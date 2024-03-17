@@ -1631,14 +1631,6 @@ lemma pspace_no_overlap_underlying_zero_update:
   apply blast
   done
 
-lemma addrFromPPtr_mask_cacheLineSize: (* FIXME AARCH64 move, remove duplicate in Arch_C *)
-  "addrFromPPtr ptr && mask cacheLineSize = ptr && mask cacheLineSize"
-  apply (simp add: addrFromPPtr_def AARCH64.pptrBase_def pptrBaseOffset_def canonical_bit_def
-                   paddrBase_def cacheLineSize_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
 lemma clearMemory_untyped_ccorres:
   "ccorres dc xfdc ((\<lambda>s. invs' s
               \<and> (\<exists>cap. cte_wp_at' (\<lambda>cte. cteCap cte = cap) ut_slot s

@@ -427,36 +427,6 @@ lemma decodeIRQ_arch_helper: "x \<noteq> IRQIssueIRQHandler \<Longrightarrow>
          (case x of IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
   by (clarsimp split: gen_invocation_labels.splits)
 
-(* FIXME AARCH64 move back to Finalise_C, otherwise we get duplication in Arch_C *)
-lemma checkIRQ_ret_good:
-  "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (clarsimp simp: checkIRQ_def rangeCheck_def maxIRQ_def minIRQ_def)
-  apply (rule hoare_pre,wp)
-  by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
-
-(* FIXME AARCH64 move back to Finalise_C, otherwise we get duplication in Arch_C *)
-lemma Arch_checkIRQ_ccorres:
-  "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
-           (liftxf errstate id undefined ret__unsigned_long_')
-   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq_w___unsigned_long\<rbrace>) []
-   (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
-  apply (cinit lift: irq_w___unsigned_long_' )
-   apply (simp add: rangeCheck_def unlessE_def AARCH64.minIRQ_def checkIRQ_def
-                    ucast_nat_def word_le_nat_alt[symmetric]
-                    linorder_not_le[symmetric] maxIRQ_def
-                    length_ineq_not_Nil hd_conv_nth cast_simps
-               del: Collect_const cong: call_ignore_cong)
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-     apply vcg
-    apply (rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def return_def Kernel_C.maxIRQ_def
-                          exception_defs syscall_error_rel_def
-                          syscall_error_to_H_cases)
-   apply (clarsimp simp: Kernel_C.maxIRQ_def)
-   apply (rule ccorres_return_CE, simp+)
-  done
-
 lemma checkIRQ_wpE:
   "\<lbrace> \<lambda>s. irq \<le> ucast maxIRQ \<longrightarrow> P () s \<rbrace> checkIRQ irq \<lbrace>P\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   unfolding checkIRQ_def rangeCheck_def

@@ -296,11 +296,6 @@ lemmas syscallMessageC_def = kernel_all_substitute.fault_messages_def
 abbreviation "exceptionMessageC \<equiv> kernel_all_substitute.fault_messages.[unat MessageID_Exception]"
 lemmas exceptionMessageC_def = kernel_all_substitute.fault_messages_def
 
-(* FIXME AARCH64 move to StateRelation_C *)
-lemma ELR_EL1_is_NextIP[simp]:
-  "Kernel_C.ELR_EL1 = Kernel_C.NextIP"
-  by (simp add: C_register_defs)
-
 lemma syscallMessage_ccorres:
   "n < unat n_syscallMessage
       \<Longrightarrow> register_from_H (AARCH64_H.syscallMessage ! n)
@@ -566,11 +561,6 @@ lemma threadGet_discarded:
   apply (rule ext)
   apply (simp add: bind_def simpler_gets_def get_def)
   done
-
-(* FIXME AARCH64 move to IsolatedThreadAction where existing setRegister_simple is commented out *)
-lemma setRegister_simple:
-  "setRegister r v = (\<lambda>con. ({((), UserContext (fpu_state con) ((user_regs con)(r := v)))}, False))"
-  by (simp add: setRegister_def simpler_modify_def)
 
 lemma handleFaultReply':
   notes option.case_cong_weak [cong] wordSize_def'[simp] take_append[simp del] prod.case_cong_weak[cong]
@@ -6110,15 +6100,6 @@ lemma receiveIPC_ccorres [corres]:
                          split: if_split)
      apply (wp gbn_wp' | simp add: guard_is_UNIV_def)+
   apply (auto simp: isCap_simps valid_cap'_def)
-  done
-
-lemma tcb_ptr_canonical: (* FIXME AARCH64: move *)
-  "\<lbrakk> pspace_canonical' s; tcb_at' t s \<rbrakk> \<Longrightarrow>
-   tcb_Ptr (make_canonical (ptr_val (tcb_ptr_to_ctcb_ptr t))) = tcb_ptr_to_ctcb_ptr t"
-  apply (frule (1) obj_at'_is_canonical)
-  apply (drule canonical_address_tcb_ptr)
-   apply (clarsimp simp: obj_at'_def objBits_simps' split: if_splits)
-  apply (clarsimp simp: canonical_make_canonical_idem)
   done
 
 lemma sendSignal_dequeue_ccorres_helper:

@@ -4802,16 +4802,6 @@ lemma placeNewObject_pte_pt:
   apply (simp add: region_actually_is_bytes bit_simps)
   done
 
-(* FIXME AARCH64: move; could be simp *)
-lemma pt_bits_minus_pte_bits:
-  "pt_bits pt_t - pte_bits = ptTranslationBits pt_t"
-  by (simp add: bit_simps)
-
-(* FIXME AARCH64: move; could be simp *)
-lemma ptTranslationBits_plus_pte_bits:
-  "ptTranslationBits pt_t + pte_bits = pt_bits pt_t"
-  by (simp add: bit_simps)
-
 lemma placeNewObject_pte_vs:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (valid_global_refs' and pspace_aligned' and pspace_distinct'

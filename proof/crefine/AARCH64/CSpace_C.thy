@@ -809,18 +809,8 @@ lemma update_freeIndex:
     apply (case_tac cte; clarsimp dest!: ctes_of_valid_cap' simp: valid_cap'_def)
    by auto
 
-(* FIXME: move *)
-lemma ccorres_cases:
-  assumes P:    " P \<Longrightarrow> ccorres r xf G G' hs a b"
-  assumes notP: "\<not>P \<Longrightarrow> ccorres r xf H H' hs a b"
-  shows "ccorres r xf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
-                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
-                      hs a b"
-  apply (cases P, auto simp: P notP)
-  done
-
 lemma capBlockSize_CL_maxSize:
-  " \<lbrakk> cap_get_tag c = scast cap_untyped_cap \<rbrakk> \<Longrightarrow> capBlockSize_CL (cap_untyped_cap_lift c) < 0x40"
+  "\<lbrakk> cap_get_tag c = scast cap_untyped_cap \<rbrakk> \<Longrightarrow> capBlockSize_CL (cap_untyped_cap_lift c) < 0x40"
   apply (clarsimp simp: cap_untyped_cap_lift_def)
   apply (clarsimp simp: cap_lift_def)
   apply (clarsimp simp: cap_untyped_cap_def cap_null_cap_def)
@@ -2469,41 +2459,6 @@ lemma valid_cap'_PageCap_is_aligned:
   apply (simp add: valid_cap'_def capAligned_def)
 done
 
-lemma cap_get_tag_isCap_unfolded_H_cap2: (* FIXME AARCH64: move; potentially replace original *)
-  shows "ccap_relation (capability.ThreadCap v0) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_thread_cap)"
-  and "ccap_relation (capability.NullCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_null_cap)"
-  and "ccap_relation (capability.NotificationCap v4 v5 v6 v7) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_notification_cap) "
-  and "ccap_relation (capability.EndpointCap v8 v9 v10 v10b v11 v12) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_endpoint_cap)"
-  and "ccap_relation (capability.IRQHandlerCap v13) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_handler_cap)"
-  and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"
-  and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
-  and "ccap_relation (capability.ReplyCap v17 v18 vr18b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
-  and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
-  and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
-  and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
-
-  and "ccap_relation (capability.ArchObjectCap arch_capability.ASIDControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_control_cap)"
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.ASIDPoolCap v28 v29)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_pool_cap)"
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 v32 v31)) cap'
-       \<Longrightarrow> if v32 = VSRootPT_T
-           then cap_get_tag cap' = scast cap_vspace_cap
-           else cap_get_tag cap' = scast cap_page_table_cap"
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.FrameCap v101 v44 v45 v46 v47)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v48)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
-  apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
-  apply (frule cap_get_tag_isCap(2), simp)
-  apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps
-                  split: if_splits pt_type.splits)+
-  done
-
-lemmas ccap_rel_cap_get_tag_cases_arch2 = (* FIXME AARCH64: move; potentially replace original *)
-  cap_get_tag_isCap_unfolded_H_cap2(12-16)
-    [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
-     OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
-
-lemmas ccap_rel_cap_get_tag_cases_arch2' = (* FIXME AARCH64: move; potentially replace original *)
-  ccap_rel_cap_get_tag_cases_arch2[OF _ refl]
-
 lemma Arch_sameRegionAs_spec:
   notes cap_get_tag = ccap_rel_cap_get_tag_cases_arch2'
   shows
@@ -3402,10 +3357,6 @@ lemma ensureNoChildren_ccorres:
   apply clarsimp
   apply (simp add: cte_wp_at_ctes_of)
   done
-
-lemma not_VSRootPT_T_eq: (* FIXME AARCH64: move to AInvs *)
-  "(pt_t \<noteq> VSRootPT_T) = (pt_t = NormalPT_T)"
-  by (cases pt_t; simp)
 
 lemma Arch_deriveCap_ccorres:
   "ccorres (syscall_error_rel \<currency> ccap_relation) deriveCap_xf

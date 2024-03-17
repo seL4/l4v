@@ -35,30 +35,6 @@ lemma objBits_InvalidPTE_pte_bits:
   "objBits AARCH64_H.InvalidPTE = pte_bits"
   by (simp add: objBits_InvalidPTE bit_simps)
 
-lemma unat_of_nat_pt_bits_mw: (* FIXME AARCH64 move *)
-  "unat (of_nat (pt_bits pt_t)::machine_word) = pt_bits pt_t"
-  by (rule unat_of_nat_eq) (simp add: bit_simps split: if_split)
-
-lemma aligned_no_overflow_less: (* FIXME AARCH64: Word_Lib *)
-  "\<lbrakk> is_aligned p n; p + 2 ^ n \<noteq> 0 \<rbrakk> \<Longrightarrow> p < p + 2 ^ n"
-  by (erule word_leq_minus_one_le) (erule is_aligned_no_overflow)
-
-lemma unat_mask_pt_bits_shift_neq_0[simp]: (* FIXME AARCH64 move *)
-  "0 < unat (mask (pt_bits pt_t) >> pte_bits :: machine_word)"
-  by (simp add: bit_simps mask_def split: if_split)
-
-lemma pptrBaseOffset_alignment_pt_bits[simp, intro!]:  (* FIXME AARCH64 move *)
-  "pt_bits pt_t \<le> pptrBaseOffset_alignment"
-  by (simp add: bit_simps pptrBaseOffset_alignment_def split: if_split)
-
-lemma addrFromPPtr_mask_cacheLineSize: (* FIXME AARCH64 move *)
-  "addrFromPPtr ptr && mask cacheLineSize = ptr && mask cacheLineSize"
-  apply (simp add: addrFromPPtr_def AARCH64.pptrBase_def pptrBaseOffset_def canonical_bit_def
-                   paddrBase_def cacheLineSize_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
 lemma clearMemory_PT_setObject_PTE_ccorres:
   "ccorres dc xfdc
            (page_table_at' pt_t ptr and (\<lambda>s. 2 ^ ptBits pt_t \<le> gsMaxObjectSize s) and
@@ -509,18 +485,6 @@ lemma ucast_x3_shiftr_asid_low_bits:
    apply (simp add: asid_low_bits_def asid_bits_def mask_def )+
   done
 
-lemma canonical_address_mask_shift: (* FIXME AARCH64: move up *)
-  "\<lbrakk> canonical_address p; is_aligned p m'; m \<le> m'; n + m = Suc canonical_bit; 0 < n \<rbrakk> \<Longrightarrow>
-   p && (mask n << m) = p"
-  apply (prop_tac "m = Suc canonical_bit - n", arith)
-  apply (simp add: canonical_address_def canonical_address_of_def canonical_bit_def)
-  apply word_eqI
-  apply (rule iffI; clarsimp)
-  apply (rename_tac n')
-  apply (prop_tac "n' < 48", fastforce)
-  apply fastforce
-  done
-
 lemma performASIDControlInvocation_ccorres:
 notes replicate_numeral[simp del]
 shows
@@ -715,6 +679,7 @@ lemmas performARMMMUInvocations
       AARCH64_H.performInvocation_def performARMMMUInvocation_def
       liftE_bind_return_bindE_returnOk
 
+(* FIXME AARCH64: consider using isVTableRoot *)
 lemma slotcap_in_mem_PageTable:
   "\<lbrakk> slotcap_in_mem cap slot (ctes_of s); (s, s') \<in> rf_sr \<rbrakk>
        \<Longrightarrow> \<exists>v. cslift s' (cte_Ptr slot) = Some v
@@ -885,16 +850,6 @@ lemma slotcap_in_mem_VSpace:
   apply (clarsimp dest!: ccte_relation_ccap_relation)
   apply (simp add: cap_get_tag_isCap_ArchObject2)
   done
-
-lemma pptrUserTop_val: (* FIXME AARCH64: need value spelled out for C code, make schematic *)
-  "pptrUserTop = 0xFFFFFFFFFFF"
-  by (simp add: pptrUserTop_def mask_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-
-lemma ccap_relation_vspace_base: (* FIXME AARCH64: move up if needed in VSpace_R *)
-  "ccap_relation (ArchObjectCap (PageTableCap p VSRootPT_T m)) cap
-    \<Longrightarrow> capVSBasePtr_CL (cap_vspace_cap_lift cap) = p"
-  by (frule cap_get_tag_isCap_unfolded_H_cap)
-     (clarsimp simp: cap_vspace_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
 
 lemma Restart_valid[simp]:
   "valid_tcb_state' Restart s"
@@ -1637,7 +1592,7 @@ lemma canonical_address_frame_at':
                 dest!: device_data_at_ko user_data_at_ko intro!: obj_at'_is_canonical)
   done
 
-definition flushtype_relation :: "flush_type \<Rightarrow> machine_word \<Rightarrow> bool" where (* FIXME AARCH64: move to VSpace_C *)
+definition flushtype_relation :: "flush_type \<Rightarrow> machine_word \<Rightarrow> bool" where
   "flushtype_relation typ label \<equiv> case typ of
      Clean \<Rightarrow>
        label \<in> scast ` {Kernel_C.ARMPageClean_Data, Kernel_C.ARMVSpaceClean_Data}
@@ -1648,7 +1603,7 @@ definition flushtype_relation :: "flush_type \<Rightarrow> machine_word \<Righta
    | Unify \<Rightarrow>
        label \<in> scast ` {Kernel_C.ARMPageUnify_Instruction, Kernel_C.ARMVSpaceUnify_Instruction}"
 
-lemma doFlush_ccorres: (* FIXME AARCH64: move to VSpace_C *)
+lemma doFlush_ccorres:
   "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask cacheLineSize = ps && mask cacheLineSize
         \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
@@ -1688,13 +1643,9 @@ lemma doFlush_ccorres: (* FIXME AARCH64: move to VSpace_C *)
                           sel4_arch_invocation_label_defs arch_invocation_label_defs)
   done
 
-lemma cte_wp_cteCap_valid: (* FIXME AARCH64: move up *)
-  "\<lbrakk> cte_wp_at' ((=) cap \<circ> cteCap) slot s; valid_objs' s \<rbrakk> \<Longrightarrow> valid_cap' cap s"
-  by (clarsimp simp: cte_wp_at_ctes_of ctes_of_valid')
-
 (* The precondition is slightly different here to ARM/ARM_HYP, because we're flushing on kernel
    virtual addresses instead of user virtual addresses (hence also no VM root switching). *)
-lemma performPageFlush_ccorres: (* FIXME AARCH64: move to VSpace_C; needs the [simp] lemmas above *)
+lemma performPageFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (\<lambda>s. pstart \<le> pstart + (end - start) \<and>
             ptrFromPAddr pstart \<le> ptrFromPAddr pstart + (end - start) \<and>
@@ -1802,18 +1753,6 @@ lemma frame_at'_is_aligned_addrFromPPtr:
   apply (simp split: kernel_object.splits)
   done
 
-lemma pptrUserTop_eq_mask_ipa_size:
-  "pptrUserTop = mask ipa_size"
-  by (simp add: pptrUserTop_def ipa_size_def)
-
-lemma mask_pptrUserTop_user_region:
-  "\<lbrakk> is_aligned v n; v + mask n \<le> pptrUserTop \<rbrakk> \<Longrightarrow> v \<in> user_region"
-  apply (simp add: user_region_def canonical_user_def pptrUserTop_eq_mask_ipa_size
-                   word_and_or_mask_aligned)
-  apply (simp flip: and_mask_eq_iff_le_mask)
-  apply word_eqI_solve
-  done
-
 lemma cap_frame_cap_lift_asid_upd_idem:
   "cap_get_tag cap = scast cap_frame_cap \<Longrightarrow>
    cap_frame_cap_lift cap\<lparr>capFMappedASID_CL := capFMappedASID_CL (cap_frame_cap_lift cap) && mask 16\<rparr> =
@@ -1861,21 +1800,6 @@ lemma ccap_relation_decodePageMap[unfolded asid_bits_def canonical_bit_def, simp
   apply (rule conjI, clarsimp)
   apply (clarsimp simp: ccap_relation_def c_valid_cap_def cap_frame_cap_lift[THEN iffD1]
                         cl_valid_cap_def)
-  done
-
-lemma user_region_canonical: (* FIXME AARCH64: move *)
-  "p \<in> user_region \<Longrightarrow> canonical_address p"
-  apply (simp add: canonical_address_range user_region_def canonical_user_def)
-  apply (erule order_trans)
-  apply (rule mask_mono)
-  apply (simp add: ipa_size_def canonical_bit_def split: if_split)
-  done
-
-lemma canonical_address_pptrUserTop_mask: (* FIXME AARCH64: move *)
-  "\<lbrakk> p + 2^n - 1 \<le> pptrUserTop; is_aligned p n \<rbrakk> \<Longrightarrow> canonical_address p"
-  apply (rule user_region_canonical)
-  apply (erule mask_pptrUserTop_user_region)
-  apply (simp add: mask_def field_simps)
   done
 
 lemmas canonical_address_C_pptrUserTop =
@@ -2443,7 +2367,7 @@ lemma framesize_from_H_mask2:
     apply (simp add: framesize_defs)+
   done
 
-lemma performVSpaceFlush_ccorres: (* FIXME AARCH64: move to VSpace_C; needs the [simp] lemmas above *)
+lemma performVSpaceFlush_ccorres:
   "ccorres (\<lambda>_ rv'. rv' = scast EXCEPTION_NONE) ret__unsigned_long_'
        (\<lambda>s. pstart \<le> pstart + (end - start) \<and>
             ptrFromPAddr pstart \<le> ptrFromPAddr pstart + (end - start) \<and>
@@ -2758,44 +2682,6 @@ lemma injection_handler_stateAssert_relocate:
   "injection_handler Inl (stateAssert ass xs >>= f) >>=E g
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
-
-lemma isVTableRoot_cap_eq: (* FIXME AARCH64: move, consider using it in slotcap_in_mem_VSpace *)
-  "isVTableRoot cap =
-     (isArchObjectCap cap \<and> isPageTableCap (capCap cap) \<and> capPTType (capCap cap) = VSRootPT_T)"
-  by (auto simp: isCap_simps isVTableRoot_ex)
-
-lemma ccap_relation_capASIDBase: (* FIXME AARCH64: move *)
-  "\<lbrakk> ccap_relation (ArchObjectCap (ASIDPoolCap p asid)) cap \<rbrakk> \<Longrightarrow>
-   capASIDBase_CL (cap_asid_pool_cap_lift cap) = asid"
-  by (clarsimp simp: cap_to_H_def Let_def cap_asid_pool_cap_lift_def
-               elim!: ccap_relationE
-               split: cap_CL.splits if_splits)
-
-lemma ccap_relation_capASIDPool: (* FIXME AARCH64: move *)
-  "\<lbrakk> ccap_relation (ArchObjectCap (ASIDPoolCap p asid)) cap \<rbrakk> \<Longrightarrow>
-   capASIDPool_CL (cap_asid_pool_cap_lift cap) = p"
-  by (clarsimp simp: cap_to_H_def Let_def cap_asid_pool_cap_lift_def
-               elim!: ccap_relationE
-               split: cap_CL.splits if_splits)
-
-lemma asid_map_get_tag_neq_none[simp]: (* FIXME AARCH64: move, beware of [simp] *)
-  "(asid_map_get_tag amap \<noteq> scast asid_map_asid_map_none) =
-   (asid_map_get_tag amap = scast asid_map_asid_map_vspace)"
-  by (simp add: asid_map_get_tag_def asid_map_tag_defs)
-
-lemma asid_map_get_tag_neq_vspace[simp]: (* FIXME AARCH64: move, beware of [simp] *)
-  "(asid_map_get_tag amap \<noteq> scast asid_map_asid_map_vspace) =
-   (asid_map_get_tag amap = scast asid_map_asid_map_none)"
-  by (simp add: asid_map_get_tag_def asid_map_tag_defs)
-
-lemma asid_map_tags_neq[simp]: (* FIXME AARCH64: move, beware of [simp] *)
-  "(scast asid_map_asid_map_vspace :: machine_word) \<noteq> scast asid_map_asid_map_none"
-  "(scast asid_map_asid_map_none :: machine_word) \<noteq> scast asid_map_asid_map_vspace"
-  by (auto simp: asid_map_tag_defs)
-
-lemma casid_map_relation_None[simp]: (* FIXME AARCH64: move, beware of [simp] *)
-  "(casid_map_relation None amap) = (asid_map_get_tag amap = scast asid_map_asid_map_none)"
-  by (simp add: casid_map_relation_def asid_map_lift_def Let_def split: option.splits if_splits)
 
 lemma decodeARMMMUInvocation_ccorres:
   notes Collect_const[simp del] if_cong[cong]
@@ -3588,7 +3474,6 @@ lemma readVCPUReg_ccorres:
   apply fastforce
   done
 
-(* FIXME AARCH64 move, something like it used to be in Arch_R on ARM_HYP *)
 crunch st_tcb_at'[wp]: readVCPUReg "\<lambda>s. Q (st_tcb_at' P t s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -4287,36 +4172,6 @@ lemma liftE_invokeVCPUAckVPPI_empty_return:
     = liftE (invokeVCPUAckVPPI vcpu val) >>=E (\<lambda>_. m [])"
   unfolding invokeVCPUAckVPPI_def
   by (clarsimp simp: liftE_bindE bind_assoc)
-
-(* FIXME AARCH64 used to be in Finalise_C *)
-lemma checkIRQ_ret_good:
-  "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (clarsimp simp: checkIRQ_def rangeCheck_def maxIRQ_def minIRQ_def)
-  apply (rule hoare_pre,wp)
-  by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
-
-(* FIXME AARCH64 used to be in Finalise_C *)
-lemma Arch_checkIRQ_ccorres:
-  "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
-           (liftxf errstate id undefined ret__unsigned_long_')
-   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq_w___unsigned_long\<rbrace>) []
-   (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
-  apply (cinit lift: irq_w___unsigned_long_' )
-   apply (simp add: rangeCheck_def unlessE_def AARCH64.minIRQ_def checkIRQ_def
-                    ucast_nat_def word_le_nat_alt[symmetric]
-                    linorder_not_le[symmetric] maxIRQ_def
-                    length_ineq_not_Nil hd_conv_nth cast_simps
-               del: Collect_const cong: call_ignore_cong)
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-     apply vcg
-    apply (rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def return_def Kernel_C.maxIRQ_def
-                          exception_defs syscall_error_rel_def
-                          syscall_error_to_H_cases)
-   apply (clarsimp simp: Kernel_C.maxIRQ_def)
-   apply (rule ccorres_return_CE, simp+)
-  done
 
 lemma decodeVCPUAckVPPI_ccorres:
   notes if_cong[cong] Collect_const[simp del]

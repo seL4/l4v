@@ -13,23 +13,6 @@ begin
 context kernel_m
 begin
 
-(* FIXME AARCH64: move to CCorres_UL, remove previous ccorres_cases, check RISCV *)
-(* note: moving this lemma outside of kernel_m locale currently causes some proofs to fail *)
-lemma ccorres_cases:
-  assumes P:    " P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf G G' hs a b"
-  assumes notP: "\<not>P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf H H' hs  a b"
-  shows "ccorres_underlying  srel Ga rrel xf arrel axf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
-                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
-                      hs a b"
-  apply (cases P, auto simp: P notP)
-  done
-
-(* FIXME AARCH64: move up, make ccorres_underlying, check if it could be made [simp], check RISCV *)
-(* Provide full ccorres context so it will work with ccorres_prog_only_cong enabled *)
-lemma ccorres_dc_comp:
-  "ccorres (dc \<circ> R) xf P P' hs m c = ccorres dc xf P P' hs m c "
-  by simp
-
 declare if_split [split del]
 
 definition
@@ -1362,14 +1345,6 @@ lemma setObject_ccorres_lemma:
   apply clarsimp
   done
 
-(* FIXME AARCH64 move to where haskell_assertE_inv is in VSpace_C, and then both of those should get
-   moved out elsewhere. For future consideration, the _inv assert rules are not safe.
-   haskell_assert_inv is introduced accidentally in TcbAcc_R during a crunch *)
-lemma haskell_assertE_wp:
-  "\<lbrace>\<lambda>s. F \<longrightarrow> Q () s\<rbrace> haskell_assertE F L \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  unfolding haskell_assertE_def
-  by (rule assertE_wp)
-
 lemma findVSpaceForASID_nonzero:
   "\<lbrace>\<top>\<rbrace> findVSpaceForASID asid \<lbrace>\<lambda>rv s. rv \<noteq> 0\<rbrace>,-"
   unfolding findVSpaceForASID_def
@@ -1825,22 +1800,6 @@ lemma getIRQSlot_ccorres_stuff:
                    size_of_def mult.commute mult.left_commute of_int_uint_ucast )
   done
 
-(* FIXME AARCH64 override original *)
-(* the number here should match the one in intStateIRQNode_array_Ptr for this to be useful*)
-lemma array_assertion_abs_irq:
-  "\<forall>s s'. (s, s') \<in> rf_sr \<and> True
-        \<and> (n s' \<le> 512 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
-    \<longrightarrow> (x s' = 0 \<or> array_assertion intStateIRQNode_Ptr (n s') (hrs_htd (t_hrs_' (globals s'))))"
-  apply (intro allI impI disjCI2)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: h_t_valid_clift_Some_iff)
-  apply (erule clift_array_assertion_imp, (simp add: exI[where x=0])+)
-  done
-
-(* FIXME AARCH64 remove *)
-lemmas ccorres_move_array_assertion_irq
-    = ccorres_move_array_assertions [OF array_assertion_abs_irq]
-
 lemma deletingIRQHandler_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
                    ({s. irq_opt_relation (Some irq) (irq_' s)}) []
@@ -1962,21 +1921,6 @@ lemma cnotification_relation_udpate_arch:
   apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
   done
 
-(* FIXME AARCH64 move (also at least on ARM_HYP) *)
-lemma case_option_both[simp]:
-  "(case f of None \<Rightarrow> P | _ \<Rightarrow> P) = P"
-  by (auto split: option.splits)
-
-(* FIXME AARCH64 move (also at least on ARM_HYP) *)
-lemma if_case_opt_same_branches:
-  "cond \<longrightarrow> Option.is_none opt \<Longrightarrow>
-   (if cond then
-      case opt of
-        None \<Rightarrow> f
-      | Some x \<Rightarrow> g x
-    else f) = f"
-  by (cases cond; cases opt; clarsimp)
-
 (* FIXME AARCH64 slow, uses unfolding of state relation for typ_heap_simps, the vcpuUpdate or
    equivalent approach for TCB would be better *)
 lemma archThreadSet_tcbVCPU_Basic_ccorres:
@@ -2011,12 +1955,6 @@ lemma archThreadSet_tcbVCPU_Basic_ccorres:
    apply (safe ; case_tac "xa = tcb_ptr_to_ctcb_ptr tptr" ; clarsimp simp: option_map2_def map_option_case)
     apply (clarsimp simp: cvariable_relation_upd_const)
   done
-
-(* FIXME AARCH64 move (also on ARM_HYP) *)
-lemma update_vcpu_map_to_vcpu:
-  "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOArch (KOVCPU vcpu)))
-             = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
-  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma setObject_vcpuTCB_updated_Basic_ccorres:
   "ccorres dc xfdc (ko_at' (vcpuTCBPtr_update t vcpu) vcpuptr) UNIV hs
@@ -2280,27 +2218,6 @@ lemma dissociateVCPUTCB_vcpu_ccorres:
      ({s. tcb_' s = tcb_ptr_to_ctcb_ptr tptr } \<inter> {s. vcpu_' s = vcpu_Ptr vcpuptr }) hs
      (dissociateVCPUTCB vcpuptr tptr) (Call dissociateVCPUTCB_'proc)"
   by (rule ccorres_guard_imp2[OF dissociateVCPUTCB_ccorres]) clarsimp
-
-
-(* FIXME AARCH64: move up, also use in ADT_C and Tcb_Queue.tcb_at_not_NULL *)
-lemma aligned_tcb_ctcb_not_NULL:
-  assumes "is_aligned p tcbBlockSizeBits"
-  shows "tcb_ptr_to_ctcb_ptr p \<noteq> NULL"
-proof
-  assume "tcb_ptr_to_ctcb_ptr p = NULL"
-  hence "p + ctcb_offset = 0"
-     by (simp add: tcb_ptr_to_ctcb_ptr_def)
-  moreover
-  from `is_aligned p tcbBlockSizeBits`
-  have "p + ctcb_offset = p || ctcb_offset"
-    by (rule word_and_or_mask_aligned) (simp add: ctcb_offset_defs objBits_defs mask_def)
-  moreover
-  have "ctcb_offset !! ctcb_size_bits"
-    by (simp add: ctcb_offset_defs objBits_defs)
-  ultimately
-  show False
-    by (simp add: bang_eq)
-qed
 
 lemma associateVCPUTCB_ccorres:
   "ccorres dc xfdc
@@ -2920,6 +2837,35 @@ lemma finaliseCap_ccorres:
   apply (frule(1) ccap_relation_IRQHandler_mask)
   apply (clarsimp simp add:mask_eq_ucast_eq)
   done
-  end
+
+lemma checkIRQ_ret_good:
+  "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
+  apply (clarsimp simp: checkIRQ_def rangeCheck_def maxIRQ_def minIRQ_def)
+  apply (rule hoare_pre,wp)
+  by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
+
+lemma Arch_checkIRQ_ccorres:
+  "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
+           (liftxf errstate id undefined ret__unsigned_long_')
+   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq_w___unsigned_long\<rbrace>) []
+   (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
+  apply (cinit lift: irq_w___unsigned_long_' )
+   apply (simp add: rangeCheck_def unlessE_def AARCH64.minIRQ_def checkIRQ_def
+                    ucast_nat_def word_le_nat_alt[symmetric]
+                    linorder_not_le[symmetric] maxIRQ_def
+                    length_ineq_not_Nil hd_conv_nth cast_simps
+               del: Collect_const cong: call_ignore_cong)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+     apply vcg
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: throwError_def return_def Kernel_C.maxIRQ_def
+                          exception_defs syscall_error_rel_def
+                          syscall_error_to_H_cases)
+   apply (clarsimp simp: Kernel_C.maxIRQ_def)
+   apply (rule ccorres_return_CE, simp+)
+  done
+
+end
 
 end

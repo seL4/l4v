@@ -204,27 +204,6 @@ proof -
   finally show ?thesis .
 qed
 
-
-lemma tcb_at_not_NULL:
-  assumes tat: "tcb_at' t s"
-  shows "tcb_ptr_to_ctcb_ptr t \<noteq> NULL"
-proof
-  assume "tcb_ptr_to_ctcb_ptr t = NULL"
-  with tat have "tcb_at' (ctcb_ptr_to_tcb_ptr NULL) s"
-    apply -
-    apply (erule subst)
-    apply simp
-    done
-
-  hence "is_aligned (ctcb_ptr_to_tcb_ptr NULL) tcbBlockSizeBits"
-    by (rule tcb_aligned')
-
-  moreover have "ctcb_ptr_to_tcb_ptr NULL !! ctcb_size_bits"
-    unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
-    by simp
-  ultimately show False by (simp add: is_aligned_nth ctcb_offset_defs objBits_defs)
-qed
-
 lemma tcb_queue_relation_not_NULL:
   assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
@@ -893,6 +872,80 @@ lemma tcb_queue_relation'_prev_mask:
   and     bits: "bits \<le> ctcb_size_bits"
   shows "ptr_val (getPrev tcb) && ~~ mask bits = ptr_val (getPrev tcb)"
   by (rule tcb_queue_relation_prev_mask [OF tcb_queue_relation'_queue_rel], fact+)
+
+lemma tcb_queue_relation_next_canonical:
+  assumes "tcb_queue_relation getNext getPrev mp queue NULL qhead"
+  assumes valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
+                    "distinct queue"
+                    "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
+                    "tcbp \<in> set queue"
+  assumes canon: "pspace_canonical' s"
+  shows "make_canonical (ptr_val (getNext tcb)) = ptr_val (getNext tcb)"
+proof (cases "getNext tcb = NULL")
+  case True
+  thus ?thesis by simp
+next
+  case False
+  hence "ctcb_ptr_to_tcb_ptr (getNext tcb) \<in> set queue" using assms
+    by (fastforce dest: tcb_queueD split: if_split_asm)
+  with valid_ep(1)
+  have tcb: "tcb_at' (ctcb_ptr_to_tcb_ptr (getNext tcb)) s" ..
+  with canon
+  have "canonical_address (ctcb_ptr_to_tcb_ptr (getNext tcb))"
+    by (simp add: obj_at'_is_canonical)
+  moreover
+  have "is_aligned (ctcb_ptr_to_tcb_ptr (getNext tcb)) tcbBlockSizeBits"
+    using tcb by (rule tcb_aligned')
+  ultimately
+  have "canonical_address (ptr_val (getNext tcb))"
+    by (rule canonical_address_ctcb_ptr)
+  thus ?thesis
+    by (simp add: canonical_make_canonical_idem)
+qed
+
+lemma tcb_queue_relation'_next_canonical:
+  "\<lbrakk> tcb_queue_relation' getNext getPrev mp queue qhead qend; \<forall>t\<in>set queue. tcb_at' t s;
+     distinct queue; mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb; tcbp \<in> set queue;
+     pspace_canonical' s\<rbrakk>
+   \<Longrightarrow> make_canonical (ptr_val (getNext tcb)) = ptr_val (getNext tcb)"
+  by (rule tcb_queue_relation_next_canonical [OF tcb_queue_relation'_queue_rel])
+
+lemma tcb_queue_relation_prev_canonical:
+  assumes "tcb_queue_relation getNext getPrev mp queue NULL qhead"
+  assumes valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
+                    "distinct queue"
+                    "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
+                    "tcbp \<in> set queue"
+  assumes canon: "pspace_canonical' s"
+  shows "make_canonical (ptr_val (getPrev tcb)) = ptr_val (getPrev tcb)"
+proof (cases "getPrev tcb = NULL")
+  case True
+  thus ?thesis by simp
+next
+  case False
+  hence "ctcb_ptr_to_tcb_ptr (getPrev tcb) \<in> set queue" using assms
+    by (fastforce dest: tcb_queueD split: if_split_asm)
+  with valid_ep(1)
+  have tcb: "tcb_at' (ctcb_ptr_to_tcb_ptr (getPrev tcb)) s" ..
+  with canon
+  have "canonical_address (ctcb_ptr_to_tcb_ptr (getPrev tcb))"
+    by (simp add: obj_at'_is_canonical)
+  moreover
+  have "is_aligned (ctcb_ptr_to_tcb_ptr (getPrev tcb)) tcbBlockSizeBits"
+    using tcb by (rule tcb_aligned')
+  ultimately
+  have "canonical_address (ptr_val (getPrev tcb))"
+    by (rule canonical_address_ctcb_ptr)
+  thus ?thesis
+    by (simp add: canonical_make_canonical_idem)
+qed
+
+lemma tcb_queue_relation'_prev_canonical:
+  "\<lbrakk> tcb_queue_relation' getNext getPrev mp queue qhead qend; \<forall>t\<in>set queue. tcb_at' t s;
+     distinct queue; mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb; tcbp \<in> set queue;
+     pspace_canonical' s\<rbrakk>
+   \<Longrightarrow> make_canonical (ptr_val (getPrev tcb)) = ptr_val (getPrev tcb)"
+  by (rule tcb_queue_relation_prev_canonical [OF tcb_queue_relation'_queue_rel])
 
 lemma cready_queues_relation_null_queue_ptrs:
   assumes rel: "cready_queues_relation mp cq aq"

@@ -121,9 +121,6 @@ definition cur_vcpu_relation ::
      at least)
    armKSVMIDTable in Haskell is  armKSHWASIDTable in C *)
 
-(* FIXME AARCH64 move, add vmid_bits_def to relevant bit defs *)
-value_type vmid_bits = "size (0::vmid)"
-
 definition carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool" where
   "carch_state_relation astate cstate \<equiv>
     armKSKernelVSpace astate = armKSKernelVSpace_C \<and>
@@ -256,6 +253,10 @@ fun register_from_H :: "register \<Rightarrow> register_idx" where
 | "register_from_H AARCH64.FaultIP     = scast Kernel_C.FaultIP"
 | "register_from_H AARCH64.TPIDR_EL0   = scast Kernel_C.TPIDR_EL0"
 | "register_from_H AARCH64.TPIDRRO_EL0 = scast Kernel_C.TPIDRRO_EL0"
+
+lemma ELR_EL1_is_NextIP[simp]:
+  "Kernel_C.ELR_EL1 = Kernel_C.NextIP"
+  by (simp add: C_register_defs)
 
 definition
   cregs_relation :: "(MachineTypes.register \<Rightarrow> machine_word) \<Rightarrow> machine_word[registers_count] \<Rightarrow> bool"
@@ -920,7 +921,23 @@ definition
 definition
   "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (seL4_CapRights_lift cr')"
 
-lemma (in kernel) syscall_error_to_H_cases_rev:
+definition
+  syscall_from_H :: "syscall \<Rightarrow> machine_word"
+where
+  "syscall_from_H c \<equiv> case c of
+    SysSend \<Rightarrow> scast Kernel_C.SysSend
+  | SysNBSend \<Rightarrow> scast Kernel_C.SysNBSend
+  | SysCall \<Rightarrow> scast Kernel_C.SysCall
+  | SysRecv \<Rightarrow> scast Kernel_C.SysRecv
+  | SysReply \<Rightarrow> scast Kernel_C.SysReply
+  | SysReplyRecv \<Rightarrow> scast Kernel_C.SysReplyRecv
+  | SysNBRecv \<Rightarrow> scast Kernel_C.SysNBRecv
+  | SysYield \<Rightarrow> scast Kernel_C.SysYield"
+
+context kernel
+begin
+
+lemma syscall_error_to_H_cases_rev:
   "\<And>n. syscall_error_to_H e lf = Some (InvalidArgument n) \<Longrightarrow>
         syscall_error_C.type_C e = scast seL4_InvalidArgument"
   "\<And>n. syscall_error_to_H e lf = Some (InvalidCapability n) \<Longrightarrow>
@@ -942,20 +959,7 @@ lemma (in kernel) syscall_error_to_H_cases_rev:
   by (clarsimp simp: syscall_error_to_H_def syscall_error_type_defs
               split: if_split_asm)+
 
-definition
-  syscall_from_H :: "syscall \<Rightarrow> machine_word"
-where
-  "syscall_from_H c \<equiv> case c of
-    SysSend \<Rightarrow> scast Kernel_C.SysSend
-  | SysNBSend \<Rightarrow> scast Kernel_C.SysNBSend
-  | SysCall \<Rightarrow> scast Kernel_C.SysCall
-  | SysRecv \<Rightarrow> scast Kernel_C.SysRecv
-  | SysReply \<Rightarrow> scast Kernel_C.SysReply
-  | SysReplyRecv \<Rightarrow> scast Kernel_C.SysReplyRecv
-  | SysNBRecv \<Rightarrow> scast Kernel_C.SysNBRecv
-  | SysYield \<Rightarrow> scast Kernel_C.SysYield"
-
-lemma (in kernel) cmap_relation_cs_atD:
+lemma cmap_relation_cs_atD:
   "\<lbrakk> cmap_relation as cs addr_fun rel; cs (addr_fun x) = Some y; inj addr_fun \<rbrakk> \<Longrightarrow>
   \<exists>ko. as x = Some ko \<and> rel ko y"
   apply (clarsimp simp: cmap_relation_def)
@@ -970,9 +974,11 @@ lemma (in kernel) cmap_relation_cs_atD:
   apply simp
   done
 
-definition (in kernel)
+definition
   rf_sr :: "(KernelStateData_H.kernel_state \<times> cstate) set"
   where
   "rf_sr \<equiv> {(s, s'). cstate_relation s (globals s')}"
+
+end
 
 end

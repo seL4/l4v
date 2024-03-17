@@ -2022,6 +2022,44 @@ lemmas ccap_rel_cap_get_tag_cases_arch =
 lemmas ccap_rel_cap_get_tag_cases_arch' =
   ccap_rel_cap_get_tag_cases_arch[OF _ refl]
 
+(* Same as cap_get_tag_isCap_unfolded_H_cap, but with an "if" for PageTableCap, so that both cases
+   match. Replacing cap_get_tag_isCap_unfolded_H_cap woudl be nice, but some existing proofs break
+   if we do that. Might be possible with additional work. *)
+lemma cap_get_tag_isCap_unfolded_H_cap2:
+  shows "ccap_relation (capability.ThreadCap v0) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_thread_cap)"
+  and "ccap_relation (capability.NullCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_null_cap)"
+  and "ccap_relation (capability.NotificationCap v4 v5 v6 v7) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_notification_cap) "
+  and "ccap_relation (capability.EndpointCap v8 v9 v10 v10b v11 v12) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_endpoint_cap)"
+  and "ccap_relation (capability.IRQHandlerCap v13) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_handler_cap)"
+  and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"
+  and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
+  and "ccap_relation (capability.ReplyCap v17 v18 vr18b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
+  and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
+  and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
+  and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
+
+  and "ccap_relation (capability.ArchObjectCap arch_capability.ASIDControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_control_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.ASIDPoolCap v28 v29)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_pool_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 v32 v31)) cap'
+       \<Longrightarrow> if v32 = VSRootPT_T
+           then cap_get_tag cap' = scast cap_vspace_cap
+           else cap_get_tag cap' = scast cap_page_table_cap"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.FrameCap v101 v44 v45 v46 v47)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v48)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
+  apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
+  apply (frule cap_get_tag_isCap(2), simp)
+  apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps
+                  split: if_splits pt_type.splits)+
+  done
+
+lemmas ccap_rel_cap_get_tag_cases_arch2 =
+  cap_get_tag_isCap_unfolded_H_cap2(12-16)
+    [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
+     OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
+
+lemmas ccap_rel_cap_get_tag_cases_arch2' =
+  ccap_rel_cap_get_tag_cases_arch2[OF _ refl]
+
 lemmas cap_lift_defs =
        cap_untyped_cap_lift_def
        cap_endpoint_cap_lift_def
@@ -2143,31 +2181,6 @@ lemma pt_array_map_relation_pt:
   apply (clarsimp simp: h_t_valid_def h_t_array_valid_def typ_uinfo_array_tag_n_m_eq bit_simps)
   done
 
-lemma page_table_pte_at': (* FIXME AARCH64: move *)
-  "page_table_at' pt_t p s \<Longrightarrow> pte_at' p s"
-  apply (clarsimp simp: page_table_at'_def)
-  apply (erule_tac x=0 in allE)
-  apply simp
-  done
-
-lemma pte_at_ko': (* FIXME AARCH64: move *)
-  "pte_at' p s \<Longrightarrow> \<exists>pte. ko_at' (pte::pte) p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  apply (case_tac ko; simp)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object, auto)[1]
-  done
-
-lemma aligned_intvl_0: (* FIXME AARCH64: move *)
-  "\<lbrakk> is_aligned p n; n < LENGTH('a) \<rbrakk> \<Longrightarrow>  (0 \<in> {p..+2^n}) = (p = 0)" for p::"'a::len word"
-  apply (rule iffI; clarsimp simp: intvl_def)
-   apply (drule_tac d="of_nat k" in is_aligned_add_or)
-    apply (simp add: word_less_nat_alt unat_of_nat order_le_less_trans[rotated])
-   apply word_eqI_solve
-  apply (rule_tac x=0 in exI)
-  apply simp
-  done
-
 lemma vspace_at_rf_sr:
   "\<lbrakk> page_table_at' VSRootPT_T pt s; gsPTTypes (ksArchState s) pt = Some VSRootPT_T;
      (s, s') \<in> rf_sr \<rbrakk>
@@ -2187,6 +2200,39 @@ lemma vspace_at_rf_sr:
    apply (clarsimp simp: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def intvl_self)
   apply simp
   done
+
+lemma ptable_at_rf_sr:
+  "\<lbrakk> page_table_at' NormalPT_T pt s; gsPTTypes (ksArchState s) pt = Some NormalPT_T;
+     (s, s') \<in> rf_sr \<rbrakk>
+   \<Longrightarrow> cslift s' (pt_Ptr pt) \<noteq> None"
+  apply (frule rf_sr_cpte_relation)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (drule (1) pt_array_map_relation_pt)
+   apply (frule page_table_pte_at')
+   apply (clarsimp dest!: pte_at_ko')
+   apply (drule (1) cmap_relation_ko_atD)
+   apply (clarsimp simp: page_table_at'_def)
+   apply (drule c_guard_clift)
+   apply (clarsimp simp: c_guard_def c_null_guard_def ptr_aligned_def)
+   apply (simp add: align_of_def typ_info_array array_tag_def align_td_array_tag)
+   apply clarsimp
+   apply (drule aligned_intvl_0, simp)
+   apply (clarsimp simp: bit_simps intvl_self)
+  apply simp
+  done
+
+lemma asid_pool_at_rf_sr:
+  "\<lbrakk>ko_at' (ASIDPool pool) p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
+  \<exists>pool'. cslift s' (ap_Ptr p) = Some pool' \<and>
+          casid_pool_relation (ASIDPool pool) pool'"
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
+  apply (erule (1) cmap_relation_ko_atE)
+  apply clarsimp
+  done
+
+lemma asid_pool_at_c_guard:
+  "\<lbrakk>asid_pool_at' p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow> c_guard (ap_Ptr p)"
+  by (fastforce intro: typ_heap_simps dest!: asid_pool_at_ko' asid_pool_at_rf_sr)
 
 lemma gsUntypedZeroRanges_rf_sr:
   "\<lbrakk> (start, end) \<in> gsUntypedZeroRanges s; (s, s') \<in> rf_sr \<rbrakk>
@@ -2217,15 +2263,6 @@ lemma heap_list_is_zero_mono:
   apply (case_tac n', simp_all)
   done
 
-lemma heap_list_h_eq_better:
-  "\<And>p. \<lbrakk> x \<in> {p..+q}; heap_list h q p = heap_list h' q p \<rbrakk>
-      \<Longrightarrow> h x = h' x"
-proof (induct q)
-  case 0 thus ?case by simp
-next
-  case (Suc n) thus ?case by (force dest: intvl_neq_start)
-qed
-
 lemma heap_list_is_zero_mono2:
   "heap_list_is_zero hmem p n
     \<Longrightarrow> {p' ..+ n'} \<le> {p ..+ n}
@@ -2246,11 +2283,17 @@ lemma arch_fault_tag_not_fault_tag_simps [simp]:
   "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_UnknownSyscall) = False"
   by (cases arch_fault ; simp add: seL4_Faults seL4_Arch_Faults)+
 
-(* FIXME: move *)
+lemma pte_at_rf_sr:
+  "\<lbrakk>ko_at' pte p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
+   \<exists>pte'. cslift s' (pte_Ptr p) = Some pte' \<and> cpte_relation pte pte'"
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
+  apply (erule (1) cmap_relation_ko_atE)
+  apply clarsimp
+  done
+
 lemma vcpu_at_rf_sr:
   "\<lbrakk>ko_at' vcpu p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
-  \<exists>vcpu'. cslift s' (vcpu_Ptr p) = Some vcpu' \<and>
-          cvcpu_relation vcpu vcpu'"
+  \<exists>vcpu'. cslift s' (vcpu_Ptr p) = Some vcpu' \<and> cvcpu_relation vcpu vcpu'"
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
   apply (erule (1) cmap_relation_ko_atE)
   apply clarsimp
@@ -2373,11 +2416,12 @@ lemma rf_sr_sched_action_relation:
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
 lemma canonical_address_tcb_ptr:
-  "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
-     canonical_address (ptr_val (tcb_ptr_to_ctcb_ptr t))"
-  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
-  apply (erule canonical_address_add)
-    apply (clarsimp simp: objBits_simps' ctcb_offset_defs canonical_bit_def)+
+  "\<lbrakk> canonical_address t; is_aligned t tcbBlockSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr_val (tcb_ptr_to_ctcb_ptr t))"
+  apply (rule canonical_address_and_maskI)
+  apply (drule canonical_address_and_maskD)
+  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def canonical_address_range tcbBlockSizeBits_def
+                        ctcb_offset_defs and_mask_plus)
   done
 
 lemma canonical_address_ctcb_ptr:
@@ -2411,40 +2455,52 @@ lemma tcb_and_not_mask_canonical:
   apply simp
   done
 
-(* FIXME: move up to TypHeap? *)
-lemma lift_t_Some_iff:
-  "lift_t g hrs p = Some v \<longleftrightarrow> hrs_htd hrs, g \<Turnstile>\<^sub>t p \<and> h_val (hrs_mem hrs) p = v"
-  unfolding hrs_htd_def hrs_mem_def by (cases hrs) (auto simp: lift_t_if)
+lemma tcb_ptr_canonical:
+  "\<lbrakk> pspace_canonical' s; tcb_at' t s \<rbrakk> \<Longrightarrow>
+   tcb_Ptr (make_canonical (ptr_val (tcb_ptr_to_ctcb_ptr t))) = tcb_ptr_to_ctcb_ptr t"
+  apply (frule (1) obj_at'_is_canonical)
+  apply (drule canonical_address_tcb_ptr)
+   apply (clarsimp simp: obj_at'_def objBits_simps' split: if_splits)
+  apply (clarsimp simp: canonical_make_canonical_idem)
+  done
 
-context
-  fixes p :: "'a::mem_type ptr"
-  fixes q :: "'b::c_type ptr"
-  fixes d g\<^sub>p g\<^sub>q
-  assumes val_p: "d,g\<^sub>p \<Turnstile>\<^sub>t p"
-  assumes val_q: "d,g\<^sub>q \<Turnstile>\<^sub>t q"
-  assumes disj: "typ_uinfo_t TYPE('a) \<bottom>\<^sub>t typ_uinfo_t TYPE('b)"
-begin
+lemma ccap_relation_capASIDBase:
+  "\<lbrakk> ccap_relation (ArchObjectCap (ASIDPoolCap p asid)) cap \<rbrakk> \<Longrightarrow>
+   capASIDBase_CL (cap_asid_pool_cap_lift cap) = asid"
+  by (clarsimp simp: cap_to_H_def Let_def cap_asid_pool_cap_lift_def
+               elim!: ccap_relationE
+               split: cap_CL.splits if_splits)
 
-lemma h_val_heap_same_typ_disj:
-  "h_val (heap_update p v h) q = h_val h q"
-  using disj by (auto intro: h_val_heap_same[OF val_p val_q]
-                       simp: tag_disj_def sub_typ_proper_def field_of_t_def typ_tag_lt_def
-                             field_of_def typ_tag_le_def)
+lemma ccap_relation_capASIDPool:
+  "\<lbrakk> ccap_relation (ArchObjectCap (ASIDPoolCap p asid)) cap \<rbrakk> \<Longrightarrow>
+   capASIDPool_CL (cap_asid_pool_cap_lift cap) = p"
+  by (clarsimp simp: cap_to_H_def Let_def cap_asid_pool_cap_lift_def
+               elim!: ccap_relationE
+               split: cap_CL.splits if_splits)
 
-lemma h_val_heap_same_hrs_mem_update_typ_disj:
-  "h_val (hrs_mem (hrs_mem_update (heap_update p v) s)) q = h_val (hrs_mem s) q"
-  by (simp add: hrs_mem_update h_val_heap_same_typ_disj)
+lemma asid_map_get_tag_neq_none[simp]:
+  "(asid_map_get_tag amap \<noteq> scast asid_map_asid_map_none) =
+   (asid_map_get_tag amap = scast asid_map_asid_map_vspace)"
+  by (simp add: asid_map_get_tag_def asid_map_tag_defs)
 
-end
+lemma asid_map_get_tag_neq_vspace[simp]:
+  "(asid_map_get_tag amap \<noteq> scast asid_map_asid_map_vspace) =
+   (asid_map_get_tag amap = scast asid_map_asid_map_none)"
+  by (simp add: asid_map_get_tag_def asid_map_tag_defs)
 
-lemmas h_t_valid_nested_fields =
-  h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]
-  h_t_valid_field[OF h_t_valid_field]
-  h_t_valid_field
+lemma asid_map_tags_neq[simp]:
+  "(scast asid_map_asid_map_vspace :: machine_word) \<noteq> scast asid_map_asid_map_none"
+  "(scast asid_map_asid_map_none :: machine_word) \<noteq> scast asid_map_asid_map_vspace"
+  by (auto simp: asid_map_tag_defs)
 
-lemmas h_t_valid_fields_clift =
-  h_t_valid_nested_fields[OF h_t_valid_clift]
-  h_t_valid_clift
+lemma casid_map_relation_None[simp]:
+  "casid_map_relation None amap = (asid_map_get_tag amap = scast asid_map_asid_map_none)"
+  by (simp add: casid_map_relation_def asid_map_lift_def Let_def split: option.splits if_splits)
+
+lemma casid_map_relation_None_lift:
+  "casid_map_relation None v = (asid_map_lift v = Some Asid_map_asid_map_none)"
+  by (clarsimp simp: casid_map_relation_def split: option.splits asid_map_CL.splits)
+
 
 (* FIXME move and share with other architectures (note: needs locale from C parse) *)
 abbreviation Basic_heap_update ::

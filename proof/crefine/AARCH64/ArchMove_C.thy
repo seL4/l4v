@@ -10,6 +10,9 @@ theory ArchMove_C
 imports Move_C
 begin
 
+lemma aligned_no_overflow_less: (* FIXME AARCH64: move to Word_Lib *)
+  "\<lbrakk> is_aligned p n; p + 2 ^ n \<noteq> 0 \<rbrakk> \<Longrightarrow> p < p + 2 ^ n"
+  by (erule word_leq_minus_one_le) (erule is_aligned_no_overflow)
 
 lemma ps_clear_is_aligned_ksPSpace_None:
   "\<lbrakk>ps_clear p n s; is_aligned p n; 0<d; d \<le> mask n\<rbrakk>
@@ -164,7 +167,7 @@ lemma more_pageBits_inner_beauty:
   apply (clarsimp simp: word_size pageBits_def)
   done
 
-(* FIXME x64: figure out where these are needed and adjust appropriately *)
+(* used in StoreWord_C *)
 lemma mask_pageBits_inner_beauty:
   "is_aligned p 3 \<Longrightarrow>
   (p && ~~ mask pageBits) + (ucast ((ucast (p && mask pageBits >> 3)):: 9 word) * 8) = (p::machine_word)"
@@ -345,18 +348,6 @@ lemma asid_shiftr_low_bits_less[simplified]:
    apply (rule shiftr_less_t2n)
    apply (simp add: le_mask_iff_lt_2n[THEN iffD1] asid_bits_def asid_low_bits_def)
   apply simp
-  done
-
-lemma getActiveIRQ_neq_Some0xFF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0xFF\<rbrace>"
-  apply (simp add: getActiveIRQ_def)
-  apply wpsimp
-  done
-
-lemma getActiveIRQ_neq_Some0x3FF:
-  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0xFF\<rbrace>"
-  apply (wpsimp simp: doMachineOp_def split_def)
-  apply (auto dest: use_valid intro: getActiveIRQ_neq_Some0xFF')
   done
 
 (* We don't have access to n_msgRegisters from C here, but the number of msg registers in C should
@@ -547,6 +538,187 @@ lemma placeNewObject_object_at_vcpu:
   "\<lbrace> \<top> \<rbrace> placeNewObject v (vcpu::vcpu) 0 \<lbrace> \<lambda>_. vcpu_at' v \<rbrace>"
   by (rule hoare_post_imp[OF _ placeNewObject_creates_object_vcpu])
      (fastforce simp: ko_at_vcpu_at'D)
+
+lemma case_option_both[simp]: (* FIXME AARCH64: move to Lib, remove duplicates *)
+  "(case f of None \<Rightarrow> P | _ \<Rightarrow> P) = P"
+  by (auto split: option.splits)
+
+lemma if_case_opt_same_branches: (* FIXME AARCH64: move to Lib, remove duplicates *)
+  "cond \<longrightarrow> Option.is_none opt \<Longrightarrow>
+   (if cond then case opt of None \<Rightarrow> f | Some x \<Rightarrow> g x else f) = f"
+  by (cases cond; cases opt; clarsimp)
+
+(* FIXME AARCH64: move these up to Refine or AInvs *)
+lemma haskell_assertE_wp[wp]:
+  "\<lbrace>\<lambda>s. F \<longrightarrow> Q () s\<rbrace> haskell_assertE F L \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  unfolding haskell_assertE_def
+  by (rule assertE_wp)
+
+(* FIXME AARCH64: this needs to exist before VSpace_R.haskell_assertE_inv, so that the crunch there
+                  does not make it [wp] *)
+lemma haskell_assertE_inv:
+  "haskell_assertE F L \<lbrace>P\<rbrace>"
+  unfolding haskell_assertE_def
+  by wpsimp
+
+lemma cte_wp_cteCap_valid:
+  "\<lbrakk> cte_wp_at' ((=) cap \<circ> cteCap) slot s; valid_objs' s \<rbrakk> \<Longrightarrow> valid_cap' cap s"
+  by (clarsimp simp: cte_wp_at_ctes_of ctes_of_valid')
+
+lemma not_VSRootPT_T_eq:
+  "(pt_t \<noteq> VSRootPT_T) = (pt_t = NormalPT_T)"
+  by (cases pt_t; simp)
+
+lemma unat_of_nat_pt_bits_mw:
+  "unat (of_nat (pt_bits pt_t)::machine_word) = pt_bits pt_t"
+  by (rule unat_of_nat_eq) (simp add: bit_simps split: if_split)
+
+lemma unat_mask_pt_bits_shift_neq_0[simp]:
+  "0 < unat (mask (pt_bits pt_t) >> pte_bits :: machine_word)"
+  by (simp add: bit_simps mask_def split: if_split)
+
+lemma pptrBaseOffset_alignment_pt_bits[simp, intro!]:
+  "pt_bits pt_t \<le> pptrBaseOffset_alignment"
+  by (simp add: bit_simps pptrBaseOffset_alignment_def split: if_split)
+
+lemma canonical_address_mask_shift:
+  "\<lbrakk> canonical_address p; is_aligned p m'; m \<le> m'; n + m = Suc canonical_bit; 0 < n \<rbrakk> \<Longrightarrow>
+   p && (mask n << m) = p"
+  apply (prop_tac "m = Suc canonical_bit - n", arith)
+  apply (simp add: canonical_address_def canonical_address_of_def canonical_bit_def)
+  apply word_eqI
+  apply (rule iffI; clarsimp)
+  apply (rename_tac n')
+  apply (prop_tac "n' < 48", fastforce)
+  apply fastforce
+  done
+
+schematic_goal pptrUserTop_val:
+  "pptrUserTop = numeral ?n"
+  by (simp add: pptrUserTop_def mask_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
+           del: word_eq_numeral_iff_iszero)
+
+lemma user_region_canonical:
+  "p \<in> user_region \<Longrightarrow> canonical_address p"
+  apply (simp add: canonical_address_range user_region_def canonical_user_def)
+  apply (erule order_trans)
+  apply (rule mask_mono)
+  apply (simp add: ipa_size_def canonical_bit_def split: if_split)
+  done
+
+lemma pptrUserTop_eq_mask_ipa_size:
+  "pptrUserTop = mask ipa_size"
+  by (simp add: pptrUserTop_def ipa_size_def)
+
+lemma mask_pptrUserTop_user_region:
+  "\<lbrakk> is_aligned v n; v + mask n \<le> pptrUserTop \<rbrakk> \<Longrightarrow> v \<in> user_region"
+  apply (simp add: user_region_def canonical_user_def pptrUserTop_eq_mask_ipa_size
+                   word_and_or_mask_aligned)
+  apply (simp flip: and_mask_eq_iff_le_mask)
+  apply word_eqI_solve
+  done
+
+lemma canonical_address_pptrUserTop_mask:
+  "\<lbrakk> p + 2^n - 1 \<le> pptrUserTop; is_aligned p n \<rbrakk> \<Longrightarrow> canonical_address p"
+  apply (rule user_region_canonical)
+  apply (erule mask_pptrUserTop_user_region)
+  apply (simp add: mask_def field_simps)
+  done
+
+lemma isVTableRoot_ex:
+  "isVTableRoot cap = (\<exists>p m. cap = ArchObjectCap (PageTableCap p VSRootPT_T m))"
+  by (simp add: isVTableRoot_def split: capability.splits arch_capability.splits pt_type.splits)
+
+lemma isVTableRoot_cap_eq:
+  "isVTableRoot cap =
+     (isArchObjectCap cap \<and> isPageTableCap (capCap cap) \<and> capPTType (capCap cap) = VSRootPT_T)"
+  by (auto simp: isCap_simps isVTableRoot_ex)
+
+(* FIXME AARCH64: try to make the 48 less magic *)
+lemma canonical_address_and_maskD:
+  "canonical_address p \<Longrightarrow> p && mask 48 = p"
+  apply (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def)
+  apply word_eqI
+  apply fastforce
+  done
+
+(* FIXME AARCH64: try to make the 48 less magic *)
+lemma canonical_address_and_maskI:
+  "p && mask 48 = p \<Longrightarrow> canonical_address p"
+  by (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def
+                and_mask_eq_iff_le_mask)
+
+
+lemma addrFromPPtr_canonical_in_kernel_window:
+  "\<lbrakk> pptrBase \<le> p; p < pptrTop \<rbrakk> \<Longrightarrow> canonical_address (addrFromPPtr p)"
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def paddrBase_def canonical_address_mask_eq
+                   canonical_bit_def pptrBase_def pageBits_def pptrTop_def)
+  by word_bitwise clarsimp
+
+lemma levelType_0[simp]:
+  "levelType 0 = NormalPT_T"
+  by (simp add: levelType_def maxPTLevel_def split: if_splits)
+
+lemma levelType_maxPTLevel[simp]:
+  "levelType maxPTLevel = VSRootPT_T"
+  by (simp add: levelType_def)
+
+(* FIXME AARCH64: move; could be simp *)
+lemma pt_bits_minus_pte_bits:
+  "pt_bits pt_t - pte_bits = ptTranslationBits pt_t"
+  by (simp add: bit_simps)
+
+(* FIXME AARCH64: move; could be simp *)
+lemma ptTranslationBits_plus_pte_bits:
+  "ptTranslationBits pt_t + pte_bits = pt_bits pt_t"
+  by (simp add: bit_simps)
+
+lemma page_table_pte_at':
+  "page_table_at' pt_t p s \<Longrightarrow> pte_at' p s"
+  apply (clarsimp simp: page_table_at'_def)
+  apply (erule_tac x=0 in allE)
+  apply simp
+  done
+
+lemma pte_at_ko':
+  "pte_at' p s \<Longrightarrow> \<exists>pte. ko_at' (pte::pte) p s"
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (case_tac ko; simp)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  done
+
+lemma getObject_asidpool_inv[wp]:
+  "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>rv :: asidpool. P\<rbrace>"
+  apply (rule getObject_inv)
+  apply simp
+  apply (rule loadObject_default_inv)
+  done
+
+lemma asid_pool_at_ko'_eq:
+  "(\<exists>ap :: asidpool. ko_at' ap p s) = asid_pool_at' p s"
+  apply (rule iffI)
+   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (case_tac ko, auto)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  done
+
+lemma asid_pool_at_ko':
+  "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (case_tac ko, auto)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  apply (rename_tac asidpool)
+  apply (case_tac asidpool, auto)[1]
+  done
+
+(* FIXME AARCH64: move; also add vmid_bits_def to relevant bit defs *)
+value_type vmid_bits = "size (0::vmid)"
+
+(* end of move to Refine/AInvs *)
 
 end
 

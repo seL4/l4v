@@ -118,16 +118,6 @@ lemma andCapRights_ac:
   "andCapRights a (andCapRights b c) = andCapRights b (andCapRights a c)"
   by (simp add: andCapRights_def conj_comms split: cap_rights.split)+
 
-(* FIXME: move, duplicated in CSpace_C *)
-lemma ccorres_cases:
-  assumes P:    " P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf G G' hs a b"
-  assumes notP: "\<not>P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf H H' hs a b"
-  shows "ccorres_underlying sr \<Gamma> r xf ar axf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
-                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
-                      hs a b"
-  apply (cases P, auto simp: P notP)
-  done
-
 lemma ccorres_locateSlotCap_push:
   "ccorres_underlying sr \<Gamma> r xf ar axf P P' hs
     (a >>=E (\<lambda>x. locateSlotCap cp n >>= (\<lambda>p. b p x))) c

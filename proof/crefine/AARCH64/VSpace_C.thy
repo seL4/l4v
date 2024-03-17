@@ -464,75 +464,7 @@ lemma getObject_pte_ccorres:
   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
   done
 
-lemma ptable_at_rf_sr: (* FIXME AARCH64: move to vs version *)
-  "\<lbrakk> page_table_at' NormalPT_T pt s; gsPTTypes (ksArchState s) pt = Some NormalPT_T;
-     (s, s') \<in> rf_sr \<rbrakk>
-   \<Longrightarrow> cslift s' (pt_Ptr pt) \<noteq> None"
-  apply (frule rf_sr_cpte_relation)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (drule (1) pt_array_map_relation_pt)
-   apply (frule page_table_pte_at')
-   apply (clarsimp dest!: pte_at_ko')
-   apply (drule (1) cmap_relation_ko_atD)
-   apply (clarsimp simp: page_table_at'_def)
-   apply (drule c_guard_clift)
-   apply (clarsimp simp: c_guard_def c_null_guard_def ptr_aligned_def)
-   apply (simp add: align_of_def typ_info_array array_tag_def align_td_array_tag)
-   apply clarsimp
-   apply (drule aligned_intvl_0, simp)
-   apply (clarsimp simp: bit_simps intvl_self)
-  apply simp
-  done
-
-lemma array_assertion_abs_pt: (* FIXME AARCH64: move to vs version, rename vspace to vs *)
-  "\<forall>s s'. (s, s') \<in> rf_sr
-        \<and> (page_table_at' NormalPT_T pt s \<and> gsPTTypes (ksArchState s) pt = Some NormalPT_T)
-        \<and> (n s' \<le> 2 ^ ptTranslationBits NormalPT_T \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
-    \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr pt) (n s') (hrs_htd (t_hrs_' (globals s'))))"
-  apply (intro allI impI disjCI2, clarsimp)
-  apply (drule (2) ptable_at_rf_sr, clarsimp)
-  apply (erule clift_array_assertion_imp; simp)
-  apply (rule_tac x=0 in exI, simp add: bit_simps)
-  done
-
-lemmas ccorres_move_array_assertion_pt (* FIXME AARCH64: move to vs version, rename vspace to vs *)
-    = ccorres_move_array_assertions[OF array_assertion_abs_pt]
-
-lemma array_assertion_abs_pt_gen: (* FIXME AARCH64: move to vs version, rename vspace to vs *)
-  "\<forall>s s'. (s, s') \<in> rf_sr
-        \<and> (page_table_at' pt_t pt s \<and> gsPTTypes (ksArchState s) pt = Some pt_t)
-        \<and> (n s' \<le> 2 ^ ptTranslationBits pt_t \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
-    \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr pt) (n s') (hrs_htd (t_hrs_' (globals s'))))"
-  apply (intro allI impI disjCI2, clarsimp)
-  apply (cases pt_t; simp)
-    apply (drule (2) vspace_at_rf_sr, clarsimp)
-    apply (erule clift_array_assertion_imp; simp)
-    apply (rule_tac x=0 in exI, simp add: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-  apply (drule (2) ptable_at_rf_sr, clarsimp)
-  apply (erule clift_array_assertion_imp; simp)
-  apply (rule_tac x=0 in exI, simp add: bit_simps)
-  done
-
-lemmas ccorres_move_array_assertion_pt_gen (* FIXME AARCH64: move to vs version, rename vspace to vs *)
-    = ccorres_move_array_assertions[OF array_assertion_abs_pt_gen]
-
 lemmas unat_and_mask_le_ptTrans = unat_and_mask_le[OF AARCH64.ptTranslationBits_le_machine_word]
-
-lemma levelType_0[simp]: (* FIXME AARCH64: move *)
-  "levelType 0 = NormalPT_T"
-  by (simp add: levelType_def maxPTLevel_def split: if_splits)
-
-lemma levelType_maxPTLevel[simp]: (* FIXME AARCH64: move *)
-  "levelType maxPTLevel = VSRootPT_T"
-  by (simp add: levelType_def)
-
-lemma pte_at_rf_sr: (* FIXME AARCH64: move *)
-  "\<lbrakk>ko_at' pte p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
-   \<exists>pte'. cslift s' (pte_Ptr p) = Some pte' \<and> cpte_relation pte pte'"
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
-  apply (erule (1) cmap_relation_ko_atE)
-  apply clarsimp
-  done
 
 definition mask_ptTranslationBits :: "pt_type \<Rightarrow> machine_word" where
   "mask_ptTranslationBits pt_t \<equiv> mask (ptTranslationBits pt_t)"
@@ -734,12 +666,6 @@ proof (induct level arbitrary: pt)
     done
 qed
 
-(* FIXME AARCH64: move to Wellformed_C with comment why it is not in Refine/higher (concrete value
-                  should only be used for C) *)
-schematic_goal maxPTLevel_val:
-  "maxPTLevel = numeral ?n"
-  by (simp add: maxPTLevel_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-
 lemma lookupPTSlot_ccorres:
   "ccorres (\<lambda>(bitsLeft,ptSlot) cr. bitsLeft = unat (ptBitsLeft_C cr) \<and> ptSlot_C cr = Ptr ptSlot)
      ret__struct_lookupPTSlot_ret_C_'
@@ -853,21 +779,6 @@ lemma getPoolPtr_ccorres:
   apply simp
   done
 
-(* FIXME AARCH64 move *)
-lemma asid_pool_at_ko'_eq:
-  "(\<exists>ap :: asidpool. ko_at' ap p s) = asid_pool_at' p s"
-  apply (rule iffI)
-   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  apply (case_tac ko, auto)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object, auto)[1]
-  done
-
-lemma casid_map_relation_None:
-  "casid_map_relation None v = (asid_map_lift v = Some Asid_map_asid_map_none)"
-  by (clarsimp simp: casid_map_relation_def split: option.splits asid_map_CL.splits)
-
 lemma findMapForASID_ccorres:
   "ccorres casid_map_relation ret__struct_asid_map_C_'
      (valid_arch_state' and K (asid_wf asid))
@@ -894,7 +805,8 @@ lemma findMapForASID_ccorres:
      apply (rename_tac pool)
      apply (rule ccorres_return_C; clarsimp)
     apply (wpsimp simp: asid_pool_at_ko'_eq getPoolPtr_def)
-   apply (clarsimp simp: casid_map_relation_None typ_heap_simps asid_map_lift_def)
+   apply (clarsimp simp: casid_map_relation_None_lift typ_heap_simps asid_map_lift_def
+                   simp del: casid_map_relation_None)
    apply (clarsimp simp: casid_pool_relation_def split: asid_pool_C.splits)
    apply (fastforce simp: word_and_le1 array_relation_def mask_2pm1[symmetric])
   apply (clarsimp simp: asid_wf_table_guard valid_arch_state'_def valid_asid_table'_def ran_def)
@@ -987,46 +899,6 @@ lemma ccorres_from_vcg_might_throw:
 end
 
 context kernel_m begin
-
-(* FIXME AARCH64: move *)
-lemma ccorres_h_t_valid_armKSGlobalUserVSpace:
-  "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
-   ccorres r xf P P' hs f (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c armKSGlobalUserVSpace_Ptr} f';; g')"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_move_c_guards[where P = \<top>])
-    apply clarsimp
-    apply assumption
-   apply simp
-  by (clarsimp simp add: rf_sr_def cstate_relation_def Let_def)
-
-(* FIXME AARCH64: MOVE copied from CSpace_RAB_C; also in other arches *)
-lemma ccorres_gen_asm_state:
-  assumes rl: "\<And>s. P s \<Longrightarrow> ccorres r xf G G' hs a c"
-  shows "ccorres r xf (G and P) G' hs a c"
-proof (rule ccorres_guard_imp2)
-  show "ccorres r xf (G and (\<lambda>_. \<exists>s. P s)) G' hs a c"
-    apply (rule ccorres_gen_asm)
-    apply (erule exE)
-    apply (erule rl)
-    done
-next
-  fix s s'
-  assume "(s, s') \<in> rf_sr" and "(G and P) s" and "s' \<in> G'"
-  thus "(G and (\<lambda>_. \<exists>s. P s)) s \<and> s' \<in> G'"
-    by fastforce
-qed
-
-(* FIXME AARCH64: move, duplicates in Ipc_C and Tcb_C; also other arches *)
-lemma ccorres_abstract_known:
-  "\<lbrakk> \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' g (g' rv'); ccorres rvr xf P P' hs f (g' val) \<rbrakk>
-     \<Longrightarrow> ccorres rvr xf P (P' \<inter> {s. xf' s = val}) hs f g"
-  apply (rule ccorres_guard_imp2)
-   apply (rule_tac xf'=xf' in ccorres_abstract)
-    apply assumption
-   apply (rule_tac P="rv' = val" in ccorres_gen_asm2)
-   apply simp
-  apply simp
-  done
 
 lemma isValidVTableRoot_def2:
   "isValidVTableRoot cap =
@@ -1142,33 +1014,6 @@ lemma ccorres_pre_gets_armKSNextVMID_ksArchState:
   apply clarsimp
   done
 
-(* FIXME AARCH64: move *)
-lemma asid_pool_at_rf_sr:
-  "\<lbrakk>ko_at' (ASIDPool pool) p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
-  \<exists>pool'. cslift s' (ap_Ptr p) = Some pool' \<and>
-          casid_pool_relation (ASIDPool pool) pool'"
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
-  apply (erule (1) cmap_relation_ko_atE)
-  apply clarsimp
-  done
-
-(* FIXME AARCH64: move *)
-lemma asid_pool_at_ko:
-  "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  apply (case_tac ko, auto)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object, auto)[1]
-  apply (rename_tac asidpool)
-  apply (case_tac asidpool, auto)[1]
-  done
-
-(* FIXME AARCH64: move *)
-lemma asid_pool_at_c_guard:
-  "\<lbrakk>asid_pool_at' p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow> c_guard (ap_Ptr p)"
-  by (fastforce intro: typ_heap_simps dest!: asid_pool_at_ko asid_pool_at_rf_sr)
-
-(* FIXME AARCH64: move *)
 lemma setObjectASID_Basic_ccorres:
   "ccorres dc xfdc \<top> {s. f s = p \<and> casid_pool_relation pool (asid_pool_C.asid_pool_C (pool' s))} hs
      (setObject p pool)
@@ -1554,27 +1399,6 @@ lemma getHWASID_ccorres:
                   split: if_split)
   done
 
-(* FIXME AARCH64: move up, try to make the 48 less magic *)
-lemma canonical_address_and_maskD:
-  "canonical_address p \<Longrightarrow> p && mask 48 = p"
-  apply (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def)
-  apply word_eqI
-  apply fastforce
-  done
-
-(* FIXME AARCH64: move up, try to make the 48 less magic *)
-lemma canonical_address_and_maskI:
-  "p && mask 48 = p \<Longrightarrow> canonical_address p"
-  by (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def
-                and_mask_eq_iff_le_mask)
-
-
-lemma addrFromPPtr_canonical_in_kernel_window:
-  "\<lbrakk> pptrBase \<le> p; p < pptrTop \<rbrakk> \<Longrightarrow> canonical_address (addrFromPPtr p)"
-  apply (simp add: addrFromPPtr_def pptrBaseOffset_def paddrBase_def canonical_address_mask_eq
-                   canonical_bit_def pptrBase_def pageBits_def pptrTop_def)
-  by word_bitwise clarsimp
-
 lemma armv_contextSwitch_ccorres:
   "ccorres dc xfdc
            (valid_arch_state' and
@@ -1700,14 +1524,6 @@ lemma setVMRoot_ccorres:
                      cap_vspace_cap_lift_def isCap_simps isZombieTCB_C_def Let_def
               elim!: ccap_relationE
               split: if_split_asm cap_CL.splits)
-
-lemma pptrBaseOffset_cacheLineSize_aligned[simp]: (* FIXME AARCH64: move *)
-  "pptrBaseOffset && mask cacheLineSize = 0"
-  by (simp add: pptrBaseOffset_def paddrBase_def pptrBase_def cacheLineSize_def mask_def)
-
-lemma ptrFromPAddr_mask_cacheLineSize[simp]: (* FIXME AARCH64: move *)
-  "ptrFromPAddr v && mask cacheLineSize = v && mask cacheLineSize"
-  by (simp add: ptrFromPAddr_def add_mask_ignore)
 
 (* FIXME: move *)
 lemma register_from_H_bound[simp]:
@@ -2130,57 +1946,6 @@ lemma performPageInvocationUnmap_ccorres:
                         c_valid_cap_def cl_valid_cap_def wellformed_mapdata'_def)
   done
 
-(* FIXME AARCH64 incorporate whichever of these are needed (from RISCV64 and ARM_HYP), remove rest
-
-lemma RISCVGetWriteFromVMRights_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call ArmGetWriteFromVMRights_'proc
-  \<lbrace> \<acute>ret__unsigned_long = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
-  supply if_cong[cong]
-  apply vcg
-  apply (simp add: vmrights_to_H_def writable_from_vm_rights_def Kernel_C.VMKernelOnly_def
-                   Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
-  apply (drule word_less_cases, auto)+
-  done
-
-lemma RISCVGetReadFromVMRights_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call RISCVGetReadFromVMRights_'proc
-  \<lbrace> \<acute>ret__unsigned_long = readable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
-  supply if_cong[cong]
-  apply vcg
-  apply (simp add: vmrights_to_H_def readable_from_vm_rights_def Kernel_C.VMKernelOnly_def
-                   Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
-  apply (drule word_less_cases, auto)+
-  done
-
-lemma writable_from_vm_rights_mask:
-  "(writable_from_vm_rights R) && 1 = (writable_from_vm_rights R :: machine_word)"
-  by (simp add: writable_from_vm_rights_def split: vmrights.splits)
-
-lemma readable_from_vm_rights_mask:
-  "(readable_from_vm_rights R) && 1 = (readable_from_vm_rights R :: machine_word)"
-  by (simp add: readable_from_vm_rights_def split: vmrights.splits)
-
-lemma user_from_vm_rights_mask:
-  "user_from_vm_rights R && 1 = (user_from_vm_rights R :: machine_word)"
-  by (simp add: user_from_vm_rights_def split: vmrights.splits)
-
-lemma HAPFromVMRights_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4\<rbrace> Call HAPFromVMRights_'proc
-  \<lbrace> \<acute>ret__unsigned_long = hap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
-  apply vcg
-  apply (simp add: vmrights_to_H_def hap_from_vm_rights_def
-                   Kernel_C.VMNoAccess_def Kernel_C.VMKernelOnly_def
-                   Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
-  apply clarsimp
-  apply (drule word_less_cases, auto)+
-  done
-
-lemma hap_from_vm_rights_mask:
-  "hap_from_vm_rights R && 3 = (hap_from_vm_rights R :: word32)"
-  by (simp add: hap_from_vm_rights_def split: vmrights.splits)
-
-*)
-
 lemma APFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 2 \<rbrace> Call APFromVMRights_'proc
   \<lbrace> \<acute>ret__unsigned_long = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
@@ -2323,10 +2088,6 @@ lemma page_table_at'_array_assertion:
   using assms
   by (fastforce intro: array_assertion_abs_vspace[where x="\<lambda>_. (1::nat)", simplified, rule_format])
 
-lemma isVTableRoot_ex:
-  "isVTableRoot cap = (\<exists>p m. cap = ArchObjectCap (PageTableCap p VSRootPT_T m))"
-  by (simp add: isVTableRoot_def split: capability.splits arch_capability.splits pt_type.splits)
-
 lemma cap_lift_VSCap_Base:
   "\<lbrakk> cap_to_H cap_cl = ArchObjectCap (PageTableCap p VSRootPT_T asid);
      cap_lift cap_c = Some cap_cl \<rbrakk>
@@ -2425,12 +2186,11 @@ lemma ccap_relation_vspace_mapped_asid:
   by (frule cap_get_tag_isCap_unfolded_H_cap)
      (clarsimp simp: cap_vspace_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
 
-(* FIXME AARCH64 potentially unused *)
-lemma ccap_relation_page_table_mapped_asid:
-  "ccap_relation (ArchObjectCap (PageTableCap p NormalPT_T (Some (asid, vspace)))) cap
-    \<Longrightarrow> asid = capPTMappedASID_CL (cap_page_table_cap_lift cap)"
+lemma ccap_relation_vspace_base:
+  "ccap_relation (ArchObjectCap (PageTableCap p VSRootPT_T m)) cap
+    \<Longrightarrow> capVSBasePtr_CL (cap_vspace_cap_lift cap) = p"
   by (frule cap_get_tag_isCap_unfolded_H_cap)
-     (clarsimp simp: cap_page_table_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
+     (clarsimp simp: cap_vspace_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
 
 lemma performPageTableInvocationMap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -2461,7 +2221,7 @@ lemma performPageTableInvocationMap_ccorres:
 (* FIXME AARCH64 VCPU/HYP related block (everything from VSpace_C on ARM_HYP) adapted to AARCH64
    some of these might be needed earlier *)
 
-(* FIXME AARCH64 move, potentially to a VCPU theory
+(* FIXME AARCH64: potentially put this into a VCPU theory
    if we try move most of the VCPU lemmas into a VCPU theory, some might need items in this or later
    theories, meaning we'd need a VCPU low (maybe put into ArchAcc?) and VCPU high theory
  *)
@@ -2486,7 +2246,6 @@ lemma vcpu_hrs_mem_update_helper:
   apply simp
   done
 
-(* FIXME AARCH64 move *)
 lemmas setObject_ccorres_helper_vcpu =
          setObject_ccorres_helper[where 'a=vcpu, simplified objBits_simps vcpuBits_def, simplified]
 

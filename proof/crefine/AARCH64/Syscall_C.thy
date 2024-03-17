@@ -1565,20 +1565,6 @@ lemma ucast_maxIRQ_is_not_less:
   apply (erule notE)
   using ucast_up_mono by fastforce
 
-(* FIXME AARCH64 move *)
-lemma ccorres_return_void_C_Seq:
-  "ccorres_underlying sr \<Gamma> r rvxf arrel xf P P' hs X (return_void_C) \<Longrightarrow>
-      ccorres_underlying sr \<Gamma> r rvxf arrel xf P P' hs X (return_void_C ;; Z)"
-  apply (clarsimp simp: return_void_C_def)
-  apply (erule ccorres_semantic_equiv0[rotated])
-  apply (rule semantic_equivI)
-  apply (clarsimp simp: exec_assoc[symmetric])
-  apply (rule exec_Seq_cong, simp)
-  apply (rule iffI)
-   apply (auto elim!:exec_Normal_elim_cases intro: exec.Throw exec.Seq)[1]
-  apply (auto elim!:exec_Normal_elim_cases intro: exec.Throw)
- done
-
 lemma get_gic_vcpu_ctrl_misr_invs'[wp]:
   "valid invs' (doMachineOp get_gic_vcpu_ctrl_misr) (\<lambda>_. invs')"
   by (simp add: get_gic_vcpu_ctrl_misr_def doMachineOp_def split_def select_f_returns | wp)+

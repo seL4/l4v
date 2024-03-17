@@ -236,10 +236,9 @@ lemma mapM_getRegister_simple:
                    bind_def return_def)
   done
 
-(* FIXME AARCH64: confirm this formulation is not needed compared to existing setRegister_simple
 lemma setRegister_simple:
-  "setRegister r v = (\<lambda>con. ({((), UserContext ((user_regs con)(r := v)))}, False))"
-  by (simp add: setRegister_def simpler_modify_def) *)
+  "setRegister r v = (\<lambda>con. ({((), UserContext (fpu_state con) ((user_regs con)(r := v)))}, False))"
+  by (simp add: setRegister_def simpler_modify_def)
 
 lemma zipWithM_setRegister_simple:
   "zipWithM_x setRegister rs vs
@@ -963,14 +962,6 @@ lemma cap_case_isPageTableCap:
   apply (case_tac option; simp)
   done
 
-(* FIXME AARCH64 move *)
-lemma getObject_asidpool_inv[wp]:
-  "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: asidpool). P\<rbrace>"
-  apply (rule getObject_inv)
-  apply simp
-  apply (rule loadObject_default_inv)
-  done
-
 lemma armContextSwitch_isolatable:
   "thread_actions_isolatable idx (armContextSwitch p asid)"
   supply if_split[split del]
@@ -991,7 +982,7 @@ lemma armContextSwitch_isolatable:
 
 lemma setVMRoot_isolatable:
   "thread_actions_isolatable idx (setVMRoot t)"
-  supply if_split[split del]
+  supply if_split[split del] haskell_assertE_inv[wp]
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def
                    locateSlot_conv getSlotCap_def
                    if_bool_simps cap_case_isPageTableCap

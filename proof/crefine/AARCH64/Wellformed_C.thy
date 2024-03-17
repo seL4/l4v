@@ -17,12 +17,13 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME AARCH64: this could also go into Invariants_H *)
 (* Takes an address and ensures it can be given to a function expecting a canonical address.
    Canonical addresses on 64-bit machines aren't really 64-bit, due to bus sizes. Hence, structures
    used by the bitfield generator will use packed addresses, resulting in this mask in the C code
    on AARCH64 (which would be a cast plus sign-extension on X64 and RISCV64).
-   For our spec rules, it's better to wrap the magic numbers if possible. *)
+   For our spec rules, it's better to wrap the magic numbers if possible.
+
+   Dependency-wise this could also go into Invariants_H, but we want to limit its use to CRefine. *)
 definition make_canonical :: "machine_word \<Rightarrow> machine_word" where
   "make_canonical p \<equiv> p && mask (Suc canonical_bit)"
 
@@ -636,10 +637,48 @@ where
 definition cacheLineSize :: nat where
   "cacheLineSize \<equiv> 6"
 
+lemma addrFromPPtr_mask_cacheLineSize:
+  "addrFromPPtr ptr && mask cacheLineSize = ptr && mask cacheLineSize"
+  apply (simp add: addrFromPPtr_def AARCH64.pptrBase_def pptrBaseOffset_def canonical_bit_def
+                   paddrBase_def cacheLineSize_def mask_def)
+  apply word_bitwise
+  done
+
+lemma pptrBaseOffset_cacheLineSize_aligned[simp]:
+  "pptrBaseOffset && mask cacheLineSize = 0"
+  by (simp add: pptrBaseOffset_def paddrBase_def pptrBase_def cacheLineSize_def mask_def)
+
+lemma ptrFromPAddr_mask_cacheLineSize[simp]:
+  "ptrFromPAddr v && mask cacheLineSize = v && mask cacheLineSize"
+  by (simp add: ptrFromPAddr_def add_mask_ignore)
+
 (* The magic 4 comes out of the bitfield generator -- this applies to all versions of the kernel. *)
 lemma ThreadState_Restart_mask[simp]:
   "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
   by (simp add: ThreadState_Restart_def mask_def)
+
+lemma aligned_tcb_ctcb_not_NULL:
+  assumes "is_aligned p tcbBlockSizeBits"
+  shows "tcb_ptr_to_ctcb_ptr p \<noteq> NULL"
+proof
+  assume "tcb_ptr_to_ctcb_ptr p = NULL"
+  hence "p + ctcb_offset = 0"
+     by (simp add: tcb_ptr_to_ctcb_ptr_def)
+  moreover
+  from `is_aligned p tcbBlockSizeBits`
+  have "p + ctcb_offset = p || ctcb_offset"
+    by (rule word_and_or_mask_aligned) (simp add: ctcb_offset_defs objBits_defs mask_def)
+  moreover
+  have "ctcb_offset !! ctcb_size_bits"
+    by (simp add: ctcb_offset_defs objBits_defs)
+  ultimately
+  show False
+    by (simp add: bang_eq)
+qed
+
+lemma tcb_at_not_NULL:
+  "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> NULL"
+  by (rule aligned_tcb_ctcb_not_NULL) (rule tcb_aligned')
 
 (* generic lemmas with arch-specific consequences *)
 
@@ -656,6 +695,12 @@ schematic_goal size_frameRegisters:
   by (simp add: upto_enum_def fromEnum_def enum_register
                 AARCH64.frameRegisters_def)
      (simp add: Suc_eq_plus1)
+
+(* Could live in Refine, but we want to make sure this is only used in CRefine. Before CRefine
+   the numeral value should never be stated explicitly. *)
+schematic_goal maxPTLevel_val:
+  "maxPTLevel = numeral ?n"
+  by (simp add: maxPTLevel_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 end
 

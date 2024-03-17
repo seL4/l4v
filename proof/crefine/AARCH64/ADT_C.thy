@@ -992,7 +992,7 @@ lemma cpspace_ntfn_relation_unique:
    by (auto simp: NtfnState_Active_def NtfnState_Idle_def NtfnState_Waiting_def typ_heap_simps
                      cnotification_relation_def Let_def tcb_queue_rel'_clift_unique
                      option_to_ctcb_ptr_def valid_obj'_def valid_ntfn'_def valid_bound_tcb'_def
-                     kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
+                     tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
               split: ntfn.splits option.splits) (* long *)
 
 lemma canonical_pageBits_shift_inj:

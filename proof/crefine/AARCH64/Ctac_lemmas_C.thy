@@ -148,6 +148,38 @@ lemma array_assertion_abs_vspace:
 lemmas ccorres_move_array_assertion_vspace
     = ccorres_move_array_assertions[OF array_assertion_abs_vspace]
 
+lemma array_assertion_abs_pt:
+  "\<forall>s s'. (s, s') \<in> rf_sr
+        \<and> (page_table_at' NormalPT_T pt s \<and> gsPTTypes (ksArchState s) pt = Some NormalPT_T)
+        \<and> (n s' \<le> 2 ^ ptTranslationBits NormalPT_T \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr pt) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2, clarsimp)
+  apply (drule (2) ptable_at_rf_sr, clarsimp)
+  apply (erule clift_array_assertion_imp; simp)
+  apply (rule_tac x=0 in exI, simp add: bit_simps)
+  done
+
+lemmas ccorres_move_array_assertion_pt
+    = ccorres_move_array_assertions[OF array_assertion_abs_pt]
+
+lemma array_assertion_abs_pt_gen:
+  "\<forall>s s'. (s, s') \<in> rf_sr
+        \<and> (page_table_at' pt_t pt s \<and> gsPTTypes (ksArchState s) pt = Some pt_t)
+        \<and> (n s' \<le> 2 ^ ptTranslationBits pt_t \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr pt) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2, clarsimp)
+  apply (cases pt_t; simp)
+    apply (drule (2) vspace_at_rf_sr, clarsimp)
+    apply (erule clift_array_assertion_imp; simp)
+    apply (rule_tac x=0 in exI, simp add: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+  apply (drule (2) ptable_at_rf_sr, clarsimp)
+  apply (erule clift_array_assertion_imp; simp)
+  apply (rule_tac x=0 in exI, simp add: bit_simps)
+  done
+
+lemmas ccorres_move_array_assertion_pt_gen
+    = ccorres_move_array_assertions[OF array_assertion_abs_pt_gen]
+
 lemma move_c_guard_ap:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> asid_pool_at' (ptr_val p) s \<and> True
               \<longrightarrow> s' \<Turnstile>\<^sub>c (p :: asid_pool_C ptr)"
@@ -162,7 +194,7 @@ lemmas ccorres_move_c_guard_ap = ccorres_move_c_guards [OF move_c_guard_ap]
 
 lemma array_assertion_abs_irq:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> True
-        \<and> (n s' \<le> 64 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+        \<and> (n s' \<le> 2 ^ LENGTH(irq_len) \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
     \<longrightarrow> (x s' = 0 \<or> array_assertion intStateIRQNode_Ptr (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (intro allI impI disjCI2)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -201,6 +233,16 @@ lemma move_c_guard_vcpu:
   done
 
 lemmas ccorres_move_c_guard_vcpu = ccorres_move_c_guards[OF move_c_guard_vcpu]
+
+lemma ccorres_h_t_valid_armKSGlobalUserVSpace:
+  "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
+   ccorres r xf P P' hs f (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c armKSGlobalUserVSpace_Ptr} f';; g')"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_move_c_guards[where P = \<top>])
+    apply clarsimp
+    apply assumption
+   apply simp
+  by (clarsimp simp add: rf_sr_def cstate_relation_def Let_def)
 
 end
 

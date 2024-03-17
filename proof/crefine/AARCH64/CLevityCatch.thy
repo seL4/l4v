@@ -14,6 +14,65 @@ imports
   Boolean_C
 begin
 
+(* FIXME AARCH64: holding area for things to move to CParser/TypHeapLib or higher.
+                  Check other architectures for use. *)
+
+lemma lift_t_Some_iff:
+  "lift_t g hrs p = Some v \<longleftrightarrow> hrs_htd hrs, g \<Turnstile>\<^sub>t p \<and> h_val (hrs_mem hrs) p = v"
+  unfolding hrs_htd_def hrs_mem_def by (cases hrs) (auto simp: lift_t_if)
+
+context
+  fixes p :: "'a::mem_type ptr"
+  fixes q :: "'b::c_type ptr"
+  fixes d g\<^sub>p g\<^sub>q
+  assumes val_p: "d,g\<^sub>p \<Turnstile>\<^sub>t p"
+  assumes val_q: "d,g\<^sub>q \<Turnstile>\<^sub>t q"
+  assumes disj: "typ_uinfo_t TYPE('a) \<bottom>\<^sub>t typ_uinfo_t TYPE('b)"
+begin
+
+lemma h_val_heap_same_typ_disj:
+  "h_val (heap_update p v h) q = h_val h q"
+  using disj by (auto intro: h_val_heap_same[OF val_p val_q]
+                       simp: tag_disj_def sub_typ_proper_def field_of_t_def typ_tag_lt_def
+                             field_of_def typ_tag_le_def)
+
+lemma h_val_heap_same_hrs_mem_update_typ_disj:
+  "h_val (hrs_mem (hrs_mem_update (heap_update p v) s)) q = h_val (hrs_mem s) q"
+  by (simp add: hrs_mem_update h_val_heap_same_typ_disj)
+
+end
+
+lemmas h_t_valid_nested_fields =
+  h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]
+  h_t_valid_field[OF h_t_valid_field]
+  h_t_valid_field
+
+lemmas h_t_valid_fields_clift =
+  h_t_valid_nested_fields[OF h_t_valid_clift]
+  h_t_valid_clift
+
+lemma aligned_intvl_0:
+  "\<lbrakk> is_aligned p n; n < LENGTH('a) \<rbrakk> \<Longrightarrow>  (0 \<in> {p..+2^n}) = (p = 0)" for p::"'a::len word"
+  apply (rule iffI; clarsimp simp: intvl_def)
+   apply (drule_tac d="of_nat k" in is_aligned_add_or)
+    apply (simp add: word_less_nat_alt unat_of_nat order_le_less_trans[rotated])
+   apply word_eqI_solve
+  apply (rule_tac x=0 in exI)
+  apply simp
+  done
+
+lemma heap_list_h_eq_better: (* FIXME AARCH64: replace heap_list_h_eq *)
+  "\<And>p. \<lbrakk> x \<in> {p..+q}; heap_list h q p = heap_list h' q p \<rbrakk>
+      \<Longrightarrow> h x = h' x"
+proof (induct q)
+  case 0 thus ?case by simp
+next
+  case (Suc n) thus ?case by (force dest: intvl_neq_start)
+qed
+
+(* end holding area *)
+
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* Short-hand for  unfolding cumbersome machine constants *)
@@ -178,7 +237,6 @@ lemma option_to_ptr_simps [simp]:
   "option_to_ptr (Some x) = Ptr x"
   by (auto simp: option_to_ptr_def split: option.split)
 
-(* FIXME MOVE *)
 lemma option_to_ptr_NULL_eq:
   "\<lbrakk> option_to_ptr p = p' \<rbrakk> \<Longrightarrow> (p' = NULL) = (p = None \<or> p = Some 0)"
   unfolding option_to_ptr_def option_to_0_def

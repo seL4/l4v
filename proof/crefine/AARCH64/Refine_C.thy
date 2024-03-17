@@ -43,14 +43,14 @@ lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
-(* FIXME AARCH64 move, wrong name, original version likely useless in ArchMove_C, check *)
+(* FIXME AARCH64 move, wrong name, eliminate magic number *)
 lemma getActiveIRQ_neq_Some0xFF':
   "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x1FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply wpsimp
   using irq_oracle_max_irq
   apply (simp add: maxIRQ_def)
-  apply (drule_tac x="(Suc (irq_state s))" in spec)
+  apply (drule_tac x="Suc (irq_state s)" in spec)
   apply clarsimp
   done
 
