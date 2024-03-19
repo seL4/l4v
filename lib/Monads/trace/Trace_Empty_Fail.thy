@@ -55,6 +55,10 @@ lemma empty_failD3:
   "\<lbrakk> empty_fail f; \<not> failed (f s) \<rbrakk> \<Longrightarrow> mres (f s) \<noteq> {}"
   by (drule(1) empty_failD2, clarsimp)
 
+lemma empty_fail_not_empty:
+  "empty_fail f \<Longrightarrow> \<forall>s. f s \<noteq> {}"
+  by (auto simp: empty_fail_def mres_def)
+
 lemma empty_fail_bindD1:
   "empty_fail (a >>= b) \<Longrightarrow> empty_fail a"
   unfolding empty_fail_def bind_def
