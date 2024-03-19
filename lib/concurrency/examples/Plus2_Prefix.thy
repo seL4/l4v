@@ -24,7 +24,13 @@ text \<open>
 
   We address the issue with a ghost variable which records the number
   of increments by each thread. We use prefix refinement to relate the
-  program with ghost variable to the initial program.\<close>
+  program with ghost variable to the initial program.
+
+  Note that the programs defined here begin with an @{const env_steps}
+  and ends with @{const interference}. This is required so that they
+  can be combined with @{const parallel}; without these steps the
+  traces would not be able to be matched up and the composed program
+  would be trivially empty.\<close>
 
 definition
   "plus2 \<equiv> do
