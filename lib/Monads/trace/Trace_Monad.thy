@@ -805,6 +805,12 @@ definition Await :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,unit) tmonad" whe
 
 section "Parallel combinator"
 
+text \<open>
+  Programs combined with @{text parallel} should begin with an
+  @{const env_steps} and end with @{const interference} to be wellformed.
+  This ensures that there are at least enough enough environment steps in
+  each program for their traces to be able to be matched up; without it
+  the composed program would be trivially empty.\<close>
 definition parallel :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad" where
   "parallel f g = (\<lambda>s. {(xs, rv). \<exists>f_steps. length f_steps = length xs
     \<and> (map (\<lambda>(f_step, (id, s)). (if f_step then id else Env, s)) (zip f_steps xs), rv) \<in> f s
