@@ -4203,7 +4203,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
-    (invs and valid_untyped_inv_wcap ui
+    (invs and schact_is_rct and valid_untyped_inv_wcap ui
       (Some (cap.UntypedCap dev ptr sz idx))
          and ct_active and einvs
          and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'. ui = Invocations_A.Retype slot True
@@ -4354,7 +4354,8 @@ lemma resetUntypedCap_corres:
   apply (frule if_unsafe_then_capD'[OF ctes_of_cte_wpD], clarsimp+)
   apply (frule(1) descendants_range_ex_cte'[OF empty_descendants_range_in' _ order_refl],
         (simp add: isCap_simps add_mask_fold)+)
-  by (intro conjI impI; clarsimp)
+  apply (auto simp: descendants_range_in'_def valid_untyped'_def)
+  done
 
 end
 
@@ -4634,7 +4635,7 @@ defs archOverlap_def:
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
-     (einvs and valid_untyped_inv ui and ct_active)
+     (einvs and valid_untyped_inv ui and ct_active and schact_is_rct)
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (cases ui)
@@ -4653,6 +4654,7 @@ lemma inv_untyped_corres':
                 (cte_map cref) reset ptr_base ptr ao' us (map cte_map slots) dev"
 
     assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
+                 "schact_is_rct s"
     and   invs': "invs' s'" "ct_active' s'"
     and      sr: "(s, s') \<in> state_relation"
     and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
