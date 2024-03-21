@@ -573,6 +573,16 @@ lemma set_thread_state_cur_ct_in_cur_domain[wp]:
         wp set_scheduler_action_wp gts_wp)+
   done
 
+lemma set_thread_state_schact_is_rct:
+  "\<lbrace>schact_is_rct and (\<lambda>s. ref = cur_thread s \<longrightarrow> runnable ts )\<rbrace>
+   set_thread_state ref ts
+   \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
+  unfolding set_thread_state_def set_thread_state_ext_extended.dxo_eq
+  apply (clarsimp simp: set_thread_state_ext_def)
+  apply (wpsimp wp: set_object_wp gts_wp simp: set_scheduler_action_def)
+  apply (clarsimp simp: schact_is_rct_def st_tcb_at_def obj_at_def)
+  done
+
 lemma set_bound_notification_cur_ct_in_cur_domain[wp]:
   "\<lbrace>ct_in_cur_domain\<rbrace>
      set_bound_notification ref ts \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
