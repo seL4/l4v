@@ -1542,7 +1542,7 @@ lemma deleteObjects_ccorres':
              doMachineOp_modify modify_modify o_def ksPSpace_ksMSu_comm
              bind_assoc modify_machinestate_assert_cnodes_swap
              modify_modify_bind)
-  apply (rule ccorres_stateAssert_fwd)
+  apply (rule ccorres_stateAssert_fwd)+
   apply (rule ccorres_stateAssert_after)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
