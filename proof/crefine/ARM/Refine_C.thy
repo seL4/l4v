@@ -516,7 +516,7 @@ lemma no_fail_callKernel:
   apply (rule corres_nofail)
    apply (rule corres_guard_imp)
      apply (rule kernel_corres)
-    apply force
+    apply (force simp: schact_is_rct_def)
    apply (simp add: sch_act_simple_def)
   apply metis
   done

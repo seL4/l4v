@@ -282,8 +282,7 @@ locale ADT_IF_Refine_1 =
     "\<lbrace>K (uop_sane uop)\<rbrace> doUserOp_if uop tc \<lbrace>\<lambda>r s. (fst r) \<noteq> Some Interrupt\<rbrace>"
   and handleEvent_corres_arch_extras:
     "corres (dc \<oplus> dc)
-       (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
-              and (\<lambda>s. scheduler_action s = resume_cur_thread))
+       (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and schact_is_rct)
        (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
               and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
               and arch_extras)
@@ -293,7 +292,7 @@ begin
 lemma kernel_entry_if_corres:
   "corres (prod_lift (dc \<oplus> dc))
      (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
-            and (\<lambda>s. scheduler_action s = resume_cur_thread)
+            and schact_is_rct
             and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
      (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
             and arch_extras
@@ -320,7 +319,7 @@ lemma kernel_entry_if_corres:
          apply (wp hoare_TrueI threadSet_invs_trivial thread_set_invs_trivial thread_set_ct_running
                    threadSet_ct_running' thread_set_not_state_valid_sched hoare_vcg_const_imp_lift
                    handle_event_domain_time_inv handle_interrupt_valid_domain_time
-                | simp add: tcb_cap_cases_def | wpc | wp (once) hoare_drop_imps)+
+                | simp add: tcb_cap_cases_def schact_is_rct_def | wpc | wp (once) hoare_drop_imps)+
    apply (fastforce simp: invs_def cur_tcb_def)
   apply force
   done
@@ -340,7 +339,7 @@ lemma kernelEntry_ex_abs[wp]:
   apply (rule_tac x=sa in exI)
   apply (clarsimp simp: domain_time_rel_eq domain_list_rel_eq)
   by (fastforce simp: ct_running_related ct_idle_related schedaction_related
-                      active_from_running' active_from_running)
+                      active_from_running' active_from_running schact_is_rct_def)
 
 lemma doUserOp_if_ct_in_state[wp]:
   "doUserOp_if f tc \<lbrace>ct_in_state' st\<rbrace>"
@@ -1272,7 +1271,7 @@ lemma haskell_to_abs:
         apply (rule corres_guard_imp)
           apply (rule kernel_entry_if_corres)
          apply clarsimp
-         apply ((clarsimp simp: full_invs_if_def full_invs_if'_def)+)[2]
+         apply ((clarsimp simp: full_invs_if_def full_invs_if'_def schact_is_rct_def)+)[2]
        apply (fastforce simp: prod_lift_def)
       apply (rule kernelEntry_if_empty_fail)
      apply (simp add: kernel_handle_preemption_if_def handlePreemption_H_if_def)

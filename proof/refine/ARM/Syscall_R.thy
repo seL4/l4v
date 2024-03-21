@@ -390,7 +390,7 @@ lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and valid_invocation i
-            and simple_sched_action
+            and schact_is_rct
             and ct_active
             and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
@@ -440,7 +440,7 @@ lemma performInvocation_corres:
        apply (clarsimp simp: liftME_def)
        apply (rule corres_guard_imp)
          apply (erule invokeTCB_corres)
-        apply (simp)+
+        apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
        \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
@@ -455,7 +455,7 @@ lemma performInvocation_corres:
           apply assumption
          apply (rule corres_trivial, simp add: returnOk_def)
         apply wp+
-      apply (clarsimp+)[2]
+      apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
     apply (rule corres_guard_imp, rule performIRQControl_corres, simp+)
    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
@@ -1205,7 +1205,7 @@ crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (
 lemma handleInvocation_corres:
   "c \<longrightarrow> b \<Longrightarrow>
    corres (dc \<oplus> dc)
-          (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
+          (einvs and schact_is_rct and ct_active)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_invocation c b)
@@ -1255,14 +1255,14 @@ lemma handleInvocation_corres:
                 apply simp
                 apply wp
                apply simp
-               apply (rule_tac Q="\<lambda>rv. einvs and simple_sched_action and valid_invocation rve
+               apply (rule_tac Q="\<lambda>rv. einvs and schact_is_rct and valid_invocation rve
                                    and (\<lambda>s. thread = cur_thread s)
                                    and st_tcb_at active thread"
                           in hoare_post_imp)
                 apply (clarsimp simp: simple_from_active ct_in_state_def
                                elim!: st_tcb_weakenE)
-               apply (wp sts_st_tcb_at' set_thread_state_simple_sched_action
-                set_thread_state_active_valid_sched)
+               apply (wp sts_st_tcb_at' set_thread_state_schact_is_rct
+                         set_thread_state_active_valid_sched)
               apply (rule_tac Q="\<lambda>rv. invs' and valid_invocation' rve'
                                       and (\<lambda>s. thread = ksCurThread s)
                                       and st_tcb_at' active' thread
@@ -1368,7 +1368,7 @@ lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
 lemma handleSend_corres:
   "corres (dc \<oplus> dc)
-          (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
+          (einvs and schact_is_rct and ct_active)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
@@ -1804,7 +1804,7 @@ lemma hr_ct_active'[wp]:
   done
 
 lemma handleCall_corres:
-  "corres (dc \<oplus> dc) (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
+  "corres (dc \<oplus> dc) (einvs and schact_is_rct and ct_active)
               (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
@@ -1985,7 +1985,7 @@ lemma handleHypervisorFault_corres:
 (* FIXME: move *)
 lemma handleEvent_corres:
   "corres (dc \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
-                       (\<lambda>s. scheduler_action s = resume_cur_thread))
+                       schact_is_rct)
                       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                        (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                        (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
@@ -2056,8 +2056,6 @@ proof -
                      doMachineOp_getActiveIRQ_IRQ_active'
                     | simp
                     | simp add: imp_conjR | wp (once) hoare_drop_imps)+
-         apply force
-        apply simp
         apply (simp add: invs'_def valid_state'_def)
        apply (rule_tac corres_underlying_split)
           apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
