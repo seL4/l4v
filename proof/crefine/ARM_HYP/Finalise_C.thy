@@ -1795,12 +1795,6 @@ lemma archThreadSet_tcbVCPU_Basic_ccorres:
     apply (clarsimp simp: cvariable_relation_upd_const)
   done
 
-(* MOVE *)
-lemma update_vcpu_map_to_vcpu:
-  "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOArch (KOVCPU vcpu)))
-             = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
-  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
-
 lemma setObject_vcpuTCB_updated_Basic_ccorres:
   "ccorres dc xfdc (ko_at' (vcpuTCBPtr_update t vcpu) vcpuptr) UNIV hs
                     (setObject vcpuptr (vcpuTCBPtr_update (\<lambda>_. tptr) vcpu))
