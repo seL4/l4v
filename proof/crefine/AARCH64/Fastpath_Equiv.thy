@@ -12,9 +12,6 @@ theory Fastpath_Equiv
 imports Fastpath_Defs IsolatedThreadAction Refine.RAB_FN
 begin
 
-(* FIXME AARCH64 stub out entire file except main theorems for now, this will need a more thorough pass;
-   this file is copied from a previous investigation of a RISCV64 fastpath
-
 lemma setCTE_obj_at'_queued:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t\<rbrace> setCTE p v \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t\<rbrace>"
   unfolding setCTE_def
@@ -29,7 +26,7 @@ crunch obj_at'_not_queued: emptySlot "obj_at' (\<lambda>a. \<not> tcbQueued a) p
 lemma getEndpoint_obj_at':
   "\<lbrace>obj_at' P ptr\<rbrace> getEndpoint ptr \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (wp getEndpoint_wp)
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def )
   done
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
@@ -88,7 +85,7 @@ lemma obj_at_tcbs_of:
   "obj_at' P t s = (EX tcb. tcbs_of s t = Some tcb & P tcb)"
   apply (simp add: tcbs_of_def split: if_split)
   apply (intro conjI impI)
-   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI])
   done
 
@@ -103,7 +100,7 @@ lemma tcbs_of_ko_at':
 lemma tcbs_of_valid_tcb':
   "\<lbrakk> valid_objs' s; tcbs_of s p = Some tcb \<rbrakk> \<Longrightarrow> valid_tcb' tcb s"
   by (frule tcbs_of_ko_at')
-     (drule (1) ko_at_valid_objs', auto simp: projectKOs valid_obj'_def)
+     (drule (1) ko_at_valid_objs', auto simp: valid_obj'_def)
 
 lemma acc_CNodeCap_repr:
   "isCNodeCap cap
@@ -128,7 +125,7 @@ lemma of_bl_from_bool:
   "of_bl [x] = from_bool x"
   by (cases x, simp_all add: from_bool_def)
 
-(* FIXME RISCV64
+(* FIXME AARCH64
 lemma dmo_clearExMonitor_setCurThread_swap:
   "(do _ \<leftarrow> doMachineOp RISCV64.clearExMonitor;
                setCurThread thread
@@ -154,17 +151,10 @@ lemma bind_case_sum_rethrow:
   apply (simp add: throwError_bind split: sum.split)
   done
 
-declare empty_fail_assertE[iff]
-
 declare empty_fail_resolveAddressBits[iff]
 
-lemma lookupExtraCaps_null:
-  "msgExtraCaps info = 0 \<Longrightarrow>
-     lookupExtraCaps thread buffer info = returnOk []"
-  by (clarsimp simp: lookupExtraCaps_def
-                     getExtraCPtrs_def liftE_bindE
-                     upto_enum_step_def mapM_Nil
-              split: Types_H.message_info.split option.split)
+(* FIXME AARCH64 rename and remove *)
+lemmas lookupExtraCaps_null = lookupExtraCaps_simple_rewrite
 
 lemma isRecvEP_endpoint_case:
   "isRecvEP ep \<Longrightarrow> case_endpoint f g h ep = f (epQueue ep)"
@@ -188,7 +178,7 @@ lemma st_tcb_at_not_in_ep_queue:
   apply clarsimp
   apply (drule(1) sym_refs_ko_atD')
   apply (cases ep, simp_all add: st_tcb_at_refs_of_rev')
-   apply (fastforce simp: st_tcb_at'_def obj_at'_def projectKOs)+
+   apply (fastforce simp: st_tcb_at'_def obj_at'_def )+
   done
 
 lemma st_tcb_at_not_in_ntfn_queue:
@@ -198,7 +188,7 @@ lemma st_tcb_at_not_in_ntfn_queue:
   apply (drule(1) sym_refs_ko_atD')
   apply (clarsimp simp: st_tcb_at_refs_of_rev')
   apply (drule_tac x="(t, NTFNSignal)" in bspec, simp)
-  apply (fastforce simp: st_tcb_at'_def obj_at'_def projectKOs ko_wp_at'_def tcb_bound_refs'_def)
+  apply (fastforce simp: st_tcb_at'_def obj_at'_def  ko_wp_at'_def tcb_bound_refs'_def)
   done
 
 lemma sym_refs_upd_sD:
@@ -215,9 +205,9 @@ lemma sym_refs_upd_sD:
    apply (rule state_refs_of'_upd[where ko'="injectKO koEx" and ptr=p and s=s,
                                   THEN ssubst[where P=sym_refs], rotated 2])
      apply simp+
-   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+   apply (clarsimp simp: obj_at'_def ko_wp_at'_def )
    apply (clarsimp simp: project_inject objBits_def)
-  apply (clarsimp simp: obj_at'_def ps_clear_upd projectKOs
+  apply (clarsimp simp: obj_at'_def ps_clear_upd
                  split: if_split)
   apply (clarsimp simp: project_inject objBits_def)
   apply auto
@@ -295,7 +285,7 @@ lemma recv_ep_queued_st_tcb_at':
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def refs_of_rev')
   apply (erule_tac x=t in ballE; clarsimp?)
   apply (erule ko_wp_at'_weakenE)
-  apply (clarsimp simp: isBlockedOnReceive_def projectKOs)
+  apply (clarsimp simp: isBlockedOnReceive_def )
   done
 
 lemma valid_ep_typ_at_lift':
@@ -518,27 +508,74 @@ lemma setThreadState_runnable_bitmap_inv:
 crunches curDomain
   for (no_fail) no_fail[intro!, wp, simp]
 
-(* FIXME RISCV64 MOVE *)
+(* FIXME AARCH64 MOVE *)
 lemma setRegister_simple_modify_registers:
   "setRegister r v = (\<lambda>con. ({((), modify_registers (\<lambda>f. f(r := v)) con)}, False))"
   by (simp add: setRegister_def simpler_modify_def modify_registers_def)
 
 term "modify_registers (\<lambda>regs. foldl (\<lambda>f (r,v). f(r := v)) regs (zip rs vs)) con"
 
-(* FIXME RISCV64 MOVE *)
-thm isolate_thread_actions_asUser
+(* FIXME AARCH64 MOVE *)
 lemma zipWithM_setRegister_simple_modify_registers:
   "zipWithM_x setRegister rs vs
-      = (\<lambda>con. ({((), modify_registers (\<lambda>regs. foldl (\<lambda>f (r,v). f(r := v)) regs (zip rs vs)) con)}, False))"
+   = (\<lambda>con. ({((), modify_registers (\<lambda>regs. foldl (\<lambda>f (r,v). f(r := v)) regs (zip rs vs)) con)},
+              False))"
   apply (simp add: zipWithM_x_mapM_x)
   apply (induct ("zip rs vs"))
-   apply (simp add: mapM_x_Nil return_def)
-  apply (clarsimp simp add: mapM_x_Cons bind_def setRegister_def modify_registers_def
-                            simpler_modify_def fun_upd_def[symmetric])
-  apply (clarsimp simp add: mapM_x_Cons bind_def setRegister_def modify_registers_def
-                            simpler_modify_def fun_upd_def[symmetric])
-  (* FIXME RAF cleanup *)
+   apply (simp add: mapM_x_Nil return_def modify_registers_def)
+  apply (clarsimp simp: mapM_x_Cons bind_def setRegister_def modify_registers_def
+                        simpler_modify_def fun_upd_def[symmetric])
   done
+
+(* FIXME AARCH64 move to IsolatedThreadAction where existing setRegister_simple is commented out *)
+lemma setRegister_simple:
+  "setRegister r v = (\<lambda>con. ({((), UserContext (fpu_state con) ((user_regs con)(r := v)))}, False))"
+  by (simp add: setRegister_def simpler_modify_def)
+
+lemma no_fail_getObject_asidpool[wp]:
+  "no_fail (asid_pool_at' pool_ptr) (getObject pool_ptr :: asidpool kernel)"
+  (* FIXME AARCH64 no_fail_getObject_tcb and no_fail_getObject_vcpu don't need this at their locations
+     in Refine; move this lemma next to them and delete this supply *)
+  supply lookupAround2_same1[simp del]
+  apply (simp add: getObject_def split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp add: obj_at'_def objBits_simps' typ_at_to_obj_at_arches
+                      cong: conj_cong option.case_cong)
+  apply (rule ps_clear_lookupAround2; assumption?)
+    apply simp
+   apply (erule is_aligned_no_overflow)
+  apply clarsimp
+  done
+
+(* FIXME AARCH64 move *)
+crunches getPoolPtr
+  for (no_fail) no_fail[intro!, wp]
+
+(* FIXME AARCH64 move? *)
+lemma no_fail_getASIDPoolEntry[intro!, wp]:
+  "no_fail (\<lambda>s. 0 < asid \<and> asid_wf asid
+                \<and> ((\<forall>ap. armKSASIDTable (ksArchState s) (asidHighBitsOf asid) = Some ap
+                         \<longrightarrow> asid_pool_at' ap s)))
+           (getASIDPoolEntry asid)"
+  unfolding getASIDPoolEntry_def getPoolPtr_def
+  supply asidHighBitsOf[simp del]
+  apply (wpsimp simp: if_apply_def2 asid_wf_def)
+  apply (simp add: mask_def asid_bits_def asidRange_def)
+  done
+
+(* FIXME AARCH64 stolen from VSpace_C, both should get moved to Move_C *)
+lemma isValidVTableRoot_def2:
+  "isValidVTableRoot cap =
+   (\<exists>pt asid vref. cap = ArchObjectCap (PageTableCap pt VSRootPT_T (Some (asid,vref))))"
+  unfolding isValidVTableRoot_def
+  by (auto simp: isVTableRoot_def
+           split: capability.splits arch_capability.splits option.splits pt_type.splits)
+
+(* FIXME AARCH64: make better comment
+   We are rewriting the slow path (LHS) to the fastpath (RHS) during the Call system call.
+   We assume non-failure on the slow path side, and need to show that the fastpath side's results
+   are a subset of slow path results, and that fastpath non-failure implies slow path non-failure.
 *)
 lemma fastpath_callKernel_SysCall_corres:
   "monadic_rewrite True False
@@ -546,12 +583,16 @@ lemma fastpath_callKernel_SysCall_corres:
                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
                 and (\<lambda>s. ksDomainTime s \<noteq> 0))
      (callKernel (SyscallEvent SysCall)) (fastpaths SysCall)"
-  sorry (*
   supply if_cong[cong] option.case_cong[cong] if_split[split del]
   supply empty_fail_getMRs[wp] (* FIXME *)
   supply empty_fail_getEndpoint[wp] (* FIXME *)
+  (* rewrite callKernel as callKernel \<sqinter> callKernel, expanding only the left alternative; when slow
+     path throws, the catch goes back to slow path, which will correspond to the right alternative *)
   apply (rule monadic_rewrite_introduce_alternative[OF callKernel_def[simplified atomize_eq]])
-  apply (rule monadic_rewrite_guard_imp)
+  apply monadic_rewrite_pre
+   apply (rule monadic_rewrite_bind_alternative_l, wpsimp)
+   (* lift out fastpathKernelAssertions, we'll need them to show non-failure in fastpath checks *)
+   apply (rule monadic_rewrite_stateAssert)
    apply (simp add: handleEvent_def handleCall_def
                     handleInvocation_def liftE_bindE_handle
                     bind_assoc getMessageInfo_def)
@@ -560,6 +601,7 @@ lemma fastpath_callKernel_SysCall_corres:
                     getMessageInfo_def alternative_bind
                     fastpaths_def
               cong: if_cong)
+   (* getters such as getCurThread don't change state, so we can pull their bind out of the alternative *)
    apply (rule monadic_rewrite_bind_alternative_l, wp)
    apply (rule monadic_rewrite_bind_tail)
     apply (rule monadic_rewrite_bind_alternative_l, wp)
@@ -567,12 +609,20 @@ lemma fastpath_callKernel_SysCall_corres:
      apply (rename_tac msgInfo)
      apply (rule monadic_rewrite_bind_alternative_l, wp)
      apply (rule monadic_rewrite_bind_tail)
+      (* both sides same until we hit syscall on LHS and tcbFault check on RHS *)
       apply monadic_rewrite_symb_exec_r
        apply (rename_tac tcbFault)
+       (* clear up alternative on RHS introduced by pickFastpath *)
+       (* FIXME AARCH64 is pickFastpath needed? it seems a completely arbitrary alternative that we
+          get rid of here without further use *)
        apply (rule monadic_rewrite_alternative_r[rotated])
         apply (rule monadic_rewrite_alternative_l)
+       (* any "if P then A else callKernel" on RHS can be rewritten to A since callKernel
+          is an alternative of LHS, with P becoming an assumption of the goal *)
+       (* FIXME AARCH64: this pattern is very common, might make sense to make it a rule with a name  *)
        apply (rule monadic_rewrite_if_r[rotated])
         apply (rule monadic_rewrite_alternative_l)
+       (* unfold syscall on LHS *)
        apply (simp add: split_def Syscall_H.syscall_def
                         liftE_bindE_handle bind_assoc
                         capFaultOnFailure_def)
@@ -587,16 +637,19 @@ lemma fastpath_callKernel_SysCall_corres:
        apply (simp only: liftE_bindE_assoc)
        apply (rule monadic_rewrite_bind_alternative_l, wp)
        apply (rule monadic_rewrite_bind_tail)
-        apply (rule monadic_rewrite_bind_alternative_l)
-         apply (wp | simp)+
+        apply (rule monadic_rewrite_bind_alternative_l, wpsimp)
+        (* getting endpoint cap *)
+        (* head of LHS can be rewritten into head of RHS using fn; split off and use fn on tail of LHS *)
         apply (rule_tac fn="case_sum Inl (Inr \<circ> fst)" in monadic_rewrite_split_fn)
           apply (simp add: liftME_liftM[symmetric] liftME_def bindE_assoc)
           apply (rule monadic_rewrite_refl)
+         (* LHS checks is_Right of the result, so we can throw away Inl case *)
          apply (rule monadic_rewrite_if_r[rotated])
           apply (rule monadic_rewrite_alternative_l)
          apply (simp add: isRight_right_map isRight_case_sum)
          apply (rule monadic_rewrite_if_r[rotated])
           apply (rule monadic_rewrite_alternative_l)
+         (* can't do anything with lookupIPCBuffer on LHS right now *)
          apply (rule monadic_rewrite_bind_alternative_l[OF lookupIPC_inv])
          apply monadic_rewrite_symb_exec_l
           apply (simp add: lookupExtraCaps_null returnOk_bind liftE_bindE_handle
@@ -608,33 +661,41 @@ lemma fastpath_callKernel_SysCall_corres:
            apply (rename_tac "send_ep")
            apply (rule monadic_rewrite_if_r[rotated])
             apply (rule monadic_rewrite_alternative_l)
+           (* getThreadVSpaceRoot, check isValidVTableRoot *)
            apply (simp add: getThreadVSpaceRoot_def locateSlot_conv)
            apply monadic_rewrite_symb_exec_r
             apply (rename_tac "pdCapCTE")
             apply (rule monadic_rewrite_if_r[rotated])
              apply (rule monadic_rewrite_alternative_l)
+            (* getASIDPoolEntry, check valid root and VMID *)
             apply monadic_rewrite_symb_exec_r
+             apply (rule monadic_rewrite_if_r[rotated])
+              apply (rule monadic_rewrite_alternative_l)
+             (* check thread priorities *)
              apply monadic_rewrite_symb_exec_r
               apply monadic_rewrite_symb_exec_r
-               apply (simp add: isHighestPrio_def')
                apply monadic_rewrite_symb_exec_r
-                apply (rule monadic_rewrite_if_r[rotated])
-                 apply (rule monadic_rewrite_alternative_l)
-                apply (rule monadic_rewrite_if_r[rotated])
-                 apply (rule monadic_rewrite_alternative_l)
+                apply (simp add: isHighestPrio_def')
                 apply monadic_rewrite_symb_exec_r
                  apply (rule monadic_rewrite_if_r[rotated])
                   apply (rule monadic_rewrite_alternative_l)
-(* no longer valid on RISCV64?
+                 (* check endpoint can grant *)
+                 apply (rule monadic_rewrite_if_r[rotated])
+                  apply (rule monadic_rewrite_alternative_l)
+                 (* check both threads are in same domain *)
                  apply monadic_rewrite_symb_exec_r
                   apply (rule monadic_rewrite_if_r[rotated])
                    apply (rule monadic_rewrite_alternative_l)
-*)
+
+                  (* fastpath checks completed, no further need for callKernel alternative *)
                   apply (rule monadic_rewrite_trans,
                          rule monadic_rewrite_pick_alternative_1)
                   apply monadic_rewrite_symb_exec_l
                    (* now committed to fastpath *)
+                   (* proof proceeds by repeated rewrites (mostly of the slow path) under the
+                      assumption of that all fastpath checks succeeded *)
                    apply (rule monadic_rewrite_trans)
+                    (* strengthen rewrite proof to showing equivalence of results *)
                     apply (rule_tac F=True and E=True in monadic_rewrite_weaken_flags)
                     apply simp
                     apply (rule monadic_rewrite_bind_tail)
@@ -722,25 +783,25 @@ lemma fastpath_callKernel_SysCall_corres:
                    apply (simp add: setThreadState_runnable_simp
                                     getThreadCallerSlot_def getThreadReplySlot_def
                                     locateSlot_conv bind_assoc)
-                   apply (rule_tac P="\<lambda>v.  obj_at' (%tcb. tcbIPCBuffer tcb = v) (hd (epQueue send_ep))"
-                           in monadic_rewrite_exists_v)
+                   apply (rule_tac P="\<lambda>v. obj_at' (\<lambda>tcb. tcbIPCBuffer tcb = v) (hd (epQueue send_ep))"
+                            in monadic_rewrite_exists_v)
                    apply (rename_tac ipcBuffer)
 
-                   apply (rule_tac P="\<lambda>v.  obj_at' (\<lambda>tcb. tcbState tcb = v) (hd (epQueue send_ep))"
-                           in monadic_rewrite_exists_v)
+                   apply (rule_tac P="\<lambda>v. obj_at' (\<lambda>tcb. tcbState tcb = v) (hd (epQueue send_ep))"
+                            in monadic_rewrite_exists_v)
                    apply (rename_tac destState)
 
-                   apply (simp add: RISCV64_H.switchToThread_def bind_assoc)
-                  (* retrieving state or thread registers is not thread_action_isolatable,
-                     translate into return with suitable precondition  *)
+                   apply (simp add: AARCH64_H.switchToThread_def getTCB_threadGet bind_assoc)
+                   (* retrieving state or thread registers is not thread_action_isolatable,
+                      translate into return with suitable precondition  *)
                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
                      apply (rule_tac v=destState in monadic_rewrite_getThreadState
                             | rule monadic_rewrite_bind monadic_rewrite_refl)+
-                                    apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp (once) hoare_drop_imps)+
+                                     apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp (once) hoare_drop_imps)+
                     apply (rule_tac v=destState in monadic_rewrite_getThreadState
                            | rule monadic_rewrite_bind monadic_rewrite_refl)+
-                               apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp (once) hoare_drop_imps)+
-
+                                apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp (once) hoare_drop_imps)+
+                   (* rewrite both sides into isolate_thread_actions *)
                    apply (rule_tac P="inj (case_bool thread (hd (epQueue send_ep)))"
                             in monadic_rewrite_gen_asm)
                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
@@ -748,6 +809,9 @@ lemma fastpath_callKernel_SysCall_corres:
                      apply (rule isolate_thread_actions_rewrite_bind
                                  fastpath_isolate_rewrites fastpath_isolatables
                                  bool.simps setRegister_simple setRegister_simple_modify_registers
+                                 threadGet_vcpu_isolatable[THEN thread_actions_isolatableD, simplified o_def]
+                                 threadGet_vcpu_isolatable[simplified o_def]
+                                 vcpuSwitch_isolatable[THEN thread_actions_isolatableD] vcpuSwitch_isolatable
                                  setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable
                                  kernelExitAssertions_isolatable[THEN thread_actions_isolatableD]
@@ -756,12 +820,12 @@ lemma fastpath_callKernel_SysCall_corres:
                                  zipWithM_setRegister_simple_modify_registers
                                  thread_actions_isolatable_bind
                               | assumption
-                              | wp assert_inv)+ (* FIXME RAF this is a bit slow *)
-
+                              | wp assert_inv)+
                    apply (rule_tac P="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
-                                       \<and> tcb_at' thread s"
-                              and F=True and E=False in monadic_rewrite_weaken_flags)
+                                          \<and> tcb_at' thread s"
+                                   and F=True and E=False in monadic_rewrite_weaken_flags)
                    apply simp
+                   (* establish RHS is equivalent to LHS on all parts of isolate_thread_actions *)
                    apply (rule monadic_rewrite_isolate_final)
                      apply (simp add: isRight_case_sum cong: list.case_cong)
                     apply (clarsimp simp: fun_eq_iff if_flip
@@ -780,13 +844,19 @@ lemma fastpath_callKernel_SysCall_corres:
                     apply (clarsimp split: if_split)
                     apply (rule ext)
                     apply (simp add: badgeRegister_def msgInfoRegister_def
-                                    RISCV64.badgeRegister_def
-                                    RISCV64.msgInfoRegister_def
+                                    AARCH64.badgeRegister_def
+                                    AARCH64.msgInfoRegister_def
                              split: if_split)
                    apply simp
-                  apply (wp | simp cong: if_cong bool.case_cong
-                            | rule getCTE_wp' gts_wp' threadGet_wp
-                                  getEndpoint_wp)+
+                  (* monadic rewriting of RHS to LHS complete *)
+                  (* facts about the result of getASIDPoolEntry aren't used in the remainder of the
+                     postcondition; roughly speaking the slow path and fastpath are equivalent
+                     without this check, but the check is needed to connect to the C which uses the
+                     fetched asid pool entry *)
+                  apply (wp
+                         | simp cong: if_cong bool.case_cong
+                         | rule getCTE_wp' gts_wp' threadGet_wp getEndpoint_wp
+                         | wp (once) hoare_drop_imp[where f="getASIDPoolEntry a" for a])+
         apply (rule validE_cases_valid)
         apply (simp add: isRight_def getSlotCap_def)
         apply (wp getCTE_wp')
@@ -797,22 +867,26 @@ lemma fastpath_callKernel_SysCall_corres:
       apply (wp user_getreg_wp threadGet_wp)+
 
   apply clarsimp
-  apply (subgoal_tac "ksCurThread s \<noteq> ksIdleThread s")
-   prefer 2
+  apply (prop_tac "ksCurThread s \<noteq> ksIdleThread s")
    apply (fastforce simp: ct_in_state'_def dest: ct_running_not_idle' elim: pred_tcb'_weakenE)
-
   apply (clarsimp simp: ct_in_state'_def pred_tcb_at')
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (clarsimp simp: isCap_simps valid_cap'_def maskCapRights_def)
   apply (frule ko_at_valid_ep', clarsimp)
   apply (frule sym_refs_ko_atD'[where 'a=endpoint], clarsimp)
-  apply (clarsimp simp: valid_ep'_def isRecvEP_endpoint_case neq_Nil_conv
-                        tcbVTableSlot_def cte_level_bits_def
-                        cte_at_tcb_at_32' length_msgRegisters
-                        size_msgRegisters_def order_less_imp_le
-                        ep_q_refs_of'_def st_tcb_at_refs_of_rev'
+
+  apply (prop_tac "cte_wp_at' (\<lambda>_. True) (hd (epQueue ep) + 2 ^ cte_level_bits * tcbVTableSlot) s")
+   apply (solves \<open>clarsimp simp: valid_ep'_def isRecvEP_endpoint_case tcbVTableSlot_def
+                                 cte_level_bits_def cte_at_tcb_at_32'\<close>)
+  apply clarsimp
+  apply (frule_tac cte=ctea in ctes_of_valid, fastforce)
+  apply (clarsimp simp: isValidVTableRoot_def2 valid_cap'_def wellformed_mapdata'_def
+                        fastpathKernelAssertions_def)
+  apply (clarsimp simp: valid_ep'_def isRecvEP_endpoint_case neq_Nil_conv length_msgRegisters
+                        size_msgRegisters_def ep_q_refs_of'_def st_tcb_at_refs_of_rev'
                   cong: if_cong)
-  apply (rename_tac blockedThread ys tcba tcbb)
+
+  apply (rename_tac blockedThread ys)
   apply (frule invs_mdb')
   apply (thin_tac "Ball S P" for S P)+
   supply imp_disjL[simp del]
@@ -823,23 +897,20 @@ lemma fastpath_callKernel_SysCall_corres:
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (fold imp_disjL, intro allI impI)
 
-  apply (subgoal_tac "ksCurThread s \<noteq> blockedThread")
-   prefer 2
+  apply (prop_tac "ksCurThread s \<noteq> blockedThread")
    apply normalise_obj_at'
   apply clarsimp
   apply (frule_tac t="blockedThread" in valid_queues_not_runnable_not_queued, assumption)
-  subgoal by (fastforce simp: st_tcb_at'_def elim: obj_at'_weakenE)
-  apply (subgoal_tac "fastpathBestSwitchCandidate blockedThread s")
-   prefer 2
+   subgoal by (fastforce simp: st_tcb_at'_def elim: obj_at'_weakenE)
+  apply (prop_tac "fastpathBestSwitchCandidate blockedThread s")
    apply (rule_tac ttcb=tcbb and ctcb=tcb in fastpathBestSwitchCandidateI)
      apply (solves \<open>simp only: disj_ac\<close>)
     apply simp+
-  apply (clarsimp simp: st_tcb_at'_def obj_at'_def objBits_simps projectKOs valid_mdb'_def
+  apply (clarsimp simp: obj_at'_def objBits_simps valid_mdb'_def
                         valid_mdb_ctes_def inj_case_bool
-                 split: bool.split)+
-  done *)
+                 split: bool.split)
+  done
 
-(*
 lemma capability_case_Null_ReplyCap:
   "(case cap of NullCap \<Rightarrow> f | ReplyCap t b cg \<Rightarrow> g t b cg | _ \<Rightarrow> h)
      = (if isReplyCap cap then g (capTCBPtr cap) (capReplyMaster cap) (capReplyCanGrant cap)
@@ -897,19 +968,19 @@ lemma receiveIPC_simple_rewrite:
        apply (cases ep; simp add: isSendEP_def)
       apply (wpsimp wp: getNotification_wp gbn_wp' getEndpoint_wp
                     simp: getBoundNotification_def)+
-  apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
+  apply (clarsimp simp: obj_at'_def  pred_tcb_at'_def)
   done
 
 lemma empty_fail_isFinalCapability:
   "empty_fail (isFinalCapability cte)"
-  by (simp add: isFinalCapability_def Let_def split: if_split)
+  by (wpsimp simp: isFinalCapability_def Let_def split_del: if_split)
 
 lemma cteDeleteOne_replycap_rewrite:
   "monadic_rewrite True False
      (cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot)
      (cteDeleteOne slot)
      (emptySlot slot NullCap)"
-  supply isFinalCapability_inv[wp] empty_fail_isFinalCapability[wp] (* FIXME *)
+  supply isFinalCapability_inv[wp] empty_fail_isFinalCapability[wp]
   apply (simp add: cteDeleteOne_def)
   apply (rule monadic_rewrite_symb_exec_l)
      apply (rule_tac P="cteCap cte \<noteq> NullCap \<and> isReplyCap (cteCap cte)
@@ -1051,7 +1122,7 @@ lemma schedule_known_rewrite:
 lemma tcb_at_cte_at_offset:
   "\<lbrakk> tcb_at' t s; 2 ^ cte_level_bits * off \<in> dom tcb_cte_cases \<rbrakk>
     \<Longrightarrow> cte_at' (t + 2 ^ cte_level_bits * off) s"
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
+  apply (clarsimp simp: obj_at'_def  objBits_simps)
   apply (erule(2) cte_wp_at_tcbI')
    apply fastforce
   apply simp
@@ -1112,7 +1183,7 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
       apply (simp add: setEndpoint_def setObject_modify_assert bind_assoc
                        exec_gets assert_def exec_modify
                 split: if_split)
-      apply (auto split: if_split simp: obj_at'_def projectKOs objBits_defs
+      apply (auto split: if_split simp: obj_at'_def  objBits_defs
                     del: ext
                  intro!: arg_cong[where f=f] ext kernel_state.fold_congs)[1]
      apply wp+
@@ -1319,7 +1390,7 @@ lemma st_tcb_at_is_Reply_imp_not_tcbQueued: "\<And>s t.\<lbrakk> invs' s; st_tcb
 lemma valid_objs_ntfn_at_tcbBoundNotification:
   "ko_at' tcb t s \<Longrightarrow> valid_objs' s \<Longrightarrow> tcbBoundNotification tcb \<noteq> None
    \<Longrightarrow> ntfn_at' (the (tcbBoundNotification tcb)) s"
-  apply (drule(1) ko_at_valid_objs', simp add: projectKOs)
+  apply (drule(1) ko_at_valid_objs', simp add: )
   apply (simp add: valid_obj'_def valid_tcb'_def valid_bound_ntfn'_def)
   apply clarsimp
   done
@@ -1362,7 +1433,7 @@ lemma active_ntfn_check_wp:
    od \<lbrace>Q\<rbrace>"
   apply (rule hoare_pre)
    apply (wp getNotification_wp gbn_wp' | wpc)+
-  apply (auto simp: pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (auto simp: pred_tcb_at'_def obj_at'_def )
   done
 
 lemma tcbSchedEnqueue_tcbIPCBuffer:
@@ -1391,12 +1462,10 @@ end
 crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps)
 
-(* FIXME RISCV64: this was removed since ARM *)
-lemma getCTE_known_cap:
-  "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = cap) p\<rbrace> getCTE p \<lbrace>\<lambda>rv s. cteCap rv = cap\<rbrace>"
-  by (rule getCTE_get)
+(* FIXME AARCH64: rename and remove *)
+lemmas getCTE_known_cap = getCTE_get
 
-(* FIXME RISCV64: this was removed since ARM in RAB_FN.thy back in refine *)
+(* FIXME AARCH64: this was removed since ARM in RAB_FN.thy back in refine *)
 lemma resolveAddressBitsFn_real_cte_at':
   "resolveAddressBitsFn cap addr depth (only_cnode_caps (ctes_of s)) = Inr rv
     \<Longrightarrow> (isCNodeCap cap \<longrightarrow> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s)
@@ -1413,19 +1482,27 @@ lemma resolveAddressBitsFn_real_cte_at':
 (* FIXME move *)
 crunches getBoundNotification
   for (no_fail) no_fail[intro!, wp, simp]
-*)
+
+(* FIXME AARCH64 move to Monadic_Rewrite *)
+lemma monadic_rewrite_fail:
+  "monadic_rewrite True E \<top> fail g"
+  by (simp add: monadic_rewrite_def)
+
+(* FIXME AARCH64 pick up commentary and cleanup from fastpath_callKernel_SysCall_corres *)
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
      (invs' and ct_in_state' ((=) Running) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
          and cnode_caps_gsCNodes')
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   including no_pre
-  sorry (*
   supply if_cong[cong] option.case_cong[cong]
   supply if_split[split del]
   supply user_getreg_inv[wp] (* FIXME *)
   apply (rule monadic_rewrite_introduce_alternative[OF callKernel_def[simplified atomize_eq]])
   apply (rule monadic_rewrite_guard_imp)
+   (* lift out fastpathKernelAssertions, we'll need them to show non-failure in fastpath checks *)
+   apply (rule monadic_rewrite_bind_alternative_l, wpsimp)
+   apply (rule monadic_rewrite_stateAssert)
    apply (simp add: handleEvent_def handleReply_def
                     handleRecv_def liftE_bindE_handle liftE_handle
                     bind_assoc getMessageInfo_def liftE_bind)
@@ -1492,32 +1569,30 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
             apply (rule monadic_rewrite_if_r[rotated])
              apply (rule monadic_rewrite_alternative_l)
             apply (simp add: bind_assoc)
-            apply (rule monadic_rewrite_bind_alternative_l, wp assert_inv)
-            apply (rule monadic_rewrite_assert)
             apply monadic_rewrite_symb_exec_r
              apply (rule monadic_rewrite_if_r[rotated])
               apply (rule monadic_rewrite_alternative_l)
-             apply (simp add: getThreadVSpaceRoot_def locateSlot_conv)
-             apply monadic_rewrite_symb_exec_r
-              apply (rename_tac vTableCTE)
-              apply (rule monadic_rewrite_if_r[rotated])
-               apply (rule monadic_rewrite_alternative_l)
-
+           (* getThreadVSpaceRoot, check isValidVTableRoot *)
+           apply (simp add: getThreadVSpaceRoot_def locateSlot_conv)
+           apply monadic_rewrite_symb_exec_r
+            apply (rename_tac "pdCapCTE")
+            apply (rule monadic_rewrite_if_r[rotated])
+             apply (rule monadic_rewrite_alternative_l)
+              (* getASIDPoolEntry, check valid root and VMID *)
               apply monadic_rewrite_symb_exec_r
+               apply (rule monadic_rewrite_if_r[rotated])
+                apply (rule monadic_rewrite_alternative_l)
+               (* check thread priorities *)
                apply monadic_rewrite_symb_exec_r
-                apply (simp add: isHighestPrio_def')
                 apply monadic_rewrite_symb_exec_r
-                 apply (rule monadic_rewrite_if_r[rotated])
-                  apply (rule monadic_rewrite_alternative_l)
-
+                 apply (simp add: isHighestPrio_def')
                  apply monadic_rewrite_symb_exec_r
                   apply (rule monadic_rewrite_if_r[rotated])
                    apply (rule monadic_rewrite_alternative_l)
-(* FIXME RISCV64 doesn't have some lines
+                  (* check thread domains *)
                   apply monadic_rewrite_symb_exec_r
                    apply (rule monadic_rewrite_if_r[rotated])
                     apply (rule monadic_rewrite_alternative_l)
-*)
                    apply (rule monadic_rewrite_trans,
                               rule monadic_rewrite_pick_alternative_1)
                    (* now committed to fastpath *)
@@ -1525,7 +1600,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                          in monadic_rewrite_exists_v)
                    apply (rename_tac ipcBuffer)
 
-                   apply (simp add: RISCV64_H.switchToThread_def bind_assoc)
+                   apply (simp add: AARCH64_H.switchToThread_def bind_assoc)
                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
 
                      apply (rule monadic_rewrite_bind monadic_rewrite_refl)+
@@ -1533,9 +1608,16 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                             | wp (once) hoare_drop_imps )+
 
                     apply (rule monadic_rewrite_bind monadic_rewrite_refl)+
-                               apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
-                                 | wp (once) hoare_drop_imps )+
+                                apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
+                                  | wp (once) hoare_drop_imps )+
 
+                   (* capReplyMaster (cteCap replyCTE) causes fail on slow path, so we can assume
+                      it's not a reply cap *)
+                   apply (rule_tac P="capReplyMaster (cteCap replyCTE)" in monadic_rewrite_cases)
+                    apply simp
+                    apply (rule monadic_rewrite_fail)
+                   apply (simp add: bind_assoc)
+                   apply (rule monadic_rewrite_assert)
                    apply (rule monadic_rewrite_trans)
                     apply (rule monadic_rewrite_trans)
                      apply (rule monadic_rewrite_bind_head)
@@ -1576,9 +1658,9 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                            apply wp
                           apply (rule monadic_rewrite_trans)
                            apply (rule_tac rv=rab_ret
-                                    in monadic_rewrite_gets_known[where m="NonDetMonad.lift f"
+                                    in monadic_rewrite_gets_known[where m="Nondet_Monad.lift f"
                                     for f, folded bindE_def])
-                          apply (simp add: NonDetMonad.lift_def isRight_case_sum)
+                          apply (simp add: Nondet_Monad.lift_def isRight_case_sum)
                           apply monadic_rewrite_symb_exec_l
                            apply (rename_tac ep_cap2)
                            apply (rule_tac P="cteCap ep_cap2 = cteCap ep_cap" in monadic_rewrite_gen_asm)
@@ -1620,8 +1702,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       setThreadState_no_sch_change setThreadState_obj_at_unchanged
                                       sts_st_tcb_at'_cases sts_bound_tcb_at'
                                       fastpathBestSwitchCandidate_lift[where f="setThreadState s t" for s t]
-                                      static_imp_wp hoare_vcg_all_lift hoare_vcg_imp_lift
-                                      static_imp_wp cnode_caps_gsCNodes_lift
+                                      hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
+                                      cnode_caps_gsCNodes_lift
                                       hoare_vcg_ex_lift
                           | wps)+
                            apply (strengthen imp_consequent[where Q="tcb_at' t s" for t s])
@@ -1634,8 +1716,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       emptySlot_cnode_caps
                                       user_getreg_inv asUser_typ_ats
                                       asUser_obj_at_not_queued asUser_obj_at' mapM_x_wp'
-                                      static_imp_wp hoare_vcg_all_lift hoare_vcg_imp_lift
-                                      static_imp_wp cnode_caps_gsCNodes_lift
+                                      hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
+                                      cnode_caps_gsCNodes_lift
                                       hoare_vcg_ex_lift
                                       fastpathBestSwitchCandidate_lift[where f="emptySlot a b" for a b]
                                    | simp del: comp_apply
@@ -1646,8 +1728,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                            apply (clarsimp cong: conj_cong)
                            apply ((wp user_getreg_inv asUser_typ_ats
                                       asUser_obj_at_not_queued asUser_obj_at' mapM_x_wp'
-                                      static_imp_wp hoare_vcg_all_lift hoare_vcg_imp_lift
-                                      static_imp_wp cnode_caps_gsCNodes_lift
+                                      hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
+                                      cnode_caps_gsCNodes_lift
                                       hoare_vcg_ex_lift
                                    | clarsimp simp: obj_at'_weakenE[OF _ TrueI]
                                    | solves \<open>
@@ -1656,15 +1738,15 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
 
                           apply (clarsimp | wp getCTE_wp' gts_imp')+
 
-                   apply (simp add: RISCV64_H.switchToThread_def bind_assoc)
+                   apply (simp add: AARCH64_H.switchToThread_def getTCB_threadGet bind_assoc)
                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
 
                      apply (rule monadic_rewrite_bind monadic_rewrite_refl)+
-                                     apply (wp mapM_x_wp' handleFault_obj_at'_tcbIPCBuffer getObject_inv | wpc | simp
-                                       | wp (once) hoare_drop_imps )+
+                                      apply (wp mapM_x_wp' handleFault_obj_at'_tcbIPCBuffer getObject_inv | wpc | simp
+                                        | wp (once) hoare_drop_imps )+
                     apply (rule monadic_rewrite_bind monadic_rewrite_refl)+
-                               apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
-                                 | wp (once) hoare_drop_imps )+
+                                apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
+                                  | wp (once) hoare_drop_imps )+
 
                    apply (simp add: bind_assoc catch_liftE
                                     receiveIPC_def Let_def liftM_def
@@ -1679,6 +1761,9 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (rule isolate_thread_actions_rewrite_bind
                                   fastpath_isolate_rewrites fastpath_isolatables
                                   bool.simps setRegister_simple setRegister_simple_modify_registers
+                                  threadGet_vcpu_isolatable[THEN thread_actions_isolatableD, simplified o_def]
+                                  threadGet_vcpu_isolatable[simplified o_def]
+                                  vcpuSwitch_isolatable[THEN thread_actions_isolatableD] vcpuSwitch_isolatable
                                   zipWithM_setRegister_simple
                                   zipWithM_setRegister_simple_modify_registers
                                   thread_actions_isolatable_bind
@@ -1737,8 +1822,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (clarsimp split: if_split)
                       apply (rule ext)
                       apply (simp add: badgeRegister_def msgInfoRegister_def
-                                       RISCV64.msgInfoRegister_def
-                                       RISCV64.badgeRegister_def
+                                       AARCH64.msgInfoRegister_def
+                                       AARCH64.badgeRegister_def
                                  cong: if_cong
                                 split: if_split)
                      apply simp
@@ -1746,13 +1831,19 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                           map_to_ctes_partial_overwrite)
                     apply (simp add: valid_mdb'_def valid_mdb_ctes_def)
                    apply simp
+                   (* monadic rewriting of RHS to LHS complete *)
+                   (* facts about the result of getASIDPoolEntry aren't used in the remainder of the
+                      postcondition; roughly speaking the slow path and fastpath are equivalent
+                      without this check, but the check is needed to connect to the C which uses the
+                      fetched asid pool entry *)
                    apply (simp cong: if_cong bool.case_cong
                           | rule getCTE_wp' gts_wp' threadGet_wp
                                  getEndpoint_wp gets_wp
                                  user_getreg_wp
                                  gets_the_wp gct_wp getNotification_wp
                                  return_wp liftM_wp gbn_wp'
-                          | (simp only: curDomain_def, wp)[1])+
+                          | (simp only: curDomain_def, wp)[1]
+                          | wp (once) hoare_drop_imp[where f="getASIDPoolEntry a" for a])+
 
   apply clarsimp
   apply (subgoal_tac "ksCurThread s \<noteq> ksIdleThread s")
@@ -1780,6 +1871,10 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
   apply (clarsimp simp: valid_cap_simps')
   apply (subst tcb_at_cte_at_offset,
          assumption, simp add: tcb_cte_cases_def cte_level_bits_def tcbSlots cteSizeBits_def)
+  apply clarsimp
+  apply (frule_tac cte=ctec in ctes_of_valid, fastforce)
+  apply (clarsimp simp: isValidVTableRoot_def2 valid_cap'_def wellformed_mapdata'_def
+                        fastpathKernelAssertions_def)
   apply (clarsimp simp: inj_case_bool cte_wp_at_ctes_of
                         length_msgRegisters
                         order_less_imp_le
@@ -1790,14 +1885,12 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                         length_msgRegisters size_msgRegisters_def order_less_imp_le
                         tcb_at_invs' invs_mdb'
                  split: bool.split)
-
   apply (subgoal_tac "fastpathBestSwitchCandidate v0a s")
    prefer 2
    apply normalise_obj_at'
    apply (rule_tac ttcb=tcba and ctcb=tcb in fastpathBestSwitchCandidateI)
      apply (erule disjE, blast, blast)
     apply simp+
-
   apply (clarsimp simp: obj_at_tcbs_of tcbSlots
                         cte_level_bits_def)
   apply (frule(1) st_tcb_at_is_Reply_imp_not_tcbQueued)
@@ -1805,7 +1898,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                         cte_level_bits_def)
   done
 
-end *)
+end
 
 lemma cnode_caps_gsCNodes_from_sr:
   "\<lbrakk> valid_objs s; (s, s') \<in> state_relation \<rbrakk> \<Longrightarrow> cnode_caps_gsCNodes' s'"
