@@ -853,7 +853,7 @@ lemma ccorres_get_registers:
            obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb AARCH64_H.capRegister = cptr
                       \<and>   (user_regs o atcbContextGet o tcbArch) tcb AARCH64_H.msgInfoRegister = msgInfo)
              (ksCurThread s) s) and R)
-     (UNIV \<inter> \<lbrace>\<acute>cptr = cptr\<rbrace> \<inter> \<lbrace>\<acute>msgInfo = msgInfo\<rbrace>) [] m c \<rbrakk>
+     (\<lbrace>\<acute>cptr = cptr\<rbrace> \<inter> \<lbrace>\<acute>msgInfo = msgInfo\<rbrace>) [] m c \<rbrakk>
       \<Longrightarrow>
    ccorres dc xfdc
      (P and Q and ct_in_state' \<top> and R)
