@@ -41,25 +41,15 @@ definition
     newVTable \<leftarrow> liftE $ getThreadVSpaceRoot dest >>= getCTE;
     unlessE (isValidVTableRoot $ cteCap newVTable) $ throwError ();
 
-\<comment> \<open> (* FIXME AARCH64 TODO *) AArch64+hyp specific tests
-    /* Need to test that the ASID is still valid */
-    asid_t asid = cap_vspace_cap_get_capVSMappedASID(newVTable);
-    asid_map_t asid_map = findMapForASID(asid);
-    if (unlikely(asid_map_get_type(asid_map) != asid_map_asid_map_vspace ||
-                 VSPACE_PTR(asid_map_asid_map_vspace_get_vspace_root(asid_map)) != cap_pd)) {
-        slowpath(SysCall);
-    }
-    /* Ensure the vmid is valid. */
-    if (unlikely(!asid_map_asid_map_vspace_get_stored_vmid_valid(asid_map))) {
-        slowpath(SysCall);
-    }
-    /* vmids are the tags used instead of hw_asids in hyp mode */
-    stored_hw_asid.words[0] = asid_map_asid_map_vspace_get_stored_hw_vmid(asid_map);
-\<close>
+    vspace_root \<leftarrow> returnOk $ capPTBasePtr $ capCap $ cteCap newVTable; \<comment> \<open>cap_pd in C\<close>
+    asid \<leftarrow> returnOk $ fst $ the $ capPTMappedAddress $ capCap $ cteCap newVTable;
+    ap_entry_opt \<leftarrow> liftE $ getASIDPoolEntry asid; \<comment> \<open>asid_map_t asid_map in C\<close>
+    unlessE (\<exists>ap_entry. ap_entry_opt = Some ap_entry \<and> apVSpace ap_entry = vspace_root
+                        \<and> apVMID ap_entry \<noteq> None) \<comment> \<open>C makes VMID check separate\<close>
+        $ throwError ();
+    \<comment> \<open>C code now saves the VMID from the ap_entry to stored_hw_asid.words[0] and the Haskell does
+       nothing, and these need to sync up in the preconditions of switchToThread_fp_ccorres\<close>
 
-\<^cancel>\<open> this check appears to only happen on AARCH32
-    pd \<leftarrow> returnOk $ \<^cancel>\<open>capPTBasePtr\<close> XXX $ capCap $ cteCap newVTable;
-\<close>
     curDom \<leftarrow> liftE $ curDomain;
     curPrio \<leftarrow> liftE $ threadGet tcbPriority curThread;
     destPrio \<leftarrow> liftE $ threadGet tcbPriority dest;
@@ -67,11 +57,6 @@ definition
     unlessE (destPrio \<ge> curPrio \<or> highest) $ throwError ();
     unlessE (capEPCanGrant epCap \<or> capEPCanGrantReply epCap) $ throwError ();
 
-\<^cancel>\<open> this check appears to only happen on AARCH32
-    asidMap \<leftarrow> liftE $ gets $ riscvKSASIDTable o ksArchState;
-    unlessE (\<exists>v. {hwasid. (hwasid, pd) \<in> ran asidMap} = {v})
-        $ throwError ();
-\<close>
     destDom \<leftarrow> liftE $ threadGet tcbDomain dest;
     unlessE (destDom = curDom) $ throwError ();
 
@@ -134,8 +119,10 @@ definition
     callerSlot \<leftarrow> liftE $ getThreadCallerSlot curThread;
     callerCTE \<leftarrow> liftE $ getCTE callerSlot;
     callerCap \<leftarrow> returnOk $ cteCap callerCTE;
-    unlessE (isReplyCap callerCap \<and> \<not> capReplyMaster callerCap)
-       $ throwError ();
+    \<comment> \<open>(* AArch64 does not check whether the caller cap is a ReplyMaster cap, since slow path
+          fails in that case. AArch32 C code does perform the redundant check.
+          See fastpath_reply_cap_check *)\<close>
+    unlessE (isReplyCap callerCap) $ throwError ();
 
     caller \<leftarrow> returnOk $ capTCBPtr callerCap;
     callerFault \<leftarrow> liftE $ threadGet tcbFault caller;
@@ -143,35 +130,20 @@ definition
     newVTable \<leftarrow> liftE $ getThreadVSpaceRoot caller >>= getCTE;
     unlessE (isValidVTableRoot $ cteCap newVTable) $ throwError ();
 
+    vspace_root \<leftarrow> returnOk $ capPTBasePtr $ capCap $ cteCap newVTable; \<comment> \<open>cap_pd in C\<close>
+    asid \<leftarrow> returnOk $ fst $ the $ capPTMappedAddress $ capCap $ cteCap newVTable;
+    ap_entry_opt \<leftarrow> liftE $ getASIDPoolEntry asid; \<comment> \<open>asid_map_t asid_map in C\<close>
+    unlessE (\<exists>ap_entry. ap_entry_opt = Some ap_entry \<and> apVSpace ap_entry = vspace_root
+                        \<and> apVMID ap_entry \<noteq> None) \<comment> \<open>C makes VMID check separate\<close>
+        $ throwError ();
+    \<comment> \<open>C code now saves the VMID from the ap_entry to stored_hw_asid.words[0] and the Haskell does
+       nothing, and these need to sync up in the preconditions of switchToThread_fp_ccorres\<close>
+
     curDom \<leftarrow> liftE $ curDomain;
     callerPrio \<leftarrow> liftE $ threadGet tcbPriority caller;
     highest \<leftarrow> liftE $ isHighestPrio curDom callerPrio;
     unlessE highest $ throwError ();
 
-\<comment> \<open> (* FIXME AARCH64 TODO *) AArch64+hyp specific tests
-    /* Need to test that the ASID is still valid */
-    asid_t asid = cap_vspace_cap_get_capVSMappedASID(newVTable);
-    asid_map_t asid_map = findMapForASID(asid);
-    if (unlikely(asid_map_get_type(asid_map) != asid_map_asid_map_vspace ||
-                 VSPACE_PTR(asid_map_asid_map_vspace_get_vspace_root(asid_map)) != cap_pd)) {
-        slowpath(SysReplyRecv);
-    }
-
-    /* Ensure the vmid is valid. */
-    if (unlikely(!asid_map_asid_map_vspace_get_stored_vmid_valid(asid_map))) {
-        slowpath(SysReplyRecv);
-    }
-
-    /* vmids are the tags used instead of hw_asids in hyp mode */
-    stored_hw_asid.words[0] = asid_map_asid_map_vspace_get_stored_hw_vmid(asid_map);
-\<close>
-
-\<^cancel>\<open> this check appears to only happen on AARCH32
-    pd \<leftarrow> returnOk $ \<^cancel>\<open>capPTBasePtr\<close> XXX $ capCap $ cteCap newVTable;
-    asidMap \<leftarrow> liftE $ gets $ riscvKSASIDTable o ksArchState;
-    unlessE (\<exists>v. {hwasid. (hwasid, pd) \<in> ran asidMap} = {v})
-        $ throwError ();
-\<close>
     callerDom \<leftarrow> liftE $ threadGet tcbDomain caller;
     unlessE (callerDom = curDom) $ throwError ();
     liftE $ do
