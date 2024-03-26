@@ -2536,7 +2536,7 @@ qed
 lemmas rsubst = back_subst[where a=s and b=t for s t]
 
 lemma rsubst2:
-  "\<lbrakk>P s x; s = t; x = y\<rbrakk> \<Longrightarrow> P t y"
+  "\<lbrakk>P a b; a = s; b = t\<rbrakk> \<Longrightarrow> P s t"
   by simp
 
 lemma rsubst3:
