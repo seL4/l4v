@@ -51,7 +51,7 @@ lemma threadGet_eq:
 
 lemma get_tsType_ccorres[corres]:
   "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_' (tcb_at' thread)
-           (UNIV \<inter> {s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
+           ({s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
             {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
   (getThreadState thread) (Call thread_state_get_tsType_'proc)"
   unfolding getThreadState_def
