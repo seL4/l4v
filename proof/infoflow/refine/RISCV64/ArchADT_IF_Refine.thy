@@ -374,8 +374,7 @@ lemma doUserOp_if_no_interrupt[ADT_IF_Refine_assms]:
 
 lemma handleEvent_corres_arch_extras[ADT_IF_Refine_assms]:
     "corres (dc \<oplus> dc)
-       (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
-              and (\<lambda>s. scheduler_action s = resume_cur_thread))
+       (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and schact_is_rct)
        (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
               and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
               and arch_extras)
