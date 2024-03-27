@@ -11,26 +11,27 @@
 
 ## Proof Dependencies
 
-### Linux Packages - Debian
+### Linux Packages - Debian Bullseye
 
-On **Buster** or **Bullseye**, to run all proofs against the
-**ARMv7-A** architecture you will need to install the following packages:
+On **Debian Bullseye**, to run all proofs you will need to install the following
+packages:
 
 ```bash
 sudo apt-get install \
     python3 python3-pip python3-dev \
-    gcc-arm-none-eabi build-essential libxml2-utils ccache \
+    gcc-arm-none-eabi gcc-aarch64-linux-gnu gcc-riscv64-unknown-elf \
+    build-essential libxml2-utils ccache \
     ncurses-dev librsvg2-bin device-tree-compiler cmake \
     ninja-build curl zlib1g-dev texlive-fonts-recommended \
     texlive-latex-extra texlive-metapost texlive-bibtex-extra \
     rsync
 ```
 
-There is no package for the MLton compiler on Buster or Bullseye, so you will
-need to install it from the [MLton website](http://www.mlton.org).
+There is no package for the MLton compiler on Bullseye, so you will need to
+install it from the [MLton website](http://www.mlton.org).
 
-The Haskell Stack package is unavailable on Bullseye and out-of-date on Buster,
-so you will need to install it from the [Haskell Stack
+The Haskell Stack package is unavailable on Bullseye, so you will need to
+install it from the [Haskell Stack
 website](https://docs.haskellstack.org/en/stable/).
 
 Continue with the [python setup step](#python) below.
@@ -39,13 +40,13 @@ Continue with the [python setup step](#python) below.
 
 These instructions are intended for Ubuntu LTS versions 20.04, and 22.04.
 
-To run all proofs against the **ARMv7-A** architecture you will need to install
-the following packages:
+To run all proofs you will need to install the following packages:
 
 ```bash
 sudo apt-get install \
     python3 python3-pip python3-dev \
-    gcc-arm-none-eabi build-essential libxml2-utils ccache \
+    gcc-arm-none-eabi gcc-aarch64-linux-gnu gcc-10-riscv64-linux-gnu \
+    build-essential libxml2-utils ccache \
     ncurses-dev librsvg2-bin device-tree-compiler cmake \
     ninja-build curl zlib1g-dev texlive-fonts-recommended \
     texlive-latex-extra texlive-metapost texlive-bibtex-extra \
