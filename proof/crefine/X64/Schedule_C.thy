@@ -82,24 +82,6 @@ lemma switchToThread_ccorres:
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def)
   done
 
-lemma get_tsType_ccorres2:
-  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_longlong_' (tcb_at' thread)
-           (UNIV \<inter> {s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
-            {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
-  (getThreadState thread) (Call thread_state_get_tsType_'proc)"
-  unfolding getThreadState_def
-  apply (rule ccorres_from_spec_modifies [where P=\<top>, simplified])
-     apply (rule thread_state_get_tsType_spec)
-    apply (rule thread_state_get_tsType_modifies)
-   apply simp
-  apply (frule (1) obj_at_cslift_tcb)
-  apply (clarsimp simp: typ_heap_simps)
-  apply (rule bexI [rotated, OF threadGet_eq], assumption)
-  apply simp
-  apply (drule ctcb_relation_thread_state_to_tsType)
-  apply simp
-  done
-
 lemma activateThread_ccorres:
   "ccorres dc xfdc
            (ct_in_state' activatable' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
@@ -109,7 +91,7 @@ lemma activateThread_ccorres:
            (Call activateThread_'proc)"
   apply (cinit)
    apply (rule ccorres_pre_getCurThread)
-   apply (ctac add: get_tsType_ccorres2 [where f="\<lambda>s. ksCurThread_' (globals s)"])
+   apply (ctac add: get_tsType_ccorres [where f="\<lambda>s. ksCurThread_' (globals s)"])
      apply (rule_tac P="activatable' rv" in ccorres_gen_asm)
      apply (wpc)
             apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
@@ -119,7 +101,7 @@ lemma activateThread_ccorres:
          apply (rule ccorres_cond_true)
          apply (rule ccorres_return_Skip)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-       apply (simp add: "StrictC'_thread_state_defs" del: Collect_const)
+       apply (simp add: ThreadState_defs del: Collect_const)
        apply (rule ccorres_cond_false)
        apply (rule ccorres_cond_false)
        apply (rule ccorres_cond_true)
@@ -127,7 +109,7 @@ lemma activateThread_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: activateIdleThread_def return_def)
       apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-     apply (simp add: "StrictC'_thread_state_defs" del: Collect_const)
+     apply (simp add: ThreadState_defs del: Collect_const)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_true)
      apply (rule ccorres_rhs_assoc)+
@@ -150,7 +132,7 @@ lemma activateThread_ccorres:
   apply (subgoal_tac "ksCurThread_' (globals s') = tcb_ptr_to_ctcb_ptr (ksCurThread s)")
    prefer 2
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: typ_heap_simps ThreadState_Running_def mask_def)
+  apply (clarsimp simp: typ_heap_simps ThreadState_defs mask_def)
   done
 
 lemma ceqv_Guard_UNIV_Skip:
@@ -703,10 +685,10 @@ lemma timerTick_ccorres:
   supply subst_all [simp del]
   apply (cinit)
    apply (rule ccorres_pre_getCurThread)
-   apply (ctac add: get_tsType_ccorres2 [where f="\<lambda>s. ksCurThread_' (globals s)"])
+   apply (ctac add: get_tsType_ccorres [where f="\<lambda>s. ksCurThread_' (globals s)"])
      apply (rule ccorres_split_nothrow_novcg)
          apply wpc
-                apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip)+
+                apply (simp add: ThreadState_defs, rule ccorres_cond_false, rule ccorres_return_Skip)+
              (* thread_state.Running *)
              apply simp
              apply (rule ccorres_cond_true)
@@ -738,7 +720,7 @@ lemma timerTick_ccorres:
                          threadSet_pred_tcb_at_state tcbSchedAppend_valid_objs' threadSet_valid_objs' threadSet_tcbDomain_triv
                     | clarsimp simp: st_tcb_at'_def o_def split: if_splits)+
              apply (vcg exspec=tcbSchedDequeue_modifies)
-        apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip)+
+        apply (simp add: ThreadState_defs, rule ccorres_cond_false, rule ccorres_return_Skip)+
         apply ceqv
        apply (clarsimp simp: decDomainTime_def numDomains_sge_1_simp)
        apply (rule ccorres_when[where R=\<top>])

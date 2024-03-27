@@ -732,7 +732,7 @@ lemma ctcb_relation_blocking_ipc_badge:
    apply (simp add: isBlockedOnSend_def split: Structures_H.thread_state.split_asm)
    apply (clarsimp simp: cthread_state_relation_def)
   apply (clarsimp simp add: ctcb_relation_def cthread_state_relation_def)
-  apply (cases "tcbState tcb", simp_all add: "StrictC'_thread_state_defs")
+  apply (cases "tcbState tcb", simp_all add: ThreadState_defs)
   done
 
 lemma cendpoint_relation_q_cong:

@@ -2912,7 +2912,7 @@ proof -
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
     apply (simp add: cthread_state_relation_def thread_state_lift_def
-                     eval_nat_numeral ThreadState_Inactive_def)
+                     eval_nat_numeral ThreadState_defs)
     apply (simp add: ccontext_relation_def carch_tcb_relation_def)
     apply (rule allI)
     subgoal for r

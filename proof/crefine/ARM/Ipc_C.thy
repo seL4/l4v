@@ -4020,9 +4020,7 @@ proof -
             apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' hoare_weak_lift_imp
                        threadSet_valid_objs' threadSet_weak_sch_act_wf
                          | simp add: valid_tcb_state'_def)+)[1]
-           apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def
-                                 ThreadState_Inactive_def mask_def
-                                 option_to_ctcb_ptr_def)
+           apply (clarsimp simp: guard_is_UNIV_def ThreadState_defs mask_def option_to_ctcb_ptr_def)
 
           apply (rule_tac Q="\<lambda>rv. valid_queues and tcb_at' receiver and valid_queues' and
                                 valid_objs' and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain) and
@@ -4044,7 +4042,7 @@ proof -
     apply (simp(no_asm_use) add: gs_set_assn_Delete_cstate_relation[unfolded o_def]
                                  subset_iff rf_sr_def)
    apply (clarsimp simp: guard_is_UNIV_def option_to_ptr_def option_to_0_def
-                         ThreadState_Running_def mask_def
+                         ThreadState_defs mask_def
                          ghost_assertion_data_get_def ghost_assertion_data_set_def
                          cap_tag_defs option_to_ctcb_ptr_def
                   split: option.splits)
@@ -4138,7 +4136,7 @@ lemma setupCallerCap_ccorres [corres]:
                           Kernel_C.tcbCaller_def)
    apply simp
    apply wp
-  apply (clarsimp simp: Kernel_C.ThreadState_BlockedOnReply_def mask_def
+  apply (clarsimp simp: ThreadState_defs mask_def
                         valid_pspace'_def tcbReplySlot_def
                         valid_tcb_state'_def Collect_const_mem
                         tcb_cnode_index_defs)
@@ -4346,7 +4344,7 @@ lemma sendIPC_block_ccorres_helper:
           (simp add: typ_heap_simps')+)[1]
          apply (simp add: tcb_cte_cases_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
-                         ThreadState_BlockedOnSend_def mask_def)
+                         ThreadState_defs mask_def)
        apply ceqv
       apply clarsimp
       apply ctac
@@ -4746,10 +4744,9 @@ lemma sendIPC_ccorres [corres]:
                           set_ep_valid_objs' setEndpoint_valid_mdb'
                 | wp (once) hoare_drop_imp
                 | strengthen sch_act_wf_weak)+
-       apply (fastforce simp: guard_is_UNIV_def ThreadState_Inactive_def Collect_const_mem
-                               ThreadState_Running_def mask_def from_bool_def
-                               option_to_ptr_def option_to_0_def
-                        split: bool.split_asm)
+       apply (fastforce simp: guard_is_UNIV_def ThreadState_defs Collect_const_mem
+                              mask_def option_to_ptr_def option_to_0_def
+                       split: bool.split_asm)
 
       \<comment> \<open>IdleEP case\<close>
       apply (rule ccorres_cond_true)
@@ -4901,7 +4898,7 @@ lemma receiveIPC_block_ccorres_helper:
         apply (erule(1) rf_sr_tcb_update_no_queue_gen, (simp add: typ_heap_simps)+)
          apply (simp add: tcb_cte_cases_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def ccap_relation_ep_helpers
-                         ThreadState_BlockedOnReceive_def mask_def cap_get_tag_isCap)
+                         ThreadState_defs mask_def cap_get_tag_isCap)
        apply ceqv
       apply clarsimp
       apply ctac
@@ -5499,9 +5496,8 @@ lemma receiveIPC_ccorres [corres]:
                    apply (ctac add: possibleSwitchTo_ccorres)
                   apply (wpsimp wp: sts_st_tcb' sts_valid_queues)
                  apply (vcg exspec=setThreadState_modifies)
-                apply (fastforce simp: guard_is_UNIV_def ThreadState_Inactive_def
-                                        mask_def ThreadState_Running_def cap_get_tag_isCap
-                                        ccap_relation_ep_helpers)
+                apply (fastforce simp: guard_is_UNIV_def ThreadState_defs mask_def
+                                       cap_get_tag_isCap ccap_relation_ep_helpers)
                apply (clarsimp simp: valid_tcb_state'_def)
                apply (rule_tac Q="\<lambda>_. valid_pspace' and valid_queues
                                        and st_tcb_at' ((=) sendState) sender and tcb_at' thread
@@ -5817,10 +5813,9 @@ lemma sendSignal_ccorres [corres]:
       apply (clarsimp simp: guard_is_UNIV_def option_to_ctcb_ptr_def
                             ARM_H.badgeRegister_def Kernel_C.badgeRegister_def
                             ARM.badgeRegister_def Kernel_C.R0_def
-                            "StrictC'_thread_state_defs"less_mask_eq
-                            Collect_const_mem)
+                            ThreadState_defs less_mask_eq Collect_const_mem)
       apply (case_tac ts, simp_all add: receiveBlocked_def typ_heap_simps
-                       cthread_state_relation_def "StrictC'_thread_state_defs")[1]
+                                        cthread_state_relation_def ThreadState_defs)[1]
       \<comment> \<open>ActiveNtfn case\<close>
      apply (rename_tac old_badge)
      apply (rule ccorres_cond_false)
@@ -5878,7 +5873,7 @@ lemma sendSignal_ccorres [corres]:
          sts_valid_queues tcb_in_cur_domain'_lift)[1]
       apply (wp sts_valid_queues sts_runnable)
      apply (wp setThreadState_st_tcb set_ntfn_valid_objs' | clarsimp)+
-    apply (clarsimp simp: guard_is_UNIV_def ThreadState_Running_def mask_def
+    apply (clarsimp simp: guard_is_UNIV_def ThreadState_defs mask_def
                           badgeRegister_def Kernel_C.badgeRegister_def
                           ARM.badgeRegister_def Kernel_C.R0_def)
    apply (clarsimp simp: guard_is_UNIV_def NtfnState_Idle_def
@@ -5933,7 +5928,7 @@ lemma receiveSignal_block_ccorres_helper:
           (simp add: typ_heap_simps')+)
          apply (simp add: tcb_cte_cases_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
-                         ThreadState_BlockedOnNotification_def mask_def)
+                         ThreadState_defs mask_def)
        apply ceqv
       apply clarsimp
       apply ctac
