@@ -102,7 +102,7 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
 
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y
-   \<or> isASIDControlCap y \<or> isASIDPoolCap y
+   \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isSGISignalCap y
    \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
   apply (simp add: ARM_H.deriveCap_def)
   by auto
@@ -113,9 +113,9 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
   apply (simp add: Retype_H.deriveCap_def)
   apply (clarsimp simp: empty_fail_bindE)
-  apply (case_tac "capCap y")
-      apply (simp_all add: isPageTableCap_def isPageDirectoryCap_def
-                           isPageCap_def isASIDPoolCap_def isASIDControlCap_def)
+  apply (case_tac "capCap y";
+         simp add: isPageTableCap_def isPageDirectoryCap_def isSGISignalCap_def
+                   isPageCap_def isASIDPoolCap_def isASIDControlCap_def)
   done
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: setExtraBadge, cteInsert
@@ -152,7 +152,7 @@ lemma empty_fail_getObject_pte [intro!, wp, simp]:
   by (simp add: empty_fail_getObject)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: decodeARMMMUInvocation
-(simp: Let_def ARMMMU_improve_cases)
+  (simp: Let_def)
 
 lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"

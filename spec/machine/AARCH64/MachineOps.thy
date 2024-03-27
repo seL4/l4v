@@ -131,6 +131,9 @@ definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad" where
 definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
+consts' ipiSendTarget_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition ipiSendTarget :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "ipiSendTarget sgi_irq targets \<equiv> machine_op_lift $ ipiSendTarget_impl sgi_irq targets"
 
 subsection "User Monad and Registers"
 

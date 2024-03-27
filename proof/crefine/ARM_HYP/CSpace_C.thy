@@ -519,13 +519,20 @@ lemma cap_lift_capEPBadge_mask_eq:
   unfolding cap_lift_def
   by (fastforce simp: Let_def mask_def word_bw_assocs split: if_split_asm)
 
+lemma Arch_isCapRevocable_def2:
+  "Arch.isCapRevocable cap cap' = (isArchSGISignalCap cap \<and> cap' = IRQControlCap)"
+  by (auto simp: isCap_simps split: capability.splits arch_capability.splits)
+
 lemma Arch_isCapRevocable_spec:
   "\<forall>s. \<Gamma>\<turnstile> {\<sigma>. s = \<sigma> \<and> True}
           Call Arch_isCapRevocable_'proc
         {t. \<forall>c c'.  ccap_relation c (derivedCap_' s) \<and> ccap_relation c' (srcCap_' s)
             \<longrightarrow> ret__unsigned_long_' t = from_bool (Arch.isCapRevocable c c')}"
   apply vcg
-  by auto
+  by (auto dest!: sym[where s="scast x" for x]
+           simp del: isCapRevocable_def
+           simp: cap_get_tag_isCap cap_get_tag_isCap_unfolded_H_cap isCap_simps
+                 Arch_isCapRevocable_def2 from_bool_0)
 
 method revokable'_hammer = solves \<open>(simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs,
                     rule ccorres_guard_imp, rule ccorres_return_C; clarsimp)\<close>
@@ -545,7 +552,8 @@ lemma revokable_ccorres:
     apply (rule ccorres_rhs_assoc)
     apply (clarsimp simp: isCap_simps)
     apply csymbr
-    apply (drule mp, fastforce)
+    apply (erule allE, erule allE, erule impE, fastforce)
+    apply clarsimp
     apply ccorres_rewrite
     apply (rule ccorres_return_C, clarsimp+)
   apply csymbr
@@ -738,7 +746,7 @@ schematic_goal ccap_relation_tag_Master:
                (case_arch_capability ?aa ?ab
                         (\<lambda>dev ptr rghts sz data. if sz = ARMSmallPage
                                 then scast cap_small_frame_cap else scast cap_frame_cap)
-                           ?ad ?ae ?af) ?h ?i ?j ?k
+                           ?ad ?ae ?af ?ag) ?h ?i ?j ?k
             (capMasterCap cap)"
   by (fastforce simp: ccap_relation_def map_option_Some_eq2
                      Let_def cap_lift_def cap_to_H_def
@@ -2667,6 +2675,20 @@ lemma gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage:
 
 
 
+(* 16 from bitfield gen; width of field *)
+lemma capSGITargetMask_CL_mask[simp]:
+  "cap_get_tag cap = scast cap_sgi_signal_cap \<Longrightarrow>
+   capSGITargetMask_CL (cap_sgi_signal_cap_lift cap) && mask 16 =
+   capSGITargetMask_CL (cap_sgi_signal_cap_lift cap)"
+  by (simp add: cap_sgi_signal_cap_lift_def cap_lift_def Let_def cap_tag_defs)
+
+(* 16 from bitfield gen; width of field *)
+lemma capSGIcapSGIIRQ_CL_mask[simp]:
+  "cap_get_tag cap = scast cap_sgi_signal_cap \<Longrightarrow>
+   capSGIIRQ_CL (cap_sgi_signal_cap_lift cap) && mask 16 =
+   capSGIIRQ_CL (cap_sgi_signal_cap_lift cap)"
+  by (simp add: cap_sgi_signal_cap_lift_def cap_lift_def Let_def cap_tag_defs)
+
 lemma Arch_sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>  ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                  ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
@@ -2681,6 +2703,14 @@ lemma Arch_sameRegionAs_spec:
   apply (simp add: ARM_HYP_H.sameRegionAs_def)
   subgoal for capa capb cap_b cap_a
   apply (cases capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
+
+        \<comment> \<open>capa is SGISignalCap\<close>
+        apply (find_goal \<open>match premises in "capa = SGISignalCap ?irq ?targets" \<Rightarrow> -\<close>)
+        apply (rule conjI, solves \<open>clarsimp simp: cap_tag_defs\<close>, clarsimp?)+
+        apply (frule cap_get_tag_isCap_unfolded_H_cap)
+        apply (rule conjI; clarsimp simp: from_bool_eq_if' from_bool_0 split: if_splits)
+         apply (clarsimp simp: cap_get_tag_SGISignalCap ucast_eq_mask)
+        apply (solves \<open>simp add: cap_get_tag_isCap isCap_simps\<close>)
 
   (* FIXME: add 1 indent, 1 extra VCPU goal appeared *)
   \<comment> \<open>capa is ASIDPoolCap\<close>
@@ -3515,8 +3545,9 @@ lemma sameRegionAs_spec:
    apply (clarsimp simp: from_bool_0 split: if_split bool.split)
   \<comment> \<open>capa is an IRQControlCap\<close>
   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap isCap_simps cap_tag_defs)[1]
-  apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
-  apply (fastforce simp: isArchCap_tag_def2 split: if_split)
+  apply (clarsimp simp: cap_get_tag_isCap[unfolded cap_tag_defs, simplified]
+                        isIRQControlCapDescendant_ex isCap_simps
+                  split: if_splits)
   done
 
 lemma gen_framesize_to_H_eq:
@@ -3544,49 +3575,114 @@ lemma capFSize_range:
   apply (simp add: cap_lift_def cap_tag_defs word_and_le1 mask_def)
   done
 
-lemma Arch_sameObjectAs_spec:
+lemma same_if_cond_eq:
+  "x \<noteq> y \<Longrightarrow> ((if P then x else y) = (if Q then x else y)) = (P = Q)"
+  by (simp split: if_split)
+
+(* FIXME SGI: move to Wellformed_C or similar *)
+lemma cap_tags_distinct:
+  "distinct [
+     cap_page_directory_cap,
+     cap_notification_cap,
+     cap_asid_control_cap,
+     cap_small_frame_cap,
+     cap_irq_handler_cap,
+     cap_irq_control_cap,
+     cap_sgi_signal_cap,
+     cap_page_table_cap,
+     cap_asid_pool_cap,
+     cap_endpoint_cap,
+     cap_untyped_cap,
+     cap_zombie_cap,
+     cap_thread_cap,
+     cap_domain_cap,
+     cap_reply_cap,
+     cap_frame_cap,
+     cap_cnode_cap,
+     cap_vcpu_cap,
+     cap_null_cap
+   ]"
+  by (simp add: cap_tag_defs)
+
+lemmas cap_tag_neqs =
+  cap_tags_distinct[simplified] distinct_rev[THEN iffD2, OF cap_tags_distinct, simplified]
+
+lemma from_bool_inj[simp]: (* FIXME SGI: move to Word_Lib (copies also in AARCH64) *)
+  "(from_bool x = from_bool y) = (x = y)"
+  by (auto simp: from_bool_def split: bool.splits)
+
+lemma cap_get_tag_isCap_unfolded_H_cap_page: (* FIXME SGI: move up *)
+  " \<lbrakk>ccap_relation (ArchObjectCap (PageCap v101 v34 v35 v36 v37)) cap'\<rbrakk>
+  \<Longrightarrow> cap_get_tag cap' = scast (if v36 = ARMSmallPage then cap_small_frame_cap else cap_frame_cap)"
+  by (erule ccap_relationE)
+     (clarsimp simp: cap_to_H_def cap_lift_def Let_def framesize_to_H_def split: if_splits)
+
+lemma Arch_As_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                      ccap_relation (ArchObjectCap capb) \<acute>cap_b \<and>
                      capAligned (ArchObjectCap capa) \<and>
                      capAligned (ArchObjectCap capb) \<rbrace>
   Call Arch_sameObjectAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.sameObjectAs capa capb) \<rbrace>"
+  supply cap_tag_neqs[simp] if_P_then_t_else_f_eq_t[simp]
   apply vcg
-  apply (clarsimp simp: ARM_HYP_H.sameObjectAs_def)
-  apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                      isCap_defs cap_tag_defs)
-      apply fastforce+
-    apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                        isCap_defs cap_tag_defs)
+  apply (clarsimp simp: ARM_HYP_H.sameObjectAs_def cong: if_cong)
+  apply (case_tac capa; simp add: cap_get_tag_isCap_unfolded_H_cap
+                                  cap_get_tag_isCap_unfolded_H_cap_page isCap_defs)
+       apply fastforce+
+     apply (case_tac capb; simp add: cap_get_tag_isCap_unfolded_H_cap
+                                     cap_get_tag_isCap_unfolded_H_cap_page isCap_simps)
+           apply fastforce+
+         apply (rename_tac vmpage_size opt d w r vmpage_sizea opt')
+         apply (case_tac "vmpage_size = ARMSmallPage",
+                simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)[1]
+          apply (rename_tac vmpage_sizea optiona)
+          apply (case_tac "vmpage_sizea = ARMSmallPage",
+                 simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)[1]
+          apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(16), simp)
+          apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), simp)
+          apply (simp add: ccap_relation_def map_option_case)
+          apply (simp add: cap_small_frame_cap_lift)
+          apply (clarsimp simp: cap_to_H_def capAligned_def to_bool_def
+                         split: if_split bool.split
+                         dest!: is_aligned_no_overflow)
+         apply (case_tac "vmpage_sizea = ARMSmallPage",
+                simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)[1]
+         apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(17), simp)
+         apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), simp)
+         apply (simp add: ccap_relation_def map_option_case)
+         apply (simp add: cap_frame_cap_lift)
+         apply (clarsimp simp: cap_to_H_def capAligned_def
+                               c_valid_cap_def cl_valid_cap_def
+                               Kernel_C.ARMSmallPage_def
+                        split: if_split bool.split vmpage_size.split_asm
+                        dest!: is_aligned_no_overflow)
+         apply (simp add: framesize_to_H_eq capFSize_range to_bool_def
+                          cap_frame_cap_lift [symmetric])
         apply fastforce+
-      apply (rename_tac vmpage_size opt d w r vmpage_sizea opt')
-      apply (case_tac "vmpage_size = ARMSmallPage",
-             simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)[1]
-       apply (rename_tac vmpage_sizea optiona)
-       apply (case_tac "vmpage_sizea = ARMSmallPage",
-              simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)[1]
-       apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(16), simp)
-       apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), simp)
-       apply (simp add: ccap_relation_def map_option_case)
-       apply (simp add: cap_small_frame_cap_lift)
-       apply (clarsimp simp: cap_to_H_def capAligned_def to_bool_def
-                      split: if_split bool.split
-                      dest!: is_aligned_no_overflow)
-      apply (case_tac "vmpage_sizea = ARMSmallPage",
-             simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)[1]
-      apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(17), simp)
-      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), simp)
-      apply (simp add: ccap_relation_def map_option_case)
-      apply (simp add: cap_frame_cap_lift)
-      apply (clarsimp simp: cap_to_H_def capAligned_def
-                            c_valid_cap_def cl_valid_cap_def
-                            Kernel_C.ARMSmallPage_def
-                     split: if_split bool.split vmpage_size.split_asm
-                     dest!: is_aligned_no_overflow)
-      apply (simp add: framesize_to_H_eq capFSize_range to_bool_def
-                       cap_frame_cap_lift [symmetric])
-     apply fastforce+
   done
+
+lemma isArchCap_tag_simps:
+  "isArchCap_tag (scast cap_page_directory_cap)"
+  "isArchCap_tag (scast cap_asid_control_cap)"
+  "isArchCap_tag (scast cap_small_frame_cap)"
+  "isArchCap_tag (scast cap_sgi_signal_cap)"
+  "isArchCap_tag (scast cap_page_table_cap)"
+  "isArchCap_tag (scast cap_asid_pool_cap)"
+  "isArchCap_tag (scast cap_frame_cap)"
+  "isArchCap_tag (scast cap_vcpu_cap)"
+  "\<not>isArchCap_tag (scast cap_notification_cap)"
+  "\<not>isArchCap_tag (scast cap_irq_handler_cap)"
+  "\<not>isArchCap_tag (scast cap_irq_control_cap)"
+  "\<not>isArchCap_tag (scast cap_endpoint_cap)"
+  "\<not>isArchCap_tag (scast cap_untyped_cap)"
+  "\<not>isArchCap_tag (scast cap_zombie_cap)"
+  "\<not>isArchCap_tag (scast cap_thread_cap)"
+  "\<not>isArchCap_tag (scast cap_domain_cap)"
+  "\<not>isArchCap_tag (scast cap_reply_cap)"
+  "\<not>isArchCap_tag (scast cap_cnode_cap)"
+  "\<not>isArchCap_tag (scast cap_null_cap)"
+  by (auto simp: isArchCap_tag_def2 cap_tag_defs)
 
 lemma sameObjectAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation capa \<acute>cap_a \<and>
@@ -3594,28 +3690,16 @@ lemma sameObjectAs_spec:
                      capAligned capa \<and> capAligned capb \<and> (\<exists>s. s \<turnstile>' capa)\<rbrace>
   Call sameObjectAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (sameObjectAs capa capb) \<rbrace>"
-  apply vcg
-  apply (clarsimp simp: sameObjectAs_def isArchCap_tag_def2)
-  apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                      isCap_simps cap_tag_defs)
-            apply fastforce+
-     \<comment> \<open>capa is an arch cap\<close>
-     apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
-     apply (simp add: isArchCap_tag_def2)
-     apply (rule conjI, rule impI, clarsimp, rule impI)+
-     apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                         isCap_simps cap_tag_defs)[1]
-                apply ((fastforce)+)[7]
-         \<comment> \<open>capb is an arch cap\<close>
-         apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
-         apply (fastforce simp: isArchCap_tag_def2 linorder_not_less [symmetric])+
-  \<comment> \<open>capa is an irq handler cap\<close>
-  apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                      isCap_simps cap_tag_defs)
-           apply fastforce+
-      \<comment> \<open>capb is an arch cap\<close>
-      apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
-      apply (fastforce simp: isArchCap_tag_def2)+
+  supply isArchCap_tag_simps[simp] cap_tag_neqs[simp]
+  apply (vcg exspec=Arch_As_spec)
+  apply (clarsimp simp: sameObjectAs_def)
+  apply (case_tac capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps; fastforce?)
+  \<comment> \<open>capa is an arch cap\<close>
+  apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
+  apply (rule conjI, rule impI, clarsimp, rule impI)+
+  apply (case_tac capb; clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
+             apply (find_goal \<open>frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap\<close>)
+             apply fastforce+
   done
 
 lemma sameRegionAs_EndpointCap:
@@ -3654,6 +3738,26 @@ lemma sameRegionAs_NotificationCap:
   apply (rename_tac zombie_cap)
   apply (case_tac "isZombieTCB_C (capZombieType_CL zombie_cap)"; simp add: Let_def)
   done
+
+lemma Arch_isMDBParentOf_spec:
+  "\<forall>capa capb firstBadged.
+     \<Gamma> \<turnstile> \<lbrace>  ccap_relation capa \<acute>cap_a \<and> \<acute>firstBadged = from_bool firstBadged \<and>
+            sameRegionAs capa capb \<rbrace>
+         Call Arch_isMDBParentOf_'proc
+         \<lbrace> \<acute>ret__unsigned_long = from_bool (isArchMDBParentOf capa capb firstBadged) \<rbrace>"
+  apply (intro allI, rule conseqPre, vcg)
+  apply (clarsimp simp: isArchMDBParentOf_def2 from_bool_0 split: if_splits)
+  apply (rule conjI; clarsimp)
+   apply (rule context_conjI)
+    apply (clarsimp dest!: cap_get_tag_isCap0)
+   apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: isCap_simps cap_get_tag_isCap_unfolded_H_cap)
+  done
+
+lemma from_bool_to_bool_mdbFirstBadged[simp]:
+  "from_bool (to_bool (mdbFirstBadged_CL (mdb_node_lift node))) =
+   mdbFirstBadged_CL (mdb_node_lift node)"
+  by (simp add: mdb_node_lift_def from_to_bool_last_bit)
 
 lemma isMDBParentOf_spec:
   notes option.case_cong_weak [cong] if_cong[cong]
@@ -3701,6 +3805,12 @@ lemma isMDBParentOf_spec:
                   split: if_split bool.splits)
 
   \<comment> \<open>sameRegionAs \<noteq> 0\<close>
+  apply (clarsimp simp: typ_heap_simps from_bool_0)
+  apply (rule exI, rule conjI, assumption)
+  apply (rule_tac x="cap_to_H x2c" in  exI)
+  apply (rule_tac x="to_bool (mdbFirstBadged_CL (mdb_node_lift (cteMDBNode_C cte_b)))" in exI)
+  apply clarsimp
+
   apply (clarsimp simp: from_bool_def)
   apply (case_tac "RetypeDecls_H.sameRegionAs (cap_to_H x2b) (cap_to_H x2c)")
    prefer 2 apply clarsimp

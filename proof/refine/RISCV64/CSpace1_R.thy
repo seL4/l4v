@@ -26,6 +26,9 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+(* unused on this architecture *)
+declare isArchMDBParentOf_def[simp]
+
 lemma isMDBParentOf_CTE1:
   "isMDBParentOf (CTE cap node) cte =
    (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
@@ -141,6 +144,10 @@ lemma obj_size_relation:
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap; simp add: objBits_def RISCV64_H.capUntypedSize_def bit_simps')
   done
+
+(* unused on this architecture *)
+declare is_irq_control_descendant_def[simp]
+declare should_be_arch_parent_of_def[simp]
 
 lemma same_region_as_relation:
     "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow>

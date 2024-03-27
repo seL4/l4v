@@ -38,6 +38,14 @@ end
 
 end
 
+context begin interpretation Arch .
+requalify_consts
+  SGISignalCap
+end
+
+definition isArchSGISignalCap :: "capability \<Rightarrow> bool" where
+  "isArchSGISignalCap cap \<equiv> \<exists>irq targets. cap = ArchObjectCap (SGISignalCap irq targets)"
+
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 
 section "Invariants on Executable Spec"
@@ -269,6 +277,7 @@ primrec azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
 | "azobj_refs' (FrameCap _ _ _ _ _) = {}"
 | "azobj_refs' (PageTableCap _ _ _) = {}"
 | "azobj_refs' (VCPUCap v) = {v}"
+| "azobj_refs' (SGISignalCap _ _) = {}"
 
 lemma azobj_refs'_only_vcpu:
   "(x \<in> azobj_refs' acap) = (acap = VCPUCap x)"
@@ -328,6 +337,7 @@ primrec acapBits :: "arch_capability \<Rightarrow> nat" where
 | "acapBits (FrameCap _ _ sz _ _)   = pageBitsForSize sz"
 | "acapBits (PageTableCap _ pt_t _) = table_size pt_t"
 | "acapBits (VCPUCap v)             = vcpuBits"
+| "acapBits (SGISignalCap _ _)      = 0"
 
 end
 
@@ -409,7 +419,8 @@ definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<
    | ASIDControlCap \<Rightarrow> True
    | FrameCap r rghts sz dev mapdata \<Rightarrow> frame_at' r sz dev s
    | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s
-   | VCPUCap r \<Rightarrow> vcpu_at' r s"
+   | VCPUCap r \<Rightarrow> vcpu_at' r s
+   | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_ref'_simps[simp] =
   valid_arch_cap_ref'_def[split_simps arch_capability.split]
@@ -614,20 +625,25 @@ where
 
 definition
   "valid_badges m \<equiv>
-  \<forall>p p' cap node cap' node'.
-    m p = Some (CTE cap node) \<longrightarrow>
-    m p' = Some (CTE cap' node') \<longrightarrow>
-    (m \<turnstile> p \<leadsto> p') \<longrightarrow>
-    (sameRegionAs cap cap') \<longrightarrow>
-    (isEndpointCap cap \<longrightarrow>
-     capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
-     capEPBadge cap' \<noteq> 0 \<longrightarrow>
-     mdbFirstBadged node')
-    \<and>
-    (isNotificationCap cap \<longrightarrow>
-     capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
-     capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
-     mdbFirstBadged node')"
+   \<forall>p p' cap node cap' node'.
+     m p = Some (CTE cap node) \<longrightarrow>
+     m p' = Some (CTE cap' node') \<longrightarrow>
+     m \<turnstile> p \<leadsto> p' \<longrightarrow>
+     (sameRegionAs cap cap' \<longrightarrow>
+      (isEndpointCap cap \<longrightarrow>
+       capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
+       capEPBadge cap' \<noteq> 0 \<longrightarrow>
+       mdbFirstBadged node')
+     \<and>
+      (isNotificationCap cap \<longrightarrow>
+       capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
+       capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
+       mdbFirstBadged node'))
+     \<and>
+ \<^cancel>\<open>  (isIRQHandlerCap cap' \<longrightarrow> mdbFirstBadged node')
+     \<and> \<close>
+     (isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow>
+      mdbFirstBadged node')"
 
 fun (sequential)
   untypedRange :: "capability \<Rightarrow> machine_word set"
@@ -642,7 +658,8 @@ where
 | "acapClass ASIDControlCap       = ASIDMasterClass"
 | "acapClass (FrameCap _ _ _ _ _) = PhysicalClass"
 | "acapClass (PageTableCap _ _ _) = PhysicalClass"
-| "acapClass (VCPUCap _) = PhysicalClass"
+| "acapClass (VCPUCap _)          = PhysicalClass"
+| "acapClass (SGISignalCap _ _)   = IRQClass"
 
 primrec
   capClass :: "capability \<Rightarrow> capclass"
@@ -708,6 +725,7 @@ definition
   m p = Some (CTE cap n) \<longrightarrow>
   m p' = Some (CTE cap' n') \<longrightarrow>
   sameRegionAs cap cap' \<longrightarrow>
+  \<not>isArchSGISignalCap cap \<longrightarrow>
   p \<noteq> p' \<longrightarrow>
   (m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> m \<turnstile> p' \<leadsto>\<^sup>+ p) \<and>
   (m \<turnstile> p \<leadsto>\<^sup>+ p' \<longrightarrow> is_chunk m cap p p') \<and>
@@ -1672,13 +1690,14 @@ lemma next_unfold:
 
 lemma is_physical_cases:
  "(capClass cap = PhysicalClass) =
-  (case cap of NullCap                         \<Rightarrow> False
-             | DomainCap                       \<Rightarrow> False
-             | IRQControlCap                   \<Rightarrow> False
-             | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m cr                 \<Rightarrow> False
-             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
-             | _                               \<Rightarrow> True)"
+  (case cap of NullCap                          \<Rightarrow> False
+             | DomainCap                        \<Rightarrow> False
+             | IRQControlCap                    \<Rightarrow> False
+             | IRQHandlerCap irq                \<Rightarrow> False
+             | ReplyCap r m cr                  \<Rightarrow> False
+             | ArchObjectCap ASIDControlCap     \<Rightarrow> False
+             | ArchObjectCap (SGISignalCap _ _) \<Rightarrow> False
+             | _                                \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
 lemma sch_act_sane_not:
@@ -2964,7 +2983,7 @@ lemma class_linksD:
 
 lemma mdb_chunkedD:
   "\<lbrakk> m p = Some (CTE cap n); m p' = Some (CTE cap' n');
-     sameRegionAs cap cap'; p \<noteq> p'; mdb_chunked m \<rbrakk>
+     sameRegionAs cap cap'; p \<noteq> p'; \<not>isArchSGISignalCap cap; mdb_chunked m \<rbrakk>
   \<Longrightarrow> (m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> m \<turnstile> p' \<leadsto>\<^sup>+ p) \<and>
      (m \<turnstile> p \<leadsto>\<^sup>+ p' \<longrightarrow> is_chunk m cap p p') \<and>
      (m \<turnstile> p' \<leadsto>\<^sup>+ p \<longrightarrow> is_chunk m cap' p' p)"

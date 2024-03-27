@@ -269,6 +269,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     setVSpaceRoot_impl
     switchFpuOwner_impl
     writeVCPUHardwareReg_impl
+    ipiSendTarget_impl
     )
 
 (* Crunches for machine ops without concrete implementations (using _impl or _val).
@@ -328,7 +329,8 @@ crunches
   switchFpuOwner,
   readVCPUHardwareReg,
   writeVCPUHardwareReg,
-  read_cntpct
+  read_cntpct,
+  ipiSendTarget
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
   and (no_irq) no_irq[intro!, wp, simp]

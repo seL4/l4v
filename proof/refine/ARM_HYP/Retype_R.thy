@@ -2727,7 +2727,7 @@ proof -
   have "valid_badges m" ..
   thus ?thesis
     apply (clarsimp simp: valid_badges_def)
-    apply (simp add: n_Some_eq n_next split: if_split_asm)
+    apply (simp add: n_Some_eq n_next isCap_simps split: if_split_asm)
     apply fastforce
     done
 qed

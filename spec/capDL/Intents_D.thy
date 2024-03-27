@@ -26,6 +26,7 @@ theory Intents_D
 imports
   "Word_Lib.WordSetup"
   "ASpec.CapRights_A"
+
 begin
 
 (*
@@ -136,12 +137,14 @@ datatype cdl_irq_handler_intent =
 datatype cdl_arch_irq_control_intent =
     (* ArchIssueIrqHandler: (target), irq, (root), index, depth *)
     ARMIrqControlIssueIrqHandlerIntent "10 word" word32 word32
+    (* ARMIssueSGISignal: irq, targets, index, depth, (cnode) *)
+  | ARMIssueSGISignalIntent machine_word machine_word machine_word machine_word
 
 datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
     IrqControlIssueIrqHandlerIntent "10 word" word32 word32
     (* InterruptControl *)
- |  ArchIrqControlIssueIrqHandlerIntent cdl_arch_irq_control_intent
+  | ArchIrqControlIssueIrqHandlerIntent cdl_arch_irq_control_intent
 
 datatype cdl_page_table_intent =
     (* Map: (target), (pd), vaddr, attr *)

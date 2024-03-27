@@ -34,6 +34,8 @@ requalify_consts
   cnode_padding_bits
   cnode_guard_size_bits
   arch_is_cap_revocable
+  is_irq_control_descendant
+  should_be_arch_parent_of
 
 end
 
@@ -660,7 +662,9 @@ where
     (is_thread_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (Zombie r b n) c' = False"
 | "same_region_as (IRQControlCap) c' =
-    (c' = IRQControlCap \<or> (\<exists>n. c' = IRQHandlerCap n))"
+    (c' = IRQControlCap \<or>
+     (\<exists>n. c' = IRQHandlerCap n) \<or>
+     (is_ArchObjectCap c' \<and> is_irq_control_descendant (the_arch_cap c')))"
 | "same_region_as DomainCap c' = (c' = DomainCap)"
 | "same_region_as (IRQHandlerCap n) c' =
     (c' = IRQHandlerCap n)"
@@ -673,10 +677,9 @@ definition
  "same_object_as cp cp' \<equiv>
    (case (cp, cp') of
       (UntypedCap dev r bits free, _) \<Rightarrow> False
-    | (IRQControlCap, IRQHandlerCap n) \<Rightarrow> False
+    | (IRQControlCap, _) \<Rightarrow> False
     | (ArchObjectCap ac, ArchObjectCap ac') \<Rightarrow> same_aobject_as ac ac'
     | _ \<Rightarrow> same_region_as cp cp')"
-
 
 
 text \<open>
@@ -711,7 +714,7 @@ children of the untyped capability they were created from.
 
  Ordinary original capabilities can have one level of derived capabilities
 (created, for instance, by the copy or mint operations). Further copies
-of these derived capabilities will create sibling, in this case
+of these derived capabilities will create siblings, in this case
 remaining on level 5. There is an exception to this scheme for endpoint
 capabilities --- they support an additional layer of depth with the
 concept of badged and unbadged endpoints. The original endpoint
@@ -729,6 +732,7 @@ definition
    (case c of
       EndpointCap ref badge R \<Rightarrow> badge \<noteq> 0 \<longrightarrow> cap_ep_badge c' = badge \<and> \<not>original'
     | NotificationCap ref badge R \<Rightarrow> badge \<noteq> 0 \<longrightarrow> cap_ep_badge c' = badge \<and> \<not>original'
+    | ArchObjectCap ac \<Rightarrow> should_be_arch_parent_of ac (the_arch_cap c') original'
     | _ \<Rightarrow> True)"
 
 text \<open>This helper function determines if the new capability

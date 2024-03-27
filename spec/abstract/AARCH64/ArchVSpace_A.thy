@@ -340,7 +340,8 @@ definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_mon
      | FrameCap r R sz dev mp \<Rightarrow> returnOk $ ArchObjectCap (FrameCap r R sz dev None)
      | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
      | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
-     | VCPUCap _ \<Rightarrow> returnOk (ArchObjectCap c)"
+     | VCPUCap _ \<Rightarrow> returnOk (ArchObjectCap c)
+     | SGISignalCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
 
 text \<open>No user-modifiable data is stored in AARCH64-specific capabilities.\<close>
 definition arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap" where
@@ -370,6 +371,8 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
       vcpu_finalise vcpu_ref;
       return (NullCap, NullCap)
      od
+   | (SGISignalCap _ _, _) \<Rightarrow>
+      return (NullCap, NullCap) \<comment> \<open>nothing to do for @{const SGISignalCap}\<close>
    | _ \<Rightarrow> return (NullCap, NullCap)"
 
 
