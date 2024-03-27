@@ -1177,8 +1177,8 @@ lemma corres_move_asm:
 lemmas corres_cross_over_guard = corres_move_asm[rotated]
 
 lemma corres_cross_add_guard:
-  "\<lbrakk> \<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q s';
-     corres_underlying sr nf nf' r P  (P' and Q) f g\<rbrakk>
+  "\<lbrakk> \<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q' s';
+     corres_underlying sr nf nf' r P (P' and Q') f g\<rbrakk>
     \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
   by (fastforce simp: corres_underlying_def)
 
