@@ -585,7 +585,7 @@ lemma getASIDPoolEntry_wp:
    getASIDPoolEntry asid
    \<lbrace>\<lambda>rv s. P rv s \<rbrace>"
   unfolding getASIDPoolEntry_def asid_has_entry_def getPoolPtr_def
-  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift getASID_wp simp: comp_def)
+  apply (wpsimp wp: haskell_assert_inv getASID_wp)
   apply normalise_obj_at'
   apply (rename_tac pool)
   apply (case_tac "pool (asid AND mask asid_low_bits)"; simp)

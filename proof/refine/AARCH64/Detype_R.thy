@@ -3006,25 +3006,14 @@ lemma curDomain_commute:
 crunch inv[wp]: curDomain P
 
 lemma placeNewObject_tcb_at':
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  shows
-  "\<lbrace>pspace_aligned' and pspace_distinct'
-    and pspace_no_overlap' ptr (objBits (makeObject::tcb))
-    and  K(is_aligned ptr  (objBits (makeObject::tcb)))
-   \<rbrace> placeNewObject ptr (makeObject::tcb) 0
-       \<lbrace>\<lambda>rv s. tcb_at' ptr s \<rbrace>"
-  apply (simp add:placeNewObject_def placeNewObject'_def split_def alignError_def)
+  "\<lbrace>pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr (objBits (makeObject::tcb))
+    and K (is_aligned ptr  (objBits (makeObject::tcb)))\<rbrace>
+   placeNewObject ptr (makeObject::tcb) 0
+   \<lbrace>\<lambda>_ s. tcb_at' ptr s \<rbrace>"
+  apply (simp add: placeNewObject_def placeNewObject'_def split_def alignError_def)
   apply wpsimp
-  apply (clarsimp simp: obj_at'_def lookupAround2_None1 objBits_simps
-                        lookupAround2_char1 field_simps projectKO_opt_tcb return_def ps_clear_def
-                  simp flip: is_aligned_mask)
-  apply (drule (1) pspace_no_overlap_disjoint')
-  apply (clarsimp intro!: set_eqI;
-         drule_tac m = "ksPSpace s" in domI,
-         erule in_emptyE,
-         fastforce elim!: in_emptyE simp:objBits_simps mask_def add_diff_eq)
+  apply (clarsimp simp: obj_at'_def objBits_simps ps_clear_def)
+  apply (fastforce intro!: set_eqI dest: pspace_no_overlap_disjoint' simp: add_mask_fold)
   done
 
 lemma monad_commute_if_weak_r:

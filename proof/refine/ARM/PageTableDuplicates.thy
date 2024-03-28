@@ -2169,7 +2169,7 @@ crunch valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   receiveIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(wp: getNotification_wp gbn_wp')
+  (wp: getNotification_wp gbn_wp' crunch_wps)
 
 crunch valid_duplicates'[wp]:
   deleteCallerCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -2177,6 +2177,7 @@ crunch valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   handleReply "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (wp: crunch_wps)
 
 crunch valid_duplicates'[wp]:
   handleYield "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"

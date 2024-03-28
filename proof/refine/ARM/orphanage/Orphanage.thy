@@ -1255,7 +1255,7 @@ lemma setupCallerCap_no_orphans [wp]:
    setupCallerCap sender receiver gr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding setupCallerCap_def
-  apply (wp setThreadState_not_active_no_orphans
+  apply (wp setThreadState_not_active_no_orphans hoare_drop_imps
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
@@ -1264,7 +1264,7 @@ lemma setupCallerCap_almost_no_orphans [wp]:
    setupCallerCap sender receiver gr
    \<lbrace> \<lambda>rv s. almost_no_orphans tcb_ptr s \<rbrace>"
   unfolding setupCallerCap_def
-  apply (wp setThreadState_not_active_almost_no_orphans
+  apply (wp setThreadState_not_active_almost_no_orphans hoare_drop_imps
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
@@ -1311,7 +1311,7 @@ lemma sendIPC_valid_queues' [wp]:
    \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
   unfolding sendIPC_def
   apply (wpsimp wp: hoare_drop_imps)
-        apply (wpsimp | wp (once) sts_st_tcb')+
+        apply (wpsimp | wp (once) sts_st_tcb' hoare_drop_imps)+
   apply (rule_tac Q="\<lambda>rv. valid_queues' and valid_objs' and ko_at' rv epptr
                           and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
    apply (clarsimp)
@@ -1815,7 +1815,7 @@ lemma deletingIRQHandler_no_orphans [wp]:
    deletingIRQHandler irq
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding deletingIRQHandler_def
-  apply (wp, auto)
+  apply (wp hoare_drop_imps, auto)
   done
 
 lemma finaliseCap_no_orphans [wp]:
@@ -2340,7 +2340,7 @@ lemma deleteCallerCap_no_orphans [wp]:
    deleteCallerCap receiver
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding deleteCallerCap_def
-  by wpsimp auto
+  by (wpsimp wp: hoare_drop_imps) auto
 
 lemma remove_neg_strg:
   "(A \<and> B) \<longrightarrow> ((x \<longrightarrow> A) \<and> (\<not> x \<longrightarrow> B))"
