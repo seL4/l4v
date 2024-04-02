@@ -789,7 +789,7 @@ lemma chooseThread_no_orphans [wp]:
     apply (rename_tac l1)
     apply (case_tac "l1 = 0")
      (* switch to idle thread *)
-     apply (simp, wp (once), simp)
+     apply (simp, wp, simp)
     (* we have a thread to switch to *)
     apply (clarsimp simp: bitmap_fun_defs)
     apply (wp assert_inv ThreadDecls_H_switchToThread_no_orphans)
@@ -1814,7 +1814,7 @@ lemma cancelBadgedSends_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding cancelBadgedSends_def
   by (wpsimp wp: filterM_preserved tcbSchedEnqueue_almost_no_orphans gts_wp' sts_st_tcb'
-                 hoare_drop_imps)
+      | wp (once) hoare_drop_imps)+
 
 crunch no_orphans [wp]: handleFaultReply "no_orphans"
 

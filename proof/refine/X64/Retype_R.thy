@@ -3519,7 +3519,7 @@ lemma createObjects_orig_cte_wp_at2':
   apply (rule handy_prop_divs)
    apply (wp createObjects_orig_obj_at2'[where sz = sz], simp)
   apply (simp add: tcb_cte_cases_def)
-  including no_pre
+  including classic_wp_pre
   apply (wp handy_prop_divs createObjects_orig_obj_at2'[where sz = sz]
              | simp add: o_def cong: option.case_cong)+
   done
@@ -3540,7 +3540,7 @@ lemma createNewCaps_cte_wp_at2:
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
      createNewCaps ty ptr n objsz dev
    \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: createNewCaps_def createObjects_def X64_H.toAPIType_def
            split del: if_split)
   apply (case_tac ty; simp add: createNewCaps_def createObjects_def Arch_createNewCaps_def
@@ -4225,7 +4225,7 @@ lemma createNewCaps_idle'[wp]:
          apply (rename_tac apiobject_type)
          apply (case_tac apiobject_type, simp_all split del: if_split)[1]
              apply (wp, simp)
-           including no_pre
+           including classic_wp_pre
            apply (wp mapM_x_wp'
                      createObjects_idle'
                      threadSet_idle'
@@ -4390,12 +4390,12 @@ lemma createNewCaps_valid_queues:
        and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
-apply (rule hoare_gen_asm)
-apply (wp valid_queues_lift_asm createNewCaps_obj_at2[where sz=sz])
-apply (clarsimp simp: projectKO_opts_defs)
-apply (simp add: inQ_def)
-apply (wp createNewCaps_pred_tcb_at'[where sz=sz] | simp)+
-done
+  apply (rule hoare_gen_asm)
+  apply (wpsimp wp: valid_queues_lift_asm createNewCaps_obj_at2[where sz=sz])
+       apply (clarsimp simp: projectKO_opts_defs)
+       apply (simp add: inQ_def)
+      apply (wpsimp wp: createNewCaps_pred_tcb_at'[where sz=sz])+
+  done
 
 lemma mapM_x_threadSet_valid_pspace:
   "\<lbrace>valid_pspace' and K (curdom \<le> maxDomain)\<rbrace>
@@ -4866,8 +4866,8 @@ lemma createObjects_queues:
         pspace_no_overlap' ptr sz s \<and> range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0\<rbrace>
   createObjects ptr n val gbits
   \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
-  apply (wp valid_queues_lift_asm [unfolded pred_conj_def, OF createObjects_orig_obj_at3]
-            createObjects_pred_tcb_at' [unfolded pred_conj_def])
+  apply (wpsimp wp: valid_queues_lift_asm [unfolded pred_conj_def, OF createObjects_orig_obj_at3]
+                    createObjects_pred_tcb_at' [unfolded pred_conj_def])
       apply fastforce
      apply wp+
   apply fastforce

@@ -187,8 +187,8 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
               apply (frule aag_can_read_self)
               apply (simp add: equiv_for_def split del: if_split)+
           apply (wp drop_spec_ev2_inv[OF liftE_ev2] gets_evrv | simp)+
-     apply (wp drop_spec_ev2_inv[OF liftE_ev2] gets_evrv
-               reads_respects_f[OF get_cap_rev, where st=st and Q=\<top>,simplified equiv_valid_def2])
+     apply (wpsimp wp: drop_spec_ev2_inv[OF liftE_ev2] gets_evrv
+                       reads_respects_f[OF get_cap_rev, where st=st and Q=\<top>,simplified equiv_valid_def2])
      apply clarsimp+
     apply (frule all_children_subjectReads[simplified comp_def])
     apply clarsimp

@@ -2745,7 +2745,7 @@ lemma arch_finaliseCap_removeable[wp]:
      Arch.finaliseCap cap final
    \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap) \<and> isNullCap (snd rv)\<rbrace>"
   unfolding ARM_HYP_H.finaliseCap_def
-  including no_pre
+  including classic_wp_pre
   apply (case_tac cap; clarsimp)
        apply ((wpsimp simp: removeable'_def isCap_simps
                 | rule conjI)+)[5]
@@ -3419,7 +3419,7 @@ lemma cancelAllIPC_mapM_x_valid_objs':
                  tcbSchedEnqueue t
                od) q
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wp mapM_x_wp' sts_valid_objs')
+  apply (wpsimp wp: mapM_x_wp' sts_valid_objs')
    apply (clarsimp simp: valid_tcb_state'_def)+
   done
 

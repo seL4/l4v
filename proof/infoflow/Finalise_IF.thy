@@ -570,10 +570,10 @@ lemma tcb_sched_action_reads_respects:
    apply (force intro: domtcbs simp: get_etcb_def)
   apply (simp add: equiv_valid_def2 ethread_get_def)
   apply (rule equiv_valid_rv_bind)
-    apply (wp equiv_valid_rv_trivial', simp)
+    apply (wpsimp wp: equiv_valid_rv_trivial')
    apply (rule equiv_valid_2_bind)
       prefer 2
-      apply (wp equiv_valid_rv_trivial, simp)
+      apply (wpsimp wp: equiv_valid_rv_trivial)
      apply (rule equiv_valid_2_bind)
         apply (rule_tac P=\<top> and P'=\<top> and L="{pasObjectAbs aag t}" and L'="{pasObjectAbs aag t}"
                      in ev2_invisible[OF domains_distinct])

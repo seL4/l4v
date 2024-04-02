@@ -186,7 +186,7 @@ lemma globals_equiv_scheduler_inv'[Scheduler_IF_assms]:
 
 lemma clearExMonitor_globals_equiv_scheduler[wp]:
   "do_machine_op clearExMonitor \<lbrace>globals_equiv_scheduler sta\<rbrace>"
-  unfolding clearExMonitor_def including no_pre
+  unfolding clearExMonitor_def including classic_wp_pre
   apply (wp dmo_no_mem_globals_equiv_scheduler)
    apply simp
   apply (simp add: simpler_modify_def valid_def)

@@ -1146,7 +1146,7 @@ lemma hy_inv: "(\<And>s f. P (trans_state f s) = P s) \<Longrightarrow> \<lbrace
   apply (wp | simp)+
   done
 
-declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]
+declare hoare_seq_ext[wp]
 
 lemma ct_active_simple [elim!]:
   "ct_active s \<Longrightarrow> st_tcb_at simple (cur_thread s) s"

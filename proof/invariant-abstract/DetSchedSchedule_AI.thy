@@ -917,22 +917,18 @@ lemma as_user_valid_sched[wp]:
                          st_tcb_def2 valid_blocked_def)
   done
 
-lemma switch_to_thread_ct_not_queued[wp]:
-  "\<lbrace>valid_queues\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
-  apply (simp add: switch_to_thread_def)
-  including no_pre
-  apply wp
-     prefer 4
-     apply (rule get_wp)
-    prefer 3
-    apply (rule assert_inv)
-   prefer 2
-   apply (rule arch_switch_to_thread_valid_queues')
-  apply (simp add: tcb_sched_action_def
-                   tcb_sched_dequeue_def | wp)+
+lemma tcb_sched_action_dequeue_not_queued[wp]:
+  "\<lbrace>valid_queues\<rbrace> tcb_sched_action tcb_sched_dequeue t \<lbrace>\<lambda>_. not_queued t\<rbrace>"
+  unfolding tcb_sched_action_def tcb_sched_dequeue_def
+  apply wpsimp
   apply (clarsimp simp add: valid_queues_def etcb_at_def not_queued_def
                        split: option.splits)
   done
+
+lemma switch_to_thread_ct_not_queued[wp]:
+  "\<lbrace>valid_queues\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
+  unfolding switch_to_thread_def
+  by wpsimp
 
 end
 
@@ -2728,9 +2724,10 @@ lemma handle_double_fault_valid_sched:
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def)
   including no_pre
-  apply (wp handle_double_fault_valid_queues handle_double_fault_valid_sched_action
-            set_thread_state_not_runnable_valid_blocked
-          | rule hoare_conjI | simp add: handle_double_fault_def | fastforce simp: simple_sched_action_def)+
+  apply (wpsimp wp: handle_double_fault_valid_queues handle_double_fault_valid_sched_action
+                    set_thread_state_not_runnable_valid_blocked
+              comb: hoare_vcg_precond_imp
+         | rule hoare_conjI | simp add: handle_double_fault_def | fastforce simp: simple_sched_action_def)+
   done
 
 lemma send_fault_ipc_error_sched_act_not[wp]:
@@ -2812,47 +2809,48 @@ lemma receive_ipc_valid_sched:
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   supply option.case_cong_weak[cong]
   apply (simp add: receive_ipc_def)
-  including no_pre
   apply (wp | wpc | simp)+
-        apply (wp set_thread_state_sched_act_not_valid_sched | wpc)+
-                 apply ((wp set_thread_state_sched_act_not_valid_sched
-                            setup_caller_cap_sched_act_not_valid_sched
-                        | simp add: do_nbrecv_failed_transfer_def)+)[2]
-               apply ((wp possible_switch_to_valid_sched_except sts_st_tcb_at' hoare_drop_imps
-                          set_thread_state_runnable_valid_queues
-                          set_thread_state_runnable_valid_sched_action
-                          set_thread_state_valid_blocked_except | simp | wpc)+)[3]
-             apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not (sender) and not_queued (sender) and not_cur_thread (sender) and (\<lambda>s. sender \<noteq> idle_thread s)" in hoare_strengthen_post)
-              apply wp
-             apply (simp add: valid_sched_def)
-            apply ((wp | wpc)+)[1]
-           apply (simp | wp gts_wp hoare_vcg_all_lift)+
-          apply (wp hoare_vcg_imp_lift)
-           apply ((simp add: set_simple_ko_def set_object_def |
-                   wp hoare_drop_imps | wpc)+)[1]
-          apply (wp hoare_vcg_imp_lift get_object_wp
-                    set_thread_state_sched_act_not_valid_sched gbn_wp
-               | simp add: get_simple_ko_def do_nbrecv_failed_transfer_def a_type_def
-                    split: kernel_object.splits
-               | wpc
-               | wp (once) hoare_vcg_all_lift hoare_vcg_ex_lift)+
+          apply (wp set_thread_state_sched_act_not_valid_sched | wpc)+
+         apply ((wp set_thread_state_sched_act_not_valid_sched
+                    setup_caller_cap_sched_act_not_valid_sched
+                 | simp add: do_nbrecv_failed_transfer_def)+)[2]
+                apply ((wp possible_switch_to_valid_sched_except sts_st_tcb_at' hoare_drop_imps
+                           set_thread_state_runnable_valid_queues
+                           set_thread_state_runnable_valid_sched_action
+                           set_thread_state_valid_blocked_except | simp | wpc)+)[3]
+              apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not (sender) and not_queued (sender)
+                                     and not_cur_thread (sender) and (\<lambda>s. sender \<noteq> idle_thread s)"
+                           in hoare_strengthen_post)
+               apply wp
+              apply (simp add: valid_sched_def)
+             apply ((wp | wpc)+)[1]
+            apply (simp | wp gts_wp hoare_vcg_all_lift)+
+           apply (wp hoare_vcg_imp_lift)
+            apply ((simp add: set_simple_ko_def set_object_def
+                    | wp hoare_drop_imps | wpc)+)[1]
+           apply (wp hoare_vcg_imp_lift get_object_wp
+                     set_thread_state_sched_act_not_valid_sched gbn_wp
+                  | simp add: get_simple_ko_def do_nbrecv_failed_transfer_def a_type_def
+                       split: kernel_object.splits
+                  | wpc
+                  | wp (once) hoare_vcg_all_lift hoare_vcg_ex_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])+
   apply (clarsimp simp: st_tcb_at_kh_if_split default_notification_def default_ntfn_def isActive_def)
-  apply (rename_tac xh xi xj)
+  apply (rename_tac ref b R ntfn xh xi xj)
   apply (drule_tac t="hd xh" and P'="\<lambda>ts. \<not> active ts" in st_tcb_weakenE)
    apply clarsimp
   apply (simp only: st_tcb_at_not)
   apply (subgoal_tac "hd xh \<noteq> idle_thread s")
    apply (fastforce simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def valid_queues_def st_tcb_at_not ct_in_state_def not_cur_thread_def runnable_eq_active not_queued_def scheduler_act_not_def split: scheduler_action.splits)
-(* clag from send_signal_valid_sched *)
+  (* clag from send_signal_valid_sched *)
   apply clarsimp
   apply (frule invs_valid_idle)
-  apply (drule_tac ptr=xc in idle_not_queued)
+  apply (drule_tac ptr=ref in idle_not_queued)
     apply (clarsimp simp: invs_sym_refs)
    apply (simp add: state_refs_of_def obj_at_def)
   apply (frule invs_valid_objs)
   apply (simp add: valid_objs_def obj_at_def)
-  apply (drule_tac x = xc in bspec)
+  apply (drule_tac x = ref in bspec)
    apply (simp add: dom_def)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def)
   apply (drule hd_in_set)

@@ -455,11 +455,10 @@ lemma mapM_x_copy_pde_updates:
   done
 
 lemma copy_global_mappings_valid_pdpt_objs[wp]:
-  notes hoare_pre [wp_pre del]
-  shows
   "\<lbrace>valid_pdpt_objs and valid_arch_state and pspace_aligned
             and K (is_aligned p pd_bits)\<rbrace>
        copy_global_mappings p \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+  including classic_wp_pre
   apply (rule hoare_gen_asm)
   apply (simp add: copy_global_mappings_def)
   apply wp

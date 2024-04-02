@@ -988,7 +988,7 @@ lemma empty_fail_getIdleThread [simp,intro!]:
 
 lemma setTCB_cur:
   "\<lbrace>cur_tcb'\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (wp cur_tcb_lift)
   apply (simp add: setObject_def split_def updateObject_default_def)
   apply wp
