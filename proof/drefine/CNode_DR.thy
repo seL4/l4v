@@ -244,8 +244,7 @@ lemma insert_cap_sibling_corres:
            cte_wp_at_caps_of_state has_parent_cte_at is_physical_def
            dest!:is_untyped_cap_eqD)
          apply fastforce
-        apply (wp get_cap_wp set_cap_idle | simp)+
-   apply clarsimp
+        apply (wpsimp wp: get_cap_wp set_cap_idle)+
    apply (clarsimp simp: not_idle_thread_def)
    apply (clarsimp simp: caps_of_state_transform_opt_cap cte_wp_at_caps_of_state
      transform_cap_def)

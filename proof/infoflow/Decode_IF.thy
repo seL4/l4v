@@ -110,8 +110,8 @@ lemma slot_cap_long_running_delete_reads_respects_f:
          apply (fastforce simp: long_running_delete_def is_final_cap_def gets_bind_ign intro: return_ev)+
       apply (wp is_final_cap_reads_respects[where st=st])[1]
      apply (fastforce simp: long_running_delete_def is_final_cap_def gets_bind_ign intro: return_ev)+
-    apply (wp reads_respects_f[OF get_cap_rev, where Q="\<top>" and st=st], blast)
-   apply (wp get_cap_wp | simp)+
+    apply (wpsimp wp: reads_respects_f[OF get_cap_rev, where Q="\<top>" and st=st])
+   apply (wp get_cap_wp)
   apply (fastforce intro!: cte_wp_valid_cap aag_has_auth_to_obj_refs_of_owned_cap simp: is_zombie_def
                      dest: silc_inv_not_subject)
   done
@@ -227,14 +227,14 @@ lemma decode_tcb_invocation_reads_respects_f:
   apply (simp add: unlessE_def[symmetric] unlessE_whenE split del: if_split
              cong: gen_invocation_labels.case_cong)
   apply (rule equiv_valid_guard_imp)
-   apply (wp (once) requiv_cur_thread_eq range_check_ev respects_f[OF derive_cap_rev]
-                    derive_cap_inv slot_cap_long_running_delete_reads_respects_f[where st=st]
-                    respects_f[OF check_valid_ipc_buffer_rev] check_valid_ipc_buffer_inv
-                    respects_f[OF decode_set_priority_rev] respects_f[OF decode_set_mcpriority_rev]
-                    respects_f[OF decode_set_sched_params_rev]
-                    respects_f[OF get_simple_ko_reads_respects]
-                    respects_f[OF get_bound_notification_reads_respects']
-          | wp (once) whenE_throwError_wp
+   apply (wp requiv_cur_thread_eq range_check_ev respects_f[OF derive_cap_rev]
+             derive_cap_inv slot_cap_long_running_delete_reads_respects_f[where st=st]
+             respects_f[OF check_valid_ipc_buffer_rev] check_valid_ipc_buffer_inv
+             respects_f[OF decode_set_priority_rev] respects_f[OF decode_set_mcpriority_rev]
+             respects_f[OF decode_set_sched_params_rev]
+             respects_f[OF get_simple_ko_reads_respects]
+             respects_f[OF get_bound_notification_reads_respects']
+             whenE_throwError_wp
           | wp (once) hoare_drop_imps
           | wpc
           | simp add: if_apply_def2 split del: if_split add: o_def split_def)+

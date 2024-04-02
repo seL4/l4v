@@ -702,7 +702,7 @@ lemma tcb_sched_action_tcb_at_not_idle[wp]:
 
 lemma valid_idle_cancel_all_ipc:
   "\<lbrace>valid_idle and valid_state :: det_state \<Rightarrow> bool\<rbrace> IpcCancel_A.cancel_all_ipc word1 \<lbrace>\<lambda>a. valid_idle\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add:cancel_all_ipc_def)
   apply (wp|wpc|simp)+
       apply (rename_tac queue list)
@@ -757,7 +757,7 @@ lemma valid_idle_cancel_all_ipc:
 
 lemma valid_idle_cancel_all_signals:
   "\<lbrace>valid_idle and valid_state :: det_state \<Rightarrow> bool\<rbrace> IpcCancel_A.cancel_all_signals word1 \<lbrace>\<lambda>a. valid_idle\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add:cancel_all_signals_def)
   apply (wp|wpc|simp)+
      apply (rename_tac list)
@@ -1285,10 +1285,9 @@ next
         apply (rule dcorres_set_extra_badge,simp)
        apply (rule Cons.hyps, rule refl, rule refl, simp)
       apply wp[1]
-     apply (simp add: store_word_offs_def set_extra_badge_def
-     not_idle_thread_def ipc_frame_wp_at_def
-     split_def)
-     apply (wp evalMonad_lookup_ipc_buffer_wp)
+     apply (simp add: store_word_offs_def set_extra_badge_def not_idle_thread_def
+                      ipc_frame_wp_at_def split_def)
+     apply (wpsimp wp: evalMonad_lookup_ipc_buffer_wp)
          apply (erule cte_wp_at_weakenE)
          apply (simp add:ipc_buffer_wp_at_def)+
         apply wp

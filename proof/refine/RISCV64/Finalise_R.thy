@@ -3017,7 +3017,7 @@ lemma cancelAllIPC_mapM_x_valid_objs':
                  tcbSchedEnqueue t
                od) q
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wp mapM_x_wp' sts_valid_objs')
+  apply (wpsimp wp: mapM_x_wp' sts_valid_objs')
    apply (clarsimp simp: valid_tcb_state'_def)+
   done
 

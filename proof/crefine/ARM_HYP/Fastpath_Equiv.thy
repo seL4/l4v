@@ -661,8 +661,7 @@ lemma fastpath_callKernel_SysCall_corres:
                               apply ((wp assert_inv threadSet_pred_tcb_at_state cteInsert_obj_at'_not_queued | wps)+)[1]
                              apply ((wp assert_inv threadSet_pred_tcb_at_state cteInsert_obj_at'_not_queued | wps)+)[1]
                             apply ((wp assert_inv threadSet_pred_tcb_at_state cteInsert_obj_at'_not_queued | wps)+)[1]
-                            apply (wp fastpathBestSwitchCandidate_lift[where f="threadSet f t" for f t])
-                             apply simp
+                            apply (wpsimp wp: fastpathBestSwitchCandidate_lift[where f="threadSet f t" for f t])
                             apply ((wp assert_inv threadSet_pred_tcb_at_state
                                        cteInsert_obj_at'_not_queued
                                     | wps)+)[1]
@@ -1367,7 +1366,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
      (invs' and ct_in_state' ((=) Running) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
          and cnode_caps_gsCNodes')
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
-  including no_pre
+  including classic_wp_pre
   supply if_cong[cong] option.case_cong[cong]
   supply if_split[split del]
   supply user_getreg_inv[wp] (* FIXME *)

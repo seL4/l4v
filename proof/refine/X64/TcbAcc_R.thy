@@ -2345,7 +2345,7 @@ lemma threadSet_queued_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
     threadSet (tcbQueued_update f) t
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: sch_act_wf_cases
               split: scheduler_action.split)
   apply (wp hoare_vcg_conj_lift)
@@ -2866,7 +2866,7 @@ lemma rescheduleRequired_valid_bitmapQ_sch_act_simple:
   "\<lbrace> valid_bitmapQ and sch_act_simple\<rbrace>
     rescheduleRequired
    \<lbrace>\<lambda>_. valid_bitmapQ \<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
   apply (rule_tac B="\<lambda>rv s. valid_bitmapQ s \<and>
                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
@@ -2879,7 +2879,7 @@ lemma rescheduleRequired_bitmapQ_no_L1_orphans_sch_act_simple:
   "\<lbrace> bitmapQ_no_L1_orphans and sch_act_simple\<rbrace>
     rescheduleRequired
    \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
   apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L1_orphans s \<and>
                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
@@ -2892,7 +2892,7 @@ lemma rescheduleRequired_bitmapQ_no_L2_orphans_sch_act_simple:
   "\<lbrace> bitmapQ_no_L2_orphans and sch_act_simple\<rbrace>
     rescheduleRequired
    \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
   apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L2_orphans s \<and>
                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)

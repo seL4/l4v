@@ -1441,7 +1441,7 @@ lemma finalise_cap_ret_is_subject:
    finalise_cap cap is_final
    \<lbrace>\<lambda>rv _ :: det_state. case (fst rv) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst rv))
                                                        | _ \<Rightarrow> True\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (case_tac cap, simp_all add: is_zombie_def)
              apply (wp | simp add: comp_def | rule impI | rule conjI)+
   apply (fastforce simp: valid_def dest: arch_finalise_cap_ret)
@@ -2400,7 +2400,7 @@ lemma transfer_caps_silc_inv:
   apply (simp add: transfer_caps_def)
   apply (wpc | wp)+
     apply (rule_tac P = "\<forall>x \<in> set dest_slots. is_subject aag (fst x)" in hoare_gen_asm)
-    apply (wp transfer_caps_loop_pres_dest cap_insert_silc_inv)
+    apply (wpsimp wp: transfer_caps_loop_pres_dest cap_insert_silc_inv)
      apply (fastforce simp: silc_inv_def)
     apply (wp get_receive_slots_authorised hoare_vcg_all_lift hoare_vcg_imp_lift | simp)+
   apply (fastforce elim: cte_wp_at_weakenE)

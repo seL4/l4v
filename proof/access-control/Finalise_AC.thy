@@ -700,7 +700,7 @@ lemma finalise_cap_auth':
   "\<lbrace>pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>rv _. pas_cap_cur_auth aag (fst rv)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (rule hoare_gen_asm)
   apply (cases cap, simp_all split del: if_split)
              apply (wp | simp add: comp_def hoare_post_taut[where P = \<top>] split del: if_split

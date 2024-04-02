@@ -232,7 +232,7 @@ lemma copy_global_mappings_globals_equiv:
   "\<lbrace>globals_equiv s and (\<lambda>s. x \<noteq> riscv_global_pt (arch_state s) \<and> is_aligned x pt_bits)\<rbrace>
    copy_global_mappings x
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding copy_global_mappings_def including no_pre
+  unfolding copy_global_mappings_def including classic_wp_pre
   apply simp
   apply wp
    apply (rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda>s. x \<noteq> riscv_global_pt (arch_state s) \<and>

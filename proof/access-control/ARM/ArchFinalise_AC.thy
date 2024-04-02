@@ -107,7 +107,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   "\<lbrace>\<lambda>_. P NullCap \<and> (\<forall>a b c. P (Zombie a b c))\<rbrace>
    finalise_cap cap is_final
    \<lbrace>\<lambda>rv _. P (fst rv)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
   apply (wp | simp add: comp_def split del: if_split | fastforce)+
   apply (rule hoare_pre)

@@ -1644,7 +1644,7 @@ proof -
                                emptyable_def
                    | wpc | strengthen tcb_cap_always_valid_strg
                                       use_no_cap_to_obj_asid_strg
-                   | wp (once) add: sch_act_simple_lift hoare_drop_imps del: cteInsert_invs
+                   | wp add: sch_act_simple_lift hoare_drop_imps del: cteInsert_invs
                    | (erule exE, clarsimp simp: word_bits_def))+
      (* the last two subgoals *)
      apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] tcb_at_st_tcb_at[symmetric]
@@ -2750,7 +2750,7 @@ crunches getThreadBufferSlot, setPriority, setMCPriority
 lemma inv_tcb_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> invokeTCB tcb_inv
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: invokeTCB_def)
   apply (rule hoare_pre)
    apply (wpc |

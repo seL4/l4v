@@ -81,7 +81,7 @@ lemma change_current_domain_and_switch_to_idle_thread_dcorres:
                     Schedule_D.switch_to_thread None
                  od)
                 switch_to_idle_thread"
-  including no_pre
+  including classic_wp_pre
   apply (clarsimp simp: Schedule_D.switch_to_thread_def switch_to_idle_thread_def)
   apply (rule dcorres_symb_exec_r)
     apply (rule corres_guard_imp)

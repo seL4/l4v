@@ -464,7 +464,7 @@ lemma copy_global_mappings_valid_arch_state:
                      and (\<lambda>s. x \<notin> global_refs s \<and> is_aligned x pt_bits)\<rbrace>
    copy_global_mappings x
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding copy_global_mappings_def including no_pre
+  unfolding copy_global_mappings_def including classic_wp_pre
   apply simp
   apply wp
    apply (rule_tac Q="\<lambda>_. valid_arch_state and valid_global_vspace_mappings and pspace_aligned

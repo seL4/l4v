@@ -601,6 +601,9 @@ lemma send_signal_reads_respects:
                         set_thread_state_runnable_equiv_but_for_labels get_simple_ko_wp
                         gts_wp update_waiting_ntfn_equiv_but_for_labels
                         blocked_cancel_ipc_nosts_equiv_but_for_labels
+            \<comment> \<open>FIXME: The following line is working around the fact that wp (once) doesn't invoke
+                      wp_pre. If that is changed then it could be removed.\<close>
+            | wp_pre0
             | wpc
             | wps)+
     apply (elim conjE)
@@ -1717,7 +1720,7 @@ lemma copy_mrs_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
    copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding copy_mrs_def including no_pre
+  unfolding copy_mrs_def including classic_wp_pre
   apply (wp | wpc)+
     apply (rule_tac Q="\<lambda>_. globals_equiv s" in hoare_strengthen_post)
      apply (wp mapM_wp' | wpc)+
