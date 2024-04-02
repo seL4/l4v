@@ -2376,7 +2376,7 @@ lemma rescheduleRequired_oa_queued:
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
   apply (rule_tac B="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)
                        \<and> ?OAQ t' p s" in hoare_seq_ext)
-   including no_pre
+   including classic_wp_pre
    apply (wp | clarsimp)+
    apply (case_tac x)
      apply (wp | clarsimp)+

@@ -497,7 +497,7 @@ lemma retype_region_ext_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and K (\<forall>x\<in> set xs. is_subject aag x)\<rbrace>
    retype_region_ext xs ty
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (subst and_assoc[symmetric])
   apply (wp retype_region_ext_extended.pas_refined_tcb_domain_map_wellformed')
   apply (simp add: retype_region_ext_def, wp)

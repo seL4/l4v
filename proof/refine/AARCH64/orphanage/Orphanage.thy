@@ -792,7 +792,7 @@ lemma chooseThread_no_orphans [wp]:
     apply (rename_tac l1)
     apply (case_tac "l1 = 0")
      (* switch to idle thread *)
-     apply (simp, wp (once), simp)
+     apply (simp, wp, simp)
     (* we have a thread to switch to *)
     apply (clarsimp simp: bitmap_fun_defs)
     apply (wp assert_inv ThreadDecls_H_switchToThread_no_orphans)

@@ -3461,11 +3461,11 @@ lemma createObjects_orig_cte_wp_at2':
               \<not> (case_option False (P' \<circ> getF) (projectKO_opt val)))
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
   createObjects' ptr n val gbits \<lbrace>\<lambda>r s. P (cte_wp_at' P' p s)\<rbrace>"
+  including classic_wp_pre
   apply (simp add: cte_wp_at'_obj_at')
   apply (rule handy_prop_divs)
    apply (wp createObjects_orig_obj_at2'[where sz = sz], simp)
   apply (simp add: tcb_cte_cases_def cteSizeBits_def)
-  including no_pre
   apply (wp handy_prop_divs createObjects_orig_obj_at2'[where sz = sz]
              | simp add: o_def cong: option.case_cong)+
   done
@@ -3488,7 +3488,7 @@ lemma createNewCaps_cte_wp_at2:
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
      createNewCaps ty ptr n objsz dev
    \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: createNewCaps_def createObjects_def RISCV64_H.toAPIType_def
            split del: if_split)
   apply (case_tac ty; simp add: createNewCaps_def createObjects_def Arch_createNewCaps_def
@@ -4389,8 +4389,7 @@ lemma createNewCaps_valid_queues:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (wp valid_queues_lift_asm createNewCaps_obj_at2[where sz=sz])
-       apply (clarsimp simp: projectKO_opts_defs)
+  apply (wpsimp wp: valid_queues_lift_asm createNewCaps_obj_at2[where sz=sz])
        apply (simp add: inQ_def)
       apply (wp createNewCaps_pred_tcb_at'[where sz=sz] | simp)+
   done

@@ -717,8 +717,7 @@ lemma transferCapsToSlots_mdb[wp]:
           \<and> transferCaps_srcs caps s\<rbrace>
     transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  apply (wp transferCapsToSlots_presM[where drv=True and vo=True and emx=True and pad=True])
-    apply clarsimp
+  apply (wpsimp wp: transferCapsToSlots_presM[where drv=True and vo=True and emx=True and pad=True])
     apply (frule valid_capAligned)
     apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def badge_derived'_def)
    apply wp
@@ -871,7 +870,7 @@ lemma transferCapsToSlots_irq_handlers[wp]:
          and transferCaps_srcs caps\<rbrace>
      transferCapsToSlots ep buffer n caps slots mi
   \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
-  apply (wp transferCapsToSlots_presM[where vo=True and emx=False and drv=True and pad=False])
+  apply (wpsimp wp: transferCapsToSlots_presM[where vo=True and emx=False and drv=True and pad=False])
      apply (clarsimp simp: is_derived'_def cte_wp_at_ctes_of badge_derived'_def)
      apply (erule(2) valid_irq_handlers_ctes_ofD)
     apply wp
@@ -974,8 +973,8 @@ lemma tcts_zero_ranges[wp]:
           \<and> transferCaps_srcs caps s\<rbrace>
     transferCapsToSlots ep buffer n caps slots mi
   \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
-  apply (wp transferCapsToSlots_presM[where emx=True and vo=True
-      and drv=True and pad=True])
+  apply (wpsimp wp: transferCapsToSlots_presM[where emx=True and vo=True
+                                                and drv=True and pad=True])
     apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (simp add: cteCaps_of_def)
    apply (rule hoare_pre, wp untyped_ranges_zero_lift)
@@ -1194,7 +1193,7 @@ lemmas copyMRs_typ_at_lifts[wp] = typ_at_lifts [OF copyMRs_typ_at']
 
 lemma copy_mrs_invs'[wp]:
   "\<lbrace> invs' and tcb_at' s and tcb_at' r \<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. invs' \<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: copyMRs_def)
   apply (wp dmo_invs' no_irq_mapM no_irq_storeWord|
          simp add: split_def)

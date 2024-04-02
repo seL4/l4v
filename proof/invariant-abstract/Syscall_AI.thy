@@ -1219,7 +1219,7 @@ lemma hy_invs[wp]: "handle_yield \<lbrace>invs\<rbrace>"
   apply (wpsimp wp: charge_budget_invs)
   done
 
-declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]
+declare hoare_seq_ext[wp]
 
 lemma ct_active_simple [elim!]:
   "ct_active s \<Longrightarrow> st_tcb_at simple (cur_thread s) s"

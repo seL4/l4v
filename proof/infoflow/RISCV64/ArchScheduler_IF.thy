@@ -184,8 +184,7 @@ lemma arch_switch_to_thread_globals_equiv_scheduler[Scheduler_IF_assms]:
    arch_switch_to_thread thread
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   unfolding arch_switch_to_thread_def storeWord_def
-  by (wpsimp wp: dmo_wp modify_wp thread_get_wp'
-      | wp (once) globals_equiv_scheduler_inv'[where P="\<top>"])+
+  by (wpsimp wp: dmo_wp modify_wp thread_get_wp' globals_equiv_scheduler_inv'[where P="\<top>"])
 
 crunches arch_activate_idle_thread
   for silc_dom_equiv[Scheduler_IF_assms, wp]: "silc_dom_equiv aag st"

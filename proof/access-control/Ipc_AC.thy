@@ -1781,7 +1781,7 @@ lemma cap_insert_ext_integrity_in_ipc_autarch:
    apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def
                          tcb_states_of_state_def get_tcb_def
               split del: if_split cong: if_cong)
-   including no_pre
+   including classic_wp_pre
    apply wp
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: list_integ_def del: split_paired_All)
@@ -2655,7 +2655,7 @@ lemma empty_slot_respects_in_ipc_autarch:
   unfolding empty_slot_def post_cap_deletion_def
   apply simp
   apply (wp add: set_cap_respects_in_ipc_autarch set_original_respects_in_ipc_autarch)
-       apply (wp empty_slot_extended_list_integ_lift_in_ipc empty_slot_list_integrity')
+       apply (wpsimp wp: empty_slot_extended_list_integ_lift_in_ipc empty_slot_list_integrity')
           apply simp
          apply wp+
       apply (wp set_cdt_empty_slot_respects_in_ipc_autarch)

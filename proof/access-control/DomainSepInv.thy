@@ -452,7 +452,7 @@ lemma finalise_cap_domain_sep_inv_cap:
   "\<lbrace>\<lambda>s. domain_sep_inv_cap irqs cap\<rbrace>
    finalise_cap cap b
    \<lbrace>\<lambda>rv s :: det_ext state. domain_sep_inv_cap irqs (fst rv)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (case_tac cap)
              apply (wp | simp add: o_def split del: if_split  split: cap.splits
                        | fastforce split: if_splits simp: domain_sep_inv_cap_def)+
@@ -784,7 +784,7 @@ lemma invoke_control_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and irq_control_inv_valid i\<rbrace>
     invoke_irq_control i
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (case_tac i)
    apply (case_tac irqs)
     apply (wp cap_insert_domain_sep_inv' | simp )+

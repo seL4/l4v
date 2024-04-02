@@ -873,13 +873,9 @@ lemma deleteASID_corres:
        apply (simp add: vs_refs_def)
        apply (rule image_eqI[rotated], erule graph_ofI)
        apply (simp add: mask_asid_low_bits_ucast_ucast)
-      apply wp
-      apply (simp add: o_def)
-      apply (wp getASID_wp)
-      apply clarsimp
-      apply assumption
-     apply wp+
-   apply clarsimp
+      \<comment> \<open>rewrite assumption so that the goal can refer to the C variable instead of the abstract's.\<close>
+      apply (drule Some_to_the)
+      apply (wpsimp wp: getASID_wp)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
                   dest!: invs_arch_state)
    apply blast

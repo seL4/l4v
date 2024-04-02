@@ -486,7 +486,7 @@ lemma dcorres_deleting_irq_handler:
   apply (rule corres_split[OF dcorres_get_irq_slot])
     apply (simp, rule delete_cap_simple_corres,simp)
     apply (rule hoare_vcg_precond_imp [where Q="invs and valid_etcbs"])
-    including no_pre
+    including classic_wp_pre
     apply (wpsimp simp:get_irq_slot_def)+
     apply (rule irq_node_image_not_idle)
     apply (simp add:invs_def valid_state_def)+
@@ -2503,6 +2503,7 @@ lemma dcorres_delete_asid:
               apply (wp | clarsimp)+
          apply simp
         apply (wp | clarsimp)+
+       apply (rule hoare_pre, wp, clarsimp)
       apply (rule hoare_pre, wp)
       apply simp
      apply (wp | clarsimp)+

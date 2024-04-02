@@ -1665,7 +1665,7 @@ lemma schedule_if_globals_equiv_scheduler[wp]:
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply (simp add: schedule_if_def)
   apply wp
-    apply (wp globals_equiv_scheduler_inv'[where P="invs"] activate_thread_globals_equiv)
+    apply (wpsimp wp: globals_equiv_scheduler_inv'[where P="invs"] activate_thread_globals_equiv)
     apply (simp add: invs_arch_state invs_valid_idle)
    apply (wp | simp)+
   done
@@ -2618,8 +2618,7 @@ lemma perform_invocation_irq_state_inv:
                       invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def]
                    | clarsimp | simp add: invoke_domain_def)+\<close>)?)
    apply wp
-    apply (wp irq_state_inv_triv' invoke_irq_control_irq_masks)
-    apply clarsimp
+    apply (wpsimp wp: irq_state_inv_triv' invoke_irq_control_irq_masks)
     apply assumption
    apply auto[1]
   apply wp

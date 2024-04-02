@@ -1173,7 +1173,7 @@ lemma sts_weak_sch_act_wf[wp]:
         \<and> (ksSchedulerAction s = SwitchToThread t \<longrightarrow> runnable' st)\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (simp add: setThreadState_def)
   apply (wp rescheduleRequired_weak_sch_act_wf)
   apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp, simp)
@@ -1637,7 +1637,7 @@ lemma rescheduleRequired_oa_queued:
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
   apply (rule_tac B="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)
                        \<and> ?OAQ t' p s" in hoare_seq_ext)
-   including no_pre
+   including classic_wp_pre
    apply (wp | clarsimp)+
    apply (case_tac x)
      apply (wp | clarsimp)+
@@ -1713,7 +1713,7 @@ lemma sts_valid_queues_partial:
                            pred_tcb_at'_def obj_at'_def inQ_def)
    apply (rule hoare_vcg_all_lift)+
     apply (rule hoare_convert_imp)
-     including no_pre
+     including classic_wp_pre
      apply (wp sts_ksQ setThreadState_oa_queued hoare_impI sts_pred_tcb_neq'
             | clarsimp)+
   apply (rule_tac Q="\<lambda>s. \<forall>d p. ?DISTINCT d p s \<and> sch_act_simple s" in hoare_pre_imp)

@@ -439,7 +439,7 @@ lemma mapM_x_copy_pde_updates:
          ucast (f x && mask pd_bits >> 3)) ` set xs then pd y else pd' y)))) \<rparr>))\<rbrace>
      mapM_x (\<lambda>x. get_pde (p + f x) >>= store_pde (p' + f x)) xs
    \<lbrace>\<lambda>_. Q\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
    apply wp

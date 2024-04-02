@@ -1098,8 +1098,7 @@ lemma dmo_cap_to'[wp]:
 lemma sct_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setCurThread t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   apply (simp add: setCurThread_def)
-  apply (wp ex_nonz_cap_to_pres')
-   apply (clarsimp elim!: cte_wp_at'_pspaceI)+
+  apply (wpsimp wp: ex_nonz_cap_to_pres')
   done
 
 
@@ -1986,7 +1985,7 @@ lemma chooseThread_invs'':
     apply (rename_tac l1)
     apply (case_tac "l1 = 0")
      (* switch to idle thread *)
-     apply (simp, wp (once) switchToIdleThread_invs', simp)
+     apply (simp, wp switchToIdleThread_invs', simp)
     (* we have a thread to switch to *)
     apply (clarsimp simp: bitmap_fun_defs)
     apply (wp assert_inv isSchedulable_wp)
