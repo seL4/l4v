@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
+(* The base theory for generated bitfield proofs about the kernel *)
+
 theory KernelState_C
 imports
   "Word_Lib.WordSetup"
