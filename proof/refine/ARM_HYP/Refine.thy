@@ -598,7 +598,7 @@ lemma kernel_corres':
        apply (wp handle_event_valid_sched hoare_vcg_if_lift3
               | simp
               | strengthen non_kernel_IRQs_strg[where Q=True, simplified], simp cong: conj_cong)+
-   apply (clarsimp simp: active_from_running)
+   apply (clarsimp simp: active_from_running schact_is_rct_def)
   apply (clarsimp simp: active_from_running')
   done
 
@@ -673,7 +673,7 @@ lemma entry_corres:
        apply ((wp thread_set_invs_trivial thread_set_ct_running
                   thread_set_not_state_valid_sched hoare_weak_lift_imp
                   hoare_vcg_disj_lift ct_in_state_thread_state_lift
-               | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state)+)[1]
+               | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state schact_is_rct_def)+)[1]
       apply (simp add: pred_conj_def cong: conj_cong)
       apply (wp threadSet_invs_trivial threadSet_ct_running'
                  hoare_weak_lift_imp hoare_vcg_disj_lift
