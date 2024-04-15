@@ -1219,8 +1219,6 @@ lemma hy_invs[wp]: "handle_yield \<lbrace>invs\<rbrace>"
   apply (wpsimp wp: charge_budget_invs)
   done
 
-declare hoare_seq_ext[wp]
-
 lemma ct_active_simple [elim!]:
   "ct_active s \<Longrightarrow> st_tcb_at simple (cur_thread s) s"
   by (fastforce simp: ct_in_state_def elim!: pred_tcb_weakenE)
