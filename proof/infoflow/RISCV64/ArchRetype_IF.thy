@@ -413,30 +413,31 @@ lemma reset_untyped_cap_reads_respects_g:
         apply (frule(1) caps_of_state_valid)
         apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
                               free_index_of_def invs_valid_global_objs)
-        apply (simp add: aligned_add_aligned is_aligned_shiftl)
-        apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
+       apply (simp add: aligned_add_aligned is_aligned_shiftl)
+       apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
        apply (rule hoare_pre)
         apply (wp preemption_point_inv' set_untyped_cap_invs_simple set_cap_cte_wp_at
                   set_cap_no_overlap only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]
+                  irq_state_independent_A_conjI
                | simp)+
         apply (strengthen empty_descendants_range_in)
-         apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>] no_irq_clearMemory
-                | simp | wp (once) dmo_wp)+
-        apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
-        apply (frule(1) caps_of_state_valid)
-        apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps free_index_of_def)
-       apply (wp | simp)+
-       apply (wp delete_objects_reads_respects_g)
-      apply (simp add: if_apply_def2)
-      apply (strengthen invs_valid_global_objs)
-      apply (wp add: delete_objects_invs_ex hoare_vcg_const_imp_lift
-                     delete_objects_pspace_no_overlap_again
-                     only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
-                     delete_objects_valid_arch_state
-                del: Untyped_AI.delete_objects_pspace_no_overlap
-             | simp)+
-     apply (rule get_cap_reads_respects_g)
-    apply (wp get_cap_wp)
+        apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>] no_irq_clearMemory
+               | simp | wp (once) dmo_wp)+
+       apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
+       apply (frule(1) caps_of_state_valid)
+       apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps free_index_of_def)
+      apply (wp | simp)+
+      apply (wp delete_objects_reads_respects_g)
+     apply (simp add: if_apply_def2)
+     apply (strengthen invs_valid_global_objs)
+     apply (wp add: delete_objects_invs_ex hoare_vcg_const_imp_lift
+                    delete_objects_pspace_no_overlap_again
+                    only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
+                    delete_objects_valid_arch_state
+               del: Untyped_AI.delete_objects_pspace_no_overlap
+            | simp)+
+    apply (rule get_cap_reads_respects_g)
+   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply (frule(1) caps_of_state_valid)
   apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps

@@ -1457,6 +1457,10 @@ proof -
     out_no_cap_to_trivial [OF ball_tcb_cap_casesI]
     checked_insert_no_cap_to
   note if_cong [cong] option.case_cong [cong]
+  \<comment> \<open>This proof is quite fragile and was written when hoare_seq_ext was added to the wp set later
+     in the theory dependencies, and so was matched with before alternatives. We re-add it here to
+     create a similar environment and avoid needing to rework the proof.\<close>
+  note hoare_seq_ext[wp]
   show ?thesis
     apply (simp add: invokeTCB_def liftE_bindE)
     apply (simp only: eq_commute[where a= "a"])
