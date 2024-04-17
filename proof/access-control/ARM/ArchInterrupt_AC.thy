@@ -87,17 +87,12 @@ lemma arch_decode_irq_control_invocation_authorised[Interrupt_AC_assms]:
        (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag))\<rbrace>
    arch_decode_irq_control_invocation info_label args slot caps
    \<lbrace>\<lambda>x _. arch_authorised_irq_ctl_inv aag x\<rbrace>, -"
-  unfolding decode_irq_control_invocation_def arch_decode_irq_control_invocation_def
+  unfolding decode_irq_control_invocation_def arch_decode_irq_control_invocation_def Let_def
             authorised_irq_ctl_inv_def arch_authorised_irq_ctl_inv_def arch_check_irq_def
   apply (rule hoare_gen_asmE)
-  apply (rule hoare_pre)
-   apply (simp add: Let_def split del: if_split cong: if_cong)
-   apply (wp whenE_throwError_wp hoare_vcg_imp_lift hoare_drop_imps
-          | strengthen  aag_Control_owns_strg
-          | simp add: o_def del: hoare_True_E_R)+
+  apply (wpsimp wp: weak_if_wp)
   apply (cases args, simp_all)
   apply (cases caps, simp_all)
-  apply (simp add: ucast_mask_drop)
   apply (auto simp: is_cap_simps cap_auth_conferred_def
                     pas_refined_wellformed
                     pas_refined_all_auth_is_owns aag_cap_auth_def)

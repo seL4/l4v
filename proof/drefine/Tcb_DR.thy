@@ -1117,8 +1117,7 @@ lemma dcorres_tcb_update_ipc_buffer:
              apply wp
             apply wpsimp
            apply (wp when_wp)+
-          apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],clarsimp+)
-        apply (wp wp_post_taut hoare_drop_imp get_cap_weak_wp)+
+        apply (wpsimp wp: wp_post_taut hoare_drop_imp get_cap_weak_wp simp_del: hoare_TrueI)+
       apply (clarsimp simp:conj_comms)
       apply (wp thread_set_global_refs_triv thread_set_valid_idle)
        apply (clarsimp simp:tcb_cap_cases_def)

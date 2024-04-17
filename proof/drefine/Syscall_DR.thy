@@ -1325,21 +1325,12 @@ lemma handle_invocation_corres:
           apply (simp add: not_idle_thread_def)
           apply (strengthen invs_valid_idle)
           apply wp+
-        apply (simp add:conj_comms not_idle_thread_def split_def)
+        \<comment> \<open>The following proof is quite fragile. If clarsimp is used, either on its own or as part
+            of wpsimp, then it rewrites pairs and necessary rules no longer match.\<close>
+        apply (simp add: not_idle_thread_def split_def)
         apply (wp sts_Restart_invs set_thread_state_ct_active)+
-       apply (simp add:conj_comms split_def msg_from_syscall_error_simp)
-       apply (wp | simp add:split_def)+
-      apply (rule_tac Q'="\<lambda>r s. s = s'a \<and> ex_nonz_cap_to (cur_thread s) s \<and> valid_invocation r s \<and>
-                                invocation_duplicates_valid r s"
-                      in hoare_post_imp_R)
-       apply (simp add:split_def liftE_bindE[symmetric])
-       apply (wp decode_inv_wf)
-      apply (clarsimp simp:ct_in_state_def st_tcb_at_def obj_at_def not_idle_thread_def)+
-     apply (rule wp_post_tautE)
-    apply clarsimp
-    apply wp
-       apply (simp add:split_def liftE_bindE[symmetric])
-       apply (wp | simp add: split_def liftE_bindE[symmetric])+
+       apply (simp add: split_def msg_from_syscall_error_simp)
+       apply (wp | simp add: split_def)+
       apply (rule_tac Q="\<lambda>r s. s = s'a \<and>
                                evalMonad (lookup_ipc_buffer False (cur_thread s'a)) s'a = Some r \<and>
                                cte_wp_at (Not \<circ> is_master_reply_cap) (snd x) s \<and>
@@ -1351,12 +1342,12 @@ lemma handle_invocation_corres:
                                (\<forall>r\<in>cte_refs (fst x) (interrupt_irq_node s). ex_cte_cap_wp_to \<top> r s)"
                       in hoare_strengthen_post)
        apply (wp evalMonad_wp)
-         apply (simp add: empty_when_fail_lookup_ipc_buffer  weak_det_spec_lookup_ipc_buffer)+
+         apply (simp add: empty_when_fail_lookup_ipc_buffer weak_det_spec_lookup_ipc_buffer)+
        apply wp
       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def st_tcb_ex_cap
                             ct_in_state_def pred_tcb_at_def not_idle_thread_def obj_at_def
                      dest!: get_tcb_SomeD)
-     apply (wp)+
+     apply wp+
     apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def pred_tcb_at_def obj_at_def)
    apply simp_all
   done

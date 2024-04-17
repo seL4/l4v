@@ -294,7 +294,7 @@ lemma decode_invocation_nonep:
    decode_invocation cap cap_ref extra_caps intent
    \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
   apply (simp add: decode_invocation_def)
-  apply (wpsimp simp: o_def nonep_invocation_def simp_del: hoare_True_E_R)
+  apply (wpsimp simp: o_def nonep_invocation_def)
   apply (auto simp: ep_related_cap_def)
   done
 
@@ -578,9 +578,7 @@ lemma call_kernel_with_intent_no_fault_helper:
                 | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
          apply (case_tac r, simp_all)[1]
         apply (simp add: validE_def[symmetric])
-        apply (rule hoare_pre, wp)
-          apply (simp add: validE_def, (wp | simp add: validE_def[symmetric])+)
-          apply (wp handle_pending_interrupts_no_ntf_cap)
+        apply (wp handle_pending_interrupts_no_ntf_cap)
          apply (rule handle_event_syscall_no_decode_exception
                    [where cur_thread = root_tcb_id
                       and intent_op = intent_op
@@ -1071,10 +1069,7 @@ lemma call_kernel_with_intent_allow_error_helper:
                 | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
          apply (case_tac r, simp_all)[1]
         apply (simp add: validE_def[symmetric])
-        apply (rule hoare_pre, wp)
-          apply (simp add: validE_def, (wp | simp add: validE_def[symmetric])+)
-          apply (wp handle_pending_interrupts_no_ntf_cap)
-
+        apply (wp handle_pending_interrupts_no_ntf_cap)
          apply (rule handle_event_syscall_allow_error
                        [where cur_thread = root_tcb_id
                           and intent_op = intent_op
