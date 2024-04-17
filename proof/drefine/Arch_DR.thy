@@ -964,7 +964,7 @@ next
         apply (simp add: pd_shifting_dual ucast_nat_def shiftr_20_less triple_shift_fun
                          le_shiftr linorder_not_le)
        apply (rule hoare_pre, wp, auto)[1]
-      apply (wp | simp)+
+      apply (wp weak_if_wp | simp)+
     apply (clarsimp simp: is_final_cap'_def
       is_final_cap_def split:list.splits)
     apply (simp add: liftE_bindE is_final_cap_def corres_symb_exec_in_gets

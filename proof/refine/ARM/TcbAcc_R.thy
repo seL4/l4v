@@ -1047,19 +1047,17 @@ lemma threadSet_obj_at'_really_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>obj. if t = t' then P (f obj) else P obj)
     t' s\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P t'\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule hoare_wp_splits)
-   apply (rule setObject_tcb_strongest)
-  apply (simp only: imp_conv_disj)
-  apply (subst simp_thms(32)[symmetric], rule hoare_vcg_disj_lift)
-   apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<not> tcb_at' t s \<and> tcb_at' t s"])
-    apply simp
-   apply (subst simp_thms(21)[symmetric], rule hoare_vcg_conj_lift)
-    apply (rule getObject_tcb_inv)
-   apply (rule hoare_strengthen_post [OF getObject_ko_at])
+  apply (wp setObject_tcb_strongest)
+   apply (subst simp_thms(32)[symmetric], rule hoare_vcg_disj_lift)
+    apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<not> tcb_at' t s \<and> tcb_at' t s"])
      apply simp
-   apply (erule obj_at'_weakenE)
-   apply simp
-  apply (cases "t = t'", simp_all)
+    apply (subst simp_thms(21)[symmetric], rule hoare_vcg_conj_lift)
+     apply (rule getObject_tcb_inv)
+    apply (rule hoare_strengthen_post [OF getObject_ko_at])
+     apply simp
+    apply (erule obj_at'_weakenE)
+    apply simp
+   apply (cases "t = t'", simp_all)
    apply (rule OMG_getObject_tcb)
   apply wp
   done

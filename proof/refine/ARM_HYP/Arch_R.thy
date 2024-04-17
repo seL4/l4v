@@ -1751,11 +1751,11 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
   apply (clarsimp simp:createMappingEntries_def)
   apply (rule hoare_pre)
    apply (wpc | wp lookupPTSlot_page_table_at'
-     | simp add: slots_duplicated_ensured_def)+
-     apply (rule_tac Q' = "\<lambda>p s.  is_aligned p 7 \<and> page_table_at' (p && ~~ mask pt_bits) s"
-       in  hoare_post_imp_R)
+          | simp add: slots_duplicated_ensured_def)+
+     apply (rule_tac Q' = "\<lambda>p s. is_aligned p 7 \<and> page_table_at' (p && ~~ mask pt_bits) s"
+                  in hoare_post_imp_R)
       apply (wp lookupPTSlot_aligned lookupPTSlot_page_table_at'
-           | simp add: vspace_bits_defs largePagePTEOffsets_def superSectionPDEOffsets_def)+
+             | simp add: vspace_bits_defs largePagePTEOffsets_def superSectionPDEOffsets_def)+
      apply (rename_tac rv s)
      apply (rule_tac x = rv in exI)
      apply clarsimp
@@ -1764,21 +1764,18 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
      apply (drule upto_enum_step_shift[where n = 7 and m = 3,simplified])
      apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
     apply wp+
-   apply (intro conjI impI)
-            apply ((clarsimp simp: vmsz_aligned_def pageBitsForSize_def
-              slots_duplicated_ensured_def
-              split:vmpage_size.splits)+)[9]
-   apply clarsimp
-   apply (drule lookup_pd_slot_aligned_6)
-    apply (simp add:pdBits_def pageBits_def pd_bits_def pde_bits_def)
-   apply (clarsimp simp:slots_duplicated_ensured_def)
-   apply (rule_tac x = "(lookup_pd_slot pd vptr)" in exI)
-   apply (clarsimp simp: superSectionPDEOffsets_def Let_def pde_bits_def)
-   apply (frule is_aligned_no_wrap'[where off = "0x78" and sz = 7])
-    apply simp
-   apply (drule upto_enum_step_shift[where n = 7 and m = 3,simplified])
-   apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
-   done
+  apply (intro conjI impI; clarsimp)
+    apply ((clarsimp simp: vmsz_aligned_def slots_duplicated_ensured_def)+)[2]
+  apply (drule lookup_pd_slot_aligned_6)
+   apply (simp add:pdBits_def pageBits_def pd_bits_def pde_bits_def)
+  apply (clarsimp simp:slots_duplicated_ensured_def)
+  apply (rule_tac x = "(lookup_pd_slot pd vptr)" in exI)
+  apply (clarsimp simp: superSectionPDEOffsets_def Let_def pde_bits_def)
+  apply (frule is_aligned_no_wrap'[where off = "0x78" and sz = 7])
+   apply simp
+  apply (drule upto_enum_step_shift[where n = 7 and m = 3,simplified])
+  apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
+  done
 
 lemma arch_decodeARMPageFlush_wf:
   "ARM_HYP_H.isPageFlushLabel (invocation_type label) \<Longrightarrow>

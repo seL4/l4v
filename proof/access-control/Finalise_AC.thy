@@ -958,18 +958,11 @@ lemma rec_del_respects_CTEDelete_transferable':
    apply (wp rec_del_respects'')
    apply (solves \<open>simp\<close>)
   apply (subst rec_del.simps[abs_def])
-  apply (wp add: hoare_K_bind without_preemption_wp hoare_weak_lift_imp wp_transferable
-                 rec_del_Finalise_transferable
-            del: wp_not_transferable
-         | wpc)+
+  apply (wpsimp wp: wp_transferable hoare_weak_lift_imp)
     apply (rule hoare_post_impErr,rule rec_del_Finalise_transferable)
-     apply simp apply (elim conjE) apply simp apply simp
-   apply (wp add: hoare_K_bind without_preemption_wp hoare_weak_lift_imp wp_transferable
-                  rec_del_Finalise_transferable
-             del: wp_not_transferable
-          | wpc)+
+     apply simp apply simp
    apply (rule hoare_post_impErr,rule rec_del_Finalise_transferable)
-    apply simp apply (elim conjE) apply simp apply simp
+    apply simp apply simp
   apply (clarsimp)
   apply (frule(3) cca_to_transferable_or_subject[OF invs_valid_objs invs_mdb])
   by (safe; simp)

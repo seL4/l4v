@@ -129,7 +129,7 @@ proof -
          apply (case_tac acap; clarsimp simp: isCap_simps catch_throwError intro!: global)
          apply (rename_tac m)
          apply (case_tac m; clarsimp simp: isCap_simps catch_throwError intro!: global)
-         apply (corres simp: lookup_failure_map_def)
+         apply (corres simp: lookup_failure_map_def wp: hoare_vcg_if_lift_ER)
           apply (frule (1) cte_wp_at_valid_objs_valid_cap)
           apply (clarsimp simp: valid_cap_def mask_def wellformed_mapdata_def)
          apply (wpsimp wp: get_cap_wp simp: getThreadVSpaceRoot_def)+
