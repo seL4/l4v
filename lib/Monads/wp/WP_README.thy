@@ -36,13 +36,15 @@ made by first applying the @{thm hoare_vcg_conj_lift} combinator rule and then t
 rule of interest. The 'wp_comb' attribute given to such rules in
 @{theory Monads.Nondet_VCG} specifies that they should be used in this way.
 
-The 'wp' tool's semantics are defined entirely by these sets of rules. It
-always either applies a 'wp' rule as an introduction rule, or applies a
-'wp_comb' rule first and then a 'wp' rule. If multiple choices are available,
-the one with the most recently added 'wp' rule is preferred. Application alone
-is preferred to application with a combinator, and combinators are also
-selected last-first. There is also a 'wp_split' rule set which are not combined
-with combinators and which are applied only if no 'wp' rules can be applied.
+The 'wp' tool's semantics are defined entirely by these sets of rules.
+Selection from a set of rules ('wp' and 'wp_split') or combinators ('wp_comb')
+occurs in last-to-first order, i.e. always preferring to apply the theorem most
+recently added to a set.
+First, each 'wp' rule is attempted in the following order:
+- on its own, as an introduction rule
+- prefixed by a 'wp_comb' rule (i.e. 'rule wp_comb_rule, rule wp_rule').
+If no 'wp' rule can be applied, rules from the 'wp_split' set are attempted
+(on their own as introduction rules, without 'wp_comb' prefixes).
 
 Note that rules may be supplied which are not the actual weakest precondition.
 This may cause the tool to produce unhelpfully weak conclusions. The
