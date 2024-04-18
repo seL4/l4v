@@ -858,6 +858,11 @@ lemma rg_vcg_split_case_sum:
        \<lbrace>G\<rbrace>, \<lbrace>Q x\<rbrace>"
   by (cases x; simp)
 
+lemma rg_seq_extE:
+  "\<lbrakk>\<And>x. \<lbrace>B x\<rbrace>,\<lbrace>R\<rbrace> g x \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>B\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  apply (clarsimp simp: validIE_def)
+  by (wp | assumption)+
+
 lemma bind_twp_nobind:
   "\<lbrakk>\<lbrace>B\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>C\<rbrace>; \<lbrace>A\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. B\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace>,\<lbrace>R\<rbrace> do f; g od \<lbrace>G\<rbrace>,\<lbrace>C\<rbrace>"
   by (erule bind_twp_fwd) clarsimp
@@ -1409,16 +1414,24 @@ lemmas all_rg_classic_wp_combs =
   rg_classic_wp_combs
 
 lemmas rg_wp_splits[wp_split] =
-  bind_twp bindE_twp handleE'_twp handleE_twp
+  handleE'_twp handleE_twp
   catch_twp rg_vcg_if_split rg_vcg_if_splitE
   liftM_twp liftME_twp whenE_twp unlessE_twp
   validIE_validI
 
 lemmas [wp_comb] = rg_wp_state_combsE rg_wp_combsE rg_wp_combs
 
+(* Add these rules to wp first to control when they are applied. We want them used last, only when
+   no other more specific wp rules apply.
+   bind_twp, bindE_twp and rg_seq_extE are wp rules instead of wp_split rules because
+   they should be used before other wp_split rules, and in combination with wp_comb rules when
+   necessary.
+   rg_vcg_prop is unsafe in certain circumstances but still useful to have applied automatically,
+   so we make it the very last rule to be tried. *)
+lemmas [wp] = rg_vcg_prop bind_twp bindE_twp rg_seq_extE
+
 (* rules towards the bottom will be matched first *)
-lemmas [wp] = rg_vcg_prop
-              twp_post_taut
+lemmas [wp] = twp_post_taut
               twp_post_tautE
               rg_fun_app_twp
               liftE_twp
