@@ -2678,8 +2678,7 @@ global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo targ
 crunches ifCondRefillUnblockCheck
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-  and cur_tcb'[wp]: cur_tcb'
-  (simp: crunch_simps wp: whileLoop_wp)
+  (simp: crunch_simps wp: whileLoop_wp wp_comb: hoare_vcg_precond_imp)
 
 lemma cancelAllIPC_loop_body_st_tcb_at'_other:
   "\<lbrace>\<lambda>s. st_tcb_at' P t' s \<and> tcb_at' t' s \<and> t' \<noteq> t\<rbrace>

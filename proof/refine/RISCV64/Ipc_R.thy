@@ -2763,6 +2763,7 @@ end
 crunches maybeReturnSc
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p' s)"
   and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
+  (wp: crunch_wps)
 
 global_interpretation maybeReturnSc: typ_at_all_props' "maybeReturnSc ntfnPtr tcbPtr"
   by typ_at_props'
@@ -2930,14 +2931,9 @@ lemma postpone_corres:
           apply (rule setReprogramTimer_corres)
          apply wp
         apply wp
-       apply (wp tcb_sched_dequeue_not_queued_inv)
-       apply (subgoal_tac "scTCB rv' = sc_tcb rv")
-        apply clarsimp
-        apply assumption
-       apply (clarsimp simp: sc_relation_def)
-      apply wpsimp
-     apply wp
-    apply wp
+       apply (prop_tac "scTCB rv' = sc_tcb rv")
+        apply (clarsimp simp: sc_relation_def)
+       apply (wpsimp wp: tcb_sched_dequeue_not_queued_inv)+
    apply (clarsimp simp: vs_all_heap_simps valid_obj_def obj_at_def is_obj_defs sc_at_ppred_def)
    apply (drule_tac p=ptr in sym_refs_ko_atD[rotated])
     apply (simp add: obj_at_def)
@@ -4235,8 +4231,10 @@ lemma maybeReturnSc_corres:
                            threadSet_valid_queues' threadSet_valid_release_queue
                            threadSet_valid_tcbs'
                            threadSet_valid_release_queue')
-        apply (wpsimp wp: thread_get_wp threadGet_wp)+
-       apply (frule ntfn_relation_par_inj, simp)
+        apply (wpsimp wp: thread_get_wp)
+       apply (rename_tac sc sc')
+       apply (case_tac sc', clarsimp)
+       apply (wpsimp wp: threadGet_wp)
       apply (wpsimp wp: get_simple_ko_wp getNotification_wp)+
     apply (rule valid_tcbs_valid_tcbE, simp, simp)
     apply (clarsimp simp: valid_tcb_def valid_bound_obj_def split: option.splits)
@@ -6242,7 +6240,7 @@ lemma gts_st_tcb':
 
 crunches replyRemove
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps wp_comb: hoare_vcg_precond_imp)
 
 crunch inv[wp]: getSanitiseRegisterInfo P
 

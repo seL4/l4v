@@ -15874,20 +15874,20 @@ lemma cancel_all_ipc_not_queued:
   apply (simp add: cancel_all_ipc_def)
   unfolding cancel_all_ipc_loop_body_def
   apply (wp reschedule_required_not_queued  | wpc | simp)+
-      apply (rule hoare_gen_asm)
+       apply (rule_tac P="t \<notin> set queue" in hoare_gen_asm)
+       apply (rule_tac S="set queue - {t}" in mapM_x_wp)
+        apply (wpsimp wp: tcb_sched_enqueue_not_queued gts_wp)
+       apply simp
+      apply (wp reschedule_required_not_queued | simp add: get_ep_queue_def)+
+      apply (rule_tac P="t \<notin> set queue" in hoare_gen_asm)
       apply (rule_tac S="set queue - {t}" in mapM_x_wp)
-       apply (wp tcb_sched_enqueue_not_queued gts_wp| clarsimp | wpc)+
-      apply (erule notE, assumption)
-     apply (wp reschedule_required_not_queued | simp add: get_ep_queue_def)+
-     apply (rule hoare_gen_asm)
-     apply (rule_tac S="set queue - {t}" in mapM_x_wp)
-      apply (wp tcb_sched_enqueue_not_queued gts_wp | wpc | clarsimp)+
-     apply (erule notE, assumption)
-    apply (wp hoare_vcg_imp_lift
-         | simp add: get_ep_queue_def get_simple_ko_def a_type_def get_object_def
-              split: kernel_object.splits
-         | wpc | wp (once) hoare_vcg_all_lift)+
-   apply safe
+       apply (wpsimp wp: tcb_sched_enqueue_not_queued gts_wp)
+      apply simp
+     apply (wp hoare_vcg_imp_lift
+          | simp add: get_ep_queue_def get_simple_ko_def a_type_def get_object_def
+               split: kernel_object.splits
+          | wpc | wp (once) hoare_vcg_all_lift)+
+  apply safe
    apply (rename_tac xa)
    apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep="SendEP xa" in
           ep_queued_st_tcb_at[rotated, rotated])
@@ -16214,7 +16214,7 @@ lemma invoke_domain_valid_sched:
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   apply (simp add: invoke_domain_def)
-  including no_pre
+  including classic_wp_pre
   apply wp
   apply (simp add: set_domain_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
@@ -16228,7 +16228,8 @@ lemma invoke_domain_valid_sched:
                       thread_set_domain_not_idle_valid_idle_etcb)
    apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued hoare_vcg_imp_lift' hoare_vcg_all_lift
                      tcb_sched_dequeue_valid_blocked_except_set_remove hoare_vcg_conj_lift)
-   apply (clarsimp simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
+    apply (clarsimp simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
+   apply (fastforce simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
     (* second case *)
   apply (wpsimp wp: tcb_sched_enqueue_valid_sched)
      apply (wpsimp wp: is_schedulable_wp')+

@@ -5350,7 +5350,8 @@ lemma schedContextDonate_valid_queues[wp]:
 lemma schedContextDonate_valid_queues'[wp]:
   "schedContextDonate sc t \<lbrace>valid_queues'\<rbrace>"
   apply (clarsimp simp: schedContextDonate_def)
-  by (wpsimp wp: threadSet_valid_queues' hoare_vcg_imp_lift' simp: inQ_def | simp)+
+  by (wpsimp wp: threadSet_valid_queues' hoare_vcg_imp_lift' comb: hoare_pre simp: inQ_def
+      | simp)+
 
 crunches tcbSchedDequeue
   for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
@@ -5401,7 +5402,8 @@ crunches schedContextDonate
   (simp: comp_def tcb_cte_cases_def crunch_simps cteSizeBits_def
      wp: threadSet_not_inQ hoare_vcg_imp_lift' valid_irq_node_lift
          setQueue_cur threadSet_ifunsafe'T threadSet_cur crunch_wps
-         cur_tcb_lift valid_dom_schedule'_lift valid_replies'_lift)
+         cur_tcb_lift valid_dom_schedule'_lift valid_replies'_lift
+   wp_comb: hoare_vcg_precond_imp)
 
 lemma schedContextDonate_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' tcbPtr\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"

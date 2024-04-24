@@ -4089,7 +4089,7 @@ crunches set_refills,refill_size, schedule_used
 lemma refill_budget_check_valid_list[wp]:
   "refill_budget_check usage \<lbrace>valid_list\<rbrace>"
   unfolding refill_budget_check_defs
-  apply (wpsimp wp: whileLoop_valid_inv hoare_drop_imps)
+  apply (wpsimp wp: whileLoop_valid_inv | wp (once) hoare_drop_imps)+
   done
 
 lemma refill_budget_check_round_robin_valid_list[wp]:

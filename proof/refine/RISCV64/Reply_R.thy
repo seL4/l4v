@@ -764,8 +764,9 @@ lemma bindScReply_corres:
                    in hoare_strengthen_post[rotated])
              apply clarsimp
              apply (erule (1) heap_path_heap_upd_not_in[simplified fun_upd_def])
+            apply (case_tac sc, clarsimp)
+            apply (wpfix add: sched_context.sel)
             apply wpsimp
-            apply (frule Some_to_the, simp)
            apply (wpsimp wp: updateReply_reply_projs)+
           apply (clarsimp simp: obj_at_def)
           apply (frule (1) valid_sched_context_objsI)

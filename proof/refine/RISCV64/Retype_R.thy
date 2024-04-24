@@ -4439,9 +4439,9 @@ lemma createNewCaps_valid_release_queue:
    createNewCaps ty ptr n us d
    \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (wp valid_release_queue_lift_asm createNewCaps_obj_at2[where sz=sz])
-       apply (simp add: inQ_def)
-      apply (wp createNewCaps_pred_tcb_at'[where sz=sz] | simp)+
+  apply (wpsimp wp: valid_release_queue_lift_asm createNewCaps_obj_at2[where sz=sz])
+    apply (simp add: inQ_def)
+   apply (wpsimp wp: createNewCaps_pred_tcb_at'[where sz=sz] )+
   done
 
 lemma mapM_x_threadSet_valid_pspace:

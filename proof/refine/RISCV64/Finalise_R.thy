@@ -3991,7 +3991,7 @@ lemma cteDeleteOne_valid_inQ_queues[wp]:
 crunches cteDeleteOne
   for ksCurDomain[wp]:  "\<lambda>s. P (ksCurDomain s)"
   and tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
-  (wp: crunch_wps simp: crunch_simps unless_def)
+  (wp: crunch_wps simp: crunch_simps unless_def wp_comb: hoare_vcg_precond_imp)
 
 end
 
@@ -4600,8 +4600,7 @@ lemma schedContextUnbindTCB_corres:
                 apply wpsimp+
        apply (case_tac sc'; clarsimp)
        apply (wpfix add: sched_context.sel)
-       apply simp
-      apply wpsimp+
+       apply wpsimp+
     apply (frule invs_valid_objs)
     apply (fastforce simp: sc_at_pred_n_def obj_at_def is_obj_defs valid_obj_def
                            valid_sched_context_def)

@@ -1908,7 +1908,7 @@ lemma schedContextBindTCB_corres:
   apply (simp only: sched_context_bind_tcb_def schedContextBindTCB_def)
   apply (rule stronger_corres_guard_imp)
     apply clarsimp
-    apply (rule corres_symb_exec_r')
+    apply (rule corres_symb_exec_r'[where Q'=\<top>])
        apply (rule corres_split_nor)
          apply (clarsimp simp: set_tcb_obj_ref_thread_set sc_relation_def)
           apply (rule threadset_corres; clarsimp simp: tcb_relation_def)
