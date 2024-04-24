@@ -44,11 +44,7 @@ fun read_sections sections =
 val crunch_parser =
     (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
      -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.const -- Scan.optional P.term ""
-     -- Scan.optional
-       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,wps_sect,ignore_sect,simp_sect,
-                                     simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect]
-        --| P.$$$ ")")
-       []
+     -- Scan.optional (P.$$$ "(" |-- read_sections crunch_sections --| P.$$$ ")") []
     )
     >> (fn (((((crunch_instance, prp_name), att_srcs), consts), extra), wpigs) =>
            (fn lthy =>
@@ -61,11 +57,7 @@ val crunches_parser =
     (((P.list1 P.const --| P.$$$ "for")
      -- P.and_list1 ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
          -- Parse.opt_attribs) -- Scan.optional (P.$$$ ":" |-- P.term) "")
-     -- Scan.optional
-       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,wps_sect,ignore_sect,simp_sect,
-                                     simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect]
-        --| P.$$$ ")")
-       []
+     -- Scan.optional (P.$$$ "(" |-- read_sections crunch_sections --| P.$$$ ")") []
     )
     >> (fn ((consts, confs), wpigs) =>
            fold (fn (((crunch_instance, prp_name), att_srcs), extra) => fn lthy =>
