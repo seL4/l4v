@@ -87,6 +87,12 @@ val simp_sect = ("simp", Parse.thm >> Thm);
 val simp_del_sect = ("simp_del", Parse.thm >> Thm);
 val rule_sect = ("rule", Parse.thm >> Thm);
 val rule_del_sect = ("rule_del", Parse.thm >> Thm);
+val wp_comb_sect = ("wp_comb", Parse.thm >> Thm);
+val wp_comb_del_sect = ("wp_comb_del", Parse.thm >> Thm);
+
+val crunch_sections =
+  [wp_sect,wp_del_sect,wps_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,
+   ignore_del_sect,wp_comb_sect,wp_comb_del_sect]
 
 fun read_const ctxt = Proof_Context.read_const {proper = true, strict = false} ctxt;
 
@@ -867,6 +873,12 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
                           |> get_thms_from_facts ctxt
         val rules = rules @ Named_Theorems.get ctxt @{named_theorems crunch_rules}
 
+        val wp_combs = wpigs |> filter (fn (s,_) => s = #1 wp_comb_sect) |> map #2 |> thms
+                    |> get_thms_from_facts ctxt
+
+        val wp_comb_dels = wpigs |> filter (fn (s,_) => s = #1 wp_comb_del_sect) |> map #2 |> thms
+                    |> get_thms_from_facts ctxt
+
         fun mk_wp thm =
            let val ms = Thm.prop_of thm |> monads_of ctxt;
                 val m = if length ms = 1
@@ -887,13 +899,17 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
                     (const_terms ~~ full_const_names)
 
         val wp_dels = get_thms_from_facts ctxt wp_dels';
-        val ctxt' = fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.wp_del] thm ctxt |> snd)
-                          wp_dels ctxt;
-
-        val ctxt'' = ctxt' delsimps simp_dels;
+        val ctxt' =
+          ctxt delsimps simp_dels
+          |> fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.wp_del] thm ctxt |> snd)
+                  wp_dels
+          |> fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.combs_add] thm ctxt |> snd)
+                  wp_combs
+          |> fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.combs_del] thm ctxt |> snd)
+                  wp_comb_dels;
 
         val crunch_cfg =
-          {ctxt = ctxt'', prp_name = prp_name, nmspce = nmspce, wp_rules = wp_rules,
+          {ctxt = ctxt', prp_name = prp_name, nmspce = nmspce, wp_rules = wp_rules,
            wps_rules = wps_rules, igs = igs, simps = simps, ig_dels = ig_dels,
            rules = rules}
         val (_, thms) =
@@ -902,7 +918,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
 
         val atts' = map (Attrib.check_src ctxt) atts;
 
-        val ctxt''' = fold (fn (name, thm) => add_thm thm atts' name) thms ctxt;
+        val new_ctxt = fold (fn (name, thm) => add_thm thm atts' name) thms ctxt;
     in
         Pretty.writeln
           (Pretty.big_list "proved:"
@@ -911,7 +927,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
                                       [Pretty.str (n ^ ": "),
                                        Syntax.pretty_term ctxt (Thm.prop_of t)])
                                 thms));
-        ctxt'''
+        new_ctxt
     end
 
 end
