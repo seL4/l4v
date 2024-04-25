@@ -1760,8 +1760,10 @@ lemma reorder_ntfn_invs[wp]:
   apply (simp only: reorder_ntfn_def)
   apply (subst bind_assoc[symmetric, where m="tcb_ep_dequeue tptr _"])
   apply (rule hoare_seq_ext)+
+     \<comment> \<open>tcb_ep_dequeue_append_valid_ntfn_rv requires that the postcondition conjunctions are
+        carefully managed, so that the bind is not split too early\<close>
      apply (wpsimp wp: set_ntfn_minor_invs get_simple_ko_wp tcb_ep_dequeue_rv_wf'
-                       tcb_ep_dequeue_append_valid_ntfn_rv hoare_vcg_conj_lift
+                       tcb_ep_dequeue_append_valid_ntfn_rv hoare_elim_pred_conj
                  simp: live_def live_ntfn_def pred_conj_def)+
   apply (frule valid_objs_ko_at[rotated], fastforce)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def pred_tcb_at_def cong: conj_cong)
