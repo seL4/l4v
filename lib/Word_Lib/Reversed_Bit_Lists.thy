@@ -844,7 +844,6 @@ next
   obtain b k where \<open>bin = of_bool b + 2 * k\<close>
     using bin_exhaust by blast
   moreover have \<open>(2 * k - 1) div 2 = k - 1\<close>
-    using even_succ_div_2 [of \<open>2 * (k - 1)\<close>]
     by simp
   ultimately show ?case
     using Suc [of \<open>bin div 2\<close>]
@@ -2212,7 +2211,7 @@ text\<open>Like @{thm shiftr_bl}\<close>
 lemma sshiftr_bl: "x >>> n \<equiv> of_bl (replicate n (msb x) @ take (LENGTH('a) - n) (to_bl x))"
   for x :: "'a::len word"
   unfolding word_msb_alt
-  by (smt (z3) length_to_bl_eq sshiftr_bl_of word_bl.Rep_inverse)
+  by (smt (verit) length_to_bl_eq sshiftr_bl_of word_bl.Rep_inverse)
 
 end
 

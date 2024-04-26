@@ -64,7 +64,7 @@ text \<open>
 
       \<^item> Equality rule: @{thm [display, mode=iff] bit_eq_iff [where ?'a = int, no_vars]}
 
-      \<^item> Induction rule: @{thm [display, mode=iff] bits_induct [where ?'a = int, no_vars]}
+      \<^item> Induction rule: @{thm [display, mode=iff] bit_induct [where ?'a = int, no_vars]}
 
     \<^item> Characteristic properties @{prop [source] \<open>bit (f x) n \<longleftrightarrow> P x n\<close>}
       are available in fact collection \<^text>\<open>bit_simps\<close>.

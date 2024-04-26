@@ -189,8 +189,8 @@ lemma sdiv_word_max:
 proof (cases \<open>sint a = 0 \<or> sint b = 0 \<or> sgn (sint a) \<noteq> sgn (sint b)\<close>)
   case True then show ?thesis
     apply (auto simp add: sgn_if not_less signed_divide_int_def split: if_splits)
-     apply (smt (z3) pos_imp_zdiv_neg_iff zero_le_power)
-    apply (smt (z3) not_exp_less_eq_0_int pos_imp_zdiv_neg_iff)
+     apply (smt (verit) pos_imp_zdiv_neg_iff zero_le_power)
+    apply (smt (verit) not_exp_less_eq_0_int pos_imp_zdiv_neg_iff)
     done
 next
   case False
