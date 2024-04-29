@@ -950,8 +950,9 @@ fun solved_tac thm =
 
 (* Convenience function for making simprocs. *)
 fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context -> cterm -> thm option) = let
-  in Simplifier.make_simproc ctxt name
-       {lhss = map (Proof_Context.read_term_pattern ctxt) pats,
+  in Simplifier.make_simproc ctxt
+       {name=name, identifier=[],
+        lhss = map (Proof_Context.read_term_pattern ctxt) pats,
         proc = K proc} end
 
 (* Get named_theorems in reverse order. We use this for translation rulesets

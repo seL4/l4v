@@ -90,15 +90,16 @@ fun simp_strategy_True_conv ct = case Thm.term_of ct of
 fun new_simp_strategy thy (name : term) ss rewr_True =
 let
   val ctxt = Proof_Context.init_global thy;
-  val ss = Simplifier.make_simproc ctxt ("simp_strategy_" ^ fst (dest_Const name))
-    {lhss = [@{term simp_strategy} $ name $ @{term x}],
+  val ss = Simplifier.make_simproc ctxt
+    {name = "simp_strategy_" ^ fst (dest_Const name),
+     lhss = [@{term simp_strategy} $ name $ @{term x}],
      proc = (fn _ => fn ctxt' => fn ct =>
         ct
         |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt'))
           then_conv (if rewr_True then simp_strategy_True_conv
                       else Conv.all_conv))
-        |> (fn c => if Thm.is_reflexive c then NONE else SOME c))
-     }
+        |> (fn c => if Thm.is_reflexive c then NONE else SOME c)),
+     identifier = []}
 in
   ss
 end
