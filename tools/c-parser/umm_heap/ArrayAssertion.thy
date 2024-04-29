@@ -204,7 +204,7 @@ next
     apply (simp add: o_def)
     apply (subst Suc.hyps)
      apply arith
-    apply (metis mod_geq)
+    apply (simp add: mod_if)
     done
 qed
 

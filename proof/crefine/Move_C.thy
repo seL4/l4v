@@ -286,8 +286,8 @@ lemma word_minus_1_shiftr:
   apply (clarsimp simp: and_mask_dvd low_bits_zero)
   apply (subst mod_pos_pos_trivial)
     apply (simp add: word_le_def)
-    apply (metis mult_zero_left neq_zero div_positive_int linorder_not_le uint_2p_alt word_div_lt_eq_0
-                 word_less_def zless2p)
+    apply (metis (mono_tags) More_Word.word_div_mult assms(2) div_of_0_id p2_gt_0 uint_2p_alt uint_div
+                             unsigned_eq_0_iff word_less_div word_less_iff_unsigned)
    apply (metis shiftr_div_2n uint_1 uint_sub_lt2p)
   apply fastforce
   done

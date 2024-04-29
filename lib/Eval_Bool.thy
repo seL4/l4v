@@ -47,12 +47,12 @@ val eval_nat = eval (mk_constname_tab [@{term "Suc 0"}, @{term "Suc 1"},
 val eval_int = eval (mk_constname_tab [@{term "0 :: int"}, @{term "1 :: int"},
     @{term "18 :: int"}, @{term "(-9) :: int"}])
 
-val eval_bool_simproc = Simplifier.make_simproc @{context} "eval_bool"
-  { lhss = [@{term "b :: bool"}], proc = K eval_bool }
-val eval_nat_simproc = Simplifier.make_simproc @{context} "eval_nat"
-  { lhss = [@{term "n :: nat"}], proc = K eval_nat }
-val eval_int_simproc = Simplifier.make_simproc @{context} "eval_int"
-  { lhss = [@{term "i :: int"}], proc = K eval_int }
+val eval_bool_simproc = Simplifier.make_simproc @{context}
+  { name = "eval_bool", lhss = [@{term "b :: bool"}], proc = K eval_bool, identifier = [] }
+val eval_nat_simproc = Simplifier.make_simproc @{context}
+  { name = "eval_nat", lhss = [@{term "n :: nat"}], proc = K eval_nat, identifier = [] }
+val eval_int_simproc = Simplifier.make_simproc @{context}
+  { name = "eval_int", lhss = [@{term "i :: int"}], proc = K eval_int, identifier = [] }
 
 end
 \<close>

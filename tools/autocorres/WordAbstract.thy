@@ -249,8 +249,7 @@ lemma sint_bitwise_abstract_binops:
 lemma abstract_val_signed_bitNOT:
   "abstract_val P x sint (x' :: 'a::len signed word) \<Longrightarrow>
    abstract_val P (NOT x) sint (NOT x')"
-  by (fastforce intro: int_eq_test_bitI
-                simp: nth_sint bin_nth_ops word_nth_neq test_bit_def'[symmetric] test_bit_wi[where 'a="'a signed"])
+  by (fastforce intro: int_eq_test_bitI simp: min_less_iff_disj)
 
 lemma abstract_val_signed_unary_minus:
   "\<lbrakk> abstract_val P r sint r' \<rbrakk> \<Longrightarrow>

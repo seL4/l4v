@@ -28,14 +28,16 @@ ML \<open>
 fun mk_meta_eq_safe t = mk_meta_eq t
   handle THM _ => t;
 
-val unfold_bodies = Simplifier.make_simproc @{context} "unfold constants named *_body"
-  {lhss = [@{term "v"}],
-   proc= fn _ =>
-  (fn ctxt => (fn t => case head_of (Thm.term_of t) of
-    Const (s, _) => if String.isSuffix "_body" s
-       then try (Global_Theory.get_thm (Proof_Context.theory_of ctxt) #> mk_meta_eq_safe) (suffix "_def" s)
-       else NONE
-   | _ => NONE))}
+val unfold_bodies = Simplifier.make_simproc @{context}
+  {name = "unfold constants named *_body",
+   lhss = [@{term "v"}],
+   proc = fn _ =>
+     (fn ctxt => (fn t => case head_of (Thm.term_of t) of
+       Const (s, _) => if String.isSuffix "_body" s
+          then try (Global_Theory.get_thm (Proof_Context.theory_of ctxt) #> mk_meta_eq_safe) (suffix "_def" s)
+          else NONE
+      | _ => NONE)),
+   identifier = []}
 \<close>
 
 theorem spec_refine:

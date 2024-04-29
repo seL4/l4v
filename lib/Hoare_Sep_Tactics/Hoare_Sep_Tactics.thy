@@ -344,8 +344,7 @@ done
 
 
 ML \<open>
-   fun J f x = f x
-               handle _ => x   (* FIXME! exceptions *)
+   fun J f x = \<^try>\<open>f x catch _ => x\<close>
 
    fun sep_wp thms ctxt  =
    let

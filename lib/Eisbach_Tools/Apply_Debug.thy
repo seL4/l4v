@@ -685,7 +685,7 @@ in
        let
         val (ctxt,thm) = get_state st;
 
-        val r = case Exn.interruptible_capture (fn st =>
+        val r = case Exn.result (fn st =>
         let val _ = Seq.pull (break ctxt NONE thm) in
         (case (Seq.pull o Proof.apply m) st
           of (SOME (Seq.Result st', _)) => RESULT (get_state st')
