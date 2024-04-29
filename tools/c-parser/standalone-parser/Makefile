@@ -53,7 +53,8 @@ include $(STP_PFX)/../Makefile
 STP_CLEAN_TARGETS := $(STPARSERS) $(TOKENIZERS) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML
 
 $(STP_PFX)/table.ML: $(ISABELLE_HOME)/src/Pure/General/table.ML
-	sed -e '/ML.pretty-printing/,/final.declarations/d' < $< > $@
+	sed -e '/\(\* cache \*\)/,/final.declarations/d' < $< | \
+	sed -e "s/^  val unsynchronized_cache:.*a/  (* removed unsynchronized_cache *)/" > $@
 
 $(ARCH_DIRS):
 	mkdir -p $@
