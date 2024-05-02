@@ -591,7 +591,6 @@ lemma sym_refs_ko_wp_atD:
 lemma zobj_refs_capRange:
   "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
   by (cases c, simp_all add: capRange_def capAligned_def is_aligned_no_overflow)
-
 end
 
 locale delete_locale =
@@ -611,8 +610,9 @@ lemma valid_objs: "valid_objs' s'"
   and        pc: "pspace_canonical' s'"
   and       pkm: "pspace_in_kernel_mappings' s'"
   and        pd: "pspace_distinct' s'"
-  and        vq: "valid_queues s'"
-  and       vq': "valid_queues' s'"
+  and       vbm: "valid_bitmaps s'"
+  and sym_sched: "sym_heap_sched_pointers s'"
+  and       vsp: "valid_sched_pointers s'"
   and  sym_refs: "sym_refs (state_refs_of' s')"
   and    iflive: "if_live_then_nonz_cap' s'"
   and  ifunsafe: "if_unsafe_then_cap' s'"
@@ -838,7 +838,6 @@ lemma refs_notRange:
   apply (rule refs_of_live')
   apply clarsimp
   done
-
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -904,6 +903,71 @@ crunches doMachineOp
   for deletionIsSafe_delete_locale[wp]: "deletionIsSafe_delete_locale base magnitude"
   (simp: deletionIsSafe_delete_locale_def)
 
+lemma detype_tcbSchedNexts_of:
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
+   \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> tcb_of' |> tcbSchedNext)
+       = tcbSchedNexts_of s'"
+  using pspace_alignedD' pspace_distinctD'
+  supply projectKOs[simp]
+  apply (clarsimp simp: opt_map_def)
+  apply (rule ext)
+  apply (rename_tac s)
+  apply (clarsimp simp: ko_wp_at'_def split: option.splits)
+  apply (drule_tac x=s in spec)
+  apply force
+  done
+
+lemma detype_tcbSchedPrevs_of:
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
+   \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> tcb_of' |> tcbSchedPrev)
+       = tcbSchedPrevs_of s'"
+  using pspace_alignedD' pspace_distinctD'
+  supply projectKOs[simp]
+  apply (clarsimp simp: opt_map_def)
+  apply (rule ext)
+  apply (rename_tac s)
+  apply (clarsimp simp: ko_wp_at'_def split: option.splits)
+  apply (drule_tac x=s in spec)
+  apply force
+  done
+
+lemma detype_inQ:
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
+   \<Longrightarrow> \<forall>d p. (inQ d p |< ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> tcb_of'))
+             = (inQ d p |< tcbs_of' s')"
+  using pspace_alignedD' pspace_distinctD'
+  supply projectKOs[simp]
+  apply (clarsimp simp: opt_map_def)
+  apply (rule ext)
+  apply (rename_tac s)
+  apply (clarsimp simp: inQ_def opt_pred_def ko_wp_at'_def split: option.splits)
+  apply (drule_tac x=s in spec)
+  apply force
+  done
+
+lemma detype_ready_queues_relation:
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s';
+    \<forall>p. p \<in> {lower..upper} \<longrightarrow> \<not> ko_wp_at' live' p s';
+    ready_queues_relation s s'; upper = upper'\<rbrakk>
+   \<Longrightarrow> ready_queues_relation_2
+        (ready_queues (detype {lower..upper'} s))
+        (ksReadyQueues s')
+        ((\<lambda>x. if lower \<le> x \<and> x \<le> upper then None
+              else ksPSpace s' x) |>
+         tcb_of' |>
+         tcbSchedNext)
+        ((\<lambda>x. if lower \<le> x \<and> x \<le> upper then None
+              else ksPSpace s' x) |>
+         tcb_of' |>
+         tcbSchedPrev)
+        (\<lambda>d p. inQ d p |< ((\<lambda>x. if lower \<le> x \<and> x \<le> upper then None else ksPSpace s' x) |> tcb_of'))"
+  apply (clarsimp simp: detype_ext_def ready_queues_relation_def Let_def)
+  apply (frule (1) detype_tcbSchedNexts_of[where S="{lower..upper}"]; simp)
+  apply (frule (1) detype_tcbSchedPrevs_of[where S="{lower..upper}"]; simp)
+  apply (frule (1) detype_inQ[where S="{lower..upper}"]; simp)
+  apply (fastforce simp add: detype_def detype_ext_def)
+  done
+
 lemma deleteObjects_corres:
   "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 3 \<Longrightarrow>
    corres dc
@@ -924,32 +988,33 @@ lemma deleteObjects_corres:
   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
    prefer 2
    apply clarsimp
-   apply (rule_tac cap="cap.UntypedCap d base magnitude idx" and ptr="(a,b)" and
-                   s=s in detype_locale'.deletionIsSafe,
-          simp_all add: detype_locale'_def
-     detype_locale_def p_assoc_help invs_valid_pspace)[1]
-   apply (simp add:valid_cap_simps)
+   apply (rule_tac cap="cap.UntypedCap d base magnitude idx" and ptr="(a,b)" and s=s
+                in detype_locale'.deletionIsSafe,
+          simp_all add: detype_locale'_def detype_locale_def invs_valid_pspace)[1]
+   apply (simp add: valid_cap_simps)
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (rule_tac ptr=ptr and idx=idx and d=d in delete_locale.deletionIsSafe_delete_locale_holds)
    apply (clarsimp simp: delete_locale_def)
    apply (intro conjI)
-    apply (fastforce simp: sch_act_simple_def state_relation_def schact_is_rct_def)
+    apply (fastforce simp: sch_act_simple_def schact_is_rct_def state_relation_def)
    apply (rule_tac cap="cap.UntypedCap d base magnitude idx" and ptr="(a,b)" and s=s
                 in detype_locale'.deletionIsSafe,
           simp_all add: detype_locale'_def detype_locale_def invs_valid_pspace)[1]
-   apply (simp add:valid_cap_simps)
+   apply (simp add: valid_cap_simps)
   apply (simp add: bind_assoc[symmetric] ksASIDMapSafe_def)
   apply (simp add: delete_objects_def)
   apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> valid_list s \<and>
-           (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
-                   descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
-           s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
-           valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
-           zombies_final s \<and> sym_refs (state_refs_of s) \<and>
-           untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
-           valid_global_refs s" and
-         Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
-                        valid_pspace' s" in corres_underlying_split)
+                           (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
+                                   descendants_range (cap.UntypedCap d base magnitude idx) cref s) \<and>
+                           s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
+                           valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
+                           zombies_final s \<and> sym_refs (state_refs_of s) \<and>
+                           untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
+                           valid_global_refs s" and
+                  Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
+                            valid_pspace' s \<and>
+                            deletionIsSafe_delete_locale base magnitude s"
+                  in corres_underlying_split)
      apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
        apply (rule corres_split[OF _ cNodeNoPartialOverlap])
@@ -962,33 +1027,37 @@ lemma deleteObjects_corres:
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
-           apply (simp add: detype_def, rule state.equality; simp add: detype_ext_def)
-          apply (intro exI, fastforce)
-         apply (rule ext, clarsimp simp add: null_filter_def)
+            apply (simp add: detype_def, rule state.equality; simp add: detype_ext_def)
+           apply (intro exI, fastforce)
+          apply (rule ext, clarsimp simp add: null_filter_def)
+          apply (rule sym, rule ccontr, clarsimp)
+          apply (drule(4) cte_map_not_null_outside')
+           apply (fastforce simp add: cte_wp_at_caps_of_state)
+          apply simp
+         apply (rule ext, clarsimp simp add: null_filter'_def
+                            map_to_ctes_delete[simplified field_simps])
          apply (rule sym, rule ccontr, clarsimp)
-         apply (drule(4) cte_map_not_null_outside')
-          apply (fastforce simp add: cte_wp_at_caps_of_state)
+         apply (frule(2) pspace_relation_cte_wp_atI
+                         [OF state_relation_pspace_relation])
+         apply (elim exE)
+         apply (frule(4) cte_map_not_null_outside')
+          apply (rule cte_wp_at_weakenE, erule conjunct1)
+          apply (case_tac y, clarsimp)
+          apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
+                                valid_nullcaps_def)
+         apply clarsimp
+         apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+                erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
          apply simp
-        apply (rule ext, clarsimp simp add: null_filter'_def
-                           map_to_ctes_delete[simplified field_simps])
-        apply (rule sym, rule ccontr, clarsimp)
-        apply (frule(2) pspace_relation_cte_wp_atI
-                        [OF state_relation_pspace_relation])
-        apply (elim exE)
-        apply (frule(4) cte_map_not_null_outside')
-         apply (rule cte_wp_at_weakenE, erule conjunct1)
-         apply (case_tac y, clarsimp)
-         apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                               valid_nullcaps_def)
-        apply clarsimp
-        apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
-               erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
-        apply simp
-       apply (rule detype_pspace_relation[simplified],
-              simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
-        apply (simp add: valid_cap'_def capAligned_def)
-       apply (clarsimp simp: valid_cap_def, assumption)
-      apply (fastforce simp add: detype_def detype_ext_def intro!: ekheap_relation_detype)
+        apply (rule detype_pspace_relation[simplified],
+               simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+         apply (simp add: valid_cap'_def capAligned_def)
+        apply (clarsimp simp: valid_cap_def, assumption)
+       apply (fastforce simp add: detype_def detype_ext_def intro!: ekheap_relation_detype)
+      apply (rule detype_ready_queues_relation; blast?)
+       apply (clarsimp simp: deletionIsSafe_delete_locale_def)
+      apply (frule state_relation_ready_queues_relation)
+      apply (simp add: ready_queues_relation_def Let_def)
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap
                            detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
@@ -1001,13 +1070,31 @@ lemma deleteObjects_corres:
                     descendants_range_def | wp (once) hoare_drop_imps)+
   apply fastforce
   done
-
 end
 
 context delete_locale begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma live_idle_untyped_range':
+  "ko_wp_at' live' p s' \<or> p = idle_thread_ptr \<Longrightarrow> p \<notin> base_bits"
+  apply (case_tac "ko_wp_at' live' p s'")
+   apply (drule if_live_then_nonz_capE'[OF iflive ko_wp_at'_weakenE])
+    apply simp
+   apply (erule ex_nonz_cap_notRange)
+  apply clarsimp
+  apply (insert invs_valid_global'[OF invs] cap invs_valid_idle'[OF invs])
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (drule (1) valid_global_refsD')
+  apply (clarsimp simp: valid_idle'_def)
+  using atLeastAtMost_iff apply (simp add: p_assoc_help mask_eq_exp_minus_1)
+  by fastforce
+
+lemma untyped_range_live_idle':
+  "p \<in> base_bits \<Longrightarrow> \<not> (ko_wp_at' live' p s' \<or> p = idle_thread_ptr)"
+  using live_idle_untyped_range' by blast
+
 lemma valid_obj':
-  "\<lbrakk> valid_obj' obj s'; ko_wp_at' ((=) obj) p s' \<rbrakk> \<Longrightarrow> valid_obj' obj state'"
+  "\<lbrakk> valid_obj' obj s'; ko_wp_at' ((=) obj) p s'; sym_heap_sched_pointers s' \<rbrakk>
+   \<Longrightarrow> valid_obj' obj state'"
   apply (case_tac obj, simp_all add: valid_obj'_def)
       apply (rename_tac endpoint)
       apply (case_tac endpoint, simp_all add: valid_ep'_def)[1]
@@ -1034,10 +1121,23 @@ lemma valid_obj':
      apply (erule(2) cte_wp_at_tcbI')
       apply fastforce
      apply simp
-    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
-                   dest!: refs_notRange split: option.splits)
+    apply (intro conjI)
+       apply (rename_tac tcb)
+       apply (case_tac "tcbState tcb"; clarsimp simp: valid_tcb_state'_def  dest!: refs_notRange)
+      apply (rename_tac tcb)
+      apply (case_tac "tcbState tcb";
+             clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
+                     dest!: refs_notRange split: option.splits)
+     apply (clarsimp simp: none_top_bool_cases)
+     apply (rename_tac prev)
+     apply (cut_tac P=live' and p=prev in live_notRange; fastforce?)
+     apply (fastforce dest: sym_heapD2[where p'=p]
+                      simp: opt_map_def ko_wp_at'_def obj_at'_def projectKOs)
+    apply (clarsimp simp: none_top_bool_cases)
+    apply (rename_tac "next")
+    apply (cut_tac P=live' and p="next" in live_notRange; fastforce?)
+    apply (fastforce dest!: sym_heapD1[where p=p]
+                     simp: opt_map_def ko_wp_at'_def obj_at'_def projectKOs)
    apply (clarsimp simp: valid_cte'_def)
    apply (rule_tac p=p in valid_cap2)
    apply (clarsimp simp: ko_wp_at'_def objBits_simps' cte_level_bits_def[symmetric])
@@ -1049,12 +1149,46 @@ lemma valid_obj':
       apply (case_tac asidpool, clarsimp simp: page_directory_at'_def)
      apply (rename_tac pte)
      apply (case_tac pte, simp_all add: valid_mapping'_def)
-    apply(rename_tac pde)
+    apply (rename_tac pde)
     apply (case_tac pde, simp_all add: valid_mapping'_def)
-   apply(rename_tac pdpte)
+   apply (rename_tac pdpte)
    apply (case_tac pdpte, simp_all add: valid_mapping'_def)
-  apply(rename_tac pml4e)
+  apply (rename_tac pml4e)
   apply (case_tac pml4e, simp_all add: valid_mapping'_def)
+  done
+
+lemma tcbSchedNexts_of_pspace':
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_distinct' state'\<rbrakk>
+   \<Longrightarrow> (pspace' |> tcb_of' |> tcbSchedNext) = tcbSchedNexts_of s'"
+  supply projectKOs[simp]
+  apply (rule ext)
+  apply (rename_tac p)
+  apply (case_tac "p \<in> base_bits")
+   apply (frule untyped_range_live_idle')
+   apply (clarsimp simp: opt_map_def)
+   apply (case_tac "ksPSpace s' p"; clarsimp)
+   apply (rename_tac obj)
+   apply (case_tac "tcb_of' obj"; clarsimp)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (fastforce simp: pspace_alignedD' pspace_distinctD')
+  apply (clarsimp simp: opt_map_def split: option.splits)
+  done
+
+lemma tcbSchedPrevs_of_pspace':
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_distinct' state'\<rbrakk>
+   \<Longrightarrow> (pspace' |> tcb_of' |> tcbSchedPrev) = tcbSchedPrevs_of s'"
+  supply projectKOs[simp]
+  apply (rule ext)
+  apply (rename_tac p)
+  apply (case_tac "p \<in> base_bits")
+   apply (frule untyped_range_live_idle')
+   apply (clarsimp simp: opt_map_def)
+   apply (case_tac "ksPSpace s' p"; clarsimp)
+   apply (rename_tac obj)
+   apply (case_tac "tcb_of' obj"; clarsimp)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (fastforce simp: pspace_alignedD' pspace_distinctD')
+  apply (clarsimp simp: opt_map_def split: option.splits)
   done
 
 lemma st_tcb:
@@ -1269,17 +1403,18 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   show "pspace_in_kernel_mappings' ?s" using pkm
     by (simp add: pspace_in_kernel_mappings'_def dom_def)
 
-  show "pspace_distinct' ?s" using pd
+  show pspace_distinct'_state': "pspace_distinct' ?s" using pd
     by (clarsimp simp add: pspace_distinct'_def ps_clear_def
                            dom_if_None Diff_Int_distrib)
 
-  show "valid_objs' ?s" using valid_objs
+  show "valid_objs' ?s" using valid_objs sym_sched
     apply (clarsimp simp: valid_objs'_def ran_def)
     apply (rule_tac p=a in valid_obj')
-     apply fastforce
-    apply (frule pspace_alignedD'[OF _ pa])
-    apply (frule pspace_distinctD'[OF _ pd])
-    apply (clarsimp simp: ko_wp_at'_def)
+      apply fastforce
+     apply (frule pspace_alignedD'[OF _ pa])
+     apply (frule pspace_distinctD'[OF _ pd])
+     apply (clarsimp simp: ko_wp_at'_def)
+    apply fastforce
     done
 
   from sym_refs show "sym_refs (state_refs_of' ?s)"
@@ -1290,19 +1425,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply safe
     apply (simp add: refs_notRange[simplified] state_refs_ko_wp_at_eq)
     done
-
-  from vq show "valid_queues ?s"
-    apply (clarsimp simp: valid_queues_def bitmapQ_defs)
-    apply (clarsimp simp: valid_queues_no_bitmap_def)
-    apply (drule spec, drule spec, drule conjunct1, drule(1) bspec)
-    apply (clarsimp simp: obj_at'_real_def)
-    apply (frule if_live_then_nonz_capE'[OF iflive, OF ko_wp_at'_weakenE])
-     apply (clarsimp simp: projectKOs inQ_def)
-    apply (clarsimp dest!: ex_nonz_cap_notRange)
-    done
-
-  from vq' show "valid_queues' ?s"
-    by (simp add: valid_queues'_def)
 
   show "if_live_then_nonz_cap' ?s" using iflive
     apply (clarsimp simp: if_live_then_nonz_cap'_def)
@@ -1578,6 +1700,20 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
      apply (clarsimp simp: untypedZeroRange_def)
     apply simp
     done
+
+  from vbm
+  show "valid_bitmaps state'"
+    by (simp add: valid_bitmaps_def bitmapQ_defs)
+
+  from sym_sched
+  show "sym_heap (pspace' |> tcb_of' |> tcbSchedNext) (pspace' |> tcb_of' |> tcbSchedPrev)"
+    using pa pd pspace_distinct'_state'
+    by (fastforce simp: tcbSchedNexts_of_pspace' tcbSchedPrevs_of_pspace')
+
+  from vsp show "valid_sched_pointers_2 (pspace' |> tcb_of' |> tcbSchedPrev)
+                                        (pspace' |> tcb_of' |> tcbSchedNext)
+                                        (tcbQueued |< (pspace' |> tcb_of'))"
+    by (clarsimp simp: valid_sched_pointers_def opt_pred_def opt_map_def)
 
 qed (clarsimp)
 
@@ -4925,7 +5061,6 @@ lemma createTCBs_tcb_at':
     apply simp
    apply simp
   apply (clarsimp simp: retype_obj_at_disj')
-  apply (clarsimp simp: projectKO_opt_tcb)
   apply (clarsimp simp: new_cap_addrs_def image_def)
   apply (drule_tac x = "unat x" in bspec)
    apply (simp add:objBits_simps' shiftl_t2n)

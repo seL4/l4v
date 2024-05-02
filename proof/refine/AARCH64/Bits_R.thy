@@ -67,6 +67,10 @@ lemma projectKO_tcb:
   "(projectKO_opt ko = Some t) = (ko = KOTCB t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
+lemma tcb_of'_TCB[simp]:
+  "tcb_of' (KOTCB tcb) = Some tcb"
+  by (simp add: projectKO_tcb)
+
 lemma projectKO_cte:
   "(projectKO_opt ko = Some t) = (ko = KOCTE t)"
   by (cases ko) (auto simp: projectKO_opts_defs)

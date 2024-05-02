@@ -216,6 +216,8 @@ definition Low_tcbH :: tcb where
      \<comment> \<open>tcbFaultHandler      =\<close> 0
      \<comment> \<open>tcbIPCBuffer         =\<close> 0
      \<comment> \<open>tcbBoundNotification =\<close> None
+     \<comment> \<open>tcbSchedPrev         =\<close> None
+     \<comment> \<open>tcbSchedNext         =\<close> None
      \<comment> \<open>tcbContext           =\<close> (ArchThread undefined)"
 
 
@@ -240,6 +242,8 @@ definition High_tcbH :: tcb where
      \<comment> \<open>tcbFaultHandler      =\<close> 0
      \<comment> \<open>tcbIPCBuffer         =\<close> 0
      \<comment> \<open>tcbBoundNotification =\<close> None
+     \<comment> \<open>tcbSchedPrev         =\<close> None
+     \<comment> \<open>tcbSchedNext         =\<close> None
      \<comment> \<open>tcbContext           =\<close> (ArchThread undefined)"
 
 
@@ -262,6 +266,8 @@ definition idle_tcbH :: tcb where
      \<comment> \<open>tcbFaultHandler      =\<close> 0
      \<comment> \<open>tcbIPCBuffer         =\<close> 0
      \<comment> \<open>tcbBoundNotification =\<close> None
+     \<comment> \<open>tcbSchedPrev         =\<close> None
+     \<comment> \<open>tcbSchedNext         =\<close> None
      \<comment> \<open>tcbContext           =\<close> (ArchThread empty_context)"
 
 
@@ -1175,7 +1181,7 @@ definition s0H_internal :: "kernel_state" where
      ksDomSchedule = [(0, 10), (1, 10)],
      ksCurDomain = 0,
      ksDomainTime = 5,
-     ksReadyQueues = const [],
+     ksReadyQueues = const (TcbQueue None None),
      ksReadyQueuesL1Bitmap = const 0,
      ksReadyQueuesL2Bitmap = const 0,
      ksCurThread = Low_tcb_ptr,
@@ -3254,8 +3260,6 @@ lemma s0H_invs:
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
    apply (simp add: objBitsKO_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs s0H_internal_def)
-  apply (rule conjI)
    apply (clarsimp simp: sym_refs_def state_refs_of'_def refs_of'_def split: option.splits)
    apply (frule kh0H_SomeD)
    apply (elim disjE, simp_all)[1]
@@ -3421,9 +3425,16 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: irqs_masked'_def s0H_internal_def maxIRQ_def timer_irq_def irqInvalid_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_queues'_def obj_at'_def s0H_internal_def inQ_def)
-   apply (frule kh0H_dom_tcb)
-   apply (elim disjE, (clarsimp simp: kh0H_obj_def)+)[1]
+   apply (clarsimp simp: sym_heap_def opt_map_def projectKOs split: option.splits)
+   using kh0H_dom_tcb
+   apply (fastforce simp: kh0H_obj_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_sched_pointers_def opt_map_def projectKOs split: option.splits)
+   using kh0H_dom_tcb
+   apply (fastforce simp: kh0H_obj_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_bitmaps_def valid_bitmapQ_def bitmapQ_def s0H_internal_def
+                         tcbQueueEmpty_def bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
   apply (rule conjI)
    apply (clarsimp simp: ct_not_inQ_def obj_at'_def objBitsKO_def
                          s0H_internal_def s0_ptrs_aligned Low_tcbH_def)
@@ -3596,7 +3607,7 @@ lemma s0_pspace_rel:
                   apply (clarsimp simp: kh0_obj_def bit_simps dest!: less_0x200_exists_ucast)
                  defer
                  apply ((clarsimp simp: kh0_obj_def kh0H_obj_def bit_simps word_bits_def
-                                        other_obj_relation_def fault_rel_optionation_def
+                                        fault_rel_optionation_def tcb_relation_cut_def
                                         tcb_relation_def arch_tcb_relation_def the_nat_to_bl_simps
                              split del: if_split)+)[3]
               prefer 13
@@ -3657,7 +3668,14 @@ lemma s0_srel:
                                         High_etcb_def Low_etcb_def default_etcb_def
                                  split: if_split_asm)
                  apply (simp add: s0_internal_def exst0_def s0H_internal_def sched_act_relation_def)
-                apply (simp add: s0_internal_def exst0_def s0H_internal_def ready_queues_relation_def)
+                apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def
+                                      ready_queues_relation_def ready_queue_relation_def
+                                      list_queue_relation_def queue_end_valid_def
+                                      prev_queue_head_def inQ_def tcbQueueEmpty_def
+                                      projectKOs opt_map_def opt_pred_def
+                               split: option.splits)
+                using kh0H_dom_tcb
+                apply (fastforce simp: kh0H_obj_def)
                apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def ghost_relation_def)
                apply (rule conjI)
                 apply (fastforce simp: kh0_def kh0_obj_def dest: kh0_SomeD)

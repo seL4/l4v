@@ -3054,7 +3054,6 @@ lemma cnc_tcb_helper:
   and      al: "is_aligned (ctcb_ptr_to_tcb_ptr p) (objBitsKO kotcb)"
   and ptr0: "ctcb_ptr_to_tcb_ptr p \<noteq> 0"
   and ptrlb: "2^ctcb_size_bits \<le> ptr_val p"
-  and vq:  "valid_queues \<sigma>"
   and pal: "pspace_aligned' (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
   and pno: "pspace_no_overlap' (ctcb_ptr_to_tcb_ptr p) (objBitsKO kotcb) (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
   and pds: "pspace_distinct' (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
@@ -3431,9 +3430,10 @@ proof -
                          apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
      apply (simp add: Kernel_Config.timeSlice_def)
     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
-        lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-        eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
-        split: if_split)+
+                     lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
+                     eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
+                     option_to_ctcb_ptr_def
+              split: if_split)+
     done
 
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
@@ -3482,15 +3482,6 @@ proof -
     apply -
     apply (erule contrapos_pp)
     apply (fastforce simp: dom_def)
-    done
-
-  hence kstcb: "\<And>qdom prio. ctcb_ptr_to_tcb_ptr p \<notin> set (ksReadyQueues \<sigma> (qdom, prio))" using vq
-    apply (clarsimp simp add: valid_queues_def valid_queues_no_bitmap_def)
-    apply (drule_tac x = qdom in spec)
-    apply (drule_tac x = prio in spec)
-    apply clarsimp
-    apply (drule (1) bspec)
-    apply (simp add: obj_at'_def)
     done
 
   have ball_subsetE:
@@ -3606,7 +3597,7 @@ proof -
     apply (simp add: cl_cte [simplified] cl_tcb [simplified] cl_rest [simplified] tag_disj_via_td_name)
     apply (clarsimp simp add: cready_queues_relation_def Let_def
                               htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
-    apply (simp add: kstcb tcb_queue_update_other' hrs_htd_update
+    apply (simp add: tcb_queue_update_other' hrs_htd_update
                      ptr_retyp_to_array[simplified] irq[simplified])
     done
 qed
@@ -4555,7 +4546,7 @@ declare replicate_numeral [simp del]
 lemma ccorres_placeNewObject_tcb:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase tcbBlockSizeBits
-      and valid_queues and (\<lambda>s. sym_refs (state_refs_of' s))
+      and (\<lambda>s. sym_refs (state_refs_of' s))
       and (\<lambda>s. 2 ^ tcbBlockSizeBits \<le> gsMaxObjectSize s)
       and ret_zero regionBase (2 ^ tcbBlockSizeBits)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase tcbBlockSizeBits tcbBlockSizeBits 1
@@ -4892,7 +4883,7 @@ qed
 lemma placeNewObject_user_data:
   "ccorresG rf_sr \<Gamma> dc xfdc
   (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase (pageBits+us)
-  and valid_queues and valid_machine_state'
+  and valid_machine_state'
   and ret_zero regionBase (2 ^ (pageBits+us))
   and (\<lambda>s. sym_refs (state_refs_of' s))
   and (\<lambda>s. 2^(pageBits +  us) \<le> gsMaxObjectSize s)
@@ -5033,7 +5024,7 @@ lemma placeNewObject_user_data_device:
   "ccorresG rf_sr \<Gamma> dc xfdc
   (pspace_aligned' and pspace_distinct'
     and ret_zero regionBase (2 ^ (pageBits + us))
-    and pspace_no_overlap' regionBase (pageBits+us) and valid_queues
+    and pspace_no_overlap' regionBase (pageBits+us)
     and (\<lambda>s. sym_refs (state_refs_of' s))
     and (\<lambda>s. 2^(pageBits +  us) \<le> gsMaxObjectSize s)
     and K (regionBase \<noteq> 0 \<and> range_cover regionBase (pageBits + us) (pageBits+us) (Suc 0)
@@ -5843,7 +5834,7 @@ proof -
      apply clarify
      apply (intro conjI)
       apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct' invs_valid_global'
-                            APIType_capBits_def invs_queues invs_valid_objs'
+                            APIType_capBits_def invs_valid_objs'
                             invs_urz)
      apply clarsimp
      apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
@@ -5999,11 +5990,6 @@ lemma threadSet_domain_ccorres [corres]:
   apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def)
   apply (simp add: cep_relations_drop_fun_upd
                    cvariable_relation_upd_const ko_at_projectKO_opt)
-  apply (rule conjI)
-   defer
-   apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: if_split)
-   apply (rule ext, simp split: if_split)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     subgoal by (simp add: ctcb_relation_def)
@@ -6127,7 +6113,6 @@ proof -
                                createObject_c_preconds_def)
          apply (frule invs_pspace_aligned')
          apply (frule invs_pspace_distinct')
-         apply (frule invs_queues)
          apply (frule invs_sym')
          apply (simp add: getObjectSize_def objBits_simps word_bits_conv
                           ARM_HYP_H.getObjectSize_def apiGetObjectSize_def
@@ -6181,7 +6166,6 @@ proof -
         apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
         apply (frule invs_pspace_aligned')
         apply (frule invs_pspace_distinct')
-        apply (frule invs_queues)
         apply (frule invs_sym')
         apply (auto simp: getObjectSize_def objBits_simps
                           ARM_HYP_H.getObjectSize_def apiGetObjectSize_def
@@ -6222,7 +6206,6 @@ proof -
        apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
        apply (frule invs_pspace_aligned')
        apply (frule invs_pspace_distinct')
-       apply (frule invs_queues)
        apply (frule invs_sym')
        apply (auto simp: getObjectSize_def objBits_simps
                          ARM_HYP_H.getObjectSize_def apiGetObjectSize_def
@@ -6265,7 +6248,6 @@ proof -
        apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
        apply (frule invs_pspace_aligned')
        apply (frule invs_pspace_distinct')
-       apply (frule invs_queues)
        apply (frule invs_sym')
        apply (frule(1) ghost_assertion_size_logic_no_unat)
        apply (clarsimp simp: objBits_simps ARM_HYP_H.getObjectSize_def apiGetObjectSize_def

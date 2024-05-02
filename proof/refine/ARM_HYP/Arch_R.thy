@@ -338,7 +338,7 @@ lemma performASIDControlInvocation_corres:
      apply (simp add:pageBits_def)
     apply clarsimp
     apply (drule(1) cte_cap_in_untyped_range)
-         apply (fastforce simp:cte_wp_at_ctes_of)
+         apply (fastforce simp: cte_wp_at_ctes_of)
         apply assumption+
      apply fastforce
     apply simp
@@ -1286,8 +1286,9 @@ lemma invokeVCPUWriteReg_corres:
   done
 
 lemma archThreadSet_VCPU_Some_corres[corres]:
-  "corres dc (tcb_at t) (tcb_at' t)
-    (arch_thread_set (tcb_vcpu_update (\<lambda>_. Some v)) t) (archThreadSet (atcbVCPUPtr_update (\<lambda>_. Some v)) t)"
+  "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+    (arch_thread_set (tcb_vcpu_update (\<lambda>_. Some v)) t)
+    (archThreadSet (atcbVCPUPtr_update (\<lambda>_. Some v)) t)"
   apply (rule archThreadSet_corres)
   apply (simp add: arch_tcb_relation_def)
   done
@@ -1325,7 +1326,7 @@ lemma associateVCPUTCB_corres:
        apply (clarsimp simp: vcpu_relation_def)
       apply (rule conjI)
        apply (frule (1) sym_refs_vcpu_tcb, fastforce)
-       apply (clarsimp simp: obj_at_def)+
+       apply (fastforce simp: obj_at_def)+
      apply (wpsimp)+
      apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t" in hoare_strengthen_post)
       apply wpsimp
@@ -1524,7 +1525,7 @@ lemma tcbSchedEnqueue_vs_entry_align[wp]:
  "\<lbrace>\<lambda>s. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p s\<rbrace>
    tcbSchedEnqueue pa
   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
-  apply (clarsimp simp: tcbSchedEnqueue_def setQueue_def)
+  apply (clarsimp simp: tcbSchedEnqueue_def tcbQueuePrepend_def setQueue_def)
   by (wp unless_wp | simp)+
 
 crunch vs_entry_align[wp]:
@@ -2252,7 +2253,7 @@ lemma assoc_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_valid_arch'
+                    setVCPU_valid_arch' valid_bitmaps_lift sym_heap_sched_pointers_lift
               simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
         | wp (once) hoare_vcg_imp_lift)+

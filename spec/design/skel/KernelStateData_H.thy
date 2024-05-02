@@ -30,9 +30,7 @@ requalify_types (in Arch)
 
 subsection "The Kernel State"
 
-type_synonym ready_queue = "machine_word list"
-translations
-(type) "machine_word list" <= (type) "ready_queue"
+type_synonym ready_queue = tcb_queue
 
 text \<open>We pull a fast one on haskell here ... although Haskell expects
 a KernelMonad which is a StateT monad in KernelData that wraps a MachineMonad,
@@ -85,7 +83,7 @@ where
     return r
   od"
 
-#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue Kernel assert stateAssert findM funArray newKernelState capHasProperty
-#INCLUDE_HASKELL SEL4/Model/StateData.lhs decls_only ONLY capHasProperty
+#INCLUDE_HASKELL SEL4/Model/StateData.lhs decls_only ONLY capHasProperty ksReadyQueues_asrt ready_qs_runnable idleThreadNotQueued
+#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue Kernel assert stateAssert findM funArray newKernelState capHasProperty ksReadyQueues_asrt ready_qs_runnable idleThreadNotQueued
 
 end

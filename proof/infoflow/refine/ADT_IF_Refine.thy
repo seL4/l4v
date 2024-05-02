@@ -304,9 +304,12 @@ lemma kernel_entry_if_corres:
       apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT)
-            apply (erule arch_tcb_context_set_tcb_relation)
-           apply (clarsimp simp: tcb_cap_cases_def)
-          apply (rule allI[OF ball_tcb_cte_casesI]; clarsimp)
+               apply (erule arch_tcb_context_set_tcb_relation)
+              apply (clarsimp simp: tcb_cap_cases_def)
+             apply (rule allI[OF ball_tcb_cte_casesI]; clarsimp)
+            apply fastforce
+           apply fastforce
+          apply fastforce
          apply (simp add: exst_same_def)
         apply (rule corres_split[OF handleEvent_corres_arch_extras])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
@@ -506,7 +509,7 @@ lemma scheduler'_if_ex_abs[wp]:
    apply wp
   apply (clarsimp simp: ex_abs_def)
   apply (rule exI, rule conjI, assumption)
-  apply (frule state_relation_schact)
+  apply (frule state_relation_sched_act_relation)
   apply (auto simp: domain_list_rel_eq domain_time_rel_eq)
   done
 
@@ -1161,7 +1164,7 @@ lemma st_tcb_at_coerce_haskell:
   apply (drule_tac x=t in bspec)
    apply fastforce
   apply clarsimp
-  apply (simp add: other_obj_relation_def)
+  apply (simp add: tcb_relation_cut_def)
   apply clarsimp
   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb split: kernel_object.splits)
   apply (rule_tac x="tcb_state tcb" in exI)

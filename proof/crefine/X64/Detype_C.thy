@@ -1686,36 +1686,10 @@ proof -
     done
 
   moreover
-  from invs have "valid_queues s" ..
-  hence "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s \<and> ko_wp_at' live' t s"
-    apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def)
-    apply (drule spec, drule spec)
-    apply clarsimp
-    apply (drule (1) bspec)
-    apply (rule conjI)
-    apply (erule obj_at'_weakenE)
-    apply simp
-    apply (simp add: obj_at'_real_def)
-    apply (erule ko_wp_at'_weakenE)
-    apply (clarsimp simp: live'_def projectKOs inQ_def)
-    done
-  hence tat: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s"
-    and  tlive: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). ko_wp_at' live' t s"
-    by auto
   from sr have
-    "cready_queues_relation (clift ?th_s)
-        (ksReadyQueues_' (globals s')) (ksReadyQueues s)"
-    unfolding cready_queues_relation_def rf_sr_def cstate_relation_def
-              cpspace_relation_def
-    apply (clarsimp simp: Let_def all_conj_distrib)
-    apply (drule spec, drule spec, drule mp)
-    apply fastforce
-    apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+,
-      simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs)[1])+
-      \<comment> \<open>waiting ...\<close>
-    apply (simp add: tcb_queue_relation_live_restrict
-                     [OF D.valid_untyped tat tlive rl])
-    done
+    "cready_queues_relation (ksReadyQueues s) (ksReadyQueues_' (globals s'))"
+    unfolding cready_queues_relation_def rf_sr_def cstate_relation_def cpspace_relation_def
+    by (clarsimp simp: Let_def all_conj_distrib)
 
   moreover
   from cs have clift:

@@ -215,9 +215,6 @@ where
 abbreviation
   "ep_queue_relation \<equiv> tcb_queue_relation tcbEPNext_C tcbEPPrev_C"
 
-abbreviation
-  "sched_queue_relation \<equiv> tcb_queue_relation tcbSchedNext_C tcbSchedPrev_C"
-
 definition
 capUntypedPtr_C :: "cap_CL \<Rightarrow> word64" where
   "capUntypedPtr_C cap \<equiv> case cap of

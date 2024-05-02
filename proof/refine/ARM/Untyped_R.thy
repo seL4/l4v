@@ -1358,16 +1358,6 @@ crunches insertNewCap
 
 crunch exst[wp]: set_cdt "\<lambda>s. P (exst s)"
 
-(*FIXME: Move to StateRelation*)
-lemma state_relation_schact[elim!]:
-  "(s,s') \<in> state_relation \<Longrightarrow> sched_act_relation (scheduler_action s) (ksSchedulerAction s')"
-  apply (simp add: state_relation_def)
-  done
-
-lemma state_relation_queues[elim!]: "(s,s') \<in> state_relation \<Longrightarrow> ready_queues_relation (ready_queues s) (ksReadyQueues s')"
-  apply (simp add: state_relation_def)
-  done
-
 lemma set_original_symb_exec_l:
   "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
@@ -1397,6 +1387,10 @@ lemma updateNewFreeIndex_noop_psp_corres:
       apply (wp getCTE_wp' | wpc
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
   done
+
+crunches updateMDB, updateNewFreeIndex, setCTE
+  for rdyq_projs[wp]:
+    "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
 lemma insertNewCap_corres:
 notes if_cong[cong del] if_weak_cong[cong]
@@ -3607,8 +3601,8 @@ lemma updateFreeIndex_clear_invs':
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
-                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
+      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp valid_bitmaps_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def
                | simp add: cte_wp_at_ctes_of)+
@@ -4173,14 +4167,12 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
-    (invs and schact_is_rct and valid_untyped_inv_wcap ui
-      (Some (cap.UntypedCap dev ptr sz idx))
-         and ct_active and einvs
-         and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'. ui = Invocations_A.Retype slot True
-             ptr_base ptr' ty us slots dev))
-     (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
-     (reset_untyped_cap slot)
-     (resetUntypedCap (cte_map slot))"
+    (einvs and schact_is_rct and ct_active
+     and valid_untyped_inv_wcap ui (Some (cap.UntypedCap dev ptr sz idx))
+     and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'.
+               ui = Invocations_A.Retype slot True ptr_base ptr' ty us slots dev))
+    (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
+    (reset_untyped_cap slot) (resetUntypedCap (cte_map slot))"
   apply (rule corres_gen_asm, clarsimp)
   apply (simp add: reset_untyped_cap_def resetUntypedCap_def
                    liftE_bindE)
@@ -5012,7 +5004,7 @@ lemma inv_untyped_corres':
       apply (clarsimp simp only: pred_conj_def invs ui if_apply_def2)
       apply (strengthen vui)
       apply (cut_tac vui invs invs')
-      apply (clarsimp simp: cte_wp_at_caps_of_state valid_sched_etcbs)
+      apply (clarsimp simp: cte_wp_at_caps_of_state valid_sched_etcbs schact_is_rct_def)
      apply (cut_tac vui' invs')
      apply (clarsimp simp: ui cte_wp_at_ctes_of if_apply_def2 ui')
      done
@@ -5173,9 +5165,6 @@ crunch irq_states' [wp]: insertNewCap valid_irq_states'
 crunch pde_mappings' [wp]: insertNewCap valid_pde_mappings'
   (wp: getCTE_wp')
 
-crunch vq'[wp]: insertNewCap valid_queues'
-  (wp: crunch_wps)
-
 crunch irqs_masked' [wp]: insertNewCap irqs_masked'
   (wp: crunch_wps rule: irqs_masked_lift)
 
@@ -5247,6 +5236,12 @@ lemma insertNewCap_urz[wp]:
     apply (auto simp add: cteCaps_of_def untypedZeroRange_def isCap_simps)
   done
 
+crunches insertNewCap
+  for tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  (wp: crunch_wps)
+
 lemma insertNewCap_invs':
   "\<lbrace>invs' and ct_active'
           and valid_cap' cap
@@ -5263,8 +5258,8 @@ lemma insertNewCap_invs':
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp insertNewCap_valid_pspace' sch_act_wf_lift
-             valid_queues_lift cur_tcb_lift tcb_in_cur_domain'_lift
-             insertNewCap_valid_global_refs'
+             cur_tcb_lift tcb_in_cur_domain'_lift valid_bitmaps_lift
+             insertNewCap_valid_global_refs' sym_heap_sched_pointers_lift
              valid_arch_state_lift'
              valid_irq_node_lift insertNewCap_valid_irq_handlers)
   apply (clarsimp simp: cte_wp_at_ctes_of)

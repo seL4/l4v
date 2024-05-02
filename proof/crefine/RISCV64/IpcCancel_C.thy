@@ -14,12 +14,12 @@ context kernel_m
 begin
 
 lemma cready_queues_index_to_C_in_range':
-  assumes prems: "qdom \<le> ucast maxDom" "prio \<le> ucast maxPrio"
+  assumes prems: "qdom \<le> maxDomain" "prio \<le> maxPriority"
   shows "cready_queues_index_to_C qdom prio < num_tcb_queues"
 proof -
   have P: "unat prio < numPriorities"
     using prems
-    by (simp add: numPriorities_def seL4_MaxPrio_def Suc_le_lessD unat_le_helper)
+    by (simp add: numPriorities_def Suc_le_lessD unat_le_helper maxDomain_def maxPriority_def)
   have Q: "unat qdom < numDomains"
     using prems
     by (simp add: maxDom_to_H le_maxDomain_eq_less_numDomains word_le_nat_alt)
@@ -33,34 +33,16 @@ lemmas cready_queues_index_to_C_in_range =
 
 lemma cready_queues_index_to_C_inj:
   "\<lbrakk> cready_queues_index_to_C qdom prio = cready_queues_index_to_C qdom' prio';
-     prio \<le> ucast maxPrio; prio' \<le> ucast maxPrio \<rbrakk> \<Longrightarrow> prio = prio' \<and> qdom = qdom'"
+     prio \<le> maxPriority; prio' \<le> maxPriority \<rbrakk> \<Longrightarrow> prio = prio' \<and> qdom = qdom'"
   apply (rule context_conjI)
-  apply (auto simp: cready_queues_index_to_C_def numPriorities_def
+  apply (auto simp: cready_queues_index_to_C_def numPriorities_def maxPriority_def
                     seL4_MaxPrio_def word_le_nat_alt dest: arg_cong[where f="\<lambda>x. x mod 256"])
   done
 
 lemma cready_queues_index_to_C_distinct:
-  "\<lbrakk> qdom = qdom' \<longrightarrow> prio \<noteq> prio'; prio \<le> ucast maxPrio; prio' \<le> ucast maxPrio \<rbrakk>
+  "\<lbrakk> qdom = qdom' \<longrightarrow> prio \<noteq> prio'; prio \<le> maxPriority; prio' \<le> maxPriority \<rbrakk>
    \<Longrightarrow> cready_queues_index_to_C qdom prio \<noteq> cready_queues_index_to_C qdom' prio'"
   apply (auto simp: cready_queues_index_to_C_inj)
-  done
-
-lemma cstate_relation_ksReadyQueues_update:
-  "\<lbrakk> cstate_relation hs cs; arr = ksReadyQueues_' cs;
-     sched_queue_relation' (clift (t_hrs_' cs)) v (head_C v') (end_C v');
-     qdom \<le> ucast maxDom; prio \<le> ucast maxPrio \<rbrakk>
-    \<Longrightarrow> cstate_relation (ksReadyQueues_update (\<lambda>qs. qs ((qdom, prio) := v)) hs)
-                        (ksReadyQueues_'_update (\<lambda>_. Arrays.update arr
-                                                        (cready_queues_index_to_C qdom prio) v') cs)"
-  apply (clarsimp simp: cstate_relation_def Let_def
-                        cmachine_state_relation_def
-                        carch_state_relation_def carch_globals_def
-                        cready_queues_relation_def seL4_MinPrio_def minDom_def)
-  apply (frule cready_queues_index_to_C_in_range, assumption)
-  apply clarsimp
-  apply (frule_tac qdom=qdoma and prio=prioa in cready_queues_index_to_C_in_range, assumption)
-  apply (frule cready_queues_index_to_C_distinct, assumption+)
-  apply clarsimp
   done
 
 lemma cmap_relation_drop_fun_upd:
@@ -72,16 +54,6 @@ lemma cmap_relation_drop_fun_upd:
   apply (rule ball_cong[OF refl])
   apply (auto split: if_split)
   done
-
-lemma valid_queuesD':
-  "\<lbrakk> obj_at' (inQ d p) t s; valid_queues' s \<rbrakk>
-        \<Longrightarrow> t \<in> set (ksReadyQueues s (d, p))"
-  by (simp add: valid_queues'_def)
-
-lemma invs_valid_queues'[elim!]:
-  "invs' s \<Longrightarrow> valid_queues' s"
-  by (simp add: invs'_def valid_state'_def)
-
 
 lemma ntfn_ptr_get_queue_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> \<sigma> \<Turnstile>\<^sub>c \<^bsup>\<sigma>\<^esup>ntfnPtr} \<acute>ret__struct_tcb_queue_C :== PROC ntfn_ptr_get_queue(\<acute>ntfnPtr)
@@ -227,22 +199,19 @@ lemma cancelSignal_ccorres_helper:
                         typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-            \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-           apply simp
-           apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
-           apply simp
-           apply (erule (1) map_to_ko_atI')
-          \<comment> \<open>ntfn relation\<close>
-          apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
-          apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
-          apply (simp add: carch_state_relation_def carch_globals_def)
-         \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         apply (clarsimp simp: comp_def)
+           \<comment> \<open>tcb relation\<close>
+           apply (erule ctcb_relation_null_ep_ptrs)
+           apply (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+          apply simp
+          apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
+          apply simp
+          apply (erule (1) map_to_ko_atI')
+         \<comment> \<open>ntfn relation\<close>
+         apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+         apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
+         apply (simp add: carch_state_relation_def carch_globals_def)
         apply (clarsimp simp: carch_state_relation_def carch_globals_def
                               typ_heap_simps' packed_heap_update_collapse_hrs)
        apply (simp add: cmachine_state_relation_def)
@@ -263,34 +232,31 @@ lemma cancelSignal_ccorres_helper:
                        typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
-           \<comment> \<open>tcb relation\<close>
-           apply (erule ctcb_relation_null_queue_ptrs)
-           apply (clarsimp simp: comp_def)
-          \<comment> \<open>ep relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-          apply simp
-          apply (rule cendpoint_relation_ntfn_queue)
-              apply fastforce
-             apply assumption+
-          apply simp
-          apply (erule (1) map_to_ko_atI')
-         \<comment> \<open>ntfn relation\<close>
-         apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
-          apply (simp add: cnotification_relation_def Let_def isWaitingNtfn_def
-                    split: ntfn.splits split del: if_split)
-          apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])
-           apply (clarsimp simp add: h_t_valid_clift_Some_iff)
-           apply (subst tcb_queue_relation'_next_sign; assumption?)
-            apply fastforce
-           apply (simp add: notification_lift_def sign_extend_sign_extend_eq canonical_bit_def)
-          apply (clarsimp simp: h_t_valid_clift_Some_iff notification_lift_def sign_extend_sign_extend_eq)
-          apply (subst tcb_queue_relation'_prev_sign; assumption?)
-           apply fastforce
-          apply (simp add: canonical_bit_def)
+          \<comment> \<open>tcb relation\<close>
+          apply (erule ctcb_relation_null_ep_ptrs)
+          apply (clarsimp simp: comp_def)
+         \<comment> \<open>ep relation\<close>
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
          apply simp
-        \<comment> \<open>queue relation\<close>
-        apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-        apply (clarsimp simp: comp_def)
+         apply (rule cendpoint_relation_ntfn_queue)
+             apply fastforce
+            apply assumption+
+         apply simp
+         apply (erule (1) map_to_ko_atI')
+        \<comment> \<open>ntfn relation\<close>
+        apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+         apply (simp add: cnotification_relation_def Let_def isWaitingNtfn_def
+                   split: ntfn.splits split del: if_split)
+         apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])
+          apply (clarsimp simp add: h_t_valid_clift_Some_iff)
+          apply (subst tcb_queue_relation'_next_sign; assumption?)
+           apply fastforce
+          apply (simp add: notification_lift_def sign_extend_sign_extend_eq canonical_bit_def)
+         apply (clarsimp simp: h_t_valid_clift_Some_iff notification_lift_def sign_extend_sign_extend_eq)
+         apply (subst tcb_queue_relation'_prev_sign; assumption?)
+          apply fastforce
+         apply (simp add: canonical_bit_def)
+        apply simp
        subgoal by (clarsimp simp: carch_state_relation_def carch_globals_def)
       subgoal by (simp add: cmachine_state_relation_def)
      subgoal by (simp add: h_t_valid_clift_Some_iff)
@@ -456,68 +422,6 @@ lemma isRunnable_ccorres [corres]:
        apply (simp add: ThreadState_defs)+
   done
 
-
-
-lemma tcb_queue_relation_update_head:
-  fixes getNext_update :: "(tcb_C ptr \<Rightarrow> tcb_C ptr) \<Rightarrow> tcb_C \<Rightarrow> tcb_C" and
-  getPrev_update :: "(tcb_C ptr \<Rightarrow> tcb_C ptr) \<Rightarrow> tcb_C \<Rightarrow> tcb_C"
-  assumes qr: "tcb_queue_relation getNext getPrev mp queue NULL qhead"
-  and     qh': "qhead' \<notin> tcb_ptr_to_ctcb_ptr ` set queue"
-  and  cs_tcb: "mp qhead' = Some tcb"
-  and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
-  and     qhN: "qhead' \<noteq> NULL"
-  and     fgN: "fg_cons getNext (getNext_update \<circ> (\<lambda>x _. x))"
-  and     fgP: "fg_cons getPrev (getPrev_update \<circ> (\<lambda>x _. x))"
-  and     npu: "\<And>f t. getNext (getPrev_update f t) = getNext t"
-  and     pnu: "\<And>f t. getPrev (getNext_update f t) = getPrev t"
-  shows   "tcb_queue_relation getNext getPrev
-                 (upd_unless_null qhead (getPrev_update (\<lambda>_. qhead') (the (mp qhead)))
-                       (mp(qhead' := Some (getPrev_update (\<lambda>_. NULL) (getNext_update (\<lambda>_. qhead)  tcb)))))
-                 (ctcb_ptr_to_tcb_ptr qhead' # queue) NULL qhead'"
-  using qr qh' cs_tcb valid_ep qhN
-  apply (subgoal_tac "qhead \<noteq> qhead'")
-  apply (clarsimp simp: pnu upd_unless_null_def fg_consD1 [OF fgN] fg_consD1 [OF fgP] npu)
-  apply (cases queue)
-    apply simp
-   apply (frule (2) tcb_queue_relation_next_not_NULL)
-    apply simp
-   apply (clarsimp simp: fg_consD1 [OF fgN] fg_consD1 [OF fgP] pnu npu)
-   apply (subst tcb_queue_relation_cong [OF refl refl refl, where mp' = mp])
-    apply (clarsimp simp: inj_eq)
-    apply (intro impI conjI)
-     apply (frule_tac x = x in imageI [where f = tcb_ptr_to_ctcb_ptr])
-     apply simp
-    apply simp
-   apply simp
-  apply clarsimp
-  apply (cases queue)
-   apply simp
-  apply simp
-  done
-
-lemma tcbSchedEnqueue_update:
-  assumes sr: "sched_queue_relation' mp queue qhead qend"
-  and     qh': "qhead' \<notin> tcb_ptr_to_ctcb_ptr ` set queue"
-  and  cs_tcb: "mp qhead' = Some tcb"
-  and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
-  and     qhN: "qhead' \<noteq> NULL"
-  shows
-  "sched_queue_relation'
-                   (upd_unless_null qhead (tcbSchedPrev_C_update (\<lambda>_. qhead') (the (mp qhead)))
-                (mp(qhead' \<mapsto> tcb\<lparr>tcbSchedNext_C := qhead, tcbSchedPrev_C := NULL\<rparr>)))
-            (ctcb_ptr_to_tcb_ptr qhead' # queue) qhead' (if qend = NULL then qhead' else qend)"
-  using sr qh' cs_tcb valid_ep qhN
-  apply -
-  apply (erule tcb_queue_relationE')
-  apply (rule tcb_queue_relationI')
-   apply (erule (5) tcb_queue_relation_update_head
-        [where getNext_update = tcbSchedNext_C_update and getPrev_update = tcbSchedPrev_C_update], simp_all)[1]
-  apply simp
-  apply (intro impI)
-  apply (erule (1) tcb_queue_relation_not_NULL')
-  apply simp
-  done
-
 lemma tcb_ptr_to_ctcb_ptr_imageD:
   "x \<in> tcb_ptr_to_ctcb_ptr ` S \<Longrightarrow> ctcb_ptr_to_tcb_ptr x \<in> S"
   apply (erule imageE)
@@ -529,93 +433,6 @@ lemma ctcb_ptr_to_tcb_ptr_imageI:
   apply (drule imageI [where f = tcb_ptr_to_ctcb_ptr])
   apply simp
   done
-
-lemma tcb_queue'_head_end_NULL:
-  assumes qr: "tcb_queue_relation' getNext getPrev mp queue qhead qend"
-  and   tat: "\<forall>t\<in>set queue. tcb_at' t s"
-  shows "(qend = NULL) = (qhead = NULL)"
-  using qr tat
-  apply -
-  apply (erule tcb_queue_relationE')
-  apply (simp add: tcb_queue_head_empty_iff)
-  apply (rule impI)
-  apply (rule tcb_at_not_NULL)
-  apply (erule bspec)
-  apply simp
-  done
-
-lemma tcb_queue_relation_qhead_mem:
-  "\<lbrakk> tcb_queue_relation getNext getPrev mp queue NULL qhead;
-  (\<forall>tcb\<in>set queue. tcb_at' tcb t) \<rbrakk>
-  \<Longrightarrow> qhead \<noteq> NULL \<longrightarrow> ctcb_ptr_to_tcb_ptr qhead \<in> set queue"
-  by (clarsimp simp: tcb_queue_head_empty_iff tcb_queue_relation_head_hd)
-
-lemma tcb_queue_relation_qhead_valid:
-  "\<lbrakk> tcb_queue_relation getNext getPrev (cslift s') queue NULL qhead;
-  (s, s') \<in> rf_sr; (\<forall>tcb\<in>set queue. tcb_at' tcb s) \<rbrakk>
-  \<Longrightarrow> qhead \<noteq> NULL \<longrightarrow> s' \<Turnstile>\<^sub>c qhead"
-  apply (frule (1) tcb_queue_relation_qhead_mem)
-  apply clarsimp
-  apply(drule (3) tcb_queue_memberD)
-  apply (simp add: h_t_valid_clift_Some_iff)
-  done
-
-lemmas tcb_queue_relation_qhead_mem' = tcb_queue_relation_qhead_mem [OF tcb_queue_relation'_queue_rel]
-lemmas tcb_queue_relation_qhead_valid' = tcb_queue_relation_qhead_valid [OF tcb_queue_relation'_queue_rel]
-
-
-lemma valid_queues_valid_q:
-  "valid_queues s \<Longrightarrow> (\<forall>tcb\<in>set (ksReadyQueues s (qdom, prio)). tcb_at' tcb s) \<and> distinct (ksReadyQueues s (qdom, prio))"
-  apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def)
-  apply (drule spec [where x = qdom])
-  apply (drule spec [where x = prio])
-  apply clarsimp
-  apply (drule (1) bspec, erule obj_at'_weakenE)
-  apply simp
-  done
-
-lemma invs_valid_q:
-  "invs' s \<Longrightarrow> (\<forall>tcb\<in>set (ksReadyQueues s (qdom, prio)). tcb_at' tcb s) \<and> distinct (ksReadyQueues s (qdom, prio))"
-  apply (rule valid_queues_valid_q)
-  apply (clarsimp simp: invs'_def valid_state'_def)
-  done
-
-lemma tcbQueued_not_in_queues:
-  assumes vq: "valid_queues s"
-  and    objat: "obj_at' (Not \<circ> tcbQueued) thread s"
-  shows   "thread \<notin> set (ksReadyQueues s (d, p))"
-  using vq objat
-  apply -
-  apply clarsimp
-  apply (drule (1) valid_queues_obj_at'D)
-  apply (erule obj_atE')+
-  apply (clarsimp simp: inQ_def)
-  done
-
-
-lemma rf_sr_sched_queue_relation:
-  "\<lbrakk> (s, s') \<in> rf_sr; d \<le> ucast maxDom; p \<le> ucast maxPrio \<rbrakk>
-  \<Longrightarrow> sched_queue_relation' (cslift s') (ksReadyQueues s (d, p))
-                                        (head_C (index (ksReadyQueues_' (globals s'))
-                                                       (cready_queues_index_to_C d p)))
-                                        (end_C (index (ksReadyQueues_' (globals s'))
-                                                      (cready_queues_index_to_C d p)))"
-  unfolding rf_sr_def cstate_relation_def cready_queues_relation_def
-  apply (clarsimp simp: Let_def seL4_MinPrio_def minDom_def)
-  done
-
-lemma ready_queue_not_in:
-  assumes  vq: "valid_queues s"
-  and     inq: "t \<in> set (ksReadyQueues s (d, p))"
-  and     neq: "d \<noteq> d' \<or> p \<noteq> p'"
-  shows   "t \<notin> set (ksReadyQueues s (d', p'))"
-proof
-  assume "t \<in> set (ksReadyQueues s (d', p'))"
-  hence "obj_at' (inQ d' p') t s" using vq by (rule valid_queues_obj_at'D)
-  moreover have "obj_at' (inQ d p) t s" using inq vq by (rule valid_queues_obj_at'D)
-  ultimately show False using neq
-    by (clarsimp elim!: obj_atE' simp: inQ_def)
-qed
 
 lemma ctcb_relation_unat_prio_eq:
   "ctcb_relation tcb tcb' \<Longrightarrow> unat (tcbPriority tcb) = unat (tcbPriority_C tcb')"
@@ -648,137 +465,6 @@ lemma threadSet_queued_ccorres [corres]:
    apply (case_tac "tcbState ko"; simp)
   apply (frule (1) obj_at_cslift_tcb)
   apply (clarsimp simp: typ_heap_simps)
-  done
-
-lemma ccorres_pre_getQueue:
-  assumes cc: "\<And>queue. ccorres r xf (P queue) (P' queue) hs (f queue) c"
-  shows   "ccorres r xf (\<lambda>s. P (ksReadyQueues s (d, p)) s \<and> d \<le> maxDomain \<and> p \<le> maxPriority)
-                        {s'. \<forall>queue. (let cqueue = index (ksReadyQueues_' (globals s'))
-                                                         (cready_queues_index_to_C d p) in
-                                      sched_queue_relation' (cslift s') queue (head_C cqueue) (end_C cqueue)) \<longrightarrow> s' \<in> P' queue}
-           hs (getQueue d p >>= (\<lambda>queue. f queue)) c"
-  apply (rule ccorres_guard_imp2)
-  apply (rule ccorres_symb_exec_l2)
-     defer
-     defer
-     apply (rule gq_sp)
-    defer
-    apply (rule ccorres_guard_imp)
-    apply (rule cc)
-     apply clarsimp
-     apply assumption
-    apply assumption
-   apply (clarsimp simp: getQueue_def gets_exs_valid)
-  apply clarsimp
-  apply (drule spec, erule mp)
-  apply (simp add: Let_def)
-  apply (erule rf_sr_sched_queue_relation)
-   apply (simp add: maxDom_to_H maxPrio_to_H)+
-  done
-
-lemma state_relation_queue_update_helper':
-  "\<lbrakk> (s, s') \<in> rf_sr;
-     (\<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
-                                       \<and> distinct (ksReadyQueues s (d, p)));
-          globals t = ksReadyQueues_'_update
-             (\<lambda>_. Arrays.update (ksReadyQueues_' (globals s')) prio' q')
-             (t_hrs_'_update f (globals s'));
-          sched_queue_relation' (cslift t) q (head_C q') (end_C q');
-          cslift t |` ( - tcb_ptr_to_ctcb_ptr ` S )
-             = cslift s' |` ( - tcb_ptr_to_ctcb_ptr ` S );
-          option_map tcb_null_sched_ptrs \<circ> cslift t
-            = option_map tcb_null_sched_ptrs \<circ> cslift s';
-          cslift_all_but_tcb_C t s';
-          zero_ranges_are_zero (gsUntypedZeroRanges s) (f (t_hrs_' (globals s')))
-              = zero_ranges_are_zero (gsUntypedZeroRanges s) (t_hrs_' (globals s'));
-          hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s'));
-          prio' = cready_queues_index_to_C qdom prio;
-          \<forall>x \<in> S. obj_at' (inQ qdom prio) x s
-                   \<or> (obj_at' (\<lambda>tcb. tcbPriority tcb = prio) x s
-                       \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = qdom) x s)
-                   \<or> (tcb_at' x s \<and> (\<forall>d' p'. (d' \<noteq> qdom \<or> p' \<noteq> prio)
-                                         \<longrightarrow> x \<notin> set (ksReadyQueues s (d', p'))));
-          S \<noteq> {}; qdom \<le> ucast maxDom; prio \<le> ucast maxPrio \<rbrakk>
-      \<Longrightarrow> (s \<lparr>ksReadyQueues := (ksReadyQueues s)((qdom, prio) := q)\<rparr>, t) \<in> rf_sr"
-  apply (subst(asm) disj_imp_rhs)
-   apply (subst obj_at'_and[symmetric])
-   apply (rule disjI1, erule obj_at'_weakenE, simp add: inQ_def)
-  apply (subst(asm) disj_imp_rhs)
-   apply (subst(asm) obj_at'_and[symmetric])
-   apply (rule conjI, erule obj_at'_weakenE, simp)
-   apply (rule allI, rule allI)
-   apply (drule_tac x=d' in spec)
-   apply (drule_tac x=p' in spec)
-   apply clarsimp
-   apply (drule(1) bspec)
-   apply (clarsimp simp: inQ_def obj_at'_def)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (intro conjI)
-      \<comment> \<open>cpspace_relation\<close>
-     apply (erule nonemptyE, drule(1) bspec)
-     apply (clarsimp simp: cpspace_relation_def)
-     apply (drule obj_at_ko_at', clarsimp)
-     apply (rule cmap_relationE1, assumption,
-            erule ko_at_projectKO_opt)
-     apply (frule null_sched_queue)
-     apply (frule null_sched_epD)
-     apply (intro conjI)
-       \<comment> \<open>tcb relation\<close>
-       apply (drule ctcb_relation_null_queue_ptrs,
-              simp_all)[1]
-      \<comment> \<open>endpoint relation\<close>
-      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-      apply simp
-      apply (erule cendpoint_relation_upd_tcb_no_queues, simp+)
-     \<comment> \<open>ntfn relation\<close>
-     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-     apply simp
-     apply (erule cnotification_relation_upd_tcb_no_queues, simp+)
-    \<comment> \<open>ready queues\<close>
-    apply (simp add: cready_queues_relation_def Let_def cready_queues_index_to_C_in_range
-                     seL4_MinPrio_def minDom_def)
-    apply clarsimp
-    apply (frule cready_queues_index_to_C_distinct, assumption+)
-    apply (clarsimp simp: cready_queues_index_to_C_in_range all_conj_distrib)
-    apply (rule iffD1 [OF tcb_queue_relation'_cong[OF refl], rotated -1],
-           drule spec, drule spec, erule mp, simp+)
-    apply clarsimp
-    apply (drule_tac x="tcb_ptr_to_ctcb_ptr x" in fun_cong)+
-    apply (clarsimp simp: restrict_map_def
-                   split: if_split_asm)
-   by (auto simp: carch_state_relation_def cmachine_state_relation_def)
-
-lemma state_relation_queue_update_helper:
-  "\<lbrakk> (s, s') \<in> rf_sr; valid_queues s;
-          globals t = ksReadyQueues_'_update
-             (\<lambda>_. Arrays.update (ksReadyQueues_' (globals s')) prio' q')
-             (t_hrs_'_update f (globals s'));
-          sched_queue_relation' (cslift t) q (head_C q') (end_C q');
-          cslift t |` ( - tcb_ptr_to_ctcb_ptr ` S )
-             = cslift s' |` ( - tcb_ptr_to_ctcb_ptr ` S );
-          option_map tcb_null_sched_ptrs \<circ> cslift t
-            = option_map tcb_null_sched_ptrs \<circ> cslift s';
-          cslift_all_but_tcb_C t s';
-          zero_ranges_are_zero (gsUntypedZeroRanges s) (f (t_hrs_' (globals s')))
-              = zero_ranges_are_zero (gsUntypedZeroRanges s) (t_hrs_' (globals s'));
-          hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s'));
-          prio' = cready_queues_index_to_C qdom prio;
-          \<forall>x \<in> S. obj_at' (inQ qdom prio) x s
-                   \<or> (obj_at' (\<lambda>tcb. tcbPriority tcb = prio) x s
-                       \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = qdom) x s)
-                   \<or> (tcb_at' x s \<and> (\<forall>d' p'. (d' \<noteq> qdom \<or> p' \<noteq> prio)
-                                         \<longrightarrow> x \<notin> set (ksReadyQueues s (d', p'))));
-          S \<noteq> {}; qdom \<le> ucast maxDom; prio \<le> ucast maxPrio \<rbrakk>
-      \<Longrightarrow> (s \<lparr>ksReadyQueues := (ksReadyQueues s)((qdom, prio) := q)\<rparr>, t) \<in> rf_sr"
-  apply (subgoal_tac "\<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
-                           \<and> distinct(ksReadyQueues s (d, p))")
-   apply (erule(5) state_relation_queue_update_helper', simp_all)
-  apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def)
-  apply (drule_tac x=d in spec)
-  apply (drule_tac x=p in spec)
-  apply (clarsimp)
-  apply (drule(1) bspec)
-  apply (erule obj_at'_weakenE, clarsimp)
   done
 
 (* FIXME: move *)
@@ -825,8 +511,8 @@ lemma cready_queues_index_to_C_def2:
 lemma ready_queues_index_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s'. s' = s \<and> (Kernel_Config.numDomains \<le> 1 \<longrightarrow> dom_' s' = 0)}
        Call ready_queues_index_'proc
-       \<lbrace>\<acute>ret__unsigned_long = (dom_' s) * 0x100 + (prio_' s)\<rbrace>"
-  by vcg (simp add: numDomains_sge_1_simp)
+       \<lbrace>\<acute>ret__unsigned_long = (dom_' s) * word_of_nat numPriorities + (prio_' s)\<rbrace>"
+  by vcg (simp add: numDomains_sge_1_simp numPriorities_def)
 
 lemma prio_to_l1index_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call prio_to_l1index_'proc
@@ -921,56 +607,6 @@ lemma cbitmap_L2_relation_bit_set:
   apply (case_tac "da = d" ; clarsimp simp: num_domains_index_updates)
   done
 
-lemma carch_state_relation_enqueue_simp:
-  "carch_state_relation (ksArchState \<sigma>)
-    (t_hrs_'_update f
-      (globals \<sigma>' \<lparr>ksReadyQueuesL1Bitmap_' := l1upd, ksReadyQueuesL2Bitmap_' := l2upd \<rparr>)
-      \<lparr>ksReadyQueues_' := rqupd \<rparr>) =
-   carch_state_relation (ksArchState \<sigma>) (t_hrs_'_update f (globals \<sigma>'))"
-  unfolding carch_state_relation_def
-  by clarsimp
-
-lemma t_hrs_ksReadyQueues_upd_absorb:
-  "t_hrs_'_update f (g s) \<lparr>ksReadyQueues_' := rqupd \<rparr> =
-   t_hrs_'_update f (g s \<lparr>ksReadyQueues_' := rqupd\<rparr>)"
-  by simp
-
-lemma rf_sr_drop_bitmaps_enqueue_helper:
-  "\<lbrakk> (\<sigma>,\<sigma>') \<in> rf_sr ;
-     cbitmap_L1_relation ksqL1upd' ksqL1upd ; cbitmap_L2_relation ksqL2upd' ksqL2upd \<rbrakk>
-   \<Longrightarrow>
-   ((\<sigma>\<lparr>ksReadyQueues := ksqupd, ksReadyQueuesL1Bitmap := ksqL1upd, ksReadyQueuesL2Bitmap := ksqL2upd\<rparr>,
-     \<sigma>'\<lparr>idx_' := i', queue_' := queue_upd',
-        globals := t_hrs_'_update f
-          (globals \<sigma>'
-             \<lparr>ksReadyQueuesL1Bitmap_' := ksqL1upd',
-              ksReadyQueuesL2Bitmap_' := ksqL2upd',
-              ksReadyQueues_' := ksqupd'\<rparr>)\<rparr>) \<in> rf_sr) =
-   ((\<sigma>\<lparr>ksReadyQueues := ksqupd\<rparr>,
-     \<sigma>'\<lparr>idx_' := i', queue_' := queue_upd',
-        globals := t_hrs_'_update f
-          (globals \<sigma>' \<lparr>ksReadyQueues_' := ksqupd'\<rparr>)\<rparr>) \<in> rf_sr)"
-  unfolding rf_sr_def cstate_relation_def Let_def
-             carch_state_relation_def cmachine_state_relation_def
-  by (clarsimp simp: rf_sr_cbitmap_L1_relation rf_sr_cbitmap_L2_relation)
-
-lemma cmachine_state_relation_enqueue_simp:
-  "cmachine_state_relation (ksMachineState \<sigma>)
-    (t_hrs_'_update f
-      (globals \<sigma>' \<lparr>ksReadyQueuesL1Bitmap_' := l1upd, ksReadyQueuesL2Bitmap_' := l2upd \<rparr>)
-      \<lparr>ksReadyQueues_' := rqupd \<rparr>) =
-   cmachine_state_relation (ksMachineState \<sigma>) (t_hrs_'_update f (globals \<sigma>'))"
-  unfolding cmachine_state_relation_def
-  by clarsimp
-
-lemma tcb_queue_relation'_empty_ksReadyQueues:
-  "\<lbrakk> sched_queue_relation' (cslift x) (q s) NULL NULL ; \<forall>t\<in> set (q s). tcb_at' t s  \<rbrakk> \<Longrightarrow> q s = []"
-  apply (clarsimp simp add: tcb_queue_relation'_def)
-  apply (subst (asm) eq_commute)
-  apply (cases "q s" rule: rev_cases, simp)
-  apply (clarsimp simp: tcb_at_not_NULL)
-  done
-
 lemma invert_prioToL1Index_c_simp:
   "p \<le> maxPriority
    \<Longrightarrow>
@@ -984,13 +620,247 @@ lemma c_invert_assist: "3 - (ucast (p :: priority) >> 6 :: machine_word) < 4"
   using prio_ucast_shiftr_wordRadix_helper'[simplified wordRadix_def]
   by - (rule word_less_imp_diff_less, simp_all)
 
+lemma addToBitmap_ccorres:
+  "ccorres dc xfdc
+     (K (tdom \<le> maxDomain \<and> prio \<le> maxPriority)) (\<lbrace>\<acute>dom = ucast tdom\<rbrace> \<inter> \<lbrace>\<acute>prio = ucast prio\<rbrace>) hs
+     (addToBitmap tdom prio) (Call addToBitmap_'proc)"
+  supply prio_and_dom_limit_helpers[simp] invert_prioToL1Index_c_simp[simp]
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply clarsimp
+  apply (frule maxDomain_le_unat_ucast_explicit)
+  apply (clarsimp simp: getQueue_def gets_def get_def setQueue_def modify_def
+                        put_def bind_def return_def bitmap_fun_defs)
+  apply (intro conjI impI allI)
+   apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                        carch_state_relation_def cmachine_state_relation_def)
+  apply (rule conjI)
+   apply (clarsimp intro!: cbitmap_L1_relation_bit_set)
+  apply (fastforce dest!: cbitmap_L2_relation_bit_set simp: wordRadix_def mask_def)
+  done
+
+lemma rf_sr_tcb_update_twice:
+  "h_t_valid (hrs_htd (hrs2 (globals s') (t_hrs_' (gs2 (globals s'))))) c_guard
+      (ptr (t_hrs_' (gs2 (globals s'))) (globals s'))
+    \<Longrightarrow> ((s, globals_update (\<lambda>gs. t_hrs_'_update (\<lambda>ths.
+        hrs_mem_update (heap_update (ptr ths gs :: tcb_C ptr) (v ths gs))
+            (hrs_mem_update (heap_update (ptr ths gs) (v' ths gs)) (hrs2 gs ths))) (gs2 gs)) s') \<in> rf_sr)
+    = ((s, globals_update (\<lambda>gs. t_hrs_'_update (\<lambda>ths.
+        hrs_mem_update (heap_update (ptr ths gs) (v ths gs)) (hrs2 gs ths)) (gs2 gs)) s') \<in> rf_sr)"
+  by (simp add: rf_sr_def cstate_relation_def Let_def
+                cpspace_relation_def typ_heap_simps'
+                carch_state_relation_def cmachine_state_relation_def
+                packed_heap_update_collapse_hrs)
+
+lemmas rf_sr_tcb_update_no_queue_gen2 =
+  rf_sr_obj_update_helper[OF rf_sr_tcb_update_no_queue_gen, simplified]
+
+lemma tcb_queue_prepend_ccorres:
+  "ccorres ctcb_queue_relation ret__struct_tcb_queue_C_'
+     (\<lambda>s. tcb_at' tcbPtr s
+          \<and> (tcbQueueHead queue \<noteq> None \<longleftrightarrow> tcbQueueEnd queue \<noteq> None)
+          \<and> (\<forall>head. tcbQueueHead queue = Some head \<longrightarrow> tcb_at' head s))
+     (\<lbrace>ctcb_queue_relation queue \<acute>queue\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
+     (tcbQueuePrepend queue tcbPtr) (Call tcb_queue_prepend_'proc)"
+  (is "ccorres _ _ ?abs _ _ _ _")
+  supply if_split[split del]
+  apply (cinit lift: tcb_')
+   \<comment> \<open>cinit is not able to lift queue_' because queue_' is later modified in the C program\<close>
+   apply (rule_tac xf'=queue_' in ccorres_abstract, ceqv, rename_tac cqueue)
+   apply (rule_tac P="ctcb_queue_relation queue cqueue" in ccorres_gen_asm2)
+   apply (rule_tac xf'=ret__unsigned_long_'
+               and val="from_bool (tcbQueueEmpty queue)"
+               and R="?abs"
+               and R'="\<lbrace>\<acute>queue = cqueue\<rbrace>"
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg)
+      apply (fastforce dest: tcb_at_not_NULL
+                       simp: ctcb_queue_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def)
+     apply ceqv
+    apply (rule_tac r'=ctcb_queue_relation and xf'=queue_' in ccorres_split_nothrow)
+        apply (rule_tac Q="?abs"
+                    and Q'="\<lambda>s'. queue_' s' = cqueue"
+                     in ccorres_cond_both')
+          apply fastforce
+         apply clarsimp
+         apply (rule ccorres_return[where R=\<top>])
+         apply (rule conseqPre, vcg)
+         apply (fastforce simp: ctcb_queue_relation_def option_to_ctcb_ptr_def)
+        apply (rule ccorres_seq_skip'[THEN iffD1])
+        apply (rule ccorres_rhs_assoc)+
+        apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+            apply (rule ccorres_Guard)
+            apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb tcbPtr s
+                                            \<and> head_C cqueue = option_to_ctcb_ptr (tcbQueueHead queue)}"
+                        and R="\<lbrace>head_C cqueue = option_to_ctcb_ptr (tcbQueueHead queue)\<rbrace>"
+                         in threadSet_ccorres_lemma4[where P=\<top> and P'=\<top>])
+             apply (rule conseqPre, vcg)
+             apply clarsimp
+             apply (frule (1) obj_at_cslift_tcb)
+             apply (fastforce intro!: rf_sr_tcb_update_no_queue_gen2
+                                simp: typ_heap_simps' tcb_cte_cases_def cteSizeBits_def
+                                      ctcb_relation_def option_to_ctcb_ptr_def)
+            apply (clarsimp simp: ctcb_relation_def option_to_ctcb_ptr_def split: if_splits)
+           apply ceqv
+          apply simp
+          apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+              apply (rule ccorres_Guard)
+              apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr
+                                              \<and> ko_at' tcb (the (tcbQueueHead queue)) s
+                                              \<and> head_C cqueue = option_to_ctcb_ptr (tcbQueueHead queue)}"
+                          and R="\<lbrace>head_C cqueue = option_to_ctcb_ptr (tcbQueueHead queue)\<rbrace>"
+                           in threadSet_ccorres_lemma4[where P=\<top> and P'=\<top>])
+               apply (rule conseqPre, vcg)
+               apply clarsimp
+               apply (frule (1) obj_at_cslift_tcb)
+               apply (fastforce intro!: rf_sr_tcb_update_no_queue_gen2
+                                  simp: typ_heap_simps' tcb_cte_cases_def cteSizeBits_def
+                                        ctcb_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def)
+              apply fastforce
+             apply ceqv
+            apply (rule ccorres_return_Skip')
+           apply wpsimp
+          apply vcg
+         apply wpsimp
+        apply vcg
+       apply ceqv
+      apply csymbr
+      apply (fastforce intro: ccorres_return_C')
+     apply wpsimp
+    apply vcg
+   apply clarsimp
+   apply (vcg exspec=tcb_queue_empty_modifies)
+  apply clarsimp
+  apply (frule (1) tcb_at_h_t_valid)
+  by (force dest: tcb_at_h_t_valid
+            simp: ctcb_queue_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def)
+
+lemma tcb_queue_append_ccorres:
+  "ccorres ctcb_queue_relation ret__struct_tcb_queue_C_'
+     (\<lambda>s. tcb_at' tcbPtr s
+          \<and> (tcbQueueHead queue \<noteq> None \<longleftrightarrow> tcbQueueEnd queue \<noteq> None)
+          \<and> (\<forall>head. tcbQueueHead queue = Some head \<longrightarrow> tcb_at' head s)
+          \<and> (\<forall>end. tcbQueueEnd queue = Some end \<longrightarrow> tcb_at' end s))
+     (\<lbrace>ctcb_queue_relation queue \<acute>queue\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
+     (tcbQueueAppend queue tcbPtr) (Call tcb_queue_append_'proc)"
+  (is "ccorres _ _ ?abs _ _ _ _")
+  supply if_split[split del]
+  apply (cinit lift: tcb_')
+   \<comment> \<open>cinit is not able to lift queue_' because queue_' is later modified in the C program\<close>
+   apply (rule_tac xf'=queue_' in ccorres_abstract, ceqv, rename_tac cqueue)
+   apply (rule_tac P="ctcb_queue_relation queue cqueue
+                      \<and> (tcbQueueHead queue \<noteq> None \<longleftrightarrow> tcbQueueEnd queue \<noteq> None)"
+                in ccorres_gen_asm2)
+   apply (rule_tac xf'=ret__unsigned_long_'
+               and val="from_bool (tcbQueueEmpty queue)"
+               and R="?abs"
+               and R'="\<lbrace>\<acute>queue = cqueue\<rbrace>"
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg)
+      apply (fastforce dest: tcb_at_not_NULL
+                       simp: ctcb_queue_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def)
+     apply ceqv
+    apply (rule_tac r'=ctcb_queue_relation and xf'=queue_' in ccorres_split_nothrow)
+        apply (rule_tac Q="?abs"
+                    and Q'="\<lambda>s'. queue_' s' = cqueue"
+                     in ccorres_cond_both')
+          apply (fastforce dest: tcb_at_not_NULL
+                           simp: ctcb_queue_relation_def option_to_ctcb_ptr_def)
+         apply clarsimp
+         apply (rule ccorres_return[where R=\<top>])
+         apply (rule conseqPre, vcg)
+         apply (fastforce simp: ctcb_queue_relation_def option_to_ctcb_ptr_def)
+        apply (rule ccorres_seq_skip'[THEN iffD1])
+        apply (rule ccorres_rhs_assoc)+
+        apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+            apply (rule ccorres_Guard)
+            apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb tcbPtr s
+                                            \<and> end_C cqueue = option_to_ctcb_ptr (tcbQueueEnd queue)}"
+                        and R="\<lbrace>end_C cqueue = option_to_ctcb_ptr (tcbQueueEnd queue)\<rbrace>"
+                         in threadSet_ccorres_lemma4[where P=\<top> and P'=\<top>])
+             apply (rule conseqPre, vcg)
+             apply clarsimp
+             apply (frule (1) obj_at_cslift_tcb)
+             apply (fastforce intro!: rf_sr_tcb_update_no_queue_gen2
+                                simp: typ_heap_simps' tcb_cte_cases_def cteSizeBits_def
+                                      ctcb_relation_def option_to_ctcb_ptr_def)
+            apply (clarsimp simp: ctcb_relation_def option_to_ctcb_ptr_def split: if_splits)
+           apply ceqv
+          apply simp
+          apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+              apply (rule ccorres_Guard)
+              apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr
+                                              \<and> ko_at' tcb (the (tcbQueueEnd queue)) s
+                                              \<and> end_C cqueue = option_to_ctcb_ptr (tcbQueueEnd queue)}"
+                          and R="\<lbrace>end_C cqueue = option_to_ctcb_ptr (tcbQueueEnd queue)\<rbrace>"
+                           in threadSet_ccorres_lemma4[where P=\<top> and P'=\<top>])
+               apply (rule conseqPre, vcg)
+               apply clarsimp
+               apply (frule (1) obj_at_cslift_tcb)
+               apply (fastforce intro!: rf_sr_tcb_update_no_queue_gen2
+                                  simp: typ_heap_simps' tcb_cte_cases_def cteSizeBits_def
+                                        ctcb_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def)
+              apply fastforce
+             apply ceqv
+            apply (rule ccorres_return_Skip')
+           apply wpsimp
+          apply vcg
+         apply wpsimp
+        apply vcg
+       apply ceqv
+      apply csymbr
+      apply (fastforce intro: ccorres_return_C')
+     apply wpsimp
+    apply vcg
+   apply (vcg exspec=tcb_queue_empty_modifies)
+  apply clarsimp
+  apply (frule (1) tcb_at_h_t_valid)
+  by (force dest: tcb_at_h_t_valid
+            simp: ctcb_queue_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def)
+
+lemma getQueue_ccorres:
+  "ccorres ctcb_queue_relation queue_'
+     (K (tdom \<le> maxDomain \<and> prio \<le> maxPriority))
+     \<lbrace>\<acute>idx = word_of_nat (cready_queues_index_to_C tdom prio)\<rbrace> hs
+     (getQueue tdom prio) (\<acute>queue :== \<acute>ksReadyQueues.[unat \<acute>idx])"
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: getQueue_def gets_def get_def bind_def return_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (frule (1) cready_queues_index_to_C_in_range)
+  apply (clarsimp simp: unat_of_nat_eq cready_queues_relation_def)
+  done
+
+lemma setQueue_ccorres:
+  "ctcb_queue_relation queue cqueue \<Longrightarrow>
+   ccorres dc xfdc
+     (K (tdom \<le> maxDomain \<and> prio \<le> maxPriority))
+     \<lbrace>\<acute>idx = word_of_nat (cready_queues_index_to_C tdom prio)\<rbrace> hs
+     (setQueue tdom prio queue)
+     (Basic (\<lambda>s. globals_update
+                  (ksReadyQueues_'_update
+                   (\<lambda>_. Arrays.update (ksReadyQueues_' (globals s)) (unat (idx_' s)) cqueue)) s))"
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: setQueue_def get_def modify_def put_def bind_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                        carch_state_relation_def cmachine_state_relation_def)
+  apply (frule (1) cready_queues_index_to_C_in_range)
+  apply (clarsimp simp: unat_of_nat_eq cready_queues_relation_def)
+  apply (frule cready_queues_index_to_C_distinct, assumption+)
+  apply (frule_tac qdom=d and prio=p in cready_queues_index_to_C_in_range)
+   apply fastforce
+  apply clarsimp
+  done
+
+crunch (empty_fail) empty_fail[wp]: isRunnable
+
 lemma tcbSchedEnqueue_ccorres:
   "ccorres dc xfdc
-           (valid_queues and tcb_at' t and valid_objs')
-           (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
-           hs
-           (tcbSchedEnqueue t)
-           (Call tcbSchedEnqueue_'proc)"
+     (tcb_at' t and valid_objs' and pspace_aligned' and pspace_distinct')
+     \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> hs
+     (tcbSchedEnqueue t) (Call tcbSchedEnqueue_'proc)"
 proof -
   note prio_and_dom_limit_helpers[simp] word_sle_def[simp] maxDom_to_H[simp] maxPrio_to_H[simp]
   note invert_prioToL1Index_c_simp[simp]
@@ -1001,24 +871,12 @@ proof -
 
   show ?thesis
     apply (cinit lift: tcb_')
-     apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
-              in ccorres_split_nothrow)
-         apply (rule threadGet_vcg_corres)
-         apply (rule allI, rule conseqPre, vcg)
-         apply clarsimp
-         apply (drule obj_at_ko_at', clarsimp)
-         apply (drule spec, drule(1) mp, clarsimp)
-         apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-        apply ceqv
-       apply (simp add: when_def unless_def del: Collect_const split del: if_split)
-       apply (rule ccorres_cond[where R=\<top>])
-         apply (simp add: to_bool_def)
-        apply (rule ccorres_rhs_assoc)+
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="dom_'" in ccorres_split_nothrow)
+     apply (rule ccorres_stateAssert)+
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_assert)
+        apply (thin_tac runnable)
+        apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
+                     in ccorres_split_nothrow)
             apply (rule threadGet_vcg_corres)
             apply (rule allI, rule conseqPre, vcg)
             apply clarsimp
@@ -1026,244 +884,246 @@ proof -
             apply (drule spec, drule(1) mp, clarsimp)
             apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
            apply ceqv
-          apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="prio_'" in ccorres_split_nothrow)
-              apply (rule threadGet_vcg_corres)
-              apply (rule allI, rule conseqPre, vcg)
-              apply clarsimp
-              apply (drule obj_at_ko_at', clarsimp)
-              apply (drule spec, drule(1) mp, clarsimp)
-              apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-             apply ceqv
-            apply (rule ccorres_rhs_assoc2)+
-            apply (simp only: bind_assoc[symmetric])
-            apply (rule ccorres_split_nothrow_novcg_dc)
-               prefer 2
-               apply (rule ccorres_move_c_guard_tcb)
-               apply simp
-               apply ctac
-              prefer 2
-              apply (wp, clarsimp, wp+)
-             apply (rule_tac P="\<lambda>s. valid_queues s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p))
-                                  \<and> (\<exists>tcb. ko_at' tcb t s \<and> tcbDomain tcb =rva
-                                  \<and> tcbPriority tcb = rvb \<and> valid_tcb' tcb s)"
-                         and P'=UNIV in ccorres_from_vcg)
-             apply (rule allI, rule conseqPre, vcg)
-             apply (clarsimp simp: getQueue_def gets_def get_def setQueue_def modify_def
-                                   put_def bind_def return_def bitmap_fun_defs null_def)
-             apply (clarsimp simp: queue_in_range valid_tcb'_def)
-             apply (rule conjI; clarsimp simp: queue_in_range)
-              (* queue is empty, set t to be new queue *)
-              apply (drule (1) obj_at_cslift_tcb)
-              apply clarsimp
-              apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
-                       in rf_sr_sched_queue_relation)
-                apply clarsimp
+          apply (simp add: when_def unless_def del: Collect_const split del: if_split)
+          apply (rule ccorres_cond[where R=\<top>])
+            apply (simp add: to_bool_def)
+           apply (rule ccorres_rhs_assoc)+
+           apply csymbr
+           apply csymbr
+           apply csymbr
+           apply csymbr
+           apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="dom_'" in ccorres_split_nothrow)
+               apply (rule threadGet_vcg_corres)
+               apply (rule allI, rule conseqPre, vcg)
                apply clarsimp
-              apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
-               apply (simp add: valid_queues_valid_q)
-              apply (subgoal_tac
-                      "head_C (ksReadyQueues_' (globals x)
-                         .[cready_queues_index_to_C (tcbDomain tcb) (tcbPriority tcb)]) = NULL")
-               prefer 2
-               apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL; simp add: valid_queues_valid_q)
-              apply (subgoal_tac
-                       "end_C (ksReadyQueues_' (globals x)
-                          .[cready_queues_index_to_C (tcbDomain tcb) (tcbPriority tcb)]) = NULL")
-               prefer 2
-               apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL[symmetric]; simp add: valid_queues_valid_q)
-              apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                        unat_trans_ucast_helper\<close>)
-              apply (frule maxDomain_le_unat_ucast_explicit)
-              apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def)
-              apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-              apply (simp add: t_hrs_ksReadyQueues_upd_absorb)
-
-              apply (rule conjI)
-               apply (clarsimp simp: l2BitmapSize_def' wordRadix_def c_invert_assist)
-              apply (subst rf_sr_drop_bitmaps_enqueue_helper, assumption)
-                apply (fastforce intro: cbitmap_L1_relation_bit_set)
-               apply (fastforce intro: cbitmap_L2_relation_bit_set simp: wordRadix_def mask_def)
-
-              apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb" in rf_sr_sched_queue_relation)
-                apply clarsimp
-               apply clarsimp
-              apply (drule_tac qhead'="tcb_ptr_to_ctcb_ptr t" and s=\<sigma> in tcbSchedEnqueue_update,
-                     simp_all add: valid_queues_valid_q)[1]
-               apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
-              apply (erule(1) state_relation_queue_update_helper[where S="{t}"],
-                     (simp | rule globals.equality)+,
-                     simp_all add: cready_queues_index_to_C_def2 numPriorities_def
-                                   t_hrs_ksReadyQueues_upd_absorb upd_unless_null_def
-                                   typ_heap_simps)[1]
-               apply (fastforce simp: tcb_null_sched_ptrs_def typ_heap_simps c_guard_clift
-                                elim: obj_at'_weaken)+
-             apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                       unat_trans_ucast_helper\<close>)
-             apply clarsimp
-             apply (rule conjI; clarsimp simp: queue_in_range)
-              (* invalid, disagreement between C and Haskell on emptiness of queue *)
-              apply (drule (1) obj_at_cslift_tcb)
-              apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-              apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb" in rf_sr_sched_queue_relation)
-                apply clarsimp
-               apply clarsimp
-              apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def)
-              apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
-               apply (simp add: valid_queues_valid_q)
-              apply clarsimp
-              apply (drule tcb_queue_relation'_empty_ksReadyQueues; simp add: valid_queues_valid_q)
-             (* queue was not empty, add t to queue and leave bitmaps alone *)
-             apply (drule (1) obj_at_cslift_tcb)
-             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-             apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb" in rf_sr_sched_queue_relation)
-               apply clarsimp
-              apply clarsimp
-             apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def)
-             apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
-              apply (simp add: valid_queues_valid_q)
-             apply clarsimp
-             apply (frule_tac t=\<sigma> in tcb_queue_relation_qhead_mem')
-              apply (simp add: valid_queues_valid_q)
-             apply (frule(1) tcb_queue_relation_qhead_valid')
-              apply (simp add: valid_queues_valid_q)
-             apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff numPriorities_def
-                                   cready_queues_index_to_C_def2)
-             apply (drule_tac qhead'="tcb_ptr_to_ctcb_ptr t" and s=\<sigma> in tcbSchedEnqueue_update,
-                    simp_all add: valid_queues_valid_q)[1]
-               apply clarsimp
-
-              apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
-             apply (frule(2) obj_at_cslift_tcb[OF valid_queues_obj_at'D])
-             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-             apply (erule_tac S="{t, v}" for v in state_relation_queue_update_helper,
-                    (simp | rule globals.equality)+,
-                    simp_all add: typ_heap_simps if_Some_helper numPriorities_def
-                                  cready_queues_index_to_C_def2 upd_unless_null_def
-                             del: fun_upd_restrict_conv
-                             cong: if_cong
-                             split del: if_split)[1]
-                apply simp
-                apply (rule conjI)
+               apply (drule obj_at_ko_at', clarsimp)
+               apply (drule spec, drule(1) mp, clarsimp)
+               apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+              apply ceqv
+             apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="prio_'" in ccorres_split_nothrow)
+                 apply (rule threadGet_vcg_corres)
+                 apply (rule allI, rule conseqPre, vcg)
                  apply clarsimp
-                 apply (drule_tac s="tcb_ptr_to_ctcb_ptr t" in sym, simp)
-                apply (clarsimp simp add: fun_upd_twist)
-               prefer 3
-               apply (simp add: obj_at'_weakenE[OF _ TrueI])
-               apply (rule disjI1, erule (1) valid_queues_obj_at'D)
-              apply clarsimp
-             apply (fastforce simp: tcb_null_sched_ptrs_def)
-            apply (simp add: typ_heap_simps c_guard_clift)
-            apply (simp add: guard_is_UNIV_def)
-           apply simp
-           apply (wp threadGet_wp)
-          apply vcg
-         apply simp
-         apply (wp threadGet_wp)
-        apply vcg
-       apply (rule ccorres_return_Skip)
-      apply simp
-      apply (wp threadGet_wp)
-     apply vcg
-    apply (fastforce simp: valid_objs'_def obj_at'_def ran_def projectKOs typ_at'_def
-                           valid_obj'_def inQ_def
-                    dest!: valid_queues_obj_at'D)
-  done
+                 apply (drule obj_at_ko_at', clarsimp)
+                 apply (drule spec, drule(1) mp, clarsimp)
+                 apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+                apply ceqv
+               apply (rule ccorres_rhs_assoc2)+
+               apply (simp only: bind_assoc[symmetric])
+               apply (rule ccorres_split_nothrow_novcg_dc)
+                  prefer 2
+                  apply (rule ccorres_move_c_guard_tcb)
+                  apply (simp only: dc_def[symmetric])
+                  apply ctac
+                 apply (rule ccorres_rhs_assoc)+
+                 apply (rule ccorres_symb_exec_r)
+                   apply (rule ccorres_Guard_Seq)
+                   apply (simp add: bind_assoc)
+                   apply (ctac add: getQueue_ccorres)
+                     apply (rename_tac queue cqueue)
+                     apply (rule_tac xf'=ret__unsigned_long_'
+                                 and val="from_bool (tcbQueueEmpty queue)"
+                                 and R="\<lambda>s. \<not> tcbQueueEmpty queue \<longrightarrow> tcb_at' (the (tcbQueueHead queue)) s
+                                            \<and> (tcbQueueHead queue \<noteq> None \<longleftrightarrow> tcbQueueEnd queue \<noteq> None)"
+                                 and R'="{s'. queue_' s' = cqueue}"
+                                  in ccorres_symb_exec_r_known_rv)
+                        apply (rule conseqPre, vcg)
+                        apply (fastforce dest: tcb_at_not_NULL
+                                         simp: ctcb_queue_relation_def option_to_ctcb_ptr_def
+                                               tcbQueueEmpty_def)
+                       apply ceqv
+                      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                          apply (rule ccorres_cond[where R=\<top>])
+                            apply fastforce
+                           apply (ctac add: addToBitmap_ccorres)
+                          apply (rule ccorres_return_Skip)
+                         apply ceqv
+                        apply (ctac add: tcb_queue_prepend_ccorres)
+                          apply (rule ccorres_Guard)
+                          apply (rule setQueue_ccorres)
+                          apply fastforce
+                         apply wpsimp
+                        apply (vcg exspec=tcb_queue_prepend_modifies)
+                       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+                      apply (vcg exspec=addToBitmap_modifies)
+                     apply vcg
+                    apply wpsimp
+                   apply vcg
+                  apply clarsimp
+                  apply vcg
+                 apply (rule conseqPre, vcg)
+                 apply clarsimp
+                apply wpsimp
+               apply (clarsimp simp: guard_is_UNIV_def)
+              apply (wpsimp wp: threadGet_wp)
+             apply vcg
+            apply clarsimp
+            apply (wpsimp wp: threadGet_wp)
+           apply vcg
+          apply (rule ccorres_return_Skip)
+         apply (wpsimp wp: threadGet_wp)
+        apply (vcg expsec=thread_state_get_tcbQueued_modifies)
+       apply wpsimp
+      apply (wpsimp wp: isRunnable_wp)
+     apply wpsimp
+    apply normalise_obj_at'
+    apply (rename_tac tcb)
+    apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+    apply (clarsimp simp: valid_tcb'_def)
+    apply (frule (1) obj_at_cslift_tcb)
+    apply (rule conjI)
+     apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
+     apply (drule_tac x="tcbDomain tcb" in spec)
+     apply (drule_tac x="tcbPriority tcb" in spec)
+     apply clarsimp
+     apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
+     apply (force dest!: tcbQueueHead_iff_tcbQueueEnd simp: tcbQueueEmpty_def obj_at'_def)
+    apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+    apply (rule conjI)
+     apply (clarsimp simp: maxDomain_def)
+    apply (cut_tac qdom="tcbDomain tcb" and prio="tcbPriority tcb"
+                in cready_queues_index_to_C_in_range)
+      apply fastforce
+     apply fastforce
+    apply (clarsimp simp: word_less_nat_alt cready_queues_index_to_C_def2)
+    done
 qed
 
-lemmas tcbSchedDequeue_update
-    = tcbDequeue_update[where tn=tcbSchedNext_C and tn_update=tcbSchedNext_C_update
-                          and tp'=tcbSchedPrev_C and tp_update=tcbSchedPrev_C_update,
-                        simplified]
+lemma tcbSchedAppend_ccorres:
+  "ccorres dc xfdc
+     (tcb_at' t and valid_objs' and pspace_aligned' and pspace_distinct')
+     \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> hs
+     (tcbSchedAppend t) (Call tcbSchedAppend_'proc)"
+proof -
+  note prio_and_dom_limit_helpers[simp] word_sle_def[simp] maxDom_to_H[simp] maxPrio_to_H[simp]
+  note invert_prioToL1Index_c_simp[simp]
 
-lemma tcb_queue_relation_prev_next:
-  "\<lbrakk> tcb_queue_relation tn tp' mp queue qprev qhead;
-     tcbp \<in> set queue; distinct (ctcb_ptr_to_tcb_ptr qprev # queue);
-     \<forall>t \<in> set queue. tcb_at' t s; qprev \<noteq> tcb_Ptr 0 \<longrightarrow> mp qprev \<noteq> None;
-     mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb \<rbrakk>
-      \<Longrightarrow> (tn tcb \<noteq> tcb_Ptr 0 \<longrightarrow> tn tcb \<in> tcb_ptr_to_ctcb_ptr ` set queue
-                       \<and> mp (tn tcb) \<noteq> None \<and> tn tcb \<noteq> tcb_ptr_to_ctcb_ptr tcbp)
-        \<and> (tp' tcb \<noteq> tcb_Ptr 0 \<longrightarrow> (tp' tcb \<in> tcb_ptr_to_ctcb_ptr ` set queue
-                                         \<or> tp' tcb = qprev)
-                       \<and> mp (tp' tcb) \<noteq> None \<and> tp' tcb \<noteq> tcb_ptr_to_ctcb_ptr tcbp)
-        \<and> (tn tcb \<noteq> tcb_Ptr 0 \<longrightarrow> tn tcb \<noteq> tp' tcb)"
-  apply (induct queue arbitrary: qprev qhead)
-   apply simp
-  apply simp
-  apply (erule disjE)
-   apply clarsimp
-   apply (case_tac "queue")
-    apply clarsimp
-   apply clarsimp
-   apply (rule conjI)
-    apply clarsimp
-   apply clarsimp
-   apply (drule_tac f=ctcb_ptr_to_tcb_ptr in arg_cong[where y="tp' tcb"], simp)
-  apply clarsimp
-  apply fastforce
-  done
+  (* when numDomains = 1, array bounds checks would become _ = 0 rather than _ < 1, changing the
+     shape of the proof compared to when numDomains > 1 *)
+  note word_less_1[simp del]
 
-lemma tcb_queue_relation_prev_next':
-  "\<lbrakk> tcb_queue_relation' tn tp' mp queue qhead qend; tcbp \<in> set queue; distinct queue;
-       \<forall>t \<in> set queue. tcb_at' t s; mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb \<rbrakk>
-      \<Longrightarrow> (tn tcb \<noteq> tcb_Ptr 0 \<longrightarrow> tn tcb \<in> tcb_ptr_to_ctcb_ptr ` set queue
-                       \<and> mp (tn tcb) \<noteq> None \<and> tn tcb \<noteq> tcb_ptr_to_ctcb_ptr tcbp)
-        \<and> (tp' tcb \<noteq> tcb_Ptr 0 \<longrightarrow> tp' tcb \<in> tcb_ptr_to_ctcb_ptr ` set queue
-                       \<and> mp (tp' tcb) \<noteq> None \<and> tp' tcb \<noteq> tcb_ptr_to_ctcb_ptr tcbp)
-        \<and> (tn tcb \<noteq> tcb_Ptr 0 \<longrightarrow> tn tcb \<noteq> tp' tcb)"
-  apply (clarsimp simp: tcb_queue_relation'_def split: if_split_asm)
-  apply (drule(1) tcb_queue_relation_prev_next, simp_all)
-   apply (fastforce dest: tcb_at_not_NULL)
-  apply clarsimp
-  done
-
-(* L1 bitmap only updated if L2 entry bits end up all zero *)
-lemma rf_sr_drop_bitmaps_dequeue_helper_L2:
-  "\<lbrakk> (\<sigma>,\<sigma>') \<in> rf_sr ;
-     cbitmap_L2_relation ksqL2upd' ksqL2upd \<rbrakk>
-   \<Longrightarrow>
-((\<sigma>\<lparr>ksReadyQueues := ksqupd,
-   ksReadyQueuesL2Bitmap := ksqL2upd\<rparr>,
- \<sigma>'\<lparr>idx_' := i',
-   queue_' := queue_upd',
-   globals := globals \<sigma>'
-     \<lparr>ksReadyQueuesL2Bitmap_' := ksqL2upd',
-      ksReadyQueues_' := ksqupd'\<rparr>\<rparr>)
-         \<in> rf_sr)
- =
-((\<sigma>\<lparr>ksReadyQueues := ksqupd\<rparr>,
- \<sigma>'\<lparr>idx_' := i',
-   queue_' := queue_upd',
-   globals := globals \<sigma>'
-     \<lparr>ksReadyQueues_' := ksqupd'\<rparr>\<rparr>) \<in> rf_sr)
-"
-  unfolding rf_sr_def cstate_relation_def Let_def
-             carch_state_relation_def cmachine_state_relation_def
-  by (clarsimp simp: rf_sr_cbitmap_L1_relation rf_sr_cbitmap_L2_relation)
-
-lemma rf_sr_drop_bitmaps_dequeue_helper:
-  "\<lbrakk> (\<sigma>,\<sigma>') \<in> rf_sr ;
-     cbitmap_L1_relation ksqL1upd' ksqL1upd ; cbitmap_L2_relation ksqL2upd' ksqL2upd \<rbrakk>
-   \<Longrightarrow>
-((\<sigma>\<lparr>ksReadyQueues := ksqupd,
-   ksReadyQueuesL2Bitmap := ksqL2upd,
-   ksReadyQueuesL1Bitmap := ksqL1upd\<rparr>,
- \<sigma>'\<lparr>idx_' := i',
-   queue_' := queue_upd',
-   globals := globals \<sigma>'
-     \<lparr>ksReadyQueuesL2Bitmap_' := ksqL2upd',
-      ksReadyQueuesL1Bitmap_' := ksqL1upd',
-      ksReadyQueues_' := ksqupd'\<rparr>\<rparr>)
-         \<in> rf_sr)
- =
-((\<sigma>\<lparr>ksReadyQueues := ksqupd\<rparr>,
- \<sigma>'\<lparr>idx_' := i',
-   queue_' := queue_upd',
-   globals := globals \<sigma>'
-     \<lparr>ksReadyQueues_' := ksqupd'\<rparr>\<rparr>) \<in> rf_sr)
-"
-  unfolding rf_sr_def cstate_relation_def Let_def
-             carch_state_relation_def cmachine_state_relation_def
-  by (clarsimp simp: rf_sr_cbitmap_L1_relation rf_sr_cbitmap_L2_relation)
+  show ?thesis
+    apply (cinit lift: tcb_')
+     apply (rule ccorres_stateAssert)+
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_assert)
+        apply (thin_tac "runnable")
+        apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
+                     in ccorres_split_nothrow)
+            apply (rule threadGet_vcg_corres)
+            apply (rule allI, rule conseqPre, vcg)
+            apply clarsimp
+            apply (drule obj_at_ko_at', clarsimp)
+            apply (drule spec, drule(1) mp, clarsimp)
+            apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+           apply ceqv
+          apply (simp add: when_def unless_def del: Collect_const split del: if_split)
+          apply (rule ccorres_cond[where R=\<top>])
+            apply (simp add: to_bool_def)
+           apply (rule ccorres_rhs_assoc)+
+           apply csymbr
+           apply csymbr
+           apply csymbr
+           apply csymbr
+           apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="dom_'" in ccorres_split_nothrow)
+               apply (rule threadGet_vcg_corres)
+               apply (rule allI, rule conseqPre, vcg)
+               apply clarsimp
+               apply (drule obj_at_ko_at', clarsimp)
+               apply (drule spec, drule(1) mp, clarsimp)
+               apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+              apply ceqv
+             apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="prio_'" in ccorres_split_nothrow)
+                 apply (rule threadGet_vcg_corres)
+                 apply (rule allI, rule conseqPre, vcg)
+                 apply clarsimp
+                 apply (drule obj_at_ko_at', clarsimp)
+                 apply (drule spec, drule(1) mp, clarsimp)
+                 apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+                apply ceqv
+               apply (rule ccorres_rhs_assoc2)+
+               apply (simp only: bind_assoc[symmetric])
+               apply (rule ccorres_split_nothrow_novcg_dc)
+                  prefer 2
+                  apply (rule ccorres_move_c_guard_tcb)
+                  apply (simp only: dc_def[symmetric])
+                  apply ctac
+                 apply (rule ccorres_rhs_assoc)+
+                 apply (rule ccorres_symb_exec_r)
+                   apply (rule ccorres_Guard_Seq)
+                   apply (simp add: bind_assoc)
+                   apply (ctac add: getQueue_ccorres)
+                     apply (rename_tac queue cqueue)
+                     apply (rule_tac xf'=ret__unsigned_long_'
+                                 and val="from_bool (tcbQueueEmpty queue)"
+                                 and R="\<lambda>s. \<not> tcbQueueEmpty queue \<longrightarrow> tcb_at' (the (tcbQueueHead queue)) s
+                                            \<and> (tcbQueueHead queue \<noteq> None \<longleftrightarrow> tcbQueueEnd queue \<noteq> None)"
+                                 and R'="{s'. queue_' s' = cqueue}"
+                                  in ccorres_symb_exec_r_known_rv)
+                        apply (rule conseqPre, vcg)
+                        apply (fastforce dest: tcb_at_not_NULL
+                                         simp: ctcb_queue_relation_def option_to_ctcb_ptr_def
+                                               tcbQueueEmpty_def)
+                       apply ceqv
+                      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                          apply (rule ccorres_cond[where R=\<top>])
+                            apply (fastforce dest!: tcb_at_not_NULL
+                                              simp: ctcb_queue_relation_def option_to_ctcb_ptr_def)
+                           apply (ctac add: addToBitmap_ccorres)
+                          apply (rule ccorres_return_Skip)
+                         apply ceqv
+                        apply (ctac add: tcb_queue_append_ccorres)
+                          apply (rule ccorres_Guard)
+                          apply (rule setQueue_ccorres)
+                          apply fastforce
+                         apply wpsimp
+                        apply (vcg exspec=tcb_queue_prepend_modifies)
+                       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+                      apply (vcg exspec=addToBitmap_modifies)
+                     apply vcg
+                    apply wpsimp
+                   apply vcg
+                  apply clarsimp
+                  apply vcg
+                 apply (rule conseqPre, vcg)
+                 apply clarsimp
+                apply wpsimp
+               apply (clarsimp simp: guard_is_UNIV_def)
+              apply (wpsimp wp: threadGet_wp)
+             apply vcg
+            apply clarsimp
+            apply (wpsimp wp: threadGet_wp)
+           apply clarsimp
+           apply vcg
+          apply (rule ccorres_return_Skip)
+         apply (wpsimp wp: threadGet_wp)
+        apply (vcg expsec=thread_state_get_tcbQueued_modifies)
+       apply wpsimp
+      apply (wpsimp wp: isRunnable_wp)
+     apply wpsimp
+    apply normalise_obj_at'
+    apply (rename_tac tcb)
+    apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+    apply (clarsimp simp: valid_tcb'_def)
+    apply (frule (1) obj_at_cslift_tcb)
+    apply (rule conjI)
+     apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
+     apply (drule_tac x="tcbDomain tcb" in spec)
+     apply (drule_tac x="tcbPriority tcb" in spec)
+     apply clarsimp
+     apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
+     apply (frule (3) obj_at'_tcbQueueEnd_ksReadyQueues)
+     apply (force dest!: tcbQueueHead_iff_tcbQueueEnd simp: tcbQueueEmpty_def obj_at'_def)
+    apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+    apply (rule conjI)
+     apply (clarsimp simp: maxDomain_def)
+    apply (cut_tac qdom="tcbDomain tcb" and prio="tcbPriority tcb"
+                in cready_queues_index_to_C_in_range)
+      apply fastforce
+     apply fastforce
+    apply (clarsimp simp: word_less_nat_alt cready_queues_index_to_C_def2 tcbQueueEmpty_def)
+    done
+qed
 
 (* FIXME same proofs as bit_set, maybe can generalise? *)
 lemma cbitmap_L1_relation_bit_clear:
@@ -1279,27 +1139,6 @@ lemma cbitmap_L1_relation_bit_clear:
   by (clarsimp simp: word_size prioToL1Index_def wordRadix_def mask_def
                      invertL1Index_def l2BitmapSize_def'
                      le_maxDomain_eq_less_numDomains word_le_nat_alt num_domains_index_updates)
-
-lemma cready_queues_relation_empty_queue_helper:
-  "\<lbrakk> tcbDomain ko \<le> maxDomain ; tcbPriority ko \<le> maxPriority ;
-     cready_queues_relation (cslift \<sigma>') (ksReadyQueues_' (globals \<sigma>')) (ksReadyQueues \<sigma>)\<rbrakk>
-   \<Longrightarrow>
-   cready_queues_relation (cslift \<sigma>')
-          (Arrays.update (ksReadyQueues_' (globals \<sigma>')) (unat (tcbDomain ko) * 256 + unat (tcbPriority ko))
-            (tcb_queue_C.end_C_update (\<lambda>_. NULL)
-              (head_C_update (\<lambda>_. NULL)
-                (ksReadyQueues_' (globals \<sigma>').[unat (tcbDomain ko) * 256 + unat (tcbPriority ko)]))))
-          ((ksReadyQueues \<sigma>)((tcbDomain ko, tcbPriority ko) := []))"
-  unfolding cready_queues_relation_def Let_def
-  using maxPrio_to_H[simp] maxDom_to_H[simp]
-  apply clarsimp
-  apply (frule (1) cready_queues_index_to_C_in_range[simplified maxDom_to_H maxPrio_to_H])
-  apply (fold cready_queues_index_to_C_def[simplified numPriorities_def])
-  apply (case_tac "qdom = tcbDomain ko",
-          simp_all add: prio_and_dom_limit_helpers seL4_MinPrio_def
-                        minDom_def)
-   apply (fastforce simp: cready_queues_index_to_C_in_range simp: cready_queues_index_to_C_distinct)+
-  done
 
 lemma cbitmap_L2_relationD:
   "\<lbrakk> cbitmap_L2_relation cbitmap2 abitmap2 ; d \<le> maxDomain ; i < l2BitmapSize \<rbrakk> \<Longrightarrow>
@@ -1330,465 +1169,301 @@ lemma cbitmap_L2_relation_bit_clear:
   apply (case_tac "da = d" ; clarsimp simp: num_domains_index_updates)
   done
 
-lemma tcbSchedDequeue_ccorres':
+lemma removeFromBitmap_ccorres:
   "ccorres dc xfdc
-           ((\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
-                     \<and> distinct (ksReadyQueues s (d, p)))
-             and valid_queues' and tcb_at' t and valid_objs')
-           (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
-           []
-           (tcbSchedDequeue t)
-           (Call tcbSchedDequeue_'proc)"
+     (K (tdom \<le> maxDomain \<and> prio \<le> maxPriority)) (\<lbrace>\<acute>dom = ucast tdom\<rbrace> \<inter> \<lbrace>\<acute>prio = ucast prio\<rbrace>) hs
+     (removeFromBitmap tdom prio) (Call removeFromBitmap_'proc)"
 proof -
-
   note prio_and_dom_limit_helpers[simp] word_sle_def[simp]
 
   (* when numDomains = 1, array bounds checks would become _ = 0 rather than _ < 1, changing the
      shape of the proof compared to when numDomains > 1 *)
   include no_less_1_simps
 
-  have ksQ_tcb_at': "\<And>s ko d p.
-    \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
-                                          \<and> distinct (ksReadyQueues s (d, p)) \<Longrightarrow>
-    \<forall>t\<in>set (ksReadyQueues s (d, p)). tcb_at' t s"
-    by (fastforce dest: spec elim: obj_at'_weakenE)
-
-  have invert_l1_index_limit: "\<And>p. invertL1Index (prioToL1Index p) < 4"
+  have invert_l1_index_limit: "\<And>p. invertL1Index (prioToL1Index p) < l2BitmapSize"
     unfolding invertL1Index_def l2BitmapSize_def' prioToL1Index_def
     by simp
 
   show ?thesis
-  apply (cinit lift: tcb_')
-   apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
-            in ccorres_split_nothrow)
-       apply (rule threadGet_vcg_corres)
-       apply (rule allI, rule conseqPre, vcg)
-       apply clarsimp
-       apply (drule obj_at_ko_at', clarsimp)
-       apply (drule spec, drule(1) mp, clarsimp)
-       apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-      apply ceqv
-     apply (simp add: when_def del: Collect_const split del: if_split)
-     apply (rule ccorres_cond[where R=\<top>])
-       apply (simp add: to_bool_def)
-      apply (rule ccorres_rhs_assoc)+
-      apply csymbr
-      apply csymbr
-      apply csymbr
-      apply csymbr
-      apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="dom_'" in ccorres_split_nothrow)
-          apply (rule threadGet_vcg_corres)
-          apply (rule allI, rule conseqPre, vcg)
-          apply clarsimp
-          apply (drule obj_at_ko_at', clarsimp)
-          apply (drule spec, drule(1) mp, clarsimp)
-          apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-         apply ceqv
-        apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="prio_'" in ccorres_split_nothrow)
-            apply (rule threadGet_vcg_corres)
-            apply (rule allI, rule conseqPre, vcg)
-            apply clarsimp
-            apply (drule obj_at_ko_at', clarsimp)
-            apply (drule spec, drule(1) mp, clarsimp)
-            apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-           apply ceqv
-          apply (rule ccorres_rhs_assoc2)+
-          apply (simp only: bind_assoc[symmetric])
-          apply (rule ccorres_split_nothrow_novcg_dc)
-             prefer 2
-             apply (rule ccorres_move_c_guard_tcb)
-             apply ctac
-            prefer 2
-            apply (wp, clarsimp, wp+)
-           apply (rule_tac P="(\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
-                                         \<and> distinct(ksReadyQueues s (d, p)))
-                                and valid_queues' and obj_at' (inQ rva rvb) t
-                                and (\<lambda>s. rva \<le> maxDomain \<and> rvb \<le> maxPriority)"
-                       and P'=UNIV in ccorres_from_vcg)
-           apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: getQueue_def gets_def get_def setQueue_def modify_def
-                                 put_def bind_def return_def bitmap_fun_defs when_def
-                                 null_def)
-
-           apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
-            apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
-             apply (frule(1) valid_queuesD')
-             apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-             apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko" in rf_sr_sched_queue_relation)
-               apply (fastforce simp: maxDom_to_H maxPrio_to_H)+
-             apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next'; (fastforce simp: ksQ_tcb_at')?)
-             apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                    simp_all add: remove1_filter ksQ_tcb_at')[1]
-             apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                       unat_trans_ucast_helper\<close>)
-             apply (clarsimp simp: maxDomain_le_unat_ucast_explicit)
-             apply (intro conjI;
-                    clarsimp simp: h_val_field_clift'
-                                   h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)+
-               apply (drule(2) filter_empty_unfiltered_contr, simp)+
-             apply (rule conjI; clarsimp)
-              apply (rule conjI)
-               apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
-              apply (rule conjI; clarsimp)
-               apply (subst rf_sr_drop_bitmaps_dequeue_helper, assumption)
-                 apply (fastforce intro: cbitmap_L1_relation_bit_clear)
-                apply (simp add: invert_prioToL1Index_c_simp)
-                apply (frule rf_sr_cbitmap_L2_relation)
-                apply (clarsimp simp: cbitmap_L2_relation_def
-                                      word_size prioToL1Index_def wordRadix_def mask_def
-                                      word_le_nat_alt
-                                      numPriorities_def wordBits_def l2BitmapSize_def'
-                                      invertL1Index_def numDomains_less_numeric_explicit)
-                apply (case_tac "d = tcbDomain ko"
-                       ; fastforce simp: le_maxDomain_eq_less_numDomains
-                                         numDomains_less_numeric_explicit)
-               apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-               apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                        in rf_sr_sched_queue_relation)
-                 apply (fold_subgoals (prefix))[2]
-                subgoal premises prems using prems by (fastforce simp: maxDom_to_H maxPrio_to_H)+
-
-               apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
-                  prefer 3
-                  apply fastforce
-                 apply (fold_subgoals (prefix))[2]
-                subgoal premises prems using prems by ((fastforce simp: ksQ_tcb_at')+)
-               apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                      simp_all add: remove1_filter ksQ_tcb_at')[1]
-               (* trivial case, setting queue to empty *)
-               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                                     cmachine_state_relation_def)
-               apply (erule (2) cready_queues_relation_empty_queue_helper)
-              (* impossible case, C L2 update disagrees with Haskell update *)
-              apply (simp add: invert_prioToL1Index_c_simp)
-              apply (subst (asm) num_domains_index_updates)
-               subgoal by (simp add: le_maxDomain_eq_less_numDomains word_le_nat_alt)
-              apply (subst (asm) Arrays.index_update)
-               apply (simp add: invert_l1_index_limit)
-
-              apply (frule rf_sr_cbitmap_L2_relation)
-              apply (drule_tac i="invertL1Index (prioToL1Index (tcbPriority ko))"
-                       in cbitmap_L2_relationD, assumption)
-               apply (fastforce simp: l2BitmapSize_def' invert_l1_index_limit)
-              apply (fastforce simp: prioToL1Index_def invertL1Index_def mask_def wordRadix_def)
-             (* impossible case *)
-             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-             apply (drule(2) filter_empty_unfiltered_contr, fastforce)
-
-            apply (frule (1) valid_queuesD')
-            apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-            apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                     in rf_sr_sched_queue_relation)
-              apply fold_subgoals[2]
-              apply (fastforce simp: maxDom_to_H maxPrio_to_H)+
-            apply (clarsimp simp: h_val_field_clift'
-                                  h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
-            apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
-               prefer 3
-               apply fastforce
-              apply (fold_subgoals (prefix))[2]
-             subgoal premises prems using prems by (fastforce simp: ksQ_tcb_at')+
-            apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                   simp_all add: remove1_filter ksQ_tcb_at')[1]
-            apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
-            apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                      unat_trans_ucast_helper\<close>)
-            apply (clarsimp simp: maxDomain_le_unat_ucast_explicit)
-            apply (rule conjI, clarsimp)
-             apply (clarsimp simp: h_val_field_clift'
-                                   h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
-             apply (rule conjI; clarsimp)
-              apply (simp add: typ_heap_simps)
-              apply (clarsimp simp: h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                    h_t_valid_field[OF h_t_valid_clift] h_t_valid_clift)
-              apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                       in state_relation_queue_update_helper',
-                     (simp | rule globals.equality)+,
-                     simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                   cready_queues_index_to_C_def2 typ_heap_simps
-                                   maxDom_to_H maxPrio_to_H
-                             cong: if_cong split del: if_split)[1]
-
-               apply (fastforce simp: tcb_null_sched_ptrs_def typ_heap_simps c_guard_clift
-                                elim: obj_at'_weaken)+
-             apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                      in state_relation_queue_update_helper',
-                    (simp | rule globals.equality)+,
-                    simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                  cready_queues_index_to_C_def2
-                                  maxDom_to_H maxPrio_to_H
-                            cong: if_cong split del: if_split,
-                    simp_all add: typ_heap_simps')[1]
-              subgoal by (fastforce simp: tcb_null_sched_ptrs_def)
-             subgoal by fastforce
-            apply clarsimp
-            apply (rule conjI; clarsimp)
-             apply (rule conjI)
-              apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
-             apply (rule conjI; clarsimp)
-              (* invalid, missing bitmap updates on haskell side *)
-              apply (fold_subgoals (prefix))[2]
-             subgoal premises prems using prems
-               by (fastforce dest!: tcb_queue_relation'_empty_ksReadyQueues
-                              elim: obj_at'_weaken)+
-            apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                     in state_relation_queue_update_helper',
-                   (simp | rule globals.equality)+,
-                   simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                 cready_queues_index_to_C_def2
-                                 maxDom_to_H maxPrio_to_H
-                           cong: if_cong split del: if_split)[1]
-               apply (fold_subgoals (prefix))[4]
-            subgoal premises prems using prems
-              by - (fastforce simp: typ_heap_simps c_guard_clift tcb_null_sched_ptrs_def
-                                    clift_heap_update_same[OF h_t_valid_clift])+
-           apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
-            apply (frule (1) valid_queuesD')
-            apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-            apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                     in rf_sr_sched_queue_relation)
-              apply (fold_subgoals (prefix))[2]
-             subgoal premises prems using prems by (fastforce simp: maxDom_to_H maxPrio_to_H)+
-            apply (clarsimp simp: h_val_field_clift'
-                                  h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
-            apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next')
-                apply fastforce
-               prefer 3
-               apply fastforce
-              apply (fold_subgoals (prefix))[2]
-             subgoal premises prems using prems by (fastforce simp: ksQ_tcb_at')+
-            apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                   simp_all add: remove1_filter ksQ_tcb_at')[1]
-            apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
-            apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                      unat_trans_ucast_helper\<close>)
-            apply (clarsimp simp: maxDomain_le_unat_ucast_explicit)
-            apply (rule conjI; clarsimp)
-             apply (clarsimp simp: h_val_field_clift'
-                                   h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
-             apply (clarsimp simp: typ_heap_simps)
-             apply (rule conjI; clarsimp simp: typ_heap_simps)
-             apply (drule(2) filter_empty_unfiltered_contr[simplified filter_noteq_op], simp)
-            apply (rule conjI)
-             apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
-            apply (rule conjI; clarsimp)
-             (* impossible case, C L2 update disagrees with Haskell update *)
-             apply (subst (asm) num_domains_index_updates)
-              apply (simp add: le_maxDomain_eq_less_numDomains word_le_nat_alt)
-             apply (subst (asm) Arrays.index_update)
-              subgoal using invert_l1_index_limit
-                by (fastforce simp add: invert_prioToL1Index_c_simp intro: nat_Suc_less_le_imp)
-             apply (frule rf_sr_cbitmap_L2_relation)
-             apply (simp add: invert_prioToL1Index_c_simp)
-             apply (drule_tac i="invertL1Index (prioToL1Index (tcbPriority ko))"
-                      in cbitmap_L2_relationD, assumption)
-              subgoal by (simp add: invert_l1_index_limit l2BitmapSize_def')
-             apply (fastforce simp: prioToL1Index_def invertL1Index_def mask_def wordRadix_def)
-
-            apply (simp add: invert_prioToL1Index_c_simp)
-            apply (subst rf_sr_drop_bitmaps_dequeue_helper_L2, assumption)
-             subgoal by (fastforce dest: rf_sr_cbitmap_L2_relation elim!: cbitmap_L2_relation_bit_clear)
-
-            (* trivial case, setting queue to empty *)
-            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                                  cmachine_state_relation_def)
-            apply (erule (2) cready_queues_relation_empty_queue_helper)
-
-           apply (frule (1) valid_queuesD')
-           apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-           apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                    in rf_sr_sched_queue_relation)
-             apply (fold_subgoals (prefix))[2]
-            subgoal premises prems using prems by (fastforce simp: maxDom_to_H maxPrio_to_H)+
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
-           apply (simp add: invert_prioToL1Index_c_simp)
-           apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next')
-               apply (fastforce simp add: ksQ_tcb_at')+
-           apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                  simp_all add: remove1_filter ksQ_tcb_at')[1]
-           apply (clarsimp simp: filter_noteq_op upd_unless_null_def)
-           apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                     unat_trans_ucast_helper\<close>)
-           apply (clarsimp simp: maxDomain_le_unat_ucast_explicit)
-           apply (rule conjI, clarsimp)
-            apply (clarsimp simp: h_val_field_clift'
-                                  h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
-            apply (clarsimp simp: typ_heap_simps)
-            apply (rule conjI; clarsimp simp: typ_heap_simps)
-             apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                      in state_relation_queue_update_helper',
-                    (simp | rule globals.equality)+,
-                    simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                  cready_queues_index_to_C_def2
-                                  maxDom_to_H maxPrio_to_H
-                            cong: if_cong split del: if_split)[1]
-                apply (fastforce simp: tcb_null_sched_ptrs_def)
-               apply (clarsimp simp: typ_heap_simps)
-              apply (fastforce simp: typ_heap_simps)
-             apply (fastforce simp: tcb_null_sched_ptrs_def)
-            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                     in state_relation_queue_update_helper',
-                   (simp | rule globals.equality)+,
-                   simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                 cready_queues_index_to_C_def2
-                                 maxDom_to_H maxPrio_to_H
-                           cong: if_cong split del: if_split)[1]
-               apply (fold_subgoals (prefix))[4]
-            subgoal premises prems using prems
-              by - (fastforce simp: typ_heap_simps c_guard_clift tcb_null_sched_ptrs_def
-                                    clift_heap_update_same[OF h_t_valid_clift])+
-           apply (clarsimp)
-           apply (rule conjI; clarsimp simp: typ_heap_simps)
-            apply (rule conjI)
-             apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
-            apply (rule conjI; clarsimp)
-             (* invalid, missing bitmap updates on haskell side *)
-             apply (drule tcb_queue_relation'_empty_ksReadyQueues)
-              apply (fold_subgoals (prefix))[2]
-             subgoal premises prems using prems by (fastforce elim: obj_at'_weaken)+
-            (* invalid, missing bitmap updates on haskell side *)
-            apply (drule tcb_queue_relation'_empty_ksReadyQueues)
-             apply (fold_subgoals (prefix))[2]
-            subgoal premises prems using prems by (fastforce elim: obj_at'_weaken)+
-           apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                    in state_relation_queue_update_helper',
-                  (simp | rule globals.equality)+,
-                  simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                cready_queues_index_to_C_def2 typ_heap_simps
-                                maxDom_to_H maxPrio_to_H
-                          cong: if_cong split del: if_split)[1]
-            apply (fold_subgoals (prefix))[2]
-           subgoal premises prems using prems
-            by (fastforce simp: typ_heap_simps c_guard_clift tcb_null_sched_ptrs_def)+
-          apply (simp add: guard_is_UNIV_def)
-         apply simp
-         apply (wp threadGet_wp)
-        apply vcg
-       apply simp
-       apply (wp threadGet_wp)
-      apply vcg
-     apply (rule ccorres_return_Skip)
+    supply if_split[split del]
+    (* pull out static assms *)
     apply simp
-    apply (wp threadGet_wp)
-   apply vcg
-  by (fastforce simp: valid_objs'_def obj_at'_def ran_def projectKOs typ_at'_def
-                      valid_obj'_def valid_tcb'_def inQ_def)
+    apply (rule ccorres_grab_asm[where P=\<top>, simplified])
+    apply (cinit lift: dom_' prio_')
+     apply clarsimp
+     apply csymbr
+     apply csymbr
+     (* we can clear up all C guards now *)
+     apply (clarsimp simp: maxDomain_le_unat_ucast_explicit word_and_less')
+     apply (simp add: invert_prioToL1Index_c_simp word_less_nat_alt)
+     apply (simp add: invert_l1_index_limit[simplified l2BitmapSize_def'])
+     apply ccorres_rewrite
+     (* handle L2 update *)
+     apply (rule_tac ccorres_split_nothrow_novcg_dc)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: simpler_gets_def get_def modify_def
+                              put_def bind_def return_def bitmap_fun_defs)
+        apply (frule rf_sr_cbitmap_L2_relation)
+        apply (erule cbitmap_L2_relation_update)
+        apply (erule (1) cbitmap_L2_relation_bit_clear)
+       (* the check on the C side is identical to checking the L2 entry, rewrite the condition *)
+       apply (simp add: getReadyQueuesL2Bitmap_def)
+       apply (rule ccorres_symb_exec_l3, rename_tac l2)
+          apply (rule_tac C'="{s. l2 = 0}"
+                      and Q="\<lambda>s. l2 = ksReadyQueuesL2Bitmap s (tdom, invertL1Index (prioToL1Index prio))"
+                   in ccorres_rewrite_cond_sr[where Q'=UNIV])
+           apply clarsimp
+           apply (frule rf_sr_cbitmap_L2_relation)
+           apply (clarsimp simp: cbitmap_L2_relationD invert_l1_index_limit split: if_split)
+          (* unset L1 bit when L2 entry is empty *)
+          apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: simpler_gets_def get_def modify_def
+                                put_def bind_def return_def bitmap_fun_defs)
+          apply (frule rf_sr_cbitmap_L1_relation)
+          apply (erule cbitmap_L1_relation_update)
+          apply (erule (1) cbitmap_L1_relation_bit_clear)
+         apply wpsimp+
+     apply (fastforce simp: guard_is_UNIV_def)
+    apply clarsimp
+    done
 qed
+
+lemma ctcb_ptr_to_tcb_ptr_option_to_ctcb_ptr[simp]:
+  "ctcb_ptr_to_tcb_ptr (option_to_ctcb_ptr (Some ptr)) = ptr"
+  by (clarsimp simp: option_to_ctcb_ptr_def)
+
+lemma tcb_queue_remove_ccorres:
+  "ccorres ctcb_queue_relation ret__struct_tcb_queue_C_'
+     (\<lambda>s. tcb_at' tcbPtr s \<and> valid_objs' s
+          \<and> (tcbQueueHead queue \<noteq> None \<longleftrightarrow> tcbQueueEnd queue \<noteq> None))
+     (\<lbrace>ctcb_queue_relation queue \<acute>queue\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
+     (tcbQueueRemove queue tcbPtr) (Call tcb_queue_remove_'proc)"
+  (is "ccorres _ _ ?abs _ _ _ _")
+  supply if_split[split del]
+  apply (cinit' lift: tcb_')
+   apply (rename_tac tcb')
+   apply (simp only: tcbQueueRemove_def)
+    \<comment> \<open>cinit is not able to lift queue_' because queue_' is later modified in the C program\<close>
+   apply (rule_tac xf'=queue_' in ccorres_abstract, ceqv, rename_tac cqueue)
+   apply (rule_tac P="ctcb_queue_relation queue cqueue" in ccorres_gen_asm2)
+   apply (rule ccorres_pre_getObject_tcb, rename_tac tcb)
+   apply (rule ccorres_symb_exec_l, rename_tac beforePtrOpt)
+      apply (rule ccorres_symb_exec_l, rename_tac afterPtrOpt)
+         apply (rule ccorres_move_c_guard_tcb)
+         apply (rule_tac xf'="before___ptr_to_struct_tcb_C_'"
+                     and val="option_to_ctcb_ptr beforePtrOpt"
+                     and R="ko_at' tcb tcbPtr and K (tcbSchedPrev tcb = beforePtrOpt)"
+                     and R'=UNIV
+                      in ccorres_symb_exec_r_known_rv)
+            apply (rule conseqPre, vcg)
+            apply (fastforce dest: obj_at_cslift_tcb simp: typ_heap_simps ctcb_relation_def)
+           apply ceqv
+          apply (rule ccorres_move_c_guard_tcb)
+          apply (rule_tac xf'="after___ptr_to_struct_tcb_C_'"
+                      and val="option_to_ctcb_ptr afterPtrOpt"
+                      and R="ko_at' tcb tcbPtr and K (tcbSchedNext tcb = afterPtrOpt)"
+                       in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+             apply (rule conseqPre, vcg)
+             apply (fastforce dest: obj_at_cslift_tcb simp: typ_heap_simps ctcb_relation_def)
+            apply ceqv
+           apply (rule ccorres_cond_seq)
+           apply (rule ccorres_cond[where R="?abs"])
+             apply (fastforce dest: tcb_at_not_NULL
+                              simp: ctcb_queue_relation_def option_to_ctcb_ptr_def)
+            apply (rule ccorres_rhs_assoc)+
+            apply csymbr
+            apply csymbr
+            apply (fastforce intro: ccorres_return_C')
+           apply (rule ccorres_cond_seq)
+           apply (rule_tac Q="?abs" and Q'=\<top> in ccorres_cond_both')
+             apply (fastforce dest: tcb_at_not_NULL
+                              simp: ctcb_queue_relation_def option_to_ctcb_ptr_def split: if_splits)
+            apply clarsimp
+            apply (rule ccorres_assert2)
+            apply (rule ccorres_rhs_assoc)+
+            apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                apply (rule ccorres_move_c_guard_tcb)+
+                apply (rule_tac P=\<top> and P'="tcb_at' tcbPtr"
+                            and Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb (the afterPtrOpt) s}"
+                             in threadSet_ccorres_lemma3)
+                 apply (rule conseqPre, vcg)
+                 apply clarsimp
+                 apply (frule (1) obj_at_cslift_tcb)
+                 apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                   simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                         tcb_cte_cases_def cteSizeBits_def)
+                apply fastforce
+               apply ceqv
+              apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                  apply (rule ccorres_move_c_guard_tcb)
+                  apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb tcbPtr s}"
+                               in threadSet_ccorres_lemma3[where P=\<top> and P'=\<top>, simplified])
+                   apply (rule conseqPre, vcg)
+                   apply clarsimp
+                   apply (frule (1) obj_at_cslift_tcb[where thread=tcbPtr])
+                   apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                     simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                           tcb_cte_cases_def cteSizeBits_def)
+                  apply clarsimp
+                 apply ceqv
+                apply (rule ccorres_symb_exec_r)
+                  apply (fastforce intro: ccorres_return_C')
+                 apply vcg
+                apply (rule conseqPre, vcg)
+                apply clarsimp
+               apply wpsimp
+              apply vcg
+             apply wpsimp
+            apply vcg
+           apply (rule ccorres_cond_seq)
+           apply (rule_tac Q="?abs" and Q'=\<top> in ccorres_cond_both')
+             apply (fastforce dest: tcb_at_not_NULL
+                              simp: ctcb_queue_relation_def option_to_ctcb_ptr_def split: if_splits)
+            apply clarsimp
+            apply (rule ccorres_assert2)
+            apply (rule ccorres_rhs_assoc)+
+            apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                apply (rule ccorres_move_c_guard_tcb)+
+                apply (rule_tac P=\<top> and P'="tcb_at' tcbPtr"
+                            and Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb (the beforePtrOpt) s}"
+                             in threadSet_ccorres_lemma3)
+                 apply (rule conseqPre, vcg)
+                 apply clarsimp
+                 apply (frule (1) obj_at_cslift_tcb)
+                 apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                   simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                         tcb_cte_cases_def cteSizeBits_def)
+                apply fastforce
+               apply ceqv
+              apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                  apply (rule ccorres_move_c_guard_tcb)
+                  apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb tcbPtr s}"
+                               in threadSet_ccorres_lemma3[where P=\<top> and P'=\<top>, simplified])
+                   apply (rule conseqPre, vcg)
+                   apply clarsimp
+                   apply (frule (1) obj_at_cslift_tcb[where thread=tcbPtr])
+                   apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                     simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                           tcb_cte_cases_def cteSizeBits_def)
+                  apply clarsimp
+                 apply ceqv
+                apply (rule ccorres_symb_exec_r)
+                  apply (fastforce intro: ccorres_return_C')
+                 apply vcg
+                apply (rule conseqPre, vcg)
+                apply clarsimp
+               apply wpsimp
+              apply vcg
+             apply wpsimp
+            apply vcg
+           apply clarsimp
+           apply (rule ccorres_assert2)+
+           apply (rule ccorres_rhs_assoc)+
+           apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+               apply (rule ccorres_move_c_guard_tcb)+
+               apply (rule_tac Q="\<lambda>s tcb'. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb' (the beforePtrOpt) s}"
+                            in threadSet_ccorres_lemma3[where P=\<top> and P'=\<top>, simplified])
+                apply (rule conseqPre, vcg)
+                apply clarsimp
+                apply (frule (1) obj_at_cslift_tcb)
+                apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                  simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                        tcb_cte_cases_def cteSizeBits_def)
+               apply clarsimp
+              apply ceqv
+             apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                 apply (rule ccorres_move_c_guard_tcb)+
+                 apply (rule_tac P=\<top> and P'="tcb_at' tcbPtr"
+                             and Q="\<lambda>s tcb'. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb' (the afterPtrOpt) s}"
+                              in threadSet_ccorres_lemma3)
+                  apply (rule conseqPre, vcg)
+                  apply clarsimp
+                  apply (frule (1) obj_at_cslift_tcb)
+                  apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                    simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                          tcb_cte_cases_def cteSizeBits_def)
+                 apply clarsimp
+                apply ceqv
+               apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                   apply (rule ccorres_move_c_guard_tcb)
+                   apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb tcbPtr s}"
+                                in threadSet_ccorres_lemma3[where P=\<top> and P'=\<top>, simplified])
+                    apply (rule conseqPre, vcg)
+                    apply clarsimp
+                    apply (frule (1) obj_at_cslift_tcb[where thread=tcbPtr])
+                    apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                      simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                            tcb_cte_cases_def cteSizeBits_def)
+                   apply clarsimp
+                  apply ceqv
+                 apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                     apply (rule ccorres_move_c_guard_tcb)
+                     apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb tcbPtr s}"
+                                  in threadSet_ccorres_lemma3[where P=\<top> and P'=\<top>, simplified])
+                      apply (rule conseqPre, vcg)
+                      apply clarsimp
+                      apply (frule (1) obj_at_cslift_tcb[where thread=tcbPtr])
+                      apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                        simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                              tcb_cte_cases_def cteSizeBits_def)
+                     apply fastforce
+                    apply ceqv
+                   apply (fastforce intro: ccorres_return_C')
+                  apply (wpsimp | vcg)+
+  apply (clarsimp split: if_splits)
+  apply normalise_obj_at'
+  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+  by (intro conjI impI;
+      clarsimp simp: ctcb_queue_relation_def typ_heap_simps option_to_ctcb_ptr_def
+                     valid_tcb'_def valid_bound_tcb'_def)
+
+lemma tcbQueueRemove_tcb_at'_head:
+  "\<lbrace>\<lambda>s. valid_objs' s \<and> (\<forall>head. tcbQueueHead queue = Some head \<longrightarrow> tcb_at' head s)\<rbrace>
+   tcbQueueRemove queue t
+   \<lbrace>\<lambda>rv s. \<not> tcbQueueEmpty rv \<longrightarrow> tcb_at' (the (tcbQueueHead rv)) s\<rbrace>"
+  unfolding tcbQueueRemove_def
+  apply (wpsimp wp: getTCB_wp haskell_assert_wp hoare_vcg_imp_lift')
+  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+  apply (fastforce simp: valid_tcb'_def valid_bound_tcb'_def tcbQueueEmpty_def obj_at'_def)
+  done
 
 lemma tcbSchedDequeue_ccorres:
   "ccorres dc xfdc
-           (valid_queues and valid_queues' and tcb_at' t and valid_objs')
-           (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
-           []
-           (tcbSchedDequeue t)
-           (Call tcbSchedDequeue_'proc)"
-  apply (rule ccorres_guard_imp [OF tcbSchedDequeue_ccorres'])
-   apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def)
-   apply (drule_tac x=d in spec)
-   apply (drule_tac x=p in spec)
-   apply (clarsimp)
-   apply (drule(1) bspec)
-   apply (erule obj_at'_weakenE)
-   apply (clarsimp)+
-  done
-
-lemma tcb_queue_relation_append:
-  "\<lbrakk> tcb_queue_relation tn tp' mp queue qprev qhead; queue \<noteq> [];
-     qend' \<notin> tcb_ptr_to_ctcb_ptr ` set queue; mp qend' = Some tcb;
-     queue = queue' @ [ctcb_ptr_to_tcb_ptr qend]; distinct queue;
-     \<forall>x \<in> set queue. tcb_ptr_to_ctcb_ptr x \<noteq> NULL; qend' \<noteq> NULL;
-     \<And>v f g. tn (tn_update f v) = f (tn v) \<and> tp' (tp_update g v) = g (tp' v)
-                \<and> tn (tp_update f v) = tn v \<and> tp' (tn_update g v) = tp' v \<rbrakk>
-    \<Longrightarrow> tcb_queue_relation tn tp'
-          (mp (qend \<mapsto> tn_update (\<lambda>_. qend') (the (mp qend)),
-               qend' \<mapsto> tn_update (\<lambda>_. NULL) (tp_update (\<lambda>_. qend) tcb)))
-          (queue @ [ctcb_ptr_to_tcb_ptr qend']) qprev qhead"
-  using [[hypsubst_thin = true]]
-  apply clarsimp
-  apply (induct queue' arbitrary: qprev qhead)
-   apply clarsimp
-  apply clarsimp
-  done
-
-lemma tcbSchedAppend_update:
-  assumes sr: "sched_queue_relation' mp queue qhead qend"
-  and     qh': "qend' \<notin> tcb_ptr_to_ctcb_ptr ` set queue"
-  and  cs_tcb: "mp qend' = Some tcb"
-  and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
-  and     qhN: "qend' \<noteq> NULL"
-  shows
-  "sched_queue_relation'
-            (upd_unless_null qend (tcbSchedNext_C_update (\<lambda>_. qend') (the (mp qend)))
-                (mp(qend' \<mapsto> tcb\<lparr>tcbSchedNext_C := NULL, tcbSchedPrev_C := qend\<rparr>)))
-            (queue @ [ctcb_ptr_to_tcb_ptr qend']) (if queue = [] then qend' else qhead) qend'"
-  using sr qh' valid_ep cs_tcb qhN
-  apply -
-  apply (rule rev_cases[where xs=queue])
-   apply (simp add: tcb_queue_relation'_def upd_unless_null_def)
-  apply (clarsimp simp: tcb_queue_relation'_def upd_unless_null_def tcb_at_not_NULL)
-  apply (drule_tac qend'=qend' and tn_update=tcbSchedNext_C_update
-             and tp_update=tcbSchedPrev_C_update and qend="tcb_ptr_to_ctcb_ptr y"
-             in tcb_queue_relation_append, simp_all)
-   apply (fastforce simp add: tcb_at_not_NULL)
-  apply (simp add: fun_upd_twist)
-  done
-
-lemma tcb_queue_relation_qend_mems:
-  "\<lbrakk> tcb_queue_relation' getNext getPrev mp queue qhead qend;
-     \<forall>x \<in> set queue. tcb_at' x s \<rbrakk>
-      \<Longrightarrow> (qend = NULL \<longrightarrow> queue = [])
-       \<and> (qend \<noteq> NULL \<longrightarrow> ctcb_ptr_to_tcb_ptr qend \<in> set queue)"
-  apply (clarsimp simp: tcb_queue_relation'_def)
-  apply (drule bspec, erule last_in_set)
-  apply (simp add: tcb_at_not_NULL)
-  done
-
-lemma tcbSchedAppend_ccorres:
-  "ccorres dc xfdc
-           (valid_queues and tcb_at' t and valid_objs')
-           (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
-           []
-           (tcbSchedAppend t)
-           (Call tcbSchedAppend_'proc)"
+     (tcb_at' t and valid_objs' and pspace_aligned' and pspace_distinct')
+     \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> hs
+     (tcbSchedDequeue t) (Call tcbSchedDequeue_'proc)"
 proof -
   note prio_and_dom_limit_helpers[simp] word_sle_def[simp] maxDom_to_H[simp] maxPrio_to_H[simp]
+  note invert_prioToL1Index_c_simp[simp]
 
   (* when numDomains = 1, array bounds checks would become _ = 0 rather than _ < 1, changing the
      shape of the proof compared to when numDomains > 1 *)
-  include no_less_1_simps
+  note word_less_1[simp del]
 
   show ?thesis
-  apply (cinit lift: tcb_')
-   apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'"
-               and xf'="ret__unsigned_longlong_'" in ccorres_split_nothrow)
-       apply (rule threadGet_vcg_corres)
-       apply (rule allI, rule conseqPre, vcg)
-       apply clarsimp
-       apply (drule obj_at_ko_at', clarsimp)
-       apply (drule spec, drule(1) mp, clarsimp)
-       apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-      apply ceqv
-     apply (simp add: when_def unless_def del: Collect_const split del: if_split)
-     apply (rule ccorres_cond[where R=\<top>])
-       apply (simp add: to_bool_def)
-      apply (rule ccorres_rhs_assoc)+
-      apply csymbr
-      apply csymbr
-      apply csymbr
-      apply csymbr
-      apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv"
-          and xf'="dom_'" in ccorres_split_nothrow)
-          apply (rule threadGet_vcg_corres)
-          apply (rule allI, rule conseqPre, vcg)
-          apply clarsimp
-          apply (drule obj_at_ko_at', clarsimp)
-          apply (drule spec, drule(1) mp, clarsimp)
-          apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-         apply ceqv
-        apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv"
-            and xf'="prio_'" in ccorres_split_nothrow)
+    apply (cinit lift: tcb_')
+     apply (rule ccorres_stateAssert)+
+     apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
+                  in ccorres_split_nothrow)
+         apply (rule threadGet_vcg_corres)
+         apply (rule allI, rule conseqPre, vcg)
+         apply clarsimp
+         apply (drule obj_at_ko_at', clarsimp)
+         apply (drule spec, drule(1) mp, clarsimp)
+         apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+        apply ceqv
+       apply (simp add: when_def del: Collect_const split del: if_split)
+       apply (rule ccorres_cond[where R=\<top>])
+         apply (simp add: to_bool_def)
+        apply (rule ccorres_rhs_assoc)+
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="dom_'" in ccorres_split_nothrow)
             apply (rule threadGet_vcg_corres)
             apply (rule allI, rule conseqPre, vcg)
             apply clarsimp
@@ -1796,123 +1471,78 @@ proof -
             apply (drule spec, drule(1) mp, clarsimp)
             apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
            apply ceqv
-          apply (rule ccorres_rhs_assoc2)+
-          apply (simp only: bind_assoc[symmetric])
-          apply (rule ccorres_split_nothrow_novcg_dc)
-             prefer 2
-             apply (rule ccorres_move_c_guard_tcb)
-             apply ctac
-            prefer 2
-            apply (wp, clarsimp, wp+)
-           apply (rule_tac P="\<lambda>s. valid_queues s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p))
-                                  \<and> (\<exists>tcb. ko_at' tcb t s \<and> tcbDomain tcb =rva
-                                  \<and> tcbPriority tcb = rvb \<and> valid_tcb' tcb s)"
-                       and P'=UNIV in ccorres_from_vcg)
-           apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: getQueue_def gets_def get_def setQueue_def modify_def
-                                 put_def bind_def return_def bitmap_fun_defs null_def)
-           apply (clarsimp simp: queue_in_range valid_tcb'_def)
-           apply (rule conjI; clarsimp simp: queue_in_range)
-            apply (drule (1) obj_at_cslift_tcb)
-            apply clarsimp
-            apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
-                     in rf_sr_sched_queue_relation)
+          apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'="prio_'" in ccorres_split_nothrow)
+              apply (rule threadGet_vcg_corres)
+              apply (rule allI, rule conseqPre, vcg)
               apply clarsimp
-             apply clarsimp
-            apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
-             apply (simp add: valid_queues_valid_q)
-            apply (frule_tac s=\<sigma> in tcb_queue_relation_qend_mems,  simp add: valid_queues_valid_q)
-            apply (drule_tac qend'="tcb_ptr_to_ctcb_ptr t" and s=\<sigma> in tcbSchedAppend_update,
-                   simp_all add: valid_queues_valid_q)[1]
-             apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
-            apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-            apply (simp add: invert_prioToL1Index_c_simp)
-            apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                      unat_trans_ucast_helper\<close>)
-            apply (clarsimp simp: maxDomain_le_unat_ucast_explicit)
-            apply (rule conjI; clarsimp)
-             apply (rule conjI)
-              apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
-             apply (simp add: t_hrs_ksReadyQueues_upd_absorb)
-             apply (subst rf_sr_drop_bitmaps_enqueue_helper, assumption)
-               apply (fastforce intro: cbitmap_L1_relation_bit_set)
-              subgoal by (fastforce intro: cbitmap_L2_relation_bit_set simp: wordRadix_def mask_def)
-             apply (erule(1) state_relation_queue_update_helper[where S="{t}"],
-                    (simp | rule globals.equality)+,
-                    simp_all add: cready_queues_index_to_C_def2 numPriorities_def
-                                  t_hrs_ksReadyQueues_upd_absorb upd_unless_null_def
-                                  typ_heap_simps)[1]
-               apply (fastforce simp: tcb_null_sched_ptrs_def elim: obj_at'_weaken)
-             apply (fastforce simp: tcb_null_sched_ptrs_def elim: obj_at'_weaken)
-            apply (clarsimp simp: upd_unless_null_def cready_queues_index_to_C_def numPriorities_def)
-           apply (rule conjI, solves \<open>clarsimp simp: le_maxDomain_eq_less_numDomains
-                                                     unat_trans_ucast_helper\<close>)
-           apply (clarsimp simp: maxDomain_le_unat_ucast_explicit)
-           apply (rule conjI; clarsimp simp: queue_in_range)
-            apply (drule (1) obj_at_cslift_tcb)
+              apply (drule obj_at_ko_at', clarsimp)
+              apply (drule spec, drule(1) mp, clarsimp)
+              apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+             apply ceqv
+            apply (rule ccorres_symb_exec_r)
+              apply (rule ccorres_Guard_Seq)
+              apply (simp add: bind_assoc)
+              apply (ctac add: getQueue_ccorres)
+                apply (rule_tac r'=ctcb_queue_relation and xf'=new_queue_' in ccorres_split_nothrow)
+                    apply (ctac add: tcb_queue_remove_ccorres)
+                   apply ceqv
+                  apply (rename_tac queue' newqueue)
+                  apply (rule ccorres_Guard_Seq)
+                  apply (ctac add: setQueue_ccorres)
+                    apply (rule ccorres_split_nothrow_novcg_dc)
+                       apply ctac
+                      apply (rule_tac xf'=ret__unsigned_long_'
+                                  and val="from_bool (tcbQueueEmpty queue')"
+                                  and R="\<lambda>s. \<not> tcbQueueEmpty queue' \<longrightarrow> tcb_at' (the (tcbQueueHead queue')) s"
+                                  in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                         apply (rule conseqPre, vcg)
+                         apply (fastforce dest: tcb_at_not_NULL
+                                          simp: ctcb_queue_relation_def option_to_ctcb_ptr_def
+                                                tcbQueueEmpty_def split: option.splits)
+                        apply ceqv
+                       apply (rule ccorres_cond[where R=\<top>])
+                         apply fastforce
+                        apply (ctac add: removeFromBitmap_ccorres)
+                       apply (rule ccorres_return_Skip)
+                      apply vcg
+                     apply (wpsimp wp: hoare_vcg_imp_lift')
+                    apply (clarsimp simp: guard_is_UNIV_def)
+                   apply (wpsimp wp: hoare_vcg_imp_lift')
+                  apply vcg
+                 apply ((wpsimp wp: tcbQueueRemove_tcb_at'_head | wp (once) hoare_drop_imps)+)[1]
+                apply (vcg exspec=tcb_queue_remove_modifies)
+               apply wpsimp
+              apply vcg
+             apply vcg
+            apply (rule conseqPre, vcg)
             apply clarsimp
-            apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
-                     in rf_sr_sched_queue_relation)
-              apply clarsimp
-             apply clarsimp
-            apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
-             apply (simp add: valid_queues_valid_q)
-            apply (frule_tac s=\<sigma> in tcb_queue_relation_qend_mems,
-                   simp add: valid_queues_valid_q)
-            apply (drule_tac qend'="tcb_ptr_to_ctcb_ptr t" and s=\<sigma> in tcbSchedAppend_update,
-                   simp_all add: valid_queues_valid_q)[1]
-              apply clarsimp
-             apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
-            apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-            apply (clarsimp simp: upd_unless_null_def cready_queues_index_to_C_def numPriorities_def)
-           apply (drule (1) obj_at_cslift_tcb)
-           apply clarsimp
-           apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
-                    in rf_sr_sched_queue_relation)
-             apply clarsimp
-            apply clarsimp
-           apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
-            apply (simp add: valid_queues_valid_q)
-           apply (frule_tac s=\<sigma> in tcb_queue_relation_qend_mems,
-                  simp add: valid_queues_valid_q)
-           apply (drule_tac qend'="tcb_ptr_to_ctcb_ptr t" and s=\<sigma> in tcbSchedAppend_update,
-                  simp_all add: valid_queues_valid_q)[1]
-             apply clarsimp
-            apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
-           apply (clarsimp simp: cready_queues_index_to_C_def2 numPriorities_def)
-           apply (frule(2) obj_at_cslift_tcb[OF valid_queues_obj_at'D])
-           apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-           apply (erule_tac S="{t, v}" for v in state_relation_queue_update_helper,
-                  (simp | rule globals.equality)+,
-                  simp_all add: typ_heap_simps if_Some_helper numPriorities_def
-                                cready_queues_index_to_C_def2 upd_unless_null_def
-                           cong: if_cong split del: if_split
-                           del: fun_upd_restrict_conv)[1]
-              apply simp
-              apply (rule conjI)
-               apply clarsimp
-               apply (drule_tac s="tcb_ptr_to_ctcb_ptr t" in sym, simp)
-              apply (clarsimp simp add: fun_upd_twist)
-             prefer 3
-             apply (simp add: obj_at'_weakenE[OF _ TrueI])
-             apply (rule disjI1, erule valid_queues_obj_at'D)
-             subgoal by simp
-            subgoal by simp
-           subgoal by (fastforce simp: tcb_null_sched_ptrs_def)
-          apply (simp add: guard_is_UNIV_def)
-         apply simp
-         apply (wp threadGet_wp)
+           apply (wpsimp wp: threadGet_wp)
+          apply vcg
+         apply clarsimp
+         apply (wpsimp wp: threadGet_wp)
         apply vcg
-       apply simp
-       apply (wp threadGet_wp)
-      apply vcg
-     apply (rule ccorres_return_Skip)
-    apply simp
-    apply (wp threadGet_wp)
-   apply vcg
-  by (fastforce simp: valid_objs'_def obj_at'_def ran_def projectKOs typ_at'_def
-                         valid_obj'_def inQ_def
-                   dest!: valid_queues_obj_at'D)
+       apply (rule ccorres_return_Skip)
+      apply (wpsimp wp: threadGet_wp)
+     apply (vcg expsec=thread_state_get_tcbQueued_modifies)
+    apply normalise_obj_at'
+    apply (rename_tac tcb)
+    apply (frule (1) obj_at_cslift_tcb)
+    apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+    apply (clarsimp simp: valid_tcb'_def)
+    apply (cut_tac qdom="tcbDomain tcb" and prio="tcbPriority tcb"
+                in cready_queues_index_to_C_in_range)
+      apply fastforce
+     apply fastforce
+    apply (rule conjI)
+     apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
+     apply (drule_tac x="tcbDomain tcb" in spec)
+     apply (drule_tac x="tcbPriority tcb" in spec)
+     apply clarsimp
+     apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
+     apply (force dest!: tcbQueueHead_iff_tcbQueueEnd simp: tcbQueueEmpty_def obj_at'_def)
+    by (fastforce simp: word_less_nat_alt
+                        cready_queues_index_to_C_def2 ctcb_relation_def
+                        typ_heap_simps le_maxDomain_eq_less_numDomains(2) unat_trans_ucast_helper)
 qed
 
 lemma isStopped_spec:
@@ -1960,8 +1590,11 @@ lemma tcb_at_1:
   done
 
 lemma rescheduleRequired_ccorres:
-  "ccorres dc xfdc (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs')
-           UNIV [] rescheduleRequired (Call rescheduleRequired_'proc)"
+  "ccorres dc xfdc
+     ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs'
+      and pspace_aligned' and pspace_distinct')
+     UNIV []
+     rescheduleRequired (Call rescheduleRequired_'proc)"
   apply cinit
    apply (rule ccorres_symb_exec_l)
       apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
@@ -2071,10 +1704,12 @@ lemma cguard_UNIV:
   by fastforce
 
 lemma lookupBitmapPriority_le_maxPriority:
-  "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ; valid_queues s \<rbrakk>
+  "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ;
+     \<forall>d p. d > maxDomain \<or> p > maxPriority \<longrightarrow> tcbQueueEmpty (ksReadyQueues s (d, p));
+     valid_bitmaps s \<rbrakk>
    \<Longrightarrow> lookupBitmapPriority d s \<le> maxPriority"
-   unfolding valid_queues_def valid_queues_no_bitmap_def
-   by (fastforce dest!: bitmapQ_from_bitmap_lookup bitmapQ_ksReadyQueuesI intro: ccontr)
+  apply (clarsimp simp: valid_bitmaps_def)
+  by (fastforce dest!: bitmapQ_from_bitmap_lookup bitmapQ_ksReadyQueuesI intro: ccontr)
 
 lemma rf_sr_ksReadyQueuesL1Bitmap_not_zero:
   "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; ksReadyQueuesL1Bitmap_' (globals s').[unat d] \<noteq> 0 \<rbrakk>
@@ -2084,10 +1719,10 @@ lemma rf_sr_ksReadyQueuesL1Bitmap_not_zero:
   done
 
 lemma ksReadyQueuesL1Bitmap_word_log2_max:
-    "\<lbrakk>valid_queues s; ksReadyQueuesL1Bitmap s d \<noteq> 0\<rbrakk>
-    \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < l2BitmapSize"
-    unfolding valid_queues_def
-    by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
+  "\<lbrakk>valid_bitmaps s; ksReadyQueuesL1Bitmap s d \<noteq> 0\<rbrakk>
+   \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < l2BitmapSize"
+  unfolding valid_bitmaps_def
+  by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
 
 lemma word_log2_max_word64[simp]:
   "word_log2 (w :: 64 word) < 64"
@@ -2095,7 +1730,7 @@ lemma word_log2_max_word64[simp]:
   by (simp add: word_size)
 
 lemma rf_sr_ksReadyQueuesL2Bitmap_simp:
-  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; valid_queues \<sigma> ; ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0 \<rbrakk>
+  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; valid_bitmaps \<sigma> ; ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0 \<rbrakk>
    \<Longrightarrow> ksReadyQueuesL2Bitmap_' (globals s').[unat d].[word_log2 (ksReadyQueuesL1Bitmap \<sigma> d)] =
       ksReadyQueuesL2Bitmap \<sigma> (d, word_log2 (ksReadyQueuesL1Bitmap \<sigma> d))"
   apply (frule rf_sr_cbitmap_L2_relation)
@@ -2104,9 +1739,9 @@ lemma rf_sr_ksReadyQueuesL2Bitmap_simp:
   done
 
 lemma ksReadyQueuesL2Bitmap_nonzeroI:
-  "\<lbrakk> d \<le> maxDomain ; valid_queues s ; ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrakk>
+  "\<lbrakk> d \<le> maxDomain ; valid_bitmaps s ; ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrakk>
    \<Longrightarrow> ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) \<noteq> 0"
-   unfolding valid_queues_def
+   unfolding valid_bitmaps_def
    apply clarsimp
    apply (frule bitmapQ_no_L1_orphansD)
     apply (erule word_log2_nth_same)
@@ -2271,9 +1906,9 @@ lemma threadGet_get_obj_at'_has_domain:
 lemma possibleSwitchTo_ccorres:
   shows
   "ccorres dc xfdc
-         (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+         ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
             and st_tcb_at' runnable' t and (\<lambda>s. ksCurDomain s \<le> maxDomain)
-            and valid_objs')
+            and valid_objs' and pspace_aligned' and pspace_distinct')
          ({s. target_' s = tcb_ptr_to_ctcb_ptr t}
           \<inter> UNIV) []
      (possibleSwitchTo t )
@@ -2321,8 +1956,8 @@ lemma possibleSwitchTo_ccorres:
 
 lemma scheduleTCB_ccorres':
   "ccorres dc xfdc
-           (tcb_at' thread and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_queues
-                           and valid_objs')
+           (tcb_at' thread and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+                           and valid_objs' and pspace_aligned' and pspace_distinct')
            (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread})
            []
   (do (runnable, curThread, action) \<leftarrow> do
@@ -2372,24 +2007,26 @@ lemma scheduleTCB_ccorres':
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isStopped_def)
-    apply wp
+   apply (simp add: isRunnable_def isStopped_def)
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def weak_sch_act_wf_def)
   done
 
 lemma scheduleTCB_ccorres_valid_queues'_pre:
-        "ccorresG rf_sr \<Gamma> dc xfdc (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs')
-         (UNIV \<inter> \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace>) []
-         (do (runnable, curThread, action) \<leftarrow> do
-             runnable \<leftarrow> isRunnable thread;
-             curThread \<leftarrow> getCurThread;
-             action \<leftarrow> getSchedulerAction;
-             return (runnable, curThread, action) od;
-             when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
-          od)
-         (Call scheduleTCB_'proc)"
+  "ccorresG rf_sr \<Gamma> dc xfdc
+     (tcb_at' thread and st_tcb_at' (not runnable') thread
+      and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and valid_objs' and pspace_aligned' and pspace_distinct')
+     \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace> []
+     (do (runnable, curThread, action) \<leftarrow> do runnable \<leftarrow> isRunnable thread;
+                                             curThread \<leftarrow> getCurThread;
+                                             action \<leftarrow> getSchedulerAction;
+                                             return (runnable, curThread, action)
+                                          od;
+         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
+      od)
+     (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
   apply (cinit' lift: tptr_')
    apply (rule ccorres_rhs_assoc2)+
@@ -2430,17 +2067,17 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
                            split: scheduler_action.split_asm)
           apply wp+
      apply (simp add: isRunnable_def isStopped_def)
-    apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
   done
-
 
 lemmas scheduleTCB_ccorres_valid_queues'
     = scheduleTCB_ccorres_valid_queues'_pre[unfolded bind_assoc return_bind split_conv]
 
 lemma rescheduleRequired_ccorres_valid_queues'_simple:
-  "ccorresG rf_sr \<Gamma> dc xfdc (valid_queues' and sch_act_simple) UNIV [] rescheduleRequired (Call rescheduleRequired_'proc)"
+  "ccorresG rf_sr \<Gamma> dc xfdc
+     sch_act_simple UNIV []
+     rescheduleRequired (Call rescheduleRequired_'proc)"
   apply cinit
    apply (rule ccorres_symb_exec_l)
       apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
@@ -2473,16 +2110,17 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
                  split: scheduler_action.split_asm)
 
 lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
-        "ccorresG rf_sr \<Gamma> dc xfdc (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and sch_act_simple)
-         (UNIV \<inter> \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace>) []
-         (do (runnable, curThread, action) \<leftarrow> do
-             runnable \<leftarrow> isRunnable thread;
-             curThread \<leftarrow> getCurThread;
-             action \<leftarrow> getSchedulerAction;
-             return (runnable, curThread, action) od;
-             when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
-          od)
-         (Call scheduleTCB_'proc)"
+  "ccorresG rf_sr \<Gamma> dc xfdc
+     (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and sch_act_simple)
+     \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace> []
+     (do (runnable, curThread, action) \<leftarrow> do runnable \<leftarrow> isRunnable thread;
+                                             curThread \<leftarrow> getCurThread;
+                                             action \<leftarrow> getSchedulerAction;
+                                             return (runnable, curThread, action)
+                                          od;
+         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
+      od)
+     (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
   apply (cinit' lift: tptr_' simp del: word_neq_0_conv)
    apply (rule ccorres_rhs_assoc2)+
@@ -2521,11 +2159,10 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isStopped_def)
-    apply wp
+   apply (simp add: isRunnable_def isStopped_def)
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
-  apply (clarsimp simp: st_tcb_at'_def obj_at'_def valid_queues'_def)
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
   done
 
 lemmas scheduleTCB_ccorres_valid_queues'_simple
@@ -2545,47 +2182,34 @@ lemma threadSet_weak_sch_act_wf_runnable':
   apply (clarsimp)
 done
 
-lemma threadSet_valid_queues_and_runnable': "\<lbrace>\<lambda>s. valid_queues s \<and> (\<forall>p. thread \<in> set (ksReadyQueues s p) \<longrightarrow> runnable' st)\<rbrace>
-                 threadSet (tcbState_update (\<lambda>_. st)) thread
-               \<lbrace>\<lambda>rv s. valid_queues s\<rbrace>"
-  apply (wp threadSet_valid_queues)
-  apply (clarsimp simp: inQ_def)
-done
-
 lemma setThreadState_ccorres[corres]:
    "ccorres dc xfdc
-   (\<lambda>s. tcb_at' thread s \<and> valid_queues s \<and> valid_objs' s \<and> valid_tcb_state' st s \<and>
-                 (ksSchedulerAction s = SwitchToThread thread \<longrightarrow> runnable' st) \<and>
-                 (\<forall>p. thread \<in> set (ksReadyQueues s p) \<longrightarrow> runnable' st) \<and>
-                 sch_act_wf (ksSchedulerAction s) s)
-     ({s'. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts_' s' && mask 4\<rparr>, fl))}
+   (\<lambda>s. tcb_at' thread s \<and> valid_objs' s \<and> valid_tcb_state' st s
+        \<and> (ksSchedulerAction s = SwitchToThread thread \<longrightarrow> runnable' st)
+        \<and> sch_act_wf (ksSchedulerAction s) s \<and> pspace_aligned' s \<and> pspace_distinct' s)
+   ({s'. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts_' s' && mask 4\<rparr>, fl))}
     \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) hs
-         (setThreadState st thread) (Call setThreadState_'proc)"
+   (setThreadState st thread) (Call setThreadState_'proc)"
    apply (cinit lift: tptr_' cong add: call_ignore_cong)
    apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
     apply (ctac add: scheduleTCB_ccorres)
-  apply (wp threadSet_weak_sch_act_wf_runnable' threadSet_valid_queues_and_runnable'
-            threadSet_valid_objs')
-  by (clarsimp simp: weak_sch_act_wf_def valid_queues_def valid_tcb'_tcbState_update)
-
-lemma threadSet_valid_queues'_and_not_runnable': "\<lbrace>tcb_at' thread and valid_queues' and (\<lambda>s. (\<not> runnable' st))\<rbrace>
-                  threadSet (tcbState_update (\<lambda>_. st)) thread
-               \<lbrace>\<lambda>rv. tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' \<rbrace>"
-
-  apply (wp threadSet_valid_queues' threadSet_tcbState_st_tcb_at')
-  apply (clarsimp simp: pred_neg_def valid_queues'_def inQ_def)+
-done
+  apply (wp threadSet_weak_sch_act_wf_runnable' threadSet_valid_objs')
+  apply (clarsimp simp: weak_sch_act_wf_def valid_tcb'_tcbState_update)
+  done
 
 lemma setThreadState_ccorres_valid_queues':
-   "ccorres dc xfdc
-   (\<lambda>s. tcb_at' thread s \<and> valid_queues' s \<and> \<not> runnable' st \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> Invariants_H.valid_queues s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> sch_act_not thread s \<and> valid_objs' s \<and> valid_tcb_state' st s)
+  "ccorres dc xfdc
+     (\<lambda>s. tcb_at' thread s \<and> \<not> runnable' st \<and> weak_sch_act_wf (ksSchedulerAction s) s
+          \<and> sch_act_not thread s \<and> valid_objs' s \<and> valid_tcb_state' st s
+          \<and> pspace_aligned' s \<and> pspace_distinct' s)
      ({s'. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts_' s' && mask 4\<rparr>, fl))}
-    \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
-         (setThreadState st thread) (Call setThreadState_'proc)"
+      \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
+     (setThreadState st thread) (Call setThreadState_'proc)"
    apply (cinit lift: tptr_' cong add: call_ignore_cong)
    apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
     apply (ctac add: scheduleTCB_ccorres_valid_queues')
-   apply (wp threadSet_valid_queues'_and_not_runnable' threadSet_weak_sch_act_wf_runnable' threadSet_valid_queues_and_runnable' threadSet_valid_objs')
+   apply (wp threadSet_weak_sch_act_wf_runnable' threadSet_valid_objs'
+             threadSet_tcbState_st_tcb_at')
   by (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
 
 lemma simp_list_case_return:
@@ -2607,22 +2231,20 @@ lemma cancelSignal_ccorres [corres]:
    apply (rule ccorres_rhs_assoc2)
    apply (ctac (no_vcg) add: cancelSignal_ccorres_helper)
      apply (ctac add: setThreadState_ccorres_valid_queues')
-    apply ((wp setNotification_nosch setNotification_ksQ hoare_vcg_all_lift set_ntfn_valid_objs' | simp add: valid_tcb_state'_def split del: if_split)+)[1]
+    apply ((wp setNotification_nosch hoare_vcg_all_lift set_ntfn_valid_objs' | simp add: valid_tcb_state'_def split del: if_split)+)[1]
    apply (simp add: ThreadState_defs)
   apply (rule conjI, clarsimp, rule conjI, clarsimp)
     apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
    subgoal by ((auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
                      isTS_defs cte_wp_at_ctes_of
                      cthread_state_relation_def sch_act_wf_weak valid_ntfn'_def
-             dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] |
-           clarsimp simp: eq_commute)+)
+               | clarsimp simp: eq_commute)+)
    apply (clarsimp)
    apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
    apply (frule (2) ntfn_blocked_in_queueD)
    by (auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
                      isTS_defs cte_wp_at_ctes_of valid_ntfn'_def
                      cthread_state_relation_def sch_act_wf_weak isWaitingNtfn_def
-             dest!: valid_queues_not_runnable'_not_ksQ[where t=thread]
              split: ntfn.splits option.splits
          |  clarsimp simp: eq_commute
          | drule_tac x=thread in bspec)+
@@ -2927,23 +2549,20 @@ lemma cancelIPC_ccorres_helper:
                         cpspace_relation_def update_ep_map_tos typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-       \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            subgoal by (clarsimp simp: comp_def)
-        \<comment> \<open>ep relation\<close>
-           apply (rule cpspace_relation_ep_update_ep, assumption+)
-            subgoal by (simp add: cendpoint_relation_def Let_def EPState_Idle_def)
-           subgoal by simp
-           \<comment> \<open>ntfn relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-          apply simp
-          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
-           subgoal by simp
-          apply (erule (1) map_to_ko_atI')
-         apply (simp add: heap_to_user_data_def Let_def)
-        \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         subgoal by (clarsimp simp: comp_def)
+           \<comment> \<open>tcb relation\<close>
+           apply (erule ctcb_relation_null_ep_ptrs)
+           subgoal by (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (rule cpspace_relation_ep_update_ep, assumption+)
+           subgoal by (simp add: cendpoint_relation_def Let_def EPState_Idle_def)
+          subgoal by simp
+         \<comment> \<open>ntfn relation\<close>
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+         apply simp
+         apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
+          subgoal by simp
+         apply (erule (1) map_to_ko_atI')
+        apply (simp add: heap_to_user_data_def Let_def)
         subgoal by (clarsimp simp: carch_state_relation_def carch_globals_def
                                    packed_heap_update_collapse_hrs)
        subgoal by (simp add: cmachine_state_relation_def)
@@ -2964,27 +2583,16 @@ lemma cancelIPC_ccorres_helper:
                        cpspace_relation_def update_ep_map_tos typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
-      \<comment> \<open>tcb relation\<close>
-           apply (erule ctcb_relation_null_queue_ptrs)
-           subgoal by (clarsimp simp: comp_def)
-       \<comment> \<open>ep relation\<close>
-          apply (rule cpspace_relation_ep_update_ep, assumption+)
-           apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: if_split)
-           \<comment> \<open>recv case\<close>
-            apply (subgoal_tac "pspace_canonical' \<sigma>")
-             prefer 2
-             apply fastforce
-            apply (clarsimp
-                     simp: h_t_valid_clift_Some_iff ctcb_offset_defs
-                           tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask
-                           tcb_queue_relation'_next_sign tcb_queue_relation'_prev_sign
-                     simp flip: canonical_bit_def
-                     cong: tcb_queue_relation'_cong)
-            subgoal by (intro impI conjI; simp)
-           \<comment> \<open>send case\<close>
-            apply (subgoal_tac "pspace_canonical' \<sigma>")
-             prefer 2
-             apply fastforce
+          \<comment> \<open>tcb relation\<close>
+          apply (erule ctcb_relation_null_ep_ptrs)
+          subgoal by (clarsimp simp: comp_def)
+         \<comment> \<open>ep relation\<close>
+         apply (rule cpspace_relation_ep_update_ep, assumption+)
+          apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: if_split)
+          \<comment> \<open>recv case\<close>
+           apply (subgoal_tac "pspace_canonical' \<sigma>")
+            prefer 2
+            apply fastforce
            apply (clarsimp
                     simp: h_t_valid_clift_Some_iff ctcb_offset_defs
                           tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask
@@ -2992,16 +2600,24 @@ lemma cancelIPC_ccorres_helper:
                     simp flip: canonical_bit_def
                     cong: tcb_queue_relation'_cong)
            subgoal by (intro impI conjI; simp)
-          subgoal by simp
-                \<comment> \<open>ntfn relation\<close>
-         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-         apply simp
-         apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
-         apply simp
-         apply (erule (1) map_to_ko_atI')
-         \<comment> \<open>queue relation\<close>
-        apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-        subgoal by (clarsimp simp: comp_def)
+          \<comment> \<open>send case\<close>
+           apply (subgoal_tac "pspace_canonical' \<sigma>")
+            prefer 2
+            apply fastforce
+          apply (clarsimp
+                   simp: h_t_valid_clift_Some_iff ctcb_offset_defs
+                         tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask
+                          tcb_queue_relation'_next_sign tcb_queue_relation'_prev_sign
+                    simp flip: canonical_bit_def
+                    cong: tcb_queue_relation'_cong)
+          subgoal by (intro impI conjI; simp)
+         subgoal by simp
+        \<comment> \<open>ntfn relation\<close>
+        apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+        apply simp
+        apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
+        apply simp
+        apply (erule (1) map_to_ko_atI')
        subgoal by (clarsimp simp: carch_state_relation_def carch_globals_def
                                   packed_heap_update_collapse_hrs)
       subgoal by (simp add: cmachine_state_relation_def)
@@ -3214,37 +2830,35 @@ lemma cancelIPC_ccorres1:
      subgoal by (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
                      isTS_defs cte_wp_at_ctes_of
                      cthread_state_relation_def sch_act_wf_weak valid_ep'_def
-             dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits)
+                     split: thread_state.splits)
     apply clarsimp
     apply (frule (2) ep_blocked_in_queueD_recv)
     apply (frule (1) ko_at_valid_ep'[OF _ invs_valid_objs'])
     subgoal by (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
                          isTS_defs cte_wp_at_ctes_of isRecvEP_def
                          cthread_state_relation_def sch_act_wf_weak valid_ep'_def
-                 dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits endpoint.splits)
+                    split: thread_state.splits endpoint.splits)
    apply (rule conjI)
     apply (clarsimp simp: inQ_def)
-   apply (rule conjI)
-    apply clarsimp
    apply clarsimp
    apply (rule conjI)
     subgoal by (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
                          isTS_defs cte_wp_at_ctes_of
                          cthread_state_relation_def sch_act_wf_weak valid_ep'_def
-                 dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits)
+                    split: thread_state.splits)
    apply clarsimp
    apply (rule conjI)
     subgoal by (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
                          isTS_defs cte_wp_at_ctes_of
                          cthread_state_relation_def sch_act_wf_weak valid_ep'_def
-                 dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits)
+                    split: thread_state.splits)
    apply clarsimp
    apply (frule (2) ep_blocked_in_queueD_send)
    apply (frule (1) ko_at_valid_ep'[OF _ invs_valid_objs'])
    subgoal by (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
                         isTS_defs cte_wp_at_ctes_of isSendEP_def
                         cthread_state_relation_def sch_act_wf_weak valid_ep'_def
-                dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits endpoint.splits)[1]
+                   split: thread_state.splits endpoint.splits)[1]
   apply (auto simp: isTS_defs cthread_state_relation_def typ_heap_simps weak_sch_act_wf_def)
   apply (case_tac ts,
            auto simp: isTS_defs cthread_state_relation_def typ_heap_simps)

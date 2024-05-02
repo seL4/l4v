@@ -262,11 +262,10 @@ lemma performASIDControlInvocation_corres:
               deleteObjects_cte_wp_at'
               deleteObjects_null_filter[where p="makePoolParent i'"])
    apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
-   apply (subgoal_tac "detype_locale x y sa" for x y)
-    prefer 2
-    apply (simp add:detype_locale_def)
-    apply (fastforce simp:cte_wp_at_caps_of_state descendants_range_def2
-            empty_descendants_range_in invs_untyped_children)
+   apply (prop_tac "detype_locale x y sa" for x y)
+    apply (simp add: detype_locale_def)
+    apply (fastforce simp: cte_wp_at_caps_of_state descendants_range_def2
+                           empty_descendants_range_in invs_untyped_children)
    apply (intro conjI)
           apply (clarsimp)
          apply (erule(1) caps_of_state_valid)
@@ -274,9 +273,9 @@ lemma performASIDControlInvocation_corres:
        apply (fold_subgoals (prefix))[2]
      subgoal premises prems using prems by (clarsimp simp:invs_def valid_state_def)+
       apply (clarsimp simp: schact_is_rct_def)
-     apply (clarsimp simp:cte_wp_at_caps_of_state)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (drule detype_locale.non_null_present)
-     apply (fastforce simp:cte_wp_at_caps_of_state)
+     apply (fastforce simp: cte_wp_at_caps_of_state)
     apply simp
    apply (frule_tac ptr = "(aa,ba)" in detype_invariants [rotated 3])
         apply fastforce
@@ -340,7 +339,7 @@ lemma performASIDControlInvocation_corres:
      apply (simp add:pageBits_def)
     apply clarsimp
     apply (drule(1) cte_cap_in_untyped_range)
-         apply (fastforce simp:cte_wp_at_ctes_of)
+         apply (fastforce simp: cte_wp_at_ctes_of)
         apply assumption+
      apply fastforce
     apply simp

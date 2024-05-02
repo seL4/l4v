@@ -151,10 +151,6 @@ where
 abbreviation
   "ep_queue_relation \<equiv> tcb_queue_relation tcbEPNext_C tcbEPPrev_C"
 
-abbreviation
-  "sched_queue_relation \<equiv> tcb_queue_relation tcbSchedNext_C tcbSchedPrev_C"
-
-
 definition
 wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" where
 "wordSizeCase a b \<equiv> (if bitSize (undefined::machine_word) = 32

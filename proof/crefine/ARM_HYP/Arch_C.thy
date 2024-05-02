@@ -2230,7 +2230,7 @@ lemma performPageGetAddress_ccorres:
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
@@ -3503,8 +3503,8 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                 st' \<noteq> Structures_H.thread_state.Inactive \<and> st' \<noteq> Structures_H.thread_state.IdleThreadState)
                 thread and (\<lambda>s. thread \<noteq> ksIdleThread s
                    \<and> (obj_at' tcbQueued thread s \<longrightarrow> st_tcb_at' runnable' thread s))"]])
-            apply (clarsimp simp: invs_valid_objs' invs_sch_act_wf'
-              valid_tcb_state'_def invs_queues)
+            apply (clarsimp simp: invs_valid_objs' invs_sch_act_wf' invs_pspace_distinct'
+                                  invs_pspace_aligned' valid_tcb_state'_def)
 
            \<comment> \<open>cache flush constraints\<close>
            subgoal for _ _ _ _ _ _ sz p
@@ -4233,9 +4233,12 @@ lemma decodeARMMMUInvocation_ccorres:
     apply (clarsimp simp: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of
                           invs_sch_act_wf' dest!: isCapDs(1))
     apply (intro conjI)
-            apply (simp add: Invariants_H.invs_queues)
-           apply (simp add: valid_tcb_state'_def)
-          apply (fastforce elim!: pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
+             apply (simp add: valid_tcb_state'_def)
+            apply (fastforce elim!: pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
+           apply fastforce
+          apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
+          apply (rename_tac obj)
+          apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]
          apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
          apply (rename_tac obj)
          apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]
@@ -4421,6 +4424,9 @@ lemma readVCPUReg_ccorres:
   apply fastforce
   done
 
+crunches readVCPUReg
+  for pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
 
 lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres *)
   notes Collect_const[simp del]
@@ -4509,7 +4515,8 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
+                        invs_pspace_aligned' invs_pspace_distinct'
                         rf_sr_ksCurThread msgRegisters_unfold ThreadState_defs
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall; clarsimp)
@@ -4603,7 +4610,7 @@ lemma decodeVCPUWriteReg_ccorres:
    apply (vcg exspec=getSyscallArg_modifies)
 
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_defs mask_def)
   apply (rule conjI; clarsimp) \<comment> \<open>not enough args\<close>
@@ -4846,7 +4853,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
   apply (vcg exspec=getSyscallArg_modifies)
 
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_defs mask_def)
 
@@ -4953,7 +4960,7 @@ lemma decodeVCPUReadReg_ccorres:
    apply (vcg exspec=getSyscallArg_modifies)
 
   apply (clarsimp simp: word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_defs mask_def)
 
@@ -5057,7 +5064,8 @@ lemma decodeVCPUSetTCB_ccorres:
    apply vcg
 
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
+                        invs_pspace_aligned' invs_pspace_distinct'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_defs mask_def)
   apply (clarsimp simp: idButNot_def interpret_excaps_test_null
@@ -5208,7 +5216,7 @@ proof -
      (* Haskell side *)
      apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isCap_simps ctes_of_cte_at)
      apply (clarsimp simp: word_le_nat_alt conj_commute
-                           invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                           invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                            rf_sr_ksCurThread msgRegisters_unfold
                            valid_tcb_state'_def mask_def
                            valid_cap'_def ct_in_state'_def sysargs_rel_to_n st_tcb_at'_def comp_def
@@ -5216,7 +5224,7 @@ proof -
      apply (fastforce elim: obj_at'_weakenE)
     (* C side *)
     apply (clarsimp simp: word_le_nat_alt conj_commute
-                          invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                          invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                           rf_sr_ksCurThread msgRegisters_unfold
                           valid_tcb_state'_def ThreadState_defs Kernel_C.maxIRQ_def
                           and_mask_eq_iff_le_mask capVCPUPtr_eq)

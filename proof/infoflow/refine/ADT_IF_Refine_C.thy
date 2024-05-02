@@ -150,7 +150,8 @@ lemma cur_thread_of_absKState[simp]:
    by (clarsimp simp: cstate_relation_def Let_def absKState_def cstate_to_H_def)
 
 lemma absKState_crelation:
-  "\<lbrakk> cstate_relation s (globals s'); invs' s \<rbrakk> \<Longrightarrow>  cstate_to_A s' = absKState s"
+  "\<lbrakk> cstate_relation s (globals s'); invs' s; ksReadyQueues_asrt s\<rbrakk>
+   \<Longrightarrow>  cstate_to_A s' = absKState s"
   apply (clarsimp simp add: cstate_to_H_correct invs'_def cstate_to_A_def)
   apply (clarsimp simp: absKState_def absExst_def observable_memory_def)
   apply (case_tac s)
@@ -224,8 +225,7 @@ locale ADT_IF_Refine_1 = kernel_m +
              (handleEvent Interrupt) (handleInterruptEntry_C_body_if)"
   and handleInvocation_ccorres':
     "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and arch_extras and ct_active' and sch_act_simple
-              and (\<lambda>s. \<forall>x. ksCurThread s \<notin> set (ksReadyQueues s x)))
+       (invs' and arch_extras and ct_active' and sch_act_simple)
        (UNIV \<inter> {s. isCall_' s = from_bool isCall} \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
        (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
   and check_active_irq_corres_C:
@@ -269,11 +269,10 @@ lemma handleEvent_ccorres:
                apply wp[1]
               apply clarsimp
               apply wp
-              apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s \<and>
-                                 (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))"
+              apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s"
                     in hoare_post_imp)
                apply (simp add: ct_in_state'_def)
-              apply (wp handleReply_sane handleReply_ct_not_ksQ)
+              apply (wp handleReply_sane)
              \<comment> \<open>SysSend\<close>
              apply (simp add: handleSend_def)
              apply (ctac (no_vcg) add: handleInvocation_ccorres)
@@ -356,7 +355,7 @@ lemma handleEvent_ccorres:
       apply (clarsimp simp: return_def)
      apply wp
     apply (simp add: guard_is_UNIV_def)
-   apply (auto simp: ct_in_state'_def ct_not_ksQ isReply_def is_cap_fault_def
+   apply (auto simp: ct_in_state'_def isReply_def is_cap_fault_def
                      cfault_rel_def seL4_Fault_UnknownSyscall_lift seL4_Fault_UserException_lift
                elim: pred_tcb'_weakenE st_tcb_ex_cap''
                dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
@@ -613,7 +612,6 @@ definition ADT_C_if where
                               (kernel_call_C_if fp) handle_preemption_C_if
                               schedule_C_if kernel_exit_C_if)\<rparr>"
 
-
 lemma c_to_haskell:
   "uop_nonempty uop
    \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
@@ -626,12 +624,16 @@ lemma c_to_haskell:
    apply (unfold_locales)
                         apply (simp add: ADT_C_if_def)
                        apply (simp_all add: preserves_trivial preserves'_trivial)
+          apply (clarsimp simp: full_invs_if'_def ex_abs_def)
+          apply (frule ksReadyQueues_asrt_cross[OF state_relation_ready_queues_relation])
           apply (clarsimp simp: lift_snd_rel_def ADT_C_if_def ADT_H_if_def absKState_crelation
                                 rf_sr_def full_invs_if'_def)
           apply (clarsimp simp: rf_sr_def full_invs_if'_def ex_abs_def)
          apply (simp add: ADT_H_if_def ADT_C_if_def lift_fst_rel_def lift_snd_rel_def)
-         apply safe
-         apply (clarsimp simp: absKState_crelation  rf_sr_def full_invs_if'_def)
+         apply (clarsimp simp: full_invs_if'_def)
+         apply (frule ex_abs_ksReadyQueues_asrt)
+         apply (clarsimp simp: absKState_crelation  rf_sr_def)
+         apply (frule invs_valid_stateI')
          apply (rule_tac x="((a,bb),ba)" in bexI)
           apply simp
          apply simp
@@ -642,7 +644,8 @@ lemma c_to_haskell:
                              kernelCall_H_if_def kernel_call_C_if_def
                              handlePreemption_H_if_def handle_preemption_C_if_def
                              schedule'_H_if_def schedule_C_if_def
-                             kernelExit_H_if_def kernel_exit_C_if_def)
+                             kernelExit_H_if_def kernel_exit_C_if_def invs'_def)
+         apply (clarsimp split: sys_mode.splits)
         apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C]; fastforce simp: full_invs_if'_def)
        apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C]; fastforce simp: full_invs_if'_def)
       apply (rule step_corres_lifts,rule corres_guard_imp[OF do_user_op_if_C_corres]; auto simp: full_invs_if'_def ex_abs_def)
