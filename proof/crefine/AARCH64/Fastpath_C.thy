@@ -39,11 +39,10 @@ lemma getEndpoint_obj_at':
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 lemma tcbSchedEnqueue_tcbContext[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-     tcbSchedEnqueue t'
-   \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule tcbSchedEnqueue_obj_at_unchangedT[OF all_tcbI])
-  apply simp
+  "tcbSchedEnqueue t' \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  apply (simp add: tcbSchedEnqueue_def tcbQueuePrepend_def unless_when)
+  apply (wp threadSet_obj_at' hoare_drop_imps threadGet_wp
+         | simp split: if_split)+
   done
 
 lemma setCTE_tcbContext:
@@ -55,20 +54,16 @@ lemma setCTE_tcbContext:
   done
 
 lemma setThreadState_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setThreadState a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setThreadState_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
-  done
+ "setThreadState a b \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def tcbSchedEnqueue_def
+            tcbQueuePrepend_def rescheduleRequired_def
+  by (wp threadSet_obj_at' hoare_drop_imps threadGet_wp | wpc
+         | simp split: if_split)+
 
 lemma setBoundNotification_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setBoundNotification a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setBoundNotification_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
-  done
+ "setBoundNotification a b \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setBoundNotification_def
+  by wpsimp
 
 declare comp_apply [simp del]
 crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
@@ -756,10 +751,13 @@ lemma switchToThread_fp_ccorres:
     apply (rule ccorres_assert2)
     apply csymbr
     apply (ctac (no_vcg) add: armv_contextSwitch_HWASID_ccorres[where vmid=vmid])
+     apply (clarsimp simp: setCurThread_def)
+     apply (rule ccorres_stateAssert)
      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
      apply (clarsimp, rule conseqPre, vcg)
      apply (clarsimp simp: setCurThread_def simpler_modify_def rf_sr_def cstate_relation_def
                            Let_def carch_state_relation_def cmachine_state_relation_def)
+    apply (wp hoare_drop_imp)
    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
 
   apply (rule conjI)
@@ -1209,8 +1207,8 @@ lemma fastpath_dequeue_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                          update_tcb_map_tos typ_heap_simps')
-   apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-    apply (rule ext, simp add: tcb_null_queue_ptrs_def
+   apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+    apply (rule ext, simp add: tcb_null_ep_ptrs_def
                      split: if_split)
    apply (rule conjI)
     apply (rule cpspace_relation_ep_update_ep, assumption+)
@@ -1226,8 +1224,6 @@ lemma fastpath_dequeue_ccorres:
   apply (simp add: carch_state_relation_def typ_heap_simps'
                    cmachine_state_relation_def h_t_valid_clift_Some_iff
                    update_ep_map_tos)
-  apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 lemma st_tcb_at_not_in_ep_queue:
@@ -1368,8 +1364,8 @@ lemma fastpath_enqueue_ccorres:
    apply (rule conjI)
     apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                           typ_heap_simps')
-    apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-     apply (rule ext, simp add: tcb_null_queue_ptrs_def
+    apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+     apply (rule ext, simp add: tcb_null_ep_ptrs_def
                          split: if_split)
     apply (rule conjI)
      apply (rule_tac S="tcb_ptr_to_ctcb_ptr ` set (ksCurThread \<sigma> # list)"
@@ -1408,8 +1404,6 @@ lemma fastpath_enqueue_ccorres:
            auto dest!: map_to_ko_atI)[1]
    apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                     cmachine_state_relation_def h_t_valid_clift_Some_iff)
-   apply (erule cready_queues_relation_null_queue_ptrs)
-   apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   apply (clarsimp simp: typ_heap_simps' EPState_Recv_def mask_def
                         is_aligned_weaken[OF is_aligned_tcb_ptr_to_ctcb_ptr])
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -1418,8 +1412,8 @@ lemma fastpath_enqueue_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                          typ_heap_simps' ct_in_state'_def)
-   apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-    apply (rule ext, simp add: tcb_null_queue_ptrs_def
+   apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+    apply (rule ext, simp add: tcb_null_ep_ptrs_def
                         split: if_split)
    apply (rule conjI)
     apply (rule_tac S="{tcb_ptr_to_ctcb_ptr (ksCurThread \<sigma>)}"
@@ -1439,8 +1433,6 @@ lemma fastpath_enqueue_ccorres:
           assumption+, auto dest!: map_to_ko_atI)[1]
   apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                    cmachine_state_relation_def h_t_valid_clift_Some_iff)
-  apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 lemma setCTE_rf_sr:
@@ -2255,9 +2247,6 @@ proof -
                                 apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                                  apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                 apply simp
-                               apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                 apply (rule ext, simp split: if_split add: typ_heap_simps')
-                                apply (rule ext, simp split: if_split add: typ_heap_simps')
                                apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                 typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                 cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2381,9 +2370,6 @@ proof -
                                             apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                                             apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                             apply simp
-                                            apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                            apply (rule ext, simp split: if_split)
-                                            apply (rule ext, simp split: if_split)
                                             apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                              typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                              cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -3154,9 +3140,6 @@ proof -
                                                      ThreadState_defs)
                                     apply (clarsimp simp: ccap_relation_ep_helpers)
                                    apply simp
-                                  apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                    apply (rule ext, simp split: if_split)
-                                   apply (rule ext, simp split: if_split)
                                   apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                    typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                    cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -3236,9 +3219,6 @@ proof -
                                                apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                                                 apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                                apply simp
-                                              apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                                apply (rule ext, simp split: if_split)
-                                               apply (rule ext, simp split: if_split)
                                               apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                                typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                                cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -3382,8 +3362,6 @@ proof -
      apply (clarsimp simp: invs_ksCurDomain_maxDomain')
      apply (rename_tac cur_tcb cte)
      apply (frule invs_valid_objs')
-     apply (frule invs_queues)
-     apply (clarsimp simp: valid_queues_def)
      apply (frule tcbs_of_aligned')
       apply (simp add: invs_pspace_aligned')
      apply (frule tcbs_of_cte_wp_at_caller)
@@ -3406,14 +3384,19 @@ proof -
       apply (solves \<open>clarsimp simp: wellformed_mapdata'_def\<close>)
      apply (frule_tac tcb=tcb in tcbs_of_valid_tcb'[OF invs_valid_objs', rotated], simp)
      apply (clarsimp simp add: valid_tcb'_def)
+     apply (frule invs_valid_objs')
+     apply (frule invs_valid_bitmaps)
+     apply (frule valid_bitmaps_bitmapQ_no_L1_orphans)
+     apply (frule invs_pspace_aligned')
+     apply (frule invs_pspace_distinct')
+     apply clarsimp
      apply (rule conjI; clarsimp?) (* canonical_address (capEPPtr (cteCap ctea)) *)
       apply (clarsimp simp: obj_at'_is_canonical dest!: invs_pspace_canonical')
      apply (clarsimp simp: isCap_simps valid_cap'_def[split_simps capability.split]
                            maskCapRights_def cte_wp_at_ctes_of cte_level_bits_def)
      apply (frule_tac p=a in ctes_of_valid', clarsimp)
-     apply (simp add: valid_cap_simps')
      apply (frule invs_mdb')
-     apply (rule conjI, solves clarsimp)+ (* a bunch of consequences of invs' *)
+     apply (simp add: valid_cap_simps')
      apply (clarsimp simp: cte_wp_at_ctes_of cte_level_bits_def
                            makeObject_cte isValidVTableRoot_def
                            to_bool_def
@@ -3426,7 +3409,6 @@ proof -
       apply (clarsimp simp: asid_has_vmid_def asid_has_entry_def)
        apply (case_tac asid_entry, fastforce)
      apply (frule ko_at_valid_ep', fastforce)
-     apply (frule invs_mdb')
      apply (safe del: notI disjE)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'
                  split: Structures_H.endpoint.split_asm)

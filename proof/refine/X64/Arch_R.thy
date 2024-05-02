@@ -267,11 +267,10 @@ lemma performASIDControlInvocation_corres:
               deleteObjects_cte_wp_at'
               deleteObjects_null_filter[where p="makePoolParent i'"])
    apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
-   apply (subgoal_tac "detype_locale x y sa" for x y)
-    prefer 2
-    apply (simp add:detype_locale_def)
-    apply (fastforce simp:cte_wp_at_caps_of_state descendants_range_def2
-            empty_descendants_range_in invs_untyped_children)
+   apply (prop_tac "detype_locale x y sa" for x y)
+    apply (simp add: detype_locale_def)
+    apply (fastforce simp: cte_wp_at_caps_of_state descendants_range_def2
+                           empty_descendants_range_in invs_untyped_children)
    apply (intro conjI)
           apply (clarsimp)
          apply (erule(1) caps_of_state_valid)
@@ -344,7 +343,7 @@ lemma performASIDControlInvocation_corres:
      apply (simp add:pageBits_def)
     apply clarsimp
     apply (drule(1) cte_cap_in_untyped_range)
-         apply (fastforce simp:cte_wp_at_ctes_of)
+         apply (fastforce simp: cte_wp_at_ctes_of)
         apply assumption+
      apply fastforce
     apply simp
@@ -1374,8 +1373,7 @@ lemma performX64PortInvocation_corres:
     apply (strengthen invs_mdb'[mk_strg])
     apply (wpsimp wp: setIOPortMask_invs')
    apply (clarsimp simp: invs_valid_objs valid_arch_inv_def valid_iocontrol_inv_def cte_wp_at_caps_of_state)
-   apply (rule conjI, clarsimp)
-   apply (clarsimp simp: safe_parent_for_def safe_parent_for_arch_def)
+   apply (fastforce simp: safe_parent_for_def safe_parent_for_arch_def)
   apply (clarsimp simp: invs_pspace_distinct' invs_pspace_aligned' valid_arch_inv'_def ioport_control_inv_valid'_def
                         valid_cap'_def capAligned_def word_bits_def)
   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
@@ -2180,7 +2178,7 @@ lemma arch_performInvocation_invs':
    apply (drule_tac src=p in valid_ioports_issuedD'[OF invs_valid_ioports'])
     apply (fastforce simp: cteCaps_of_def)
    apply force
-  by (force simp: cteCaps_of_def ran_def valid_ioports'_simps dest!: invs_valid_ioports')
+  using ranD valid_ioports_issuedD' by fastforce
 
 end
 

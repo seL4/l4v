@@ -1439,10 +1439,6 @@ lemma cur_thread_cur_domain:
   by (clarsimp simp: pred_tcb_at_def invs_def valid_idle_def
                      valid_state_def obj_at_def guarded_pas_domain_def)
 
-lemma valid_sched_valid_queues[intro]:
-  "valid_sched s \<Longrightarrow> valid_queues s"
-  by (simp add: valid_sched_def)
-
 lemma ethread_get_wp2:
   "\<lbrace>\<lambda>s. \<forall>etcb. etcb_at ((=) etcb) t s \<longrightarrow> Q (f etcb) s\<rbrace>
    ethread_get f t

@@ -1391,7 +1391,7 @@ lemma performPageGetAddress_ccorres:
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
@@ -2833,13 +2833,14 @@ lemma decodeRISCVMMUInvocation_ccorres:
     apply (rule conjI; clarsimp)
     apply (frule invs_arch_state')
     apply (rule conjI, clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
-    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_queues
-                          invs_sch_act_wf'
+    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_sch_act_wf'
                           unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
     apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
     apply (rule conjI; clarsimp)+
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (intro conjI)
+            apply fastforce
+           apply fastforce
           apply fastforce
          apply (fastforce elim!: pred_tcb'_weakenE)
         apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
@@ -2856,9 +2857,11 @@ lemma decodeRISCVMMUInvocation_ccorres:
      apply (clarsimp simp: le_mask_asid_bits_helper)
     apply (simp add: is_aligned_shiftl_self)
    (* RISCVASIDPoolAssign *)
-   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_queues invs_sch_act_wf')
+   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_sch_act_wf')
    apply (frule invs_arch_state', clarsimp)
    apply (intro conjI)
+          apply fastforce
+         apply fastforce
         apply fastforce
        apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
       apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)

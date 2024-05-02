@@ -78,7 +78,7 @@ lemma typ_at_UserDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
-                        cte_relation_def other_obj_relation_def
+                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -107,7 +107,7 @@ lemma typ_at_DeviceDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
-                        cte_relation_def other_obj_relation_def
+                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -589,7 +589,7 @@ lemma kernel_corres':
            apply simp
            apply (rule handleInterrupt_corres[simplified dc_def])
           apply simp
-          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
+          apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: schact_is_rct_def)[1]
          apply simp
          apply (rule_tac Q="\<lambda>irq s. invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
@@ -668,7 +668,7 @@ lemma entry_corres:
     apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split)
          apply simp
-         apply (rule threadset_corresT)
+         apply (rule threadset_corresT; simp?)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_set_def atcbContextSet_def)
            apply (clarsimp simp: tcb_cap_cases_def cteSizeBits_def)

@@ -482,7 +482,7 @@ proof -
     apply (intro conjI impI allI)
            apply (erule pspace_dom_relatedE[OF _ pspace_relation])
            apply clarsimp
-           apply (case_tac ko, simp_all add: other_obj_relation_def)
+           apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def)
              apply (clarsimp simp add: cte_relation_def split: if_split_asm)
             apply (clarsimp simp add: ep_relation_def EndpointMap_def
                                split: Structures_A.endpoint.splits)
@@ -495,7 +495,7 @@ proof -
            apply (clarsimp split: if_split_asm)+
 
           apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-          apply (case_tac ko, simp_all add: other_obj_relation_def)
+          apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def)
             apply (clarsimp simp add: cte_relation_def split: if_split_asm)
            apply (clarsimp simp add: ntfn_relation_def AEndpointMap_def
                               split: Structures_A.ntfn.splits)
@@ -508,7 +508,7 @@ proof -
           apply (clarsimp split: if_split_asm)+
 
          apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-         apply (case_tac ko, simp_all add: other_obj_relation_def)
+         apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def)
           apply (clarsimp simp add: cte_relation_def split: if_split_asm)
          apply (rename_tac arch_kernel_obj)
          apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
@@ -517,7 +517,7 @@ proof -
          apply (clarsimp split: if_split_asm)+
 
         apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-        apply (case_tac ko, simp_all add: other_obj_relation_def)
+        apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def)
          apply (clarsimp simp add: cte_relation_def split: if_split_asm)
         apply (rename_tac arch_kernel_obj)
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
@@ -543,7 +543,7 @@ proof -
          apply (case_tac vmpage_size; simp)
            apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-       apply (case_tac ko, simp_all add: other_obj_relation_def)
+       apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def)
         apply (clarsimp simp add: cte_relation_def split: if_split_asm)
        apply (rename_tac arch_kernel_obj)
        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
@@ -569,7 +569,7 @@ proof -
         apply (case_tac vmpage_size; simp)
           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
       apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-      apply (case_tac ko, simp_all add: other_obj_relation_def)
+      apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def)
         apply (clarsimp simp add: cte_relation_def split: if_split_asm)
        prefer 2
        apply (rename_tac arch_kernel_obj)
@@ -596,7 +596,7 @@ proof -
                                 arch_tcb_relation_imp_ArchTcnMap)
      apply (simp add: absCNode_def cte_map_def)
      apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-     apply (case_tac ko, simp_all add: other_obj_relation_def
+     apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def
                                 split: if_split_asm)
       prefer 2
       apply (rename_tac arch_kernel_obj)
@@ -660,7 +660,7 @@ proof -
     (* mapping architecture-specific objects *)
     apply clarsimp
     apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-    apply (case_tac ko, simp_all add: other_obj_relation_def)
+    apply (case_tac ko, simp_all add: tcb_relation_cut_def other_obj_relation_def)
      apply (clarsimp simp add: cte_relation_def split: if_split_asm)
     apply (rename_tac arch_kernel_object y ko P arch_kernel_obj)
     apply (case_tac arch_kernel_object, simp_all add: absHeapArch_def split: asidpool.splits)
@@ -804,7 +804,7 @@ shows
    apply (case_tac "ksPSpace s' x", clarsimp)
     apply (erule_tac x=x in allE, clarsimp)
    apply clarsimp
-   apply (case_tac a, simp_all add: other_obj_relation_def)
+   apply (case_tac a, simp_all add: tcb_relation_cut_def other_obj_relation_def)
   apply (insert pspace_relation)
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (erule(1) pspace_dom_relatedE)
@@ -848,7 +848,7 @@ lemma TCB_implies_KOTCB:
   apply (clarsimp simp add: pspace_relation_def pspace_dom_def
                             dom_def UNION_eq Collect_eq)
   apply (erule_tac x=a in allE)+
-  apply (clarsimp simp add: other_obj_relation_def
+  apply (clarsimp simp add: tcb_relation_cut_def
                   split: Structures_H.kernel_object.splits)
   apply (drule iffD1)
    apply (fastforce simp add: dom_def image_def)
@@ -1638,7 +1638,7 @@ definition
       domain_index_internal = ksDomScheduleIdx s,
       cur_domain_internal = ksCurDomain s,
       domain_time_internal = ksDomainTime s,
-      ready_queues_internal = curry (ksReadyQueues s),
+      ready_queues_internal = (\<lambda>d p. heap_walk (tcbSchedNexts_of s) (tcbQueueHead (ksReadyQueues s (d, p))) []),
       cdt_list_internal = absCDTList (cteMap (gsCNodes s)) (ctes_of s)\<rparr>"
 
 lemma absExst_correct:
@@ -1646,12 +1646,15 @@ lemma absExst_correct:
   assumes rel: "(s, s') \<in> state_relation"
   shows "absExst s' = exst s"
   apply (rule det_ext.equality)
-      using rel invs invs'
-      apply (simp_all add: absExst_def absSchedulerAction_correct absEkheap_correct
-                           absCDTList_correct[THEN fun_cong] state_relation_def invs_def valid_state_def
-                           ready_queues_relation_def invs'_def valid_state'_def
-                           valid_pspace_def valid_sched_def valid_pspace'_def curry_def fun_eq_iff)
-      apply (fastforce simp: absEkheap_correct)
+           using rel invs invs'
+           apply (simp_all add: absExst_def absSchedulerAction_correct absEkheap_correct
+                                absCDTList_correct[THEN fun_cong] state_relation_def invs_def
+                                valid_state_def ready_queues_relation_def ready_queue_relation_def
+                                invs'_def valid_state'_def
+                                valid_pspace_def valid_sched_def valid_pspace'_def curry_def
+                                fun_eq_iff)
+   apply (fastforce simp: absEkheap_correct)
+  apply (fastforce simp: list_queue_relation_def Let_def dest: heap_ls_is_walk)
   done
 
 

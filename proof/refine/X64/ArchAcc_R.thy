@@ -70,16 +70,6 @@ lemma getObject_ASIDPool_corres:
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
   done
 
-lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s;
-      pspace_distinct' s; ko = injectKO v \<rbrakk>
-      \<Longrightarrow> ko_at' v x s"
-  apply (simp add: obj_at'_def projectKOs project_inject
-                   pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply simp
-  done
-
 lemmas aligned_distinct_asid_pool_atI'
     = aligned_distinct_obj_atI'[where 'a=asidpool,
                                 simplified, OF _ _ _ refl]
@@ -595,8 +585,12 @@ lemma setObject_PD_corres:
    apply (drule(1) ekheap_kheap_dom)
    apply clarsimp
    apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
+   apply (simp add: other_obj_relation_def tcb_relation_cut_def
            split: Structures_A.kernel_object.splits)
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pde')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   apply (fastforce dest: tcbs_of'_non_tcb_update)
   apply (rule conjI)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pd_bits" in allE)+
@@ -680,12 +674,16 @@ lemma setObject_PT_corres:
    apply (drule(1) ekheap_kheap_dom)
    apply clarsimp
    apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
-           split: Structures_A.kernel_object.splits)
-  apply (rule conjI)
+   apply (simp add: other_obj_relation_def tcb_relation_cut_def
+               split: Structures_A.kernel_object.splits)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
    apply fastforce
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
@@ -744,20 +742,21 @@ lemma setObject_PDPT_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+          apply simp
+         apply simp
+        apply clarsimp
        apply simp
+      apply (frule (1) pspace_alignedD)
+      apply (drule_tac p=x in pspace_alignedD, assumption)
       apply simp
-     apply clarsimp
-     apply (frule (1) pspace_alignedD)
-     apply (drule_tac p=x in pspace_alignedD, assumption)
-     apply simp
-     apply (drule mask_alignment_ugliness)
+      apply (drule mask_alignment_ugliness)
+         apply (simp add: pdpt_bits_def pageBits_def)
         apply (simp add: pdpt_bits_def pageBits_def)
-       apply (simp add: pdpt_bits_def pageBits_def)
-      apply clarsimp
-      apply (drule test_bit_size)
-      apply (clarsimp simp: word_size bit_simps)
-      apply arith
-     apply ((simp split: if_split_asm)+)[5]
+       apply clarsimp
+       apply (drule test_bit_size)
+       apply (clarsimp simp: word_size bit_simps)
+       apply arith
+      apply ((simp split: if_split_asm)+)[5]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)
@@ -765,8 +764,12 @@ lemma setObject_PDPT_corres:
    apply (drule(1) ekheap_kheap_dom)
    apply clarsimp
    apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
-           split: Structures_A.kernel_object.splits)
+   apply (simp add: other_obj_relation_def tcb_relation_cut_def
+               split: Structures_A.kernel_object.splits)
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pdpte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   apply (fastforce dest: tcbs_of'_non_tcb_update)
   apply (rule conjI)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pdpt_bits" in allE)+
@@ -818,20 +821,21 @@ lemma setObject_PML4_corres:
     apply clarsimp
     apply (drule_tac x = x in spec)
     apply (clarsimp simp: pml4e_relation_def mask_pml4_bits_inner_beauty
-      dest!: more_pml4_inner_beauty)
+                    dest!: more_pml4_inner_beauty)
    apply (rule ballI)
    apply (drule (1) bspec)
    apply clarsimp
    apply (rule conjI)
     apply (clarsimp simp: pml4e_relation_def mask_pml4_bits_inner_beauty
-      dest!: more_pml4_inner_beauty)
+                    dest!: more_pml4_inner_beauty)
    apply clarsimp
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+          apply simp
          apply simp
         apply simp
-       apply clarsimp
+       apply simp
       apply simp
      apply (frule (1) pspace_alignedD)
      apply (drule_tac p=x in pspace_alignedD, assumption)
@@ -845,14 +849,18 @@ lemma setObject_PML4_corres:
       apply arith
      apply ((simp split: if_split_asm)+)[2]
    apply (simp add: other_obj_relation_def
-      split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)
    apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
    apply (drule(1) ekheap_kheap_dom)
    apply clarsimp
    apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
-      split: Structures_A.kernel_object.splits)
+   apply (simp add: other_obj_relation_def tcb_relation_cut_def
+               split: Structures_A.kernel_object.splits)
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pml4e')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   apply (fastforce dest: tcbs_of'_non_tcb_update)
   apply (rule conjI)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pml4_bits" in allE)+

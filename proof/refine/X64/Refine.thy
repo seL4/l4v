@@ -80,7 +80,7 @@ lemma typ_at_UserDataI:
   apply (drule (1) bspec)
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
-  apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
+  apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def tcb_relation_cut_def
                         cte_relation_def other_obj_relation_def
                         pde_relation_def pdpte_relation_def pml4e_relation_def
               split: Structures_A.kernel_object.split_asm
@@ -111,7 +111,7 @@ lemma typ_at_DeviceDataI:
   apply (drule (1) bspec)
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
-  apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
+  apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def tcb_relation_cut_def
                         cte_relation_def other_obj_relation_def
                         pde_relation_def pdpte_relation_def pml4e_relation_def
               split: Structures_A.kernel_object.split_asm
@@ -558,7 +558,7 @@ lemma kernel_corres':
            apply simp
            apply (rule handleInterrupt_corres[simplified dc_def])
           apply simp
-          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
+          apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: schact_is_rct_def)[1]
          apply simp
          apply (rule_tac Q="\<lambda>irq s. invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
@@ -635,7 +635,7 @@ lemma entry_corres:
     apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split)
          apply simp
-         apply (rule threadset_corresT)
+         apply (rule threadset_corresT; simp)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_set_def atcbContextSet_def)
            apply (clarsimp simp: tcb_cap_cases_def)
@@ -647,7 +647,7 @@ lemma entry_corres:
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
            apply wp+
-         apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)
+         apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, fastforce simp: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply (wp thread_set_invs_trivial thread_set_ct_running
                  threadSet_invs_trivial threadSet_ct_running'
@@ -655,8 +655,8 @@ lemma entry_corres:
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
                           schact_is_rct_def
-              | (wps, wp threadSet_st_tcb_at2) )+
-   apply (clarsimp simp: invs_def cur_tcb_def)
+              | (wps, wp threadSet_st_tcb_at2))+
+   apply (fastforce simp: invs_def cur_tcb_def)
   apply (clarsimp simp: ct_in_state'_def)
   done
 

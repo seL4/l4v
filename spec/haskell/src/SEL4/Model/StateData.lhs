@@ -127,7 +127,7 @@ Note that there is no error-signalling mechanism available to functions in "Kern
 The ready queue is simply a list of threads that are ready to
 run. Each thread in this list is at the same priority level.
 
-> type ReadyQueue = [PPtr TCB]
+> type ReadyQueue = TcbQueue
 
 This is a standard Haskell singly-linked list independent of the
 thread control block structures. However, in a real implementation, it
@@ -153,7 +153,15 @@ replaces the previous one.
 > getCurThread = gets ksCurThread
 
 > setCurThread :: PPtr TCB -> Kernel ()
-> setCurThread tptr = modify (\ks -> ks { ksCurThread = tptr })
+> setCurThread tptr = do
+>     stateAssert idleThreadNotQueued "the idle thread cannot be in the ready queues"
+>     modify (\ks -> ks { ksCurThread = tptr })
+
+In many places, we would like to be able to use the fact that threads in the
+ready queues have runnable' thread state. We add an assertion that it does hold.
+
+> ready_qs_runnable :: KernelState -> Bool
+> ready_qs_runnable _ = True
 
 Similarly, these functions access the idle thread pointer, the ready queue for a given priority level (adjusted to account for the active security domain), the requested action of the scheduler, and the interrupt handler state.
 
@@ -232,7 +240,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksCurDomain = 0,
 >         ksDomainTime = 15,
 >         ksReadyQueues =
->             funPartialArray (const [])
+>             funPartialArray (const (TcbQueue {tcbQueueHead = Nothing, tcbQueueEnd = Nothing}))
 >                             ((0, 0), (fromIntegral numDomains, maxPriority)),
 >         ksReadyQueuesL1Bitmap = funPartialArray (const 0) (0, fromIntegral numDomains),
 >         ksReadyQueuesL2Bitmap =
@@ -282,4 +290,12 @@ The function "findM" searches a list, returning the first item for which the giv
 >     r <- f x
 >     if r then return $ Just x else findM f xs
 
+Several asserts about ksReadyQueues
 
+> ksReadyQueues_asrt :: KernelState -> Bool
+> ksReadyQueues_asrt _ = True
+
+An assert that will say that the idle thread is not in a ready queue
+
+> idleThreadNotQueued :: KernelState -> Bool
+> idleThreadNotQueued _ = True

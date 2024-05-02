@@ -1247,8 +1247,8 @@ lemma decodeX64PageTableInvocation_ccorres:
                                  sch_act_wf (ksSchedulerAction b) b \<and> cte_wp_at' (\<lambda>_. True) slot b"
                                  in hoare_strengthen_post)
          apply wp
-        apply (clarsimp simp: isCap_simps invs_valid_objs' valid_cap'_def valid_tcb_state'_def
-                              invs_arch_state' invs_no_0_obj')
+        apply (fastforce simp: isCap_simps invs_valid_objs' valid_cap'_def valid_tcb_state'_def
+                               invs_arch_state' invs_no_0_obj')
        apply vcg
       apply wp
      apply simp
@@ -1854,7 +1854,7 @@ lemma performPageGetAddress_ccorres:
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
@@ -2223,9 +2223,9 @@ lemma decodeX86ModeMapPage_ccorres:
     apply (wp injection_wp[OF refl] createMappingEntries_wf)
    apply (simp add: all_ex_eq_helper)
    apply (vcg exspec=createSafeMappingEntries_PDPTE_modifies)
-  by (clarsimp simp: invs_valid_objs' tcb_at_invs' vmsz_aligned_addrFromPPtr' invs_queues
-                     valid_tcb_state'_def invs_sch_act_wf' ThreadState_defs rf_sr_ksCurThread
-                     arch_invocation_label_defs mask_def isCap_simps)
+  by (fastforce simp: invs_valid_objs' tcb_at_invs' vmsz_aligned_addrFromPPtr'
+                      valid_tcb_state'_def invs_sch_act_wf' ThreadState_defs rf_sr_ksCurThread
+                      arch_invocation_label_defs mask_def isCap_simps)
 
 lemma valid_cap'_PageCap_kernel_mappings:
   "\<lbrakk>pspace_in_kernel_mappings' s; isPageCap cap; valid_cap' (ArchObjectCap cap) s\<rbrakk>
@@ -3236,7 +3236,8 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
                                  sch_act_wf (ksSchedulerAction b) b \<and> cte_wp_at' (\<lambda>_. True) slot b"
                         in hoare_strengthen_post)
          apply wp
-        apply (clarsimp simp: isCap_simps invs_valid_objs' valid_cap'_def valid_tcb_state'_def invs_arch_state' invs_no_0_obj')
+        apply (fastforce simp: isCap_simps invs_valid_objs' valid_cap'_def valid_tcb_state'_def
+                               invs_arch_state' invs_no_0_obj')
        apply vcg
       apply wp
      apply simp
@@ -4389,10 +4390,10 @@ lemma decodeX64MMUInvocation_ccorres:
     apply (clarsimp simp: invs_valid_objs')
     apply (rule conjI, fastforce)
     apply (clarsimp simp: ctes_of_valid' invs_valid_objs' isCap_simps)
-    apply (clarsimp simp: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of
-                          invs_sch_act_wf' dest!: isCapDs(1))
+    apply (clarsimp simp: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of invs_pspace_distinct'
+                          invs_sch_act_wf' invs_pspace_aligned'
+                    dest!: isCapDs(1))
     apply (intro conjI)
-            apply (simp add: Invariants_H.invs_queues)
            apply (simp add: valid_tcb_state'_def)
           apply (fastforce elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
          apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
@@ -4548,7 +4549,7 @@ lemma invokeX86PortIn8_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
+       (valid_objs' and ct_in_state' ((=) Restart) and pspace_aligned' and pspace_distinct' and
         (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
        (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn8\<rbrace>
              \<inter> \<lbrace>\<acute>port = port\<rbrace>
@@ -4636,7 +4637,7 @@ lemma invokeX86PortIn16_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
+       (valid_objs' and ct_in_state' ((=) Restart) and pspace_aligned' and pspace_distinct' and
         (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
        (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn16\<rbrace>
              \<inter> \<lbrace>\<acute>port = port\<rbrace>
@@ -4724,7 +4725,7 @@ lemma invokeX86PortIn32_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
+       (valid_objs' and ct_in_state' ((=) Restart) and pspace_aligned' and pspace_distinct' and
         (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
        (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn32\<rbrace>
              \<inter> \<lbrace>\<acute>port = port\<rbrace>
@@ -5365,8 +5366,8 @@ proof -
                                       and sch_act_simple and cte_wp_at' \<top> slot
                                       and (\<lambda>s. thread = ksCurThread s)" in hoare_strengthen_post)
                apply (wpsimp wp: getSlotCap_wp)
-              apply (clarsimp simp: unat_less_2p_word_bits invs_queues invs_valid_objs'
-                                    valid_tcb_state'_def
+              apply (clarsimp simp: unat_less_2p_word_bits invs_valid_objs'
+                                    valid_tcb_state'_def invs_pspace_aligned' invs_pspace_distinct'
                                     invs_sch_act_wf' st_tcb_strg'[rule_format] st_tcb_at'_def obj_at'_def
                                     projectKOs word_le_not_less
                              split: thread_state.splits)
@@ -5472,7 +5473,7 @@ proof -
                 apply (rule ccorres_return_CE, simp+)[1]
                apply (rule ccorres_return_C_errorE, simp+)[1]
               apply wp
-             apply (wpsimp wp: ct_in_state'_set sts_running_valid_queues)
+             apply (wpsimp wp: ct_in_state'_set sts_valid_objs')
             apply (simp add: Collect_const_mem intr_and_se_rel_def cintr_def exception_defs)
             apply (vcg exspec=setThreadState_modifies)
            apply clarsimp
@@ -5516,7 +5517,7 @@ proof -
                 apply (rule ccorres_return_CE, simp+)[1]
                apply (rule ccorres_return_C_errorE, simp+)[1]
               apply wp
-             apply (wpsimp wp: ct_in_state'_set sts_running_valid_queues)
+             apply (wpsimp wp: ct_in_state'_set sts_valid_objs')
             apply (simp add: Collect_const_mem intr_and_se_rel_def cintr_def exception_defs)
             apply (vcg exspec=setThreadState_modifies)
            apply clarsimp
@@ -5559,7 +5560,7 @@ proof -
                apply (rule ccorres_return_CE, simp+)[1]
               apply (rule ccorres_return_C_errorE, simp+)[1]
              apply wp
-            apply (wpsimp wp: ct_in_state'_set sts_running_valid_queues)
+            apply (wpsimp wp: ct_in_state'_set sts_valid_objs')
            apply (simp add: Collect_const_mem intr_and_se_rel_def cintr_def exception_defs)
            apply (vcg exspec=setThreadState_modifies)
           apply clarsimp
@@ -5727,7 +5728,7 @@ proof -
      apply (rule syscall_error_throwError_ccorres_n)
      apply (clarsimp simp: syscall_error_to_H_cases)
     apply (clarsimp simp: arch_invocation_label_defs sysargs_rel_to_n valid_tcb_state'_def tcb_at_invs'
-                          invs_queues invs_sch_act_wf' ct_active_st_tcb_at_minor' rf_sr_ksCurThread
+                          invs_sch_act_wf' ct_active_st_tcb_at_minor' rf_sr_ksCurThread
                           ucast_mask_drop[where n=16, simplified mask_def, simplified])
     apply (safe, simp_all add: unat_eq_0 unat_eq_1)
            apply (clarsimp dest!: unat_length_2_helper simp: ThreadState_defs mask_def syscall_error_rel_def

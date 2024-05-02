@@ -292,11 +292,15 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
   unfolding cmdbnode_relation_def mdb_node_to_H_def mdb_node_lift_def cte_lift_def
   by (fastforce split: option.splits)
 
-definition
-  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option"
+definition tcb_no_ctes_proj ::
+  "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8
+          \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option
+          \<times> machine_word option \<times> machine_word option"
   where
-  "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
-                            tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
+  "tcb_no_ctes_proj t \<equiv>
+     (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
+      tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t,
+      tcbSchedNext t, tcbSchedPrev t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
@@ -1468,9 +1472,9 @@ lemma cmap_relation_cong:
    apply (erule imageI)
    done
 
-lemma ctcb_relation_null_queue_ptrs:
+lemma ctcb_relation_null_ep_ptrs:
   assumes rel: "cmap_relation mp mp' tcb_ptr_to_ctcb_ptr ctcb_relation"
-  and same: "map_option tcb_null_queue_ptrs \<circ> mp'' = map_option tcb_null_queue_ptrs \<circ> mp'"
+  and same: "map_option tcb_null_ep_ptrs \<circ> mp'' = map_option tcb_null_ep_ptrs \<circ> mp'"
   shows "cmap_relation mp mp'' tcb_ptr_to_ctcb_ptr ctcb_relation"
   using rel
   apply (rule iffD1 [OF cmap_relation_cong, OF _ map_option_eq_dom_eq, rotated -1])
@@ -1478,7 +1482,7 @@ lemma ctcb_relation_null_queue_ptrs:
    apply (rule same [symmetric])
   apply (drule compD [OF same])
   apply (case_tac b, case_tac b')
-  apply (simp add: ctcb_relation_def tcb_null_queue_ptrs_def)
+  apply (simp add: ctcb_relation_def tcb_null_ep_ptrs_def)
   done
 
 (* FIXME x64: do we still need these?
@@ -2363,6 +2367,14 @@ lemma capTCBPtr_eq:
   apply clarsimp
   done
 
+lemma rf_sr_ctcb_queue_relation:
+  "\<lbrakk> (s, s') \<in> rf_sr; d \<le> maxDomain; p \<le> maxPriority \<rbrakk>
+  \<Longrightarrow> ctcb_queue_relation (ksReadyQueues s (d, p))
+                          (index (ksReadyQueues_' (globals s')) (cready_queues_index_to_C d p))"
+  unfolding rf_sr_def cstate_relation_def cready_queues_relation_def
+  apply (clarsimp simp: Let_def seL4_MinPrio_def minDom_def maxDom_to_H maxPrio_to_H)
+  done
+
 lemma rf_sr_sched_action_relation:
   "(s, s') \<in> rf_sr
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
@@ -2479,6 +2491,12 @@ lemma fpu_null_state_heap_update_tag_disj':
   using lift_t_heap_update_same[OF valid disj]
   by (clarsimp simp: fpu_null_state_relation_def hrs_mem_update_def hrs_htd_def
               split: prod.splits)
+
+lemma rf_sr_obj_update_helper:
+  "(s, s'\<lparr> globals := globals s' \<lparr> t_hrs_' := t_hrs_' (globals (undefined
+              \<lparr> globals := (undefined \<lparr> t_hrs_' := f (globals s') (t_hrs_' (globals s')) \<rparr>)\<rparr>))\<rparr>\<rparr>) \<in> rf_sr
+          \<Longrightarrow> (s, globals_update (\<lambda>v. t_hrs_'_update (f v) v) s') \<in> rf_sr"
+  by (simp cong: StateSpace.state.fold_congs globals.fold_congs)
 
 lemmas h_t_valid_nested_fields =
   h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]

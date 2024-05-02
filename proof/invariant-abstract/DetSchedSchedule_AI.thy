@@ -2212,6 +2212,13 @@ end
 
 crunch valid_sched[wp]: dec_domain_time valid_sched
 
+lemma thread_set_time_slice_valid_queues[wp]:
+  "ethread_set (tcb_time_slice_update f) tptr \<lbrace>valid_queues\<rbrace>"
+  apply (unfold thread_set_time_slice_def ethread_set_def set_eobject_def)
+  apply wpsimp
+  apply (fastforce simp: get_etcb_def valid_queues_def is_etcb_at'_def etcb_at'_def)
+  done
+
 lemma timer_tick_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> timer_tick \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: timer_tick_def crunch_simps thread_set_time_slice_def

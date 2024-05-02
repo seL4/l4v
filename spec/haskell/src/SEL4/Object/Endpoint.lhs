@@ -229,6 +229,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 
 > cancelAllIPC :: PPtr Endpoint -> Kernel ()
 > cancelAllIPC epptr = do
+>         stateAssert ksReadyQueues_asrt ""
 >         ep <- getEndpoint epptr
 >         case ep of
 >             IdleEP ->
@@ -244,6 +245,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 
 > cancelBadgedSends :: PPtr Endpoint -> Word -> Kernel ()
 > cancelBadgedSends epptr badge = do
+>     stateAssert ksReadyQueues_asrt ""
 >     ep <- getEndpoint epptr
 >     case ep of
 >         IdleEP -> return ()
