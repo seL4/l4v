@@ -278,7 +278,7 @@ lemma bind_return_unit:
   by simp
 
 lemma modify_id_return:
- "modify id = return ()"
+  "modify id = return ()"
   by (simp add: simpler_modify_def return_def)
 
 lemma liftE_bind_return_bindE_returnOk:
@@ -496,20 +496,24 @@ lemma bind_inv_inv_comm_weak:
   apply (fastforce simp: bind_def valid_def empty_fail_def split_def image_def)
   done
 
-lemma state_assert_false[simp]: "state_assert (\<lambda>_. False) = fail"
+lemma state_assert_false[simp]:
+  "state_assert (\<lambda>_. False) = fail"
   by monad_eq
 
-lemma condition_fail_rhs: "condition C X fail = (state_assert C >>= (\<lambda>_. X))"
+lemma condition_fail_rhs:
+  "condition C X fail = (state_assert C >>= (\<lambda>_. X))"
   by (monad_eq simp: Bex_def)
 
-lemma condition_swap: "condition C A B = condition (\<lambda>s. \<not> C s) B A"
+lemma condition_swap:
+  "condition C A B = condition (\<lambda>s. \<not> C s) B A"
   by monad_eq auto
 
-lemma condition_fail_lhs: "condition C fail X = (state_assert (\<lambda>s. \<not> C s) >>= (\<lambda>_. X))"
+lemma condition_fail_lhs:
+  "condition C fail X = (state_assert (\<lambda>s. \<not> C s) >>= (\<lambda>_. X))"
   by (metis condition_fail_rhs condition_swap)
 
 lemma condition_bind_fail[simp]:
-    "(condition C A B >>= (\<lambda>_. fail)) = condition C (A >>= (\<lambda>_. fail)) (B >>= (\<lambda>_. fail))"
+  "(condition C A B >>= (\<lambda>_. fail)) = condition C (A >>= (\<lambda>_. fail)) (B >>= (\<lambda>_. fail))"
   by monad_eq blast
 
 lemma bind_fail_propagates:
