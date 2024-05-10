@@ -1570,7 +1570,7 @@ next
   have level: "level < maxPTLevel" by simp
   then
   have [simp]: "word_of_nat maxPTLevel - (1 + of_nat level) < maxPT" (is "?i < maxPT")
-    by (cases "config_ARM_PA_SIZE_BITS_40";
+    by (cases config_ARM_PA_SIZE_BITS_40;
         simp add: maxPTLevel_def maxPT_def unat_arith_simps unat_of_nat)
 
   from level

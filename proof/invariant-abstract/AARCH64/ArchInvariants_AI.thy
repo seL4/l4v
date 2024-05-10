@@ -840,7 +840,7 @@ proof -
   have m1: "(-1::vm_level) = (if config_ARM_PA_SIZE_BITS_40 then 3 else 4)"
     by (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
   show ?thesis unfolding asid_pool_level_def
-   by (simp add: m1)
+    by (simp add: m1 Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 qed
 
 lemma asid_pool_level_not_0[simp]:
@@ -864,7 +864,8 @@ next
   note maxBound_minus_one_bit[simp del]
   assume "x \<le> max_pt_level"
   thus "x \<noteq> asid_pool_level"
-    unfolding level_defs by (auto simp: maxBound_size_bit split: if_splits)
+    unfolding level_defs
+    by (auto simp: maxBound_size_bit Kernel_Config.config_ARM_PA_SIZE_BITS_40_def split: if_splits)
 qed
 
 lemma asid_pool_level_eq:
@@ -891,7 +892,9 @@ lemma vm_level_less_max_pt_level:
 
 lemma vm_level_less_le_1:
   "\<lbrakk> (level' :: vm_level) < level \<rbrakk> \<Longrightarrow> level' \<le> level' + 1"
-  by (fastforce dest: max_pt_level_enum vm_level_less_max_pt_level split: if_split_asm)
+  by (fastforce dest: max_pt_level_enum vm_level_less_max_pt_level
+                simp: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
+                split: if_split_asm)
 
 lemma asid_pool_level_leq_conv[iff]:
   "(asid_pool_level \<le> level) = (level = asid_pool_level)"
@@ -905,7 +908,7 @@ lemma max_pt_level_not_asid_pool_level[simp]:
   "max_pt_level \<noteq> asid_pool_level"
   "asid_pool_level \<noteq> max_pt_level"
   by (simp add: asid_pool_level_def)
-     (simp add: level_defs)
+     (simp add: level_defs Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 lemma asid_pool_level_minus:
   "asid_pool_level = -1"

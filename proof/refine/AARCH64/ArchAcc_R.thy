@@ -603,6 +603,8 @@ lemma user_region_or:
   "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
   by (simp add: user_region_def canonical_user_def le_mask_high_bits word_size)
 
+lemmas bit_pred = bit0.pred bit1.pred
+
 lemma lookupPTSlotFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
@@ -619,7 +621,7 @@ next
   from `0 < level`
   obtain nlevel where nlevel: "level = nlevel + 1" by (auto intro: that[of "level-1"])
   with `0 < level`
-  have nlevel1: "nlevel < nlevel + 1" using bit1.pred by fastforce
+  have nlevel1: "nlevel < nlevel + 1" using bit_pred by fastforce
   with nlevel
   have level: "size level = Suc (size nlevel)" by simp
 
@@ -672,7 +674,7 @@ next
      apply (simp add: plus_one_eq_asid_pool vref_for_level_def pt_bits_left_def)
      apply (rule conjI, simp add: max_pt_level_def)
      apply (clarsimp simp: level_defs bit_simps maxPTLevel_def)
-     apply word_eqI_solve
+     apply (solves \<open>cases config_ARM_PA_SIZE_BITS_40; clarsimp?; word_eqI_solve\<close>)
     apply (clarsimp simp: vref_for_level_def pt_bits_left_def)
     apply (rule conjI; clarsimp)
      apply (subgoal_tac "nlevel = max_pt_level - 1")
@@ -684,11 +686,13 @@ next
     apply (simp add: pt_bits_def)
     apply (prop_tac "level_type (nlevel + 1) = NormalPT_T")
      apply (drule max_pt_level_enum)
-     apply (auto simp: level_defs split: if_split_asm)[1]
+     (* Unfolding config_ARM_PA_SIZE_BITS_40_def here, because the level_enum only produces a
+        contradiction in one of the branches when PA_40 is set. *)
+     apply (solves \<open>auto simp: level_defs Kernel_Config.config_ARM_PA_SIZE_BITS_40_def\<close>)[1]
     apply (simp add: bit_simps)
     apply word_eqI
     apply (drule max_pt_level_enum)
-    by (auto split: if_split_asm)
+    by (cases config_ARM_PA_SIZE_BITS_40, auto simp: max_pt_level_def2)
 
   from `0 < level` `level' = size level` `pt' = pt` level `level \<le> max_pt_level` level_m1
   show ?case
@@ -828,7 +832,7 @@ next
      apply (simp add: plus_one_eq_asid_pool vref_for_level_def pt_bits_left_def)
      apply (rule conjI, simp add: max_pt_level_def)
      apply (clarsimp simp: level_defs bit_simps maxPTLevel_def)
-     apply word_eqI_solve
+     apply (solves \<open>cases config_ARM_PA_SIZE_BITS_40; clarsimp?; word_eqI_solve\<close>)
     apply (clarsimp simp: vref_for_level_def pt_bits_left_def)
     apply (rule conjI; clarsimp)
      apply (subgoal_tac "nlevel = max_pt_level - 1")
@@ -840,11 +844,13 @@ next
     apply (simp add: pt_bits_def)
     apply (prop_tac "level_type (nlevel + 1) = NormalPT_T")
      apply (drule max_pt_level_enum)
-     apply (auto simp: level_defs split: if_split_asm)[1]
+     (* Unfolding config_ARM_PA_SIZE_BITS_40_def here, because the level_enum only produces a
+        contradiction in one of the branches when PA_40 is set. *)
+     apply (solves \<open>auto simp: level_defs Kernel_Config.config_ARM_PA_SIZE_BITS_40_def split: if_split_asm\<close>)[1]
     apply (simp add: bit_simps)
     apply word_eqI
     apply (drule max_pt_level_enum)
-    by (auto split: if_split_asm)
+    by (cases config_ARM_PA_SIZE_BITS_40, auto simp: max_pt_level_def2)
 
   note vm_level.size_minus_one[simp]
   from minus.prems

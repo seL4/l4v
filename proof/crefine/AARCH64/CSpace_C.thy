@@ -2533,7 +2533,7 @@ lemma cap_get_capSizeBits_spec:
                         cap_lift_domain_cap cap_get_tag_scast
                         objBits_defs wordRadix_def
                         c_valid_cap_def cl_valid_cap_def pageBits_def asidPoolBits_def
-                        Kernel_Config.config_ARM_PA_SIZE_BITS_40_def (* FIXME AARCH64: #define in C, so no other option for now *)
+                        Kernel_Config.config_ARM_PA_SIZE_BITS_40_def (* #define in C, so no other option for now *)
                  cong: option.case_cong
                  dest!: sym [where t = "ucast (cap_get_tag cap)" for cap])
   apply (clarsimp split: option.splits cap_CL.splits dest!: cap_lift_Some_CapD)
