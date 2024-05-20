@@ -79,7 +79,7 @@ record
 axiomatization
   irq_oracle :: "nat \<Rightarrow> 10 word"
 where
-  irq_oracle_max_irq: "\<forall> n. (irq_oracle n) <= ARM.maxIRQ"
+  irq_oracle_max_irq: "\<forall> n. irq_oracle n <= Kernel_Config.maxIRQ"
 
 end_qualify
 

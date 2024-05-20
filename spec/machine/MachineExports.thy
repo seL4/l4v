@@ -39,7 +39,6 @@ requalify_consts
   frameRegisters
   ackInterrupt
   resetTimer
-  maxIRQ
   minIRQ
   word_size_bits
   clearMemory

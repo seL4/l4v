@@ -69,7 +69,7 @@ record
 axiomatization
   irq_oracle :: "nat \<Rightarrow> AARCH64.irq"
 where
-  irq_oracle_max_irq: "\<forall>n. irq_oracle n <= AARCH64.maxIRQ"
+  irq_oracle_max_irq: "\<forall>n. irq_oracle n <= Kernel_Config.maxIRQ"
 
 end_qualify
 

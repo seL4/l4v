@@ -12,7 +12,12 @@ imports
   ArchInterruptDecls_H
   ArchHypervisor_H
 begin
+
 context Arch begin global_naming ARM_HYP_H
+
+(* Kernel_Config provides a generic numeral, Haskell expects type irq *)
+abbreviation (input) maxIRQ :: irq where
+  "maxIRQ == Kernel_Config.maxIRQ"
 
 #INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs Arch= CONTEXT ARM_HYP_H bodies_only ArchInv= NOT initInterruptController
 

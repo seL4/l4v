@@ -69,9 +69,6 @@ definition addrFromKPPtr :: "word32 \<Rightarrow> paddr" where
 definition minIRQ :: "irq" where
   "minIRQ \<equiv> 0"
 
-definition maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 0x9F"
-
 end
 
 end
