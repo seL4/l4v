@@ -245,6 +245,30 @@ def parse_maxIRQ(l4v_arch: str, platform_gen_h_file: str) -> str:
 
     raise Exception(f'Could not find maxIRQ in {platform_gen_h_file}')
 
+
+def parse_irqBits(l4v_arch: str, platform_gen_h_file: str) -> str:
+    """
+    Parse platform_gen.h for the value of IRQ_CNODE_SLOT_BITS, which becomes
+    the width of the irq type in ASpec and ExecSpec. It is expected to be
+    of the form #define IRQ_CNODE_SLOT_BITS (<number literal>)
+    """
+
+    # fixed value on X64
+    if l4v_arch == 'X64':
+        return None
+
+    irqBits_re = re.compile(r'#define[\t ]+IRQ_CNODE_SLOT_BITS[\t ]+\(?([0-9]+)\)?')
+
+    with open(platform_gen_h_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            m = irqBits_re.match(line)
+            if m:
+                return m.group(1)
+
+    raise Exception(f'Could not find IRQ_CNODE_SLOT_BITS in {platform_gen_h_file}')
+
+
 def add_defaults(config: Dict[str, str]):
     """
     Defaults are boolean config keys that are mentioned in known_config_keys
@@ -281,7 +305,8 @@ begin
 """
 
 
-def write_config_thy(header, config_thy_path, config: Dict[str, str], physBase=None, maxIRQ=None):
+def write_config_thy(header, config_thy_path, config: Dict[str, str],
+                     physBase=None, maxIRQ=None, irqBits=None):
     """
     Write a Kernel_Config.thy file for a given configuration dict.
     """
@@ -302,6 +327,12 @@ def write_config_thy(header, config_thy_path, config: Dict[str, str], physBase=N
             f.write('definition maxIRQ where (* from platform_gen.h. *)\n')
             f.write(f'  "maxIRQ \\<equiv> {maxIRQ}"\n\n')
             names.append('maxIRQ')
+
+        if irqBits:
+            f.write('(* IRQ_CNODE_SLOT_BITS from platform_gen.h. *)\n')
+            f.write('definition irqBits :: nat where\n')
+            f.write(f'  "irqBits \\<equiv> {irqBits}"\n\n')
+            names.append('irqBits')
 
         for key, value in config.items():
             type = type_of(key)
@@ -353,6 +384,7 @@ if __name__ == '__main__':
     config = parse_gen_config(config_path)
     physBase = parse_physBase(l4v_arch, devices_gen_path)
     maxIRQ = parse_maxIRQ(l4v_arch, platform_gen_path)
+    irqBits = parse_irqBits(l4v_arch, platform_gen_path)
     add_defaults(config)
 
     header = theory_header.format(
@@ -362,4 +394,4 @@ if __name__ == '__main__':
         platform_gen_path,
         path.realpath(__file__)
     )
-    write_config_thy(header, thy_path, config, physBase, maxIRQ)
+    write_config_thy(header, thy_path, config, physBase, maxIRQ, irqBits)
