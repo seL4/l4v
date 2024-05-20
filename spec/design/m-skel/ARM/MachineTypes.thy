@@ -77,7 +77,7 @@ record
   machine_state_rest :: ARM.machine_state_rest
 
 axiomatization
-  irq_oracle :: "nat \<Rightarrow> 10 word"
+  irq_oracle :: "nat \<Rightarrow> ARM.irq"
 where
   irq_oracle_max_irq: "\<forall> n. irq_oracle n <= Kernel_Config.maxIRQ"
 

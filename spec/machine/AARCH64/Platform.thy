@@ -17,7 +17,7 @@ begin
 
 context Arch begin global_naming AARCH64
 
-type_synonym irq_len = 9 (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
+value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"
 type_synonym paddr = machine_word
 

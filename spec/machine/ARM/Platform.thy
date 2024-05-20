@@ -24,7 +24,8 @@ text \<open>
   addresses, as well as the range of IRQs on the platform.
 \<close>
 
-type_synonym irq = "10 word"
+value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
+type_synonym irq = "irq_len word"
 type_synonym paddr = word32
 
 abbreviation (input) "toPAddr \<equiv> id"
