@@ -11,6 +11,8 @@
  *     Option monad while loop formalisation.
  *)
 
+chapter \<open>State Projections and Reader Option Monad\<close>
+
 theory Reader_Option_Monad
   imports
     Monad_Lib
@@ -22,7 +24,7 @@ section \<open>Projections\<close>
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"
 
-text \<open>Similar to map_option but the second function returns option as well\<close>
+text \<open>Similar to @{const map_option} but the second function returns @{text option} as well\<close>
 definition opt_map :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> ('s,'b) lookup" (infixl "|>" 54) where
   "f |> g \<equiv> \<lambda>s. case f s of None \<Rightarrow> None | Some x \<Rightarrow> g x"
 
@@ -241,7 +243,7 @@ abbreviation ogets :: "('s \<Rightarrow> 'a) \<Rightarrow> ('s, 'a) lookup" wher
 
 text \<open>
   Integration with exception monad.
-  Corresponding bindE would be analogous to lifting in Nondet_Monad.\<close>
+  Corresponding bindE would be analogous to lifting in @{text Nondet_Monad}.\<close>
 
 definition
   "oreturnOk x = K (Some (Inr x))"
@@ -250,15 +252,19 @@ definition
   "othrow e = K (Some (Inl e))"
 
 definition
-  "oguard G \<equiv> (\<lambda>s. if G s then Some () else None)"
+  "oguard G \<equiv> \<lambda>s. if G s then Some () else None"
 
 definition
-  "ocondition c L R \<equiv> (\<lambda>s. if c s then L s else R s)"
+  "ocondition c L R \<equiv> \<lambda>s. if c s then L s else R s"
 
 definition
   "oskip \<equiv> oreturn ()"
 
-lemmas omonad_defs = ofail_def oreturn_def oassert_def oassert_opt_def asks_def ounless_def
+lemma ogets_def:
+  "ogets f = (\<lambda>s. Some (f s))"
+  by (clarsimp simp: asks_def obind_def oreturn_def)
+
+lemmas omonad_defs = ofail_def oreturn_def oassert_def oassert_opt_def ogets_def ounless_def
                      owhen_def
 
 
@@ -266,26 +272,26 @@ subsection \<open>Monad laws\<close>
 
 lemma oreturn_bind[simp]:
   "(oreturn x |>> f) = f x"
-  by (auto simp add: oreturn_def obind_def K_def)
+  by (auto simp add: oreturn_def obind_def)
 
 lemma obind_return[simp]:
   "(m |>> oreturn) = m"
-  by (auto simp add: oreturn_def obind_def K_def split: option.splits)
+  by (auto simp add: oreturn_def obind_def split: option.splits)
 
 lemma obind_assoc:
   "(m |>> f) |>> g  =  m |>> (\<lambda>x. f x |>> g)"
-  by (auto simp add: oreturn_def obind_def K_def split: option.splits)
+  by (auto simp add: oreturn_def obind_def split: option.splits)
 
 
 subsection \<open>Binding and fail\<close>
 
 lemma obind_fail [simp]:
   "f |>> (\<lambda>_. ofail) = ofail"
-  by (auto simp add: ofail_def obind_def K_def split: option.splits)
+  by (auto simp add: ofail_def obind_def split: option.splits)
 
 lemma ofail_bind [simp]:
   "ofail |>> m = ofail"
-  by (auto simp add: ofail_def obind_def K_def split: option.splits)
+  by (auto simp add: ofail_def obind_def split: option.splits)
 
 
 subsection \<open>Function package setup\<close>
@@ -348,11 +354,11 @@ lemma ocondition_True:
 
 lemma in_oreturn [simp]:
   "(oreturn x s = Some v) = (v = x)"
-  by (auto simp: oreturn_def K_def)
+  by (auto simp: oreturn_def)
 
 lemma oreturn_None[simp]:
   "\<not> oreturn x s = None"
-  by (simp add: oreturn_def K_def)
+  by (simp add: oreturn_def)
 
 lemma oreturnE:
   "\<lbrakk>oreturn x s = Some v; v = x \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
@@ -360,7 +366,7 @@ lemma oreturnE:
 
 lemma in_ofail[simp]:
   "ofail s \<noteq> Some v"
-  by (auto simp: ofail_def K_def)
+  by (auto simp: ofail_def)
 
 lemma ofailE:
   "ofail s = Some v \<Longrightarrow> P"
@@ -408,7 +414,7 @@ lemma obindE:
 
 lemma in_othrow_eq[simp]:
   "(othrow e s = Some v) = (v = Inl e)"
-  by (auto simp: othrow_def K_def)
+  by (auto simp: othrow_def)
 
 lemma othrowE:
   "\<lbrakk>othrow e s = Some v; v = Inl e \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
@@ -416,7 +422,7 @@ lemma othrowE:
 
 lemma in_oreturnOk_eq[simp]:
   "(oreturnOk x s = Some v) = (v = Inr x)"
-  by (auto simp: oreturnOk_def K_def)
+  by (auto simp: oreturnOk_def)
 
 lemma oreturnOkE:
   "\<lbrakk>oreturnOk x s = Some v; v = Inr x \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
@@ -434,11 +440,11 @@ lemma in_opt_map_Some_None_eq[simp]:
 
 lemma oreturn_comp[simp]:
   "oreturn x \<circ> f = oreturn x"
-  by (simp add: oreturn_def K_def o_def)
+  by (simp add: oreturn_def o_def)
 
 lemma ofail_comp[simp]:
   "ofail \<circ> f = ofail"
-  by (auto simp: ofail_def K_def)
+  by (auto simp: ofail_def)
 
 lemma oassert_comp[simp]:
   "oassert P \<circ> f = oassert P"
@@ -446,7 +452,7 @@ lemma oassert_comp[simp]:
 
 lemma fail_apply[simp]:
   "ofail s = None"
-  by (simp add: ofail_def K_def)
+  by (simp add: ofail_def)
 
 lemma oassert_apply[simp]:
   "oassert P s = (if P then Some () else None)"
@@ -474,7 +480,9 @@ lemma if_comp_dist:
 
 lemma obindK_is_opt_map:
   "f \<bind> (\<lambda>x. K $ g x) = f |> g"
-  by (simp add: obind_def opt_map_def K_def)
+  by (simp add: obind_def opt_map_def)
+
+lemmas in_omonad = bind_eq_Some_conv in_obind_eq in_opt_map_eq in_opt_pred Let_def
 
 
 section \<open>"While" loops over option monad.\<close>
@@ -581,6 +589,7 @@ proof -
       by (induct arbitrary:s) (auto intro: step final)
   qed
 qed
+
 
 section \<open>Lift @{term option_while} to the @{typ "('a,'s) lookup"} monad\<close>
 

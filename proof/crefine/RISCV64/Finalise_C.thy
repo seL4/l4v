@@ -1959,8 +1959,6 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x3F", simplified])
   done
 
-lemmas upcast_ucast_id = More_Word.ucast_up_inj
-
 lemma irq_opt_relation_Some_ucast:
   "\<lbrakk> x && mask 6 = x; ucast x \<noteq> irqInvalid;
     ucast x \<le> (scast Kernel_C.maxIRQ :: 6 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>

@@ -91,7 +91,7 @@ type_synonym ppn = "ppn_len word"
 text \<open>This lemma encodes @{typ ppn_len} value above as a term, so we can use it generically:\<close>
 lemma ppn_len_def':
   "ppn_len = ipa_size - pageBits"
-  by (simp add: ppn_len_def pageBits_def ipa_size_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+  by (simp add: ppn_len_val pageBits_def ipa_size_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 datatype pte =
     InvalidPTE
@@ -113,48 +113,7 @@ definition pte_base_addr :: "pte \<Rightarrow> paddr" where
 definition ppn_from_pptr :: "obj_ref \<Rightarrow> ppn" where
   "ppn_from_pptr p = ucast (addrFromPPtr p >> pageBits)"
 
-definition vs_index_bits :: nat where
-  "vs_index_bits \<equiv> if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat)"
-
-lemma vs_index_bits_ge0[simp, intro!]: "0 < vs_index_bits"
-  by (simp add: vs_index_bits_def)
-
-(* A dependent-ish type in Isabelle. We use typedef here instead of value_type so that we can
-   retain a symbolic value (vs_index_bits) for the size of the type instead of getting a plain
-   number such as 9 or 10. *)
-typedef vs_index_len = "{n :: nat. n < vs_index_bits}" by auto
-
-end
-
-instantiation AARCH64_A.vs_index_len :: len0
-begin
-  interpretation Arch .
-  definition len_of_vs_index_len: "len_of (x::vs_index_len itself) \<equiv> CARD(vs_index_len)"
-  instance ..
-end
-
-instantiation AARCH64_A.vs_index_len :: len
-begin
-  interpretation Arch .
-  instance
-  proof
-   show "0 < LENGTH(vs_index_len)"
-     by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
-  qed
-end
-
-context Arch begin global_naming AARCH64_A
-
-type_synonym vs_index = "vs_index_len word"
-
-type_synonym pt_index_len = 9
-type_synonym pt_index = "pt_index_len word"
-
-text \<open>Sanity check:\<close>
-lemma length_vs_index_len[simp]:
-  "LENGTH(vs_index_len) = vs_index_bits"
-  by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
-
+(* Sanity check for page table type sizes -- ptTranslationBits not yet available at definition site *)
 lemma vs_index_ptTranslationBits:
   "ptTranslationBits VSRootPT_T = LENGTH(vs_index_len)"
   by (simp add: ptTranslationBits_def vs_index_bits_def)
@@ -215,7 +174,7 @@ definition
   "default_vcpu \<equiv> \<lparr>
       vcpu_tcb    = None,
       vcpu_vgic   = default_gic_vcpu_interface,
-      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault),
+      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM),
       vcpu_vppi_masked = (\<lambda>_. False),
       vcpu_vtimer = VirtTimer 0
    \<rparr>"

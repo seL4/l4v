@@ -439,6 +439,7 @@ where valid_cap'_def:
   | UntypedCap d r n f \<Rightarrow>
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
+        \<and> canonical_address r
   | EndpointCap r badge x y z t \<Rightarrow> ep_at' r s
   | NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -511,13 +512,28 @@ definition valid_ntfn' :: "Structures_H.notification \<Rightarrow> kernel_state 
   | ActiveNtfn b \<Rightarrow> True)
   \<and> valid_bound_tcb' (ntfnBoundTCB ntfn) s"
 
+(* FIXME AARCH64: remove if unused at the end *)
 definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
 
-(* KOArch validity can be lifted from AInvs, since all cases only consist of typ_at' predicates. *)
-definition
-  valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
+definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
+  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> is_aligned vt tcbBlockSizeBits"
+
+(* This is a slight abuse of "canonical_address". What we really need to know for ADT_C in CRefine
+   is that the top pageBits bits of TablePTEs have a known value, because we shift left by pageBits.
+   What we actually know is that this is a physical address, so it is bound by the physical address
+   space size, which depending on config can be 40, 44, or 48. 48 happens to also be the bound for
+   the virtual address space, which canonical_address is for. This is good enough for our purposes. *)
+definition ppn_bounded :: "pte \<Rightarrow> bool" where
+  "ppn_bounded pte \<equiv> case pte of PageTablePTE ppn \<Rightarrow> canonical_address ppn | _ \<Rightarrow> True"
+
+definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
+  "valid_arch_obj' ako \<equiv> case ako of
+     KOPTE pte \<Rightarrow> ppn_bounded pte
+   | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
+   | _ \<Rightarrow> True"
+
+definition valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_obj' ko s \<equiv> case ko of
     KOEndpoint endpoint \<Rightarrow> valid_ep' endpoint s
   | KONotification notification \<Rightarrow> valid_ntfn' notification s
@@ -526,7 +542,7 @@ where
   | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
-  | KOArch arch_kernel_object \<Rightarrow> True"
+  | KOArch ako \<Rightarrow> valid_arch_obj' ako"
 
 definition
   pspace_aligned' :: "kernel_state \<Rightarrow> bool"
@@ -539,6 +555,9 @@ definition
 where
   "pspace_distinct' s \<equiv>
    \<forall>x \<in> dom (ksPSpace s). ps_clear x (objBitsKO (the (ksPSpace s x))) s"
+
+definition pspace_canonical' :: "kernel_state \<Rightarrow> bool" where
+  "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
 
 definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
@@ -802,6 +821,7 @@ definition
 where
   "valid_pspace' \<equiv> valid_objs' and
                    pspace_aligned' and
+                   pspace_canonical' and
                    pspace_distinct' and
                    no_0_obj' and
                    valid_mdb'"
@@ -984,10 +1004,12 @@ definition max_armKSGICVCPUNumListRegs :: nat where
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
    valid_asid_table' (armKSASIDTable (ksArchState s)) \<and>
+   0 \<notin> ran (armKSVMIDTable (ksArchState s)) \<and>
    (case armHSCurVCPU (ksArchState s) of
       Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
       | _ \<Rightarrow> True) \<and>
-   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
+   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs \<and>
+   canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
 
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
@@ -1670,7 +1692,7 @@ lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
-    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
+    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; pspace_canonical' s; no_0_obj' s;
       valid_mdb' s \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
@@ -1788,7 +1810,7 @@ lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
   by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
-                     typ_at'_def
+                     typ_at'_def pspace_canonical'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
 
 lemma ex_cte_cap_to_pspaceI'[elim]:
@@ -2420,6 +2442,10 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       valid_bound_tcb_lift
                       valid_arch_tcb_lift'
 
+lemma valid_arch_state_armKSGlobalUserVSpace:
+  "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
+  by (simp add: valid_arch_state'_def)
+
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
   by (auto simp add: mdb_next_rel_def mdb_next_def)
@@ -2636,6 +2662,10 @@ lemma pspace_aligned_update [iff]:
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
+
+lemma pspace_canonical_update [iff]:
+  "pspace_canonical' (f s) = pspace_canonical' s"
+  by (simp add: pspace pspace_canonical'_def ps_clear_def)
 
 lemma pred_tcb_at_update [iff]:
   "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
@@ -3236,6 +3266,14 @@ lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
 
+lemma invs_pspace_canonical'[elim!]:
+  "invs' s \<Longrightarrow> pspace_canonical' s"
+  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
+lemma valid_pspace_canonical'[elim!]:
+  "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
+  by (rule valid_pspaceE')
+
 lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
@@ -3337,6 +3375,59 @@ lemma mask_wordRadix_less_wordBits:
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
+
+lemma canonical_address_mask_eq:
+  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
+  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
+
+lemma canonical_address_and:
+  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
+  by (simp add: canonical_address_range word_and_le)
+
+lemma canonical_address_add:
+  assumes "is_aligned p n"
+  assumes "f < 2 ^ n"
+  assumes "n \<le> canonical_bit"
+  assumes "canonical_address p"
+  shows "canonical_address (p + f)"
+proof -
+  from `f < 2 ^ n`
+  have "f \<le> mask n"
+    by (simp add: mask_plus_1 plus_one_helper)
+
+  from `canonical_address p`
+  have "p && mask (Suc canonical_bit) = p"
+    by (simp add: canonical_address_mask_eq)
+  moreover
+  from `f \<le> mask n` `is_aligned p n`
+  have "p + f = p || f"
+    by (simp add: word_and_or_mask_aligned)
+  moreover
+  from `f \<le> mask n` `n \<le> canonical_bit`
+  have "f \<le> mask (Suc canonical_bit)"
+    using le_smaller_mask by fastforce
+  hence "f && mask (Suc canonical_bit) = f"
+    by (simp add: le_mask_imp_and_mask)
+  ultimately
+  have "(p + f) && mask (Suc canonical_bit) = p + f"
+    by (simp add: word_ao_dist)
+  thus ?thesis
+    by (simp add: canonical_address_mask_eq)
+qed
+
+lemma range_cover_canonical_address:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+   apply (drule (1) range_cover.range_cover_compare)
+   apply (clarsimp simp: word_less_nat_alt)
+   apply unat_arith
+  apply (simp add: canonical_bit_def)
+  done
 
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:

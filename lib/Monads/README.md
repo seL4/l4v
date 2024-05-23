@@ -26,14 +26,23 @@ In particular, this session defines:
 
 - for the nondeterministic state monad, additional concepts such as
   wellformedness with respect to failure (`empty_fail`), absence of failure
-  (`no_fail`), absence of exceptions (`no_throw`). See the respective theories
-  for more details.
+  (`no_fail`), absence of exceptions (`no_throw`). See its [README][nondet] and
+  the respective theories for more details.
+
+- the trace monad has similar concepts where applicable, and its theories follow
+  the same structure as that of the nondet monad.
 
 The directory [`wp/`](./wp/) contains proof methods to reason about these monads
-in weakest-precondition style.
+in weakest-precondition style. See its [README][wp] for more details.
+
+This session also introduces a [strengthen] method, which is useful for
+performing rewriting steps within the complex conclusions that often appear when
+working with these monads.
 
 [l4v]: https://github.com/seL4/l4v/
-[nondet]: ./nondet/Nondet_Monad.thy
+[nondet]: ./nondet/Nondet_README.thy
 [option]: ./reader_option/Reader_Option_Monad.thy
 [trace]: ./trace/Trace_Monad.thy
 [AutoCorres]: ../../tools/autocorres/
+[wp]: ./wp/WP_README.thy
+[strengthen]: ./Strengthen_Demo.thy

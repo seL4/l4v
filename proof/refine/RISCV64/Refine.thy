@@ -522,6 +522,23 @@ abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" w
 
 lemmas valid_domain_list'_def = valid_domain_list_2_def
 
+(* nothing extra needed on this architecture *)
+defs fastpathKernelAssertions_def:
+  "fastpathKernelAssertions \<equiv> \<lambda>s. True"
+
+lemma fastpathKernelAssertions_cross:
+  "\<lbrakk> (s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
+  unfolding fastpathKernelAssertions_def
+  by simp
+
+(* this is only needed for callKernel, where we have invs' on concrete side *)
+lemma corres_cross_over_fastpathKernelAssertions:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> invs s; \<And>s'. Q s' \<Longrightarrow> invs' s';
+     corres r P (Q and fastpathKernelAssertions) f g \<rbrakk> \<Longrightarrow>
+   corres r P Q f g"
+  by (rule corres_cross_over_guard[where Q="Q and fastpathKernelAssertions"])
+     (fastforce elim: fastpathKernelAssertions_cross)+
+
 defs kernelExitAssertions_def:
   "kernelExitAssertions s \<equiv> valid_domain_list' s \<and> cur_tcb' s"
 
@@ -989,6 +1006,8 @@ lemma kernel_corres:
              invs'
              (call_kernel event) (callKernel event)"
   unfolding callKernel_def K_bind_def
+  apply (rule corres_cross_over_fastpathKernelAssertions, blast+)
+  apply (rule corres_stateAssert_r)
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
@@ -1056,6 +1075,7 @@ lemma entry_corres:
                  thread_set_not_state_valid_sched hoare_weak_lift_imp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
+                          schact_is_rct_def
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (fastforce simp: invs_def cur_tcb_def)
   apply (clarsimp simp: ct_in_state'_def cur_tcb'_def invs'_def valid_release_queue'_def obj_at'_def)

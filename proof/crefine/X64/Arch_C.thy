@@ -1589,15 +1589,6 @@ lemma pde_align_ptBits:
   apply (simp add: bit_simps)
   done
 
-lemma vaddr_segment_nonsense3_folded:
-  "is_aligned (p :: machine_word) pageBits \<Longrightarrow>
-   (p + ((vaddr >> pageBits) && mask (pt_bits - word_size_bits) << word_size_bits) && ~~ mask pt_bits) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (simp add: bit_simps mask_def)+
-  apply (rule shiftl_less_t2n[where m=12 and n=3, simplified, OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
-   apply simp+
-  done
-
 lemma storePDE_Basic_ccorres'':
   "ccorres dc xfdc
      (\<lambda>_. True)
@@ -1913,7 +1904,7 @@ lemma shiftr_asid_low_bits_mask_eq_0:
   apply (rule iffI[rotated])
    apply simp
   apply (rule asid_low_high_bits)
-     apply (rule upcast_ucast_id[where 'b=machine_word_len]; simp add: asid_low_bits_of_mask_eq)
+     apply (rule More_Word.ucast_up_inj[where 'b=machine_word_len]; simp add: asid_low_bits_of_mask_eq)
     apply (simp add: ucast_asid_high_bits_is_shift)
    apply (simp add: asid_wf_def mask_def)
   apply (rule asid_wf_0)
@@ -1924,18 +1915,6 @@ lemma slotcap_in_mem_valid:
             \<Longrightarrow> s \<turnstile>' cap"
   apply (clarsimp simp: slotcap_in_mem_def)
   apply (erule(1) ctes_of_valid')
-  done
-
-lemma unat_less_iff64:
-  "\<lbrakk>unat (a::machine_word) = b;c < 2^word_bits\<rbrakk>
-   \<Longrightarrow> (a < of_nat c) = (b < c)"
-  apply (rule iffI)
-    apply (drule unat_less_helper)
-    apply simp
-  apply (simp add:unat64_eq_of_nat)
-  apply (rule of_nat_mono_maybe)
-   apply (simp add:word_bits_def)
-  apply simp
   done
 
 lemma injection_handler_if_returnOk:
@@ -1949,11 +1928,6 @@ lemma injection_handler_if_returnOk:
 
 lemma pbfs_less: "pageBitsForSize sz < 31"
   by (case_tac sz,simp_all add: bit_simps)
-
-definition
-  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
-where
-  "to_option f x \<equiv> if f x then Some x else None"
 
 lemma cte_wp_at_eq_gsMaxObjectSize:
   "cte_wp_at' ((=) cap o cteCap) slot s

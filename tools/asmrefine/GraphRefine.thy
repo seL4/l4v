@@ -1126,7 +1126,7 @@ lemma simpl_to_graph_call_next_step:
         (add_cont (call initf proc ret (\<lambda>x y. com.Basic (f' x y))) con)
         n tS P I eqs out_eqs"
   apply (rule simpl_to_graph_name_simpl_state)
-  apply (clarsimp simp: call_def block_def graph)
+  apply (clarsimp simp: call_def block_def block_exn_def graph)
   apply (rule_tac i=0 and j=3 and P'="{initf sst}"
         and inp_eqs'="\<lambda>gst _. eqs gst sst \<and> sst \<in> I" in simpl_to_graph_step_general)
    apply (simp add: init[THEN eq_implD] numeral_3_eq_3 eq_OO)

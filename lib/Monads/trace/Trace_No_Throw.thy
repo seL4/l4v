@@ -31,7 +31,7 @@ lemma no_throw_def':
   by (clarsimp simp: no_throw_def validE_def2 split_def split: sum.splits)
 
 
-subsection \<open>no_throw rules\<close>
+subsection \<open>@{const no_throw} rules\<close>
 
 lemma no_throw_returnOk[simp]:
   "no_throw P (returnOk a)"
@@ -98,5 +98,18 @@ lemma condition_nothrow:
 lemma no_throw_Inr:
   "\<lbrakk> x \<in> mres (A s); no_throw P A; P s \<rbrakk> \<Longrightarrow> \<exists>y. fst x = Inr y"
   by (fastforce simp: no_throw_def' split: sum.splits)
+
+lemma mres_parallel:
+  "x \<in> mres (parallel f g s) \<Longrightarrow> x \<in> mres (f s) \<and> x \<in> mres (g s)"
+  unfolding parallel_def2 mres_def
+  apply (clarsimp simp: image_def)
+  apply (auto intro!: bexI)
+  done
+
+lemma no_throw_parallel:
+  "\<lbrakk> no_throw P f \<or> no_throw Q g \<rbrakk> \<Longrightarrow> no_throw (P and Q) (parallel f g)"
+  unfolding no_throw_def'
+  apply (auto dest!: mres_parallel)
+  done
 
 end

@@ -86,6 +86,7 @@ data VCPUReg =
     | VCPURegISR
     | VCPURegVBAR
     | VCPURegTPIDR_EL1
+    | VCPURegVMPIDR_EL2
     | VCPURegSP_EL1
     | VCPURegELR_EL1
     | VCPURegSPSR_EL1

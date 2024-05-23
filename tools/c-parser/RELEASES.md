@@ -156,3 +156,9 @@
       ##<decl_type>: <name>
 
   e.g. `##Function: ctzl`
+
+## 1.20
+
+- Builds with Isabelle2023
+- Rearranged library session structure and included more libraries for heap
+  reasoning in the release. See e.g. files TypHeapLib.thy and LemmaBucket_C.thy

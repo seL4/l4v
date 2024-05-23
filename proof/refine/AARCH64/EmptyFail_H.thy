@@ -295,12 +295,19 @@ crunch (empty_fail) empty_fail: decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeV
                                 decodeVCPUAckVPPI
   (simp: Let_def)
 
+crunch (empty_fail) empty_fail[wp, simp]: handleFault
+
+lemma handleHypervisorFault_empty_fail[intro!, wp, simp]:
+  "empty_fail (handleHypervisorFault t f)"
+  by (cases f, simp add: handleHypervisorFault_def isFpuEnable_def split del: if_split)
+     wpsimp
+
 crunch (empty_fail) empty_fail: callKernel
   (wp: empty_fail_catch)
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
-              (\<lambda>s. scheduler_action s = resume_cur_thread) and
+              schact_is_rct and
               (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and

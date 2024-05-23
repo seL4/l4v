@@ -4190,7 +4190,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
-    (invs and valid_machine_time and (\<lambda>s. scheduler_action s = resume_cur_thread)
+    (invs and valid_machine_time and schact_is_rct
      and valid_untyped_inv_wcap ui (Some (cap.UntypedCap dev ptr sz idx)) and ct_active and einvs
      and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'. ui = Invocations_A.Retype slot True
              ptr_base ptr' ty us slots dev))
@@ -4638,10 +4638,13 @@ lemma (in range_cover) funky_aligned:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+defs archOverlap_def:
+  "archOverlap \<equiv> \<lambda>_ _. False"
+
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
-     (einvs and valid_machine_time and valid_untyped_inv ui and ct_active and (\<lambda>s. schact_is_rct s))
+     (einvs and valid_machine_time and valid_untyped_inv ui and ct_active and schact_is_rct)
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (cases ui)
@@ -4871,7 +4874,8 @@ lemma inv_untyped_corres':
     show " corres (dc \<oplus> (=)) ((=) s) ((=) s')
            (invoke_untyped ?ui)
            (invokeUntyped ?ui')"
-      apply (clarsimp simp:invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc)
+      apply (clarsimp simp: invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc
+                            archOverlap_def)
       apply (insert cover)
       apply (rule corres_guard_imp)
         apply (rule corres_split_norE)

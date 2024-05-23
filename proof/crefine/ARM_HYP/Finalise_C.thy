@@ -1667,8 +1667,6 @@ lemma irq_opt_relation_Some_ucast:
   apply (simp only: unat_arith_simps)
   by (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
 
-lemmas upcast_ucast_id = More_Word.ucast_up_inj
-
 lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
     \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
@@ -1794,12 +1792,6 @@ lemma archThreadSet_tcbVCPU_Basic_ccorres:
    apply (safe ; case_tac "xa = tcb_ptr_to_ctcb_ptr tptr" ; clarsimp simp: option_map2_def map_option_case)
     apply (clarsimp simp: cvariable_relation_upd_const)
   done
-
-(* MOVE *)
-lemma update_vcpu_map_to_vcpu:
-  "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOArch (KOVCPU vcpu)))
-             = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
-  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma setObject_vcpuTCB_updated_Basic_ccorres:
   "ccorres dc xfdc (ko_at' (vcpuTCBPtr_update t vcpu) vcpuptr) UNIV hs

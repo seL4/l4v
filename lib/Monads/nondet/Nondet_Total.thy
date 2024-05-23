@@ -11,7 +11,7 @@ theory Nondet_Total
   imports Nondet_No_Fail
 begin
 
-section \<open>Total correctness for Nondet_Monad and Nondet_Monad with exceptions\<close>
+section \<open>Total correctness for @{text Nondet_Monad} and @{text Nondet_Monad} with exceptions\<close>
 
 subsection Definitions
 
@@ -202,7 +202,7 @@ lemma validNF_gets[wp]:
 lemma validNF_condition[wp]:
   "\<lbrakk> \<lbrace> Q \<rbrace> A \<lbrace>P\<rbrace>!; \<lbrace> R \<rbrace> B \<lbrace>P\<rbrace>!\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>!"
   by (erule validNFE)+
-     (rule validNF; wpsimp wp: no_fail_condition)
+     (rule validNF; wpsimp)
 
 lemma validNF_assert[wp]:
   "\<lbrace> (\<lambda>s. P) and (R ()) \<rbrace> assert P \<lbrace> R \<rbrace>!"
@@ -344,7 +344,7 @@ lemma validE_NF_handleE[wp]:
 lemma validE_NF_condition[wp]:
   "\<lbrakk> \<lbrace> Q \<rbrace> A \<lbrace>P\<rbrace>,\<lbrace> E \<rbrace>!; \<lbrace> R \<rbrace> B \<lbrace>P\<rbrace>,\<lbrace> E \<rbrace>! \<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>,\<lbrace> E \<rbrace>!"
-  by (erule validE_NFE)+ (wpsimp wp: no_fail_condition validE_NF)
+  by (erule validE_NFE)+ (wpsimp wp: validE_NF)
 
 lemma hoare_assume_preNF:
   "(\<And>s. P s \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!"

@@ -30,7 +30,7 @@ where
      pte <- pteAtIndex level ptPtr vPtr;
      if isPageTablePTE pte
      then do
-       checkPTAt (getPPtrFromPTE pte);
+       checkPTAt NormalPT_T (getPPtrFromPTE pte);
        lookupPTSlotFromLevel (level - 1) (getPPtrFromPTE pte) vPtr
      od
      else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
@@ -50,12 +50,15 @@ where
     if ptr = targetPtPtr
         then returnOk slot
         else doE
-          liftE $ checkPTAt ptr;
+          liftE $ checkPTAt NormalPT_T ptr;
           lookupPTFromLevel (level - 1) ptr vPtr targetPtPtr
         odE
   odE"
 
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv=ArchRetypeDecls_H NOT lookupPTSlotFromLevel lookupPTFromLevel pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft checkPTAt
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv=ArchRetypeDecls_H NOT lookupPTSlotFromLevel lookupPTFromLevel pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft checkPTAt checkValidMappingSize
+
+defs checkValidMappingSize_def:
+  "checkValidMappingSize sz \<equiv> stateAssert (\<lambda>s. 2 ^ sz <= gsMaxObjectSize s) []"
 
 end
 

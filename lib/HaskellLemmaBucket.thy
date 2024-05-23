@@ -159,6 +159,10 @@ lemma stateAssertE_inv:
   "\<lbrace>P\<rbrace> stateAssertE Q l \<lbrace>\<lambda>_. P\<rbrace>"
   by (clarsimp simp: valid_def stateAssertE_def stateAssert_def in_monad)
 
+lemma haskell_assert_inv:
+  "\<lbrace>P\<rbrace> haskell_assert Q l \<lbrace>\<lambda>_. P\<rbrace>"
+  by wpsimp
+
 lemma init_append_last:
   "xs \<noteq> [] \<Longrightarrow> init xs @ [last xs] = xs"
   apply (induct xs rule: rev_induct)

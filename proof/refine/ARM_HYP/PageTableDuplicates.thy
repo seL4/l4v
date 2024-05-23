@@ -2102,7 +2102,7 @@ crunch valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   receiveIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(wp: getNotification_wp gbn_wp')
+  (wp: getNotification_wp gbn_wp' crunch_wps)
 
 crunch valid_duplicates'[wp]:
   deleteCallerCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -2110,6 +2110,7 @@ crunch valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   handleReply "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (wp: crunch_wps)
 
 crunch valid_duplicates'[wp]:
   handleYield "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -2177,13 +2178,17 @@ lemma non_kernel_IRQs_strg:
     (\<exists>y. irq = Some y) \<longrightarrow> invs' s \<and> (the irq \<in> non_kernel_IRQs \<longrightarrow> P) \<and> Q"
   by auto
 
+(* nothing extra needed on this architecture *)
+defs fastpathKernelAssertions_def:
+  "fastpathKernelAssertions \<equiv> \<lambda>s. True"
+
 lemma callKernel_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
     (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: callKernel_def)
+  apply (simp add: callKernel_def fastpathKernelAssertions_def)
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
              hoare_drop_imp[where R="\<lambda>_. kernelExitAssertions"]

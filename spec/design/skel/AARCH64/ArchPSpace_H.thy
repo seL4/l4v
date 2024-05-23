@@ -13,7 +13,8 @@ begin
 
 context Arch begin global_naming AARCH64_H
 
-#INCLUDE_HASKELL SEL4/Model/PSpace/AARCH64.hs
+#INCLUDE_HASKELL SEL4/Model/PSpace/AARCH64.hs decls_only ONLY pTablePartialOverlap
+#INCLUDE_HASKELL SEL4/Model/PSpace/AARCH64.hs NOT pTablePartialOverlap
 
 end (* context Arch *)
 

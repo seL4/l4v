@@ -73,11 +73,11 @@ thm subset_UNIV subset_UNIV[mk_strg]
 
 text \<open>Rules which would introduce schematics are
 adjusted by @{attribute mk_strg} to introduce quantifiers
-instead. The argument I to mk_strg prevents this step.
+instead. The argument I to @{attribute mk_strg} prevents this step.
 \<close>
 thm subsetD subsetD[mk_strg I] subsetD[mk_strg]
 
-text \<open>The first argument to mk_strg controls the way
+text \<open>The first argument to @{attribute mk_strg} controls the way
 the rule will be applied.
   I: use rule in introduction style, matching its conclusion.
   D: use rule in destruction (forward) style, matching its first premise.
@@ -101,10 +101,10 @@ lemma
   (* oops, overdid it *)
   oops
 
-text \<open>Subsequent arguments to mk_strg capture premises for
+text \<open>Subsequent arguments to @{attribute mk_strg} capture premises for
 special treatment. The 'A' argument (synonym 'E') specifies that
 a premise should be solved by assumption. Our fancy proof above
-used a strengthen rule bexI[mk_strg I _ A], which tells strengthen
+used a strengthen rule @{text "bexI[mk_strg I _ A]"}, which tells strengthen
 to do approximately the same thing as
 \<open>apply (rule bexI) prefer 2 apply assumption\<close>
 

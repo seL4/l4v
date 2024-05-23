@@ -1330,6 +1330,7 @@ crunches updateMDB, updateNewFreeIndex
   and ksWorkUnitsCompleted[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
+
 crunches insertNewCap
   for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
@@ -1337,8 +1338,11 @@ crunches insertNewCap
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and pspace_canonical'[wp]: pspace_canonical'
   (wp: crunch_wps)
-crunch nosch[wp]: insertNewCaps "\<lambda>s. P (ksSchedulerAction s)"
+
+crunches insertNewCaps
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps)
 
 
@@ -2897,7 +2901,7 @@ lemma inv_untyped_corres_helper1:
 
 lemma createNewCaps_valid_pspace_extras:
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2906,7 +2910,16 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
+          \<and> pspace_no_overlap' ptr sz s
+          \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
+          \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
+          \<and> ksCurDomain s \<le> maxDomain
+   )\<rbrace>
+     createNewCaps ty ptr n us d
+   \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
+  "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2915,7 +2928,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2924,7 +2937,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2932,18 +2945,21 @@ lemma createNewCaps_valid_pspace_extras:
    )\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
+      apply (rule hoare_grab_asm)+
+      apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
+           apply (simp add:valid_pspace'_def)+
      apply (rule hoare_grab_asm)+
      apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-         apply (simp add:valid_pspace'_def)+
+          apply (simp add:valid_pspace'_def)+
     apply (rule hoare_grab_asm)+
     apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-        apply (simp add:valid_pspace'_def)+
+         apply (simp add:valid_pspace'_def)+
    apply (rule hoare_grab_asm)+
    apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-       apply (simp add:valid_pspace'_def)+
+        apply (simp add:valid_pspace'_def)+
   apply (rule hoare_grab_asm)+
   apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-      apply (simp add:valid_pspace'_def)+
+       apply (simp add:valid_pspace'_def)+
   done
 
 declare map_fst_zip_prefix[simp]
@@ -3170,18 +3186,13 @@ lemma createNewCaps_valid_cap':
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
         (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and>
-        ptr \<noteq> 0 \<and> sz \<le> maxUntypedSizeBits\<rbrace>
+        ptr \<noteq> 0 \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)\<rbrace>
     createNewCaps ty ptr n us d
   \<lbrace>\<lambda>r s. \<forall>cap\<in>set r. s \<turnstile>' cap\<rbrace>"
   apply (rule hoare_assume_pre)
   apply clarsimp
-  apply (erule createNewCaps_valid_cap)
-  apply simp+
+  apply (erule createNewCaps_valid_cap; simp)
   done
-
-lemma dmo_ctes_of[wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  by (simp add: doMachineOp_def split_def | wp)+
 
 lemma createNewCaps_ranges:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0<n \<rbrace>
@@ -3924,6 +3935,10 @@ lemma vc'[simp] : "s \<turnstile>' capability.UntypedCap dev (ptr && ~~ mask sz)
   apply (simp add: invs_valid_objs')
   done
 
+lemma ptr_cn[simp]:
+  "canonical_address (ptr && ~~ mask sz)"
+  using vc' unfolding valid_cap'_def by simp
+
 lemma sz_limit[simp]:
   "sz \<le> maxUntypedSizeBits"
   using vc' unfolding valid_cap'_def by clarsimp
@@ -4057,6 +4072,12 @@ defs cNodeOverlap_def:
       \<or> cte_level_bits + n \<ge> word_bits
       \<or> ({p .. p + 2 ^ (cte_level_bits + n) - 1} \<inter> {p. inRange p} \<noteq> {}))"
 
+defs archOverlap_def:
+  "archOverlap \<equiv> \<lambda>s inRange.
+    \<exists>p pt_t. gsPTTypes (ksArchState s) p = Some pt_t \<and>
+             (\<not>is_aligned p (pt_bits pt_t) \<or>
+              ({p .. p + 2 ^ pt_bits pt_t - 1} \<inter> {p. inRange p} \<noteq> {}))"
+
 lemma cNodeNoOverlap:
   notes Int_atLeastAtMost[simp del]
   shows
@@ -4076,6 +4097,36 @@ lemma cNodeNoOverlap:
                           obj_at_def is_cap_table is_cap_simps)
     apply (frule(1) pspace_alignedD)
     apply simp
+    apply (elim allE, drule(1) mp, simp add: obj_range_def valid_obj_def cap_aligned_def)
+    apply (erule is_aligned_get_word_bits[where 'a=machine_word_len, folded word_bits_def])
+     apply (clarsimp simp: is_aligned_no_overflow simp del: )
+     apply blast
+    apply (simp add: is_aligned_no_overflow power_overflow word_bits_def
+                     Int_atLeastAtMost)
+   apply wp+
+  done
+
+lemma archNoOverlap:
+  notes Int_atLeastAtMost[simp del]
+  shows
+  "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
+                                          \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
+                         \<and> valid_objs s \<and> pspace_aligned s)
+             \<top>
+             (return x) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
+  apply (simp add: stateAssert_def assert_def)
+  apply (rule corres_symb_exec_r[OF _ get_sp])
+    apply (rule corres_req[rotated], subst if_P, assumption)
+     apply simp
+    apply (clarsimp simp: archOverlap_def cte_wp_at_caps_of_state)
+    apply (frule state_rel_ghost)
+    apply (drule (1) ghost_PTTypes)
+    apply (frule(1) caps_of_state_valid_cap)
+    apply (frule usable_range_subseteq[rotated], simp add: valid_cap_def)
+    apply (clarsimp simp: valid_cap_def valid_untyped_def
+                          obj_at_def is_cap_table is_cap_simps)
+    apply (frule(1) pspace_alignedD)
+    apply (simp add: pt_bits_def)
     apply (elim allE, drule(1) mp, simp add: obj_range_def valid_obj_def cap_aligned_def)
     apply (erule is_aligned_get_word_bits[where 'a=machine_word_len, folded word_bits_def])
      apply (clarsimp simp: is_aligned_no_overflow simp del: )
@@ -4175,7 +4226,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
-    (invs and valid_untyped_inv_wcap ui
+    (invs and schact_is_rct and valid_untyped_inv_wcap ui
       (Some (cap.UntypedCap dev ptr sz idx))
          and ct_active and einvs
          and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'. ui = Invocations_A.Retype slot True
@@ -4326,7 +4377,8 @@ lemma resetUntypedCap_corres:
   apply (frule if_unsafe_then_capD'[OF ctes_of_cte_wpD], clarsimp+)
   apply (frule(1) descendants_range_ex_cte'[OF empty_descendants_range_in' _ order_refl],
         (simp add: isCap_simps add_mask_fold)+)
-  by (intro conjI impI; clarsimp)
+  apply (auto simp: descendants_range_in'_def valid_untyped'_def)
+  done
 
 end
 
@@ -4596,17 +4648,14 @@ lemma (in range_cover) funky_aligned:
   done
 
 defs canonicalAddressAssert_def:
-  "canonicalAddressAssert p \<equiv> True" (* FIXME AARCH64: (for CRefine)
-  might need this to be either canonical_user or something in the kernel region --
-  both are liftable from AInvs via valid_vspace_uses, but
-  valid_vspace_uses will first have to be added to the state relation *)
+  "canonicalAddressAssert \<equiv> AARCH64.canonical_address"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
-     (einvs and valid_untyped_inv ui and ct_active)
+     (einvs and valid_untyped_inv ui and ct_active and schact_is_rct)
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (cases ui)
@@ -4625,6 +4674,7 @@ lemma inv_untyped_corres':
                 (cte_map cref) reset ptr_base ptr ao' us (map cte_map slots) dev"
 
     assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
+                 "schact_is_rct s"
     and   invs': "invs' s'" "ct_active' s'"
     and      sr: "(s, s') \<in> state_relation"
     and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
@@ -4799,6 +4849,9 @@ lemma inv_untyped_corres':
       using range_cover.sz[OF cover]
       by (simp add: unat_less_helper and_mask_less_size word_size)
 
+    have ptr_cn[simp]: "canonical_address (ptr && ~~ mask sz)"
+      using vc' unfolding valid_cap'_def by simp
+
     have overlap_ranges1:
       "{x. ptr \<le> x \<and> x \<le> ptr + 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us
             * of_nat (length slots) - 1} \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}"
@@ -4833,6 +4886,11 @@ lemma inv_untyped_corres':
     have sz_limit[simp]: "sz \<le> maxUntypedSizeBits"
       using vc' unfolding valid_cap'_def by clarsimp
 
+    from ptr_cn sz_limit
+    have canonical_ptr[simp]: "canonical_address ptr"
+      unfolding canonical_address_range maxUntypedSizeBits_def canonical_bit_def
+      by word_bitwise (simp add: word_size)
+
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap
         dev (ptr && ~~ mask sz) sz (if reset then 0 else idx)"
       ,unfolded free_index_update_def free_index_of_def,simplified]
@@ -4856,6 +4914,8 @@ lemma inv_untyped_corres':
                 sz (if reset then 0 else idx)" in corres_gen_asm)
           apply (rule corres_add_noop_lhs)
           apply (rule corres_split_nor[OF cNodeNoOverlap _ return_wp stateAssert_wp])
+          apply (rule corres_add_noop_lhs)
+          apply (rule corres_split_nor[OF archNoOverlap _ return_wp stateAssert_wp])
           apply (clarsimp simp: canonicalAddressAssert_def)
           apply (rule corres_split[OF updateFreeIndex_corres])
               apply (simp add:isCap_simps)+
@@ -5428,6 +5488,7 @@ lemma invokeUntyped_invs'':
     note slots_invD = invokeUntyped_proofs.slots_invD[OF pf]
     note nidx[simp] = add_minus_neg_mask[where ptr = ptr]
     note idx_compare' = invokeUntyped_proofs.idx_compare'[OF pf]
+    note ptr_cn[simp] = invokeUntyped_proofs.ptr_cn[OF pf]
     note sz_limit[simp] = invokeUntyped_proofs.sz_limit[OF pf]
 
     have valid_global_refs': "valid_global_refs' s"

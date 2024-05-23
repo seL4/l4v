@@ -519,6 +519,8 @@ lemma fastpath_callKernel_SysCall_corres:
   supply empty_fail_getEndpoint[wp] (* FIXME *)
   apply (rule monadic_rewrite_introduce_alternative[OF callKernel_def[simplified atomize_eq]])
   apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_bind_alternative_l, wpsimp)
+   apply (rule monadic_rewrite_stateAssert)
    apply (simp add: handleEvent_def handleCall_def
                     handleInvocation_def liftE_bindE_handle
                     bind_assoc getMessageInfo_def)
@@ -1367,6 +1369,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
   supply user_getreg_inv[wp] (* FIXME *)
   apply (rule monadic_rewrite_introduce_alternative[OF callKernel_def[simplified atomize_eq]])
   apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_bind_alternative_l, wpsimp)
+   apply (rule monadic_rewrite_stateAssert)
    apply (simp add: handleEvent_def handleReply_def
                     handleRecv_def liftE_bindE_handle liftE_handle
                     bind_assoc getMessageInfo_def liftE_bind)

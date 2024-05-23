@@ -26,7 +26,7 @@ text \<open>
        schematic does not have as parameters.
 
   In the "constructor expression" case, we let users supply additional
-  constructor handlers via the `datatype_schematic` attribute. The method uses
+  constructor handlers via the @{text "datatype_schematic"} attribute. The method uses
   rules of the following form:
 
     @{term "\<And>x1 x2 x3. getter (constructor x1 x2 x3) = x2"}
@@ -69,18 +69,18 @@ structure Datatype_Schematic_Data = Generic_Data
 (
   \<comment> \<open>
     Keys are names of datatype constructors (like @{const Cons}), values are
-    `(index, function_name, thm)`.
+    @{text "(index, function_name, thm)"}.
 
-    - `function_name` is the name of an "accessor" function that accesses part
+    - @{text function_name} is the name of an "accessor" function that accesses part
       of the constructor specified by the key (so the accessor @{const hd} is
       related to the constructor/key @{const Cons}).
 
-    - `thm` is a theorem showing that the function accesses one of the
+    - @{text thm} is a theorem showing that the function accesses one of the
       arguments to the constructor (like @{thm list.sel(1)}).
 
-    - `idx` is the index of the constructor argument that the accessor
-      accesses.  (eg. since `hd` accesses the first argument, `idx = 0`; since
-      `tl` accesses the second argument, `idx = 1`).
+    - @{text idx} is the index of the constructor argument that the accessor
+      accesses.  (eg. since @{const hd} accesses the first argument, @{text "idx = 0"}; since
+      @{const tl} accesses the second argument, @{text "idx = 1"}).
   \<close>
   type T = ((int * string * thm) list) Symtab.table;
   val empty = Symtab.empty;
@@ -287,7 +287,7 @@ lemma selectively_exposing_datatype_arugments:
   notes get_basic_0.simps[datatype_schematic]
   shows "\<exists>x. \<forall>a b. x (basic a b) = a"
   apply (rule exI, (rule allI)+)
-  apply datatype_schem \<comment> \<open>Only exposes `a` to the schematic.\<close>
+  apply datatype_schem \<comment> \<open>Only exposes @{text a} to the schematic.\<close>
   by (rule refl)
 
 lemma method_handles_primrecs_with_two_constructors:

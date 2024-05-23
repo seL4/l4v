@@ -2186,9 +2186,8 @@ crunches rescheduleRequired, tcbSchedDequeue
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]: "pspace_distinct'"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-
-crunches rescheduleRequired, tcbSchedDequeue
-  for no_0_obj'[wp]: "no_0_obj'"
+  and no_0_obj'[wp]: "no_0_obj'"
+  and pspace_canonical'[wp]: pspace_canonical'
 
 lemma sts'_valid_pspace'_inv[wp]:
   "\<lbrace> valid_pspace' and tcb_at' t and valid_tcb_state' st \<rbrace>

@@ -682,8 +682,10 @@ lemmas transferCapsToSlots_pres2
     = transferCapsToSlots_presM[where vo=False and emx=True
                                   and drv=False and pad=False, simplified]
 
-crunch pspace_aligned'[wp]: transferCapsToSlots pspace_aligned'
-crunch pspace_distinct'[wp]: transferCapsToSlots pspace_distinct'
+crunches transferCapsToSlots
+  for pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
+  and pspace_canonical'[wp]: pspace_canonical'
 
 lemma transferCapsToSlots_typ_at'[wp]:
    "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>
@@ -1018,7 +1020,7 @@ lemma transferCaps_corres:
     and (\<lambda>s. valid_message_info info)
     and transfer_caps_srcs caps)
    (tcb_at' receiver and valid_objs' and
-    pspace_aligned' and pspace_distinct'
+    pspace_aligned' and pspace_distinct' and pspace_canonical'
     and no_0_obj' and valid_mdb'
     and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
     and case_option \<top> valid_ipc_buffer_ptr' recv_buf
@@ -1193,22 +1195,10 @@ lemma copy_mrs_invs'[wp]:
     apply (wp | simp | blast)+
   done
 
-crunch aligned'[wp]: transferCaps pspace_aligned'
-  (wp: crunch_wps simp: zipWithM_x_mapM)
-crunch distinct'[wp]: transferCaps pspace_distinct'
-  (wp: crunch_wps simp: zipWithM_x_mapM)
-
-crunch aligned'[wp]: setMRs pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps)
-crunch distinct'[wp]: setMRs pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps)
-crunch aligned'[wp]: copyMRs pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps)
-crunch distinct'[wp]: copyMRs pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps)
-crunch aligned'[wp]: setMessageInfo pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps)
-crunch distinct'[wp]: setMessageInfo pspace_distinct'
+crunches transferCaps, setMRs, copyMRs, setMessageInfo
+  for aligned'[wp]: pspace_aligned'
+  and distinct'[wp]: pspace_distinct'
+  and pspace_canonical'[wp]: pspace_canonical'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_mrs_valid_objs' [wp]:
@@ -1402,7 +1392,7 @@ lemma doNormalTransfer_corres:
    and case_option \<top> in_user_frame send_buf
    and case_option \<top> in_user_frame recv_buf)
   (tcb_at' sender and tcb_at' receiver and valid_objs'
-   and pspace_aligned' and pspace_distinct' and cur_tcb'
+   and pspace_aligned' and pspace_distinct' and pspace_canonical' and cur_tcb'
    and valid_mdb' and no_0_obj'
    and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
    and case_option \<top> valid_ipc_buffer_ptr' send_buf
@@ -2243,6 +2233,7 @@ lemma sts_valid_pspace_hangers:
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. no_0_obj'\<rbrace>"
   by (safe intro!: hoare_strengthen_post [OF sts'_valid_pspace'_inv])
@@ -3975,7 +3966,8 @@ lemma lookupCap_cap_to_refs[wp]:
 
 crunches setVMRoot
   for valid_objs'[wp]: valid_objs'
-  (wp: getASID_wp crunch_wps simp: getPoolPtr_def)
+  (wp: getASID_wp crunch_wps findVSpaceForASID_vs_at_wp
+   simp: getPoolPtr_def getThreadVSpaceRoot_def if_distribR)
 
 lemma arch_stt_objs' [wp]:
   "\<lbrace>valid_objs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"

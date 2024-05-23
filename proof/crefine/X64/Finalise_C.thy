@@ -1699,8 +1699,6 @@ lemma irq_opt_relation_Some_ucast:
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
 
-lemmas upcast_ucast_id = More_Word.ucast_up_inj
-
 lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 8 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 8 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
     \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"

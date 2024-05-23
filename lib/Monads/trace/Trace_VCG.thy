@@ -33,7 +33,7 @@ text \<open>
   computation is the empty set then the triple is trivially valid. This means
   @{term "assert P"} does not require us to prove that @{term P} holds, but
   rather allows us to assume @{term P}! Proving non-failure is done via a
-  separate predicate and calculus (see Trace_No_Fail).\<close>
+  separate predicate and calculus (see @{text Trace_No_Fail}).\<close>
 definition valid ::
   "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
@@ -519,6 +519,24 @@ lemmas hoare_vcg_precond_imp = hoare_weaken_pre (* FIXME lib: eliminate *)
 
 lemmas hoare_seq_ext = seq_ext[rotated]
 lemmas hoare_vcg_seqE = seqE[rotated]
+
+lemmas hoare_vcg_seqE_R = validE_validE_R[OF hoare_vcg_seqE [OF validE_R_validE validE_R_validE]]
+lemmas hoare_vcg_seqE_E = validE_validE_E[OF hoare_vcg_seqE [OF validE_E_validE]]
+
+lemma hoare_seq_extE_R:
+  "\<lbrakk>\<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>Q\<rbrace>,-; \<lbrace>P\<rbrace> f \<lbrace>B\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f >>= g \<lbrace>Q\<rbrace>,-"
+  apply (clarsimp simp: validE_R_def validE_def)
+  by (wp | assumption)+
+
+lemma hoare_seq_extE_E:
+  "\<lbrakk>\<And>x. \<lbrace>B x\<rbrace> g x -,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>B\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f >>= g -,\<lbrace>E\<rbrace>"
+  apply (clarsimp simp: validE_E_def validE_def)
+  by (wp | assumption)+
+
+lemma hoare_seq_extE:
+  "\<lbrakk>\<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>B\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f >>= g \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  apply (clarsimp simp: validE_def)
+  by (wp | assumption)+
 
 lemma hoare_seq_ext_nobind:
   "\<lbrakk> \<lbrace>B\<rbrace> g \<lbrace>C\<rbrace>; \<lbrace>A\<rbrace> f \<lbrace>\<lambda>_. B\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> do f; g od \<lbrace>C\<rbrace>"
@@ -1016,7 +1034,7 @@ lemmas liftME_E_E_wp[wp_split] = validE_validE_E [OF liftME_wp, simplified, OF v
 lemma assert_opt_wp:
   "\<lbrace>\<lambda>s. x \<noteq> None \<longrightarrow> Q (the x) s\<rbrace> assert_opt x \<lbrace>Q\<rbrace>"
   unfolding assert_opt_def
-  by (case_tac x; wpsimp wp: fail_wp return_wp)
+  by (cases x; wpsimp wp: fail_wp return_wp)
 
 lemma gets_the_wp:
   "\<lbrace>\<lambda>s. (f s \<noteq> None) \<longrightarrow> Q (the (f s)) s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
@@ -1102,7 +1120,7 @@ lemmas all_classic_wp_combs =
   hoare_classic_wp_combs
 
 lemmas hoare_wp_splits[wp_split] =
-  hoare_seq_ext hoare_vcg_seqE handleE'_wp handleE_wp
+  handleE'_wp handleE_wp
   validE_validE_R [OF hoare_vcg_seqE [OF validE_R_validE]]
   validE_validE_R [OF handleE'_wp [OF validE_R_validE]]
   validE_validE_R [OF handleE_wp [OF validE_R_validE]]
@@ -1114,9 +1132,20 @@ lemmas hoare_wp_splits[wp_split] =
 
 lemmas [wp_comb] = hoare_wp_state_combsE hoare_wp_combsE  hoare_wp_combs
 
+(* Add these rules to wp first to control when they are applied. We want them used last, only when
+   no other more specific wp rules apply.
+   hoare_seq_ext, hoare_vcg_seqE and their variants are wp rules instead of wp_split rules because
+   they should be used before other wp_split rules, and in combination with wp_comb rules when
+   necessary.
+   hoare_vcg_prop is unsafe in certain circumstances but still useful to have applied automatically,
+   so we make it the very last rule to be tried. *)
+lemmas [wp] =
+  hoare_vcg_prop hoare_seq_ext
+  hoare_vcg_seqE_R hoare_vcg_seqE_E hoare_vcg_seqE
+  hoare_seq_extE_R hoare_seq_extE_E hoare_seq_extE
+
 (* rules towards the bottom will be matched first *)
-lemmas [wp] = hoare_vcg_prop
-              wp_post_taut
+lemmas [wp] = wp_post_taut
               hoare_fun_app_wp
               returnOk_E
               liftE_validE_E

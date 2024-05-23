@@ -222,7 +222,7 @@ lemma L1corres_call:
         (L1_call scope_setup (measure_call dest_fn) scope_teardown f)
         (call scope_setup dest scope_teardown (\<lambda>_ t. Basic (f t)))"
   apply (clarsimp simp: L1corres_alt_def)
-  apply (unfold call_def block_def L1_call_def)
+  apply (unfold call_def block_def block_exn_def L1_call_def)
   apply (rule ccorresE_DynCom)
   apply clarsimp
   apply (rule ccorresE_get)
@@ -256,7 +256,7 @@ lemma L1corres_reccall:
         (L1_call scope_setup (dest_fn m) scope_teardown f)
         (call scope_setup dest scope_teardown (\<lambda>_ t. Basic (f t)))"
   apply (clarsimp simp: L1corres_alt_def)
-  apply (unfold call_def block_def L1_call_def)
+  apply (unfold call_def block_def block_exn_def L1_call_def)
   apply (rule ccorresE_DynCom)
   apply clarsimp
   apply (rule ccorresE_get)

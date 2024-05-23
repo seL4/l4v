@@ -2523,16 +2523,12 @@ lemma setCTE_state_hyp_refs_of'[wp]:
                  split: kernel_object.split_asm if_split_asm)
   done
 
-crunch state_hyp_refs_of'[wp]: cteInsert "\<lambda>s. P (state_hyp_refs_of' s)"
-  (wp: crunch_wps)
-
-crunch aligned'[wp]: cteInsert pspace_aligned'
-  (wp: crunch_wps)
-
-crunch distinct'[wp]: cteInsert pspace_distinct'
-  (wp: crunch_wps)
-
-crunch no_0_obj' [wp]: cteInsert no_0_obj'
+crunches cteInsert
+  for state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
+  and aligned'[wp]: pspace_aligned'
+  and distinct'[wp]: pspace_distinct'
+  and pspace_canonical'[wp]: pspace_canonical'
+  and no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps)
 
 lemma cteInsert_valid_pspace:
@@ -2997,6 +2993,7 @@ crunches setupReplyMaster
   and it[wp]: "\<lambda>s. P (ksIdleThread s)"
   and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
+  and pspace_canonical'[wp]: pspace_canonical'
   (wp: crunch_wps)
 
 lemmas setCTE_cteCap_wp_irq[wp] =
@@ -6200,9 +6197,11 @@ lemma updateFreeIndex_forward_valid_objs':
   apply (rule usableUntypedRange_mono1, simp_all)
   done
 
-crunch pspace_aligned'[wp]: updateFreeIndex "pspace_aligned'"
-crunch pspace_distinct'[wp]: updateFreeIndex "pspace_distinct'"
-crunch no_0_obj[wp]: updateFreeIndex "no_0_obj'"
+crunches updateFreeIndex
+  for pspace_aligned'[wp]: "pspace_aligned'"
+  and pspace_distinct'[wp]: "pspace_distinct'"
+  and no_0_obj[wp]: "no_0_obj'"
+  and pspace_canonical'[wp]: pspace_canonical'
 
 lemma updateFreeIndex_forward_valid_mdb':
   "\<lbrace>\<lambda>s. valid_mdb' s \<and> valid_objs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap

@@ -5,7 +5,7 @@
  *)
 
 theory ExtraCorres
-imports Corres_UL\<comment> \<open> Monads.OptionMonadWP\<close> DetWPLib
+imports Corres_UL DetWPLib
 begin
 
 (* FIXME: the S in this rule is mainly to make the induction work, we don't actually need it in

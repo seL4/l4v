@@ -52,13 +52,13 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SSH: ${{ secrets.AWS_SSH }}
     - name: Upload kernel builds
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: kernel-builds
+        name: kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}
         path: artifacts/kernel-builds
         if-no-files-found: ignore
     - name: Upload logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}
         path: logs.tar.xz
@@ -95,7 +95,7 @@ jobs:
         branch: [imx8-fpu-ver, exynos5-ver]
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: ${{ matrix.branch }}
         path: l4v-${{ matrix.branch }}

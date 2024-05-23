@@ -2,24 +2,10 @@
     Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2007 Norbert Schirmer
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
+Copyright (c) 2022 Apple Inc. All rights reserved.
 *)
 
-(* FIXME: Adapt guard generation to new syntax of op + etc. *)
+(* fixme: Adapt guard generation to new syntax of op + etc. *)
 
 signature HOARE_SYNTAX =
 sig
@@ -37,10 +23,12 @@ sig
   val basic_tr: Proof.context -> term list -> term
   val bexp_tr': string -> Proof.context -> term list -> term
   val bind_tr': Proof.context -> term list -> term
-  val call_ass_tr: bool -> bool -> Proof.context -> term list -> term
+  val call_ass_tr: bool -> bool -> term list -> Proof.context -> term list -> term
   val call_tr': Proof.context -> term list -> term
-  val call_tr: bool -> bool -> Proof.context -> term list -> term
+  val call_exn_tr': Proof.context -> term list -> term
+  val call_tr: bool -> bool -> term list -> Proof.context -> term list -> term
   val dyn_call_tr': Proof.context -> term list -> term
+  val dyn_call_exn_tr': Proof.context -> term list -> term
   val fcall_tr': Proof.context -> term list -> term
   val fcall_tr: Proof.context -> term list -> term
   val guarded_Assign_tr: Proof.context -> term list -> term
@@ -68,7 +56,7 @@ sig
   val raise_tr': Proof.context -> term list -> term
   val raise_tr: Proof.context -> term list -> term
   val switch_tr': Proof.context -> term list -> term
-  val update_comp: Proof.context -> string list -> bool -> bool -> xstring -> term -> term -> term
+  val update_comp: Proof.context -> Hoare.lense option -> string list -> bool -> bool -> xstring -> term -> term -> term
   val use_call_tr': bool Config.T
   val whileAnnoGFix_tr': Proof.context -> term list -> term
   val whileAnnoG_tr': Proof.context -> term list -> term
@@ -84,11 +72,11 @@ val globalsN = "globals";
 val localsN = "locals";
 val globals_updateN = suffix Record.updateN globalsN;
 val locals_updateN = suffix Record.updateN localsN;
-val upd_globalsN = "upd_globals";   (* FIXME authentic syntax !? *)
+val upd_globalsN = "upd_globals";   (* fixme authentic syntax !? *)
 val allocN = "alloc_'";
 val freeN = "free_'";
 
-val Null = Syntax.free "Simpl_Heap.Null";   (* FIXME ?? *)
+val Null = Syntax.free "Simpl_Heap.Null";   (* fixme ?? *)
 
 
 (** utils **)
@@ -119,13 +107,21 @@ fun is_prefix_or_suffix s t =
   can (unprefix s) t orelse can (unsuffix s) t;
 
 
+fun is_other ctxt = case Hoare.get_default_state_kind ctxt of Hoare.Other _ => true | _ => false
+
 (** hoare data **)
 
 fun is_global_comp ctxt name =
-  (case StateSpace.get_comp (Context.Proof ctxt) name of
-    SOME (_, ln) => is_prefix_or_suffix "globals" (Long_Name.base_name ln)
-  | NONE => false);
-
+  let
+    val res = case Hoare.get_default_state_space ctxt of
+                SOME {is_defined, ...} => not (is_defined ctxt name)
+              | _ =>
+                (case StateSpace.get_comp' (Context.Proof ctxt) name of
+                  SOME (_, lns) => forall (fn ln => is_prefix_or_suffix "globals" (Long_Name.base_name ln)) lns
+                | NONE => false)
+  in
+    res
+  end
 
 (** parsing and printing **)
 
@@ -150,7 +146,7 @@ fun is_global ctxt name =
 
 exception UNDEFINED of string
 
-(* FIXME: if is_state_var etc. is reimplemented, rethink about when adding the deco to
+(* fixme: if is_state_var etc. is reimplemented, rethink about when adding the deco to
    the records *)
 
 fun first_successful_tr _ [] = raise TERM ("first_successful_tr: no success",[])
@@ -158,30 +154,48 @@ fun first_successful_tr _ [] = raise TERM ("first_successful_tr: no success",[])
   | first_successful_tr f (x::xs) = f x handle TERM _ => first_successful_tr f xs;
 
 fun statespace_lookup_tr ctxt ps s n =
-  let
-    val cn = map Hoare.clique_name (#active_procs (Hoare.get_data ctxt));
-    val procs = ps @ cn;
-    val names =
-      n :: map (fn p => (suffix (Hoare.par_deco p) (unsuffixI Hoare.deco n))) procs;
-  in first_successful_tr (StateSpace.gen_lookup_tr ctxt s) names
-  end;
+  case Hoare.get_default_state_space ctxt of
+    SOME {lookup_tr, ...} => lookup_tr ctxt n $ s
+  | _ =>
+      let
+        val cn = map Hoare.clique_name (#active_procs (Hoare.get_data ctxt));
+        val procs = ps @ cn;
+        val names =
+          (Hoare.name_tr ctxt true n) :: map (fn p => (suffix (Hoare.par_deco p) (unsuffixI Hoare.deco n))) procs;
+      in
+        first_successful_tr (StateSpace.gen_lookup_tr ctxt s) names
+      end
 
-fun statespace_update_tr ctxt ps id n v s =
-  let
-    val cn = map Hoare.clique_name (#active_procs (Hoare.get_data ctxt));
-    val procs = ps @ cn;
-    val names =
-      n :: map (fn p => (suffix (Hoare.par_deco p) (unsuffixI Hoare.deco n))) procs;
-  in first_successful_tr (fn n => StateSpace.gen_update_tr id ctxt n v s) names
-  end;
+fun K_rec_syntax v = Abs ("_", dummyT, incr_boundvars 1 v);
+
+fun statespace_update_tr ctxt NONE ps id n v =
+      (case Hoare.get_default_state_space ctxt of
+        SOME {update_tr, ...} => update_tr ctxt n $ K_rec_syntax v
+      | _ =>
+        let
+          fun gen_update_tr id ctxt n v =
+            StateSpace.gen'_update_tr true id ctxt n v (Bound 0) |> dest_comb |> fst
+
+          val cn = map Hoare.clique_name (#active_procs (Hoare.get_data ctxt));
+          val procs = ps @ cn;
+          val names =
+            (Hoare.name_tr ctxt true n) :: map (fn p => (suffix (Hoare.par_deco p) (unsuffixI Hoare.deco n))) procs;
+        in first_successful_tr (fn n => gen_update_tr id ctxt n v) names
+        end)
+  | statespace_update_tr ctxt (SOME {lookup, update}) ps id n v =
+      update $ K_rec_syntax v
+
 
 local
   fun is_record_sel ctxt nm =
     let
-      val consts = Proof_Context.consts_of ctxt;
-      val exists_const = can (Consts.the_const consts) o intern_const_syntax consts;
-      val exists_abbrev = can (Consts.the_abbreviation consts) o intern_const_syntax consts;
-    in (exists_const nm) orelse (exists_abbrev nm) end;
+      val SOME (Const (c, T)) = try (Syntax.read_term ctxt) nm
+      val recT = domain_type T
+      val (flds, _) = Record.get_recT_fields (Proof_Context.theory_of ctxt) recT
+    in member (op =) (map fst flds) c end
+    handle TYPE _ => false
+         | Bind  => false
+         | Match => false
 in
 
 fun lookup_comp ctxt ps name =
@@ -196,7 +210,7 @@ fun lookup_comp ctxt ps name =
     in (fn s => statespace_lookup_tr ctxt ps (sel $ s) name) end;
 
 (*
-FIXME:
+fixme:
 update of global and local components:
 One should generally provide functions:
 glob_upd:: ('g => 'g) => 's => 's
@@ -210,9 +224,9 @@ This would make the composition more straightforward...
 Basically one wants the map on a component rather then the update. Maps can
 be composed nicer...
 *)
-fun K_rec_syntax v = Abs ("_", dummyT, incr_boundvars 1 v);
 
-fun update_comp ctxt ps atomic id name value =
+
+fun update_comp ctxt lense_opt ps atomic id name value =
   if is_record_sel ctxt name
   then
     let
@@ -220,7 +234,7 @@ fun update_comp ctxt ps atomic id name value =
     in
       if atomic andalso is_global ctxt name
       then (fn s =>
-        Syntax.free globals_updateN $ (K_rec_syntax (upd $ (Syntax.free globalsN $ s))) $ s)
+        Syntax.free globals_updateN $ (*(K_rec_syntax*) upd  $ s)
       else (fn s => upd $ s)
     end
   else
@@ -231,8 +245,8 @@ fun update_comp ctxt ps atomic id name value =
     in
       fn s =>
         if atomic then
-          upd $ (K_rec_syntax (statespace_update_tr ctxt ps id name value (sel $ s))) $ s
-        else statespace_update_tr ctxt ps id name value s
+          upd $ statespace_update_tr ctxt lense_opt ps id name value $ s
+        else statespace_update_tr ctxt lense_opt ps id name value $ s
     end;
 
 end;
@@ -282,6 +296,17 @@ fun antiquoteOld_tr ctxt [s, n] =
   | Const (c, T) => lookup_comp ctxt [] (Hoare.varname c) s
   | _ => n $ s);
 
+fun first_match [] t = raise Match
+  | first_match (f::fs) t = f t handle Match => first_match fs t
+
+fun lookup_tr' ctxt t = t |> first_match [
+  fn t =>
+    case Hoare.get_default_state_space ctxt of
+     SOME {lookup_tr', ...} => lookup_tr' ctxt t
+   | NONE => raise Match,
+  fn t => Hoare.undeco ctxt t]
+
+
 fun antiquote_tr' ctxt name =
   let
     fun is_state i t =
@@ -291,7 +316,7 @@ fun antiquote_tr' ctxt name =
           i = j andalso member (op =) [globalsN, localsN] (Long_Name.base_name g)
       | _ => false);
     fun tr' i (t $ u) =
-       if is_state i u then Syntax.const name $ tr' i (Hoare.undeco ctxt t)
+       if is_state i u then Syntax.const name $ tr' i (lookup_tr' ctxt t)
        else tr' i t $ tr' i u
       | tr' i (Abs (x, T, t)) = Abs (x, T, tr' (i + 1) t)
       | tr' i a = if a = Bound i then raise Match else a;
@@ -323,23 +348,24 @@ fun antiquote_applied_only_to P =
   in test 0 end;
 
 
+
 fun antiquote_mult_tr' ctxt is_selector current old  =
   let
     fun tr' i (t $ u) =
           state_test u
             (fn Bound j =>
-                  if j = i then Syntax.const current $ tr' i (Hoare.undeco ctxt t)
+                  if j = i then Syntax.const current $ tr' i (lookup_tr' ctxt t)
                   else if is_selector t (* other quantified states *)
-                  then Syntax.const old $ Bound j $ tr' i (Hoare.undeco ctxt t)
+                  then Syntax.const old $ Bound j $ tr' i (lookup_tr' ctxt t)
                   else  tr' i t $ tr' i u
               | pre as ((Const (m,_) $ Free _)) (* pre state *) =>
                   if (m = @{syntax_const "_bound"} orelse m = @{syntax_const "_free"})
                     andalso is_selector t
-                  then Syntax.const old $ pre $ tr' i (Hoare.undeco ctxt t)
+                  then Syntax.const old $ pre $ tr' i (lookup_tr' ctxt t)
                   else tr' i t $ pre
               | pre as ((Const (m,_) $ Var _)) (* pre state *) =>
                   if m = @{syntax_const "_var"} andalso is_selector t
-                  then Syntax.const old $ pre $ tr' i (Hoare.undeco ctxt t)
+                  then Syntax.const old $ pre $ tr' i (lookup_tr' ctxt t)
                   else tr' i t $ pre
               | u => tr' i t $ tr' i u)
       | tr' i (Abs (x, T, t)) = Abs (x, T, tr' (i + 1) t)
@@ -360,14 +386,15 @@ fun app_quote_mult_tr' ctxt is_selector f (t :: ts) =
   | app_quote_mult_tr' _ _ _ _ = raise Match;
 
 
+
 fun atomic_var_tr ctxt ps name value =
-  update_comp ctxt ps true false name value;
+  update_comp ctxt NONE ps true false name value;
 
 
 fun heap_var_tr ctxt hp p value =
   let
     fun upd s =
-      update_comp ctxt [] true false hp
+      update_comp ctxt NONE [] true false hp
         (Syntax.const @{const_syntax fun_upd} $ lookup_comp ctxt [] hp s $ p $ value) s;
   in upd end;
 
@@ -543,14 +570,14 @@ fun new_tr ctxt (ts as [var,size,init]) =
 
         val g = Syntax.free globalsN $ Bound 0;
         val alloc = lookup_comp ctxt [] allocN (Bound 0);
-        val new = Syntax.free "new" $ (Syntax.const @{const_syntax set} $ alloc);  (* FIXME new !? *)
+        val new = Syntax.free "new" $ (Syntax.const @{const_syntax set} $ alloc);  (* fixme new !? *)
 
         fun mk_upd (var,v) =
           let
             val varn = Hoare.varname var;
             val var' = lookup_comp ctxt [] varn (Bound 0);
           in
-            update_comp ctxt [] false false varn
+            update_comp ctxt NONE [] false false varn
               (Syntax.const @{const_syntax fun_upd} $ var' $ new $ v)
           end;
 
@@ -559,10 +586,10 @@ fun new_tr ctxt (ts as [var,size,init]) =
         val freetest = Syntax.const @{const_syntax Orderings.less_eq} $ size $ free;
 
         val alloc_upd =
-          update_comp ctxt [] false false allocN
+          update_comp ctxt NONE [] false false allocN
             (Syntax.const @{const_syntax Cons} $ new $ alloc);
         val free_upd =
-          update_comp ctxt [] false false freeN
+          update_comp ctxt NONE [] false false freeN
             (Syntax.const @{const_syntax Groups.minus} $ free $ size);
 
         val g' =
@@ -592,14 +619,14 @@ fun nnew_tr ctxt (ts as [var,size,init]) =
 
         val g = Syntax.free globalsN $ Bound 0;
         val alloc = lookup_comp ctxt [] allocN (Bound 0);
-        val new = Syntax.free "new" $ (Syntax.const @{const_syntax set} $ alloc);  (* FIXME new !? *)
+        val new = Syntax.free "new" $ (Syntax.const @{const_syntax set} $ alloc);  (* fixme new !? *)
 
         fun mk_upd (var,v) =
           let
             val varn = Hoare.varname var;
             val var' = lookup_comp ctxt [] varn (Bound 0);
           in
-            update_comp ctxt [] false false varn
+            update_comp ctxt NONE [] false false varn
               (Syntax.const @{const_syntax fun_upd} $ var' $ new $ v)
           end;
 
@@ -608,10 +635,10 @@ fun nnew_tr ctxt (ts as [var,size,init]) =
         val freetest = Syntax.const @{const_syntax Orderings.less_eq} $ size $ free;
 
         val alloc_upd =
-          update_comp ctxt [] false false allocN
+          update_comp ctxt NONE [] false false allocN
             (Syntax.const @{const_syntax Cons} $ new $ alloc);
         val free_upd =
-          update_comp ctxt [] false false freeN
+          update_comp ctxt NONE [] false false freeN
             (Syntax.const @{const_syntax Groups.minus} $ free $ size);
 
         val g' =
@@ -633,7 +660,7 @@ fun loc_tr ctxt (ts as [init, bdy]) =
     fun dest_init (Const (@{syntax_const "_locinit"}, _) $ Const (var,_) $ v) = (var, v)
       | dest_init (Const (@{syntax_const "_locnoinit"}, _) $ Const (var, _)) =
            (var, Syntax.const antiquoteCur $ Syntax.free (Hoare.varname var))
-           (* FIXME could skip this dummy initialisation v := v s and
+           (* fixme: could skip this dummy initialisation v := v s and
               derive non init variables in the print translation from
               the return function instead the init function *)
       | dest_init _ = raise Match;
@@ -644,10 +671,10 @@ fun loc_tr ctxt (ts as [init, bdy]) =
       | dest_inits _ = raise Match;
 
     fun mk_init_upd (var, v) =
-      update_comp ctxt [] true false var (antiquoteCur_tr ctxt v);
+      update_comp ctxt NONE [] true false var (antiquoteCur_tr ctxt v);
 
     fun mk_ret_upd var =
-      update_comp ctxt [] true false var (lookup_comp ctxt [] var (Bound 1));
+      update_comp ctxt NONE [] true false var (lookup_comp ctxt [] var (Bound 1));
 
     val var_vals = map (apfst Hoare.varname) (dest_inits init);
     val ini = Abs ("s", dummyT, fold mk_init_upd var_vals (Bound 0));
@@ -672,7 +699,7 @@ local
 fun le l r =
   Syntax.const @{const_syntax Orderings.less} $ l $ r;
 
-fun in_range t = Syntax.free "in_range" $ t;   (* FIXME ?? *)
+fun in_range t = Syntax.free "in_range" $ t;   (* fixme ?? *)
 
 fun not_zero t =
   Syntax.const @{const_syntax Not} $
@@ -680,7 +707,7 @@ fun not_zero t =
 
 fun not_Null t =
   Syntax.const @{const_syntax Not} $
-    (Syntax.const @{const_syntax HOL.eq} $ t $ Syntax.free "Simpl_Heap.Null");   (* FIXME ?? *)
+    (Syntax.const @{const_syntax HOL.eq} $ t $ Syntax.free "Simpl_Heap.Null");   (* fixme ?? *)
 
 fun in_length i l =
   Syntax.const @{const_syntax Orderings.less} $ i $
@@ -725,7 +752,7 @@ fun guard ctxt Ts (add as (Const (@{const_name Groups.plus},_) $ l $ r)) =
   | guard ctxt Ts (Const (@{const_name HOL.disj},_) $ l $ r) =
       guard ctxt Ts l & mk_imp (HOLogic.Not $ l,guard ctxt Ts r)
   | guard ctxt Ts (dv as (Const (@{const_name Rings.divide},_) $ l $ r)) =
-      guard ctxt Ts l & guard ctxt Ts r & SOME (not_zero r) & SOME (in_range dv) (* FIXME: Make more concrete guard...*)
+      guard ctxt Ts l & guard ctxt Ts r & SOME (not_zero r) & SOME (in_range dv) (* fixme: Make more concrete guard...*)
   | guard ctxt Ts (Const (@{const_name Rings.modulo},_) $ l $ r) =
       guard ctxt Ts l & guard ctxt Ts r & SOME (not_zero r)
   | guard ctxt Ts (un as (Const (@{const_name Groups.uminus},_) $ n)) =
@@ -759,7 +786,7 @@ in
    in guard ctxt [T] t' end;
 
 end;
-(* FIXME: make guard function a parameter of all parse-translations that need it.*)
+(* fixme: make guard function a parameter of all parse-translations that need it.*)
 
 val _ = Theory.setup (Context.theory_map (Hoare.install_generate_guard mk_guard));
 
@@ -862,22 +889,22 @@ fun dest_actuals (Const (@{syntax_const "_actuals_empty"}, _)) = []
   | dest_actuals t = raise TERM ("dest_actuals", [t]);
 
 
-fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
+fun mk_call_tr ctxt grd Call formals pn pt actuals has_args result_exn cont =
   let
     val fcall = cont <> NONE;
     val state_kind =
       the_default (Hoare.get_default_state_kind ctxt)
         (Hoare.get_state_kind pn ctxt);
-    fun init_par_tr name arg =
-      update_comp ctxt [] false false name (antiquoteCur_tr ctxt arg);
+    fun init_par_tr name lense_opt arg =
+      update_comp ctxt lense_opt [] false false name (antiquoteCur_tr ctxt arg);
 
     fun result_par_tr name arg =
       let
         fun offset_old n = 2;
         fun offset n = if is_global ctxt n then 0 else 2;
+        val lookup = lookup_comp ctxt [] name (Bound 1)
       in
-        update_tr ctxt [pn] offset offset_old
-          (lookup_comp ctxt [] name (Bound 1)) arg
+        update_tr ctxt [pn] offset offset_old lookup arg
       end;
 
     val _ = if not (Config.get ctxt StateSpace.silent) andalso
@@ -895,8 +922,8 @@ fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
       [Syntax.const globals_updateN $ (K_rec_syntax (Const (globalsN, dummyT) $ Bound 0))];
     val ret = Abs ("s", dummyT, Abs ("t", dummyT, Library.foldr (op $) (globals, Bound 1)));
 
-    val val_formals = filter (fn (kind, _) => kind = Hoare.In) formals;
-    val res_formals = filter (fn (kind, _) => kind = Hoare.Out) formals;
+    val val_formals = filter (fn (kind, _, _) => kind = Hoare.In) formals;
+    val res_formals = filter (fn (kind, _, _) => kind = Hoare.Out) formals;
 
     val (val_actuals, res_actuals) = chop (length val_formals) actuals;
     val init_bdy =
@@ -904,12 +931,12 @@ fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
         val state =
           (case state_kind of
             Hoare.Record => Bound 0
-          | Hoare.Function => Syntax.const localsN $ Bound 0);
-        val upds = fold2 (fn (_, name) => init_par_tr name) val_formals val_actuals state;
+          | _ => Syntax.const localsN $ Bound 0);
+        val upds = fold2 (fn (_, name, lense_opt) => init_par_tr name lense_opt) val_formals val_actuals state;
       in
         (case state_kind of
           Hoare.Record => upds
-        | Hoare.Function => Syntax.const locals_updateN $ K_rec_syntax upds $ Bound 0)
+        | _ => Syntax.const locals_updateN $ K_rec_syntax upds $ Bound 0)
       end;
     val init = Abs ("s", dummyT, init_bdy);
 
@@ -919,18 +946,19 @@ fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
         NONE => (* Procedure call *)
             let
               val results =
-                map (fn ((_, name), arg) => result_par_tr name arg)
+                map (fn ((_, name, _), arg) => result_par_tr name arg)
                   (rev (res_formals ~~ res_actuals));
               val res =
                 Abs ("i", dummyT, Abs ("t", dummyT,
                     Syntax.const @{const_syntax Basic} $
                       Abs ("s", dummyT, fold_rev (fn f => fn s => f s) results (Bound 0))));
-            in if has_args then Call $init $ pt $ ret $ res else Call $ pt end
+              val args = [init, pt, ret] @ result_exn @ [res]
+            in if has_args then list_comb (Call, args) else Call $ pt end
         | SOME c => (* Function call *)
             let
               val res =
                 (case res_formals of
-                  [(_, n)] => Abs ("s", dummyT, lookup_comp ctxt [] n (Bound 0))
+                  [(_, n, _)] => Abs ("s", dummyT, lookup_comp ctxt [] n (Bound 0))
                 | _ =>
                     if Config.get ctxt StateSpace.silent
                     then Abs ("s", dummyT, lookup_comp ctxt [] "dummy" (Bound 0))
@@ -949,79 +977,80 @@ fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
   end;
 
 
-(* FIXME: What is prfx for, maybe unused *)
-fun dest_procname ctxt prfx false (Const (p, _)) =
-      (prfx ^ suffix Hoare.proc_deco p, HOLogic.mk_string p)
-  | dest_procname ctxt prfx false (t as Free (p, T)) =
-      (prfx ^ suffix Hoare.proc_deco p, Free (suffix Hoare.proc_deco p, T))
-  | dest_procname ctxt prfx false (Const (@{syntax_const "_free"},_) $ Free (p,T)) =
-      (prfx ^ suffix Hoare.proc_deco p, Free (suffix Hoare.proc_deco p, T))
-  | dest_procname ctxt prfx false (t as (Const (@{syntax_const "_antiquoteCur"},_) $ Const (p, _))) =
-      (prfx ^ Hoare.resuffix Hoare.deco Hoare.proc_deco p, t)
-  | dest_procname ctxt prfx false (t as (Const (@{syntax_const "_antiquoteCur"}, _) $ Free (p, _))) =
-      (prfx ^ Hoare.resuffix Hoare.deco Hoare.proc_deco p, t)
-  | dest_procname ctxt prfx false (t as Const (p, _) $ _) =
-      (prfx ^ Hoare.resuffix Hoare.deco Hoare.proc_deco p, t) (* antiquoteOld *)
-  | dest_procname ctxt prfx false (t as Free (p,_)$_)  =
-      (prfx ^ Hoare.resuffix Hoare.deco Hoare.proc_deco p, t) (* antiquoteOld *)
-  | dest_procname ctxt prfx false (t as Const (@{syntax_const "_antiquoteOld"}, _) $ _ $ Const (p, _)) =
-      (prfx ^ suffix Hoare.proc_deco p, t)
-  | dest_procname ctxt prfx false (t as Const (@{syntax_const "_antiquoteOld"}, _) $ _ $ Free (p,_)) =
-      (prfx ^ suffix Hoare.proc_deco p, t)
-  (* FIXME StateFun.lookup !? *)
-  | dest_procname ctxt prfx false (t as Const (@{const_name "StateFun.lookup"}, _) $ _ $ Free (p, _) $ _) =
-      (prfx ^ suffix Hoare.proc_deco (Hoare.remdeco' p), t) (* antiquoteOld *)
+fun dest_procname ctxt false (Const (p, _)) =
+      (suffix Hoare.proc_deco p, HOLogic.mk_string p)
+  | dest_procname ctxt false (t as Free (p, T)) =
+      (case Hoare.get_default_state_space ctxt of
+        SOME {read_function_name, ...} => (p, read_function_name ctxt p)
+      | _ => (suffix Hoare.proc_deco p, Free (suffix Hoare.proc_deco p, T)))
+  | dest_procname ctxt false (Const (@{syntax_const "_free"},_) $ Free (p,T)) =
+      (suffix Hoare.proc_deco p, Free (suffix Hoare.proc_deco p, T))
+  | dest_procname ctxt false (t as (Const (@{syntax_const "_antiquoteCur"},_) $ Const (p, _))) =
+      (Hoare.resuffix Hoare.deco Hoare.proc_deco p, t)
+  | dest_procname ctxt false (t as (Const (@{syntax_const "_antiquoteCur"}, _) $ Free (p, _))) =
+      (Hoare.resuffix Hoare.deco Hoare.proc_deco p, t)
+  | dest_procname ctxt false (t as Const (p, _) $ _) =
+      (Hoare.resuffix Hoare.deco Hoare.proc_deco p, t) (* antiquoteOld *)
+  | dest_procname ctxt false (t as Free (p,_)$_)  =
+      (Hoare.resuffix Hoare.deco Hoare.proc_deco p, t) (* antiquoteOld *)
+  | dest_procname ctxt false (t as Const (@{syntax_const "_antiquoteOld"}, _) $ _ $ Const (p, _)) =
+      (suffix Hoare.proc_deco p, t)
+  | dest_procname ctxt false (t as Const (@{syntax_const "_antiquoteOld"}, _) $ _ $ Free (p,_)) =
+      (suffix Hoare.proc_deco p, t)
+  | dest_procname ctxt false (t as Const (@{const_name "StateFun.lookup"}, _) $ _ $ Free (p, _) $ _) =
+      (suffix Hoare.proc_deco (Hoare.remdeco' ctxt p), t) (* antiquoteOld *)
 
-  | dest_procname ctxt prfx false t = (prfx, t)
-  | dest_procname ctxt prfx true t =
+  | dest_procname ctxt false t = ("", t)
+  | dest_procname ctxt true t =
       let fun quote t = Abs ("s", dummyT, antiquoteCur_tr ctxt t)
       in
         (case quote t of
           (t' as Abs (_, _, Free (p, _) $ Bound 0)) =>
-            (prfx ^ Hoare.resuffix Hoare.deco Hoare.proc_deco p, t')
-        (* FIXME StateFun.lookup !? *)
+            (Hoare.resuffix Hoare.deco Hoare.proc_deco p, t')
         | (t' as Abs (_, _, Const (@{const_name "StateFun.lookup"}, _) $ _ $ Free (p, _) $ (_ $ Bound 0))) =>
-            (prfx ^ suffix Hoare.proc_deco (Hoare.remdeco' p), t')
-        | t' => (prfx, t'))
+            (suffix Hoare.proc_deco (Hoare.remdeco' ctxt p), t')
+        | t' => ("", t'))
       end
 
-fun gen_call_tr prfx dyn grd ctxt p actuals has_args cont =
+fun gen_call_tr dyn grd ctxt p actuals has_args result_exn cont =
   let
-    fun Call false true NONE = Const (@{const_syntax call}, dummyT)
-      | Call false false NONE = Const (@{const_syntax Call}, dummyT)
-      | Call true true NONE = Const (@{const_syntax dynCall}, dummyT)
-      | Call false true (SOME c) = Const (@{const_syntax fcall}, dummyT)
-      | Call _ _ _ = raise TERM ("gen_call_tr: no proper procedure call", []);
+    fun Call false true [] NONE = Const (@{const_syntax call}, dummyT)
+      | Call false true _ NONE = Const (@{const_syntax call_exn}, dummyT)
+      | Call false false [] NONE = Const (@{const_syntax Call}, dummyT)
+      | Call true true [] NONE = Const (@{const_syntax dynCall}, dummyT)
+      | Call true true _ NONE = Const (@{const_syntax dynCall_exn}, dummyT)
+      | Call false true [] (SOME c) = Const (@{const_syntax fcall}, dummyT)
+      | Call _ _ _ _ = raise TERM ("gen_call_tr: no proper procedure call", []);
 
-    val (pn, pt) = dest_procname ctxt prfx dyn (Term_Position.strip_positions p);
+    val (pn, pt) = dest_procname ctxt dyn (Term_Position.strip_positions p);
   in
     (case Hoare.get_params pn ctxt of
       SOME formals =>
-        mk_call_tr ctxt grd (Call dyn has_args cont) formals pn pt actuals has_args cont
+        mk_call_tr ctxt grd (Call dyn has_args result_exn cont) formals pn pt actuals has_args result_exn cont
     | NONE =>
         if Config.get ctxt StateSpace.silent
-        then mk_call_tr ctxt grd (Call dyn has_args cont) [] pn pt [] has_args cont
+        then mk_call_tr ctxt grd (Call dyn has_args result_exn cont) [] pn pt [] has_args result_exn cont
         else raise TERM ("gen_call_tr: procedure " ^ quote pn ^ " not defined", []))
   end;
 
-fun call_tr dyn grd ctxt [p, actuals] =
-      gen_call_tr "" dyn grd ctxt p (dest_actuals actuals) true NONE
-  | call_tr _ _ _  t = raise TERM ("call_tr", t);
+fun call_tr dyn grd result_exn ctxt [p, actuals] =
+      gen_call_tr dyn grd ctxt p (dest_actuals actuals) true result_exn NONE
+  | call_tr _ _ _ _ t = raise TERM ("call_tr", t);
 
-fun call_ass_tr dyn grd ctxt [l, p, actuals] =
-      gen_call_tr "" dyn grd ctxt p (dest_actuals actuals @ [l]) true NONE
-  | call_ass_tr  _ _ _ t = raise TERM ("call_ass_tr", t);
+fun call_ass_tr dyn grd result_exn ctxt [l, p, actuals] =
+      gen_call_tr dyn grd ctxt p (dest_actuals actuals @ [l]) true result_exn NONE
+  | call_ass_tr  _ _ _ _ t = raise TERM ("call_ass_tr", t);
 
 fun proc_tr ctxt [p, actuals] =
-      gen_call_tr "" false false ctxt p (dest_actuals actuals) false NONE
+      gen_call_tr false false ctxt p (dest_actuals actuals) false [] NONE
   | proc_tr _  t = raise TERM ("proc_tr", t);
 
 fun proc_ass_tr ctxt [l, p, actuals] =
-      gen_call_tr "" false false ctxt p (dest_actuals actuals @ [l]) false NONE
+      gen_call_tr false false ctxt p (dest_actuals actuals @ [l]) false [] NONE
   | proc_ass_tr _ t = raise TERM ("proc_ass_tr", t);
 
 fun fcall_tr ctxt [p, actuals, c] =
-      gen_call_tr "" false false ctxt p (dest_actuals actuals) true (SOME c)
+      gen_call_tr false false ctxt p (dest_actuals actuals) true [] (SOME c)
   | fcall_tr _ t = raise TERM ("fcall_tr", t);
 
 
@@ -1042,7 +1071,11 @@ fun update_name_tr' ctxt (Free x) = Const (upd_tr' ctxt x)
   | update_name_tr' ctxt ((c as Const (@{syntax_const "_free"}, _)) $ Free x) =
       (*c $*) Const (upd_tr' ctxt x)
   | update_name_tr' ctxt (Const x) = Const (upd_tr' ctxt x)
-  | update_name_tr' _ _ = raise Match;
+  | update_name_tr' ctxt t =
+     (case Hoare.get_default_state_space ctxt of
+       SOME {update_tr',...} => update_tr' ctxt t
+     | NONE => raise Match);
+
 
 fun term_name_eq (Const (x, _)) (Const (y, _)) = (x = y)
   | term_name_eq (Free (x, _)) (Free (y, _)) = (x = y)
@@ -1076,7 +1109,7 @@ fun list_mult_update_tr' l (r as Const (@{const_syntax list_multupd},_) $ var $ 
       (Syntax.const @{const_syntax list_multsel} $ var $ idxs, values)
   | list_mult_update_tr' l r = (l, r);
 
-fun update_tr' l (r as Const (@{const_syntax fun_upd}, _) $
+fun update_tr' ctxt l (r as Const (@{const_syntax fun_upd}, _) $
         (hp as (Const (@{syntax_const "_antiquoteCur"}, _) $ _)) $ p $ value) =
       if term_name_eq l hp then
         (case value of
@@ -1084,94 +1117,159 @@ fun update_tr' l (r as Const (@{const_syntax fun_upd}, _) $
         | (Const (@{const_syntax list_multupd},_) $ _ $ _ $ _) => list_mult_update_tr' (l $ p) value
         | _ => (l $ p, value))
       else (l, r)
-  | update_tr' l (r as Const (@{const_syntax list_update},_) $
+  | update_tr' ctxt l (r as Const (@{const_syntax list_update},_) $
         (var as (Const (@{syntax_const "_antiquoteCur"}, _) $ _)) $ i $ value) =
       if term_name_eq l var then list_update_tr' l r else (l, r)
-  | update_tr' l (r as Const (@{const_syntax list_multupd}, _) $
+  | update_tr' ctxt l (r as Const (@{const_syntax list_multupd}, _) $
         (var as (Const (@{syntax_const "_antiquoteCur"}, _) $ _)) $ idxs $ values) =
       if term_name_eq l var then list_mult_update_tr' l r else (l, r)
-  | update_tr' l r = (l, r);
+  | update_tr' ctxt l r = (l, r);
 
 
-fun dest_K_rec (Abs (_, _, v)) =
-      if member (op =) (loose_bnos v) 0 then NONE else SOME (incr_boundvars ~1 v)
-  | dest_K_rec (Abs (_, _, Abs (_, _, v) $ Bound 0)) = (* eta expanded version *)
+fun dest_K_rec (Abs (_, _, Abs (_, _, v) $ Bound 0)) = (* eta expanded version *)
       let val lbv = loose_bnos v;
       in if member (op =) lbv 0 orelse member (op =) lbv 1
          then NONE else SOME (incr_boundvars ~2 v)
       end
+  | dest_K_rec (Abs (_, _, v)) =
+      if member (op =) (loose_bnos v) 0 then NONE else SOME (incr_boundvars ~1 v)
+  | dest_K_rec (Const (@{const_syntax K_statefun}, _) $ v) = SOME v
   | dest_K_rec _ = NONE;
 
+fun the_Match (SOME x) = x
+  | the_Match (NONE) = raise Match
+
+fun dest_update ctxt (upd' $ dest $ constr $ n $ v $ s) =
+      (n, v, SOME s)
+  | dest_update ctxt (upd' $ dest $ constr $ n $ v) =
+      (n, v, NONE)
+  | dest_update ctxt t =
+     case Hoare.get_default_state_space ctxt of
+       SOME {dest_update_tr', ...} => dest_update_tr' ctxt t
+     | NONE => raise Match
+
 local
-fun uncover (upd,v) =
-  (case (upd, v) of
-    (Const (cupd, _), upd' $ dest $ constr $ n $ (Const (@{const_syntax K_statefun}, _) $ v') $ s) =>
+fun uncover ctxt (upd,v) = (upd, v) |> first_match [
+  fn (Const (cupd, _), t) =>
       if member (op =) [globals_updateN, locals_updateN] (Long_Name.base_name cupd)
-      then (case s of (Const (g, _) $ _) =>
-               if member (op =) [localsN, globalsN] (Long_Name.base_name g)
-               then (n, v')
-               else raise Match
-             | _ => raise Match)
-       else (upd, v)
-  | (Const (gupd, _), upd' $ k $ s) =>
-      (case dest_K_rec k of
-        SOME v' =>
-          if Long_Name.base_name gupd = globals_updateN
-          then
-            (case s of
-              Const (gl, _) $ _ =>
-                if Long_Name.base_name gl = globalsN (* assignment *)
-                then (upd',v')
-                else raise Match
-            | _ => raise Match)
+      then case dest_update ctxt t of
+             (n, v', SOME s) => (case s of (Const (g, _) $ _) =>
+                                   if member (op =) [localsN, globalsN] (Long_Name.base_name g)
+                                   then (n, the_Match (dest_K_rec v'))
+                                   else raise Match
+                                 | _ => raise Match)
+           | (n, v', NONE) => (n, the_Match (dest_K_rec v'))
+      else (upd, v),
+  fn (upd, v ) =>
+    (case (upd, v) of
+      (Const (gupd, _), t as (upd' $ k $ s)) =>
+        (case dest_K_rec k of
+          SOME v' =>
+            if Long_Name.base_name gupd = globals_updateN
+            then
+              (case s of
+                Const (gl, _) $ _ =>
+                  if Long_Name.base_name gl = globalsN (* assignment *)
+                  then (upd',v')
+                  else raise Match
+              | _ => raise Match)
+            else (upd, v)
+        | _ => (upd, v))
+    | (Const (upd_glob, _), upd' $ v') =>
+        if Long_Name.base_name upd_glob = upd_globalsN (* result parameter *)
+        then (upd', v')
+        else if Long_Name.base_name upd_glob = globals_updateN
+          then (case dest_K_rec v' of
+                  SOME v'' => (upd',v'')
+                | _ => (upd, v))
           else (upd, v)
-      | _ => (upd, v))
-  | (Const (upd_glob, _), upd' $ v') =>
-      if Long_Name.base_name upd_glob = upd_globalsN (* result parameter *)
-      then (upd', v') else (upd, v)
-  | _ => (upd, v));
+    | _ => (upd, v))]
 in
 
-fun global_upd_tr' upd k =
+fun global_upd_tr' ctxt upd k =
   (case dest_K_rec k of
-    SOME v => uncover (upd, v)
-  | NONE => uncover (upd, k));
-
+    SOME v => uncover ctxt (upd, v)
+  | NONE => uncover ctxt (upd, k))
 end;
 
-
-fun dest_updates (t as (upd as Const (u, _)) $ k $ state) =
+fun dest_updates ctxt t = t |> first_match [
+  fn (t as (upd as Const (u, _)) $ k $ state) =>
       (case dest_K_rec k of
         SOME value =>
           if member (op =) [globals_updateN, locals_updateN] (Long_Name.base_name u)
-          then dest_updates value
+          then dest_updates ctxt value
           else if can (unsuffix Record.updateN) u orelse Long_Name.base_name u = upd_globalsN
-          then (upd,value)::dest_updates state
+          then (upd,value)::dest_updates ctxt state
           else raise Match
-      | NONE => raise Match)
-  | dest_updates (t as (upd as Const (u,_))$k) =
+      | NONE => raise Match (*dest_updates ctxt k @ dest_updates ctxt state*) (* check for nested update (e.g. locals-stack) *)
+                (*handle Match => []*)), (* t could be just (globals $ s) *)
+  fn (t as (upd as Const (u,_))$k) =>
       (case dest_K_rec k of
         SOME value =>
           if member (op =) [globals_updateN, locals_updateN] (Long_Name.base_name u)
-          then dest_updates value
+          then dest_updates ctxt value
           else if can (unsuffix Record.updateN) u orelse Long_Name.base_name u = upd_globalsN
           then [(upd,value)]
           else if Long_Name.base_name u = globalsN then [] else raise Match
-      | NONE => []) (* t could be just (globals $ s) *)
-  | dest_updates ((Const (u, _)) $ _ $ _ $ n $ (Const (@{const_syntax K_statefun},_) $ value) $ state) =
+      | NONE => dest_updates ctxt k (* check for nested update (e.g. locals-stack) *)
+                handle Match => []), (* t could be just (globals $ s) *)
+  fn ((Const (u, _)) $ _ $ _ $ n $ k $ state) =>
       if Long_Name.base_name u = Long_Name.base_name StateFun.updateN
-      then (n, value) :: dest_updates state
-      else raise Match
-  | dest_updates t = [];
+      then case dest_K_rec k of SOME value => (n, value) :: dest_updates ctxt state | _ => raise Match
+      else raise Match,
+  fn ((Const (u, _)) $ _ $ _ $ n $ k) =>
+      if Long_Name.base_name u = Long_Name.base_name StateFun.updateN
+      then case dest_K_rec k of SOME value => [(n, value)] | _ => raise Match
+      else raise Match,
+  fn t =>
+       (case Hoare.get_default_state_space ctxt of
+          SOME {dest_update_tr', ...} =>
+            (case dest_update_tr' ctxt t of
+               (n, v, SOME s) => (n, the_Match (dest_K_rec v))::dest_updates ctxt s
+             | (n, v, NONE) => [(n, the_Match (dest_K_rec v))])
+        | NONE => raise Match),
+  fn t => []]
 
-(* FIXME: externalize names properly before removing decoration! *)
+fun dest_updates ctxt t = t |> first_match [
+  fn (t as (upd as Const (u, _)) $ k $ state) =>
+       if member (op =) [globals_updateN, locals_updateN] (Long_Name.base_name u) then
+          dest_updates ctxt k @ dest_updates ctxt state
+       else if can (unsuffix Record.updateN) u orelse Long_Name.base_name u = upd_globalsN then
+          (upd, the_Match (dest_K_rec k))::dest_updates ctxt state
+       else raise Match, (* t could be just (globals $ s) *)
+  fn (t as (upd as Const (u,_))$k) =>
+       if member (op =) [globals_updateN, locals_updateN] (Long_Name.base_name u) then
+         dest_updates ctxt k
+       else if can (unsuffix Record.updateN) u orelse Long_Name.base_name u = upd_globalsN then
+         [(upd, the_Match (dest_K_rec k))]
+       (*else if Long_Name.base_name u = globalsN then [] *)
+       else raise Match,
+  fn ((Const (u, _)) $ _ $ _ $ n $ k $ state) =>
+       if Long_Name.base_name u = Long_Name.base_name StateFun.updateN then
+         (n, the_Match (dest_K_rec k)) :: dest_updates ctxt state
+       else raise Match,
+  fn ((Const (u, _)) $ _ $ _ $ n $ k) =>
+      if Long_Name.base_name u = Long_Name.base_name StateFun.updateN then
+        [(n, the_Match (dest_K_rec k))]
+      else raise Match,
+  fn t =>
+       (case Hoare.get_default_state_space ctxt of
+          SOME {dest_update_tr', ...} =>
+            (case dest_update_tr' ctxt t of
+               (n, v, SOME s) => (n, the_Match (dest_K_rec v))::dest_updates ctxt s
+             | (n, v, NONE) => [(n, the_Match (dest_K_rec v))])
+        | NONE => raise Match),
+  fn t => []]
+
+
+(* fixme: externalize names properly before removing decoration! *)
 fun init_tr' ctxt [Abs (_,_,t)] =
   let
     val upds  =
-      case dest_updates t of
+      case dest_updates ctxt t of
         us as [(Const (gupd, _), v)] =>
           if Long_Name.base_name gupd = globals_updateN
-          then dest_updates v else us
+          then dest_updates ctxt v else us
       | us => us;
 
     val comps =
@@ -1202,16 +1300,16 @@ fun tr' ctxt c (upd,v) =
   let
     val l = Syntax.const antiquoteCur $ update_name_tr' ctxt upd;
     val r = quote_tr' ctxt antiquoteCur (Abs ("s", dummyT, v));
-    val (l', r') = update_tr' l r;
+    val (l', r') = update_tr' ctxt l r;
   in (c $ l' $ r') end;
 
 in
 fun app_assign_tr' c ctxt (Abs (s, _, upd $ v $ Bound 0) :: ts) =
-      tr' ctxt c (global_upd_tr' upd v)
+      tr' ctxt c (global_upd_tr' ctxt upd v)
   | app_assign_tr' c ctxt ((upd $ v) :: ts) =
       (case upd of
         u $ v => raise Match
-      | _ => tr' ctxt c (global_upd_tr' upd v))
+      | _ => tr' ctxt c (global_upd_tr' ctxt upd v))
   | app_assign_tr' _ _ _ = raise Match;
 end;
 
@@ -1239,7 +1337,7 @@ fun basic_tr' ctxt [Abs (s, T, t)] =
         ((t' as (Const (@{const_syntax Let'},_) $ _ $ _)) $ Bound 0) => (true, t')
       | _ => (false, t);
     val (recomb, t'') = split_Let' t';
-    val upds = dest_updates t'';
+    val upds = dest_updates ctxt t'';
     val _ = if length upds <= 1 andalso not has_let then raise Match else ();
     val ass =
       map (fn (u, v) => app_assign_tr' (Syntax.const @{syntax_const "_BAssign"}) ctxt
@@ -1254,8 +1352,8 @@ fun loc_tr' ctxt [init, bdy, return, c] =
       (let
         val upds =
           (case init of
-            Abs (_, _, t as (upd $ v $ s)) => dest_updates t
-          | upd $ v => dest_updates (upd $ v $ Bound 0)
+            Abs (_, _, t as (upd $ v $ s)) => dest_updates ctxt t
+          | upd $ v => dest_updates ctxt (upd $ v $ Bound 0)
           | _ => raise Match);
 
         fun mk_locinit c v =
@@ -1279,14 +1377,14 @@ fun loc_tr' ctxt [init, bdy, return, c] =
                 if Long_Name.base_name lookup = Long_Name.base_name StateFun.lookupN
                   andalso Long_Name.base_name locals = localsN
                 then init_or_not c c' v
-                else mk_locinit (Hoare.remdeco' c) v
-              | _ => mk_locinit (Hoare.remdeco' c) v)
+                else mk_locinit (Hoare.remdeco' ctxt c) v
+              | _ => mk_locinit (Hoare.remdeco' ctxt c) v)
           | mk_init _ = raise Match;
 
         val inits =
           foldr1 (fn (t, u) => Syntax.const @{syntax_const "_locinits"} $ t $ u)
             (map mk_init (rev upds));
-      in Syntax.const @{syntax_const "_Loc"} $ inits $ bdy end handle Fail _ => raise Match)
+      in Syntax.const @{syntax_const "_Loc"} $ inits $ bdy end handle Fail _ => raise Match | Empty => raise Match)
   | loc_tr' _ _ = raise Match;
 
 
@@ -1299,46 +1397,48 @@ fun actuals_tr' acts =
 
 fun gen_call_tr' ctxt Call CallAss init p return c =
   let
-    fun get_init_updates (Abs (s, _, upds)) = dest_updates upds
-      | get_init_updates upds = dest_updates upds;
+    fun get_init_updates (Abs (s, _, upds)) = dest_updates ctxt upds
+      | get_init_updates upds = dest_updates ctxt upds;
 
     fun get_res_updates (Abs (i, _, Abs (t, _, Const (@{const_syntax Basic}, _) $ Abs (s, _, upds)))) =
-          dest_updates upds
+          dest_updates ctxt upds
       | get_res_updates (Abs (i, _, Abs (t, _, Const (@{const_syntax Basic}, _) $ upds))) =
-          dest_updates upds
+          dest_updates ctxt upds
       | get_res_updates _ = raise Match;
 
-      fun init_par_tr' par =
+    val init_upds = rev (get_init_updates init)
+    fun init_par_tr' par =
         Syntax.const @{syntax_const "_par"} $ quote_tr' ctxt antiquoteCur (Abs ("s", dummyT, par));
-      val init_actuals =
-        map (fn (_, value) => init_par_tr' value) (rev (get_init_updates init));
+    val init_actuals =
+      map (fn (_, value) => init_par_tr' value) init_upds;
 
-      fun tr' c (upd, v) =
-        let
-          val l = Syntax.const antiquoteCur $ update_name_tr' ctxt upd;
-          val r =
-            quote_tr' ctxt antiquoteCur
+    fun tr' c (upd, v) =
+      let
+        val l = Syntax.const antiquoteCur $ update_name_tr' ctxt upd;
+        val r =
+          quote_tr' ctxt antiquoteCur
+            (quote_tr' ctxt antiquoteCur
               (quote_tr' ctxt antiquoteCur
-                (quote_tr' ctxt antiquoteCur
-                  (Abs ("i", dummyT, Abs ("t", dummyT, Abs ("s", dummyT, v))))));
-          val (l', _) = update_tr' l r;
-        in c $ l' end;
+                (Abs ("i", dummyT, Abs ("t", dummyT, Abs ("s", dummyT, v))))));
+        val (l', _) = update_tr' ctxt l r;
+      in c $ l' end;
 
-      fun ret_par_tr' (upd, v) =
-        tr' (Syntax.const @{syntax_const "_par"}) (global_upd_tr' upd v);
+    fun ret_par_tr' (upd, v) =
+      tr' (Syntax.const @{syntax_const "_par"}) (global_upd_tr' ctxt upd v);
 
-      val res_updates = rev (get_res_updates c);
-      val res_actuals = map ret_par_tr' res_updates;
-  in if Config.get ctxt use_call_tr' then
+    val res_updates = rev (get_res_updates c);
+    val res_actuals = map ret_par_tr' res_updates;
+  in
+    if Config.get ctxt use_call_tr' then
         (case res_actuals of
           [l] => CallAss $ l $ p $ actuals_tr' init_actuals
          | _ => Call $ p $ actuals_tr' (init_actuals @ res_actuals))
-     else raise Match
+    else raise Match
   end;
 
 fun gen_fcall_tr' ctxt init p return result c =
   let
-    fun get_init_updates (Abs (s, _, upds)) = dest_updates upds
+    fun get_init_updates (Abs (s, _, upds)) = dest_updates ctxt upds
       | get_init_updates _ = raise Match;
 
     fun init_par_tr' par =
@@ -1363,7 +1463,7 @@ fun pname_tr' ctxt ((f as Const (@{syntax_const "_free"}, _)) $ Free (p, T)) =
   | pname_tr' ctxt p =
       let
         (* from HOL strings to ML strings *)
-        fun dest_nib c =    (* FIXME authentic syntax *)
+        fun dest_nib c =    (* fixme authentic syntax *)
           (case raw_explode c of
             ["N", "i", "b", "b", "l", "e", h] =>
               if "0" <= h andalso h <= "9" then ord h - ord "0"
@@ -1391,6 +1491,12 @@ fun call_tr' ctxt [init, p, return, result] =
         (Const (@{syntax_const "_CallAss"}, dummyT)) init (pname_tr' ctxt p) return result
   | call_tr' _ _ = raise Match;
 
+fun call_exn_tr' ctxt [init, p, return, result_exn, result] =
+      gen_call_tr' ctxt
+        (Const (@{syntax_const "_Call_exn"}, dummyT))
+        (Const (@{syntax_const "_CallAss_exn"}, dummyT)) init (pname_tr' ctxt p) return result
+  | call_exn_tr' _ _ = raise Match;
+
 
 fun dyn_call_tr' ctxt [init, p, return, result] =
       let val p' = quote_tr' ctxt antiquoteCur p
@@ -1401,13 +1507,22 @@ fun dyn_call_tr' ctxt [init, p, return, result] =
       end
   | dyn_call_tr' _ _ = raise Match;
 
+fun dyn_call_exn_tr' ctxt [init, p, return, result_exn, result] =
+      let val p' = quote_tr' ctxt antiquoteCur p
+      in
+        gen_call_tr' ctxt
+          (Const (@{syntax_const "_DynCall_exn"}, dummyT))
+          (Const (@{syntax_const "_DynCallAss_exn"}, dummyT)) init p' return result
+      end
+  | dyn_call_exn_tr' _ _ = raise Match;
+
 fun proc_tr' ctxt [p] =
       let
         val p' = pname_tr' ctxt p;
-        val pn = fst (dest_procname ctxt "" false p');
+        val pn = fst (dest_procname ctxt false p');
         val formals = the (Hoare.get_params pn ctxt) handle Option.Option => raise Match;
-        val val_formals = map_filter (fn (Hoare.In, p) => SOME p | _ => NONE) formals;
-        val res_formals = map_filter (fn (Hoare.Out, p) => SOME p | _ => NONE) formals;
+        val val_formals = map_filter (fn (Hoare.In, p, _) => SOME p | _ => NONE) formals;
+        val res_formals = map_filter (fn (Hoare.Out, p, _) => SOME p | _ => NONE) formals;
         fun mkpar n =
           Syntax.const @{syntax_const "_par"} $
             (Syntax.const antiquoteCur $ Syntax.const (Hoare.remdeco ctxt n));
@@ -1439,7 +1554,10 @@ fun assert_tr' ctxt ((t as Abs (_, _, p)) :: ts) =
         fun selector (Const (c, T)) = Hoare.is_state_var c
           | selector (Const (l, _) $ _ $ _) =
               Long_Name.base_name l = Long_Name.base_name StateFun.lookupN
-          | selector t = false;
+          | selector t =
+              (case Hoare.get_default_state_space ctxt of
+                SOME {is_lookup,...} => is_lookup ctxt t
+              | _ => false)
 
         fun fix_state (Const (@{const_syntax HOL.eq},_) $ (Const (@{syntax_const "_free"}, _) $ _)) = true
           | fix_state (Const (@{const_syntax HOL.eq},_) $ (Const (@{syntax_const "_bound"}, _) $ _)) = true
@@ -1477,9 +1595,9 @@ fun new_tr' ctxt
           | mk_init ((f as Const (@{syntax_const "_free"}, _)) $
                 Free (var, T), Const (@{const_syntax fun_upd},_) $ _ $ _ $ v) =
               Syntax.const @{syntax_const "_newinit"} $
-                (f $ Free (Hoare.remdeco' var, T)) $ v;
+                (f $ Free (Hoare.remdeco' ctxt var, T)) $ v;
 
-        val inits_free_allocs = dest_updates inits_free_alloc;
+        val inits_free_allocs = dest_updates ctxt inits_free_alloc;
 
         val inits = map mk_init (take (length inits_free_allocs - 2) (inits_free_allocs));
         val inits' =
@@ -1489,10 +1607,10 @@ fun new_tr' ctxt
           let
             val l = Syntax.const antiquoteCur $ update_name_tr' ctxt upd;
             val r = quote_tr' ctxt antiquoteCur (Abs (s, dummyT, v));
-            val (l', r') = update_tr' l r
+            val (l', r') = update_tr' ctxt l r
           in l' end;
 
-        val l = tr' (global_upd_tr' upd' null);
+        val l = tr' (global_upd_tr' ctxt upd' null);
 
       in Syntax.const @{syntax_const "_New"} $ l $ size $ inits' end
   | new_tr' _ _ = raise Match;
@@ -1510,9 +1628,9 @@ fun nnew_tr' ctxt
           | mk_init ((f as Const (@{syntax_const "_free"}, _)) $ Free (var, T),
                 Const (@{const_syntax fun_upd}, _) $_ $ _ $ v) =
               Syntax.const @{syntax_const "_newinit"} $
-                (f $ Free (Hoare.remdeco' var, T)) $ v;
+                (f $ Free (Hoare.remdeco' ctxt var, T)) $ v;
 
-        val free_inits_allocs = dest_updates free_inits_alloc;
+        val free_inits_allocs = dest_updates ctxt free_inits_alloc;
 
         val inits = map mk_init (take (length free_inits_allocs - 2) (tl free_inits_allocs));
         val inits' =
@@ -1522,10 +1640,10 @@ fun nnew_tr' ctxt
           let
             val l = Syntax.const antiquoteCur $ update_name_tr' ctxt upd;
             val r = quote_tr' ctxt antiquoteCur (Abs (s, dummyT, v));
-            val (l', r') = update_tr' l r;
+            val (l', r') = update_tr' ctxt l r;
           in l' end;
 
-        val l = tr' (global_upd_tr' upd' null);
+        val l = tr' (global_upd_tr' ctxt upd' null);
 
       in Syntax.const @{syntax_const "_NNew"} $ l $ size $ inits' end
   | nnew_tr' _ _ = raise Match;

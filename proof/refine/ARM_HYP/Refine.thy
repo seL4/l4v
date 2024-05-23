@@ -402,6 +402,19 @@ abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" w
 
 lemmas valid_domain_list'_def = valid_domain_list_2_def
 
+lemma fastpathKernelAssertions_cross:
+  "\<lbrakk> (s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
+  unfolding fastpathKernelAssertions_def
+  by simp
+
+(* this is only needed for callKernel, where we have invs' on concrete side *)
+lemma corres_cross_over_fastpathKernelAssertions:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> invs s; \<And>s'. Q s' \<Longrightarrow> invs' s';
+     corres r P (Q and fastpathKernelAssertions) f g \<rbrakk> \<Longrightarrow>
+   corres r P Q f g"
+  by (rule corres_cross_over_guard[where Q="Q and fastpathKernelAssertions"])
+     (fastforce elim: fastpathKernelAssertions_cross)+
+
 defs kernelExitAssertions_def:
   "kernelExitAssertions s \<equiv> 0 < ksDomainTime s \<and> valid_domain_list' s"
 
@@ -585,7 +598,7 @@ lemma kernel_corres':
        apply (wp handle_event_valid_sched hoare_vcg_if_lift3
               | simp
               | strengthen non_kernel_IRQs_strg[where Q=True, simplified], simp cong: conj_cong)+
-   apply (clarsimp simp: active_from_running)
+   apply (clarsimp simp: active_from_running schact_is_rct_def)
   apply (clarsimp simp: active_from_running')
   done
 
@@ -598,6 +611,8 @@ lemma kernel_corres:
               (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
              (call_kernel event) (callKernel event)"
   unfolding callKernel_def K_bind_def
+  apply (rule corres_cross_over_fastpathKernelAssertions, blast+)
+  apply (rule corres_stateAssert_r)
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
@@ -658,7 +673,7 @@ lemma entry_corres:
        apply ((wp thread_set_invs_trivial thread_set_ct_running
                   thread_set_not_state_valid_sched hoare_weak_lift_imp
                   hoare_vcg_disj_lift ct_in_state_thread_state_lift
-               | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state)+)[1]
+               | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state schact_is_rct_def)+)[1]
       apply (simp add: pred_conj_def cong: conj_cong)
       apply (wp threadSet_invs_trivial threadSet_ct_running'
                  hoare_weak_lift_imp hoare_vcg_disj_lift

@@ -6,7 +6,7 @@ Source: https://github.com/seL4/l4v/
 # AFP entry https://www.isa-afp.org/entries/Simpl.html
 Files: tools/c-parser/Simpl/*
 Copyright: 2008, Norbert Schirmer, TU Muenchen
-License: LGPL-2.1-only
+License: BSD-3-Clause
 
 # AFP entry Word_Lib
 Files: lib/Word_Lib/Word_Next.thy

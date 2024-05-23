@@ -1,19 +1,21 @@
-Core Development Team
----------------------
+Core Developers
+---------------
 
     David Greenaway (inactive)
 
-    Japheth Lim <Japheth.Lim@data61.csiro.au>
+    Japheth Lim (inactive)
+
+    Gerwin Klein (maintenance)
 
 Contributions
 -------------
 
-    Lars Noschinski <noschinl@in.tum.de>
+    Lars Noschinski
 
         "owhile" definitions and related rules, as well as many other
         contributions to the proof libraries.
 
-    Matthew Brecknell <Matthew.Brecknell@data61.csiro.au>
+    Matthew Brecknell (inactive)
 
         Maintenance; integration with seL4's C refinement framework.
 

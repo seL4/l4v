@@ -1124,6 +1124,16 @@ lemma set_thread_state_ep_at_ppred[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. N (ep_at_ppred proj P p s)\<rbrace>"
   by (wpsimp simp: ep_at_ppred_def wp: sts_obj_at_impossible')
 
+lemma set_thread_state_schact_is_rct:
+  "\<lbrace>schact_is_rct and (\<lambda>s. ref = cur_thread s \<longrightarrow> runnable ts )\<rbrace>
+   set_thread_state ref ts
+   \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
+  unfolding set_thread_state_def set_thread_state_ext_extended.dxo_eq
+  apply (clarsimp simp: set_thread_state_ext_def)
+  apply (wpsimp wp: set_object_wp gts_wp simp: set_scheduler_action_def)
+  apply (clarsimp simp: schact_is_rct_def st_tcb_at_def obj_at_def)
+  done
+
 (* FIXME: move *)
 lemma set_thread_state_ntfn_at_ppred[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. N (ntfn_at_ppred proj P p s)\<rbrace>"
@@ -2566,6 +2576,14 @@ lemma switch_to_thread_ct_not_queued[wp]:
   "\<lbrace>valid_ready_qs\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv. ct_not_queued::'state_ext state \<Rightarrow> _\<rbrace>"
   apply (wpsimp wp: valid_sched_wp)
   by (fastforce simp: valid_ready_qs_def vs_all_heap_simps valid_sched_wpsimps)
+
+lemma tcb_sched_action_dequeue_not_queued[wp]:
+  "\<lbrace>valid_queues\<rbrace> tcb_sched_action tcb_sched_dequeue t \<lbrace>\<lambda>_. not_queued t\<rbrace>"
+  unfolding tcb_sched_action_def tcb_sched_dequeue_def
+  apply wpsimp
+  apply (clarsimp simp add: valid_queues_def etcb_at_def not_queued_def
+                       split: option.splits)
+  done
 
 lemma switch_to_thread_ct_not_in_q[wp]:
   "\<lbrace>valid_ready_qs\<rbrace> switch_to_thread t \<lbrace>\<lambda>_. ct_not_in_q::'state_ext state \<Rightarrow> _\<rbrace>"

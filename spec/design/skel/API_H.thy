@@ -14,6 +14,6 @@ text \<open>collects all API modules\<close>
 
 #INCLUDE_HASKELL SEL4.lhs decls_only NOT callKernel
 
-#INCLUDE_HASKELL SEL4.lhs NOT kernelExitAssertions
+#INCLUDE_HASKELL SEL4.lhs NOT kernelExitAssertions fastpathKernelAssertions
 
 end

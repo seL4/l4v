@@ -73,4 +73,8 @@ lemma context_disjE:
   "\<lbrakk>P \<or> Q; P \<Longrightarrow> R; \<lbrakk>\<not>P; Q\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by auto
 
+lemma subst2:
+  "\<lbrakk>s = t; u = v; P s u\<rbrakk> \<Longrightarrow> P t v"
+  by clarsimp
+
 end

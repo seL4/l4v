@@ -92,6 +92,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_hypervisor_fault valid_list
+  (simp: isFpuEnable_def)
 
 end
 

@@ -1742,7 +1742,7 @@ lemma perform_pt_inv_unmap_invs[wp]:
                     hoare_vcg_all_lift hoare_vcg_imp_lift' mapM_x_swp_store_pte_invs_unmap
                     mapM_x_store_pte_unreachable hoare_vcg_ball_lift
                     unmap_page_table_not_target real_cte_at_typ_valid
-                simp: cte_wp_at_caps_of_state)
+                simp: cte_wp_at_caps_of_state cleanCacheRange_PoU_def)
   apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state)
   apply (clarsimp simp: is_arch_update_def is_cap_simps is_PageTableCap_def
                         update_map_data_def valid_cap_def valid_arch_cap_def cap_aligned_def)
@@ -2910,7 +2910,7 @@ lemma restore_virt_timer_invs[wp]:
   "\<lbrace>\<lambda> s. invs s\<rbrace> restore_virt_timer vcpu_ptr \<lbrace>\<lambda>_ . invs\<rbrace>"
   unfolding restore_virt_timer_def read_cntpct_def
              is_irq_active_def get_irq_state_def
-  by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
+  by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_drop_imp
                  maskInterrupt_invs)
 
 lemma vcpu_enable_invs[wp]:

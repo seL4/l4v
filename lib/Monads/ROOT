@@ -7,6 +7,7 @@
 chapter Lib
 
 session Monads (lib) = HOL +
+  options [document = pdf]
 
   sessions
     "HOL-Library"
@@ -21,14 +22,7 @@ session Monads (lib) = HOL +
     trace
 
   theories
-    WPBang
-    WPFix
-    Eisbach_WP
-    WPI
-    WPC
-    WP_Pre
-    WP
-    Datatype_Schematic
+    Fun_Pred_Syntax
     Nondet_Monad
     Nondet_Lemmas
     Nondet_VCG
@@ -42,13 +36,37 @@ session Monads (lib) = HOL +
     Nondet_Monad_Equations
     Nondet_While_Loop_Rules
     Nondet_While_Loop_Rules_Completeness
+    Nondet_Reader_Option
     Reader_Option_Monad
-    Reader_Option_ND
     Reader_Option_VCG
     Trace_Monad
     Trace_Lemmas
     Trace_VCG
     Trace_Det
+    Trace_No_Throw
+    Trace_Empty_Fail
+    Trace_No_Trace
+    Trace_Total
+    Trace_Strengthen_Setup
+    Trace_Monad_Equations
+    Trace_RG
+    Trace_More_RG
+    Trace_In_Monad
+    Trace_More_VCG
+    Trace_No_Fail
+    Trace_Reader_Option
+    Trace_Sat
     Strengthen
     Nondet_Strengthen_Setup
     Strengthen_Demo
+    WPBang
+    WPFix
+    Eisbach_WP
+    WPI
+    WPC
+    WP_Pre
+    WP
+    Datatype_Schematic
+
+  document_files
+    "root.tex"

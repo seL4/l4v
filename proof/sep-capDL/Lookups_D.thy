@@ -7,7 +7,7 @@
 theory Lookups_D
 imports
   "DSpec.Syscall_D"
-  "Monads.Reader_Option_ND"
+  "Monads.Nondet_Reader_Option"
 begin
 
 type_synonym 'a lookup = "cdl_state \<Rightarrow> 'a option"
@@ -93,56 +93,5 @@ lemma gets_the_resolve_cap:
   apply (rule bind_apply_cong, rule refl)
   apply (clarsimp simp: in_monad gets_the_get_cnode [symmetric])
   done
-
-definition resolve_address_bits' ::
-  "cdl_cap \<Rightarrow> cdl_cptr \<Rightarrow> nat \<Rightarrow> (cdl_cap_ref \<times> nat) lookup"
-where
-  "resolve_address_bits' cap cptr n \<equiv> odrop $  resolve_cap cap cptr n"
-
-
-
-definition
-  lookup_slot' :: "cdl_object_id \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cap_ref lookup"
-where
-  "lookup_slot' thread cptr \<equiv>
-    DO
-      cspace_root \<leftarrow> opt_cap (thread, tcb_cspace_slot);
-      (slot, _) \<leftarrow> resolve_address_bits' cspace_root cptr word_bits;
-      oreturn slot
-    OD"
-
-definition
-  lookup_cap' :: "cdl_object_id \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cap lookup"
-where
-  "lookup_cap' thread cptr \<equiv>
-    DO
-      slot \<leftarrow> lookup_slot' thread cptr;
-      opt_cap slot
-    OD"
-
-definition
-  lookup_cap_and_slot' :: "cdl_object_id \<Rightarrow> cdl_cptr \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) lookup"
-where
-  "lookup_cap_and_slot' thread cptr \<equiv>
-    DO
-      slot \<leftarrow> lookup_slot' thread cptr;
-      cap \<leftarrow> opt_cap slot;
-      oreturn (cap, slot)
-    OD"
-
-definition
-  lookup_object :: "cdl_object_id \<Rightarrow> cdl_cptr \<Rightarrow> cdl_object_id lookup"
-where
-  "lookup_object thread cptr \<equiv>
-    DO
-      cap \<leftarrow> lookup_cap' thread cptr;
-      oreturn $ cap_object cap
-    OD"
-
-definition
-  lookup_extra_caps' :: "cdl_object_id \<Rightarrow> cdl_cptr list \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list lookup"
-where
-  "lookup_extra_caps' thread cptrs \<equiv>
-     omap (\<lambda>cptr. lookup_cap_and_slot' thread cptr) cptrs"
 
 end

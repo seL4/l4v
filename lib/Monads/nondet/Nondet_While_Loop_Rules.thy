@@ -198,7 +198,7 @@ lemma whileLoop_results_induct_lemma3 [consumes 1]:
   apply clarsimp
   done
 
-subsection "Inductive reasoning about whileLoop results"
+subsection "Inductive reasoning about @{const whileLoop} results"
 
 lemma in_whileLoop_induct[consumes 1]:
   assumes in_whileLoop: "(r', s') \<in> fst (whileLoop C B r s)"
@@ -278,7 +278,7 @@ lemma whileLoop_terminatesE_induct [consumes 1]:
   apply (force simp: lift_def split: sum.splits)
   done
 
-subsection "Direct reasoning about whileLoop components"
+subsection "Direct reasoning about @{const whileLoop} components"
 
 lemma fst_whileLoop_cond_false:
   assumes loop_result: "(r', s') \<in> fst (whileLoop C B r s)"
@@ -447,33 +447,36 @@ lemma exs_valid_whileLoop:
     and wf_R: "wf R"
     and final_I: "\<And>r s. \<lbrakk> T r s; \<not> C r s  \<rbrakk> \<Longrightarrow> Q r s"
   shows "\<lbrace> P \<rbrace> whileLoop C B r \<exists>\<lbrace> Q \<rbrace>"
-proof (clarsimp simp: exs_valid_def Bex_def)
-  fix s
-  assume "P s"
-
+proof -
   {
-    fix x
-    have "T (fst x) (snd x) \<Longrightarrow> \<exists>r' s'. (r', s') \<in> fst (whileLoop C B (fst x) (snd x)) \<and> T r' s'"
-      using wf_R
-    proof induct
-      case (less x)
-      then show ?case
-        apply atomize
-        apply (cases "C (fst x) (snd x)")
-         apply (subst whileLoop_unroll)
-         apply (clarsimp simp: condition_def bind_def')
-         apply (cut_tac iter_I[where ?s0.0="snd x" and r="fst x"])
-         apply (clarsimp simp: exs_valid_def)
-         apply blast
-        apply (subst whileLoop_unroll)
-        apply (cases x)
-        apply (clarsimp simp: condition_def bind_def' return_def)
-        done
-    qed
-  }
+    fix s
+    assume "P s"
 
-  thus "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' s'"
-    by (metis \<open>P s\<close> fst_conv init_T snd_conv final_I fst_whileLoop_cond_false)
+    {
+      fix x
+      have "T (fst x) (snd x) \<Longrightarrow> \<exists>r' s'. (r', s') \<in> fst (whileLoop C B (fst x) (snd x)) \<and> T r' s'"
+        using wf_R
+      proof induct
+        case (less x)
+        then show ?case
+          apply atomize
+          apply (cases "C (fst x) (snd x)")
+           apply (subst whileLoop_unroll)
+           apply (clarsimp simp: condition_def bind_def')
+           apply (cut_tac iter_I[where ?s0.0="snd x" and r="fst x"])
+           apply (clarsimp simp: exs_valid_def)
+           apply blast
+          apply (subst whileLoop_unroll)
+          apply (cases x)
+          apply (clarsimp simp: condition_def bind_def' return_def)
+          done
+      qed
+    }
+
+    then have "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' s'"
+      by (metis \<open>P s\<close> fst_conv init_T snd_conv final_I fst_whileLoop_cond_false)
+  }
+  thus ?thesis by (clarsimp simp: exs_valid_def Bex_def)
 qed
 
 lemma empty_fail_whileLoop[empty_fail_cond, intro!, wp]:
@@ -618,7 +621,7 @@ lemma whileLoopE_liftE:
    apply (rule set_eqI, rule iffI)
     apply clarsimp
     apply (clarsimp simp: in_liftE whileLoop_def)
-    \<comment> \<open>The schematic existential is instantiated by 'subst isr_Inr_proj' ... 'rule refl' in two lines\<close>
+    \<comment> \<open>The schematic existential is instantiated by @{text "subst isr_Inr_projr ... rule refl"} in two lines\<close>
     apply (rule exI)
     apply (rule conjI)
      apply (subst isr_Inr_projr)
@@ -788,7 +791,7 @@ lemma whileLoopE_wp_inv [wp]:
   apply (rule validE_whileLoopE [where I=I], auto)
   done
 
-subsection "Stronger whileLoop rules"
+subsection "Stronger @{const whileLoop} rules"
 
 lemma whileLoop_rule_strong:
   assumes init_U: "\<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>r s. (r, s) \<in> fst Q \<rbrace>"
@@ -848,7 +851,7 @@ lemma snd_whileLoop_subset:
   done
 
 
-subsection "Some rules for whileM"
+subsection "Some rules for @{const whileM}"
 
 lemma whileM_wp_gen:
   assumes termin:"\<And>s. I False s \<Longrightarrow> Q s"

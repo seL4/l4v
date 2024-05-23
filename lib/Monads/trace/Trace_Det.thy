@@ -55,10 +55,8 @@ lemma det_UN:
 lemma bind_detI[simp, intro!]:
   "\<lbrakk> det f; \<forall>x. det (g x) \<rbrakk> \<Longrightarrow> det (f >>= g)"
   unfolding bind_def det_def
-  apply clarsimp
-  apply (erule_tac x=s in allE)
-  apply clarsimp
-  done
+  apply (erule all_reg[rotated])
+  by clarsimp
 
 lemma det_modify[iff]:
   "det (modify f)"

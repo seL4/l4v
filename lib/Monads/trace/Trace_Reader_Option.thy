@@ -1,19 +1,20 @@
 (*
+ * Copyright 2024, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-(* Reader option monad syntax plus the connection between the reader option monad and the nondet monad *)
+(* Reader option monad syntax plus the connection between the reader option monad and the trace monad *)
 
-theory Reader_Option_ND
+theory Trace_Reader_Option
 imports
-  Nondet_Lemmas
-  Reader_Option_Monad
+  Trace_No_Fail
+  Reader_Option_VCG
 begin
 
 (* FIXME: remove this syntax, standardise on do {..} instead *)
-(* Syntax defined here so we can reuse Nondet_Monad definitions *)
+(* Syntax defined here so we can reuse Trace_Monad definitions *)
 syntax
   "_doO" :: "[dobinds, 'a] => 'a"  ("(DO (_);//   (_)//OD)" 100)
 
@@ -23,48 +24,35 @@ translations
   "DO x <- a; e OD"        == "a |>> (\<lambda>x. e)"
 
 
-lemma ogets_def:
-  "ogets f = (\<lambda>s. Some (f s))"
-  by (clarsimp simp: asks_def obind_def)
+lemma ovalid_K_bind_wp[wp]:
+  "ovalid P f Q \<Longrightarrow> ovalid P (K_bind f x) Q"
+  by simp
 
-definition
-  ocatch :: "('s,('e + 'a)) lookup \<Rightarrow> ('e \<Rightarrow> ('s,'a) lookup) \<Rightarrow> ('s, 'a) lookup"
-  (infix "<ocatch>" 10)
-where
-  "f <ocatch> handler \<equiv> do {
-     x \<leftarrow> f;
-     case x of Inr b \<Rightarrow> oreturn b | Inl e \<Rightarrow> handler e
-   }"
+lemma ovalidNF_K_bind_wp[wp]:
+  "ovalidNF P f Q \<Longrightarrow> ovalidNF P (K_bind f x) Q"
+  by simp
+
+lemma no_ofail_K_bind[wp]:
+  "no_ofail P f \<Longrightarrow> no_ofail P (K_bind f x)"
+  by simp
+
+lemma no_ofail_gets_the_eq:
+  "no_ofail P f \<longleftrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
+  by (auto simp: no_ofail_def no_fail_def gets_the_def gets_def
+                 get_def assert_opt_def bind_def return_def fail_def
+         split: option.split)
+
+lemmas no_ofail_gets_the =
+  no_ofail_gets_the_eq[THEN iffD1]
 
 
-definition
-  odrop :: "('s, 'e + 'a) lookup \<Rightarrow> ('s, 'a) lookup"
-where
-  "odrop f \<equiv> do {
-     x \<leftarrow> f;
-     case x of Inr b \<Rightarrow> oreturn b | Inl e \<Rightarrow> ofail
-   }"
+(* Lemmas relating ovalid and valid *)
+lemma ovalid_gets_the:
+  "ovalid P f Q \<Longrightarrow> \<lbrace>P\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
+  apply wpsimp
+  apply (fastforce dest: use_ovalid)
+  done
 
-definition
-  osequence_x :: "('s, 'a) lookup list \<Rightarrow> ('s, unit) lookup"
-where
-  "osequence_x xs \<equiv> foldr (\<lambda>x y. do { x; y }) xs (oreturn ())"
-
-definition
-  osequence :: "('s, 'a) lookup list \<Rightarrow> ('s, 'a list) lookup"
-where
-  "osequence xs \<equiv> let mcons = (\<lambda>p q. p |>> (\<lambda>x. q |>> (\<lambda>y. oreturn (x#y))))
-                 in foldr mcons xs (oreturn [])"
-
-definition
-  omap :: "('a \<Rightarrow> ('s,'b) lookup) \<Rightarrow> 'a list \<Rightarrow> ('s, 'b list) lookup"
-where
-  "omap f xs \<equiv> osequence (map f xs)"
-
-definition
-  opt_cons :: "'a option \<Rightarrow> 'a list \<Rightarrow> 'a list" (infixr "o#" 65)
-where
-  "opt_cons x xs \<equiv> case x of None \<Rightarrow> xs | Some x' \<Rightarrow> x' # xs"
 
 lemmas monad_simps =
   gets_the_def bind_def assert_def assert_opt_def
@@ -131,9 +119,9 @@ lemma gets_obind_bind_eq:
    (gets f >>= (\<lambda>x. case x of None \<Rightarrow> return None | Some y \<Rightarrow> gets (g y)))"
   by (auto simp: simpler_gets_def bind_def obind_def return_def split: option.splits)
 
-lemma fst_assert_opt:
-  "fst (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
-  by (clarsimp simp: assert_opt_def fail_def return_def split: option.split)
+lemma mres_assert_opt:
+  "mres (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
+  by (clarsimp simp: assert_opt_def fail_def return_def mres_def vimage_def split: option.split)
 
 
 lemmas omonad_simps [simp] =
@@ -142,15 +130,13 @@ lemmas omonad_simps [simp] =
   gets_the_throwError gets_the_assert gets_the_Some
   gets_the_oapply_comp
 
-lemmas in_omonad = bind_eq_Some_conv in_obind_eq in_opt_map_eq in_opt_pred Let_def
 
-
-section "Relation between option monad loops and non-deterministic monad loops."
+section "Relation between option monad loops and trace monad loops."
 
 (* Option monad whileLoop formalisation thanks to Lars Noschinski <noschinl@in.tum.de>. *)
 
 lemma gets_the_conv:
-  "(gets_the B s) = (case B s of Some r' \<Rightarrow> ({(r', s)}, False) | _ \<Rightarrow> ({}, True))"
+  "(gets_the B s) = (case B s of Some r' \<Rightarrow> ({([], Result (r', s))}) | _ \<Rightarrow> {([], Failed)})"
   by (auto simp: gets_the_def gets_def get_def bind_def return_def fail_def assert_opt_def split: option.splits)
 
 lemma gets_the_loop_terminates:
@@ -172,43 +158,59 @@ next
   qed
 qed
 
+lemma The_eqD:
+  "\<lbrakk>The P = x; \<exists>!x. P x\<rbrakk> \<Longrightarrow> P x"
+  by (metis theI)
+
 lemma gets_the_whileLoop:
   fixes C :: "'a \<Rightarrow> 's \<Rightarrow> bool"
+  assumes terminates: "\<forall>s. whileLoop_terminates C (\<lambda>a. gets_the (B a)) r s"
   shows "whileLoop C (\<lambda>a. gets_the (B a)) r = gets_the (owhile C B r)"
 proof -
-  { fix r s r' s' assume "(Some (r,s), Some (r', s')) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
-    then have "s = s' \<and> (Some r, Some r') \<in> option_while' (\<lambda>a. C a s) (\<lambda>a. B a s)"
-    by (induct "Some (r, s)" "Some (r', s')" arbitrary: r s)
+  { fix r s r' s' ts assume "((r,s), ts, Result (r', s')) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
+    then have "s = s' \<and> ts = [] \<and>(Some r, Some r') \<in> option_while' (\<lambda>a. C a s) (\<lambda>a. B a s)"
+    by (induct r s ts "Result (r', s')")
        (auto intro: option_while'.intros simp: gets_the_conv split: option.splits) }
-  note wl'_Inl = this
+  note wl'_Result = this
 
-  { fix r s assume "(Some (r,s), None) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
-    then have "(Some r, None) \<in> option_while' (\<lambda>a. C a s) (\<lambda>a. B a s)"
-      by (induct "Some (r, s)" "None :: (('a \<times> 's) option)" arbitrary: r s)
+  { fix r s ts assume "((r,s), ts, Failed) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
+    then have "ts = [] \<and> (Some r, None) \<in> option_while' (\<lambda>a. C a s) (\<lambda>a. B a s)"
+      by (induct r s ts "Failed :: (('s, 'a) tmres)")
          (auto intro: option_while'.intros simp: gets_the_conv split: option.splits) }
-  note wl'_Inr = this
+  note wl'_Failed = this
+
+  { fix r s ts assume "((r,s), ts, Incomplete) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
+    then have "False"
+      by (induct r s ts "Incomplete :: (('s, 'a) tmres)")
+         (auto intro: option_while'.intros simp: gets_the_conv split: option.splits) }
+  note wl'_Incomplete = this
 
   { fix r s r' assume "(Some r, Some r') \<in> option_while' (\<lambda>a. C a s) (\<lambda>a. B a s)"
-    then have "(Some (r,s), Some (r',s)) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
+    then have "((r,s), [], Result (r',s)) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
     by (induct "Some r" "Some r'" arbitrary: r)
        (auto intro: whileLoop_results.intros simp: gets_the_conv) }
   note option_while'_Some = this
 
   { fix r s assume "(Some r, None) \<in> option_while' (\<lambda>a. C a s) (\<lambda>a. B a s)"
-    then have "(Some (r,s), None) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
+    then have "((r,s), [], Failed) \<in> whileLoop_results C (\<lambda>a. gets_the (B a))"
     by (induct "Some r" "None :: 'a option" arbitrary: r)
        (auto intro: whileLoop_results.intros simp: gets_the_conv) }
   note option_while'_None = this
 
   have "\<And>s. owhile C B r s = None
-      \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({}, True)"
-    by (auto simp: whileLoop_def owhile_def option_while_def option_while'_THE gets_the_loop_terminates
-      split: if_split_asm dest: option_while'_None wl'_Inl option_while'_inj)
+          \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = {([], Failed)}"
+    using terminates
+    by (intro subset_antisym;
+        clarsimp simp: whileLoop_def owhile_def option_while_def gets_the_loop_terminates
+                split: if_split_asm intro!: option_while'_None dest!: The_eqD)
+       (case_tac b, auto dest!: wl'_Result wl'_Failed wl'_Incomplete option_while'_inj option_while'_THE)
   moreover
   have "\<And>s r'. owhile C B r s = Some r'
-      \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({(r', s)}, False)"
-    by (auto simp: whileLoop_def owhile_def option_while_def option_while'_THE gets_the_loop_terminates
-      split: if_split_asm dest: wl'_Inl wl'_Inr option_while'_inj intro: option_while'_Some)
+          \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = {([], Result (r', s))}"
+    by (intro subset_antisym;
+        clarsimp simp: whileLoop_def owhile_def option_while_def option_while'_THE
+                split: if_split_asm intro!: option_while'_Some)
+       (case_tac b, auto dest: wl'_Result wl'_Failed wl'_Incomplete option_while'_inj)
   ultimately
   show ?thesis
     by (auto simp: fun_eq_iff gets_the_conv split: option.split)

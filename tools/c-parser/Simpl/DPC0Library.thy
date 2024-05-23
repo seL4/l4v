@@ -1,7 +1,8 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
+
+Copyright (C) 2006-2008 Norbert Schirmer
 *)
 
 section \<open>DPC0 standard library\<close>

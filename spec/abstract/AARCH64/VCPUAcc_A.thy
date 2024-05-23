@@ -103,6 +103,8 @@ definition restore_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_m
      offset \<leftarrow> return $ cntvoff + ucast delta;
      vcpu_write_reg vcpu_ptr VCPURegCNTVOFF offset;
      vcpu_restore_reg vcpu_ptr VCPURegCNTVOFF;
+     \<comment> \<open>read again, so we don't have to reason about @{const vcpu_write_reg} changes in CRefine\<close>
+     vcpu \<leftarrow> get_vcpu vcpu_ptr;
      masked \<leftarrow> return $ (vcpu_vppi_masked vcpu (the $ irq_vppi_event_index irqVTimerEvent));
      \<comment> \<open>we do not know here that irqVTimerEvent is IRQReserved, therefore not IRQInactive,
         so the only way to prove we don't unmask an inactive interrupt is to check\<close>
@@ -196,8 +198,7 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
             gicIndices;
 
           \<comment> \<open>armvVCPUSave\<close>
-          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1;
-          do_machine_op isb
+          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1
        od
      | _ \<Rightarrow> fail"
 

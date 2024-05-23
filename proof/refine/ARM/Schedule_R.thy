@@ -2013,7 +2013,6 @@ lemma chooseThread_ct_not_queued_2:
    apply simp+
   done
 
-
 lemma chooseThread_invs'':
   "chooseThread \<lbrace>invs'\<rbrace>"
   unfolding chooseThread_def Let_def

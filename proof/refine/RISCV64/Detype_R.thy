@@ -100,6 +100,9 @@ defs deletionIsSafe_def:
         \<and> (\<forall>ko. ksPSpace s p = Some (KOArch ko) \<and> p \<in> {ptr .. ptr + 2 ^ bits - 1}
                 \<longrightarrow> 6 \<le> bits)"
 
+defs deletionIsSafe_delete_locale_def:
+  "deletionIsSafe_delete_locale \<equiv> \<lambda>ptr bits s. \<forall>p. ko_wp_at' live' p s \<longrightarrow> p \<notin> mask_range ptr bits"
+
 defs ksASIDMapSafe_def:
   "ksASIDMapSafe \<equiv> \<lambda>s. True"
 
@@ -122,6 +125,7 @@ lemma deleteObjects_def2:
      stateAssert valid_idle'_asrt [];
      stateAssert release_q_runnable_asrt [];
      stateAssert (deletionIsSafe ptr bits) [];
+     stateAssert (deletionIsSafe_delete_locale ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
@@ -157,6 +161,7 @@ lemma deleteObjects_def3:
      stateAssert release_q_runnable_asrt [];
      assert (is_aligned ptr bits);
      stateAssert (deletionIsSafe ptr bits) [];
+     stateAssert (deletionIsSafe_delete_locale ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
@@ -431,6 +436,7 @@ next
 qed
 
 end
+
 locale detype_locale' = detype_locale + constrains s::"det_state"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -472,19 +478,6 @@ lemma sym_refs_ko_wp_atD:
 lemma zobj_refs_capRange:
   "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
   by (cases c, simp_all add: capRange_def capAligned_def is_aligned_no_overflow)
-end
-
-locale delete_locale =
-  fixes s' and base and bits and ptr and idx and d
-  assumes     cap: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d base bits idx) ptr s'"
-  and      nodesc: "descendants_range' (UntypedCap d base bits idx) ptr (ctes_of s')"
-  and        invs: "invs' s'"
-  and    sym_refs: "sym_refs (state_refs_of' s')"
-  and valid_idle': "valid_idle' s'"
-  and      ct_act: "ct_active' s'"
-  and     sa_simp: "sch_act_simple s'"
-  and          al: "is_aligned base bits"
-  and      rlqrun: "\<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
 
 context delete_locale begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -1147,7 +1140,7 @@ lemma st_tcb:
                 dest: live_notRange)
 
 lemma irq_nodes_global:
-  "\<forall>irq :: irq. irq_node' s + (ucast irq << cteSizeBits) \<in> global_refs' s"
+  "\<forall>irq :: irq. irq_node' s' + (ucast irq << cteSizeBits) \<in> global_refs' s'"
   by (simp add: global_refs'_def)
 
 lemma global_refs:
@@ -3069,17 +3062,8 @@ lemma placeNewObject_tcb_at':
    \<lbrace>\<lambda>_ s. tcb_at' ptr s \<rbrace>"
   apply (simp add:placeNewObject_def placeNewObject'_def split_def alignError_def)
   apply wpsimp
-  apply (clarsimp simp: obj_at'_def lookupAround2_None1 objBits_simps
-                        lookupAround2_char1 field_simps projectKO_opt_tcb return_def ps_clear_def
-                  simp flip: is_aligned_mask)
-  apply (drule (1) pspace_no_overlap_disjoint')
-  apply (intro conjI impI allI)
-     apply (clarsimp intro!: set_eqI)
-     apply (metis add_mask_fold if_Some_Some)
-    apply (clarsimp simp: objBits_simps' word_bits_def)
-   apply (clarsimp intro!: set_eqI)
-   apply (simp add: add_mask_fold not_in_domD orthD1)
-  apply (clarsimp simp: objBits_simps' word_bits_def)
+  apply (clarsimp simp: obj_at'_def objBits_simps ps_clear_def)
+  apply (fastforce intro!: set_eqI dest: pspace_no_overlap_disjoint' simp: add_mask_fold)
   done
 
 lemma monad_commute_if_weak_r:

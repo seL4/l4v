@@ -42,8 +42,13 @@ abbreviation
   pt_Ptr :: "32 word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[2048]) ptr" where "pd_Ptr == Ptr"
+
+declare seL4_VCPUReg_Num_def[code]
+value_type num_vcpu_regs = "unat seL4_VCPUReg_Num"
+
 abbreviation
-  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[42]) ptr" where "regs_C_Ptr \<equiv> Ptr"
+  regs_C_Ptr :: "addr \<Rightarrow> (machine_word[num_vcpu_regs]) ptr" where"regs_C_Ptr \<equiv> Ptr"
+
 abbreviation
   vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
 abbreviation
@@ -456,31 +461,31 @@ lemma maxDom_sgt_0_maxDomain:
 
 lemma num_domains_calculation:
   "num_domains = numDomains"
-  unfolding num_domains_def by eval
+  unfolding num_domains_val by eval
 
 private lemma num_domains_card_explicit:
   "num_domains = CARD(num_domains)"
-  by (simp add: num_domains_def)
+  by (simp add: num_domains_val)
 
 lemmas num_domains_index_updates =
-  index_update[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+  index_update[where 'b=num_domains, folded num_domains_card_explicit num_domains_val,
                simplified num_domains_calculation]
-  index_update2[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+  index_update2[where 'b=num_domains, folded num_domains_card_explicit num_domains_val,
                 simplified num_domains_calculation]
 
 (* C ArrayGuards will throw these at us and there is no way to avoid a proof of being less than a
    specific number expressed as a word, so we must introduce these. However, being explicit means
    lack of discipline can lead to a violation. *)
-lemma numDomains_less_numeric_explicit[simplified num_domains_def One_nat_def]:
+lemma numDomains_less_numeric_explicit[simplified num_domains_val One_nat_def]:
   "x < Kernel_Config.numDomains \<Longrightarrow> x < num_domains"
   by (simp add: num_domains_calculation)
 
-lemma numDomains_less_unat_ucast_explicit[simplified num_domains_def]:
+lemma numDomains_less_unat_ucast_explicit[simplified num_domains_val]:
   "unat x < Kernel_Config.numDomains \<Longrightarrow> (ucast (x::domain) :: machine_word) < of_nat num_domains"
   apply (rule word_less_nat_alt[THEN iffD2])
   apply transfer
   apply simp
-  apply (drule numDomains_less_numeric_explicit, simp add: num_domains_def)
+  apply (drule numDomains_less_numeric_explicit, simp add: num_domains_val)
   done
 
 lemmas maxDomain_le_unat_ucast_explicit =
@@ -505,7 +510,7 @@ value_type num_tcb_queues = "numDomains * numPriorities"
 
 lemma num_tcb_queues_calculation:
   "num_tcb_queues = numDomains * numPriorities"
-  unfolding num_tcb_queues_def by eval
+  unfolding num_tcb_queues_val by eval
 
 
 (* Input abbreviations for API object types *)

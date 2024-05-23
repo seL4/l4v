@@ -520,7 +520,8 @@ lemma handle_hyp_fault_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t
       and (ct_active or ct_idle)\<rbrace>
     handle_hypervisor_fault t fault \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def)
+  supply if_split[split del]
+  by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def isFpuEnable_def)
 
 lemma handle_reserved_irq_valid_sched:
   "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>

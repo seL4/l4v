@@ -145,7 +145,7 @@ makeVCPUObject =
                         , vgicAPR = 0
                         , vgicLR = vgicLR
                         }
-        , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrDefault)]
+        , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrEL1VM)]
         , vcpuVPPIMasked = funArray (const False)
         , vcpuVTimer = VirtTimer 0
         }

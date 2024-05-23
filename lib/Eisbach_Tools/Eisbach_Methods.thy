@@ -17,6 +17,17 @@ imports
   Local_Method
 begin
 
+section \<open>Warnings\<close>
+
+method_setup not_visible =
+  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
+     let
+       val ctxt' = Context_Position.set_visible false ctxt
+       fun tac st' = method_evaluate m ctxt' facts st'
+     in SIMPLE_METHOD tac facts end)\<close>
+  \<open>set context visibility to false for suppressing warnings in method execution\<close>
+
+
 section \<open>Debugging methods\<close>
 
 method print_concl = (match conclusion in P for P \<Rightarrow> \<open>print_term P\<close>)

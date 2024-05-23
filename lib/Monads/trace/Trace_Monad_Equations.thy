@@ -10,7 +10,9 @@
 
 theory Trace_Monad_Equations
   imports
+    Trace_Empty_Fail
     Trace_No_Fail
+    Trace_No_Trace
 begin
 
 lemmas assertE_assert = assertE_liftE
@@ -117,35 +119,22 @@ lemma gets_the_returns:
   by (simp_all add: returnOk_def throwError_def
                     gets_the_return)
 
-lemma all_rv_choice_fn_eq_pred:
-  "\<lbrakk> \<And>rv. P rv \<Longrightarrow> \<exists>fn. f rv = g fn \<rbrakk> \<Longrightarrow> \<exists>fn. \<forall>rv. P rv \<longrightarrow> f rv = g (fn rv)"
-  apply (rule_tac x="\<lambda>rv. SOME h. f rv = g h" in exI)
-  apply (clarsimp split: if_split)
-  by (meson someI_ex)
-
-lemma all_rv_choice_fn_eq:
-  "\<lbrakk> \<And>rv. \<exists>fn. f rv = g fn \<rbrakk>
-   \<Longrightarrow> \<exists>fn. f = (\<lambda>rv. g (fn rv))"
-  using all_rv_choice_fn_eq_pred[where f=f and g=g and P=\<top>]
-  by (simp add: fun_eq_iff)
-
 lemma gets_the_eq_bind:
-  "\<lbrakk> \<exists>fn. f = gets_the (fn o fn'); \<And>rv. \<exists>fn. g rv = gets_the (fn o fn') \<rbrakk>
+  "\<lbrakk> f = gets_the (fn_f o fn'); \<And>rv. g rv = gets_the (fn_g rv o fn') \<rbrakk>
    \<Longrightarrow> \<exists>fn. (f >>= g) = gets_the (fn o fn')"
-  apply (clarsimp dest!: all_rv_choice_fn_eq)
-  apply (rule_tac x="\<lambda>s. case (fn s) of None \<Rightarrow> None | Some v \<Rightarrow> fna v s" in exI)
+  apply clarsimp
+  apply (rule exI[where x="\<lambda>s. case (fn_f s) of None \<Rightarrow> None | Some v \<Rightarrow> fn_g v s"])
   apply (simp add: gets_the_def bind_assoc exec_gets
                    assert_opt_def fun_eq_iff
             split: option.split)
   done
 
 lemma gets_the_eq_bindE:
-  "\<lbrakk> \<exists>fn. f = gets_the (fn o fn'); \<And>rv. \<exists>fn. g rv = gets_the (fn o fn') \<rbrakk>
+  "\<lbrakk> f = gets_the (fn_f o fn'); \<And>rv. g rv = gets_the (fn_g rv o fn') \<rbrakk>
    \<Longrightarrow> \<exists>fn. (f >>=E g) = gets_the (fn o fn')"
-  apply (simp add: bindE_def)
-  apply (erule gets_the_eq_bind)
+  unfolding bindE_def
+  apply (erule gets_the_eq_bind[where fn_g="\<lambda>rv s. case rv of Inl e \<Rightarrow> Some (Inl e) | Inr v \<Rightarrow> fn_g v s"])
   apply (simp add: lift_def gets_the_returns split: sum.split)
-  apply fastforce
   done
 
 lemma gets_the_fail:
@@ -227,7 +216,7 @@ lemma bind_return_unit:
   by simp
 
 lemma modify_id_return:
- "modify id = return ()"
+  "modify id = return ()"
   by (simp add: simpler_modify_def return_def)
 
 lemma liftE_bind_return_bindE_returnOk:
@@ -257,6 +246,38 @@ lemma zipWithM_x_modify:
   apply (rule ext)
   apply (simp add: simpler_modify_def bind_def split_def)
   done
+
+lemma bind_return_subst:
+  assumes r: "\<And>r. \<lbrace>\<lambda>s. P x = r\<rbrace> f x \<lbrace>\<lambda>rv s. Q rv = r\<rbrace>"
+  shows
+  "do a \<leftarrow> f x;
+      g (Q a)
+   od =
+   do _ \<leftarrow> f x;
+      g (P x)
+   od"
+proof -
+  have "do a \<leftarrow> f x;
+           return (Q a)
+        od =
+        do _ \<leftarrow> f x;
+           return (P x)
+        od"
+    using r
+    apply (subst fun_eq_iff)
+    apply (auto simp: bind_def valid_def return_def mres_def vimage_def split: tmres.splits;
+           fastforce simp: image_def intro: rev_bexI)
+    done
+  hence "do a \<leftarrow> f x;
+            return (Q a)
+         od >>= g =
+         do _ \<leftarrow> f x;
+            return (P x)
+         od >>= g"
+    by (rule bind_cong, simp)
+  thus ?thesis
+    by simp
+qed
 
 lemma assert2:
   "(do v1 \<leftarrow> assert P; v2 \<leftarrow> assert Q; c od)
@@ -319,6 +340,28 @@ lemma if_bind:
 lemma bind_liftE_distrib: "(liftE (A >>= (\<lambda>x. B x))) = (liftE A >>=E (\<lambda>x. liftE (\<lambda>s. B x s)))"
   by (clarsimp simp: liftE_def bindE_def lift_def bind_assoc)
 
+(*FIXME: the following lemmas were originally solved by monad_eq, which doesn't yet exist for the
+         trace monad due to traces making equality more complicated.*)
+lemma condition_apply_cong:
+  "\<lbrakk> c s = c' s'; s = s'; \<And>s. c' s \<Longrightarrow> l s = l' s  ; \<And>s. \<not> c' s \<Longrightarrow> r s = r' s  \<rbrakk> \<Longrightarrow>  condition c l r s = condition c' l' r' s'"
+  by (simp add: condition_def)
+
+lemma condition_cong [cong, fundef_cong]:
+  "\<lbrakk> c = c'; \<And>s. c' s \<Longrightarrow> l s = l' s; \<And>s. \<not> c' s \<Longrightarrow> r s = r' s \<rbrakk> \<Longrightarrow> condition c l r = condition c' l' r'"
+  by (simp add: condition_def fun_eq_iff)
+
+lemma lift_Inr [simp]: "(lift X (Inr r)) = (X r)"
+  by (simp add: lift_def)
+
+lemma lift_Inl [simp]: "lift C (Inl a) = throwError a"
+  by (simp add: lift_def)
+
+lemma returnOk_def2:  "returnOk a = return (Inr a)"
+  by (simp add: returnOk_def)
+
+lemma liftE_fail[simp]: "liftE fail = fail"
+  by (simp add: liftE_def)
+
 lemma if_catch_distrib:
   "((if P then f else g) <catch> h) = (if P then f <catch> h else g <catch> h)"
   by (simp split: if_split)
@@ -341,9 +384,114 @@ lemma catch_is_if:
 lemma liftE_K_bind: "liftE ((K_bind (\<lambda>s. A s)) x) = K_bind (liftE (\<lambda>s. A s)) x"
   by clarsimp
 
+lemma monad_eq_split:
+  assumes "\<And>r s. Q r s \<Longrightarrow> f r s = f' r s"
+          "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>r s. Q r s\<rbrace>"
+          "P s"
+  shows "(g >>= f) s = (g >>= f') s"
+proof -
+  have pre: "\<And>rv s'. \<lbrakk>(rv, s') \<in> mres (g s)\<rbrakk> \<Longrightarrow> f rv s' = f' rv s'"
+    using assms unfolding valid_def apply -
+    by (erule allE[where x=s]) (fastforce simp: mres_def image_def)
+  show ?thesis
+    by (fastforce intro!: bind_apply_cong simp: pre)
+qed
+
+lemma monad_eq_split2:
+  assumes eq: " g' s = g s"
+  assumes tail:"\<And>r s. Q r s \<Longrightarrow> f r s = f' r s"
+  and hoare:   "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>r s. Q r s\<rbrace>" "P s"
+  shows "(g >>= f) s = (g' >>= f') s"
+  apply (rule trans)
+   apply (rule monad_eq_split[OF tail hoare], assumption)
+  apply (clarsimp simp: bind_def eq)
+  done
+
 lemma monad_eq_split_tail:
   "\<lbrakk>f = g; a s = b s\<rbrakk> \<Longrightarrow> (a >>= f) s = ((b >>= g) s)"
   by (simp add:bind_def)
+
+lemma double_gets_drop_regets:
+  "(do x \<leftarrow> gets f;
+       y \<leftarrow> gets f;
+       m y x
+    od) =
+   (do x \<leftarrow> gets f;
+       m x x
+    od)"
+  by (simp add: simpler_gets_def bind_def)
+
+lemma state_assert_false[simp]:
+  "state_assert (\<lambda>_. False) = fail"
+  by (simp add: state_assert_def get_def bind_def)
+
+lemma condition_fail_rhs:
+  "condition C X fail = (state_assert C >>= (\<lambda>_. X))"
+  by (auto simp: condition_def state_assert_def assert_def fail_def return_def get_def bind_def
+                 fun_eq_iff)
+
+lemma condition_swap:
+  "condition C A B = condition (\<lambda>s. \<not> C s) B A"
+  by (simp add: condition_def fun_eq_iff)
+
+lemma condition_fail_lhs:
+  "condition C fail X = (state_assert (\<lambda>s. \<not> C s) >>= (\<lambda>_. X))"
+  by (metis condition_fail_rhs condition_swap)
+
+lemma condition_bind_fail[simp]:
+  "(condition C A B >>= (\<lambda>_. fail)) = condition C (A >>= (\<lambda>_. fail)) (B >>= (\<lambda>_. fail))"
+  by (auto simp: condition_def assert_def fail_def bind_def fun_eq_iff)
+
+lemma bind_fail_propagates:
+  "\<lbrakk>no_trace A; empty_fail A\<rbrakk> \<Longrightarrow> A >>= (\<lambda>_. fail) = fail"
+  by (fastforce simp: no_trace_def fail_def bind_def case_prod_unfold
+               dest!: empty_fail_not_empty split: tmres.splits)
+
+lemma simple_bind_fail [simp]:
+  "(state_assert X >>= (\<lambda>_. fail)) = fail"
+  "(modify M >>= (\<lambda>_. fail)) = fail"
+  "(return X >>= (\<lambda>_. fail)) = fail"
+  "(gets X >>= (\<lambda>_. fail)) = fail"
+  by (auto intro!: bind_fail_propagates)
+
+lemma bind_inv_inv_comm:
+  "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>; \<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>_. P\<rbrace>;
+     empty_fail f; empty_fail g; no_trace f; no_trace g \<rbrakk> \<Longrightarrow>
+   do x \<leftarrow> f; y \<leftarrow> g; n x y od = do y \<leftarrow> g; x \<leftarrow> f; n x y od"
+  apply (rule ext)
+  apply (rule trans[where s="(do (x, y) \<leftarrow> do x \<leftarrow> f; y \<leftarrow> (\<lambda>_. g s) ; (\<lambda>_. return (x, y) s) od;
+                                 n x y od) s" for s])
+   apply (simp add: bind_assoc)
+   apply (intro bind_apply_cong, simp_all)[1]
+    apply (metis in_inv_by_hoareD)
+   apply (simp add: return_def bind_def)
+   apply (metis in_inv_by_hoareD)
+  apply (rule trans[where s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
+                                 n x y od) s" for s, rotated])
+   apply (simp add: bind_assoc)
+   apply (intro bind_apply_cong, simp_all)[1]
+    apply (metis in_inv_by_hoareD)
+   apply (simp add: return_def bind_def)
+   apply (metis in_inv_by_hoareD)
+  apply (rule bind_apply_cong, simp_all)
+  apply (clarsimp simp: bind_def split_def return_def)
+  apply (rule subset_antisym;
+         clarsimp simp: no_trace_def case_prod_unfold
+                 split: tmres.splits dest!: empty_fail_not_empty)
+       apply ((drule_tac x=x in spec)+, fastforce)+
+  done
+
+lemma bind_known_operation_eq:
+  "\<lbrakk> no_fail P f; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. rv = x \<and> s = t\<rbrace>; P s; Q s; empty_fail f; no_trace f \<rbrakk>
+     \<Longrightarrow> (f >>= g) s = g x t"
+  apply (drule(1) no_failD)
+  apply (subgoal_tac "f s = {([], Result (x, t))}")
+   apply (clarsimp simp: bind_def)
+  apply (rule subset_antisym;
+         clarsimp simp: valid_def empty_fail_def no_trace_def mres_def image_def failed_def)
+   apply (metis eq_snd_iff tmres.exhaust)
+  apply fastforce
+  done
 
 lemma assert_opt_If:
   "assert_opt v = If (v = None) fail (return (the v))"
@@ -376,7 +524,7 @@ lemma select_empty_bind[simp]:
   by (simp add: select_def bind_def)
 
 
-subsection \<open>Alternative env_steps with repeat\<close>
+subsection \<open>Alternative @{text env_steps} with repeat\<close>
 
 lemma mapM_Cons:
   "mapM f (x # xs) = do
@@ -397,6 +545,25 @@ lemma mapM_x_Cons:
   "mapM_x f [] = return ()"
   by (simp_all add: mapM_x_def sequence_x_def)
 
+lemma mapME_Cons:
+  "mapME f (x # xs) = doE
+     y \<leftarrow> f x;
+     ys \<leftarrow> mapME f xs;
+     returnOk (y # ys)
+   odE"
+  and mapME_Nil:
+  "mapME f [] = returnOk []"
+  by (simp_all add: mapME_def sequenceE_def)
+
+lemma mapME_x_Cons:
+  "mapME_x f (x # xs) = doE
+     y \<leftarrow> f x;
+     mapME_x f xs
+   odE"
+  and mapME_x_Nil:
+  "mapME_x f [] = returnOk ()"
+  by (simp_all add: mapME_x_def sequenceE_x_def)
+
 lemma mapM_append:
   "mapM f (xs @ ys) = (do
      fxs \<leftarrow> mapM f xs;
@@ -412,6 +579,21 @@ lemma mapM_x_append:
    od)"
   by (induct xs, simp_all add: mapM_x_Cons mapM_x_Nil bind_assoc)
 
+lemma mapME_append:
+  "mapME f (xs @ ys) = (doE
+     fxs \<leftarrow> mapME f xs;
+     fys \<leftarrow> mapME f ys;
+     returnOk (fxs @ fys)
+   odE)"
+  by (induct xs, simp_all add: mapME_Cons mapME_Nil bindE_assoc)
+
+lemma mapME_x_append:
+  "mapME_x f (xs @ ys) = (doE
+     fxs \<leftarrow> mapME_x f xs;
+     mapME_x f ys
+   odE)"
+  by (induct xs, simp_all add: mapME_x_Cons mapME_x_Nil bindE_assoc)
+
 lemma mapM_map:
   "mapM f (map g xs) = mapM (f o g) xs"
   by (induct xs; simp add: mapM_Nil mapM_Cons)
@@ -419,6 +601,14 @@ lemma mapM_map:
 lemma mapM_x_map:
   "mapM_x f (map g xs) = mapM_x (f o g) xs"
   by (induct xs; simp add: mapM_x_Nil mapM_x_Cons)
+
+lemma mapME_map:
+  "mapME f (map g xs) = mapME (f o g) xs"
+  by (induct xs; simp add: mapME_Nil mapME_Cons)
+
+lemma mapME_x_map:
+  "mapME_x f (map g xs) = mapME_x (f o g) xs"
+  by (induct xs; simp add: mapME_x_Nil mapME_x_Cons)
 
 primrec repeat_n :: "nat \<Rightarrow> ('s, unit) tmonad \<Rightarrow> ('s, unit) tmonad" where
     "repeat_n 0 f = return ()"
@@ -531,7 +721,7 @@ lemma put_trace_mapM_x:
 
 lemma rev_surj:
   "surj rev"
-  by (rule_tac f=rev in surjI, simp)
+  by (rule surjI[where f=rev], simp)
 
 lemma select_image:
   "select (f ` S) = do x \<leftarrow> select S; return (f x) od"

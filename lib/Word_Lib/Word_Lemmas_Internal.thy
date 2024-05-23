@@ -791,4 +791,97 @@ lemma word_mult_div_assoc:
                unat_eq_zero word_arith_nat_div word_arith_nat_mult)
   done
 
+lemma mask_shift_neg_mask_eq:
+  "\<lbrakk> n' \<le> n; x \<le> mask (m+n') \<rbrakk> \<Longrightarrow> (x && ~~ mask n) && (mask m << n') = x && ~~ mask n"
+  by word_eqI_solve
+
+lemma from_bool_inj[simp]:
+  "(from_bool x = from_bool y) = (x = y)"
+  unfolding from_bool_def
+  by (auto split: bool.splits)
+
+lemma word_le_1_and_idem:
+  "w \<le> 1 \<Longrightarrow> w AND 1 = w" for w :: "_ word"
+  by (metis word_bw_same(1) word_le_1 word_log_esimps(7))
+
+lemma from_to_bool_le_1_idem:
+  "w \<le> 1 \<Longrightarrow> from_bool (to_bool w) = w"
+  apply (subst word_le_1_and_idem[symmetric], assumption)
+  apply (simp add: from_to_bool_last_bit)
+  apply (simp add: word_le_1_and_idem)
+  done
+
+lemma and_1_0_not_bit_0:
+  "(w && 1 = 0) = (\<not> (w::'a::len word) !! 0)"
+  using to_bool_and_1[simplified to_bool_def, where x=w]
+  by auto
+
+lemma unat_scast_up:
+  "\<lbrakk> LENGTH('a) \<le> LENGTH('b); 0 \<le> sint x \<rbrakk> \<Longrightarrow>unat (scast x::'b::len word) = unat x"
+  for x :: "'a :: len  word"
+  apply (simp flip: bit_last_iff not_less)
+  apply word_eqI
+  apply (clarsimp simp: min_def split: if_splits)
+  apply (rule conjI; clarsimp)
+   apply (drule test_bit_lenD)
+   apply clarsimp
+   apply (metis le_antisym nat_le_Suc_less_imp)
+  apply fastforce
+  done
+
+lemma unat_uint_less:
+  "unat x < nat i \<Longrightarrow> uint x < i" for x :: "'a :: len word"
+  by (simp add: zless_nat_eq_int_zless)
+
+lemma sint_ge_zero_uint:
+  "uint x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
+  by (simp add: sint_eq_uint_2pl word_2p_lem wsst_TYs(3))
+
+lemma sint_ge_zero_unat:
+  "unat x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
+  by (fastforce intro: sint_ge_zero_uint unat_uint_less simp: nat_power_eq)
+
+lemma mask_shiftl_le_mask:
+  "mask n << m \<le> (mask (n+m) :: 'a::len word)"
+  by (subst add.commute)
+     (rule leq_high_bits_shiftr_low_bits_leq_bits, simp)
+
+(* This is more useful for getting rid of a downcast *)
+lemma unat_ucast_unat_id:
+  "unat x < 2 ^ LENGTH('b) \<Longrightarrow> unat (UCAST('a::len \<rightarrow> 'b::len) x) = unat x"
+  by (simp add: unat_eq_of_nat)
+
+lemma ucast_up_preserves_gt0:
+  "\<lbrakk> 0 < x; LENGTH('a) < LENGTH('b) \<rbrakk> \<Longrightarrow> 0 < (ucast x :: 'b::len word)" for x :: "'a::len word"
+  by (metis ucast_0 ucast_less_ucast_weak)
+
+lemma ucast_up_preserves_not0:
+  "\<lbrakk> x \<noteq> 0; LENGTH('a) < LENGTH('b::len) \<rbrakk> \<Longrightarrow> (ucast x :: 'b::len word) \<noteq> 0"
+  for x :: "'a::len word"
+  by (metis ucast_0 ucast_ucast_id)
+
+lemma unat_le_fold:
+  "n < 2 ^ LENGTH('a) \<Longrightarrow> (unat x \<le> n) = (x \<le> of_nat n)" for x::"'a::len word"
+  by (simp add: word_le_nat_alt unat_of_nat_eq)
+
+lemma ucast_and_mask_drop:
+  "LENGTH('a) \<le> n \<Longrightarrow> (ucast w :: 'b::len word) && mask n = ucast w" for w::"'a::len word"
+  by word_eqI (fastforce dest: test_bit_lenD)
+
+lemma add_mask_ignore:
+  "x && mask n = 0 \<Longrightarrow> v + x && mask n = v && mask n"
+  by (metis add_0_right mask_eqs(2))
+
+lemma word_ctz_upcast_id:
+  "\<lbrakk> x \<noteq> 0; is_up (ucast::'a word \<Rightarrow>'b word) \<rbrakk> \<Longrightarrow>
+  word_ctz (ucast x :: 'b::len word) = word_ctz x" for x :: "'a::len word"
+  unfolding word_ctz_def
+  by (simp add: ucast_up_app[where n="LENGTH('b) - LENGTH('a)"]
+                source_size_def target_size_def is_up_def eq_zero_set_bl)
+
+lemma ucast_ucast_mask_id:
+  "\<lbrakk> LENGTH('b::len) < LENGTH('a); n = LENGTH('b) \<rbrakk> \<Longrightarrow>
+   UCAST('b \<rightarrow> 'a) (UCAST('a \<rightarrow> 'b) (x && mask n)) = x && mask n" for x :: "'a::len word"
+  by (simp add: ucast_ucast_len[OF eq_mask_less])
+
 end

@@ -1404,15 +1404,6 @@ lemma performPageGetAddress_ccorres:
                      pred_tcb_at'_def obj_at'_def ct_in_state'_def)
   done
 
-lemma vaddr_segment_nonsense3_folded:
-  "is_aligned (p :: machine_word) pageBits \<Longrightarrow>
-   (p + ((vaddr >> pageBits) && mask (pt_bits - word_size_bits) << word_size_bits) && ~~ mask pt_bits) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (simp add: bit_simps mask_def)+
-  apply (rule shiftl_less_t2n[where m=12 and n=3, simplified, OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
-   apply simp+
-  done
-
 lemma vmsz_aligned_addrFromPPtr':
   "vmsz_aligned (addrFromPPtr p) sz
        = vmsz_aligned p sz"
@@ -1455,18 +1446,6 @@ lemma slotcap_in_mem_valid:
   apply (erule(1) ctes_of_valid')
   done
 
-lemma unat_less_iff64:
-  "\<lbrakk>unat (a::machine_word) = b;c < 2^word_bits\<rbrakk>
-   \<Longrightarrow> (a < of_nat c) = (b < c)"
-  apply (rule iffI)
-    apply (drule unat_less_helper)
-    apply simp
-  apply (simp add:unat64_eq_of_nat)
-  apply (rule of_nat_mono_maybe)
-   apply (simp add:word_bits_def)
-  apply simp
-  done
-
 lemma injection_handler_if_returnOk:
   "injection_handler Inl (if a then b else returnOk c)
   = (if a then (injection_handler Inl b) else returnOk c)"
@@ -1478,11 +1457,6 @@ lemma injection_handler_if_returnOk:
 
 lemma pbfs_less: "pageBitsForSize sz < 31"
   by (case_tac sz,simp_all add: bit_simps)
-
-definition
-  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
-where
-  "to_option f x \<equiv> if f x then Some x else None"
 
 lemma cte_wp_at_eq_gsMaxObjectSize:
   "cte_wp_at' ((=) cap o cteCap) slot s

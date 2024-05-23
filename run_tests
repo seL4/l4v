@@ -95,12 +95,9 @@ EXCLUDE["RISCV64"]=[
 EXCLUDE["AARCH64"]=[
     # To be eliminated/refined as development progresses
     "ASepSpec",
-    "CKernel",
-    "CBaseRefine",
     "Access",
 
     # Tools and unrelated content, removed for development
-    "CParser",
     "AutoCorres",
     "CamkesGlueSpec",
     "Sep_Algebra",
@@ -114,7 +111,8 @@ EXCLUDE["AARCH64"]=[
     "DSpec",
     "DBaseRefine",
     "CamkesGlueProofs",
-    "AsmRefine"
+    "AsmRefine",
+    "SimplExportAndRefine"
 ]
 
 # Check EXCLUDE is exhaustive over the available architectures

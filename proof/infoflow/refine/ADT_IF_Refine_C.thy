@@ -384,7 +384,7 @@ lemma kernelEntry_corres_C:
    apply (erule no_fail_pre)
    apply (clarsimp simp: all_invs'_def)
    apply (rule exI, rule conjI, assumption)
-   apply clarsimp
+   apply (clarsimp simp: schact_is_rct_def)
   apply (simp only: bind_assoc)
   apply (simp add: getCurThread_def)
   apply (rule corres_guard_imp)
@@ -413,7 +413,7 @@ lemma kernelEntry_corres_C:
         apply (rule threadSet_all_invs_triv'[where e=e])
        apply (clarsimp simp: all_invs'_def)
        apply (rule exI, (rule conjI, assumption)+)
-       subgoal by force
+       subgoal by (force simp: schact_is_rct_def)
       apply simp
       apply (rule hoare_post_taut[where P=\<top>])
      apply wp+

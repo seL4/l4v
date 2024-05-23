@@ -218,10 +218,12 @@ Will be set to something stricter in Isabelle when required.
 For verification purposes a check is made that the region the objects are created in does not overlap with any existing CNodes.
 
 >         let totalObjectSize = (length destSlots) `shiftL` (getObjectSize newType userSize)
->         stateAssert (\x -> not (cNodeOverlap (gsCNodes x)
->                 (\x -> fromPPtr retypeBase <= x
->                     && x <= fromPPtr retypeBase + fromIntegral totalObjectSize - 1)))
+>         let inRange = (\x -> fromPPtr retypeBase <= x &&
+>                              x <= fromPPtr retypeBase + fromIntegral totalObjectSize - 1)
+>         stateAssert (\s -> not (cNodeOverlap (gsCNodes s) inRange))
 >             "CNodes present in region to be retyped."
+>         stateAssert (\s -> not (archOverlap s inRange))
+>             "Arch specific non-overlap requirements."
 >         assert (canonicalAddressAssert retypeBase) "Canonical ptr required on some architectures"
 >         let freeRef = retypeBase + PPtr (fromIntegral totalObjectSize)
 >         updateFreeIndex srcSlot (getFreeIndex base freeRef)
@@ -235,4 +237,7 @@ This function performs the check that CNodes do not overlap with the retyping re
 > cNodeOverlap :: (Word -> Maybe Int) -> (Word -> Bool) -> Bool
 > cNodeOverlap _ _ = False
 
+Architecture specific assertion similar to cNodeOverlap, for architectures that have variable-sized objects.
 
+> archOverlap :: KernelState -> (Word -> Bool) -> Bool
+> archOverlap _ _ = False

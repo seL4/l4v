@@ -102,7 +102,8 @@ lemma ccorres_locateSlotCap_push:
    apply (rule monadic_rewrite_bindE[OF monadic_rewrite_refl])
     apply (rule monadic_rewrite_transverse)
      apply (rule monadic_rewrite_bind_head)
-     apply (rule monadic_rewrite_stateAssert)
+     apply (rule monadic_rewrite_stateAssert[where f="return", simplified])
+    apply (rule monadic_rewrite_refl)
     apply simp
     apply (rule monadic_rewrite_refl)
    apply assumption

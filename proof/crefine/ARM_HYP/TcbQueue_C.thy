@@ -1199,8 +1199,5 @@ lemma rf_sr_tcb_update_not_in_queue:
                          typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
-lemmas rf_sr_tcb_update_not_in_queue2
-    = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_not_in_queue, simplified]
-
 end
 end

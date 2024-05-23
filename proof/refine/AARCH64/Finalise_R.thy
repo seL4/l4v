@@ -25,6 +25,7 @@ lemma case_Null_If:
 crunches emptySlot
   for aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
+  and pspace_canonical'[wp]: pspace_canonical'
   (simp: case_Null_If)
 
 lemma updateCap_cte_wp_at_cases:
@@ -2479,11 +2480,11 @@ lemma setObject_tcb_gsMaxObjectSize[wp]:
   "setObject t (v :: tcb) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
   by (wpsimp simp: setObject_def wp: updateObject_default_inv)
 
-crunch ksInterruptState[wp]: archThreadSet "\<lambda>s. P (ksInterruptState s)"
-
-crunch gsMaxObjectSize[wp]: archThreadSet "\<lambda>s. P (gsMaxObjectSize s)"
-
-crunch ksMachineState[wp]: archThreadSet "\<lambda>s. P (ksMachineState s)"
+crunches archThreadSet
+  for pspace_canonical'[wp]: pspace_canonical'
+  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   (wp: setObject_ksMachine updateObject_default_inv)
 
 lemma archThreadSet_state_refs_of'[wp]:
@@ -2610,7 +2611,7 @@ lemma dissoc_invs':
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
         | clarsimp simp: live'_def hyp_live'_def arch_live'_def)+
   supply fun_upd_apply[simp]
-  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def tcb_vcpu_refs'_def
+  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def tcb_vcpu_refs'_def valid_vcpu'_def
                   split: option.splits if_split_asm)
   apply safe
    apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs)

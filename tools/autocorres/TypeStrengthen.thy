@@ -14,7 +14,6 @@
 theory TypeStrengthen
 imports
   L2Defs
-  "Monads.Reader_Option_ND"
   ExecConcrete
 begin
 

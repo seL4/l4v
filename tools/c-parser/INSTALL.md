@@ -9,7 +9,7 @@
 NB: These instructions apply to the stand-alone release of the C parser.
 If this is in an L4.verified checkout, see the top-level README.md instead.
 
-This code requires Isabelle2021 and the MLton SML compiler.
+This code requires Isabelle2023 and the MLton SML compiler.
 
 The C parser supports multiple target architectures:
 

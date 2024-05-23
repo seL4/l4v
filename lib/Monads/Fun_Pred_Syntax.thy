@@ -7,6 +7,8 @@
 (* Syntax for using multi-argument functions as predicates, e.g "P and Q" where P and Q are
    functions to bool, taking one or more parameters. *)
 
+chapter \<open>Function Predicate Syntax\<close>
+
 theory Fun_Pred_Syntax
 imports Main
 begin
@@ -137,7 +139,9 @@ lemma pred_bot_comp[simp]:
   by (simp add: comp_def)
 
 
-text \<open>We would get these for free if we could instantiate pred_top/pred_bot to top/bot directly:\<close>
+text \<open>
+  We would get these for free if we could instantiate @{const pred_top}/@{const pred_bot} to
+  @{const top}/@{const bot} directly:\<close>
 
 lemmas pred_top_left_neutral[simp] =
   inf_top.left_neutral[where 'a="'a \<Rightarrow> bool", unfolded pred_top_def]
@@ -182,6 +186,13 @@ lemma bipred_disj_op_eq[simp]:
 
 lemma bipred_le_true[simp]: "R \<le> \<top>\<top>"
   by clarsimp
+
+lemma bipred_and_or_True[simp]:
+  "(P or \<top>\<top>) = \<top>\<top>"
+  "(\<top>\<top> or P) = \<top>\<top>"
+  "(P and \<top>\<top>) = P"
+  "(\<top>\<top> and P) = P"
+  by auto
 
 
 section \<open>Examples\<close>

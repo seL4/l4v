@@ -4554,14 +4554,14 @@ lemma decodeVCPUWriteReg_ccorres:
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and sysargs_rel args buffer
               and (valid_cap' (ArchObjectCap cp)) and K (isVCPUCap cp))
-       (UNIV \<inter> {s. unat (length_' s) = length args}
+       (UNIV \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) hs
        (decodeVCPUWriteReg args cp
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUWriteReg_'proc)"
   apply (rule ccorres_grab_asm)
-  apply (cinit' lift: length_' cap_' buffer_' simp: decodeVCPUWriteReg_def Let_def)
+  apply (cinit' lift: length___unsigned_long_' cap_' buffer_' simp: decodeVCPUWriteReg_def Let_def)
    apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
     apply (rule_tac ccorres_gen_asm[where P="length args < 2"])
     apply clarsimp
@@ -4685,7 +4685,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
               and sysargs_rel args buffer
               and (valid_cap' (ArchObjectCap cp))
               and K (isVCPUCap cp))
-       (UNIV \<inter> {s. unat (length_' s) = length args}
+       (UNIV \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              ) hs
@@ -4693,7 +4693,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUInjectIRQ_'proc)"
   apply (rule ccorres_grab_asm)
-  apply (cinit' lift: length_' cap_' buffer_'
+  apply (cinit' lift: length___unsigned_long_' cap_' buffer_'
                 simp: decodeVCPUInjectIRQ_def Let_def shiftL_nat )
    apply csymbr
    apply csymbr
@@ -4901,14 +4901,14 @@ lemma decodeVCPUReadReg_ccorres:
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and sysargs_rel args buffer
               and (valid_cap' (ArchObjectCap cp)))
-       (UNIV \<inter> {s. unat (length_' s) = length args}
+       (UNIV \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) hs
        (decodeVCPUReadReg args cp
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUReadReg_'proc)"
-  apply (cinit' lift: length_' cap_' buffer_' call_')
+  apply (cinit' lift: length___unsigned_long_' cap_' buffer_' call_')
    apply (clarsimp simp: decodeVCPUReadReg_def Let_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
@@ -5117,7 +5117,7 @@ lemma decodeVCPUAckVPPI_ccorres:
               and sysargs_rel args buffer
               and (valid_cap' (ArchObjectCap cp))
               and K (isVCPUCap cp))
-       (UNIV \<inter> {s. unat (length_' s) = length args}
+       (UNIV \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              ) hs
@@ -5139,7 +5139,7 @@ proof -
 
   show ?thesis
     apply (rule ccorres_grab_asm)
-    apply (cinit' lift: length_' cap_' buffer_')
+    apply (cinit' lift: length___unsigned_long_' cap_' buffer_')
      apply (clarsimp simp: decodeVCPUAckVPPI_def)
      apply (csymbr, rename_tac cp')
      apply csymbr
@@ -5238,7 +5238,7 @@ lemma decodeARMVCPUInvocation_ccorres:
               and (valid_cap' (ArchObjectCap cp)))
        (UNIV \<comment> \<open>whoever wrote the C code decided to name this arbitrarily differently from other functions\<close>
              \<inter> {s. label___unsigned_long_' s = label}
-             \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
@@ -5247,7 +5247,7 @@ lemma decodeARMVCPUInvocation_ccorres:
        (decodeARMVCPUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMVCPUInvocation_'proc)"
-  apply (cinit' lift: label___unsigned_long_' length_' slot_' current_extra_caps_'
+  apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' slot_' current_extra_caps_'
                        cap_' buffer_' call_')
    apply (clarsimp simp: decodeARMVCPUInvocation_def)
 

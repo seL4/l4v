@@ -1,4 +1,7 @@
-lib
+lib/Basics
+lib/Eisbach_Tools
+lib/ML_Utils
+lib/Monads
 lib/Word_Lib
 c-parser
 autocorres

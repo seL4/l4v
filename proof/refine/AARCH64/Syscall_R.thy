@@ -401,7 +401,7 @@ lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and valid_invocation i
-            and simple_sched_action
+            and schact_is_rct
             and ct_active
             and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active')
@@ -450,7 +450,7 @@ lemma performInvocation_corres:
        apply (clarsimp simp: liftME_def)
        apply (rule corres_guard_imp)
          apply (erule invokeTCB_corres)
-        apply (simp)+
+        apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
       \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
@@ -465,7 +465,7 @@ lemma performInvocation_corres:
           apply assumption
          apply (rule corres_trivial, simp add: returnOk_def)
         apply wp+
-      apply (clarsimp+)[2]
+      apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
     apply (rule corres_guard_imp, rule performIRQControl_corres, simp+)
    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
@@ -1182,7 +1182,7 @@ crunches reply_from_kernel
 lemma handleInvocation_corres:
   "c \<longrightarrow> b \<Longrightarrow>
    corres (dc \<oplus> dc)
-          (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
+          (einvs and schact_is_rct and ct_active)
           (invs' and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_invocation c b)
@@ -1226,14 +1226,14 @@ lemma handleInvocation_corres:
                       apply (wp reply_from_kernel_tcb_at)
                      apply (rule impI, wp+)
                      apply (wpsimp wp: hoare_drop_imps|strengthen invs_distinct invs_psp_aligned)+
-               apply (rule_tac Q="\<lambda>rv. einvs and simple_sched_action and valid_invocation rve
+               apply (rule_tac Q="\<lambda>rv. einvs and schact_is_rct and valid_invocation rve
                                    and (\<lambda>s. thread = cur_thread s)
                                    and st_tcb_at active thread"
                           in hoare_post_imp)
                 apply (clarsimp simp: simple_from_active ct_in_state_def
                                elim!: st_tcb_weakenE)
                apply (wp sts_st_tcb_at' set_thread_state_simple_sched_action
-                set_thread_state_active_valid_sched)
+                         set_thread_state_schact_is_rct set_thread_state_active_valid_sched)
               apply (rule_tac Q="\<lambda>rv. invs' and valid_invocation' rve'
                                       and (\<lambda>s. thread = ksCurThread s)
                                       and st_tcb_at' active' thread
@@ -1332,12 +1332,13 @@ lemma hinv_invs'[wp]:
   done
 
 crunch typ_at'[wp]: handleFault "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps)
 
 lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
 lemma handleSend_corres:
   "corres (dc \<oplus> dc)
-          (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
+          (einvs and schact_is_rct and ct_active)
           (invs' and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
@@ -1650,17 +1651,13 @@ lemma getHSR_invs'[wp]:
   "doMachineOp getHSR \<lbrace>invs'\<rbrace>"
   by (simp add: getHSR_def doMachineOp_def split_def select_f_returns | wp)+
 
-lemma getDFSR_invs'[wp]:
-  "doMachineOp getDFSR \<lbrace>invs'\<rbrace>"
-  by (simp add: getDFSR_def doMachineOp_def split_def select_f_returns | wp)+
+lemma getESR_invs'[wp]:
+  "doMachineOp getESR \<lbrace>invs'\<rbrace>"
+  by (simp add: getESR_def doMachineOp_def split_def select_f_returns | wp)+
 
 lemma getFAR_invs'[wp]:
   "doMachineOp getFAR \<lbrace>invs'\<rbrace>"
   by (simp add: getFAR_def doMachineOp_def split_def select_f_returns | wp)+
-
-lemma getIFSR_invs'[wp]:
-  "doMachineOp getIFSR \<lbrace>invs'\<rbrace>"
-  by (simp add: getIFSR_def doMachineOp_def split_def select_f_returns | wp)+
 
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: AARCH64_H.handleVMFault_def
@@ -1765,18 +1762,17 @@ lemma hr_ct_active'[wp]:
   "\<lbrace>invs' and ct_active'\<rbrace> handleReply \<lbrace>\<lambda>rv. ct_active'\<rbrace>"
   apply (simp add: handleReply_def getSlotCap_def getCurThread_def
                    getThreadCallerSlot_def locateSlot_conv)
-  apply (rule hoare_seq_ext)
-   apply (rule ct_in_state'_decomp)
-    apply ((wp hoare_drop_imps | wpc | simp)+)[1]
-   apply (subst haskell_assert_def)
-   apply (wp hoare_vcg_all_lift getCTE_wp doReplyTransfer_st_tcb_at_active
-        | wpc | simp)+
+  apply (rule hoare_seq_ext, rename_tac cur_thread)
+   apply (rule_tac t=cur_thread in ct_in_state'_decomp)
+    apply (wpsimp wp: getCTE_wp)
+    apply (fastforce simp: cte_wp_at_ctes_of)
+   apply (wpsimp wp: getCTE_wp doReplyTransfer_st_tcb_at_active)+
   apply (fastforce simp: ct_in_state'_def cte_wp_at_ctes_of valid_cap'_def
-                  dest: ctes_of_valid')
+                   dest: ctes_of_valid')
   done
 
 lemma handleCall_corres:
-  "corres (dc \<oplus> dc) (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
+  "corres (dc \<oplus> dc) (einvs and schact_is_rct and ct_active)
               (invs' and
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
@@ -1948,11 +1944,9 @@ lemma handleHypervisorFault_corres:
                     and (\<lambda>s. \<forall>p. thread \<notin> set(ksReadyQueues s p))
                     and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
           (handle_hypervisor_fault thread fault) (handleHypervisorFault thread fault)"
-  apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
-  apply (corresK corres: handleFault_corres)
-  apply (clarsimp simp: valid_fault_def)
+  apply (cases fault; clarsimp simp: handleHypervisorFault_def isFpuEnable_def split del: if_split)
+  apply (corres corres: handleFault_corres simp: valid_fault_def)
   done
-
 
 lemma dmo_machine_rest_lift:
   "(\<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s) \<Longrightarrow>
@@ -1966,7 +1960,7 @@ lemma hvmf_invs_lift:
    \<lbrace>P\<rbrace> handleVMFault t flt \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handleVMFault_def
   by (wpsimp wp: dmo_machine_rest_lift asUser_inv dmo'_gets_wp
-           simp: getHSR_def addressTranslateS1_def getDFSR_def getFAR_def getIFSR_def
+           simp: getHSR_def addressTranslateS1_def getESR_def getFAR_def
                  curVCPUActive_def doMachineOp_bind getRestartPC_def getRegister_def)
 
 lemma hvmf_invs_etc:
@@ -1982,7 +1976,7 @@ lemma hvmf_invs_etc:
 
 lemma handleEvent_corres:
   "corres (dc \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
-                       (\<lambda>s. scheduler_action s = resume_cur_thread))
+                       schact_is_rct)
                       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                        (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
                       (handle_event event) (handleEvent event)"
@@ -2050,8 +2044,6 @@ proof -
                    doMachineOp_getActiveIRQ_IRQ_active'
                   | simp
                   | simp add: imp_conjR | wp (once) hoare_drop_imps)+
-       apply force
-      apply simp
       apply (clarsimp simp: invs'_def valid_state'_def ct_not_inQ_def valid_queues_def
                             valid_queues_no_bitmap_def)
      apply (rule_tac corres_underlying_split)
@@ -2088,18 +2080,18 @@ crunches handleVMFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and cap_to'[wp]: "ex_nonz_cap_to' t"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
 
-crunches handleVMFault, handleHypervisorFault
+crunches handleHypervisorFault
   for ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps getSlotCap_wp simp: getThreadReplySlot_def getThreadCallerSlot_def locateSlotTCB_def locateSlotBasic_def)
+  (wp: undefined_valid haskell_assert_inv simp: isFpuEnable_def)
 
 lemma hh_invs'[wp]:
   "\<lbrace>invs' and sch_act_not p and (\<lambda>s. \<forall>a b. p \<notin> set (ksReadyQueues s (a, b))) and
     st_tcb_at' simple' p and ex_nonz_cap_to' p and (\<lambda>s. p \<noteq> ksIdleThread s)\<rbrace>
   handleHypervisorFault p t \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: AARCH64_H.handleHypervisorFault_def)
-  apply (cases t; wpsimp)
-  done
+  supply if_split[split del]
+  by (cases t; wpsimp simp: AARCH64_H.handleHypervisorFault_def isFpuEnable_def)
 
 lemma ct_not_idle':
   fixes s

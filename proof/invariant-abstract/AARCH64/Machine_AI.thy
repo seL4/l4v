@@ -87,7 +87,7 @@ lemma det_setNextPC: "det (setNextPC p)"
 
 text \<open>Failure on empty result\<close>
 
-crunches loadWord, storeWord, machine_op_lift, clearMemory
+crunches loadWord, storeWord, machine_op_lift
   for (empty_fail) empty_fail[intro!, wp, simp]
   (ignore: Nondet_Monad.bind mapM_x simp: machine_op_lift_def empty_fail_cond)
 
@@ -122,18 +122,6 @@ lemma no_fail_machine_op_lift [simp]:
   "no_fail \<top> (machine_op_lift f)"
   by (simp add: machine_op_lift_def)
 
-lemma no_fail_clearMemory[simp, wp]:
-  "no_fail (\<lambda>_. is_aligned p 3) (clearMemory p b)"
-  apply (simp add: clearMemory_def mapM_x_mapM)
-  apply (rule no_fail_pre)
-   apply (wp no_fail_mapM' no_fail_storeWord )
-  apply (clarsimp simp: upto_enum_step_def)
-  apply (erule aligned_add_aligned)
-   apply (simp add: word_size_def)
-   apply (rule is_aligned_mult_triv2 [where n = 3, simplified])
-  apply simp
-  done
-
 lemma no_fail_freeMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 3) (freeMemory p b)"
   apply (simp add: freeMemory_def mapM_x_mapM)
@@ -150,7 +138,7 @@ lemma no_fail_getActiveIRQ[wp]:
   "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
-   apply (wp no_fail_select)
+   apply wp
   apply simp
   done
 
@@ -235,9 +223,6 @@ lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
   by (wpsimp simp: storeWord_def wp: no_irq_modify)
 
-lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
-  by (wpsimp simp: clearMemory_def no_irq_mapM_x no_irq_storeWord)
-
 crunches ackInterrupt
   for (no_irq) no_irq[intro!, wp, simp]
 
@@ -306,7 +291,6 @@ crunches
   dsb,
   enableFpuEL01,
   fpuThreadDeleteOp,
-  getDFSR,
   getESR,
   getFAR,
   get_gic_vcpu_ctrl_apr,
@@ -319,7 +303,6 @@ crunches
   get_gic_vcpu_ctrl_vmcr,
   get_gic_vcpu_ctrl_vtr,
   getHSR,
-  getIFSR,
   getMemoryRegions,
   gets,
   getSCTLR,
@@ -384,6 +367,30 @@ lemma dmo_valid_irq_states[wp]:
   "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
   unfolding valid_irq_states_def do_machine_op_def
   by (wpsimp, erule use_valid; assumption)
+
+text \<open>Ops that require machine-ops rules derived above\<close>
+
+\<comment> \<open>These can't be placed into the sections above, as they require the derivation of the machine op
+   properties, and those in turn rely on items in specific sections above. There are unlikely to be
+   many definitions like this in MachineOps.thy\<close>
+
+crunches clearMemory
+  for (empty_fail) empty_fail[intro!, wp, simp]
+
+lemma no_fail_clearMemory[unfolded word_size_bits_def, simp, wp]:
+  "no_fail (\<lambda>_. is_aligned p word_size_bits) (clearMemory p b)"
+  apply (simp add: clearMemory_def word_size_bits_def mapM_x_mapM)
+  apply (rule no_fail_pre)
+   apply (wp no_fail_mapM' no_fail_storeWord )
+  apply (clarsimp simp: upto_enum_step_def)
+  apply (erule aligned_add_aligned)
+   apply (simp add: word_size_def)
+   apply (rule is_aligned_mult_triv2 [where n = 3, simplified])
+  apply simp
+  done
+
+lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
+  by (wpsimp simp: clearMemory_def no_irq_mapM_x no_irq_storeWord)
 
 text \<open>Misc WP rules\<close>
 

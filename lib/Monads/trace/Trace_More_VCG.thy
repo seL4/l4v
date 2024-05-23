@@ -25,7 +25,7 @@ lemma hoare_post_add:
 
 lemma hoare_post_addE:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. R s \<and> Q s\<rbrace>, \<lbrace>T\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. Q s\<rbrace>, \<lbrace>T\<rbrace>"
-  by (erule hoare_post_impErr'; simp)
+  by (erule hoare_post_impErr; simp)
 
 lemma hoare_pre_add:
   "(\<forall>s. P s \<longrightarrow> R s) \<Longrightarrow> (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace> f \<lbrace>Q\<rbrace>)"
@@ -137,8 +137,8 @@ lemma hoare_split_bind_case_sum:
              "\<And>rv. \<lbrace>S rv\<rbrace> h rv \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
   shows      "\<lbrace>P\<rbrace> f >>= case_sum g h \<lbrace>Q\<rbrace>"
-  apply (rule hoare_seq_ext [OF _ y[unfolded validE_def]])
-  apply (case_tac x, simp_all add: x)
+  apply (rule hoare_seq_ext[OF _ y[unfolded validE_def]])
+  apply (wpsimp wp: x split: sum.splits)
   done
 
 lemma hoare_split_bind_case_sumE:
@@ -147,8 +147,8 @@ lemma hoare_split_bind_case_sumE:
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
   shows      "\<lbrace>P\<rbrace> f >>= case_sum g h \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (unfold validE_def)
-  apply (rule hoare_seq_ext [OF _ y[unfolded validE_def]])
-  apply (case_tac x, simp_all add: x [unfolded validE_def])
+  apply (rule hoare_seq_ext[OF _ y[unfolded validE_def]])
+  apply (wpsimp wp: x[unfolded validE_def] split: sum.splits)
   done
 
 lemma assertE_sp:
@@ -256,12 +256,11 @@ lemma doesn't_grow_proof:
   assumes x: "\<And>x. \<lbrace>\<lambda>s. x \<notin> S s \<and> P s\<rbrace> f \<lbrace>\<lambda>rv s. x \<notin> S s\<rbrace>"
   shows      "\<lbrace>\<lambda>s. card (S s) < n \<and> P s\<rbrace> f \<lbrace>\<lambda>rv s. card (S s) < n\<rbrace>"
   apply (clarsimp simp: valid_def)
-  apply (subgoal_tac "S b \<subseteq> S s")
-   apply (drule card_mono [OF y], simp)
+  apply (erule le_less_trans[rotated])
+  apply (rule card_mono[OF y])
   apply clarsimp
   apply (rule ccontr)
-  apply (subgoal_tac "x \<notin> S b", simp)
-  apply (erule use_valid [OF _ x])
+  apply (drule (2) use_valid[OF _ x, OF _ conjI])
   apply simp
   done
 
@@ -297,13 +296,12 @@ lemma shrinks_proof:
   assumes w: "\<And>s. P s \<Longrightarrow> x \<in> S s"
   shows      "\<lbrace>\<lambda>s. card (S s) \<le> n \<and> P s\<rbrace> f \<lbrace>\<lambda>rv s. card (S s) < n\<rbrace>"
   apply (clarsimp simp: valid_def)
-  apply (subgoal_tac "S b \<subset> S s")
-   apply (drule psubset_card_mono [OF y], simp)
+  apply (erule less_le_trans[rotated])
+  apply (rule psubset_card_mono[OF y])
   apply (rule psubsetI)
    apply clarsimp
    apply (rule ccontr)
-   apply (subgoal_tac "x \<notin> S b", simp)
-   apply (erule use_valid [OF _ x])
+   apply (drule (2) use_valid[OF _ x, OF _ conjI])
    apply simp
   by (metis use_valid w z)
 
@@ -393,13 +391,12 @@ lemma P_bool_lift:
   assumes f: "\<lbrace>\<lambda>s. \<not>Q s\<rbrace> f \<lbrace>\<lambda>r s. \<not>Q s\<rbrace>"
   shows "\<lbrace>\<lambda>s. P (Q s)\<rbrace> f \<lbrace>\<lambda>r s. P (Q s)\<rbrace>"
   apply (clarsimp simp: valid_def)
-  apply (subgoal_tac "Q b = Q s")
-   apply simp
+  apply (rule back_subst[where P=P], assumption)
   apply (rule iffI)
-   apply (rule classical)
-   apply (drule (1) use_valid [OF _ f])
-   apply simp
-  apply (erule (1) use_valid [OF _ t])
+   apply (erule (1) use_valid [OF _ t])
+  apply (rule classical)
+  apply (drule (1) use_valid [OF _ f])
+  apply simp
   done
 
 lemmas fail_inv = hoare_fail_any[where Q="\<lambda>_. P" and P=P for P]
@@ -416,11 +413,10 @@ lemma hoare_Ball_helper:
   assumes y: "\<And>P. \<lbrace>\<lambda>s. P (S s)\<rbrace> f \<lbrace>\<lambda>rv s. P (S s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<forall>x \<in> S s. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x \<in> S s. Q x rv s\<rbrace>"
   apply (clarsimp simp: valid_def)
-  apply (subgoal_tac "S b = S s")
-   apply (erule post_by_hoare2 [OF x])
-   apply (clarsimp simp: Ball_def)
-  apply (erule_tac P1="\<lambda>x. x = S s" in post_by_hoare2 [OF y])
-  apply (rule refl)
+  apply (drule bspec, erule back_subst[where P="\<lambda>A. x\<in>A" for x])
+   apply (erule post_by_hoare[OF y, rotated])
+   apply (rule refl)
+  apply (erule (1) post_by_hoare[OF x])
   done
 
 lemma handy_prop_divs:
@@ -479,14 +475,14 @@ lemma hoare_in_monad_post:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
   shows      "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>rv s. (rv, s) \<in> mres (f s)\<rbrace>"
   apply (clarsimp simp: valid_def)
-  apply (subgoal_tac "s = b", simp)
-  apply (simp add: state_unchanged [OF x])
+  apply (rule back_subst[where P="\<lambda>s. x\<in>mres (f s)" for x], assumption)
+  apply (simp add: state_unchanged[OF x])
   done
 
 lemma list_case_throw_validE_R:
   "\<lbrakk> \<And>y ys. xs = y # ys \<Longrightarrow> \<lbrace>P\<rbrace> f y ys \<lbrace>Q\<rbrace>,- \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> case xs of [] \<Rightarrow> throwError e | x # xs \<Rightarrow> f x xs \<lbrace>Q\<rbrace>,-"
-  apply (case_tac xs, simp_all)
+  apply (cases xs, simp_all)
   apply wp
   done
 
@@ -522,13 +518,13 @@ lemma wp_split_const_if:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>"
   shows "\<lbrace>\<lambda>s. (G \<longrightarrow> P s) \<and> (\<not> G \<longrightarrow> P' s)\<rbrace> f \<lbrace>\<lambda>rv s. (G \<longrightarrow> Q rv s) \<and> (\<not> G \<longrightarrow> Q' rv s)\<rbrace>"
-  by (case_tac G, simp_all add: x y)
+  by (cases G, simp_all add: x y)
 
 lemma wp_split_const_if_R:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
   assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,-"
   shows "\<lbrace>\<lambda>s. (G \<longrightarrow> P s) \<and> (\<not> G \<longrightarrow> P' s)\<rbrace> f \<lbrace>\<lambda>rv s. (G \<longrightarrow> Q rv s) \<and> (\<not> G \<longrightarrow> Q' rv s)\<rbrace>,-"
-  by (case_tac G, simp_all add: x y)
+  by (cases G, simp_all add: x y)
 
 lemma hoare_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace>; Q \<Longrightarrow> \<lbrace>T\<rbrace> f \<lbrace>S\<rbrace> \<rbrakk>
@@ -589,11 +585,12 @@ lemma univ_wp:
 lemma univ_get_wp:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. P\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<forall>(rv, s') \<in> mres (f s). s = s' \<longrightarrow> Q rv s'\<rbrace> f \<lbrace>Q\<rbrace>"
-  apply (rule hoare_pre_imp [OF _ univ_wp])
+  apply (rule hoare_pre_imp[OF _ univ_wp])
   apply clarsimp
   apply (drule bspec, assumption, simp)
-  apply (subgoal_tac "s = b", simp)
-  apply (simp add: state_unchanged [OF x])
+  apply (drule mp)
+   apply (simp add: state_unchanged[OF x])
+  apply simp
   done
 
 lemma other_hoare_in_monad_post:
@@ -630,10 +627,10 @@ lemma bindE_split_recursive_asm:
   apply (clarsimp simp: validE_def valid_def bindE_def in_bind lift_def)
   apply (erule allE, erule(1) impE)
   apply (drule(1) bspec, simp)
-  apply (case_tac x, simp_all add: in_throwError)
+  apply (clarsimp simp: in_throwError split: sum.splits)
   apply (drule x)
   apply (clarsimp simp: validE_def valid_def)
-  apply (drule(1) bspec, simp)
+  apply (drule(1) bspec, simp split: sum.splits)
   done
 
 lemma validE_R_abstract_rv:
@@ -687,9 +684,8 @@ lemma valid_rv_split:
 lemma hoare_rv_split:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. rv \<longrightarrow> (Q rv s)\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (\<not>rv) \<longrightarrow> (Q rv s)\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (case_tac a, fastforce+)
-  done
+  apply (clarsimp simp: valid_def split_def)
+  by (metis (full_types) fst_eqD snd_conv)
 
 lemma combine_validE:
   "\<lbrakk> \<lbrace> P \<rbrace> x \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>; \<lbrace> P' \<rbrace> x \<lbrace> Q' \<rbrace>,\<lbrace> E' \<rbrace> \<rbrakk>
@@ -718,23 +714,19 @@ lemma validE_pre_satisfies_post:
 
 lemma hoare_validE_R_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, - ; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, - \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, -"
-  apply (clarsimp simp: Ball_def validE_R_def validE_def valid_def)
-  by (case_tac a; fastforce)
+  by (fastforce simp: Ball_def validE_R_def validE_def valid_def split: sum.splits)
 
 lemma hoare_validE_E_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace> f -, \<lbrace>Q\<rbrace> ; \<lbrace>P\<rbrace> f -, \<lbrace>Q'\<rbrace> \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f -, \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
-  apply (clarsimp simp: Ball_def validE_E_def validE_def valid_def)
-  by (case_tac a; fastforce)
+  by (fastforce simp: Ball_def validE_E_def validE_def valid_def split: sum.splits)
 
 lemma validE_R_post_conjD1:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
-  apply (clarsimp simp: validE_R_def validE_def valid_def)
-  by (case_tac a; fastforce)
+  by (fastforce simp: validE_R_def validE_def valid_def split: sum.splits)
 
 lemma validE_R_post_conjD2:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,-"
-  apply (clarsimp simp: validE_R_def validE_def valid_def)
-  by (case_tac a; fastforce)
+  by (fastforce simp: validE_R_def validE_def valid_def split: sum.splits)
 
 lemma throw_opt_wp[wp]:
   "\<lbrace>if v = None then E ex else Q (the v)\<rbrace> throw_opt ex v \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"

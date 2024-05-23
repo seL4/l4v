@@ -2272,7 +2272,7 @@ lemma invokeUntyped_Retype_ccorres:
             (Call invokeUntyped_Retype_'proc)"
       apply (cinit lift: retypeBase_' srcSlot_' reset_' newType_'
                          userSize_' deviceMemory_' destCNode_' destOffset_' destLength_'
-                   simp: when_def)
+                   simp: when_def archOverlap_def)
        apply (rule ccorres_move_c_guard_cte)
        apply csymbr
        apply (rule ccorres_abstract_cleanup)

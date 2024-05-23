@@ -17,10 +17,10 @@ begin
 
 
 text \<open>
-  Methods for manipulating the post conditions of hoare triples as if they
+  Methods for manipulating the post conditions of Hoare triples as if they
   were proper subgoals.
 
-  post_asm can be used with the @ attribute to modify existing proofs. Useful
+  @{text post_asm} can be used with the \@ attribute to modify existing proofs. Useful
   for proving large postconditions in one proof and then subsequently decomposing it.
 
 \<close>
@@ -98,8 +98,8 @@ end
 
 
 text \<open>
-  Method (meant to be used with @ as an attribute) used for producing multiple facts out of
-  a single hoare triple with a conjunction in its post condition.
+  Method (meant to be used with \@ as an attribute) used for producing multiple facts out of
+  a single Hoare triple with a conjunction in its post condition.
 \<close>
 
 context begin

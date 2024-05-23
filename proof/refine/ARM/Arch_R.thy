@@ -309,9 +309,9 @@ lemma performASIDControlInvocation_corres:
   apply clarsimp
   apply (frule empty_descendants_range_in')
   apply (intro conjI,
-    simp_all add: is_simple_cap'_def isCap_simps descendants_range'_def2
-                  null_filter_descendants_of'[OF null_filter_simp']
-                  capAligned_def asid_low_bits_def)
+         simp_all add: is_simple_cap'_def isCap_simps descendants_range'_def2
+                       null_filter_descendants_of'[OF null_filter_simp']
+                       capAligned_def asid_low_bits_def)
        apply (erule descendants_range_caps_no_overlapI')
         apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
        apply (simp add:empty_descendants_range_in')

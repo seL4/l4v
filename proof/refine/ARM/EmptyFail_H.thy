@@ -287,7 +287,7 @@ crunch (empty_fail) empty_fail: callKernel
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
-                (\<lambda>s. scheduler_action s = resume_cur_thread) and
+                schact_is_rct and
                 current_time_bounded and
                 consumed_time_bounded and
                 valid_machine_time and

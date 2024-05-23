@@ -3943,7 +3943,9 @@ lemma simple'_not_is_BlockedOnReply:
   by (clarsimp simp: is_BlockedOnReply_def)
 
 lemma sai_invs'[wp]:
-  "\<lbrace>invs' and ex_nonz_cap_to' ntfnptr\<rbrace> sendSignal ntfnptr badge \<lbrace>\<lambda>y. invs'\<rbrace>"
+  "\<lbrace>invs' and ex_nonz_cap_to' ntfnptr\<rbrace>
+   sendSignal ntfnptr badge
+   \<lbrace>\<lambda>y. invs'\<rbrace>"
   (is "valid ?pre _ _")
   apply (simp add: sendSignal_def)
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
