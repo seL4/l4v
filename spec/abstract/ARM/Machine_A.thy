@@ -13,7 +13,7 @@ chapter "ARM Machine Instantiation"
 
 theory Machine_A
 imports
-  "ExecSpec.MachineTypes"
+  "ExecSpec.MachineOps"
 begin
 
 context Arch begin global_naming ARM_A
@@ -107,11 +107,9 @@ definition
   msg_label_bits :: nat where
   [simp]: "msg_label_bits \<equiv> 20"
 
-type_synonym user_context = "register \<Rightarrow> data"
-
 definition
   new_context :: "user_context" where
-  "new_context \<equiv> (\<lambda>r. 0) (CPSR := 0x150)"
+  "new_context \<equiv> UserContext ((\<lambda>r. 0) (CPSR := 0x150))"
 
 text \<open>The lowest virtual address in the kernel window. The kernel reserves the
 virtual addresses from here up in every virtual address space.\<close>

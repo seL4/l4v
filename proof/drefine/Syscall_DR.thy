@@ -842,7 +842,7 @@ lemma handle_fault_corres:
 
 lemma get_tcb_mrs_wp:
   "\<lbrace>ko_at (TCB obj) thread and K_bind (evalMonad (lookup_ipc_buffer False thread) sa = Some (op_buf)) and (=) sa\<rbrace>
-    get_mrs thread (op_buf) (data_to_message_info (arch_tcb_context_get (tcb_arch obj) msg_info_register))
+    get_mrs thread (op_buf) (data_to_message_info (arch_tcb_get_registers (tcb_arch obj) msg_info_register))
             \<lbrace>\<lambda>rv s. rv = get_tcb_mrs (machine_state sa) obj\<rbrace>"
   apply (case_tac op_buf)
     apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def arch_tcb_get_registers_def)
@@ -850,12 +850,14 @@ lemma get_tcb_mrs_wp:
     apply (clarsimp simp:get_tcb_mrs_def Let_def)
     apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
     apply (clarsimp simp:get_tcb_message_info_def get_ipc_buffer_words_empty)
-    apply (clarsimp dest!:get_tcb_SomeD simp:obj_at_def)
+    apply (clarsimp dest!:get_tcb_SomeD simp:obj_at_def arch_tcb_context_get_def)
   apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def arch_tcb_get_registers_def)
   apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
   apply (wp|wpc)+
   apply (rule_tac P = "tcb = obj" in hoare_gen_asm)
-   apply (clarsimp simp: get_tcb_mrs_def Let_def get_tcb_message_info_def Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
+   apply (clarsimp simp: get_tcb_mrs_def Let_def get_tcb_message_info_def Suc_leI[OF msg_registers_lt_msg_max_length]
+                         arch_tcb_context_get_def
+                   split del:if_split)
     apply (rule_tac Q="\<lambda>buf_mrs s. buf_mrs =
       (get_ipc_buffer_words (machine_state sa) obj ([Suc (length msg_registers)..<msg_max_length] @ [msg_max_length]))"
       in hoare_strengthen_post)
@@ -1018,7 +1020,7 @@ lemma weak_det_spec_get_mrs:
   done
 
 lemma lookup_cap_and_slot_inv:
-  "\<lbrace>P\<rbrace> CSpace_A.lookup_cap_and_slot t (to_bl (arch_tcb_context_get (tcb_arch obj'a) cap_register)) \<lbrace>\<lambda>x. P\<rbrace>, \<lbrace>\<lambda>ft s. True\<rbrace>"
+  "\<lbrace>P\<rbrace> CSpace_A.lookup_cap_and_slot t (to_bl (arch_tcb_get_registers (tcb_arch obj'a) cap_register)) \<lbrace>\<lambda>x. P\<rbrace>, \<lbrace>\<lambda>ft s. True\<rbrace>"
   apply (simp add:CSpace_A.lookup_cap_and_slot_def)
   apply (wp | clarsimp simp:liftE_bindE)+
   done
@@ -1039,9 +1041,9 @@ lemma decode_invocation_corres':
           (cdl_intent_op (transform_full_intent (machine_state s) (cur_thread s) ctcb)))
      rv)
      ((\<lambda>(slot, cap, extracaps, buffer).
-          do args \<leftarrow> get_mrs (cur_thread s) buffer (data_to_message_info (arch_tcb_context_get (tcb_arch ctcb) msg_info_register));
-          Decode_A.decode_invocation (mi_label (data_to_message_info (arch_tcb_context_get (tcb_arch ctcb) msg_info_register))) args
-          (to_bl (arch_tcb_context_get (tcb_arch ctcb) cap_register)) slot cap extracaps
+          do args \<leftarrow> get_mrs (cur_thread s) buffer (data_to_message_info (arch_tcb_get_registers (tcb_arch ctcb) msg_info_register));
+          Decode_A.decode_invocation (mi_label (data_to_message_info (arch_tcb_get_registers (tcb_arch ctcb) msg_info_register))) args
+          (to_bl (arch_tcb_get_registers (tcb_arch ctcb) cap_register)) slot cap extracaps
          od)
      rv')"
   apply (rule dcorres_expand_pfx)
@@ -1056,11 +1058,13 @@ lemma decode_invocation_corres':
       apply clarsimp
       apply (rule dcorres_expand_pfx)
       apply (rule corres_guard_imp[OF decode_invocation_corres])
-           apply (clarsimp simp:transform_full_intent_def Let_def get_tcb_message_info_def)+
+           apply (solves \<open>clarsimp simp: transform_full_intent_def Let_def get_tcb_message_info_def
+                                         arch_tcb_get_registers_def arch_tcb_context_get_def\<close>)+
      apply (wp get_tcb_mrs_wp | clarsimp)+
   apply (rule dcorres_expand_pfx)
   apply (rule dcorres_free_throw[OF decode_invocation_error_branch])
-   apply (clarsimp simp:transform_full_intent_def Let_def get_tcb_message_info_def)+
+   apply (clarsimp simp:transform_full_intent_def Let_def get_tcb_message_info_def
+                        arch_tcb_get_registers_def arch_tcb_context_get_def)+
   done
 
 lemma reply_from_kernel_error:
@@ -1290,7 +1294,8 @@ lemma handle_invocation_corres:
                               cap = transform_cap cap' \<and> slot = transform_cslot_ptr slot'
                             \<and> extra = transform_cap_list extra'" in  corres_split_bind_case_sum)
         apply (rule_tac Q = "\<lambda>x. \<top>" and Q'="\<lambda>x. (=) s'a" in corres_initial_splitE)
-           apply (clarsimp simp: transform_full_intent_def Let_def)
+           apply (clarsimp simp: transform_full_intent_def Let_def arch_tcb_get_registers_def
+                                 arch_tcb_context_get_def)
            apply (rule corres_guard_imp[OF dcorres_lookup_cap_and_slot[simplified]])
               apply (clarsimp simp: word_bits_def not_idle_thread_def invs_def valid_state_def)+
           apply (rule dcorres_symb_exec_r_evalMonad)
@@ -1411,6 +1416,7 @@ lemma handle_recv_corres:
                  \<and> not_idle_thread (cur_thread s) s
                  \<and> (st_tcb_at active (cur_thread s') s \<and> invs s \<and> valid_etcbs s) \<and> ko_at (TCB obj') (cur_thread s') s " and R= "\<lambda>r. \<top>"
                        in corres_splitEE[where r'="\<lambda>x y. x = transform_cap y"])
+              apply (simp add: arch_tcb_get_registers_def arch_tcb_context_get_def)
               apply (rule lookup_cap_corres, simp)
               apply (simp add: word_bits_def)
              apply (rule dcorres_expand_pfx)

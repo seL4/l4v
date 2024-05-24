@@ -5241,6 +5241,11 @@ lemma invalid_Thread_CNode:
   apply (clarsimp simp: obj_at'_def projectKOs)
   done
 
+(* FIXME MOVE *)
+lemma all_Not_False[simp]:
+  "All Not = False"
+  by blast
+
 lemma Final_notUntyped_capRange_disjoint:
   "\<lbrakk> isFinal cap sl (cteCaps_of s); cteCaps_of s sl' = Some cap';
       sl \<noteq> sl'; capUntypedPtr cap = capUntypedPtr cap'; capBits cap = capBits cap';
@@ -5256,21 +5261,11 @@ lemma Final_notUntyped_capRange_disjoint:
    apply (clarsimp simp: valid_cap'_def
                          obj_at'_def projectKOs objBits_simps'
                          typ_at'_def ko_wp_at'_def
+                         page_table_at'_def page_directory_at'_def
+                         sameObjectAs_def3 isCap_simps
                   split: capability.split_asm zombie_type.split_asm
-                         arch_capability.split_asm
-                  dest!: spec[where x=0])
-     apply (clarsimp simp: sameObjectAs_def3 isCap_simps)
-    apply (simp add: isCap_simps)
-   apply (simp add: isCap_simps)
-  apply (clarsimp simp: valid_cap'_def
-                        obj_at'_def projectKOs objBits_simps
-                        typ_at'_def ko_wp_at'_def
-                        page_table_at'_def page_directory_at'_def
-                 split: capability.split_asm zombie_type.split_asm
-                        arch_capability.split_asm
-                 dest!: spec[where x=0])
-    apply fastforce+
-  apply (clarsimp simp: isCap_simps sameObjectAs_def3)
+                         arch_capability.split_asm option.split_asm
+                  dest!: spec[where x=0])+
   done
 
 lemma capBits_capUntyped_capRange:

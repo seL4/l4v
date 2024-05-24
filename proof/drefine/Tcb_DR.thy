@@ -967,11 +967,13 @@ lemma TPIDRURW_notin_msg_registers[simp]:
   done
 
 lemma transform_full_intent_update_tpidrurw[simp]:
-  "transform_full_intent ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set (s(TPIDRURW := a)) (tcb_arch tcb)\<rparr>)
-   = transform_full_intent ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set s (tcb_arch tcb)\<rparr>)"
-   apply (clarsimp simp: transform_full_intent_def cap_register_def ARM.capRegister_def)
+  "transform_full_intent ms ref (tcb\<lparr>tcb_arch := arch_tcb_set_registers (s(TPIDRURW := a)) (tcb_arch tcb)\<rparr>)
+   = transform_full_intent ms ref (tcb\<lparr>tcb_arch := arch_tcb_set_registers s (tcb_arch tcb)\<rparr>)"
+   apply (clarsimp simp: transform_full_intent_def cap_register_def ARM.capRegister_def
+                         arch_tcb_set_registers_def arch_tcb_context_get_def Let_def)
    by (fastforce simp: get_tcb_message_info_def msg_info_register_def ARM.msgInfoRegister_def
-                       get_tcb_mrs_def get_ipc_buffer_words_def Suc_le_eq Let_def)
+                       get_tcb_mrs_def get_ipc_buffer_words_def Suc_le_eq Let_def
+                       arch_tcb_context_get_def)
 
 lemma as_user_valid_irq_node[wp]:
   "\<lbrace>valid_irq_node\<rbrace>
@@ -987,7 +989,10 @@ lemma set_register_TPIDRURW_tcb_abstract_inv[wp]:
   "\<lbrace>\<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>
      setRegister TPIDRURW a
    \<lbrace>\<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>"
-  by (simp add: setRegister_def simpler_modify_def valid_def transform_tcb_def)
+  supply transform_full_intent_update_tpidrurw[simplified arch_tcb_set_registers_def, simp]
+  apply (simp add: setRegister_def simpler_modify_def valid_def arch_tcb_context_set_def
+                   transform_tcb_def)
+  done
 
 lemma dcorres_tcb_update_ipc_buffer:
   "dcorres (dc \<oplus> dc) (\<top>) (invs and valid_etcbs and tcb_at obj_id' and not_idle_thread obj_id'

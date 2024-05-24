@@ -1723,7 +1723,7 @@ shows
                                = min (unat n) (unat n_frameRegisters + unat n_gpRegisters)"
                                 in ccorres_gen_asm)
                     apply (rule ccorres_split_nothrow_novcg)
-                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                      (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                               = reply) target s"
                                    in ccorres_mapM_x_while)
@@ -1789,7 +1789,7 @@ shows
                                  in ccorres_split_nothrow_novcg)
                           apply (rule ccorres_Cond_rhs)
                            apply (rule ccorres_rel_imp,
-                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                       (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                = reply) target s
                                                  \<and> valid_ipc_buffer_ptr' (the destIPCBuffer) s
@@ -1902,7 +1902,7 @@ shows
                             apply (rename_tac i_c, rule_tac P="i_c = 0" in ccorres_gen_asm2)
                             apply (simp add: drop_zip del: Collect_const)
                             apply (rule ccorres_Cond_rhs)
-                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                        (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                 = reply) target s
                                                   \<and> valid_ipc_buffer_ptr' (the destIPCBuffer) s \<and> valid_pspace' s"

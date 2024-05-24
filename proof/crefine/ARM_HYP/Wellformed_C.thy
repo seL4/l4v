@@ -59,6 +59,9 @@ abbreviation
 abbreviation
   word_Ptr :: "addr \<Rightarrow> machine_word ptr" where "word_Ptr \<equiv> Ptr"
 
+type_synonym registers_count = 20
+type_synonym registers_array = "machine_word[registers_count]"
+
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"
   apply (rule hoare_complete)

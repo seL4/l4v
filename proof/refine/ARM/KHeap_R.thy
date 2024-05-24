@@ -678,8 +678,8 @@ lemma cte_wp_at_ctes_of:
    apply (simp add: field_simps)
   apply (clarsimp split: if_split_asm del: disjCI)
    apply (simp add: ps_clear_def3 field_simps)
-  apply (rule disjI2, rule exI[where x="p - (p && ~~ mask 9)"])
-  apply (clarsimp simp: ps_clear_def3[where na=9] is_aligned_mask
+  apply (rule disjI2, rule exI[where x="p - (p && ~~ mask tcb_bits)"])
+  apply (clarsimp simp: ps_clear_def3[where na=tcb_bits] is_aligned_mask
                         word_bw_assocs field_simps)
   done
 

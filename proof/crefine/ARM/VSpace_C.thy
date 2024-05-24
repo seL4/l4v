@@ -1701,7 +1701,7 @@ lemma setRegister_ccorres:
     apply (rule ball_tcb_cte_casesI, simp+)
    apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                          atcbContextSet_def atcbContextGet_def
-                         carch_tcb_relation_def
+                         carch_tcb_relation_def cregs_relation_def
                   split: if_split)
   apply (clarsimp simp: Collect_const_mem
                         register_from_H_less)

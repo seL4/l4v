@@ -48,7 +48,7 @@ lemma iarch_tcb_context_set[simp]:
 lemma iarch_tcb_set_registers[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb)
      = arch_tcb_to_iarch_tcb arch_tcb"
-  by (simp add: arch_tcb_set_registers_def)
+  by (simp add: arch_tcb_to_iarch_tcb_def arch_tcb_set_registers_def)
 
 lemmas vspace_bits_defs = pd_bits_def pde_bits_def pt_bits_def pte_bits_def pageBits_def
 

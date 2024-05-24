@@ -593,8 +593,8 @@ lemma ccorres_add_gets:
 lemma ccorres_get_registers:
   "\<lbrakk> \<And>cptr msgInfo. ccorres dc xfdc
      ((\<lambda>s. P s \<and> Q s \<and>
-           obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
-                      \<and>   (atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msgInfo)
+           obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
+                      \<and>   (user_regs o atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msgInfo)
              (ksCurThread s) s) and R)
      (UNIV \<inter> \<lbrace>\<acute>cptr = cptr\<rbrace> \<inter> \<lbrace>\<acute>msgInfo = msgInfo\<rbrace>) [] m c \<rbrakk>
       \<Longrightarrow>
@@ -607,15 +607,15 @@ lemma ccorres_get_registers:
   apply (rule ccorres_assume_pre)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.capRegister" in meta_allE)
-  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.msgInfoRegister" in meta_allE)
+  apply (erule_tac x="(user_regs o atcbContextGet o tcbArch) ko ARM_H.capRegister" in meta_allE)
+  apply (erule_tac x="(user_regs o atcbContextGet o tcbArch) ko ARM_H.msgInfoRegister" in meta_allE)
   apply (erule ccorres_guard_imp2)
   apply (clarsimp simp: rf_sr_ksCurThread)
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                         ARM_H.msgInfoRegister_def ARM_H.capRegister_def
                         ARM.msgInfoRegister_def ARM.capRegister_def
-                        carch_tcb_relation_def
+                        carch_tcb_relation_def cregs_relation_def
                         "StrictC'_register_defs")
   done
 

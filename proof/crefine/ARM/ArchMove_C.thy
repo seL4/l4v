@@ -218,7 +218,9 @@ proof -
 qed
 
 lemma user_getreg_rv:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb r)) t\<rbrace>
+   asUser t (getRegister r)
+   \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
