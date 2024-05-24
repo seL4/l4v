@@ -130,7 +130,7 @@ begin
 
 lemma "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>(=)\<rbrace>"
   apply (rule hoare_pre)
-   apply (rule hoare_seq_ext)+
+   apply (rule bind_wp)+
     apply (wps | rule hoare_vcg_prop)+
   oops
 

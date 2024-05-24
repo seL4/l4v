@@ -53,7 +53,7 @@ lemma uncurry2: "\<forall>r s. Q r s \<and> Q' r s \<longrightarrow> Q'' r s \<L
 
 named_theorems hoare_post_imps
 
-lemmas [hoare_post_imps] = hoare_post_imp_R hoare_post_imp[rotated]
+lemmas [hoare_post_imps] = hoare_strengthen_postE_R hoare_strengthen_postE_E hoare_strengthen_post
 
 method post_asm_raw methods m =
   (drule hoare_post_imps,
