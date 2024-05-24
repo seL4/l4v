@@ -1495,11 +1495,11 @@ lemma threadSet_same:
   by (wpsimp wp: setObject_tcb_strongest getObject_tcb_wp) fastforce
 
 lemma asUser_setRegister_ko_at':
-  "\<lbrace>obj_at' (\<lambda>tcb'. tcb = tcbArch_update (\<lambda>_. atcbContextSet ((atcbContextGet (tcbArch tcb'))(r := v)) (tcbArch tcb')) tcb') dst\<rbrace>
+  "\<lbrace>obj_at' (\<lambda>tcb'. tcb = tcbArch_update (\<lambda>_. atcbContextSet (modify_registers (\<lambda>regs. regs(r := v)) (atcbContextGet (tcbArch tcb'))) (tcbArch tcb')) tcb') dst\<rbrace>
   asUser dst (setRegister r v) \<lbrace>\<lambda>rv. ko_at' (tcb::tcb) dst\<rbrace>"
   unfolding asUser_def
   apply (wpsimp wp: threadSet_same threadGet_wp)
-  apply (clarsimp simp: setRegister_def simpler_modify_def obj_at'_def)
+  apply (clarsimp simp: setRegister_def simpler_modify_def obj_at'_def modify_registers_def)
   done
 
 lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
@@ -1804,7 +1804,7 @@ shows
                                = min (unat n) (unat n_frameRegisters + unat n_gpRegisters)"
                                 in ccorres_gen_asm)
                     apply (rule ccorres_split_nothrow_novcg)
-                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                      (ARM_HYP_H.frameRegisters @ ARM_HYP_H.gpRegisters))
                                                               = reply) target s"
                                    in ccorres_mapM_x_while)
@@ -1870,7 +1870,7 @@ shows
                                  in ccorres_split_nothrow_novcg)
                           apply (rule ccorres_Cond_rhs)
                            apply (rule ccorres_rel_imp,
-                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                       (ARM_HYP_H.frameRegisters @ ARM_HYP_H.gpRegisters))
                                                                = reply) target s
                                                  \<and> valid_ipc_buffer_ptr' (the destIPCBuffer) s
@@ -1982,7 +1982,7 @@ shows
                             apply (rename_tac i_c, rule_tac P="i_c = 0" in ccorres_gen_asm2)
                             apply (simp add: drop_zip del: Collect_const)
                             apply (rule ccorres_Cond_rhs)
-                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                        (ARM_HYP_H.frameRegisters @ ARM_HYP_H.gpRegisters))
                                                                 = reply) target s
                                                   \<and> valid_ipc_buffer_ptr' (the destIPCBuffer) s \<and> valid_pspace' s"

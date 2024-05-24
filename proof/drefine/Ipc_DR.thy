@@ -1011,7 +1011,7 @@ lemma evalMonad_mapM:
 
 lemma evalMonad_get_extra_cptrs:
   "\<lbrakk>evalMonad (lookup_ipc_buffer False thread) s = Some (Some buf);get_tcb thread s = Some tcb;
-    (evalMonad (Ipc_A.get_extra_cptrs (Some buf) (data_to_message_info (arch_tcb_context_get (tcb_arch tcb) msg_info_register))) s) = Some a
+    (evalMonad (Ipc_A.get_extra_cptrs (Some buf) (data_to_message_info (arch_tcb_get_registers (tcb_arch tcb) msg_info_register))) s) = Some a
     \<rbrakk>
   \<Longrightarrow> a = (map (to_bl) (cdl_intent_extras $ transform_full_intent (machine_state s) thread tcb))"
   including no_pre
@@ -1036,7 +1036,7 @@ lemma evalMonad_get_extra_cptrs:
     apply (rule weak_det_spec_mapM[OF weak_det_spec_loadWord])
    apply (rule empty_when_fail_mapM)
    apply (clarsimp simp:empty_when_fail_loadWord weak_det_spec_loadWord)
-  apply (clarsimp simp:get_tcb_message_info_def)
+  apply (clarsimp simp:get_tcb_message_info_def arch_tcb_context_get_def arch_tcb_get_registers_def)
   done
 
 lemma dcorres_symb_exec_r_evalMonad:
@@ -1645,10 +1645,10 @@ lemma dcorres_lookup_extra_caps:
      \<top> ((=) s)
      (Endpoint_D.lookup_extra_caps thread
                                    (cdl_intent_extras (transform_full_intent (machine_state s) thread t)))
-     (Ipc_A.lookup_extra_caps thread buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register)))"
+     (Ipc_A.lookup_extra_caps thread buffer (data_to_message_info (arch_tcb_get_registers (tcb_arch t) msg_info_register)))"
   apply (clarsimp simp:lookup_extra_caps_def liftE_bindE Endpoint_D.lookup_extra_caps_def)
   apply (rule corres_symb_exec_r)
-     apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register))) s = Some rv"
+     apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (arch_tcb_get_registers (tcb_arch t) msg_info_register))) s = Some rv"
                      in corres_gen_asm2)
      apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = word_bits}"])
            prefer 3
@@ -1701,7 +1701,7 @@ lemma dcorres_copy_mrs':
     and valid_idle and not_idle_thread thread and not_idle_thread recv and tcb_at recv
     and valid_objs and pspace_aligned and pspace_distinct and valid_etcbs)
     (corrupt_ipc_buffer recv in_receive)
-    (copy_mrs send rva recv rv (mi_length (data_to_message_info (arch_tcb_context_get (tcb_arch tcb) msg_info_register))))"
+    (copy_mrs send rva recv rv (mi_length (data_to_message_info (arch_tcb_get_registers (tcb_arch tcb) msg_info_register))))"
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:corrupt_ipc_buffer_def)
   apply (case_tac rv)
@@ -1858,7 +1858,7 @@ done
 
 lemma ipc_buffer_wp_at_copy_mrs[wp]:
   "\<lbrace>ipc_buffer_wp_at buf t \<rbrace>
-     copy_mrs send rva recv rv (mi_length (data_to_message_info (arch_tcb_context_get (tcb_arch obj') msg_info_register)))
+     copy_mrs send rva recv rv (mi_length (data_to_message_info (arch_tcb_get_registers (tcb_arch obj') msg_info_register)))
    \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t\<rbrace>"
   unfolding copy_mrs_def
   apply (wp|wpc)+

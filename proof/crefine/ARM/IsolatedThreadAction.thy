@@ -9,6 +9,8 @@ theory IsolatedThreadAction
 imports ArchMove_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 datatype tcb_state_regs =
   TCBStateRegs (tsrState : thread_state) (tsrContext : "MachineTypes.register \<Rightarrow> machine_word")
 
@@ -16,13 +18,16 @@ definition
   get_tcb_state_regs :: "kernel_object option \<Rightarrow> tcb_state_regs"
 where
  "get_tcb_state_regs oko \<equiv> case oko of
-    Some (KOTCB tcb) \<Rightarrow> TCBStateRegs (tcbState tcb) ((atcbContextGet o tcbArch) tcb)"
+    Some (KOTCB tcb) \<Rightarrow> TCBStateRegs (tcbState tcb) ((user_regs o atcbContextGet o tcbArch) tcb)"
 
 definition
   put_tcb_state_regs_tcb :: "tcb_state_regs \<Rightarrow> tcb \<Rightarrow> tcb"
 where
  "put_tcb_state_regs_tcb tsr tcb \<equiv> case tsr of
-     TCBStateRegs st regs \<Rightarrow> tcb \<lparr> tcbState := st, tcbArch := atcbContextSet regs (tcbArch tcb) \<rparr>"
+     TCBStateRegs st regs \<Rightarrow>
+        tcb \<lparr> tcbState := st,
+              tcbArch := atcbContextSet (UserContext regs)
+                         (tcbArch tcb) \<rparr>"
 
 definition
   put_tcb_state_regs :: "tcb_state_regs \<Rightarrow> kernel_object option \<Rightarrow> kernel_object option"
@@ -103,8 +108,6 @@ lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-
 lemma setObject_modify:
   fixes v :: "'a :: pspace_storable" shows
   "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
@@ -136,8 +139,6 @@ lemma getObject_return:
   apply (simp add: magnitudeCheck_assert in_monad)
   done
 
-end
-
 lemmas getObject_return_tcb
     = getObject_return[OF meta_eq_to_obj_eq, OF loadObject_tcb,
                        unfolded objBits_simps', simplified]
@@ -156,13 +157,13 @@ lemma partial_overwrite_fun_upd:
 
 lemma get_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> get_tcb_state_regs (ksPSpace s p)
-       = TCBStateRegs (tcbState ko) ((atcbContextGet o tcbArch) ko)"
+       = TCBStateRegs (tcbState ko) ((user_regs o atcbContextGet o tcbArch) ko)"
   by (clarsimp simp: obj_at'_def projectKOs get_tcb_state_regs_def)
 
 lemma put_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> put_tcb_state_regs tsr (ksPSpace s p)
        = Some (KOTCB (ko \<lparr> tcbState := tsrState tsr
-                         , tcbArch := atcbContextSet (tsrContext tsr) (tcbArch ko)\<rparr>))"
+                         , tcbArch := atcbContextSet (UserContext (tsrContext tsr)) (tcbArch ko)\<rparr>))"
   by (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
                      put_tcb_state_regs_tcb_def
               split: tcb_state_regs.split)
@@ -193,7 +194,7 @@ lemma ksPSpace_update_partial_id:
   done
 
 lemma isolate_thread_actions_asUser:
-  "\<lbrakk> idx t' = t; inj idx; f = (\<lambda>s. ({(v, g s)}, False)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> idx t' = t; inj idx; f = (\<lambda>s. ({(v, modify_registers g s)}, False)) \<rbrakk> \<Longrightarrow>
    monadic_rewrite False True (\<lambda>s. \<forall>x. tcb_at' (idx x) s)
       (asUser t f)
       (isolate_thread_actions idx (return v)
@@ -214,17 +215,30 @@ lemma isolate_thread_actions_asUser:
   apply (clarsimp simp: partial_overwrite_get_tcb_state_regs
                         put_tcb_state_regs_ko_at')
   apply (case_tac ko, simp)
+  apply (rename_tac uc)
+  apply (case_tac uc, simp add: modify_registers_def atcbContextGet_def atcbContextSet_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+lemma getRegister_simple:
+  "getRegister r = (\<lambda>con. ({(user_regs con r, con)}, False))"
+  by (simp add: getRegister_def simpler_gets_def)
+
+lemma mapM_getRegister_simple:
+  "mapM getRegister rs = (\<lambda>con. ({(map (user_regs con) rs, con)}, False))"
+  apply (induct rs)
+   apply (simp add: mapM_Nil return_def)
+  apply (simp add: mapM_Cons getRegister_def simpler_gets_def
+                   bind_def return_def)
+  done
 
 lemma setRegister_simple:
-  "setRegister r v = (\<lambda>con. ({((), con (r := v))}, False))"
+  "setRegister r v = (\<lambda>con. ({((), UserContext ((user_regs con)(r := v)))}, False))"
   by (simp add: setRegister_def simpler_modify_def)
 
 lemma zipWithM_setRegister_simple:
   "zipWithM_x setRegister rs vs
-      = (\<lambda>con. ({((), foldl (\<lambda>con (r, v). con (r := v)) con (zip rs vs))}, False))"
+      = (\<lambda>con. ({((),
+                  UserContext (foldl (\<lambda>regs (r, v). ((regs)(r := v))) (user_regs con) (zip rs vs)))}, False))"
   supply if_split[split del]
   apply (simp add: zipWithM_x_mapM_x)
   apply (induct ("zip rs vs"))
@@ -232,6 +246,18 @@ lemma zipWithM_setRegister_simple:
   apply (clarsimp simp add: mapM_x_Cons bind_def setRegister_def
                             simpler_modify_def fun_upd_def[symmetric])
   done
+
+(* this variant used in fastpath rewrite proof *)
+lemma setRegister_simple_modify_registers:
+  "setRegister r v = (\<lambda>con. ({((), modify_registers (\<lambda>f. f(r := v)) con)}, False))"
+  by (simp add: modify_registers_def setRegister_simple)
+
+(* this variant used in fastpath rewrite proof *)
+lemma zipWithM_setRegister_simple_modify_registers:
+  "zipWithM_x setRegister rs vs
+   = (\<lambda>con. ({((), modify_registers (\<lambda>regs. foldl (\<lambda>f (r,v). f(r := v)) regs (zip rs vs)) con)},
+              False))"
+  by (simp add: modify_registers_def zipWithM_setRegister_simple)
 
 lemma dom_partial_overwrite:
   "\<forall>x. tcb_at' (idx x) s \<Longrightarrow> dom (partial_overwrite idx tsrs (ksPSpace s))
@@ -718,7 +744,7 @@ lemma doIPCTransfer_simple_rewrite:
                \<and> msgLength (messageInfoFromWord msgInfo)
                       \<le> of_nat (length msgRegisters))
       and obj_at' (\<lambda>tcb. tcbFault tcb = None
-               \<and> (atcbContextGet o tcbArch) tcb msgInfoRegister = msgInfo) sender)
+               \<and> (user_regs o atcbContextGet o tcbArch) tcb msgInfoRegister = msgInfo) sender)
    (doIPCTransfer sender ep badge grant rcvr)
    (do rv \<leftarrow> mapM_x (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                              asUser rcvr (setRegister r v)
@@ -883,17 +909,6 @@ lemma activateThread_simple_rewrite:
 
 end
 
-lemma setCTE_obj_at_prio[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace> setCTE p v \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  unfolding setCTE_def
-  by (rule setObject_cte_obj_at_tcb', simp+)
-
-crunch obj_at_prio[wp]: cteInsert "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_wps)
-
-crunch ctes_of[wp]: asUser "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps)
-
 lemma tcbSchedEnqueue_tcbPriority[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>
      tcbSchedEnqueue t'
@@ -1022,8 +1037,7 @@ lemma setCTE_assert_modify:
      apply (subst updateObject_cte_tcb)
       apply (fastforce simp add: subtract_mask)
      apply (simp add: assert_opt_def alignCheck_assert bind_assoc
-                      magnitudeCheck_assert
-                      is_aligned_neg_mask2 objBits_def)
+                      magnitudeCheck_assert objBits_def)
      apply (rule ps_clear_lookupAround2, assumption+)
        apply (rule word_and_le2)
       apply (simp add: objBits_simps mask_def field_simps)
@@ -1059,13 +1073,17 @@ lemma partial_overwrite_fun_upd2:
                 else y)"
   by (simp add: fun_eq_iff partial_overwrite_def split: if_split)
 
+lemma atcbContextSetSetGet_eq[simp]:
+  "atcbContextSet (UserContext (user_regs (atcbContextGet t))) t = t"
+  by (cases t, simp add: atcbContextSet_def atcbContextGet_def)
+
 lemma setCTE_isolatable:
   "thread_actions_isolatable idx (setCTE p v)"
   supply if_split[split del]
   apply (simp add: setCTE_assert_modify)
   apply (clarsimp simp: thread_actions_isolatable_def
                         monadic_rewrite_def fun_eq_iff
-                        liftM_def exec_gets
+                        liftM_def
                         isolate_thread_actions_def
                         bind_assoc exec_gets getSchedulerAction_def
                         bind_select_f_bind[symmetric]
@@ -1341,6 +1359,7 @@ lemma copy_register_isolate:
   apply (case_tac obj, case_tac obja)
   apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
                    put_tcb_state_regs_tcb_def get_tcb_state_regs_def
+                   atcbContextGet_def
              cong: if_cong)
   apply (auto simp: fun_eq_iff split: if_split)
   done
@@ -1459,7 +1478,8 @@ lemmas fastpath_isolatables
       thread_actions_isolatable_returns
 
 lemmas fastpath_isolate_rewrites
-    = isolate_thread_actions_threadSet_tcbState isolate_thread_actions_asUser
+    = isolate_thread_actions_threadSet_tcbState
+      isolate_thread_actions_asUser
       copy_registers_isolate setSchedulerAction_isolate
       fastpath_isolatables[THEN thread_actions_isolatableD]
 

@@ -39,6 +39,9 @@ abbreviation
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
 
+type_synonym registers_count = 20
+type_synonym registers_array = "machine_word[registers_count]"
+
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"
   apply (rule hoare_complete)

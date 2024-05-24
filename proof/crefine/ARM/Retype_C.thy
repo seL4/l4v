@@ -2910,19 +2910,22 @@ proof -
     unfolding ctcb_relation_def makeObject_tcb
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
-         apply (simp add: cthread_state_relation_def thread_state_lift_def
-                          eval_nat_numeral ThreadState_Inactive_def)
-        apply (clarsimp simp: ccontext_relation_def carch_tcb_relation_def
-                              newArchTCB_def atcbContextGet_def)
-        apply (case_tac r; simp add: C_register_defs index_foldr_update
-                                     atcbContext_def newArchTCB_def newContext_def
-                                     initContext_def)
-       apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)
-      apply (simp add: Kernel_Config.timeSlice_def)
-     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
-                      lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-                      index_foldr_update seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
-               split: if_split)+
+          apply (simp add: cthread_state_relation_def thread_state_lift_def
+                           eval_nat_numeral ThreadState_Inactive_def)
+         apply (clarsimp simp: ccontext_relation_def carch_tcb_relation_def)
+         (* C regs relation *)
+         apply (clarsimp simp: cregs_relation_def)
+         subgoal for r
+           by (case_tac r;
+               simp add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def atcbContextGet_def
+                         newArchTCB_def newContext_def initContext_def take_bit_Suc
+                    del: unsigned_numeral)
+        apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)
+       apply (simp add: Kernel_Config.timeSlice_def)
+      apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
+                       lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
+                       index_foldr_update seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
+                split: if_split)+
     apply (simp add: option_to_ctcb_ptr_def)
     done
 
