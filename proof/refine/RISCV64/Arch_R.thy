@@ -326,7 +326,7 @@ lemma performASIDControlInvocation_corres:
    apply (drule (1) cte_cap_in_untyped_range)
         apply (fastforce simp add: cte_wp_at_ctes_of)
        apply assumption+
-     apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+     apply (clarsimp simp: invs'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
     apply fastforce
    apply simp
   apply clarsimp

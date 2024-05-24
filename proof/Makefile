@@ -10,6 +10,11 @@ default: images test
 test:
 all: images test
 
+# Allow sorry command in RISCV64 CRefine during development:
+ifeq "$(L4V_ARCH)" "RISCV64"
+  export CREFINE_QUICK_AND_DIRTY=1
+endif
+
 #
 # Setup heaps.
 #

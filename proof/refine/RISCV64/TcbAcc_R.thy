@@ -1691,7 +1691,7 @@ lemmas getThreadState_corres = getThreadState_corres'[OF refl]
 lemma is_blocked_corres:
   "corres (=) (pspace_aligned and pspace_distinct and tcb_at tcb_ptr)  \<top>
               (is_blocked tcb_ptr) (isBlocked tcb_ptr)"
-  apply (rule_tac Q="tcb_at' tcb_ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' tcb_ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   unfolding is_blocked_def isBlocked_def
   apply clarsimp
@@ -2349,7 +2349,7 @@ lemma gets_the_exec: "f s \<noteq> None \<Longrightarrow>  (do x \<leftarrow> ge
 lemma tcbSchedDequeue_corres:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) valid_queues
              (tcb_sched_action tcb_sched_dequeue t) (tcbSchedDequeue t)"
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp only: tcbSchedDequeue_def tcb_sched_action_def)
   apply (rule corres_symb_exec_r[OF _ _ threadGet_inv, where Q'="\<lambda>rv. tcb_at' t and Invariants_H.valid_queues and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"])

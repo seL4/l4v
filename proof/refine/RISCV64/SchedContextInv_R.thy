@@ -804,10 +804,10 @@ lemma refillResetRR_corres:
   supply projection_rewrites[simp]
   apply (subst is_active_sc_rewrite)
   apply (subst valid_refills_rewrite)
-  apply (rule_tac Q="is_active_sc' csc_ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="is_active_sc' csc_ptr" in corres_cross_add_guard)
    apply (fastforce dest!: is_active_sc'_cross[OF state_relation_pspace_relation])
-  apply (rule_tac Q="\<lambda>s'. ((\<lambda>sc'. refillSize sc' = 2) |< scs_of' s') csc_ptr"
-         in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. ((\<lambda>sc'. refillSize sc' = 2) |< scs_of' s') csc_ptr"
+                  in corres_cross_add_guard)
    apply (clarsimp simp: obj_at'_def round_robin2_def obj_at_def is_sc_obj
                          rr_valid_refills_def is_active_sc2_def is_active_sc'_def in_omonad)
    apply (drule (1) pspace_relation_absD[where x=csc_ptr, OF _ state_relation_pspace_relation])
@@ -835,7 +835,7 @@ lemma refillNew_corres:
      (pspace_aligned and pspace_distinct and sc_obj_at n sc_ptr and valid_objs) valid_objs'
      (refill_new sc_ptr max_refills budget period) (refillNew sc_ptr max_refills budget period)"
   apply (rule corres_cross_add_guard
-               [where Q = "sc_at' sc_ptr and (\<lambda>s'. ((\<lambda>sc. scSize sc = n) |< scs_of' s') sc_ptr)"])
+               [where Q' = "sc_at' sc_ptr and (\<lambda>s'. ((\<lambda>sc. scSize sc = n) |< scs_of' s') sc_ptr)"])
    apply (fastforce dest!: sc_obj_at_cross[OF state_relation_pspace_relation]
                      simp: obj_at'_def in_omonad objBits_simps)
   apply (clarsimp simp: refillNew_def refill_new_def setRefillHd_def updateRefillHd_def)
@@ -912,13 +912,13 @@ lemma refillUpdate_corres:
      (refillUpdate sc_ptr period budget max_refills)"
   (is "_ \<Longrightarrow> _ \<Longrightarrow> corres _ (?pred and _) ?conc _ _")
   supply getSchedContext_wp[wp del] set_sc'.get_wp[wp del] projection_rewrites[simp]
-  apply (rule corres_cross_add_guard[where Q = "sc_at' sc_ptr"])
+  apply (rule corres_cross_add_guard[where Q' = "sc_at' sc_ptr"])
    apply (fastforce dest!: sc_obj_at_cross[OF state_relation_pspace_relation]
                      simp: obj_at'_def opt_map_red objBits_simps)
   apply (rule corres_cross_add_guard
-               [where Q="obj_at' (\<lambda>sc. objBits sc = minSchedContextBits + n) sc_ptr"])
+               [where Q'="obj_at' (\<lambda>sc. objBits sc = minSchedContextBits + n) sc_ptr"])
    apply (fastforce intro: sc_obj_at_cross)
-  apply (rule_tac Q="is_active_sc' sc_ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="is_active_sc' sc_ptr" in corres_cross_add_guard)
    apply (rule is_active_sc'_cross, fastforce+)
 
   apply (rule corres_guard_imp)
@@ -1197,11 +1197,11 @@ lemma invokeSchedControlConfigureFlags_corres:
    apply (fastforce intro: valid_sched_context_size_objsI
                      simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
   apply (simp add: pred_conj_comm)
-  apply (rule_tac Q="\<lambda>s'. sc_at' sc_ptr s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. sc_at' sc_ptr s'" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross)
   apply (rule_tac Q="\<lambda>s. sc_at (cur_sc s) s" in corres_cross_add_abs_guard)
    apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
-  apply (rule_tac Q="\<lambda>s'. active_sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. active_sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: active_sc_at'_cross simp: state_relation_def)
 
   apply (rule_tac F="budget \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET \<and> period \<le> MAX_PERIOD
@@ -1365,7 +1365,7 @@ lemma invokeSchedControlConfigureFlags_corres:
 
       apply (rule corres_if_split; (solves simp)?)
 
-       apply (rule_tac Q="is_active_sc' sc_ptr" in corres_cross_add_guard)
+       apply (rule_tac Q'="is_active_sc' sc_ptr" in corres_cross_add_guard)
         apply (fastforce simp: is_active_sc_rewrite[symmetric] sc_at_pred_n_def obj_at_def
                                is_sc_obj_def vs_all_heap_simps opt_map_def active_sc_def
                        intro!: is_active_sc'_cross)

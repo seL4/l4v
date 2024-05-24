@@ -504,7 +504,7 @@ lemma setConsumed_corres:
 lemma get_tcb_yield_to_corres:
   "corres (=) (pspace_aligned and pspace_distinct and tcb_at t) \<top>
           (get_tcb_obj_ref tcb_yield_to t) (threadGet tcbYieldTo t)"
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: get_tcb_obj_ref_def getBoundNotification_def)
   apply (rule corres_guard_imp)
@@ -515,7 +515,7 @@ lemma get_tcb_yield_to_corres:
 lemma tcb_yield_to_update_corres:
   "corres dc (pspace_aligned and pspace_distinct and tcb_at t) \<top>
           (set_tcb_obj_ref tcb_yield_to_update t yt) (threadSet (tcbYieldTo_update (\<lambda>_. yt)) t)"
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (rule corres_guard_imp)
     apply (rule set_tcb_obj_ref_corres; simp add: tcb_relation_def)
@@ -533,7 +533,7 @@ lemma schedContextCancelYieldTo_corres:
           \<top>
           (sched_context_cancel_yield_to t)
           (schedContextCancelYieldTo t)" (is "corres _ ?abs_guard _ _ _")
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (clarsimp simp: sched_context_cancel_yield_to_def schedContextCancelYieldTo_def
                         updateSchedContext_def maybeM_def)

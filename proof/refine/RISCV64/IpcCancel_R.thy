@@ -252,7 +252,8 @@ lemma blocked_cancelIPC_corres:
                           and valid_ep' ep"
                    in corres_inst)
       \<comment>\<open>cross over replyTCB\<close>
-      apply (rule_tac Q="\<lambda>s. bound reply_opt \<longrightarrow> obj_at' (\<lambda>r. replyTCB r = Some t) (the reply_opt) s" in corres_cross_add_guard)
+      apply (rule_tac Q'="\<lambda>s. bound reply_opt \<longrightarrow> obj_at' (\<lambda>r. replyTCB r = Some t) (the reply_opt) s"
+                      in corres_cross_add_guard)
        apply clarsimp
        apply (drule state_relationD)
        apply (frule_tac s'=s' in pspace_aligned_cross, simp)
@@ -659,7 +660,7 @@ lemma replyRemoveTCB_corres:
                 (reply_remove_tcb t rp) (replyRemoveTCB t)"
   (is "corres _ ?abs_guard ?conc_guard _ _")
   apply add_sym_refs
-  apply (rule_tac Q="st_tcb_at' ((=) (thread_state.BlockedOnReply (Some rp))) t" in corres_cross_add_guard)
+  apply (rule_tac Q'="st_tcb_at' ((=) (thread_state.BlockedOnReply (Some rp))) t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
   apply (clarsimp simp: reply_remove_tcb_def replyRemoveTCB_def isReply_def)
   apply (rule corres_guard_imp)
@@ -677,7 +678,7 @@ lemma replyRemoveTCB_corres:
              apply (rule_tac P="?abs_guard and (\<lambda>s. sc_with_reply rp s = sc_opt) and reply_at rp"
                          and P'="?conc_guard and (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' reply' rp"
                     in corres_inst)
-             apply (rule_tac Q="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned'
+             apply (rule_tac Q'="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned'
                                       and pspace_distinct' and pspace_bounded'"
                     in corres_cross_add_guard)
               apply (frule pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
@@ -739,7 +740,7 @@ lemma replyRemoveTCB_corres:
                                 and  K (rp \<in> set (sc_replies x))"
                     in corres_symb_exec_l)
                 apply (rename_tac sc)
-                apply (rule_tac Q="(\<lambda>s'. scReplies_of s' scp = hd_opt (sc_replies sc)) and sc_at' scp"
+                apply (rule_tac Q'="(\<lambda>s'. scReplies_of s' scp = hd_opt (sc_replies sc)) and sc_at' scp"
                        in corres_cross_add_guard)
                  apply (clarsimp; rule conjI)
                   apply (frule state_relation_sc_replies_relation)
@@ -976,12 +977,12 @@ lemma setSchedContext_pop_head_corres:
               setSchedContext ptr (scReply_update (\<lambda>_. replyPrev reply') sc')
            od)"
   supply opt_mapE[elim!]
-  apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD simp: obj_at_def is_sc_obj_def vs_heap_simps
                     elim!: sc_at_cross valid_objs_valid_sched_context_size)
-  apply (rule_tac Q="pspace_aligned' and pspace_distinct'" in corres_cross_add_guard)
+  apply (rule_tac Q'="pspace_aligned' and pspace_distinct'" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: pspace_aligned_cross pspace_distinct_cross)
-  apply (rule_tac Q="\<lambda>s'. scReplies_of s' ptr = Some rp" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. scReplies_of s' ptr = Some rp" in corres_cross_add_guard)
    apply (subst sc_replies_relation_scReplies_of[symmetric, OF state_relation_sc_replies_relation])
       apply simp
      apply clarsimp
@@ -1114,24 +1115,24 @@ lemma replyPop_corres:
                              (?conc_guard and (\<lambda>s'. sym_refs (list_refs_of_replies' s'))) _ _")
   supply if_split[split del] opt_mapE[elim!]
   apply add_sym_refs
-  apply (rule_tac Q="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
+  apply (rule_tac Q'="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
-  apply (rule_tac Q="\<lambda>s. tcbSCs_of s t = tcbsc" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. tcbSCs_of s t = tcbsc" in corres_cross_add_guard)
    apply (fastforce dest!: bound_sc_tcb_at_cross elim!: obj_at'_weakenE)
-  apply (rule_tac Q="pspace_distinct'" in corres_cross_add_guard)
+  apply (rule_tac Q'="pspace_distinct'" in corres_cross_add_guard)
    apply (fastforce dest!: pspace_distinct_cross)
-  apply (rule_tac Q="pspace_aligned'" in corres_cross_add_guard)
+  apply (rule_tac Q'="pspace_aligned'" in corres_cross_add_guard)
    apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q="pspace_bounded'" in corres_cross_add_guard)
+  apply (rule_tac Q'="pspace_bounded'" in corres_cross_add_guard)
    apply (fastforce dest!: pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
-  apply (rule_tac Q="\<lambda>s. scReplies_of s scp = Some rp" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. scReplies_of s scp = Some rp" in corres_cross_add_guard)
    apply (fastforce simp: opt_map_red obj_at'_def
                    dest!: sc_replies_relation_scReplies_of state_relation_sc_replies_relation)
   apply (simp add: reply_unlink_sc_def replyPop_def bind_assoc liftM_def)
   apply (rule_tac Q="\<lambda>sc. ?abs_guard and reply_tcb_reply_at ((=) (Some t)) rp
-                          and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext sc n) scp s)
-                          and bound_sc_tcb_at ((=) tcbsc) t
-                          and K (\<exists>ls. sc_replies sc = rp#ls \<and> distinct (rp#ls))"
+                           and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext sc n) scp s)
+                           and bound_sc_tcb_at ((=) tcbsc) t
+                           and K (\<exists>ls. sc_replies sc = rp#ls \<and> distinct (rp#ls))"
          in corres_symb_exec_l)
      apply (rename_tac sc)
      apply (rule corres_gen_asm') (* sc_replies sc = rp # ls, distinct (rp#ls) *)
@@ -1395,7 +1396,7 @@ lemma replyRemove_corres:
   (is "\<lbrakk> _ ; _ \<rbrakk> \<Longrightarrow> corres _ ?abs_guard ?conc_guard _ _")
   apply (rule corres_gen_asm2', simp only:)
   apply add_sym_refs
-  apply (rule_tac Q="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
+  apply (rule_tac Q'="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
   apply (clarsimp simp: reply_remove_def replyRemove_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
@@ -1429,8 +1430,8 @@ lemma replyRemove_corres:
                 apply (rule_tac P="?abs_guard and (\<lambda>s. sc_with_reply rp s = sc_opt) and  ko_at (Structures_A.Reply reply) rp"
                            and P'="?conc_guard and (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' reply' rp"
                        in corres_inst)
-                apply (rule_tac Q="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned'
-                                         and pspace_distinct' and pspace_bounded'"
+                apply (rule_tac Q'="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned'
+                                    and pspace_distinct' and pspace_bounded'"
                        in corres_cross_add_guard)
                  apply (frule pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
                  apply (fastforce simp: sc_replies_relation_sc_with_reply_cross_eq
@@ -1490,7 +1491,7 @@ lemma replyRemove_corres:
                                         and  K (rp \<in> set (sc_replies sc))"
                        in corres_symb_exec_l)
                    apply (rename_tac sc)
-                   apply (rule_tac Q="\<lambda>s. scReplies_of s scp = hd_opt (sc_replies sc) \<and> sc_at' scp s"
+                   apply (rule_tac Q'="\<lambda>s. scReplies_of s scp = hd_opt (sc_replies sc) \<and> sc_at' scp s"
                           in corres_cross_add_guard)
                     apply (clarsimp; rule conjI)
                      apply (frule state_relation_sc_replies_relation)
@@ -1695,7 +1696,7 @@ lemma cancel_ipc_corres:
       (cancel_ipc t) (cancelIPC t)"
   apply add_sym_refs
   apply add_ready_qs_runnable
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: cancel_ipc_def cancelIPC_def Let_def)
   apply (rule corres_stateAssert_add_assertion[rotated])

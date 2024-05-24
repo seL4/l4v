@@ -1238,7 +1238,7 @@ lemma handleInvocation_corres:
   apply add_ct_not_inQ
   apply add_valid_idle'
   apply add_sym_refs
-  apply (rule_tac Q="\<lambda>s'. bound_sc_tcb_at' bound (ksCurThread s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. bound_sc_tcb_at' bound (ksCurThread s') s'" in corres_cross_add_guard)
    apply (fastforce intro: ct_released_cross_weak)
   apply (simp add: handle_invocation_def handleInvocation_def liftE_bindE)
   apply (rule corres_stateAssertE_add_assertion[rotated])
@@ -1561,7 +1561,7 @@ lemma handleRecv_isBlocking_corres':
   (is "corres dc (?pre1) (?pre2) (handle_recv _ _) (handleRecv _ _)")
   unfolding handle_recv_def handleRecv_def Let_def
   apply add_cur_tcb'
-  apply (rule_tac Q="ct_active'" in corres_cross_add_guard)
+  apply (rule_tac Q'="ct_active'" in corres_cross_add_guard)
    apply (fastforce elim!: ct_active_cross dest: invs_psp_aligned invs_distinct)
   apply (simp add: cap_register_def capRegister_def liftM_bind
              cong: if_cong cap.case_cong capability.case_cong split del: if_split)
@@ -1712,13 +1712,13 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
      (end_timeslice canTimeout) (endTimeslice canTimeout)"
   (is "corres _ ?pre ?pre' _ _")
   unfolding end_timeslice_def endTimeslice_def isValidTimeoutHandler_def bind_assoc
-  apply (rule_tac Q="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                   dest!: state_relationD)
    apply (erule (2) sc_at_cross)
    apply (fastforce simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj
                     dest: valid_sched_context_size_objsI)
-  apply (rule_tac Q="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
    apply (prop_tac "cur_sc s = ksCurSc s'", clarsimp dest!: state_relationD)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (fastforce dest: valid_sched_context_size_objsI elim!: is_active_sc'2_cross
@@ -1944,12 +1944,12 @@ lemma chargeBudget_corres:
      (charge_budget consumed canTimeout) (chargeBudget consumed canTimeout True)"
   (is "corres _ (?pred and _ and cur_sc_offset_ready 0) _ _ _")
   unfolding chargeBudget_def charge_budget_def ifM_def bind_assoc
-  apply (rule_tac Q="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply clarsimp
    apply (frule (1) cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb])
    apply (drule state_relationD, clarsimp)
    apply (erule sc_at_cross; fastforce simp: invs_def valid_state_def valid_pspace_def)
-  apply (rule_tac Q="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
    apply (fastforce intro: valid_objs_valid_sched_context_size
                      simp: sc_at_pred_n_def obj_at_def is_sc_obj_def state_relation_def vs_all_heap_simps
                     intro: is_active_sc'2_cross)
@@ -2085,7 +2085,7 @@ lemma checkBudget_corres: (* called when ct_schedulable or in checkBudgetRestart
      invs'
      check_budget checkBudget"
   unfolding check_budget_def checkBudget_def
-  apply (rule_tac Q="\<lambda>s'. active_sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. active_sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: active_sc_at'_cross_valid_objs simp: state_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF getCurSc_corres])
@@ -2116,9 +2116,9 @@ lemma handleYield_corres:
      handle_yield handleYield"
   (is "corres _ ?pre ?pre' _ _")
   supply opt_mapE[elim!]
-  apply (rule_tac Q=ct_active' in corres_cross_add_guard)
+  apply (rule_tac Q'=ct_active' in corres_cross_add_guard)
    apply (fastforce intro!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
-  apply (rule_tac Q="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                   dest!: state_relationD schact_is_rct)
    apply (erule (2) sc_at_cross)
@@ -2539,8 +2539,8 @@ lemma handleInv_handleRecv_corres:
       odE)"
   apply add_cur_tcb'
   apply add_sym_refs
-  apply (rule_tac Q="\<lambda>s'. pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') (ksCurThread s')"
-         in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') (ksCurThread s')"
+                  in corres_cross_add_guard)
    apply (clarsimp simp: released_sc_tcb_at_def active_sc_tcb_at_def2)
    apply (prop_tac "scp = cur_sc s")
     apply (drule invs_cur_sc_tcb_symref, clarsimp simp: schact_is_rct_def)
@@ -2557,8 +2557,8 @@ lemma handleInv_handleRecv_corres:
    apply (clarsimp simp: opt_map_red dest!: state_relationD)
    apply (frule_tac x="ksCurThread s'" in pspace_relation_absD, simp)
    apply (fastforce simp: other_obj_relation_def tcb_relation_def)
-  apply (rule_tac Q="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
-         in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
+                  in corres_cross_add_guard)
    apply (clarsimp, frule tcb_at_invs)
    apply (fastforce simp: not_in_release_q_def release_queue_relation_def pred_map_def opt_map_red obj_at'_def
                           invs'_def valid_pspace'_def valid_release_queue'_def cur_tcb'_def

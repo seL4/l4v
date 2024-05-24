@@ -535,7 +535,7 @@ lemma isRunnable_corres':
    corres (\<lambda>ts runn. runnable ts = runn)
      (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (get_thread_state t) (isRunnable t')"
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: isRunnable_def)
   apply (subst bind_return[symmetric])
@@ -2176,7 +2176,7 @@ crunches schedContextYieldTo, schedContextCompleteYieldTo
 lemma schedContextUnbindTCB_corres':
   "corres dc (invs and valid_sched and sc_tcb_sc_at ((\<noteq>) None) scp) invs'
              (sched_context_unbind_tcb scp) (schedContextUnbindTCB scp)"
-  apply (rule corres_cross_add_guard[where Q="obj_at' (\<lambda>sc. \<exists>y. scTCB sc = Some y) scp"])
+  apply (rule corres_cross_add_guard[where Q'="obj_at' (\<lambda>sc. \<exists>y. scTCB sc = Some y) scp"])
    apply (fastforce elim: sc_tcb_sc_at_bound_cross dest!: state_relation_pspace_relation
                     simp: invs_def valid_state_def valid_pspace_def)
 

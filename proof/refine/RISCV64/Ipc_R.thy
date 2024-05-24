@@ -1572,7 +1572,7 @@ lemma makeFaultMessage_corres:
        apply (case_tac "tcb_sched_context tcb"; case_tac "tcbSchedContext tcb'";
               clarsimp simp: tcb_relation_def)
        apply (rule corres_underlying_split)
-          apply (rule_tac Q="sc_at' (the (tcbSchedContext tcb'))" and P'=\<top> in corres_cross_add_guard)
+          apply (rule_tac Q'="sc_at' (the (tcbSchedContext tcb'))" and P'=\<top> in corres_cross_add_guard)
            apply (fastforce dest!: state_relationD intro!: sc_at_cross simp: obj_at'_def)[1]
           apply (rule corres_guard_imp)
             apply (rule schedContextUpdateConsumed_corres)
@@ -6350,15 +6350,15 @@ lemma doReplyTransfer_corres:
                           apply (rule corres_symb_exec_l [OF _ _ gets_sp], rename_tac ct)
                             apply (rule corres_symb_exec_r [OF _ refillReady_sp], rename_tac ready)
                               apply (rule corres_symb_exec_r [OF _ refillSufficient_sp], rename_tac suff)
-                                apply (rule_tac Q="\<lambda>_. ready = refill_ready ct (refill_hd sc)
-                                                       \<and> suff = refill_sufficient 0 (refill_hd sc)"
+                                apply (rule_tac Q'="\<lambda>_. ready = refill_ready ct (refill_hd sc)
+                                                        \<and> suff = refill_sufficient 0 (refill_hd sc)"
                                              in corres_cross_add_guard[rotated])
                                  apply (rule_tac corres_gen_asm2)
                                  apply (rule stronger_corres_guard_imp)
                                    apply (rule corres_if, simp)
                                     apply (rule possibleSwitchTo_corres; (solves simp)?)
                                    apply (rule corres_symb_exec_r[OF _ get_sc_sp'], rename_tac sc')
-                                     apply (rule_tac Q="\<lambda>_. sc_badge sc = scBadge sc'" in corres_cross_add_guard[rotated])
+                                     apply (rule_tac Q'="\<lambda>_. sc_badge sc = scBadge sc'" in corres_cross_add_guard[rotated])
                                       apply (rule_tac corres_gen_asm2)
                                       apply (rule_tac Q="\<lambda>s. active_scs_valid s \<and>
                                                is_active_sc (the scopt') s \<and> current_time_bounded s \<and>

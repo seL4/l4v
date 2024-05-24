@@ -1183,19 +1183,6 @@ lemma tcbSchedDequeue_rewrite:
    apply (wpsimp wp: threadGet_const)+
   done
 
-lemma switchToThread_rewrite:
-  "monadic_rewrite True True
-       (ct_in_state' (Not \<circ> runnable') and cur_tcb' and obj_at' (Not \<circ> tcbQueued) t
-        and ready_qs_runnable)
-       (switchToThread t)
-       (do Arch.switchToThread t; setCurThread t od)"
-  apply (simp add: switchToThread_def Thread_H.switchToThread_def)
-  apply (monadic_rewrite_l monadic_rewrite_stateAssert, simp)
-   apply (monadic_rewrite_l tcbSchedDequeue_rewrite, simp)
-   apply (rule monadic_rewrite_refl)
-  apply (clarsimp simp: comp_def)
-  done
-
 lemma threadGet_isolatable:
   assumes v: "\<And>tsr. \<forall>tcb. f (put_tcb_state_regs_tcb tsr tcb) = f tcb"
   shows "thread_actions_isolatable idx (threadGet f t)"

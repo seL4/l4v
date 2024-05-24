@@ -687,7 +687,7 @@ lemma update_sc_reply_stack_update_ko_at'_corres:
      (ko_at' sc' ptr and (\<lambda>s. heap_ls (replyPrevs_of s) reply_ptr replies))
      (update_sched_context ptr (sc_replies_update (\<lambda>_. replies)))
      (setSchedContext ptr (scReply_update (\<lambda>_. reply_ptr) sc'))"
-  apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD sc_at_cross simp: obj_at'_def)
   apply (rule_tac Q="sc_obj_at (objBits sc' - minSchedContextBits) ptr" in corres_cross_add_abs_guard)
    apply (fastforce dest!: state_relationD ko_at_sc_cross)
@@ -1554,7 +1554,7 @@ lemma setSchedContext_scReply_update_None_corres:
              setSchedContext ptr (scReply_update Map.empty sc')
           od)"
   supply opt_mapE[elim!]
-  apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD simp: obj_at_def is_sc_obj_def vs_heap_simps
                     elim!: sc_at_cross valid_objs_valid_sched_context_size)
   apply (rule corres_symb_exec_r)
@@ -1641,7 +1641,7 @@ lemma cleanReply_sc_with_reply_None_corres':
     \<top>
      (set_reply_obj_ref reply_sc_update rp None)
      (cleanReply rp)"
-  apply (rule_tac Q="reply_at' rp" in corres_cross_add_guard)
+  apply (rule_tac Q'="reply_at' rp" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD reply_at_cross)
   apply (rule corres_guard_imp)
   apply (rule corres_noop_sr2[OF reply_sc_update_sc_with_reply_None_exs_valid
@@ -1657,7 +1657,7 @@ lemma cleanReply_sc_with_reply_None_corres:
     \<top>
      (set_reply_obj_ref reply_sc_update rp None)
      (cleanReply rp)"
-  apply (rule_tac Q="reply_at' rp" in corres_cross_add_guard)
+  apply (rule_tac Q'="reply_at' rp" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD reply_at_cross)
   apply (simp add: cleanReply_def bind_assoc)
   apply (rule corres_guard_imp)
@@ -1699,10 +1699,11 @@ proof -
     by (clarsimp simp: obj_at_simps)
   show ?thesis using assms
     (* crossing information *)
-    apply (rule_tac Q="reply_at' rp and reply_at' nrp and sc_at' scp
-                      and pspace_distinct' and pspace_aligned'
-                      and  (\<lambda>s. sym_refs (state_refs_of' s))
-                      and (\<lambda>s'. sc_with_reply' rp s' = Some scp)" in corres_cross_add_guard)
+    apply (rule_tac Q'="reply_at' rp and reply_at' nrp and sc_at' scp
+                        and pspace_distinct' and pspace_aligned'
+                        and  (\<lambda>s. sym_refs (state_refs_of' s))
+                        and (\<lambda>s'. sc_with_reply' rp s' = Some scp)"
+                    in corres_cross_add_guard)
      apply clarsimp
      apply (prop_tac "reply_at' rp s'")
       apply (fastforce dest!: state_relationD intro!: reply_at_cross

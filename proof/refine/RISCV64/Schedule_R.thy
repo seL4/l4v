@@ -200,7 +200,7 @@ lemma tcbSchedAppend_corres:
   "corres dc (pspace_aligned and pspace_distinct and tcb_at t)
              (valid_queues and valid_queues')
           (tcb_sched_action (tcb_sched_append) t) (tcbSchedAppend t)"
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+  apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp only: tcbSchedAppend_def tcb_sched_action_def)
   apply (rule corres_symb_exec_r [OF _ _ threadGet_inv,
@@ -3011,7 +3011,7 @@ lemma possibleSwitchTo_corres:
       (possible_switch_to t)
       (possibleSwitchTo t')"
   supply dc_simp [simp del]
-  apply (rule corres_cross_add_guard[where Q="tcb_at' t"])
+  apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
   apply (simp add: possible_switch_to_def possibleSwitchTo_def cong: if_cong)
   apply (rule corres_guard_imp)
@@ -3720,7 +3720,7 @@ lemma mergeRefills_corres:
      (merge_refills sc_ptr) (mergeRefills sc_ptr)"
   unfolding mergeRefills_def merge_refills_def merge_refill_def
   apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel], fastforce)
-  apply (rule_tac Q="\<lambda>s'. ((\<lambda>sc'. 1 < refillSize sc') |< scs_of' s') sc_ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. ((\<lambda>sc'. 1 < refillSize sc') |< scs_of' s') sc_ptr" in corres_cross_add_guard)
    apply clarsimp
    apply (drule (2) state_relation_sc_relation)
    apply (clarsimp simp: sc_relation_def)
@@ -4103,7 +4103,7 @@ lemma refillBudgetCheckRoundRobin_corres:
   apply (clarsimp simp: refill_budget_check_round_robin_def refillBudgetCheckRoundRobin_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
    apply (corresKsimp corres: getCurSc_corres)
-  apply (rule_tac Q="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
    apply (rule_tac ptr="ksCurSc s'" in is_active_sc'_cross[OF state_relation_pspace_relation]; simp)
    apply clarsimp
   apply (rule corres_guard_imp)
@@ -4199,10 +4199,10 @@ lemma nonOverlappingMergeRefills_corres:
   apply (rule corres_symb_exec_r[OF _ getRefillSize_sp, rotated])
     apply (wpsimp wp: getRefillSize_wp)
    apply wpsimp
-  apply (rule_tac Q="is_active_sc' scPtr" in corres_cross_add_guard)
+  apply (rule_tac Q'="is_active_sc' scPtr" in corres_cross_add_guard)
    apply (fastforce dest: is_active_sc'2_cross)
-  apply (rule_tac Q="obj_at' (\<lambda>sc'. Suc 0 < refillSize sc') scPtr"
-               in corres_cross_add_guard)
+  apply (rule_tac Q'="obj_at' (\<lambda>sc'. Suc 0 < refillSize sc') scPtr"
+                  in corres_cross_add_guard)
    apply (fastforce dest!: length_sc_refills_cross[where P="\<lambda>l. Suc 0 < l"]
                      simp: opt_map_red opt_pred_def vs_all_heap_simps obj_at'_def)
   apply (rule corres_symb_exec_r[OF _ assert_sp, rotated])
@@ -4335,7 +4335,7 @@ lemma headInsufficientLoop_corres:
                  (head_insufficient_loop sc_ptr)
                  (headInsufficientLoop scPtr)"
   apply (clarsimp simp: head_insufficient_loop_def headInsufficientLoop_def runReaderT_def)
-  apply (rule_tac Q="active_sc_at' scPtr" in corres_cross_add_guard)
+  apply (rule_tac Q'="active_sc_at' scPtr" in corres_cross_add_guard)
    apply (fastforce dest: active_sc_at'_cross)
   apply (rule corres_whileLoop_abs; simp?)
        apply (frule head_insufficient_equiv[where scPtr=scPtr]; simp?)
@@ -4358,7 +4358,7 @@ lemma getRefillFull_corres:
   "sc_ptr = scPtr \<Longrightarrow>
    corres (=) (sc_at sc_ptr and pspace_aligned and pspace_distinct) (valid_refills' scPtr)
      (refill_full sc_ptr) (getRefillFull scPtr)"
-  apply (rule_tac Q="sc_at' scPtr" in corres_cross_add_guard)
+  apply (rule_tac Q'="sc_at' scPtr" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross)
   apply (clarsimp simp: refill_full_def getRefillFull_def readRefillFull_def
                         readSchedContext_def getObject_def[symmetric] getSchedContext_def[symmetric]
@@ -4388,9 +4388,9 @@ lemma scheduleUsed_corres:
       (valid_refills' scPtr)
       (schedule_used sc_ptr new) (scheduleUsed scPtr new')"
   apply (clarsimp simp: schedule_used_def scheduleUsed_def get_refills_def bind_assoc)
-  apply (rule_tac Q="sc_at' scPtr" in corres_cross_add_guard)
+  apply (rule_tac Q'="sc_at' scPtr" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross)
-  apply (rule_tac Q="is_active_sc' scPtr" in corres_cross_add_guard)
+  apply (rule_tac Q'="is_active_sc' scPtr" in corres_cross_add_guard)
    apply (fastforce intro: is_active_sc'_cross)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corresKsimp corres: get_sc_corres)
@@ -4485,9 +4485,9 @@ lemma handleOverrunLoopBody_corres:
           \<and> pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) (cur_sc s))
      (\<lambda>s'. valid_objs' s' \<and> valid_refills' (ksCurSc s') s')
      (handle_overrun_loop_body r) (handleOverrunLoopBody r')"
-  apply (rule_tac Q="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross simp: state_relation_def)
-  apply (rule_tac Q="\<lambda>s'. is_active_sc' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. is_active_sc' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: is_active_sc'_cross simp: state_relation_def)
   apply (clarsimp simp: handle_overrun_loop_body_def handleOverrunLoopBody_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
@@ -4679,9 +4679,9 @@ lemma handleOverrunLoop_corres:
               (\<lambda>s'. valid_objs' s' \<and> valid_refills' (ksCurSc s') s')
               (handle_overrun_loop usage)
               (handleOverrunLoop usage')"
-  apply (rule_tac Q="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross simp: state_relation_def)
-  apply (rule_tac Q="\<lambda>s'. is_active_sc' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. is_active_sc' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: is_active_sc'_cross simp: state_relation_def)
   apply (clarsimp simp: handle_overrun_loop_def handleOverrunLoop_def runReaderT_def)
   apply (rule corres_whileLoop_abs; simp?)
@@ -4723,9 +4723,9 @@ lemma refillBudgetCheck_corres:
                  (refill_budget_check usage)
                  (refillBudgetCheck usage')"
   (is "_ \<Longrightarrow> corres _ (?P and _) _ _ _")
-  apply (rule_tac Q="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross simp: state_relation_def)
-  apply (rule_tac Q="\<lambda>s'. is_active_sc' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. is_active_sc' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro!: is_active_sc'2_cross simp: state_relation_def)
 
   apply (clarsimp simp: refill_budget_check_def refillBudgetCheck_def)
@@ -4896,7 +4896,7 @@ lemma commitTime_corres:
              commit_time
              commitTime"
   supply if_split[split del]
-  apply (rule_tac Q="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross simp: state_relation_def)
   apply (clarsimp simp: commit_time_def commitTime_def liftM_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])

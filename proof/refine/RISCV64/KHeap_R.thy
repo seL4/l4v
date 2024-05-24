@@ -4740,7 +4740,7 @@ lemma update_sc_no_reply_stack_update_corres:
          (do sc' <- getSchedContext ptr;
              setSchedContext ptr (f' sc')
           od)"
-  apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
+  apply (rule_tac Q'="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD sc_at_cross simp: obj_at'_def)
   apply (rule corres_symb_exec_r)
      apply (rule corres_guard1_imp)
@@ -5147,48 +5147,48 @@ lemma release_q_runnable_cross:
     that are asserted to hold in the Haskell definition.\<close>
 
 method add_sym_refs =
-  rule_tac Q="\<lambda>s'. sym_refs (state_refs_of' s')" in corres_cross_add_guard,
+  rule_tac Q'="\<lambda>s'. sym_refs (state_refs_of' s')" in corres_cross_add_guard,
   (clarsimp simp: pred_conj_def)?,
   (elim conjE)?,
   (frule invs_sym_refs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
   fastforce dest: state_refs_of_cross_eq
 
 method add_ct_not_inQ =
-  rule_tac Q="\<lambda>s'. ct_not_inQ s'" in corres_cross_add_guard,
+  rule_tac Q'="\<lambda>s'. ct_not_inQ s'" in corres_cross_add_guard,
   (frule valid_sched_valid_sched_action)?,
   fastforce intro!: ct_not_inQ_cross simp: valid_sched_def
 
 method add_sch_act_wf =
-  rule_tac Q="\<lambda>s'. sch_act_wf (ksSchedulerAction s') s'" in corres_cross_add_guard,
+  rule_tac Q'="\<lambda>s'. sch_act_wf (ksSchedulerAction s') s'" in corres_cross_add_guard,
   fastforce intro!: sch_act_wf_cross simp: valid_sched_def
 
 method add_ct_idle_or_in_cur_domain' =
-  rule_tac Q="\<lambda>s'. ct_idle_or_in_cur_domain' s'" in corres_cross_add_guard,
+  rule_tac Q'="\<lambda>s'. ct_idle_or_in_cur_domain' s'" in corres_cross_add_guard,
   fastforce intro!: ct_idle_or_in_cur_domain'_cross simp: valid_sched_def
 
 method add_valid_idle' =
-  rule_tac Q="\<lambda>s'. valid_idle' s'" in corres_cross_add_guard,
+  rule_tac Q'="\<lambda>s'. valid_idle' s'" in corres_cross_add_guard,
   fastforce intro!: valid_idle'_cross
 
 method add_ready_qs_runnable =
-  rule_tac Q=ready_qs_runnable in corres_cross_add_guard,
+  rule_tac Q'=ready_qs_runnable in corres_cross_add_guard,
   (clarsimp simp: pred_conj_def)?,
   (frule valid_sched_valid_ready_qs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
   fastforce dest: ready_qs_runnable_cross
 
 method add_release_q_runnable =
-  rule_tac Q="\<lambda>s'. \<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
+  rule_tac Q'="\<lambda>s'. \<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
         in corres_cross_add_guard,
   (simp only: pred_conj_def)?,
   (frule valid_sched_valid_release_q)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
   fastforce dest: release_q_runnable_cross
 
 method add_valid_replies for rptr uses simp =
-  rule_tac Q="\<lambda>s. valid_replies'_sc_asrt rptr s" in corres_cross_add_guard,
+  rule_tac Q'="\<lambda>s. valid_replies'_sc_asrt rptr s" in corres_cross_add_guard,
   fastforce elim: valid_replies_sc_cross simp: simp
 
 method add_cur_tcb' =
-  rule_tac Q="\<lambda>s'. cur_tcb' s'" in corres_cross_add_guard,
+  rule_tac Q'="\<lambda>s'. cur_tcb' s'" in corres_cross_add_guard,
   fastforce intro!: cur_tcb_cross
 
 end

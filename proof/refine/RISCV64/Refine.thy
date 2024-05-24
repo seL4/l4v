@@ -510,6 +510,7 @@ lemma ckernel_invs:
    apply (rule hoare_post_impErr[where E="\<lambda>_. invs'" and Q=Q and R=Q for Q])
      apply wpsimp
     apply (clarsimp simp: active_from_running')+
+   apply wp
   apply (clarsimp simp: sym_heap_def pred_map_def)
   apply (rule_tac x="ksCurSc s" in exI)
   apply (clarsimp simp: obj_at_simps is_active_sc'_def isScActive_def opt_map_red pred_map_def
@@ -678,7 +679,7 @@ lemma kernel_preemption_corres:
                    _ <- mcsPreemptionPoint irq_opt;
                    when (\<exists>y. irq_opt = Some y) (handleInterrupt (the irq_opt))
                 od))" (is "corres _ ?P ?P' _ _")
-  apply (rule_tac Q="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply clarsimp
    apply (frule (1) cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb])
    apply (drule state_relationD, clarsimp)
@@ -857,23 +858,23 @@ lemma kernel_corres':
   unfolding call_kernel_def
   apply add_cur_tcb'
   apply add_sym_refs
-  apply (rule_tac Q="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread" in corres_cross_add_guard)
    apply (fastforce intro!: resume_cur_thread_cross)
-  apply (rule_tac Q="\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s" in corres_cross_add_guard)
    apply (fastforce intro!: ct_running_cross)
-  apply (rule_tac Q="ct_running' or ct_idle'" in corres_cross_add_guard)
+  apply (rule_tac Q'="ct_running' or ct_idle'" in corres_cross_add_guard)
    apply (simp only: pred_disj_def)
    apply (rule ct_running_or_idle_cross, fastforce+)
-  apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s" in corres_cross_add_guard)
+  apply (rule_tac Q'="\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s" in corres_cross_add_guard)
    apply (fastforce simp: invs_def valid_state_def valid_pspace_def intro!: cur_sc_tcb_cross)
-  apply (rule_tac Q="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
+  apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
          in corres_cross_add_guard)
    apply (clarsimp, frule tcb_at_invs)
    subgoal by (fastforce simp: not_in_release_q_def release_queue_relation_def pred_map_def
                                opt_map_red obj_at'_def invs'_def valid_pspace'_def
                                valid_release_queue'_def cur_tcb'_def
                         dest!: state_relationD)
-  apply (rule_tac Q="\<lambda>s'. pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') (ksCurThread s')"
+  apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') (ksCurThread s')"
          in corres_cross_add_guard)
    apply clarsimp
    apply (frule invs_cur_sc_tcb_symref, clarsimp simp: schact_is_rct)
