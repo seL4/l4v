@@ -79,7 +79,7 @@ A further caveat is that the 'wp' and 'wp_comb' rulesets provided are not
 necessarily ideal. Updating these rulesets would create difficult maintenance
 problems, and thus they are largely left as first defined. One issue that has
 not been addressed is the implicit precondition weakening done by combinator
-rules @{thm hoare_post_comb_imp_conj} and @{thm hoare_vcg_precond_imp}. In hindsight it
+rules @{thm hoare_post_comb_imp_conj} and @{thm hoare_weaken_pre}. In hindsight it
 would be better if @{thm hoare_pre} were always applied manually, or if the 'wp'
 tool itself could decide when they ought be applied. Note that such weakening
 rules were not supplied for the error hoare triples/quadruple, which postdate
