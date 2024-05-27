@@ -101,7 +101,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
         apply ((strengthen use_no_cap_to_obj_asid_strg
                              tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                              tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]
-                | simp add: conj_comms(1, 2) del: hoareE_R_TrueI
+                | simp add: conj_comms(1, 2)
                 | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
                        hoare_vcg_E_elim hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
                 | (wp check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
@@ -125,7 +125,6 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
                       thread_set_P thread_set_P' set_mcpriority_P set_mcpriority_idle_thread
                       dxo_wp_weak hoare_weak_lift_imp)
                 | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified] emptyable_def option_update_thread_def
-                       del: hoareE_R_TrueI
                 | wpc)+) (*slow*)
   apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def

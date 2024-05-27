@@ -1793,7 +1793,6 @@ lemma arch_decodeARMPageFlush_wf:
         (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
        decodeARMPageFlush label args (arch_capability.PageCap d word vmrights vmpage_size option)
        \<lbrace>valid_arch_inv'\<rbrace>, -"
-  supply hoareE_R_TrueI [simp del]
   apply (simp add: decodeARMPageFlush_def)
   apply (wpsimp wp: whenE_throwError_wp simp: valid_arch_inv'_def valid_page_inv'_def if_apply_def2)
   done
@@ -1977,7 +1976,6 @@ lemma arch_decodeInvocation_wf[wp]:
    \<comment> \<open>PageDirectoryCap\<close>
    apply (simp add: decodeARMMMUInvocation_def ARM_HYP_H.decodeInvocation_def isCap_simps Let_def)
 
-   supply hoareE_R_TrueI [simp del]
    apply (cases "ARM_HYP_H.isPDFlushLabel (invocation_type label)", simp_all)
     apply (cases args; simp)
      apply wp

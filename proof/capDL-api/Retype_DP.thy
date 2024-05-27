@@ -252,7 +252,7 @@ lemma reset_untyped_cap_wp:
   apply (rule hoare_pre)
    apply (wp whenE_wp)
       apply (rule_tac P = "\<exists>fr. cap = UntypedCap dev obj_range fr
-          \<and> (\<forall>fr\<in> set x. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range)" in hoare_gen_asmE)
+          \<and> (\<forall>fr\<in> set rv. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range)" in hoare_gen_asmE)
       apply clarsimp
       apply (wp whenE_wp mapME_x_wp)
       apply (rule ballI)
@@ -261,7 +261,7 @@ lemma reset_untyped_cap_wp:
        apply simp
        apply (rule hoare_post_imp[OF _ set_cap_wp])
        apply clarsimp
-       apply (rule_tac x = xa in exI)
+       apply (rule_tac x = x in exI)
         apply ((rule conjI, fastforce)+, sep_solve)
       apply clarsimp
       apply sep_solve

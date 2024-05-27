@@ -234,7 +234,7 @@ lemma tc_invs[Tcb_AI_asms]:
    apply wp
       apply ((simp only: simp_thms cong: conj_cong
         | (strengthen invs_strengthen)+
-        | (simp add: conj_comms del: hoareE_R_TrueI,
+        | (simp add: conj_comms,
                   strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_liftE_R
@@ -260,7 +260,6 @@ lemma tc_invs[Tcb_AI_asms]:
              hoare_weak_lift_imp hoare_weak_lift_imp_conj)[1]
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def
-               del: hoareE_R_TrueI
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]

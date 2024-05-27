@@ -278,11 +278,7 @@ lemmas unifyFailure_discard2
 lemma deriveCap_not_null:
   "\<lbrace>\<top>\<rbrace> deriveCap slot cap \<lbrace>\<lambda>rv. K (rv \<noteq> NullCap \<longrightarrow> cap \<noteq> NullCap)\<rbrace>,-"
   apply (simp add: deriveCap_def split del: if_split)
-  apply (case_tac cap)
-          apply (simp_all add: Let_def isCap_simps)
-  apply wp
-  apply simp
-  done
+  by (case_tac cap; wpsimp simp: isCap_simps)
 
 lemma deriveCap_derived_foo:
   "\<lbrace>\<lambda>s. \<forall>cap'. (cte_wp_at' (\<lambda>cte. badge_derived' cap (cteCap cte)
@@ -4159,7 +4155,7 @@ lemma si_blk_makes_simple':
    \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   apply (simp add: sendIPC_def)
   apply (rule bind_wp [OF _ get_ep_inv'])
-  apply (case_tac xa, simp_all)
+  apply (case_tac rv, simp_all)
     apply (rename_tac list)
     apply (case_tac list, simp_all add: case_bool_If case_option_If
                              split del: if_split cong: if_cong)
@@ -4179,7 +4175,7 @@ lemma si_blk_makes_runnable':
    \<lbrace>\<lambda>rv. st_tcb_at' runnable' t\<rbrace>"
   apply (simp add: sendIPC_def)
   apply (rule bind_wp [OF _ get_ep_inv'])
-  apply (case_tac xa, simp_all)
+  apply (case_tac rv, simp_all)
     apply (rename_tac list)
     apply (case_tac list, simp_all add: case_bool_If case_option_If
                              split del: if_split cong: if_cong)

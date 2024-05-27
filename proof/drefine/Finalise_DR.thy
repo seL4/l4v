@@ -210,13 +210,14 @@ lemma delete_cap_one_shrink_descendants:
      apply (clarsimp simp add:empty_slot_def)
      apply (wp dxo_wp_weak)
          apply simp
-        apply (rule_tac P="\<lambda>s. valid_mdb s \<and> cdt s = xa \<and> cdt pres = xa \<and> slot \<in> CSpaceAcc_A.descendants_of p (cdt s)
-          \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
-          in hoare_weaken_pre)
+        apply (rename_tac slot_p cdt')
+        apply (rule_tac P="\<lambda>s. valid_mdb s \<and> cdt s = cdt' \<and> cdt pres = cdt' \<and> slot \<in> CSpaceAcc_A.descendants_of p (cdt s)
+                               \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
+                     in hoare_weaken_pre)
          apply (rule_tac Q ="\<lambda>r s. Q r s \<and>  (mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))" for Q in hoare_strengthen_post)
           apply (rule hoare_vcg_conj_lift)
            apply (rule delete_cdt_slot_shrink_descendants[where y= "cdt pres" and p = p])
-          apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s ) xa" in hoare_weaken_pre)
+          apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s ) cdt'" in hoare_weaken_pre)
            apply (case_tac slot)
            apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def)
           apply (assumption)
@@ -245,7 +246,7 @@ lemma delete_cap_one_shrink_descendants:
   apply (drule descendants_not_null_cap)
    apply simp
   apply (clarsimp simp:cte_wp_at_def)
-done
+  done
 
 lemma invs_emptyable_descendants:
   "\<lbrakk>invs s;CSpaceAcc_A.descendants_of slot (cdt s) = {(a, b)}\<rbrakk>
@@ -1402,10 +1403,10 @@ lemma remain_pt_pd_relation:
   apply (subgoal_tac "ptr\<noteq> y")
    apply (simp add: store_pte_def)
    apply wp
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
                 and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_weaken_pre)
       apply (clarsimp simp: set_pt_def)
-      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
+      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
                    and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_weaken_pre)
        apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
        apply (drule_tac x= y in bspec,simp)
@@ -1426,10 +1427,10 @@ lemma remain_pd_section_relation:
        \<lbrace>\<lambda>r s. pd_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
   apply (simp add: store_pde_def)
   apply wp
-    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                   and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
      apply (clarsimp simp: set_pd_def)
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                 and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
       apply (clarsimp simp: pd_section_relation_def dest!: ucast_inj_mask | rule conjI)+
@@ -1448,10 +1449,10 @@ lemma remain_pd_super_section_relation:
        \<lbrace>\<lambda>r s. pd_super_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
   apply (simp add: store_pde_def)
   apply wp
-    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
      apply (clarsimp simp: set_pd_def)
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
       apply (clarsimp simp: pd_super_section_relation_def dest!: ucast_inj_mask | rule conjI)+

@@ -1227,7 +1227,7 @@ lemma not_master_reply_cap_lcs[wp]:
   apply wp
     apply (simp add:split_def)
     apply wp
-    apply (rule_tac Q ="\<lambda>cap. cte_wp_at (\<lambda>x. x = cap) (fst x) and real_cte_at (fst x)
+    apply (rule_tac Q ="\<lambda>cap. cte_wp_at (\<lambda>x. x = cap) (fst rv) and real_cte_at (fst rv)
                               and valid_reply_masters and valid_objs" in hoare_strengthen_post)
      apply (wp get_cap_cte_wp_at)
     apply clarify
@@ -1338,13 +1338,13 @@ lemma handle_invocation_corres:
        apply (wp | simp add: split_def)+
       apply (rule_tac Q="\<lambda>r s. s = s'a \<and>
                                evalMonad (lookup_ipc_buffer False (cur_thread s'a)) s'a = Some r \<and>
-                               cte_wp_at (Not \<circ> is_master_reply_cap) (snd x) s \<and>
-                               cte_wp_at ((=) (fst x)) (snd x) s \<and>
-                               real_cte_at (snd x) s \<and>
-                               s \<turnstile> fst x \<and>
-                               ex_cte_cap_wp_to (\<lambda>_. True) (snd x) s \<and>
-                               (\<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s) \<and>
-                               (\<forall>r\<in>cte_refs (fst x) (interrupt_irq_node s). ex_cte_cap_wp_to \<top> r s)"
+                               cte_wp_at (Not \<circ> is_master_reply_cap) (snd rv) s \<and>
+                               cte_wp_at ((=) (fst rv)) (snd rv) s \<and>
+                               real_cte_at (snd rv) s \<and>
+                               s \<turnstile> fst rv \<and>
+                               ex_cte_cap_wp_to (\<lambda>_. True) (snd rv) s \<and>
+                               (\<forall>r\<in>zobj_refs (fst rv). ex_nonz_cap_to r s) \<and>
+                               (\<forall>r\<in>cte_refs (fst rv) (interrupt_irq_node s). ex_cte_cap_wp_to \<top> r s)"
                       in hoare_strengthen_post)
        apply (wp evalMonad_wp)
          apply (simp add: empty_when_fail_lookup_ipc_buffer weak_det_spec_lookup_ipc_buffer)+
@@ -1530,7 +1530,7 @@ lemma handle_vm_fault_wp:
    apply wp
      apply (clarsimp simp:do_machine_op_def getDFSR_def)
      apply wp
-       apply (case_tac x)
+       apply (case_tac rv)
        apply clarsimp
        apply (rule_tac P="P and (\<lambda>x. snd (aa,ba) = machine_state x)" in  hoare_post_imp)
         apply (assumption)
@@ -1539,7 +1539,7 @@ lemma handle_vm_fault_wp:
     apply (clarsimp simp:gets_def alternative_def get_def bind_def select_def return_def)
     apply (clarsimp simp:do_machine_op_def getFAR_def)
     apply wp
-      apply (case_tac x)
+      apply (case_tac rv)
       apply clarsimp
       apply (rule_tac P="P and (\<lambda>x. snd (aa,ba) = machine_state x)" in  hoare_post_imp)
        apply (assumption)
@@ -1550,7 +1550,7 @@ lemma handle_vm_fault_wp:
   apply wp
     apply (clarsimp simp:do_machine_op_def getIFSR_def)
     apply wp
-      apply (case_tac x)
+      apply (case_tac rv)
       apply clarsimp
       apply (rule_tac P="P and (\<lambda>x. snd (aa,ba) = machine_state x)" in  hoare_post_imp)
        apply (assumption)

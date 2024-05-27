@@ -2662,9 +2662,9 @@ lemma ri_invs':
   apply (rule bind_wp[OF _ gbn_sp])
   apply (rule bind_wp)
   (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_if_split)
+   apply (rule_tac R="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
-   apply (case_tac x)
+   apply (case_tac rv)
      apply (wp | rule hoare_pre, wpc | simp)+
            apply (simp add: invs_def valid_state_def valid_pspace_def)
            apply (rule hoare_pre, wp valid_irq_node_typ valid_ioports_lift)
@@ -2844,7 +2844,7 @@ lemma rai_invs':
   apply (cases cap, simp_all)
   apply (rename_tac ntfn badge rights)
   apply (rule bind_wp [OF _ get_simple_ko_sp])
-  apply (case_tac "ntfn_obj x")
+  apply (case_tac "ntfn_obj rv")
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
      apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
@@ -2885,7 +2885,7 @@ lemma rai_invs':
    apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
    apply (rule context_conjI, fastforce simp: pred_tcb_at_def obj_at_def tcb_bound_refs_def2
                                                state_refs_of_def)
-   apply (subgoal_tac "ntfn_bound_tcb x = None")
+   apply (subgoal_tac "ntfn_bound_tcb rv = None")
     apply (rule conjI, clarsimp split: option.splits)
     apply (rule conjI, erule delta_sym_refs)
       apply (fastforce simp: pred_tcb_at_def2 obj_at_def symreftype_inverse'
@@ -3252,16 +3252,16 @@ lemma ri_makes_simple:
   apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule bind_wp [OF _ gbn_sp])
   apply (rule bind_wp)
-   apply (rename_tac ep I DO x CARE NOT)
-   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_if_split)
+   apply (rename_tac ep I DO rv CARE NOT)
+   apply (rule_tac R="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
-   apply (case_tac x, simp_all)
+   apply (case_tac rv, simp_all)
      apply (rule hoare_pre, wpc)
        apply (wp sts_st_tcb_at_cases, simp)
       apply (simp add: do_nbrecv_failed_transfer_def, wp)
      apply clarsimp
     apply (rule bind_wp [OF _ assert_sp])
-    apply (rule bind_wp [where B="\<lambda>s. st_tcb_at simple t'"])
+    apply (rule bind_wp [where Q'="\<lambda>s. st_tcb_at simple t'"])
      apply (rule bind_wp [OF _ gts_sp])
      apply (rule hoare_pre)
       apply (wp setup_caller_cap_makes_simple sts_st_tcb_at_cases

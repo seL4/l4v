@@ -99,11 +99,12 @@ lemma activate_invs':
    \<lbrace>\<lambda>rv. invs' and (ct_running' or ct_idle')\<rbrace>"
   apply (simp add: activateThread_def)
   apply (rule bind_wp)
-   apply (rule_tac B="\<lambda>state s. invs' s \<and> sch_act_simple s
-                              \<and> st_tcb_at' (\<lambda>st. st = state) thread s
-                              \<and> thread = ksCurThread s
-                              \<and> (runnable' state \<or> idle' state)" in bind_wp)
-    apply (case_tac x, simp_all add: isTS_defs hoare_pre_cont
+   apply (rule_tac Q'="\<lambda>state s. invs' s \<and> sch_act_simple s
+                                 \<and> st_tcb_at' (\<lambda>st. st = state) thread s
+                                 \<and> thread = ksCurThread s
+                                 \<and> (runnable' state \<or> idle' state)"
+                in bind_wp)
+    apply (case_tac rv, simp_all add: isTS_defs hoare_pre_cont
                        split del: if_splits cong: if_cong)
       apply (wp)
       apply (clarsimp simp: ct_in_state'_def)
@@ -155,8 +156,7 @@ lemma activate_sch_act:
   apply (simp add: activateThread_def getCurThread_def
              cong: if_cong Structures_H.thread_state.case_cong)
   apply (rule bind_wp [OF _ gets_sp])
-  apply (rule bind_wp[where B="\<lambda>st s. (runnable' or idle') st
-                                          \<and> P (ksSchedulerAction s)"])
+  apply (rule bind_wp[where Q'="\<lambda>st s. (runnable' or idle') st \<and> P (ksSchedulerAction s)"])
    apply (rule hoare_pre)
     apply (wp | wpc | simp add: setThreadState_runnable_simp)+
   apply (clarsimp simp: ct_in_state'_def cur_tcb'_def pred_tcb_at'
@@ -2451,8 +2451,6 @@ lemma decodeTCBConf_wf[wp]:
    apply wpsimp
   apply (fastforce simp: isThreadControl_def2 objBits_defs)
   done
-
-declare hoareE_R_TrueI [simp del]
 
 lemma lsft_real_cte:
   "\<lbrace>valid_objs'\<rbrace> lookupSlotForThread t x \<lbrace>\<lambda>rv. real_cte_at' rv\<rbrace>, -"

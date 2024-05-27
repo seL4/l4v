@@ -656,7 +656,7 @@ lemma getMRs_tcbContext:
   apply (thin_tac "thread = t" for t)
   apply (clarsimp simp add: getMRs_def)
   apply (wp|wpc)+
-    apply (rule_tac P="n < length x" in hoare_gen_asm)
+    apply (rule_tac P="n < length rv" in hoare_gen_asm)
     apply (clarsimp simp: nth_append)
     apply (wp mapM_wp' hoare_weak_lift_imp)+
     apply simp

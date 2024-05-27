@@ -619,7 +619,7 @@ next
   show ?case
     apply (simp add: mapME_Cons)
     apply (wp)
-     apply (rule_tac Q' = "\<lambda>xs s. (R s \<and> (\<forall>x \<in> set xs. P x s)) \<and> P x s" in hoare_strengthen_postE_R)
+     apply (rule_tac Q' = "\<lambda>xs s. (R s \<and> (\<forall>x \<in> set xs. P x s)) \<and> P rv s" in hoare_strengthen_postE_R)
       apply (wp Cons.hyps minvp)
      apply simp
     apply (fold validE_R_def)

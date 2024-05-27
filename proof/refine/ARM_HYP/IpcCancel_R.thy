@@ -943,7 +943,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at:
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def
              cong: if_cong Structures_H.thread_state.case_cong)
   apply (rule bind_wp [OF _ gts_sp'])
-  apply (case_tac x, simp_all add: isTS_defs list_case_If)
+  apply (case_tac rv, simp_all add: isTS_defs list_case_If)
          apply (wp sts_st_tcb_at'_cases delete_one_st_tcb_at
                    threadSet_pred_tcb_no_state
                    cancelSignal_st_tcb_at hoare_drop_imps
@@ -1015,9 +1015,8 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (clarsimp simp: cancelIPC_def Let_def)
   apply (case_tac "t'=t")
-   apply (rule_tac B="\<lambda>st. st_tcb_at' runnable' t and K (runnable' st)"
-            in bind_wp)
-    apply(case_tac x; simp)
+   apply (rule_tac Q'="\<lambda>st. st_tcb_at' runnable' t and K (runnable' st)" in bind_wp)
+    apply(case_tac rv; simp)
    apply (wpsimp wp: sts_pred_tcb_neq')+
            apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
            apply (wp cteDeleteOne_tcb_at_runnable'

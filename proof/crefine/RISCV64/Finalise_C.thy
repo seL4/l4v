@@ -1527,7 +1527,7 @@ lemma unmapPageTable_ccorres:
              apply simp
             apply wp
            apply (simp add: guard_is_UNIV_def)
-          apply (simp add: guard_is_UNIV_def)
+          apply wpsimp
          apply (simp add: guard_is_UNIV_def)
         apply vcg
        apply (vcg spec=modifies)

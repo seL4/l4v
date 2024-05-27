@@ -1829,7 +1829,7 @@ lemma unmapPage_ccorres:
         apply ccorres_rewrite
         apply (clarsimp simp: liftE_liftM)
         apply (ctac add: invalidateTranslationSingleASID_ccorres)
-       apply clarsimp
+       apply wpsimp
       apply clarsimp
       apply (clarsimp simp: guard_is_UNIV_def conj_comms tcb_cnode_index_defs)
      apply (simp add: throwError_def)

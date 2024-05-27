@@ -388,7 +388,7 @@ lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
                                                               pasObjectAbs aag x \<in> L)
                                                     | _ \<Rightarrow> True))" in hoare_strengthen_post)
          apply (wp mapM_x_wp' store_word_offs_equiv_but_for_labels | simp add: split_def)+
-         apply (case_tac xa, clarsimp split: if_split_asm elim!: in_set_zipE)
+         apply (case_tac x, clarsimp split: if_split_asm elim!: in_set_zipE)
          apply (clarsimp simp: for_each_byte_of_word_def)
          apply (erule bspec)
          apply (clarsimp simp: ptr_range_def)

@@ -2749,7 +2749,7 @@ lemma reset_untyped_cap_invs_etc:
    apply (frule(1) caps_of_state_pspace_no_overlapD, simp+)
    apply (simp add: word_bw_assocs field_simps)
   apply (clarsimp simp: free_index_of_def split del: if_split)
-  apply (rule_tac B="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
+  apply (rule_tac Q'="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
         and ct_active and ?psp" in bindE_wp_fwd)
    apply clarsimp
    apply (rule hoare_pre)
@@ -3686,7 +3686,7 @@ lemma invoke_untyp_invs':
     show "\<lbrace>(=) s\<rbrace> invoke_untyped ?ui \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>, \<lbrace>\<lambda>_ s. invs s \<and> Q s\<rbrace>"
       using cover
       apply (simp add:mapM_x_def[symmetric] invoke_untyped_def)
-      apply (rule_tac B="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
+      apply (rule_tac Q'="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ?ui
             (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)

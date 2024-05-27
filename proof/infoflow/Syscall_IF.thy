@@ -330,7 +330,7 @@ proof (cases oper)
     apply (rule equiv_valid_guard_imp)
      apply (wpc | simp | wp reads_respects_f_g'[OF invoke_untyped_reads_respects_g]
                             invoke_untyped_silc_inv)+
-    by (simp add: authorised_invocation_def)
+    by (fastforce simp: authorised_invocation_def)
 next
   case InvokeEndpoint
   then show ?thesis
@@ -383,7 +383,7 @@ next
     apply (rule equiv_valid_guard_imp)
      apply (wpc | simp | wp reads_respects_f_g'[OF invoke_irq_control_reads_respects_g]
                             invoke_irq_control_silc_inv)+
-    by (simp add: invs_def valid_state_def authorised_invocation_def)
+    by (fastforce simp: invs_def valid_state_def authorised_invocation_def)
 next
   case InvokeIRQHandler
   then show ?thesis
@@ -497,9 +497,7 @@ lemma decode_invocation_authorised_extra:
    decode_invocation info_label args ptr slot cap excaps
    \<lbrace>\<lambda>rv s. authorised_invocation_extra aag rv\<rbrace>,-"
   unfolding decode_invocation_def authorised_invocation_extra_def
-  apply (rule hoare_pre)
-   apply (wp decode_tcb_invocation_authorised_extra | wpc | simp add: split_def o_def uncurry_def)+
-  apply auto
+  apply (wpsimp wp: decode_tcb_invocation_authorised_extra simp: split_def o_def)+
   done
 
 lemma sts_schact_is_rct_runnable:
@@ -649,9 +647,9 @@ lemma lookup_cap_cap_fault:
   "\<lbrace>invs\<rbrace> lookup_cap c b -, \<lbrace>\<lambda>f s. valid_fault (CapFault x y f)\<rbrace>"
   apply (simp add: lookup_cap_def)
   apply wp
-    apply (case_tac xa)
+    apply (case_tac rv)
     apply (simp add: validE_E_def)
-    apply (wp)
+    apply wp
    apply (fold validE_E_def)
    apply (wp lookup_slot_for_thread_cap_fault)
   apply assumption

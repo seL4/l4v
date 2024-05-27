@@ -2648,11 +2648,7 @@ lemma decode_cnode_corres:
                         apply simp
                        apply (rule dcorres_returnOk)
                        apply (simp add:translate_cnode_invocation_def)
-                      apply (wp get_cap_wp whenE_wp|clarsimp)+
-         apply (rule hoare_strengthen_postE_R[OF validE_validE_R])
-         apply (rule hoareE_TrueI[where P = \<top>])
-          apply fastforce
-         apply (wp hoare_drop_imp|simp)+
+                      apply (wp get_cap_wp | simp)+
          apply (rule_tac Q'="\<lambda>r. real_cte_at src_slota and valid_objs and
                                 real_cte_at dest_slota and valid_idle and
                                      not_idle_thread (fst src_slota) and

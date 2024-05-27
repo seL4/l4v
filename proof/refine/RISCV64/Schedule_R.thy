@@ -972,7 +972,7 @@ lemma asUser_ct_not_inQ[wp]:
     apply (rule gets_inv)
    defer
    apply (rule select_f_inv)
-  apply (case_tac x; simp)
+  apply (case_tac rv; simp)
   apply (clarsimp simp: asUser_replace_def obj_at'_def fun_upd_def
                   split: option.split kernel_object.split)
   apply wp
@@ -1159,7 +1159,7 @@ lemma setThreadState_rct:
    apply (rule bind_wp [OF _
                  hoare_vcg_conj_lift [OF isRunnable_const isRunnable_inv]])
    apply (clarsimp simp: when_def)
-   apply (case_tac x)
+   apply (case_tac rv)
     apply (clarsimp, wp)[1]
    apply (clarsimp)
   apply (rule bind_wp [OF _
@@ -2082,11 +2082,12 @@ proof -
     apply (clarsimp simp: chooseThread_def Let_def curDomain_def)
     apply (rule bind_wp[OF _ stateAssert_sp])+
     apply (simp only: return_bind, simp)
-    apply (rule bind_wp[where B="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
+    apply (rule bind_wp[where Q'="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
                                               \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s"])
-     apply (rule_tac B="\<lambda>rv s. invs_no_cicd' s \<and> curdom = ksCurDomain s \<and>
-                               rv = ksReadyQueuesL1Bitmap s curdom \<and>
-                               ksReadyQueues_asrt s \<and> ready_qs_runnable s" in bind_wp)
+     apply (rule_tac Q'="\<lambda>rv s. invs_no_cicd' s \<and> curdom = ksCurDomain s \<and>
+                                rv = ksReadyQueuesL1Bitmap s curdom \<and>
+                                ksReadyQueues_asrt s \<and> ready_qs_runnable s"
+                  in bind_wp)
       apply (rename_tac l1)
       apply (case_tac "l1 = 0")
        (* switch to idle thread *)
@@ -2145,11 +2146,12 @@ proof -
     apply (clarsimp simp: chooseThread_def Let_def curDomain_def)
     apply (rule bind_wp[OF _ stateAssert_sp])+
     apply (simp only: return_bind, simp)
-    apply (rule bind_wp[where B="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
+    apply (rule bind_wp[where Q'="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
                                               \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s"])
-     apply (rule_tac B="\<lambda>rv s. invs_no_cicd' s \<and> curdom = ksCurDomain s \<and>
-                               rv = ksReadyQueuesL1Bitmap s curdom \<and>
-                               ksReadyQueues_asrt s \<and> ready_qs_runnable s" in bind_wp)
+     apply (rule_tac Q'="\<lambda>rv s. invs_no_cicd' s \<and> curdom = ksCurDomain s \<and>
+                                rv = ksReadyQueuesL1Bitmap s curdom \<and>
+                                ksReadyQueues_asrt s \<and> ready_qs_runnable s"
+                  in bind_wp)
       apply (rename_tac l1)
       apply (case_tac "l1 = 0")
        (* switch to idle thread *)

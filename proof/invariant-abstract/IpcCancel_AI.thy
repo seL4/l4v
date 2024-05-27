@@ -567,8 +567,8 @@ lemma (in delete_one_abs) reply_cancel_ipc_no_reply_cap[wp]:
   shows "\<lbrace>invs and tcb_at t\<rbrace> (reply_cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply wp
-        apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) x s \<and>
-                                (\<forall>sl R. sl \<noteq> x \<longrightarrow>
+        apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) rv s \<and>
+                                (\<forall>sl R. sl \<noteq> rv \<longrightarrow>
                                   caps_of_state s sl \<noteq> Some (cap.ReplyCap t False R))"
                   in hoare_strengthen_post)
          apply (wp hoare_vcg_conj_lift hoare_vcg_all_lift

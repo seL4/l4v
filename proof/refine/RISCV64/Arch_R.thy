@@ -1158,15 +1158,15 @@ lemma arch_decodeInvocation_wf[wp]:
 
     \<comment> \<open>ASIDPool cap\<close>
     apply (simp add: decodeRISCVMMUInvocation_def RISCV64_H.decodeInvocation_def
-                     Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def
-               cong: if_cong split del: if_split)
-    apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp cong: if_cong)
+                     Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def)
+    apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp
+             split_del: if_split)
     apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
     apply (rule conjI)
      apply (erule cte_wp_at_weakenE')
      apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
-    apply (subst (asm) conj_assoc [symmetric])
-    apply (subst (asm) assocs_empty_dom_comp [symmetric])
+    apply (subst (asm) conj_assoc [symmetric],
+           subst (asm) assocs_empty_dom_comp [symmetric])
     apply (drule dom_hd_assocsD)
     apply (simp add: capAligned_def asid_wf_def mask_def)
     apply (elim conjE)
