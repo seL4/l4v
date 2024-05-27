@@ -100,9 +100,6 @@ defs deletionIsSafe_def:
         \<and> (\<forall>ko. ksPSpace s p = Some (KOArch ko) \<and> p \<in> {ptr .. ptr + 2 ^ bits - 1}
                 \<longrightarrow> 6 \<le> bits)"
 
-defs deletionIsSafe_delete_locale_def: (* FIXME merge: remove completely? *)
-  "deletionIsSafe_delete_locale \<equiv> \<lambda>ptr bits s. True"
-
 defs ksASIDMapSafe_def:
   "ksASIDMapSafe \<equiv> \<lambda>s. True"
 
@@ -125,7 +122,6 @@ lemma deleteObjects_def2:
      stateAssert valid_idle'_asrt [];
      stateAssert release_q_runnable_asrt [];
      stateAssert (deletionIsSafe ptr bits) [];
-     stateAssert (deletionIsSafe_delete_locale ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
@@ -161,7 +157,6 @@ lemma deleteObjects_def3:
      stateAssert release_q_runnable_asrt [];
      assert (is_aligned ptr bits);
      stateAssert (deletionIsSafe ptr bits) [];
-     stateAssert (deletionIsSafe_delete_locale ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
@@ -873,7 +868,6 @@ lemma deleteObjects_corres:
    apply (rule delete_locale.deletionIsSafe_holds;
           (fastforce simp: delete_locale_def valid_cap_simps sch_act_simple_def state_relation_def
                            sched_act_relation_def pred_conj_def)?)
-  apply (simp add: deletionIsSafe_delete_locale_def) (* FIXME merge: remove? *)
   apply (simp add: bind_assoc[symmetric])
   apply (rule corres_stateAssert_implied2)
      defer
