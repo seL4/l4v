@@ -4462,8 +4462,8 @@ lemma resetUntypedCap_invs_etc:
        (simp_all add: cte_wp_at_ctes_of)+)[1]
   apply (clarsimp simp: unlessE_def cte_wp_at_ctes_of
              split del: if_split)
-  apply (rule_tac B="\<lambda>_. invs' and valid_untyped_inv_wcap' ?ui (Some ?cap)
-        and ct_active' and ?psp" in bindE_wp_fwd)
+  apply (rule_tac Q'="\<lambda>_. invs' and valid_untyped_inv_wcap' ?ui (Some ?cap) and ct_active' and ?psp"
+               in bindE_wp_fwd)
    apply clarsimp
    apply (rule hoare_pre)
     apply (simp add: sch_act_simple_def)
@@ -5492,11 +5492,11 @@ lemma invokeUntyped_invs'':
     apply (clarsimp simp:invokeUntyped_def getSlotCap_def ui)
     apply (rule validE_valid)
     apply (rule hoare_pre)
-     apply (rule_tac B="\<lambda>_ s. invs' s \<and> Q s \<and> ct_active' s
-          \<and> valid_untyped_inv_wcap' ui
-              (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
-          \<and> (reset \<longrightarrow> pspace_no_overlap' (ptr && ~~ mask sz) sz s)
-          " in bindE_wp_fwd)
+     apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> Q s \<and> ct_active' s
+                               \<and> valid_untyped_inv_wcap' ui
+                                   (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
+                               \<and> (reset \<longrightarrow> pspace_no_overlap' (ptr && ~~ mask sz) sz s)"
+                  in bindE_wp_fwd)
       apply (simp only: whenE_def)
       apply wp
        apply (rule hoare_strengthen_postE, rule combine_validE,

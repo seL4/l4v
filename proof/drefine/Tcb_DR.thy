@@ -1376,13 +1376,11 @@ done
 lemma hoare_case_someE:
   "\<lbrace>P\<rbrace>a\<lbrace>\<lambda>r s. Q s\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. case x of None \<Rightarrow> True | Some y \<Rightarrow> P s\<rbrace> a
     \<lbrace>\<lambda>rv s. case x of None \<Rightarrow> True | Some y \<Rightarrow> Q s\<rbrace>,-"
-  apply (case_tac x)
-    apply clarsimp+
-done
+  by (case_tac x; wpsimp)
 
 lemma case_option_wpE:
   "(\<And>x. \<lbrace>P x\<rbrace>a\<lbrace>\<lambda>r. Q x\<rbrace>,-) \<Longrightarrow> \<lbrace>case_option \<top> P z\<rbrace>a\<lbrace>\<lambda>r. case_option \<top> Q z\<rbrace>,-"
-  by (clarsimp split:option.splits)
+  by (wpsimp split: option.splits)
 
 lemma option_update_thread_not_idle_thread[wp]:
   "\<lbrace>not_idle_thread x and not_idle_thread a\<rbrace>option_update_thread a b c\<lbrace>\<lambda>r. not_idle_thread x\<rbrace>"

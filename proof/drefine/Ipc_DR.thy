@@ -72,7 +72,7 @@ lemma handle_reply_cur_thread_idle_thread:
                apply ((wps|wp cap_delete_one_it)+)[1]
               apply (wp do_ipc_transfer_cur_thread_idle_thread dxo_wp_weak)+
                     apply (clarsimp simp: trans_state_def)
-                   apply (case_tac xf)
+                   apply (case_tac rvf)
                    apply (simp | wp set_thread_state_cur_thread_idle_thread
                                     thread_set_cur_thread_idle_thread)+
                  apply ((wps | wp)+)[1]
@@ -1333,8 +1333,8 @@ next
              apply (rule cap_insert_weak_cte_wp_at_not_null)
              apply clarsimp+
            apply (wp cap_insert_idle valid_irq_node_typ hoare_vcg_ball_lift cap_insert_cte_wp_at)+
-       apply (simp add: if_apply_def2)
-       apply wp
+        apply (wpsimp simp: if_apply_def2)
+       apply (wpsimp simp: if_apply_def2)
       apply (simp add: if_apply_def2)
       apply (rule validE_R_validE)
       apply (simp add:conj_comms ball_conj_distrib split del:if_split)
@@ -1593,7 +1593,7 @@ lemma transfer_caps_loop_None:
 lemma get_rs_length [wp]:
   "\<lbrace>\<top>\<rbrace> get_receive_slots rcv buffer \<lbrace>\<lambda>slots s. length slots \<le> 1\<rbrace>"
   apply (cases buffer)
-   apply (simp del: hoareE_R_TrueI|wp)+
+   apply (simp|wp)+
   done
 
 lemma transfer_caps_dcorres:

@@ -830,7 +830,6 @@ lemma decode_arch_invocation_authorised:
           | wpc
           | simp add: authorised_asid_control_inv_def authorised_page_inv_def
                       authorised_page_directory_inv_def
-                 del: hoareE_R_TrueI
                  split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)

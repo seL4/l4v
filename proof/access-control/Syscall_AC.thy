@@ -135,7 +135,7 @@ lemma decode_invocation_authorised:
              decode_arch_invocation_authorised
           | strengthen cnode_eq_strg
           | wpc | simp add: comp_def authorised_invocation_def decode_invocation_def
-                       split del: if_split del: hoareE_R_TrueI
+                       split del: if_split
           | wp (once) hoare_FalseE_R)+
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
@@ -279,8 +279,7 @@ lemma handle_invocation_pas_refined:
        | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
        | wpc
        | rule hoare_drop_imps
-       | simp add: if_apply_def2 conj_comms split del: if_split
-              del: hoareE_R_TrueI)+,
+       | simp add: if_apply_def2 conj_comms split del: if_split)+,
       (wp lookup_extra_caps_auth lookup_extra_caps_authorised decode_invocation_authorised
           lookup_cap_and_slot_authorised lookup_cap_and_slot_cur_auth as_user_pas_refined
           lookup_cap_and_slot_valid_fault3 hoare_vcg_const_imp_lift_R

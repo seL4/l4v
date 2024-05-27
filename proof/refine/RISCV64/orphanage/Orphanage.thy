@@ -685,10 +685,10 @@ lemma chooseThread_no_orphans [wp]:
   supply if_split[split del]
   apply (simp only: return_bind, simp)
   apply (intro bind_wp[OF _ stateAssert_sp])
-  apply (rule bind_wp[where B="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
+  apply (rule bind_wp[where Q'="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
                                             \<and> rv = ksCurDomain s"])
-   apply (rule_tac B="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
-                             \<and> curdom = ksCurDomain s \<and> rv = ksReadyQueuesL1Bitmap s curdom"
+   apply (rule_tac Q'="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
+                              \<and> curdom = ksCurDomain s \<and> rv = ksReadyQueuesL1Bitmap s curdom"
                 in bind_wp)
     apply (rename_tac l1)
     apply (case_tac "l1 = 0")

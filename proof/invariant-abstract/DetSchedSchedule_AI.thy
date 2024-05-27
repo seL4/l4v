@@ -1669,7 +1669,7 @@ crunch simple_sched_action[wp]: finalise_cap simple_sched_action
    simp: unless_def if_fun_split)
 
 lemma suspend_valid_sched[wp]:
-  notes bind_wp_fwd_inv = bind_wp_fwd[where A=I and B="\<lambda>_. I" for I]
+  notes bind_wp_fwd_inv = bind_wp_fwd[where P=I and Q'="\<lambda>_. I" for I]
   shows "\<lbrace>valid_sched and simple_sched_action\<rbrace> suspend t \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: suspend_def)
   apply (rule bind_wp_fwd_inv)
@@ -2177,7 +2177,7 @@ lemma set_thread_state_runnable_valid_blocked:
   "\<lbrace>valid_blocked and st_tcb_at runnable ref and (\<lambda>s. runnable ts)\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (rule bind_wp[OF _ gets_the_get_tcb_sp])
-  apply (rule_tac B="\<lambda>rv. valid_blocked and st_tcb_at runnable ref" in bind_wp_fwd)
+  apply (rule_tac Q'="\<lambda>rv. valid_blocked and st_tcb_at runnable ref" in bind_wp_fwd)
    apply (wp set_object_wp)
    apply (clarsimp simp: valid_blocked_def not_queued_def runnable_eq_active
                          pred_tcb_at_def st_tcb_at_kh_def obj_at_kh_def obj_at_def)

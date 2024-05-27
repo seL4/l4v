@@ -37,7 +37,7 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
    apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                  in hoare_gen_asm)
    apply (simp only: split_def)
-   apply (((simp add: conj_comms del: hoareE_R_TrueI,
+   apply (((simp add: conj_comms,
            strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
           | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
           | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
@@ -78,7 +78,6 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
                cap_delete_pas_refined'[THEN valid_validE_E] thread_set_cte_wp_at_trivial
           | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                       emptyable_def a_type_def partial_inv_def
-                 del: hoareE_R_TrueI
           | wpc
           | strengthen invs_mdb use_no_cap_to_obj_asid_strg
                        tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]

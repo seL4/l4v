@@ -905,7 +905,7 @@ lemma threadSet_cte_wp_at'T:
                  getF (F tcb) = getF tcb"
   shows "\<lbrace>\<lambda>s. P' (cte_wp_at' P p s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P' (cte_wp_at' P p s)\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule bind_wp [where B="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' ((=) rv) t s"])
+  apply (rule bind_wp[where Q'="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' ((=) rv) t s"])
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def projectKOs in_monad objBits_simps'
                           obj_at'_def in_magnitude_check prod_eq_iff)
@@ -3850,10 +3850,11 @@ lemma rescheduleRequired_valid_bitmapQ_sch_act_simple:
    \<lbrace>\<lambda>_. valid_bitmapQ \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. valid_bitmapQ s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in bind_wp)
+  apply (rule_tac Q'="\<lambda>rv s. valid_bitmapQ s \<and>
+                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)"
+               in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -3863,10 +3864,11 @@ lemma rescheduleRequired_bitmapQ_no_L1_orphans_sch_act_simple:
    \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L1_orphans s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in bind_wp)
+  apply (rule_tac Q'="\<lambda>rv s. bitmapQ_no_L1_orphans s \<and>
+                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)"
+               in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -3876,10 +3878,11 @@ lemma rescheduleRequired_bitmapQ_no_L2_orphans_sch_act_simple:
    \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L2_orphans s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in bind_wp)
+  apply (rule_tac Q'="\<lambda>rv s. bitmapQ_no_L2_orphans s \<and>
+                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)"
+               in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -3919,10 +3922,10 @@ lemma rescheduleRequired_ksQ:
    \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
   including no_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)
-                            \<and> P (ksReadyQueues s p)" in bind_wp)
+  apply (rule_tac Q'="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread) \<and> P (ksReadyQueues s p)"
+               in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply wp
   done
 

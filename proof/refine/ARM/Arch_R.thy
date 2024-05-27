@@ -1565,7 +1565,7 @@ lemma arch_decodeARMPageFlush_wf:
   apply (simp add: decodeARMPageFlush_def)
   apply (rule hoare_pre)
    apply (wp throwE_R whenE_throwError_wp | wpc | clarsimp simp: if_apply_def2)+
-   apply (simp add: valid_arch_inv'_def valid_page_inv'_def)
+   apply (wpsimp simp: valid_arch_inv'_def valid_page_inv'_def)
   apply fastforce
   done
 

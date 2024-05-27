@@ -123,8 +123,7 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
    apply (wp select_ext_weak_wp whenE_throwError_wp check_vp_wpR unlessE_wp get_pde_wp
              get_master_pde_wp find_pd_for_asid_authority3 create_mapping_entries_parent_for_refs
           | wpc
-          | simp add: authorised_for_globals_page_inv_def
-                 del: hoareE_R_TrueI)+
+          | simp add: authorised_for_globals_page_inv_def)+
      apply (simp cong: if_cong)
      apply (wp hoare_vcg_if_lift2)
      apply (rule hoare_conjI)

@@ -266,7 +266,7 @@ lemma decodeCNodeInvocation_corres:
             apply (clarsimp simp add: returnOk_def)
            apply (wp get_cap_wp getCTE_wp | simp only: whenE_def | clarsimp)+
       apply (rule hoare_trivE_R[where P="\<top>"])
-      apply (simp add: cte_wp_at_ctes_of pred_conj_def cong: conj_cong)
+      apply (wpsimp simp: cte_wp_at_ctes_of pred_conj_def)
      apply (fastforce elim!: valid_cnode_capI simp: invs_def valid_state_def valid_pspace_def)
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
    \<comment> \<open>Rotate\<close>

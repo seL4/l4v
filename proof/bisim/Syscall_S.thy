@@ -323,12 +323,12 @@ lemma bisim_liftME_same:
   shows "bisim (f \<oplus> (=)) P P' (liftME g m) (liftME g m')"
   unfolding liftME_def
   apply (rule bisim_guard_imp)
-  apply (rule bisim_splitE [OF bs])
-   apply simp
-   apply (rule bisim_returnOk)
-   apply simp
-   apply wp
-  apply simp+
+    apply (rule bisim_splitE [OF bs])
+      apply simp
+      apply (rule bisim_returnOk)
+      apply simp
+     apply wp+
+   apply simp+
   done
 
 lemma bisim_split_if:
@@ -596,7 +596,7 @@ lemma handle_recv_bisim:
                    apply (simp split del: if_split)
                    apply (rule bisim_refl [where P = \<top> and P' = \<top>])
                    apply (case_tac rc, simp_all)[1]
-                   apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def del:  hoareE_R_TrueI)+
+                   apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def)+
                    apply (rule handle_fault_bisim)
                    apply (wp get_simple_ko_wp | wpc | simp)+
                    apply (rule_tac Q' = "\<lambda>_. separate_state and valid_objs and tcb_at r" in hoare_strengthen_postE_R)

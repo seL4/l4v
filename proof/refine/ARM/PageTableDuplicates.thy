@@ -2156,8 +2156,7 @@ lemma activate_sch_valid_duplicates'[wp]:
   apply (simp add: activateThread_def getCurThread_def
              cong: if_cong Structures_H.thread_state.case_cong)
   apply (rule bind_wp [OF _ gets_sp])
-  apply (rule bind_wp[where B="\<lambda>st s.  (runnable' or idle') st
-    \<and> vs_valid_duplicates' (ksPSpace s)"])
+  apply (rule bind_wp[where Q'="\<lambda>st s. (runnable' or idle') st \<and> vs_valid_duplicates' (ksPSpace s)"])
    apply (rule hoare_pre)
     apply (wp | wpc | simp add: setThreadState_runnable_simp)+
   apply (clarsimp simp: ct_in_state'_def cur_tcb'_def pred_tcb_at'

@@ -264,7 +264,6 @@ lemma tc_invs[Tcb_AI_asms]:
              hoare_weak_lift_imp hoare_weak_lift_imp_conj)[1]
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def
-               del: hoareE_R_TrueI
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]

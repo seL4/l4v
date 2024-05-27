@@ -441,14 +441,15 @@ lemma decode_cnode_inv_wf[wp]:
                           derive_cap_zobjrefs derive_cap_objrefs_iszombie
                             | wp (once) hoare_drop_imps)+ )[1]
               apply (wp whenE_throwError_wp | wpcw)+
+            apply (rename_tac dest_slot y src_slot)
             apply simp
-            apply (rule_tac Q="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap x
+            apply (rule_tac Q="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap dest_slot
                                        and zombies_final and valid_objs
-                                       and real_cte_at src_slot and real_cte_at x
+                                       and real_cte_at src_slot and real_cte_at dest_slot
                                        and cte_wp_at (\<lambda>c. c = src_cap) src_slot
-                                       and cte_wp_at ((=) cap.NullCap) x"
+                                       and cte_wp_at ((=) cap.NullCap) dest_slot"
                        in hoare_post_imp)
-             apply (rename_tac rv s)
+             apply (rename_tac src_cap s)
              apply (clarsimp simp: cte_wp_at_caps_of_state all_rights_def)
              apply (simp add: cap_master_update_cap_data weak_derived_update_cap_data
                               cap_asid_update_cap_data
@@ -456,7 +457,7 @@ lemma decode_cnode_inv_wf[wp]:
              apply (strengthen cap_badge_update_cap_data)
              apply simp
              apply (frule (1) caps_of_state_valid_cap)
-             apply (case_tac "is_zombie rv")
+             apply (case_tac "is_zombie src_cap")
               apply (clarsimp simp add: valid_cap_def2 update_cap_data_def
                                         is_cap_simps
                               split: if_split_asm)
@@ -501,10 +502,11 @@ lemma decode_cnode_inv_wf[wp]:
                     whenE_def unlessE_def)
    apply (rule hoare_pre)
     apply (wp get_cap_wp ensure_empty_stronger | simp)+
-      apply (rule_tac Q'="\<lambda>rv s. real_cte_at rv s \<and> real_cte_at x s
+      apply (rename_tac dest_slot src_slot)
+      apply (rule_tac Q'="\<lambda>rv s. real_cte_at rv s \<and> real_cte_at dest_slot s
                               \<and> real_cte_at src_slot s
                               \<and> ex_cte_cap_wp_to is_cnode_cap rv s
-                              \<and> ex_cte_cap_wp_to is_cnode_cap x s
+                              \<and> ex_cte_cap_wp_to is_cnode_cap dest_slot s
                               \<and> invs s" in hoare_strengthen_postE_R)
        apply wp+
       apply (clarsimp simp: cte_wp_at_caps_of_state
@@ -2051,21 +2053,19 @@ lemma rec_del_delete_cases:
   done
   done
 
-
 lemma cap_delete_deletes:
   notes hoare_pre [wp_pre del]
   shows
-  "\<And>p.
+    "\<And>p.
     \<lbrace>\<top> :: 'state_ext state \<Rightarrow> bool\<rbrace>
       cap_delete p
     \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) p\<rbrace>,-"
   subgoal for p
-  unfolding cap_delete_def
-  using rec_del_delete_cases[where sl=p and ex=True]
-  apply (simp add: validE_R_def)
-  apply wp
-  apply simp
-  done
+    unfolding cap_delete_def
+    using rec_del_delete_cases[where sl=p and ex=True]
+    apply (simp add: validE_R_def)
+    apply wp
+    done
   done
 
 end

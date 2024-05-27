@@ -2351,7 +2351,7 @@ lemma send_ipc_integrity_autarch:
           apply (wp set_thread_state_integrity_autarch thread_get_wp'
                     do_ipc_transfer_integrity_autarch
                     hoare_vcg_all_lift hoare_drop_imps set_endpoint_respects
-                 | wpc | simp add: get_thread_state_def split del: if_split del: hoareE_R_TrueI)+
+                 | wpc | simp add: get_thread_state_def split del: if_split)+
    apply (fastforce simp: a_type_def obj_at_def is_ep elim: send_ipc_valid_ep_helper)
   \<comment> \<open>we don't own head of queue\<close>
   apply clarsimp

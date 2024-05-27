@@ -171,7 +171,7 @@ lemma handleVMFaultEvent_ccorres:
        apply (clarsimp simp: return_def)
       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-     apply (case_tac x, clarsimp, wp)
+     apply (case_tac rv, clarsimp, wp)
      apply (clarsimp, wp, simp)
     apply wp
    apply (simp add: guard_is_UNIV_def)

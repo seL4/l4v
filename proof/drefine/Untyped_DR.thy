@@ -1839,7 +1839,7 @@ lemma decode_untyped_corres:
        apply simp
       apply clarsimp
      apply (rule hoare_pre)
-      apply (wp hoare_drop_imp | simp)+
+      apply wpsimp
      apply fastforce
     apply (clarsimp simp: conj_comms is_cnode_cap_transform_cap split del: if_split)
     apply (rule validE_R_validE)

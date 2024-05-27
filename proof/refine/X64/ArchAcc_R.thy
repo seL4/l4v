@@ -1589,10 +1589,7 @@ lemma mapping_map_pdpte: "\<lbrakk>mapping_map (vm_page_entry.VMPDPTE p, x) m'; 
 lemma createMappingEntries_wf:
   "\<lbrace>\<top>\<rbrace> createMappingEntries base vptr sz R attrs vspace \<lbrace>\<lambda>rv s. page_entry_map_corres rv\<rbrace>, -"
   apply (simp add: createMappingEntries_def page_entry_map_corres_def)
-  apply (rule hoare_pre)
-   apply wpc
-     apply (wp | simp split: vmpage_entry.splits)+
-  by auto
+  by (wpsimp split: vmpage_entry.splits)
 
 lemma ensureSafeMapping_corres:
   notes mapping_map_simps = mapping_map_def page_entry_map_def page_entry_ptr_map_def attr_mask_def
