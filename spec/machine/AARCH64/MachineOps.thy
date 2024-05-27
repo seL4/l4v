@@ -117,9 +117,9 @@ definition getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad" where
      is_masked \<leftarrow> gets $ irq_masks;
      modify (\<lambda>s. s \<lparr> irq_state := irq_state s + 1 \<rparr>);
      active_irq \<leftarrow> gets $ irq_oracle \<circ> irq_state;
-     if is_masked active_irq \<or> active_irq = 0xFF \<or> (in_kernel \<and> active_irq \<in> non_kernel_IRQs)
+     if is_masked active_irq \<or> (in_kernel \<and> active_irq \<in> non_kernel_IRQs)
      then return None
-     else return ((Some active_irq) :: irq option)
+     else return (Some active_irq)
    od"
 
 definition maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad" where
