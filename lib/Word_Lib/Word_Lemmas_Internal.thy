@@ -1014,4 +1014,8 @@ lemma scast_ucast_up_minus_1_ucast:
    apply (metis gt0_iff_gem1 msb_less_mono ucast_less_ucast_weak unsigned_0 word_upcast_neg_msb)
   by (metis less_le ucast_nat_def ucast_up_preserves_not0 unat_minus_one unat_ucast_up_simp)
 
+lemma toEnum_unat_ucast:
+  "unat w < 2^LENGTH('a) \<Longrightarrow> toEnum (unat w) = (ucast w :: 'a::len word)"
+  by (clarsimp simp: not_le)
+
 end
