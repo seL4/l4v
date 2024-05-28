@@ -5139,7 +5139,7 @@ proof -
     by (simp flip: word_unat.Rep_inject add: VPPIEventIRQ_invalid_def)
 
   have irqVPPIEventIndex_not_invalid:
-    "\<And>vppi. irqVPPIEventIndex (UCAST(32 \<rightarrow> 10) (args ! 0)) = Some vppi
+    "\<And>vppi. irqVPPIEventIndex (UCAST(32 \<rightarrow> irq_len) (args ! 0)) = Some vppi
             \<Longrightarrow> of_nat (fromEnum vppi) \<noteq> SCAST(32 signed \<rightarrow> 32) VPPIEventIRQ_invalid"
     by (clarsimp simp: irqVPPIEventIndex_def VPPIEventIRQ_invalid_def IRQ_def
                        fromEnum_def enum_vppievent_irq
@@ -5167,13 +5167,13 @@ proof -
                                       injection_handler_bindE bindE_assoc)
        apply (ctac add: ccorres_injection_handler_csum1[OF Arch_checkIRQ_ccorres]; clarsimp)
           apply ccorres_rewrite
-          apply (prop_tac "toEnum (unat (args ! 0)) = UCAST(32 \<rightarrow> 10) (args ! 0)")
-           apply (fastforce simp: Kernel_C.maxIRQ_def word_le_nat_alt ucast_nat_def)
+          apply (prop_tac "toEnum (unat (args ! 0)) = UCAST(32 \<rightarrow> irq_len) (args ! 0)")
+           apply (fastforce simp: Kernel_C_maxIRQ maxIRQ_ucast_toEnum_eq_irq)
           apply csymbr
           apply clarsimp
           (* simplify outcome of irqVPPIEventIndex_'proc *)
           apply (rule_tac Q=\<top> and Q'=UNIV
-                   and C'="{s. irqVPPIEventIndex (UCAST(32 \<rightarrow> 10) (args ! 0)) = None}"
+                   and C'="{s. irqVPPIEventIndex (UCAST(32 \<rightarrow> irq_len) (args ! 0)) = None}"
                    in ccorres_rewrite_cond_sr_Seq)
            apply (solves \<open>clarsimp simp: irqVPPIEventIndex_not_invalid split: option.splits\<close>)
 
@@ -5223,10 +5223,10 @@ proof -
                            runnable'_eq)
      apply (fastforce elim: obj_at'_weakenE)
     (* C side *)
-    apply (clarsimp simp: word_le_nat_alt conj_commute
+    apply (clarsimp simp: conj_commute maxIRQ_le_mask_irq_len
                           invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                           rf_sr_ksCurThread msgRegisters_unfold
-                          valid_tcb_state'_def ThreadState_defs Kernel_C.maxIRQ_def
+                          valid_tcb_state'_def ThreadState_defs Kernel_C_maxIRQ
                           and_mask_eq_iff_le_mask capVCPUPtr_eq)
     apply (clarsimp simp:  mask_def)
     done

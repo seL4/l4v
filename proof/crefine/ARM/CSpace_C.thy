@@ -1662,10 +1662,8 @@ lemma setIRQState_ccorres:
           apply (clarsimp simp: simpler_modify_def)
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
-          apply (simp add: cinterrupt_relation_def Kernel_C.maxIRQ_def)
-          apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
-                            unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b
-                         split: if_split )
+          apply (simp add: cinterrupt_relation_def Kernel_C_maxIRQ ucast_irq_array_guard)
+          apply (clarsimp simp: word_le_nat_alt unat_irq_array_guard split: if_split)
          apply ceqv
 
         apply (ctac add:  maskInterrupt_ccorres)
@@ -1679,11 +1677,8 @@ lemma setIRQState_ccorres:
    apply (simp add: empty_fail_def getInterruptState_def simpler_gets_def)
 
   apply clarsimp
-  apply (cases irqState, simp_all)
-  apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def)
-  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)
-  apply (simp add: Kernel_C.IRQInactive_def Kernel_C.IRQReserved_def)
-done
+  apply (cases irqState; simp add: irq_state_defs)
+  done
 
 
 lemma deletedIRQHandler_ccorres:
@@ -1921,8 +1916,7 @@ definition
   cleanup_info_wf' :: "capability \<Rightarrow> bool"
 where
   "cleanup_info_wf' cap \<equiv> case cap of
-      IRQHandlerCap irq \<Rightarrow>
-        UCAST(10\<rightarrow>machine_word_len) irq \<le> SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
+      IRQHandlerCap irq \<Rightarrow> (ucast irq :: machine_word) \<le> Kernel_Config.maxIRQ
     | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap
     | _ \<Rightarrow> True"
 
@@ -1955,18 +1949,17 @@ lemma postCapDeletion_ccorres:
    apply (simp add: not_irq_or_arch_cap_case)
    apply (rule ccorres_return_Skip)
   apply clarsimp
-  apply (rule conjI, clarsimp simp: isCap_simps  Kernel_C.maxIRQ_def)
+  apply (rule conjI, clarsimp simp: isCap_simps  Kernel_C_maxIRQ)
    apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
    apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
-                         cleanup_info_wf'_def maxIRQ_def Kernel_C.maxIRQ_def)
+                         cleanup_info_wf'_def Kernel_C_maxIRQ)
   apply (rule conjI, clarsimp simp: isCap_simps)
   apply (rule conjI[rotated], clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
-  apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
-                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def mask_def)
-  apply (clarsimp simp: word_size Kernel_C.maxIRQ_def maxIRQ_def)
-  by word_bitwise
+  apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def irq_len_val
+                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def ucast_ucast_mask)
+  done
 
 lemma emptySlot_ccorres:
   "ccorres dc xfdc
@@ -2908,7 +2901,7 @@ lemma sameRegionAs_spec:
            apply (simp add: ccap_relation_def map_option_case)
            apply (simp add: cap_irq_handler_cap_lift)
            apply (simp add: cap_to_H_def)
-           apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
+           apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def irq_len_val
                                  cl_valid_cap_def mask_twice from_bool_0
                           split: if_split bool.split
                           | intro impI conjI

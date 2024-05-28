@@ -194,10 +194,10 @@ lemma well_formed_cap_example [simp]:
               split: cdl_cap.splits if_split_asm)
 
 lemma range_example_irq_node:
-  "range example_irq_node = {x. x \<le> 0x3FF}"
-  apply (clarsimp simp: irq_nodes_def example_spec_def example_irq_node_def)
+  "range example_irq_node = {x. x \<le> mask irq_len}"
+  apply (clarsimp simp: irq_nodes_def example_spec_def example_irq_node_def irq_len_val mask_def)
   apply (subst ucast_range_less, simp+)
-  apply (subst word_less_sub_le [where 'a = 32 and n=10, simplified])
+  apply (subst word_less_sub_le [where 'a = 32 and n=irq_len, unfolded irq_len_val, simplified])
   apply simp
   done
 
@@ -206,8 +206,8 @@ lemma irq_cnodes_example_spec [simp]:
   by (clarsimp simp: irq_nodes_def range_example_irq_node
                      object_at_def is_irq_node_def example_spec_def)
 
-lemma example_irq_node_less_3FF:
-  "example_irq_node irq = obj_id \<Longrightarrow> obj_id \<le> 0x3FF"
+lemma example_irq_node_less_mask_irq_len:
+  "example_irq_node irq = obj_id \<Longrightarrow> obj_id \<le> mask irq_len"
   apply (insert range_example_irq_node)
   apply (auto simp: image_def)
   done
@@ -219,7 +219,7 @@ lemma well_formed_irqhandler_caps_example:
                         empty_cap_map_def opt_cap_def slots_of_def
                         example_tcb_def
                  split: if_split_asm)
-  apply (drule example_irq_node_less_3FF, simp)+
+  apply (drule example_irq_node_less_mask_irq_len, simp add: irq_len_val mask_def)+
   done
 
 lemma well_formed_cdt_example [simp]:
@@ -323,8 +323,8 @@ lemma well_formed_irq_table_example [simp]:
   apply (rule conjI)
   apply (clarsimp simp: well_formed_irq_table_def example_irq_node_def down_ucast_inj is_down)
   apply clarsimp
-  apply (cut_tac irq=irq in example_irq_node_less_3FF, simp)
-  apply (clarsimp simp: example_spec_def object_id_defs split: if_split_asm)
+  apply (cut_tac irq=irq in example_irq_node_less_mask_irq_len, simp add: irq_len_val mask_def)
+  apply (clarsimp simp: example_spec_def object_id_defs irq_len_val mask_def split: if_split_asm)
   done
 
 lemma well_formed_example:

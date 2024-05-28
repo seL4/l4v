@@ -39,7 +39,7 @@ proof -
      apply (clarsimp simp: return_def)
     apply wp
    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_post_imp)
-    apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+    apply (solves clarsimp)
    apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done

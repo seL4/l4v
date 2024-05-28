@@ -21,7 +21,7 @@ imports
 begin
 
 (* A hardware IRQ number. *)
-type_synonym cdl_irq = "10 word"
+type_synonym cdl_irq = irq
 
 (*
  * How objects are named within the kernel.

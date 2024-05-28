@@ -117,7 +117,7 @@ lemma addToBitmap_sets_L1Bitmap_same_dom:
        \<lbrace>\<lambda>rv s. ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrace>"
   unfolding addToBitmap_def bitmap_fun_defs
   apply wpsimp
-  by (metis nth_0 of_nat_numeral prioToL1Index_bit_set word_neq_0_conv word_or_zero)
+  by (metis nth_0 prioToL1Index_bit_set word_or_zero)
 
 context begin interpretation Arch .
 

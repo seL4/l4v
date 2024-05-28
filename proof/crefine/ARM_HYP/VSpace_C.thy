@@ -1821,7 +1821,7 @@ lemma vcpu_read_reg_ccorres:
   done
 
 lemma irqVPPIEventIndex_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>irq && mask 10 = \<acute>irq \<rbrace>
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>irq && mask irq_len = \<acute>irq \<rbrace>
        Call irqVPPIEventIndex_'proc
        \<lbrace> \<acute>ret__unsigned_long
          = case_option (ucast VPPIEventIRQ_invalid) (of_nat \<circ> fromEnum) (irqVPPIEventIndex (ucast \<^bsup>s\<^esup>irq)) \<rbrace>"
@@ -1832,6 +1832,7 @@ lemma irqVPPIEventIndex_spec:
   apply (auto dest!: word_unat.Rep_inject[THEN iffD2]
               simp: VPPIEventIRQ_invalid_def unat_ucast_eq_unat_and_mask and_mask_eq_iff_le_mask
                     fromEnum_def enum_vppievent_irq mask_def word_le_nat_alt word_less_nat_alt
+                    irq_len_val
               simp flip: word_unat.Rep_inject)
   done
 
@@ -1851,18 +1852,15 @@ lemma isIRQActive_ccorres:
         (isIRQActive irq) (Call isIRQActive_'proc)"
   apply (cinit lift: irq_')
    apply (simp add: getIRQState_def getInterruptState_def)
-   apply (rule_tac P="irq \<le> ucast Kernel_C.maxIRQ \<and> unat irq < (192::nat)" in ccorres_gen_asm)
+   apply (rule_tac P="irq \<le> Kernel_Config.maxIRQ" in ccorres_gen_asm)
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
    apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: simpler_gets_def word_sless_msb_less maxIRQ_def
-                         word_less_nat_alt)
-   apply (clarsimp simp: order_le_less_trans unat_less_helper Kernel_C.IRQInactive_def
-                         Kernel_C.maxIRQ_def word_0_sle_from_less[OF order_less_le_trans, OF ucast_less])
-   apply (clarsimp simp: rf_sr_def cstate_relation_def Kernel_C.maxIRQ_def
+   apply (clarsimp simp: simpler_gets_def Kernel_C_maxIRQ ucast_irq_array_guard)
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Kernel_C_maxIRQ Kernel_C.IRQInactive_def
                          Let_def cinterrupt_relation_def)
    apply (drule spec, drule(1) mp)
    apply (case_tac "intStateIRQTable (ksInterruptState \<sigma>) irq")
-      apply (simp add: irq_state_defs Kernel_C.maxIRQ_def word_le_nat_alt)+
+      apply (simp add: irq_state_defs Kernel_C_maxIRQ)+
   done
 
 lemma restore_virt_timer_ccorres:
@@ -1929,13 +1927,13 @@ lemma restore_virt_timer_ccorres:
        apply vcg
      apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
 
-  apply (clarsimp simp: IRQ_def Collect_const_mem irqVPPIEventIndex_def)
+  apply (clarsimp simp: IRQ_def Collect_const_mem irqVPPIEventIndex_def Kernel_C_maxIRQ)
   apply (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALhigh, simplified, symmetric]
                    vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALlow, simplified, symmetric]
                    vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric]
                    vcpureg_eq_use_types[where reg=VCPURegCNTVOFFhigh, simplified, symmetric]
                    vcpureg_eq_use_types[where reg=VCPURegCNTVOFFlow, simplified, symmetric])
-  apply (clarsimp simp: irqVTimerEvent_def Kernel_C.maxIRQ_def)
+  apply (clarsimp simp: irqVTimerEvent_def)
   apply (rule conjI)
    apply clarsimp
    apply (drule vcpu_at_ko)
@@ -1943,7 +1941,7 @@ lemma restore_virt_timer_ccorres:
    apply (simp add: fromEnum_def enum_vppievent_irq)
 
   (* remaining C side *)
-  apply (clarsimp simp: and_mask_eq_iff_le_mask)
+  apply (clarsimp simp: and_mask_eq_iff_le_mask irq_len_val)
   apply (clarsimp simp: mask_def)
   apply normalise_obj_at'
   apply (drule (1) vcpu_at_rf_sr)

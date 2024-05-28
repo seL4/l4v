@@ -1,4 +1,4 @@
-(*
+  (*
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -9,11 +9,6 @@ chapter "Toplevel Refinement Statement"
 theory Refine_C
 imports Init_C Fastpath_Equiv Fastpath_C CToCRefine
 begin
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
-  (ignore: getFAR getDFSR getIFSR)
-end
 
 context kernel_m
 begin
@@ -85,10 +80,10 @@ proof -
       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
    apply simp
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and>
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ) \<and>
                              sch_act_not (ksCurThread s) s"
                 in hoare_post_imp)
-    apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
+    apply (solves clarsimp)
    apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done

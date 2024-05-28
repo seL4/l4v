@@ -2054,7 +2054,7 @@ lemma cteDeleteOne_ccorres:
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
-   CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (irq :: 10 word))
+   CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (irq ::irq))
      = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
@@ -2092,9 +2092,10 @@ lemma deletingIRQHandler_ccorres:
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def Kernel_C.maxIRQ_def)
+                        irq_opt_relation_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
+  apply unat_arith (* only word type bounds should be left *)
+  apply simp
   done
 
 lemma Zombie_new_spec:
@@ -2113,7 +2114,7 @@ lemma Zombie_new_spec:
 
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
-    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 10
+    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask irq_len
         = capIRQ_CL (cap_irq_handler_cap_lift ccap)"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule ccap_relation_c_valid_cap)
@@ -2259,7 +2260,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  ARM.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="capIRQ cap \<le> Kernel_Config.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply csymbr
@@ -2319,17 +2320,16 @@ lemma finaliseCap_ccorres:
     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
     apply (frule(1) ccap_relation_IRQHandler_mask)
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                          valid_cap'_def ARM.maxIRQ_def
-                          Kernel_C.maxIRQ_def)
-    apply (rule irq_opt_relation_Some_ucast_left, simp)
+                          valid_cap'_def Kernel_C_maxIRQ)
+    apply (rule irq_opt_relation_Some_ucast_left, simp add: irq_len_val)
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                          valid_cap'_def ARM.maxIRQ_def
-                          Kernel_C.maxIRQ_def)
+                          valid_cap'_def Kernel_C_maxIRQ)
    apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)
-  by (clarsimp simp add: mask_eq_ucast_eq)
-  end
+  by (clarsimp simp add: mask_eq_ucast_eq irq_len_val)
+
+end
 
 end

@@ -104,7 +104,7 @@ lemma init_irq_ptrs_ineqs:
 proof -
   have P: "ucast irq < (2 ^ (14 - cte_level_bits) :: word32)"
     apply (rule order_le_less_trans[OF
-        ucast_le_ucast[where 'a=10 and 'b=32,simplified,THEN iffD2, OF word_n1_ge]])
+        ucast_le_ucast[where 'a=irq_len and 'b=32,simplified,THEN iffD2, OF word_n1_ge]])
     apply (simp add: cte_level_bits_def minus_one_norm)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
@@ -144,7 +144,7 @@ lemmas init_irq_ptrs_all_ineqs[unfolded init_irq_node_ptr_def cte_level_bits_def
      init_irq_ptrs_less_ineqs[THEN less_imp_neq]
      init_irq_ptrs_less_ineqs[THEN less_imp_neq, THEN not_sym]
 
-lemmas ucast_le_ucast_10_32 = ucast_le_ucast[where 'a=10 and 'b=32,simplified]
+lemmas ucast_le_ucast_irq_32 = ucast_le_ucast[where 'a=irq_len and 'b=32,simplified]
 lemma init_irq_ptrs_eq:
   "((ucast (irq :: irq) << cte_level_bits)
         = (ucast (irq' :: irq) << cte_level_bits :: word32))
@@ -154,7 +154,7 @@ lemma init_irq_ptrs_eq:
   apply (erule_tac bnd="ucast (max_word :: irq) + 1"
               in shift_distinct_helper[rotated 3],
          safe intro!: plus_one_helper2;
-         simp add: ucast_le_ucast_10_32 up_ucast_inj_eq cte_level_bits_def minus_1_eq_mask
+         simp add: ucast_le_ucast_irq_32 up_ucast_inj_eq cte_level_bits_def minus_1_eq_mask
                    ucast_leq_mask;
          simp add: mask_eq_exp_minus_1)
   done

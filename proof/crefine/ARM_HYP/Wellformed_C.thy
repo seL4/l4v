@@ -350,15 +350,12 @@ definition
   "cte_to_H cte \<equiv> CTE (cap_to_H (cap_CL cte)) (mdb_node_to_H (cteMDBNode_CL cte))"
 
 
-
-definition
-cl_valid_cap :: "cap_CL \<Rightarrow> bool"
-where
-"cl_valid_cap c \<equiv>
-   case c of
-     Cap_frame_cap fc \<Rightarrow> ((capFSize_CL fc) \<noteq>  scast Kernel_C.ARMSmallPage)
-     | Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 10 = capIRQ_CL fc)
-     | x \<Rightarrow> True"
+definition cl_valid_cap :: "cap_CL \<Rightarrow> bool" where
+  "cl_valid_cap c \<equiv>
+     case c of
+         Cap_frame_cap fc \<Rightarrow> capFSize_CL fc \<noteq> scast Kernel_C.ARMSmallPage
+       | Cap_irq_handler_cap fc \<Rightarrow> capIRQ_CL fc && mask irq_len = capIRQ_CL fc
+       | _ \<Rightarrow> True"
 
 definition
 c_valid_cap :: "cap_C \<Rightarrow> bool"
@@ -511,6 +508,26 @@ lemma num_tcb_queues_calculation:
   "num_tcb_queues = numDomains * numPriorities"
   unfolding num_tcb_queues_val by eval
 
+text \<open>maxIRQ interface\<close>
+
+(* Main lemma to use when one encounters Kernel_C.maxIRQ *)
+lemma Kernel_C_maxIRQ:
+  "Kernel_C.maxIRQ = Kernel_Config.maxIRQ"
+  by (simp add: Kernel_C.maxIRQ_def Kernel_Config.maxIRQ_def)
+
+value_type irq_array_size = "Suc Kernel_Config.maxIRQ"
+
+(* For numeral array guard assertions. *)
+lemma unat_irq_array_guard[unfolded irq_array_size_val, simplified]:
+  "unat irq \<le> Kernel_Config.maxIRQ \<Longrightarrow> unat irq < irq_array_size" for irq::irq
+  by (simp add: irq_array_size_def)
+
+lemma ucast_irq_array_guard[unfolded irq_array_size_val, simplified]:
+  "irq \<le> Kernel_Config.maxIRQ \<Longrightarrow> ucast irq < (of_nat irq_array_size :: machine_word)" for irq::irq
+  apply (simp add: irq_array_size_def word_less_nat_alt word_le_nat_alt)
+  apply (rule order_le_less_trans, rule unat_ucast_le)
+  apply simp
+  done
 
 (* Input abbreviations for API object types *)
 (* disambiguates names *)

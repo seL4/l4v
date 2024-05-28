@@ -24,9 +24,13 @@
 
 theory Intents_D
 imports
-  "Word_Lib.WordSetup"
   "ASpec.CapRights_A"
+  ExecSpec.Platform
 begin
+
+context begin interpretation Arch .
+requalify_types irq
+end
 
 (*
  * Entities in seL4 have particular rights to kernel objects, which
@@ -135,11 +139,11 @@ datatype cdl_irq_handler_intent =
 
 datatype cdl_arch_irq_control_intent =
     (* ArchIssueIrqHandler: (target), irq, (root), index, depth *)
-    ARMIrqControlIssueIrqHandlerIntent "10 word" word32 word32
+    ARMIrqControlIssueIrqHandlerIntent irq word32 word32
 
 datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
-    IrqControlIssueIrqHandlerIntent "10 word" word32 word32
+    IrqControlIssueIrqHandlerIntent irq word32 word32
     (* InterruptControl *)
  |  ArchIrqControlIssueIrqHandlerIntent cdl_arch_irq_control_intent
 

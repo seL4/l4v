@@ -83,8 +83,8 @@ proof -
        apply (clarsimp simp: return_def)
       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ)" in hoare_post_imp)
-    apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)" in hoare_post_imp)
+    apply (solves clarsimp)
    apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
@@ -267,9 +267,9 @@ lemma handleSyscall_ccorres:
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
                 apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                                          (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ)"
+                                          (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)"
                                 in hoare_post_imp)
-                 apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+                 apply (solves clarsimp)
                 apply (wp getActiveIRQ_le_maxIRQ | simp)+
                apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
                apply (simp add: invs'_def valid_state'_def)
@@ -301,9 +301,9 @@ lemma handleSyscall_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
                apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                                         (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ)"
+                                         (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)"
                                in hoare_post_imp)
-                apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+                apply (solves clarsimp)
                apply (wp getActiveIRQ_le_maxIRQ | simp)+
               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
               apply (simp add: invs'_def valid_state'_def)
@@ -335,9 +335,9 @@ lemma handleSyscall_ccorres:
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
               apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                                        (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ)"
+                                        (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)"
                               in hoare_post_imp)
-               apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+               apply (solves clarsimp)
               apply (wp getActiveIRQ_le_maxIRQ | simp)+
              apply (rule_tac Q=" invs'" in hoare_post_imp_dc2E, wp)
              apply (simp add: invs'_def valid_state'_def)

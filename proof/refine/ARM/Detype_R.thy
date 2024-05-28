@@ -1184,7 +1184,7 @@ lemma st_tcb:
   by (fastforce simp: pred_tcb_at'_def obj_at'_real_def projectKOs dest: live_notRange)
 
 lemma irq_nodes_global:
-  "\<forall>irq :: 10 word. irq_node' s' + (ucast irq) * 16 \<in> global_refs' s'"
+  "\<forall>irq :: irq. irq_node' s' + (ucast irq) * 16 \<in> global_refs' s'"
   by (simp add: global_refs'_def mult.commute mult.left_commute cteSizeBits_def shiftl_t2n)
 
 lemma global_refs:
@@ -1200,7 +1200,7 @@ lemma global_refs2:
   using global_refs by blast
 
 lemma irq_nodes_range:
-  "\<forall>irq :: 10 word. irq_node' s' + (ucast irq) * 16 \<notin> base_bits"
+  "\<forall>irq :: irq. irq_node' s' + (ucast irq) * 16 \<notin> base_bits"
   using irq_nodes_global global_refs
   by blast
 

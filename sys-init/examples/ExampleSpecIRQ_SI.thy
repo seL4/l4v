@@ -334,12 +334,12 @@ lemma cdl_irq_node_example_spec [simp]:
   by (clarsimp simp: example_spec_def)
 
 lemma range_example_irq_node_helper:
-  "range example_irq_node = (\<lambda>irq. irq + 0x100) ` range (ucast :: 10 word \<Rightarrow> 32 word)"
+  "range example_irq_node = (\<lambda>irq. irq + 0x100) ` range (ucast :: irq \<Rightarrow> 32 word)"
   by (auto simp: example_irq_node_def image_def)
 
 lemma range_example_irq_node:
-  "range example_irq_node =  {x. 0x100 \<le> x \<and> x < 0x500}"
-  apply (clarsimp simp: range_example_irq_node_helper ucast_range_less)
+  "range example_irq_node =  {x. 0x100 \<le> x \<and> x < 0x100 + 2^irq_len}"
+  apply (clarsimp simp: range_example_irq_node_helper ucast_range_less irq_len_val)
   apply (clarsimp simp: image_def)
   apply rule
    apply (clarsimp simp:  word_le_nat_alt  word_less_nat_alt unat_plus_if')
@@ -785,7 +785,7 @@ lemma ucast_0xFE:
   by (rule ucast_up_inj, simp+)
 
 lemma ucast_4:
-  "(ucast :: 10 word \<Rightarrow> 32 word) irq = 4 \<Longrightarrow> irq = 4"
+  "(ucast :: irq \<Rightarrow> 32 word) irq = 4 \<Longrightarrow> irq = 4"
   by (rule ucast_up_inj, simp+)
 
 lemma rangeD:
