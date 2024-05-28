@@ -1637,20 +1637,7 @@ lemma mdbPrev_not_zero_eq_simpler:
   apply fastforce
   done
 
-(* TODO: move *)
-
-definition
-  irq_opt_relation_def:
-  "irq_opt_relation (airq :: (10 word) option) (cirq :: machine_word) \<equiv>
-       case airq of
-         Some irq \<Rightarrow> (cirq = ucast irq \<and>
-                      irq \<noteq> ucast irqInvalid \<and>
-                      ucast irq \<le> UCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ)
-       | None \<Rightarrow> cirq = ucast irqInvalid"
-
-
 declare unat_ucast_up_simp[simp]
-
 
 lemma setIRQState_ccorres:
   "ccorres dc xfdc

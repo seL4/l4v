@@ -22,27 +22,25 @@ lemma handleInterrupt_ccorres[ADT_IF_Refine_assms]:
 proof -
   show ?thesis
   apply (rule ccorres_guard_imp2)
-   apply (simp add: handleEvent_def minus_one_norm handleInterruptEntry_C_body_if_def irqInvalid_def2)
+   apply (simp add: handleEvent_def minus_one_norm handleInterruptEntry_C_body_if_def)
    apply (clarsimp simp: liftE_def bind_assoc)
    apply (rule ccorres_rhs_assoc)
    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)
-    apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
     apply wpc
      apply (simp add: ccorres_cond_empty_iff)
      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (clarsimp simp: ucast_helper_simps_32 ucast_not_helper ccorres_cond_univ_iff ucast_ucast_a is_down)
+    apply (clarsimp simp: ucast_not_helper ccorres_cond_univ_iff irq_type_never_invalid)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
     apply wp
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)
-                                     \<and> rv \<noteq> Some 0xFFFF" in hoare_post_imp)
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_post_imp)
     apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
-   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+   apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 qed
@@ -267,13 +265,13 @@ lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
   apply (subst bind_assoc[symmetric])
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = ucast irqInvalid
-                                                                | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> ucast irqInvalid",
-                                        OF ccorres_corres_u_xf])
+                                                     | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> ucast irqInvalid",
+                             OF ccorres_corres_u_xf])
         apply (rule ccorres_guard_imp)
           apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
              apply (rule getActiveIRQ_ccorres)
             apply simp+
-          apply (case_tac x; simp add: ucast_helper_simps_32 irqInvalid_def2)
+          apply (case_tac x; simp add: irq_type_never_invalid)
          apply simp+
        apply (rule no_fail_dmo')
        apply (rule no_fail_getActiveIRQ)

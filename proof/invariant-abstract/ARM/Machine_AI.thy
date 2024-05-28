@@ -618,14 +618,6 @@ lemma getActiveIRQ_le_maxIRQ':
   apply (simp add: linorder_not_le)
   done
 
-(* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
-lemma getActiveIRQ_neq_Some0xFF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
-  apply (simp add: getActiveIRQ_def)
-  apply wp
-  apply simp
-  done
-
 lemma getActiveIRQ_neq_non_kernel:
   "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<rbrace>"
   apply (simp add: getActiveIRQ_def)
