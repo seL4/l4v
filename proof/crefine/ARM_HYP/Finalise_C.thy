@@ -961,6 +961,15 @@ lemma unbindMaybeNotification_ccorres:
                       objBitsKO_def is_aligned_def option_to_ctcb_ptr_def tcb_at_not_NULL
              split: ntfn.splits)
 
+(* On ARM, irqInvalid is 2^16-1 (i.e. -1 in 16-bit), which, by type, is always greater than maxIRQ *)
+(* This means we could remove the cirq \<noteq> irqInvalid part in the Some clause. Currently left in for
+   proof convencience *)
+definition irq_opt_relation :: "irq option \<Rightarrow> machine_word \<Rightarrow> bool" where
+  "irq_opt_relation airq cirq \<equiv>
+     case airq of
+         Some irq \<Rightarrow> cirq = ucast irq \<and> cirq \<noteq> irqInvalid \<and> irq \<le> Kernel_Config.maxIRQ
+       | None \<Rightarrow> cirq = irqInvalid"
+
 lemma finaliseCap_True_cases_ccorres:
   "\<And>final. isEndpointCap cap \<or> isNotificationCap cap
              \<or> isReplyCap cap \<or> isDomainCap cap \<or> cap = NullCap \<Longrightarrow>
@@ -1778,35 +1787,9 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x1F", simplified])
   done
 
-
-lemma irq_opt_relation_Some_ucast:
-  "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x):: 10 word))"
-  using ucast_ucast_mask[where x=x and 'a=10, symmetric]
-  apply (simp add: irq_opt_relation_def)
-  apply (rule conjI, clarsimp simp: minus_one_norm irqInvalid_def Kernel_C.maxIRQ_def)
-  apply (simp only: unat_arith_simps)
-  by (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
-
-lemma irq_opt_relation_Some_ucast':
-  "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
-  apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
-  apply (rule irq_opt_relation_Some_ucast[rotated]; simp)
-  apply word_eqI_solve
-  done
-
-lemma irq_opt_relation_Some_ucast_left:
-  "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
-  apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
-  apply (rule irq_opt_relation_Some_ucast[rotated]; simp)
-  apply word_eqI_solve
-  done
-
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
-    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 10
+    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask irq_len
         = capIRQ_CL (cap_irq_handler_cap_lift ccap)"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule ccap_relation_c_valid_cap)

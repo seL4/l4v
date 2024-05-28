@@ -2052,20 +2052,7 @@ lemma valid_mdb_Prev_neq_Next_better:
   apply (simp add: mdb_next_unfold)
 done
 
-(* TODO: move *)
-
-definition
-  irq_opt_relation_def:
-  "irq_opt_relation (airq :: (10 word) option) (cirq :: machine_word) \<equiv>
-       case airq of
-         Some irq \<Rightarrow> (cirq = ucast irq \<and>
-                      irq \<noteq> scast irqInvalid \<and>
-                      ucast irq \<le> (scast Kernel_C.maxIRQ :: machine_word))
-       | None \<Rightarrow> cirq = ucast irqInvalid"
-
-
 declare unat_ucast_up_simp[simp]
-
 
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
