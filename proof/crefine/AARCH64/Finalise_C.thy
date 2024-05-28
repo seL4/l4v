@@ -963,27 +963,23 @@ lemma unbindMaybeNotification_ccorres:
                       objBitsKO_def is_aligned_def option_to_ctcb_ptr_def tcb_at_not_NULL
              split: ntfn.splits)
 
-(* TODO: move *)
-(* On ARM machines, irqInvalid is 2^16-1 (i.e. -1 in 16-bit), which is greater than maxIRQ *)
-definition
-  irq_opt_relation_def:
-  "irq_opt_relation (airq :: (irq_len word) option) (cirq :: machine_word) \<equiv>
-       case airq of
-         Some irq \<Rightarrow> (cirq = ucast irq \<and>
-                      irq \<noteq> scast irqInvalid \<and>
-                      ucast irq \<le> UCAST(32 signed \<rightarrow> irq_len) Kernel_C.maxIRQ)
-       | None \<Rightarrow> cirq = ucast irqInvalid"
+(* On ARM, irqInvalid is 2^16-1 (i.e. -1 in 16-bit), which, by type, is always greater than maxIRQ *)
+(* This means we could remove the cirq \<noteq> irqInvalid part in the Some clause. Currently left in for
+   proof convencience *)
+definition irq_opt_relation :: "irq option \<Rightarrow> machine_word \<Rightarrow> bool" where
+  "irq_opt_relation airq cirq \<equiv>
+     case airq of
+         Some irq \<Rightarrow> cirq = ucast irq \<and> cirq \<noteq> irqInvalid \<and> irq \<le> Kernel_Config.maxIRQ
+       | None \<Rightarrow> cirq = irqInvalid"
 
 lemma irq_opt_relation_Some_ucast:
-  "\<lbrakk> x && mask (LENGTH(irq_len)) = x; ucast x \<noteq> irqInvalid;
-     ucast x \<le> (scast Kernel_C.maxIRQ :: irq_len word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
+  "\<lbrakk> x && mask LENGTH(irq_len) = x; ucast x \<noteq> irqInvalid;
+     (ucast x :: irq) \<le> scast Kernel_C.maxIRQ \<or> x \<le> scast Kernel_C.maxIRQ \<rbrakk>
    \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
   unfolding irq_opt_relation_def
-  apply (simp add: and_mask_eq_iff_le_mask)
-  apply (simp add: mask_def)
-  apply (subst ucast_ucast_len)
-   apply (erule order_le_less_trans, simp)
-  apply (clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def mask_def unat_arith_simps unat_ucast)
+  apply (simp add: and_mask_eq_iff_le_mask Kernel_C_maxIRQ)
+  apply (rule conjI, solves \<open>simp add: ucast_ucast_len mask_def order_le_less_trans\<close>)
+  apply (clarsimp simp: irqInvalid_def mask_def unat_arith_simps unat_ucast)
   done
 
 lemma finaliseCap_True_cases_ccorres:
@@ -1950,9 +1946,10 @@ lemma deletingIRQHandler_ccorres:
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def Kernel_C.maxIRQ_def)
+                        irq_opt_relation_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
+  apply unat_arith (* only word type bounds should be left *)
+  apply simp
   done
 
 (* 6 = wordRadix,
@@ -2866,7 +2863,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  AARCH64.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="capIRQ cap \<le> maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply csymbr
@@ -2931,7 +2928,7 @@ lemma finaliseCap_ccorres:
       apply fastforce
      apply (simp add: irqInvalid_def and_mask_eq_iff_le_mask)
      apply (fastforce simp: mask_def) (* faster when not combined with prev simp *)
-    apply (simp add: Kernel_C.maxIRQ_def maxIRQ_def)
+    apply (simp add: Kernel_C_maxIRQ)
    apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
@@ -2941,9 +2938,9 @@ lemma finaliseCap_ccorres:
 
 lemma checkIRQ_ret_good:
   "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (clarsimp simp: checkIRQ_def rangeCheck_def maxIRQ_def minIRQ_def)
+  apply (clarsimp simp: checkIRQ_def rangeCheck_def minIRQ_def)
   apply (rule hoare_pre,wp)
-  by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
+  by (clarsimp simp: Kernel_C_maxIRQ split: if_split)
 
 lemma Arch_checkIRQ_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
@@ -2953,17 +2950,17 @@ lemma Arch_checkIRQ_ccorres:
   apply (cinit lift: irq_w___unsigned_long_' )
    apply (simp add: rangeCheck_def unlessE_def AARCH64.minIRQ_def checkIRQ_def
                     ucast_nat_def word_le_nat_alt[symmetric]
-                    linorder_not_le[symmetric] maxIRQ_def
+                    linorder_not_le[symmetric]
                     length_ineq_not_Nil hd_conv_nth cast_simps
                del: Collect_const cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
      apply vcg
     apply (rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def return_def Kernel_C.maxIRQ_def
+    apply (clarsimp simp: throwError_def return_def Kernel_C_maxIRQ
                           exception_defs syscall_error_rel_def
                           syscall_error_to_H_cases)
-   apply (clarsimp simp: Kernel_C.maxIRQ_def)
+   apply (clarsimp simp: Kernel_C_maxIRQ)
    apply (rule ccorres_return_CE, simp+)
   done
 

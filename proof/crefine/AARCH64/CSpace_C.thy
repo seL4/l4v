@@ -38,13 +38,10 @@ lemma maskCapRights_cap_cases:
   apply (cases c; simp add: isCap_simps split del: if_split)
   done
 
-
-(* FIXME x64: ucast? see how it goes *)
 lemma wordFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromVMRights_'proc \<lbrace>\<acute>ret__unsigned_long = \<^bsup>s\<^esup>vm_rights\<rbrace>"
   by vcg simp?
 
-(* FIXME x64: ucast? see how it goes *)
 lemma vmRightsFromWord_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call vmRightsFromWord_'proc \<lbrace>\<acute>ret__unsigned_long = \<^bsup>s\<^esup>w\<rbrace>"
   by vcg simp?
@@ -1650,14 +1647,12 @@ lemma setIRQState_ccorres:
                    in ccorres_from_vcg)
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: setInterruptState_def)
-          apply (clarsimp simp: simpler_modify_def)
+          apply (clarsimp simp: simpler_modify_def Kernel_C_maxIRQ ucast_irq_array_guard)
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
-          apply (simp add: cinterrupt_relation_def Kernel_C.maxIRQ_def)
-          apply (clarsimp simp: word_sless_msb_less order_le_less_trans
-                                unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b
-                         split: if_split )
-          apply ceqv
+          apply (clarsimp simp: cinterrupt_relation_def Kernel_C_maxIRQ word_le_nat_alt
+                                unat_irq_array_guard split: if_split)
+         apply ceqv
         apply (ctac add: maskInterrupt_ccorres)
        apply wp
       apply vcg
@@ -1665,13 +1660,8 @@ lemma setIRQState_ccorres:
     apply (simp add: getInterruptState_def gets_def)
     apply wp
    apply (simp add: empty_fail_def getInterruptState_def simpler_gets_def)
-  apply clarsimp
-  apply (cases irqState, simp_all)
-  apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def)
-  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)
-  apply (simp add: Kernel_C.IRQInactive_def Kernel_C.IRQReserved_def)
+  apply (cases irqState; simp add: irq_state_defs)
   done
-
 
 lemma deletedIRQHandler_ccorres:
   "ccorres dc xfdc
@@ -2218,10 +2208,10 @@ lemma postCapDeletion_ccorres:
    apply (simp add: not_irq_or_arch_cap_case)
    apply (rule ccorres_return_Skip)
   apply clarsimp
-  apply (rule conjI, clarsimp simp: isCap_simps  Kernel_C.maxIRQ_def)
+  apply (rule conjI, clarsimp simp: isCap_simps Kernel_C_maxIRQ)
    apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
    apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
-                         cleanup_info_wf'_def maxIRQ_def Kernel_C.maxIRQ_def)
+                         cleanup_info_wf'_def Kernel_C_maxIRQ)
   apply (rule conjI, clarsimp simp: isCap_simps cleanup_info_wf'_def)
   apply (rule conjI[rotated], clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps)

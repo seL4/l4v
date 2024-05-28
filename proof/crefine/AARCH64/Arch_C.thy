@@ -4228,7 +4228,7 @@ proof -
        apply (ctac add: ccorres_injection_handler_csum1[OF Arch_checkIRQ_ccorres]; clarsimp)
           apply ccorres_rewrite
           apply (prop_tac "toEnum (unat (args ! 0)) = UCAST(machine_word_len \<rightarrow> irq_len) (args ! 0)")
-           apply (fastforce simp: Kernel_C.maxIRQ_def word_le_nat_alt ucast_nat_def)
+           apply (solves \<open>simp add: Kernel_C_maxIRQ maxIRQ_ucast_toEnum_eq_irq\<close>)
           apply csymbr
           apply clarsimp
           (* simplify outcome of irqVPPIEventIndex_'proc *)
@@ -4286,8 +4286,10 @@ proof -
      apply (fastforce elim: obj_at'_weakenE)
     (* C side *)
     apply (clarsimp simp: word_le_nat_alt rf_sr_ksCurThread msgRegisters_unfold
-                          Kernel_C.maxIRQ_def and_mask_eq_iff_le_mask capVCPUPtr_eq)
-    apply (clarsimp simp:  mask_def)
+                          Kernel_C_maxIRQ and_mask_eq_iff_le_mask capVCPUPtr_eq)
+    apply (rule conjI; clarsimp)
+    using maxIRQ_less_2p_irq_len
+    apply (simp add: mask_def)
     done
 qed
 

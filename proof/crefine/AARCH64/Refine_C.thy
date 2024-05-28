@@ -15,10 +15,6 @@ imports
   CToCRefine
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
-end
-
 context kernel_m
 begin
 
@@ -79,7 +75,7 @@ proof -
       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
    apply simp
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> AARCH64.maxIRQ) \<and>
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ) \<and>
                              sch_act_not (ksCurThread s) s" in hoare_post_imp)
     apply (solves clarsimp)
    apply (wp getActiveIRQ_le_maxIRQ | simp)+
