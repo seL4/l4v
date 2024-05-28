@@ -2637,4 +2637,8 @@ text \<open>Prevent clarsimp and others from creating Some from not None by fold
 definition
   "not_None x = (x \<noteq> None)"
 
+lemma mod_le_nat:
+  "x \<le> y \<Longrightarrow> x mod n \<le> y" for y::nat
+  using mod_less_eq_dividend order_trans by blast
+
 end
