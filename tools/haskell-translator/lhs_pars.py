@@ -515,7 +515,7 @@ def type_transform(string):
     # apply everything locally then work back up
     bstring = braces.str(string, '(', ')')
     bits = bstring.split('->')
-    r = ' \<Rightarrow> '
+    r = r' \<Rightarrow> '
     if len(bits) == 1:
         bits = bstring.split(',')
         r = ' * '
@@ -612,7 +612,7 @@ def constructor_reversing(tokens):
         listToken = braces.str('(List %s)' % tokens[2], '(', ')')
         return [listToken, tokens[0]]
     elif tokens[0] == 'array':
-        arrow_token = braces.str('\<Rightarrow>', '(', ')')
+        arrow_token = braces.str(r'\<Rightarrow>', '(', ')')
         return [tokens[1], arrow_token, tokens[2]]
     elif tokens[0] == 'either':
         plus_token = braces.str('+', '(', ')')
@@ -861,7 +861,7 @@ def named_extractor_update_lemma(ex_name, up_name):
 def named_extractor_definitions(name, map, type, header, constructors):
     lines = []
     lines.append('primrec')
-    lines.append('  %s :: "%s \<Rightarrow> %s"'
+    lines.append('  %s :: "%s \\<Rightarrow> %s"'
                  % (name, header, type))
     lines.append('where')
     is_first = True
@@ -883,7 +883,7 @@ def named_extractor_definitions(name, map, type, header, constructors):
 def named_update_definitions(name, map, type, header, constructors):
     lines = []
     lines.append('primrec')
-    ra = '\<Rightarrow>'
+    ra = r'\<Rightarrow>'
     if len(type.split()) > 1:
         type = '(%s)' % type
     lines.append('  %s_update :: "(%s %s %s) %s %s %s %s"'
@@ -916,17 +916,17 @@ def named_constructor_translation(name, map, header):
     lines.append('abbreviation (input)')
     l = '  %s_trans :: "' % name
     for n, type in map:
-        l = l + '(' + type + ') \<Rightarrow> '
-    l = l + '%s" ("%s\'_ \<lparr> %s= _' % (header, name, map[0][0])
+        l = l + '(' + type + r') \<Rightarrow> '
+    l = l + '%s" ("%s\'_ \\<lparr> %s= _' % (header, name, map[0][0])
     for n, type in map[1:]:
         l = l + ', %s= _' % n.replace("_", "'_")
-    l = l + ' \<rparr>")'
+    l = l + r' \<rparr>")'
     lines.append(l)
     lines.append('where')
-    l = '  "%s_ \<lparr> %s= v0' % (name, map[0][0])
+    l = '  "%s_ \\<lparr> %s= v0' % (name, map[0][0])
     for i, (n, type) in enumerate(map[1:]):
         l = l + ', %s= v%d' % (n, i + 1)
-    l = l + ' \<rparr> == %s' % name
+    l = l + ' \\<rparr> == %s' % name
     for i in range(len(map)):
         l = l + ' v%d' % i
     l = l + '"'
@@ -938,15 +938,15 @@ def named_constructor_translation(name, map, header):
 def named_constructor_check(name, map, header):
     lines = []
     lines.append('definition')
-    lines.append('  is%s :: "%s \<Rightarrow> bool"' % (name, header))
+    lines.append('  is%s :: "%s \\<Rightarrow> bool"' % (name, header))
     lines.append('where')
-    lines.append(' "is%s v \<equiv> case v of' % name)
+    lines.append(' "is%s v \\<equiv> case v of' % name)
     l = '    %s ' % name
     for i, _ in enumerate(map):
         l = l + 'v%d ' % i
-    l = l + '\<Rightarrow> True'
+    l = l + r'\<Rightarrow> True'
     lines.append(l)
-    lines.append('  | _ \<Rightarrow> False"')
+    lines.append(r'  | _ \<Rightarrow> False"')
 
     return lines
 
@@ -980,7 +980,7 @@ def type_wrapper_type(header, cons, rhs, d, decons=None):
             % (decons, header, header, header, header),
             'where',
             '  %s_update_def[simp]:' % decons,
-            ' "%s_update f y \<equiv> f y"' % decons,
+            ' "%s_update f y \\<equiv> f y"' % decons,
             ''
         ])
         lines.extend(named_constructor_translation(cons, [(decons, decons_type)
@@ -1097,7 +1097,7 @@ def storable_instance_proofs(header, canonical, d):
     next_type_tag = next_type_tag + 1
     proofs.extend([
         '', 'defs (overloaded)', '  typetag_%s[simp]:' % header,
-        ' "typetag (x :: %s) \<equiv> %d"' % (header, next_type_tag), ''
+        ' "typetag (x :: %s) \\<equiv> %d"' % (header, next_type_tag), ''
         'instance %s :: dynamic' % header, '  by (intro_classes, simp)'
     ])
 
@@ -1135,7 +1135,7 @@ def storable_instance_proofs(header, canonical, d):
     else:
         extradefs.extend([
             '  loadObject_%s[simp]:' % header,
-            ' "(loadObject p q n obj) :: %s \<equiv>' % header,
+            ' "(loadObject p q n obj) :: %s \\<equiv>' % header,
             '    loadObject_default p q n obj"',
         ])
 
@@ -1152,7 +1152,7 @@ def storable_instance_proofs(header, canonical, d):
     else:
         extradefs.extend([
             '  updateObject_%s[simp]:' % header,
-            ' "updateObject (val :: %s) \<equiv>' % header,
+            ' "updateObject (val :: %s) \\<equiv>' % header,
             '    updateObject_default val"',
         ])
 
@@ -1203,7 +1203,7 @@ def pspace_storable_instance_proofs(header, canonical, d):
     else:
         extradefs.extend([
             '  loadObject_%s[simp]:' % header,
-            ' "(loadObject p q n obj) :: %s kernel \<equiv>' % header,
+            ' "(loadObject p q n obj) :: %s kernel \\<equiv>' % header,
             '    loadObject_default p q n obj"',
         ])
 
@@ -1220,7 +1220,7 @@ def pspace_storable_instance_proofs(header, canonical, d):
     else:
         extradefs.extend([
             '  updateObject_%s[simp]:' % header,
-            ' "updateObject (val :: %s) \<equiv>' % header,
+            ' "updateObject (val :: %s) \\<equiv>' % header,
             '    updateObject_default val"',
         ])
 
@@ -1268,7 +1268,7 @@ def enum_instance_proofs(header, canonical, d):
         if call.current_context:
             lines.append('interpretation Arch .')
         lines.append('definition')
-        lines.append('  enum_%s: "enum_class.enum \<equiv> map %s enum"'
+        lines.append('  enum_%s: "enum_class.enum \\<equiv> map %s enum"'
                      % (header, cons))
 
     else:
@@ -1280,7 +1280,7 @@ def enum_instance_proofs(header, canonical, d):
         if call.current_context:
             lines.append('interpretation Arch .')
         lines.append('definition')
-        lines.append('  enum_%s: "enum_class.enum \<equiv> ' % header)
+        lines.append('  enum_%s: "enum_class.enum \\<equiv> ' % header)
         if len(cons_no_args) == 0:
             lines.append('    []')
         else:
@@ -1300,11 +1300,11 @@ def enum_instance_proofs(header, canonical, d):
         lines.append('  by (meson injI %s.inject)' % header)
     lines.append('')
     lines.append('definition')
-    lines.append('  "enum_class.enum_all (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"'
+    lines.append('  "enum_class.enum_all (P :: %s \\<Rightarrow> bool) \\<longleftrightarrow> Ball UNIV P"'
                  % header)
     lines.append('')
     lines.append('definition')
-    lines.append('  "enum_class.enum_ex (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"'
+    lines.append('  "enum_class.enum_ex (P :: %s \\<Rightarrow> bool) \\<longleftrightarrow> Bex UNIV P"'
                  % header)
     lines.append('')
     lines.append('  instance')
@@ -1327,7 +1327,7 @@ def enum_instance_proofs(header, canonical, d):
     if call.current_context:
         lines.append('interpretation Arch .')
     lines.append('definition')
-    lines.append('  enum_alt_%s: "enum_alt \<equiv> ' % header)
+    lines.append('  enum_alt_%s: "enum_alt \\<equiv> ' % header)
     lines.append('    alt_from_ord (enum :: %s list)"' % header)
     lines.append('instance ..')
     lines.append('end')
@@ -1401,9 +1401,9 @@ def bij_instance(classname, typename, constructor, fns):
         names2 = tuple([name + "'" for name in names])
         fstr1 = fstr % names
         fstr2 = fstr % names2
-        L.append('  %s_%s: "%s \<equiv>' % (fname, typename, fstr1))
+        L.append('  %s_%s: "%s \\<equiv>' % (fname, typename, fstr1))
         for name in names:
-            L.append("    case %s of %s %s' \<Rightarrow>"
+            L.append("    case %s of %s %s' \\<Rightarrow>"
                      % (name, constructor, name))
         if cast_return:
             L.append('      %s (%s)"' % (constructor, fstr2))
@@ -1466,25 +1466,25 @@ def body_transform(body, defined, sig, nopattern=False):
         bits = line.split()
         numLiftIO[0] = numLiftIO[0] + 1
         rhs = '(%d :: Int) %s' % (numLiftIO[0], ' '.join(bits[1:]))
-        line = '%s\<equiv> underlying_arch_op %s' % (line, rhs)
+        line = '%s\\<equiv> underlying_arch_op %s' % (line, rhs)
         children = []
     elif '=' in line:
-        line = '\<equiv>'.join(line.split('=', 1))
+        line = '\\<equiv>'.join(line.split('=', 1))
     elif leading_bar.match(children[0][0]):
         pass
     elif '=' in children[0][0]:
         (nextline, c2) = children[0]
-        children[0] = ('\<equiv>'.join(nextline.split('=', 1)), c2)
+        children[0] = ('\\<equiv>'.join(nextline.split('=', 1)), c2)
     else:
         warning('def of %s missing =\n' % defined, filename)
 
     if children and (children[-1][0].endswith('where') or
                      children[-1][0].lstrip().startswith('where')):
-        bits = line.split('\<equiv>')
+        bits = line.split(r'\<equiv>')
         where_clause = where_clause_transform(children[-1])
         children = children[:-1]
         if len(bits) == 2 and bits[1].strip():
-            line = bits[0] + '\<equiv>'
+            line = bits[0] + r'\<equiv>'
             new_line = ' ' * len(line) + bits[1]
             children = [(new_line, children)]
     else:
@@ -1499,7 +1499,7 @@ def body_transform(body, defined, sig, nopattern=False):
     (line, children) = do_clauses_transform((line, children), sig)
 
     if children and leading_bar.match(children[0][0]):
-        line = line + ' \<equiv>'
+        line = line + r' \<equiv>'
         children = guarded_body_transform(children, ' = ')
 
     children = where_clause + children
@@ -1527,7 +1527,7 @@ def bracket_dollar_lambdas(xxx_todo_changeme):
     (line, children) = xxx_todo_changeme
     if dollar_lambda_regex.search(line):
         [left, right] = dollar_lambda_regex.split(line)
-        line = '%s(\<lambda>%s' % (left, right)
+        line = '%s(\\<lambda>%s' % (left, right)
         both = (line, children)
         if has_trailing_string(';', both):
             both = remove_trailing_string(';', both)
@@ -1799,7 +1799,7 @@ left_start_table = {
 
 def do_clause_pattern(line, children, type, n=0):
     bits = line.split('<-')
-    default = [('\<leftarrow>'.join(bits), children)]
+    default = [('\\<leftarrow>'.join(bits), children)]
     if len(bits) == 1:
         return default
     (left, right) = line.split('<-', 1)
@@ -1997,8 +1997,8 @@ def case_clauses_transform(xxx_todo_changeme5):
             x = str(bits[0]) + ':: ' + type_transform(str(bits[1]))
 
     if children and children[-1][0].strip().startswith('where'):
-        warning(f'where clause in case: %r, removing case.' % line, filename)
-        return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
+        warning('where clause in case: %r, removing case.' % line, filename)
+        return (beforecase + r'\<comment> \<open>case removed\<close> undefined', [])
         # where_clause = where_clause_transform(children[-1])
         # children = children[:-1]
         # (in_stmt, l) = where_clause[-1]
@@ -2040,7 +2040,7 @@ def case_clauses_transform(xxx_todo_changeme5):
     conv = get_case_conv(cases)
     if conv == '<X>':
         warning('blanked case in caseconvs', filename)
-        return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
+        return (beforecase + r'\<comment> \<open>case removed\<close> undefined', [])
     if not conv:
         warning('no caseconv for %r\n' % (cases, ), filename)
         if cases not in cases_added:
@@ -2050,7 +2050,7 @@ def case_clauses_transform(xxx_todo_changeme5):
             f.write('%s ---X>\n\n' % casestr)
             f.close()
             cases_added[cases] = 1
-        return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
+        return (beforecase + r'\<comment> \<open>case removed\<close> undefined', [])
     conv = subs_nums_and_x(conv, x)
 
     new_line = beforecase + '(' + conv[0][0]
@@ -2113,7 +2113,7 @@ def lhs_transform(line):
     if '(' not in line:
         return line
 
-    [left, right] = line.split('\<equiv>')
+    [left, right] = line.split(r'\<equiv>')
 
     ws = left[:len(left) - len(left.lstrip())]
 
@@ -2124,17 +2124,17 @@ def lhs_transform(line):
     for (i, bit) in enumerate(bits):
         if bit.startswith('('):
             bits[i] = 'arg%d' % i
-            case = 'case arg%d of %s \<Rightarrow> ' % (i, bit)
+            case = 'case arg%d of %s \\<Rightarrow> ' % (i, bit)
             right = case + right
 
-    return ws + ' '.join([str(bit) for bit in bits]) + '\<equiv>' + right
+    return ws + ' '.join([str(bit) for bit in bits]) + r'\<equiv>' + right
 
 
 def lhs_de_underscore(line):
     if '_' not in line:
         return line
 
-    [left, right] = line.split('\<equiv>')
+    [left, right] = line.split(r'\<equiv>')
 
     ws = left[:len(left) - len(left.lstrip())]
 
@@ -2145,7 +2145,7 @@ def lhs_de_underscore(line):
         if bit == '_':
             bits[i] = 'arg%d' % i
 
-    return ws + ' '.join([str(bit) for bit in bits]) + ' \<equiv>' + right
+    return ws + ' '.join([str(bit) for bit in bits]) + r' \<equiv>' + right
 
 
 regexes = [
@@ -2167,11 +2167,11 @@ regexes = [
     (re.compile('assert '), 'haskell_assert '),
     (re.compile('assertE '), 'haskell_assertE '),
     (re.compile('=='), '='),
-    (re.compile(r"\(/="), '(\<lambda>x. x \<noteq>'),
-    (re.compile('/='), '\<noteq>'),
+    (re.compile(r"\(/="), r'(\<lambda>x. x \<noteq>'),
+    (re.compile('/='), r'\<noteq>'),
     (re.compile('"([^"])*"'), '[]'),
-    (re.compile('&&'), '\<and>'),
-    (re.compile('\|\|'), '\<or>'),
+    (re.compile('&&'), r'\<and>'),
+    (re.compile('\|\|'), r'\<or>'),
     (re.compile(r"(\W)not(\s)"), r"\1Not\2"),
     (re.compile(r"(\W)and(\s)"), r"\1andList\2"),
     (re.compile(r"(\W)or(\s)"), r"\1orList\2"),
@@ -2206,7 +2206,7 @@ regexes = [
     (re.compile(r"\$!"), r"$"),
     (re.compile('([^>])>='), r'\1\<ge>'),
     (re.compile('>>([^=])'), r'>>_\1'),
-    (re.compile('<='), '\<le>'),
+    (re.compile('<='), r'\<le>'),
     (re.compile(r" \\\\ "), " `~listSubtract~` "),
     (re.compile(r"(\s\w+)\s*@\s*\w+\s*{\s*}\s*\<leftarrow>"),
      r"\1 \<leftarrow>"),
@@ -2402,9 +2402,9 @@ constructor_conv_table = {
     'Nothing': 'None',
     'Left': 'Inl',
     'Right': 'Inr',
-    'PPtr': '\<comment> \<open>PPtr\<close>',
-    'Register': '\<comment> \<open>Register\<close>',
-    'Word': '\<comment> \<open>Word\<close>',
+    'PPtr': r'\<comment> \<open>PPtr\<close>',
+    'Register': r'\<comment> \<open>Register\<close>',
+    'Word': r'\<comment> \<open>Word\<close>',
 }
 
 unique_ids_per_file = {}
@@ -2428,9 +2428,9 @@ def all_constructor_conv(cases):
                 bits[j] = 'v%d' % get_next_unique_id()
         pat = ' '.join(bits)
         if i == 0:
-            conv.append(('  %s \<Rightarrow> ' % pat, i))
+            conv.append(('  %s \\<Rightarrow> ' % pat, i))
         else:
-            conv.append(('| %s \<Rightarrow> ' % pat, i))
+            conv.append(('| %s \\<Rightarrow> ' % pat, i))
     return conv
 
 
@@ -2455,9 +2455,9 @@ def extended_pattern_conv(cases):
         bits = [constructor_conv_table.get(bit, bit) for bit in bits]
         pat = ''.join(bits)
         if i == 0:
-            conv.append(('  %s \<Rightarrow> ' % pat, i))
+            conv.append(('  %s \\<Rightarrow> ' % pat, i))
         else:
-            conv.append(('| %s \<Rightarrow> ' % pat, i))
+            conv.append(('| %s \\<Rightarrow> ' % pat, i))
     return conv
 
 
@@ -2590,7 +2590,7 @@ def primrec_transform(d):
         else:
             l = "  " + l
             is_not_first = True
-        l = l.split('\<equiv>')
+        l = l.split(r'\<equiv>')
         assert len(l) == 2
         l = '= ('.join(l)
         (l, c) = remove_trailing_string('"', (l, c))
@@ -2708,16 +2708,16 @@ def get_lambda_body_lines(d):
 
     line = line[1:]
     # find \<equiv> in first or 2nd line
-    if '\<equiv>' not in line and '\<equiv>' in children[0][0]:
+    if r'\<equiv>' not in line and r'\<equiv>' in children[0][0]:
         (l, c) = children[0]
         children = c + children[1:]
         line = line + l
-    [lhs, rhs] = line.split('\<equiv>', 1)
+    [lhs, rhs] = line.split(r'\<equiv>', 1)
     bits = lhs.split()
     args = bits[1:]
     assert fn in bits[0]
 
-    line = '(\<lambda>' + ' '.join(args) + '. ' + rhs
+    line = r'(\<lambda>' + ' '.join(args) + '. ' + rhs
     # lines = ['(* body of %s *)' % fn, line] + flatten_tree (children)
     lines = [line] + flatten_tree(children)
     assert (lines[-1].endswith('"'))
