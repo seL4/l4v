@@ -320,12 +320,6 @@ lemma invokeTCB_ReadRegisters_corres:
   apply (clarsimp simp: invs'_def dest!: global'_no_ex_cap)
   done
 
-lemma invs_valid_queues':
-  "invs' s \<longrightarrow> valid_queues' s"
-  by (clarsimp simp:invs'_def)
-
-declare invs_valid_queues'[rule_format, elim!]
-
 lemma asUser_postModifyRegisters_corres:
   "corres dc \<top> (tcb_at' t)
      (arch_post_modify_registers ct t)
@@ -399,6 +393,10 @@ lemma suspend_ResumeCurrentThread_imp_notct[wp]:
    \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
   by (wpsimp simp: suspend_def wp_del: getThreadState_only_state_wp)
 
+crunches restart, suspend
+  for cur_tcb'[wp]: cur_tcb'
+  (wp: crunch_wps threadSet_cur ignore: threadSet)
+
 lemma invokeTCB_CopyRegisters_corres:
   "corres (dc \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
@@ -427,6 +425,7 @@ proof -
          apply simp
         apply simp
        apply (simp | wp)+
+     apply fastforce+
     done
   have R: "\<And>src src' des des' xs ys. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
@@ -449,7 +448,7 @@ proof -
       apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
         apply (rule asUser_setNextPC_corres)
        apply wp+
-     apply simp+
+     apply fastforce+
     done
   show ?thesis
     apply (simp add: invokeTCB_def performTransfer_def)
@@ -1014,8 +1013,8 @@ lemma out_corresT:
   assumes y: "\<And>v. \<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (fn' v tcb) = getF tcb"
   shows
   "out_rel fn fn' v v' \<Longrightarrow>
-     corres dc (tcb_at t)
-               (tcb_at' t)
+     corres dc (tcb_at t and pspace_aligned and pspace_distinct)
+               \<top>
        (option_update_thread t fn v)
        (case_option (return ()) (\<lambda>x. threadSet (fn' x) t) v')"
   apply (case_tac v, simp_all add: out_rel_def
@@ -1029,42 +1028,40 @@ lemma tcbSchedDequeue_sch_act_simple[wp]:
   "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
   by (wpsimp simp: sch_act_simple_def)
 
-lemma valid_queues_subsetE':
-  "\<lbrakk> valid_queues' s; ksPSpace s = ksPSpace s';
-     \<forall>x. set (ksReadyQueues s x) \<subseteq> set (ksReadyQueues s' x) \<rbrakk>
-   \<Longrightarrow> valid_queues' s'"
-  by (simp add: valid_queues'_def obj_at'_def
-                ps_clear_def subset_iff projectKOs)
+lemma tcbSchedNext_update_tcb_cte_cases:
+  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbPriority_update f tcb) = a tcb"
+  unfolding tcb_cte_cases_def
+  by (case_tac tcb; fastforce simp: objBits_simps')
 
-lemma setQueue_invs_bits[wp]:
-  "\<lbrace>valid_pspace'\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> setQueue d p q \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace> setQueue d p q \<lbrace>\<lambda>rv s. sym_refs (state_refs_of' s)\<rbrace>"
-  "\<lbrace>if_live_then_nonz_cap'\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  "\<lbrace>if_unsafe_then_cap'\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  "\<lbrace>cur_tcb'\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
-  "\<lbrace>valid_global_refs'\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  "\<lbrace>valid_irq_handlers'\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
-   by (simp add: setQueue_def tcb_in_cur_domain'_def
-         | wp sch_act_wf_lift cur_tcb_lift
-         | fastforce)+
+lemma threadSet_priority_invs':
+  "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace>
+   threadSet (tcbPriority_update (\<lambda>_. p)) t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (simp add: invs'_def valid_state'_def split del: if_split)
+  apply (wp threadSet_valid_pspace'
+            threadSet_sch_actT_P[where P=False, simplified]
+            threadSet_state_refs_of'T[where f'=id]
+            threadSet_iflive'T
+            threadSet_ifunsafe'T
+            threadSet_idle'T
+            valid_irq_node_lift
+            valid_irq_handlers_lift''
+            threadSet_ctes_ofT
+            threadSet_not_inQ
+            threadSet_ct_idle_or_in_cur_domain'
+            threadSet_cur
+            untyped_ranges_zero_lift
+            sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
+            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
+         | clarsimp simp: cteCaps_of_def tcbSchedNext_update_tcb_cte_cases | rule refl)+
+  apply (clarsimp simp: o_def)
+  by (auto simp: obj_at'_def)
 
-lemma setQueue_ex_idle_cap[wp]:
-  "\<lbrace>\<lambda>s. ex_nonz_cap_to' (ksIdleThread s) s\<rbrace>
-   setQueue d p q
-   \<lbrace>\<lambda>rv s. ex_nonz_cap_to' (ksIdleThread s) s\<rbrace>"
-  by (simp add: setQueue_def, wp,
-      simp add: ex_nonz_cap_to'_def cte_wp_at_pspaceI)
-
-lemma tcbPriority_caps_safe:
-  "\<forall>tcb. \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF (tcbPriority_update f tcb) = getF tcb) x"
-  by (rule all_tcbI, rule ball_tcb_cte_casesI, simp+)
-
-lemma tcbPriority_Queued_caps_safe:
-  "\<forall>tcb. \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF (tcbPriority_update f (tcbQueued_update g tcb)) = getF tcb) x"
-  by (rule all_tcbI, rule ball_tcb_cte_casesI, simp+)
-
-end
+lemma setP_invs':
+  "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace> setPriority t p \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding setPriority_def
+  by (wpsimp wp: rescheduleRequired_invs' threadSet_priority_invs')
 
 crunches setPriority, setMCPriority
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
@@ -1342,11 +1339,6 @@ lemma setMCPriority_valid_objs'[wp]:
 
 crunch sch_act_simple[wp]: setMCPriority sch_act_simple
   (wp: ssa_sch_act_simple crunch_wps rule: sch_act_simple_lift simp: crunch_simps)
-
-(* For some reason, when this was embedded in a larger expression clarsimp wouldn't remove it. Adding it as a simp rule does *)
-lemma inQ_tc_corres_helper:
-  "(\<forall>d p. (\<exists>tcb. tcbQueued tcb \<and> tcbPriority tcb = p \<and> tcbDomain tcb = d \<and> (tcbQueued tcb \<longrightarrow> tcbDomain tcb \<noteq> d)) \<longrightarrow> a \<notin> set (ksReadyQueues s (d, p))) = True"
-  by clarsimp
 
 abbreviation "valid_option_prio \<equiv> case_option True (\<lambda>(p, auth). p \<le> maxPriority)"
 
@@ -2705,7 +2697,7 @@ lemma eq_ucast_word8[simp]:
   done
 
 lemma checkPrio_corres:
-  "corres (ser \<oplus> dc) (tcb_at auth) (tcb_at' auth)
+  "corres (ser \<oplus> dc) (tcb_at auth and pspace_aligned and pspace_distinct) \<top>
      (check_prio p auth) (checkPrio p auth)"
   apply (simp add: check_prio_def checkPrio_def)
   apply (rule corres_guard_imp)
@@ -2748,7 +2740,7 @@ lemma decodeSetMCPriority_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap;
      list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation)
-       (cur_tcb and valid_etcbs and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> (fst x)))
+       (cur_tcb and valid_etcbs and (pspace_aligned and pspace_distinct and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> (fst x))))
        (invs' and (\<lambda>s. \<forall>x \<in> set extras'. s \<turnstile>' (fst x)))
        (decode_set_mcpriority args cap slot extras)
        (decodeSetMCPriority args cap' extras')"
@@ -3467,8 +3459,8 @@ notes if_cong[cong] shows
 
 lemma decodeUnbindNotification_corres:
   "corres (ser \<oplus> tcbinv_relation)
-      (tcb_at t)
-      (tcb_at' t)
+      (tcb_at t and pspace_aligned and pspace_distinct)
+      \<top>
      (decode_unbind_notification (cap.ThreadCap t))
      (decodeUnbindNotification (capability.ThreadCap t))"
   apply (simp add: decode_unbind_notification_def decodeUnbindNotification_def)

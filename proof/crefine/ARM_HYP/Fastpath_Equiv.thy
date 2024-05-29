@@ -31,13 +31,9 @@ lemma getEndpoint_obj_at':
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
-lemma tcbSchedEnqueue_tcbContext[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-     tcbSchedEnqueue t'
-   \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule tcbSchedEnqueue_obj_at_unchangedT[OF all_tcbI])
-  apply simp
-  done
+crunches tcbSchedEnqueue
+  for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
+  (simp: tcbQueuePrepend_def)
 
 lemma setCTE_tcbContext:
   "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
@@ -50,19 +46,17 @@ lemma setCTE_tcbContext:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma setThreadState_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setThreadState a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setThreadState_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
+ "setThreadState st tptr \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def
+  apply (wpsimp wp: threadSet_wp hoare_drop_imps)
+  apply (fastforce simp: obj_at'_def objBits_simps projectKOs  atcbContext_def ps_clear_upd)
   done
 
 lemma setBoundNotification_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setBoundNotification a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setBoundNotification_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
+ "setBoundNotification ntfnPtr tptr \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setBoundNotification_def
+  apply (wpsimp wp: threadSet_wp hoare_drop_imps)
+  apply (fastforce simp: obj_at'_def objBits_simps projectKOs)
   done
 
 declare comp_apply [simp del]
@@ -127,13 +121,15 @@ lemma of_bl_from_bool:
 
 lemma dmo_clearExMonitor_setCurThread_swap:
   "(do _ \<leftarrow> doMachineOp ARM_HYP.clearExMonitor;
-               setCurThread thread
-            od)
+       setCurThread thread
+    od)
     = (do _ \<leftarrow> setCurThread thread;
-            doMachineOp ARM_HYP.clearExMonitor od)"
-  apply (simp add: setCurThread_def doMachineOp_def split_def)
-  apply (rule oblivious_modify_swap[symmetric])
-  apply (intro oblivious_bind, simp_all)
+          doMachineOp ARM_HYP.clearExMonitor
+       od)"
+  apply (clarsimp simp: ARM_HYP.clearExMonitor_def)
+  apply (simp add: doMachineOp_modify)
+  apply (rule oblivious_modify_swap)
+  apply (fastforce intro: oblivious_bind simp: setCurThread_def idleThreadNotQueued_def)
   done
 
 lemma pd_at_asid_inj':
@@ -508,11 +504,39 @@ lemma setThreadState_runnable_bitmap_inv:
 crunches curDomain
   for (no_fail) no_fail[intro!, wp, simp]
 
+lemma setThreadState_tcbDomain_tcbPriority_obj_at'[wp]:
+  "setThreadState ts t \<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb) (tcbPriority tcb)) t'\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def tcbSchedEnqueue_def tcbQueuePrepend_def
+  apply (wpsimp wp: threadSet_wp hoare_drop_imps threadGet_wp simp: setQueue_def bitmap_fun_defs)
+  apply (fastforce simp: obj_at'_def st_tcb_at'_def objBits_simps projectKOs)
+  done
+
+lemma setThreadState_tcbQueued_obj_at'[wp]:
+  "setThreadState ts t \<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def tcbSchedEnqueue_def tcbQueuePrepend_def
+  apply (wpsimp wp: threadSet_wp hoare_drop_imps threadGet_wp simp: setQueue_def bitmap_fun_defs)
+  apply (fastforce simp: obj_at'_def st_tcb_at'_def objBits_simps projectKOs)
+  done
+
+lemma setThreadState_tcbFault_obj_at'[wp]:
+  "setThreadState ts t \<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t'\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def tcbSchedEnqueue_def tcbQueuePrepend_def
+  apply (wpsimp wp: threadSet_wp hoare_drop_imps threadGet_wp simp: setQueue_def bitmap_fun_defs)
+  apply (fastforce simp: obj_at'_def st_tcb_at'_def objBits_simps projectKOs)
+  done
+
+lemma setThreadState_tcbArch_obj_at'[wp]:
+  "setThreadState ts t \<lbrace>obj_at' (\<lambda>tcb. P (tcbArch tcb)) t'\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def tcbSchedEnqueue_def tcbQueuePrepend_def
+  apply (wpsimp wp: threadSet_wp hoare_drop_imps threadGet_wp simp: setQueue_def bitmap_fun_defs)
+  apply (fastforce simp: obj_at'_def st_tcb_at'_def objBits_simps projectKOs)
+  done
+
 lemma fastpath_callKernel_SysCall_corres:
   "monadic_rewrite True False
          (invs' and ct_in_state' ((=) Running)
                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-                and (\<lambda>s. ksDomainTime s \<noteq> 0))
+                and (\<lambda>s. ksDomainTime s \<noteq> 0) and ready_qs_runnable)
      (callKernel (SyscallEvent SysCall)) (fastpaths SysCall)"
   supply if_cong[cong] option.case_cong[cong] if_split[split del]
   supply empty_fail_getMRs[wp] (* FIXME *)
@@ -669,22 +693,18 @@ lemma fastpath_callKernel_SysCall_corres:
                            apply wp[1]
                           apply (simp cong: if_cong HOL.conj_cong add: if_bool_simps)
                           apply (simp_all only:)[5]
-                          apply ((wp setThreadState_oa_queued[of _ "\<lambda>a _ _. \<not> a"]
-                                     setThreadState_obj_at_unchanged
-                                     asUser_obj_at_unchanged mapM_x_wp'
+                          apply ((wp asUser_obj_at_unchanged mapM_x_wp'
                                      sts_st_tcb_at'_cases
                                      setThreadState_no_sch_change
                                      setEndpoint_obj_at_tcb'
                                      fastpathBestSwitchCandidate_lift[where f="setThreadState f t" for f t]
-                                     setThreadState_oa_queued
                                      fastpathBestSwitchCandidate_lift[where f="asUser t f" for f t]
                                      fastpathBestSwitchCandidate_lift[where f="setEndpoint a b" for a b]
                                      lookupBitmapPriority_lift
                                      setThreadState_runnable_bitmap_inv
                                      getEndpoint_obj_at'
-                                   | simp add: setMessageInfo_def
+                                   | simp add: setMessageInfo_def obj_at'_conj
                                    | wp (once) hoare_vcg_disj_lift)+)
-
                    apply (simp add: setThreadState_runnable_simp
                                     getThreadCallerSlot_def getThreadReplySlot_def
                                     locateSlot_conv bind_assoc)
@@ -794,8 +814,6 @@ lemma fastpath_callKernel_SysCall_corres:
    prefer 2
    apply normalise_obj_at'
   apply clarsimp
-  apply (frule_tac t="blockedThread" in valid_queues_not_runnable_not_queued, assumption)
-  subgoal by (fastforce simp: st_tcb_at'_def elim: obj_at'_weakenE)
   apply (subgoal_tac "fastpathBestSwitchCandidate blockedThread s")
    prefer 2
    apply (rule_tac ttcb=tcbb and ctcb=tcb in fastpathBestSwitchCandidateI)
@@ -804,6 +822,9 @@ lemma fastpath_callKernel_SysCall_corres:
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def objBits_simps projectKOs valid_mdb'_def
                         valid_mdb_ctes_def inj_case_bool
                  split: bool.split)+
+  apply (clarsimp simp: ready_qs_runnable_def)
+  apply (drule_tac x=blockedThread in spec)
+  apply (clarsimp simp: obj_at'_def projectKOs st_tcb_at'_def objBits_simps)
   done
 
 lemma capability_case_Null_ReplyCap:
@@ -960,14 +981,16 @@ crunch tcbContext[wp]: possibleSwitchTo "obj_at' (\<lambda>tcb. P ( (atcbContext
 crunch only_cnode_caps[wp]: doFaultTransfer "\<lambda>s. P (only_cnode_caps (ctes_of s))"
   (wp: crunch_wps simp: crunch_simps)
 
+(* FIXME: monadic_rewrite_l does not work with stateAssert here *)
 lemma tcbSchedDequeue_rewrite_not_queued:
   "monadic_rewrite True False (tcb_at' t and obj_at' (Not \<circ> tcbQueued) t)
      (tcbSchedDequeue t) (return ())"
-  apply (simp add: tcbSchedDequeue_def when_def)
-  apply (monadic_rewrite_l monadic_rewrite_if_l_False \<open>wp threadGet_const\<close>)
-   apply (monadic_rewrite_symb_exec_l, rule monadic_rewrite_refl)
-   apply wp+
-  apply clarsimp
+  apply (simp add: tcbSchedDequeue_def)
+  apply wp_pre
+  apply monadic_rewrite_symb_exec_l
+    apply (monadic_rewrite_symb_exec_l_known False, simp)
+     apply (rule monadic_rewrite_refl)
+    apply (wpsimp wp: threadGet_const)+
   done
 
 lemma schedule_known_rewrite:
@@ -1006,7 +1029,7 @@ lemma schedule_known_rewrite:
                             \<open>wpsimp wp: Arch_switchToThread_obj_at_pre\<close>)
    (* remove no-ops *)
    apply simp
-   apply (repeat 9 \<open>rule monadic_rewrite_symb_exec_l\<close>) (* until switchToThread *)
+   apply (repeat 13 \<open>rule monadic_rewrite_symb_exec_l\<close>) (* until switchToThread *)
                               apply (rule monadic_rewrite_refl)
                              apply (wpsimp simp: isHighestPrio_def')+
   apply (clarsimp simp: ct_in_state'_def not_pred_tcb_at'_strengthen
@@ -1268,18 +1291,12 @@ crunches setThreadState, emptySlot, asUser
   (wp: obj_at_setObject2 crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 
-lemma st_tcb_at_is_Reply_imp_not_tcbQueued: "\<And>s t.\<lbrakk> invs' s; st_tcb_at' isReply t s\<rbrakk> \<Longrightarrow> obj_at' (\<lambda>a. \<not> tcbQueued a) t s"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def st_tcb_at'_def valid_queues_no_bitmap_def)
-  apply (rule all_prio_not_inQ_not_tcbQueued)
-  apply (clarsimp simp: obj_at'_def)
-  apply (erule_tac x="d" in allE)
-  apply (erule_tac x="p" in allE)
-  apply (erule conjE)
-  apply (erule_tac x="t" in ballE)
-   apply (clarsimp simp: obj_at'_def runnable'_def isReply_def)
-   apply (case_tac "tcbState obj")
-          apply ((clarsimp simp: inQ_def)+)[8]
-  apply (clarsimp simp: valid_queues'_def obj_at'_def)
+lemma st_tcb_at_is_Reply_imp_not_tcbQueued:
+  "\<And>s t. \<lbrakk> ready_qs_runnable s; st_tcb_at' isReply t s\<rbrakk>  \<Longrightarrow> obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) t s"
+  apply (clarsimp simp: ready_qs_runnable_def)
+  apply (drule_tac x=t in spec)
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def isReply_def)
+  apply (case_tac "tcbState obj"; clarsimp)
   done
 
 lemma valid_objs_ntfn_at_tcbBoundNotification:
@@ -1335,7 +1352,7 @@ lemma tcbSchedEnqueue_tcbIPCBuffer:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t\<rbrace>
   tcbSchedEnqueue t'
   \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_when)
+  apply (simp add: tcbSchedEnqueue_def tcbQueuePrepend_def unless_when)
   apply (wp threadSet_obj_at' hoare_drop_imps threadGet_wp
         |simp split: if_split)+
   done
@@ -1361,10 +1378,20 @@ crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuff
 crunches getBoundNotification
   for (no_fail) no_fail[intro!, wp, simp]
 
+lemma threadSet_tcb_at'[wp]:
+  "threadSet f t' \<lbrace>\<lambda>s. P (tcb_at' addr s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  apply (erule rsubst[where P=P])
+  by (clarsimp simp: obj_at'_def projectKOs ps_clear_upd objBits_simps)
+
+crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
+  for tcb''[wp]: "\<lambda>s. P (tcb_at' addr s)"
+  (wp: crunch_wps)
+
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
      (invs' and ct_in_state' ((=) Running) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-         and cnode_caps_gsCNodes')
+         and cnode_caps_gsCNodes' and ready_qs_runnable)
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   including classic_wp_pre
   supply if_cong[cong] option.case_cong[cong]
@@ -1494,8 +1521,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                             and thread=thread in possibleSwitchTo_rewrite))
                            | rule cteDeleteOne_replycap_rewrite
                            | rule monadic_rewrite_bind monadic_rewrite_refl
-                           | wp assert_inv mapM_x_wp'
-                                setThreadState_obj_at_unchanged
+                           | wp assert_inv mapM_x_wp' sts_valid_objs'
                                 asUser_obj_at_unchanged
                                 hoare_strengthen_post[OF _ obj_at_conj'[simplified atomize_conjL], rotated]
                                  lookupBitmapPriority_lift
@@ -1561,8 +1587,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                | wps)+)[3]
                     apply (simp cong: rev_conj_cong)
                     apply (wpsimp wp: setThreadState_tcbContext[simplified comp_apply]
-                                      setThreadState_oa_queued user_getreg_rv
-                                      setThreadState_no_sch_change setThreadState_obj_at_unchanged
+                                      user_getreg_rv
+                                      setThreadState_no_sch_change sts_valid_objs'
                                       sts_st_tcb_at'_cases sts_bound_tcb_at'
                                       fastpathBestSwitchCandidate_lift[where f="setThreadState s t" for s t]
                                       hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
@@ -1570,8 +1596,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       hoare_vcg_ex_lift
                           | wps)+
                            apply (strengthen imp_consequent[where Q="tcb_at' t s" for t s])
-                           apply ((wp setThreadState_oa_queued user_getreg_rv setThreadState_no_sch_change
-                                      setThreadState_obj_at_unchanged
+                           apply ((wp user_getreg_rv setThreadState_no_sch_change
                                       sts_st_tcb_at'_cases sts_bound_tcb_at'
                                       emptySlot_obj_at'_not_queued emptySlot_obj_at_ep
                                       emptySlot_tcbContext[simplified comp_apply]
@@ -1748,7 +1773,9 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
   apply (clarsimp simp: obj_at_tcbs_of tcbSlots
                         cte_level_bits_def)
   apply (frule(1) st_tcb_at_is_Reply_imp_not_tcbQueued)
-  apply (auto simp: obj_at_tcbs_of tcbSlots
+  apply (frule invs_pspace_aligned')
+  apply (frule invs_pspace_distinct')
+  apply (auto simp: obj_at_tcbs_of tcbSlots projectKOs
                         cte_level_bits_def)
   done
 

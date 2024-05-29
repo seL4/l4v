@@ -439,9 +439,8 @@ lemma invoke_irq_handler_invs'[wp]:
     InterruptDecls_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
     apply (wp dmo_maskInterrupt)
-    apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_masks'_def
-      valid_machine_state'_def ct_not_inQ_def
-      ct_in_current_domain_ksMachineState)
+    apply (clarsimp simp: invs'_def valid_state'_def valid_irq_masks'_def
+                          valid_machine_state'_def ct_not_inQ_def)
    apply (wp cteInsert_invs)+
    apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg safe_ioport_insert'_ntfn_strg)
    apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
@@ -586,14 +585,13 @@ lemma updateIRQState_invs'[wp]:
   apply (clarsimp simp: X64_H.updateIRQState_def)
   apply wp
   apply (fastforce simp: invs'_def valid_state'_def cur_tcb'_def
-                         Invariants_H.valid_queues_def valid_queues'_def
                          valid_idle'_def valid_irq_node'_def
                          valid_arch_state'_def valid_global_refs'_def
                          global_refs'_def valid_machine_state'_def
                          if_unsafe_then_cap'_def ex_cte_cap_to'_def
                          valid_irq_handlers'_def irq_issued'_def
                          cteCaps_of_def valid_irq_masks'_def
-                         bitmapQ_defs valid_queues_no_bitmap_def valid_x64_irq_state'_def
+                         bitmapQ_defs  valid_x64_irq_state'_def
                          valid_ioports'_def all_ioports_issued'_def issued_ioports'_def)
   done
 
@@ -664,13 +662,6 @@ lemma decDomainTime_corres:
   apply (clarsimp simp:state_relation_def)
   done
 
-lemma tcbSchedAppend_valid_objs':
-  "\<lbrace>valid_objs'\<rbrace>tcbSchedAppend t \<lbrace>\<lambda>r. valid_objs'\<rbrace>"
-  apply (simp add:tcbSchedAppend_def)
-  apply (wpsimp wp: unless_wp threadSet_valid_objs' threadGet_wp)
-  apply (clarsimp simp add:obj_at'_def typ_at'_def)
-  done
-
 lemma thread_state_case_if:
  "(case state of Structures_A.thread_state.Running \<Rightarrow> f | _ \<Rightarrow> g) =
   (if state = Structures_A.thread_state.Running then f else g)"
@@ -681,26 +672,20 @@ lemma threadState_case_if:
   (if state = Structures_H.thread_state.Running then f else g)"
   by (case_tac state,auto)
 
-lemma tcbSchedAppend_invs_but_ct_not_inQ':
-  "\<lbrace>invs' and st_tcb_at' runnable' t \<rbrace>
-   tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
-  apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-             untyped_ranges_zero_lift
-        | simp add: cteCaps_of_def o_def
-        | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
-  done
+lemma ready_qs_distinct_domain_time_update[simp]:
+  "ready_qs_distinct (domain_time_update f s) = ready_qs_distinct s"
+  by (clarsimp simp: ready_qs_distinct_def)
 
 lemma timerTick_corres:
-  "corres dc (cur_tcb and valid_sched)
+  "corres dc (cur_tcb and valid_sched and pspace_aligned and pspace_distinct)
              invs'
              timer_tick timerTick"
   supply if_weak_cong[cong]
   apply (simp add: timerTick_def timer_tick_def)
-  apply (simp add:thread_state_case_if threadState_case_if)
-  apply (rule_tac Q="\<top> and (cur_tcb and valid_sched)" and Q'="\<top> and invs'" in corres_guard_imp)
+  apply (simp add: thread_state_case_if threadState_case_if)
+  apply (rule_tac Q="cur_tcb and valid_sched and pspace_aligned and pspace_distinct"
+              and Q'=invs'
+               in corres_guard_imp)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF getCurThread_corres])
         apply simp
@@ -722,75 +707,75 @@ lemma timerTick_corres:
                 apply (rule corres_split)
                    apply (rule ethread_set_corres; simp)
                    apply (simp add: etcb_relation_def)
-                  apply (rule corres_split[OF tcbSchedAppend_corres])
+                  apply (rule corres_split[OF tcbSchedAppend_corres], simp)
                     apply (rule rescheduleRequired_corres)
-                   apply (wp)[1]
-                  apply (rule hoare_strengthen_post)
-                   apply (rule tcbSchedAppend_invs_but_ct_not_inQ',
-                          clarsimp simp: sch_act_wf_weak)
-                 apply (wp threadSet_timeslice_invs threadSet_valid_queues
-                           threadSet_valid_queues' threadSet_pred_tcb_at_state)+
-             apply simp
-            apply simp
-            apply (rule corres_when,simp)
+                   apply wp
+                  apply ((wpsimp wp: tcbSchedAppend_sym_heap_sched_pointers
+                                     tcbSchedAppend_valid_objs'
+                          | strengthen valid_objs'_valid_tcbs')+)[1]
+                 apply ((wp thread_set_time_slice_valid_queues
+                         | strengthen valid_queues_in_correct_ready_q
+                                      valid_queues_ready_qs_distinct)+)[1]
+                apply ((wpsimp wp: threadSet_sched_pointers threadSet_valid_sched_pointers
+                                   threadSet_valid_objs'
+                        | strengthen valid_objs'_valid_tcbs')+)[1]
+               apply wpsimp+
+            apply (rule corres_when, simp)
             apply (rule corres_split[OF decDomainTime_corres])
               apply (rule corres_split[OF getDomainTime_corres])
                 apply (rule corres_when,simp)
                 apply (rule rescheduleRequired_corres)
                apply (wp hoare_drop_imp)+
-             apply (simp add:dec_domain_time_def)
-             apply wp+
-            apply (simp add:decDomainTime_def)
-            apply wp
-           apply (wp|wpc|unfold Let_def|simp)+
-              apply (wp hoare_weak_lift_imp threadSet_timeslice_invs threadSet_valid_queues  threadSet_valid_queues'
-                 threadSet_pred_tcb_at_state threadSet_weak_sch_act_wf tcbSchedAppend_valid_objs'
-                 rescheduleRequired_weak_sch_act_wf tcbSchedAppend_valid_queues| simp)+
-              apply (strengthen sch_act_wf_weak)
-              apply (clarsimp simp:conj_comms)
-              apply (wp tcbSchedAppend_valid_queues tcbSchedAppend_sch_act_wf)
-             apply simp
-             apply (wp threadSet_valid_queues threadSet_pred_tcb_at_state threadSet_sch_act
-              threadSet_tcbDomain_triv threadSet_valid_queues' threadSet_valid_objs'| simp)+
-           apply (wp threadGet_wp gts_wp gts_wp')+
-     apply (clarsimp simp: cur_tcb_def tcb_at_is_etcb_at valid_sched_def valid_sched_action_def)
-    prefer 2
-    apply clarsimp
-   apply (clarsimp simp add:cur_tcb_def valid_sched_def
-       valid_sched_action_def valid_etcbs_def is_tcb_def
-       is_etcb_at_def st_tcb_at_def obj_at_def
-       dest!:get_tcb_SomeD)
-   apply (clarsimp simp: invs'_def valid_state'_def
-   sch_act_wf_weak
-   cur_tcb'_def inQ_def
-   ct_in_state'_def obj_at'_def)
-   apply (clarsimp simp:st_tcb_at'_def
-      valid_idle'_def ct_idle_or_in_cur_domain'_def
-      obj_at'_def projectKO_eq)
-  apply simp
+             apply (wpsimp simp: dec_domain_time_def)
+            apply (wpsimp simp: decDomainTime_def)
+           apply (wpsimp wp: hoare_weak_lift_imp threadSet_timeslice_invs
+                             tcbSchedAppend_valid_objs'
+                             threadSet_pred_tcb_at_state threadSet_weak_sch_act_wf
+                             rescheduleRequired_weak_sch_act_wf
+                         split_del: if_split)+
+              apply (strengthen valid_queues_in_correct_ready_q valid_queues_ready_qs_distinct)
+              apply (wpsimp wp: thread_set_time_slice_valid_queues)
+             apply ((wpsimp wp: thread_set_time_slice_valid_queues
+                     | strengthen valid_queues_in_correct_ready_q valid_queues_ready_qs_distinct)+)[1]
+            apply wpsimp
+           apply wpsimp
+          apply ((wpsimp wp: threadSet_sched_pointers threadSet_valid_sched_pointers
+                             threadSet_valid_objs'
+                  | strengthen valid_objs'_valid_tcbs'
+                  | wp (once) hoare_drop_imp)+)[1]
+         apply (wpsimp wp: gts_wp gts_wp')+
+     apply (clarsimp simp: cur_tcb_def)
+     apply (frule valid_sched_valid_etcbs)
+     apply (frule (1) tcb_at_is_etcb_at)
+     apply (frule valid_sched_valid_queues)
+     apply (fastforce simp: pred_tcb_at_def obj_at_def valid_sched_weak_strg)
+    apply (clarsimp simp: etcb_at_def split: option.splits)
+    apply fastforce
+   apply (fastforce simp: valid_state'_def ct_not_inQ_def)
+  apply fastforce
   done
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 
 lemma handleInterrupt_corres:
   "corres dc
-     (einvs) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
+     einvs
+     (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
-  (is "corres dc (einvs) ?P' ?f ?g")
-  apply (simp add: handle_interrupt_def handleInterrupt_def )
+  (is "corres dc ?P ?P' ?f ?g")
+  apply (simp add: handle_interrupt_def handleInterrupt_def)
   apply (rule conjI[rotated]; rule impI)
-
-  apply (rule corres_guard_imp)
+   apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQState_corres,
-                              where R="\<lambda>rv. einvs"
-                                and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
-      defer
-      apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
-      apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated)
-    apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
-    apply ((wp | simp)+)[4]
-    apply (rule corres_gen_asm2)
+                               where R="\<lambda>rv. ?P"
+                                 and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
+       defer
+       apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
+   apply (rule corres_guard_imp)
+     apply (rule corres_split)
+        apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
+      apply ((wp | simp)+)[4]
+  apply (rule corres_gen_asm2)
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
    apply (simp add: getSlotCap_def bind_assoc)
    apply (rule corres_guard_imp)
@@ -818,7 +803,7 @@ lemma handleInterrupt_corres:
       apply (rule corres_machine_op)
       apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
      apply wp+
-   apply clarsimp
+   apply fastforce
   apply clarsimp
   done
 
@@ -841,52 +826,38 @@ lemma updateTimeSlice_valid_pspace[wp]:
   apply (auto simp:tcb_cte_cases_def)
   done
 
-lemma updateTimeSlice_valid_queues[wp]:
-  "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-   \<lbrace>\<lambda>r s. Invariants_H.valid_queues s\<rbrace>"
-  apply (wp threadSet_valid_queues,simp)
-  apply (clarsimp simp:obj_at'_def inQ_def)
-  done
-
-
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
-crunch ifunsafe[wp]: tcbSchedAppend if_unsafe_then_cap'
 crunch irq_handlers'[wp]: tcbSchedAppend valid_irq_handlers'
   (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
-crunch irq_states'[wp]: tcbSchedAppend valid_irq_states'
 crunch irqs_masked'[wp]: tcbSchedAppend irqs_masked'
   (simp: unless_def wp: crunch_wps)
 crunch ct[wp]: tcbSchedAppend cur_tcb'
   (wp: cur_tcb_lift crunch_wps)
 
-crunch cur_tcb'[wp]: tcbSchedAppend cur_tcb'
-  (simp: unless_def wp: crunch_wps)
-
 lemma timerTick_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> timerTick \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "timerTick \<lbrace>invs'\<rbrace>"
   apply (simp add: timerTick_def)
   apply (wpsimp wp: threadSet_invs_trivial threadSet_pred_tcb_no_state
                     rescheduleRequired_all_invs_but_ct_not_inQ
-                    tcbSchedAppend_invs_but_ct_not_inQ'
-                simp: tcb_cte_cases_def)
-     apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
-     apply (clarsimp simp add:invs'_def valid_state'_def)
+              simp: tcb_cte_cases_def)
+      apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
+       apply (clarsimp simp: invs'_def valid_state'_def)
       apply (simp add: decDomainTime_def)
       apply wp
      apply simp
      apply wpc
-          apply (wp add: threadGet_wp threadSet_cur threadSet_timeslice_invs
-                               rescheduleRequired_all_invs_but_ct_not_inQ
-                               hoare_vcg_imp_lift threadSet_ct_idle_or_in_cur_domain'
-                          del: tcbSchedAppend_sch_act_wf)+
-             apply (rule hoare_strengthen_post[OF tcbSchedAppend_invs_but_ct_not_inQ'])
-             apply (wpsimp simp: valid_pspace'_def sch_act_wf_weak)+
-           apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_tcbDomain_triv
-                             threadSet_valid_objs' threadSet_timeslice_invs)+
-       apply (wp threadGet_wp)
+            apply (wp add: threadGet_wp threadSet_cur threadSet_timeslice_invs
+                           rescheduleRequired_all_invs_but_ct_not_inQ
+                           hoare_vcg_imp_lift threadSet_ct_idle_or_in_cur_domain')+
+            apply (rule hoare_strengthen_post[OF tcbSchedAppend_all_invs_but_ct_not_inQ'])
+            apply (wpsimp simp: invs'_def valid_state'_def valid_pspace'_def sch_act_wf_weak)+
+           apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post)
+            apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_tcbDomain_triv
+                              threadSet_valid_objs' threadSet_timeslice_invs)+
+           apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+          apply (wpsimp simp: invs'_def valid_state'_def valid_pspace'_def sch_act_wf_weak)+
       apply (wp gts_wp')+
-  apply (clarsimp simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def)
+  apply (auto simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def cong: conj_cong)
   done
 
 lemma resetTimer_invs'[wp]:

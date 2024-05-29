@@ -213,7 +213,7 @@ lemma decodeDomainInvocation_ccorres:
    apply (drule_tac x="extraCaps ! 0" and P="\<lambda>v. valid_cap' (fst v) s" in bspec)
     apply (clarsimp simp: nth_mem interpret_excaps_test_null excaps_map_def)
    apply (clarsimp simp: valid_cap_simps' pred_tcb'_weakenE active_runnable')
-   apply (rule conjI)
+   apply (intro conjI; fastforce?)
     apply (fastforce simp: tcb_st_refs_of'_def elim:pred_tcb'_weakenE)
    apply (rule conjI)
     apply fastforce
@@ -1283,7 +1283,7 @@ lemma decodeCNodeInvocation_ccorres:
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_objs' invs_valid_pspace'
-                        ct_in_state'_def pred_tcb_at' invs_queues
+                        ct_in_state'_def pred_tcb_at'
                         cur_tcb'_def word_sle_def word_sless_def
                         unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
   apply (rule conjI)
@@ -1314,9 +1314,6 @@ lemma decodeCNodeInvocation_ccorres:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch valid_queues[wp]: insertNewCap "valid_queues"
-  (wp: crunch_wps)
 
 lemmas setCTE_def3 = setCTE_def2[THEN eq_reflection]
 
@@ -3229,7 +3226,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
                       and valid_idle'" in hoare_post_imp_R)
                    prefer 2
                    apply (clarsimp simp: invs_valid_objs' invs_mdb'
-                      invs_queues ct_in_state'_def pred_tcb_at')
+                                         ct_in_state'_def pred_tcb_at')
                    apply (subgoal_tac "ksCurThread s \<noteq> ksIdleThread sa")
                     prefer 2
                     apply clarsimp

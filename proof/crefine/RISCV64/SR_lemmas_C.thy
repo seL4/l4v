@@ -1555,9 +1555,9 @@ lemma cmap_relation_cong:
    apply (erule imageI)
    done
 
-lemma ctcb_relation_null_queue_ptrs:
+lemma ctcb_relation_null_ep_ptrs:
   assumes rel: "cmap_relation mp mp' tcb_ptr_to_ctcb_ptr ctcb_relation"
-  and same: "map_option tcb_null_queue_ptrs \<circ> mp'' = map_option tcb_null_queue_ptrs \<circ> mp'"
+  and same: "map_option tcb_null_ep_ptrs \<circ> mp'' = map_option tcb_null_ep_ptrs \<circ> mp'"
   shows "cmap_relation mp mp'' tcb_ptr_to_ctcb_ptr ctcb_relation"
   using rel
   apply (rule iffD1 [OF cmap_relation_cong, OF _ map_option_eq_dom_eq, rotated -1])
@@ -1565,7 +1565,7 @@ lemma ctcb_relation_null_queue_ptrs:
    apply (rule same [symmetric])
   apply (drule compD [OF same])
   apply (case_tac b, case_tac b')
-  apply (simp add: ctcb_relation_def tcb_null_queue_ptrs_def)
+  apply (simp add: ctcb_relation_def tcb_null_ep_ptrs_def)
   done
 
 lemma map_to_ctes_upd_tcb_no_ctes:
@@ -2226,6 +2226,14 @@ lemma capTCBPtr_eq:
   apply (simp add: cap_get_tag_isCap[symmetric])
   apply (drule(1) cap_get_tag_to_H)
   apply clarsimp
+  done
+
+lemma rf_sr_ctcb_queue_relation:
+  "\<lbrakk> (s, s') \<in> rf_sr; d \<le> maxDomain; p \<le> maxPriority \<rbrakk>
+  \<Longrightarrow> ctcb_queue_relation (ksReadyQueues s (d, p))
+                          (index (ksReadyQueues_' (globals s')) (cready_queues_index_to_C d p))"
+  unfolding rf_sr_def cstate_relation_def cready_queues_relation_def
+  apply (clarsimp simp: Let_def seL4_MinPrio_def minDom_def maxDom_to_H maxPrio_to_H)
   done
 
 lemma rf_sr_sched_action_relation:

@@ -2847,6 +2847,8 @@ lemma decodeRISCVMMUInvocation_ccorres:
     apply (rule conjI; clarsimp)+
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (intro conjI)
+            apply fastforce
+           apply fastforce
           apply fastforce
          apply (fastforce elim!: pred_tcb'_weakenE)
        apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def)

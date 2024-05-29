@@ -805,16 +805,9 @@ lemma ct_active_runnable' [simp]:
   "ct_active' s \<Longrightarrow> ct_in_state' runnable' s"
   by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
-lemma valid_irq_node_tcbSchedEnqueue[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s \<rbrace> tcbSchedEnqueue ptr
-  \<lbrace>\<lambda>rv s'. valid_irq_node' (irq_node' s') s'\<rbrace>"
-  apply (rule hoare_pre)
-  apply (simp add:valid_irq_node'_def )
-  apply (wp unless_wp hoare_vcg_all_lift | wps)+
-  apply (simp add:tcbSchedEnqueue_def)
-  apply (wp unless_wp| simp)+
-  apply (simp add:valid_irq_node'_def)
-  done
+crunches tcbSchedEnqueue
+  for valid_irq_node[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
+  (rule: valid_irq_node_lift)
 
 lemma tcbSchedEnqueue_valid_action:
   "\<lbrace>\<lambda>s. \<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s\<rbrace>
@@ -1555,7 +1548,6 @@ lemma handleRecv_isBlocking_corres':
                and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s))
               (invs' and ct_in_state' simple'
                      and sch_act_sane
-                     and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
                      and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s))
                     (handle_recv isBlocking canReply) (handleRecv isBlocking canReply)"
   (is "corres dc (?pre1) (?pre2) (handle_recv _ _) (handleRecv _ _)")
@@ -2281,7 +2273,6 @@ lemma handleHypervisorFault_corres:
   "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread
                    and (%_. valid_fault f))
              (invs' and sch_act_not thread
-                    and (\<lambda>s. \<forall>p. thread \<notin> set(ksReadyQueues s p))
                     and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
           (handle_hypervisor_fault w fault) (handleHypervisorFault w fault)"
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)

@@ -220,7 +220,7 @@ lemma pspace_relation_cte_wp_at:
    apply (clarsimp elim!: cte_wp_at_weakenE')
   apply clarsimp
   apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: other_obj_relation_def)
+  apply (clarsimp simp: tcb_relation_cut_def)
   apply (simp split: kernel_object.split_asm)
   apply (drule(2) aligned'_distinct'_ko_at'I[where 'a=tcb], simp)
    apply simp
@@ -1592,10 +1592,10 @@ lemma cte_map_pulls_tcb_to_abstract:
      \<Longrightarrow> \<exists>tcb'. kheap s x = Some (TCB tcb') \<and> tcb_relation tcb' tcb
                   \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> cte_level_bits))))"
   apply (rule pspace_dom_relatedE, assumption+)
-  apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
-  apply (clarsimp simp: other_obj_relation_def
+  apply (erule(1) obj_relation_cutsE;
+         clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        RISCV64_A.arch_kernel_obj.split_asm)
+                        RISCV64_A.arch_kernel_obj.split_asm if_split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -1611,8 +1611,7 @@ lemma pspace_relation_update_tcbs:
               del: dom_fun_upd)
   apply (erule conjE)
   apply (rule ballI, drule(1) bspec)
-  apply (rule conjI, simp add: other_obj_relation_def)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm)
+  apply (clarsimp simp: tcb_relation_cut_def split: Structures_A.kernel_object.split_asm)
   apply (drule bspec, fastforce)
   apply clarsimp
   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
@@ -1920,16 +1919,16 @@ lemma pspace_relation_cte_wp_atI':
    apply (simp split: if_split_asm)
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
+   apply (subgoal_tac "n = x - y", clarsimp)
+    apply (drule tcb_cases_related2, clarsimp)
+    apply (intro exI, rule conjI)
+     apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
+     apply fastforce
+    apply simp
+   apply clarsimp
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
                    RISCV64_A.arch_kernel_obj.split_asm)
-  apply (subgoal_tac "n = x - y", clarsimp)
-   apply (drule tcb_cases_related2, clarsimp)
-   apply (intro exI, rule conjI)
-    apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
-    apply fastforce
-   apply simp
-  apply clarsimp
   done
 
 lemma pspace_relation_cte_wp_atI:
@@ -2560,9 +2559,9 @@ lemma updateMDB_pspace_relation:
     apply (clarsimp simp: tcb_ctes_clear cte_level_bits_def objBits_defs)
    apply clarsimp
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all split: if_split_asm)[1]
-   apply (clarsimp split: Structures_A.kernel_object.split_asm
-                          RISCV64_A.arch_kernel_obj.split_asm
+   apply (rule obj_relation_cutsE, assumption+;
+          clarsimp split: Structures_A.kernel_object.split_asm
+                          RISCV64_A.arch_kernel_obj.split_asm if_split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))
@@ -3793,6 +3792,9 @@ lemma updateUntypedCap_descendants_of:
   apply simp
   apply (clarsimp simp:mdb_next_rel_def mdb_next_def split:if_splits)
   done
+
+crunches setCTE
+  for tcbQueued[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
 
 lemma setCTE_UntypedCap_corres:
   "\<lbrakk>cap_relation cap (cteCap cte); is_untyped_cap cap; idx' = idx\<rbrakk>
@@ -5166,7 +5168,6 @@ lemma cteInsert_corres:
             apply (thin_tac "ksMachineState t = p" for p t)+
             apply (thin_tac "ksCurThread t = p" for p t)+
             apply (thin_tac "ksIdleThread t = p" for p t)+
-            apply (thin_tac "ksReadyQueues t = p" for p t)+
             apply (thin_tac "ksSchedulerAction t = p" for p t)+
 
             apply (rule conjI)

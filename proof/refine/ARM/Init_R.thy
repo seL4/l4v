@@ -99,8 +99,8 @@ definition zeroed_intermediate_state ::
     ksDomSchedule = [],
     ksCurDomain = 0,
     ksDomainTime = 0,
-    ksReadyQueues = K [],
-    ksReleaseQueue = [],
+    ksReadyQueues = K (TcbQueue None None),
+    ksReleaseQueue = TcbQueue None None,
     ksReadyQueuesL1Bitmap = K 0,
     ksReadyQueuesL2Bitmap = K 0,
     ksCurThread = 0,
@@ -126,10 +126,22 @@ lemma non_empty_refine_state_relation:
   "(zeroed_abstract_state, zeroed_intermediate_state) \<in> state_relation"
   apply (clarsimp simp: state_relation_def zeroed_state_defs state.defs)
   apply (intro conjI)
+<<<<<<< HEAD
            apply (clarsimp simp: pspace_relation_def pspace_dom_def)
           apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
          apply (clarsimp simp: ready_queues_relation_def)
         apply (clarsimp simp: release_queue_relation_def)
+||||||| eb3db4bf3
+           apply (clarsimp simp: pspace_relation_def pspace_dom_def)
+          apply (clarsimp simp: ekheap_relation_def)
+         apply (clarsimp simp: ready_queues_relation_def)
+=======
+          apply (clarsimp simp: pspace_relation_def pspace_dom_def)
+         apply (clarsimp simp: ekheap_relation_def)
+        apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def queue_end_valid_def
+                              opt_pred_def list_queue_relation_def tcbQueueEmpty_def
+                              prev_queue_head_def)
+>>>>>>> verification/master
        apply (clarsimp simp: ghost_relation_def)
       apply (fastforce simp: cdt_relation_def swp_def dest: cte_wp_at_domI)
      apply (clarsimp simp: cdt_list_relation_def map_to_ctes_def)

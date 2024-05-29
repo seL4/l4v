@@ -48,9 +48,7 @@ lemma replyOnRestart_invs'[wp]:
   including no_pre
   apply (simp add: replyOnRestart_def)
   apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_weak_lift_imp)
-  apply (rule hoare_vcg_all_lift)
-  apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_vcg_all_lift rfk_ksQ)
-   apply (rule hoare_strengthen_post, rule gts_sp')
+  apply (rule hoare_strengthen_post, rule gts_sp')
   apply (clarsimp simp: pred_tcb_at')
   apply (auto elim!: pred_tcb'_weakenE st_tcb_ex_cap''
                dest: st_tcb_at_idle_thread')

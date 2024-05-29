@@ -258,7 +258,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
     apply (simp add: syscall_error_to_H_cases)
    apply simp
   apply (clarsimp simp: Collect_const_mem tcb_at_invs')
-  apply (clarsimp simp: invs_queues invs_valid_objs'
+  apply (clarsimp simp: invs_valid_objs'
                         ct_in_state'_def
                         ccap_rights_relation_def
                         mask_def[where n=4] ThreadState_defs)
@@ -274,7 +274,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
                     slotcap_in_mem_def valid_tcb_state'_def
              dest!: interpret_excaps_eq split: bool.splits)+
-     apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[4]
+     apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[6]
     apply (drule ctes_of_valid')
      apply fastforce
     apply (clarsimp simp add:valid_cap_simps' X64.maxIRQ_def)
@@ -863,9 +863,9 @@ from assms show ?thesis
               apply (rule hoare_weaken_pre[where P="?pre"])
                apply (rule isIRQActive_wp)
               apply (clarsimp simp: sysargs_rel_to_n unat_less_2p_word_bits
-                                    invs_valid_objs' tcb_at_invs' invs_queues valid_tcb_state'_def
+                                    invs_valid_objs' tcb_at_invs' valid_tcb_state'_def
                                     invs_sch_act_wf' ct_in_state'_def cte_wp_at_weakenE'
-                                    pred_tcb'_weakenE)
+                                    pred_tcb'_weakenE invs_pspace_aligned' invs_pspace_distinct')
               apply (subst pred_tcb'_weakenE, assumption, fastforce)+
               apply (rule conjI)
                apply (rule TrueI)
@@ -962,9 +962,9 @@ from assms show ?thesis
                           apply (rule hoare_weaken_pre[where P="?pre"])
                            apply wp
                           apply (clarsimp simp: invs_valid_objs' tcb_at_invs'
-                                                invs_queues valid_tcb_state'_def
+                                                valid_tcb_state'_def invs_pspace_aligned'
                                                 invs_sch_act_wf' ct_in_state'_def
-                                                cte_wp_at_weakenE')
+                                                cte_wp_at_weakenE' invs_pspace_distinct')
                           apply (subst pred_tcb'_weakenE, assumption, fastforce)+
                           apply (intro conjI impI)
                             apply (rule TrueI)+
@@ -995,7 +995,7 @@ from assms show ?thesis
      apply clarsimp
      apply (fastforce simp: guard_is_UNIV_def interpret_excaps_eq excaps_map_def
                       split: Product_Type.prod.split)
-    apply (auto simp: invs_queues invs_valid_objs' ct_in_state'_def irqIntOffset_def
+    apply (auto simp: invs_valid_objs' ct_in_state'_def irqIntOffset_def
                       ccap_rights_relation_def mask_def[where n=4]
                       ThreadState_defs rf_sr_ksCurThread cte_wp_at_ctes_of
                       sysargs_rel_def sysargs_rel_n_def

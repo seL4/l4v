@@ -1183,6 +1183,11 @@ global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma ksReadyQueues_update_gs[simp]:
+  "ksReadyQueues (update_gs tp us addrs s) = ksReadyQueues s"
+  by (simp add: update_gs_def
+         split: aobject_type.splits Structures_A.apiobject_type.splits)
+
 lemma update_gs_id:
   "tp \<in> no_gs_types \<Longrightarrow> update_gs tp us addrs = id"
   by (simp add: no_gs_types_def update_gs_def
@@ -1574,6 +1579,16 @@ lemma retype_state_relation:
                                                      (?ps' |> reply_of' |> replyPrev)"
     using retype_sc_replies_relation [OF _ pspr vs vs' pn pn' ko tysc cover orr num_r]
     by clarsimp
+
+  have rdyqrel: "ready_queues_relation s s'"
+    using sr by (simp add: state_relation_def)
+
+  thus "ready_queues_relation_2 (ready_queues s) (ksReadyQueues s')
+                                (?ps' |> tcb_of' |> tcbSchedNext) (?ps' |> tcb_of' |> tcbSchedPrev)
+                                (\<lambda>d p. inQ d p |< (?ps' |> tcb_of'))"
+    using retype_ready_queues_relation[OF _ vs' pn' ko cover num_r]
+    by (clarsimp simp: ready_queues_relation_def Let_def)
+
 qed
 
 lemma new_cap_addrs_fold':
@@ -2446,6 +2461,13 @@ lemma other_objs_default_relation:
                         arch_tcb_relation_def
                  split: Structures_A.apiobject_type.split_asm)
   done
+
+lemma tcb_relation_retype:
+  "obj_relation_retype (default_object Structures_A.TCBObject dev n) (KOTCB makeObject)"
+  by (clarsimp simp: default_object_def obj_relation_retype_def tcb_relation_def default_tcb_def
+                     makeObject_tcb makeObject_cte new_context_def newContext_def
+                     fault_rel_optionation_def initContext_def default_arch_tcb_def newArchTCB_def
+                     arch_tcb_relation_def objBits_simps' tcb_relation_cut_def)
 
 lemma captable_relation_retype:
   "n < word_bits \<Longrightarrow>
@@ -4015,16 +4037,6 @@ lemma sch_act_wf_lift_asm:
   apply auto
   done
 
-lemma valid_queues_lift_asm':
-  assumes tat: "\<And>d p t. \<lbrace>\<lambda>s. \<not> obj_at' (inQ d p) t s \<and> Q d p s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> obj_at' (inQ d p) t s\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  shows   "\<lbrace>\<lambda>s. valid_queues' s \<and> (\<forall>d p. Q d p s)\<rbrace> f \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  apply (simp only: valid_queues'_def imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-            tat prq)
-  apply simp
-  done
-
 lemma createObjects'_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> createObjects' p n v us \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
@@ -4493,90 +4505,152 @@ crunch irq_states' [wp]: createNewCaps valid_irq_states'
 crunch ksMachine[wp]: createObjects "\<lambda>s. P (ksMachineState s)"
   (simp: crunch_simps unless_def)
 
-lemma createNewCaps_valid_queues':
-  "\<lbrace>valid_queues' and pspace_no_overlap' ptr sz
-       and pspace_aligned' and pspace_distinct' and pspace_bounded'
-       and K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
-                \<longrightarrow> sc_size_bounds us)
-       and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
-     createNewCaps ty ptr n us d
-   \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (wp valid_queues_lift_asm' [OF createNewCaps_obj_at2])
-  apply (clarsimp simp: projectKOs)
-  apply (simp add: makeObjectKO_def
-            split: object_type.split_asm
-                   apiobject_type.split_asm)
-  apply (clarsimp simp: inQ_def)
-  apply (auto simp: makeObject_tcb
-             split: object_type.splits apiobject_type.splits)
+lemma createObjects_valid_bitmaps:
+  "createObjects' ptr n val gbits \<lbrace>valid_bitmaps\<rbrace>"
+  apply (clarsimp simp: createObjects'_def alignError_def split_def)
+  apply (wp case_option_wp[where P="\<lambda>_. P" and P'=P for P, simplified] assert_inv
+         | clarsimp simp del: fun_upd_apply)+
+  apply (clarsimp simp: valid_bitmaps_def valid_bitmapQ_def bitmapQ_def bitmapQ_no_L2_orphans_def
+                        bitmapQ_no_L1_orphans_def)
   done
 
-lemma createNewCaps_valid_queues:
-  "\<lbrace>valid_queues and pspace_no_overlap' ptr sz
-       and pspace_aligned' and pspace_distinct' and pspace_bounded'
-       and K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
-                \<longrightarrow> sc_size_bounds us)
-       and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
-     createNewCaps ty ptr n us d
-   \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (wpsimp wp: valid_queues_lift_asm createNewCaps_obj_at2[where sz=sz])
-       apply (clarsimp simp: projectKO_opts_defs)
-       apply (simp add: inQ_def)
-      apply (wpsimp wp: createNewCaps_pred_tcb_at'[where sz=sz])+
+lemma valid_bitmaps_gsCNodes_update[simp]:
+  "valid_bitmaps (gsCNodes_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
+
+lemma valid_bitmaps_gsUserPages_update[simp]:
+  "valid_bitmaps (gsUserPages_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
+
+crunches curDomain, copyGlobalMappings
+  for valid_bitmaps[wp]: valid_bitmaps
+  and sched_pointers[wp]: "\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  (wp: crunch_wps valid_bitmaps_lift)
+
+lemma createNewCaps_valid_bitmaps:
+  "\<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> valid_bitmaps s\<rbrace>
+   createNewCaps ty ptr n us dev
+   \<lbrace>\<lambda>_. valid_bitmaps\<rbrace>"
+  unfolding createNewCaps_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
+             split del: if_split)
+  apply (cases ty; simp add: createNewCaps_def Arch_createNewCaps_def
+                        split del: if_split)
+        apply (rename_tac apiobject_type)
+        apply (case_tac apiobject_type; simp split del: if_split)
+            apply (rule hoare_pre, wp, simp)
+           apply (wpsimp wp: createObjects_valid_bitmaps)
+           by (wpsimp wp: createObjects_valid_bitmaps[simplified o_def] mapM_x_wp
+               | simp add: makeObject_tcb objBits_def createObjects_def
+               | intro conjI impI)+
+
+lemma createObjects_sched_queues:
+  "\<lbrace>\<lambda>s. n \<noteq> 0
+        \<and> range_cover ptr sz (objBitsKO val + gbits) n
+        \<and> P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> (case val of KOTCB tcb \<Rightarrow> tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None
+                     | _ \<Rightarrow> True)
+        \<and> pspace_aligned' s \<and> pspace_distinct' s
+        \<and> pspace_no_overlap' ptr sz s\<rbrace>
+   createObjects' ptr n val gbits
+   \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  (is "\<lbrace> \<lambda>s. _ \<and> _ \<and> ?Pre s \<rbrace> _ \<lbrace>\<lambda>_. _\<rbrace>")
+proof (rule hoare_grab_asm)+
+  assume not_0: "\<not> n = 0"
+    and cover: "range_cover ptr sz ((objBitsKO val) + gbits) n"
+  then show
+    "\<lbrace>\<lambda>s. ?Pre s\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  proof -
+    have shiftr_not_zero:" 1 \<le> ((of_nat n)::machine_word) << gbits"
+      using range_cover_not_zero_shift[OF not_0 cover,where gbits = gbits]
+      by (simp add:word_le_sub1)
+    show ?thesis
+      apply (clarsimp simp: createObjects'_def unless_def alignError_def split_def)
+      apply (wp | clarsimp simp del: fun_upd_apply)+
+      apply (clarsimp simp: shiftL_nat data_map_insert_def[symmetric]
+                            new_cap_addrs_fold'[OF shiftr_not_zero]
+                  simp del: data_map_insert_def)
+      using range_cover.unat_of_nat_n_shift[OF cover, where gbits=gbits, simplified]
+      apply (clarsimp simp: foldr_upd_app_if)
+      apply (rule_tac a="tcbSchedNexts_of s" and b="tcbSchedPrevs_of s"
+                   in rsubst2[rotated, OF sym sym, where P=P])
+        apply (rule ext)
+        apply (clarsimp simp: opt_map_def)
+        apply (frule (3) retype_ksPSpace_None[simplified mult.commute])
+          apply (fastforce intro: cover)
+         apply fastforce
+        apply (clarsimp simp: projectKOs split: kernel_object.splits option.splits)
+       apply (rule ext)
+       apply (clarsimp simp: opt_map_def)
+       apply (frule (3) retype_ksPSpace_None[simplified mult.commute])
+         apply (fastforce intro: cover)
+        apply fastforce
+       apply (clarsimp simp: projectKOs split: kernel_object.splits option.splits)
+      apply simp
+      done
+  qed
+qed
+
+crunches doMachineOp
+  for sched_projs[wp]: "\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
+
+lemma createNewCaps_sched_queues:
+  assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
+  assumes not_0: "n \<noteq> 0"
+  shows
+    "\<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s
+          \<and> P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>
+     createNewCaps ty ptr n us dev
+     \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  unfolding createNewCaps_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
+             split del: if_split)
+  apply (cases ty; simp add: createNewCaps_def Arch_createNewCaps_def
+                        split del: if_split)
+        apply (rename_tac apiobject_type)
+        apply (case_tac apiobject_type; simp split del: if_split)
+            apply (rule hoare_pre, wp, simp)
+           apply (insert cover not_0)
+           apply (wpsimp wp: mapM_x_wp' createObjects_sched_queues
+                       simp: curDomain_def)
+           by (wpsimp wp: mapM_x_wp' createObjects_sched_queues[simplified o_def]
+                          threadSet_sched_pointers
+               | simp add: objBitsKO_def APIType_capBits_def valid_pspace'_def makeObject_tcb
+                           objBits_def pageBits_def archObjSize_def createObjects_def
+                           pt_bits_def ptBits_def pteBits_def pdBits_def pdeBits_def word_size_bits_def
+               | intro conjI impI)+
+
+lemma createObjects_valid_sched_pointers:
+  "\<lbrace>\<lambda>s. valid_sched_pointers s
+        \<and> (case val of KOTCB tcb \<Rightarrow> tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None
+                     | _ \<Rightarrow> True)\<rbrace>
+   createObjects' ptr n val gbits
+   \<lbrace>\<lambda>_. valid_sched_pointers\<rbrace>"
+  apply (clarsimp simp: createObjects'_def unless_def alignError_def split_def)
+  apply (wp case_option_wp[where P="\<lambda>_. P" and P'=P for P, simplified] assert_inv
+         | clarsimp simp del: fun_upd_apply)+
+  apply (clarsimp simp: valid_sched_pointers_def foldr_upd_app_if opt_pred_def opt_map_def comp_def)
+  apply (cases "tcb_of' val"; clarsimp simp: projectKOs)
   done
 
-lemma valid_release_queue_lift_asm':
-  assumes tat: "\<And>t. \<lbrace>\<lambda>s. \<not> obj_at' tcbInReleaseQueue t s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> obj_at' tcbInReleaseQueue t s\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReleaseQueue s)\<rbrace>"
-  shows   "\<lbrace>\<lambda>s. valid_release_queue' s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
-  apply (simp only: valid_release_queue'_def imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-            tat prq)
-  apply simp
-  done
-
-lemma valid_release_queue_lift_asm:
-  assumes tat: "\<And>tcb. \<lbrace>obj_at' tcbInReleaseQueue tcb and Q \<rbrace> f \<lbrace>\<lambda>_. obj_at' tcbInReleaseQueue tcb\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReleaseQueue s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReleaseQueue s)\<rbrace>"
-  shows   "\<lbrace>Invariants_H.valid_release_queue and Q\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_release_queue\<rbrace>"
-  apply (simp only: valid_release_queue_def imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-            tat prq)
-  apply simp
-  done
-
-lemma createNewCaps_valid_release_queue':
-  "\<lbrace>valid_release_queue' and pspace_no_overlap' ptr sz
-       and pspace_aligned' and pspace_distinct' and pspace_bounded'
-       and K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
-                \<longrightarrow> sc_size_bounds us)
-       and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
-     createNewCaps ty ptr n us d
-   \<lbrace>\<lambda>rv. valid_release_queue'\<rbrace>"
-  apply (wp valid_release_queue_lift_asm' [OF createNewCaps_obj_at2])
-  apply (clarsimp simp: projectKOs)
-  apply (simp add: makeObjectKO_def
-            split: object_type.split_asm
-                   apiobject_type.split_asm)
-  apply (auto simp: makeObject_tcb
-             split: object_type.splits apiobject_type.splits)
-  done
-
-lemma createNewCaps_valid_release_queue:
-  "\<lbrace>valid_release_queue and pspace_no_overlap' ptr sz
-       and pspace_aligned' and pspace_distinct' and pspace_bounded'
-       and K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
-                \<longrightarrow> sc_size_bounds us)
-       and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
-     createNewCaps ty ptr n us d
-   \<lbrace>\<lambda>rv. valid_release_queue\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (wp valid_release_queue_lift_asm createNewCaps_obj_at2[where sz=sz])
-       apply (clarsimp simp: projectKO_opts_defs)
-       apply (simp add: inQ_def)
-      apply (wp createNewCaps_pred_tcb_at'[where sz=sz] | simp)+
-  done
+lemma createNewCaps_valid_sched_pointers:
+  "\<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> valid_sched_pointers s\<rbrace>
+   createNewCaps ty ptr n us dev
+   \<lbrace>\<lambda>_. valid_sched_pointers\<rbrace>"
+  unfolding createNewCaps_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
+             split del: if_split)
+  apply (cases ty; simp add: createNewCaps_def Arch_createNewCaps_def
+                        split del: if_split)
+        apply (rename_tac apiobject_type)
+        apply (case_tac apiobject_type; simp split del: if_split)
+            apply (rule hoare_pre, wp, simp)
+           apply (wpsimp wp: createObjects_valid_sched_pointers)
+           by (wpsimp wp: createObjects_valid_sched_pointers[simplified o_def] mapM_x_wp
+                          threadSet_valid_sched_pointers
+               | simp add: makeObject_tcb objBits_def createObjects_def
+               | intro conjI impI)+
 
 lemma mapM_x_threadSet_valid_pspace:
   "\<lbrace>valid_pspace' and K (curdom \<le> maxDomain)\<rbrace>
@@ -4990,14 +5064,13 @@ proof (rule hoare_gen_asm, erule conjE)
                createNewCaps_valid_arch_state
                valid_irq_node_lift_asm [unfolded pred_conj_def, OF _ createNewCaps_obj_at']
                createNewCaps_irq_handlers' createNewCaps_vms
-               createNewCaps_valid_queues
-               createNewCaps_valid_queues'
-               createNewCaps_valid_release_queue
-               createNewCaps_valid_release_queue'
-               createNewCaps_pred_tcb_at'
+               createNewCaps_pred_tcb_at' cnc_ct_not_inQ
                createNewCaps_ct_idle_or_in_cur_domain'
                createNewCaps_sch_act_wf
                createNewCaps_urz[where sz=sz]
+               createNewCaps_sched_queues[OF cover not_0]
+               createNewCaps_valid_sched_pointers
+               createNewCaps_valid_bitmaps
            | simp)+
   using not_0
   apply (clarsimp simp: valid_pspace'_def)
@@ -5042,59 +5115,6 @@ lemma createObjects_sch:
   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (wp sch_act_wf_lift_asm createObjects_pred_tcb_at' createObjects_orig_obj_at3 | force)+
-  done
-
-lemma createObjects_queues:
-  "\<lbrace>\<lambda>s. valid_queues s \<and>  pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and>
-        pspace_no_overlap' ptr sz s \<and> range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0\<rbrace>
-  createObjects ptr n val gbits
-  \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
-  apply (wpsimp wp: valid_queues_lift_asm [unfolded pred_conj_def, OF createObjects_orig_obj_at3]
-                    createObjects_pred_tcb_at' [unfolded pred_conj_def])
-  apply fastforce
-  done
-
-lemma createObjects_queues':
-  assumes no_tcb: "\<And>t. projectKO_opt val \<noteq> Some (t::tcb)"
-  shows
-  "\<lbrace>\<lambda>s. valid_queues' s \<and>  pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and>
-        pspace_no_overlap' ptr sz s \<and> range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0\<rbrace>
-  createObjects ptr n val gbits
-  \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp add: createObjects_def)
-  apply (wp valid_queues_lift_asm')
-    apply (wp createObjects_orig_obj_at2')
-    apply clarsimp
-    apply assumption
-   apply wp
-  apply (clarsimp simp: no_tcb split: option.splits)
-  apply fastforce
-  done
-
-lemma createObjects_release_queue:
-  "\<lbrace>\<lambda>s. valid_release_queue s \<and>  pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and>
-        pspace_no_overlap' ptr sz s \<and> range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0\<rbrace>
-  createObjects ptr n val gbits
-  \<lbrace>\<lambda>rv. valid_release_queue\<rbrace>"
-  by (wp valid_release_queue_lift_asm [unfolded pred_conj_def, OF createObjects_orig_obj_at3]
-            createObjects_pred_tcb_at' [unfolded pred_conj_def])
-     fastforce
-
-lemma createObjects_release_queue':
-  assumes no_tcb: "\<And>t. projectKO_opt val \<noteq> Some (t::tcb)"
-  shows
-  "\<lbrace>\<lambda>s. valid_release_queue' s \<and>  pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and>
-        pspace_no_overlap' ptr sz s \<and> range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0\<rbrace>
-  createObjects ptr n val gbits
-  \<lbrace>\<lambda>rv. valid_release_queue'\<rbrace>"
-  apply (simp add: createObjects_def)
-  apply (wp valid_release_queue_lift_asm')
-    apply (wp createObjects_orig_obj_at2')
-    apply clarsimp
-    apply assumption
-   apply wp
-  apply (clarsimp simp: no_tcb split: option.splits)
-  apply fastforce
   done
 
 lemma createObjects_no_cte_ifunsafe':

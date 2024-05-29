@@ -86,7 +86,7 @@ sorry (* FIXME RT: handleInterruptEntry_ccorres
          apply (rule allI, rule conseqPre, vcg)
          apply (clarsimp simp: return_def)
         apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
       apply vcg
      apply vcg
     apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
@@ -129,14 +129,12 @@ sorry (* FIXME RT: handleUnknownSyscall_ccorres
          apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
-              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
     apply (clarsimp, vcg)
    apply (clarsimp, rule conseqPre, vcg, clarsimp)
   apply clarsimp
   apply (intro impI conjI allI)
-      apply fastforce
-     apply (clarsimp simp: ct_not_ksQ)
-    apply (clarsimp simp add: sch_act_simple_def split: scheduler_action.split)
+    apply fastforce
    apply (rule active_ex_cap')
     apply (erule active_from_running')
    apply (erule invs_iflive')
@@ -187,13 +185,13 @@ sorry (* FIXME RT: handleVMFaultEvent_ccorres
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
       apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
      apply (case_tac x, clarsimp, wp)
      apply (clarsimp, wp, simp)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: simple_sane_strg[unfolded sch_act_sane_not])
-  apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
+  apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
   done *)
@@ -220,16 +218,14 @@ sorry (* FIXME RT: handleUserLevelFault_ccorres
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
-              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
     apply (clarsimp, vcg)
    apply (clarsimp, rule conseqPre, vcg, clarsimp)
   apply clarsimp
   apply (intro impI conjI allI)
-      apply (simp add: ct_in_state'_def)
-      apply (erule pred_tcb'_weakenE)
-      apply simp
-     apply (clarsimp simp: ct_not_ksQ)
-    apply (clarsimp simp add: sch_act_simple_def split: scheduler_action.split)
+    apply (simp add: ct_in_state'_def)
+    apply (erule pred_tcb'_weakenE)
+    apply simp
    apply (rule active_ex_cap')
     apply (erule active_from_running')
    apply (erule invs_iflive')
@@ -403,11 +399,10 @@ sorry (* FIXME RT: handleSyscall_ccorres
           apply wp[1]
          apply clarsimp
          apply wp
-         apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s \<and>
-                            (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))"
+         apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s"
                               in hoare_post_imp)
           apply (simp add: ct_in_state'_def)
-         apply (wp handleReply_sane handleReply_ct_not_ksQ)
+         apply (wp handleReply_sane)
         \<comment> \<open>SysYield\<close>
         apply (clarsimp simp: syscall_from_H_def syscall_defs)
         apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
@@ -433,11 +428,11 @@ sorry (* FIXME RT: handleSyscall_ccorres
        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
-      apply (wp schedule_invs' schedule_sch_act_wf | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+      apply (wp schedule_invs' schedule_sch_act_wf
+             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
      apply (simp
           | wpc
           | wp hoare_drop_imp handleReply_sane handleReply_nonz_cap_to_ct schedule_invs'
-               handleReply_ct_not_ksQ[simplified]
           | strengthen ct_active_not_idle'_strengthen invs_valid_objs_strengthen)+
       apply (rule_tac  Q="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
       apply (wp hy_invs')
@@ -455,7 +450,7 @@ sorry (* FIXME RT: handleSyscall_ccorres
   apply (frule active_ex_cap')
    apply (clarsimp simp: invs'_def valid_state'_def)
   apply (clarsimp simp: simple_sane_strg ct_in_state'_def st_tcb_at'_def obj_at'_def
-                        isReply_def ct_not_ksQ irqInvalid_def Kernel_C.irqInvalid_def)
+                        isReply_def irqInvalid_def Kernel_C.irqInvalid_def)
   apply (auto simp: syscall_from_H_def Kernel_C.SysSend_def
               split: option.split_asm)
   done *)
@@ -541,7 +536,7 @@ sorry (* FIXME RT: handleHypervisorEvent_ccorres
          apply simp
         apply assumption
        apply (wp schedule_sch_act_wf schedule_invs'
-              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
     apply clarsimp+
   done *)
 
@@ -687,7 +682,7 @@ lemma threadSet_all_invs_triv':
     apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
               thread_set_ct_in_state
-           | simp add: tcb_cap_cases_def tcb_arch_ref_def
+           | simp add: tcb_cap_cases_def tcb_arch_ref_def exst_same_def
            | rule threadSet_ct_in_state'
            | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
@@ -1022,6 +1017,9 @@ lemma refinement2_both:
         subgoal by (clarsimp simp: valid_sched_def)
        apply fastforce+
     apply (clarsimp simp: rf_sr_def)
+    apply (clarsimp simp: lift_state_relation_def full_invs_def)
+    apply (rule ksReadyQueues_asrt_cross)
+    apply (erule state_relation_ready_queues_relation)
    apply (simp add:absKState_def observable_memory_def absExst_def)
    apply (rule MachineTypes.machine_state.equality,simp_all)[1]
    apply (rule ext)

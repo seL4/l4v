@@ -68,8 +68,7 @@ lemma put_tcb_state_regs_twice[simp]:
   "put_tcb_state_regs tsr (put_tcb_state_regs tsr' tcb)
     = put_tcb_state_regs tsr tcb"
   apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                   atcbContextSet_def
-                   makeObject_tcb newArchTCB_def newContext_def initContext_def
+                   makeObject_tcb newArchTCB_def
             split: tcb_state_regs.split option.split
                    Structures_H.kernel_object.split)
   apply (intro all_tcbI)
@@ -1178,9 +1177,11 @@ lemma thread_actions_isolatableD:
 lemma tcbSchedDequeue_rewrite:
   "monadic_rewrite True True (obj_at' (Not \<circ> tcbQueued) t) (tcbSchedDequeue t) (return ())"
   apply (simp add: tcbSchedDequeue_def)
-   apply (wp_pre, monadic_rewrite_symb_exec_l_known False, simp)
-    apply (rule monadic_rewrite_refl)
-   apply (wpsimp wp: threadGet_const)+
+  apply wp_pre
+  apply monadic_rewrite_symb_exec_l
+    apply (monadic_rewrite_symb_exec_l_known False, simp)
+     apply (rule monadic_rewrite_refl)
+    apply (wpsimp wp: threadGet_const)+
   done
 
 lemma threadGet_isolatable:

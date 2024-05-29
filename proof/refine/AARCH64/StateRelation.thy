@@ -184,13 +184,20 @@ definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Ri
    \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'
    \<and> tcb_mcpriority tcb = tcbMCP tcb'"
 
+\<comment> \<open>
+  A pair of objects @{term "(obj, obj')"} should satisfy the following relation when, under further
+  mild assumptions, a @{term corres_underlying} lemma for @{term "set_object obj"}
+  and @{term "setObject obj'"} can be stated: see setObject_other_corres in KHeap_R.
+
+  TCBs do not satisfy this relation because the tcbSchedPrev and tcbSchedNext fields of a TCB are
+  used to model the ready queues, and so an update to such a field would correspond to an update
+  to a ready queue (see ready_queues_relation below).\<close>
 definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
 where
   "other_obj_relation obj obj' \<equiv>
    (case (obj, obj') of
-      (TCB tcb, KOTCB tcb') \<Rightarrow> tcb_relation tcb tcb'
-    | (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
+      (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
     | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
     | (ArchObj (AARCH64_A.ASIDPool ap), KOArch (KOASIDPool ap')) \<Rightarrow> asid_pool_relation ap ap'
     | (ArchObj (AARCH64_A.VCPU vcpu), KOArch (KOVCPU vcpu')) \<Rightarrow> vcpu_relation vcpu vcpu'
@@ -221,22 +228,28 @@ primrec aobj_relation_cuts :: "AARCH64_A.arch_kernel_obj \<Rightarrow> machine_w
 | "aobj_relation_cuts (AARCH64_A.VCPU v) x =
      {(x, other_obj_relation)}"
 
+definition tcb_relation_cut :: "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
+  "tcb_relation_cut obj obj' \<equiv>
+   case (obj, obj') of
+       (TCB t, KOTCB t') \<Rightarrow> tcb_relation t t'
+     | _ \<Rightarrow> False"
+
 primrec obj_relation_cuts :: "Structures_A.kernel_object \<Rightarrow> machine_word \<Rightarrow> obj_relation_cuts" where
   "obj_relation_cuts (CNode sz cs) x =
      (if well_formed_cnode_n sz cs
       then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
       else {(x, \<bottom>\<bottom>)})"
-| "obj_relation_cuts (TCB tcb) x = {(x, other_obj_relation)}"
+| "obj_relation_cuts (TCB tcb) x = {(x, tcb_relation_cut)}"
 | "obj_relation_cuts (Endpoint ep) x = {(x, other_obj_relation)}"
 | "obj_relation_cuts (Notification ntfn) x = {(x, other_obj_relation)}"
 | "obj_relation_cuts (ArchObj ao) x = aobj_relation_cuts ao x"
-
 
 lemma obj_relation_cuts_def2:
   "obj_relation_cuts ko x =
    (case ko of CNode sz cs \<Rightarrow> if well_formed_cnode_n sz cs
                               then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
                               else {(x, \<bottom>\<bottom>)}
+             | TCB tcb \<Rightarrow> {(x, tcb_relation_cut)}
              | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) `
                                          {0..mask (ptTranslationBits (pt_type pt))}
              | ArchObj (DataPage dev sz) \<Rightarrow>
@@ -250,6 +263,7 @@ lemma obj_relation_cuts_def3:
   "obj_relation_cuts ko x =
    (case a_type ko of
       ACapTable n \<Rightarrow> {(cte_map (x, y), cte_relation y) | y. length y = n}
+    | ATCB \<Rightarrow> {(x, tcb_relation_cut)}
     | AArch (APageTable pt_t) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) `
                                       {0..mask (ptTranslationBits pt_t)}
     | AArch (AUserData sz) \<Rightarrow> {(x + (n << pageBits), \<lambda>_ obj. obj = KOUserData)
@@ -265,6 +279,7 @@ definition is_other_obj_relation_type :: "a_type \<Rightarrow> bool" where
  "is_other_obj_relation_type tp \<equiv>
     case tp of
       ACapTable n \<Rightarrow> False
+    | ATCB \<Rightarrow> False
     | AArch (APageTable _) \<Rightarrow> False
     | AArch (AUserData _) \<Rightarrow> False
     | AArch (ADeviceData _) \<Rightarrow> False
@@ -278,6 +293,10 @@ lemma is_other_obj_relation_type_CapTable:
 lemma is_other_obj_relation_type_PageTable:
   "\<not> is_other_obj_relation_type (AArch (APageTable pt_t))"
   unfolding is_other_obj_relation_type_def by simp
+
+lemma is_other_obj_relation_type_TCB:
+  "\<not> is_other_obj_relation_type ATCB"
+  by (simp add: is_other_obj_relation_type_def)
 
 lemma is_other_obj_relation_type_UserData:
   "\<not> is_other_obj_relation_type (AArch (AUserData sz))"
@@ -318,10 +337,55 @@ primrec sched_act_relation :: "Deterministic_A.scheduler_action \<Rightarrow> sc
   "sched_act_relation choose_new_thread a' = (a' = ChooseNewThread)" |
   "sched_act_relation (switch_thread x) a' = (a' = SwitchToThread x)"
 
-definition ready_queues_relation ::
-  "(Deterministic_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Deterministic_A.ready_queue) \<Rightarrow>
-   (domain \<times> priority \<Rightarrow> KernelStateData_H.ready_queue) \<Rightarrow> bool" where
-  "ready_queues_relation qs qs' \<equiv> \<forall>d p. (qs d p = qs' (d, p))"
+definition queue_end_valid :: "obj_ref list \<Rightarrow> tcb_queue \<Rightarrow> bool" where
+  "queue_end_valid ts q \<equiv>
+     (ts = [] \<longrightarrow> tcbQueueEnd q = None) \<and> (ts \<noteq> [] \<longrightarrow> tcbQueueEnd q = Some (last ts))"
+
+definition prev_queue_head :: "tcb_queue \<Rightarrow> (obj_ref \<rightharpoonup> 'a) \<Rightarrow> bool" where
+  "prev_queue_head q prevs \<equiv> \<forall>head. tcbQueueHead q = Some head \<longrightarrow> prevs head = None"
+
+lemma prev_queue_head_heap_upd:
+  "\<lbrakk>prev_queue_head q prevs; Some r \<noteq> tcbQueueHead q\<rbrakk> \<Longrightarrow> prev_queue_head q (prevs(r := x))"
+  by (clarsimp simp: prev_queue_head_def)
+
+definition list_queue_relation ::
+  "obj_ref list \<Rightarrow> tcb_queue \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool"
+  where
+  "list_queue_relation ts q nexts prevs \<equiv>
+     heap_ls nexts (tcbQueueHead q) ts \<and> queue_end_valid ts q \<and> prev_queue_head q prevs"
+
+lemma list_queue_relation_nil:
+  "list_queue_relation ts q nexts prevs \<Longrightarrow> ts = [] \<longleftrightarrow> tcbQueueEmpty q"
+  by (fastforce dest: heap_path_head simp: tcbQueueEmpty_def list_queue_relation_def)
+
+definition ready_queue_relation ::
+  "Deterministic_A.domain \<Rightarrow> Structures_A.priority
+   \<Rightarrow> Deterministic_A.ready_queue \<Rightarrow> ready_queue
+   \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
+   \<Rightarrow> (obj_ref \<Rightarrow> bool) \<Rightarrow> bool"
+  where
+  "ready_queue_relation d p q q' nexts prevs flag \<equiv>
+     list_queue_relation q q' nexts prevs
+     \<and> (\<forall>t. flag t \<longleftrightarrow> t \<in> set q)
+     \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> tcbQueueEmpty q')"
+
+definition ready_queues_relation_2 ::
+  "(Deterministic_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Deterministic_A.ready_queue)
+   \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue)
+   \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
+   \<Rightarrow> (domain \<Rightarrow> priority \<Rightarrow> obj_ref \<Rightarrow> bool) \<Rightarrow> bool"
+  where
+  "ready_queues_relation_2 qs qs' nexts prevs inQs \<equiv>
+     \<forall>d p. let q = qs d p; q' = qs' (d, p); flag = inQs d p in
+           ready_queue_relation d p q q' nexts prevs flag"
+
+abbreviation ready_queues_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "ready_queues_relation s s' \<equiv>
+     ready_queues_relation_2
+      (ready_queues s) (ksReadyQueues s') (tcbSchedNexts_of s') (tcbSchedPrevs_of s')
+      (\<lambda>d p. inQ d p |< tcbs_of' s')"
+
+lemmas ready_queues_relation_def = ready_queues_relation_2_def
 
 definition ghost_relation ::
   "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> (machine_word \<rightharpoonup> pt_type) \<Rightarrow> bool" where
@@ -381,6 +445,8 @@ lemma obj_relation_cutsE:
      \<And>sz cs z cap cte. \<lbrakk> ko = CNode sz cs; well_formed_cnode_n sz cs; y = cte_map (x, z);
                          ko' = KOCTE cte; cs z = Some cap; cap_relation cap (cteCap cte) \<rbrakk>
               \<Longrightarrow> R;
+     \<And>tcb tcb'. \<lbrakk> y = x; ko = TCB tcb; ko' = KOTCB tcb'; tcb_relation tcb tcb' \<rbrakk>
+               \<Longrightarrow> R;
      \<And>pt z pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (z << pteBits);
                    z \<le> mask (ptTranslationBits (pt_type pt)); ko' = KOArch (KOPTE pte');
                    pte_relation' (pt_apply pt z) pte' \<rbrakk>
@@ -391,8 +457,9 @@ lemma obj_relation_cutsE:
             \<lbrakk> y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
     \<rbrakk> \<Longrightarrow> R"
   by (force simp: obj_relation_cuts_def2 is_other_obj_relation_type_def a_type_def
-                  cte_relation_def pte_relation_def
-            split: Structures_A.kernel_object.splits if_splits AARCH64_A.arch_kernel_obj.splits)
+                  cte_relation_def pte_relation_def tcb_relation_cut_def
+            split: Structures_A.kernel_object.splits kernel_object.splits if_splits
+                   AARCH64_A.arch_kernel_obj.splits)
 
 lemma eq_trans_helper:
   "\<lbrakk> x = y; P y = Q \<rbrakk> \<Longrightarrow> P x = Q"
@@ -460,7 +527,7 @@ definition state_relation :: "(det_state \<times> kernel_state) set" where
          pspace_relation (kheap s) (ksPSpace s')
        \<and> ekheap_relation (ekheap s) (ksPSpace s')
        \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
-       \<and> ready_queues_relation (ready_queues s) (ksReadyQueues s')
+       \<and> ready_queues_relation s s'
        \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))
        \<and> cdt_relation (swp cte_at s) (cdt s) (ctes_of s')
        \<and> cdt_list_relation (cdt_list s) (cdt s) (ctes_of s')
@@ -482,6 +549,10 @@ lemma curthread_relation:
   "(a, b) \<in> state_relation \<Longrightarrow> ksCurThread b = cur_thread a"
   by (simp add: state_relation_def)
 
+lemma curdomain_relation[elim!]:
+  "(s, s') \<in> state_relation \<Longrightarrow> cur_domain s = ksCurDomain s'"
+  by (clarsimp simp: state_relation_def)
+
 lemma state_relation_pspace_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> pspace_relation (kheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
@@ -490,12 +561,24 @@ lemma state_relation_ekheap_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> ekheap_relation (ekheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
 
+lemma state_relation_sched_act_relation[elim!]:
+  "(s,s') \<in> state_relation \<Longrightarrow> sched_act_relation (scheduler_action s) (ksSchedulerAction s')"
+  by (clarsimp simp: state_relation_def)
+
+lemma state_relation_ready_queues_relation[elim!]:
+  "(s, s') \<in> state_relation \<Longrightarrow> ready_queues_relation s s'"
+  by (simp add: state_relation_def)
+
+lemma state_relation_idle_thread[elim!]:
+  "(s, s') \<in> state_relation \<Longrightarrow> idle_thread s = ksIdleThread s'"
+  by (clarsimp simp: state_relation_def)
+
 lemma state_relationD:
   "(s, s') \<in> state_relation \<Longrightarrow>
    pspace_relation (kheap s) (ksPSpace s') \<and>
    ekheap_relation (ekheap s) (ksPSpace s') \<and>
    sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
-   ready_queues_relation (ready_queues s) (ksReadyQueues s') \<and>
+   ready_queues_relation s s' \<and>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s')) \<and>
    cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
    cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
@@ -517,7 +600,7 @@ lemma state_relationE [elim?]:
   and rl: "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
              ekheap_relation (ekheap s) (ksPSpace s');
              sched_act_relation (scheduler_action s) (ksSchedulerAction s');
-             ready_queues_relation (ready_queues s) (ksReadyQueues s');
+             ready_queues_relation s s';
              ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'));
              cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
              revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');

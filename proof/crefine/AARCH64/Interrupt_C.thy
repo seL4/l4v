@@ -259,7 +259,7 @@ supply [[goals_limit=20]]
     apply (simp add: syscall_error_to_H_cases)
    apply simp
   apply (clarsimp simp: Collect_const_mem tcb_at_invs')
-  apply (clarsimp simp: invs_queues invs_valid_objs'
+  apply (clarsimp simp: invs_valid_objs'
                         ct_in_state'_def
                         ccap_rights_relation_def
                         mask_def[where n=4] ThreadState_defs)
@@ -275,7 +275,7 @@ supply [[goals_limit=20]]
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
                     slotcap_in_mem_def valid_tcb_state'_def
              dest!: interpret_excaps_eq split: bool.splits)+
-     apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[4]
+     apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[6]
     apply (drule ctes_of_valid')
      apply fastforce
     apply (clarsimp simp add:valid_cap_simps' AARCH64.maxIRQ_def)

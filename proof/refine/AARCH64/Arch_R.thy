@@ -275,9 +275,9 @@ lemma performASIDControlInvocation_corres:
        apply (fold_subgoals (prefix))[2]
      subgoal premises prems using prems by (clarsimp simp:invs_def valid_state_def)+
       apply (clarsimp simp: schact_is_rct_def)
-     apply (clarsimp simp:cte_wp_at_caps_of_state)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (drule detype_locale.non_null_present)
-     apply (fastforce simp:cte_wp_at_caps_of_state)
+     apply (fastforce simp: cte_wp_at_caps_of_state)
     apply simp
    apply (frule_tac ptr = "(aa,ba)" in detype_invariants [rotated 3])
         apply fastforce
@@ -342,7 +342,7 @@ lemma performASIDControlInvocation_corres:
      apply (simp add:pageBits_def)
     apply clarsimp
     apply (drule(1) cte_cap_in_untyped_range)
-         apply (fastforce simp:cte_wp_at_ctes_of)
+         apply (fastforce simp: cte_wp_at_ctes_of)
         apply assumption+
      apply fastforce
     apply simp
@@ -1854,7 +1854,7 @@ lemma assoc_invs':
                     valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    setObject_typ_at' cur_tcb_lift
+                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift sym_heap_sched_pointers_lift
                     setVCPU_valid_arch'
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def

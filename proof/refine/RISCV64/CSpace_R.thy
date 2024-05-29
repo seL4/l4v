@@ -1091,47 +1091,6 @@ lemma bitmapQ_no_L2_orphans_lift:
   apply (rule hoare_vcg_prop, assumption)
   done
 
-lemma valid_queues_lift_asm:
-  assumes tat1: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and Q \<rbrace> f \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-  and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  shows   "\<lbrace>valid_queues and Q\<rbrace> f \<lbrace>\<lambda>_. valid_queues\<rbrace>"
-  unfolding valid_queues_def valid_queues_no_bitmap_def
-  by (wpsimp wp: tat1 prq prqL1 prqL2 valid_bitmapQ_lift bitmapQ_no_L2_orphans_lift
-                 bitmapQ_no_L1_orphans_lift hoare_vcg_all_lift hoare_Ball_helper)
-
-lemmas valid_queues_lift = valid_queues_lift_asm[where Q="\<lambda>_. True", simplified]
-
-lemma valid_queues_lift':
-  assumes tat: "\<And>d p tcb. \<lbrace>\<lambda>s. \<not> obj_at' (inQ d p) tcb s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> obj_at' (inQ d p) tcb s\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  shows   "\<lbrace>valid_queues'\<rbrace> f \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  unfolding valid_queues'_def imp_conv_disj
-  by (wp hoare_vcg_all_lift hoare_vcg_disj_lift tat prq)
-
-lemma valid_release_queue_lift:
-  assumes tat: "\<And>tcb. f \<lbrace>\<lambda>s. obj_at' (tcbInReleaseQueue) tcb s\<rbrace>"
-  and     prlq: "\<And>P. f \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
-  shows   "f \<lbrace>valid_release_queue\<rbrace>"
-  unfolding valid_release_queue_def iff_conv_conj_imp
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_conj_lift hoare_vcg_imp_lift' tat prlq)
-
-lemma valid_release_queue'_lift:
-  assumes tat: "\<And>tcb. f \<lbrace>\<lambda>s. \<not> (obj_at' (tcbInReleaseQueue) tcb s)\<rbrace>"
-  and     prlq: "\<And>P. f \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
-  shows   "f \<lbrace>valid_release_queue'\<rbrace>"
-  unfolding valid_release_queue'_def iff_conv_conj_imp
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_conj_lift hoare_vcg_imp_lift' tat prlq)
-
-lemma setCTE_norq [wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueues s) \<rbrace>"
-  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
-
-lemma setCTE_ksReleaseQueue[wp]:
-  "setCTE ptr cte \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
-  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
-
 lemma setCTE_norqL1 [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueuesL1Bitmap s) \<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
@@ -2779,33 +2738,7 @@ lemma setCTE_inQ[wp]:
    apply (simp_all add: inQ_def)
   done
 
-lemma setCTE_tcbInReleaseQueue[wp]:
-  "setCTE ptr v \<lbrace>\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)\<rbrace>"
-  apply (simp add: setCTE_def)
-  apply (rule setObject_cte_obj_at_tcb'; simp)
-  done
-
-lemma setCTE_valid_queues'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp only: valid_queues'_def imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-  done
-
-lemma setCTE_valid_release_queue[wp]:
-  "setCTE p cte \<lbrace>valid_release_queue\<rbrace>"
-  apply (simp only: valid_release_queue_def)
-  apply (wpsimp wp: hoare_vcg_all_lift | wps)+
-  done
-
-lemma setCTE_valid_release_queue'[wp]:
-  "setCTE p cte \<lbrace>valid_release_queue'\<rbrace>"
-  apply (simp only: valid_release_queue'_def)
-  apply (wpsimp wp: hoare_vcg_all_lift | wps)+
-  done
-
-crunches cteInsert
-  for inQ[wp]: "\<lambda>s. P (obj_at' (inQ d p) t s)"
-  and tcbInReleaseQueue[wp]: "\<lambda>s. P (obj_at' tcbInReleaseQueue t s)"
+crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
   (wp: crunch_wps)
 
 lemma setCTE_it'[wp]:
@@ -3634,7 +3567,7 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ups' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cns s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cns_of_heap (kheap s))\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cns' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsCNodes s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_sa' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_rqs' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
@@ -5678,6 +5611,8 @@ lemma updateCap_same_master:
        apply (extract_conjunct \<open>match conclusion in "release_queue_relation a b" for a b \<Rightarrow> -\<close>)
         subgoal by (erule setCTE_set_cap_release_queue_relation_valid_corres; assumption)
        apply (subst conj_assoc[symmetric])
+       apply (extract_conjunct \<open>match conclusion in "ready_queues_relation a b" for a b \<Rightarrow> -\<close>)
+        subgoal by (erule setCTE_set_cap_ready_queues_relation_valid_corres; assumption)
        apply (rule conjI)
         apply (frule setCTE_pspace_only)
         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
@@ -5917,8 +5852,9 @@ lemma updateFreeIndex_forward_invs':
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
+                sym_heap_sched_pointers_lift valid_bitmaps_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])

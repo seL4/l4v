@@ -2898,6 +2898,11 @@ abbreviation (input) valid_sched_valid_blocked :: "obj_ref set \<Rightarrow> val
                          tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
     valid_blocked_except_set_2 S rq rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
 
+lemma valid_blocked_except_cur_thread[simp]:
+  "valid_blocked_except_2 (cur_thread s) queues kh sa (cur_thread s)
+   = valid_blocked_2 queues kh sa (cur_thread s)"
+  by (fastforce simp: valid_blocked_except_2_def valid_blocked_2_def)
+
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) ekh thread"
 

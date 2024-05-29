@@ -14,7 +14,7 @@ lemmas lookup_slot_wrapper_defs'[simp] =
    lookupSourceSlot_def lookupTargetSlot_def lookupPivotSlot_def
 
 lemma getMessageInfo_corres: "corres ((=) \<circ> message_info_map)
-                      (tcb_at t) (tcb_at' t)
+                      (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                       (get_message_info t) (getMessageInfo t)"
   apply (rule corres_guard_imp)
     apply (unfold get_message_info_def getMessageInfo_def fun_app_def)
@@ -767,14 +767,6 @@ lemma tcts_sch_act[wp]:
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   by (wp sch_act_wf_lift tcb_in_cur_domain'_lift transferCapsToSlots_pres1)
 
-lemma tcts_vq[wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift transferCapsToSlots_pres1)
-
-lemma tcts_vq'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift' transferCapsToSlots_pres1)
-
 crunch state_refs_of' [wp]: setExtraBadge "\<lambda>s. P (state_refs_of' s)"
 
 lemma tcts_state_refs_of'[wp]:
@@ -984,9 +976,10 @@ crunches setExtraBadge, transferCapsToSlots
   and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 crunches transferCapsToSlots
-  for valid_release_queue[wp]: valid_release_queue
-  and valid_release_queue'[wp]: valid_release_queue'
-  (wp: crunch_wps)
+  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  and valid_bitmaps[wp]: valid_bitmaps
+  (rule: sym_heap_sched_pointers_lift)
 
 lemma transferCapsToSlots_invs[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> distinct slots
@@ -1189,15 +1182,12 @@ lemma set_mrs_valid_objs' [wp]:
 crunch valid_objs'[wp]: copyMRs valid_objs'
   (wp: crunch_wps simp: crunch_simps)
 
-
 lemma setMRs_invs_bits[wp]:
   "\<lbrace>valid_pspace'\<rbrace> setMRs t buf mrs \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
      setMRs t buf mrs \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
      setMRs t buf mrs \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setMRs t buf mrs \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  "\<lbrace>valid_queues'\<rbrace> setMRs t buf mrs \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
      setMRs t buf mrs
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -1214,8 +1204,6 @@ lemma copyMRs_invs_bits[wp]:
   "\<lbrace>valid_pspace'\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> copyMRs s sb r rb n
       \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  "\<lbrace>valid_queues'\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
       copyMRs s sb r rb n
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -1484,15 +1472,15 @@ lemma msgFromLookupFailure_map[simp]:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma asUser_getRestartPC_corres:
-  "corres (=) (tcb_at t) (tcb_at' t)
-                 (as_user t getRestartPC) (asUser t getRestartPC)"
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+     (as_user t getRestartPC) (asUser t getRestartPC)"
   apply (rule asUser_corres')
   apply (rule corres_Id, simp, simp)
   apply (rule no_fail_getRestartPC)
   done
 
 lemma asUser_mapM_getRegister_corres:
-  "corres (=) (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (as_user t (mapM getRegister regs))
      (asUser t (mapM getRegister regs))"
   apply (rule asUser_corres')
@@ -1502,7 +1490,7 @@ lemma asUser_mapM_getRegister_corres:
   done
 
 lemma makeArchFaultMessage_corres:
-  "corres (=) (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
   (make_arch_fault_msg f t)
   (makeArchFaultMessage (arch_fault_map f) t)"
   apply (cases f, clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
@@ -1513,7 +1501,7 @@ lemma makeArchFaultMessage_corres:
   done
 
 lemma makeFaultMessage_corres:
-  "corres (=) (tcb_at t and valid_objs and pspace_aligned and pspace_distinct) (tcb_at' t)
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (make_fault_msg ft t)
      (makeFaultMessage (fault_map ft) t)"
   apply (cases ft, simp_all add: makeFaultMessage_def split del: if_split)
@@ -1591,7 +1579,8 @@ lemma doFaultTransfer_corres:
   apply (rule_tac Q="\<lambda>fault. valid_objs and pspace_distinct and pspace_aligned and
                              K (\<exists>f. fault = Some f) and
                              tcb_at sender and tcb_at receiver and
-                             case_option \<top> in_user_frame recv_buf"
+                             case_option \<top> in_user_frame recv_buf and
+                             pspace_aligned and pspace_distinct"
               and Q'="\<lambda>fault'. tcb_at' sender and tcb_at' receiver and
                                case_option \<top> valid_ipc_buffer_ptr' recv_buf"
                in corres_underlying_split)
@@ -1699,12 +1688,6 @@ crunches doIPCTransfer
   (wp: crunch_wps
    simp: zipWithM_x_mapM ball_conj_distrib)
 
-crunches doIPCTransfer
-  for vrq'[wp]: valid_release_queue'
-  (wp: crunch_wps threadSet_vrq'_inv
-   simp: zipWithM_x_mapM ball_conj_distrib
-   ignore: threadSet)
-
 end
 
 global_interpretation doIPCTransfer: typ_at_all_props' "doIPCTransfer s e b g r"
@@ -1749,7 +1732,7 @@ lemma doIPCTransfer_invs[wp]:
   done
 
 lemma handle_fault_reply_registers_corres:
-  "corres (=) (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
            (do t' \<leftarrow> arch_get_sanitise_register_info t;
                y \<leftarrow> as_user t
                 (zipWithM_x
@@ -1910,9 +1893,8 @@ lemma replyClear_weak_sch_act_wf[wp]:
   apply (auto simp: pred_tcb_at'_def obj_at'_def weak_sch_act_wf_def)
   done
 
-crunches finaliseCapTrue_standin
-  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-  (simp: crunch_simps wp: crunch_wps)
+crunch pred_tcb_at'[wp]: handleFaultReply "pred_tcb_at' proj P t"
+crunch tcb_in_cur_domain'[wp]: handleFaultReply "tcb_in_cur_domain' t"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -3996,8 +3978,10 @@ lemma sai_invs'[wp]:
   done
 
 lemma replyFromKernel_corres:
-  "corres dc (tcb_at t and invs) (tcb_at' t and invs')
+  "corres dc (tcb_at t and invs) invs'
              (reply_from_kernel t r) (replyFromKernel t r)"
+  apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
+   apply (fastforce intro!: tcb_at_cross)
   apply (case_tac r)
   apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def
                         badge_register_def badgeRegister_def)
@@ -4008,7 +3992,7 @@ lemma replyFromKernel_corres:
            apply simp
           apply (rule setMessageInfo_corres)
           apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
-                 | clarsimp)+
+                 | fastforce)+
   done
 
 lemma rfk_invs':
@@ -5984,6 +5968,10 @@ lemma replyUnlink_obj_at_tcb_none:
   apply (wpsimp wp: updateReply_wp_all gts_wp')
   by (auto simp: obj_at'_def projectKOs objBitsKO_def)
 
+crunches possibleSwitchTo
+  for pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
+
 lemma si_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' active' t
           and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
@@ -6112,6 +6100,11 @@ lemma sfi_invs_plus':
    apply (clarsimp simp: invs'_def valid_release_queue'_def obj_at'_def)
   apply (fastforce simp: ex_nonz_cap_to'_def cte_wp_at'_def)
   done
+
+crunches send_fault_ipc
+  for pspace_aligned[wp]: "pspace_aligned :: det_ext state \<Rightarrow> _"
+  and pspace_distinct[wp]: "pspace_distinct :: det_ext state \<Rightarrow> _"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma handleFault_corres:
   assumes "fr f f'"

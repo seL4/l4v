@@ -303,6 +303,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         stateAssert sch_act_wf_asrt
 >             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert ksReadyQueues_asrt ""
 >         ep <- getEndpoint epptr
 >         case ep of
 >             IdleEP ->
@@ -320,6 +321,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     stateAssert sch_act_wf_asrt
 >         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>     stateAssert ksReadyQueues_asrt ""
 >     ep <- getEndpoint epptr
 >     case ep of
 >         IdleEP -> return ()

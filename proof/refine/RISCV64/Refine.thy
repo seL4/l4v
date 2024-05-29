@@ -77,7 +77,7 @@ lemma typ_at_UserDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
-                        cte_relation_def other_obj_relation_def
+                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -107,7 +107,7 @@ lemma typ_at_DeviceDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
-                        cte_relation_def other_obj_relation_def
+                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -632,6 +632,10 @@ proof -
 qed
 
 lemmas ex_abs_def = ex_abs_underlying_def[where sr=state_relation and P=G,abs_def] for G
+
+lemma ex_abs_ksReadyQueues_asrt:
+  "ex_abs P s \<Longrightarrow> ksReadyQueues_asrt s"
+  by (fastforce simp: ex_abs_def intro: ksReadyQueues_asrt_cross)
 
 lemma device_update_invs':
   "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)

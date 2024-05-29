@@ -83,30 +83,11 @@ crunch ksRQL1[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 crunch ksRQL2[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
 crunch obj_at'[wp]: postCapDeletion "\<lambda>s. Q (obj_at' P p s)"
 
-lemmas postCapDeletion_valid_queues[wp] =
-    valid_queues_lift [OF postCapDeletion_obj_at'
-                          postCapDeletion_ksRQ]
-
 crunch inQ[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (inQ d p) t s)"
 crunch tcbInReleaseQueue[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)"
 crunch tcbDomain[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
 crunch tcbPriority[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
 crunch tcbQueued[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
-
-lemma emptySlot_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  unfolding emptySlot_def
-  by (wp | wpcw | wp valid_queues_lift | simp)+
-
-lemma emptySlot_valid_release_queue [wp]:
-  "emptySlot sl opt \<lbrace>Invariants_H.valid_release_queue\<rbrace>"
-  unfolding emptySlot_def
-  by (wp | wpcw | wp valid_release_queue_lift | simp)+
-
-lemma emptySlot_valid_release_queue' [wp]:
-  "emptySlot sl opt \<lbrace>Invariants_H.valid_release_queue'\<rbrace>"
-  unfolding emptySlot_def
-  by (wp | wpcw | wp valid_release_queue'_lift | simp)+
 
 crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
 crunch ksCurDomain[wp]: emptySlot "\<lambda>s. P (ksCurDomain s)"
@@ -1148,8 +1129,7 @@ definition
  "removeable' sl \<equiv> \<lambda>s cap.
     (\<exists>p. p \<noteq> sl \<and> cte_wp_at' (\<lambda>cte. capMasterCap (cteCap cte) = capMasterCap cap) p s)
     \<or> ((\<forall>p \<in> cte_refs' cap (irq_node' s). p \<noteq> sl \<longrightarrow> cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) p s)
-         \<and> (\<forall>p \<in> zobj_refs' cap. ko_wp_at' (Not \<circ> live') p s)
-         \<and> (\<forall>t \<in> threadCapRefs cap. \<forall>p. t \<notin> set (ksReadyQueues s p)))"
+         \<and> (\<forall>p \<in> zobj_refs' cap. ko_wp_at' (Not \<circ> live') p s))"
 
 lemma not_Final_removeable:
   "\<not> isFinal cap sl (cteCaps_of s)
@@ -1334,11 +1314,6 @@ crunch irq_states' [wp]: emptySlot valid_irq_states'
 
 crunch no_0_obj' [wp]: emptySlot no_0_obj'
  (wp: crunch_wps)
-
-crunch valid_queues'[wp]: setInterruptState "valid_queues'"
-  (simp: valid_queues'_def)
-
-crunch valid_queues'[wp]: emptySlot "valid_queues'"
 
 crunch pde_mappings'[wp]: emptySlot "valid_pde_mappings'"
 end
@@ -3239,10 +3214,6 @@ lemma unbindNotification_bound_tcb_at':
   done
 
 crunches unbindNotification, unbindMaybeNotification
-  for valid_queues[wp]: "Invariants_H.valid_queues"
-  (wp: sbn_valid_queues)
-
-crunches unbindNotification, unbindMaybeNotification
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: weak_sch_act_wf_lift)
 
@@ -3261,6 +3232,10 @@ lemma unbindMaybeNotification_tcb_at'[wp]:
 crunch cte_wp_at'[wp]: prepareThreadDelete "cte_wp_at' P p"
 crunch valid_cap'[wp]: prepareThreadDelete "valid_cap' cap"
 crunch invs[wp]: prepareThreadDelete "invs'"
+
+crunches prepareThreadDelete
+  for sched_projs_obj_at'[wp]:
+    "\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None) t s"
 
 end
 
@@ -4994,12 +4969,6 @@ lemma arch_recycleCap_improve_cases:
    "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;
          \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
   by (cases cap, simp_all add: isCap_simps)
-
-crunch queues[wp]: copyGlobalMappings "Invariants_H.valid_queues"
-  (wp: crunch_wps ignore: storePDE)
-
-crunch queues'[wp]: copyGlobalMappings "Invariants_H.valid_queues'"
-  (wp: crunch_wps ignore: storePDE)
 
 crunch ifunsafe'[wp]: copyGlobalMappings "if_unsafe_then_cap'"
   (wp: crunch_wps ignore: storePDE)

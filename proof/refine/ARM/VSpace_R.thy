@@ -493,7 +493,7 @@ lemma armv_contextSwitch_corres:
   done
 
 lemma handleVMFault_corres:
-  "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
+  "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) \<top>
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: ARM_H.handleVMFault_def)
   apply corres_cases
@@ -2009,8 +2009,8 @@ lemma message_info_from_data_eqv:
 
 lemma setMessageInfo_corres:
  "mi' = message_info_map mi \<Longrightarrow>
-  corres dc (tcb_at t) (tcb_at' t)
-         (set_message_info t mi) (setMessageInfo t mi')"
+  corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+    (set_message_info t mi) (setMessageInfo t mi')"
   apply (simp add: setMessageInfo_def set_message_info_def)
   apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) =
                       message_info_to_data mi")
@@ -2662,7 +2662,7 @@ lemma storePDE_invs[wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
+             cur_tcb_lift valid_irq_handlers_lift'' valid_bitmaps_lift sym_heap_sched_pointers_lift
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
@@ -2704,7 +2704,7 @@ lemma storePTE_invs [wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
@@ -2750,7 +2750,7 @@ lemma setASIDPool_invs [wp]:
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
-             updateObject_default_inv
+             updateObject_default_inv valid_bitmaps_lift
            | simp add: cteCaps_of_def
            | rule setObject_ksPSpace_only)+
   apply (clarsimp simp add: setObject_def o_def)

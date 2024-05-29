@@ -5017,6 +5017,12 @@ crunches cteSwap
   and valid_release_queue[wp]: "valid_release_queue"
   and valid_release_queue'[wp]: "valid_release_queue'"
 
+crunches cteSwap
+  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  and valid_bitmaps[wp]: valid_bitmaps
+  (rule: valid_bitmaps_lift)
+
 lemma cteSwap_invs'[wp]:
   "\<lbrace>invs' and valid_cap' c and valid_cap' c' and
     ex_cte_cap_to' c1 and ex_cte_cap_to' c2 and
@@ -5473,6 +5479,10 @@ lemma updateCap_untyped_ranges_zero_simple:
 crunch tcb_in_cur_domain'[wp]: updateCap "tcb_in_cur_domain' t"
   (wp: crunch_wps simp: crunch_simps rule: tcb_in_cur_domain'_lift)
 
+crunches updateCap
+  for valid_bitmaps[wp]: valid_bitmaps
+  (rule: valid_bitmaps_lift)
+
 lemma make_zombie_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> s \<turnstile>' cap \<and>
     cte_wp_at' (\<lambda>cte. isFinal (cteCap cte) sl (cteCaps_of s)) sl s \<and>
@@ -5493,7 +5503,8 @@ lemma make_zombie_invs':
                              \<comment> \<open>RT warning: The previous two conjuncts are new, they were
                                              inserted to fix this lemma.\<close>
                              \<and> obj_at' (Not \<circ> tcbQueued) p s
-                             \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr)))) sl s\<rbrace>
+                             \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
+                                              \<and> tcbSchedPrev tcb = None) p s)) sl s\<rbrace>
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_mdb'_def
@@ -8540,6 +8551,15 @@ lemma cteMove_urz [wp]:
   apply (drule weak_derived_untypedZeroRange[OF weak_derived_sym'], clarsimp)
   apply auto
   done
+
+crunches updateMDB
+  for valid_bitmaps[wp]: valid_bitmaps
+  (rule: valid_bitmaps_lift)
+
+(* FIXME: arch_split *)
+lemma haskell_assert_inv:
+  "haskell_assert Q L \<lbrace>P\<rbrace>"
+  by wpsimp
 
 lemma cteMove_invs' [wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> ex_cte_cap_to' word2 s \<and>

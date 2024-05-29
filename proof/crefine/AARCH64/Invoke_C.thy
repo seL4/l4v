@@ -80,15 +80,14 @@ lemma setDomain_ccorres:
                             and (\<lambda>s. curThread = ksCurThread s)"
               in hoare_strengthen_post)
       apply (wp threadSet_all_invs_but_sch_extra)
-     apply (clarsimp simp: valid_pspace_valid_objs' st_tcb_at_def[symmetric]
-                           sch_act_simple_def st_tcb_at'_def weak_sch_act_wf_def
-                    split: if_splits)
+     apply (fastforce simp: valid_pspace_valid_objs' st_tcb_at_def[symmetric]
+                            sch_act_simple_def st_tcb_at'_def weak_sch_act_wf_def
+                     split: if_splits)
     apply (simp add: guard_is_UNIV_def)
-   apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and sch_act_simple
-                          and (\<lambda>s. curThread = ksCurThread s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p)))"
+   apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and sch_act_simple and (\<lambda>s. curThread = ksCurThread s)"
             in hoare_strengthen_post)
     apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_not_queued
-              tcbSchedDequeue_not_in_queue hoare_vcg_imp_lift hoare_vcg_all_lift)
+              hoare_vcg_imp_lift hoare_vcg_all_lift)
    apply (clarsimp simp: invs'_def valid_pspace'_def valid_state'_def)
   apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def
                          invs'_def valid_state'_def valid_pspace'_def)
@@ -196,8 +195,8 @@ lemma decodeDomainInvocation_ccorres:
    apply clarsimp
    apply (vcg exspec=getSyscallArg_modifies)
 
-  apply (clarsimp simp: valid_tcb_state'_def invs_valid_queues' invs_valid_objs'
-                        invs_queues invs_sch_act_wf' ct_in_state'_def pred_tcb_at'
+  apply (clarsimp simp: valid_tcb_state'_def invs_valid_objs'
+                        invs_sch_act_wf' ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
                         mask_eq_iff_w2p mask_eq_iff_w2p word_size ThreadState_defs)
   apply (rule conjI)
@@ -207,7 +206,7 @@ lemma decodeDomainInvocation_ccorres:
    apply (drule_tac x="extraCaps ! 0" and P="\<lambda>v. valid_cap' (fst v) s" in bspec)
     apply (clarsimp simp: nth_mem interpret_excaps_test_null excaps_map_def)
    apply (clarsimp simp: valid_cap_simps' pred_tcb'_weakenE active_runnable')
-   apply (rule conjI)
+   apply (intro conjI; fastforce?)
     apply (fastforce simp: tcb_st_refs_of'_def elim:pred_tcb'_weakenE)
    apply (simp add: word_le_nat_alt unat_ucast unat_numDomains_to_H le_maxDomain_eq_less_numDomains)
   apply (clarsimp simp: ccap_relation_def cap_to_H_simps cap_thread_cap_lift)
@@ -760,15 +759,15 @@ lemma decodeCNodeInvocation_ccorres:
                               apply simp
                               apply (wp injection_wp_E[OF refl])
                               apply (rule hoare_post_imp_R)
-                               apply (rule_tac Q'="\<lambda>rv. valid_pspace' and valid_queues
+                               apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                     and valid_cap' rv and valid_objs'
                                                          and tcb_at' thread and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
                                            in hoare_vcg_R_conj)
                                 apply (rule deriveCap_Null_helper[OF deriveCap_derived])
                                apply wp
                               apply (clarsimp simp: cte_wp_at_ctes_of)
-                              apply (simp add: is_derived'_def badge_derived'_def
-                                               valid_tcb_state'_def)
+                              apply (fastforce simp: is_derived'_def badge_derived'_def
+                                                     valid_tcb_state'_def)
                              apply (simp add: Collect_const_mem all_ex_eq_helper)
                              apply (vcg exspec=deriveCap_modifies)
                             apply wp
@@ -836,14 +835,14 @@ lemma decodeCNodeInvocation_ccorres:
                                   apply (simp add: conj_comms valid_tcb_state'_def)
                                   apply (wp injection_wp_E[OF refl])
                                   apply (rule hoare_post_imp_R)
-                                   apply (rule_tac Q'="\<lambda>rv. valid_pspace' and valid_queues
+                                   apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                         and valid_cap' rv and valid_objs'
                                                              and tcb_at' thread and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
                                                in hoare_vcg_R_conj)
                                     apply (rule deriveCap_Null_helper [OF deriveCap_derived])
                                    apply wp
                                   apply (clarsimp simp: cte_wp_at_ctes_of)
-                                  apply (simp add: is_derived'_def badge_derived'_def)
+                                  apply (fastforce simp: is_derived'_def badge_derived'_def)
                                  apply (simp add: Collect_const_mem all_ex_eq_helper)
                                  apply (vcg exspec=deriveCap_modifies)
                                 apply (simp add: Collect_const_mem)
@@ -951,12 +950,14 @@ lemma decodeCNodeInvocation_ccorres:
                      apply (rule_tac Q'="\<lambda>a b. cte_wp_at' (\<lambda>x. True) a b \<and> invs' b \<and>
                        tcb_at' thread b  \<and> sch_act_wf (ksSchedulerAction b) b \<and> valid_tcb_state' Restart b
                        \<and> Q2 b" for Q2 in  hoare_post_imp_R)
-                       prefer 2
-                       apply (clarsimp simp:cte_wp_at_ctes_of)
-                       apply (drule ctes_of_valid')
-                         apply (erule invs_valid_objs')
-                        apply (clarsimp simp:valid_updateCapDataI invs_queues invs_valid_objs' invs_valid_pspace')
-                       apply (assumption)
+                      prefer 2
+                      apply (clarsimp simp:cte_wp_at_ctes_of)
+                      apply (drule ctes_of_valid')
+                       apply (erule invs_valid_objs')
+                      apply (frule invs_pspace_aligned')
+                      apply (frule invs_pspace_distinct')
+                      apply (clarsimp simp:valid_updateCapDataI invs_valid_objs' invs_valid_pspace')
+                      apply assumption
                      apply (wp hoare_vcg_all_lift_R injection_wp_E[OF refl]
                                lsfco_cte_at' hoare_vcg_const_imp_lift_R
                            )+
@@ -1351,7 +1352,7 @@ lemma decodeCNodeInvocation_ccorres:
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_objs' invs_valid_pspace'
-                        ct_in_state'_def pred_tcb_at' invs_queues
+                        ct_in_state'_def pred_tcb_at'
                         cur_tcb'_def word_sle_def word_sless_def
                         unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
   apply (rule conjI)
@@ -1382,9 +1383,6 @@ lemma decodeCNodeInvocation_ccorres:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch valid_queues[wp]: insertNewCap "valid_queues"
-  (wp: crunch_wps)
 
 lemmas setCTE_def3 = setCTE_def2[THEN eq_reflection]
 
@@ -3311,7 +3309,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
                       and sch_act_simple and ct_active'" in hoare_post_imp_R)
                    prefer 2
                    apply (clarsimp simp: invs_valid_objs' invs_mdb'
-                      invs_queues ct_in_state'_def pred_tcb_at')
+                                         ct_in_state'_def pred_tcb_at')
                    apply (subgoal_tac "ksCurThread s \<noteq> ksIdleThread sa")
                     prefer 2
                     apply clarsimp

@@ -670,7 +670,7 @@ proof -
       apply (clarsimp dest!: koTypeOf_pte simp: objBits_simps bit_simps)
       apply (rename_tac pte')
       apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-      apply (case_tac ko; simp add: other_obj_relation_def)
+      apply (case_tac ko; simp add: tcb_relation_cut_def other_obj_relation_def)
        apply (clarsimp simp add: cte_relation_def split: if_split_asm)
        apply (clarsimp simp add: cte_relation_def split: if_split_asm)
       apply (rename_tac ako' y ko P ako)
@@ -759,7 +759,7 @@ lemma TCB_implies_KOTCB:
   apply (clarsimp simp add: pspace_relation_def pspace_dom_def
                             dom_def UNION_eq Collect_eq)
   apply (erule_tac x=a in allE)+
-  apply (clarsimp simp add: other_obj_relation_def
+  apply (clarsimp simp add: tcb_relation_cut_def
                   split: Structures_H.kernel_object.splits)
   apply (drule iffD1)
    apply (fastforce simp add: dom_def image_def)

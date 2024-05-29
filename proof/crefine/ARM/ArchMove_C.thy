@@ -91,14 +91,9 @@ lemma empty_fail_findPDForASIDAssert[iff]:
   unfolding findPDForASIDAssert_def checkPDAt_def checkPDUniqueToASID_def checkPDASIDMapMembership_def
   by (wpsimp wp: empty_fail_getObject)
 
-crunches Arch.switchToThread
-  for valid_queues'[wp]: valid_queues'
-  (simp: crunch_simps ignore: clearExMonitor)
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-crunches switchToIdleThread, switchToThread
-  for valid_pspace'[wp]: valid_pspace'
-  (simp: crunch_simps)
+
 crunches switchToThread
   for valid_arch_state'[wp]: valid_arch_state'
 

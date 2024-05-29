@@ -292,9 +292,6 @@ lemma asUser_getRegister_discarded:
                         return_def fail_def stateAssert_def)
   done
 
-crunches Arch.switchToThread
-  for valid_queues'[wp]: valid_queues'
-  (simp: crunch_simps wp: hoare_drop_imps crunch_wps getASID_wp)
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
@@ -311,10 +308,6 @@ lemma updateASIDPoolEntry_valid_pspace'[wp]:
   "updateASIDPoolEntry p f \<lbrace>valid_pspace'\<rbrace>"
   unfolding updateASIDPoolEntry_def valid_pspace'_def getPoolPtr_def
   by (wpsimp wp: getASID_wp)
-
-crunches switchToIdleThread, switchToThread
-  for valid_pspace'[wp]: valid_pspace'
-  (simp: whenE_def crunch_simps wp: crunch_wps hoare_drop_imps)
 
 lemma getMessageInfo_less_4:
   "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
@@ -453,8 +446,6 @@ lemma ko_at_vcpu_at'D:
 (* FIXME: change the original to be predicated! *)
 crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
-
-crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
 
 crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
 

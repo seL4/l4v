@@ -766,19 +766,35 @@ lemma setObject_pte_replies_of'[wp]:
   by setObject_easy_cases
 
 crunches storePTE
-  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
+
+lemma storePTE_tcbs_of'[wp]:
+  "storePTE c (pte::pte) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  unfolding storePTE_def
+  by setObject_easy_cases
+
+crunches storePTE
+  for pspace_canonical'[wp]: "pspace_canonical'"
+  and pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
+
+lemma storePTE_valid_objs[wp]:
+  "storePTE p pte \<lbrace>valid_objs'\<rbrace>"
+  apply (simp add: storePTE_def doMachineOp_def split_def)
+  apply (rule hoare_pre, rule setObject_valid_objs'[where P=\<top>])
+   apply (clarsimp simp: updateObject_default_def in_monad  valid_obj'_def)
+  apply simp
+  done
 
 lemma storePTE_invs[wp]:
   "storePTE p pte \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
-             untyped_ranges_zero_lift
-           | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
-  done
+  unfolding invs'_def valid_state'_def valid_pspace'_def
+  by (wpsimp wp: sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift'
+                 valid_irq_node_lift cur_tcb_lift valid_irq_handlers_lift'' untyped_ranges_zero_lift
+                 valid_bitmaps_lift
+             simp: cteCaps_of_def o_def)
 
 lemma setASIDPool_valid_objs [wp]:
   "setObject p (ap::asidpool) \<lbrace>valid_objs'\<rbrace>"
@@ -812,7 +828,7 @@ lemma setASIDPool_invs [wp]:
             valid_arch_state_lift' valid_irq_node_lift
             cur_tcb_lift valid_irq_handlers_lift''
             untyped_ranges_zero_lift
-            updateObject_default_inv
+            updateObject_default_inv valid_bitmaps_lift
           | simp add: cteCaps_of_def
           | rule setObject_ksPSpace_only)+
   apply (clarsimp simp:  o_def)

@@ -161,6 +161,7 @@ If a notification object is deleted, then pending receive operations must be can
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         stateAssert sch_act_wf_asrt
 >             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert ksReadyQueues_asrt ""
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             WaitingNtfn queue -> do

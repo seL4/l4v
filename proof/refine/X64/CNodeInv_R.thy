@@ -5116,7 +5116,6 @@ lemma cteSwap_urz[wp]:
 crunches cteSwap
   for valid_arch_state'[wp]: "valid_arch_state'"
   and irq_states'[wp]: "valid_irq_states'"
-  and vq'[wp]: "valid_queues'"
   and ksqsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and ksqsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and st_tcb_at'[wp]: "st_tcb_at' P t"
@@ -5124,6 +5123,12 @@ crunches cteSwap
   and pspace_domain_valid[wp]: "pspace_domain_valid"
   and ct_not_inQ[wp]: "ct_not_inQ"
   and ksDomScheduleIdx [wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+
+crunches cteSwap
+  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  and valid_bitmaps[wp]: valid_bitmaps
+  (rule: valid_bitmaps_lift)
 
 lemma cteSwap_invs'[wp]:
   "\<lbrace>invs' and valid_cap' c and valid_cap' c' and
@@ -5586,6 +5591,10 @@ lemma updateCap_untyped_ranges_zero_simple:
 crunch tcb_in_cur_domain'[wp]: updateCap "tcb_in_cur_domain' t"
   (wp: crunch_wps simp: crunch_simps rule: tcb_in_cur_domain'_lift)
 
+crunches updateCap
+  for valid_bitmaps[wp]: valid_bitmaps
+  (rule: valid_bitmaps_lift)
+
 lemma make_zombie_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> s \<turnstile>' cap \<and>
     cte_wp_at' (\<lambda>cte. isFinal (cteCap cte) sl (cteCaps_of s)) sl s \<and>
@@ -5602,7 +5611,8 @@ lemma make_zombie_invs':
                             st_tcb_at' ((=) Inactive) p s
                              \<and> bound_tcb_at' ((=) None) p s
                              \<and> obj_at' (Not \<circ> tcbQueued) p s
-                             \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr)))) sl s\<rbrace>
+                             \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
+                                              \<and> tcbSchedPrev tcb = None) p s)) sl s\<rbrace>
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
@@ -5639,7 +5649,9 @@ lemma make_zombie_invs':
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (subgoal_tac "st_tcb_at' ((=) Inactive) p' s
                                \<and> obj_at' (Not \<circ> tcbQueued) p' s
-                               \<and> bound_tcb_at' ((=) None) p' s")
+                               \<and> bound_tcb_at' ((=) None) p' s
+                               \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
+                                                \<and> tcbSchedPrev tcb = None) p' s")
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
    apply (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
@@ -8652,7 +8664,7 @@ lemma cteMove_ioports' [wp]:
   apply (clarsimp simp add: modify_map_def split: if_split_asm dest!: weak_derived_cap_ioports')
   apply (rule conjI, clarsimp)
    apply (rule conjI, clarsimp)
-     apply (force simp: isCap_simps)
+    apply blast
    subgoal by ((auto | blast)+)
   apply clarsimp
   apply (rule conjI, clarsimp)
@@ -8716,6 +8728,15 @@ lemma cteMove_urz [wp]:
   apply (drule weak_derived_untypedZeroRange[OF weak_derived_sym'], clarsimp)
   apply auto
   done
+
+crunches updateMDB
+  for valid_bitmaps[wp]: valid_bitmaps
+  (rule: valid_bitmaps_lift)
+
+(* FIXME: arch_split *)
+lemma haskell_assert_inv:
+  "haskell_assert Q L \<lbrace>P\<rbrace>"
+  by wpsimp
 
 lemma cteMove_invs' [wp]:
   "\<lbrace>\<lambda>x. invs' x \<and> ex_cte_cap_to' word2 x \<and>
@@ -8793,6 +8814,10 @@ crunch ksWorkUnitsCompleted[wp]: updateCap "\<lambda>s. P (ksWorkUnitsCompleted 
 crunch ksDomSchedule[wp]: updateCap "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomScheduleIdx[wp]: updateCap "\<lambda>s. P (ksDomScheduleIdx s)"
 crunch ksDomainTime[wp]: updateCap "\<lambda>s. P (ksDomainTime s)"
+
+crunches updateCap
+  for rdyq_projs[wp]:
+    "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
 lemma corres_null_cap_update:
   "cap_relation cap cap' \<Longrightarrow>

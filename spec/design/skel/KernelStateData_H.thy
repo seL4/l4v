@@ -34,9 +34,9 @@ requalify_types (in Arch)
 
 subsection "The Kernel State"
 
-type_synonym ready_queue = "machine_word list"
+type_synonym ready_queue = tcb_queue
 
-type_synonym release_queue = "machine_word list"
+type_synonym release_queue = tcb_queue
 
 text \<open>We pull a fast one on haskell here ... although Haskell expects
 a KernelMonad which is a StateT monad in KernelData that wraps a MachineMonad,
@@ -100,7 +100,7 @@ where
     return r
   od"
 
-#INCLUDE_HASKELL SEL4/Model/StateData.lhs decls_only ONLY capHasProperty sym_refs_asrt valid_replies'_sc_asrt ready_qs_runnable tcs_cross_asrt1 tcs_cross_asrt2 ct_not_inQ_asrt sch_act_wf_asrt valid_idle'_asrt cur_tcb'_asrt sch_act_sane_asrt ct_not_ksQ_asrt ct_active'_asrt rct_imp_activatable'_asrt release_q_runnable_asrt ct_activatable'_asrt
-#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue ReaderM Kernel KernelR getsJust assert stateAssert funOfM condition whileLoop findM funArray newKernelState capHasProperty ifM whenM whileM andM orM sym_refs_asrt valid_replies'_sc_asrt ready_qs_runnable tcs_cross_asrt1 tcs_cross_asrt2 ct_not_inQ_asrt sch_act_wf_asrt valid_idle'_asrt cur_tcb'_asrt sch_act_sane_asrt ct_not_ksQ_asrt ct_active'_asrt rct_imp_activatable'_asrt release_q_runnable_asrt ct_activatable'_asrt
+#INCLUDE_HASKELL SEL4/Model/StateData.lhs decls_only ONLY capHasProperty sym_refs_asrt valid_replies'_sc_asrt ready_qs_runnable tcs_cross_asrt1 tcs_cross_asrt2 ct_not_inQ_asrt sch_act_wf_asrt valid_idle'_asrt cur_tcb'_asrt sch_act_sane_asrt ct_not_ksQ_asrt ct_active'_asrt rct_imp_activatable'_asrt release_q_runnable_asrt ct_activatable'_asrt ksReadyQueues_asrt ready_qs_runnable idleThreadNotQueued
+#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue ReaderM Kernel KernelR getsJust assert stateAssert funOfM condition whileLoop findM funArray newKernelState capHasProperty ifM whenM whileM andM orM sym_refs_asrt valid_replies'_sc_asrt ready_qs_runnable tcs_cross_asrt1 tcs_cross_asrt2 ct_not_inQ_asrt sch_act_wf_asrt valid_idle'_asrt cur_tcb'_asrt sch_act_sane_asrt ct_not_ksQ_asrt ct_active'_asrt rct_imp_activatable'_asrt release_q_runnable_asrt ct_activatable'_asrt ksReadyQueues_asrt ready_qs_runnable idleThreadNotQueued
 
 end

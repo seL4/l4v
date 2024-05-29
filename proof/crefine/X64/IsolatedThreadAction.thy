@@ -67,12 +67,12 @@ lemma put_tcb_state_regs_twice[simp]:
   "put_tcb_state_regs tsr (put_tcb_state_regs tsr' tcb)
     = put_tcb_state_regs tsr tcb"
   apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                   atcbContextSet_def
-                   makeObject_tcb newArchTCB_def newContext_def initContext_def
+                   makeObject_tcb newArchTCB_def atcbContextSet_def
             split: tcb_state_regs.split option.split
                    Structures_H.kernel_object.split)
   apply (intro all_tcbI impI allI)
-  apply (case_tac q, simp)
+   using atcbContextSet_def atcbContext_set_set
+   apply fastforce+
   done
 
 lemma partial_overwrite_twice[simp]:
@@ -379,7 +379,7 @@ lemma obj_at_partial_overwrite_id2:
 
 lemma objBits_2n:
   "(1 :: machine_word) < 2 ^ objBits obj"
-  by (simp add: objBits_def objBitsKO_def archObjSize_def pageBits_def objBits_simps'
+  by (simp add: archObjSize_def pageBits_def objBits_simps'
          split: kernel_object.split arch_kernel_object.split)
 
 lemma getObject_get_assert:
@@ -923,9 +923,11 @@ lemma oblivious_switchToThread_schact:
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
                    pointerInUserData_def isRunnable_def isStopped_def
-                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
+                   getThreadState_def tcbSchedDequeue_def tcbQueueRemove_def bitmap_fun_defs
+                   ksReadyQueues_asrt_def)
   by (safe intro!: oblivious_bind
-              | simp_all add: oblivious_setVMRoot_schact)+
+              | simp_all add: ready_qs_runnable_def idleThreadNotQueued_def
+                              oblivious_setVMRoot_schact)+
 
 (* FIXME move *)
 lemma empty_fail_getCurThread[intro!, wp, simp]:
@@ -945,29 +947,9 @@ lemma activateThread_simple_rewrite:
 
 end
 
-lemma setCTE_obj_at_prio[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace> setCTE p v \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  unfolding setCTE_def
-  by (rule setObject_cte_obj_at_tcb', simp+)
-
-crunch obj_at_prio[wp]: cteInsert "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_wps)
-
-crunch ctes_of[wp]: asUser "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps)
-
-lemma tcbSchedEnqueue_tcbPriority[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>
-     tcbSchedEnqueue t'
-   \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp cong: if_cong)+
-  done
-
-crunch obj_at_prio[wp]: cteDeleteOne "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_wps setEndpoint_obj_at_tcb'
-       setThreadState_obj_at_unchanged setNotification_tcb setBoundNotification_obj_at_unchanged
-        simp: crunch_simps unless_def)
+crunches setBoundNotification, cteDeleteOne
+  for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma setThreadState_no_sch_change:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>
@@ -1086,8 +1068,6 @@ lemma setCTE_assert_modify:
        apply (rule word_and_le2)
       apply (simp add: objBits_simps mask_def field_simps)
      apply (simp add: simpler_modify_def cong: option.case_cong if_cong)
-     apply (rule kernel_state.fold_congs[OF refl refl])
-     apply (clarsimp simp: projectKO_opt_tcb cong: if_cong)
     apply (clarsimp simp: lookupAround2_char1 word_and_le2)
     apply (rule ccontr, clarsimp)
     apply (erule(2) ps_clearD)
@@ -1104,7 +1084,7 @@ lemma setCTE_assert_modify:
    apply (erule disjE)
     apply clarsimp
     apply (frule(1) tcb_cte_cases_aligned_helpers)
-    apply (clarsimp simp: domI[where m = cte_cte_cases] field_simps)
+    apply (clarsimp simp: domI field_simps)
     apply (clarsimp simp: lookupAround2_char1 obj_at'_def projectKOs
                           objBits_simps)
    apply (clarsimp simp: obj_at'_def lookupAround2_char1
@@ -1232,11 +1212,14 @@ lemma thread_actions_isolatableD:
 lemma tcbSchedDequeue_rewrite:
   "monadic_rewrite True True (obj_at' (Not \<circ> tcbQueued) t) (tcbSchedDequeue t) (return ())"
   apply (simp add: tcbSchedDequeue_def)
-   apply (wp_pre, monadic_rewrite_symb_exec_l_known False, simp)
-    apply (rule monadic_rewrite_refl)
-   apply (wpsimp wp: threadGet_const)+
+  apply wp_pre
+  apply monadic_rewrite_symb_exec_l
+    apply (monadic_rewrite_symb_exec_l_known False, simp)
+     apply (rule monadic_rewrite_refl)
+    apply (wpsimp wp: threadGet_const)+
   done
 
+(* FIXME: improve automation here *)
 lemma switchToThread_rewrite:
   "monadic_rewrite True True
        (ct_in_state' (Not \<circ> runnable') and cur_tcb' and obj_at' (Not \<circ> tcbQueued) t)
@@ -1244,7 +1227,9 @@ lemma switchToThread_rewrite:
        (do Arch.switchToThread t; setCurThread t od)"
   apply (simp add: switchToThread_def Thread_H.switchToThread_def)
   apply (monadic_rewrite_l tcbSchedDequeue_rewrite, simp)
-   apply (rule monadic_rewrite_refl)
+   (* strip LHS of getters and asserts until LHS and RHS are the same *)
+   apply (repeat_unless \<open>rule monadic_rewrite_refl\<close> monadic_rewrite_symb_exec_l)
+      apply wpsimp+
   apply (clarsimp simp: comp_def)
   done
 
@@ -1282,9 +1267,33 @@ lemma threadGet_isolatable:
                thread_actions_isolatable_fail)
   done
 
+lemma tcbQueued_put_tcb_state_regs_tcb:
+  "tcbQueued (put_tcb_state_regs_tcb tsr tcb) = tcbQueued tcb"
+  apply (clarsimp simp: put_tcb_state_regs_tcb_def)
+  by (cases tsr; clarsimp)
+
+lemma idleThreadNotQueued_isolatable:
+  "thread_actions_isolatable idx (stateAssert idleThreadNotQueued [])"
+  apply (simp add: stateAssert_def2 stateAssert_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               gets_isolatable
+               thread_actions_isolatable_if
+               thread_actions_isolatable_returns
+               thread_actions_isolatable_fail)
+    unfolding idleThreadNotQueued_def
+    apply (clarsimp simp: obj_at_partial_overwrite_If)
+    apply (clarsimp simp: obj_at'_def tcbQueued_put_tcb_state_regs_tcb)
+   apply wpsimp+
+  done
+
 lemma setCurThread_isolatable:
   "thread_actions_isolatable idx (setCurThread t)"
-  by (simp add: setCurThread_def modify_isolatable)
+  unfolding setCurThread_def
+  apply (rule thread_actions_isolatable_bind)
+    apply (rule idleThreadNotQueued_isolatable)
+   apply (fastforce intro: modify_isolatable)
+  apply wpsimp
+  done
 
 lemma isolate_thread_actions_tcbs_at:
   assumes f: "\<And>x. \<lbrace>tcb_at' (idx x)\<rbrace> f \<lbrace>\<lambda>rv. tcb_at' (idx x)\<rbrace>" shows

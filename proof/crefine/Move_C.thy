@@ -624,9 +624,7 @@ lemma tcbFault_submonad_args:
 lemma threadGet_stateAssert_gets:
   "threadGet ext t = do stateAssert (tcb_at' t) []; gets (thread_fetch ext t) od"
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
-    apply (clarsimp intro!: obj_at_ko_at'[where P="\<lambda>tcb :: tcb. True", simplified]
-           | wp threadGet_wp)+
-  apply (clarsimp simp: obj_at'_def thread_fetch_def projectKOs)
+  apply (wp threadGet_wp | clarsimp simp: obj_at'_def thread_fetch_def projectKOs)+
   done
 
 lemma threadGet_tcbFault_submonad_fn:
@@ -912,15 +910,6 @@ lemma ex_st_tcb_at'_simp[simp]:
   "(\<exists>ts. st_tcb_at' ((=) ts) dest s) = tcb_at' dest s"
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
-\<comment> \<open>FIXME RT: this and the following lemma should be able to be removed now
-  lemma threadGet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb thread s \<longrightarrow> P (f tcb) s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
-  apply (rule hoare_post_imp [OF _ tg_sp'])
-  apply clarsimp
-  apply (frule obj_at_ko_at')
-  apply (clarsimp elim: obj_atE')
-  done\<close>
-
 lemma threadGet_wp'':
   "\<lbrace>\<lambda>s. \<forall>v. obj_at' (\<lambda>tcb. f tcb = v) thread s \<longrightarrow> P v s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
   apply (rule hoare_pre)
@@ -1000,45 +989,9 @@ lemma st_tcb_at'_opeq_simp:
     = st_tcb_at' (\<lambda>st. st = Structures_H.thread_state.Running) (ksCurThread s) s"
   by (fastforce simp add: st_tcb_at'_def obj_at'_def)
 
-lemma invs_queues_imp:
-  "invs' s \<longrightarrow> valid_queues s"
-  by clarsimp
-
 lemma invs'_pspace_domain_valid:
   "invs' s \<Longrightarrow> pspace_domain_valid s"
   by (simp add: invs'_def)
-
-lemma tcbSchedEnqueue_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> tcbSchedEnqueue t' \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp add: y)+
-  done
-
-lemma setThreadState_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbState_update f tcb) = P tcb"
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  assumes z: "\<And>f. \<forall>tcb. P (tcbFault_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setThreadState t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wpsimp wp: rescheduleRequired_obj_at'_only_st_qd_ft
-                    scheduleTCB_obj_at'_only_st_qd_ft)
-  apply (clarsimp simp: obj_at'_def x y z cong: if_cong)
-  done
-
-lemma setBoundNotification_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbBoundNotification_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setBoundNotification t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemmas setThreadState_obj_at_unchanged
-    = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI all_tcbI]
-
-lemmas setBoundNotification_obj_at_unchanged
-    = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
 
 lemma magnitudeCheck_assert2:
   "\<lbrakk> is_aligned x n; (1 :: machine_word) < 2 ^ n; ksPSpace s x = Some v \<rbrakk> \<Longrightarrow>
@@ -1208,13 +1161,6 @@ lemma ksPSpace_update_eq_ExD:
   "s = t\<lparr> ksPSpace := ksPSpace s\<rparr>
      \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
   by (erule exI)
-
-lemma tcbSchedEnqueue_queued_queues_inv:
-  "\<lbrace>\<lambda>s.  obj_at' tcbQueued t s \<and> P (ksReadyQueues s) \<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  unfolding tcbSchedEnqueue_def unless_def
-  apply (wpsimp simp: if_apply_def2 wp: threadGet_wp)
-  apply normalise_obj_at'
-  done
 
 (* FIXME BV: generalise *)
 lemma word_clz_1[simp]:

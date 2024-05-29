@@ -774,14 +774,6 @@ lemma tcts_sch_act[wp]:
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   by (wp sch_act_wf_lift tcb_in_cur_domain'_lift transferCapsToSlots_pres1)
 
-lemma tcts_vq[wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift transferCapsToSlots_pres1)
-
-lemma tcts_vq'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift' transferCapsToSlots_pres1)
-
 crunch state_refs_of' [wp]: setExtraBadge "\<lambda>s. P (state_refs_of' s)"
 
 lemma tcts_state_refs_of'[wp]:
@@ -985,9 +977,10 @@ crunches setExtraBadge, transferCapsToSlots
   and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 crunches transferCapsToSlots
-  for valid_release_queue[wp]: valid_release_queue
-  and valid_release_queue'[wp]: valid_release_queue'
-  (wp: crunch_wps)
+  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  and valid_bitmaps[wp]: valid_bitmaps
+  (rule: sym_heap_sched_pointers_lift)
 
 lemma transferCapsToSlots_invs[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> distinct slots
@@ -1220,15 +1213,12 @@ lemma set_mrs_valid_objs' [wp]:
 crunch valid_objs'[wp]: copyMRs valid_objs'
   (wp: crunch_wps simp: crunch_simps)
 
-
 lemma setMRs_invs_bits[wp]:
   "\<lbrace>valid_pspace'\<rbrace> setMRs t buf mrs \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
      setMRs t buf mrs \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
      setMRs t buf mrs \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setMRs t buf mrs \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  "\<lbrace>valid_queues'\<rbrace> setMRs t buf mrs \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
      setMRs t buf mrs
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -1245,8 +1235,6 @@ lemma copyMRs_invs_bits[wp]:
   "\<lbrace>valid_pspace'\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> copyMRs s sb r rb n
       \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  "\<lbrace>valid_queues'\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
       copyMRs s sb r rb n
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -1727,12 +1715,6 @@ crunches doIPCTransfer
   (wp: crunch_wps
    simp: zipWithM_x_mapM ball_conj_distrib)
 
-crunches doIPCTransfer
-  for vrq'[wp]: valid_release_queue'
-  (wp: crunch_wps threadSet_vrq'_inv
-   simp: zipWithM_x_mapM ball_conj_distrib
-   ignore: threadSet)
-
 end
 
 global_interpretation doIPCTransfer: typ_at_all_props' "doIPCTransfer s e b g r"
@@ -1945,40 +1927,14 @@ lemma cteDeleteOne_weak_sch_act[wp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches handleFaultReply
-  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
-  and valid_queues[wp]: "Invariants_H.valid_queues"
-  and valid_queues'[wp]: "valid_queues'"
-  and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
+crunch pred_tcb_at'[wp]: handleFaultReply "pred_tcb_at' proj P t"
+crunch tcb_in_cur_domain'[wp]: handleFaultReply "tcb_in_cur_domain' t"
 
 crunches unbindNotification
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: sbn_sch_act')
 
-lemma possibleSwitchTo_valid_queues[wp]:
-  "\<lbrace>Invariants_H.valid_queues and valid_objs' and
-    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' t\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  by (wpsimp wp: hoare_drop_imps hoare_vcg_if_lift2
-           simp: inReleaseQueue_def possibleSwitchTo_def curDomain_def bitmap_fun_defs)
-
-lemma cancelAllIPC_valid_queues':
-  "cancelAllIPC t \<lbrace> valid_queues' \<rbrace>"
-  apply (clarsimp simp: cancelAllIPC_def)
-  apply (wpsimp wp: mapM_x_wp' get_ep_inv' getEndpoint_wp)
-  done
-
-lemma cancelAllSignals_valid_queues':
-  "cancelAllSignals t \<lbrace> valid_queues' \<rbrace>"
-  apply (clarsimp simp: cancelAllSignals_def)
-  apply (wpsimp wp: mapM_x_wp' getNotification_wp)
-  done
-
-crunches cteDeleteOne
-  for valid_queues'[wp]: valid_queues'
-  (simp: crunch_simps inQ_def
-     wp: crunch_wps sts_st_tcb' getObject_inv threadSet_valid_queues')
+crunch valid_objs'[wp]: handleFaultReply valid_objs'
 
 crunches handleFaultReply
   for valid_objs'[wp]: valid_objs'
@@ -5984,6 +5940,10 @@ lemma replyUnlink_obj_at_tcb_none:
   apply (simp add: replyUnlink_def)
   apply (wpsimp wp: updateReply_wp_all gts_wp')
   by (auto simp: obj_at'_def objBitsKO_def)
+
+crunches possibleSwitchTo
+  for pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
 
 lemma si_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' active' t

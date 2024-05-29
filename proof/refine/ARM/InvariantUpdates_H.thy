@@ -77,15 +77,6 @@ lemma valid_tcb'_tcbFault_update[simp]:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
   by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def cteSizeBits_def)
 
-lemma valid_queues_ksSchedulerAction_update[simp]:
-  "valid_queues (ksSchedulerAction_update f s) = valid_queues s"
- unfolding valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
- by simp
-
-lemma valid_queues'_ksSchedulerAction_update[simp]:
-  "valid_queues' (ksSchedulerAction_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
 lemma ex_cte_cap_wp_to'_gsCNodes_update[simp]:
   "ex_cte_cap_wp_to' P p (gsCNodes_update f s') = ex_cte_cap_wp_to' P p s'"
   by (simp add: ex_cte_cap_wp_to'_def)
@@ -119,49 +110,25 @@ lemma tcb_in_cur_domain_ct[simp]:
   "tcb_in_cur_domain' t  (ksCurThread_update f s) = tcb_in_cur_domain' t s"
   by (fastforce simp: tcb_in_cur_domain'_def)
 
-lemma valid_queues'_ksCurDomain[simp]:
-  "valid_queues' (ksCurDomain_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksCurDomain[simp]:
+  "valid_bitmaps (ksCurDomain_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksDomScheduleIdx[simp]:
-  "valid_queues' (ksDomScheduleIdx_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksDomScheduleIdx[simp]:
+  "valid_bitmaps (ksDomScheduleIdx_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksDomSchedule[simp]:
-  "valid_queues' (ksDomSchedule_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksDomSchedule[simp]:
+   "valid_bitmaps (ksDomSchedule_update f s) = valid_bitmaps s"
+   by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksDomainTime[simp]:
-  "valid_queues' (ksDomainTime_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksDomainTime[simp]:
+  "valid_bitmaps (ksDomainTime_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksWorkUnitsCompleted[simp]:
-  "valid_queues' (ksWorkUnitsCompleted_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues'_ksReprogramTimer[simp]:
-  "valid_queues' (ksReprogramTimer_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues_ksCurDomain[simp]:
-  "valid_queues (ksCurDomain_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomScheduleIdx[simp]:
-  "valid_queues (ksDomScheduleIdx_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomSchedule[simp]:
-  "valid_queues (ksDomSchedule_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomainTime[simp]:
-  "valid_queues (ksDomainTime_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksWorkUnitsCompleted[simp]:
-  "valid_queues (ksWorkUnitsCompleted_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
+lemma valid_bitmaps_ksWorkUnitsCompleted[simp]:
+  "valid_bitmaps (ksWorkUnitsCompleted_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
 lemma valid_queues_ksReprogramTimer[simp]:
   "valid_queues (ksReprogramTimer_update f s) = valid_queues s"
@@ -292,6 +259,10 @@ lemma inQ_tcbIPCBuffer_update_idem[simp]:
 
 lemma valid_mdb_interrupts'[simp]:
   "valid_mdb' (ksInterruptState_update f s) = valid_mdb' s"
+  by (simp add: valid_mdb'_def)
+
+lemma valid_mdb'_ksReadyQueues_update[simp]:
+  "valid_mdb' (ksReadyQueues_update f s) = valid_mdb' s"
   by (simp add: valid_mdb'_def)
 
 lemma vms_ksReadyQueues_update[simp]:

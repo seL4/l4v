@@ -77,24 +77,17 @@ lemma ready_qs_runnable_ksMachineState[simp]:
   "ready_qs_runnable (ksMachineState_update f s) = ready_qs_runnable s"
   by (clarsimp simp: ready_qs_runnable_def)
 
-lemma ready_or_release'_ksMachineState[simp]:
-  "ready_or_release' (ksMachineState_update f s) = ready_or_release' s"
-  by (clarsimp simp: ready_or_release'_def)
+lemma threadGet_exs_valid[wp]:
+  "tcb_at' t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> threadGet f t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  unfolding threadGet_def liftM_def
+  apply (wpsimp wp: exs_getObject)
+    apply (fastforce simp: obj_at'_def objBits_simps')+
+  done
 
-crunches setVMRoot
-  for ready_qs_runnable'[wp]: ready_qs_runnable
-  and ready_or_release'[wp]: ready_or_release'
-  (wp: crunch_wps)
-
-lemma switchToThread_ready_qs_runnable[wp]:
-  "RISCV64_H.switchToThread t \<lbrace>ready_qs_runnable\<rbrace>"
-  unfolding RISCV64_H.switchToThread_def
-  by wpsimp
-
-lemma switchToThread_ready_or_release'[wp]:
-  "RISCV64_H.switchToThread t \<lbrace>ready_or_release'\<rbrace>"
-  unfolding RISCV64_H.switchToThread_def
-  by wpsimp
+lemma isRunnable_exs_valid[wp]:
+  "tcb_at' t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> isRunnable t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  unfolding isRunnable_def getThreadState_def
+  by (wpsimp wp: exs_getObject)
 
 (* FIXME: move *)
 lemma switchToThread_ccorres:
@@ -122,7 +115,7 @@ lemma switchToThread_ccorres:
 lemma activateThread_ccorres:
   "ccorres dc xfdc
            (ct_in_state' activatable' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
-                   and valid_queues and valid_objs')
+            and valid_objs' and pspace_aligned' and pspace_distinct')
            UNIV []
            activateThread
            (Call activateThread_'proc)"
@@ -215,6 +208,31 @@ lemma switchToThread_ccorres':
 
 lemmas word_log2_max_word_word_size = word_log2_max[where 'a=machine_word_len, simplified word_size, simplified]
 
+lemma ccorres_pre_getQueue:
+  assumes cc: "\<And>queue. ccorres r xf (P queue) (P' queue) hs (f queue) c"
+  shows   "ccorres r xf (\<lambda>s. P (ksReadyQueues s (d, p)) s \<and> d \<le> maxDomain \<and> p \<le> maxPriority)
+                        {s'. \<forall>queue. (let cqueue = index (ksReadyQueues_' (globals s'))
+                                                         (cready_queues_index_to_C d p) in
+                                      ctcb_queue_relation queue cqueue) \<longrightarrow> s' \<in> P' queue}
+           hs (getQueue d p >>= (\<lambda>queue. f queue)) c"
+  apply (rule ccorres_guard_imp2)
+  apply (rule ccorres_symb_exec_l2)
+     defer
+     defer
+     apply (rule gq_sp)
+    defer
+    apply (rule ccorres_guard_imp)
+    apply (rule cc)
+     apply clarsimp
+     apply assumption
+    apply assumption
+   apply (clarsimp simp: getQueue_def gets_exs_valid)
+  apply clarsimp
+  apply (drule spec, erule mp)
+  apply (erule rf_sr_ctcb_queue_relation)
+   apply (simp add: maxDom_to_H maxPrio_to_H)+
+  done
+
 lemma chooseThread_ccorres:
   "ccorres dc xfdc
      (invs' and valid_idle' and (\<lambda>s.  \<forall>d p. distinct (ksReadyQueues s (d, p))) and ready_or_release')
@@ -266,7 +284,7 @@ proof -
          apply (rule_tac P="curdom \<le> maxDomain" in ccorres_cross_over_guard_no_st)
          apply (rule_tac P="prio \<le> maxPriority" in ccorres_cross_over_guard_no_st)
          apply (rule ccorres_pre_getQueue)
-         apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
+         apply (rule_tac P="\<not> tcbQueueEmpty queue" in ccorres_cross_over_guard_no_st)
          apply (rule ccorres_symb_exec_l)
             apply (rule ccorres_assert)
             apply (rule ccorres_symb_exec_r)
@@ -281,7 +299,6 @@ proof -
              apply (rule conseqPre, vcg)
              apply (rule Collect_mono)
              apply clarsimp
-             apply (strengthen queue_in_range)
              apply assumption
             apply clarsimp
             apply (rule conseqPre, vcg)
@@ -862,7 +879,7 @@ sorry (* FIXME RT: schedule_ccorres
           apply (wp (once) hoare_drop_imps)
            apply wp
           apply (strengthen strenghten_False_imp[where P="a = ResumeCurrentThread" for a])
-          apply (clarsimp simp: conj_ac invs_queues invs_valid_objs' cong: conj_cong)
+          apply (clarsimp simp: conj_ac invs_valid_objs' cong: conj_cong)
           apply wp
          apply (clarsimp, vcg exspec=tcbSchedEnqueue_modifies)
         apply (clarsimp, vcg exspec=tcbSchedEnqueue_modifies)
@@ -882,9 +899,11 @@ sorry (* FIXME RT: schedule_ccorres
     apply wp
    apply vcg
 
-  apply (clarsimp simp: tcb_at_invs' rf_sr_ksCurThread if_apply_def2 invs_queues invs_valid_objs')
+  apply (clarsimp simp: tcb_at_invs' rf_sr_ksCurThread if_apply_def2 invs_valid_objs')
   apply (frule invs_sch_act_wf')
   apply (frule tcb_at_invs')
+  apply (frule invs_pspace_aligned')
+  apply (frule invs_pspace_distinct')
   apply (rule conjI)
    apply (clarsimp dest!: rf_sr_cscheduler_relation simp: cscheduler_action_relation_def)
   apply (rule conjI; clarsimp)

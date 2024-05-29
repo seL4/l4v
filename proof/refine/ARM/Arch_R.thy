@@ -321,7 +321,7 @@ lemma performASIDControlInvocation_corres:
      apply (simp add:pageBits_def)
     apply clarsimp
     apply (drule(1) cte_cap_in_untyped_range)
-         apply (fastforce simp:cte_wp_at_ctes_of)
+         apply (fastforce simp: cte_wp_at_ctes_of)
         apply assumption+
      apply fastforce
     apply simp
@@ -1271,7 +1271,7 @@ lemma tcbSchedEnqueue_vs_entry_align[wp]:
  "\<lbrace>\<lambda>s. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p s\<rbrace>
    tcbSchedEnqueue pa
   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
-  apply (clarsimp simp: tcbSchedEnqueue_def setQueue_def)
+  apply (clarsimp simp: tcbSchedEnqueue_def tcbQueuePrepend_def setQueue_def)
   by (wp unless_wp | simp)+
 
 crunch vs_entry_align[wp]:

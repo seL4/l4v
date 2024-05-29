@@ -3005,8 +3005,6 @@ lemma cnc_tcb_helper:
   assumes rfsr: "(\<sigma>\<lparr>ksPSpace := ks\<rparr>, x) \<in> rf_sr"
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr p) (objBitsKO kotcb)"
   assumes ptr0: "ctcb_ptr_to_tcb_ptr p \<noteq> 0"
-  assumes vq: "valid_queues \<sigma>"
-  assumes vrlq: "valid_release_queue \<sigma>"
   assumes pal: "pspace_aligned' (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
   assumes pno: "pspace_no_overlap' (ctcb_ptr_to_tcb_ptr p) (objBitsKO kotcb) (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
   assumes pds: "pspace_distinct' (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
@@ -5845,7 +5843,7 @@ lemma placeNewObject_user_data_device:
   "ccorresG rf_sr \<Gamma> dc xfdc
   (pspace_aligned' and pspace_distinct' and pspace_bounded'
     and ret_zero regionBase (2 ^ (pageBits + us))
-    and pspace_no_overlap' regionBase (pageBits+us) and valid_queues
+    and pspace_no_overlap' regionBase (pageBits+us)
     and (\<lambda>s. sym_refs (state_refs_of' s))
     and (\<lambda>s. 2^(pageBits +  us) \<le> gsMaxObjectSize s)
     and K (regionBase \<noteq> 0 \<and> range_cover regionBase (pageBits + us) (pageBits+us) (Suc 0)
@@ -6049,7 +6047,7 @@ proof -
     apply clarify
     apply (intro conjI)
      apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct' invs_valid_global'
-                           APIType_capBits_def invs_queues invs_valid_objs'
+                           APIType_capBits_def invs_valid_objs'
                            invs_urz pageBits_def)
     apply clarsimp
     apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def

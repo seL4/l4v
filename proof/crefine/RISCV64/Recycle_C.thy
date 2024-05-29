@@ -862,8 +862,9 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
                    st_tcb_at' (\<lambda>st. isBlockedOnSend st \<and> blockingObject st = ptr) x s)
                               \<and> distinct (xs @ list) \<and> ko_at' IdleEP ptr s
                               \<and> (\<forall>p. \<forall>x \<in> set (xs @ list). \<forall>rf. (x, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> NTFNBound})
-                              \<and> valid_queues s \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_canonical' s
-                              \<and> sch_act_wf (ksSchedulerAction s) s \<and> valid_objs' s"
+                              \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_canonical' s
+                              \<and> sch_act_wf (ksSchedulerAction s) s \<and> valid_objs' s
+                              \<and> ksReadyQueues_head_end s \<and> ksReadyQueues_head_end_tcb_at' s"
                      and P'="\<lambda>xs. {s. ep_queue_relation' (cslift s) (xs @ list)
                                          (head_C (queue_' s)) (end_C (queue_' s))}
                                 \<inter> {s. thread_' s = (case list of [] \<Rightarrow> tcb_Ptr 0
@@ -963,8 +964,9 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
                    apply (rule_tac rrel=dc and xf=xfdc
                                and P="\<lambda>s. (\<forall>t \<in> set (x @ a # lista). tcb_at' t s)
                                           \<and> (\<forall>p. \<forall>t \<in> set (x @ a # lista). \<forall>rf. (t, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> NTFNBound})
-                                          \<and> valid_queues s \<and> distinct (x @ a # lista)
-                                          \<and> pspace_aligned' s \<and> pspace_distinct' s"
+                                          \<and> distinct (x @ a # lista)
+                                          \<and> pspace_aligned' s \<and> pspace_distinct' s
+                                          \<and> ksReadyQueues_head_end s \<and> ksReadyQueues_head_end_tcb_at' s"
                               and P'="{s. ep_queue_relation' (cslift s) (x @ a # lista)
                                            (head_C (queue_' s)) (end_C (queue_' s))}"
                                in ccorres_from_vcg)
@@ -980,8 +982,7 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
                    apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def)
                    apply (rule conjI)
                     apply (clarsimp simp: cpspace_relation_def)
-                    apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-                     apply (rule null_ep_queue)
+                    apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
                      subgoal by (simp add: o_def)
                     apply (rule conjI)
                      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
@@ -1004,9 +1005,6 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
                     apply (clarsimp simp: image_iff)
                     apply (drule_tac x=p in spec)
                     subgoal by fastforce
-                   apply (rule conjI)
-                    apply (erule cready_queues_relation_not_queue_ptrs,
-                           auto dest: null_ep_schedD[unfolded o_def] simp: o_def)[1]
                    apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def)
                   apply (rule ccorres_symb_exec_r2)
                     apply (erule spec)
@@ -1015,12 +1013,11 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
                  apply wp
                 apply simp
                 apply vcg
-               apply (wp hoare_vcg_const_Ball_lift tcbSchedEnqueue_ep_at
-                         sch_act_wf_lift)
+               apply (wp hoare_vcg_const_Ball_lift sch_act_wf_lift)
               apply simp
               apply (vcg exspec=tcbSchedEnqueue_cslift_spec)
              apply (wp hoare_vcg_const_Ball_lift sts_st_tcb_at'_cases
-                       sts_sch_act sts_valid_queues setThreadState_oa_queued)
+                       sts_sch_act sts_valid_objs')
             apply (vcg exspec=setThreadState_cslift_spec)
            apply (simp add: ccorres_cond_iffs)
            apply (rule ccorres_symb_exec_r2)
@@ -1044,14 +1041,11 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
            apply (clarsimp simp: cscheduler_action_relation_def st_tcb_at'_def
                           split: scheduler_action.split_asm)
            apply (rename_tac word)
-           apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
-              apply simp
-             subgoal by clarsimp
-            subgoal by clarsimp
+           apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge; simp?)
            subgoal by clarsimp
           apply clarsimp
           apply (rule conjI)
-           apply (frule(3) tcbSchedEnqueue_cslift_precond_discharge)
+           apply (frule tcbSchedEnqueue_cslift_precond_discharge; simp?)
            subgoal by clarsimp
           apply clarsimp
           apply (rule context_conjI)

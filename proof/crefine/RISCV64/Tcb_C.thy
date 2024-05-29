@@ -401,9 +401,10 @@ lemma hrs_mem_update_cong:
 
 lemma setPriority_ccorres:
   "ccorres dc xfdc
-      (\<lambda>s. tcb_at' t s \<and> Invariants_H.valid_queues s \<and>  ksCurDomain s \<le> maxDomain \<and>
-           valid_queues' s \<and> valid_objs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> (priority \<le> maxPriority))
-      (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. prio_' s = ucast priority})
+      (\<lambda>s. tcb_at' t s \<and> ksCurDomain s \<le> maxDomain \<and>
+           valid_objs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> (priority \<le> maxPriority) \<and>
+           pspace_aligned' s \<and> pspace_distinct' s)
+      ({s. tptr_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. prio_' s = ucast priority})
       [] (setPriority t priority) (Call setPriority_'proc)"
   apply (cinit lift: tptr_' prio_')
 sorry (* FIXME RT: setPriority_ccorres
@@ -427,7 +428,7 @@ sorry (* FIXME RT: setPriority_ccorres
         apply (ctac add: possibleSwitchTo_ccorres)
        apply (rule ccorres_return_Skip')
       apply (wp isRunnable_wp)
-     apply (wpsimp wp: hoare_drop_imps threadSet_valid_queues threadSet_valid_objs'
+     apply (wpsimp wp: hoare_drop_imps threadSet_valid_objs'
                        weak_sch_act_wf_lift_linear threadSet_pred_tcb_at_state
                        threadSet_tcbDomain_triv
                  simp: st_tcb_at'_def o_def split: if_splits)
@@ -436,13 +437,11 @@ sorry (* FIXME RT: setPriority_ccorres
                  where Q="\<lambda>rv s.
                           obj_at' (\<lambda>_. True) t s \<and>
                           priority \<le> maxPriority \<and>
-                          Invariants_H.valid_queues s \<and>
                           ksCurDomain s \<le> maxDomain \<and>
                           valid_objs' s \<and>
-                          valid_queues' s \<and>
                           weak_sch_act_wf (ksSchedulerAction s) s \<and>
-                          (\<forall>d p. \<not> t \<in> set (ksReadyQueues s (d, p)))"])
-    apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues tcbSchedDequeue_nonq)
+                          pspace_aligned' s \<and> pspace_distinct' s"])
+    apply (wp weak_sch_act_wf_lift_linear valid_tcb'_def)
    apply (clarsimp simp: valid_tcb'_tcbPriority_update)
   apply clarsimp
   apply (frule (1) valid_objs'_maxDomain[where t=t])
@@ -772,12 +771,12 @@ sorry (* FIXME RT: invokeTCB_ThreadControlCaps_ccorres
                         apply (clarsimp simp : guard_is_UNIV_def Collect_const_mem)
                        apply (rule hoare_strengthen_post[
                                     where Q= "\<lambda>rv s.
-                                              Invariants_H.valid_queues s \<and>
                                               valid_objs' s \<and>
                                               weak_sch_act_wf (ksSchedulerAction s) s \<and>
                                               ((\<exists>a b. priority = Some (a, b)) \<longrightarrow>
                                                    tcb_at' target s \<and> ksCurDomain s \<le> maxDomain \<and>
-                                                   valid_queues' s \<and>  fst (the priority) \<le> maxPriority)"])
+                                                   fst (the priority) \<le> maxPriority) \<and>
+                                              pspace_aligned' s \<and> pspace_distinct' s"])
                         apply (strengthen sch_act_wf_weak)
                         apply (wp hoare_weak_lift_imp)
                        apply (clarsimp split: if_splits)
@@ -866,12 +865,12 @@ sorry (* FIXME RT: invokeTCB_ThreadControlCaps_ccorres
                apply (clarsimp simp : guard_is_UNIV_def Collect_const_mem)
               apply (simp cong: conj_cong)
               apply (rule hoare_strengthen_post[
-                            where Q="\<lambda>a b. (Invariants_H.valid_queues b \<and>
-                                       valid_objs' b \<and>
+                            where Q="\<lambda>a b. (valid_objs' b \<and>
                                        sch_act_wf (ksSchedulerAction b) b \<and>
+                                       pspace_aligned' b \<and> pspace_distinct' b \<and>
                                        ((\<exists>a b. priority = Some (a, b)) \<longrightarrow>
                                           tcb_at'  target b \<and>
-                                          ksCurDomain b \<le> maxDomain \<and> valid_queues' b \<and>
+                                          ksCurDomain b \<le> maxDomain \<and>
                                           fst (the priority) \<le> maxPriority)) \<and>
                                        ((case snd (the buf)
                                            of None \<Rightarrow> 0
@@ -893,15 +892,15 @@ sorry (* FIXME RT: invokeTCB_ThreadControlCaps_ccorres
                prefer 2
                apply fastforce
               apply (strengthen cte_is_derived_capMasterCap_strg
-                                invs_queues invs_weak_sch_act_wf invs_sch_act_wf'
+                                invs_weak_sch_act_wf invs_sch_act_wf'
                                 invs_valid_objs' invs_mdb' invs_pspace_aligned',
                             simp add: o_def)
               apply (rule_tac P="is_aligned (fst (the buf)) msg_align_bits"
                        in hoare_gen_asm)
               apply (wp threadSet_ipcbuffer_trivial hoare_weak_lift_imp
                      | simp
-                     | strengthen invs_sch_act_wf' invs_valid_objs' invs_weak_sch_act_wf invs_queues
-                                  invs_valid_queues' | wp hoare_drop_imps)+
+                     | strengthen invs_sch_act_wf' invs_valid_objs' invs_weak_sch_act_wf
+                     | wp hoare_drop_imps)+
              apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                    option_to_0_def
                             split: option.split_asm)
@@ -910,7 +909,7 @@ sorry (* FIXME RT: invokeTCB_ThreadControlCaps_ccorres
              apply (rule ccorres_return_C_errorE, simp+)[1]
             apply vcg
            apply (simp add: conj_comms cong: conj_cong)
-           apply (strengthen invs_ksCurDomain_maxDomain')
+           apply (strengthen invs_ksCurDomain_maxDomain' invs_pspace_distinct')
            apply (wp hoare_vcg_const_imp_lift_R cteDelete_invs')
           apply simp
           apply (rule ccorres_split_nothrow_novcg_dc)
@@ -927,8 +926,7 @@ sorry (* FIXME RT: invokeTCB_ThreadControlCaps_ccorres
          apply (rule conjI)
           apply (clarsimp simp: objBits_simps' word_bits_conv case_option_If2 if_n_0_0 valid_cap'_def
                                 capAligned_def obj_at'_def projectKOs)
-         apply (clarsimp simp: invs_valid_objs' invs_valid_queues'
-                               Invariants_H.invs_queues invs_ksCurDomain_maxDomain')
+         apply (fastforce simp: invs_valid_objs' invs_ksCurDomain_maxDomain')
         apply (rule ccorres_Cond_rhs_Seq)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr
@@ -1133,7 +1131,7 @@ sorry (* FIXME RT: restart_ccorres
         apply (ctac(no_vcg) add: tcbSchedEnqueue_ccorres)
          apply (ctac add: possibleSwitchTo_ccorres)
         apply (wp weak_sch_act_wf_lift)[1]
-       apply (wp sts_valid_queues setThreadState_st_tcb)[1]
+       apply (wp sts_valid_objs' setThreadState_st_tcb)[1]
       apply (simp add: valid_tcb_state'_def)
       apply wp
       apply (wp (once) sch_act_wf_lift, (wp tcb_in_cur_domain'_lift)+)
@@ -3314,7 +3312,8 @@ sorry (* FIXME RT: decodeTCBConfigure_ccorres
    apply (rule conjI, fastforce)
    apply (drule interpret_excaps_eq)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_tcb_state'_def numeral_eqs le_ucast_ucast_le
-                         tcb_at_invs' invs_valid_objs' invs_queues invs_sch_act_wf'
+                         tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
+                         invs_pspace_aligned' invs_pspace_distinct'
                          ct_in_state'_def pred_tcb_at'_def obj_at'_def tcb_st_refs_of'_def)
    apply (erule disjE; simp add: objBits_defs mask_def)
   apply (clarsimp simp: idButNot_def interpret_excaps_test_null

@@ -156,8 +156,9 @@ To run a "ReaderM" inside a state monad stack, e.g. the "Kernel" monad, use "get
 The ready queue is simply a list of threads that are ready to
 run. Each thread in this list is at the same priority level.
 
-> type ReadyQueue = [PPtr TCB]
-> type ReleaseQueue = [PPtr TCB]
+> type ReadyQueue = TcbQueue
+
+> type ReleaseQueue = TcbQueue
 
 This is a standard Haskell singly-linked list independent of the
 thread control block structures. However, in a real implementation, it
@@ -184,8 +185,14 @@ replaces the previous one.
 
 > setCurThread :: PPtr TCB -> Kernel ()
 > setCurThread tptr = do
->   stateAssert ready_qs_runnable "Threads in the ready queues are runnable'"
->   modify (\ks -> ks { ksCurThread = tptr })
+>     stateAssert idleThreadNotQueued "the idle thread cannot be in the ready queues"
+>     modify (\ks -> ks { ksCurThread = tptr })
+
+In many places, we would like to be able to use the fact that threads in the
+ready queues have runnable' thread state. We add an assertion that it does hold.
+
+> ready_qs_runnable :: KernelState -> Bool
+> ready_qs_runnable _ = True
 
 In many places, we would like to be able to use the fact that threads in the
 ready queues have runnable' thread state. We add an assertion that it does hold.
@@ -319,7 +326,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksCurDomain = 0,
 >         ksDomainTime = 15,
 >         ksReadyQueues =
->             funPartialArray (const [])
+>             funPartialArray (const (TcbQueue {tcbQueueHead = Nothing, tcbQueueEnd = Nothing}))
 >                             ((0, 0), (fromIntegral numDomains, maxPriority)),
 >         ksReadyQueuesL1Bitmap = funPartialArray (const 0) (0, fromIntegral numDomains),
 >         ksReadyQueuesL2Bitmap =
@@ -482,3 +489,13 @@ activatable' after schedule runs. We add an assertion that this is the case.
 
 > ct_activatable'_asrt :: KernelState -> Bool
 > ct_activatable'_asrt _ = True
+
+Several asserts about ksReadyQueues
+
+> ksReadyQueues_asrt :: KernelState -> Bool
+> ksReadyQueues_asrt _ = True
+
+An assert that will say that the idle thread is not in a ready queue
+
+> idleThreadNotQueued :: KernelState -> Bool
+> idleThreadNotQueued _ = True

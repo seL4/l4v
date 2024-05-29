@@ -18,8 +18,7 @@ definition
 definition
   "array_relation r n a c \<equiv> \<forall>i \<le> n. r (a i) (index c (unat i))"
 
-(* used for bound ntfn/tcb *)
-definition
+definition option_to_ctcb_ptr :: "machine_word option \<Rightarrow> tcb_C ptr" where
   "option_to_ctcb_ptr x \<equiv> case x of None \<Rightarrow> NULL | Some t \<Rightarrow> tcb_ptr_to_ctcb_ptr t"
 
 
@@ -704,17 +703,17 @@ definition
 where
   "cready_queues_index_to_C qdom prio \<equiv> (unat qdom) * numPriorities + (unat prio)"
 
-definition cready_queues_relation ::
-  "tcb_C typ_heap \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue) \<Rightarrow> bool"
-where
-  "cready_queues_relation h_tcb queues aqueues \<equiv>
-     \<forall>qdom prio. ((qdom \<ge> ucast minDom \<and> qdom \<le> ucast maxDom \<and>
-                  prio \<ge> ucast minPrio \<and> prio \<le> ucast maxPrio) \<longrightarrow>
-       (let cqueue = index queues (cready_queues_index_to_C qdom prio) in
-            sched_queue_relation' h_tcb (aqueues (qdom, prio)) (head_C cqueue) (end_C cqueue)))
-        \<and> (\<not> (qdom \<ge> ucast minDom \<and> qdom \<le> ucast maxDom \<and>
-                  prio \<ge> ucast minPrio \<and> prio \<le> ucast maxPrio) \<longrightarrow> aqueues (qdom, prio) = [])"
+definition ctcb_queue_relation :: "tcb_queue \<Rightarrow> tcb_queue_C \<Rightarrow> bool" where
+   "ctcb_queue_relation aqueue cqueue \<equiv>
+      head_C cqueue = option_to_ctcb_ptr (tcbQueueHead aqueue)
+      \<and> end_C cqueue = option_to_ctcb_ptr (tcbQueueEnd aqueue)"
 
+definition cready_queues_relation ::
+  "(domain \<times> priority \<Rightarrow> ready_queue) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow>  bool"
+  where
+  "cready_queues_relation aqueues cqueues \<equiv>
+     \<forall>d p. d \<le> maxDomain \<and> p \<le> maxPriority
+           \<longrightarrow> ctcb_queue_relation (aqueues (d, p)) (index cqueues (cready_queues_index_to_C d p))"
 
 abbreviation
   "cte_array_relation astate cstate

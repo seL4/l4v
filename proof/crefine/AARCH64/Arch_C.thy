@@ -1421,7 +1421,7 @@ lemma performPageGetAddress_ccorres:
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
@@ -3246,13 +3246,14 @@ lemma decodeARMMMUInvocation_ccorres:
     apply (rule conjI; clarsimp)
     apply (frule invs_arch_state')
     apply (rule conjI, clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
-    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_queues
-                          invs_sch_act_wf'
+    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_sch_act_wf'
                           unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
     apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
     apply (rule conjI; clarsimp)+
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (intro conjI)
+            apply fastforce
+           apply fastforce
           apply fastforce
          apply (fastforce elim!: pred_tcb'_weakenE)
         apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
@@ -3269,15 +3270,17 @@ lemma decodeARMMMUInvocation_ccorres:
      apply (clarsimp simp: le_mask_asid_bits_helper)
     apply (simp add: is_aligned_shiftl_self)
    (* ARMASIDPoolAssign *)
-   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_queues invs_sch_act_wf')
+   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_sch_act_wf')
    apply (frule invs_arch_state', clarsimp)
    apply (intro conjI)
+         apply fastforce
         apply fastforce
-       apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
+       apply fastforce
       apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
-     apply (cases extraCaps; simp)
-     apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isPTCap'_def)
-    apply (simp add: valid_cap'_def)
+     apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
+    apply (cases extraCaps; simp)
+    apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isPTCap'_def)
+   apply (simp add: valid_cap'_def)
    apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
                          asid_low_bits_word_bits asidInvalid_def asid_wf_def
                   dest!: filter_eq_ConsD)
@@ -3473,7 +3476,10 @@ lemma readVCPUReg_ccorres:
   apply fastforce
   done
 
-crunch st_tcb_at'[wp]: readVCPUReg "\<lambda>s. Q (st_tcb_at' P t s)"
+crunches readVCPUReg
+  for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P t s)"
+  and pspace_aligned'[wp]: "pspace_aligned'"
+  and pspace_distinct'[wp]: "pspace_distinct'"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres *)
@@ -3563,16 +3569,15 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold ThreadState_defs
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall; clarsimp)
    apply (rule conjI, clarsimp simp: ct_in_state'_def st_tcb_at'_def comp_def)
-    apply (fastforce simp: obj_at'_def projectKOs)
-   apply (clarsimp simp: Kernel_C.badgeRegister_def AARCH64.badgeRegister_def
-                         AARCH64_H.badgeRegister_def C_register_defs)
+    apply (fastforce simp: obj_at'_def)
+   apply (clarsimp simp: AARCH64.badgeRegister_def AARCH64_H.badgeRegister_def C_register_defs)
    apply (simp add: rf_sr_def cstate_relation_def Let_def)
-  apply (rule conjI, clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs ct_in_state'_def)
+  apply (rule conjI, fastforce simp: pred_tcb_at'_def obj_at'_def ct_in_state'_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   done
 
@@ -3658,7 +3663,7 @@ lemma decodeVCPUWriteReg_ccorres:
    apply (vcg exspec=getSyscallArg_modifies)
 
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_defs mask_def)
   apply (rule conjI; clarsimp) \<comment> \<open>not enough args\<close>
@@ -3913,7 +3918,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
    apply (vcg exspec=getSyscallArg_modifies)
 
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_defs mask_def)
 
@@ -4015,7 +4020,7 @@ lemma decodeVCPUReadReg_ccorres:
    apply (vcg exspec=getSyscallArg_modifies)
 
   apply (clarsimp simp: word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_defs mask_def)
 
@@ -4119,8 +4124,9 @@ lemma decodeVCPUSetTCB_ccorres:
    apply vcg
 
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
-                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
+                        invs_pspace_aligned' invs_pspace_distinct'
                         valid_tcb_state'_def ThreadState_defs mask_def)
   apply (clarsimp simp: idButNot_def interpret_excaps_test_null
                         excaps_map_def neq_Nil_conv)
@@ -4272,18 +4278,15 @@ proof -
      (* Haskell side *)
      apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isCap_simps ctes_of_cte_at)
      apply (clarsimp simp: word_le_nat_alt conj_commute
-                           invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                           invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                            rf_sr_ksCurThread msgRegisters_unfold
-                           valid_tcb_state'_def mask_def
+                           valid_tcb_state'_def mask_def invs_pspace_aligned' invs_pspace_distinct'
                            valid_cap'_def ct_in_state'_def sysargs_rel_to_n st_tcb_at'_def comp_def
                            runnable'_eq)
      apply (fastforce elim: obj_at'_weakenE)
     (* C side *)
-    apply (clarsimp simp: word_le_nat_alt conj_commute
-                          invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
-                          rf_sr_ksCurThread msgRegisters_unfold
-                          valid_tcb_state'_def ThreadState_defs Kernel_C.maxIRQ_def
-                          and_mask_eq_iff_le_mask capVCPUPtr_eq)
+    apply (clarsimp simp: word_le_nat_alt rf_sr_ksCurThread msgRegisters_unfold
+                          Kernel_C.maxIRQ_def and_mask_eq_iff_le_mask capVCPUPtr_eq)
     apply (clarsimp simp:  mask_def)
     done
 qed

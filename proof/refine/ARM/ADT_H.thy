@@ -958,7 +958,7 @@ lemma TCB_implies_KOTCB:
   apply (clarsimp simp add: pspace_relation_def pspace_dom_def
                             dom_def UNION_eq Collect_eq)
   apply (erule_tac x=a in allE)+
-  apply (clarsimp simp add: other_obj_relation_def
+  apply (clarsimp simp add: tcb_relation_cut_def
                   split: Structures_H.kernel_object.splits)
   apply (drule iffD1)
    apply (fastforce simp add: dom_def image_def)

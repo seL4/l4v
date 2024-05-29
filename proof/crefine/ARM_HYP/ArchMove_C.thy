@@ -408,12 +408,6 @@ lemma ko_at'_tcb_vcpu_not_NULL:
   by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
                 dest: valid_objs_valid_tcb')
 
-
-(* FIXME move *)
-lemma setVMRoot_valid_queues':
-  "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
-  by (rule valid_queues_lift'; wp)
-
 lemma vcpuEnable_valid_pspace' [wp]:
   "\<lbrace> valid_pspace' \<rbrace> vcpuEnable a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
   by (wpsimp simp: valid_pspace'_def valid_mdb'_def)
@@ -442,8 +436,6 @@ crunch ko_at'2[wp]: doMachineOp "\<lambda>s. P (ko_at' p t s)"
 (* FIXME: change the original to be predicated! *)
 crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
-
-crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
 
 crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
 

@@ -610,13 +610,6 @@ lemma decDomainTime_corres:
   apply (clarsimp simp:state_relation_def cdt_relation_def)
   done
 
-lemma tcbSchedAppend_valid_objs':
-  "\<lbrace>valid_objs'\<rbrace>tcbSchedAppend t \<lbrace>\<lambda>r. valid_objs'\<rbrace>"
-  apply (simp add:tcbSchedAppend_def)
-  apply (wpsimp wp: unless_wp threadSet_valid_objs' threadGet_wp)
-  apply (clarsimp simp add:obj_at'_def typ_at'_def)
-  done
-
 lemma thread_state_case_if:
  "(case state of Structures_A.thread_state.Running \<Rightarrow> f | _ \<Rightarrow> g) =
   (if state = Structures_A.thread_state.Running then f else g)"
