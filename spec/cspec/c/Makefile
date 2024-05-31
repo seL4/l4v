@@ -4,11 +4,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-# For kernel builds (CSpec and binary verificaiton):
-KERNEL_BUILD_ROOT := build/${L4V_ARCH}
+# For kernel builds (CSpec and binary verificaiton).
+# We will get e.g. "ARM_" for empty L4V_PLAT, but that is preferrable to messing
+# with the corresponding external_file and install_C_file commands in Isabelle.
+KERNEL_BUILD_ROOT := build/${L4V_ARCH}_${L4V_PLAT}
 
 # For building configuration headers only (not used in CSpec):
-KERNEL_CONFIG_ROOT := config-build/${L4V_ARCH}
+KERNEL_CONFIG_ROOT := config-build/${L4V_ARCH}_${L4V_PLAT}
 
 # Death to recursively-expanded variables.
 KERNEL_CMAKE_EXTRA_OPTIONS := ${KERNEL_CMAKE_EXTRA_OPTIONS}
