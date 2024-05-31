@@ -52,7 +52,7 @@ theory UmmTypesFile
 begin
 declare [[allow_underscore_idents = true]]
 external_file "%(input)s"
-setup \<open> IsarInstall.gen_umm_types_file "%(input)s" "%(output)s" \<close>
+setup \\<open> IsarInstall.gen_umm_types_file "%(input)s" "%(output)s" \\<close>
 end
 """
 
