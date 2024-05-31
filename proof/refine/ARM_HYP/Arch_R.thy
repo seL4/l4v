@@ -701,7 +701,7 @@ lemma resolve_vaddr_valid_mapping_size:
         \<and> (case cap of cap.ArchObjectCap c \<Rightarrow> is_page_cap c | _ \<Rightarrow> False)
         \<and> cap_bits cap = pageBitsForSize a \<rbrace> "
   apply (simp add: resolve_vaddr_def)
-  apply (rule hoare_seq_ext[OF _ get_master_pde_sp])
+  apply (rule bind_wp[OF _ get_master_pde_sp])
   apply (rule hoare_pre)
    apply (wp get_master_pte_wp | wpc
      | simp add: lookup_pt_slot_no_fail_def)+
@@ -1622,7 +1622,7 @@ lemma findPDForASID_valid_offset'[wp]:
   "\<lbrace>valid_objs' and K (vptr < pptrBase)\<rbrace> findPDForASID p
    \<lbrace>\<lambda>rv s. valid_pde_mapping_offset' (rv + (vptr >> 21 << 3) && mask pd_bits)\<rbrace>,-"
   apply (rule hoare_gen_asmE)
-  apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
+  apply (rule hoare_strengthen_postE_R, rule findPDForASID_aligned)
   apply (simp add: mask_add_aligned vspace_bits_defs)
   apply (erule less_pptrBase_valid_pde_offset'')
   done
@@ -1755,7 +1755,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
    apply (wpc | wp lookupPTSlot_page_table_at'
           | simp add: slots_duplicated_ensured_def)+
      apply (rule_tac Q' = "\<lambda>p s. is_aligned p 7 \<and> page_table_at' (p && ~~ mask pt_bits) s"
-                  in hoare_post_imp_R)
+                  in hoare_strengthen_postE_R)
       apply (wp lookupPTSlot_aligned lookupPTSlot_page_table_at'
              | simp add: vspace_bits_defs largePagePTEOffsets_def superSectionPDEOffsets_def)+
      apply (rename_tac rv s)
@@ -1793,7 +1793,7 @@ lemma arch_decodeARMPageFlush_wf:
         (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
        decodeARMPageFlush label args (arch_capability.PageCap d word vmrights vmpage_size option)
        \<lbrace>valid_arch_inv'\<rbrace>, -"
-  supply hoare_True_E_R [simp del]
+  supply hoareE_R_TrueI [simp del]
   apply (simp add: decodeARMPageFlush_def)
   apply (wpsimp wp: whenE_throwError_wp simp: valid_arch_inv'_def valid_page_inv'_def if_apply_def2)
   done
@@ -1850,7 +1850,7 @@ lemma arch_decodeInvocation_wf[wp]:
                                     (snd (excaps!0)) and
                                   sch_act_simple and
                                   (\<lambda>s. descendants_of' (snd (excaps!0)) (ctes_of s) = {}) "
-                                  in hoare_post_imp_R)
+                                  in hoare_strengthen_postE_R)
                  apply (simp add: lookupTargetSlot_def)
                  apply wp
                 apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -1951,7 +1951,7 @@ lemma arch_decodeInvocation_wf[wp]:
                           c \<turnstile>' capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 21 << 21))) \<and>
                           is_aligned (addrFromPPtr word) ptBits \<and>
                           valid_pde_mapping_offset' (b + (hd args >> 21 << 3) && mask pd_bits)
-                         " in hoare_post_imp_R)
+                         " in hoare_strengthen_postE_R)
               apply (wp whenE_throwError_wp isFinalCapability_inv getPDE_wp | wpc
                      | simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE
                      | rule_tac x="fst p" in hoare_imp_eq_substR
@@ -1977,7 +1977,7 @@ lemma arch_decodeInvocation_wf[wp]:
    \<comment> \<open>PageDirectoryCap\<close>
    apply (simp add: decodeARMMMUInvocation_def ARM_HYP_H.decodeInvocation_def isCap_simps Let_def)
 
-   supply hoare_True_E_R [simp del]
+   supply hoareE_R_TrueI [simp del]
    apply (cases "ARM_HYP_H.isPDFlushLabel (invocation_type label)", simp_all)
     apply (cases args; simp)
      apply wp

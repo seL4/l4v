@@ -873,7 +873,7 @@ proof -
 
 qed
 
-lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
+lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_TrueI, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma set_ioport_mask_tcb_cap_valid[wp]:
   "\<lbrace>tcb_cap_valid a b\<rbrace> set_ioport_mask f l bl \<lbrace>\<lambda>rv. tcb_cap_valid a b\<rbrace>"
@@ -1128,7 +1128,7 @@ lemma create_mapping_entries_parent_for_refs:
   apply (rule hoare_gen_asmE)
   apply (cases pgsz; simp add: vmsz_aligned_def)
     by (wp,
-        rule hoare_post_imp_R,
+        rule hoare_strengthen_postE_R,
         rule lookup_pt_slot_cap_to lookup_pd_slot_cap_to lookup_pdpt_slot_cap_to,
         elim exEI,
         clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def,
@@ -1142,7 +1142,7 @@ lemma find_vspace_for_asid_ref_offset_voodoo:
    \<lbrace>\<lambda>rv. (ref \<rhd> (rv + (get_pml4_index v  << word_size_bits) && ~~ mask pml4_bits))\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule_tac Q'="\<lambda>rv s. is_aligned rv pml4_bits \<and> (ref \<rhd> rv) s"
-               in hoare_post_imp_R)
+               in hoare_strengthen_postE_R)
    apply simp
    apply (rule hoare_pre, wp find_vspace_for_asid_lookup_ref)
    apply simp
@@ -1265,7 +1265,7 @@ lemma find_vspace_for_asid_lookup_vspace_wp:
   "\<lbrace> \<lambda>s. valid_vspace_objs s \<and> (\<forall>pm. vspace_at_asid asid pm s \<and> page_map_l4_at pm s
     \<and> (\<exists>\<rhd> pm) s \<longrightarrow> Q pm s) \<rbrace> find_vspace_for_asid asid \<lbrace> Q \<rbrace>, -"
   (is "\<lbrace> \<lambda>s. ?v s \<and> (\<forall>pm. ?vpm pm s \<longrightarrow> Q pm s) \<rbrace> ?f \<lbrace> Q \<rbrace>, -")
-  apply (rule_tac Q'="\<lambda>rv s. ?vpm rv s \<and> (\<forall>pm. ?vpm pm s \<longrightarrow> Q pm s)" in hoare_post_imp_R)
+  apply (rule_tac Q'="\<lambda>rv s. ?vpm rv s \<and> (\<forall>pm. ?vpm pm s \<longrightarrow> Q pm s)" in hoare_strengthen_postE_R)
    apply wpsimp
    apply (simp | fast)+
   done
@@ -1616,7 +1616,7 @@ lemma arch_decode_inv_wf[wp]:
                                             and (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {})
                                             and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap False frame pageBits idx) (snd (excaps!0))
                                             and (\<lambda>s. x64_asid_table (arch_state s) free = None)"
-                         in hoare_post_imp_R)
+                         in hoare_strengthen_postE_R)
                   apply (simp add: lookup_target_slot_def)
                   apply wp
                  apply (clarsimp simp: cte_wp_at_def asid_wf_high)

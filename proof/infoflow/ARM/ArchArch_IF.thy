@@ -398,7 +398,7 @@ lemma find_pd_for_asid_assert_reads_respects:
   unfolding find_pd_for_asid_assert_def
   apply (wpsimp wp: get_pde_rev find_pd_for_asid_reads_respects hoare_vcg_all_lift)
    apply (rule_tac Q'="\<lambda>rv s. is_subject aag (lookup_pd_slot rv 0 && ~~ mask pd_bits)"
-                in hoare_post_imp_R)
+                in hoare_strengthen_postE_R)
     apply (rule find_pd_for_asid_pd_slot_authorised)
    apply (rename_tac rv s)
    apply (subgoal_tac "lookup_pd_slot rv 0 = rv")
@@ -625,7 +625,7 @@ lemma unmap_page_table_reads_respects:
                   (unmap_page_table asid vaddr pt)"
   unfolding unmap_page_table_def fun_app_def page_table_mapped_def
   by (wp dmo_mol_reads_respects store_pde_reads_respects get_pde_rev
-         flush_table_reads_respects find_pd_for_asid_reads_respects hoare_vcg_all_lift_R
+         flush_table_reads_respects find_pd_for_asid_reads_respects hoare_vcg_all_liftE_R
       | wpc | simp add: cleanByVA_PoU_def | wp (once) hoare_drop_imps)+
 
 lemma perform_page_table_invocation_reads_respects:
@@ -1352,7 +1352,7 @@ lemma unmap_page_globals_equiv:
                                    \<longrightarrow> (\<forall>xa\<in>set [0 , 4 .e. 0x3C]. xa + lookup_pd_slot x vptr
                                                                      && ~~ mask pd_bits
                                                                    \<noteq> arm_global_pd (arch_state sa)))"
-                  and E="\<lambda>_. globals_equiv st" in hoare_post_impErr)
+                  and E="\<lambda>_. globals_equiv st" in hoare_strengthen_postE)
         apply (wp find_pd_for_asid_not_arm_global_pd_large_page)
        apply simp
       apply simp

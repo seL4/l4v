@@ -141,7 +141,7 @@ lemma mapM_x_store_pte_updates:
    apply wp
    apply (clarsimp simp: obj_at_def fun_upd_idem)
   apply (simp add: mapM_x_Cons)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: store_pte_def set_pt_def set_object_def word_size_bits_def)
   apply (wp get_pt_wp get_object_wp)
@@ -205,7 +205,7 @@ lemma mapM_x_store_pde_updates:
    apply wp
    apply (clarsimp simp: obj_at_def fun_upd_idem)
   apply (simp add: mapM_x_Cons)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: store_pde_def set_pd_def set_object_def word_size_bits_def)
   apply (wp get_pd_wp get_object_wp)

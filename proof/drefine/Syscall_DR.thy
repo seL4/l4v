@@ -742,7 +742,7 @@ lemma perform_invocation_corres:
       apply (rule corres_split[OF invoke_cnode_corres])
         apply (clarsimp simp:lift_def,case_tac rv',simp add: throwError_def)
         apply (simp)
-       apply (rule hoare_triv[of \<top>], rule hoare_post_taut)+
+       apply (rule hoare_triv[of \<top>], rule hoare_TrueI)+
      apply clarsimp+
     done
 
@@ -756,7 +756,7 @@ lemma perform_invocation_corres:
          apply (rule_tac F = "\<exists>x. rv' = Inr x" in corres_gen_asm2)
          apply (rule corres_trivial)
          apply (clarsimp simp:lift_def returnOk_def)
-        apply (rule hoare_triv[of \<top>], rule hoare_post_taut)+
+        apply (rule hoare_triv[of \<top>], rule hoare_TrueI)+
        apply ((wp|simp add: liftE_def)+)
     (* arch *)
     apply (rename_tac arch_label)
@@ -767,7 +767,7 @@ lemma perform_invocation_corres:
         apply (rule_tac F = "\<exists>x. rv' = Inr x" in corres_gen_asm2)
         apply (rule corres_trivial)
         apply (clarsimp simp:lift_def returnOk_def)
-       apply (rule hoare_triv[of \<top>], rule hoare_post_taut)
+       apply (rule hoare_triv[of \<top>], rule hoare_TrueI)
       apply ((wp|simp add: liftE_def)+)
     done
 
@@ -826,7 +826,7 @@ lemma handle_fault_corres:
       apply (simp add:send_fault_ipc_def not_idle_thread_def Let_def)
       apply (wp hoare_drop_imps hoare_vcg_ball_lift | wpc)+
       apply (rule_tac Q'="\<lambda>r s. invs s \<and> valid_etcbs s \<and> obj\<noteq> idle_thread s \<and> obj = cur_thread s'"
-        in hoare_post_imp_R)
+        in hoare_strengthen_postE_R)
        apply wp
       apply (clarsimp simp:invs_mdb invs_valid_idle)
      apply wp
@@ -1242,7 +1242,7 @@ lemma not_master_reply_cap_lcs'[wp]:
   "\<lbrace>valid_reply_masters and valid_objs\<rbrace> CSpace_A.lookup_cap_and_slot t ptr
             \<lbrace>\<lambda>rv s. cte_wp_at (Not \<circ> is_master_reply_cap) (snd rv) s\<rbrace>,-"
   apply (rule_tac Q' = "\<lambda>rv s. \<not> is_master_reply_cap (fst rv) \<and> cte_wp_at ((=) (fst rv)) (snd rv) s"
-           in hoare_post_imp_R)
+           in hoare_strengthen_postE_R)
    apply (rule hoare_pre,wp,simp)
   apply (clarsimp simp:cte_wp_at_def)
   done
@@ -1445,7 +1445,7 @@ lemma handle_recv_corres:
               apply clarsimp
              apply wp+
             apply (rule hoare_vcg_conj_liftE_R)
-             apply (rule hoare_post_imp_R, rule lookup_cap_valid)
+             apply (rule hoare_strengthen_postE_R, rule lookup_cap_valid)
              apply (clarsimp simp: valid_cap_def)
             apply wp+
           apply (simp add:injection_handler_def)
@@ -1455,7 +1455,7 @@ lemma handle_recv_corres:
           apply (rule hoare_vcg_E_elim)
            apply (simp add: lookup_cap_def lookup_slot_for_thread_def split_def)
            apply wp
-            apply (rule hoare_post_impErr[OF resolve_address_bits_valid_fault])
+            apply (rule hoare_strengthen_postE[OF resolve_address_bits_valid_fault])
              apply simp
             apply simp
            apply wp

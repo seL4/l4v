@@ -1317,7 +1317,7 @@ lemma perform_asid_control_invocation_pas_refined:
   apply (rule hoare_gen_asm)
   apply (simp add: perform_asid_control_invocation_def )
   apply wpc
-   apply (rule pas_refined_asid_control_helper hoare_seq_ext hoare_K_bind)+
+   apply (rule pas_refined_asid_control_helper bind_wp hoare_K_bind)+
          apply (wp cap_insert_pas_refined' hoare_weak_lift_imp | simp)+
       apply ((wp retype_region_pas_refined'[where sz=pageBits]
                  hoare_vcg_ex_lift hoare_vcg_all_lift hoare_weak_lift_imp hoare_wp_combs hoare_drop_imp

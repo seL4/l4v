@@ -583,7 +583,7 @@ lemma handle_invocation_reads_respects_g:
              | rule hoare_drop_imps)+
                apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> invs s \<and> is_subject aag rv \<and>
                                          is_subject aag (cur_thread s) \<and> rv \<noteq> idle_thread s"
-                            in hoare_post_imp_R)
+                            in hoare_strengthen_postE_R)
                 apply (wp pinv_invs perform_invocation_silc_inv)
                apply (simp add: invs_def valid_state_def valid_pspace_def)
               apply (wpsimp wp: reads_respects_f_g'
@@ -698,7 +698,7 @@ lemma handle_recv_reads_respects_f:
          apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and> tcb_at rv s \<and>
                                    pas_cur_domain aag s \<and> cte_wp_at \<top> (fst r) s \<and> is_subject aag rv \<and>
                                    is_subject aag (cur_thread s) \<and> is_subject aag (fst (fst r))"
-                      in hoare_post_imp_R)
+                      in hoare_strengthen_postE_R)
           apply ((wp lookup_slot_for_thread_authorised lookup_slot_cte_at_wp | simp)+)[1]
          apply (clarsimp simp: silc_inv_not_subject[symmetric] invs_mdb invs_valid_objs)
          apply (auto intro: caps_of_state_valid reads_ep
@@ -708,7 +708,7 @@ lemma handle_recv_reads_respects_f:
         apply (rule_tac Q="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
                                  tcb_at rv s \<and> pas_cur_domain aag s \<and> is_subject aag rv \<and>
                                  is_subject aag (cur_thread s) \<and> is_subject aag (fst (fst r))"
-                     and E=E and F=E for E in hoare_post_impErr)
+                     and E=E and F=E for E in hoare_strengthen_postE)
           apply (wp lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault)
          apply ((fastforce simp add:valid_fault_def)+)[3]
       apply (wp reads_respects_f[OF as_user_reads_respects,where st=st and Q=\<top>])
@@ -725,7 +725,7 @@ lemma handle_recv_globals_equiv:
         | wpc | simp add: Let_def)+
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
                       E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)"
-                   in hoare_post_impErr)
+                   in hoare_strengthen_postE)
         apply (rule hoare_vcg_E_elim)
          apply (wp lookup_cap_cap_fault receive_ipc_globals_equiv
                    receive_signal_globals_equiv delete_caller_cap_invs
@@ -738,7 +738,7 @@ lemma handle_recv_globals_equiv:
                   clarsimp simp: invs_valid_objs invs_valid_global_objs invs_arch_state invs_distinct)+
      apply (rule_tac Q'="\<lambda>r s. invs s \<and> globals_equiv st s \<and> thread \<noteq> idle_thread s \<and>
                                tcb_at thread s \<and> cur_thread s = thread"
-                  in hoare_post_imp_R)
+                  in hoare_strengthen_postE_R)
       apply (wp as_user_globals_equiv | simp add: invs_imps valid_fault_def)+
     apply (wp delete_caller_cap_invs delete_caller_cap_globals_equiv
            | simp add: invs_imps invs_valid_idle ct_active_not_idle)+
@@ -907,7 +907,7 @@ lemma handle_event_reads_respects_f_g:
        apply (rule_tac E="\<lambda>r s. invs s \<and> is_subject aag rv \<and> is_subject aag (cur_thread s)
                               \<and> valid_fault r \<and> pas_refined aag s \<and> pas_cur_domain aag s
                               \<and> silc_inv aag st s \<and> rv \<noteq> idle_thread s"
-                   and Q="\<top>\<top>" in hoare_post_impErr)
+                   and Q="\<top>\<top>" in hoare_strengthen_postE)
          apply (rule hoare_vcg_E_conj)
           apply (wp hv_invs handle_vm_fault_silc_inv)+
        apply (simp add: invs_imps invs_mdb invs_valid_idle)+
@@ -985,7 +985,7 @@ lemma handle_invocation_globals_equiv:
          | simp split del: if_split
          | wp (once) hoare_drop_imps)+
          apply (rule_tac Q="\<lambda>r. invs and globals_equiv st and (\<lambda>s. thread \<noteq> idle_thread s)"
-                     and E="\<lambda>_. globals_equiv st" in hoare_post_impErr)
+                     and E="\<lambda>_. globals_equiv st" in hoare_strengthen_postE)
            apply (wp pinv_invs perform_invocation_globals_equiv
                      requiv_get_tcb_eq' set_thread_state_globals_equiv
                      sts_authorised_for_globals_inv

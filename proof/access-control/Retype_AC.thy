@@ -266,7 +266,7 @@ lemma delete_objects_respects[wp]:
    delete_objects ptr bits
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (rule_tac seq_ext)
+  apply (rule_tac bind_wp_fwd)
    apply (rule hoare_triv[of P _ "%_. P" for P])
    apply (wp dmo_freeMemory_respects | simp)+
   by (fastforce simp: ptr_range_def intro!: detype_integrity)
@@ -1192,7 +1192,7 @@ lemma decode_untyped_invocation_authorised:
                        is_subject aag (fst slot) \<and> pas_refined aag s \<and> word_size_bits \<le> sz \<and>
                        sz < word_bits \<and> is_aligned base sz \<and>
                        (is_cnode_cap (excaps ! 0) \<longrightarrow> (\<forall>x\<in>obj_refs_ac (excaps ! 0). is_subject aag x))"
-                   in hoare_post_imp_R)
+                   in hoare_strengthen_postE_R)
        apply (wp data_to_obj_type_ret_not_asid_pool data_to_obj_type_inv2)
       apply (case_tac "excaps ! 0", simp_all, fastforce simp: nonzero_data_to_nat_simp)[1]
      apply (wp whenE_throwError_wp)+

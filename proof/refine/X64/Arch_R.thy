@@ -539,7 +539,7 @@ lemma find_vspace_for_asid_lookup_slot [wp]:
   find_vspace_for_asid asid
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (lookup_pml4_slot rv vptr && ~~ mask pml4_bits)\<rbrace>, -"
   apply (rule hoare_pre)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (rule hoare_vcg_R_conj)
      apply (rule hoare_vcg_R_conj)
       apply (rule find_vspace_for_asid_inv [where P="\<top>", THEN valid_validE_R])
@@ -703,14 +703,14 @@ lemma decodeX64PageTableInvocation_corres:
              apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
-                     | wp whenE_wp hoare_vcg_all_lift_R getPDE_wp get_pde_wp
+                     | wp whenE_wp hoare_vcg_all_liftE_R getPDE_wp get_pde_wp
                      | wp (once) hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
       apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
                            equal_kernel_mappings s \<and> valid_global_objs s \<and>
                            (\<exists>ref. (ref \<rhd> rv) s) \<and> typ_at (AArch APageMapL4) rv s \<and>
                            is_aligned rv pml4_bits"
-                       in hoare_post_imp_R[rotated])
+                       in hoare_strengthen_postE_R[rotated])
        apply fastforce
       apply (wpsimp | wp (once) hoare_drop_imps)+
     apply (fastforce simp: valid_cap_def mask_def)
@@ -794,14 +794,14 @@ lemma decodeX64PageDirectoryInvocation_corres:
              apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
-                        | wp whenE_wp hoare_vcg_all_lift_R getPDPTE_wp get_pdpte_wp
+                        | wp whenE_wp hoare_vcg_all_liftE_R getPDPTE_wp get_pdpte_wp
                         | wp (once) hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
       apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
                            equal_kernel_mappings s \<and> valid_global_objs s \<and>
                            (\<exists>ref. (ref \<rhd> rv) s) \<and> typ_at (AArch APageMapL4) rv s \<and>
                            is_aligned rv pml4_bits"
-                        in hoare_post_imp_R[rotated])
+                        in hoare_strengthen_postE_R[rotated])
        apply fastforce
       apply (wpsimp | wp (once) hoare_drop_imps)+
     apply (fastforce simp: valid_cap_def mask_def)
@@ -882,7 +882,7 @@ lemma decodeX64PDPointerTableInvocation_corres:
              apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
-                    | wp whenE_wp hoare_vcg_all_lift_R getPML4E_wp get_pml4e_wp
+                    | wp whenE_wp hoare_vcg_all_liftE_R getPML4E_wp get_pml4e_wp
                     | wp (once) hoare_drop_imps)+)
     apply (fastforce simp: valid_cap_def mask_def intro!: page_map_l4_pml4e_at_lookupI)
    apply (clarsimp simp: valid_cap'_def)
@@ -1805,7 +1805,7 @@ lemma arch_decodeInvocation_wf[wp]:
                             cte_wp_at' (\<lambda>cte. \<exists>idx. cteCap cte = (UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
                             sch_act_simple and
                             (\<lambda>s. descendants_of' (snd (excaps!0)) (ctes_of s) = {}) "
-                            in hoare_post_imp_R)
+                            in hoare_strengthen_postE_R)
            apply (simp add: lookupTargetSlot_def)
            apply wp
           apply (clarsimp simp: cte_wp_at_ctes_of asid_wf_def)

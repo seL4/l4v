@@ -261,7 +261,7 @@ lemma decode_invocation_IRQHandlerCap:
   apply (simp add: decode_invocation_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc | simp add: o_def)+
-       apply (rule hoare_post_imp_R[where Q'="\<top>\<top>"])
+       apply (rule hoare_strengthen_postE_R[where Q'="\<top>\<top>"])
         apply wp
        apply (clarsimp simp: uncurry_def)
       apply (wp | wpc | simp add: decode_irq_handler_invocation_def o_def split del: if_split)+
@@ -345,7 +345,7 @@ lemma call_kernel_irq_masks:
                               (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
      apply (wp | simp)+
    apply (rule_tac Q="\<lambda>x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s"
-               and F="E" for E in hoare_post_impErr)
+               and F="E" for E in hoare_strengthen_postE)
      apply (rule valid_validE)
      apply (wp handle_event_irq_masks[where st=st] valid_validE[OF handle_event_domain_sep_inv]
             | simp)+

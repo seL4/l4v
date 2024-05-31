@@ -62,9 +62,9 @@ lemma decode_cnode_invocation_rev:
   apply (simp add: unlessE_whenE)
   apply wp
   apply (wp if_apply_ev derive_cap_rev whenE_inv hoare_vcg_imp_lift_R
-             lookup_slot_for_cnode_op_rev hoare_vcg_all_lift_R
+             lookup_slot_for_cnode_op_rev hoare_vcg_all_liftE_R
              lookup_slot_for_cnode_op_authorised ensure_empty_rev get_cap_rev
-         | simp add: split_def unlessE_whenE split del: if_split del: hoare_True_E_R
+         | simp add: split_def unlessE_whenE split del: if_split del: hoareE_R_TrueI
          | wpc
          | wp (once) hoare_drop_imps, wp (once) lookup_slot_for_cnode_op_authorised
          | strengthen aag_can_read_self)+

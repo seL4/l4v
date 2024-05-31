@@ -300,7 +300,7 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
   apply (simp add: split_def cong: option.case_cong)
   (* slow, ~2 mins *)
   apply (simp only: conj_ac cong: conj_cong imp_cong |
-         wp checked_insert_pas_refined checked_cap_insert_silc_inv hoare_vcg_all_lift_R
+         wp checked_insert_pas_refined checked_cap_insert_silc_inv hoare_vcg_all_liftE_R
             hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
             cap_delete_silc_inv_not_transferable
             cap_delete_pas_refined' cap_delete_deletes

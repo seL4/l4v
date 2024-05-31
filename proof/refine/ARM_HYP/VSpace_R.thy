@@ -734,12 +734,12 @@ lemma find_pd_for_asid_pd_at_asid_again:
   apply (unfold validE_def, rule hoare_name_pre_state, fold validE_def)
   apply (case_tac "\<exists>pd. vspace_at_asid asid pd s")
    apply clarsimp
-   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> rv = pd" and E="\<bottom>\<bottom>" in hoare_post_impErr)
+   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> rv = pd" and E="\<bottom>\<bottom>" in hoare_strengthen_postE)
      apply (rule hoare_pre, wp find_pd_for_asid_valids)
      apply fastforce
     apply simp+
   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> vspace_at_asid asid rv s'"
-              and E="\<lambda>rv s'. s' = s" in hoare_post_impErr)
+              and E="\<lambda>rv s'. s' = s" in hoare_strengthen_postE)
     apply (rule hoare_pre, wp)
     apply clarsimp+
   done
@@ -1083,7 +1083,7 @@ lemma vcpuSwitch_corres:
                     vcpuEnable_corres
                     vcpuRestore_corres
                     vcpuSave_corres
-                    hoare_post_taut conjI
+                    hoare_TrueI conjI
                     corres_underlying_split corres_guard_imp
                | clarsimp simp add: when_def | wpsimp | assumption)+
       done
@@ -1703,7 +1703,7 @@ lemma storeHWASID_valid_arch' [wp]:
    apply (rule_tac Q'="\<lambda>rv s. valid_asid_map' (armKSASIDMap (ksArchState s))
                                \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits
                                \<and> armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
-              in hoare_post_imp_R)
+              in hoare_strengthen_postE_R)
     apply (wp findPDForASID_inv2)+
    apply clarsimp
    apply (clarsimp simp: valid_asid_map'_def)
@@ -1838,7 +1838,7 @@ lemma flushTable_corres:
            apply ((wp mapM_wp' hoare_vcg_const_imp_lift get_pte_wp getPTE_wp|
                    wpc|simp|fold cur_tcb_def cur_tcb'_def)+)[4]
        apply (wpsimp wp: hoare_drop_imps | fold cur_tcb_def cur_tcb'_def)+
-       apply (wpsimp wp: hoare_post_taut load_hw_asid_wp simp: valid_global_objs_def
+       apply (wpsimp wp: hoare_TrueI load_hw_asid_wp simp: valid_global_objs_def
             | rule hoare_drop_imps)+
   done
 
@@ -1873,7 +1873,7 @@ lemma flushPage_corres:
             apply (rule setVMRoot_corres)
            apply wp+
          apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-         apply (wpsimp wp: hoare_post_taut load_hw_asid_wp simp: valid_global_objs_def
+         apply (wpsimp wp: hoare_TrueI load_hw_asid_wp simp: valid_global_objs_def
                | rule hoare_drop_imps
                | fold cur_tcb_def cur_tcb'_def)+
   done
@@ -2253,7 +2253,7 @@ lemma unmapPage_corres:
            apply clarsimp
            apply (rule flushPage_corres)
           apply wp
-          apply (rule_tac Q'="\<lambda>_. invs and vspace_at_asid asid pda" in hoare_post_imp_R)
+          apply (rule_tac Q'="\<lambda>_. invs and vspace_at_asid asid pda" in hoare_strengthen_postE_R)
            apply (wpsimp wp: lookup_pt_slot_inv lookup_pt_slot_cap_to2' lookup_pt_slot_cap_to_multiple2
                              store_pde_invs_unmap store_pde_pd_at_asid mapM_swp_store_pde_invs_unmap
                          simp: largePagePTEOffsets_def pte_bits_def

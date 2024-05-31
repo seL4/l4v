@@ -758,7 +758,7 @@ lemma decodeCNodeInvocation_ccorres:
                                apply (vcg exspec=setThreadState_modifies)
                               apply simp
                               apply (wp injection_wp_E[OF refl])
-                              apply (rule hoare_post_imp_R)
+                              apply (rule hoare_strengthen_postE_R)
                                apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                     and valid_cap' rv and valid_objs'
                                                          and tcb_at' thread and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
@@ -834,7 +834,7 @@ lemma decodeCNodeInvocation_ccorres:
                                    apply (vcg exspec=setThreadState_modifies)
                                   apply (simp add: conj_comms valid_tcb_state'_def)
                                   apply (wp injection_wp_E[OF refl])
-                                  apply (rule hoare_post_imp_R)
+                                  apply (rule hoare_strengthen_postE_R)
                                    apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                         and valid_cap' rv and valid_objs'
                                                              and tcb_at' thread and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
@@ -949,7 +949,7 @@ lemma decodeCNodeInvocation_ccorres:
                      apply (rule validE_R_validE)
                      apply (rule_tac Q'="\<lambda>a b. cte_wp_at' (\<lambda>x. True) a b \<and> invs' b \<and>
                        tcb_at' thread b  \<and> sch_act_wf (ksSchedulerAction b) b \<and> valid_tcb_state' Restart b
-                       \<and> Q2 b" for Q2 in  hoare_post_imp_R)
+                       \<and> Q2 b" for Q2 in  hoare_strengthen_postE_R)
                       prefer 2
                       apply (clarsimp simp:cte_wp_at_ctes_of)
                       apply (drule ctes_of_valid')
@@ -958,7 +958,7 @@ lemma decodeCNodeInvocation_ccorres:
                       apply (frule invs_pspace_distinct')
                       apply (clarsimp simp:valid_updateCapDataI invs_valid_objs' invs_valid_pspace')
                       apply assumption
-                     apply (wp hoare_vcg_all_lift_R injection_wp_E[OF refl]
+                     apply (wp hoare_vcg_all_liftE_R injection_wp_E[OF refl]
                                lsfco_cte_at' hoare_vcg_const_imp_lift_R
                            )+
                     apply (simp add: Collect_const_mem word_sle_def word_sless_def
@@ -1288,7 +1288,7 @@ lemma decodeCNodeInvocation_ccorres:
                               apply (rule_tac Q'="\<lambda>rvb. invs'
                                                    and cte_at' rv and cte_at' rva
                                                    and tcb_at' thread"
-                                                        in hoare_post_imp_R)
+                                                        in hoare_strengthen_postE_R)
                                apply (wp lsfco_cte_at')
                               apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_updateCapData
                                                     capBadge_updateCapData_True)
@@ -1337,7 +1337,7 @@ lemma decodeCNodeInvocation_ccorres:
          apply vcg
         apply simp
         apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_lift_R
-                  hoare_vcg_all_lift_R lsfco_cte_at' hoare_weak_lift_imp
+                  hoare_vcg_all_liftE_R lsfco_cte_at' hoare_weak_lift_imp
                 | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen
                       cong: conj_cong
                 | wp (once) hoare_drop_imps)+
@@ -2444,7 +2444,7 @@ lemma invokeUntyped_Retype_ccorres:
          apply (clarsimp simp: misc unat_of_nat_eq[OF range_cover.weak, OF cover])
          apply (vcg exspec=cap_untyped_cap_ptr_set_capFreeIndex_modifies)
         apply simp
-        apply (rule validE_validE_R, rule hoare_post_impErr,
+        apply (rule validE_validE_R, rule hoare_strengthen_postE,
                rule hoare_vcg_conj_liftE1[rotated, where Q="\<lambda>_ s.
                  case gsCNodes s cnodeptr of None \<Rightarrow> False
                    | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n"],
@@ -2629,7 +2629,7 @@ lemma mapME_ensureEmptySlot':
   apply (erule meta_allE)
   apply wp
   apply (fold validE_R_def)
-  apply (erule hoare_post_imp_R)
+  apply (erule hoare_strengthen_postE_R)
   apply clarsimp
   done
 
@@ -2638,7 +2638,7 @@ lemma mapME_ensureEmptySlot:
   mapME (\<lambda>x. injection_handler Inl (ensureEmptySlot (f x))) [S .e. (E::machine_word)]
   \<lbrace>\<lambda>rva s. \<forall>slot. S \<le> slot \<and> slot \<le> E \<longrightarrow>
            (\<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f slot) = Some cte)\<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule mapME_ensureEmptySlot')
   apply clarsimp
   done
@@ -3306,7 +3306,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
                       and ex_cte_cap_to' (capCNodePtr rv)
                       and (\<lambda>s. case gsCNodes s (capCNodePtr rv) of None \<Rightarrow> False
                             | Some n \<Rightarrow> args ! 4 + args ! 5 - 1 < 2 ^ n)
-                      and sch_act_simple and ct_active'" in hoare_post_imp_R)
+                      and sch_act_simple and ct_active'" in hoare_strengthen_postE_R)
                    prefer 2
                    apply (clarsimp simp: invs_valid_objs' invs_mdb'
                                          ct_in_state'_def pred_tcb_at')
@@ -3354,7 +3354,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
                       \<and> invs' s \<and> ksCurThread s = thread
                       \<and> valid_cap' r s
                       \<and> (\<forall>rf\<in>cte_refs' r (irq_node' s). ex_cte_cap_to' rf s)
-                      \<and> sch_act_simple s \<and> ct_active' s" in hoare_post_imp_R)
+                      \<and> sch_act_simple s \<and> ct_active' s" in hoare_strengthen_postE_R)
                  apply clarsimp
                  apply (wp injection_wp_E[OF refl] getSlotCap_cap_to'
                            getSlotCap_capAligned

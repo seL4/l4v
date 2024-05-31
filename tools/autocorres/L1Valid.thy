@@ -83,9 +83,9 @@ lemma L1_seq_lp: "\<lbrakk>
     \<And>s. E2 () s \<Longrightarrow> E () s
     \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> L1_seq A B \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (clarsimp simp: L1_seq_def)
-  apply (rule seqE [rotated])
-   apply (erule validE_weaken, simp+)[1]
-  apply (erule validE_weaken, simp+)[1]
+  apply (rule bindE_wp)
+   apply (erule hoare_chainE, simp+)[1]
+  apply (erule hoare_chainE, simp+)[1]
   done
 
 lemma L1_condition_lp: "
@@ -100,8 +100,8 @@ lemma L1_condition_lp: "
   \<lbrace>P\<rbrace> L1_condition c A B \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (clarsimp simp: L1_condition_def)
   apply wp
-    apply (erule validE_weaken, simp+)[1]
-   apply (erule validE_weaken, simp+)[1]
+    apply (erule hoare_chainE, simp+)[1]
+   apply (erule hoare_chainE, simp+)[1]
   apply simp
   done
 
@@ -117,8 +117,8 @@ lemma L1_catch_lp: "
   apply (clarsimp simp: L1_catch_def)
   including no_pre
   apply wp
-   apply (erule validE_weaken, simp+)[1]
-  apply (erule validE_weaken, simp+)[1]
+   apply (erule hoare_chainE, simp+)[1]
+  apply (erule hoare_chainE, simp+)[1]
   done
 
 lemma L1_init_lp: "\<lbrakk> \<And>s. P s \<Longrightarrow> \<forall>x. Q () (f (\<lambda>_. x) s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> L1_init f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
@@ -134,11 +134,11 @@ lemma L1_while_lp:
   and inv: " \<And>s. Q' () s \<Longrightarrow> P' s"
   and inv': " \<And>s. P' s \<Longrightarrow> Q' () s"
   shows "\<lbrace> P \<rbrace> L1_while c B \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>"
-  apply (rule validE_weaken [where P'=P' and Q'=Q' and E'=E'])
+  apply (rule hoare_chainE [where P'=P' and Q'=Q' and E'=E'])
      apply (clarsimp simp: L1_while_def)
      apply (rule validE_whileLoopE [where I="\<lambda>r s. P' s"])
       apply simp
-      apply (rule validE_weaken [OF body_lp])
+      apply (rule hoare_chainE [OF body_lp])
         apply (clarsimp simp: p_impl)
        apply (clarsimp simp: inv)
       apply simp
@@ -156,7 +156,7 @@ lemma L1_recguard_lp:
    \<lbrace>P\<rbrace> L1_recguard v A \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (clarsimp simp: L1_recguard_def)
   apply wp
-   apply (erule validE_weaken)
+   apply (erule hoare_chainE)
      apply assumption
     apply simp
    apply simp

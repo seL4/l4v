@@ -1809,7 +1809,7 @@ lemma performPageGetAddress_ccorres:
        apply clarsimp
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
-      apply (rule hoare_post_taut[of \<top>])
+      apply (rule hoare_TrueI[of \<top>])
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
      apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
@@ -1832,7 +1832,7 @@ lemma performPageGetAddress_ccorres:
                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                  apply (rule allI, rule conseqPre, vcg)
                  apply (clarsimp simp: return_def)
-                apply (rule hoare_post_taut[of \<top>])
+                apply (rule hoare_TrueI[of \<top>])
                apply (vcg exspec=setThreadState_modifies)
               apply wpsimp
              apply (vcg exspec=setRegister_modifies)
@@ -4581,7 +4581,7 @@ lemma invokeX86PortIn8_ccorres:
          apply clarsimp
          apply (rule conseqPre, vcg)
          apply (clarsimp simp: return_def)
-        apply (rule hoare_post_taut[of \<top>])
+        apply (rule hoare_TrueI[of \<top>])
        apply (rule ccorres_rhs_assoc)+
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
        apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
@@ -4604,7 +4604,7 @@ lemma invokeX86PortIn8_ccorres:
                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
                    apply (clarsimp simp: return_def)
-                  apply (rule hoare_post_taut[of \<top>])
+                  apply (rule hoare_TrueI[of \<top>])
                  apply (vcg exspec=setThreadState_modifies)
                 apply wpsimp
                apply (vcg exspec=setRegister_modifies)
@@ -4669,7 +4669,7 @@ lemma invokeX86PortIn16_ccorres:
          apply clarsimp
          apply (rule conseqPre, vcg)
          apply (clarsimp simp: return_def)
-        apply (rule hoare_post_taut[of \<top>])
+        apply (rule hoare_TrueI[of \<top>])
        apply (rule ccorres_rhs_assoc)+
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
        apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
@@ -4692,7 +4692,7 @@ lemma invokeX86PortIn16_ccorres:
                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
                    apply (clarsimp simp: return_def)
-                  apply (rule hoare_post_taut[of \<top>])
+                  apply (rule hoare_TrueI[of \<top>])
                  apply (vcg exspec=setThreadState_modifies)
                 apply wpsimp
                apply (vcg exspec=setRegister_modifies)
@@ -4755,7 +4755,7 @@ lemma invokeX86PortIn32_ccorres:
          apply clarsimp
          apply (rule conseqPre, vcg)
          apply (clarsimp simp: return_def)
-        apply (rule hoare_post_taut[of \<top>])
+        apply (rule hoare_TrueI[of \<top>])
        apply (rule ccorres_rhs_assoc)+
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
        apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
@@ -4778,7 +4778,7 @@ lemma invokeX86PortIn32_ccorres:
                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
                    apply (clarsimp simp: return_def)
-                  apply (rule hoare_post_taut[of \<top>])
+                  apply (rule hoare_TrueI[of \<top>])
                  apply (vcg exspec=setThreadState_modifies)
                 apply wpsimp
                apply (vcg exspec=setRegister_modifies)

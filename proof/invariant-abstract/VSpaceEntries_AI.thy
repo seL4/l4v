@@ -177,7 +177,7 @@ lemma mapME_x_accumulate_checks:
         apply (wp mapME_x_wp' P P'
           hoare_vcg_const_Ball_liftE
           | simp add:Q
-          | rule hoare_post_impErr[OF P])+
+          | rule hoare_strengthen_postE[OF P])+
         using Cons.prems
         apply fastforce
       apply (wp Cons.hyps)

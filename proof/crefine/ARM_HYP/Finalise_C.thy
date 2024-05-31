@@ -1523,8 +1523,8 @@ lemma pageTableMapped_pd:
    \<lbrace>\<lambda>rv s. case rv of Some x \<Rightarrow> page_directory_at' x s | _ \<Rightarrow> True\<rbrace>"
   apply (simp add: pageTableMapped_def)
   apply (rule hoare_pre)
-   apply (wp getPDE_wp hoare_vcg_all_lift_R | wpc)+
-   apply (rule hoare_post_imp_R, rule findPDForASID_page_directory_at'_simple)
+   apply (wp getPDE_wp hoare_vcg_all_liftE_R | wpc)+
+   apply (rule hoare_strengthen_postE_R, rule findPDForASID_page_directory_at'_simple)
    apply (clarsimp split: if_split)
   apply simp
   done

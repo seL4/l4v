@@ -1586,7 +1586,7 @@ lemma unmapPageTable_ccorres:
         apply (simp,ccorres_rewrite,simp add:throwError_def)
         apply (rule ccorres_return_void_C)
        apply (clarsimp,wp)
-       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> page_table_at' ptPtr s" in hoare_post_imp_R)
+       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> page_table_at' ptPtr s" in hoare_strengthen_postE_R)
         apply wp
        apply clarsimp
       apply (vcg exspec=lookupPDSlot_modifies)

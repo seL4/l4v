@@ -1706,7 +1706,7 @@ lemma arch_decodeInvocation_wf[wp]:
                                    cte_wp_at' (\<lambda>cte. \<exists>idx. cteCap cte = (UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
                                    sch_act_simple and
                                    (\<lambda>s. descendants_of' (snd (excaps!0)) (ctes_of s) = {}) "
-                                   in hoare_post_imp_R)
+                                   in hoare_strengthen_postE_R)
                   apply (simp add: lookupTargetSlot_def)
                   apply wp
                  apply (clarsimp simp: cte_wp_at_ctes_of asid_wf_def mask_def)

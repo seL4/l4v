@@ -73,7 +73,7 @@ lemma (in delete_one_conc_pre) cancelIPC_simple[wp]:
   "\<lbrace>\<top>\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def
              cong: Structures_H.thread_state.case_cong list.case_cong)
-  apply (rule hoare_seq_ext [OF _ gts_sp'])
+  apply (rule bind_wp [OF _ gts_sp'])
   apply (rule hoare_pre)
    apply (wpc
            | wp sts_st_tcb_at'_cases hoare_vcg_conj_lift
@@ -872,7 +872,7 @@ proof -
   show ?thesis
     apply (simp add:   cancelIPC_def crunch_simps
                cong:   if_cong list.case_cong)
-    apply (rule hoare_seq_ext [OF _ gts_sp'])
+    apply (rule bind_wp [OF _ gts_sp'])
     apply (case_tac state,
            simp_all add: isTS_defs)
            apply (safe intro!: hoare_weaken_pre[OF Q]
@@ -915,7 +915,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def
              cong: if_cong Structures_H.thread_state.case_cong)
-  apply (rule hoare_seq_ext [OF _ gts_sp'])
+  apply (rule bind_wp [OF _ gts_sp'])
   apply (case_tac x, simp_all add: isTS_defs list_case_If)
          apply (wp sts_st_tcb_at'_cases delete_one_st_tcb_at
                    threadSet_pred_tcb_no_state
@@ -989,7 +989,7 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
   apply (clarsimp simp: cancelIPC_def Let_def)
   apply (case_tac "t'=t")
    apply (rule_tac B="\<lambda>st. st_tcb_at' runnable' t and K (runnable' st)"
-            in hoare_seq_ext)
+            in bind_wp)
     apply (case_tac x; simp)
    apply (wp sts_pred_tcb_neq'  | simp | wpc)+
            apply (clarsimp)
@@ -1080,7 +1080,7 @@ text \<open>The suspend operation, significant as called from delete\<close>
 lemma rescheduleRequired_weak_sch_act_wf:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: rescheduleRequired_def setSchedulerAction_def)
-  apply (wp hoare_post_taut | simp add: weak_sch_act_wf_def)+
+  apply (wp hoare_TrueI | simp add: weak_sch_act_wf_def)+
   done
 
 lemma sts_weak_sch_act_wf[wp]:
@@ -1695,7 +1695,7 @@ lemma rescheduleRequired_all_invs_but_ct_not_inQ:
 lemma cancelAllIPC_invs'[wp]:
   "\<lbrace>invs'\<rbrace> cancelAllIPC ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
             cancel_all_invs'_helper hoare_vcg_const_Ball_lift
             valid_global_refs_lift' valid_arch_state_lift'
@@ -1724,8 +1724,8 @@ lemma cancelAllIPC_invs'[wp]:
 lemma cancelAllSignals_invs'[wp]:
   "\<lbrace>invs'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: cancelAllSignals_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp [OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfna", simp_all)
     apply (wp, simp)
    apply (wp, simp)
@@ -1758,8 +1758,8 @@ lemma cancelAllSignals_invs'[wp]:
 lemma cancelAllIPC_valid_objs'[wp]:
   "\<lbrace>valid_objs' and pspace_aligned' and pspace_distinct'\<rbrace> cancelAllIPC ep \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper  cong del: if_cong)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ep_sp'])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp [OF _ get_ep_sp'])
   apply (rule hoare_pre)
    apply (wp set_ep_valid_objs' setSchedulerAction_valid_objs')
     apply (rule_tac Q="\<lambda>_ s. valid_objs' s \<and> pspace_aligned' s \<and> pspace_distinct' s
@@ -1782,8 +1782,8 @@ lemma cancelAllIPC_valid_objs'[wp]:
 lemma cancelAllSignals_valid_objs'[wp]:
   "\<lbrace>valid_objs' and pspace_aligned' and pspace_distinct'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: cancelAllSignals_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp [OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfna", simp_all)
     apply (wp, simp)
    apply (wp, simp)
@@ -1923,8 +1923,8 @@ lemma cancelAllIPC_unlive:
   "\<lbrace>valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
       cancelAllIPC ep \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ep\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ep_sp'])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp [OF _ get_ep_sp'])
   apply (rule hoare_pre)
    apply (wp cancelAll_unlive_helper setEndpoint_ko_wp_at'
              hoare_vcg_const_Ball_lift rescheduleRequired_unlive
@@ -1942,8 +1942,8 @@ lemma cancelAllSignals_unlive:
       \<and> obj_at' (\<lambda>ko. ntfnBoundTCB ko = None) ntfnptr s\<rbrace>
       cancelAllSignals ntfnptr \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ntfnptr\<rbrace>"
   apply (simp add: cancelAllSignals_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp [OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfn", simp_all add: setNotification_def)
     apply wp
     apply (fastforce simp: obj_at'_real_def
@@ -2002,8 +2002,8 @@ lemma cancelBadgedSends_filterM_helper':
    apply wp
    apply clarsimp
   apply (clarsimp simp: filterM_append bind_assoc simp del: set_append distinct_append)
-  apply (drule spec, erule hoare_seq_ext[rotated])
-  apply (rule hoare_seq_ext [OF _ gts_inv'])
+  apply (drule spec, erule bind_wp_fwd)
+  apply (rule bind_wp [OF _ gts_inv'])
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift hoare_vcg_const_Ball_lift sts_sch_act'
              sch_act_wf_lift valid_irq_handlers_lift'' cur_tcb_lift irqs_masked_lift
@@ -2030,13 +2030,13 @@ lemma cancelBadgedSends_invs[wp]:
   shows
   "\<lbrace>invs'\<rbrace> cancelBadgedSends epptr badge \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: cancelBadgedSends_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ep_sp'], rename_tac ep)
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp [OF _ get_ep_sp'], rename_tac ep)
   apply (case_tac ep, simp_all)
     apply ((wp | simp)+)[2]
   apply (subst bind_assoc [where g="\<lambda>_. rescheduleRequired",
                            symmetric])+
-  apply (rule hoare_seq_ext
+  apply (rule bind_wp
                 [OF rescheduleRequired_all_invs_but_ct_not_inQ])
   apply (simp add: list_case_return cong: list.case_cong)
   apply (rule hoare_pre, wp valid_irq_node_lift irqs_masked_lift)

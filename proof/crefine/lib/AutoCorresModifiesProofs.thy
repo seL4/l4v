@@ -32,7 +32,7 @@ text \<open>
   (via L1_call_simpl), so the limitations of ac_corres do not apply.
 \<close>
 lemma autocorres_modifies_transfer:
-  notes hoare_seq_ext[wp]
+  notes bind_wp[wp]
   fixes \<Gamma> globals f' f_'proc modifies_eqn P xf
   assumes f'_def: "f' \<equiv> AC_call_L1 P globals xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
   assumes f_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. modifies_eqn (globals t) (globals \<sigma>)}"

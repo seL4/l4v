@@ -435,7 +435,7 @@ lemma schedule_rewrite_ct_not_runnable':
 
 lemma resolveAddressBits_points_somewhere:
   "\<lbrace>\<lambda>s. \<forall>slot. Q slot s\<rbrace> resolveAddressBits cp cptr bits \<lbrace>Q\<rbrace>,-"
-  apply (rule_tac Q'="\<lambda>rv s. \<forall>rv. Q rv s" in hoare_post_imp_R)
+  apply (rule_tac Q'="\<lambda>rv s. \<forall>rv. Q rv s" in hoare_strengthen_postE_R)
    apply wp
   apply clarsimp
   done
@@ -1531,7 +1531,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                      apply (monadic_rewrite_symb_exec_l_known thread)
                       apply (monadic_rewrite_symb_exec_l_known cptr)
                        apply (rule monadic_rewrite_bind)
-                         apply (rule monadic_rewrite_catch[OF _ monadic_rewrite_refl True_E_E])
+                         apply (rule monadic_rewrite_catch[OF _ monadic_rewrite_refl wp_post_tautE_E])
                          apply monadic_rewrite_symb_exec_l
                           apply (rename_tac cTableCTE2,
                                  rule_tac P="cteCap cTableCTE2 = cteCap cTableCTE"

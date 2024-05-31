@@ -46,14 +46,14 @@ lemma drop_equalled_validE:
 lemma drop_spec_valid[wp_split]:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   apply (simp add: spec_valid_def)
-  apply (erule hoare_vcg_precond_imp)
+  apply (erule hoare_weaken_pre)
   apply clarsimp
   done
 
 lemma drop_spec_validE[wp_split]:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (simp add: spec_validE_def)
-  apply (erule hoare_vcg_precond_impE)
+  apply (erule hoare_weaken_preE)
   apply clarsimp
   done
 

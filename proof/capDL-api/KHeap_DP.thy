@@ -599,7 +599,7 @@ lemma derive_cap_wpE:
   done
 
 lemma derive_cap_wp2: "\<lbrace>P\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. if rv = NullCap then True else P s\<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (wp (once) derive_cap_wpE)
   apply (clarsimp)
   done
@@ -832,7 +832,7 @@ lemma lookup_slot_rvu:
      lookup_slot thread cap_ptr
    \<lbrace>Q\<rbrace>, \<lbrace>Q'\<rbrace> "
   apply (clarsimp simp: lookup_slot_def gets_the_resolve_cap[symmetric] split_def)
-  apply (rule hoare_vcg_seqE)+
+  apply (rule bindE_wp)+
     apply (rule returnOk_wp)
    apply (rule resolve_cap_u_nf [where r=r])
   apply (rule hoare_pre, wp)
@@ -876,7 +876,7 @@ lemma lookup_cap_and_slot_rvu:
      lookup_cap_and_slot thread cap_ptr
    \<lbrace>Q\<rbrace>, \<lbrace>Q'\<rbrace> "
   apply (clarsimp simp: lookup_cap_and_slot_def)
-  apply (rule hoare_vcg_seqE)+
+  apply (rule bindE_wp)+
     apply (rule returnOk_wp)
    apply (wp get_cap_rv)
   apply (rule hoare_pre, wp lookup_slot_rvu)
