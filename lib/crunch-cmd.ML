@@ -795,7 +795,7 @@ fun crunch cfg pre extra stack const' thms =
           val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop);
           fun wp' wp_rules = wp ctxt (map snd (thms @ #wp_rules cfg) @ goals' @ wp_rules)
           val thm = Goal.prove_future ctxt''' [] [] goal_prop
-              ( (*DupSkip.goal_prove_wrapper *) (fn _ =>
+              (fn _ =>
               resolve_tac ctxt''' [rule] 1
                 THEN maybe_cheat_tac ctxt'''
               THEN ALLGOALS (simp_tac ctxt''')
@@ -820,7 +820,7 @@ fun crunch cfg pre extra stack const' thms =
                   CHANGED_GOAL (simp_tac ctxt''')
                 ) n))
               THEN proof_failed_warnings const stack cfg wp' ctxt'''
-              )) |> singleton (Proof_Context.export ctxt''' ctxt)
+              ) |> singleton (Proof_Context.export ctxt''' ctxt)
         in (SOME thm, (get_thm_name cfg const, thm) :: thms') end
     end
     handle WrongType =>
