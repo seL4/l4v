@@ -682,7 +682,7 @@ lemma sendFaultIPC_ccorres:
         apply (rule_tac Q="\<lambda>a b. invs' b \<and> st_tcb_at' simple' tptr b
                                  \<and> sch_act_not tptr b \<and> valid_cap' a b"
                  and E="\<lambda> _. \<top>"
-                 in hoare_post_impErr)
+                 in hoare_strengthen_postE)
           apply (wp)
          apply (clarsimp simp: isCap_simps)
          apply (clarsimp simp: valid_cap'_def pred_tcb_at')+
@@ -715,9 +715,9 @@ lemma handleFault_ccorres:
         apply (ctac (no_vcg) add: handleDoubleFault_ccorres)
        apply (simp add: sendFaultIPC_def)
        apply wp
-         apply ((wp hoare_vcg_all_lift_R hoare_drop_impE_R |wpc |simp add: throw_def)+)[1]
+         apply ((wp hoare_vcg_all_liftE_R hoare_drop_impE_R |wpc |simp add: throw_def)+)[1]
         apply clarsimp
-        apply ((wp hoare_vcg_all_lift_R hoare_drop_impE_R |wpc |simp add: throw_def)+)[1]
+        apply ((wp hoare_vcg_all_liftE_R hoare_drop_impE_R |wpc |simp add: throw_def)+)[1]
        apply (wp)
       apply (simp add: guard_is_UNIV_def)
      apply (simp add: guard_is_UNIV_def)
@@ -883,7 +883,7 @@ lemma handleInvocation_ccorres:
                    apply (simp add: invocationCatch_def o_def)
                    apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' rv"
                                and E="\<lambda>ft. invs' and tcb_at' rv"
-                              in hoare_post_impErr)
+                              in hoare_strengthen_postE)
                      apply (wp hoare_split_bind_case_sumE hoare_drop_imps
                                setThreadState_nonqueued_state_update
                                ct_in_state'_set setThreadState_st_tcb
@@ -1368,7 +1368,7 @@ lemma handleRecv_ccorres:
       apply (rename_tac thread epCPtr)
         apply (rule_tac Q'="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
                \<and> sch_act_sane s \<and> thread = ksCurThread s
-               \<and> valid_cap' rv s)" in hoare_post_imp_R[rotated])
+               \<and> valid_cap' rv s)" in hoare_strengthen_postE_R[rotated])
        apply (intro conjI impI allI; clarsimp simp: sch_act_sane_def)
        apply (fastforce dest: obj_at_valid_objs'[OF _ invs_valid_objs'] ko_at_valid_ntfn')
       apply wp

@@ -317,7 +317,7 @@ lemma invoke_untyped_valid_sched:
    apply (rule_tac I="invs and valid_untyped_inv ui and ct_active"
                 in valid_sched_tcb_state_preservation)
           apply (wpsimp wp: invoke_untyped_st_tcb_at invoke_untyped_etcb_at)+
-     apply (rule hoare_post_impErr, rule invoke_untyp_invs; simp add: invs_valid_idle)
+     apply (rule hoare_strengthen_postE, rule invoke_untyp_invs; simp add: invs_valid_idle)
     apply simp
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)
     apply (rule_tac f="\<lambda>s. x (ready_queues s)" in hoare_lift_Pf)

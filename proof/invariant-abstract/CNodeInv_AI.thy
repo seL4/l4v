@@ -401,7 +401,7 @@ lemma cap_derive_not_null_helper2:
      derive_cap slot cap
    \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> Q rv s\<rbrace>, -"
   apply (drule cap_derive_not_null_helper)
-  apply (erule hoare_post_imp_R)
+  apply (erule hoare_strengthen_postE_R)
   apply simp
   done
 
@@ -492,8 +492,8 @@ lemma decode_cnode_inv_wf[wp]:
     apply (simp add: decode_cnode_invocation_def
                      unlessE_def whenE_def
                split del: if_split)
-    apply (wp get_cap_wp hoare_vcg_all_lift_R | simp add: )+
-     apply (rule_tac Q'="\<lambda>rv. invs and cte_wp_at (\<lambda>_. True) rv" in hoare_post_imp_R)
+    apply (wp get_cap_wp hoare_vcg_all_liftE_R | simp add: )+
+     apply (rule_tac Q'="\<lambda>rv. invs and cte_wp_at (\<lambda>_. True) rv" in hoare_strengthen_postE_R)
       apply (wp lsfco_cte_at)
      apply (clarsimp simp: cte_wp_valid_cap invs_valid_objs has_cancel_send_rights_ep_cap)+
    \<comment> \<open>Rotate\<close>
@@ -505,7 +505,7 @@ lemma decode_cnode_inv_wf[wp]:
                               \<and> real_cte_at src_slot s
                               \<and> ex_cte_cap_wp_to is_cnode_cap rv s
                               \<and> ex_cte_cap_wp_to is_cnode_cap x s
-                              \<and> invs s" in hoare_post_imp_R)
+                              \<and> invs s" in hoare_strengthen_postE_R)
        apply wp+
       apply (clarsimp simp: cte_wp_at_caps_of_state
                      dest!: real_cte_at_cte del: impI)
@@ -691,7 +691,7 @@ lemma cap_swap_not_recursive:
    \<lbrace>\<lambda>rv s. card (not_recursive_cspaces s) < n\<rbrace>"
   apply (cases "p1 = p2", simp_all)
   apply (simp add: cap_swap_def set_cdt_def when_def)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (wp | simp)+
       apply (rule not_recursive_set_cap_doesn't_grow)
      apply (wp not_recursive_set_cap_shrinks set_cap_cte_wp_at' get_cap_wp hoare_vcg_disj_lift)
@@ -1856,7 +1856,7 @@ lemma cap_swap_valid_arch_caps[wp]:
   apply (simp add: cap_swap_def)
   apply (rule hoare_pre)
    apply (subst bind_assoc[symmetric],
-          rule hoare_seq_ext [rotated],
+          rule bind_wp_fwd,
           rule swap_of_caps_valid_arch_caps)
    apply (wp | simp split del: if_split)+
   done
@@ -2510,7 +2510,7 @@ lemma rec_del_invs:
       rec_del args
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule validE_valid)
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
   apply (rule hoare_pre)
     apply (rule use_spec)
     apply (rule rec_del_invs')
@@ -2830,7 +2830,7 @@ lemma rec_del_emptyable:
       rec_del args
     \<lbrace>\<lambda>rv. emptyable (slot_rdcall args) :: 'state_ext state \<Rightarrow> bool\<rbrace>, -"
   apply (rule validE_validE_R)
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
   apply (rule hoare_pre)
     apply (rule use_spec)
     apply (rule rec_del_invs')
@@ -2848,7 +2848,7 @@ lemma reduce_zombie_cap_to:
       rec_del (ReduceZombieCall cap slot exp)
     \<lbrace>\<lambda>rv (s::'state_ext state). \<not> exp \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s\<rbrace>, -"
   apply (rule validE_validE_R)
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
     apply (rule hoare_pre)
      apply (rule use_spec)
      apply (rule rec_del_invs')
@@ -3367,7 +3367,7 @@ lemma cap_move_valid_arch_caps[wp]:
   apply (simp add: cap_move_def)
   apply (rule hoare_pre)
    apply (subst bind_assoc[symmetric],
-          rule hoare_seq_ext [rotated],
+          rule bind_wp_fwd,
           rule swap_of_caps_valid_arch_caps)
    apply (wp | simp)+
   apply (clarsimp elim!: cte_wp_at_weakenE)

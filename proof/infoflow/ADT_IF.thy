@@ -2390,7 +2390,7 @@ lemma preemption_point_irq_state_inv'[wp]:
 lemma validE_validE_E':
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -, \<lbrace>E\<rbrace>"
   apply (rule validE_validE_E)
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
     apply assumption
    apply simp+
   done
@@ -2473,7 +2473,7 @@ lemma rec_del_irq_state_inv:
   "\<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
    rec_del call
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
     apply (rule use_spec)
     apply (rule rec_del_irq_state_inv')
    apply auto
@@ -2730,7 +2730,7 @@ lemma kernel_entry_if_next_irq_state_of_state:
      \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
   apply (simp add: kernel_entry_if_def in_bind in_return | elim conjE exE)+
   apply (erule use_validE_R)
-   apply (rule_tac Q'="\<lambda>_. irq_state_inv i_s" in hoare_post_imp_R)
+   apply (rule_tac Q'="\<lambda>_. irq_state_inv i_s" in hoare_strengthen_postE_R)
     apply (rule validE_validE_R')
     apply (rule handle_event_irq_state_inv[where sta=st and irq=irq] | simp)+
    apply (clarsimp simp: irq_state_inv_def)
@@ -2751,7 +2751,7 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
   apply (simp add: kernel_entry_if_def in_bind in_return | elim conjE exE)+
   apply (erule use_validE_E)
    apply (rule validE_validE_E)
-   apply (rule hoare_post_impErr)
+   apply (rule hoare_strengthen_postE)
      apply (rule handle_event_irq_state_inv[where sta=st and irq=irq and st=i_s])
      apply simp+
    apply (simp add: irq_state_next_def)

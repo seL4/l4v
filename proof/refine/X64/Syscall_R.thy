@@ -778,9 +778,9 @@ lemma doReply_invs[wp]:
    doReplyTransfer t' t slot grant
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: doReplyTransfer_def liftM_def)
-  apply (rule hoare_seq_ext [OF _ gts_sp'])
-  apply (rule hoare_seq_ext [OF _ assert_sp])
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ gts_sp'])
+  apply (rule bind_wp [OF _ assert_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (wp, wpc)
         apply wp
           apply (wp (once) sts_invs_minor'')
@@ -1048,7 +1048,7 @@ lemma lookupExtras_real_ctes[wp]:
 
 lemma lookupExtras_ctes[wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupExtraCaps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. cte_at' (snd x) s\<rbrace>,-"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lookupExtras_real_ctes)
   apply (simp add: real_cte_at')
   done
@@ -1266,7 +1266,7 @@ lemma hinv_invs'[wp]:
          apply simp
          apply (intro conjI impI)
           apply (wp gts_imp' | simp)+
-        apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R[rotated])
+        apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_strengthen_postE_R[rotated])
          apply clarsimp
          apply (subgoal_tac "thread \<noteq> ksIdleThread s", simp_all)[1]
           apply (fastforce elim!: pred_tcb'_weakenE st_tcb_ex_cap'')
@@ -1380,7 +1380,7 @@ lemma cteDeleteOne_reply_cap_to''[wp]:
    cteDeleteOne slot
    \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   apply (simp add: cteDeleteOne_def ex_nonz_cap_to'_def unless_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (rule hoare_assume_pre)
   apply (subgoal_tac "isReplyCap (cteCap cte) \<or> isNullCap (cteCap cte)")
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
@@ -1528,7 +1528,7 @@ lemma hw_invs'[wp]:
                              \<and> thread \<noteq> ksIdleThread s
                             \<and> (\<forall>x \<in> zobj_refs' rv. ex_nonz_cap_to' x s)"
               and E="\<lambda>_ _. True"
-           in hoare_post_impErr[rotated])
+           in hoare_strengthen_postE[rotated])
         apply (clarsimp simp: isCap_simps ct_in_state'_def pred_tcb_at' invs_valid_objs'
                               sch_act_sane_not obj_at'_def projectKOs pred_tcb_at'_def)
       apply (assumption)
@@ -1680,7 +1680,7 @@ lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
     cteDeleteOne_st_tcb_at[where P=simple', simplified]
 
 crunch st_tcb_at_simple'[wp]: handleReply "st_tcb_at' simple' t'"
-  (wp: hoare_post_taut crunch_wps sts_st_tcb_at'_cases
+  (wp: hoare_TrueI crunch_wps sts_st_tcb_at'_cases
        threadSet_pred_tcb_no_state
      ignore: setThreadState)
 
@@ -1706,7 +1706,7 @@ lemma hr_ct_active'[wp]:
   "\<lbrace>invs' and ct_active'\<rbrace> handleReply \<lbrace>\<lambda>rv. ct_active'\<rbrace>"
   apply (simp add: handleReply_def getSlotCap_def getCurThread_def
                    getThreadCallerSlot_def locateSlot_conv)
-  apply (rule hoare_seq_ext, rename_tac cur_thread)
+  apply (rule bind_wp, rename_tac cur_thread)
    apply (rule_tac t=cur_thread in ct_in_state'_decomp)
     apply (wpsimp wp: getCTE_wp)
     apply (fastforce simp: cte_wp_at_ctes_of)

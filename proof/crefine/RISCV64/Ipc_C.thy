@@ -2794,7 +2794,7 @@ next
                  \<and> (\<forall>x\<in>set xs'. s \<turnstile>' fst x
                     \<and> cte_wp_at' (\<lambda>c. is_the_ep (cteCap c) \<longrightarrow> fst x = cteCap c) (snd x) s
                     \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable_masked (fst x) (cteCap c)) (snd x) s)"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
                 prefer 2
                  apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
                    valid_pspace_valid_objs' is_derived_capMasterCap image_def)
@@ -3220,7 +3220,7 @@ proof -
                        apply (simp add: seL4_Fault_CapFault_lift)
                        apply (clarsimp simp: is_cap_fault_def)
                       apply wp
-                      apply (rule hoare_post_imp_R, rule lsft_real_cte)
+                      apply (rule hoare_strengthen_postE_R, rule lsft_real_cte)
                       apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
                      apply (vcg exspec=lookupSlot_modifies)
                     apply vcg
@@ -3273,7 +3273,7 @@ proof -
                           liftE_bindE[symmetric])
          apply (wp mapME_length mapME_set | simp)+
            apply (rule_tac Q'="\<lambda>rv. no_0_obj' and real_cte_at' rv"
-                      in hoare_post_imp_R, wp lsft_real_cte)
+                      in hoare_strengthen_postE_R, wp lsft_real_cte)
            apply (clarsimp simp: cte_wp_at_ctes_of)
           apply (wpsimp)+
         apply (clarsimp simp: guard_is_UNIV_def
@@ -3403,7 +3403,7 @@ qed
 lemma lookupIPCBuffer_not_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer r t \<lbrace>\<lambda>rv. K (rv \<noteq> Some 0)\<rbrace>"
   apply (simp add: lookupIPCBuffer_def RISCV64_H.lookupIPCBuffer_def)
-  apply (wp hoare_post_taut haskell_assert_wp
+  apply (wp hoare_TrueI haskell_assert_wp
     | simp add: Let_def getThreadBufferSlot_def locateSlotTCB_def
     | intro conjI impI | wpc)+
   done
@@ -4103,7 +4103,7 @@ lemma transferCaps_local_slots:
     transferCaps tag caps ep receiver receiveBuffer
    \<lbrace>\<lambda>tag'. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
   apply (simp add: transferCaps_def pred_conj_def)
-  apply (rule hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd)
    apply (rule hoare_vcg_conj_lift)
     apply (rule get_rs_real_cte_at')
    apply (rule get_recv_slot_inv')

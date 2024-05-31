@@ -598,7 +598,7 @@ lemma kernel_corres':
                       in hoare_post_imp)
           apply simp
          apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
-       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
+       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_strengthen_postE)
          apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split[OF schedule_corres])
@@ -607,7 +607,7 @@ lemma kernel_corres':
               | simp cong: rev_conj_cong | strengthen None_drop | subst Ex_Some_conv)+
      apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and
                      E="\<lambda>_. valid_sched and invs and valid_list"
-            in hoare_post_impErr)
+            in hoare_strengthen_postE)
        apply (wp handle_event_valid_sched hoare_vcg_imp_lift' |simp)+
        apply (wp handle_event_valid_sched hoare_vcg_if_lift3
               | simp

@@ -103,7 +103,7 @@ lemma mapM_x_storePTE_updates:
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
   apply (simp add: mapM_x_Cons)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: storePTE_def setObject_def)
   apply (wp | simp add:split_def updateObject_default_def)+
@@ -399,7 +399,7 @@ lemma mapM_x_storePDE_updates:
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
   apply (simp add: mapM_x_Cons)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: storePDE_def setObject_def)
   apply (wp | simp add:split_def updateObject_default_def)+
@@ -1370,7 +1370,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (rule hoare_pre)
    apply simp
    apply (wp add: updateFreeIndex_pspace_no_overlap')
-   apply (rule hoare_post_impErr)
+   apply (rule hoare_strengthen_postE)
      apply (rule combine_validE)
       apply (rule_tac ui=ui in whenE_reset_resetUntypedCap_invs_etc)
      apply (rule whenE_wp)
@@ -1599,7 +1599,7 @@ lemma unmapPage_valid_duplicates'[wp]:
         apply simp
         apply (wp mapM_x_mapM_valid)+
        apply (wp checkMappingPPtr_inv lookupPTSlot_page_table_at')+
-      apply (rule hoare_post_imp_R[OF lookupPTSlot_aligned[where sz= vmpage_size]])
+      apply (rule hoare_strengthen_postE_R[OF lookupPTSlot_aligned[where sz= vmpage_size]])
       apply (simp add:pageBitsForSize_def)
       apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
       apply (clarsimp simp: mask_def add.commute upto_enum_step_def largePagePTEOffsets_def
@@ -1615,7 +1615,7 @@ lemma unmapPage_valid_duplicates'[wp]:
      apply (clarsimp simp:conj_comms)
      apply (wp checkMappingPPtr_inv hoare_weak_lift_imp)+
    apply (clarsimp simp:conj_comms)
-   apply (rule hoare_post_imp_R[where Q'= "\<lambda>r. pspace_aligned' and
+   apply (rule hoare_strengthen_postE_R[where Q'= "\<lambda>r. pspace_aligned' and
      (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
      K(vmsz_aligned' vptr vmpage_size \<and> is_aligned r pdBits)
      and page_directory_at' (lookup_pd_slot r vptr && ~~ mask pdBits)"])
@@ -1648,7 +1648,7 @@ lemma unmapPageTable_valid_duplicates'[wp]:
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add:unmapPageTable_def pageTableMapped_def)
   apply (wpsimp wp: storePDE_no_duplicates' getPDE_wp)
-   apply (rule hoare_post_imp_R[where Q' = "\<lambda>r s. vs_valid_duplicates' (ksPSpace s)"])
+   apply (rule hoare_strengthen_postE_R[where Q' = "\<lambda>r s. vs_valid_duplicates' (ksPSpace s)"])
     apply wp
    apply (clarsimp simp: ko_wp_at'_def obj_at'_real_def projectKO_opt_pde)
    apply (clarsimp simp: vs_entry_align_def
@@ -1713,7 +1713,7 @@ lemma finaliseSlot_valid_duplicates'[wp]:
   \<lbrace>\<lambda>_ s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s \<rbrace>"
   unfolding finaliseSlot_def
   apply (rule validE_valid, rule hoare_pre,
-    rule hoare_post_impErr, rule use_spec)
+    rule hoare_strengthen_postE, rule use_spec)
      apply (rule finaliseSlot_invs'[where p=slot and slot=slot and Pr="vs_valid_duplicates' o ksPSpace"])
       apply (simp_all add: valid_duplicates_finalise_prop_stuff)
    apply (wp | simp add: o_def)+
@@ -2051,7 +2051,7 @@ lemma tc_valid_duplicates':
               checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
               checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_lift_R
               typ_at_lifts[OF setPriority_typ_at'] assertDerived_wp threadSet_cte_wp_at'
-              hoare_vcg_all_lift_R hoare_vcg_all_lift hoare_weak_lift_imp)[1]
+              hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_weak_lift_imp)[1]
           | wpc
           | simp add: inQ_def
           | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_lift)+)
@@ -2155,8 +2155,8 @@ lemma activate_sch_valid_duplicates'[wp]:
      activateThread \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: activateThread_def getCurThread_def
              cong: if_cong Structures_H.thread_state.case_cong)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_seq_ext[where B="\<lambda>st s.  (runnable' or idle') st
+  apply (rule bind_wp [OF _ gets_sp])
+  apply (rule bind_wp[where B="\<lambda>st s.  (runnable' or idle') st
     \<and> vs_valid_duplicates' (ksPSpace s)"])
    apply (rule hoare_pre)
     apply (wp | wpc | simp add: setThreadState_runnable_simp)+
@@ -2211,7 +2211,7 @@ lemma handleRecv_valid_duplicates'[wp]:
 
       apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
 
-                   in hoare_post_impErr[rotated])
+                   in hoare_strengthen_postE[rotated])
 
         apply (clarsimp simp: isCap_simps sch_act_sane_not)
        apply assumption
@@ -2251,7 +2251,7 @@ lemma callKernel_valid_duplicates':
              schedule_sch_act_simple he_invs'
           | simp add: no_irq_getActiveIRQ
           | wp (once) hoare_drop_imps )+
-   apply (rule hoare_post_impErr)
+   apply (rule hoare_strengthen_postE)
      apply (rule valid_validE)
      prefer 2
      apply assumption

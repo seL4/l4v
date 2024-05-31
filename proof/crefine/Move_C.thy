@@ -651,7 +651,7 @@ lemma asUser_obj_at_notQ:
    asUser t (setRegister r v)
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: asUser_def)
-  apply (rule hoare_seq_ext)+
+  apply (rule bind_wp)+
     apply (simp add: split_def)
     apply (rule threadSet_obj_at'_really_strongest)
    apply (wp threadGet_wp |rule gets_inv|wpc|clarsimp)+

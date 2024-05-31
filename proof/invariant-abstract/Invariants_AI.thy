@@ -2304,7 +2304,7 @@ lemma valid_tcb_state_typ:
   assumes P: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb_state st s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb_state st s\<rbrace>"
   by (case_tac st,
-      simp_all add: valid_tcb_state_def hoare_post_taut
+      simp_all add: valid_tcb_state_def hoare_TrueI
                     ep_at_typ P tcb_at_typ ntfn_at_typ)
 
 lemma ntfn_at_typ_at:
@@ -2332,7 +2332,7 @@ lemma valid_ep_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_ep ep s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ep ep s\<rbrace>"
   apply (case_tac ep,
-         simp_all add: valid_ep_def hoare_post_taut tcb_at_typ)
+         simp_all add: valid_ep_def hoare_TrueI tcb_at_typ)
    apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
    apply (rule hoare_vcg_conj_lift [OF _ hoare_vcg_prop])
    apply (rule hoare_vcg_const_Ball_lift [OF P])
@@ -2345,14 +2345,14 @@ lemma valid_ntfn_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_ntfn ntfn s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ntfn ntfn s\<rbrace>"
   apply (case_tac "ntfn_obj ntfn",
-         simp_all add: valid_ntfn_def valid_bound_tcb_def hoare_post_taut tcb_at_typ)
+         simp_all add: valid_ntfn_def valid_bound_tcb_def hoare_TrueI tcb_at_typ)
     defer 2
-    apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P)+)[2]
+    apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_TrueI tcb_at_typ P)+)[2]
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])+
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_vcg_const_Ball_lift [OF P])
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
-  apply (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P)
+  apply (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_TrueI tcb_at_typ P)
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P)
   done
 

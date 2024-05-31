@@ -247,7 +247,7 @@ lemma lookup_pd_slot_inv:
   "\<lbrace>P\<rbrace> lookup_pd_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: lookup_pd_slot_def)
   apply (rule hoare_pre)
-  apply (wp get_pdpte_wp lookup_pdpt_slot_inv hoare_vcg_all_lift_R hoare_drop_imps| wpc)+
+  apply (wp get_pdpte_wp lookup_pdpt_slot_inv hoare_vcg_all_liftE_R hoare_drop_imps| wpc)+
   apply clarsimp
   done
 
@@ -255,7 +255,7 @@ lemma lookup_pt_slot_inv:
   "\<lbrace>P\<rbrace> lookup_pt_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: lookup_pt_slot_def)
   apply (rule hoare_pre)
-  apply (wp get_pde_wp lookup_pd_slot_inv hoare_vcg_all_lift_R hoare_drop_imps| wpc)+
+  apply (wp get_pde_wp lookup_pd_slot_inv hoare_vcg_all_liftE_R hoare_drop_imps| wpc)+
   apply clarsimp
   done
 

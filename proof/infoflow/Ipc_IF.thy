@@ -898,7 +898,7 @@ lemma transfer_caps_loop_reads_respects':
     apply (rule_tac Q'="\<lambda>capd s. (capd \<noteq> NullCap
                                   \<longrightarrow> cte_wp_at (is_derived (cdt s) (obj,ind) capd) (obj, ind) s)
                                \<and> (capd \<noteq> NullCap \<longrightarrow> QM s capd)" for QM
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
      prefer 2
      apply (clarsimp simp: cte_wp_at_caps_of_state split del: if_split)
      apply (strengthen is_derived_is_transferable[mk_strg I' O], assumption, solves\<open>simp\<close>)
@@ -964,7 +964,7 @@ lemma lookup_slot_for_cnode_op_rev:
   apply (wp resolve_address_bits_rev lookup_error_on_failure_rev
             whenE_throwError_wp
          | wpc
-         | rule hoare_post_imp_R[OF hoare_True_E_R[where P="\<top>"]]
+         | rule hoare_strengthen_postE_R[OF wp_post_tautE_R]
          | simp add: split_def split del: if_split)+
   done
 
@@ -1511,7 +1511,7 @@ lemma send_fault_ipc_reads_respects:
             hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_all_lift
             thread_set_pas_refined cap_fault_on_failure_rev
             lookup_slot_for_thread_rev
-            lookup_slot_for_thread_authorised hoare_vcg_all_lift_R
+            lookup_slot_for_thread_authorised hoare_vcg_all_liftE_R
             thread_get_reads_respects get_cap_auth_wp[where aag=aag] get_cap_rev
             thread_set_tcb_fault_set_invs
        | wpc
@@ -1524,7 +1524,7 @@ lemma send_fault_ipc_reads_respects:
                           \<and> pas_cur_domain aag s
                           \<and> valid_fault fault
                           \<and> is_subject aag (fst (fst rv))"
-               in hoare_post_imp_R[rotated])
+               in hoare_strengthen_postE_R[rotated])
        apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
       apply (wp get_cap_auth_wp[where aag=aag] lookup_slot_for_thread_authorised
                 thread_get_reads_respects
@@ -1700,7 +1700,7 @@ next
         apply (wp cap_insert_globals_equiv'')
        apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                    and E="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
-                    in hoare_post_impErr)
+                    in hoare_strengthen_postE)
          apply (simp add: whenE_def, rule conjI)
           apply (rule impI, wp)+
          apply (simp)+
@@ -1900,7 +1900,7 @@ lemma cancel_ipc_blocked_globals_equiv:
    cancel_ipc a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_ipc_def
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wpc; (simp,rule blocked_cancel_ipc_globals_equiv)?)
         apply (rule hoare_pre_cont)+
@@ -1963,7 +1963,7 @@ lemma send_fault_ipc_valid_global_objs:
   apply (wp)
      apply (simp add: Let_def)
      apply (wp send_ipc_valid_global_objs | wpc)+
-    apply (rule_tac Q'="\<lambda>_. valid_global_objs" in hoare_post_imp_R)
+    apply (rule_tac Q'="\<lambda>_. valid_global_objs" in hoare_strengthen_postE_R)
      apply (wp | simp)+
   done
 
@@ -1985,7 +1985,7 @@ lemma send_fault_ipc_globals_equiv:
     apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and
                             valid_global_refs and pspace_distinct and pspace_aligned and
                             valid_global_objs and K (valid_fault fault) and valid_idle and
-                            (\<lambda>s. sym_refs (state_refs_of s))" in hoare_post_imp_R)
+                            (\<lambda>s. sym_refs (state_refs_of s))" in hoare_strengthen_postE_R)
      apply (wp | simp)+
     apply (clarsimp)
     apply (rule valid_tcb_fault_update)
@@ -2005,7 +2005,7 @@ lemma handle_fault_globals_equiv:
   unfolding handle_fault_def
   apply (wp handle_double_fault_globals_equiv)
     apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state" and
-                    E="\<lambda>_. globals_equiv st and valid_arch_state" in hoare_post_impErr)
+                    E="\<lambda>_. globals_equiv st and valid_arch_state" in hoare_strengthen_postE)
       apply (wp send_fault_ipc_globals_equiv | simp)+
   done
 

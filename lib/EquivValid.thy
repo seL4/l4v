@@ -513,7 +513,7 @@ lemma liftME_ev:
   shows "equiv_valid_inv I A P (liftME f g)"
   apply(simp add: liftME_def)
   apply (rule bindE_ev_pre[OF returnOk_ev reads_res])
-  apply (rule hoare_True_E_R)
+  apply (rule hoareE_R_TrueI)
   apply fast
   done
 
@@ -645,7 +645,7 @@ lemma mapME_ev_pre:
    apply(subst mapME_Cons)
    apply wp
    apply fastforce
-   apply (rule hoare_True_E_R[where P="\<top>"])
+   apply (rule wp_post_tautE_R)
    apply fastforce+
   done
 

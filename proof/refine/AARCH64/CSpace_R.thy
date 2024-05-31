@@ -2548,7 +2548,7 @@ lemma updateMDB_iflive'[wp]:
      updateMDB p m
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
   apply (clarsimp simp: updateMDB_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (wp setCTE_iflive')
   apply (clarsimp elim!: cte_wp_at_weakenE')
   done
@@ -2561,7 +2561,7 @@ lemma updateCap_iflive':
      updateCap p cap
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
   apply (simp add: updateCap_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (wp setCTE_iflive')
   apply (clarsimp elim!: cte_wp_at_weakenE')
   done

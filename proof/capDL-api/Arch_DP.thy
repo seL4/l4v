@@ -232,7 +232,7 @@ lemma seL4_Page_Table_Map:
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
          iv = InvokePageTable (PageTableMap (PageTableCap ptr Real (get_mapped_asid asid' (vaddr && ~~ mask 20))) (PageTableCap ptr Fake None)
           (cnode_id,pt_offset) (cdl_lookup_pd_slot pd_ptr vaddr))"
-         in hoare_post_impErr[rotated -1])
+         in hoare_strengthen_postE[rotated -1])
            apply assumption
           apply clarsimp
          apply (rule hoare_vcg_E_elim)
@@ -362,7 +362,7 @@ lemma seL4_Section_Map_wp:
          (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
          (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
           [cdl_lookup_pd_slot pd_ptr vaddr])"
-         in hoare_post_impErr[rotated -1])
+         in hoare_strengthen_postE[rotated -1])
           apply assumption
          apply (rule hoare_vcg_E_elim)
           apply wp
@@ -503,7 +503,7 @@ lemma seL4_Page_Map_wp:
          (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
          (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None)
              (cnode_id,frame_offset) [ (pt_ptr, unat ((vaddr >> 12) && 0xFF))] )"
-         in hoare_post_impErr[rotated -1])
+         in hoare_strengthen_postE[rotated -1])
           apply assumption
          apply (rule hoare_vcg_E_elim)
           apply wp

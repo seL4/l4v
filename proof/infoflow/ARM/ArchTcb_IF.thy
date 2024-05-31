@@ -95,19 +95,19 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
   supply set_priority_extended.dxo_eq[simp del]
          reschedule_required_ext_extended.dxo_eq[simp del]
   apply (simp add: split_def cong: option.case_cong)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                 in hoare_gen_asm)
    apply wp
-        apply ((simp add: conj_comms(1, 2) del: hoare_True_E_R
-                | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_lift_R
+        apply ((simp add: conj_comms(1, 2) del: hoareE_R_TrueI
+                | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
                        hoare_vcg_E_elim hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
                 | (wp check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
                       check_cap_inv2[where Q="\<lambda>_ s. t \<noteq> idle_thread s"]
                       out_invs_trivial case_option_wpE cap_delete_deletes
                       cap_delete_valid_cap cap_insert_valid_cap out_cte_at
                       cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
-                      hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                      hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                       thread_set_tcb_ipc_buffer_cap_cleared_invs
                       thread_set_invs_trivial[OF ball_tcb_cap_casesI]
                       hoare_vcg_all_lift thread_set_valid_cap out_emptyable
@@ -123,7 +123,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
                       thread_set_P thread_set_P' set_mcpriority_P set_mcpriority_idle_thread
                       dxo_wp_weak hoare_weak_lift_imp)
                 | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified] emptyable_def
-                       del: hoare_True_E_R
+                       del: hoareE_R_TrueI
                 | wpc
                 | strengthen use_no_cap_to_obj_asid_strg
                              tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
@@ -170,7 +170,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                            check_cap_inv[OF check_cap_inv[OF cap_insert_ct]]
                            get_thread_state_rev[THEN
                                                reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-                           hoare_vcg_all_lift_R hoare_vcg_all_lift
+                           hoare_vcg_all_liftE_R hoare_vcg_all_lift
                            cap_delete_reads_respects[where st=st] checked_insert_pas_refined
                            thread_set_pas_refined
                            reads_respects_f[OF checked_insert_reads_respects, where st=st]
@@ -202,7 +202,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                       check_cap_inv[OF check_cap_inv[OF cap_insert_cur_domain]]
                       check_cap_inv[OF check_cap_inv[OF cap_insert_ct]]
                       get_thread_state_rev[THEN reads_respects_f[where st=st and Q=\<top>]]
-                      hoare_vcg_all_lift_R hoare_vcg_all_lift
+                      hoare_vcg_all_liftE_R hoare_vcg_all_lift
                       cap_delete_reads_respects[where st=st] checked_insert_pas_refined
                       thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects]
                       checked_cap_insert_silc_inv[where st=st]

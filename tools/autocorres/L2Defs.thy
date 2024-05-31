@@ -258,7 +258,7 @@ lemma L2corres_while:
         apply (rule body_corres [unfolded L2corres_def])
        apply (clarsimp simp: pred_imply)
       apply (clarsimp simp: cond_match)
-     apply (rule validE_weaken [OF inv_holds], (clarsimp simp: pred_imply2)+)[1]
+     apply (rule hoare_chainE [OF inv_holds], (clarsimp simp: pred_imply2)+)[1]
     apply (metis pred_extract pred_imply2)
    apply (metis pred_extract pred_imply2)
   apply simp

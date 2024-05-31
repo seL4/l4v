@@ -1416,7 +1416,7 @@ lemma emptySlot_untyped_ranges[wp]:
      emptySlot sl opt \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
   apply (simp add: emptySlot_def case_Null_If)
   apply (rule hoare_pre)
-   apply (rule hoare_seq_ext)
+   apply (rule bind_wp)
     apply (rule untyped_ranges_zero_lift)
      apply (wp getCTE_cteCap_wp clearUntypedFreeIndex_cteCaps_of
        | wpc | simp add: clearUntypedFreeIndex_def updateTrackedFreeIndex_def
@@ -1488,7 +1488,7 @@ lemma clearUntypedFreeIndex_noop_corres:
     apply (rule corres_bind_return2)
     apply (rule corres_symb_exec_r_conj[where P'="cte_at' (cte_map slot)"])
        apply (rule corres_trivial, simp)
-      apply (wp hoare_TrueI[where P=\<top>] getCTE_wp' | wpc
+      apply (wp wp_post_taut getCTE_wp' | wpc
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
      apply (clarsimp simp: state_relation_def)
     apply (rule no_fail_pre)
@@ -2244,10 +2244,10 @@ crunches setBoundNotification
 lemma unbindNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindNotification tcb \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: unbindNotification_def invs'_def valid_state'_def)
-  apply (rule hoare_seq_ext[OF _ gbn_sp'])
+  apply (rule bind_wp[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, clarsimp, wp, clarsimp)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
   apply (wp sbn'_valid_pspace'_inv sbn_sch_act' valid_irq_node_lift
             irqs_masked_lift setBoundNotification_ct_not_inQ sym_heap_sched_pointers_lift
@@ -2290,7 +2290,7 @@ lemma ntfn_bound_tcb_at':
 lemma unbindMaybeNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindMaybeNotification ntfnptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: unbindMaybeNotification_def invs'_def valid_state'_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sym_heap_sched_pointers_lift valid_irq_node_lift
              irqs_masked_lift setBoundNotification_ct_not_inQ
@@ -2820,7 +2820,7 @@ lemma cteDeleteOne_cteCaps_of:
      cteDeleteOne p
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def split_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (case_tac "\<forall>final. finaliseCap (cteCap cte) final True = fail")
    apply (simp add: finaliseCapTrue_standin_simple_def)
    apply wp
@@ -2963,7 +2963,7 @@ lemma unbindMaybeNotification_valid_objs'[wp]:
      unbindMaybeNotification t
    \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: unbindMaybeNotification_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
   apply (wp threadSet_valid_objs' gbn_wp' set_ntfn_valid_objs' hoare_vcg_all_lift
             setNotification_valid_tcb' getNotification_wp
@@ -3003,7 +3003,7 @@ lemma unbindMaybeNotification_obj_at'_bound:
      unbindMaybeNotification r
    \<lbrace>\<lambda>_ s. obj_at' (\<lambda>ntfn. ntfnBoundTCB ntfn = None) r s\<rbrace>"
   apply (simp add: unbindMaybeNotification_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp obj_at_setObject2
         | wpc
@@ -3054,7 +3054,7 @@ lemma capDeleteOne_bound_tcb_at':
 lemma cancelIPC_bound_tcb_at'[wp]:
   "\<lbrace>bound_tcb_at' P tptr\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. bound_tcb_at' P tptr\<rbrace>"
   apply (simp add: cancelIPC_def Let_def)
-  apply (rule hoare_seq_ext[OF _ gts_sp'])
+  apply (rule bind_wp[OF _ gts_sp'])
   apply (case_tac "state", simp_all)
          defer 2
          apply (rule hoare_pre)
@@ -3414,7 +3414,7 @@ lemma cteDeleteOne_reply_pred_tcb_at:
     cteDeleteOne slot
    \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def isFinalCapability_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: cte_wp_at_ctes_of when_def isCap_simps
                         Let_def finaliseCapTrue_standin_def)
@@ -3435,7 +3435,7 @@ end
 lemma rescheduleRequired_sch_act_not[wp]:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"
   apply (simp add: rescheduleRequired_def setSchedulerAction_def)
-  apply (wp hoare_post_taut | simp)+
+  apply (wp hoare_TrueI | simp)+
   done
 
 crunch sch_act_not[wp]: cteDeleteOne "sch_act_not t"

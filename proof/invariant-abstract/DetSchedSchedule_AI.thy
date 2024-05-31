@@ -1509,10 +1509,10 @@ lemma thread_set_not_state_valid_sched:
 lemma unbind_notification_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> unbind_notification ntfnptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: unbind_notification_def)
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (rule bind_wp[OF _ gbn_sp])
   apply (case_tac ntfnptra, simp, wp, simp)
   apply (clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wp set_bound_notification_valid_sched, clarsimp)
   done
 
@@ -1669,14 +1669,14 @@ crunch simple_sched_action[wp]: finalise_cap simple_sched_action
    simp: unless_def if_fun_split)
 
 lemma suspend_valid_sched[wp]:
-  notes seq_ext_inv = seq_ext[where A=I and B="\<lambda>_. I" for I]
+  notes bind_wp_fwd_inv = bind_wp_fwd[where A=I and B="\<lambda>_. I" for I]
   shows "\<lbrace>valid_sched and simple_sched_action\<rbrace> suspend t \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: suspend_def)
-  apply (rule seq_ext_inv)
+  apply (rule bind_wp_fwd_inv)
    apply wpsimp
-  apply (rule seq_ext_inv)
+  apply (rule bind_wp_fwd_inv)
    apply wp
-  apply (rule seq_ext_inv)
+  apply (rule bind_wp_fwd_inv)
    apply wpsimp
   apply (wp tcb_sched_action_dequeue_strong_valid_sched
        | simp)+
@@ -2176,13 +2176,13 @@ lemmas set_thread_state_active_valid_sched_except_blocked =
 lemma set_thread_state_runnable_valid_blocked:
   "\<lbrace>valid_blocked and st_tcb_at runnable ref and (\<lambda>s. runnable ts)\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (rule hoare_seq_ext[OF _ gets_the_get_tcb_sp])
-  apply (rule_tac B="\<lambda>rv. valid_blocked and st_tcb_at runnable ref" in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ gets_the_get_tcb_sp])
+  apply (rule_tac B="\<lambda>rv. valid_blocked and st_tcb_at runnable ref" in bind_wp_fwd)
    apply (wp set_object_wp)
    apply (clarsimp simp: valid_blocked_def not_queued_def runnable_eq_active
                          pred_tcb_at_def st_tcb_at_kh_def obj_at_kh_def obj_at_def)
   apply (simp add: set_thread_state_ext_def)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (rule_tac S="runnable ts" in hoare_gen_asm_spec)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   apply clarsimp
@@ -2694,7 +2694,7 @@ lemma send_fault_ipc_valid_sched[wp]:
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (simp add: send_fault_ipc_def Let_def)
   apply (wp send_ipc_valid_sched thread_set_not_state_valid_sched thread_set_no_change_tcb_state
-            hoare_gen_asm'[OF thread_set_tcb_fault_set_invs]  hoare_drop_imps hoare_vcg_all_lift_R
+            hoare_gen_asm'[OF thread_set_tcb_fault_set_invs]  hoare_drop_imps hoare_vcg_all_liftE_R
             ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             hoare_vcg_disj_lift
          | wpc | simp | wps)+
@@ -2733,24 +2733,24 @@ lemma handle_double_fault_valid_sched:
   including no_pre
   apply (wpsimp wp: handle_double_fault_valid_queues handle_double_fault_valid_sched_action
                     set_thread_state_not_runnable_valid_blocked
-              comb: hoare_vcg_precond_imp
+              comb: hoare_weaken_pre
          | rule hoare_conjI | simp add: handle_double_fault_def | fastforce simp: simple_sched_action_def)+
   done
 
 lemma send_fault_ipc_error_sched_act_not[wp]:
   "\<lbrace>scheduler_act_not t\<rbrace> send_fault_ipc tptr fault -, \<lbrace>\<lambda>rv. scheduler_act_not t\<rbrace>"
   by (simp add: send_fault_ipc_def Let_def |
-      (wp hoare_drop_imps hoare_vcg_all_lift_R)+ | wpc)+
+      (wp hoare_drop_imps hoare_vcg_all_liftE_R)+ | wpc)+
 
 lemma send_fault_ipc_error_cur_thread[wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> send_fault_ipc tptr fault -, \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
   by (simp add: send_fault_ipc_def Let_def |
-      (wp hoare_drop_imps hoare_vcg_all_lift_R)+ | wpc)+
+      (wp hoare_drop_imps hoare_vcg_all_liftE_R)+ | wpc)+
 
 lemma send_fault_ipc_error_not_queued[wp]:
   "\<lbrace>not_queued t\<rbrace> send_fault_ipc tptr fault -, \<lbrace>\<lambda>rv. not_queued t\<rbrace>"
   by (simp add: send_fault_ipc_def Let_def |
-      (wp hoare_drop_imps hoare_vcg_all_lift_R)+ | wpc)+
+      (wp hoare_drop_imps hoare_vcg_all_liftE_R)+ | wpc)+
 
 context DetSchedSchedule_AI begin
 lemma handle_fault_valid_sched:
@@ -2976,7 +2976,7 @@ lemma unbind_maybe_notification_sym_refs[wp]:
      unbind_maybe_notification a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_maybe_notification_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp | wpc | clarsimp)+
   apply (rule conjI)
@@ -3096,7 +3096,7 @@ lemma handle_recv_valid_sched:
       apply (wpsimp simp: lookup_cap_def lookup_slot_for_thread_def)
        apply (wp resolve_address_bits_valid_fault2)+
     apply (simp add: valid_fault_def)
-    apply (wp hoare_drop_imps hoare_vcg_all_lift_R)
+    apply (wp hoare_drop_imps hoare_vcg_all_liftE_R)
    apply (wpsimp wp: delete_caller_cap_not_queued | strengthen invs_valid_tcb_ctable_strengthen)+
   apply (auto simp: ct_in_state_def tcb_at_invs objs_valid_tcb_ctable invs_valid_objs)
   done
@@ -3266,13 +3266,13 @@ lemma handle_invocation_valid_sched:
                 apply (wp set_thread_state_runnable_valid_sched)[1]
                apply wp+
          apply (wp gts_wp hoare_vcg_all_lift)
-        apply (rule_tac Q="\<lambda>_. valid_sched" and E="\<lambda>_. valid_sched" in hoare_post_impErr)
+        apply (rule_tac Q="\<lambda>_. valid_sched" and E="\<lambda>_. valid_sched" in hoare_strengthen_postE)
           apply wp
          apply ((clarsimp simp: st_tcb_at_def obj_at_def)+)[2]
        apply (wp ct_in_state_set set_thread_state_runnable_valid_sched
              | simp add: split_def if_apply_def2 split del: if_split)+
       apply (simp add: validE_E_def)
-      apply (rule hoare_post_impErr)
+      apply (rule hoare_strengthen_postE)
         apply (rule lookup_cap_and_slot_valid_fault)
        apply (wp | simp)+
   apply (auto simp: ct_in_state_def valid_sched_def ct_not_in_q_def valid_queues_def not_queued_def runnable_eq_active elim: st_tcb_ex_cap)
@@ -3365,8 +3365,8 @@ lemma do_reply_transfer_add_assert:
     apply (wp a)
    apply simp
   apply (simp add: do_reply_transfer_def)
-  apply (rule hoare_seq_ext)
-   apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
+   apply (rule bind_wp)
     prefer 2
     apply (rule assert_false)
    apply simp
@@ -3499,7 +3499,7 @@ lemma call_kernel_valid_sched:
      apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
     apply auto[1]
    apply (rule_tac Q="\<lambda>rv. valid_sched and invs" and
-                   E="\<lambda>rv. valid_sched and invs" in hoare_post_impErr)
+                   E="\<lambda>rv. valid_sched and invs" in hoare_strengthen_postE)
      apply (rule valid_validE)
      apply (wp handle_event_valid_sched)
     apply (force intro: active_from_running)+

@@ -31,10 +31,10 @@ lemma hoare_eq_post: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace
   by (rule hoare_strengthen_post, assumption, clarsimp)
 
 lemma hoare_eq_postE: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>E\<rbrace>"
-  by (metis (full_types) hoare_post_impErr')
+  by (metis (full_types) hoare_strengthen_postE)
 
 lemma hoare_eq_postE_R: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>, -"
-  by (metis hoare_post_imp_R)
+  by (metis hoare_strengthen_postE_R)
 
 ML \<open>
 val sep_select_post_method =  sep_select_generic_method false [@{thm hoare_eq_post},

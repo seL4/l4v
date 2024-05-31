@@ -1560,9 +1560,9 @@ lemma invoke_untyped_corres:
                       Q="\<lambda>_. valid_etcbs and invs and valid_untyped_inv_wcap untyped_invocation
                                 (Some (cap.UntypedCap dev ptr' sz (if reset then 0 else idx))) and ct_active
                              and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr' .. ptr' + 2 ^ sz - 1} s)"
-                      in hoare_post_impErr)
+                      in hoare_strengthen_postE)
         apply (wp whenE_wp)
-        apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc)
+        apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc)
          apply (clarsimp simp only: if_True simp_thms ptrs, intro conjI, assumption+)
         apply simp
        apply (clarsimp simp only: ui ptrs)
@@ -1658,9 +1658,9 @@ end
 lemma mapME_x_inv_wp2:
   "(\<And>x. \<lbrace>P and E\<rbrace> f x \<lbrace>\<lambda>rv. P and E\<rbrace>,\<lbrace>\<lambda>rv. E\<rbrace>)
       \<Longrightarrow> \<lbrace>P and E\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>\<lambda>rv. E\<rbrace>"
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
   apply (rule mapME_x_inv_wp[where E="\<lambda>_. E"])
-    apply (rule hoare_post_impErr, assumption)
+    apply (rule hoare_strengthen_postE, assumption)
      apply simp_all
   done
 
@@ -1845,11 +1845,11 @@ lemma decode_untyped_corres:
     apply (rule validE_R_validE)
     apply (rule_tac Q' = "\<lambda>a s. invs s \<and> valid_etcbs s \<and> valid_cap a s \<and> cte_wp_at ((=) (cap.UntypedCap dev ptr sz idx)) slot' s
       \<and> (Structures_A.is_cnode_cap a \<longrightarrow> not_idle_thread (obj_ref_of a) s)"
-      in hoare_post_imp_R)
+      in hoare_strengthen_postE_R)
      apply (rule hoare_pre)
       apply (wp get_cap_wp)
       apply (rule_tac Q' = "\<lambda>a s. invs s \<and> valid_etcbs s \<and> cte_wp_at ((=) (cap.UntypedCap dev ptr sz idx)) slot' s"
-      in hoare_post_imp_R)
+      in hoare_strengthen_postE_R)
        apply wp
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (frule_tac p = "(x,y)" for x y in caps_of_state_valid[rotated])

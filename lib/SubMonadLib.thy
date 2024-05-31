@@ -343,13 +343,13 @@ lemma corres_submonad:
    apply (fastforce simp: corres_underlying_def stateAssert_def get_def
                          assert_def return_def bind_def)
   apply (rule corres_underlying_split [where r'="\<lambda>x y. (x, y) \<in> ssr",
-                             OF _ _ hoare_post_taut hoare_post_taut])
+                             OF _ _ hoare_TrueI hoare_TrueI])
    apply clarsimp
   apply (rule corres_underlying_split [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
-                             OF _ _ hoare_post_taut hoare_post_taut])
+                             OF _ _ hoare_TrueI hoare_TrueI])
    defer
    apply clarsimp
-   apply (rule corres_underlying_split [where r'=dc, OF _ _ hoare_post_taut hoare_post_taut])
+   apply (rule corres_underlying_split [where r'=dc, OF _ _ hoare_TrueI hoare_TrueI])
     apply (simp add: corres_modify')
    apply clarsimp
   apply (rule corres_select_f_stronger)

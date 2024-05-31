@@ -154,7 +154,7 @@ lemma L1_while_nothrow: "no_throw \<top> B \<Longrightarrow> no_throw \<top> (L1
   apply (clarsimp simp: no_throw_def)
   apply (rule validE_whileLoopE [where I="\<lambda>_ _. True"])
     apply simp
-   apply (erule validE_weaken, simp+)
+   apply (erule hoare_chainE, simp+)
   done
 
 lemma L1_catch_nothrow_lhs: "\<lbrakk> no_throw \<top> L \<rbrakk> \<Longrightarrow> no_throw \<top> (L1_catch L R)"
@@ -202,7 +202,7 @@ lemma L1_seq_noreturn_lhs: "no_return \<top> L \<Longrightarrow> no_return \<top
 
 lemma L1_seq_noreturn_rhs: "\<lbrakk> no_return \<top> R \<rbrakk> \<Longrightarrow> no_return \<top> (L1_seq L R)"
   apply (clarsimp simp: L1_defs no_return_def no_throw_def)
-  apply (rule seqE [where B="\<lambda>_ _. True"])
+  apply (rule bindE_wp_fwd [where B="\<lambda>_ _. True"])
    apply (rule hoareE_TrueI)
   apply simp
   done

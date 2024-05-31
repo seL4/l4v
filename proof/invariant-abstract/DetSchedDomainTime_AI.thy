@@ -446,7 +446,7 @@ lemma call_kernel_domain_time_inv_det_ext:
     apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_post_imp)
      apply fastforce
     apply (wp handle_event_domain_time_inv)+
-   apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp_R)
+   apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_strengthen_postE_R)
     apply (wp handle_event_domain_time_inv)
    apply fastforce+
   done

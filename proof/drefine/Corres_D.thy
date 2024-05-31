@@ -273,7 +273,7 @@ lemma hoare_mapM_idempotent: "\<lbrakk> \<And> a R. \<lbrace> R \<rbrace> x a \<
   apply atomize
   apply (erule_tac x=a in allE)
   apply (erule_tac x=R in allE)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply wp
   apply assumption
   done

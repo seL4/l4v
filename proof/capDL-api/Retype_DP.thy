@@ -371,7 +371,7 @@ lemma invoke_untyped_wp:
        apply (drule(1) subset_trans[rotated],fastforce)+
      apply (wp reset_untyped_cap_wp unlessE_wp| simp)+
    apply (wp hoare_drop_impE_R)
-   apply (erule hoare_post_imp_R[OF reset_untyped_cap_wp
+   apply (erule hoare_strengthen_postE_R[OF reset_untyped_cap_wp
             [where free_range = free_range and obj_range = obj_range]])
    apply clarsimp
    apply (rule conjI)
@@ -512,7 +512,7 @@ lemma invoke_untyped_one_wp:
   \<and>* P > s) \<rbrace>, -"
   apply simp
   apply (rule hoare_pre)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (rule invoke_untyped_wp
       [where free_range = free_range and obj_range = obj_range
       and tot_free_range = tot_free_range and obj = obj and P = P])
@@ -612,7 +612,7 @@ lemma seL4_Untyped_Retype_sep:
          apply clarsimp
          apply (rule hoare_vcg_E_elim[where P = P and P' = P for P,simplified,rotated])
           apply wp
-          apply (rule hoare_post_imp_R[OF hoare_vcg_conj_lift_R])
+          apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_lift_R])
            apply (rule invoke_untyped_one_has_children)
            apply fastforce
           apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
@@ -947,7 +947,7 @@ lemma invoke_untyped_preempt:
   apply (wp unlessE_wp)
    apply (simp add: reset_untyped_cap_def whenE_liftE | wp whenE_wp)+
       apply (rule_tac P = "\<exists>a. cap = UntypedCap dev obj_range a" in hoare_gen_asmEx)
-      apply (rule hoare_post_impErr[where E = E and F = E for E])
+      apply (rule hoare_strengthen_postE[where E = E and F = E for E])
         apply (rule mapME_x_inv_wp[where P = P and E = "\<lambda>r. P" for P])
         apply wp
          apply simp
@@ -1165,7 +1165,7 @@ lemma invoke_untyped_no_pending[wp]:
      apply (wp (once) hoare_drop_imps)
      apply (wpsimp split_del: if_split)+
    apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
-                        \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_post_imp_R)
+                        \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_strengthen_postE_R)
     apply (wp reset_untyped_cap_no_pending)
    apply simp
   apply auto
@@ -1222,7 +1222,7 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
          apply clarsimp
          apply (rule hoare_vcg_E_elim[where P = P and P' = P for P,simplified,rotated])
           apply wp
-          apply (rule hoare_post_imp_R[OF hoare_vcg_conj_lift_R])
+          apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_lift_R])
            apply (rule valid_validE_R)
            apply (rule invoke_untyped_cdt_inc)
           apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in

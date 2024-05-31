@@ -722,7 +722,7 @@ lemma Arch_switchToThread_pred_tcb'[wp]:
 proof -
   have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
     apply (simp add:  pred_tcb_at'_def ARM_H.switchToThread_def)
-    apply (rule hoare_seq_ext)+
+    apply (rule bind_wp)+
        apply (rule doMachineOp_obj_at)
      apply (rule setVMRoot_obj_at)
     done
@@ -947,7 +947,7 @@ lemma Arch_switchToThread_obj_at[wp]:
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def )
-  apply (rule hoare_seq_ext)+
+  apply (rule bind_wp)+
    apply (rule doMachineOp_obj_at)
   apply (rule setVMRoot_obj_at)
   done
@@ -1110,21 +1110,21 @@ lemma setThreadState_rct:
    \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"
   apply (simp add: setThreadState_def)
   apply (rule hoare_pre_disj')
-   apply (rule hoare_seq_ext [OF _
+   apply (rule bind_wp [OF _
                  hoare_vcg_conj_lift
                    [OF threadSet_tcbState_st_tcb_at' [where P=runnable']
                        threadSet_nosch]])
-   apply (rule hoare_seq_ext [OF _
+   apply (rule bind_wp [OF _
                  hoare_vcg_conj_lift [OF isRunnable_const isRunnable_inv]])
    apply (clarsimp simp: when_def)
    apply (case_tac x)
     apply (clarsimp, wp)[1]
    apply (clarsimp)
-  apply (rule hoare_seq_ext [OF _
+  apply (rule bind_wp [OF _
                 hoare_vcg_conj_lift
                   [OF threadSet_ct threadSet_nosch]])
-  apply (rule hoare_seq_ext [OF _ isRunnable_inv])
-  apply (rule hoare_seq_ext [OF _
+  apply (rule bind_wp [OF _ isRunnable_inv])
+  apply (rule bind_wp [OF _
                 hoare_vcg_conj_lift
                   [OF gct_wp gct_wp]])
   apply (rename_tac ct)
@@ -2013,13 +2013,13 @@ proof -
 
   show ?thesis
     apply (clarsimp simp: chooseThread_def Let_def curDomain_def)
-    apply (rule hoare_seq_ext[OF _ stateAssert_sp])+
+    apply (rule bind_wp[OF _ stateAssert_sp])+
     apply (simp only: return_bind, simp)
-    apply (rule hoare_seq_ext[where B="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
+    apply (rule bind_wp[where B="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
                                               \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s"])
      apply (rule_tac B="\<lambda>rv s. invs_no_cicd' s \<and> curdom = ksCurDomain s \<and>
                                rv = ksReadyQueuesL1Bitmap s curdom \<and>
-                               ksReadyQueues_asrt s \<and> ready_qs_runnable s" in hoare_seq_ext)
+                               ksReadyQueues_asrt s \<and> ready_qs_runnable s" in bind_wp)
       apply (rename_tac l1)
       apply (case_tac "l1 = 0")
        (* switch to idle thread *)
@@ -2076,13 +2076,13 @@ proof -
   (* FIXME this is almost identical to the chooseThread_invs_no_cicd'_posts proof, can generalise? *)
   show ?thesis
     apply (clarsimp simp: chooseThread_def Let_def curDomain_def)
-    apply (rule hoare_seq_ext[OF _ stateAssert_sp])+
+    apply (rule bind_wp[OF _ stateAssert_sp])+
     apply (simp only: return_bind, simp)
-    apply (rule hoare_seq_ext[where B="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
+    apply (rule bind_wp[where B="\<lambda>rv s. invs_no_cicd' s \<and> rv = ksCurDomain s
                                               \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s"])
      apply (rule_tac B="\<lambda>rv s. invs_no_cicd' s \<and> curdom = ksCurDomain s \<and>
                                rv = ksReadyQueuesL1Bitmap s curdom \<and>
-                               ksReadyQueues_asrt s \<and> ready_qs_runnable s" in hoare_seq_ext)
+                               ksReadyQueues_asrt s \<and> ready_qs_runnable s" in bind_wp)
       apply (rename_tac l1)
       apply (case_tac "l1 = 0")
        (* switch to idle thread *)
@@ -2120,7 +2120,7 @@ lemma schedule_invs':
   "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>rv. invs'\<rbrace>"
   supply ssa_wp[wp del]
   apply (simp add: schedule_def)
-  apply (rule_tac hoare_seq_ext, rename_tac t)
+  apply (rule_tac bind_wp, rename_tac t)
    apply (wp, wpc)
       \<comment> \<open>action = ResumeCurrentThread\<close>
       apply (wp)[1]
@@ -2213,7 +2213,7 @@ lemma schedule_ct_activatable'[wp]:
   "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
   supply ssa_wp[wp del]
   apply (simp add: schedule_def)
-  apply (rule_tac hoare_seq_ext, rename_tac t)
+  apply (rule_tac bind_wp, rename_tac t)
    apply (wp, wpc)
       \<comment> \<open>action = ResumeCurrentThread\<close>
       apply (wp)[1]

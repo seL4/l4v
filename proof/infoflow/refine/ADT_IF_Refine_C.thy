@@ -414,7 +414,7 @@ lemma kernelEntry_corres_C:
        apply (rule exI, (rule conjI, assumption)+)
        subgoal by (force simp: schact_is_rct_def)
       apply simp
-      apply (rule hoare_post_taut[where P=\<top>])
+      apply (rule wp_post_taut)
      apply wp+
    apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
   apply fastforce
@@ -444,7 +444,7 @@ lemma handle_preemption_corres_C:
         apply clarsimp
        apply simp
       apply simp
-     apply (rule hoare_post_taut[where P=\<top>])+
+     apply (rule wp_post_taut)+
    apply (fastforce simp: ex_abs_def schedaction_related)+
   done
 
@@ -509,7 +509,7 @@ lemma schedule_if_corres_C:
           apply simp
          apply simp
         apply simp
-       apply (rule hoare_post_taut[where P=\<top>])+
+       apply (rule wp_post_taut)+
      apply (rule_tac Q="\<lambda>r. ct_in_state' activatable' and invs' and
                             ex_abs (invs and ct_in_state activatable)" in hoare_strengthen_post)
       apply (wp schedule_invs' corres_ex_abs_lift)
@@ -518,7 +518,7 @@ lemma schedule_if_corres_C:
      apply (clarsimp simp: ex_abs_def invs'_def valid_state'_def valid_pspace'_def)
      apply fastforce
     apply simp
-    apply (rule hoare_post_taut[where P=\<top>])
+    apply (rule wp_post_taut)
    apply (auto simp: ex_abs_def)
   done
 
