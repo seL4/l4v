@@ -25,7 +25,8 @@ section \<open>Platform Constants\<close>
 
 context Arch begin global_naming X64
 
-type_synonym irq = word8
+type_synonym irq_len = 8
+type_synonym irq = "irq_len word"
 type_synonym paddr = word64
 
 
