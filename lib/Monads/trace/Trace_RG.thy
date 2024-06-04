@@ -363,8 +363,7 @@ lemma rg_FalseE[simp]:
   by (simp add: validI_def validIE_def)
 
 lemma rg_post_imp:
-  "\<lbrakk>\<And>v s0 s. Q' v s0 s \<Longrightarrow> Q v s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk>
-   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrakk>\<And>v s0 s. Q' v s0 s \<Longrightarrow> Q v s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by (simp add: validI_def)
 
 lemma rg_post_impE:
@@ -375,16 +374,24 @@ lemma rg_post_impE:
 lemmas rg_strengthen_post = rg_post_imp[rotated]
 lemmas rg_strengthen_postE = rg_post_impE[rotated 2]
 
-lemma rg_post_imp_dc:
-  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
+lemma rg_strengthen_postE_R:
+  "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,-; \<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-"
+  by (erule rg_post_impE)
+
+lemma rg_strengthen_postE_E:
+  "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E'\<rbrace>; \<And>rv s0 s. E' rv s0 s \<Longrightarrow> E rv s0 s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>"
+  by (rule rg_post_impE)
+
+lemma rg_post_impE_dc:
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
   by (fastforce simp: validIE_def validI_def split: sum.splits)
 
-lemma rg_post_imp_dc2:
-  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,-"
+lemma rg_post_impE_R_dc:
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,-"
   by (fastforce simp: validIE_def validI_def split: sum.splits)
 
-lemma rg_post_imp_dc2E:
-  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,-,\<lbrace>\<lambda>_. Q\<rbrace>"
+lemma rg_post_impE_E_dc:
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>\<lambda>_. Q\<rbrace>"
   by (fastforce simp: validIE_def validI_def split: sum.splits)
 
 lemma rg_guar_imp:
@@ -778,7 +785,7 @@ subsection \<open>@{const validI} and @{const validIE}, @{const validIE_R}, @{co
 
 lemma validI_validIE:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
-  by (rule rg_post_imp_dc)
+  by (rule rg_post_impE_dc)
 
 lemma validI_validIE2:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s; \<And>s0 s. Q' s0 s \<Longrightarrow> E s0 s\<rbrakk>
@@ -793,11 +800,11 @@ lemma validIE_validI:
 
 lemma validI_validIE_R:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,-"
-  by (rule rg_post_imp_dc2)
+  by (rule rg_post_impE_R_dc)
 
 lemma validI_validIE_E:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>\<lambda>_. Q\<rbrace>"
-  by (rule rg_post_imp_dc2E)
+  by (rule rg_post_impE_E_dc)
 
 lemma validIE_eq_validI:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. Q\<rbrace>,\<lbrace>\<lambda>rv. Q\<rbrace> = \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. Q\<rbrace>"
@@ -875,8 +882,8 @@ lemma bindE_twp_nobind:
 lemmas bind_twp_skip = bind_twp[where Q=Q and Q'=Q for Q]
 
 lemma rg_chain:
-  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<And>s0 s. P' s0 s \<Longrightarrow> P s0 s; \<And>rv s0 s. Q rv s0 s \<Longrightarrow> S rv s0 s\<rbrakk>
-   \<Longrightarrow> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>"
+  "\<lbrakk>\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>; \<And>s0 s. P s0 s \<Longrightarrow> P' s0 s; \<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s\<rbrakk>
+   \<Longrightarrow> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by (wp_pre, rule rg_post_imp)
 
 lemma rg_chainE:
@@ -1005,7 +1012,7 @@ lemma rg_absorb_imp:
   by (erule rg_post_imp[rotated], blast)
 
 lemma rg_weaken_imp:
-  "\<lbrakk>\<And>rv s0 s. Q rv s0 s \<Longrightarrow> Q' rv s0 s ;  \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> S rv s0 s\<rbrace>\<rbrakk>
+  "\<lbrakk>\<And>rv s0 s. Q rv s0 s \<Longrightarrow> Q' rv s0 s ; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> S rv s0 s\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q rv s0 s \<longrightarrow> S rv s0 s\<rbrace>"
   by (clarsimp simp: validI_def split_def)
 
@@ -1099,23 +1106,15 @@ lemma rg_trivE:   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>
 lemma rg_trivE_R: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-" .
 lemma rg_trivR_R: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>" .
 
-lemma rg_vcg_E_conj:
+lemma rg_vcg_conj_liftE_E:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv s0 s. E rv s0 s \<and> E' rv s0 s\<rbrace>"
   unfolding validIE_def
   by (rule rg_post_imp[OF _ rg_vcg_conj_lift]; simp split: sum.splits)
 
-lemma rg_vcg_E_elim:
+lemma rg_vcg_conj_elimE:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  by (rule rg_strengthen_postE[OF rg_vcg_E_conj]) simp+
-
-lemma rg_strengthen_post_R:
-  "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,-; \<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-"
-  by (erule rg_post_impE)
-
-lemma rg_strengthen_post_E:
-  "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>Q'\<rbrace>; \<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>Q\<rbrace>"
-  by (rule rg_post_impE)
+  by (rule rg_strengthen_postE[OF rg_vcg_conj_liftE_E]) simp+
 
 lemma rg_post_comb_imp_conj:
   "\<lbrakk>\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>; \<And>s0 s. P s0 s \<Longrightarrow> P' s0 s\<rbrakk>
@@ -1123,11 +1122,11 @@ lemma rg_post_comb_imp_conj:
   by (wpsimp wp: rg_vcg_conj_lift)
 
 lemma rg_vcg_if_lift:
-  "\<lbrace>R\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (P \<longrightarrow> X rv s0 s) \<and> (\<not>P \<longrightarrow> Y rv s0 s)\<rbrace> \<Longrightarrow>
-   \<lbrace>R\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. if P then X rv s0 s else Y rv s0 s\<rbrace>"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (P' \<longrightarrow> X rv s0 s) \<and> (\<not>P' \<longrightarrow> Y rv s0 s)\<rbrace> \<Longrightarrow>
+   \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. if P' then X rv s0 s else Y rv s0 s\<rbrace>"
 
-  "\<lbrace>R\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (P \<longrightarrow> X rv s0 s) \<and> (\<not>P \<longrightarrow> Y rv s0 s)\<rbrace> \<Longrightarrow>
-   \<lbrace>R\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (P' \<longrightarrow> X rv s0 s) \<and> (\<not>P' \<longrightarrow> Y rv s0 s)\<rbrace> \<Longrightarrow>
+   \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. if P' then X rv else Y rv\<rbrace>"
   by (auto simp: validI_def split_def)
 
 lemma rg_vcg_split_lift[wp]:
@@ -1398,12 +1397,12 @@ lemmas rg_wp_combs = rg_vcg_conj_lift
 lemmas rg_wp_combsE =
   rg_vcg_conj_liftE1
   rg_vcg_conj_liftE2
-  rg_vcg_E_elim
+  rg_vcg_conj_elimE
 
 lemmas rg_wp_state_combsE =
   validI_validIE_R
   rg_vcg_conj_liftE1[OF validI_validIE_R]
-  rg_vcg_E_elim[OF validI_validIE_E]
+  rg_vcg_conj_elimE[OF validI_validIE_E]
   rg_vcg_conj_liftE2[OF validI_validIE_E]
 
 lemmas rg_classic_wp_combs = rg_post_comb_imp_conj rg_weaken_pre rg_wp_combs
@@ -1578,11 +1577,13 @@ lemma rg_drop_imp:
   by (auto simp: validI_def)
 
 lemma rg_drop_impE:
-  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> Q s0 s\<rbrace>, \<lbrace>E\<rbrace>"
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> Q rv s0 s\<rbrace>, \<lbrace>E\<rbrace>"
   by (simp add: rg_chainE)
 
+(*Q is used instead of E so that hoare_drop_imps can be instantiated, which requires that all of its
+  thms have the same variables.*)
 lemma rg_drop_impE_E:
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv s0 s. E' rv s0 s \<longrightarrow> E rv s0 s\<rbrace>"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q''\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q''\<rbrace>, \<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> Q rv s0 s\<rbrace>"
   by (auto simp: validIE_def validI_def split: sum.splits)
 
 lemmas rg_drop_imps = rg_drop_imp rg_drop_impE rg_drop_impE_E
