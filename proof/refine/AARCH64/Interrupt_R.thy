@@ -808,7 +808,7 @@ proof -
                      apply (wp gts_wp)
                     apply (wp gts_wp')
                    apply (rule_tac
-                            Q="\<lambda>rv. tcb_at rv and einvs
+                            Q'="\<lambda>rv. tcb_at rv and einvs
                                     and (\<lambda>_. valid_fault (ExceptionTypes_A.fault.ArchFault rva))"
                             in hoare_post_imp)
                     apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb runnable_eq pred_conj_def)
@@ -881,7 +881,7 @@ lemma vppiEvent_corres:
                 is runnable directly afterwards, which is obvious and should not propagate further;
                 clean up the postconditions of the thread_get and threadGet *)
            apply (rule_tac
-                    Q="\<lambda>rv. tcb_at rv and einvs
+                    Q'="\<lambda>rv. tcb_at rv and einvs
                             and (\<lambda>_. valid_fault (ExceptionTypes_A.fault.ArchFault
                                                     (AARCH64_A.VPPIEvent irq)))"
                     in hoare_post_imp)

@@ -69,7 +69,7 @@ lemma hoare_vcg_if_lift3:
   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then X rv else Y rv) s\<rbrace>"
   by auto
 
-lemmas hoare_pre_post = hoare_pre_imp[where R="\<lambda>_. Q" and Q=Q for Q]
+lemmas hoare_pre_post = hoare_pre_imp[where Q="\<lambda>_. Q" and P'=Q for Q]
 
 lemmas corres_underlying_gets_pre_rhs =
   corres_symb_exec_r[OF _ _ gets_inv no_fail_pre[OF no_fail_gets TrueI]]

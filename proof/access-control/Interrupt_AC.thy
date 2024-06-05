@@ -84,7 +84,7 @@ lemma invoke_irq_handler_pas_refined:
    apply (wp cap_insert_pas_refined_not_transferable delete_one_caps_of_state
           | strengthen invs_mdb | simp add: cte_wp_at_caps_of_state)+
     apply (rename_tac irq cap slot)
-    apply (rule_tac Q =
+    apply (rule_tac Q'=
             "\<lambda> irq_slot. K(irq_slot \<noteq> slot) and invs and emptyable irq_slot
                      and cte_wp_at can_fast_finalise irq_slot
                      and not cte_wp_at is_transferable_cap slot

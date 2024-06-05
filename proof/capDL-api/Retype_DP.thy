@@ -714,7 +714,6 @@ lemma unify_failure_cdt_lift:
   including no_pre
   apply (wp hoare_drop_imps)
   apply (clarsimp simp:validE_def valid_def)
-  apply (case_tac a,fastforce+)
   done
 
 lemma validE_def2:
@@ -960,7 +959,7 @@ lemma invoke_untyped_preempt:
   apply (wp unlessE_wp)
    apply (simp add: reset_untyped_cap_def whenE_liftE | wp whenE_wp)+
       apply (rule_tac P = "\<exists>a. cap = UntypedCap dev obj_range a" in hoare_gen_asmEx)
-      apply (rule hoare_strengthen_postE[where E'=E and F = E for E])
+      apply (rule hoare_strengthen_postE[where E'=E and E=E for E])
         apply (rule mapME_x_inv_wp[where P = P and E = "\<lambda>r. P" for P])
         apply wp
          apply simp

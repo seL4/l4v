@@ -1324,7 +1324,7 @@ lemma delete_asid_no_vs_lookup_target_no_vspace:
    \<lbrace>\<lambda>rv s. vs_lookup_target level asid vref s \<noteq> Some (level, pt)\<rbrace>"
   unfolding delete_asid_def
   (* We know we are in the case where delete_asid does not do anything *)
-  apply (wpsimp wp: when_wp[where Q="\<lambda>_. False", simplified])
+  apply (wpsimp wp: when_wp[where P'="\<lambda>_. False", simplified])
   apply (rule conjI, fastforce simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def)
   (* pool_for_asid asid s \<noteq> None *)
   apply clarsimp

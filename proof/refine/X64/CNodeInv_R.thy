@@ -6658,8 +6658,8 @@ lemma cteDelete_sch_act_simple:
      cteDelete slot exposed \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (wp hoare_drop_imps | simp)+
-  apply (rule_tac hoare_strengthen_postE [where Q="\<lambda>rv. sch_act_simple"
-                                       and E="\<lambda>rv. sch_act_simple"])
+  apply (rule_tac hoare_strengthen_postE [where Q'="\<lambda>rv. sch_act_simple"
+                                       and E'="\<lambda>rv. sch_act_simple"])
     apply (rule valid_validE)
     apply (wp finaliseSlot_sch_act_simple)
     apply simp+
