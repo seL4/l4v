@@ -1985,8 +1985,8 @@ theorem callKernel_no_orphans[wp]:
   apply (wpsimp wp: hoare_drop_imp[where f=activateThread] schedule_invs'
          (* getActiveIRQ can't return a non-kernel IRQ *)
          | wp (once) hoare_post_imp[
-                       where a="doMachineOp (getActiveIRQ True)"
-                         and Q="\<lambda>rv s. no_orphans s \<and> invs' s \<and> rv \<notin> Some ` non_kernel_IRQs"])+
+                       where f="doMachineOp (getActiveIRQ True)"
+                         and Q'="\<lambda>rv s. no_orphans s \<and> invs' s \<and> rv \<notin> Some ` non_kernel_IRQs"])+
   done
 
 end

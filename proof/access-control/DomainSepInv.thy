@@ -1089,13 +1089,15 @@ lemma handle_invocation_domain_sep_inv:
                    split_def liftE_liftM_liftME liftME_def bindE_assoc)
   apply (wp syscall_valid perform_invocation_domain_sep_inv set_thread_state_runnable_valid_sched
          | simp split del: if_split)+
-        apply (rule_tac E="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of
-                                                       and valid_mdb and (\<lambda>y. valid_fault ft)"
-                    and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+        apply (rule_tac E'="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of
+                                                        and valid_mdb and (\<lambda>y. valid_fault ft)"
+                    and Q="Q" and Q'=Q for Q
+                     in hoare_strengthen_postE)
          apply (wp | simp | clarsimp)+
-      apply (rule_tac E="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of and
-                              valid_mdb and (\<lambda>y. valid_fault (CapFault x False ft))"
-                  and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+      apply (rule_tac E'="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of and
+                               valid_mdb and (\<lambda>y. valid_fault (CapFault x False ft))"
+                  and Q="Q" and Q'=Q for Q
+                   in hoare_strengthen_postE)
         apply (wp lcs_ex_cap_to2 | clarsimp)+
   apply (auto intro: st_tcb_ex_cap simp: ct_in_state_def)
   done
@@ -1184,8 +1186,10 @@ lemma handle_event_domain_sep_inv:
        apply (wpsimp wp: handle_send_domain_sep_inv handle_call_domain_sep_inv
                          handle_recv_domain_sep_inv handle_reply_domain_sep_inv hy_inv
               | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def)+
-     apply (rule_tac E="\<lambda>rv s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state) \<and>
-                               invs s \<and> valid_fault rv" and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+     apply (rule_tac E'="\<lambda>rv s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state) \<and>
+                                invs s \<and> valid_fault rv"
+                 and Q="Q" and Q'=Q for Q
+                  in hoare_strengthen_postE)
      apply (wp | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def | auto)+
   done
 

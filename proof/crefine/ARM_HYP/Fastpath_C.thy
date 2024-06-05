@@ -790,7 +790,7 @@ lemma switchToThread_fp_ccorres:
      apply (rule ccorres_False[where P'=UNIV])
     apply simp
     apply (wp findPDForASID_pd_at_wp)[1]
-   apply (rule_tac Q=
+   apply (rule_tac Q'=
             "\<lambda>r s. \<forall>cte. map_to_ctes (ksPSpace s) (thread + 2 ^ cte_level_bits * tcbVTableSlot) = Some cte \<longrightarrow>
                            pd \<in> ran (\<lambda>a. map_option snd (armKSASIDMap (ksArchState s) a))
                            \<and> page_directory_at' pd s

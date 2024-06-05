@@ -728,9 +728,8 @@ lemma flush_table_empty:
   apply (wp find_pd_for_asid_inv mapM_wp
     | simp
     | wpc
-    | rule_tac
-        Q="\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s"
-        in hoare_strengthen_post)+
+    | rule_tac Q'="\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s"
+            in hoare_strengthen_post)+
   done
 
 lemma unmap_page_table_empty:

@@ -2441,7 +2441,7 @@ lemma handle_fault_pas_refined:
      apply (clarsimp simp: send_fault_ipc_def Let_def)
      apply wp
        apply wpsimp
-      apply (rule hoare_strengthen_postE[where E'=E and F=E for E])
+      apply (rule hoare_strengthen_postE[where E'=E and E=E for E])
         apply (rule valid_validE)
         apply (wpsimp wp: send_fault_ipc_pas_refined)+
   apply fastforce

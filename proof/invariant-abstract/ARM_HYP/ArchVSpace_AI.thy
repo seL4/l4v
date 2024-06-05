@@ -1095,7 +1095,7 @@ lemma set_vm_root_for_flush_asid_map [wp]:
   apply (simp add: set_vm_root_for_flush_def)
   apply (wp|wpc|simp)+
    apply (rule hoare_strengthen_post [where
-               Q="\<lambda>_. valid_asid_map and K (asid \<le> mask asid_bits)"])
+               Q'="\<lambda>_. valid_asid_map and K (asid \<le> mask asid_bits)"])
     apply wp
    apply simp
   apply wp

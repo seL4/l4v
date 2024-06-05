@@ -360,8 +360,8 @@ lemma call_kernel_irq_masks:
     apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
                               (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
      apply (wp | simp)+
-   apply (rule_tac Q="\<lambda>x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s"
-               and F="E" for E in hoare_strengthen_postE)
+   apply (rule_tac Q'="\<lambda>x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s"
+               and E="E" for E in hoare_strengthen_postE)
      apply (rule valid_validE)
      apply (wp handle_event_irq_masks[where st=st] valid_validE[OF handle_event_domain_sep_inv]
             | simp)+
