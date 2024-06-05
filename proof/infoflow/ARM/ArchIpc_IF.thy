@@ -382,7 +382,7 @@ lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
   unfolding set_mrs_def
   apply (wp | wpc)+
         apply (subst zipWithM_x_mapM_x)
-        apply (rule_tac Q="\<lambda>_. equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L  \<and>
+        apply (rule_tac Q'="\<lambda>_. equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L  \<and>
                                (case buf of (Some buf') \<Rightarrow> is_aligned buf' msg_align_bits \<and>
                                                            (\<forall>x \<in> ptr_range buf' msg_align_bits.
                                                               pasObjectAbs aag x \<in> L)

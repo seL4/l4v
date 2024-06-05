@@ -918,7 +918,7 @@ lemma unmap_page_table_respects:
   apply (simp add: unmap_page_table_def sfence_def)
   apply (wpsimp wp: pt_lookup_from_level_is_subject dmo_mol_respects hoare_vcg_conj_liftE_weaker
                     store_pte_respects pt_lookup_from_level_wrp[where Q="\<lambda>_. integrity aag X st"]
-         | wp (once) hoare_drop_imps hoare_vcg_E_elim)+
+         | wp (once) hoare_drop_imps hoare_vcg_conj_elimE)+
   apply (intro conjI; clarsimp)
     apply fastforce
    apply (rule aag_Control_into_owns[rotated], assumption)
@@ -1070,7 +1070,7 @@ lemma perform_pg_inv_map_pas_refined:
     apply (rule hoare_vcg_conj_lift, wpsimp)
     apply wps
     apply (rule state_vrefs_store_NonPageTablePTE_wp)
-   apply (rule_tac Q="\<lambda>_. invs and pas_refined aag and K (\<not> is_PageTablePTE pte)
+   apply (rule_tac Q'="\<lambda>_. invs and pas_refined aag and K (\<not> is_PageTablePTE pte)
                                and authorised_page_inv aag (PageMap cap ct_slot (pte,slot))
                                and same_ref (pte,slot) (ArchObjectCap cap)"
                 in hoare_strengthen_post[rotated])
@@ -1152,7 +1152,7 @@ lemma unmap_page_respects:
                       mapM_set''[where f="(\<lambda>a. store_pte a InvalidPTE)"
                                    and I="\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)"
                                    and Q="integrity aag X st"]
-          | wp (once) hoare_drop_imps[where R="\<lambda>rv s. rv"])+
+          | wp (once) hoare_drop_imps[where Q'="\<lambda>rv s. rv"])+
   apply (clarsimp simp: pt_lookup_slot_def)
   apply (frule pt_lookup_slot_from_level_is_subject)
           apply (fastforce simp: valid_arch_state_asid_table
@@ -1336,7 +1336,7 @@ lemma perform_asid_control_invocation_pas_refined:
    apply (rename_tac frame slot parent base )
    apply (case_tac slot, rename_tac slot_ptr slot_idx)
    apply (case_tac parent, rename_tac parent_ptr parent_idx)
-   apply (rule_tac Q="\<lambda>rv s.
+   apply (rule_tac Q'="\<lambda>rv s.
              (\<exists>idx. cte_wp_at ((=) (UntypedCap False frame pageBits idx)) parent s) \<and>
              (\<forall>x\<in>ptr_range frame pageBits. is_subject aag x) \<and>
              pas_refined aag s \<and> pas_cur_domain aag s \<and>
@@ -1467,7 +1467,7 @@ lemma copy_global_mappings_state_vrefs:
   unfolding copy_global_mappings_def
   apply clarsimp
   apply wp
-    apply (rule_tac Q="\<lambda>_ s. P (state_vrefs s) \<and> pspace_aligned s \<and> valid_vspace_objs s \<and>
+    apply (rule_tac Q'="\<lambda>_ s. P (state_vrefs s) \<and> pspace_aligned s \<and> valid_vspace_objs s \<and>
                              valid_asid_table s \<and> unique_table_refs s \<and> valid_vs_lookup s \<and>
                              valid_objs s \<and> is_aligned pt_ptr pt_bits \<and> is_aligned global_pt pt_bits \<and>
                              (\<forall>level. \<not> \<exists>\<rhd> (level, table_base (pt_ptr)) s) \<and>
@@ -1672,7 +1672,7 @@ lemma copy_global_mappings_vs_lookup_table_noteq:
   unfolding copy_global_mappings_def
   apply clarsimp
   apply wp
-    apply (rule_tac Q="\<lambda>_. pspace_aligned and valid_vspace_objs and valid_asid_table and
+    apply (rule_tac Q'="\<lambda>_. pspace_aligned and valid_vspace_objs and valid_asid_table and
                            unique_table_refs and valid_vs_lookup and valid_objs and
                            (\<lambda>s. vs_lookup_table level asid vref s \<noteq> Some (level, pt_ptr) \<and>
                                 vref \<in> user_region \<and> is_aligned pt_ptr pt_bits \<and>

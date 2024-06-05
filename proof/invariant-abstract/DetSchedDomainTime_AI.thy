@@ -472,12 +472,12 @@ lemma call_kernel_domain_time_inv_det_ext:
    apply (rule hoare_pre)
    apply ((wp schedule_domain_time_left handle_interrupt_valid_domain_time
            | wpc | simp)+)[1]
-   apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_strengthen_post)
     apply wp
    apply fastforce+
   (* now non-interrupt case; may throw but does not touch domain_time in handle_event *)
   apply (wp schedule_domain_time_left without_preemption_wp handle_interrupt_valid_domain_time)
-    apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_post_imp)
      apply fastforce
     apply (wp handle_event_domain_time_inv)+
    apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_strengthen_postE_R)

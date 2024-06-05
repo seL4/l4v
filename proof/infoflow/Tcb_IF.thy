@@ -165,11 +165,11 @@ lemma rec_del_preservation2:
      rec_del call
      \<lbrace>\<lambda>r. P\<rbrace>"
   apply (insert assms)
-  apply (rule_tac Q="\<lambda>s. invs s \<and> P s \<and> Q s
+  apply (rule_tac P'="\<lambda>s. invs s \<and> P s \<and> Q s
                                 \<and> emptyable (slot_rdcall call) s
                                 \<and> valid_rec_del_call call s" in hoare_pre_imp)
    apply simp
-  apply (rule_tac Q="\<lambda>rv s. P s \<and> Q s" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>rv s. P s \<and> Q s" in hoare_strengthen_post)
    apply (rule validE_valid)
    apply (rule use_spec)
    apply (rule rec_del_preservation2' [where R=R],simp+)
@@ -306,7 +306,7 @@ lemma invoke_tcb_globals_equiv:
                                 | clarsimp simp: no_cap_to_idle_thread)+\<close>)?)
    apply wpsimp
        apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arch_copy_register_sets)
-       apply (rule_tac Q="\<lambda>_. valid_arch_state and globals_equiv st and
+       apply (rule_tac Q'="\<lambda>_. valid_arch_state and globals_equiv st and
                               (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)"
                     in hoare_strengthen_post)
         apply (wpsimp wp: mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
@@ -500,7 +500,7 @@ lemma invoke_tcb_reads_respects_f:
          apply (strengthen invs_mdb
                 | wpsimp wp: when_ev restart_reads_respects_f reschedule_required_reads_respects_f
                              as_user_reads_respects_f restart_silc_inv restart_pas_refined hoare_vcg_if_lift)+
-            apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. \<forall>rv. R rv s" and R=R for R, rotated])
+            apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<forall>rv. R rv s" and R=R for R, rotated])
              apply (rename_tac rv s)
              apply (erule_tac x=rv in allE, assumption)
             apply wpsimp+
@@ -518,7 +518,7 @@ lemma invoke_tcb_reads_respects_f:
                  restart_silc_inv restart_pas_refined
               | simp split del: if_split add: det_setRegister det_setNextPC
               | strengthen invs_mdb
-              | (rule hoare_strengthen_post[where Q="\<lambda>_. silc_inv aag st and pas_refined aag
+              | (rule hoare_strengthen_post[where Q'="\<lambda>_. silc_inv aag st and pas_refined aag
                                                                          and pspace_aligned
                                                                          and valid_vspace_objs
                                                                          and valid_arch_state",

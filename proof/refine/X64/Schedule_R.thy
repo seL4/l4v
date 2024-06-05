@@ -597,7 +597,7 @@ lemma tcbSchedDequeue_valid_mdb'[wp]:
   "\<lbrace>valid_mdb' and valid_objs'\<rbrace> tcbSchedDequeue tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   unfolding tcbSchedDequeue_def
   apply (wpsimp simp: bitmap_fun_defs setQueue_def wp: threadSet_mdb' tcbQueueRemove_valid_mdb')
-      apply (rule_tac Q="\<lambda>_. tcb_at' tcbPtr" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_. tcb_at' tcbPtr" in hoare_post_imp)
        apply (fastforce simp: tcb_cte_cases_def cteSizeBits_def)
       apply (wpsimp wp: threadGet_wp)+
   apply (fastforce simp: obj_at'_def)
@@ -903,7 +903,7 @@ lemma tcbSchedDequeue_not_tcbQueued:
   "\<lbrace>\<top>\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. obj_at' (\<lambda>x. \<not> tcbQueued x) t\<rbrace>"
   apply (simp add: tcbSchedDequeue_def)
   apply (wp|clarsimp)+
-  apply (rule_tac Q="\<lambda>queued. obj_at' (\<lambda>x. tcbQueued x = queued) t" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>queued. obj_at' (\<lambda>x. tcbQueued x = queued) t" in hoare_post_imp)
      apply (clarsimp simp: obj_at'_def)
     apply (wpsimp wp: threadGet_wp)+
   apply (clarsimp simp: obj_at'_def)
@@ -1905,7 +1905,7 @@ lemma schedule_corres:
 
            apply (clarsimp simp: conj_ac cong: conj_cong)
            apply wp
-           apply (rule_tac Q="\<lambda>_ s. valid_blocked_except t s \<and> scheduler_action s = switch_thread t"
+           apply (rule_tac Q'="\<lambda>_ s. valid_blocked_except t s \<and> scheduler_action s = switch_thread t"
                     in hoare_post_imp, fastforce)
            apply (wp add: tcb_sched_action_enqueue_valid_blocked_except
                           tcbSchedEnqueue_invs'_not_ResumeCurrentThread thread_get_wp
@@ -2173,7 +2173,7 @@ lemma schedule_invs':
     apply (wpsimp wp: scheduleChooseNewThread_invs' ssa_invs'
                       chooseThread_invs_no_cicd' setSchedulerAction_invs' setSchedulerAction_direct
                       switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued_2
-           | wp hoare_disjI2[where R="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
+           | wp hoare_disjI2[where Q'="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
            | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
            | strengthen invs'_invs_no_cicd

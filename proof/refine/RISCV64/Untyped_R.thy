@@ -398,7 +398,7 @@ next
              apply (simp add: word_le_nat_alt)
             apply (simp add: unat_arith_simps)
            apply wpsimp+
-          apply (rule hoare_strengthen_post [where Q = "\<lambda>r. invs and valid_cap r and cte_at slot"])
+          apply (rule hoare_strengthen_post[where Q'="\<lambda>r. invs and valid_cap r and cte_at slot"])
            apply wp+
           apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def
                                 valid_cap_def word_bits_def)
@@ -406,7 +406,7 @@ next
           apply (strengthen refl exI[mk_strg I E] exI[where x=d])+
           apply simp
          apply wp+
-         apply (rule hoare_strengthen_post [where Q = "\<lambda>r. invs' and cte_at' (cte_map slot)"])
+         apply (rule hoare_strengthen_post[where Q'="\<lambda>r. invs' and cte_at' (cte_map slot)"])
           apply wp+
          apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct')
         apply (wp whenE_throwError_wp | wp (once) hoare_drop_imps)+
@@ -3171,7 +3171,7 @@ lemma createNewCaps_parent_helper:
                        (\<forall>tup\<in>set (zip (xs rv) rv).
                                 sameRegionAs (cteCap cte) (snd tup)))
     p\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
                                            \<and> isUntypedCap (cteCap cte)
                                            \<and> (\<forall>tup\<in>set (zip (xs rv) rv).
                                 sameRegionAs (cteCap cte) (snd tup))"])
@@ -4542,7 +4542,7 @@ lemma resetUntypedCap_invs_etc:
               | strengthen invs_pspace_aligned' invs_pspace_distinct'
               | simp add: ct_in_state'_def
                           sch_act_simple_def
-              | rule hoare_vcg_conj_lift_R
+              | rule hoare_vcg_conj_liftE_R
               | wp (once) preemptionPoint_inv
               | wps
               | wp (once) ex_cte_cap_to'_pres)+
@@ -5222,7 +5222,7 @@ lemma insertNewCap_valid_irq_handlers:
 lemma insertNewCap_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace>ct_idle_or_in_cur_domain' and ct_active'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
 apply (wp ct_idle_or_in_cur_domain'_lift_futz[where Q=\<top>])
-apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>tcb. tcbState tcb \<noteq> Structures_H.thread_state.Inactive) t and obj_at' (\<lambda>tcb. d = tcbDomain tcb) t"
+apply (rule_tac Q'="\<lambda>_. obj_at' (\<lambda>tcb. tcbState tcb \<noteq> Structures_H.thread_state.Inactive) t and obj_at' (\<lambda>tcb. d = tcbDomain tcb) t"
              in hoare_strengthen_post)
 apply (wp | clarsimp elim: obj_at'_weakenE)+
 apply (auto simp: obj_at'_def)

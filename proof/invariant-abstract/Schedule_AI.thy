@@ -133,7 +133,7 @@ lemma (in Schedule_AI) stt_invs [wp]:
   apply (simp add: switch_to_thread_def)
   apply wp
      apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-    apply (rule_tac Q="\<lambda>_. invs and tcb_at t'" in hoare_strengthen_post, wp)
+    apply (rule_tac Q'="\<lambda>_. invs and tcb_at t'" in hoare_strengthen_post, wp)
     apply (clarsimp simp: invs_def valid_state_def valid_idle_def
                           valid_irq_node_def valid_machine_state_def)
     apply (fastforce simp: cur_tcb_def obj_at_def

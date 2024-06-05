@@ -1659,8 +1659,8 @@ lemma arch_decodeInvocation_wf[wp]:
                 cong: list.case_cong prod.case_cong)
      apply (rule hoare_pre)
       apply (wpsimp simp: valid_arch_inv'_def valid_page_inv'_def)
-            apply (rule hoare_vcg_conj_lift_R,(wp ensureSafeMapping_inv)[1])+
-            apply (wpsimp wp: whenE_throwError_wp checkVP_wpR hoare_vcg_const_imp_lift_R
+            apply (rule hoare_vcg_conj_liftE_R,(wp ensureSafeMapping_inv)[1])+
+            apply (wpsimp wp: whenE_throwError_wp checkVP_wpR hoare_vcg_const_imp_liftE_R
                               hoare_drop_impE_R ensureSafeMapping_valid_slots_duplicated'
                               createMappingEntries_valid_pde_slots' findPDForASID_page_directory_at'
                         simp: valid_arch_inv'_def valid_page_inv'_def)+

@@ -962,7 +962,7 @@ lemma ct_in_state_decomp:
   assumes x: "\<lbrace>\<lambda>s. t = (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. t = (cur_thread s)\<rbrace>"
   assumes y: "\<lbrace>Pre\<rbrace> f \<lbrace>\<lambda>rv. st_tcb_at Prop t\<rbrace>"
   shows      "\<lbrace>\<lambda>s. Pre s \<and> t = (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state Prop\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. t = cur_thread s \<and> st_tcb_at Prop t s"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. t = cur_thread s \<and> st_tcb_at Prop t s"])
    apply (clarsimp simp add: ct_in_state_def)
   apply (rule hoare_weaken_pre)
    apply (wp x y)

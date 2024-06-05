@@ -76,7 +76,7 @@ lemma vgic_maintenance_valid_domain_time:
   "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
     vgic_maintenance \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   unfolding vgic_maintenance_def
-  apply (rule hoare_strengthen_post [where Q="\<lambda>_ s. 0 < domain_time s"])
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. 0 < domain_time s"])
    apply (wpsimp wp: handle_fault_domain_time_inv hoare_drop_imps)
   apply clarsimp
   done
@@ -85,7 +85,7 @@ lemma vppi_event_valid_domain_time:
   "\<lbrace>\<lambda>s :: det_ext state. 0 < domain_time s\<rbrace>
     vppi_event irq \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   unfolding vppi_event_def
-  apply (rule hoare_strengthen_post [where Q="\<lambda>_ s. 0 < domain_time s"])
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. 0 < domain_time s"])
    apply (wpsimp wp: handle_fault_domain_time_inv hoare_drop_imps)
   apply clarsimp
   done
@@ -112,7 +112,7 @@ lemma timer_tick_valid_domain_time:
            wp: reschedule_required_valid_domain_time hoare_vcg_const_imp_lift gts_wp
                (* unless we hit dec_domain_time we know ?dtnot0 holds on the state, so clean up the
                   postcondition once we hit thread_set_time_slice *)
-               hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and R="\<lambda>_ s. domain_time s = 0 \<longrightarrow> X s"
+               hoare_post_imp[where Q'="\<lambda>_. ?dtnot0" and R="\<lambda>_ s. domain_time s = 0 \<longrightarrow> X s"
                                 and a="thread_set_time_slice t ts" for X t ts]
                hoare_drop_imp[where f="ethread_get t f" for t f])
   apply fastforce
@@ -128,15 +128,15 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
   apply (case_tac "maxIRQ < i", solves \<open>wpsimp wp: hoare_false_imp\<close>)
   apply clarsimp
   apply (wpsimp simp: arch_mask_irq_signal_def)
-        apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="send_signal p c" for p c], fastforce)
+        apply (rule hoare_post_imp[where Q'="\<lambda>_. ?dtnot0" and a="send_signal p c" for p c], fastforce)
         apply wpsimp
-       apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_cap p" for p], fastforce)
+       apply (rule hoare_post_imp[where Q'="\<lambda>_. ?dtnot0" and a="get_cap p" for p], fastforce)
        apply (wpsimp wp: timer_tick_valid_domain_time simp: handle_reserved_irq_def)+
-     apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="vppi_event i" for i], fastforce)
+     apply (rule hoare_post_imp[where Q'="\<lambda>_. ?dtnot0" and a="vppi_event i" for i], fastforce)
      apply wpsimp+
-    apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="vgic_maintenance"], fastforce)
+    apply (rule hoare_post_imp[where Q'="\<lambda>_. ?dtnot0" and a="vgic_maintenance"], fastforce)
     apply wpsimp+
-   apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_irq_state i" for i], fastforce)
+   apply (rule hoare_post_imp[where Q'="\<lambda>_. ?dtnot0" and a="get_irq_state i" for i], fastforce)
    apply wpsimp+
   done
 

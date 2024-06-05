@@ -743,7 +743,7 @@ next
     apply simp
     apply (rule hoare_pre_spec_validE)
      apply (wp replace_cap_invs | simp add: is_cap_simps)+
-      apply (rule_tac Q="\<lambda>rv s. Q s \<and> invs s \<and> cte_wp_at (\<lambda>cap. cap = rv) slot s
+      apply (rule_tac Q'="\<lambda>rv s. Q s \<and> invs s \<and> cte_wp_at (\<lambda>cap. cap = rv) slot s
                              \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap
                                         \<or> \<not> False \<and> is_zombie cap
                                             \<and> (ptr, nat_to_cref (zombie_cte_bits bits) n)

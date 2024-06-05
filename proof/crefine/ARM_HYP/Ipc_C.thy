@@ -1455,7 +1455,7 @@ lemma asUser_atcbContext_obj_at:
 lemma asUser_tcbFault_inv:
   "\<lbrace>\<lambda>s. \<exists>t. ko_at' t p' s \<and> tcbFault t = f\<rbrace> asUser p m
    \<lbrace>\<lambda>rv s. \<exists>t. ko_at' t p' s \<and> tcbFault t = f\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. obj_at' (\<lambda>t. tcbFault t = f) p'"
+  apply (rule_tac Q'="\<lambda>rv. obj_at' (\<lambda>t. tcbFault t = f) p'"
                in hoare_strengthen_post)
    apply (wp asUser_tcbFault_obj_at)
    apply (clarsimp simp: obj_at'_def)+
@@ -3782,7 +3782,7 @@ lemma doIPCTransfer_ccorres [corres]:
                            fault_to_fault_tag_nonzero)
      apply ctac
     apply (clarsimp simp: guard_is_UNIV_def option_to_ptr_def split: option.splits)
-   apply (rule_tac Q="\<lambda>rv. valid_pspace' and cur_tcb' and tcb_at' sender
+   apply (rule_tac Q'="\<lambda>rv. valid_pspace' and cur_tcb' and tcb_at' sender
                        and tcb_at' receiver and K (rv \<noteq> Some 0)
                        and (case_option \<top> valid_ipc_buffer_ptr' rv)
                        and K (receiver \<noteq> sender \<and> endpoint \<noteq> Some 0)"
@@ -4549,7 +4549,7 @@ lemma doReplyTransfer_ccorres [corres]:
                          | simp add: valid_tcb_state'_def)+)[1]
            apply (clarsimp simp: guard_is_UNIV_def ThreadState_defs mask_def option_to_ctcb_ptr_def)
 
-          apply (rule_tac Q="\<lambda>rv. tcb_at' receiver and
+          apply (rule_tac Q'="\<lambda>rv. tcb_at' receiver and
                                 valid_objs' and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain) and
                                 (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
                                 pspace_aligned' and pspace_distinct'" in hoare_post_imp)
@@ -4647,7 +4647,7 @@ lemma setupCallerCap_ccorres [corres]:
                        ptr_add_assertion_positive Collect_const_mem
                        tcb_cnode_index_defs)
      apply simp
-     apply (rule_tac Q="\<lambda>rv. valid_pspace' and tcb_at' receiver" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>rv. valid_pspace' and tcb_at' receiver" in hoare_post_imp)
       apply (auto simp: cte_wp_at_ctes_of isCap_simps
                         tcbSlots Kernel_C.tcbCaller_def size_of_def
                         cte_level_bits_def)[1]
@@ -6004,7 +6004,7 @@ lemma receiveIPC_ccorres [corres]:
                 apply (fastforce simp: guard_is_UNIV_def ThreadState_defs mask_def
                                        cap_get_tag_isCap ccap_relation_ep_helpers)
                apply (clarsimp simp: valid_tcb_state'_def)
-               apply (rule_tac Q="\<lambda>_. valid_pspace'
+               apply (rule_tac Q'="\<lambda>_. valid_pspace'
                                        and st_tcb_at' ((=) sendState) sender and tcb_at' thread
                                        and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
                                        and sch_act_not sender and K (thread \<noteq> sender)
@@ -6012,7 +6012,7 @@ lemma receiveIPC_ccorres [corres]:
                 apply (fastforce simp: valid_pspace_valid_objs' pred_tcb_at'_def sch_act_wf_weak
                                        obj_at'_def)
                apply (wpsimp simp: guard_is_UNIV_def option_to_ptr_def option_to_0_def conj_ac)+
-           apply (rule_tac Q="\<lambda>rv. valid_pspace'
+           apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                and cur_tcb' and tcb_at' sender and tcb_at' thread
                                and sch_act_not sender and K (thread \<noteq> sender)
                                and ep_at' (capEPPtr cap)
@@ -6302,7 +6302,7 @@ lemma sendSignal_ccorres [corres]:
            apply (ctac add: possibleSwitchTo_ccorres)
           apply (wp sts_valid_objs' sts_st_tcb_at'_cases
                  | simp add: option_to_ctcb_ptr_def split del: if_split)+
-        apply (rule_tac Q="\<lambda>_. tcb_at' (the (ntfnBoundTCB ntfn)) and invs'"
+        apply (rule_tac Q'="\<lambda>_. tcb_at' (the (ntfnBoundTCB ntfn)) and invs'"
                  in hoare_post_imp)
          apply auto[1]
         apply wp
@@ -6668,7 +6668,7 @@ lemma receiveSignal_ccorres [corres]:
           apply (rule receiveSignal_enqueue_ccorres_helper[simplified])
          apply (simp add: valid_ntfn'_def)
          apply (wp sts_st_tcb')
-         apply (rule_tac Q="\<lambda>rv. ko_wp_at' (\<lambda>x. projectKO_opt x = Some ntfn
+         apply (rule_tac Q'="\<lambda>rv. ko_wp_at' (\<lambda>x. projectKO_opt x = Some ntfn
                                \<and> projectKO_opt x = (None::tcb option))
                                   (capNtfnPtr cap)"
                        in hoare_post_imp)
@@ -6735,7 +6735,7 @@ lemma receiveSignal_ccorres [corres]:
         apply (rule_tac ntfn="ntfn" in receiveSignal_enqueue_ccorres_helper[simplified])
        apply (simp add: valid_ntfn'_def)
        apply (wp sts_st_tcb')
-       apply (rule_tac Q="\<lambda>rv. ko_wp_at' (\<lambda>x. projectKO_opt x = Some ntfn
+       apply (rule_tac Q'="\<lambda>rv. ko_wp_at' (\<lambda>x. projectKO_opt x = Some ntfn
                              \<and> projectKO_opt x = (None::tcb option))
                                     (capNtfnPtr cap)
                       and K (thread \<notin> set list)"

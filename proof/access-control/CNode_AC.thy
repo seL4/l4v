@@ -246,7 +246,7 @@ lemma decode_cnode_inv_authorised:
   apply (simp add: authorised_cnode_inv_def decode_cnode_invocation_def
                    split_def whenE_def unlessE_def set_eq_iff
              cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R lsfco_cte_at
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R lsfco_cte_at
          | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)
@@ -866,7 +866,7 @@ lemma empty_slot_integrity_transferable[wp_transferable]:
    apply (simp add: set_cdt_def)
    apply (wp set_original_wp)
        apply (rename_tac cdtv x)
-       apply (rule_tac Q = "\<lambda>_ s'. integrity aag X s s'\<and> cdtv = cdt s \<and>
+       apply (rule_tac Q'="\<lambda>_ s'. integrity aag X s s'\<and> cdtv = cdt s \<and>
                             is_original_cap s = is_original_cap s'"
                        in hoare_post_imp)
         apply (clarsimp simp add: integrity_def)

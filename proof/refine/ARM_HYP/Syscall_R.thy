@@ -340,7 +340,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
      apply (wps setObject_sa_unchanged)
      apply (wp hoare_weak_lift_imp getObject_tcb_wp hoare_vcg_all_lift)+
    apply (rename_tac word)
-   apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = SwitchToThread word \<longrightarrow>
+   apply (rule_tac Q'="\<lambda>_ s. ksSchedulerAction s = SwitchToThread word \<longrightarrow>
                             st_tcb_at' runnable' word s \<and> tcb_in_cur_domain' word s \<and> word \<noteq> t"
                    in hoare_strengthen_post)
     apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)+
@@ -377,20 +377,20 @@ lemma setDomain_corres:
          apply ((wpsimp wp: hoare_vcg_imp_lift' ethread_set_not_queued_valid_queues hoare_vcg_all_lift
                  | strengthen valid_objs'_valid_tcbs' valid_queues_in_correct_ready_q
                               valid_queues_ready_qs_distinct)+)[1]
-        apply (rule_tac Q="\<lambda>_. valid_objs' and sym_heap_sched_pointers and valid_sched_pointers
+        apply (rule_tac Q'="\<lambda>_. valid_objs' and sym_heap_sched_pointers and valid_sched_pointers
                                and pspace_aligned' and pspace_distinct'
                                and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' tptr"
                      in hoare_strengthen_post[rotated])
          apply (fastforce simp: invs'_def valid_state'_def sch_act_wf_weak st_tcb_at'_def o_def)
         apply (wpsimp wp: threadSet_valid_objs' threadSet_sched_pointers
                           threadSet_valid_sched_pointers)+
-       apply (rule_tac Q="\<lambda>_ s. valid_queues s \<and> not_queued tptr s
+       apply (rule_tac Q'="\<lambda>_ s. valid_queues s \<and> not_queued tptr s
                                 \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_etcbs s
                                 \<and> weak_valid_sched_action s"
                     in hoare_post_imp)
         apply (fastforce simp: pred_tcb_at_def obj_at_def)
        apply (wpsimp wp: tcb_dequeue_not_queued)
-      apply (rule_tac Q = "\<lambda>_ s. invs' s \<and> obj_at' (Not \<circ> tcbQueued) tptr s \<and> sch_act_simple s
+      apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> obj_at' (Not \<circ> tcbQueued) tptr s \<and> sch_act_simple s
                                  \<and>  tcb_at' tptr s"
                    in hoare_strengthen_post[rotated])
        apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def sch_act_simple_def)
@@ -804,7 +804,7 @@ lemma doReply_invs[wp]:
           apply simp
           apply (wp (once) sts_st_tcb')
           apply wp
-         apply (rule_tac Q="\<lambda>_ s. invs' s \<and> t \<noteq> ksIdleThread s \<and> st_tcb_at' awaiting_reply' t s"
+         apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> t \<noteq> ksIdleThread s \<and> st_tcb_at' awaiting_reply' t s"
                  in hoare_post_imp)
           apply clarsimp
           apply (rule conjI, erule pred_tcb'_weakenE, case_tac st, clarsimp+)
@@ -817,7 +817,7 @@ lemma doReply_invs[wp]:
           apply (case_tac st, clarsimp+)
          apply (wp cteDeleteOne_reply_pred_tcb_at)+
         apply clarsimp
-        apply (rule_tac Q="\<lambda>_. (\<lambda>s. t \<noteq> ksIdleThread s)
+        apply (rule_tac Q'="\<lambda>_. (\<lambda>s. t \<noteq> ksIdleThread s)
                                and cte_wp_at' (\<lambda>cte. \<exists>grant. cteCap cte
                                                              = capability.ReplyCap t False grant) slot"
                      in hoare_strengthen_post [rotated])
@@ -829,7 +829,7 @@ lemma doReply_invs[wp]:
         apply (erule cte_wp_at_weakenE')
         apply (fastforce)
        apply (wp sts_invs_minor'' sts_st_tcb' hoare_weak_lift_imp)
-             apply (rule_tac Q="\<lambda>_ s. invs' s \<and> sch_act_simple s
+             apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> sch_act_simple s
                                       \<and> st_tcb_at' awaiting_reply' t s
                                       \<and> t \<noteq> ksIdleThread s"
                           in hoare_post_imp)
@@ -844,7 +844,7 @@ lemma doReply_invs[wp]:
               apply (case_tac st, clarsimp+)
              apply (wp threadSet_invs_trivial threadSet_st_tcb_at2 hoare_weak_lift_imp
                     | clarsimp simp add: inQ_def)+
-           apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t
+           apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' t
                                  and sch_act_simple and st_tcb_at' awaiting_reply' t"
                    in hoare_strengthen_post [rotated])
             apply clarsimp
@@ -962,7 +962,7 @@ lemma setDomain_invs':
   apply (simp add:setDomain_def )
   apply (wp add: when_wp hoare_weak_lift_imp hoare_weak_lift_imp_conj rescheduleRequired_all_invs_but_extra
     tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
-     apply (rule_tac Q = "\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
+     apply (rule_tac Q'="\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
       \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"
       in hoare_strengthen_post[rotated])
       apply (clarsimp simp:invs'_def valid_state'_def st_tcb_at'_def[symmetric] valid_pspace'_def)
@@ -974,7 +974,7 @@ lemma setDomain_invs':
       apply assumption
      apply (wp hoare_weak_lift_imp threadSet_pred_tcb_no_state threadSet_not_curthread_ct_domain
                threadSet_tcbDomain_update_ct_not_inQ | simp)+
-    apply (rule_tac Q = "\<lambda>r s. invs' s \<and> curThread = ksCurThread s \<and> sch_act_simple s
+    apply (rule_tac Q'="\<lambda>r s. invs' s \<and> curThread = ksCurThread s \<and> sch_act_simple s
                              \<and> domain \<le> maxDomain
                              \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_not ptr s)"
       in hoare_strengthen_post[rotated])
@@ -1244,7 +1244,7 @@ lemma handleInvocation_corres:
                       apply (wp reply_from_kernel_tcb_at)
                      apply (rule impI, wp+)
                      apply (wpsimp wp: hoare_drop_imps|strengthen invs_distinct invs_psp_aligned)+
-               apply (rule_tac Q="\<lambda>rv. einvs and schact_is_rct and valid_invocation rve
+               apply (rule_tac Q'="\<lambda>rv. einvs and schact_is_rct and valid_invocation rve
                                    and (\<lambda>s. thread = cur_thread s)
                                    and st_tcb_at active thread"
                           in hoare_post_imp)
@@ -1252,7 +1252,7 @@ lemma handleInvocation_corres:
                                elim!: st_tcb_weakenE)
                apply (wp sts_st_tcb_at' set_thread_state_schact_is_rct
                          set_thread_state_active_valid_sched)
-              apply (rule_tac Q="\<lambda>rv. invs' and valid_invocation' rve'
+              apply (rule_tac Q'="\<lambda>rv. invs' and valid_invocation' rve'
                                       and (\<lambda>s. thread = ksCurThread s)
                                       and st_tcb_at' active' thread
                                       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
@@ -1265,7 +1265,7 @@ lemma handleInvocation_corres:
              apply (wp lec_caps_to lsft_ex_cte_cap_to
                     | simp add: split_def liftE_bindE[symmetric]
                                 ct_in_state'_def ball_conj_distrib
-                    | rule hoare_vcg_E_elim)+
+                    | rule hoare_vcg_conj_elimE)+
    apply (clarsimp simp: tcb_at_invs invs_valid_objs
                          valid_tcb_state_def ct_in_state_def
                          simple_from_active invs_mdb
@@ -1536,7 +1536,7 @@ lemma handleRecv_isBlocking_corres':
           apply (rule handleFault_corres)
           apply simp
          apply (wp get_simple_ko_wp | wpcw | simp)+
-         apply (rule hoare_vcg_E_elim)
+         apply (rule hoare_vcg_conj_elimE)
           apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
           apply wp
            apply (simp add: split_def)
@@ -1584,14 +1584,14 @@ lemma hw_invs'[wp]:
                          deleteCallerCap_ct']
                     | wpc | simp add: ct_in_state'_def whenE_def split del: if_split)+
      apply (rule validE_validE_R)
-     apply (rule_tac Q="\<lambda>rv s. invs' s
+     apply (rule_tac Q'="\<lambda>rv s. invs' s
                              \<and> sch_act_sane s
                              \<and> thread = ksCurThread s
                              \<and> ct_in_state' simple' s
                              \<and> ex_nonz_cap_to' thread s
                              \<and> thread \<noteq> ksIdleThread s
                             \<and> (\<forall>x \<in> zobj_refs' rv. ex_nonz_cap_to' x s)"
-              and E="\<lambda>_ _. True"
+              and E'="\<lambda>_ _. True"
            in hoare_strengthen_postE[rotated])
         apply (clarsimp simp: isCap_simps ct_in_state'_def pred_tcb_at' invs_valid_objs'
                               sch_act_sane_not obj_at'_def projectKOs pred_tcb_at'_def)
@@ -1640,7 +1640,7 @@ lemma hy_invs':
   "\<lbrace>invs' and ct_active'\<rbrace> handleYield \<lbrace>\<lambda>r. invs' and ct_active'\<rbrace>"
   apply (simp add: handleYield_def)
   apply (wpsimp wp: ct_in_state_thread_state_lift' rescheduleRequired_all_invs_but_ct_not_inQ)
-     apply (rule_tac Q="\<lambda>_. all_invs_but_ct_not_inQ' and ct_active'" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_. all_invs_but_ct_not_inQ' and ct_active'" in hoare_post_imp)
       apply clarsimp
      apply (subst pred_conj_def)
      apply (rule hoare_vcg_conj_lift)
@@ -1850,7 +1850,7 @@ lemma handleReply_nonz_cap_to_ct:
   "\<lbrace>ct_active' and invs' and sch_act_simple\<rbrace>
      handleReply
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to' (ksCurThread s) s\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. ct_active' and invs'"
+  apply (rule_tac Q'="\<lambda>rv. ct_active' and invs'"
                in hoare_post_imp)
    apply (auto simp: ct_in_state'_def elim: st_tcb_ex_cap'')[1]
   apply (wp | simp)+

@@ -771,7 +771,7 @@ lemma perform_page_invocation_reads_respects:
                 invalidate_tlb_by_asid_reads_respects get_master_pte_reads_respects
                 get_master_pde_reads_respects set_mrs_reads_respects set_message_info_reads_respects
              | simp add: cleanByVA_PoU_def pte_check_if_mapped_def pde_check_if_mapped_def
-             | wpc | wp (once) hoare_drop_imps[where R="\<lambda>r s. r"])+
+             | wpc | wp (once) hoare_drop_imps[where Q'="\<lambda>r s. r"])+
   apply (clarsimp simp: authorised_page_inv_def valid_page_inv_def)
   apply (auto simp: cte_wp_at_caps_of_state valid_slots_def cap_auth_conferred_def
                     update_map_data_def is_page_cap_def authorised_slots_def valid_page_inv_def
@@ -1260,17 +1260,17 @@ lemma unmap_page_table_globals_equiv:
    \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
   unfolding unmap_page_table_def page_table_mapped_def
   apply (wp store_pde_globals_equiv | wpc | simp add: cleanByVA_PoU_def)+
-     apply (rule_tac Q="\<lambda>_. globals_equiv st and (\<lambda>sa. lookup_pd_slot pd vaddr &&
+     apply (rule_tac Q'="\<lambda>_. globals_equiv st and (\<lambda>sa. lookup_pd_slot pd vaddr &&
                                                     ~~ mask pd_bits \<noteq> arm_global_pd (arch_state sa))"
                   in hoare_strengthen_post)
-      apply (wp find_pd_for_asid_not_arm_global_pd hoare_post_imp_dc2E_actual | simp)+
+      apply (wp find_pd_for_asid_not_arm_global_pd hoare_post_impE_E_dc_actual | simp)+
   done
 
 lemma mapM_x_swp_store_pte_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    mapM_x (swp store_pte A) slots
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. globals_equiv s and valid_arch_state" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_. globals_equiv s and valid_arch_state" in hoare_strengthen_post)
    apply (wp mapM_x_wp' store_pte_globals_equiv | simp)+
   done
 
@@ -1333,7 +1333,7 @@ lemma mapM_swp_store_pte_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    mapM (swp store_pte A) slots
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (rule_tac Q="\<lambda> _. globals_equiv st and valid_arch_state"
+  apply (rule_tac Q'="\<lambda> _. globals_equiv st and valid_arch_state"
                in hoare_strengthen_post)
    apply (wp mapM_wp' store_pte_globals_equiv | simp)+
   done
@@ -1342,7 +1342,7 @@ lemma mapM_swp_store_pde_globals_equiv:
   "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>x \<in> set slots. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s))\<rbrace>
    mapM (swp store_pde A) slots
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. globals_equiv st and
+  apply (rule_tac Q'="\<lambda>_. globals_equiv st and
                          (\<lambda>s. \<forall>x \<in> set slots. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s))"
                in hoare_strengthen_post)
    apply (wp mapM_wp' store_pde_globals_equiv | simp)+
@@ -1356,7 +1356,7 @@ lemma mapM_x_swp_store_pde_globals_equiv :
   "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>x \<in> set slots. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s))\<rbrace>
    mapM_x (swp store_pde A) slots
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. globals_equiv st and
+  apply (rule_tac Q'="\<lambda>_. globals_equiv st and
                          (\<lambda>s. \<forall>x \<in> set slots. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s))"
                in hoare_strengthen_post)
    apply (wp mapM_x_wp' store_pde_globals_equiv | simp)+
@@ -1378,12 +1378,12 @@ lemma unmap_page_globals_equiv:
        apply (rule hoare_drop_imps)
        apply (wp)+
      apply (rule hoare_pre)
-      apply (rule_tac Q="\<lambda>x. globals_equiv st and
+      apply (rule_tac Q'="\<lambda>x. globals_equiv st and
                              (\<lambda>sa. lookup_pd_slot x vptr && mask 6 = 0
                                    \<longrightarrow> (\<forall>xa\<in>set [0 , 4 .e. 0x3C]. xa + lookup_pd_slot x vptr
                                                                      && ~~ mask pd_bits
                                                                    \<noteq> arm_global_pd (arch_state sa)))"
-                  and E="\<lambda>_. globals_equiv st" in hoare_strengthen_postE)
+                  and E'="\<lambda>_. globals_equiv st" in hoare_strengthen_postE)
         apply (wp find_pd_for_asid_not_arm_global_pd_large_page)
        apply simp
       apply simp
@@ -1451,7 +1451,7 @@ lemma set_mrs_globals_equiv:
        apply (simp add: zipWithM_x_mapM_x)
        apply (rule conjI)
         apply (rule impI)
-        apply (rule_tac Q="\<lambda>_. globals_equiv s"
+        apply (rule_tac Q'="\<lambda>_. globals_equiv s"
           in hoare_strengthen_post)
          apply (wp mapM_x_wp')
          apply (simp add: split_def)
@@ -1517,7 +1517,7 @@ lemma perform_asid_control_invocation_globals_equiv:
    (* factor out the implication -- we know what the relevant components of the
       cap referred to in the cte_wp_at are anyway from valid_aci, so just use
       those directly to simplify the reasoning later on *)
-   apply (rule_tac Q="\<lambda>a b. globals_equiv s b \<and> invs b \<and>
+   apply (rule_tac Q'="\<lambda>a b. globals_equiv s b \<and> invs b \<and>
                              word1 \<noteq> arm_global_pd (arch_state b) \<and> word1 \<noteq> idle_thread b \<and>
                              (\<exists>idx. cte_wp_at ((=) (UntypedCap False word1 pageBits idx)) cslot_ptr2 b) \<and>
                              descendants_of cslot_ptr2 (cdt b) = {} \<and>

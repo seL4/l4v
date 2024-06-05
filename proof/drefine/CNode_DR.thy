@@ -222,7 +222,7 @@ lemma insert_cap_sibling_corres:
              | simp add: swp_def cte_wp_at_caps_of_state)+)
          apply (wp set_cap_idle |
             simp add:set_untyped_cap_as_full_def split del: if_split)+
-          apply (rule_tac Q = "\<lambda>r s. cdt s sibling = None
+          apply (rule_tac Q'="\<lambda>r s. cdt s sibling = None
            \<and> \<not> should_be_parent_of src_capa (is_original_cap s sibling) cap (cap_insert_dest_original cap src_capa)
            \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
            in hoare_strengthen_post)
@@ -234,7 +234,7 @@ lemma insert_cap_sibling_corres:
          apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp add:set_untyped_cap_as_full_def
            split del: if_split)+
-         apply (rule_tac Q = "\<lambda>r s. cdt s sibling = None
+         apply (rule_tac Q'="\<lambda>r s. cdt s sibling = None
            \<and> (\<exists>cap. caps_of_state s src = Some cap)
            \<and> \<not> should_be_parent_of src_capa (is_original_cap s src) cap (cap_insert_dest_original cap src_capa)
            \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
@@ -306,7 +306,7 @@ lemma insert_cap_child_corres:
                     | simp add: swp_def cte_wp_at_caps_of_state)+
          apply (wp set_cap_idle |
           simp add:set_untyped_cap_as_full_def split del:if_split)+
-          apply (rule_tac Q = "\<lambda>r s. not_idle_thread (fst child) s
+          apply (rule_tac Q'="\<lambda>r s. not_idle_thread (fst child) s
             \<and> should_be_parent_of src_capa (is_original_cap s child) cap (cap_insert_dest_original cap src_capa)
             \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
            in hoare_strengthen_post)
@@ -315,7 +315,7 @@ lemma insert_cap_child_corres:
           apply fastforce
          apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp split del:if_split add:set_untyped_cap_as_full_def)+
-         apply (rule_tac Q = "\<lambda>r s. not_idle_thread (fst child) s
+         apply (rule_tac Q'="\<lambda>r s. not_idle_thread (fst child) s
            \<and> (\<exists>cap. caps_of_state s src = Some cap)
            \<and> should_be_parent_of src_capa (is_original_cap s src) cap (cap_insert_dest_original cap src_capa)
            \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
@@ -521,7 +521,7 @@ lemma delete_cap_corres:
     apply (rule validE_validE_R)
     apply (simp add:validE_def weak_valid_mdb_def)
     apply (rule hoare_drop_imp)
-    apply (rule_tac Q = "\<lambda>r. invs and not_idle_thread a and valid_etcbs" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>r. invs and not_idle_thread a and valid_etcbs" in hoare_strengthen_post)
      apply (wp rec_del_invs)
      apply (simp add:not_idle_thread_def validE_def)
      apply wp
@@ -550,7 +550,7 @@ lemma delete_cap_corres':
     apply (rule validE_validE_R)
     apply (simp add:validE_def weak_valid_mdb_def)
     apply (rule hoare_drop_imp)
-    apply (rule_tac Q = "\<lambda>r. invs and not_idle_thread a and valid_etcbs" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>r. invs and not_idle_thread a and valid_etcbs" in hoare_strengthen_post)
      apply (wp rec_del_invs)
      apply (simp add:not_idle_thread_def validE_def)
      apply wp
@@ -1004,7 +1004,7 @@ lemma dcorres_ep_cancel_badge_sends:
                apply simp+
              apply (clarsimp simp:bind_assoc not_idle_thread_def)
              apply (wp sts_st_tcb_at_neq)
-              apply (rule_tac Q="\<lambda>r a. valid_idle a \<and> idle_thread a = idle_thread s' \<and>
+              apply (rule_tac Q'="\<lambda>r a. valid_idle a \<and> idle_thread a = idle_thread s' \<and>
                 st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.thread_state.BlockedOnSend epptr pl) y a
                \<and> y \<noteq> idle_thread a \<and> valid_etcbs a" in hoare_strengthen_post)
                apply wp
@@ -1524,7 +1524,7 @@ lemma store_pte_ct:
   apply wp
    apply (simp add:set_pt_def)
    apply wp
-   apply (rule_tac Q = "\<lambda>r s. P (cur_thread s)" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. P (cur_thread s)" in hoare_strengthen_post)
     apply (wp|clarsimp)+
   done
 
@@ -1535,7 +1535,7 @@ lemma invalidate_tlb_by_asid_dwp:
   apply (wp do_machine_op_wp|wpc)+
    apply clarsimp
    apply (wp)
-  apply (rule_tac Q = "\<lambda>r s. transform s = cs" in  hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>r s. transform s = cs" in hoare_strengthen_post)
    apply (simp add:load_hw_asid_def)
    apply (wp|clarsimp)+
   done
@@ -1569,10 +1569,10 @@ lemma copy_global_mappings_dwp:
   "is_aligned word pd_bits\<Longrightarrow> \<lbrace>\<lambda>ps. valid_idle (ps :: det_state) \<and> transform ps = cs\<rbrace> copy_global_mappings word \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   apply (simp add:copy_global_mappings_def)
   apply wp
-    apply (rule_tac Q = "\<lambda>r s. valid_idle s \<and> transform s = cs" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>r s. valid_idle s \<and> transform s = cs" in hoare_strengthen_post)
      apply (rule mapM_x_wp')
      apply wp
-       apply (rule_tac Q="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_weaken_pre)
+       apply (rule_tac P'="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_weaken_pre)
         apply (rule dcorres_to_wp)
         apply (rule corres_guard_imp[OF store_pde_set_cap_corres])
           apply (clarsimp simp:kernel_mapping_slots_def)
@@ -1782,7 +1782,7 @@ lemma thread_set_valid_idle:
   apply (simp add: thread_set_def not_idle_thread_def)
   apply (simp add: gets_the_def valid_idle_def)
   apply wp
-  apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_weaken_pre)
+  apply (rule_tac P'="not_idle_thread thread and valid_idle" in hoare_weaken_pre)
   apply (clarsimp simp: KHeap_A.set_object_def get_object_def in_monad get_def put_def bind_def obj_at_def
                         return_def valid_def not_idle_thread_def valid_idle_def pred_tcb_at_def)
   apply simp+

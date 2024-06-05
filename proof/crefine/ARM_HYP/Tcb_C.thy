@@ -422,7 +422,7 @@ lemma setPriority_ccorres:
                  simp: st_tcb_at'_def o_def split: if_splits)
     apply (simp add: guard_is_UNIV_def)
    apply (rule hoare_strengthen_post[
-                 where Q="\<lambda>rv s.
+                 where Q'="\<lambda>rv s.
                           obj_at' (\<lambda>_. True) t s \<and>
                           priority \<le> maxPriority \<and>
                           ksCurDomain s \<le> maxDomain \<and>
@@ -667,8 +667,8 @@ lemma invokeTCB_ThreadControl_ccorres:
                          apply clarsimp
                          apply wp
                         apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
-                       apply (rule hoare_strengthen_post [
-                                    where Q= "\<lambda>rv s.
+                       apply (rule hoare_strengthen_post[
+                                    where Q'="\<lambda>rv s.
                                               valid_objs' s \<and>
                                               weak_sch_act_wf (ksSchedulerAction s) s \<and>
                                               ((\<exists>a b. priority = Some (a, b)) \<longrightarrow>
@@ -759,7 +759,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
               apply (simp cong: conj_cong)
               apply (rule hoare_strengthen_post[
-                            where Q="\<lambda>a b. (valid_objs' b \<and>
+                            where Q'="\<lambda>a b. (valid_objs' b \<and>
                                        sch_act_wf (ksSchedulerAction b) b \<and>
                                        pspace_aligned' b \<and> pspace_distinct' b \<and>
                                        ((\<exists>a b. priority = Some (a, b)) \<longrightarrow>
@@ -806,7 +806,7 @@ lemma invokeTCB_ThreadControl_ccorres:
             apply vcg
            apply (simp add: conj_comms cong: conj_cong)
            apply (strengthen invs_ksCurDomain_maxDomain' invs_pspace_distinct')
-           apply (wp hoare_vcg_const_imp_lift_R cteDelete_invs')
+           apply (wp hoare_vcg_const_imp_liftE_R cteDelete_invs')
           apply simp
           apply (rule ccorres_split_nothrow_novcg_dc)
              apply (rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
@@ -1217,13 +1217,13 @@ lemma invokeTCB_CopyRegisters_ccorres:
             apply (simp add: pred_conj_def guard_is_UNIV_def  cong: if_cong
                       | wp mapM_x_wp_inv hoare_drop_imp)+
            apply clarsimp
-      apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
+      apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
        apply (fastforce simp: sch_act_wf_weak)
       apply (wpsimp wp: hoare_drop_imp restart_invs')+
      apply (clarsimp simp add: guard_is_UNIV_def)
     apply (wp hoare_drop_imp hoare_vcg_if_lift)+
     apply simp
-    apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
+    apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
      apply (fastforce simp: sch_act_wf_weak)
     apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp add: guard_is_UNIV_def)
@@ -1627,7 +1627,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                     apply wp
                    apply (simp add: guard_is_UNIV_def)
                   apply (wp hoare_drop_imp)
-                   apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' dst" in hoare_strengthen_post[rotated])
+                   apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' dst" in hoare_strengthen_post[rotated])
                     apply (fastforce simp: sch_act_wf_weak)
                    apply (wpsimp wp: restart_invs')+
                  apply (clarsimp simp add: guard_is_UNIV_def)
@@ -2142,7 +2142,7 @@ shows
         apply wp
        apply (simp add: Collect_const_mem ThreadState_defs mask_def)
        apply vcg
-      apply (rule_tac Q="\<lambda>rv. invs' and st_tcb_at' ((=) Restart) thread
+      apply (rule_tac Q'="\<lambda>rv. invs' and st_tcb_at' ((=) Restart) thread
                              and tcb_at' target" in hoare_post_imp)
        apply (clarsimp simp: pred_tcb_at')
        apply (auto elim!: pred_tcb'_weakenE)[1]

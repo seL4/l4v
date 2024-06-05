@@ -723,16 +723,16 @@ lemma handle_recv_globals_equiv:
   unfolding handle_recv_def
   apply (wp handle_fault_globals_equiv get_simple_ko_wp
         | wpc | simp add: Let_def)+
-      apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
-                      E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)"
+      apply (rule_tac Q'="\<lambda>r s. invs s \<and> globals_equiv st s" and
+                      E'="\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)"
                    in hoare_strengthen_postE)
-        apply (rule hoare_vcg_E_elim)
+        apply (rule hoare_vcg_conj_elimE)
          apply (wp lookup_cap_cap_fault receive_ipc_globals_equiv
                    receive_signal_globals_equiv delete_caller_cap_invs
                    delete_caller_cap_globals_equiv
                 | wpc
                 | simp add: Let_def invs_imps invs_valid_idle valid_fault_def
-                | rule_tac Q="\<lambda>rv s. invs s \<and> thread \<noteq> idle_thread s \<and> globals_equiv st s"
+                | rule_tac Q'="\<lambda>rv s. invs s \<and> thread \<noteq> idle_thread s \<and> globals_equiv st s"
                            in hoare_strengthen_post,
                   wp,
                   clarsimp simp: invs_valid_objs invs_valid_global_objs invs_arch_state invs_distinct)+
@@ -907,11 +907,11 @@ lemma handle_event_reads_respects_f_g:
         apply ((wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st] | simp)+)[1]
        prefer 2
        apply (simp add: validE_E_def)
-       apply (rule_tac E="\<lambda>r s. invs s \<and> is_subject aag rv \<and> is_subject aag (cur_thread s)
+       apply (rule_tac E'="\<lambda>r s. invs s \<and> is_subject aag rv \<and> is_subject aag (cur_thread s)
                               \<and> valid_fault r \<and> pas_refined aag s \<and> pas_cur_domain aag s
                               \<and> silc_inv aag st s \<and> rv \<noteq> idle_thread s"
-                   and Q="\<top>\<top>" in hoare_strengthen_postE)
-         apply (rule hoare_vcg_E_conj)
+                   and Q'="\<top>\<top>" in hoare_strengthen_postE)
+         apply (rule hoare_vcg_conj_liftE_E)
           apply (wp hv_invs handle_vm_fault_silc_inv)+
        apply (simp add: invs_imps invs_mdb invs_valid_idle)+
      apply wp+
@@ -987,8 +987,8 @@ lemma handle_invocation_globals_equiv:
             set_thread_state_globals_equiv hoare_vcg_all_lift
          | simp split del: if_split
          | wp (once) hoare_drop_imps)+
-         apply (rule_tac Q="\<lambda>r. invs and globals_equiv st and (\<lambda>s. thread \<noteq> idle_thread s)"
-                     and E="\<lambda>_. globals_equiv st" in hoare_strengthen_postE)
+         apply (rule_tac Q'="\<lambda>r. invs and globals_equiv st and (\<lambda>s. thread \<noteq> idle_thread s)"
+                     and E'="\<lambda>_. globals_equiv st" in hoare_strengthen_postE)
            apply (wp pinv_invs perform_invocation_globals_equiv
                      requiv_get_tcb_eq' set_thread_state_globals_equiv
                      sts_authorised_for_globals_inv

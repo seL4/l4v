@@ -679,7 +679,7 @@ lemma schedule_ccorres:
        apply wp
       apply clarsimp
       (* when runnable tcbSchedEnqueue curThread *)
-      apply (rule_tac Q="\<lambda>rv s. invs' s \<and> ksCurThread s = curThread
+      apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> ksCurThread s = curThread
                                 \<and> ksSchedulerAction s = SwitchToThread candidate" in hoare_post_imp)
        apply (clarsimp simp: invs'_bitmapQ_no_L1_orphans invs_ksCurDomain_maxDomain')
        apply (fastforce dest: invs_sch_act_wf')

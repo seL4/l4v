@@ -66,7 +66,7 @@ lemma do_user_op_if_partitionIntegrity[Noninterference_assms]:
   "\<lbrace>partitionIntegrity aag st and pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace>
    do_user_op_if tc uop
    \<lbrace>\<lambda>_. partitionIntegrity aag st\<rbrace>"
- apply (rule_tac Q="\<lambda>rv s. integrity (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
+ apply (rule_tac Q'="\<lambda>rv s. integrity (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
                                      (scheduler_affects_globals_frame st) st s \<and>
                            domain_fields_equiv st s \<and> idle_thread s = idle_thread st \<and>
                            globals_equiv_scheduler st s \<and> silc_dom_equiv aag st s"

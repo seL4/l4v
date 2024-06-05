@@ -493,7 +493,7 @@ lemma cancel_ipc_caps_of_state:
   apply (simp add: cancel_ipc_def reply_cancel_ipc_def
              cong: Structures_A.thread_state.case_cong)
   apply (wpsimp wp: cap_delete_one_caps_of_state)
-     apply (rule_tac Q="\<lambda>_ s. (\<forall>p. cte_wp_at can_fast_finalise p s
+     apply (rule_tac Q'="\<lambda>_ s. (\<forall>p. cte_wp_at can_fast_finalise p s
                                 \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap)))
                                 \<and> P (caps_of_state s)"
                   in hoare_post_imp)
@@ -941,7 +941,7 @@ lemma cap_delete_one_deletes_reply:
    \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply wp
-     apply (rule_tac Q="\<lambda>rv s. \<forall>sl' R. if (sl' = slot)
+     apply (rule_tac Q'="\<lambda>rv s. \<forall>sl' R. if (sl' = slot)
                                then cte_wp_at (\<lambda>c. c = cap.NullCap) sl' s
                                else caps_of_state s sl' \<noteq> Some (cap.ReplyCap t False R)"
                   in hoare_post_imp)

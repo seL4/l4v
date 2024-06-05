@@ -474,7 +474,7 @@ lemma dcorres_invoke_irq_control_body:
    apply (simp add:valid_cap_def cap_aligned_def word_bits_def)
    apply (rule hoare_pre)
     apply (rule hoare_vcg_conj_lift)
-     apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.IRQControlCap) (aa,ba) s
+     apply (rule_tac Q'="\<lambda>r s. cte_wp_at ((=) cap.IRQControlCap) (aa,ba) s
                                 \<and> is_original_cap s (aa, ba)" in hoare_strengthen_post)
       apply (wp set_irq_state_cte_wp_at set_irq_state_original)
      apply (simp add:cte_wp_at_def should_be_parent_of_def)
@@ -578,7 +578,7 @@ lemma cte_wp_at_neq_slot_cap_delete_one:
            apply (wp dxo_wp_weak | simp)+
          apply (clarsimp simp:set_cdt_def)
          apply (wp | clarsimp)+
-      apply (rule_tac Q = "\<lambda>r s. cte_wp_at P slot s \<and> cte_at slot' s" in hoare_strengthen_post)
+      apply (rule_tac Q'="\<lambda>r s. cte_wp_at P slot s \<and> cte_at slot' s" in hoare_strengthen_post)
        apply (rule hoare_vcg_conj_lift)
         apply wp
        apply (wp get_cap_cte)

@@ -1983,7 +1983,7 @@ lemma reset_untyped_cap_untyped_cap:
   apply (rule hoare_pre)
    apply (wp set_cap_cte_wp_at | simp add: unless_def)+
      apply (rule valid_validE,
-            rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>cp. is_untyped_cap cp \<and> is_untyped_cap cap \<and>
+            rule_tac Q'="\<lambda>rv. cte_wp_at (\<lambda>cp. is_untyped_cap cp \<and> is_untyped_cap cap \<and>
                                              untyped_range cp = untyped_range cap \<and>
                                              P True (untyped_range cp)) slot"
                   in hoare_strengthen_post)
@@ -2108,7 +2108,7 @@ lemma reset_untyped_cap_silc_inv:
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule validE_valid, rule hoare_pre)
    apply (wp set_cap_silc_inv_simple | simp add: unless_def)+
-     apply (rule valid_validE, rule_tac Q="\<lambda>_. cte_wp_at is_untyped_cap slot and
+     apply (rule valid_validE, rule_tac Q'="\<lambda>_. cte_wp_at is_untyped_cap slot and
                                                silc_inv aag st" in hoare_strengthen_post)
       apply (rule validE_valid, rule mapME_x_inv_wp, rule hoare_pre)
        apply (wp mapME_x_inv_wp preemption_point_inv set_cap_cte_wp_at
@@ -2135,7 +2135,7 @@ lemma invoke_untyped_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-   apply (rule_tac Q="\<lambda>_. silc_inv aag st and
+   apply (rule_tac Q'="\<lambda>_. silc_inv aag st and
                           cte_wp_at (\<lambda>cp. is_untyped_cap cp
                                           \<longrightarrow> (\<forall>x \<in> untyped_range cp. is_subject aag x))
                                     (case ui of Retype src_slot _ _ _ _ _ _ _ \<Rightarrow> src_slot)"
@@ -2840,7 +2840,7 @@ lemma handle_recv_silc_inv:
             receive_ipc_silc_inv lookup_slot_for_thread_authorised
             lookup_slot_for_thread_cap_fault get_cap_auth_wp[where aag=aag]
          | wpc | simp
-         | rule_tac Q="\<lambda>rv s. invs s \<and> pas_refined aag s \<and> is_subject aag thread \<and>
+         | rule_tac Q'="\<lambda>rv s. invs s \<and> pas_refined aag s \<and> is_subject aag thread \<and>
                               (pasSubject aag, Receive, pasObjectAbs aag x31) \<in> pasPolicy aag"
                  in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
     apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s \<and>

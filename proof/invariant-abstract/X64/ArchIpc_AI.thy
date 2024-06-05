@@ -297,7 +297,7 @@ lemma transfer_caps_tcb_caps:
   apply (erule imp)
   apply (wp hoare_vcg_conj_lift hoare_vcg_const_imp_lift hoare_vcg_all_lift
             )
-    apply (rule_tac Q = "\<lambda>rv s.  ( \<forall>x\<in>set rv. real_cte_at x s )
+    apply (rule_tac Q'="\<lambda>rv s.  ( \<forall>x\<in>set rv. real_cte_at x s )
       \<and> cte_wp_at P (t, ref) s \<and> tcb_at t s"
        in hoare_strengthen_post)
      apply (wp get_rs_real_cte_at)
@@ -322,7 +322,7 @@ lemma transfer_caps_non_null_cte_wp_at:
    apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at hoare_weak_lift_imp
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
-            [where Q="\<lambda>rv s'. (cte_wp_at ((\<noteq>) cap.NullCap) ptr) s'
+            [where Q'="\<lambda>rv s'. (cte_wp_at ((\<noteq>) cap.NullCap) ptr) s'
                       \<and> (\<forall>x\<in>set rv. cte_wp_at ((=) cap.NullCap) x s')",
              rotated])
     apply (clarsimp)
@@ -440,7 +440,7 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
          apply (subst ball_conj_distrib)
          apply (wp get_rs_cte_at2 thread_get_wp hoare_weak_lift_imp grs_distinct
                    hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift | simp)+
-  apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>r s. cap_refs_respects_device_region s
           \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
    apply wp
    apply auto[1]

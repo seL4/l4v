@@ -243,7 +243,7 @@ lemma ctes_of_Some_cte_wp_at:
 lemma user_getreg_wp:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (user_regs \<circ> atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
       asUser t (getRegister r) \<lbrace>Q\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
    apply simp
   apply (rule hoare_pre, wp hoare_vcg_ex_lift user_getreg_rv)
   apply (clarsimp simp: obj_at'_def)

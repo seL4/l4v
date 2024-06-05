@@ -981,13 +981,13 @@ lemma corres_inst_conj_lift[corresKwp_wp_comb]:
 lemmas [corresKwp_wp_comb] =
   corresKwp_wp_comb_del[# \<open>-\<close> \<open>atomize (full), rule allI, rule corres_inst_eq_imp\<close>]
   valid_validE_R
-  hoare_vcg_R_conj[OF valid_validE_R]
-  hoare_vcg_E_elim[OF valid_validE_E]
-  hoare_vcg_E_conj[OF valid_validE_E]
+  hoare_vcg_conj_liftE_R[OF valid_validE_R]
+  hoare_vcg_conj_elimE[OF valid_validE_E]
+  hoare_vcg_conj_liftE_E[OF valid_validE_E]
   validE_validE_R
-  hoare_vcg_R_conj
-  hoare_vcg_E_elim
-  hoare_vcg_E_conj
+  hoare_vcg_conj_liftE_R
+  hoare_vcg_conj_elimE
+  hoare_vcg_conj_liftE_E
   hoare_vcg_conj_lift
 
 declare hoare_post_comb_imp_conj[corresKwp_wp_comb_del]

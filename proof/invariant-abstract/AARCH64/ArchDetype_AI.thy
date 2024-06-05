@@ -645,7 +645,7 @@ lemma delete_objects_invs[wp]:
   apply (simp add: delete_objects_def)
   apply (simp add: freeMemory_def word_size_def bind_assoc)
    apply (rule hoare_pre)
-   apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
+   apply (rule_tac P'="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)
    apply (simp add: mapM_storeWord_clear_um[unfolded word_size_def]
                     intvl_range_conv[where 'a=machine_word_len, folded word_bits_def])

@@ -115,7 +115,7 @@ lemma delete_asid_pool_invs[wp]:
   apply wpsimp
       apply (strengthen invs_arm_asid_table_unmap)
       apply (rename_tac table pool)
-      apply (rule_tac Q="\<lambda>_ s. (invs s \<and> is_aligned base asid_low_bits \<and> table = asid_table s \<and>
+      apply (rule_tac Q'="\<lambda>_ s. (invs s \<and> is_aligned base asid_low_bits \<and> table = asid_table s \<and>
                                  (\<exists>ap. asid_pools_of s pptr = Some ap \<and>
                                    (\<forall>asid_low. ap asid_low \<noteq> None \<longrightarrow> pool asid_low \<noteq> None))) \<and>
                                (\<forall>x \<in> set [0 .e. mask asid_low_bits].
@@ -782,7 +782,7 @@ lemma dissociate_vcpu_tcb_sym_refs_hyp[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: dissociate_vcpu_tcb_def arch_get_sanitise_register_info_def)
   apply (wp arch_thread_set_wp set_vcpu_wp)
-       apply (rule_tac Q="\<lambda>_ s. obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_vcpu (tcb_arch tcb) = Some vr) t s
+       apply (rule_tac Q'="\<lambda>_ s. obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_vcpu (tcb_arch tcb) = Some vr) t s
                              \<and> sym_refs (state_hyp_refs_of s)" in hoare_post_imp)
         apply clarsimp
         apply (clarsimp simp: get_tcb_Some_ko_at obj_at_def sym_refs_vcpu_None split: if_splits)
@@ -1127,7 +1127,7 @@ lemma arch_finalise_cap_vcpu:
   notes simps = replaceable_def
                 is_cap_simps vs_cap_ref_def
                 no_cap_to_obj_with_diff_ref_Null o_def
-  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
+  notes wps = hoare_drop_imp[where Q'="%_. is_final_cap' cap" for cap]
               valid_cap_typ
   shows
   "cap = VCPUCap r \<Longrightarrow> \<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
@@ -1370,7 +1370,7 @@ lemma arch_finalise_cap_replaceable:
                 is_cap_simps vs_cap_ref_def
                 no_cap_to_obj_with_diff_ref_Null o_def
                 reachable_frame_cap_simps
-  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
+  notes wps = hoare_drop_imp[where Q'="%_. is_final_cap' cap" for cap]
               valid_cap_typ
               unmap_page_unreachable unmap_page_table_unreachable
               delete_asid_unreachable vcpu_finalise_unlive[simplified o_def]
@@ -1484,7 +1484,7 @@ lemma prepare_thread_delete_unlive0:
 
 lemma prepare_thread_delete_unlive[wp]:
   "\<lbrace>obj_at (Not \<circ> live0) ptr\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. obj_at (Not \<circ> live0) ptr and obj_at (Not \<circ> hyp_live) ptr" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>rv. obj_at (Not \<circ> live0) ptr and obj_at (Not \<circ> hyp_live) ptr" in hoare_strengthen_post)
   apply (wpsimp wp: hoare_vcg_conj_lift prepare_thread_delete_unlive_hyp prepare_thread_delete_unlive0)
    apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: obj_at_def, case_tac ko, simp_all add: is_tcb_def live_def)

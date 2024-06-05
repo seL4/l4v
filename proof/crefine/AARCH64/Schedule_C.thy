@@ -90,7 +90,7 @@ lemma Arch_switchToThread_ccorres:
        apply wpsimp
       apply (vcg exspec=vcpu_switch_modifies)
      apply wpsimp+
-    apply (rule_tac Q="\<lambda>rv s. all_invs_but_ct_idle_or_in_cur_domain' s
+    apply (rule_tac Q'="\<lambda>rv s. all_invs_but_ct_idle_or_in_cur_domain' s
                               \<and> case_option \<top> (ko_wp_at' (is_vcpu' and hyp_live')) (atcbVCPUPtr (tcbArch rv)) s
                               \<and> obj_at' (\<lambda>t::tcb. True) t s" in hoare_strengthen_post[rotated])
      apply (clarsimp simp: vcpu_at_is_vcpu' invs_no_cicd'_def valid_state'_def valid_pspace'_def
@@ -717,7 +717,7 @@ lemma schedule_ccorres:
        apply wp
       apply clarsimp
       (* when runnable tcbSchedEnqueue curThread *)
-      apply (rule_tac Q="\<lambda>rv s. invs' s \<and> ksCurThread s = curThread
+      apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> ksCurThread s = curThread
                                 \<and> ksSchedulerAction s = SwitchToThread candidate" in hoare_post_imp)
        apply (clarsimp simp: invs'_bitmapQ_no_L1_orphans invs_ksCurDomain_maxDomain')
        apply (fastforce dest: invs_sch_act_wf')

@@ -132,7 +132,7 @@ lemma kernel_entry_if_valid_domain_time:
    apply (wp handle_interrupt_valid_domain_time
           | clarsimp | wpc)+
      \<comment> \<open>strengthen post of do_machine_op; we know interrupt occurred\<close>
-     apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
+     apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
      apply (wp+, simp)
   done
 
@@ -362,7 +362,7 @@ lemma doUserOp_if_ex_abs[wp]:
    \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift'[OF do_user_op_if_corres'])
-   apply (rule_tac Q="\<lambda>a. invs and ct_running and valid_list and valid_sched" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>a. invs and ct_running and valid_list and valid_sched" in hoare_strengthen_post)
     apply (wp do_user_op_if_invs)
    apply clarsimp
   apply (clarsimp simp: ex_abs_def)
@@ -433,7 +433,7 @@ lemma handle_preemption_if_valid_domain_time:
   unfolding handle_preemption_if_def
   apply (rule hoare_pre)
    apply (wp handle_interrupt_valid_domain_time)
-   apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
+   apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
    apply (wp, simp)
   done
 
@@ -772,7 +772,7 @@ lemma abstract_invs:
               apply (rule preserves_lifts |
                      wp check_active_irq_if_wp do_user_op_if_invs
                     | clarsimp simp add: full_invs_if_def)+
-          apply (rule_tac Q="\<lambda>r s'. (invs and ct_running) s' \<and>
+          apply (rule_tac Q'="\<lambda>r s'. (invs and ct_running) s' \<and>
                    valid_list s' \<and>
                    valid_sched s' \<and> scheduler_action s' = resume_cur_thread \<and>
                    valid_domain_list s' \<and>
@@ -782,7 +782,7 @@ lemma abstract_invs:
              apply clarsimp+
          apply (rule preserves_lifts)
          apply (simp add: full_invs_if_def)
-         apply (rule_tac Q="\<lambda>r s'. (invs and ct_running) s' \<and>
+         apply (rule_tac Q'="\<lambda>r s'. (invs and ct_running) s' \<and>
                   valid_list s' \<and>
                    valid_domain_list s' \<and>
                   domain_time s' \<noteq> 0 \<and>

@@ -443,7 +443,7 @@ lemma decode_cnode_inv_wf[wp]:
               apply (wp whenE_throwError_wp | wpcw)+
             apply (rename_tac dest_slot y src_slot)
             apply simp
-            apply (rule_tac Q="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap dest_slot
+            apply (rule_tac Q'="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap dest_slot
                                        and zombies_final and valid_objs
                                        and real_cte_at src_slot and real_cte_at dest_slot
                                        and cte_wp_at (\<lambda>c. c = src_cap) src_slot
@@ -3129,7 +3129,7 @@ lemma duplicate_creation:
      set_cap cap p'
   \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>cap. \<not> is_final_cap' cap s) p s\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (rule hoare_post_imp [where Q="\<lambda>rv. cte_wp_at (\<lambda>c. gen_obj_refs c = gen_obj_refs cap) p
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv. cte_wp_at (\<lambda>c. gen_obj_refs c = gen_obj_refs cap) p
                                         and cte_wp_at ((=) cap) p'"])
    apply (clarsimp simp: cte_wp_at_def)
    apply (case_tac "\<exists>x. x \<in> obj_refs cap \<and> x \<in> obj_refs capa")

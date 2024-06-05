@@ -635,7 +635,7 @@ lemma copyGlobalMappings_ksPSpace_stable:
   apply (case_tac "\<not> is_aligned x 2")
    apply (rule hoare_name_pre_state)
    apply (clarsimp)
-   apply (rule_tac Q = "\<lambda>r s. is_aligned (armKSGlobalPD (ksArchState s)) 2
+   apply (rule_tac Q'="\<lambda>r s. is_aligned (armKSGlobalPD (ksArchState s)) 2
       \<and> pspace_aligned' s" in hoare_post_imp)
     apply (frule_tac x = x in not_aligned_eq_None)
      apply simp
@@ -726,7 +726,7 @@ lemma copyGlobalMappings_ksPSpace_stable:
   apply (rule hoare_pre)
    apply (rule hoare_vcg_const_imp_lift)
    apply wp
-    apply (rule_tac Q = "\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and> globalPD = armKSGlobalPD (ksArchState s)"
+    apply (rule_tac Q'="\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and> globalPD = armKSGlobalPD (ksArchState s)"
       in hoare_post_imp)
      apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
         | simp add: storePDE_def setObject_def split_def
@@ -753,7 +753,7 @@ lemma copyGlobalMappings_ksPSpace_same:
   apply clarsimp
   apply (rule hoare_pre)
    apply wp
-    apply (rule_tac Q = "\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and> globalPD = armKSGlobalPD (ksArchState s)"
+    apply (rule_tac Q'="\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and> globalPD = armKSGlobalPD (ksArchState s)"
       in hoare_post_imp)
      apply simp
     apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
@@ -1045,10 +1045,10 @@ lemma createObject_valid_duplicates'[wp]:
   apply (wpc | wp| simp add: ARM_H.createObject_def split del: if_split)+
          apply (simp add: placeNewObject_def placeNewDataObject_def
                           placeNewObject'_def split_def split del: if_split
-           | wp unless_wp[where P="d"] unless_wp[where Q=\<top>]
+           | wp unless_wp[where P="d"] unless_wp[where P'=\<top>]
            | wpc | simp add: alignError_def split del: if_split)+
      apply (rule copyGlobalMappings_valid_duplicates')
-    apply ((wp unless_wp[where P="d"] unless_wp[where Q=\<top>] | wpc
+    apply ((wp unless_wp[where P="d"] unless_wp[where P'=\<top>] | wpc
             | simp add: alignError_def placeNewObject_def
                         placeNewObject'_def split_def split del: if_split)+)[2]
   apply (intro conjI impI)
@@ -2076,7 +2076,7 @@ lemma tc_valid_duplicates':
               checkCap_inv[where P="valid_cap' c" for c]
               checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)" for P]
               checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
-              checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_lift_R
+              checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_liftE_R
               typ_at_lifts[OF setPriority_typ_at'] assertDerived_wp threadSet_cte_wp_at'
               hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_weak_lift_imp)[1]
           | wpc
@@ -2244,7 +2244,7 @@ lemma handleRecv_valid_duplicates'[wp]:
    apply wp
        apply ((wp getNotification_wp | wpc | simp add: whenE_def split del: if_split)+)[1]
 
-      apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
+      apply (rule_tac Q'="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
 
                    in hoare_strengthen_postE[rotated])
 

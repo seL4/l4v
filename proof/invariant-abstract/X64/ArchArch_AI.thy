@@ -1351,8 +1351,8 @@ lemma decode_page_invocation_wf[wp]:
   apply (cases "invocation_type label = ArchInvocationLabel X64PageMap")
    apply (simp split del: if_split)
    apply (rule hoare_pre)
-    apply (wpsimp wp: whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
-                      hoare_vcg_disj_lift_R hoare_vcg_conj_lift_R create_mapping_entries_parent_for_refs
+    apply (wpsimp wp: whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_liftE_R
+                      hoare_vcg_disj_lift_R hoare_vcg_conj_liftE_R create_mapping_entries_parent_for_refs
                       hoare_vcg_ex_lift_R find_vspace_for_asid_vspace_at_asid
                       create_mapping_entries_valid_slots create_mapping_entries_same_refs_ex
                       find_vspace_for_asid_lookup_vspace_wp
@@ -1555,7 +1555,7 @@ lemma decode_ioport_control_inv_wf[wp]:
              split del: if_split
                   cong: if_cong)
   apply (rule hoare_pre)
-   apply (wp ensure_empty_stronger hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
+   apply (wp ensure_empty_stronger hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift
              is_ioport_range_free_wp
               | simp add: cte_wp_at_eq_simp valid_iocontrol_inv_def valid_arch_inv_def
                split del: if_split

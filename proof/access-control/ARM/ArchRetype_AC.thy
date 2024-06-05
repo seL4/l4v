@@ -169,7 +169,7 @@ lemma copy_global_mappings_pas_refined:
   apply wp
     (* Use \<circ> to avoid wp filtering out the global_pd condition here
        TODO: see if we can clean this up *)
-    apply (rule_tac Q="\<lambda>rv s. is_aligned global_pd pd_bits \<and>
+    apply (rule_tac Q'="\<lambda>rv s. is_aligned global_pd pd_bits \<and>
                               (global_pd = (arm_global_pd \<circ> arch_state) s \<and>
                                valid_kernel_mappings s \<and> valid_arch_state s \<and>
                                valid_global_objs s \<and> valid_global_refs s \<and> pas_refined aag s)"
@@ -219,7 +219,7 @@ lemma init_arch_objects_pas_refined[Retype_AC_assms]:
   apply (case_tac aobject_type, simp_all)
         apply ((simp | wp)+)[5]
    apply wp
-    apply (rule_tac Q="\<lambda>rv. pas_refined aag and
+    apply (rule_tac Q'="\<lambda>rv. pas_refined aag and
                             all_invs_but_equal_kernel_mappings_restricted (set refs) and
                             (\<lambda>s. \<forall>x \<in> set refs. x \<notin> global_refs s)" in hoare_strengthen_post)
      apply (wp mapM_x_wp[OF _ subset_refl])

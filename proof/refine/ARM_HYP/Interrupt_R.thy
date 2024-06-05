@@ -381,7 +381,7 @@ lemma invokeIRQHandler_corres:
        apply simp
        apply (rule corres_split_nor[OF cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
-        apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
+        apply (rule_tac Q'="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
                                   \<and> (a, b) \<noteq> irq_slot
                                   \<and> cte_wp_at (is_derived (cdt s) (a, b) cap) (a, b) s"
                       in hoare_post_imp)
@@ -856,7 +856,7 @@ proof -
                     apply (clarsimp simp: pred_tcb_at_def obj_at_def invs_psp_aligned invs_distinct)
                    apply wp
                   apply clarsimp
-                  apply (rule_tac Q="\<lambda>rv x. tcb_at' rv x
+                  apply (rule_tac Q'="\<lambda>rv x. tcb_at' rv x
                                             \<and> invs' x
                                             \<and> sch_act_not rv x"
                            in hoare_post_imp)
@@ -930,7 +930,7 @@ lemma vppiEvent_corres:
                    clarsimp simp: invs_psp_aligned invs_distinct)
            apply wp
           apply (clarsimp cong: imp_cong conj_cong simp: pred_conj_def)
-          apply (rule_tac Q="\<lambda>rv x. tcb_at' rv x
+          apply (rule_tac Q'="\<lambda>rv x. tcb_at' rv x
                                     \<and> invs' x
                                     \<and> sch_act_not rv x" in hoare_post_imp)
            apply (rename_tac rv s)
@@ -1078,7 +1078,7 @@ lemma timerTick_invs'[wp]:
   apply (wpsimp wp: threadSet_invs_trivial threadSet_pred_tcb_no_state
                     rescheduleRequired_all_invs_but_ct_not_inQ
               simp: tcb_cte_cases_def)
-      apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
        apply (clarsimp simp: invs'_def valid_state'_def)
       apply (simp add: decDomainTime_def)
       apply wp
@@ -1089,7 +1089,7 @@ lemma timerTick_invs'[wp]:
                            hoare_vcg_imp_lift threadSet_ct_idle_or_in_cur_domain')+
             apply (rule hoare_strengthen_post[OF tcbSchedAppend_all_invs_but_ct_not_inQ'])
             apply (wpsimp simp: invs'_def valid_state'_def valid_pspace'_def sch_act_wf_weak)+
-           apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post)
+           apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post)
             apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_tcbDomain_triv
                               threadSet_valid_objs' threadSet_timeslice_invs)+
            apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
@@ -1136,7 +1136,7 @@ lemma vgicMaintenance_invs'[wp]:
             apply (strengthen st_tcb_ex_cap''[where P=active'])
             apply (strengthen invs_iflive')
             apply (clarsimp cong: imp_cong conj_cong simp: pred_conj_def)
-            apply (rule_tac Q="\<lambda>_ s. tcb_at' (ksCurThread s) s
+            apply (rule_tac Q'="\<lambda>_ s. tcb_at' (ksCurThread s) s
                                       \<and> invs' s
                                       \<and> sch_act_not (ksCurThread s) s"
                     in hoare_post_imp)
@@ -1169,7 +1169,7 @@ lemma vppiEvent_invs'[wp]:
             apply (strengthen st_tcb_ex_cap''[where P=active'])
             apply (strengthen invs_iflive')
             apply (clarsimp cong: imp_cong conj_cong simp: pred_conj_def)
-            apply (rule_tac Q="\<lambda>_ s. tcb_at' (ksCurThread s) s
+            apply (rule_tac Q'="\<lambda>_ s. tcb_at' (ksCurThread s) s
                                       \<and> invs' s
                                       \<and> sch_act_not (ksCurThread s) s"
                     in hoare_post_imp)
@@ -1191,7 +1191,7 @@ lemma hint_invs[wp]:
   apply (simp add: handleInterrupt_def getSlotCap_def cong: irqstate.case_cong)
   apply (rule conjI; rule impI)
    apply (wp dmo_maskInterrupt_True getCTE_wp' | wpc | simp add: doMachineOp_bind maskIrqSignal_def)+
-    apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
      apply fastforce
     apply (wpsimp wp: threadSet_invs_trivial getIRQState_wp

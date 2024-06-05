@@ -259,7 +259,7 @@ lemma decodeInvocation_ccorres:
        apply simp
        apply (vcg exspec=performInvocation_Reply_modifies)
       apply (simp add: cur_tcb'_def[symmetric])
-      apply (rule_tac R="\<lambda>rv s. ksCurThread s = thread" in hoare_post_add)
+      apply (rule_tac Q'="\<lambda>rv s. ksCurThread s = thread" in hoare_post_add)
       apply (simp cong: conj_cong)
       apply (strengthen imp_consequent)
       apply (wp sts_invs_minor' sts_st_tcb_at'_cases)
@@ -712,9 +712,9 @@ lemma sendFaultIPC_ccorres:
                  , assumption)
          apply vcg
         apply (clarsimp simp: inQ_def)
-        apply (rule_tac Q="\<lambda>a b. invs' b \<and> st_tcb_at' simple' tptr b
+        apply (rule_tac Q'="\<lambda>a b. invs' b \<and> st_tcb_at' simple' tptr b
                                  \<and> sch_act_not tptr b \<and> valid_cap' a b"
-                 and E="\<lambda> _. \<top>"
+                 and E'="\<lambda> _. \<top>"
                  in hoare_strengthen_postE)
           apply (wp)
          apply (clarsimp simp: isCap_simps)
@@ -944,8 +944,8 @@ lemma handleInvocation_ccorres:
                      apply (rule ccorres_return_C_errorE, simp+)[1]
                     apply vcg
                    apply (simp add: invocationCatch_def o_def)
-                   apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' rv"
-                               and E="\<lambda>ft. invs' and tcb_at' rv"
+                   apply (rule_tac Q'="\<lambda>rv'. invs' and tcb_at' rv"
+                               and E'="\<lambda>ft. invs' and tcb_at' rv"
                               in hoare_strengthen_postE)
                      apply (wp hoare_split_bind_case_sumE hoare_drop_imps
                                setThreadState_nonqueued_state_update
@@ -1997,7 +1997,7 @@ proof -
 
        (* clean up get_gic_vcpu_ctrl_misr postcondition *)
        apply (wp hoare_vcg_all_lift)
-       apply (rule_tac Q="\<lambda>_ s. ?PRE s \<and> armHSCurVCPU (ksArchState s) = Some (vcpuPtr, active)" in hoare_post_imp)
+       apply (rule_tac Q'="\<lambda>_ s. ?PRE s \<and> armHSCurVCPU (ksArchState s) = Some (vcpuPtr, active)" in hoare_post_imp)
         apply clarsimp
         apply (clarsimp simp: invs'_HScurVCPU_vcpu_at' valid_arch_state'_def max_armKSGICVCPUNumListRegs_def dest!: invs_arch_state')
         apply (erule eisr_calc_signed_limits)

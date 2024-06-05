@@ -643,7 +643,7 @@ lemma cancel_all_ipc_reads_respects:
       | rule subset_refl
       | wp (once) hoare_drop_imps
       | assumption
-      | rule hoare_strengthen_post[where Q="\<lambda>_. pas_refined aag and pspace_aligned
+      | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag and pspace_aligned
                                                                 and valid_vspace_objs
                                                                 and valid_arch_state", OF mapM_x_wp])+
 
@@ -777,7 +777,7 @@ lemma cancel_all_signals_reads_respects:
       | rule subset_refl
       | wp (once) hoare_drop_imps
       | simp
-      | rule hoare_strengthen_post[where Q="\<lambda>_. pas_refined aag and pspace_aligned
+      | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag and pspace_aligned
                                                                 and valid_vspace_objs
                                                                 and valid_arch_state", OF mapM_x_wp])+
 
@@ -824,7 +824,7 @@ lemma cap_delete_one_reads_respects_f:
             reads_respects_f[OF fast_finalise_reads_respects, where st=st]
             empty_slot_silc_inv
         | simp | elim conjE)+
-      apply (rule_tac Q="\<lambda>rva s. rva = is_final_cap' rv s \<and>
+      apply (rule_tac Q'="\<lambda>rva s. rva = is_final_cap' rv s \<and>
                                  cte_wp_at ((=) rv) slot s \<and>
                                  silc_inv aag st s \<and>
                                  is_subject aag (fst slot) \<and>
@@ -856,7 +856,7 @@ lemma cap_delete_one_reads_respects_f_transferable:
              reads_respects_f[OF empty_slot_reads_respects, where st=st]
              reads_respects_f[OF fast_finalise_reads_respects, where st=st]
           | simp | elim conjE)+
-      apply (rule_tac Q="\<lambda>rva s. rva = is_final_cap' rv s \<and>
+      apply (rule_tac Q'="\<lambda>rva s. rva = is_final_cap' rv s \<and>
                                  cte_wp_at ((=) rv) slot s \<and>
                                  silc_inv aag st s \<and>
                                  is_transferable_in slot s \<and>
@@ -1001,7 +1001,7 @@ lemma reply_cancel_ipc_reads_respects_f:
             reads_respects_f[OF thread_set_reads_respects, where st=st]
             reads_respects_f[OF gets_descendants_of_revrv[folded equiv_valid_def2]]
          | simp add: when_def split del: if_split | elim conjE)+
-   apply (rule_tac Q="\<lambda> rv s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s
+   apply (rule_tac Q'="\<lambda> rv s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s
                                                 \<and> tcb_at tptr s \<and> is_subject aag tptr"
                 in hoare_strengthen_post)
     apply (wp thread_set_tcb_fault_update_silc_inv hoare_vcg_imp_lift hoare_vcg_ball_lift
@@ -1262,7 +1262,7 @@ next
           apply (clarsimp simp: appropriate_cte_cap_def split: cap.splits)
          apply (clarsimp cong: conj_cong simp: conj_comms)
         apply (wp drop_spec_ev[OF liftE_ev] is_final_cap_reads_respects | simp)+
-       apply (rule_tac Q="\<lambda>rva s. rva = is_final_cap' rv s \<and> cte_wp_at ((=) rv) slot s \<and>
+       apply (rule_tac Q'="\<lambda>rva s. rva = is_final_cap' rv s \<and> cte_wp_at ((=) rv) slot s \<and>
                                   only_timer_irq_inv irq st' s \<and> silc_inv aag st s \<and>
                                   pas_refined aag s \<and> pas_cap_cur_auth aag rv \<and>
                                   invs s \<and> valid_list s \<and> valid_sched s \<and> simple_sched_action s \<and>
