@@ -178,7 +178,7 @@ lemma globals_equiv_scheduler_inv'[Scheduler_IF_assms]:
   apply (rule use_spec)
   apply (simp add: spec_valid_def)
   apply (erule_tac x="(swap_things sa s)" in allE)
-  apply (rule_tac Q="\<lambda>r st. globals_equiv (swap_things sa s) st" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>r st. globals_equiv (swap_things sa s) st" in hoare_strengthen_post)
    apply (rule hoare_pre)
     apply assumption
    apply (clarsimp simp: globals_equiv_def swap_things_def globals_equiv_scheduler_def

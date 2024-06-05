@@ -427,7 +427,7 @@ lemma unmap_page_respects:
                       mapM_set''[where f="(\<lambda>a. store_pde a InvalidPDE)"
                                    and I="\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)"
                                    and Q="integrity aag X st"]
-          | wp (once) hoare_drop_imps[where R="\<lambda>rv s. rv"])+
+          | wp (once) hoare_drop_imps[where Q'="\<lambda>rv s. rv"])+
   done
 
 (* FIXME: CLAG *)
@@ -609,7 +609,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
    apply (rename_tac frame slot parent base cap)
    apply (case_tac slot, rename_tac slot_ptr slot_idx)
    apply (case_tac parent, rename_tac parent_ptr parent_idx)
-   apply (rule_tac Q="\<lambda>rv s.
+   apply (rule_tac Q'="\<lambda>rv s.
              (\<exists>idx. cte_wp_at ((=) (UntypedCap False frame pageBits idx)) parent s) \<and>
              (\<forall>x\<in>ptr_range frame pageBits. is_subject aag x) \<and>
              pas_refined aag s \<and>
@@ -963,7 +963,7 @@ lemma delete_asid_pool_pas_refined [wp]:
   "delete_asid_pool param_a param_b \<lbrace>pas_refined aag\<rbrace>"
   unfolding delete_asid_pool_def
   apply (wp | wpc | simp)+
-      apply (rule_tac Q = "\<lambda>_ s. pas_refined aag s \<and>
+      apply (rule_tac Q'="\<lambda>_ s. pas_refined aag s \<and>
                                  asid_table = arm_asid_table (arch_state s)" in hoare_post_imp)
        apply clarsimp
        apply (erule pas_refined_clear_asid)

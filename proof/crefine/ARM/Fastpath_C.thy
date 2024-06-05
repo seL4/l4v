@@ -1571,7 +1571,7 @@ lemma ctes_of_Some_cte_wp_at:
 lemma user_getreg_wp:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
       asUser t (getRegister r) \<lbrace>Q\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
    apply simp
   apply (rule hoare_pre, wp hoare_vcg_ex_lift user_getreg_rv)
   apply (clarsimp simp: obj_at'_def)
@@ -2266,7 +2266,7 @@ proof -
                                set_ep_valid_objs'
                                setObject_no_0_obj'[where 'a=endpoint, folded setEndpoint_def]
                                | strengthen not_obj_at'_strengthen)+
-                      apply (rule_tac Q="\<lambda>_ s. hd (epQueue send_ep) \<noteq> curThread
+                      apply (rule_tac Q'="\<lambda>_ s. hd (epQueue send_ep) \<noteq> curThread
                                               \<and> pred_tcb_at' itcbState ((=) (tcbState xa)) (hd (epQueue send_ep)) s"
                                in hoare_post_imp)
                        apply fastforce

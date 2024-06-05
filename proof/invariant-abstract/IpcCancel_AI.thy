@@ -441,7 +441,7 @@ lemma reply_cancel_ipc_invs:
   shows           "\<lbrace>invs\<rbrace> (reply_cancel_ipc t :: (unit,'z::state_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply (wp delete)
-  apply (rule_tac Q="\<lambda>rv. invs" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>rv. invs" in hoare_post_imp)
    apply (fastforce simp: emptyable_def dest: reply_slot_not_descendant)
   apply (wp thread_set_invs_trivial)
    apply (auto simp: tcb_cap_cases_def)+
@@ -574,7 +574,7 @@ lemma (in delete_one_abs) reply_cancel_ipc_no_reply_cap[wp]:
   shows "\<lbrace>invs and tcb_at t\<rbrace> (reply_cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply wp
-        apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) rv s \<and>
+        apply (rule_tac Q'="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) rv s \<and>
                                 (\<forall>sl R. sl \<noteq> rv \<longrightarrow>
                                   caps_of_state s sl \<noteq> Some (cap.ReplyCap t False R))"
                   in hoare_strengthen_post)
@@ -583,7 +583,7 @@ lemma (in delete_one_abs) reply_cancel_ipc_no_reply_cap[wp]:
         apply (clarsimp simp: has_reply_cap_def cte_wp_at_caps_of_state is_reply_cap_to_def)
         apply (case_tac "(aa, ba) = (a, b)",simp_all)[1]
        apply (wp hoare_vcg_all_lift | simp del: split_paired_All)+
-   apply (rule_tac Q="\<lambda>_ s. invs s \<and> tcb_at t s" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_ s. invs s \<and> tcb_at t s" in hoare_post_imp)
     apply (erule conjE)
     apply (frule(1) reply_cap_descends_from_master)
     apply (auto dest: reply_master_no_descendants_no_reply[rotated -1])[1]
@@ -599,7 +599,7 @@ lemma (in delete_one_abs) cancel_ipc_no_reply_cap[wp]:
                   cancel_signal_invs cancel_signal_st_tcb_at_general
                   blocked_cancel_ipc_invs blocked_ipc_st_tcb_at_general
         | strengthen reply_cap_doesnt_exist_strg)+
-   apply (rule_tac Q="\<lambda>rv. st_tcb_at ((=) rv) t and invs" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>rv. st_tcb_at ((=) rv) t and invs" in hoare_strengthen_post)
     apply (wpsimp wp: gts_st_tcb)
    apply (fastforce simp: invs_def valid_state_def st_tcb_at_tcb_at
                    elim!: pred_tcb_weakenE)+
@@ -651,7 +651,7 @@ lemma (in delete_one_pre) reply_cancel_ipc_cte_wp_at_preserved:
   \<lbrace>cte_wp_at P p\<rbrace> (reply_cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
   unfolding reply_cancel_ipc_def
   apply (wpsimp wp: delete_one_cte_wp_at_preserved)
-   apply (rule_tac Q="\<lambda>_. cte_wp_at P p" in hoare_post_imp, clarsimp)
+   apply (rule_tac Q'="\<lambda>_. cte_wp_at P p" in hoare_post_imp, clarsimp)
    apply (wpsimp wp: thread_set_cte_wp_at_trivial simp: ran_tcb_cap_cases)
   apply assumption
   done
@@ -746,7 +746,7 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
    \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   unfolding reply_cancel_ipc_def
   apply (wpsimp wp: cap_delete_one_bound_tcb_at select_inv)
-   apply (rule_tac Q="\<lambda>_. bound_tcb_at P t and valid_mdb and valid_objs and tcb_at p" in  hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>_. bound_tcb_at P t and valid_mdb and valid_objs and tcb_at p" in hoare_strengthen_post)
     apply (wpsimp wp: thread_set_no_change_tcb_pred thread_set_mdb)
      apply (fastforce simp:tcb_cap_cases_def)
     apply (wpsimp wp: thread_set_valid_objs_triv simp: ran_tcb_cap_cases)
@@ -786,7 +786,7 @@ lemma suspend_unlive:
   supply hoare_vcg_if_split[wp_split del] if_split[split del]
   apply (wp | simp only: obj_at_exst_update)+
      apply (simp add: obj_at_def)
-     apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
       supply hoare_vcg_if_split[wp_split]
       apply wp
      apply (auto simp: pred_tcb_def2)[1]
@@ -1113,7 +1113,7 @@ lemma cancel_all_signals_unlive[wp]:
    apply (wp
         | wpc
         | simp add: unbind_maybe_notification_def)+
-     apply (rule_tac Q="\<lambda>_. obj_at (is_ntfn and Not \<circ> live) ntfnptr" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_. obj_at (is_ntfn and Not \<circ> live) ntfnptr" in hoare_post_imp)
       apply (fastforce elim: obj_at_weakenE)
      apply (wp mapM_x_wp' sts_obj_at_impossible
           | simp add: is_ntfn)+

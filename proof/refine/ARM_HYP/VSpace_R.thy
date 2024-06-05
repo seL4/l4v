@@ -739,12 +739,12 @@ lemma find_pd_for_asid_pd_at_asid_again:
   apply (unfold validE_def, rule hoare_name_pre_state, fold validE_def)
   apply (case_tac "\<exists>pd. vspace_at_asid asid pd s")
    apply clarsimp
-   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> rv = pd" and E="\<bottom>\<bottom>" in hoare_strengthen_postE)
+   apply (rule_tac Q'="\<lambda>rv s'. s' = s \<and> rv = pd" and E'="\<bottom>\<bottom>" in hoare_strengthen_postE)
      apply (rule hoare_pre, wp find_pd_for_asid_valids)
      apply fastforce
     apply simp+
-  apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> vspace_at_asid asid rv s'"
-              and E="\<lambda>rv s'. s' = s" in hoare_strengthen_postE)
+  apply (rule_tac Q'="\<lambda>rv s'. s' = s \<and> vspace_at_asid asid rv s'"
+              and E'="\<lambda>rv s'. s' = s" in hoare_strengthen_postE)
     apply (rule hoare_pre, wp)
     apply clarsimp+
   done
@@ -1563,7 +1563,7 @@ lemma deleteASIDPool_corres:
               apply (simp only:)
               apply (rule setVMRoot_corres)
              apply wp+
-         apply (rule_tac R="\<lambda>_ s. rv = arm_asid_table (arch_state s)"
+         apply (rule_tac Q'="\<lambda>_ s. rv = arm_asid_table (arch_state s)"
                     in hoare_post_add)
          apply (drule sym, simp only: )
          apply (drule sym, simp only: )
@@ -1578,7 +1578,7 @@ lemma deleteASIDPool_corres:
          apply (rule hoare_vcg_conj_lift,
                  (rule mapM_invalidate[where ptr=ptr])?,
                  ((wp mapM_wp' | simp)+)[1])+
-        apply (rule_tac R="\<lambda>_ s. rv' = armKSASIDTable (ksArchState s)"
+        apply (rule_tac Q'="\<lambda>_ s. rv' = armKSASIDTable (ksArchState s)"
                      in hoare_post_add)
         apply (simp only: pred_conj_def cong: conj_cong)
         apply simp
@@ -2052,7 +2052,7 @@ lemma valid_objs_valid_vcpu': "\<lbrakk> valid_objs' s ; ko_at' (t :: vcpu) p s 
 lemma setObject_vcpu_no_tcb_update:
   "\<lbrakk> vcpuTCBPtr (f vcpu) = vcpuTCBPtr vcpu \<rbrakk>
   \<Longrightarrow> \<lbrace> valid_objs' and ko_at' (vcpu :: vcpu) p\<rbrace> setObject p (f vcpu) \<lbrace> \<lambda>_. valid_objs' \<rbrace>"
-  apply (rule_tac Q="valid_objs' and (ko_at' vcpu p and valid_obj' (KOArch (KOVCPU vcpu)))" in hoare_pre_imp)
+  apply (rule_tac P'="valid_objs' and (ko_at' vcpu p and valid_obj' (KOArch (KOVCPU vcpu)))" in hoare_pre_imp)
    apply (clarsimp)
    apply (frule valid_objs_valid_vcpu')
     apply assumption+
@@ -2299,11 +2299,11 @@ lemma unmapPage_corres:
                  | wp hoare_drop_imps
                  | wp mapM_wp' | assumption)+
           apply auto[1]
-         apply (wpsimp wp: hoare_vcg_const_imp_lift_R lookupPTSlot_inv
+         apply (wpsimp wp: hoare_vcg_const_imp_liftE_R lookupPTSlot_inv
                | strengthen not_in_global_refs_vs_lookup
                  page_directory_at_lookup_mask_aligned_strg
                  page_directory_at_lookup_mask_add_aligned_strg
-               | wp hoare_vcg_const_Ball_lift_R mapM_wp')+
+               | wp hoare_vcg_const_Ball_liftE_R mapM_wp')+
    apply (clarsimp simp add: valid_unmap_def valid_asid_def)
    apply (case_tac sz)
       apply (auto simp: invs_def valid_state_def
@@ -2868,7 +2868,7 @@ proof -
                     apply wp
                    apply (wpsimp, safe; wpsimp wp: hoare_vcg_ex_lift)
                   apply wpsimp
-                 apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs
+                 apply (rule_tac Q'="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs
                                     and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
                   prefer 2
                   apply auto[1]
@@ -2928,7 +2928,7 @@ proof -
                    apply wp
                   apply (wpsimp, safe ; wpsimp wp: hoare_vcg_ex_lift)
                  apply wpsimp
-                apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs
+                apply (rule_tac Q'="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs
                                    and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
                  prefer 2
                  apply auto[1]
@@ -5323,7 +5323,7 @@ lemma perform_pt_invs [wp]:
   apply clarsimp
   apply (wp arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp|wpc)+
   apply (rename_tac acap word a b)
-  apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>d r R sz m. cteCap cte =
+  apply (rule_tac Q'="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>d r R sz m. cteCap cte =
                                        ArchObjectCap (PageCap d r R sz m)) word"
                in hoare_strengthen_post)
     apply (wp unmapPage_cte_wp_at')

@@ -48,7 +48,7 @@ lemma dcorres_call_kernel:
           apply (clarsimp simp: when_def split: option.splits)
           apply (rule handle_interrupt_corres[simplified dc_def])
          apply ((wp | simp)+)[3]
-      apply (rule hoare_post_imp_dc2E, rule handle_event_invs_and_valid_sched)
+      apply (rule hoare_post_impE_E_dc, rule handle_event_invs_and_valid_sched)
       apply (clarsimp simp: invs_def valid_state_def)
       apply (simp add: conj_comms if_apply_def2 non_kernel_IRQs_def
              | wp | strengthen valid_etcbs_sched valid_idle_invs_strg)+

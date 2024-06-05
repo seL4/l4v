@@ -1075,7 +1075,7 @@ lemma threadSet_obj_at'_really_strongest:
   apply (simp add: threadSet_def)
   apply (wp setObject_tcb_strongest)
    apply (subst simp_thms(32)[symmetric], rule hoare_vcg_disj_lift)
-    apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<not> tcb_at' t s \<and> tcb_at' t s"])
+    apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<not> tcb_at' t s \<and> tcb_at' t s"])
      apply simp
     apply (subst simp_thms(21)[symmetric], rule hoare_vcg_conj_lift)
      apply (rule getObject_inv_tcb)
@@ -1161,7 +1161,7 @@ proof -
   show ?thesis
     apply (rule_tac P=P in P_bool_lift)
      apply (rule pos)
-    apply (rule_tac Q="\<lambda>_ s. \<not> tcb_at' t' s \<or> pred_tcb_at' proj (\<lambda>tcb. \<not> P' tcb) t' s"
+    apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> pred_tcb_at' proj (\<lambda>tcb. \<not> P' tcb) t' s"
              in hoare_post_imp)
      apply (erule disjE)
       apply (clarsimp dest!: pred_tcb_at')
@@ -3311,7 +3311,7 @@ lemma sts_valid_objs':
    setThreadState st t
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp simp: setThreadState_def wp: threadSet_valid_objs')
-   apply (rule_tac Q="\<lambda>_. valid_objs' and pspace_aligned' and pspace_distinct'" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_. valid_objs' and pspace_aligned' and pspace_distinct'" in hoare_post_imp)
     apply fastforce
    apply (wpsimp wp: threadSet_valid_objs')
   apply (simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
@@ -3578,7 +3578,7 @@ lemma sts_sch_act':
    apply assumption
   apply (case_tac "runnable' st")
    apply ((wp threadSet_runnable_sch_act hoare_drop_imps | simp)+)[1]
-  apply (rule_tac Q="\<lambda>rv s. st_tcb_at' (Not \<circ> runnable') t s \<and>
+  apply (rule_tac Q'="\<lambda>rv s. st_tcb_at' (Not \<circ> runnable') t s \<and>
                      (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                             sch_act_wf (ksSchedulerAction s) s)"
                in hoare_post_imp)
@@ -3598,10 +3598,10 @@ lemma sts_sch_act[wp]:
    prefer 2
    apply assumption
   apply (case_tac "runnable' st")
-   apply (rule_tac Q="\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+   apply (rule_tac P'="\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
                 in hoare_pre_imp, simp)
    apply ((wp hoare_drop_imps threadSet_runnable_sch_act | simp)+)[1]
-  apply (rule_tac Q="\<lambda>rv s. st_tcb_at' (Not \<circ> runnable') t s \<and>
+  apply (rule_tac Q'="\<lambda>rv s. st_tcb_at' (Not \<circ> runnable') t s \<and>
                      (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                             sch_act_wf (ksSchedulerAction s) s)"
                in hoare_post_imp)
@@ -3877,7 +3877,7 @@ lemma addToBitmap_valid_bitmapQ:
    addToBitmap d p
    \<lbrace>\<lambda>_. valid_bitmapQ\<rbrace>"
   (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (rule_tac Q="\<lambda>_ s. ?pre s \<and> bitmapQ d p s" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_ s. ?pre s \<and> bitmapQ d p s" in hoare_strengthen_post)
    apply (wpsimp wp: addToBitmap_valid_bitmapQ_except addToBitmap_bitmapQ)
   apply (fastforce elim: valid_bitmap_valid_bitmapQ_exceptE)
   done
@@ -4572,7 +4572,7 @@ lemma ct_in_state'_decomp:
   assumes x: "\<lbrace>\<lambda>s. t = (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>rv s. t = (ksCurThread s)\<rbrace>"
   assumes y: "\<lbrace>Pre\<rbrace> f \<lbrace>\<lambda>rv. st_tcb_at' Prop t\<rbrace>"
   shows      "\<lbrace>\<lambda>s. Pre s \<and> t = (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state' Prop\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. t = ksCurThread s \<and> st_tcb_at' Prop t s"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. t = ksCurThread s \<and> st_tcb_at' Prop t s"])
    apply (clarsimp simp add: ct_in_state'_def)
   apply (rule hoare_weaken_pre)
    apply (wp x y)
@@ -4643,7 +4643,7 @@ lemma setQueue_pred_tcb_at[wp]:
   unfolding pred_tcb_at'_def
   apply (rule_tac P=P' in P_bool_lift)
    apply (rule setQueue_obj_at)
-  apply (rule_tac Q="\<lambda>_ s. \<not>typ_at' TCBT t s \<or> obj_at' (Not \<circ> (P \<circ> proj \<circ> tcb_to_itcb')) t s"
+  apply (rule_tac Q'="\<lambda>_ s. \<not>typ_at' TCBT t s \<or> obj_at' (Not \<circ> (P \<circ> proj \<circ> tcb_to_itcb')) t s"
            in hoare_post_imp, simp add: not_obj_at' o_def)
   apply (wp hoare_vcg_disj_lift)
   apply (clarsimp simp: not_obj_at' o_def)
@@ -4904,7 +4904,7 @@ lemma sts_iflive'[wp]:
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: setThreadState_def setQueue_def)
   apply wpsimp
-   apply (rule_tac Q="\<lambda>rv. if_live_then_nonz_cap' and pspace_aligned' and pspace_distinct'"
+   apply (rule_tac Q'="\<lambda>rv. if_live_then_nonz_cap' and pspace_aligned' and pspace_distinct'"
                 in hoare_post_imp)
     apply clarsimp
    apply (wpsimp wp: threadSet_iflive')
@@ -5048,7 +5048,7 @@ lemma tcbSchedEnqueue_ct_not_inQ:
   proof -
     have ts: "\<lbrace>?PRE\<rbrace> threadSet (tcbQueued_update (\<lambda>_. True)) t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
       apply (simp add: ct_not_inQ_def)
-      apply (rule_tac Q="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
+      apply (rule_tac P'="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                   \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s \<and> ksCurThread s \<noteq> t"
                   in hoare_pre_imp, clarsimp)
       apply (rule hoare_convert_imp [OF threadSet_nosch])
@@ -5075,7 +5075,7 @@ lemma tcbSchedAppend_ct_not_inQ:
   proof -
     have ts: "\<lbrace>?PRE\<rbrace> threadSet (tcbQueued_update (\<lambda>_. True)) t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
       apply (simp add: ct_not_inQ_def)
-      apply (rule_tac Q="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
+      apply (rule_tac P'="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                   \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s \<and> ksCurThread s \<noteq> t"
                   in hoare_pre_imp, clarsimp)
       apply (rule hoare_convert_imp [OF threadSet_nosch])
@@ -5102,7 +5102,7 @@ lemma setSchedulerAction_direct:
 lemma rescheduleRequired_ct_not_inQ:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (simp add: rescheduleRequired_def ct_not_inQ_def)
-  apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = ChooseNewThread"
+  apply (rule_tac Q'="\<lambda>_ s. ksSchedulerAction s = ChooseNewThread"
            in hoare_post_imp, clarsimp)
   apply (wp setSchedulerAction_direct)
   done
@@ -5173,7 +5173,7 @@ lemma setThreadState_ct_not_inQ:
   including no_pre
   apply (simp add: setThreadState_def)
   apply (wp rescheduleRequired_ct_not_inQ)
-  apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp, clarsimp)
+  apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_post_imp, clarsimp)
   apply (wp)
   done
 
@@ -5330,7 +5330,7 @@ lemma removeFromBitmap_valid_bitmapQ[wp]:
    removeFromBitmap d p
    \<lbrace>\<lambda>_. valid_bitmapQ\<rbrace>"
   (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (rule_tac Q="\<lambda>_ s. ?pre s \<and> \<not> bitmapQ d p s" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_ s. ?pre s \<and> \<not> bitmapQ d p s" in hoare_strengthen_post)
    apply (wpsimp wp: removeFromBitmap_valid_bitmapQ_except removeFromBitmap_bitmapQ)
   apply (fastforce elim: valid_bitmap_valid_bitmapQ_exceptE)
   done

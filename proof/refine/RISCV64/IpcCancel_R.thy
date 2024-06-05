@@ -906,7 +906,7 @@ lemma (in delete_one_conc_pre) cancelIPC_sch_act_simple[wp]:
   apply (wp hoare_drop_imps delete_one_sch_act_simple
        | simp add: getThreadReplySlot_def | wpcw
        | rule sch_act_simple_lift
-       | (rule_tac Q="\<lambda>rv. sch_act_simple" in hoare_post_imp, simp))+
+       | (rule_tac Q'="\<lambda>rv. sch_act_simple" in hoare_post_imp, simp))+
   done
 
 lemma cancelSignal_st_tcb_at:
@@ -916,7 +916,7 @@ lemma cancelSignal_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   apply (simp add: cancelSignal_def Let_def list_case_If)
   apply (wp sts_st_tcb_at'_cases hoare_vcg_const_imp_lift
-            hoare_drop_imp[where R="%rv s. P' rv" for P'])
+            hoare_drop_imp[where Q'="%rv s. P' rv" for P'])
    apply clarsimp+
   done
 
@@ -1005,7 +1005,7 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
     apply (case_tac rv; simp)
    apply (wp sts_pred_tcb_neq'  | simp | wpc)+
            apply (clarsimp)
-           apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
+           apply (rule_tac Q'="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
            apply (wp cteDeleteOne_tcb_at_runnable'
                     threadSet_pred_tcb_no_state
                     cancelSignal_tcb_at_runnable'
@@ -1104,7 +1104,7 @@ lemma sts_weak_sch_act_wf[wp]:
   including classic_wp_pre
   apply (simp add: setThreadState_def)
   apply (wp rescheduleRequired_weak_sch_act_wf)
-  apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp, simp)
+  apply (rule_tac Q'="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp, simp)
   apply (simp add: weak_sch_act_wf_def)
   apply (wp hoare_vcg_all_lift)
    apply (wps threadSet_nosch)
@@ -1232,11 +1232,11 @@ lemma (in delete_one) suspend_corres:
            apply wp
           apply (wpsimp wp: sts_valid_objs')
           apply (wpsimp simp: update_restart_pc_def updateRestartPC_def valid_tcb_state'_def)+
-       apply (rule hoare_post_imp[where Q = "\<lambda>rv s. einvs s \<and> tcb_at t s"])
+       apply (rule hoare_post_imp[where Q'="\<lambda>rv s. einvs s \<and> tcb_at t s"])
         apply (simp add: invs_implies invs_strgs valid_queues_in_correct_ready_q
                          valid_queues_ready_qs_distinct valid_sched_def)
        apply wp
-      apply (rule hoare_post_imp[where Q = "\<lambda>_ s. invs' s \<and> tcb_at' t s"])
+      apply (rule hoare_post_imp[where Q'="\<lambda>_ s. invs' s \<and> tcb_at' t s"])
        apply (fastforce simp: invs'_def valid_tcb_state'_def)
       apply (wpsimp simp: update_restart_pc_def updateRestartPC_def)+
    apply fastforce+
@@ -1279,7 +1279,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   apply (simp add: suspend_def)
   apply (wpsimp wp: sts_invs_minor' gts_wp' simp: updateRestartPC_def
          | strengthen no_refs_simple_strg')+
-   apply (rule_tac Q="\<lambda>_. invs' and sch_act_simple and st_tcb_at' simple' t
+   apply (rule_tac Q'="\<lambda>_. invs' and sch_act_simple and st_tcb_at' simple' t
                           and (\<lambda>s. t \<noteq> ksIdleThread s)"
                 in hoare_post_imp)
     apply clarsimp
@@ -1307,7 +1307,7 @@ lemma (in delete_one_conc_pre) suspend_sch_act_simple[wp]:
 lemma (in delete_one_conc) suspend_objs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
    suspend t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post)
    apply (wp suspend_invs')
   apply fastforce
   done
@@ -1421,7 +1421,7 @@ proof -
         apply (rule ep_cancel_corres_helper)
        apply (rule mapM_x_wp')
        apply (wp weak_sch_act_wf_lift_linear set_thread_state_runnable_weak_valid_sched_action | simp)+
-      apply (rule_tac R="\<lambda>_ s. \<forall>x\<in>set list. tcb_at' x s \<and> valid_objs' s \<and> pspace_aligned' s \<and> pspace_distinct' s"
+      apply (rule_tac Q'="\<lambda>_ s. \<forall>x\<in>set list. tcb_at' x s \<and> valid_objs' s \<and> pspace_aligned' s \<and> pspace_distinct' s"
                    in hoare_post_add)
       apply (rule mapM_x_wp')
       apply ((wpsimp wp: hoare_vcg_const_Ball_lift mapM_x_wp' sts_st_tcb' sts_valid_objs'
@@ -1481,7 +1481,7 @@ lemma cancelAllSignals_corres:
                  set_thread_state_runnable_weak_valid_sched_action
             | simp)+
       apply (rename_tac list)
-      apply (rule_tac R="\<lambda>_ s. (\<forall>x\<in>set list. tcb_at' x s) \<and> valid_objs' s
+      apply (rule_tac Q'="\<lambda>_ s. (\<forall>x\<in>set list. tcb_at' x s) \<and> valid_objs' s
                                \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_objs' s
                                \<and> pspace_aligned' s \<and> pspace_distinct' s"
                    in hoare_post_add)
@@ -1529,7 +1529,7 @@ proof -
   show ?thesis
   apply (simp add: setThreadState_def)
   apply (wpsimp wp: hoare_vcg_imp_lift [OF nrct])
-   apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_post_imp)
     apply (clarsimp)
    apply (rule hoare_convert_imp [OF threadSet_nosch threadSet_ct])
   apply assumption
@@ -1780,7 +1780,7 @@ lemma cancelAllIPC_valid_objs'[wp]:
   apply (rule bind_wp [OF _ get_ep_sp'])
   apply (rule hoare_pre)
    apply (wp set_ep_valid_objs' setSchedulerAction_valid_objs')
-    apply (rule_tac Q="\<lambda>_ s. valid_objs' s \<and> pspace_aligned' s \<and> pspace_distinct' s
+    apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> pspace_aligned' s \<and> pspace_distinct' s
                              \<and> (\<forall>x\<in>set (epQueue ep). tcb_at' x s)"
                     in hoare_post_imp)
      apply simp
@@ -1806,7 +1806,7 @@ lemma cancelAllSignals_valid_objs'[wp]:
     apply (wp, simp)
    apply (wp, simp)
   apply (rename_tac list)
-  apply (rule_tac Q="\<lambda>rv s. valid_objs' s \<and> (\<forall>x\<in>set list. tcb_at' x s)"
+  apply (rule_tac Q'="\<lambda>rv s. valid_objs' s \<and> (\<forall>x\<in>set list. tcb_at' x s)"
                   in hoare_post_imp)
    apply (simp add: valid_ntfn'_def)
   apply (simp add: Ball_def)
@@ -2107,7 +2107,7 @@ lemma cancelBadgedSends_corres:
     apply (rule corres_split_nor[OF setEndpoint_corres])
        apply (simp add: ep_relation_def)
       apply (rule corres_split_eqr[OF _ _ _ hoare_post_add
-                                             [where R="\<lambda>_. valid_objs' and pspace_aligned'
+                                             [where Q'="\<lambda>_. valid_objs' and pspace_aligned'
                                                            and pspace_distinct'"]])
          apply (rule_tac S="(=)"
                      and Q="\<lambda>xs s. (\<forall>x \<in> set xs. (epptr, TCBBlockedSend) \<in> state_refs_of s x) \<and>

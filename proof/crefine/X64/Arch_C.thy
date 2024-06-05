@@ -826,7 +826,7 @@ shows
        apply clarsimp
        apply (wp getSlotCap_wp)
       apply clarsimp
-     apply (rule_tac Q="\<lambda>_. cte_wp_at' ((=) (UntypedCap isdev frame pageBits idx) o cteCap) parent
+     apply (rule_tac Q'="\<lambda>_. cte_wp_at' ((=) (UntypedCap isdev frame pageBits idx) o cteCap) parent
                            and (\<lambda>s. descendants_range_in' {frame..frame + (2::machine_word) ^ pageBits - (1::machine_word)} parent (ctes_of s))
                            and pspace_no_overlap' frame pageBits
                            and invs'
@@ -1243,7 +1243,7 @@ lemma decodeX64PageTableInvocation_ccorres:
          apply simp
          apply (vcg exspec=findVSpaceForASID_modifies)
         apply simp
-        apply (rule_tac Q="\<lambda>a b. invs' b \<and> valid_cap' (fst (extraCaps ! 0)) b \<and> tcb_at' thread b \<and>
+        apply (rule_tac Q'="\<lambda>a b. invs' b \<and> valid_cap' (fst (extraCaps ! 0)) b \<and> tcb_at' thread b \<and>
                                  sch_act_wf (ksSchedulerAction b) b \<and> cte_wp_at' (\<lambda>_. True) slot b"
                                  in hoare_strengthen_post)
          apply wp
@@ -3232,7 +3232,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
          apply simp
          apply (vcg exspec=findVSpaceForASID_modifies)
         apply simp
-        apply (rule_tac Q="\<lambda>a b. invs' b \<and> valid_cap' (fst (extraCaps ! 0)) b \<and> tcb_at' thread b \<and>
+        apply (rule_tac Q'="\<lambda>a b. invs' b \<and> valid_cap' (fst (extraCaps ! 0)) b \<and> tcb_at' thread b \<and>
                                  sch_act_wf (ksSchedulerAction b) b \<and> cte_wp_at' (\<lambda>_. True) slot b"
                         in hoare_strengthen_post)
          apply wp
@@ -5362,7 +5362,7 @@ proof -
                 apply (simp add: all_ex_eq_helper)
                 apply (vcg exspec=lookupTargetSlot_modifies)
                apply (wpsimp wp: isIOPortRangeFree_wp)
-              apply (rule_tac Q="\<lambda>rv. invs' and valid_cap' a and st_tcb_at' runnable' thread
+              apply (rule_tac Q'="\<lambda>rv. invs' and valid_cap' a and st_tcb_at' runnable' thread
                                       and sch_act_simple and cte_wp_at' \<top> slot
                                       and (\<lambda>s. thread = ksCurThread s)" in hoare_strengthen_post)
                apply (wpsimp wp: getSlotCap_wp)
@@ -5382,7 +5382,7 @@ proof -
          apply (simp add: all_ex_eq_helper, vcg exspec=getSyscallArg_modifies)
         apply wp
        apply (simp add: all_ex_eq_helper, vcg exspec=getSyscallArg_modifies)
-      apply (rule_tac Q="\<lambda>rv. ?apre" in hoare_strengthen_post)
+      apply (rule_tac Q'="\<lambda>rv. ?apre" in hoare_strengthen_post)
        apply wp
       apply (clarsimp simp: sysargs_rel_to_n excaps_in_mem_def slotcap_in_mem_def cte_wp_at_ctes_of
                       interpret_excaps_eq

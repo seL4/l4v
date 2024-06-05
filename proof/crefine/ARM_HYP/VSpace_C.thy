@@ -2081,7 +2081,7 @@ lemma vcpu_enable_ccorres:
        apply wpsimp
       apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
      apply wpsimp+
-   apply (rule_tac Q="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
+   apply (rule_tac Q'="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
    apply wpsimp
   apply (clarsimp simp: typ_heap_simps' Collect_const_mem cvcpu_relation_def
                         cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_def
@@ -2761,7 +2761,7 @@ lemma performPageFlush_ccorres:
           apply (ctac add: setVMRoot_ccorres)
          apply (rule ccorres_return_Skip)
         apply (simp add: cur_tcb'_def[symmetric])
-        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+        apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
          apply (simp add: invs'_invs_no_cicd)
         apply wp+
       apply (rule ccorres_return_Skip)
@@ -2941,7 +2941,7 @@ lemma performPageDirectoryInvocationFlush_ccorres:
        apply wp
       apply (simp add: guard_is_UNIV_def)
      apply (simp add: cur_tcb'_def[symmetric])
-     apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
       apply (simp add: invs'_invs_no_cicd)
      apply wp+
    apply (simp)
@@ -2995,7 +2995,7 @@ lemma flushPage_ccorres:
         apply (ctac add: setVMRoot_ccorres)
        apply (rule ccorres_return_Skip)
       apply (wp | simp add: cur_tcb'_def[symmetric])+
-      apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
        apply (simp add: invs'_invs_no_cicd)
       apply (wp | simp add: cur_tcb'_def[symmetric])+
      apply (rule ccorres_return_Skip)
@@ -3541,7 +3541,7 @@ lemma unmapPage_ccorres:
       apply (rule ccorres_return_void_C)
      apply vcg
     apply (simp add: lookup_pd_slot_def Let_def table_bits_defs)
-    apply (wp hoare_vcg_const_imp_lift_R findPDForASID_valid_offset'[simplified table_bits_defs]
+    apply (wp hoare_vcg_const_imp_liftE_R findPDForASID_valid_offset'[simplified table_bits_defs]
               findPDForASID_aligned[simplified table_bits_defs])
    apply (simp add: Collect_const_mem)
    apply (vcg exspec=findPDForASID_modifies)
@@ -4183,7 +4183,7 @@ lemma flushTable_ccorres:
        apply (rule ccorres_return_Skip)
       apply (wp hoare_weak_lift_imp)
        apply clarsimp
-       apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
         apply (simp add: invs'_invs_no_cicd cur_tcb'_def)
        apply (wp mapM_x_wp_inv getPTE_wp | wpc)+
      apply (rule ccorres_return_Skip)

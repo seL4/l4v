@@ -2759,7 +2759,7 @@ lemma cancelIPC_ccorres1:
                                 ghost_assertion_data_set_def cap_tag_defs)
               apply (simp add: locateSlot_conv, wp)
              apply vcg
-            apply (rule_tac Q="\<lambda>rv. tcb_at' thread and invs'" in hoare_post_imp)
+            apply (rule_tac Q'="\<lambda>rv. tcb_at' thread and invs'" in hoare_post_imp)
              apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def
                                    cap_get_tag_isCap ucast_id)
             apply (wp threadSet_invs_trivial | simp)+

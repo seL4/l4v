@@ -2146,7 +2146,7 @@ lemma cteInsert_mdb' [wp]:
   cteInsert cap src dest
   \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   apply (simp add:valid_mdb'_def valid_mdb_ctes_def)
-  apply (rule_tac Q = "\<lambda>r s. valid_dlist (ctes_of s) \<and> irq_control (ctes_of s) \<and>
+  apply (rule_tac Q'="\<lambda>r s. valid_dlist (ctes_of s) \<and> irq_control (ctes_of s) \<and>
                no_0 (ctes_of s) \<and> mdb_chain_0 (ctes_of s) \<and>
                mdb_chunked (ctes_of s) \<and> untyped_mdb' (ctes_of s) \<and> untyped_inc' (ctes_of s) \<and>
                Q s" for Q
@@ -3957,12 +3957,12 @@ lemma setupReplyMaster_corres:
        apply (fastforce dest: pspace_relation_no_reply_caps
                              state_relation_pspace_relation)
       apply (clarsimp simp: cte_map_def tcb_cnode_index_def cte_wp_at_ctes_of)
-     apply (rule_tac Q="\<lambda>rv. einvs and tcb_at t and
+     apply (rule_tac Q'="\<lambda>rv. einvs and tcb_at t and
                              cte_wp_at ((=) rv) (t, tcb_cnode_index 2)"
                   in hoare_strengthen_post)
       apply (wp hoare_drop_imps get_cap_wp)
      apply (clarsimp simp: invs_def valid_state_def elim!: cte_wp_at_weakenE)
-    apply (rule_tac Q="\<lambda>rv. valid_pspace' and valid_mdb' and
+    apply (rule_tac Q'="\<lambda>rv. valid_pspace' and valid_mdb' and
                             cte_wp_at' ((=) rv) (cte_map (t, tcb_cnode_index 2))"
                  in hoare_strengthen_post)
      apply (wp hoare_drop_imps getCTE_wp')

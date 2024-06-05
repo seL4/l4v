@@ -757,7 +757,7 @@ lemma suspend_ccorres:
         apply ceqv
        apply (ctac(no_vcg) add: setThreadState_ccorres_simple)
         apply (ctac add: tcbSchedDequeue_ccorres)
-       apply (rule_tac Q="\<lambda>_. valid_objs' and tcb_at' thread and pspace_aligned' and pspace_distinct'"
+       apply (rule_tac Q'="\<lambda>_. valid_objs' and tcb_at' thread and pspace_aligned' and pspace_distinct'"
                     in hoare_post_imp)
         apply clarsimp
        apply (wp sts_valid_objs')[1]
@@ -2394,7 +2394,7 @@ lemma associateVCPUTCB_ccorres:
       apply ((wpsimp wp: hoare_vcg_all_lift hoare_drop_imps
               | strengthen invs_valid_objs' invs_arch_state')+)[1]
      apply (vcg exspec=dissociateVCPUTCB_modifies)
-    apply (rule_tac Q="\<lambda>_. invs' and vcpu_at' vcpuptr and tcb_at' tptr" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_. invs' and vcpu_at' vcpuptr and tcb_at' tptr" in hoare_post_imp)
      apply (clarsimp simp: typ_at_tcb' obj_at'_def)
      apply (rename_tac vcpu obj, case_tac vcpu)
      apply (fastforce simp: valid_arch_tcb'_def valid_vcpu'_def objBits_simps)

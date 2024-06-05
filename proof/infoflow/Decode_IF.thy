@@ -51,7 +51,7 @@ lemma expand_len_gr_Suc_0:
   by fastforce
 
 (* FIXME: remove *)
-lemmas hoare_vcg_imp_lift_R = hoare_vcg_const_imp_lift_R
+lemmas hoare_vcg_imp_liftE_R = hoare_vcg_const_imp_liftE_R
 
 lemma decode_cnode_invocation_rev:
   "reads_equiv_valid_inv A (aag :: 'a subject_label PAS)
@@ -61,7 +61,7 @@ lemma decode_cnode_invocation_rev:
   apply (rule equiv_valid_guard_imp)
   apply (simp add: unlessE_whenE)
   apply wp
-  apply (wp if_apply_ev derive_cap_rev whenE_inv hoare_vcg_imp_lift_R
+  apply (wp if_apply_ev derive_cap_rev whenE_inv hoare_vcg_imp_liftE_R
              lookup_slot_for_cnode_op_rev hoare_vcg_all_liftE_R
              lookup_slot_for_cnode_op_authorised ensure_empty_rev get_cap_rev
          | simp add: split_def unlessE_whenE split del: if_split
@@ -201,7 +201,7 @@ lemma decode_untyped_invocation_rev:
          | simp
          | rule validE_R_validE | strengthen aag_can_read_self)+
                   apply (rule hoare_strengthen_post[
-                                  where Q="\<lambda> rv s. (is_cnode_cap rv
+                                  where Q'="\<lambda> rv s. (is_cnode_cap rv
                                                          \<longrightarrow> is_subject aag (obj_ref_of rv))
                                                  \<and> pas_refined aag s"])
                    apply (wp (once) whenE_throwError_wp

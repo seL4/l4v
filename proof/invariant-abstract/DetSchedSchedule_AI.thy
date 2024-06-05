@@ -2093,7 +2093,7 @@ lemma restart_valid_sched[wp]:
                                     set_thread_state_valid_blocked_except
                                     sts_st_tcb_at' cancel_ipc_simple2
                                     possible_switch_to_valid_sched)+
-    apply (rule_tac Q="\<lambda>_. valid_sched and not_cur_thread thread and (\<lambda>s. thread \<noteq> idle_thread s)" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>_. valid_sched and not_cur_thread thread and (\<lambda>s. thread \<noteq> idle_thread s)" in hoare_strengthen_post)
      apply wp
     apply (simp add: valid_sched_def)
    apply (simp add: if_fun_split)
@@ -2595,7 +2595,7 @@ lemma do_reply_transfer_valid_sched[wp]:
         apply (wp set_thread_state_runnable_valid_queues
                   set_thread_state_runnable_valid_sched_action
                   set_thread_state_valid_blocked_except sts_st_tcb_at')[1]
-       apply (rule_tac Q="\<lambda>_. valid_sched and not_cur_thread receiver
+       apply (rule_tac Q'="\<lambda>_. valid_sched and not_cur_thread receiver
                                and (\<lambda>s. receiver \<noteq> idle_thread s)"
               in hoare_strengthen_post)
         apply wp
@@ -2750,7 +2750,7 @@ lemma send_ipc_valid_sched:
                  set_thread_state_valid_blocked_except sts_st_tcb_at')
       apply (clarsimp simp: conj.commute eq_commute)
       apply (rename_tac recvr q recv_state)
-      apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not thread and not_queued thread
+      apply (rule_tac Q'="\<lambda>_. valid_sched and scheduler_act_not thread and not_queued thread
                               and (\<lambda>s. recvr \<noteq> cur_thread s)
                               and (\<lambda>s. recvr \<noteq> idle_thread s \<and> recvr \<noteq> thread)"
                in hoare_strengthen_post)
@@ -2878,7 +2878,7 @@ lemma send_signal_valid_sched[wp]:
             set_thread_state_runnable_valid_queues set_thread_state_runnable_valid_sched_action
             set_thread_state_valid_blocked_except sts_st_tcb_at' gts_wp  | wpc | clarsimp)+
        apply (rename_tac ntfn a st)
-       apply (rule_tac Q="\<lambda>rv s. valid_sched s \<and> a \<noteq> idle_thread s \<and> not_cur_thread a s" in hoare_strengthen_post)
+       apply (rule_tac Q'="\<lambda>rv s. valid_sched s \<and> a \<noteq> idle_thread s \<and> not_cur_thread a s" in hoare_strengthen_post)
         apply (wp gts_wp get_simple_ko_wp | simp add: valid_sched_def)+
   apply (clarsimp)
   apply (rule conjI, clarsimp, rule conjI)
@@ -2928,7 +2928,7 @@ lemma receive_ipc_valid_sched:
                            set_thread_state_runnable_valid_queues
                            set_thread_state_runnable_valid_sched_action
                            set_thread_state_valid_blocked_except | simp | wpc)+)[3]
-              apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not (sender) and not_queued (sender)
+              apply (rule_tac Q'="\<lambda>_. valid_sched and scheduler_act_not (sender) and not_queued (sender)
                                      and not_cur_thread (sender) and (\<lambda>s. sender \<noteq> idle_thread s)"
                            in hoare_strengthen_post)
                apply wp
@@ -3208,7 +3208,7 @@ lemma handle_recv_valid_sched:
               cong: if_cong)
   apply (wp get_simple_ko_wp handle_fault_valid_sched delete_caller_cap_not_queued
             receive_ipc_valid_sched receive_signal_valid_sched | simp)+
-     apply (rule hoare_vcg_E_elim)
+     apply (rule hoare_vcg_conj_elimE)
       apply (wpsimp simp: lookup_cap_def lookup_slot_for_thread_def)
        apply (wp resolve_address_bits_valid_fault2)+
     apply (simp add: valid_fault_def)
@@ -3327,7 +3327,7 @@ lemma invoke_domain_valid_sched[wp]:
       apply (wp hoare_weak_lift_imp hoare_weak_lift_imp_conj tcb_dequeue_not_queued tcb_sched_action_dequeue_valid_blocked_except)
      apply simp
      apply (wp hoare_vcg_disj_lift)
-     apply (rule_tac Q="\<lambda>_. valid_sched and not_queued t and valid_idle and (\<lambda>s. t \<noteq> idle_thread s)" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>_. valid_sched and not_queued t and valid_idle and (\<lambda>s. t \<noteq> idle_thread s)" in hoare_strengthen_post)
       apply (wp tcb_sched_action_dequeue_valid_sched_not_runnable tcb_dequeue_not_queued)
      apply (simp add: valid_sched_def valid_sched_action_def)
     apply simp
@@ -3385,7 +3385,7 @@ lemma handle_invocation_valid_sched:
                 apply (wp set_thread_state_runnable_valid_sched)[1]
                apply wp+
          apply (wp gts_wp hoare_vcg_all_lift)
-        apply (rule_tac Q="\<lambda>_. valid_sched" and E="\<lambda>_. valid_sched" in hoare_strengthen_postE)
+        apply (rule_tac Q'="\<lambda>_. valid_sched" and E'="\<lambda>_. valid_sched" in hoare_strengthen_postE)
           apply wp
          apply ((clarsimp simp: st_tcb_at_def obj_at_def)+)[2]
        apply (wp ct_in_state_set set_thread_state_runnable_valid_sched
@@ -3626,14 +3626,14 @@ lemma call_kernel_valid_sched:
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (simp add: call_kernel_def)
   apply (wp schedule_valid_sched activate_thread_valid_sched | simp)+
-     apply (rule_tac Q="\<lambda>rv. invs" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>rv. invs" in hoare_strengthen_post)
       apply wp
      apply (erule invs_valid_idle)
-    apply (rule hoare_strengthen_post [where Q="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> valid_sched s \<and> invs s"])
+    apply (rule hoare_strengthen_post[where Q'="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> valid_sched s \<and> invs s"])
      apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
     apply auto[1]
-   apply (rule_tac Q="\<lambda>rv. valid_sched and invs" and
-                   E="\<lambda>rv. valid_sched and invs" in hoare_strengthen_postE)
+   apply (rule_tac Q'="\<lambda>rv. valid_sched and invs" and
+                   E'="\<lambda>rv. valid_sched and invs" in hoare_strengthen_postE)
      apply (rule valid_validE)
      apply (wp handle_event_valid_sched)
     apply (force intro: active_from_running)+

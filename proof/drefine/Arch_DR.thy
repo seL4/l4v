@@ -166,7 +166,7 @@ lemma dcorres_lookup_pt_slot:
           apply simp
          apply simp
      apply (simp add: transform_pde_def)+
-    apply (rule hoare_strengthen_post[where Q = "\<lambda>r. valid_pde r and pspace_aligned"] )
+    apply (rule hoare_strengthen_post[where Q'="\<lambda>r. valid_pde r and pspace_aligned"] )
      apply (wp get_pde_valid)
     apply (clarsimp simp:valid_pde_def dest!:pt_aligned
       split:ARM_A.pde.splits)
@@ -184,7 +184,7 @@ lemma lookup_pt_slot_aligned_6':
   apply (simp add:lookup_pt_slot_def)
   apply (wp|wpc)+
    apply clarsimp
-   apply (rule hoare_strengthen_post[where Q = "\<lambda>r. valid_pde r and pspace_aligned"] )
+   apply (rule hoare_strengthen_post[where Q'="\<lambda>r. valid_pde r and pspace_aligned"] )
     apply wp
    apply simp+
    apply (clarsimp simp:valid_pde_def dest!:pt_aligned split:ARM_A.pde.splits)
@@ -1207,7 +1207,7 @@ lemma invoke_page_table_corres:
        apply (wp store_pte_cte_wp_at)
       apply fastforce
      apply wpsimp+
-    apply (rule_tac Q="\<lambda>rv s. invs s \<and> valid_etcbs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
+    apply (rule_tac Q'="\<lambda>rv s. invs s \<and> valid_etcbs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
                               caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
      apply wp
     apply (clarsimp simp:invs_def valid_state_def)
@@ -1235,7 +1235,7 @@ lemma set_vm_root_for_flush_dwp[wp]:
        apply (rule hoare_conjI,rule hoare_drop_imp)
         apply (wp do_machine_op_wp|clarsimp simp:load_hw_asid_def)+
      apply (wpc|wp)+
-    apply (rule_tac Q="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
      apply (wp|clarsimp)+
   done
 
@@ -1548,7 +1548,7 @@ lemma invoke_page_corres:
           apply (clarsimp simp: transform_mapping_def update_map_data_def)
          apply (wp get_cap_cte_wp_at_rv unmap_page_pred_tcb_at |
                 clarsimp simp:valid_idle_def not_idle_thread_def)+
-     apply (rule_tac Q="\<lambda>rv s. valid_etcbs s \<and>
+     apply (rule_tac Q'="\<lambda>rv s. valid_etcbs s \<and>
                                idle_tcb_at (\<lambda>(st, ntfn, arch). idle st \<and> ntfn = None \<and> valid_arch_idle arch)
                                            (idle_thread s) s \<and>
                                a \<noteq> idle_thread s \<and> idle_thread s = idle_thread_ptr \<and> cte_wp_at \<top> (a,b) s \<and>
@@ -1683,7 +1683,7 @@ proof -
                  apply (clarsimp simp: transform_asid_table_def transform_asid_def
                                        fun_upd_def[symmetric] unat_map_upd)
                 apply wp+
-             apply (rule_tac Q="\<lambda>rv s. cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) cref s
+             apply (rule_tac Q'="\<lambda>rv s. cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) cref s
                                        \<and> asid_pool_at frame s
                                        \<and> cte_wp_at ((=) cap.NullCap) cnode_ref s
                                        \<and> ex_cte_cap_to cnode_ref s \<and> invs s \<and> valid_etcbs s"
@@ -1719,7 +1719,7 @@ proof -
       apply (rule_tac P = "is_aligned frame page_bits \<and> page_bits \<le> word_bits \<and> 2 \<le> page_bits"
                       in hoare_gen_asm)
       apply (simp add: delete_objects_rewrite[unfolded word_size_bits_def] is_aligned_neg_mask_eq)
-      apply (rule_tac Q="\<lambda>_ s.
+      apply (rule_tac Q'="\<lambda>_ s.
              invs s \<and> valid_etcbs s \<and> pspace_no_overlap_range_cover frame pageBits s \<and>
              descendants_range_in (untyped_range (cap.UntypedCap False frame pageBits idx)) cref s \<and>
              cte_wp_at ((=) (cap.UntypedCap False frame pageBits idx)) cref s \<and>

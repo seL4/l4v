@@ -423,7 +423,7 @@ lemma deleteASIDPool_corres:
               apply (simp only:)
               apply (rule setVMRoot_corres[OF refl])
              apply wp+
-         apply (rule_tac R="\<lambda>_ s. rv = x64_asid_table (arch_state s)"
+         apply (rule_tac Q'="\<lambda>_ s. rv = x64_asid_table (arch_state s)"
                   in hoare_post_add)
          apply (drule sym, simp only: )
          apply (drule sym, simp only: )
@@ -436,7 +436,7 @@ lemma deleteASIDPool_corres:
                            valid_vs_lookup_unmap_strg)
          apply (wp mapM_wp')+
          apply simp
-        apply (rule_tac R="\<lambda>_ s. rv' = x64KSASIDTable (ksArchState s)"
+        apply (rule_tac Q'="\<lambda>_ s. rv' = x64KSASIDTable (ksArchState s)"
                  in hoare_post_add)
         apply (simp only: pred_conj_def cong: conj_cong)
         apply simp
@@ -2601,7 +2601,7 @@ lemma perform_page_invs [wp]:
          | wpc
          | clarsimp simp: performPageInvocationUnmap_def)+
    apply (rename_tac acap word a b)
-   apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>r R mt sz d m. cteCap cte =
+   apply (rule_tac Q'="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>r R mt sz d m. cteCap cte =
                                        ArchObjectCap (PageCap r R mt sz d m)) word"
                in hoare_strengthen_post)
     apply (wp unmapPage_cte_wp_at')

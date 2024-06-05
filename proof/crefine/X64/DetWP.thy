@@ -121,7 +121,7 @@ lemma det_wp_asUser [wp]:
       apply (drule det_wp_det)
       apply (erule det_wp_select_f)
      apply wp+
-   apply (rule_tac Q="\<lambda>_. tcb_at' t" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_. tcb_at' t" in hoare_post_imp)
     apply simp
    apply wp
   apply simp

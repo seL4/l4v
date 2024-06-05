@@ -907,7 +907,7 @@ lemma setVCPU_valid_arch':
 lemma setObject_vcpu_no_tcb_update:
   "\<lbrakk> vcpuTCBPtr (f vcpu) = vcpuTCBPtr vcpu \<rbrakk>
   \<Longrightarrow> \<lbrace> valid_objs' and ko_at' (vcpu :: vcpu) p\<rbrace> setObject p (f vcpu) \<lbrace> \<lambda>_. valid_objs' \<rbrace>"
-  apply (rule_tac Q="valid_objs' and (ko_at' vcpu p and valid_obj' (KOArch (KOVCPU vcpu)))" in hoare_pre_imp)
+  apply (rule_tac P'="valid_objs' and (ko_at' vcpu p and valid_obj' (KOArch (KOVCPU vcpu)))" in hoare_pre_imp)
    apply (clarsimp)
    apply (simp add: valid_obj'_def)
    apply (drule (1) ko_at_valid_objs', simp)
@@ -1843,7 +1843,7 @@ lemma deleteASID_corres [corres]:
                              wp: set_asid_pool_None_vmid_inv set_asid_pool_vspace_objs_unmap_single)
               apply (wp getASID_wp)+
            apply (rename_tac p pool pool' a b)
-           apply (rule_tac Q="\<lambda>_ s. invs s \<and>
+           apply (rule_tac Q'="\<lambda>_ s. invs s \<and>
                                     (\<exists>high. asid_table s high = Some p \<and>
                                             vmid_for_asid s (asid_of high (asid_low_bits_of asid)) =
                                               None)" in hoare_strengthen_post)

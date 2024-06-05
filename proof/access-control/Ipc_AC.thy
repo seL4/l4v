@@ -540,7 +540,7 @@ next
          and solve this using derived_cap_is_derived, and then solve the rest
          using derive_cap_is_derived_foo *)
     apply (rule_tac Q'="\<lambda>r s. S r s \<and> Q r s" for S Q in hoare_strengthen_postE_R)
-     apply (rule hoare_vcg_conj_lift_R)
+     apply (rule hoare_vcg_conj_liftE_R)
       apply (rule derive_cap_is_derived)
      prefer 2
      apply clarsimp
@@ -765,7 +765,7 @@ lemma transfer_caps_loop_presM_extended:
           | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
       apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
-    apply (rule hoare_vcg_conj_liftE_R)
+    apply (rule hoare_vcg_conj_liftE_R')
      apply (rule derive_cap_is_derived_foo')
     apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> NullCap \<longrightarrow>
                                    cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s) \<and>
@@ -773,8 +773,8 @@ lemma transfer_caps_loop_presM_extended:
      prefer 2
      apply clarsimp
      apply assumption
-    apply (rule hoare_vcg_conj_liftE_R)
-     apply (rule hoare_vcg_const_imp_lift_R)
+    apply (rule hoare_vcg_conj_liftE_R')
+     apply (rule hoare_vcg_const_imp_liftE_R)
      apply (rule derive_cap_is_derived)
     apply (wp derive_cap_is_derived_foo')+
   apply (clarsimp simp: cte_wp_at_caps_of_state
@@ -850,7 +850,7 @@ lemma copy_mrs_pas_refined:
    copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding copy_mrs_def
-  apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned
+  apply (rule_tac Q'="\<lambda>_. pas_refined aag and pspace_aligned
                                          and valid_vspace_objs
                                          and valid_arch_state"
                in hoare_strengthen_post[rotated], clarsimp)
@@ -1059,7 +1059,7 @@ lemma send_ipc_pas_refined:
          apply (simp add: hoare_if_r_and split del:if_split)
          apply (wp setup_caller_cap_pas_refined set_thread_state_pas_refined)+
        apply (simp split del:if_split)
-       apply (rule_tac Q="\<lambda>rv. pas_refined aag and pspace_aligned and valid_vspace_objs and
+       apply (rule_tac Q'="\<lambda>rv. pas_refined aag and pspace_aligned and valid_vspace_objs and
                                valid_arch_state and valid_mdb and
                                K (can_grant \<or> can_grant_reply
                                   \<longrightarrow> (reply_can_grant \<longrightarrow> is_subject aag x21) \<and>
@@ -1203,7 +1203,7 @@ lemma receive_ipc_base_pas_refined:
    apply (wp set_thread_state_pas_refined get_simple_ko_wp setup_caller_cap_pas_refined
           | wpc | simp add: thread_get_def do_nbrecv_failed_transfer_def split del: if_split)+
         apply (rename_tac list sss data)
-        apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and>
+        apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and>
                                   valid_arch_state s \<and> valid_mdb s \<and>
                                   (sender_can_grant data \<longrightarrow> is_subject aag (hd list)) \<and>
                                   (sender_can_grant_reply data \<longrightarrow>
@@ -1529,7 +1529,7 @@ lemma receive_ipc_base_integrity:
              sts_receive_Inactive_respects[where ep = epptr]
              as_user_integrity_autarch)
         apply (rename_tac list tcb data)
-        apply (rule_tac Q="\<lambda>rv s. integrity aag X st s
+        apply (rule_tac Q'="\<lambda>rv s. integrity aag X st s
                            \<and> valid_mdb s
                            \<and> is_subject aag receiver
                            \<and> (sender_can_call data \<longrightarrow> AllowGrant \<in> rights
@@ -2080,7 +2080,7 @@ valid_objs and valid_mdb and st_tcb_at can_receive_ipc receiver and
   apply (wpsimp wp: as_user_respects_in_ipc set_message_info_respects_in_ipc copy_mrs_pas_refined
                     copy_mrs_respects_in_ipc transfer_caps_respects_in_ipc get_mi_length
                     lookup_extra_caps_authorised lookup_extra_caps_length hoare_vcg_const_Ball_lift
-                    hoare_vcg_conj_lift_R hoare_vcg_const_imp_lift lec_valid_cap'
+                    hoare_vcg_conj_liftE_R hoare_vcg_const_imp_lift lec_valid_cap'
          | rule hoare_drop_imps)+
   apply (auto simp: null_def intro: st_tcb_at_tcb_at)
   done
@@ -2353,7 +2353,7 @@ lemma send_ipc_integrity_autarch:
    apply (rule hoare_pre)
     apply (wp setup_caller_cap_integrity_autarch set_thread_state_integrity_autarch thread_get_wp'
            | wpc)+
-          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s \<and> (can_grant \<longrightarrow> is_subject aag (hd list))"
+          apply (rule_tac Q'="\<lambda>rv s. integrity aag X st s \<and> (can_grant \<longrightarrow> is_subject aag (hd list))"
                        in hoare_strengthen_post[rotated])
           apply simp+
           apply (wp set_thread_state_integrity_autarch thread_get_wp'
@@ -2368,7 +2368,7 @@ lemma send_ipc_integrity_autarch:
   apply (rule hoare_pre)
    apply (wpc, wp)
    apply (rename_tac list s receiver queue)
-   apply (rule_tac Q="\<lambda>_ s'. integrity aag X st s \<and>
+   apply (rule_tac Q'="\<lambda>_ s'. integrity aag X st s \<and>
                              integrity_tcb_in_ipc aag X receiver epptr TRFinal s s'" in hoare_post_imp)
     apply (fastforce dest!: integrity_tcb_in_ipc_final elim!: integrity_trans)
    apply (wp setup_caller_cap_respects_in_ipc_reply
@@ -2437,11 +2437,11 @@ lemma handle_fault_pas_refined:
    handle_fault thread fault
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (wpsimp wp: set_thread_state_pas_refined simp: handle_fault_def handle_double_fault_def)
-    apply (rule hoare_vcg_E_elim)
+    apply (rule hoare_vcg_conj_elimE)
      apply (clarsimp simp: send_fault_ipc_def Let_def)
      apply wp
        apply wpsimp
-      apply (rule hoare_strengthen_postE[where E=E and F=E for E])
+      apply (rule hoare_strengthen_postE[where E'=E and F=E for E])
         apply (rule valid_validE)
         apply (wpsimp wp: send_fault_ipc_pas_refined)+
   apply fastforce
@@ -2478,7 +2478,7 @@ lemma send_fault_ipc_integrity_autarch:
          | wpc | simp add: is_obj_defs)+
   (* 14 subgoals *)
   apply (rename_tac word1 word2 set)
-  apply (rule_tac R="\<lambda>rv s. ep_at word1 s" in hoare_post_add)
+  apply (rule_tac Q'="\<lambda>rv s. ep_at word1 s" in hoare_post_add)
   apply (simp only: obj_at_conj_distrib[symmetric] flip: conj_assoc)
   apply (wp thread_set_obj_at_impossible thread_set_tcb_fault_set_invs
             get_cap_auth_wp[where aag=aag]
@@ -2812,7 +2812,7 @@ lemma do_reply_transfer_respects:
     \<comment> \<open>receiver is not a subject\<close>
     apply (rule use_spec') \<comment> \<open>Name initial state\<close>
     apply (simp add: spec_valid_def) \<comment> \<open>no imp rule?\<close>
-    apply (rule_tac Q="\<lambda>_ s'. integrity aag X st s \<and>
+    apply (rule_tac Q'="\<lambda>_ s'. integrity aag X st s \<and>
                               integrity_tcb_in_ipc aag X receiver _ TRFinal s s'" in hoare_post_imp)
      apply (fastforce dest!: integrity_tcb_in_ipc_final elim!: integrity_trans)
     apply ((wp possible_switch_to_respects_in_ipc_autarch
@@ -2835,7 +2835,7 @@ lemma do_reply_transfer_respects:
     apply (rule use_spec') \<comment> \<open>Name initial state\<close>
     apply (simp add: spec_valid_def) \<comment> \<open>no imp rule?\<close>
     apply wp
-          apply (rule_tac Q="\<lambda>_ s'. integrity aag X st s \<and>
+          apply (rule_tac Q'="\<lambda>_ s'. integrity aag X st s \<and>
                                       integrity_tcb_in_fault_reply aag X receiver TRFFinal s s'"
                        in hoare_post_imp)
            apply (fastforce dest!: integrity_tcb_in_fault_reply_final elim!: integrity_trans)

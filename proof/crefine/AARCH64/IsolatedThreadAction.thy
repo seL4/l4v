@@ -602,7 +602,7 @@ lemma select_f_isolatable:
 lemma doMachineOp_isolatable:
   "thread_actions_isolatable idx (doMachineOp m)"
   apply (simp add: doMachineOp_def split_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                gets_isolatable thread_actions_isolatable_returns
                modify_isolatable select_f_isolatable)
   apply (simp | wp)+
@@ -622,8 +622,8 @@ lemma getASIDPoolEntry_isolatable:
                    case_option_If2 assertE_def liftE_def checkPTAt_def
                    stateAssert_def2 assert_def liftM_def
              cong: if_cong)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_bindE[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable getObject_isolatable)
@@ -638,8 +638,8 @@ lemma findVSpaceForASID_isolatable:
                    case_option_If2 assertE_def liftE_def checkPTAt_def
                    stateAssert_def2
              cong: if_cong)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_bindE[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable getObject_isolatable getASIDPoolEntry_isolatable
@@ -738,7 +738,7 @@ lemma setASIDPool_isolatable:
 lemma vcpuUpdate_isolatable:
   "thread_actions_isolatable idx (vcpuUpdate p f)"
   apply (clarsimp simp: vcpuUpdate_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                getVCPU_isolatable setVCPU_isolatable
          |wp|assumption|clarsimp)+
   done
@@ -754,7 +754,7 @@ lemma vgicUpdateLR_isolatable:
 lemma vcpuWriteReg_isolatable:
   "thread_actions_isolatable idx (vcpuWriteReg v p val)"
   apply (clarsimp simp: vcpuWriteReg_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                vcpuUpdate_isolatable doMachineOp_isolatable
          | wpsimp)+
   done
@@ -762,7 +762,7 @@ lemma vcpuWriteReg_isolatable:
 lemma vcpuReadReg_isolatable:
   "thread_actions_isolatable idx (vcpuReadReg v p)"
   apply (clarsimp simp: vcpuReadReg_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                vcpuUpdate_isolatable getVCPU_isolatable thread_actions_isolatable_return
          | wpsimp)+
   done
@@ -770,7 +770,7 @@ lemma vcpuReadReg_isolatable:
 lemma vcpuSaveReg_isolatable:
   "thread_actions_isolatable idx (vcpuSaveReg p v)"
   apply (clarsimp simp: vcpuSaveReg_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                vcpuUpdate_isolatable doMachineOp_isolatable
          | wpsimp)+
   done
@@ -778,7 +778,7 @@ lemma vcpuSaveReg_isolatable:
 lemma vcpuRestoreReg_isolatable:
   "thread_actions_isolatable idx (vcpuRestoreReg p v)"
   apply (clarsimp simp: vcpuRestoreReg_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                vcpuUpdate_isolatable doMachineOp_isolatable getVCPU_isolatable
          | wpsimp)+
   done
@@ -787,14 +787,14 @@ lemma thread_actions_isolatable_mapM_x:
   "\<lbrakk> \<And>x. thread_actions_isolatable idx (f x);
      \<And>x t. f x \<lbrace>tcb_at' t\<rbrace> \<rbrakk> \<Longrightarrow> thread_actions_isolatable idx (mapM_x f xs)"
   apply (induct xs; clarsimp simp: mapM_x_Nil mapM_x_Cons thread_actions_isolatable_returns)
-  apply (rule thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]; clarsimp?)
+  apply (rule thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]; clarsimp?)
    apply assumption+
   done
 
 lemma vcpuSaveRegRange_isolatable:
   "thread_actions_isolatable idx (vcpuSaveRegRange p r rt)"
   apply (clarsimp simp: vcpuSaveRegRange_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                vcpuSaveReg_isolatable thread_actions_isolatable_mapM_x
          | wpsimp)+
   done
@@ -802,7 +802,7 @@ lemma vcpuSaveRegRange_isolatable:
 lemma vcpuRestoreRegRange_isolatable:
   "thread_actions_isolatable idx (vcpuRestoreRegRange p r rt)"
   apply (clarsimp simp: vcpuRestoreRegRange_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                vcpuRestoreReg_isolatable thread_actions_isolatable_mapM_x
          | wpsimp)+
   done
@@ -810,7 +810,7 @@ lemma vcpuRestoreRegRange_isolatable:
 lemma saveVirtTimer_isolatable:
   "thread_actions_isolatable idx (saveVirtTimer v)"
   apply (clarsimp simp: saveVirtTimer_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
@@ -821,7 +821,7 @@ lemma saveVirtTimer_isolatable:
 lemma getIRQState_isolatable:
   "thread_actions_isolatable idx (getIRQState irq)"
   apply (clarsimp simp: getIRQState_def liftM_def getInterruptState_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                 thread_actions_isolatable_returns gets_isolatable
          | wpsimp | fastforce)+
   done
@@ -829,7 +829,7 @@ lemma getIRQState_isolatable:
 lemma restoreVirtTimer_isolatable:
   "thread_actions_isolatable idx (restoreVirtTimer v)"
   apply (clarsimp simp: restoreVirtTimer_def when_def isIRQActive_def liftM_bind)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
@@ -843,7 +843,7 @@ lemma vcpuSave_isolatable:
   supply if_split[split del]
   apply (clarsimp simp: vcpuSave_def armvVCPUSave_def thread_actions_isolatable_fail when_def
                   split: option.splits)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
@@ -856,7 +856,7 @@ lemma vcpuSave_isolatable:
 lemma vcpuEnable_isolatable:
   "thread_actions_isolatable idx (vcpuEnable v)"
   apply (clarsimp simp: vcpuEnable_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                vcpuRestoreReg_isolatable doMachineOp_isolatable getVCPU_isolatable
                restoreVirtTimer_isolatable
          | wpsimp)+
@@ -865,7 +865,7 @@ lemma vcpuEnable_isolatable:
 lemma vcpuRestore_isolatable:
   "thread_actions_isolatable idx (vcpuRestore v)"
   apply (clarsimp simp: vcpuRestore_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                getVCPU_isolatable gets_isolatable doMachineOp_isolatable vcpuEnable_isolatable
                vcpuRestoreRegRange_isolatable
          | wpsimp)+
@@ -874,7 +874,7 @@ lemma vcpuRestore_isolatable:
 lemma vcpuDisable_isolatable:
   "thread_actions_isolatable idx (vcpuDisable v)"
   apply (clarsimp simp: vcpuDisable_def split: option.splits, intro conjI)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                doMachineOp_isolatable vcpuEnable_isolatable
                vgicUpdate_isolatable vcpuSaveReg_isolatable saveVirtTimer_isolatable
          | wpsimp)+
@@ -885,16 +885,16 @@ lemma vcpuSwitch_isolatable:
   supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp: vcpuSwitch_def when_def split: option.splits)
   apply (safe intro!:
-               thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_catch[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_bindE[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_catch[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable)
    apply (clarsimp simp: thread_actions_isolatable_returns
                   split: option.splits
          |intro thread_actions_isolatable_if thread_actions_isolatable_returns
-                thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+                thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                 vcpuSave_isolatable vcpuRestore_isolatable
                 vcpuDisable_isolatable vcpuEnable_isolatable
                 modifyArchState_isolatable conjI doMachineOp_isolatable
@@ -965,9 +965,9 @@ lemma armContextSwitch_isolatable:
   "thread_actions_isolatable idx (armContextSwitch p asid)"
   supply if_split[split del]
   apply (simp add: armContextSwitch_def getVMID_def loadVMID_def getASIDPoolEntry_def getPoolPtr_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_catch[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_bindE[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_catch[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail gets_isolatable getASIDPool_isolatable
                setASIDPool_isolatable doMachineOp_isolatable
@@ -988,9 +988,9 @@ lemma setVMRoot_isolatable:
                    whenE_def liftE_def
                    stateAssert_def2
              cong: if_cong)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_catch[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_bindE[OF _ _ hoare_weaken_pre]
+               thread_actions_isolatable_catch[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable getCTE_isolatable
@@ -1325,7 +1325,7 @@ lemma setThreadState_no_sch_change:
   (is "Nondet_VCG.valid ?P ?f ?Q")
   apply (simp add: setThreadState_def setSchedulerAction_def)
   apply (wp hoare_pre_cont[where f=rescheduleRequired])
-  apply (rule_tac Q="\<lambda>_. ?P and st_tcb_at' ((=) st) t" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>_. ?P and st_tcb_at' ((=) st) t" in hoare_post_imp)
    apply (clarsimp split: if_split)
    apply (clarsimp simp: obj_at'_def st_tcb_at'_def projectKOs)
   apply (wp threadSet_pred_tcb_at_state)
@@ -1387,7 +1387,7 @@ lemma setEndpoint_isolatable:
    apply (simp add: obj_at_partial_overwrite_id2)
    apply (drule_tac x=x in spec)
    apply (clarsimp simp: obj_at'_def projectKOs select_f_asserts)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if
                thread_actions_isolatable_return
                thread_actions_isolatable_fail)
@@ -1533,7 +1533,7 @@ lemma cteInsert_isolatable:
   supply if_split[split del] if_cong[cong]
   apply (simp add: cteInsert_def updateCap_def updateMDB_def
                    Let_def setUntypedCapAsFull_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if
                thread_actions_isolatable_returns
                getCTE_isolatable setCTE_isolatable)
@@ -1619,7 +1619,7 @@ lemma switchToThread_isolatable:
   "thread_actions_isolatable idx (Arch.switchToThread t)"
   apply (simp add: switchToThread_def getTCB_threadGet
                    storeWordUser_def stateAssert_def2)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                gets_isolatable setVMRoot_isolatable
                thread_actions_isolatable_if
                doMachineOp_isolatable
@@ -1640,7 +1640,7 @@ lemma tcbQueued_put_tcb_state_regs_tcb:
 lemma idleThreadNotQueued_isolatable:
   "thread_actions_isolatable idx (stateAssert idleThreadNotQueued [])"
   apply (simp add: stateAssert_def2 stateAssert_def)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                gets_isolatable
                thread_actions_isolatable_if
                thread_actions_isolatable_returns
@@ -1858,7 +1858,7 @@ lemma updateMDB_isolatable:
   "thread_actions_isolatable idx (updateMDB slot f)"
   apply (simp add: updateMDB_def thread_actions_isolatable_return
             split: if_split)
-  apply (intro impI thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro impI thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                getCTE_isolatable setCTE_isolatable,
            (wp | simp)+)
   done
@@ -1880,7 +1880,7 @@ lemma emptySlot_isolatable:
   "thread_actions_isolatable idx (emptySlot slot NullCap)"
   apply (simp add: emptySlot_def updateCap_def case_Null_If Retype_H.postCapDeletion_def
              cong: if_cong)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                clearUntypedFreeIndex_isolatable
                thread_actions_isolatable_if
                getCTE_isolatable setCTE_isolatable

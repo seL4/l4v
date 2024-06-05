@@ -147,7 +147,7 @@ lemma delete_asid_pool_unmapped[wp]:
    \<lbrace>\<lambda>rv s. \<not> ([VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> poolptr) s\<rbrace>"
   apply (simp add: delete_asid_pool_def)
   apply wp
-    apply (rule hoare_strengthen_post [where Q="\<lambda>_. \<top>"])
+    apply (rule hoare_strengthen_post[where Q'="\<lambda>_. \<top>"])
      apply wp+
     defer
     apply wp+
@@ -423,7 +423,7 @@ lemma arch_finalise_cap_replaceable[wp]:
                 vs_lookup_pages_eq_ap[THEN fun_cong, symmetric]
                 is_cap_simps vs_cap_ref_def
                 no_cap_to_obj_with_diff_ref_Null o_def
-  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
+  notes wps = hoare_drop_imp[where Q'="%_. is_final_cap' cap" for cap]
               unmap_page_table_unmapped3 valid_cap_typ
   shows
     "\<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
@@ -519,7 +519,7 @@ lemma suspend_unlive':
   supply hoare_vcg_if_split[wp_split del] if_split[split del]
   apply (wp | simp only: obj_at_exst_update)+
      apply (simp add: obj_at_def live_def hyp_live_def)
-     apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
       supply hoare_vcg_if_split[wp_split]
       apply wp
      apply (auto simp: pred_tcb_def2)[1]
@@ -1601,7 +1601,7 @@ lemma delete_asid_pool_unmapped2:
    apply (wp delete_asid_pool_unmapped)
   apply (simp add: delete_asid_pool_def)
   apply wp
-      apply (rule_tac Q="\<lambda>rv s. ?Q s \<and> asid_table = arm_asid_table (arch_state s)"
+      apply (rule_tac Q'="\<lambda>rv s. ?Q s \<and> asid_table = arm_asid_table (arch_state s)"
                  in hoare_post_imp)
        apply (clarsimp simp: fun_upd_def[symmetric])
        apply (drule vs_lookup_clear_asid_table[rule_format])

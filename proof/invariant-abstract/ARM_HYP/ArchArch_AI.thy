@@ -911,7 +911,7 @@ lemma associate_vcpu_tcb_sym_refs_hyp[wp]:
                              obj_at (\<lambda>ko. hyp_refs_of ko = {} ) t s  \<and>
                              sym_refs (state_hyp_refs_of s)"
                           in hoare_triv)
-      apply (rule_tac Q="\<lambda>rv s. obj_at (\<lambda>ko. hyp_refs_of ko = {} ) vr s \<and>
+      apply (rule_tac Q'="\<lambda>rv s. obj_at (\<lambda>ko. hyp_refs_of ko = {} ) vr s \<and>
                                 obj_at (\<lambda>ko. hyp_refs_of ko = {} ) t s  \<and>
                                 sym_refs (state_hyp_refs_of s)"
                              in hoare_post_imp)
@@ -924,7 +924,7 @@ lemma associate_vcpu_tcb_sym_refs_hyp[wp]:
        apply (wp | wpc | clarsimp)+
       apply (simp add: obj_at_def)
      apply (wp  get_vcpu_ko | wpc | clarsimp)+
-   apply (rule_tac Q="\<lambda>rv s. (\<exists>t'. obj_at (\<lambda>tcb. tcb = TCB t' \<and> rv = tcb_vcpu (tcb_arch t')) t s) \<and>
+   apply (rule_tac Q'="\<lambda>rv s. (\<exists>t'. obj_at (\<lambda>tcb. tcb = TCB t' \<and> rv = tcb_vcpu (tcb_arch t')) t s) \<and>
                              sym_refs (state_hyp_refs_of s)"
                           in hoare_post_imp)
     apply (clarsimp simp: obj_at_def)
@@ -1109,7 +1109,7 @@ lemma associate_vcpu_tcb_valid_arch_state[wp]:
   "associate_vcpu_tcb vcpu tcb \<lbrace>valid_arch_state\<rbrace>"
   apply (clarsimp simp: associate_vcpu_tcb_def)
   apply (wpsimp wp: vcpu_switch_valid_arch)
-        apply (rule_tac Q="\<lambda>_. valid_arch_state and obj_at hyp_live vcpu" in hoare_post_imp)
+        apply (rule_tac Q'="\<lambda>_. valid_arch_state and obj_at hyp_live vcpu" in hoare_post_imp)
          apply fastforce
         apply wpsimp
        apply (wpsimp wp: arch_thread_set.valid_arch_state)
@@ -1561,9 +1561,9 @@ lemma find_pd_for_asid_lookup_pd_wp:
   "\<lbrace> \<lambda>s. valid_vspace_objs s \<and> (\<forall>pd. vspace_at_asid asid pd s \<and> page_directory_at pd s
     \<and> (\<exists>\<rhd> pd) s \<longrightarrow> Q pd s) \<rbrace> find_pd_for_asid asid \<lbrace> Q \<rbrace>, -"
   apply (rule hoare_strengthen_postE_R)
-   apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_page_directory])
-   apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_lookup, simplified])
-   apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_pd_at_asid, simplified])
+   apply (rule hoare_vcg_conj_liftE_R[OF find_pd_for_asid_page_directory])
+   apply (rule hoare_vcg_conj_liftE_R[OF find_pd_for_asid_lookup, simplified])
+   apply (rule hoare_vcg_conj_liftE_R[OF find_pd_for_asid_pd_at_asid, simplified])
    apply (wp (once) find_pd_for_asid_inv)
   apply auto
   done
@@ -1688,7 +1688,7 @@ lemma arch_decode_inv_wf[wp]:
       apply (wpsimp wp: whenE_throwError_wp check_vp_wpR create_mapping_entries_parent_for_refs
                         find_pd_for_asid_pd_at_asid create_mapping_entries_valid_slots
                         create_mapping_entries_same_refs_ex hoare_vcg_ex_lift_R hoare_vcg_disj_lift_R
-                        hoare_vcg_const_imp_lift_R find_pd_for_asid_lookup_pd_wp
+                        hoare_vcg_const_imp_liftE_R find_pd_for_asid_lookup_pd_wp
                   simp: valid_arch_inv_def valid_page_inv_def is_pg_cap_def
                         cte_wp_at_caps_of_state[where P="\<lambda>c. same_refs rv c s" for rv s])
       apply (clarsimp simp: neq_Nil_conv)

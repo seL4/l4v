@@ -569,7 +569,7 @@ lemma call_kernel_with_intent_no_fault_helper:
   apply wp
         apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
         apply (simp add:call_kernel_loop_def)
-        apply (rule_tac Q = "\<lambda>r s. cdl_current_thread s = Some root_tcb_id
+        apply (rule_tac Q'="\<lambda>r s. cdl_current_thread s = Some root_tcb_id
                                \<and> cdl_current_domain s = minBound \<longrightarrow> Q s
                " in hoare_strengthen_post[rotated])
          apply fastforce
@@ -580,7 +580,7 @@ lemma call_kernel_with_intent_no_fault_helper:
             apply (rule hoare_pre_cont)
            apply (wp has_restart_cap_sep_wp[where cap = RunningCap])[1]
           apply wp
-         apply (rule_tac Q = "\<lambda>r s. cdl_current_thread s = Some root_tcb_id
+         apply (rule_tac Q'="\<lambda>r s. cdl_current_thread s = Some root_tcb_id
                               \<and> cdl_current_domain s = minBound \<longrightarrow> (Q s
                               \<and>  <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> s)"
                 in hoare_strengthen_post)
@@ -1049,7 +1049,7 @@ lemma call_kernel_with_intent_allow_error_helper:
   apply (wp thread_has_error_wp)
         apply (simp add:call_kernel_loop_def)
         apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
-        apply (rule_tac Q = "\<lambda>r s. (cdl_current_thread s = Some root_tcb_id
+        apply (rule_tac Q'="\<lambda>r s. (cdl_current_thread s = Some root_tcb_id
                                     \<and> cdl_current_domain s = minBound) \<longrightarrow>
                                        (\<not>tcb_has_error (the (cdl_current_thread s)) s \<longrightarrow> Q s) \<and>
                                        (tcb_has_error (the (cdl_current_thread s)) s \<longrightarrow> Perror s)"

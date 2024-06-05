@@ -534,7 +534,7 @@ lemma init_arch_objects_valid_vspace:
   apply (simp add: init_arch_objects_def)
   apply (rule hoare_pre)
    apply (wp | wpc)+
-     apply (rule_tac Q="\<lambda>rv. valid_vspace_objs' and pspace_aligned and valid_arch_state"
+     apply (rule_tac Q'="\<lambda>rv. valid_vspace_objs' and pspace_aligned and valid_arch_state"
                   in hoare_post_imp, simp)
      apply (rule mapM_x_wp')
      apply (rule hoare_pre, wp copy_global_mappings_valid_vspace_objs')

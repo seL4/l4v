@@ -1301,7 +1301,7 @@ lemma hoare_gen_asm2:
 lemma hoare_vcg_all_liftE:
   "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>, \<lbrace>Q' x\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>, \<lbrace>\<lambda>rv s. \<forall>x. Q' x rv s\<rbrace>"
   unfolding validE_def
-  apply (rule hoare_post_imp [where Q = "\<lambda>v s. \<forall>x. case v of Inl e \<Rightarrow> Q' x e s | Inr r \<Rightarrow> Q x r s"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>v s. \<forall>x. case v of Inl e \<Rightarrow> Q' x e s | Inr r \<Rightarrow> Q x r s"])
    apply (clarsimp split: sum.splits)
   apply (erule hoare_vcg_all_lift)
   done

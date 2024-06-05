@@ -106,7 +106,7 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (cases ivk)
   apply (wpsimp wp: cap_insert_domain_sep_inv' simp: set_irq_state_def)
-   apply (rule_tac Q="\<lambda>_. domain_sep_inv irqs st and arch_irq_control_inv_valid ivk"
+   apply (rule_tac Q'="\<lambda>_. domain_sep_inv irqs st and arch_irq_control_inv_valid ivk"
                 in hoare_strengthen_post[rotated])
     apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def arch_irq_control_inv_valid_def)
    apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)+

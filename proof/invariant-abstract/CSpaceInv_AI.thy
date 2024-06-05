@@ -1477,7 +1477,7 @@ lemma set_cap_caps_of_state2:
   "\<lbrace>\<lambda>s. P ((caps_of_state s)(p \<mapsto> cap)) (cdt s) (is_original_cap s)\<rbrace>
   set_cap cap p
   \<lbrace>\<lambda>rv s. P (caps_of_state s) (cdt s) (is_original_cap s)\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. \<exists>m mr. P (caps_of_state s) m mr
+  apply (rule_tac Q'="\<lambda>rv s. \<exists>m mr. P (caps_of_state s) m mr
                                   \<and> (cdt s = m) \<and> (is_original_cap s = mr)"
            in hoare_post_imp)
    apply simp

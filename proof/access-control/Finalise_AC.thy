@@ -283,7 +283,7 @@ lemma cancel_all_ipc_pas_refined[wp]:
    cancel_all_ipc epptr
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: cancel_all_ipc_def get_ep_queue_def cong: endpoint.case_cong)
-  apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned
+  apply (rule_tac Q'="\<lambda>_. pas_refined aag and pspace_aligned
                                          and valid_vspace_objs
                                          and valid_arch_state"
                in hoare_strengthen_post)
@@ -296,7 +296,7 @@ lemma cancel_all_signals_pas_refined[wp]:
    cancel_all_signals ntfnptr
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: cancel_all_signals_def cong: ntfn.case_cong)
-  apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned
+  apply (rule_tac Q'="\<lambda>_. pas_refined aag and pspace_aligned
                                          and valid_vspace_objs
                                          and valid_arch_state"
                in hoare_strengthen_post)
@@ -352,7 +352,7 @@ lemma reply_cancel_ipc_pas_refined[wp]:
   apply (rule hoare_gen_asm)
   apply (simp add: reply_cancel_ipc_def)
   apply (wp add: wp_transferable del: wp_not_transferable)
-   apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs and tcb_at t and pas_refined aag"])
+   apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs and tcb_at t and pas_refined aag"])
     apply (wpsimp wp: hoare_wp_combs thread_set_tcb_fault_reset_invs thread_set_pas_refined)+
    apply (frule(1) reply_cap_descends_from_master0)
    apply (fastforce simp: cte_wp_at_caps_of_state intro:it_Reply)
@@ -1167,7 +1167,7 @@ next
                                         simp_thms disj_not1], simp_all)[1]
        apply (simp add: cte_wp_at_caps_of_state)
        apply wp+
-      apply (rule_tac Q = "\<lambda>rv' s. (slot \<noteq> p \<or> exposed \<longrightarrow> cte_wp_at P p s) \<and> P (fst rv')
+      apply (rule_tac Q'="\<lambda>rv' s. (slot \<noteq> p \<or> exposed \<longrightarrow> cte_wp_at P p s) \<and> P (fst rv')
                              \<and> cte_at slot s" in hoare_post_imp)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (wp hoare_weak_lift_imp set_cap_cte_wp_at' finalise_cap_cte_wp_at_nullinv

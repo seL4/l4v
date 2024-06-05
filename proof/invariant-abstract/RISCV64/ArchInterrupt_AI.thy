@@ -149,7 +149,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
     apply (wp valid_cap_typ [OF cap_delete_one_typ_at])
      apply (strengthen real_cte_tcb_valid)
      apply (wp real_cte_at_typ_valid [OF cap_delete_one_typ_at])
-     apply (rule_tac Q="\<lambda>rv s. is_ntfn_cap cap \<and> invs s
+     apply (rule_tac Q'="\<lambda>rv s. is_ntfn_cap cap \<and> invs s
                               \<and> cte_wp_at (is_derived (cdt s) prod cap) prod s"
                 in hoare_post_imp)
       apply (clarsimp simp: is_cap_simps is_derived_def cte_wp_at_caps_of_state)
@@ -244,7 +244,7 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
      apply (wpsimp wp: dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt
                       send_signal_interrupt_states simp: arch_mask_irq_signal_def)+
      apply (wp get_cap_wp send_signal_interrupt_states )
-    apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
      apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
      apply (intro allI exI, erule cte_wp_at_weakenE)
      apply (clarsimp simp: is_cap_simps)

@@ -1124,7 +1124,7 @@ lemma handle_preemption_if_irq_masks:
    handle_preemption_if tc
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply (simp add: handle_preemption_if_def | wp handle_interrupt_irq_masks[where st=st])+
-   apply (rule_tac Q="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
+   apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
                              (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
   by (wp | simp)+
 
@@ -1607,7 +1607,7 @@ lemma kernel_entry_if_domain_time_sched_action:
   apply (case_tac "e = Interrupt")
    apply (simp add: kernel_entry_if_def)
    apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
-      apply (rule_tac Q="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
+      apply (rule_tac Q'="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
        apply (wp | simp)+
       apply (wp hoare_false_imp kernel_entry_if_domain_fields | fastforce)+
   done
@@ -1623,7 +1623,7 @@ lemma handle_preemption_if_domain_time_sched_action:
    \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   apply (simp add: handle_preemption_if_def)
   apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
-   apply (rule_tac Q="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
     apply wpsimp+
   done
 
@@ -1945,7 +1945,7 @@ lemma handle_preemption_if_valid_sched[wp]:
    handle_preemption_if irq
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (wpsimp simp: handle_preemption_if_def cong: if_cong)
-   apply (rule_tac Q="\<lambda>rv. valid_sched and invs and K (rv \<notin> Some ` non_kernel_IRQs)"
+   apply (rule_tac Q'="\<lambda>rv. valid_sched and invs and K (rv \<notin> Some ` non_kernel_IRQs)"
                 in hoare_strengthen_post[rotated])
     apply clarsimp
    apply (wpsimp wp: getActiveIRQ_neq_non_kernel)+
@@ -2049,7 +2049,7 @@ lemma invs_if_Step_ADT_A_if:
        apply simp
       apply simp
       apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
-       apply (rule_tac Q="\<lambda>a. (invs and ct_running) and
+       apply (rule_tac Q'="\<lambda>a. (invs and ct_running) and
                               (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
                                    only_timer_irq_inv timer_irq s0_internal b \<and>
                                    silc_inv initial_aag s0_internal b \<and>
@@ -2071,7 +2071,7 @@ lemma invs_if_Step_ADT_A_if:
       apply simp
      apply simp
      apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
-      apply (rule_tac Q="\<lambda>a. (invs and ct_running) and
+      apply (rule_tac Q'="\<lambda>a. (invs and ct_running) and
                              (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
                                   only_timer_irq_inv timer_irq s0_internal b \<and>
                                   silc_inv initial_aag s0_internal b \<and>
@@ -2822,7 +2822,7 @@ lemma schedule_if_irq_measure_if:
 lemma schedule_if_next_irq_state_of_state:
   "(r, b) \<in> fst (schedule_if uc i_s) \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
   apply (erule use_valid)
-   apply (rule_tac Q="\<lambda>_. irq_state_inv i_s" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>_. irq_state_inv i_s" in hoare_strengthen_post)
     apply (wp schedule_if_irq_state_inv)
    apply (auto simp: irq_state_inv_def)
   done

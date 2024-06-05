@@ -76,7 +76,7 @@ lemma (in Tcb_AI_1) activate_invs:
     apply wp
     apply (clarsimp elim!: pred_tcb_weakenE
                      simp: ct_in_state_def)
-   apply (rule_tac Q="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
+   apply (rule_tac Q'="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
    apply (rule hoare_pre)
     apply (wp sts_invs_minor ct_in_state_set)
       apply simp
@@ -88,7 +88,7 @@ lemma (in Tcb_AI_1) activate_invs:
                          valid_idle_def valid_pspace_def
                elim: st_tcb_ex_cap pred_tcb_weakenE,
           auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
-  apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
+  apply (rule_tac Q'="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
   apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
   apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
   done

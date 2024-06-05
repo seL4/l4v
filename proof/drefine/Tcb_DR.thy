@@ -568,9 +568,9 @@ lemma restart_corres:
             apply wp
            apply (simp add:not_idle_thread_def)
            apply ((wp|wps)+)[2]
-         apply (rule_tac Q="(=) s' and invs" in  hoare_weaken_pre)
+         apply (rule_tac P'="(=) s' and invs" in hoare_weaken_pre)
           apply (rule hoare_strengthen_post
-             [where Q="\<lambda>r. invs and tcb_at obj_id and not_idle_thread obj_id and valid_etcbs"])
+             [where Q'="\<lambda>r. invs and tcb_at obj_id and not_idle_thread obj_id and valid_etcbs"])
            apply (simp add:not_idle_thread_def)
            apply (wp)
              apply (clarsimp simp:invs_def valid_state_def valid_pspace_def
@@ -701,7 +701,7 @@ lemma not_idle_after_restart [wp]:
    apply (simp add:cancel_ipc_def)
    apply (wp not_idle_after_blocked_cancel_ipc not_idle_after_reply_cancel_ipc
              not_idle_thread_cancel_signal | wpc)+
-   apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at ((=) r) obj_id'
+   apply (rule hoare_strengthen_post[where Q'="\<lambda>r. st_tcb_at ((=) r) obj_id'
                                                   and not_idle_thread obj_id' and invs"])
     apply (wp gts_sp)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def not_idle_thread_def | rule conjI)+
@@ -788,7 +788,7 @@ lemma cnode_cap_unique_bits:
     CSpaceAcc_A.get_cap (ba, c)
   \<lbrace>\<lambda>rv s. (Structures_A.is_cnode_cap rv \<and> obj_refs rv = obj_refs cap) \<longrightarrow> (bits_of rv = bits_of cap)\<rbrace>"
   apply (rule hoare_pre)
-   apply (rule_tac Q="\<lambda>r s. (\<forall>a b. \<not> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap \<and>
+   apply (rule_tac Q'="\<lambda>r s. (\<forall>a b. \<not> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap \<and>
                                                     table_cap_ref c \<noteq> table_cap_ref cap) (a, b) s)
                             \<and> valid_cap cap s \<and> valid_objs s
                             \<and> valid_objs s \<and> cte_wp_at (\<lambda>x. x = r) (ba,c) s"
@@ -1057,8 +1057,8 @@ lemma dcorres_tcb_update_ipc_buffer:
                apply simp
               apply wpsimp+
      apply (rule validE_validE_R)
-     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread obj_id' s  \<and> tcb_at obj_id' s"
-        in hoare_strengthen_postE[where E="\<lambda>x. \<top>"])
+     apply (rule_tac Q'="\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread obj_id' s  \<and> tcb_at obj_id' s"
+        in hoare_strengthen_postE[where E'="\<lambda>x. \<top>"])
        apply (simp add:not_idle_thread_def)
        apply (wp cap_delete_cte_at cap_delete_deletes)
       apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
@@ -1100,7 +1100,7 @@ lemma dcorres_tcb_update_ipc_buffer:
                apply (rule dcorres_insert_cap_combine)
                apply clarsimp
               apply wp
-             apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 4) s
+             apply (rule_tac Q'="\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 4) s
                                         \<and> cte_wp_at (\<lambda>_. True) (ab, ba) s
                                         \<and> valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s
                                         \<and> valid_mdb s \<and> valid_objs s\<and> not_idle_thread ab s \<and> valid_etcbs s
@@ -1139,10 +1139,10 @@ lemma dcorres_tcb_update_ipc_buffer:
      apply (simp add: transform_tcb_slot_4)
      apply (rule hoare_strengthen_postE[OF validE_R_validE[OF hoareE_R_TrueI]])
       apply simp+
-    apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread (fst a') s \<and> tcb_at obj_id' s
+    apply (rule_tac Q'="\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread (fst a') s \<and> tcb_at obj_id' s
       \<and> not_idle_thread obj_id' s \<and> not_idle_thread ab s \<and> cte_wp_at (\<lambda>a. True) (ab,ba) s
       \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) (obj_id', tcb_cnode_index 4) s \<and> is_aligned a msg_align_bits"
-      in hoare_strengthen_postE[where E="\<lambda>x. \<top>"])
+      in hoare_strengthen_postE[where E'="\<lambda>x. \<top>"])
       apply (simp add:not_idle_thread_def)
       apply (wp cap_delete_cte_at cap_delete_deletes cap_delete_valid_cap)
      apply (clarsimp simp:invs_valid_objs invs_mdb invs_valid_idle)
@@ -1207,7 +1207,7 @@ lemma dcorres_tcb_update_vspace_root:
              apply (simp add: transform_cap_def)
             apply wp
            apply (simp add: same_object_as_def)
-           apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+           apply (rule_tac Q'="\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
              \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
              \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
              in hoare_strengthen_post)
@@ -1224,10 +1224,10 @@ lemma dcorres_tcb_update_vspace_root:
       apply (rule hoare_drop_imp)
       apply (wp | simp)+
     apply (rule validE_validE_R)
-    apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and>
+    apply (rule_tac Q'="\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and>
                  not_idle_thread (fst a') s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s \<and>
                  cte_wp_at (\<lambda>c. c = cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s"
-          in hoare_strengthen_postE[where E="\<lambda>x. \<top>"])
+          in hoare_strengthen_postE[where E'="\<lambda>x. \<top>"])
       apply (simp add: not_idle_thread_def)
       apply (wp cap_delete_cte_at cap_delete_deletes)
      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
@@ -1293,7 +1293,7 @@ lemma dcorres_tcb_update_cspace_root:
              apply (rule dcorres_insert_cap_combine[folded alternative_com])
              apply (clarsimp simp:is_cap_simps)
             apply wp
-           apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+           apply (rule_tac Q'="\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
              \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
              \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index 0) s)"
              in hoare_strengthen_post)
@@ -1316,11 +1316,11 @@ lemma dcorres_tcb_update_cspace_root:
      apply clarsimp
      apply wp
     apply (clarsimp simp:conj_comms)
-    apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and> valid_cap aaa s \<and>
+    apply (rule_tac Q'="\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and> valid_cap aaa s \<and>
                  not_idle_thread (fst a') s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s \<and>
                  cte_wp_at (\<lambda>c. c = cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and>
                  no_cap_to_obj_dr_emp aaa s"
-            in hoare_strengthen_postE[where E = "\<lambda>r. \<top>"])
+            in hoare_strengthen_postE[where E'="\<lambda>r. \<top>"])
       apply (simp add:not_idle_thread_def)
       apply (wp cap_delete_cte_at cap_delete_deletes cap_delete_valid_cap)
      apply (simp add:invs_valid_objs)
@@ -1623,7 +1623,7 @@ lemma dcorres_thread_control:
                   | intro conjI allI impI
                   | clarsimp split: option.split)+
      apply (wp case_option_wpE)+
-    apply (rule_tac Q="\<lambda>_. ?P" in hoare_strengthen_post[rotated])
+    apply (rule_tac Q'="\<lambda>_. ?P" in hoare_strengthen_post[rotated])
      apply (clarsimp simp: is_valid_vtable_root_def is_cnode_or_valid_arch_def
                            is_arch_cap_def not_idle_thread_def emptyable_def
                     split: option.splits)

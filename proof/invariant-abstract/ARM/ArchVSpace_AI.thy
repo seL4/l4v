@@ -354,7 +354,7 @@ lemma load_hw_asid_invs[wp]: "\<lbrace>invs\<rbrace> load_hw_asid asid \<lbrace>
 lemma invalidate_tlb_by_asid_invs[wp]:
   "\<lbrace>invs\<rbrace> invalidate_tlb_by_asid asid \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (clarsimp simp: invalidate_tlb_by_asid_def | wp | wpc)+
-  apply (rule_tac Q="K invs" in hoare_post_imp)
+  apply (rule_tac Q'="K invs" in hoare_post_imp)
   apply (clarsimp|wp load_hw_asid_invs)+
   done
 
@@ -414,14 +414,14 @@ lemma invalidate_asid_entry_arch_state [wp]:
 lemma flush_space_asid_map[wp]:
   "\<lbrace>valid_asid_map\<rbrace> flush_space space \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
   apply (simp add: flush_space_def)
-  apply (wp load_hw_asid_wp | wpc | simp | rule_tac Q="\<lambda>_. valid_asid_map" in hoare_strengthen_post)+
+  apply (wp load_hw_asid_wp | wpc | simp | rule_tac Q'="\<lambda>_. valid_asid_map" in hoare_strengthen_post)+
   done
 
 
 lemma flush_space_arch_objs[wp]:
   "\<lbrace>valid_vspace_objs\<rbrace> flush_space space \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   apply (simp add: flush_space_def)
-  apply (wp load_hw_asid_wp | wpc | simp | rule_tac Q="\<lambda>_. valid_vspace_objs" in hoare_strengthen_post)+
+  apply (wp load_hw_asid_wp | wpc | simp | rule_tac Q'="\<lambda>_. valid_vspace_objs" in hoare_strengthen_post)+
   done
 
 
@@ -490,7 +490,7 @@ crunch invalidate_asid_entry
 lemma flush_space_pd_at_asid [wp]:
   "\<lbrace>vspace_at_asid a pd\<rbrace> flush_space asid \<lbrace>\<lambda>_. vspace_at_asid a pd\<rbrace>"
   apply (simp add: flush_space_def)
-  apply (wp load_hw_asid_wp|wpc|rule_tac Q="\<lambda>_. vspace_at_asid a pd" in hoare_strengthen_post|simp)+
+  apply (wp load_hw_asid_wp|wpc|rule_tac Q'="\<lambda>_. vspace_at_asid a pd" in hoare_strengthen_post|simp)+
   done
 
 
@@ -592,7 +592,7 @@ lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanC
 
 lemma flush_space_invs[wp]: "\<lbrace>invs\<rbrace> flush_space asid \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: flush_space_def | wp | wpc)+
-  apply (rule_tac Q="K invs" in hoare_post_imp, (simp|wp)+)
+  apply (rule_tac Q'="K invs" in hoare_post_imp, (simp|wp)+)
   done
 
 crunch flush_space
@@ -1706,7 +1706,7 @@ lemma svr_invs [wp]:
      apply simp
     apply (rule valid_validE_R)
     apply (wp find_pd_for_asid_inv | simp add: split_def)+
-   apply (rule_tac Q="\<lambda>c s. invs s \<and> s \<turnstile> c" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>c s. invs s \<and> s \<turnstile> c" in hoare_strengthen_post)
     apply wp
    apply (clarsimp simp: valid_cap_def mask_def)
   apply(simp add: invs_valid_objs)
@@ -3132,7 +3132,7 @@ lemma unmap_page_table_invs[wp]:
   apply (simp add: unmap_page_table_def)
   apply (rule hoare_pre)
    apply (wp dmo_invs | wpc | simp)+
-      apply (rule_tac Q="\<lambda>_. invs and K (asid \<le> mask asid_bits)" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_. invs and K (asid \<le> mask asid_bits)" in hoare_post_imp)
        apply safe
         apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
                                    underlying_memory m p" in use_valid)
@@ -3566,7 +3566,7 @@ lemma perform_page_table_invocation_invs[wp]:
   apply (cases pti)
    apply (clarsimp simp: valid_pti_def perform_page_table_invocation_def)
    apply (wp dmo_invs)
-    apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_. invs" in hoare_post_imp)
      apply safe
       apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
                                  underlying_memory m p" in use_valid)
@@ -3686,7 +3686,7 @@ lemma find_pd_for_asid_lookup_slot [wp]:
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (lookup_pd_slot rv vptr && ~~ mask pd_bits)\<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_R_conj)
+    apply (rule hoare_vcg_conj_liftE_R)
      apply (rule find_pd_for_asid_lookup)
     apply (rule find_pd_for_asid_aligned_pd)
    apply (simp add: pd_shifting lookup_pd_slot_def Let_def)
@@ -3699,8 +3699,8 @@ lemma find_pd_for_asid_lookup_slot_large_page [wp]:
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (x + lookup_pd_slot rv vptr && ~~ mask pd_bits)\<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_R_conj)
-      apply (rule hoare_vcg_R_conj)
+    apply (rule hoare_vcg_conj_liftE_R)
+      apply (rule hoare_vcg_conj_liftE_R)
        apply (rule find_pd_for_asid_inv [where P="K (x \<in> set [0, 4 .e. 0x3C] \<and> is_aligned vptr 24)", THEN valid_validE_R])
      apply (rule find_pd_for_asid_lookup)
     apply (rule find_pd_for_asid_aligned_pd)
@@ -3713,7 +3713,7 @@ lemma find_pd_for_asid_pde_at_add [wp]:
   find_pd_for_asid asid \<lbrace>\<lambda>rv. pde_at (x + lookup_pd_slot rv vptr)\<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_R_conj)
+    apply (rule hoare_vcg_conj_liftE_R)
      apply (rule find_pd_for_asid_inv [where P=
                  "K (x \<in> set [0, 4 .e. 0x3C] \<and> is_aligned vptr 24) and pspace_aligned", THEN valid_validE_R])
     apply (rule find_pd_for_asid_page_directory)
@@ -3997,7 +3997,7 @@ lemma unmap_page_invs:
   apply (rule hoare_pre)
    apply (wp flush_page_invs hoare_vcg_const_imp_lift)
     apply (wp hoare_drop_imp[where f="check_mapping_pptr a b c" for a b c]
-              hoare_drop_impE_R[where R="\<lambda>x y. x && mask b = c" for b c]
+              hoare_drop_impE_R[where Q'="\<lambda>x y. x && mask b = c" for b c]
               lookup_pt_slot_inv lookup_pt_slot_cap_to2'
               lookup_pt_slot_cap_to_multiple2
               store_pde_invs_unmap mapM_swp_store_pde_invs_unmap
@@ -4009,7 +4009,7 @@ lemma unmap_page_invs:
                      page_directory_at_lookup_mask_aligned_strg
                      page_directory_at_lookup_mask_add_aligned_strg)+
    apply (wp find_pd_for_asid_page_directory
-             hoare_vcg_const_imp_lift_R hoare_vcg_const_Ball_lift_R
+             hoare_vcg_const_imp_liftE_R hoare_vcg_const_Ball_liftE_R
           | wp (once) hoare_drop_imps)+
   apply (auto simp: vmsz_aligned_def)
   done
@@ -4306,7 +4306,7 @@ lemma unmap_page_unmapped:
     (* Establish that pptr reachable, otherwise trivial *)
   apply (rule hoare_name_pre_state2)
   apply (case_tac "\<not> (ref \<unrhd> p) s")
-   apply (rule hoare_pre(1)[OF unmap_page_no_lookup_pages])
+   apply (rule hoare_weaken_pre[OF unmap_page_no_lookup_pages])
    apply clarsimp+
 
      (* This should be somewhere else but isn't *)
@@ -4594,7 +4594,7 @@ lemma perform_page_invs [wp]:
     apply (rule hoare_pre)
      apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
                hoare_vcg_const_imp_lift | wpc | simp)+
-       apply (rule_tac Q="\<lambda>_ s. invs s \<and>
+       apply (rule_tac Q'="\<lambda>_ s. invs s \<and>
                                 cte_wp_at (\<lambda>c. is_pg_cap c \<and>
                                   (\<forall>ref. vs_cap_ref c = Some ref \<longrightarrow>
                                          \<not> (ref \<unrhd> obj_ref_of c) s)) cslot_ptr s"

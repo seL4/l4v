@@ -1500,7 +1500,7 @@ lemma invoke_untyped_corres:
                     retype_region_obj_at[THEN hoare_vcg_const_imp_lift]
                     retype_region_caps_of[where sza = "\<lambda>_. sz"]
                  | simp add: misc)+
-            apply (rule_tac Q="\<lambda>rv s. cte_wp_at ((\<noteq>) cap.NullCap) cref s
+            apply (rule_tac Q'="\<lambda>rv s. cte_wp_at ((\<noteq>) cap.NullCap) cref s
                                       \<and> post_retype_invs tp rv s
                                       \<and> idle_thread s \<notin> fst ` set slots
                                       \<and> untyped_is_device (transform_cap cap) = dev
@@ -1516,7 +1516,7 @@ lemma invoke_untyped_corres:
                       retype_region_post_retype_invs[where sz = sz]
                       hoare_vcg_const_Ball_lift retype_region_aligned_for_init)+
           apply (clarsimp simp:conj_comms misc cover)
-          apply (rule_tac Q="\<lambda>r s.
+          apply (rule_tac Q'="\<lambda>r s.
                cte_wp_at (\<lambda>cp. \<exists>idx. cp = (cap.UntypedCap dev ptr' sz idx)) cref s \<and>
                invs s \<and> pspace_no_overlap_range_cover ptr sz s \<and> caps_no_overlap ptr sz s \<and>
                region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1} s \<and>
@@ -1558,8 +1558,8 @@ lemma invoke_untyped_corres:
        apply (wp (once) hoare_drop_imps)
        apply wp
       apply ((rule validE_validE_R)?,
-             rule_tac E="\<top>\<top>" and
-                      Q="\<lambda>_. valid_etcbs and invs and valid_untyped_inv_wcap untyped_invocation
+             rule_tac E'="\<top>\<top>" and
+                      Q'="\<lambda>_. valid_etcbs and invs and valid_untyped_inv_wcap untyped_invocation
                                 (Some (cap.UntypedCap dev ptr' sz (if reset then 0 else idx))) and ct_active
                              and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr' .. ptr' + 2 ^ sz - 1} s)"
                       in hoare_strengthen_postE)

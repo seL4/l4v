@@ -1228,7 +1228,7 @@ lemma retype_region_cur_tcb[wp]:
   supply
     is_aligned_neg_mask_eq[simp del]
     is_aligned_neg_mask_weaken[simp del]
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>tp. tcb_at tp s \<and> cur_thread s = tp"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>tp. tcb_at tp s \<and> cur_thread s = tp"])
    apply (simp add: cur_tcb_def)
   apply (wpsimp wp: hoare_vcg_ex_lift retype_region_obj_at_other3 simp: retype_region_def)
   apply (auto simp: cur_tcb_def cong: if_cong)

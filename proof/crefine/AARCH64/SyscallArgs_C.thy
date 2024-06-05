@@ -952,7 +952,7 @@ lemma getMRs_user_word:
                          linorder_not_less [symmetric])
    apply (wp mapM_loadWordUser_user_words_at)
    apply (wp hoare_vcg_all_lift)
-    apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>_. \<top>" in hoare_strengthen_post)
      apply wp
     apply clarsimp
     defer
@@ -1008,7 +1008,7 @@ lemma getMRs_rel:
   apply (rule hoare_pre)
    apply (rule_tac x=mi in hoare_exI)
    apply wp
-   apply (rule_tac Q="\<lambda>rv s. thread = ksCurThread s \<and> fst (getMRs thread buffer mi s) = {(rv,s)}" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>rv s. thread = ksCurThread s \<and> fst (getMRs thread buffer mi s) = {(rv,s)}" in hoare_strengthen_post)
     apply (wp det_result det_wp_getMRs)
    apply clarsimp
   apply (clarsimp simp: cur_tcb'_def)
@@ -1175,7 +1175,7 @@ lemma getSyscallArg_ccorres_foo:
     apply (clarsimp simp: option_to_ptr_def option_to_0_def)
     apply (rule_tac P="\<lambda>s. valid_ipc_buffer_ptr' (ptr_val (Ptr b)) s \<and> i < msgLength mi \<and>
                            msgLength mi \<le> msgMaxLength \<and> scast n_msgRegisters \<le> i"
-                 in hoare_pre(1))
+                 in hoare_weaken_pre)
      apply (wp getMRs_user_word)
     apply (clarsimp simp: msgMaxLength_def unat_less_helper)
    apply fastforce
