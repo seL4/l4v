@@ -1543,7 +1543,7 @@ lemma init_cnode_slot_copy_not_original_sep:
                                        object_fields_empty spec t obj_id \<and>*
                                        si_objects) \<and>*
                                       si_objs_caps_at t orig_caps spec dev {obj_id. cnode_at obj_id spec} \<and>* R\<guillemotright>"
-                          and Q="\<lambda>_. \<guillemotleft>(object_slot_initialised spec t obj_id slot \<and>*
+                          and Q'="\<lambda>_. \<guillemotleft>(object_slot_initialised spec t obj_id slot \<and>*
                                        si_cap_at t dup_caps spec dev obj_id \<and>*
                                        object_fields_empty spec t obj_id \<and>*
                                        si_objects) \<and>*
