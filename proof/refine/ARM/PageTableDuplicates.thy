@@ -2049,7 +2049,7 @@ lemma tc_valid_duplicates':
               checkCap_inv[where P="valid_cap' c" for c]
               checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)" for P]
               checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
-              checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_lift_R
+              checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_liftE_R
               typ_at_lifts[OF setPriority_typ_at'] assertDerived_wp threadSet_cte_wp_at'
               hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_weak_lift_imp)[1]
           | wpc

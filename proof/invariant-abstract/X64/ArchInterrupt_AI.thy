@@ -115,11 +115,11 @@ lemma arch_decode_irq_control_valid[wp]:
         split del: if_split
              cong: if_cong)
   apply (rule hoare_pre)
-   apply (wp ensure_empty_stronger hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
+   apply (wp ensure_empty_stronger hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift
           | simp add: cte_wp_at_eq_simp split del: if_split
           | wpc
-          | wp hoare_vcg_imp_lift_R[where P="\<lambda>rv s. \<not> x64_num_ioapics (arch_state s) - 1 < args ! 2"]
-          | wp hoare_vcg_imp_lift_R[where P="\<lambda>rv s. x64_num_ioapics (arch_state s) \<noteq> 0"]
+          | wp hoare_vcg_imp_liftE_R[where P="\<lambda>rv s. \<not> x64_num_ioapics (arch_state s) - 1 < args ! 2"]
+          | wp hoare_vcg_imp_liftE_R[where P="\<lambda>rv s. x64_num_ioapics (arch_state s) \<noteq> 0"]
           | wp (once) hoare_drop_imps)+
   apply ( safe; auto simp: word_le_not_less[symmetric] word_leq_minus_one_le
                            irq_plus_min_ge_min irq_plus_min_le_max ioapicIRQLines_def

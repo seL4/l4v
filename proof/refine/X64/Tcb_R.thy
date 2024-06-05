@@ -1458,7 +1458,7 @@ proof -
   have B: "\<And>t v. \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbFaultHandler_update v) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
     by (wp threadSet_invs_trivial | clarsimp simp: inQ_def)+
   note stuff = Z B out_invs_trivial hoare_case_option_wp
-    hoare_vcg_const_Ball_lift hoare_vcg_const_Ball_lift_R
+    hoare_vcg_const_Ball_lift hoare_vcg_const_Ball_liftE_R
     cap_delete_deletes cap_delete_valid_cap out_valid_objs
     cap_insert_objs
     cteDelete_deletes cteDelete_sch_act_simple
@@ -1493,7 +1493,7 @@ proof -
                   apply (rule corres_returnOkTT, simp)
                  apply wp
                 apply wp
-               apply (wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
+               apply (wpsimp wp: hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift
                                  hoare_vcg_all_liftE_R hoare_vcg_all_lift
                                  as_user_invs thread_set_ipc_tcb_cap_valid
                                  thread_set_tcb_ipc_buffer_cap_cleared_invs
@@ -1514,7 +1514,7 @@ proof -
                                  threadSet_invs_tcbIPCBuffer_update threadSet_cte_wp_at'
                       | strengthen simple_sched_action_sched_act_not)+
                 apply ((wpsimp wp: stuff hoare_vcg_all_liftE_R hoare_vcg_all_lift
-                                   hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
+                                   hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift
                                    threadSet_valid_objs' thread_set_not_state_valid_sched
                                    thread_set_tcb_ipc_buffer_cap_cleared_invs thread_set_cte_wp_at_trivial
                                    thread_set_no_cap_to_trivial getThreadBufferSlot_dom_tcb_cte_cases
@@ -1550,7 +1550,7 @@ proof -
                          in hoare_strengthen_postE_R[simplified validE_R_def, rotated])
              apply (case_tac g'; clarsimp simp: isCap_simps ; clarsimp elim: invs_valid_objs' cong:imp_cong)
             apply (wp add: stuff hoare_vcg_all_liftE_R hoare_vcg_all_lift
-                                 hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift setMCPriority_invs'
+                                 hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift setMCPriority_invs'
                                  threadSet_valid_objs' thread_set_not_state_valid_sched setP_invs'
                                  typ_at_lifts [OF setPriority_typ_at']
                                  typ_at_lifts [OF setMCPriority_typ_at']
@@ -1628,15 +1628,15 @@ lemma tc_invs':
       apply (wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift
                         checkCap_inv[where P="tcb_at' t" for t] assertDerived_wp_weak
                         threadSet_invs_trivial2 threadSet_tcb'  hoare_vcg_all_lift threadSet_cte_wp_at')+
-       apply (wpsimp wp: hoare_weak_lift_imp_R cteDelete_deletes
-                         hoare_vcg_all_liftE_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_lift_R hoare_vcg_propE_R
+       apply (wpsimp wp: hoare_weak_lift_impE_R cteDelete_deletes
+                         hoare_vcg_all_liftE_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_liftE_R hoare_vcg_propE_R
                          cteDelete_invs' cteDelete_invs' cteDelete_typ_at'_lifts)+
      apply (assumption | clarsimp cong: conj_cong imp_cong | (rule case_option_wp_None_returnOk)
             | wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift checkCap_inv[where P="tcb_at' t" for t] assertDerived_wp_weak
                          hoare_vcg_imp_lift' hoare_vcg_all_lift checkCap_inv[where P="tcb_at' t" for t]
                          checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
-                         hoare_vcg_const_imp_lift_R assertDerived_wp_weak hoare_weak_lift_imp_R cteDelete_deletes
-                         hoare_vcg_all_liftE_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_lift_R hoare_vcg_propE_R
+                         hoare_vcg_const_imp_liftE_R assertDerived_wp_weak hoare_weak_lift_impE_R cteDelete_deletes
+                         hoare_vcg_all_liftE_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_liftE_R hoare_vcg_propE_R
                          cteDelete_invs' cteDelete_typ_at'_lifts cteDelete_sch_act_simple)+
   apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs tcbIPCBufferSlot_def)
   by (auto dest!: isCapDs isReplyCapD isValidVTableRootD simp: isCap_simps)
@@ -2715,7 +2715,7 @@ lemma inv_tcb_IRQInactive:
   apply (rule hoare_pre)
    apply (wpc |
           wp withoutPreemption_R cteDelete_IRQInactive checkCap_inv
-             hoare_vcg_const_imp_lift_R cteDelete_irq_states'
+             hoare_vcg_const_imp_liftE_R cteDelete_irq_states'
              hoare_vcg_const_imp_lift |
           simp add: split_def)+
   done

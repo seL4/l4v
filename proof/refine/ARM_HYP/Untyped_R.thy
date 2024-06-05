@@ -4558,7 +4558,7 @@ lemma resetUntypedCap_invs_etc:
               | strengthen invs_pspace_aligned' invs_pspace_distinct'
               | simp add: ct_in_state'_def
                           sch_act_simple_def
-              | rule hoare_vcg_conj_lift_R
+              | rule hoare_vcg_conj_liftE_R
               | wp (once) preemptionPoint_inv
               | wps
               | wp (once) ex_cte_cap_to'_pres)+

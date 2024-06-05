@@ -6807,7 +6807,7 @@ shows  "ccorres dc xfdc
                  (cnodeptr + (of_nat k * 0x10 + start * 0x10 + of_nat n * 0x10)) s)
               \<and> descendants_range_in' {(of_nat n << APIType_capBits newType userSize) +
                  ptr.. (ptr && ~~ mask sz) + 2 ^ sz  - 1} srcSlot (ctes_of s)"
-              in hoare_pre(1))
+              in hoare_weaken_pre)
              apply wp
             apply (clarsimp simp:createObject_hs_preconds_def conj_comms
                    invs_valid_pspace' invs_pspace_distinct' invs_pspace_aligned'

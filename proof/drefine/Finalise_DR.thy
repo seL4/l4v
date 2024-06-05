@@ -3410,7 +3410,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
       apply (wp cutMon_validE_R_drop rec_del_invs
                  | simp add: not_idle_thread_def
                  | strengthen invs_weak_valid_mdb invs_valid_idle_strg
-                 | rule hoare_vcg_E_elim[rotated])+
+                 | rule hoare_vcg_conj_elimE[rotated])+
 
     done
 next

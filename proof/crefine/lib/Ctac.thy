@@ -1770,7 +1770,7 @@ next
         apply assumption
        apply (clarsimp elim!: inl_inrE)
       apply simp
-      apply (rule hoare_vcg_const_imp_lift_R)
+      apply (rule hoare_vcg_const_imp_liftE_R)
       apply (rule hoare_gen_asmE)
       apply (erule Cons.prems(3)[where n=0, simplified])
      apply (rule_tac P="Q \<inter> {s. \<exists>\<sigma>. P \<sigma> \<and> (\<sigma>, s) \<in> sr}"

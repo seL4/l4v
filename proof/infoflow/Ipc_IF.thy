@@ -902,7 +902,7 @@ lemma transfer_caps_loop_reads_respects':
      prefer 2
      apply (clarsimp simp: cte_wp_at_caps_of_state split del: if_split)
      apply (strengthen is_derived_is_transferable[mk_strg I' O], assumption, solves\<open>simp\<close>)
-    apply (rule hoare_vcg_conj_liftE_R)
+    apply (rule hoare_vcg_conj_liftE_R')
      apply (rule derive_cap_is_derived)
     apply (wp derive_cap_is_derived_foo')
    apply wp

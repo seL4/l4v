@@ -724,7 +724,7 @@ lemma handle_recv_globals_equiv:
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
                       E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)"
                    in hoare_strengthen_postE)
-        apply (rule hoare_vcg_E_elim)
+        apply (rule hoare_vcg_conj_elimE)
          apply (wp lookup_cap_cap_fault receive_ipc_globals_equiv
                    receive_signal_globals_equiv delete_caller_cap_invs
                    delete_caller_cap_globals_equiv
@@ -906,7 +906,7 @@ lemma handle_event_reads_respects_f_g:
                               \<and> valid_fault r \<and> pas_refined aag s \<and> pas_cur_domain aag s
                               \<and> silc_inv aag st s \<and> rv \<noteq> idle_thread s"
                    and Q="\<top>\<top>" in hoare_strengthen_postE)
-         apply (rule hoare_vcg_E_conj)
+         apply (rule hoare_vcg_conj_liftE_E)
           apply (wp hv_invs handle_vm_fault_silc_inv)+
        apply (simp add: invs_imps invs_mdb invs_valid_idle)+
      apply wp+

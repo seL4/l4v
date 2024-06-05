@@ -1662,7 +1662,7 @@ lemma tc_no_orphans:
                checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
                checkCap_inv[where P=no_orphans] checkCap_inv[where P="tcb_at' a"]
                threadSet_cte_wp_at' hoare_vcg_all_liftE_R hoare_vcg_all_lift threadSet_no_orphans
-               hoare_vcg_const_imp_lift_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
+               hoare_vcg_const_imp_liftE_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
           | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
                      objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
            wp hoare_return_sp)

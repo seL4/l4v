@@ -1248,7 +1248,7 @@ lemma handleInvocation_corres:
              apply (wp lec_caps_to lsft_ex_cte_cap_to
                     | simp add: split_def liftE_bindE[symmetric]
                                 ct_in_state'_def ball_conj_distrib
-                    | rule hoare_vcg_E_elim)+
+                    | rule hoare_vcg_conj_elimE)+
    apply (clarsimp simp: tcb_at_invs invs_valid_objs
                          valid_tcb_state_def ct_in_state_def
                          simple_from_active invs_mdb
@@ -1512,7 +1512,7 @@ lemma handleRecv_isBlocking_corres':
           apply (rule handleFault_corres)
           apply simp
          apply (wp get_simple_ko_wp | wpcw | simp)+
-         apply (rule hoare_vcg_E_elim)
+         apply (rule hoare_vcg_conj_elimE)
           apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
           apply wp
            apply (simp add: split_def)

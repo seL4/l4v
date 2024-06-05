@@ -1233,7 +1233,7 @@ lemma unmap_page_table_globals_equiv:
      apply (rule_tac Q="\<lambda>_. globals_equiv st and (\<lambda>sa. lookup_pd_slot pd vaddr &&
                                                     ~~ mask pd_bits \<noteq> arm_global_pd (arch_state sa))"
                   in hoare_strengthen_post)
-      apply (wp find_pd_for_asid_not_arm_global_pd hoare_post_imp_dc2E_actual | simp)+
+      apply (wp find_pd_for_asid_not_arm_global_pd hoare_post_impE_E_dc_actual | simp)+
   done
 
 lemma mapM_x_swp_store_pte_globals_equiv:

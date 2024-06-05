@@ -815,7 +815,7 @@ lemma invokeTCB_ThreadControl_ccorres:
             apply vcg
            apply (simp add: conj_comms cong: conj_cong)
            apply (strengthen invs_ksCurDomain_maxDomain' invs_pspace_distinct')
-           apply (wp hoare_vcg_const_imp_lift_R cteDelete_invs')
+           apply (wp hoare_vcg_const_imp_liftE_R cteDelete_invs')
           apply simp
           apply (rule ccorres_split_nothrow_novcg_dc)
              apply (rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)

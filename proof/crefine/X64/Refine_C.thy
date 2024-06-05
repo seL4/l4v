@@ -268,7 +268,7 @@ lemma handleSyscall_ccorres:
                                              in hoare_post_imp)
                  apply (clarsimp simp: non_kernel_IRQs_def)
                 apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+               apply (rule_tac Q=" invs' " in hoare_post_impE_E_dc, wp)
                apply (simp add: invs'_def valid_state'_def)
               apply clarsimp
               apply (vcg exspec=handleInvocation_modifies)
@@ -304,7 +304,7 @@ lemma handleSyscall_ccorres:
                                      in hoare_post_imp)
                 apply (clarsimp simp: non_kernel_IRQs_def)
                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-              apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+              apply (rule_tac Q=" invs' " in hoare_post_impE_E_dc, wp)
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
              apply (vcg exspec=handleInvocation_modifies)
@@ -341,7 +341,7 @@ lemma handleSyscall_ccorres:
                                         in hoare_post_imp)
                apply (clarsimp simp: non_kernel_IRQs_def)
               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-             apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+             apply (rule_tac Q=" invs' " in hoare_post_impE_E_dc, wp)
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
             apply (vcg exspec=handleInvocation_modifies)

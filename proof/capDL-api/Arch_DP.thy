@@ -235,7 +235,7 @@ lemma seL4_Page_Table_Map:
          in hoare_strengthen_postE[rotated -1])
            apply assumption
           apply clarsimp
-         apply (rule hoare_vcg_E_elim)
+         apply (rule hoare_vcg_conj_elimE)
           apply wp
          apply wp
          apply (rule validE_validE_R)
@@ -364,7 +364,7 @@ lemma seL4_Section_Map_wp:
           [cdl_lookup_pd_slot pd_ptr vaddr])"
          in hoare_strengthen_postE[rotated -1])
           apply assumption
-         apply (rule hoare_vcg_E_elim)
+         apply (rule hoare_vcg_conj_elimE)
           apply wp
          apply wp
          apply (rule validE_validE_R)
@@ -505,7 +505,7 @@ lemma seL4_Page_Map_wp:
              (cnode_id,frame_offset) [ (pt_ptr, unat ((vaddr >> 12) && 0xFF))] )"
          in hoare_strengthen_postE[rotated -1])
           apply assumption
-         apply (rule hoare_vcg_E_elim)
+         apply (rule hoare_vcg_conj_elimE)
           apply wp
          apply wp
          apply (rule validE_validE_R)

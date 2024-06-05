@@ -278,7 +278,7 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
          | clarsimp
          | simp only: conj_ac cong: conj_cong imp_cong
          | wp checked_insert_pas_refined checked_cap_insert_silc_inv hoare_vcg_all_liftE_R
-              hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
+              hoare_vcg_all_lift hoare_vcg_const_imp_liftE_R
               cap_delete_silc_inv_not_transferable
               cap_delete_pas_refined' cap_delete_deletes
               cap_delete_valid_cap cap_delete_cte_at

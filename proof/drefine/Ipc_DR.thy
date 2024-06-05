@@ -1353,7 +1353,7 @@ next
         apply simp
        apply (clarsimp simp:cte_wp_at_caps_of_state)
       apply (subst imp_conjR)
-      apply (rule hoare_vcg_conj_liftE_R)
+      apply (rule hoare_vcg_conj_liftE_R')
        apply (rule derive_cap_is_derived)
       apply (rule derive_cap_is_derived_foo)
      apply wp+
@@ -1934,7 +1934,7 @@ lemma corres_complete_ipc_transfer:
             apply (rule hoare_strengthen_postE_R)
              apply (rule validE_validE_R)
              apply (rule hoare_vcg_conj_liftE1[OF lookup_extra_caps_srcs])
-             apply (rule hoare_post_imp_dc2_actual[OF lookup_extra_caps_inv[where P=valid_objs]])
+             apply (rule hoare_post_impE_R_dc_actual[OF lookup_extra_caps_inv[where P=valid_objs]])
             apply clarsimp
             apply (drule(1) bspec)
             apply (clarsimp simp:cte_wp_at_caps_of_state)

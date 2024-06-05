@@ -610,9 +610,9 @@ lemma seL4_Untyped_Retype_sep:
                has_kids 1)"
            in hoare_gen_asmEx)
          apply clarsimp
-         apply (rule hoare_vcg_E_elim[where P = P and P' = P for P,simplified,rotated])
+         apply (rule hoare_vcg_conj_elimE[where P = P and P' = P for P,simplified,rotated])
           apply wp
-          apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_lift_R])
+          apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_liftE_R])
            apply (rule invoke_untyped_one_has_children)
            apply fastforce
           apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
@@ -1220,9 +1220,9 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
                has_kids 1)"
            in hoare_gen_asmEx)
          apply clarsimp
-         apply (rule hoare_vcg_E_elim[where P = P and P' = P for P,simplified,rotated])
+         apply (rule hoare_vcg_conj_elimE[where P = P and P' = P for P,simplified,rotated])
           apply wp
-          apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_lift_R])
+          apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_liftE_R])
            apply (rule valid_validE_R)
            apply (rule invoke_untyped_cdt_inc)
           apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in

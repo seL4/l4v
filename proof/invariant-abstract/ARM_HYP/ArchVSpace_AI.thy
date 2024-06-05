@@ -4686,7 +4686,7 @@ lemma find_pd_for_asid_lookup_slot [wp]:
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (lookup_pd_slot rv vptr && ~~ mask pd_bits)\<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_R_conj)
+    apply (rule hoare_vcg_conj_liftE_R)
      apply (rule find_pd_for_asid_lookup)
     apply (rule find_pd_for_asid_aligned_pd)
    apply (simp add: pd_shifting lookup_pd_slot_def Let_def)
@@ -4699,8 +4699,8 @@ lemma find_pd_for_asid_lookup_slot_large_page [wp]:
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (x + lookup_pd_slot rv vptr && ~~ mask pd_bits)\<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_R_conj)
-      apply (rule hoare_vcg_R_conj)
+    apply (rule hoare_vcg_conj_liftE_R)
+      apply (rule hoare_vcg_conj_liftE_R)
        apply (rule find_pd_for_asid_inv [where P="K (x \<in> set [0, 8 .e. 0x78] \<and> is_aligned vptr 25)", THEN valid_validE_R])
      apply (rule find_pd_for_asid_lookup)
     apply (rule find_pd_for_asid_aligned_pd)
@@ -4713,7 +4713,7 @@ lemma find_pd_for_asid_pde_at_add [wp]:
   find_pd_for_asid asid \<lbrace>\<lambda>rv. pde_at (x + lookup_pd_slot rv vptr)\<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_R_conj)
+    apply (rule hoare_vcg_conj_liftE_R)
      apply (rule find_pd_for_asid_inv [where P=
                  "K (x \<in> set [0, 8 .e. 0x78] \<and> is_aligned vptr 25) and pspace_aligned", THEN valid_validE_R])
     apply (rule find_pd_for_asid_page_directory)
@@ -4991,7 +4991,7 @@ lemma unmap_page_invs:
                      page_directory_at_lookup_mask_aligned_strg
                      page_directory_at_lookup_mask_add_aligned_strg)+
    apply (wp find_pd_for_asid_page_directory
-             hoare_vcg_const_imp_lift_R hoare_vcg_const_Ball_lift_R
+             hoare_vcg_const_imp_liftE_R hoare_vcg_const_Ball_liftE_R
           | wp (once) hoare_drop_imps)+
   apply (auto simp: vmsz_aligned_def)
   done
@@ -5265,7 +5265,7 @@ lemma unmap_page_unmapped:
     (* Establish that pptr reachable, otherwise trivial *)
   apply (rule hoare_name_pre_state2)
   apply (case_tac "\<not> (ref \<unrhd> p) s")
-   apply (rule hoare_pre(1)[OF unmap_page_no_lookup_pages])
+   apply (rule hoare_weaken_pre[OF unmap_page_no_lookup_pages])
    apply clarsimp+
 
      (* This should be somewhere else but isn't *)

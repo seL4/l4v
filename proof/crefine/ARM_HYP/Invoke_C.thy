@@ -770,7 +770,7 @@ lemma decodeCNodeInvocation_ccorres:
                                apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                     and valid_cap' rv and valid_objs'
                                                          and tcb_at' thread and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
-                                           in hoare_vcg_R_conj)
+                                           in hoare_vcg_conj_liftE_R)
                                 apply (rule deriveCap_Null_helper[OF deriveCap_derived])
                                apply wp
                               apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -846,7 +846,7 @@ lemma decodeCNodeInvocation_ccorres:
                                    apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                         and valid_cap' rv and valid_objs'
                                                              and tcb_at' thread and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
-                                               in hoare_vcg_R_conj)
+                                               in hoare_vcg_conj_liftE_R)
                                     apply (rule deriveCap_Null_helper [OF deriveCap_derived])
                                    apply wp
                                   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -967,7 +967,7 @@ lemma decodeCNodeInvocation_ccorres:
                       apply (clarsimp simp:valid_updateCapDataI invs_valid_objs' invs_valid_pspace')
                       apply assumption
                      apply (wp hoare_vcg_all_liftE_R injection_wp_E[OF refl]
-                               lsfco_cte_at' hoare_vcg_const_imp_lift_R
+                               lsfco_cte_at' hoare_vcg_const_imp_liftE_R
                            )+
                     apply (simp add: Collect_const_mem word_sle_def word_sless_def
                                      all_ex_eq_helper)
@@ -1344,7 +1344,7 @@ lemma decodeCNodeInvocation_ccorres:
           apply (rule ccorres_return_C_errorE, simp+)[1]
          apply vcg
         apply simp
-        apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_lift_R
+        apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_liftE_R
                   hoare_vcg_all_liftE_R lsfco_cte_at' hoare_weak_lift_imp
                 | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen
                       cong: conj_cong

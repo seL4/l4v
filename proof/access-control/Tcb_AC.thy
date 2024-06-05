@@ -432,7 +432,7 @@ lemma decode_set_space_authorised:
   apply (simp cong: list.case_cong split del: if_split)
   apply (clarsimp simp: ball_Un split del: if_split
          | wp (once) derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas
-                     derive_cap_cli hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
+                     derive_cap_cli hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R
                      whenE_throwError_wp slot_long_running_inv)+
   apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)
   apply (auto simp: aag_cap_auth_def update_cap_cli

@@ -203,7 +203,7 @@ lemma lcs_reply_owns:
    \<lbrace>\<lambda>rv _. \<forall>ep. (\<exists>m R. fst rv = ReplyCap ep m R \<and> AllowGrant \<in> R) \<longrightarrow> is_subject aag ep\<rbrace>, -"
   apply (rule hoare_strengthen_postE_R)
    apply (rule hoare_pre)
-    apply (rule hoare_vcg_conj_lift_R [where S = "K (pas_refined aag)"])
+    apply (rule hoare_vcg_conj_liftE_R [where S = "K (pas_refined aag)"])
      apply (rule lookup_cap_and_slot_cur_auth)
     apply (simp | wp lookup_cap_and_slot_inv)+
   apply (force simp: aag_cap_auth_def cap_auth_conferred_def reply_cap_rights_to_auth_def
@@ -282,7 +282,7 @@ lemma handle_invocation_pas_refined:
        | simp add: if_apply_def2 conj_comms split del: if_split)+,
       (wp lookup_extra_caps_auth lookup_extra_caps_authorised decode_invocation_authorised
           lookup_cap_and_slot_authorised lookup_cap_and_slot_cur_auth as_user_pas_refined
-          lookup_cap_and_slot_valid_fault3 hoare_vcg_const_imp_lift_R
+          lookup_cap_and_slot_valid_fault3 hoare_vcg_const_imp_liftE_R
        | simp add: comp_def runnable_eq_active split del: if_split)+,
        fastforce intro: guarded_to_cur_domain if_live_then_nonz_capD
                   simp: ct_in_state_def st_tcb_at_def live_def)+
@@ -316,7 +316,7 @@ lemma handle_invocation_respects:
                    set_thread_state_integrity_autarch
                    lookup_cap_and_slot_cur_auth lookup_cap_and_slot_authorised
                    hoare_vcg_const_imp_lift perform_invocation_pas_refined
-                   set_thread_state_ct_st hoare_vcg_const_imp_lift_R
+                   set_thread_state_ct_st hoare_vcg_const_imp_liftE_R
                    lookup_cap_and_slot_valid_fault3
                 | (rule valid_validE, strengthen invs_vobjs_strgs))+
   by (fastforce intro: st_tcb_ex_cap' guarded_to_cur_domain
@@ -701,7 +701,7 @@ lemma handle_event_integrity:
                   handle_reply_valid_sched
                   hoare_vcg_conj_lift hoare_vcg_all_lift hoare_drop_imps
             simp: domain_sep_inv_def
-      | rule dmo_wp hoare_vcg_E_elim
+      | rule dmo_wp hoare_vcg_conj_elimE
       | fastforce
       | (rule hoare_vcg_conj_lift)?, wpsimp wp: getActiveIRQ_inv)+
 

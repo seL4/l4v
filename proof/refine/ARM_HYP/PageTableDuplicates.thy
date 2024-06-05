@@ -1959,7 +1959,7 @@ lemma tc_valid_duplicates':
                checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
                checkCap_inv[where P=sch_act_simple]
                cteDelete_valid_duplicates'
-               hoare_vcg_const_imp_lift_R
+               hoare_vcg_const_imp_liftE_R
                typ_at_lifts [OF setPriority_typ_at']
                assertDerived_wp
                threadSet_cte_wp_at'

@@ -3092,7 +3092,7 @@ lemma handle_recv_valid_sched:
               cong: if_cong)
   apply (wp get_simple_ko_wp handle_fault_valid_sched delete_caller_cap_not_queued
             receive_ipc_valid_sched receive_signal_valid_sched | simp)+
-     apply (rule hoare_vcg_E_elim)
+     apply (rule hoare_vcg_conj_elimE)
       apply (wpsimp simp: lookup_cap_def lookup_slot_for_thread_def)
        apply (wp resolve_address_bits_valid_fault2)+
     apply (simp add: valid_fault_def)

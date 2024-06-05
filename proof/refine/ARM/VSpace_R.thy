@@ -1598,11 +1598,11 @@ lemma unmapPage_corres:
                 | wp mapM_wp')+
           apply (fastforce simp: invs_vspace_objs[simplified])
          apply (wp lookupPTSlot_inv mapM_wp' | wpc | clarsimp)+
-        apply (wp hoare_vcg_const_imp_lift_R
+        apply (wp hoare_vcg_const_imp_liftE_R
              | strengthen lookup_pd_slot_kernel_mappings_strg not_in_global_refs_vs_lookup
                page_directory_at_lookup_mask_aligned_strg lookup_pd_slot_kernel_mappings_set_strg
                page_directory_at_lookup_mask_add_aligned_strg
-             | wp hoare_vcg_const_Ball_lift_R
+             | wp hoare_vcg_const_Ball_liftE_R
              | simp)+
    apply (clarsimp simp add: valid_unmap_def valid_asid_def)
    apply (case_tac sz)

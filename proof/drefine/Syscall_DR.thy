@@ -1444,7 +1444,7 @@ lemma handle_recv_corres:
               defer(* NEED RECEIVE ASYNC IPC *)
               apply clarsimp
              apply wp+
-            apply (rule hoare_vcg_conj_liftE_R)
+            apply (rule hoare_vcg_conj_liftE_R')
              apply (rule hoare_strengthen_postE_R, rule lookup_cap_valid)
              apply (clarsimp simp: valid_cap_def)
             apply wp+
@@ -1452,7 +1452,7 @@ lemma handle_recv_corres:
           apply (wp get_simple_ko_wp |wpc)+
           apply (simp only: conj_ac)
           apply wp
-          apply (rule hoare_vcg_E_elim)
+          apply (rule hoare_vcg_conj_elimE)
            apply (simp add: lookup_cap_def lookup_slot_for_thread_def split_def)
            apply wp
             apply (rule hoare_strengthen_postE[OF resolve_address_bits_valid_fault])
@@ -1652,8 +1652,8 @@ lemma handle_event_corres:
       apply (rule corres_symb_exec_catch_r)
          apply (rule handle_fault_corres)
         apply (simp only: conj_comms)
-        apply (rule hoare_vcg_E_conj)
-         apply (wp handle_vm_fault_wp | rule hoare_vcg_E_conj)+
+        apply (rule hoare_vcg_conj_liftE_E)
+         apply (wp handle_vm_fault_wp | rule hoare_vcg_conj_liftE_E)+
       apply (simp add:no_fail_def)
      apply wp
      apply clarsimp

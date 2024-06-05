@@ -939,7 +939,7 @@ lemma lcs_ex_cap_to2[wp]:
   done
 
 (* FIXME AARCH64: this should really not be wp *)
-declare hoare_vcg_const_imp_lift_E[wp]
+declare hoare_vcg_const_imp_liftE_E[wp]
 
 context Syscall_AI begin
 
@@ -980,7 +980,7 @@ lemma hinv_invs':
   apply simp
   apply (wp sts_st_tcb_at')
   apply (simp only: simp_thms K_def if_apply_def2)
-  apply (rule hoare_vcg_E_elim)
+  apply (rule hoare_vcg_conj_elimE)
   apply (wp | simp add: if_apply_def2)+
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
   done
@@ -1097,7 +1097,7 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking
     cong: if_cong)
   apply (wp get_simple_ko_wp | clarsimp)+
   apply (wp delete_caller_cap_nonz_cap get_simple_ko_wp hoare_vcg_ball_lift | simp)+
-     apply (rule hoare_vcg_E_elim)
+     apply (rule hoare_vcg_conj_elimE)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
        apply (simp add: split_def)

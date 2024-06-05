@@ -41,7 +41,7 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
            strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
           | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
           | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
-                 hoare_vcg_E_elim hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
+                 hoare_vcg_conj_elimE hoare_vcg_const_imp_liftE_R hoare_vcg_conj_liftE_R
           | wp restart_integrity_autarch set_mcpriority_integrity_autarch
                as_user_integrity_autarch thread_set_integrity_autarch
                option_update_thread_integrity_autarch
@@ -54,7 +54,7 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
                out_invs_trivial case_option_wpE cap_delete_deletes
                cap_delete_valid_cap cap_insert_valid_cap out_cte_at
                cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
-               hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
+               hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R
                thread_set_tcb_ipc_buffer_cap_cleared_invs
                thread_set_invs_trivial[OF ball_tcb_cap_casesI]
                hoare_vcg_all_lift thread_set_valid_cap out_emptyable

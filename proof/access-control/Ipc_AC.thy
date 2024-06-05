@@ -536,7 +536,7 @@ next
          and solve this using derived_cap_is_derived, and then solve the rest
          using derive_cap_is_derived_foo *)
     apply (rule_tac Q'="\<lambda>r s. S r s \<and> Q r s" for S Q in hoare_strengthen_postE_R)
-     apply (rule hoare_vcg_conj_lift_R)
+     apply (rule hoare_vcg_conj_liftE_R)
       apply (rule derive_cap_is_derived)
      prefer 2
      apply clarsimp
@@ -760,7 +760,7 @@ lemma transfer_caps_loop_presM_extended:
           | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
       apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
-    apply (rule hoare_vcg_conj_liftE_R)
+    apply (rule hoare_vcg_conj_liftE_R')
      apply (rule derive_cap_is_derived_foo')
     apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> NullCap \<longrightarrow>
                                    cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s) \<and>
@@ -768,8 +768,8 @@ lemma transfer_caps_loop_presM_extended:
      prefer 2
      apply clarsimp
      apply assumption
-    apply (rule hoare_vcg_conj_liftE_R)
-     apply (rule hoare_vcg_const_imp_lift_R)
+    apply (rule hoare_vcg_conj_liftE_R')
+     apply (rule hoare_vcg_const_imp_liftE_R)
      apply (rule derive_cap_is_derived)
     apply (wp derive_cap_is_derived_foo')+
   apply (clarsimp simp: cte_wp_at_caps_of_state
@@ -2072,7 +2072,7 @@ valid_objs and valid_mdb and st_tcb_at can_receive_ipc receiver and
   apply (wpsimp wp: as_user_respects_in_ipc set_message_info_respects_in_ipc copy_mrs_pas_refined
                     copy_mrs_respects_in_ipc transfer_caps_respects_in_ipc get_mi_length
                     lookup_extra_caps_authorised lookup_extra_caps_length hoare_vcg_const_Ball_lift
-                    hoare_vcg_conj_lift_R hoare_vcg_const_imp_lift lec_valid_cap'
+                    hoare_vcg_conj_liftE_R hoare_vcg_const_imp_lift lec_valid_cap'
          | rule hoare_drop_imps)+
   apply (auto simp: null_def intro: st_tcb_at_tcb_at)
   done
@@ -2429,7 +2429,7 @@ lemma handle_fault_pas_refined:
    handle_fault thread fault
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (wpsimp wp: set_thread_state_pas_refined simp: handle_fault_def handle_double_fault_def)
-    apply (rule hoare_vcg_E_elim)
+    apply (rule hoare_vcg_conj_elimE)
      apply (clarsimp simp: send_fault_ipc_def Let_def)
      apply wp
        apply wpsimp

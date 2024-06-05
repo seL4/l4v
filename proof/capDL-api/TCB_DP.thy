@@ -220,8 +220,8 @@ lemma tcb_update_cspace_root_wp:
   apply (wpsimp wp: whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv
                     hoare_vcg_conj_liftE1)
     apply (wpsimp wp: tcb_empty_thread_slot_wpE[sep_wand_wpE] simp: sep_conj_assoc)
-   apply (wpsimp wp: hoare_vcg_all_liftE_R[THEN hoare_vcg_E_elim[rotated]]
-                     hoare_vcg_const_imp_lift_R
+   apply (wpsimp wp: hoare_vcg_all_liftE_R[THEN hoare_vcg_conj_elimE[rotated]]
+                     hoare_vcg_const_imp_liftE_R
                      tcb_empty_thread_slot_wpE[sep_wand_wpE]
           split_del: if_split simp: if_apply_def2)
   apply (clarsimp)

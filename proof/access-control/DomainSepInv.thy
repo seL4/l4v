@@ -1041,7 +1041,7 @@ lemma invoke_tcb_domain_sep_inv:
      apply  ((wp | simp)+)[1]
     apply (simp add: split_def cong: option.case_cong)
     apply (wp checked_cap_insert_domain_sep_inv hoare_vcg_all_liftE_R hoare_vcg_all_lift
-              hoare_vcg_const_imp_lift_R cap_delete_domain_sep_inv cap_delete_deletes
+              hoare_vcg_const_imp_liftE_R cap_delete_domain_sep_inv cap_delete_deletes
               dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at hoare_weak_lift_imp
            | wpc | strengthen
            | simp add: option_update_thread_def emptyable_def tcb_cap_cases_def

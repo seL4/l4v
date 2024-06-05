@@ -2260,11 +2260,11 @@ lemma unmapPage_corres:
                  | wp hoare_drop_imps
                  | wp mapM_wp' | assumption)+
           apply auto[1]
-         apply (wpsimp wp: hoare_vcg_const_imp_lift_R lookupPTSlot_inv
+         apply (wpsimp wp: hoare_vcg_const_imp_liftE_R lookupPTSlot_inv
                | strengthen not_in_global_refs_vs_lookup
                  page_directory_at_lookup_mask_aligned_strg
                  page_directory_at_lookup_mask_add_aligned_strg
-               | wp hoare_vcg_const_Ball_lift_R mapM_wp')+
+               | wp hoare_vcg_const_Ball_liftE_R mapM_wp')+
    apply (clarsimp simp add: valid_unmap_def valid_asid_def)
    apply (case_tac sz)
       apply (auto simp: invs_def valid_state_def

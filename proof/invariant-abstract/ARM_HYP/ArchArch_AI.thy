@@ -1556,9 +1556,9 @@ lemma find_pd_for_asid_lookup_pd_wp:
   "\<lbrace> \<lambda>s. valid_vspace_objs s \<and> (\<forall>pd. vspace_at_asid asid pd s \<and> page_directory_at pd s
     \<and> (\<exists>\<rhd> pd) s \<longrightarrow> Q pd s) \<rbrace> find_pd_for_asid asid \<lbrace> Q \<rbrace>, -"
   apply (rule hoare_strengthen_postE_R)
-   apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_page_directory])
-   apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_lookup, simplified])
-   apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_pd_at_asid, simplified])
+   apply (rule hoare_vcg_conj_liftE_R[OF find_pd_for_asid_page_directory])
+   apply (rule hoare_vcg_conj_liftE_R[OF find_pd_for_asid_lookup, simplified])
+   apply (rule hoare_vcg_conj_liftE_R[OF find_pd_for_asid_pd_at_asid, simplified])
    apply (wp (once) find_pd_for_asid_inv)
   apply auto
   done
@@ -1683,7 +1683,7 @@ lemma arch_decode_inv_wf[wp]:
       apply (wpsimp wp: whenE_throwError_wp check_vp_wpR create_mapping_entries_parent_for_refs
                         find_pd_for_asid_pd_at_asid create_mapping_entries_valid_slots
                         create_mapping_entries_same_refs_ex hoare_vcg_ex_lift_R hoare_vcg_disj_lift_R
-                        hoare_vcg_const_imp_lift_R find_pd_for_asid_lookup_pd_wp
+                        hoare_vcg_const_imp_liftE_R find_pd_for_asid_lookup_pd_wp
                   simp: valid_arch_inv_def valid_page_inv_def is_pg_cap_def
                         cte_wp_at_caps_of_state[where P="\<lambda>c. same_refs rv c s" for rv s])
       apply (clarsimp simp: neq_Nil_conv)

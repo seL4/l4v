@@ -1229,7 +1229,7 @@ lemma getSyscallArg_ccorres_foo:
     apply (clarsimp simp: option_to_ptr_def option_to_0_def)
     apply (rule_tac P="\<lambda>s. valid_ipc_buffer_ptr' (ptr_val (Ptr b)) s \<and> i < msgLength mi \<and>
                            msgLength mi \<le> msgMaxLength \<and> scast n_msgRegisters \<le> i"
-                 in hoare_pre(1))
+                 in hoare_weaken_pre)
      apply (wp getMRs_user_word)
     apply (clarsimp simp: msgMaxLength_def unat_less_helper)
    apply fastforce

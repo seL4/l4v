@@ -473,7 +473,7 @@ next
         apply clarsimp
         apply assumption
        apply (subst imp_conjR)
-       apply (rule hoare_vcg_conj_liftE_R)
+       apply (rule hoare_vcg_conj_liftE_R')
         apply (rule derive_cap_is_derived)
        apply (wp derive_cap_is_derived_foo)+
       apply (simp split del: if_split)
@@ -485,7 +485,7 @@ next
        apply clarsimp
        apply assumption
       apply (subst imp_conjR)
-      apply (rule hoare_vcg_conj_liftE_R)
+      apply (rule hoare_vcg_conj_liftE_R')
        apply (rule hoare_strengthen_postE_R[OF deriveCap_derived])
        apply (clarsimp simp:cte_wp_at_ctes_of)
       apply (wp deriveCap_derived_foo)
@@ -593,7 +593,7 @@ lemma cteInsert_assume_Null:
    apply (rule bind_wp[OF _ getCTE_sp])+
    apply (rule hoare_name_pre_state)
    apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (erule hoare_pre(1))
+  apply (erule hoare_weaken_pre)
   apply simp
   done
 
@@ -1694,7 +1694,7 @@ declare asUser_global_refs' [wp]
 lemma lec_valid_cap' [wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupExtraCaps thread xa mi \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. s \<turnstile>' fst x)\<rbrace>, -"
   apply (rule hoare_pre, rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_conj_lift_R[where R=valid_objs' and S="\<lambda>_. valid_objs'"])
+    apply (rule hoare_vcg_conj_liftE_R[where R=valid_objs' and S="\<lambda>_. valid_objs'"])
      apply (rule lookupExtraCaps_srcs)
     apply wp
    apply (clarsimp simp: cte_wp_at_ctes_of)

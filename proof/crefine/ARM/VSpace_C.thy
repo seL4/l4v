@@ -2369,7 +2369,7 @@ lemma unmapPage_ccorres:
       apply (rule ccorres_return_void_C)
      apply vcg
     apply (simp add: lookup_pd_slot_def Let_def)
-    apply (wp hoare_vcg_const_imp_lift_R)
+    apply (wp hoare_vcg_const_imp_liftE_R)
    apply (simp add: Collect_const_mem)
    apply (vcg exspec=findPDForASID_modifies)
   apply (clarsimp simp: invs_arch_state' invs_no_0_obj' invs_valid_objs'

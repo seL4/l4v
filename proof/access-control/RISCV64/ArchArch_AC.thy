@@ -917,7 +917,7 @@ lemma unmap_page_table_respects:
   apply (simp add: unmap_page_table_def sfence_def)
   apply (wpsimp wp: pt_lookup_from_level_is_subject dmo_mol_respects hoare_vcg_conj_liftE_weaker
                     store_pte_respects pt_lookup_from_level_wrp[where Q="\<lambda>_. integrity aag X st"]
-         | wp (once) hoare_drop_imps hoare_vcg_E_elim)+
+         | wp (once) hoare_drop_imps hoare_vcg_conj_elimE)+
   apply (intro conjI; clarsimp)
     apply fastforce
    apply (rule aag_Control_into_owns[rotated], assumption)

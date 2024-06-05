@@ -573,7 +573,7 @@ lemma cap_insert_assume_null:
    apply (rule bind_wp[OF _ get_cap_sp])+
    apply (clarsimp simp: valid_def cte_wp_at_caps_of_state in_monad
               split del: if_split)
-  apply (erule hoare_pre(1))
+  apply (erule hoare_weaken_pre)
   apply simp
   done
 
@@ -607,7 +607,7 @@ lemma transfer_caps_loop_presM:
            | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
       apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
-      apply (rule hoare_vcg_conj_liftE_R)
+      apply (rule hoare_vcg_conj_liftE_R')
        apply (rule derive_cap_is_derived_foo)
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow>
           cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s)
@@ -616,8 +616,8 @@ lemma transfer_caps_loop_presM:
         prefer 2
         apply clarsimp
         apply assumption
-       apply (rule hoare_vcg_conj_liftE_R)
-         apply (rule hoare_vcg_const_imp_lift_R)
+       apply (rule hoare_vcg_conj_liftE_R')
+         apply (rule hoare_vcg_const_imp_liftE_R)
         apply (rule derive_cap_is_derived)
       apply (wp derive_cap_is_derived_foo)+
   apply (clarsimp simp: cte_wp_at_caps_of_state
