@@ -135,7 +135,7 @@ lemma sep_list_conj_map_singleton_wp:
   "\<lbrakk>x \<in> set xs; \<And>R. \<lbrace><P \<and>* I x \<and>* R>\<rbrace> f \<lbrace>\<lambda>_. <Q \<and>* I x \<and>* R>\<rbrace>\<rbrakk>
   \<Longrightarrow> \<lbrace><P \<and>* \<And>* map I xs \<and>* R>\<rbrace> f \<lbrace>\<lambda>_. <Q \<and>* \<And>* map I xs \<and>* R>\<rbrace>"
   apply (rule hoare_chain[where P'="<P \<and>* I x \<and>* \<And>* map I (remove1 x xs) \<and>* R>" and
-                                 Q="\<lambda>_. <Q \<and>* I x \<and>* \<And>* map I (remove1 x xs) \<and>* R>"])
+                                Q'="\<lambda>_. <Q \<and>* I x \<and>* \<And>* map I (remove1 x xs) \<and>* R>"])
     apply fastforce
    apply (subst (asm) sep_list_conj_map_remove1, assumption)
    apply (sep_select_asm 3)
@@ -147,7 +147,7 @@ lemma sep_set_conj_map_singleton_wp:
   "\<lbrakk>finite xs; x \<in> xs; \<And>R. \<lbrace><P \<and>* I x \<and>* R>\<rbrace> f \<lbrace>\<lambda>_. <Q \<and>* I x \<and>* R>\<rbrace>\<rbrakk>
   \<Longrightarrow> \<lbrace><P \<and>* (\<And>* x\<in>xs. I x) \<and>* R>\<rbrace> f \<lbrace>\<lambda>_. <Q \<and>* (\<And>* x\<in>xs. I x) \<and>* R>\<rbrace>"
   apply (rule hoare_chain[where P'="<P \<and>* I x \<and>* (\<And>* x\<in>xs - {x}. I x) \<and>* R>" and
-                                 Q="\<lambda>_. <Q \<and>* I x \<and>* (\<And>* x\<in>xs - {x}. I x) \<and>* R>"], assumption)
+                                Q'="\<lambda>_. <Q \<and>* I x \<and>* (\<And>* x\<in>xs - {x}. I x) \<and>* R>"], assumption)
    apply (subst (asm) sep.prod.remove, assumption+)
    apply sep_solve
   apply (subst sep.prod.remove, assumption+)

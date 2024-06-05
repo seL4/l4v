@@ -705,10 +705,10 @@ lemma handle_recv_reads_respects_f:
                       simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)[1]
         apply (wp reads_respects_f[OF handle_fault_reads_respects,where st=st])
        apply (wpsimp wp: get_simple_ko_wp get_cap_wp)+
-        apply (rule_tac Q="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
+        apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
                                  tcb_at rv s \<and> pas_cur_domain aag s \<and> is_subject aag rv \<and>
                                  is_subject aag (cur_thread s) \<and> is_subject aag (fst (fst r))"
-                     and E=E and F=E for E in hoare_strengthen_postE)
+                     and E'=E and E=E for E in hoare_strengthen_postE)
           apply (wp lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault)
          apply ((fastforce simp add:valid_fault_def)+)[3]
       apply (wp reads_respects_f[OF as_user_reads_respects,where st=st and Q=\<top>])

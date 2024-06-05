@@ -573,7 +573,7 @@ lemma kernelEntry_invs':
     and valid_domain_list' \<rbrace>
   kernelEntry e tc
   \<lbrace>\<lambda>_. invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>"
-  apply (rule_tac R1="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some (ksCurSc s)) (ksCurThread s) s"
+  apply (rule_tac P'1="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some (ksCurSc s)) (ksCurThread s) s"
          in hoare_pre_add[THEN iffD2])
    apply (clarsimp simp: obj_at'_tcb_scs_of_equiv obj_at'_sc_tcbs_of_equiv sym_heap_def)
    apply (fastforce simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def)
@@ -859,7 +859,7 @@ lemma kernel_corres':
        apply (rule corres_split_handle[OF handleEvent_corres])
          (* handle *)
          apply (rule kernel_preemption_corres)
-        apply (rule_tac E="\<lambda>_ s. einvs s \<and> scheduler_act_sane s \<and> cur_sc_chargeable s \<and>
+        apply (rule_tac E'="\<lambda>_ s. einvs s \<and> scheduler_act_sane s \<and> cur_sc_chargeable s \<and>
                                  (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> ct_not_queued s \<and>
                                  (schact_is_rct s \<longrightarrow> ct_in_state activatable s) \<and>
                                  (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s) \<and>

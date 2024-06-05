@@ -147,8 +147,7 @@ lemma schedule_ct_activateable:
                             set_tcb_queue_def get_tcb_queue_def
                         wp: thread_get_wp' stt_activatable)
        apply (wp add: is_schedulable_wp)+
-    apply (rule hoare_strengthen_post[where
-             Q="\<lambda>_. invs and valid_sched"])
+    apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs and valid_sched"])
      apply wp
     apply (subgoal_tac "\<forall>x. scheduler_action s = switch_thread x \<longrightarrow> st_tcb_at activatable x s")
      apply (subgoal_tac "scheduler_action s = resume_cur_thread \<longrightarrow> ct_in_state activatable s")
@@ -366,7 +365,7 @@ lemma install_tcb_cap_schact_is_rct_imp_cur_sc_active:
   apply (cases slot_opt; clarsimp; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule bindE_wp_fwd_skip)
-   apply (rule_tac E="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_postE)
+   apply (rule_tac E'="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_postE)
      apply (clarsimp simp: cap_delete_def)
      apply (rule valid_validE)
      apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -385,7 +384,7 @@ lemma install_tcb_frame_cap_schact_is_rct_imp_cur_sc_active:
   apply (cases buffer; clarsimp; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule bindE_wp_fwd_skip)
-   apply (rule_tac E="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_postE)
+   apply (rule_tac E'="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_postE)
      apply (clarsimp simp: cap_delete_def)
      apply (rule valid_validE)
      apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -1203,7 +1202,7 @@ lemma handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q:
     apply wpsimp
     apply (fastforce dest!: cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable
                       simp: schact_is_rct_def)
-   apply (rule_tac Q'="\<lambda>_. ct_not_blocked" in hoare_strengthen_postE_E)
+   apply (rule_tac E'="\<lambda>_. ct_not_blocked" in hoare_strengthen_postE_E)
     apply wpsimp
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
                     split: thread_state.splits)
@@ -1635,7 +1634,7 @@ lemma install_tcb_cap_schact_is_rct_imp_ct_activatable:
   apply (cases slot_opt; clarsimp; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule bindE_wp_fwd_skip)
-   apply (rule_tac E="\<lambda>_. ?P" in hoare_strengthen_postE)
+   apply (rule_tac E'="\<lambda>_. ?P" in hoare_strengthen_postE)
      apply (clarsimp simp: cap_delete_def)
      apply (rule valid_validE)
      apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -1655,7 +1654,7 @@ lemma install_tcb_frame_cap_schact_is_rct_imp_ct_activatable:
   apply (cases buffer; clarsimp; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule bindE_wp_fwd_skip)
-   apply (rule_tac E="\<lambda>_ . ?P" in hoare_strengthen_postE)
+   apply (rule_tac E'="\<lambda>_ . ?P" in hoare_strengthen_postE)
      apply (clarsimp simp: cap_delete_def)
      apply (rule valid_validE)
      apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -2093,7 +2092,7 @@ lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
    apply (rule_tac Q'="\<lambda>_ s. is_refill_ready (cur_sc s) s" in hoare_post_imp)
     apply (rule is_refill_ready_imp_cur_sc_offset_ready_zero; fastforce)
    apply (rule hoare_weaken_pre)
-    apply (rule_tac f=cur_sc and g=cur_sc in hoare_lift_Pf_pre_conj[where R=\<top>, simplified];
+    apply (rule_tac f=cur_sc and g=cur_sc in hoare_lift_Pf_pre_conj[where P'=\<top>, simplified];
            (solves wpsimp)?)
     apply (wpsimp wp: refill_budget_check_round_robin_refill_ready_offset_ready_and_sufficient
                       refill_budget_check_refill_ready_offset_ready_and_sufficient)
@@ -2160,7 +2159,7 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
   apply (rule bind_wp[OF _ get_sched_context_sp])
 
   apply (rule_tac P="\<lambda>s. cur_thread s = idle_thread s" in hoare_pre_tautI)
-   apply (rule_tac R1="\<lambda>s. scp = idle_sc_ptr" in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
+   apply (rule_tac P'1="\<lambda>s. scp = idle_sc_ptr" in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
     apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
    apply (rule_tac Q'="\<lambda>_ s. scp = idle_sc_ptr" in bind_wp_fwd)
     apply wpsimp

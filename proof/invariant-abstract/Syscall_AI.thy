@@ -1099,8 +1099,7 @@ lemma hinv_invs':
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
   apply (wpsimp wp: syscall_valid sts_invs_minor2 rfk_invs split_del: if_split)+
-         apply (rule_tac Q = "\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in
-                hoare_post_imp)
+         apply (rule_tac Q'="\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in hoare_post_imp)
           apply (auto elim!: pred_tcb_weakenE st_tcb_ex_cap
                             fault_tcbs_valid_states_not_fault_tcb_states
                       dest: st_tcb_at_idle_thread invs_fault_tcbs_valid_states
@@ -1108,8 +1107,7 @@ lemma hinv_invs':
          apply (wpsimp wp: gts_sp)+
        apply (simp add: ct_in_state_def conj_commute conj_left_commute)
        apply (wpsimp wp: sts_schedulable_scheduler_action)
-       apply (rule_tac Q = "\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in
-              hoare_post_imp)
+       apply (rule_tac Q'="\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in hoare_post_imp)
         apply simp
        apply (wpsimp)
       apply (simp only: simp_thms K_def if_apply_def2)

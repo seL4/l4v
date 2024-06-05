@@ -870,8 +870,7 @@ lemma tcb_has_error_set_cap:
   \<lbrace>\<lambda>ya s. P (tcb_has_error p s)\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply clarsimp
-  apply (rule_tac Q = "\<lambda>r s'. tcb_has_error p s' = tcb_has_error p s" in
-    hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>r s'. tcb_has_error p s' = tcb_has_error p s" in hoare_strengthen_post)
   apply (simp add:set_cap_def
     gets_the_def set_object_def
     split_def)
@@ -1067,7 +1066,7 @@ lemma call_kernel_with_intent_allow_error_helper:
                          hoare_strengthen_post[OF schedule_no_choice_wp])
          apply (clarsimp, assumption)
         apply clarsimp
-        apply (rule_tac Q =
+        apply (rule_tac Q'=
                "\<lambda>r a. (\<not> tcb_has_error root_tcb_id a \<longrightarrow> (Q a
                             \<and> cdl_current_thread a = Some root_tcb_id
                             \<and> cdl_current_domain a = minBound

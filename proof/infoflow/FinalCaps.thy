@@ -2794,15 +2794,17 @@ lemma handle_invocation_silc_inv:
   apply (wp syscall_valid perform_invocation_silc_inv set_thread_state_runnable_valid_sched
             set_thread_state_pas_refined decode_invocation_authorised
          | simp split del: if_split)+
-       apply (rule_tac E="\<lambda>ft. silc_inv aag st and pas_refined aag and
-                               is_subject aag \<circ> cur_thread and invs and
-                               (\<lambda>_. valid_fault ft \<and> is_subject aag thread)"
-                   and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+       apply (rule_tac E'="\<lambda>ft. silc_inv aag st and pas_refined aag and
+                                is_subject aag \<circ> cur_thread and invs and
+                                (\<lambda>_. valid_fault ft \<and> is_subject aag thread)"
+                   and Q="Q" and Q'=Q for Q
+                    in hoare_strengthen_postE)
          apply (wp lookup_extra_caps_authorised lookup_extra_caps_auth | simp)+
-     apply (rule_tac E="\<lambda>ft. silc_inv aag st and pas_refined aag and
-                             is_subject aag \<circ> cur_thread and invs and
-                             (\<lambda>_. valid_fault (CapFault x False ft) \<and> is_subject aag thread)"
-                 and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+     apply (rule_tac E'="\<lambda>ft. silc_inv aag st and pas_refined aag and
+                              is_subject aag \<circ> cur_thread and invs and
+                              (\<lambda>_. valid_fault (CapFault x False ft) \<and> is_subject aag thread)"
+                 and Q="Q" and Q'=Q for Q
+                  in hoare_strengthen_postE)
         apply (wp lookup_cap_and_slot_authorised lookup_cap_and_slot_cur_auth | simp)+
   apply (auto intro: st_tcb_ex_cap simp: ct_in_state_def runnable_eq_active)
   done

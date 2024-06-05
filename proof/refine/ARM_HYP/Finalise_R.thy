@@ -4013,7 +4013,7 @@ lemma no_idle_thread_cap:
 
 lemmas getCTE_no_0_obj'_helper
   = getCTE_inv
-    hoare_strengthen_post[where Q'="\<lambda>_. no_0_obj'" and P=no_0_obj' and a="getCTE slot" for slot]
+    hoare_strengthen_post[where Q'="\<lambda>_. no_0_obj'" and P=no_0_obj' and f="getCTE slot" for slot]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 context

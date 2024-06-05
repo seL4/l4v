@@ -510,7 +510,7 @@ lemma ckernel_invs:
     apply (wpsimp wp: stateAssert_wp)
    apply (wpsimp wp: isSchedulable_wp hoare_drop_imp)
     apply (intro iffI; clarsimp simp: isScActive_def isSchedulable_bool_def)
-   apply (rule hoare_strengthen_postE[where E'="\<lambda>_. invs'" and Q=Q and R=Q for Q])
+   apply (rule hoare_strengthen_postE[where E'="\<lambda>_. invs'" and Q=Q and Q'=Q for Q])
      apply wpsimp
     apply (clarsimp simp: active_from_running')+
    apply wp
@@ -586,7 +586,7 @@ lemma kernelEntry_invs':
     and valid_domain_list' \<rbrace>
   kernelEntry e tc
   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (rule_tac R1="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some (ksCurSc s)) (ksCurThread s) s"
+  apply (rule_tac P'1="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some (ksCurSc s)) (ksCurThread s) s"
          in hoare_pre_add[THEN iffD2])
    apply (clarsimp simp: obj_at'_tcb_scs_of_equiv obj_at'_sc_tcbs_of_equiv sym_heap_def)
    apply (fastforce simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def)
@@ -881,13 +881,13 @@ lemma kernel_corres':
        apply (rule corres_split_handle[OF handleEvent_corres])
          (* handle *)
          apply (rule kernel_preemption_corres)
-        apply (rule_tac E="\<lambda>_ s. einvs s \<and> scheduler_act_sane s \<and> cur_sc_chargeable s \<and>
+        apply (rule_tac E'="\<lambda>_ s. einvs s \<and> scheduler_act_sane s \<and> cur_sc_chargeable s \<and>
                                  (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> ct_not_queued s \<and>
                                  (schact_is_rct s \<longrightarrow> ct_in_state activatable s) \<and>
                                  (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s) \<and>
                                  ct_not_blocked s \<and> current_time_bounded s \<and>
                                  ct_not_in_release_q s \<and> consumed_time_bounded s"
-               in hoare_strengthen_postE[where Q=Q and R=Q for Q])
+               in hoare_strengthen_postE[where Q=Q and Q'=Q for Q])
           apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_activatable
                             handle_event_schact_is_rct_imp_cur_sc_active call_kernel_schact_is_rct
                             handle_event_scheduler_act_sane handle_event_ct_not_queuedE_E

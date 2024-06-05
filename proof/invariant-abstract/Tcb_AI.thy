@@ -1886,7 +1886,7 @@ lemma cap_delete_fh_lift:
   apply (rule bindE_wp_fwd)
    apply (subst liftE_validE)
    apply (rule get_cap_sp)
-  apply (subst hoare_pre_addE[where R="K (valid_fault_handler cap)"])
+  apply (subst hoare_pre_addE[where P'="K (valid_fault_handler cap)"])
    apply clarsimp
    apply (subgoal_tac "cte_wp_at valid_fault_handler (target, tcb_cnode_index 3) s")
     apply (simp add: cte_wp_at_caps_of_state)

@@ -1305,7 +1305,7 @@ lemma handleInvocation_corres:
                apply (strengthen invs_valid_objs invs_psp_aligned invs_distinct)
                apply (clarsimp cong: conj_cong)
                apply (wpsimp wp: hoare_drop_imp)
-              apply (rule_tac Q'="tcb_at' thread and invs'" in hoare_post_imp_dc2)
+              apply (rule_tac Q'="tcb_at' thread and invs'" in hoare_post_impE_R_dc)
                apply wpsimp
               apply (clarsimp simp: invs'_def)
              apply simp
@@ -1628,10 +1628,10 @@ lemma handleRecv_isBlocking_corres':
             apply wpsimp+
           apply (rule handleFault_corres, clarsimp)
          apply (wpsimp wp: get_sk_obj_ref_wp)
-         apply (rule_tac Q="\<lambda>_. ?pre1 and (\<lambda>s. cur_thread s = thread)
+         apply (rule_tac Q'="\<lambda>_. ?pre1 and (\<lambda>s. cur_thread s = thread)
                                  and K (valid_fault (ExceptionTypes_A.fault.CapFault x True
                                         (ExceptionTypes_A.lookup_failure.MissingCapability 0)))"
-                     and E=E and F=E for E
+                     and E=E and E'=E for E
                 in hoare_strengthen_postE[rotated])
            apply (fastforce dest: valid_sched_valid_release_q
                             simp: valid_sched_valid_sched_action valid_sched_active_scs_valid

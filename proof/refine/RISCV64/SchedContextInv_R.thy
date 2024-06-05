@@ -632,7 +632,7 @@ lemma schedContextYieldTo_corres:
                                               threadSet_sched_pointers threadSet_valid_sched_pointers
                                         simp: fun_upd_def[symmetric])
                            apply (rule_tac
-                                    Q="\<lambda>_. sc_at scp and
+                                    Q'="\<lambda>_. sc_at scp and
                                            valid_objs and
                                            pspace_aligned and
                                            pspace_distinct and

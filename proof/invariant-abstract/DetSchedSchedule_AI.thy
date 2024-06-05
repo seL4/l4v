@@ -4330,7 +4330,7 @@ lemma refill_unblock_check_valid_refills[wp]:
                      refill_head_overlapping_loop_def non_overlapping_merge_refills_def
                      vs_all_heap_simps update_refill_hd_rewrite update_sched_context_set_refills_rewrite)
 
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
                                            = unat (scrc_budget cfg))
                                    (sc_refill_cfgs_of s) sc_ptr"
                in hoare_pre_add[THEN iffD2])
@@ -9778,7 +9778,7 @@ lemma handle_overrun_loop_body_ordered_disjoint:
     handle_overrun_loop_body usage
     \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
   (is "valid _ _ (\<lambda>_ s. ?post s)")
-  apply (rule_tac R1="\<lambda>s. sc_ptr = cur_sc s
+  apply (rule_tac P'1="\<lambda>s. sc_ptr = cur_sc s
                           \<longrightarrow> pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg))
                                        (sc_refill_cfgs_of s) (cur_sc s)"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
@@ -9913,7 +9913,7 @@ lemma handle_overrun_loop_head_bound:
    \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg))) + 4 * unat MAX_PERIOD \<le> unat max_time)
                    (sc_refill_cfgs_of s) (cur_sc s)\<rbrace>"
   (is "valid _ _ (\<lambda>_ s. ?post s)")
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) (cur_sc s)"
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) (cur_sc s)"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
    apply (blast intro: head_time_buffer_implies_no_overflow)
   apply (clarsimp simp: handle_overrun_loop_def)
@@ -9955,7 +9955,7 @@ lemma handle_overrun_loop_head_bound:
 
   apply (rule_tac f=cur_sc in hoare_lift_Pf2; (solves wpsimp)?)
   apply (rename_tac sc_ptr)
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
    apply (fastforce dest!: head_time_buffer_implies_no_overflow[rotated 1]
                      simp: vs_all_heap_simps)
@@ -10594,7 +10594,7 @@ lemma refill_budget_check_valid_refills[wp]:
                       schedule_used_defs
           | fastforce simp: obj_at_def vs_all_heap_simps)+)[1]
 
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
                                            = unat (scrc_budget cfg))
                                    (sc_refill_cfgs_of s) sc_ptr"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
@@ -10643,7 +10643,7 @@ lemma refill_budget_check_valid_refills[wp]:
                            word_le_nat_alt)
    apply (clarsimp simp: vs_all_heap_simps)
 
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
    apply (fastforce intro!: head_time_buffer_implies_no_overflow
                       simp: vs_all_heap_simps)
@@ -11262,7 +11262,7 @@ lemma refill_budget_check_refill_ready_offset_ready_and_sufficient:
                       schedule_used_defs
           | fastforce simp: obj_at_def vs_all_heap_simps)+)[1]
 
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
                                            = unat (scrc_budget cfg))
                                    (sc_refill_cfgs_of s) (cur_sc s)"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
@@ -11370,7 +11370,7 @@ lemma refill_budget_check_is_refill_sufficient:
                       schedule_used_defs
           | fastforce simp: obj_at_def vs_all_heap_simps)+)[1]
 
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
                                            = unat (scrc_budget cfg))
                                    (sc_refill_cfgs_of s) (cur_sc s)"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
@@ -11881,7 +11881,7 @@ lemma refill_budget_check_bounded_release_time:
                       schedule_used_defs
           | fastforce simp: obj_at_def vs_all_heap_simps)+)[1]
 
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
                                            = unat (scrc_budget cfg))
                                    (sc_refill_cfgs_of s) sc_ptr"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
@@ -11928,7 +11928,7 @@ lemma refill_budget_check_bounded_release_time:
                            word_le_nat_alt is_sc_obj_def)
    apply (clarsimp simp: vs_all_heap_simps)
 
-  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
+  apply (rule_tac P'1="\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
    apply (fastforce intro!: head_time_buffer_implies_no_overflow simp: vs_all_heap_simps)
 
@@ -21194,7 +21194,7 @@ lemma charge_budget_ct_not_blocked_on_receive[wp]:
   "charge_budget consumed canTimeout \<lbrace>ct_not_blocked_on_receive :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp wp: charge_budget_ct_in_state)
 
-lemmas check_budget_restart_false = hoare_drop_imp[where f=check_budget_restart and R="\<lambda>r s. \<not>r"]
+lemmas check_budget_restart_false = hoare_drop_imp[where f=check_budget_restart and Q'="\<lambda>r s. \<not>r"]
 
 lemma cur_sc_chargeable_sc_not_in_release_q:
   "cur_sc_chargeable (s :: 'state_ext state)
@@ -23869,7 +23869,7 @@ lemma restart_cur_sc_not_in_release_q:
   apply (rule bind_wp_fwd_skip, solves \<open>wpsimp simp: heap_refs_inv_def\<close>)
   apply (rule bind_wp[OF _ gsc_sp])
   apply (rule hoare_when_cases, simp)
-  apply (rule_tac R1="\<lambda>s. \<forall>sc_ptr. sc_opt = Some sc_ptr \<longrightarrow> sc_ptr \<noteq> idle_sc_ptr"
+  apply (rule_tac P'1="\<lambda>s. \<forall>sc_ptr. sc_opt = Some sc_ptr \<longrightarrow> sc_ptr \<noteq> idle_sc_ptr"
                in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
    apply (intro conjI impI allI)
    apply (rename_tac sc_ptr)
@@ -26038,7 +26038,7 @@ lemma reply_push_ct_ready_if_schedulable_callee:
               apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' get_simple_ko_wp)
              apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' get_simple_ko_wp)
             apply (rule_tac
-                     Q="\<lambda>_ s. if sc_caller \<noteq> None \<and> sc_callee = None \<and> can_donate
+                     Q'="\<lambda>_ s. if sc_caller \<noteq> None \<and> sc_callee = None \<and> can_donate
                               then callee = cur_thread s \<and> is_refill_ready (the sc_caller) s
                                    \<and> pred_map (\<lambda>x. x = sc_callee) (tcb_scps_of s) (cur_thread s)
                                    \<and> pred_map (\<lambda>x. x = sc_caller) (tcb_scps_of s) caller
@@ -26049,7 +26049,7 @@ lemma reply_push_ct_ready_if_schedulable_callee:
             apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv hoare_vcg_if_lift2
                               hoare_vcg_all_lift hoare_vcg_imp_lift)
          apply (rule_tac
-                  Q="\<lambda>_ s. ct_ready_if_schedulable s
+                  Q'="\<lambda>_ s. ct_ready_if_schedulable s
                            \<and> (can_donate \<longrightarrow>
                                 callee = cur_thread s
                                 \<and> (sc_caller = None \<or> is_refill_ready (the sc_caller) s)
@@ -26393,7 +26393,7 @@ lemma preemption_path_cur_sc_in_release_q_imp_zero_consumed:
    preemption_path
    \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed :: det_state \<Rightarrow> _\<rbrace>"
   (is "valid (?cond and _) _ _")
-  apply (rule_tac R1="cur_sc_in_release_q_imp_zero_consumed" in hoare_pre_add[THEN iffD2])
+  apply (rule_tac P'1="cur_sc_in_release_q_imp_zero_consumed" in hoare_pre_add[THEN iffD2])
    apply (fastforce intro: cur_sc_chargeable_cur_sc_in_release_q_imp_zero_consumed)
   apply (clarsimp simp: preemption_path_def)
   apply (rule bind_wp_fwd_skip, solves wpsimp)

@@ -125,10 +125,6 @@ lemma option_to_0_simps [simp]:
 lemma of_bool_from_bool: "of_bool = from_bool"
   by (rule ext, simp add: from_bool_def split: bool.split)
 
-lemma hoare_vcg_imp_liftE_R:
-  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, -; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, - \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, -"
-  by (auto simp add: valid_def validE_R_def validE_def split_def split: sum.splits)
-
 (* FIXME: move to Lib *)
 lemma length_Suc_0_conv:
   "length x = Suc 0 = (\<exists>y. x = [y])"

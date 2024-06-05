@@ -5709,7 +5709,7 @@ lemma resetUntypedCap_st_tcb_at':
    \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   apply (rule_tac
-          Q="\<lambda>s. \<exists>d v0 v1 f. invs' s \<and> sym_refs (state_refs_of' s)
+          P'="\<lambda>s. \<exists>d v0 v1 f. invs' s \<and> sym_refs (state_refs_of' s)
                              \<and> st_tcb_at' (P and (\<noteq>) Structures_H.thread_state.Inactive and
                                             (\<noteq>) Structures_H.thread_state.IdleThreadState) t s
                              \<and> (cte_wp_at' (\<lambda>cp. cteCap cp = capability.UntypedCap d v0 v1 f) slot s)

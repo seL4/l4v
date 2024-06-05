@@ -1155,11 +1155,11 @@ lemma call_kernel_integrity':
   apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues
                     handle_interrupt_integrity dmo_wp handle_interrupt_pas_refined)
     apply (clarsimp simp: if_fun_split)
-    apply (rule_tac Q="\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs) \<and>
-                                R True (domain_sep_inv (pasMaySendIrqs aag) st' s) rv ms"
-                and R="\<lambda>rv ms. R (the rv \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)
+    apply (rule_tac Q'="\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs) \<and>
+                                Q True (domain_sep_inv (pasMaySendIrqs aag) st' s) rv ms"
+                and Q="\<lambda>rv ms. Q (the rv \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)
                                  (pasMaySendIrqs aag \<or> interrupt_states s (the rv) \<noteq> IRQSignal) rv ms"
-                for R in hoare_strengthen_post[rotated], fastforce simp: domain_sep_inv_def)
+                for Q in hoare_strengthen_post[rotated], fastforce simp: domain_sep_inv_def)
     apply (wpsimp wp: getActiveIRQ_rv_None hoare_drop_imps getActiveIRQ_inv)
    apply (rule hoare_strengthen_postE,
       rule_tac Q="integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag

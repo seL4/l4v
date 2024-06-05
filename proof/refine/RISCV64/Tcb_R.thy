@@ -2004,8 +2004,8 @@ lemma cteDelete_fh_lift:
    apply (subst liftE_validE)
    apply (rule getCTE_sp)
   apply (clarsimp split del: if_split)
-  apply (rule_tac Q="P and invs' and L and cte_wp_at' (\<lambda>c. c = cte) target
-                       and K (isValidFaultHandler (cteCap cte))" in hoare_pre(2))
+  apply (rule_tac P'="P and invs' and L and cte_wp_at' (\<lambda>c. c = cte) target
+                       and K (isValidFaultHandler (cteCap cte))" in hoare_weaken_preE)
    apply (case_tac "cteCap cte"; clarsimp simp: isValidFaultHandler_def split: bool.splits)
     apply (wpsimp simp: C)+
          apply (rule hoare_FalseE)

@@ -52,7 +52,7 @@ lemma lsfco_cte_at':
    apply (wp)
   apply (clarsimp simp: split_def unlessE_def
              split del: if_split)
-  apply (wp hoare_drop_imps throwE_R)
+  apply (wpsimp wp: hoare_drop_imps throwE_R)
   done
 
 declare unifyFailure_wp [wp]
@@ -1729,7 +1729,7 @@ declare asUser_global_refs' [wp]
 lemma lec_valid_cap' [wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupExtraCaps thread xa mi \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. s \<turnstile>' fst x)\<rbrace>, -"
   apply (rule hoare_pre, rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_conj_liftE_R[where R=valid_objs' and S="\<lambda>_. valid_objs'"])
+    apply (rule hoare_vcg_conj_liftE_R[where P'=valid_objs' and Q'="\<lambda>_. valid_objs'"])
      apply (rule lookupExtraCaps_srcs)
     apply wp
    apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -5810,7 +5810,7 @@ lemma ri_invs' [wp]:
                               (ep_at' (capEPPtr cap) s \<longrightarrow>
                                obj_at' (\<lambda>ep. ep \<noteq> IdleEP \<longrightarrow> t \<notin> set (epQueue ep)) (capEPPtr cap) s)"
                  in bind_wp)
-     apply (rule_tac R1="\<lambda>s. \<forall>rptr. replyOpt = Some rptr \<longrightarrow> \<not> is_reply_linked rptr s"
+     apply (rule_tac P'1="\<lambda>s. \<forall>rptr. replyOpt = Some rptr \<longrightarrow> \<not> is_reply_linked rptr s"
             in hoare_pre_add[THEN iffD2])
       apply clarsimp
       apply (frule valid_replies'_no_tcb; clarsimp)

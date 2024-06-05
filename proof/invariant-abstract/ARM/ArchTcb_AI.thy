@@ -394,7 +394,7 @@ lemma tcs_invs[Tcb_AI_asms]:
     apply (clarsimp cong: conj_cong)
     apply (wpsimp wp: maybeM_wp_drop_None hoare_vcg_all_lift hoare_vcg_imp_lift', assumption)
    apply (clarsimp cong: conj_cong)
-   apply (rule hoare_post_addE[where R="invs and tcb_at t and ex_nonz_cap_to t"])
+   apply (rule hoare_post_addE[where Q'="invs and tcb_at t and ex_nonz_cap_to t"])
    apply (clarsimp cong: conj_cong)
    apply (rule hoare_vcg_conj_elimE)
     apply (wpsimp wp: install_tcb_cap_invs)
