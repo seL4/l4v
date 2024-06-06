@@ -642,7 +642,7 @@ lemma getMessageInfo_le3:
   including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
-  apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_. \<top>" in hoare_strengthen_post)
    apply wp
   apply (rename_tac rv s)
   apply (simp add: messageInfoFromWord_def Let_def msgExtraCapBits_def)
@@ -655,7 +655,7 @@ lemma getMessageInfo_msgLength:
   including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
-  apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_. \<top>" in hoare_strengthen_post)
    apply wp
   apply (simp add: messageInfoFromWord_def Let_def not_less msgMaxLength_def msgLengthBits_def
             split: if_split)
@@ -992,7 +992,7 @@ lemma cancelIPC_st_tcb_at':
   "\<lbrace>\<lambda>s. t\<noteq>t' \<and> st_tcb_at' P t' s\<rbrace> cancelIPC t \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_conv)
   apply (wp sts_pred_tcb_neq' getEndpoint_wp cteDeleteOne_Reply getCTE_wp' | wpc)+
-          apply (rule hoare_strengthen_post [where Q="\<lambda>_. st_tcb_at' P t'"])
+          apply (rule hoare_strengthen_post[where Q'="\<lambda>_. st_tcb_at' P t'"])
            apply (wp threadSet_st_tcb_at2)
            apply simp
           apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def)

@@ -226,12 +226,12 @@ lemma set_thread_state_sched_act:
     apply (simp add: set_thread_state_ext_def)
     apply wp
        apply (rule hoare_pre_cont)
-      apply (rule_tac Q="\<lambda>rv. (\<lambda>s. runnable ts) and (\<lambda>s. P (scheduler_action s))"
+      apply (rule_tac Q'="\<lambda>rv. (\<lambda>s. runnable ts) and (\<lambda>s. P (scheduler_action s))"
               in hoare_strengthen_post)
        apply wp
       apply force
      apply (wp gts_st_tcb_at)+
-     apply (rule_tac Q="\<lambda>rv. st_tcb_at ((=) state) thread and (\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>rv. st_tcb_at ((=) state) thread and (\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))" in hoare_strengthen_post)
      apply (simp add: st_tcb_at_def)
      apply (wp obj_set_prop_at)+
     apply (force simp: st_tcb_at_def obj_at_def)
@@ -270,7 +270,7 @@ lemma kernel_entry_invs:
   \<lbrace>\<lambda>rv. einvs and (\<lambda>s. ct_running s \<or> ct_idle s)
     and (\<lambda>s. 0 < domain_time s) and valid_domain_list
     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s) and valid_sched and
+  apply (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s) and valid_sched and
                            (\<lambda>s. 0 < domain_time s) and valid_domain_list and
                            valid_list and (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in hoare_post_imp)
@@ -316,7 +316,7 @@ lemma do_user_op_invs2:
   do_user_op f tc
    \<lbrace>\<lambda>_. (einvs  and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread))
         and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
-  apply (rule_tac Q="\<lambda>_. valid_list and valid_sched and
+  apply (rule_tac Q'="\<lambda>_. valid_list and valid_sched and
    (\<lambda>s. scheduler_action s = resume_cur_thread) and (invs and ct_running) and
    (\<lambda>s. 0 < domain_time s) and valid_domain_list"
    in hoare_strengthen_post)
@@ -391,7 +391,7 @@ lemma ckernel_invs:
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
              schedule_sch_act_simple he_invs' schedule_invs' hoare_vcg_if_lift3
-             hoare_drop_imp[where R="\<lambda>_. kernelExitAssertions"]
+             hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
           | simp add: no_irq_getActiveIRQ
           | strengthen non_kernel_IRQs_strg[where Q=True, simplified], simp cong: conj_cong)+
   done
@@ -580,20 +580,20 @@ lemma kernel_corres':
           apply simp
           apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: schact_is_rct_def)[1]
          apply simp
-         apply (rule_tac Q="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> invs' s \<and>
+         apply (rule_tac Q'="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
                                  intStateIRQTable (ksInterruptState s ) irq' \<noteq> IRQInactive)"
                       in hoare_post_imp)
           apply clarsimp
          apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
-       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_strengthen_postE)
+       apply (rule_tac Q'="\<lambda>_. \<top>" and E'="\<lambda>_. invs'" in hoare_strengthen_postE)
          apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split[OF schedule_corres])
         apply (rule activateThread_corres)
        apply (wp schedule_invs' hoare_vcg_if_lift2 dmo_getActiveIRQ_non_kernel
               | simp cong: rev_conj_cong | strengthen None_drop | subst Ex_Some_conv)+
-     apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and E="\<lambda>_. valid_sched and invs and valid_list"
+     apply (rule_tac Q'="\<lambda>_. valid_sched and invs and valid_list" and E'="\<lambda>_. valid_sched and invs and valid_list"
             in hoare_strengthen_postE)
        apply (wp handle_event_valid_sched hoare_vcg_if_lift3
               | simp

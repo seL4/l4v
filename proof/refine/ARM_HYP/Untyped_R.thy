@@ -398,7 +398,7 @@ next
            apply wp+
           apply (wp hoare_drop_impE_R hoare_vcg_all_liftE_R
                  | clarsimp)+
-          apply (rule hoare_strengthen_post [where Q = "\<lambda>r. invs and valid_cap r and cte_at slot"])
+          apply (rule hoare_strengthen_post[where Q'="\<lambda>r. invs and valid_cap r and cte_at slot"])
            apply wp+
           apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def
                                 valid_cap_def word_bits_def)
@@ -406,7 +406,7 @@ next
           apply (strengthen refl exI[mk_strg I E] exI[where x=d])+
           apply simp
          apply wp+
-         apply (rule hoare_strengthen_post [where Q = "\<lambda>r. invs' and cte_at' (cte_map slot)"])
+         apply (rule hoare_strengthen_post[where Q'="\<lambda>r. invs' and cte_at' (cte_map slot)"])
           apply wp+
          apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct')
          apply auto[1]
@@ -3203,7 +3203,7 @@ lemma createNewCaps_parent_helper:
                        (\<forall>tup\<in>set (zip (xs rv) rv).
                                 sameRegionAs (cteCap cte) (snd tup)))
     p\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
                                            \<and> isUntypedCap (cteCap cte)
                                            \<and> (\<forall>tup\<in>set (zip (xs rv) rv).
                                 sameRegionAs (cteCap cte) (snd tup))"])
@@ -5246,7 +5246,7 @@ crunch tcbPriority_inv[wp]: insertNewCap "obj_at' (\<lambda>tcb. P (tcbPriority 
 lemma insertNewCap_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace>ct_idle_or_in_cur_domain' and ct_active'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
 apply (wp ct_idle_or_in_cur_domain'_lift_futz[where Q=\<top>])
-apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>tcb. tcbState tcb \<noteq> Structures_H.thread_state.Inactive) t and obj_at' (\<lambda>tcb. d = tcbDomain tcb) t"
+apply (rule_tac Q'="\<lambda>_. obj_at' (\<lambda>tcb. tcbState tcb \<noteq> Structures_H.thread_state.Inactive) t and obj_at' (\<lambda>tcb. d = tcbDomain tcb) t"
              in hoare_strengthen_post)
 apply (wp | clarsimp elim: obj_at'_weakenE)+
 apply (auto simp: obj_at'_def)

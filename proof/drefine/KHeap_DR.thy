@@ -1384,10 +1384,10 @@ lemma valid_idle_fast_finalise[wp]:
   apply (case_tac p)
              apply simp_all
      apply (wp,simp add:valid_state_def invs_def)
-    apply (rule hoare_post_imp[where Q="%r. invs"])
+    apply (rule hoare_post_imp[where Q'="%r. invs"])
      apply (clarsimp simp:valid_state_def invs_def,wp cancel_all_ipc_invs)
     apply clarsimp
-   apply (rule hoare_post_imp[where Q="%r. invs"])
+   apply (rule hoare_post_imp[where Q'="%r. invs"])
     apply (clarsimp simp:valid_state_def invs_def,wp unbind_maybe_notification_invs cancel_all_signals_invs)
    apply clarsimp
   apply wp
@@ -1398,10 +1398,10 @@ lemma valid_irq_node_fast_finalise[wp]:
   "\<lbrace>invs\<rbrace> IpcCancel_A.fast_finalise p q \<lbrace>%r. valid_irq_node\<rbrace>"
   apply (case_tac p; simp)
      apply (wp,simp add:valid_state_def invs_def)
-    apply (rule hoare_post_imp[where Q="%r. invs"])
+    apply (rule hoare_post_imp[where Q'="%r. invs"])
       apply (clarsimp simp:valid_state_def invs_def,wp cancel_all_ipc_invs)
       apply clarsimp
-    apply (rule hoare_post_imp[where Q="%r. invs"])
+    apply (rule hoare_post_imp[where Q'="%r. invs"])
       apply (clarsimp simp:valid_state_def invs_def,wp unbind_maybe_notification_invs cancel_all_signals_invs)
       apply clarsimp
   apply wp
@@ -1412,10 +1412,10 @@ lemma invs_mdb_fast_finalise[wp]:
   "\<lbrace>invs\<rbrace> IpcCancel_A.fast_finalise p q \<lbrace>%r. valid_mdb\<rbrace>"
   apply (case_tac p; simp)
      apply (wp,simp add:valid_state_def invs_def)
-    apply (rule hoare_post_imp[where Q="%r. invs"])
+    apply (rule hoare_post_imp[where Q'="%r. invs"])
       apply (clarsimp simp:valid_state_def invs_def,wp cancel_all_ipc_invs)
       apply clarsimp
-    apply (rule hoare_post_imp[where Q="%r. invs"])
+    apply (rule hoare_post_imp[where Q'="%r. invs"])
       apply (clarsimp simp:valid_state_def invs_def,wp unbind_maybe_notification_invs cancel_all_signals_invs)
       apply clarsimp
   apply wp
@@ -2745,7 +2745,7 @@ lemma get_tcb_reply_cap_wp_cte_at:
     "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid, tcb_cnode_index 2)\<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
     \<lbrace>\<lambda>rv. cte_wp_at ((\<noteq>) cap.NullCap) (obj_ref_of rv, tcb_cnode_index 2)\<rbrace>"
   apply (rule hoare_post_imp
-     [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
+     [where Q'="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
        and tcb_at sid and valid_objs and cte_wp_at ((=) r) (sid,tcb_cnode_index 2)"])
    apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)
@@ -2759,7 +2759,7 @@ lemma get_tcb_reply_cap_wp_master_cap:
   "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid,tcb_cnode_index 2) \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
     \<lbrace>\<lambda>rv s. (is_master_reply_cap rv)  \<rbrace>"
   apply (rule hoare_post_imp
-     [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
+     [where Q'="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
        and tcb_at sid and valid_objs and cte_wp_at ((=) r) (sid,tcb_cnode_index 2)"])
    apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)
@@ -2773,7 +2773,7 @@ lemma get_tcb_reply_cap_wp_original_cap:
     "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
     \<lbrace>\<lambda>rv s. is_original_cap s (obj_ref_of rv, tcb_cnode_index 2)\<rbrace>"
   apply (rule hoare_post_imp
-     [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb
+     [where Q'="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb
        and tcb_at sid and valid_objs and cte_wp_at ((=) r) (sid,tcb_cnode_index 2)"])
    apply (rename_tac rv s)
    apply clarsimp
@@ -2797,7 +2797,7 @@ lemma get_tcb_reply_cap_wp_obj_ref:
     "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid,tcb_cnode_index 2) \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
     \<lbrace>\<lambda>rv s. (obj_ref_of rv = sid) \<rbrace>"
   apply (rule hoare_post_imp
-     [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
+     [where Q'="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
        and tcb_at sid and valid_objs and cte_wp_at ((=) r) (sid,tcb_cnode_index 2)"])
    apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)
@@ -2944,7 +2944,7 @@ lemma delete_cap_simple_corres:
            apply (rule always_empty_slot_corres)
           apply simp
          apply wp
-         apply (rule hoare_post_imp [where Q="\<lambda>r. valid_mdb and valid_idle
+         apply (rule hoare_post_imp[where Q'="\<lambda>r. valid_mdb and valid_idle
                       and  not_idle_thread (fst slot) and valid_etcbs"])
           apply (simp add:valid_mdb_def weak_valid_mdb_def)
          apply wp
@@ -2956,7 +2956,7 @@ lemma delete_cap_simple_corres:
 
 lemma cap_delete_one_valid_mdb[wp]:
   "\<lbrace>invs and emptyable slot\<rbrace> cap_delete_one slot \<lbrace>\<lambda>yc. valid_mdb\<rbrace>"
-  apply (rule hoare_post_imp [where Q="%x. invs"])
+  apply (rule hoare_post_imp[where Q'="%x. invs"])
    apply (simp add:invs_def valid_state_def valid_pspace_def)
   apply (rule delete_one_invs)
   done
@@ -3375,9 +3375,9 @@ lemma not_idle_thread_resolve_address_bits:
   apply (rule validE_R_validE)
   apply (rule_tac hoare_weaken_preE_R)
    apply (rule validE_validE_R)
-   apply (rule_tac Q="\<lambda>r. valid_etcbs and valid_global_refs and valid_objs and valid_idle and
+   apply (rule_tac Q'="\<lambda>r. valid_etcbs and valid_global_refs and valid_objs and valid_idle and
                           valid_irq_node and ex_cte_cap_to (fst r)"
-          in hoare_strengthen_postE[where E="\<lambda>x y. True"])
+          in hoare_strengthen_postE[where E'="\<lambda>x y. True"])
      apply (wp rab_cte_cap_to)
     apply (auto intro: ex_cte_cap_wp_to_not_idle)[2]
   apply (clarsimp simp:ex_cte_cap_to_def)

@@ -1091,7 +1091,7 @@ lemma get_tcb_mrs_wp:
   apply (rule_tac P = "tcb = obj" in hoare_gen_asm)
    apply (clarsimp simp: get_tcb_mrs_def Let_def get_tcb_message_info_def Suc_leI[OF msg_registers_lt_msg_max_length]
                    split del:if_split)
-    apply (rule_tac Q="\<lambda>buf_mrs s. buf_mrs =
+    apply (rule_tac Q'="\<lambda>buf_mrs s. buf_mrs =
       (get_ipc_buffer_words (machine_state sa) obj ([Suc (length msg_registers)..<msg_max_length] @ [msg_max_length]))"
       in hoare_strengthen_post)
     apply (rule get_ipc_buffer_words[where thread=thread ])

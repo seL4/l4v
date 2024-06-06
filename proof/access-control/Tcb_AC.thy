@@ -375,7 +375,7 @@ lemma invoke_tcb_pas_refined:
   apply (rule hoare_gen_asm)
   apply (cases ti, simp_all add: authorised_tcb_inv_def)
         apply (wp ita_wps hoare_drop_imps
-                  hoare_strengthen_post[where Q="\<lambda>_. pas_refined aag and pspace_aligned
+                  hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag and pspace_aligned
                                                                      and valid_vspace_objs
                                                                      and valid_arch_state",
                                         OF mapM_x_wp']

@@ -7412,7 +7412,7 @@ lemma createObject_valid_cap':
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -7486,7 +7486,7 @@ lemma createObject_caps_overlap_reserved_ret':
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -7509,7 +7509,7 @@ lemma createObject_descendants_range':
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -7540,7 +7540,7 @@ lemma createObject_idlethread_range:
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -7560,7 +7560,7 @@ lemma createObject_IRQHandler:
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -7578,7 +7578,7 @@ lemma createObject_capClass[wp]:
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -7626,7 +7626,7 @@ lemma createObject_parent_helper:
     \<rbrace>
     createObject ty ptr us dev
     \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte) \<and> (sameRegionAs (cteCap cte) rv)) p\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
                                            \<and> isUntypedCap (cteCap cte) \<and>
                                 sameRegionAs (cteCap cte) rv"])
   apply (clarsimp simp:cte_wp_at_ctes_of)

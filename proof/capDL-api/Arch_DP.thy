@@ -221,7 +221,7 @@ lemma seL4_Page_Table_Map:
          in hoare_gen_asmEx)
         apply (elim conjE exE)
         apply simp
-        apply (rule_tac Q = "\<lambda>iv s. cdl_current_thread s = Some root_tcb_id \<and>
+        apply (rule_tac Q'="\<lambda>iv s. cdl_current_thread s = Some root_tcb_id \<and>
                                     cdl_current_domain s = minBound \<and>
           <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
           \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
@@ -350,7 +350,7 @@ lemma seL4_Section_Map_wp:
          in hoare_gen_asmEx)
         apply (elim exE)+
         apply simp
-        apply (rule_tac Q = "\<lambda>iv s. cdl_current_thread s = Some root_tcb_id \<and>
+        apply (rule_tac Q'="\<lambda>iv s. cdl_current_thread s = Some root_tcb_id \<and>
                                     cdl_current_domain s = minBound \<and>
           <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
           \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
@@ -489,7 +489,7 @@ lemma seL4_Page_Map_wp:
          in hoare_gen_asmEx)
         apply (elim exE)+
         apply simp
-        apply (rule_tac Q = "\<lambda>iv s. cdl_current_thread s = Some root_tcb_id \<and>
+        apply (rule_tac Q'="\<lambda>iv s. cdl_current_thread s = Some root_tcb_id \<and>
                                     cdl_current_domain s = minBound \<and>
           <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
           \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap

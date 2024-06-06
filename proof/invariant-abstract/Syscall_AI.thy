@@ -409,7 +409,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
           apply (drule st_tcb_at_eq, erule pred_tcb_weaken_strongerE, simp)
           apply clarsimp
          apply (wp handle_fault_reply_has_no_reply_cap)
-     apply (rule_tac Q = "\<lambda>_. st_tcb_at awaiting_reply t and invs and
+     apply (rule_tac Q'="\<lambda>_. st_tcb_at awaiting_reply t and invs and
                          (\<lambda>s. \<not>has_reply_cap t s)" in hoare_strengthen_post[rotated])
       apply (clarsimp)
       apply (erule pred_tcb_weakenE)
@@ -1075,7 +1075,7 @@ lemma delete_caller_cap_simple[wp]:
 
 lemma delete_caller_deletes_caller[wp]:
   "\<lbrace>\<top>\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv. cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3)\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 3)"
+  apply (rule_tac Q'="\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 3)"
                in hoare_post_imp,
          clarsimp elim!: cte_wp_at_weakenE)
   apply (simp add: delete_caller_cap_def cap_delete_one_def unless_def, wp)
@@ -1255,7 +1255,7 @@ lemma handle_reply_nonz_cap_to_ct:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s \<and> valid_objs s \<and> valid_mdb s \<and> tcb_at (cur_thread s) s\<rbrace>
      handle_reply
    \<lbrace>\<lambda>rv s :: 'state_ext state. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. \<exists>ct. (ct = cur_thread s) \<and> ex_nonz_cap_to ct s"
+  apply (rule_tac Q'="\<lambda>rv s. \<exists>ct. (ct = cur_thread s) \<and> ex_nonz_cap_to ct s"
                in hoare_post_imp)
    apply simp
   apply (wp hoare_vcg_ex_lift handle_reply_nonz_cap)

@@ -6201,7 +6201,7 @@ lemma reduceZombie_invs'':
           apply (wp | simp)+
          apply (rule getCTE_wp)
         apply (wp | simp)+
-      apply (rule_tac Q="\<lambda>cte s. rv = capZombiePtr cap +
+      apply (rule_tac Q'="\<lambda>cte s. rv = capZombiePtr cap +
                                       of_nat (capZombieNumber cap) * 2^cteSizeBits - 2^cteSizeBits
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
                               \<and> no_cte_prop Q s \<and> sch_act_simple s"
@@ -6542,7 +6542,7 @@ lemmas cteDelete_typ_at'_lifts [wp] = typ_at_lifts [OF cteDelete_typ_at']
 
 lemma cteDelete_cte_at:
   "\<lbrace>\<top>\<rbrace> cteDelete slot bool \<lbrace>\<lambda>rv. cte_at' slot\<rbrace>"
-  apply (rule_tac Q="\<lambda>s. cte_at' slot s \<or> \<not> cte_at' slot s"
+  apply (rule_tac P'="\<lambda>s. cte_at' slot s \<or> \<not> cte_at' slot s"
                in hoare_weaken_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_disj_lift)
@@ -6582,7 +6582,7 @@ lemma cteDelete_cte_wp_at_invs:
       apply (clarsimp simp: cte_wp_at_ctes_of)
      apply wp
     apply (simp add: imp_conjR conj_comms)
-    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> sch_act_simple s \<and>
+    apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> sch_act_simple s \<and>
                    (fst rv \<longrightarrow>
                        cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s) \<and>
                    (fst rv \<longrightarrow>
@@ -6592,7 +6592,7 @@ lemma cteDelete_cte_wp_at_invs:
                                          cteCap cte = NullCap \<or>
                                          (\<exists>zb n. cteCap cte = Zombie slot zb n))
                                   slot s)"
-                and E="\<lambda>rv. \<top>" in hoare_strengthen_postE)
+                and E'="\<lambda>rv. \<top>" in hoare_strengthen_postE)
       apply (wp finaliseSlot_invs finaliseSlot_removeable finaliseSlot_sch_act_simple
                 hoare_drop_impE_R[OF finaliseSlot_irqs])
        apply (rule hoare_strengthen_postE_R, rule finaliseSlot_abort_cases)
@@ -6800,7 +6800,7 @@ proof (induct rule: finalise_induct3)
           apply ((wp | simp add: locateSlot_conv)+)[2]
         apply (rule drop_spec_validE)
         apply simp
-        apply (rule_tac Q="\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)
+        apply (rule_tac Q'="\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)
                                      \<and> cte_wp_at' (\<lambda>cte. cteCap cte = fst rvb) sl s"
                          in hoare_post_imp)
          apply (clarsimp simp: o_def cte_wp_at_ctes_of capToRPO_def
@@ -7369,7 +7369,7 @@ next
                 apply (rule updateCap_corres)
                  apply simp
                 apply (simp add: is_cap_simps)
-               apply (rule_tac R="\<lambda>rv. cte_at' (cte_map ?target)" in hoare_post_add)
+               apply (rule_tac Q'="\<lambda>rv. cte_at' (cte_map ?target)" in hoare_post_add)
                apply (wp, (wp getCTE_wp)+)
               apply (clarsimp simp: cte_wp_at_ctes_of)
              apply (rule no_fail_pre, wp, simp)
@@ -7531,7 +7531,7 @@ lemma cteRevoke_typ_at':
 
 lemma cteRevoke_invs':
   "\<lbrace>invs' and sch_act_simple\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>rv. invs' and sch_act_simple" in hoare_strengthen_post)
   apply (wp cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)+
     apply simp_all
   done
@@ -9115,7 +9115,7 @@ proof (induct rule: finalise_spec_induct)
             apply (unfold Let_def split_def fst_conv snd_conv
                           case_Zombie_assert_fold haskell_fail_def)
             apply (wp getCTE_wp' preemptionPoint_invR| simp add: o_def irq_state_independent_HI)+
-            apply (rule hoare_post_imp [where Q="\<lambda>_. valid_irq_states'"])
+            apply (rule hoare_post_imp[where Q'="\<lambda>_. valid_irq_states'"])
              apply simp
             apply wp[1]
            apply (rule spec_strengthen_postE)

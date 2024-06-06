@@ -201,7 +201,7 @@ lemma decode_untyped_invocation_rev:
          | simp
          | rule validE_R_validE | strengthen aag_can_read_self)+
                   apply (rule hoare_strengthen_post[
-                                  where Q="\<lambda> rv s. (is_cnode_cap rv
+                                  where Q'="\<lambda> rv s. (is_cnode_cap rv
                                                          \<longrightarrow> is_subject aag (obj_ref_of rv))
                                                  \<and> pas_refined aag s"])
                    apply (wp (once) whenE_throwError_wp

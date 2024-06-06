@@ -203,7 +203,7 @@ lemma lcs_reply_owns:
    \<lbrace>\<lambda>rv _. \<forall>ep. (\<exists>m R. fst rv = ReplyCap ep m R \<and> AllowGrant \<in> R) \<longrightarrow> is_subject aag ep\<rbrace>, -"
   apply (rule hoare_strengthen_postE_R)
    apply (rule hoare_pre)
-    apply (rule hoare_vcg_conj_liftE_R [where S = "K (pas_refined aag)"])
+    apply (rule hoare_vcg_conj_liftE_R[where Q'="K (pas_refined aag)"])
      apply (rule lookup_cap_and_slot_cur_auth)
     apply (simp | wp lookup_cap_and_slot_inv)+
   apply (force simp: aag_cap_auth_def cap_auth_conferred_def reply_cap_rights_to_auth_def
@@ -334,7 +334,7 @@ lemma handle_recv_pas_refined:
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
             hoare_vcg_all_liftE_R get_simple_ko_wp
          | wpc | simp
-         | (rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread \<and> aag_has_auth_to aag Receive thread"
+         | (rule_tac Q'="\<lambda>rv s. invs s \<and> is_subject aag thread \<and> aag_has_auth_to aag Receive thread"
                   in hoare_strengthen_post,
             wp, clarsimp simp: invs_valid_objs invs_sym_refs))+
      apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> invs s \<and> tcb_at thread s
@@ -360,7 +360,7 @@ lemma handle_recv_integrity:
             lookup_slot_for_thread_cap_fault get_cap_auth_wp [where aag=aag] get_simple_ko_wp
          | wpc
          | simp
-         | rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread \<and> aag_has_auth_to aag Receive thread"
+         | rule_tac Q'="\<lambda>rv s. invs s \<and> is_subject aag thread \<and> aag_has_auth_to aag Receive thread"
                  in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
      apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> einvs s \<and> is_subject aag (cur_thread s)
                               \<and> tcb_at thread s \<and> cur_thread s = thread \<and> is_subject aag thread

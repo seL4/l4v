@@ -909,7 +909,7 @@ lemma associate_vcpu_tcb_sym_refs_hyp[wp]:
                              obj_at (\<lambda>ko. hyp_refs_of ko = {} ) t s  \<and>
                              sym_refs (state_hyp_refs_of s)"
                           in hoare_triv)
-      apply (rule_tac Q="\<lambda>rv s. obj_at (\<lambda>ko. hyp_refs_of ko = {} ) vr s \<and>
+      apply (rule_tac Q'="\<lambda>rv s. obj_at (\<lambda>ko. hyp_refs_of ko = {} ) vr s \<and>
                                 obj_at (\<lambda>ko. hyp_refs_of ko = {} ) t s  \<and>
                                 sym_refs (state_hyp_refs_of s)"
                              in hoare_post_imp)
@@ -922,7 +922,7 @@ lemma associate_vcpu_tcb_sym_refs_hyp[wp]:
        apply (wp | wpc | clarsimp)+
       apply (simp add: obj_at_def)
      apply (wp  get_vcpu_ko | wpc | clarsimp)+
-   apply (rule_tac Q="\<lambda>rv s. (\<exists>t'. obj_at (\<lambda>tcb. tcb = TCB t' \<and> rv = tcb_vcpu (tcb_arch t')) t s) \<and>
+   apply (rule_tac Q'="\<lambda>rv s. (\<exists>t'. obj_at (\<lambda>tcb. tcb = TCB t' \<and> rv = tcb_vcpu (tcb_arch t')) t s) \<and>
                              sym_refs (state_hyp_refs_of s)"
                           in hoare_post_imp)
     apply (clarsimp simp: obj_at_def)
@@ -1106,7 +1106,7 @@ lemma associate_vcpu_tcb_valid_arch_state[wp]:
   "associate_vcpu_tcb vcpu tcb \<lbrace>valid_arch_state\<rbrace>"
   apply (clarsimp simp: associate_vcpu_tcb_def)
   apply (wpsimp wp: vcpu_switch_valid_arch)
-        apply (rule_tac Q="\<lambda>_. valid_arch_state and obj_at hyp_live vcpu" in hoare_post_imp)
+        apply (rule_tac Q'="\<lambda>_. valid_arch_state and obj_at hyp_live vcpu" in hoare_post_imp)
          apply fastforce
         apply wpsimp
        apply (wpsimp wp: arch_thread_set.valid_arch_state)

@@ -865,7 +865,7 @@ lemma empty_slot_integrity_transferable[wp_transferable]:
    apply (simp add: set_cdt_def)
    apply (wp set_original_wp)
        apply (rename_tac cdtv x)
-       apply (rule_tac Q = "\<lambda>_ s'. integrity aag X s s'\<and> cdtv = cdt s \<and>
+       apply (rule_tac Q'="\<lambda>_ s'. integrity aag X s s'\<and> cdtv = cdt s \<and>
                             is_original_cap s = is_original_cap s'"
                        in hoare_post_imp)
         apply (clarsimp simp add: integrity_def)

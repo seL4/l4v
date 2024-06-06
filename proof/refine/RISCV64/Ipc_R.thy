@@ -2108,7 +2108,7 @@ lemma doReplyTransfer_corres:
           apply (fastforce)
          apply (clarsimp simp:is_cap_simps)
         apply (wp weak_valid_sched_action_lift)+
-       apply (rule_tac Q="\<lambda>_ s. valid_objs' s \<and> cur_tcb' s \<and> tcb_at' receiver s
+       apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> cur_tcb' s \<and> tcb_at' receiver s
                                 \<and> sch_act_wf (ksSchedulerAction s) s
                                 \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s
                                 \<and> pspace_aligned' s \<and> pspace_distinct' s"
@@ -2165,7 +2165,7 @@ lemma doReplyTransfer_corres:
                              threadSet_tcbDomain_triv threadSet_valid_objs'
                              threadSet_sched_pointers threadSet_valid_sched_pointers
                         | simp add: valid_tcb_state'_def)+
-     apply (rule_tac Q="\<lambda>_. valid_sched and cur_tcb and tcb_at sender and tcb_at receiver and
+     apply (rule_tac Q'="\<lambda>_. valid_sched and cur_tcb and tcb_at sender and tcb_at receiver and
                             valid_objs and pspace_aligned and pspace_distinct"
                      in hoare_strengthen_post [rotated], clarsimp)
      apply (wp)
@@ -2173,7 +2173,7 @@ lemma doReplyTransfer_corres:
       apply (assumption)
      apply (rule conjI, clarsimp)
      apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def)
-    apply (rule_tac Q="\<lambda>_. tcb_at' sender and tcb_at' receiver and invs'"
+    apply (rule_tac Q'="\<lambda>_. tcb_at' sender and tcb_at' receiver and invs'"
                     in hoare_strengthen_post [rotated])
      apply (solves\<open>auto simp: invs'_def valid_state'_def\<close>)
     apply wp
@@ -2254,14 +2254,14 @@ lemma setupCallerCap_corres:
                               tcb_cnode_index_def cte_level_bits_def)
             apply (simp add: cte_map_def tcbCallerSlot_def
                              tcb_cnode_index_def cte_level_bits_def)
-           apply (rule_tac R="\<lambda>rv. cte_at' (receiver + 2 ^ cte_level_bits * tcbCallerSlot)"
+           apply (rule_tac Q'="\<lambda>rv. cte_at' (receiver + 2 ^ cte_level_bits * tcbCallerSlot)"
                     in hoare_post_add)
 
            apply (wp, (wp getSlotCap_wp)+)
           apply blast
          apply (rule no_fail_pre, wp)
          apply (clarsimp simp: cte_wp_at'_def cte_at'_def)
-        apply (rule_tac R="\<lambda>rv. cte_at' (sender + 2 ^ cte_level_bits * tcbReplySlot)"
+        apply (rule_tac Q'="\<lambda>rv. cte_at' (sender + 2 ^ cte_level_bits * tcbReplySlot)"
                      in hoare_post_add)
         apply (wp, (wp getCTE_wp')+)
        apply blast
@@ -2590,7 +2590,7 @@ lemma sendSignal_corres:
                                valid_queues_in_correct_ready_q valid_queues_ready_qs_distinct
                                valid_sched_valid_queues
                   | simp add: valid_tcb_state_def)+
-         apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' a" in hoare_strengthen_post)
+         apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' a" in hoare_strengthen_post)
           apply wp
          apply (fastforce simp: invs'_def valid_state'_def sch_act_wf_weak valid_tcb_state'_def)
         apply (rule setNotification_corres)
@@ -2618,7 +2618,7 @@ lemma sendSignal_corres:
           apply (rule corres_split[OF asUser_setRegister_corres])
             apply (rule possibleSwitchTo_corres)
            apply ((wp | simp)+)[1]
-          apply (rule_tac Q="\<lambda>_. (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
+          apply (rule_tac Q'="\<lambda>_. (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
                                  cur_tcb' and
                                  st_tcb_at' runnable' (hd list) and valid_objs' and
                                  sym_heap_sched_pointers and valid_sched_pointers and
@@ -2801,7 +2801,7 @@ lemma cancelIPC_nonz_cap_to'[wp]:
        | wpc
        | simp
        | clarsimp elim!: cte_wp_at_weakenE'
-       | rule hoare_post_imp[where Q="\<lambda>rv. ex_nonz_cap_to' p"])+
+       | rule hoare_post_imp[where Q'="\<lambda>rv. ex_nonz_cap_to' p"])+
   done
 
 
@@ -2880,7 +2880,7 @@ proof -
           apply (wpc)
            apply (wp | simp)+
        apply (wpc, wp+)
-     apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
+     apply (rule_tac Q'="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
      apply (wp)
     apply simp
     done
@@ -2892,7 +2892,7 @@ proof -
     apply (wp)
         apply (wp hoare_convert_imp)[1]
        apply (wp)
-      apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
+      apply (rule_tac Q'="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
       apply (wp hoare_convert_imp | simp)+
      done
   show ?thesis
@@ -2905,16 +2905,16 @@ proof -
         apply (wp)+
            apply (wp hoare_convert_imp)[1]
           apply (wpc, wp+)
-        apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
+        apply (rule_tac Q'="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
         apply (wp cdo)+
-         apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
+         apply (rule_tac Q'="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
          apply ((wp aipc hoare_convert_imp)+)[6]
     apply (wp)
        apply (wp hoare_convert_imp)[1]
       apply (wpc, wp+)
-    apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
+    apply (rule_tac Q'="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
     apply (wp)
-   apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
+   apply (rule_tac Q'="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
    apply (wp)
   apply simp
   done
@@ -3170,7 +3170,7 @@ lemma receiveIPC_corres:
                                              valid_sched_action_def)
                      apply (clarsimp split: if_split_asm)
                     apply (clarsimp | wp do_ipc_transfer_tcb_caps)+
-                   apply (rule_tac Q="\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s
+                   apply (rule_tac Q'="\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s
                                             \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s
                                             \<and> pspace_aligned' s \<and> pspace_distinct' s"
                                 in hoare_post_imp)
@@ -3423,7 +3423,7 @@ lemma setupCallerCap_vp[wp]:
   apply (simp add: valid_pspace'_def setupCallerCap_def getThreadCallerSlot_def
                    getThreadReplySlot_def locateSlot_conv getSlotCap_def)
   apply (wp getCTE_wp)
-  apply (rule_tac Q="\<lambda>_. valid_pspace' and
+  apply (rule_tac Q'="\<lambda>_. valid_pspace' and
                          tcb_at' sender and tcb_at' rcvr"
                   in hoare_post_imp)
    apply (clarsimp simp: valid_cap'_def o_def cte_wp_at_ctes_of isCap_simps
@@ -3454,7 +3454,7 @@ lemma setupCallerCap_ifunsafe[wp]:
   apply (wp getSlotCap_cte_wp_at
        | simp add: unique_master_reply_cap' | strengthen eq_imp_strg
        | wp (once) hoare_drop_imp[where f="getCTE rs" for rs])+
-   apply (rule_tac Q="\<lambda>rv. valid_objs' and tcb_at' rcvr and ex_nonz_cap_to' rcvr"
+   apply (rule_tac Q'="\<lambda>rv. valid_objs' and tcb_at' rcvr and ex_nonz_cap_to' rcvr"
                 in hoare_post_imp)
     apply (clarsimp simp: ex_nonz_tcb_cte_caps' tcbCallerSlot_def
                           objBits_def objBitsKO_def dom_def cte_level_bits_def)
@@ -3593,7 +3593,7 @@ lemma completeSignal_invs:
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp set_ntfn_minor_invs' | wpc | simp)+
-    apply (rule_tac Q="\<lambda>_ s. (state_refs_of' s ntfnptr = ntfn_bound_refs' (ntfnBoundTCB ntfn))
+    apply (rule_tac Q'="\<lambda>_ s. (state_refs_of' s ntfnptr = ntfn_bound_refs' (ntfnBoundTCB ntfn))
                            \<and> ntfn_at' ntfnptr s
                            \<and> valid_ntfn' (ntfnObj_update (\<lambda>_. Structures_H.ntfn.IdleNtfn) ntfn) s
                            \<and> ((\<exists>y. ntfnBoundTCB ntfn = Some y) \<longrightarrow> ex_nonz_cap_to' ntfnptr s)
@@ -3623,7 +3623,7 @@ lemma setupCallerCap_urz[wp]:
                    getThreadCallerSlot_def getThreadReplySlot_def
                    locateSlot_conv)
   apply (wp getCTE_wp')
-  apply (rule_tac Q="\<lambda>_. untyped_ranges_zero' and valid_mdb' and valid_objs'" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>_. untyped_ranges_zero' and valid_mdb' and valid_objs'" in hoare_post_imp)
    apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def untyped_derived_eq_def
                          isCap_simps)
   apply (wp sts_valid_pspace_hangers)
@@ -3672,7 +3672,7 @@ lemma ri_invs' [wp]:
   apply (rule bind_wp [OF _ gbn_sp'])
   apply (rule bind_wp)
   (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at' ep (capEPPtr cap) and ?pre" in hoare_vcg_if_split)
+   apply (rule_tac P''="ko_at' ep (capEPPtr cap) and ?pre" in hoare_vcg_if_split)
     apply (wp completeSignal_invs)
    apply (case_tac ep)
      \<comment> \<open>endpoint = RecvEP\<close>
@@ -3944,9 +3944,9 @@ lemma si_invs'[wp]:
                hoare_convert_imp [OF setEndpoint_nosch setEndpoint_ct']
                hoare_drop_imp [where f="threadGet tcbFault t"]
              | rule_tac f="getThreadState a" in hoare_drop_imp
-             | wp (once) hoare_drop_imp[where R="\<lambda>_ _. call"]
-               hoare_drop_imp[where R="\<lambda>_ _. \<not> call"]
-               hoare_drop_imp[where R="\<lambda>_ _. cg"]
+             | wp (once) hoare_drop_imp[where Q'="\<lambda>_ _. call"]
+               hoare_drop_imp[where Q'="\<lambda>_ _. \<not> call"]
+               hoare_drop_imp[where Q'="\<lambda>_ _. cg"]
              | simp    add: valid_tcb_state'_def case_bool_If
                             case_option_If
                       cong: if_cong

@@ -197,7 +197,7 @@ lemma handleEvent_Interrupt_no_fail: "no_fail (invs' and ex_abs einvs) (handleEv
    apply wp
      apply (rule handleInterrupt_no_fail)
     apply (simp add: crunch_simps)
-    apply (rule_tac Q="\<lambda>r s. ex_abs (einvs) s \<and> invs' s \<and>
+    apply (rule_tac Q'="\<lambda>r s. ex_abs (einvs) s \<and> invs' s \<and>
                              (\<forall>irq. r = Some irq
                                     \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)"
                  in hoare_strengthen_post)
@@ -269,7 +269,7 @@ lemma handleEvent_ccorres:
                apply wp[1]
               apply clarsimp
               apply wp
-              apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s"
+              apply (rule_tac Q'="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s"
                     in hoare_post_imp)
                apply (simp add: ct_in_state'_def)
               apply (wp handleReply_sane)
@@ -510,7 +510,7 @@ lemma schedule_if_corres_C:
          apply simp
         apply simp
        apply (rule wp_post_taut)+
-     apply (rule_tac Q="\<lambda>r. ct_in_state' activatable' and invs' and
+     apply (rule_tac Q'="\<lambda>r. ct_in_state' activatable' and invs' and
                             ex_abs (invs and ct_in_state activatable)" in hoare_strengthen_post)
       apply (wp schedule_invs' corres_ex_abs_lift)
        apply (rule schedule_corres)

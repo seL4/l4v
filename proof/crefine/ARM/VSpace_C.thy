@@ -1647,7 +1647,7 @@ lemma performPageFlush_ccorres:
           apply (ctac add: setVMRoot_ccorres)
          apply (rule ccorres_return_Skip)
         apply (simp add: cur_tcb'_def[symmetric])
-        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+        apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
          apply (simp add: invs'_invs_no_cicd)
         apply wp+
       apply (rule ccorres_return_Skip)
@@ -1785,7 +1785,7 @@ lemma performPageDirectoryInvocationFlush_ccorres:
        apply wp
       apply (simp add: guard_is_UNIV_def)
      apply (simp add: cur_tcb'_def[symmetric])
-     apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
       apply (simp add: invs'_invs_no_cicd)
      apply wp+
    apply (simp)
@@ -1839,7 +1839,7 @@ lemma flushPage_ccorres:
         apply (ctac add: setVMRoot_ccorres)
        apply (rule ccorres_return_Skip)
       apply (wp | simp add: cur_tcb'_def[symmetric])+
-      apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
        apply (simp add: invs'_invs_no_cicd)
       apply (wp | simp add: cur_tcb'_def[symmetric])+
      apply (rule ccorres_return_Skip)
@@ -3014,7 +3014,7 @@ lemma flushTable_ccorres:
        apply (rule ccorres_return_Skip)
       apply (wp hoare_weak_lift_imp)
        apply clarsimp
-       apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
         apply (simp add: invs'_invs_no_cicd cur_tcb'_def)
        apply (wp mapM_x_wp_inv getPTE_wp | wpc)+
      apply (rule ccorres_return_Skip)

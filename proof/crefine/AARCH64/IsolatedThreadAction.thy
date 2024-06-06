@@ -1322,7 +1322,7 @@ lemma setThreadState_no_sch_change:
   (is "Nondet_VCG.valid ?P ?f ?Q")
   apply (simp add: setThreadState_def setSchedulerAction_def)
   apply (wp hoare_pre_cont[where f=rescheduleRequired])
-  apply (rule_tac Q="\<lambda>_. ?P and st_tcb_at' ((=) st) t" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>_. ?P and st_tcb_at' ((=) st) t" in hoare_post_imp)
    apply (clarsimp split: if_split)
    apply (clarsimp simp: obj_at'_def st_tcb_at'_def projectKOs)
   apply (wp threadSet_pred_tcb_at_state)

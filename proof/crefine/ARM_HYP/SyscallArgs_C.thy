@@ -1038,7 +1038,7 @@ lemma getMRs_user_word:
                          linorder_not_less [symmetric])
    apply (wp mapM_loadWordUser_user_words_at)
    apply (wp hoare_vcg_all_lift)
-    apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>_. \<top>" in hoare_strengthen_post)
      apply wp
     apply clarsimp
     defer
@@ -1094,7 +1094,7 @@ lemma getMRs_rel:
   apply (rule hoare_pre)
    apply (rule_tac x=mi in hoare_exI)
    apply wp
-   apply (rule_tac Q="\<lambda>rv s. thread = ksCurThread s \<and> fst (getMRs thread buffer mi s) = {(rv,s)}" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>rv s. thread = ksCurThread s \<and> fst (getMRs thread buffer mi s) = {(rv,s)}" in hoare_strengthen_post)
     apply (wp det_result det_wp_getMRs)
    apply clarsimp
   apply (clarsimp simp: cur_tcb'_def)

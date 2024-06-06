@@ -784,7 +784,7 @@ lemma invoke_untyped_cdt_inc[wp]:
         apply (wp set_parent_other unless_wp unlessE_wp
                | wpc | simp)+
    apply (simp add: reset_untyped_cap_def validE_def sum.case_eq_if)
-   apply (rule_tac Q = "\<lambda>r s. cdl_cdt s child = Some parent" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>r s. cdl_cdt s child = Some parent" in hoare_post_imp)
     apply simp
    apply (wp whenE_wp mapME_x_inv_wp | simp)+
   apply (clarsimp simp:detype_def)
@@ -947,7 +947,7 @@ lemma invoke_untyped_preempt:
   apply (wp unlessE_wp)
    apply (simp add: reset_untyped_cap_def whenE_liftE | wp whenE_wp)+
       apply (rule_tac P = "\<exists>a. cap = UntypedCap dev obj_range a" in hoare_gen_asmEx)
-      apply (rule hoare_strengthen_postE[where E = E and F = E for E])
+      apply (rule hoare_strengthen_postE[where E'=E and F = E for E])
         apply (rule mapME_x_inv_wp[where P = P and E = "\<lambda>r. P" for P])
         apply wp
          apply simp

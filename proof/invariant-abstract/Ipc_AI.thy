@@ -927,11 +927,11 @@ lemma tcl_reply':
   done
 
 lemmas tcl_reply[wp] = tcl_reply' [THEN hoare_strengthen_post
-                                        [where R="\<lambda>_. valid_reply_caps"],
+                                        [where Q="\<lambda>_. valid_reply_caps"],
                                    simplified]
 
 lemmas tcl_reply_masters[wp] = tcl_reply' [THEN hoare_strengthen_post
-                                        [where R="\<lambda>_. valid_reply_masters"],
+                                        [where Q="\<lambda>_. valid_reply_masters"],
                                    simplified]
 
 lemma transfer_caps_loop_irq_node[wp]:
@@ -2447,7 +2447,7 @@ lemma setup_caller_cap_reply[wp]:
    \<lbrace>\<lambda>rv. valid_reply_caps\<rbrace>"
   unfolding setup_caller_cap_def
   apply wp
-   apply (rule_tac Q="\<lambda>rv s. pspace_aligned s \<and> tcb_at st s \<and>
+   apply (rule_tac Q'="\<lambda>rv s. pspace_aligned s \<and> tcb_at st s \<and>
          st_tcb_at (\<lambda>ts. ts = Structures_A.thread_state.BlockedOnReply) st s \<and>
          \<not> has_reply_cap st s"
                  in hoare_post_imp)
@@ -2623,7 +2623,7 @@ lemma complete_signal_invs:
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp set_ntfn_minor_invs | wpc | simp)+
-   apply (rule_tac Q="\<lambda>_ s. (state_refs_of s ntfnptr = ntfn_bound_refs (ntfn_bound_tcb ntfn))
+   apply (rule_tac Q'="\<lambda>_ s. (state_refs_of s ntfnptr = ntfn_bound_refs (ntfn_bound_tcb ntfn))
                       \<and> (\<exists>T. typ_at T ntfnptr s) \<and> valid_ntfn (ntfn_set_obj ntfn IdleNtfn) s
                       \<and> ((\<exists>y. ntfn_bound_tcb ntfn = Some y) \<longrightarrow> ex_nonz_cap_to ntfnptr s)"
                       in hoare_strengthen_post)
@@ -2662,7 +2662,7 @@ lemma ri_invs':
   apply (rule bind_wp[OF _ gbn_sp])
   apply (rule bind_wp)
   (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
+   apply (rule_tac P''="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
    apply (case_tac rv)
      apply (wp | rule hoare_pre, wpc | simp)+
@@ -3253,7 +3253,7 @@ lemma ri_makes_simple:
   apply (rule bind_wp [OF _ gbn_sp])
   apply (rule bind_wp)
    apply (rename_tac ep I DO rv CARE NOT)
-   apply (rule_tac R="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
+   apply (rule_tac P''="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
    apply (case_tac rv, simp_all)
      apply (rule hoare_pre, wpc)
