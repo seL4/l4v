@@ -2124,7 +2124,7 @@ lemma schedule_corres:
                           tcbSchedEnqueue_invs'_not_ResumeCurrentThread thread_get_wp
                      del: gets_wp
                   | strengthen valid_objs'_valid_tcbs')+
-       apply (clarsimp simp: conj_ac if_apply_def2 cong: imp_cong conj_cong del: hoare_gets)
+       apply (clarsimp simp: conj_ac if_apply_def2 cong: imp_cong conj_cong)
        apply (wp gets_wp)+
 
    (* abstract final subgoal *)
