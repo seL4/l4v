@@ -4223,19 +4223,16 @@ lemma createNewCaps_idle'[wp]:
              split del: if_split)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
                       split del: if_split)
-         apply (rename_tac apiobject_type)
-         apply (case_tac apiobject_type, simp_all split del: if_split)[1]
-             apply (wp, simp)
-           including classic_wp_pre
-           apply (wp mapM_x_wp'
-                     createObjects_idle'
-                     threadSet_idle'
-                   | simp add: projectKO_opt_tcb projectKO_opt_cte
-                               makeObject_cte makeObject_tcb archObjSize_def
-                               tcb_cte_cases_def objBitsKO_def APIType_capBits_def
-                               objBits_def createObjects_def bit_simps cteSizeBits_def
-                   | intro conjI impI
-                   | fastforce simp: curDomain_def)+
+      apply (rename_tac apiobject_type)
+      apply (case_tac apiobject_type, simp_all split del: if_split)[1]
+          apply wpsimp
+         apply (wpsimp wp: mapM_x_wp' createObjects_idle' threadSet_idle'
+                | simp add: projectKO_opt_tcb projectKO_opt_cte
+                            makeObject_cte makeObject_tcb archObjSize_def
+                            tcb_cte_cases_def objBitsKO_def APIType_capBits_def
+                            objBits_def createObjects_def bit_simps cteSizeBits_def
+                | intro conjI impI
+                | clarsimp simp: curDomain_def)+
   done
 
 crunch createNewCaps
