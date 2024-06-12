@@ -20335,12 +20335,6 @@ lemma reset_untyped_cap_consumed_time_bounded[wp]:
    apply (wpsimp wp: mapME_x_wp_inv)+
   done
 
-lemma preemption_point_current_time_bounded[wp]:
-  "preemption_point \<lbrace>current_time_bounded :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: preemption_point_def)
-  apply (wpsimp wp: OR_choiceE_weak_wp hoare_drop_imps update_time_stamp_current_time_bounded)
-  done
-
 lemma reset_untyped_cap_current_time_bounded[wp]:
   "reset_untyped_cap slot \<lbrace>current_time_bounded :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: reset_untyped_cap_def)
@@ -21890,23 +21884,21 @@ crunches update_work_units, reset_work_units
   (simp: is_cur_domain_expired_def)
 
 lemma preemption_point_cur_sc_offset_sufficient[wp]:
-  "\<lbrace>\<lambda>s :: det_state. (cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s)\<rbrace>
+  "\<lbrace>\<lambda>s :: det_state. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>
    preemption_point
-   \<lbrace>\<lambda>_ s. (cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s)\<rbrace>, -"
-  apply (clarsimp simp: preemption_point_def)
-  apply (clarsimp simp: validE_R_def)
-  apply (rule bindE_wp_fwd_skip, wpsimp)
-  apply (clarsimp simp: validE_R_def[symmetric])
+   \<lbrace>\<lambda>_ s. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>, -"
+  unfolding preemption_point_def
+  apply forward_inv_step
   apply (rule OR_choiceE_E_weak_wp)
-  apply (rule alternativeE_R_wp[where P=Q and P'=Q for Q, simplified pred_conj_def, simplified]
-         ; (solves wpsimp)?)
-  apply (clarsimp simp: validE_R_def)
-  apply (rule bindE_wp_fwd_skip, wpsimp)
+  apply (rule alternativeE_R_wp[where P=Q and P'=Q for Q, simplified pred_conj_def, simplified];
+         (solves wpsimp)?)
+  apply forward_inv_step
   apply (clarsimp simp: validE_R_def)
   apply (rule_tac Q'="\<top>\<top>" in bindE_wp)
-   apply (rule bindE_wp_fwd_skip, wpsimp)
-   apply wpsimp
-   apply (clarsimp simp: obj_at_def vs_all_heap_simps)
+   apply forward_inv_step \<comment> \<open>step over the do_machine_op\<close>
+   apply (wpsimp wp: hoare_vcg_all_lift)
+   apply (fastforce dest: read_sc_refill_sufficient_SomeD read_sched_context_SomeD
+                    simp: obj_at_def vs_all_heap_simps )
   apply wpsimp
   done
 

@@ -473,29 +473,53 @@ lemma refill_capacity_ccorres:
   done
 
 lemma refill_sufficient_ccorres:
-  "ccorres dc xfdc
-     \<top> (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>usage = usage\<rbrace>) []
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (active_sc_at' scPtr and valid_objs' and no_0_obj') (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>usage = usage\<rbrace>) []
      (getRefillSufficient scPtr usage) (Call refill_sufficient_'proc)"
-sorry (* FIXME RT: refill_sufficient_ccorres *)
+  apply (cinit simp: readRefillSufficient_def getRefillCapacity_def[symmetric])
+   apply (ctac add: refill_capacity_ccorres)
+     apply csymbr
+     apply (fastforce intro: ccorres_return_C)
+    apply wpsimp
+   apply (vcg exspec=refill_capacity_modifies)
+  apply wpsimp
+  apply (clarsimp simp: minBudget_def split: if_splits)
+  done
 
 lemma isCurDomainExpired_ccorres:
-  "ccorres dc xfdc \<top> UNIV [] isCurDomainExpired (Call isCurDomainExpired_'proc)"
-sorry (* FIXME RT: isCurDomainExpired_ccorres *)
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_' \<top> UNIV []
+     isCurDomainExpired (Call isCurDomainExpired_'proc)"
+  apply cinit
+   apply (rule ccorres_pre_getDomainTime)
+   apply (rule ccorres_return_C)
+     apply clarsimp
+    apply fastforce
+   apply fastforce
+  apply (clarsimp simp: to_bool_def numDomains_sge_1_simp split: if_splits)
+  done
+
+crunches updateTimeStamp, setWorkUnits
+  for obj_at'[wp]: "\<lambda>s. P (obj_at' Q ptr s)"
+  and active_sc_at'[wp]: "active_sc_at' scPtr"
+  and valid_objs'[wp]: valid_objs'
+  and no_0_obj'[wp]: no_0_obj'
+  and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
+  (simp: active_sc_at'_def)
+
+crunch (empty_fail) empty_fail[wp]:
+  scActive, getRefillSufficient, getConsumedTime, isCurDomainExpired, getCurSc
 
 lemma preemptionPoint_ccorres:
-  "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-      invs' UNIV []
-      preemptionPoint (Call preemptionPoint_'proc)"
+  "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_') invs' UNIV []
+     preemptionPoint (Call preemptionPoint_'proc)"
+  supply Collect_const[simp del]
   apply (cinit simp: Kernel_Config.workUnitsLimit_def whenE_def)
    apply (rule ccorres_liftE_Seq)
-   apply (rule ccorres_split_nothrow
-               [where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
+   apply (rule ccorres_split_nothrow[where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
        apply (rule ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: modifyWorkUnits_def simpler_modify_def)
-       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                             carch_state_relation_def
-                             cmachine_state_relation_def)
+       apply (clarsimp simp: modifyWorkUnits_def simpler_modify_def rf_sr_def cstate_relation_def
+                             Let_def carch_state_relation_def cmachine_state_relation_def)
       apply ceqv
      apply (rule ccorres_liftE_Seq)
      apply (rule ccorres_pre_getWorkUnits)
@@ -503,37 +527,134 @@ lemma preemptionPoint_ccorres:
      apply (rule_tac R="\<lambda>s. rv = ksWorkUnitsCompleted s" in ccorres_cond2)
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
       prefer 2
-      apply simp
-      apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
+      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
       apply (simp add: returnOk_def return_def)
      apply (rule ccorres_liftE_Seq)
      apply (rule ccorres_rhs_assoc)+
-     apply (rule ccorres_split_nothrow
-                 [where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
+     apply (rule ccorres_split_nothrow[where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
          apply (rule ccorres_from_vcg)
          apply (rule allI, rule conseqPre, vcg)
-         apply (thin_tac "P" for P)+
-         apply (clarsimp simp: setWorkUnits_def simpler_modify_def)
-         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                               carch_state_relation_def
-                                     cmachine_state_relation_def)
+         apply (clarsimp simp: setWorkUnits_def simpler_modify_def rf_sr_def cstate_relation_def
+                               Let_def carch_state_relation_def cmachine_state_relation_def)
         apply ceqv
        apply (rule ccorres_liftE_Seq)
-sorry (* FIXME RT: preemptionPoint_corres *) (*
-       apply (ctac (no_vcg) add: isIRQPending_ccorres)
-        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-        apply (rule allI, rule conseqPre, vcg)
-        apply (simp add: from_bool_0 whenE_def returnOk_def throwError_def
-                         return_def split: option.splits)
-        apply (clarsimp simp: cintr_def exception_defs)
-       apply wp+
+       apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+        apply (rule ccorres_liftE_Seq)
+        apply (ctac (no_vcg) add: isIRQPending_ccorres)
+         apply csymbr
+         apply clarsimp
+         apply (rename_tac irq_opt)
+         apply (rule_tac P="irq_opt \<noteq> None" in ccorres_cases; clarsimp)
+          apply ccorres_rewrite
+          apply (rule ccorres_liftE_Seq)
+          apply (rule ccorres_symb_exec_l')
+             apply (rule ccorres_liftE_Seq)
+             apply (rule ccorres_symb_exec_l')
+                apply (clarsimp simp: stateAssertE_def)
+                apply (rule ccorres_liftE_Seq)
+                apply (rule ccorres_stateAssert)
+                apply (rule ccorres_liftE_Seq)
+                apply (rule ccorres_symb_exec_l')
+                   apply (rule ccorres_liftE_Seq)
+                   apply (rule ccorres_symb_exec_l')
+                      apply (rule ccorres_cond_seq)
+                      apply (rule ccorres_cond_true)
+                      apply ccorres_rewrite
+                      apply (rule ccorres_cond_seq)
+                      apply (rule ccorres_cond_true)
+                      apply ccorres_rewrite
+                      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                      apply (rule allI, rule conseqPre, vcg)
+                      apply (simp add: throwError_def return_def cintr_def exception_defs)
+                     apply (clarsimp simp: andM_def ifM_def)
+                     apply wpsimp+
+         apply (rule ccorres_cond_seq)
+         apply ccorres_rewrite
+         apply (rule ccorres_liftE_Seq)
+         apply (rule ccorres_rhs_assoc)
+         apply (ctac (no_vcg) add: isCurDomainExpired_ccorres, rename_tac domExp)
+          apply csymbr
+          apply (rule ccorres_cond_seq)
+          apply clarsimp
+          apply (rule_tac P="to_bool domExp" in ccorres_cases; clarsimp simp: to_bool_def)
+           apply ccorres_rewrite
+           apply (rule ccorres_liftE_Seq)
+           apply (rule ccorres_pre_getCurSc)
+           apply (clarsimp simp: stateAssertE_def)
+           apply (rule ccorres_liftE_Seq)
+           apply (rule ccorres_stateAssert)
+           apply (rule ccorres_cond_seq)
+           apply (rule ccorres_cond_true)
+           apply (rule ccorres_liftE_Seq)
+           apply (rule ccorres_symb_exec_l')
+              apply (rule ccorres_liftE_Seq)
+              apply (rule ccorres_symb_exec_l')
+                 apply ccorres_rewrite
+                 apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                 apply (rule allI, rule conseqPre, vcg)
+                 apply (simp add: throwError_def return_def cintr_def exception_defs)
+                apply (clarsimp simp: andM_def ifM_def)
+                apply wpsimp+
+          apply ccorres_rewrite
+          apply (rule ccorres_liftE_Seq)
+          apply (rule ccorres_pre_getCurSc)
+          apply (clarsimp simp: stateAssertE_def)
+          apply (rule ccorres_liftE_Seq)
+          apply (rule ccorres_stateAssert)
+          apply (rule ccorres_liftE_Seq)
+          apply (rule ccorres_pre_getConsumedTime)
+          apply (rule ccorres_liftE_Seq)
+          apply ccorres_rewrite
+          apply (rule ccorres_rhs_assoc)
+          apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'=ret__int_'
+                       in ccorres_split_nothrow_novcg)
+              apply (clarsimp simp: andM_def ifM_def bind_assoc)
+              apply (rule ccorres_rhs_assoc)
+              apply (ctac add: sc_active_ccorres)
+                apply csymbr
+                apply (rule ccorres_cond[where R=\<top>])
+                  apply (fastforce simp: to_bool_def)
+                 apply (rule ccorres_add_return2)
+                 apply (ctac add: refill_sufficient_ccorres)
+                   apply (rule ccorres_return[where R=\<top> and R'=UNIV])
+                   apply vcg
+                   apply (fastforce simp: to_bool_def)
+                  apply wpsimp
+                 apply clarsimp
+                 apply (vcg exspec=refill_sufficient_modifies)
+                apply (rule ccorres_return_Skip')
+               apply wpsimp
+              apply (clarsimp simp: to_bool_def)
+              apply (vcg exspec=sc_active_modifies)
+             apply ceqv
+            apply clarsimp
+            apply csymbr
+            apply clarsimp
+            apply (rule ccorres_cond_seq)
+            apply (rule ccorres_cond[where R=\<top>])
+              apply (fastforce simp: to_bool_def)
+             apply ccorres_rewrite
+             apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+             apply (rule allI, rule conseqPre, vcg)
+             apply (simp add: throwError_def return_def cintr_def exception_defs)
+            apply ccorres_rewrite
+            apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+            apply (rule allI, rule conseqPre, vcg)
+            apply (simp add: throwError_def returnOk_def return_def cintr_def exception_defs)
+           apply wpsimp
+          apply (clarsimp simp: guard_is_UNIV_def)
+         apply (rule_tac Q="\<lambda>_. valid_objs' and no_0_obj'" in hoare_post_imp)
+          apply (clarsimp simp: active_sc_at'_def obj_at'_def)
+         apply wpsimp
+        apply (wpsimp wp: hoare_drop_imps)
+       apply wpsimp
+      apply wpsimp
      apply vcg
-    apply (unfold modifyWorkUnits_def)[1]
-    apply wp
+    apply (wpsimp simp: modifyWorkUnits_def)
    apply vcg
-  apply simp
-  done *)
+  apply (fastforce simp: sc_at'_asrt_def)
+  done
 
 definition
   "invocationCatch thread isBlocking isCall canDonate inject

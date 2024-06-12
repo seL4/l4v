@@ -1314,6 +1314,7 @@ crunches preemption_point
   and cte_wp_at[wp]: "cte_wp_at P p"
   and cur_sc_tcb[wp]: cur_sc_tcb
   and invs[wp]: invs
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (rule: preemption_point_inv simp: cur_sc_tcb_def ignore_del: preemption_point)
 
 lemma update_time_stamp_ct_schedulable[wp]:

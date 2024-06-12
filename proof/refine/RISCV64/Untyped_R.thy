@@ -1417,6 +1417,7 @@ crunches set_cap, set_cdt
   for domain_index[wp]: "\<lambda>s. P (domain_index s)"
   and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps)
+
 crunches updateMDB, updateNewFreeIndex, setCTE
   for rdyq_projs[wp]:
     "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"

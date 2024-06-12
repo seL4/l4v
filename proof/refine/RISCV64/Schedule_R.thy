@@ -1710,9 +1710,9 @@ lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
 
 lemma scheduleChooseNewThread_corres:
   "corres dc
-    (\<lambda>s. invs s \<and> valid_ready_qs s \<and> ready_or_release s \<and> scheduler_action s = choose_new_thread)
-    (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
-           schedule_choose_new_thread scheduleChooseNewThread"
+     (\<lambda>s. invs s \<and> valid_ready_qs s \<and> ready_or_release s \<and> scheduler_action s = choose_new_thread)
+     (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
+     schedule_choose_new_thread scheduleChooseNewThread"
   apply (clarsimp simp: schedule_choose_new_thread_def scheduleChooseNewThread_def)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: ksReadyQueues_asrt_cross)
@@ -1720,8 +1720,7 @@ lemma scheduleChooseNewThread_corres:
     apply (rule corres_split[OF getDomainTime_corres], clarsimp)
       apply (rule corres_split[OF scheduleChooseNewThread_fragment_corres, simplified bind_assoc])
         apply (rule setSchedulerAction_corres)
-        apply (wp | simp)+
-    apply (wp | simp add: getDomainTime_def)+
+        apply wpsimp+
   done
 
 lemma ssa_ct_not_inQ:
@@ -1734,10 +1733,6 @@ lemma ssa_invs':
   apply (wp ssa_ct_not_inQ)
   apply (clarsimp simp: invs'_def valid_irq_node'_def valid_dom_schedule'_def)
   done
-
-lemma getDomainTime_wp[wp]: "\<lbrace>\<lambda>s. P (ksDomainTime s) s \<rbrace> getDomainTime \<lbrace> P \<rbrace>"
-  unfolding getDomainTime_def
-  by wp
 
 lemma switchToThread_ct_not_queued_2:
   "\<lbrace>invs' and tcb_at' t\<rbrace> switchToThread t \<lbrace>\<lambda>rv s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>"

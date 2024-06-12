@@ -3976,7 +3976,7 @@ lemma preemption_point_inv':
   apply (clarsimp simp: preemption_point_def)
   apply (wpsimp simp: reset_work_units_def update_work_units_def
                   wp: OR_choiceE_weak_wp update_time_stamp_wp hoare_drop_imps
-                      hoare_vcg_all_lift)
+                      hoare_vcg_all_lift hoare_vcg_if_lift2)
   done
 
 locale Deterministic_AI_1 =
