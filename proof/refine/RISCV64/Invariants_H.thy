@@ -1028,14 +1028,17 @@ lemma inQ_implies_tcbQueueds_of:
 definition ready_or_release' where
   "ready_or_release' s \<equiv> \<forall>t. \<not> ((tcbQueued and tcbInReleaseQueue) |< tcbs_of' s) t"
 
-defs not_tcbQueued_asrt_def[simp]:
+defs not_tcbQueued_asrt_def:
   "not_tcbQueued_asrt tcbPtr s \<equiv> \<not> (tcbQueued |< tcbs_of' s) tcbPtr"
+declare not_tcbQueued_asrt_def[simp]
 
-defs not_tcbInReleaseQueue_asrt_def[simp]:
+defs not_tcbInReleaseQueue_asrt_def:
   "not_tcbInReleaseQueue_asrt tcbPtr s \<equiv> \<not> (tcbInReleaseQueue |< tcbs_of' s) tcbPtr"
+declare not_tcbInReleaseQueue_asrt_def[simp]
 
-defs ready_or_release'_asrt_def[simp]:
+defs ready_or_release'_asrt_def:
   "ready_or_release'_asrt \<equiv> ready_or_release'"
+declare ready_or_release'_asrt_def[simp]
 
 defs ready_qs_runnable_def:
   "ready_qs_runnable s \<equiv> \<forall>t. obj_at' tcbQueued t s \<longrightarrow> st_tcb_at' runnable' t s"

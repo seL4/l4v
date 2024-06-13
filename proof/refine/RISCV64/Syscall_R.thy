@@ -1681,11 +1681,11 @@ lemma hw_invs'[wp]:
   apply (rule bind_wp[OF _ getCurThread_sp])
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule catch_wp; (solves wpsimp)?)
-  apply (rule_tac A=A and
-                  B="\<lambda>rv. A and (\<lambda>s. \<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s)
+  apply (rule_tac P=P and
+                  Q'="\<lambda>rv. P and (\<lambda>s. \<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s)
                           and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s)
                           and (\<lambda>s. st_tcb_at' active' (ksCurThread s) s)"
-         for A in bindE_wp_fwd)
+         for P in bindE_wp_fwd)
    apply wpsimp
    apply (fastforce simp: ct_in_state'_def)
   apply (rename_tac epCap)

@@ -2253,11 +2253,12 @@ lemma ksReadyQueues_asrt_cross:
   "ready_queues_relation s s' \<Longrightarrow> ksReadyQueues_asrt s'"
   by (fastforce simp: ready_queues_relation_def Let_def ksReadyQueues_asrt_def)
 
-defs ksReleaseQueue_asrt_def[simplified release_queue_relation_def Let_def]:
+defs ksReleaseQueue_asrt_def':
   "ksReleaseQueue_asrt
      \<equiv> \<lambda>s'. \<exists>ts. release_queue_relation_2 ts (ksReleaseQueue s' )
                                           (tcbSchedNexts_of s') (tcbSchedPrevs_of s')
                                           (tcbInReleaseQueue |< tcbs_of' s')"
+lemmas ksReleaseQueue_asrt_def = ksReleaseQueue_asrt_def'[simplified release_queue_relation_def]
 
 lemma ksReleaseQueue_asrt_cross:
   "release_queue_relation s s' \<Longrightarrow> ksReleaseQueue_asrt s'"

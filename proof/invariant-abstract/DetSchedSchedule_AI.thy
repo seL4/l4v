@@ -11793,11 +11793,11 @@ lemma commit_time_released_ipc_queues[wp]:
   apply (simp add: commit_time_def)
   apply (rule bind_wp[OF _ gets_sp])
   apply (rule bind_wp[OF _ get_sched_context_sp])
-  apply (rule bind_wp_fwd_skip', wpsimp)
+  apply (rule bind_wp_skip, wpsimp)
   apply (rule hoare_when_cases, simp)
   apply (rule bind_wp[OF _ gets_sp])
   apply (rename_tac csc sc consumed)
-  apply (rule bind_wp_fwd_skip', wpsimp)
+  apply (rule bind_wp_skip, wpsimp)
   apply (rule hoare_when_cases, simp)
   apply (rule bind_wp_fwd_skip, solves \<open>wpsimp\<close>, simp?)+
   apply (rule hoare_weaken_pre)
@@ -13017,7 +13017,7 @@ lemma maybe_donate_sc_released_ipc_queues:
   apply (wpsimp wp: sched_context_donate_released_sc_released_ipc_queues
                      hoare_vcg_if_lift2 maybeM_wp hoare_drop_imp
               simp: get_sc_obj_ref_def obj_at_def)
-  apply (subgoal_tac "ntfn_at_ppred ntfn_sc ((=) (Some xa)) ntfnptr s", fastforce)
+  apply (subgoal_tac "ntfn_at_ppred ntfn_sc ((=) (Some x)) ntfnptr s", fastforce)
   apply (clarsimp simp: sk_obj_at_pred_def obj_at_def)
   done
 
@@ -13114,8 +13114,8 @@ lemma maybe_donate_sc_valid_sched_action:
    apply (rule bind_wp[OF _ gsc_ntfn_sp])
    apply (wpsimp wp: sched_context_resume_valid_sched_action)
      apply (rule_tac Q="\<lambda>_ s. valid_sched_action s \<and>
-                              (\<forall>x. sc_tcb_sc_at ((=) (Some x)) xa s \<longrightarrow>
-                                   scheduler_act_not x s)"
+                              (\<forall>y. sc_tcb_sc_at ((=) (Some y)) x s \<longrightarrow>
+                                   scheduler_act_not y s)"
                in hoare_strengthen_post[rotated])
       apply clarsimp
      apply (wpsimp wp: sched_context_donate_valid_sched_action
@@ -16429,11 +16429,11 @@ lemma sched_context_yield_to_valid_sched:
   unfolding sched_context_yield_to_def assert_opt_def
   apply (rule bind_wp[OF _ gscyf_sp])
   apply (rule bind_wp[OF _ sched_context_yield_to_valid_sched_helper], simp)
-  apply (rule_tac A=A
-              and B="\<lambda>_. A and (\<lambda>s. is_active_sc sc_ptr s \<and> sc_not_in_release_q sc_ptr s
-                         \<and> (runnable |< (kheap s |> sc_of |> sc_tcb |> tcb_sts_of s)) sc_ptr
-                         \<longrightarrow> is_refill_ready sc_ptr s)"
-         for A in bind_wp_fwd)
+  apply (rule_tac P=P
+              and Q'="\<lambda>_. P and (\<lambda>s. is_active_sc sc_ptr s \<and> sc_not_in_release_q sc_ptr s
+                          \<and> (runnable |< (kheap s |> sc_of |> sc_tcb |> tcb_sts_of s)) sc_ptr
+                          \<longrightarrow> is_refill_ready sc_ptr s)"
+         for P in bind_wp_fwd)
    apply ((wpsimp wp: sched_context_resume_schedulable_imp_sc_ready
                       sched_context_resume_valid_sched hoare_vcg_conj_lift
                       sched_context_resume_not_in_release_q
@@ -17330,7 +17330,7 @@ lemma suspend_ct_in_state:
    suspend x
    \<lbrace>\<lambda>rv. ct_in_state P:: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: suspend_def update_restart_pc_def)
-  apply (rule bind_wp[rotated, where A=A and B="\<lambda>_. A" for A])
+  apply (rule bind_wp[rotated, where P=P and Q'="\<lambda>_. P" for P])
    apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' cancel_ipc_ct_in_state)
   apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift set_thread_state_ct_st
                     set_tcb_obj_ref_ct_in_state get_tcb_obj_ref_wp hoare_vcg_all_lift
@@ -22084,7 +22084,7 @@ lemma reset_untyped_cap_cur_sc_active_implies_cur_sc_offset_sufficient[wp]:
   apply (intro conjI)
    apply wpsimp
   apply clarsimp
-  apply (rule_tac B="\<lambda>_ s. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s"
+  apply (rule_tac Q'="\<lambda>_ s. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s"
               and E="\<top>\<top>"
                in bindE_wp_fwd)
    apply (subst cur_sc_active_implies_cur_sc_offset_sufficient_rewrite)+
@@ -24004,7 +24004,7 @@ lemma unbind_from_sc_cur_sc_in_release_q_imp_zero_consumed[wp]:
   apply (rule bind_wp_fwd_skip, wpsimp)+
   apply (case_tac "sc_yield_from sc"; clarsimp?)
   apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (case_tac x; clarsimp?)
+  apply (case_tac rv; clarsimp?)
   apply (rule bind_wp_fwd_skip, wpsimp)+
   apply wpsimp
   done
@@ -24450,7 +24450,7 @@ lemma install_tcb_frame_cap_cur_sc_in_release_q_imp_zero_consumed_pred[wp]:
   supply uminus_apply[simp del]
   apply (cases buffer; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (clarsimp simp: validE_R_def)
-  apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
+  apply (rule_tac Q'="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
               and E="\<top>\<top>"
                in bindE_wp_fwd)
    apply wpsimp
@@ -24494,7 +24494,7 @@ lemma install_tcb_cap_cur_sc_in_release_q_imp_zero_consumed_pred[wp]:
   unfolding install_tcb_cap_def
   apply (cases buffer; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (clarsimp simp: validE_R_def)
-  apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
+  apply (rule_tac Q'="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
               and E="\<top>\<top>"
                in bindE_wp_fwd)
    apply wpsimp
@@ -24524,7 +24524,7 @@ lemma install_tcb_cap_cur_sc_not_in_release_q:
   unfolding install_tcb_cap_def
   apply (cases buffer; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (clarsimp simp: validE_R_def)
-  apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
+  apply (rule_tac Q'="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
               and E="\<top>\<top>"
                in bindE_wp_fwd)
    apply wpsimp
@@ -24539,7 +24539,7 @@ lemma install_tcb_cap_release_q_not_blocked_on_reply[wp]:
   unfolding install_tcb_cap_def
   apply (cases buffer; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (clarsimp simp: validE_R_def)
-  apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
+  apply (rule_tac Q'="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
               and E="\<top>\<top>"
                in bindE_wp_fwd)
    apply wpsimp
@@ -24668,7 +24668,7 @@ lemma invoke_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
   apply (rule bindE_wp_fwd_skip, wpsimp wp: hoare_case_option_wp)
    apply (clarsimp split: option.splits)
 
-  apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed"
+  apply (rule_tac Q'="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed"
               and E="\<top>\<top>"
                in bindE_wp_fwd
          ; (solves \<open>wpsimp\<close>)?)
@@ -25966,7 +25966,7 @@ lemma check_budget_restart_ct_ready_if_schedulable[wp]:
    check_budget_restart
    \<lbrace>\<lambda>rv s:: det_state. ct_ready_if_schedulable s\<rbrace>"
   unfolding check_budget_restart_def
-  apply (rule_tac bind_wp[where Q'=R and C=R for R])
+  apply (rule_tac bind_wp[where Q'=R and Q=R for R])
    apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong gts_wp)
    apply (clarsimp simp: ct_ready_if_schedulable_def tcb_at_kh_simps vs_all_heap_simps)
   apply (wpsimp wp: check_budget_ct_ready_if_schedulable)
@@ -26218,7 +26218,7 @@ lemma sched_context_donate_heap_refs_inv[wp]:
                           heap_refs_retract_at_def vs_all_heap_simps heap_upd_def)[1]
   apply (clarsimp simp: bind_assoc )
   apply (subst bind_assoc[symmetric])
-  apply (rule_tac bind_wp[where A=R and B="\<lambda>_. R" for R, rotated])
+  apply (rule_tac bind_wp[where P=R and Q'="\<lambda>_. R" for R, rotated])
    apply (wpsimp simp: sc_at_kh_simps tcb_at_kh_simps)
   apply (rule hoare_weaken_pre)
    apply (wpsimp wp: set_tcb_sched_context_valid_sched_except_tcb_scp_heap)

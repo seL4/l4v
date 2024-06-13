@@ -6125,8 +6125,6 @@ lemma handleFault_corres:
         apply (rule corres_split_eqr)
            apply (rule corres_split_catch[OF sendFaultIPC_corres])
                apply (fastforce simp: tcb_relation_def)+
-            apply wp
-           apply wp
           apply (clarsimp simp: handle_no_fault_def handleNoFaultHandler_def unless_def when_def)
           apply (rule setThreadState_corres, simp)
          apply (rule_tac Q="\<lambda>_ s. invs s \<and> tcb_at t s" in hoare_strengthen_post[rotated])
@@ -6178,7 +6176,9 @@ lemma handleTimeout_corres:
            apply (rule corres_assert_assume_l)
            apply (rule corres_split)
               apply (rule corres_split_catch[OF sendFaultIPC_corres])
-                  apply (fastforce simp: tcb_relation_def)+
+                  apply fastforce
+                 apply (fastforce simp: tcb_relation_def)
+                apply (rule corres_trivial, clarsimp)
                apply wp+
              apply (rule corres_trivial, clarsimp)
             apply (wp getTCB_wp)+

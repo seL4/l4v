@@ -62,7 +62,7 @@ lemma (in Tcb_AI_1) activate_invs:
   apply (rule bind_wp [OF _ thread_get_sp])
   apply (case_tac yt_opt, simp)
    apply (rule bind_wp [OF _ gts_sp])
-   apply (rule_tac Q="st_tcb_at ((=) x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+   apply (rule_tac Q="st_tcb_at ((=) rv) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
     apply (rename_tac state)
     apply (case_tac state; simp)
       apply wp

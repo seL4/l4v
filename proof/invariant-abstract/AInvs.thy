@@ -416,7 +416,7 @@ lemma invoke_tcb_schact_is_rct_imp_cur_sc_active:
         by auto
    apply (rename_tac target cnode_index cslot_ptr fault_handler mcp priority sc)
    apply (rule validE_valid)
-   apply (rule_tac B= "\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> tcb_at target s"
+   apply (rule_tac Q'= "\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> tcb_at target s"
                and E="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s)"
                 in bindE_wp_fwd)
     apply (invoke_tcb_install_tcb_cap_helper wp: install_tcb_cap_schact_is_rct_imp_cur_sc_active)+
@@ -1202,7 +1202,7 @@ lemma handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q:
     apply wpsimp
     apply (fastforce dest!: cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable
                       simp: schact_is_rct_def)
-   apply (rule_tac Q'="\<lambda>_. ct_not_blocked" in hoare_post_imp_E)
+   apply (rule_tac Q'="\<lambda>_. ct_not_blocked" in hoare_strengthen_postE_E)
     apply wpsimp
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
                     split: thread_state.splits)
@@ -1891,7 +1891,7 @@ lemma receive_ipc_schact_is_rct_imp_ct_activatable[wp]:
    \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   apply (clarsimp simp: receive_ipc_def)
   apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (case_tac x; clarsimp)
+  apply (case_tac rv; clarsimp)
   apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
   apply (rule hoare_if)
    apply (wpsimp wp: hoare_vcg_imp_lift')

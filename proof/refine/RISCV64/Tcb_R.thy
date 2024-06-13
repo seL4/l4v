@@ -2842,7 +2842,7 @@ lemma decodeSetSchedParams_wf:
   apply (clarsimp simp: validE_R_def)
   apply (rule bindE_wp_fwd_skip, wpsimp wp: checkPrio_inv)
   apply (rule bindE_wp[OF _ checkPrio_lt_ct_weak'[unfolded validE_R_def]])+
-  apply (wpsimp wp: checkPrio_lt_ct_weak gts_wp' threadGet_wp)
+  apply (wpsimp wp: checkPrio_lt_ct_weak gts_wp' threadGet_wp split_del: if_split)
   apply (clarsimp simp: maxPriority_def numPriorities_def pred_tcb_at'_def obj_at'_def)
   using max_word_max [of \<open>UCAST(64 \<rightarrow> 8) x\<close> for x]
   apply (auto simp: max_word_mask numeral_eq_Suc mask_Suc)

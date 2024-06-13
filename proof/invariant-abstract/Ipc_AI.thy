@@ -2825,7 +2825,7 @@ lemma maybe_donate_sc_pred_tcb_at:
   apply (case_tac sc_opt; simp)
    apply (rule bind_wp[OF _ gsc_ntfn_sp])
    apply (simp add: maybeM_def)
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
     apply wpsimp
    apply (rule bind_wp[OF _ gsct_sp])
    apply (rename_tac sc_tcb_opt)
@@ -2846,7 +2846,7 @@ lemma rai_pred_tcb_neq:
   apply (simp add: receive_signal_def)
   apply (case_tac cap; simp)
   apply (rule bind_wp[OF _ get_simple_ko_sp])
-  apply (case_tac "ntfn_obj x"; simp)
+  apply (case_tac "ntfn_obj rv"; simp)
     apply (case_tac is_blocking; simp)
      apply (wpsimp wp: schedule_tcb_pred_tcb_at maybe_return_sc_pred_tcb_at sts_st_tcb_at_neq)
     apply (wpsimp simp: do_nbrecv_failed_transfer_def)
