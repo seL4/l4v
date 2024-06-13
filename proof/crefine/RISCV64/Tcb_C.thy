@@ -588,7 +588,7 @@ lemma installTCBCap_ccorres:
           apply (rule ccorres_symb_exec_l)
              apply (ctac (no_vcg) add: cteInsert_ccorres)
               apply (rule ccorres_return_CE[simplified returnOk_def comp_def]; clarsimp)
-             apply (rule hoare_post_taut)
+             apply (rule hoare_TrueI)
             apply wpsimp
            apply wpsimp
           apply clarsimp

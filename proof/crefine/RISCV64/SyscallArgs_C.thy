@@ -365,7 +365,7 @@ lemma refill_head_ccorres:
      apply (rule ccorres_from_vcg_throws)
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (rule hoare_post_taut)
+    apply (rule hoare_TrueI)
    apply (rule conseqPre, vcg)
    apply (rule subset_refl)
   apply clarsimp
@@ -406,7 +406,7 @@ lemma refill_tail_ccorres:
      apply (rule ccorres_from_vcg_throws)
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (rule hoare_post_taut)
+    apply (rule hoare_TrueI)
    apply (rule conseqPre, vcg)
    apply (rule subset_refl)
   apply clarsimp

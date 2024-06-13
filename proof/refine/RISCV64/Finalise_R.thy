@@ -2262,7 +2262,7 @@ crunches setBoundNotification
 lemma unbindNotification_invs[wp]:
   "unbindNotification tcb \<lbrace>invs'\<rbrace>"
   apply (simp add: unbindNotification_def invs'_def valid_dom_schedule'_def)
-  apply (rule hoare_seq_ext[OF _ gbn_sp'])
+  apply (rule bind_wp[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, clarsimp, wp, clarsimp)
   apply clarsimp
   apply (rule bind_wp[OF _ get_ntfn_sp'])
@@ -2298,7 +2298,7 @@ lemma ntfn_bound_tcb_at':
 lemma unbindMaybeNotification_invs[wp]:
   "unbindMaybeNotification ntfnptr \<lbrace>invs'\<rbrace>"
   apply (simp add: unbindMaybeNotification_def invs'_def valid_dom_schedule'_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (wpsimp wp: sbn'_valid_pspace'_inv sbn_sch_act'
                     valid_irq_node_lift irqs_masked_lift setBoundNotification_ct_not_inQ
                     untyped_ranges_zero_lift sym_heap_sched_pointers_lift
@@ -2398,7 +2398,7 @@ lemma replyPop_valid_objs'[wp]:
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   unfolding replyPop_def
   supply if_split[split del]
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: schedContextDonate_valid_objs' hoare_vcg_if_lift_strong threadGet_const)
                   apply (clarsimp simp: obj_at'_def)
                  apply (wpsimp wp: replyNext_update_valid_objs' hoare_drop_imp hoare_vcg_if_lift2)+
@@ -2590,11 +2590,11 @@ lemma replyRemove_if_live_then_nonz_cap':
    replyRemove replyPtr tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (clarsimp simp: replyRemove_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (intro hoare_seq_ext[OF _ get_reply_sp']
-               hoare_seq_ext[OF _ assert_sp]
-               hoare_seq_ext[OF _ assert_opt_sp]
-               hoare_seq_ext[OF _ gts_sp'])
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (intro bind_wp[OF _ get_reply_sp']
+               bind_wp[OF _ assert_sp]
+               bind_wp[OF _ assert_opt_sp]
+               bind_wp[OF _ gts_sp'])
   apply (rule hoare_if)
    apply (wpsimp wp: replyPop_iflive)
   apply (clarsimp simp: when_def)
@@ -2899,7 +2899,7 @@ lemma unbindMaybeNotification_obj_at'_ntfnBound:
    unbindMaybeNotification r
    \<lbrace>\<lambda>_ s. obj_at' (\<lambda>ntfn. ntfnBoundTCB ntfn = None) r s\<rbrace>"
   apply (simp add: unbindMaybeNotification_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp obj_at_setObject2
         | wpc
@@ -2973,7 +2973,7 @@ crunches tcbReleaseRemove, tcbSchedDequeue
 lemma schedContextUnbindTCB_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding schedContextUnbindTCB_def
-  apply (rule schedContextUnbindTCB_invs'_helper[simplified] hoare_seq_ext | clarsimp)+
+  apply (rule schedContextUnbindTCB_invs'_helper[simplified] bind_wp | clarsimp)+
         apply (wpsimp wp: tcbReleaseRemove_invs' tcbSchedDequeue_invs' hoare_vcg_all_lift)+
   apply (fastforce dest: sym_refs_obj_atD'
                    simp: invs_valid_objs' invs'_valid_tcbs' valid_idle'_asrt_def
@@ -3125,7 +3125,7 @@ lemma unbindFromSC_bound_sc_tcb_at'_None:
    unbindFromSC t
    \<lbrace>\<lambda>rv. bound_sc_tcb_at' ((=) None) t\<rbrace>"
   apply (simp add: unbindFromSC_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wpsimp wp: schedContextUnbindTCB_bound_sc_tcb_at'_None threadGet_wp get_sc_inv'
                     hoare_drop_imp)
   apply (auto simp: pred_tcb_at'_def obj_at'_def)
@@ -3270,7 +3270,7 @@ lemma cancelIPC_makes_unlive:
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
   unfolding cancelIPC_def blockedCancelIPC_def Let_def getBlockingObject_def sym_refs_asrt_def
   apply simp
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ gts_sp'])+
+  apply (intro bind_wp[OF _ stateAssert_sp] bind_wp[OF _ gts_sp'])+
   apply (case_tac state; clarsimp)
          (* BlockedOnReceive*)
          apply (rename_tac ep pl rp)
@@ -3543,8 +3543,8 @@ lemma cteDeleteOne_cte_wp_at_preserved:
 lemma cancelIPC_cteCaps_of[wp]:
   "cancelIPC t \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cancelIPC_def Let_def capHasProperty_def locateSlot_conv)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule hoare_pre)
    apply (wp getCTE_wp' | wpcw
           | simp add: cte_wp_at_ctes_of
@@ -3733,7 +3733,7 @@ crunches isFinalCapability
 crunches cteDeleteOne
   for ksCurDomain[wp]:  "\<lambda>s. P (ksCurDomain s)"
   and tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
-  (wp: crunch_wps simp: crunch_simps unless_def wp_comb: hoare_vcg_precond_imp)
+  (wp: crunch_wps simp: crunch_simps unless_def wp_comb: hoare_weaken_pre)
 
 end
 
@@ -3785,7 +3785,7 @@ lemma deletingIRQHandler_invs' [wp]:
 lemma schedContextSetInactive_invs'[wp]:
   "schedContextSetInactive scPtr \<lbrace>invs'\<rbrace>"
   apply (clarsimp simp: schedContextSetInactive_def updateSchedContext_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
   apply (wpsimp wp: setSchedContext_invs' hoare_vcg_all_lift)
    apply (fastforce dest: invs'_ko_at_valid_sched_context' intro!: if_live_then_nonz_capE'
                     simp: ko_wp_at'_def obj_at'_def live_sc'_def

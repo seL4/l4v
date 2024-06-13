@@ -602,15 +602,15 @@ lemma si_blk_makes_simple:
    send_ipc True call bdg x can_reply_grant can_donate t' epptr
    \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (rule bind_wp[OF _ get_simple_ko_inv])
   apply (case_tac ep; simp)
     apply (wpsimp wp: sts_st_tcb_at_cases)
    apply (wpsimp wp: sts_st_tcb_at_cases)
   apply (rule hoare_gen_asm[simplified])
   apply (rename_tac list)
   apply (case_tac list; simp)
-  apply (rule hoare_seq_ext [OF _ set_simple_ko_pred_tcb_at])
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ set_simple_ko_pred_tcb_at])
+  apply (rule bind_wp [OF _ gts_sp])
   supply maybeM_inv[wp]
   apply (wpsimp wp: sts_st_tcb_at_cases hoare_drop_imp)
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
@@ -668,10 +668,10 @@ lemma reply_unlink_tcb_sym_refs_BlockedOnReceive:
                                     else state_refs_of s x))\<rbrace>
    reply_unlink_tcb tptr rptr \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (clarsimp simp: reply_unlink_tcb_def pred_tcb_at_eq_commute)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj], clarsimp)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj], clarsimp)
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ assert_sp, OF hoare_gen_asm_conj], clarsimp)
+  apply (rule bind_wp[OF _ gts_sp])
+  apply (rule bind_wp[OF _ assert_sp, OF hoare_gen_asm_conj], clarsimp)
   apply wpsimp
   apply (rule_tac V="tptr \<noteq> rptr" in revcut_rl; clarsimp simp: pred_tcb_at_def obj_at_def)
   by (erule delta_sym_refs
@@ -772,13 +772,13 @@ lemma receive_ipc_preamble_rv:
   unfolding receive_ipc_preamble_def
   apply (cases reply; clarsimp intro!: hoare_weaken_pre[OF return_wp])
   apply (thin_tac _, rename_tac reply_ptr R)
-  apply (rule hoare_seq_ext[OF _ grt_sp]; simp?)
+  apply (rule bind_wp[OF _ grt_sp]; simp?)
   apply (rename_tac t_opt)
   apply (case_tac t_opt;
          clarsimp intro!: hoare_weaken_pre[OF return_wp] reply_tcb_reply_at_None_imp_reply_sc_reply_at_None'
                     simp: )
   apply (rename_tac t_ptr)
-  apply (rule hoare_seq_ext[OF return_wp], simp)
+  apply (rule bind_wp[OF return_wp], simp)
   apply (rule hoare_when_cases, clarsimp)
    apply (drule_tac x=reply_ptr and y=t and tp=TCBReply in sym_refsE[OF invs_sym_refs];
           fastforce simp: reply_at_ppred_def pred_tcb_at_def obj_at_def state_refs_of_def refs_of_rev
@@ -934,8 +934,8 @@ lemma reply_push_sender_sc_Some_invs:
                  | Some x \<Rightarrow> is_timeout_fault x))
    \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (clarsimp simp: reply_push_def bind_sc_reply_def bind_assoc)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (rule_tac S="sender_sc = sc_caller \<and> sender \<noteq> thread \<and> sender \<noteq> reply_ptr \<and> thread \<noteq> reply_ptr"
                in hoare_gen_asm_spec, fastforce simp: sk_obj_at_pred_def pred_tcb_at_def obj_at_def)
   apply (rule subst[of "do _ <- do _ <- a; b od; c od"
@@ -943,7 +943,7 @@ lemma reply_push_sender_sc_Some_invs:
                        "\<lambda>c. \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace>"
                     for a b c P Q]
          , simp add: bind_assoc)
-  apply (rule_tac B="\<lambda>_ s. st_tcb_at ((=) (BlockedOnReply reply_ptr)) sender s
+  apply (rule_tac Q'="\<lambda>_ s. st_tcb_at ((=) (BlockedOnReply reply_ptr)) sender s
                            \<and> bound_sc_tcb_at ((=) sc_callee) thread s
                            \<and> reply_tcb_reply_at (\<lambda>t. t = Some sender) reply_ptr s
                            \<and> reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr s
@@ -955,7 +955,7 @@ lemma reply_push_sender_sc_Some_invs:
                            \<and> sender \<noteq> idle_thread s
                            \<and> reply_ptr \<notin> fst ` replies_with_sc s
                            \<and> invs s"
-           in hoare_seq_ext[rotated])
+           in bind_wp_fwd)
    apply (wpsimp wp: sts_st_tcb_at_cases set_thread_state_bound_sc_tcb_at sts_only_idle
                      sts_valid_replies sts_fault_tcbs_valid_states valid_ioports_lift
                simp: invs_def valid_state_def valid_pspace_def valid_tcb_state_def
@@ -970,7 +970,7 @@ lemma reply_push_sender_sc_Some_invs:
   apply (rule hoare_when_cases; clarsimp)
     (* reset *)
   apply (rename_tac sc_caller)
-  apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]])
+  apply (rule bind_wp[OF _ gscrpls_sp[simplified]])
   apply (wpsimp wp: sched_context_donate_invs reply_sc_update_Some_invs
                     sc_replies_update_valid_replies_cons valid_sc_typ_list_all_reply
                     valid_ioports_lift get_simple_ko_wp update_sched_context_valid_idle)
@@ -1172,8 +1172,8 @@ lemma maybe_return_sc_sym_refs_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: maybe_return_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_ntfn_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply wpsimp
   apply safe
    apply (fastforce simp: pred_tcb_at_def valid_obj_def valid_tcb_def valid_bound_obj_def
@@ -1330,49 +1330,49 @@ lemma ri_invs[wp]:
                                   receive_ipc_blocked_def[symmetric]
                                   receive_ipc_idle_def[symmetric])
   apply (rename_tac ep_ptr ep_badge ep_rights)
-  apply (rule hoare_seq_ext[where B="\<lambda>rv. invs and ?pre and receive_ipc_preamble_rv reply rv",
+  apply (rule bind_wp[where Q'="\<lambda>rv. invs and ?pre and receive_ipc_preamble_rv reply rv",
          rotated]; simp)
    apply (wpsimp wp: receive_ipc_preamble_invs receive_ipc_preamble_caps_of_state
                      receive_ipc_preamble_st_tcb_at receive_ipc_preamble_rv
                simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state)
   apply (rename_tac reply_opt)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp[simplified pred_conj_comm]])
-  apply (rule hoare_seq_ext[OF _ gbn_sp[simplified pred_conj_comm]])
-  apply (rule hoare_seq_ext[OF _ get_notification_default_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp[simplified pred_conj_comm]])
+  apply (rule bind_wp[OF _ gbn_sp[simplified pred_conj_comm]])
+  apply (rule bind_wp[OF _ get_notification_default_sp])
   apply (rule hoare_weaken_pre)
    apply (rule_tac R="receive_ipc_preconds thread ep_ptr reply reply_opt ep invs"
           in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
    prefer 2 apply (clarsimp simp: st_tcb_at_tcb_at)
   apply (thin_tac "\<not> (_ \<and> _)", clarsimp)
-  apply (rule_tac B="\<lambda>r s. st_tcb_at active thread s \<and>
+  apply (rule_tac Q'="\<lambda>r s. st_tcb_at active thread s \<and>
              ex_nonz_cap_to thread s \<and>
              ex_nonz_cap_to ep_ptr s \<and>
              (\<forall>r\<in>zobj_refs reply. ex_nonz_cap_to r s) \<and>
              receive_ipc_preamble_rv reply reply_opt s \<and>
              ko_at (Endpoint ep) ep_ptr s \<and> invs s"
-           in hoare_seq_ext[rotated])
+           in bind_wp_fwd)
    apply (wpsimp wp: hoare_vcg_ball_lift split: if_split)
     apply (fastforce dest: st_tcb_at_idle_thread split: if_split)
     (* IdleEP, RecvEP *)
   apply (case_tac ep; clarsimp simp: receive_ipc_blocked_invs[where reply=reply])
     (* SendEP *)
   apply (rename_tac queue)
-  apply (rule hoare_seq_ext[OF _ assert_sp], simp)
+  apply (rule bind_wp[OF _ assert_sp], simp)
   apply (case_tac queue; clarsimp cong: if_cong list.case_cong)
   apply (rename_tac sender queue)
   apply (rule_tac s="mk_ep SendEP queue"
            in subst[where P="\<lambda>c. \<lbrace>P\<rbrace> set_endpoint p c >>= r \<lbrace>Q\<rbrace>" for P p r Q]
          , simp add: mk_ep_def split: list.splits)
        (* set_endpoint *)
-  apply (rule_tac B="\<lambda>r. receive_ipc_preconds thread ep_ptr reply reply_opt
+  apply (rule_tac Q'="\<lambda>r. receive_ipc_preconds thread ep_ptr reply reply_opt
                            (mk_ep SendEP queue)
                            (\<lambda>s. sym_refs (\<lambda>p. if p = ep_ptr then set (sender # queue) \<times> {EPSend}
                                                             else state_refs_of s p)
                                 \<and> sym_refs (state_hyp_refs_of s)
                                 \<and> sender \<notin> set queue
                                 \<and> all_invs_but_sym_refs s)"
-           in hoare_seq_ext[rotated])
+           in bind_wp_fwd)
    apply (wpsimp wp: hoare_vcg_ball_lift set_simple_ko_at valid_ioports_lift)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (apply_conjunct \<open>erule delta_sym_refs; fastforce simp: ko_at_state_refs_ofD
@@ -1381,11 +1381,11 @@ lemma ri_invs[wp]:
                      simp: valid_obj_def valid_ep_def mk_ep_def
                     split: endpoint.splits if_splits)
                   (* get_thread_state *)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (case_tac sender_state; clarsimp)
   apply (rename_tac ep_ptr' sender_data)
     (* do_ipc_transfer, and stash some knowledge that will be useful later *)
-  apply (rule_tac B="\<lambda>r. receive_ipc_preconds thread ep_ptr reply reply_opt
+  apply (rule_tac Q'="\<lambda>r. receive_ipc_preconds thread ep_ptr reply reply_opt
                            (mk_ep SendEP queue)
                            (\<lambda>s. sym_refs (\<lambda>p. if p = sender then tcb_non_st_state_refs_of s sender
                                                          else state_refs_of s p)
@@ -1398,7 +1398,7 @@ lemma ri_invs[wp]:
                                 \<and> sender \<noteq> idle_thread s
                                 \<and> state_refs_of s ep_ptr = set queue \<times> {EPSend}
                                 \<and> all_invs_but_sym_refs s)"
-           in hoare_seq_ext[rotated])
+           in bind_wp_fwd)
    apply (wpsimp wp: do_ipc_transfer_tcb_caps[where t=thread] hoare_vcg_ball_lift
                simp: st_tcb_at_tcb_at)
    apply (rule_tac V="sender \<noteq> ep_ptr" in revcut_rl, fastforce simp: obj_at_def pred_tcb_at_def)
@@ -1415,8 +1415,8 @@ lemma ri_invs[wp]:
    apply (clarsimp simp: sym_refs_def)
    apply (drule_tac x=ep_ptr in spec; clarsimp simp: mk_ep_def split: if_splits;
           erule (1) TCBBlockedSend_in_state_refs_of_unique)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp_fwd_skip)
    apply (wpsimp wp: hoare_vcg_ball_lift receive_ipc_preamble_rv_lift)
     apply (rule hoare_vcg_conj_lift)
      apply (wp misc_refill_unblock_check_obj_at_impossible')
@@ -1424,7 +1424,7 @@ lemma ri_invs[wp]:
     apply wpsimp
    apply clarsimp
    (* thread_get tcb_fault *)
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule bind_wp[OF _ thread_get_sp])
     (* if not call and no fault: sender \<rightarrow> Running *)
   apply (rule hoare_if[rotated]
          , wpsimp wp: set_thread_state_invs cong: if_cong
@@ -1434,7 +1434,7 @@ lemma ri_invs[wp]:
          , wpsimp wp: set_thread_state_invs cong: if_cong
          , fastforce simp: replies_blocked_def st_tcb_at_def obj_at_def)
        (* otherwise (grant and reply and (call or fault)): reply_push *)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (clarsimp)
   apply (rename_tac rply)
   apply (wp reply_push_sender_sc_Some_invs)
@@ -1476,7 +1476,7 @@ lemma sched_context_donate_sym_refs_BlockedOnReceive:
                          else state_refs_of s a)\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: sched_context_donate_def)
-  apply (rule hoare_seq_ext[OF _ gsct_sp])
+  apply (rule bind_wp[OF _ gsct_sp])
   apply (simp add: when_def)
   apply (intro conjI)
    apply wpsimp
@@ -1546,7 +1546,7 @@ lemma reply_push_invs_helper:
    \<lbrace> \<lambda>rv. invs \<rbrace>"
   supply if_weak_cong[cong del] if_split[split del]
   apply (rule hoare_when_cases, simp)
-  apply (rule hoare_seq_ext[OF _ gscrpls_sp[unfolded fun_app_def, simplified]])
+  apply (rule bind_wp[OF _ gscrpls_sp[unfolded fun_app_def, simplified]])
   apply (rename_tac sc_replies')
   apply (case_tac sc_replies'; simp)
    apply (wpsimp wp: sched_context_donate_invs)
@@ -1650,8 +1650,8 @@ lemma reply_push_invs':
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: reply_push_def bind_sc_reply_def bind_assoc)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (case_tac sc_caller; simp)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ set_reply_tcb_valid_tcb_state
@@ -1817,8 +1817,8 @@ lemma si_invs'_helper_no_reply:
      possible_switch_to dest
   od
   \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ thread_get_sp])
   apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp)
    apply (wpsimp simp: if_cond_refill_unblock_check_def)
       apply (wp hoare_vcg_all_lift hoare_drop_imps)
@@ -1949,8 +1949,8 @@ lemma si_invs'_helper_some_reply:
       possible_switch_to dest
    od
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ thread_get_sp])
   apply (case_tac "call \<or> fault \<noteq> None"; clarsimp split del: if_split)
    apply (wpsimp simp: if_cond_refill_unblock_check_def)
       apply (wp hoare_vcg_all_lift hoare_drop_imps)
@@ -2074,7 +2074,7 @@ lemma si_invs'_helper_fault:
    od
    \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
   supply if_weak_cong[cong del]
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (case_tac recv_state; simp split del: if_split)
   apply (rename_tac r pl)
   apply (case_tac r, simp split del: if_split)
@@ -2211,7 +2211,7 @@ lemma si_invs':
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     apply (cases bl, simp_all)[1]
      apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -2315,7 +2315,7 @@ lemma si_invs'_fault:
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
@@ -2435,7 +2435,7 @@ lemma hf_invs':
   apply (clarsimp simp: obj_at_def tcb_cnode_map_def)
   done
 
-lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
+lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI TrueI TrueI,simplified]
 
 lemma valid_bound_sc_typ_at:
   "\<forall>p. \<lbrace>\<lambda>s. sc_at p s\<rbrace> f \<lbrace>\<lambda>_ s. sc_at p s\<rbrace>
@@ -2497,16 +2497,16 @@ lemma schedule_tcb_invs':
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (rule hoare_vcg_disj_lift[where Q = "\<lambda>_. invs" and Q' = "\<lambda>_. invs", simplified])
    apply (simp add: schedule_tcb_def)
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_seq_ext[OF _ is_schedulable_sp])
+   apply (rule bind_wp[OF _ gets_sp])
+   apply (rule bind_wp[OF _ gets_sp])
+   apply (rule bind_wp[OF _ is_schedulable_sp])
    apply (simp add: when_def reschedule_required_def)
    apply (intro conjI)
     prefer 2
     apply (wpsimp wp: hoare_pre_cont)
     apply (clarsimp simp: is_schedulable_opt_def pred_tcb_at_def obj_at_def get_tcb_def)
    apply clarsimp
-   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule bind_wp[OF _ gets_sp])
    apply (case_tac action; simp)
      apply (wpsimp simp: set_scheduler_action_def wp_del: set_scheduler_action_invs)
      apply (clarsimp simp: invs_def valid_state_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
@@ -2542,7 +2542,7 @@ lemma maybe_return_sc_schedule_tcb:
      schedule_tcb tcb_ptr
    od
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (rule hoare_seq_ext[OF schedule_tcb_invs'])
+  apply (rule bind_wp[OF schedule_tcb_invs'])
   apply (wpsimp wp: hoare_vcg_disj_lift)
   apply (rule hoare_pre_cont)
   apply (wpsimp wp: hoare_vcg_disj_lift)
@@ -2569,7 +2569,7 @@ lemma rai_invs':
   supply if_weak_cong[cong del]
   apply (simp add: receive_signal_def)
   apply (cases cap, simp_all)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rename_tac notification, case_tac "ntfn_obj notification"; simp)
     apply (case_tac is_blocking; simp)
      apply (wpsimp simp: live_def live_ntfn_def invs_def valid_state_def valid_pspace_def
@@ -2630,6 +2630,6 @@ lemma rai_invs':
   done
 
 lemmas rai_invs[wp] =
-  rai_invs'[where Q=\<top>, simplified hoare_post_taut, OF TrueI TrueI TrueI, simplified]
+  rai_invs'[where Q=\<top>, simplified hoare_TrueI, OF TrueI TrueI TrueI, simplified]
 
 end

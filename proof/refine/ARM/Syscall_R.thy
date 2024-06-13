@@ -752,7 +752,7 @@ lemma handleTimeout_invs':
                              and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte
                                                                                = cteCap (tcbTimeoutHandler tcb))
                                                                         (tptr + n) s)"
-                   in hoare_post_impErr)
+                   in hoare_strengthen_postE)
         apply (rule sfi_invs_plus')
        apply (wpsimp wp: getTCB_wp
                    simp: isValidTimeoutHandler_def)+
@@ -772,26 +772,26 @@ lemma doReplyTransfer_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   (is "valid ?pre _ _")
   apply (simp add: doReplyTransfer_def liftM_def)
-  apply (rule hoare_seq_ext[OF _ get_reply_sp'], rename_tac reply)
+  apply (rule bind_wp[OF _ get_reply_sp'], rename_tac reply)
   apply (case_tac "replyTCB reply"; clarsimp)
    apply wpsimp
   apply (rename_tac receiver)
-  apply (rule hoare_seq_ext[OF _ gts_sp'])
+  apply (rule bind_wp[OF _ gts_sp'])
   apply (rule hoare_if)
    apply wpsimp
-  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) receiver and ex_nonz_cap_to' receiver"
-               in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) receiver and ex_nonz_cap_to' receiver"
+               in bind_wp_fwd)
    apply (wpsimp wp: replyRemove_invs')
    apply (clarsimp simp: pred_tcb_at'_def)
    apply (fastforce intro: if_live_then_nonz_capE'
                      simp: ko_wp_at'_def obj_at'_def projectKOs isReply_def)
   apply simp
-  apply (rule hoare_seq_ext[OF _ threadGet_sp])
-  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) receiver and tcb_at' receiver and ex_nonz_cap_to' receiver"
-         in hoare_seq_ext[rotated], wpsimp)
-  apply (rule hoare_seq_ext[OF _ threadGet_sp], rename_tac fault)
-  apply (rule_tac B="\<lambda>_. ?pre and tcb_at' receiver and ex_nonz_cap_to' receiver"
-         in hoare_seq_ext)
+  apply (rule bind_wp[OF _ threadGet_sp])
+  apply (rule_tac Q'="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) receiver and tcb_at' receiver and ex_nonz_cap_to' receiver"
+         in bind_wp_fwd, wpsimp)
+  apply (rule bind_wp[OF _ threadGet_sp], rename_tac fault)
+  apply (rule_tac Q'="\<lambda>_. ?pre and tcb_at' receiver and ex_nonz_cap_to' receiver"
+         in bind_wp)
    apply (wpsimp wp: possibleSwitchTo_invs' handleTimeout_invs' threadGet_wp hoare_drop_imps refillReady_wp)
    apply (fastforce simp: runnable_eq_active' obj_at'_def)
   apply (case_tac fault; clarsimp)
@@ -800,7 +800,7 @@ lemma doReplyTransfer_invs'[wp]:
   apply (rule_tac Q="?pre and st_tcb_at' ((=) Inactive) receiver and ex_nonz_cap_to' receiver"
                in hoare_weaken_pre[rotated])
   using global'_no_ex_cap apply fastforce
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2\<close>)+
+  apply (rule bind_wp_fwd_skip, solves \<open>wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2\<close>)+
   apply clarsimp
   apply (intro conjI impI)
    apply (wpsimp wp: setThreadState_Restart_invs')
@@ -893,7 +893,7 @@ crunches schedContextResume
 lemma schedContextCancelYieldTo_bound_scTCB[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule hoare_when_cases, simp)
   apply (wpsimp wp: set_sc'.obj_at' simp: updateSchedContext_def)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
@@ -915,11 +915,11 @@ lemma contextYieldToUpdateQueues_invs':
    contextYieldToUpdateQueues scPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: contextYieldToUpdateQueues_def)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
-  apply (rule hoare_seq_ext[OF _ isSchedulable_sp])
+  apply (rule bind_wp[OF _ get_sc_sp'], rename_tac sc)
+  apply (rule bind_wp[OF _ isSchedulable_sp])
   apply (rule hoare_if; (solves wpsimp)?)
-  apply (rule hoare_seq_ext[OF _ getCurThread_sp], rename_tac ctPtr)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule bind_wp[OF _ getCurThread_sp], rename_tac ctPtr)
+  apply (rule bind_wp_fwd_skip, solves wpsimp)+
   apply (rule hoare_if)
    apply wpsimp
    apply (erule isSchedulable_bool_runnableE)
@@ -928,9 +928,9 @@ lemma contextYieldToUpdateQueues_invs':
    apply (clarsimp simp: valid_sched_context'_def valid_bound_obj'_def obj_at_simps opt_map_def)
   apply (subst bind_dummy_ret_val[symmetric])
   apply (subst bind_assoc[symmetric])
-  apply (rule_tac B="\<lambda>_. invs' and ct_active' and (\<lambda>s. st_tcb_at' runnable' (the (scTCB sc)) s)
+  apply (rule_tac Q'="\<lambda>_. invs' and ct_active' and (\<lambda>s. st_tcb_at' runnable' (the (scTCB sc)) s)
                          and (\<lambda>s. ctPtr = ksCurThread s)"
-               in hoare_seq_ext[rotated])
+               in bind_wp_fwd)
    apply (clarsimp simp: pred_conj_def)
    apply (intro hoare_vcg_conj_lift_pre_fix)
        apply (rule hoare_weaken_pre)
@@ -1001,10 +1001,10 @@ lemma setDomain_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: setDomain_def)
-  apply (rule hoare_seq_ext[OF _ getCurThread_sp])
-  apply (rule_tac B="\<lambda>_ s. ?P s \<and> (\<forall>p. ptr \<notin> set (ksReadyQueues s p))" in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ getCurThread_sp])
+  apply (rule_tac Q'="\<lambda>_ s. ?P s \<and> (\<forall>p. ptr \<notin> set (ksReadyQueues s p))" in bind_wp_fwd)
    apply (wpsimp wp: tcbSchedDequeue_nonq hoare_vcg_all_lift)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_tcbDomain_update_invs')
+  apply (rule bind_wp_fwd_skip, wpsimp wp: threadSet_tcbDomain_update_invs')
   apply (wpsimp wp: tcbSchedEnqueue_invs' isSchedulable_wp)
   apply (clarsimp simp: isSchedulable_bool_def pred_map_simps st_tcb_at'_def obj_at_simps
                  elim!: opt_mapE)
@@ -1037,8 +1037,8 @@ lemma invokeSchedControlConfigureFlags_invs':
   (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (clarsimp simp: invokeSchedControlConfigureFlags_def)
   apply (cases iv; clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
-  apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ get_sc_sp'])
+  apply (rule_tac Q'="\<lambda>_. ?pre" in bind_wp_fwd)
    apply (wpsimp wp: commitTime_invs' tcbReleaseRemove_invs' hoare_vcg_ex_lift)
   apply (wpsimp wp: hoare_vcg_if_lift refillNew_invs' refillUpdate_invs' hoare_vcg_imp_lift')
   by (fastforce simp: valid_refills_number'_def)
@@ -1413,7 +1413,7 @@ lemma hinv_invs'[wp]:
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper' ct_not_inQ_asrt_def)
   apply (rule validE_valid)
-  apply (intro hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (intro bindE_wp[OF _ stateAssertE_sp])
   apply (wp syscall_valid' setThreadState_nonqueued_state_update rfk_invs'
             hoare_vcg_all_lift hoare_weak_lift_imp)
          apply simp
@@ -1651,7 +1651,7 @@ lemma handleRecv_isBlocking_corres':
                                  and K (valid_fault (ExceptionTypes_A.fault.CapFault x True
                                         (ExceptionTypes_A.lookup_failure.MissingCapability 0)))"
                      and E=E and F=E for E
-                in hoare_post_impErr[rotated])
+                in hoare_strengthen_postE[rotated])
            apply (fastforce simp: valid_sched_valid_sched_action valid_sched_active_scs_valid ct_in_state_def)
           apply simp
          apply (wpsimp wp: resolve_address_bits_valid_fault2 simp: lookup_cap_def lookup_cap_and_slot_def lookup_slot_for_thread_def)
@@ -1698,14 +1698,14 @@ lemma hw_invs'[wp]:
    handleRecv isBlocking canReply
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: handleRecv_def cong: if_cong split del: if_split)
-  apply (rule hoare_seq_ext[OF _ getCurThread_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ getCurThread_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule catch_wp; (solves wpsimp)?)
   apply (rule_tac A=A and
                   B="\<lambda>rv. A and (\<lambda>s. \<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s)
                           and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s)
                           and (\<lambda>s. st_tcb_at' active' (ksCurThread s) s)"
-         for A in hoare_vcg_seqE[rotated])
+         for A in bindE_wp_fwd)
    apply wpsimp
    apply (fastforce simp: ct_in_state'_def)
   apply (rename_tac epCap)
@@ -2213,7 +2213,7 @@ lemma handleYield_corres:
 lemma chargeBudget_invs'[wp]:
   "chargeBudget consumed canTimeout Flag \<lbrace>invs'\<rbrace>"
   unfolding chargeBudget_def ifM_def bind_assoc
-  apply (rule hoare_seq_ext[OF _ getCurSc_sp])
+  apply (rule bind_wp[OF _ getCurSc_sp])
   apply (wpsimp wp: isSchedulable_wp)
      apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs'"])
       apply wpsimp
@@ -2309,7 +2309,7 @@ lemma hc_invs'[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: handleCall_def)
   apply (rule validE_valid)
-  apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (rule bindE_wp[OF _ stateAssertE_sp])
   apply wpsimp
   done
 
@@ -2415,7 +2415,7 @@ crunches checkBudget
 lemma checkBudgetRestart_invs'[wp]:
   "checkBudgetRestart \<lbrace>invs'\<rbrace>"
   unfolding checkBudgetRestart_def
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: setThreadState_Restart_invs')
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def)
   apply (intro conjI)
@@ -2556,7 +2556,7 @@ proof -
                  | clarsimp simp: active_from_running' simple_from_running' simple_sane_strg
                                   stateAssertE_def stateAssert_def
                         simp del: split_paired_All
-                 | rule hoare_post_imp_R[where Q'="\<lambda>_. invs'", rotated],
+                 | rule hoare_strengthen_postE_R[where Q'="\<lambda>_. invs'", rotated],
                    clarsimp simp: ct_active'_asrt_def
                  | rule conjI active_ex_cap'
                  | drule ct_not_ksQ[rotated]

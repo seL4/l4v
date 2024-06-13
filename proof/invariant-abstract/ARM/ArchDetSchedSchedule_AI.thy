@@ -102,7 +102,7 @@ lemma set_vm_root_valid_blocked_ct_in_q [wp]:
 lemma arch_switch_to_thread_valid_blocked [wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
-  apply (rule hoare_seq_ext)+
+  apply (rule bind_wp)+
   apply wpsimp+
   done
 

@@ -1330,7 +1330,7 @@ lemma deleteObjects_valid_duplicates'[wp]:
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: deleteObjects_def2)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
+  apply (intro bind_wp[OF _ stateAssert_sp])
   apply (wpsimp wp: hoare_drop_imps)
   apply (clarsimp simp: deletionIsSafe_def)
   apply (erule valid_duplicates_deleteObjects_helper)
@@ -1362,7 +1362,7 @@ lemma resetUntypedCap_valid_duplicates'[wp]:
   (is "\<lbrace>?P\<rbrace> ?f \<lbrace>\<lambda>_. ?Q\<rbrace>")
   apply (clarsimp simp: resetUntypedCap_def)
   apply (rule validE_valid)
-  apply (rule_tac B="\<lambda>cap. ?P and cte_wp_at' ((=) cap \<circ> cteCap) slot" in hoare_vcg_seqE[rotated])
+  apply (rule_tac Q'="\<lambda>cap. ?P and cte_wp_at' ((=) cap \<circ> cteCap) slot" in bindE_wp_fwd)
    apply wpsimp
   apply (simp only: unlessE_def)
   apply (clarsimp; safe; (solves wpsimp)?)
@@ -2135,7 +2135,7 @@ lemma hi_valid_duplicates'[wp]:
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper' ct_not_inQ_asrt_def)
   apply (rule validE_valid)
-  apply (intro hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (intro bindE_wp[OF _ stateAssertE_sp])
   apply (wpsimp wp: syscall_valid' setThreadState_nonqueued_state_update rfk_invs' ct_in_state'_set
                     hoare_drop_imp)
   apply (fastforce simp: ct_in_state'_def simple_sane_strg sch_act_simple_def
@@ -2171,7 +2171,7 @@ lemma activate_sch_valid_duplicates'[wp]:
      activateThread \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: activateThread_def getCurThread_def
              cong: if_cong Structures_H.thread_state.case_cong)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (wpsimp wp: threadGet_wp hoare_drop_imps)
   by (fastforce simp: obj_at'_def)
 
@@ -2194,7 +2194,7 @@ lemma hc_valid_duplicates'[wp]:
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: handleCall_def)
   apply (rule validE_valid)
-  apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (rule bindE_wp[OF _ stateAssertE_sp])
   apply wpsimp
   done
 
@@ -2205,7 +2205,7 @@ lemma handleRecv_valid_duplicates'[wp]:
   apply (rule hoare_pre)
    apply wp
       apply ((wp getNotification_wp | wpc | simp add: whenE_def split del: if_split)+)[1]
-     apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)" in hoare_post_impErr[rotated])
+     apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)" in hoare_strengthen_postE[rotated])
        apply (clarsimp simp: isCap_simps sch_act_sane_not)
       apply assumption
      apply (wp)+

@@ -4956,7 +4956,7 @@ lemma inv_untyped_corres':
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
           \<and> scheduler_action s = resume_cur_thread
-          " in hoare_post_imp_R)
+          " in hoare_strengthen_postE_R)
           apply (simp add: whenE_def, wp)
            apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc, auto)[1]
           apply wp
@@ -5103,8 +5103,8 @@ crunch if_unsafe_then_cap'[wp]: updateNewFreeIndex "if_unsafe_then_cap'"
 lemma insertNewCap_list_refs_of_replies'[wp]:
   "insertNewCap parent slot cap \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
   apply (clarsimp simp: insertNewCap_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: getCTE_wp)
   apply (clarsimp simp: opt_map_def list_refs_of_reply'_def o_def split: option.splits)
   done

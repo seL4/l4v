@@ -353,7 +353,7 @@ crunches switch_sched_context, sc_and_timer
 lemma next_domain_domain_time_left[wp]:
   "\<lbrace>valid_domain_list\<rbrace> next_domain \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
   apply (clarsimp simp: next_domain_def)
-  apply (rule_tac B="\<lambda>_ s. 0 < domain_time s" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in bind_wp)
    apply (wpsimp wp: dxo_wp_weak)
   apply wpsimp
   apply (clarsimp simp: valid_domain_list_def all_set_conv_all_nth)
@@ -380,15 +380,15 @@ lemma schedule_domain_time_left:
    \<lbrace>\<lambda>_ s :: det_state. Suc 0 < numDomains \<longrightarrow> 0 < domain_time s \<rbrace>"
   supply word_neq_0_conv[simp]
   apply (simp add: schedule_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule_tac B="\<lambda>_ s. (domain_time s = 0 \<and> 1 < numDomains \<longrightarrow> scheduler_action s = choose_new_thread)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule_tac Q'="\<lambda>_ s. (domain_time s = 0 \<and> 1 < numDomains \<longrightarrow> scheduler_action s = choose_new_thread)
                            \<and> valid_domain_list s"
-                in hoare_seq_ext[rotated])
+                in bind_wp_fwd)
    apply wpsimp
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ is_schedulable_sp])
-  apply (rule hoare_seq_ext[OF _  gets_sp], rename_tac action)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp[OF _ is_schedulable_sp])
+  apply (rule bind_wp[OF _  gets_sp], rename_tac action)
   apply (case_tac action; wpsimp wp: is_schedulable_wp hoare_vcg_const_imp_lift hoare_drop_imps)
   done
 
@@ -412,7 +412,7 @@ lemma call_kernel_domain_time_inv_det_ext:
   unfolding call_kernel_def
   apply (case_tac "e = Interrupt"; clarsimp)
    apply (wpsimp wp: schedule_domain_time_left)
-  apply (rule_tac B="\<lambda>_. valid_domain_list" in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_. valid_domain_list" in bind_wp_fwd)
    apply wpsimp
   apply (wp schedule_domain_time_left without_preemption_wp)
   done

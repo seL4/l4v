@@ -4540,9 +4540,9 @@ lemma resetUntypedCap_invs_etc:
        (simp_all add: cte_wp_at_ctes_of)+)[1]
   apply (clarsimp simp: unlessE_def cte_wp_at_ctes_of
              split del: if_split)
-  apply (rule_tac B="\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+  apply (rule_tac Q'="\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s))
                          and valid_untyped_inv_wcap' ?ui (Some ?cap)
-                         and ct_active' and ?psp" in hoare_vcg_seqE[rotated])
+                         and ct_active' and ?psp" in bindE_wp_fwd)
    apply clarsimp
    apply (rule hoare_pre)
     apply (simp add: sch_act_simple_def)
@@ -4585,7 +4585,7 @@ lemma resetUntypedCap_invs_etc:
                          modify_map_def)
    apply auto[1]
   apply simp
-  apply (rule hoare_pre, rule hoare_post_impErr,
+  apply (rule hoare_pre, rule hoare_strengthen_postE,
     rule_tac P="\<lambda>i. invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ?psp and ct_active'
     and valid_untyped_inv_wcap' ?ui
         (Some (UntypedCap dev ptr sz (if i = 0 then idx
@@ -5051,7 +5051,7 @@ lemma inv_untyped_corres':
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
           \<and> scheduler_action s = resume_cur_thread
-          " in hoare_post_imp_R)
+          " in hoare_strengthen_postE_R)
           apply (simp add: whenE_def, wp)
            apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc, auto)[1]
           apply wp
@@ -5204,8 +5204,8 @@ crunch if_unsafe_then_cap'[wp]: updateNewFreeIndex "if_unsafe_then_cap'"
 lemma insertNewCap_list_refs_of_replies'[wp]:
   "insertNewCap parent slot cap \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
   apply (clarsimp simp: insertNewCap_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: getCTE_wp)
   apply (clarsimp simp: opt_map_def list_refs_of_reply'_def o_def split: option.splits)
   done
@@ -5576,11 +5576,11 @@ lemma invokeUntyped_invs'':
     apply (clarsimp simp:invokeUntyped_def getSlotCap_def ui)
     apply (rule validE_valid)
     apply (rule hoare_pre)
-     apply (rule_tac B="\<lambda>_ s. invs' s \<and> sym_refs (state_refs_of' s) \<and> Q s \<and> ct_active' s
+     apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> sym_refs (state_refs_of' s) \<and> Q s \<and> ct_active' s
           \<and> valid_untyped_inv_wcap' ui
               (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap' (ptr && ~~ mask sz) sz s)
-          " in hoare_vcg_seqE[rotated])
+          " in bindE_wp_fwd)
       apply (simp only: whenE_def)
       apply wp
        apply (rule hoare_strengthen_postE, rule combine_validE,

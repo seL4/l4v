@@ -230,7 +230,7 @@ lemma sts_Restart_invs[wp]:
 lemma check_budget_restart_invs[wp]:
   "\<lbrace>\<lambda>s. invs s\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd)
    apply (rule check_budget_invs)
   apply (wpsimp wp: gts_wp)
   apply (frule invs_fault_tcbs_valid_states)
@@ -971,7 +971,7 @@ lemma lookup_cap_and_slot_cte_wp_at_P:
   shows "\<lbrace>P\<rbrace> lookup_cap_and_slot thread cptr \<lbrace>\<lambda>x. cte_wp_at (Q (fst x)) (snd x)\<rbrace>, -"
   apply (simp add: lookup_cap_and_slot_def split_def)
   apply (wp get_cap_wp)
-   apply (rule hoare_post_imp_R [where Q'="\<lambda>_. P"], wp)
+   apply (rule hoare_strengthen_postE_R [where Q'="\<lambda>_. P"], wp)
    apply (clarsimp simp: cte_wp_at_caps_of_state P)
   apply simp
   done
@@ -1044,8 +1044,8 @@ lemma stsa_schedulable_scheduler_action:
    set_thread_state_act thread
    \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   apply (simp add: set_thread_state_act_def)
-  apply (rule hoare_seq_ext[OF _ hoare_gets_sp])+
-  apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
+  apply (rule bind_wp[OF _ hoare_gets_sp])+
+  apply (rule bind_wp[OF _ is_schedulable_sp'])
   apply (simp add: when_def)
   apply (intro conjI)
    apply (wpsimp wp: hoare_pre_cont)
@@ -1374,7 +1374,7 @@ lemma send_ipc_not_cur_ct_active[wp]:
      send_ipc block call badge can_grant can_reply_grant can_donate thread epptr
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (rule bind_wp[OF _ get_simple_ko_inv])
   apply (case_tac ep; simp)
     apply (wpsimp wp: set_thread_state_ct_st)
    apply (wpsimp wp: set_thread_state_ct_st)
@@ -1414,7 +1414,7 @@ lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
      send_ipc False False bdg cg crg can_donate t epptr
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (rule bind_wp[OF _ get_simple_ko_inv])
   apply (case_tac ep; simp)
     apply wpsimp
    apply wpsimp
@@ -1589,10 +1589,10 @@ lemma reply_unlink_runnable[wp]:
   apply (rule hoare_strengthen_pre_via_assert_backward[of "st_tcb_at (Not \<circ> runnable) t", rotated]
          , wpsimp wp: reply_unlink_tcb_st_tcb_at simp: pred_tcb_at_def obj_at_def)
   apply (clarsimp simp: reply_unlink_tcb_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ assert_inv])
+  apply (rule bind_wp[OF _ gts_sp])
+  apply (rule bind_wp[OF _ assert_sp, OF hoare_gen_asm_conj])
   apply (rule hoare_weaken_pre[where Q=\<bottom>])
   by (auto simp: pred_tcb_at_def obj_at_def)
 

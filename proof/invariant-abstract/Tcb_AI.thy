@@ -58,10 +58,10 @@ lemma complete_yield_to_ct_in_state[wp]:
 lemma (in Tcb_AI_1) activate_invs:
   "\<lbrace>(invs::'state_ext state \<Rightarrow> bool)\<rbrace> activate_thread \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (unfold activate_thread_def get_tcb_obj_ref_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_seq_ext [OF _ thread_get_sp])
+  apply (rule bind_wp [OF _ gets_sp])
+  apply (rule bind_wp [OF _ thread_get_sp])
   apply (case_tac yt_opt, simp)
-   apply (rule hoare_seq_ext [OF _ gts_sp])
+   apply (rule bind_wp [OF _ gts_sp])
    apply (rule_tac Q="st_tcb_at ((=) x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
     apply (rename_tac state)
     apply (case_tac state; simp)
@@ -84,9 +84,9 @@ lemma (in Tcb_AI_1) activate_invs:
     apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
     apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
    apply clarsimp
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply (rule hoare_K_bind)
-   apply (rule hoare_seq_ext [OF _ gts_sp])
+   apply (rule bind_wp [OF _ gts_sp])
    apply (rule_tac Q="st_tcb_at ((=) state) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
     apply (rename_tac state)
     apply (case_tac state; simp)
@@ -309,7 +309,7 @@ crunches tcb_release_remove
 lemma tcb_sched_action_valid_tcb[wp]:
   "tcb_sched_action action thread \<lbrace>\<lambda>s. valid_tcb ptr tcb s\<rbrace>"
   apply (clarsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def)
-  apply (intro hoare_seq_ext[OF _ thread_get_sp])
+  apply (intro bind_wp[OF _ thread_get_sp])
   apply (wpsimp wp: thread_get_wp)
   apply (clarsimp simp: obj_at_def update_valid_tcb is_tcb_def)
   done
@@ -317,8 +317,8 @@ lemma tcb_sched_action_valid_tcb[wp]:
 lemma set_thread_state_valid_tcb[wp]:
   "\<lbrace>valid_tcb ptr tcb and valid_tcb_state st\<rbrace> set_thread_state thread st \<lbrace>\<lambda>_. valid_tcb ptr tcb\<rbrace>"
   apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule_tac B="\<lambda>_. valid_tcb ptr tcb" in hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule_tac Q'="\<lambda>_. valid_tcb ptr tcb" in bind_wp_fwd)
    apply (wpsimp wp: set_object_valid_tcbs)
   apply (wpsimp wp: set_object_valid_tcbs update_valid_tcb is_schedulable_inv hoare_vcg_if_lift2
                     hoare_vcg_conj_lift hoare_drop_imps
@@ -328,8 +328,8 @@ lemma set_thread_state_valid_tcb[wp]:
 lemma set_thread_state_valid_tcbs[wp]:
   "\<lbrace>valid_tcbs and valid_tcb_state st\<rbrace> set_thread_state thread st \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
   apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
-  apply (rule hoare_seq_ext[OF _ gets_the_get_tcb_sp])
-  apply (rule_tac B="\<lambda>_. valid_tcbs" in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ gets_the_get_tcb_sp])
+  apply (rule_tac Q'="\<lambda>_. valid_tcbs" in bind_wp_fwd)
    apply (wpsimp wp: set_object_valid_tcbs)
    apply (fastforce simp: valid_tcbs_def obj_at_def
                    intro: valid_tcb_state_update)
@@ -900,10 +900,10 @@ lemma cap_delete_deletes_fh:
    \<lbrace>\<lambda>_. cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p\<rbrace>, -"
   apply (rule_tac Q'="\<lambda>rv s. ((p = ptr) \<longrightarrow> cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p s) \<and>
                              ((p \<noteq> ptr) \<longrightarrow> cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p s)"
-               in hoare_post_imp_R)
-   apply (rule hoare_vcg_precond_impE_R)
+               in hoare_strengthen_postE_R)
+   apply (rule hoare_weaken_preE_R)
     apply (rule hoare_vcg_conj_lift_R)
-     apply (rule hoare_post_imp_R[OF cap_delete_deletes])
+     apply (rule hoare_strengthen_postE_R[OF cap_delete_deletes])
      apply (clarsimp simp: cte_wp_at_def)
     apply (rule hoare_vcg_const_imp_lift_R)
     apply (rule cap_delete_ep)
@@ -993,7 +993,7 @@ lemma set_set_simple_ko_has_reply[wp]:
 lemma unbind_notification_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> unbind_notification t' \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   apply (simp add: unbind_notification_def has_reply_cap_def cte_wp_at_caps_of_state)
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (rule bind_wp[OF _ gbn_sp])
   apply (case_tac ntfnptr; wpsimp simp: maybeM_def)
   done
 
@@ -1325,7 +1325,7 @@ lemma decode_cv_space_inv[wp]:
 
 lemma decode_cv_space_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decode_cv_space args cap slot excs \<lbrace>\<lambda>rv s. is_ThreadControlCaps rv\<rbrace>,-"
-  by (wpsimp simp: decode_cv_space_def simp_del: hoare_True_E_R split_del: if_split)
+  by (wpsimp simp: decode_cv_space_def simp_del: hoareE_R_TrueI split_del: if_split)
 
 context Tcb_AI
 begin
@@ -1413,7 +1413,7 @@ begin
 lemma decode_cv_space_target[wp]:
   "\<lbrace>\<top>\<rbrace> decode_cv_space args (ThreadCap t) slot caps \<lbrace>\<lambda>rv s. tc_target rv = t\<rbrace>, -"
   unfolding decode_cv_space_def
-  by (wpsimp split_del: if_split simp_del: hoare_True_E_R)
+  by (wpsimp split_del: if_split simp_del: hoareE_R_TrueI)
 
 lemma decode_tcb_conf_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool)
@@ -1431,7 +1431,7 @@ lemma decode_tcb_conf_wf[wp]:
                                    \<and> is_ThreadControlCaps set_space \<and> is_ThreadControlCaps set_params
                                    \<and> tc_target set_space = t
                                    \<and> cte_at slot s \<and> ex_cte_cap_to slot s"
-                      in hoare_post_imp_R)
+                      in hoare_strengthen_postE_R)
        apply wpsimp
       apply (clarsimp simp: is_ThreadControlCaps_def)
      apply (wpsimp simp: real_cte_at_cte)+
@@ -1544,7 +1544,7 @@ lemma decode_tcb_inv_wf:
       decode_tcb_invocation label args (cap.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp add: decode_tcb_invocation_def Let_def cong: if_cong split del: if_split)
-  apply (rule hoare_vcg_precond_impE_R)
+  apply (rule hoare_weaken_preE_R)
    apply wpc
    apply (wp decode_tcb_conf_wf decode_readreg_wf
              decode_writereg_wf decode_copyreg_wf
@@ -1759,7 +1759,7 @@ lemma reorder_ntfn_invs[wp]:
   "\<lbrace>invs and st_tcb_at (\<lambda>st. ntfn_blocked st = Some nptr) tptr\<rbrace> reorder_ntfn nptr tptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp only: reorder_ntfn_def)
   apply (subst bind_assoc[symmetric, where m="tcb_ep_dequeue tptr _"])
-  apply (rule hoare_seq_ext)+
+  apply (rule bind_wp)+
      \<comment> \<open>tcb_ep_dequeue_append_valid_ntfn_rv requires that the postcondition conjunctions are
         carefully managed, so that the bind is not split too early\<close>
      apply (wpsimp wp: set_ntfn_minor_invs get_simple_ko_wp tcb_ep_dequeue_rv_wf'
@@ -1799,7 +1799,7 @@ lemma set_ep_minor_invs:
 lemma reorder_ep_invs[wp]:
   "\<lbrace>invs and st_tcb_at (\<lambda>st. ep_blocked st = Some nptr) tptr\<rbrace> reorder_ep nptr tptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp only: reorder_ep_def get_ep_queue_def endpoint.case_eq_if if_cancel)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wp set_ep_minor_invs hoare_drop_imps tcb_ep_dequeue_rv_wf'
             tcb_ep_dequeue_valid_ep tcb_ep_dequeue_inv tcb_ep_dequeue_rv_wf''
             tcb_ep_append_valid_ep tcb_ep_append_inv tcb_ep_append_rv_wf''')
@@ -1871,7 +1871,7 @@ lemma cap_delete_fh_lift:
    apply (subst rec_del_FinaliseSlot)
    prefer 2
    apply assumption
-  apply (rule hoare_vcg_seqE[rotated])
+  apply (rule bindE_wp_fwd)
    apply (subst liftE_validE)
    apply (rule get_cap_sp)
   apply (subst hoare_pre_addE[where R="K (valid_fault_handler cap)"])

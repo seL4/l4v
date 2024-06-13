@@ -670,7 +670,7 @@ lemma sched_context_donate_valid_objs [wp]:
                        and t="do x \<leftarrow> a; _ \<leftarrow> b x; _ \<leftarrow> c; d od"
                        and P="\<lambda>h. \<lbrace>_\<rbrace> h \<lbrace>_\<rbrace>" for a b c d]
           , simp add: bind_assoc)
-   apply (rule hoare_seq_ext[where B="\<lambda>rv s. Not (tcb_at tcbp s)"]
+   apply (rule bind_wp[where Q'="\<lambda>rv s. Not (tcb_at tcbp s)"]
           , wpsimp wp: set_tcb_obj_ref_wp simp: obj_at_def is_tcb)
    apply (wpsimp wp: weak_if_wp get_sc_obj_ref_wp simp: test_reschedule_def)
   apply (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def test_reschedule_def
@@ -975,7 +975,7 @@ lemma reply_remove_iflive [wp]:
    reply_remove t rp
    \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
   apply (simp add: reply_remove_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "reply_tcb reply = None")
    apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
   apply (wpsimp simp: obj_at_def reply_tcb_reply_at_def
@@ -1166,7 +1166,7 @@ lemma non_overlapping_merge_refills_nonempty_refills:
    non_overlapping_merge_refills sc_ptr
    \<lbrace>\<lambda>_ s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s\<rbrace>"
   unfolding non_overlapping_merge_refills_def update_refill_hd_def
-  apply (rule_tac B="\<lambda>_ s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>_ s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s" in bind_wp)
   apply (wpsimp wp: update_sched_context_wp)
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def neq_Nil_lengthI)
   apply (wpsimp wp: refill_pop_head_nonempty_refills)

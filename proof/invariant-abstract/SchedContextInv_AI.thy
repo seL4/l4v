@@ -156,7 +156,7 @@ lemma sched_context_cancel_yield_to_valid_idle[wp]:
    sched_context_cancel_yield_to tcb_ptr
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   unfolding sched_context_cancel_yield_to_def  maybeM_def get_tcb_obj_ref_def
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule bind_wp[OF _ thread_get_sp])
   apply (case_tac yt_opt; simp)
    apply wpsimp
   apply (wpsimp wp: update_sched_context_valid_idle thread_get_wp')
@@ -467,9 +467,9 @@ lemma sched_context_yield_to_invs:
     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and ex_nonz_cap_to scp\<rbrace>
        sched_context_yield_to scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (unfold sched_context_yield_to_def get_sc_obj_ref_def bind_assoc)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   apply clarsimp
-  apply (rule hoare_seq_ext[where B=
+  apply (rule bind_wp[where Q'=
           "\<lambda>_. invs and (\<lambda>s. cur_thread s \<noteq> idle_thread s) and
                (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s) and
                (\<lambda>s. sc_yf_sc_at ((=) None) scp s) and
@@ -1389,7 +1389,7 @@ lemma send_fault_ipc_invs':
           force simp: obj_at_def tcb_cnode_map_def)+
   done
 
-lemmas send_fault_ipc_invs[wp] = send_fault_ipc_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
+lemmas send_fault_ipc_invs[wp] = send_fault_ipc_invs'[where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI TrueI TrueI,simplified]
 
 lemma handle_timeout_Timeout_invs:
   "\<lbrace>invs and st_tcb_at active tptr\<rbrace>
@@ -1511,7 +1511,7 @@ lemma charge_budget_invs[wp]:
   supply if_split [split del]
   unfolding charge_budget_def is_round_robin_def
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule bind_wp[OF _ gets_sp])
   apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp is_schedulable_wp)
      apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post[rotated])
       apply (clarsimp simp: ct_in_state_def runnable_eq pred_tcb_at_def obj_at_def schedulable_def

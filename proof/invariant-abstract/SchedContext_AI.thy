@@ -233,7 +233,7 @@ lemma handle_overrun_loop_valid_objs[wp]:
 lemma refill_budget_check_valid_objs[wp]:
   "refill_budget_check usage \<lbrace>valid_objs\<rbrace>"
   apply (clarsimp simp: refill_budget_check_def)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule bind_wp_fwd_skip, solves wpsimp)+
   apply (wpsimp wp: set_refills_valid_objs simp: update_refill_hd_def)
   done
 
@@ -821,10 +821,10 @@ lemma commit_time_invs:
   "commit_time \<lbrace>invs\<rbrace>"
   supply fun_upd_apply[simp del]
   apply (clarsimp simp: commit_time_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   apply (case_tac "sc_active sc \<and> csc \<noteq> idle_sc_ptr"; clarsimp split del: if_split simp: bind_assoc)
-   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule bind_wp[OF _ gets_sp])
    apply (rename_tac csc sc consumed)
    apply (case_tac "0 < consumed"; simp split del: if_split add: bind_assoc)
     apply (wpsimp wp: commit_times_invs_helper hoare_vcg_ex_lift
@@ -957,9 +957,9 @@ crunches switch_sched_context
 lemma switch_sched_context_invs [wp]:
   "\<lbrace>valid_state and cur_tcb\<rbrace> switch_sched_context \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_sched_context_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (wpsimp simp: get_tcb_queue_def wp: cur_sc_update_invs hoare_drop_imps)
   apply (clarsimp simp: valid_state_def)
   done
@@ -1447,10 +1447,10 @@ lemma sched_context_unbind_tcb_invs[wp]:
   notes refs_of_simps[simp del]
   shows "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr\<rbrace> sched_context_unbind_tcb sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: sched_context_unbind_tcb_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   apply (simp add: assert_opt_def2)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule bind_wp[OF _ assert_sp])
+  apply (rule bind_wp[OF _ gets_sp])
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
             simp_del: disj_not1
                   wp: sched_context_unbind_tcb_invs_helper valid_irq_node_typ valid_ioports_lift
@@ -1710,10 +1710,10 @@ lemma refill_unblock_check_ex_nonz_cap_to_ct[wp]:
 lemma refill_unblock_check_state_refs_of_ct[wp]:
   "refill_unblock_check scp \<lbrace>\<lambda>s. P (state_refs_of s) (cur_thread s)\<rbrace>"
   apply (clarsimp simp: refill_unblock_check_defs)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule bind_wp_fwd_skip, solves wpsimp)+
   apply (rule hoare_when_cases, simp)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)+
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip, solves wpsimp)+
+  apply (rule bind_wp_fwd_skip)
    apply (wpsimp simp: set_refills_def
                    wp: update_sched_context_wp get_refills_wp)
    apply (clarsimp simp: state_refs_of_def obj_at_def

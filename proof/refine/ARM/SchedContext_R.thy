@@ -407,9 +407,9 @@ lemma schedContextCancelYieldTo_cur_tcb'[wp]:
 lemma schedContextCancelYeldTo_valid_release_queue'[wp]:
   "schedContextCancelYieldTo t \<lbrace>valid_release_queue'\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
-  apply (rule hoare_seq_ext[OF _ threadGet_sp])
+  apply (rule bind_wp[OF _ threadGet_sp])
   apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
-  apply (rule_tac B="\<lambda>_. valid_release_queue'" in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_. valid_release_queue'" in bind_wp_fwd)
    apply wpsimp
   apply (wpsimp wp: threadSet_valid_release_queue' setObject_tcb_wp)
   apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
@@ -634,18 +634,18 @@ lemma schedContextDonate_valid_objs':
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
+  apply (rule bind_wp[OF _ get_sc_sp'], rename_tac sc)
   apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
                in hoare_weaken_pre[rotated])
    apply (fastforce simp: sc_ko_at_valid_objs_valid_sc' obj_at'_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (rule hoare_when_cases, clarsimp)
-   apply (rule hoare_seq_ext_skip, wpsimp wp: tcbSchedDequeue_valid_objs')
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_valid_objs')
+   apply (rule bind_wp_fwd_skip, wpsimp wp: tcbSchedDequeue_valid_objs')
+   apply (rule bind_wp_fwd_skip, wpsimp)
+   apply (rule bind_wp_fwd_skip, wpsimp wp: threadSet_valid_objs')
     apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
    apply wpsimp
-  apply (rule_tac B="\<lambda>_. ?pre and sc_at' scPtr" in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_. ?pre and sc_at' scPtr" in bind_wp_fwd)
    apply (wpsimp wp: set_sc_valid_objs')
    apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def
                          sc_size_bounds_def objBits_def objBitsKO_def)

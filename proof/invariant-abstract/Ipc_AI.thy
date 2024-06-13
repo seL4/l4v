@@ -1830,7 +1830,7 @@ lemma copy_mrs_valid_idle [wp]:
 lemma sched_context_update_consumed_valid_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def set_object_def
                       get_object_def valid_idle_def obj_at_def pred_tcb_at_def)
   done
@@ -1878,7 +1878,7 @@ lemma set_mrs_cur_sc_tcb[wp]:
 lemma sched_context_update_consumed_cur_sc_tcb [wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def set_object_def
                       get_object_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
   done
@@ -2101,10 +2101,10 @@ lemma maybe_donate_sc_if_live_then_nonz_cap[wp]:
    maybe_donate_sc tptr ntfnptr
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (case_tac sc_opt)
    apply clarsimp
-   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (rule bind_wp[OF _ gsc_ntfn_sp])
    apply (wpsimp simp: get_sc_obj_ref_def wp: maybeM_wp weak_if_wp)
   apply wpsimp
   done
@@ -2112,10 +2112,10 @@ lemma maybe_donate_sc_if_live_then_nonz_cap[wp]:
 lemma maybe_donate_sc_valid_idle[wp]:
   "\<lbrace>\<lambda>s. valid_idle s \<and> tptr \<noteq> idle_thread s\<rbrace> maybe_donate_sc tptr ntfnptr \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (case_tac sc_opt)
    apply clarsimp
-   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (rule bind_wp[OF _ gsc_ntfn_sp])
    apply (wpsimp simp: get_sc_obj_ref_def get_sched_context_def get_object_def sc_tcb_sc_at_def
                        obj_at_def
                    wp: maybeM_wp)
@@ -2125,10 +2125,10 @@ lemma maybe_donate_sc_valid_idle[wp]:
 lemma maybe_donate_sc_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> maybe_donate_sc tptr ntfnptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (case_tac sc_opt)
    apply clarsimp
-   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (rule bind_wp[OF _ gsc_ntfn_sp])
    apply (wpsimp simp: get_sc_obj_ref_def pred_tcb_at_def obj_at_def is_tcb
                    wp: maybeM_wp weak_if_wp)
   apply wpsimp
@@ -2223,19 +2223,19 @@ lemma maybe_donate_sc_sym_refs:
      maybe_donate_sc tcb_ptr ntfn_ptr
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (case_tac sc_opt; simp)
-   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (rule bind_wp[OF _ gsc_ntfn_sp])
    apply (rename_tac ntfn_sc')
    apply (case_tac ntfn_sc')
     apply (clarsimp simp: maybeM_def)
     apply wpsimp
    apply (clarsimp simp: maybeM_def)
-   apply (rule hoare_seq_ext[OF _ gsct_sp])
+   apply (rule bind_wp[OF _ gsct_sp])
    apply (rename_tac sc_tcb_opt)
    apply (case_tac sc_tcb_opt)
     apply (clarsimp simp: sched_context_donate_def bind_assoc)
-    apply (rule hoare_seq_ext[OF _ gsct_sp])
+    apply (rule bind_wp[OF _ gsct_sp])
     apply (case_tac x)
      apply wpsimp
      apply (fastforce simp: state_refs_of_def obj_at_def get_refs_def2 pred_tcb_at_def
@@ -2325,7 +2325,7 @@ lemma update_waiting_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del] if_cong[cong]
   apply (simp add: update_waiting_ntfn_def)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply wpsimp
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                     wp: sts_valid_replies sts_only_idle sts_fault_tcbs_valid_states)
@@ -2424,7 +2424,7 @@ lemma cancel_ipc_simpler:
    cancel_ipc t
    \<lbrace>\<lambda>_. st_tcb_at (\<lambda>st. st \<in> {Running, Inactive, Restart}) t\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ gts_sp])
   apply (wpsimp wp: hoare_strengthen_post [OF blocked_cancel_ipc_inactive]
                     hoare_strengthen_post [OF reply_remove_tcb_inactive]
                     hoare_strengthen_post [OF cancel_signal_inactive]
@@ -2446,14 +2446,14 @@ lemma cancel_ipc_fault_tcb_at_None[wp]:
 lemma sai_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to ntfnptr\<rbrace> send_signal ntfnptr bdg \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: send_signal_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfn"; simp)
     apply (case_tac "ntfn_bound_tcb ntfn"; simp)
      apply (wp set_ntfn_minor_invs)
      apply (fastforce simp: obj_at_def invs_def valid_pspace_def valid_state_def valid_obj_def
                             valid_ntfn_def)
     apply (rename_tac tptr)
-    apply (rule hoare_seq_ext[OF _ gts_sp])
+    apply (rule bind_wp[OF _ gts_sp])
     apply (case_tac "receive_blocked st"; simp)
      apply (clarsimp simp: receive_blocked_def)
      apply (case_tac st; simp)
@@ -2646,7 +2646,7 @@ locale Ipc_AI_cont = Ipc_AI state_ext_t
 lemma complete_signal_invs:
   "\<lbrace>invs and ex_nonz_cap_to tcb\<rbrace> complete_signal ntfnptr tcb \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: complete_signal_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfn"; simp)
   apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
      apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs and tcb_at tcb"])
@@ -2821,13 +2821,13 @@ lemma maybe_donate_sc_pred_tcb_at:
   "\<lbrace>(\<lambda>s. P' (pred_tcb_at proj P tcb_ptr' s)) and K (tcb_ptr \<noteq> tcb_ptr')\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr
    \<lbrace>\<lambda>rv s. P' (pred_tcb_at proj P tcb_ptr' s)\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gsc_sp])
   apply (case_tac sc_opt; simp)
-   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (rule bind_wp[OF _ gsc_ntfn_sp])
    apply (simp add: maybeM_def)
    apply (case_tac x; simp)
     apply wpsimp
-   apply (rule hoare_seq_ext[OF _ gsct_sp])
+   apply (rule bind_wp[OF _ gsct_sp])
    apply (rename_tac sc_tcb_opt)
    apply (case_tac sc_tcb_opt; simp)
     apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def tcb_release_remove_def
@@ -2845,7 +2845,7 @@ lemma rai_pred_tcb_neq:
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
   apply (simp add: receive_signal_def)
   apply (case_tac cap; simp)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj x"; simp)
     apply (case_tac is_blocking; simp)
      apply (wpsimp wp: schedule_tcb_pred_tcb_at maybe_return_sc_pred_tcb_at sts_st_tcb_at_neq)
@@ -2909,9 +2909,9 @@ crunches complete_signal, do_nbrecv_failed_transfer
 lemma complete_signal_st_tcb_at[wp]:
   "complete_signal ntfnptr tptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
   apply (clarsimp simp: complete_signal_def)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule bind_wp_fwd_skip, solves wpsimp)
   apply (case_tac "ntfn_obj ntfn"; clarsimp)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule bind_wp_fwd_skip, solves wpsimp)+
   apply wpsimp
   done
 

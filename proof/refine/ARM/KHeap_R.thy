@@ -549,7 +549,7 @@ lemma setObject_distinct_types_preserves_obj_at'_pre:
     "distinct_updateObject_types TYPE('a) TYPE('b)"
   shows "setObject p v \<lbrace>\<lambda>s. P' (obj_at' P t s)\<rbrace>"
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (erule_tac P="P'" in rsubst)
@@ -4938,7 +4938,7 @@ lemma threadSet_tcbSCs_of_inv:
   "\<forall>x. tcbSchedContext (f x) = tcbSchedContext x \<Longrightarrow>
   threadSet f t \<lbrace>\<lambda>s. P (tcbSCs_of s)\<rbrace>"
   unfolding threadSet_def
-  apply (rule hoare_seq_ext[OF _ get_tcb_sp'])
+  apply (rule bind_wp[OF _ get_tcb_sp'])
   apply (wpsimp wp: setObject_tcb_tcbs_of')
   apply (erule subst[where P=P, rotated], rule ext)
   apply (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def projectKO_tcb

@@ -9087,7 +9087,7 @@ lemma inv_cnode_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> invokeCNode cnode_inv
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: invokeCNode_def)
-  apply (wp hoare_TrueI [where P=\<top>] cteRevoke_IRQInactive finaliseSlot_IRQInactive
+  apply (wp wp_post_taut cteRevoke_IRQInactive finaliseSlot_IRQInactive
              cteDelete_IRQInactive
              whenE_wp
            | wpc

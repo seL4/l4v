@@ -2710,8 +2710,8 @@ lemma reset_untyped_cap_invs_etc:
    apply (frule(1) caps_of_state_pspace_no_overlapD, simp+)
    apply (simp add: word_bw_assocs field_simps)
   apply (clarsimp simp: free_index_of_def split del: if_split)
-  apply (rule_tac B="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
-        and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and ?psp" in hoare_vcg_seqE[rotated])
+  apply (rule_tac Q'="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
+        and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and ?psp" in bindE_wp_fwd)
    apply clarsimp
    apply (rule hoare_pre)
     apply (wp hoare_vcg_ex_lift hoare_vcg_const_Ball_lift
@@ -2751,7 +2751,7 @@ lemma reset_untyped_cap_invs_etc:
     apply (simp add: valid_cap_def)
    apply simp
   apply (clarsimp simp: bits_of_def free_index_of_def)
-  apply (rule hoare_pre, rule hoare_post_impErr,
+  apply (rule hoare_pre, rule hoare_strengthen_postE,
     rule_tac P="\<lambda>i. invs and ?psp and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
                     and valid_untyped_inv_wcap ?ui
                           (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ resetChunkBits)))"
@@ -3637,7 +3637,7 @@ lemma invoke_untyp_invs':
     show "\<lbrace>(=) s\<rbrace> invoke_untyped ?ui \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>, \<lbrace>\<lambda>_ s. invs s \<and> Q s\<rbrace>"
       using cover
       apply (simp add:mapM_x_def[symmetric] invoke_untyped_def)
-      apply (rule_tac B="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
+      apply (rule_tac Q'="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
           \<and> scheduler_action s = resume_cur_thread
           \<and> valid_untyped_inv_wcap ?ui
             (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s

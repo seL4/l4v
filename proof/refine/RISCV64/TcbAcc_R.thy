@@ -1357,7 +1357,7 @@ lemma threadSet_valid_tcbs':
    threadSet f t
    \<lbrace>\<lambda>rv. valid_tcbs'\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule hoare_seq_ext[OF _ get_tcb_sp'])
+  apply (rule bind_wp[OF _ get_tcb_sp'])
   apply (wpsimp wp: setObject_tcb_valid_tcbs')
   apply (clarsimp simp: obj_at'_def valid_tcbs'_def)
   done
@@ -2758,7 +2758,7 @@ lemma conjunct_rewrite:
 lemma isSchedulable_inv[wp]:
   "isSchedulable tcbPtr \<lbrace>P\<rbrace>"
   apply (clarsimp simp: isSchedulable_def inReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_inv])
+  apply (rule bind_wp[OF _ getObject_tcb_inv])
   by (wpsimp wp: inReleaseQueue_inv)
 
 \<comment> \<open>In sched_context_donate, weak_valid_sched_action does not propagate backwards over the statement
@@ -3494,7 +3494,7 @@ lemma rescheduleRequired_weak_sch_act_wf[wp]:
    rescheduleRequired
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: rescheduleRequired_def setSchedulerAction_def)
-  apply (wp hoare_post_taut | simp add: weak_sch_act_wf_def)+
+  apply (wp hoare_TrueI | simp add: weak_sch_act_wf_def)+
   done
 
 lemma sts_weak_sch_act_wf[wp]:
@@ -3516,7 +3516,7 @@ lemma threadSet_isSchedulable_bool_nochange:
    threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
   unfolding isSchedulable_bool_def threadSet_def
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def)
   apply (fastforce simp: pred_map_def isScActive_def elim!: opt_mapE)
   done
@@ -3528,7 +3528,7 @@ lemma threadSet_isSchedulable_bool:
    threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
   unfolding isSchedulable_bool_def threadSet_def
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def)
   apply (fastforce simp: pred_map_def isScActive_def elim!: opt_mapE)
   done
@@ -4105,7 +4105,7 @@ lemma rescheduleRequired_valid_tcbs'[wp]:
    rescheduleRequired
    \<lbrace>\<lambda>_. valid_tcbs'\<rbrace>"
   apply (clarsimp simp: rescheduleRequired_def)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: tcbSchedEnqueue_valid_tcbs' update_valid_tcb' isSchedulable_wp)+
+  apply (rule bind_wp_fwd_skip, wpsimp wp: tcbSchedEnqueue_valid_tcbs' update_valid_tcb' isSchedulable_wp)+
   apply (wpsimp wp: update_valid_tcb')
   done
 
@@ -5085,7 +5085,7 @@ lemma tcbSchedEnqueue_if_unsafe_then_cap'[wp]:
 lemma setThreadState_if_unsafe_then_cap'[wp]:
   "setThreadState st p \<lbrace>if_unsafe_then_cap'\<rbrace>"
   apply (clarsimp simp: setThreadState_def scheduleTCB_def rescheduleRequired_def when_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (rule threadSet_ifunsafe'T)
    apply (clarsimp simp: tcb_cte_cases_def objBits_simps')
   apply (wpsimp wp: isSchedulable_wp)
@@ -6463,9 +6463,9 @@ lemma tcbReleaseRemove_valid_sched_pointers[wp]:
    \<lbrace>\<lambda>_. valid_sched_pointers\<rbrace>"
   supply if_split[split del]
   apply (clarsimp simp: tcbReleaseRemove_def)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ inReleaseQueue_sp])
+  apply (intro bind_wp[OF _ stateAssert_sp] bind_wp[OF _ inReleaseQueue_sp])
   apply (rule hoare_when_cases, fastforce)
-  apply (rule hoare_seq_ext[OF _ getReleaseQueue_sp])
+  apply (rule bind_wp[OF _ getReleaseQueue_sp])
   apply (rule forward_inv_step_rules)
    apply (wpsimp wp: hoare_vcg_ex_lift split: if_splits)
   apply (wpsimp wp: threadSet_wp getTCB_wp simp: tcbQueueRemove_def setReleaseQueue_def)

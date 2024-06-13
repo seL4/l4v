@@ -2857,7 +2857,7 @@ lemma reply_at_typ_at:
 lemma valid_tcb_state_typ:
   assumes P: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb_state st s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb_state st s\<rbrace>"
-  by (case_tac st; wpsimp simp: valid_tcb_state_def hoare_post_taut reply_at_typ
+  by (case_tac st; wpsimp simp: valid_tcb_state_def hoare_TrueI reply_at_typ
                                 ep_at_typ P tcb_at_typ ntfn_at_typ
                           wp: assms valid_case_option_post_wp
                           cong: option.case_cong)
@@ -2898,17 +2898,17 @@ lemma valid_ntfn_typ:
   assumes Q: "\<And>p n. \<lbrace>typ_at (ASchedContext n) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (ASchedContext n) p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_ntfn ntfn s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ntfn ntfn s\<rbrace>"
   apply (case_tac "ntfn_obj ntfn",
-         simp_all add: valid_ntfn_def valid_bound_obj_def hoare_post_taut tcb_at_typ sc_at_typ)
+         simp_all add: valid_ntfn_def valid_bound_obj_def hoare_TrueI tcb_at_typ sc_at_typ)
     defer 2
   apply ((rule hoare_vcg_conj_lift,
-         (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P);
-         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut hoare_vcg_ex_lift sc_at_typ Q))+)[2]
+         (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_TrueI tcb_at_typ P);
+         (case_tac "ntfn_sc ntfn", simp_all add: hoare_TrueI hoare_vcg_ex_lift sc_at_typ Q))+)[2]
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])+
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_vcg_const_Ball_lift [OF P])
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
-  apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P);
-         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut sc_at_typ hoare_vcg_ex_lift Q))
+  apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_TrueI tcb_at_typ P);
+         (case_tac "ntfn_sc ntfn", simp_all add: hoare_TrueI sc_at_typ hoare_vcg_ex_lift Q))
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P Q)
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
   apply (rule hoare_vcg_conj_lift; simp add: P hoare_vcg_ex_lift Q)

@@ -313,7 +313,7 @@ lemma install_tcb_frame_cap_invs:
                       thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
                       thread_set_ipc_tcb_cap_valid)
    apply((wpsimp wp: cap_delete_deletes
-             hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+             hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R hoare_vcg_all_lift
              hoare_weak_lift_imp hoare_weak_lift_imp_conj
            | strengthen use_no_cap_to_obj_asid_strg
            | wp cap_delete_ep)+)[1]
@@ -332,29 +332,29 @@ lemma tcc_invs[Tcb_AI_asms]:
        \<comment> \<open>non-exception case\<close>
        apply (wpsimp wp: install_tcb_frame_cap_invs)
       \<comment> \<open>pull invs out the front and simplify\<close>
-      apply ((simp add: conj_comms del: hoare_True_E_R, simp cong: conj_cong))
+      apply ((simp add: conj_comms del: hoareE_R_TrueI, simp cong: conj_cong))
       \<comment> \<open>install_tcb_cap 1\<close>
       apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
-      apply (wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+      apply (wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                         install_tcb_cap_invs)
      \<comment> \<open>install_tcb_cap 0\<close>
      apply (simp)
      apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
-     apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+     apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                         install_tcb_cap_invs
             | strengthen tcb_cap_always_valid_strg
             | wp install_tcb_cap_cte_wp_at_ep)+)[1]
     \<comment> \<open>install_tcb_cap 4\<close>
     apply (simp)
     apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
-    apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+    apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                        install_tcb_cap_invs
            | strengthen tcb_cap_always_valid_strg
            | wp install_tcb_cap_cte_wp_at_ep)+)[1]
    \<comment> \<open>install_tcb_cap 3\<close>
    apply (simp)
    apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
-   apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+   apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                       install_tcb_cap_invs
           | strengthen tcb_cap_always_valid_strg
           | wp install_tcb_cap_cte_wp_at_ep)+)[1]
@@ -398,7 +398,7 @@ lemma tcs_invs[Tcb_AI_asms]:
    apply (clarsimp cong: conj_cong)
    apply (rule hoare_vcg_E_elim)
     apply (wpsimp wp: install_tcb_cap_invs)
-   apply (wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+   apply (wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                      install_tcb_cap_invs hoare_vcg_imp_lift
                      install_tcb_cap_ex_nonz_cap_to
                simp: not_pred_tcb)

@@ -1098,10 +1098,10 @@ lemma update_time_stamp_cur_time_monotonic:
    \<lbrace>\<lambda>_ s. val \<le> cur_time s\<rbrace>"
   supply minus_add_distrib[simp del]
   apply (clarsimp simp: update_time_stamp_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac previous_time)
-  apply (rule_tac B="\<lambda>rv s. cur_time s \<le> rv \<and> rv \<le> - getCurrentTime_buffer - 1
+  apply (rule bind_wp[OF _ gets_sp], rename_tac previous_time)
+  apply (rule_tac Q'="\<lambda>rv s. cur_time s \<le> rv \<and> rv \<le> - getCurrentTime_buffer - 1
                             \<and> cur_time s = val \<and> cur_time s = previous_time"
-               in hoare_seq_ext[rotated])
+               in bind_wp_fwd)
    apply (wpsimp wp: dmo_getCurrentTime_sp)+
   done
 
@@ -1119,11 +1119,11 @@ lemma reset_untyped_cap_cur_time_monotonic:
    \<lbrace>\<lambda>_ s. val \<le> cur_time s\<rbrace>"
   apply (clarsimp simp: reset_untyped_cap_def)
   apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, wpsimp)
+  apply (rule bindE_wp_fwd_skip, wpsimp)
   apply (rule valid_validE)
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, wpsimp)
+  apply (rule bindE_wp_fwd_skip, wpsimp)
   apply (rule valid_validE)
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule hoare_weaken_pre)
@@ -1132,7 +1132,7 @@ lemma reset_untyped_cap_cur_time_monotonic:
     apply (intro hoare_vcg_conj_lift_pre_fix)
      apply wpsimp
     apply (rule validE_valid)
-    apply (rule hoare_seq_ext_skipE, wpsimp)+
+    apply (rule bindE_wp_fwd_skip, wpsimp)+
     apply (rule valid_validE)
     apply (clarsimp simp: valid_def)
     apply (frule_tac val1="cur_time s" in use_valid[OF _ preemption_point_cur_time_monotonic])

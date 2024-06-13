@@ -58,10 +58,10 @@ lemma update_time_stamp_wp[CSpace_AI_assms]:
   apply (simp add: update_time_stamp_def do_machine_op_def split_def
                    getCurrentTime_def select_modify_comm gets_machine_state_modify
                    select_f_select[simplified liftM_def])
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
    apply (fastforce simp: time_state_independent_A_def getCurrentTime_independent_A_def in_monad)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
    apply (fastforce simp: cur_time_independent_A_def)
   apply wpsimp
   apply (fastforce simp: update_time_stamp_independent_A_def domain_time_independent_A_def)

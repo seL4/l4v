@@ -599,7 +599,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   supply if_cong[cong]
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def
                    get_sk_obj_ref_def update_sk_obj_ref_def maybeM_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs hoare_drop_imp get_simple_ko_wp valid_ioports_lift)
   apply simp
@@ -752,7 +752,7 @@ lemma (in Finalise_AI_1) sched_context_unbind_yield_from_invs:
   "\<lbrace>invs \<comment> \<open>and (\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = (Some tp) \<and> st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) scptr s)\<close>\<rbrace>
       sched_context_unbind_yield_from scptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: sched_context_unbind_yield_from_def maybeM_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   by (wpsimp simp: sched_context_unbind_yield_from_def wp: complete_yield_to_invs)
 
 lemma list_all_remove1: "list_all P ls \<Longrightarrow> list_all P (remove1 x ls)"
@@ -768,7 +768,7 @@ lemma  sched_context_clear_ntfn_sc_yf_helper[wp]:
       sched_context_unbind_ntfn scptr \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
   apply (clarsimp simp: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
               simp: update_sk_obj_ref_def set_simple_ko_def
                     update_sched_context_def set_object_def)
@@ -826,7 +826,7 @@ lemma  sched_context_unbind_tcb_sc_yf_helper[wp]:
                         tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
                         reschedule_required_def set_scheduler_action_def is_schedulable_def
                   cong: scheduler_action.case_cong)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   by (wpsimp wp: thread_get_wp')
 
 lemma sched_context_unbind_all_tcbs_sc_yf_helper[wp]:
@@ -835,7 +835,7 @@ lemma sched_context_unbind_all_tcbs_sc_yf_helper[wp]:
       sched_context_unbind_all_tcbs scptr \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
   apply (clarsimp simp: sched_context_unbind_all_tcbs_def get_sc_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sched_context_sp])
   apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp)
   done
 
@@ -1287,10 +1287,10 @@ lemma reply_remove_tcb_st_tcb_at_general:
     reply_remove_tcb t r
    \<lbrace>\<lambda>rv s. P (st_tcb_at P' t' s)\<rbrace>"
   apply (clarsimp simp: reply_remove_tcb_def)
-  apply (rule hoare_seq_ext[OF _ gts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ gets_inv])
-  apply (rule hoare_seq_ext[OF reply_unlink_tcb_st_tcb_at])
+  apply (rule bind_wp[OF _ gts_inv])
+  apply (rule bind_wp[OF _ assert_inv])
+  apply (rule bind_wp[OF _ gets_inv])
+  apply (rule bind_wp[OF reply_unlink_tcb_st_tcb_at])
   by (wpsimp wp: get_sk_obj_ref_wp)
 
 lemma cancel_ipc_st_tcb_at:
@@ -1300,7 +1300,7 @@ lemma cancel_ipc_st_tcb_at:
     cancel_ipc t
    \<lbrace>\<lambda>rv s. P (st_tcb_at P' t' s)\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (wpsimp wp: blocked_ipc_st_tcb_at_general reply_remove_tcb_st_tcb_at_general
                     cancel_signal_st_tcb_at_general thread_set_no_change_tcb_pred_gen
                     hoare_drop_imps)
@@ -1524,7 +1524,7 @@ lemma unbind_notification_sym_refs[wp]:
      unbind_notification a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_notification_def)
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
+  apply (rule bind_wp [OF _ gbn_sp])
   apply (case_tac ntfnptr; simp add: maybeM_def)
    apply (wpsimp)
   apply (wpsimp simp: update_sk_obj_ref_def wp: get_simple_ko_wp)
@@ -1564,7 +1564,7 @@ lemma sched_context_donate_bound_sc_tcb_at_None:
           sched_context_donate sc_ptr caller_tcb
    \<lbrace>\<lambda>_. bound_sc_tcb_at ((=) None) t\<rbrace>"
   apply (clarsimp simp: sched_context_donate_def)
-  apply (rule hoare_seq_ext[OF _ gsct_sp])
+  apply (rule bind_wp[OF _ gsct_sp])
   apply (wpsimp simp: sched_context_donate_def wp: ssc_bound_tcb_at_cases hoare_vcg_imp_lift')
   done
 
@@ -1661,7 +1661,7 @@ lemma reply_remove_unlive:
   supply if_split[split del]
   apply (simp add: reply_remove_def assert_opt_def)
   apply (rule hoare_gen_asm[simplified])
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wpsimp wp: not_live_reply_weaken[OF reply_unlink_tcb_not_live] reply_unlink_sc_None)
   apply (fastforce dest: sc_with_reply_None_reply_sc_reply_at
                    simp: reply_at_ppred_def obj_at_def is_reply_def)
@@ -1683,7 +1683,7 @@ lemma blocked_cancel_ipc_unlive:
   apply (rule_tac Q="\<lambda>rv. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply" in hoare_strengthen_post[rotated]
          , fastforce simp: obj_at_def)
   apply (simp add: blocked_cancel_ipc_def)
-  apply (rule hoare_seq_ext[OF _ gbi_ep_sp])
+  apply (rule bind_wp[OF _ gbi_ep_sp])
   by (wpsimp wp: sts_obj_at_impossible reply_unlink_tcb_not_live
                  get_simple_ko_wp hoare_vcg_all_lift
            simp: is_reply reply_sc_reply_at_def obj_at_def)

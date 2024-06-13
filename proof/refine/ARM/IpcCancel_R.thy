@@ -66,9 +66,9 @@ lemma cancelIPC_st_tcb_at':
    cancelIPC t
    \<lbrace>\<lambda>rv s. P (st_tcb_at' P' t' s)\<rbrace>"
   apply (clarsimp simp: cancelIPC_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp'])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp[OF _ gts_sp'])
   apply (wpsimp wp: blockedCancelIPC_st_tcb_at replyRemoveTCB_st_tcb_at'_cases
                     cancelSignal_st_tcb_at'_cases threadSet_pred_tcb_no_state)
   apply (auto simp: pred_tcb_at'_def obj_at'_def)
@@ -1780,7 +1780,7 @@ lemma cancelSignal_invs':
       done
     show ?thesis
       apply (simp add: cancelSignal_def invs'_def Let_def valid_dom_schedule'_def)
-      apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+      apply (rule bind_wp[OF _ stateAssert_sp])
       apply (wp valid_irq_node_lift sts_sch_act' irqs_masked_lift
                 hoare_vcg_all_lift [OF set_ntfn'.ksReadyQueues]
                 setThreadState_ct_not_inQ NTFNSN set_ntfn'.get_wp
@@ -2237,8 +2237,8 @@ lemma rescheduleRequired_oa_queued:
    \<lbrace>\<lambda>_ s. P (obj_at' (\<lambda>tcb. Q (tcbQueued tcb) (tcbDomain tcb) (tcbPriority tcb)) t' s)\<rbrace>"
   (is "\<lbrace>?OAQ t' p and sch_act_simple\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)
-                       \<and> ?OAQ t' p s" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)
+                       \<and> ?OAQ t' p s" in bind_wp)
    including classic_wp_pre
    apply (wp | clarsimp)+
    apply (case_tac x)
@@ -2295,16 +2295,16 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
    ThreadDecls_H.suspend t
    \<lbrace>\<lambda>rv. invs'\<rbrace>" (is "valid ?pre _ _")
   apply (simp add: suspend_def updateRestartPC_def getThreadState_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' simple' t"
-               in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule_tac Q'="\<lambda>_. ?pre and st_tcb_at' simple' t"
+               in bind_wp_fwd)
    apply (wpsimp wp: cancelIPC_simple)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip)
    apply clarsimp
    apply (wpsimp simp: updateRestartPC_def)
-  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) t"
-               in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) t"
+               in bind_wp_fwd)
    apply (wpsimp wp: sts_invs_minor' sts_st_tcb_at'_cases)
    apply (fastforce elim: pred_tcb'_weakenE)
   apply (wpsimp wp: tcbReleaseRemove_invs' schedContextCancelYieldTo_invs')
@@ -2457,8 +2457,8 @@ lemma cancelAllIPC_loop_body_st_tcb_at'_other:
    cancelAllIPC_loop_body t
    \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
   apply (clarsimp simp: cancelAllIPC_loop_body_def restartThreadIfNoFault_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_st_tcb_at')
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp wp: replyUnlink_st_tcb_at')
   apply (wpsimp wp: threadGet_wp)
      apply (rule hoare_strengthen_post[where Q="\<lambda>_. st_tcb_at' P t'", rotated])
       apply (clarsimp simp: obj_at'_def)
@@ -2471,8 +2471,8 @@ lemma cancelAllIPC_loop_body_weak_sch_act_wf:
    cancelAllIPC_loop_body t
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (clarsimp simp: cancelAllIPC_loop_body_def restartThreadIfNoFault_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_st_tcb_at')
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp wp: replyUnlink_st_tcb_at')
   apply (wpsimp wp: sts_st_tcb_at'_cases hoare_drop_imps)
   apply (clarsimp simp: weak_sch_act_wf_def pred_neg_def st_tcb_at'_def obj_at'_def)
   done
@@ -2495,8 +2495,8 @@ lemma cancelAllIPC_loop_body_valid_queues:
    cancelAllIPC_loop_body t
    \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (clarsimp simp: cancelAllIPC_loop_body_def restartThreadIfNoFault_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
    apply (clarsimp simp: weak_sch_act_wf_def pred_neg_def st_tcb_at'_def obj_at'_def)
   apply (wpsimp wp: sts_valid_queues sts_st_tcb_at'_cases hoare_drop_imps)
   done
@@ -3145,7 +3145,7 @@ lemma cancelAllIPC_invs'[wp]:
   supply valid_dom_schedule'_def[simp]
   unfolding cancelAllIPC_def cancelAllIPC_loop_body_def restartThreadIfNoFault_def
   apply (simp add: ep'_Idle_case_helper cong del: if_cong)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
+  apply (intro bind_wp[OF _ stateAssert_sp])
   apply (wpsimp wp: rescheduleRequired_invs' cancel_all_invs'_helper
                     hoare_vcg_const_Ball_lift
                     valid_global_refs_lift' valid_arch_state_lift'
@@ -3224,8 +3224,8 @@ lemma ntfn_queued_st_tcb_at':
 lemma cancelAllSignals_invs'[wp]:
   "cancelAllSignals ntfnPtr \<lbrace>invs'\<rbrace>"
   apply (simp add: cancelAllSignals_def)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (intro bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfn"; simp)
     apply wpsimp
    apply wpsimp
@@ -3258,9 +3258,9 @@ lemma setQueue_valid_ep'[wp]:
 lemma tcbSchedEnqueue_valid_ep'[wp]:
   "tcbSchedEnqueue thread \<lbrace>valid_ep' ep\<rbrace>"
   apply (clarsimp simp: tcbSchedEnqueue_def unless_def when_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply clarsimp
-  apply (rule hoare_seq_ext_skip, wpsimp wp: hoare_if)+
+  apply (rule bind_wp_fwd_skip, wpsimp wp: hoare_if)+
   apply (wpsimp wp: threadSet_wp)
   apply (fastforce simp: valid_ep'_def obj_at'_def projectKOs objBitsKO_def split: endpoint.splits)
   done
@@ -3268,14 +3268,14 @@ lemma tcbSchedEnqueue_valid_ep'[wp]:
 lemma cancelAllIPC_valid_objs'[wp]:
   "\<lbrace>valid_objs'\<rbrace> cancelAllIPC ep \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ get_ep_sp']\<close>
-                       \<open>rule hoare_seq_ext_skip, wpsimp\<close>)
+  apply (repeat_unless \<open>rule bind_wp[OF _ get_ep_sp']\<close>
+                       \<open>rule bind_wp_fwd_skip, wpsimp\<close>)
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
-  apply (rule_tac B="\<lambda>_ s. valid_objs' s \<and> valid_ep' epa s" in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> valid_ep' epa s" in bind_wp_fwd)
    apply (wpsimp wp: set_ep_valid_objs')
    apply (frule (1) ep_ko_at_valid_objs_valid_ep')
    apply (fastforce simp: valid_ep'_def obj_at'_def projectKOs objBitsKO_def split: endpoint.splits)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply wpsimp
   apply (rule_tac Q="\<lambda>_ s. valid_objs' s \<and> valid_ep' ep s" in hoare_strengthen_post; clarsimp)
   apply (rule mapM_x_wp')
@@ -3284,8 +3284,8 @@ lemma cancelAllIPC_valid_objs'[wp]:
 lemma cancelAllSignals_valid_objs'[wp]:
   "\<lbrace>valid_objs' and pspace_aligned' and pspace_distinct'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: cancelAllSignals_def)
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ get_ntfn_sp']\<close>
-                       \<open>rule hoare_seq_ext_skip, wpsimp\<close>)
+  apply (repeat_unless \<open>rule bind_wp[OF _ get_ntfn_sp']\<close>
+                       \<open>rule bind_wp_fwd_skip, wpsimp\<close>)
   apply (case_tac "ntfnObj ntfna", simp_all)
     apply (wp, simp)
    apply (wp, simp)
@@ -3306,8 +3306,8 @@ lemma cancelAllIPC_st_tcb_at:
   unfolding cancelAllIPC_def cancelAllIPC_loop_body_def restartThreadIfNoFault_def
   apply (rule hoare_gen_asm)
   apply simp
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
-  apply (intro hoare_seq_ext[OF _ get_ep_sp'])
+  apply (intro bind_wp[OF _ stateAssert_sp])
+  apply (intro bind_wp[OF _ get_ep_sp'])
   apply (clarsimp simp: endpoint.case_eq_if)
   apply (rule conjI)
    apply wpsimp
@@ -3414,18 +3414,18 @@ lemma cancelAllIPC_unlive:
    \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ep\<rbrace>"
   unfolding cancelAllIPC_def cancelAllIPC_loop_body_def restartThreadIfNoFault_def
   apply (simp add: ep'_Idle_case_helper)
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ get_ep_sp']\<close>
-                       \<open>rule hoare_seq_ext_skip, wpsimp\<close>)
+  apply (repeat_unless \<open>rule bind_wp[OF _ get_ep_sp']\<close>
+                       \<open>rule bind_wp_fwd_skip, wpsimp\<close>)
   apply (rename_tac endpoint)
   apply (rule hoare_if)
    apply (wpsimp simp: ko_wp_at'_def live'_def obj_at'_def projectKOs)
 
-  apply (rule_tac B="\<lambda>_ s. valid_objs' s
+  apply (rule_tac Q'="\<lambda>_ s. valid_objs' s
                            \<and> sch_act_wf (ksSchedulerAction s) s
                            \<and> ko_wp_at' (Not \<circ> live') ep s
                            \<and> ep_at' ep s
                            \<and> valid_ep' endpoint s"
-               in hoare_seq_ext[rotated])
+               in bind_wp_fwd)
    apply (wpsimp wp: set_ep_valid_objs' set_ep'.sch_act_wf)
     apply (wpsimp wp: set_ep'.set_wp)
    apply (clarsimp simp del: fun_upd_apply)
@@ -3442,12 +3442,12 @@ lemma cancelAllIPC_unlive:
                          \<and> valid_ep' endpoint s"
                in hoare_weaken_pre[rotated])
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def projectKOs)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply (wpsimp wp: rescheduleRequired_unlive)
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp')
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_valid_objs' replyUnlink_unlive)
+   apply (rule bind_wp_fwd_skip, wpsimp)
+   apply (rule bind_wp_fwd_skip, wpsimp wp: replyUnlink_valid_objs' replyUnlink_unlive)
    apply (wpsimp wp: possibleSwitchTo_unlive_other setThreadState_unlive_other hoare_drop_imps
                      possibleSwitchTo_sch_act_not_other)
    apply (clarsimp simp: valid_tcb_state'_def obj_at'_def projectKOs)
@@ -3482,8 +3482,8 @@ lemma cancelAllSignals_unlive:
    cancelAllSignals ntfnptr
    \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ntfnptr\<rbrace>"
   apply (simp add: cancelAllSignals_def)
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ get_ntfn_sp']\<close>
-                       \<open>rule hoare_seq_ext_skip, wpsimp\<close>)
+  apply (repeat_unless \<open>rule bind_wp[OF _ get_ntfn_sp']\<close>
+                       \<open>rule bind_wp_fwd_skip, wpsimp\<close>)
   apply (case_tac "ntfnObj ntfn"; simp)
     apply wp
     apply (fastforce simp: obj_at'_real_def projectKOs live_ntfn'_def ko_wp_at'_def)
@@ -3549,8 +3549,8 @@ lemma cancelBadgedSends_filterM_helper':
    apply wp
    apply clarsimp
   apply (clarsimp simp: filterM_append bind_assoc simp del: set_append distinct_append)
-  apply (drule spec, erule hoare_seq_ext[rotated])
-  apply (rule hoare_seq_ext [OF _ gts_inv'])
+  apply (drule spec, erule bind_wp_fwd)
+  apply (rule bind_wp [OF _ gts_inv'])
   apply (simp add: opt_map_Some_eta_fold split del: if_split)
   apply (rule hoare_pre)
    apply (wpsimp wp: valid_irq_node_lift hoare_vcg_const_Ball_lift
@@ -3584,13 +3584,13 @@ lemma cancelBadgedSends_invs'[wp]:
   shows
   "cancelBadgedSends epptr badge \<lbrace>invs'\<rbrace>"
   apply (simp add: cancelBadgedSends_def)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ep_sp'], rename_tac ep)
+  apply (intro bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp [OF _ get_ep_sp'], rename_tac ep)
   apply (case_tac ep, simp_all)
     apply ((wp | simp)+)[2]
   apply (subst bind_assoc [where g="\<lambda>_. rescheduleRequired",
                            symmetric])+
-  apply (rule hoare_seq_ext
+  apply (rule bind_wp
                 [OF rescheduleRequired_invs'])
   apply (simp add: list_case_return invs'_def valid_dom_schedule'_def cong: list.case_cong)
   apply (rule hoare_pre, wp valid_irq_node_lift irqs_masked_lift)
@@ -3706,8 +3706,8 @@ lemma cancelBadgedSends_corres:
                     apply (rule corres_split[OF restart_thread_if_no_fault_corres])
                       unfolding restartThreadIfNoFault_def
                       apply (rule corres_return_eq_same, simp)
-                     apply (rule hoare_TrueI[where P=\<top>])
-                    apply (rule hoare_TrueI[where P=\<top>])
+                     apply (rule wp_post_taut)
+                    apply (rule wp_post_taut)
                    apply simp+
                 apply (wpsimp wp: gts_wp)
                apply (wpsimp wp: gts_wp')
@@ -3791,9 +3791,9 @@ lemma suspend_unqueued:
   apply (simp add: suspend_def unless_def tcbSchedDequeue_def)
   apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)
           apply (wpsimp simp: threadGet_getObject comp_def wp: getObject_tcb_wp)+
-      apply (rule hoare_strengthen_post, rule hoare_post_taut)
+      apply (rule hoare_strengthen_post, rule hoare_TrueI)
       apply (fastforce simp: obj_at'_def projectKOs)
-     apply (rule hoare_post_taut)
+     apply (rule hoare_TrueI)
     apply wpsimp+
   done
 

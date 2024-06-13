@@ -1318,7 +1318,7 @@ lemma threadSet_valid_tcbs':
    threadSet f t
    \<lbrace>\<lambda>rv. valid_tcbs'\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule hoare_seq_ext[OF _ get_tcb_sp'])
+  apply (rule bind_wp[OF _ get_tcb_sp'])
   apply (wpsimp wp: setObject_tcb_valid_tcbs')
   apply (clarsimp simp: obj_at'_def projectKOs valid_tcbs'_def)
   done
@@ -2071,7 +2071,7 @@ lemma conjunct_rewrite:
 lemma isSchedulable_inv[wp]:
   "isSchedulable tcbPtr \<lbrace>P\<rbrace>"
   apply (clarsimp simp: isSchedulable_def inReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_inv])
+  apply (rule bind_wp[OF _ getObject_tcb_inv])
   by (wpsimp wp: inReleaseQueue_inv)
 
 lemma get_sc_refill_sufficient_sp:
@@ -3094,7 +3094,7 @@ where
 lemma isSchedulable_wp:
   "\<lbrace>\<lambda>s. \<forall>t. isSchedulable_bool tcbPtr s = t \<and> tcb_at' tcbPtr s \<longrightarrow> P t s\<rbrace> isSchedulable tcbPtr \<lbrace>P\<rbrace>"
   apply (clarsimp simp: isSchedulable_def)
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb inReleaseQueue_def wp: threadGet_wp)
   apply (rule conjI)
    apply (fastforce simp: isSchedulable_bool_def isScActive_def obj_at'_def projectKOs
@@ -3121,7 +3121,7 @@ lemma rescheduleRequired_weak_sch_act_wf[wp]:
    rescheduleRequired
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: rescheduleRequired_def setSchedulerAction_def)
-  apply (wp hoare_post_taut | simp add: weak_sch_act_wf_def)+
+  apply (wp hoare_TrueI | simp add: weak_sch_act_wf_def)+
   done
 
 lemma sts_weak_sch_act_wf[wp]:
@@ -3143,7 +3143,7 @@ lemma threadSet_isSchedulable_bool_nochange:
    threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
   unfolding isSchedulable_bool_def threadSet_def
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def projectKOs)
   apply (fastforce simp: pred_map_def projectKOs isScActive_def elim!: opt_mapE)
   done
@@ -3155,7 +3155,7 @@ lemma threadSet_isSchedulable_bool:
    threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
   unfolding isSchedulable_bool_def threadSet_def
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def projectKOs)
   apply (fastforce simp: pred_map_def projectKOs isScActive_def elim!: opt_mapE)
   done
@@ -3654,8 +3654,8 @@ lemma scheduleTCB_valid_queues:
    scheduleTCB tcbPtr
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   apply (clarsimp simp: scheduleTCB_def getCurThread_def getSchedulerAction_def)
-  apply (intro hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
+  apply (intro bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
   by (wpsimp simp: scheduleTCB_def sch_act_simple_def
                wp: rescheduleRequired_valid_queues_sch_act_simple hoare_vcg_if_lift2
@@ -3686,8 +3686,8 @@ lemma tcbSchedEnqueue_valid_queues'[wp]:
   "tcbSchedEnqueue t \<lbrace>valid_queues'\<rbrace>"
   apply (simp add: tcbSchedEnqueue_def)
   apply (rule hoare_pre)
-   apply (rule_tac B="\<lambda>rv. valid_queues' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
-           in hoare_seq_ext)
+   apply (rule_tac Q'="\<lambda>rv. valid_queues' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
+           in bind_wp)
     apply (rename_tac queued)
     apply (case_tac queued; simp_all add: unless_def when_def)
      apply (wp threadSet_valid_queues' setQueue_valid_queues' | simp)+
@@ -3728,42 +3728,42 @@ lemma tcbSchedEnqueue_sch_act_sane[wp]:
 lemma rescheduleRequired_valid_release_queue[wp]:
   "rescheduleRequired \<lbrace>valid_release_queue\<rbrace>"
   apply (simp add: rescheduleRequired_def getSchedulerAction_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule_tac B="\<lambda>_. valid_release_queue" in hoare_seq_ext[rotated]
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule_tac Q'="\<lambda>_. valid_release_queue" in bind_wp_fwd
          ; (solves \<open>wpsimp simp: valid_release_queue_def\<close>)?)
   done
 
 lemma rescheduleRequired_valid_release_queue'[wp]:
   "rescheduleRequired \<lbrace>valid_release_queue'\<rbrace>"
   apply (simp add: rescheduleRequired_def getSchedulerAction_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule_tac B="\<lambda>_. valid_release_queue'" in hoare_seq_ext[rotated]
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule_tac Q'="\<lambda>_. valid_release_queue'" in bind_wp_fwd
          ; (solves \<open>wpsimp simp: valid_release_queue'_def\<close>)?)
   done
 
 lemma setThreadState_valid_queues'[wp]:
   "\<lbrace>\<lambda>s. valid_queues' s\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (wp threadSet_valid_queues')
    apply (clarsimp simp: inQ_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases; wpsimp simp: weak_sch_act_wf_def)
   done
 
 lemma setThreadState_valid_release_queue[wp]:
   "setThreadState st t \<lbrace>valid_release_queue\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (wp threadSet_valid_release_queue)
    using valid_release_queue_def apply simp
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases)
    apply clarsimp
   apply wpsimp
@@ -3772,13 +3772,13 @@ lemma setThreadState_valid_release_queue[wp]:
 lemma setThreadState_valid_release_queue'[wp]:
   "setThreadState st t \<lbrace>valid_release_queue'\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (wp threadSet_valid_release_queue')
    apply (fastforce simp: obj_at'_def valid_release_queue'_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases)
    apply clarsimp
   apply wpsimp
@@ -3834,18 +3834,18 @@ crunches setQueue
 lemma tcbSchedEnqueue_valid_tcb'[wp]:
   "tcbSchedEnqueue thread \<lbrace>valid_tcb' tcb\<rbrace>"
   apply (clarsimp simp: tcbSchedEnqueue_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (clarsimp simp: unless_def when_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)+
+  apply (rule bind_wp_fwd_skip, wpsimp)+
   apply (wpsimp wp: threadSet_valid_tcb')
   done
 
 lemma tcbSchedEnqueue_valid_tcbs'[wp]:
   "tcbSchedEnqueue thread \<lbrace>valid_tcbs'\<rbrace>"
   apply (clarsimp simp: tcbSchedEnqueue_def setQueue_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (clarsimp simp: unless_def when_def)
-  apply (rule hoare_seq_ext_skip, wpsimp simp: valid_tcbs'_def wp: update_valid_tcb')+
+  apply (rule bind_wp_fwd_skip, wpsimp simp: valid_tcbs'_def wp: update_valid_tcb')+
   apply (wpsimp wp: threadSet_valid_tcbs')
   done
 
@@ -3858,14 +3858,14 @@ lemma setSchedulerAction_valid_tcbs'[wp]:
 lemma rescheduleRequired_valid_tcb'[wp]:
   "rescheduleRequired \<lbrace>valid_tcb' tcb\<rbrace>"
   apply (clarsimp simp: rescheduleRequired_def)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: update_valid_tcb' isSchedulable_wp)+
+  apply (rule bind_wp_fwd_skip, wpsimp wp: update_valid_tcb' isSchedulable_wp)+
   apply (wpsimp wp: update_valid_tcb')
   done
 
 lemma rescheduleRequired_valid_tcbs'[wp]:
   "rescheduleRequired \<lbrace>valid_tcbs'\<rbrace>"
   apply (clarsimp simp: rescheduleRequired_def)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: update_valid_tcb' isSchedulable_wp)+
+  apply (rule bind_wp_fwd_skip, wpsimp wp: update_valid_tcb' isSchedulable_wp)+
   apply (wpsimp wp: update_valid_tcb')
   done
 
@@ -3886,8 +3886,8 @@ lemma rescheduleRequired_ksQ:
    \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
   including no_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)
-                            \<and> P (ksReadyQueues s)" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)
+                            \<and> P (ksReadyQueues s)" in bind_wp)
    apply wpsimp
    apply (case_tac x; simp)
   apply wp
@@ -4858,11 +4858,11 @@ lemma sts_iflive'[wp]:
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def rescheduleRequired_def
                    getCurThread_def getSchedulerAction_def)
-  apply (rule_tac B="\<lambda>rv. if_live_then_nonz_cap'" in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>rv. if_live_then_nonz_cap'" in bind_wp_fwd)
    apply (wpsimp wp: threadSet_iflive')
         apply fastforce+
-  apply (intro hoare_seq_ext[OF _ gets_sp]
-               hoare_seq_ext[OF _ isSchedulable_sp])
+  apply (intro bind_wp[OF _ gets_sp]
+               bind_wp[OF _ isSchedulable_sp])
   apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
   apply (wpsimp wp: isSchedulable_inv hoare_vcg_if_lift2 hoare_drop_imps)
   done
@@ -4884,7 +4884,7 @@ crunches addToBitmap
 lemma setThreadState_if_unsafe_then_cap'[wp]:
   "setThreadState st p \<lbrace>if_unsafe_then_cap'\<rbrace>"
   apply (clarsimp simp: setThreadState_def scheduleTCB_def rescheduleRequired_def when_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (rule threadSet_ifunsafe'T)
    apply (clarsimp simp: tcb_cte_cases_def)
   apply (wpsimp simp: tcbSchedEnqueue_def)
@@ -6268,8 +6268,8 @@ lemma tcbReleaseRemove_valid_queues_no_bitmap:
    tcbReleaseRemove tcbPtr
    \<lbrace>\<lambda>_. valid_queues_no_bitmap\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: threadSet_valid_queues_no_bitmap_new)
   apply (clarsimp simp: valid_queues_no_bitmap_def valid_queues_def)
   apply (fastforce simp: obj_at'_def inQ_def)
@@ -6316,8 +6316,8 @@ crunches setReleaseQueue, setReprogramTimer
 lemma tcbReleaseRemove_valid_queues'[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>valid_queues'\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: threadSet_valid_queues')
   apply (clarsimp simp: valid_queues'_def inQ_def)
   done
@@ -6329,8 +6329,8 @@ crunches setReprogramTimer
 lemma tcbReleaseRemove_valid_release_queue[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>valid_release_queue\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: threadSet_valid_release_queue)
   apply (clarsimp simp: valid_release_queue_def)
   done
@@ -6338,8 +6338,8 @@ lemma tcbReleaseRemove_valid_release_queue[wp]:
 lemma tcbReleaseRemove_valid_release_queue'[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>valid_release_queue'\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: threadSet_valid_release_queue')
   apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
   done
@@ -6355,17 +6355,17 @@ crunches setReprogramTimer
 lemma tcbReleaseRemove_valid_objs'[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>valid_objs'\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: threadSet_valid_objs')
   done
 
 lemma tcbReleaseRemove_valid_mdb'[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>valid_mdb'\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule_tac B="\<lambda>_. valid_mdb'" in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule_tac Q'="\<lambda>_. valid_mdb'" in bind_wp_fwd)
    apply wpsimp
    apply (clarsimp simp: valid_mdb'_def)
   apply (wpsimp wp: setObject_tcb_mdb' getObject_tcb_wp simp: threadSet_def)
@@ -6383,8 +6383,8 @@ lemma tcbReleaseRemove_if_live_then_nonz_cap'[wp]:
    tcbReleaseRemove tptr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: threadSet_iflive' setSchedContext_iflive' threadGet_wp)
   apply (fastforce simp: obj_at'_def projectKOs)
   done
@@ -6398,8 +6398,8 @@ lemma tcbReleaseRemove_valid_idle'[wp]:
 lemma tcbReleaseRemove_ct_not_inQ[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>ct_not_inQ\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def getReleaseQueue_def setReleaseQueue_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: threadSet_not_inQ)
   done
 

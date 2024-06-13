@@ -4724,7 +4724,7 @@ lemma createNewCaps_valid_pspace:
              apply (insert cover tysc sz_limit ptr_cn ptr_km)
              (* for TCBObject, we need to know a bit more about tcbDomain *)
              apply (simp add: curDomain_def)
-             apply (rule hoare_seq_ext[OF _ gets_sp])
+             apply (rule bind_wp[OF _ gets_sp])
              apply (clarsimp simp: createObjects_def)
              apply (rule hoare_assume_pre)
   by (wpsimp wp: createObjects_valid_pspace_untyped'[of dev us _ "Inr ty", where ptr=ptr]

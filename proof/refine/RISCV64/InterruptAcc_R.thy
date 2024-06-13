@@ -377,10 +377,10 @@ lemma updateTimeStamp_inv:
      domain_time_independent_H P\<rbrakk>
     \<Longrightarrow> updateTimeStamp \<lbrace>P\<rbrace>"
   apply (simp add: updateTimeStamp_def doMachineOp_def getCurrentTime_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
    apply (fastforce simp: time_state_independent_H_def getCurrentTime_independent_H_def in_monad)
-  apply (rule hoare_seq_ext_skip, wpsimp simp: setCurTime_def)
+  apply (rule bind_wp_fwd_skip, wpsimp simp: setCurTime_def)
    apply (clarsimp simp: updateTimeStamp_independent_def)
    apply (drule_tac x="\<lambda>_. curTime'" in spec)
    apply (drule_tac x=id in spec)
@@ -403,15 +403,15 @@ lemma preemptionPoint_inv:
   apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def
                    setConsumedTime_def setCurTime_def)
   apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (rule bindE_wp_fwd_skip, solves wpsimp)+
   apply (clarsimp simp: whenE_def)
   apply (intro conjI impI; (solves wpsimp)?)
-  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (rule bindE_wp_fwd_skip, solves wpsimp)+
   apply (rename_tac preempt)
   apply (case_tac preempt; clarsimp)
-   apply (rule hoare_seq_ext_skipE)
+   apply (rule bindE_wp_fwd_skip)
     apply (wpsimp wp: updateTimeStamp_inv)
-  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (rule bindE_wp_fwd_skip, solves wpsimp)+
   apply (wpsimp wp: getRefills_wp hoare_drop_imps
               simp: isCurDomainExpired_def getDomainTime_def refillSufficient_def)
   done

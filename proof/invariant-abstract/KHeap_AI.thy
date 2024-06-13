@@ -2204,7 +2204,7 @@ lemma get_sched_context_sp:
   "\<lbrace>P\<rbrace> get_sched_context sc_ptr
    \<lbrace> \<lambda>r s. P s \<and> (\<exists>n. ko_at (SchedContext r n) sc_ptr s)\<rbrace>"
   apply (simp add: get_sched_context_def)
-  apply (rule hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd)
    apply (rule get_object_sp)
   apply (wpsimp, fastforce)
   done
@@ -2219,7 +2219,7 @@ lemma assert_get_tcb_ko':
 lemma is_schedulable_wp:
   "\<lbrace>\<lambda>s. \<forall>t. schedulable tcb_ptr s = t \<longrightarrow> P t s\<rbrace> is_schedulable tcb_ptr \<lbrace>P\<rbrace>"
   apply (clarsimp simp: is_schedulable_def)
-  apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
+  apply (rule bind_wp[OF _ assert_get_tcb_ko'])
   apply (case_tac "tcb_sched_context tcb"; clarsimp)
    apply (wpsimp simp: schedulable_def obj_at_def get_tcb_rev)
   by (wpsimp simp: schedulable_def obj_at_def get_tcb_rev is_sc_active_def

@@ -2189,7 +2189,7 @@ lemma tcb_bound_refs'_not_Bound:
 lemma unbindNotification_invs[wp]:
   "unbindNotification tcb \<lbrace>invs'\<rbrace>"
   apply (simp add: unbindNotification_def invs'_def valid_dom_schedule'_def)
-  apply (rule hoare_seq_ext[OF _ gbn_sp'])
+  apply (rule bind_wp[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, clarsimp, wp, clarsimp)
   apply clarsimp
   apply (rule bind_wp[OF _ get_ntfn_sp'])
@@ -2223,7 +2223,7 @@ lemma ntfn_bound_tcb_at':
 lemma unbindMaybeNotification_invs[wp]:
   "unbindMaybeNotification ntfnptr \<lbrace>invs'\<rbrace>"
   apply (simp add: unbindMaybeNotification_def invs'_def valid_dom_schedule'_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (wpsimp wp: sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues
                     valid_irq_node_lift irqs_masked_lift setBoundNotification_ct_not_inQ
                     untyped_ranges_zero_lift
@@ -2326,7 +2326,7 @@ lemma replyPop_valid_objs'[wp]:
   "replyPop replyPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
   unfolding replyPop_def
   supply if_split[split del]
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: schedContextDonate_valid_objs' hoare_vcg_if_lift_strong threadGet_const)
                   apply (clarsimp simp: obj_at'_def)
                  apply (wpsimp wp: replyNext_update_valid_objs' hoare_drop_imp hoare_vcg_if_lift2)+
@@ -2449,19 +2449,19 @@ lemma replyPop_list_refs_of_replies'[wp]:
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_ s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   unfolding replyPop_def
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_reply_sp'])
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp[OF _ get_reply_sp'])
+  apply (rule bind_wp_fwd_skip, solves \<open>wpsimp\<close>, simp?)+
+  apply (rule bind_wp)
    apply (wpsimp wp: cleanReply_list_refs_of_replies')
   apply (rule hoare_when_cases)
    apply (clarsimp simp: obj_at'_def)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp simp: comp_def\<close>, simp?)+
+  apply (rule bind_wp[OF _ assert_sp])
+  apply (rule bind_wp_fwd_skip, solves \<open>wpsimp simp: comp_def\<close>, simp?)+
   apply (subst bind_assoc[symmetric])
-  apply (rule hoare_seq_ext)
-   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)
+  apply (rule bind_wp)
+   apply (rule bind_wp_fwd_skip, solves \<open>wpsimp\<close>, simp?)
    apply (wpsimp wp: hoare_when_cases)
    apply (wp updateReply_list_refs_of_replies' hoare_vcg_all_lift hoare_drop_imp)
    apply (clarsimp simp: isHead_def split: reply_next.splits)
@@ -2530,23 +2530,23 @@ lemma replyPop_iflive:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   (is "valid (?pred and _) _ ?post")
   apply (clarsimp simp: replyPop_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (intro hoare_seq_ext[OF _ get_reply_sp']
-               hoare_seq_ext[OF _ assert_sp]
-               hoare_seq_ext[OF _ assert_opt_sp]
-               hoare_seq_ext[OF _ gts_sp'])
-  apply (rule_tac B="?post"  in hoare_seq_ext; (solves wpsimp)?)
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (intro bind_wp[OF _ get_reply_sp']
+               bind_wp[OF _ assert_sp]
+               bind_wp[OF _ assert_opt_sp]
+               bind_wp[OF _ gts_sp'])
+  apply (rule_tac Q'="?post"  in bind_wp; (solves wpsimp)?)
   apply clarsimp
   apply (rename_tac reply tptr state)
   apply (rule hoare_when_cases, simp)
-  apply (intro hoare_seq_ext[OF _ get_sc_sp']
-               hoare_seq_ext[OF _ assert_sp]
-               hoare_seq_ext[OF _ assert_opt_sp])
+  apply (intro bind_wp[OF _ get_sc_sp']
+               bind_wp[OF _ assert_sp]
+               bind_wp[OF _ assert_opt_sp])
 
-  apply (rule_tac B="\<lambda>_ s. ?pred s \<and> sym_refs (list_refs_of_replies' s) \<and> ko_at' reply replyPtr s
+  apply (rule_tac Q'="\<lambda>_ s. ?pred s \<and> sym_refs (list_refs_of_replies' s) \<and> ko_at' reply replyPtr s
                            \<and> isHead (replyNext reply)
                            \<and> ex_nonz_cap_to' (theHeadScPtr (replyNext reply)) s"
-               in hoare_seq_ext[rotated])
+               in bind_wp_fwd)
    apply (wpsimp wp: setSchedContext_iflive' schedContextDonate_if_live_then_nonz_cap')
    apply (frule (1) sc_ko_at_valid_objs_valid_sc')
    apply (frule (1) reply_ko_at_valid_objs_valid_reply')
@@ -2558,15 +2558,15 @@ lemma replyPop_iflive:
   apply clarsimp
   apply (rename_tac reply_next)
   apply (subst bind_assoc[symmetric])
-  apply (rule_tac B="\<lambda>_ s. ?pred s \<and> ex_nonz_cap_to' (theHeadScPtr (Some reply_next)) s"
-               in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_ s. ?pred s \<and> ex_nonz_cap_to' (theHeadScPtr (Some reply_next)) s"
+               in bind_wp_fwd)
 
    apply (clarsimp simp: when_def)
    apply (intro conjI impI)
     apply clarsimp
     apply (rename_tac replyPrevPtr)
     apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
-     apply (rule_tac B="\<lambda>_ s. ?pred s \<and> ex_nonz_cap_to' replyPtr s" in hoare_seq_ext[rotated])
+     apply (rule_tac Q'="\<lambda>_ s. ?pred s \<and> ex_nonz_cap_to' replyPtr s" in bind_wp_fwd)
       apply (wpsimp wp: updateReply_iflive'_strong updateReply_valid_objs')
       apply (frule (1) reply_ko_at_valid_objs_valid_reply')
       apply (clarsimp simp: valid_reply'_def getReplyNextPtr_def)
@@ -2585,7 +2585,7 @@ lemma replyPop_iflive:
                        simp: ko_wp_at'_def obj_at'_def projectKOs live_reply'_def)
      apply (clarsimp simp: obj_at'_def)
      apply (wpsimp wp: updateReply_iflive'_strong updateReply_valid_objs')
-    apply (rule_tac B="\<lambda>_. valid_objs'" in hoare_seq_ext[rotated])
+    apply (rule_tac Q'="\<lambda>_. valid_objs'" in bind_wp_fwd)
      apply (wpsimp wp: updateReply_valid_objs' hoare_vcg_all_lift)
      apply (fastforce dest: reply_ko_at_valid_objs_valid_reply'
                       simp: valid_reply'_def getReplyNextPtr_def valid_bound_obj'_def)
@@ -2596,7 +2596,7 @@ lemma replyPop_iflive:
    apply (fastforce elim: if_live_then_nonz_capE'
                     simp: valid_reply'_def ko_wp_at'_def obj_at'_def projectKOs live_reply'_def)
 
-  apply (rule hoare_seq_ext[OF _ threadGet_sp])
+  apply (rule bind_wp[OF _ threadGet_sp])
   apply (wpsimp wp: schedContextDonate_if_live_then_nonz_cap')
   done
 
@@ -2606,11 +2606,11 @@ lemma replyRemove_if_live_then_nonz_cap':
    replyRemove replyPtr tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (clarsimp simp: replyRemove_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (intro hoare_seq_ext[OF _ get_reply_sp']
-               hoare_seq_ext[OF _ assert_sp]
-               hoare_seq_ext[OF _ assert_opt_sp]
-               hoare_seq_ext[OF _ gts_sp'])
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (intro bind_wp[OF _ get_reply_sp']
+               bind_wp[OF _ assert_sp]
+               bind_wp[OF _ assert_opt_sp]
+               bind_wp[OF _ gts_sp'])
   apply (rule hoare_if)
    apply (wpsimp wp: replyPop_iflive)
   apply (clarsimp simp: when_def)
@@ -2637,22 +2637,22 @@ lemma replyPop_valid_idle':
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   apply (clarsimp simp: replyPop_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (intro hoare_seq_ext[OF _ get_reply_sp']
-               hoare_seq_ext[OF _ assert_sp]
-               hoare_seq_ext[OF _ assert_opt_sp]
-               hoare_seq_ext[OF _ gts_sp'])
-  apply (rule_tac B="\<lambda>_. valid_idle' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)" in hoare_seq_ext)
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (intro bind_wp[OF _ get_reply_sp']
+               bind_wp[OF _ assert_sp]
+               bind_wp[OF _ assert_opt_sp]
+               bind_wp[OF _ gts_sp'])
+  apply (rule_tac Q'="\<lambda>_. valid_idle' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)" in bind_wp)
    apply wpsimp
   apply (rule hoare_when_cases, simp)
   apply clarsimp
   apply (rename_tac reply_next)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
-  apply (rule_tac B="\<lambda>_ s. valid_idle' s \<and> tcbPtr \<noteq> idle_thread_ptr
+  apply (rule bind_wp[OF _ assert_sp])
+  apply (rule bind_wp[OF _ get_sc_sp'])
+  apply (rule_tac Q'="\<lambda>_ s. valid_idle' s \<and> tcbPtr \<noteq> idle_thread_ptr
                            \<and> obj_at' (\<lambda>sc. scTCB sc \<noteq> Some idle_thread_ptr)
                                       (theHeadScPtr (Some reply_next)) s"
-               in hoare_seq_ext)
+               in bind_wp)
    apply (wpsimp wp: schedContextDonate_valid_idle' hoare_vcg_if_lift2 hoare_vcg_imp_lift'
                      threadGet_const updateReply_obj_at'_only_st_qd_ft)
    apply (clarsimp simp: valid_idle'_def)
@@ -3029,7 +3029,7 @@ lemma unbindMaybeNotification_obj_at'_no_change:
   "\<forall>ntfn tcb. P ntfn = P (ntfn \<lparr>ntfnBoundTCB := tcb\<rparr>)
    \<Longrightarrow> unbindMaybeNotification r \<lbrace>obj_at' P r'\<rbrace>"
   apply (simp add: unbindMaybeNotification_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp obj_at_setObject2
         | wpc
@@ -3094,7 +3094,7 @@ crunches tcbReleaseRemove, tcbSchedDequeue
 lemma schedContextUnbindTCB_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding schedContextUnbindTCB_def
-  apply (rule schedContextUnbindTCB_invs'_helper[simplified] hoare_seq_ext | clarsimp)+
+  apply (rule schedContextUnbindTCB_invs'_helper[simplified] bind_wp | clarsimp)+
         apply (wpsimp wp: tcbReleaseRemove_invs' tcbReleaseRemove_not_queued
                           tcbSchedDequeue_nonq tcbSchedDequeue_invs' hoare_vcg_all_lift)+
   apply (fastforce dest: sym_refs_obj_atD'
@@ -3201,7 +3201,7 @@ lemma unbindFromSC_bound_sc_tcb_at'_None:
    unbindFromSC t
    \<lbrace>\<lambda>rv. bound_sc_tcb_at' ((=) None) t\<rbrace>"
   apply (simp add: unbindFromSC_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wpsimp wp: schedContextUnbindTCB_bound_sc_tcb_at'_None threadGet_wp get_sc_inv'
                     hoare_drop_imp)
   apply (auto simp: pred_tcb_at'_def obj_at'_def)
@@ -3346,7 +3346,7 @@ lemma cancelIPC_makes_unlive:
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
   unfolding cancelIPC_def blockedCancelIPC_def Let_def getBlockingObject_def sym_refs_asrt_def
   apply simp
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ gts_sp'])+
+  apply (intro bind_wp[OF _ stateAssert_sp] bind_wp[OF _ gts_sp'])+
   apply (case_tac state; clarsimp)
          (* BlockedOnReceive*)
          apply (rename_tac ep pl rp)
@@ -3620,8 +3620,8 @@ lemma cteDeleteOne_cte_wp_at_preserved:
 lemma cancelIPC_cteCaps_of[wp]:
   "cancelIPC t \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cancelIPC_def Let_def capHasProperty_def locateSlot_conv)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule hoare_pre)
    apply (wp getCTE_wp' | wpcw
           | simp add: cte_wp_at_ctes_of
@@ -3912,7 +3912,7 @@ lemma threadSet_valid_inQ_queues_dequeue_wp:
   threadSet (tcbQueued_update (\<lambda>_. False)) t
   \<lbrace>\<lambda>_. valid_inQ_queues \<rbrace>"
   unfolding threadSet_def
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (simp add: valid_inQ_queues_def)
   apply (wpsimp wp: hoare_Ball_helper hoare_vcg_all_lift setObject_tcb_strongest)
   apply (clarsimp simp: valid_inQ_queues_except_def)
@@ -3984,16 +3984,16 @@ lemma schedContextDonate_valid_inQ_queues:
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
-  apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ get_sc_sp'], rename_tac sc)
+  apply (rule_tac Q'="\<lambda>_. ?pre" in bind_wp_fwd)
    apply (rule hoare_when_cases, clarsimp)
-   apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
+   apply (rule_tac Q'="\<lambda>_. ?pre" in bind_wp_fwd)
     apply (wpsimp wp: tcbSchedDequeue_valid_inQ_queues)
     apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
                       simp: valid_sched_context'_def)
-   apply (rule hoare_seq_ext_skip)
+   apply (rule bind_wp_fwd_skip)
     apply wpsimp
-   apply (rule hoare_seq_ext_skip)
+   apply (rule bind_wp_fwd_skip)
     apply (wpsimp wp: threadSet_valid_objs')
     apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def)
    apply wpsimp+
@@ -4005,22 +4005,22 @@ lemma replyPop_valid_inQ_queues[wp]:
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: replyPop_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext[OF _ get_reply_sp'])
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ gts_sp']\<close>
-                       \<open>rule hoare_seq_ext_skip, solves wpsimp\<close>)
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp[OF _ get_reply_sp'])
+  apply (repeat_unless \<open>rule bind_wp[OF _ gts_sp']\<close>
+                       \<open>rule bind_wp_fwd_skip, solves wpsimp\<close>)
   apply (rule_tac Q="?pre and tcb_at' tcbPtr and ko_at' reply replyPtr"
          in hoare_weaken_pre[rotated])
    apply fastforce
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ assert_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (case_tac "replyNext reply"; simp add: bind_assoc)
    apply wpsimp
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (rule hoare_gen_asm_conj)
   apply (clarsimp simp: isHead_def split: reply_next.split_asm)
   apply (rename_tac scp)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
+  apply (rule bind_wp[OF _ get_sc_sp'])
   apply (wpsimp wp: schedContextDonate_valid_inQ_queues replyUnlink_valid_objs')
       apply (rule_tac Q="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
        apply clarsimp
@@ -4146,7 +4146,7 @@ lemma unbindFromSC_invs'[wp]:
 lemma schedContextSetInactive_invs'[wp]:
   "schedContextSetInactive scPtr \<lbrace>invs'\<rbrace>"
   apply (clarsimp simp: schedContextSetInactive_def updateSchedContext_def)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
   apply (wpsimp wp: setSchedContext_invs' hoare_vcg_all_lift)
    apply (fastforce dest: invs'_ko_at_valid_sched_context' intro!: if_live_then_nonz_capE'
                     simp: ko_wp_at'_def obj_at'_def live_sc'_def projectKOs
@@ -5036,7 +5036,7 @@ lemma unbindMaybeNotification_ct_not_ksQ:
    unbindMaybeNotification t
    \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set (ksReadyQueues s p)\<rbrace>"
   apply (simp add: unbindMaybeNotification_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (case_tac "ntfnBoundTCB ntfn", simp, wp, simp+)
   apply (rule hoare_pre)
     apply wp

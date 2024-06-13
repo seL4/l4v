@@ -204,7 +204,7 @@ lemma decodeCNodeInvocation_corres:
                      subgoal by (auto simp add: whenE_def, auto simp add: returnOk_def)
                     apply (wp | wpc | simp(no_asm))+
                 apply (wp hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
-                          hoare_vcg_all_lift_R hoare_vcg_all_lift lsfco_cte_at' hoare_drop_imps
+                          hoare_vcg_all_liftE_R hoare_vcg_all_lift lsfco_cte_at' hoare_drop_imps
                                | clarsimp)+
         subgoal by (auto elim!: valid_cnode_capI)
        apply (clarsimp simp: invs'_def valid_pspace'_def)
@@ -418,7 +418,7 @@ lemma decodeCNodeInv_wf[wp]:
              apply (wp whenE_throwError_wp getCTE_wp | wpc | simp(no_asm))+
           apply (rule_tac Q'="\<lambda>rv. invs' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) destSlot
                                          and ex_cte_cap_to' destSlot"
-                                  in hoare_post_imp_R, wp)
+                                  in hoare_strengthen_postE_R, wp)
           apply (clarsimp simp: cte_wp_at_ctes_of)
           apply (frule invs_valid_objs')
           apply (simp add: ctes_of_valid' valid_updateCapDataI

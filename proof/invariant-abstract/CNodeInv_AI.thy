@@ -2029,7 +2029,7 @@ lemma suspend_makes_halted[wp]:
   "\<lbrace>valid_objs\<rbrace> SchedContext_A.suspend thread \<lbrace>\<lambda>_. st_tcb_at halted thread\<rbrace>"
   unfolding SchedContext_A.suspend_def
   apply (simp flip: bind_assoc)
-  apply (rule hoare_seq_ext[OF sched_context_cancel_yield_to_halted])
+  apply (rule bind_wp[OF sched_context_cancel_yield_to_halted])
   apply (simp add: bind_assoc)
   apply (wp hoare_strengthen_post [OF sts_st_tcb_at] gbn_wp
          | clarsimp elim!: pred_tcb_weakenE)+

@@ -230,12 +230,12 @@ lemma preemption_point_inv:
          \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: preemption_point_def get_sc_refill_sufficient_def get_sc_active_def)
   apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, wpsimp)
+  apply (rule bindE_wp_fwd_skip, wpsimp)
   apply (rule valid_validE)
   apply (rule OR_choiceE_weak_wp)
   apply (rule alternative_wp[where P=P and P'=P for P, simplified]; (solves wpsimp)?)
   apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, solves \<open>wpsimp wp: update_time_stamp_wp\<close>)+
+  apply (rule bindE_wp_fwd_skip, solves \<open>wpsimp wp: update_time_stamp_wp\<close>)+
   apply wpsimp
   done
 

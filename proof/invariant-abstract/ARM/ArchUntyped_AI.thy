@@ -639,9 +639,9 @@ lemma copy_global_mappings_obj_at_non_pd:
   assumes non_pd: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"
   shows "copy_global_mappings ptr \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
   apply (clarsimp simp: copy_global_mappings_def)
-  apply (rule hoare_seq_ext[OF _ gets_inv])
+  apply (rule bind_wp[OF _ gets_inv])
   apply (rule mapM_x_wp')
-  apply (rule hoare_seq_ext[OF _ get_pde_inv])
+  apply (rule bind_wp[OF _ get_pde_inv])
   apply (wpsimp simp: store_pde_def set_pd_def wp: set_object_wp get_object_wp)
   apply (clarsimp simp: obj_at_def elim!: rsubst[of N])
   apply (rule iffI; drule spec[OF non_pd, THEN mp]; simp)

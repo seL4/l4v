@@ -1111,11 +1111,11 @@ lemma refillNew_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: refillNew_def)
   apply (simp flip: bind_assoc)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply (rule maybeAddEmptyTail_invs')
   apply (simp add: bind_assoc)
   apply (clarsimp simp: setRefillHd_def updateRefillHd_def)
-  apply (rule hoare_seq_ext[OF _ getCurTime_sp])
+  apply (rule bind_wp[OF _ getCurTime_sp])
   apply (rule hoare_weaken_pre)
    (* combine the separate updateSchedContext steps into one *)
    apply (rule monadic_rewrite_refine_valid,
@@ -1137,7 +1137,7 @@ lemma refillUpdate_invs':
   (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (clarsimp simp: refillUpdate_def)
   apply (simp flip: bind_assoc)
-  apply (rule_tac B="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>_. invs' and active_sc_at' scPtr" in bind_wp)
    apply (wpsimp wp: updateRefillHd_invs')
   apply (clarsimp simp: pred_conj_def)
   apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -1145,9 +1145,9 @@ lemma refillUpdate_invs':
    apply (wpsimp wp: updateSchedContext_wp refillReady_wp
                simp: updateRefillHd_def)
    apply (fastforce simp: active_sc_at'_def obj_at_simps MIN_REFILLS_def ps_clear_def)
-  apply (rule_tac B="\<lambda>_. invs'" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>_. invs'" in bind_wp)
    apply wpsimp
-  apply (rule_tac B="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>_. invs' and active_sc_at' scPtr" in bind_wp)
    apply (wpsimp wp: updateRefillHd_invs' refillReady_wp)
   apply (clarsimp simp: pred_conj_def)
   apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -1155,7 +1155,7 @@ lemma refillUpdate_invs':
    apply (wpsimp wp: updateSchedContext_wp refillReady_wp
                simp: updateRefillHd_def)
    apply (clarsimp simp: active_sc_at'_def obj_at_simps MIN_REFILLS_def ps_clear_def)
-  apply (rule_tac B="\<lambda>_. invs' and ex_nonz_cap_to' scPtr" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>_. invs' and ex_nonz_cap_to' scPtr" in bind_wp)
    apply (wpsimp wp: updateSchedContext_invs')
    apply (fastforce dest: invs'_ko_at_valid_sched_context'
                     simp: valid_sched_context'_def valid_sched_context_size'_def obj_at_simps)
@@ -1165,7 +1165,7 @@ lemma refillUpdate_invs':
    apply (wpsimp wp: updateSchedContext_ex_nonz_cap_to' refillReady_wp
                simp: updateRefillHd_def)
   apply (simp add: bind_assoc)
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
     apply (wpsimp wp: updateSchedContext_invs')
     apply (fastforce dest: invs'_ko_at_valid_sched_context'
@@ -1173,8 +1173,8 @@ lemma refillUpdate_invs':
                            refillSize_def)
    apply (wpsimp wp: updateSchedContext_wp)
    apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
-  apply (rule_tac B="\<lambda>_. ?P and (\<lambda>s'. ((\<lambda>sc'. scRefillHead sc' = 0) |< scs_of' s') scPtr)"
-               in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_. ?P and (\<lambda>s'. ((\<lambda>sc'. scRefillHead sc' = 0) |< scs_of' s') scPtr)"
+               in bind_wp_fwd)
    apply (clarsimp simp: pred_conj_def)
    apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
      apply (wpsimp wp: updateSchedContext_invs')
@@ -1184,9 +1184,9 @@ lemma refillUpdate_invs':
     apply (wpsimp wp: updateSchedContext_wp)
     apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
    apply (wpsimp wp: updateSchedContext_wp)
-  apply (rule_tac B="\<lambda>_. ?P and (\<lambda>s'. ((\<lambda>sc'. scRefillHead sc' = 0) |< scs_of' s') scPtr)
+  apply (rule_tac Q'="\<lambda>_. ?P and (\<lambda>s'. ((\<lambda>sc'. scRefillHead sc' = 0) |< scs_of' s') scPtr)
                             and (\<lambda>s'. ((\<lambda>sc'. refillSize sc' = 1) |< scs_of' s') scPtr)"
-               in hoare_seq_ext[rotated])
+               in bind_wp_fwd)
    apply (clarsimp simp: pred_conj_def)
    apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
       apply (wpsimp wp: updateSchedContext_invs')
@@ -1385,7 +1385,7 @@ lemma invokeSchedControlConfigureFlags_corres:
       apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
      apply (rule_tac Q="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated])
       apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-     apply (rule hoare_seq_ext_skip, wpsimp)+
+     apply (rule bind_wp_fwd_skip, wpsimp)+
      apply wpsimp
 
     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
@@ -1474,8 +1474,8 @@ lemma invokeSchedControlConfigureFlags_corres:
      apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
 
     apply (rule hoare_if)
-     apply (rule hoare_seq_ext_skip, wpsimp)
-     apply (rule hoare_seq_ext[OF _ gts_sp])
+     apply (rule bind_wp_fwd_skip, wpsimp)
+     apply (rule bind_wp[OF _ gts_sp])
      apply (rule hoare_if)
 
       apply (wps_conj_solves wp: refill_update_valid_sched_action refill_update_invs)
@@ -1509,7 +1509,7 @@ lemma invokeSchedControlConfigureFlags_corres:
     apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def)
    apply (rule hoare_if)
     apply wps_conj_solves
-    apply (rule hoare_seq_ext[OF _ isRunnable_sp])
+    apply (rule bind_wp[OF _ isRunnable_sp])
     apply (rule hoare_if)
      apply (wpsimp wp: refillUpdate_invs')
      apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def)

@@ -142,10 +142,10 @@ lemma perform_asid_control_etcb_at:
    \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (cases aci, rename_tac frame slot parent base)
   apply (simp add: perform_asid_control_invocation_def, thin_tac _)
-  apply (rule hoare_seq_ext[OF _ delete_objects_etcb_at])
-  apply (rule hoare_seq_ext[OF _ get_cap_inv])
-  apply (rule hoare_seq_ext[OF _ set_cap_valid_sched_pred])
-  apply (rule hoare_seq_ext[OF _ retype_region_etcb_at])
+  apply (rule bind_wp[OF _ delete_objects_etcb_at])
+  apply (rule bind_wp[OF _ get_cap_inv])
+  apply (rule bind_wp[OF _ set_cap_valid_sched_pred])
+  apply (rule bind_wp[OF _ retype_region_etcb_at])
   apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_imp_lift')
   by (clarsimp simp: pred_tcb_at_def obj_at_def)
 

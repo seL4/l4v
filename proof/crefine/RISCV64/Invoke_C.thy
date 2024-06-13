@@ -884,14 +884,14 @@ lemma decodeCNodeInvocation_ccorres:
                                                 \<and> tcb_at' thread s
                                                 \<and> sch_act_wf (ksSchedulerAction s) s
                                                 \<and> valid_tcb_state' Restart s
-                                                \<and> sysargs_rel args buffer s" in  hoare_post_imp_R)
+                                                \<and> sysargs_rel args buffer s" in  hoare_strengthen_postE_R)
                        prefer 2
                        apply (clarsimp simp:cte_wp_at_ctes_of)
                        apply (drule ctes_of_valid')
                        apply (erule invs_valid_objs')
                       apply (force simp: sysargs_rel_to_n valid_updateCapDataI
                                          invs_valid_objs' invs_valid_pspace')
-                     apply (wp hoare_vcg_all_lift_R injection_wp_E[OF refl]
+                     apply (wp hoare_vcg_all_liftE_R injection_wp_E[OF refl]
                                lsfco_cte_at' hoare_vcg_const_imp_lift_R)+
                     apply (simp add: Collect_const_mem word_sle_def word_sless_def
                                      all_ex_eq_helper)
@@ -1201,7 +1201,7 @@ lemma decodeCNodeInvocation_ccorres:
                                                    and cte_at' rv and cte_at' rva
                                                    and tcb_at' thread and (\<lambda>s. ksCurThread s = thread)
                                                    and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
-                                                        in hoare_post_imp_R)
+                                                        in hoare_strengthen_postE_R)
                                apply (wp lsfco_cte_at')
                               apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_updateCapData
                                                     capBadge_updateCapData_True)
@@ -3206,7 +3206,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
                             | Some n \<Rightarrow> args ! 4 + args ! 5 - 1 < 2 ^ n)
                       and sch_act_simple and ct_active'
                       and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
-                      and valid_idle'" in hoare_post_imp_R)
+                      and valid_idle'" in hoare_strengthen_postE_R)
                    prefer 2
                    apply (clarsimp simp: invs_valid_objs' invs_mdb'
                                          ct_in_state'_def pred_tcb_at')
@@ -3256,7 +3256,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
                       \<and> (\<forall>rf\<in>cte_refs' r (irq_node' s). ex_cte_cap_to' rf s)
                       \<and> sch_act_simple s \<and> ct_active' s
                       \<and> sch_act_wf (ksSchedulerAction s) s
-                      \<and> valid_idle' s" in hoare_post_imp_R)
+                      \<and> valid_idle' s" in hoare_strengthen_postE_R)
                  apply clarsimp
                  apply (wp injection_wp_E[OF refl] getSlotCap_cap_to'
                            getSlotCap_capAligned

@@ -2501,7 +2501,7 @@ lemma valid_idle_store_pte[wp]:
   "\<lbrace>valid_idle\<rbrace> store_pte y pte \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: store_pte_def)
   apply wp
-    apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
+    apply (rule hoare_weaken_pre[where Q="valid_idle"])
      apply (simp add: set_pt_def)
      apply (wpsimp wp: set_object_wp_strong)
      apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def a_type_simps split: if_splits)

@@ -1771,11 +1771,11 @@ lemma chooseThread_invs'':
   "chooseThread \<lbrace>invs'\<rbrace>"
   unfolding chooseThread_def Let_def
   apply (simp only: return_bind, simp split del: if_split)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext[where B="\<lambda>rv s. invs' s \<and> rv = ksCurDomain s \<and> ready_qs_runnable s"])
-   apply (rule_tac B="\<lambda>rv s. invs' s \<and> curdom = ksCurDomain s \<and>
+  apply (intro bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp[where Q'="\<lambda>rv s. invs' s \<and> rv = ksCurDomain s \<and> ready_qs_runnable s"])
+   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> curdom = ksCurDomain s \<and>
                              rv = ksReadyQueuesL1Bitmap s curdom \<and> ready_qs_runnable s"
-                in hoare_seq_ext)
+                in bind_wp)
     apply (rename_tac l1)
     apply (case_tac "l1 = 0")
      (* switch to idle thread *)
@@ -2089,7 +2089,7 @@ lemma mergeRefills_valid_objs':
    mergeRefills scPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (clarsimp simp: mergeRefills_def updateRefillHd_def)
-  apply (rule_tac B="\<lambda>_ s. valid_objs' s \<and> sc_at' scPtr s" in hoare_seq_ext[rotated])
+  apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> sc_at' scPtr s" in bind_wp_fwd)
    apply wpsimp
    apply (clarsimp simp: obj_at_simps opt_map_red opt_pred_def)
   apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
@@ -2191,7 +2191,7 @@ lemma refillPopHead_if_live_then_nonz_cap'[wp]:
 lemma mergeRefills_if_live_then_nonz_cap'[wp]:
   "mergeRefills scPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (clarsimp simp: mergeRefills_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp simp: updateRefillHd_def updateSchedContext_def)
   apply (fastforce intro: if_live_then_nonz_capE'
                     simp: ko_wp_at'_def obj_at'_real_def live_sc'_def)
@@ -2200,7 +2200,7 @@ lemma mergeRefills_if_live_then_nonz_cap'[wp]:
 lemma nonOverlappingMergeRefills_if_live_then_nonz_cap'[wp]:
   "nonOverlappingMergeRefills scPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (clarsimp simp: nonOverlappingMergeRefills_def updateRefillHd_def)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: getRefillSize_wp)+
+  apply (rule bind_wp_fwd_skip, wpsimp wp: getRefillSize_wp)+
   by (wpsimp simp: updateSchedContext_def getRefillSize_wp,
       fastforce intro: if_live_then_nonz_capE'
                  simp: ko_wp_at'_def obj_at'_real_def live_sc'_def)+
@@ -2236,7 +2236,7 @@ lemma refillUnblockCheck_if_live_then_nonz_cap'[wp]:
 lemma mergeRefills_valid_idle'[wp]:
   "mergeRefills scPtr \<lbrace>valid_idle'\<rbrace>"
   apply (clarsimp simp: mergeRefills_def updateRefillHd_def updateSchedContext_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp simp: valid_idle'_def obj_at'_def)
   done
 
@@ -2304,11 +2304,11 @@ lemma nonOverlappingMergeRefills_valid_objs':
    nonOverlappingMergeRefills scPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (clarsimp simp: nonOverlappingMergeRefills_def updateRefillHd_def)
-  apply (rule hoare_seq_ext[OF _ getRefillSize_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule_tac B="\<lambda>_ s. valid_objs' s \<and> sc_at' scPtr s" in hoare_seq_ext[rotated])
+  apply (rule bind_wp[OF _ getRefillSize_sp])
+  apply (rule bind_wp[OF _ assert_sp])
+  apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> sc_at' scPtr s" in bind_wp_fwd)
    apply wpsimp
-  apply (rule hoare_seq_ext_skip)
+  apply (rule bind_wp_fwd_skip)
    apply (wpsimp wp: updateSchedContext_valid_objs')
      apply (clarsimp simp: valid_sched_context'_def obj_at_simps valid_obj'_def
                            valid_sched_context_size'_def in_omonad refillSize_def)
@@ -2348,8 +2348,8 @@ lemma handleOverrunLoop_valid_objs':
 lemma refillBudgetCheck_valid_objs':
   "refillBudgetCheck usage \<lbrace>valid_objs'\<rbrace>"
   apply (clarsimp simp: refillBudgetCheck_def isRoundRobin_def refillReady_def getCurSc_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ scActive_sp])
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp[OF _ scActive_sp])
   apply (wpsimp wp: headInsufficientLoop_valid_objs' handleOverrunLoop_valid_objs'
                     hoare_vcg_all_lift updateRefillHd_valid_objs' hoare_vcg_if_lift2 hoare_drop_imps)
   apply (clarsimp simp: active_sc_at'_def obj_at'_def)
@@ -2393,7 +2393,7 @@ lemma refillBudgetCheck_valid_idle'[wp]:
   "refillBudgetCheck usage \<lbrace>valid_idle'\<rbrace>"
   apply (clarsimp simp: refillBudgetCheck_def isRoundRobin_def refillReady_def
                         setReprogramTimer_def updateRefillHd_def setRefillHd_def)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule bind_wp_fwd_skip, solves wpsimp)+
   apply (wpsimp wp: updateSchedContext_valid_idle')
   done
 
@@ -2566,15 +2566,15 @@ lemma schedule_invs':
   "schedule \<lbrace>invs'\<rbrace>"
   supply if_split [split del]
   apply (simp add: schedule_def scAndTimer_def cur_tcb'_asrt_def)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
+  apply (intro bind_wp[OF _ stateAssert_sp])
   apply (clarsimp simp: sch_act_wf_asrt_def)
-  apply (rule_tac hoare_seq_ext, rename_tac t)
+  apply (rule_tac bind_wp, rename_tac t)
    apply (rule_tac Q="invs' and cur_tcb'" in hoare_weaken_pre)
-    apply (rule hoare_seq_ext_skip, wpsimp)
-    apply (rule_tac hoare_seq_ext[OF _ getCurThread_sp])
-    apply (rule_tac hoare_seq_ext[OF _ isSchedulable_sp])
-    apply (rule_tac hoare_seq_ext[OF _ getSchedulerAction_sp])
-    apply (rule hoare_seq_ext)
+    apply (rule bind_wp_fwd_skip, wpsimp)
+    apply (rule_tac bind_wp[OF _ getCurThread_sp])
+    apply (rule_tac bind_wp[OF _ isSchedulable_sp])
+    apply (rule_tac bind_wp[OF _ getSchedulerAction_sp])
+    apply (rule bind_wp)
      apply (wpsimp wp: switchSchedContext_invs' hoare_drop_imp)
     apply (wpsimp wp: scheduleChooseNewThread_invs' isSchedulable_wp setSchedulerAction_invs'
                       ssa_invs' hoare_vcg_disj_lift)
@@ -3667,7 +3667,7 @@ lemma mergeRefills_length_decreasing:
    mergeRefills scp
    \<lbrace>\<lambda>r' s'. refillSize (the (scs_of' s' scp)) < refillSize (the (scs_of' s scp))\<rbrace>"
   unfolding mergeRefills_def updateRefillHd_def
-  apply (rule hoare_seq_ext[OF _ refillPopHead_length_decreasing])
+  apply (rule bind_wp[OF _ refillPopHead_length_decreasing])
   apply (wpsimp wp: refillPopHead_length_decreasing updateSchedContext_wp)
   apply (clarsimp simp: refillSize_def split: if_splits)
   done
@@ -3899,7 +3899,7 @@ lemma isRoundRobin_sp:
    isRoundRobin scPtr
    \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. ko_at' sc scPtr s \<and> rv = (scPeriod sc = 0))\<rbrace>"
   apply (simp add: isRoundRobin_def)
-  apply (rule hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd)
    apply (rule get_sc_sp')
   apply (wp hoare_return_sp)
   apply (clarsimp simp: obj_at'_def)
@@ -3937,7 +3937,7 @@ lemma getRefills_sp:
    getRefills scPtr
    \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. ko_at' sc scPtr s \<and> (rv = scRefills sc))\<rbrace>"
   apply (simp add: getRefills_def)
-  apply (rule hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd)
    apply (rule get_sc_sp')
   apply (wp hoare_return_sp)
   apply (clarsimp simp: obj_at'_def)
@@ -4132,7 +4132,7 @@ lemma refill_pop_head_sched_context_at[wp]:
 lemma non_overlapping_merge_refills_is_active_sc[wp]:
   "non_overlapping_merge_refills sc_ptr \<lbrace>is_active_sc sc_ptr'\<rbrace>"
   apply (clarsimp simp: non_overlapping_merge_refills_def update_refill_hd_def)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule bind_wp_fwd_skip, solves wpsimp)
   apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: vs_all_heap_simps obj_at_def)
   done
@@ -5090,14 +5090,14 @@ lemma schedule_corres:
 
    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
    apply (rename_tac target)
-   apply (rule_tac B="\<lambda>_ s. invs' s \<and> curThread = ksCurThread s"
-                in hoare_seq_ext[rotated])
+   apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> curThread = ksCurThread s"
+                in bind_wp_fwd)
     apply wpsimp
     apply (clarsimp simp: invs'_def isSchedulable_bool_def st_tcb_at'_def pred_map_simps
                           obj_at_simps cur_tcb'_def sch_act_wf_cases
                    split: scheduler_action.splits
                    elim!: opt_mapE)
-   apply (rule hoare_seq_ext_skip, solves wpsimp)+
+   apply (rule bind_wp_fwd_skip, solves wpsimp)+
    apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp)
     apply (clarsimp simp: invs'_def)
    apply (wpsimp wp: scheduleChooseNewThread_invs' ksReadyQueuesL1Bitmap_return_wp

@@ -510,7 +510,7 @@ lemma ckernel_invs:
     apply (wpsimp wp: stateAssert_wp)
    apply (wpsimp wp: isSchedulable_wp hoare_drop_imp)
     apply (intro iffI; clarsimp simp: isScActive_def isSchedulable_bool_def)
-   apply (rule hoare_post_impErr[where E="\<lambda>_. invs'" and Q=Q and R=Q for Q])
+   apply (rule hoare_strengthen_postE[where E="\<lambda>_. invs'" and Q=Q and R=Q for Q])
      apply wpsimp
     apply (clarsimp simp: active_from_running')+
    apply wp
@@ -567,7 +567,7 @@ lemma threadSet_sym_heap_tcbSCs:
   "\<forall>x. tcbSchedContext (f x) = tcbSchedContext x \<Longrightarrow>
   threadSet f t \<lbrace>\<lambda>s. P (tcbSCs_of s) (scTCBs_of s)\<rbrace>"
   unfolding threadSet_def
-  apply (rule hoare_seq_ext[OF _ get_tcb_sp'])
+  apply (rule bind_wp[OF _ get_tcb_sp'])
   apply (wpsimp wp: setObject_tcb_tcbs_of' | wps)+
   apply (prop_tac "((\<lambda>a. if a = t then Some (f tcb) else tcbs_of' s a) |>
               tcbSchedContext) = tcbSCs_of s")
@@ -887,7 +887,7 @@ lemma kernel_corres':
                                  (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s) \<and>
                                  ct_not_blocked s \<and> current_time_bounded s \<and>
                                  ct_not_in_release_q s \<and> consumed_time_bounded s"
-               in hoare_post_impErr[where Q=Q and R=Q for Q])
+               in hoare_strengthen_postE[where Q=Q and R=Q for Q])
           apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_activatable
                             handle_event_schact_is_rct_imp_cur_sc_active call_kernel_schact_is_rct
                             handle_event_scheduler_act_sane handle_event_ct_not_queuedE_E
@@ -895,7 +895,7 @@ lemma kernel_corres':
                             handle_event_valid_sched)
          apply simp
         apply (clarsimp simp: cur_sc_chargeable_def)
-       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
+       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_strengthen_postE)
          apply wpsimp+
       apply (rule_tac P="invs and valid_sched and current_time_bounded
                          and ct_ready_if_schedulable and scheduler_act_sane
@@ -960,7 +960,7 @@ lemma kernel_corres':
       apply (wpsimp simp: mcsPreemptionPoint_def wp: isSchedulable_wp)
      apply (wpsimp wp: dmo_getirq_inv)
      apply (clarsimp simp: isSchedulable_bool_def isScActive_def)
-    apply (rule_tac Q="\<lambda>_. invs'" and E="\<lambda>_. invs'" in hoare_post_impErr)
+    apply (rule_tac Q="\<lambda>_. invs'" and E="\<lambda>_. invs'" in hoare_strengthen_postE)
       apply (wpsimp wp: he_invs')
      apply simp
     apply clarsimp
