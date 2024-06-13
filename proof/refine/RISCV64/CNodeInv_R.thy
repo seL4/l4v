@@ -247,7 +247,7 @@ lemma decodeCNodeInvocation_corres:
             apply (clarsimp simp add: returnOk_def)
            apply (wp get_cap_wp getCTE_wp | simp only: whenE_def | clarsimp)+
       apply (rule hoare_trivE_R[where P="\<top>"])
-      apply (simp add: cte_wp_at_ctes_of pred_conj_def cong: conj_cong)
+      apply (wpsimp simp: cte_wp_at_ctes_of pred_conj_def)
      apply (fastforce elim!: valid_cnode_capI simp: invs_def valid_state_def valid_pspace_def)
     apply (clarsimp simp: invs'_def valid_pspace'_def)
    \<comment> \<open>Rotate\<close>
@@ -361,7 +361,7 @@ lemma deriveCap_Null_helper:
   apply (cases "cap = NullCap")
    apply (simp add: deriveCap_def isCap_simps)
    apply (wp | simp)+
-  apply (rule hoare_post_imp_R, rule assms)
+  apply (rule hoare_strengthen_postE_R, rule assms)
   apply simp
   done
 
@@ -449,7 +449,7 @@ lemma decodeCNodeInv_wf[wp]:
                      unlessE_whenE)
     apply (rule hoare_pre)
      apply (wp whenE_throwError_wp getCTE_wp | simp)+
-     apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> cte_wp_at' (\<lambda>_. True) rv s" in hoare_post_imp_R)
+     apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> cte_wp_at' (\<lambda>_. True) rv s" in hoare_strengthen_postE_R)
       apply (wp lsfco_cte_at')
      apply (simp add: cte_wp_at_ctes_of imp_ex hasCancelSendRights_not_Null)
      apply (clarsimp simp: ctes_of_valid' invs_valid_objs')
@@ -463,7 +463,7 @@ lemma decodeCNodeInv_wf[wp]:
       apply (rule_tac Q'="\<lambda>rv s. cte_at' rv s \<and> cte_at' destSlot s
                               \<and> cte_at' srcSlot s \<and> ex_cte_cap_to' rv s
                               \<and> ex_cte_cap_to' destSlot s
-                              \<and> invs' s" in hoare_post_imp_R)
+                              \<and> invs' s" in hoare_strengthen_postE_R)
        apply (wp lsfco_cte_at')
       apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (frule invs_valid_objs')
@@ -5866,7 +5866,7 @@ lemma cteDelete_delete_cases:
     apply (rule hoare_strengthen_post [OF emptySlot_deletes])
     apply (clarsimp simp: cte_wp_at_ctes_of)
    apply wp+
-   apply (rule hoare_post_imp_R, rule finaliseSlot_abort_cases)
+   apply (rule hoare_strengthen_postE_R, rule finaliseSlot_abort_cases)
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply simp
   done
@@ -6285,7 +6285,7 @@ lemma finaliseSlot_invs'':
                  \<and> (snd rv \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' (snd rv) slot (cteCaps_of s))\<rbrace>,
    \<lbrace>\<lambda>rv s. invs' s\<rbrace>"
   unfolding finaliseSlot_def
-  apply (rule hoare_pre, rule hoare_post_impErr, rule use_spec)
+  apply (rule hoare_pre, rule hoare_strengthen_postE, rule use_spec)
      apply (rule finaliseSlot_invs'[where P="\<top>" and Pr="\<top>" and p=slot])
       apply (simp_all add: no_cte_prop_top)
     apply wp
@@ -6304,7 +6304,7 @@ lemma finaliseSlot_removeable:
   "\<lbrace>\<lambda>s. invs' s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
      finaliseSlot slot e
    \<lbrace>\<lambda>rv s. fst rv \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s\<rbrace>,-"
-  apply (rule validE_validE_R, rule hoare_post_impErr)
+  apply (rule validE_validE_R, rule hoare_strengthen_postE)
     apply (rule finaliseSlot_invs'')
    apply simp+
   done
@@ -6313,7 +6313,7 @@ lemma finaliseSlot_irqs:
   "\<lbrace>\<lambda>s. invs' s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
      finaliseSlot slot e
    \<lbrace>\<lambda>rv s. (snd rv \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' (snd rv) slot (cteCaps_of s))\<rbrace>,-"
-  apply (rule validE_validE_R, rule hoare_post_impErr)
+  apply (rule validE_validE_R, rule hoare_strengthen_postE)
     apply (rule finaliseSlot_invs'')
    apply simp+
   done
@@ -6327,7 +6327,7 @@ lemma finaliseSlot_cte_wp_at:
                               P cp \<and> capZombiePtr cp \<noteq> p)) p s\<rbrace>,-"
   unfolding finaliseSlot_def
   apply (rule hoare_pre, unfold validE_R_def)
-   apply (rule hoare_post_impErr, rule use_spec)
+   apply (rule hoare_strengthen_postE, rule use_spec)
      apply (rule finaliseSlot_invs'[where P=P and Pr=\<top> and p=p])
       apply (simp_all add: no_cte_prop_top finalise_prop_stuff_def)
     apply wp
@@ -6351,7 +6351,7 @@ lemma reduceZombie_invs:
    reduceZombie cap slot exposed
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule validE_valid)
-  apply (rule hoare_post_impErr, rule hoare_pre, rule reduceZombie_invs'[where p=slot])
+  apply (rule hoare_strengthen_postE, rule hoare_pre, rule reduceZombie_invs'[where p=slot])
      apply clarsimp+
   done
 
@@ -6361,7 +6361,7 @@ lemma reduceZombie_cap_to:
    reduceZombie cap slot exposed
    \<lbrace>\<lambda>_ s. \<not> exposed \<longrightarrow> ex_cte_cap_to' slot s\<rbrace>, -"
   apply (rule validE_validE_R, rule hoare_pre,
-         rule hoare_post_impErr)
+         rule hoare_strengthen_postE)
      apply (rule reduceZombie_invs'[where p=slot])
      apply clarsimp+
   done
@@ -6371,7 +6371,7 @@ lemma cteDelete_invs':
   apply (rule hoare_gen_asm)
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (rule hoare_pre, wp finaliseSlot_invs)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (unfold validE_R_def)
     apply (rule use_spec)
     apply (rule spec_valid_conj_liftE1)
@@ -6407,9 +6407,9 @@ lemma cteDelete_cte_at:
     apply (rule hoare_vcg_disj_lift)
      apply (rule typ_at_lifts, rule cteDelete_typ_at')
     apply (simp add: cteDelete_def finaliseSlot_def split_def)
-    apply (rule validE_valid, rule seqE)
+    apply (rule validE_valid, rule bindE_wp_fwd)
      apply (subst finaliseSlot'_simps_ext)
-     apply (rule seqE)
+     apply (rule bindE_wp_fwd)
       apply simp
       apply (rule getCTE_sp)
      apply (rule hoare_pre, rule hoare_FalseE)
@@ -7270,7 +7270,7 @@ next
           apply (clarsimp simp: zombie_alignment_oddity cte_map_replicate)
          apply (wp get_cap_cte_wp_at getCTE_wp' rec_del_cte_at
                    rec_del_invs rec_del_delete_cases)+
-      apply (rule hoare_post_imp_R)
+      apply (rule hoare_strengthen_postE_R)
        apply (rule_tac P="\<lambda>cp. cp = Zombie ptr (zbits_map bits) (Suc n)"
                     in cteDelete_cte_wp_at_invs[where p="cte_map slot"])
        apply clarsimp
@@ -8790,7 +8790,7 @@ lemma cteDelete_irq_states':
   \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
   apply (simp add: cteDelete_def split_def)
   apply (wp whenE_wp)
-   apply (rule hoare_post_impErr)
+   apply (rule hoare_strengthen_postE)
      apply (rule hoare_valid_validE)
      apply (rule finaliseSlot_irq_states')
     apply simp

@@ -26,7 +26,7 @@ lemma activateIdleThread_corres:
 
 lemma gts_st_tcb':
   "\<lbrace>tcb_at' t\<rbrace> getThreadState t \<lbrace>\<lambda>rv. st_tcb_at' (\<lambda>st. st = rv) t\<rbrace>"
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (rule hoare_post_imp[where Q="\<lambda>rv s. \<exists>rv'. rv = rv' \<and> st_tcb_at' (\<lambda>st. st = rv') t s"])
     apply simp
    apply (wp hoare_vcg_ex_lift)
@@ -2789,7 +2789,7 @@ lemma checkPrio_lt_ct:
 
 lemma checkPrio_lt_ct_weak:
   "\<lbrace>\<top>\<rbrace> checkPrio prio auth \<lbrace>\<lambda>rv s. mcpriority_tcb_at' (\<lambda>mcp. ucast prio \<le> mcp) auth s\<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
   apply (rule checkPrio_lt_ct)
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   by (rule le_ucast_ucast_le) simp
@@ -3061,7 +3061,7 @@ lemma slotCapLongRunningDelete_corres:
 lemma slot_long_running_inv'[wp]:
   "\<lbrace>P\<rbrace> slotCapLongRunningDelete ptr \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: slotCapLongRunningDelete_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_inv])
+  apply (rule bind_wp [OF _ getCTE_inv])
   apply (rule hoare_pre, wpcw, (wp isFinalCapability_inv)+)
   apply simp
   done
@@ -3389,8 +3389,6 @@ lemma decodeTCBConf_wf[wp]:
    apply wpsimp
   apply (fastforce simp: isThreadControl_def2 objBits_defs)
   done
-
-declare hoare_True_E_R [simp del]
 
 lemma lsft_real_cte:
   "\<lbrace>valid_objs'\<rbrace> lookupSlotForThread t x \<lbrace>\<lambda>rv. real_cte_at' rv\<rbrace>, -"

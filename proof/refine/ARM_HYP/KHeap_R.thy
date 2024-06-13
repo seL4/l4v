@@ -291,7 +291,7 @@ lemma obj_at_setObject1:
    setObject p (v::'a::pspace_storable)
   \<lbrace> \<lambda>rv. obj_at' (\<lambda>x::'a::pspace_storable. True) t \<rbrace>"
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad obj_at'_def
                         projectKOs lookupAround2_char1
                         project_inject
@@ -313,7 +313,7 @@ lemma obj_at_setObject2:
    setObject p (v::'a)
   \<lbrace> \<lambda>rv. obj_at' P t \<rbrace>"
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (drule R)
@@ -762,8 +762,8 @@ lemma cte_wp_at_ctes_of:
    apply (simp add: field_simps)
   apply (clarsimp split: if_split_asm del: disjCI)
    apply (simp add: ps_clear_def3 field_simps)
-  apply (rule disjI2, rule exI[where x="p - (p && ~~ mask 9)"])
-  apply (clarsimp simp: ps_clear_def3[where na=9] is_aligned_mask
+  apply (rule disjI2, rule exI[where x="p - (p && ~~ mask tcb_bits)"])
+  apply (clarsimp simp: ps_clear_def3[where na=tcb_bits] is_aligned_mask
                         word_bw_assocs field_simps)
   done
 

@@ -927,7 +927,7 @@ proof -
 qed
 
 lemmas aci_invs[wp] =
-  aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
+  aci_invs'[where Q=\<top>,simplified hoare_TrueI, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_arch_inv ai\<rbrace>
@@ -1281,7 +1281,7 @@ lemma decode_asid_control_invocation_wf[wp]:
                                      and (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {})
                                      and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap False frame pageBits idx) (snd (excaps!0))
                                      and (\<lambda>s. riscv_asid_table (arch_state s) free = None)"
-                  in hoare_post_imp_R)
+                  in hoare_strengthen_postE_R)
            apply (simp add: lookup_target_slot_def)
            apply wp
           apply (clarsimp simp: cte_wp_at_def)

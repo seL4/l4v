@@ -666,7 +666,7 @@ lemma vcpuSwitch_corres:
                     vcpuEnable_corres
                     vcpuRestore_corres
                     vcpuSave_corres
-                    hoare_post_taut conjI
+                    hoare_TrueI conjI
                     corres_underlying_split corres_guard_imp
                | clarsimp simp add: when_def | wpsimp | assumption)+
       done

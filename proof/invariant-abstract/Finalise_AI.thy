@@ -438,7 +438,7 @@ lemma cap_delete_one_caps_of_state:
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def
                    is_final_cap_def)
-  apply (rule hoare_seq_ext [OF _ get_cap_sp])
+  apply (rule bind_wp [OF _ get_cap_sp])
   apply (case_tac "can_fast_finalise cap")
    apply (wp empty_slot_caps_of_state get_cap_wp)
    apply (clarsimp simp: cte_wp_at_caps_of_state
@@ -956,7 +956,7 @@ lemma unbind_notification_not_bound:
    \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = None) ntfnptr\<rbrace>"
   apply (simp add: unbind_notification_def maybeM_def)
   apply (rule hoare_pre)
-   apply (rule hoare_seq_ext[OF _ gbn_wp[where P="\<lambda>ptr _. ptr = (Some ntfnptr)"]])
+   apply (rule bind_wp[OF _ gbn_wp[where P="\<lambda>ptr _. ptr = (Some ntfnptr)"]])
    apply (rule hoare_gen_asm[where P'=\<top>, simplified])
    apply (wp sbn_obj_at_impossible simple_obj_set_prop_at | wpc | simp add: update_sk_obj_ref_def)+
   apply (clarsimp simp: obj_at_def)

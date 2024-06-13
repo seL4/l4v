@@ -325,6 +325,11 @@ lemma bindE_twp[wp_split]:
 lemmas bind_twp_fwd = bind_twp[rotated]
 lemmas bindE_twp_fwd = bindE_twp[rotated]
 
+lemma bind_twpE:
+  "\<lbrakk>\<And>x. \<lbrace>Q' x\<rbrace>,\<lbrace>R\<rbrace> g x \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  apply (clarsimp simp: validIE_def)
+  by (wp | assumption)+
+
 lemma rg_TrueI:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>_ _. \<top>\<rbrace> = prefix_closed f"
   by (simp add: validI_def)
@@ -335,7 +340,7 @@ lemma rgE_TrueI:
 
 lemmas twp_post_taut = rg_TrueI[where P="\<top>\<top>", THEN iffD2]
 lemmas twp_post_tautE = rgE_TrueI[where P="\<top>\<top>", THEN iffD2]
-lemmas [elim!] = twp_post_taut twp_post_tautE
+lemmas twp_post_tauts[intro] = twp_post_taut twp_post_tautE
 
 lemma rg_post_conj[intro]:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q and Q'\<rbrace>"
@@ -367,6 +372,9 @@ lemma rg_post_impE:
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (clarsimp simp: validIE_def2 split: sum.splits)
 
+lemmas rg_strengthen_post = rg_post_imp[rotated]
+lemmas rg_strengthen_postE = rg_post_impE[rotated 2]
+
 lemma rg_post_imp_dc:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
   by (fastforce simp: validIE_def validI_def split: sum.splits)
@@ -389,8 +397,6 @@ lemma rg_guar_impE:
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (clarsimp simp: validIE_def elim!: rg_guar_imp)
 
-lemmas rg_strengthen_post = rg_post_imp[rotated]
-lemmas rg_strengthen_postE = rg_post_impE[rotated 2]
 lemmas rg_strengthen_guar = rg_guar_imp[rotated]
 lemmas rg_strengthen_guarE = rg_guar_impE[rotated]
 
@@ -858,17 +864,12 @@ lemma rg_vcg_split_case_sum:
        \<lbrace>G\<rbrace>, \<lbrace>Q x\<rbrace>"
   by (cases x; simp)
 
-lemma rg_seq_extE:
-  "\<lbrakk>\<And>x. \<lbrace>B x\<rbrace>,\<lbrace>R\<rbrace> g x \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>B\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (clarsimp simp: validIE_def)
-  by (wp | assumption)+
-
 lemma bind_twp_nobind:
-  "\<lbrakk>\<lbrace>B\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>C\<rbrace>; \<lbrace>A\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. B\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace>,\<lbrace>R\<rbrace> do f; g od \<lbrace>G\<rbrace>,\<lbrace>C\<rbrace>"
+  "\<lbrakk>\<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> do f; g od \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by (erule bind_twp_fwd) clarsimp
 
 lemma bindE_twp_nobind:
-  "\<lbrakk>\<lbrace>B\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>; \<lbrace>A\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. B\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace>,\<lbrace>R\<rbrace> doE f; g odE \<lbrace>G\<rbrace>,\<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>"
+  "\<lbrakk>\<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> doE f; g odE \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (erule bindE_twp_fwd) clarsimp
 
 lemmas bind_twp_skip = bind_twp[where Q=Q and Q'=Q for Q]
@@ -878,13 +879,11 @@ lemma rg_chain:
    \<Longrightarrow> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>"
   by (wp_pre, rule rg_post_imp)
 
-lemma validIE_weaken: (* FIXME lib: eliminate in favour of rg_chainE *)
+lemma rg_chainE:
   "\<lbrakk>\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> A \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace>; \<And>s0 s. P s0 s \<Longrightarrow> P' s0 s; \<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s;
     \<And>rv s0 s. E' rv s0 s \<Longrightarrow> E rv s0 s\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> A \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by wp_pre (rule rg_post_impE)
-
-lemmas rg_chainE = validIE_weaken
 
 lemma rg_vcg_conj_lift:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk>
@@ -902,10 +901,10 @@ lemma rg_vcg_conj_liftE1:
   by (fastforce simp: split_def split: sum.splits)
 
 lemma rg_vcg_conj_liftE2:
-  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
-   \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>\<lambda>rv s0 s. E rv s0 s \<and> E' rv s0 s\<rbrace>"
-  unfolding validIE_def
-  by (rule rg_post_imp[OF _ rg_vcg_conj_lift]; simp split: sum.splits)
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>P and P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv s0 s. E rv s0 s \<and> E' rv s0 s\<rbrace>"
+  unfolding validI_def validIE_def
+  by (fastforce simp: split_def split: sum.splits)
 
 lemma rg_vcg_conj_liftE_weaker:
   assumes "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
@@ -1100,9 +1099,15 @@ lemma rg_trivE:   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>
 lemma rg_trivE_R: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-" .
 lemma rg_trivR_R: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>" .
 
+lemma rg_vcg_E_conj:
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv s0 s. E rv s0 s \<and> E' rv s0 s\<rbrace>"
+  unfolding validIE_def
+  by (rule rg_post_imp[OF _ rg_vcg_conj_lift]; simp split: sum.splits)
+
 lemma rg_vcg_E_elim:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  by (rule rg_strengthen_postE[OF rg_vcg_conj_liftE2]) simp+
+  by (rule rg_strengthen_postE[OF rg_vcg_E_conj]) simp+
 
 lemma rg_strengthen_post_R:
   "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,-; \<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-"
@@ -1423,16 +1428,15 @@ lemmas [wp_comb] = rg_wp_state_combsE rg_wp_combsE rg_wp_combs
 
 (* Add these rules to wp first to control when they are applied. We want them used last, only when
    no other more specific wp rules apply.
-   bind_twp, bindE_twp and rg_seq_extE are wp rules instead of wp_split rules because
+   bind_twp, bindE_twp and bind_twpE are wp rules instead of wp_split rules because
    they should be used before other wp_split rules, and in combination with wp_comb rules when
    necessary.
    rg_vcg_prop is unsafe in certain circumstances but still useful to have applied automatically,
    so we make it the very last rule to be tried. *)
-lemmas [wp] = rg_vcg_prop bind_twp bindE_twp rg_seq_extE
+lemmas [wp] = rg_vcg_prop bind_twp bindE_twp bind_twpE
 
 (* rules towards the bottom will be matched first *)
-lemmas [wp] = twp_post_taut
-              twp_post_tautE
+lemmas [wp] = twp_post_tauts
               rg_fun_app_twp
               liftE_twp
               alternative_twp
@@ -1575,7 +1579,7 @@ lemma rg_drop_imp:
 
 lemma rg_drop_impE:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> Q s0 s\<rbrace>, \<lbrace>E\<rbrace>"
-  by (simp add: validIE_weaken)
+  by (simp add: rg_chainE)
 
 lemma rg_drop_impE_E:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv s0 s. E' rv s0 s \<longrightarrow> E rv s0 s\<rbrace>"
@@ -1669,13 +1673,13 @@ lemma rg_returnOk_tsp:
 named_theorems forward_inv_step_rules
 
 lemmas rg_forward_inv_step_nobind[forward_inv_step_rules] =
-  bind_twp_nobind[where B=A and A=A for A, rotated]
+  bind_twp_nobind[where Q'=P and P=P for P, rotated]
 
 lemmas bind_twp_fwd_skip[forward_inv_step_rules] =
   bind_twp_fwd[where Q'="\<lambda>_. P" and P=P for P]
 
 lemmas rg_forward_inv_step_nobindE_valid[forward_inv_step_rules] =
-  bindE_twp_nobind[where B=A and A=A and E="\<lambda>_. C" and C="\<lambda>_. C" for A C,
+  bindE_twp_nobind[where Q'=P and P=P and E="\<lambda>_. Q" and Q="\<lambda>_. Q" for P Q,
                         simplified validIE_eq_validI, rotated]
 
 lemmas rg_forward_inv_step_valid[forward_inv_step_rules] =
@@ -1683,7 +1687,7 @@ lemmas rg_forward_inv_step_valid[forward_inv_step_rules] =
                  simplified validIE_eq_validI]
 
 lemmas rg_forward_inv_step_nobindE[forward_inv_step_rules] =
-  bindE_twp_nobind[where B=A and A=A for A, rotated]
+  bindE_twp_nobind[where Q'=P and P=P for P, rotated]
 
 lemmas bindE_twp_fwd_skip[forward_inv_step_rules] =
   bindE_twp_fwd[where Q'="\<lambda>_. P" and P=P for P]

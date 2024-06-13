@@ -66,7 +66,7 @@ lemma setCTE_asidpool':
   "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> setCTE c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
   apply (clarsimp simp: setCTE_def)
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (clarsimp simp: obj_at'_def projectKOs)
@@ -218,7 +218,9 @@ proof -
 qed
 
 lemma user_getreg_rv:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb r)) t\<rbrace>
+   asUser t (getRegister r)
+   \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)

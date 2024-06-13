@@ -542,7 +542,7 @@ lemma set_cap_valid_objs:
         and tcb_cap_valid x p\<rbrace>
       set_cap x p \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj, simp_all split del: if_split)
    apply clarsimp
    apply (wp set_object_valid_objs)
@@ -730,7 +730,7 @@ lemma set_cap_pspace:
   assumes x: "\<And>s f'. f (kheap_update f' s) = f s"
   shows      "\<lbrace>\<lambda>s. P (f s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. P (f s)\<rbrace>"
   apply (simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj, simp_all split del: if_split cong: if_cong)
    apply (wpsimp wp: set_object_wp simp: x)+
   done
@@ -946,7 +946,7 @@ lemma set_cap_zombies:
 lemma set_cap_obj_at_other:
   "\<lbrace>\<lambda>s. P (obj_at P' p s) \<and> p \<noteq> fst p'\<rbrace> set_cap cap p' \<lbrace>\<lambda>rv s. P (obj_at P' p s)\<rbrace>"
   apply (simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_inv])
+  apply (rule bind_wp [OF _ get_object_inv])
   apply (case_tac obj, simp_all split del: if_split)
    apply (wpsimp wp: set_object_wp simp: obj_at_def)+
   done

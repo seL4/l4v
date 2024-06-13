@@ -2884,7 +2884,7 @@ lemma valid_ep_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_ep ep s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ep ep s\<rbrace>"
   apply (case_tac ep,
-         simp_all add: valid_ep_def hoare_post_taut tcb_at_typ)
+         simp_all add: valid_ep_def hoare_TrueI tcb_at_typ)
    apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
    apply (rule hoare_vcg_conj_lift [OF _ hoare_vcg_prop])
    apply (rule hoare_vcg_const_Ball_lift [OF P])

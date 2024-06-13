@@ -612,7 +612,7 @@ lemma cancel_signal_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_signal_def
                    invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfna", simp_all)[1]
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
@@ -1423,7 +1423,7 @@ lemma blocked_cancel_ipc_valid_objs[wp]:
 lemma cancel_signal_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> cancel_signal t ntfnptr \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: cancel_signal_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs
           | simp only: valid_inactive
@@ -2348,7 +2348,7 @@ lemma waiting_ntfn_list_tcb_at:
 lemma cancel_all_signals_invs:
   "\<lbrace>invs\<rbrace> cancel_all_signals ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_all_signals_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp cancel_all_signals_invs_helper set_simple_ko_valid_objs valid_irq_node_typ
              hoare_vcg_const_Ball_lift valid_ioports_lift
@@ -2461,7 +2461,7 @@ lemma cancel_all_unlive_helper:
 lemma cancel_all_ipc_unlive:
   "\<lbrace>\<top>\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all add: set_simple_ko_def get_ep_queue_def)
     apply wp
     apply (clarsimp simp: live_def elim!: obj_at_weakenE)
@@ -2482,7 +2482,7 @@ lemma cancel_all_signals_unlive[wp]:
      cancel_all_signals ntfnptr
    \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) ntfnptr\<rbrace>"
   apply (simp add: cancel_all_signals_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp
         | wpc
@@ -2579,7 +2579,7 @@ lemma cancel_badged_sends_invs[wp]:
   "\<lbrace>invs\<rbrace> cancel_badged_sends epptr badge \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_cong[cong]
   apply (simp add: cancel_badged_sends_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep; simp)
     apply wpsimp
    apply (simp add: invs_def valid_state_def valid_pspace_def)

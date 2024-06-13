@@ -111,7 +111,7 @@ lemma preemptionPoint_inv:
   shows "\<lbrace>P\<rbrace> preemptionPoint \<lbrace>\<lambda>_. P\<rbrace>" using assms
   apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def)
   apply (wpc
-          | wp whenE_wp hoare_seq_ext [OF _ select_inv] hoare_drop_imps
+          | wp whenE_wp bind_wp [OF _ select_inv] hoare_drop_imps
           | simp)+
   done
 

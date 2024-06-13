@@ -1222,7 +1222,7 @@ lemmas prefix_refinement_bind_isr = prefix_refinement_bind[where isr=isr and int
 lemmas pfx_refn_bind =
   prefix_refinement_bind_v[where sr=sr and isr=sr and osr=sr and intsr=sr for sr]
 lemmas pfx_refn_bindT =
-  pfx_refn_bind[where P'="\<top>" and Q'="\<lambda>_ _. True", OF _ _ hoare_post_taut twp_post_taut,
+  pfx_refn_bind[where P'="\<top>" and Q'="\<lambda>_ _. True", OF _ _ hoare_TrueI twp_post_taut,
                 simplified pred_conj_def, simplified]
 
 \<comment> \<open>FIXME: these are copied from Corres_UL.thy, move somewhere that they can be shared\<close>

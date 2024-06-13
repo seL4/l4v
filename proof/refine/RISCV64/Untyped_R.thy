@@ -673,7 +673,7 @@ lemma map_ensure_empty':
    apply (wp getCTE_wp')
    apply (clarsimp elim!: cte_wp_at_weakenE')
   apply (erule meta_allE)
-  apply (erule hoare_post_imp_R)
+  apply (erule hoare_strengthen_postE_R)
   apply clarsimp
   done
 
@@ -4523,7 +4523,7 @@ lemma resetUntypedCap_invs_etc:
     ?f \<lbrace>\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ?vu2 and ct_active' and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>")
   apply (simp add: resetUntypedCap_def getSlotCap_def
                    liftE_bind_return_bindE_returnOk bindE_assoc)
-  apply (rule hoare_vcg_seqE[rotated])
+  apply (rule bindE_wp_fwd)
    apply simp
    apply (rule getCTE_sp)
   apply (rule hoare_name_pre_stateE)
@@ -5053,7 +5053,7 @@ lemma inv_untyped_corres':
           \<and> scheduler_action s = resume_cur_thread
           " in hoare_post_imp_R)
           apply (simp add: whenE_def, wp)
-           apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc, auto)[1]
+           apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc, auto)[1]
           apply wp
          apply (clarsimp simp: ui cte_wp_at_caps_of_state
                                bits_of_def untyped_range.simps)
@@ -5094,7 +5094,7 @@ lemma inv_untyped_corres':
          apply (drule invoke_untyped_proofs.usable_range_disjoint)
          apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
 
-        apply ((rule validE_validE_R)?, rule hoare_post_impErr,
+        apply ((rule validE_validE_R)?, rule hoare_strengthen_postE,
                rule whenE_reset_resetUntypedCap_invs_etc[where ptr="ptr && ~~ mask sz"
                    and ptr'=ptr and sz=sz and idx=idx and ui=ui' and dev=dev])
 
@@ -5583,7 +5583,7 @@ lemma invokeUntyped_invs'':
           " in hoare_vcg_seqE[rotated])
       apply (simp only: whenE_def)
       apply wp
-       apply (rule hoare_post_impErr, rule combine_validE,
+       apply (rule hoare_strengthen_postE, rule combine_validE,
            rule resetUntypedCap_invs_etc, rule valid_validE, rule reset_Q')
         apply (clarsimp simp only: if_True)
         apply auto[1]
@@ -5675,7 +5675,7 @@ lemma invokeUntyped_invs'[wp]:
   "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp invokeUntyped_invs''[where Q=\<top>, simplified hoare_post_taut, simplified])
+  apply (wp invokeUntyped_invs''[where Q=\<top>, simplified hoare_TrueI, simplified])
   apply auto
   done
 

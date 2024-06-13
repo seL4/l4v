@@ -960,7 +960,7 @@ lemma threadSet_cte_wp_at'T:
                  getF (F tcb) = getF tcb"
   shows "\<lbrace>\<lambda>s. P' (cte_wp_at' P p s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P' (cte_wp_at' P p s)\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule hoare_seq_ext [where B="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' ((=) rv) t s"])
+  apply (rule bind_wp [where Q'="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' ((=) rv) t s"])
    apply (rename_tac tcb)
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def in_monad objBits_simps'
@@ -1514,7 +1514,7 @@ lemma threadSet_valid_tcbs':
    threadSet f t
    \<lbrace>\<lambda>_. valid_tcbs'\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_valid_tcbs')
   apply (clarsimp simp: obj_at'_def valid_tcbs'_def)
   done
@@ -3924,10 +3924,10 @@ lemma rescheduleRequired_valid_bitmapQ_sch_act_simple:
    \<lbrace>\<lambda>_. valid_bitmapQ \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. valid_bitmapQ s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. valid_bitmapQ s \<and> (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)"
+               in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -3937,10 +3937,10 @@ lemma rescheduleRequired_bitmapQ_no_L1_orphans_sch_act_simple:
    \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L1_orphans s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. bitmapQ_no_L1_orphans s \<and> (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)"
+               in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -3950,10 +3950,10 @@ lemma rescheduleRequired_bitmapQ_no_L2_orphans_sch_act_simple:
    \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L2_orphans s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. bitmapQ_no_L2_orphans s \<and> (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)"
+               in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -4216,7 +4216,7 @@ lemma zipWithM_x_corres:
       apply (rule b)
      apply (rule a)
     apply (rule corres_trivial, simp)
-   apply (rule hoare_post_taut)+
+   apply (rule hoare_TrueI)+
   done
 
 
@@ -4574,14 +4574,14 @@ lemma ct_in_state'_decomp:
   shows      "\<lbrace>\<lambda>s. Pre s \<and> t = (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state' Prop\<rbrace>"
   apply (rule hoare_post_imp [where Q="\<lambda>rv s. t = ksCurThread s \<and> st_tcb_at' Prop t s"])
    apply (clarsimp simp add: ct_in_state'_def)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (wp x y)
   apply simp
   done
 
 lemma ct_in_state'_set:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> P st \<and> t = ksCurThread s\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (rule ct_in_state'_decomp[where t=t])
     apply (wp setThreadState_ct')
    apply (wp setThreadState_st_tcb)
@@ -5425,9 +5425,9 @@ lemma tcbSchedEnqueue_valid_sched_pointers[wp]:
   "tcbSchedEnqueue tcbPtr \<lbrace>valid_sched_pointers\<rbrace>"
   apply (clarsimp simp: tcbSchedEnqueue_def getQueue_def unless_def)
   \<comment> \<open>we step forwards until we can step over the addToBitmap in order to avoid state blow-up\<close>
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ isRunnable_inv]
-               hoare_seq_ext[OF _ assert_sp] hoare_seq_ext[OF _ threadGet_sp]
-               hoare_seq_ext[OF _ gets_sp]
+  apply (intro bind_wp[OF _ stateAssert_sp] bind_wp[OF _ isRunnable_inv]
+               bind_wp[OF _ assert_sp] bind_wp[OF _ threadGet_sp]
+               bind_wp[OF _ gets_sp]
          | rule hoare_when_cases, fastforce)+
   apply (forward_inv_step wp: hoare_vcg_ex_lift)
   supply if_split[split del]
@@ -5451,9 +5451,9 @@ lemma tcbSchedAppend_valid_sched_pointers[wp]:
   "tcbSchedAppend tcbPtr \<lbrace>valid_sched_pointers\<rbrace>"
   apply (clarsimp simp: tcbSchedAppend_def getQueue_def unless_def)
   \<comment> \<open>we step forwards until we can step over the addToBitmap in order to avoid state blow-up\<close>
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ isRunnable_inv]
-               hoare_seq_ext[OF _ assert_sp] hoare_seq_ext[OF _ threadGet_sp]
-               hoare_seq_ext[OF _ gets_sp]
+  apply (intro bind_wp[OF _ stateAssert_sp] bind_wp[OF _ isRunnable_inv]
+               bind_wp[OF _ assert_sp] bind_wp[OF _ threadGet_sp]
+               bind_wp[OF _ gets_sp]
          | rule hoare_when_cases, fastforce)+
   apply (forward_inv_step wp: hoare_vcg_ex_lift)
   supply if_split[split del]
@@ -5594,10 +5594,10 @@ lemma tcbQueueInsert_sym_heap_sched_pointers:
    \<lbrace>\<lambda>_. sym_heap_sched_pointers\<rbrace>"
   apply (clarsimp simp: tcbQueueInsert_def)
   \<comment> \<open>forwards step in order to name beforePtr below\<close>
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (rule hoare_ex_pre_conj[simplified conj_commute], rename_tac beforePtr)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (wpsimp wp: threadSet_wp)
   apply normalise_obj_at'
   apply (prop_tac "tcbPtr \<noteq> afterPtr")

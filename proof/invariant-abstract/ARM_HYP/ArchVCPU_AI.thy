@@ -307,7 +307,7 @@ crunches cancel_ipc, send_ipc, receive_ipc
 lemma send_fault_ipc_arch_tcb_at[wp]:
   "send_fault_ipc tptr fault \<lbrace>arch_tcb_at P t\<rbrace>"
   unfolding send_fault_ipc_def thread_set_def Let_def
-  by (wpsimp wp: set_object_wp hoare_drop_imps hoare_vcg_all_lift_R
+  by (wpsimp wp: set_object_wp hoare_drop_imps hoare_vcg_all_liftE_R
            simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
 crunches handle_fault, handle_interrupt, handle_vm_fault, handle_hypervisor_fault, send_signal

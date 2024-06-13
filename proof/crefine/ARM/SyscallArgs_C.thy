@@ -630,13 +630,14 @@ lemma asUser_const_rv:
 lemma getMRs_tcbContext:
   "\<lbrace>\<lambda>s. n < unat n_msgRegisters \<and> n < unat (msgLength info) \<and> thread = ksCurThread s \<and> cur_tcb' s\<rbrace>
   getMRs thread buffer info
-  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. atcbContextGet (tcbArch tcb) (ARM_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
+  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. user_regs (atcbContextGet (tcbArch tcb)) (ARM_H.msgRegisters ! n) = rv ! n)
+                  (ksCurThread s) s\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "thread = t" for t)
   apply (clarsimp simp add: getMRs_def)
   apply (wp|wpc)+
-    apply (rule_tac P="n < length x" in hoare_gen_asm)
+    apply (rule_tac P="n < length rv" in hoare_gen_asm)
     apply (clarsimp simp: nth_append)
     apply (wp mapM_wp' hoare_weak_lift_imp)+
     apply simp
@@ -1186,7 +1187,10 @@ lemma getSyscallArg_ccorres_foo:
      apply (simp add: word_less_nat_alt split: if_split)
     apply (rule ccorres_add_return2)
     apply (rule ccorres_symb_exec_l)
-       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. atcbContextGet (tcbArch tcb) (ARM_H.msgRegisters!n) = x!n) (ksCurThread s) s"
+       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32)
+                              \<and> obj_at' (\<lambda>tcb. user_regs (atcbContextGet (tcbArch tcb))
+                                                         (ARM_H.msgRegisters!n) = x!n)
+                                        (ksCurThread s) s"
                    and P' = UNIV
          in ccorres_from_vcg_split_throws)
         apply vcg
@@ -1197,7 +1201,7 @@ lemma getSyscallArg_ccorres_foo:
        apply (clarsimp simp: typ_heap_simps')
        apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                              msgRegisters_ccorres atcbContextGet_def
-                             carch_tcb_relation_def)
+                             carch_tcb_relation_def cregs_relation_def)
        apply (subst (asm) msgRegisters_ccorres)
         apply (clarsimp simp: n_msgRegisters_def)
        apply (simp add: n_msgRegisters_def word_less_nat_alt)

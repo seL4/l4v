@@ -963,7 +963,7 @@ lemma threadSet_cte_wp_at'T:
                  getF (F tcb) = getF tcb"
   shows "\<lbrace>\<lambda>s. P' (cte_wp_at' P p s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P' (cte_wp_at' P p s)\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule hoare_seq_ext [where B="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' ((=) rv) t s"])
+  apply (rule bind_wp [where Q'="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' ((=) rv) t s"])
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def projectKOs in_monad
                           obj_at'_def objBits_simps' in_magnitude_check prod_eq_iff)
@@ -1525,7 +1525,7 @@ lemma threadSet_valid_tcbs':
    threadSet f t
    \<lbrace>\<lambda>_. valid_tcbs'\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_valid_tcbs')
   apply (clarsimp simp: obj_at'_def projectKOs valid_tcbs'_def)
   done
@@ -3952,10 +3952,10 @@ lemma rescheduleRequired_valid_bitmapQ_sch_act_simple:
    \<lbrace>\<lambda>_. valid_bitmapQ \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. valid_bitmapQ s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. valid_bitmapQ s \<and>
+                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -3965,10 +3965,10 @@ lemma rescheduleRequired_bitmapQ_no_L1_orphans_sch_act_simple:
    \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L1_orphans s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. bitmapQ_no_L1_orphans s \<and>
+                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -3978,10 +3978,10 @@ lemma rescheduleRequired_bitmapQ_no_L2_orphans_sch_act_simple:
    \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
   including classic_wp_pre
   apply (simp add: rescheduleRequired_def sch_act_simple_def)
-  apply (rule_tac B="\<lambda>rv s. bitmapQ_no_L2_orphans s \<and>
-                            (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in hoare_seq_ext)
+  apply (rule_tac Q'="\<lambda>rv s. bitmapQ_no_L2_orphans s \<and>
+                             (rv = ResumeCurrentThread \<or> rv = ChooseNewThread)" in bind_wp)
    apply wpsimp
-   apply (case_tac x; simp)
+   apply (case_tac rv; simp)
   apply (wp, fastforce)
   done
 
@@ -4160,6 +4160,18 @@ lemmas msgRegisters_unfold
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
 
+lemma thread_get_registers:
+  "thread_get (arch_tcb_get_registers \<circ> tcb_arch) t = as_user t (gets user_regs)"
+  apply (simp add: thread_get_def as_user_def arch_tcb_get_registers_def
+                   arch_tcb_context_get_def arch_tcb_context_set_def)
+  apply (rule bind_cong [OF refl])
+  apply (clarsimp simp: gets_the_member)
+  apply (simp add: get_def the_run_state_def set_object_def get_object_def
+                   put_def bind_def return_def gets_def)
+  apply (drule get_tcb_SomeD)
+  apply (clarsimp simp: map_upd_triv select_f_def image_def return_def)
+  done
+
 lemma getMRs_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct)
               (case_option \<top> valid_ipc_buffer_ptr' buf)
@@ -4171,8 +4183,7 @@ lemma getMRs_corres:
              (tcb_at t and pspace_aligned and pspace_distinct) \<top>
              (thread_get (arch_tcb_get_registers o tcb_arch) t)
              (asUser t (mapM getRegister ARM_HYP_H.msgRegisters))"
-    unfolding arch_tcb_get_registers_def
-    apply (subst thread_get_as_user)
+    apply (subst thread_get_registers)
     apply (rule asUser_corres')
     apply (subst mapM_gets)
      apply (simp add: getRegister_def)
@@ -4236,7 +4247,7 @@ lemma zipWithM_x_corres:
       apply (rule b)
      apply (rule a)
     apply (rule corres_trivial, simp)
-   apply (rule hoare_post_taut)+
+   apply (rule hoare_TrueI)+
   done
 
 
@@ -4251,6 +4262,28 @@ lemma storeWordUser_valid_ipc_buffer_ptr' [wp]:
   unfolding valid_ipc_buffer_ptr'_def2
   by (wp hoare_vcg_all_lift storeWordUser_typ_at')
 
+lemma thread_set_as_user_registers:
+  "thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_set_registers (f (arch_tcb_get_registers (tcb_arch tcb)))
+                          (tcb_arch tcb) \<rparr>) t
+    = as_user t (modify (modify_registers f))"
+proof -
+  have P: "\<And>f. det (modify f)"
+    by (simp add: modify_def)
+  thus ?thesis
+    apply (simp add: as_user_def P thread_set_def)
+    apply (clarsimp simp: select_f_def simpler_modify_def bind_def image_def modify_registers_def
+                          arch_tcb_set_registers_def arch_tcb_get_registers_def
+                          arch_tcb_context_set_def arch_tcb_context_get_def)
+    done
+qed
+
+lemma UserContext_fold:
+  "UserContext (foldl (\<lambda>s (x, y). s(x := y)) (user_regs s) xs) =
+   foldl (\<lambda>s (r, v). UserContext ((user_regs s)(r := v))) s xs"
+  apply (induct xs arbitrary: s; simp)
+  apply (clarsimp split: prod.splits)
+  by (metis user_context.sel(1))
+
 lemma setMRs_corres:
   assumes m: "mrs' = mrs"
   shows
@@ -4258,7 +4291,8 @@ lemma setMRs_corres:
               (case_option \<top> valid_ipc_buffer_ptr' buf)
               (set_mrs t buf mrs) (setMRs t buf mrs')"
 proof -
-  have setRegister_def2: "setRegister = (\<lambda>r v. modify (\<lambda>s. s ( r := v )))"
+  have setRegister_def2:
+    "setRegister = (\<lambda>r v.  modify (\<lambda>s. UserContext ((user_regs s)(r := v))))"
     by ((rule ext)+, simp add: setRegister_def)
 
   have S: "\<And>xs ys n m. m - n \<ge> length xs \<Longrightarrow> (zip xs (drop n (take m ys))) = zip xs (drop n ys)"
@@ -4272,24 +4306,23 @@ proof -
 
   show ?thesis using m
     unfolding setMRs_def set_mrs_def
-    apply (clarsimp simp: arch_tcb_set_registers_def arch_tcb_get_registers_def cong: option.case_cong split del: if_split)
+    apply (clarsimp cong: option.case_cong split del: if_split)
     apply (subst bind_assoc[symmetric])
     apply (fold thread_set_def[simplified])
-    apply (subst thread_set_as_user[where f="\<lambda>context. \<lambda>reg.
-                      if reg \<in> set (take (length mrs) msg_registers)
-                      then mrs ! (the_index msg_registers reg) else context reg",simplified])
+    apply (subst thread_set_as_user_registers)
     apply (cases buf)
-     apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
+     apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_modify
                            take_min_len zip_take_triv2 min.commute)
      apply (rule corres_guard_imp)
        apply (rule corres_split_nor[OF asUser_corres'])
           apply (rule corres_modify')
-           apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold
+           apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold UserContext_fold
+                                  modify_registers_def
                             cong: if_cong simp del: the_index.simps)
           apply ((wp |simp)+)[6]
     \<comment> \<open>buf = Some a\<close>
     using if_split[split del]
-    apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
+    apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_modify
                           take_min_len zip_take_triv2 min.commute
                           msgMaxLength_def msgLengthBits_def)
     apply (simp add: msg_max_length_def)
@@ -4297,9 +4330,10 @@ proof -
       apply (rule corres_split_nor[OF asUser_corres'])
          apply (rule corres_modify')
           apply (simp only: msgRegisters_unfold cong: if_cong)
-          apply (fastforce simp: fold_fun_upd[symmetric])
+          apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold UserContext_fold
+                                  modify_registers_def)
          apply clarsimp
-         apply (rule corres_split_nor)
+        apply (rule corres_split_nor)
            apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * 4)) \<and> x < unat max_ipc_words}"
                         in zipWithM_x_corres)
                apply (fastforce intro: storeWordUser_corres)
@@ -4568,14 +4602,14 @@ lemma ct_in_state'_decomp:
   shows      "\<lbrace>\<lambda>s. Pre s \<and> t = (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state' Prop\<rbrace>"
   apply (rule hoare_post_imp [where Q="\<lambda>rv s. t = ksCurThread s \<and> st_tcb_at' Prop t s"])
    apply (clarsimp simp add: ct_in_state'_def)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (wp x y)
   apply simp
   done
 
 lemma ct_in_state'_set:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> P st \<and> t = ksCurThread s\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (rule ct_in_state'_decomp[where t=t])
     apply (wp setThreadState_ct')
    apply (wp setThreadState_st_tcb)
@@ -5424,9 +5458,9 @@ lemma tcbSchedEnqueue_valid_sched_pointers[wp]:
   supply projectKOs[simp]
   apply (clarsimp simp: tcbSchedEnqueue_def getQueue_def unless_def)
   \<comment> \<open>we step forwards until we can step over the addToBitmap in order to avoid state blow-up\<close>
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ isRunnable_inv]
-               hoare_seq_ext[OF _ assert_sp] hoare_seq_ext[OF _ threadGet_sp]
-               hoare_seq_ext[OF _ gets_sp]
+  apply (intro bind_wp[OF _ stateAssert_sp] bind_wp[OF _ isRunnable_inv]
+               bind_wp[OF _ assert_sp] bind_wp[OF _ threadGet_sp]
+               bind_wp[OF _ gets_sp]
          | rule hoare_when_cases, fastforce)+
   apply (forward_inv_step wp: hoare_vcg_ex_lift)
   supply if_split[split del]
@@ -5451,9 +5485,9 @@ lemma tcbSchedAppend_valid_sched_pointers[wp]:
   supply projectKOs[simp]
   apply (clarsimp simp: tcbSchedAppend_def getQueue_def unless_def)
   \<comment> \<open>we step forwards until we can step over the addToBitmap in order to avoid state blow-up\<close>
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ isRunnable_inv]
-               hoare_seq_ext[OF _ assert_sp] hoare_seq_ext[OF _ threadGet_sp]
-               hoare_seq_ext[OF _ gets_sp]
+  apply (intro bind_wp[OF _ stateAssert_sp] bind_wp[OF _ isRunnable_inv]
+               bind_wp[OF _ assert_sp] bind_wp[OF _ threadGet_sp]
+               bind_wp[OF _ gets_sp]
          | rule hoare_when_cases, fastforce)+
   apply (forward_inv_step wp: hoare_vcg_ex_lift)
   supply if_split[split del]
@@ -5597,10 +5631,10 @@ lemma tcbQueueInsert_sym_heap_sched_pointers:
   supply projectKOs[simp]
   apply (clarsimp simp: tcbQueueInsert_def)
   \<comment> \<open>forwards step in order to name beforePtr below\<close>
-  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ getObject_tcb_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (rule hoare_ex_pre_conj[simplified conj_commute], rename_tac beforePtr)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (wpsimp wp: threadSet_wp)
   apply normalise_obj_at'
   apply (prop_tac "tcbPtr \<noteq> afterPtr")

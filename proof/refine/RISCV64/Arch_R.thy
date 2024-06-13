@@ -662,7 +662,7 @@ lemma decodeX64PageTableInvocation_corres:
              apply (rule leq_mask_shift)
              apply (simp add: bit_simps le_mask_high_bits word_size)
             apply ((clarsimp cong: if_cong
-                     | wp whenE_wp hoare_vcg_all_lift_R getPTE_wp get_pte_wp
+                     | wp whenE_wp hoare_vcg_all_liftE_R getPTE_wp get_pte_wp
                      | wp (once) hoare_drop_imps)+)
     apply (clarsimp simp: invs_vspace_objs invs_valid_asid_table invs_psp_aligned invs_distinct)
     apply (clarsimp simp: valid_cap_def wellformed_mapdata_def not_le below_user_vtop_in_user_region)
@@ -1120,7 +1120,7 @@ lemma arch_decodeInvocation_wf[wp]:
                             cte_wp_at' (\<lambda>cte. \<exists>idx. cteCap cte = (UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
                             sch_act_simple and
                             (\<lambda>s. descendants_of' (snd (excaps!0)) (ctes_of s) = {}) "
-                            in hoare_post_imp_R)
+                            in hoare_strengthen_postE_R)
            apply (simp add: lookupTargetSlot_def)
            apply wp
           apply (clarsimp simp: cte_wp_at_ctes_of asid_wf_def mask_def)
@@ -1141,15 +1141,15 @@ lemma arch_decodeInvocation_wf[wp]:
 
     \<comment> \<open>ASIDPool cap\<close>
     apply (simp add: decodeRISCVMMUInvocation_def RISCV64_H.decodeInvocation_def
-                     Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def
-               cong: if_cong split del: if_split)
-    apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp cong: if_cong)
+                     Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def)
+    apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp
+             split_del: if_split)
     apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
     apply (rule conjI)
      apply (erule cte_wp_at_weakenE')
      apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
-    apply (subst (asm) conj_assoc [symmetric])
-    apply (subst (asm) assocs_empty_dom_comp [symmetric])
+    apply (subst (asm) conj_assoc [symmetric],
+           subst (asm) assocs_empty_dom_comp [symmetric])
     apply (drule dom_hd_assocsD)
     apply (simp add: capAligned_def asid_wf_def mask_def)
     apply (elim conjE)

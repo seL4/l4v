@@ -227,8 +227,8 @@ lemma hoare_set_object_weaken_pre:
                 [OF assms, where N="\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> a_type ko \<noteq> a_type v"])
   apply fastforce
   apply (simp add: set_object_def)
-  apply (rule hoare_seq_ext[OF _ get_object_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ get_object_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (fastforce intro: hoare_weaken_pre[OF hoare_pre_cont])
   done
 

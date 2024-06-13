@@ -236,9 +236,14 @@ fun
   | "register_from_H ARM.FaultIP = scast Kernel_C.FaultIP"
 
 definition
-  ccontext_relation :: "(MachineTypes.register \<Rightarrow> word32) \<Rightarrow> user_context_C \<Rightarrow> bool"
+  cregs_relation :: "(MachineTypes.register \<Rightarrow> machine_word) \<Rightarrow> machine_word[registers_count] \<Rightarrow> bool"
 where
-  "ccontext_relation regs uc \<equiv>  \<forall>r. regs r = index (registers_C uc) (unat (register_from_H r))"
+  "cregs_relation Hregs Cregs \<equiv>  \<forall>r. Hregs r = Cregs.[unat (register_from_H r)]"
+
+definition
+  ccontext_relation :: "user_context \<Rightarrow> user_context_C \<Rightarrow> bool"
+where
+  "ccontext_relation uc_H uc_C \<equiv> cregs_relation (user_regs uc_H) (registers_C uc_C)"
 
 primrec
   cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow>

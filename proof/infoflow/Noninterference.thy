@@ -2936,7 +2936,7 @@ lemma thread_get_tcb_context_reads_respects_g:
               and Q="\<top>\<top>" in equiv_valid_rv_bind)
     apply (rule thread_get_tcb_context_reads_respects_g_helper)
    apply (rule return_ev2, simp)
-  apply (rule hoare_post_taut)
+  apply (rule hoare_TrueI)
   done
 
 (* this is a little more complicated because the context isn't

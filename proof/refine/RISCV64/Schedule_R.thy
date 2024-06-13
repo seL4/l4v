@@ -890,14 +890,14 @@ lemma asUser_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> asUser t (setRegister f r)
           \<lbrace>\<lambda>_ . ct_not_inQ\<rbrace>"
   apply (clarsimp simp: submonad_asUser.fn_is_sm submonad_fn_def)
-  apply (rule hoare_seq_ext)+
+  apply (rule bind_wp)+
      prefer 4
      apply (rule stateAssert_sp)
     prefer 3
     apply (rule gets_inv)
    defer
    apply (rule select_f_inv)
-  apply (case_tac x; simp)
+  apply (case_tac rv; simp)
   apply (clarsimp simp: asUser_replace_def obj_at'_def fun_upd_def
                   split: option.split kernel_object.split)
   apply wp

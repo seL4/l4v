@@ -828,7 +828,7 @@ lemma Arch_switchToThread_pred_tcb'[wp]:
 proof -
   have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
     apply (simp add:  pred_tcb_at'_def ARM_H.switchToThread_def)
-    apply (rule hoare_seq_ext)+
+    apply (rule bind_wp)+
        apply (rule doMachineOp_obj_at)
      apply (rule setVMRoot_obj_at)
     done
@@ -1107,7 +1107,7 @@ lemma Arch_switchToThread_obj_at[wp]:
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def )
-  apply (rule hoare_seq_ext)+
+  apply (rule bind_wp)+
    apply (rule doMachineOp_obj_at)
   apply (rule setVMRoot_obj_at)
   done

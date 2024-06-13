@@ -805,7 +805,7 @@ lemma neg_mask_in_mask_range:
     apply (subst word_plus_and_or_coroll, word_eqI_solve)
     apply (metis bit.disj_ac(2) bit.disj_conj_distrib2 le_word_or2 word_and_max word_or_not)
    apply clarsimp
-   apply (smt add.right_neutral eq_iff is_aligned_neg_mask_eq mask_out_add_aligned neg_mask_mono_le
+   apply (smt (verit) add.right_neutral eq_iff is_aligned_neg_mask_eq mask_out_add_aligned neg_mask_mono_le
               word_and_not)
   apply (simp add: power_overflow mask_eq_decr_exp)
   done

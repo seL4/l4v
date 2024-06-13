@@ -510,7 +510,7 @@ lemma get_simple_ko_valid_obj[wp]:
    get_simple_ko f ep
    \<lbrace> \<lambda>r. valid_obj ep (f r) \<rbrace>"
   apply (simp add: get_simple_ko_def)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    prefer 2
    apply (rule hoare_pre_imp [OF _ get_object_valid])
    apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -525,7 +525,7 @@ lemma get_simple_ko_valid_simple_obj[wp]:
    get_simple_ko f ep
    \<lbrace> \<lambda>r. valid_simple_obj (f r) \<rbrace>"
   apply (simp add: get_simple_ko_def)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    prefer 2
    apply (rule hoare_pre_imp [OF _ get_object_valid])
    apply (simp add: invs_def valid_state_def valid_pspace_def)

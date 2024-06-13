@@ -25,7 +25,7 @@ lemma set_cap_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P ((caps_of_state s) (ptr \<mapsto> cap))\<rbrace> set_cap cap ptr \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (cases ptr)
   apply (clarsimp simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj; simp_all split del: if_split cong: if_cong bind_cong)
    apply (wpsimp wp: set_object_wp)
    apply (fastforce elim!: rsubst[where P=P]

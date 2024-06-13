@@ -135,7 +135,7 @@ lemma decode_invocation_authorised:
              decode_arch_invocation_authorised
           | strengthen cnode_eq_strg
           | wpc | simp add: comp_def authorised_invocation_def decode_invocation_def
-                       split del: if_split del: hoare_True_E_R
+                       split del: if_split
           | wp (once) hoare_FalseE_R)+
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
@@ -201,7 +201,7 @@ lemma lcs_reply_owns:
   "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
    lookup_cap_and_slot thread ptr
    \<lbrace>\<lambda>rv _. \<forall>ep. (\<exists>m R. fst rv = ReplyCap ep m R \<and> AllowGrant \<in> R) \<longrightarrow> is_subject aag ep\<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule hoare_pre)
     apply (rule hoare_vcg_conj_lift_R [where S = "K (pas_refined aag)"])
      apply (rule lookup_cap_and_slot_cur_auth)
@@ -218,7 +218,7 @@ lemma lookup_cap_and_slot_valid_fault3:
    lookup_cap_and_slot thread cptr
    -, \<lbrace>\<lambda>ft _. valid_fault (CapFault (of_bl cptr) rp ft)\<rbrace>"
   apply (unfold validE_E_def)
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
     apply (rule lookup_cap_and_slot_valid_fault)
    apply auto
   done
@@ -279,8 +279,7 @@ lemma handle_invocation_pas_refined:
        | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
        | wpc
        | rule hoare_drop_imps
-       | simp add: if_apply_def2 conj_comms split del: if_split
-              del: hoare_True_E_R)+,
+       | simp add: if_apply_def2 conj_comms split del: if_split)+,
       (wp lookup_extra_caps_auth lookup_extra_caps_authorised decode_invocation_authorised
           lookup_cap_and_slot_authorised lookup_cap_and_slot_cur_auth as_user_pas_refined
           lookup_cap_and_slot_valid_fault3 hoare_vcg_const_imp_lift_R
@@ -301,7 +300,7 @@ lemma handle_invocation_respects:
             reply_from_kernel_integrity_autarch
             set_thread_state_integrity_autarch
             hoare_vcg_conj_lift
-            hoare_vcg_all_lift_R hoare_vcg_all_lift
+            hoare_vcg_all_liftE_R hoare_vcg_all_lift
          | rule hoare_drop_imps
          | wpc
          | simp add: if_apply_def2
@@ -333,14 +332,14 @@ lemma handle_recv_pas_refined:
   apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_signal_pas_refined
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            hoare_vcg_all_lift_R get_simple_ko_wp
+            hoare_vcg_all_liftE_R get_simple_ko_wp
          | wpc | simp
          | (rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread \<and> aag_has_auth_to aag Receive thread"
                   in hoare_strengthen_post,
             wp, clarsimp simp: invs_valid_objs invs_sym_refs))+
      apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> invs s \<and> tcb_at thread s
                               \<and> cur_thread s = thread \<and> is_subject aag (cur_thread s)
-                              \<and> is_subject aag thread" in hoare_post_imp_R [rotated])
+                              \<and> is_subject aag thread" in hoare_strengthen_postE_R [rotated])
       apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def
                              cap_rights_to_auth_def valid_fault_def)
      apply (wp user_getreg_inv | strengthen invs_vobjs_strgs | simp)+
@@ -365,7 +364,7 @@ lemma handle_recv_integrity:
                  in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
      apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> einvs s \<and> is_subject aag (cur_thread s)
                               \<and> tcb_at thread s \<and> cur_thread s = thread \<and> is_subject aag thread
-                              \<and> integrity aag X st s" in hoare_post_imp_R [rotated])
+                              \<and> integrity aag X st s" in hoare_strengthen_postE_R [rotated])
       apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def
                              cap_rights_to_auth_def valid_fault_def)
      apply wpsimp+
@@ -1147,7 +1146,7 @@ lemma call_kernel_integrity':
                                  (pasMaySendIrqs aag \<or> interrupt_states s (the rv) \<noteq> IRQSignal) rv ms"
                 for R in hoare_strengthen_post[rotated], fastforce simp: domain_sep_inv_def)
     apply (wpsimp wp: getActiveIRQ_rv_None hoare_drop_imps getActiveIRQ_inv)
-   apply (rule hoare_post_impErr,
+   apply (rule hoare_strengthen_postE,
       rule_tac Q="integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag
                                      and domain_sep_inv (pasMaySendIrqs aag) st'
                                      and is_subject aag \<circ> cur_thread

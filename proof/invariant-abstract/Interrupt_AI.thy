@@ -242,7 +242,7 @@ lemma IRQHandler_valid:
 
 lemmas (in Interrupt_AI)
   invoke_irq_handler_invs[wp] = invoke_irq_handler_invs'[where ex_inv=\<top>
-                                                             , simplified hoare_post_taut
+                                                             , simplified hoare_TrueI
                                                              , OF TrueI TrueI TrueI
                                                              , simplified
                                                         ]
@@ -270,7 +270,7 @@ lemma cancel_ipc_noreply_interrupt_states:
 lemma send_signal_interrupt_states[wp_unsafe]:
   "\<lbrace>\<lambda>s. P (interrupt_states s) \<and> valid_objs s\<rbrace> send_signal a b \<lbrace>\<lambda>_ s. P (interrupt_states s)\<rbrace>"
   apply (simp add: send_signal_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
   apply (wp gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
   done

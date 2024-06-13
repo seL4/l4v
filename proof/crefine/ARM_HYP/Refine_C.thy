@@ -166,7 +166,7 @@ lemma handleVMFaultEvent_ccorres:
        apply (clarsimp simp: return_def)
       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-     apply (case_tac x, clarsimp, wp)
+     apply (case_tac rv, clarsimp, wp)
      apply (clarsimp, wp, simp)
     apply wp
    apply (simp add: guard_is_UNIV_def)
@@ -603,8 +603,8 @@ lemma ccorres_add_gets:
 lemma ccorres_get_registers:
   "\<lbrakk> \<And>cptr msgInfo. ccorres dc xfdc
      ((\<lambda>s. P s \<and> Q s \<and>
-           obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_HYP_H.capRegister = cptr
-                      \<and>   (atcbContextGet o tcbArch) tcb ARM_HYP_H.msgInfoRegister = msgInfo)
+           obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb ARM_HYP_H.capRegister = cptr
+                      \<and>   (user_regs o atcbContextGet o tcbArch) tcb ARM_HYP_H.msgInfoRegister = msgInfo)
              (ksCurThread s) s) and R)
      (UNIV \<inter> \<lbrace>\<acute>cptr = cptr\<rbrace> \<inter> \<lbrace>\<acute>msgInfo = msgInfo\<rbrace>) [] m c \<rbrakk>
       \<Longrightarrow>
@@ -617,15 +617,15 @@ lemma ccorres_get_registers:
   apply (rule ccorres_assume_pre)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_HYP_H.capRegister" in meta_allE)
-  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_HYP_H.msgInfoRegister" in meta_allE)
+  apply (erule_tac x="(user_regs o atcbContextGet o tcbArch) ko ARM_HYP_H.capRegister" in meta_allE)
+  apply (erule_tac x="(user_regs o atcbContextGet o tcbArch) ko ARM_HYP_H.msgInfoRegister" in meta_allE)
   apply (erule ccorres_guard_imp2)
   apply (clarsimp simp: rf_sr_ksCurThread)
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                         ARM_HYP_H.msgInfoRegister_def ARM_HYP_H.capRegister_def
                         ARM_HYP.msgInfoRegister_def ARM_HYP.capRegister_def
-                        carch_tcb_relation_def
+                        carch_tcb_relation_def cregs_relation_def
                         "StrictC'_register_defs")
   done
 

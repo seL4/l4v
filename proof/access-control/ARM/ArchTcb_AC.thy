@@ -33,14 +33,14 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
   apply (subst invoke_tcb.simps)
   apply (subst option_update_thread_def)
   apply (subst set_priority_extended.dxo_eq)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                  in hoare_gen_asm)
    apply (simp only: split_def)
-   apply (((simp add: conj_comms del: hoare_True_E_R,
+   apply (((simp add: conj_comms,
            strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
           | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
-          | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_lift_R
+          | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
                  hoare_vcg_E_elim hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
           | wp restart_integrity_autarch set_mcpriority_integrity_autarch
                as_user_integrity_autarch thread_set_integrity_autarch
@@ -54,7 +54,7 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
                out_invs_trivial case_option_wpE cap_delete_deletes
                cap_delete_valid_cap cap_insert_valid_cap out_cte_at
                cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
-               hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+               hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                thread_set_tcb_ipc_buffer_cap_cleared_invs
                thread_set_invs_trivial[OF ball_tcb_cap_casesI]
                hoare_vcg_all_lift thread_set_valid_cap out_emptyable
@@ -78,7 +78,6 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
                cap_delete_pas_refined'[THEN valid_validE_E] thread_set_cte_wp_at_trivial
           | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                       emptyable_def a_type_def partial_inv_def
-                 del: hoare_True_E_R
           | wpc
           | strengthen invs_mdb use_no_cap_to_obj_asid_strg
                        tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]

@@ -1289,7 +1289,7 @@ lemma exceptionMessage_length_aux :
 lemma copyMRsFault_ccorres_exception:
   "ccorres dc xfdc
            (valid_pspace'
-             and obj_at' (\<lambda>tcb. map (atcbContext (tcbArch tcb)) ARM_H.exceptionMessage = msg) sender
+             and obj_at' (\<lambda>tcb. map (user_regs (atcbContext (tcbArch tcb))) ARM_H.exceptionMessage = msg) sender
              and K (length msg = 3)
              and K (recvBuffer \<noteq> Some 0)
              and K (sender \<noteq> receiver))
@@ -1311,7 +1311,7 @@ lemma copyMRsFault_ccorres_exception:
                                          for as bs, simplified] bind_assoc)
    apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
 
-       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.exceptionMessage = msg) sender"
+       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((user_regs o atcbContext o tcbArch) tcb) ARM_H.exceptionMessage = msg) sender"
                      in ccorres_mapM_x_while)
            apply (clarsimp simp: n_msgRegisters_def)
            apply (rule ccorres_guard_imp2)
@@ -1357,7 +1357,7 @@ lemma mapM_cong: "\<lbrakk> \<forall>x. elem x xs \<longrightarrow> f x = g x \<
 lemma copyMRsFault_ccorres_syscall:
   "ccorres dc xfdc
            (valid_pspace'
-             and obj_at' (\<lambda>tcb. map (atcbContext (tcbArch tcb)) ARM_H.syscallMessage = msg) sender
+             and obj_at' (\<lambda>tcb. map (user_regs (atcbContext (tcbArch tcb))) ARM_H.syscallMessage = msg) sender
              and (case recvBuffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)
              and K (length msg = 12)
              and K (recvBuffer \<noteq> Some 0)
@@ -1396,7 +1396,7 @@ proof -
                                          and ys="drop (unat n_msgRegisters) (zip as bs)"
                                          for as bs, simplified] bind_assoc)
    apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg) sender"
+       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((user_regs o atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg) sender"
                      in ccorres_mapM_x_while)
            apply (clarsimp simp: n_msgRegisters_def)
            apply (rule ccorres_guard_imp2)
@@ -1425,7 +1425,7 @@ proof -
      apply (rule ccorres_Cond_rhs)
       apply (simp del: Collect_const)
       apply (rule ccorres_rel_imp)
-       apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg)
+       apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map ((user_regs o atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg)
                                         sender and valid_pspace'
                                         and (case recvBuffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)"
                             in ccorres_mapM_x_while'[where i="unat n_msgRegisters"])
@@ -2584,7 +2584,7 @@ next
                  \<and> (\<forall>x\<in>set xs'. s \<turnstile>' fst x
                     \<and> cte_wp_at' (\<lambda>c. is_the_ep (cteCap c) \<longrightarrow> fst x = cteCap c) (snd x) s
                     \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable_masked (fst x) (cteCap c)) (snd x) s)"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
                 prefer 2
                  apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
                    valid_pspace_valid_objs' is_derived_capMasterCap image_def)
@@ -3001,7 +3001,7 @@ proof -
                         apply (simp add: seL4_Fault_CapFault_lift)
                         apply (clarsimp simp: is_cap_fault_def)
                        apply wp
-                       apply (rule hoare_post_imp_R, rule lsft_real_cte)
+                       apply (rule hoare_strengthen_postE_R, rule lsft_real_cte)
                        apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
                       apply (vcg exspec=lookupSlot_modifies)
                      apply vcg
@@ -3054,7 +3054,7 @@ proof -
                             liftE_bindE[symmetric])
            apply (wp mapME_length mapME_set | simp)+
              apply (rule_tac Q'="\<lambda>rv. no_0_obj' and real_cte_at' rv"
-                        in hoare_post_imp_R, wp lsft_real_cte)
+                        in hoare_strengthen_postE_R, wp lsft_real_cte)
              apply (clarsimp simp: cte_wp_at_ctes_of)
             apply (wpsimp)+
           apply (clarsimp simp: guard_is_UNIV_def
@@ -3185,7 +3185,7 @@ qed
 lemma lookupIPCBuffer_not_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer r t \<lbrace>\<lambda>rv. K (rv \<noteq> Some 0)\<rbrace>"
   apply (simp add: lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def)
-  apply (wp hoare_post_taut haskell_assert_wp
+  apply (wp hoare_TrueI haskell_assert_wp
     | simp add: Let_def getThreadBufferSlot_def locateSlotTCB_def
     | intro conjI impI | wpc)+
   done
@@ -3864,7 +3864,7 @@ lemma transferCaps_local_slots:
     transferCaps tag caps ep receiver receiveBuffer
    \<lbrace>\<lambda>tag'. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
   apply (simp add: transferCaps_def pred_conj_def)
-  apply (rule hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd)
    apply (rule hoare_vcg_conj_lift)
     apply (rule get_rs_real_cte_at')
    apply (rule get_recv_slot_inv')

@@ -56,6 +56,7 @@ definition
     x64_current_cr3 = cr3 0 0,
     x64_allocated_io_ports = \<lambda>_. False,
     x64_num_ioapics = 1,
+    x64_ioapic_nirqs = \<lambda>_. ucast ioapicIRQLines,
     x64_irq_state = K IRQFree
    \<rparr>"
 

@@ -540,6 +540,10 @@ end
 context state_rel begin
 
 definition
+  "ioapic_nirqs_to_H cstate \<equiv>
+     \<lambda>x. if x \<le> of_nat maxNumIOAPIC then ioapic_nirqs_' cstate.[unat x] else 0"
+
+definition
   "carch_state_to_H cstate \<equiv>
    X64KernelState
       (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
@@ -553,6 +557,7 @@ definition
       x64KSKernelVSpace_C
       (cioport_bitmap_to_H (the (clift (t_hrs_' cstate) (Ptr (symbol_table ''x86KSAllocatedIOPorts'')))))
       (ucast (num_ioapics_' cstate))
+      (ioapic_nirqs_to_H cstate)
       \<comment> \<open>Map IRQ states to their Haskell equivalent, and out-of-bounds entries to X64IRQFree\<close>
       (case_option X64IRQFree id \<circ>
           (array_map_conv
@@ -583,13 +588,18 @@ lemma carch_state_to_H_correct:
   apply (fastforce simp: valid_asid_table'_def)
   apply (simp add: ccr3_relation_def split: cr3.splits)
   apply (rule conjI)
+   apply (solves \<open>clarsimp simp: global_ioport_bitmap_relation_def\<close>)
+  apply (rule conjI)
    prefer 2
    apply (rule ext)
    apply (clarsimp simp: x64_irq_state_relation_def array_relation_def array_map_conv_def
                          array_to_map_def)
    using valid[simplified valid_arch_state'_def valid_x64_irq_state'_def]
    apply (case_tac "x \<le> maxIRQ"; fastforce split: option.split)
-  apply (clarsimp simp: global_ioport_bitmap_relation_def)
+  apply (clarsimp simp: array_relation_def ioapic_nirqs_to_H_def)
+  apply (rule ext)
+  using valid[simplified valid_arch_state'_def valid_ioapic_def]
+  apply (clarsimp simp: not_le)
   done
 
 end

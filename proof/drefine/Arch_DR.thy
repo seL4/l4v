@@ -782,7 +782,7 @@ next
                        in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
                   apply (rule corres_from_rdonly, simp_all)[1]
                     apply (wp+ | simp)+
-                  apply (rule hoare_strengthen_post, rule hoare_post_taut)
+                  apply (rule hoare_strengthen_post, rule hoare_TrueI)
                   apply (rename_tac rv s)
                   apply (case_tac rv, auto simp add: in_monad)[1]
                  apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
@@ -822,7 +822,7 @@ next
                       in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
                  apply (rule corres_from_rdonly, simp_all)[1]
                    apply (wp+ | simp)+
-                 apply (rule hoare_strengthen_post, rule hoare_post_taut)
+                 apply (rule hoare_strengthen_post, rule hoare_TrueI)
                  apply (rename_tac rv s)
                  apply (case_tac rv, auto simp add: in_monad)[1]
                 apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
@@ -936,7 +936,7 @@ next
                for I in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
          apply (rule corres_from_rdonly, simp_all)[1]
            apply (wp | simp)+
-         apply (rule hoare_strengthen_post, rule hoare_post_taut)
+         apply (rule hoare_strengthen_post, rule hoare_TrueI)
          apply (rename_tac rv s)
          apply (case_tac rv, auto simp add: in_monad)[1]
         apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
@@ -1102,7 +1102,7 @@ lemma set_cap_opt_cap':
   "\<lbrace>\<lambda>s. P ((\<lambda>p. opt_cap p s) (slot \<mapsto> cap))\<rbrace> KHeap_D.set_cap slot cap \<lbrace>\<lambda>rv s. P (\<lambda>p. opt_cap p s)\<rbrace>"
   apply (cases slot)
   apply (clarsimp simp add:KHeap_D.set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ dget_object_sp])
+  apply (rule bind_wp [OF _ dget_object_sp])
   apply (case_tac obj; simp add: KHeap_D.set_object_def has_slots_def update_slots_def object_slots_def
                             split del: if_split cong: if_cong bind_cong;
                        wpsimp)

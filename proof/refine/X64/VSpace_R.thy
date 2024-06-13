@@ -583,7 +583,7 @@ lemma unmapPageTable_corres:
                    apply simp
                   apply (rule invalidatePageStructureCacheASID_corres)
                  apply ((wpsimp wp: hoare_if get_pde_wp getPDE_wp)+)[8]
-         apply ((wpsimp wp: lookup_pd_slot_wp hoare_vcg_all_lift_R | wp (once) hoare_drop_imps)+)[2]
+         apply ((wpsimp wp: lookup_pd_slot_wp hoare_vcg_all_liftE_R | wp (once) hoare_drop_imps)+)[2]
        apply ((wp find_vspace_for_asid_wp)+)[4]
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_arch_caps_def
                          word_neq_0_conv[symmetric])
@@ -676,7 +676,7 @@ lemma unmapPage_corres:
                       apply (simp add: page_entry_map_def)
                      apply simp
                      apply (rule storePTE_corres')
-                     apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
+                     apply (((wpsimp  wp: hoare_vcg_all_liftE_R get_pte_wp getPTE_wp lookup_pt_slot_wp
                                     simp: unlessE_def is_aligned_pml4 if_apply_def2
                                split_del: if_split
                                 simp_del: dc_simp)+
@@ -689,7 +689,7 @@ lemma unmapPage_corres:
                      apply (simp add: page_entry_map_def)
                     apply simp
                     apply (rule storePDE_corres')
-                    apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
+                    apply (((wpsimp  wp: hoare_vcg_all_liftE_R get_pde_wp getPDE_wp lookup_pd_slot_wp
                                    simp: unlessE_def is_aligned_pml4 if_apply_def2
                               split_del: if_split
                                simp_del: dc_simp)+
@@ -702,7 +702,7 @@ lemma unmapPage_corres:
                     apply (simp add: page_entry_map_def)
                    apply simp
                    apply (rule storePDPTE_corres')
-                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
+                   apply (((wpsimp  wp: hoare_vcg_all_liftE_R get_pdpte_wp getPDPTE_wp
                                         lookup_pdpt_slot_wp
                                   simp: unlessE_def is_aligned_pml4 if_apply_def2
                              split_del: if_split
@@ -889,7 +889,7 @@ proof -
                  apply (rule corres_fail[where P=\<top> and P'=\<top>])
                  apply (simp add: same_refs_def)
                 apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                          hoare_post_taut hoare_post_taut])
+                                                          hoare_TrueI hoare_TrueI])
                 apply simp
                 apply (rule invalidatePageStructureCacheASID_corres)
                apply (wpsimp simp: invs_psp_aligned)+
@@ -908,7 +908,7 @@ proof -
                 apply (simp add: same_refs_def)
                apply simp
                apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                         hoare_post_taut hoare_post_taut])
+                                                         hoare_TrueI hoare_TrueI])
                apply (rule invalidatePageStructureCacheASID_corres)
               apply (wpsimp simp: invs_psp_aligned)+
         apply (frule (1) mapping_map_pdpte, clarsimp)
@@ -926,7 +926,7 @@ proof -
                apply (simp add: same_refs_def)
               apply simp
               apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                        hoare_post_taut hoare_post_taut])
+                                                        hoare_TrueI hoare_TrueI])
               apply (rule invalidatePageStructureCacheASID_corres)
              apply (wpsimp simp: invs_psp_aligned)+
        apply (wp arch_update_cap_invs_map set_cap_valid_page_map_inv)
@@ -951,7 +951,7 @@ proof -
    apply (simp add: perform_page_invocation_unmap_def performPageInvocationUnmap_def split_def)
     apply (rule corres_guard_imp)
      apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                               hoare_post_taut hoare_post_taut])
+                                               hoare_TrueI hoare_TrueI])
      apply (rule corres_split)
         apply (rule unmapPage_corres[OF refl refl refl refl])
        apply (rule corres_split[where r'=acap_relation])
@@ -1100,7 +1100,7 @@ lemma clear_pdpt_corres:
 
 crunches invalidatePageStructureCacheASID, unmapPageTable, unmapPageDirectory, unmapPDPT
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps hoare_vcg_all_lift_R)
+  (wp: crunch_wps hoare_vcg_all_liftE_R)
 
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 lemmas unmapPageDirectory_typ_ats[wp] = typ_at_lifts[OF unmapPageDirectory_typ_at']

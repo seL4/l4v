@@ -48,7 +48,7 @@ lemma iarch_tcb_context_set[simp]:
 lemma iarch_tcb_set_registers[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb)
      = arch_tcb_to_iarch_tcb arch_tcb"
-  by (simp add: arch_tcb_set_registers_def)
+  by (simp add: arch_tcb_to_iarch_tcb_def)
 
 (* These simplifications allows us to keep many arch-specific proofs unchanged. *)
 

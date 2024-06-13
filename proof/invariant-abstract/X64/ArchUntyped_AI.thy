@@ -476,7 +476,7 @@ lemma copy_global_mappings_nonempty_table:
                         (set (second_level_tables (arch_state s)))) r s) \<and>
            valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp[where S="{x. get_pml4_index pptr_base \<le> x
                                        \<and> x < 2 ^ (pml4_bits - word_size_bits)}"])

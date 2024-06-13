@@ -19,12 +19,11 @@ fun try_attribute_cmd (warn, attr_srcs) (ctxt, thm) =
   let
     val attrs = map (attribute_generic ctxt) attr_srcs
     val (th', context') =
-      fold (uncurry o Thm.apply_attribute) attrs (thm, ctxt)
-      handle e =>
-        (if Exn.is_interrupt e then Exn.reraise e
-         else if warn then warning ("TRY: ignoring exception: " ^ (@{make_string} e))
-         else ();
-        (thm, ctxt))
+      \<^try>\<open>
+         fold (uncurry o Thm.apply_attribute) attrs (thm, ctxt)
+       catch e =>
+         (if warn then warning ("TRY: ignoring exception: " ^ (@{make_string} e)) else ();
+          (thm, ctxt))\<close>
   in (SOME context', SOME th') end
 
 in

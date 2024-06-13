@@ -753,7 +753,7 @@ qed
 
 
 lemmas rec_del_invs'[CNodeInv_AI_assms] = rec_del_invs'' [where Q=\<top>,
-  simplified hoare_post_taut pred_conj_def simp_thms, OF TrueI TrueI TrueI TrueI, simplified]
+  simplified hoare_TrueI pred_conj_def simp_thms, OF TrueI TrueI TrueI TrueI, simplified]
 
 end
 

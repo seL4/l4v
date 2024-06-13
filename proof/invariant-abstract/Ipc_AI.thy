@@ -42,7 +42,7 @@ lemma lsfco_cte_at:
   "\<lbrace>valid_objs and valid_cap cn\<rbrace>
   lookup_slot_for_cnode_op f cn idx depth
   \<lbrace>\<lambda>rv. cte_at rv\<rbrace>,-"
-  by (rule hoare_post_imp_R, rule lookup_cnode_slot_real_cte, simp add: real_cte_at_cte)
+  by (rule hoare_strengthen_postE_R, rule lookup_cnode_slot_real_cte, simp add: real_cte_at_cte)
 
 declare do_machine_op_tcb[wp]
 
@@ -104,7 +104,7 @@ lemma cap_derive_not_null_helper:
    \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> Q rv s\<rbrace>,-"
   apply (case_tac cap,
          simp_all add: is_zombie_def,
-         safe elim!: hoare_post_imp_R)
+         safe elim!: hoare_strengthen_postE_R)
    apply (wp | simp add: derive_cap_def is_zombie_def)+
   done
 
@@ -352,7 +352,7 @@ lemma lsfco_cte_wp_at_univ:
       lookup_slot_for_cnode_op f croot idx depth
    \<lbrace>\<lambda>rv. cte_wp_at (P rv) rv\<rbrace>, -"
   apply (rule hoare_gen_asmE)
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lsfco_cte_at)
   apply (clarsimp simp: cte_wp_at_def)
   done
@@ -529,7 +529,7 @@ lemma cap_insert_assume_null:
   apply (rule hoare_name_pre_state)
   apply (erule impCE)
    apply (simp add: cap_insert_def)
-   apply (rule hoare_seq_ext[OF _ get_cap_sp])+
+   apply (rule bind_wp[OF _ get_cap_sp])+
    apply (clarsimp simp: valid_def cte_wp_at_caps_of_state in_monad
               split del: if_split)
   apply (erule hoare_pre(1))
@@ -571,7 +571,7 @@ lemma transfer_caps_loop_presM:
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow>
           cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s)
           \<and> (cap'\<noteq> cap.NullCap \<longrightarrow> QM s cap')" for QM
-          in hoare_post_imp_R)
+          in hoare_strengthen_postE_R)
         prefer 2
         apply clarsimp
         apply assumption

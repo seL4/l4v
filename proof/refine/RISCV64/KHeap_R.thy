@@ -397,7 +397,7 @@ lemma obj_at_setObject2:
    setObject p (v::'a)
   \<lbrace> \<lambda>rv. obj_at' P t \<rbrace>"
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (drule R)

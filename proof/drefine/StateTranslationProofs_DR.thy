@@ -54,10 +54,12 @@ abbreviation
 "update_kheap kh s \<equiv> kheap_update (\<lambda>_. kh) s"
 
 abbreviation
-"tcb_set_mi tcb msg \<equiv> tcb \<lparr>tcb_context := (tcb_context tcb)(msg_info_register := msg)\<rparr>"
+"tcb_set_mi tcb msg \<equiv>
+  tcb \<lparr>tcb_context := modify_registers (\<lambda>rs. rs(msg_info_register := msg)) (tcb_context tcb)\<rparr>"
 
 abbreviation
-"update_tcb_cxt_badge msg tcb\<equiv> tcb \<lparr>tcb_context := (tcb_context tcb)(badge_register := msg)\<rparr>"
+"update_tcb_cxt_badge msg tcb\<equiv>
+  tcb \<lparr>tcb_context := modify_registers (\<lambda>rs. rs(badge_register := msg)) (tcb_context tcb)\<rparr>"
 
 abbreviation
 "update_tcb_state state tcb \<equiv> tcb \<lparr>tcb_state := state\<rparr>"

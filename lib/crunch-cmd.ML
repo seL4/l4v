@@ -71,8 +71,6 @@ fun funkysplit [_,b,c] = [b,c]
 
 fun real_base_name name = name |> Long_Name.explode |> funkysplit |> Long_Name.implode (*Handles locales properly-ish*)
 
-fun handle_int exn func = if Exn.is_interrupt exn then Exn.reraise exn else func
-
 val Thm : (Facts.ref * Token.src list) -> ((Facts.ref * Token.src list), xstring) sum = Inl
 val Constant : xstring -> ((Facts.ref * Token.src list), xstring) sum = Inr
 val thms = lefts
@@ -235,6 +233,7 @@ fun simps_of n = n ^ simps_sfx;
 fun num_args t = length (binder_types t) - 1;
 
 fun real_const_from_name const nmspce ctxt =
+  \<^try>\<open>
     let
       val qual::locale::nm::nil = Long_Name.explode const;
       val SOME some_nmspce = nmspce;
@@ -243,7 +242,7 @@ fun real_const_from_name const nmspce ctxt =
      in
        nm
      end
-     handle exn => handle_int exn const;
+  catch _ => const\<close>;
 
 
 fun get_monad ctxt f xs = if is_Const f then
@@ -389,12 +388,14 @@ fun eq_cname (Const (s, _)) (Const (t, _)) = (s = t)
   | eq_cname _ _ = false
 
 fun resolve_abbreviated ctxt abbrev =
-  let
+  \<^try>\<open>
+    let
       val (abbrevn,_) = dest_Const abbrev
       val origin = (head_of (snd ((Consts.the_abbreviation o Proof_Context.consts_of) ctxt abbrevn)));
       val (originn,_) = dest_Const origin;
       val (_::_::_::nil) = Long_Name.explode originn;
-    in origin end handle exn => handle_int exn abbrev
+    in origin end
+  catch _ => abbrev\<close>;
 
 fun map_consts f =
       let
@@ -442,10 +443,14 @@ fun induct_inst ctxt const goal nmspce =
        then error ("Unfold rule generated for " ^ const ^ " does not apply")
        else (ms', induct_inst_simplified) end
 
-fun unfold_data ctxt constn goal nmspce NONE = (
-    induct_inst ctxt constn goal nmspce handle exn => handle_int exn
-    unfold ctxt constn goal nmspce handle exn => handle_int exn
-    error ("unfold_data: couldn't find defn or induct rule for " ^ constn))
+fun unfold_data ctxt constn goal nmspce NONE =
+    \<^try>\<open>
+      induct_inst ctxt constn goal nmspce
+    catch _ =>
+      \<^try>\<open>
+        unfold ctxt constn goal nmspce
+      catch _ =>
+        error ("unfold_data: couldn't find defn or induct rule for " ^ constn)\<close>\<close>
   | unfold_data ctxt constn goal _ (SOME thm) =
     let
       val trivial_rule = Thm.trivial goal
@@ -755,8 +760,8 @@ fun crunch cfg pre extra stack const' thms =
     let
       val _ = "crunching constant: " ^ Proof_Context.markup_const ctxt const |> writeln;
       val const_term = read_const ctxt const;
-      val goal = make_goal const_term const pre extra ctxt
-                 handle exn => handle_int exn (raise WrongType);
+      val goal =
+        \<^try>\<open>make_goal const_term const pre extra ctxt catch _ => raise WrongType\<close>;
       val _ = debug_trace_bl
         [K (Pretty.str "goal: "), fn () => Syntax.pretty_term ctxt goal]
     in (* first check: has this constant already been done or supplied? *)
@@ -795,7 +800,7 @@ fun crunch cfg pre extra stack const' thms =
           val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop);
           fun wp' wp_rules = wp ctxt (map snd (thms @ #wp_rules cfg) @ goals' @ wp_rules)
           val thm = Goal.prove_future ctxt''' [] [] goal_prop
-              ( (*DupSkip.goal_prove_wrapper *) (fn _ =>
+              (fn _ =>
               resolve_tac ctxt''' [rule] 1
                 THEN maybe_cheat_tac ctxt'''
               THEN ALLGOALS (simp_tac ctxt''')
@@ -820,7 +825,7 @@ fun crunch cfg pre extra stack const' thms =
                   CHANGED_GOAL (simp_tac ctxt''')
                 ) n))
               THEN proof_failed_warnings const stack cfg wp' ctxt'''
-              )) |> singleton (Proof_Context.export ctxt''' ctxt)
+              ) |> singleton (Proof_Context.export ctxt''' ctxt)
         in (SOME thm, (get_thm_name cfg const, thm) :: thms') end
     end
     handle WrongType =>
@@ -832,15 +837,17 @@ fun crunch cfg pre extra stack const' thms =
 fun get_locale_origins full_const_names ctxt =
   let
     fun get_locale_origin abbrev =
-      let
-        (*Check if the given const is an abbreviation*)
-        val (origin,_) = dest_Const (head_of (snd ((Consts.the_abbreviation o Proof_Context.consts_of) ctxt abbrev)));
-        (*Check that the origin can be broken into 3 parts (i.e. it is from a locale) *)
-        val [_,_,_] = Long_Name.explode origin;
-        (*Remember the theory for the abbreviation*)
+      \<^try>\<open>
+        let
+          (*Check if the given const is an abbreviation*)
+          val (origin,_) = dest_Const (head_of (snd ((Consts.the_abbreviation o Proof_Context.consts_of) ctxt abbrev)));
+          (*Check that the origin can be broken into 3 parts (i.e. it is from a locale) *)
+          val [_,_,_] = Long_Name.explode origin;
+          (*Remember the theory for the abbreviation*)
 
-        val [qual,nm] = Long_Name.explode abbrev
-      in SOME qual end handle exn => handle_int exn NONE
+          val [qual,nm] = Long_Name.explode abbrev
+        in SOME qual end
+      catch _ => NONE\<close>
   in fold (curry (fn (abbrev,qual) => case (get_locale_origin abbrev) of
                                         SOME q => SOME q
                                       | NONE => NONE)) full_const_names NONE

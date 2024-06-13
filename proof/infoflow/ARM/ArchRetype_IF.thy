@@ -584,9 +584,9 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
                and Q="\<lambda>_. invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz (If reset 0 idx)))
                                and ct_active
                                and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1} s)"
-                in hoare_post_impErr)
+                in hoare_strengthen_postE)
      apply (rule hoare_pre, wp whenE_wp)
-      apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc)
+      apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc)
        apply (clarsimp simp only: if_True simp_thms, intro conjI, assumption+)
       apply simp
      apply assumption

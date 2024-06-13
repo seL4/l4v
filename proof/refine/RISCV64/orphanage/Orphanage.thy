@@ -650,7 +650,7 @@ lemma findM_failure':
   apply (induct xs arbitrary: S)
    apply (clarsimp, wp, clarsimp)
   apply clarsimp
-  apply (rule hoare_seq_ext[rotated], assumption)
+  apply (rule bind_wp_fwd, assumption)
   apply (case_tac r)
    apply (clarsimp, wp, clarsimp)
   apply clarsimp
@@ -684,12 +684,12 @@ lemma chooseThread_no_orphans [wp]:
   unfolding chooseThread_def Let_def
   supply if_split[split del]
   apply (simp only: return_bind, simp)
-  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext[where B="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
+  apply (intro bind_wp[OF _ stateAssert_sp])
+  apply (rule bind_wp[where Q'="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
                                             \<and> rv = ksCurDomain s"])
-   apply (rule_tac B="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
-                             \<and> curdom = ksCurDomain s \<and> rv = ksReadyQueuesL1Bitmap s curdom"
-                in hoare_seq_ext)
+   apply (rule_tac Q'="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
+                              \<and> curdom = ksCurDomain s \<and> rv = ksReadyQueuesL1Bitmap s curdom"
+                in bind_wp)
     apply (rename_tac l1)
     apply (case_tac "l1 = 0")
      (* switch to idle thread *)
@@ -1067,7 +1067,7 @@ lemma sendFaultIPC_no_orphans [wp]:
    apply (wp threadSet_no_orphans threadSet_valid_objs'
              threadSet_sch_act | wpc | clarsimp)+
     apply (rule_tac Q'="\<lambda>_ s. no_orphans s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
      apply (wp | clarsimp simp: inQ_def valid_tcb'_def tcb_cte_cases_def)+
   done
 
@@ -1302,9 +1302,9 @@ lemma unbindNotification_no_orphans[wp]:
     unbindNotification t
    \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
   unfolding unbindNotification_def
-  apply (rule hoare_seq_ext[OF _ gbn_sp'])
+  apply (rule bind_wp[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, simp_all, wp, simp)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (wp | simp)+
   done
 
@@ -1477,7 +1477,7 @@ lemma finaliseSlot_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding finaliseSlot_def
   apply (rule validE_valid, rule hoare_pre,
-    rule hoare_post_impErr, rule use_spec)
+    rule hoare_strengthen_postE, rule use_spec)
      apply (rule finaliseSlot_invs'[where p=slot and slot=slot and Pr=no_orphans])
       apply (simp_all add: no_orphans_finalise_prop_stuff)
    apply (wp | simp)+
@@ -1657,7 +1657,7 @@ lemma tc_no_orphans:
                case_option_wp[where m'="return ()", OF setPriority_no_orphans return_inv,simplified]
                checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
                checkCap_inv[where P=no_orphans] checkCap_inv[where P="tcb_at' a"]
-               threadSet_cte_wp_at' hoare_vcg_all_lift_R hoare_vcg_all_lift threadSet_no_orphans
+               threadSet_cte_wp_at' hoare_vcg_all_liftE_R hoare_vcg_all_lift threadSet_no_orphans
                hoare_vcg_const_imp_lift_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
           | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
                      objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
@@ -1926,7 +1926,7 @@ notes if_cong[cong] shows
    \<lbrace> \<lambda>rv . no_orphans \<rbrace>"
   unfolding handleRecv_def
   apply (clarsimp simp: whenE_def split del: if_split | wp hoare_drop_imps getNotification_wp | wpc )+ (*takes a while*)
-     apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp_R)
+     apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_strengthen_postE_R)
       apply (wp, fastforce)
     apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp)
      apply (wp | clarsimp | fastforce)+

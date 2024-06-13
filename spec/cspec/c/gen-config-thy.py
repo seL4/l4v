@@ -170,6 +170,7 @@ known_config_keys = {
     'CONFIG_CTZ_64': (bool, None),
     'CONFIG_CLZ_NO_BUILTIN': (bool, None),
     'CONFIG_CTZ_NO_BUILTIN': (bool, None),
+    'CONFIG_MAX_NUM_IOAPIC': (nat, 'maxNumIOAPIC'),
 }
 
 

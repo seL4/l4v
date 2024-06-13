@@ -2160,7 +2160,7 @@ lemma lookup_pt_slot_reachable [wp]:
   apply (simp add: pred_conj_def ex_simps [symmetric] del: ex_simps)
   apply (rule hoare_vcg_ex_lift_R1)
   apply (rule hoare_pre)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (rule lookup_pt_slot_looks_up)
    prefer 2
    apply clarsimp

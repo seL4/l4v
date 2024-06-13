@@ -68,13 +68,11 @@ definition
         dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
         ensure_empty dest_slot;
 
-       \<comment> \<open>Following should be wrapped in to a function like what c did
-          since it is pc99 related, problem is where to put this function\<close>
-
         numIOAPICs \<leftarrow> liftE $ gets (x64_num_ioapics \<circ> arch_state);
+        ioapic_nirqs \<leftarrow> liftE $ gets (x64_ioapic_nirqs \<circ> arch_state);
         whenE (numIOAPICs = 0) $ throwError IllegalOperation;
         whenE (ioapic > numIOAPICs - 1) $ throwError (RangeError 0 (numIOAPICs-1));
-        whenE (pin > ioapicIRQLines - 1) $ throwError (RangeError 0 (ioapicIRQLines-1));
+        whenE (pin > ucast (ioapic_nirqs ioapic - 1)) $ throwError (RangeError 0 (ucast (ioapic_nirqs ioapic - 1)));
         whenE (level > 1) $ throwError (RangeError 0 1);
         whenE (polarity > 1) $ throwError (RangeError 0 1);
 

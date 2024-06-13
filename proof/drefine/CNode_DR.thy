@@ -898,7 +898,7 @@ lemma ntfn_waiting_set_upd_kh:
 done
 
 lemma dcorres_ep_cancel_badge_sends:
-  notes hoare_post_taut[wp]
+  notes hoare_TrueI[wp]
   shows
   "dcorres dc \<top> (valid_state and valid_etcbs)
     (CSpace_D.cancel_badged_sends epptr word2)
@@ -1569,7 +1569,7 @@ lemma copy_global_mappings_dwp:
     apply (rule_tac Q = "\<lambda>r s. valid_idle s \<and> transform s = cs" in hoare_strengthen_post)
      apply (rule mapM_x_wp')
      apply wp
-       apply (rule_tac Q="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_vcg_precond_imp)
+       apply (rule_tac Q="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_weaken_pre)
         apply (rule dcorres_to_wp)
         apply (rule corres_guard_imp[OF store_pde_set_cap_corres])
           apply (clarsimp simp:kernel_mapping_slots_def)
@@ -1779,7 +1779,7 @@ lemma thread_set_valid_idle:
   apply (simp add: thread_set_def not_idle_thread_def)
   apply (simp add: gets_the_def valid_idle_def)
   apply wp
-  apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_vcg_precond_imp)
+  apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_weaken_pre)
   apply (clarsimp simp: KHeap_A.set_object_def get_object_def in_monad get_def put_def bind_def obj_at_def
                         return_def valid_def not_idle_thread_def valid_idle_def pred_tcb_at_def)
   apply simp+
@@ -2319,7 +2319,7 @@ lemma lsfco_not_idle:
   "\<lbrace>valid_objs and valid_cap cap and valid_idle\<rbrace>
    CSpace_A.lookup_slot_for_cnode_op b cap idx depth
    \<lbrace>\<lambda>rv. not_idle_thread (fst rv)\<rbrace>, -"
-  apply (rule_tac Q'="\<lambda>rv. real_cte_at rv and valid_idle" in hoare_post_imp_R)
+  apply (rule_tac Q'="\<lambda>rv. real_cte_at rv and valid_idle" in hoare_strengthen_postE_R)
    apply (rule hoare_pre, wp)
    apply simp
   apply (clarsimp simp: obj_at_def not_idle_thread_def valid_idle_def
@@ -2481,7 +2481,7 @@ lemma decode_cnode_corres:
                         apply (rule dcorres_returnOk)
                         apply (simp add:translate_cnode_invocation_def)
                        apply wp+
-                    apply (rule hoare_post_imp_R[OF validE_validE_R])
+                    apply (rule hoare_strengthen_postE_R[OF validE_validE_R])
                      apply (rule hoareE_TrueI[where P = \<top>])
                     apply (wp|simp)+
                   apply (strengthen mask_cap_valid)
@@ -2648,17 +2648,13 @@ lemma decode_cnode_corres:
                         apply simp
                        apply (rule dcorres_returnOk)
                        apply (simp add:translate_cnode_invocation_def)
-                      apply (wp get_cap_wp whenE_wp|clarsimp)+
-         apply (rule hoare_post_imp_R[OF validE_validE_R])
-         apply (rule hoareE_TrueI[where P = \<top>])
-          apply fastforce
-         apply (wp hoare_drop_imp|simp)+
+                      apply (wp get_cap_wp | simp)+
          apply (rule_tac Q'="\<lambda>r. real_cte_at src_slota and valid_objs and
                                 real_cte_at dest_slota and valid_idle and
                                      not_idle_thread (fst src_slota) and
                                      not_idle_thread (fst dest_slota) and
                                      not_idle_thread (fst r) and valid_etcbs"
-                             in hoare_post_imp_R)
+                             in hoare_strengthen_postE_R)
          apply (wp lsfco_not_idle)
         apply (clarsimp simp:Invariants_AI.cte_wp_valid_cap)
        apply (wp lsfco_not_idle)+

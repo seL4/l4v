@@ -244,7 +244,7 @@ lemma ctes_of_Some_cte_wp_at:
   by (clarsimp simp: cte_wp_at_ctes_of)
 
 lemma user_getreg_wp:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
       asUser t (getRegister r) \<lbrace>Q\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
    apply simp
@@ -435,7 +435,7 @@ lemma schedule_rewrite_ct_not_runnable':
 
 lemma resolveAddressBits_points_somewhere:
   "\<lbrace>\<lambda>s. \<forall>slot. Q slot s\<rbrace> resolveAddressBits cp cptr bits \<lbrace>Q\<rbrace>,-"
-  apply (rule_tac Q'="\<lambda>rv s. \<forall>rv. Q rv s" in hoare_post_imp_R)
+  apply (rule_tac Q'="\<lambda>rv s. \<forall>rv. Q rv s" in hoare_strengthen_postE_R)
    apply wp
   apply clarsimp
   done
@@ -733,7 +733,8 @@ lemma fastpath_callKernel_SysCall_corres:
                      apply (rule monadic_rewrite_weaken_flags[where F=False and E=True], simp)
                      apply (rule isolate_thread_actions_rewrite_bind
                                  fastpath_isolate_rewrites fastpath_isolatables
-                                 bool.simps setRegister_simple
+                                 bool.simps setRegister_simple_modify_registers
+                                 zipWithM_setRegister_simple_modify_registers
                                  threadGet_vcpu_isolatable[THEN thread_actions_isolatableD, simplified o_def]
                                  threadGet_vcpu_isolatable[simplified o_def]
                                  vcpuSwitch_isolatable[THEN thread_actions_isolatableD] vcpuSwitch_isolatable
@@ -741,7 +742,6 @@ lemma fastpath_callKernel_SysCall_corres:
                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable
                                  kernelExitAssertions_isolatable[THEN thread_actions_isolatableD]
                                  kernelExitAssertions_isolatable
-                                 zipWithM_setRegister_simple
                                  thread_actions_isolatable_bind
                               | assumption
                               | wp assert_inv)+
@@ -1534,7 +1534,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                      apply (monadic_rewrite_symb_exec_l_known thread)
                       apply (monadic_rewrite_symb_exec_l_known cptr)
                        apply (rule monadic_rewrite_bind)
-                         apply (rule monadic_rewrite_catch[OF _ monadic_rewrite_refl True_E_E])
+                         apply (rule monadic_rewrite_catch[OF _ monadic_rewrite_refl wp_post_tautE_E])
                          apply monadic_rewrite_symb_exec_l
                           apply (rename_tac cTableCTE2,
                                  rule_tac P="cteCap cTableCTE2 = cteCap cTableCTE"
@@ -1648,8 +1648,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (rule monadic_rewrite_weaken_flags[where F=False and E=True], simp)
                       apply (rule isolate_thread_actions_rewrite_bind
                                   fastpath_isolate_rewrites fastpath_isolatables
-                                  bool.simps setRegister_simple
-                                  zipWithM_setRegister_simple
+                                  bool.simps setRegister_simple_modify_registers
+                                  zipWithM_setRegister_simple_modify_registers
                                   thread_actions_isolatable_bind
                                   thread_actions_isolatableD[OF setCTE_isolatable]
                                   setCTE_isolatable

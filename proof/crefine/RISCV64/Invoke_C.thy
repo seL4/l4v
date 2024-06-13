@@ -686,7 +686,7 @@ lemma decodeCNodeInvocation_ccorres:
                                apply (vcg exspec=setThreadState_modifies)
                               apply simp
                               apply (wp injection_wp_E[OF refl])
-                              apply (rule hoare_post_imp_R)
+                              apply (rule hoare_strengthen_postE_R)
                                apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                         and valid_cap' rv and valid_objs'
                                                         and tcb_at' thread
@@ -764,7 +764,7 @@ lemma decodeCNodeInvocation_ccorres:
                                    apply (vcg exspec=setThreadState_modifies)
                                   apply (simp add: conj_comms valid_tcb_state'_def)
                                   apply (wp injection_wp_E[OF refl])
-                                  apply (rule hoare_post_imp_R)
+                                  apply (rule hoare_strengthen_postE_R)
                                    apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                             and valid_cap' rv and valid_objs'
                                                             and tcb_at' thread
@@ -1251,7 +1251,7 @@ lemma decodeCNodeInvocation_ccorres:
          apply vcg
         apply simp
         apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_lift_R
-                  hoare_vcg_all_lift_R lsfco_cte_at' hoare_weak_lift_imp
+                  hoare_vcg_all_liftE_R lsfco_cte_at' hoare_weak_lift_imp
                 | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen
                       cong: conj_cong
                 | wp (once) hoare_drop_imps)+
@@ -2327,7 +2327,7 @@ lemma invokeUntyped_Retype_ccorres:
          apply (clarsimp simp: misc unat_of_nat_eq[OF range_cover.weak, OF cover])
          apply (vcg exspec=cap_untyped_cap_ptr_set_capFreeIndex_modifies)
         apply simp
-        apply (rule validE_validE_R, rule hoare_post_impErr,
+        apply (rule validE_validE_R, rule hoare_strengthen_postE,
                rule hoare_vcg_conj_liftE1[rotated, where Q="\<lambda>_ s.
                  case gsCNodes s cnodeptr of None \<Rightarrow> False
                    | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n"],
@@ -2508,7 +2508,7 @@ lemma mapME_ensureEmptySlot':
   apply (erule meta_allE)
   apply wp
   apply (fold validE_R_def)
-  apply (erule hoare_post_imp_R)
+  apply (erule hoare_strengthen_postE_R)
   apply clarsimp
   done
 
@@ -2517,7 +2517,7 @@ lemma mapME_ensureEmptySlot:
   mapME (\<lambda>x. injection_handler Inl (ensureEmptySlot (f x))) [S .e. (E::machine_word)]
   \<lbrace>\<lambda>rva s. \<forall>slot. S \<le> slot \<and> slot \<le> E \<longrightarrow>
            (\<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f slot) = Some cte)\<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule mapME_ensureEmptySlot')
   apply clarsimp
   done

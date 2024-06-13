@@ -87,9 +87,9 @@ lemma dcorres_unmap_page_empty:
   apply (rule corres_symb_exec_l)
     apply (rule corres_guard_imp)
     apply (rule_tac x = "[]" in select_pick_corres)
-      apply (clarsimp simp:mapM_x_def sequence_x_def del:hoare_post_taut)
+      apply (clarsimp simp:mapM_x_def sequence_x_def del:hoare_TrueI)
 prefer 4
-  apply (rule hoare_post_taut)
+  apply (rule hoare_TrueI)
   apply simp_all
   apply (simp add:exs_valid_def slots_with_def gets_def has_slots_def get_def bind_def return_def )
 done
@@ -210,13 +210,14 @@ lemma delete_cap_one_shrink_descendants:
      apply (clarsimp simp add:empty_slot_def)
      apply (wp dxo_wp_weak)
          apply simp
-        apply (rule_tac P="\<lambda>s. valid_mdb s \<and> cdt s = xa \<and> cdt pres = xa \<and> slot \<in> CSpaceAcc_A.descendants_of p (cdt s)
-          \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
-          in hoare_vcg_precond_imp)
+        apply (rename_tac slot_p cdt')
+        apply (rule_tac P="\<lambda>s. valid_mdb s \<and> cdt s = cdt' \<and> cdt pres = cdt' \<and> slot \<in> CSpaceAcc_A.descendants_of p (cdt s)
+                               \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
+                     in hoare_weaken_pre)
          apply (rule_tac Q ="\<lambda>r s. Q r s \<and>  (mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))" for Q in hoare_strengthen_post)
           apply (rule hoare_vcg_conj_lift)
            apply (rule delete_cdt_slot_shrink_descendants[where y= "cdt pres" and p = p])
-          apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s ) xa" in hoare_vcg_precond_imp)
+          apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s ) cdt'" in hoare_weaken_pre)
            apply (case_tac slot)
            apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def)
           apply (assumption)
@@ -245,7 +246,7 @@ lemma delete_cap_one_shrink_descendants:
   apply (drule descendants_not_null_cap)
    apply simp
   apply (clarsimp simp:cte_wp_at_def)
-done
+  done
 
 lemma invs_emptyable_descendants:
   "\<lbrakk>invs s;CSpaceAcc_A.descendants_of slot (cdt s) = {(a, b)}\<rbrakk>
@@ -485,7 +486,7 @@ lemma dcorres_deleting_irq_handler:
   apply (rule corres_guard_imp)
   apply (rule corres_split[OF dcorres_get_irq_slot])
     apply (simp, rule delete_cap_simple_corres,simp)
-    apply (rule hoare_vcg_precond_imp [where Q="invs and valid_etcbs"])
+    apply (rule hoare_weaken_pre [where Q="invs and valid_etcbs"])
     including classic_wp_pre
     apply (wpsimp simp:get_irq_slot_def)+
     apply (rule irq_node_image_not_idle)
@@ -1402,11 +1403,11 @@ lemma remain_pt_pd_relation:
   apply (subgoal_tac "ptr\<noteq> y")
    apply (simp add: store_pte_def)
    apply wp
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
-                and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
+                and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_weaken_pre)
       apply (clarsimp simp: set_pt_def)
-      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
-                   and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
+      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
+                   and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_weaken_pre)
        apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
        apply (drule_tac x= y in bspec,simp)
        apply (clarsimp simp: pt_page_relation_def dest!: ucast_inj_mask| rule conjI)+
@@ -1426,11 +1427,11 @@ lemma remain_pd_section_relation:
        \<lbrace>\<lambda>r s. pd_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
   apply (simp add: store_pde_def)
   apply wp
-    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-                  and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+                  and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
      apply (clarsimp simp: set_pd_def)
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-                and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+                and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
       apply (clarsimp simp: pd_section_relation_def dest!: ucast_inj_mask | rule conjI)+
        apply (drule mask_compare_imply)
@@ -1448,11 +1449,11 @@ lemma remain_pd_super_section_relation:
        \<lbrace>\<lambda>r s. pd_super_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
   apply (simp add: store_pde_def)
   apply wp
-    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-               and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+               and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
      apply (clarsimp simp: set_pd_def)
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-               and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+               and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
       apply (clarsimp simp: pd_super_section_relation_def dest!: ucast_inj_mask | rule conjI)+
        apply (drule mask_compare_imply)
@@ -1985,7 +1986,7 @@ lemma check_mapping_pptr_section_relation:
   "\<lbrace>\<top>\<rbrace> check_mapping_pptr w ARMSection (Inr (lookup_pd_slot rv' b))
    \<lbrace>\<lambda>rv s. rv \<longrightarrow>
     pd_section_relation (lookup_pd_slot rv' b && ~~ mask pd_bits) w (lookup_pd_slot rv' b) s\<rbrace>"
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (simp add:check_mapping_pptr_def)
    apply (wp get_pde_wp)
   apply (clarsimp simp: obj_at_def)
@@ -1996,7 +1997,7 @@ done
 lemma check_mapping_pptr_super_section_relation:
   "\<lbrace>\<top>\<rbrace> check_mapping_pptr w ARMSuperSection (Inr (lookup_pd_slot rv' b))
    \<lbrace>\<lambda>rv s. rv \<longrightarrow> pd_super_section_relation (lookup_pd_slot rv' b && ~~ mask pd_bits) w (lookup_pd_slot rv' b) s\<rbrace>"
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (simp add:check_mapping_pptr_def)
    apply (wp get_pde_wp)
   apply (clarsimp simp: obj_at_def)
@@ -2008,7 +2009,7 @@ lemma lookup_pt_slot_aligned:
   "\<lbrace>invs and \<exists>\<rhd> pd and K (is_aligned pd pd_bits \<and> is_aligned vptr 16 \<and> vptr < kernel_base)\<rbrace>
         lookup_pt_slot pd vptr \<lbrace>\<lambda>rb s. is_aligned rb 6\<rbrace>, -"
   apply (rule hoare_gen_asmE)+
-  apply (rule hoare_pre, rule hoare_post_imp_R, rule lookup_pt_slot_cap_to)
+  apply (rule hoare_pre, rule hoare_strengthen_postE_R, rule lookup_pt_slot_cap_to)
    apply auto
   done
 
@@ -2160,7 +2161,7 @@ lemma dcorres_page_table_mapped:
            apply (simp add:transform_pde_def)
            apply (rule dcorres_returnOk,simp)
           apply wp+
-       apply (rule hoare_post_imp_R[OF find_pd_for_asid_aligned_pd])
+       apply (rule hoare_strengthen_postE_R[OF find_pd_for_asid_aligned_pd])
        apply simp
        apply (erule less_kernel_base_mapping_slots)
        apply (simp add:pd_bits_def pageBits_def)
@@ -2288,7 +2289,7 @@ lemma find_pd_for_asid_kernel_mapping_help:
   "\<lbrace>pspace_aligned and valid_vspace_objs and K (v<kernel_base) \<rbrace> find_pd_for_asid a
    \<lbrace>\<lambda>rv s. ucast (lookup_pd_slot rv v && mask pd_bits >> 2) \<notin> kernel_mapping_slots \<rbrace>,-"
   apply (rule hoare_gen_asmE)
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule find_pd_for_asid_aligned_pd_bits)
    apply simp
   apply (rule less_kernel_base_mapping_slots)

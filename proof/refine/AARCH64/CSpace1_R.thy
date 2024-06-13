@@ -398,7 +398,7 @@ lemma resolveAddressBits_cte_at':
   resolveAddressBits cap addr depth
   \<lbrace>\<lambda>rv. cte_at' (fst rv)\<rbrace>, \<lbrace>\<lambda>rv s. True\<rbrace>"
   apply (fold validE_R_def)
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule resolveAddressBits_real_cte_at')
   apply (erule real_cte_at')
   done
@@ -741,11 +741,11 @@ lemma lookupSlotForThread_corres:
       apply clarsimp
      apply simp
     prefer 2
-    apply (rule hoare_vcg_precond_impE)
+    apply (rule hoare_weaken_preE)
      apply (rule resolve_address_bits_cte_at [unfolded validE_R_def])
     apply clarsimp
    prefer 2
-   apply (rule hoare_vcg_precond_impE)
+   apply (rule hoare_weaken_preE)
     apply (rule resolveAddressBits_cte_at')
    apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (simp add: returnOk_def split_def)

@@ -42,9 +42,9 @@ declare hoare_wp_combs [wp del, wp_comb del]
 declare hoare_wp_state_combsE [wp del, wp_comb del]
 
 lemmas hoare_wp_combsE_autocorres [wp_comb]
-    = hoare_vcg_precond_impE hoare_vcg_precond_impE_R validE_validE_R
+    = hoare_weaken_preE hoare_weaken_preE_R validE_validE_R
 lemmas hoare_wp_combs_autocorres [wp_comb]
-    = hoare_vcg_precond_imp
+    = hoare_weaken_pre
 declare validNF_weaken_pre[wp_comb]
 declare validE_NF_weaken_pre[wp_comb]
 bundle nf_no_pre

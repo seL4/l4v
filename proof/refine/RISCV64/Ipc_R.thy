@@ -284,11 +284,7 @@ lemmas unifyFailure_discard2
 lemma deriveCap_not_null:
   "\<lbrace>\<top>\<rbrace> deriveCap slot cap \<lbrace>\<lambda>rv. K (rv \<noteq> NullCap \<longrightarrow> cap \<noteq> NullCap)\<rbrace>,-"
   apply (simp add: deriveCap_def split del: if_split)
-  apply (case_tac cap)
-          apply (simp_all add: Let_def isCap_simps)
-  apply wp
-  apply simp
-  done
+  by (case_tac cap; wpsimp simp: isCap_simps)
 
 lemma deriveCap_derived_foo:
   "\<lbrace>\<lambda>s. \<forall>cap'. (cte_wp_at' (\<lambda>cte. badge_derived' cap (cteCap cte)
@@ -493,7 +489,7 @@ next
        apply (rule_tac Q' ="\<lambda>cap' s. (cap'\<noteq> cap.NullCap \<longrightarrow>
          cte_wp_at (is_derived (cdt s) (a, b) cap') (a, b) s
          \<and> QM s cap')" for QM
-         in hoare_post_imp_R)
+         in hoare_strengthen_postE_R)
         prefer 2
         apply clarsimp
         apply assumption
@@ -505,13 +501,13 @@ next
       apply (rule_tac Q' ="\<lambda>cap' s. (cap'\<noteq> capability.NullCap \<longrightarrow>
          cte_wp_at' (\<lambda>c. is_derived' (ctes_of s) (cte_map (a, b)) cap' (cteCap c)) (cte_map (a, b)) s
          \<and> QM s cap')" for QM
-        in hoare_post_imp_R)
+        in hoare_strengthen_postE_R)
        prefer 2
        apply clarsimp
        apply assumption
       apply (subst imp_conjR)
       apply (rule hoare_vcg_conj_liftE_R)
-       apply (rule hoare_post_imp_R[OF deriveCap_derived])
+       apply (rule hoare_strengthen_postE_R[OF deriveCap_derived])
        apply (clarsimp simp:cte_wp_at_ctes_of)
       apply (wp deriveCap_derived_foo)
      apply (clarsimp simp: cte_wp_at_caps_of_state remove_rights_def
@@ -615,7 +611,7 @@ lemma cteInsert_assume_Null:
   apply (rule hoare_name_pre_state)
   apply (erule impCE)
    apply (simp add: cteInsert_def)
-   apply (rule hoare_seq_ext[OF _ getCTE_sp])+
+   apply (rule bind_wp[OF _ getCTE_sp])+
    apply (rule hoare_name_pre_state)
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (erule hoare_pre(1))
@@ -1714,7 +1710,7 @@ declare asUser_global_refs' [wp]
 
 lemma lec_valid_cap' [wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupExtraCaps thread xa mi \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. s \<turnstile>' fst x)\<rbrace>, -"
-  apply (rule hoare_pre, rule hoare_post_imp_R)
+  apply (rule hoare_pre, rule hoare_strengthen_postE_R)
     apply (rule hoare_vcg_conj_lift_R[where R=valid_objs' and S="\<lambda>_. valid_objs'"])
      apply (rule lookupExtraCaps_srcs)
     apply wp

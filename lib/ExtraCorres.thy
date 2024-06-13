@@ -72,7 +72,7 @@ next
   show ?case
     apply (simp add: mapM_Cons)
     apply (rule corres_underlying_split [OF corr' _ ha [OF Cons(2)] hc [OF Cons(2)]])
-    apply (rule corres_underlying_split [OF Cons(3) _ hoare_post_taut hoare_post_taut])
+    apply (rule corres_underlying_split [OF Cons(3) _ hoare_TrueI hoare_TrueI])
     apply (simp add: rc)
     apply (rule Cons.hyps)+
     done

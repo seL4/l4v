@@ -804,7 +804,7 @@ lemma lookup_extras_real_ctes[wp]:
 
 lemma lookup_extras_ctes[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. cte_at (snd x) s\<rbrace>,-"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lookup_extras_real_ctes)
   apply (simp add: real_cte_at_cte)
   done
@@ -1110,7 +1110,7 @@ lemma hinv_invs':
   done
 
 lemmas hinv_invs[wp] = hinv_invs'
-  [where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI,simplified]
+  [where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI TrueI,simplified]
 
 lemma get_cap_reg_inv[wp]: "\<lbrace>P\<rbrace> get_cap_reg r \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: get_cap_reg_def)
@@ -1184,7 +1184,7 @@ lemma hw_invs[wp]:
        apply (simp add: split_def)
        apply (wp resolve_address_bits_valid_fault2)+
      apply (simp add: valid_fault_def)
-     apply ((wp hoare_vcg_all_lift_R lookup_cap_ex_cap
+     apply ((wp hoare_vcg_all_liftE_R lookup_cap_ex_cap
           | simp add: obj_at_def
           | simp add: conj_disj_distribL ball_conj_distrib
           | wp (once) hoare_drop_imps)+)
@@ -1631,7 +1631,7 @@ lemma send_fault_ipc_st_tcb_at_runnable:
   apply (rule hoare_pre, wp)
      apply wpc
                 apply (wp send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial
-                          hoare_vcg_all_lift_R thread_get_wp
+                          hoare_vcg_all_liftE_R thread_get_wp
                         | clarsimp
                         | wp (once) hoare_drop_imps)+
   done

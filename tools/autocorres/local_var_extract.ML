@@ -748,7 +748,7 @@ fun inject_return_vals ctxt prog_info name_map needed_returns allow_excess throw
         in
           mk_corresXF_thm' ctxt prog_info name_map needed_returns throw_vars (vars_read UNION preserved_vals)
               generated_term l1_term
-              (@{thm L2corres_inject_return} OF [thm, @{thm validE_weaken} OF [preserve_proof]])
+              (@{thm L2corres_inject_return} OF [thm, @{thm hoare_chainE} OF [preserve_proof]])
         end
     in
       (vars_read UNION preserved_vals, needed_returns, generated_term, generated_thm)
@@ -950,7 +950,7 @@ in
           in
             mkthm block_reads rhs_rets generated_term
                 (@{thm L2corres_seq} OF [lhs_thm, rhs_thm,
-                    @{thm validE_weaken} OF [preserve_proof]])
+                    @{thm hoare_chainE} OF [preserve_proof]])
           end
         in
           inject (block_reads, rhs_rets, generated_term, thm)
@@ -986,7 +986,7 @@ in
             val preserve_proof = mk_multivar_preservation_proof ctxt prog_info name_map lhs_term needed_preserves
           in
             mkthm block_reads needed_vars generated_term
-                (@{thm L2corres_catch} OF [lhs_thm, rhs_thm, @{thm validE_weaken} OF [preserve_proof]])
+                (@{thm L2corres_catch} OF [lhs_thm, rhs_thm, @{thm hoare_chainE} OF [preserve_proof]])
           end
         in
           inject (block_reads, needed_vars, generated_term, thm)
@@ -1071,7 +1071,7 @@ in
                 ] @{thm L2corres_while}
           in
             mkthm (body_reads UNION read_vars UNION loop_iterators) loop_iterators generated_term
-                (base_thm OF [body_thm, @{thm validE_weaken} OF [preserve_proof]])
+                (base_thm OF [body_thm, @{thm hoare_chainE} OF [preserve_proof]])
           end
         in
           inject (body_reads UNION read_vars UNION loop_iterators, loop_iterators, generated_term, thm)

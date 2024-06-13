@@ -174,7 +174,7 @@ lemma copy_global_mappings_pas_refined:
                                valid_global_objs s \<and> valid_global_refs s \<and> pas_refined aag s)"
                  in hoare_strengthen_post)
      apply (rule mapM_x_wp[OF _ subset_refl])
-     apply (rule hoare_seq_ext)
+     apply (rule bind_wp)
       apply (unfold o_def)
     (* Use [1] so wp doesn't filter out the global_pd condition *)
       apply (wp store_pde_pas_refined store_pde_valid_kernel_mappings_map_global)[1]

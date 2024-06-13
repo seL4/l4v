@@ -2961,14 +2961,9 @@ lemma update_ti_t_array_rep_word0:
   done
 
 lemma newContext_def2:
-  "newContext \<equiv> (\<lambda>x. if x = register.CPSR then 0x150 else 0)"
-proof -
-  have "newContext = (\<lambda>x. if x = register.CPSR then 0x150 else 0)"
-    apply (simp add: newContext_def initContext_def)
-    apply (auto intro: ext)
-    done
-  thus "newContext \<equiv> (\<lambda>x. if x = register.CPSR then 0x150 else 0)" by simp
-qed
+  "newContext \<equiv> UserContext (\<lambda>x. if x = register.CPSR then 0x150 else 0)"
+  by (rule newContext_def[simplified initContext_def, simplified,
+                          simplified fun_upd_def])
 
 lemma tcb_queue_update_other:
   "\<lbrakk> ctcb_ptr_to_tcb_ptr p \<notin> set tcbs \<rbrakk> \<Longrightarrow>
@@ -3419,15 +3414,15 @@ proof -
     supply unsigned_numeral[simp del]
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
-        apply (simp add: cthread_state_relation_def thread_state_lift_def
-                         eval_nat_numeral ThreadState_defs)
-       apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
-                             newArchTCB_def)
+         apply (simp add: cthread_state_relation_def thread_state_lift_def
+                          eval_nat_numeral ThreadState_defs)
+        apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
+                              newArchTCB_def cregs_relation_def)
        apply (case_tac r,
               simp_all add: "StrictC'_register_defs" eval_nat_numeral
                             atcbContext_def newArchTCB_def newContext_def
                             initContext_def)[1] \<comment> \<open>takes ages\<close>
-                         apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
+                           apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
      apply (simp add: Kernel_Config.timeSlice_def)
     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
                      lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def

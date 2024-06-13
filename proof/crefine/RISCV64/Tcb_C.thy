@@ -986,7 +986,7 @@ sorry (* FIXME RT: invokeTCB_ThreadControlCaps_ccorres
          apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes
                    cteDelete_sch_act_simple
                 | strengthen invs_valid_objs')+
-         apply (rule hoare_post_imp_R[where Q' = "\<lambda>r. invs'"])
+         apply (rule hoare_strengthen_postE_R[where Q' = "\<lambda>r. invs'"])
           apply (wp cteDelete_invs')
          apply (clarsimp simp:cte_wp_at_ctes_of)
         apply simp
@@ -1054,7 +1054,7 @@ sorry (* FIXME RT: invokeTCB_ThreadControlCaps_ccorres
         apply (simp add: cte_is_derived_capMasterCap_strg o_def)
         apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes cteDelete_sch_act_simple
                | strengthen invs_valid_objs')+
-        apply (rule hoare_post_imp_R[where Q' = "\<lambda>r. invs'"])
+        apply (rule hoare_strengthen_postE_R[where Q' = "\<lambda>r. invs'"])
          apply (wp cteDelete_invs')
         apply (clarsimp simp:cte_wp_at_ctes_of)
        apply simp

@@ -282,12 +282,12 @@ lemma send_fault_ipc_bisim:
        apply (clarsimp simp: handle_double_fault_def)
        apply (rule bisim_refl')
       apply (simp add: Let_def)
-      apply (rule hoare_vcg_seqE)
-       apply (rule hoare_vcg_seqE)
+      apply (rule bindE_wp)
+       apply (rule bindE_wp)
         apply (wpc; wp)
        apply wp
        apply simp
-       apply (rule hoare_post_imp_R [OF lc_sep])
+       apply (rule hoare_strengthen_postE_R [OF lc_sep])
        apply (clarsimp simp: separate_cap_def)
       apply (wp | simp add: Let_def)+
         apply (rule_tac P = "separate_cap handler_cap" in hoare_gen_asmE')
@@ -323,12 +323,12 @@ lemma bisim_liftME_same:
   shows "bisim (f \<oplus> (=)) P P' (liftME g m) (liftME g m')"
   unfolding liftME_def
   apply (rule bisim_guard_imp)
-  apply (rule bisim_splitE [OF bs])
-   apply simp
-   apply (rule bisim_returnOk)
-   apply simp
-   apply wp
-  apply simp+
+    apply (rule bisim_splitE [OF bs])
+      apply simp
+      apply (rule bisim_returnOk)
+      apply simp
+     apply wp+
+   apply simp+
   done
 
 lemma bisim_split_if:
@@ -596,10 +596,10 @@ lemma handle_recv_bisim:
                    apply (simp split del: if_split)
                    apply (rule bisim_refl [where P = \<top> and P' = \<top>])
                    apply (case_tac rc, simp_all)[1]
-                   apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def del:  hoare_True_E_R)+
+                   apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def)+
                    apply (rule handle_fault_bisim)
                    apply (wp get_simple_ko_wp | wpc | simp)+
-                   apply (rule_tac Q' = "\<lambda>_. separate_state and valid_objs and tcb_at r" in hoare_post_imp_R)
+                   apply (rule_tac Q' = "\<lambda>_. separate_state and valid_objs and tcb_at r" in hoare_strengthen_postE_R)
                     prefer 2
                     apply simp
                    apply (wp | simp add: cur_tcb_def)+

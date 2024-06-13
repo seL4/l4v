@@ -1152,7 +1152,7 @@ lemma lookupExtras_real_ctes[wp]:
 
 lemma lookupExtras_ctes[wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupExtraCaps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. cte_at' (snd x) s\<rbrace>,-"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lookupExtras_real_ctes)
   apply (simp add: real_cte_at')
   done
@@ -1413,7 +1413,7 @@ lemma hinv_invs'[wp]:
          apply simp
          apply (intro conjI impI)
           apply (wp gts_imp' | simp)+
-        apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R[rotated])
+        apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_strengthen_postE_R[rotated])
          apply clarsimp
           apply (fastforce elim!: pred_tcb'_weakenE st_tcb_ex_cap'')
         apply wp+

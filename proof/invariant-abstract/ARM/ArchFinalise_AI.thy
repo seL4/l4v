@@ -754,7 +754,7 @@ lemma flush_table_empty:
                          s))
                s"
     and Q'="\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s"
-    in hoare_post_imp_R)
+    in hoare_strengthen_postE_R)
   prefer 2 apply simp
   apply (wp find_pd_for_asid_inv mapM_wp
     | simp
@@ -1644,7 +1644,7 @@ lemma page_table_mapped_wp_weak:
   apply (simp add: page_table_mapped_def)
   apply (rule hoare_pre)
    apply (wp get_pde_wp | wpc)+
-   apply (rule_tac Q'="\<lambda>_. ?P" in hoare_post_imp_R)
+   apply (rule_tac Q'="\<lambda>_. ?P" in hoare_strengthen_postE_R)
     apply wp
    apply clarsimp
   apply simp

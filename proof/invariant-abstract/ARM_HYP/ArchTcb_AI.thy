@@ -237,13 +237,13 @@ lemma tc_invs[Tcb_AI_asms]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
  apply (rule hoare_gen_asm)+
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply wp
       (* takes long: (30 sec) *)
       apply ((simp only: simp_thms cong: conj_cong
         | (strengthen invs_strengthen)+
         | rule wp_split_const_if wp_split_const_if_R
-                   hoare_vcg_all_lift_R
+                   hoare_vcg_all_liftE_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
                    hoare_vcg_R_conj
         | (wp out_invs_trivial case_option_wpE cap_delete_deletes
@@ -266,7 +266,6 @@ lemma tc_invs[Tcb_AI_asms]:
              hoare_weak_lift_imp hoare_weak_lift_imp_conj)[1]
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def
-               del: hoare_True_E_R
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]

@@ -126,11 +126,13 @@ end
 definition
   "register_to_H \<equiv> inv register_from_H"
 
+context state_rel begin
+
 definition
   to_user_context_C :: "user_context \<Rightarrow> user_context_C"
 where
-  "to_user_context_C uc \<equiv> user_context_C (FCP (\<lambda>r. uc (register_to_H (of_nat r))))"
-
+  "to_user_context_C uc \<equiv>
+    user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r)))"
 
 (* FIXME ARMHYP is this useful in any other file? *)
 (* Note: depends on vcpuactive being false when vcpuptr is NULL! *)
@@ -142,21 +144,16 @@ where
     then None
     else Some (ptr_val vcpuptr, to_bool vcpuactive)"
 
-context kernel_m begin
-
-lemma ccontext_rel_to_C:
-  "ccontext_relation uc (to_user_context_C uc)"
-  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def)
-  apply (rule arg_cong [where f=uc])
-  apply (simp add: register_to_H_def inv_def)
-  done
-
-end
-
 definition
   from_user_context_C :: "user_context_C \<Rightarrow> user_context"
 where
-  "from_user_context_C uc \<equiv> \<lambda>r. index (registers_C uc) (unat (register_from_H r))"
+  "from_user_context_C uc \<equiv>
+     UserContext (\<lambda>r. (registers_C uc).[unat (register_from_H r)])"
+
+lemma (in kernel_m) ccontext_rel_to_C:
+  "ccontext_relation uc (to_user_context_C uc)"
+  unfolding ccontext_relation_def to_user_context_C_def cregs_relation_def
+  by (clarsimp simp: register_to_H_def inv_def)
 
 definition
   getContext_C :: "tcb_C ptr \<Rightarrow> cstate \<Rightarrow> user_context"
@@ -166,7 +163,12 @@ where
 
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
-  by (auto simp: ccontext_relation_def from_user_context_C_def)
+  unfolding ccontext_relation_def cregs_relation_def
+  apply (cases uc)
+  apply (auto simp: from_user_context_C_def)
+  done
+
+end
 
 context kernel_m begin
 
@@ -762,9 +764,16 @@ lemma cpspace_cte_relation_unique:
 lemma inj_tcb_ptr_to_ctcb_ptr: "inj tcb_ptr_to_ctcb_ptr"
   by (simp add: inj_on_def tcb_ptr_to_ctcb_ptr_def)
 
+lemma cregs_relation_imp_eq:
+  "cregs_relation f x \<Longrightarrow> cregs_relation g x \<Longrightarrow> f=g"
+  by (auto simp: cregs_relation_def)
+
 lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
-  by (rule ext) (simp add: ccontext_relation_def)
+  unfolding ccontext_relation_def
+  apply (cases f, cases g)
+  apply (auto dest: cregs_relation_imp_eq)
+  done
 
 lemma map_to_ctes_tcb_ctes:
   notes if_cong[cong]

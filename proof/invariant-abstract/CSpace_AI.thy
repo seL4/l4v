@@ -292,7 +292,7 @@ proof (induct args arbitrary: s rule: resolve_address_bits'.induct)
         s \<turnstile> \<lbrace>P'\<rbrace> resolve_address_bits' z args \<lbrace>Q\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
     unfolding spec_validE_def
     apply (fold validE_R_def)
-    apply (erule hoare_post_imp_R)
+    apply (erule hoare_strengthen_postE_R)
     apply simp
     done
   show ?case
@@ -357,7 +357,7 @@ lemma resolve_address_bits_cte_at:
   "\<lbrace> valid_objs and valid_cap (fst args) \<rbrace>
   resolve_address_bits args
   \<lbrace>\<lambda>rv. cte_at (fst rv)\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule resolve_address_bits_real_cte_at)
+  apply (rule hoare_strengthen_postE_R, rule resolve_address_bits_real_cte_at)
   apply (erule real_cte_at_cte)
   done
 
@@ -4035,7 +4035,7 @@ lemma set_cap_ups_of_heap[wp]:
  "\<lbrace>\<lambda>s. P (ups_of_heap (kheap s))\<rbrace> set_cap cap sl
   \<lbrace>\<lambda>_ s. P (ups_of_heap (kheap s))\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj)
   by (auto simp: valid_def in_monad obj_at_def get_object_def)
 
@@ -4061,7 +4061,7 @@ lemma set_cap_cns_of_heap[wp]:
  "\<lbrace>\<lambda>s. P (cns_of_heap (kheap s))\<rbrace> set_cap cap sl
   \<lbrace>\<lambda>_ s. P (cns_of_heap (kheap s))\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj)
    apply (auto simp: valid_def in_monad obj_at_def get_object_def)
   done

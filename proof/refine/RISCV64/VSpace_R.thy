@@ -484,7 +484,7 @@ lemma performPageInvocation_corres:
   apply (cases pgi; clarsimp simp: valid_page_inv_def mapping_map_def)
     apply (simp add: bind_assoc[symmetric])
     apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                             hoare_post_taut hoare_post_taut])
+                                             hoare_TrueI hoare_TrueI])
     apply (simp add: bind_assoc)
     apply (rule corres_guard_imp)
       apply (simp add: perform_pg_inv_map_def)
@@ -496,7 +496,7 @@ lemma performPageInvocation_corres:
     apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
    apply (simp add: bind_assoc[symmetric])
    apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                               hoare_post_taut hoare_post_taut])
+                                               hoare_TrueI hoare_TrueI])
    apply (simp add: bind_assoc)
    apply (clarsimp simp: perform_pg_inv_unmap_def liftM_def)
    apply (rename_tac cap a b cap')

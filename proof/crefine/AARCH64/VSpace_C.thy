@@ -1452,7 +1452,7 @@ lemma setVMRoot_ccorres:
       apply (subst bind_return_unit)
       apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
        apply (rule ccorres_return_void_C)
-      apply (rule hoare_post_taut[where P=\<top>])
+      apply (rule wp_post_taut)
      apply (simp add: catch_def bindE_bind_linearise bind_assoc liftE_def)
      apply csymbr
      apply csymbr
@@ -1482,7 +1482,7 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_add_return2)
          apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
           apply (rule ccorres_return_void_C)
-         apply (rule hoare_post_taut[where P=\<top>])
+         apply (rule wp_post_taut)
         apply (simp add: whenE_def returnOk_def assertE_liftE liftE_bind)
         apply (rule ccorres_assert2)
         apply (ctac (no_vcg) add: armv_contextSwitch_ccorres)
@@ -1601,7 +1601,7 @@ lemma setMR_as_setRegister_ccorres:
      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (rule hoare_post_taut[of \<top>])
+    apply (rule hoare_TrueI[of \<top>])
    apply (vcg exspec=setRegister_modifies)
   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
   apply (subst msgRegisters_ccorres[symmetric])
@@ -2049,7 +2049,7 @@ lemma setCTE_asidpool':
   "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> setCTE c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
   apply (clarsimp simp: setCTE_def)
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (clarsimp simp: obj_at'_def)

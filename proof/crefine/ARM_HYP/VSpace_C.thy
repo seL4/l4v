@@ -2816,7 +2816,7 @@ lemma setRegister_ccorres:
     apply (rule ball_tcb_cte_casesI, simp+)
    apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                          atcbContextSet_def atcbContextGet_def
-                         carch_tcb_relation_def
+                         carch_tcb_relation_def cregs_relation_def
                   split: if_split)
   apply (clarsimp simp: Collect_const_mem register_from_H_sless
                         register_from_H_less)
@@ -2850,7 +2850,7 @@ lemma setMR_as_setRegister_ccorres:
      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (rule hoare_post_taut[of \<top>])
+    apply (rule hoare_TrueI[of \<top>])
    apply (vcg exspec=setRegister_modifies)
   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
   apply (subst msgRegisters_ccorres[symmetric])

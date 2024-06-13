@@ -25,7 +25,7 @@ lemma hoare_post_add:
 
 lemma hoare_post_addE:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. R s \<and> Q s\<rbrace>, \<lbrace>T\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. Q s\<rbrace>, \<lbrace>T\<rbrace>"
-  by (erule hoare_post_impErr; simp)
+  by (erule hoare_strengthen_postE; simp)
 
 lemma hoare_pre_add:
   "(\<forall>s. P s \<longrightarrow> R s) \<Longrightarrow> (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace> f \<lbrace>Q\<rbrace>)"
@@ -137,7 +137,7 @@ lemma hoare_split_bind_case_sum:
              "\<And>rv. \<lbrace>S rv\<rbrace> h rv \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
   shows      "\<lbrace>P\<rbrace> f >>= case_sum g h \<lbrace>Q\<rbrace>"
-  apply (rule hoare_seq_ext[OF _ y[unfolded validE_def]])
+  apply (rule bind_wp[OF _ y[unfolded validE_def]])
   apply (wpsimp wp: x split: sum.splits)
   done
 
@@ -147,7 +147,7 @@ lemma hoare_split_bind_case_sumE:
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
   shows      "\<lbrace>P\<rbrace> f >>= case_sum g h \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (unfold validE_def)
-  apply (rule hoare_seq_ext[OF _ y[unfolded validE_def]])
+  apply (rule bind_wp[OF _ y[unfolded validE_def]])
   apply (wpsimp wp: x[unfolded validE_def] split: sum.splits)
   done
 
@@ -509,7 +509,7 @@ lemma weaker_hoare_ifE:
   assumes x: "\<lbrace>P \<rbrace> a \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes y: "\<lbrace>P'\<rbrace> b \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   shows      "\<lbrace>P and P'\<rbrace> if test then a else b \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (rule hoare_vcg_precond_impE)
+  apply (rule hoare_weaken_preE)
    apply (wp x y)
   apply simp
   done
@@ -635,7 +635,7 @@ lemma bindE_split_recursive_asm:
 
 lemma validE_R_abstract_rv:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. Q rv' s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
-  by (erule hoare_post_imp_R, simp)
+  by (erule hoare_strengthen_postE_R, simp)
 
 lemma validE_cases_valid:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q (Inr rv) s\<rbrace>,\<lbrace>\<lambda>rv s. Q (Inl rv) s\<rbrace>
@@ -649,10 +649,9 @@ lemma liftM_pre:
   assumes rl: "\<lbrace>\<lambda>s. \<not> P s \<rbrace> a \<lbrace> \<lambda>_ _. False \<rbrace>"
   shows "\<lbrace>\<lambda>s. \<not> P s \<rbrace> liftM f a \<lbrace> \<lambda>_ _. False \<rbrace>"
   unfolding liftM_def
-  apply (rule seq)
-  apply (rule rl)
+  apply (rule bind_wp_fwd)
+   apply (rule rl)
   apply wp
-  apply simp
   done
 
 lemma hoare_gen_asm':

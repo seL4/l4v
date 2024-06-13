@@ -25,7 +25,7 @@ fun check_has_frees_tac Ps (_ : int) thm = let
 
 fun wp_bang wp_safe_rules ctxt = let
     val wp_safe_rules_conj = ((wp_safe_rules RL @{thms hoare_vcg_conj_lift hoare_vcg_R_conj})
-        RL @{thms hoare_strengthen_post hoare_post_imp_R})
+        RL @{thms hoare_strengthen_post hoare_strengthen_postE_R hoare_strengthen_postE_E})
       |> map (rotate_prems 1)
   in
     resolve_tac ctxt wp_safe_rules_conj

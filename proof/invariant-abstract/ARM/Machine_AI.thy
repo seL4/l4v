@@ -512,7 +512,7 @@ lemma no_irq_seq [wp]:
   "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (f >>= g)"
   apply (subst no_irq_def)
   apply clarsimp
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
   apply (wp|simp)+
   done
 

@@ -969,9 +969,9 @@ method corresKwp uses wp =
       \<open>use in \<open>wp add: wp | wpc\<close>\<close>))\<close>)
 
 lemmas [corresKwp_wp_comb_del] =
-  hoare_vcg_precond_imp
-  hoare_vcg_precond_impE
-  hoare_vcg_precond_impE_R
+  hoare_weaken_pre
+  hoare_weaken_preE
+  hoare_weaken_preE_R
 
 lemma corres_inst_conj_lift[corresKwp_wp_comb]:
   "\<lbrakk>\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>s. corres_inst_eq (R s) (P s)\<rbrakk> \<Longrightarrow>

@@ -329,7 +329,7 @@ lemma unmap_page_table_reads_respects:
   apply (rule equiv_valid_guard_imp)
    apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev
              pt_lookup_from_level_reads_respects pt_lookup_from_level_is_subject
-             find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_lift_R
+             find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_liftE_R
           | wpc | simp add: sfence_def | wp (once) hoare_drop_imps)+
   apply clarsimp
   apply (frule vspace_for_asid_is_subject)

@@ -1178,9 +1178,20 @@ definition
 where
   "valid_x64_irq_state' irqState \<equiv> \<forall>irq > maxIRQ. irqState irq = X64IRQFree"
 
-definition
-  valid_arch_state' :: "kernel_state \<Rightarrow> bool"
-where
+definition valid_ioapic_2 :: "machine_word \<Rightarrow> (machine_word \<Rightarrow> 8 word) \<Rightarrow> bool" where
+  "valid_ioapic_2 num_ioapics ioapic_nirqs \<equiv>
+    num_ioapics \<le> of_nat Kernel_Config.maxNumIOAPIC \<and>
+    (\<forall>ioapic < num_ioapics. 0 < ioapic_nirqs ioapic) \<and>
+    (\<forall>ioapic < num_ioapics. ioapic_nirqs ioapic \<le> ucast ioapicIRQLines) \<and>
+    (\<forall>ioapic > of_nat Kernel_Config.maxNumIOAPIC. ioapic_nirqs ioapic = 0)"
+
+abbreviation valid_ioapic where
+  "valid_ioapic s \<equiv>
+     valid_ioapic_2 (x64KSNumIOAPICs (ksArchState s)) (x64KSIOAPICnIRQs (ksArchState s))"
+
+lemmas valid_ioapic_def = valid_ioapic_2_def
+
+definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
   valid_asid_table' (x64KSASIDTable (ksArchState s)) s \<and>
   valid_cr3' (x64KSCurrentUserCR3 (ksArchState s)) \<and>
@@ -1188,7 +1199,8 @@ where
   valid_global_pds' (x64KSSKIMPDs (ksArchState s)) s \<and>
   valid_global_pdpts' (x64KSSKIMPDPTs (ksArchState s)) s \<and>
   valid_global_pts' (x64KSSKIMPTs (ksArchState s)) s \<and>
-  valid_x64_irq_state' (x64KSIRQState (ksArchState s))"
+  valid_x64_irq_state' (x64KSIRQState (ksArchState s)) \<and>
+  valid_ioapic s"
 
 definition
   irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -3460,6 +3472,10 @@ lemma invs_valid_idle'[elim!]:
 lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
+
+lemma invs_valid_ioapic[elim!]:
+  "invs' s \<Longrightarrow> valid_ioapic s"
+  by (simp add: invs'_def valid_state'_def valid_arch_state'_def)
 
 lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
