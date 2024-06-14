@@ -604,7 +604,8 @@ crunches deleting_irq_handler
 context Finalise_AI_1 begin
 context begin
   declare if_cong[cong]
-  crunch typ_at[wp]: finalise_cap "\<lambda>(s :: 'a state). P (typ_at T p s)"
+  crunches finalise_cap
+    for typ_at[wp]: "\<lambda>(s :: 'a state). P (typ_at T p s)"
 end
 end
 

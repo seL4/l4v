@@ -75,8 +75,7 @@ requalify_facts
 
 crunches
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot
-  for (bcorres) bcorres[wp]
-  truncate_state
+  for (bcorres) bcorres[wp]: truncate_state
   (ignore: maskInterrupt)
 
 lemma get_cap_det:
@@ -123,8 +122,7 @@ lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
 
 crunches
   cancel_all_ipc, cancel_all_signals, unbind_maybe_notification, unbind_notification, bind_notification
-  for (bcorres) bcorres[wp]
-  truncate_state
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def ignore: gets_the)
 
 lemma fast_finalise_bcorres[wp]:
