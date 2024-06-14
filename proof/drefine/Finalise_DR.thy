@@ -1931,7 +1931,7 @@ lemma (in pspace_update_eq) pd_pt_relation_update[iff]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunchesflush_page
+crunches flush_page
   for cdt[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps simp:crunch_simps)
 

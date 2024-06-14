@@ -23,7 +23,7 @@ definition
              ko_at' (ASIDPool pool) ap s \<and> pool (asidLowBitsOf asid) = Some vs \<and>
              page_map_l4_at' vs s"
 
-crunchescheckPDAt
+crunches checkPDAt
   for inv[wp]: P
 
 lemma findVSpaceForASID_vs_at_wp:

@@ -30,7 +30,7 @@ defs checkPDASIDMapMembership_def:
   "checkPDASIDMapMembership pd asids
      \<equiv> stateAssert (\<lambda>s. pd \<notin> ran ((option_map snd o armKSASIDMap (ksArchState s) |` (- set asids)))) []"
 
-crunchescheckPDAt
+crunches checkPDAt
   for inv[wp]: P
 
 lemma findPDForASID_pd_at_wp:
