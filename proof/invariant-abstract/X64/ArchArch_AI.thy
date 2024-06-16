@@ -179,11 +179,11 @@ lemma ucast_fst_hd_assocs:
   done
 
 
-crunch typ_at [wp]:
+crunches
   perform_page_table_invocation, perform_page_directory_invocation, perform_pdpt_invocation,
   perform_page_invocation, perform_asid_pool_invocation, perform_io_port_invocation,
   perform_ioport_control_invocation
-  "\<lambda>s. P (typ_at T p s)"
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
 
 
@@ -968,7 +968,8 @@ lemma sts_valid_page_inv[wp]:
         | wps)+)
 
 
-crunch global_refs_inv[wp]: set_thread_state "\<lambda>s. P (global_refs s)"
+crunches set_thread_state
+  for global_refs_inv[wp]: "\<lambda>s. P (global_refs s)"
 
 lemma sts_empty_table[wp]:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (second_level_tables (arch_state s)))) p s\<rbrace>
@@ -1010,7 +1011,8 @@ lemma create_mapping_entries_inv [wp]:
 
 crunch_ignore (add: select_ext)
 
-crunch inv [wp]: arch_decode_invocation "P"
+crunches arch_decode_invocation
+  for inv[wp]: "P"
   (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
 
@@ -1666,11 +1668,11 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunch pred_tcb_at [wp]:
+crunches
   perform_page_table_invocation, perform_page_directory_invocation, perform_pdpt_invocation,
   perform_page_invocation, perform_asid_pool_invocation, perform_io_port_invocation,
   perform_ioport_control_invocation
-  "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_pinv_st_tcb_at:

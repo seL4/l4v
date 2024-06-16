@@ -62,7 +62,8 @@ lemma capFaultOnFailure_empty_fail [intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (capFaultOnFailure cptr rp m)"
   by (simp add: capFaultOnFailure_def)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: locateSlotCap
+crunches locateSlotCap
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma resolveAddressBits_spec_empty_fail:
   notes spec_empty_fail_bindE'[wp_split]
@@ -105,7 +106,8 @@ lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   apply (simp add: AARCH64_H.deriveCap_def)
   by (auto simp: isCap_simps)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: ensureNoChildren
+crunches ensureNoChildren
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
@@ -115,7 +117,8 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
       apply (simp_all add: isCap_simps)
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: setExtraBadge, cteInsert
+crunches setExtraBadge, cteInsert
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
   "empty_fail (transferCapsToSlots ep buffer n caps slots mi)"
@@ -126,7 +129,8 @@ lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
   apply (simp | wp | wpc | safe)+
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: lookupTargetSlot, ensureEmptySlot, lookupSourceSlot, lookupPivotSlot
+crunches lookupTargetSlot, ensureEmptySlot, lookupSourceSlot, lookupPivotSlot
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma decodeCNodeInvocation_empty_fail[intro!, wp, simp]:
   "empty_fail (decodeCNodeInvocation label args cap exs)"
@@ -174,7 +178,8 @@ lemma empty_fail_pt_type_exhausted:
    \<Longrightarrow> False"
   by (case_tac pt_t; simp)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: decodeARMMMUInvocation
+crunches decodeARMMMUInvocation
+  for (empty_fail) empty_fail[intro!, wp, simp]
   (simp: Let_def pteAtIndex_def
    wp: empty_fail_catch empty_fail_pt_type_exhausted empty_fail_arch_cap_exhausted)
 
@@ -182,10 +187,12 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
+crunches cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
+  for (empty_fail) empty_fail[intro!, wp, simp]
 (simp: Let_def setNotification_def setBoundNotification_def wp: empty_fail_getObject)
 
-crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
+crunches "ThreadDecls_H.suspend"
+  for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
   (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
@@ -196,14 +203,16 @@ lemma vcpuUpdate_empty_fail[intro!, wp, simp]:
   "empty_fail (vcpuUpdate p f)"
   by (fastforce simp: vcpuUpdate_def)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: vcpuEnable, vcpuRestore
+crunches vcpuEnable, vcpuRestore
+  for (empty_fail) empty_fail[intro!, wp, simp]
   (simp: uncurry_def)
 
 lemma empty_fail_lookupPTFromLevel[intro!, wp, simp]:
   "empty_fail (lookupPTFromLevel level ptPtr vPtr target)"
   by (induct level arbitrary: ptPtr; subst lookupPTFromLevel.simps; simp; wpsimp)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
+crunches finaliseCap, preemptionPoint, capSwapForDelete
+  for (empty_fail) empty_fail[intro!, wp, simp]
 (wp: empty_fail_catch simp: Let_def ignore: lookupPTFromLevel)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
@@ -245,7 +254,8 @@ lemma assertDerived_empty_fail[intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (assertDerived src cap f)"
   by (fastforce simp: assertDerived_def)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cteDelete
+crunches cteDelete
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma spec_empty_fail_unlessE':
   "\<lbrakk> \<not> P \<Longrightarrow> spec_empty_fail f s \<rbrakk> \<Longrightarrow> spec_empty_fail (unlessE P f) s"
@@ -278,8 +288,9 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchError f g)"
   by fastforce
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]:
+crunches
   chooseThread, getDomainTime, nextDomain, isHighestPrio
+  for (empty_fail) empty_fail[intro!, wp, simp]
   (wp: empty_fail_catch)
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
@@ -288,21 +299,25 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
 
-crunch (empty_fail) empty_fail[wp, simp]: setMRs, setMessageInfo
+crunches setMRs, setMessageInfo
+  for (empty_fail) empty_fail[wp, simp]
 (wp: empty_fail_catch simp: const_def Let_def)
 
-crunch (empty_fail) empty_fail: decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeVCPUReadReg, doFlush,
+crunches decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeVCPUReadReg, doFlush,
                                 decodeVCPUAckVPPI
+  for (empty_fail) empty_fail
   (simp: Let_def)
 
-crunch (empty_fail) empty_fail[wp, simp]: handleFault
+crunches handleFault
+  for (empty_fail) empty_fail[wp, simp]
 
 lemma handleHypervisorFault_empty_fail[intro!, wp, simp]:
   "empty_fail (handleHypervisorFault t f)"
   by (cases f, simp add: handleHypervisorFault_def isFpuEnable_def split del: if_split)
      wpsimp
 
-crunch (empty_fail) empty_fail: callKernel
+crunches callKernel
+  for (empty_fail) empty_fail
   (wp: empty_fail_catch)
 
 theorem call_kernel_serial:

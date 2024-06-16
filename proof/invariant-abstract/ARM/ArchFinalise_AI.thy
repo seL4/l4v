@@ -19,7 +19,8 @@ lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
                      a_type_arch_live live_def hyp_live_def
               split: arch_cap.split_asm if_splits)
 
-crunch caps_of_state[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
+crunches prepare_thread_delete
+  for caps_of_state[wp,Finalise_AI_asms]: "\<lambda>s. P (caps_of_state s)"
 
 global_naming ARM
 
@@ -137,7 +138,8 @@ lemma delete_asid_invs[wp]:
   apply blast
   done
 
-crunch invs: page_table_mapped "invs"
+crunches page_table_mapped
+  for invs: "invs"
 
 lemma delete_asid_pool_unmapped[wp]:
   "\<lbrace>\<top>\<rbrace>
@@ -214,7 +216,8 @@ lemma set_pd_tcb_at:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pd a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
   by (clarsimp simp: simpler_set_pd_def valid_def obj_at_def)
 
-crunch tcb_at_arch: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
+crunches unmap_page
+  for tcb_at_arch: "\<lambda>s. P (ko_at (TCB tcb) t s)"
     (simp: crunch_simps wp: crunch_wps set_pt_tcb_at set_pd_tcb_at)
 
 lemmas unmap_page_tcb_at = unmap_page_tcb_at_arch
@@ -339,7 +342,8 @@ lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
        | wpc | simp add: tcb_cap_cases_def)+
   done
 
-crunch is_final_cap'[wp]: prepare_thread_delete "is_final_cap' cap"
+crunches prepare_thread_delete
+  for is_final_cap'[wp]: "is_final_cap' cap"
 
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
@@ -371,11 +375,13 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
    apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
   done
 
-crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap,prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
+crunches arch_finalise_cap,prepare_thread_delete
+  for typ_at_arch[wp,Finalise_AI_asms]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
 
-crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
+crunches prepare_thread_delete
+  for tcb_at[wp]: "\<lambda>s. tcb_at p s"
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -583,10 +589,12 @@ lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
   done
 
 
-crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
+crunches arch_finalise_cap
+  for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
 
-crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
+crunches prepare_thread_delete
+  for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
 
 end
@@ -638,12 +646,15 @@ interpretation Finalise_AI_2?: Finalise_AI_2
 
 context Arch begin global_naming ARM
 
-crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
+crunches arch_finalise_cap
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch irq_node[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
+crunches prepare_thread_delete
+  for irq_node[wp,Finalise_AI_asms]: "\<lambda>s. P (interrupt_irq_node s)"
 
-crunch pred_tcb_at[wp]: arch_finalise_cap "pred_tcb_at proj P t"
+crunches arch_finalise_cap
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
 
 
@@ -667,8 +678,8 @@ lemma store_pde_unmap_empty:
   apply (clarsimp simp: obj_at_def empty_table_def pde_ref_def valid_pde_mappings_def)
   done
 
-crunch empty[wp]: find_free_hw_asid, store_hw_asid, load_hw_asid, set_vm_root_for_flush, page_table_mapped, invalidate_tlb_by_asid
-  "\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s"
+crunches find_free_hw_asid, store_hw_asid, load_hw_asid, set_vm_root_for_flush, page_table_mapped, invalidate_tlb_by_asid
+  for empty[wp]: "\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s"
 
 lemma store_pte_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
@@ -678,16 +689,16 @@ lemma store_pte_unmap_empty:
   apply (clarsimp simp: obj_at_def empty_table_def)
   done
 
-crunch caps_of_state[wp]: invalidate_tlb_by_asid
-  "\<lambda>s. P (caps_of_state s)"
+crunches invalidate_tlb_by_asid
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
 
 lemma invalidate_tlb_by_asid_pspace_aligned:
   "\<lbrace>pspace_aligned\<rbrace> invalidate_tlb_by_asid aa \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
   apply (simp add: invalidate_tlb_by_asid_def load_hw_asid_def | wp | wpc)+
   done
 
-crunch cte_wp_at[wp]: invalidate_tlb_by_asid, page_table_mapped
-  "\<lambda>s. P (cte_wp_at P' p s)"
+crunches invalidate_tlb_by_asid, page_table_mapped
+  for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma flush_table_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
@@ -863,13 +874,16 @@ lemma replaceable_reset_pt:
 
 
 
-crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
+crunches arch_finalise_cap
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
-crunch obj_at[wp]: set_vm_root, invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"
+crunches set_vm_root, invalidate_tlb_by_asid
+  for obj_at[wp]: "\<lambda>s. P' (obj_at P p s)"
   (wp: whenE_wp simp: crunch_simps)
 
-crunch arm_global_pts[wp]: set_vm_root, invalidate_asid_entry "\<lambda>s. P' (arm_global_pts (arch_state s))"
+crunches set_vm_root, invalidate_asid_entry
+  for arm_global_pts[wp]: "\<lambda>s. P' (arm_global_pts (arch_state s))"
   (wp: whenE_wp simp: crunch_simps)
 
 lemma delete_asid_empty_table_pd:
@@ -1185,11 +1199,14 @@ lemma store_pde_vspace_objs_invalid:
   apply (simp add: pde_ref_def)
   done
 
-crunch valid_cap: invalidate_tlb_by_asid "valid_cap cap"
-crunch inv: page_table_mapped "P"
-crunch valid_objs[wp]: invalidate_tlb_by_asid "valid_objs"
-crunch valid_asid_table[wp]: do_machine_op
-  "\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s"
+crunches invalidate_tlb_by_asid
+  for valid_cap: "valid_cap cap"
+crunches page_table_mapped
+  for inv: "P"
+crunches invalidate_tlb_by_asid
+  for valid_objs[wp]: "valid_objs"
+crunches do_machine_op
+  for valid_asid_table[wp]: "\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s"
 
 lemma mapM_x_swp_store_invalid_pte_invs:
   "\<lbrace>invs and (\<lambda>s. \<exists>slot. cte_wp_at
@@ -1214,7 +1231,8 @@ lemma mapM_x_swp_store_invalid_pde_invs:
 
 global_naming Arch
 
-crunch invs[wp]: prepare_thread_delete invs
+crunches prepare_thread_delete
+  for invs[wp]: invs
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1608,11 +1626,11 @@ lemma page_table_mapped_wp_weak:
   apply simp
   done
 
-crunch arm_global_pd[wp]: invalidate_tlb_by_asid
-           "\<lambda>s. P (arm_global_pd (arch_state s))"
+crunches invalidate_tlb_by_asid
+  for arm_global_pd[wp]: "\<lambda>s. P (arm_global_pd (arch_state s))"
 
-crunch global_refs_invs[wp]: invalidate_tlb_by_asid
-           "\<lambda>s. P (global_refs s)"
+crunches invalidate_tlb_by_asid
+  for global_refs_invs[wp]: "\<lambda>s. P (global_refs s)"
 
 lemmas pd_bits_14 = pd_bits
 
@@ -1630,14 +1648,16 @@ lemma page_table_pte_atE:
   apply arith
   done
 
-crunch aligned[wp]: invalidate_tlb_by_asid "pspace_aligned"
+crunches invalidate_tlb_by_asid
+  for aligned[wp]: "pspace_aligned"
 
-crunch valid_arch_state[wp]: invalidate_tlb_by_asid "valid_arch_state"
+crunches invalidate_tlb_by_asid
+  for valid_arch_state[wp]: "valid_arch_state"
 
-crunch valid_cap [wp]: unmap_page_table, invalidate_tlb_by_asid,
+crunches unmap_page_table, invalidate_tlb_by_asid,
   page_table_mapped, store_pte, delete_asid_pool, copy_global_mappings,
   arch_finalise_cap
-  "valid_cap c"
+  for valid_cap[wp]: "valid_cap c"
   (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
 
 global_naming Arch

@@ -305,7 +305,8 @@ lemma thread_set_valid_idle_trivial:
   done
 
 
-crunch it [wp]: thread_set "\<lambda>s. P (idle_thread s)"
+crunches thread_set
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
 
 
 lemma thread_set_caps_of_state_trivial:
@@ -324,7 +325,8 @@ lemma thread_set_caps_of_state_trivial:
 
 
 
-crunch irq_node[wp]: thread_set "\<lambda>s. P (interrupt_irq_node s)"
+crunches thread_set
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 
 lemma thread_set_global_refs_triv:
@@ -349,7 +351,8 @@ lemma thread_set_valid_reply_masters_trivial:
   shows "\<lbrace>valid_reply_masters\<rbrace> thread_set f t \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
   by (wp valid_reply_masters_cte_lift thread_set_caps_of_state_trivial y)
 
-crunch interrupt_states[wp]: thread_set "\<lambda>s. P (interrupt_states s)"
+crunches thread_set
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
 lemma thread_set_obj_at_impossible:
   "\<lbrakk> \<And>tcb. \<not> (P (TCB tcb)) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. obj_at P p s\<rbrace> thread_set f t \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
@@ -389,7 +392,8 @@ lemma thread_set_pspace_in_kernel_window[wp]:
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
-crunch pspace_respects_device_region[wp]: thread_set "pspace_respects_device_region"
+crunches thread_set
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: set_object_pspace_respects_device_region)
 
 lemma thread_set_cap_refs_in_kernel_window:
@@ -661,10 +665,12 @@ lemma as_user_caps [wp]:
   done
 
 
-crunch it[wp]: as_user "\<lambda>s. P (idle_thread s)"
+crunches as_user
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps)
 
-crunch irq_node[wp]: as_user "\<lambda>s. P (interrupt_irq_node s)"
+crunches as_user
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps)
 
 
@@ -794,7 +800,8 @@ lemma set_thread_state_typ_at [wp]:
   apply (clarsimp simp: obj_at_def a_type_def dest!: get_tcb_SomeD)
   done
 
-crunch typ_at[wp]: set_bound_notification "\<lambda>s. P (typ_at T p s)"
+crunches set_bound_notification
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 
 lemma set_thread_state_tcb[wp]:
@@ -1375,9 +1382,11 @@ lemmas st_tcb_at_caller_cap_null =
 end
 
 
-crunch irq_node[wp]: set_thread_state, set_bound_notification "\<lambda>s. P (interrupt_irq_node s)"
+crunches set_thread_state, set_bound_notification
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
-crunch interrupt_states[wp]: set_thread_state, set_bound_notification "\<lambda>s. P (interrupt_states s)"
+crunches set_thread_state, set_bound_notification
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
 lemmas set_thread_state_valid_irq_nodes[wp]
     = valid_irq_handlers_lift [OF set_thread_state_caps_of_state
@@ -1421,7 +1430,8 @@ lemma set_thread_state_pspace_in_kernel_window[wp]:
       set_thread_state p st \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   by (simp add: set_thread_state_thread_set, wp, simp, wp)
 
-crunch pspace_respects_device_region[wp]: set_thread_state pspace_respects_device_region
+crunches set_thread_state
+  for pspace_respects_device_region[wp]: pspace_respects_device_region
 (wp: set_object_pspace_respects_device_region)
 
 lemma set_thread_state_cap_refs_in_kernel_window[wp]:
@@ -1443,7 +1453,8 @@ lemma set_bound_notification_pspace_in_kernel_window[wp]:
       set_bound_notification p ntfn \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   by (simp add: set_bound_notification_thread_set, wp)
 
-crunch pspace_respects_device_region[wp]: set_bound_notification pspace_respects_device_region
+crunches set_bound_notification
+  for pspace_respects_device_region[wp]: pspace_respects_device_region
   (wp: set_object_pspace_respects_device_region)
 
 lemma set_bound_notification_cap_refs_in_kernel_window[wp]:
@@ -1612,7 +1623,8 @@ lemma set_thread_state_valid_cap:
   apply (wp set_object_valid_cap|clarsimp)+
   done
 
-crunch valid_cap: set_bound_notification "valid_cap c"
+crunches set_bound_notification
+  for valid_cap: "valid_cap c"
 
 lemma set_thread_state_cte_at:
   "\<lbrace>cte_at p\<rbrace> set_thread_state x st \<lbrace>\<lambda>rv. cte_at p\<rbrace>"
@@ -1652,7 +1664,8 @@ lemma sts_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
-crunch ex_nonz_cap_to[wp]: set_bound_notification "ex_nonz_cap_to p"
+crunches set_bound_notification
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   (wp: ex_nonz_cap_to_pres)
 
 lemma ct_in_state_set:

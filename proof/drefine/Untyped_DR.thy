@@ -811,7 +811,8 @@ lemma transform_default_cap:
                     transform_asid_def asid_high_bits_of_def asid_low_bits_def
              split: aobject_type.split)
 
-crunch valid_etcbs[wp]: create_cap_ext valid_etcbs
+crunches create_cap_ext
+  for valid_etcbs[wp]: valid_etcbs
 
 lemma create_cap_dcorres:
   "dcorres dc \<top> (cte_at parent and cte_wp_at ((=) cap.NullCap) slot
@@ -1045,7 +1046,8 @@ lemma create_caps_loop_dcorres:
   apply (auto simp: cte_wp_at_caps_of_state image_def)
   done
 
-crunch valid_idle[wp]: init_arch_objects "valid_idle"
+crunches init_arch_objects
+  for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps unless_wp ignore: clearMemory)
 
 lemma update_available_range_dcorres:
@@ -1652,7 +1654,8 @@ qed
 context
 notes if_cong[cong]
 begin
-crunch inv[wp]: "CSpace_D.ensure_empty" "P"
+crunches "CSpace_D.ensure_empty"
+  for inv[wp]: "P"
 end
 
 lemma mapME_x_inv_wp2:

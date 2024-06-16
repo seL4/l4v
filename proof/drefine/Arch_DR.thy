@@ -556,7 +556,8 @@ lemma select_ret_or_throw_twiceE:
   apply (rule ext, auto simp: throwError_def return_def)
   done
 
-crunch inv[wp]: select_ret_or_throw "P"
+crunches select_ret_or_throw
+  for inv[wp]: "P"
 
 lemma corres_initial_bindE_rdonly_select_ret_or_throw:
   assumes y: "\<And>rv'. corres_underlying sr nf nf' (e \<oplus> r) P P' (select_ret_or_throw S X) (d rv')"

@@ -86,7 +86,8 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
          split del: if_split)
   done
 
-crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
+crunches set_irq_state
+  for valid_global_refs[Interrupt_AI_asms]: "valid_global_refs"
 
 crunches arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
@@ -170,7 +171,8 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
   done
 
 
-crunch device_state_inv[wp]: resetTimer "\<lambda>ms. P (device_state ms)"
+crunches resetTimer
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma resetTimer_invs_ARCH[Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>_. invs\<rbrace>"

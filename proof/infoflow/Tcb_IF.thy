@@ -237,10 +237,12 @@ lemma no_cap_to_idle_thread:
 end
 
 
-crunch idle_thread_inv [wp]: set_mcpriority "\<lambda>s. P (idle_thread s)"
+crunches set_mcpriority
+  for idle_thread_inv[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation)
 
-crunch idle_thread'[wp]: restart "\<lambda>s. P (idle_thread s)"
+crunches restart
+  for idle_thread'[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: dxo_wp_weak)
 
 lemma bind_notification_globals_equiv:
@@ -258,7 +260,8 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
   apply (wp unbind_notification_globals_equiv bind_notification_globals_equiv)+
   done
 
-crunch globals_equiv: set_mcpriority "globals_equiv st"
+crunches set_mcpriority
+  for globals_equiv: "globals_equiv st"
 
 lemma dxo_globals_equiv[wp]:
   "do_extended_op eop \<lbrace>globals_equiv st\<rbrace>"

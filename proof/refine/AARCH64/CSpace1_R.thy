@@ -2623,13 +2623,20 @@ lemma updateMDB_ctes_of:
   apply simp
   done
 
-crunch aligned[wp]: updateMDB "pspace_aligned'"
-crunch pdistinct[wp]: updateMDB "pspace_distinct'"
-crunch tcbSchedPrevs_of[wp]: updateMDB "\<lambda>s. P (tcbSchedPrevs_of s)"
-crunch tcbSchedNexts_of[wp]: updateMDB "\<lambda>s. P (tcbSchedNexts_of s)"
-crunch inQ_opt_pred[wp]: updateMDB "\<lambda>s. P (inQ d p |< tcbs_of' s)"
-crunch inQ_opt_pred'[wp]: updateMDB "\<lambda>s. P (\<lambda>d p. inQ d p |< tcbs_of' s)"
-crunch ksReadyQueues[wp]: updateMDB "\<lambda>s. P (ksReadyQueues s)"
+crunches updateMDB
+  for aligned[wp]: "pspace_aligned'"
+crunches updateMDB
+  for pdistinct[wp]: "pspace_distinct'"
+crunches updateMDB
+  for tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+crunches updateMDB
+  for tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+crunches updateMDB
+  for inQ_opt_pred[wp]: "\<lambda>s. P (inQ d p |< tcbs_of' s)"
+crunches updateMDB
+  for inQ_opt_pred'[wp]: "\<lambda>s. P (\<lambda>d p. inQ d p |< tcbs_of' s)"
+crunches updateMDB
+  for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps simp: crunch_simps setObject_def updateObject_cte)
 
 lemma setCTE_rdyq_projs[wp]:
@@ -5144,7 +5151,8 @@ lemma (in mdb_insert_abs_sib) next_slot':
 
 lemmas valid_list_def = valid_list_2_def
 
-crunch valid_list[wp]: set_untyped_cap_as_full valid_list
+crunches set_untyped_cap_as_full
+  for valid_list[wp]: valid_list
 
 lemma updateMDB_the_lot':
   assumes "(x, s'') \<in> fst (updateMDB p f s')"

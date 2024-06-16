@@ -127,7 +127,8 @@ lemma domain_sep_inv_detype_lift:
    \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. domain_sep_inv irqs st (detype S s)\<rbrace>"
   by (strengthen detype_domain_sep_inv, assumption)
 
-crunch domain_sep_inv[wp]: set_extra_badge "domain_sep_inv irqs st"
+crunches set_extra_badge
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
 (* FIXME: following 3 lemmas clagged from FinalCaps *)
 lemma set_cap_neg_cte_wp_at_other_helper':
@@ -265,7 +266,8 @@ lemma domain_sep_inv_cdt_update[simp]:
   "domain_sep_inv irqs st (s\<lparr>cdt := X\<rparr>) = domain_sep_inv irqs st s"
   by (simp add: domain_sep_inv_def)
 
-crunch domain_sep_inv[wp]: update_cdt "domain_sep_inv irqs st"
+crunches update_cdt
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
 lemma set_untyped_cap_as_full_domain_sep_inv[wp]:
   "set_untyped_cap_as_full a b c \<lbrace>domain_sep_inv irqs st\<rbrace>"
@@ -352,7 +354,8 @@ lemma set_simple_ko_neg_cte_wp_at[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch domain_sep_inv[wp]: set_simple_ko "domain_sep_inv irqs st"
+crunches set_simple_ko
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
 lemma set_thread_state_neg_cte_wp_at[wp]:
@@ -389,7 +392,8 @@ lemma set_bound_notification_neg_cte_wp_at[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch domain_sep_inv[wp]: set_thread_state, set_bound_notification, get_bound_notification "domain_sep_inv irqs st"
+crunches set_thread_state, set_bound_notification, get_bound_notification
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
 lemma thread_set_tcb_fault_update_neg_cte_wp_at[wp]:
@@ -413,14 +417,16 @@ lemma thread_set_tcb_fault_update_domain_sep_inv[wp]:
   "thread_set (tcb_fault_update blah) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
   by (wp domain_sep_inv_triv)
 
-crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
+crunches as_user
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
 lemma get_cap_domain_sep_inv_cap:
   "\<lbrace>domain_sep_inv irqs st\<rbrace> get_cap cap \<lbrace>\<lambda>rv s. domain_sep_inv_cap irqs rv\<rbrace>"
   by (wpsimp wp: get_cap_wp simp: cte_wp_at_domain_sep_inv_cap)
 
-crunch domain_sep_inv[wp]: cap_swap_for_delete "domain_sep_inv irqs st"
+crunches cap_swap_for_delete
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: get_cap_domain_sep_inv_cap dxo_wp_weak simp: crunch_simps ignore: cap_swap_ext)
 
 lemma preemption_point_domain_sep_inv[wp]:
@@ -646,7 +652,8 @@ lemma domain_sep_inv_cap_UntypedCap[simp]:
   "domain_sep_inv_cap irqs (UntypedCap dev base sz n)"
   by (simp add: domain_sep_inv_cap_def)
 
-crunch domain_sep_inv[wp]: delete_objects "domain_sep_inv irqs st"
+crunches delete_objects
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_detype_lift)
 
 
@@ -711,7 +718,8 @@ lemma dxo_domain_sep_inv[wp]:
   "do_extended_op eop \<lbrace>domain_sep_inv irqs st\<rbrace>"
   by (simp | wp dxo_wp_weak)+
 
-crunch domain_sep_inv[wp]: copy_mrs, set_message_info, set_mrs "domain_sep_inv irqs st"
+crunches copy_mrs, set_message_info, set_mrs
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps set_object_tcb_arch_update_domain_sep_inv simp: crunch_simps ignore: set_object)
 
 lemma cap_insert_domain_sep_inv':
@@ -808,7 +816,8 @@ lemma derive_cap_domain_sep_inv_cap:
 end
 
 
-crunch domain_sep_inv[wp]: receive_signal, complete_signal "domain_sep_inv irqs st"
+crunches receive_signal, complete_signal
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
 lemma domain_sep_inv_cap_ReplyCap[simp]:
   "domain_sep_inv_cap irqs (ReplyCap param_a param_b param_c)"
@@ -929,7 +938,8 @@ crunches do_reply_transfer, handle_fault, reply_from_kernel, restart
 
 end
 
-crunch domain_sep_inv[wp]: setup_reply_master "domain_sep_inv irqs st"
+crunches setup_reply_master
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma thread_set_tcb_ipc_buffer_update_neg_cte_wp_at[wp]:
@@ -1011,7 +1021,8 @@ lemma checked_cap_insert_domain_sep_inv:
   apply (erule (1) same_object_as_domain_sep_inv_cap)
   done
 
-crunch domain_sep_inv[wp]: bind_notification,reschedule_required "domain_sep_inv irqs st"
+crunches bind_notification,reschedule_required
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
 lemma set_mcpriority_domain_sep_inv[wp]:
   "set_mcpriority tcb_ref mcp \<lbrace>domain_sep_inv irqs st\<rbrace>"

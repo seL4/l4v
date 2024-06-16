@@ -3432,7 +3432,8 @@ lemma curDomain_commute:
   apply auto
   done
 
-crunch inv[wp]: curDomain P
+crunches curDomain
+  for inv[wp]: P
 
 lemma placeNewObject_tcb_at':
   notes [simp del] = atLeastatMost_subset_iff atLeastLessThan_iff
@@ -3790,11 +3791,16 @@ lemma new_cap_object_comm_helper:
    apply clarsimp
   done
 
-crunch pspace_aligned'[wp]: updateNewFreeIndex "pspace_aligned'"
-crunch pspace_distinct'[wp]: updateNewFreeIndex "pspace_distinct'"
-crunch valid_arch_state'[wp]: updateNewFreeIndex "valid_arch_state'"
-crunch pspace_no_overlap'[wp]: updateNewFreeIndex "pspace_no_overlap' ptr n"
-crunch ctes_of[wp]: updateNewFreeIndex "\<lambda>s. P (ctes_of s)"
+crunches updateNewFreeIndex
+  for pspace_aligned'[wp]: "pspace_aligned'"
+crunches updateNewFreeIndex
+  for pspace_distinct'[wp]: "pspace_distinct'"
+crunches updateNewFreeIndex
+  for valid_arch_state'[wp]: "valid_arch_state'"
+crunches updateNewFreeIndex
+  for pspace_no_overlap'[wp]: "pspace_no_overlap' ptr n"
+crunches updateNewFreeIndex
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
 lemma updateNewFreeIndex_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> updateNewFreeIndex slot \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
@@ -5712,7 +5718,8 @@ lemma insertNewCap_wps[wp]:
   apply (fastforce elim!: rsubst[where P=P])
   done
 
-crunch typ_at'[wp]: insertNewCap "\<lambda>s. P (typ_at' T p s)"
+crunches insertNewCap
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
 lemma createNewObjects_pspace_no_overlap':

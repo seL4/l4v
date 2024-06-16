@@ -28,7 +28,8 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply (clarsimp simp: word_bits_conv)
   done
 
-crunch device_state_inv[wp]: clearExMonitor "\<lambda>ms. P (device_state ms)"
+crunches clearExMonitor
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma clearExMonitor_invs [wp]:
   "\<lbrace>invs\<rbrace> do_machine_op clearExMonitor \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -67,7 +68,8 @@ lemma arch_stit_tcb_at[wp]:
   apply wp
   done
 
-crunch ct[wp]: set_vm_root "\<lambda>s. P (cur_thread s)"
+crunches set_vm_root
+  for ct[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_stit_activatable[wp, Schedule_AI_asms]:

@@ -26,7 +26,8 @@ lemma cancel_signal_simple:
   "\<lbrace>\<top>\<rbrace> cancel_signal t ntfn \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   by (simp add: cancel_signal_def | wp sts_st_tcb_at')+
 
-crunch  typ_at: cancel_all_ipc "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
+crunches cancel_all_ipc
+  for typ_at: "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
 lemma cancel_all_helper:
   " \<lbrace>valid_objs and
@@ -60,7 +61,8 @@ lemma cancel_all_ipc_valid_objs:
   done
 
 
-crunch typ_at: cancel_all_signals "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
+crunches cancel_all_signals
+  for typ_at: "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
 
 lemma unbind_notification_valid_objs_helper:
@@ -195,7 +197,8 @@ lemma update_restart_pc_has_reply_cap[wp]:
   apply (wp hoare_vcg_all_lift)
   done
 
-crunch st_tcb_at_simple[wp]: reply_cancel_ipc "st_tcb_at simple t"
+crunches reply_cancel_ipc
+  for st_tcb_at_simple[wp]: "st_tcb_at simple t"
   (wp: crunch_wps sts_st_tcb_at_cases thread_set_no_change_tcb_state
    simp: crunch_simps unless_def)
 
@@ -228,8 +231,8 @@ lemma blocked_cancel_ipc_tcb_at [wp]:
 
 context IpcCancel_AI begin
 
-crunch typ_at[wp]: cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
-                   "\<lambda>(s :: 'a state). P (typ_at T p s)"
+crunches cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
+  for typ_at[wp]: "\<lambda>(s :: 'a state). P (typ_at T p s)"
   (wp: crunch_wps hoare_vcg_if_splitE
      simp: crunch_simps unless_def)
 
@@ -526,18 +529,22 @@ lemma no_refs_simple_strg:
   by (fastforce elim!: pred_tcb_weakenE)+
 
 
-crunch it[wp]: cancel_all_ipc "\<lambda>s. P (idle_thread s)"
+crunches cancel_all_ipc
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: unless_def crunch_simps)
 
-crunch it[wp]: cancel_all_signals, fast_finalise, unbind_notification "\<lambda>s. P (idle_thread s)"
+crunches cancel_all_signals, fast_finalise, unbind_notification
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: unless_def crunch_simps)
 
 context IpcCancel_AI begin
 
-crunch it[wp]: reply_cancel_ipc  "\<lambda>(s::'a state). P (idle_thread s)"
+crunches reply_cancel_ipc
+  for it[wp]: "\<lambda>(s::'a state). P (idle_thread s)"
   (wp: crunch_wps simp: unless_def crunch_simps)
 
-crunch it[wp]: cancel_ipc "\<lambda>(s :: 'a state). P (idle_thread s)"
+crunches cancel_ipc
+  for it[wp]: "\<lambda>(s :: 'a state). P (idle_thread s)"
 
 end
 
@@ -625,10 +632,12 @@ end
 declare if_cong [cong del]
 
 
-crunch cte_wp_at[wp]: blocked_cancel_ipc "cte_wp_at P p"
+crunches blocked_cancel_ipc
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps)
 
-crunch cte_wp_at[wp]: cancel_signal "cte_wp_at P p"
+crunches cancel_signal
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps)
 
 locale delete_one_pre =
@@ -673,7 +682,8 @@ lemma set_thread_state_bound_tcb_at[wp]:
   unfolding set_thread_state_def set_object_def get_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
-crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "bound_tcb_at P t"
+crunches cancel_all_ipc, empty_slot, is_final_cap, get_cap
+  for bound_tcb_at[wp]: "bound_tcb_at P t"
   (wp: mapM_x_wp_inv)
 
 
@@ -761,7 +771,8 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
   apply simp
   done
 
-crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
+crunches cancel_ipc
+  for bound_tcb_at[wp]: "bound_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv)
 
 context IpcCancel_AI begin
@@ -998,7 +1009,8 @@ lemma unbind_notification_invs:
                   split: option.splits)
   done
 
-crunch bound_tcb_at[wp]: cancel_all_signals "bound_tcb_at P t"
+crunches cancel_all_signals
+  for bound_tcb_at[wp]: "bound_tcb_at P t"
   (wp: mapM_x_wp_inv)
 
 
@@ -1111,10 +1123,12 @@ lemma cancel_all_signals_unlive[wp]:
   done
 
 
-crunch cte_wp_at[wp]: cancel_all_ipc "cte_wp_at P p"
+crunches cancel_all_ipc
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps mapM_x_wp)
 
-crunch cte_wp_at[wp]: cancel_all_signals "cte_wp_at P p"
+crunches cancel_all_signals
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps mapM_x_wp thread_set_cte_wp_at_trivial
    simp: tcb_cap_cases_def)
 

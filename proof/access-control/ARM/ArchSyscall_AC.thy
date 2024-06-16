@@ -150,10 +150,12 @@ lemma handle_reserved_irq_arch_state[Syscall_AC_assms, wp]:
   "handle_reserved_irq irq \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
 
-crunch arch_state[Syscall_AC_assms, wp]: init_arch_objects "\<lambda>s. P (arch_state s)"
+crunches init_arch_objects
+  for arch_state[Syscall_AC_assms, wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps)
 
-crunch ct_active [Syscall_AC_assms, wp]: arch_post_cap_deletion "ct_active"
+crunches arch_post_cap_deletion
+  for ct_active[Syscall_AC_assms, wp]: "ct_active"
   (wp: crunch_wps filterM_preserved unless_wp
    simp: crunch_simps ignore: do_extended_op)
 

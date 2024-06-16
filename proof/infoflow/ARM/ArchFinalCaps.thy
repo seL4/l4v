@@ -170,7 +170,8 @@ lemma perform_page_directory_invocation_silc_inv:
    apply (wp | simp)+
   done
 
-crunch silc_inv[wp]: invalidate_tlb_by_asid "silc_inv aag st"
+crunches invalidate_tlb_by_asid
+  for silc_inv[wp]: "silc_inv aag st"
 
 lemma perform_page_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and valid_page_inv blah and K (authorised_page_inv aag blah)\<rbrace>

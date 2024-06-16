@@ -104,9 +104,11 @@ lemma arch_finalise_cap_pas_refined[wp]:
   apply (auto simp: valid_arch_cap_def wellformed_mapdata_def)
   done
 
-crunch pas_refined[wp]: prepare_thread_delete "pas_refined aag"
+crunches prepare_thread_delete
+  for pas_refined[wp]: "pas_refined aag"
 
-crunch respects[Finalise_AC_assms, wp]: prepare_thread_delete "integrity aag X st"
+crunches prepare_thread_delete
+  for respects[Finalise_AC_assms, wp]: "integrity aag X st"
 
 lemma sbn_st_vrefs[Finalise_AC_assms]:
   "\<lbrace>(\<lambda>s. P (state_vrefs s)) and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>

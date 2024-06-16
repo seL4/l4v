@@ -859,7 +859,8 @@ lemma setObject_tcb_ep_obj_at'[wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
+crunches setThreadState
+  for ep_obj_at'[wp]: "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
   (simp: unless_def)
 
 (* FIXME: move to AInvs *)
@@ -1019,7 +1020,8 @@ lemma ko_at'_not_NULL:
    \<Longrightarrow> p \<noteq> 0"
   by (fastforce simp:  word_gt_0 typ_at'_no_0_objD)
 
-crunch ksReadyQueuesL1Bitmap[wp]: setQueue "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunches setQueue
+  for ksReadyQueuesL1Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 
 lemma sts_running_ksReadyQueuesL1Bitmap[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>

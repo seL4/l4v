@@ -173,13 +173,14 @@ proof -
     done
 qed
 
-crunch typ_at [wp]:
+crunches
   perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation,
   perform_vspace_invocation
-  "\<lambda>s. P (typ_at T p s)"
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps ignore: store_pte)
 
-crunch typ_at [wp]: perform_vcpu_invocation "\<lambda>s. P (typ_at T p s)"
+crunches perform_vcpu_invocation
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
 
 lemmas perform_page_table_invocation_typ_ats [wp] =
@@ -986,7 +987,8 @@ lemma arch_thread_set_ex_nonz_cap_to[wp]:
                         caps_of_state_tcb_arch_update)
   done
 
-crunch ex_nonz_cap_to[wp]: dissociate_vcpu_tcb "ex_nonz_cap_to t"
+crunches dissociate_vcpu_tcb
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   (wp: crunch_wps)
 
 crunches vcpu_switch
@@ -1261,7 +1263,8 @@ lemma sts_valid_page_inv[wp]:
     apply (wpsimp wp: sts_typ_ats hoare_vcg_ex_lift hoare_vcg_disj_lift | wps)+
   done
 
-crunch global_refs_inv[wp]: set_thread_state "\<lambda>s. P (global_refs s)"
+crunches set_thread_state
+  for global_refs_inv[wp]: "\<lambda>s. P (global_refs s)"
 
 lemma sts_vs_lookup_slot[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. P (vs_lookup_slot level asid vref s)\<rbrace>"
@@ -1292,7 +1295,8 @@ lemma sts_valid_arch_inv:
 crunch_ignore (add: select_ext find_vspace_for_asid)
 
 
-crunch inv [wp]: arch_decode_invocation "P"
+crunches arch_decode_invocation
+  for inv[wp]: "P"
   (wp: crunch_wps select_ext_weak_wp hoare_vcg_all_lift
        hoare_vcg_all_liftE_R hoare_drop_imps simp: crunch_simps)
 
@@ -1705,9 +1709,9 @@ lemma perform_vcpu_invocation_pred_tcb_at[wp_unsafe]:
                          invoke_vcpu_ack_vppi_def)+
   done
 
-crunch pred_tcb_at [wp]:
+crunches
   perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation, perform_vspace_invocation
-  "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_pinv_st_tcb_at:

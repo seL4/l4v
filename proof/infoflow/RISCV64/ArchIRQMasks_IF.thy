@@ -24,16 +24,19 @@ lemma delete_objects_irq_masks[IRQMasks_IF_assms, wp]:
   apply (wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
 
-crunch irq_masks[IRQMasks_IF_assms, wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
+crunches invoke_untyped
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
        wp: mapME_x_inv_wp preemption_point_inv
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
-crunch irq_masks[IRQMasks_IF_assms, wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
+crunches finalise_cap
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (  wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
 
-crunch irq_masks[IRQMasks_IF_assms, wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"
+crunches send_signal
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
 
 lemma handle_interrupt_irq_masks[IRQMasks_IF_assms]:
@@ -81,9 +84,11 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   apply clarsimp
   done
 
-crunch irq_masks[IRQMasks_IF_assms, wp]: activate_thread "\<lambda>s. P (irq_masks_of_state s)"
+crunches activate_thread
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
-crunch irq_masks[IRQMasks_IF_assms, wp]: schedule "\<lambda>s. P (irq_masks_of_state s)"
+crunches schedule
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps simp: crunch_simps)
 
 end
@@ -99,10 +104,12 @@ qed
 
 context Arch begin global_naming RISCV64
 
-crunch irq_masks[IRQMasks_IF_assms, wp]: do_reply_transfer "\<lambda>s. P (irq_masks_of_state s)"
+crunches do_reply_transfer
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 
-crunch irq_masks[IRQMasks_IF_assms, wp]: arch_perform_invocation "\<lambda>s. P (irq_masks_of_state s)"
+crunches arch_perform_invocation
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps no_irq)
 
 (* FIXME: remove duplication in this proof -- requires getting the wp automation

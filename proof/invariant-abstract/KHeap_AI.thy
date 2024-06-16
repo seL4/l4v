@@ -195,7 +195,8 @@ lemma dxo_wp_weak[wp]:
   apply (simp add: xopv[simplified trans_state_update'])
   done
 
-crunch ct[wp]: set_thread_state "\<lambda>s. P (cur_thread s)"
+crunches set_thread_state
+  for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
 lemma sts_ep_at_inv[wp]:
   "\<lbrace> ep_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
@@ -544,7 +545,8 @@ lemma valid_mdb_lift:
   apply simp
   done
 
-crunch no_cdt[wp]: set_simple_ko "\<lambda>s. P (cdt s)"
+crunches set_simple_ko
+  for no_cdt[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
 
 
@@ -869,7 +871,8 @@ lemma set_simple_ko_ex_cap[wp]:
   by (wp ex_nonz_cap_to_pres)
 
 
-crunch it[wp]: set_simple_ko "\<lambda>s. P (idle_thread s)"
+crunches set_simple_ko
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_simple_ko_idle[wp]:
@@ -899,10 +902,12 @@ lemma ep_redux_simps:
                  simp: valid_ep_def valid_ntfn_def valid_bound_tcb_def)+
 
 
-crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
+crunches set_simple_ko
+  for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch irq_node_inv[wp]: set_simple_ko "\<lambda>s. P (interrupt_irq_node s)"
+crunches set_simple_ko
+  for irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
 lemma set_simple_ko_global_refs [wp]:
@@ -922,7 +927,8 @@ lemma obj_at_ko_atE:
   "\<lbrakk> obj_at P ptr s; ko_at k ptr s; P k \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (clarsimp simp: obj_at_def)
 
-crunch interrupt_states[wp]: set_simple_ko "\<lambda>s. P (interrupt_states s)"
+crunches set_simple_ko
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
 lemma set_object_non_arch:
@@ -1349,7 +1355,8 @@ lemma thread_get_wp':
   done
 
 
-crunch inv[wp]: get_irq_slot "P"
+crunches get_irq_slot
+  for inv[wp]: "P"
 
 lemmas set_object_typ_ats [wp] = abs_typ_at_lifts [OF set_object_typ_at]
 

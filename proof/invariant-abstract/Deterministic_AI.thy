@@ -1471,7 +1471,8 @@ lemma next_slot:
   done
 end
 
-crunch exst[wp]: set_cap "(\<lambda>s. P (exst s))" (wp: crunch_wps simp: crunch_simps)
+crunches set_cap
+  for exst[wp]: "(\<lambda>s. P (exst s))" (wp: crunch_wps simp: crunch_simps)
 
 lemma set_cap_caps_of_state3:
   "\<lbrace>\<lambda>s. P ((caps_of_state s) (p \<mapsto> cap)) (cdt s)  (exst s) (is_original_cap s)\<rbrace>
@@ -3106,7 +3107,8 @@ lemma (in mdb_empty_abs') next_slot:
   apply(fastforce split: if_split_asm)
   done
 
-crunch valid_list[wp]: post_cap_deletion,set_cap valid_list
+crunches post_cap_deletion,set_cap
+  for valid_list[wp]: valid_list
   (wp: crunch_wps)
 
 interpretation empty_slot_extended: is_extended "empty_slot_ext a b"
@@ -3813,37 +3815,44 @@ lemma create_cap_valid_list[wp]:
   done
 
 
-crunch valid_list[wp]: set_extra_badge valid_list
+crunches set_extra_badge
+  for valid_list[wp]: valid_list
 
 lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
-crunch valid_list[wp]: tcb_sched_action,reschedule_required,set_thread_state_ext "valid_list"
+crunches tcb_sched_action,reschedule_required,set_thread_state_ext
+  for valid_list[wp]: "valid_list"
   (simp: unless_def ignore_del: tcb_sched_action reschedule_required set_thread_state_ext)
 
 interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext a"
   by (unfold_locales; wp)
 
-crunch all_but_exst[wp]: reschedule_required "all_but_exst P"
+crunches reschedule_required
+  for all_but_exst[wp]: "all_but_exst P"
   (ignore_del: reschedule_required)
 
 interpretation reschedule_required_ext_extended: is_extended "reschedule_required"
   by (unfold_locales; wp)
 
-crunch valid_list[wp]: fast_finalise valid_list (wp: crunch_wps)
+crunches fast_finalise
+  for valid_list[wp]: valid_list (wp: crunch_wps)
 
 lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding cap_delete_one_def by (wpsimp simp: unless_def)
 
-crunch valid_list[wp]: thread_set valid_list
+crunches thread_set
+  for valid_list[wp]: valid_list
 
 lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def
   by (wp hoare_drop_imps thread_set_mdb | simp)+
 
-crunch all_but_exst[wp]: update_work_units "all_but_exst P"
+crunches update_work_units
+  for all_but_exst[wp]: "all_but_exst P"
 
-crunch all_but_exst[wp]: reset_work_units "all_but_exst P"
+crunches reset_work_units
+  for all_but_exst[wp]: "all_but_exst P"
 
 global_interpretation update_work_units_ext_extended: is_extended "update_work_units"
   by (unfold_locales; wp)
@@ -3880,7 +3889,8 @@ lemmas rec_del_valid_list[wp] = rec_del_preservation
       empty_slot_valid_list
       finalise_cap_valid_list]
 
-crunch valid_list[wp]: cap_delete valid_list
+crunches cap_delete
+  for valid_list[wp]: valid_list
   (wp: preemption_point_inv')
 
 end
@@ -3895,18 +3905,22 @@ lemma cap_revoke_valid_list[wp]:"\<lbrace>valid_list\<rbrace> cap_revoke a \<lbr
   apply (wp preemption_point_inv'|simp)+
   done
 
-crunch valid_list[wp]: ethread_set "valid_list"
+crunches ethread_set
+  for valid_list[wp]: "valid_list"
 
 end
 
-crunch all_but_exst[wp]: ethread_set "all_but_exst P"
+crunches ethread_set
+  for all_but_exst[wp]: "all_but_exst P"
 
-crunch (empty_fail) empty_fail[wp]: ethread_set
+crunches ethread_set
+  for (empty_fail) empty_fail[wp]
 
 global_interpretation ethread_set_extended: is_extended "ethread_set a b"
   by (unfold_locales; wp)
 
-crunch valid_list[wp]: cancel_badged_sends valid_list
+crunches cancel_badged_sends
+  for valid_list[wp]: valid_list
   (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def
    ignore: without_preemption filterM )
 
@@ -3926,21 +3940,25 @@ crunches possible_switch_to
   and (empty_fail) empty_fail[wp]
   (simp: ethread_get_def ignore_del: possible_switch_to)
 
-crunch valid_list[wp]: set_priority,set_mcpriority "valid_list"
+crunches set_priority,set_mcpriority
+  for valid_list[wp]: "valid_list"
   (wp: crunch_wps ignore_del: set_priority)
 
 global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a"
   by (unfold_locales; wp)
 
-crunch all_but_exst[wp]: set_priority "all_but_exst P"
+crunches set_priority
+  for all_but_exst[wp]: "all_but_exst P"
   (simp: ethread_get_def ignore_del: set_priority)
 
-crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
+crunches set_priority,set_mcpriority
+  for (empty_fail) empty_fail[wp]
 
 global_interpretation set_priority_extended: is_extended "set_priority a b"
   by (unfold_locales; wp)
 
-crunch all_but_exst[wp]: set_domain "all_but_exst P" (simp: ethread_get_def)
+crunches set_domain
+  for all_but_exst[wp]: "all_but_exst P" (simp: ethread_get_def)
 
 global_interpretation set_domain_extended: is_extended "set_domain a b"
   by (unfold_locales; wp)
@@ -3948,17 +3966,21 @@ global_interpretation set_domain_extended: is_extended "set_domain a b"
 global_interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
   by (unfold_locales; wp)
 
-crunch all_but_exst[wp]: dec_domain_time "all_but_exst P" (simp: ethread_get_def)
+crunches dec_domain_time
+  for all_but_exst[wp]: "all_but_exst P" (simp: ethread_get_def)
 
-crunch (empty_fail) empty_fail[wp]: dec_domain_time
+crunches dec_domain_time
+  for (empty_fail) empty_fail[wp]
 
 global_interpretation dec_domain_time_extended: is_extended "dec_domain_time"
   by (unfold_locales; wp)
 
-crunch valid_list[wp]: update_restart_pc "valid_list"
+crunches update_restart_pc
+  for valid_list[wp]: "valid_list"
 
 context Deterministic_AI_1 begin
-crunch valid_list[wp]: invoke_tcb valid_list
+crunches invoke_tcb
+  for valid_list[wp]: valid_list
   (wp: mapM_x_wp' ignore: check_cap_at simp: check_cap_at_def)
 end
 
@@ -4009,7 +4031,8 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
 
 context Deterministic_AI_2 begin
 
-crunch valid_list[wp]: invoke_irq_handler valid_list
+crunches invoke_irq_handler
+  for valid_list[wp]: valid_list
 
 lemma handle_event_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> handle_event e \<lbrace>\<lambda>_.valid_list\<rbrace>"

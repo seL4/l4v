@@ -12,9 +12,11 @@ context Arch begin global_naming ARM_A
 
 named_theorems Finalise_AC_assms
 
-crunch pas_refined[wp]: arch_finalise_cap, prepare_thread_delete "pas_refined aag"
+crunches arch_finalise_cap, prepare_thread_delete
+  for pas_refined[wp]: "pas_refined aag"
 
-crunch respects[Finalise_AC_assms, wp]: prepare_thread_delete "integrity aag X st"
+crunches prepare_thread_delete
+  for respects[Finalise_AC_assms, wp]: "integrity aag X st"
 
 lemma sbn_st_vrefs[Finalise_AC_assms, wp]:
   "set_bound_notification t st \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"

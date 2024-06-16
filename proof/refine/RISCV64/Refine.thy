@@ -824,7 +824,8 @@ lemma domain_list_rel_eq:
   "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomSchedule c) = P (domain_list a)"
   by (clarsimp simp: state_relation_def)
 
-crunch valid_objs': doUserOp, checkActiveIRQ valid_objs'
+crunches doUserOp, checkActiveIRQ
+  for valid_objs': valid_objs'
   (wp: crunch_wps)
 
 lemma ckernel_invariant:

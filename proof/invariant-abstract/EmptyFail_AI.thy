@@ -67,7 +67,8 @@ crunch_ignore (empty_fail)
         decode_tcb_invocation without_preemption as_user syscall
         cap_fault_on_failure check_cap_at zipWithM filterM)
 
-crunch (empty_fail) empty_fail[wp]: set_object, get_cap
+crunches set_object, get_cap
+  for (empty_fail) empty_fail[wp]
   (simp: split_def kernel_object.splits)
 
 lemma check_cap_at_empty_fail[wp]:
@@ -82,7 +83,8 @@ lemma as_user_empty_fail[wp]:
   apply (simp | wp)+
   done
 
-crunch (empty_fail) empty_fail[wp]: get_message_info
+crunches get_message_info
+  for (empty_fail) empty_fail[wp]
   (simp: split_def kernel_object.splits)
 
 lemma cap_fault_on_failure_empty_fail[wp]:
@@ -157,10 +159,11 @@ lemma resolve_address_bits_spec_empty_fail:
 lemmas resolve_address_bits_empty_fail[wp] =
        resolve_address_bits_spec_empty_fail[THEN use_spec_empty_fail]
 
-crunch (empty_fail) empty_fail[wp]:
+crunches
   lookup_slot_for_cnode_op, decode_untyped_invocation, range_check,
   lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap,
   allActiveTCBs
+  for (empty_fail) empty_fail[wp]
 
 locale EmptyFail_AI_load_word =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -345,17 +348,20 @@ lemma schedule_empty_fail[wp]:
 
 end
 
-crunch (empty_fail) empty_fail[wp]: set_scheduler_action, next_domain, reschedule_required
+crunches set_scheduler_action, next_domain, reschedule_required
+  for (empty_fail) empty_fail[wp]
   (simp: scheduler_action.split ignore_del: reschedule_required)
 
-crunch (empty_fail) empty_fail[wp, intro!, simp]: ethread_get_when
+crunches ethread_get_when
+  for (empty_fail) empty_fail[wp, intro!, simp]
 
 locale EmptyFail_AI_schedule_det = EmptyFail_AI_schedule "TYPE(det_ext)" +
   assumes choose_thread_empty_fail[wp]: "empty_fail choose_thread"
 
 context EmptyFail_AI_schedule_det begin
 
-crunch (empty_fail) empty_fail[wp, intro!, simp]: schedule_choose_new_thread
+crunches schedule_choose_new_thread
+  for (empty_fail) empty_fail[wp, intro!, simp]
 
 lemma schedule_empty_fail'[intro!, wp, simp]:
   "empty_fail (schedule :: (unit,det_ext) s_monad)"

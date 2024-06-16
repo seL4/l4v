@@ -3169,7 +3169,8 @@ lemma curDomain_commute:
   apply auto
   done
 
-crunch inv[wp]: curDomain P
+crunches curDomain
+  for inv[wp]: P
 
 lemma placeNewObject_tcb_at':
   "\<lbrace>pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr (objBits (makeObject::tcb))
@@ -5222,7 +5223,8 @@ lemma insertNewCap_wps[wp]:
   apply (fastforce elim!: rsubst[where P=P])
   done
 
-crunch typ_at'[wp]: insertNewCap "\<lambda>s. P (typ_at' T p s)"
+crunches insertNewCap
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
 end

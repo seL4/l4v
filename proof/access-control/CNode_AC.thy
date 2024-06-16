@@ -430,7 +430,8 @@ named_theorems wp_not_transferable
 
 context CNode_AC_1 begin
 
-crunch respects[wp]: deleted_irq_handler "integrity aag X st"
+crunches deleted_irq_handler
+  for respects[wp]: "integrity aag X st"
 
 lemma post_cap_deletion_integrity[wp]:
  "\<lbrace>integrity aag X s and K (cleanup_info_wf cleanup_info aag)\<rbrace>
@@ -986,8 +987,10 @@ lemma aag_cap_auth_NullCap [simp]:
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid)
 
-crunch thread_st_auth[wp]: set_cdt "\<lambda>s. P (thread_st_auth s)"
-crunch thread_bound_ntfns[wp]: set_cdt "\<lambda>s. P (thread_bound_ntfns s)"
+crunches set_cdt
+  for thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
+crunches set_cdt
+  for thread_bound_ntfns[wp]: "\<lambda>s. P (thread_bound_ntfns s)"
 
 
 locale CNode_AC_3 = CNode_AC_2 +
@@ -1414,7 +1417,8 @@ lemma set_ntfn_respects:
   apply (clarsimp simp: integrity_def tro_ntfn integrity_asids_kh_upds)
   done
 
-crunch integrity_autarch: thread_set "integrity aag X st"
+crunches thread_set
+  for integrity_autarch: "integrity aag X st"
 
 end
 
@@ -1503,7 +1507,8 @@ lemma auth_derived_caps_of_state_impls:
   apply (auto dest: pas_refined_mem[OF sta_untyped] pas_refined_mem[OF sta_caps])
   done
 
-crunch cur_domain[wp]: deleted_irq_handler "\<lambda>s. P (cur_domain s)"
+crunches deleted_irq_handler
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
 lemma preemption_point_cur_domain[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
@@ -1521,17 +1526,20 @@ lemma post_cap_deletion_cur_domain[wp]:
   "post_cap_deletion c \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
   by (wpsimp simp: post_cap_deletion_def)
 
-crunch cur_domain[wp]: cap_swap_for_delete, empty_slot "\<lambda>s. P (cur_domain s)"
+crunches cap_swap_for_delete, empty_slot
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
-crunch cur_domain[wp]: finalise_cap "\<lambda>s. P (cur_domain s)"
+crunches finalise_cap
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma rec_del_cur_domain[wp]:
   "rec_del call \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
   by (rule rec_del_preservation; wp)
 
-crunch cur_domain[wp]: cap_delete  "\<lambda>s. P (cur_domain s)"
+crunches cap_delete
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
 lemma cap_revoke_cur_domain[wp]:
   "cap_revoke slot \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"

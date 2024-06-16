@@ -11,7 +11,8 @@ imports Init_C Fastpath_Equiv Fastpath_C CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
+crunches handleVMFault
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
 end
 
@@ -121,7 +122,8 @@ lemma handleUnknownSyscall_ccorres:
   apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
   done
 
-crunch ct[wp]:  handleVMFault "\<lambda>s. P (ksCurThread s)"
+crunches  handleVMFault
+  for ct[wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma handleVMFaultEvent_ccorres:
   "ccorres dc xfdc
@@ -878,7 +880,8 @@ lemma dom_if_rewrite:
   "dom (\<lambda>x. if P x then Some (f x) else None) = dom (\<lambda>x. if P x then Some () else None)"
   by (auto split:if_splits)
 
-crunch dmo_typ_at_pre_dom[wp]: doMachineOp "\<lambda>s. P (dom (\<lambda>x. if typ_at' T (x && ~~ mask pageBits) s then Some () else None))"
+crunches doMachineOp
+  for dmo_typ_at_pre_dom[wp]: "\<lambda>s. P (dom (\<lambda>x. if typ_at' T (x && ~~ mask pageBits) s then Some () else None))"
   (wp: crunch_wps simp: crunch_simps device_mem'_def)
 
 lemma dmo_domain_device_mem'[wp]:

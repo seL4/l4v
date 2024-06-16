@@ -341,7 +341,8 @@ locale CNode_IF_1 =
      arch_globals_equiv ct it kh kh' as as' ms ms'"
 begin
 
-crunch globals_equiv[wp]: set_untyped_cap_as_full "globals_equiv st"
+crunches set_untyped_cap_as_full
+  for globals_equiv[wp]: "globals_equiv st"
 
 lemma cap_insert_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
@@ -562,7 +563,8 @@ lemma work_units_limit_reached_reads_respects[wp]:
   apply force
   done
 
-crunch invs[wp]: work_units_limit_reached invs
+crunches work_units_limit_reached
+  for invs[wp]: invs
 
 lemma preemption_point_def2:
   "(preemption_point :: (unit,det_ext) p_monad) =

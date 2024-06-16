@@ -1123,7 +1123,8 @@ lemma setObject_cte_ct:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject t (v::cte) \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
   by (clarsimp simp: valid_def setCTE_def[symmetric] dest!: setCTE_pspace_only)
 
-crunch ct[wp]: cteInsert "\<lambda>s. P (ksCurThread s)"
+crunches cteInsert
+  for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: setObject_cte_ct hoare_drop_imps)
 end
 context mdb_insert
@@ -2474,7 +2475,8 @@ proof -
  done
 qed
 
-crunch state_refs_of'[wp]: cteInsert "\<lambda>s. P (state_refs_of' s)"
+crunches cteInsert
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
 
 lemma setCTE_state_hyp_refs_of'[wp]:
@@ -2486,16 +2488,20 @@ lemma setCTE_state_hyp_refs_of'[wp]:
                  split: kernel_object.split_asm if_split_asm)
   done
 
-crunch state_hyp_refs_of'[wp]: cteInsert "\<lambda>s. P (state_hyp_refs_of' s)"
+crunches cteInsert
+  for state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: crunch_wps)
 
-crunch aligned'[wp]: cteInsert pspace_aligned'
+crunches cteInsert
+  for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps)
 
-crunch distinct'[wp]: cteInsert pspace_distinct'
+crunches cteInsert
+  for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps)
 
-crunch no_0_obj' [wp]: cteInsert no_0_obj'
+crunches cteInsert
+  for no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps)
 
 lemma cteInsert_valid_pspace:
@@ -2685,7 +2691,8 @@ lemma setCTE_ksInterruptState[wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setCTE param_a param_b \<lbrace>\<lambda>_ s. P (ksInterruptState s)\<rbrace>"
   by (wp setObject_ksInterrupt updateObject_cte_inv | simp add: setCTE_def)+
 
-crunch ksInterruptState[wp]: cteInsert "\<lambda>s. P (ksInterruptState s)"
+crunches cteInsert
+  for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   (wp: crunch_wps)
 
 lemmas updateMDB_cteCaps_of_ksInt[wp]
@@ -2758,7 +2765,8 @@ lemma setCTE_inQ[wp]:
    apply (simp_all add: inQ_def)
   done
 
-crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
+crunches cteInsert
+  for inQ[wp]: "\<lambda>s. P (obj_at' (inQ d p) t s)"
   (wp: crunch_wps)
 
 lemma setCTE_it'[wp]:
@@ -2777,7 +2785,8 @@ lemma setCTE_idle [wp]:
   apply wpsimp
   done
 
-crunch it[wp]: getCTE "\<lambda>s. P (ksIdleThread s)"
+crunches getCTE
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 lemma getCTE_no_idle_cap:
   "\<lbrace>valid_global_refs'\<rbrace>
@@ -2801,7 +2810,8 @@ lemma updateCap_idle':
   apply (wp | simp)+
   done
 
-crunch idle [wp]: setUntypedCapAsFull "valid_idle'"
+crunches setUntypedCapAsFull
+  for idle[wp]: "valid_idle'"
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
 lemma cteInsert_idle'[wp]:
@@ -2875,10 +2885,12 @@ lemma updateCap_global_refs [wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-crunch arch [wp]: cteInsert "\<lambda>s. P (ksArchState s)"
+crunches cteInsert
+  for arch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
-crunch valid_arch[wp]: cteInsert valid_arch_state'
+crunches cteInsert
+  for valid_arch[wp]: valid_arch_state'
   (wp: crunch_wps)
 
 lemma cteInsert_valid_irq_handlers'[wp]:
@@ -2910,7 +2922,8 @@ lemma setCTE_valid_mappings'[wp]:
   apply assumption
   done
 
-crunch pde_mappings' [wp]: cteInsert valid_pde_mappings'
+crunches cteInsert
+  for pde_mappings'[wp]: valid_pde_mappings'
   (wp: crunch_wps)
 
 lemma setCTE_irq_states' [wp]:
@@ -2926,10 +2939,12 @@ lemma setCTE_irq_states' [wp]:
   apply assumption
   done
 
-crunch irq_states' [wp]: cteInsert valid_irq_states'
+crunches cteInsert
+  for irq_states'[wp]: valid_irq_states'
   (wp: crunch_wps)
 
-crunch pred_tcb_at'[wp]: cteInsert "pred_tcb_at' proj P t"
+crunches cteInsert
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: crunch_wps)
 
 lemma setCTE_cteCaps_of[wp]:
@@ -2941,25 +2956,34 @@ lemma setCTE_cteCaps_of[wp]:
   apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
   done
 
-crunch inQ[wp]: setupReplyMaster "\<lambda>s. P (obj_at' (inQ d p) t s)"
+crunches setupReplyMaster
+  for inQ[wp]: "\<lambda>s. P (obj_at' (inQ d p) t s)"
   (wp: crunch_wps)
-crunch norq[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueues s)"
+crunches setupReplyMaster
+  for norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps)
-crunch ct[wp]: setupReplyMaster "\<lambda>s. P (ksCurThread s)"
+crunches setupReplyMaster
+  for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
-crunch state_refs_of'[wp]: setupReplyMaster "\<lambda>s. P (state_refs_of' s)"
+crunches setupReplyMaster
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
-crunch state_hyp_refs_of'[wp]: setupReplyMaster "\<lambda>s. P (state_hyp_refs_of' s)"
+crunches setupReplyMaster
+  for state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: crunch_wps)
-crunch it[wp]: setupReplyMaster "\<lambda>s. P (ksIdleThread s)"
+crunches setupReplyMaster
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: setCTE_it')
-crunch nosch[wp]: setupReplyMaster "\<lambda>s. P (ksSchedulerAction s)"
-crunch irq_node'[wp]: setupReplyMaster "\<lambda>s. P (irq_node' s)"
+crunches setupReplyMaster
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+crunches setupReplyMaster
+  for irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
 
 lemmas setCTE_cteCap_wp_irq[wp] =
     hoare_use_eq_irq_node' [OF setCTE_ksInterruptState setCTE_cteCaps_of]
 
-crunch global_refs'[wp]: setUntypedCapAsFull "\<lambda>s. P (global_refs' s) "
+crunches setUntypedCapAsFull
+  for global_refs'[wp]: "\<lambda>s. P (global_refs' s) "
   (simp: crunch_simps)
 
 
@@ -2978,7 +3002,8 @@ lemma setUntypedCapAsFull_valid_refs'[wp]:
     isCap_simps split:if_splits)
 done
 
-crunch gsMaxObjectSize[wp]: setUntypedCapAsFull "\<lambda>s. P (gsMaxObjectSize s)"
+crunches setUntypedCapAsFull
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
 
 lemma setUntypedCapAsFull_sizes[wp]:
   "\<lbrace>\<lambda>s. valid_cap_sizes' sz (ctes_of s) \<and> cte_wp_at' ((=) srcCTE) src s\<rbrace>
@@ -3029,10 +3054,12 @@ lemma cteInsert_valid_globals [wp]:
   apply simp
   done
 
-crunch arch [wp]: cteInsert "\<lambda>s. P (ksArchState s)"
+crunches cteInsert
+  for arch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
-crunch pde_mappings' [wp]: cteInsert valid_pde_mappings'
+crunches cteInsert
+  for pde_mappings'[wp]: valid_pde_mappings'
   (wp: crunch_wps)
 
 lemma setCTE_ksMachine[wp]:
@@ -3044,7 +3071,8 @@ lemma setCTE_ksMachine[wp]:
   apply (safe, (wp unless_wp | simp)+)
   done
 
-crunch ksMachine[wp]: cteInsert "\<lambda>s. P (ksMachineState s)"
+crunches cteInsert
+  for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
   (wp: crunch_wps)
 
 lemma cteInsert_vms'[wp]:
@@ -3056,7 +3084,8 @@ lemma cteInsert_vms'[wp]:
           intro hoare_drop_imp|assumption)+
   done
 
-crunch pspace_domain_valid[wp]: cteInsert "pspace_domain_valid"
+crunches cteInsert
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: crunch_wps)
 
 lemma setCTE_ct_not_inQ[wp]:
@@ -3069,7 +3098,8 @@ lemma setCTE_ct_not_inQ[wp]:
        apply (clarsimp simp add: obj_at'_def)+
   done
 
-crunch ct_not_inQ[wp]: cteInsert "ct_not_inQ"
+crunches cteInsert
+  for ct_not_inQ[wp]: "ct_not_inQ"
   (simp: crunch_simps wp: hoare_drop_imp)
 
 lemma setCTE_ksCurDomain[wp]:
@@ -3093,13 +3123,16 @@ lemma setCTE_ksDomSchedule[wp]:
   apply wp
   done
 
-crunch ksCurDomain[wp]: cteInsert "\<lambda>s. P (ksCurDomain s)"
+crunches cteInsert
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp:  crunch_wps )
 
-crunch ksIdleThread[wp]: cteInsert "\<lambda>s. P (ksIdleThread s)"
+crunches cteInsert
+  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps)
 
-crunch ksDomSchedule[wp]: cteInsert "\<lambda>s. P (ksDomSchedule s)"
+crunches cteInsert
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps)
 
 lemma setCTE_tcbDomain_inv[wp]:
@@ -3108,7 +3141,8 @@ lemma setCTE_tcbDomain_inv[wp]:
   apply (rule setObject_cte_obj_at_tcb', simp_all)
   done
 
-crunch tcbDomain_inv[wp]: cteInsert "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
+crunches cteInsert
+  for tcbDomain_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
   (wp: crunch_simps hoare_drop_imps)
 
 lemma setCTE_tcbPriority_inv[wp]:
@@ -3117,7 +3151,8 @@ lemma setCTE_tcbPriority_inv[wp]:
   apply (rule setObject_cte_obj_at_tcb', simp_all)
   done
 
-crunch tcbPriority_inv[wp]: cteInsert "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+crunches cteInsert
+  for tcbPriority_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_simps hoare_drop_imps)
 
 
@@ -3131,10 +3166,12 @@ lemma setObject_cte_domIdx:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject t (v::cte) \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
   by (clarsimp simp: valid_def setCTE_def[symmetric] dest!: setCTE_pspace_only)
 
-crunch ksDomScheduleIdx[wp]: cteInsert "\<lambda>s. P (ksDomScheduleIdx s)"
+crunches cteInsert
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: setObject_cte_domIdx hoare_drop_imps)
 
-crunch gsUntypedZeroRanges[wp]: cteInsert "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunches cteInsert
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_cte_inv crunch_wps)
 
 definition
@@ -3317,7 +3354,8 @@ lemma deriveCap_corres:
      apply (clarsimp simp: o_def)+
   done
 
-crunch inv[wp]: deriveCap "P"
+crunches deriveCap
+  for inv[wp]: "P"
   (simp: crunch_simps wp: crunch_wps arch_deriveCap_inv)
 
 lemma valid_NullCap:
@@ -3350,7 +3388,8 @@ lemma cte_wp_at'_conjI:
   "\<lbrakk> cte_wp_at' P p s; cte_wp_at' Q p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>c. P c \<and> Q c) p s"
   by (auto simp add: cte_wp_at'_def)
 
-crunch inv'[wp]: rangeCheck "P"
+crunches rangeCheck
+  for inv'[wp]: "P"
   (simp: crunch_simps)
 
 lemma lookupSlotForCNodeOp_inv'[wp]:
@@ -3724,7 +3763,8 @@ lemma updateMDB_ctes_of_cases:
   apply (case_tac y, simp)
   done
 
-crunch ct[wp]: updateMDB "\<lambda>s. P (ksCurThread s)"
+crunches updateMDB
+  for ct[wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma setCTE_state_bits[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
@@ -3735,10 +3775,14 @@ lemma setCTE_state_bits[wp]:
   apply (wp updateObject_cte_inv | simp)+
   done
 
-crunch ms'[wp]: updateMDB "\<lambda>s. P (ksMachineState s)"
-crunch idle'[wp]: updateMDB "\<lambda>s. P (ksIdleThread s)"
-crunch arch'[wp]: updateMDB "\<lambda>s. P (ksArchState s)"
-crunch int'[wp]: updateMDB "\<lambda>s. P (ksInterruptState s)"
+crunches updateMDB
+  for ms'[wp]: "\<lambda>s. P (ksMachineState s)"
+crunches updateMDB
+  for idle'[wp]: "\<lambda>s. P (ksIdleThread s)"
+crunches updateMDB
+  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
+crunches updateMDB
+  for int'[wp]: "\<lambda>s. P (ksInterruptState s)"
 
 lemma cte_map_eq_subst:
   "\<lbrakk> cte_at p s; cte_at p' s; valid_objs s; pspace_aligned s; pspace_distinct s \<rbrakk>
@@ -3986,10 +4030,12 @@ lemma setupReplyMaster_corres:
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
   done
 
-crunch tcb'[wp]: setupReplyMaster "tcb_at' t"
+crunches setupReplyMaster
+  for tcb'[wp]: "tcb_at' t"
   (wp: crunch_wps)
 
-crunch idle'[wp]: setupReplyMaster "valid_idle'"
+crunches setupReplyMaster
+  for idle'[wp]: "valid_idle'"
 
 (* Levity: added (20090126 19:32:14) *)
 declare stateAssert_wp [wp]
@@ -4052,7 +4098,8 @@ lemma setupReplyMaster_wps[wp]:
                         tcb_cnode_index_def2 cte_map_nat_to_cref cte_level_bits_def)
   done
 
-crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
+crunches setupReplyMaster
+  for no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setupReplyMaster_valid_pspace':
@@ -4108,7 +4155,8 @@ lemma setupReplyMaster_global_refs[wp]:
                  split: capability.split_asm)
   done
 
-crunch valid_arch'[wp]: setupReplyMaster "valid_arch_state'"
+crunches setupReplyMaster
+  for valid_arch'[wp]: "valid_arch_state'"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma ex_nonz_tcb_cte_caps':
@@ -4141,7 +4189,8 @@ lemma ex_nonz_cap_not_global':
   apply (clarsimp simp: ctes_of_valid_cap')
   done
 
-crunch typ_at'[wp]: setupReplyMaster "\<lambda>s. P (typ_at' T p s)"
+crunches setupReplyMaster
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setCTE_irq_handlers':
@@ -6213,9 +6262,12 @@ lemma updateFreeIndex_forward_valid_objs':
   apply (rule usableUntypedRange_mono1, simp_all)
   done
 
-crunch pspace_aligned'[wp]: updateFreeIndex "pspace_aligned'"
-crunch pspace_distinct'[wp]: updateFreeIndex "pspace_distinct'"
-crunch no_0_obj[wp]: updateFreeIndex "no_0_obj'"
+crunches updateFreeIndex
+  for pspace_aligned'[wp]: "pspace_aligned'"
+crunches updateFreeIndex
+  for pspace_distinct'[wp]: "pspace_distinct'"
+crunches updateFreeIndex
+  for no_0_obj[wp]: "no_0_obj'"
 
 lemma updateFreeIndex_forward_valid_mdb':
   "\<lbrace>\<lambda>s. valid_mdb' s \<and> valid_objs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap

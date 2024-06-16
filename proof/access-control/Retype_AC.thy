@@ -716,7 +716,8 @@ lemmas delete_objects_descendants_range_in =
 end
 
 
-crunch arch_state[wp]: delete_objects "\<lambda>s. P (arch_state s)"
+crunches delete_objects
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (ignore: do_machine_op freeMemory)
 
 lemma bits_of_UntypedCap:

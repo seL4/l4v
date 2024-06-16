@@ -24,7 +24,8 @@ lemma get_irq_slot_cte_at[wp]:
   done
 
 
-crunch valid_ioc[wp]: set_irq_state valid_ioc
+crunches set_irq_state
+  for valid_ioc[wp]: valid_ioc
 
 definition valid_irq_masks_but where
   "valid_irq_masks_but irq table masked \<equiv> \<forall> irq'. irq' \<noteq> irq \<longrightarrow> table irq' = IRQInactive \<longrightarrow> masked irq'"

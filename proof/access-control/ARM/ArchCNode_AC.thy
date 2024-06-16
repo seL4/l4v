@@ -318,7 +318,8 @@ lemma pas_refined_arch_state_update_not_asids[simp]:
   \<Longrightarrow> pas_refined aag (arch_state_update f s) = pas_refined aag s"
   by (simp add: pas_refined_def state_objs_to_policy_def)
 
-crunch cdt[wp]: store_pte "\<lambda>s. P (cdt s)"
+crunches store_pte
+  for cdt[wp]: "\<lambda>s. P (cdt s)"
 
 lemma store_pte_state_refs[wp]:
   "store_pte p pte \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
@@ -381,7 +382,8 @@ lemma store_pte_ekheap[wp]:
   apply simp
   done
 
-crunch asid_table_inv [wp]: store_pte "\<lambda>s. P (asid_table s)"
+crunches store_pte
+  for asid_table_inv[wp]: "\<lambda>s. P (asid_table s)"
 
 lemma store_pte_pas_refined[wp]:
   "\<lbrace>pas_refined aag and
@@ -540,7 +542,8 @@ lemma pas_refined_clear_asid:
                elim!: state_asids_to_policy_aux.cases
                split: if_split_asm)
 
-crunch integrity_autarch: set_asid_pool "integrity aag X st"
+crunches set_asid_pool
+  for integrity_autarch: "integrity aag X st"
   (wp: crunch_wps)
 
 end

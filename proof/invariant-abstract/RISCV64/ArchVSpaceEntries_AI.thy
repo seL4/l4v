@@ -40,7 +40,8 @@ lemma set_object_valid_vspace_objs'[wp]:
   apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
   done
 
-crunch valid_vspace_objs'[wp]: cap_insert, cap_swap_for_delete,empty_slot "valid_vspace_objs'"
+crunches cap_insert, cap_swap_for_delete,empty_slot
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps simp: crunch_simps ignore:set_object)
 
 lemma mapM_x_store_pte_updates:
@@ -102,10 +103,12 @@ lemma unmap_page_table_valid_vspace_objs'[wp]:
   apply (simp add: obj_at_def)
   done
 
-crunch valid_vspace_objs'[wp]: set_simple_ko "valid_vspace_objs'"
+crunches set_simple_ko
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps)
 
-crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
+crunches finalise_cap, cap_swap_for_delete, empty_slot
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
 
 lemma preemption_point_valid_vspace_objs'[wp]:
@@ -119,7 +122,8 @@ lemmas cap_revoke_preservation_valid_vspace_objs = cap_revoke_preservation[OF _,
 lemmas rec_del_preservation_valid_vspace_objs = rec_del_preservation[OF _ _ _ _,
                                                     where P=valid_vspace_objs', simplified]
 
-crunch valid_vspace_objs'[wp]: cap_delete, cap_revoke "valid_vspace_objs'"
+crunches cap_delete, cap_revoke
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (rule: cap_revoke_preservation_valid_vspace_objs)
 
 lemma copy_global_mappings_valid_vspace_objs'[wp]:
@@ -138,10 +142,12 @@ lemma non_invalid_in_pte_range:
   \<Longrightarrow> x \<in> pte_range pte x"
   by (case_tac pte,simp_all)
 
-crunch valid_vspace_objs'[wp]: cancel_badged_sends "valid_vspace_objs'"
+crunches cancel_badged_sends
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps filterM_mapM wp: crunch_wps ignore: filterM)
 
-crunch valid_vspace_objs'[wp]: cap_move, cap_insert "valid_vspace_objs'"
+crunches cap_move, cap_insert
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
 
 lemma invoke_cnode_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and valid_cnode_inv i\<rbrace> invoke_cnode i \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
@@ -150,7 +156,8 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-crunch valid_vspace_objs'[wp]: invoke_tcb "valid_vspace_objs'"
+crunches invoke_tcb
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at)
 
@@ -158,11 +165,13 @@ lemma invoke_domain_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   by (simp add: invoke_domain_def | wp)+
 
-crunch valid_vspace_objs'[wp]: set_extra_badge, transfer_caps_loop "valid_vspace_objs'"
+crunches set_extra_badge, transfer_caps_loop
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (rule: transfer_caps_loop_pres)
 
-crunch valid_vspace_objs'[wp]: send_ipc, send_signal,
-    do_reply_transfer, invoke_irq_control, invoke_irq_handler "valid_vspace_objs'"
+crunches send_ipc, send_signal,
+    do_reply_transfer, invoke_irq_control, invoke_irq_handler
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps simp: crunch_simps
          ignore: clearMemory const_on_failure set_object)
 
@@ -185,7 +194,8 @@ lemma detype_valid_vspace[elim!]:
   "valid_vspace_objs' s \<Longrightarrow> valid_vspace_objs' (detype S s)"
   by (auto simp add: detype_def ran_def)
 
-crunch valid_vspace_objs'[wp]: create_cap "valid_vspace_objs'"
+crunches create_cap
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (ignore: clearMemory simp: crunch_simps)
 
 lemma init_arch_objects_valid_vspace:
@@ -200,7 +210,8 @@ lemma delete_objects_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> delete_objects ptr bits \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   by (rule delete_objects_reduct) (wp detype_valid_vspace)
 
-crunch valid_vspace_objs'[wp]: reset_untyped_cap "valid_vspace_objs'"
+crunches reset_untyped_cap
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: mapME_x_inv_wp crunch_wps simp: crunch_simps unless_def)
 
 lemma invoke_untyped_valid_vspace_objs'[wp]:
@@ -230,8 +241,9 @@ lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
   apply (erule (1) is_aligned_pt)
   done
 
-crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
-     perform_asid_control_invocation "valid_vspace_objs'"
+crunches perform_asid_pool_invocation,
+     perform_asid_control_invocation
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (ignore: delete_objects set_object
        wp: hoare_weak_lift_imp crunch_wps
      simp: crunch_simps unless_def)
@@ -292,7 +304,8 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
   apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
   done
 
-crunch valid_vspace_objs'[wp]: handle_fault, reply_from_kernel "valid_vspace_objs'"
+crunches handle_fault, reply_from_kernel
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma handle_invocation_valid_vspace_objs'[wp]:
@@ -306,9 +319,10 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
   done
 
 
-crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervisor_fault,
+crunches activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
-       handle_send, handle_yield, handle_interrupt "valid_vspace_objs'"
+       handle_send, handle_yield, handle_interrupt
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
               OR_choice set_scheduler_action)

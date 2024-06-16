@@ -29,7 +29,8 @@ locale BCorres2_AI =
     "bcorres (arch_switch_to_idle_thread :: 'a state \<Rightarrow> _)
         arch_switch_to_idle_thread"
 
-crunch (bcorres)bcorres[wp]: deleting_irq_handler truncate_state
+crunches deleting_irq_handler
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def swp_def)
 
 lemma update_restart_pc_bcorres[wp]:
@@ -38,7 +39,8 @@ lemma update_restart_pc_bcorres[wp]:
       | clarsimp simp: update_restart_pc_def as_user_def bind_select_f_bind'
                 split: prod.splits)+
 
-crunch (bcorres)bcorres[wp]: suspend, finalise_cap truncate_state
+crunches suspend, finalise_cap
+  for (bcorres) bcorres[wp]: truncate_state
 
 definition all_but_exst where
   "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
@@ -251,11 +253,13 @@ lemma all_but_exst_update[simp]:
   apply (simp add: all_but_exst_def)
   done
 
-crunch all_but_exst[wp]: set_scheduler_action,tcb_sched_action,next_domain,
-                         cap_move_ext "all_but_exst P"
+crunches set_scheduler_action,tcb_sched_action,next_domain,
+                         cap_move_ext
+  for all_but_exst[wp]: "all_but_exst P"
   (simp: Let_def ignore_del: tcb_sched_action cap_move_ext)
 
-crunch (empty_fail) empty_fail[wp]: cap_move_ext
+crunches cap_move_ext
+  for (empty_fail) empty_fail[wp]
   (ignore_del: cap_move_ext)
 
 global_interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
@@ -341,7 +345,8 @@ qed
 
 lemmas cap_revoke_bcorres[wp] = use_sbcorres_underlying[OF cap_revoke_s_bcorres]
 
-crunch (bcorres)bcorres[wp]: "Tcb_A.restart",as_user,option_update_thread truncate_state (simp: gets_the_def ignore: clearMemory check_cap_at gets_the getRegister setRegister getRestartPC setNextPC)
+crunches "Tcb_A.restart",as_user,option_update_thread
+  for (bcorres) bcorres[wp]: truncate_state (simp: gets_the_def ignore: clearMemory check_cap_at gets_the getRegister setRegister getRestartPC setNextPC)
 
 lemma check_cap_at_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (check_cap_at a b f) (check_cap_at a b f')"
   apply (simp add: check_cap_at_def)
@@ -400,7 +405,8 @@ lemma const_on_failure_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (con
   apply wpsimp
   done
 
-crunch (bcorres)bcorres[wp]: lookup_target_slot,lookup_cap,load_cap_transfer truncate_state (simp: gets_the_def ignore: loadWord)
+crunches lookup_target_slot,lookup_cap,load_cap_transfer
+  for (bcorres) bcorres[wp]: truncate_state (simp: gets_the_def ignore: loadWord)
 
 lemma get_receive_slots_bcorres[wp]: "bcorres (get_receive_slots a b) (get_receive_slots a b)"
   by (cases b; wpsimp)
@@ -417,11 +423,13 @@ lemma (in BCorres2_AI) handle_fault_reply_bcorres[wp]:
   apply (wp | simp)+
   done
 
-crunch (bcorres)bcorres[wp]: lookup_source_slot,ensure_empty,lookup_pivot_slot truncate_state
+crunches lookup_source_slot,ensure_empty,lookup_pivot_slot
+  for (bcorres) bcorres[wp]: truncate_state
 
 declare option.case_cong[cong]
 
-crunch (bcorres)bcorres[wp]: range_check truncate_state
+crunches range_check
+  for (bcorres) bcorres[wp]: truncate_state
 
 lemma decode_read_registers_bcorres[wp]: "bcorres (decode_read_registers a (cap.ThreadCap b)) (decode_read_registers a (cap.ThreadCap b))"
   apply (simp add: decode_read_registers_def)

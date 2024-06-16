@@ -817,7 +817,8 @@ lemma set_asid_pool_ekheap[wp]:
   apply (wp get_object_wp | simp)+
   done
 
-crunch integrity_autarch: set_asid_pool "integrity aag X st"
+crunches set_asid_pool
+  for integrity_autarch: "integrity aag X st"
   (wp: crunch_wps)
 
 lemma store_pte_respects:

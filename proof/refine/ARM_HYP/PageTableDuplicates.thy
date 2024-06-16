@@ -28,15 +28,18 @@ lemma set_ntfn_valid_duplicate' [wp]:
       apply simp+
   done
 
-crunch valid_duplicates' [wp]: cteInsert "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches cteInsert
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp: crunch_wps)
 
-crunch valid_duplicates'[wp]: setupReplyMaster "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches setupReplyMaster
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp: crunch_wps simp: crunch_simps)
 
 
 (* we need the following lemma in Syscall_R *)
-crunch inv[wp]: getRegister "P"
+crunches getRegister
+  for inv[wp]: "P"
 
 lemma doMachineOp_ksPSpace_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksPSpace s)\<rbrace> doMachineOp f \<lbrace>\<lambda>ya s. P (ksPSpace s)\<rbrace>"
@@ -77,7 +80,8 @@ crunches threadSet, setBoundNotification
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
-crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches rescheduleRequired
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemma getExtraCptrs_valid_duplicates'[wp]:
@@ -87,16 +91,20 @@ lemma getExtraCptrs_valid_duplicates'[wp]:
   apply (wpc|simp|wp mapM_wp')+
   done
 
-crunch valid_duplicates'[wp]: getExtraCPtrs "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches getExtraCPtrs
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt asUser_inv updateObject_default_inv)
 
-crunch valid_duplicates'[wp]: lookupExtraCaps "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches lookupExtraCaps
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt asUser_inv updateObject_default_inv mapME_wp)
 
-crunch valid_duplicates'[wp]: setExtraBadge "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches setExtraBadge
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt asUser_inv updateObject_default_inv mapME_wp)
 
-crunch valid_duplicates'[wp]: getReceiveSlots "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches getReceiveSlots
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (simp: unless_def getReceiveSlots_def
      wp: setObject_ksInterrupt asUser_inv updateObject_default_inv mapME_wp)
 
@@ -106,26 +114,31 @@ lemma transferCapsToSlots_duplicates'[wp]:
   \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by (rule transferCapsToSlots_pres1; wp)
 
-crunch valid_duplicates'[wp]: transferCaps "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches transferCaps
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (simp: unless_def
      wp: setObject_ksInterrupt asUser_inv updateObject_default_inv mapME_wp)
 
-crunch valid_duplicates'[wp]: sendFaultIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches sendFaultIPC
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (ignore: transferCapsToSlots
        wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at'
      simp: zipWithM_x_mapM ball_conj_distrib)
 
-crunch valid_duplicates'[wp]: handleFault "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches handleFault
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (ignore: transferCapsToSlots
        wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at'
      simp: zipWithM_x_mapM ball_conj_distrib)
 
-crunch valid_duplicates'[wp]: replyFromKernel "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches replyFromKernel
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (ignore: transferCapsToSlots
        wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at'
      simp: zipWithM_x_mapM ball_conj_distrib)
 
-crunch valid_duplicates'[wp]: insertNewCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches insertNewCap
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (ignore: transferCapsToSlots
        wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at'
      simp: zipWithM_x_mapM ball_conj_distrib)
@@ -867,13 +880,15 @@ lemma deleteObjects_valid_duplicates'[wp]:
   apply simp
   done
 
-crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
+crunches resetUntypedCap
+  for arch_inv[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
      wp: hoare_drop_imps unless_wp mapME_x_inv_wp
          preemptionPoint_inv
    ignore: freeMemory)
 
-crunch valid_duplicates[wp]: updateFreeIndex "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches updateFreeIndex
+  for valid_duplicates[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 lemma resetUntypedCap_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s))
@@ -934,8 +949,9 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (auto split: if_split_asm)
   done
 
-crunch valid_duplicates'[wp]:
-  doReplyTransfer "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  doReplyTransfer
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps isFinalCapability_inv
    simp: crunch_simps unless_def)
 
@@ -953,19 +969,23 @@ lemma setVCPU_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
-crunch valid_duplicates'[wp]: vcpuSwitch "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches vcpuSwitch
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps FalseI simp: crunch_simps)
 
-crunch valid_duplicates'[wp]:
-  setVMRoot "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  setVMRoot
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  invalidateASIDEntry "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  invalidateASIDEntry
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  flushSpace "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  flushSpace
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma get_asid_valid_duplicates'[wp]:
@@ -991,12 +1011,14 @@ lemma set_asid_pool_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],clarsimp+)+
   done
 
-crunch valid_duplicates'[wp]:
-  suspend "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  suspend
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def o_def)
 
-crunch valid_duplicates'[wp]:
-  deletingIRQHandler "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  deletingIRQHandler
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma storePDE_no_duplicates':
@@ -1067,8 +1089,9 @@ lemma storePTE_no_duplicates':
   apply fastforce
   done
 
-crunch valid_duplicates'[wp]:
- lookupPTSlot "\<lambda>s. valid_duplicates' (ksPSpace s)"
+crunches
+ lookupPTSlot
+  for valid_duplicates'[wp]: "\<lambda>s. valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma checkMappingPPtr_SmallPage:
@@ -1106,8 +1129,9 @@ lemma mapM_x_mapM_valid:
   apply fastforce
   done
 
-crunch valid_duplicates'[wp]:
- flushPage "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+ flushPage
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma lookupPTSlot_aligned:
@@ -1143,7 +1167,8 @@ lemma doMachineOp_live_vcpu_at_tcb[wp]: "\<lbrakk>\<forall>s xb. (p s) = (p (s\<
     apply clarsimp+
   done
 
-crunch ko_at'_s[wp]: armv_contextSwitch "\<lambda>s. ko_at' t (ksCurThread s) s"
+crunches armv_contextSwitch
+  for ko_at'_s[wp]: "\<lambda>s. ko_at' t (ksCurThread s) s"
 
 lemma flushPage_valid_arch_state'[wp]:
   "\<lbrace>\<lambda>s. valid_arch_state' s \<and> live_vcpu_at_tcb (ksCurThread s) s \<rbrace>
@@ -1160,8 +1185,9 @@ lemma flushPage_valid_arch_state'[wp]:
   apply (clarsimp split: option.splits)
   done
 
-crunch valid_arch_state'[wp]:
- flushTable "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+ flushTable
+  for valid_arch_state'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma unmapPage_valid_duplicates'[wp]:
@@ -1209,12 +1235,14 @@ lemma unmapPage_valid_duplicates'[wp]:
   apply (clarsimp simp:ptBits_def pt_bits_def pageBits_def nondup_obj_def vmsz_aligned'_def)
   done
 
-crunch ko_wp_at'[wp]:
- checkPDNotInASIDMap "\<lambda>s. ko_wp_at' P p s"
+crunches
+ checkPDNotInASIDMap
+  for ko_wp_at'[wp]: "\<lambda>s. ko_wp_at' P p s"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch ko_wp_at'[wp]:
- armv_contextSwitch "\<lambda>s. ko_wp_at' P p s"
+crunches
+ armv_contextSwitch
+  for ko_wp_at'[wp]: "\<lambda>s. ko_wp_at' P p s"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma setVCPU_nondup_obj[wp]:
@@ -1260,8 +1288,9 @@ lemma unmapPageTable_valid_duplicates'[wp]:
   apply simp
   done
 
-crunch valid_duplicates'[wp]:
- deleteASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+ deleteASID
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunches deleteASIDPool, unbindNotification, prepareThreadDelete, vcpuFinalise
@@ -1286,20 +1315,24 @@ lemma finaliseCap_valid_duplicates'[wp]:
             apply (wp|intro conjI|clarsimp split: option.splits)+
   done
 
-crunch valid_duplicates'[wp]:
-  capSwapForDelete "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  capSwapForDelete
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  cteMove "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  cteMove
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  cancelBadgedSends "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  cancelBadgedSends
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  invalidateTLBByASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  invalidateTLBByASID
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 declare withoutPreemption_lift [wp del]
@@ -1362,24 +1395,29 @@ lemma mapM_x_storePTE_invalid_whole:
   apply (simp add: mask_def field_simps vspace_bits_defs is_aligned_neg_mask_eq')
   done
 
-crunch valid_objs'[wp]:
-  invalidateTLBByASID valid_objs'
+crunches
+  invalidateTLBByASID
+  for valid_objs'[wp]: valid_objs'
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch pspace_aligned'[wp]:
-  invalidateTLBByASID pspace_aligned'
+crunches
+  invalidateTLBByASID
+  for pspace_aligned'[wp]: pspace_aligned'
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  isFinalCapability "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  isFinalCapability
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
-crunch valid_cap'[wp]:
-  isFinalCapability "\<lambda>s. valid_cap' cap s"
+crunches
+  isFinalCapability
+  for valid_cap'[wp]: "\<lambda>s. valid_cap' cap s"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  sendSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  sendSignal
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 lemma invokeIRQControl_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> performIRQControl a
@@ -1850,7 +1888,8 @@ lemma placeASIDPool_valid_duplicates'[wp]:
   apply assumption
   done
 
-crunch valid_duplicates'[wp]: performARMVCPUInvocation "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches performARMVCPUInvocation
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps)
 
 lemma performArchInvocation_valid_duplicates':
@@ -1920,7 +1959,8 @@ crunches restart, setPriority, setMCPriority
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
 
-crunch inv [wp]: getThreadBufferSlot P
+crunches getThreadBufferSlot
+  for inv[wp]: P
   (wp: crunch_wps)
 
 lemma tc_valid_duplicates':
@@ -2039,12 +2079,14 @@ lemma hi_valid_duplicates'[wp]:
                         dest: st_tcb_at_idle_thread')+
   done
 
-crunch valid_duplicates' [wp]:
-  activateIdleThread "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches
+  activateIdleThread
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: setNextPC threadSet simp:crunch_simps)
 
-crunch valid_duplicates' [wp]:
-  tcbSchedAppend "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches
+  tcbSchedAppend
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (simp:crunch_simps wp:unless_wp)
 
 lemma timerTick_valid_duplicates'[wp]:
@@ -2073,8 +2115,9 @@ lemma handleInterrupt_valid_duplicates'[wp]:
   done
 
 
-crunch valid_duplicates' [wp]:
-  schedule "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches
+  schedule
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: setNextPC clearExMonitor threadSet
      simp: crunch_simps wp:findM_inv hoare_drop_imps)
 
@@ -2091,27 +2134,33 @@ lemma activate_sch_valid_duplicates'[wp]:
                  elim!: pred_tcb'_weakenE)
   done
 
-crunch valid_duplicates'[wp]:
-  receiveSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  receiveSignal
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
-crunch valid_duplicates'[wp]:
-  receiveIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  receiveIPC
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: getNotification_wp gbn_wp' crunch_wps)
 
-crunch valid_duplicates'[wp]:
-  deleteCallerCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  deleteCallerCap
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps)
 
-crunch valid_duplicates'[wp]:
-  handleReply "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  handleReply
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps)
 
-crunch valid_duplicates'[wp]:
-  handleYield "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  handleYield
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
  (ignore: threadGet simp:crunch_simps wp:unless_wp)
 
-crunch valid_duplicates'[wp]:
-  "VSpace_H.handleVMFault", handleHypervisorFault "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches
+  "VSpace_H.handleVMFault", handleHypervisorFault
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
  (ignore: getFAR getDFSR getIFSR simp:crunch_simps)
 
 lemma hs_valid_duplicates'[wp]:

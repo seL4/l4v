@@ -14,12 +14,14 @@ named_theorems Tcb_IF_assms
 
 section "arm global pd"
 
-crunch arm_global_pd[wp]: set_irq_state, suspend "\<lambda>s. P (arm_global_pd (arch_state s))"
+crunches set_irq_state, suspend
+  for arm_global_pd[wp]: "\<lambda>s. P (arm_global_pd (arch_state s))"
   (wp: mapM_x_wp select_inv hoare_vcg_if_lift2 hoare_drop_imps dxo_wp_weak
    simp: unless_def
    ignore: empty_slot_ext reschedule_required)
 
-crunch arm_global_pd[wp]: as_user, restart "\<lambda>s. P (arm_global_pd (arch_state s))" (wp: dxo_wp_weak)
+crunches as_user, restart
+  for arm_global_pd[wp]: "\<lambda>s. P (arm_global_pd (arch_state s))" (wp: dxo_wp_weak)
 
 lemma cap_ne_global_pd:
   "\<lbrakk> ex_nonz_cap_to word s; valid_global_refs s \<rbrakk>

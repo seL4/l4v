@@ -358,7 +358,8 @@ lemma mapM_x_swp_store_kernel_base_globals_equiv:
 
 declare arch_get_sanitise_register_info_def[simp]
 
-crunch globals_equiv[Finalise_IF_assms, wp]: prepare_thread_delete "globals_equiv st"
+crunches prepare_thread_delete
+  for globals_equiv[Finalise_IF_assms, wp]: "globals_equiv st"
   (wp: dxo_wp_weak)
 
 lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:

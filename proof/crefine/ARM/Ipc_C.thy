@@ -27,9 +27,11 @@ lemma replyFromKernel_success_empty:
   unfolding replyFromKernel_def replyFromKernel_success_empty_def
   by (simp add: setMRs_Nil submonad_asUser.fn_stateAssert)
 
-crunch sch_act_wf: handleFaultReply "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+crunches handleFaultReply
+  for sch_act_wf: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 
-crunch valid_ipc_buffer_ptr' [wp]: copyMRs "valid_ipc_buffer_ptr' p"
+crunches copyMRs
+  for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' p"
   (rule: hoare_valid_ipc_buffer_ptr_typ_at' wp: crunch_wps)
 
 lemma threadSet_obj_at'_nontcb:
@@ -169,7 +171,8 @@ lemma asUser_comm:
    apply (rule efa efb)+
   done
 
-crunch inv[wp]: getSanitiseRegisterInfo P
+crunches getSanitiseRegisterInfo
+  for inv[wp]: P
 
 lemma empty_fail_getSanitiseRegisterInfo[wp, simp]:
   "empty_fail (getSanitiseRegisterInfo t)"
@@ -881,8 +884,10 @@ end
 
 (* FIXME: move *)
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch valid_pspace'[wp]: setMR "valid_pspace'"
-crunch valid_ipc_buffer_ptr'[wp]: setMR "valid_ipc_buffer_ptr' p"
+crunches setMR
+  for valid_pspace'[wp]: "valid_pspace'"
+crunches setMR
+  for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' p"
 end
 
 context kernel_m begin
@@ -3807,13 +3812,13 @@ lemma handleFaultReply_ccorres [corres]:
 context
 notes if_cong[cong]
 begin
-crunch tcbFault: emptySlot, tcbSchedEnqueue, rescheduleRequired
-          "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
+crunches emptySlot, tcbSchedEnqueue, rescheduleRequired
+  for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps
     simp: crunch_simps unless_def)
 
-crunch tcbFault: setThreadState, cancelAllIPC, cancelAllSignals
-          "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
+crunches setThreadState, cancelAllIPC, cancelAllSignals
+  for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps)
 end
 
@@ -3825,7 +3830,8 @@ lemma sbn_tcbFault:
   apply (wp threadSet_obj_at' | simp cong: if_cong)+
   done
 
-crunch tcbFault: unbindNotification, unbindMaybeNotification "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
+crunches unbindNotification, unbindMaybeNotification
+  for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (ignore: threadSet wp: sbn_tcbFault)
 
 (* FIXME: move *)
@@ -3915,7 +3921,8 @@ lemma doIPCTransfer_reply_or_replyslot:
   apply simp
   done
 
-crunch ksCurDomain[wp]: handleFaultReply "\<lambda>s. P (ksCurDomain s)"
+crunches handleFaultReply
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
 lemma doReplyTransfer_ccorres [corres]:
   "ccorres dc xfdc

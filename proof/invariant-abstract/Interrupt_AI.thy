@@ -116,7 +116,8 @@ locale Interrupt_AI =
         set_thread_state t st
       \<lbrace>\<lambda>rv. arch_irq_control_inv_valid i\<rbrace>"
 
-crunch inv[wp]: decode_irq_handler_invocation "P"
+crunches decode_irq_handler_invocation
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 lemma valid_irq_handlersD:
@@ -139,7 +140,8 @@ lemma decode_irq_handler_valid[wp]:
   apply (fastforce dest: valid_irq_handlersD simp: invs_def valid_state_def)
   done
 
-crunch inv[wp]: is_irq_active "P"
+crunches is_irq_active
+  for inv[wp]: "P"
 
 lemma mod_le:
   "\<lbrakk>b < c;b dvd c\<rbrakk>  \<Longrightarrow> (a mod b \<le> a mod (c::nat))"
@@ -207,18 +209,23 @@ lemma get_irq_slot_ex_cte:
   apply clarsimp
   done
 
-crunch pspace_aligned[wp]: set_irq_state "pspace_aligned"
+crunches set_irq_state
+  for pspace_aligned[wp]: "pspace_aligned"
 
-crunch pspace_distinct[wp]: set_irq_state "pspace_distinct"
+crunches set_irq_state
+  for pspace_distinct[wp]: "pspace_distinct"
 
 lemma valid_mdb_interrupts[simp]:
   "valid_mdb (interrupt_states_update f s) = valid_mdb s"
   by (simp add: valid_mdb_def mdb_cte_at_def)
 
-crunch valid_mdb[wp]: set_irq_state "valid_mdb"
+crunches set_irq_state
+  for valid_mdb[wp]: "valid_mdb"
 
-crunch mdb_cte_wp_at[wp]: set_irq_state "\<lambda>s. cte_wp_at (P (cdt s)) p s"
-crunch real_cte_at[wp]: set_irq_state "real_cte_at p"
+crunches set_irq_state
+  for mdb_cte_wp_at[wp]: "\<lambda>s. cte_wp_at (P (cdt s)) p s"
+crunches set_irq_state
+  for real_cte_at[wp]: "real_cte_at p"
 
 lemmas set_irq_state_cte_cap_to[wp]
     = ex_cte_cap_to_pres [OF set_irq_state_mdb_cte_wp_at set_irq_state_irq_node]
@@ -241,7 +248,8 @@ lemmas (in Interrupt_AI)
                                                              , simplified
                                                         ]
 
-crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
+crunches update_waiting_ntfn, cancel_signal, blocked_cancel_ipc
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
 
 lemma cancel_ipc_noreply_interrupt_states:
   "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply) t s \<and> P (interrupt_states s) \<rbrace> cancel_ipc t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"

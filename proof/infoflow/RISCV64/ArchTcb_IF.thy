@@ -12,12 +12,14 @@ context Arch begin global_naming RISCV64
 
 named_theorems Tcb_IF_assms
 
-crunch riscv_global_pt[wp]: set_irq_state, suspend "\<lambda>s. P (riscv_global_pt (arch_state s))"
+crunches set_irq_state, suspend
+  for riscv_global_pt[wp]: "\<lambda>s. P (riscv_global_pt (arch_state s))"
   (wp: mapM_x_wp select_inv hoare_vcg_if_lift2 hoare_drop_imps dxo_wp_weak
    simp: unless_def
    ignore: empty_slot_ext reschedule_required)
 
-crunch riscv_global_pt[wp]: as_user, restart "\<lambda>s. P (riscv_global_pt (arch_state s))" (wp: dxo_wp_weak)
+crunches as_user, restart
+  for riscv_global_pt[wp]: "\<lambda>s. P (riscv_global_pt (arch_state s))" (wp: dxo_wp_weak)
 
 lemma cap_ne_global_pt:
   "\<lbrakk> ex_nonz_cap_to word s; valid_global_refs s; valid_global_arch_objs s \<rbrakk>

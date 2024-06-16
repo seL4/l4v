@@ -98,7 +98,8 @@ lemma assert_get_tcb_sp:
   apply (clarsimp simp: valid_obj_def)
   done
 
-crunch inv[wp]: get_cap "P"
+crunches get_cap
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 
@@ -155,10 +156,12 @@ proof (induct slot rule: resolve_address_bits'.induct)
   done
 qed
 
-crunch inv [wp]: lookup_slot_for_thread P
+crunches lookup_slot_for_thread
+  for inv[wp]: P
 
 
-crunch inv [wp]: lookup_cap P
+crunches lookup_cap
+  for inv[wp]: P
 
 
 lemma cte_at_tcb_update:
@@ -642,7 +645,8 @@ lemma set_cap_cap_to:
   done
 
 
-crunch irq_node[wp]: set_cap "\<lambda>s. P (interrupt_irq_node s)"
+crunches set_cap
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps)
 
 
@@ -719,7 +723,8 @@ lemma update_cap_ifunsafe:
   done
 
 
-crunch it[wp]: set_cap "\<lambda>s. P (idle_thread s)"
+crunches set_cap
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 
@@ -1324,7 +1329,8 @@ lemma set_cap_reply_masters [wp]:
   apply clarsimp
   done
 
-crunch interrupt_states[wp]: cap_insert "\<lambda>s. P (interrupt_states s)"
+crunches cap_insert
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_cap_irq_handlers:
@@ -1656,7 +1662,8 @@ lemma descendants_inc_minor:
   done
 
 
-crunch cte_wp_at: set_cdt "cte_wp_at P p"
+crunches set_cdt
+  for cte_wp_at: "cte_wp_at P p"
 
 
 lemma set_cdt_cdt_ct_ms_rvk[wp]:
@@ -1707,7 +1714,8 @@ lemma cur_tcb_more_update[iff]:
   "cur_tcb (trans_state f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
+crunches cap_insert
+  for cur[wp]: cur_tcb (wp: hoare_drop_imps)
 
 
 lemma update_cdt_ifunsafe[wp]:
@@ -1882,10 +1890,12 @@ lemma set_cdt_caps_of_state:
   done
 
 
-crunch cos_ioc: set_cdt "\<lambda>s. P (caps_of_state s) (is_original_cap s)"
+crunches set_cdt
+  for cos_ioc: "\<lambda>s. P (caps_of_state s) (is_original_cap s)"
 
 
-crunch irq_node[wp]: set_cdt "\<lambda>s. P (interrupt_irq_node s)"
+crunches set_cdt
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 
 lemmas set_cdt_caps_irq_node[wp]
@@ -1940,20 +1950,25 @@ lemma state_refs_of_revokable[simp]:
   "state_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_refs_of s"
   by (simp add: state_refs_of_def)
 
-crunch state_refs_of[wp]: cap_insert "\<lambda>s. P (state_refs_of s)"
+crunches cap_insert
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps)
 
-crunch state_hyp_refs_of[wp]: set_untyped_cap_as_full "\<lambda>s. P (state_hyp_refs_of s)"
+crunches set_untyped_cap_as_full
+  for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps)
 
-crunch state_hyp_refs_of[wp]: cap_insert "\<lambda>s. P (state_hyp_refs_of s)"
+crunches cap_insert
+  for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps)
 
-crunch aligned[wp]: cap_insert pspace_aligned
+crunches cap_insert
+  for aligned[wp]: pspace_aligned
   (wp: hoare_drop_imps)
 
 
-crunch "distinct" [wp]: cap_insert pspace_distinct
+crunches cap_insert
+  for "distinct"[wp]: pspace_distinct
   (wp: hoare_drop_imps)
 
 
@@ -2037,11 +2052,13 @@ lemma cap_insert_objs [wp]:
     | simp split del: if_split)+
   done
 
-crunch pred_tcb_at[wp]: cap_insert, set_cdt "pred_tcb_at proj P t"
+crunches cap_insert, set_cdt
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: hoare_drop_imps)
 
 
-crunch ct [wp]: cap_insert "\<lambda>s. P (cur_thread s)"
+crunches cap_insert
+  for ct[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 

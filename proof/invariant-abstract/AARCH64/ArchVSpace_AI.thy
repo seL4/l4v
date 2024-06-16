@@ -35,7 +35,8 @@ sublocale
                         arch_kernel_obj.splits)+
   done
 
-crunch inv [wp]: get_vcpu "P"
+crunches get_vcpu
+  for inv[wp]: "P"
 
 lemma set_vcpu_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_vcpu t vcpu \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
@@ -74,7 +75,8 @@ lemma pspace_in_kernel_window_set_vcpu[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_.pspace_in_kernel_window\<rbrace>"
   by (rule pspace_in_kernel_window_atyp_lift, wp+)
 
-crunch pspace_in_kernel_window[wp]: vcpu_switch "pspace_in_kernel_window"
+crunches vcpu_switch
+  for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (simp: Metis.not_atomize crunch_simps a_type_def when_def
      wp: crunch_wps ignore: do_machine_op)
 
@@ -85,7 +87,8 @@ lemma find_vspace_for_asid_wp[wp]:
   unfolding find_vspace_for_asid_def
   by wpsimp
 
-crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
+crunches perform_page_invocation
+  for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma asid_word_bits [simp]: "asid_bits < word_bits"
@@ -983,7 +986,8 @@ lemma set_vm_root_invs[wp]:
   unfolding set_vm_root_def
   by (wpsimp simp: if_distribR wp: get_cap_wp)
 
-crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
+crunches set_vm_root
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
@@ -1860,10 +1864,12 @@ lemma perform_page_table_invocation_invs[wp]:
   "\<lbrace>invs and valid_pti pti\<rbrace> perform_page_table_invocation pti \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding perform_page_table_invocation_def by (cases pti; wpsimp)
 
-crunch cte_wp_at [wp]: unmap_page "\<lambda>s. P (cte_wp_at P' p s)"
+crunches unmap_page
+  for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch typ_at [wp]: unmap_page "\<lambda>s. P (typ_at T p s)"
+crunches unmap_page
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas unmap_page_typ_ats [wp] = abs_typ_at_lifts [OF unmap_page_typ_at]
@@ -2652,20 +2658,24 @@ lemma set_vcpu_cap_refs_in_kernel_window[wp]:
   apply wp+
   done
 
-crunch valid_irq_states[wp]: set_vcpu valid_irq_states
+crunches set_vcpu
+  for valid_irq_states[wp]: valid_irq_states
   (wp: crunch_wps simp: crunch_simps)
 
-crunch interrupt_state[wp]: set_vcpu "\<lambda>s. P (interrupt_states s)"
+crunches set_vcpu
+  for interrupt_state[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas set_vcpu_valid_irq_handlers[wp] = valid_irq_handlers_lift[OF set_vcpu.caps set_vcpu_interrupt_state]
 
-crunch interrupt_irq_node[wp]: set_vcpu "\<lambda>s. P (interrupt_irq_node s)"
+crunches set_vcpu
+  for interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas set_vcpu_valid_irq_node[wp] = valid_irq_node_typ[OF set_vcpu_typ_at set_vcpu_interrupt_irq_node]
 
-crunch idle_thread[wp]: set_vcpu "\<lambda>s. P (idle_thread s)"
+crunches set_vcpu
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_vcpu_valid_global_refs[wp]:
@@ -3076,7 +3086,8 @@ lemma set_vcpu_cte_wp_at[wp]:
   by (clarsimp elim!: rsubst[where P=P]
              simp: cte_wp_at_after_update)
 
-crunch cte_wp_at[wp]: vcpu_disable, vcpu_enable, vcpu_save, vcpu_restore "\<lambda>s. P (cte_wp_at P' p s)"
+crunches vcpu_disable, vcpu_enable, vcpu_save, vcpu_restore
+  for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma vcpu_switch_cte_wp_at[wp]:
@@ -3086,7 +3097,8 @@ lemma vcpu_switch_cte_wp_at[wp]:
   apply (wp | wpc | clarsimp)+
   done
 
-crunch global_refs_inv[wp]: vcpu_enable, vcpu_disable, vcpu_restore, vcpu_save "\<lambda>s. P (global_refs s)"
+crunches vcpu_enable, vcpu_disable, vcpu_restore, vcpu_save
+  for global_refs_inv[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps simp: crunch_simps global_refs_arch_update_eq)
 
 lemma modify_valid_lift: "\<lbrakk> \<And>s. P s = P (f s) ; \<lbrace>P\<rbrace> f' \<lbrace> \<lambda>_ s. P s\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f' \<lbrace> \<lambda>rv s. P (f s)\<rbrace>"

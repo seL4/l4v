@@ -20,35 +20,39 @@ crunches
   and domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
+crunches arch_finalise_cap
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
+crunches
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
   prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion,
   arch_invoke_irq_handler
-  "\<lambda>s. P (domain_list s)"
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap, arch_get_sanitise_register_info "\<lambda>s. P (domain_time s)"
+crunches arch_finalise_cap, arch_get_sanitise_register_info
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
+crunches
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault,
   prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion,
   arch_invoke_irq_handler
-  "\<lambda>s. P (domain_time s)"
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: make_arch_fault_msg "\<lambda>s. P (domain_list s)"
+crunches make_arch_fault_msg
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: make_arch_fault_msg "\<lambda>s. P (domain_time s)"
+crunches make_arch_fault_msg
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
 end
@@ -61,24 +65,30 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
 
 context Arch begin global_naming ARM_HYP
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: handle_hypervisor_fault "\<lambda>s. P (domain_list s)"
+crunches handle_hypervisor_fault
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
-  handle_reserved_irq, arch_mask_irq_signal "\<lambda>s. P (domain_list s)"
+crunches
+  handle_reserved_irq, arch_mask_irq_signal
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: handle_hypervisor_fault "\<lambda>s. P (domain_time s)"
+crunches handle_hypervisor_fault
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
-  handle_reserved_irq, arch_mask_irq_signal "\<lambda>s. P (domain_time s)"
+crunches
+  handle_reserved_irq, arch_mask_irq_signal
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
+crunches arch_perform_invocation
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_time s)"
+crunches arch_perform_invocation
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps check_cap_inv)
 
 lemma vgic_maintenance_valid_domain_time:
