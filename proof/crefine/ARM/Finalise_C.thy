@@ -1098,7 +1098,8 @@ lemma offset_xf_for_sequence:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch pde_mappings'[wp]: invalidateHWASIDEntry "valid_pde_mappings'"
+crunches invalidateHWASIDEntry
+  for pde_mappings'[wp]: "valid_pde_mappings'"
 end
 
 context kernel_m begin
@@ -1140,12 +1141,18 @@ lemma invalidateASIDEntry_ccorres:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch obj_at'[wp]: invalidateASIDEntry "obj_at' P p"
-crunch obj_at'[wp]: flushSpace "obj_at' P p"
-crunch valid_objs'[wp]: invalidateASIDEntry "valid_objs'"
-crunch valid_objs'[wp]: flushSpace "valid_objs'"
-crunch pde_mappings'[wp]: invalidateASIDEntry "valid_pde_mappings'"
-crunch pde_mappings'[wp]: flushSpace "valid_pde_mappings'"
+crunches invalidateASIDEntry
+  for obj_at'[wp]: "obj_at' P p"
+crunches flushSpace
+  for obj_at'[wp]: "obj_at' P p"
+crunches invalidateASIDEntry
+  for valid_objs'[wp]: "valid_objs'"
+crunches flushSpace
+  for valid_objs'[wp]: "valid_objs'"
+crunches invalidateASIDEntry
+  for pde_mappings'[wp]: "valid_pde_mappings'"
+crunches flushSpace
+  for pde_mappings'[wp]: "valid_pde_mappings'"
 end
 
 context kernel_m begin

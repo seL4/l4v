@@ -205,9 +205,11 @@ lemma cancel_all_ipc_respects [wp]:
 end
 
 
-crunch pas_refined[wp]: blocked_cancel_ipc, cancel_signal "pas_refined aag"
+crunches blocked_cancel_ipc, cancel_signal
+  for pas_refined[wp]: "pas_refined aag"
 
-crunch tcb_domain_map_wellformed[wp]: reschedule_required "tcb_domain_map_wellformed aag"
+crunches reschedule_required
+  for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
 
 (* FIXME move to AInvs *)
 lemma tcb_sched_action_ekheap[wp]:
@@ -236,10 +238,12 @@ lemma sbn_thread_st_auth[wp]:
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
-crunch valid_mdb[wp]: fast_finalise "valid_mdb :: det_ext state \<Rightarrow> bool"
+crunches fast_finalise
+  for valid_mdb[wp]: "valid_mdb :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_objs[wp]: fast_finalise "valid_objs :: det_ext state \<Rightarrow> bool"
+crunches fast_finalise
+  for valid_objs[wp]: "valid_objs :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
 
@@ -370,7 +374,8 @@ crunches suspend
   and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
   (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps)
 
-crunch pas_refined[wp]: suspend "pas_refined aag"
+crunches suspend
+  for pas_refined[wp]: "pas_refined aag"
 
 lemma finalise_cap_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and valid_cap cap and K (pas_cap_cur_auth aag cap)\<rbrace>

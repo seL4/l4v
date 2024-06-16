@@ -19,7 +19,8 @@ lemma make_fault_message_inv[Ipc_AC_assms, wp]:
 
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
-crunch integrity_asids[Ipc_AC_assms, wp]: cap_insert_ext "integrity_asids aag subjects x a st"
+crunches cap_insert_ext
+  for integrity_asids[Ipc_AC_assms, wp]: "integrity_asids aag subjects x a st"
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
@@ -100,7 +101,8 @@ crunches set_extra_badge
   for respects_in_ipc[Ipc_AC_assms, wp]: "integrity_tcb_in_ipc aag X receiver epptr TRContext st"
   (wp: store_word_offs_respects_in_ipc)
 
-crunch pas_refined[Ipc_AC_assms, wp]: handle_arch_fault_reply "pas_refined aag"
+crunches handle_arch_fault_reply
+  for pas_refined[Ipc_AC_assms, wp]: "pas_refined aag"
 
 lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and

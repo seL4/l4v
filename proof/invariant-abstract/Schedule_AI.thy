@@ -35,7 +35,8 @@ requalify_facts
   no_irq_storeWord
 end
 
-crunch inv[wp]: schedule_switch_thread_fastfail P
+crunches schedule_switch_thread_fastfail
+  for inv[wp]: P
 
 lemma findM_inv'':
   assumes p: "suffix xs xs'"

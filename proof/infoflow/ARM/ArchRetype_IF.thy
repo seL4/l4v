@@ -97,11 +97,13 @@ lemma set_pd_reads_respects_g:
   by (fastforce intro: equiv_valid_guard_imp[OF reads_respects_g] doesnt_touch_globalsI
                        set_pd_reads_respects set_pd_globals_equiv)
 
-crunch irq_state[Retype_IF_assms, wp]: clearMemory "\<lambda>s. P (irq_state s)"
+crunches clearMemory
+  for irq_state[Retype_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
   (wp: crunch_wps simp: crunch_simps storeWord_def cleanByVA_PoU_def
    ignore_del: clearMemory cleanL2Range dsb cleanByVA)
 
-crunch irq_state[Retype_IF_assms, wp]: freeMemory "\<lambda>s. P (irq_state s)"
+crunches freeMemory
+  for irq_state[Retype_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
   (wp: crunch_wps simp: crunch_simps storeWord_def)
 
 lemma get_object_arm_global_pd_revg:

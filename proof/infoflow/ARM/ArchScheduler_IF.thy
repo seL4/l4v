@@ -114,7 +114,8 @@ lemma arch_scheduler_affects_equiv_ekheap_update[Scheduler_IF_assms, simp]:
   "arch_scheduler_affects_equiv s (ekheap_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
-crunch irq_state[Scheduler_IF_assms, wp]: ackInterrupt "\<lambda>s. P (irq_state s)"
+crunches ackInterrupt
+  for irq_state[Scheduler_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
 
 lemma thread_set_context_globals_equiv[Scheduler_IF_assms]:
   "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>
@@ -209,7 +210,8 @@ lemma dmo_mol_exclusive_state[wp]:
   by (wp mol_exclusive_state dmo_wp
       | simp add: split_def dmo_bind_valid writeTTBR0_def isb_def dsb_def)+
 
-crunch exclusive_state[wp]: set_vm_root "\<lambda>s. P (exclusive_state (machine_state s))"
+crunches set_vm_root
+  for exclusive_state[wp]: "\<lambda>s. P (exclusive_state (machine_state s))"
   (ignore: do_machine_op
      simp: invalidateLocalTLB_ASID_def setHardwareASID_def set_current_pd_def dsb_def isb_def
            writeTTBR0_def dmo_bind_valid crunch_simps)

@@ -572,7 +572,8 @@ lemma tcbSchedEnqueue_invs'[wp]:
               simp: cteCaps_of_def o_def)
   done
 
-crunch ksMachine[wp]: tcbSchedAppend "\<lambda>s. P (ksMachineState s)"
+crunches tcbSchedAppend
+  for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
   (simp: unless_def)
 
 lemma tcbSchedAppend_vms'[wp]:
@@ -581,16 +582,20 @@ lemma tcbSchedAppend_vms'[wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-crunch pspace_domain_valid[wp]: tcbSchedAppend "pspace_domain_valid"
+crunches tcbSchedAppend
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
   (simp: unless_def)
 
-crunch ksCurDomain[wp]: tcbSchedAppend "\<lambda>s. P (ksCurDomain s)"
+crunches tcbSchedAppend
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 (simp: unless_def)
 
-crunch ksIdleThread[wp]: tcbSchedAppend "\<lambda>s. P (ksIdleThread s)"
+crunches tcbSchedAppend
+  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
 (simp: unless_def)
 
-crunch ksDomSchedule[wp]: tcbSchedAppend "\<lambda>s. P (ksDomSchedule s)"
+crunches tcbSchedAppend
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
 (simp: unless_def)
 
 lemma tcbQueueAppend_tcbPriority_obj_at'[wp]:
@@ -621,7 +626,8 @@ lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
    apply wp+
   done
 
-crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
+crunches tcbSchedAppend
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   (simp: unless_def)
 
 crunches tcbSchedAppend, tcbSchedDequeue
@@ -707,7 +713,8 @@ lemma tcb_at'_has_tcbDomain:
  "tcb_at' t s \<Longrightarrow> \<exists>p. obj_at' (\<lambda>tcb. tcbDomain tcb = p) t s"
  by (clarsimp simp add: obj_at'_def)
 
-crunch ksMachine[wp]: tcbSchedDequeue "\<lambda>s. P (ksMachineState s)"
+crunches tcbSchedDequeue
+  for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
   (simp: unless_def)
 
 lemma tcbSchedDequeue_vms'[wp]:
@@ -716,15 +723,19 @@ lemma tcbSchedDequeue_vms'[wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-crunch pspace_domain_valid[wp]: tcbSchedDequeue "pspace_domain_valid"
+crunches tcbSchedDequeue
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
 
-crunch ksCurDomain[wp]: tcbSchedDequeue "\<lambda>s. P (ksCurDomain s)"
+crunches tcbSchedDequeue
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 (simp: unless_def)
 
-crunch ksIdleThread[wp]: tcbSchedDequeue "\<lambda>s. P (ksIdleThread s)"
+crunches tcbSchedDequeue
+  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
 (simp: unless_def)
 
-crunch ksDomSchedule[wp]: tcbSchedDequeue "\<lambda>s. P (ksDomSchedule s)"
+crunches tcbSchedDequeue
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
 (simp: unless_def)
 
 lemma tcbSchedDequeue_tcb_in_cur_domain'[wp]:
@@ -735,7 +746,8 @@ lemma tcbSchedDequeue_tcb_in_cur_domain'[wp]:
   apply (wpsimp wp: hoare_when_weak_wp getObject_tcb_wp threadGet_wp)
   done
 
-crunch ksDomScheduleIdx[wp]: tcbSchedDequeue "\<lambda>s. P (ksDomScheduleIdx s)"
+crunches tcbSchedDequeue
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   (simp: unless_def)
 
 lemma tcbSchedDequeue_valid_mdb'[wp]:
@@ -1050,7 +1062,8 @@ lemma Arch_switchToThread_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding AARCH64_H.switchToThread_def by (wpsimp wp: getObject_tcb_hyp_sym_refs)
 
-crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
+crunches "Arch.switchToThread"
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (simp: crunch_simps wp: crunch_wps getASID_wp)
 
 crunches Arch.switchToThread
@@ -1079,13 +1092,16 @@ lemma asUser_obj_at[wp]:
 
 declare doMachineOp_obj_at[wp]
 
-crunch valid_arch_state'[wp]: asUser "valid_arch_state'"
+crunches asUser
+  for valid_arch_state'[wp]: "valid_arch_state'"
 (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_irq_states'[wp]: asUser "valid_irq_states'"
+crunches asUser
+  for valid_irq_states'[wp]: "valid_irq_states'"
 (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_machine_state'[wp]: asUser "valid_machine_state'"
+crunches asUser
+  for valid_machine_state'[wp]: "valid_machine_state'"
 (wp: crunch_wps simp: crunch_simps)
 
 lemma asUser_valid_irq_node'[wp]:
@@ -1095,7 +1111,8 @@ lemma asUser_valid_irq_node'[wp]:
    apply (wpsimp wp: crunch_wps)+
   done
 
-crunch irq_masked'_helper: asUser "\<lambda>s. P (intStateIRQTable (ksInterruptState s))"
+crunches asUser
+  for irq_masked'_helper: "\<lambda>s. P (intStateIRQTable (ksInterruptState s))"
 (wp: crunch_wps simp: crunch_simps)
 
 lemma asUser_irq_masked'[wp]:
@@ -1124,16 +1141,20 @@ lemma asUser_ct_not_inQ[wp]:
   apply (rule conjI; clarsimp; blast)
   done
 
-crunch pspace_domain_valid[wp]: asUser "pspace_domain_valid"
+crunches asUser
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
 (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_dom_schedule'[wp]: asUser "valid_dom_schedule'"
+crunches asUser
+  for valid_dom_schedule'[wp]: "valid_dom_schedule'"
 (wp: crunch_wps simp: crunch_simps)
 
-crunch gsUntypedZeroRanges[wp]: asUser "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunches asUser
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps simp: unless_def)
 
-crunch ctes_of[wp]: asUser "\<lambda>s. P (ctes_of s)"
+crunches asUser
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: unless_def)
 
 lemmas asUser_cteCaps_of[wp] = cteCaps_of_ctes_of_lift[OF asUser_ctes_of]
@@ -1274,10 +1295,12 @@ crunches updateASIDPoolEntry
   for cap_to'[wp]: "ex_nonz_cap_to' p"
   (wp: crunch_wps ex_nonz_cap_to_pres' getASID_wp)
 
-crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
+crunches "Arch.switchToThread"
+  for cap_to'[wp]: "ex_nonz_cap_to' p"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch cap_to'[wp]: switchToThread "ex_nonz_cap_to' p"
+crunches switchToThread
+  for cap_to'[wp]: "ex_nonz_cap_to' p"
   (simp: crunch_simps)
 
 lemma no_longer_inQ[simp]:
@@ -1295,7 +1318,8 @@ lemmas iflive_inQ_nonz_cap[elim]
 
 declare Cons_eq_tails[simp]
 
-crunch ksCurDomain[wp]: "ThreadDecls_H.switchToThread" "\<lambda>s. P (ksCurDomain s)"
+crunches "ThreadDecls_H.switchToThread"
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
 (* FIXME move *)
 lemma obj_tcb_at':
@@ -1494,7 +1518,8 @@ lemma switchToIdleThread_invs_no_cicd':
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_idle'_def)
   done
 
-crunch obj_at'[wp]: "Arch.switchToIdleThread" "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
+crunches "Arch.switchToIdleThread"
+  for obj_at'[wp]: "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
 
 
 declare hoare_weak_lift_imp_conj[wp_split del]
@@ -1505,8 +1530,10 @@ lemma setCurThread_const:
 
 
 
-crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
-crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
+crunches switchToIdleThread
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
+crunches switchToThread
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"
@@ -1560,7 +1587,8 @@ lemma corres_assert_assume_r:
   \<Longrightarrow> corres dc P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"
   by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
-crunch cur[wp]: tcbSchedEnqueue cur_tcb'
+crunches tcbSchedEnqueue
+  for cur[wp]: cur_tcb'
   (simp: unless_def)
 
 lemma thread_get_exs_valid[wp]:
@@ -1913,11 +1941,15 @@ lemma isHighestPrio_corres:
          apply (wpsimp simp: if_apply_def2 wp: hoare_drop_imps ksReadyQueuesL1Bitmap_return_wp)+
   done
 
-crunch valid_idle_etcb[wp]: set_scheduler_action valid_idle_etcb
+crunches set_scheduler_action
+  for valid_idle_etcb[wp]: valid_idle_etcb
 
-crunch inv[wp]: isHighestPrio P
-crunch inv[wp]: curDomain P
-crunch inv[wp]: scheduleSwitchThreadFastfail P
+crunches isHighestPrio
+  for inv[wp]: P
+crunches curDomain
+  for inv[wp]: P
+crunches scheduleSwitchThreadFastfail
+  for inv[wp]: P
 
 lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
   "setSchedulerAction ChooseNewThread \<lbrace>invs' \<rbrace>"

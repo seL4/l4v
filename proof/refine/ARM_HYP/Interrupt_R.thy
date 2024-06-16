@@ -107,7 +107,8 @@ lemma decodeIRQHandlerInvocation_corres:
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
-crunch inv[wp]: decodeIRQHandlerInvocation "P"
+crunches decodeIRQHandlerInvocation
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 lemma decode_irq_handler_valid'[wp]:
@@ -142,7 +143,8 @@ lemma is_irq_active_corres:
             split: irqstate.split_asm irq_state.split_asm)
   done
 
-crunch inv: isIRQActive "P"
+crunches isIRQActive
+  for inv: "P"
 
 lemma isIRQActive_wp:
   "\<lbrace>\<lambda>s. \<forall>rv. (irq_issued' irq s \<longrightarrow> rv) \<longrightarrow> Q rv s\<rbrace> isIRQActive irq \<lbrace>Q\<rbrace>"
@@ -289,7 +291,8 @@ lemma decodeIRQControlInvocation_corres:
                simp: not_less unat_le_helper)
   done
 
-crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
+crunches "InterruptDecls_H.decodeIRQControlInvocation"
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 
@@ -455,7 +458,8 @@ lemma IRQHandler_valid':
   "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
-crunch valid_mdb'[wp]: setIRQState "valid_mdb'"
+crunches setIRQState
+  for valid_mdb'[wp]: "valid_mdb'"
 
 lemma no_fail_setIRQTrigger: "no_fail \<top> (setIRQTrigger irq trig)"
   by (simp add: setIRQTrigger_def)
@@ -521,7 +525,8 @@ lemma performIRQControl_corres:
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   by (clarsimp simp: arch_performIRQControl_corres)
 
-crunch valid_cap'[wp]: setIRQState "valid_cap' cap"
+crunches setIRQState
+  for valid_cap'[wp]: "valid_cap' cap"
 
 lemma setIRQState_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> setIRQState st irq \<lbrace>\<lambda>_. ex_cte_cap_to' p\<rbrace>"
@@ -715,9 +720,12 @@ lemma doMachineOp_get_invs [wp]:
   "doMachineOp (gets f) \<lbrace>P\<rbrace>"
   unfolding doMachineOp_def by (wpsimp simp: in_monad)
 
-crunch sch_act_ct_rq [wp]: doMachineOp "\<lambda>s. P (ksSchedulerAction s) (ksCurThread s) (ksReadyQueues s)"
-crunch pred_tcb_at'_ct [wp]: doMachineOp "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
-crunch ex_nonz_cap_to' [wp]: doMachineOp "\<lambda>s. P (ex_nonz_cap_to' (ksCurThread s) s)"
+crunches doMachineOp
+  for sch_act_ct_rq[wp]: "\<lambda>s. P (ksSchedulerAction s) (ksCurThread s) (ksReadyQueues s)"
+crunches doMachineOp
+  for pred_tcb_at'_ct[wp]: "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
+crunches doMachineOp
+  for ex_nonz_cap_to'[wp]: "\<lambda>s. P (ex_nonz_cap_to' (ksCurThread s) s)"
 
 lemma runnable_not_halted: "runnable st \<Longrightarrow> \<not> halted st"
   by (auto simp: runnable_eq)
@@ -1021,10 +1029,12 @@ lemma threadSet_ksDomainTime[wp]:
   apply (wp crunch_wps | simp add:updateObject_default_def)+
   done
 
-crunch ksDomainTime[wp]: rescheduleRequired "\<lambda>s. P (ksDomainTime s)"
+crunches rescheduleRequired
+  for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 (simp:tcbSchedEnqueue_def wp:unless_wp)
 
-crunch ksDomainTime[wp]: tcbSchedAppend "\<lambda>s. P (ksDomainTime s)"
+crunches tcbSchedAppend
+  for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 (simp:tcbSchedEnqueue_def wp:unless_wp)
 
 lemma updateTimeSlice_valid_pspace[wp]:
@@ -1052,11 +1062,14 @@ lemma updateTimeSlice_hyp_refs[wp]:
   done
 
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
-crunch irq_handlers'[wp]: tcbSchedAppend valid_irq_handlers'
+crunches tcbSchedAppend
+  for irq_handlers'[wp]: valid_irq_handlers'
   (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
-crunch irqs_masked'[wp]: tcbSchedAppend irqs_masked'
+crunches tcbSchedAppend
+  for irqs_masked'[wp]: irqs_masked'
   (simp: unless_def wp: crunch_wps)
-crunch ct[wp]: tcbSchedAppend cur_tcb'
+crunches tcbSchedAppend
+  for ct[wp]: cur_tcb'
   (wp: cur_tcb_lift crunch_wps)
 
 lemma timerTick_invs'[wp]:
@@ -1190,7 +1203,8 @@ lemma hint_invs[wp]:
                         unat_arith_simps)
   done
 
-crunch st_tcb_at'[wp]: timerTick "st_tcb_at' P t"
+crunches timerTick
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: threadSet_pred_tcb_no_state)
 
 end

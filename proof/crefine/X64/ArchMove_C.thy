@@ -103,7 +103,8 @@ lemma Arch_switchToThread_obj_at_pre:
   apply (wp asUser_obj_at_notQ doMachineOp_obj_at hoare_drop_imps|wpc)+
   done
 
-crunch pspace_canonical'[wp]: setThreadState pspace_canonical'
+crunches setThreadState
+  for pspace_canonical'[wp]: pspace_canonical'
 
 lemma word_shift_by_3:
   "x * 8 = (x::'a::len word) << 3"
@@ -184,7 +185,8 @@ lemma empty_fail_findVSpaceForASID[iff]:
   unfolding findVSpaceForASID_def checkPML4At_def
   by (wpsimp wp: empty_fail_getObject)
 
-crunch inv'[wp]: archThreadGet P
+crunches archThreadGet
+  for inv'[wp]: P
 
 (* FIXME MOVE near thm tg_sp' *)
 lemma atg_sp':
@@ -265,7 +267,8 @@ lemma setVMRoot_valid_arch_state':
          | strengthen valid_cr3'_makeCR3)+
   done
 
-crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
+crunches switchToThread
+  for valid_arch_state'[wp]: valid_arch_state'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma mab_gt_2 [simp]:
@@ -393,7 +396,8 @@ declare valid_asid_pool'.simps[simp del]
 (*<<<*)
 
 (* FIXME: change the original to be predicated! *)
-crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
+crunches doMachineOp
+  for pred_tcb_at'2[wp]: "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
 lemma valid_untyped':

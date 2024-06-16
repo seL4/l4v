@@ -539,7 +539,8 @@ lemma setObject_asidpool_gs[wp]:
   "setObject ptr (vcpu::asidpool) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
     by (wpsimp wp: updateObject_default_inv simp: setObject_def crunch_simps)
 
-crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
+crunches deleteASIDPool
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps)
 

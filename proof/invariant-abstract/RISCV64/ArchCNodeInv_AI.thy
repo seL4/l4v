@@ -471,7 +471,8 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
   apply (simp add: nat_to_cref_def word_bits_conv)
   done
 
-crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
+crunches prepare_thread_delete
+  for st_tcb_at_halted[wp]: "st_tcb_at halted t"
 
 lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
@@ -499,7 +500,8 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
 
 lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
-crunch emptyable[wp,CNodeInv_AI_assms]: finalise_cap "\<lambda>s. emptyable sl s"
+crunches finalise_cap
+  for emptyable[wp,CNodeInv_AI_assms]: "\<lambda>s. emptyable sl s"
   (simp: crunch_simps rule: emptyable_lift
      wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs)
 
@@ -916,7 +918,8 @@ declare cap_revoke.simps[simp del]
 
 context Arch begin global_naming RISCV64
 
-crunch typ_at[wp, CNodeInv_AI_assms]: finalise_slot "\<lambda>s. P (typ_at T p s)"
+crunches finalise_slot
+  for typ_at[wp, CNodeInv_AI_assms]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps filterM_mapM unless_def
    ignore: without_preemption filterM set_object clearMemory)
 

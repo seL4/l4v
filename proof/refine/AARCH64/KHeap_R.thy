@@ -1887,7 +1887,8 @@ lemma setEndpoint_idle'[wp]:
        apply (simp add: objBits_simps' updateObject_default_inv idle_tcb_ps_def)+
   done
 
-crunch it[wp]: setEndpoint "\<lambda>s. P (ksIdleThread s)"
+crunches setEndpoint
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: updateObject_default_inv)
 
 lemma setObject_ksPSpace_only:
@@ -1918,7 +1919,8 @@ lemma valid_irq_handlers_lift':
 
 lemmas valid_irq_handlers_lift'' = valid_irq_handlers_lift' [unfolded cteCaps_of_def]
 
-crunch ksInterruptState[wp]: setEndpoint "\<lambda>s. P (ksInterruptState s)"
+crunches setEndpoint
+  for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemmas setEndpoint_irq_handlers[wp]
@@ -2022,7 +2024,8 @@ lemma setNotification_idle'[wp]:
         apply (simp add: objBits_simps' updateObject_default_inv idle_tcb_ps_def)+
   done
 
-crunch it[wp]: setNotification "\<lambda>s. P (ksIdleThread s)"
+crunches setNotification
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: updateObject_default_inv)
 
 lemma set_ntfn_arch' [wp]:
@@ -2047,7 +2050,8 @@ lemma set_ntfn_global_refs' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
 
-crunch typ_at' [wp]: setNotification "\<lambda>s. P (typ_at' T p s)" (ignore_del: setObject)
+crunches setNotification
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)" (ignore_del: setObject)
 
 lemma set_ntfn_hyp[wp]:
   "setNotification ptr val \<lbrace>\<lambda>s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace>"
@@ -2158,7 +2162,8 @@ lemma setNotification_ct_idle_or_in_cur_domain'[wp]:
            | clarsimp simp: updateObject_default_def in_monad setNotification_def)+
   done
 
-crunch gsUntypedZeroRanges[wp]: setNotification "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunches setNotification
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma sym_heap_sched_pointers_lift:
@@ -2289,9 +2294,11 @@ lemma dmo_inv':
   apply simp
   done
 
-crunch cte_wp_at'2[wp]: doMachineOp "\<lambda>s. P (cte_wp_at' P' p s)"
+crunches doMachineOp
+  for cte_wp_at'2[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
 
-crunch typ_at'[wp]: doMachineOp "\<lambda>s. P (typ_at' T p s)"
+crunches doMachineOp
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemmas doMachineOp_typ_ats[wp] = typ_at_lifts [OF doMachineOp_typ_at']
 
@@ -2309,10 +2316,13 @@ lemma doMachineOp_invs_bits[wp]:
        | wp
        | fastforce elim: state_refs_of'_pspaceI)+
 
-crunch obj_at'[wp]: doMachineOp "\<lambda>s. P (obj_at' P' p s)"
+crunches doMachineOp
+  for obj_at'[wp]: "\<lambda>s. P (obj_at' P' p s)"
 
-crunch it[wp]: doMachineOp "\<lambda>s. P (ksIdleThread s)"
-crunch idle'[wp]: doMachineOp "valid_idle'"
+crunches doMachineOp
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
+crunches doMachineOp
+  for idle'[wp]: "valid_idle'"
   (wp: crunch_wps simp: crunch_simps valid_idle'_pspace_itI)
 
 lemma setEndpoint_ksMachine:

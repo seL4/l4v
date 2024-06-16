@@ -16,8 +16,9 @@ named_theorems EmptyFail_AI_assms
 crunch_ignore (empty_fail)
   (add: pt_lookup_from_level)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
+crunches
   load_word_offs, get_mrs
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
 declare loadWord_empty_fail[EmptyFail_AI_assms]
 
@@ -31,18 +32,21 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 
 context Arch begin global_naming AARCH64
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
+crunches handle_fault
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def)
 
-crunch (empty_fail) empty_fail[wp]:
+crunches
   decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params,
   decode_set_tls_base
+  for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
-crunch (empty_fail) empty_fail[wp]: decode_vcpu_invocation
+crunches decode_vcpu_invocation
+  for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
@@ -50,7 +54,8 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
       | wp | intro conjI impI)+
 
-crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment, check_vspace_root
+crunches find_vspace_for_asid, check_vp_alignment, check_vspace_root
+  for (empty_fail) empty_fail[wp]
 
 lemma arch_decode_ARMASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
@@ -133,12 +138,14 @@ lemma empty_fail_pt_lookup_from_level[wp]:
   apply wpsimp
   done
 
-crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
+crunches vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
+  for (empty_fail) empty_fail[wp]
   (ignore: set_object get_object)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
+crunches maskInterrupt, empty_slot,
     finalise_cap, preemption_point, vcpu_save,
     cap_swap_for_delete, decode_invocation
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pte.splits bool.splits list.splits)
@@ -152,8 +159,9 @@ proof goal_cases
 qed
 
 context Arch begin global_naming AARCH64
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
+crunches
   cap_delete, choose_thread
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
 
 global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit

@@ -572,7 +572,8 @@ lemma get_pte_inv[wp]:
 
 lemmas store_pte_typ_ats [wp] = abs_typ_at_lifts [OF store_pte_typ_at]
 
-crunch cte_wp_at[wp]: set_irq_state "\<lambda>s. P (cte_wp_at P' p s)"
+crunches set_irq_state
+  for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma set_pt_cte_wp_at:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
@@ -673,7 +674,8 @@ lemma set_asid_pool_cur_tcb [wp]:
   unfolding cur_tcb_def
   by (rule hoare_lift_Pf [where f=cur_thread]; wp)
 
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
+crunches set_asid_pool
+  for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
 
 lemma set_asid_pool_pts_of [wp]:
@@ -966,7 +968,8 @@ lemma set_pt_aligned [wp]:
   done
 
 
-crunch interrupt_states[wp]: set_pt "\<lambda>s. P (interrupt_states s)"
+crunches set_pt
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
 lemma unique_table_caps_ptD:
@@ -1052,7 +1055,8 @@ lemma set_pt_global_objs [wp]:
   unfolding valid_global_objs_def by wp
 
 
-crunch v_ker_map[wp]: set_pt "valid_kernel_mappings"
+crunches set_pt
+  for v_ker_map[wp]: "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
 
@@ -1498,7 +1502,8 @@ lemma as_user_in_device_frame[wp]:
   unfolding in_device_frame_def
   by (wp hoare_vcg_ex_lift)
 
-crunch obj_at[wp]: load_word_offs "\<lambda>s. P (obj_at Q p s)"
+crunches load_word_offs
+  for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
 
 lemma load_word_offs_in_user_frame[wp]:
   "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> load_word_offs a x \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
@@ -1529,7 +1534,8 @@ lemma set_pt_vms[wp]:
                    split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
-crunch valid_irq_states[wp]: set_pt "valid_irq_states"
+crunches set_pt
+  for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps)
 
 
@@ -1641,18 +1647,22 @@ lemma set_asid_pool_reply_masters [wp]:
   by (wp valid_reply_masters_cte_lift)
 
 
-crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
+crunches set_asid_pool
+  for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
-crunch idle [wp]: set_asid_pool "\<lambda>s. P (idle_thread s)"
+crunches set_asid_pool
+  for idle[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
 
-crunch irq [wp]: set_asid_pool "\<lambda>s. P (interrupt_irq_node s)"
+crunches set_asid_pool
+  for irq[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
-crunch valid_irq_states[wp]: set_asid_pool "valid_irq_states"
+crunches set_asid_pool
+  for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps)
 
 lemma set_asid_pool_valid_global [wp]:
@@ -1662,7 +1672,8 @@ lemma set_asid_pool_valid_global [wp]:
   by (wp valid_global_refs_cte_lift)
 
 
-crunch interrupt_states[wp]: set_asid_pool "\<lambda>s. P (interrupt_states s)"
+crunches set_asid_pool
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
 lemma vs_lookup_table_unreachable_upd_idem:
@@ -1904,7 +1915,8 @@ lemma set_asid_pool_global_objs [wp]:
   "set_asid_pool p ap \<lbrace>valid_global_objs\<rbrace>"
   by (clarsimp simp: valid_global_objs_def) wp
 
-crunch v_ker_map[wp]: set_asid_pool "valid_kernel_mappings"
+crunches set_asid_pool
+  for v_ker_map[wp]: "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
 lemma set_asid_pool_vspace_objs_unmap_single:
@@ -2884,9 +2896,12 @@ lemma machine_op_lift_device_state[wp]:
                      select_def ignore_failure_def select_f_def
               split: if_splits)
 
-crunch device_state_inv[wp]: sfence "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: hwASIDFlush "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: setVSpaceRoot "\<lambda>ms. P (device_state ms)"
+crunches sfence
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+crunches hwASIDFlush
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+crunches setVSpaceRoot
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma as_user_inv:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"

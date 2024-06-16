@@ -578,11 +578,15 @@ lemma heap_to_user_data_in_user_mem'[simp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch pde_mappings'[wp]: invalidateTLBByASID "valid_pde_mappings'"
-crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
+crunches invalidateTLBByASID
+  for pde_mappings'[wp]: "valid_pde_mappings'"
+crunches invalidateTLBByASID
+  for ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
 
-crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize s)"
-crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
+crunches invalidateTLBByASID
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+crunches deleteASIDPool
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps)
 end

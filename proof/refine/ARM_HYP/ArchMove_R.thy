@@ -23,7 +23,8 @@ method prefer_next = tactic \<open>SUBGOAL (K (prefer_tac 2)) 1\<close>
 context begin interpretation Arch .
 
 (* Move to Deterministic_AI*)
-crunch valid_etcbs[wp]: copy_global_mappings valid_etcbs (wp: mapM_x_wp')
+crunches copy_global_mappings
+  for valid_etcbs[wp]: valid_etcbs (wp: mapM_x_wp')
 
 (* Move to Machine_AI *)
 lemma no_fail_writeContextIDAndPD[wp]: "no_fail \<top> (writeContextIDAndPD a w)"

@@ -97,7 +97,8 @@ crunches do_machine_op
   for thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
   and state_vrefs[wp]: "\<lambda>s :: 'a :: state_ext state. P (state_vrefs s)"
 
-crunch integrity_autarch: set_message_info "integrity aag X st"
+crunches set_message_info
+  for integrity_autarch: "integrity aag X st"
 
 (* FIXME: move *)
 lemma set_mrs_thread_st_auth[wp]:

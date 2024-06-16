@@ -364,7 +364,8 @@ lemma get_object_revrv':
     apply (wpsimp)+
   done
 
-crunch irq_state_of_state[wp]: cancel_badged_sends "\<lambda>s. P (irq_state_of_state s)"
+crunches cancel_badged_sends
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps simp: filterM_mapM)
 
 
@@ -416,7 +417,8 @@ locale Arch_IF_1 =
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
 begin
 
-crunch valid_global_refs[wp]: empty_slot "\<lambda>s :: det_state. valid_global_refs s"
+crunches empty_slot
+  for valid_global_refs[wp]: "\<lambda>s :: det_state. valid_global_refs s"
   (simp: cap_range_def)
 
 crunches set_extra_badge, set_mrs, reply_from_kernel, invoke_domain
@@ -427,19 +429,24 @@ lemma transfer_caps_loop_irq_state[wp]:
   "transfer_caps_loop a b c d e f \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
-crunch irq_state_of_state[wp]: handle_recv, handle_reply "\<lambda>s. P (irq_state_of_state s)"
+crunches handle_recv, handle_reply
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps)
 
-crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
+crunches invoke_irq_handler
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
 
-crunch irq_state_of_state[wp]: schedule "\<lambda>s. P (irq_state_of_state s)"
+crunches schedule
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: machine_op_lift_def machine_rest_lift_def crunch_simps)
 
-crunch irq_state_of_state[wp]: finalise_cap "\<lambda>s. P (irq_state_of_state s)"
+crunches finalise_cap
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: modify_wp crunch_wps dmo_wp simp: crunch_simps)
 
-crunch irq_state_of_state[wp]: send_signal, restart "\<lambda>s. P (irq_state_of_state s)"
+crunches send_signal, restart
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
 
 lemma mol_states_equiv_for:
   "machine_op_lift mop \<lbrace>\<lambda>ms. states_equiv_for P Q R S st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"

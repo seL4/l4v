@@ -815,7 +815,8 @@ lemma range_cover_subset_not_empty:
     apply (fastforce simp:range_cover_def)+
   done
 
-crunch global_refs[wp]: retype_region "\<lambda>s. P (global_refs s)"
+crunches retype_region
+  for global_refs[wp]: "\<lambda>s. P (global_refs s)"
   (simp: crunch_simps)
 
 locale Retype_AI_retype_region_ret =
@@ -867,7 +868,8 @@ done
 
 end
 
-crunch valid_pspace: do_machine_op "valid_pspace"
+crunches do_machine_op
+  for valid_pspace: "valid_pspace"
 
 
 lemma do_machine_op_return_foo:
@@ -913,9 +915,12 @@ locale Retype_AI_dmo_eq_kernel_restricted =
       \<lbrace>\<lambda>rv s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>"
 
 
-crunch only_idle[wp]: do_machine_op "only_idle"
-crunch valid_global_refs[wp]: do_machine_op "valid_global_refs"
-crunch cap_refs_in_kernel_window[wp]: do_machine_op "cap_refs_in_kernel_window"
+crunches do_machine_op
+  for only_idle[wp]: "only_idle"
+crunches do_machine_op
+  for valid_global_refs[wp]: "valid_global_refs"
+crunches do_machine_op
+  for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
 
 
 locale Retype_AI_post_retype_invs =
@@ -2057,10 +2062,12 @@ lemmas retype_region_arch_objs = use_retype_region_proofs
          simplified]
 
 
-crunch irq_node[wp]: retype_region "\<lambda>s. P (interrupt_irq_node s)"
+crunches retype_region
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps)
 
-crunch interrupt_states[wp]: retype_region "\<lambda>s. P (interrupt_states s)"
+crunches retype_region
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (simp: crunch_simps)
 
 

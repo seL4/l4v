@@ -17,10 +17,12 @@ lemma setCTE_obj_at'_queued:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
-crunch obj_at'_queued: cteInsert "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
+crunches cteInsert
+  for obj_at'_queued: "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
   (wp: setCTE_obj_at'_queued crunch_wps)
 
-crunch obj_at'_not_queued: emptySlot "obj_at' (\<lambda>a. \<not> tcbQueued a) p"
+crunches emptySlot
+  for obj_at'_not_queued: "obj_at' (\<lambda>a. \<not> tcbQueued a) p"
   (wp: setCTE_obj_at'_queued)
 
 lemma getEndpoint_obj_at':
@@ -60,14 +62,16 @@ lemma setBoundNotification_tcbContext:
   done
 
 declare comp_apply [simp del]
-crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
+crunches deleteCallerCap
+  for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
        setNotification_tcb crunch_wps setThreadState_tcbContext
    simp: crunch_simps unless_def)
 declare comp_apply [simp]
 
 
-crunch ksArch[wp]: asUser "\<lambda>s. P (ksArchState s)"
+crunches asUser
+  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps)
 
 definition
@@ -488,9 +492,11 @@ crunches cteInsert, threadSet, asUser, emptySlot
   and ksReadyQueuesL2Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: hoare_drop_imps)
 
-crunch ksReadyQueuesL1Bitmap_inv[wp]: setEndpoint "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunches setEndpoint
+  for ksReadyQueuesL1Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
-crunch ksReadyQueuesL2Bitmap_inv[wp]: setEndpoint "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+crunches setEndpoint
+  for ksReadyQueuesL2Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma setThreadState_runnable_bitmap_inv:
@@ -966,16 +972,19 @@ lemma setCTE_obj_at_ntfn[wp]:
                         if_split_asm)
   done
 
-crunch obj_at_ep[wp]: emptySlot "obj_at' (P :: endpoint \<Rightarrow> bool) p"
+crunches emptySlot
+  for obj_at_ep[wp]: "obj_at' (P :: endpoint \<Rightarrow> bool) p"
 
 crunches emptySlot, asUser
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps)
 
-crunch tcbContext[wp]: possibleSwitchTo "obj_at' (\<lambda>tcb. P ( (atcbContextGet o tcbArch) tcb)) t"
+crunches possibleSwitchTo
+  for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ( (atcbContextGet o tcbArch) tcb)) t"
   (wp: crunch_wps simp_del: comp_apply)
 
-crunch only_cnode_caps[wp]: doFaultTransfer "\<lambda>s. P (only_cnode_caps (ctes_of s))"
+crunches doFaultTransfer
+  for only_cnode_caps[wp]: "\<lambda>s. P (only_cnode_caps (ctes_of s))"
   (wp: crunch_wps simp: crunch_simps)
 
 (* FIXME: monadic_rewrite_l does not work with stateAssert here *)
@@ -1304,7 +1313,8 @@ lemma valid_objs_ntfn_at_tcbBoundNotification:
   apply clarsimp
   done
 
-crunch bound_tcb_at'_Q[wp]: setThreadState "\<lambda>s. Q (bound_tcb_at' P t s)"
+crunches setThreadState
+  for bound_tcb_at'_Q[wp]: "\<lambda>s. Q (bound_tcb_at' P t s)"
   (wp: threadSet_pred_tcb_no_state crunch_wps simp: unless_def)
 
 lemmas emptySlot_pred_tcb_at'_Q[wp] = lift_neg_pred_tcb_at'[OF emptySlot_typ_at' emptySlot_pred_tcb_at']
@@ -1326,7 +1336,8 @@ lemma resolveAddressBitsFn_eq_name_slot:
   apply auto
   done
 
-crunch bound_tcb_at'_Q[wp]: asUser "\<lambda>s. Q (bound_tcb_at' P t s)"
+crunches asUser
+  for bound_tcb_at'_Q[wp]: "\<lambda>s. Q (bound_tcb_at' P t s)"
   (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
 
 
@@ -1354,21 +1365,25 @@ lemma tcbSchedEnqueue_tcbIPCBuffer:
         |simp split: if_split)+
   done
 
-crunch obj_at'_tcbIPCBuffer[wp]: rescheduleRequired "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+crunches rescheduleRequired
+  for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps tcbSchedEnqueue_tcbIPCBuffer simp: rescheduleRequired_def)
 
 context
 notes if_cong[cong]
 begin
-crunch obj_at'_tcbIPCBuffer[wp]: setThreadState "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+crunches setThreadState
+  for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps threadSet_obj_at'_really_strongest)
 
-crunch obj_at'_tcbIPCBuffer[wp]: handleFault "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+crunches handleFault
+  for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest
    simp: zipWithM_x_mapM)
 end
 
-crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+crunches emptySlot
+  for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps)
 
 (* FIXME move *)

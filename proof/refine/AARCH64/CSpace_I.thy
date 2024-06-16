@@ -89,7 +89,8 @@ lemma rab_inv' [wp]:
 
 lemmas rab_inv'' [wp] = rab_inv' [folded resolveAddressBits_decl_def]
 
-crunch inv [wp]: lookupCap P
+crunches lookupCap
+  for inv[wp]: P
 
 lemma updateObject_cte_inv:
   "\<lbrace>P\<rbrace> updateObject (cte :: cte) ko x y n \<lbrace>\<lambda>rv. P\<rbrace>"

@@ -8,7 +8,8 @@ theory Interrupt_IF
 imports ArchFinalise_IF
 begin
 
-crunch valid_global_objs[wp]: cap_delete_one "valid_global_objs"
+crunches cap_delete_one
+  for valid_global_objs[wp]: "valid_global_objs"
   (wp: dxo_wp_weak simp: unless_def ignore: empty_slot_ext)
 
 

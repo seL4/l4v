@@ -19,16 +19,25 @@ context Arch begin global_naming AARCH64
 named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_invs[Syscall_AI_assms]
-crunch pred_tcb_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "pred_tcb_at proj P t"
-crunch invs[wp,Syscall_AI_assms]: handle_arch_fault_reply "invs"
-crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "ex_nonz_cap_to c"
-crunch it[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (idle_thread s)"
-crunch caps[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (caps_of_state s)"
-crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply, make_fault_msg, arch_get_sanitise_register_info "\<lambda>s. P (cur_thread s)"
-crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "valid_objs"
-crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cte_wp_at P' p s)"
+crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+  for pred_tcb_at[wp,Syscall_AI_assms]: "pred_tcb_at proj P t"
+crunches handle_arch_fault_reply
+  for invs[wp,Syscall_AI_assms]: "invs"
+crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+  for cap_to[wp,Syscall_AI_assms]: "ex_nonz_cap_to c"
+crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+  for it[wp,Syscall_AI_assms]: "\<lambda>s. P (idle_thread s)"
+crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+  for caps[wp,Syscall_AI_assms]: "\<lambda>s. P (caps_of_state s)"
+crunches handle_arch_fault_reply, make_fault_msg, arch_get_sanitise_register_info
+  for cur_thread[wp,Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
+crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+  for valid_objs[wp,Syscall_AI_assms]: "valid_objs"
+crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+  for cte_wp_at[wp,Syscall_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
 
-crunch typ_at[wp, Syscall_AI_assms]: invoke_irq_control "\<lambda>s. P (typ_at T p s)"
+crunches invoke_irq_control
+  for typ_at[wp, Syscall_AI_assms]: "\<lambda>s. P (typ_at T p s)"
 
 lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"

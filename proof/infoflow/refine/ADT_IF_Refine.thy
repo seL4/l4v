@@ -19,7 +19,8 @@ definition kernelEntry_if where
      return (r,tc)
    od"
 
-crunch (empty_fail) empty_fail: kernelEntry_if
+crunches kernelEntry_if
+  for (empty_fail) empty_fail
 
 definition kernelExit_if where
   "kernelExit_if tc \<equiv> do
@@ -55,7 +56,8 @@ definition preserves where
 definition preserves' where
   "preserves' mode P f \<equiv> \<forall>(s,e,s') \<in> f. (s,mode) \<in> P \<longrightarrow> (s',e) \<in> P"
 
-crunch (empty_fail) empty_fail: kernelExit_if
+crunches kernelExit_if
+  for (empty_fail) empty_fail
 
 definition prod_lift where
   "prod_lift R r r' \<equiv> R (fst r) (fst r') \<and> (snd r) = (snd r')"
@@ -69,7 +71,8 @@ definition handlePreemption_if :: "user_context \<Rightarrow> user_context kerne
      return tc
    od"
 
-crunch (empty_fail) empty_fail: handlePreemption_if
+crunches handlePreemption_if
+  for (empty_fail) empty_fail
 
 definition handlePreemption_H_if where
   "handlePreemption_H_if \<equiv> {(s, u, s'). s' \<in> fst (split handlePreemption_if s)}"
@@ -82,7 +85,8 @@ definition schedule'_if :: "user_context \<Rightarrow> user_context kernel" wher
      return tc
    od"
 
-crunch (empty_fail) empty_fail: schedule'_if
+crunches schedule'_if
+  for (empty_fail) empty_fail
 
 definition schedule'_H_if where
   "schedule'_H_if \<equiv> {(s, e, s'). s' \<in> fst (split schedule'_if s)}"
@@ -93,7 +97,8 @@ definition checkActiveIRQ_if :: "user_context \<Rightarrow> (irq option \<times>
      return (irq, tc)
    od"
 
-crunch (empty_fail) empty_fail: checkActiveIRQ_if
+crunches checkActiveIRQ_if
+  for (empty_fail) empty_fail
 
 definition checkActiveIRQ_H_if where
   "checkActiveIRQ_H_if \<equiv>
@@ -150,8 +155,10 @@ lemmas schedaction_related = sched_act_rct_related
 lemma empty_fail_select_bind: "empty_fail (assert (S \<noteq> {}) >>= (\<lambda>_. select S))"
   by (clarsimp simp: empty_fail_def select_def assert_def)
 
-crunch (empty_fail) empty_fail[wp]: user_memory_update
-crunch (empty_fail) empty_fail[wp]: device_memory_update
+crunches user_memory_update
+  for (empty_fail) empty_fail[wp]
+crunches device_memory_update
+  for (empty_fail) empty_fail[wp]
 
 lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
@@ -178,7 +185,8 @@ lemma corres_return_same_trivial:
   "corres_underlying sr b c (=) \<top> \<top> (return a) (return a)"
   by simp
 
-crunch (no_fail) no_fail[wp]: device_memory_update
+crunches device_memory_update
+  for (no_fail) no_fail[wp]
 
 lemma corres_ex_abs_lift':
   "\<lbrakk> corres_underlying state_relation False False r S P' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace> \<rbrakk>

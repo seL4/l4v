@@ -71,7 +71,8 @@ lemma findPDForASIDAssert_pd_at_wp:
   apply simp
   done
 
-crunch inv[wp]: findPDForASIDAssert "P"
+crunches findPDForASIDAssert
+  for inv[wp]: "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
 lemma pspace_relation_pd:
@@ -307,7 +308,8 @@ lemma loadHWASID_corres:
   apply simp
   done
 
-crunch inv[wp]: loadHWASID "P"
+crunches loadHWASID
+  for inv[wp]: "P"
   (wp: crunch_wps)
 
 lemma storeHWASID_corres:
@@ -447,13 +449,16 @@ lemma findFreeHWASID_corres:
   apply clarsimp
   done
 
-crunch aligned'[wp]: findFreeHWASID "pspace_aligned'"
+crunches findFreeHWASID
+  for aligned'[wp]: "pspace_aligned'"
   (simp: crunch_simps)
 
-crunch distinct'[wp]: findFreeHWASID "pspace_distinct'"
+crunches findFreeHWASID
+  for distinct'[wp]: "pspace_distinct'"
   (simp: crunch_simps)
 
-crunch no_0_obj'[wp]: getHWASID "no_0_obj'"
+crunches getHWASID
+  for no_0_obj'[wp]: "no_0_obj'"
 
 lemma getHWASID_corres:
   "corres (=)
@@ -1139,14 +1144,20 @@ lemma setCurrentPD_corres:
     apply simp+
   done
 
-crunch tcb_at'[wp]: armv_contextSwitch "tcb_at' t"
-crunch ko_at'[wp]: armv_contextSwitch "ko_at' p t"
+crunches armv_contextSwitch
+  for tcb_at'[wp]: "tcb_at' t"
+crunches armv_contextSwitch
+  for ko_at'[wp]: "ko_at' p t"
 
-crunch tcb_at[wp]: arm_context_switch "tcb_at p"
-crunch ko_at[wp]: arm_context_switch "ko_at p t"
+crunches arm_context_switch
+  for tcb_at[wp]: "tcb_at p"
+crunches arm_context_switch
+  for ko_at[wp]: "ko_at p t"
 
-crunch pspace_distinct'[wp]: getHWASID "pspace_distinct'"
-crunch pspace_aligned'[wp]: getHWASID "pspace_aligned'"
+crunches getHWASID
+  for pspace_distinct'[wp]: "pspace_distinct'"
+crunches getHWASID
+  for pspace_aligned'[wp]: "pspace_aligned'"
 
 (* TODO: move CSpaceInv_AI *)
 lemma assert_get_tcb_ko':
@@ -1324,16 +1335,21 @@ lemma invalidateASIDEntry_corres:
   apply simp
   done
 
-crunch aligned'[wp]: invalidateASID "pspace_aligned'"
-crunch distinct'[wp]: invalidateASID "pspace_distinct'"
+crunches invalidateASID
+  for aligned'[wp]: "pspace_aligned'"
+crunches invalidateASID
+  for distinct'[wp]: "pspace_distinct'"
 
 lemma invalidateASID_cur' [wp]:
   "\<lbrace>cur_tcb'\<rbrace> invalidateASID x \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
   by (simp add: invalidateASID_def|wp)+
 
-crunch aligned' [wp]: invalidateASIDEntry pspace_aligned'
-crunch distinct' [wp]: invalidateASIDEntry pspace_distinct'
-crunch cur' [wp]: invalidateASIDEntry cur_tcb'
+crunches invalidateASIDEntry
+  for aligned'[wp]: pspace_aligned'
+crunches invalidateASIDEntry
+  for distinct'[wp]: pspace_distinct'
+crunches invalidateASIDEntry
+  for cur'[wp]: cur_tcb'
 
 lemma invalidateASID_valid_arch_state [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> invalidateASIDEntry x \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -1355,7 +1371,8 @@ crunches vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore
 lemma vcpuSwitch_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
+crunches deleteASID
+  for no_0_obj'[wp]: "no_0_obj'"
   (simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 
@@ -1437,10 +1454,10 @@ lemma valid_arch_state_unmap_strg':
   apply (auto simp: ran_def split: if_split_asm option.splits)
   done
 
-crunch armKSASIDTable_inv[wp]: invalidateASIDEntry
-    "\<lambda>s. P (armKSASIDTable (ksArchState s))"
-crunch armKSASIDTable_inv[wp]: flushSpace
-    "\<lambda>s. P (armKSASIDTable (ksArchState s))"
+crunches invalidateASIDEntry
+  for armKSASIDTable_inv[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
+crunches flushSpace
+  for armKSASIDTable_inv[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
 
 lemma deleteASIDPool_corres:
   "corres dc
@@ -1640,10 +1657,12 @@ proof -
   done
 qed
 
-crunch typ_at' [wp]: armv_contextSwitch "\<lambda>s. P (typ_at' T p s)"
+crunches armv_contextSwitch
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
-crunch typ_at' [wp]: findPDForASID "\<lambda>s. P (typ_at' T p s)"
+crunches findPDForASID
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def)
 
 crunches vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore
@@ -1655,7 +1674,8 @@ lemma vcpuSwitch_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (typ_at' T p s) \<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
+crunches setVMRoot
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps
      wp: crunch_wps getObject_inv loadObject_default_inv)
 
@@ -1663,17 +1683,21 @@ lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
 lemmas loadHWASID_typ_ats [wp] = typ_at_lifts [OF loadHWASID_inv]
 
-crunch typ_at' [wp]: setVMRootForFlush "\<lambda>s. P (typ_at' T p s)"
+crunches setVMRootForFlush
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: hoare_drop_imps)
 
 lemmas setVMRootForFlush_typ_ats' [wp] = typ_at_lifts [OF setVMRootForFlush_typ_at']
 
-crunch aligned' [wp]: setVMRootForFlush pspace_aligned'
+crunches setVMRootForFlush
+  for aligned'[wp]: pspace_aligned'
   (wp: hoare_drop_imps)
-crunch distinct' [wp]: setVMRootForFlush pspace_distinct'
+crunches setVMRootForFlush
+  for distinct'[wp]: pspace_distinct'
   (wp: hoare_drop_imps)
 
-crunch cur' [wp]: setVMRootForFlush cur_tcb'
+crunches setVMRootForFlush
+  for cur'[wp]: cur_tcb'
   (wp: hoare_drop_imps)
 
 lemma findPDForASID_inv2:
@@ -1787,7 +1811,8 @@ lemma getHWASID_valid_arch':
   apply (wp | wpc | simp)+
   done
 
-crunch valid_arch' [wp]: setVMRootForFlush "valid_arch_state'"
+crunches setVMRootForFlush
+  for valid_arch'[wp]: "valid_arch_state'"
   (wp: hoare_drop_imps)
 
 lemma load_hw_asid_corres2:
@@ -1805,7 +1830,8 @@ lemma load_hw_asid_corres2:
   apply simp
   done
 
-crunch no_0_obj'[wp]: flushTable "no_0_obj'"
+crunches flushTable
+  for no_0_obj'[wp]: "no_0_obj'"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma flushTable_corres:
@@ -1878,14 +1904,16 @@ lemma flushPage_corres:
                | fold cur_tcb_def cur_tcb'_def)+
   done
 
-crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
+crunches flushTable
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: assertE_def when_def wp: crunch_wps)
 
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
 lemmas findPDForASID_typ_ats' [wp] = typ_at_lifts [OF findPDForASID_inv]
 
-crunch inv [wp]: findPDForASID P
+crunches findPDForASID
+  for inv[wp]: P
   (simp: assertE_def whenE_def loadObject_default_def
    wp: crunch_wps getObject_inv)
 
@@ -1903,10 +1931,12 @@ crunches vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore
 lemma vcpuSwitch_distinct'[wp]: "\<lbrace>pspace_distinct'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
+crunches unmapPageTable
+  for aligned'[wp]: "pspace_aligned'"
   (simp: crunch_simps
      wp: crunch_wps getObject_inv loadObject_default_inv)
-crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
+crunches unmapPageTable
+  for distinct'[wp]: "pspace_distinct'"
   (simp: crunch_simps
      wp: crunch_wps getObject_inv loadObject_default_inv)
 
@@ -1952,13 +1982,16 @@ lemma storePTE_ko_wp_vcpu_at'[wp]:
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs is_vcpu'_def)
   done
 
-crunch inv[wp]: pageTableMapped "P"
+crunches pageTableMapped
+  for inv[wp]: "P"
   (wp: loadObject_default_inv)
 
-crunch no_0_obj'[wp]: storePDE no_0_obj'
+crunches storePDE
+  for no_0_obj'[wp]: no_0_obj'
  (wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp)
 
-crunch no_0_obj'[wp]: storePTE no_0_obj'
+crunches storePTE
+  for no_0_obj'[wp]: no_0_obj'
  (wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp)
 
 lemma storePDE_valid_arch'[wp]: "\<lbrace>valid_arch_state'\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -2007,7 +2040,8 @@ lemma unmapPageTable_corres:
                      vs_refs_pages_def graph_of_def split: if_splits)
   done
 
-crunch typ_at' [wp]: flushPage "\<lambda>s. P (typ_at' T p s)"
+crunches flushPage
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps hoare_drop_imps)
 
 lemmas flushPage_typ_ats' [wp] = typ_at_lifts [OF flushPage_typ_at']
@@ -2044,16 +2078,20 @@ crunches
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: mapM_wp_inv simp: mapM_x_mapM)
 
-crunch valid_objs' [wp]: flushPage "valid_objs'"
+crunches flushPage
+  for valid_objs'[wp]: "valid_objs'"
   (wp: crunch_wps hoare_drop_imps simp: crunch_simps)
 
-crunch inv: lookupPTSlot "P"
+crunches lookupPTSlot
+  for inv: "P"
   (wp: loadObject_default_inv)
 
-crunch aligned' [wp]: unmapPage pspace_aligned'
+crunches unmapPage
+  for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps simp: crunch_simps)
 
-crunch distinct' [wp]: unmapPage pspace_distinct'
+crunches unmapPage
+  for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma corres_split_strengthen_ftE:
@@ -2104,7 +2142,8 @@ lemma checkMappingPPtr_corres:
    apply simp+
   done
 
-crunch inv[wp]: checkMappingPPtr "P"
+crunches checkMappingPPtr
+  for inv[wp]: "P"
   (wp: crunch_wps loadObject_default_inv simp: crunch_simps)
 
 lemma store_pte_pd_at_asid[wp]:
@@ -2509,7 +2548,8 @@ definition
   | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
-crunch ctes[wp]: doMachineOp "\<lambda>s. P (ctes_of s)"
+crunches doMachineOp
+  for ctes[wp]: "\<lambda>s. P (ctes_of s)"
 
 lemma setObject_vcpu_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
@@ -2531,7 +2571,8 @@ crunches vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable
 lemma vcpuSwitch_ctes[wp]: "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> vcpuSwitch vcpu \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
+crunches unmapPage
+  for ctes[wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps
      wp: crunch_wps loadObject_default_inv getObject_inv)
 
@@ -2626,7 +2667,8 @@ lemma pdeCheckIfMapped_corres:
   apply simp
   done
 
-crunch valid_asid_map[wp]: store_pte "valid_asid_map"
+crunches store_pte
+  for valid_asid_map[wp]: "valid_asid_map"
 
 lemma set_cap_pd_at_asid [wp]:
   "\<lbrace>vspace_at_asid asid pd\<rbrace> set_cap t st \<lbrace>\<lambda>rv. vspace_at_asid asid pd\<rbrace>"
@@ -2679,7 +2721,8 @@ lemma setCTE_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
-crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches updateCap
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps
    simp: crunch_simps unless_def)
 
@@ -3062,7 +3105,8 @@ lemma clear_page_table_corres:
   apply simp
   done
 
-crunch typ_at'[wp]: unmapPageTable "\<lambda>s. P (typ_at' T p s)"
+crunches unmapPageTable
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 
 lemma performPageTableInvocation_corres:
@@ -3210,7 +3254,8 @@ lemma vcpuSwitch_obj_at'_no_vcpu[wp]:
   "vcpuSwitch param_a \<lbrace>\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch obj_at'_no_vcpu[wp]: setVMRoot "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
+crunches setVMRoot
+  for obj_at'_no_vcpu[wp]: "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
   (simp: crunch_simps)
 
 lemma storeHWASID_invs:
@@ -3399,10 +3444,13 @@ lemma setVMRoot_ksQ[wp]:
           | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
   done
 
-crunch ksIdleThread[wp]: storeWordUser "\<lambda>s. P (ksIdleThread s)"
-crunch ksIdleThread[wp]: asUser "\<lambda>s. P (ksIdleThread s)"
+crunches storeWordUser
+  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+crunches asUser
+  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
 (wp: crunch_wps simp: crunch_simps)
-crunch ksQ[wp]: asUser "\<lambda>s. P (ksReadyQueues s)"
+crunches asUser
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
 (wp: crunch_wps simp: crunch_simps)
 
 lemma dmo_machine_op_lift_invs'[wp]:
@@ -4250,10 +4298,14 @@ lemma vcpuSwitch_invs_no_cicd'[wp]:
   apply (auto simp: invs_no_cicd'_def valid_state'_def valid_arch_state'_def pred_conj_def)
   done
 
-crunch valid_arch_state'[wp]: checkPDNotInASIDMap valid_arch_state'
-crunch valid_arch_state'[wp]: findPDForASID  valid_arch_state'
-crunch valid_arch_state'[wp]: armv_contextSwitch valid_arch_state'
-crunch ko_wp_at'[wp]: armv_contextSwitch "ko_wp_at' P' t"
+crunches checkPDNotInASIDMap
+  for valid_arch_state'[wp]: valid_arch_state'
+crunches findPDForASID
+  for valid_arch_state'[wp]: valid_arch_state'
+crunches armv_contextSwitch
+  for valid_arch_state'[wp]: valid_arch_state'
+crunches armv_contextSwitch
+  for ko_wp_at'[wp]: "ko_wp_at' P' t"
 
 lemma valid_case_option_post_wp':
   "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>rv. Q x\<rbrace>) \<Longrightarrow>
@@ -4344,17 +4396,21 @@ crunches
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (ignore: doMachineOp wp: crunch_wps)
 
-crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
+crunches setVMRoot
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
        loadObject_default_def)
 
-crunch it' [wp]: findPDForASID "\<lambda>s. P (ksIdleThread s)"
+crunches findPDForASID
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
-crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
+crunches deleteASIDPool
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp')
 
-crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
+crunches lookupPTSlot
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
 lemma storePTE_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
@@ -4363,11 +4419,13 @@ lemma storePTE_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storeP
 lemma storePDE_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
-crunch it' [wp]: flushTable "\<lambda>s. P (ksIdleThread s)"
+crunches flushTable
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def
    wp: setObject_idle' hoare_drop_imps mapM_wp')
 
-crunch it' [wp]: deleteASID "\<lambda>s. P (ksIdleThread s)"
+crunches deleteASID
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def updateObject_default_def
    wp: getObject_inv)
 
@@ -4379,16 +4437,20 @@ lemma valid_slots_lift':
    apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t valid_pde_lift' valid_pte_lift', simp)+
   done
 
-crunch typ_at' [wp]: performPageTableInvocation "\<lambda>s. P (typ_at' T p s)"
+crunches performPageTableInvocation
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
-crunch typ_at' [wp]: performPageDirectoryInvocation "\<lambda>s. P (typ_at' T p s)"
+crunches performPageDirectoryInvocation
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
-crunch typ_at' [wp]: performPageInvocation "\<lambda>s. P (typ_at' T p s)"
+crunches performPageInvocation
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
-crunch typ_at' [wp]: performASIDPoolInvocation "\<lambda>s. P (typ_at' T p s)"
+crunches performASIDPoolInvocation
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: getObject_cte_inv getASID_wp)
 
 lemmas performPageTableInvocation_typ_ats' [wp] =
@@ -4540,7 +4602,8 @@ lemma storePDE_vms'[wp]:
   by (wpsimp simp: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
              wp: setObject_typ_at_inv setObject_ksMachine updateObject_default_inv hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-crunch pspace_domain_valid[wp]: storePDE "pspace_domain_valid"
+crunches storePDE
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: hoare_drop_imp)
 
 lemma storePDE_ct_not_inQ[wp]:
@@ -4752,7 +4815,8 @@ lemma storePTE_vms'[wp]:
   by (wpsimp simp: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
              wp: setObject_typ_at_inv setObject_ksMachine updateObject_default_inv hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-crunch pspace_domain_valid[wp]: storePTE "pspace_domain_valid"
+crunches storePTE
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: hoare_drop_imp)
 
 lemma storePTE_ct_not_inQ[wp]:
@@ -4995,7 +5059,8 @@ lemma vcpuSwitch_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (cte_wp_at' P' p s)\<rbrace> "
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
+crunches unmapPageTable
+  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
@@ -5059,7 +5124,8 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
                      machine_rest_lift_def split_def | wp)+
   done
 
-crunch invs'[wp]: unmapPageTable "invs'"
+crunches unmapPageTable
+  for invs'[wp]: "invs'"
   (ignore: storePDE doMachineOp
        wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
            storePDE_Invalid_invs mapM_wp' no_irq_setCurrentPD
@@ -5086,7 +5152,8 @@ lemma perform_pti_invs [wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
   done
 
-crunch invs'[wp]: setVMRootForFlush "invs'"
+crunches setVMRootForFlush
+  for invs'[wp]: "invs'"
 
 lemma addPTEOffset_Invalid[simp]:
   "addPTEOffset InvalidPTE x = InvalidPTE"
@@ -5188,12 +5255,14 @@ lemma mapM_storePDE_invs:
     apply simp+
   done
 
-crunch cte_wp_at': unmapPage "\<lambda>s. P (cte_wp_at' P' p s)"
+crunches unmapPage
+  for cte_wp_at': "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
-crunch inv: lookupPTSlot P
+crunches lookupPTSlot
+  for inv: P
   (wp: crunch_wps simp: crunch_simps)
 
 lemma flushPage_invs' [wp]:
@@ -5210,7 +5279,8 @@ lemma unmapPage_invs' [wp]:
   by (wpsimp wp: lookupPTSlot_inv mapM_storePTE_invs mapM_storePDE_invs
                  hoare_vcg_const_imp_lift)
 
-crunch (no_irq) no_irq[wp]: doFlush
+crunches doFlush
+  for (no_irq) no_irq[wp]
   (simp: Let_def)
 
 crunches pteCheckIfMapped, pdeCheckIfMapped
