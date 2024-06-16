@@ -199,11 +199,13 @@ lemma set_vcpu_tcb_at_arch: (* generalise? this holds except when the ko is a vc
   "set_vcpu p v \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
   by (wp set_vcpu_nonvcpu_at; auto)
 
-crunch tcb_at_arch: vcpu_switch "\<lambda>s. P (ko_at (TCB tcb) t s)"
+crunches vcpu_switch
+  for tcb_at_arch: "\<lambda>s. P (ko_at (TCB tcb) t s)"
     (simp: crunch_simps when_def
        wp: crunch_wps set_vcpu_tcb_at_arch)
 
-crunch tcb_at_arch: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
+crunches unmap_page
+  for tcb_at_arch: "\<lambda>s. P (ko_at (TCB tcb) t s)"
     (simp: crunch_simps wp: crunch_wps set_pt_tcb_at ignore: set_object)
 
 lemmas unmap_page_tcb_at = unmap_page_tcb_at_arch
@@ -405,31 +407,39 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)
   done
 
-crunch typ_at_arch [wp]: arch_thread_set "\<lambda>s. P (typ_at T p s)"
+crunches arch_thread_set
+  for typ_at_arch[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps set_object_typ_at)
 
-crunch typ_at[wp]: dissociate_vcpu_tcb "\<lambda>s. P (typ_at T p s)"
+crunches dissociate_vcpu_tcb
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: do_machine_op set_object)
 
-crunch typ_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (typ_at T p s)"
+crunches arch_finalise_cap
+  for typ_at[wp,Finalise_AI_asms]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt set_object)
 
-crunch typ_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
+crunches prepare_thread_delete
+  for typ_at[wp,Finalise_AI_asms]: "\<lambda>s. P (typ_at T p s)"
 
-crunch tcb_at[wp]: arch_thread_set "\<lambda>s. tcb_at p s"
+crunches arch_thread_set
+  for tcb_at[wp]: "\<lambda>s. tcb_at p s"
   (ignore: set_object)
 
-crunch tcb_at[wp]: arch_thread_get "\<lambda>s. tcb_at p s"
+crunches arch_thread_get
+  for tcb_at[wp]: "\<lambda>s. tcb_at p s"
 
 lemma vcpu_set_tcb_at[wp]: "\<lbrace>\<lambda>s. tcb_at p s\<rbrace> set_vcpu t vcpu \<lbrace>\<lambda>_ s. tcb_at p s\<rbrace>"
   by (wpsimp simp: tcb_at_typ)
 
-crunch tcb_at[wp]: dissociate_vcpu_tcb "\<lambda>s. tcb_at p s"
+crunches dissociate_vcpu_tcb
+  for tcb_at[wp]: "\<lambda>s. tcb_at p s"
   (wp: crunch_wps)
 
-crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
+crunches prepare_thread_delete
+  for tcb_at[wp]: "\<lambda>s. tcb_at p s"
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -445,7 +455,8 @@ lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
          | clarsimp simp: arch_finalise_cap_def)+
   done
 
-crunch inv[wp]: arch_thread_get "P"
+crunches arch_thread_get
+  for inv[wp]: "P"
 
 lemma hoare_split: "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>"
   by (auto simp: valid_def)
@@ -507,20 +518,24 @@ lemma arch_thread_set_cap_refs_in_kernel_window[wp]:
   apply wp+
   done
 
-crunch valid_irq_states[wp]: arch_thread_set valid_irq_states
+crunches arch_thread_set
+  for valid_irq_states[wp]: valid_irq_states
   (wp: crunch_wps simp: crunch_simps)
 
-crunch interrupt_state[wp]: arch_thread_set "\<lambda>s. P (interrupt_states s)"
+crunches arch_thread_set
+  for interrupt_state[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas arch_thread_set_valid_irq_handlers[wp] = valid_irq_handlers_lift[OF arch_thread_set.caps arch_thread_set_interrupt_state]
 
-crunch interrupt_irq_node[wp]: arch_thread_set "\<lambda>s. P (interrupt_irq_node s)"
+crunches arch_thread_set
+  for interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas arch_thread_set_valid_irq_node[wp] = valid_irq_node_typ[OF arch_thread_set_typ_at_arch arch_thread_set_interrupt_irq_node]
 
-crunch idle_thread[wp]: arch_thread_set "\<lambda>s. P (idle_thread s)"
+crunches arch_thread_set
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_thread_set_valid_global_refs[wp]:
@@ -778,7 +793,8 @@ lemma dissociate_vcpu_tcb_sym_refs_hyp[wp]:
   apply (clarsimp simp: get_tcb_Some_ko_at obj_at_def sym_refs_vcpu_None split: if_splits)
   done
 
-crunch valid_objs[wp]: dissociate_vcpu_tcb "valid_objs"
+crunches dissociate_vcpu_tcb
+  for valid_objs[wp]: "valid_objs"
   (wp: crunch_wps simp: crunch_simps valid_obj_def valid_vcpu_def ignore: arch_thread_set)
 
 lemma set_vcpu_unlive_hyp[wp]:
@@ -830,7 +846,8 @@ lemma as_user_unlive0[wp]:
 lemma o_def_not: "obj_at (\<lambda>a. \<not> P a) t s =  obj_at (Not o P) t s"
   by (simp add: obj_at_def)
 
-crunch unlive0: dissociate_vcpu_tcb "obj_at (Not \<circ> live0) t"
+crunches dissociate_vcpu_tcb
+  for unlive0: "obj_at (Not \<circ> live0) t"
   (wp: crunch_wps simp: o_def_not ignore: arch_thread_set)
 
 lemma arch_thread_set_if_live_then_nonz_cap':
@@ -909,7 +926,8 @@ lemma vcpu_invalidate_active_ivs[wp]: "\<lbrace>invs\<rbrace> vcpu_invalidate_ac
   unfolding vcpu_invalidate_active_def
   by (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
 
-crunch cur_tcb[wp]: dissociate_vcpu_tcb "cur_tcb"
+crunches dissociate_vcpu_tcb
+  for cur_tcb[wp]: "cur_tcb"
   (wp: crunch_wps)
 
 crunches dissociate_vcpu_tcb
@@ -926,32 +944,40 @@ crunches dissociate_vcpu_tcb
    simp: crunch_simps read_cntpct_def maskInterrupt_def
    ignore: do_machine_op)
 
-crunch pspace_respects_device_region[wp]: dissociate_vcpu_tcb "pspace_respects_device_region"
+crunches dissociate_vcpu_tcb
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: crunch_wps)
 
-crunch cap_refs_in_kernel_window[wp]: dissociate_vcpu_tcb "cap_refs_in_kernel_window"
+crunches dissociate_vcpu_tcb
+  for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch pspace_in_kernel_window[wp]: dissociate_vcpu_tcb "pspace_in_kernel_window"
+crunches dissociate_vcpu_tcb
+  for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (wp: crunch_wps)
 
 lemma valid_asid_map_arm_current_vcpu_update[simp]:
   "valid_asid_map (s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>) = valid_asid_map s"
   by (simp add: valid_asid_map_def vspace_at_asid_def)
 
-crunch valid_asid_map[wp]: dissociate_vcpu_tcb "valid_asid_map"
+crunches dissociate_vcpu_tcb
+  for valid_asid_map[wp]: "valid_asid_map"
   (wp: crunch_wps)
 
-crunch valid_kernel_mappings[wp]: dissociate_vcpu_tcb "valid_kernel_mappings"
+crunches dissociate_vcpu_tcb
+  for valid_kernel_mappings[wp]: "valid_kernel_mappings"
   (wp: crunch_wps)
 
-crunch valid_arch_caps[wp]: dissociate_vcpu_tcb "valid_arch_caps"
+crunches dissociate_vcpu_tcb
+  for valid_arch_caps[wp]: "valid_arch_caps"
   (wp: crunch_wps)
 
-crunch valid_vspace_objs[wp]: dissociate_vcpu_tcb "valid_vspace_objs"
+crunches dissociate_vcpu_tcb
+  for valid_vspace_objs[wp]: "valid_vspace_objs"
   (wp: crunch_wps)
 
-crunch valid_irq_handlers[wp]: dissociate_vcpu_tcb "valid_irq_handlers"
+crunches dissociate_vcpu_tcb
+  for valid_irq_handlers[wp]: "valid_irq_handlers"
   (wp: crunch_wps ignore: do_machine_op)
 
 lemma as_user_valid_irq_node[wp]:
@@ -961,7 +987,8 @@ lemma as_user_valid_irq_node[wp]:
   apply (clarsimp simp: valid_irq_node_def obj_at_def is_cap_table dest!: get_tcb_SomeD)
   by (metis kernel_object.distinct(1) option.inject)
 
-crunch valid_irq_node[wp]: dissociate_vcpu_tcb "valid_irq_node"
+crunches dissociate_vcpu_tcb
+  for valid_irq_node[wp]: "valid_irq_node"
   (wp: crunch_wps)
 
 lemma dmo_maskInterrupt_True_valid_irq_states[wp]:
@@ -1049,7 +1076,8 @@ lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb 
          | wp (once) hoare_drop_imps)+
   done
 
-crunch invs[wp]: vcpu_finalise invs
+crunches vcpu_finalise
+  for invs[wp]: invs
   (ignore: dissociate_vcpu_tcb)
 
 lemma arch_finalise_cap_invs' [wp,Finalise_AI_asms]:
@@ -1532,13 +1560,16 @@ lemma arch_thread_set_cte_wp_at[wp]:
     apply (clarsimp simp: tcb_cnode_map_def)+
   done
 
-crunch cte_wp_at[wp,Finalise_AI_asms]: dissociate_vcpu_tcb "\<lambda>s. P (cte_wp_at P' p s)"
+crunches dissociate_vcpu_tcb
+  for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at ignore: arch_thread_set)
 
-crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
+crunches prepare_thread_delete
+  for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at ignore: arch_thread_set)
 
-crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
+crunches arch_finalise_cap
+  for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at ignore: arch_thread_set)
 
 end
@@ -1597,18 +1628,21 @@ crunches
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps subset_refl)
 
-crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
+crunches prepare_thread_delete
+  for irq_node[Finalise_AI_asms,wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
+crunches arch_finalise_cap
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch pred_tcb_at[wp]:
+crunches
   delete_asid_pool, delete_asid, unmap_page_table, unmap_page, vcpu_invalidate_active
-  "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps test)
 
-crunch pred_tcb_at[wp_unsafe]: arch_finalise_cap "pred_tcb_at proj P t"
+crunches arch_finalise_cap
+  for pred_tcb_at[wp_unsafe]: "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma set_vcpu_empty[wp]:
@@ -1742,7 +1776,8 @@ lemma replaceable_or_arch_update_pg:
 
 global_naming Arch
 
-crunch invs[wp]: prepare_thread_delete invs
+crunches prepare_thread_delete
+  for invs[wp]: invs
   (ignore: set_object do_machine_op wp: dmo_invs_lift)
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:

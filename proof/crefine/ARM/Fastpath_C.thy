@@ -24,10 +24,12 @@ lemma setCTE_obj_at'_queued:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
-crunch obj_at'_queued: cteInsert "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
+crunches cteInsert
+  for obj_at'_queued: "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
   (wp: setCTE_obj_at'_queued crunch_wps)
 
-crunch obj_at'_not_queued: emptySlot "obj_at' (\<lambda>a. \<not> tcbQueued a) p"
+crunches emptySlot
+  for obj_at'_not_queued: "obj_at' (\<lambda>a. \<not> tcbQueued a) p"
   (wp: setCTE_obj_at'_queued)
 
 lemma getEndpoint_obj_at':
@@ -66,14 +68,16 @@ lemma setBoundNotification_tcbContext:
   by wpsimp
 
 declare comp_apply [simp del]
-crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
+crunches deleteCallerCap
+  for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
        setNotification_tcb crunch_wps setThreadState_tcbContext
    simp: crunch_simps unless_def)
 declare comp_apply [simp]
 
 
-crunch ksArch[wp]: asUser "\<lambda>s. P (ksArchState s)"
+crunches asUser
+  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps)
 
 definition

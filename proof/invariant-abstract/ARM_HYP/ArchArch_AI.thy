@@ -189,11 +189,13 @@ lemma ucast_fst_hd_assocs:
   done
 
 
-crunch typ_at [wp]: perform_page_table_invocation, perform_page_invocation,
-         perform_asid_pool_invocation, perform_page_directory_invocation "\<lambda>s. P (typ_at T p s)"
+crunches perform_page_table_invocation, perform_page_invocation,
+         perform_asid_pool_invocation, perform_page_directory_invocation
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
 
-crunch typ_at [wp]: perform_vcpu_invocation "\<lambda>s. P (typ_at T p s)"
+crunches perform_vcpu_invocation
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
 
 lemmas perform_page_table_invocation_typ_ats [wp] =
@@ -964,7 +966,8 @@ lemma arch_thread_set_ex_nonz_cap_to[wp]:
                         caps_of_state_tcb_arch_update)
   done
 
-crunch ex_nonz_cap_to[wp]: dissociate_vcpu_tcb "ex_nonz_cap_to t"
+crunches dissociate_vcpu_tcb
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   (wp: crunch_wps)
 
 crunches vcpu_switch
@@ -1276,12 +1279,14 @@ lemma sts_valid_arch_inv:
   apply (clarsimp simp: is_tcb_def, wp sts_valid_vcpu_invocation_inv)
   done
 
-crunch inv[wp]: ensure_safe_mapping, create_mapping_entries "P"
+crunches ensure_safe_mapping, create_mapping_entries
+  for inv[wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp)
 
 crunch_ignore (add: select_ext)
 
-crunch inv [wp]: arch_decode_invocation "P"
+crunches arch_decode_invocation
+  for inv[wp]: "P"
   (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
 
@@ -1864,9 +1869,10 @@ lemma perform_vcpu_invocation_pred_tcb_at[wp_unsafe]:
                          invoke_vcpu_ack_vppi_def)+
   done
 
-crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
+crunches perform_page_table_invocation, perform_page_invocation,
            perform_asid_pool_invocation,
-           perform_page_directory_invocation "pred_tcb_at proj P t"
+           perform_page_directory_invocation
+  for pred_tcb_at: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 

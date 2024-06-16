@@ -1674,8 +1674,10 @@ generalise init_arch_objects to initialise other object types.
 definition retype_region2_ext :: "obj_ref list \<Rightarrow> Structures_A.apiobject_type \<Rightarrow> unit det_ext_monad" where
   "retype_region2_ext ptrs type \<equiv> modify (\<lambda>s. ekheap_update (foldr (\<lambda>p ekh. (ekh(p := default_ext type default_domain))) ptrs) s)"
 
-crunch all_but_exst[wp]: retype_region2_ext "all_but_exst P"
-crunch (empty_fail) empty_fail[wp]: retype_region2_ext
+crunches retype_region2_ext
+  for all_but_exst[wp]: "all_but_exst P"
+crunches retype_region2_ext
+  for (empty_fail) empty_fail[wp]
 
 end
 
@@ -1691,8 +1693,10 @@ definition
        mapM_x (ethread_set (\<lambda>tcb. tcb\<lparr>tcb_domain := cdom\<rparr>)) ptrs
       od)"
 
-crunch all_but_exst[wp]: retype_region2_extra_ext "all_but_exst P" (wp: mapM_x_wp)
-crunch (empty_fail) empty_fail[wp]: retype_region2_extra_ext (wp: mapM_x_wp)
+crunches retype_region2_extra_ext
+  for all_but_exst[wp]: "all_but_exst P" (wp: mapM_x_wp)
+crunches retype_region2_extra_ext
+  for (empty_fail) empty_fail[wp] (wp: mapM_x_wp)
 
 end
 
@@ -3680,7 +3684,8 @@ lemma createObjects_orig_obj_at':
   apply simp
   done
 
-crunch ko_wp_at'[wp]: doMachineOp "\<lambda>s. P (ko_wp_at' P' p s)"
+crunches doMachineOp
+  for ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' P' p s)"
 
 lemma createObjects_orig_cte_wp_at':
   "\<lbrace>\<lambda>s. range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0
@@ -4224,7 +4229,8 @@ lemma createNewCaps_cur:
   apply auto
   done
 
-crunch ksInterrupt[wp]: createNewCaps "\<lambda>s. P (ksInterruptState s)"
+crunches createNewCaps
+  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   (simp: crunch_simps unless_def
    wp: setObject_ksInterrupt updateObject_default_inv crunch_wps)
 
@@ -4384,10 +4390,12 @@ lemma createObjects'_irq_states' [wp]:
   apply fastforce
   done
 
-crunch irq_states' [wp]: createNewCaps valid_irq_states'
+crunches createNewCaps
+  for irq_states'[wp]: valid_irq_states'
   (wp: crunch_wps no_irq no_irq_clearMemory simp: crunch_simps unless_def)
 
-crunch ksMachine[wp]: createObjects "\<lambda>s. P (ksMachineState s)"
+crunches createObjects
+  for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
   (simp: crunch_simps unless_def)
 
 lemma createObjects_valid_bitmaps:
@@ -4738,10 +4746,12 @@ lemma createObjects'_ksDomScheduleIdx[wp]:
   apply simp
   done
 
-crunch ksDomSchedule[wp]: createNewCaps "\<lambda>s. P (ksDomSchedule s)"
+crunches createNewCaps
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp: mapM_x_wp' simp: crunch_simps)
 
-crunch ksDomScheduleIdx[wp]: createNewCaps "\<lambda>s. P (ksDomScheduleIdx s)"
+crunches createNewCaps
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: mapM_x_wp' simp: crunch_simps)
 
 lemma createObjects_null_filter':
@@ -4818,7 +4828,8 @@ lemma createNewCaps_null_filter':
                     | fastforce)+
   done
 
-crunch gsUntypedZeroRanges[wp]: createNewCaps "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunches createNewCaps
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: mapM_x_wp' simp: crunch_simps)
 
 lemma untyped_ranges_zero_inv_null_filter:

@@ -1011,7 +1011,8 @@ lemma invokeArch_tcb_at':
                   wp: performASIDControlInvocation_tcb_at')
   done
 
-crunch pspace_no_overlap'[wp]: setThreadState "pspace_no_overlap' w s"
+crunches setThreadState
+  for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
   (simp: unless_def)
 
 lemma sts_cte_cap_to'[wp]:
@@ -1186,21 +1187,24 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (wpsimp, simp+)
   done
 
-crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
+crunches setMRs
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
    wp: hoare_drop_imps hoare_vcg_split_case_option
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-crunch nosch [wp]: performRISCVMMUInvocation "\<lambda>s. P (ksSchedulerAction s)"
+crunches performRISCVMMUInvocation
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
-crunch st_tcb_at': performPageTableInvocation,
+crunches performPageTableInvocation,
                    performPageInvocation,
-                   performASIDPoolInvocation "st_tcb_at' P t"
+                   performASIDPoolInvocation
+  for st_tcb_at': "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps pteAtIndex_def)
 
 lemma performASIDControlInvocation_st_tcb_at':
@@ -1251,7 +1255,8 @@ lemmas arch_finalise_cap_aligned' = ArchRetypeDecls_H_RISCV64_H_finaliseCap_alig
 
 lemmas arch_finalise_cap_distinct' = ArchRetypeDecls_H_RISCV64_H_finaliseCap_distinct'
 
-crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
+crunches "Arch.finaliseCap"
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strengthen':

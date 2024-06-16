@@ -67,7 +67,8 @@ lemma capFaultOnFailure_empty_fail [intro!, wp, simp]:
   apply (simp add: capFaultOnFailure_def)
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: locateSlotCap
+crunches locateSlotCap
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma resolveAddressBits_spec_empty_fail:
   notes spec_empty_fail_bindE'[wp_split]
@@ -107,7 +108,8 @@ lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   apply (simp add: ARM_H.deriveCap_def)
   by auto
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: ensureNoChildren
+crunches ensureNoChildren
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
@@ -118,7 +120,8 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
                            isPageCap_def isASIDPoolCap_def isASIDControlCap_def)
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: setExtraBadge, cteInsert
+crunches setExtraBadge, cteInsert
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
   "empty_fail (transferCapsToSlots ep buffer n caps slots mi)"
@@ -129,7 +132,8 @@ lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
   apply (simp | wp | wpc | safe)+
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: lookupTargetSlot, ensureEmptySlot, lookupSourceSlot, lookupPivotSlot
+crunches lookupTargetSlot, ensureEmptySlot, lookupSourceSlot, lookupPivotSlot
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma decodeCNodeInvocation_empty_fail[intro!, wp, simp]:
   "empty_fail (decodeCNodeInvocation label args cap exs)"
@@ -151,7 +155,8 @@ lemma empty_fail_getObject_pte [intro!, wp, simp]:
   "empty_fail (getObject p :: pte kernel)"
   by (simp add: empty_fail_getObject)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: decodeARMMMUInvocation
+crunches decodeARMMMUInvocation
+  for (empty_fail) empty_fail[intro!, wp, simp]
 (simp: Let_def ARMMMU_improve_cases)
 
 lemma ignoreFailure_empty_fail[intro!, wp, simp]:
@@ -161,20 +166,23 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
 context
 notes option.case_cong_weak[cong]
 begin
-crunch (empty_fail) empty_fail[intro!, wp, simp]:
+crunches
   cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped,
   possibleSwitchTo, tcbSchedAppend
+  for (empty_fail) empty_fail[intro!, wp, simp]
   (simp: crunch_simps)
 end
 
-crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
+crunches "ThreadDecls_H.suspend"
+  for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
   (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
   by (fastforce simp: restart_def)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
+crunches finaliseCap, preemptionPoint, capSwapForDelete
+  for (empty_fail) empty_fail[intro!, wp, simp]
   (wp: empty_fail_catch simp: Let_def)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
@@ -216,7 +224,8 @@ lemma assertDerived_empty_fail[intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (assertDerived src cap f)"
   by (fastforce simp: assertDerived_def)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cteDelete
+crunches cteDelete
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma spec_empty_fail_unlessE':
   "\<lbrakk> \<not> P \<Longrightarrow> spec_empty_fail f s \<rbrakk> \<Longrightarrow> spec_empty_fail (unlessE P f) s"
@@ -249,8 +258,9 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchError f g)"
   by fastforce
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]:
+crunches
   chooseThread, getDomainTime, nextDomain, isHighestPrio
+  for (empty_fail) empty_fail[intro!, wp, simp]
   (wp: empty_fail_catch)
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
@@ -259,7 +269,8 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
 
-crunch (empty_fail) empty_fail: callKernel
+crunches callKernel
+  for (empty_fail) empty_fail
   (wp: empty_fail_catch)
 
 theorem call_kernel_serial:

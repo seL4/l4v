@@ -113,7 +113,8 @@ lemma arch_scheduler_affects_equiv_ekheap_update[Scheduler_IF_assms, simp]:
   "arch_scheduler_affects_equiv s (ekheap_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
-crunch irq_state[Scheduler_IF_assms, wp]: ackInterrupt "\<lambda>s. P (irq_state s)"
+crunches ackInterrupt
+  for irq_state[Scheduler_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
 
 lemma thread_set_context_globals_equiv[Scheduler_IF_assms]:
   "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>

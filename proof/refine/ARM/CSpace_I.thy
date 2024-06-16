@@ -89,7 +89,8 @@ lemma rab_inv' [wp]:
 
 lemmas rab_inv'' [wp] = rab_inv' [folded resolveAddressBits_decl_def]
 
-crunch inv [wp]: lookupCap P
+crunches lookupCap
+  for inv[wp]: P
 
 lemma updateObject_cte_inv:
   "\<lbrace>P\<rbrace> updateObject (cte :: cte) ko x y n \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -2013,7 +2014,8 @@ lemma setCTE_no_0_obj' [wp]:
 
 declare mresults_fail[simp]
 
-crunch idle[wp]: get_object "valid_idle"
+crunches get_object
+  for idle[wp]: "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
 end

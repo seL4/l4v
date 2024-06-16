@@ -754,10 +754,12 @@ lemma separate_state_machine_state:
   "separate_state (s\<lparr>machine_state := ms\<rparr>) = separate_state s"
   unfolding separate_state_def by simp
 
-crunch separate_state [wp]: set_thread_state, set_simple_ko "separate_state"
+crunches set_thread_state, set_simple_ko
+  for separate_state[wp]: "separate_state"
    (wp: separate_state_pres' crunch_wps simp: crunch_simps)
 
-crunch separate_state [wp]: "Syscall_SA.handle_event" "separate_state"
+crunches "Syscall_SA.handle_event"
+  for separate_state[wp]: "separate_state"
    (wp: crunch_wps syscall_valid
     simp: crunch_simps separate_state_machine_state
     ignore: syscall)

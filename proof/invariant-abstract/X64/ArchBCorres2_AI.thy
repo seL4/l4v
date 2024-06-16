@@ -13,22 +13,29 @@ context Arch begin global_naming X64
 
 named_theorems BCorres2_AI_assms
 
-crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: invoke_cnode truncate_state
+crunches invoke_cnode
+  for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
   (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set)
 
-crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_objects truncate_state
+crunches create_cap,init_arch_objects,retype_region,delete_objects
+  for (bcorres) bcorres[wp]: truncate_state
   (ignore: freeMemory clearMemory retype_region_ext)
 
-crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord)
+crunches set_extra_badge,derive_cap
+  for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord)
 
-crunch (bcorres)bcorres[wp]: invoke_untyped truncate_state
+crunches invoke_untyped
+  for (bcorres) bcorres[wp]: truncate_state
   (ignore: sequence_x)
 
-crunch (bcorres)bcorres[wp]: set_mcpriority truncate_state
+crunches set_mcpriority
+  for (bcorres) bcorres[wp]: truncate_state
 
-crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: arch_get_sanitise_register_info, arch_post_modify_registers truncate_state
+crunches arch_get_sanitise_register_info, arch_post_modify_registers
+  for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
-crunch (bcorres)bcorres[wp]: updateIRQState truncate_state
+crunches updateIRQState
+  for (bcorres) bcorres[wp]: truncate_state
 
 lemma invoke_tcb_bcorres[wp]:
   fixes a
@@ -69,8 +76,9 @@ lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
   by (cases a; simp add: handle_arch_fault_reply_def; wp)
 
-crunch (bcorres)bcorres[wp, BCorres2_AI_assms]:
-    arch_switch_to_thread,arch_switch_to_idle_thread truncate_state
+crunches
+    arch_switch_to_thread,arch_switch_to_idle_thread
+  for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
 end
 
@@ -84,7 +92,8 @@ lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 
 context Arch begin global_naming X64
 
-crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
+crunches send_ipc,send_signal,do_reply_transfer,arch_perform_invocation
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def swp_def set_object_def
  ignore: freeMemory clearMemory loadWord cap_fault_on_failure
          storeWord lookup_error_on_failure getRestartPC getRegister mapME )
@@ -99,10 +108,11 @@ lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (d
   apply (wp | wpc | simp add: split_def | intro impI conjI)+
   done
 
-crunch (bcorres)bcorres[wp]:
+crunches
   decode_set_ipc_buffer, decode_set_space, decode_set_priority,
   decode_set_mcpriority, decode_set_sched_params, decode_bind_notification,
-  decode_unbind_notification, decode_set_tls_base truncate_state
+  decode_unbind_notification, decode_set_tls_base
+  for (bcorres) bcorres[wp]: truncate_state
 
 lemma decode_tcb_configure_bcorres[wp]: "bcorres (decode_tcb_configure b (cap.ThreadCap c) d e)
      (decode_tcb_configure b (cap.ThreadCap c) d e)"
@@ -124,12 +134,14 @@ lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_
   apply (wp | wpc | simp)+
   done
 
-crunch (bcorres) bcorres[wp]: handle_invocation truncate_state
+crunches handle_invocation
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: syscall_def Let_def gets_the_def
    ignore: syscall cap_fault_on_failure without_preemption const_on_failure
            decode_tcb_invocation)
 
-crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
+crunches receive_ipc,receive_signal,delete_caller_cap
+  for (bcorres) bcorres[wp]: truncate_state
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
   unfolding handle_vm_fault_def
@@ -147,7 +159,8 @@ lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
          | intro impI conjI allI | wp | wpc)+
   done
 
-crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord)
+crunches guarded_switch_to,switch_to_idle_thread
+  for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord)
 
 lemma choose_switch_or_idle:
   "((), s') \<in> fst (choose_thread s) \<Longrightarrow>

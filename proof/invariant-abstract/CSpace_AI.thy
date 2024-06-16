@@ -1787,7 +1787,8 @@ lemma free_index_update_reply_master_revocable[simp]:
 lemma imp_rev: "\<lbrakk>a\<longrightarrow>b;\<not>b\<rbrakk> \<Longrightarrow> \<not> a" by auto
 
 
-crunch cte_wp_at[wp]: update_cdt, set_original  "\<lambda>s. cte_wp_at P p s"
+crunches update_cdt, set_original
+  for cte_wp_at[wp]: "\<lambda>s. cte_wp_at P p s"
   (wp: crunch_wps)
 
 lemma cap_insert_weak_cte_wp_at:
@@ -3507,7 +3508,8 @@ lemma cap_insert_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (rule valid_idle_lift; wp)
 
-crunch reply[wp]: set_cdt "valid_reply_caps"
+crunches set_cdt
+  for reply[wp]: "valid_reply_caps"
 
 lemma set_untyped_cap_as_full_has_reply_cap:
   "\<lbrace>\<lambda>s. (has_reply_cap t s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
@@ -3597,7 +3599,8 @@ lemma cap_insert_reply [wp]:
   done
 
 
-crunch reply_masters[wp]: set_cdt "valid_reply_masters"
+crunches set_cdt
+  for reply_masters[wp]: "valid_reply_masters"
 
 
 lemma cap_insert_reply_masters [wp]:
@@ -3621,10 +3624,12 @@ lemma cap_insert_valid_arch [wp]:
   by (rule valid_arch_state_lift_aobj_at; wp cap_insert_aobj_at)
 
 
-crunch caps [wp]: update_cdt "\<lambda>s. P (caps_of_state s)"
+crunches update_cdt
+  for caps[wp]: "\<lambda>s. P (caps_of_state s)"
 
 
-crunch irq_node [wp]: update_cdt "\<lambda>s. P (interrupt_irq_node s)"
+crunches update_cdt
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 
 lemma update_cdt_global [wp]:
@@ -3649,7 +3654,8 @@ crunches cap_insert
   and vspace_objs [wp]: "valid_vspace_objs"
   (wp: crunch_wps)
 
-crunch arch_caps[wp]: update_cdt "valid_arch_caps"
+crunches update_cdt
+  for arch_caps[wp]: "valid_arch_caps"
 
 lemma is_derived_obj_refs:
   "is_derived m p cap cap' \<Longrightarrow> obj_refs cap = obj_refs cap'"
@@ -3753,12 +3759,14 @@ lemma cap_is_device_free_index_update_simp[simp]:
 
 locale cap_insert_crunches begin
 
-crunch arch_obj_at[wp]: cap_insert "ko_at (ArchObj ao) p"
+crunches cap_insert
+  for arch_obj_at[wp]: "ko_at (ArchObj ao) p"
   (ignore: set_object set_cap wp: set_cap_obj_at_impossible crunch_wps
      simp: caps_of_def cap_of_def)
 
 
-crunch empty_table_at[wp]: cap_insert "obj_at (empty_table S) p"
+crunches cap_insert
+  for empty_table_at[wp]: "obj_at (empty_table S) p"
   (ignore: set_object set_cap wp: set_cap_obj_at_impossible crunch_wps
      simp: empty_table_caps_of)
 
@@ -3773,14 +3781,17 @@ crunches cap_insert
   and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (wp: get_cap_wp simp: crunch_simps)
 
-crunch cap_refs_in_kernel_window[wp]: update_cdt "cap_refs_in_kernel_window"
+crunches update_cdt
+  for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
 
 end
 
-crunch pspace_respects_device_region[wp]: cap_insert "pspace_respects_device_region"
+crunches cap_insert
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: crunch_wps)
 
-crunch cap_refs_respects_device_region[wp]: update_cdt "cap_refs_respects_device_region"
+crunches update_cdt
+  for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
 
 lemma cap_insert_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region
@@ -3814,7 +3825,8 @@ lemma set_cdt_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_cdt t \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   by (simp add: set_cdt_def, wp) (simp add: valid_ioc_def)
 
-crunch valid_ioc[wp]: update_cdt valid_ioc
+crunches update_cdt
+  for valid_ioc[wp]: valid_ioc
 
 
 (* FIXME: we could weaken this. *)
@@ -3844,7 +3856,8 @@ lemma set_cdt_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_cdt t \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (simp add: set_cdt_def, wp) (simp add: valid_machine_state_def)
 
-crunch vms[wp]: update_cdt valid_machine_state
+crunches update_cdt
+  for vms[wp]: valid_machine_state
 
 
 lemma cap_insert_vms[wp]:
@@ -3861,7 +3874,8 @@ lemma valid_irq_states_is_original_cap_update[simp]:
   "valid_irq_states (s\<lparr>is_original_cap := x\<rparr>) = valid_irq_states s"
   by(auto simp: valid_irq_states_def)
 
-crunch valid_irq_states[wp]: cap_insert "valid_irq_states"
+crunches cap_insert
+  for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma valid_irq_states_exst_update[simp]:
@@ -4086,7 +4100,8 @@ lemma guarded_lookup_valid_cap:
   apply assumption
   done
 
-crunch inv[wp]: lookup_slot_for_cnode_op "P"
+crunches lookup_slot_for_cnode_op
+  for inv[wp]: "P"
   (wp:  simp: crunch_simps)
 
 
@@ -4126,7 +4141,8 @@ lemma ct_from_words_inv [wp]:
   by (simp add: captransfer_from_words_def | wp dmo_inv loadWord_inv)+
 
 (* FIXME: move *)
-crunch inv[wp]: stateAssert P
+crunches stateAssert
+  for inv[wp]: P
 
 lemma not_Null_valid_imp [simp]:
   "(cap \<noteq> cap.NullCap \<longrightarrow> s \<turnstile> cap) = (s \<turnstile> cap)"
@@ -4392,11 +4408,13 @@ crunches setup_reply_master
   and pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (simp: crunch_simps)
 
-crunch arch_ko_at: setup_reply_master "ko_at (ArchObj ao) p"
+crunches setup_reply_master
+  for arch_ko_at: "ko_at (ArchObj ao) p"
   (ignore: set_cap wp: set_cap_obj_at_impossible crunch_wps
      simp: if_apply_def2 caps_of_def cap_of_def)
 
-crunch empty_table_at[wp]: setup_reply_master "obj_at (empty_table S) p"
+crunches setup_reply_master
+  for empty_table_at[wp]: "obj_at (empty_table S) p"
   (ignore: set_cap wp: set_cap_obj_at_impossible crunch_wps
      simp: if_apply_def2 empty_table_caps_of)
 
@@ -4440,7 +4458,8 @@ lemma setup_reply_master_vms[wp]:
   apply (simp add: valid_machine_state_def)
   done
 
-crunch valid_irq_states[wp]: setup_reply_master "valid_irq_states"
+crunches setup_reply_master
+  for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 

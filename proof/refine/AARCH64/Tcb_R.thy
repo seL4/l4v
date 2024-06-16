@@ -577,7 +577,8 @@ lemma tcbSchedDequeue_ct_in_state'[wp]:
   apply (rule hoare_lift_Pf [where f=ksCurThread]; wp)
   done
 
-crunch cur[wp]: tcbSchedDequeue cur_tcb'
+crunches tcbSchedDequeue
+  for cur[wp]: cur_tcb'
 
 crunches tcbSchedDequeue
   for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' st tcbPtr s)"
@@ -968,7 +969,8 @@ lemma setMCPriority_valid_objs'[wp]:
   apply (fastforce  simp: obj_at'_def)+
   done
 
-crunch sch_act_simple[wp]: setMCPriority sch_act_simple
+crunches setMCPriority
+  for sch_act_simple[wp]: sch_act_simple
   (wp: ssa_sch_act_simple crunch_wps rule: sch_act_simple_lift simp: crunch_simps)
 
 abbreviation "valid_option_prio \<equiv> case_option True (\<lambda>(p, auth). p \<le> maxPriority)"
@@ -2015,7 +2017,8 @@ lemma checkPrio_lt_ct_weak:
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   by (rule le_ucast_ucast_le) simp
 
-crunch inv: checkPrio "P"
+crunches checkPrio
+  for inv: "P"
 
 lemma decodeSetPriority_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t \<rbrace>
@@ -2191,7 +2194,8 @@ lemma decodeSetMCPriority_is_tc[wp]:
   apply (clarsimp simp: isThreadControl_def)
   done
 
-crunch inv[wp]: decodeSetIPCBuffer "P"
+crunches decodeSetIPCBuffer
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 lemma slotCapLongRunningDelete_corres:
@@ -2536,7 +2540,8 @@ lemma decodeTCBInvocation_corres:
              elim!: list_all2_mono)
   done
 
-crunch inv[wp]: decodeTCBInvocation P
+crunches decodeTCBInvocation
+  for inv[wp]: P
   (simp: crunch_simps)
 
 lemma real_cte_at_not_tcb_at':

@@ -129,13 +129,16 @@ lemma invoke_page_table_wp:
   apply (wp sep_wp: insert_cap_orphan_wp set_cap_wp, sep_solve)
 done
 
-crunch cdl_cur_thread[wp]: invoke_page "\<lambda>s. P (cdl_current_thread s)"
+crunches invoke_page
+  for cdl_cur_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: crunch_wps simp: swp_def)
 
-crunch cdl_cur_thread[wp]: invoke_page_table "\<lambda>s. P (cdl_current_thread s)"
+crunches invoke_page_table
+  for cdl_cur_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: crunch_wps simp: swp_def)
 
-crunch cdl_cur_domain[wp]: invoke_page_table, invoke_page "\<lambda>s. P (cdl_current_domain s)"
+crunches invoke_page_table, invoke_page
+  for cdl_cur_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
   (wp: crunch_wps simp: swp_def unless_def)
 
 lemmas cap_asid_simps[simp] = cap_asid_def[split_simps cdl_cap.split]
@@ -568,9 +571,11 @@ lemma decode_invocation_asid_pool_assign:
   apply (clarsimp simp:cap_object_def cap_has_object_def)
   done
 
-crunch cdl_cur_thread[wp]: invoke_asid_pool "\<lambda>s. P (cdl_current_thread s)"
+crunches invoke_asid_pool
+  for cdl_cur_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
 
-crunch cdl_cur_domain[wp]: invoke_asid_pool "\<lambda>s. P (cdl_current_domain s)"
+crunches invoke_asid_pool
+  for cdl_cur_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
 
 lemma set_split_single:
   "a \<in>A \<Longrightarrow> A = A - {a} \<union> {a}"

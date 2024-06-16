@@ -445,8 +445,8 @@ lemma set_pd_cte_wp_at_iin[wp]:
    apply (simp add: obj_at_def)+
   done
 
-crunch cte_wp_at_iin[wp]: init_arch_objects
-  "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
+crunches init_arch_objects
+  for cte_wp_at_iin[wp]: "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
   (ignore: clearMemory wp: crunch_wps)
 
 lemmas init_arch_objects_ex_cte_cap_wp_to

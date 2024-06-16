@@ -129,7 +129,8 @@ lemma activate_invs':
                          pred_disj_def)
   done
 
-crunch nosch[wp]: activateIdleThread "\<lambda>s. P (ksSchedulerAction s)"
+crunches activateIdleThread
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: setNextPC)
 
 declare not_psubset_eq[dest!]
@@ -171,10 +172,12 @@ lemma idle_tsr:
   "thread_state_relation ts ts' \<Longrightarrow> idle' ts' = idle ts"
   by (case_tac ts, auto)
 
-crunch cur [wp]: cancelIPC cur_tcb'
+crunches cancelIPC
+  for cur[wp]: cur_tcb'
   (wp: crunch_wps simp: crunch_simps o_def)
 
-crunch cur [wp]: setupReplyMaster cur_tcb'
+crunches setupReplyMaster
+  for cur[wp]: cur_tcb'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setCTE_weak_sch_act_wf[wp]:
@@ -301,10 +304,12 @@ lemma invokeTCB_ReadRegisters_corres:
   apply (clarsimp simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
   done
 
-crunch sch_act_simple [wp]: asUser "sch_act_simple"
+crunches asUser
+  for sch_act_simple[wp]: "sch_act_simple"
   (rule: sch_act_simple_lift)
 
-crunch invs'[wp]: getSanitiseRegisterInfo invs'
+crunches getSanitiseRegisterInfo
+  for invs'[wp]: invs'
 
 lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
   by (clarsimp simp: valid_sched_def)
@@ -365,7 +370,8 @@ lemma invokeTCB_WriteRegisters_corres:
   apply fastforce
   done
 
-crunch it[wp]: suspend "\<lambda>s. P (ksIdleThread s)"
+crunches suspend
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 lemma tcbSchedDequeue_ResumeCurrentThread_imp_notct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
@@ -488,8 +494,10 @@ lemma readreg_invs':
        | clarsimp simp: invs'_def valid_state'_def
                  dest!: global'_no_ex_cap)+
 
-crunch ex_nonz_cap_to'[wp]: getSanitiseRegisterInfo "ex_nonz_cap_to' d"
-crunch it'[wp]: getSanitiseRegisterInfo "\<lambda>s. P (ksIdleThread s)"
+crunches getSanitiseRegisterInfo
+  for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' d"
+crunches getSanitiseRegisterInfo
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 lemma writereg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
@@ -583,7 +591,8 @@ lemma tcbSchedDequeue_ct_in_state'[wp]:
   apply (rule hoare_lift_Pf[where f=ksCurThread]; wpsimp)
   done
 
-crunch cur[wp]: tcbSchedDequeue cur_tcb'
+crunches tcbSchedDequeue
+  for cur[wp]: cur_tcb'
 
 crunches tcbSchedDequeue
   for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' st tcbPtr s)"
@@ -1009,7 +1018,8 @@ lemma setMCPriority_valid_objs'[wp]:
   apply (fastforce  simp: obj_at'_def)+
   done
 
-crunch sch_act_simple[wp]: setMCPriority sch_act_simple
+crunches setMCPriority
+  for sch_act_simple[wp]: sch_act_simple
   (wp: ssa_sch_act_simple crunch_wps rule: sch_act_simple_lift simp: crunch_simps)
 
 abbreviation "valid_option_prio \<equiv> case_option True (\<lambda>(p, auth). p \<le> maxPriority)"
@@ -2015,7 +2025,8 @@ lemma getMCP_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at' ((=) mcp
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
-crunch inv: checkPrio "P"
+crunches checkPrio
+  for inv: "P"
   (simp: crunch_simps)
 
 lemma checkPrio_wp:
@@ -2214,7 +2225,8 @@ lemma decodeSetMCPriority_is_tc[wp]:
   apply (clarsimp simp: isThreadControl_def)
   done
 
-crunch inv[wp]: decodeSetIPCBuffer "P"
+crunches decodeSetIPCBuffer
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 lemma slotCapLongRunningDelete_corres:
@@ -2574,7 +2586,8 @@ lemma decodeTCBInvocation_corres:
              elim!: list_all2_mono)
   done
 
-crunch inv[wp]: decodeTCBInvocation P
+crunches decodeTCBInvocation
+  for inv[wp]: P
 (simp: crunch_simps)
 
 lemma real_cte_at_not_tcb_at':

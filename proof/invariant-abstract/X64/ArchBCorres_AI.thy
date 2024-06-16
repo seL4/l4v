@@ -11,10 +11,12 @@ begin
 
 context Arch begin global_naming X64
 
-crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state
+crunches arch_finalise_cap
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: swp_def)
 
-crunch (bcorres)bcorres[wp]: prepare_thread_delete truncate_state
+crunches prepare_thread_delete
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: swp_def)
 
 end
