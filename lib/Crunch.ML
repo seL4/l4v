@@ -41,7 +41,7 @@ fun read_section all_sections section =
 fun read_sections sections =
     Scan.repeat (Scan.first (map (read_section sections) sections)) >> List.concat
 
-val crunches_parser =
+val crunch_parser =
     (((P.list1 P.const --| P.$$$ "for")
      -- P.and_list1 ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
          -- Parse.opt_attribs) -- Scan.optional (P.$$$ ":" |-- P.term) "")
@@ -55,9 +55,9 @@ val crunches_parser =
                    crunch_x att_srcs extra prp_name wpigs consts lthy)) confs));
 
 (*
- example: crunches f,g for (kind) inv: P and (kind2) inv2: Q (wp: h_P simp: .. ignore: ..)
+ example: crunch f,g for (kind) inv: P and (kind2) inv2: Q (wp: h_P simp: .. ignore: ..)
 
- where: crunches = command keyword
+ where: crunch = command keyword
         kind   = instance of crunch, e.g. valid, no_fail
         inv    = lemma name pattern
         [wp]   = optional list of attributes for all proved thms
@@ -76,11 +76,11 @@ val crunches_parser =
  There is a longer description of what each crunch does in crunch-cmd.ML
 *)
 
-val crunchesP =
+val crunchP =
     Outer_Syntax.local_theory
-        @{command_keyword "crunches"}
+        @{command_keyword "crunch"}
         "crunch through monadic definitions with multiple properties"
-        crunches_parser
+        crunch_parser
 
 val add_sect = ("add", Parse.const >> Constant);
 val del_sect = ("del", Parse.const >> Constant);

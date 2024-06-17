@@ -24,7 +24,7 @@ lemma get_irq_slot_cte_at[wp]:
   done
 
 
-crunches set_irq_state
+crunch set_irq_state
   for valid_ioc[wp]: valid_ioc
 
 definition valid_irq_masks_but where

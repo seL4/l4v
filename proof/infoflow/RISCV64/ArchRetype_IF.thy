@@ -70,11 +70,11 @@ lemma set_pt_reads_respects_g:
   by (fastforce intro: equiv_valid_guard_imp[OF reads_respects_g] doesnt_touch_globalsI
                        set_pt_reads_respects set_pt_globals_equiv)
 
-crunches clearMemory
+crunch clearMemory
   for irq_state[Retype_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
   (wp: crunch_wps simp: crunch_simps storeWord_def ignore_del: clearMemory)
 
-crunches freeMemory
+crunch freeMemory
   for irq_state[Retype_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
   (wp: crunch_wps simp: crunch_simps storeWord_def)
 

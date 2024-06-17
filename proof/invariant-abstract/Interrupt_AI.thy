@@ -116,7 +116,7 @@ locale Interrupt_AI =
         set_thread_state t st
       \<lbrace>\<lambda>rv. arch_irq_control_inv_valid i\<rbrace>"
 
-crunches decode_irq_handler_invocation
+crunch decode_irq_handler_invocation
   for inv[wp]: "P"
   (simp: crunch_simps)
 
@@ -140,7 +140,7 @@ lemma decode_irq_handler_valid[wp]:
   apply (fastforce dest: valid_irq_handlersD simp: invs_def valid_state_def)
   done
 
-crunches is_irq_active
+crunch is_irq_active
   for inv[wp]: "P"
 
 lemma mod_le:
@@ -152,7 +152,7 @@ lemma is_up_8_32: "is_up (ucast :: word8 \<Rightarrow> word32)"
   by (simp add: is_up_def source_size_def target_size_def word_size)
 
 
-crunches
+crunch
   cancel_all_ipc, cancel_all_signals, fast_finalise, set_cap, post_cap_deletion
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
@@ -209,22 +209,22 @@ lemma get_irq_slot_ex_cte:
   apply clarsimp
   done
 
-crunches set_irq_state
+crunch set_irq_state
   for pspace_aligned[wp]: "pspace_aligned"
 
-crunches set_irq_state
+crunch set_irq_state
   for pspace_distinct[wp]: "pspace_distinct"
 
 lemma valid_mdb_interrupts[simp]:
   "valid_mdb (interrupt_states_update f s) = valid_mdb s"
   by (simp add: valid_mdb_def mdb_cte_at_def)
 
-crunches set_irq_state
+crunch set_irq_state
   for valid_mdb[wp]: "valid_mdb"
 
-crunches set_irq_state
+crunch set_irq_state
   for mdb_cte_wp_at[wp]: "\<lambda>s. cte_wp_at (P (cdt s)) p s"
-crunches set_irq_state
+crunch set_irq_state
   for real_cte_at[wp]: "real_cte_at p"
 
 lemmas set_irq_state_cte_cap_to[wp]
@@ -248,7 +248,7 @@ lemmas (in Interrupt_AI)
                                                              , simplified
                                                         ]
 
-crunches update_waiting_ntfn, cancel_signal, blocked_cancel_ipc
+crunch update_waiting_ntfn, cancel_signal, blocked_cancel_ipc
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
 
 lemma cancel_ipc_noreply_interrupt_states:

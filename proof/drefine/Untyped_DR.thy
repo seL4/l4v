@@ -636,7 +636,7 @@ lemma page_objects_default_object:
      \<Longrightarrow> \<exists>vmsz. (default_object ty dev us = ArchObj (DataPage dev vmsz) \<and> pageBitsForSize vmsz = obj_bits_api ty us)"
   by (auto simp: default_object_def default_arch_object_def obj_bits_api_def pageBitsForSize_def)
 
-crunches cleanByVA, cleanCacheRange_RAM
+crunch cleanByVA, cleanCacheRange_RAM
   for mem[wp]: "\<lambda>s. P (underlying_memory s)"
   (ignore_del: cleanByVA cleanL2Range)
 
@@ -811,7 +811,7 @@ lemma transform_default_cap:
                     transform_asid_def asid_high_bits_of_def asid_low_bits_def
              split: aobject_type.split)
 
-crunches create_cap_ext
+crunch create_cap_ext
   for valid_etcbs[wp]: valid_etcbs
 
 lemma create_cap_dcorres:
@@ -1046,7 +1046,7 @@ lemma create_caps_loop_dcorres:
   apply (auto simp: cte_wp_at_caps_of_state image_def)
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps unless_wp ignore: clearMemory)
 
@@ -1654,7 +1654,7 @@ qed
 context
 notes if_cong[cong]
 begin
-crunches "CSpace_D.ensure_empty"
+crunch "CSpace_D.ensure_empty"
   for inv[wp]: "P"
 end
 

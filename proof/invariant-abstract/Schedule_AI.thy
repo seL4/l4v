@@ -35,7 +35,7 @@ requalify_facts
   no_irq_storeWord
 end
 
-crunches schedule_switch_thread_fastfail
+crunch schedule_switch_thread_fastfail
   for inv[wp]: P
 
 lemma findM_inv'':

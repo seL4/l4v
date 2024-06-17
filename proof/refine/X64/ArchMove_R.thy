@@ -75,7 +75,7 @@ lemma no_irq_ioapicMapPinToVector[wp]:
   by (simp add: ioapicMapPinToVector_def)
 
 (* Move to Deterministic_AI*)
-crunches copy_global_mappings
+crunch copy_global_mappings
   for valid_etcbs[wp]: valid_etcbs (wp: mapM_x_wp')
 
 (* Move to no_gs_types_simps in ArchRetype_AI *)
@@ -136,7 +136,7 @@ lemma hw_asid_invalidate_valid_arch_state[wp]:
   "\<lbrace>valid_arch_state\<rbrace> hw_asid_invalidate asid pm \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding hw_asid_invalidate_def by wp
 
-crunches hw_asid_invalidate
+crunch hw_asid_invalidate
   for valid_global_objs[wp]: "valid_global_objs"
 
 (* Move to invariants *)

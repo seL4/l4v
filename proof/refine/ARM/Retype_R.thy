@@ -1605,9 +1605,9 @@ generalise init_arch_objects to initialise other object types.
 definition retype_region2_ext :: "obj_ref list \<Rightarrow> Structures_A.apiobject_type \<Rightarrow> unit det_ext_monad" where
   "retype_region2_ext ptrs type \<equiv> modify (\<lambda>s. ekheap_update (foldr (\<lambda>p ekh. (ekh(p := default_ext type default_domain))) ptrs) s)"
 
-crunches retype_region2_ext
+crunch retype_region2_ext
   for all_but_exst[wp]: "all_but_exst P"
-crunches retype_region2_ext
+crunch retype_region2_ext
   for (empty_fail) empty_fail[wp]
 
 end
@@ -1624,9 +1624,9 @@ definition
        mapM_x (ethread_set (\<lambda>tcb. tcb\<lparr>tcb_domain := cdom\<rparr>)) ptrs
       od)"
 
-crunches retype_region2_extra_ext
+crunch retype_region2_extra_ext
   for all_but_exst[wp]: "all_but_exst P" (wp: mapM_x_wp)
-crunches retype_region2_extra_ext
+crunch retype_region2_extra_ext
   for (empty_fail) empty_fail[wp] (wp: mapM_x_wp)
 
 end
@@ -2732,11 +2732,11 @@ lemma copyGlobalMappings_cte_wp_at[wp]:
   apply (wp mapM_x_wp')
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
 
@@ -2753,7 +2753,7 @@ lemmas object_splits =
 declare hoare_in_monad_post[wp del]
 declare univ_get_wp[wp del]
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for valid_arch_state'[wp]: "valid_arch_state'"
   (wp: crunch_wps)
 
@@ -3432,23 +3432,23 @@ lemma getObject_valid_pde'[wp]:
   apply (clarsimp simp: projectKOs valid_obj'_def dest!: obj_at_valid_objs')
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for valid_objs'[wp]: "valid_objs'"
   (ignore: storePDE wp: crunch_wps)
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for pspace_aligned'[wp]: "pspace_aligned'"
   (wp: crunch_wps)
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for pspace_distinct'[wp]: "pspace_distinct'"
   (wp: crunch_wps)
 
 lemmas storePDE_valid_mdb[wp]
     = storePDE_ctes[where P=valid_mdb_ctes, folded valid_mdb'_def]
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for valid_mdb[wp]: "valid_mdb'"
   (wp: crunch_wps)
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps)
 
@@ -3693,7 +3693,7 @@ lemma createObjects_orig_obj_at':
   apply simp
   done
 
-crunches doMachineOp
+crunch doMachineOp
   for ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' P' p s)"
 
 lemma createObjects_orig_cte_wp_at':
@@ -3866,7 +3866,7 @@ lemma createObjects_state_refs_of'':
      apply simp+
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
 
@@ -3919,22 +3919,22 @@ lemma createObjects_iflive':
   apply (fastforce simp: ex_nonz_cap_to'_def)
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: updateObject_default_inv crunch_wps)
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for ksReadyQueuesL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   (wp: updateObject_default_inv crunch_wps)
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for ksReadyQueuesL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: updateObject_default_inv crunch_wps)
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for valid_idle'[wp]: "valid_idle'"
   (simp: objBits_simps archObjSize_def
      wp: updateObject_default_inv crunch_wps setObject_idle' refl)
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for iflive'[wp]: "if_live_then_nonz_cap'"
   (wp: crunch_wps)
 
@@ -3995,7 +3995,7 @@ lemma threadSet_qsL2[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   by (simp add: threadSet_def | wp updateObject_default_inv)+
 
-crunches createObjects, createNewCaps
+crunch createObjects, createNewCaps
   for qs[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and qsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and qsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
@@ -4035,7 +4035,7 @@ lemma createObjects'_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> createObjects' p n v us \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
-crunches createObjects, doMachineOp, createNewCaps
+crunch createObjects, doMachineOp, createNewCaps
   for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -4209,7 +4209,7 @@ lemma createNewCaps_cur:
   apply auto
   done
 
-crunches createNewCaps
+crunch createNewCaps
   for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   (simp: crunch_simps unless_def
      wp: setObject_ksInterrupt updateObject_default_inv crunch_wps)
@@ -4238,7 +4238,7 @@ lemma createObjects_nosch'[wp]:
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
-crunches copyGlobalMappings, createObjects, createNewCaps
+crunch copyGlobalMappings, createObjects, createNewCaps
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
@@ -4293,13 +4293,13 @@ lemma createNewCaps_idle'[wp]:
                    | fastforce simp: curDomain_def)+
   done
 
-crunches createNewCaps
+crunch createNewCaps
   for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps unless_def wp: crunch_wps)
-crunches createNewCaps
+crunch createNewCaps
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv)
-crunches createNewCaps
+crunch createNewCaps
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv)
 
@@ -4495,14 +4495,14 @@ lemma createObjects'_irq_states' [wp]:
   apply fastforce
   done
 
-crunches createNewCaps
+crunch createNewCaps
   for irq_states'[wp]: valid_irq_states'
   (wp: crunch_wps no_irq no_irq_clearMemory simp: crunch_simps unless_def)
 
-crunches createObjects
+crunch createObjects
   for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
   (simp: crunch_simps unless_def)
-crunches createObjects
+crunch createObjects
   for cur_domain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (simp: unless_def)
 
@@ -4523,7 +4523,7 @@ lemma valid_bitmaps_gsUserPages_update[simp]:
   "valid_bitmaps (gsUserPages_update f s) = valid_bitmaps s"
   by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-crunches curDomain, copyGlobalMappings
+crunch curDomain, copyGlobalMappings
   for valid_bitmaps[wp]: valid_bitmaps
   and sched_pointers[wp]: "\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
   and valid_sched_pointers[wp]: valid_sched_pointers
@@ -4593,7 +4593,7 @@ proof (rule hoare_grab_asm)+
   qed
 qed
 
-crunches doMachineOp
+crunch doMachineOp
   for sched_projs[wp]: "\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
 
 lemma createNewCaps_sched_queues:
@@ -4775,7 +4775,7 @@ lemma createObjects_pspace_domain_valid:
   apply (simp add: objBits_def)
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: crunch_wps)
 
@@ -4798,7 +4798,7 @@ lemma createNewCaps_pspace_domain_valid[wp]:
                     archObjSize_def ptBits_def pdBits_def)
   done
 
-crunches createNewCaps
+crunch createNewCaps
   for cur_domain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: crunch_wps)
 
@@ -4893,15 +4893,15 @@ lemma createObjects'_ksDomScheduleIdx[wp]:
   apply simp
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
 
-crunches createNewCaps
+crunch createNewCaps
   for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp: mapM_x_wp' simp: crunch_simps)
 
-crunches createNewCaps
+crunch createNewCaps
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: mapM_x_wp' simp: crunch_simps)
 
@@ -4982,7 +4982,7 @@ lemma createNewCaps_null_filter':
                     | fastforce)+
   done
 
-crunches createNewCaps
+crunch createNewCaps
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
@@ -5291,7 +5291,7 @@ lemma untyped_zero_ranges_cte_def:
   apply (safe, metis+)
   done
 
-crunches createObjects
+crunch createObjects
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (simp: unless_def)
 

@@ -454,7 +454,7 @@ lemma ARMMMU_improve_cases:
 lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp getVCPU_wp | rule conjI)+
 
-crunches "ARM_HYP_H.decodeInvocation"
+crunch "ARM_HYP_H.decodeInvocation"
   for inv[wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: crunch_simps ARMMMU_improve_cases)
@@ -1294,7 +1294,7 @@ lemma archThreadSet_VCPU_Some_corres[corres]:
   apply (simp add: arch_tcb_relation_def)
   done
 
-crunches dissociateVCPUTCB
+crunch dissociateVCPUTCB
   for no_0_obj'[wp]: no_0_obj'
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -1447,7 +1447,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-crunches writeVCPUReg, readVCPUReg, performARMVCPUInvocation
+crunch writeVCPUReg, readVCPUReg, performARMVCPUInvocation
   for tcb_at'[wp]: "tcb_at' p"
 
 lemma invokeArch_tcb_at':
@@ -1464,7 +1464,7 @@ lemma invokeArch_tcb_at':
   apply wpsimp
   done
 
-crunches setThreadState
+crunch setThreadState
   for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
   (simp: unless_def)
 
@@ -1515,12 +1515,12 @@ lemma setTCB_pdpt_bits'[wp]:
   apply (erule(1) ps_clear_updE)
   done
 
-crunches
+crunch
   threadSet
   for vs_entry_align'[wp]: "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (wp: crunch_wps)
 
-crunches
+crunch
   addToBitmap
   for vs_entry_align'[wp]: "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (wp: crunch_wps)
@@ -1532,7 +1532,7 @@ lemma tcbSchedEnqueue_vs_entry_align[wp]:
   apply (clarsimp simp: tcbSchedEnqueue_def tcbQueuePrepend_def setQueue_def)
   by (wp unless_wp | simp)+
 
-crunches
+crunch
   setThreadState
   for vs_entry_align[wp]: "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (wp: crunch_wps)
@@ -2007,25 +2007,25 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (drule_tac t="cteCap cte" in sym, simp)
   by fastforce
 
-crunches setMRs
+crunch setMRs
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
    wp: hoare_drop_imps hoare_vcg_split_case_option
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-crunches performARMMMUInvocation, performARMVCPUInvocation
+crunch performARMMMUInvocation, performARMVCPUInvocation
   for nosch [wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
-crunches performPageDirectoryInvocation, performPageTableInvocation, performPageInvocation,
+crunch performPageDirectoryInvocation, performPageTableInvocation, performPageInvocation,
             performASIDPoolInvocation
   for st_tcb_at': "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp getObject_cte_inv FalseI simp: crunch_simps)
 
-crunches performARMVCPUInvocation
+crunch performARMVCPUInvocation
   for st_tcb_at': "st_tcb_at' P t"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2073,31 +2073,31 @@ lemma performASIDControlInvocation_st_tcb_at':
   apply auto
   done
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for aligned': pspace_aligned'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for distinct': pspace_distinct'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunches  "Arch.finaliseCap"
+crunch  "Arch.finaliseCap"
   for cte_wp_at': "cte_wp_at' P p"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 

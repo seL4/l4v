@@ -71,7 +71,7 @@ named_theorems Retype_AC_assms
 declare retype_region_proofs.vrefs_eq[Retype_AC_assms]
 declare retype_region_proofs'.pas_refined[Retype_AC_assms]
 
-crunches set_pd
+crunch set_pd
   for integrity_autarch: "integrity aag X st"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -264,7 +264,7 @@ lemma freeMemory_valid_irq_states:
   unfolding freeMemory_def
   by (wp mapM_x_wp[OF _ subset_refl] storeWord_valid_irq_states)
 
-crunches freeMemory
+crunch freeMemory
   for pspace_respects_device_region[wp]: "\<lambda>ms. P (device_state ms)"
   (wp: crunch_wps)
 
@@ -282,7 +282,7 @@ lemma dmo_freeMemory_invs[Retype_AC_assms]:
   apply auto
   done
 
-crunches delete_objects
+crunch delete_objects
   for global_refs[wp]: "\<lambda>s. P (global_refs s)"
   (ignore: do_machine_op freeMemory)
 

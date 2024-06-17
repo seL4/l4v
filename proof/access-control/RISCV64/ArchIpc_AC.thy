@@ -19,7 +19,7 @@ lemma make_fault_message_inv[Ipc_AC_assms, wp]:
 
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
-crunches cap_insert_ext
+crunch cap_insert_ext
   for integrity_asids[Ipc_AC_assms, wp]: "integrity_asids aag subjects x a st"
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
@@ -97,11 +97,11 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
                    simp del: of_nat_nat intro: ptr_range_off_off_mems)
   done
 
-crunches set_extra_badge
+crunch set_extra_badge
   for respects_in_ipc[Ipc_AC_assms, wp]: "integrity_tcb_in_ipc aag X receiver epptr TRContext st"
   (wp: store_word_offs_respects_in_ipc)
 
-crunches handle_arch_fault_reply
+crunch handle_arch_fault_reply
   for pas_refined[Ipc_AC_assms, wp]: "pas_refined aag"
 
 lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
@@ -184,7 +184,7 @@ lemma auth_ipc_buffers_machine_state_update[Ipc_AC_assms, simp]:
   "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers s"
   by (clarsimp simp: auth_ipc_buffers_def get_tcb_def)
 
-crunches handle_arch_fault_reply
+crunch handle_arch_fault_reply
   for pspace_aligned[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_arch_state s"

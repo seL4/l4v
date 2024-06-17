@@ -32,9 +32,9 @@ lemma pt_lookup_from_level_bcorres[wp]:
   "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
   by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for (bcorres) bcorres[wp]: truncate_state
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for (bcorres) bcorres[wp]: truncate_state
 
 end

@@ -103,7 +103,7 @@ lemma Arch_switchToThread_obj_at_pre:
   apply (wp asUser_obj_at_notQ doMachineOp_obj_at hoare_drop_imps|wpc)+
   done
 
-crunches setThreadState
+crunch setThreadState
   for pspace_canonical'[wp]: pspace_canonical'
 
 lemma word_shift_by_3:
@@ -185,7 +185,7 @@ lemma empty_fail_findVSpaceForASID[iff]:
   unfolding findVSpaceForASID_def checkPML4At_def
   by (wpsimp wp: empty_fail_getObject)
 
-crunches archThreadGet
+crunch archThreadGet
   for inv'[wp]: P
 
 (* FIXME MOVE near thm tg_sp' *)
@@ -251,7 +251,7 @@ lemma sign_extend_canonical_address:
   "(x = sign_extend 47 x) = canonical_address x"
   by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
 
-crunches switchToIdleThread
+crunch switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
 lemma setCurrentUserCR3_valid_arch_state'[wp]:
@@ -267,7 +267,7 @@ lemma setVMRoot_valid_arch_state':
          | strengthen valid_cr3'_makeCR3)+
   done
 
-crunches switchToThread
+crunch switchToThread
   for valid_arch_state'[wp]: valid_arch_state'
   (wp: crunch_wps simp: crunch_simps)
 
@@ -396,7 +396,7 @@ declare valid_asid_pool'.simps[simp del]
 (*<<<*)
 
 (* FIXME: change the original to be predicated! *)
-crunches doMachineOp
+crunch doMachineOp
   for pred_tcb_at'2[wp]: "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
@@ -489,7 +489,7 @@ lemma user_getreg_rv:
   apply (clarsimp simp: obj_at'_def getRegister_def in_monad atcbContextGet_def)
   done
 
-crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
          updateFreeIndex, preemptionPoint
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only

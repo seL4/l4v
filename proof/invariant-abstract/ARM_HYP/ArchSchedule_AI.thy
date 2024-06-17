@@ -28,7 +28,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply (clarsimp simp: word_bits_conv)
   done
 
-crunches clearExMonitor
+crunch clearExMonitor
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 
@@ -64,7 +64,7 @@ lemma set_vcpu_ct[wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_vcpu v v' \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   by (wpsimp simp: set_vcpu_def wp: get_object_wp)
 
-crunches
+crunch
   vcpu_update, vgic_update, vgic_update_lr, vcpu_restore_reg_range, vcpu_save_reg_range,
   vcpu_enable, vcpu_disable, vcpu_save, vcpu_restore, vcpu_switch, vcpu_save
   for it[wp]: "\<lambda>s. P (idle_thread s)"
@@ -81,7 +81,7 @@ lemma arch_stit_tcb_at[wp]:
   apply (wp tcb_at_typ_at)
   done
 
-crunches set_vm_root
+crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps wp: hoare_drop_imps)

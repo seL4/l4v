@@ -95,7 +95,7 @@ lemma possible_switch_to_equiv_but_for_labels:
   apply (clarsimp simp: etcb_at_def split: option.splits)
   done
 
-crunches set_thread_state_ext, set_thread_state, set_simple_ko
+crunch set_thread_state_ext, set_thread_state, set_simple_ko
   for etcb_at_cdom[wp]: "\<lambda>s. etcb_at (P (cur_domain s)) t s"
   (wp: crunch_wps)
 
@@ -416,7 +416,7 @@ lemma ev2_invisible_simple:
     apply (rule ev2_invisible[OF domains_distinct])
   by fastforce+
 
-crunches blocked_cancel_ipc_nosts
+crunch blocked_cancel_ipc_nosts
   for silc_inv[wp]: "silc_inv aag st"
 
 
@@ -503,13 +503,13 @@ lemmas cancel_ipc_reads_respects_rewrite =
 lemmas cancel_ipc_valid_rewrite =
   monadic_rewrite_is_valid[OF cancel_ipc_to_blocked_nosts, simplified bind_assoc]
 
-crunches blocked_cancel_ipc_nosts
+crunch blocked_cancel_ipc_nosts
   for etcb_at[wp]: "etcb_at P t"
-crunches blocked_cancel_ipc_nosts
+crunch blocked_cancel_ipc_nosts
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-crunches blocked_cancel_ipc_nosts
+crunch blocked_cancel_ipc_nosts
   for pas_refined[wp]: "pas_refined aag"
-crunches blocked_cancel_ipc_nosts
+crunch blocked_cancel_ipc_nosts
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
 lemma BlockedOnReceive_inj:
@@ -521,7 +521,7 @@ lemma receive_blockedD:
   "receive_blocked st \<Longrightarrow> \<exists>epptr pl. st = BlockedOnReceive epptr pl"
   by (cases st; simp add: receive_blocked_def)
 
-crunches blocked_cancel_ipc_nosts
+crunch blocked_cancel_ipc_nosts
   for pspace_aligned[wp]: pspace_aligned
   and valid_vspace_objs[wp]: valid_vspace_objs
   and valid_arch_state[wp]: valid_arch_state
@@ -1784,7 +1784,7 @@ lemma valid_ep_send_enqueue:
   apply (auto split: list.splits)
   done
 
-crunches complete_signal
+crunch complete_signal
   for globals_equiv[wp]: "globals_equiv st"
 
 lemma case_list_cons_cong:
@@ -1914,7 +1914,7 @@ lemma cancel_ipc_blocked_globals_equiv:
   apply (case_tac state;(clarsimp simp: pred_tcb_at_def obj_at_def receive_blocked_def))
   by (simp add: eq_commute)
 
-crunches possible_switch_to
+crunch possible_switch_to
   for globals_equiv[wp]: "globals_equiv st"
   (wp: tcb_sched_action_extended.globals_equiv reschedule_required_ext_extended.globals_equiv
    ignore_del: possible_switch_to)
@@ -1999,7 +1999,7 @@ lemma send_fault_ipc_globals_equiv:
      apply (wp | simp)+
   done
 
-crunches send_fault_ipc
+crunch send_fault_ipc
   for valid_arch_state[wp]: valid_arch_state
   (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps)
 
@@ -2022,7 +2022,7 @@ lemma handle_fault_reply_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (cases fault; wpsimp wp: as_user_globals_equiv handle_arch_fault_reply_globals_equiv)
 
-crunches handle_fault_reply
+crunch handle_fault_reply
   for valid_global_objs: "\<lambda>s :: det_state. valid_global_objs s"
 
 lemma do_reply_transfer_globals_equiv:

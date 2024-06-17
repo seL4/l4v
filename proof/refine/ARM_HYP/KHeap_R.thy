@@ -1926,7 +1926,7 @@ lemma setEndpoint_idle'[wp]:
   apply (clarsimp simp: projectKOs idle_tcb_ps_def)
   done
 
-crunches setEndpoint
+crunch setEndpoint
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: updateObject_default_inv)
 
@@ -1958,7 +1958,7 @@ lemma valid_irq_handlers_lift':
 
 lemmas valid_irq_handlers_lift'' = valid_irq_handlers_lift' [unfolded cteCaps_of_def]
 
-crunches setEndpoint
+crunch setEndpoint
   for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
@@ -2079,7 +2079,7 @@ lemma setNotification_idle'[wp]:
   apply (clarsimp simp: projectKOs idle_tcb_ps_def)
   done
 
-crunches setNotification
+crunch setNotification
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: updateObject_default_inv)
 
@@ -2105,7 +2105,7 @@ lemma set_ntfn_global_refs' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
 
-crunches setNotification
+crunch setNotification
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)" (ignore_del: setObject)
 
 lemma set_ntfn_valid_arch' [wp]:
@@ -2192,7 +2192,7 @@ lemma setObject_pspace_domain_valid[wp]:
   apply (clarsimp simp: lookupAround2_char1)
   done
 
-crunches setNotification, setEndpoint
+crunch setNotification, setEndpoint
   for pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma ct_not_inQ_lift:
@@ -2238,7 +2238,7 @@ lemma setNotification_ct_idle_or_in_cur_domain'[wp]:
            | clarsimp simp: updateObject_default_def in_monad setNotification_def)+
   done
 
-crunches setNotification
+crunch setNotification
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
@@ -2248,7 +2248,7 @@ lemma sym_heap_sched_pointers_lift:
   shows "f \<lbrace>sym_heap_sched_pointers\<rbrace>"
   by (rule_tac f=tcbSchedPrevs_of in hoare_lift_Pf2; wpsimp wp: assms)
 
-crunches setNotification
+crunch setNotification
   for tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
   and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
   and valid_sched_pointers[wp]: valid_sched_pointers
@@ -2371,10 +2371,10 @@ lemma dmo_inv':
   apply simp
   done
 
-crunches doMachineOp
+crunch doMachineOp
   for cte_wp_at'2[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
 
-crunches doMachineOp
+crunch doMachineOp
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemmas doMachineOp_typ_ats[wp] = typ_at_lifts [OF doMachineOp_typ_at']
@@ -2393,15 +2393,15 @@ lemma doMachineOp_invs_bits[wp]:
        | wp
        | fastforce elim: state_refs_of'_pspaceI)+
 
-crunches doMachineOp
+crunch doMachineOp
   for obj_at'[wp]: "\<lambda>s. P (obj_at' P' p s)"
 
-crunches doMachineOp
+crunch doMachineOp
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
-crunches doMachineOp
+crunch doMachineOp
   for idle'[wp]: "valid_idle'"
   (wp: crunch_wps simp: crunch_simps valid_idle'_pspace_itI)
-crunches doMachineOp
+crunch doMachineOp
   for pde_mappings'[wp]: "valid_pde_mappings'"
 
 lemma setEndpoint_ksMachine:

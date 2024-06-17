@@ -98,7 +98,7 @@ lemma delete_asid_invs[wp]:
   apply (wpsimp wp: set_asid_pool_invs_unmap)
   done
 
-crunches set_vm_root
+crunch set_vm_root
   for vs_lookup[wp]: "\<lambda>s. P (vs_lookup s)"
   (wp: crunch_wps simp: crunch_simps vs_lookup_arch_update)
 
@@ -187,7 +187,7 @@ lemma set_pml4_tcb_at_arch[simplified, wp]:
   by (clarsimp simp: valid_def obj_at_def set_object_def get_object_def
                      in_monad a_type_simps set_arch_obj_simps)
 
-crunches unmap_page
+crunch unmap_page
   for tcb_at_arch: "\<lambda>s. P (ko_at (TCB tcb) t s)"
     (simp: crunch_simps wp: crunch_wps ignore: set_pt set_pd set_pdpt)
 
@@ -318,7 +318,7 @@ lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
        | wpc | simp add: tcb_cap_cases_def)+
   done
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for is_final_cap'[wp]: "is_final_cap' cap"
 
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
@@ -352,23 +352,23 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
   done
 
-crunches arch_finalise_cap, prepare_thread_delete
+crunch arch_finalise_cap, prepare_thread_delete
   for typ_at_arch[wp,Finalise_AI_asms]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for valid_cap[wp]: "valid_cap cap"
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for tcb_at[wp]: "tcb_at p"
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for cte_wp_at[wp, Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for irq_node[wp, Finalise_AI_asms]: "\<lambda>s. P (interrupt_irq_node s)"
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for caps_of_state[wp, Finalise_AI_asms]: "\<lambda>s. P (caps_of_state s)"
 
-crunches nativeThreadUsingFPU, switchFpuOwner
+crunch nativeThreadUsingFPU, switchFpuOwner
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma dmo_nativeThreadUsingFPU[wp]: "\<lbrace>invs\<rbrace> do_machine_op (nativeThreadUsingFPU thread) \<lbrace>\<lambda>y. invs\<rbrace>"
@@ -391,7 +391,7 @@ lemma dmo_switchFpuOwner[wp]: "\<lbrace>invs\<rbrace> do_machine_op (switchFpuOw
   apply (erule (1) use_valid[OF _ switchFpuOwner_irq_masks])
   done
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for invs[wp]: invs
   (ignore: do_machine_op)
 
@@ -531,7 +531,7 @@ lemma suspend_unlive':
     apply wpsimp+
   done
 
-crunches fpu_thread_delete
+crunch fpu_thread_delete
   for obj_at[wp]: "\<lambda>s. P' (obj_at P p s)"
   (wp: whenE_wp simp: crunch_simps)
 
@@ -612,7 +612,7 @@ lemma set_asid_pool_cte_wp_at:
              simp: cte_wp_at_after_update a_type_simps)
 
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def set_arch_obj_simps
      wp: set_aobject_cte_wp_at crunch_wps set_object_cte_at
@@ -677,11 +677,11 @@ lemma flush_table_pred_tcb_at: "\<lbrace>\<lambda>s. pred_tcb_at proj P t s\<rbr
   apply (wp mapM_x_wp' | wpc | simp | rule hoare_pre)+
   done
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps set_arch_obj_simps wp: crunch_wps set_aobject_pred_tcb_at
    ignore: set_object)
@@ -760,7 +760,7 @@ lemma flush_table_empty:
     | rule hoare_pre)+
   done
 
-crunches flush_all, invalidate_page_structure_cache_asid, lookup_pt_slot, set_vm_root,
+crunch flush_all, invalidate_page_structure_cache_asid, lookup_pt_slot, set_vm_root,
                   hw_asid_invalidate
   for empty[wp]: "\<lambda>s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s"
   (wp: crunch_wps simp: crunch_simps)
@@ -1013,15 +1013,15 @@ lemma replaceable_reset_pdpt:
   apply simp_all
   done
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
-crunches invalidate_page_structure_cache_asid, hw_asid_invalidate
+crunch invalidate_page_structure_cache_asid, hw_asid_invalidate
   for obj_at[wp]: "\<lambda>s. P' (obj_at P p s)"
   (wp: whenE_wp simp: crunch_simps)
 
-crunches invalidate_page_structure_cache_asid, hw_asid_invalidate
+crunch invalidate_page_structure_cache_asid, hw_asid_invalidate
   for x64_global_pdpts[wp]: "\<lambda>s. P' (x64_global_pdpts (arch_state s))"
   (wp: whenE_wp simp: crunch_simps)
 
@@ -1247,9 +1247,9 @@ lemma replaceable_or_arch_update_pg:
   apply (auto simp: is_cap_simps is_arch_update_def cap_master_cap_simps)
   done
 
-crunches invalidate_page_structure_cache_asid, hw_asid_invalidate
+crunch invalidate_page_structure_cache_asid, hw_asid_invalidate
   for valid_cap: "valid_cap cap"
-crunches do_machine_op
+crunch do_machine_op
   for valid_asid_table[wp]: "\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s"
 
 global_naming Arch
@@ -1338,7 +1338,7 @@ lemma (* replace_cap_invs_arch_update *)[Finalise_AI_asms]:
   apply simp
   done
 
-crunches hw_asid_invalidate
+crunch hw_asid_invalidate
   for pred_tcb_at_P[wp]: "\<lambda>s. P (pred_tcb_at proj Q p s)"
 
 lemma dmo_tcb_cap_valid_ARCH [Finalise_AI_asms]:
@@ -1594,7 +1594,7 @@ lemma delete_asid_pool_unmapped2:
   apply fastforce
   done
 
-crunches hw_asid_invalidate, invalidate_page_structure_cache_asid
+crunch hw_asid_invalidate, invalidate_page_structure_cache_asid
   for x64_global_pml4[wp]: "\<lambda>s. P (x64_global_pml4(arch_state s))"
 
 lemma page_table_pte_atE:
@@ -1610,7 +1610,7 @@ lemma page_table_pte_atE:
   apply (auto simp: bit_simps)
   done
 
-crunches unmap_page_table,
+crunch unmap_page_table,
   store_pte, delete_asid_pool, copy_global_mappings,
   arch_finalise_cap
   for valid_cap[wp]: "valid_cap c"
@@ -1666,7 +1666,7 @@ lemma setup_caller_cap_ioports:
   by (wpsimp simp: setup_caller_cap_def is_cap_simps wp: cap_insert_ioports_not
              split_del: if_split)
 
-crunches set_mrs, as_user, set_message_info, copy_mrs, make_arch_fault_msg
+crunch set_mrs, as_user, set_message_info, copy_mrs, make_arch_fault_msg
   for ioports[wp]: valid_ioports
   (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object)
 

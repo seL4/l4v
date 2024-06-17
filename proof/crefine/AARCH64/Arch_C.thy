@@ -14,7 +14,7 @@ unbundle l4v_word_context
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches unmapPageTable
+crunch unmapPageTable
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -3476,7 +3476,7 @@ lemma readVCPUReg_ccorres:
   apply fastforce
   done
 
-crunches readVCPUReg
+crunch readVCPUReg
   for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P t s)"
   and pspace_aligned'[wp]: "pspace_aligned'"
   and pspace_distinct'[wp]: "pspace_distinct'"

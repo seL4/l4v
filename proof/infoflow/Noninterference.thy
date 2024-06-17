@@ -1351,11 +1351,11 @@ lemma ev_add_pre:
   apply simp
   done
 
-crunches check_active_irq_if
+crunch check_active_irq_if
   for invs[wp]: "einvs"
   (wp: dmo_getActiveIRQ_wp ignore: do_machine_op)
 
-crunches thread_set
+crunch thread_set
   for schact_is_rct[wp]: "schact_is_rct"
   (wp: get_object_wp simp: schact_is_rct_def)
 

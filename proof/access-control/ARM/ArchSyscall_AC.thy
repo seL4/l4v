@@ -27,11 +27,11 @@ lemma invs_irq_state_update[Syscall_AC_assms, simp]:
   apply (subst ARM.fold_congs(2); fastforce)
   done
 
-crunches prepare_thread_delete, arch_finalise_cap
+crunch prepare_thread_delete, arch_finalise_cap
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches set_original
+crunch set_original
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
@@ -49,15 +49,15 @@ lemma state_vrefs_cur_thread_update[Syscall_AC_assms, simp]:
   "state_vrefs (cur_thread_update f s) = state_vrefs s"
   by (simp add: state_vrefs_def)
 
-crunches arch_mask_irq_signal, handle_reserved_irq
+crunch arch_mask_irq_signal, handle_reserved_irq
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
 
-crunches handle_hypervisor_fault
+crunch handle_hypervisor_fault
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
   and cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
 
-crunches handle_vm_fault
+crunch handle_vm_fault
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
   and cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and state_refs_of[Syscall_AC_assms, wp]: "\<lambda>s. P (state_refs_of s)"
@@ -72,11 +72,11 @@ lemma handle_vm_fault_integrity[Syscall_AC_assms]:
   apply (wp as_user_integrity_autarch dmo_wp | simp add: getDFSR_def getFAR_def getIFSR_def)+
   done
 
-crunches ackInterrupt, resetTimer
+crunch ackInterrupt, resetTimer
   for underlying_memory_inv[Syscall_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
   (simp: maskInterrupt_def)
 
-crunches arch_mask_irq_signal, handle_reserved_irq
+crunch arch_mask_irq_signal, handle_reserved_irq
   for integrity[Syscall_AC_assms, wp]: "integrity aag X st"
   (wp: dmo_no_mem_respects)
 
@@ -150,16 +150,16 @@ lemma handle_reserved_irq_arch_state[Syscall_AC_assms, wp]:
   "handle_reserved_irq irq \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
 
-crunches init_arch_objects
+crunch init_arch_objects
   for arch_state[Syscall_AC_assms, wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps)
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for ct_active[Syscall_AC_assms, wp]: "ct_active"
   (wp: crunch_wps filterM_preserved unless_wp
    simp: crunch_simps ignore: do_extended_op)
 
-crunches
+crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
   handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply

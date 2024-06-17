@@ -12,7 +12,7 @@ context Arch begin global_naming AARCH64
 
 named_theorems IpcCancel_AI_asms
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for typ_at[wp, IpcCancel_AI_asms]: "\<lambda>s. P (typ_at T p s)"
   and idle_thread[wp, IpcCancel_AI_asms]: "\<lambda>s. P (idle_thread s)"
 

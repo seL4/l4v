@@ -26,7 +26,7 @@ lemma cancel_signal_simple:
   "\<lbrace>\<top>\<rbrace> cancel_signal t ntfn \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   by (simp add: cancel_signal_def | wp sts_st_tcb_at')+
 
-crunches cancel_all_ipc
+crunch cancel_all_ipc
   for typ_at: "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
 lemma cancel_all_helper:
@@ -61,7 +61,7 @@ lemma cancel_all_ipc_valid_objs:
   done
 
 
-crunches cancel_all_signals
+crunch cancel_all_signals
   for typ_at: "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
 
@@ -183,7 +183,7 @@ locale IpcCancel_AI =
     assumes arch_post_cap_deletion_idle_thread[wp]:
       "\<And>P acap. \<lbrace>\<lambda>(s :: 'a state). P (idle_thread s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
 
-crunches update_restart_pc
+crunch update_restart_pc
   for typ_at[wp]: "\<lambda>s. P (typ_at ty ptr s)"
   (* NB: Q needed for following has_reply_cap proof *)
   and cte_wp_at[wp]: "\<lambda>s. Q (cte_wp_at P cte s)"
@@ -197,7 +197,7 @@ lemma update_restart_pc_has_reply_cap[wp]:
   apply (wp hoare_vcg_all_lift)
   done
 
-crunches reply_cancel_ipc
+crunch reply_cancel_ipc
   for st_tcb_at_simple[wp]: "st_tcb_at simple t"
   (wp: crunch_wps sts_st_tcb_at_cases thread_set_no_change_tcb_state
    simp: crunch_simps unless_def)
@@ -231,7 +231,7 @@ lemma blocked_cancel_ipc_tcb_at [wp]:
 
 context IpcCancel_AI begin
 
-crunches cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
+crunch cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
   for typ_at[wp]: "\<lambda>(s :: 'a state). P (typ_at T p s)"
   (wp: crunch_wps hoare_vcg_if_splitE
      simp: crunch_simps unless_def)
@@ -529,21 +529,21 @@ lemma no_refs_simple_strg:
   by (fastforce elim!: pred_tcb_weakenE)+
 
 
-crunches cancel_all_ipc
+crunch cancel_all_ipc
   for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: unless_def crunch_simps)
 
-crunches cancel_all_signals, fast_finalise, unbind_notification
+crunch cancel_all_signals, fast_finalise, unbind_notification
   for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: unless_def crunch_simps)
 
 context IpcCancel_AI begin
 
-crunches reply_cancel_ipc
+crunch reply_cancel_ipc
   for it[wp]: "\<lambda>(s::'a state). P (idle_thread s)"
   (wp: crunch_wps simp: unless_def crunch_simps)
 
-crunches cancel_ipc
+crunch cancel_ipc
   for it[wp]: "\<lambda>(s :: 'a state). P (idle_thread s)"
 
 end
@@ -632,11 +632,11 @@ end
 declare if_cong [cong del]
 
 
-crunches blocked_cancel_ipc
+crunch blocked_cancel_ipc
   for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps)
 
-crunches cancel_signal
+crunch cancel_signal
   for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps)
 
@@ -682,7 +682,7 @@ lemma set_thread_state_bound_tcb_at[wp]:
   unfolding set_thread_state_def set_object_def get_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
-crunches cancel_all_ipc, empty_slot, is_final_cap, get_cap
+crunch cancel_all_ipc, empty_slot, is_final_cap, get_cap
   for bound_tcb_at[wp]: "bound_tcb_at P t"
   (wp: mapM_x_wp_inv)
 
@@ -771,7 +771,7 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
   apply simp
   done
 
-crunches cancel_ipc
+crunch cancel_ipc
   for bound_tcb_at[wp]: "bound_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv)
 
@@ -1009,7 +1009,7 @@ lemma unbind_notification_invs:
                   split: option.splits)
   done
 
-crunches cancel_all_signals
+crunch cancel_all_signals
   for bound_tcb_at[wp]: "bound_tcb_at P t"
   (wp: mapM_x_wp_inv)
 
@@ -1123,11 +1123,11 @@ lemma cancel_all_signals_unlive[wp]:
   done
 
 
-crunches cancel_all_ipc
+crunch cancel_all_ipc
   for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps mapM_x_wp)
 
-crunches cancel_all_signals
+crunch cancel_all_signals
   for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps mapM_x_wp thread_set_cte_wp_at_trivial
    simp: tcb_cap_cases_def)

@@ -10,17 +10,17 @@ imports Recycle_C
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches unmapPageTable
+crunch unmapPageTable
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches unmapPageTable
+crunch unmapPageTable
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
 
-crunches pteCheckIfMapped
+crunch pteCheckIfMapped
   for inv[wp]: "P"
 
-crunches pdeCheckIfMapped
+crunch pdeCheckIfMapped
   for inv[wp]: "P"
 end
 
@@ -2866,7 +2866,7 @@ lemma liftE_case_sum:
   "liftE f >>= case_sum (throwError \<circ> Inr) g = f >>= g"
   by (simp add:liftE_def)
 
-crunches resolveVAddr
+crunch resolveVAddr
   for inv': "P"
   (wp: crunch_wps simp: crunch_simps)
 

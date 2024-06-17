@@ -21,7 +21,7 @@ context begin
 interpretation Arch .
 
 (* Move to Deterministic_AI*)
-crunches copy_global_mappings
+crunch copy_global_mappings
   for valid_etcbs[wp]: valid_etcbs (wp: mapM_x_wp')
 
 end

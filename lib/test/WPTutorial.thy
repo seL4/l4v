@@ -219,7 +219,7 @@ context
 notes if_cong[cong]
 begin
 
-crunches
+crunch
   setup_reply_master, set_simple_ko
   for machine_state_preserved: "\<lambda>s. P (machine_state s)"
   (simp: split_def wp: crunch_wps)

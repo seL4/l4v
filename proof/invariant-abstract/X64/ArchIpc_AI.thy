@@ -337,7 +337,7 @@ lemma transfer_caps_non_null_cte_wp_at:
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
-crunches do_fault_transfer
+crunch do_fault_transfer
   for cte_wp_at[wp,Ipc_AI_assms]: "cte_wp_at P p"
 
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
@@ -407,7 +407,7 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
   done
 
 declare make_arch_fault_msg_invs[Ipc_AI_assms]
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for typ_at[Ipc_AI_assms]: "P (typ_at T p s)"
 
 end
@@ -422,7 +422,7 @@ context Arch begin global_naming X64
 
 named_theorems Ipc_AI_cont_assms
 
-crunches do_ipc_transfer
+crunch do_ipc_transfer
   for pspace_respects_device_region[wp, Ipc_AI_cont_assms]: "pspace_respects_device_region"
   (wp: crunch_wps ignore: const_on_failure simp: crunch_simps)
 
@@ -452,7 +452,7 @@ lemma set_mrs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
   by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
 
-crunches do_ipc_transfer
+crunch do_ipc_transfer
   for state_hyp_refs_of[wp, Ipc_AI_cont_assms]: "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 

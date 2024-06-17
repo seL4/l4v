@@ -716,7 +716,7 @@ lemmas delete_objects_descendants_range_in =
 end
 
 
-crunches delete_objects
+crunch delete_objects
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (ignore: do_machine_op freeMemory)
 

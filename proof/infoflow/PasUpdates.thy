@@ -40,7 +40,7 @@ locale PasUpdates_1 =
     "prepare_thread_delete p \<lbrace>domain_fields P\<rbrace>"
 begin
 
-crunches
+crunch
   retype_region_ext, create_cap_ext, cap_insert_ext, ethread_set, cap_move_ext, empty_slot_ext,
   cap_swap_ext, set_thread_state_ext, tcb_sched_action, reschedule_required, cap_swap_for_delete,
   finalise_cap, cap_move, cap_swap, cap_delete, cancel_badged_sends, cap_insert
@@ -142,7 +142,7 @@ locale PasUpdates_2 = PasUpdates_1 +
      state_asids_to_policy aag s"
 begin
 
-crunches
+crunch
   set_domain,possible_switch_to,set_priority,set_extra_badge,handle_send,handle_recv,handle_reply
   for domain_fields[wp]: "domain_fields P"
   (wp: syscall_valid crunch_wps mapME_x_inv_wp

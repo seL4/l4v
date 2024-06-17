@@ -89,7 +89,7 @@ lemma handle_hypervisor_fault_globals_equiv[Syscall_IF_assms]:
   "handle_hypervisor_fault thread hypfault_type \<lbrace>globals_equiv st\<rbrace>"
   by (cases hypfault_type; wpsimp)
 
-crunches arch_activate_idle_thread
+crunch arch_activate_idle_thread
   for globals_equiv[Syscall_IF_assms, wp]: "globals_equiv st"
 
 lemma select_f_setNextPC_reads_respects[Syscall_IF_assms, wp]:

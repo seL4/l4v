@@ -52,7 +52,7 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
    apply (simp add:retype_addrs_def)
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for pspace_aligned[wp]:  "pspace_aligned"
   and pspace_distinct[wp]: "pspace_distinct"
   and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
@@ -61,7 +61,7 @@ crunches init_arch_objects
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps)
 
-crunches store_pte
+crunch store_pte
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (ignore: clearMemory wp: crunch_wps)
 
@@ -87,11 +87,11 @@ lemma get_pte_wellformed[wp]:
   apply (fastforce simp: valid_objs_def dom_def valid_obj_def ptes_of_def in_opt_map_eq)
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_objs[wp]: "valid_objs"
   (ignore: clearMemory wp: crunch_wps)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_arch_state[wp]: "valid_arch_state"
   (ignore: clearMemory set_object wp: crunch_wps)
 
@@ -99,16 +99,16 @@ lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ
 
 lemmas init_arch_objects_cap_table[wp] = cap_table_at_lift_valid [OF init_arch_objects_typ_at]
 
-crunches clearMemory
+crunch clearMemory
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp ignore_del: clearMemory)
 
-crunches reserve_region
+crunch reserve_region
   for pspace_respects_device_region[wp]: pspace_respects_device_region
-crunches reserve_region
+crunch reserve_region
   for cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
 
-crunches reserve_region
+crunch reserve_region
   for invs[wp]: "invs"
 
 lemma dmo_eq_kernel_restricted [wp, Retype_AI_assms]:
@@ -951,11 +951,11 @@ lemma invs_irq_state_independent:
                      swp_def valid_irq_states_def
               split: option.split)
 
-crunches storeWord, clearMemory
+crunch storeWord, clearMemory
   for irq_masks_inv[wp]: "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps ignore_del: storeWord clearMemory)
 
-crunches clearMemory
+crunch clearMemory
   for underlying_mem_0[wp]: "\<lambda>s. underlying_memory s p = 0"
   (wp: crunch_wps storeWord_um_eq_0 ignore_del: clearMemory)
 
@@ -980,7 +980,7 @@ lemma caps_region_kernel_window_imp:
   apply blast
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
@@ -990,7 +990,7 @@ lemma init_arch_objects_excap:
    \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
   by (wp ex_cte_cap_to_pres)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps)
 

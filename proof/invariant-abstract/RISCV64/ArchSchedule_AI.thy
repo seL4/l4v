@@ -62,7 +62,7 @@ lemma arch_stit_tcb_at[wp]:
   apply (wp tcb_at_typ_at)
   done
 
-crunches set_vm_root
+crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps wp: hoare_drop_imps)

@@ -20,25 +20,25 @@ crunch_ignore (del:
 
 crunch_ignore (add: do_extended_op)
 
-crunches update_cdt_list
+crunch update_cdt_list
   for ekheap[wp]: "\<lambda>s. P (ekheap s)"
-crunches update_cdt_list
+crunch update_cdt_list
   for rqueues[wp]: "\<lambda>s. P (ready_queues s)"
-crunches update_cdt_list
+crunch update_cdt_list
   for schedact[wp]: "\<lambda>s. P (scheduler_action s)"
-crunches update_cdt_list
+crunch update_cdt_list
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
-crunches create_cap, cap_insert
+crunch create_cap, cap_insert
   for ekheap[wp]: "\<lambda>s :: det_ext state. P (ekheap s)" (wp: crunch_wps)
 
-crunches create_cap, cap_insert
+crunch create_cap, cap_insert
   for rqueues[wp]: "\<lambda>s :: det_ext state. P (ready_queues s)" (wp: crunch_wps)
 
-crunches create_cap, cap_insert
+crunch create_cap, cap_insert
   for schedact[wp]: "\<lambda>s :: det_ext state. P (scheduler_action s)" (wp: crunch_wps)
 
-crunches create_cap, cap_insert
+crunch create_cap, cap_insert
   for cur_domain[wp]: "\<lambda>s :: det_ext state. P (cur_domain s)" (wp: crunch_wps)
 
 lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_cap a b c d e \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
@@ -47,7 +47,7 @@ lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_
    apply (wp dxo_wp_weak | wpc | simp)+
   done
 
-crunches create_cap,cap_insert,set_cap
+crunch create_cap,cap_insert,set_cap
   for valid_etcbs[wp]: valid_etcbs (wp: valid_etcbs_lift set_cap_typ_at)
 
 lemma valid_etcb_fold_update: "valid_etcbs_2 ekh kh \<Longrightarrow> type \<noteq> apiobject_type.Untyped \<Longrightarrow> valid_etcbs_2
@@ -171,7 +171,7 @@ lemmas mapM_x_defsym = mapM_x_def[symmetric]
 
 context DetSchedAux_AI_det_ext begin
 
-crunches invoke_untyped
+crunch invoke_untyped
   for valid_etcbs[wp]: "valid_etcbs"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
    simp: mapM_x_defsym crunch_simps unless_def)
@@ -179,7 +179,7 @@ crunches invoke_untyped
 end
 
 
-crunches create_cap,cap_insert,set_cap
+crunch create_cap,cap_insert,set_cap
   for valid_blocked[wp]: valid_blocked
   (wp: valid_blocked_lift set_cap_typ_at)
 
@@ -214,7 +214,7 @@ lemma delete_objects_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> delete_
 
 context DetSchedAux_AI_det_ext begin
 
-crunches invoke_untyped
+crunch invoke_untyped
   for valid_blocked[wp]: "valid_blocked"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
    simp: mapM_x_defsym crunch_simps unless_def)
@@ -341,22 +341,22 @@ end
 
 lemmas hoare_imp_lift_something = hoare_convert_imp
 
-crunches create_cap,cap_insert
+crunch create_cap,cap_insert
   for valid_queues[wp]: valid_queues
   (wp: valid_queues_lift)
 
-crunches create_cap,cap_insert
+crunch create_cap,cap_insert
   for valid_sched_action[wp]: valid_sched_action
   (wp: valid_sched_action_lift)
 
-crunches create_cap,cap_insert
+crunch create_cap,cap_insert
   for valid_sched[wp]: valid_sched
   (wp: valid_sched_lift)
 
-crunches thread_set_time_slice, dec_domain_time
+crunch thread_set_time_slice, dec_domain_time
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
 
-crunches get_tcb_queue
+crunch get_tcb_queue
   for inv[wp]: "\<lambda>s. P s"
 
 lemma ethread_get_when_wp:

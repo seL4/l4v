@@ -15,7 +15,7 @@ lemma detype_irq_masks[simp]:
   "irq_masks (machine_state (detype S s)) = irq_masks_of_state s"
   by (simp add: detype_def)
 
-crunches cap_insert
+crunch cap_insert
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps)
 
@@ -38,9 +38,9 @@ lemma spec_strengthen_errE:
      \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (auto simp: spec_validE_def validE_def valid_def split: sum.splits)
 
-crunches create_cap
+crunch create_cap
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
-crunches cap_swap_for_delete
+crunch cap_swap_for_delete
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 
@@ -82,11 +82,11 @@ locale IRQMasks_IF_1 =
     "schedule \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
 begin
 
-crunches set_extra_badge
+crunch set_extra_badge
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps dmo_wp)
 
-crunches send_ipc
+crunch send_ipc
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps ignore: const_on_failure rule: transfer_caps_loop_pres)
 
@@ -173,32 +173,32 @@ lemma invoke_irq_control_irq_masks:
 end
 
 
-crunches cancel_ipc
+crunch cancel_ipc
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches restart, set_mcpriority
+crunch restart, set_mcpriority
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
-crunches bind_notification, unbind_notification
+crunch bind_notification, unbind_notification
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps no_irq simp: crunch_simps)
 
-crunches suspend
+crunch suspend
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma checked_insert_irq_masks[wp]:
   "check_cap_at a b (check_cap_at c d (cap_insert e f g)) \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   by (wpsimp simp: check_cap_at_def)
 
-crunches cap_move
+crunch cap_move
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma preemption_point_irq_masks[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   by (wp preemption_point_inv, simp+)
 
-crunches cancel_badged_sends
+crunch cancel_badged_sends
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps dmo_wp no_irq unless_wp
    simp: filterM_mapM crunch_simps no_irq_clearMemory
@@ -248,11 +248,11 @@ lemma invoke_cnode_irq_masks:
                  cap_revoke_irq_masks[where st=st] cap_delete_irq_masks[where st=st]
       split_del: if_split)+
 
-crunches handle_fault
+crunch handle_fault
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -264,7 +264,7 @@ fun irq_of_handler_inv where
   "irq_of_handler_inv (ClearIRQHandler irq) = irq" |
   "irq_of_handler_inv (SetIRQHandler irq _ _) = irq"
 
-crunches invoke_domain
+crunch invoke_domain
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma decode_invocation_IRQHandlerCap:
@@ -325,10 +325,10 @@ lemma handle_invocation_irq_masks:
          | simp add: invs_valid_objs)+
   done
 
-crunches handle_reply
+crunch handle_reply
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
-crunches handle_recv
+crunch handle_recv
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
 

@@ -85,7 +85,7 @@ lemma asUser_get_registers:
   done
 
 (* only exists in Haskell, only used for C refinement *)
-crunches writeTTBR0Ptr
+crunch writeTTBR0Ptr
   for (empty_fail) empty_fail[wp,simp]
 
 end

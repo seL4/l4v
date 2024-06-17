@@ -228,7 +228,7 @@ lemma make_fault_message_inv[wp, Ipc_AI_assms]:
               | simp add: getRegister_def)+
   done
 
-crunches make_fault_msg
+crunch make_fault_msg
   for tcb_at[wp]: "tcb_at t"
 
 lemma do_fault_transfer_invs[wp, Ipc_AI_assms]:
@@ -340,7 +340,7 @@ lemma transfer_caps_non_null_cte_wp_at:
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
-crunches do_fault_transfer
+crunch do_fault_transfer
   for cte_wp_at[wp,Ipc_AI_assms]: "cte_wp_at P p"
 
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
@@ -394,7 +394,7 @@ lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for typ_at[Ipc_AI_assms]: "P (typ_at T p s)"
 
 lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
@@ -425,82 +425,82 @@ lemma dmo_addressTranslateS1_cap_refs_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 pc) \<lbrace>cap_refs_respects_device_region\<rbrace>"
   by (wpsimp  wp: cap_refs_respects_device_region_dmo)
 
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for aligned[wp, Ipc_AI_assms]: "pspace_aligned"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for distinct[wp, Ipc_AI_assms]: "pspace_distinct"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for vmdb[wp, Ipc_AI_assms]: "valid_mdb"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for ifunsafe[wp, Ipc_AI_assms]: "if_unsafe_then_cap"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for iflive[wp, Ipc_AI_assms]: "if_live_then_nonz_cap"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for state_refs_of[wp, Ipc_AI_assms]: "\<lambda>s. P (state_refs_of s)"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for ct[wp, Ipc_AI_assms]: "cur_tcb"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for zombies[wp, Ipc_AI_assms]: "zombies_final"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for it[wp, Ipc_AI_assms]: "\<lambda>s. P (idle_thread s)"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for valid_globals[wp, Ipc_AI_assms]: "valid_global_refs"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for reply_masters[wp, Ipc_AI_assms]: "valid_reply_masters"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for valid_idle[wp, Ipc_AI_assms]: "valid_idle"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for arch[wp, Ipc_AI_assms]: "\<lambda>s. P (arch_state s)"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for typ_at[wp, Ipc_AI_assms]: "\<lambda>s. P (typ_at T p s)"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for irq_node[wp, Ipc_AI_assms]: "\<lambda>s. P (interrupt_irq_node s)"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for valid_reply[wp, Ipc_AI_assms]: "valid_reply_caps"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for irq_handlers[wp, Ipc_AI_assms]: "valid_irq_handlers"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for vspace_objs[wp, Ipc_AI_assms]: "valid_vspace_objs"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for global_objs[wp, Ipc_AI_assms]: "valid_global_objs"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for global_vspace_mapping[wp, Ipc_AI_assms]: "valid_global_vspace_mappings"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for arch_caps[wp, Ipc_AI_assms]: "valid_arch_caps"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for v_ker_map[wp, Ipc_AI_assms]: "valid_kernel_mappings"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for eq_ker_map[wp, Ipc_AI_assms]: "equal_kernel_mappings"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for asid_map[wp, Ipc_AI_assms]: "valid_asid_map"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for only_idle[wp, Ipc_AI_assms]: "only_idle"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for pspace_in_kernel_window[wp, Ipc_AI_assms]: "pspace_in_kernel_window"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for cap_refs_in_kernel_window[wp, Ipc_AI_assms]: "cap_refs_in_kernel_window"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for valid_objs[wp, Ipc_AI_assms]: "valid_objs"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for valid_ioc[wp, Ipc_AI_assms]: "valid_ioc"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for pred_tcb[wp, Ipc_AI_assms]: "pred_tcb_at proj P t"
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for cap_to[wp, Ipc_AI_assms]: "ex_nonz_cap_to p"
 
-crunches  make_arch_fault_msg
+crunch  make_arch_fault_msg
   for obj_at[wp, Ipc_AI_assms]: "\<lambda>s. P (obj_at P' pd s)"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
 
-crunches make_arch_fault_msg
+crunch make_arch_fault_msg
   for vms[wp, Ipc_AI_assms]: valid_machine_state
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
-crunches make_arch_fault_msg
+crunch make_arch_fault_msg
   for valid_irq_states[wp, Ipc_AI_assms]: "valid_irq_states"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
-crunches make_arch_fault_msg
+crunch make_arch_fault_msg
   for cap_refs_respects_device_region[wp, Ipc_AI_assms]: "cap_refs_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
@@ -520,11 +520,11 @@ lemma dmo_addressTranslateS1_pspace_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 pc) \<lbrace>pspace_respects_device_region\<rbrace>"
   by (wpsimp simp: addressTranslateS1_def do_machine_op_bind wp: device_region_dmos)
 
-crunches make_fault_msg
+crunch make_fault_msg
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
-crunches do_ipc_transfer
+crunch do_ipc_transfer
   for pspace_respects_device_region[wp, Ipc_AI_cont_assms]: "pspace_respects_device_region"
   (wp: crunch_wps ignore: const_on_failure simp: crunch_simps)
 
@@ -545,7 +545,7 @@ lemma set_mrs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
   by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
 
-crunches do_ipc_transfer
+crunch do_ipc_transfer
   for state_hyp_refs_of[wp, Ipc_AI_cont_assms]: "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 

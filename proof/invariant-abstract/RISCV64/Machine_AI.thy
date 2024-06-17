@@ -211,7 +211,7 @@ lemma no_irq_machine_rest_lift:
   apply simp
   done
 
-crunches machine_op_lift
+crunch machine_op_lift
   for (no_irq) no_irq[wp, simp]
 
 lemma no_irq:

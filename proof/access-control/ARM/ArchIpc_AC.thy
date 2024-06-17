@@ -15,7 +15,7 @@ named_theorems Ipc_AC_assms
 declare make_fault_message_inv[Ipc_AC_assms]
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
-crunches cap_insert_ext
+crunch cap_insert_ext
   for integrity_asids[Ipc_AC_assms, wp]: "integrity_asids aag subjects x a st"
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
@@ -97,13 +97,13 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   apply simp
   done
 
-crunches set_extra_badge
+crunch set_extra_badge
   for respects_in_ipc[Ipc_AC_assms, wp]: "integrity_tcb_in_ipc aag X receiver epptr TRContext st"
   (wp: store_word_offs_respects_in_ipc)
 
-crunches arch_get_sanitise_register_info
+crunch arch_get_sanitise_register_info
   for inv[Ipc_AC_assms, wp]: P
-crunches handle_arch_fault_reply
+crunch handle_arch_fault_reply
   for pas_refined[Ipc_AC_assms, wp]: "pas_refined aag"
 
 lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:

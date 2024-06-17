@@ -15,11 +15,11 @@ named_theorems Deterministic_AI_assms
 lemma flush_table_valid_list[wp]: "\<lbrace>valid_list\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. valid_list\<rbrace>"
   by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
 
-crunches set_object
+crunch set_object
   for valid_list[wp]: valid_list
   (wp: get_object_wp)
 
-crunches
+crunch
   cap_swap_for_delete,set_cap,finalise_cap,arch_get_sanitise_register_info,
   arch_post_modify_registers, arch_invoke_irq_handler
   for valid_list[wp, Deterministic_AI_assms]: valid_list
@@ -36,12 +36,12 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
 
 context Arch begin global_naming X64
 
-crunches invoke_untyped
+crunch invoke_untyped
   for valid_list[wp]: valid_list
   (wp: crunch_wps preemption_point_inv' unless_wp mapME_x_wp'
    simp: mapM_x_def_bak crunch_simps)
 
-crunches invoke_irq_control, store_pde, store_pte, store_pdpte, store_pml4e,
+crunch invoke_irq_control, store_pde, store_pte, store_pdpte, store_pml4e,
                        perform_io_port_invocation, perform_ioport_control_invocation
   for valid_list[wp]: valid_list
   (wp: crunch_wps simp: crunch_simps)
@@ -90,16 +90,16 @@ lemma perform_page_invocation_valid_list[wp]:
                split: cap.splits arch_cap.splits option.splits sum.splits)+
   done
 
-crunches perform_invocation
+crunch perform_invocation
   for valid_list[wp]: valid_list
   (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
 
-crunches handle_invocation
+crunch handle_invocation
   for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps syscall_valid simp: crunch_simps
    ignore: without_preemption syscall)
 
-crunches handle_recv, handle_yield, handle_call,
+crunch handle_recv, handle_yield, handle_call,
                                                handle_hypervisor_fault
   for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps simp: crunch_simps)
@@ -119,7 +119,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def arch_mask_irq_signal_def
        | wp (once) hoare_drop_imps)+
 
-crunches handle_send,handle_reply
+crunch handle_send,handle_reply
   for valid_list[wp, Deterministic_AI_assms]: valid_list
 
 end

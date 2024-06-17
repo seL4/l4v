@@ -102,7 +102,7 @@ lemma scheduler_action_states_equiv[simp]:
   "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
   by (simp add: states_equiv_for_def equiv_for_def equiv_asids_def)
 
-crunches set_thread_state_ext
+crunch set_thread_state_ext
   for states_equiv[wp]: "states_equiv_for P Q R S st"
   (ignore_del: set_thread_state_ext)
 
@@ -537,7 +537,7 @@ lemma gets_cur_domain_ev:
   apply (simp add: reads_equiv_def)
   done
 
-crunches set_simple_ko
+crunch set_simple_ko
   for sched_act[wp]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps)
 
@@ -1426,7 +1426,7 @@ lemma cancel_all_ipc_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (fastforce intro: hoare_strengthen_post[OF cancel_all_ipc_globals_equiv'])
 
-crunches fast_finalise
+crunch fast_finalise
   for valid_global_objs: "valid_global_objs"
   (wp: crunch_wps dxo_wp_weak ignore: reschedule_required)
 
@@ -1470,7 +1470,7 @@ lemma fast_finalise_globals_equiv:
                     unbind_maybe_notification_globals_equiv
               simp: when_def split_del: if_split)+
 
-crunches deleted_irq_handler
+crunch deleted_irq_handler
   for globals_equiv[wp]: "globals_equiv st"
 
 lemma empty_slot_globals_equiv:
@@ -1479,15 +1479,15 @@ lemma empty_slot_globals_equiv:
   by (wpsimp wp: set_cap_globals_equiv'' set_original_globals_equiv hoare_vcg_if_lift2
                  set_cdt_globals_equiv dxo_wp_weak hoare_drop_imps hoare_vcg_all_lift)
 
-crunches cap_delete_one
+crunch cap_delete_one
   for globals_equiv: "globals_equiv st"
   (wp: set_cap_globals_equiv'' hoare_drop_imps simp: crunch_simps unless_def)
 
 (*FIXME: Lots of this stuff should be in arch *)
-crunches deleting_irq_handler
+crunch deleting_irq_handler
   for globals_equiv[wp]: "globals_equiv st"
 
-crunches cancel_ipc
+crunch cancel_ipc
   for globals_equiv[wp]: "globals_equiv st"
   (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 simp: unless_def)
 
@@ -1510,7 +1510,7 @@ lemma suspend_globals_equiv[ wp]:
   apply auto
   done
 
-crunches unbind_notification
+crunch unbind_notification
   for valid_arch_state[wp]: valid_arch_state
 
 lemma finalise_cap_globals_equiv:

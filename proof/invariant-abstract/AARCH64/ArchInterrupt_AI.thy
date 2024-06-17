@@ -82,7 +82,7 @@ lemma maskInterrupt_invs_ARCH[Interrupt_AI_asms]:
                          cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
-crunches plic_complete_claim
+crunch plic_complete_claim
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma dmo_plic_complete_claim[wp]:
@@ -106,7 +106,7 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
          split del: if_split)
   done
 
-crunches set_irq_state
+crunch set_irq_state
   for valid_global_refs[Interrupt_AI_asms]: "valid_global_refs"
 
 lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
@@ -186,7 +186,7 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
   done
 
 
-crunches resetTimer
+crunch resetTimer
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma resetTimer_invs_ARCH[Interrupt_AI_asms]:
@@ -229,7 +229,7 @@ lemma halted_eq:
   "halted st = (st = Inactive \<or> st = IdleThreadState)"
   by (cases st; simp)
 
-crunches vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+crunch vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   (wp: ex_nonz_cap_to_pres)
 
 lemma vgic_maintenance_invs[wp]:
@@ -295,7 +295,7 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
   apply (wpsimp wp: ex_cte_cap_to_pres simp: cap_table_at_typ)
   done
 
-crunches arch_invoke_irq_handler
+crunch arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 end

@@ -917,7 +917,7 @@ lemma tcbSchedEnqueue_tcbPriority[wp]:
   apply (wp | simp cong: if_cong)+
   done
 
-crunches cteDeleteOne
+crunch cteDeleteOne
   for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_wps setEndpoint_obj_at'_tcb setNotification_tcb
    simp: crunch_simps unless_def setBoundNotification_def)
@@ -925,7 +925,7 @@ crunches cteDeleteOne
 context
 notes if_cong[cong]
 begin
-crunches rescheduleRequired
+crunch rescheduleRequired
   for obj_at_dom[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
 end
 

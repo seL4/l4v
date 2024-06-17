@@ -46,11 +46,11 @@ lemma set_asid_pool_silc_inv[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunches arch_finalise_cap, prepare_thread_delete, init_arch_objects
+crunch arch_finalise_cap, prepare_thread_delete, init_arch_objects
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
   (wp: crunch_wps modify_wp simp: crunch_simps ignore: set_object)
 
-crunches handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
+crunch handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
          arch_invoke_irq_handler, arch_mask_irq_signal,
          arch_post_cap_deletion, arch_post_modify_registers,
          arch_activate_idle_thread, arch_switch_to_idle_thread, arch_switch_to_thread
@@ -203,10 +203,10 @@ lemma perform_asid_control_invocation_silc_inv:
   apply (fastforce intro: is_aligned_no_wrap' simp: blah)
   done
 
-crunches store_asid_pool_entry
+crunch store_asid_pool_entry
   for silc_inv[wp]: "silc_inv aag st"
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for silc_inv[wp]: "silc_inv aag st"
   (wp: crunch_wps modify_wp simp: crunch_simps ignore: set_object)
 

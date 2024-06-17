@@ -206,7 +206,7 @@ lemma get_mapM_x_lower:
   qed
 
 (* Move to DetSchedDomainTime_AI *)
-crunches do_user_op
+crunch do_user_op
   for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
 
 lemma next_child_child_set:

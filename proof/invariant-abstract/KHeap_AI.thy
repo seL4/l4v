@@ -195,7 +195,7 @@ lemma dxo_wp_weak[wp]:
   apply (simp add: xopv[simplified trans_state_update'])
   done
 
-crunches set_thread_state
+crunch set_thread_state
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
 lemma sts_ep_at_inv[wp]:
@@ -545,7 +545,7 @@ lemma valid_mdb_lift:
   apply simp
   done
 
-crunches set_simple_ko
+crunch set_simple_ko
   for no_cdt[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
 
@@ -871,7 +871,7 @@ lemma set_simple_ko_ex_cap[wp]:
   by (wp ex_nonz_cap_to_pres)
 
 
-crunches set_simple_ko
+crunch set_simple_ko
   for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -902,11 +902,11 @@ lemma ep_redux_simps:
                  simp: valid_ep_def valid_ntfn_def valid_bound_tcb_def)+
 
 
-crunches set_simple_ko
+crunch set_simple_ko
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches set_simple_ko
+crunch set_simple_ko
   for irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
@@ -927,7 +927,7 @@ lemma obj_at_ko_atE:
   "\<lbrakk> obj_at P ptr s; ko_at k ptr s; P k \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (clarsimp simp: obj_at_def)
 
-crunches set_simple_ko
+crunch set_simple_ko
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
@@ -969,7 +969,7 @@ lemma do_machine_op_result[wp]:
   unfolding do_machine_op_def
   by wpsimp (erule(2) use_valid)
 
-crunches do_machine_op
+crunch do_machine_op
   for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
   and cur_tcb[wp]: cur_tcb
   and zombies[wp]: zombies_final
@@ -1296,7 +1296,7 @@ lemma valid_irq_states_triv:
    apply assumption
   by blast
 
-crunches set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notification
+crunch set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notification
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
 
@@ -1355,7 +1355,7 @@ lemma thread_get_wp':
   done
 
 
-crunches get_irq_slot
+crunch get_irq_slot
   for inv[wp]: "P"
 
 lemmas set_object_typ_ats [wp] = abs_typ_at_lifts [OF set_object_typ_at]

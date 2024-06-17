@@ -112,7 +112,7 @@ lemma decodeIRQHandlerInvocation_corres:
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
-crunches decodeIRQHandlerInvocation
+crunch decodeIRQHandlerInvocation
   for inv[wp]: "P"
   (simp: crunch_simps)
 
@@ -148,7 +148,7 @@ lemma is_irq_active_corres:
             split: irqstate.split_asm irq_state.split_asm)
   done
 
-crunches isIRQActive
+crunch isIRQActive
   for inv: "P"
 
 lemma isIRQActive_wp:
@@ -299,7 +299,7 @@ lemma decodeIRQControlInvocation_corres:
   apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres] dest!: not_le_imp_less simp: o_def length_Suc_conv split: list.splits)
   done
 
-crunches "InterruptDecls_H.decodeIRQControlInvocation"
+crunch "InterruptDecls_H.decodeIRQControlInvocation"
   for inv[wp]: "P"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -468,7 +468,7 @@ lemma IRQHandler_valid':
   "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
-crunches setIRQState
+crunch setIRQState
   for valid_mdb'[wp]: "valid_mdb'"
 
 method do_machine_op_corres
@@ -486,7 +486,7 @@ lemma updateIRQState_corres[wp]:
       apply (auto simp: state_relation_def arch_state_relation_def x64_irq_relation_def)
   done
 
-crunches X64_H.updateIRQState
+crunch X64_H.updateIRQState
   for pspace_distinct'[wp]: "pspace_distinct'"
   and pspace_aligned'[wp]: "pspace_aligned'"
   and cte_wp_at'[wp]: "cte_wp_at' a b"
@@ -569,7 +569,7 @@ lemma performIRQControl_corres:
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   by (clarsimp simp: arch_performIRQControl_corres)
 
-crunches setIRQState
+crunch setIRQState
   for valid_cap'[wp]: "valid_cap' cap"
 
 lemma setIRQState_cte_cap_to'[wp]:
@@ -823,11 +823,11 @@ lemma threadSet_ksDomainTime[wp]:
   apply (wp crunch_wps | simp add:updateObject_default_def)+
   done
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 (simp:tcbSchedEnqueue_def wp:unless_wp)
 
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 (simp:tcbSchedEnqueue_def wp:unless_wp)
 
@@ -839,13 +839,13 @@ lemma updateTimeSlice_valid_pspace[wp]:
   done
 
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
   (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for irqs_masked'[wp]: irqs_masked'
   (simp: unless_def wp: crunch_wps)
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for ct[wp]: cur_tcb'
   (wp: cur_tcb_lift crunch_wps)
 
@@ -914,7 +914,7 @@ lemma hint_invs[wp]:
   done
 
 
-crunches timerTick
+crunch timerTick
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: threadSet_pred_tcb_no_state)
 

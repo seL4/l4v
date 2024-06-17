@@ -65,7 +65,7 @@ lemma bcorres_select_ext[wp]:
 
 context Arch begin
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for (bcorres) bcorres[wp]: truncate_state
 
 end
@@ -73,7 +73,7 @@ end
 requalify_facts
   Arch.arch_post_cap_deletion_bcorres
 
-crunches
+crunch
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot
   for (bcorres) bcorres[wp]: truncate_state
   (ignore: maskInterrupt)
@@ -120,7 +120,7 @@ lemma is_final_cap_bcorres[wp]:
 lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
   by (simp add: get_tcb_def)
 
-crunches
+crunch
   cancel_all_ipc, cancel_all_signals, unbind_maybe_notification, unbind_notification, bind_notification
   for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def ignore: gets_the)
@@ -129,7 +129,7 @@ lemma fast_finalise_bcorres[wp]:
   "bcorres (fast_finalise a b) (fast_finalise a b)"
   by (cases a; wpsimp)
 
-crunches get_irq_slot
+crunch get_irq_slot
   for (bcorres) bcorres[wp]: truncate_state (simp: gets_def)
 
 lemma throw_on_false_bcorres[wp]:
@@ -142,7 +142,7 @@ lemma preemption_point_bcorres[wp]:
   "bcorres preemption_point preemption_point"
   unfolding preemption_point_def by wpsimp
 
-crunches cap_swap_for_delete
+crunch cap_swap_for_delete
   for (bcorres) bcorres[wp]: truncate_state
 
 lemma gets_the_get_tcb_bcorres[wp]:

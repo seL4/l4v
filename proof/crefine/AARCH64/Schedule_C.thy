@@ -69,7 +69,7 @@ lemma switchToIdleThread_ccorres:
       apply (wpsimp simp: AARCH64_H.switchToIdleThread_def wp: hoare_drop_imps)+
   done
 
-crunches vcpuSwitch
+crunch vcpuSwitch
   for pspace_canonical'[wp]: pspace_canonical'
   (wp: crunch_wps)
 

@@ -943,11 +943,11 @@ lemma setCTE_obj_at_prio[wp]:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
-crunches cteInsert
+crunch cteInsert
   for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_wps)
 
-crunches asUser
+crunch asUser
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps)
 
@@ -959,7 +959,7 @@ lemma tcbSchedEnqueue_tcbPriority[wp]:
   apply (wp | simp cong: if_cong)+
   done
 
-crunches cteDeleteOne
+crunch cteDeleteOne
   for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_wps setEndpoint_obj_at'_tcb setNotification_tcb simp: crunch_simps unless_def)
 

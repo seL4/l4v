@@ -134,11 +134,11 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
   apply (auto simp: is_cnode_or_valid_arch_def is_cap_simps)
   done
 
-crunches arch_get_sanitise_register_info, arch_post_modify_registers
+crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for tcb_at[wp, Tcb_AI_asms]: "tcb_at a"
-crunches arch_get_sanitise_register_info, arch_post_modify_registers
+crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for invs[wp, Tcb_AI_asms]: "invs"
-crunches arch_get_sanitise_register_info, arch_post_modify_registers
+crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for ex_nonz_cap_to[wp, Tcb_AI_asms]: "ex_nonz_cap_to a"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
@@ -368,11 +368,11 @@ lemma update_cap_valid[Tcb_AI_asms]:
   done
 
 
-crunches switch_to_thread
+crunch switch_to_thread
   for pred_tcb_at: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches invoke_tcb
+crunch invoke_tcb
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: check_cap_at setNextPC zipWithM
        wp: hoare_drop_imps mapM_x_wp' check_cap_inv

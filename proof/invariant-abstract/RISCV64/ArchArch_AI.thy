@@ -210,7 +210,7 @@ proof -
 qed
 
 
-crunches
+crunch
   perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
@@ -635,7 +635,7 @@ lemma cap_insert_ioports_ap:
    \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   by wpsimp
 
-crunches cap_insert
+crunch cap_insert
   for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
   (wp: crunch_wps)
 
@@ -934,7 +934,7 @@ lemma sts_aobjs_of[wp]:
   apply (auto dest!: get_tcb_SomeD simp: opt_map_def split: option.splits)
   done
 
-crunches set_thread_state
+crunch set_thread_state
   for pool_for_asid[wp]: "\<lambda>s. P (pool_for_asid asid s)"
   (wp: assert_inv)
 
@@ -967,7 +967,7 @@ lemma sts_valid_page_inv[wp]:
     apply (wpsimp wp: sts_typ_ats hoare_vcg_ex_lift hoare_vcg_disj_lift | wps)+
   done
 
-crunches set_thread_state
+crunch set_thread_state
   for global_refs_inv[wp]: "\<lambda>s. P (global_refs s)"
 
 lemma sts_vs_lookup_slot[wp]:
@@ -998,7 +998,7 @@ lemma sts_valid_arch_inv:
 crunch_ignore (add: select_ext find_vspace_for_asid)
 
 
-crunches arch_decode_invocation
+crunch arch_decode_invocation
   for inv[wp]: "P"
   (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
@@ -1298,7 +1298,7 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunches
+crunch
   perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)

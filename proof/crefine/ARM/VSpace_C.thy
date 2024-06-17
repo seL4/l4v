@@ -1143,9 +1143,9 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches invalidateASID
+crunch invalidateASID
   for armKSNextASID[wp]: "\<lambda>s. P (armKSNextASID (ksArchState s))"
-crunches invalidateHWASIDEntry
+crunch invalidateHWASIDEntry
   for armKSNextASID[wp]: "\<lambda>s. P (armKSNextASID (ksArchState s))"
 
 end
@@ -1616,7 +1616,7 @@ lemma doFlush_ccorres:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches setVMRootForFlush
+crunch setVMRootForFlush
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps)
 end
@@ -1861,7 +1861,7 @@ lemma flushPage_ccorres:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches flushPage
+crunch flushPage
   for no_0_obj'[wp]: "no_0_obj'"
 end
 

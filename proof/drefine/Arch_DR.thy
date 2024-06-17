@@ -556,7 +556,7 @@ lemma select_ret_or_throw_twiceE:
   apply (rule ext, auto simp: throwError_def return_def)
   done
 
-crunches select_ret_or_throw
+crunch select_ret_or_throw
   for inv[wp]: "P"
 
 lemma corres_initial_bindE_rdonly_select_ret_or_throw:

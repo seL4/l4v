@@ -163,9 +163,9 @@ lemma getObject_ASIDPool_corres':
    apply auto
   done
 
-crunches headM
+crunch headM
   for inv[wp]: P
-crunches tailM
+crunch tailM
   for inv[wp]: P
 
 lemma storePDE_cte_wp_at'[wp]:
@@ -224,9 +224,9 @@ lemma storePTE_state_hyp_refs_of[wp]:
   by (wpsimp wp: headM_inv hoare_drop_imps setObject_state_hyp_refs_of_eq
              simp: storePTE_def updateObject_default_def in_monad projectKOs)
 
-crunches setIRQState
+crunch setIRQState
   for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
-crunches getIRQSlot
+crunch getIRQSlot
   for inv[wp]: "P"
 
 lemma setObject_ASIDPool_corres [corres]:
@@ -1233,11 +1233,11 @@ lemma lookupPTSlot_corres [corres]:
 
 declare in_set_zip_refl[simp]
 
-crunches storePDE
+crunch storePDE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
-crunches storePTE
+crunch storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
@@ -1258,7 +1258,7 @@ lemma getObject_pde_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pde. P\<rbrace>"
   by (simp add: getObject_inv loadObject_default_inv)
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
 

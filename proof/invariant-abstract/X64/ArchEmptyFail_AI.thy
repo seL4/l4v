@@ -21,7 +21,7 @@ lemma invalidateLocalPageStructureCacheASID_ef[simp,wp]:
   "empty_fail (invalidateLocalPageStructureCacheASID vs asid)"
   by (simp add: invalidateLocalPageStructureCacheASID_def)
 
-crunches
+crunch
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs, invalidate_page_structure_cache_asid
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
@@ -35,7 +35,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 
 context Arch begin global_naming X64
 
-crunches handle_fault
+crunch handle_fault
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
@@ -53,7 +53,7 @@ lemma port_in_empty_fail[simp, intro!]:
   apply (simp add: port_in_def)
   by (wp | simp add: ef)+
 
-crunches
+crunch
   decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params,
   decode_set_tls_base
@@ -65,7 +65,7 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
       | wp | intro conjI impI)+
 
-crunches find_vspace_for_asid, check_vp_alignment,
+crunch find_vspace_for_asid, check_vp_alignment,
                    ensure_safe_mapping, get_asid_pool, lookup_pt_slot, get_pt,
                    decode_port_invocation, decode_ioport_control_invocation
   for (empty_fail) empty_fail[wp]
@@ -147,7 +147,7 @@ lemma flush_table_empty_fail[simp, wp]: "empty_fail (flush_table a b c d)"
   unfolding flush_table_def
   by wpsimp
 
-crunches maskInterrupt, empty_slot,
+crunch maskInterrupt, empty_slot,
     finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -157,7 +157,7 @@ crunches maskInterrupt, empty_slot,
          set_object_def
    ignore: nativeThreadUsingFPU_impl switchFpuOwner_impl)
 
-crunches setRegister, setNextPC
+crunch setRegister, setNextPC
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
 end
@@ -169,7 +169,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   qed
 
 context Arch begin global_naming X64
-crunches
+crunch
   cap_delete, choose_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
@@ -194,11 +194,11 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 
 context Arch begin global_naming X64
 
-crunches possible_switch_to
+crunch possible_switch_to
   for (empty_fail) empty_fail[wp,EmptyFail_AI_assms]
   (ignore_del: possible_switch_to)
 
-crunches handle_event, activate_thread
+crunch handle_event, activate_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits

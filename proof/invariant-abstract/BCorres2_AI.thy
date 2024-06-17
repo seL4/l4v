@@ -29,7 +29,7 @@ locale BCorres2_AI =
     "bcorres (arch_switch_to_idle_thread :: 'a state \<Rightarrow> _)
         arch_switch_to_idle_thread"
 
-crunches deleting_irq_handler
+crunch deleting_irq_handler
   for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def swp_def)
 
@@ -39,7 +39,7 @@ lemma update_restart_pc_bcorres[wp]:
       | clarsimp simp: update_restart_pc_def as_user_def bind_select_f_bind'
                 split: prod.splits)+
 
-crunches suspend, finalise_cap
+crunch suspend, finalise_cap
   for (bcorres) bcorres[wp]: truncate_state
 
 definition all_but_exst where
@@ -253,12 +253,12 @@ lemma all_but_exst_update[simp]:
   apply (simp add: all_but_exst_def)
   done
 
-crunches set_scheduler_action,tcb_sched_action,next_domain,
+crunch set_scheduler_action,tcb_sched_action,next_domain,
                          cap_move_ext
   for all_but_exst[wp]: "all_but_exst P"
   (simp: Let_def ignore_del: tcb_sched_action cap_move_ext)
 
-crunches cap_move_ext
+crunch cap_move_ext
   for (empty_fail) empty_fail[wp]
   (ignore_del: cap_move_ext)
 
@@ -345,7 +345,7 @@ qed
 
 lemmas cap_revoke_bcorres[wp] = use_sbcorres_underlying[OF cap_revoke_s_bcorres]
 
-crunches "Tcb_A.restart",as_user,option_update_thread
+crunch "Tcb_A.restart",as_user,option_update_thread
   for (bcorres) bcorres[wp]: truncate_state (simp: gets_the_def ignore: clearMemory check_cap_at gets_the getRegister setRegister getRestartPC setNextPC)
 
 lemma check_cap_at_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (check_cap_at a b f) (check_cap_at a b f')"
@@ -405,7 +405,7 @@ lemma const_on_failure_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (con
   apply wpsimp
   done
 
-crunches lookup_target_slot,lookup_cap,load_cap_transfer
+crunch lookup_target_slot,lookup_cap,load_cap_transfer
   for (bcorres) bcorres[wp]: truncate_state (simp: gets_the_def ignore: loadWord)
 
 lemma get_receive_slots_bcorres[wp]: "bcorres (get_receive_slots a b) (get_receive_slots a b)"
@@ -423,12 +423,12 @@ lemma (in BCorres2_AI) handle_fault_reply_bcorres[wp]:
   apply (wp | simp)+
   done
 
-crunches lookup_source_slot,ensure_empty,lookup_pivot_slot
+crunch lookup_source_slot,ensure_empty,lookup_pivot_slot
   for (bcorres) bcorres[wp]: truncate_state
 
 declare option.case_cong[cong]
 
-crunches range_check
+crunch range_check
   for (bcorres) bcorres[wp]: truncate_state
 
 lemma decode_read_registers_bcorres[wp]: "bcorres (decode_read_registers a (cap.ThreadCap b)) (decode_read_registers a (cap.ThreadCap b))"

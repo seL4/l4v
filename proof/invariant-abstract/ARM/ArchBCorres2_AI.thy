@@ -13,22 +13,22 @@ context Arch begin global_naming ARM
 
 named_theorems BCorres2_AI_assms
 
-crunches invoke_cnode
+crunch invoke_cnode
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
   (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set )
 
-crunches create_cap,init_arch_objects,retype_region,delete_objects
+crunch create_cap,init_arch_objects,retype_region,delete_objects
   for (bcorres) bcorres[wp]: truncate_state
   (ignore: freeMemory clearMemory retype_region_ext)
 
-crunches set_extra_badge,derive_cap
+crunch set_extra_badge,derive_cap
   for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord)
 
-crunches invoke_untyped
+crunch invoke_untyped
   for (bcorres) bcorres[wp]: truncate_state
   (ignore: sequence_x)
 
-crunches set_mcpriority,
+crunch set_mcpriority,
           arch_get_sanitise_register_info, arch_post_modify_registers
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
@@ -74,7 +74,7 @@ lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
   by (cases a; simp add: handle_arch_fault_reply_def; wp)
 
-crunches
+crunch
     arch_switch_to_thread,arch_switch_to_idle_thread
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
@@ -90,7 +90,7 @@ lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 
 context Arch begin global_naming ARM
 
-crunches send_ipc,send_signal,do_reply_transfer,arch_perform_invocation
+crunch send_ipc,send_signal,do_reply_transfer,arch_perform_invocation
   for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory loadWord cap_fault_on_failure
          storeWord lookup_error_on_failure getRestartPC getRegister mapME)
@@ -105,7 +105,7 @@ lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (d
   apply (wp | wpc | simp add: split_def | intro impI conjI)+
   done
 
-crunches
+crunch
   decode_set_ipc_buffer, decode_set_space, decode_set_priority,
   decode_set_mcpriority, decode_set_sched_params, decode_bind_notification,
   decode_unbind_notification, decode_set_tls_base
@@ -131,13 +131,13 @@ lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_
   apply (wp | wpc | simp)+
   done
 
-crunches handle_invocation
+crunch handle_invocation
   for (bcorres) bcorres[wp]: truncate_state
   (simp: syscall_def Let_def gets_the_def
    ignore: syscall cap_fault_on_failure without_preemption
            const_on_failure decode_tcb_invocation)
 
-crunches receive_ipc,receive_signal,delete_caller_cap
+crunch receive_ipc,receive_signal,delete_caller_cap
   for (bcorres) bcorres[wp]: truncate_state
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
@@ -160,7 +160,7 @@ lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
          | intro impI conjI allI | wp | wpc)+
   done
 
-crunches guarded_switch_to,switch_to_idle_thread
+crunch guarded_switch_to,switch_to_idle_thread
   for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord clearExMonitor)
 
 lemma choose_switch_or_idle:

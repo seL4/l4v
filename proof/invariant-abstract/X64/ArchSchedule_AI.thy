@@ -58,11 +58,11 @@ lemma arch_stit_tcb_at[wp]:
   apply wp
   done
 
-crunches set_vm_root
+crunch set_vm_root
   for st_tcb_at[wp]: "st_tcb_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches set_vm_root
+crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
