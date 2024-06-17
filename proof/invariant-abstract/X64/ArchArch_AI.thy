@@ -179,7 +179,7 @@ lemma ucast_fst_hd_assocs:
   done
 
 
-crunches
+crunch
   perform_page_table_invocation, perform_page_directory_invocation, perform_pdpt_invocation,
   perform_page_invocation, perform_asid_pool_invocation, perform_io_port_invocation,
   perform_ioport_control_invocation
@@ -968,7 +968,7 @@ lemma sts_valid_page_inv[wp]:
         | wps)+)
 
 
-crunches set_thread_state
+crunch set_thread_state
   for global_refs_inv[wp]: "\<lambda>s. P (global_refs s)"
 
 lemma sts_empty_table[wp]:
@@ -1011,7 +1011,7 @@ lemma create_mapping_entries_inv [wp]:
 
 crunch_ignore (add: select_ext)
 
-crunches arch_decode_invocation
+crunch arch_decode_invocation
   for inv[wp]: "P"
   (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
@@ -1668,7 +1668,7 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunches
+crunch
   perform_page_table_invocation, perform_page_directory_invocation, perform_pdpt_invocation,
   perform_page_invocation, perform_asid_pool_invocation, perform_io_port_invocation,
   perform_ioport_control_invocation

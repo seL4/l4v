@@ -19,7 +19,7 @@ definition kernelEntry_if where
      return (r,tc)
    od"
 
-crunches kernelEntry_if
+crunch kernelEntry_if
   for (empty_fail) empty_fail
 
 definition kernelExit_if where
@@ -56,7 +56,7 @@ definition preserves where
 definition preserves' where
   "preserves' mode P f \<equiv> \<forall>(s,e,s') \<in> f. (s,mode) \<in> P \<longrightarrow> (s',e) \<in> P"
 
-crunches kernelExit_if
+crunch kernelExit_if
   for (empty_fail) empty_fail
 
 definition prod_lift where
@@ -71,7 +71,7 @@ definition handlePreemption_if :: "user_context \<Rightarrow> user_context kerne
      return tc
    od"
 
-crunches handlePreemption_if
+crunch handlePreemption_if
   for (empty_fail) empty_fail
 
 definition handlePreemption_H_if where
@@ -85,7 +85,7 @@ definition schedule'_if :: "user_context \<Rightarrow> user_context kernel" wher
      return tc
    od"
 
-crunches schedule'_if
+crunch schedule'_if
   for (empty_fail) empty_fail
 
 definition schedule'_H_if where
@@ -97,7 +97,7 @@ definition checkActiveIRQ_if :: "user_context \<Rightarrow> (irq option \<times>
      return (irq, tc)
    od"
 
-crunches checkActiveIRQ_if
+crunch checkActiveIRQ_if
   for (empty_fail) empty_fail
 
 definition checkActiveIRQ_H_if where
@@ -155,9 +155,9 @@ lemmas schedaction_related = sched_act_rct_related
 lemma empty_fail_select_bind: "empty_fail (assert (S \<noteq> {}) >>= (\<lambda>_. select S))"
   by (clarsimp simp: empty_fail_def select_def assert_def)
 
-crunches user_memory_update
+crunch user_memory_update
   for (empty_fail) empty_fail[wp]
-crunches device_memory_update
+crunch device_memory_update
   for (empty_fail) empty_fail[wp]
 
 lemma corres_gets_same:
@@ -185,7 +185,7 @@ lemma corres_return_same_trivial:
   "corres_underlying sr b c (=) \<top> \<top> (return a) (return a)"
   by simp
 
-crunches device_memory_update
+crunch device_memory_update
   for (no_fail) no_fail[wp]
 
 lemma corres_ex_abs_lift':
@@ -820,7 +820,7 @@ lemma abstract_invs:
    apply (fastforce simp: full_invs_if_def ADT_A_if_def step_restrict_def)+
   done
 
-crunches checkActiveIRQ_if
+crunch checkActiveIRQ_if
   for ksDomainTime_inv[wp]: "\<lambda>s. P (ksDomainTime s)"
   and ksDomSchedule_inv[wp]: "\<lambda>s. P (ksDomSchedule s)"
 

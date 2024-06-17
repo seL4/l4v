@@ -57,26 +57,26 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
 lemmas [wp] =  unless_wp
 
 (* These also prove facts about copy_global_mappings *)
-crunches init_arch_objects
+crunch init_arch_objects
   for pspace_aligned[wp]: "pspace_aligned"
   (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
-crunches init_arch_objects
+crunch init_arch_objects
   for pspace_distinct[wp]: "pspace_distinct"
   (ignore: clearMemory set_object set_pml4
        wp: crunch_wps set_object_distinct
      simp: crunch_simps unless_def set_arch_obj_simps)
-crunches init_arch_objects
+crunch init_arch_objects
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def set_arch_obj_simps)
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_mdb[wp]: "valid_mdb"
   (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def set_arch_obj_simps)
-crunches init_arch_objects
+crunch init_arch_objects
   for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   (ignore: clearMemory set_pml4
        wp: crunch_wps set_aobject_cte_wp_at
      simp: crunch_simps unless_def set_arch_obj_simps)
-crunches init_arch_objects
+crunch init_arch_objects
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
 
@@ -118,11 +118,11 @@ lemma store_pml4e_valid_objs[wp]:
   apply (wpsimp simp: store_pml4e_def set_arch_obj_simps)
   by (fastforce simp: valid_objs_def obj_at_def dom_def valid_obj_def)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_objs[wp]: "valid_objs"
   (ignore: clearMemory wp: crunch_wps simp: unless_def)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_arch_state[wp]: "valid_arch_state"
   (ignore: clearMemory set_pml4 set_object wp: crunch_wps simp: unless_def crunch_simps set_arch_obj_simps)
 
@@ -130,79 +130,79 @@ lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ
 
 lemmas init_arch_objects_cap_table[wp] = cap_table_at_lift_valid [OF init_arch_objects_typ_at]
 
-crunches clearMemory
+crunch clearMemory
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp ignore_del: clearMemory)
 
-crunches reserve_region
+crunch reserve_region
   for pspace_respects_device_region[wp]: pspace_respects_device_region
-crunches reserve_region
+crunch reserve_region
   for cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
 
-crunches reserve_region
+crunch reserve_region
   for invs[wp]: "invs"
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for iflive[wp]: "if_live_then_nonz_cap"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for zombies[wp]: "zombies_final"
   (wp: crunch_wps simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps is_tcb_def)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for only_idle[wp]: "only_idle"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for ifunsafe[wp]: "if_unsafe_then_cap"
   (wp: crunch_wps simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for reply_caps[wp]: "valid_reply_caps"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for reply_masters[wp]: "valid_reply_masters"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for valid_global[wp]: "valid_global_refs"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
   (wp: crunch_wps simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
   (wp: crunch_wps simp: set_arch_obj_simps)
 
@@ -476,7 +476,7 @@ lemma copy_global_mappings_invs:
                         restrict_map_def)
   done
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for global_refs_inv[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
@@ -1258,11 +1258,11 @@ lemma invs_irq_state_independent:
       cur_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_irq_states_def)
 
-crunches storeWord, clearMemory
+crunch storeWord, clearMemory
   for irq_masks_inv[wp]: "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps ignore_del: storeWord clearMemory)
 
-crunches clearMemory
+crunch clearMemory
   for underlying_mem_0[wp]: "\<lambda>s. underlying_memory s p = 0"
   (wp: crunch_wps storeWord_um_eq_0 ignore_del: clearMemory)
 
@@ -1288,7 +1288,7 @@ lemma caps_region_kernel_window_imp:
   done
 
 (* make these available in the generic theory? *)
-crunches init_arch_objects
+crunch init_arch_objects
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
@@ -1296,7 +1296,7 @@ lemma init_arch_objects_excap[wp]:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   by (wp ex_cte_cap_to_pres )
 
-crunches init_arch_objects
+crunch init_arch_objects
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps ignore: set_object set_pml4 simp: set_arch_obj_simps)
 

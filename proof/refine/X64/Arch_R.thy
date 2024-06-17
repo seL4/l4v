@@ -461,7 +461,7 @@ lemma asidHighBits [simp]:
 
 declare word_unat_power [symmetric, simp del]
 
-crunches "X64_H.decodeInvocation"
+crunch "X64_H.decodeInvocation"
   for inv[wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: forME_x_def crunch_simps)
@@ -1326,7 +1326,7 @@ lemma perform_port_inv_corres:
   by (auto simp: no_fail_in8 no_fail_in16 no_fail_in32
                     no_fail_out8 no_fail_out16 no_fail_out32)
 
-crunches setIOPortMask
+crunch setIOPortMask
   for valid_pspace'[wp]: valid_pspace'
   and valid_cap'[wp]: "valid_cap' c"
 
@@ -1511,7 +1511,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-crunches performX64PortInvocation
+crunch performX64PortInvocation
   for tcb_at'[wp]: "tcb_at' t"
 
 lemma invokeArch_tcb_at':
@@ -1523,7 +1523,7 @@ lemma invokeArch_tcb_at':
                   wp: performASIDControlInvocation_tcb_at')
   done
 
-crunches setThreadState
+crunch setThreadState
   for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
   (simp: unless_def)
 
@@ -1864,21 +1864,21 @@ lemma arch_decodeInvocation_wf[wp]:
                cong: if_cong split del: if_split)
   by (wpsimp)
 
-crunches setMRs
+crunch setMRs
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
    wp: hoare_drop_imps hoare_vcg_split_case_option
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-crunches performX64MMUInvocation, performX64PortInvocation
+crunch performX64MMUInvocation, performX64PortInvocation
   for nosch [wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
-crunches performPageDirectoryInvocation, performPageTableInvocation,
+crunch performPageDirectoryInvocation, performPageTableInvocation,
                    performPageInvocation, performPDPTInvocation,
                    performASIDPoolInvocation, performX64PortInvocation
   for st_tcb_at': "st_tcb_at' P t"
@@ -1928,32 +1928,32 @@ lemma performASIDControlInvocation_st_tcb_at':
   apply auto
   done
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for aligned': pspace_aligned'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for distinct': pspace_distinct'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
 
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunches "Arch.finaliseCap"
+crunch "Arch.finaliseCap"
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunches  "Arch.finaliseCap"
+crunch  "Arch.finaliseCap"
   for cte_wp_at': "cte_wp_at' P p"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 

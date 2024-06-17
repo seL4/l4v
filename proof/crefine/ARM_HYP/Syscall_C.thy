@@ -15,7 +15,7 @@ imports
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches replyFromKernel
+crunch replyFromKernel
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 end
 
@@ -1601,7 +1601,7 @@ lemma get_gic_vcpu_ctrl_eisr0_invs'[wp]:
   "valid invs' (doMachineOp get_gic_vcpu_ctrl_eisr0) (\<lambda>_. invs')"
   by (simp add: get_gic_vcpu_ctrl_eisr0_def doMachineOp_def split_def select_f_returns | wp)+
 
-crunches armv_contextSwitch
+crunch armv_contextSwitch
   for obj_at'_s[wp]: "\<lambda>s. obj_at' P (ksCurThread s) s"
 
 lemma ccorres_return_void_C_Seq:

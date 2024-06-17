@@ -42,7 +42,7 @@ lemma ksReadyQueues_head_end_ksSchedulerAction_update[simp]:
   "ksReadyQueues_head_end (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) = ksReadyQueues_head_end s"
   by (simp add: ksReadyQueues_head_end_def)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksReadyQueues_head_end[wp]: ksReadyQueues_head_end
 
 lemma setThreadState_ksReadyQueues_head_end[wp]:
@@ -89,7 +89,7 @@ lemma ksReadyQueues_head_end_tcb_at'_ksSchedulerAction_update[simp]:
    = ksReadyQueues_head_end_tcb_at' s"
   by (simp add: ksReadyQueues_head_end_tcb_at'_def)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksReadyQueues_head_end_tcb_at'[wp]: ksReadyQueues_head_end_tcb_at'
 
 lemma setThreadState_ksReadyQueues_head_end_tcb_at'[wp]:
@@ -390,7 +390,7 @@ next
     done
 qed
 
-crunches setEndpoint, setNotification
+crunch setEndpoint, setNotification
   for ksReadyQueues_head_end[wp]: ksReadyQueues_head_end
   and ksReadyQueues_head_end_tcb_at'[wp]: ksReadyQueues_head_end_tcb_at'
   (simp: updateObject_default_def)
@@ -710,7 +710,7 @@ lemma updateRestartPC_ccorres:
                     AARCH64.faultRegister_def AARCH64.nextInstructionRegister_def)
   done
 
-crunches updateRestartPC
+crunch updateRestartPC
   for sch_act_simple[wp]: sch_act_simple
   and valid_objs'[wp]: valid_objs'
   and tcb_at'[wp]: "tcb_at' p"
@@ -1149,7 +1149,7 @@ lemma invs'_invs_no_cicd':
 
 (* FIXME AARCH64: vcpu_vppi_masked_C_Ptr is too generic, applies to most bit fields *)
 
-crunches invalidateTLBByASID, invalidateASIDEntry
+crunch invalidateTLBByASID, invalidateASIDEntry
   for valid_arch_state'[wp]: valid_arch_state'
   and cur_tcb'[wp]: cur_tcb'
   (wp: crunch_wps)
@@ -1169,7 +1169,7 @@ lemma updateASIDPoolEntry_dom_ap_inv:
   apply (fastforce simp: obj_at'_real_def ko_wp_at'_def objBits_simps split: if_split)
   done
 
-crunches invalidateASIDEntry, invalidateTLBByASID
+crunch invalidateASIDEntry, invalidateTLBByASID
   for dom_ap_inv[wp]: "\<lambda>s. obj_at' (\<lambda>ap. dom (inv asidpool.ASIDPool ap) =
                                      dom (inv asidpool.ASIDPool pool)) p s"
 

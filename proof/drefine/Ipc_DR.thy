@@ -418,7 +418,7 @@ lemma block_thread_on_ntfn_recv_corres:
 lemma corres_ignore_ret_lhs: "dcorres rv P P' (do f;g od) f' \<Longrightarrow> dcorres rv P P' (do a\<leftarrow>f;g od) f'"
  by (clarsimp simp:corres_underlying_def)
 
-crunches set_thread_state, set_object
+crunch set_thread_state, set_object
   for not_idle[wp]: "not_idle_thread y :: 'a::state_ext state \<Rightarrow> bool"
   (simp: not_idle_thread_def get_object_def wp: dxo_wp_weak)
 
@@ -692,7 +692,7 @@ lemma valid_idle_set_thread_state:
   apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
-crunches tcb_sched_action
+crunch tcb_sched_action
   for not_idle_thread[wp]: "not_idle_thread a"
   (wp: simp: not_idle_thread_def)
 
@@ -1182,7 +1182,7 @@ shows "\<lbrace>\<lambda>s. evalMonad (lookup_ipc_buffer in_receive x) s = Some 
   apply (clarsimp simp:evalMonad_def return_def split:if_splits)
   done
 
-crunches update_cdt
+crunch update_cdt
   for ipc_buffer_wp_at[wp]: "ipc_buffer_wp_at buf t"
   (wp: crunch_wps simp: crunch_simps Retype_A.detype_def set_cdt_def ipc_buffer_wp_at_def ignore:clearMemory)
 
@@ -2176,7 +2176,7 @@ lemma when_return:
   "when f (return ()) = return ()"
   by (simp add:when_def)
 
-crunches handle_fault_reply
+crunch handle_fault_reply
   for valid_etcbs[wp]: valid_etcbs
 
 lemma do_reply_transfer_corres:
@@ -2539,7 +2539,7 @@ lemma dcorres_dummy_set_pending_cap_Restart:
     split : Structures_A.thread_state.splits)
   done
 
-crunches do_ipc_transfer
+crunch do_ipc_transfer
   for pred_tcb[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
 

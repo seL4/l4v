@@ -91,10 +91,10 @@ lemma empty_fail_findPDForASIDAssert[iff]:
   unfolding findPDForASIDAssert_def checkPDAt_def checkPDUniqueToASID_def checkPDASIDMapMembership_def
   by (wpsimp wp: empty_fail_getObject)
 
-crunches switchToIdleThread
+crunch switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
-crunches switchToThread
+crunch switchToThread
   for valid_arch_state'[wp]: valid_arch_state'
 
 lemma mab_gt_2 [simp]:
@@ -226,7 +226,7 @@ lemma user_getreg_rv:
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
   done
 
-crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
          updateFreeIndex, preemptionPoint
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only

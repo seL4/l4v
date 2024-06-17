@@ -16,7 +16,7 @@ named_theorems EmptyFail_AI_assms
 crunch_ignore (empty_fail)
   (add: pt_lookup_from_level)
 
-crunches
+crunch
   load_word_offs, get_mrs
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
@@ -32,20 +32,20 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 
 context Arch begin global_naming AARCH64
 
-crunches handle_fault
+crunch handle_fault
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def)
 
-crunches
+crunch
   decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params,
   decode_set_tls_base
   for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
-crunches decode_vcpu_invocation
+crunch decode_vcpu_invocation
   for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
@@ -54,7 +54,7 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
       | wp | intro conjI impI)+
 
-crunches find_vspace_for_asid, check_vp_alignment, check_vspace_root
+crunch find_vspace_for_asid, check_vp_alignment, check_vspace_root
   for (empty_fail) empty_fail[wp]
 
 lemma arch_decode_ARMASIDControlMakePool_empty_fail:
@@ -138,11 +138,11 @@ lemma empty_fail_pt_lookup_from_level[wp]:
   apply wpsimp
   done
 
-crunches vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
+crunch vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
   for (empty_fail) empty_fail[wp]
   (ignore: set_object get_object)
 
-crunches maskInterrupt, empty_slot,
+crunch maskInterrupt, empty_slot,
     finalise_cap, preemption_point, vcpu_save,
     cap_swap_for_delete, decode_invocation
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -159,7 +159,7 @@ proof goal_cases
 qed
 
 context Arch begin global_naming AARCH64
-crunches
+crunch
   cap_delete, choose_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
@@ -194,7 +194,7 @@ lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
                    get_gic_vcpu_ctrl_misr_def
                    vgic_maintenance_def)
 
-crunches possible_switch_to, handle_event, activate_thread
+crunch possible_switch_to, handle_event, activate_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pte.splits

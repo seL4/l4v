@@ -26,11 +26,11 @@ lemma integrity_cdt_list_as_list_integ:
    list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st s"
   by (fastforce elim: integrity_cdt_listE list_integE intro: list_integI integrity_cdt_list_intros)
 
-crunches cap_swap_ext,cap_move_ext,empty_slot_ext
+crunch cap_swap_ext,cap_move_ext,empty_slot_ext
   for ekheap[wp]: "\<lambda>s. P (ekheap s)"
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
 
-crunches set_untyped_cap_as_full
+crunch set_untyped_cap_as_full
   for integrity_autarch: "integrity aag X st"
 
 
@@ -430,7 +430,7 @@ named_theorems wp_not_transferable
 
 context CNode_AC_1 begin
 
-crunches deleted_irq_handler
+crunch deleted_irq_handler
   for respects[wp]: "integrity aag X st"
 
 lemma post_cap_deletion_integrity[wp]:
@@ -485,7 +485,7 @@ lemma reply_cap_no_grand_parent:
   done
 
 (* FIXME MOVE ? *)
-crunches set_cdt_list, update_cdt_list
+crunch set_cdt_list, update_cdt_list
   for cdt[wp]: "\<lambda>s. P (cdt s)"
   and kheap[wp]: "\<lambda>s. P (kheap s)"
   and valid_mdb[wp]: "\<lambda>s. P (valid_mdb s)"
@@ -515,7 +515,7 @@ locale CNode_AC_2 = CNode_AC_1 +
     "\<And>P. update_cdt_list f \<lbrace>\<lambda>s. P (state_asids_to_policy aag s)\<rbrace>"
 begin
 
-crunches set_original
+crunch set_original
   for tcb_domain_map_wellformed[wp]: "\<lambda>s. P (tcb_domain_map_wellformed aag s)"
   and state_irqs_to_policy[wp]: "\<lambda>s. P (state_irqs_to_policy aag s)"
   and cdt_change_allowed[wp]: "\<lambda>s. P (cdt_change_allowed' aag slot s)"
@@ -915,10 +915,10 @@ lemma pas_refined_interrupt_states_update[simp]:
   "pas_refined aag (interrupt_states_update f s) = pas_refined aag s"
   by (simp add: pas_refined_def state_objs_to_policy_def state_refs_of_def)
 
-crunches deleted_irq_handler
+crunch deleted_irq_handler
   for pas_refined[wp]: "pas_refined aag"
 
-crunches set_untyped_cap_as_full
+crunch set_untyped_cap_as_full
   for pas_refined: "pas_refined aag"
 
 lemmas set_untyped_cap_as_full_pas_refined'[wp] = set_untyped_cap_as_full_pas_refined[simplified]
@@ -987,9 +987,9 @@ lemma aag_cap_auth_NullCap [simp]:
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid)
 
-crunches set_cdt
+crunch set_cdt
   for thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
-crunches set_cdt
+crunch set_cdt
   for thread_bound_ntfns[wp]: "\<lambda>s. P (thread_bound_ntfns s)"
 
 
@@ -1089,7 +1089,7 @@ lemma cap_move_pas_refined[wp]:
                 dest: invs_mdb pas_refined_mem[OF sta_cdt]
                       pas_refined_mem[OF sta_cdt_transferable])
 
-crunches set_original, set_cdt
+crunch set_original, set_cdt
   for pspace_aligned[wp]: pspace_aligned
   and valid_vspace_objs[wp]: valid_vspace_objs
   and valid_arch_state[wp]: valid_arch_state
@@ -1417,7 +1417,7 @@ lemma set_ntfn_respects:
   apply (clarsimp simp: integrity_def tro_ntfn integrity_asids_kh_upds)
   done
 
-crunches thread_set
+crunch thread_set
   for integrity_autarch: "integrity aag X st"
 
 end
@@ -1507,7 +1507,7 @@ lemma auth_derived_caps_of_state_impls:
   apply (auto dest: pas_refined_mem[OF sta_untyped] pas_refined_mem[OF sta_caps])
   done
 
-crunches deleted_irq_handler
+crunch deleted_irq_handler
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
 lemma preemption_point_cur_domain[wp]:
@@ -1526,11 +1526,11 @@ lemma post_cap_deletion_cur_domain[wp]:
   "post_cap_deletion c \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
   by (wpsimp simp: post_cap_deletion_def)
 
-crunches cap_swap_for_delete, empty_slot
+crunch cap_swap_for_delete, empty_slot
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
-crunches finalise_cap
+crunch finalise_cap
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
@@ -1538,7 +1538,7 @@ lemma rec_del_cur_domain[wp]:
   "rec_del call \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
   by (rule rec_del_preservation; wp)
 
-crunches cap_delete
+crunch cap_delete
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
 lemma cap_revoke_cur_domain[wp]:

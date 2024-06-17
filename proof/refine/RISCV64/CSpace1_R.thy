@@ -2622,19 +2622,19 @@ lemma updateMDB_ctes_of:
   apply simp
   done
 
-crunches updateMDB
+crunch updateMDB
   for aligned[wp]: "pspace_aligned'"
-crunches updateMDB
+crunch updateMDB
   for pdistinct[wp]: "pspace_distinct'"
-crunches updateMDB
+crunch updateMDB
   for tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
-crunches updateMDB
+crunch updateMDB
   for tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
-crunches updateMDB
+crunch updateMDB
   for inQ_opt_pred[wp]: "\<lambda>s. P (inQ d p |< tcbs_of' s)"
-crunches updateMDB
+crunch updateMDB
   for inQ_opt_pred'[wp]: "\<lambda>s. P (\<lambda>d p. inQ d p |< tcbs_of' s)"
-crunches updateMDB
+crunch updateMDB
   for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps simp: crunch_simps setObject_def updateObject_cte)
 
@@ -2647,7 +2647,7 @@ lemma setCTE_rdyq_projs[wp]:
      apply wpsimp+
   done
 
-crunches updateMDB
+crunch updateMDB
   for rdyq_projs[wp]:"\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
                              (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
@@ -3849,7 +3849,7 @@ lemma updateUntypedCap_descendants_of:
   apply (clarsimp simp:mdb_next_rel_def mdb_next_def split:if_splits)
   done
 
-crunches setCTE
+crunch setCTE
   for tcbQueued[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
 
 lemma setCTE_UntypedCap_corres:
@@ -5150,7 +5150,7 @@ lemma (in mdb_insert_abs_sib) next_slot':
 
 lemmas valid_list_def = valid_list_2_def
 
-crunches set_untyped_cap_as_full
+crunch set_untyped_cap_as_full
   for valid_list[wp]: valid_list
 
 lemma updateMDB_the_lot':

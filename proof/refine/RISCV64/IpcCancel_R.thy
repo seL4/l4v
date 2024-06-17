@@ -11,17 +11,17 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches cancelAllIPC
+crunch cancelAllIPC
   for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps mapM_x_wp' simp: unless_def)
-crunches cancelAllIPC
+crunch cancelAllIPC
   for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps mapM_x_wp' simp: unless_def)
 
-crunches cancelAllSignals
+crunch cancelAllSignals
   for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps mapM_x_wp')
-crunches cancelAllSignals
+crunch cancelAllSignals
   for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps mapM_x_wp')
 
@@ -39,7 +39,7 @@ lemma cancelSignal_pred_tcb_at':
   apply (wp sts_pred_tcb_neq' getNotification_wp | wpc | clarsimp)+
   done
 
-crunches emptySlot
+crunch emptySlot
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: setCTE_pred_tcb_at')
 
@@ -109,11 +109,11 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
   done
 
 context begin interpretation Arch .
-crunches emptySlot
+crunch emptySlot
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 end
 
-crunches cancelSignal
+crunch cancelSignal
   for tcb_at'[wp]: "tcb_at' t"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -623,7 +623,7 @@ lemma setNotification_utr[wp]:
   apply (simp add: o_def)
   done
 
-crunches setEndpoint
+crunch setEndpoint
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
@@ -637,7 +637,7 @@ lemma setEndpoint_utr[wp]:
 declare cart_singleton_empty [simp]
 declare cart_singleton_empty2[simp]
 
-crunches setNotification
+crunch setNotification
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
   (wp: setObject_queues_unchanged_tcb updateObject_default_inv)
 
@@ -646,7 +646,7 @@ lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_no
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches setNotification
+crunch setNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
   (wp: valid_bitmaps_lift)
@@ -742,14 +742,14 @@ lemma setEndpoint_vms[wp]:
   by (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-crunches setEndpoint
+crunch setEndpoint
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
   (wp: setObject_queues_unchanged_tcb updateObject_default_inv)
 
-crunches setEndpoint
+crunch setEndpoint
   for sch_act_not[wp]: "sch_act_not t"
 
-crunches setEndpoint
+crunch setEndpoint
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: setObject_ep_cur_domain)
 
@@ -785,7 +785,7 @@ lemma setEndpoint_ksDomScheduleIdx[wp]:
 
 end
 
-crunches setEndpoint
+crunch setEndpoint
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
@@ -951,7 +951,7 @@ lemma sts_sch_act_not[wp]:
   apply (wp hoare_drop_imps | simp | wpcw)+
   done
 
-crunches cancelSignal, setBoundNotification
+crunch cancelSignal, setBoundNotification
   for sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps)
 
@@ -971,7 +971,7 @@ lemma cancelAllSignals_tcb_at_runnable':
   unfolding cancelAllSignals_def
   by (wpsimp wp: mapM_x_wp' sts_st_tcb' hoare_drop_imp)
 
-crunches unbindNotification, bindNotification, unbindMaybeNotification
+crunch unbindNotification, bindNotification, unbindMaybeNotification
   for st_tcb_at'[wp]: "st_tcb_at' P p"
   (wp: threadSet_pred_tcb_no_state ignore: threadSet)
 
@@ -983,7 +983,7 @@ lemma (in delete_one_conc_pre) finaliseCap_tcb_at_runnable':
        | wpc)+
   done
 
-crunches isFinalCapability
+crunch isFinalCapability
   for pred_tcb_at'[wp]: "pred_tcb_at' proj st t"
   (simp: crunch_simps)
 
@@ -993,7 +993,7 @@ lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
   apply (wp finaliseCap_tcb_at_runnable' hoare_drop_imps | clarsimp)+
   done
 
-crunches getThreadReplySlot, getEndpoint
+crunch getThreadReplySlot, getEndpoint
   for pred_tcb_at'[wp]: "pred_tcb_at' proj st t"
 
 lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
@@ -1013,7 +1013,7 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
                   | wpc | simp add: o_def if_fun_split)+
   done
 
-crunches cancelSignal
+crunch cancelSignal
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: crunch_wps)
 
@@ -1047,7 +1047,7 @@ lemma setThreadState_tcbDomain_obj_at'[wp]:
   unfolding setThreadState_def
   by wpsimp
 
-crunches cancelSignal
+crunch cancelSignal
   for tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
   (wp: crunch_wps)
 
@@ -1174,22 +1174,22 @@ lemma asUser_tcbQueued_inv[wp]:
 
 context begin interpretation Arch .
 
-crunches cancel_ipc
+crunch cancel_ipc
   for pspace_aligned[wp]: "pspace_aligned :: det_state \<Rightarrow> _"
   and pspace_distinct[wp]: "pspace_distinct :: det_state \<Rightarrow> _"
   (simp: crunch_simps wp: crunch_wps)
 
 end
 
-crunches asUser
+crunch asUser
   for valid_sched_pointers[wp]: valid_sched_pointers
   (wp: crunch_wps)
 
-crunches set_thread_state
+crunch set_thread_state
   for in_correct_ready_q[wp]: in_correct_ready_q
   (wp: crunch_wps)
 
-crunches set_thread_state_ext
+crunch set_thread_state_ext
   for ready_qs_distinct[wp]: ready_qs_distinct
   (wp: crunch_wps)
 
@@ -1251,7 +1251,7 @@ lemma no_refs_simple_strg':
   "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"
   by (fastforce elim!: pred_tcb'_weakenE)+
 
-crunches cancelSignal
+crunch cancelSignal
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1263,7 +1263,7 @@ lemma (in delete_one_conc_pre) cancelIPC_it[wp]:
   apply (wp hoare_drop_imps delete_one_it | wpc | simp add:if_apply_def2 Fun.comp_def)+
   done
 
-crunches tcbSchedDequeue
+crunch tcbSchedDequeue
   for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   (wp: crunch_wps)
 
@@ -1384,7 +1384,7 @@ lemma ep_cancel_corres_helper:
                   simp: valid_tcb_state'_def)+
   done
 
-crunches set_simple_ko
+crunch set_simple_ko
   for ready_qs_distinct[wp]: ready_qs_distinct
   and in_correct_ready_q[wp]: in_correct_ready_q
   (rule: ready_qs_distinct_lift wp: crunch_wps)
@@ -1687,11 +1687,11 @@ lemma ct_not_in_ntfnQueue:
   using assms unfolding ct_in_state'_def
   by (rule not_in_ntfnQueue)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for valid_pspace'[wp]: "valid_pspace'"
-crunches rescheduleRequired
+crunch rescheduleRequired
   for valid_global_refs'[wp]: "valid_global_refs'"
-crunches rescheduleRequired
+crunch rescheduleRequired
   for valid_machine_state'[wp]: "valid_machine_state'"
 
 lemma sch_act_wf_weak[elim!]:
@@ -1982,7 +1982,7 @@ lemma cancelAllSignals_unlive:
   apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def obj_at'_def)+
   done
 
-crunches tcbSchedEnqueue
+crunch tcbSchedEnqueue
   for ep_at'[wp]: "ep_at' epptr"
   (simp: unless_def)
 
@@ -2080,7 +2080,7 @@ lemma cancelBadgedSends_invs[wp]:
   apply (fastforce simp: set_eq_subset tcb_bound_refs'_def)
   done
 
-crunches tcb_sched_action
+crunch tcb_sched_action
   for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
 
 lemma setEndpoint_valid_tcbs'[wp]:
@@ -2165,7 +2165,7 @@ lemma cancelBadgedSends_corres:
   apply (fastforce simp: valid_ep'_def)
   done
 
-crunches updateRestartPC
+crunch updateRestartPC
   for tcb_at'[wp]: "tcb_at' t"
   (simp: crunch_simps)
 
@@ -2174,9 +2174,9 @@ lemma suspend_unqueued:
   unfolding suspend_def
   by (wpsimp simp: comp_def wp: tcbSchedDequeue_not_tcbQueued)
 
-crunches prepareThreadDelete
+crunch prepareThreadDelete
   for unqueued: "obj_at' (\<lambda>a. \<not> tcbQueued a) t"
-crunches prepareThreadDelete
+crunch prepareThreadDelete
   for inactive: "st_tcb_at' ((=) Inactive) t'"
 
 end

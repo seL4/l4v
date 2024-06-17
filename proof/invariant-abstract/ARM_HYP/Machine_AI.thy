@@ -362,7 +362,7 @@ lemma no_irq_machine_rest_lift:
   apply simp
   done
 
-crunches machine_op_lift
+crunch machine_op_lift
   for (no_irq) no_irq[wp, simp]
 
 lemma no_irq:
@@ -810,7 +810,7 @@ lemma empty_fail_set_gic_vcpu_ctrl_hcr[simp, intro!]:
   "empty_fail (set_gic_vcpu_ctrl_hcr w)"
   by (simp add: set_gic_vcpu_ctrl_hcr_def)
 
-crunches readVCPUHardwareReg, writeVCPUHardwareReg, get_cntv_cval_64, set_cntv_cval_64,
+crunch readVCPUHardwareReg, writeVCPUHardwareReg, get_cntv_cval_64, set_cntv_cval_64,
           get_cntv_off_64, set_cntv_off_64, read_cntpct
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]

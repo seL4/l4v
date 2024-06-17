@@ -106,7 +106,7 @@ lemma decodeIRQHandlerInvocation_corres:
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
-crunches decodeIRQHandlerInvocation
+crunch decodeIRQHandlerInvocation
   for inv[wp]: "P"
   (simp: crunch_simps)
 
@@ -142,7 +142,7 @@ lemma is_irq_active_corres:
             split: irqstate.split_asm irq_state.split_asm)
   done
 
-crunches isIRQActive
+crunch isIRQActive
   for inv: "P"
 
 lemma isIRQActive_wp:
@@ -170,7 +170,7 @@ lemma whenE_rangeCheck_eq:
 
 lemmas irq_const_defs = minIRQ_def
 
-crunches arch_check_irq, checkIRQ
+crunch arch_check_irq, checkIRQ
   for inv: "P"
   (simp: crunch_simps)
 
@@ -276,7 +276,7 @@ lemma decodeIRQControlInvocation_corres:
                 simp: not_less unat_le_helper)
   done
 
-crunches "InterruptDecls_H.decodeIRQControlInvocation"
+crunch "InterruptDecls_H.decodeIRQControlInvocation"
   for inv[wp]: "P"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -457,7 +457,7 @@ lemma IRQHandler_valid':
   "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
-crunches setIRQState
+crunch setIRQState
   for valid_mdb'[wp]: "valid_mdb'"
 
 method do_machine_op_corres
@@ -527,7 +527,7 @@ lemma performIRQControl_corres:
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   by (clarsimp simp: arch_performIRQControl_corres)
 
-crunches setIRQState
+crunch setIRQState
   for valid_cap'[wp]: "valid_cap' cap"
 
 lemma setIRQState_cte_cap_to'[wp]:
@@ -706,7 +706,7 @@ lemma countTrailingZeros_simp[simp]:
   unfolding countTrailingZeros_def word_ctz_def
   by (simp add: to_bl_upt)
 
-crunches doMachineOp
+crunch doMachineOp
    for sch_act_ct_rq[wp]: "\<lambda>s. P (ksSchedulerAction s) (ksCurThread s) (ksReadyQueues s)"
    and pred_tcb_at'_ct[wp]: "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
    and ex_nonz_cap_to'[wp]: "\<lambda>s. P (ex_nonz_cap_to' (ksCurThread s) s)"
@@ -730,7 +730,7 @@ lemma dmo_gets_wp:
   "\<lbrace>\<lambda>s. P (f (machine_state s)) s\<rbrace> do_machine_op (gets f) \<lbrace>P\<rbrace>"
   by (wpsimp simp: submonad_do_machine_op.gets)
 
-crunches vgicUpdateLR
+crunch vgicUpdateLR
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma virqType_eq[simp]:
@@ -981,11 +981,11 @@ lemma handleInterrupt_corres:
   apply clarsimp
   done
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 (simp:tcbSchedEnqueue_def wp:unless_wp)
 
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 (simp:tcbSchedEnqueue_def wp:unless_wp)
 
@@ -1013,7 +1013,7 @@ lemma updateTimeSlice_hyp_refs[wp]:
   apply (clarsimp simp: objBitsKO_def ps_clear_def dom_upd_eq split: option.splits)
   done
 
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
   and irqs_masked'[wp]: irqs_masked'
   and ct[wp]: cur_tcb'
@@ -1151,7 +1151,7 @@ lemma hint_invs[wp]:
                         unat_arith_simps)
   done
 
-crunches timerTick
+crunch timerTick
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: threadSet_pred_tcb_no_state)
 

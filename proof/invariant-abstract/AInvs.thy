@@ -70,7 +70,7 @@ lemma device_update_invs:
   apply clarsimp
   by (fastforce split: if_splits) (* takes 20 secs *)
 
-crunches user_memory_update
+crunch user_memory_update
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma dom_restrict_plus_eq:

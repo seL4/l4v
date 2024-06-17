@@ -12,11 +12,11 @@ context Arch begin global_naming ARM
 
 named_theorems DetSchedDomainTime_AI_assms
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
-crunches
+crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
@@ -24,11 +24,11 @@ crunches
   arch_post_modify_registers, arch_post_cap_deletion, arch_invoke_irq_handler
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
-crunches
+crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
@@ -48,17 +48,17 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
 
 context Arch begin global_naming ARM
 
-crunches arch_mask_irq_signal
+crunch arch_mask_irq_signal
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
 
-crunches arch_mask_irq_signal
+crunch arch_mask_irq_signal
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps check_cap_inv)
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
@@ -96,11 +96,11 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
    apply wpsimp+
   done
 
-crunches handle_reserved_irq
+crunch handle_reserved_irq
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
-crunches handle_reserved_irq
+crunch handle_reserved_irq
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 

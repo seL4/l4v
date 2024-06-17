@@ -20,7 +20,7 @@ lemma foldr_data_map_insert[simp]:
   apply (simp add:data_map_insert_def[abs_def] fun_upd_def)
   done
 
-crunches resetUntypedCap
+crunch resetUntypedCap
   for arch_inv[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
      wp: hoare_drop_imps unless_wp mapME_x_inv_wp
@@ -39,7 +39,7 @@ lemma mapM_x_mapM_valid:
 
 declare withoutPreemption_lift [wp del]
 
-crunches
+crunch
   isFinalCapability
   for valid_cap'[wp]: "\<lambda>s. valid_cap' cap s"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)

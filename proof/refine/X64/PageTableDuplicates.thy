@@ -28,11 +28,11 @@ lemma foldr_data_map_insert[simp]:
   apply (simp add:data_map_insert_def[abs_def] fun_upd_def)
   done
 
-crunches createNewObjects
+crunch createNewObjects
   for arch_inv[wp]: "\<lambda>s. P (x64KSSKIMPML4 (ksArchState s))"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps unless_wp)
 
-crunches resetUntypedCap
+crunch resetUntypedCap
   for arch_inv[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
      wp: hoare_drop_imps unless_wp mapME_x_inv_wp
@@ -50,19 +50,19 @@ lemma mapM_x_mapM_valid:
   apply fastforce
   done
 
-crunches
+crunch
  flushTable
   for valid_arch_state'[wp]: valid_arch_state'
   (wp: crunch_wps  simp: crunch_simps unless_def)
 
 declare withoutPreemption_lift [wp del]
 
-crunches
+crunch
   isFinalCapability
   for valid_cap'[wp]: "\<lambda>s. valid_cap' cap s"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
-crunches getThreadBufferSlot
+crunch getThreadBufferSlot
   for inv[wp]: P
   (wp: crunch_wps)
 

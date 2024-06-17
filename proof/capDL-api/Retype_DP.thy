@@ -49,7 +49,7 @@ lemma create_objects_mapM_x':
     done
 qed
 
-crunches generate_object_ids
+crunch generate_object_ids
   for inv[wp]: P
   (wp: crunch_wps)
 
@@ -292,12 +292,12 @@ lemma reset_untyped_cap_wp:
    apply fastforce+
   done
 
-crunches reset_untyped_cap
+crunch reset_untyped_cap
   for cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
   (wp: mapM_x_wp' mapME_x_inv_wp crunch_wps unless_wp
    simp: detype_def crunch_simps)
 
-crunches invoke_untyped
+crunch invoke_untyped
   for cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
   (wp: mapM_x_wp' mapME_x_inv_wp crunch_wps unless_wp
    simp: detype_def crunch_simps validE_E_def)
@@ -442,11 +442,11 @@ abbreviation (input) "retype_with_kids uinv
   \<equiv> (case uinv of (InvokeUntyped (Retype uref nt ts dest has_kids n)) \<Rightarrow> has_kids)"
 
 
-crunches retype_region, update_available_range
+crunch retype_region, update_available_range
   for cdt[wp]: "\<lambda>s. P (cdl_cdt s)"
   (simp: crunch_simps corrupt_intents_def)
 
-crunches retype_region, update_available_range
+crunch retype_region, update_available_range
   for has_children[wp]: "has_children slot"
   (simp: crunch_simps corrupt_intents_def has_children_def is_cdt_parent_def)
 
@@ -536,7 +536,7 @@ lemma mark_tcb_intent_error_has_children[wp]:
   by (wpsimp simp: has_children_def is_cdt_parent_def mark_tcb_intent_error_def update_thread_def
                    set_object_def)
 
-crunches corrupt_frame, corrupt_tcb_intent, corrupt_ipc_buffer
+crunch corrupt_frame, corrupt_tcb_intent, corrupt_ipc_buffer
   for cdt[wp]: "\<lambda>s. P (cdl_cdt s)"
   (simp: crunch_simps corrupt_intents_def)
 
@@ -696,11 +696,11 @@ lemma seL4_Untyped_Retype_sep:
  * become parents, and never lose their children                      *
  **********************************************************************)
 
-crunches schedule
+crunch schedule
   for cdt_inc[wp]: "\<lambda>s. cdl_cdt s child = parent"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches handle_pending_interrupts
+crunch handle_pending_interrupts
   for cdt_inc[wp]: "\<lambda>s. cdl_cdt s child = parent"
   (wp: simp: crunch_simps)
 
@@ -743,19 +743,19 @@ lemma hoare_drop_impE_R:
   apply fastforce
   done
 
-crunches block_thread_on_ipc
+crunch block_thread_on_ipc
   for cdt_inc[wp]: "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   hoare_drop_imps
   simp:crunch_simps get_thread_def
   ignore:unify_failure)
 
-crunches set_untyped_cap_as_full
+crunch set_untyped_cap_as_full
   for cdt_inc[wp]: "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   simp:crunch_simps get_thread_def)
 
-crunches mark_tcb_intent_error
+crunch mark_tcb_intent_error
   for cdt_inc[wp]: "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   simp:crunch_simps)
@@ -803,7 +803,7 @@ lemma object_at_cdl_cdt[simp]:
    = object_at P ptr s"
   by (simp add: object_at_def)
 
-crunches set_parent
+crunch set_parent
   for tcb_intent[wp]: "\<lambda>s. tcb_at' (\<lambda>tcb. P (cdl_tcb_intent tcb)) ptr s"
 
 lemma throw_on_none_wp:
@@ -838,10 +838,10 @@ lemma lookup_cap_rvu':
   apply (sep_solve)
   done
 
-crunches  handle_pending_interrupts
+crunch  handle_pending_interrupts
   for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
 
-crunches  lookup_cap
+crunch  lookup_cap
   for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: hoare_drop_imps)
 
@@ -891,11 +891,11 @@ lemma corrupt_intents_no_pending:
               simp: object_slots_def option.splits)
   done
 
-crunches corrupt_ipc_buffer
+crunch corrupt_ipc_buffer
   for no_pending[wp]: no_pending
   (wp: crunch_wps update_thread_no_pending corrupt_intents_no_pending)
 
-crunches mark_tcb_intent_error
+crunch mark_tcb_intent_error
   for no_pending[wp]: no_pending
   (wp: crunch_wps update_thread_no_pending corrupt_intents_no_pending)
 
@@ -1006,12 +1006,12 @@ lemma set_parent_cdl_parent:
    apply clarsimp
    done
 
-crunches reset_untyped_cap
+crunch reset_untyped_cap
   for cdl_parent[wp]: "\<lambda>s. cdl_cdt s slot = Some parent"
    (wp: assert_inv crunch_wps mapME_x_inv_wp
     simp: crunch_simps detype_def)
 
-crunches insert_cap_child, corrupt_ipc_buffer,
+crunch insert_cap_child, corrupt_ipc_buffer,
           corrupt_tcb_intent, update_thread, derive_cap, insert_cap_sibling
   for cdl_parent[wp]: "\<lambda>s. cdl_cdt s slot = Some parent"
    (wp: crunch_wps set_parent_cdl_parent simp: crunch_simps corrupt_intents_def)
@@ -1028,7 +1028,7 @@ lemma transfer_caps_loop_cdl_parent:
 
 lemmas reset_untyped_cap_cdl2[wp] = reset_untyped_cap_cdl_parent[THEN valid_validE_E]
 
-crunches inject_reply_cap
+crunch inject_reply_cap
   for cdt_parent: "\<lambda>s. cdl_cdt s slot = Some parent"
   (simp: crunch_simps unless_def wp: crunch_wps)
 
@@ -1068,7 +1068,7 @@ lemma set_cap_no_pending[wp]:
            apply (clarsimp simp: opt_cap_def slots_of_def)+
   done
 
-crunches create_cap
+crunch create_cap
   for no_pending[wp]: no_pending
 
 lemma default_object_no_pending_cap:
@@ -1090,7 +1090,7 @@ lemma create_objects_no_pending[wp]:
   done
 
 
-crunches retype_region
+crunch retype_region
   for no_pending[wp]: "no_pending"
   (wp: crunch_wps ignore: create_objects)
 

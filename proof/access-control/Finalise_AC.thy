@@ -205,10 +205,10 @@ lemma cancel_all_ipc_respects [wp]:
 end
 
 
-crunches blocked_cancel_ipc, cancel_signal
+crunch blocked_cancel_ipc, cancel_signal
   for pas_refined[wp]: "pas_refined aag"
 
-crunches reschedule_required
+crunch reschedule_required
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
 
 (* FIXME move to AInvs *)
@@ -238,11 +238,11 @@ lemma sbn_thread_st_auth[wp]:
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
-crunches fast_finalise
+crunch fast_finalise
   for valid_mdb[wp]: "valid_mdb :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches fast_finalise
+crunch fast_finalise
   for valid_objs[wp]: "valid_objs :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -303,14 +303,14 @@ lemma cancel_all_signals_pas_refined[wp]:
    apply (wpsimp wp: mapM_x_wp_inv set_thread_state_pas_refined get_simple_ko_wp)+
   done
 
-crunches unbind_maybe_notification, cancel_all_ipc, cancel_all_signals,
+crunch unbind_maybe_notification, cancel_all_ipc, cancel_all_signals,
          fast_finalise, blocked_cancel_ipc, cap_move
   for pspace_aligned[wp]: pspace_aligned
   and valid_vspace_objs[wp]: valid_vspace_objs
   and valid_arch_state[wp]: valid_arch_state
   (ignore: cap_move_ext tcb_sched_action reschedule_required wp: dxo_wp_weak mapM_x_inv_wp)
 
-crunches cap_delete_one
+crunch cap_delete_one
   for pas_refined_transferable[wp_transferable]: "pas_refined aag"
   and pas_refined[wp, wp_not_transferable]: "pas_refined aag"
   (wp: crunch_wps simp: crunch_simps)
@@ -368,13 +368,13 @@ lemma deleting_irq_handler_pas_refined[wp]:
   apply (fastforce simp: pas_refined_def irq_map_wellformed_aux_def)
   done
 
-crunches suspend
+crunch suspend
   for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
   (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps)
 
-crunches suspend
+crunch suspend
   for pas_refined[wp]: "pas_refined aag"
 
 lemma finalise_cap_pas_refined[wp]:

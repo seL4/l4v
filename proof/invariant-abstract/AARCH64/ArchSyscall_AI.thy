@@ -19,24 +19,24 @@ context Arch begin global_naming AARCH64
 named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_invs[Syscall_AI_assms]
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for pred_tcb_at[wp,Syscall_AI_assms]: "pred_tcb_at proj P t"
-crunches handle_arch_fault_reply
+crunch handle_arch_fault_reply
   for invs[wp,Syscall_AI_assms]: "invs"
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for cap_to[wp,Syscall_AI_assms]: "ex_nonz_cap_to c"
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for it[wp,Syscall_AI_assms]: "\<lambda>s. P (idle_thread s)"
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for caps[wp,Syscall_AI_assms]: "\<lambda>s. P (caps_of_state s)"
-crunches handle_arch_fault_reply, make_fault_msg, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, make_fault_msg, arch_get_sanitise_register_info
   for cur_thread[wp,Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for valid_objs[wp,Syscall_AI_assms]: "valid_objs"
-crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for cte_wp_at[wp,Syscall_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
 
-crunches invoke_irq_control
+crunch invoke_irq_control
   for typ_at[wp, Syscall_AI_assms]: "\<lambda>s. P (typ_at T p s)"
 
 lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
@@ -59,7 +59,7 @@ lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
                             table_cap_ref_mask_cap Ball_def)
   done
 
-crunches getESR, getFAR
+crunch getESR, getFAR
   for inv[wp]: "P"
 
 lemma do_machine_op_geESR_inv[wp]:

@@ -41,7 +41,7 @@ lemma kernelEntry_arch_extras[ADT_IF_Refine_assms, wp]:
          | clarsimp)+
   done
 
-crunches threadSet
+crunch threadSet
   for arch_extras[ADT_IF_Refine_assms, wp]: "arch_extras"
 
 lemma arch_tcb_context_set_tcb_relation[ADT_IF_Refine_assms]:
@@ -398,11 +398,11 @@ lemma handle_preemption_if_corres[ADT_IF_Refine_assms]:
                         Let_def valid_irq_states'_def)
   done
 
-crunches doUserOp_if
+crunch doUserOp_if
   for ksDomainTime_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomainTime s)"
   and ksDomSchedule_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
 
-crunches checkActiveIRQ_if
+crunch checkActiveIRQ_if
   for arch_extras[ADT_IF_Refine_assms, wp]: arch_extras
 
 lemma valid_device_abs_state_eq[ADT_IF_Refine_assms]:

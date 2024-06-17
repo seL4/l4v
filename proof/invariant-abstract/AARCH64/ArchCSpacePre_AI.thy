@@ -76,7 +76,7 @@ lemma ups_of_heap_non_arch_upd:
   "h x = Some ko \<Longrightarrow> non_arch_obj ko \<Longrightarrow> non_arch_obj ko' \<Longrightarrow> ups_of_heap (h(x \<mapsto> ko')) = ups_of_heap h"
   by (rule ext) (auto simp add: ups_of_heap_def non_arch_obj_def split: kernel_object.splits)
 
-crunches lookup_ipc_buffer
+crunch lookup_ipc_buffer
   for inv[wp]: "I"
 
 lemma vs_cap_ref_to_table_cap_ref:

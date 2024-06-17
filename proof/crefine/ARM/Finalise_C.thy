@@ -41,7 +41,7 @@ lemma ksReadyQueues_head_end_ksSchedulerAction_update[simp]:
   "ksReadyQueues_head_end (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) = ksReadyQueues_head_end s"
   by (simp add: ksReadyQueues_head_end_def)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksReadyQueues_head_end[wp]: ksReadyQueues_head_end
 
 lemma setThreadState_ksReadyQueues_head_end[wp]:
@@ -88,7 +88,7 @@ lemma ksReadyQueues_head_end_tcb_at'_ksSchedulerAction_update[simp]:
    = ksReadyQueues_head_end_tcb_at' s"
   by (simp add: ksReadyQueues_head_end_tcb_at'_def)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksReadyQueues_head_end_tcb_at'[wp]: ksReadyQueues_head_end_tcb_at'
 
 lemma setThreadState_ksReadyQueues_head_end_tcb_at'[wp]:
@@ -388,7 +388,7 @@ next
     done
 qed
 
-crunches setEndpoint, setNotification
+crunch setEndpoint, setNotification
   for ksReadyQueues_head_end[wp]: ksReadyQueues_head_end
   and ksReadyQueues_head_end_tcb_at'[wp]: ksReadyQueues_head_end_tcb_at'
   (simp: updateObject_default_def)
@@ -673,7 +673,7 @@ lemma updateRestartPC_ccorres:
                    ARM.faultRegister_def ARM.nextInstructionRegister_def)
   done
 
-crunches updateRestartPC
+crunch updateRestartPC
   for sch_act_simple[wp]: sch_act_simple
   and valid_objs'[wp]: valid_objs'
   and tcb_at'[wp]: "tcb_at' p"
@@ -1098,7 +1098,7 @@ lemma offset_xf_for_sequence:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches invalidateHWASIDEntry
+crunch invalidateHWASIDEntry
   for pde_mappings'[wp]: "valid_pde_mappings'"
 end
 
@@ -1141,17 +1141,17 @@ lemma invalidateASIDEntry_ccorres:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches invalidateASIDEntry
+crunch invalidateASIDEntry
   for obj_at'[wp]: "obj_at' P p"
-crunches flushSpace
+crunch flushSpace
   for obj_at'[wp]: "obj_at' P p"
-crunches invalidateASIDEntry
+crunch invalidateASIDEntry
   for valid_objs'[wp]: "valid_objs'"
-crunches flushSpace
+crunch flushSpace
   for valid_objs'[wp]: "valid_objs'"
-crunches invalidateASIDEntry
+crunch invalidateASIDEntry
   for pde_mappings'[wp]: "valid_pde_mappings'"
-crunches flushSpace
+crunch flushSpace
   for pde_mappings'[wp]: "valid_pde_mappings'"
 end
 

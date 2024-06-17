@@ -87,7 +87,7 @@ lemma det_setNextPC: "det (setNextPC p)"
 
 text \<open>Failure on empty result\<close>
 
-crunches loadWord, storeWord, machine_op_lift
+crunch loadWord, storeWord, machine_op_lift
   for (empty_fail) empty_fail[intro!, wp, simp]
   (ignore: Nondet_Monad.bind mapM_x simp: machine_op_lift_def empty_fail_cond)
 
@@ -160,7 +160,7 @@ lemma no_irq_machine_rest_lift[simp, wp]:
   "no_irq (machine_rest_lift f)"
   by (wpsimp simp: no_irq_def machine_rest_lift_def split_def)
 
-crunches machine_op_lift
+crunch machine_op_lift
   for (no_irq) no_irq[wp, simp]
 
 lemma no_irq:
@@ -223,7 +223,7 @@ lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
   by (wpsimp simp: storeWord_def wp: no_irq_modify)
 
-crunches ackInterrupt
+crunch ackInterrupt
   for (no_irq) no_irq[intro!, wp, simp]
 
 text \<open>Wide-angle crunch proofs over architecture-specific machine operations for
@@ -279,7 +279,7 @@ crunch_ignore (valid, empty_fail, no_fail)
    - add read_cntpct
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
-crunches
+crunch
   addressTranslateS1,
   branchFlushRange,
   check_export_arch_timer,
@@ -337,15 +337,15 @@ crunches
   and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
   (wp: no_irq_bind ignore: empty_fail Nondet_Monad.bind)
 
-crunches getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
+crunch getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
 
-crunches ackInterrupt, maskInterrupt
+crunch ackInterrupt, maskInterrupt
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
 
-crunches ackInterrupt
+crunch ackInterrupt
   for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
 
 text \<open>Lifting rules\<close>
@@ -354,7 +354,7 @@ lemma dmo_machine_state_lift:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
   unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
 
-crunches do_machine_op
+crunch do_machine_op
   for user_frame[wp]: "\<lambda>s. P (in_user_frame p s)"
 
 lemma dmo_valid_machine_state[wp]:
@@ -374,7 +374,7 @@ text \<open>Ops that require machine-ops rules derived above\<close>
    properties, and those in turn rely on items in specific sections above. There are unlikely to be
    many definitions like this in MachineOps.thy\<close>
 
-crunches clearMemory
+crunch clearMemory
   for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma no_fail_clearMemory[unfolded word_size_bits_def, simp, wp]:

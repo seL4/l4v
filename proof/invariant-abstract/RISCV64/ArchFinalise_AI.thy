@@ -12,7 +12,7 @@ context Arch begin
 
 named_theorems Finalise_AI_asms
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps)
 
@@ -143,7 +143,7 @@ lemma set_pt_tcb_at:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pt a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
   by (wpsimp simp: set_pt_def obj_at_def wp: set_object_wp)
 
-crunches unmap_page
+crunch unmap_page
   for tcb_at_arch: "\<lambda>s. P (ko_at (TCB tcb) t s)"
     (simp: crunch_simps wp: crunch_wps set_pt_tcb_at ignore: set_object)
 
@@ -338,26 +338,26 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)
   done
 
-crunches arch_thread_set
+crunch arch_thread_set
   for typ_at_arch[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps set_object_typ_at)
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for typ_at[wp,Finalise_AI_asms]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt set_object)
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for typ_at[wp,Finalise_AI_asms]: "\<lambda>s. P (typ_at T p s)"
 
-crunches arch_thread_set
+crunch arch_thread_set
   for tcb_at[wp]: "\<lambda>s. tcb_at p s"
   (ignore: set_object)
 
-crunches arch_thread_get
+crunch arch_thread_get
   for tcb_at[wp]: "\<lambda>s. tcb_at p s"
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for tcb_at[wp]: "\<lambda>s. tcb_at p s"
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
@@ -374,7 +374,7 @@ lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
          | clarsimp simp: arch_finalise_cap_def)+
   done
 
-crunches arch_thread_get
+crunch arch_thread_get
   for inv[wp]: "P"
 
 lemma hoare_split: "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>"
@@ -437,23 +437,23 @@ lemma arch_thread_set_cap_refs_in_kernel_window[wp]:
   apply wp+
   done
 
-crunches arch_thread_set
+crunch arch_thread_set
   for valid_irq_states[wp]: valid_irq_states
   (wp: crunch_wps simp: crunch_simps)
 
-crunches arch_thread_set
+crunch arch_thread_set
   for interrupt_state[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas arch_thread_set_valid_irq_handlers[wp] = valid_irq_handlers_lift[OF arch_thread_set.caps arch_thread_set_interrupt_state]
 
-crunches arch_thread_set
+crunch arch_thread_set
   for interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas arch_thread_set_valid_irq_node[wp] = valid_irq_node_typ[OF arch_thread_set_typ_at_arch arch_thread_set_interrupt_irq_node]
 
-crunches arch_thread_set
+crunch arch_thread_set
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -663,7 +663,7 @@ lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
                      a_type_arch_live live_def hyp_live_def
               split: arch_cap.split_asm if_splits)
 
-crunches set_vm_root
+crunch set_vm_root
   for ptes_of[wp]: "\<lambda>s. P (ptes_of s)"
   and asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of s)"
   and asid_table[wp]: "\<lambda>s. P (asid_table s)"
@@ -972,10 +972,10 @@ lemma arch_thread_set_cte_wp_at[wp]:
     apply (clarsimp simp: tcb_cnode_map_def)+
   done
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
    ignore: arch_thread_set)
@@ -1028,19 +1028,19 @@ interpretation Finalise_AI_2?: Finalise_AI_2
 
 context Arch begin global_naming RISCV64
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for irq_node[Finalise_AI_asms,wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches
+crunch
   delete_asid_pool, delete_asid, unmap_page_table, unmap_page
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps test)
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for pred_tcb_at[wp_unsafe]: "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -1099,7 +1099,7 @@ lemma is_arch_update_reset_page:
   apply (simp add: is_arch_update_def is_arch_cap_def cap_master_cap_def)
   done
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
@@ -1156,7 +1156,7 @@ lemma replaceable_or_arch_update_pg:
 
 global_naming Arch
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for invs[wp]: invs
   (ignore: set_object)
 
@@ -1334,7 +1334,7 @@ lemma valid_kernel_mappings [iff]:
   "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_kernel_mappings s"
   by (simp add: valid_kernel_mappings_def)
 
-crunches unmap_page_table, store_pte, delete_asid_pool, copy_global_mappings
+crunch unmap_page_table, store_pte, delete_asid_pool, copy_global_mappings
   for valid_cap[wp]: "valid_cap c"
   (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
 
@@ -1373,7 +1373,7 @@ lemma (* zombie_cap_two_nonidles *)[Finalise_AI_asms]:
   apply (cases ptr, auto dest: valid_idle_has_null_cap_ARCH[rotated -1])[1]
   done
 
-crunches empty_slot, finalise_cap, send_ipc, receive_ipc
+crunch empty_slot, finalise_cap, send_ipc, receive_ipc
   for ioports[wp]: valid_ioports
   (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object)
 

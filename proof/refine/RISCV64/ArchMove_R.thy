@@ -25,7 +25,7 @@ definition ppn_len :: nat where
   "ppn_len \<equiv> LENGTH(pte_ppn_len)"
 
 (* Move to Deterministic_AI *)
-crunches copy_global_mappings
+crunch copy_global_mappings
   for valid_etcbs[wp]: valid_etcbs (wp: mapM_x_wp')
 
 lemma get_pt_mapM_x_lower:

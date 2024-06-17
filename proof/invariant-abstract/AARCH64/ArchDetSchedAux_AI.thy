@@ -13,7 +13,7 @@ context Arch begin global_naming AARCH64
 
 named_theorems DetSchedAux_AI_assms
 
-crunches init_arch_objects
+crunch init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
   and valid_queues[wp]: valid_queues
@@ -23,14 +23,14 @@ crunches init_arch_objects
 (* already proved earlier *)
 declare invoke_untyped_cur_thread[DetSchedAux_AI_assms]
 
-crunches invoke_untyped
+crunch invoke_untyped
   for ready_queues[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (ready_queues s)"
   and scheduler_action[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (scheduler_action s)"
   and cur_domain[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
    simp: detype_def detype_ext_def crunch_simps wrap_ext_det_ext_ext_def mapM_x_defsym)
 
-crunches invoke_untyped
+crunch invoke_untyped
   for idle_thread[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv dxo_wp_weak
    simp: detype_def detype_ext_def crunch_simps wrap_ext_det_ext_ext_def mapM_x_defsym
@@ -41,7 +41,7 @@ lemma tcb_sched_action_valid_idle_etcb:
   by (rule valid_idle_etcb_lift)
      (wpsimp simp: tcb_sched_action_def set_tcb_queue_def)
 
-crunches do_machine_op
+crunch do_machine_op
   for ekheap[wp]: "\<lambda>s. P (ekheap s)"
 
 lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
@@ -49,7 +49,7 @@ lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
   unfolding delete_objects_def detype_def detype_ext_def
   by (wpsimp simp: wrap_ext_det_ext_ext_def etcb_at_def)
 
-crunches reset_untyped_cap
+crunch reset_untyped_cap
   for etcb_at[wp]: "etcb_at P t"
   and valid_etcbs[wp]: "valid_etcbs"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps
@@ -69,7 +69,7 @@ lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
   done
 
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_blocked[wp, DetSchedAux_AI_assms]: valid_blocked
   (wp: valid_blocked_lift set_cap_typ_at)
 
@@ -85,7 +85,7 @@ lemma perform_asid_control_etcb_at:
   apply simp
   done
 
-crunches perform_asid_control_invocation
+crunch perform_asid_control_invocation
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and valid_etcbs[wp]: valid_etcbs
   and valid_blocked[wp]: valid_blocked

@@ -18,11 +18,11 @@ lemma flush_table_domain_list_inv[wp]: "\<lbrace>\<lambda>s. P (domain_list s)\<
 lemma flush_table_domain_time_inv[wp]: "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv s. P (domain_time s)\<rbrace>"
   by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp mapM_x_wp' subset_refl simp: crunch_simps)
 
-crunches
+crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
@@ -31,11 +31,11 @@ crunches
   arch_invoke_irq_handler, arch_mask_irq_signal
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
 
-crunches arch_finalise_cap
+crunch arch_finalise_cap
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
-crunches
+crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
@@ -57,24 +57,24 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
 
 context Arch begin global_naming X64
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
-crunches arch_mask_irq_signal
+crunch arch_mask_irq_signal
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
 
-crunches arch_mask_irq_signal
+crunch arch_mask_irq_signal
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps check_cap_inv)
 
-crunches do_machine_op
+crunch do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"
 
-crunches get_irq_slot
+crunch get_irq_slot
   for inv[wp]: P
 
 lemma timer_tick_valid_domain_time:

@@ -929,7 +929,7 @@ lemma cNodeNoPartialOverlap:
 
 declare wrap_ext_det_ext_ext_def[simp]
 
-crunches doMachineOp
+crunch doMachineOp
   for deletionIsSafe_delete_locale[wp]: "deletionIsSafe_delete_locale base magnitude"
   (simp: deletionIsSafe_delete_locale_def)
 
@@ -3432,7 +3432,7 @@ lemma curDomain_commute:
   apply auto
   done
 
-crunches curDomain
+crunch curDomain
   for inv[wp]: P
 
 lemma placeNewObject_tcb_at':
@@ -3791,15 +3791,15 @@ lemma new_cap_object_comm_helper:
    apply clarsimp
   done
 
-crunches updateNewFreeIndex
+crunch updateNewFreeIndex
   for pspace_aligned'[wp]: "pspace_aligned'"
-crunches updateNewFreeIndex
+crunch updateNewFreeIndex
   for pspace_distinct'[wp]: "pspace_distinct'"
-crunches updateNewFreeIndex
+crunch updateNewFreeIndex
   for valid_arch_state'[wp]: "valid_arch_state'"
-crunches updateNewFreeIndex
+crunch updateNewFreeIndex
   for pspace_no_overlap'[wp]: "pspace_no_overlap' ptr n"
-crunches updateNewFreeIndex
+crunch updateNewFreeIndex
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
 lemma updateNewFreeIndex_cte_wp_at[wp]:
@@ -5718,7 +5718,7 @@ lemma insertNewCap_wps[wp]:
   apply (fastforce elim!: rsubst[where P=P])
   done
 
-crunches insertNewCap
+crunch insertNewCap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 

@@ -180,7 +180,7 @@ lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
                           cte_wp_at_caps_of_state
                           obj_ref_none_no_asid)
 
-crunches do_machine_op
+crunch do_machine_op
   for valid_cap: "valid_cap cap"
 
 lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
@@ -192,10 +192,10 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
          split del: if_split)
   done
 
-crunches set_irq_state
+crunch set_irq_state
   for valid_global_refs[Interrupt_AI_asms]: "valid_global_refs"
 
-crunches arch_invoke_irq_handler
+crunch arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
@@ -254,7 +254,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
   done
 qed
 
-crunches ioapicMapPinToVector
+crunch ioapicMapPinToVector
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma updateIRQState_invs[wp]:
@@ -287,7 +287,7 @@ lemma dmo_ioapicMapPinToVector[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ioapi
   apply(erule (1) use_valid[OF _ ioapicMapPinToVector_irq_masks])
   done
 
-crunches updateIRQState
+crunch updateIRQState
   for real_cte_at[wp]: "real_cte_at x"
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at Q slot s)"
   and cdt[wp]: "\<lambda>s. P (cdt s)"
@@ -328,7 +328,7 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
                          ex_cte_cap_to_cnode_always_appropriate_strg)
   by wp
 
-crunches resetTimer
+crunch resetTimer
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma resetTimer_invs_ARCH[Interrupt_AI_asms]:
@@ -377,7 +377,7 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
    apply (wp ex_cte_cap_to_pres | simp add: cap_table_at_typ)+
   done
 
-crunches arch_invoke_irq_handler
+crunch arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 end

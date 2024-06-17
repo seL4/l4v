@@ -93,10 +93,10 @@ lemma (in Tcb_AI_1) activate_invs:
   apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
   done
 
-crunches setup_reply_master
+crunch setup_reply_master
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
 
-crunches setup_reply_master
+crunch setup_reply_master
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
 
 
@@ -147,7 +147,7 @@ lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (wpsimp simp: tcb_at_typ wp: restart_typ_at)
 
-crunches update_restart_pc
+crunch update_restart_pc
   for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
 
 lemma suspend_nonz_cap_to_tcb[wp]:
@@ -683,9 +683,9 @@ lemma set_mcpriority_valid_objs[wp]:
   apply (simp add: Invariants_AI.invs_valid_objs)
   done
 
-crunches set_mcpriority
+crunch set_mcpriority
   for valid_cap[wp]: "valid_cap c"
-crunches set_mcpriority
+crunch set_mcpriority
   for cte_at[wp]: "cte_at c"
 
 lemma set_mcpriority_invs[wp]:
@@ -767,7 +767,7 @@ where
 
 end
 
-crunches unbind_notification
+crunch unbind_notification
   for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
 
 lemma sbn_has_reply[wp]:
@@ -954,7 +954,7 @@ lemmas get_mcpriority_wp =
 lemmas get_mcpriority_get =
   thread_get_ret[where proj=itcb_mcpriority, simplified comp_def, simplified]
 
-crunches check_prio
+crunch check_prio
   for inv: "P"
   (simp: crunch_simps)
 
@@ -1166,7 +1166,7 @@ lemma derived_cap_cnode_valid:
   done
 
 
-crunches  decode_unbind_notification
+crunch  decode_unbind_notification
   for inv[wp]: P
 (simp: whenE_def)
 
@@ -1345,7 +1345,7 @@ lemma tcb_cap_cases_tcb_mcpriority:
          getF (tcb_mcpriority_update F tcb) = getF tcb"
   by (rule ball_tcb_cap_casesI, simp+)
 
-crunches set_mcpriority
+crunch set_mcpriority
   for tcb_at[wp]: "tcb_at r"
 
 lemma set_mcpriority_no_cap_to_obj_with_diff_ref[wp]:

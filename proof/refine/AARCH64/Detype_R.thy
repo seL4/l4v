@@ -955,7 +955,7 @@ lemma corres_return_bind2: (* FIXME AARCH64: move to Corres_UL *)
   "corres_underlying sr nf nf' r P P' f (do return (); g od) \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
   by simp
 
-crunches doMachineOp
+crunch doMachineOp
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   and deletionIsSafe_delete_locale[wp]: "deletionIsSafe_delete_locale base magnitude"
   (simp: deletionIsSafe_delete_locale_def)
@@ -3169,7 +3169,7 @@ lemma curDomain_commute:
   apply auto
   done
 
-crunches curDomain
+crunch curDomain
   for inv[wp]: P
 
 lemma placeNewObject_tcb_at':
@@ -3515,7 +3515,7 @@ lemma new_cap_object_comm_helper:
    apply clarsimp
   done
 
-crunches updateNewFreeIndex
+crunch updateNewFreeIndex
   for pspace_aligned'[wp]: "pspace_aligned'"
   and pspace_distinct'[wp]: "pspace_distinct'"
   and pspace_canonical'[wp]: "pspace_canonical'"
@@ -5017,7 +5017,7 @@ lemma createObject_def3:
   apply (simp add:createObject_def2[symmetric])
   done
 
-crunches updatePTType
+crunch updatePTType
   for pspace_no_overlap'[wp]: "pspace_no_overlap' p n"
 
 lemma ArchCreateObject_pspace_no_overlap':
@@ -5142,7 +5142,7 @@ lemma createObject_pspace_no_overlap':
         dest!: to_from_apiTypeD)
   done
 
-crunches updatePTType
+crunch updatePTType
   for aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
 
@@ -5223,7 +5223,7 @@ lemma insertNewCap_wps[wp]:
   apply (fastforce elim!: rsubst[where P=P])
   done
 
-crunches insertNewCap
+crunch insertNewCap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 

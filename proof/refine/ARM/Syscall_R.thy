@@ -488,7 +488,7 @@ lemma sendSignal_tcb_at'[wp]:
 lemmas checkCap_inv_typ_at'
   = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for P T p]
 
-crunches restart, bindNotification, performTransfer
+crunch restart, bindNotification, performTransfer
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma invokeTCB_typ_at'[wp]:
@@ -510,25 +510,25 @@ lemma invokeTCB_typ_at'[wp]:
 
 lemmas invokeTCB_typ_ats[wp] = typ_at_lifts [OF invokeTCB_typ_at']
 
-crunches doReplyTransfer
+crunch doReplyTransfer
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: hoare_drop_imps)
 
 lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
 
-crunches "performIRQControl"
+crunch "performIRQControl"
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemmas invokeIRQControl_typ_ats[wp] =
   typ_at_lifts [OF performIRQControl_typ_at']
 
-crunches InterruptDecls_H.invokeIRQHandler
+crunch InterruptDecls_H.invokeIRQHandler
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemmas invokeIRQHandler_typ_ats[wp] =
   typ_at_lifts [OF InterruptDecls_H_invokeIRQHandler_typ_at']
 
-crunches setDomain
+crunch setDomain
   for tcb_at'[wp]: "tcb_at' tptr"
   (simp: crunch_simps)
 
@@ -548,7 +548,7 @@ lemma sts_cte_at[wp]:
   apply (wp|simp)+
   done
 
-crunches setThreadState
+crunch setThreadState
   for obj_at_ntfn[wp]: "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB ntfn) (ntfnObj ntfn)) ntfnptr"
   (wp: obj_at_setObject2 crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
@@ -594,7 +594,7 @@ lemma sts_valid_inv'[wp]:
   done
 
 (* FIXME: move to TCB *)
-crunches decodeDomainInvocation
+crunch decodeDomainInvocation
   for inv[wp]: P
   (wp: crunch_wps simp: crunch_simps)
 
@@ -667,7 +667,7 @@ lemma active_ex_cap'[elim]:
      \<Longrightarrow> ex_nonz_cap_to' (ksCurThread s) s"
   by (fastforce simp: ct_in_state'_def elim!: st_tcb_ex_cap'')
 
-crunches handleFaultReply
+crunch handleFaultReply
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 lemma handleFaultReply_invs[wp]:
@@ -678,7 +678,7 @@ lemma handleFaultReply_invs[wp]:
                           split: arch_fault.split)+
   done
 
-crunches handleFaultReply
+crunch handleFaultReply
   for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps)
 
@@ -701,7 +701,7 @@ proof -
     done
 qed
 
-crunches setMessageInfo
+crunch setMessageInfo
   for cte_wp_at'[wp]: "cte_wp_at' P p"
 
 lemma copyMRs_cte_wp_at'[wp]:
@@ -850,7 +850,7 @@ lemma ct_active_runnable' [simp]:
   "ct_active' s \<Longrightarrow> ct_in_state' runnable' s"
   by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
-crunches tcbSchedEnqueue
+crunch tcbSchedEnqueue
   for valid_irq_node[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
   (rule: valid_irq_node_lift)
 
@@ -1107,7 +1107,7 @@ lemma st_tcb_at_idle_thread':
         \<Longrightarrow> P IdleThreadState"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
-crunches replyFromKernel
+crunch replyFromKernel
   for tcb_at'[wp]: "tcb_at' t"
 
 lemma invs_weak_sch_act_wf_strg:
@@ -1148,11 +1148,11 @@ lemma setTCB_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
-crunches threadSet
+crunch threadSet
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
-crunches addToBitmap
+crunch addToBitmap
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
@@ -1160,14 +1160,14 @@ lemma tcbSchedEnqueue_valid_duplicates'[wp]:
  "tcbSchedEnqueue tcbPtr \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by (wpsimp simp: tcbSchedEnqueue_def tcbQueuePrepend_def unless_def setQueue_def)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
-crunches setThreadState
+crunch setThreadState
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
 
@@ -1272,13 +1272,13 @@ lemma gts_imp':
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
   done
 
-crunches replyFromKernel
+crunch replyFromKernel
   for st_tcb_at'[wp]: "st_tcb_at' P t"
-crunches replyFromKernel
+crunch replyFromKernel
   for cap_to'[wp]: "ex_nonz_cap_to' p"
-crunches replyFromKernel
+crunch replyFromKernel
   for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-crunches replyFromKernel
+crunch replyFromKernel
   for sch_act_simple[wp]: sch_act_simple
   (rule: sch_act_simple_lift)
 
@@ -1324,7 +1324,7 @@ lemma hinv_invs'[wp]:
                         dest: st_tcb_at_idle_thread')+
   done
 
-crunches handleFault
+crunch handleFault
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
@@ -1442,13 +1442,13 @@ lemma deleteCallerCap_nonz_cap:
   apply (auto simp: ex_nonz_cap_to'_def isCap_simps cte_wp_at_ctes_of)
   done
 
-crunches cteDeleteOne
+crunch cteDeleteOne
   for sch_act_sane[wp]: sch_act_sane
   (wp: crunch_wps loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
    rule: sch_act_sane_lift)
 
-crunches deleteCallerCap
+crunch deleteCallerCap
   for sch_act_sane[wp]: sch_act_sane
   (wp: crunch_wps)
 
@@ -1646,7 +1646,7 @@ lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vpt
    apply (wp | wpcw | simp)+
   done
 
-crunches handleVMFault
+crunch handleVMFault
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getFAR getDFSR getIFSR)
 
@@ -1719,7 +1719,7 @@ lemma hr_invs'[wp]:
   apply (simp add: invs'_def cur_tcb'_def)
   done
 
-crunches handleReply
+crunch handleReply
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
@@ -1729,7 +1729,7 @@ crunches handleReply
 lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
     cteDeleteOne_st_tcb_at[where P=simple', simplified]
 
-crunches handleReply
+crunch handleReply
   for st_tcb_at_simple'[wp]: "st_tcb_at' simple' t'"
   (wp: hoare_TrueI crunch_wps sts_st_tcb_at'_cases
        threadSet_pred_tcb_no_state
@@ -1792,10 +1792,10 @@ lemma cteInsert_sane[wp]:
             hoare_convert_imp [OF cteInsert_nosch cteInsert_ct])
   done
 
-crunches setExtraBadge
+crunch setExtraBadge
   for sane[wp]: sch_act_sane
 
-crunches transferCaps
+crunch transferCaps
   for sane[wp]: "sch_act_sane"
   (wp: transferCapsToSlots_pres1 crunch_wps
    simp: crunch_simps
@@ -1809,13 +1809,13 @@ lemma possibleSwitchTo_sane:
   apply (simp add: sch_act_sane_def)
   done
 
-crunches handleFaultReply
+crunch handleFaultReply
   for sane[wp]: sch_act_sane
   (  wp: threadGet_inv hoare_drop_imps crunch_wps
    simp: crunch_simps
    ignore: setSchedulerAction)
 
-crunches doIPCTransfer
+crunch doIPCTransfer
   for sane[wp]: sch_act_sane
   (  wp: threadGet_inv hoare_drop_imps crunch_wps
    simp: crunch_simps
@@ -1847,10 +1847,10 @@ lemma handleReply_nonz_cap_to_ct:
   apply (wp | simp)+
   done
 
-crunches handleFaultReply
+crunch handleFaultReply
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
 
-crunches possible_switch_to, handle_recv
+crunch possible_switch_to, handle_recv
   for valid_etcbs[wp]: "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1982,7 +1982,7 @@ proof -
       done
   qed
 
-crunches handleVMFault,handleHypervisorFault
+crunch handleVMFault,handleHypervisorFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and cap_to'[wp]: "ex_nonz_cap_to' t"
   and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -2033,7 +2033,7 @@ lemma ct_active_not_idle'[simp]:
                    elim: pred_tcb'_weakenE)+
   done
 
-crunches handleFault, receiveSignal, receiveIPC, asUser
+crunch handleFault, receiveSignal, receiveIPC, asUser
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
 

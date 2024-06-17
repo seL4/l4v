@@ -182,7 +182,7 @@ lemma vcpu_at_ko:
   apply (case_tac arch_kernel_object, auto)[1]
   done
 
-crunches archThreadGet
+crunch archThreadGet
   for inv'[wp]: P
 
 (* FIXME MOVE near thm tg_sp' *)
@@ -409,31 +409,31 @@ lemma ko_at_vcpu_at'D:
 
 
 (* FIXME: change the original to be predicated! *)
-crunches doMachineOp
+crunch doMachineOp
   for ko_at'2[wp]: "\<lambda>s. P (ko_at' p t s)"
   (simp: crunch_simps)
 
 (* FIXME: change the original to be predicated! *)
-crunches doMachineOp
+crunch doMachineOp
   for pred_tcb_at'2[wp]: "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
-crunches readVCPUReg
+crunch readVCPUReg
   for valid_objs'[wp]: "\<lambda>s. valid_objs' s"
 
-crunches readVCPUReg
+crunch readVCPUReg
   for sch_act_wf'[wp]: "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
 
-crunches readVCPUReg
+crunch readVCPUReg
   for ko_at'[wp]: "\<lambda>s. P (ko_at' a p s)"
 
-crunches readVCPUReg
+crunch readVCPUReg
   for obj_at'[wp]: "\<lambda>s. P (obj_at' a p s)"
 
-crunches readVCPUReg
+crunch readVCPUReg
   for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' a b p s)"
 
-crunches readVCPUReg
+crunch readVCPUReg
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
 
 (* schematic_goal leads to Suc (Suc ..) form only *)
@@ -610,7 +610,7 @@ lemma user_getreg_rv:
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
   done
 
-crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
          updateFreeIndex, preemptionPoint
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only

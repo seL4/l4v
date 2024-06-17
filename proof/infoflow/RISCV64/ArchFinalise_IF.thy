@@ -12,7 +12,7 @@ context Arch begin global_naming RISCV64
 
 named_theorems Finalise_IF_assms
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for globals_equiv[Finalise_IF_assms, wp]: "globals_equiv st"
 
 lemma dmo_maskInterrupt_reads_respects[Finalise_IF_assms]:
@@ -333,7 +333,7 @@ lemma arch_finalise_cap_globals_equiv[Finalise_IF_assms]:
 
 declare arch_get_sanitise_register_info_def[simp]
 
-crunches prepare_thread_delete
+crunch prepare_thread_delete
   for globals_equiv[Finalise_IF_assms, wp]: "globals_equiv st"
   (wp: dxo_wp_weak)
 
