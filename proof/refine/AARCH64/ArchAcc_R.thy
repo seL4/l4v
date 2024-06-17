@@ -263,9 +263,9 @@ lemma storePTE_state_hyp_refs_of[wp]:
   by (wpsimp wp: hoare_drop_imps setObject_state_hyp_refs_of_eq
              simp: storePTE_def updateObject_default_def in_monad)
 
-crunches setIRQState
+crunch setIRQState
   for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
-crunches getIRQSlot
+crunch getIRQSlot
   for inv[wp]: "P"
 
 lemma setObject_ASIDPool_corres[corres]:
@@ -918,7 +918,7 @@ qed
 
 declare in_set_zip_refl[simp]
 
-crunches storePTE
+crunch storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
@@ -1083,7 +1083,7 @@ lemma no_0_page_table:
   apply simp
   done
 
-crunches getASIDPoolEntry
+crunch getASIDPoolEntry
   for no_0_obj'[wp]: no_0_obj'
   (wp: getObject_inv simp: loadObject_default_def)
 

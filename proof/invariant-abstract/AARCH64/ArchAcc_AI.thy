@@ -625,7 +625,7 @@ lemma get_pte_inv[wp]:
 
 lemmas store_pte_typ_ats [wp] = abs_typ_at_lifts [OF store_pte_typ_at]
 
-crunches set_irq_state
+crunch set_irq_state
   for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma set_pt_cte_wp_at:
@@ -719,7 +719,7 @@ lemma set_asid_pool_cur_tcb [wp]:
   unfolding cur_tcb_def
   by (rule hoare_lift_Pf [where f=cur_thread]; wp)
 
-crunches set_asid_pool
+crunch set_asid_pool
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
 
@@ -891,7 +891,7 @@ lemma set_pt_distinct [wp]:
                 split: kernel_object.splits arch_kernel_obj.splits)
   done
 
-crunches store_pte
+crunch store_pte
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   and "distinct"[wp]: pspace_distinct
 
@@ -1053,7 +1053,7 @@ lemma set_pt_reply_masters:
   "\<lbrace>valid_reply_masters\<rbrace>  set_pt p pt  \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
   by (wp valid_reply_masters_cte_lift)
 
-crunches set_pt
+crunch set_pt
   for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   and idle[wp]: "\<lambda>s. P (idle_thread s)"
   and irq[wp]: "\<lambda>s. P (interrupt_irq_node s)"
@@ -1089,7 +1089,7 @@ lemma set_pt_aligned [wp]:
   done
 
 
-crunches set_pt
+crunch set_pt
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
@@ -1176,7 +1176,7 @@ lemma set_pt_global_objs [wp]:
   unfolding valid_global_objs_def by wp
 
 
-crunches set_pt
+crunch set_pt
   for v_ker_map[wp]: "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
@@ -1184,7 +1184,7 @@ lemma set_pt_asid_map[wp]:
   "set_pt p pt \<lbrace>valid_asid_map\<rbrace>"
   by (wp valid_asid_map_lift_strong)
 
-crunches store_pte
+crunch store_pte
   for pred_tcb[wp]:  "\<lambda>s. Q (pred_tcb_at proj P t s)"
   and idle[wp]: "\<lambda>s. P (idle_thread s)"
 
@@ -1538,7 +1538,7 @@ lemma as_user_in_device_frame[wp]:
   unfolding in_device_frame_def
   by (wp hoare_vcg_ex_lift)
 
-crunches load_word_offs
+crunch load_word_offs
   for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
 
 lemma load_word_offs_in_user_frame[wp]:
@@ -1563,7 +1563,7 @@ lemma set_pt_vms[wp]:
                    split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
-crunches set_pt
+crunch set_pt
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps)
 
@@ -1655,7 +1655,7 @@ lemma set_asid_pool_reply_masters [wp]:
    \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
   by (wp valid_reply_masters_cte_lift)
 
-crunches set_asid_pool
+crunch set_asid_pool
   for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   and idle[wp]: "\<lambda>s. P (idle_thread s)"
   and irq[wp]: "\<lambda>s. P (interrupt_irq_node s)"
@@ -1902,7 +1902,7 @@ lemma set_asid_pool_global_objs [wp]:
   "set_asid_pool p ap \<lbrace>valid_global_objs\<rbrace>"
   by (clarsimp simp: valid_global_objs_def) wp
 
-crunches set_asid_pool
+crunch set_asid_pool
   for v_ker_map[wp]: "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
@@ -2120,7 +2120,7 @@ lemma set_pt_vcpus[wp]:
   by (wpsimp wp: set_object_wp)
      (fastforce simp: opt_map_def obj_at_def split: option.splits elim: rsubst[where P=P])
 
-crunches store_pte
+crunch store_pte
   for iflive[wp]: if_live_then_nonz_cap
   and zombies_final[wp]: zombies_final
   and valid_mdb[wp]: valid_mdb
@@ -2820,7 +2820,7 @@ lemma cap_refs_respects_device_region_dmo:
   apply auto
   done
 
-crunches do_machine_op
+crunch do_machine_op
   for valid_ioports[wp]: valid_ioports
   and valid_vspace_objs[wp]: valid_vspace_objs
   and valid_kernel_mappings[wp]: valid_kernel_mappings
@@ -2871,7 +2871,7 @@ proof -
     done
 qed
 
-crunches getRegister
+crunch getRegister
   for inv[wp]: P
   (simp: getRegister_def)
 

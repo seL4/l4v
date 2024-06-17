@@ -57,22 +57,22 @@ declare store_pde_state_refs_of [wp]
 declare store_pde_state_hyp_refs_of [wp]
 
 (* These also prove facts about copy_global_mappings *)
-crunches init_arch_objects
+crunch init_arch_objects
   for pspace_aligned[wp]: "pspace_aligned"
   (ignore: clearMemory wp: crunch_wps unless_wp)
-crunches init_arch_objects
+crunch init_arch_objects
   for pspace_distinct[wp]: "pspace_distinct"
   (ignore: clearMemory wp: crunch_wps unless_wp)
-crunches init_arch_objects
+crunch init_arch_objects
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (ignore: clearMemory wp: crunch_wps unless_wp)
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_mdb[wp]: "valid_mdb"
   (ignore: clearMemory wp: crunch_wps unless_wp)
-crunches init_arch_objects
+crunch init_arch_objects
   for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   (ignore: clearMemory wp: crunch_wps unless_wp)
-crunches init_arch_objects
+crunch init_arch_objects
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps unless_wp)
 
@@ -132,7 +132,7 @@ lemma get_pde_wellformed[wp]:
   apply (fastforce simp add: valid_objs_def dom_def obj_at_def valid_obj_def)
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_objs[wp]: "valid_objs"
   (ignore: clearMemory wp: crunch_wps unless_wp)
 
@@ -140,7 +140,7 @@ lemma set_pd_arch_state[wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_pd ptr val \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (rule set_pd_valid_arch)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for valid_arch_state[wp]: "valid_arch_state"
   (ignore: clearMemory set_object wp: crunch_wps unless_wp)
 
@@ -148,83 +148,83 @@ lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ
 
 lemmas init_arch_objects_cap_table[wp] = cap_table_at_lift_valid [OF init_arch_objects_typ_at]
 
-crunches clearMemory
+crunch clearMemory
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp ignore_del: clearMemory)
 
-crunches reserve_region
+crunch reserve_region
   for pspace_respects_device_region[wp]: pspace_respects_device_region
-crunches reserve_region
+crunch reserve_region
   for cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
 
-crunches reserve_region
+crunch reserve_region
   for invs[wp]: "invs"
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for iflive[wp]: "if_live_then_nonz_cap"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for zombies[wp]: "zombies_final"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for only_idle[wp]: "only_idle"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for ifunsafe[wp]: "if_unsafe_then_cap"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for reply_caps[wp]: "valid_reply_caps"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for reply_masters[wp]: "valid_reply_masters"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for valid_global[wp]: "valid_global_refs"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: crunch_wps)
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
   (wp: crunch_wps)
 
@@ -354,10 +354,10 @@ lemma store_pde_valid_kernel_mappings_map_global:
   done
 
 
-crunches store_pde
+crunch store_pde
   for valid_asid_map[wp]: "valid_asid_map"
 
-crunches store_pde
+crunch store_pde
   for cur[wp]: "cur_tcb"
 
 lemma mapM_x_store_pde_eq_kernel_mappings_restr:
@@ -467,7 +467,7 @@ lemma store_pde_vms[wp]:
  "\<lbrace>valid_machine_state\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (simp add: store_pde_def, wp) clarsimp
 
-crunches store_pde
+crunch store_pde
   for valid_irq_states[wp]: "valid_irq_states"
 
 lemma copy_global_invs_mappings_restricted:
@@ -529,7 +529,7 @@ lemma copy_global_mappings_invs:
                         restrict_map_def)
   done
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for global_refs_inv[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
@@ -1332,13 +1332,13 @@ lemma invs_irq_state_independent:
       cur_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_irq_states_def)
 
-crunches cleanByVA, cleanCacheRange_PoC, dsb, cleanCacheRange_PoC, cleanL2Range, cleanByVA_PoU,
+crunch cleanByVA, cleanCacheRange_PoC, dsb, cleanCacheRange_PoC, cleanL2Range, cleanByVA_PoU,
   storeWord, clearMemory
   for irq_masks_inv[wp]: "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps
    ignore_del: cleanByVA_PoU storeWord clearMemory cleanL2Range cleanCacheRange_PoC dsb cleanByVA)
 
-crunches clearMemory
+crunch clearMemory
   for underlying_mem_0[wp]: "\<lambda>s. underlying_memory s p = 0"
   (wp: crunch_wps storeWord_um_eq_0 ignore_del: clearMemory)
 
@@ -1363,7 +1363,7 @@ lemma caps_region_kernel_window_imp:
   apply blast
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
@@ -1373,7 +1373,7 @@ lemma init_arch_objects_excap:
    \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
   by (wp ex_cte_cap_to_pres)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps)
 

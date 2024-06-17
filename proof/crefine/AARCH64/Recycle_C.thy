@@ -539,7 +539,7 @@ lemma setObject_asidpool_gs[wp]:
   "setObject ptr (vcpu::asidpool) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
     by (wpsimp wp: updateObject_default_inv simp: setObject_def crunch_simps)
 
-crunches deleteASIDPool
+crunch deleteASIDPool
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps)
@@ -769,7 +769,7 @@ lemma ntfn_q_refs'_no_NTFNBound[simp]:
   "(x, NTFNBound) \<notin> ntfn_q_refs_of' ntfn"
   by (auto simp: ntfn_q_refs_of'_def split: ntfn.splits)
 
-crunches setThreadState
+crunch setThreadState
   for pspace_canonical'[wp]: pspace_canonical'
 
 lemma cancelBadgedSends_ccorres:

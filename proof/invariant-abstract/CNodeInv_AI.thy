@@ -1058,7 +1058,7 @@ lemmas rec_del_preservation[crunch_rules] =
 end
 
 
-crunches cap_swap_for_delete
+crunch cap_swap_for_delete
   for typ_at: "\<lambda>s. P (typ_at T p s)"
 
 lemma cap_swap_valid_cap:
@@ -1079,7 +1079,7 @@ lemma cap_swap_cte_at:
 
 context CNodeInv_AI begin
 
-crunches rec_del
+crunch rec_del
   for typ_at: "\<lambda>s::'state_ext state. P (typ_at T p s)"
   (ignore: preemption_point wp: preemption_point_inv)
 
@@ -1426,10 +1426,10 @@ lemma cap_swap_valid_objs[wp]:
   done
 
 
-crunches cap_swap
+crunch cap_swap
   for aligned[wp]: "pspace_aligned"
 
-crunches cap_swap
+crunch cap_swap
   for disctinct[wp]: "pspace_distinct"
 
 
@@ -1741,15 +1741,15 @@ lemma cap_swap_fd_reply_masters[wp]:
   done
 
 
-crunches cap_swap
+crunch cap_swap
   for refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (ignore: set_cap simp: state_refs_of_pspaceI)
 
-crunches cap_swap
+crunch cap_swap
   for hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (ignore: set_cap simp: state_refs_of_pspaceI)
 
-crunches cap_swap
+crunch cap_swap
   for cur_tcb[wp]: "cur_tcb"
 
 
@@ -1808,10 +1808,10 @@ lemma cap_swap_global_refs[wp]:
   done
 
 
-crunches cap_swap
+crunch cap_swap
   for arch[wp]: "\<lambda>s. P (arch_state s)"
 
-crunches cap_swap
+crunch cap_swap
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 
@@ -1827,7 +1827,7 @@ lemma valid_reply_caps_of_stateD':
   by (fastforce simp: valid_reply_caps_def has_reply_cap_def
                       is_reply_cap_to_def cte_wp_at_caps_of_state)
 
-crunches cap_swap
+crunch cap_swap
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
 
@@ -1852,13 +1852,13 @@ lemma cap_swap_irq_handlers[wp]:
   done
 
 
-crunches cap_swap
+crunch cap_swap
   for vspace_objs[wp]: "valid_vspace_objs"
 
-crunches cap_swap
+crunch cap_swap
   for valid_global_objs[wp]: "valid_global_objs"
 
-crunches cap_swap
+crunch cap_swap
   for valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
 
 context CNodeInv_AI begin
@@ -1879,16 +1879,16 @@ lemma cap_swap_valid_arch_caps[wp]:
 end
 
 
-crunches cap_swap
+crunch cap_swap
   for v_ker_map[wp]: "valid_kernel_mappings"
 
-crunches cap_swap
+crunch cap_swap
   for eq_ker_map[wp]: "equal_kernel_mappings"
 
-crunches cap_swap
+crunch cap_swap
   for only_idle[wp]: only_idle
 
-crunches cap_swap
+crunch cap_swap
   for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
 
 
@@ -1905,13 +1905,13 @@ lemma cap_swap_valid_ioc[wp]:
   done
 
 
-crunches cap_swap
+crunch cap_swap
   for machine_state[wp]: "\<lambda>s. P(machine_state s)"
 
-crunches cap_swap
+crunch cap_swap
   for valid_irq_states[wp]: "valid_irq_states"
 
-crunches cap_swap
+crunch cap_swap
   for pspace_respects_device_region[wp]: pspace_respects_device_region
 
 lemma cap_refs_respects_device_region_original_cap[wp]:
@@ -2390,11 +2390,11 @@ lemma empty_slot_emptyable[wp]:
   done
 
 
-crunches blocked_cancel_ipc
+crunch blocked_cancel_ipc
   for emptyable[wp]: "emptyable sl"
   (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases hoare_weak_lift_imp)
 
-crunches cancel_signal
+crunch cancel_signal
   for emptyable[wp]: "emptyable sl"
   (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases hoare_weak_lift_imp)
 
@@ -2422,10 +2422,10 @@ lemma reply_cancel_ipc_emptyable[wp]:
          | simp add: tcb_cap_cases_def descendants_of_cte_at)+
   done
 
-crunches cancel_ipc
+crunch cancel_ipc
   for emptyable[wp]: "emptyable sl"
 
-crunches update_restart_pc
+crunch update_restart_pc
   for emptyable[wp]: "emptyable sl"
   (rule: emptyable_lift)
 
@@ -2437,11 +2437,11 @@ lemma suspend_emptyable[wp]:
       apply (wpsimp wp: set_thread_state_cte_wp_at)+
   done
 
-crunches do_machine_op
+crunch do_machine_op
   for emptyable[wp]: "emptyable sl"
   (rule: emptyable_lift)
 
-crunches set_irq_state
+crunch set_irq_state
   for emptyable[wp]: "emptyable sl"
   (rule: emptyable_lift)
 
@@ -2468,7 +2468,7 @@ lemma finalise_cap_not_reply_master:
 end
 
 
-crunches empty_slot
+crunch empty_slot
   for cte_at_pres[wp]: "cte_at sl"
 
 
@@ -2737,18 +2737,18 @@ lemma cap_swap_fd_rvk_prog:
 lemmas empty_slot_rvk_prog' = empty_slot_rvk_prog[unfolded o_def]
 
 
-crunches cancel_ipc
+crunch cancel_ipc
   for rvk_prog: "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def tcb_cap_cases_def
      wp: hoare_drop_imps empty_slot_rvk_prog'
          thread_set_caps_of_state_trivial)
 
-crunches suspend
+crunch suspend
   for rvk_prog: "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
      wp: crunch_wps empty_slot_rvk_prog')
 
-crunches deleting_irq_handler
+crunch deleting_irq_handler
   for rvk_prog: "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
      wp: crunch_wps empty_slot_rvk_prog')
@@ -3094,7 +3094,7 @@ lemma cap_revoke_mdb_stuff3:
   apply simp
   done
 
-crunches cancel_badged_sends
+crunch cancel_badged_sends
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps filterM_mapM unless_def
    ignore: without_preemption filterM set_object clearMemory)
@@ -3318,17 +3318,17 @@ lemma cap_move_if_unsafe [wp]:
 end
 
 
-crunches cap_move
+crunch cap_move
   for arch[wp]: "\<lambda>s. P (arch_state s)"
 
-crunches cap_move
+crunch cap_move
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 lemma cap_range_NullCap:
   "cap_range cap.NullCap = {}"
   by (simp add: cap_range_def)
 
-crunches cap_move
+crunch cap_move
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
 
@@ -3487,7 +3487,7 @@ lemma cap_move_src_slot_Null:
   by (wp set_cdt_cte_wp_at set_cap_cte_wp_at' | simp)+
 
 
-crunches cap_move
+crunch cap_move
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
 
 lemmas (in CNodeInv_AI_5) cap_revoke_cap_table[wp]
@@ -3497,7 +3497,7 @@ lemmas appropriate_cte_cap_simps = appropriate_cte_cap_def [split_simps cap.spli
 
 context CNodeInv_AI_5 begin
 
-crunches is_final_cap
+crunch is_final_cap
   for inv[wp]: "P"
 
 lemma is_final_cap_is_final[wp]:
@@ -3549,7 +3549,7 @@ lemma tcb_cap_valid_is_original_cap[simp]:
   by (simp add: tcb_cap_valid_def)
 
 
-crunches cap_move
+crunch cap_move
   for tcb_cap_valid[wp]: "tcb_cap_valid cap p"
 
 

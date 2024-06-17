@@ -1400,11 +1400,11 @@ lemma setCTE_sch_act_wf[wp]:
    \<lbrace>\<lambda>x s. sch_act_wf (ksSchedulerAction s) s \<rbrace>"
   by (wp sch_act_wf_lift setCTE_pred_tcb_at' setCTE_tcb_in_cur_domain')
 
-crunches insertNewCap
+crunch insertNewCap
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps ignore: setCTE)
 
-crunches deleteObjects
+crunch deleteObjects
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: unless_def)
 
@@ -1419,7 +1419,7 @@ lemma deleteObjects_gsCNodes_at_pt:
         | wp (once) hoare_drop_imps)+
   done
 
-crunches setThreadState, updateFreeIndex, preemptionPoint
+crunch setThreadState, updateFreeIndex, preemptionPoint
   for gsCNodes[wp]:  "\<lambda>s. P (gsCNodes s)"
   (simp: unless_def whenE_def ignore_del: preemptionPoint)
 

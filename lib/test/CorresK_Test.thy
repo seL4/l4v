@@ -212,11 +212,11 @@ lemma invalidateASIDEntry_corres:
   done
 
 
-crunches invalidateASIDEntry, flushSpace
+crunch invalidateASIDEntry, flushSpace
   for typ_at'[wp]: "typ_at' T t"
-crunches invalidateASIDEntry, flushSpace
+crunch invalidateASIDEntry, flushSpace
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-crunches invalidateASIDEntry, flushSpace
+crunch invalidateASIDEntry, flushSpace
   for obj_at'[wp]: "obj_at' P p"
 
 lemmas flush_space_corres_args[corres] =

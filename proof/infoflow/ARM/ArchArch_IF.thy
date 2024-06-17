@@ -51,34 +51,34 @@ lemma as_user_set_register_ev2:
     apply auto
   done
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for valid_global_refs[Arch_IF_assms, wp]: "valid_global_refs"
 
-crunches store_word_offs
+crunch store_word_offs
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: storeWord_def)
 
-crunches set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
+crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def)
 
-crunches arch_switch_to_idle_thread, arch_switch_to_thread
+crunch arch_switch_to_idle_thread, arch_switch_to_thread
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: invalidateLocalTLB_ASID_def setHardwareASID_def set_current_pd_def machine_op_lift_def
          machine_rest_lift_def crunch_simps storeWord_def dsb_def isb_def writeTTBR0_def)
 
-crunches arch_invoke_irq_handler
+crunch arch_invoke_irq_handler
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp simp: maskInterrupt_def)
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp simp: set_current_pd_def invalidateLocalTLB_ASID_def do_flush_defs
        invalidateLocalTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs
    wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
-crunches arch_finalise_cap, prepare_thread_delete
+crunch arch_finalise_cap, prepare_thread_delete
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: modify_wp crunch_wps dmo_wp
    simp: crunch_simps invalidateLocalTLB_ASID_def dsb_def
@@ -495,11 +495,11 @@ lemmas states_equiv_for_arm_asid_map_update =
   states_equiv_for_arm_asid_map_update1
   states_equiv_for_arm_asid_map_update2
 
-crunches invalidate_hw_asid_entry
+crunch invalidate_hw_asid_entry
   for states_equiv_for: "states_equiv_for P Q R S st"
   (simp: states_equiv_for_arm_hwasid_table_update)
 
-crunches invalidate_asid
+crunch invalidate_asid
   for states_equiv_for: "states_equiv_for P Q R S st"
   (simp: states_equiv_for_arm_asid_map_update)
 
@@ -541,7 +541,7 @@ lemma states_equiv_for_arch_update2:
 
 lemmas states_equiv_for_arch_update = states_equiv_for_arch_update1 states_equiv_for_arch_update2
 
-crunches store_hw_asid
+crunch store_hw_asid
   for states_equiv_for: "states_equiv_for P Q R S st"
   (simp: states_equiv_for_arch_update)
 
@@ -552,7 +552,7 @@ lemma find_free_hw_asid_states_equiv_for:
                  do_machine_op_mol_states_equiv_for invalidate_asid_states_equiv_for
            simp: states_equiv_for_arm_next_asid_update invalidateLocalTLB_ASID_def)
 
-crunches get_hw_asid
+crunch get_hw_asid
   for states_equiv_for: "states_equiv_for P Q R S st"
 
 lemma arm_context_switch_reads_respects:
@@ -588,7 +588,7 @@ lemma get_pte_reads_respects:
   unfolding get_pte_def fun_app_def
   by (wpsimp wp: get_pt_reads_respects)
 
-crunches set_vm_root_for_flush
+crunch set_vm_root_for_flush
   for states_equiv_for: "states_equiv_for P Q R S st"
   (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: set_current_pd_def)
 
@@ -599,17 +599,17 @@ lemma set_vm_root_for_flush_reads_respects:
   by (wpsimp wp: arm_context_switch_reads_respects dmo_mol_reads_respects
                  hoare_vcg_all_lift hoare_drop_imps gets_cur_thread_ev get_cap_rev)+
 
-crunches flush_table
+crunch flush_table
   for states_equiv_for: "states_equiv_for P Q R S st"
   (wp: crunch_wps do_machine_op_mol_states_equiv_for
    ignore: do_machine_op
    simp: invalidateLocalTLB_ASID_def crunch_simps)
 
-crunches flush_table
+crunch flush_table
   for sched_act: "\<lambda> s. P (scheduler_action s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches flush_table
+crunch flush_table
   for wuc: "\<lambda> s. P (work_units_completed s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -684,15 +684,15 @@ lemma lookup_pt_slot_reads_respects:
   unfolding lookup_pt_slot_def fun_app_def
   by (wpsimp wp: get_pde_rev)
 
-crunches flush_page
+crunch flush_page
   for sched_act: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps simp: if_apply_def2)
 
-crunches flush_page
+crunch flush_page
   for wuc: "\<lambda>s. P (work_units_completed s)"
   (wp: crunch_wps simp: if_apply_def2)
 
-crunches flush_page
+crunch flush_page
   for states_equiv_for: "states_equiv_for P Q R S st"
   (wp: do_machine_op_mol_states_equiv_for crunch_wps
    ignore: do_machine_op
@@ -723,14 +723,14 @@ lemma unmap_page_reads_respects:
       | wpc | wp (once) hoare_drop_imps
       | simp add: is_aligned_6_masks is_aligned_mask[symmetric] cleanByVA_PoU_def)+
 
-crunches invalidate_tlb_by_asid
+crunch invalidate_tlb_by_asid
   for states_equiv_for: "states_equiv_for P Q R S st"
   (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateLocalTLB_ASID_def)
 
-crunches invalidate_tlb_by_asid
+crunch invalidate_tlb_by_asid
   for sched_act[wp]: "\<lambda>s. P (scheduler_action s)"
 
-crunches invalidate_tlb_by_asid
+crunch invalidate_tlb_by_asid
   for wuc[wp]: "\<lambda>s. P (work_units_completed s)"
 
 lemma invalidate_tlb_by_asid_reads_respects:
@@ -892,17 +892,17 @@ lemma arm_asid_table_delete_ev2:
           elim!: states_equiv_forE equiv_forE
            elim: is_subject_kheap_eq[simplified reads_equiv_def2 states_equiv_for_def, rotated])
 
-crunches invalidate_asid_entry
+crunch invalidate_asid_entry
   for states_equiv_for: "states_equiv_for P Q R S st"
-crunches invalidate_asid_entry
+crunch invalidate_asid_entry
   for sched_act: "\<lambda>s. P (scheduler_action s)"
-crunches invalidate_asid_entry
+crunch invalidate_asid_entry
   for wuc: "\<lambda>s. P (work_units_completed s)"
-crunches flush_space
+crunch flush_space
   for sched_act: "\<lambda>s. P (scheduler_action s)"
-crunches flush_space
+crunch flush_space
   for wuc: "\<lambda>s. P (work_units_completed s)"
-crunches flush_space
+crunch flush_space
   for states_equiv_for: "states_equiv_for P Q R S st"
   (wp: mol_states_equiv_for dmo_wp
    ignore: do_machine_op
@@ -1088,11 +1088,11 @@ lemma set_asid_pool_globals_equiv:
   apply (fastforce simp: valid_arch_state_def obj_at_def)
   done
 
-crunches invalidate_hw_asid_entry
+crunch invalidate_hw_asid_entry
   for globals_equiv[wp]: "globals_equiv s"
   (simp: globals_equiv_def)
 
-crunches invalidate_asid
+crunch invalidate_asid
   for globals_equiv[wp]: "globals_equiv s"
   (simp: globals_equiv_def)
 
@@ -1167,7 +1167,7 @@ lemma delete_asid_pool_globals_equiv[wp]:
   by (wpsimp wp: set_vm_root_globals_equiv mapM_wp[OF _ subset_refl] modify_wp
                  invalidate_asid_entry_globals_equiv flush_space_globals_equiv)
 
-crunches invalidate_tlb_by_asid
+crunch invalidate_tlb_by_asid
   for globals_equiv[wp]: "globals_equiv s"
   (simp: invalidateLocalTLB_ASID_def wp: dmo_mol_globals_equiv ignore: machine_op_lift do_machine_op)
 
@@ -1181,7 +1181,7 @@ lemma set_pt_globals_equiv:
   apply (fastforce simp: valid_arch_state_def obj_at_def)
   done
 
-crunches store_pte
+crunch store_pte
   for globals_equiv: "globals_equiv s"
 
 lemma set_vm_root_for_flush_globals_equiv[wp]:
@@ -1203,11 +1203,11 @@ lemma arm_global_pd_arm_hwasid_table_update[simp]:
   "arm_global_pd (arch_state s\<lparr>arm_hwasid_table := x\<rparr>) = arm_global_pd (arch_state s)"
   by (simp add: globals_equiv_def)
 
-crunches flush_table
+crunch flush_table
   for arm_global_pd[wp]: "\<lambda>s. P (arm_global_pd (arch_state s))"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches page_table_mapped
+crunch page_table_mapped
   for globals_equiv[wp]: "globals_equiv st"
 
 (*FIXME: duplicated, more reasonable version of not_in_global_refs_vs_lookup *)
@@ -1278,7 +1278,7 @@ lemma mapM_x_swp_store_pte_valid_arch_state[wp]:
   "mapM_x (swp store_pte A) slots \<lbrace>valid_arch_state\<rbrace>"
   by (wp mapM_x_wp' | simp add: swp_def)+
 
-crunches unmap_page_table
+crunch unmap_page_table
   for valid_arch_state[wp]: "valid_arch_state"
   (wp: crunch_wps simp: crunch_simps a_type_simps)
 
@@ -1427,7 +1427,7 @@ definition authorised_for_globals_page_inv ::
   "authorised_for_globals_page_inv pgi \<equiv> \<lambda>s.
      case pgi of PageMap asid cap ptr m \<Rightarrow> \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
 
-crunches unmap_page
+crunch unmap_page
   for valid_arch_state[wp]: "valid_arch_state"
   (wp: crunch_wps)
 
@@ -1760,7 +1760,7 @@ lemma mapM_x_swp_store_pde_pas_refined_simple:
   "mapM_x (swp store_pde InvalidPDE) A \<lbrace>pas_refined aag\<rbrace>"
   by (wpsimp wp: mapM_x_wp' store_pde_pas_refined_simple)
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for valid_global_objs[wp]: "valid_global_objs"
 
 lemma get_thread_state_globals_equiv[wp]:

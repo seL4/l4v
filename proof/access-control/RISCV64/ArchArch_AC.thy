@@ -480,7 +480,7 @@ lemma unmap_page_table_pas_refined:
   apply (metis vs_lookup_table_vspace user_region_slots is_aligned_neg_mask2 pt_slot_offset_offset)
   done
 
-crunches unmap_page_table
+crunch unmap_page_table
   for cdt[wp]: "\<lambda>s. P (cdt s)"
 
 definition authorised_page_table_inv :: "'a PAS \<Rightarrow> page_table_invocation \<Rightarrow> bool" where
@@ -817,7 +817,7 @@ lemma set_asid_pool_ekheap[wp]:
   apply (wp get_object_wp | simp)+
   done
 
-crunches set_asid_pool
+crunch set_asid_pool
   for integrity_autarch: "integrity aag X st"
   (wp: crunch_wps)
 
@@ -1035,7 +1035,7 @@ lemma set_cap_vs_lookup_slot[wp]:
   apply (auto split: if_splits)
   done
 
-crunches set_cap
+crunch set_cap
   for level_of_table[wp]: "\<lambda>s. P (level_of_table p s)"
   (simp: level_of_table_def)
 
@@ -1488,7 +1488,7 @@ lemma copy_global_mappings_state_vrefs:
   using not_in_global_refs_vs_lookup apply fastforce
   done
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for tcb_domain_map_wellformed[wp]: "\<lambda>s. P (tcb_domain_map_wellformed aag s)"
   and asid_table[wp]: "\<lambda>s. P (asid_table s)"
   and cdt[wp]: "\<lambda>s. P (cdt s)"
@@ -1583,7 +1583,7 @@ lemma store_asid_pool_entry_state_vrefs:
   apply (fastforce simp: state_vrefs_def)
   done
 
-crunches store_asid_pool_entry
+crunch store_asid_pool_entry
   for irq_map_wellformed[wp]: "\<lambda>s. P (irq_map_wellformed aag s)"
   and tcb_domain_map_wellformed[wp]: "\<lambda>s. P (tcb_domain_map_wellformed aag s)"
   and state_irqs_to_policy[wp]: "\<lambda>s. P (state_irqs_to_policy aag s)"

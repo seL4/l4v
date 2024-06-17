@@ -1931,11 +1931,11 @@ lemma (in pspace_update_eq) pd_pt_relation_update[iff]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches flush_page
+crunch flush_page
   for cdt[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps simp:crunch_simps)
 
-crunches flush_page
+crunch flush_page
   for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps simp:crunch_simps)
 
@@ -1947,15 +1947,15 @@ lemma mdb_cte_at_flush_page[wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-crunches flush_table
+crunch flush_table
   for pd_pt_relation[wp]: "pd_pt_relation a b c"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches flush_table
+crunch flush_table
   for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps simp:crunch_simps)
 
-crunches page_table_mapped
+crunch page_table_mapped
   for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps simp:crunch_simps)
 
@@ -3342,7 +3342,7 @@ lemma preemption_point_valid_etcbs[wp]: "\<lbrace> valid_etcbs \<rbrace> preempt
            split: option.splits kernel_object.splits)
   done
 
-crunches cap_swap_ext, cap_swap_for_delete
+crunch cap_swap_ext, cap_swap_for_delete
   for valid_etcbs[wp]: "valid_etcbs"
 
 lemma rec_del_valid_etcbs[wp]:

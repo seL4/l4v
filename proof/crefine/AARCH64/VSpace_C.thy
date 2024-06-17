@@ -1188,7 +1188,7 @@ lemma invalidateVMIDEntry_ccorres:
   apply (simp (no_asm) add: mask_def vmid_bits_val unat_max_word)
   done
 
-crunches invalidateVMIDEntry, invalidateASID
+crunch invalidateVMIDEntry, invalidateASID
   for nextVMID[wp]: "\<lambda>s. P (armKSNextVMID (ksArchState s))"
   (wp: crunch_wps getASID_wp)
 
@@ -2557,7 +2557,7 @@ lemma isIRQActive_ccorres:
   apply (simp add: irq_state_defs Kernel_C_maxIRQ)
   done
 
-crunches isIRQActive, vcpuRestoreReg
+crunch isIRQActive, vcpuRestoreReg
   for ko_at_vcpu'[wp]: "\<lambda>s. P (ko_at' (v::vcpu) p s)"
 
 lemma restore_virt_timer_ccorres:

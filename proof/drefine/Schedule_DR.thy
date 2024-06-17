@@ -46,7 +46,7 @@ lemma allActiveTCBs_corres:
   apply (auto simp: getActiveTCBs_subset)
   done
 
-crunches switch_to_idle_thread
+crunch switch_to_idle_thread
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
 
 lemma dcorres_arch_switch_to_idle_thread_return: "dcorres dc \<top> \<top> (return ()) arch_switch_to_idle_thread"
@@ -109,7 +109,7 @@ lemma arch_switch_to_thread_dcorres:
       apply (wp|simp)+
   done
 
-crunches arch_switch_to_thread
+crunch arch_switch_to_thread
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps wp: crunch_wps ignore: ARM.clearExMonitor)
 
@@ -140,7 +140,7 @@ lemma corrupt_intents_current_thread:
   "cdl_current_thread (corrupt_intents x p s) = cdl_current_thread s"
   by (simp add: corrupt_intents_def)
 
-crunches corrupt_frame
+crunch corrupt_frame
   for cdl_cur: "\<lambda>s. cdl_current_thread s = x"
   (simp: corrupt_intents_current_thread)
 
@@ -474,7 +474,7 @@ lemma set_scheduler_action_transform:
   "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_scheduler_action a \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   by (clarsimp simp: set_scheduler_action_def etcb_at_def| wp )+
 
-crunches set_scheduler_action
+crunch set_scheduler_action
   for valid_idle_etcb[wp]: valid_idle_etcb
 
 (* RHS copy-pasted from schedule_dcorres switch_thread case *)
@@ -652,7 +652,7 @@ lemma as_user_setNextPC_corres:
                         arch_tcb_update_aux3)
   done
 
-crunches set_thread_state_ext
+crunch set_thread_state_ext
   for transform_inv[wp]: "\<lambda>s. transform s = cs"
 
 lemma dcorres_dummy_set_thread_state_runnable:

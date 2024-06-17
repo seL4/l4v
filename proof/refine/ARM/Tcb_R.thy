@@ -128,7 +128,7 @@ lemma activate_invs':
                          pred_disj_def)
   done
 
-crunches activateIdleThread
+crunch activateIdleThread
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: setNextPC)
 
@@ -172,11 +172,11 @@ lemma idle_tsr:
   "thread_state_relation ts ts' \<Longrightarrow> idle' ts' = idle ts"
   by (case_tac ts, auto)
 
-crunches cancelIPC
+crunch cancelIPC
   for cur[wp]: cur_tcb'
   (wp: crunch_wps simp: crunch_simps o_def)
 
-crunches setupReplyMaster
+crunch setupReplyMaster
   for cur[wp]: cur_tcb'
   (wp: crunch_wps simp: crunch_simps)
 
@@ -200,7 +200,7 @@ lemma setupReplyMaster_weak_sch_act_wf[wp]:
   apply assumption
   done
 
-crunches setup_reply_master, Tcb_A.restart, arch_post_modify_registers
+crunch setup_reply_master, Tcb_A.restart, arch_post_modify_registers
   for pspace_aligned[wp]: "pspace_aligned :: det_ext state \<Rightarrow> _"
   and pspace_distinct[wp]: "pspace_distinct :: det_ext state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps)
@@ -311,7 +311,7 @@ lemma invokeTCB_ReadRegisters_corres:
   apply (clarsimp simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
   done
 
-crunches asUser
+crunch asUser
   for sch_act_simple[wp]: "sch_act_simple"
   (rule: sch_act_simple_lift)
 
@@ -327,7 +327,7 @@ lemma asUser_postModifyRegisters_corres:
   apply (rule corres_stateAssert_assume)
    by simp+
 
-crunches restart
+crunch restart
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   (simp: crunch_simps wp: crunch_wps threadSet_sched_pointers threadSet_valid_sched_pointers)
@@ -368,7 +368,7 @@ lemma invokeTCB_WriteRegisters_corres:
          apply (wp | clarsimp)+
   done
 
-crunches suspend
+crunch suspend
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 lemma tcbSchedDequeue_ResumeCurrentThread_imp_notct[wp]:
@@ -391,7 +391,7 @@ lemma suspend_ResumeCurrentThread_imp_notct[wp]:
    \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
   by (wpsimp simp: suspend_def)
 
-crunches restart, suspend
+crunch restart, suspend
   for cur_tcb'[wp]: cur_tcb'
   (wp: crunch_wps threadSet_cur ignore: threadSet)
 
@@ -492,10 +492,10 @@ lemma readreg_invs':
        | clarsimp simp: invs'_def valid_state'_def
                  dest!: global'_no_ex_cap)+
 
-crunches getSanitiseRegisterInfo
+crunch getSanitiseRegisterInfo
   for invs'[wp]: invs'
 
-crunches getSanitiseRegisterInfo
+crunch getSanitiseRegisterInfo
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' d"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and tcb_at'[wp]: "tcb_at' a"
@@ -593,10 +593,10 @@ lemma threadSet_valid_objs_tcbPriority_update:
     apply (fastforce  simp: obj_at'_def)+
   done
 
-crunches tcbSchedDequeue
+crunch tcbSchedDequeue
   for cur[wp]: cur_tcb'
 
-crunches tcbSchedDequeue
+crunch tcbSchedDequeue
   for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' st tcbPtr s)"
 
 lemma sp_corres2:
@@ -722,13 +722,13 @@ lemma setP_invs':
   unfolding setPriority_def
   by (wpsimp wp: rescheduleRequired_invs' threadSet_priority_invs')
 
-crunches setPriority, setMCPriority
+crunch setPriority, setMCPriority
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
 lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
 
-crunches setPriority, setMCPriority
+crunch setPriority, setMCPriority
   for valid_cap[wp]: "valid_cap' c"
   (wp: getObject_inv_tcb)
 
@@ -1019,7 +1019,7 @@ lemma setMCPriority_valid_objs'[wp]:
   apply (fastforce  simp: obj_at'_def)+
   done
 
-crunches setMCPriority
+crunch setMCPriority
   for sch_act_simple[wp]: sch_act_simple
   (wp: ssa_sch_act_simple crunch_wps rule: sch_act_simple_lift simp: crunch_simps)
 
@@ -1562,7 +1562,7 @@ lemmas threadSet_ipcbuffer_trivial
     = threadSet_invs_trivial[where F="tcbIPCBuffer_update F'" for F',
                               simplified inQ_def, simplified]
 
-crunches setPriority, setMCPriority
+crunch setPriority, setMCPriority
   for cap_to'[wp]: "ex_nonz_cap_to' a"
   (simp: crunch_simps)
 
@@ -1775,7 +1775,7 @@ lemma valid_bound_ntfn_lift:
   apply (wp typ_at_lifts[OF P])+
   done
 
-crunches setBoundNotification
+crunch setBoundNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   (ignore: threadSet wp: threadSet_sched_pointers)
 
@@ -2033,7 +2033,7 @@ lemma getMCP_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at' ((=) mcp
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
-crunches checkPrio
+crunch checkPrio
   for inv: "P"
   (simp: crunch_simps)
 
@@ -2219,7 +2219,7 @@ lemma decodeSetIPCBuffer_is_tc[wp]:
   apply (clarsimp simp: isThreadControl_def)
   done
 
-crunches decodeSetIPCBuffer
+crunch decodeSetIPCBuffer
   for inv[wp]: "P"
   (simp: crunch_simps)
 
@@ -2582,7 +2582,7 @@ lemma decodeTCBInvocation_corres:
              elim!: list_all2_mono)
   done
 
-crunches decodeTCBInvocation
+crunch decodeTCBInvocation
   for inv[wp]: P
 (simp: crunch_simps)
 
@@ -2642,7 +2642,7 @@ lemma decodeTCBInv_wf:
   apply (fastforce simp: real_cte_at_not_tcb_at' objBits_defs)
   done
 
-crunches getThreadBufferSlot, setPriority, setMCPriority
+crunch getThreadBufferSlot, setPriority, setMCPriority
   for irq_states'[wp]: valid_irq_states'
   (simp: crunch_simps)
 

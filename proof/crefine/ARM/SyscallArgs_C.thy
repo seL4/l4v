@@ -38,7 +38,7 @@ where
      od)
   od"
 
-crunches replyOnRestart
+crunch replyOnRestart
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps simp: crunch_simps)
 

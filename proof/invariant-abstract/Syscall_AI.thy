@@ -34,7 +34,7 @@ lemmas [wp] =
 lemmas [simp] =
   data_to_cptr_def
 
-crunches ethread_get, ethread_get_when
+crunch ethread_get, ethread_get_when
   for inv[wp]: P
 
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -251,15 +251,15 @@ locale Systemcall_AI_Pre =
 
 begin
 
-crunches handle_fault_reply
+crunch handle_fault_reply
   for pred_tcb_at[wp]: "pred_tcb_at proj (P :: 'a \<Rightarrow> _) t :: 'state_ext state \<Rightarrow> _"
-crunches handle_fault_reply
+crunch handle_fault_reply
   for invs[wp]: "invs :: 'state_ext state \<Rightarrow> _"
-crunches handle_fault_reply
+crunch handle_fault_reply
   for cap_to[wp]: "ex_nonz_cap_to c :: 'state_ext state \<Rightarrow> _"
-crunches handle_fault_reply
+crunch handle_fault_reply
   for it[wp]: "\<lambda>s :: 'state_ext state. P (idle_thread s) "
-crunches handle_fault_reply
+crunch handle_fault_reply
   for caps[wp]: "\<lambda>s :: 'state_ext state. P (caps_of_state s)"
 
 end
@@ -454,11 +454,11 @@ lemma (in Systemcall_AI_Pre2) pinv_invs[wp]:
   done
 
 
-crunches do_reply_transfer
+crunch do_reply_transfer
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps)
 
-crunches invoke_irq_handler
+crunch invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 
@@ -548,7 +548,7 @@ lemma sts_nasty_bit:
   apply (clarsimp simp: o_def cte_wp_at_def)
   done
 
-crunches set_thread_state
+crunch set_thread_state
   for is_original_cap[wp]: "\<lambda>s. P (is_original_cap s)"
 
 lemma sts_no_cap_asid[wp]:
@@ -917,23 +917,23 @@ lemma valid_validE_R_eq:
   by (fastforce simp: validE_R_def validE_def valid_def split_def)
 
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for tcb_at[wp]: "tcb_at t"
   (simp: crunch_simps)
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps)
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for cap_to[wp]: "ex_nonz_cap_to p"
   (simp: crunch_simps)
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps)
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for cte_wp_at[wp]: "cte_wp_at P p"
   (simp: crunch_simps)
 
@@ -1126,7 +1126,7 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking
   apply (fastforce elim!: invs_valid_tcb_ctable st_tcb_ex_cap)
   done
 
-crunches delete_caller_cap
+crunch delete_caller_cap
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemmas delete_caller_cap_tcb[wp]
@@ -1190,10 +1190,10 @@ lemma (in Syscall_AI) hr_invs[wp]:
                   elim: cte_wp_at_weakenE)
   done
 
-crunches set_extra_badge
+crunch set_extra_badge
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
-crunches (in Syscall_AI) handle_reply
+crunch (in Syscall_AI) handle_reply
   for cur_thread[wp]: "\<lambda>s :: 'state_ext state. P (cur_thread s)"
   (wp: crunch_wps simp: unless_def crunch_simps
    ignore: make_fault_msg rule: transfer_caps_loop_pres)
@@ -1205,7 +1205,7 @@ lemma simple_if_Restart_Inactive:
   "simple (if P then Structures_A.Restart else Structures_A.Inactive)"
   by simp
 
-crunches (in Syscall_AI) handle_reply
+crunch (in Syscall_AI) handle_reply
   for st_tcb_at_simple[wp]: "st_tcb_at simple t' :: 'state_ext state \<Rightarrow> _"
   (wp: hoare_TrueI crunch_wps sts_st_tcb_at_cases
        thread_set_no_change_tcb_state
@@ -1215,7 +1215,7 @@ lemmas (in Syscall_AI) hr_ct_in_state_simple[wp]
     = ct_in_state_thread_state_lift [OF handle_reply_cur_thread
                                        handle_reply_st_tcb_at_simple]
 
-crunches (in Syscall_AI) handle_fault_reply
+crunch (in Syscall_AI) handle_fault_reply
   for vo[wp]: "valid_objs :: 'state_ext state \<Rightarrow> _"
 
 lemmas handle_fault_reply_typ_ats[wp] =
@@ -1362,7 +1362,7 @@ lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
    apply (wp get_simple_ko_wp | wpc | simp)+
   done
 
-crunches do_nbrecv_failed_transfer
+crunch do_nbrecv_failed_transfer
   for st_tcb_at_runnable[wp]: "st_tcb_at runnable t"
 
 lemma fast_finalise_sym_refs:
@@ -1373,7 +1373,7 @@ lemma fast_finalise_sym_refs:
              | clarsimp)+
   done
 
-crunches empty_slot
+crunch empty_slot
   for state_refs_of[wp]: "\<lambda>s::det_ext state. P (state_refs_of s)"
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
 

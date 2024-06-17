@@ -24,11 +24,11 @@ lemma setCTE_obj_at'_queued:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
-crunches cteInsert
+crunch cteInsert
   for obj_at'_queued: "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
   (wp: setCTE_obj_at'_queued crunch_wps)
 
-crunches emptySlot
+crunch emptySlot
   for obj_at'_not_queued: "obj_at' (\<lambda>a. \<not> tcbQueued a) p"
   (wp: setCTE_obj_at'_queued)
 
@@ -68,7 +68,7 @@ lemma setBoundNotification_tcbContext:
   by wpsimp
 
 declare comp_apply [simp del]
-crunches deleteCallerCap
+crunch deleteCallerCap
   for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
        setNotification_tcb crunch_wps setThreadState_tcbContext
@@ -76,7 +76,7 @@ crunches deleteCallerCap
 declare comp_apply [simp]
 
 
-crunches asUser
+crunch asUser
   for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps)
 
@@ -545,7 +545,7 @@ lemma vcpuSwitch_armKSVMIDTable[wp]:
 
 lemmas vcpuSwitch_typ_ats[wp] = typ_at_lifts [OF vcpuSwitch_typ_at']
 
-crunches findVSpaceForASID
+crunch findVSpaceForASID
   for (empty_fail) empty_fail[wp,intro!]
   (wp: empty_fail_getObject ignore: withoutFailure)
 
@@ -1723,7 +1723,7 @@ lemma setObject_tcb_asidpool_obj_at'[wp]:
   done
 
 (* FIXME AARCH64 move *)
-crunches setThreadState
+crunch setThreadState
   for asidpool_obj_at'[wp]: "obj_at' (P :: asidpool \<Rightarrow> bool) ptr"
   (simp: unless_def)
 

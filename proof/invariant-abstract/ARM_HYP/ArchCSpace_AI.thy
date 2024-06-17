@@ -588,7 +588,7 @@ lemma cap_insert_simple_invs:
 
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   and valid_objs[wp]: valid_objs
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"

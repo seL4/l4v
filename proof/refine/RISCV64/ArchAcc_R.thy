@@ -260,9 +260,9 @@ lemma storePTE_state_refs_of[wp]:
          clarsimp simp: updateObject_default_def in_monad)
   done
 
-crunches setIRQState
+crunch setIRQState
   for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
-crunches getIRQSlot
+crunch getIRQSlot
   for inv[wp]: "P"
 
 lemma setObject_ASIDPool_corres[corres]:
@@ -825,7 +825,7 @@ qed
 
 declare in_set_zip_refl[simp]
 
-crunches storePTE
+crunch storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
@@ -841,7 +841,7 @@ lemma getObject_pte_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pte. P\<rbrace>"
   by (simp add: getObject_inv loadObject_default_inv)
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
 

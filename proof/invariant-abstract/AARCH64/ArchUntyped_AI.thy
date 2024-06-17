@@ -342,7 +342,7 @@ lemma nonempty_default[simp, Untyped_AI_assms]:
   apply (case_tac aobject_type; simp add: default_arch_object_def empty_pt_def)
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for cte_wp_at_iin[wp]: "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
 
 lemmas init_arch_objects_ex_cte_cap_wp_to = init_arch_objects_excap

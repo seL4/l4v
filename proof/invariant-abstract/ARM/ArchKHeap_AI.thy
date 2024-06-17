@@ -794,7 +794,7 @@ lemma cap_is_device_obj_is_device[simp]:
                 default_object_def  default_arch_object_def
          split: apiobject_type.splits aobject_type.splits)
 
-crunches storeWord
+crunch storeWord
   for device_state_inv: "\<lambda>ms. P (device_state ms)"
   (ignore_del: storeWord)
 

@@ -947,7 +947,7 @@ lemma activateThread_simple_rewrite:
 
 end
 
-crunches setBoundNotification, cteDeleteOne
+crunch setBoundNotification, cteDeleteOne
   for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_wps simp: crunch_simps)
 

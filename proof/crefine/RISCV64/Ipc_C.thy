@@ -28,10 +28,10 @@ lemma replyFromKernel_success_empty:
   unfolding replyFromKernel_def replyFromKernel_success_empty_def
   by (simp add: setMRs_Nil submonad_asUser.fn_stateAssert)
 
-crunches handleFaultReply
+crunch handleFaultReply
   for sch_act_wf: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 
-crunches copyMRs
+crunch copyMRs
   for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' p"
   (rule: hoare_valid_ipc_buffer_ptr_typ_at' wp: crunch_wps)
 
@@ -183,7 +183,7 @@ lemma asUser_comm:
    apply (rule efa efb)+
   done
 
-crunches getSanitiseRegisterInfo
+crunch getSanitiseRegisterInfo
   for inv[wp]: P
 
 lemma empty_fail_getSanitiseRegisterInfo[wp, simp]:
@@ -1016,9 +1016,9 @@ end
 
 (* FIXME: move *)
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches setMR
+crunch setMR
   for valid_pspace'[wp]: "valid_pspace'"
-crunches setMR
+crunch setMR
   for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' p"
 end
 
@@ -4048,12 +4048,12 @@ lemma handleFaultReply_ccorres [corres]:
 context
 notes if_cong[cong]
 begin
-crunches emptySlot, tcbSchedEnqueue, rescheduleRequired
+crunch emptySlot, tcbSchedEnqueue, rescheduleRequired
   for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps
     simp: crunch_simps unless_def)
 
-crunches setThreadState, cancelAllIPC, cancelAllSignals
+crunch setThreadState, cancelAllIPC, cancelAllSignals
   for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps)
 end
@@ -4066,7 +4066,7 @@ lemma sbn_tcbFault:
   apply (wp threadSet_obj_at' | simp cong: if_cong)+
   done
 
-crunches unbindNotification, unbindMaybeNotification
+crunch unbindNotification, unbindMaybeNotification
   for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (ignore: threadSet wp: sbn_tcbFault)
 
@@ -4160,7 +4160,7 @@ lemma doIPCTransfer_reply_or_replyslot:
   apply simp
   done
 
-crunches handleFaultReply
+crunch handleFaultReply
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
 lemma doReplyTransfer_ccorres [corres]:

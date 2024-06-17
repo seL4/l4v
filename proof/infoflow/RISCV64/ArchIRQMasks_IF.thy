@@ -24,18 +24,18 @@ lemma delete_objects_irq_masks[IRQMasks_IF_assms, wp]:
   apply (wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
 
-crunches invoke_untyped
+crunch invoke_untyped
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
        wp: mapME_x_inv_wp preemption_point_inv
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
-crunches finalise_cap
+crunch finalise_cap
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (  wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
 
-crunches send_signal
+crunch send_signal
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
 
@@ -65,7 +65,7 @@ lemma arch_invoke_irq_control_irq_masks[IRQMasks_IF_assms]:
   apply (clarsimp simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
   done
 
-crunches handle_vm_fault, handle_hypervisor_fault
+crunch handle_vm_fault, handle_hypervisor_fault
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp no_irq)
 
@@ -84,10 +84,10 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   apply clarsimp
   done
 
-crunches activate_thread
+crunch activate_thread
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
-crunches schedule
+crunch schedule
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps simp: crunch_simps)
 
@@ -104,11 +104,11 @@ qed
 
 context Arch begin global_naming RISCV64
 
-crunches do_reply_transfer
+crunch do_reply_transfer
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps no_irq)
 

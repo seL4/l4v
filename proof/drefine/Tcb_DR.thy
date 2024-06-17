@@ -589,7 +589,7 @@ lemma restart_corres:
   apply (fastforce simp:opt_cap_tcb not_idle_thread_def)
   done
 
-crunches get_thread, getRegister
+crunch get_thread, getRegister
   for inv [wp]: P
   (ignore_del: getRegister)
 
@@ -686,7 +686,7 @@ lemma invoke_tcb_corres_copy_regs_loop:
      apply (wp|simp)+
   done
 
-crunches
+crunch
   "Tcb_A.restart", "IpcCancel_A.suspend"
   for idle_thread_constant[wp]: "\<lambda>s::'z::state_ext state. P (idle_thread s)"
   (wp: dxo_wp_weak)
@@ -718,7 +718,7 @@ lemma not_idle_after_suspend [wp]:
    apply (simp add:not_idle_thread_def invs_def valid_state_def)+
   done
 
-crunches "Tcb_A.restart"
+crunch "Tcb_A.restart"
   for valid_etcbs[wp]: "valid_etcbs"
 
 (* Copy registers from one thread to another. *)
@@ -816,7 +816,7 @@ lemma get_cap_ex_cte_cap_wp_to:
   apply (clarsimp simp:is_cap_simps)
   done
 
-crunches cap_delete
+crunch cap_delete
   for idle[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps ignore: wrap_ext_bool OR_choiceE)
 
@@ -1469,7 +1469,7 @@ lemma option_set_mcpriority_corres:
   apply (wp set_mcpriority_transform)
   by simp
 
-crunches option_update_thread, set_priority, set_mcpriority
+crunch option_update_thread, set_priority, set_mcpriority
   for valid_etcbs[wp]: "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1481,21 +1481,21 @@ lemma not_idle_thread_scheduler_action_update[iff]:
   "not_idle_thread ptr (scheduler_action_update f s) = not_idle_thread ptr s"
   by (simp add: not_idle_thread_def)
 
-crunches reschedule_required, set_priority, set_mcpriority
+crunch reschedule_required, set_priority, set_mcpriority
   for not_idle_thread[wp]: "not_idle_thread ptr"
   (wp: crunch_wps simp: crunch_simps)
 
 
 
-crunches tcb_sched_action
+crunch tcb_sched_action
   for emptyable[wp]: "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches reschedule_required
+crunch reschedule_required
   for emptyable[wp]: "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches set_priority, set_mcpriority
+crunch set_priority, set_mcpriority
   for emptyable[wp]: "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 

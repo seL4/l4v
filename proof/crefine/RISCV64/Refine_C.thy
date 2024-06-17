@@ -21,7 +21,7 @@ imports
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunches handleVMFault
+crunch handleVMFault
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
 end
 
@@ -841,7 +841,7 @@ lemma dom_if_rewrite:
   "dom (\<lambda>x. if P x then Some (f x) else None) = dom (\<lambda>x. if P x then Some () else None)"
   by (auto split:if_splits)
 
-crunches doMachineOp
+crunch doMachineOp
   for dmo_typ_at_pre_dom[wp]: "\<lambda>s. P (dom (\<lambda>x. if typ_at' T (x && ~~ mask pageBits) s then Some () else None))"
   (wp: crunch_wps simp: crunch_simps device_mem'_def)
 

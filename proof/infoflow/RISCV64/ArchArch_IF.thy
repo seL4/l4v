@@ -50,33 +50,33 @@ lemma as_user_set_register_ev2:
     apply auto
   done
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for valid_global_refs[Arch_IF_assms, wp]: "valid_global_refs"
 
-crunches store_word_offs
+crunch store_word_offs
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: storeWord_def)
 
-crunches set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
+crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def)
 
-crunches arch_switch_to_idle_thread, arch_switch_to_thread
+crunch arch_switch_to_idle_thread, arch_switch_to_thread
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: machine_op_lift_def setVSpaceRoot_def
          machine_rest_lift_def crunch_simps storeWord_def)
 
-crunches arch_invoke_irq_handler
+crunch arch_invoke_irq_handler
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp simp: maskInterrupt_def plic_complete_claim_def)
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp simp: cache_machine_op_defs
    wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
-crunches arch_finalise_cap, prepare_thread_delete
+crunch arch_finalise_cap, prepare_thread_delete
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: modify_wp crunch_wps dmo_wp
    simp: crunch_simps hwASIDFlush_def)
@@ -1197,7 +1197,7 @@ lemma arch_perform_invocation_globals_equiv:
   apply (auto simp: authorised_for_globals_arch_inv_def invs_def valid_state_def valid_arch_inv_def)
   done
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for valid_global_objs[wp]: "valid_global_objs"
 
 lemma get_thread_state_globals_equiv[wp]:

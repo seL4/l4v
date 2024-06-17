@@ -10,7 +10,7 @@ begin
 
 section "valid global objs"
 
-crunches cancel_ipc, restart, deleting_irq_handler, suspend, cap_swap_for_delete
+crunch cancel_ipc, restart, deleting_irq_handler, suspend, cap_swap_for_delete
   for valid_global_objs[wp]: "valid_global_objs"
   (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 dxo_wp_weak simp: unless_def)
 
@@ -194,7 +194,7 @@ locale Tcb_IF_1 =
     "reads_respects_f aag l \<top> (arch_get_sanitise_register_info t)"
 begin
 
-crunches cap_swap_for_delete
+crunch cap_swap_for_delete
   for valid_arch_state[wp]: valid_arch_state
   (wp: dxo_wp_weak)
 
@@ -237,11 +237,11 @@ lemma no_cap_to_idle_thread:
 end
 
 
-crunches set_mcpriority
+crunch set_mcpriority
   for idle_thread_inv[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation)
 
-crunches restart
+crunch restart
   for idle_thread'[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: dxo_wp_weak)
 
@@ -260,7 +260,7 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
   apply (wp unbind_notification_globals_equiv bind_notification_globals_equiv)+
   done
 
-crunches set_mcpriority
+crunch set_mcpriority
   for globals_equiv: "globals_equiv st"
 
 lemma dxo_globals_equiv[wp]:

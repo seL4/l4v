@@ -89,15 +89,15 @@ lemma as_user_pas_refined[wp]:
   apply simp
   done
 
-crunches set_message_info
+crunch set_message_info
   for pas_refined[wp]: "pas_refined aag"
   and cdt[wp]: "\<lambda>s. P (cdt s)"
 
-crunches do_machine_op
+crunch do_machine_op
   for thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
   and state_vrefs[wp]: "\<lambda>s :: 'a :: state_ext state. P (state_vrefs s)"
 
-crunches set_message_info
+crunch set_message_info
   for integrity_autarch: "integrity aag X st"
 
 (* FIXME: move *)

@@ -160,7 +160,7 @@ lemma lookup_pt_slot_inv_any:
   apply (wp get_pde_wp | simp | wpc)+
   done
 
-crunches set_irq_state
+crunch set_irq_state
   for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma set_pt_cte_wp_at:
@@ -258,7 +258,7 @@ lemma set_pd_aligned [wp]:
   done
 
 
-crunches store_pde
+crunch store_pde
   for aligned[wp]: pspace_aligned
   (wp: hoare_drop_imps)
 
@@ -310,9 +310,9 @@ definition
           (\<forall>p \<in> set xs. (\<exists>\<rhd> (p && ~~ mask pd_bits) and pde_at p) s) \<and>
           wellformed_pde pde \<and> valid_pde pde s"
 
-crunches get_master_pte
+crunch get_master_pte
   for inv[wp]: P
-crunches get_master_pde
+crunch get_master_pde
   for inv[wp]: P
 
 lemma ucast_mask_asid_low_bits [simp]:
@@ -346,7 +346,7 @@ lemma set_asid_pool_cur_tcb [wp]:
   by (rule hoare_lift_Pf [where f=cur_thread]) wp+
 
 
-crunches set_asid_pool
+crunch set_asid_pool
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
 
@@ -969,22 +969,22 @@ lemma global_refs_kheap [simp]:
   by (simp add: global_refs_def)
 
 
-crunches set_pd
+crunch set_pd
   for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
-crunches set_pd
+crunch set_pd
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps)
 
 
-crunches set_pd
+crunch set_pd
   for idle[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
 
-crunches set_pd
+crunch set_pd
   for irq[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
@@ -1018,7 +1018,7 @@ lemma set_pd_cur:
   done
 
 
-crunches set_pd
+crunch set_pd
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
@@ -1148,22 +1148,22 @@ lemma set_pt_reply_masters:
   by (wp valid_reply_masters_cte_lift)
 
 
-crunches set_pt
+crunch set_pt
   for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
-crunches set_pt
+crunch set_pt
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps)
 
 
-crunches set_pt
+crunch set_pt
   for idle[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
 
-crunches set_pt
+crunch set_pt
   for irq[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
@@ -1205,7 +1205,7 @@ lemma set_pt_aligned [wp]:
   done
 
 
-crunches set_pt
+crunch set_pt
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
@@ -1509,7 +1509,7 @@ lemma set_pt_global_objs:
                         valid_vso_at_def obj_at_def empty_table_def)
   done
 
-crunches set_pt
+crunch set_pt
   for v_ker_map[wp]: "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
@@ -1633,7 +1633,7 @@ lemma as_user_in_device_frame[wp]:
   unfolding in_device_frame_def
   by (wp hoare_vcg_ex_lift)
 
-crunches load_word_offs
+crunch load_word_offs
   for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
 
 lemma load_word_offs_in_user_frame[wp]:
@@ -1668,11 +1668,11 @@ lemma set_pt_vms[wp]:
   apply (clarsimp simp: a_type_simps)
   done
 
-crunches set_pt
+crunch set_pt
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps)
 
-crunches set_pd
+crunch set_pd
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps)
 
@@ -1914,21 +1914,21 @@ lemma set_asid_pool_reply_masters [wp]:
   by (wp valid_reply_masters_cte_lift)
 
 
-crunches set_asid_pool
+crunch set_asid_pool
   for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
-crunches set_asid_pool
+crunch set_asid_pool
   for idle[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
 
-crunches set_asid_pool
+crunch set_asid_pool
   for irq[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
-crunches set_asid_pool
+crunch set_asid_pool
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps)
 
@@ -1939,7 +1939,7 @@ lemma set_asid_pool_valid_global [wp]:
   by (wp valid_global_refs_cte_lift)
 
 
-crunches set_asid_pool
+crunch set_asid_pool
   for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
@@ -2031,7 +2031,7 @@ lemma valid_pde_typ_at:
   by (case_tac pde, auto simp add: data_at_def)
 
 
-crunches set_asid_pool
+crunch set_asid_pool
   for v_ker_map[wp]: "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
@@ -2798,7 +2798,7 @@ lemma store_pte_valid_vspace_objs[wp]:
   apply auto
 done
 
-crunches store_pte
+crunch store_pte
   for valid_arch[wp]: valid_arch_state
 
 lemma set_pd_vs_lookup_unmap:
@@ -3165,7 +3165,7 @@ lemma machine_op_lift_device_state[wp]:
                      select_def ignore_failure_def select_f_def
               split: if_splits)
 
-crunches invalidateLocalTLB_ASID, invalidateLocalTLB_VAASID, setHardwareASID, isb, dsb,
+crunch invalidateLocalTLB_ASID, invalidateLocalTLB_VAASID, setHardwareASID, isb, dsb,
          set_current_pd, storeWord, cleanByVA_PoU, cleanL2Range
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   (simp: setCurrentPDPL2_def
@@ -3195,7 +3195,7 @@ proof -
     done
 qed
 
-crunches getRegister
+crunch getRegister
   for inv[wp]: P
   (simp: getRegister_def)
 
