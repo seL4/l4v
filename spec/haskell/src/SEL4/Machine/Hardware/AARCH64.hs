@@ -443,7 +443,7 @@ check_export_arch_timer = error "Unimplemented - machine op"
 {- Constants -}
 
 hcrVCPU =  (0x80086039 :: Word) -- HCR_VCPU
-hcrNative = (0x8e28703b :: Word) -- HCR_NATIVE
+hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
 vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
