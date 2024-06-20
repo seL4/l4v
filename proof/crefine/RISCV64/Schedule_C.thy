@@ -507,18 +507,6 @@ lemma isHighestPrio_ccorres:
                   split: if_splits)
   done
 
-lemma isRoundRobin_ccorres:
-  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (isRoundRobin scPtr) (Call isRoundRobin_'proc)"
-  apply cinit
-   apply (rule ccorres_pre_getObject_sc)
-   apply (rule ccorres_Guard)
-   apply (rule ccorres_return_C)
-     apply simp+
-  apply (fastforce simp: rf_sr_def csched_context_relation_def typ_heap_simps
-                  split: if_splits)
-  done
-
 lemma refill_size_length_scRefills_helper:
   "\<lbrakk>valid_sched_context' sc s; valid_sched_context_size' sc\<rbrakk>
    \<Longrightarrow> Suc (2 * length (scRefills sc)) < 2 ^ word_bits"
@@ -586,16 +574,6 @@ lemma refill_full_ccorres:
   apply (fastforce simp: csched_context_relation_def typ_heap_simps split: if_splits)
   done
 
-lemma refill_single_ccorres:
-  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     (sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (refillSingle scPtr) (Call refill_single_'proc)"
-  apply cinit
-   apply (rule ccorres_pre_getObject_sc)
-   apply (rule ccorres_Guard)+
-   apply (ctac add: ccorres_return_C)
-  by (clarsimp simp: csched_context_relation_def typ_heap_simps
-              split: if_splits)
-
 (* FIXME RT: move to Refine *)
 lemma length_scRefills_bounded:
   "\<lbrakk>valid_sched_context' sc s; valid_sched_context_size' sc\<rbrakk>
@@ -614,7 +592,7 @@ lemma length_scRefills_bounded:
 
 lemma sc_released_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (active_sc_at' scPtr and valid_objs') \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (scReleased scPtr) (Call sc_released_'proc)"
   apply (cinit simp: readScReleased_def scActive_def[symmetric] gets_the_if_distrib)
    apply (ctac add: sc_active_ccorres)

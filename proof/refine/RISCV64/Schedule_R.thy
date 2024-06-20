@@ -2085,50 +2085,6 @@ crunches refillBudgetCheck, refillUnblockCheck
   and active_sc_at'[wp]: "active_sc_at' scPtr"
   (wp: crunch_wps)
 
-lemma mergeRefills_valid_objs':
-  "\<lbrace>\<lambda>s. valid_objs' s \<and> sc_at' scPtr s \<and> ((\<lambda>sc. 1 < refillSize sc) |< scs_of' s) scPtr\<rbrace>
-   mergeRefills scPtr
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: mergeRefills_def updateRefillHd_def)
-  apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> sc_at' scPtr s" in bind_wp_fwd)
-   apply wpsimp
-   apply (clarsimp simp: obj_at_simps opt_map_red opt_pred_def)
-  apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
-  apply (clarsimp simp: valid_sched_context'_def obj_at_simps valid_obj'_def
-                        valid_sched_context_size'_def opt_map_red opt_pred_def refillSize_def
-                 dest!: sc_ko_at_valid_objs_valid_sc')
-  done
-
-lemma no_ofail_refillHeadOverlapping:
-  "no_ofail (sc_at' scp) (refillHeadOverlapping scp)"
-  unfolding refillHeadOverlapping_def oreturn_def obind_def oliftM_def no_ofail_def
-            readRefillSize_def readRefillNext_def
-  by (clarsimp dest!: no_ofailD[OF no_ofail_readSchedContext])
-
-lemma refillHeadOverlapping_implies_count_greater_than_one:
-  "\<lbrakk>the (refillHeadOverlapping scPtr s); sc_at' scPtr s\<rbrakk>
-   \<Longrightarrow> ((\<lambda>sc. 1 < refillSize sc) |< scs_of' s) scPtr"
-  apply (clarsimp simp: refillHeadOverlapping_def readSchedContext_def oliftM_def
-                        readRefillNext_def readRefillSize_def obind_def omonad_defs
-                 split: option.splits dest!: readObject_misc_ko_at')
-   apply (fastforce dest: no_ofail_sc_at'_readObject[unfolded no_ofail_def, rule_format])
-  apply (clarsimp simp: obj_at_simps opt_map_red opt_pred_def MIN_REFILLS_def)
-  done
-
-lemma refillHeadOverlappingLoop_valid_objs':
-  "\<lbrace>\<lambda>s. valid_objs' s \<and> sc_at' scPtr s\<rbrace>
-   refillHeadOverlappingLoop scPtr
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  (is "valid ?pre _ _")
-  apply (clarsimp simp: refillHeadOverlappingLoop_def)
-  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"] mergeRefills_valid_objs')
-    apply (clarsimp simp: runReaderT_def)
-    apply (prop_tac "((\<lambda>sc. 1 < refillSize sc) |< scs_of' s) scPtr")
-     apply (fastforce elim: refillHeadOverlapping_implies_count_greater_than_one
-                      simp: obj_at_simps opt_map_red)
-    apply simp+
-  done
-
 lemma updateRefillHd_valid_objs':
   "\<lbrace>\<lambda>s. valid_objs' s \<and> sc_at' scPtr s\<rbrace>
    updateRefillHd scPtr f
@@ -2227,6 +2183,7 @@ lemma refillUnblockCheck_valid_objs'[wp]:
   "refillUnblockCheck scPtr \<lbrace>valid_objs'\<rbrace>"
   apply (clarsimp simp: refillUnblockCheck_def isRoundRobin_def refillReady_def)
   apply (wpsimp wp: updateRefillHd_valid_objs' refillHeadOverlappingLoop_valid_objs' scActive_wp)
+  apply (clarsimp simp: active_sc_at'_def obj_at'_def)
   done
 
 lemma refillUnblockCheck_valid_mdb'[wp]:
@@ -2256,11 +2213,10 @@ lemma refillPopHead_if_live_then_nonz_cap'[wp]:
                     simp: ko_wp_at'_def obj_at'_real_def live_sc'_def)
   done
 
-lemma mergeRefills_if_live_then_nonz_cap'[wp]:
-  "mergeRefills scPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  apply (clarsimp simp: mergeRefills_def)
-  apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (wpsimp simp: updateRefillHd_def updateSchedContext_def)
+lemma updateRefillHd_if_live_then_nonz_cap'[wp]:
+  "updateRefillHd scPtr f \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
+  apply wpsimp
   apply (fastforce intro: if_live_then_nonz_capE'
                     simp: ko_wp_at'_def obj_at'_real_def live_sc'_def)
   done
@@ -2280,14 +2236,6 @@ crunches refillHeadOverlappingLoop, headInsufficientLoop
   for if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
   (wp: crunch_wps)
 
-lemma updateRefillHd_if_live_then_nonz_cap'[wp]:
-  "updateRefillHd scPtr f \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
-  apply wpsimp
-  apply (fastforce intro: if_live_then_nonz_capE'
-                    simp: ko_wp_at'_def obj_at'_real_def live_sc'_def)
-  done
-
 lemma setRefillHd_if_live_then_nonz_cap'[wp]:
   "setRefillHd scPtr f \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (wpsimp simp: setRefillHd_def)
@@ -2304,13 +2252,6 @@ lemma refillUnblockCheck_if_live_then_nonz_cap'[wp]:
   apply (wpsimp wp: scActive_wp)
   done
 
-lemma mergeRefills_valid_idle'[wp]:
-  "mergeRefills scPtr \<lbrace>valid_idle'\<rbrace>"
-  apply (clarsimp simp: mergeRefills_def updateRefillHd_def updateSchedContext_def)
-  apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (wpsimp simp: valid_idle'_def obj_at'_def)
-  done
-
 lemma updateSchedContext_scRefills_updateAt_valid_idle'[wp]:
   "updateSchedContext scPtr (\<lambda>sc. scRefills_update (\<lambda>_. updateAt (scRefillHead sc) (scRefills sc) f) sc)
    \<lbrace>valid_idle'\<rbrace>"
@@ -2324,25 +2265,6 @@ lemma nonOverlappingMergeRefills_valid_idle'[wp]:
 crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
   for valid_idle'[wp]: valid_idle'
   (wp: crunch_wps)
-
-lemma refillUnblockCheck_valid_idle'[wp]:
-  "refillUnblockCheck scPtr \<lbrace>valid_idle'\<rbrace>"
-  apply (clarsimp simp: refillUnblockCheck_def isRoundRobin_def refillReady_def
-                        setReprogramTimer_def updateRefillHd_def updateSchedContext_def)
-  apply (wpsimp wp: scActive_wp)
-  apply (clarsimp simp: valid_idle'_def obj_at'_def)
-  done
-
-crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
-  for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
-  (wp: crunch_wps)
-
-lemma refillUnblockCheck_ct_idle_or_in_cur_domain'[wp]:
-  "refillUnblockCheck scPtr \<lbrace>ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (clarsimp simp: refillUnblockCheck_def isRoundRobin_def refillReady_def
-                        setReprogramTimer_def updateRefillHd_def)
-  apply (wpsimp wp: scActive_wp)
-  done
 
 crunches refillUnblockCheck, refillBudgetCheck
   for reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
@@ -2472,16 +2394,6 @@ lemma refillBudgetCheck_valid_machine_state'[wp]:
   "refillBudgetCheck usage \<lbrace>valid_machine_state'\<rbrace>"
   unfolding refillBudgetCheck_def
   by (wpsimp wp: hoare_drop_imps)
-
-lemma refillBudgetCheck_ct_idle_or_in_cur_domain'[wp]:
-  "refillBudgetCheck usage \<lbrace>ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (clarsimp simp: refillBudgetCheck_def isRoundRobin_def refillReady_def
-                        setReprogramTimer_def updateRefillHd_def)
-  apply (wpsimp wp: getRefillSize_wp getRefillFull_wp hoare_vcg_all_lift hoare_drop_imps
-                    hoare_vcg_if_lift2
-              simp: scheduleUsed_def refillAddTail_def setRefillTl_def updateRefillTl_def
-                    updateRefillHd_def setRefillHd_def)
-  done
 
 lemma refillBudgetCheck_invs'[wp]:
   "refillBudgetCheck usage \<lbrace>invs'\<rbrace>"
@@ -3574,10 +3486,9 @@ lemma refillPopHead_corres:
                 apply (clarsimp simp: objBits_simps)
                apply (wpsimp | wpsimp wp: getRefillNext_wp)+
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-  apply (fastforce dest: length_sc_refills_cross valid_objs'_valid_refills'
-                   simp: valid_refills'_def obj_at'_def sc_at_pred_n_def obj_at_def opt_map_def
-                         opt_pred_def)
-  done
+  by (fastforce dest: length_sc_refills_cross valid_objs'_valid_refills'
+                simp: valid_refills'_def obj_at'_def sc_at_pred_n_def obj_at_def opt_map_def
+                      opt_pred_def)
 
 lemma refillPopHead_valid_refills'[wp]:
   "\<lbrace>\<lambda>s. valid_refills' scPtr' s
@@ -3598,10 +3509,13 @@ lemma refillHeadOverlapping_simp:
                                 \<le> rTime (refillHd sc') + rAmount (refillHd sc'))) sc_ptr"
   unfolding refillHeadOverlapping_def
   apply (frule no_ofailD[OF no_ofail_readSchedContext])
-  by (clarsimp simp: obind_def omonad_defs oliftM_def obj_at'_def readRefillNext_def
-                     readRefillSize_def refillIndex_def opt_map_red readSchedContext_def
-                     refillSize_def valid_refills'_def in_omonad refillNext_def
-              dest!: readObject_ko_at'_sc split: option.splits if_splits)
+  apply (clarsimp simp: obind_def omonad_defs oliftM_def obj_at'_def readRefillNext_def
+                        readRefillSize_def refillIndex_def opt_map_red readSchedContext_def
+                        refillSize_def valid_refills'_def in_omonad refillNext_def
+                        readRefillHead_def readRefillIndex_def readRefillSingle_def
+                 dest!: readObject_ko_at'_sc split: option.splits if_splits)
+  apply fastforce
+  done
 
 lemma refill_head_overlapping_simp:
   "sc_at sc_ptr s \<Longrightarrow>
@@ -3621,7 +3535,6 @@ lemma refillHeadOverlapping_corres_eq:
   "\<lbrakk>(s, s') \<in> state_relation; sc_at sc_ptr s; sc_at' sc_ptr s'; valid_refills' sc_ptr s'\<rbrakk>
    \<Longrightarrow> refill_head_overlapping sc_ptr s = refillHeadOverlapping sc_ptr s'"
   apply (frule no_ofailD[OF no_ofail_refillHeadOverlapping])
-  apply (insert refillHeadOverlapping_implies_count_greater_than_one[of sc_ptr s'])
   apply clarsimp
   apply (drule (2) state_relation_sc_relation)
   apply (clarsimp simp: obj_at_simps is_sc_obj)
@@ -3651,6 +3564,38 @@ lemma merge_overlapping_refills_scs_of2[wp]:
                   wp: get_refills_wp set_refills_wp update_sched_context_wp)
   by (clarsimp simp: is_active_sc2_def obj_at_def opt_map_red)
 
+lemma update_refill_hd_decompose:
+  "update_refill_hd sc_ptr (g o f) = do update_refill_hd sc_ptr f; update_refill_hd sc_ptr g od"
+  apply (clarsimp simp: update_refill_hd_def)
+  apply (subst bind_dummy_ret_val)
+  apply (subst update_sched_context_decompose[symmetric])
+  apply fastforce
+  done
+
+lemma merge_refill_def2:
+  "update_refill_hd sc_ptr (merge_refill hd_refill)
+   = do update_refill_hd sc_ptr (r_time_update (\<lambda>_. r_time hd_refill));
+        update_refill_hd sc_ptr (\<lambda>hd. r_amount_update (\<lambda>_. r_amount hd + r_amount hd_refill) hd)
+     od"
+  unfolding merge_refill_def
+  apply (subst update_refill_hd_decompose[symmetric])
+  apply (fastforce intro: arg_cong2[where f = update_refill_hd])
+  done
+
+lemma updateRefillHd_valid_refills'[wp]:
+  "updateRefillHd scPtr f \<lbrace>valid_refills' scPtr'\<rbrace>"
+  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def setSchedContext_def)
+  apply (wpsimp wp: setObject_sc_wp)
+  apply (fastforce simp: valid_refills'_def obj_at'_def opt_map_def opt_pred_def refillSize_def)
+  done
+
+lemma updateRefillTl_valid_refills'[wp]:
+  "updateRefillTl scPtr f \<lbrace>valid_refills' scPtr'\<rbrace>"
+  apply (clarsimp simp: updateRefillTl_def updateSchedContext_def setSchedContext_def)
+  apply (wpsimp wp: setObject_sc_wp)
+  apply (fastforce simp: valid_refills'_def obj_at'_def opt_map_def opt_pred_def refillSize_def)
+  done
+
 (* if the loop guard is true, the refill length is greater than one *)
 lemma mergeOverlappingRefills_corres:
   "corres dc
@@ -3668,12 +3613,13 @@ lemma mergeOverlappingRefills_corres:
    apply (clarsimp simp: valid_refills'_def obj_at_simps is_sc_obj opt_map_red opt_pred_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF refillPopHead_corres])
-      apply (rule updateRefillHd_corres, simp)
-       apply (clarsimp simp: refill_map_def merge_refill_def)+
-     apply (rule hoare_strengthen_post[where Q="\<lambda>_. sc_at sc_ptr", rotated])
-      apply (simp add: active_sc_at_equiv is_active_sc_rewrite[symmetric])
-     apply (wpsimp wp: refill_pop_head_sc_active)
-    apply wpsimp
+      apply (rule corres_split[OF updateRefillHd_corres], simp)
+         apply (clarsimp simp: refill_map_def)+
+        apply (rule updateRefillHd_corres, simp)
+        apply (clarsimp simp: refill_map_def)
+       apply (rule hoare_strengthen_post[where Q="\<lambda>_. sc_at sc_ptr", rotated])
+        apply (simp add: active_sc_at_equiv is_active_sc_rewrite[symmetric])
+       apply (wpsimp wp: refill_pop_head_sc_active)+
    apply (clarsimp simp: obj_at_def is_sc_obj opt_map_red is_active_sc_rewrite active_sc_at_equiv
                          sc_refills_sc_at_rewrite)
   apply (fastforce simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def refillNext_def)
@@ -3691,14 +3637,6 @@ lemma no_fail_getRefillHead[wp]:
   apply (wpsimp simp: getRefillHead_def)
   apply (erule no_ofailD[OF no_ofail_readRefillHead])
   done
-
-lemma no_ofail_readRefillNext[wp]:
-  "no_ofail (sc_at' scPtr) (readRefillNext scPtr next)"
-  unfolding readRefillNext_def readSchedContext_def
-  by (wpsimp wp_del: ovalid_readObject)
-
-lemmas no_fail_getRefillNext[wp] =
-  no_ofail_gets_the[OF no_ofail_readRefillNext, simplified getRefillNext_def[symmetric]]
 
 lemma no_ofail_readScActive[wp]:
   "no_ofail (sc_at' scPtr) (readScActive scPtr)"
@@ -3777,14 +3715,15 @@ crunches merge_overlapping_refills
 
 lemma refillHeadOverlappingLoop_corres:
   "corres dc
-     (sc_at sc_ptr and  pspace_aligned and pspace_distinct and valid_objs and is_active_sc sc_ptr)
+     (sc_at sc_ptr and pspace_aligned and pspace_distinct and valid_objs and is_active_sc sc_ptr)
      (valid_objs' and valid_refills' sc_ptr)
      (refill_head_overlapping_loop sc_ptr) (refillHeadOverlappingLoop sc_ptr)"
   unfolding refill_head_overlapping_loop_def refillHeadOverlappingLoop_def runReaderT_def
   apply (rule_tac Q'="active_sc_at' sc_ptr" in corres_cross_add_guard)
    apply (fastforce intro!: active_sc_at'_cross_valid_objs)
   apply (rule corres_whileLoop)
-        apply (drule refillHeadOverlapping_corres_eq[where sc_ptr=sc_ptr]; simp add: runReaderT_def)
+        apply (drule refillHeadOverlapping_corres_eq[where sc_ptr=sc_ptr];
+               simp add: runReaderT_def active_sc_at'_rewrite)
        apply simp
        apply (rule corres_guard_imp
                       [where P=P and Q=P for P,
@@ -3793,7 +3732,7 @@ lemma refillHeadOverlappingLoop_corres:
                           Q'="Q and (\<lambda>s. ((\<lambda>sc. 1 < refillSize sc) |< scs_of' s) sc_ptr)" for Q])
          apply (rule corres_cross_add_abs_guard
                        [where Q="(\<lambda>s. ((\<lambda>sc. 1 < length (sc_refills sc)) |< scs_of2 s) sc_ptr)"])
-          apply clarsimp
+          apply (clarsimp simp: active_sc_at'_rewrite)
           apply (drule (2) state_relation_sc_relation)
           apply (clarsimp simp: obj_at_simps is_sc_obj valid_refills'_def sc_relation_def
                                 opt_map_red opt_pred_def)
@@ -3815,6 +3754,10 @@ lemma refillHeadOverlappingLoop_corres:
   apply (fastforce intro!: mergeOverlappingRefills_terminates)
   done
 
+lemma ksReprogramTimer_update_valid_refills'[simp]:
+  "valid_refills' scPtr (ksReprogramTimer_update f s) = valid_refills' scPtr s"
+  by (clarsimp simp: valid_refills'_def)
+
 lemma refillUnblockCheck_corres:
   "corres dc
      (sc_at scp and pspace_aligned and pspace_distinct
@@ -3833,7 +3776,6 @@ lemma refillUnblockCheck_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF isRoundRobin_corres])
       apply (rule corres_split_eqr[OF refillReady_corres], simp)
-        apply simp
         apply (rule corres_when, fastforce)
         apply (rule corres_split[OF getCurTime_corres])
           apply (rule corres_split[OF updateRefillHd_corres], simp)
@@ -3841,14 +3783,15 @@ lemma refillUnblockCheck_corres:
             apply (rule corres_split[OF setReprogramTimer_corres])
               apply (rule refillHeadOverlappingLoop_corres)
              apply (wpsimp simp: setReprogramTimer_def)+
-           apply (wpsimp simp: is_active_sc_rewrite)
-          apply (wpsimp wp: updateRefillHd_valid_objs'
-                 | wpsimp wp: updateSchedContext_wp simp: updateRefillHd_def)+
+           apply (wpsimp simp: is_active_sc_rewrite)+
+          apply (wpsimp wp: updateRefillHd_valid_objs')+
      apply (wpsimp wp: is_round_robin_wp isRoundRobin_wp)+
-   apply (clarsimp simp: obj_at_simps opt_map_red opt_pred_def is_active_sc_rewrite
-                         sc_at_pred_n_def is_sc_obj_def
-                  split: Structures_A.kernel_object.splits)
-  apply (fastforce simp: obj_at_simps valid_refills'_def in_omonad refillSize_def opt_map_def)
+    apply (clarsimp simp: obj_at_simps opt_map_red opt_pred_def is_active_sc_rewrite
+                          sc_at_pred_n_def
+                   split: Structures_A.kernel_object.splits)
+   apply (fastforce dest!: valid_objs'_valid_refills'
+                     simp: obj_at_simps opt_map_red opt_pred_def is_active_sc'_def)
+  apply (wpsimp simp: active_sc_at'_rewrite)
   done
 
 lemma sporadic_implies_active_cross:
@@ -4052,14 +3995,8 @@ lemma refillBudgetCheckRoundRobin_corres:
       apply (clarsimp simp: refill_map_def)
      apply (wpsimp simp: update_refill_hd_rewrite wp: set_refills_wp get_refills_wp)
     apply (wpsimp wp: hoare_vcg_conj_lift)
-     apply (wpsimp simp: updateRefillHd_def wp: updateSchedContext_wp)
-    apply (wpsimp wp: updateRefillHd_valid_objs')
-   apply (clarsimp simp: obj_at_def is_active_sc2_def is_sc_obj opt_map_red
-                  split: option.split_asm Structures_A.kernel_object.split_asm)
-  apply (clarsimp simp: obj_at_simps fun_upd_def[symmetric] scBits_simps ps_clear_upd)
-  apply (clarsimp simp: is_active_sc'_def valid_obj'_def valid_sched_context'_def valid_refills'_def
-                        opt_pred_def refillSize_def
-                 split: option.split_asm if_splits)
+   apply (wpsimp simp: updateRefillHd_def wp: updateSchedContext_wp)
+  apply (wpsimp wp: updateRefillHd_valid_objs')
   done
 
 lemma head_insufficient_length_greater_than_one:
@@ -4079,20 +4016,6 @@ lemma update_refill_hd_comp:
      od"
   apply (clarsimp simp: update_refill_hd_def)
   apply (rule box_equals[OF update_sched_context_decompose]; fastforce)
-  done
-
-lemma updateRefillHd_valid_refills'[wp]:
-  "updateRefillHd scPtr f \<lbrace>valid_refills' scPtr'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def setSchedContext_def)
-  apply (wpsimp wp: setObject_sc_wp)
-  apply (fastforce simp: valid_refills'_def obj_at'_def opt_map_def opt_pred_def refillSize_def)
-  done
-
-lemma updateRefillTl_valid_refills'[wp]:
-  "updateRefillTl scPtr f \<lbrace>valid_refills' scPtr'\<rbrace>"
-  apply (clarsimp simp: updateRefillTl_def updateSchedContext_def setSchedContext_def)
-  apply (wpsimp wp: setObject_sc_wp)
-  apply (fastforce simp: valid_refills'_def obj_at'_def opt_map_def opt_pred_def refillSize_def)
   done
 
 lemma refill_pop_head_is_active_sc[wp]:
@@ -4403,17 +4326,23 @@ lemma head_time_buffer_equiv:
                         maxReleaseTime_equiv opt_map_def vs_all_heap_simps refill_map_def)
   done
 
+lemma readRefillSingle_sp:
+  "\<lblot>Q\<rblot>
+   readRefillSingle scp
+   \<lblot>\<lambda>rv s. Q s \<and> (\<exists>sc. ko_at' sc scp s \<and> (rv = (scRefillHead sc = scRefillTail sc)))\<rblot>"
+  apply wpsimp
+  by (simp add: obj_at'_def)
+
+lemmas readRefillSingle_SomeD = use_ovalid[OF readRefillSingle_sp, where P=\<top>, simplified]
+
 lemma refillSingle_sp:
   "\<lbrace>P\<rbrace>
    refillSingle scp
    \<lbrace>\<lambda>rv s. P s \<and> (\<forall>ko. ko_at' ko scp s \<longrightarrow> rv = (scRefillHead ko = scRefillTail ko))\<rbrace>"
-  apply (clarsimp simp: refillSingle_def)
+  unfolding refillSingle_def
   apply wpsimp
-  apply (clarsimp simp: obj_at'_def)
+  apply (fastforce dest: readRefillSingle_SomeD simp: obj_at'_def)
   done
-
-crunches updateRefillHd, scheduleUsed
-   for valid_sched_context'[wp]: "valid_sched_context' sc"
 
 lemma handleOverrunLoopBody_corres:
   "r = r' \<Longrightarrow>
@@ -4525,6 +4454,7 @@ lemma handleOverrunLoopBody_valid_refills'[wp]:
   "handleOverrunLoopBody r'  \<lbrace>valid_refills' scPtr\<rbrace>"
   apply (clarsimp simp: handleOverrunLoopBody_def updateRefillHd_def refillSingle_def)
   apply wpsimp
+  apply (frule readRefillSingle_SomeD)
   apply (fastforce simp: valid_refills'_def opt_map_red opt_pred_def obj_at_simps
                          refillSingle_equiv[THEN arg_cong_Not, symmetric] refillSize_def)
   done

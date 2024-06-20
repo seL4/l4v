@@ -11,42 +11,6 @@ begin
 
 context kernel_m begin
 
-lemma refill_next_ccorres:
-  "ccorres (\<lambda>next next'. next = unat next') ret__unsigned_long_'
-     (active_sc_at' scPtr and invs' and K (Suc idx < 2 ^ word_bits))
-     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>index = word_of_nat idx\<rbrace>) []
-     (getRefillNext scPtr idx) (Call refill_next_'proc)"
-  supply len_bit0[simp del]
-  apply (cinit lift: sc_' index_'
-               simp: readRefillNext_def refillNext_def readSchedContext_def getObject_def[symmetric]
-                     getSchedContext_def[symmetric])
-   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
-   apply (rule ccorres_move_c_guard_sc)
-   apply (rule ccorres_return_C; clarsimp)
-  apply (rule conjI)
-   apply clarsimp
-  apply (clarsimp simp: active_sc_at'_def)
-  apply normalise_obj_at'
-  apply (rename_tac sc' sc)
-  apply (frule (1) obj_at_cslift_sc)
-  apply (clarsimp simp: typ_heap_simps csched_context_relation_def split: if_splits)
-  apply (prop_tac "0 < scRefillMax sc")
-   apply (clarsimp simp: active_sc_at'_def obj_at'_def)
-  apply (frule (1) invs'_ko_at_valid_sched_context')
-  apply (clarsimp simp: word_bits_def)
-  apply (frule (1) length_scRefills_bounded)
-  apply (intro conjI impI allI)
-   apply (cut_tac x=idx
-              and y="unat (scRefillMax_C sc') - Suc 0"
-              and 'a1=machine_word_len
-               in inj_on_contraD[OF inj_on_word_of_nat])
-      apply assumption
-     apply fastforce
-    apply (fastforce simp: valid_sched_context'_def word_bits_def)
-   apply fastforce
-  apply (fastforce simp: unat_of_nat_eq unat_add_lem')
-  done
-
 lemma getRefillSize_exs_valid[wp]:
   "\<lbrace>(=) s\<rbrace> getRefillSize scPtr \<lbrace>\<lambda>r. (=) s\<rbrace>"
   by (wpsimp simp: getRefillSize_def)
@@ -122,6 +86,7 @@ lemma refill_add_tail_ccorres:
   apply (elim conjE)
   apply (frule (1) length_scRefills_bounded)
   apply (intro conjI)
+       apply fastforce
       apply (clarsimp simp: valid_sched_context'_def word_bits_len_of refillSizeBytes_def)
      apply (fastforce simp: obj_at'_def objBits_simps opt_map_def ps_clear_def)
     apply (fastforce simp: valid_sched_context'_def refillNext_def refillSize_def split: if_splits)
@@ -543,11 +508,8 @@ lemma refill_update_ccorres:
                                       cong: StateSpace.state.fold_congs)
                       apply (rule_tac old_sc=sc and n="scRefillHead sc"
                                   and fa="\<lambda>refill. rAmount_update (\<lambda>_. newBudget) refill"
-                                   in rf_sr_refill_update2)
-                                apply fastforce
-                               apply fastforce
-                              apply fastforce
-                             apply fastforce
+                                   in rf_sr_refill_update2,
+                             fastforce+)
                             apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def
                                                   obj_at'_def)
                            apply (fastforce simp: sched_context.expand)
@@ -631,8 +593,9 @@ lemma refill_update_ccorres:
          apply (clarsimp simp: active_sc_at'_rewrite)
         apply wpsimp
        apply (vcg exspec=refill_ready_modifies)
-      apply (wpsimp wp: updateSchedContext_refills_invs' updateSchedContext_active_sc_at'
-                        hoare_drop_imps)
+      apply (rule_tac Q="\<lambda>_ s. invs' s \<and> active_sc_at' scPtr s" in hoare_post_imp)
+       apply fastforce
+      apply (wpsimp wp: updateSchedContext_refills_invs' updateSchedContext_active_sc_at')
      apply (vcg exspec=refill_index_modifies)
     apply (rule_tac Q="\<lambda>_ s. invs' s \<and> active_sc_at' scPtr s \<and> 0 < newMaxRefills
                              \<and> obj_at' (\<lambda>sc. newMaxRefills \<le> refillAbsoluteMax' (objBits sc)) scPtr s"
@@ -640,6 +603,7 @@ lemma refill_update_ccorres:
      apply (clarsimp simp: active_sc_at'_def)
      apply normalise_obj_at'
      apply (frule maxRefills_helper)
+     apply (frule invs_valid_objs')
      apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
      apply (clarsimp simp: valid_sched_context'_def refillSize_def objBits_simps word_bits_def
                            obj_at'_def)

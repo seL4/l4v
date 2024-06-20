@@ -5013,8 +5013,9 @@ lemma refillSingle_corres:
    corres (=) (sc_at scp) (obj_at' sc_valid_refills' scp')
      (refill_single scp)
      (refillSingle scp')"
-  unfolding refill_single_def refillSingle_def
-  apply (simp add: refill_size_def get_refills_def)
+  apply (simp add: refill_single_def readRefillSingle_def refillSingle_def
+                   refill_size_def get_refills_def readSchedContext_def
+             flip: getSchedContext_def getObject_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule_tac R'="\<lambda>sc s. sc_valid_refills' sc" and R="\<lambda>_ _ . True" in corres_split)
        apply (rule get_sc_corres)

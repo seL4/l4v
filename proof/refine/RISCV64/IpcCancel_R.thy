@@ -2865,7 +2865,7 @@ lemma refillPopHead_valid_pspace'[wp]:
 lemma refillPopHead_not_live'[wp]:
   "refillPopHead scPtr \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
   unfolding refillPopHead_def
-  apply (wpsimp wp: updateSchedContext_wp)
+  apply (wpsimp wp: updateSchedContext_wp getRefillNext_wp)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def opt_map_red live_sc'_def objBits_simps'
                         ps_clear_upd)
   done
@@ -2879,7 +2879,7 @@ lemma updateRefillHd_ko_wp_at_not_live'[wp]:
 
 crunches ifCondRefillUnblockCheck
   for not_live'[wp]: "\<lambda>s. P (ko_wp_at' (Not \<circ> live') p' s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps simp_del: comp_apply)
 
 lemma updateRefillHd_refs_of'[wp]:
   "updateRefillHd sc_ptr f \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
@@ -2891,7 +2891,7 @@ lemma updateRefillHd_refs_of'[wp]:
 lemma refillPopHead_refs_of'[wp]:
   "refillPopHead sc_ptr \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
   unfolding refillPopHead_def updateSchedContext_def
-  apply wpsimp
+  apply (wpsimp wp: getRefillNext_wp)
   apply (fastforce elim!: rsubst[where P=P] simp: obj_at'_def state_refs_of'_def split: if_splits)
   done
 

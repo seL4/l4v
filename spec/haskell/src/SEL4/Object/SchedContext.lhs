@@ -161,10 +161,13 @@ This module uses the C preprocessor to select a target architecture.
 > scReleased :: PPtr SchedContext -> Kernel Bool
 > scReleased scPtr = getsJust (readScReleased scPtr)
 
-> refillSingle :: PPtr SchedContext -> Kernel Bool
-> refillSingle scPtr = do
->     sc <- getSchedContext scPtr
+> readRefillSingle :: PPtr SchedContext -> KernelR Bool
+> readRefillSingle scPtr = do
+>     sc <- readSchedContext scPtr
 >     return $ scRefillHead sc == scRefillTail sc
+
+> refillSingle :: PPtr SchedContext -> Kernel Bool
+> refillSingle scPtr = getsJust (readRefillSingle scPtr)
 
 > refillSize :: SchedContext -> Int
 > refillSize sc =
@@ -236,9 +239,11 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillPopHead :: PPtr SchedContext -> Kernel Refill
 > refillPopHead scPtr = do
->     refill <- getRefillHead scPtr
->     updateSchedContext scPtr $ \sc -> sc { scRefillHead = refillNext sc (scRefillHead sc) }
->     return refill
+>     head <- getRefillHead scPtr
+>     sc <- getSchedContext scPtr
+>     next <- getRefillNext scPtr (scRefillHead sc)
+>     updateSchedContext scPtr $ \sc -> sc { scRefillHead = next }
+>     return head
 
 > refillAddTail :: PPtr SchedContext -> Refill -> Kernel ()
 > refillAddTail scPtr refill = do
@@ -335,20 +340,20 @@ This module uses the C preprocessor to select a target architecture.
 > mergeOverlappingRefills :: PPtr SchedContext -> Kernel ()
 > mergeOverlappingRefills scPtr = do
 >     old_head <- refillPopHead scPtr
->     updateRefillHd scPtr $ \head -> head { rTime = rTime old_head,
->                                            rAmount = rAmount head + rAmount old_head }
+>     updateRefillHd scPtr $ \head -> head { rTime = rTime old_head }
+>     updateRefillHd scPtr $ \head -> head { rAmount = rAmount head + rAmount old_head }
 
 > refillHeadOverlapping :: PPtr SchedContext -> KernelR Bool
 > refillHeadOverlapping scPtr = do
->     head <- liftM refillHd $ readSchedContext scPtr
->     let amount = rAmount head
->     let tail = rTime head + amount
->     headIndex <- liftM scRefillHead $ readSchedContext scPtr
->     nextRefillIndex <- readRefillNext scPtr headIndex
->     nextRefill <- liftM (refillIndex nextRefillIndex) $ readSchedContext scPtr
->     let enough_time = rTime nextRefill <= tail
->     refills <- readRefillSize scPtr
->     return (refills > 1 && enough_time)
+>     single <- readRefillSingle scPtr
+>     if not single
+>         then do
+>             head <- readRefillHead scPtr
+>             sc <- readSchedContext scPtr
+>             nextIndex <- readRefillNext scPtr (scRefillHead sc)
+>             nextRefill <- readRefillIndex scPtr nextIndex
+>             return $ rTime nextRefill <= rTime head + rAmount head
+>         else return False
 
 > refillHeadOverlappingLoop :: PPtr SchedContext -> Kernel ()
 > refillHeadOverlappingLoop scPtr =
@@ -417,6 +422,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
+>       active <- scActive scPtr
+>       assert active "the scheduling context must be active"
 >       roundRobin <- isRoundRobin scPtr
 >       ready <- refillReady scPtr
 >       when ((not roundRobin) && ready) $ do

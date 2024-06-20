@@ -2635,7 +2635,8 @@ lemma sc_ptr_to_crefill_ptr_inj:
   done
 
 lemma rf_sr_refill_update:
-  "\<lbrakk>(s, s') \<in> rf_sr; ko_at' (old_sc :: sched_context) scPtr s; invs' s; no_0_obj' s;
+  "\<lbrakk>(s, s') \<in> rf_sr; ko_at' (old_sc :: sched_context) scPtr s;
+    valid_objs' s; no_0_obj' s; pspace_aligned' s; pspace_distinct' s; pspace_bounded' s;
     n < length (scRefills old_sc);
     sc = scRefills_update (\<lambda>ls. updateAt n ls f) old_sc;
     cslift s' (sched_context_Ptr scPtr) = Some sc';
@@ -2648,7 +2649,6 @@ lemma rf_sr_refill_update:
         t'\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
 
-  apply (frule invs_valid_objs')
   apply (frule_tac k=old_sc in sc_ko_at_valid_objs_valid_sc', assumption)
   apply (frule rf_sr_refill_buffer_relation)
   apply (frule_tac sc=old_sc and scPtr=scPtr and n=n in h_t_valid_refill; fastforce?)
@@ -2695,9 +2695,6 @@ lemma rf_sr_refill_update:
        apply (rename_tac p sc'')
        apply (case_tac "p \<noteq> scPtr")
         apply (clarsimp simp: map_comp_def split: option.splits if_splits)
-        apply (frule invs_pspace_aligned')
-        apply (frule invs_pspace_distinct')
-        apply (frule invs_pspace_bounded')
         apply (drule_tac x=p in spec)
         apply (drule_tac x="KOSchedContext sc''" in spec)
         apply (clarsimp simp: Let_def dyn_array_list_rel_pointwise typ_heap_simps split: if_splits)

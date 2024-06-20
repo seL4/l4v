@@ -4308,12 +4308,6 @@ lemma doIPCTransfer_reply_or_replyslot:
 
 crunch ksCurDomain[wp]: handleFaultReply "\<lambda>s. P (ksCurDomain s)"
 
-lemma refill_ready_ccorres:
-  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (refillReady scPtr) (Call refill_ready_'proc)"
-sorry (* FIXME RT: refill_ready_ccorres *)
-
 lemma postpone_ccorres:
   "ccorres dc xfdc
      \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []

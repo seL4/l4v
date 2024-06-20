@@ -6552,7 +6552,7 @@ crunches refillUnblockCheck
 lemma refillPopHead_sym_heap_scReplies[wp]:
   "refillPopHead scp \<lbrace>sym_heap_scReplies\<rbrace>"
   unfolding refillPopHead_def
-  apply (wpsimp wp: updateSchedContext_wp)
+  apply (wpsimp wp: updateSchedContext_wp getRefillNext_wp)
   apply (clarsimp simp: sym_heap_def obj_at'_def opt_map_def split: option.splits)
   done
 
