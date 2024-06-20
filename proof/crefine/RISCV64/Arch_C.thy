@@ -521,7 +521,7 @@ shows
       apply clarsimp
       apply (wp getSlotCap_wp)
      apply clarsimp
-    apply (rule_tac Q="\<lambda>_. cte_wp_at' ((=) (UntypedCap isdev frame pageBits idx) o cteCap) parent
+    apply (rule_tac Q'="\<lambda>_. cte_wp_at' ((=) (UntypedCap isdev frame pageBits idx) o cteCap) parent
                           and (\<lambda>s. descendants_range_in' {frame..frame + (2::machine_word) ^ pageBits - (1::machine_word)} parent (ctes_of s))
                           and pspace_no_overlap' frame pageBits
                           and invs'

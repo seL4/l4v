@@ -220,8 +220,8 @@ lemma tcb_update_cspace_root_wp:
   apply (wpsimp wp: whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv
                     hoare_vcg_conj_liftE1)
     apply (wpsimp wp: tcb_empty_thread_slot_wpE[sep_wand_wpE] simp: sep_conj_assoc)
-   apply (wpsimp wp: hoare_vcg_all_liftE_R[THEN hoare_vcg_E_elim[rotated]]
-                     hoare_vcg_const_imp_lift_R
+   apply (wpsimp wp: hoare_vcg_all_liftE_R[THEN hoare_vcg_conj_elimE[rotated]]
+                     hoare_vcg_const_imp_liftE_R
                      tcb_empty_thread_slot_wpE[sep_wand_wpE]
           split_del: if_split simp: if_apply_def2)
   apply (clarsimp)
@@ -534,7 +534,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
          apply (rule hoare_post_imp[OF _  insert_cap_sibling_wp])
        apply (sep_erule_concl refl_imp sep_any_imp)+
        apply (assumption)
-       apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+       apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
          \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
          \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -
          \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -542,7 +542,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
          " in hoare_post_imp)
        apply (clarsimp simp:sep_conj_ac)
        apply wp+
-     apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+     apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
        \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -563,7 +563,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
        apply (sep_select 2)
        apply (drule sep_map_c_any)
        apply assumption
-      apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+      apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
         \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
         \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -572,7 +572,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
         " in hoare_post_imp)
        apply (clarsimp simp:sep_conj_ac)
       apply wp+
-     apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+     apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -582,7 +582,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
      apply (wp tcb_empty_thread_slot_wp_inv)
     apply clarsimp
     apply sep_solve
-    apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+    apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
       \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
       \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -596,7 +596,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
         apply (sep_schem)
        apply wp
        apply (rule hoare_post_imp[OF _ insert_cap_sibling_wp], sep_schem)
-      apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+      apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
         \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
         \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -605,7 +605,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
        apply (clarsimp simp:sep_conj_ac, sep_solve)
       apply wp+
      apply (rule_tac P = "cap_type (fst x2) \<noteq> Some UntypedType" in hoare_gen_asmEx)
-     apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+     apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
        \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -620,7 +620,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
    apply sep_solve+
   apply (rule hoare_pre)
    apply (wp|wpc|simp)+
-   apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
+   apply (rule_tac Q'="\<lambda>r s. P (cdl_current_thread s)
           \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
           \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c NullCap
           \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -799,7 +799,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
        apply wp
          apply (rule hoare_post_imp[OF _  insert_cap_sibling_wp])
        apply (sep_schem)
-       apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+       apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
          \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
          \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -
          \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -807,7 +807,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
          " in hoare_post_imp)
          apply (clarsimp simp: sep_conj_ac, sep_solve)
         apply wp+
-      apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+      apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
        \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -828,7 +828,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
         apply (sep_select 2)
         apply (drule sep_map_c_any)
         apply assumption
-       apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+       apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
         \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
         \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -837,7 +837,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
         " in hoare_post_imp)
         apply (clarsimp simp:sep_conj_ac)
        apply wp+
-     apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+     apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -847,7 +847,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
       apply (wp tcb_empty_thread_slot_wp_inv)
      apply clarsimp
      apply sep_solve
-    apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+    apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
       \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
       \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -866,7 +866,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
         apply (sep_select 2)
         apply (drule sep_map_c_any)
         apply assumption
-       apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+       apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
         \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
         \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -875,7 +875,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
         apply (clarsimp simp:sep_conj_ac)
        apply wp+
      apply (rule_tac P = "cap_type (fst x2) \<noteq> Some UntypedType" in hoare_gen_asmEx)
-     apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+     apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
        \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -
        \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -890,7 +890,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
                  apply sep_solve+
    apply (rule hoare_pre)
     apply (wp|wpc|simp)+
-    apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
+    apply (rule_tac Q'="\<lambda>r s. P (cdl_current_domain s)
           \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
           \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c NullCap
           \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
@@ -1060,7 +1060,7 @@ shows
             apply (sep_schem)
            apply sep_solve
           apply assumption
-         apply (rule_tac Q = "\<lambda>r s. cdl_current_thread s = Some root_tcb_id \<and>
+         apply (rule_tac Q'="\<lambda>r s. cdl_current_thread s = Some root_tcb_id \<and>
           cdl_current_domain s = minBound \<and>
           (\<exists>cspace_cap' vspace_cap' buffer_frame_cap'.
           iv = (InvokeTcb $
@@ -1082,7 +1082,7 @@ shows
           root_tcb_id \<mapsto>f Tcb cdl_tcb \<and>*
           cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size) \<and>*
           (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>* (cap_object cnode_cap, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>* R> s"
-          in  hoare_strengthen_post)
+          in hoare_strengthen_post)
           apply wp
           apply clarsimp
           apply (rule hoare_strengthen_post[OF set_cap_wp])

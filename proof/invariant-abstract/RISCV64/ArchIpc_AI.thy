@@ -55,8 +55,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | fold validE_R_def
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[11]
-  including no_pre
-  apply(rule hoare_pre, wp hoare_drop_imps arch_derive_cap_is_derived)
+  apply(wp hoare_drop_imps arch_derive_cap_is_derived)
   apply(clarify, drule cte_wp_at_norm, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
   apply(erule cte_wp_at_weakenE)
@@ -286,7 +285,7 @@ lemma transfer_caps_tcb_caps:
          | wpc | simp)+
     apply (erule imp)
    apply (wp hoare_vcg_conj_lift hoare_vcg_const_imp_lift hoare_vcg_all_lift)
-    apply (rule_tac Q = "\<lambda>rv s. (\<forall>x\<in>set rv. real_cte_at x s) \<and> cte_wp_at P (t, ref) s \<and> tcb_at t s"
+    apply (rule_tac Q'="\<lambda>rv s. (\<forall>x\<in>set rv. real_cte_at x s) \<and> cte_wp_at P (t, ref) s \<and> tcb_at t s"
                     in hoare_strengthen_post)
      apply (wp get_rs_real_cte_at)
     apply clarsimp
@@ -310,7 +309,7 @@ lemma transfer_caps_non_null_cte_wp_at:
    apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at hoare_weak_lift_imp
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
-            [where Q="\<lambda>rv s'. (cte_wp_at ((\<noteq>) cap.NullCap) ptr) s'
+            [where Q'="\<lambda>rv s'. (cte_wp_at ((\<noteq>) cap.NullCap) ptr) s'
                       \<and> (\<forall>x\<in>set rv. cte_wp_at ((=) cap.NullCap) x s')",
              rotated])
     apply (clarsimp)

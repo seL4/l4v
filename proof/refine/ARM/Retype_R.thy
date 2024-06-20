@@ -4183,7 +4183,7 @@ lemma createNewCaps_cur:
         cur_tcb' s\<rbrace>
       createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
    apply (simp add: cur_tcb'_def)
   apply (wp hoare_vcg_ex_lift createNewCaps_obj_at')
   apply (clarsimp simp: pspace_no_overlap'_def cur_tcb'_def valid_pspace'_def)
@@ -4257,20 +4257,17 @@ lemma createNewCaps_idle'[wp]:
              split del: if_split)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
                       split del: if_split)
-         apply (rename_tac apiobject_type)
-         apply (case_tac apiobject_type, simp_all split del: if_split)[1]
-             apply (wp, simp)
-           including classic_wp_pre
-           apply (wp mapM_x_wp'
-                     createObjects_idle'
-                     threadSet_idle'
-                   | simp add: projectKO_opt_tcb projectKO_opt_cte
-                               makeObject_cte makeObject_tcb archObjSize_def
-                               tcb_cte_cases_def objBitsKO_def APIType_capBits_def
-                               ptBits_def pdBits_def pageBits_def objBits_def
-                               createObjects_def pteBits_def pdeBits_def
-                   | intro conjI impI
-                   | fastforce simp: curDomain_def)+
+        apply (rename_tac apiobject_type)
+        apply (case_tac apiobject_type, simp_all split del: if_split)[1]
+            apply wpsimp
+           apply (wpsimp wp: mapM_x_wp' createObjects_idle' threadSet_idle'
+                  | simp add: projectKO_opt_tcb projectKO_opt_cte
+                              makeObject_cte makeObject_tcb archObjSize_def
+                              tcb_cte_cases_def objBitsKO_def APIType_capBits_def
+                              ptBits_def pdBits_def pageBits_def objBits_def
+                              createObjects_def pteBits_def pdeBits_def
+                  | intro conjI impI
+                  | clarsimp simp: curDomain_def)+
   done
 
 crunch ksArch[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
@@ -4288,7 +4285,7 @@ lemma createNewCaps_global_refs':
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (simp add: valid_global_refs'_def valid_cap_sizes'_def valid_refs'_def)
-  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
+  apply (rule_tac Q'="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
         \<or> 2 ^ capBits (cteCap cte) > gsMaxObjectSize s)) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
                  in hoare_post_imp)
    apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
@@ -4998,7 +4995,7 @@ proof (rule hoare_gen_asm, erule conjE)
     "\<lbrace>ct_not_inQ and valid_pspace' and pspace_no_overlap' ptr sz\<rbrace>
      createNewCaps ty ptr n us dev \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
     unfolding ct_not_inQ_def
-    apply (rule_tac Q="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
+    apply (rule_tac P'="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                              \<longrightarrow> (obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s
                                   \<and> valid_pspace' s \<and> pspace_no_overlap' ptr sz s)"
                     in hoare_pre_imp, clarsimp)
@@ -5109,7 +5106,7 @@ lemma createObjects_no_cte_valid_global:
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. valid_global_refs' s\<rbrace>"
   apply (simp add: valid_global_refs'_def valid_cap_sizes'_def valid_refs'_def)
-  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
+  apply (rule_tac Q'="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
         \<or> 2 ^ capBits (cteCap cte) > gsMaxObjectSize s)) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
                  in hoare_post_imp)
    apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
@@ -5220,7 +5217,7 @@ lemma createObjects_cur':
         cur_tcb' s\<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. cur_tcb' s\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
    apply (simp add: cur_tcb'_def)
   apply (wp hoare_vcg_ex_lift createObjects_orig_obj_at3)
   apply (clarsimp simp: cur_tcb'_def)
@@ -5309,7 +5306,7 @@ proof -
       createObjects ptr n val gbits \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
     (is "\<lbrakk> _; _ \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. ct_not_inQ s \<and> ?REST s\<rbrace> _ \<lbrace>_\<rbrace>")
     apply (simp add: ct_not_inQ_def)
-    apply (rule_tac Q="\<lambda>s. (ksSchedulerAction s = ResumeCurrentThread) \<longrightarrow>
+    apply (rule_tac P'="\<lambda>s. (ksSchedulerAction s = ResumeCurrentThread) \<longrightarrow>
                              (obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s \<and> ?REST s)"
              in hoare_pre_imp, clarsimp)
     apply (rule hoare_convert_imp [OF createObjects_nosch])

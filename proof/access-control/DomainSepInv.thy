@@ -869,7 +869,7 @@ lemma send_ipc_domain_sep_inv:
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   unfolding send_ipc_def
   apply (wp setup_caller_cap_domain_sep_inv hoare_vcg_if_lift | wpc | simp split del:if_split)+
-        apply (rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
+        apply (rule_tac Q'="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
          apply (wp do_ipc_transfer_domain_sep_inv dxo_wp_weak | wpc | simp)+
      apply (wp (once) hoare_drop_imps)
      apply (wp get_simple_ko_wp)+
@@ -886,7 +886,7 @@ lemma receive_ipc_base_domain_sep_inv:
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   apply (clarsimp cong: endpoint.case_cong thread_get_def get_thread_state_def)
   apply (wp setup_caller_cap_domain_sep_inv dxo_wp_weak | wpc | simp split del: if_split)+
-        apply (rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
+        apply (rule_tac Q'="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
          apply (wp do_ipc_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | simp)+
      apply (wpsimp wp: hoare_vcg_imp_lift[OF set_simple_ko_get_tcb, unfolded disj_not1]
                        hoare_vcg_all_lift get_simple_ko_wp
@@ -1041,7 +1041,7 @@ lemma invoke_tcb_domain_sep_inv:
      apply  ((wp | simp)+)[1]
     apply (simp add: split_def cong: option.case_cong)
     apply (wp checked_cap_insert_domain_sep_inv hoare_vcg_all_liftE_R hoare_vcg_all_lift
-              hoare_vcg_const_imp_lift_R cap_delete_domain_sep_inv cap_delete_deletes
+              hoare_vcg_const_imp_liftE_R cap_delete_domain_sep_inv cap_delete_deletes
               dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at hoare_weak_lift_imp
            | wpc | strengthen
            | simp add: option_update_thread_def emptyable_def tcb_cap_cases_def
@@ -1078,13 +1078,15 @@ lemma handle_invocation_domain_sep_inv:
                    split_def liftE_liftM_liftME liftME_def bindE_assoc)
   apply (wp syscall_valid perform_invocation_domain_sep_inv set_thread_state_runnable_valid_sched
          | simp split del: if_split)+
-        apply (rule_tac E="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of
-                                                       and valid_mdb and (\<lambda>y. valid_fault ft)"
-                    and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+        apply (rule_tac E'="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of
+                                                        and valid_mdb and (\<lambda>y. valid_fault ft)"
+                    and Q="Q" and Q'=Q for Q
+                     in hoare_strengthen_postE)
          apply (wp | simp | clarsimp)+
-      apply (rule_tac E="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of and
-                              valid_mdb and (\<lambda>y. valid_fault (CapFault x False ft))"
-                  and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+      apply (rule_tac E'="\<lambda>ft. domain_sep_inv irqs st and valid_objs and sym_refs \<circ> state_refs_of and
+                               valid_mdb and (\<lambda>y. valid_fault (CapFault x False ft))"
+                  and Q="Q" and Q'=Q for Q
+                   in hoare_strengthen_postE)
         apply (wp lcs_ex_cap_to2 | clarsimp)+
   apply (auto intro: st_tcb_ex_cap simp: ct_in_state_def)
   done
@@ -1147,7 +1149,7 @@ lemma handle_recv_domain_sep_inv:
   apply (wp hoare_vcg_all_lift lookup_slot_for_thread_cap_fault receive_ipc_domain_sep_inv
             delete_caller_cap_domain_sep_inv get_cap_wp get_simple_ko_wp
          | wpc | simp
-         | (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. cur_thread s = thread)" in hoare_strengthen_post, wp,
+         | (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. cur_thread s = thread)" in hoare_strengthen_post, wp,
             clarsimp simp: invs_valid_objs invs_sym_refs))+
      apply (rule_tac Q'="\<lambda>r s. domain_sep_inv irqs st s \<and> invs s \<and>
                                tcb_at thread s \<and> thread = cur_thread s" in hoare_strengthen_postE_R)
@@ -1173,8 +1175,10 @@ lemma handle_event_domain_sep_inv:
        apply (wpsimp wp: handle_send_domain_sep_inv handle_call_domain_sep_inv
                          handle_recv_domain_sep_inv handle_reply_domain_sep_inv hy_inv
               | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def)+
-     apply (rule_tac E="\<lambda>rv s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state) \<and>
-                               invs s \<and> valid_fault rv" and R="Q" and Q=Q for Q in hoare_strengthen_postE)
+     apply (rule_tac E'="\<lambda>rv s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state) \<and>
+                                invs s \<and> valid_fault rv"
+                 and Q="Q" and Q'=Q for Q
+                  in hoare_strengthen_postE)
      apply (wp | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def | auto)+
   done
 

@@ -189,10 +189,10 @@ lemma duplicate_cap_sep_general:
   apply clarsimp
   apply (frule well_formed_finite [where obj_id=obj_id])
   apply (clarsimp simp: si_caps_at_def)
-  apply (rule hoare_chain [where
-   P="\<guillemotleft>((si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>* si_objects) \<and>*
+  apply (rule hoare_chain[where
+   P'="\<guillemotleft>((si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>* si_objects) \<and>*
         (\<And>* obj_id \<in> {obj_id. real_object_at obj_id spec}. si_cap_at t orig_caps spec dev obj_id) \<and>* R\<guillemotright>" and
-   Q="\<lambda>rv.\<guillemotleft>(si_cap_at t (map_of (zip [obj\<leftarrow>obj_ids. obj_filter obj spec]
+   Q'="\<lambda>rv.\<guillemotleft>(si_cap_at t (map_of (zip [obj\<leftarrow>obj_ids. obj_filter obj spec]
             free_cptrs)) spec dev obj_id \<and>* si_objects) \<and>*
         (\<And>* obj_id \<in> {obj_id. real_object_at obj_id spec}. si_cap_at t orig_caps spec dev obj_id) \<and>* R\<guillemotright>"])
     apply (rule sep_set_conj_map_singleton_wp [where x=obj_id])

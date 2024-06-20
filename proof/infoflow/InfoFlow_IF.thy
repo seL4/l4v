@@ -957,8 +957,9 @@ lemma do_machine_op_rev:
        apply (clarsimp simp: select_f_def equiv_valid_2_def)
        apply (insert equiv_dmo, clarsimp simp: equiv_valid_def2 equiv_valid_2_def)[1]
        apply blast
-    apply (wp select_f_inv)+
+      apply (wpsimp wp: select_f_inv)+
     apply (fastforce simp: select_f_def dest: state_unchanged[OF mo_inv])+
+  apply wpsimp
   done
 
 end

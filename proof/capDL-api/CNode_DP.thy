@@ -189,7 +189,7 @@ lemma seL4_CNode_Mint_sep:
           apply (sep_solve)
          apply sep_solve
         apply (assumption)
-       apply (rule_tac Q = "\<lambda>r. (\<lambda>s. cdl_current_thread s = Some root_tcb_id \<and>
+       apply (rule_tac Q'="\<lambda>r. (\<lambda>s. cdl_current_thread s = Some root_tcb_id \<and>
                 cdl_current_domain s = minBound) and
                 < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q > and
                 K (\<exists>cap''. reset_cap_asid cap'' = reset_cap_asid cap' \<and> iv = InvokeCNode
@@ -354,7 +354,7 @@ lemma seL4_CNode_Mutate_sep:
             apply (sep_solve)
           apply sep_solve
          apply (assumption)
-        apply (rule_tac Q = "\<lambda>r. < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q >
+        apply (rule_tac Q'="\<lambda>r. < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q >
           and (\<lambda>a. cdl_current_thread a = Some root_tcb_id
                  \<and> cdl_current_domain a = minBound) and K(\<exists>dcap.
            reset_cap_asid dcap = reset_cap_asid src_cap \<and>
@@ -513,7 +513,7 @@ lemma seL4_CNode_Move_sep:
            apply (sep_solve)
           apply sep_solve
          apply (assumption)
-        apply (rule_tac Q = "\<lambda>r. < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q>
+        apply (rule_tac Q'="\<lambda>r. < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q>
           and (\<lambda>a. cdl_current_thread a = Some root_tcb_id
                  \<and> cdl_current_domain a = minBound) and K(\<exists>dcap.
            reset_cap_asid dcap = reset_cap_asid src_cap \<and>
@@ -670,7 +670,7 @@ lemma seL4_CNode_Copy_sep:
            apply (sep_solve)
           apply sep_solve
          apply (assumption)
-        apply (rule_tac Q = "\<lambda>r. (\<lambda>s. cdl_current_thread s = Some root_tcb_id
+        apply (rule_tac Q'="\<lambda>r. (\<lambda>s. cdl_current_thread s = Some root_tcb_id
                                     \<and> cdl_current_domain s = minBound) and
           < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q> and
           K (\<exists>cap''. reset_cap_asid cap'' = reset_cap_asid src_cap \<and> iv = InvokeCNode

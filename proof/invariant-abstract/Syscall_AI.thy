@@ -358,10 +358,10 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
         apply (wp sts_invs_minor)
        apply (clarsimp)
        apply (wp cap_delete_one_st_tcb_at)
-       apply (rule_tac Q = "\<lambda>_. invs and if_live_then_nonz_cap and
+       apply (rule_tac Q'="\<lambda>_. invs and if_live_then_nonz_cap and
                                 st_tcb_at awaiting_reply t and
-                                (\<lambda>s. \<not>has_reply_cap t s)" in
-              hoare_strengthen_post[rotated])
+                                (\<lambda>s. \<not>has_reply_cap t s)"
+                    in hoare_strengthen_post[rotated])
         apply (clarsimp)
         apply (rule conjI, erule(1) st_tcb_ex_cap, clarsimp)
         apply (rule conjI)
@@ -371,13 +371,11 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
         apply (rule disjI1)
         apply (erule pred_tcb_weakenE)
         apply (clarsimp)
-       apply (rule_tac Q = "\<lambda>_. invs and st_tcb_at awaiting_reply t and
-                           (\<lambda>s. \<not>has_reply_cap t s)" in
-              hoare_strengthen_post[rotated], clarsimp)
+       apply (rule_tac Q'="\<lambda>_. invs and st_tcb_at awaiting_reply t and (\<lambda>s. \<not>has_reply_cap t s)"
+                    in hoare_strengthen_post[rotated], clarsimp)
        apply (wp cap_delete_one_reply_st_tcb_at cap_delete_one_deletes_reply | simp)+
-      apply (rule_tac Q = "\<lambda>_. valid_reply_caps and
-                          cte_wp_at (is_reply_cap_to t) slot" in
-             hoare_strengthen_post[rotated], clarsimp)
+      apply (rule_tac Q'="\<lambda>_. valid_reply_caps and cte_wp_at (is_reply_cap_to t) slot"
+                   in hoare_strengthen_post[rotated], clarsimp)
        apply (erule cte_wp_at_weakenE, simp)
       apply (wp)
       apply (rule do_ipc_transfer_non_null_cte_wp_at2, clarsimp simp add: is_reply_cap_to_def)
@@ -390,17 +388,16 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
            apply (clarsimp)
            apply (wp thread_set_cap_to thread_set_it |
                   clarsimp simp add: tcb_cap_cases_def)+
-           apply (rule_tac Q = "\<lambda>_. invs and st_tcb_at awaiting_reply t and
-                               (\<lambda>s. \<not>has_reply_cap t s)" in
-                  hoare_strengthen_post[rotated])
+           apply (rule_tac Q'="\<lambda>_. invs and st_tcb_at awaiting_reply t and (\<lambda>s. \<not>has_reply_cap t s)"
+                        in hoare_strengthen_post[rotated])
             apply (clarsimp)
             apply (erule pred_tcb_weakenE)
             apply (clarsimp)
            apply (wp thread_set_invs_trivial thread_set_no_change_tcb_state
                      thread_set_has_no_reply_cap | clarsimp simp add: tcb_cap_cases_def)+
-         apply (rule_tac Q = "\<lambda>_. st_tcb_at (\<lambda>s. tcb_st_refs_of s = {}) t and invs and
-                             st_tcb_at awaiting_reply t and (\<lambda>s. \<not>has_reply_cap t s)" in
-                hoare_strengthen_post[rotated])
+         apply (rule_tac Q'="\<lambda>_. st_tcb_at (\<lambda>s. tcb_st_refs_of s = {}) t and invs and
+                                 st_tcb_at awaiting_reply t and (\<lambda>s. \<not>has_reply_cap t s)"
+                      in hoare_strengthen_post[rotated])
           apply (clarsimp)
           apply (rule conjI)
            apply (erule(1) st_tcb_ex_cap'[where P=awaiting_reply])
@@ -409,7 +406,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
           apply (drule st_tcb_at_eq, erule pred_tcb_weaken_strongerE, simp)
           apply clarsimp
          apply (wp handle_fault_reply_has_no_reply_cap)
-     apply (rule_tac Q = "\<lambda>_. st_tcb_at awaiting_reply t and invs and
+     apply (rule_tac Q'="\<lambda>_. st_tcb_at awaiting_reply t and invs and
                          (\<lambda>s. \<not>has_reply_cap t s)" in hoare_strengthen_post[rotated])
       apply (clarsimp)
       apply (erule pred_tcb_weakenE)
@@ -419,10 +416,9 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
     apply (wp hoare_drop_imp hoare_allI)[1]
    apply (wp assert_wp)
   apply (clarsimp)
-  apply (rule_tac Q = "\<lambda>rv. st_tcb_at ((=) rv) t and tcb_at t' and invs and
-                      emptyable slot and
-                      cte_wp_at (is_reply_cap_to t) slot" in
-         hoare_strengthen_post[rotated])
+  apply (rule_tac Q'="\<lambda>rv. st_tcb_at ((=) rv) t and tcb_at t' and invs and
+                           emptyable slot and cte_wp_at (is_reply_cap_to t) slot"
+               in hoare_strengthen_post[rotated])
    apply (clarsimp simp add: st_tcb_at_tcb_at)
    apply (rule conjI, erule pred_tcb_weakenE, clarsimp)+
    apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def)
@@ -939,7 +935,7 @@ lemma lcs_ex_cap_to2[wp]:
   done
 
 (* FIXME AARCH64: this should really not be wp *)
-declare hoare_vcg_const_imp_lift_E[wp]
+declare hoare_vcg_const_imp_liftE_E[wp]
 
 context Syscall_AI begin
 
@@ -966,8 +962,7 @@ lemma hinv_invs':
 
   apply (wp syscall_valid sts_invs_minor2 rfk_invs
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp split del: if_split)+
-  apply (rule_tac Q = "\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in
-         hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in hoare_post_imp)
   apply (auto elim!: pred_tcb_weakenE st_tcb_ex_cap
               dest: st_tcb_at_idle_thread
               simp: st_tcb_at_tcb_at)[1]
@@ -975,12 +970,11 @@ lemma hinv_invs':
   apply wp
   apply (simp add: ct_in_state_def conj_commute conj_left_commute)
   apply wp
-  apply (rule_tac Q = "\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in
-         hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in hoare_post_imp)
   apply simp
   apply (wp sts_st_tcb_at')
   apply (simp only: simp_thms K_def if_apply_def2)
-  apply (rule hoare_vcg_E_elim)
+  apply (rule hoare_vcg_conj_elimE)
   apply (wp | simp add: if_apply_def2)+
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
   done
@@ -1075,7 +1069,7 @@ lemma delete_caller_cap_simple[wp]:
 
 lemma delete_caller_deletes_caller[wp]:
   "\<lbrace>\<top>\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv. cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3)\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 3)"
+  apply (rule_tac Q'="\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 3)"
                in hoare_post_imp,
          clarsimp elim!: cte_wp_at_weakenE)
   apply (simp add: delete_caller_cap_def cap_delete_one_def unless_def, wp)
@@ -1097,7 +1091,7 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking
     cong: if_cong)
   apply (wp get_simple_ko_wp | clarsimp)+
   apply (wp delete_caller_cap_nonz_cap get_simple_ko_wp hoare_vcg_ball_lift | simp)+
-     apply (rule hoare_vcg_E_elim)
+     apply (rule hoare_vcg_conj_elimE)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
        apply (simp add: split_def)
@@ -1255,7 +1249,7 @@ lemma handle_reply_nonz_cap_to_ct:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s \<and> valid_objs s \<and> valid_mdb s \<and> tcb_at (cur_thread s) s\<rbrace>
      handle_reply
    \<lbrace>\<lambda>rv s :: 'state_ext state. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. \<exists>ct. (ct = cur_thread s) \<and> ex_nonz_cap_to ct s"
+  apply (rule_tac Q'="\<lambda>rv s. \<exists>ct. (ct = cur_thread s) \<and> ex_nonz_cap_to ct s"
                in hoare_post_imp)
    apply simp
   apply (wp hoare_vcg_ex_lift handle_reply_nonz_cap)
