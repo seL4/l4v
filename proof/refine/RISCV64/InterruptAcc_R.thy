@@ -284,14 +284,6 @@ lemma get_sc_active_sp:
   apply (clarsimp simp: obj_at_def active_sc_def)
   done
 
-lemma scActive_sp:
-  "\<lbrace>P\<rbrace>
-   scActive scPtr
-   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. ko_at' sc scPtr s \<and> rv = (0 < scRefillMax sc))\<rbrace>"
-  apply wpsimp
-  apply (clarsimp simp: obj_at'_def)
-  done
-
 crunches updateTimeStamp, setWorkUnits, isCurDomainExpired
   for ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
   and active_sc_at'[wp]: "active_sc_at' scPtr"
@@ -305,9 +297,6 @@ crunches updateTimeStamp, setWorkUnits, isCurDomainExpired
 crunches update_time_stamp
   for kheap[wp]: "\<lambda>s. P (kheap s)"
   (simp: crunch_simps)
-
-defs sc_at'_asrt_def:
-  "sc_at'_asrt \<equiv> \<lambda>scPtr s. sc_at' scPtr s"
 
 crunch (no_fail) no_fail[wp]: getCurSc
 

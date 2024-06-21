@@ -1173,17 +1173,18 @@ lemma tcb_queue_relation2_cong:
 
 context kernel_m begin
 
-lemma setThreadState_ccorres_valid_queues'_simple:
+lemma setThreadState_ccorres_simple:
   "ccorres dc xfdc
-     (tcb_at' thread)
-     ({s'. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts_' s' && mask 4\<rparr>, fl))}
-      \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
+     (\<lambda>s. tcb_at' thread s \<and> sch_act_simple s \<and> no_0_obj' s
+          \<and> weak_sch_act_wf (ksSchedulerAction s) s)
+     (\<lbrace>\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := \<acute>ts && mask 4\<rparr>, fl)\<rbrace>
+      \<inter> \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace>) []
      (setThreadState st thread) (Call setThreadState_'proc)"
   apply (cinit lift: tptr_' cong add: call_ignore_cong)
-    apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
-   apply (ctac add: scheduleTCB_ccorres_valid_queues'_simple)
-  apply wpsimp
-  apply (clarsimp simp: weak_sch_act_wf_def)
+   apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
+    apply (ctac add: scheduleTCB_ccorres_simple)
+   apply (wpsimp wp: threadSet_valid_objs')
+  apply clarsimp
   done
 
 lemma updateRestartPC_ccorres:
@@ -1401,23 +1402,27 @@ lemma active_runnable':
 
 crunches updateRestartPC
   for no_0_obj'[wp]: no_0_obj'
+  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps)
 
 lemma suspend_ccorres:
   assumes cteDeleteOne_ccorres:
-  "\<And>w slot. ccorres dc xfdc
-   (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
-        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
-   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+  "\<And>w slot.
+   ccorres dc xfdc
+     (invs'
+      and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+          \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+     ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
         \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   shows
   "ccorres dc xfdc
-   (invs' and tcb_at' thread and (\<lambda>s. thread \<noteq> ksIdleThread s))
-   (UNIV \<inter> {s. target_' s = tcb_ptr_to_ctcb_ptr thread}) []
-   (suspend thread) (Call suspend_'proc)"
+     (invs' and sch_act_simple and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and tcb_at' thread
+      and (\<lambda>s. thread \<noteq> ksIdleThread s))
+     \<lbrace>\<acute>target = tcb_ptr_to_ctcb_ptr thread\<rbrace> []
+     (suspend thread) (Call suspend_'proc)"
   apply (cinit lift: target_')
-  apply (rule ccorres_stateAssert)
+   apply (rule ccorres_stateAssert)
    apply (ctac(no_vcg) add: cancelIPC_ccorres1 [OF cteDeleteOne_ccorres])
     apply (rule getThreadState_ccorres_foo)
     apply (rename_tac threadState)
@@ -1444,7 +1449,7 @@ lemma suspend_ccorres:
           apply (ctac (no_vcg) add: updateRestartPC_ccorres)
          apply (rule ccorres_return_Skip)
         apply ceqv
-       apply (ctac(no_vcg) add: setThreadState_ccorres_valid_queues'_simple)
+       apply (ctac(no_vcg) add: setThreadState_ccorres_simple)
         apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
          apply (ctac (no_vcg) add: tcbReleaseRemove_ccorres)
           apply (ctac (no_vcg) add: schedContext_cancelYieldTo_ccorres)
@@ -1454,10 +1459,12 @@ lemma suspend_ccorres:
     apply clarsimp
     apply (rule conseqPre, vcg)
     apply (rule subset_refl)
-   apply (rule_tac Q="\<lambda>_. invs' and tcb_at' thread" in hoare_post_imp)
+   apply (rule_tac Q="\<lambda>_ s. invs' s \<and> tcb_at' thread s \<and> sch_act_simple s
+                            \<and> weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp)
     apply fastforce
    apply (wpsimp wp: hoare_vcg_all_lift)
-  by (auto simp: ThreadState_defs)[1]
+  apply (auto simp: ThreadState_defs)
+  done
 
 lemma cap_to_H_NTFNCap_tag:
   "\<lbrakk> cap_to_H cap = NotificationCap word1 word2 a b;

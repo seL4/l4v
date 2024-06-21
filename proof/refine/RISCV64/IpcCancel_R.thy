@@ -360,13 +360,14 @@ lemma blocked_cancelIPC_corres:
 
 lemma cancelSignal_corres:
   "corres dc
-          (invs and valid_ready_qs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t)
-          (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) t)
-          (cancel_signal t ntfn)
-          (cancelSignal t ntfn)"
+     (invs and valid_ready_qs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t)
+     (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) t)
+     (cancel_signal t ntfn) (cancelSignal t ntfn)"
   apply add_sym_refs
   apply add_ready_qs_runnable
   apply (simp add: cancel_signal_def cancelSignal_def Let_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (clarsimp simp: sym_refs_asrt_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply clarsimp
   apply (rule corres_guard_imp)
@@ -1775,7 +1776,7 @@ lemma cancelSignal_invs':
       done
     show ?thesis
       apply (simp add: cancelSignal_def invs'_def Let_def valid_dom_schedule'_def)
-      apply (rule bind_wp[OF _ stateAssert_sp])
+      apply (intro bind_wp[OF _ stateAssert_sp])
       apply (wp valid_irq_node_lift sts_sch_act' irqs_masked_lift
                 hoare_vcg_all_lift [OF set_ntfn'.ksReadyQueues]
                 setThreadState_ct_not_inQ NTFNSN set_ntfn'.get_wp
@@ -1996,10 +1997,8 @@ lemma cancelIPC_st_tcb_at:
   done
 
 lemma weak_sch_act_wf_lift_linear:
-  "\<lbrakk> \<And>t. \<lbrace>\<lambda>s. sa s \<noteq> SwitchToThread t\<rbrace> f \<lbrace>\<lambda>rv s. sa s \<noteq> SwitchToThread t\<rbrace>;
-     \<And>t. \<lbrace>st_tcb_at' runnable' t\<rbrace> f \<lbrace>\<lambda>rv. st_tcb_at' runnable' t\<rbrace>;
-     \<And>t. \<lbrace>tcb_in_cur_domain' t\<rbrace> f \<lbrace>\<lambda>rv. tcb_in_cur_domain' t\<rbrace> \<rbrakk>
-       \<Longrightarrow> \<lbrace>\<lambda>s. weak_sch_act_wf (sa s) s\<rbrace> f \<lbrace>\<lambda>rv s. weak_sch_act_wf (sa s) s\<rbrace>"
+  "\<lbrakk> \<And>t. f \<lbrace>\<lambda>s. sa s \<noteq> SwitchToThread t\<rbrace>; \<And>t. f \<lbrace>tcb_at' t\<rbrace> \<rbrakk>
+   \<Longrightarrow> f \<lbrace>\<lambda>s. weak_sch_act_wf (sa s) s\<rbrace>"
   apply (simp only: weak_sch_act_wf_def imp_conv_disj)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift hoare_vcg_conj_lift)
   apply simp_all
@@ -2069,17 +2068,12 @@ lemma setObject_ntfn_sa_unchanged[wp]:
   done
 
 lemma setNotification_weak_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
-    setNotification ntfnptr ntfn
-   \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (wp hoare_vcg_all_lift hoare_convert_imp hoare_vcg_conj_lift
-         | simp add: weak_sch_act_wf_def st_tcb_at'_def tcb_in_cur_domain'_def)+
-   apply wps
-   apply (wpsimp simp: o_def)+
-  done
+  "setNotification ntfnptr ntfn \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  by (wpsimp wp: hoare_vcg_all_lift hoare_convert_imp hoare_vcg_conj_lift
+           simp: weak_sch_act_wf_def)+
 
 lemmas ipccancel_weak_sch_act_wfs
-    = weak_sch_act_wf_lift[OF _ setCTE_pred_tcb_at']
+    = weak_sch_act_wf_lift[OF _ setCTE.typ_at_lifts_all'(1)]
 
  (* prevents wp from splitting on the when; stronger technique than hoare_when_weak_wp
     FIXME: possible to replace with hoare_when_weak_wp?
@@ -2802,46 +2796,10 @@ lemma ep'_Idle_case_helper:
   "(case ep of IdleEP \<Rightarrow> a | _ \<Rightarrow> b) = (if (ep = IdleEP) then a else b)"
   by (cases ep, simp_all)
 
-lemma rescheduleRequired_notresume:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>
-    rescheduleRequired \<lbrace>\<lambda>_ s. ksSchedulerAction s = ChooseNewThread\<rbrace>"
-  proof -
-    have ssa: "\<lbrace>\<top>\<rbrace> setSchedulerAction ChooseNewThread
-               \<lbrace>\<lambda>_ s. ksSchedulerAction s = ChooseNewThread\<rbrace>"
-      by (simp add: setSchedulerAction_def | wp)+
-    show ?thesis
-      by (simp add: rescheduleRequired_def, wp ssa)
-  qed
-
-lemma setThreadState_ResumeCurrentThread_imp_notct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
-   setThreadState st t
-   \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-proof -
-  have nrct:
-    "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>
-     rescheduleRequired
-     \<lbrace>\<lambda>_ s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>"
-    by (rule hoare_strengthen_post [OF rescheduleRequired_notresume], simp)
-  show ?thesis
-  apply (simp add: setThreadState_def scheduleTCB_def)
-  apply (wpsimp wp: hoare_vcg_imp_lift [OF nrct] isSchedulable_wp hoare_vcg_if_lift2)
-   apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp)
-    apply clarsimp
-   apply (rule hoare_convert_imp [OF threadSet.ksSchedulerAction threadSet.ct])
-  apply assumption
-  done
-qed
-
 lemma replyUnlink_valid_irq_node'[wp]:
   "replyUnlink r t \<lbrace>\<lambda> s. valid_irq_node' (irq_node' s) s\<rbrace>"
   unfolding replyUnlink_def
   by (wpsimp wp: valid_irq_node_lift gts_wp')
-
-lemma weak_sch_act_wf_D1:
-  "weak_sch_act_wf sa s \<Longrightarrow> (\<forall>t. sa = SwitchToThread t \<longrightarrow> st_tcb_at' runnable' t s)"
-  by (simp add: weak_sch_act_wf_def)
 
 lemma updateSchedContext_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and
@@ -2970,7 +2928,7 @@ lemma cancel_all_invs'_helper:
                     hoare_vcg_const_Ball_lift sts_st_tcb'
                     possibleSwitchTo_sch_act_not_other)
        apply (wpsimp wp: valid_irq_node_lift hoare_vcg_const_Ball_lift sts_st_tcb' sts_sch_act'
-                  split: if_splits | strengthen weak_sch_act_wf_D1)+
+                  split: if_splits)
      apply (wp hoare_drop_imp)
     apply (wpsimp wp: hoare_vcg_const_Ball_lift hoare_vcg_all_lift gts_wp' hoare_vcg_imp_lift
                       replyUnlink_valid_objs' replyUnlink_st_tcb_at'
@@ -3079,7 +3037,7 @@ lemma ct_not_in_ntfnQueue:
 
 lemma sch_act_wf_weak[elim!]:
   "sch_act_wf sa s \<Longrightarrow> weak_sch_act_wf sa s"
-  by (case_tac sa, (simp add: weak_sch_act_wf_def)+)
+  by (clarsimp simp: weak_sch_act_wf_def)
 
 crunches setEndpoint, setNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers

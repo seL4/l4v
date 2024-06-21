@@ -1226,14 +1226,15 @@ crunches suspend
 
 lemma invokeTCB_CopyRegisters_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
-   (invs' and tcb_at' destn and tcb_at' source
-          and ex_nonz_cap_to' destn and ex_nonz_cap_to' source)
-   (UNIV \<inter> {s. dest___ptr_to_struct_tcb_C_' s = tcb_ptr_to_ctcb_ptr destn}
-         \<inter> {s. tcb_src_' s = tcb_ptr_to_ctcb_ptr source}
-         \<inter> {s. to_bool (resumeTarget_' s) = resume}
-         \<inter> {s. to_bool (suspendSource_' s) = susp}
-         \<inter> {s. to_bool (transferFrame_' s) = frames}
-         \<inter> {s. to_bool (transferInteger_' s) = ints}) []
+     (invs' and sch_act_simple and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and tcb_at' destn and tcb_at' source
+      and ex_nonz_cap_to' destn and ex_nonz_cap_to' source)
+     (\<lbrace>\<acute>dest = tcb_ptr_to_ctcb_ptr destn\<rbrace>
+      \<inter> \<lbrace>\<acute>tcb_src = tcb_ptr_to_ctcb_ptr source\<rbrace>
+      \<inter> \<lbrace>to_bool \<acute>resumeTarget = resume\<rbrace>
+      \<inter> \<lbrace>to_bool \<acute>suspendSource = susp\<rbrace>
+      \<inter> \<lbrace>to_bool \<acute>transferFrame = frames\<rbrace>
+      \<inter> \<lbrace>to_bool \<acute>transferInteger = ints\<rbrace>) []
    (invokeTCB (CopyRegisters destn source susp resume frames ints arch))
    (Call invokeTCB_CopyRegisters_'proc)"
   apply (cinit lift: dest___ptr_to_struct_tcb_C_' tcb_src_' resumeTarget_'
@@ -1317,16 +1318,17 @@ lemma invokeTCB_CopyRegisters_ccorres:
           apply (simp add: pred_conj_def guard_is_UNIV_def cong: if_cong
                   | wp mapM_x_wp_inv hoare_drop_imp)+
       apply clarsimp
-      apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' destn"
+      apply (rule_tac Q="\<lambda>_. invs' and tcb_at' destn
+                             and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)"
                    in hoare_strengthen_post[rotated])
        apply (fastforce simp: sch_act_wf_weak)
       apply (wpsimp wp: hoare_drop_imp restart_invs')+
      apply (clarsimp simp add: guard_is_UNIV_def)
     apply (wp hoare_drop_imp hoare_vcg_if_lift)+
     apply simp
-    apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' destn and ex_nonz_cap_to' destn"
+    apply (rule_tac Q="\<lambda>rv. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and tcb_at' destn and ex_nonz_cap_to' destn"
                  in hoare_strengthen_post[rotated])
-     apply (fastforce intro: global'_no_ex_cap)
+     apply (fastforce dest: global'_no_ex_cap)
     apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp add: guard_is_UNIV_def)
   apply (clarsimp simp: invs_valid_objs'
@@ -1776,8 +1778,9 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
 
 lemma invokeTCB_Suspend_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and tcb_at' t and ex_nonz_cap_to' t)
-     {s. thread_' s = tcb_ptr_to_ctcb_ptr t} []
+     (invs' and sch_act_simple and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and tcb_at' t and ex_nonz_cap_to' t)
+     \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace> []
    (invokeTCB (Suspend t)) (Call invokeTCB_Suspend_'proc)"
   apply (cinit lift: thread_')
    apply (simp add: liftE_def return_returnOk)
@@ -1855,6 +1858,9 @@ lemma lookupIPCBuffer_Some_0:
 lemma asUser_valid_ipc_buffer_ptr':
   "\<lbrace> valid_ipc_buffer_ptr' p \<rbrace> asUser t m \<lbrace> \<lambda>rv s. valid_ipc_buffer_ptr' p s \<rbrace>"
   by (simp add: valid_ipc_buffer_ptr'_def, wp, auto simp: valid_ipc_buffer_ptr'_def)
+
+crunches setMessageInfo, storeWordUser
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
 lemma invokeTCB_ReadRegisters_ccorres:
 notes
@@ -2186,7 +2192,7 @@ shows
                           apply (clarsimp simp: ThreadState_defs mask_def)
                          apply (rule mapM_x_wp')
                          apply (rule hoare_pre)
-                          apply (wpsimp wp: sch_act_wf_lift tcb_in_cur_domain'_lift)
+                          apply (wpsimp wp: weak_sch_act_wf_lift tcb_in_cur_domain'_lift)
                          apply fastforce
                         apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                         apply (simp add: message_info_to_H_def)
@@ -2254,7 +2260,8 @@ shows
         apply wp
        apply (simp add: Collect_const_mem ThreadState_defs mask_def)
        apply vcg
-      apply (rule_tac Q="\<lambda>_. invs' and st_tcb_at' ((=) Restart) thread and tcb_at' target"
+      apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+                             and st_tcb_at' ((=) Restart) thread and tcb_at' target"
                    in hoare_post_imp)
        apply (clarsimp simp: pred_tcb_at')
        apply (auto elim!: pred_tcb'_weakenE)[1]

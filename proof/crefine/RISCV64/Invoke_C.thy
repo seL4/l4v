@@ -40,9 +40,12 @@ lemma cap_case_ThreadCap2:
   by (simp add: isCap_simps
          split: capability.split)
 
+crunches tcbSchedEnqueue
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+
 lemma setDomain_ccorres:
   "ccorres dc xfdc
-      (invs' and tcb_at' t and (\<lambda>s. d \<le> maxDomain))
+      (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and tcb_at' t and (\<lambda>s. d \<le> maxDomain))
       (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. dom_' s = ucast d})
       [] (setDomain t d) (Call setDomain_'proc)"
   apply (rule ccorres_gen_asm)
@@ -75,12 +78,14 @@ lemma setDomain_ccorres:
        apply (simp add: guard_is_UNIV_def)
       apply simp
       apply wp
-     apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
+     apply (rule_tac Q="\<lambda>rv'. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+                              and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
        apply (wpsimp wp: isSchedulable_wp)
       apply (fastforce simp: valid_pspace_valid_objs' weak_sch_act_wf_def
                       split: if_splits)
-     apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
+     apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+                            and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
       apply (wpsimp wp: threadSet_tcbDomain_update_invs' hoare_vcg_imp_lift'
                         threadSet_isSchedulable_bool)+

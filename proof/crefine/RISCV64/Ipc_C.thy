@@ -4596,7 +4596,8 @@ lemma sendIPC_dequeue_ccorres_helper:
 lemma sendIPC_block_ccorres_helper:
   "ccorres dc xfdc (tcb_at' thread and valid_objs' and pspace_canonical' and
                     sch_act_not thread and ep_at' epptr and
-                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
+                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and no_0_obj' and
+                    pspace_aligned' and pspace_distinct' and
                     K (bos = ThreadState_BlockedOnSend
                       \<and> epptr' = epptr \<and> badge' = badge
                       \<and> cg = from_bool canGrant \<and> cgr = from_bool canGrantReply
@@ -4654,8 +4655,8 @@ lemma sendIPC_block_ccorres_helper:
                        split: bool.split)
        apply ceqv
       apply clarsimp
-      apply ctac
-     apply (wp threadSet_weak_sch_act_wf_runnable' threadSet_valid_objs')
+      apply (ctac add: scheduleTCB_ccorres)
+     apply (wp threadSet_valid_objs')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
                          tcb_cte_cases_def cteSizeBits_def)
@@ -6333,6 +6334,7 @@ lemma receiveSignal_block_ccorres_helper:
   "ccorres dc xfdc (tcb_at' thread and sch_act_not thread and
                     valid_objs' and ntfn_at' ntfnptr and pspace_canonical' and
                     (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
+                    no_0_obj' and pspace_aligned' and pspace_distinct' and
                     K (ntfnptr = ntfnptr && ~~ mask 4))
                    UNIV hs
            (setThreadState (Structures_H.thread_state.BlockedOnNotification
@@ -6367,8 +6369,8 @@ lemma receiveSignal_block_ccorres_helper:
         apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
        apply ceqv
       apply clarsimp
-      apply ctac
-     apply (wp hoare_vcg_all_lift threadSet_valid_objs' threadSet_weak_sch_act_wf_runnable')
+      apply (ctac add: scheduleTCB_ccorres)
+     apply (wp hoare_vcg_all_lift threadSet_valid_objs')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (auto simp: weak_sch_act_wf_def valid_tcb'_def tcb_cte_cases_def
                      valid_tcb_state'_def obj_at'_is_canonical cteSizeBits_def)

@@ -1087,7 +1087,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
     apply (clarsimp simp: ct_in_state'_def isCap_simps valid_tcb_state'_def)
     apply (case_tac v1; clarsimp) (* is PT mapped *)
      apply (auto simp: ct_in_state'_def isCap_simps valid_tcb_state'_def valid_cap'_def
-                       wellformed_mapdata'_def sch_act_wf_def sch_act_simple_def
+                       wellformed_mapdata'_def weak_sch_act_wf_def sch_act_simple_def
                 elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
     done
   apply (rule conjI)
@@ -1102,7 +1102,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
                            slotcap_in_mem_def dest!: ctes_of_valid')
     by (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
-                   sch_act_wf_def sch_act_simple_def
+                   weak_sch_act_wf_def sch_act_simple_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
 
   apply (rule conjI)
@@ -2105,7 +2105,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
   subgoal
     by (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
-                   sch_act_wf_def sch_act_simple_def
+                   weak_sch_act_wf_def sch_act_simple_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
 
   (* RISCVPageUnMap, Haskell side *)
@@ -2113,7 +2113,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
   subgoal
     by (auto simp: isCap_simps comp_def ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
-                   sch_act_wf_def sch_act_simple_def
+                   weak_sch_act_wf_def sch_act_simple_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
 
   (* C side of precondition satisfaction *)
@@ -2847,6 +2847,10 @@ lemma decodeRISCVMMUInvocation_ccorres:
     apply (rule conjI; clarsimp)+
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (intro conjI)
+             apply fastforce
+            apply fastforce
+           apply fastforce
+          apply fastforce
          apply fastforce
         apply (fastforce elim!: pred_tcb'_weakenE)
        apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def)
@@ -2864,6 +2868,10 @@ lemma decodeRISCVMMUInvocation_ccorres:
    apply (clarsimp simp: isCap_simps valid_tcb_state'_def)
    apply (frule invs_arch_state', clarsimp)
    apply (intro conjI)
+           apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
+          apply fastforce
+         apply fastforce
+        apply fastforce
        apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
       apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
      apply (cases extraCaps; simp)
