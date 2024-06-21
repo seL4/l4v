@@ -111,14 +111,16 @@ runnable; this is to prevent it being inserted in the scheduler queue.
 
 > isSchedulable :: PPtr TCB -> Kernel Bool
 > isSchedulable tcbPtr = do
->     tcb <- getObject tcbPtr
->     if tcbSchedContext tcb == Nothing
+>     runnable <- isRunnable tcbPtr
+>     scPtrOpt <- threadGet tcbSchedContext tcbPtr
+>     stateAssert valid_tcbs'_asrt "valid_tcbs' holds"
+>     if scPtrOpt == Nothing
 >         then return False
 >         else do
->             sc <- getSchedContext $ fromJust $ tcbSchedContext tcb
->             runnable <- isRunnable tcbPtr
+>             let scPtr = fromJust scPtrOpt
+>             active <- scActive scPtr
 >             inReleaseQ <- inReleaseQueue tcbPtr
->             return $! runnable && scRefillMax sc > 0 && not inReleaseQ
+>             return $ runnable && active && not inReleaseQ
 
 \subsubsection{Suspending a Thread}
 

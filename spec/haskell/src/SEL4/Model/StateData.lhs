@@ -521,3 +521,8 @@ An assert that will say that there is a scheduling context at the given pointer
 
 > sc_at'_asrt :: PPtr SchedContext -> KernelState -> Bool
 > sc_at'_asrt _ _ = True
+
+An assert that will say that valid_tcbs' holds
+
+> valid_tcbs'_asrt :: KernelState -> Bool
+> valid_tcbs'_asrt _ = True

@@ -373,38 +373,6 @@ lemma invokeTCB_WriteRegisters_corres:
   apply (fastforce dest: valid_sched_valid_ready_qs)
   done
 
-lemma tcbSchedDequeue_ResumeCurrentThread_imp_notct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
-   tcbSchedDequeue t
-   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  by (wp hoare_convert_imp)
-
-lemma updateRestartPC_ResumeCurrentThread_imp_notct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
-   updateRestartPC t
-   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  unfolding updateRestartPC_def
-  apply (wp hoare_convert_imp)
-  done
-
-lemma schedContextCancelYieldTo_ResumeCurrentThread_imp_notct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
-   schedContextCancelYieldTo t
-   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  by (wp hoare_convert_imp)
-
-lemma tcbReleaseRemove_ResumeCurrentThread_imp_notct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
-   tcbReleaseRemove t
-   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  by (wp hoare_convert_imp)
-
-lemma suspend_ResumeCurrentThread_imp_notct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
-   suspend t
-   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  by (wpsimp simp: suspend_def wp_del: getThreadState_only_state_wp)
-
 lemma invokeTCB_CopyRegisters_corres:
   "corres (dc \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and

@@ -250,13 +250,13 @@ lemma decodeIRQHandlerInvocation_ccorres:
       apply (rule ccorres_alternative2)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (wp sts_invs_minor')+
-    apply (rule ccorres_equals_throwError)
-     apply (fastforce simp: invocationCatch_def throwError_bind
-                      split: gen_invocation_labels.split)
-    apply (simp add: ccorres_cond_iffs cong: StateSpace.state.fold_congs globals.fold_congs)
-    apply (rule syscall_error_throwError_ccorres_n)
-    apply (simp add: syscall_error_to_H_cases)
-   apply simp
+   apply (rule ccorres_equals_throwError)
+    apply (fastforce simp: invocationCatch_def throwError_bind
+                     split: gen_invocation_labels.split)
+   apply (simp add: ccorres_cond_iffs cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (rule syscall_error_throwError_ccorres_n)
+   apply (simp add: syscall_error_to_H_cases)
+  apply simp
   apply (clarsimp simp: Collect_const_mem)
   apply (clarsimp simp: invs_valid_objs'
                         ct_in_state'_def
@@ -270,16 +270,18 @@ lemma decodeIRQHandlerInvocation_ccorres:
                     slotcap_in_mem_def valid_tcb_state'_def
              dest!: interpret_excaps_eq split: bool.splits)
   apply (intro conjI impI allI)
-  apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
-                    excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                    slotcap_in_mem_def valid_tcb_state'_def
-             dest!: interpret_excaps_eq split: bool.splits)+
-     apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[6]
+                 apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
+                                   excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
+                                   slotcap_in_mem_def valid_tcb_state'_def
+                            dest!: interpret_excaps_eq split: bool.splits)+
+            apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[6]
+      apply fastforce
+     apply fastforce
     apply (drule ctes_of_valid')
      apply fastforce
     apply (clarsimp simp add:valid_cap_simps' RISCV64.maxIRQ_def)
     apply (erule order.trans,simp)
-  apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')
+   apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')
   done
 
 declare mask_of_mask[simp]

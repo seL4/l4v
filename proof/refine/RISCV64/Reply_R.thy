@@ -593,7 +593,7 @@ lemma replyUnlink_weak_sch_act_wf[wp]:
   "replyUnlink r t \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp only: replyUnlink_def liftM_def)
   apply (wpsimp wp: sts_sch_act' gts_wp')
-  by (fastforce simp: replyUnlink_assertion_def st_tcb_at'_def obj_at'_def weak_sch_act_wf_def)
+  done
 
 lemma replyRemoveTCB_sch_act_wf:
   "replyRemoveTCB tptr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"

@@ -514,6 +514,8 @@ lemma refill_size_length_scRefills_helper:
                    simp: refillSizeBytes_def word_bits_def)
   done
 
+crunch (empty_fail) empty_fail[wp]: getSchedContext
+
 lemma refill_size_ccorres:
   "ccorres (\<lambda>rv rv'. rv = unat rv') ret__unsigned_long_'
      (sc_at' scPtr and valid_objs' and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []

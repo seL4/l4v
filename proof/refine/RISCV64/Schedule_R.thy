@@ -2673,32 +2673,22 @@ lemma rescheduleRequired_sch_act_sane[wp]:
 crunch sch_act_sane[wp]: setThreadState, setBoundNotification "sch_act_sane"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma weak_sch_act_wf_at_cross:
+lemma weak_sch_act_wf_cross:
   assumes sr: "(s,s') \<in> state_relation"
   assumes aligned: "pspace_aligned s"
   assumes distinct: "pspace_distinct s"
-  assumes t: "valid_sched_action s"
+  assumes t: "weak_valid_sched_action s"
   shows "weak_sch_act_wf (ksSchedulerAction s') s'"
   using assms
-  apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def weak_sch_act_wf_def)
+  apply (clarsimp simp: weak_valid_sched_action_def weak_sch_act_wf_def)
   apply (frule state_relation_sched_act_relation)
   apply (rename_tac t)
   apply (drule_tac x=t in spec)
   apply (prop_tac "scheduler_action s = switch_thread t")
-   apply (metis sched_act_relation.simps Structures_A.scheduler_action.exhaust
-                scheduler_action.simps)
-  apply (intro conjI impI)
-   apply (rule st_tcb_at_runnable_cross; fastforce?)
-   apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: switch_in_cur_domain_def in_cur_domain_def etcb_at_def vs_all_heap_simps)
-  apply (prop_tac "tcb_at t s")
-   apply (clarsimp simp: obj_at_def is_tcb_def)
-  apply (frule state_relation_pspace_relation)
-  apply (frule (3) tcb_at_cross)
-  apply (clarsimp simp: tcb_in_cur_domain'_def obj_at'_def)
-  apply (frule curdomain_relation)
-  apply (frule (2) pspace_relation_tcb_domain_priority)
-  apply simp
+   subgoal
+     by (metis sched_act_relation.simps Structures_A.scheduler_action.exhaust
+               scheduler_action.simps)
+  apply (auto simp: obj_at_def is_tcb_def vs_all_heap_simps intro: tcb_at_cross)
   done
 
 lemma tcb_sched_enqueue_in_correct_ready_q[wp]:
@@ -3347,6 +3337,14 @@ lemma threadGet_wp':
   apply (wp getObject_tcb_wp)
   done
 
+crunches setEndpoint, setReply, setNotification
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: weak_sch_act_wf_lift)
+
+crunches restart, suspend
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma setNextInterrupt_corres:
   "corres dc ((\<lambda>s. active_sc_tcb_at (cur_thread s) s)
               and (\<lambda>s. \<forall>t \<in> set (release_queue s). active_sc_tcb_at t s)
@@ -3632,14 +3630,6 @@ lemma no_fail_getRefillHead[wp]:
   apply (wpsimp simp: getRefillHead_def)
   apply (erule no_ofailD[OF no_ofail_readRefillHead])
   done
-
-lemma no_ofail_readScActive[wp]:
-  "no_ofail (sc_at' scPtr) (readScActive scPtr)"
-  unfolding readScActive_def readSchedContext_def
-  by (wpsimp wp_del: ovalid_readObject)
-
-lemmas no_fail_scActive[wp] =
-  no_ofail_gets_the[OF no_ofail_readScActive, simplified scActive_def[symmetric]]
 
 lemma no_fail_refillPopHead[wp]:
   "no_fail (sc_at' scPtr) (refillPopHead scPtr)"
@@ -5028,22 +5018,19 @@ lemma schedule_corres:
      apply fastforce
     apply (wpsimp wp: awaken_invs')
    apply (corresKsimp corres: awaken_corres)
-   apply (fastforce intro: weak_sch_act_wf_at_cross dest: valid_sched_valid_ready_qs
-                     simp: invs_def valid_state_def)
+   apply (fastforce dest: valid_sched_valid_ready_qs simp: invs_def valid_state_def)
   apply (rule corres_split_skip)
      apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
     apply wpsimp
    apply (corresKsimp corres: checkDomainTime_corres)
-   apply (fastforce intro: weak_sch_act_wf_at_cross dest: valid_sched_valid_ready_qs
-                     simp: invs_def valid_state_def)
+   apply (fastforce dest: valid_sched_valid_ready_qs simp: invs_def valid_state_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurThread_sp])
    apply corresKsimp
   apply clarsimp
   apply (rename_tac curThread)
   apply (rule corres_underlying_split[rotated 2, OF is_schedulable_sp' isSchedulable_sp])
    apply (corresKsimp corres: isSchedulable_corres)
-   apply (fastforce intro: weak_sch_act_wf_at_cross
-                     simp: invs_def valid_state_def state_relation_def cur_tcb_def)
+   apply (fastforce simp: invs_def valid_state_def state_relation_def cur_tcb_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getSchedulerAction_sp])
    apply (corresKsimp corres: getSchedulerAction_corres)
 
