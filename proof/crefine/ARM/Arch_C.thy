@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -49,11 +50,11 @@ lemma performPageTableInvocationUnmap_ccorres:
         apply (ctac add: unmapPageTable_ccorres)
           apply csymbr
           apply (simp add: storePTE_def swp_def)
-          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres[unfolded dc_def])
+          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres)
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
-       apply (simp add: to_bool_def)
+       apply simp
        apply (rule ccorres_return_Skip')
       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
       apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
@@ -396,7 +397,9 @@ shows
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_abstract_cleanup)
       apply (rule ccorres_symb_exec_l)
-        apply (rule_tac P = "rva = (capability.UntypedCap isdev frame pageBits idx)" in ccorres_gen_asm)
+        apply (rename_tac pcap)
+        apply (rule_tac P = "pcap = (capability.UntypedCap isdev frame pageBits idx)"
+                 in ccorres_gen_asm)
         apply (simp add: hrs_htd_update del:fun_upd_apply)
         apply (rule ccorres_split_nothrow)
 
@@ -531,10 +534,10 @@ shows
                          pageBits_def
                    split: if_split)
   apply (clarsimp simp: ARMSmallPageBits_def word_sle_def is_aligned_mask[symmetric]
-                        ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+                        ghost_assertion_data_get_gs_clear_region)
   apply (subst ghost_assertion_size_logic_flex[unfolded o_def, rotated])
      apply assumption
-    apply (simp add: ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+    apply (simp add: ghost_assertion_data_get_gs_clear_region)
    apply (drule valid_global_refsD_with_objSize, clarsimp)+
    apply (clarsimp simp: isCap_simps dest!: ccte_relation_ccap_relation)
   apply (cut_tac ptr=frame and bits=12
@@ -795,7 +798,7 @@ lemma decodeARMPageTableInvocation_ccorres:
             apply vcg
            apply (rule conseqPre, vcg)
            apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                 syscall_error_to_H_cases exception_defs false_def)
+                                 syscall_error_to_H_cases exception_defs)
            apply (erule lookup_failure_rel_fault_lift[rotated])
            apply (simp add: exception_defs)
           apply simp
@@ -837,7 +840,7 @@ lemma decodeARMPageTableInvocation_ccorres:
                          slotcap_in_mem_def)
    apply (auto dest: ctes_of_valid')[1]
   apply (rule conjI)
-   apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs"
+   apply (clarsimp simp: rf_sr_ksCurThread ThreadState_defs
                          mask_eq_iff_w2p word_size
                          ct_in_state'_def st_tcb_at'_def
                          word_sle_def word_sless_def
@@ -863,7 +866,7 @@ lemma decodeARMPageTableInvocation_ccorres:
   apply (subst array_assertion_abs_pd, erule conjI,
     simp add: unat_eq_0 unat_shiftr_le_bound pdBits_def pageBits_def pdeBits_def)
   apply (clarsimp simp: rf_sr_ksCurThread mask_def[where n=4]
-                        "StrictC'_thread_state_defs"
+                        ThreadState_defs
                         ccap_relation_def cap_to_H_def
                         cap_lift_page_table_cap word_bw_assocs
                         shiftr_shiftl1 mask_def[where n=18])
@@ -888,8 +891,8 @@ lemma checkVPAlignment_spec:
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
    apply (simp add: pageBitsForSize_def split: vmpage_size.split)
-  apply (simp add: from_bool_def vmsz_aligned'_def is_aligned_mask
-                   mask_def split: if_split)
+  apply (simp add: vmsz_aligned'_def is_aligned_mask mask_def
+            split: if_split)
   done
 
 definition
@@ -1031,9 +1034,9 @@ lemma createSafeMappingEntries_PDE_ccorres:
     apply (clarsimp simp: pde_get_tag_alt cpde_relation_pde_case
                           pde_tag_defs fst_throwError_returnOk
                           pde_range_relation_def ptr_range_to_list_def
-                          exception_defs isRight_def from_bool_def[where b=True]
+                          exception_defs isRight_def
                           syscall_error_rel_def syscall_error_to_H_cases)
-    apply (clarsimp simp: cpde_relation_def true_def false_def)
+    apply (clarsimp simp: cpde_relation_def)
    apply (rule ccorres_Cond_rhs)
     apply (simp del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
@@ -1073,7 +1076,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                     apply (rule allI, rule conseqPre, vcg)
                     apply (clarsimp simp: if_1_0_0 return_def typ_heap_simps Let_def)
                     apply (simp add: isPageTablePDE_def isSectionPDE_def
-                                     cpde_relation_pde_case from_bool_def)
+                                     cpde_relation_pde_case)
                     apply (intro impI conjI disjCI2, simp_all add: array_assertion_shrink_right)[1]
                     apply (clarsimp simp: pde_tag_defs  split: if_split bool.split)
                     apply (frule pde_pde_section_size_0_1[simplified pde_tag_defs, simplified], simp)
@@ -1132,8 +1135,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                         vm_attribs_relation_def
                         superSectionPDEOffsets_def pdeBits_def
                         from_bool_mask_simp[unfolded mask_def, simplified]
-                        ptr_range_to_list_def upto_enum_step_def
-                        o_def upto_enum_word
+                        ptr_range_to_list_def upto_enum_step_def upto_enum_word
                   cong: if_cong)
   apply (frule(1) page_directory_at_rf_sr, clarsimp)
   apply (frule array_ptr_valid_array_assertionD[OF h_t_valid_clift])
@@ -1141,7 +1143,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
     ARMSectionBits_def word_0_sle_from_less
     pageBits_def)
   apply (rule conjI)
-   apply (simp add: cpde_relation_def true_def false_def)
+   apply (simp add: cpde_relation_def)
   apply (simp add: upt_def split: if_split)
   done
 
@@ -1186,11 +1188,9 @@ lemma lookupPTSlot_le_0x3C:
      apply clarsimp
     apply (simp add: word_bits_def)
    apply simp
-  apply (simp add: ARM.ptrFromPAddr_def pptrBaseOffset_def)
-  apply (erule aligned_add_aligned)
-   apply (simp add: pptrBase_def ARM.physBase_def
-     physBase_def is_aligned_def)
-  apply (simp add: word_bits_def pteBits_def)
+  apply (rule is_aligned_ptrFromPAddr_n[rotated], simp)
+  apply (erule is_aligned_weaken)
+  apply (simp add: pteBits_def)
   done
 
 lemma pte_get_tag_exhaust:
@@ -1275,7 +1275,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
          apply vcg
         apply (rule conseqPre, vcg)
         apply (clarsimp simp: fst_throwError_returnOk syscall_error_to_H_cases
-                              syscall_error_rel_def exception_defs false_def)
+                              syscall_error_rel_def exception_defs)
         apply (erule lookup_failure_rel_fault_lift[rotated])
         apply (simp add: exception_defs)
        apply simp
@@ -1373,7 +1373,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
          apply vcg
         apply (rule conseqPre, vcg)
         apply (clarsimp simp: fst_throwError_returnOk syscall_error_rel_def
-                              syscall_error_to_H_cases exception_defs false_def)
+                              syscall_error_to_H_cases exception_defs)
         apply (erule lookup_failure_rel_fault_lift[rotated])
         apply (simp add: exception_defs)
        apply (wp injection_wp[OF refl])
@@ -1392,7 +1392,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
                         from_bool_mask_simp[unfolded mask_def, simplified])
   apply (clarsimp simp: typ_heap_simps pte_range_relation_def
                         ptr_range_to_list_def upto_enum_word)
-  apply (simp add: cpte_relation_def true_def false_def pte_tag_defs)
+  apply (simp add: cpte_relation_def pte_tag_defs)
   using pte_get_tag_exhaust
   apply (auto simp: vmsz_aligned'_def largePagePTEOffsets_def pteBits_def
                     upt_def upto_enum_def upto_enum_step_def)[1]
@@ -1413,7 +1413,7 @@ definition
 lemma valid_pte_slots_lift2:
   "\<lbrakk> \<And>pt. \<lbrace> page_table_at' pt \<rbrace> f \<lbrace> \<lambda>_. page_table_at' pt \<rbrace> \<rbrakk>
     \<Longrightarrow> \<lbrace> valid_pte_slots'2 slots \<rbrace> f \<lbrace> \<lambda>_. valid_pte_slots'2 slots \<rbrace>"
-  apply (cases slots, simp_all add: valid_pte_slots'2_def hoare_post_taut)
+  apply (cases slots, simp_all add: valid_pte_slots'2_def hoare_TrueI)
   apply clarsimp
   apply (wp hoare_vcg_ex_lift hoare_vcg_conj_lift | assumption)+
   done
@@ -1428,17 +1428,9 @@ definition
 lemma valid_pde_slots_lift2:
   "\<lbrakk> \<And>pd. \<lbrace> page_directory_at' pd \<rbrace> f \<lbrace> \<lambda>_. page_directory_at' pd \<rbrace> \<rbrakk>
     \<Longrightarrow> \<lbrace> valid_pde_slots'2 slots \<rbrace> f \<lbrace> \<lambda>_. valid_pde_slots'2 slots \<rbrace>"
-  apply (cases slots, simp_all add: valid_pde_slots'2_def hoare_post_taut)
+  apply (cases slots, simp_all add: valid_pde_slots'2_def hoare_TrueI)
   apply clarsimp
   apply (wp hoare_vcg_ex_lift hoare_vcg_conj_lift | assumption)+
-  done
-
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add:addrFromPPtr_def pptrBaseOffset_def
-    pptrBase_def physBase_def ARM.physBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
   done
 
 lemma pteCheckIfMapped_ccorres:
@@ -1454,7 +1446,7 @@ lemma pteCheckIfMapped_ccorres:
   apply clarsimp
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: typ_heap_simps' return_def)
-  apply (case_tac rv, simp_all add: to_bool_def isInvalidPTE_def pte_tag_defs pte_pte_invalid_def
+  apply (case_tac rv, simp_all add: isInvalidPTE_def pte_tag_defs pte_pte_invalid_def
                                     cpte_relation_def pte_pte_large_lift_def pte_get_tag_def
                                     pte_lift_def Let_def
                              split: if_split_asm)
@@ -1476,13 +1468,13 @@ lemma pdeCheckIfMapped_ccorres:
     (Call pdeCheckIfMapped_'proc)"
   apply (cinit lift: pde___ptr_to_struct_pde_C_')
    apply (rule ccorres_pre_getObject_pde)
-   apply (rule_tac P'="{s. \<exists>pde'. cslift s (pde_Ptr slot) = Some pde' \<and> cpde_relation rv pde'}"
+   apply (rule_tac P'="{s. \<exists>pde'. cslift s (pde_Ptr slot) = Some pde' \<and> cpde_relation pd pde'}"
      in ccorres_from_vcg_throws[where P="\<lambda>s. True"])
    apply simp_all
   apply clarsimp
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: typ_heap_simps' return_def)
-  apply (case_tac rv, simp_all add: to_bool_def cpde_relation_invalid isInvalidPDE_def
+  apply (case_tac pd, simp_all add: cpde_relation_invalid isInvalidPDE_def
                              split: if_split)
   done
 
@@ -1566,7 +1558,7 @@ lemma performPageInvocationMapPTE_ccorres:
             apply (rule allI, rule conseqPre, vcg)
             apply (clarsimp simp:return_def)
            apply (rule wp_post_taut)
-          apply (simp add: to_bool_def)
+          apply simp
           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp:return_def)
@@ -1803,7 +1795,7 @@ lemma performPageInvocationMapPDE_ccorres:
              apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def)
             apply vcg
             apply simp
-           apply (wp valid_pde_slots_lift2)
+           apply (wpsimp wp: valid_pde_slots_lift2)
           apply clarsimp
           apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def)
           apply (rule order_less_le_trans)
@@ -1827,12 +1819,12 @@ lemma performPageInvocationMapPDE_ccorres:
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp:return_def)
           apply wp [1]
-         apply (simp add: to_bool_def)
+         apply simp
          apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
          apply (rule allI, rule conseqPre, vcg)
          apply (clarsimp simp:return_def)
         apply (wp hoare_vcg_const_imp_lift) [1]
-       apply (clarsimp simp: to_bool_def)
+       apply clarsimp
        apply (rule hoare_strengthen_post)
         apply (rule_tac Q'="\<lambda>rv s. valid_pde_mappings' s
                 \<and> valid_pde_slots'2 mapping s
@@ -1898,8 +1890,6 @@ lemma setMRs_single:
 (* usually when we call setMR directly, we mean to only set a single message register
    which will fit in actual registers *)
 lemma setMR_as_setRegister_ccorres:
-  notes dc_simp[simp del]
-  shows
   "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
       (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
       (UNIV \<inter> \<lbrace>\<acute>reg = val\<rbrace>
@@ -1916,8 +1906,8 @@ lemma setMR_as_setRegister_ccorres:
    apply (ctac add: setRegister_ccorres)
      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: dc_def return_def)
-    apply (rule hoare_post_taut[of \<top>])
+     apply (clarsimp simp: return_def)
+    apply (rule hoare_TrueI[of \<top>])
    apply (vcg exspec=setRegister_modifies)
   apply (clarsimp simp: length_msgRegisters n_msgRegisters_def not_le conj_commute)
   apply (subst msgRegisters_ccorres[symmetric])
@@ -1926,7 +1916,7 @@ lemma setMR_as_setRegister_ccorres:
   done
 
 lemma performPageGetAddress_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
@@ -1952,8 +1942,8 @@ lemma performPageGetAddress_ccorres:
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply clarsimp
        apply (rule conseqPre, vcg)
-       apply (clarsimp simp: return_def dc_simp)
-      apply (rule hoare_post_taut[of \<top>])
+       apply (clarsimp simp: return_def)
+      apply (rule hoare_TrueI[of \<top>])
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
      apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
@@ -1975,8 +1965,8 @@ lemma performPageGetAddress_ccorres:
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                  apply (rule allI, rule conseqPre, vcg)
-                 apply (clarsimp simp: return_def dc_def)
-                apply (rule hoare_post_taut[of \<top>])
+                 apply (clarsimp simp: return_def)
+                apply (rule hoare_TrueI[of \<top>])
                apply (vcg exspec=setThreadState_modifies)
               apply wpsimp
              apply (vcg exspec=setRegister_modifies)
@@ -1988,40 +1978,35 @@ lemma performPageGetAddress_ccorres:
                                Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
          apply (vcg exspec=setMR_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def)
+       apply clarsimp
        apply (vcg exspec=setRegister_modifies)
       apply wpsimp
-     apply (clarsimp simp: dc_def ThreadState_Running_def)
+     apply clarsimp
      apply (vcg exspec=lookupIPCBuffer_modifies)
     apply clarsimp
     apply vcg
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
    apply (auto simp: ARM.badgeRegister_def ARM_H.badgeRegister_def Kernel_C.badgeRegister_def
-                     Kernel_C.R0_def fromPAddr_def ThreadState_Running_def
+                     Kernel_C.R0_def fromPAddr_def ThreadState_defs
                      pred_tcb_at'_def obj_at'_def projectKOs ct_in_state'_def)
   done
 
 lemma vmsz_aligned_addrFromPPtr':
-  "vmsz_aligned' (addrFromPPtr p) sz
-       = vmsz_aligned' p sz"
-  apply (simp add: vmsz_aligned'_def addrFromPPtr_def
-                   ARM.addrFromPPtr_def)
-  apply (subgoal_tac "is_aligned pptrBaseOffset (pageBitsForSize sz)")
-   apply (rule iffI)
-    apply (drule(1) aligned_add_aligned)
-      apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
-     apply simp
-   apply (erule(1) aligned_sub_aligned)
-    apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
-  apply (simp add: pageBitsForSize_def pptrBaseOffset_def pptrBase_def
-                   physBase_def ARM.physBase_def is_aligned_def
-            split: vmpage_size.split)
+  "vmsz_aligned' (addrFromPPtr p) sz = vmsz_aligned' p sz"
+  apply (simp add: vmsz_aligned'_def)
+  apply (rule iffI)
+   apply (simp add: addrFromPPtr_def is_aligned_mask)
+   apply (prop_tac "pptrBaseOffset AND mask (pageBitsForSize sz) = 0")
+    apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+   apply (simp flip: mask_eqs(8))
+  apply (erule is_aligned_addrFromPPtr_n)
+  apply (cases sz; clarsimp)
   done
 
 lemmas vmsz_aligned_addrFromPPtr
@@ -2172,7 +2157,7 @@ lemma pte_get_tag_alt:
   by (auto simp add: pte_lift_def Let_def split: if_split_asm)
 
 definition
-  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
+  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option" (* FIXME: consider moving to Lib *)
 where
   "to_option f x \<equiv> if f x then Some x else None"
 
@@ -2187,12 +2172,12 @@ where
 
 lemma resolve_ret_rel_None[simp]:
   "resolve_ret_rel None y = (valid_C y = scast false)"
-  by (clarsimp simp: resolve_ret_rel_def o_def to_option_def false_def to_bool_def split: if_splits)
+  by (clarsimp simp: resolve_ret_rel_def to_option_def to_bool_def split: if_splits)
 
 lemma resolve_ret_rel_Some:
   "\<lbrakk>valid_C y = scast true;  frameSize_C y = framesize_from_H (fst x); snd x = frameBase_C y\<rbrakk>
    \<Longrightarrow> resolve_ret_rel (Some x) y"
-  by (clarsimp simp: resolve_ret_rel_def o_def to_option_def true_def)
+  by (clarsimp simp: resolve_ret_rel_def to_option_def)
 
 lemma resolveVAddr_ccorres:
   "ccorres resolve_ret_rel ret__struct_resolve_ret_C_'
@@ -2462,7 +2447,7 @@ lemma decodeARMFrameInvocation_ccorres:
         apply vcg
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                             syscall_error_to_H_cases exception_defs false_def)
+                             syscall_error_to_H_cases exception_defs)
        apply (erule lookup_failure_rel_fault_lift[rotated])
        apply (simp add: exception_defs)
       apply (wp injection_wp[OF refl])
@@ -2619,7 +2604,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply csymbr
             apply (simp add: ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
-            apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
+            apply (rule syscall_error_throwError_ccorres_n)
             apply (simp add: syscall_error_to_H_cases)
            (* Doesn't throw case *)
            apply (drule_tac s="Some y" in sym,
@@ -2635,7 +2620,7 @@ lemma decodeARMFrameInvocation_ccorres:
                   apply (prop_tac "generic_frame_cap_get_capFMappedASID_CL (cap_lift cap)
                                    = capPDMappedASID_CL (cap_page_directory_cap_lift rv')")
                    apply (clarsimp simp: cap_lift_page_directory_cap cap_to_H_def
-                                         to_bool_def cap_page_directory_cap_lift_def
+                                         cap_page_directory_cap_lift_def
                                   elim!: ccap_relationE split: if_splits)
                   apply (clarsimp, ccorres_rewrite)
                   apply (csymbr, clarsimp simp: hd_conv_nth length_ineq_not_Nil, ccorres_rewrite)
@@ -2646,7 +2631,6 @@ lemma decodeARMFrameInvocation_ccorres:
                         simp add: ARM.pptrBase_def ARM.pptrBase_def
                                   hd_conv_nth length_ineq_not_Nil,
                         ccorres_rewrite)
-                 apply (fold dc_def)
                  apply (rule ccorres_return_Skip, clarsimp)
                apply (subgoal_tac "cap_get_tag cap = SCAST(32 signed \<rightarrow> 32) cap_frame_cap
                                    \<or> cap_get_tag cap = SCAST(32 signed \<rightarrow> 32) cap_small_frame_cap",
@@ -2667,7 +2651,7 @@ lemma decodeARMFrameInvocation_ccorres:
                 apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                    apply vcg
                   apply (clarsimp simp: cap_lift_page_directory_cap cap_to_H_def
-                                        to_bool_def cap_page_directory_cap_lift_def
+                                        cap_page_directory_cap_lift_def
                                  elim!: ccap_relationE split: if_split)
                  apply (rule syscall_error_throwError_ccorres_n)
                  apply (simp add: syscall_error_to_H_cases)
@@ -2744,7 +2728,7 @@ lemma decodeARMFrameInvocation_ccorres:
                apply (rule_tac P'="{s. find_ret = errstate s}" in ccorres_from_vcg_throws[where P=\<top>])
                apply (rule allI, rule conseqPre, vcg)
                apply (clarsimp simp: fst_throwError_returnOk exception_defs syscall_error_rel_def
-                                     syscall_error_to_H_cases false_def)
+                                     syscall_error_to_H_cases)
                apply (erule lookup_failure_rel_fault_lift[rotated], simp add: exception_defs)
               apply simp
               apply (wp injection_wp[OF refl] | wp (once) hoare_drop_imps)+
@@ -2804,7 +2788,7 @@ lemma decodeARMFrameInvocation_ccorres:
      done
 
   (* C side *)
-  apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs" mask_eq_iff_w2p
+  apply (clarsimp simp: rf_sr_ksCurThread ThreadState_defs mask_eq_iff_w2p
                         word_size word_less_nat_alt from_bool_0 excaps_map_def cte_wp_at_ctes_of)
   apply (frule ctes_of_valid', clarsimp)
   apply (drule_tac t="cteCap ctea" in sym)
@@ -3041,11 +3025,10 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
         apply (simp add:if_to_top_of_bind if_to_top_of_bindE)
         apply (rule ccorres_if_cond_throws[rotated -1,where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp dest!:cap_lift_page_directory_cap
-                    simp : cap_page_directory_cap_lift_def
-                           cap_to_H_def to_bool_def Let_def
-                    elim!: ccap_relationE
-                    split: cap_CL.splits if_splits)
+          apply (clarsimp dest!: cap_lift_page_directory_cap
+                          simp : cap_page_directory_cap_lift_def cap_to_H_def to_bool_def Let_def
+                          elim!: ccap_relationE
+                          split: cap_CL.splits if_splits)
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add:syscall_error_to_H_cases)
@@ -3081,16 +3064,17 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                 apply simp
                apply simp
               apply ceqv
-             apply (simp add:injection_handler_If
-               injection_handler_returnOk if_to_top_of_bind if_to_top_of_bindE)
+             apply (simp add: injection_handler_If injection_handler_returnOk if_to_top_of_bind
+                              if_to_top_of_bindE)
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                 apply vcg
-               apply (clarsimp simp:resolve_ret_rel_def to_bool_def to_option_def
-                        rel_option_alt_def not_le split:option.splits if_splits)
-              apply (simp add:invocationCatch_def ARM_H.performInvocation_def
-                performInvocation_def performARMMMUInvocation_def)
-              apply (simp add:performPageDirectoryInvocation_def
-                liftE_case_sum liftE_bindE liftE_alternative)
+               apply (clarsimp simp: resolve_ret_rel_def to_bool_def to_option_def
+                                     rel_option_alt_def not_le
+                              split: option.splits if_splits)
+              apply (simp add: invocationCatch_def ARM_H.performInvocation_def
+                               performInvocation_def performARMMMUInvocation_def)
+              apply (simp add: performPageDirectoryInvocation_def
+                               liftE_case_sum liftE_bindE liftE_alternative)
               apply (ctac add: setThreadState_ccorres)
               apply (rule ccorres_alternative2)
               apply (simp add:returnOk_liftE[symmetric])
@@ -3115,7 +3099,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
               apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: throwError_def return_def syscall_error_rel_def exception_defs
-                                    syscall_error_to_H_cases false_def)
+                                    syscall_error_to_H_cases)
               apply (clarsimp simp: page_base_def resolve_ret_rel_def rel_option_alt_def to_option_def
                                     mask_def[unfolded shiftl_1,symmetric]
                               split: option.splits if_splits)
@@ -3150,8 +3134,8 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                 st' \<noteq> Structures_H.thread_state.Inactive \<and> st' \<noteq> Structures_H.thread_state.IdleThreadState)
                 thread and (\<lambda>s. thread \<noteq> ksIdleThread s
                    \<and> (obj_at' tcbQueued thread s \<longrightarrow> st_tcb_at' runnable' thread s))"]])
-            apply (clarsimp simp: invs_valid_objs' invs_sch_act_wf'
-              valid_tcb_state'_def invs_queues)
+            apply (clarsimp simp: invs_valid_objs' invs_sch_act_wf' valid_tcb_state'_def
+                                  invs_pspace_aligned' invs_pspace_distinct')
             apply (rule conjI)
              apply (erule flush_range_le)
               apply (simp add:linorder_not_le)
@@ -3171,7 +3155,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
             apply vcg
            apply (rule conseqPre, vcg)
            apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                 syscall_error_to_H_cases exception_defs false_def)
+                                 syscall_error_to_H_cases exception_defs)
            apply (erule lookup_failure_rel_fault_lift[rotated])
            apply (simp add: exception_defs)
           apply simp
@@ -3221,67 +3205,65 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
       apply (case_tac st,simp+)
      apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
      apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
-                        cap_lift_page_table_cap typ_heap_simps'
+                           cap_lift_page_table_cap typ_heap_simps'
+                           cap_to_H_def cap_page_directory_cap_lift_def
+                           cap_page_table_cap_lift_def
+                           typ_heap_simps' shiftl_t2n[where n=2] field_simps
+                    elim!: ccap_relationE)
+     apply (intro conjI impI allI)
+      apply (clarsimp simp: ThreadState_defs less_mask_eq rf_sr_ksCurThread
+                            resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
+                            to_option_def rel_option_alt_def to_bool_def typ_heap_simps'
+                     split: option.splits if_splits
+             | fastforce simp: mask_def
+             | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
+             | rule word_of_nat_less,simp add: pbfs_less)+
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
+    apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
+                          cap_lift_page_table_cap
+                          cap_to_H_def cap_page_directory_cap_lift_def
+                          cap_page_table_cap_lift_def
+                          typ_heap_simps' shiftl_t2n[where n=2] field_simps
+                   elim!: ccap_relationE)
+    apply (intro conjI impI allI)
+     apply (clarsimp simp: less_mask_eq rf_sr_ksCurThread
+                           resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
+                           to_option_def rel_option_alt_def to_bool_def
+                           typ_heap_simps'
+                    split: option.splits if_splits
+            | fastforce simp: mask_def
+            | rule flushtype_relation_triv, simp add:isPageFlush_def isPDFlushLabel_def
+            | rule word_of_nat_less, simp add: pbfs_less)+
+   apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
+   apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
+                         cap_lift_page_table_cap
+                         cap_to_H_def cap_page_directory_cap_lift_def
+                         to_bool_def cap_page_table_cap_lift_def
+                         typ_heap_simps' shiftl_t2n[where n=2] field_simps
+                  elim!: ccap_relationE)
+   apply (intro conjI impI allI)
+    apply (clarsimp simp: ThreadState_defs less_mask_eq rf_sr_ksCurThread
+                          resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
+                          to_option_def rel_option_alt_def typ_heap_simps'
+                   split: option.splits if_splits
+           | fastforce simp: mask_def
+           | rule flushtype_relation_triv, simp add:isPageFlush_def isPDFlushLabel_def
+           | rule word_of_nat_less, simp add: pbfs_less)+ (* slow 20 secs *)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
+  apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
+                        cap_lift_page_table_cap
                         cap_to_H_def cap_page_directory_cap_lift_def
                         to_bool_def cap_page_table_cap_lift_def
                         typ_heap_simps' shiftl_t2n[where n=2] field_simps
                  elim!: ccap_relationE)
-     apply (intro conjI impI allI)
-      apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
-        resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-        to_option_def rel_option_alt_def to_bool_def typ_heap_simps'
-        split:option.splits if_splits
-      | fastforce simp: mask_def
-      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
-      | rule word_of_nat_less,simp add: pbfs_less)+
-    apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
-    apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
-      cap_lift_page_table_cap
-      cap_to_H_def cap_page_directory_cap_lift_def
-      to_bool_def cap_page_table_cap_lift_def
-      typ_heap_simps' shiftl_t2n[where n=2] field_simps
-      elim!: ccap_relationE)
-    apply (intro conjI impI allI)
-     apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
-        resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-        to_option_def rel_option_alt_def to_bool_def
-        typ_heap_simps'
-        split:option.splits if_splits
-      | fastforce simp: mask_def
-      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
-      | rule word_of_nat_less,simp add: pbfs_less)+
-   apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
-   apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
-     cap_lift_page_table_cap
-     cap_to_H_def cap_page_directory_cap_lift_def
-     to_bool_def cap_page_table_cap_lift_def
-     typ_heap_simps' shiftl_t2n[where n=2] field_simps
-     elim!: ccap_relationE)
-   apply (intro conjI impI allI)
-    apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
-      resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-      to_option_def rel_option_alt_def to_bool_def
-      typ_heap_simps'
-      split:option.splits if_splits
-      | fastforce simp: mask_def
-      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
-      | rule word_of_nat_less,simp add: pbfs_less)+ (* slow 20 secs *)
-  apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
-  apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
-    cap_lift_page_table_cap
-    cap_to_H_def cap_page_directory_cap_lift_def
-    to_bool_def cap_page_table_cap_lift_def
-    typ_heap_simps' shiftl_t2n[where n=2] field_simps
-    elim!: ccap_relationE)
   apply (intro conjI impI allI)
-   by (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
-     resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-     to_option_def rel_option_alt_def to_bool_def
-     typ_heap_simps'
-     split:option.splits if_splits
-     | fastforce simp: mask_def
-     | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
-     | rule word_of_nat_less,simp add: pbfs_less)+
+   by (clarsimp simp: less_mask_eq rf_sr_ksCurThread
+                      resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
+                      to_option_def rel_option_alt_def typ_heap_simps'
+               split: option.splits if_splits
+       | fastforce simp: mask_def
+       | rule flushtype_relation_triv, simp add:isPageFlush_def isPDFlushLabel_def
+       | rule word_of_nat_less, simp add: pbfs_less)+
 
 lemma Arch_decodeInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps
@@ -3433,14 +3415,13 @@ lemma Arch_decodeInvocation_ccorres:
                   apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
                    apply (clarsimp simp: asid_high_bits_def)
-                  apply (clarsimp simp: rf_sr_armKSASIDTable from_bool_def
+                  apply (clarsimp simp: rf_sr_armKSASIDTable
                                         asid_high_bits_word_bits
                                         option_to_ptr_def option_to_0_def
                                         order_less_imp_le
                                         linorder_not_less
                                         order_antisym[OF inc_le])
-                  apply (clarsimp simp: true_def false_def
-                                 split: option.split if_split)
+                  apply (clarsimp split: option.split if_split)
                   apply (simp add: asid_high_bits_def word_le_nat_alt
                                    word_less_nat_alt unat_add_lem[THEN iffD1])
                   apply auto[1]
@@ -3460,7 +3441,6 @@ lemma Arch_decodeInvocation_ccorres:
                                       word_sless_def if_1_0_0 from_bool_0
                                       rf_sr_armKSASIDTable[where n=0, simplified])
                 apply (simp add: asid_high_bits_def option_to_ptr_def option_to_0_def
-                                 from_bool_def
                           split: option.split if_split)
                 apply fastforce
                apply ceqv
@@ -3573,8 +3553,7 @@ lemma Arch_decodeInvocation_ccorres:
                          del: Collect_const)
               apply (simp add: if_1_0_0 from_bool_0 hd_conv_nth length_ineq_not_Nil
                           del: Collect_const)
-              apply (clarsimp simp: eq_Nil_null[symmetric] asid_high_bits_word_bits hd_conv_nth
-                ThreadState_Restart_def mask_def)
+              apply (clarsimp simp: eq_Nil_null[symmetric] asid_high_bits_word_bits hd_conv_nth mask_def)
               apply wp+
             apply (simp add: cap_get_tag_isCap)
             apply (rule HoarePartial.SeqSwap)
@@ -3695,7 +3674,7 @@ lemma Arch_decodeInvocation_ccorres:
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: throwError_def return_def
                                 syscall_error_rel_def exception_defs
-                                syscall_error_to_H_cases false_def)
+                                syscall_error_to_H_cases)
           apply (simp add: lookup_fault_lift_invalid_root)
          apply csymbr
          apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
@@ -3744,9 +3723,7 @@ lemma Arch_decodeInvocation_ccorres:
                                        = capASIDBase cp")
                 apply (subgoal_tac "\<And>x. (x < (i_' xb + 1))
                                           = (x < i_' xb \<or> x = i_' xb)")
-                 apply (clarsimp simp: inc_le from_bool_def typ_heap_simps
-                                       asid_low_bits_def not_less field_simps
-                                       false_def
+                 apply (clarsimp simp: inc_le typ_heap_simps asid_low_bits_def not_less field_simps
                                 split: if_split bool.splits)
                  apply unat_arith
                 apply (rule iffI)
@@ -3797,11 +3774,10 @@ lemma Arch_decodeInvocation_ccorres:
                                    word_sless_def word_sle_def)
              apply (erule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
                     erule ko_at_projectKO_opt)
-             apply (clarsimp simp: typ_heap_simps from_bool_def split: if_split)
+             apply (clarsimp simp: typ_heap_simps split: if_split)
              apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
              apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
-                                   cap_asid_pool_cap_lift_def false_def
-                                   ucast_minus ucast_nat_def
+                                   cap_asid_pool_cap_lift_def ucast_minus ucast_nat_def
                             elim!: ccap_relationE)
             apply ceqv
            apply (rule ccorres_Guard_Seq)+
@@ -3885,9 +3861,12 @@ lemma Arch_decodeInvocation_ccorres:
     apply (clarsimp simp: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of
                           invs_sch_act_wf' dest!: isCapDs(1))
     apply (intro conjI)
-            apply (simp add: Invariants_H.invs_queues)
-           apply (simp add: valid_tcb_state'_def)
-          apply (fastforce elim!: pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
+             apply (simp add: valid_tcb_state'_def)
+            apply (fastforce elim!: pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
+           apply fastforce
+          apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
+          apply (rename_tac obj)
+          apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]
          apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
          apply (rename_tac obj)
          apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]
@@ -3924,13 +3903,11 @@ lemma Arch_decodeInvocation_ccorres:
     apply (auto simp: ct_in_state'_def valid_tcb_state'_def
                dest!: st_tcb_at_idle_thread'
                elim!: pred_tcb'_weakenE)[1]
-  apply (clarsimp simp: if_1_0_0 cte_wp_at_ctes_of asidHighBits_handy_convs
+  apply (clarsimp simp: cte_wp_at_ctes_of asidHighBits_handy_convs
                         word_sle_def word_sless_def asidLowBits_handy_convs
-                        rf_sr_ksCurThread "StrictC'_thread_state_defs"
-                        mask_def[where n=4]
+                        rf_sr_ksCurThread ThreadState_defs mask_def[where n=4]
                   cong: if_cong)
-  apply (clarsimp simp: if_1_0_0 to_bool_def ccap_relation_isDeviceCap2
-     objBits_simps archObjSize_def pageBits_def from_bool_def case_bool_If)
+  apply (clarsimp simp: ccap_relation_isDeviceCap2 objBits_simps archObjSize_def pageBits_def)
   apply (rule conjI)
    (* Is Asid Control Cap *)
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def excaps_map_def)
@@ -3940,11 +3917,10 @@ lemma Arch_decodeInvocation_ccorres:
                          ccap_rights_relation_def rightsFromWord_wordFromRights)
    apply (clarsimp simp: asid_high_bits_word_bits split: list.split_asm)
     apply (clarsimp simp: cap_untyped_cap_lift_def cap_lift_untyped_cap
-                         cap_to_H_def[split_simps cap_CL.split]
-                         hd_conv_nth length_ineq_not_Nil
-                  elim!: ccap_relationE)
-   apply (clarsimp simp: if_1_0_0 to_bool_def unat_eq_of_nat
-                         objBits_simps archObjSize_def pageBits_def from_bool_def case_bool_If
+                          cap_to_H_def[split_simps cap_CL.split]
+                          hd_conv_nth length_ineq_not_Nil
+                   elim!: ccap_relationE)
+   apply (clarsimp simp: to_bool_def unat_eq_of_nat objBits_simps archObjSize_def pageBits_def
                   split: if_splits)
   apply (clarsimp simp: asid_low_bits_word_bits isCap_simps neq_Nil_conv
                         excaps_map_def excaps_in_mem_def
@@ -3962,10 +3938,10 @@ lemma Arch_decodeInvocation_ccorres:
                   elim!: ccap_relationE split: if_split_asm)
    apply (clarsimp split: list.split)
   apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
-                        cap_to_H_def to_bool_def
-                        cap_page_directory_cap_lift_def
+                        cap_to_H_def cap_page_directory_cap_lift_def to_bool_def
                  elim!: ccap_relationE split: if_split_asm)
   done
+
 end
 
 end

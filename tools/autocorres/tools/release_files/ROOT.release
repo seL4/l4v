@@ -8,15 +8,14 @@
 session AutoCorres = CParser +
   sessions
     "HOL-Eisbach"
-    Lib
-    CLib
+    Monads
   theories
+    "DataStructures"
     "AutoCorres"
 
 session AutoCorresTest in "tests" = AutoCorres +
   sessions
     "HOL-Number_Theory"
-    AutoCorres
   directories
     "parse-tests"
     "proof-tests"

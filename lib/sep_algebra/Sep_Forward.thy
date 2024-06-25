@@ -59,7 +59,8 @@ lemma sep_conj_coimpl_cancel''':
 lemma sep_coimpl_cancel':
   "(\<And>s. pred_imp Q P s) \<Longrightarrow> (P \<leadsto>* R) s   \<Longrightarrow>
    (\<And>s. R s \<Longrightarrow> R' s) \<Longrightarrow> (Q \<leadsto>* R') s"
-  by (metis pred_neg_def sep_coimpl_def sep_conj_def)
+  by (metis sep_coimpl_weaken sep_snake_septraction septraction_snake_trivial)
+
 
 definition "pointer P \<equiv> (\<forall>x y. \<forall>s R. (P x \<and>* R) s \<longrightarrow> (P y \<leadsto>* R and (\<lambda>s. x = y)) s)"
 

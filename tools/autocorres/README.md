@@ -15,8 +15,8 @@ in [Isabelle/HOL][1]. In particular, it uses Norrish's
 abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
-  [1]: https://www.cl.cam.ac.uk/research/hvg/Isabelle/
-  [2]: https://trustworthy.systems/software/TS/c-parser/
+  [1]: https://isabelle.in.tum.de
+  [2]: https://github.com/seL4/l4v/blob/master/tools/c-parser/README.md
 
 
 
@@ -35,7 +35,7 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2021:
+AutoCorres is packaged as a theory for Isabelle2022:
 
     https://isabelle.in.tum.de
 

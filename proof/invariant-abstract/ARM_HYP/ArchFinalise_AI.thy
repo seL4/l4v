@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -462,7 +463,7 @@ lemma arch_thread_set_cur_tcb[wp]: "\<lbrace>cur_tcb\<rbrace> arch_thread_set p 
 
 lemma cte_wp_at_update_some_tcb:
   "\<lbrakk>kheap s v = Some (TCB tcb) ; tcb_cnode_map tcb = tcb_cnode_map (f tcb)\<rbrakk>
-  \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := kheap s (v \<mapsto> TCB (f tcb))\<rparr>) = cte_wp_at P p s"
+  \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := (kheap s)(v \<mapsto> TCB (f tcb))\<rparr>) = cte_wp_at P p s"
   apply (clarsimp simp: cte_wp_at_cases2 dest!: get_tcb_SomeD)
   done
 
@@ -657,7 +658,7 @@ lemma arch_thread_set_valid_objs_vcpu_Some[wp]:
 
 lemma sym_refs_update_some_tcb:
   "\<lbrakk>kheap s v = Some (TCB tcb) ; refs_of (TCB tcb) = refs_of (TCB (f tcb))\<rbrakk>
-  \<Longrightarrow> sym_refs (state_refs_of (s\<lparr>kheap := kheap s (v \<mapsto> TCB (f tcb))\<rparr>)) = sym_refs (state_refs_of s)"
+  \<Longrightarrow> sym_refs (state_refs_of (s\<lparr>kheap := (kheap s)(v \<mapsto> TCB (f tcb))\<rparr>)) = sym_refs (state_refs_of s)"
   apply (rule_tac f=sym_refs in arg_cong)
   apply (rule all_ext)
   apply (clarsimp simp: sym_refs_def state_refs_of_def)
@@ -705,7 +706,7 @@ lemma vcpu_invalidate_tcbs_inv[wp]:
 lemma sym_refs_vcpu_None:
   assumes sym_refs: "sym_refs (state_hyp_refs_of s)"
   assumes tcb: "ko_at (TCB tcb) t s" "tcb_vcpu (tcb_arch tcb) = Some vr"
-  shows "sym_refs (state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_arch := tcb_vcpu_update Map.empty (tcb_arch tcb)\<rparr>),
+  shows "sym_refs (state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_arch := tcb_vcpu_update Map.empty (tcb_arch tcb)\<rparr>),
                                        vr \<mapsto> ArchObj (VCPU (vcpu_tcb_update Map.empty v)))\<rparr>))"
     (is "sym_refs (state_hyp_refs_of ?s')")
 proof -
@@ -1397,7 +1398,7 @@ crunches
   (wp: crunch_wps subset_refl)
 
 crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -1470,7 +1471,7 @@ lemma flush_table_empty:
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table {}) word s\<rbrace>"
   apply (clarsimp simp: flush_table_def set_vm_root_def)
-  apply (wp do_machine_op_obj_at arm_context_switch_P_obj_at hoare_whenE_wp hoare_drop_imp
+  apply (wp do_machine_op_obj_at arm_context_switch_P_obj_at whenE_wp hoare_drop_imp
     | wpc
     | simp
     | wps)+
@@ -1488,7 +1489,7 @@ lemma flush_table_empty:
                          s))
                s"
     and Q'="\<lambda>_ s. obj_at (empty_table {}) word s"
-    in hoare_post_imp_R)
+    in hoare_strengthen_postE_R)
   prefer 2 apply simp
   apply (wp find_pd_for_asid_inv mapM_wp
     | simp
@@ -1653,7 +1654,7 @@ lemma set_vm_root_empty[wp]:
   done
 
 crunch obj_at[wp]: invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 lemma set_asid_pool_empty[wp]:
   "\<lbrace>obj_at (empty_table {}) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table {}) word\<rbrace>"
@@ -1878,7 +1879,7 @@ lemma arch_finalise_case_no_lookup:
               | simp add: vs_cap_ref_simps
                           vs_lookup_pages_eq_at[THEN fun_cong, symmetric]
                           vs_lookup_pages_eq_ap[THEN fun_cong, symmetric])+
-     apply (wp hoare_vcg_all_lift unmap_page_unmapped static_imp_wp)
+     apply (wp hoare_vcg_all_lift unmap_page_unmapped hoare_weak_lift_imp)
     apply (wpc|wp unmap_page_table_unmapped3 delete_asid_unmapped
       |simp add:vs_cap_ref_def
       vs_lookup_pages_eq_at[THEN fun_cong,symmetric]
@@ -2108,7 +2109,7 @@ lemma set_asid_pool_obj_at_ptr:
 lemma valid_arch_state_table_strg:
   "valid_arch_state s \<and> asid_pool_at p s \<and>
    Some p \<notin> arm_asid_table (arch_state s) ` (dom (arm_asid_table (arch_state s)) - {x}) \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>)"
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (arm_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ran_def split: option.split)
   apply (rule conjI; clarsimp)
    apply (rule conjI, fastforce)
@@ -2141,8 +2142,8 @@ lemma vs_lookup1_arch [simp]:
 
 lemma vs_lookup_empty_table:
   "(rs \<rhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
-     arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+  (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool Map.empty)),
+     arch_state := arch_state s\<lparr>arm_asid_table := (arm_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<rhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (erule vs_lookupE)
   apply clarsimp
@@ -2174,8 +2175,8 @@ lemma vs_lookup_empty_table:
 
 lemma vs_lookup_pages_empty_table:
   "(rs \<unrhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
-     arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+  (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool Map.empty)),
+     arch_state := arch_state s\<lparr>arm_asid_table := (arm_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<unrhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (subst (asm) vs_lookup_pages_def)
   apply (clarsimp simp: Image_def)
@@ -2210,7 +2211,7 @@ lemma set_asid_pool_empty_table_objs:
   set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vspace_objs
              (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                arm_asid_table (arch_state s)(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                (arm_asid_table (arch_state s))(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vspace_objs_def
@@ -2235,7 +2236,7 @@ lemma set_asid_pool_empty_table_lookup:
   set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vs_lookup
              (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                (arm_asid_table (arch_state s))(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vs_lookup_def
@@ -2257,7 +2258,7 @@ lemma set_asid_pool_empty_valid_asid_map:
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
        set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                 arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                 (arm_asid_table (arch_state s))(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: valid_asid_map_def vspace_at_asid_def
@@ -2289,7 +2290,7 @@ lemma set_asid_pool_invs_table:
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
        set_asid_pool p Map.empty
   \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                 arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                 (arm_asid_table (arch_state s))(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)
   apply (rule hoare_pre)
    apply (wp valid_irq_node_typ set_asid_pool_typ_at
@@ -2345,7 +2346,7 @@ lemma page_table_mapped_wp_weak:
   apply (simp add: page_table_mapped_def)
   apply (rule hoare_pre)
    apply (wp get_pde_wp | wpc)+
-   apply (rule_tac Q'="\<lambda>_. ?P" in hoare_post_imp_R)
+   apply (rule_tac Q'="\<lambda>_. ?P" in hoare_strengthen_postE_R)
     apply wp
    apply clarsimp
   apply simp

@@ -291,9 +291,9 @@ next
                           toInteger_nat fromInteger_nat wordBits_def)
          apply (simp add: not_le)
         apply (rule whenE_throwError_corres, simp)
-         apply (clarsimp simp: fromAPIType_def X64_H.fromAPIType_def)
+         apply (clarsimp simp: fromAPIType_def)
         apply (rule whenE_throwError_corres, simp)
-         apply (clarsimp simp: fromAPIType_def X64_H.fromAPIType_def)
+         apply (clarsimp simp: fromAPIType_def)
         apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'"
                 in corres_splitEE[OF corres_if])
              apply simp
@@ -726,7 +726,7 @@ lemma map_ensure_empty':
    apply (wp getCTE_wp')
    apply (clarsimp elim!: cte_wp_at_weakenE')
   apply (erule meta_allE)
-  apply (erule hoare_post_imp_R)
+  apply (erule hoare_strengthen_postE_R)
   apply clarsimp
   done
 
@@ -1401,16 +1401,6 @@ crunch nosch[wp]: insertNewCaps "\<lambda>s. P (ksSchedulerAction s)"
 
 crunch exst[wp]: set_cdt "\<lambda>s. P (exst s)"
 
-(*FIXME: Move to StateRelation*)
-lemma state_relation_schact[elim!]:
-  "(s,s') \<in> state_relation \<Longrightarrow> sched_act_relation (scheduler_action s) (ksSchedulerAction s')"
-  apply (simp add: state_relation_def)
-  done
-
-lemma state_relation_queues[elim!]: "(s,s') \<in> state_relation \<Longrightarrow> ready_queues_relation (ready_queues s) (ksReadyQueues s')"
-  apply (simp add: state_relation_def)
-  done
-
 lemma set_original_symb_exec_l:
   "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
@@ -1440,6 +1430,10 @@ lemma updateNewFreeIndex_noop_psp_corres:
       apply (wp getCTE_wp' | wpc
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
   done
+
+crunches updateMDB, updateNewFreeIndex, setCTE
+  for rdyq_projs[wp]:
+    "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
 lemma insertNewCap_corres:
 notes if_cong[cong del] if_weak_cong[cong]
@@ -3292,7 +3286,7 @@ lemma createNewCaps_valid_cap':
 
 lemma dmo_ctes_of[wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  by (simp add: doMachineOp_def split_def | wp select_wp)+
+  by (simp add: doMachineOp_def split_def | wp)+
 
 lemma createNewCaps_ranges:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0<n \<rbrace>
@@ -3616,7 +3610,7 @@ lemma updateFreeIndex_mdb_simple':
   and    cte_wp_at' :"ctes_of s src = Some cte" "cteCap cte = capability.UntypedCap d ptr sz idx'"
   and      unt_inc' :"untyped_inc' (ctes_of s)"
   and   valid_objs' :"valid_objs' s"
-  and invp: "mdb_inv_preserve (ctes_of s) (ctes_of s(src \<mapsto> cteCap_update (\<lambda>_. capability.UntypedCap d ptr sz idx) cte))"
+  and invp: "mdb_inv_preserve (ctes_of s) ((ctes_of s)(src \<mapsto> cteCap_update (\<lambda>_. UntypedCap d ptr sz idx) cte))"
     (is "mdb_inv_preserve (ctes_of s) ?ctes")
 
   show "untyped_inc' ?ctes"
@@ -3718,8 +3712,8 @@ lemma updateFreeIndex_clear_invs':
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
-                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp setCTE_ioports'
+      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift setCTE_ioports'
+                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp valid_bitmaps_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def
                | simp add: cte_wp_at_ctes_of)+
@@ -4145,15 +4139,17 @@ lemma idx_le_new_offs:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma valid_sched_etcbs[elim!]: "valid_sched_2 queues ekh sa cdom kh ct it \<Longrightarrow> valid_etcbs_2 ekh kh"
   by (simp add: valid_sched_def)
 
 crunch ksIdleThread[wp]: deleteObjects "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps unless_wp ignore: freeMemory)
 crunch ksCurDomain[wp]: deleteObjects "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps unless_wp ignore: freeMemory)
 crunch irq_node[wp]: deleteObjects "\<lambda>s. P (irq_node' s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps unless_wp ignore: freeMemory)
 
 lemma deleteObjects_ksCurThread[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> deleteObjects ptr sz \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -4303,14 +4299,12 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
-    (invs and valid_untyped_inv_wcap ui
-      (Some (cap.UntypedCap dev ptr sz idx))
-         and ct_active and einvs
-         and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'. ui = Invocations_A.Retype slot True
-             ptr_base ptr' ty us slots dev))
-     (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
-     (reset_untyped_cap slot)
-     (resetUntypedCap (cte_map slot))"
+    (einvs and schact_is_rct and ct_active
+     and valid_untyped_inv_wcap ui (Some (cap.UntypedCap dev ptr sz idx))
+     and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'.
+               ui = Invocations_A.Retype slot True ptr_base ptr' ty us slots dev))
+    (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
+    (reset_untyped_cap slot) (resetUntypedCap (cte_map slot))"
   apply (rule corres_gen_asm, clarsimp)
   apply (simp add: reset_untyped_cap_def resetUntypedCap_def
                    liftE_bindE)
@@ -4459,7 +4453,7 @@ lemma resetUntypedCap_corres:
   apply (frule if_unsafe_then_capD'[OF ctes_of_cte_wpD], clarsimp+)
   apply (frule(1) descendants_range_ex_cte'[OF empty_descendants_range_in' _ order_refl],
     (simp add: isCap_simps)+)
-  apply (intro conjI impI; clarsimp)
+  apply (auto simp: descendants_range_in'_def valid_untyped'_def)
   done
 
 end
@@ -4558,7 +4552,7 @@ lemma resetUntypedCap_invs_etc:
     ?f \<lbrace>\<lambda>_. invs' and ?vu2 and ct_active' and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>")
   apply (simp add: resetUntypedCap_def getSlotCap_def
                    liftE_bind_return_bindE_returnOk bindE_assoc)
-  apply (rule hoare_vcg_seqE[rotated])
+  apply (rule bindE_wp_fwd)
    apply simp
    apply (rule getCTE_sp)
   apply (rule hoare_name_pre_stateE)
@@ -4575,8 +4569,8 @@ lemma resetUntypedCap_invs_etc:
        (simp_all add: cte_wp_at_ctes_of)+)[1]
   apply (clarsimp simp: unlessE_def cte_wp_at_ctes_of
              split del: if_split)
-  apply (rule_tac B="\<lambda>_. invs' and valid_untyped_inv_wcap' ?ui (Some ?cap)
-        and ct_active' and ?psp" in hoare_vcg_seqE[rotated])
+  apply (rule_tac Q'="\<lambda>_. invs' and valid_untyped_inv_wcap' ?ui (Some ?cap) and ct_active' and ?psp"
+               in bindE_wp_fwd)
    apply clarsimp
    apply (rule hoare_pre)
     apply (simp add: sch_act_simple_def)
@@ -4618,7 +4612,7 @@ lemma resetUntypedCap_invs_etc:
                          modify_map_def)
    apply auto[1]
   apply simp
-  apply (rule hoare_pre, rule hoare_post_impErr,
+  apply (rule hoare_pre, rule hoare_strengthen_postE,
     rule_tac P="\<lambda>i. invs' and ?psp and ct_active' and valid_untyped_inv_wcap' ?ui
         (Some (UntypedCap dev ptr sz (if i = 0 then idx
             else (length [ptr , ptr + 2 ^ resetChunkBits .e. getFreeRef ptr idx - 1] - i) * 2 ^ resetChunkBits)))"
@@ -4706,7 +4700,7 @@ lemma whenE_reset_resetUntypedCap_invs_etc:
       and ct_active'
       and pspace_no_overlap' (if reset then ptr else ptr') sz\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp resetUntypedCap_invs_etc[where idx=idx,
+   apply (wp whenE_wp resetUntypedCap_invs_etc[where idx=idx,
            simplified pred_conj_def conj_assoc]
        | simp)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -4717,6 +4711,8 @@ lemma whenE_reset_resetUntypedCap_invs_etc:
   done
 
 crunch ksCurDomain[wp]: updateFreeIndex "\<lambda>s. P (ksCurDomain s)"
+
+end
 
 lemma (in range_cover) funky_aligned:
   "is_aligned ((ptr && foo) + v * 2 ^ sbit) sbit"
@@ -4729,10 +4725,13 @@ lemma (in range_cover) funky_aligned:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+defs archOverlap_def:
+  "archOverlap \<equiv> \<lambda>_ _. False"
+
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
-     (einvs and valid_untyped_inv ui and ct_active)
+     (einvs and valid_untyped_inv ui and ct_active and schact_is_rct)
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (cases ui)
@@ -4751,6 +4750,7 @@ lemma inv_untyped_corres':
                 (cte_map cref) reset ptr_base ptr ao' us (map cte_map slots) dev"
 
     assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
+                 "schact_is_rct s"
     and   invs': "invs' s'" "ct_active' s'"
     and      sr: "(s, s') \<in> state_relation"
     and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
@@ -4972,7 +4972,8 @@ lemma inv_untyped_corres':
     show " corres (dc \<oplus> (=)) ((=) s) ((=) s')
            (invoke_untyped ?ui)
            (invokeUntyped ?ui')"
-      apply (clarsimp simp:invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc)
+      apply (clarsimp simp: invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc
+                            archOverlap_def)
       apply (insert cover)
       apply (rule corres_guard_imp)
         apply (rule corres_split_norE)
@@ -5062,9 +5063,9 @@ lemma inv_untyped_corres':
           \<and> valid_untyped_inv_wcap ui
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
-          " in hoare_post_imp_R)
+          " in hoare_strengthen_postE_R)
           apply (simp add: whenE_def split del: if_split, wp)
-           apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc, auto)[1]
+           apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc, auto)[1]
           apply wp
          apply (clarsimp simp: ui cte_wp_at_caps_of_state
                                bits_of_def untyped_range.simps)
@@ -5105,7 +5106,7 @@ lemma inv_untyped_corres':
          apply (drule invoke_untyped_proofs.usable_range_disjoint)
          apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
 
-        apply ((rule validE_validE_R)?, rule hoare_post_impErr,
+        apply ((rule validE_validE_R)?, rule hoare_strengthen_postE,
                rule whenE_reset_resetUntypedCap_invs_etc[where ptr="ptr && ~~ mask sz"
                    and ptr'=ptr and sz=sz and idx=idx and ui=ui' and dev=dev])
 
@@ -5146,7 +5147,7 @@ lemma inv_untyped_corres':
       apply (clarsimp simp only: pred_conj_def invs ui)
       apply (strengthen vui)
       apply (cut_tac vui invs invs')
-      apply (clarsimp simp: cte_wp_at_caps_of_state valid_sched_etcbs)
+      apply (clarsimp simp: cte_wp_at_caps_of_state valid_sched_etcbs schact_is_rct_def)
      apply (cut_tac vui' invs')
      apply (clarsimp simp: ui cte_wp_at_ctes_of if_apply_def2 ui')
      done
@@ -5160,12 +5161,6 @@ crunch pred_tcb_at'[wp]: insertNewCap "pred_tcb_at' proj P t"
 crunch pred_tcb_at'[wp]: doMachineOp "pred_tcb_at' proj P t"
   (wp: crunch_wps)
 
-
-crunch irq_node[wp]: set_thread_state "\<lambda>s. P (interrupt_irq_node s)"
-crunch ctes_of [wp]: setQueue "\<lambda>s. P (ctes_of s)"
-crunch cte_wp_at [wp]: setQueue "cte_wp_at' P p"
-  (simp: cte_wp_at_ctes_of)
-
 lemma sts_valid_untyped_inv':
   "\<lbrace>valid_untyped_inv' ui\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_untyped_inv' ui\<rbrace>"
   apply (cases ui, simp add: ex_cte_cap_to'_def)
@@ -5176,7 +5171,7 @@ lemma sts_valid_untyped_inv':
 
 crunch nosch[wp]: invokeUntyped "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM
-     wp: crunch_wps hoare_unless_wp mapME_x_inv_wp preemptionPoint_inv)
+     wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv)
 
 crunch no_0_obj'[wp]: insertNewCap no_0_obj'
   (wp: crunch_wps)
@@ -5202,11 +5197,8 @@ crunch norqL1[wp]: insertNewCap "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   (wp: crunch_wps)
 crunch norqL2[wp]: insertNewCap "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: crunch_wps)
-crunch ct[wp]: insertNewCap "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps)
 crunch state_refs_of'[wp]: insertNewCap "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
-crunch cteCaps[wp]: updateNewFreeIndex "\<lambda>s. P (cteCaps_of s)"
 crunch if_unsafe_then_cap'[wp]: updateNewFreeIndex "if_unsafe_then_cap'"
 
 lemma insertNewCap_ifunsafe'[wp]:
@@ -5311,39 +5303,29 @@ lemma insertNewCap_ioports':
   apply (wpsimp wp: setCTE_ioports' getCTE_wp)
   by (clarsimp simp: cte_wp_at_ctes_of)
 
-crunch irq_states' [wp]: insertNewCap valid_irq_states'
-  (wp: getCTE_wp')
-
-crunch vq'[wp]: insertNewCap valid_queues'
-  (wp: crunch_wps)
-
-crunch irqs_masked' [wp]: insertNewCap irqs_masked'
-  (wp: crunch_wps rule: irqs_masked_lift)
-
-crunch valid_machine_state'[wp]: insertNewCap valid_machine_state'
-  (wp: crunch_wps)
-
-crunch pspace_domain_valid[wp]: insertNewCap pspace_domain_valid
-  (wp: crunch_wps)
-
-crunch ct_not_inQ[wp]: insertNewCap "ct_not_inQ"
-  (wp: crunch_wps)
-
-crunch tcbState_inv[wp]: insertNewCap "obj_at' (\<lambda>tcb. P (tcbState tcb)) t"
-  (wp: crunch_simps hoare_drop_imps)
-crunch tcbDomain_inv[wp]: insertNewCap "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
-  (wp: crunch_simps hoare_drop_imps)
-crunch tcbPriority_inv[wp]: insertNewCap "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+crunches insertNewCap
+  for irq_states'[wp]: valid_irq_states'
+  and irqs_masked' [wp]: irqs_masked'
+  and valid_machine_state'[wp]: valid_machine_state'
+  and pspace_domain_valid[wp]: pspace_domain_valid
+  and ct_not_inQ[wp]: "ct_not_inQ"
+  and tcbState_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbState tcb)) t"
+  and tcbDomain_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
+  and tcbPriority_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+  and sched_queues_projs[wp]: "\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
+  and tcbQueueds_of[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
   (wp: crunch_simps hoare_drop_imps)
 
 lemma insertNewCap_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace>ct_idle_or_in_cur_domain' and ct_active'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
-apply (wp ct_idle_or_in_cur_domain'_lift_futz[where Q=\<top>])
-apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>tcb. tcbState tcb \<noteq> Structures_H.thread_state.Inactive) t and obj_at' (\<lambda>tcb. d = tcbDomain tcb) t"
-             in hoare_strengthen_post)
-apply (wp | clarsimp elim: obj_at'_weakenE)+
-apply (auto simp: obj_at'_def)
-done
+  apply (wp ct_idle_or_in_cur_domain'_lift_futz[where Q=\<top>])
+   apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>tcb. tcbState tcb \<noteq> Structures_H.thread_state.Inactive) t and
+                          obj_at' (\<lambda>tcb. d = tcbDomain tcb) t"
+                in hoare_strengthen_post)
+    apply (wp | clarsimp elim: obj_at'_weakenE)+
+    apply (auto simp: obj_at'_def)
+  done
 
 crunch ksDomScheduleIdx[wp]: insertNewCap "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: crunch_simps hoare_drop_imps)
@@ -5410,8 +5392,8 @@ lemma insertNewCap_invs':
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp insertNewCap_valid_pspace' sch_act_wf_lift
-             valid_queues_lift cur_tcb_lift tcb_in_cur_domain'_lift
-             insertNewCap_valid_global_refs'
+             cur_tcb_lift tcb_in_cur_domain'_lift sym_heap_sched_pointers_lift
+             insertNewCap_valid_global_refs' valid_bitmaps_lift
              valid_arch_state_lift' insertNewCap_ioports'
              valid_irq_node_lift insertNewCap_valid_irq_handlers)
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -5493,9 +5475,6 @@ lemma createNewCaps_cap_to':
   apply fastforce
   done
 
-crunch it[wp]: copyGlobalMappings "\<lambda>s. P (ksIdleThread s)"
-  (wp: mapM_x_wp' ignore: clearMemory)
-
 lemma createNewCaps_idlethread[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> createNewCaps tp ptr sz us d \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
   apply (simp add: createNewCaps_def toAPIType_def
@@ -5525,8 +5504,6 @@ lemma createNewCaps_IRQHandler[wp]:
   apply (rule hoare_pre)
    apply (wp | wpc | simp add: image_def | rule hoare_pre_cont)+
   done
-
-crunch ksIdleThread[wp]: updateCap "\<lambda>s. P (ksIdleThread s)"
 
 lemma createNewCaps_ct_active':
   "\<lbrace>ct_active' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz and K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
@@ -5643,14 +5620,14 @@ lemma invokeUntyped_invs'':
     apply (clarsimp simp:invokeUntyped_def getSlotCap_def ui)
     apply (rule validE_valid)
     apply (rule hoare_pre)
-     apply (rule_tac B="\<lambda>_ s. invs' s \<and> Q s \<and> ct_active' s
+     apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> Q s \<and> ct_active' s
           \<and> valid_untyped_inv_wcap' ui
               (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap' (ptr && ~~ mask sz) sz s)
-          " in hoare_vcg_seqE[rotated])
+          " in bindE_wp_fwd)
       apply (simp only: whenE_def)
       apply wp
-       apply (rule hoare_post_impErr, rule combine_validE,
+       apply (rule hoare_strengthen_postE, rule combine_validE,
            rule resetUntypedCap_invs_etc, rule valid_validE, rule reset_Q')
         apply (clarsimp simp only: if_True)
         apply auto[1]
@@ -5743,7 +5720,7 @@ lemma invokeUntyped_invs'[wp]:
   "\<lbrace>invs' and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp invokeUntyped_invs''[where Q=\<top>, simplified hoare_post_taut, simplified])
+  apply (wp invokeUntyped_invs''[where Q=\<top>, simplified hoare_TrueI, simplified])
   apply auto
   done
 
@@ -5814,7 +5791,7 @@ lemma resetUntypedCap_IRQInactive:
   (is "\<lbrace>?P\<rbrace> resetUntypedCap slot \<lbrace>?Q\<rbrace>,\<lbrace>?E\<rbrace>")
   apply (simp add: resetUntypedCap_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp[where P=valid_irq_states' and E="?E", THEN hoare_post_impErr]
+   apply (wp mapME_x_inv_wp[where P=valid_irq_states' and E="?E", THEN hoare_strengthen_postE]
              doMachineOp_irq_states' preemptionPoint_inv hoare_drop_imps
      | simp add: no_irq_clearMemory if_apply_def2)+
   done
@@ -5823,8 +5800,7 @@ lemma inv_untyped_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> invokeUntyped ui
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: invokeUntyped_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp resetUntypedCap_IRQInactive | wpc | simp)+
+  apply (wpsimp wp: resetUntypedCap_IRQInactive)
   done
 
 end

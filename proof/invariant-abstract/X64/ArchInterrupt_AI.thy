@@ -20,8 +20,7 @@ where
                     real_cte_at dest_slot and
                     (\<lambda>s. ioapic < x64_num_ioapics (arch_state s)) and
                     K (minUserIRQ \<le> irq \<and> irq \<le> maxUserIRQ \<and>
-                       pin < ioapicIRQLines \<and> level < 2 \<and>
-                       polarity < 2))"
+                       level < 2 \<and> polarity < 2))"
 | "arch_irq_control_inv_valid_real (IssueIRQHandlerMSI irq dest_slot src_slot bus dev func handle)
       = (cte_wp_at ((=) NullCap) dest_slot and
                     cte_wp_at ((=) IRQControlCap) src_slot and

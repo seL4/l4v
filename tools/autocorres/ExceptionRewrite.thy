@@ -58,12 +58,6 @@ lemma alwaysfail_noreturn: "always_fail P A \<Longrightarrow> no_return P A"
 lemma alwaysfail_nothrow: "always_fail P A \<Longrightarrow> no_throw P A"
   by (clarsimp simp: always_fail_def no_throw_def validE_def valid_def split: sum.splits)
 
-lemma empty_fail_handleE: "\<lbrakk> empty_fail L; \<And>r. empty_fail (R r) \<rbrakk> \<Longrightarrow> empty_fail (L <handle> R)"
-  apply (clarsimp simp: handleE_def handleE'_def)
-  apply (erule empty_fail_bind)
-  apply (clarsimp simp: empty_fail_error_bits split: sum.splits)
-  done
-
 lemma no_return_bindE:
   "no_return (\<lambda>_. True) A \<Longrightarrow> (A >>=E B) = A"
   apply (rule ext)+
@@ -75,10 +69,10 @@ lemma no_return_bindE:
     apply (erule disjE)
      apply clarsimp
     apply clarsimp
-    apply (erule (1) my_BallE)
+    apply (drule (1) bspec)
     apply clarsimp
    apply clarsimp
-   apply (erule (1) my_BallE)
+   apply (drule (1) bspec)
    apply (clarsimp split: sum.splits)
   apply (clarsimp simp: snd_bindE no_return_def validE_def valid_def)
   apply (erule_tac x=x in allE)
@@ -120,20 +114,13 @@ lemma L1_condition_empty_fail: "\<lbrakk> empty_fail L; empty_fail R \<rbrakk> \
   by (clarsimp simp: empty_fail_def L1_defs returnOk_def return_def split: condition_splits)
 
 lemma L1_seq_empty_fail: "\<lbrakk> empty_fail L; empty_fail R \<rbrakk> \<Longrightarrow> empty_fail (L1_seq L R)"
-  apply (clarsimp simp: L1_defs)
-  apply (erule (1) empty_fail_bindE)
-  done
+  by (clarsimp simp: L1_defs)
 
 lemma L1_catch_empty_fail: "\<lbrakk> empty_fail L; empty_fail R \<rbrakk> \<Longrightarrow> empty_fail (L1_catch L R)"
-  apply (clarsimp simp: L1_defs)
-  apply (erule (1) empty_fail_handleE)
-  done
+  by (clarsimp simp: L1_defs)
 
 lemma L1_while_empty_fail: "empty_fail B \<Longrightarrow> empty_fail (L1_while C B)"
-  apply (clarsimp simp: L1_while_def)
-  apply (rule empty_fail_whileLoopE)
-  apply simp
-  done
+  by (clarsimp simp: L1_while_def)
 
 (*
  * no_throw lemmas.
@@ -167,7 +154,7 @@ lemma L1_while_nothrow: "no_throw \<top> B \<Longrightarrow> no_throw \<top> (L1
   apply (clarsimp simp: no_throw_def)
   apply (rule validE_whileLoopE [where I="\<lambda>_ _. True"])
     apply simp
-   apply (erule validE_weaken, simp+)
+   apply (erule hoare_chainE, simp+)
   done
 
 lemma L1_catch_nothrow_lhs: "\<lbrakk> no_throw \<top> L \<rbrakk> \<Longrightarrow> no_throw \<top> (L1_catch L R)"
@@ -215,7 +202,7 @@ lemma L1_seq_noreturn_lhs: "no_return \<top> L \<Longrightarrow> no_return \<top
 
 lemma L1_seq_noreturn_rhs: "\<lbrakk> no_return \<top> R \<rbrakk> \<Longrightarrow> no_return \<top> (L1_seq L R)"
   apply (clarsimp simp: L1_defs no_return_def no_throw_def)
-  apply (rule seqE [where B="\<lambda>_ _. True"])
+  apply (rule bindE_wp_fwd[where Q'="\<lambda>_ _. True"])
    apply (rule hoareE_TrueI)
   apply simp
   done
@@ -344,13 +331,17 @@ lemma L1_catch_cond_seq:
   apply (rule L1_catch_single_cond)
   done
 
+lemma unit_not_Inr:
+  "(a \<noteq> Inr ()) = (a = Inl ())"
+  by (cases a; clarsimp)
+
 (* This exciting lemma lets up break up a L1_catch into two parts in
  * the exciting circumstance that "E" never returns. *)
 lemma L1_catch_seq_cond_noreturn_ex:
   "\<lbrakk> no_return \<top> E \<rbrakk> \<Longrightarrow> (L1_catch (L1_seq (L1_condition c A B) C) E) = (L1_seq (L1_catch (L1_condition c A B) E) (L1_catch C E))"
   apply (clarsimp simp: L1_defs)
-  apply (monad_eq simp: no_return_def valid_def validE_def Ball_def
-      Bex_def unit_Inl_or_Inr split:sum.splits)
+  apply (monad_eq simp: no_return_def valid_def validE_def Ball_def Bex_def unit_not_Inr
+                  split: sum.splits)
   apply (safe, (metis Inr_not_Inl)+)
   done
 

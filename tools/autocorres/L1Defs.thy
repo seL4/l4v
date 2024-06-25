@@ -222,7 +222,7 @@ lemma L1corres_call:
         (L1_call scope_setup (measure_call dest_fn) scope_teardown f)
         (call scope_setup dest scope_teardown (\<lambda>_ t. Basic (f t)))"
   apply (clarsimp simp: L1corres_alt_def)
-  apply (unfold call_def block_def L1_call_def)
+  apply (unfold call_def block_def block_exn_def L1_call_def)
   apply (rule ccorresE_DynCom)
   apply clarsimp
   apply (rule ccorresE_get)
@@ -256,7 +256,7 @@ lemma L1corres_reccall:
         (L1_call scope_setup (dest_fn m) scope_teardown f)
         (call scope_setup dest scope_teardown (\<lambda>_ t. Basic (f t)))"
   apply (clarsimp simp: L1corres_alt_def)
-  apply (unfold call_def block_def L1_call_def)
+  apply (unfold call_def block_def block_exn_def L1_call_def)
   apply (rule ccorresE_DynCom)
   apply clarsimp
   apply (rule ccorresE_get)
@@ -320,7 +320,7 @@ lemma L1corres_prepend_unknown_var':
    apply (monad_eq simp: Bex_def)
    apply metis
   apply (subst L1_init_def)
-  apply (wp del: hoare_vcg_prop)
+  apply (wpsimp wp_del: hoare_vcg_prop)
   done
 
 lemma L1_catch_seq_join: "no_throw \<top> A \<Longrightarrow> L1_seq A (L1_catch B C) = (L1_catch (L1_seq A B) C)"
@@ -334,7 +334,7 @@ lemma no_throw_L1_init [simp]: "no_throw P (L1_init f)"
   apply (rule no_throw_bindE [where B=\<top>])
     apply simp
    apply simp
-  apply wp
+  apply wpsimp
   done
 
 lemma L1corres_prepend_unknown_var:

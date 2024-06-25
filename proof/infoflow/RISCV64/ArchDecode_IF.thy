@@ -97,7 +97,7 @@ lemma pas_cap_cur_auth_ASIDControlCap:
 
 lemma decode_asid_pool_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -128,7 +128,7 @@ lemma decode_asid_pool_invocation_reads_respects_f:
 
 lemma decode_asid_control_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -144,7 +144,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
    apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-             reads_respects_f_inv'[OF ensure_no_children_rev] select_wp
+             reads_respects_f_inv'[OF ensure_no_children_rev]
              reads_respects_f_inv'[OF lookup_error_on_failure_rev]
               gets_apply_ev
              is_final_cap_reads_respects
@@ -174,7 +174,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
 
 lemma decode_frame_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -193,7 +193,7 @@ lemma decode_frame_invocation_reads_respects_f:
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-              reads_respects_f_inv'[OF ensure_no_children_rev] select_wp
+              reads_respects_f_inv'[OF ensure_no_children_rev]
               reads_respects_f_inv'[OF lookup_error_on_failure_rev]
               find_vspace_for_asid_reads_respects
               is_final_cap_reads_respects
@@ -236,7 +236,7 @@ lemma decode_frame_invocation_reads_respects_f:
 
 lemma decode_page_table_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -254,7 +254,7 @@ lemma decode_page_table_invocation_reads_respects_f:
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-              reads_respects_f_inv'[OF ensure_no_children_rev] select_wp
+              reads_respects_f_inv'[OF ensure_no_children_rev]
               reads_respects_f_inv'[OF lookup_error_on_failure_rev]
               find_vspace_for_asid_reads_respects
               is_final_cap_reads_respects
@@ -303,7 +303,7 @@ lemma decode_page_table_invocation_reads_respects_f:
 
 lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot

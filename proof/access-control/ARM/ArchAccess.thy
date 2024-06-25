@@ -196,10 +196,10 @@ lemmas integrity_asids_kh_upds =
 declare integrity_asids_def[simp]
 
 lemma integrity_asids_kh_upds':
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> CNode sz cs)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> TCB tcb)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Endpoint ep)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Notification ntfn)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> CNode sz cs)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB tcb)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> Endpoint ep)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> Notification ntfn)\<rparr>) s"
   by auto
 
 lemma integrity_asids_kh_update:
@@ -210,10 +210,10 @@ lemma integrity_asids_kh_update:
 
 subsection \<open>Misc definitions\<close>
 
-definition ctxt_IP_update where
-  "ctxt_IP_update ctxt \<equiv> ctxt(NextIP := ctxt FaultIP)"
+definition ctxt_IP_update :: "user_context \<Rightarrow> user_context" where
+  "ctxt_IP_update ctxt \<equiv> UserContext ((user_regs ctxt)(NextIP := user_regs ctxt FaultIP))"
 
-abbreviation arch_IP_update where
+abbreviation arch_IP_update :: "arch_tcb \<Rightarrow> arch_tcb" where
   "arch_IP_update arch \<equiv> arch_tcb_context_set (ctxt_IP_update (arch_tcb_context_get arch)) arch"
 
 definition asid_pool_integrity ::
@@ -261,7 +261,6 @@ requalify_consts
   state_vrefs
   state_asids_to_policy_arch
   integrity_asids
-  ctxt_IP_update
   arch_IP_update
   arch_cap_auth_conferred
   arch_integrity_obj_atomic

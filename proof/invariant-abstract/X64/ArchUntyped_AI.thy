@@ -389,10 +389,10 @@ lemma create_cap_ioports[wp, Untyped_AI_assms]:
 (* FIXME: move *)
 lemma simpler_store_pml4e_def:
   "store_pml4e p pde s =
-    (case kheap s (p && ~~ mask pml4_bits) of
+    (case (kheap s)(p && ~~ mask pml4_bits) of
           Some (ArchObj (PageMapL4 pml4)) =>
-            ({((), s\<lparr>kheap := (kheap s((p && ~~ mask pml4_bits) \<mapsto>
-                                       (ArchObj (PageMapL4 (pml4(ucast (p && mask pml4_bits >> word_size_bits) := pde))))))\<rparr>)}, False)
+            ({((), s\<lparr>kheap := (kheap s)(p && ~~ mask pml4_bits \<mapsto>
+                                       (ArchObj (PageMapL4 (pml4(ucast (p && mask pml4_bits >> word_size_bits) := pde)))))\<rparr>)}, False)
         | _ => ({}, True))"
   apply     (auto simp: store_pml4e_def set_object_def get_object_def simpler_gets_def assert_def a_type_simps
                         return_def fail_def set_object_def get_def put_def bind_def get_pml4_def aa_type_simps
@@ -476,7 +476,7 @@ lemma copy_global_mappings_nonempty_table:
                         (set (second_level_tables (arch_state s)))) r s) \<and>
            valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp[where S="{x. get_pml4_index pptr_base \<le> x
                                        \<and> x < 2 ^ (pml4_bits - word_size_bits)}"])
@@ -538,7 +538,7 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
   apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wp hoare_unless_wp | wpc | simp add: reserve_region_def second_level_tables_def)+
+   apply (wp unless_wp | wpc | simp add: reserve_region_def second_level_tables_def)+
   apply (clarsimp simp: obj_bits_api_def default_arch_object_def pml4_bits_def pageBits_def)
   done
 
@@ -568,7 +568,7 @@ lemma set_pml4e_cte_wp_at_iin[wp]:
 
 crunch cte_wp_at_iin[wp]: init_arch_objects
   "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
-  (ignore: clearMemory store_pml4e wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory store_pml4e wp: crunch_wps unless_wp)
 
 lemmas init_arch_objects_ex_cte_cap_wp_to
     = init_arch_objects_excap

@@ -12,10 +12,10 @@ crunch cdl_current_domain[wp]: update_available_range, generate_object_ids, upda
                                mark_tcb_intent_error, corrupt_ipc_buffer, insert_cap_sibling,
                                insert_cap_child, move_cap, invoke_irq_control, invoke_irq_handler
                                                     "\<lambda>s. P (cdl_current_domain s)"
-(wp: crunch_wps select_wp alternative_wp alternativeE_wp hoare_unless_wp simp: split_def corrupt_intents_def)
+(wp: crunch_wps unless_wp simp: split_def corrupt_intents_def)
 
 crunch cdl_irq_node [wp]:  corrupt_ipc_buffer "\<lambda>s. P (cdl_irq_node s)"
-(wp: crunch_wps select_wp simp: corrupt_intents_def)
+(wp: crunch_wps simp: corrupt_intents_def)
 crunch cdl_irq_node [wp]:  mark_tcb_intent_error "\<lambda>s. P (cdl_irq_node s)"
 (wp: crunch_wps)
 
@@ -124,7 +124,7 @@ lemma corrupt_tcb_intent_sep_helper[wp]:
   \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>"
    apply (simp add:corrupt_tcb_intent_def update_thread_def
      set_object_def)
-   apply (wp select_wp | wpc | simp add:set_object_def)+
+   apply (wp | wpc | simp add:set_object_def)+
    apply (clarsimp simp:object_at_def)
    apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
@@ -141,7 +141,7 @@ lemma corrupt_frame_sep_helper[wp]:
   "\<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>
   corrupt_frame a \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>"
   apply (simp add:corrupt_frame_def)
-  apply (wp select_wp)
+  apply wp
   apply (clarsimp simp:corrupt_intents_def object_at_def
     map_add_def split:option.splits cdl_object.splits)
   apply (simp add:object_clean_def intent_reset_def
@@ -157,7 +157,7 @@ lemma corrupt_ipc_buffer_sep_inv[wp]:
    \<lbrace>\<lambda>rv s. < P > s\<rbrace>"
   apply (rule sep_nonimpact_valid_lift)
    apply (simp add:corrupt_ipc_buffer_def)
-   apply (wp select_wp hoare_drop_imps | wpc | simp)+
+   apply (wp hoare_drop_imps | wpc | simp)+
   done
 
 lemma update_thread_intent_update:
@@ -231,55 +231,48 @@ lemma no_exception_conj':
   done
 
 crunch inv[wp]: decode_untyped_invocation P
-  (wp:crunch_wps alternativeE_wp mapME_x_inv_wp
-    unlessE_wp simp:crunch_simps throw_on_none_def)
+  (wp: crunch_wps mapME_x_inv_wp unlessE_wp simp: crunch_simps throw_on_none_def)
 
 crunch inv[wp]: decode_irq_handler_invocation P
-  (wp:crunch_wps alternativeE_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_tcb_invocation P
-  (wp:crunch_wps alternativeE_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_domain_invocation P
-  (wp:crunch_wps alternativeE_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp:crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_irq_control_invocation P
-  (wp:crunch_wps alternativeE_wp select_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_asid_control_invocation P
-  (wp:crunch_wps alternativeE_wp select_wp ignore:returnOk
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps ignore: returnOk simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: lookup_cap_and_slot P
   (wp:crunch_wps resolve_address_bits_wp)
 
 crunch inv[wp]: decode_page_invocation P
-  (wp:crunch_wps alternativeE_wp select_wp resolve_address_bits_wp
-    simp:throw_on_none_def)
+  (wp: crunch_wps resolve_address_bits_wp simp: throw_on_none_def)
 
 lemma decode_page_table_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_page_table_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add:decode_page_table_invocation_def)
   apply (rule hoare_pre)
-   apply (wpc|wp alternativeE_wp select_wp |simp add:throw_on_none_def)+
+   apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
 lemma decode_page_directory_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_page_directory_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add:decode_page_directory_invocation_def)
   apply (rule hoare_pre)
-   apply (wpc|wp alternativeE_wp select_wp |simp add:throw_on_none_def)+
+   apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
 lemma decode_asid_pool_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_asid_pool_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add:decode_asid_pool_invocation_def)
   apply (rule hoare_pre)
-   apply (wpc|wp alternativeE_wp select_wp |simp add:throw_on_none_def)+
+   apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
 lemma decode_invocation_inv[wp]:
@@ -301,7 +294,7 @@ lemma decode_invocation_nonep:
    decode_invocation cap cap_ref extra_caps intent
    \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
   apply (simp add: decode_invocation_def)
-  apply (wpsimp simp: o_def nonep_invocation_def simp_del: hoare_True_E_R)
+  apply (wpsimp simp: o_def nonep_invocation_def wp: wp_post_tauts)
   apply (auto simp: ep_related_cap_def)
   done
 
@@ -325,8 +318,8 @@ lemma wp_no_exception_seq_r:
       and validE_f: "\<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. P' r\<rbrace>,\<lbrace>\<lambda>r. Inv\<rbrace>"
   shows "\<lbrace>P\<rbrace> f >>=E g \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r. Inv\<rbrace>"
   apply (rule hoare_pre)
-  apply (rule hoare_vcg_seqE)
-    apply (rule hoare_post_impErr[OF validE_g])
+  apply (rule bindE_wp)
+    apply (rule hoare_strengthen_postE[OF validE_g])
      apply simp
     apply simp
    apply (wp validE_f)
@@ -371,7 +364,7 @@ lemma handle_event_syscall_no_decode_exception:
       apply (rule liftE_wp_split_r)+
        apply (rule wp_no_exception_seq_r)
         apply (rule liftE_wp_no_exception)
-         apply (rule hoare_whenE_wp)
+         apply (rule whenE_wp)
          apply simp
          apply wp
            apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
@@ -403,7 +396,7 @@ lemma handle_event_syscall_no_decode_exception:
      apply (rule_tac P = " y = cur_thread \<and>
        cdl_intent_extras (cdl_tcb_intent ya) = intent_extra" in hoare_gen_asmEx)
      apply simp
-     apply (rule hoare_post_impErr[OF no_exception_conj])
+     apply (rule hoare_strengthen_postE[OF no_exception_conj])
         apply (rule_tac r = yb in lookup_extra_caps_exec)
        prefer 2
        apply (elim conjE)
@@ -413,7 +406,7 @@ lemma handle_event_syscall_no_decode_exception:
     apply (rule_tac P = "(cdl_intent_cap (cdl_tcb_intent ya)) = intent_cptr
        \<and> y = cur_thread"
        in hoare_gen_asmEx)
-    apply (rule hoare_post_impErr[OF no_exception_conj])
+    apply (rule hoare_strengthen_postE[OF no_exception_conj])
        apply simp
        apply (rule lookup_cap_and_slot_exec)
       prefer 2
@@ -427,16 +420,15 @@ lemma handle_event_syscall_no_decode_exception:
   done
 
 crunch cdl_current_thread [wp]:  delete_cap_simple "\<lambda>s. P (cdl_current_thread s)"
-(wp:crunch_wps select_wp  simp:split_def unless_def)
+  (wp: crunch_wps simp: split_def unless_def)
 
 crunch cdl_current_thread [wp]:  mark_tcb_intent_error "\<lambda>s. P (cdl_current_thread s)"
-(wp:crunch_wps select_wp  simp:split_def unless_def)
+  (wp: crunch_wps simp: split_def unless_def)
 
 crunch cdl_current_thread [wp]:  corrupt_ipc_buffer "\<lambda>s. P (cdl_current_thread s)"
-(wp:crunch_wps select_wp simp:split_def unless_def corrupt_frame_def corrupt_intents_def)
+  (wp: crunch_wps simp: split_def unless_def corrupt_frame_def corrupt_intents_def)
 
 crunch cdl_current_thread [wp]:  invoke_irq_control, invoke_irq_handler "\<lambda>s. P (cdl_current_thread s)"
-(wp:alternative_wp)
 
 
 lemma corrupt_tcb_intent_all_active_tcbs[wp]:
@@ -478,7 +470,7 @@ lemma send_signal_no_pending:
   \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: send_signal_def send_signal_bound_def)
   apply (rule hoare_pre)
-  apply (wp alternative_wp | wpc)+
+  apply (wp | wpc)+
      apply (rule hoare_pre_cont)
     apply (rule_tac P = "waiters = {}" in hoare_gen_asm)
     apply (clarsimp simp: option_select_def)
@@ -495,7 +487,7 @@ lemma send_signal_no_pending:
   done
 
 crunch invs[wp]: get_active_irq P
-  (wp: crunch_wps alternative_wp select_wp)
+  (wp: crunch_wps)
 
 lemma handle_pending_interrupts_no_ntf_cap:
   "\<lbrace>P and no_pending\<rbrace>
@@ -506,7 +498,7 @@ lemma handle_pending_interrupts_no_ntf_cap:
    apply (wp send_signal_no_pending
            | wpc
            | simp add: option_select_def handle_interrupt_def split del: if_split)+
-   apply (wp alternative_wp select_wp hoare_drop_imps hoare_vcg_all_lift)
+   apply (wp hoare_drop_imps hoare_vcg_all_lift)
   apply simp
   done
 
@@ -556,61 +548,59 @@ lemma call_kernel_with_intent_no_fault_helper:
   using unify
   apply (simp add:call_kernel_with_intent_def)
   apply wp
-       apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
-       apply (simp add:call_kernel_loop_def)
-       apply (rule_tac Q = "\<lambda>r s. cdl_current_thread s = Some root_tcb_id
-                              \<and> cdl_current_domain s = minBound \<longrightarrow> Q s
-              " in hoare_strengthen_post[rotated])
-        apply fastforce
-       apply clarsimp
-       apply wp
-          apply (rule hoare_vcg_imp_lift)
-           apply (wpc|wp hoare_vcg_imp_lift|simp cong: if_cong)+
-           apply (rule hoare_pre_cont)
-          apply (wp has_restart_cap_sep_wp[where cap = RunningCap])[1]
-         apply wp
+        apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
+        apply (simp add:call_kernel_loop_def)
         apply (rule_tac Q = "\<lambda>r s. cdl_current_thread s = Some root_tcb_id
-                             \<and> cdl_current_domain s = minBound \<longrightarrow> (Q s
-                             \<and>  <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> s)"
-               in hoare_strengthen_post)
-         apply (rule schedule_no_choice_wp)
-        apply fastforce
-       apply (rule whileLoop_wp[where
-               I = "\<lambda>rv s. case rv of Inl _ \<Rightarrow> (tcb_at'
-                    (\<lambda>tcb. cdl_intent_op (cdl_tcb_intent tcb) = Some intent_op \<and>
-                           cdl_intent_cap (cdl_tcb_intent tcb) = cdl_intent_cap intent \<and>
-                           cdl_intent_extras (cdl_tcb_intent tcb) = cdl_intent_extras intent)
-                           root_tcb_id s
-                    \<and> cdl_current_thread s = Some root_tcb_id
-                    \<and> cdl_current_domain s = minBound \<and> Pd2 s)
-               | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
-        apply (case_tac r, simp_all add: isLeft_def)[1]
-       apply (simp add: validE_def[symmetric])
-       apply (rule hoare_pre, wp)
-         apply (simp add: validE_def, (wp | simp add: validE_def[symmetric])+)
-         apply (wp handle_pending_interrupts_no_ntf_cap)
-        apply (rule handle_event_syscall_no_decode_exception
-                  [where cur_thread = root_tcb_id
-                     and intent_op = intent_op
-                     and intent_cptr = intent_cptr
-                     and intent_extra = intent_extra])
-                apply (wp set_cap_wp set_cap_all_scheduable_tcbs
-                        set_cap_hold delete_cap_simple_wp[where cap = RestartCap])[1]
-               apply (rule decode_invocation_no_exception)
-              apply (rule lookup_extra_caps_exec)
-             apply (rule lookup_cap_and_slot_exec)
-            apply (rule non_ep_cap)
-           apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
-                mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[2]
-         apply (rule hoare_post_impErr[OF perform_invocation_hold])
-          apply (fastforce simp:sep_state_projection_def sep_any_def
-            sep_map_c_def sep_conj_def)
-         apply simp
-        apply (wp set_restart_cap_hold)
-       apply (clarsimp simp: isLeft_def)
+                               \<and> cdl_current_domain s = minBound \<longrightarrow> Q s
+               " in hoare_strengthen_post[rotated])
+         apply fastforce
+        apply clarsimp
+        apply wp
+           apply (rule hoare_vcg_imp_lift)
+            apply (wpc|wp hoare_vcg_imp_lift|simp cong: if_cong)+
+            apply (rule hoare_pre_cont)
+           apply (wp has_restart_cap_sep_wp[where cap = RunningCap])[1]
+          apply wp
+         apply (rule_tac Q = "\<lambda>r s. cdl_current_thread s = Some root_tcb_id
+                              \<and> cdl_current_domain s = minBound \<longrightarrow> (Q s
+                              \<and>  <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> s)"
+                in hoare_strengthen_post)
+          apply (rule schedule_no_choice_wp)
+         apply fastforce
+        apply (rule whileLoop_wp[where
+                I = "\<lambda>rv s. case rv of Inl _ \<Rightarrow> (tcb_at'
+                     (\<lambda>tcb. cdl_intent_op (cdl_tcb_intent tcb) = Some intent_op \<and>
+                            cdl_intent_cap (cdl_tcb_intent tcb) = cdl_intent_cap intent \<and>
+                            cdl_intent_extras (cdl_tcb_intent tcb) = cdl_intent_extras intent)
+                            root_tcb_id s
+                     \<and> cdl_current_thread s = Some root_tcb_id
+                     \<and> cdl_current_domain s = minBound \<and> Pd2 s)
+                | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
+         apply (case_tac r, simp_all)[1]
+        apply (simp add: validE_def[symmetric])
+        apply (wp handle_pending_interrupts_no_ntf_cap)
+         apply (rule handle_event_syscall_no_decode_exception
+                   [where cur_thread = root_tcb_id
+                      and intent_op = intent_op
+                      and intent_cptr = intent_cptr
+                      and intent_extra = intent_extra])
+                 apply (wp set_cap_wp set_cap_all_scheduable_tcbs
+                         set_cap_hold delete_cap_simple_wp[where cap = RestartCap])[1]
+                apply (rule decode_invocation_no_exception)
+               apply (rule lookup_extra_caps_exec)
+              apply (rule lookup_cap_and_slot_exec)
+             apply (rule non_ep_cap)
+            apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
+                 mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[2]
+          apply (rule hoare_strengthen_postE[OF perform_invocation_hold])
+           apply (fastforce simp:sep_state_projection_def sep_any_def
+             sep_map_c_def sep_conj_def)
+          apply simp
+         apply (wp set_restart_cap_hold)
+        apply (clarsimp split: sum.split_asm)
        apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
-   apply simp
-   apply (wp upd_thread update_thread_wp)+
+       apply simp
+       apply (wp upd_thread update_thread_wp)+
   apply auto
   done
 
@@ -622,13 +612,7 @@ lemma invoke_cnode_insert_cap:
   apply (simp add:validE_def)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:invoke_cnode_def liftE_bindE validE_def[symmetric])
-  apply (rule alternative_valid)
-   apply (rule hoare_pre)
-    apply (rule insert_cap_sibling_wp)
-   apply simp
-  apply (rule hoare_pre)
-   apply (rule insert_cap_child_wp)
-  apply simp
+  apply (wpsimp wp: insert_cap_sibling_wp insert_cap_child_wp)
   done
 
 lemma invoke_cnode_move_wp:
@@ -682,19 +666,17 @@ lemma cdl_cur_thread_detype:
   by (simp add:detype_def)
 
 crunch cdl_current_thread[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_thread s)"
-  (wp: select_wp alternativeE_wp mapME_x_inv_wp hoare_whenE_wp
-    simp: cdl_cur_thread_detype crunch_simps)
+  (wp: mapME_x_inv_wp whenE_wp simp: cdl_cur_thread_detype crunch_simps)
 
 lemmas helper = valid_validE_E[OF reset_untyped_cap_cdl_current_thread]
 
 crunch cdl_current_thread[wp]: invoke_untyped "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp alternativeE_wp
-    helper
-  simp:cdl_cur_thread_detype crunch_simps)
+  (wp: mapM_x_wp' crunch_wps unless_wp helper
+       simp:cdl_cur_thread_detype crunch_simps)
 
 crunch cdl_current_thread[wp]: move_cap "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp
-  simp:crunch_simps)
+  (wp: mapM_x_wp' crunch_wps unless_wp
+   simp:crunch_simps)
 
 lemma cnode_insert_cap_cdl_current_thread:
   "\<lbrace>\<lambda>s. P (cdl_current_thread s)  \<rbrace>
@@ -704,7 +686,7 @@ lemma cnode_insert_cap_cdl_current_thread:
   apply (clarsimp simp:
     invoke_cnode_def liftE_bindE validE_def[symmetric])
   apply (rule hoare_pre)
-  apply (wp alternative_valid | simp | wpc)+
+  apply (wp | simp | wpc)+
   done
 
 lemma cnode_move_cap_cdl_current_thread:
@@ -715,7 +697,7 @@ lemma cnode_move_cap_cdl_current_thread:
   apply (clarsimp simp:
     invoke_cnode_def liftE_bindE validE_def[symmetric])
   apply (rule hoare_pre)
-  apply (wp alternative_valid | simp | wpc)+
+  apply (wp | simp | wpc)+
   done
 
 lemma sep_any_imp_c'_conj:
@@ -854,7 +836,7 @@ lemma syscall_valid_helper_allow_error:
     apply (wp mark_tcb_intent_error_no_error)
     apply (rule hoare_drop_imp,simp)
    apply simp
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
     apply fastforce
    apply simp
   apply simp
@@ -871,7 +853,7 @@ lemma tcb_has_error_set_cap:
   apply (simp add:set_cap_def
     gets_the_def set_object_def
     split_def)
-  apply (wp select_wp|wpc|simp)+
+  apply (wp|wpc|simp)+
   apply (clarsimp simp:tcb_has_error_def
     object_at_def,simp split:cdl_object.split_asm)
   apply (intro conjI impI)
@@ -930,7 +912,7 @@ lemma handle_event_syscall_allow_error:
       apply (rule liftE_wp_split_r)+
        apply (rule wp_no_exception_seq_r)
         apply (rule liftE_wp_no_exception)
-         apply (rule hoare_whenE_wp)
+         apply (rule whenE_wp)
          apply (simp)
          apply wp
            apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
@@ -963,7 +945,7 @@ lemma handle_event_syscall_allow_error:
      apply (rule_tac P = "
        cdl_intent_extras (cdl_tcb_intent ya) = intent_extra" in hoare_gen_asmEx)
      apply simp
-     apply (rule hoare_post_impErr[OF no_exception_conj])
+     apply (rule hoare_strengthen_postE[OF no_exception_conj])
         apply (rule_tac r = r in lookup_extra_caps_exec)
        prefer 2
        apply (elim conjE)
@@ -1043,87 +1025,83 @@ lemma call_kernel_with_intent_allow_error_helper:
   using unify
   apply (simp add:call_kernel_with_intent_def)
   apply (wp thread_has_error_wp)
-    apply (simp add:call_kernel_loop_def)
-    apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
-    apply (rule_tac Q = "\<lambda>r s. (cdl_current_thread s = Some root_tcb_id
-                             \<and> cdl_current_domain s = minBound) \<longrightarrow> (
-      ((\<not> tcb_has_error (the (cdl_current_thread s)) s) \<longrightarrow> Q s) \<and>
-      ((tcb_has_error (the (cdl_current_thread s)) s) \<longrightarrow> Perror s))"
-      in hoare_strengthen_post[rotated])
-    apply (fastforce simp: error_imp)
-    apply wp
-       (* fragile , do not know why *)
-       apply (rule hoare_vcg_imp_lift[where P' = "\<lambda>s. cdl_current_thread s \<noteq> Some root_tcb_id
-                                                    \<or> cdl_current_domain s \<noteq> minBound"])
-        apply (rule hoare_pre,(wp hoare_vcg_imp_lift|wpc|simp cong: if_cong)+)[1]
-        apply (wp | wpc | simp)+
-        apply (rule hoare_pre_cont)
-       apply (wp has_restart_cap_sep_wp[where cap = RunningCap])+
-       apply simp
-      apply (rule_tac current_thread1=root_tcb_id and current_domain1=minBound in
-                        hoare_strengthen_post[OF schedule_no_choice_wp])
-      apply (clarsimp, assumption)
-     apply clarsimp
-    apply (rule_tac Q = "\<lambda>r a. (\<not> tcb_has_error root_tcb_id a \<longrightarrow> (Q a
-      \<and> cdl_current_thread a = Some root_tcb_id
-      \<and> cdl_current_domain a = minBound
-      \<and> <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> a))
-      \<and> (tcb_has_error root_tcb_id a \<longrightarrow> (Perror a
-      \<and> cdl_current_thread a = Some root_tcb_id
-      \<and> cdl_current_domain a = minBound
-      \<and> <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> a))"
-      in hoare_strengthen_post[rotated])
-     apply fastforce
-       apply (rule whileLoop_wp[where
-               I = "\<lambda>rv s. case rv of Inl _ \<Rightarrow> (tcb_at'
-                    (\<lambda>tcb. cdl_intent_op (cdl_tcb_intent tcb) = Some intent_op \<and>
-                           cdl_intent_cap (cdl_tcb_intent tcb) = cdl_intent_cap intent \<and>
-                           cdl_intent_extras (cdl_tcb_intent tcb) = cdl_intent_extras intent \<and>
-                           cdl_intent_error (cdl_tcb_intent tcb) = False)
-                           root_tcb_id s
-                    \<and> cdl_current_thread s = Some root_tcb_id
-                    \<and> cdl_current_domain s = minBound \<and> Pd2 s)
-               | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
-        apply (case_tac r, simp_all add: isLeft_def)[1]
-       apply (simp add: validE_def[symmetric])
-       apply (rule hoare_pre, wp)
-         apply (simp add: validE_def, (wp | simp add: validE_def[symmetric])+)
-         apply (wp handle_pending_interrupts_no_ntf_cap)
-
-    apply (rule handle_event_syscall_allow_error
-      [where cur_thread = root_tcb_id
-         and intent_op = intent_op
-         and intent_cptr = intent_cptr
-         and intent_extra = intent_extra])
-            apply (wp set_cap_wp
-              set_cap_hold delete_cap_simple_wp[where cap = RestartCap])[1]
-           apply (rule decode_invocation_allow_error)
-          apply (rule lookup_extra_caps_exec)
-         apply (rule lookup_cap_and_slot_exec)
-        apply (unfold validE_R_def)
-        apply (rule hoare_post_impErr)
-          apply (rule lookup_cap_and_slot_exec)
+        apply (simp add:call_kernel_loop_def)
+        apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
+        apply (rule_tac Q = "\<lambda>r s. (cdl_current_thread s = Some root_tcb_id
+                                    \<and> cdl_current_domain s = minBound) \<longrightarrow>
+                                       (\<not>tcb_has_error (the (cdl_current_thread s)) s \<longrightarrow> Q s) \<and>
+                                       (tcb_has_error (the (cdl_current_thread s)) s \<longrightarrow> Perror s)"
+                        in hoare_strengthen_post[rotated])
+         apply (fastforce simp: error_imp)
+        apply wp (* fragile , do not know why *)
+           apply (rule hoare_vcg_imp_lift[where P' = "\<lambda>s. cdl_current_thread s \<noteq> Some root_tcb_id
+                                                          \<or> cdl_current_domain s \<noteq> minBound"])
+            apply (rule hoare_pre,(wp hoare_vcg_imp_lift|wpc|simp cong: if_cong)+)[1]
+           apply (wp | wpc | simp)+
+            apply (rule hoare_pre_cont)
+           apply (wp has_restart_cap_sep_wp[where cap = RunningCap])+
          apply simp
-        apply simp
-       apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
-         mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[4]
-     apply (rule hoare_post_impErr[OF perform_invocation_hold])
-       apply (fastforce simp:sep_state_projection_def sep_any_def
-         sep_map_c_def sep_conj_def)
-      apply simp
-     apply (wp set_restart_cap_hold)
-    apply (clarsimp dest!:error_imp)
-    apply (sep_cancel, simp)
-    apply (clarsimp simp: isLeft_def)
-   apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
-   apply simp
-   apply (wp upd_thread update_thread_wp)+
-  apply (clarsimp)
-  apply (clarsimp simp:sep_map_c_conj sep_map_f_conj object_at_def
-    object_project_def sep_state_projection_def
-    split:option.splits cdl_object.split)
+         apply (rule_tac current_thread1=root_tcb_id and current_domain1=minBound in
+                         hoare_strengthen_post[OF schedule_no_choice_wp])
+         apply (clarsimp, assumption)
+        apply clarsimp
+        apply (rule_tac Q =
+               "\<lambda>r a. (\<not> tcb_has_error root_tcb_id a \<longrightarrow> (Q a
+                            \<and> cdl_current_thread a = Some root_tcb_id
+                            \<and> cdl_current_domain a = minBound
+                            \<and> <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> a))
+                            \<and> (tcb_has_error root_tcb_id a \<longrightarrow> (Perror a
+                            \<and> cdl_current_thread a = Some root_tcb_id
+                            \<and> cdl_current_domain a = minBound
+                            \<and> <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> a))"
+               in hoare_strengthen_post[rotated])
+         apply fastforce
+        apply (rule whileLoop_wp[where
+                I = "\<lambda>rv s. case rv of Inl _ \<Rightarrow>
+                     (tcb_at'
+                     (\<lambda>tcb. cdl_intent_op (cdl_tcb_intent tcb) = Some intent_op \<and>
+                            cdl_intent_cap (cdl_tcb_intent tcb) = cdl_intent_cap intent \<and>
+                            cdl_intent_extras (cdl_tcb_intent tcb) = cdl_intent_extras intent \<and>
+                            cdl_intent_error (cdl_tcb_intent tcb) = False)
+                            root_tcb_id s \<and>
+                     cdl_current_thread s = Some root_tcb_id \<and>
+                     cdl_current_domain s = minBound \<and> Pd2 s)
+                | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
+         apply (case_tac r, simp_all)[1]
+        apply (simp add: validE_def[symmetric])
+        apply (wp handle_pending_interrupts_no_ntf_cap)
+         apply (rule handle_event_syscall_allow_error
+                       [where cur_thread = root_tcb_id
+                          and intent_op = intent_op
+                          and intent_cptr = intent_cptr
+                          and intent_extra = intent_extra])
+                    apply (wp set_cap_wp
+                              set_cap_hold delete_cap_simple_wp[where cap = RestartCap])[1]
+                   apply (rule decode_invocation_allow_error)
+                  apply (rule lookup_extra_caps_exec)
+                 apply (rule lookup_cap_and_slot_exec)
+                apply (unfold validE_R_def)
+                apply (rule hoare_strengthen_postE)
+                  apply (rule lookup_cap_and_slot_exec)
+                 apply simp
+                apply simp
+               apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
+                          mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[4]
+           apply (rule hoare_strengthen_postE[OF perform_invocation_hold])
+            apply (fastforce simp:sep_state_projection_def sep_any_def sep_map_c_def sep_conj_def)
+           apply simp
+          apply (wp set_restart_cap_hold)
+         apply (clarsimp dest!:error_imp)
+         apply (sep_cancel, simp)
+        apply (clarsimp split: sum.split_asm)
+       apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
+       apply simp
+       apply (wp upd_thread update_thread_wp)+
+  apply (clarsimp simp: sep_map_c_conj sep_map_f_conj object_at_def
+                        object_project_def sep_state_projection_def
+                  split:option.splits cdl_object.split)
   apply (case_tac z)
-    apply (clarsimp dest!:arg_cong[where f= object_type],simp add:object_type_def)+
+           apply (clarsimp dest!:arg_cong[where f= object_type],simp add:object_type_def)+
   done
 
 definition
@@ -1137,13 +1115,8 @@ lemma invoke_cnode_insert_cap':
   apply (simp add:validE_def)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:invoke_cnode_def liftE_bindE validE_def[symmetric])
-  apply (rule alternative_valid)
-   apply (rule hoare_pre)
-    apply (rule insert_cap_sibling_wp)
-   apply (simp add:cap_of_insert_call_def)
-  apply (rule hoare_pre)
-   apply (rule insert_cap_child_wp)
-  apply (simp add:cap_of_insert_call_def)
+  apply (wpsimp wp: insert_cap_sibling_wp insert_cap_child_wp
+                simp: cap_of_insert_call_def)
   done
 
 lemma object_to_sep_state_slot:
@@ -1164,13 +1137,13 @@ lemma sep_map_c_asid_reset:
    apply clarsimp
    apply (case_tac "\<not> has_slots obj")
     apply simp
-   apply (rule_tac x = "update_slots (object_slots obj(snd ptr \<mapsto> cap')) obj"
+   apply (rule_tac x = "update_slots ((object_slots obj)(snd ptr \<mapsto> cap')) obj"
      in exI)
    apply (simp add:sep_map_general_def object_to_sep_state_slot)
   apply clarsimp
   apply (case_tac "\<not> has_slots obj")
    apply simp
-  apply (rule_tac x = "update_slots (object_slots obj(snd ptr \<mapsto> cap)) obj"
+  apply (rule_tac x = "update_slots ((object_slots obj)(snd ptr \<mapsto> cap)) obj"
     in exI)
   apply (simp add:sep_map_general_def object_to_sep_state_slot)
   done

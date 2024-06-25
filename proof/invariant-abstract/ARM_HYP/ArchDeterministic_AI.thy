@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -46,7 +47,7 @@ crunch valid_list[wp]: invalidate_tlb_by_asid valid_list
    ignore: without_preemption filterM )
 
 crunch valid_list[wp]: invoke_untyped valid_list
-  (wp: crunch_wps preemption_point_inv' hoare_unless_wp mapME_x_wp'
+  (wp: crunch_wps preemption_point_inv' unless_wp mapME_x_wp'
     simp: mapM_x_def_bak crunch_simps)
 
 crunch valid_list[wp]: invoke_irq_control valid_list

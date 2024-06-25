@@ -14,7 +14,7 @@ named_theorems PasUpdates_assms
 
 crunches arch_post_cap_deletion, arch_finalise_cap, prepare_thread_delete
   for domain_fields[PasUpdates_assms, wp]: "domain_fields P"
-  (    wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
+  (    wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
      simp: crunch_simps check_cap_at_def filterM_mapM unless_def
    ignore: without_preemption filterM rec_del check_cap_at cap_revoke
    ignore_del: retype_region_ext create_cap_ext cap_insert_ext ethread_set cap_move_ext

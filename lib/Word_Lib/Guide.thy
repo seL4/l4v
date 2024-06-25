@@ -6,7 +6,7 @@
 
 (*<*)
 theory Guide
-  imports Word_Lib_Sumo Machine_Word_32 Machine_Word_64 Ancient_Numeral
+  imports Word_Lib_Sumo Machine_Word_32 Machine_Word_64
 begin
 
 context semiring_bit_operations
@@ -64,7 +64,7 @@ text \<open>
 
       \<^item> Equality rule: @{thm [display, mode=iff] bit_eq_iff [where ?'a = int, no_vars]}
 
-      \<^item> Induction rule: @{thm [display, mode=iff] bits_induct [where ?'a = int, no_vars]}
+      \<^item> Induction rule: @{thm [display, mode=iff] bit_induct [where ?'a = int, no_vars]}
 
     \<^item> Characteristic properties @{prop [source] \<open>bit (f x) n \<longleftrightarrow> P x n\<close>}
       are available in fact collection \<^text>\<open>bit_simps\<close>.
@@ -364,8 +364,13 @@ text \<open>
   \<^descr>[\<^theory>\<open>Word_Lib.Bit_Comprehension\<close>]
 
     Comprehension syntax for bit values over predicates
-    \<^typ>\<open>nat \<Rightarrow> bool\<close>.  For \<^typ>\<open>'a::len word\<close>, straightforward
-    alternatives exist; difficult to handle for \<^typ>\<open>int\<close>.
+    \<^typ>\<open>nat \<Rightarrow> bool\<close>, for \<^typ>\<open>'a::len word\<close>; straightforward
+    alternatives exist.
+
+  \<^descr>[\<^theory>\<open>Word_Lib.Bit_Comprehension_Int\<close>]
+
+    Comprehension syntax for bit values over predicates
+    \<^typ>\<open>nat \<Rightarrow> bool\<close>, for \<^typ>\<open>int\<close>; inherently non-computational.
 
   \<^descr>[\<^theory>\<open>Word_Lib.Reversed_Bit_Lists\<close>]
 
@@ -388,9 +393,16 @@ text \<open>
 section \<open>Changelog\<close>
 
 text \<open>
+  \<^descr>[Changes since AFP 2022] ~
+
+    \<^item> Theory \<^text>\<open>Word_Lib.Ancient_Numeral\<close> has been removed from session.
+
+    \<^item> Bit comprehension syntax for \<^typ>\<open>int\<close> moved to separate theory
+      \<^theory>\<open>Word_Lib.Bit_Comprehension_Int\<close>.
+
   \<^descr>[Changes since AFP 2021] ~
 
-    \<^item> Theory \<^theory>\<open>Word_Lib.Ancient_Numeral\<close> is not part of \<^theory>\<open>Word_Lib.Word_Lib_Sumo\<close>
+    \<^item> Theory \<^text>\<open>Word_Lib.Ancient_Numeral\<close> is not part of \<^theory>\<open>Word_Lib.Word_Lib_Sumo\<close>
       any longer.
 
     \<^item> Infix syntax for \<^term>\<open>(AND)\<close>, \<^term>\<open>(OR)\<close>, \<^term>\<open>(XOR)\<close> organized in

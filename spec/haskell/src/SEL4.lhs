@@ -39,6 +39,7 @@ faults, and system calls; the set of possible events is defined in
 
 > callKernel :: Event -> Kernel ()
 > callKernel ev = do
+>     stateAssert fastpathKernelAssertions "Fast path assertions must hold"
 >     runExceptT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do
 >                       irq <- doMachineOp (getActiveIRQ True)
@@ -51,3 +52,12 @@ This will be replaced by actual assertions in the proofs:
 
 > kernelExitAssertions :: KernelState -> Bool
 > kernelExitAssertions _ = True
+
+During refinement proofs, abstract invariants are used to show properties on the
+design spec without corresponding invariants on the concrete level. Since the
+fast path proofs do not have access to the abstract invariant level nor the
+state relation, any extra properties need to be crossed over via this assertion.
+This will be replaced by actual assertions in the proofs.
+
+> fastpathKernelAssertions :: KernelState -> Bool
+> fastpathKernelAssertions _ = True

@@ -53,16 +53,16 @@ definition arch_decode_irq_control_invocation ::
     else throwError IllegalOperation)"
 
 definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes" where
-  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Execute \<or> \<not>w !! 2 \<and> attr = Device}"
+  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Device \<or> \<not>w !! 2 \<and> attr = Execute}"
 
 definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
   "make_user_pte addr attr rights vm_size \<equiv>
      PagePTE addr (vm_size = ARMSmallPage) (attr - {Global}) rights"
 
-definition check_vspace_root :: "arch_cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
+definition check_vspace_root :: "cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
   "check_vspace_root cap arg_no \<equiv>
      case cap of
-       PageTableCap pt VSRootPT_T (Some (asid, _)) \<Rightarrow> returnOk (pt, asid)
+       ArchObjectCap (PageTableCap pt VSRootPT_T (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
      | _ \<Rightarrow> throwError $ InvalidCapability arg_no"
 
 type_synonym 'z arch_decoder =
@@ -79,7 +79,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
            attr = args ! 2;
            vspace_cap = fst (extra_caps ! 0)
          in doE
-           (pt, asid) \<leftarrow> check_vspace_root cap 1;
+           (pt, asid) \<leftarrow> check_vspace_root vspace_cap 1;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
            check_vp_alignment pgsz vaddr;
@@ -91,7 +91,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
              odE
            | None \<Rightarrow> doE
                vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
-               whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0
+               whenE (vtop > user_vtop) $ throwError $ InvalidArgument 0
              odE;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            unlessE (pt_bits_left level = pg_bits) $
@@ -167,7 +167,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder" where
            vspace_cap = fst (extra_caps ! 0)
          in doE
            whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
-           (pt, asid) \<leftarrow> check_vspace_root cap 1;
+           (pt, asid) \<leftarrow> check_vspace_root vspace_cap 1;
            whenE (user_vtop < vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
@@ -225,7 +225,7 @@ definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
         in doE
           whenE (end \<le> start) $ throwError $ InvalidArgument 1;
           whenE (end > pptrUserTop) $ throwError $ IllegalOperation;
-          (vspace, asid) \<leftarrow> check_vspace_root cap 0;
+          (vspace, asid) \<leftarrow> check_vspace_root (ArchObjectCap cap) 0;
           vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
           whenE (vspace' \<noteq> vspace) $ throwError $ InvalidCapability 0;
           frame_info \<leftarrow> liftE $ gets $ lookup_frame p start \<circ> ptes_of;
@@ -247,7 +247,7 @@ definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
 
 definition decode_vspace_invocation :: "'z::state_ext arch_decoder" where
   "decode_vspace_invocation label args cte cap extra_caps \<equiv>
-     if isPageFlushLabel (invocation_type label)
+     if isVSpaceFlushLabel (invocation_type label)
      then decode_vs_inv_flush label args cte cap extra_caps
      else throwError IllegalOperation"
 

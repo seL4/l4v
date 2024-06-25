@@ -10,7 +10,7 @@ Termination for recursive functions.
 theory FactorialTest
 imports
   "AutoCorres.AutoCorres"
-  "Lib.OptionMonadWP"
+  "Monads.Reader_Option_VCG"
 begin
 
 external_file "factorial.c"
@@ -47,7 +47,7 @@ proof (induct n arbitrary: m rule: less_induct)
 
    show "no_ofail (\<lambda>_. unat x < m) (factorial' m x)"
      apply (subst factorial'.simps)
-     apply (wp induct_asm ovalid_post_triv)
+     apply (wpsimp wp: induct_asm ovalid_post_triv)
      apply unat_arith
     done
 qed

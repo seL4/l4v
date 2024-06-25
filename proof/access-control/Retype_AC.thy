@@ -266,7 +266,7 @@ lemma delete_objects_respects[wp]:
    delete_objects ptr bits
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (rule_tac seq_ext)
+  apply (rule_tac bind_wp_fwd)
    apply (rule hoare_triv[of P _ "%_. P" for P])
    apply (wp dmo_freeMemory_respects | simp)+
   by (fastforce simp: ptr_range_def intro!: detype_integrity)
@@ -354,7 +354,7 @@ lemma invoke_untyped_integrity:
              init_arch_objects_integrity retype_region_integrity
              retype_region_ret_is_subject
              set_cap_integrity_autarch hoare_vcg_if_lift
-             hoare_whenE_wp reset_untyped_cap_integrity
+             whenE_wp reset_untyped_cap_integrity
           | clarsimp simp: split_paired_Ball
           | erule in_set_zipE
           | blast)+
@@ -497,7 +497,7 @@ lemma retype_region_ext_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and K (\<forall>x\<in> set xs. is_subject aag x)\<rbrace>
    retype_region_ext xs ty
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (subst and_assoc[symmetric])
   apply (wp retype_region_ext_extended.pas_refined_tcb_domain_map_wellformed')
   apply (simp add: retype_region_ext_def, wp)
@@ -970,7 +970,7 @@ lemma reset_untyped_cap_valid_vspace_objs:
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding reset_untyped_cap_def
   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
-      apply (wp static_imp_wp delete_objects_valid_vspace_objs)
+      apply (wp hoare_weak_lift_imp delete_objects_valid_vspace_objs)
      apply (wpsimp wp: get_cap_wp)+
   apply (cases src_slot)
   apply (auto simp: cte_wp_at_caps_of_state)
@@ -1008,7 +1008,7 @@ lemma reset_untyped_cap_valid_arch_state:
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding reset_untyped_cap_def
   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
-      apply (wp static_imp_wp delete_objects_valid_arch_state)
+      apply (wp hoare_weak_lift_imp delete_objects_valid_arch_state)
      apply (wpsimp wp: get_cap_wp)+
   apply (cases src_slot)
   apply (auto simp: cte_wp_at_caps_of_state)
@@ -1192,7 +1192,7 @@ lemma decode_untyped_invocation_authorised:
                        is_subject aag (fst slot) \<and> pas_refined aag s \<and> word_size_bits \<le> sz \<and>
                        sz < word_bits \<and> is_aligned base sz \<and>
                        (is_cnode_cap (excaps ! 0) \<longrightarrow> (\<forall>x\<in>obj_refs_ac (excaps ! 0). is_subject aag x))"
-                   in hoare_post_imp_R)
+                   in hoare_strengthen_postE_R)
        apply (wp data_to_obj_type_ret_not_asid_pool data_to_obj_type_inv2)
       apply (case_tac "excaps ! 0", simp_all, fastforce simp: nonzero_data_to_nat_simp)[1]
      apply (wp whenE_throwError_wp)+

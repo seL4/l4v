@@ -11,9 +11,10 @@
 
 theory Corres_UL_C
 imports
-  "LemmaBucket_C"
-  "Lib.LemmaBucket"
-  "SIMPL_Lemmas"
+  CParser.LemmaBucket_C
+  Lib.LemmaBucket
+  SIMPL_Lemmas
+  Monads.Nondet_Reader_Option
 begin
 
 declare word_neq_0_conv [simp del]
@@ -47,7 +48,7 @@ lemma exec_handlers_use_hoare_nothrow:
   apply -
   apply (drule hoare_sound)
   apply (clarsimp elim: exec_Normal_elim_cases
-    simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+    simp: Nondet_Monad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (drule spec, drule spec, drule (1) mp)
@@ -56,6 +57,12 @@ lemma exec_handlers_use_hoare_nothrow:
   apply simp
   done
 
+lemma exec_handlers_use_hoare_nothrow_hoarep:
+  "\<lbrakk>E \<turnstile>\<^sub>h \<langle>c # hs, s'\<rangle> \<Rightarrow> (n, t); s' \<in> R'; E \<turnstile> R' c Q'\<rbrakk> \<Longrightarrow> E \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> t \<and> isNormal t"
+  apply (drule hoare_sound)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (erule exec_handlers.cases; fastforce simp: isNormal_def isAbr_def)
+  done
 
 definition
   unif_rrel :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 'b)
@@ -85,6 +92,9 @@ where
          Normal s'' \<Rightarrow> (\<exists>(r, t) \<in> fst (m s). (t, s'') \<in> srel
                             \<and> unif_rrel (n = length hs) rrel xf arrel axf r s'')
        | _ \<Rightarrow> False))"
+
+abbreviation
+  "ccorresG rf_sr \<Gamma> r xf \<equiv> ccorres_underlying rf_sr \<Gamma> r xf r xf"
 
 declare isNormal_simps [simp]
 
@@ -161,6 +171,13 @@ lemma ccorresE:
    apply simp
   apply simp
   done
+
+lemma ccorresE_gets_the:
+  "\<lbrakk>ccorresG srel \<Gamma> rrel xf G G' hs (gets_the c) c'; (s, s') \<in> srel; G s; s' \<in> G'; no_ofail G c;
+    \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs, s'\<rangle> \<Rightarrow> (n, Normal t')\<rbrakk>
+   \<Longrightarrow> (s, t') \<in> srel \<and> rrel (the (c s)) (xf t')"
+  by (fastforce simp: ccorres_underlying_def no_ofail_def unif_rrel_def gets_the_def gets_def
+                      get_def bind_def return_def)
 
 lemma ccorres_empty_handler_abrupt:
   assumes cc: "ccorres_underlying sr \<Gamma> rrel xf' arrel axf P P' [] a c"
@@ -271,26 +288,45 @@ lemma ccorres_from_vcg_nofail:
   apply (rule hoare_complete, simp add: HoarePartialDef.valid_def)
   done
 
-
-lemma ccorres_to_vcg:
-  "ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c \<Longrightarrow>
-  (\<forall>\<sigma>. \<not> snd (a \<sigma>) \<longrightarrow> \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel}
-  c
-  {s. (\<exists>(rv, \<sigma>') \<in> fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> rrel rv (xf s))})"
-  apply -
-  apply rule
-  apply (rule impI)
+lemma ccorres_to_vcg_with_prop:
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a; \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel}
+           c {t'. \<exists>(rv, t) \<in> fst (a s). (t, t') \<in> srel \<and> rrel rv (xf t') \<and> R rv t}"
   apply (rule hoare_complete)
-  apply (simp add: HoarePartialDef.valid_def cvalid_def)
-  apply (intro impI allI)
+  apply (clarsimp simp: HoarePartialDef.valid_def cvalid_def no_fail_def)
+  apply (drule_tac x=s in spec)
   apply clarsimp
   apply (frule (5) ccorres_empty_handler_abrupt)
-  apply (erule (4) ccorresE)
-   apply (erule (1) EHOther)
-  apply clarsimp
-  apply rule
-   apply simp
-  apply (fastforce simp: unif_rrel_simps)
+  apply (fastforce elim!: ccorresE EHOther simp: unif_rrel_simps valid_def)
+  done
+
+lemma ccorres_to_vcg:
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel}
+           c {t'. \<exists>(rv, t) \<in> fst (a s). (t, t') \<in> srel \<and> rrel rv (xf t')}"
+  apply (frule (1) ccorres_to_vcg_with_prop[where R="\<top>\<top>"])
+   apply wpsimp
+  apply fastforce
+  done
+
+lemma ccorres_to_vcg_Normal:
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel} c UNIV"
+  apply (frule (1) ccorres_to_vcg_with_prop[where R="\<top>\<top>" and s=s])
+   apply wpsimp
+  apply (fastforce elim: conseqPost)
+  done
+
+lemma ccorres_to_vcg_gets_the:
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] (gets_the r) c; no_ofail P r\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> (P' \<inter> {s'. (s, s') \<in> srel \<and> P s})
+           c {t'. (s, t') \<in> srel \<and> P s \<and> (r s \<noteq> None) \<and> rrel (the (r s)) (xf t')}"
+  apply (frule ccorres_to_vcg_with_prop[where R="\<lambda>_. P" and s=s])
+    apply (erule no_ofail_gets_the)
+   apply wpsimp
+  apply (clarsimp simp: gets_the_def simpler_gets_def bind_def return_def get_def assert_opt_def
+                        fail_def conseq_under_new_pre
+                 split: option.splits)
   done
 
 lemma exec_handlers_Seq_cases0':
@@ -803,6 +839,46 @@ lemma ccorres_call:
   apply simp
   done
 
+text \<open>
+  This rule is intended to be used in the case where the C calls a function and then uses the
+  returned value to update a global variable. Typically, the Haskell will split this up into a
+  getter function followed by a setter function. Note that the getter function may change the
+  state.
+
+  The extra return statement on the Haskell side allows us to establish a nontrivial return relation
+  between the values set on the concrete and abstract side. The @{thm bind_assoc_return_reverse} rule
+  may assist with rewriting statements to add the extra return needed by this rule\<close>
+lemma ccorres_call_getter_setter:
+  assumes cul: "ccorresG sr \<Gamma> r' xf' P (i ` P') [] getter (Call f)"
+  and     gsr: "\<And>x x' s t rv rv'.
+                  \<lbrakk> (x, t) \<in> sr; r' rv (xf' t); (rv', x') \<in> fst (setter rv x) \<rbrakk>
+                  \<Longrightarrow> (x', g s t (clean s t)) \<in> sr"
+  and     res: "\<And>s t rv. r' rv (xf' t) \<Longrightarrow> r rv (xf (g s t (clean s t)))"
+  and     ist: "\<And>x s. (x, s) \<in> sr \<Longrightarrow> (x, i s) \<in> sr"
+  and      ef: "\<And>val. empty_fail (setter val)"
+  shows "ccorresG sr \<Gamma> r xf P P' hs
+           (do val \<leftarrow> getter; setter val; return val od)
+           (call i f clean (\<lambda>s t. Basic (g s t)))"
+  apply (rule ccorresI')
+  apply (rename_tac s s' n z)
+  apply (prop_tac "\<not> snd (getter s)")
+   apply (clarsimp simp: bind_def)
+  apply (erule exec_handlers.cases; clarsimp)
+   apply (erule exec_call_Normal_elim; simp?)
+    apply (clarsimp elim!: exec_Normal_elim_cases)
+   apply (fastforce intro: ccorresE[OF cul ist] EHAbrupt EHEmpty elim: exec.Call)
+  apply (erule exec_call_Normal_elim; simp?)
+     apply (rule ccorresE[OF cul ist], simp+)
+      apply (fastforce intro: EHOther elim: exec.Call)
+     using ef
+     apply (fastforce intro: gsr res
+                       simp: unif_rrel_simps bind_def empty_fail_def return_def
+                       elim: exec_Normal_elim_cases)
+    apply (fastforce intro: ccorresE[OF cul ist] EHOther elim: exec.Call)
+   apply (fastforce intro: ccorresE[OF cul ist] EHOther elim: exec.Call)
+  apply (fastforce intro: ccorresE[OF cul ist] EHOther elim: exec.CallUndefined)
+  done
+
 declare semantic_equivD1 [dest]
 declare semantic_equivD2 [dest]
 
@@ -988,7 +1064,7 @@ lemma ccorres_liftM_simp [simp]:
   apply (rule ccorresI')
   apply simp
   apply (erule (5) ccorresE)
-  apply (simp add: liftM_def NonDetMonad.bind_def return_def)
+  apply (simp add: liftM_def Nondet_Monad.bind_def return_def)
   apply (erule bexI [rotated])
   apply (simp add: unif_rrel_def split: if_split_asm)
   done
@@ -1115,8 +1191,8 @@ lemma ccorres_symb_exec_l:
 
 lemma ccorres_symb_exec_l':
   assumes cc: "\<And>rv. ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) G' hs (f rv) c"
-  and     v1: "\<And>s. NonDetMonad.valid ((=) s) m (\<lambda>r. (=) s)"
-  and     v2: "NonDetMonad.valid G m Q"
+  and     v1: "\<And>s. valid ((=) s) m (\<lambda>r. (=) s)"
+  and     v2: "valid G m Q"
   and     ef: "empty_fail m"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs (m >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
@@ -1127,7 +1203,7 @@ lemma ccorres_symb_exec_l':
 lemma ccorres_symb_exec_l2:
   assumes cc: "\<And>rv. ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv) hs (f rv) c"
   and     v1: "\<And>s. G s \<Longrightarrow> exs_valid ((=) s) m (\<lambda>r. (=) s)"
-  and     v2: "NonDetMonad.valid G m Q"
+  and     v2: "valid G m Q"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf G {s'. \<forall>rv s. (s, s') \<in> sr \<and> Q rv s \<longrightarrow> s' \<in> Q' rv} hs (m >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorresI')
   apply (frule use_exs_valid [OF v1])
@@ -1344,14 +1420,6 @@ lemma ccorres_move_Guard:
   done
 
 section "novcg"
-
-lemma ccorres_to_vcg':
-  "\<lbrakk> ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; \<not> snd (a \<sigma>) \<rbrakk> \<Longrightarrow>
-    \<Gamma>\<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} c
-       {s. \<exists>(rv, \<sigma>')\<in>fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> rrel rv (xf s)}"
-  apply (drule  ccorres_to_vcg)
-  apply clarsimp
-  done
 
 lemma exec_handlers_Hoare_UNIV:
   "guard_is_UNIV r xf Q \<Longrightarrow>
@@ -1661,5 +1729,111 @@ lemma ccorres_grab_asm:
   "(Q \<Longrightarrow> ccorres_underlying sr G rr xf ar ax P P' hs f g) \<Longrightarrow>
    ccorres_underlying sr G rr xf ar ax (P and K Q) P' hs f g"
   by (fastforce simp: ccorres_underlying_def)
+
+
+\<comment> \<open> An experimental cong rule for rewriting everywhere reasonable, with full context.
+    Can cause problems when there are schematic variables or when one of the return relations
+    takes a pair as a parameter. \<close>
+lemma ccorres_context_cong_helper':
+  assumes c: "ccorres_underlying sr \<Gamma> r xf ar axf P Q hs a c"
+  assumes "\<And>s. P s = P' s"
+  \<comment> \<open>Don't use membership equality when rewriting Q, as the LHS can be simplified into something
+     that is unable to unify with the RHS.
+  assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> s' \<in> Q = (s' \<in> Q')"\<close>
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q = Q'"
+  assumes "hs = hs'"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk> \<Longrightarrow> a s = a' s"
+  assumes "\<And>s s' s''. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk>  \<Longrightarrow> semantic_equiv \<Gamma> s' s'' c c'"
+  assumes "\<And>s s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             xf t' = xf' t'"
+  assumes "\<And>x s t s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s);
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             r x (xf' t') = r' x (xf' t')"
+  assumes "\<And>s s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; n \<noteq> size hs'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             axf t' = axf' t'"
+  assumes "\<And>x s t s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s); n \<noteq> size hs';
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             ar x (axf' t') = ar' x (axf' t')"
+  shows   "ccorres_underlying sr \<Gamma> r' xf' ar' axf' P' Q' hs' a' c'"
+  using c
+  apply -
+  apply (rule ccorresI')
+  apply (erule (1) ccorresE)
+      apply (force simp: assms)
+     apply (force simp: assms)
+    apply (force simp: assms)
+   apply (clarsimp simp: assms)
+   apply (erule exec_handlers_semantic_equivD2)
+   apply (force simp: assms)
+  apply (fastforce simp: unif_rrel_def assms)
+  done
+
+lemma ccorres_context_cong_helper:
+  assumes "\<And>s. P s = P' s"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q = Q'"
+  assumes "hs = hs'"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk> \<Longrightarrow> a s = a' s"
+  assumes "\<And>s s' s''. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk>  \<Longrightarrow> semantic_equiv \<Gamma> s' s'' c c'"
+  assumes "\<And>s s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             xf t' = xf' t'"
+  assumes "\<And>x s t s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s);
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             r x (xf' t') = r' x (xf' t')"
+  assumes "\<And>s s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; n \<noteq> size hs'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             axf t' = axf' t'"
+  assumes "\<And>x s t s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s); n \<noteq> size hs';
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             ar x (axf' t') = ar' x (axf' t')"
+  shows   "ccorres_underlying sr \<Gamma> r xf ar axf P Q hs a c
+           = ccorres_underlying sr \<Gamma> r' xf' ar' axf' P' Q' hs' a' c'"
+  using assms
+  apply -
+  apply rule
+   apply (erule ccorres_context_cong_helper'; assumption)
+  apply (erule ccorres_context_cong_helper')
+  by (fastforce simp: semantic_equiv_sym exec_handlers_semantic_equiv[where a=c and b=c'])+
+
+lemmas ccorres_context_cong = ccorres_context_cong_helper[OF _ _ _ _ semantic_equivI]
+
+\<comment> \<open> Only rewrite guards, the handler stack and function bodies, with context.
+    This is often more useful, as we generally want the return relations and extraction
+    functions to be stable while working with a ccorres_underlying statement. \<close>
+lemma ccorres_context_weak_cong:
+  assumes "\<And>s. P s = P' s"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q = Q'"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk> \<Longrightarrow> a s = a' s"
+  assumes "\<And>s s' s''. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk>  \<Longrightarrow> \<Gamma>\<turnstile> \<langle>c,Normal s'\<rangle> \<Rightarrow> s'' = \<Gamma>\<turnstile> \<langle>c',Normal s'\<rangle> \<Rightarrow> s''"
+  shows   "ccorres_underlying sr \<Gamma> r xf ar axf P Q hs a c
+           = ccorres_underlying sr \<Gamma> r xf ar axf P' Q' hs a' c'"
+  by (clarsimp simp: assms cong: ccorres_context_cong)
+
+\<comment> \<open> Even more restrictive: only rewrite the abstract monad. \<close>
+lemma ccorres_abstract_cong:
+  "\<lbrakk> \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s ; s' \<in> P' \<rbrakk> \<Longrightarrow> a s = b s \<rbrakk> \<Longrightarrow>
+   ccorres_underlying sr G r xf ar axf P P' hs a c
+   = ccorres_underlying sr G r xf ar axf P P' hs b c"
+  by (clarsimp cong: ccorres_context_weak_cong)
+
+\<comment> \<open> Rewrite almost everywhere, without context. This should behave the same as with normal
+    term rewriting with no cong rule, except it will not rewrite the state relation or function
+    environment. \<close>
+lemma ccorres_all_cong:
+  "\<lbrakk> r=r'; xf=xf'; ar=ar'; axf=axf'; P=P'; Q=Q'; hs=hs'; m=m'; c=c' \<rbrakk> \<Longrightarrow>
+   ccorres_underlying srel \<Gamma> r xf ar axf P Q hs m c
+   = ccorres_underlying srel \<Gamma> r' xf' ar' axf' P' Q' hs' m' c'"
+  by (simp cong: ccorres_context_cong)
+
+\<comment> \<open> Only rewrite guards, the handler stack and function bodies, without context.
+    We make this the default behaviour, so that the the return relations and extraction
+    functions are stable under simplification. \<close>
+lemmas ccorres_weak_cong = ccorres_all_cong[OF refl refl refl refl, cong]
 
 end

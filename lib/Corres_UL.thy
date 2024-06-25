@@ -7,8 +7,8 @@
 theory Corres_UL
 imports
   Crunch_Instances_NonDet
-  WPEx
-  WPFix
+  Monads.WPEx
+  Monads.WPFix
   HaskellLemmaBucket
 begin
 
@@ -72,39 +72,39 @@ lemma corres_underlying_serial:
   apply auto
   done
 
-(* FIXME: duplicated with HOL.iff_allI *)
-lemma All_eqI:
-  assumes ass: "\<And>x. A x = B x"
-  shows "(\<forall>x. A x) = (\<forall>x. B x)"
-  apply (subst ass)
-  apply (rule refl)
-  done
-
 lemma corres_singleton:
  "corres_underlying sr nf nf' r P P' (\<lambda>s. ({(R s, S s)},x)) (\<lambda>s. ({(R' s, S' s)},False))
   = (\<forall>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<and> (nf \<longrightarrow> \<not> x)
           \<longrightarrow> ((S s, S' s') \<in> sr \<and> r (R s) (R' s')))"
   by (auto simp: corres_underlying_def)
 
-lemma corres_return[simp]:
+(* Lemmas that should not be [simp] inside automated corres methods.
+   Shared between Corres_Method and CorresK_Method. *)
+named_theorems corres_no_simp
+
+(* Safe terminal corres rules that instantiate return relation and guards.
+   Shared between Corres_Method and CorresK_Method. *)
+named_theorems corres
+
+(* Terminal corres rules that instantiate return relation and guards and that are safe if side
+   conditions case be solved immediately. Used in Corres_Method. *)
+named_theorems corres_term
+
+lemma corres_return[simp, corres_no_simp]:
   "corres_underlying sr nf nf' r P P' (return a) (return b) =
    ((\<exists>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr) \<longrightarrow> r a b)"
   by (simp add: return_def corres_singleton)
 
-lemma corres_get[simp]:
- "corres_underlying sr nf nf' r P P' get get =
-  (\<forall> s s'. (s, s') \<in> sr \<and> P s \<and> P' s' \<longrightarrow> r s s')"
-  apply (simp add: get_def corres_singleton)
-  apply (rule All_eqI)+
-  apply safe
-  done
+lemma corres_get[simp, corres_no_simp]:
+ "corres_underlying sr nf nf' r P P' get get = (\<forall> s s'. (s, s') \<in> sr \<and> P s \<and> P' s' \<longrightarrow> r s s')"
+  by (fastforce simp: get_def corres_singleton)
 
-lemma corres_gets[simp]:
+lemma corres_gets[simp, corres_no_simp]:
  "corres_underlying sr nf nf' r P P' (gets a) (gets b) =
   (\<forall> s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<longrightarrow> r (a s) (b s'))"
   by (simp add: simpler_gets_def corres_singleton)
 
-lemma corres_throwError[simp]:
+lemma corres_throwError[simp, corres_no_simp]:
   "corres_underlying sr nf nf' r P P' (throwError a) (throwError b) =
    ((\<exists>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr) \<longrightarrow> r (Inl a) (Inl b))"
   by (simp add: throwError_def)
@@ -210,7 +210,13 @@ end
 
 text \<open>The guard weakening rule\<close>
 
-lemma stronger_corres_guard_imp:
+named_theorems corres_pre
+(* Introduce schematic corres guards; fail if already schematic *)
+method corres_pre0 = WP_Pre.pre_tac corres_pre
+(* Optionally introduce schematic corres guards *)
+method corres_pre = corres_pre0?
+
+lemma stronger_corres_guard_imp[corres_pre]:
   assumes x: "corres_underlying sr nf nf' r Q Q' f g"
   assumes y: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q s"
   assumes z: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q' s'"
@@ -221,12 +227,28 @@ lemma corres_guard_imp:
   assumes x: "corres_underlying sr nf nf' r Q Q' f g"
   assumes y: "\<And>s. P s \<Longrightarrow> Q s" "\<And>s. P' s \<Longrightarrow> Q' s"
   shows      "corres_underlying sr nf nf' r P P' f g"
-  apply (rule stronger_corres_guard_imp)
+  apply corres_pre
     apply (rule x)
    apply (simp add: y)+
   done
 
-lemma corres_rel_imp:
+lemma corres_guard_imp2:
+  "\<lbrakk>corres_underlying sr nf nf' r Q P' f g; \<And>s. P s \<Longrightarrow> Q s\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by corres_pre
+(* FIXME: names\<dots> (cf. corres_guard2_imp below) *)
+lemmas corres_guard1_imp = corres_guard_imp2
+
+lemma corres_guard2_imp:
+  "\<lbrakk>corres_underlying sr nf nf' r P Q' f g; \<And>s. P' s \<Longrightarrow> Q' s\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by corres_pre
+
+named_theorems corres_rrel_pre
+(* Introduce schematic return relation, fail if already schematic *)
+method corres_rrel_pre = WP_Pre.pre_tac corres_rrel_pre
+
+lemma corres_rel_imp[corres_rrel_pre]:
   assumes x: "corres_underlying sr nf nf' r' P P' f g"
   assumes y: "\<And>x y. r' x y \<Longrightarrow> r x y"
   shows      "corres_underlying sr nf nf' r P P' f g"
@@ -315,6 +337,18 @@ lemma corres_splitEE:
     apply assumption+
   apply (case_tac rv)
    apply (clarsimp simp: lift_def y)+
+  done
+
+lemma corres_splitEE_prod:
+  assumes x: "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
+  assumes y: "\<And>x y x' y'. r' (x, y) (x', y')
+              \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R x y) (R' x' y') (b x y) (d x' y')"
+  assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>\<lambda>(x, y). R x y \<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>\<lambda>(x, y). R' x y\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
+  shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>(x, y). b x y)) (c >>=E (\<lambda>(x, y). d x y))"
+  using assms
+  apply (unfold bindE_def validE_def)
+  apply (rule corres_split[rotated 2], assumption+)
+  apply (fastforce simp: lift_def y split: sum.splits)
   done
 
 lemma corres_split_handle:
@@ -447,34 +481,44 @@ lemma corres_if3:
                                     (if G then a else b) (if G' then c else d)"
   by simp
 
+lemma corres_if_strong:
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s, s') \<in> sr; R s; R' s'\<rbrakk> \<Longrightarrow> G = G';
+    \<lbrakk>G; G'\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' a c;
+    \<lbrakk>\<not> G; \<not> G'\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r Q Q' b d \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r
+         (R and (if G then P else Q)) (R' and (if G' then P' else Q'))
+         (if G then a else b) (if G' then c else d)"
+  by (fastforce simp: corres_underlying_def)
+
+lemmas corres_if_strong' =
+  corres_if_strong[where R=R and P=R and Q=R for R,
+                   where R'=R' and P'=R' and Q'=R' for R', simplified]
 
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
-lemma snd_liftM [simp]:
-  "snd (liftM t f s) = snd (f s)"
-  by (auto simp: liftM_def bind_def return_def)
+(* These rules are declared [simp], which in hindsight was not a good decision, because they
+   change the return relation which often is schematic when these rules apply in the goal.
+   In those circumstances it is usually safer to unfold liftM_def and proceed with the resulting
+   substituted term.
 
+   (We leave the [simp] attribute here, because too many proofs now depend on it)
+*)
 lemma corres_liftM_simp[simp]:
-  "(corres_underlying sr nf nf' r P P' (liftM t f) g)
-    = (corres_underlying sr nf nf' (r \<circ> t) P P' f g)"
-  apply (simp add: corres_underlying_def
-           handy_liftM_lemma Ball_def Bex_def)
-  apply (rule All_eqI)+
-  apply blast
-  done
+  "corres_underlying sr nf nf' r P P' (liftM t f) g =
+   corres_underlying sr nf nf' (r \<circ> t) P P' f g"
+  by (fastforce simp add: corres_underlying_def in_liftM)
 
 lemma corres_liftM2_simp[simp]:
- "corres_underlying sr nf nf' r P P' f (liftM t g) =
-  corres_underlying sr nf nf' (\<lambda>x. r x \<circ> t) P P' f g"
-  apply (simp add: corres_underlying_def
-           handy_liftM_lemma Ball_def)
-  apply (rule All_eqI)+
-  apply blast
-  done
+  "corres_underlying sr nf nf' r P P' f (liftM t g) =
+   corres_underlying sr nf nf' (\<lambda>x. r x \<circ> t) P P' f g"
+  by (fastforce simp add: corres_underlying_def in_liftM)
 
 lemma corres_liftE_rel_sum[simp]:
- "corres_underlying sr nf nf' (f \<oplus> r) P P' (liftE m) (liftE m') = corres_underlying sr nf nf' r P P' m m'"
+ "corres_underlying sr nf nf' (f \<oplus> r) P P' (liftE m) (liftE m') =
+  corres_underlying sr nf nf' r P P' m m'"
   by (simp add: liftE_liftM o_def)
+
+lemmas corres_liftE_lift = corres_liftE_rel_sum[THEN iffD2]
 
 text \<open>Support for proving correspondence to noop with hoare triples\<close>
 
@@ -505,7 +549,7 @@ proof -
     apply (rule P)
     apply assumption
    apply (erule(1) nf')
-  apply (case_tac ra, simp_all)
+  apply (simp split: sum.splits)
   done
 qed
 
@@ -539,24 +583,12 @@ text \<open>Support for dividing correspondence along
 lemma corres_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> corres_underlying sr nf nf' r R S x y; Q \<Longrightarrow> corres_underlying sr nf nf' r T U x y \<rbrakk>
      \<Longrightarrow> corres_underlying sr nf nf' r (\<lambda>s. (P \<longrightarrow> R s) \<and> (Q \<longrightarrow> T s)) (\<lambda>s. (P \<longrightarrow> S s) \<and> (Q \<longrightarrow> U s)) x y"
-  apply safe
-   apply (rule corres_guard_imp)
-     apply simp
-    apply simp
-   apply simp
-  apply (rule corres_guard_imp)
-    apply simp
-   apply simp
-  apply simp
-  done
+  by (safe; corres_pre, simp+)
 
 lemma corres_weaker_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> corres_underlying sr nf nf' r R S x y; Q \<Longrightarrow> corres_underlying sr nf nf' r T U x y \<rbrakk>
      \<Longrightarrow> corres_underlying sr nf nf' r (R and T) (S and U) x y"
-  apply (rule corres_guard_imp)
-    apply (rule corres_disj_division)
-      apply simp+
-  done
+  by (corres_pre, rule corres_disj_division, simp+)
 
 lemma corres_symmetric_bool_cases:
   "\<lbrakk> P = P'; \<lbrakk> P; P' \<rbrakk> \<Longrightarrow> corres_underlying srel nf nf' r Q Q' f g;
@@ -575,13 +607,13 @@ lemma corres_symb_exec_l:
   assumes y: "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail P m"
   shows      "corres_underlying sr nf nf' r P P' (m >>= (\<lambda>rv. x rv)) y"
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (subst gets_bind_ign[symmetric], rule corres_split[OF _ z])
       apply (rule corres_noop2)
          apply (erule x)
         apply (rule gets_wp)
        apply (erule nf)
-      apply (rule non_fail_gets)
+      apply (rule no_fail_gets)
      apply (rule y)
     apply (rule gets_wp)
    apply simp+
@@ -593,12 +625,12 @@ lemma corres_symb_exec_r:
   assumes x: "\<And>s. P' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail P' m"
   shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>rv. y rv))"
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (subst gets_bind_ign[symmetric], rule corres_split[OF _ z])
       apply (rule corres_noop2)
          apply (simp add: simpler_gets_def exs_valid_def)
         apply (erule x)
-       apply (rule non_fail_gets)
+       apply (rule no_fail_gets)
       apply (erule nf)
      apply (rule gets_wp)
     apply (rule y)
@@ -618,7 +650,7 @@ proof -
     apply (erule nf)
     done
   show ?thesis
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (subst return_bind[symmetric],
              rule corres_split [OF P])
       apply (rule z)
@@ -683,6 +715,17 @@ lemma corres_trivial:
  "corres_underlying sr nf nf' r \<top> \<top> f g \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> f g"
   by assumption
 
+lemma corres_underlying_trivial[corres]:
+  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' (=) \<top> P' f f"
+  by (auto simp add: corres_underlying_def Id_def no_fail_def)
+
+(* Instance of corres_underlying_trivial for unit type with dc instead of (=) as return relation,
+   for nicer return relation instantiation. *)
+lemma corres_underlying_trivial_dc[corres]:
+  "(nf' \<Longrightarrow> no_fail P' f) \<Longrightarrow> corres_underlying Id nf nf' dc (\<lambda>_. True) P' f f"
+  for f :: "('s, unit) nondet_monad"
+  by (fastforce intro: corres_underlying_trivial corres_rrel_pre)
+
 lemma corres_assume_pre:
   assumes R: "\<And>s s'. \<lbrakk> P s; Q s'; (s,s') \<in> sr \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P Q f g"
   shows "corres_underlying sr nf nf' r P Q f g"
@@ -692,24 +735,13 @@ lemma corres_assume_pre:
   apply blast
   done
 
-lemma corres_guard_imp2:
-  "\<lbrakk>corres_underlying sr nf nf' r Q P' f g; \<And>s. P s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by (blast intro: corres_guard_imp)
-(* FIXME: names\<dots> (cf. corres_guard2_imp below) *)
-lemmas corres_guard1_imp = corres_guard_imp2
-
-lemma corres_guard2_imp:
-  "\<lbrakk>corres_underlying sr nf nf' r P Q' f g; \<And>s. P' s \<Longrightarrow> Q' s\<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by (drule (1) corres_guard_imp[where P'=P' and Q=P], assumption+)
-
 lemma corres_initial_splitE:
 "\<lbrakk> corres_underlying sr nf nf' (f \<oplus> r') P P' a c;
    \<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (Q rv) (Q' rv') (b rv) (d rv');
    \<lbrace>P\<rbrace> a \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>r s. True\<rbrace>;
    \<lbrace>P'\<rbrace> c \<lbrace>Q'\<rbrace>, \<lbrace>\<lambda>r s. True\<rbrace>\<rbrakk>
 \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) P P' (a >>=E b) (c >>=E d)"
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (erule corres_splitEE)
       apply fastforce+
   done
@@ -720,11 +752,16 @@ lemma corres_assert_assume:
   by (auto simp: bind_def assert_def fail_def return_def
                  corres_underlying_def)
 
+lemma corres_assert_assume_l:
+  "corres_underlying sr nf nf' rrel P Q (f ()) g
+  \<Longrightarrow> corres_underlying sr nf nf' rrel (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
+  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
+
 lemma corres_assert_gen_asm_cross:
   "\<lbrakk> \<And>s s'. \<lbrakk>(s, s') \<in> sr; P' s; Q' s'\<rbrakk> \<Longrightarrow> A;
      A \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
   \<Longrightarrow> corres_underlying sr nf nf' r (P and P') (Q and Q') f (assert A >>= g)"
-  by (metis corres_assert_assume corres_assume_pre corres_guard_imp pred_andE)
+  by (metis corres_assert_assume corres_assume_pre corres_weaker_disj_division)
 
 lemma corres_state_assert:
   "corres_underlying sr nf nf' rr P Q f (g ()) \<Longrightarrow>
@@ -752,6 +789,20 @@ lemma corres_stateAssert_implied:
   apply (rule corres_symb_exec_r [OF _ get_sp])
     apply (rule corres_assume_pre)
     apply (rule corres_assert_assume)
+     apply (erule corres_guard_imp, clarsimp+)
+   apply (wp | rule no_fail_pre)+
+  done
+
+lemmas corres_stateAssert_ignore =
+  corres_stateAssert_implied[where P=P and P'=P for P, simplified, rotated]
+
+lemma corres_stateAssert_r:
+  "corres_underlying sr nf nf' r P Q f (g ()) \<Longrightarrow>
+   corres_underlying sr nf nf' r P (Q and P') f (stateAssert P' [] >>= g)"
+  apply (clarsimp simp: bind_assoc stateAssert_def)
+  apply (rule corres_symb_exec_r [OF _ get_sp])
+    apply (rule corres_assert_assume)
+     apply (rule corres_assume_pre)
      apply (erule corres_guard_imp, clarsimp+)
    apply (wp | rule no_fail_pre)+
   done
@@ -849,6 +900,31 @@ lemma corres_assert_opt_assume:
   by (auto simp: bind_def assert_opt_def assert_def fail_def return_def
                  corres_underlying_def split: option.splits)
 
+lemma corres_assert_opt[corres]:
+  "r x x' \<Longrightarrow>
+  corres_underlying sr nf nf' (\<lambda>x x'. r (Some x) x') (\<lambda>s. x \<noteq> None) \<top> (assert_opt x) (return x')"
+  unfolding corres_underlying_def
+  by (clarsimp simp: assert_opt_def return_def split: option.splits)
+
+lemma assert_opt_assert_corres[corres]:
+  "(x = None) = (x' = None) \<Longrightarrow>
+   corres_underlying sr nf nf' (\<lambda>y _. x = Some y) (K (x \<noteq> None)) \<top>
+                     (assert_opt x) (assert (\<exists>y. x' = Some y))"
+  by (simp add: corres_underlying_def assert_opt_def return_def split: option.splits)
+
+lemma corres_assert_opt_l:
+  assumes "\<And>x. P' = Some x \<Longrightarrow> corres_underlying sr nf nf' r (P x) Q (f x) g"
+  shows "corres_underlying sr nf nf' r (\<lambda>s. \<exists>x. P' = Some x \<and> P x s) Q (assert_opt P' >>= f) g"
+  using assms
+  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def corres_underlying_def
+           split: option.splits)
+
+lemma corres_gets_the_gets:
+  "corres_underlying sr False nf' r P P' (gets_the f) f' \<Longrightarrow>
+   corres_underlying sr nf nf' (\<lambda>x x'. x \<noteq> None \<and> r (the x) x') P P' (gets f) f'"
+  apply (simp add: gets_the_def bind_def simpler_gets_def assert_opt_def)
+  apply (fastforce simp: corres_underlying_def in_monad split: option.splits)
+  done
 
 text \<open>Support for proving correspondance by decomposing the state relation\<close>
 
@@ -900,9 +976,15 @@ lemma corres_returnOk:
   apply wp
   done
 
-lemmas corres_returnOkTT = corres_trivial [OF corres_returnOk]
+lemma corres_returnOkTT:
+  "r x y \<Longrightarrow> corres_underlying sr nf nf' (r' \<oplus> r) \<top> \<top> (returnOk x) (returnOk y)"
+  by (simp add: corres_returnOk)
 
-lemma corres_False [simp]:
+lemma corres_throwErrorTT:
+  "r x y \<Longrightarrow> corres_underlying sr nf nf' (r \<oplus> r') \<top> \<top> (throwError x) (throwError y)"
+  by simp
+
+lemma corres_False [simp, corres_no_simp]:
   "corres_underlying sr nf nf' r P \<bottom> f f'"
   by (simp add: corres_underlying_def)
 
@@ -958,7 +1040,7 @@ next
   show ?case
     apply (simp add: mapME_x_def sequenceE_x_def)
     apply (fold mapME_x_def sequenceE_x_def dc_def)
-    apply (rule corres_guard_imp)
+    apply corres_pre
       apply (rule corres_splitEE)
          apply (rule x)
         apply (rule IH)
@@ -1094,6 +1176,18 @@ lemma corres_move_asm:
 
 lemmas corres_cross_over_guard = corres_move_asm[rotated]
 
+lemma corres_cross_add_guard:
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q' s';
+    corres_underlying sr nf nf' r P (P' and Q') f g\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def)
+
+lemma corres_cross_add_abs_guard:
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q s;
+    corres_underlying sr nf nf' r (P and Q)  P' f g\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def)
+
 lemma corres_either_alternate:
   "\<lbrakk> corres_underlying sr nf nf' r P Pa' a c; corres_underlying sr nf nf' r P Pb' b c \<rbrakk>
    \<Longrightarrow> corres_underlying sr nf nf' r P (Pa' or Pb') (a \<sqinter> b) c"
@@ -1160,7 +1254,7 @@ lemma corres_stateAssert_implied2:
   assumes g: "\<lbrace>Q\<rbrace> g \<lbrace>\<lambda>_. R'\<rbrace>"
   shows "corres_underlying sr nf nf' dc P Q f (g >>= (\<lambda>_. stateAssert Q' []))"
   apply (subst bind_return[symmetric])
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (rule corres_split)
        apply (rule c)
       apply (clarsimp simp: corres_underlying_def return_def
@@ -1172,6 +1266,18 @@ lemma corres_stateAssert_implied2:
     apply (rule g)
    apply simp
   apply simp
+  done
+
+lemma corres_stateAssert_add_assertion:
+  "\<lbrakk> corres_underlying sr nf nf' r P (Q and Q') f (g ());
+     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P Q f (stateAssert Q' [] >>= g)"
+  apply (clarsimp simp: bind_assoc stateAssert_def)
+  apply (rule corres_symb_exec_r [OF _ get_sp])
+    apply (rule corres_assume_pre)
+    apply (rule corres_assert_assume)
+     apply (erule corres_guard_imp, clarsimp+)
+   apply (wp | rule no_fail_pre)+
   done
 
 lemma corres_add_noop_lhs:
@@ -1194,7 +1300,7 @@ lemmas corres_split_dc = corres_split[where r'=dc, simplified]
 
 lemma isLeft_case_sum:
   "isLeft v \<Longrightarrow> (case v of Inl v' \<Rightarrow> f v' | Inr v' \<Rightarrow> g v') = f (theLeft v)"
-  by (clarsimp simp: isLeft_def)
+  by (clarsimp split: sum.splits)
 
 lemma corres_symb_exec_catch_r:
   "\<lbrakk> \<And>rv. corres_underlying sr nf nf' r P (Q' rv) f (h rv);
@@ -1207,18 +1313,17 @@ lemma corres_symb_exec_catch_r:
    apply assumption
   apply (simp add: validE_def)
   apply (erule hoare_chain, simp_all)[1]
-  apply (simp add: isLeft_def split: sum.split_asm)
+  apply (simp split: sum.split_asm)
   done
 
-lemma corres_return_eq_same:
-  "a = b \<Longrightarrow> corres_underlying srel nf' nf (=) \<top> \<top> (return a) (return b)"
-  apply (simp add: corres_underlying_def return_def)
-  done
+lemma corres_returnTT:
+  "r a b \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> (return a) (return b)"
+  by simp
+
+lemmas corres_return_eq_same = corres_returnTT[of "(=)"]
 
 lemmas corres_discard_r =
   corres_symb_exec_r [where P'=P' and Q'="\<lambda>_. P'" for P', simplified]
-
-lemmas corres_returnTT = corres_return[where P=\<top> and P'=\<top>, THEN iffD2]
 
 lemma corres_assert_gen_asm:
   "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
@@ -1246,6 +1351,19 @@ lemma corres_add_guard:
     corres_underlying sr nf nf' r Q Q' f g"
   by (auto simp: corres_underlying_def)
 
+lemma corres_stateAssert_r_cross:
+  assumes A: "\<forall>s s'. (s, s') \<in> sr \<longrightarrow> P' s \<longrightarrow> Q' s' \<longrightarrow> A s'"
+  assumes C: "corres_underlying sr nf nf' r P Q f (g ())"
+  shows
+  "corres_underlying sr nf nf' r (P and P') (Q and Q') f (stateAssert A [] >>= g)"
+  apply (clarsimp simp: bind_assoc stateAssert_def)
+  apply corres_pre
+    apply (rule corres_symb_exec_r)
+       apply (rule corres_assert_gen_asm2, rule C)
+      apply wpsimp+
+  apply (simp add: A)
+  done
+
 (* safer non-rewrite version of corres_gets *)
 lemma corres_gets_trivial:
   "\<lbrakk>\<And>s s'. (s,s') \<in> sr \<Longrightarrow> f s = f' s' \<rbrakk>
@@ -1267,7 +1385,7 @@ lemma corres_underlying_assert_assert:
 lemma corres_underlying_stateAssert_stateAssert:
   assumes "\<And>s s'. \<lbrakk> (s,s') \<in> rf_sr; P s; P' s' \<rbrakk> \<Longrightarrow> Q' s' = Q s"
   shows "corres_underlying rf_sr nf False dc P P' (stateAssert Q []) (stateAssert Q' [])"
-  by (auto simp: stateAssert_def get_def NonDetMonad.bind_def corres_underlying_def
+  by (auto simp: stateAssert_def get_def Nondet_Monad.bind_def corres_underlying_def
                  assert_def return_def fail_def assms)
 
 (* We can ignore a stateAssert in the middle of a computation even if we don't ignore abstract
@@ -1277,7 +1395,7 @@ lemma corres_stateAssert_no_fail:
      corres_underlying S False nf' r P Q (do v \<leftarrow> g; h v od) f \<rbrakk> \<Longrightarrow>
    corres_underlying S False nf' r P Q (do v \<leftarrow> g; _ \<leftarrow> stateAssert X []; h v od) f"
   apply (simp add: corres_underlying_def stateAssert_def get_def assert_def return_def no_fail_def fail_def cong: if_cong)
-  apply (clarsimp simp: split_def NonDetMonad.bind_def split: if_splits)
+  apply (clarsimp simp: split_def Nondet_Monad.bind_def split: if_splits)
   apply (erule allE, erule (1) impE)
   apply (drule (1) bspec, clarsimp)+
   done

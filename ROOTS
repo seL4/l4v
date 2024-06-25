@@ -7,6 +7,10 @@ tools
 camkes
 sys-init
 lib
+lib/Basics
+lib/Eisbach_Tools
+lib/ML_Utils
+lib/Monads
 lib/Word_Lib
 lib/sep_algebra
 lib/EVTutorial

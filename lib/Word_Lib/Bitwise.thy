@@ -365,7 +365,7 @@ lemma upt_eq_list_intros:
   by (simp_all add: upt_eq_Cons_conv)
 
 
-subsection \<open>Tactic definition\<close>
+text \<open>Tactic definition\<close>
 
 lemma if_bool_simps:
   "If p True y = (p \<or> y) \<and> If p False y = (\<not> p \<and> y) \<and>
@@ -400,9 +400,7 @@ fun upt_conv ctxt ct =
       end
   | _ => NONE;
 
-val expand_upt_simproc =
-  Simplifier.make_simproc \<^context> "expand_upt"
-   {lhss = [\<^term>\<open>upt x y\<close>], proc = K upt_conv};
+val expand_upt_simproc = \<^simproc_setup>\<open>passive expand_upt ("upt x y") = \<open>K upt_conv\<close>\<close>;
 
 fun word_len_simproc_fn ctxt ct =
   (case Thm.term_of ct of
@@ -420,8 +418,7 @@ fun word_len_simproc_fn ctxt ct =
   | _ => NONE);
 
 val word_len_simproc =
-  Simplifier.make_simproc \<^context> "word_len"
-   {lhss = [\<^term>\<open>len_of x\<close>], proc = K word_len_simproc_fn};
+  \<^simproc_setup>\<open>passive word_len ("len_of x") = \<open>K word_len_simproc_fn\<close>\<close>;
 
 (* convert 5 or nat 5 to Suc 4 when n_sucs = 1, Suc (Suc 4) when n_sucs = 2,
    or just 5 (discarding nat) when n_sucs = 0 *)
@@ -448,9 +445,11 @@ fun nat_get_Suc_simproc_fn n_sucs ctxt ct =
   end handle TERM _ => NONE;
 
 fun nat_get_Suc_simproc n_sucs ts =
-  Simplifier.make_simproc \<^context> "nat_get_Suc"
-   {lhss = map (fn t => t $ \<^term>\<open>n :: nat\<close>) ts,
-    proc = K (nat_get_Suc_simproc_fn n_sucs)};
+  Simplifier.make_simproc \<^context>
+   {name = "nat_get_Suc",
+    lhss = map (fn t => t $ \<^term>\<open>n :: nat\<close>) ts,
+    proc = K (nat_get_Suc_simproc_fn n_sucs),
+    identifier = []};
 
 val no_split_ss =
   simpset_of (put_simpset HOL_ss \<^context>
@@ -502,6 +501,6 @@ end
 
 method_setup word_bitwise =
   \<open>Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (Word_Bitwise_Tac.tac ctxt 1))\<close>
-  "decomposer for word equalities and inequalities into bit propositions"
+  "decomposer for word equalities and inequalities into bit propositions on concrete word lengths"
 
 end

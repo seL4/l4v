@@ -159,7 +159,7 @@ lemma unmap_page_table_respects:
   apply (rule hoare_gen_asm)
   apply (simp add: unmap_page_table_def page_table_mapped_def )
   apply (rule hoare_pre)
-   apply (wpsimp wp: store_pde_respects page_table_mapped_wp_weak get_pde_wp hoare_vcg_all_lift_R
+   apply (wpsimp wp: store_pde_respects page_table_mapped_wp_weak get_pde_wp hoare_vcg_all_liftE_R
                simp: cleanByVA_PoU_def
           | wp (once) hoare_drop_imps)+
   apply auto
@@ -372,7 +372,7 @@ lemma lookup_pt_slot_authorised3:
    \<lbrace>\<lambda>rv _.  \<forall>x\<in>set [rv, rv + 4 .e. rv + 0x3C]. is_subject aag (x && ~~ mask pt_bits)\<rbrace>, -"
   apply (rule_tac Q'="\<lambda>rv s. is_aligned rv 6 \<and> (\<forall>x\<in>set [0, 4 .e. 0x3C].
                                                   is_subject aag (x + rv && ~~ mask pt_bits))"
-               in hoare_post_imp_R)
+               in hoare_strengthen_postE_R)
   apply (rule hoare_pre)
   apply (wp lookup_pt_slot_is_aligned_6 lookup_pt_slot_authorised2)
    apply (fastforce simp: vmsz_aligned_def pd_bits_def pageBits_def)
@@ -549,7 +549,7 @@ lemma perform_asid_control_invocation_respects:
   apply (rule hoare_pre)
    apply (wpc, simp)
    apply (wpsimp wp: set_cap_integrity_autarch cap_insert_integrity_autarch
-                     retype_region_integrity[where sz=12] static_imp_wp)
+                     retype_region_integrity[where sz=12] hoare_weak_lift_imp)
   apply (clarsimp simp: authorised_asid_control_inv_def
                         ptr_range_def page_bits_def add.commute
                         range_cover_def obj_bits_api_def default_arch_object_def
@@ -576,12 +576,12 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: perform_asid_control_invocation_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_pas_refined' static_imp_wp
+   apply (wp cap_insert_pas_refined' hoare_weak_lift_imp
           | strengthen pas_refined_set_asid_strg
           | wpc
           | simp add: delete_objects_def2 fun_upd_def[symmetric])+
       apply (wp retype_region_pas_refined'[where sz=pageBits]
-                hoare_vcg_ex_lift hoare_vcg_all_lift static_imp_wp hoare_wp_combs hoare_drop_imp
+                hoare_vcg_ex_lift hoare_vcg_all_lift hoare_weak_lift_imp hoare_wp_combs hoare_drop_imp
                 retype_region_invs_extras(1)[where sz = pageBits]
                 retype_region_invs_extras(4)[where sz = pageBits]
                 retype_region_invs_extras(6)[where sz = pageBits]
@@ -591,7 +591,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
                 max_index_upd_invs_simple max_index_upd_caps_overlap_reserved
                 hoare_vcg_ex_lift set_cap_cte_wp_at hoare_vcg_disj_lift set_free_index_valid_pspace
                 set_cap_descendants_range_in set_cap_no_overlap get_cap_wp set_cap_caps_no_overlap
-                hoare_vcg_all_lift static_imp_wp retype_region_invs_extras
+                hoare_vcg_all_lift hoare_weak_lift_imp retype_region_invs_extras
                 set_cap_pas_refined_not_transferable
              | simp add: do_machine_op_def split_def cte_wp_at_neg2 region_in_kernel_window_def)+
    apply (rename_tac frame slot parent base cap)
@@ -826,12 +826,10 @@ lemma decode_arch_invocation_authorised:
   apply (rule hoare_pre)
    apply (simp add: split_def Let_def split del: if_split
               cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong)
-   apply (wp select_wp whenE_throwError_wp check_vp_wpR
-             find_pd_for_asid_authority2
+   apply (wp whenE_throwError_wp check_vp_wpR find_pd_for_asid_authority2
           | wpc
           | simp add: authorised_asid_control_inv_def authorised_page_inv_def
                       authorised_page_directory_inv_def
-                 del: hoare_True_E_R
                  split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
@@ -959,8 +957,9 @@ lemma delete_asid_pool_pas_refined [wp]:
 crunch respects[wp]: invalidate_asid_entry "integrity aag X st"
 
 crunch respects[wp]: flush_space "integrity aag X st"
-  (ignore: do_machine_op simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def
-           dsb_def clean_D_PoU_def invalidate_I_PoU_def do_machine_op_bind)
+  (ignore: do_machine_op
+   simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def
+         do_machine_op_bind empty_fail_cond)
 
 lemma delete_asid_pool_respects[wp]:
   "\<lbrace>integrity aag X st and

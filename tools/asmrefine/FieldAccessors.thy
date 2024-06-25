@@ -5,9 +5,9 @@
  *)
 
 theory FieldAccessors
-
-imports "CLib.LemmaBucket_C"
-
+  imports
+    Lib.Lib
+    CParser.LemmaBucket_C
 begin
 
 lemma h_val_mono:
@@ -53,10 +53,10 @@ lemma heap_update_rotate:
                 heap_update_list_rotate)
 
 lemma c_guard_align_of:
-  "\<lbrakk> align_of TYPE('a :: c_type) + size_of TYPE('a) < 2 ^ word_bits;
-           align_of TYPE('a) \<noteq> 0 \<rbrakk> \<Longrightarrow>
-       c_guard (Ptr (of_nat (align_of TYPE('a))) :: 'a ptr)"
+  "\<lbrakk> align_of TYPE('a :: c_type) + size_of TYPE('a) < 2 ^ word_bits; align_of TYPE('a) \<noteq> 0 \<rbrakk> \<Longrightarrow>
+   c_guard (Ptr (of_nat (align_of TYPE('a))) :: 'a ptr)"
   unfolding c_guard_def
+  supply word_neq_0_conv[simp del]
   apply (simp add: ptr_aligned_def unat_of_nat c_null_guard_def)
   apply (clarsimp simp: intvl_def word_bits_conv take_bit_nat_eq_self)
   apply (drule trans[rotated], rule sym, rule Abs_fnat_hom_add)

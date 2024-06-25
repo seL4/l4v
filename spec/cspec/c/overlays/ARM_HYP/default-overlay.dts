@@ -1,0 +1,6 @@
+/*
+ * Copyright 2023, Proofcraft Pty Ltd
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
+/* Empty overlay file that will be used if no custom `overlay.dts` exists. */

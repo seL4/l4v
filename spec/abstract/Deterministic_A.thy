@@ -107,7 +107,7 @@ text \<open>The current scheduler action,
   which is part of the scheduling state.\<close>
 datatype scheduler_action =
     resume_cur_thread
-  | switch_thread obj_ref
+  | switch_thread (sch_act_target : obj_ref)
   | choose_new_thread
 
 type_synonym domain = word8
@@ -244,7 +244,7 @@ definition set_eobject :: "obj_ref \<Rightarrow> etcb \<Rightarrow> unit det_ext
   where
  "set_eobject ptr obj \<equiv>
   do es \<leftarrow> get;
-    ekh \<leftarrow> return $ ekheap es(ptr \<mapsto> obj);
+    ekh \<leftarrow> return $ (ekheap es)(ptr \<mapsto> obj);
     put (es\<lparr>ekheap := ekh\<rparr>)
   od"
 

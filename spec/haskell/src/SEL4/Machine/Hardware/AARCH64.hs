@@ -71,10 +71,10 @@ paddrBase :: PAddr
 paddrBase = Platform.PAddr 0x0
 
 pptrBase :: VPtr
-pptrBase = VPtr 0xFFFFFFC000000000
+pptrBase = VPtr 0x0000008000000000
 
 pptrTop :: VPtr
-pptrTop = VPtr 0xFFFFFFFF80000000
+pptrTop = VPtr 0x000000FFC0000000
 
 kernelELFPAddrBase :: PAddr
 kernelELFPAddrBase = toPAddr $ (fromPAddr Platform.physBase) + 0x4000000
@@ -161,6 +161,8 @@ setNextPC = setRegister (Register AARCH64.NextIP)
 -- It zeros every word to ensure that user tasks cannot access any private data
 -- that might previously have been stored in the region.
 
+-- This function's abstract definition is in MachineOps.thy
+
 clearMemory :: PPtr Word -> Int -> MachineMonad ()
 clearMemory ptr byteLength = error "Unimplemented -- machine op"
 
@@ -243,27 +245,15 @@ enableFpuEL01 = error "Unimplemented - machine op"
 getFAR :: MachineMonad VPtr
 getFAR = error "Unimplemented - machine op"
 
-getDFSR :: MachineMonad Word
-getDFSR =  error "Unimplemented - machine op"
-
-getIFSR :: MachineMonad Word
-getIFSR =  error "Unimplemented - machine op"
-
-
 {- Hypervisor-specific status/control registers -}
 
--- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
-getHSR :: MachineMonad Word
-getHSR = error "Unimplemented - machine op"
-
--- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
 setHCR :: Word -> MachineMonad ()
 setHCR _hcr = error "Unimplemented - machine op"
 
 getESR :: MachineMonad Word
 getESR = error "Unimplemented - machine op"
 
-addressTranslateS1 :: VPtr -> MachineMonad VPtr -- FIXME AARCH64: pending C PR
+addressTranslateS1 :: VPtr -> MachineMonad VPtr
 addressTranslateS1 = error "Unimplemented - machine op"
 
 getSCTLR :: MachineMonad Word
@@ -302,9 +292,9 @@ data VMRights
     deriving (Show, Eq)
 
 vmRightsToBits :: VMRights -> Word
-vmRightsToBits VMKernelOnly = 1
-vmRightsToBits VMReadOnly = 2
-vmRightsToBits VMReadWrite = 3
+vmRightsToBits VMKernelOnly = 0
+vmRightsToBits VMReadOnly = 3
+vmRightsToBits VMReadWrite = 1
 
 allowWrite :: VMRights -> Bool
 allowWrite VMKernelOnly = False
@@ -341,7 +331,7 @@ data PTE
         pteDevice :: Bool,
         pteRights :: VMRights }
     | PageTablePTE {
-        pteBaseAddress :: PAddr }
+        ptePPN :: PAddr }
     deriving (Show, Eq)
 
 {- Simulator callbacks -}
@@ -400,6 +390,9 @@ debugPrint str = liftIO $ putStrLn str
 fpuThreadDeleteOp :: Word -> MachineMonad ()
 fpuThreadDeleteOp tcbPtr = error "Unimplemented callback"
 
+isFpuEnable :: MachineMonad Bool
+isFpuEnable = error "Unimplemented - lazy FPU switch abstracted as machine op"
+
 {- GIC VCPU interface -}
 
 get_gic_vcpu_ctrl_hcr :: MachineMonad Word32
@@ -450,7 +443,7 @@ check_export_arch_timer = error "Unimplemented - machine op"
 {- Constants -}
 
 hcrVCPU =  (0x80086039 :: Word) -- HCR_VCPU
-hcrNative = (0x8e28703b :: Word) -- HCR_NATIVE
+hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
 vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN

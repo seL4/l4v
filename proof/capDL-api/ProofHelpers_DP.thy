@@ -11,7 +11,7 @@ imports
 begin
 
 crunch_ignore (add:
-  NonDetMonad.bind return "when" get gets fail
+  Nondet_Monad.bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE

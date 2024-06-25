@@ -49,9 +49,7 @@ qed
 
 lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and arch_extras and
-        ct_active' and sch_act_simple and
-        (\<lambda>s. \<forall>x. ksCurThread s \<notin> set (ksReadyQueues s x)))
+       (invs' and arch_extras and ct_active' and sch_act_simple)
        (UNIV \<inter> {s. isCall_' s = from_bool isCall}
              \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
        (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
@@ -118,7 +116,7 @@ lemma corres_dmo_getExMonitor_C:
       apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). r = r' \<and> ms = rv \<and> ms' = rv'"
               in corres_split)
          apply (rule corres_trivial, rule corres_select_f')
-          apply (clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def
+          apply (clarsimp simp: getExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def gets_def
                                 get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: getExMonitor_no_fail[simplified no_fail_def])
         apply (clarsimp simp: split_def)
@@ -132,7 +130,7 @@ lemma corres_dmo_getExMonitor_C:
                                  cmachine_state_relation_def Let_def)
           apply (rule corres_trivial, clarsimp)
          apply (wp hoare_TrueI)+
-   apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
+   apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def
                                             gets_def get_def return_def modify_def put_def select_f_def)+
   done
 
@@ -150,7 +148,7 @@ lemma corres_dmo_setExMonitor_C:
                                               ms' = rv'\<lparr>exclusive_state := es\<rparr>"
               in corres_split)
          apply (rule corres_trivial, rule corres_select_f')
-          apply (clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def
+          apply (clarsimp simp: setExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def gets_def
                                 get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: setExMonitor_no_fail[simplified no_fail_def])
         apply (simp add: split_def)
@@ -162,7 +160,7 @@ lemma corres_dmo_setExMonitor_C:
         apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
                               cmachine_state_relation_def Let_def)
        apply (wp hoare_TrueI)+
-   apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
+   apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def
                                             gets_def get_def return_def modify_def put_def select_f_def)+
   done
 
@@ -193,20 +191,24 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
   apply (rule corres_gen_asm)
   apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_nonempty_def del: split_paired_All)
   apply (rule corres_gets_same)
-    apply (clarsimp simp: absKState_crelation ptable_rights_s'_def ptable_rights_s''_def
-           rf_sr_def  cstate_relation_def Let_def cstate_to_H_correct)
+    apply (fastforce dest: ex_abs_ksReadyQueues_asrt
+                     simp: absKState_crelation ptable_rights_s'_def ptable_rights_s''_def
+                           rf_sr_def cstate_relation_def Let_def cstate_to_H_correct)
    apply simp
   apply (rule corres_gets_same)
-    apply (clarsimp simp: ptable_xn_s'_def ptable_xn_s''_def ptable_attrs_s_def
-                          absKState_crelation ptable_attrs_s'_def ptable_attrs_s''_def  rf_sr_def)
+    apply (fastforce dest: ex_abs_ksReadyQueues_asrt
+                     simp: ptable_xn_s'_def ptable_xn_s''_def ptable_attrs_s_def
+                           absKState_crelation ptable_attrs_s'_def ptable_attrs_s''_def rf_sr_def)
    apply simp
   apply (rule corres_gets_same)
+    apply clarsimp
+    apply (frule ex_abs_ksReadyQueues_asrt)
     apply (clarsimp simp: absKState_crelation curthread_relation ptable_lift_s'_def ptable_lift_s''_def
                          ptable_lift_s_def rf_sr_def)
    apply simp
   apply (simp add: getCurThread_def)
   apply (rule corres_gets_same)
-    apply (simp add: absKState_crelation rf_sr_def)
+    apply (fastforce dest: ex_abs_ksReadyQueues_asrt simp: absKState_crelation rf_sr_def)
    apply simp
   apply (rule corres_gets_same)
     apply (rule fun_cong[where x=ptrFromPAddr])
@@ -247,7 +249,7 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
               apply (rule corres_split[OF device_update_corres_C])
                 apply (rule corres_split[OF corres_dmo_setExMonitor_C,
                               where R="\<top>\<top>" and R'="\<top>\<top>"])
-                  apply (wp select_wp | simp)+
+                  apply (wp | simp)+
    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
                           invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
                   split: if_splits)

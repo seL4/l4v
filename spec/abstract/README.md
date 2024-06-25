@@ -14,7 +14,7 @@ specification. The specification draws in additional interface files from
 `design` and `machine`.
 
 The specification is written in monadic style. See
-`l4v/lib/Monad_WP/NonDetMonad` for the definition of this monad.
+`l4v/lib/Monads/NonDetMonad` for the definition of this monad.
 
 Top-Level Theory
 ----------------
@@ -45,14 +45,14 @@ The corresponding Isabelle session is `ASpec`. It is set up to build a
 human-readable PDF document. `Glossary_Doc` contains definitions of common
 seL4 terms.
 
-To build, run in directory `l4v/spec`:
+To build, run in directory `l4v/`:
 
-    make ASpec
+    L4V_ARCH=ARM ./run_test ASpec
 
 Remarks
 -------
 
- * Note that this specification is actually an extensible _family_ of
+ * Note that this specification is actually an extensible *family* of
    specifications, with predefined extension points. These points can
    either be left generic, as for most of the abstract invariant proofs,
    or they can be instantiated to more precise behaviour, such as in

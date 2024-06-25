@@ -9,7 +9,7 @@ Abstract Spec Invariant Proof
 
 This proof defines and proves the global invariants of seL4's
 [abstract specification](../../spec/abstract/). The invariants are
-phrased and proved using a [monadic Hoare logic](../../lib/Monad_WP/NonDetMonad.thy)
+phrased and proved using a [monadic Hoare logic](../../lib/Monads/nondet/Nondet_Monad.thy)
 described in a TPHOLS '08 [paper][1].
 
   [1]: https://trustworthy.systems/publications/nictaabstracts/Cock_KS_08.abstract "Secure Microkernels, State Monads and Scalable Refinement"
@@ -17,9 +17,9 @@ described in a TPHOLS '08 [paper][1].
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build for the ARM architecture from the `l4v/` directory, run:
 
-    ./isabelle/bin/isabelle build -d . -v -b AInvs
+    L4V_ARCH=ARM ./run_tests AInvs
 
 Important Theories
 ------------------

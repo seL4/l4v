@@ -31,7 +31,7 @@ lemma decode_cnode_copy_same_parent_rvu:
   \<lbrace>\<lambda>rv s. Q rv\<rbrace>, -"
   apply (clarsimp simp:user_pointer_at_def Let_def)
   apply (clarsimp simp: decode_cnode_invocation_def split_def split: sum.splits)
-  apply (wp hoare_whenE_wp | simp)+
+  apply (wp whenE_wp | simp)+
         apply (rule validE_validE_R)
         apply (wp derive_cap_invE)+
       apply (rule validE_validE_R)
@@ -60,7 +60,7 @@ lemma invoke_cnode_insert_cdl_current_domain[wp]:
    \<lbrace>\<lambda>_ s. P (cdl_current_domain s) \<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp alternative_wp | wpc | clarsimp)+
+   apply (wp | wpc | clarsimp)+
   done
 
 lemma invoke_cnode_move_cdl_current_domain[wp]:
@@ -177,7 +177,7 @@ lemma seL4_CNode_Mint_sep:
          apply (wp cnode_insert_cap_cdl_current_thread)[1]
         apply (rule no_exception_conj')
          apply (wp)[1]
-        apply (rule hoare_post_impErr)
+        apply (rule hoare_strengthen_postE)
           apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* R" for R
           in invoke_cnode_insert_cap')
           apply simp
@@ -343,7 +343,7 @@ lemma seL4_CNode_Mutate_sep:
           apply (wp cnode_move_cap_cdl_current_thread)[1]
          apply (rule no_exception_conj')
           apply wp[1]
-         apply (rule hoare_post_impErr)
+         apply (rule hoare_strengthen_postE)
            apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* R" for R
              in invoke_cnode_move_cap)
           apply clarsimp
@@ -502,7 +502,7 @@ lemma seL4_CNode_Move_sep:
           apply (wp cnode_move_cap_cdl_current_thread)[1]
          apply (rule no_exception_conj')
           apply wp[1]
-         apply (rule hoare_post_impErr)
+         apply (rule hoare_strengthen_postE)
            apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* R" for R
              in invoke_cnode_move_cap)
           apply clarsimp
@@ -657,7 +657,7 @@ lemma seL4_CNode_Copy_sep:
           apply (wp cnode_insert_cap_cdl_current_thread)[1]
          apply (rule no_exception_conj')
           apply wp[1]
-         apply (rule hoare_post_impErr)
+         apply (rule hoare_strengthen_postE)
            apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* R" for R
              in invoke_cnode_insert_cap')
             apply simp

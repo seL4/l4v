@@ -389,10 +389,10 @@ lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
      apply (rule conjI; clarsimp)
     apply (intro allI impI)
     apply (elim exE conjE)
-    sorry (* FIXME AARCH64
-    subgoal for _ _ _ _ p
+    subgoal for \<dots> p
       by (case_tac "p=b"; case_tac "p=a";
-            fastforce simp add: valid_table_caps_def empty_table_caps_of)
+          clarsimp simp add: valid_table_caps_def empty_table_caps_of;
+          fastforce)
    apply (simp add: unique_table_caps_def split del: if_split)
    apply (erule allfEI[where f="id (a := b, b := a)"])
    apply (erule allfEI[where f="id (a := b, b := a)"])
@@ -402,7 +402,7 @@ lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
   apply (erule allfEI[where f="id (a := b, b := a)"])
   apply (clarsimp split del: if_split split: if_split_asm dest!:vs_cap_ref_to_table_cap_ref
                       dest!: weak_derived_table_cap_ref)
-  done *)
+  done
 
 
 lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
@@ -410,10 +410,8 @@ lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
     cte_wp_at (weak_derived c) a and
     cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  apply (simp add: cap_swap_def set_cdt_def valid_asid_map_def vspace_at_asid_def)
-  apply (rule hoare_pre)
-   apply (wp set_cap.vs_lookup|simp
-          |rule hoare_lift_Pf [where f=arch_state])+
+  apply (simp add: cap_swap_def set_cdt_def vspace_at_asid_def)
+  apply (wp set_cap.vs_lookup|simp|rule hoare_lift_Pf [where f=arch_state])+
   done
 
 
@@ -489,34 +487,26 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
                              split: option.split
                    | intro impI conjI
                    | rule hoare_drop_imp)+
-  sorry (* FIXME AARCH64
   apply (drule_tac final_zombie_not_live; (assumption | simp add: invs_iflive)?)
    apply (clarsimp simp: pred_tcb_at_def is_tcb obj_at_def live_def, elim disjE)
     apply (clarsimp; case_tac "tcb_state tcb"; simp)+
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
-      apply (wp
-             | clarsimp simp: valid_cap_def obj_at_def is_tcb_def is_cap_table_def
-                        split: option.splits bool.split
-             | intro impI conjI)+
-  done *)
+  apply (wpsimp simp: arch_finalise_cap_def valid_cap_def obj_at_def is_tcb_def is_cap_table_def)
+  done
 
 lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
-(* FIXME AARCH64 VCPU/FPU
 crunch emptyable[wp,CNodeInv_AI_assms]: finalise_cap "\<lambda>s. emptyable sl s"
   (simp: crunch_simps rule: emptyable_lift
-     wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs) *)
-
+     wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs
+         arch_finalise_cap_pred_tcb_at)
 
 lemma finalise_cap_not_reply_master_unlifted [CNodeInv_AI_assms]:
   "(rv, s') \<in> fst (finalise_cap cap sl s) \<Longrightarrow>
    \<not> is_master_reply_cap (fst rv)"
-  sorry (* FIXME AARCH64
   by (case_tac cap, auto simp: is_cap_simps in_monad liftM_def
                                arch_finalise_cap_def
-                        split: if_split_asm arch_cap.split_asm bool.split_asm option.split_asm) *)
-
+                        split: if_split_asm arch_cap.split_asm bool.split_asm option.split_asm
+                               pt_type.splits)
 
 lemma nat_to_cref_0_replicate [CNodeInv_AI_assms]:
   "\<And>n. n < word_bits \<Longrightarrow> nat_to_cref n 0 = replicate n False"
@@ -531,17 +521,16 @@ lemma prepare_thread_delete_thread_cap [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>
     prepare_thread_delete t
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
-  sorry (* FIXME AARCH64 VCPU
-  by (wpsimp simp: prepare_thread_delete_def) *)
+  by (wpsimp simp: prepare_thread_delete_def)
 
 end
 
 
 global_interpretation CNodeInv_AI?: CNodeInv_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
-  case 1 show ?case sorry (* FIXME AARCH64 by (unfold_locales; (fact CNodeInv_AI_assms)?) *)
-  qed
+  case 1 show ?case by (unfold_locales; (fact CNodeInv_AI_assms)?)
+qed
 
 
 termination rec_del by (rule rec_del_termination)
@@ -550,9 +539,8 @@ termination rec_del by (rule rec_del_termination)
 context Arch begin global_naming AARCH64
 
 lemma post_cap_delete_pre_is_final_cap':
-  "\<And>s.
-       \<lbrakk>valid_ioports s; caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
-       \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) (caps_of_state s(slot \<mapsto> NullCap))"
+  "\<lbrakk>valid_ioports s; caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
+   \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) ((caps_of_state s)(slot \<mapsto> NullCap))"
   apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def post_cap_delete_pre_def
                       split: cap.split_asm if_split_asm
                       elim!: ranE dest!: caps_of_state_cteD)
@@ -629,7 +617,7 @@ next
         apply (rule "2.hyps"[simplified rec_del_call.simps slot_rdcall.simps conj_assoc], assumption+)
        apply (simp add: cte_wp_at_eq_simp
                 | wp replace_cap_invs set_cap_sets final_cap_same_objrefs
-                     set_cap_cte_cap_wp_to static_imp_wp
+                     set_cap_cte_cap_wp_to hoare_weak_lift_imp
                 | erule finalise_cap_not_reply_master)+
        apply (wp hoare_vcg_const_Ball_lift)+
       apply (rule hoare_strengthen_post)
@@ -798,7 +786,7 @@ qed
 
 
 lemmas rec_del_invs'[CNodeInv_AI_assms] = rec_del_invs'' [where Q=\<top>,
-  simplified hoare_post_taut pred_conj_def simp_thms, OF TrueI TrueI TrueI TrueI, simplified]
+  simplified hoare_TrueI pred_conj_def simp_thms, OF TrueI TrueI TrueI TrueI, simplified]
 
 end
 
@@ -813,15 +801,8 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
 context Arch begin global_naming AARCH64
 
 lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
-   "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
-   finalise_cap a b
-   \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
-  apply (case_tac a,simp_all add:liftM_def)
-    apply (wp suspend_rvk_prog deleting_irq_handler_rvk_prog
-      | clarsimp simp:is_final_cap_def comp_def)+
-  sorry (* FIXME AARCH64 probably VCPU
-  done *)
-
+   "finalise_cap cap f \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
+  by (cases cap; wpsimp wp: suspend_rvk_prog deleting_irq_handler_rvk_prog)
 
 lemma rec_del_rvk_prog [CNodeInv_AI_assms]:
   "st \<turnstile> \<lbrace>\<lambda>s. revoke_progress_ord m (option_map cap_to_rpo \<circ> caps_of_state s)
@@ -1008,10 +989,10 @@ end
 
 
 global_interpretation CNodeInv_AI_5?: CNodeInv_AI_5
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact CNodeInv_AI_assms)?)
-  qed
+qed
 
 
 end

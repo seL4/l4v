@@ -812,10 +812,7 @@ lemma bin_sc_sc_diff: "m \<noteq> n \<Longrightarrow> bin_sc m c (bin_sc n b w) 
   done
 
 lemma bin_nth_sc_gen: "(bit :: int \<Rightarrow> nat \<Rightarrow> bool) (bin_sc n b w) m = (if m = n then b else (bit :: int \<Rightarrow> nat \<Rightarrow> bool) w m)"
-  apply (induct n arbitrary: w m)
-   apply (case_tac m; simp add: bit_Suc)
-  apply (case_tac m; simp add: bit_Suc)
-  done
+  by (simp add: bit_simps)
 
 lemma bin_sc_eq:
   \<open>bin_sc n False = unset_bit n\<close>
@@ -1339,33 +1336,22 @@ lemma int_shiftr_numeral_Suc0 [simp]:
 
 lemma bin_nth_minus_p2:
   assumes sign: "bin_sign x = 0"
-  and y: "y = push_bit n 1"
-  and m: "m < n"
-  and x: "x < y"
+    and y: "y = push_bit n 1"
+    and m: "m < n"
+    and x: "x < y"
   shows "bit (x - y) m = bit x m"
 proof -
-  from sign y x have \<open>x \<ge> 0\<close> and \<open>y = 2 ^ n\<close> and \<open>x < 2 ^ n\<close>
-    by (simp_all add: bin_sign_def push_bit_eq_mult split: if_splits)
-  from \<open>0 \<le> x\<close> \<open>x < 2 ^ n\<close> \<open>m < n\<close> have \<open>bit x m \<longleftrightarrow> bit (x - 2 ^ n) m\<close>
-  proof (induction m arbitrary: x n)
-    case 0
-    then show ?case
-      by simp
-  next
-    case (Suc m)
-    moreover define q where \<open>q = n - 1\<close>
-    ultimately have n: \<open>n = Suc q\<close>
-      by simp
-    have \<open>(x - 2 ^ Suc q) div 2 = x div 2 - 2 ^ q\<close>
-      by simp
-    moreover from Suc.IH [of \<open>x div 2\<close> q] Suc.prems
-    have \<open>bit (x div 2) m \<longleftrightarrow> bit (x div 2 - 2 ^ q) m\<close>
-      by (simp add: n)
-    ultimately show ?case
-      by (simp add: bit_Suc n)
-  qed
-  with \<open>y = 2 ^ n\<close> show ?thesis
+  from \<open>bin_sign x = 0\<close> have \<open>x \<ge> 0\<close>
+    by (simp add: sign_Pls_ge_0)
+  moreover from x y have \<open>x < 2 ^ n\<close>
     by simp
+  ultimately have \<open>q < n\<close> if \<open>bit x q\<close> for q
+    using that by (metis bit_take_bit_iff take_bit_int_eq_self)
+  then have \<open>bit (x + NOT (mask n)) m = bit x m\<close>
+    using \<open>m < n\<close> by (simp add: disjunctive_add bit_simps)
+  also have \<open>x + NOT (mask n) = x - y\<close>
+    using y by (simp flip: minus_exp_eq_not_mask)
+  finally show ?thesis .
 qed
 
 lemma bin_clr_conv_NAND:
@@ -1430,7 +1416,7 @@ lemma clearBit_no:
 
 lemma eq_mod_iff: "0 < n \<Longrightarrow> b = b mod n \<longleftrightarrow> 0 \<le> b \<and> b < n"
   for b n :: int
-  by auto (metis pos_mod_conj)+
+  using pos_mod_sign [of n b] pos_mod_bound [of n b] by (safe, auto)
 
 lemma split_uint_lem: "bin_split n (uint w) = (a, b) \<Longrightarrow>
     a = take_bit (LENGTH('a) - n) a \<and> b = take_bit (LENGTH('a)) b"

@@ -13,6 +13,8 @@ on:
   repository_dispatch:
     types:
       - manifest-update
+  # for testing:
+  workflow_dispatch:
 
 jobs:
   code:
@@ -35,6 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        num_domains: ['1', '']
     # test only most recent push:
     concurrency: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
     steps:
@@ -43,20 +46,21 @@ jobs:
       with:
         L4V_ARCH: ${{ matrix.arch }}
         xml: ${{ needs.code.outputs.xml }}
+        NUM_DOMAINS: ${{ matrix.num_domains }}
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SSH: ${{ secrets.AWS_SSH }}
-    - name: Upload C graph-lang
-      uses: actions/upload-artifact@v3
+    - name: Upload kernel builds
+      uses: actions/upload-artifact@v4
       with:
-        name: c-graph-lang
-        path: artifacts/simpl-export
+        name: kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}
+        path: artifacts/kernel-builds
         if-no-files-found: ignore
     - name: Upload logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: logs-${{ matrix.arch }}
+        name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}
         path: logs.tar.xz
 
   deploy:
@@ -69,44 +73,44 @@ jobs:
         xml: ${{ needs.code.outputs.xml }}
       env:
         GH_SSH: ${{ secrets.CI_SSH }}
-
-  binary-verification:
-    name: Trigger binary verification
-    runs-on: ubuntu-latest
-    needs: [code, proofs]
-    steps:
-    # download-artifact doesn't have an option to ignore missing artifacts,
-    # so we download them all to test if c-graph-lang exists.
-    - name: Fetch artifacts
-      uses: actions/download-artifact@v3
-      with:
-        path: artifacts
-    - name: Check for C graph-lang artifacts
-      id: enabled
-      env:
-        MANIFEST: ${{ needs.code.outputs.xml }}
-      run: |
-        # Check if there are any C graph-lang artifacts
-        if [ -e artifacts/c-graph-lang ]; then
-          echo "C graph-lang artifacts found, will trigger binary verification"
-          echo -n "${MANIFEST}" > verification-manifest.xml
-          echo "::set-output name=enabled::true"
-        else
-          echo "No C graph-lang artifacts found, will not trigger binary verification"
-        fi
-    - name: Upload manifest
-      if: steps.enabled.outputs.enabled
-      uses: actions/upload-artifact@v3
-      with:
-        name: manifest
-        path: verification-manifest.xml
     - name: Trigger binary verification
-      if: steps.enabled.outputs.enabled
-      uses: peter-evans/repository-dispatch@v1
+      uses: seL4/ci-actions/bv-trigger@master
       with:
         token: ${{ secrets.PRIV_REPO_TOKEN }}
-        repository: ${{ github.repository }}
-        event-type: binary-verification
-        # binary-verification uses the run_id to retrieve this workflow's artifacts.
-        client-payload: |
-          { "repo": "${{ github.repository }}", "run_id": "${{ github.run_id }}" }
+        tag: "l4v/proof-deploy/${{ github.event_name }}"
+
+# Automatically rebase platform branches on pushes to master.
+# This workflow here on the master branch attempts a git rebase of the platform
+# branches listed in the build matrix below. If the rebase succeeds, the rebased
+# branch is pushed under the name `<branch>-rebased`. This triggers the build
+# workflow on the `<branch>-rebased` branch, which will run the proofs. If the
+# proofs succeed, the `<branch>-rebased` branch is force-pushed over
+# `<branch>`, becoming the new platform branch.
+  rebase:
+    name: Rebase platform branches
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [imx8-fpu-ver, exynos5-ver]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+        path: l4v-${{ matrix.branch }}
+        fetch-depth: 0
+        # needed to trigger push actions on the -rebased branch
+        # (implict GITHUB_TOKEN does not trigger further push actions).
+        token: ${{ secrets.PRIV_REPO_TOKEN }}
+    - name: Rebase
+      run: |
+        cd l4v-${{ matrix.branch }}
+        git config --global user.name "seL4 CI"
+        git config --global user.email "ci@sel4.systems"
+        git rebase origin/master
+        git status
+    - name: Push
+      run: |
+        cd l4v-${{ matrix.branch }}
+        git push -f origin HEAD:${{ matrix.branch }}-rebased

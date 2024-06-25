@@ -8,8 +8,9 @@ theory CLevityCatch
 imports
   "CBaseRefine.Include_C"
   ArchMove_C
-  "CLib.LemmaBucket_C"
+  "CParser.LemmaBucket_C"
   "Lib.LemmaBucket"
+  Boolean_C
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -61,12 +62,12 @@ declare empty_fail_doMachineOp [simp]
 lemma asUser_get_registers:
   "\<lbrace>tcb_at' target\<rbrace>
      asUser target (mapM getRegister xs)
-   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) xs = rv) target s\<rbrace>"
+   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. map ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb) xs = rv) target s\<rbrace>"
   apply (induct xs)
    apply (simp add: mapM_empty asUser_return)
    apply wp
    apply simp
-  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return)
+  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return empty_fail_cond)
   apply wp
    apply simp
    apply (rule hoare_strengthen_post)

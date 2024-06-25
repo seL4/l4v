@@ -7,8 +7,8 @@ in [Isabelle/HOL][1]. In particular, it uses Norrish's
 abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
-  [1]: https://www.cl.cam.ac.uk/research/hvg/Isabelle/
-  [2]: https://trustworthy.systems/software/TS/c-parser/
+  [1]: https://isabelle.in.tum.de/
+  [2]: https://github.com/seL4/l4v/blob/master/tools/c-parser/README.md
 
 
 
@@ -28,16 +28,21 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2021:
+AutoCorres is packaged as a theory for Isabelle2023:
 
     https://isabelle.in.tum.de
 
-AutoCorres currently supports three platforms: ARM, X64, and RISCV64.
+AutoCorres currently supports four platforms: ARM, AARCH64, X64, and RISCV64.
 The platform determines the sizes of C integral and pointer types.
 
 For ARM, the sizes are:
   - 64 bits: long long
   - 32 bits: pointers, long, int
+  - 16 bits: short
+
+For AARCH64:
+  - 64 bits: pointers, long long, long
+  - 32 bits: int
   - 16 bits: short
 
 For X64:
@@ -102,12 +107,12 @@ This package contains:
 
     * Michael Norrish's C parser, used to translate C code into Isabelle:
 
-        https://trustworthy.systems/software/TS/c-parser/
+        https://github.com/seL4/l4v/blob/master/tools/c-parser/README.md
 
     * Norbert Schirmer's Simpl language and associated VCG tool. The
       C parser translates C into Schirmer's Simpl language:
 
-        https://www.isa-afp.org/entries/Simpl.shtml
+        https://www.isa-afp.org/entries/Simpl.html
 
     * Code from SML/NJ, including an implementation of binary sets
       (Binaryset.ML) and the mllex and mlyacc tools
@@ -120,9 +125,9 @@ This package contains:
     * Compatibility word libraries and associated lemmas, for
       assisting with reasoning about words (such as 32-bit words).
 
-    * Libraries from Data61 for defining and reasoning about monads,
-      including definitions for nondeterministic state monads and option
-      monads, along with a large proof library relating to these
+    * Libraries from the l4v repository for defining and reasoning about
+      monads, including definitions for nondeterministic state monads and
+      option monads, along with a large proof library relating to these
       definitions.
 
     * The "wp" weakest precondition tool, which can be used to

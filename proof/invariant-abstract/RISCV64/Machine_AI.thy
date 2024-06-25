@@ -17,7 +17,7 @@ definition
   "no_irq f \<equiv> \<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
 
 lemma wpc_helper_no_irq:
-  "no_irq f \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (no_irq f)"
+  "no_irq f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (no_irq f)"
   by (simp add: wpc_helper_def)
 
 wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
@@ -56,7 +56,7 @@ setup \<open>
 \<close>
 
 crunch_ignore (no_irq) (add:
-  NonDetMonad.bind return "when" get gets fail
+  Nondet_Monad.bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE
@@ -83,13 +83,13 @@ lemma det_getRestartPC: "det getRestartPC"
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
 
-
+(* FIXME empty_fail: make all empty_fail [intro!, wp], and non-conditional ones [simp] *)
 lemma ef_loadWord: "empty_fail (loadWord x)"
-  by (simp add: loadWord_def)
+  by (fastforce simp: loadWord_def)
 
 
 lemma ef_storeWord: "empty_fail (storeWord x y)"
-  by (simp add: storeWord_def)
+  by (fastforce simp: storeWord_def)
 
 
 lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
@@ -175,7 +175,7 @@ lemma no_fail_getActiveIRQ[wp]:
   "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
-   apply (wp non_fail_select)
+   apply wp
   apply simp
   done
 
@@ -184,7 +184,7 @@ definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow>
 lemma getActiveIRQ_inv [wp]:
   "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply (simp add: irq_state_independent_def)
   done
 
@@ -284,7 +284,7 @@ lemma no_irq_seq [wp]:
   "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (f >>= g)"
   apply (subst no_irq_def)
   apply clarsimp
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
   apply (wp|simp)+
   done
 
@@ -329,7 +329,7 @@ lemma getActiveIRQ_le_maxIRQ':
     getActiveIRQ in_kernel
    \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply clarsimp
   apply (rule ccontr)
   apply (simp add: linorder_not_le)
@@ -338,7 +338,7 @@ lemma getActiveIRQ_le_maxIRQ':
 lemma getActiveIRQ_neq_non_kernel:
   "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply auto
   done
 
@@ -356,7 +356,7 @@ lemma empty_fail_initL2Cache: "empty_fail initL2Cache"
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
-  by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
+  by (fastforce simp: clearMemory_def mapM_x_mapM ef_storeWord)
 
 lemma no_irq_setVSpaceRoot:
   "no_irq (setVSpaceRoot r a)"

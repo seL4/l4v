@@ -50,7 +50,6 @@ definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref
 (* this is what asid_map encodes in ARM/ARM_HYP; getASIDPoolEntry in Haskell *)
 definition entry_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> asid_pool_entry option" where
   "entry_for_asid asid = do {
-     oassert (0 < asid);
      pool_ptr \<leftarrow> pool_for_asid asid;
      entry_for_pool pool_ptr asid \<circ> asid_pools_of
    }"
@@ -68,6 +67,7 @@ definition update_asid_pool_entry ::
 
 definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option" where
   "vspace_for_asid asid = do {
+     oassert (0 < asid);
      entry \<leftarrow> entry_for_asid asid;
      oreturn $ ap_vspace entry
    }"
@@ -173,7 +173,7 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
   "handle_vm_fault thread fault \<equiv> case fault of
      ARMDataAbort \<Rightarrow> doE
        addr \<leftarrow> liftE $ do_machine_op getFAR;
-       fault \<leftarrow> liftE $ do_machine_op getDFSR;
+       fault \<leftarrow> liftE $ do_machine_op getESR;
        cur_v \<leftarrow> liftE $ gets (arm_current_vcpu \<circ> arch_state);
        addr \<leftarrow> if (\<exists>v. cur_v = Some (v, True)) \<comment> \<open>VCPU active\<close>
               then doE
@@ -188,7 +188,7 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
      odE
    | ARMPrefetchAbort \<Rightarrow> doE
        pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
-       fault \<leftarrow> liftE $ do_machine_op getIFSR;
+       fault \<leftarrow> liftE $ do_machine_op getESR;
        cur_v \<leftarrow> liftE $ gets (arm_current_vcpu \<circ> arch_state);
        pc \<leftarrow> if (\<exists>v. cur_v = Some (v, True)) \<comment> \<open>VCPU active\<close>
             then doE
@@ -263,6 +263,8 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
          when (\<exists>vmid. pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace vmid pt)) $ do
            invalidate_tlb_by_asid asid;
            invalidate_asid_entry asid;
+           \<comment> \<open>re-read here, because @{text invalidate_asid_entry} changes the ASID pool:\<close>
+           pool \<leftarrow> get_asid_pool pool_ptr;
            pool' \<leftarrow> return $ pool (asid_low_bits_of asid := None);
            set_asid_pool pool_ptr pool';
            tcb \<leftarrow> gets cur_thread;

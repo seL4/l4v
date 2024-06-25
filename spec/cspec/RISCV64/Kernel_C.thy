@@ -95,6 +95,9 @@ text \<open>Hide unqualified names conflicting with Kernel_Config names. Force u
 hide_const (open)
   numDomains
 
+text \<open>Add a more usable name for the collection of ThreadState definitions\<close>
+lemmas ThreadState_defs = StrictC'_thread_state_defs
+
 (* hide vmpage sizes again *)
 hide_const
   vmpage_size.RISCVSmallPage

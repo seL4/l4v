@@ -121,7 +121,7 @@ lemma dcorres_opt_parent_set_parent_helper:
   "dcorres dc \<top> P
   (gets (opt_parent (transform_cslot_ptr src)) >>=
   case_option (return ())
-  (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
+  (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> P s)
@@ -143,7 +143,7 @@ lemma dcorres_opt_parent_set_parent_helper:
 
 lemma dcorres_set_parent_helper:
   "dcorres dc \<top> P
-  (modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>))
+  (modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(transform_cslot_ptr child \<mapsto> parent)\<rparr>))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> P s)
@@ -218,7 +218,7 @@ lemma insert_cap_sibling_corres:
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
               elim!: ranE)[1]
-           apply ((wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
+           apply ((wp set_cap_caps_of_state2 get_cap_wp hoare_weak_lift_imp
              | simp add: swp_def cte_wp_at_caps_of_state)+)
          apply (wp set_cap_idle |
             simp add:set_untyped_cap_as_full_def split del: if_split)+
@@ -231,7 +231,7 @@ lemma insert_cap_sibling_corres:
            cte_wp_at_caps_of_state has_parent_cte_at is_physical_def
            dest!:is_untyped_cap_eqD)
           apply fastforce
-         apply (wp get_cap_wp set_cap_idle static_imp_wp
+         apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp add:set_untyped_cap_as_full_def
            split del: if_split)+
          apply (rule_tac Q = "\<lambda>r s. cdt s sibling = None
@@ -244,8 +244,7 @@ lemma insert_cap_sibling_corres:
            cte_wp_at_caps_of_state has_parent_cte_at is_physical_def
            dest!:is_untyped_cap_eqD)
          apply fastforce
-        apply (wp get_cap_wp set_cap_idle | simp)+
-   apply clarsimp
+        apply (wpsimp wp: get_cap_wp set_cap_idle)+
    apply (clarsimp simp: not_idle_thread_def)
    apply (clarsimp simp: caps_of_state_transform_opt_cap cte_wp_at_caps_of_state
      transform_cap_def)
@@ -303,7 +302,7 @@ lemma insert_cap_child_corres:
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
                       elim!: ranE)[1]
-           apply (wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
+           apply (wp set_cap_caps_of_state2 get_cap_wp hoare_weak_lift_imp
                     | simp add: swp_def cte_wp_at_caps_of_state)+
          apply (wp set_cap_idle |
           simp add:set_untyped_cap_as_full_def split del:if_split)+
@@ -314,14 +313,14 @@ lemma insert_cap_child_corres:
            apply (wp set_cap_mdb_cte_at | simp add:not_idle_thread_def)+
           apply (clarsimp simp:mdb_cte_at_def cte_wp_at_caps_of_state)
           apply fastforce
-         apply (wp get_cap_wp set_cap_idle static_imp_wp
+         apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp split del:if_split add:set_untyped_cap_as_full_def)+
          apply (rule_tac Q = "\<lambda>r s. not_idle_thread (fst child) s
            \<and> (\<exists>cap. caps_of_state s src = Some cap)
            \<and> should_be_parent_of src_capa (is_original_cap s src) cap (cap_insert_dest_original cap src_capa)
            \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
        in hoare_strengthen_post)
-          apply (wp set_cap_mdb_cte_at static_imp_wp | simp add:not_idle_thread_def)+
+          apply (wp set_cap_mdb_cte_at hoare_weak_lift_imp | simp add:not_idle_thread_def)+
          apply (clarsimp simp:mdb_cte_at_def cte_wp_at_caps_of_state)
          apply fastforce
         apply clarsimp
@@ -700,7 +699,7 @@ lemma cap_revoke_corres_helper:
   show ?case
   supply if_cong[cong]
   apply (subst cap_revoke.simps)
-  apply (rule monadic_rewrite_corres2[where P =\<top>,simplified])
+  apply (rule monadic_rewrite_corres_l[where P =\<top>,simplified])
    apply (rule Finalise_DR.monadic_trancl_preemptible_step)
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:liftE_bindE)
@@ -719,7 +718,7 @@ lemma cap_revoke_corres_helper:
             apply (clarsimp simp:empty_set_eq)+
             apply (clarsimp simp:returnOk_def lift_def)
             apply (rule corres_guard_imp)
-              apply (rule monadic_rewrite_corres2[where P=\<top> ,simplified])
+              apply (rule monadic_rewrite_corres_l[where P=\<top> ,simplified])
                apply (rule monadic_trancl_preemptible_return)
               apply (rule corres_trivial)
               apply (clarsimp simp:returnOk_def boolean_exception_def)+
@@ -734,7 +733,7 @@ lemma cap_revoke_corres_helper:
               apply simp+
             apply (clarsimp simp: lift_def empty_set_eq)+
             apply (rule corres_guard_imp)
-              apply (rule monadic_rewrite_corres2[where P=\<top> ,simplified])
+              apply (rule monadic_rewrite_corres_l[where P=\<top> ,simplified])
                apply (rule monadic_trancl_preemptible_return)
               apply (rule corres_trivial)
               apply (clarsimp simp:returnOk_def boolean_exception_def)+
@@ -756,7 +755,7 @@ lemma cap_revoke_corres_helper:
                  apply (erule cte_wp_at_weakenE, simp)
                 apply (simp,blast)
               apply simp+
-            apply (wp select_wp,(clarsimp simp: select_ext_def in_monad)+)
+            apply (wp, (clarsimp simp: select_ext_def in_monad)+)
            apply (rule dcorres_expand_pfx)
            apply (rule_tac r'="\<lambda>cap cap'. cap = transform_cap cap'"
              and Q ="\<lambda>r. \<top>" and Q'="\<lambda>r s. cte_wp_at (\<lambda>x. x = r) (aa,ba) s \<and> s = sfix" in corres_split_forwards')
@@ -792,9 +791,10 @@ lemma cap_revoke_corres_helper:
              in corres_split_forwards')
               apply (rule corres_guard_imp[OF corres_trivial[OF preemption_corres]])
                apply simp+
-             apply (rule alternative_valid)
-              apply (simp add:valid_def throwError_def return_def)
-             apply (simp add:valid_def returnOk_def return_def)
+             apply wp
+               apply (simp add:valid_def throwError_def return_def)
+              apply (simp add:valid_def returnOk_def return_def)
+             apply fastforce
             apply (clarsimp simp: valid_def)
            apply clarsimp
            apply (case_tac rva)
@@ -877,28 +877,28 @@ lemma corres_mapM_to_mapM_x:
   by (simp add: mapM_x_mapM liftM_def[symmetric])
 
 lemma ep_waiting_set_recv_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_recv epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_recv epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ep_waiting_set_recv epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ep_waiting_set_recv_def obj_at_def is_ep_def)
 done
 
 lemma ep_waiting_set_send_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_send epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_send epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ep_waiting_set_send epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ep_waiting_set_send_def obj_at_def is_ep_def)
 done
 
 lemma ntfn_waiting_set_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ntfn_waiting_set epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ntfn_waiting_set epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ntfn_waiting_set epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ntfn_waiting_set_def obj_at_def is_ep_def)
 done
 
 lemma dcorres_ep_cancel_badge_sends:
-  notes hoare_post_taut[wp]
+  notes hoare_TrueI[wp]
   shows
   "dcorres dc \<top> (valid_state and valid_etcbs)
     (CSpace_D.cancel_badged_sends epptr word2)
@@ -1346,7 +1346,7 @@ next
   show ?case
     apply (clarsimp simp:mapM_Cons)
     apply (subst do_machine_op_bind)
-      apply (clarsimp simp:ef_storeWord)+
+      apply (clarsimp simp:ef_storeWord empty_fail_cond)+
     apply (subst corrupt_frame_duplicate[symmetric])
     apply (rule corres_guard_imp)
       apply (rule corres_split)
@@ -1569,7 +1569,7 @@ lemma copy_global_mappings_dwp:
     apply (rule_tac Q = "\<lambda>r s. valid_idle s \<and> transform s = cs" in hoare_strengthen_post)
      apply (rule mapM_x_wp')
      apply wp
-       apply (rule_tac Q="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_vcg_precond_imp)
+       apply (rule_tac Q="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_weaken_pre)
         apply (rule dcorres_to_wp)
         apply (rule corres_guard_imp[OF store_pde_set_cap_corres])
           apply (clarsimp simp:kernel_mapping_slots_def)
@@ -1779,7 +1779,7 @@ lemma thread_set_valid_idle:
   apply (simp add: thread_set_def not_idle_thread_def)
   apply (simp add: gets_the_def valid_idle_def)
   apply wp
-  apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_vcg_precond_imp)
+  apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_weaken_pre)
   apply (clarsimp simp: KHeap_A.set_object_def get_object_def in_monad get_def put_def bind_def obj_at_def
                         return_def valid_def not_idle_thread_def valid_idle_def pred_tcb_at_def)
   apply simp+
@@ -1946,7 +1946,7 @@ context
 notes if_cong[cong]
 begin
 crunch valid_etcbs[wp]: cancel_badged_sends valid_etcbs
-(wp: mapM_x_wp hoare_drop_imps hoare_unless_wp ignore: filterM)
+(wp: mapM_x_wp hoare_drop_imps unless_wp ignore: filterM)
 end
 
 lemma cap_revoke_valid_etcbs[wp]:
@@ -2090,7 +2090,7 @@ lemma decode_cnode_error_corres:
      apply (rule corres_symb_exec_r_dcE, wp)
       apply (rule corres_symb_exec_r_dcE, wp)
        apply (rule corres_symb_exec_r_dcE)
-         apply (rule hoare_pre, wp hoare_whenE_wp)
+         apply (rule hoare_pre, wp whenE_wp)
          apply simp
         apply (rule corres_trivial)
         apply (simp split: gen_invocation_labels.split invocation_label.split list.split)
@@ -2319,7 +2319,7 @@ lemma lsfco_not_idle:
   "\<lbrace>valid_objs and valid_cap cap and valid_idle\<rbrace>
    CSpace_A.lookup_slot_for_cnode_op b cap idx depth
    \<lbrace>\<lambda>rv. not_idle_thread (fst rv)\<rbrace>, -"
-  apply (rule_tac Q'="\<lambda>rv. real_cte_at rv and valid_idle" in hoare_post_imp_R)
+  apply (rule_tac Q'="\<lambda>rv. real_cte_at rv and valid_idle" in hoare_strengthen_postE_R)
    apply (rule hoare_pre, wp)
    apply simp
   apply (clarsimp simp: obj_at_def not_idle_thread_def valid_idle_def
@@ -2481,7 +2481,7 @@ lemma decode_cnode_corres:
                         apply (rule dcorres_returnOk)
                         apply (simp add:translate_cnode_invocation_def)
                        apply wp+
-                    apply (rule hoare_post_imp_R[OF validE_validE_R])
+                    apply (rule hoare_strengthen_postE_R[OF validE_validE_R])
                      apply (rule hoareE_TrueI[where P = \<top>])
                     apply (wp|simp)+
                   apply (strengthen mask_cap_valid)
@@ -2648,17 +2648,13 @@ lemma decode_cnode_corres:
                         apply simp
                        apply (rule dcorres_returnOk)
                        apply (simp add:translate_cnode_invocation_def)
-                      apply (wp get_cap_wp hoare_whenE_wp|clarsimp)+
-         apply (rule hoare_post_imp_R[OF validE_validE_R])
-         apply (rule hoareE_TrueI[where P = \<top>])
-          apply fastforce
-         apply (wp hoare_drop_imp|simp)+
+                      apply (wp get_cap_wp | simp)+
          apply (rule_tac Q'="\<lambda>r. real_cte_at src_slota and valid_objs and
                                 real_cte_at dest_slota and valid_idle and
                                      not_idle_thread (fst src_slota) and
                                      not_idle_thread (fst dest_slota) and
                                      not_idle_thread (fst r) and valid_etcbs"
-                             in hoare_post_imp_R)
+                             in hoare_strengthen_postE_R)
          apply (wp lsfco_not_idle)
         apply (clarsimp simp:Invariants_AI.cte_wp_valid_cap)
        apply (wp lsfco_not_idle)+

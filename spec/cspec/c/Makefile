@@ -29,7 +29,7 @@ CONFIG_THY := ../../machine/${L4V_ARCH}/Kernel_Config.thy
 # called by ../../Makefile
 config: ${CONFIG_THY}
 
-${CONFIG_THY}: ${KERNEL_CONFIG_ROOT}/.cmake_done
+${CONFIG_THY}: ${CONFIG_DONE}
 	./gen-config-thy.py
 
 

@@ -247,7 +247,7 @@ lemma lookup_pd_slot_inv:
   "\<lbrace>P\<rbrace> lookup_pd_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: lookup_pd_slot_def)
   apply (rule hoare_pre)
-  apply (wp get_pdpte_wp lookup_pdpt_slot_inv hoare_vcg_all_lift_R hoare_drop_imps| wpc)+
+  apply (wp get_pdpte_wp lookup_pdpt_slot_inv hoare_vcg_all_liftE_R hoare_drop_imps| wpc)+
   apply clarsimp
   done
 
@@ -255,7 +255,7 @@ lemma lookup_pt_slot_inv:
   "\<lbrace>P\<rbrace> lookup_pt_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: lookup_pt_slot_def)
   apply (rule hoare_pre)
-  apply (wp get_pde_wp lookup_pd_slot_inv hoare_vcg_all_lift_R hoare_drop_imps| wpc)+
+  apply (wp get_pde_wp lookup_pd_slot_inv hoare_vcg_all_liftE_R hoare_drop_imps| wpc)+
   apply clarsimp
   done
 
@@ -1210,17 +1210,16 @@ lemma valid_machine_stateE:
 
 lemma in_user_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj; in_user_frame q s\<rbrakk>
-    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_user_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
   done
 
 lemma valid_machine_state_heap_updI:
-assumes vm : "valid_machine_state s"
-assumes tyat : "typ_at type p s"
-shows
-  " a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+  assumes vm : "valid_machine_state s"
+  assumes tyat : "typ_at type p s"
+  shows "a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: valid_machine_state_def)
   subgoal for p
    apply (rule valid_machine_stateE[OF vm,where p = p])
@@ -1355,7 +1354,7 @@ lemma vs_ref_lvl_obj_same_type:
 
 lemma valid_vspace_obj_kheap_upd:
   "\<lbrakk>typ_at (a_type (ArchObj obj)) ptr s; valid_vspace_obj ao s\<rbrakk>
-  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>)"
+   \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := (kheap s)(ptr \<mapsto> ArchObj obj)\<rparr>)"
   apply (cases ao, simp_all)
       apply (fastforce simp: a_type_simps obj_at_def valid_pte_def)+
      apply (clarsimp)
@@ -1421,7 +1420,7 @@ lemma set_object_valid_vspace_objs[wp]:
       apply simp
      apply simp
     apply (rule vs_lookup1_wellformed.wellformed_lookup_axioms
-                  [where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s,simplified])
+                  [where s = "s\<lparr>kheap := (kheap s)(ptr \<mapsto> ArchObj obj)\<rparr>" for s,simplified])
    apply (clarsimp simp: obj_at_def cong:vs_ref_lvl_obj_same_type)
   apply clarsimp
   apply (rule valid_vspace_obj_kheap_upd)
@@ -1486,7 +1485,7 @@ lemma set_object_valid_vs_lookup[wp]:
       apply simp
      apply simp
     apply (rule vs_lookup_pages1_wellformed.wellformed_lookup_axioms
-                  [where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s, simplified])
+                  [where s = "s\<lparr>kheap := (kheap s)(ptr \<mapsto> ArchObj obj)\<rparr>" for s, simplified])
    apply (clarsimp simp: obj_at_def cong:vs_ref_lvl_obj_same_type)
   apply (clarsimp simp: fun_upd_def)
   apply (subst caps_of_state_after_update)
@@ -1591,7 +1590,7 @@ lemma valid_global_refsD:
 
 lemma in_device_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj ; in_device_frame q s\<rbrakk>
-    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_device_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
@@ -1642,7 +1641,7 @@ lemma vs_lookup_pages_pt_eq:
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
-  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
+  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := (kheap s)(p \<mapsto> ko')\<rparr>)"
     apply (rule hoare_to_pure_kheap_upd[OF valid_vspace_obj_typ])
     by (auto simp: obj_at_def)
 
@@ -2800,7 +2799,7 @@ lemma cap_refs_respects_device_region_dmo:
 
 lemma machine_op_lift_device_state[wp]:
   "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
+  by (clarsimp simp: machine_op_lift_def Nondet_VCG.valid_def bind_def
                      machine_rest_lift_def gets_def simpler_modify_def get_def return_def
                      select_def ignore_failure_def select_f_def
               split: if_splits)

@@ -57,4 +57,13 @@ lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
 lemma neq_0_unat: "x \<noteq> 0 \<Longrightarrow> 0 < unat x" for x::machine_word
   by (simp add: unat_gt_0)
 
+(* The 32-bit version is occasionally needed on 64-bit platforms *)
+lemma word_rsplit_0_32:
+  "word_rsplit (0::32 word) = [0, 0, 0, (0::8 word)]"
+  by (simp add: word_rsplit_def bin_rsplit_def word_bits_def word_size_def Cons_replicate_eq)
+
+lemma word_ctz_upcast_id_32_64:
+  "x \<noteq> 0 \<Longrightarrow> word_ctz (UCAST(32 \<rightarrow> 64) x) = word_ctz x"
+  by (simp add: word_ctz_upcast_id is_up)
+
 end

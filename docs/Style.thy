@@ -219,6 +219,138 @@ lemma test_lemma3:
          case_tac h; simp)
   done
 
+section \<open>Right vs left operator-wrapping\<close>
+
+text \<open>
+  When a term is too long, there is a general consensus to wrap it at operators. However, consensus
+  has never emerged on whether the operator should then end up at the end of the line (right
+  operator wrapping), or start of the next one (left operator wrapping).
+  Some people have a tendency towards right-wrapping, others towards left-wrapping. They
+  each have advantages in specific contexts, thus both appear in the l4v proofs and are permitted
+  style.\<close>
+
+term \<open>A \<and> B \<longrightarrow> C \<and> D\<close> \<comment> \<open>no wrapping when A..D are small terms\<close>
+
+term \<open>A \<and>
+      B \<longrightarrow>
+        C \<and>
+        D\<close> \<comment> \<open>right-wrapping when A..D are large terms\<close>
+
+term \<open>A
+      \<and> B
+      \<longrightarrow> C
+         \<and> D\<close> \<comment> \<open>left-wrapping when A..D are large terms\<close>
+
+text \<open>
+  While both styles are permitted, do not mix them in the same lemma. If a lemma already uses
+  one style and you aren't doing a major rewrite, stick to the existing style.\<close>
+
+lemma
+  shows "\<lbrakk> A; B; C\<rbrakk> \<Longrightarrow>
+         D" \<comment> \<open>right-wrapping OK\<close>
+  and "\<lbrakk> A; B; C\<rbrakk>
+       \<Longrightarrow> D" \<comment> \<open>left-wrapping OK\<close>
+  oops \<comment> \<open>mixing styles: NOT OK\<close>
+
+text \<open>
+  Some operators and syntax only have ONE style. As seen in other sections:
+  * the `|` in `case`  never appears on the right
+  * `;` is always on the right when wrapping lists of assumptions
+  * `shows .. and ... and` wraps with `and` on the left
+  * `|` in method invocations always goes on the left
+  * commas and (semi)colons, owing to our natural language origins, always end up on the right\<close>
+
+lemma
+  shows
+    "\<lbrakk> A
+     ; B \<rbrakk> \<comment> \<open>wrong: always on right\<close>
+     \<comment> \<open>ok: \<Longrightarrow> can be either left or right\<close>
+     \<Longrightarrow> C" and \<comment> \<open>wrong: `shows/and` only on left!\<close>
+    "D"
+  and "E" \<comment> \<open>ok: on left\<close>
+proof -
+  have "True \<and> True"
+    by (rule conjI,
+        blast,
+        blast) \<comment> \<open>ok\<close>
+  have "True \<and> True"
+    by (rule conjI
+        , blast
+        , blast) \<comment> \<open>NOT OK: commas go on right\<close>
+  have "True \<and> True"
+    by (rule conjI;
+        blast) \<comment> \<open>ok\<close>
+  have "True \<and> True"
+    by (rule conjI
+        ; blast) \<comment> \<open>NOT OK: semicolons go on right\<close>
+  have "True \<and> True"
+    by (rule conjI
+        | blast)+ \<comment> \<open>ok\<close>
+  have "True \<and> True"
+    by (rule conjI |
+        blast)+ \<comment> \<open>NOT OK: `|` goes on the left\<close>
+  oops
+
+text \<open>
+  The general principle of "nothing indented less than what it belongs to" is in effect for both
+  wrapping styles. Remember, the goal of the exercise is to make it as clear to read for others as
+  you can. Sometimes, scanning the left side of the screen to see the overall term can help,
+  while other times putting @{text \<Longrightarrow>} on the right will save space and prevent subsequent lines
+  from wrapping.\<close>
+
+text \<open>
+  Inner-syntax indentation is not automatable in the general case, so our goal is to help
+  ease of comprehension as much as possible, i.e.
+  @{term "A \<and> B \<or> C \<longrightarrow> D \<or> E \<and> F"} is bearable if A..F are short, but if they are large terms,
+  please avoid doing either of these:\<close>
+
+term "
+  A \<and>
+  B \<or>
+  C \<longrightarrow>
+  D \<or>
+  E \<and>
+  F" \<comment> \<open>avoid: requires building a parse tree in one's head\<close>
+
+term "
+  A
+  \<and> B
+  \<or> C
+  \<longrightarrow> D
+  \<or> E
+  \<and> F" \<comment> \<open>can be marginally easier to scan, but still avoid due to mental parsing difficulty\<close>
+
+text \<open>Instead, help out the reader like this:\<close>
+
+term "
+  A \<and>
+  B \<or>
+  C \<longrightarrow>
+    D \<or>
+      E \<and>
+      F"
+
+term "
+  A
+  \<and> B
+  \<or> C
+  \<longrightarrow> D
+     \<or> E
+       \<and> F"
+
+text \<open>AVOID indentation that misrepresents the parse tree and confuses the reader:\<close>
+
+term "
+  A
+  \<and> B
+    \<or> C" \<comment> \<open>NOT OK: implies this parses as @{text "A \<and> (B \<or> C)"}\<close>
+
+term "
+  A \<and>
+  B \<longrightarrow>
+    B \<or>
+  A" \<comment> \<open>NOT OK: implies this parses as @{text "((A \<and> B) \<longrightarrow> B) \<or> A"}\<close>
+
 section \<open>Other\<close>
 
 text \<open>
@@ -297,6 +429,64 @@ text \<open>
   A known use case for `prefer` is where a proof has a tree-like structure, and the prover wants to
   approach it with a breadth-first approach. Since the default isabelle strategy is depth-first,
   prefers (or defers) will be needed, e.g. corres proofs.\<close>
+
+subsection \<open>Using by\<close>
+
+text \<open>
+  When all subgoals of a proof can be solved in one apply statement, use `by`.\<close>
+
+lemma
+  "True"
+  by simp
+
+lemma
+  "X"
+  apply (subgoal_tac "True")
+   prefer 2
+   subgoal by blast
+  apply (subgoal_tac "True")
+   prefer 2
+   subgoal
+     by blast \<comment> \<open>for tactic invocations that would overflow the line\<close>
+  oops
+
+text \<open>
+  When all subgoals of a proof can be solved in two apply statements, use `by` to indicate the
+  intermediate state is not interesting.\<close>
+
+lemma
+  "True \<and> True"
+  by (rule conjI) auto
+
+lemma
+  "True \<and> True"
+  by (rule conjI)
+     auto \<comment> \<open>for tactic invocations that would overflow the line\<close>
+
+text \<open>
+  Avoid using `by` at the end of an apply-style proof with multiple steps.
+  The exception to this rule are long-running statements (over 2 seconds) that complete the proof.
+  There, we favour parallelism (proof forking in interactive mode) over visual consistency.
+
+  If you do use `by` starting on a line of its own, it should be indented as if it were an
+  apply statement.
+  NOTE: the default Isabelle auto-indenter will not indent `by` according to the number of goals,
+        which is another reason to avoid mixing it with apply style\<close>
+
+lemma
+  "True \<and> True \<and> True \<and> True \<and> True \<and> True \<and> True"
+  apply (intro conjI)
+        apply blast
+       apply blast
+      apply auto
+  done \<comment> \<open>use this style in general: no by\<close>
+
+lemma long_running_ending:
+  "True \<and> True \<and> True \<and> True \<and> True \<and> True \<and> True"
+  apply (intro conjI)
+        apply blast
+       apply blast
+      by auto \<comment> \<open>only if long-running, and note indentation!\<close>
 
 subsection \<open>Unfolding definitions\<close>
 

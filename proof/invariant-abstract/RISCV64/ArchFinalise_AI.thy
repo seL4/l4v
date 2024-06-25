@@ -390,7 +390,7 @@ lemma arch_thread_set_cur_tcb[wp]: "\<lbrace>cur_tcb\<rbrace> arch_thread_set p 
 
 lemma cte_wp_at_update_some_tcb:
   "\<lbrakk>kheap s v = Some (TCB tcb) ; tcb_cnode_map tcb = tcb_cnode_map (f tcb)\<rbrakk>
-  \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := kheap s (v \<mapsto> TCB (f tcb))\<rparr>) = cte_wp_at P p s"
+  \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := (kheap s)(v \<mapsto> TCB (f tcb))\<rparr>) = cte_wp_at P p s"
   apply (clarsimp simp: cte_wp_at_cases2 dest!: get_tcb_SomeD)
   done
 
@@ -551,7 +551,7 @@ lemma arch_thread_set_valid_objs_context[wp]:
 
 lemma sym_refs_update_some_tcb:
   "\<lbrakk>kheap s v = Some (TCB tcb) ; refs_of (TCB tcb) = refs_of (TCB (f tcb))\<rbrakk>
-  \<Longrightarrow> sym_refs (state_refs_of (s\<lparr>kheap := kheap s (v \<mapsto> TCB (f tcb))\<rparr>)) = sym_refs (state_refs_of s)"
+  \<Longrightarrow> sym_refs (state_refs_of (s\<lparr>kheap := (kheap s)(v \<mapsto> TCB (f tcb))\<rparr>)) = sym_refs (state_refs_of s)"
   apply (rule_tac f=sym_refs in arg_cong)
   apply (rule all_ext)
   apply (clarsimp simp: sym_refs_def state_refs_of_def)
@@ -707,7 +707,7 @@ lemmas reachable_frame_cap_simps =
   reachable_frame_cap_def[unfolded is_frame_cap_def arch_cap_fun_lift_def, split_simps cap.split]
 
 lemma vs_lookup_slot_non_PageTablePTE:
-  "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = ptes_of s(p \<mapsto> pte); \<not> is_PageTablePTE pte;
+  "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = (ptes_of s)(p \<mapsto> pte); \<not> is_PageTablePTE pte;
      asid_pools_of s' = asid_pools_of s;
      asid_table s' = asid_table s; valid_asid_table s; pspace_aligned s\<rbrakk>
   \<Longrightarrow> vs_lookup_slot level asid vref s' =
@@ -1090,16 +1090,6 @@ lemma set_vm_root_empty[wp]:
   apply (wpsimp wp: get_cap_wp)
   done
 
-lemma set_asid_pool_empty[wp]:
-  "\<lbrace>obj_at (empty_table S) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table S) word\<rbrace>"
-  by (wpsimp wp: set_object_wp simp: set_asid_pool_def obj_at_def empty_table_def)
-
-lemma delete_asid_empty_table_pt[wp]:
-  "delete_asid a word \<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>"
-   apply (simp add: delete_asid_def)
-   apply wpsimp
-   done
-
 lemma ucast_less_shiftl_helper3:
   "\<lbrakk> len_of TYPE('b) + 3 < len_of TYPE('a); 2 ^ (len_of TYPE('b) + 3) \<le> n\<rbrakk>
     \<Longrightarrow> (ucast (x :: 'b::len word) << 3) < (n :: 'a::len word)"
@@ -1237,7 +1227,7 @@ lemma (* replace_cap_invs_arch_update *)[Finalise_AI_asms]:
 lemma dmo_pred_tcb_at[wp]:
   "do_machine_op mop \<lbrace>\<lambda>s. P (pred_tcb_at f Q t s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
@@ -1314,7 +1304,7 @@ lemma set_asid_pool_obj_at_ptr:
 
 locale_abbrev
   "asid_table_update asid ap s \<equiv>
-     s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>"
+     s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>"
 
 lemma valid_table_caps_table [simp]:
   "valid_table_caps (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_table_caps s"

@@ -325,7 +325,7 @@ lemma prop_of_two_valid:
   by (rule hoare_pre, wps f g, wp, simp)
 
 lemma thread_set_tcb_context_update_wp:
-  "\<lbrace>\<lambda>s. P (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb t s))))\<rparr>)\<rbrace>
+  "\<lbrace>\<lambda>s. P (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb t s))))\<rparr>)\<rbrace>
    thread_set (tcb_arch_update f) t
    \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: thread_set_def)
@@ -381,8 +381,7 @@ lemma kernel_entry_if_globals_equiv_scheduler:
                                and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
-  apply (wp globals_equiv_scheduler_inv' kernel_entry_if_globals_equiv)
-   apply (clarsimp)
+  apply (wpsimp wp: globals_equiv_scheduler_inv' kernel_entry_if_globals_equiv)
    apply assumption
   apply clarsimp
   done
@@ -460,7 +459,7 @@ lemma schedule_cur_domain:
    schedule
    \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
    (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  supply hoare_pre_cont[where a=next_domain, wp add]
+  supply hoare_pre_cont[where f=next_domain, wp add]
          ethread_get_wp[wp del] if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
@@ -477,7 +476,7 @@ lemma schedule_domain_fields:
    schedule
    \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
    (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  supply hoare_pre_cont[where a=next_domain, wp add]
+  supply hoare_pre_cont[where f=next_domain, wp add]
          ethread_get_wp[wp del] if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
@@ -631,7 +630,7 @@ locale Noninterference_1 =
     "reads_respects_g aag l \<top> (do_machine_op (storeWord ptr w))"
   and integrity_asids_update_reference_state:
    "is_subject aag t
-    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := kheap s(t \<mapsto> blah)\<rparr>)"
+    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
   and partitionIntegrity_subjectAffects_aobj:
     "\<lbrakk> partitionIntegrity aag s s'; kheap s x = Some (ArchObj ao); kheap s x \<noteq> kheap s' x;
        silc_inv aag st s; pas_refined aag s; pas_wellformed_noninterference aag \<rbrakk>
@@ -685,7 +684,7 @@ locale Noninterference_1 =
 begin
 
 lemma integrity_update_reference_state:
-  "\<lbrakk> is_subject aag t; integrity aag X st s; st = st'\<lparr>kheap := kheap st'(t \<mapsto> blah)\<rparr> \<rbrakk>
+  "\<lbrakk> is_subject aag t; integrity aag X st s; st = st'\<lparr>kheap := (kheap st')(t \<mapsto> blah)\<rparr> \<rbrakk>
      \<Longrightarrow> integrity (aag :: 'a subject_label PAS) X st' s"
   apply (erule integrity_trans[rotated])
   apply (clarsimp simp: integrity_def opt_map_def integrity_asids_update_reference_state)
@@ -2090,10 +2089,10 @@ lemma tcb_sched_action_reads_respects_g':
    apply (force intro: domtcbs simp: get_etcb_def)
   apply (simp add: equiv_valid_def2 ethread_get_def)
   apply (rule equiv_valid_rv_bind)
-    apply (wp equiv_valid_rv_trivial', simp)
+    apply (wpsimp wp: equiv_valid_rv_trivial')
    apply (rule equiv_valid_2_bind)
       prefer 2
-      apply (wp equiv_valid_rv_trivial, simp)
+      apply (wpsimp wp: equiv_valid_rv_trivial)
      apply (rule equiv_valid_2_bind)
         apply (rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag thread}" and
                                               L'="{pasObjectAbs aag thread}" in ev2_invisible')
@@ -2103,8 +2102,7 @@ lemma tcb_sched_action_reads_respects_g':
             apply (rule doesnt_touch_globalsI | simp | wp)+
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def bind_def return_def
                              labels_are_invisible_def)
-       apply wp+
-  apply clarsimp
+       apply wpsimp+
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (erule_tac x="(thread, tcb_domain y)" in ballE)
    apply force
@@ -2272,7 +2270,7 @@ lemma schedule_choose_new_thread_reads_respects_g:
   apply (subst gets_app_rewrite[where y=domain_time and f="\<lambda>x. x = 0"])+
   apply (wp gets_domain_time_zero_ev set_scheduler_action_reads_respects_g
             choose_thread_reads_respects_g ev_pre_cont[where f=next_domain]
-            hoare_pre_cont[where a=next_domain] when_ev)
+            hoare_pre_cont[where f=next_domain] when_ev)
   apply (clarsimp simp: valid_sched_def word_neq_0_conv)
   done
 
@@ -2938,7 +2936,7 @@ lemma thread_get_tcb_context_reads_respects_g:
               and Q="\<top>\<top>" in equiv_valid_rv_bind)
     apply (rule thread_get_tcb_context_reads_respects_g_helper)
    apply (rule return_ev2, simp)
-  apply (rule hoare_post_taut)
+  apply (rule hoare_TrueI)
   done
 
 (* this is a little more complicated because the context isn't

@@ -65,12 +65,16 @@ next
      apply (rule someI2_ex, fastforce+)+
     done
 
+  (* FIXME: For some reason Nondet_In_Monad.in_fail doesn't fire below. This version would probably
+            have been better in the first place. *)
+  have [simp]: "\<And>s. fst (fail s) = {}" by (simp add: fail_def)
+
   have loadWord_const:
    "\<And>a s. \<forall>x\<in>fst (loadWord a s). snd x = s"
     apply (case_tac "is_aligned a 2")
      apply (simp add: loadWord_def is_aligned_mask exec_gets)
      apply (simp add: return_def)
-    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask)
+    apply (simp add: loadWord_def exec_gets is_aligned_mask)
     done
 
   have loadWord_atMostOneResult:
@@ -78,7 +82,7 @@ next
     apply (case_tac "is_aligned a 2")
      apply (simp add: loadWord_def is_aligned_mask exec_gets)
      apply (simp add: return_def)
-    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask)
+    apply (simp add: loadWord_def exec_gets is_aligned_mask)
     done
 
   have mapM_loadWord_atMostOneResult[rule_format]:
@@ -648,6 +652,7 @@ lemma clearMemory_unused_corres_noop:
      (return ())
      (do_machine_op (clearMemory p (2 ^ (obj_bits_api ty us))))"
   (is "\<lbrakk> ?def; ?szv; ?in \<rbrakk> \<Longrightarrow> dcorres dc \<top> ?P ?f ?g")
+  supply empty_fail_cond[simp]
   apply (drule page_objects_default_object[where us=us and dev = dev], clarsimp)
   apply (rename_tac pgsz)
   apply (simp add: clearMemory_def do_machine_op_bind cleanCacheRange_PoC_def
@@ -731,7 +736,7 @@ lemma init_arch_objects_corres_noop:
   done
 
 lemma monad_commute_set_cap_cdt:
-  "monad_commute \<top> (KHeap_D.set_cap ptr cap) (modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(ptr2 \<mapsto> ptr3)\<rparr>))"
+  "monad_commute \<top> (KHeap_D.set_cap ptr cap) (modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(ptr2 \<mapsto> ptr3)\<rparr>))"
   apply (clarsimp simp:monad_commute_def)
   apply (rule sym)
   apply (subst bind_assoc[symmetric])
@@ -860,7 +865,7 @@ lemma create_cap_mdb_cte_at:
   \<and> cte_wp_at ((\<noteq>)cap.NullCap) parent s \<and> cte_at (fst tup) s\<rbrace>
       create_cap type sz parent dev tup \<lbrace>\<lambda>rv s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s) (cdt s)\<rbrace>"
   apply (simp add: create_cap_def split_def mdb_cte_at_def)
-  apply (wp hoare_vcg_all_lift set_cap_default_not_none set_cdt_cte_wp_at static_imp_wp dxo_wp_weak
+  apply (wp hoare_vcg_all_lift set_cap_default_not_none set_cdt_cte_wp_at hoare_weak_lift_imp dxo_wp_weak
           | simp | wps)+
   apply (fastforce simp: cte_wp_at_caps_of_state)
   done
@@ -1041,7 +1046,7 @@ lemma create_caps_loop_dcorres:
   done
 
 crunch valid_idle[wp]: init_arch_objects "valid_idle"
-  (wp: crunch_wps hoare_unless_wp ignore: clearMemory)
+  (wp: crunch_wps unless_wp ignore: clearMemory)
 
 lemma update_available_range_dcorres:
   "dcorres dc \<top> ( K(\<exists>idx. untyped_cap = transform_cap (cap.UntypedCap dev ptr sz idx)
@@ -1206,15 +1211,6 @@ lemma mapME_x_upt_length_ys:
     = mapME_x (\<lambda>_. f) ys"
   by (metis mapME_x_map_simp[where f="\<lambda>_. ()" and m="\<lambda>_. m" for m,
             unfolded o_def] map_replicate_const length_upt minus_nat.diff_0)
-
-lemma monadic_set_cap_id:
-  "monadic_rewrite False True
-    (cte_wp_at ((=) cap) p)
-    (set_cap cap p) (return ())"
-  by (clarsimp simp: monadic_rewrite_def set_cap_id return_def)
-
-lemmas monadic_set_cap_id2
-    = monadic_rewrite_transverse[OF monadic_set_cap_id monadic_rewrite_refl]
 
 (* FIXME: move *)
 lemma mapME_x_append:
@@ -1564,9 +1560,9 @@ lemma invoke_untyped_corres:
                       Q="\<lambda>_. valid_etcbs and invs and valid_untyped_inv_wcap untyped_invocation
                                 (Some (cap.UntypedCap dev ptr' sz (if reset then 0 else idx))) and ct_active
                              and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr' .. ptr' + 2 ^ sz - 1} s)"
-                      in hoare_post_impErr)
-        apply (wp hoare_whenE_wp)
-        apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc)
+                      in hoare_strengthen_postE)
+        apply (wp whenE_wp)
+        apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc)
          apply (clarsimp simp only: if_True simp_thms ptrs, intro conjI, assumption+)
         apply simp
        apply (clarsimp simp only: ui ptrs)
@@ -1662,9 +1658,9 @@ end
 lemma mapME_x_inv_wp2:
   "(\<And>x. \<lbrace>P and E\<rbrace> f x \<lbrace>\<lambda>rv. P and E\<rbrace>,\<lbrace>\<lambda>rv. E\<rbrace>)
       \<Longrightarrow> \<lbrace>P and E\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>\<lambda>rv. E\<rbrace>"
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
   apply (rule mapME_x_inv_wp[where E="\<lambda>_. E"])
-    apply (rule hoare_post_impErr, assumption)
+    apply (rule hoare_strengthen_postE, assumption)
      apply simp_all
   done
 
@@ -1843,17 +1839,17 @@ lemma decode_untyped_corres:
        apply simp
       apply clarsimp
      apply (rule hoare_pre)
-      apply (wp hoare_drop_imp | simp)+
+      apply wpsimp
      apply fastforce
     apply (clarsimp simp: conj_comms is_cnode_cap_transform_cap split del: if_split)
     apply (rule validE_R_validE)
     apply (rule_tac Q' = "\<lambda>a s. invs s \<and> valid_etcbs s \<and> valid_cap a s \<and> cte_wp_at ((=) (cap.UntypedCap dev ptr sz idx)) slot' s
       \<and> (Structures_A.is_cnode_cap a \<longrightarrow> not_idle_thread (obj_ref_of a) s)"
-      in hoare_post_imp_R)
+      in hoare_strengthen_postE_R)
      apply (rule hoare_pre)
       apply (wp get_cap_wp)
       apply (rule_tac Q' = "\<lambda>a s. invs s \<and> valid_etcbs s \<and> cte_wp_at ((=) (cap.UntypedCap dev ptr sz idx)) slot' s"
-      in hoare_post_imp_R)
+      in hoare_strengthen_postE_R)
        apply wp
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (frule_tac p = "(x,y)" for x y in caps_of_state_valid[rotated])

@@ -6,7 +6,7 @@
 
 theory Try_Methods
 
-imports Eisbach_Methods
+imports Eisbach_Tools.Eisbach_Methods
 
 keywords "trym" :: diag
   and "add_try_method" :: thy_decl

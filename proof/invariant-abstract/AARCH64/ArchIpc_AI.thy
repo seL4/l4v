@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -307,7 +308,7 @@ lemma transfer_caps_non_null_cte_wp_at:
   unfolding transfer_caps_def
   apply simp
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at static_imp_wp
+   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at hoare_weak_lift_imp
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
             [where Q="\<lambda>rv s'. (cte_wp_at ((\<noteq>) cap.NullCap) ptr) s'
@@ -434,21 +435,21 @@ crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' 
 
 lemma dmo_addressTranslateS1_valid_machine_state[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> valid_machine_state \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: dmo_valid_machine_state)
 
 crunch vms[wp, Ipc_AI_assms]: make_arch_fault_msg valid_machine_state
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 lemma dmo_addressTranslateS1_valid_irq_states[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> valid_irq_states \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: dmo_valid_irq_states)
 
 crunch valid_irq_states[wp, Ipc_AI_assms]: make_arch_fault_msg "valid_irq_states"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 lemma dmo_addressTranslateS1_cap_refs_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> cap_refs_respects_device_region \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: cap_refs_respects_device_region_dmo)
 
 crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "cap_refs_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
@@ -467,7 +468,7 @@ named_theorems Ipc_AI_cont_assms
 
 lemma dmo_addressTranslateS1_pspace_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> pspace_respects_device_region \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: pspace_respects_device_region_dmo)
 
 crunch pspace_respects_device_region[wp]: make_fault_msg "pspace_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
@@ -482,7 +483,7 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   apply (wpsimp simp: do_ipc_transfer_def do_normal_transfer_def transfer_caps_def bind_assoc
                 wp: hoare_vcg_all_lift hoare_drop_imps)+
          apply (simp only: ball_conj_distrib[where P="\<lambda>x. real_cte_at x s" for s])
-         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
+         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp hoare_weak_lift_imp grs_distinct
                            hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
                        simp: obj_at_def is_tcb_def)+
    apply (simp split: kernel_object.split_asm)
@@ -510,14 +511,14 @@ lemma valid_arch_mdb_cap_swap:
        \<Longrightarrow> valid_arch_mdb
             ((is_original_cap s)
              (a := is_original_cap s b, b := is_original_cap s a))
-            (caps_of_state s(a \<mapsto> c', b \<mapsto> c))"
+            ((caps_of_state s)(a \<mapsto> c', b \<mapsto> c))"
   by (auto simp: valid_arch_mdb_def)
 
 end
 
 interpretation Ipc_AI_cont?: Ipc_AI_cont
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales;(fact Ipc_AI_cont_assms)?)
-  qed
+qed
 end

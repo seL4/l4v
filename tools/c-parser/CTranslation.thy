@@ -11,7 +11,7 @@ imports
   "StaticFun"
   "IndirectCalls"
   "ModifiesProofs"
-  "Lib.MLUtils"
+  "ML_Utils.ML_Utils"
   "HOL-Eisbach.Eisbach"
 keywords
   "cond_sorry_modifies_proofs"

@@ -292,8 +292,7 @@ lemma dmo_freeMemory_respects[Retype_AC_assms]:
   apply wp
   apply clarsimp
   apply (erule use_valid)
-   apply (wp mol_respects mapM_x_wp' storeWord_integrity_autarch)
-   apply simp
+   apply (wpsimp wp: mol_respects mapM_x_wp' storeWord_integrity_autarch)
    apply (clarsimp simp: word_size_def word_size_bits_def word_bits_def
                          upto_enum_step_shift_red[where us=3, simplified])
    apply (erule bspec)

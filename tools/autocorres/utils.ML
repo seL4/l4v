@@ -459,7 +459,7 @@ fun term_fold_map_top f x =
  *)
 fun simp_map f =
   Context.map_proof (
-    Local_Theory.declaration {syntax = false, pervasive = false} (
+    Local_Theory.declaration {syntax = false, pervasive = false, pos = @{here}} (
       K (Simplifier.map_ss f)))
   |> Context.proof_map
 
@@ -678,7 +678,7 @@ fun isa_str_list_to_ml t =
 fun chain_preds stateT [] = Abs ("s", stateT, @{term "HOL.True"})
   | chain_preds     _ [x] = x
   | chain_preds stateT (x::xs) =
-      Const (@{const_name "pred_conj"},
+      Const (@{const_name "inf_class.inf"},
           (stateT --> @{typ bool}) --> (stateT --> @{typ bool}) --> (stateT --> @{typ bool}))
         $ x $ (chain_preds stateT xs)
 
@@ -950,8 +950,9 @@ fun solved_tac thm =
 
 (* Convenience function for making simprocs. *)
 fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context -> cterm -> thm option) = let
-  in Simplifier.make_simproc ctxt name
-       {lhss = map (Proof_Context.read_term_pattern ctxt) pats,
+  in Simplifier.make_simproc ctxt
+       {name=name, identifier=[],
+        lhss = map (Proof_Context.read_term_pattern ctxt) pats,
         proc = K proc} end
 
 (* Get named_theorems in reverse order. We use this for translation rulesets

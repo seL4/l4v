@@ -421,7 +421,7 @@ proof -
               Some (ArchObj (PageDirectory pd))"
   let ?ko' = "ArchObj (PageDirectory
                          (pd(ucast (pde_ptr && mask pd_bits >> 2) := pde)))"
-  let ?s' = "s\<lparr>kheap := kheap s(pde_ptr && ~~ mask pd_bits \<mapsto> ?ko')\<rparr>"
+  let ?s' = "s\<lparr>kheap := (kheap s)(pde_ptr && ~~ mask pd_bits \<mapsto> ?ko')\<rparr>"
   have typ_at: "\<And>T p. typ_at T p s \<Longrightarrow> typ_at T p ?s'"
     using pd
     by (clarsimp simp: obj_at_def a_type_def)
@@ -475,7 +475,7 @@ lemma copy_global_mappings_nonempty_table:
                         (set (second_level_tables (arch_state s)))) r s) \<and>
            valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp[where S="{x. kernel_base >> 20 \<le> x \<and>
                                       x < 2 ^ (pd_bits - 2)}"])
@@ -531,7 +531,7 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
   apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wp hoare_unless_wp | wpc | simp add: reserve_region_def second_level_tables_def)+
+   apply (wp unless_wp | wpc | simp add: reserve_region_def second_level_tables_def)+
   apply (clarsimp simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
   done
 
@@ -562,7 +562,7 @@ lemma set_pd_cte_wp_at_iin[wp]:
 
 crunch cte_wp_at_iin[wp]: init_arch_objects
   "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 
 lemmas init_arch_objects_ex_cte_cap_wp_to
     = init_arch_objects_excap

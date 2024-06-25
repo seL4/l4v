@@ -103,6 +103,8 @@ definition restore_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_m
      offset \<leftarrow> return $ cntvoff + ucast delta;
      vcpu_write_reg vcpu_ptr VCPURegCNTVOFF offset;
      vcpu_restore_reg vcpu_ptr VCPURegCNTVOFF;
+     \<comment> \<open>read again, so we don't have to reason about @{const vcpu_write_reg} changes in CRefine\<close>
+     vcpu \<leftarrow> get_vcpu vcpu_ptr;
      masked \<leftarrow> return $ (vcpu_vppi_masked vcpu (the $ irq_vppi_event_index irqVTimerEvent));
      \<comment> \<open>we do not know here that irqVTimerEvent is IRQReserved, therefore not IRQInactive,
         so the only way to prove we don't unmask an inactive interrupt is to check\<close>
@@ -120,7 +122,7 @@ definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
-        vcpu_save_reg vr VCPURegACTLR; \<comment> \<open>since FPU enabled\<close>
+        vcpu_save_reg vr VCPURegCPACR; \<comment> \<open>since FPU enabled\<close>
         do_machine_op isb
       od
     | _ \<Rightarrow> return ();
@@ -166,44 +168,13 @@ definition vcpu_invalidate_active :: "(unit,'z::state_ext) s_monad" where
     modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := None \<rparr>\<rparr>)
   od"
 
-text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
-
-text \<open>Removing the connection between a TCB and VCPU:\<close>
-definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "dissociate_vcpu_tcb vr t \<equiv> do
-     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
-     v \<leftarrow> get_vcpu vr;
-     assert (t_vcpu = Some vr \<and> vcpu_tcb v = Some t); \<comment> \<open>make sure they were associated\<close>
-     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
-     when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
-     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
-     set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
-     as_user t $ do
-       sr \<leftarrow> getRegister SPSR_EL1;
-       setRegister SPSR_EL1 $ sanitise_register False SPSR_EL1 sr
-     od
-   od"
-
-text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
-definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "associate_vcpu_tcb vr t \<equiv> do
-     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
-     case t_vcpu of
-       Some p \<Rightarrow> dissociate_vcpu_tcb p t
-     | _ \<Rightarrow> return ();
-     v \<leftarrow> get_vcpu vr;
-     case vcpu_tcb v of
-       Some p \<Rightarrow> dissociate_vcpu_tcb vr p
-     | _ \<Rightarrow> return ();
-     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vr \<rparr>) t;
-     set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>)
-  od"
-
 text \<open>Register + context save for VCPUs\<close>
 definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_save vb \<equiv>
      case vb
      of Some (vr, active) \<Rightarrow> do
+          do_machine_op dsb;
+
           when active $ do
             vcpu_save_reg vr VCPURegSCTLR;
             hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
@@ -227,8 +198,7 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
             gicIndices;
 
           \<comment> \<open>armvVCPUSave\<close>
-          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1;
-          do_machine_op isb
+          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1
        od
      | _ \<Rightarrow> fail"
 
@@ -291,6 +261,42 @@ definition vcpu_switch :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_m
                 modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
               od))
      od"
+
+
+text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
+
+text \<open>Removing the connection between a TCB and VCPU:\<close>
+definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "dissociate_vcpu_tcb vr t \<equiv> do
+     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+     v \<leftarrow> get_vcpu vr;
+     assert (t_vcpu = Some vr \<and> vcpu_tcb v = Some t); \<comment> \<open>make sure they were associated\<close>
+     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
+     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
+     set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
+     as_user t $ do
+       sr \<leftarrow> getRegister SPSR_EL1;
+       setRegister SPSR_EL1 $ sanitise_register False SPSR_EL1 sr
+     od
+   od"
+
+text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
+definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "associate_vcpu_tcb vcpu_ptr t \<equiv> do
+     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+     case t_vcpu of
+       Some p \<Rightarrow> dissociate_vcpu_tcb p t
+     | _ \<Rightarrow> return ();
+     v \<leftarrow> get_vcpu vcpu_ptr;
+     case vcpu_tcb v of
+       Some p \<Rightarrow> dissociate_vcpu_tcb vcpu_ptr p
+     | _ \<Rightarrow> return ();
+     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vcpu_ptr \<rparr>) t;
+     set_vcpu vcpu_ptr (v\<lparr> vcpu_tcb := Some t \<rparr>);
+     ct \<leftarrow> gets cur_thread;
+     when (t = ct) $ vcpu_switch (Some vcpu_ptr)
+  od"
 
 text \<open>
   Prepare a given VCPU for removal: dissociate it, and clean up current VCPU state

@@ -138,12 +138,12 @@ fun do_adjust ctxt ((("select", []), [p]), fixes) t = let
   | do_adjust _ args _ = error ("do_adjust: unexpected: " ^ @{make_string} args)
 
 fun unvarify_types_same ty = ty
-  |> Term_Subst.map_atypsT_same
+  |> Term.map_atyps_same
     (fn TVar ((a, i), S) => TFree (a ^ "_var_" ^ string_of_int i, S)
       | _ => raise Same.SAME)
 
 fun unvarify_types tm = tm
-  |> Same.commit (Term_Subst.map_types_same unvarify_types_same)
+  |> Same.commit (Term.map_types_same unvarify_types_same)
 
 fun match_abbreviation mode name init adjusts int ctxt = let
     val init_term = init ctxt

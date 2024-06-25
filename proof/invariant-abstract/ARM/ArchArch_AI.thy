@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -18,7 +19,7 @@ definition
   cte_wp_at (\<lambda>cap. \<exists>idx. cap = cap.UntypedCap False frame pageBits idx ) parent s \<and>
   descendants_of parent (cdt s) = {} \<and>
   is_aligned base asid_low_bits \<and> base \<le> 2^asid_bits - 1 \<and>
-  arm_asid_table (arch_state s) (asid_high_bits_of base) = None"
+  asid_table s (asid_high_bits_of base) = None"
 
 
 lemma safe_parent_strg:
@@ -63,7 +64,7 @@ lemma check_vp_wpR [wp]:
   check_vp_alignment sz w \<lbrace>P\<rbrace>, -"
   apply (simp add: check_vp_alignment_def unlessE_whenE cong: vmpage_size.case_cong)
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp|wpc)+
+   apply (wp whenE_wp|wpc)+
   apply (simp add: vmsz_aligned_def)
   done
 
@@ -71,7 +72,7 @@ lemma check_vp_wpR [wp]:
 lemma check_vp_inv: "\<lbrace>P\<rbrace> check_vp_alignment sz w \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: check_vp_alignment_def unlessE_whenE cong: vmpage_size.case_cong)
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp|wpc)+
+   apply (wp whenE_wp|wpc)+
   apply simp
   done
 
@@ -269,8 +270,8 @@ end
 locale asid_update = Arch +
   fixes ap asid s s'
   assumes ko: "ko_at (ArchObj (ASIDPool Map.empty)) ap s"
-  assumes empty: "arm_asid_table (arch_state s) asid = None"
-  defines "s' \<equiv> s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>"
+  assumes empty: "asid_table s asid = None"
+  defines "s' \<equiv> s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>"
 begin
 
 lemma vs_lookup1' [simp]:
@@ -285,7 +286,7 @@ lemma vs_lookup_pages1' [simp]:
 
 lemma vs_asid_refs' [simp]:
   "vs_asid_refs (arm_asid_table (arch_state s')) =
-  vs_asid_refs (arm_asid_table (arch_state s)) \<union> {([VSRef (ucast asid) None], ap)}"
+  vs_asid_refs (asid_table s) \<union> {([VSRef (ucast asid) None], ap)}"
   apply (simp add: s'_def)
   apply (rule set_eqI)
   apply (rule iffI)
@@ -400,8 +401,8 @@ end
 context Arch begin global_naming ARM
 
 lemma valid_arch_state_strg:
-  "valid_arch_state s \<and> ap \<notin> ran (arm_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+  "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_pool_at ap s \<longrightarrow>
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def)
   apply (clarsimp simp: valid_asid_table_def ran_def)
   apply (fastforce intro!: inj_on_fun_updI)
@@ -411,11 +412,11 @@ lemma valid_arch_state_strg:
 lemma valid_vs_lookup_at_upd_strg:
   "valid_vs_lookup s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<and>
+   asid_table s asid = None \<and>
    (\<exists>ptr cap. caps_of_state s ptr = Some cap \<and> ap \<in> obj_refs cap \<and>
               vs_cap_ref cap = Some [VSRef (ucast asid) None])
    \<longrightarrow>
-   valid_vs_lookup (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   valid_vs_lookup (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
   apply (subgoal_tac "asid_update ap asid s")
    prefer 2
@@ -488,7 +489,7 @@ lemma valid_table_caps_asid_upd [iff]:
 
 lemma vs_asid_ref_upd:
   "([VSRef (ucast (asid_high_bits_of asid')) None] \<rhd> ap')
-    (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)
+    (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)
   = (if asid_high_bits_of asid' = asid_high_bits_of asid
     then ap' = ap
     else ([VSRef (ucast (asid_high_bits_of asid')) None] \<rhd> ap') s)"
@@ -497,7 +498,7 @@ lemma vs_asid_ref_upd:
 
 lemma vs_asid_ref_eq:
   "([VSRef (ucast asid) None] \<rhd> ap) s
-  = (arm_asid_table (arch_state s) asid = Some ap)"
+  = (asid_table s asid = Some ap)"
   by (fastforce elim: vs_lookup_atE intro: vs_lookup_atI)
 
 
@@ -509,12 +510,12 @@ lemma set_cap_reachable_pg_cap:
 lemma cap_insert_simple_arch_caps_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
      and no_cap_to_obj_with_diff_ref cap {dest}
-     and (\<lambda>s. arm_asid_table (arch_state s) (asid_high_bits_of asid) = None)
+     and (\<lambda>s. asid_table s (asid_high_bits_of asid) = None)
      and ko_at (ArchObj (ASIDPool Map.empty)) ap
      and K (cap = ArchObjectCap (ASIDPoolCap ap asid)) \<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv s. valid_arch_caps (s\<lparr>arch_state := arch_state s
-                       \<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
+                       \<lparr>arm_asid_table := (asid_table s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: cap_insert_def update_cdt_def set_cdt_def valid_arch_caps_def
     set_untyped_cap_as_full_def bind_assoc)
   apply (strengthen valid_vs_lookup_at_upd_strg)
@@ -526,7 +527,7 @@ lemma cap_insert_simple_arch_caps_ap:
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
       apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
-                get_cap_wp static_imp_wp)+
+                get_cap_wp hoare_weak_lift_imp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
@@ -546,8 +547,8 @@ lemma cap_insert_simple_arch_caps_ap:
 lemma valid_asid_map_asid_upd_strg:
   "valid_asid_map s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   asid_table s asid = None \<longrightarrow>
+   valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
   apply (subgoal_tac "asid_update ap asid s")
    prefer 2
@@ -559,8 +560,8 @@ lemma valid_asid_map_asid_upd_strg:
 lemma valid_vspace_objs_asid_upd_strg:
   "valid_vspace_objs s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   asid_table s asid = None \<longrightarrow>
+   valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
   apply (subgoal_tac "asid_update ap asid s")
    prefer 2
@@ -572,8 +573,8 @@ lemma valid_vspace_objs_asid_upd_strg:
 lemma valid_global_objs_asid_upd_strg:
   "valid_global_objs s \<and>
    ko_at (ArchObj (arch_kernel_obj.ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   asid_table s asid = None \<longrightarrow>
+   valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   by clarsimp
 
 
@@ -590,11 +591,11 @@ lemma cap_insert_ap_invs:
     K (cap = cap.ArchObjectCap (arch_cap.ASIDPoolCap ap asid)) and
    (\<lambda>s. \<forall>irq \<in> cap_irqs cap. irq_issued irq s) and
    ko_at (ArchObj (arch_kernel_obj.ASIDPool Map.empty)) ap and
-   (\<lambda>s. ap \<notin> ran (arm_asid_table (arch_state s)) \<and>
-        arm_asid_table (arch_state s) (asid_high_bits_of asid) = None)\<rbrace>
+   (\<lambda>s. ap \<notin> ran (asid_table s) \<and>
+        asid_table s (asid_high_bits_of asid) = None)\<rbrace>
   cap_insert cap src dest
   \<lbrace>\<lambda>rv s. invs (s\<lparr>arch_state := arch_state s
-                       \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
+                       \<lparr>arm_asid_table := ((arm_asid_table \<circ> arch_state) s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (strengthen valid_arch_state_strg
                     valid_asid_map_asid_upd_strg valid_vspace_objs_asid_upd_strg )
@@ -741,17 +742,17 @@ proof -
          K (cap = ArchObjectCap (ASIDPoolCap ap asid)) and
          (\<lambda>s. \<forall>irq\<in>cap_irqs cap. irq_issued irq s) and
          ko_at (ArchObj (ASIDPool Map.empty)) ap and
-         (\<lambda>s. ap \<notin> ran (arm_asid_table (arch_state s)) \<and>
-         arm_asid_table (arch_state s) (asid_high_bits_of asid) = None))\<rbrace>
+         (\<lambda>s. ap \<notin> ran (asid_table s) \<and>
+         asid_table s (asid_high_bits_of asid) = None))\<rbrace>
          cap_insert cap src dest
         \<lbrace>\<lambda>rv s.
            invs
              (s\<lparr>arch_state := arch_state s
-                 \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s
+                 \<lparr>arm_asid_table := ((arm_asid_table \<circ> arch_state) s)
                     (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>) \<and>
            Q
              (s\<lparr>arch_state := arch_state s
-                 \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s
+                 \<lparr>arm_asid_table := ((arm_asid_table \<circ> arch_state) s)
                     (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
     apply (wp cap_insert_ap_invs)
      apply simp
@@ -861,7 +862,7 @@ proof -
 
 qed
 
-lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
+lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_TrueI, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
@@ -945,7 +946,7 @@ lemma create_mapping_entries_inv [wp]:
 crunch_ignore (add: select_ext)
 
 crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_wp select_ext_weak_wp simp: crunch_simps)
+  (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
 
 lemma create_mappings_empty [wp]:
@@ -1000,13 +1001,13 @@ lemma create_mapping_entries_parent_for_refs:
                                    superSectionPDE_offsets_def)
      apply (rule hoare_pre)
       apply wp
-      apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to)
+      apply (rule hoare_strengthen_postE_R, rule lookup_pt_slot_cap_to)
       apply (elim exEI)
       apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def)
      apply simp
     apply (rule hoare_pre)
      apply wp
-     apply (rule hoare_post_imp_R)
+     apply (rule hoare_strengthen_postE_R)
       apply (rule lookup_pt_slot_cap_to_multiple1)
      apply (elim conjE exEI cte_wp_at_weakenE)
      apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def
@@ -1048,7 +1049,7 @@ lemma find_pd_for_asid_shifting_voodoo:
   "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace>
      find_pd_for_asid asid
    \<lbrace>\<lambda>rv s. v >> 20 = rv + (v >> 20 << 2) && mask pd_bits >> 2\<rbrace>,-"
-  apply (rule hoare_post_imp_R,
+  apply (rule hoare_strengthen_postE_R,
          rule find_pd_for_asid_aligned_pd)
   apply (subst pd_shifting_dual, simp)
   apply (rule word_eqI)
@@ -1067,7 +1068,7 @@ lemma find_pd_for_asid_ref_offset_voodoo:
    \<lbrace>\<lambda>rv. (ref \<rhd> (rv + (v >> 20 << 2) && ~~ mask pd_bits))\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule_tac Q'="\<lambda>rv s. is_aligned rv 14 \<and> (ref \<rhd> rv) s"
-               in hoare_post_imp_R)
+               in hoare_strengthen_postE_R)
    apply (simp add: ucast_ucast_mask
                     mask_asid_low_bits_ucast_ucast)
    apply (fold asid_low_bits_def)
@@ -1232,7 +1233,7 @@ lemma cte_wp_at_page_cap_weaken:
 lemma find_pd_for_asid_lookup_pd_wp:
   "\<lbrace> \<lambda>s. valid_vspace_objs s \<and> (\<forall>pd. vspace_at_asid asid pd s \<and> page_directory_at pd s
     \<and> (\<exists>\<rhd> pd) s \<longrightarrow> Q pd s) \<rbrace> find_pd_for_asid asid \<lbrace> Q \<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_page_directory])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_lookup, simplified])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_pd_at_asid, simplified])
@@ -1255,7 +1256,6 @@ lemma aligned_sum_less_kernel_base:
    apply (case_tac sz,simp_all add:kernel_base_def is_aligned_def)+
   done
 
-
 lemma arch_decode_inv_wf[wp]:
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap arch_cap) and
     cte_wp_at ((=) (cap.ArchObjectCap arch_cap)) slot and
@@ -1266,7 +1266,7 @@ lemma arch_decode_inv_wf[wp]:
       apply (rename_tac word1 word2)
       apply (simp add: arch_decode_invocation_def Let_def split_def cong: if_cong split del: if_split)
       apply (rule hoare_pre)
-       apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_wp select_ext_weak_wp|
+       apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_ext_weak_wp|
                wpc|
                simp add: valid_arch_inv_def valid_apinv_def)+)[1]
       apply (simp add: valid_arch_inv_def valid_apinv_def)
@@ -1318,7 +1318,7 @@ lemma arch_decode_inv_wf[wp]:
                                (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {}) and
                                cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
                                (\<lambda>s. arm_asid_table (arch_state s) free = None)"
-                         in hoare_post_imp_R)
+                         in hoare_strengthen_postE_R)
               apply (simp add: lookup_target_slot_def)
               apply wp
              apply (clarsimp simp: cte_wp_at_def)
@@ -1328,7 +1328,7 @@ lemma arch_decode_inv_wf[wp]:
               apply (simp add: asid_bits_def asid_low_bits_def)
              apply (simp add: asid_bits_def)
             apply (simp split del: if_split)
-            apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp | wpc | simp)+
+            apply (wp ensure_no_children_sp select_ext_weak_wp whenE_throwError_wp | wpc | simp)+
      apply clarsimp
      apply (rule conjI, fastforce)
      apply (cases excaps, simp)
@@ -1372,7 +1372,7 @@ lemma arch_decode_inv_wf[wp]:
                               linorder_not_le aligned_sum_less_kernel_base
                         elim: is_aligned_weaken split: vmpage_size.split
                        split: if_splits
-                      intro!: is_aligned_addrFromPPtr is_aligned_addrFromPPtr_n
+                      intro!: is_aligned_addrFromPPtr_n
                               pbfs_atleast_pageBits)[2]
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
      apply simp
@@ -1386,7 +1386,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (cases "isPageFlushLabel (invocation_type label)")
      apply (rule hoare_pre)
       apply simp
-      apply (wp whenE_throwError_wp static_imp_wp hoare_drop_imps)
+      apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imps)
         apply (simp add: valid_arch_inv_def valid_page_inv_def)
         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
      apply (clarsimp simp: valid_cap_def mask_def)
@@ -1402,7 +1402,7 @@ lemma arch_decode_inv_wf[wp]:
                cong: if_cong)
    apply (rename_tac word option)
    apply (rule hoare_pre)
-    apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_lift_R
+    apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_liftE_R
             | wpc
             | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def split: if_splits
             | rule_tac x="fst p" in hoare_imp_eq_substR
@@ -1410,14 +1410,14 @@ lemma arch_decode_inv_wf[wp]:
          apply (rule_tac Q'="\<lambda>a b. ko_at (ArchObj (PageDirectory pd))
                                     (a + (args ! 0 >> 20 << 2) && ~~ mask pd_bits) b \<longrightarrow>
                                     pd (ucast (a + (args ! 0 >> 20 << 2) && mask pd_bits >> 2)) =
-                                    InvalidPDE \<longrightarrow> L word option p pd a b" for L in hoare_post_imp_R[rotated])
+                                    InvalidPDE \<longrightarrow> L word option p pd a b" for L in hoare_strengthen_postE_R[rotated])
           apply (intro impI)
           apply (erule impE)
            apply clarsimp
           apply (erule impE)
            apply (clarsimp split: pde.splits)
           apply assumption
-         apply ((wp whenE_throwError_wp hoare_vcg_all_lift_R
+         apply ((wp whenE_throwError_wp hoare_vcg_all_liftE_R
                     find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]
                     find_pd_for_asid_ref_offset_voodoo find_pd_for_asid_shifting_voodoo
                     find_pd_for_asid_inv
@@ -1468,11 +1468,11 @@ lemma arch_decode_inv_wf[wp]:
   apply (cases "isPDFlushLabel (invocation_type label)")
    apply simp
    apply (rule hoare_pre)
-    apply (wpsimp wp: whenE_throwError_wp static_imp_wp hoare_drop_imp get_master_pte_wp
+    apply (wpsimp wp: whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imp get_master_pte_wp
                       get_master_pde_wp whenE_throwError_wp
                 simp: resolve_vaddr_def valid_arch_inv_def valid_pdi_def Let_def)
         apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
          apply wpsimp+
    apply (wpsimp wp: throwError_validE_R simp: valid_cap_def mask_def)+
   done

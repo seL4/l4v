@@ -363,7 +363,7 @@ proof -
         apply (clarsimp simp add: corres_alternate2 split: ARM_A.pde.split)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
                               opt_object_page_directory
@@ -409,7 +409,7 @@ proof -
         apply (rename_tac word1 set word2)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: pd_aligned obj_at_def lookup_pd_slot_pd
                               a_type_simps)
@@ -458,7 +458,7 @@ proof -
                                      lookup_error_injection dc_def[symmetric])
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
                               opt_object_page_directory
@@ -477,7 +477,7 @@ proof -
                                      lookup_error_injection dc_def[symmetric])
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
                               opt_object_page_directory
@@ -557,7 +557,6 @@ lemma select_ret_or_throw_twiceE:
   done
 
 crunch inv[wp]: select_ret_or_throw "P"
-  (wp: select_wp)
 
 lemma corres_initial_bindE_rdonly_select_ret_or_throw:
   assumes y: "\<And>rv'. corres_underlying sr nf nf' (e \<oplus> r) P P' (select_ret_or_throw S X) (d rv')"
@@ -659,7 +658,7 @@ proof (induct x)
            apply (rule ucast_up_inj[where 'b=32])
             apply (simp add: ucast_ucast_mask is_aligned_mask asid_low_bits_def)
            apply simp
-          apply (wp select_wp | simp add:valid_cap_def split del: if_split)+
+          apply (wp | simp add:valid_cap_def split del: if_split)+
     done
 next
   case ASIDControlCap
@@ -737,7 +736,7 @@ next
               apply (rule less_trans)
                apply simp
               apply simp
-             apply (wp lsfco_not_idle select_inv select_wp | simp)+
+             apply (wp lsfco_not_idle select_inv | simp)+
     apply (simp add: cte_wp_at_caps_of_state neq_Nil_conv invs_mdb_cte mdb_cte_at_rewrite)
     apply auto
     done
@@ -782,8 +781,9 @@ next
                        in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
                   apply (rule corres_from_rdonly, simp_all)[1]
                     apply (wp+ | simp)+
-                  apply (rule hoare_strengthen_post, rule hoare_post_taut)
-                  apply (case_tac r, auto simp add: in_monad)[1]
+                  apply (rule hoare_strengthen_post, rule hoare_TrueI)
+                  apply (rename_tac rv s)
+                  apply (case_tac rv, auto simp add: in_monad)[1]
                  apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
                                   check_vp_alignment_def unlessE_whenE)
                  apply (clarsimp simp add: liftE_bindE[symmetric])
@@ -821,8 +821,9 @@ next
                       in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
                  apply (rule corres_from_rdonly, simp_all)[1]
                    apply (wp+ | simp)+
-                 apply (rule hoare_strengthen_post, rule hoare_post_taut)
-                 apply (case_tac r, auto simp add: in_monad)[1]
+                 apply (rule hoare_strengthen_post, rule hoare_TrueI)
+                 apply (rename_tac rv s)
+                 apply (case_tac rv, auto simp add: in_monad)[1]
                 apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
                                  check_vp_alignment_def unlessE_whenE)
                 apply (clarsimp simp add: liftE_bindE[symmetric])
@@ -934,8 +935,9 @@ next
                for I in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
          apply (rule corres_from_rdonly, simp_all)[1]
            apply (wp | simp)+
-         apply (rule hoare_strengthen_post, rule hoare_post_taut)
-         apply (case_tac r, auto simp add: in_monad)[1]
+         apply (rule hoare_strengthen_post, rule hoare_TrueI)
+         apply (rename_tac rv s)
+         apply (case_tac rv, auto simp add: in_monad)[1]
         apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
                          check_vp_alignment_def unlessE_whenE)
         apply clarsimp
@@ -945,7 +947,7 @@ next
              corres_alternate2)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly,simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def, wp)
         apply (clarsimp simp: in_monad select_def arch_invocation_relation_def
           translate_arch_invocation_def transform_page_table_inv_def
@@ -961,7 +963,7 @@ next
         apply (simp add: pd_shifting_dual ucast_nat_def shiftr_20_less triple_shift_fun
                          le_shiftr linorder_not_le)
        apply (rule hoare_pre, wp, auto)[1]
-      apply (wp | simp)+
+      apply (wp weak_if_wp | simp)+
     apply (clarsimp simp: is_final_cap'_def
       is_final_cap_def split:list.splits)
     apply (simp add: liftE_bindE is_final_cap_def corres_symb_exec_in_gets
@@ -1099,10 +1101,10 @@ lemma set_cap_opt_cap':
   "\<lbrace>\<lambda>s. P ((\<lambda>p. opt_cap p s) (slot \<mapsto> cap))\<rbrace> KHeap_D.set_cap slot cap \<lbrace>\<lambda>rv s. P (\<lambda>p. opt_cap p s)\<rbrace>"
   apply (cases slot)
   apply (clarsimp simp add:KHeap_D.set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ dget_object_sp])
+  apply (rule bind_wp [OF _ dget_object_sp])
   apply (case_tac obj; simp add: KHeap_D.set_object_def has_slots_def update_slots_def object_slots_def
                             split del: if_split cong: if_cong bind_cong;
-                       wpsimp wp: select_wp)
+                       wpsimp)
        by (auto elim!:rsubst[where P=P] simp: opt_cap_def slots_of_def object_slots_def)
 
 lemma set_cap_opt_cap:
@@ -1203,7 +1205,7 @@ lemma invoke_page_table_corres:
        apply clarsimp
        apply (wp store_pte_cte_wp_at)
       apply fastforce
-     apply (wp hoare_post_taut)+
+     apply wpsimp+
     apply (rule_tac Q="\<lambda>rv s. invs s \<and> valid_etcbs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
                               caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
      apply wp
@@ -1585,23 +1587,20 @@ lemma valid_etcbs_clear_um_detype:
   by (clarsimp simp: valid_etcbs_def st_tcb_at_def is_etcb_at_def st_tcb_at_kh_def
                      obj_at_kh_def obj_at_def detype_def detype_ext_def clear_um_def)
 
-
 lemma unat_map_upd:
-  "unat_map (Some \<circ> transform_asid_table_entry \<circ> arm_asid_table
-    as (asid_high_bits_of base \<mapsto> frame)) =
-   unat_map (Some \<circ> transform_asid_table_entry \<circ> arm_asid_table as)
-    (unat (asid_high_bits_of base) \<mapsto> AsidPoolCap frame 0)"
+  "unat_map (Some \<circ> transform_asid_table_entry \<circ> (asid_table as)(asid_high_bits_of base \<mapsto> frame)) =
+   (unat_map (Some \<circ> transform_asid_table_entry \<circ> asid_table as))
+     (unat (asid_high_bits_of base) \<mapsto> AsidPoolCap frame 0)"
   apply (rule ext)
-  apply (clarsimp simp:unat_map_def asid_high_bits_of_def
-    transform_asid_table_entry_def)
+  apply (clarsimp simp:unat_map_def asid_high_bits_of_def transform_asid_table_entry_def)
   apply (intro impI conjI)
     apply (subgoal_tac "x<256")
-     apply (clarsimp simp:unat_map_def asid_high_bits_of_def asid_low_bits_def
-       transform_asid_table_entry_def transform_asid_def)
+     apply (clarsimp simp: unat_map_def asid_high_bits_of_def asid_low_bits_def
+                           transform_asid_table_entry_def transform_asid_def)
      apply (drule_tac x="of_nat x" in unat_cong)
      apply (subst (asm) word_unat.Abs_inverse)
       apply (clarsimp simp:unats_def unat_ucast)+
-done
+  done
 
 declare descendants_of_empty[simp]
 

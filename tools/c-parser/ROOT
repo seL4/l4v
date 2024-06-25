@@ -15,9 +15,11 @@ session "Simpl-VCG" in Simpl = Word_Lib +
 session CParser = "Simpl-VCG" +
   sessions
     "HOL-Library"
-    "Lib"
+    "ML_Utils"
+    "Basics"
   directories
     "umm_heap"
     "umm_heap/$L4V_ARCH"
   theories
     "CTranslation"
+    "LemmaBucket_C"

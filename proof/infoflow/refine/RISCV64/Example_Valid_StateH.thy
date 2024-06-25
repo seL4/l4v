@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -40,7 +41,7 @@ definition Low_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode)
         (the_nat_to_bl_10 4)
           \<mapsto> (ArchObjectCap (ASIDPoolCap Low_pool_ptr (ucast Low_asid)), Null_mdb),
         (the_nat_to_bl_10 5)
-          \<mapsto> (ArchObjectCap (FrameCap shared_page_ptr VMReadWrite RISCVLargePage
+          \<mapsto> (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadWrite RISCVLargePage
                                       False (Some (ucast Low_asid, 0))),
               MDB 0 (Silc_cnode_ptr + 0xA0) False False),
         (the_nat_to_bl_10 6)
@@ -73,7 +74,7 @@ definition High_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode
         (the_nat_to_bl_10 4)
           \<mapsto> (ArchObjectCap (ASIDPoolCap High_pool_ptr (ucast High_asid)), Null_mdb),
         (the_nat_to_bl_10 5)
-          \<mapsto> (ArchObjectCap (FrameCap shared_page_ptr VMReadOnly RISCVLargePage
+          \<mapsto> (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadOnly RISCVLargePage
                                       False (Some (ucast High_asid, 0))),
               MDB (Silc_cnode_ptr + 0xA0) 0 False False),
         (the_nat_to_bl_10 6)
@@ -100,7 +101,7 @@ definition Silc_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode
        ((the_nat_to_bl_10 2)
           \<mapsto> (CNodeCap Silc_cnode_ptr 10 2 10, Null_mdb),
         (the_nat_to_bl_10 5)
-          \<mapsto> (ArchObjectCap (FrameCap shared_page_ptr VMReadOnly RISCVLargePage
+          \<mapsto> (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadOnly RISCVLargePage
                                       False (Some (ucast Silc_asid, 0))),
               MDB (Low_cnode_ptr + 0xA0) (High_cnode_ptr + 0xA0) False False),
         (the_nat_to_bl_10 318)
@@ -128,10 +129,10 @@ text \<open>Global page table\<close>
 definition global_pteH' :: "pt_index \<Rightarrow> pte" where
   "global_pteH' idx \<equiv>
      if idx = 0x100
-     then PagePTE ((ucast (idx && mask (ptTranslationBits - 1)) << ptTranslationBits * 2))
+     then PagePTE ((ucast (idx && mask (ptTranslationBits - 1)) << ptTranslationBits * size max_pt_level))
                   False False False VMKernelOnly
-     else if idx = 0x1FE
-     then PagePTE (2 << ptTranslationBits * 2) False False False VMKernelOnly
+     else if idx = elf_index
+     then PagePTE (ucast ((kernelELFPAddrBase && ~~mask toplevel_bits) >> pageBits)) False False False VMKernelOnly
      else InvalidPTE"
 
 definition global_pteH where
@@ -149,7 +150,7 @@ text \<open>Low's page tables\<close>
 definition Low_pt'H :: "pt_index \<Rightarrow> pte" where
   "Low_pt'H \<equiv>
      (\<lambda>_. InvalidPTE)
-       (0 := PagePTE (addrFromPPtr shared_page_ptr >> pt_bits) False False False VMReadWrite)"
+       (0 := PagePTE (shared_page_ptr_phys >> pt_bits) False False False VMReadWrite)"
 
 definition Low_ptH :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
   "Low_ptH \<equiv>
@@ -174,7 +175,7 @@ text \<open>High's page tables\<close>
 definition High_pt'H :: "pt_index \<Rightarrow> pte" where
   "High_pt'H \<equiv>
      (\<lambda>_. InvalidPTE)
-       (0 := PagePTE (addrFromPPtr shared_page_ptr >> pt_bits) False False False VMReadOnly)"
+       (0 := PagePTE (shared_page_ptr_phys >> pt_bits) False False False VMReadOnly)"
 
 definition High_ptH :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
   "High_ptH \<equiv>
@@ -215,6 +216,8 @@ definition Low_tcbH :: tcb where
      \<comment> \<open>tcbFaultHandler      =\<close> 0
      \<comment> \<open>tcbIPCBuffer         =\<close> 0
      \<comment> \<open>tcbBoundNotification =\<close> None
+     \<comment> \<open>tcbSchedPrev         =\<close> None
+     \<comment> \<open>tcbSchedNext         =\<close> None
      \<comment> \<open>tcbContext           =\<close> (ArchThread undefined)"
 
 
@@ -239,6 +242,8 @@ definition High_tcbH :: tcb where
      \<comment> \<open>tcbFaultHandler      =\<close> 0
      \<comment> \<open>tcbIPCBuffer         =\<close> 0
      \<comment> \<open>tcbBoundNotification =\<close> None
+     \<comment> \<open>tcbSchedPrev         =\<close> None
+     \<comment> \<open>tcbSchedNext         =\<close> None
      \<comment> \<open>tcbContext           =\<close> (ArchThread undefined)"
 
 
@@ -261,6 +266,8 @@ definition idle_tcbH :: tcb where
      \<comment> \<open>tcbFaultHandler      =\<close> 0
      \<comment> \<open>tcbIPCBuffer         =\<close> 0
      \<comment> \<open>tcbBoundNotification =\<close> None
+     \<comment> \<open>tcbSchedPrev         =\<close> None
+     \<comment> \<open>tcbSchedNext         =\<close> None
      \<comment> \<open>tcbContext           =\<close> (ArchThread empty_context)"
 
 
@@ -315,7 +322,7 @@ definition kh0H :: "(obj_ref \<rightharpoonup> kernel_object)" where
            option_update_range [Low_tcb_ptr \<mapsto> KOTCB Low_tcbH] \<circ>
            option_update_range [High_tcb_ptr \<mapsto> KOTCB High_tcbH] \<circ>
            option_update_range [idle_tcb_ptr \<mapsto> KOTCB idle_tcbH] \<circ>
-           option_update_range (shared_pageH shared_page_ptr) \<circ>
+           option_update_range (shared_pageH shared_page_ptr_virt) \<circ>
            option_update_range (global_ptH riscv_global_pt_ptr)
            ) Map.empty"
 
@@ -333,7 +340,7 @@ lemma s0_ptrs_aligned:
   "is_aligned Low_tcb_ptr 10"
   "is_aligned idle_tcb_ptr 10"
   "is_aligned ntfn_ptr 5"
-  "is_aligned shared_page_ptr 21"
+  "is_aligned shared_page_ptr_virt 21"
   "is_aligned irq_cnode_ptr 10"
   "is_aligned Low_pool_ptr 12"
   "is_aligned High_pool_ptr 12"
@@ -349,7 +356,7 @@ lemma page_offs_min':
   done
 
 lemma page_offs_min:
-  "shared_page_ptr \<le> shared_page_ptr + (ucast (x:: pt_index) << 12)"
+  "shared_page_ptr_virt \<le> shared_page_ptr_virt + (ucast (x:: pt_index) << 12)"
   by (simp_all add: page_offs_min' s0_ptrs_aligned)
 
 lemma page_offs_max':
@@ -368,7 +375,7 @@ lemma page_offs_max':
   done
 
 lemma page_offs_max:
-  "shared_page_ptr + (ucast (x :: pt_index) << 12) \<le> shared_page_ptr + 0x1FFFFF"
+  "shared_page_ptr_virt + (ucast (x :: pt_index) << 12) \<le> shared_page_ptr_virt + 0x1FFFFF"
   by (simp_all add: page_offs_max' s0_ptrs_aligned)
 
 definition page_offs_range where
@@ -384,7 +391,7 @@ lemma page_offs_in_range':
   done
 
 lemma page_offs_in_range:
-  "shared_page_ptr + (ucast (x :: pt_index) << 12) \<in> page_offs_range shared_page_ptr"
+  "shared_page_ptr_virt + (ucast (x :: pt_index) << 12) \<in> page_offs_range shared_page_ptr_virt"
   by (simp_all add: page_offs_in_range' s0_ptrs_aligned)
 
 lemma page_offs_range_correct':
@@ -425,7 +432,8 @@ lemma page_offs_range_correct':
   done
 
 lemma page_offs_range_correct:
-  "x \<in> page_offs_range shared_page_ptr \<Longrightarrow> \<exists>y. x = shared_page_ptr + (ucast (y :: pt_index) << 12)"
+  "x \<in> page_offs_range shared_page_ptr_virt
+   \<Longrightarrow> \<exists>y. x = shared_page_ptr_virt + (ucast (y :: pt_index) << 12)"
   by (simp_all add: page_offs_range_correct' s0_ptrs_aligned)
 
 
@@ -799,7 +807,7 @@ lemma not_in_range_None:
   "x \<notin> pt_offs_range riscv_global_pt_ptr \<Longrightarrow> global_ptH riscv_global_pt_ptr x = None"
   "x \<notin> pt_offs_range Low_pt_ptr \<Longrightarrow> Low_ptH Low_pt_ptr x = None"
   "x \<notin> pt_offs_range High_pt_ptr \<Longrightarrow> High_ptH High_pt_ptr x = None"
-  "x \<notin> page_offs_range shared_page_ptr \<Longrightarrow> shared_pageH shared_page_ptr x = None"
+  "x \<notin> page_offs_range shared_page_ptr_virt \<Longrightarrow> shared_pageH shared_page_ptr_virt x = None"
   by (auto simp: page_offs_range_def cnode_offs_range_def pt_offs_range_def s0_ptr_defs kh0H_obj_def)
 
 lemma kh0H_dom_distinct:
@@ -877,13 +885,13 @@ lemma kh0H_dom_distinct:
   "Low_pool_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   "irq_cnode_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   "ntfn_ptr \<notin> tcb_offs_range idle_tcb_ptr"
-  "idle_tcb_ptr \<notin> page_offs_range shared_page_ptr"
-  "High_tcb_ptr \<notin> page_offs_range shared_page_ptr"
-  "Low_tcb_ptr \<notin> page_offs_range shared_page_ptr"
-  "High_pool_ptr \<notin> page_offs_range shared_page_ptr"
-  "Low_pool_ptr \<notin> page_offs_range shared_page_ptr"
-  "irq_cnode_ptr \<notin> page_offs_range shared_page_ptr"
-  "ntfn_ptr \<notin> page_offs_range shared_page_ptr"
+  "idle_tcb_ptr \<notin> page_offs_range shared_page_ptr_virt"
+  "High_tcb_ptr \<notin> page_offs_range shared_page_ptr_virt"
+  "Low_tcb_ptr \<notin> page_offs_range shared_page_ptr_virt"
+  "High_pool_ptr \<notin> page_offs_range shared_page_ptr_virt"
+  "Low_pool_ptr \<notin> page_offs_range shared_page_ptr_virt"
+  "irq_cnode_ptr \<notin> page_offs_range shared_page_ptr_virt"
+  "ntfn_ptr \<notin> page_offs_range shared_page_ptr_virt"
   by (auto simp: tcb_offs_range_def pt_offs_range_def page_offs_range_def
                  cnode_offs_range_def kh0H_obj_def s0_ptr_defs)
 
@@ -899,7 +907,7 @@ lemma kh0H_dom_sets_distinct:
   "irq_node_offs_range \<inter> tcb_offs_range High_tcb_ptr = {}"
   "irq_node_offs_range \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "irq_node_offs_range \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "irq_node_offs_range \<inter> page_offs_range shared_page_ptr = {}"
+  "irq_node_offs_range \<inter> page_offs_range shared_page_ptr_virt = {}"
   "cnode_offs_range Silc_cnode_ptr \<inter> cnode_offs_range High_cnode_ptr = {}"
   "cnode_offs_range Silc_cnode_ptr \<inter> cnode_offs_range Low_cnode_ptr = {}"
   "cnode_offs_range Silc_cnode_ptr \<inter> pt_offs_range riscv_global_pt_ptr = {}"
@@ -910,7 +918,7 @@ lemma kh0H_dom_sets_distinct:
   "cnode_offs_range Silc_cnode_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "cnode_offs_range Silc_cnode_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "cnode_offs_range Silc_cnode_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "cnode_offs_range Silc_cnode_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "cnode_offs_range Silc_cnode_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "cnode_offs_range High_cnode_ptr \<inter> cnode_offs_range Low_cnode_ptr = {}"
   "cnode_offs_range High_cnode_ptr \<inter> pt_offs_range riscv_global_pt_ptr = {}"
   "cnode_offs_range High_cnode_ptr \<inter> pt_offs_range High_pd_ptr = {}"
@@ -920,7 +928,7 @@ lemma kh0H_dom_sets_distinct:
   "cnode_offs_range High_cnode_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "cnode_offs_range High_cnode_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "cnode_offs_range High_cnode_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "cnode_offs_range High_cnode_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "cnode_offs_range High_cnode_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "cnode_offs_range Low_cnode_ptr \<inter> pt_offs_range riscv_global_pt_ptr = {}"
   "cnode_offs_range Low_cnode_ptr \<inter> pt_offs_range High_pd_ptr = {}"
   "cnode_offs_range Low_cnode_ptr \<inter> pt_offs_range Low_pd_ptr = {}"
@@ -929,7 +937,7 @@ lemma kh0H_dom_sets_distinct:
   "cnode_offs_range Low_cnode_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "cnode_offs_range Low_cnode_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "cnode_offs_range Low_cnode_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "cnode_offs_range Low_cnode_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "cnode_offs_range Low_cnode_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "pt_offs_range riscv_global_pt_ptr \<inter> pt_offs_range High_pd_ptr = {}"
   "pt_offs_range riscv_global_pt_ptr \<inter> pt_offs_range Low_pd_ptr = {}"
   "pt_offs_range riscv_global_pt_ptr \<inter> pt_offs_range High_pt_ptr = {}"
@@ -937,35 +945,35 @@ lemma kh0H_dom_sets_distinct:
   "pt_offs_range riscv_global_pt_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "pt_offs_range riscv_global_pt_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "pt_offs_range riscv_global_pt_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "pt_offs_range riscv_global_pt_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "pt_offs_range riscv_global_pt_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "pt_offs_range High_pd_ptr \<inter> pt_offs_range Low_pd_ptr = {}"
   "pt_offs_range High_pd_ptr \<inter> pt_offs_range High_pt_ptr = {}"
   "pt_offs_range High_pd_ptr \<inter> pt_offs_range Low_pt_ptr = {}"
   "pt_offs_range High_pd_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "pt_offs_range High_pd_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "pt_offs_range High_pd_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "pt_offs_range High_pd_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "pt_offs_range High_pd_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "pt_offs_range Low_pd_ptr \<inter> pt_offs_range High_pt_ptr = {}"
   "pt_offs_range Low_pd_ptr \<inter> pt_offs_range Low_pt_ptr = {}"
   "pt_offs_range Low_pd_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "pt_offs_range Low_pd_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "pt_offs_range Low_pd_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "pt_offs_range Low_pd_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "pt_offs_range Low_pd_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "pt_offs_range High_pt_ptr \<inter> pt_offs_range Low_pt_ptr = {}"
   "pt_offs_range High_pt_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "pt_offs_range High_pt_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "pt_offs_range High_pt_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "pt_offs_range High_pt_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "pt_offs_range High_pt_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "pt_offs_range Low_pt_ptr \<inter> tcb_offs_range High_tcb_ptr = {}"
   "pt_offs_range Low_pt_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "pt_offs_range Low_pt_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "pt_offs_range Low_pt_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "pt_offs_range Low_pt_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "tcb_offs_range High_tcb_ptr \<inter> tcb_offs_range Low_tcb_ptr = {}"
   "tcb_offs_range High_tcb_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "tcb_offs_range High_tcb_ptr \<inter> page_offs_range shared_page_ptr = {}"
+  "tcb_offs_range High_tcb_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
   "tcb_offs_range Low_tcb_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
-  "tcb_offs_range Low_tcb_ptr \<inter> page_offs_range shared_page_ptr = {}"
-  "page_offs_range shared_page_ptr \<inter> tcb_offs_range idle_tcb_ptr = {}"
+  "tcb_offs_range Low_tcb_ptr \<inter> page_offs_range shared_page_ptr_virt = {}"
+  "page_offs_range shared_page_ptr_virt \<inter> tcb_offs_range idle_tcb_ptr = {}"
   by (rule disjointI, clarsimp simp: tcb_offs_range_def pt_offs_range_def page_offs_range_def
                                      irq_node_offs_range_def cnode_offs_range_def s0_ptr_defs
                     , drule (1) order_trans le_less_trans, fastforce)+
@@ -1036,13 +1044,13 @@ lemma kh0H_dom_distinct':
   "riscv_global_pt_ptr + (ucast y << 3) \<noteq> Low_pool_ptr"
   "riscv_global_pt_ptr + (ucast y << 3) \<noteq> irq_cnode_ptr"
   "riscv_global_pt_ptr + (ucast y << 3) \<noteq> ntfn_ptr"
-  "shared_page_ptr + (ucast y << 12) \<noteq> idle_tcb_ptr"
-  "shared_page_ptr + (ucast y << 12) \<noteq> High_tcb_ptr"
-  "shared_page_ptr + (ucast y << 12) \<noteq> Low_tcb_ptr"
-  "shared_page_ptr + (ucast y << 12) \<noteq> High_pool_ptr"
-  "shared_page_ptr + (ucast y << 12) \<noteq> Low_pool_ptr"
-  "shared_page_ptr + (ucast y << 12) \<noteq> irq_cnode_ptr"
-  "shared_page_ptr + (ucast y << 12) \<noteq> ntfn_ptr"
+  "shared_page_ptr_virt + (ucast y << 12) \<noteq> idle_tcb_ptr"
+  "shared_page_ptr_virt + (ucast y << 12) \<noteq> High_tcb_ptr"
+  "shared_page_ptr_virt + (ucast y << 12) \<noteq> Low_tcb_ptr"
+  "shared_page_ptr_virt + (ucast y << 12) \<noteq> High_pool_ptr"
+  "shared_page_ptr_virt + (ucast y << 12) \<noteq> Low_pool_ptr"
+  "shared_page_ptr_virt + (ucast y << 12) \<noteq> irq_cnode_ptr"
+  "shared_page_ptr_virt + (ucast y << 12) \<noteq> ntfn_ptr"
   apply (drule offs_in_range, fastforce simp: kh0H_dom_distinct)+
   apply (cut_tac x=y in offs_in_range(1), fastforce simp: kh0H_dom_distinct)+
   apply (cut_tac x=y in offs_in_range(2), fastforce simp: kh0H_dom_distinct)+
@@ -1057,7 +1065,7 @@ lemma not_disjointI:
   by fastforce
 
 lemma shared_pageH_KOUserData[simp]:
-  "shared_pageH shared_page_ptr (shared_page_ptr + (UCAST(9 \<rightarrow> 64) y << 12)) = Some KOUserData"
+  "shared_pageH shared_page_ptr_virt (shared_page_ptr_virt + (UCAST(9 \<rightarrow> 64) y << 12)) = Some KOUserData"
   apply (clarsimp simp: shared_pageH_def page_offs_min page_offs_max add.commute)
   apply (cut_tac shared_page_ptr_is_aligned)
   apply (clarsimp simp: is_aligned_mask mask_def s0_ptr_defs bit_simps)
@@ -1083,7 +1091,7 @@ lemma kh0H_simps[simp]:
   "kh0H (Low_pt_ptr  + (ucast y << 3)) = Low_ptH  Low_pt_ptr  (Low_pt_ptr  + (ucast y << 3))"
   "kh0H (High_pt_ptr + (ucast y << 3)) = High_ptH High_pt_ptr (High_pt_ptr + (ucast y << 3))"
   "kh0H (riscv_global_pt_ptr + (ucast y << 3)) = global_ptH riscv_global_pt_ptr (riscv_global_pt_ptr + (ucast y << 3))"
-  "kh0H (shared_page_ptr + (ucast y << 12)) = Some KOUserData"
+  "kh0H (shared_page_ptr_virt + (ucast y << 12)) = Some KOUserData"
   supply option.case_cong[cong]
   apply (fastforce simp: kh0H_def option_update_range_def)
   by ((clarsimp simp: kh0H_def kh0H_dom_distinct kh0H_dom_distinct'
@@ -1100,7 +1108,7 @@ lemma kh0H_dom:
   "dom kh0H = {idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
                High_pool_ptr, Low_pool_ptr, irq_cnode_ptr, ntfn_ptr} \<union>
               irq_node_offs_range \<union>
-              page_offs_range shared_page_ptr \<union>
+              page_offs_range shared_page_ptr_virt \<union>
               cnode_offs_range Silc_cnode_ptr \<union>
               cnode_offs_range High_cnode_ptr \<union>
               cnode_offs_range Low_cnode_ptr \<union>
@@ -1144,7 +1152,7 @@ lemma kh0H_SomeD:
        x \<in> cnode_offs_range High_cnode_ptr \<and> High_cte High_cnode_ptr x \<noteq> None \<and> y = the (High_cte High_cnode_ptr x) \<or>
        x \<in> cnode_offs_range Silc_cnode_ptr \<and> Silc_cte Silc_cnode_ptr x \<noteq> None \<and> y = the (Silc_cte Silc_cnode_ptr x) \<or>
        x = irq_cnode_ptr \<and> y = KOCTE irq_cte \<or>
-       x \<in> page_offs_range shared_page_ptr \<and> y = KOUserData"
+       x \<in> page_offs_range shared_page_ptr_virt \<and> y = KOUserData"
   apply (frule kh0H_SomeD')
   apply (elim disjE)
   by ((clarsimp | drule offs_range_correct)+)
@@ -1160,7 +1168,7 @@ definition arch_state0H :: Arch.kernel_state where
 definition s0H_internal :: "kernel_state" where
   "s0H_internal \<equiv> \<lparr>
      ksPSpace = kh0H,
-     gsUserPages = [shared_page_ptr \<mapsto> RISCVLargePage],
+     gsUserPages = [shared_page_ptr_virt \<mapsto> RISCVLargePage],
      gsCNodes = (\<lambda>x. if \<exists>irq :: irq. init_irq_node_ptr + (ucast irq << 5) = x
                      then Some 0 else None)
                 (Low_cnode_ptr  \<mapsto> 10,
@@ -1173,7 +1181,7 @@ definition s0H_internal :: "kernel_state" where
      ksDomSchedule = [(0, 10), (1, 10)],
      ksCurDomain = 0,
      ksDomainTime = 5,
-     ksReadyQueues = const [],
+     ksReadyQueues = const (TcbQueue None None),
      ksReadyQueuesL1Bitmap = const 0,
      ksReadyQueuesL2Bitmap = const 0,
      ksCurThread = Low_tcb_ptr,
@@ -2342,9 +2350,9 @@ lemma valid_caps_s0H[simp]:
   "valid_cap' (CNodeCap Low_cnode_ptr 10 2 10) s0H_internal"
   "valid_cap' (CNodeCap High_cnode_ptr 10 2 10) s0H_internal"
   "valid_cap' (CNodeCap Silc_cnode_ptr 10 2 10) s0H_internal"
-  "valid_cap' (ArchObjectCap (FrameCap shared_page_ptr VMReadWrite RISCVLargePage False (Some (ucast Low_asid, 0)))) s0H_internal"
-  "valid_cap' (ArchObjectCap (FrameCap shared_page_ptr VMReadOnly RISCVLargePage False (Some (ucast High_asid, 0)))) s0H_internal"
-  "valid_cap' (ArchObjectCap (FrameCap shared_page_ptr VMReadOnly RISCVLargePage False (Some (ucast Silc_asid, 0)))) s0H_internal"
+  "valid_cap' (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadWrite RISCVLargePage False (Some (ucast Low_asid, 0)))) s0H_internal"
+  "valid_cap' (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadOnly RISCVLargePage False (Some (ucast High_asid, 0)))) s0H_internal"
+  "valid_cap' (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadOnly RISCVLargePage False (Some (ucast Silc_asid, 0)))) s0H_internal"
   "valid_cap' (ArchObjectCap (PageTableCap Low_pt_ptr (Some (ucast Low_asid, 0)))) s0H_internal"
   "valid_cap' (ArchObjectCap (PageTableCap High_pt_ptr (Some (ucast High_asid, 0)))) s0H_internal"
   "valid_cap' (ArchObjectCap (PageTableCap Low_pd_ptr (Some (ucast Low_asid, 0)))) s0H_internal"
@@ -2644,7 +2652,7 @@ lemma map_to_ctes_kh0H_simps'[simp]:
   "map_to_ctes kh0H (Low_cnode_ptr + 0x60) = Some (CTE (ArchObjectCap (PageTableCap Low_pd_ptr (Some (ucast Low_asid, 0))))
                                                        (MDB 0 (Low_tcb_ptr + 0x20) False False))"
   "map_to_ctes kh0H (Low_cnode_ptr + 0x80) = Some (CTE (ArchObjectCap (ASIDPoolCap Low_pool_ptr (ucast Low_asid))) Null_mdb)"
-  "map_to_ctes kh0H (Low_cnode_ptr + 0xA0) = Some (CTE (ArchObjectCap (FrameCap shared_page_ptr VMReadWrite RISCVLargePage
+  "map_to_ctes kh0H (Low_cnode_ptr + 0xA0) = Some (CTE (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadWrite RISCVLargePage
                                                                                 False (Some (ucast Low_asid, 0))))
                                                        (MDB 0 (Silc_cnode_ptr + 0xA0) False False))"
   "map_to_ctes kh0H (Low_cnode_ptr + 0xC0) = Some (CTE (ArchObjectCap (PageTableCap Low_pt_ptr (Some (ucast Low_asid, 0)))) Null_mdb)"
@@ -2655,14 +2663,14 @@ lemma map_to_ctes_kh0H_simps'[simp]:
   "map_to_ctes kh0H (High_cnode_ptr + 0x60) = Some (CTE (ArchObjectCap (PageTableCap High_pd_ptr (Some (ucast High_asid, 0))))
                                                         (MDB 0 (High_tcb_ptr + 0x20) False False))"
   "map_to_ctes kh0H (High_cnode_ptr + 0x80) = Some (CTE (ArchObjectCap (ASIDPoolCap High_pool_ptr (ucast High_asid))) Null_mdb)"
-  "map_to_ctes kh0H (High_cnode_ptr + 0xA0) = Some (CTE (ArchObjectCap (FrameCap shared_page_ptr VMReadOnly RISCVLargePage
+  "map_to_ctes kh0H (High_cnode_ptr + 0xA0) = Some (CTE (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadOnly RISCVLargePage
                                                                                  False (Some (ucast High_asid, 0))))
                                                         (MDB (Silc_cnode_ptr + 0xA0) 0 False False))"
   "map_to_ctes kh0H (High_cnode_ptr + 0xC0) = Some (CTE (ArchObjectCap (PageTableCap High_pt_ptr (Some (ucast High_asid, 0)))) Null_mdb)"
   "map_to_ctes kh0H (High_cnode_ptr + 0x27C0) = Some (CTE (NotificationCap ntfn_ptr 0 False True)
                                                           (MDB 0 (Silc_cnode_ptr + 0x27C0) False False))"
   "map_to_ctes kh0H (Silc_cnode_ptr + 0x40) = Some (CTE (CNodeCap Silc_cnode_ptr 10 2 10) Null_mdb)"
-  "map_to_ctes kh0H (Silc_cnode_ptr + 0xA0) = Some (CTE (ArchObjectCap (FrameCap shared_page_ptr VMReadOnly RISCVLargePage
+  "map_to_ctes kh0H (Silc_cnode_ptr + 0xA0) = Some (CTE (ArchObjectCap (FrameCap shared_page_ptr_virt VMReadOnly RISCVLargePage
                                                                                  False (Some (ucast Silc_asid, 0))))
                                                         (MDB (Low_cnode_ptr + 0xA0) (High_cnode_ptr + 0xA0) False False))"
   "map_to_ctes kh0H (Silc_cnode_ptr + 0x27C0) = Some (CTE (NotificationCap ntfn_ptr 0 True False)
@@ -3224,7 +3232,7 @@ lemma valid_arch_state_s0H:
   apply (intro conjI)
     apply (clarsimp simp: valid_asid_table'_def s0H_internal_def arch_state0H_def asid_bits_defs
                           asid_high_bits_of_def Low_asid_def High_asid_def mask_def s0_ptr_defs)
-   apply (clarsimp simp: valid_global_pts'_def riscv_global_pt_is_aligned[simplified bit_simps]
+   apply (clarsimp simp: valid_global_pts'_def is_aligned_riscv_global_pt_ptr[simplified bit_simps]
                          arch_state0H_def page_table_at'_def typ_at'_def ko_wp_at'_def
                          bit_simps global_ptH_def pt_offs_min)
    apply (subst objBitsKO_def)
@@ -3251,8 +3259,6 @@ lemma s0H_invs:
                          s0H_internal_def s0_ptrs_aligned objBitsKO_def Low_tcbH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
    apply (simp add: objBitsKO_def)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs s0H_internal_def)
   apply (rule conjI)
    apply (clarsimp simp: sym_refs_def state_refs_of'_def refs_of'_def split: option.splits)
    apply (frule kh0H_SomeD)
@@ -3419,9 +3425,16 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: irqs_masked'_def s0H_internal_def maxIRQ_def timer_irq_def irqInvalid_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_queues'_def obj_at'_def s0H_internal_def inQ_def)
-   apply (frule kh0H_dom_tcb)
-   apply (elim disjE, (clarsimp simp: kh0H_obj_def)+)[1]
+   apply (clarsimp simp: sym_heap_def opt_map_def projectKOs split: option.splits)
+   using kh0H_dom_tcb
+   apply (fastforce simp: kh0H_obj_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_sched_pointers_def opt_map_def projectKOs split: option.splits)
+   using kh0H_dom_tcb
+   apply (fastforce simp: kh0H_obj_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_bitmaps_def valid_bitmapQ_def bitmapQ_def s0H_internal_def
+                         tcbQueueEmpty_def bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
   apply (rule conjI)
    apply (clarsimp simp: ct_not_inQ_def obj_at'_def objBitsKO_def
                          s0H_internal_def s0_ptrs_aligned Low_tcbH_def)
@@ -3446,7 +3459,7 @@ lemma kh0_pspace_dom:
   "pspace_dom kh0 = {idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
                      High_pool_ptr, Low_pool_ptr, irq_cnode_ptr, ntfn_ptr} \<union>
                     irq_node_offs_range \<union>
-                    page_offs_range shared_page_ptr \<union>
+                    page_offs_range shared_page_ptr_virt \<union>
                     cnode_offs_range Silc_cnode_ptr \<union>
                     cnode_offs_range High_cnode_ptr \<union>
                     cnode_offs_range Low_cnode_ptr \<union>
@@ -3492,7 +3505,7 @@ lemma kh0_pspace_dom:
    apply (force simp: kh0_def kh0_obj_def image_def cte_map_def')
   apply (rule conjI)
    apply clarsimp
-   apply (rule_tac x=shared_page_ptr in exI)
+   apply (rule_tac x=shared_page_ptr_virt in exI)
    apply (drule offs_range_correct)
    apply (clarsimp simp: kh0_def kh0_obj_def image_def s0_ptr_defs cte_map_def' dom_caps bit_simps)
    apply (rule_tac x="UCAST (9 \<rightarrow> 64) y" in exI)
@@ -3594,16 +3607,17 @@ lemma s0_pspace_rel:
                   apply (clarsimp simp: kh0_obj_def bit_simps dest!: less_0x200_exists_ucast)
                  defer
                  apply ((clarsimp simp: kh0_obj_def kh0H_obj_def bit_simps word_bits_def
-                                        other_obj_relation_def fault_rel_optionation_def
+                                        fault_rel_optionation_def tcb_relation_cut_def
                                         tcb_relation_def arch_tcb_relation_def the_nat_to_bl_simps
                              split del: if_split)+)[3]
               prefer 13
               apply ((clarsimp simp: kh0_obj_def kh0H_all_obj_def bit_simps add.commute
                                      pt_offs_max pt_offs_min pte_relation_def
                           split del: if_split,
-                      clarsimp simp: s0_ptr_defs addrFromPPtr_def  pptrBaseOffset_def paddrBase_def
+                      clarsimp simp: s0_ptr_defs shared_page_ptr_phys_def addrFromPPtr_def pptrBaseOffset_def paddrBase_def
                                      vmrights_map_def vm_read_only_def vm_read_write_def
-                                     kh0_obj_def kh0H_all_obj_def bit_simps mask_def)+)[5]
+                                     kh0_obj_def kh0H_all_obj_def elf_index_value,
+                      (clarsimp simp: bit_simps mask_def)?)+)[5]
          apply (clarsimp simp: kh0_obj_def kh0H_obj_def well_formed_cnode_n_def
                                cte_relation_def cte_map_def bit_simps)
         apply (clarsimp simp: kh0H_obj_def bit_simps ntfn_def other_obj_relation_def ntfn_relation_def)
@@ -3654,7 +3668,14 @@ lemma s0_srel:
                                         High_etcb_def Low_etcb_def default_etcb_def
                                  split: if_split_asm)
                  apply (simp add: s0_internal_def exst0_def s0H_internal_def sched_act_relation_def)
-                apply (simp add: s0_internal_def exst0_def s0H_internal_def ready_queues_relation_def)
+                apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def
+                                      ready_queues_relation_def ready_queue_relation_def
+                                      list_queue_relation_def queue_end_valid_def
+                                      prev_queue_head_def inQ_def tcbQueueEmpty_def
+                                      projectKOs opt_map_def opt_pred_def
+                               split: option.splits)
+                using kh0H_dom_tcb
+                apply (fastforce simp: kh0H_obj_def)
                apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def ghost_relation_def)
                apply (rule conjI)
                 apply (fastforce simp: kh0_def kh0_obj_def dest: kh0_SomeD)

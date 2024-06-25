@@ -31,7 +31,7 @@ lemmas obj_valid_vspace_simps[simp]
         [split_simps Structures_A.kernel_object.split
                      arch_kernel_obj.split]
 
-abbreviation
+locale_abbrev
   valid_vspace_objs' :: "'z state \<Rightarrow> bool"
 where
  "valid_vspace_objs' s \<equiv> \<forall>x \<in> ran (kheap s). obj_valid_vspace x"
@@ -77,37 +77,29 @@ lemma valid_vspace_objs'_vsD:
 lemma store_pte_valid_vspace_objs'[wp]:
   "store_pte pt_t p pte \<lbrace>valid_vspace_objs'\<rbrace>"
   apply (simp add: store_pte_def set_pt_def, wp get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  sorry (* FIXME AARCH64
-  apply (rule valid_entries_overwrite_0)
-   apply (fastforce simp:ran_def)
-  apply (drule bspec)
-   apply fastforce
+  apply (clarsimp simp: obj_at_def pt_upd_def split: pt.splits)
+  apply (rule conjI; clarsimp; rename_tac pt)
+   apply (rule valid_entries_overwrite_0, fastforce simp:ran_def)
+   apply (case_tac "pt pa"; case_tac pte; simp)
+  apply (rule valid_entries_overwrite_0, fastforce simp:ran_def)
   apply (case_tac "pt pa"; case_tac pte; simp)
-  done *)
+  done
+
+crunches invalidate_tlb_by_asid_va, invalidate_tlb_by_asid, unmap_page_table
+  for vspace_objs'[wp]: valid_vspace_objs'
 
 lemma unmap_page_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> unmap_page sz asid vptr pptr \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: unmap_page_def mapM_discarded
              cong: vmpage_size.case_cong)
-  sorry (* FIXME AARCH64
-  apply (wpsimp wp: store_pte_valid_vspace_objs')
-  done *)
-
-lemma unmap_page_table_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> unmap_page_table asid vptr pt \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: unmap_page_table_def)
-  sorry (* FIXME AARCH64
-  apply (wp get_object_wp store_pte_valid_vspace_objs' | wpc)+
-  apply (simp add: obj_at_def)
-  done *)
+  apply wpsimp
+  done
 
 crunch valid_vspace_objs'[wp]: set_simple_ko "valid_vspace_objs'"
   (wp: crunch_wps)
 
-(* FIXME AARCH64
 crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object) *)
+  (wp: crunch_wps preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
 
 lemma preemption_point_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
@@ -120,10 +112,8 @@ lemmas cap_revoke_preservation_valid_vspace_objs = cap_revoke_preservation[OF _,
 lemmas rec_del_preservation_valid_vspace_objs = rec_del_preservation[OF _ _ _ _,
                                                     where P=valid_vspace_objs', simplified]
 
-(* FIXME AARCH64
 crunch valid_vspace_objs'[wp]: cap_delete, cap_revoke "valid_vspace_objs'"
   (rule: cap_revoke_preservation_valid_vspace_objs)
-*)
 
 crunch valid_vspace_objs'[wp]: cancel_badged_sends "valid_vspace_objs'"
   (simp: crunch_simps filterM_mapM wp: crunch_wps ignore: filterM)
@@ -132,16 +122,12 @@ crunch valid_vspace_objs'[wp]: cap_move, cap_insert "valid_vspace_objs'"
 
 lemma invoke_cnode_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and valid_cnode_inv i\<rbrace> invoke_cnode i \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: invoke_cnode_def)
-  apply (rule hoare_pre)
-   apply (wp get_cap_wp | wpc | simp split del: if_split)+
-  sorry (* FIXME AARCH64
-  done *)
+  unfolding invoke_cnode_def
+  by (wpsimp wp: get_cap_wp split_del: if_split)
 
-(* FIXME AARCH64
 crunch valid_vspace_objs'[wp]: invoke_tcb "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
-       ignore: check_cap_at) *)
+       ignore: check_cap_at)
 
 lemma invoke_domain_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
@@ -150,11 +136,10 @@ lemma invoke_domain_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: set_extra_badge, transfer_caps_loop "valid_vspace_objs'"
   (rule: transfer_caps_loop_pres)
 
-(* FIXME AARCH64
 crunch valid_vspace_objs'[wp]: send_ipc, send_signal,
     do_reply_transfer, invoke_irq_control, invoke_irq_handler "valid_vspace_objs'"
   (wp: crunch_wps simp: crunch_simps
-         ignore: clearMemory const_on_failure set_object) *)
+         ignore: clearMemory const_on_failure set_object)
 
 lemma valid_vspace_objs'_trans_state[simp]: "valid_vspace_objs' (trans_state f s) = valid_vspace_objs' s"
   apply (simp add: obj_valid_vspace_def)
@@ -168,8 +153,7 @@ lemma retype_region_valid_vspace_objs'[wp]:
                  elim!: ranE split: if_split_asm simp del:fun_upd_apply)
   apply (simp add: default_object_def default_arch_object_def
             split: kernel_object.splits apiobject_type.split aobject_type.split)+
-  sorry (* FIXME AARCH64
-  done *)
+  done
 
 lemma detype_valid_vspace[elim!]:
   "valid_vspace_objs' s \<Longrightarrow> valid_vspace_objs' (detype S s)"
@@ -224,17 +208,12 @@ lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
    \<lbrace> \<lambda>_. valid_vspace_objs' \<rbrace>"
   apply (simp add: perform_asid_pool_invocation_def)
   apply (wpsimp wp: get_cap_wp)
-  sorry (* FIXME AARCH64
-  apply (simp add: cte_wp_at_caps_of_state)
-  apply (drule (1) valid_capsD)
-  apply (clarsimp simp: is_ArchObjectCap_def is_PageTableCap_def valid_cap_def)
-  apply (erule (1) is_aligned_pt)
-  done *)
+  done
 
 crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_vspace_objs'"
   (ignore: delete_objects set_object
-       wp: static_imp_wp select_wp crunch_wps
+       wp: hoare_weak_lift_imp crunch_wps
      simp: crunch_simps unless_def)
 
 lemma perform_page_valid_vspace_objs'[wp]:
@@ -246,16 +225,17 @@ lemma perform_page_valid_vspace_objs'[wp]:
                 split: sum.split arch_cap.split option.split,
          safe intro!: hoare_gen_asm hoare_gen_asm[unfolded K_def],
          simp_all add: mapM_x_Nil mapM_x_Cons mapM_x_map)
-  sorry (* FIXME AARCH64
     apply (wp store_pte_valid_vspace_objs' hoare_vcg_imp_lift[OF set_cap_arch_obj_neg]
-              hoare_vcg_all_lift
+              hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_if_lift
            | clarsimp simp: cte_wp_at_weakenE[OF _ TrueI] obj_at_def swp_def valid_page_inv_def
                             valid_slots_def perform_pg_inv_map_def perform_pg_inv_unmap_def
-                            perform_pg_inv_get_addr_def
+                            perform_pg_inv_get_addr_def perform_flush_def
                      split: pte.splits
+                     split del: if_split
+           | rule conjI
            | wpc
            | wp (once) hoare_drop_imps)+
-  done *)
+  done
 
 lemma perform_page_table_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and valid_pti pinv\<rbrace>
@@ -265,28 +245,22 @@ lemma perform_page_table_valid_vspace_objs'[wp]:
              cong: page_table_invocation.case_cong
                    option.case_cong cap.case_cong arch_cap.case_cong)
   apply (rule hoare_pre)
-  sorry (* FIXME AARCH64
    apply (wp hoare_vcg_ex_lift store_pte_valid_vspace_objs'
              set_cap_arch_obj hoare_vcg_all_lift mapM_x_wp'
               | wpc
               | simp add: swp_def
               | strengthen all_imp_ko_at_from_ex_strg
               | wp (once) hoare_drop_imps)+
-  done *)
+  done
 
 lemma perform_invocation_valid_vspace_objs'[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_vspace_objs'\<rbrace>
       perform_invocation blocking call i
          \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (cases i, simp_all)
-  apply (wp send_signal_interrupt_states | simp)+
-  sorry (* FIXME AARCH64
-  apply (clarsimp simp:)
-  apply (wp | wpc | simp)+
-  apply (simp add: arch_perform_invocation_def)
-  apply (wp | wpc | simp)+
+  apply (cases i; wpsimp)
+   apply (wpsimp simp: arch_perform_invocation_def perform_vspace_invocation_def perform_flush_def)
   apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
-  done *)
+  done
 
 crunch valid_vspace_objs'[wp]: handle_fault, reply_from_kernel "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps)
@@ -299,29 +273,25 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
                | simp add: split_def | wpc
                | wp (once) hoare_drop_imps)+
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
-  sorry (* FIXME AARCH64
-  done *)
+  done
 
-(* FIXME AARCH64
 crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
        handle_send, handle_yield, handle_interrupt "valid_vspace_objs'"
-  (simp: crunch_simps wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp
+  (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
-              OR_choice set_scheduler_action) *)
+              OR_choice set_scheduler_action)
 
 lemma handle_event_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace> handle_event e \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  sorry (* FIXME AARCH64
-  by (case_tac e; simp) (wpsimp simp: Let_def handle_vm_fault_def | wp (once) hoare_drop_imps)+ *)
+  by (case_tac e; simp) (wpsimp simp: Let_def handle_vm_fault_def | wp (once) hoare_drop_imps)+
 
 lemma schedule_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply simp
-  sorry (* FIXME AARCH64
-  done *)
+  done
 
 lemma call_kernel_valid_vspace_objs'[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs'\<rbrace>
@@ -333,8 +303,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
                  | wp (once) hoare_drop_imps)+
-  sorry (* FIXME AARCH64 missing crunches
-  done *)
+  done
 
 end
 

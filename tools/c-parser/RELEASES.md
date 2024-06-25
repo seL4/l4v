@@ -145,3 +145,20 @@
 - always use fresh names for generated temporary variables.
   This fixes a problem that could make some function call expressions unprovable. (VER-1389)
 - improve compile time performance for functional record update definitions
+
+## 1.19
+
+- Builds with Isabelle2021-1
+- setup for AARCH64/ARM64 targets
+- AST printing for top-level declarations annotated to make them easier to
+  consume in external tools. Annotations take the form:
+
+      ##<decl_type>: <name>
+
+  e.g. `##Function: ctzl`
+
+## 1.20
+
+- Builds with Isabelle2023
+- Rearranged library session structure and included more libraries for heap
+  reasoning in the release. See e.g. files TypHeapLib.thy and LemmaBucket_C.thy

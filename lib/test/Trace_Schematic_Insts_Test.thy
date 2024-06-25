@@ -6,7 +6,7 @@
 
 theory Trace_Schematic_Insts_Test
 imports
-  Lib.Trace_Schematic_Insts
+  Eisbach_Tools.Trace_Schematic_Insts
 begin
 
 text \<open>

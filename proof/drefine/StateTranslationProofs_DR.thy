@@ -54,10 +54,12 @@ abbreviation
 "update_kheap kh s \<equiv> kheap_update (\<lambda>_. kh) s"
 
 abbreviation
-"tcb_set_mi tcb msg \<equiv> tcb \<lparr>tcb_context := (tcb_context tcb)(msg_info_register := msg)\<rparr>"
+"tcb_set_mi tcb msg \<equiv>
+  tcb \<lparr>tcb_context := modify_registers (\<lambda>rs. rs(msg_info_register := msg)) (tcb_context tcb)\<rparr>"
 
 abbreviation
-"update_tcb_cxt_badge msg tcb\<equiv> tcb \<lparr>tcb_context := (tcb_context tcb)(badge_register := msg)\<rparr>"
+"update_tcb_cxt_badge msg tcb\<equiv>
+  tcb \<lparr>tcb_context := modify_registers (\<lambda>rs. rs(badge_register := msg)) (tcb_context tcb)\<rparr>"
 
 abbreviation
 "update_tcb_state state tcb \<equiv> tcb \<lparr>tcb_state := state\<rparr>"
@@ -66,7 +68,7 @@ abbreviation
 "update_tcb_boundntfn ntfn_opt tcb \<equiv> tcb \<lparr>tcb_bound_notification := ntfn_opt\<rparr>"
 
 abbreviation
-"dupdate_cdl_object ptr obj s \<equiv>  cdl_objects_update (\<lambda>_. cdl_objects s(ptr \<mapsto> obj)) s"
+"dupdate_cdl_object ptr obj s \<equiv>  cdl_objects_update (\<lambda>_. (cdl_objects s)(ptr \<mapsto> obj)) s"
 
 abbreviation
 "dupdate_tcb_intent intent tcb\<equiv> tcb \<lparr>cdl_tcb_intent := intent\<rparr>"

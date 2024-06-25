@@ -72,6 +72,7 @@ lemma hoarep_Int:
   apply fastforce
   done
 
+lemmas hoarep_Int_pre_fix = hoarep_Int[where P=P and P'=P for P, simplified]
 
 lemma Normal_result:
   "\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> Normal t' \<Longrightarrow> \<exists>t. s = Normal t"
@@ -350,5 +351,62 @@ lemma hoarep_revert:
   apply simp
   done
 
+lemma intermediate_Normal_state:
+  "\<lbrakk>\<Gamma> \<turnstile> \<langle>Seq c\<^sub>1 c\<^sub>2, Normal t\<rangle> \<Rightarrow> t''; t \<in> P; \<Gamma> \<turnstile> P c\<^sub>1 Q\<rbrakk>
+   \<Longrightarrow> \<exists>t'. \<Gamma> \<turnstile> \<langle>c\<^sub>1, Normal t\<rangle> \<Rightarrow> Normal t' \<and> \<Gamma> \<turnstile> \<langle>c\<^sub>2, Normal t'\<rangle> \<Rightarrow> t''"
+  apply (erule exec_Normal_elim_cases(8))
+  apply (insert hoarep_exec)
+  apply fastforce
+  done
+
+lemma hoarep_ex_pre:
+  "(\<And>x. \<Gamma> \<turnstile> {s. P x s} c Q) \<Longrightarrow> \<Gamma> \<turnstile> {s. \<exists>x. P x s} c Q"
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (fastforce dest: hoarep_exec'[rotated])
+  done
+
+lemma hoarep_ex_lift:
+  "(\<And>x. \<Gamma> \<turnstile> {s. P x s} c {s. Q x s}) \<Longrightarrow> \<Gamma> \<turnstile> {s. \<exists>x. P x s} c {s. \<exists>x. Q x s}"
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (rename_tac s x)
+  apply (drule_tac x=x in meta_spec)
+  apply (prop_tac "s \<in> Collect (P x)")
+   apply fastforce
+  apply (frule (2) hoarep_exec)
+  apply fastforce
+  done
+
+lemma hoarep_conj_lift_pre_fix:
+  "\<lbrakk>\<Gamma> \<turnstile> P c {s. Q s}; \<Gamma> \<turnstile> P c {s. Q' s}\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> P c {s. Q s \<and> Q' s}"
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (frule (2) hoarep_exec[where Q="Collect Q"])
+  apply (frule (2) hoarep_exec[where Q="Collect Q'"])
+  apply fastforce
+  done
+
+lemma exec_While_final_inv'':
+  "\<lbrakk> \<Gamma> \<turnstile> \<langle>b, x\<rangle> \<Rightarrow> s'; b = While C B; x = Normal s;
+    \<And>s. s \<notin> C \<Longrightarrow> I s (Normal s);
+    \<And>t t' t''. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Normal t'; \<Gamma>\<turnstile> \<langle>While C B, Normal t'\<rangle> \<Rightarrow> t'';
+                 I t' t'' \<rbrakk> \<Longrightarrow> I t t'';
+    \<And>t t'. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Abrupt t' \<rbrakk> \<Longrightarrow> I t (Abrupt t');
+    \<And>t. \<lbrakk> t \<in> C; \<Gamma> \<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Stuck \<rbrakk> \<Longrightarrow> I t Stuck;
+    \<And>t f. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Fault f \<rbrakk> \<Longrightarrow> I t (Fault f) \<rbrakk>
+   \<Longrightarrow> I s s'"
+  apply (induct arbitrary: s rule: exec.induct; simp)
+  apply (erule exec_elim_cases; fastforce simp: exec.WhileTrue exec.WhileFalse)
+  done
+
+lemma While_inv_from_body:
+  "\<Gamma> \<turnstile> (G \<inter> C) B G \<Longrightarrow> \<Gamma> \<turnstile> G While C B G"
+  apply (drule hoare_sound)+
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  by (erule exec_While_final_inv''[where I="\<lambda>s s'. s \<in> G \<longrightarrow> s' \<in> Normal ` G", THEN impE],
+      fastforce+)
 
 end

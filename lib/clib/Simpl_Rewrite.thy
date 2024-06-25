@@ -10,8 +10,8 @@ text \<open>A simple proof method for rewriting Simpl programs under a predicate
 theory Simpl_Rewrite
 imports
   "Simpl-VCG.Vcg"
-  "Lib.Eisbach_Methods"
-  "Lib.Apply_Debug"
+  "Eisbach_Tools.Eisbach_Methods"
+  "Eisbach_Tools.Apply_Debug"
 begin
 
 text \<open>One layer of context around a Simpl program.
@@ -460,7 +460,7 @@ text \<open>Methods to automate rewriting.\<close>
 
 method do_rewrite uses hom ruleset declares C_simp_simps =
   (rule com_ctxt_focus_rewrite[OF hom], rule ruleset,
-   #break "simpl_rewrite_rewrite", (simp add: C_simp_simps; fail))+
+   #break "simpl_rewrite_rewrite", (not_visible \<open>simp add: C_simp_simps\<close>; fail))+
 
 method rewrite_pre uses hom declares C_simp_pre C_simp_simps =
   (do_rewrite hom: hom ruleset: C_simp_pre)

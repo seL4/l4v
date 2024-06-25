@@ -51,12 +51,12 @@ lemma corresXF_simple_corresXF:
    apply clarsimp
    apply (erule allE, erule impE, force)
    apply (clarsimp split: sum.splits cong del: unit.case_cong)
-   apply (erule (1) my_BallE)
+   apply (drule (1) bspec)
    apply clarsimp
   apply clarsimp
   apply (erule_tac x=s in allE)
   apply (clarsimp split: sum.splits cong del: unit.case_cong)
-  apply (erule (1) my_BallE)
+  apply (drule (1) bspec)
   apply clarsimp
   done
 
@@ -144,23 +144,12 @@ lemma corresXF_exec_normal:
   "\<lbrakk> corresXF st ret ex P A B; (Inr r', s') \<in> fst (B s); \<not> snd (A (st s)); P s \<rbrakk>
       \<Longrightarrow> (Inr (ret r' s'), st s') \<in> fst (A (st s))"
   using corresXF_simple_exec
-  apply (clarsimp simp: corresXF_def)
-  apply (clarsimp split: sum.splits)
-  apply (erule_tac x=s in allE)
-  apply clarsimp
-  apply (erule (1) my_BallE)
-  apply clarsimp
-  done
+  by (fastforce simp: corresXF_def)
 
 lemma corresXF_exec_except:
   "\<lbrakk> corresXF st ret ex P A B; (Inl r', s') \<in> fst (B s); \<not> snd (A (st s)); P s \<rbrakk>
       \<Longrightarrow> (Inl (ex r' s'), st s') \<in> fst (A (st s))"
-  apply (clarsimp simp: corresXF_def)
-  apply (erule allE, erule impE, force)
-  apply (clarsimp)
-  apply (erule (1) my_BallE)
-  apply (clarsimp split: sum.splits)
-  done
+  by (fastforce simp: corresXF_def)
 
 lemma corresXF_exec_fail:
   "\<lbrakk> corresXF st ret ex P A B; snd (B s); P s \<rbrakk>
@@ -256,13 +245,11 @@ lemma corresXF_join:
   apply (subst (asm) corresXF_simple_corresXF[symmetric])+
   apply (subst corresXF_simple_corresXF[symmetric])
   apply (unfold bindE_def)
-  apply (erule corresXF_simple_join [where P'="\<lambda>a b s. (case b of Inl r \<Rightarrow> a = Inl (E r s) | Inr r \<Rightarrow> a = Inr (V r s) \<and> P' (theRight a) r s)"])
+  apply (erule corresXF_simple_join [where P'="\<lambda>a b s. (case b of Inl r \<Rightarrow> a = Inl (E r s) | Inr r \<Rightarrow> a = Inr (V r s) \<and> P' (projr a) r s)"])
     apply (simp add: corresXF_simple_def split: sum.splits unit.splits)
-    apply (clarsimp simp: NonDetMonad.lift_def
-      throwError_def return_def split: sum.splits
-      cong del: unit.case_cong)
+    apply (clarsimp simp: Nondet_Monad.lift_def throwError_def return_def)
     apply fastforce
-   apply (fastforce simp: NonDetMonad.validE_def split: sum.splits cong del: unit.case_cong)
+   apply (fastforce simp: Nondet_VCG.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done
 
@@ -272,13 +259,11 @@ lemma corresXF_except:
   apply (subst (asm) corresXF_simple_corresXF[symmetric])+
   apply (subst corresXF_simple_corresXF[symmetric])
   apply (unfold handleE'_def)
-  apply (erule corresXF_simple_join [where P'="\<lambda>a b s. (case b of Inr r \<Rightarrow> a = Inr (V r s) | Inl r \<Rightarrow> a = Inl (E r s) \<and> P' (theLeft a) r s)"])
+  apply (erule corresXF_simple_join [where P'="\<lambda>a b s. (case b of Inr r \<Rightarrow> a = Inr (V r s) | Inl r \<Rightarrow> a = Inl (E r s) \<and> P' (projl a) r s)"])
     apply (simp add: corresXF_simple_def split: sum.splits unit.splits)
-    apply (clarsimp simp: NonDetMonad.lift_def throwError_def
-      return_def split: sum.splits unit.splits cong del:
-      unit.case_cong)
+    apply (clarsimp simp: Nondet_Monad.lift_def throwError_def return_def)
     apply fastforce
-   apply (clarsimp simp: NonDetMonad.validE_def split: sum.splits cong del: unit.case_cong)
+   apply (clarsimp simp: Nondet_VCG.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done
 
@@ -315,19 +300,16 @@ lemma corresXF_simple_loop_terminates:
    apply (clarsimp simp: cond_match)
   apply atomize
   apply clarsimp
-  apply (erule allE2)
-  apply (erule impE)
+  apply (erule allE, erule allE, erule impE)
    apply (erule conjI)
    apply (clarsimp simp: cond_match)
   apply clarsimp
   apply (rule whileLoop_terminates.intros(2))
    apply (clarsimp simp: cond_match)
   apply (clarsimp split: sum.splits)
-  apply (erule (1) my_BallE)
+  apply (drule (1) bspec)
   apply clarsimp
-  apply (erule (1) my_BallE)
-  apply clarsimp
-  apply (erule_tac x=a and y=b in allE2)
+  apply (drule (1) bspec)
   apply clarsimp
   apply (frule use_valid [OF _ pred_inv])
     apply (clarsimp simp: no_fail_def)
@@ -579,18 +561,18 @@ lemma corresXF_while:
   apply (rule corresXF_simple_weaken_pre)
    apply (rule corresXF_simple_while [where
       P ="\<lambda>x s. (case x of Inl _ \<Rightarrow> True| Inr v \<Rightarrow>  P v s)"
-                  and P'="\<lambda>x s. P' (theRight x) s"])
+                  and P'="\<lambda>x s. P' (projr x) s"])
        apply (insert body_corres)[1]
        apply (subst (asm) corresXF_simple_corresXF[symmetric])
        apply atomize
-       apply (erule_tac x="theRight x" in allE)
-       apply (clarsimp simp: corresXF_simple_def NonDetMonad.lift_def
-      throwError_def return_def split: sum.splits)
+       apply (erule_tac x="projr x" in allE)
+       apply (clarsimp simp: corresXF_simple_def Nondet_Monad.lift_def throwError_def return_def
+                       split: sum.splits)
       apply (clarsimp simp: cond_match split: sum.splits)
      apply (clarsimp simp: lift_def split: sum.splits)
      apply (cut_tac  pred_inv [unfolded validE_def, simplified lift_def])
      apply (erule hoare_chain)
-      apply (monad_eq simp: NonDetMonad.lift_def whileLoopE_def split: sum.splits)
+      apply (monad_eq simp: Nondet_Monad.lift_def whileLoopE_def split: sum.splits)
      apply monad_eq
     apply (clarsimp simp: pred_imply split: sum.splits)
    apply (clarsimp simp: init_match pred_imply)
@@ -671,7 +653,7 @@ proof -
         apply (erule impE)
          apply (erule contrapos_nn)
          apply (erule new_body_fails_more)
-        apply (erule (1) my_BallE)
+        apply (drule (1) bspec)
         apply clarsimp
         apply (monad_eq simp: cond_match guardE_def split_def  split: sum.splits)
        apply (drule snd_whileLoopE_first_step)
@@ -708,9 +690,9 @@ lemma ccorresE_corresXF_merge:
   apply clarsimp
   apply (erule allE, erule impE, fastforce)
   apply (case_tac t; clarsimp)
-   apply (erule (1) my_BallE)
+   apply (drule (1) bspec)
    apply (clarsimp split: sum.splits)
-  apply (erule (1) my_BallE)
+  apply (drule (1) bspec)
   apply (clarsimp split: sum.splits)
   apply (drule no_throw_Inr, assumption)
    apply simp
@@ -816,8 +798,7 @@ lemma corresXF_spec:
     \<Longrightarrow>  corresXF st ret ex P (specE A) (specE A')"
   apply (monad_eq simp: corresXF_def specE_def spec_def Ball_def split: sum.splits)
   apply (frule_tac y=s' in surjD)
-  apply (clarsimp simp: image_def set_eq_UNIV)
-  apply metis
+  apply blast
   done
 
 lemma corresXF_throw:

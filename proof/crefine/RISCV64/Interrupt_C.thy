@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -16,7 +17,7 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
      (InterruptDecls_H.invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
   apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
    apply (ctac add: plic_complete_claim_ccorres)
-  apply (simp add: from_bool_def false_def)
+  apply simp
   done
 
 lemma getIRQSlot_ccorres:
@@ -74,7 +75,7 @@ proof -
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (rule ccorres_call)
-           apply (rule cteInsert_ccorres[simplified dc_def])
+           apply (rule cteInsert_ccorres)
           apply simp
          apply simp
         apply simp
@@ -111,7 +112,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
    apply (simp add: ucast_up_ucast is_up)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
-       apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
+       apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
         gs_set_assn_Delete_cstate_relation[unfolded o_def])
@@ -229,7 +230,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
      apply (clarsimp simp: Collect_const_mem neq_Nil_conv
                     dest!: interpret_excaps_eq)
      apply (simp add: rf_sr_ksCurThread mask_def[where n=4]
-                      "StrictC'_thread_state_defs" cap_get_tag_isCap excaps_map_def
+                      ThreadState_defs cap_get_tag_isCap excaps_map_def
                       word_sless_def word_sle_def)
     apply (simp add: invocationCatch_def throwError_bind
                      interpret_excaps_test_null Collect_True
@@ -256,24 +257,23 @@ lemma decodeIRQHandlerInvocation_ccorres:
     apply (simp add: syscall_error_to_H_cases)
    apply simp
   apply (clarsimp simp: Collect_const_mem tcb_at_invs')
-  apply (clarsimp simp: invs_queues invs_valid_objs'
+  apply (clarsimp simp: invs_valid_objs'
                         ct_in_state'_def
                         ccap_rights_relation_def
-                        mask_def[where n=4]
-                        "StrictC'_thread_state_defs")
+                        mask_def[where n=4] ThreadState_defs)
   apply (subst pred_tcb'_weakenE, assumption, fastforce)+
   apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def
                         sysargs_rel_n_def word_less_nat_alt)
   apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                    slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def
+                    slotcap_in_mem_def valid_tcb_state'_def
              dest!: interpret_excaps_eq split: bool.splits)
   apply (intro conjI impI allI)
   apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                    slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def
+                    slotcap_in_mem_def valid_tcb_state'_def
              dest!: interpret_excaps_eq split: bool.splits)+
-     apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[4]
+     apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[6]
     apply (drule ctes_of_valid')
      apply fastforce
     apply (clarsimp simp add:valid_cap_simps' RISCV64.maxIRQ_def)
@@ -344,7 +344,7 @@ lemma invokeIRQControl_ccorres:
       (performIRQControl (Invocations_H.irqcontrol_invocation.IssueIRQHandler irq slot parent))
       (Call invokeIRQControl_'proc)"
   by (clarsimp simp: performIRQControl_def liftE_def bind_assoc
-               intro!: invokeIRQControl_expanded_ccorres[simplified liftE_def K_def, simplified])
+               intro!: invokeIRQControl_expanded_ccorres[simplified liftE_def, simplified])
 
 lemma isIRQActive_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
@@ -363,8 +363,7 @@ lemma isIRQActive_ccorres:
                          Let_def cinterrupt_relation_def)
    apply (drule spec, drule(1) mp)
    apply (case_tac "intStateIRQTable (ksInterruptState \<sigma>) irq")
-     apply (simp add: from_bool_def irq_state_defs Kernel_C.maxIRQ_def
-                      word_le_nat_alt)+
+      apply (simp add: irq_state_defs Kernel_C.maxIRQ_def word_le_nat_alt)+
   done
 
 lemma Platform_maxIRQ:
@@ -607,7 +606,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                 apply (simp add: and_mask_eq_iff_le_mask)
                 apply (simp add: mask_def word_le_nat_alt)
                apply (clarsimp simp: numeral_2_eq_2 numeral_3_eq_3 exception_defs
-                                     ThreadState_Restart_def false_def mask_def from_bool_def)
+                                     ThreadState_defs mask_def)
                apply (rule conseqPre, vcg)
                apply (fastforce simp: exception_defs split: if_split)
               apply (rule subset_refl)
@@ -625,12 +624,11 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
     apply (vcg exspec=getSyscallArg_modifies)
    apply ccorres_rewrite
    apply (auto split: invocation_label.split arch_invocation_label.split
-               intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def dc_def id_def]
+               intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def]
                simp: throwError_def invocationCatch_def syscall_error_to_H_cases invocation_eq_use_types)[1]
   apply clarsimp
   apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
-                        ThreadState_Restart_def unat_of_nat mask_def
                         sysargs_rel_to_n
                   cong: if_cong)
   apply (rule conjI)
@@ -774,7 +772,7 @@ lemma decodeIRQControlInvocation_ccorres:
              apply (rule sym)
              apply (simp add: and_mask_eq_iff_le_mask)
              apply (simp add: mask_def word_le_nat_alt)
-            apply (clarsimp simp: numeral_2_eq_2 exception_defs ThreadState_Restart_def false_def mask_def)
+            apply (clarsimp simp: numeral_2_eq_2 exception_defs ThreadState_defs mask_def)
             apply (rule conseqPre, vcg)
              apply (fastforce simp: exception_defs)
             apply (rule subset_refl)
@@ -800,7 +798,6 @@ lemma decodeIRQControlInvocation_ccorres:
   apply clarsimp
   apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
-                        ThreadState_Restart_def unat_of_nat mask_def
                         sysargs_rel_to_n
                   cong: if_cong)
   apply (rule conjI)

@@ -313,15 +313,12 @@ lemma invoke_untyped_valid_sched:
   "\<lbrace>invs and valid_untyped_inv ui and ct_active and valid_sched and valid_idle \<rbrace>
      invoke_untyped ui
    \<lbrace> \<lambda>_ . valid_sched \<rbrace>"
-  including no_pre
   apply (rule hoare_pre)
    apply (rule_tac I="invs and valid_untyped_inv ui and ct_active"
-     in valid_sched_tcb_state_preservation)
-          apply (wp invoke_untyped_st_tcb_at)
-          apply simp
-         apply (wp invoke_untyped_etcb_at)+
-    apply (rule hoare_post_impErr, rule hoare_pre, rule invoke_untyp_invs,
-        simp_all add: invs_valid_idle)[1]
+                in valid_sched_tcb_state_preservation)
+          apply (wpsimp wp: invoke_untyped_st_tcb_at invoke_untyped_etcb_at)+
+     apply (rule hoare_strengthen_postE, rule invoke_untyp_invs; simp add: invs_valid_idle)
+    apply simp
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)
     apply (rule_tac f="\<lambda>s. x (ready_queues s)" in hoare_lift_Pf)
      apply wp+

@@ -26,7 +26,7 @@ definition
     crunch_foo1 13
   od"
 
-crunch_ignore (valid, empty_fail, no_fail) (add: bind)
+crunch_ignore (valid, empty_fail, no_fail) (add: Nondet_Monad.bind)
 
 crunch (empty_fail) empty_fail: crunch_foo2
 

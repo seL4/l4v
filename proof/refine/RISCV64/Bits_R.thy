@@ -73,6 +73,10 @@ lemma projectKO_tcb:
   "(projectKO_opt ko = Some t) = (ko = KOTCB t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
+lemma tcb_of'_TCB[simp]:
+  "tcb_of' (KOTCB tcb) = Some tcb"
+  by (simp add: projectKO_tcb)
+
 lemma projectKO_cte:
   "(projectKO_opt ko = Some t) = (ko = KOCTE t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
@@ -207,6 +211,8 @@ definition
 where
   lfr_def[simp]:
  "lfr x y \<equiv> (y = lookup_failure_map x)"
+
+lemmas corres_throwError_lfr[corres_term] = corres_throwErrorTT[of lfr]
 
 text \<open>Correspondence and weakest precondition
         rules for the "on failure" transformers\<close>

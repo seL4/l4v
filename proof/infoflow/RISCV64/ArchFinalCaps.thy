@@ -160,7 +160,7 @@ lemma perform_page_invocation_silc_inv:
    apply (wp mapM_wp[OF _ subset_refl] set_cap_silc_inv
              mapM_x_wp[OF _ subset_refl]
              perform_page_table_invocation_silc_inv_get_cap_helper'[where st=st]
-             hoare_vcg_all_lift hoare_vcg_if_lift static_imp_wp
+             hoare_vcg_all_lift hoare_vcg_if_lift hoare_weak_lift_imp
           | wpc
           | simp only: swp_def o_def fun_app_def K_def
           | wp (once) hoare_drop_imps)+
@@ -186,7 +186,7 @@ lemma perform_asid_control_invocation_silc_inv:
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_silc_inv' retype_region_silc_inv[where sz=pageBits]
             set_cap_silc_inv get_cap_slots_holding_overlapping_caps[where st=st]
-            delete_objects_silc_inv static_imp_wp
+            delete_objects_silc_inv hoare_weak_lift_imp
          | wpc | simp )+
   apply (clarsimp simp: authorised_asid_control_inv_def silc_inv_def valid_aci_def ptr_range_def page_bits_def)
   apply (rule conjI)
@@ -250,15 +250,15 @@ lemma arch_invoke_irq_control_silc_inv[FinalCaps_assms]:
   done
 
 lemma invoke_tcb_silc_inv[FinalCaps_assms]:
-  notes static_imp_wp [wp]
-        static_imp_conj_wp [wp]
+  notes hoare_weak_lift_imp [wp]
+        hoare_weak_lift_imp_conj [wp]
   shows "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag and tcb_inv_wf tinv
                           and K (authorised_tcb_inv aag tinv)\<rbrace>
          invoke_tcb tinv
          \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (case_tac tinv)
          apply ((wp restart_silc_inv hoare_vcg_if_lift suspend_silc_inv mapM_x_wp[OF _ subset_refl]
-                    static_imp_wp
+                    hoare_weak_lift_imp
                  | wpc
                  | simp split del: if_split add: authorised_tcb_inv_def check_cap_at_def
                  | clarsimp
@@ -277,7 +277,7 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
   apply (strengthen use_no_cap_to_obj_asid_strg
          | clarsimp
          | simp only: conj_ac cong: conj_cong imp_cong
-         | wp checked_insert_pas_refined checked_cap_insert_silc_inv hoare_vcg_all_lift_R
+         | wp checked_insert_pas_refined checked_cap_insert_silc_inv hoare_vcg_all_liftE_R
               hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
               cap_delete_silc_inv_not_transferable
               cap_delete_pas_refined' cap_delete_deletes

@@ -34,7 +34,7 @@ context Arch begin global_naming AARCH64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
-         Let_def wp: zipWithM_x_empty_fail)
+         Let_def)
 
 crunch (empty_fail) empty_fail[wp]:
   decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
@@ -50,38 +50,36 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
       | wp | intro conjI impI)+
 
-crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment (* FIXME AARCH64 , check_slot *)
+crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment, check_vspace_root
 
 lemma arch_decode_ARMASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def)
   apply (wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def)
-    apply (simp add: decode_asid_control_invocation_def)
-    apply (intro impI conjI allI)
-    apply (simp add: split_def)
-    apply wp
-     apply simp
-    apply (subst bindE_assoc[symmetric])
-    apply (rule empty_fail_bindE)
-      subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
-                                  bind_def return_def returnOk_def lift_def liftE_def fail_def
-                                  gets_def get_def assert_def select_def
-                           split: if_split_asm)
+     apply (simp add: decode_asid_control_invocation_def)
+     apply (intro impI conjI allI)
+     apply (simp add: split_def)
+     apply (wp (once), simp)
+     apply (subst bindE_assoc[symmetric])
+     apply (rule empty_fail_bindE)
+      subgoal by (force simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
+                              bind_def return_def returnOk_def lift_def liftE_def fail_def
+                              gets_def get_def assert_def select_def
+                        split: if_split_asm)
      apply wpsimp
-    apply (wpsimp simp: decode_frame_invocation_def)
-    subgoal sorry (* missing wp rule *)
-   subgoal sorry (* PTs *)
-  apply wpsimp
-  done (* FIXME AARCH64 VCPU and PageFlush invocations
-  apply (wpsimp simp: decode_page_table_invocation_def)
-  done *)
+    apply (wpsimp simp: decode_frame_invocation_def decode_fr_inv_flush_def Let_def)
+   apply (wpsimp simp: decode_vspace_invocation_def decode_vs_inv_flush_def
+                       decode_page_table_invocation_def Let_def)
+  apply (wpsimp simp: decode_vcpu_invocation_def)
+  done
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   unfolding arch_decode_invocation_def decode_page_table_invocation_def decode_frame_invocation_def
-            decode_asid_control_invocation_def
+            decode_asid_control_invocation_def decode_fr_inv_flush_def Let_def
+            decode_vspace_invocation_def decode_vs_inv_flush_def
   apply (wpsimp; wpsimp?)
   apply (simp add: decode_asid_pool_invocation_def)
   apply (intro impI allI conjI)
@@ -94,12 +92,11 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
   apply (rule empty_fail_bindE, wpsimp)
   apply (subst bindE_assoc[symmetric])
   apply (rule empty_fail_bindE)
-   subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
-                               bind_def return_def returnOk_def lift_def liftE_def select_ext_def
-                               gets_def get_def assert_def fail_def)
-  sorry (* FIXME AARCH64
+   subgoal by (force simp: empty_fail_def whenE_def throwError_def select_def bindE_def
+                           bind_def return_def returnOk_def lift_def liftE_def select_ext_def
+                           gets_def get_def assert_def fail_def)
   apply wpsimp
-  done *)
+  done
 
 lemma arch_decode_invocation_empty_fail[wp]:
   "empty_fail (arch_decode_invocation label b c d e f)"
@@ -111,19 +108,20 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail
                     arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]
-  sorry (* FIXME AARCH64 frame caps
-  by (all \<open>(wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def
-                         decode_asid_control_invocation_def decode_frame_invocation_def
-                         decode_page_table_invocation_def decode_pt_inv_map_def
-                         decode_fr_inv_map_def Let_def)\<close>) (* 15s *) *)
+  apply (all \<open>(wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def
+                            decode_asid_control_invocation_def decode_frame_invocation_def
+                            decode_page_table_invocation_def decode_pt_inv_map_def
+                            decode_fr_inv_map_def decode_fr_inv_flush_def
+                            decode_vspace_invocation_def decode_vs_inv_flush_def Let_def)\<close>) (* 15s *)
+  done
 
 end
 
 global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming AARCH64
 
@@ -138,28 +136,20 @@ lemma empty_fail_pt_lookup_from_level[wp]:
 crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
   (ignore: set_object get_object)
 
-lemma vcpu_save_empty_fail[wp,EmptyFail_AI_assms]: "empty_fail (vcpu_save a)"
-  apply (simp add:  vcpu_save_def)
-  sorry (* FIXME AARCH64 missing empty_fail_dsb
-  apply (wpsimp wp: empty_fail_dsb empty_fail_isb  simp: vgic_update_def)
-  done *)
-
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
-    finalise_cap, preemption_point,
+    finalise_cap, preemption_point, vcpu_save,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pte.splits bool.splits list.splits)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
-
 end
 
 global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming AARCH64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
@@ -167,22 +157,22 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
 end
 
 global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_schedule_det?: EmptyFail_AI_schedule_det
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming AARCH64
 
@@ -209,21 +199,21 @@ crunches possible_switch_to, handle_event, activate_thread
 end
 
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_call_kernel_det?: EmptyFail_AI_call_kernel_det
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 end

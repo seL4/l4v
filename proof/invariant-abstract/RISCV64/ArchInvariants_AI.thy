@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -7,10 +8,6 @@
 theory ArchInvariants_AI
 imports InvariantsPre_AI
 begin
-
-(* setup *)
-
-declare opt_mapE[rule del]
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 
@@ -1284,9 +1281,55 @@ lemma canonical_user_pptr_base:
   "canonical_user < pptr_base"
   by (simp add: canonical_user_def pptr_base_def pptrBase_def canonical_bit_def mask_def)
 
+(* Shadow lemmas from Arch_Kernel_Config_Lemmas and fold definitions to avoid magic numbers.
+   Written out to make sure the folding has succeeded: *)
+
+lemma is_page_aligned_physBase:
+  "is_aligned physBase pageBits"
+  by (rule is_page_aligned_physBase[folded pageBits_def])
+
+lemma kernel_window_sufficient:
+  "pptrBase + (1 << kernel_window_bits) \<le> kernelELFBase"
+  by (rule kernel_window_sufficient[folded kernel_window_bits_def])
+
+lemma kernel_elf_window_at_least_page:
+  "kernelELFBase + 2 ^ pageBits \<le> kdevBase"
+  by (rule kernel_elf_window_at_least_page[folded pageBits_def])
+
+lemma kernelELFBase_no_overflow:
+  "kernelELFBase < kernelELFBase + 2 ^ pageBits"
+  by (rule kernelELFBase_no_overflow[folded pageBits_def])
+
+(* end shadowing of Arch_Kernel_Config_Lemmas *)
+
+lemma is_page_aligned_kernelELFPAddrBase:
+  "is_aligned kernelELFPAddrBase pageBits"
+  unfolding kernelELFPAddrBase_def
+  by (fastforce intro!: is_aligned_add is_page_aligned_physBase
+                simp: kernelELFPAddrBase_def pageBits_def is_aligned_def)
+
 lemma pptr_base_kernel_elf_base:
   "pptr_base < kernel_elf_base"
-  by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def)
+  by (simp add: pptr_base_def kernel_elf_base_def pptrBase_kernelELFBase)
+
+lemma pptr_base_kdev_base:
+  "pptr_base < kdev_base"
+  by (simp add: pptr_base_def pptrBase_def kdev_base_def kdevBase_def canonical_bit_def)
+
+lemma is_page_aligned_pptrTop:
+  "is_aligned pptrTop pageBits"
+  by (simp add: pptrTop_def pageBits_def is_aligned_def)
+
+lemma is_page_aligned_kernel_elf_base:
+  "is_aligned kernel_elf_base pageBits"
+  unfolding kernel_elf_base_def kernelELFBase_def
+  by (simp add: is_aligned_add is_page_aligned_pptrTop is_aligned_andI1
+                is_page_aligned_kernelELFPAddrBase)
+
+lemma canonical_user_kernel_elf_base:
+  "canonical_user < kernel_elf_base"
+  using canonical_user_pptr_base pptr_base_kernel_elf_base
+  by simp
 
 lemma above_pptr_base_canonical:
   "pptr_base \<le> p \<Longrightarrow> canonical_address p"
@@ -2564,7 +2607,7 @@ lemma vs_lookup_table_eq_lift:
 
 lemma aobjs_of_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of s"
+   \<Longrightarrow> (kheap s)(p \<mapsto> ko') |> aobj_of = aobjs_of s"
   by (rule ext)
      (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
 

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -57,17 +58,17 @@ declare store_pde_state_hyp_refs_of [wp]
 
 (* These also prove facts about copy_global_mappings *)
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch pspace_distinct[wp]: init_arch_objects "pspace_distinct"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch mdb_inv[wp]: init_arch_objects "\<lambda>s. P (cdt s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch valid_mdb[wp]: init_arch_objects "valid_mdb"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 
 lemma mdb_cte_at_store_pde[wp]:
   "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>
@@ -126,14 +127,14 @@ lemma get_pde_wellformed[wp]:
   done
 
 crunch valid_objs[wp]: init_arch_objects "valid_objs"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 
 lemma set_pd_arch_state[wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_pd ptr val \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (rule set_pd_valid_arch)
 
 crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
-  (ignore: clearMemory set_object wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory set_object wp: crunch_wps unless_wp)
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
 
@@ -341,7 +342,7 @@ lemma mapM_x_store_pde_eq_kernel_mappings_restr:
                       \<and> ko_at (ArchObj (PageDirectory pdv')) pd' s
                       \<and> pdv (ucast x) = pdv' (ucast x)))\<rbrace>"
   apply (induct xs rule: rev_induct, simp_all add: mapM_x_Nil mapM_x_append mapM_x_singleton)
-  apply (erule hoare_seq_ext[rotated])
+  apply (erule bind_wp_fwd)
   apply (simp add: store_pde_def set_pd_def set_object_def cong: bind_cong)
   apply (wp get_object_wp get_pde_wp)
   apply (clarsimp simp: obj_at_def split del: if_split)
@@ -377,7 +378,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
      copy_global_mappings pd
    \<lbrace>\<lambda>rv s. equal_kernel_mappings (s \<lparr> kheap := restrict_map (kheap s) (- S) \<rparr>)\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (rule hoare_chain)
     apply (rule hoare_vcg_conj_lift)
      apply (rule_tac P="global_pd \<notin> (insert pd S)" in hoare_vcg_prop)
@@ -447,9 +448,9 @@ lemma copy_global_invs_mappings_restricted:
   apply (simp add: valid_pspace_def pred_conj_def)
   apply (rule hoare_conjI, wp copy_global_equal_kernel_mappings_restricted)
    apply (clarsimp simp: global_refs_def)
-  apply (rule valid_prove_more, rule hoare_vcg_conj_lift, rule hoare_TrueI)
+  apply (rule hoare_post_add, rule hoare_vcg_conj_lift, rule hoare_TrueI)
   apply (simp add: copy_global_mappings_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp[where S="{x. kernel_base >> 20 \<le> x
                                        \<and> x < 2 ^ (pd_bits - 2)}"])
@@ -508,7 +509,7 @@ lemma mapM_copy_global_invs_mappings_restricted:
   apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
   apply (induct pds, simp_all only: mapM_x_Nil mapM_x_Cons K_bind_def)
    apply wpsimp
-  apply (rule hoare_seq_ext, assumption, thin_tac "P" for P)
+  apply (rule bind_wp, assumption, thin_tac "P" for P)
   apply (wpsimp wp: copy_global_invs_mappings_restricted)
   done
 

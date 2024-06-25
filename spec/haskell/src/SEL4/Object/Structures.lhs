@@ -248,6 +248,14 @@ The TCB is used to store various data about the thread's current state:
 >         tcbState :: ThreadState,
 >         tcbMCP :: Priority,
 >         tcbPriority :: Priority,
+
+\item a flag indicating whether the thread is a member of a ready queue.
+    Note that the flag is necessary, since although the tcbSchedPrev and tcbSchedNext fields listed below
+    are used only to navigate through a ready queue, we cannot say that a thread is queued
+    if and only if either its tcbSchedPrev or tcbSchedNext field is not Nothing.
+    For consider a thread that is the sole member of a ready queue.
+    It will have both its tcbSchedNext and tcbSchedPrev fields equal to Nothing, but it will still be tcbQueued.
+
 >         tcbQueued :: Bool,
 
 \item the thread's current fault state;
@@ -269,6 +277,11 @@ The TCB is used to store various data about the thread's current state:
 \item the thread's currently bound notification object;
 
 >         tcbBoundNotification :: Maybe (PPtr Notification),
+
+\item the thread's pointers to the previous and next entries in a scheduling queue;
+
+>         tcbSchedPrev :: Maybe (PPtr TCB),
+>         tcbSchedNext :: Maybe (PPtr TCB),
 
 \item and any arch-specific TCB contents
 
@@ -403,7 +416,8 @@ This type is used to represent the required action, if any, of the scheduler nex
 
 \item IPC operations may request that the scheduler switch to a specific thread.
 
->     | SwitchToThread (PPtr TCB)
+>     | SwitchToThread {
+>         schActTarget :: PPtr TCB }
 
 >     deriving (Eq, Show)
 
@@ -475,4 +489,6 @@ Various operations on the free index of an Untyped cap.
 >         endPtr = capPtr cap + PPtr (2 ^ capBlockSize cap) - 1
 > untypedZeroRange _ = Nothing
 
-
+> data TcbQueue = TcbQueue {
+>     tcbQueueHead :: Maybe (PPtr TCB),
+>     tcbQueueEnd :: Maybe (PPtr TCB) }

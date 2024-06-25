@@ -17,7 +17,7 @@ definition
   "no_irq f \<equiv> \<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
 
 lemma wpc_helper_no_irq:
-  "no_irq f \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (no_irq f)"
+  "no_irq f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (no_irq f)"
   by (simp add: wpc_helper_def)
 
 wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
@@ -56,7 +56,7 @@ setup \<open>
 \<close>
 
 crunch_ignore (no_irq) (add:
-  NonDetMonad.bind return "when" get gets fail
+  Nondet_Monad.bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE
@@ -83,13 +83,13 @@ lemma det_getRestartPC: "det getRestartPC"
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
 
-
+(* FIXME empty_fail: make all empty_fail [intro!, wp], and non-conditional ones [simp] *)
 lemma ef_loadWord: "empty_fail (loadWord x)"
-  by (simp add: loadWord_def)
+  by (fastforce simp: loadWord_def)
 
 
 lemma ef_storeWord: "empty_fail (storeWord x y)"
-  by (simp add: storeWord_def)
+  by (fastforce simp: storeWord_def)
 
 
 lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
@@ -175,7 +175,7 @@ lemma no_fail_getActiveIRQ[wp]:
   "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
-   apply (wp non_fail_select)
+   apply wp
   apply simp
   done
 
@@ -184,7 +184,7 @@ definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow>
 lemma getActiveIRQ_inv [wp]:
   "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply (simp add: irq_state_independent_def)
   done
 
@@ -287,7 +287,7 @@ lemma no_irq_seq [wp]:
   "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (f >>= g)"
   apply (subst no_irq_def)
   apply clarsimp
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
   apply (wp|simp)+
   done
 
@@ -369,7 +369,7 @@ lemma getActiveIRQ_le_maxIRQ':
     getActiveIRQ in_kernel
    \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply clarsimp
   apply (rule ccontr)
   apply (simp add: linorder_not_le)
@@ -379,14 +379,13 @@ lemma getActiveIRQ_le_maxIRQ':
 lemma getActiveIRQ_neq_Some0xFF':
   "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
-  apply simp
+  apply wpsimp
   done
 
 lemma getActiveIRQ_neq_non_kernel:
   "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply auto
   done
 
@@ -407,16 +406,14 @@ lemma empty_fail_initL2Cache: "empty_fail  initL2Cache"
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
-  by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
+  by (fastforce simp: clearMemory_def mapM_x_mapM ef_storeWord)
 
 lemma getFaultAddress_ef[simp,wp]: "empty_fail getFaultAddress"
   by (simp add: getFaultAddress_def)
 
-(* FIXME x64: move *)
 lemma ioapicMapPinToVector_ef[simp,wp]: "empty_fail (ioapicMapPinToVector a b c d e)"
   by (simp add: ioapicMapPinToVector_def)
 
-(* FIXME x64: move *)
 lemma invalidateTLBEntry_ef[simp,wp]: "empty_fail (invalidateTLBEntry b)"
   by (simp add: invalidateTLBEntry_def)
 
@@ -426,39 +423,30 @@ lemma invalidateASID_ef[simp,wp]: "empty_fail (invalidateASID a b)"
 lemma invalidateTranslationSingleASID_ef[simp,wp]: "empty_fail (invalidateTranslationSingleASID a b)"
   by (simp add: invalidateTranslationSingleASID_def)
 
-(* FIXME x64: move *)
 lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b a)"
   by (simp add: hwASIDInvalidate_def)
 
-(* FIXME x64: move *)
 lemma updateIRQState_ef[simp,wp]: "empty_fail (updateIRQState b c)"
-  by (simp add: updateIRQState_def)
+  by (fastforce simp: updateIRQState_def)
 
-(* FIXME x64: move *)
 lemma writeCR3_ef[simp,wp]: "empty_fail (writeCR3 a b)"
   by (simp add: writeCR3_def)
 
-(* FIXME x64: move *)
 lemma in8_ef[simp,wp]: "empty_fail (in8 port)"
-  by (simp add: in8_def)
+  by (fastforce simp: in8_def)
 
-(* FIXME x64: move *)
 lemma in16_ef[simp,wp]: "empty_fail (in16 port)"
-  by (simp add: in16_def)
+  by (fastforce simp: in16_def)
 
-(* FIXME x64: move *)
 lemma in32_ef[simp,wp]: "empty_fail (in32 port)"
-  by (simp add: in32_def)
+  by (fastforce simp: in32_def)
 
-(* FIXME x64: move *)
 lemma out8_ef[simp,wp]: "empty_fail (out8 port dat)"
   by (simp add: out8_def)
 
-(* FIXME x64: move *)
 lemma out16_ef[simp,wp]: "empty_fail (out16 port dat)"
   by (simp add: out16_def)
 
-(* FIXME x64: move *)
 lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
   by (simp add: out32_def)
 

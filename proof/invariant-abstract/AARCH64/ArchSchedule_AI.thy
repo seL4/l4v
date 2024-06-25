@@ -31,32 +31,22 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
 global_naming Arch
 
 lemma arch_stt_invs [wp,Schedule_AI_asms]:
-  "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
+  "arch_switch_to_thread t' \<lbrace>invs\<rbrace>"
   apply (wpsimp simp: arch_switch_to_thread_def)
   by (rule sym_refs_VCPU_hyp_live; fastforce)
 
 lemma arch_stt_tcb [wp,Schedule_AI_asms]:
-  "\<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply (wp)
-  sorry (* FIXME AARCH64 VCPU
-  done *)
+  "arch_switch_to_thread t' \<lbrace>tcb_at t'\<rbrace>"
+  by (wpsimp simp: arch_switch_to_thread_def wp: tcb_at_typ_at)
 
 lemma arch_stt_runnable[Schedule_AI_asms]:
-  "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at runnable t\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply wp
-  sorry (* FIXME AARCH64 VCPU
-  done *)
+  "arch_switch_to_thread t \<lbrace>st_tcb_at runnable t\<rbrace>"
+  by (wpsimp simp: arch_switch_to_thread_def)
 
 lemma idle_strg:
   "thread = idle_thread s \<and> invs s \<Longrightarrow> invs (s\<lparr>cur_thread := thread\<rparr>)"
   by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
                      pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
-
-lemma set_vcpu_ct[wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_vcpu v v' \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  by (wpsimp simp: set_vcpu_def wp: get_object_wp)
 
 crunches
   vcpu_update, vgic_update, vgic_update_lr, vcpu_restore_reg_range, vcpu_save_reg_range,
@@ -66,16 +56,12 @@ crunches
   (wp: mapM_x_wp mapM_wp subset_refl)
 
 lemma arch_stit_invs[wp, Schedule_AI_asms]:
-  "\<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. invs\<rbrace>"
-  sorry (* FIXME AARCH64 VSpace & VCPU
-  by (wpsimp simp: arch_switch_to_idle_thread_def) *)
+  "arch_switch_to_idle_thread \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: arch_switch_to_idle_thread_def)
 
 lemma arch_stit_tcb_at[wp]:
-  "\<lbrace>tcb_at t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. tcb_at t\<rbrace>"
-  apply (simp add: arch_switch_to_idle_thread_def )
-  apply (wp tcb_at_typ_at)
-  sorry (* FIXME AARCH64 VSpace & VCPU
-  done *)
+  "arch_switch_to_idle_thread \<lbrace>tcb_at t\<rbrace>"
+  by (wpsimp simp: arch_switch_to_idle_thread_def wp: tcb_at_typ_at)
 
 crunches set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
@@ -83,30 +69,27 @@ crunches set_vm_root
   (simp: crunch_simps wp: hoare_drop_imps)
 
 lemma arch_stit_activatable[wp, Schedule_AI_asms]:
-  "\<lbrace>ct_in_state activatable\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
+  "arch_switch_to_idle_thread \<lbrace>ct_in_state activatable\<rbrace>"
   apply (clarsimp simp: arch_switch_to_idle_thread_def)
   apply (wpsimp simp: ct_in_state_def wp: ct_in_state_thread_state_lift)
-  sorry (* FIXME AARCH64 VCPU
-  done *)
+  done
 
 lemma stit_invs [wp,Schedule_AI_asms]:
-  "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "switch_to_idle_thread \<lbrace>invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
   apply (wpsimp|strengthen idle_strg)+
-  sorry (* FIXME AARCH64 VSpace & VCPU
-  done *)
+  done
 
 lemma stit_activatable[Schedule_AI_asms]:
-  "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
+  "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_state activatable\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
-  apply (wp | simp add: ct_in_state_def)+
-  sorry (* FIXME AARCH64 VCPU
+  apply (wpsimp simp: ct_in_state_def)
   apply (clarsimp simp: invs_def valid_state_def cur_tcb_def valid_idle_def
                  elim!: pred_tcb_weaken_strongerE)
-  done *)
+  done
 
 lemma stt_invs [wp,Schedule_AI_asms]:
-  "\<lbrace>invs\<rbrace> switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
+  "switch_to_thread t' \<lbrace>invs\<rbrace>"
   apply (simp add: switch_to_thread_def)
   apply wp
      apply (simp add: trans_state_update[symmetric] del: trans_state_update)
@@ -122,17 +105,17 @@ lemma stt_invs [wp,Schedule_AI_asms]:
 end
 
 interpretation Schedule_AI_U?: Schedule_AI_U
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?)
-  qed
+    by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?)
+qed
 
 interpretation Schedule_AI?: Schedule_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?)
-  qed
+    by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?)
+qed
 
 end

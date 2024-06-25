@@ -143,180 +143,6 @@ lemma cteSizeBits_le_cte_level_bits[simp]:
   "cteSizeBits \<le> cte_level_bits"
   by (simp add: cte_level_bits_def cteSizeBits_def)
 
-lemma msb_le_mono:
-  fixes v w :: "'a::len word"
-  shows "v \<le> w \<Longrightarrow> msb v \<Longrightarrow> msb w"
-  by (simp add: msb_big)
-
-lemma neg_msb_le_mono:
-  fixes v w :: "'a::len word"
-  shows "v \<le> w \<Longrightarrow> \<not> msb w \<Longrightarrow> \<not> msb v"
-  by (simp add: msb_big)
-
-lemmas msb_less_mono = msb_le_mono[OF less_imp_le]
-lemmas neg_msb_less_mono = neg_msb_le_mono[OF less_imp_le]
-
-lemma word_sless_iff_less:
-  "\<lbrakk> \<not> msb v; \<not> msb w \<rbrakk> \<Longrightarrow> v <s w \<longleftrightarrow> v < w"
-  by (simp add: word_sless_alt sint_eq_uint word_less_alt)
-
-lemmas word_sless_imp_less = word_sless_iff_less[THEN iffD1, rotated 2]
-lemmas word_less_imp_sless = word_sless_iff_less[THEN iffD2, rotated 2]
-
-lemma word_sle_iff_le:
-  "\<lbrakk> \<not> msb v; \<not> msb w \<rbrakk> \<Longrightarrow> v <=s w \<longleftrightarrow> v \<le> w"
-  by (simp add: word_sle_def sint_eq_uint word_le_def)
-
-lemmas word_sle_imp_le = word_sle_iff_le[THEN iffD1, rotated 2]
-lemmas word_le_imp_sle = word_sle_iff_le[THEN iffD2, rotated 2]
-
-lemma to_bool_if:
-  "(if w \<noteq> 0 then 1 else 0) = (if to_bool w then 1 else 0)"
-  by (auto simp: to_bool_def)
-
-(* FIXME: move to Word_Lib *)
-lemma word_upcast_shiftr:
-  assumes "LENGTH('a::len) \<le> LENGTH('b::len)"
-  shows "UCAST('a \<rightarrow> 'b) (w >> n) = UCAST('a \<rightarrow> 'b) w >> n"
-  apply (intro word_eqI impI iffI; clarsimp simp: word_size nth_shiftr nth_ucast)
-  apply (drule test_bit_size)
-  using assms by (simp add: word_size)
-
-lemma word_upcast_neg_msb:
-  "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> \<not> msb (UCAST('a \<rightarrow> 'b) w)"
-  unfolding ucast_def msb_word_of_int
-  by clarsimp (metis Suc_pred bit_imp_le_length lens_gt_0(2) not_less_eq)
-
-(* FIXME: move to Word_Lib *)
-lemma word_upcast_0_sle:
-  "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> 0 <=s UCAST('a \<rightarrow> 'b) w"
-  by (simp add: word_sle_iff_le[OF word_msb_0 word_upcast_neg_msb])
-
-(* FIXME: move to Word_Lib *)
-lemma scast_ucast_up_eq_ucast:
-  assumes "LENGTH('a::len) < LENGTH('b::len)"
-  shows "SCAST('b \<rightarrow> 'c) (UCAST('a \<rightarrow> 'b) w) = UCAST('a \<rightarrow> 'c::len) w"
-  using assms
-  apply (subst scast_eq_ucast; simp)
-  apply (simp only: ucast_def msb_word_of_int)
-   apply (metis bin_nth_uint_imp decr_length_less_iff numeral_nat(7) verit_comp_simplify1(3))
-  by (metis less_or_eq_imp_le ucast_nat_def unat_ucast_up_simp)
-
-lemma not_max_word_iff_less:
-  "w \<noteq> max_word \<longleftrightarrow> w < max_word"
-  by (simp add: order_less_le)
-
-lemma ucast_increment:
-  assumes "w \<noteq> max_word"
-  shows "UCAST('a::len \<rightarrow> 'b::len) w + 1 = UCAST('a \<rightarrow> 'b) (w + 1)"
-  apply (cases "LENGTH('b) \<le> LENGTH('a)")
-   apply (simp add: ucast_down_add is_down)
-  apply (subgoal_tac "uint w + 1 < 2 ^ LENGTH('a)")
-   apply (subgoal_tac "uint w + 1 < 2 ^ LENGTH('b)")
-    apply (subst word_uint_eq_iff)
-    apply (simp add: uint_arith_simps uint_up_ucast is_up)
-   apply (erule less_trans, rule power_strict_increasing, simp, simp)
-  apply (subst less_diff_eq[symmetric])
-  using assms
-  apply (simp add: not_max_word_iff_less word_less_alt)
-  apply (erule less_le_trans)
-  apply simp
-  done
-
-lemma max_word_gt_0:
-  "0 < max_word"
-  by (simp add: le_neq_trans[OF max_word_max])
-
-lemma and_not_max_word:
-  "m \<noteq> max_word \<Longrightarrow> w && m \<noteq> max_word"
-  by (simp add: not_max_word_iff_less word_and_less')
-
-lemma mask_not_max_word:
-  "m < LENGTH('a::len) \<Longrightarrow> mask m \<noteq> (max_word :: 'a word)"
-  by (simp add: mask_eq_exp_minus_1)
-
-lemmas and_mask_not_max_word =
-  and_not_max_word[OF mask_not_max_word]
-
-lemma shiftr_not_max_word:
-  "0 < n \<Longrightarrow> w >> n \<noteq> max_word"
-  by (metis and_mask_eq_iff_shiftr_0 and_mask_not_max_word diff_less len_gt_0 shiftr_le_0 word_shiftr_lt)
-
-lemma word_sandwich1:
-  fixes a b c :: "'a::len word"
-  assumes "a < b"
-  assumes "b <= c"
-  shows "0 < b - a \<and> b - a <= c"
-  using assms diff_add_cancel order_less_irrefl add_0 word_le_imp_diff_le
-        word_le_less_eq word_neq_0_conv
-  by metis
-
-lemma word_sandwich2:
-  fixes a b :: "'a::len word"
-  assumes "0 < a"
-  assumes "a <= b"
-  shows "b - a < b"
-  using assms less_le_trans word_diff_less
-  by blast
-
-lemma unat_and_mask_less_2p:
-  fixes w :: "'a::len word"
-  shows "m < LENGTH('a) \<Longrightarrow> unat (w && mask m) < 2 ^ m"
-  by (simp add: unat_less_helper  and_mask_less')
-
-lemma unat_shiftr_less_2p:
-  fixes w :: "'a::len word"
-  shows "n + m = LENGTH('a) \<Longrightarrow> unat (w >> n) < 2 ^ m"
-  by (cases "n = 0"; simp add: unat_less_helper shiftr_less_t2n3)
-
-lemma nat_div_less_mono:
-  fixes m n :: nat
-  shows "m div d < n div d \<Longrightarrow> m < n"
-  by (meson div_le_mono not_less)
-
-lemma word_shiftr_less_mono:
-  fixes w :: "'a::len word"
-  shows "w >> n < v >> n \<Longrightarrow> w < v"
-  by (auto simp: word_less_nat_alt shiftr_div_2n' elim: nat_div_less_mono)
-
-lemma word_shiftr_less_mask:
-  fixes w :: "'a::len word"
-  shows "(w >> n < v >> n) \<longleftrightarrow> (w && ~~mask n < v && ~~mask n)"
-  by (metis (mono_tags) le_shiftr mask_shift shiftr_eq_neg_mask_eq word_le_less_eq word_le_not_less)
-
-lemma word_shiftr_le_mask:
-  fixes w :: "'a::len word"
-  shows "(w >> n \<le> v >> n) \<longleftrightarrow> (w && ~~mask n \<le> v && ~~mask n)"
-  by (metis (mono_tags) le_shiftr mask_shift shiftr_eq_neg_mask_eq word_le_less_eq word_le_not_less)
-
-lemma word_shiftr_eq_mask:
-  fixes w :: "'a::len word"
-  shows "(w >> n = v >> n) \<longleftrightarrow> (w && ~~mask n = v && ~~mask n)"
-  by (metis (mono_tags) mask_shift shiftr_eq_neg_mask_eq)
-
-lemmas word_shiftr_cmp_mask =
-  word_shiftr_less_mask word_shiftr_le_mask word_shiftr_eq_mask
-
-lemma if_if_if_same_output:
-  "(if c1 then if c2 then t else f else if c3 then t else f) = (if c1 \<and> c2 \<or> \<not>c1 \<and> c3 then t else f)"
-  by (simp split: if_splits)
-
-lemma word_le_split_mask:
-  "(w \<le> v) \<longleftrightarrow> (w >> n < v >> n \<or> w >> n = v >> n \<and> w && mask n \<le> v && mask n)"
-  apply (simp add: word_shiftr_eq_mask word_shiftr_less_mask)
-  apply (rule subst[where P="\<lambda>c. c \<le> d = e" for d e, OF AND_NOT_mask_plus_AND_mask_eq[where n=n]])
-  apply (rule subst[where P="\<lambda>c. d \<le> c = e" for d e, OF AND_NOT_mask_plus_AND_mask_eq[where n=n]])
-  apply (rule iffI)
-   apply safe
-     apply (fold_subgoals (prefix))[2]
-    apply (subst atomize_conj)
-    apply (rule context_conjI)
-     apply (metis AND_NOT_mask_plus_AND_mask_eq neg_mask_mono_le word_le_less_eq)
-    apply (metis add.commute word_and_le1 word_bw_comms(1) word_plus_and_or_coroll2 word_plus_mcs_4)
-   apply (metis Groups.add_ac(2) neg_mask_mono_le word_le_less_eq word_not_le word_plus_and_or_coroll2)
-  apply (metis add.commute word_and_le1 word_bw_comms(1) word_plus_and_or_coroll2 word_plus_mcs_3)
-  done
-
 lemma unat_ucast_prio_mask_simp[simp]:
   "unat (ucast (p::priority) && mask m :: machine_word) = unat (p && mask m)"
   by (simp add: ucast_and_mask)
@@ -325,18 +151,10 @@ lemma unat_ucast_prio_shiftr_simp[simp]:
   "unat (ucast (p::priority) >> n :: machine_word) = unat (p >> n)"
   by simp
 
-lemma from_bool_to_bool_and_1 [simp]:
-  assumes r_size: "1 < size r"
-  shows "from_bool (to_bool (r && 1)) = r && 1"
-proof -
-  from r_size have "r && 1 < 2"
-    by (simp add: and_mask_less_size [where n=1, unfolded mask_def, simplified])
-  thus ?thesis
-    by (fastforce simp add: from_bool_def to_bool_def dest: word_less_cases)
-qed
-
 lemma wb_gt_2:
   "2 < word_bits" by (simp add: word_bits_conv)
+
+declare from_bool_to_bool_and_1[simp]
 
 (* NOTE: unused. *)
 lemma inj_on_option_map:
@@ -468,8 +286,8 @@ lemma word_minus_1_shiftr:
   apply (clarsimp simp: and_mask_dvd low_bits_zero)
   apply (subst mod_pos_pos_trivial)
     apply (simp add: word_le_def)
-    apply (metis mult_zero_left neq_zero div_positive_int linorder_not_le uint_2p_alt word_div_lt_eq_0
-                 word_less_def zless2p)
+    apply (metis (mono_tags) More_Word.word_div_mult assms(2) div_of_0_id p2_gt_0 uint_2p_alt uint_div
+                             unsigned_eq_0_iff word_less_div word_less_iff_unsigned)
    apply (metis shiftr_div_2n uint_1 uint_sub_lt2p)
   apply fastforce
   done
@@ -568,7 +386,7 @@ lemma map_to_ko_at_updI':
    \<lbrakk> (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some y;
      valid_pspace' s; ko_at' y' x' s;
      objBitsKO (injectKO y') = objBitsKO y''; x \<noteq> x' \<rbrakk> \<Longrightarrow>
-   ko_at' y x (s\<lparr>ksPSpace := ksPSpace s(x' \<mapsto> y'')\<rparr>)"
+   ko_at' y x (s\<lparr>ksPSpace := (ksPSpace s)(x' \<mapsto> y'')\<rparr>)"
   by (fastforce simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd
                dest: map_to_ko_atI)
 
@@ -625,9 +443,7 @@ lemma tcbFault_submonad_args:
 lemma threadGet_stateAssert_gets:
   "threadGet ext t = do stateAssert (tcb_at' t) []; gets (thread_fetch ext t) od"
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
-    apply (clarsimp intro!: obj_at_ko_at'[where P="\<lambda>tcb :: tcb. True", simplified]
-           | wp threadGet_wp)+
-  apply (clarsimp simp: obj_at'_def thread_fetch_def projectKOs)
+  apply (wp threadGet_wp | clarsimp simp: obj_at'_def thread_fetch_def projectKOs)+
   done
 
 lemma threadGet_tcbFault_submonad_fn:
@@ -653,7 +469,7 @@ lemma asUser_obj_at_notQ:
    asUser t (setRegister r v)
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: asUser_def)
-  apply (rule hoare_seq_ext)+
+  apply (rule bind_wp)+
     apply (simp add: split_def)
     apply (rule threadSet_obj_at'_really_strongest)
    apply (wp threadGet_wp |rule gets_inv|wpc|clarsimp)+
@@ -670,6 +486,7 @@ lemma empty_fail_asUser[iff]:
 lemma asUser_mapM_x:
   "(\<And>x. empty_fail (f x)) \<Longrightarrow>
     asUser t (mapM_x f xs) = do stateAssert (tcb_at' t) []; mapM_x (\<lambda>x. asUser t (f x)) xs od"
+  supply empty_fail_cond[simp]
   apply (simp add: mapM_x_mapM asUser_bind_distrib)
   apply (subst submonad_mapM [OF submonad_asUser submonad_asUser])
    apply simp
@@ -678,7 +495,7 @@ lemma asUser_mapM_x:
   apply (rule bind_apply_cong [OF refl])+
   apply (clarsimp simp: in_monad dest!: fst_stateAssertD)
   apply (drule use_valid, rule mapM_wp', rule asUser_typ_ats, assumption)
-  apply (simp add: stateAssert_def get_def NonDetMonad.bind_def)
+  apply (simp add: stateAssert_def get_def Nondet_Monad.bind_def)
   done
 
 lemma asUser_threadGet_tcbFault_comm:
@@ -785,7 +602,7 @@ lemma empty_fail_rethrowFailure:
 lemma empty_fail_resolveAddressBits:
   "empty_fail (resolveAddressBits cap cptr bits)"
 proof -
-  note empty_fail_assertE[iff]
+  note empty_fail_cond[simp]
   show ?thesis
   apply (rule empty_fail_use_cutMon)
   apply (induct rule: resolveAddressBits.induct)
@@ -793,8 +610,7 @@ proof -
   apply (unfold Let_def cnode_cap_case_if fun_app_def
                 K_bind_def haskell_assertE_def split_def)
   apply (intro empty_fail_cutMon_intros)
-  apply (clarsimp simp: empty_fail_drop_cutMon empty_fail_whenEs
-                        locateSlot_conv returnOk_liftE[symmetric]
+  apply (clarsimp simp: empty_fail_drop_cutMon locateSlot_conv returnOk_liftE[symmetric]
                         isCap_simps)+
   done
 qed
@@ -828,8 +644,9 @@ lemma getMessageInfo_le3:
   apply wp
   apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
    apply wp
+  apply (rename_tac rv s)
   apply (simp add: messageInfoFromWord_def Let_def msgExtraCapBits_def)
-  apply (cut_tac y="r >> Types_H.msgLengthBits" in word_and_le1 [where a=3])
+  apply (cut_tac y="rv >> Types_H.msgLengthBits" in word_and_le1 [where a=3])
   apply (simp add: word_le_nat_alt)
   done
 
@@ -872,7 +689,7 @@ lemma cteDeleteOne_sch_act_wf:
   apply (simp add: finaliseCapTrue_standin_def Let_def)
   apply (rule hoare_pre)
   apply (wp isFinalCapability_inv cancelAllSignals_sch_act_wf
-            cancelAllIPC_sch_act_wf getCTE_wp' static_imp_wp
+            cancelAllIPC_sch_act_wf getCTE_wp' hoare_weak_lift_imp
          | wpc
          | simp add: Let_def split: if_split)+
   done
@@ -902,7 +719,7 @@ lemma setNotification_tcb:
 
 lemma state_refs_of'_upd:
   "\<lbrakk> valid_pspace' s; ko_wp_at' (\<lambda>ko. objBitsKO ko = objBitsKO ko') ptr s \<rbrakk> \<Longrightarrow>
-   state_refs_of' (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko')\<rparr>) =
+   state_refs_of' (s\<lparr>ksPSpace := (ksPSpace s)(ptr \<mapsto> ko')\<rparr>) =
    (state_refs_of' s)(ptr := refs_of' ko')"
   apply (rule ext)
   apply (clarsimp simp: ps_clear_upd valid_pspace'_def pspace_aligned'_def
@@ -913,14 +730,6 @@ lemma state_refs_of'_upd:
 lemma ex_st_tcb_at'_simp[simp]:
   "(\<exists>ts. st_tcb_at' ((=) ts) dest s) = tcb_at' dest s"
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
-
-lemma threadGet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb thread s \<longrightarrow> P (f tcb) s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
-  apply (rule hoare_post_imp [OF _ tg_sp'])
-  apply clarsimp
-  apply (frule obj_at_ko_at')
-  apply (clarsimp elim: obj_atE')
-  done
 
 lemma threadGet_wp'':
   "\<lbrace>\<lambda>s. \<forall>v. obj_at' (\<lambda>tcb. f tcb = v) thread s \<longrightarrow> P v s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
@@ -987,7 +796,7 @@ lemma empty_fail_getIdleThread [simp,intro!]:
 
 lemma setTCB_cur:
   "\<lbrace>cur_tcb'\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (wp cur_tcb_lift)
   apply (simp add: setObject_def split_def updateObject_default_def)
   apply wp
@@ -998,8 +807,7 @@ lemma empty_fail_slotCapLongRunningDelete:
   "empty_fail (slotCapLongRunningDelete slot)"
   by (auto simp: slotCapLongRunningDelete_def Let_def
                  case_Null_If isFinalCapability_def
-          split: if_split
-         intro!: empty_fail_bind)
+          split: if_split)
 
 lemmas mapM_x_append = mapM_x_append2
 
@@ -1020,9 +828,6 @@ lemma getSlotCap_wp':
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id"
-  by (simp add: fromIntegral_def fromInteger_nat toInteger_nat)
-
 lemma invs_cicd_valid_objs' [elim!]:
   "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> valid_objs' s"
   by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_pspace'_def)
@@ -1032,10 +837,6 @@ lemma st_tcb_at'_opeq_simp:
     = st_tcb_at' (\<lambda>st. st = Structures_H.thread_state.Running) (ksCurThread s) s"
   by (fastforce simp add: st_tcb_at'_def obj_at'_def)
 
-lemma invs_queues_imp:
-  "invs' s \<longrightarrow> valid_queues s"
-  by clarsimp
-
 lemma invs'_pspace_domain_valid:
   "invs' s \<Longrightarrow> pspace_domain_valid s"
   by (simp add: invs'_def valid_state'_def)
@@ -1044,45 +845,6 @@ lemma and_eq_0_is_nth:
   fixes x :: "('a :: len) word"
   shows "y = 1 << n \<Longrightarrow> ((x && y) = 0) = (\<not> (x !! n))"
   by (metis (poly_guards_query) and_eq_0_is_nth)
-
-lemma tcbSchedEnqueue_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> tcbSchedEnqueue t' \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp add: y)+
-  done
-
-lemma rescheduleRequired_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp tcbSchedEnqueue_obj_at_unchangedT[OF y] | wpc)+
-  apply simp
-  done
-
-lemma setThreadState_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbState_update f tcb) = P tcb"
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setThreadState t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp rescheduleRequired_obj_at_unchangedT[OF y], simp)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemma setBoundNotification_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbBoundNotification_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setBoundNotification t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemmas setThreadState_obj_at_unchanged
-    = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI]
-
-lemmas setBoundNotification_obj_at_unchanged
-    = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
 
 lemma magnitudeCheck_assert2:
   "\<lbrakk> is_aligned x n; (1 :: machine_word) < 2 ^ n; ksPSpace s x = Some v \<rbrakk> \<Longrightarrow>
@@ -1207,7 +969,7 @@ lemma ctes_of_valid_strengthen:
 
 lemma finaliseCap_Reply:
   "\<lbrace>Q (NullCap,NullCap) and K (isReplyCap cap)\<rbrace> finaliseCapTrue_standin cap is_final \<lbrace>Q\<rbrace>"
-  apply (rule NonDetMonadVCG.hoare_gen_asm)
+  apply (rule Nondet_VCG.hoare_gen_asm)
   apply (wpsimp simp: finaliseCapTrue_standin_def isCap_simps)
   done
 
@@ -1301,13 +1063,6 @@ lemma ksPSpace_update_eq_ExD:
   "s = t\<lparr> ksPSpace := ksPSpace s\<rparr>
      \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
   by (erule exI)
-
-lemma tcbSchedEnqueue_queued_queues_inv:
-  "\<lbrace>\<lambda>s.  obj_at' tcbQueued t s \<and> P (ksReadyQueues s) \<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  unfolding tcbSchedEnqueue_def unless_def
-  apply (wpsimp simp: if_apply_def2 wp: threadGet_wp)
-  apply normalise_obj_at'
-  done
 
 (* FIXME BV: generalise *)
 lemma word_clz_1[simp]:
@@ -1466,9 +1221,21 @@ lemma asUser_obj_at':
 lemma update_ep_map_to_ctes:
   fixes P :: "endpoint \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
+  shows     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)
+
+(* FIXME AARCH64 move *)
+lemma multiple_add_less_nat:
+  "\<lbrakk> a < (c :: nat); x dvd a; x dvd c; b < x \<rbrakk>
+   \<Longrightarrow> a + b < c"
+  apply (subgoal_tac "b < c - a")
+   apply simp
+  apply (erule order_less_le_trans)
+  apply (rule dvd_imp_le)
+   apply simp
+  apply simp
+  done
 
 end

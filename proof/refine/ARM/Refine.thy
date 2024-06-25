@@ -81,7 +81,7 @@ lemma typ_at_UserDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
-                        cte_relation_def other_obj_relation_def
+                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
                         pde_relation_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
@@ -112,7 +112,7 @@ lemma typ_at_DeviceDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
-                        cte_relation_def other_obj_relation_def
+                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
                         pde_relation_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
@@ -280,7 +280,7 @@ lemma kernel_entry_invs:
             thread_set_ct_running thread_set_not_state_valid_sched
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
-            static_imp_wp
+            hoare_weak_lift_imp
       | clarsimp simp add: tcb_cap_cases_def active_from_running)+
   done
 
@@ -296,18 +296,18 @@ definition
 
 lemma do_user_op_valid_list:"\<lbrace>valid_list\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_valid_sched:"\<lbrace>valid_sched\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_sched_act:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> do_user_op f tc \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_invs2:
@@ -401,6 +401,19 @@ abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" w
 
 lemmas valid_domain_list'_def = valid_domain_list_2_def
 
+lemma fastpathKernelAssertions_cross:
+  "\<lbrakk> (s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
+  unfolding fastpathKernelAssertions_def
+  by simp
+
+(* this is only needed for callKernel, where we have invs' on concrete side *)
+lemma corres_cross_over_fastpathKernelAssertions:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> invs s; \<And>s'. Q s' \<Longrightarrow> invs' s';
+     corres r P (Q and fastpathKernelAssertions) f g \<rbrakk> \<Longrightarrow>
+   corres r P Q f g"
+  by (rule corres_cross_over_guard[where Q="Q and fastpathKernelAssertions"])
+     (fastforce elim: fastpathKernelAssertions_cross)+
+
 defs kernelExitAssertions_def:
   "kernelExitAssertions s \<equiv> 0 < ksDomainTime s \<and> valid_domain_list' s"
 
@@ -421,8 +434,8 @@ lemma kernelEntry_invs':
          (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>"
   apply (simp add: kernelEntry_def)
   apply (wp ckernel_invs callKernel_valid_duplicates' callKernel_domain_time_left
-            threadSet_invs_trivial threadSet_ct_running' select_wp
-            TcbAcc_R.dmo_invs' static_imp_wp
+            threadSet_invs_trivial threadSet_ct_running'
+            TcbAcc_R.dmo_invs' hoare_weak_lift_imp
             callKernel_domain_time_left
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
                           valid_domain_list'_def)+
@@ -499,7 +512,7 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs' select_wp
+  apply (wp device_update_invs'
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                        user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
@@ -513,7 +526,7 @@ lemma doUserOp_valid_duplicates':
    doUserOp f tc
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: doUserOp_def split_def)
-  apply (wp dmo_invs' select_wp)
+  apply (wp dmo_invs')
   apply clarsimp
   done
 
@@ -552,7 +565,7 @@ lemma kernel_corres':
            apply simp
            apply (rule handleInterrupt_corres[simplified dc_def])
           apply simp
-          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
+          apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: schact_is_rct_def)[1]
          apply simp
          apply (rule_tac Q="\<lambda>irq s. invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
@@ -561,7 +574,7 @@ lemma kernel_corres':
                       in hoare_post_imp)
           apply simp
          apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
-       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
+       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_strengthen_postE)
          apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split[OF schedule_corres])
@@ -570,9 +583,9 @@ lemma kernel_corres':
                  schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
      apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and
                      E="\<lambda>_. valid_sched and invs and valid_list"
-            in hoare_post_impErr)
+            in hoare_strengthen_postE)
        apply (wp handle_event_valid_sched hoare_vcg_imp_lift' |simp)+
-   apply (clarsimp simp: active_from_running)
+   apply (clarsimp simp: active_from_running schact_is_rct_def)
   apply (clarsimp simp: active_from_running')
   done
 
@@ -585,6 +598,8 @@ lemma kernel_corres:
               (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
              (call_kernel event) (callKernel event)"
   unfolding callKernel_def K_bind_def
+  apply (rule corres_cross_over_fastpathKernelAssertions, blast+)
+  apply (rule corres_stateAssert_r)
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
@@ -628,7 +643,7 @@ lemma entry_corres:
     apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split)
          apply simp
-         apply (rule threadset_corresT)
+         apply (rule threadset_corresT; simp?)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_set_def atcbContextSet_def)
            apply (clarsimp simp: tcb_cap_cases_def)
@@ -640,15 +655,16 @@ lemma entry_corres:
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
            apply wp+
-         apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)
+         apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, fastforce simp: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply (wp thread_set_invs_trivial thread_set_ct_running
                  threadSet_invs_trivial threadSet_ct_running'
-                 select_wp thread_set_not_state_valid_sched static_imp_wp
+                 thread_set_not_state_valid_sched hoare_weak_lift_imp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
+                          schact_is_rct_def
               | (wps, wp threadSet_st_tcb_at2) )+
-   apply (clarsimp simp: invs_def cur_tcb_def)
+   apply (fastforce simp: invs_def cur_tcb_def)
   apply (clarsimp simp: ct_in_state'_def)
   done
 

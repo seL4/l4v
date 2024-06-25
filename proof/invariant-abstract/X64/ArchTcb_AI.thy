@@ -198,7 +198,6 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply (simp add: cap_delete_def
                    no_cap_to_obj_with_diff_ref_ran_caps_form)
   apply wp
-  apply simp
   apply (rule use_spec)
   apply (rule rec_del_all_caps_in_range)
      apply (simp add: table_cap_ref_def[simplified, split_simps cap.split]
@@ -231,19 +230,20 @@ lemma tc_invs[Tcb_AI_asms]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply wp
-      apply ((simp only: simp_thms
-        | (simp add: conj_comms del: hoare_True_E_R,
+      apply ((simp only: simp_thms cong: conj_cong
+        | (strengthen invs_strengthen)+
+        | (simp add: conj_comms,
                   strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
         | rule wp_split_const_if wp_split_const_if_R
-                   hoare_vcg_all_lift_R
+                   hoare_vcg_all_liftE_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
                    hoare_vcg_R_conj
         | (wp out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap
-             hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+             hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              hoare_vcg_all_lift thread_set_valid_cap out_emptyable
@@ -257,10 +257,9 @@ lemma tc_invs[Tcb_AI_asms]:
              checked_insert_no_cap_to
              out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
              thread_set_ipc_tcb_cap_valid
-             static_imp_wp static_imp_conj_wp)[1]
+             hoare_weak_lift_imp hoare_weak_lift_imp_conj)[1]
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def
-               del: hoare_True_E_R
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]

@@ -7,28 +7,49 @@ name: Weekly Clean
 on:
   schedule:
     - cron: '1 15 * * 6'  # 15:01 UTC every Sat = 1:01 am Syd every Sun
+  # for testing:
+  workflow_dispatch:
 
 jobs:
-  all:
+  proofs:
     name: Proofs
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        num_domains: ['1', '7', '']
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        NUM_DOMAINS: ${{ matrix.num_domains }}
         cache_read: ''  # start with empty cache, but write cache back (default)
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SSH: ${{ secrets.AWS_SSH }}
         GH_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-    - name: Upload logs
-      uses: actions/upload-artifact@v2
+    - name: Upload kernel builds
+      uses: actions/upload-artifact@v4
       with:
-        name: logs-${{ matrix.arch }}
+        name: kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}
+        path: artifacts/kernel-builds
+        if-no-files-found: ignore
+    - name: Upload logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}
         path: logs.tar.xz
+
+  binary-verification:
+    name: Trigger BV
+    runs-on: ubuntu-latest
+    needs: proofs
+    steps:
+    - name: Trigger binary verification
+      uses: seL4/ci-actions/bv-trigger@master
+      with:
+        token: ${{ secrets.PRIV_REPO_TOKEN }}
+        tag: l4v/weekly-clean

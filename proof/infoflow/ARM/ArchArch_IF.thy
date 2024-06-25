@@ -62,7 +62,7 @@ crunches set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_switch_to_idle_thread, arch_switch_to_thread
   "\<lambda>s :: det_state. P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp
+  (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: invalidateLocalTLB_ASID_def setHardwareASID_def set_current_pd_def machine_op_lift_def
          machine_rest_lift_def crunch_simps storeWord_def dsb_def isb_def writeTTBR0_def)
 
@@ -76,7 +76,7 @@ crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>s. P (irq_state
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_finalise_cap, prepare_thread_delete
   "\<lambda>s :: det_state. P (irq_state_of_state s)"
-  (wp: select_wp modify_wp crunch_wps dmo_wp
+  (wp: modify_wp crunch_wps dmo_wp
    simp: crunch_simps invalidateLocalTLB_ASID_def dsb_def
          cleanCaches_PoU_def invalidate_I_PoU_def clean_D_PoU_def)
 
@@ -398,9 +398,10 @@ lemma find_pd_for_asid_assert_reads_respects:
   unfolding find_pd_for_asid_assert_def
   apply (wpsimp wp: get_pde_rev find_pd_for_asid_reads_respects hoare_vcg_all_lift)
    apply (rule_tac Q'="\<lambda>rv s. is_subject aag (lookup_pd_slot rv 0 && ~~ mask pd_bits)"
-                in hoare_post_imp_R)
-   apply (rule find_pd_for_asid_pd_slot_authorised)
-   apply (subgoal_tac "lookup_pd_slot r 0 = r")
+                in hoare_strengthen_postE_R)
+    apply (rule find_pd_for_asid_pd_slot_authorised)
+   apply (rename_tac rv s)
+   apply (subgoal_tac "lookup_pd_slot rv 0 = rv")
     apply fastforce
    apply (simp add: lookup_pd_slot_def)
   apply fastforce
@@ -410,7 +411,7 @@ lemma modify_arm_hwasid_table_reads_respects:
   "reads_respects aag l \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_hwasid_table := param\<rparr>\<rparr>))"
   apply (simp add: equiv_valid_def2)
   apply (rule modify_ev2)
-  (* FIXME: slow 5s *)
+  (* slow 5s *)
   by (auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
           intro: equiv_asids_triv' split: if_splits)
 
@@ -419,7 +420,7 @@ lemma modify_arm_asid_map_reads_respects:
   "reads_respects aag l \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_asid_map := param\<rparr>\<rparr>))"
   apply (simp add: equiv_valid_def2)
   apply (rule modify_ev2)
-  (* FIXME: slow 5s *)
+  (* slow 5s *)
   by (auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
           intro: equiv_asids_triv' split: if_splits)
 
@@ -427,7 +428,7 @@ lemma modify_arm_next_asid_reads_respects:
   "reads_respects aag l \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_next_asid := param\<rparr>\<rparr>))"
   apply (simp add: equiv_valid_def2)
   apply (rule modify_ev2)
-  (* FIXME: slow 5s *)
+  (* slow 5s *)
   by (auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
           intro: equiv_asids_triv' split: if_splits)
 
@@ -567,7 +568,7 @@ lemma set_vm_root_states_equiv_for[wp]:
   "set_vm_root thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
   unfolding set_vm_root_def catch_def fun_app_def set_current_pd_def isb_def dsb_def writeTTBR0_def
   by (wpsimp wp: arm_context_switch_states_equiv_for do_machine_op_mol_states_equiv_for
-                 hoare_vcg_all_lift hoare_whenE_wp hoare_drop_imps
+                 hoare_vcg_all_lift whenE_wp hoare_drop_imps
            simp: dmo_bind_valid if_apply_def2)+
 
 lemma set_vm_root_reads_respects:
@@ -624,7 +625,7 @@ lemma unmap_page_table_reads_respects:
                   (unmap_page_table asid vaddr pt)"
   unfolding unmap_page_table_def fun_app_def page_table_mapped_def
   by (wp dmo_mol_reads_respects store_pde_reads_respects get_pde_rev
-         flush_table_reads_respects find_pd_for_asid_reads_respects hoare_vcg_all_lift_R
+         flush_table_reads_respects find_pd_for_asid_reads_respects hoare_vcg_all_liftE_R
       | wpc | simp add: cleanByVA_PoU_def | wp (once) hoare_drop_imps)+
 
 lemma perform_page_table_invocation_reads_respects:
@@ -764,9 +765,9 @@ lemma perform_page_invocation_reads_respects:
 lemma equiv_asids_arm_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
      \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)
+           (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)
                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := arm_asid_table (arch_state t)
+           (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := (asid_table t)
                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
 
@@ -1277,6 +1278,7 @@ lemma do_flush_globals_equiv:
   apply (cases "typ")
   by (wp dmo_cacheRangeOp_lift
       | simp add: do_flush_def cache_machine_op_defs do_flush_defs do_machine_op_bind when_def
+                  empty_fail_cond
       | clarsimp | rule conjI)+
 
 lemma perform_page_directory_invocation_globals_equiv:
@@ -1350,7 +1352,7 @@ lemma unmap_page_globals_equiv:
                                    \<longrightarrow> (\<forall>xa\<in>set [0 , 4 .e. 0x3C]. xa + lookup_pd_slot x vptr
                                                                      && ~~ mask pd_bits
                                                                    \<noteq> arm_global_pd (arch_state sa)))"
-                  and E="\<lambda>_. globals_equiv st" in hoare_post_impErr)
+                  and E="\<lambda>_. globals_equiv st" in hoare_strengthen_postE)
         apply (wp find_pd_for_asid_not_arm_global_pd_large_page)
        apply simp
       apply simp
@@ -1426,8 +1428,8 @@ lemma set_mrs_globals_equiv:
        apply (clarsimp)
        apply (insert length_msg_lt_msg_max)
        apply (simp)
-      apply (wp set_object_globals_equiv static_imp_wp)
-     apply (wp hoare_vcg_all_lift set_object_globals_equiv static_imp_wp)+
+      apply (wp set_object_globals_equiv hoare_weak_lift_imp)
+     apply (wp hoare_vcg_all_lift set_object_globals_equiv hoare_weak_lift_imp)+
    apply (clarsimp simp:arm_global_pd_not_tcb)+
   done
 
@@ -1442,7 +1444,7 @@ lemma perform_page_invocation_globals_equiv:
   apply (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift dmo_cacheRangeOp_lift
             mapM_swp_store_pde_globals_equiv mapM_x_swp_store_pte_globals_equiv
             mapM_x_swp_store_pde_globals_equiv set_cap_globals_equiv''
-            unmap_page_globals_equiv store_pte_globals_equiv store_pde_globals_equiv static_imp_wp
+            unmap_page_globals_equiv store_pte_globals_equiv store_pde_globals_equiv hoare_weak_lift_imp
             do_flush_globals_equiv set_mrs_globals_equiv set_message_info_globals_equiv
          | wpc | simp add: do_machine_op_bind cleanByVA_PoU_def)+
   by (auto simp: cte_wp_parent_not_global_pd authorised_for_globals_page_inv_def valid_page_inv_def
@@ -1477,7 +1479,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp static_imp_wp
+             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the

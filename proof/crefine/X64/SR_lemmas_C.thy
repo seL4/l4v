@@ -292,11 +292,15 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
   unfolding cmdbnode_relation_def mdb_node_to_H_def mdb_node_lift_def cte_lift_def
   by (fastforce split: option.splits)
 
-definition
-  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option"
+definition tcb_no_ctes_proj ::
+  "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8
+          \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option
+          \<times> machine_word option \<times> machine_word option"
   where
-  "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
-                            tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
+  "tcb_no_ctes_proj t \<equiv>
+     (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
+      tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t,
+      tcbSchedNext t, tcbSchedPrev t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
@@ -307,7 +311,7 @@ lemma tcb_cte_cases_proj_eq [simp]:
 (* NOTE: 5 = cte_level_bits *)
 lemma map_to_ctes_upd_cte':
   "\<lbrakk> ksPSpace s p = Some (KOCTE cte'); is_aligned p cte_level_bits; ps_clear p cte_level_bits s \<rbrakk>
-  \<Longrightarrow> map_to_ctes (ksPSpace s(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
+  \<Longrightarrow> map_to_ctes ((ksPSpace s)(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
   apply (erule (1) map_to_ctes_upd_cte)
   apply (simp add: field_simps ps_clear_def3 cte_level_bits_def mask_def)
   done
@@ -315,7 +319,7 @@ lemma map_to_ctes_upd_cte':
 lemma map_to_ctes_upd_tcb':
   "[| ksPSpace s p = Some (KOTCB tcb'); is_aligned p tcbBlockSizeBits;
    ps_clear p tcbBlockSizeBits s |]
-==> map_to_ctes (ksPSpace s(p |-> KOTCB tcb)) =
+==> map_to_ctes ((ksPSpace s)(p |-> KOTCB tcb)) =
     (%x. if EX getF setF.
                tcb_cte_cases (x - p) = Some (getF, setF) &
                getF tcb ~= getF tcb'
@@ -442,7 +446,7 @@ lemma fst_setCTE:
   assumes ct: "cte_at' dest s"
   and     rl: "\<And>s'. \<lbrakk> ((), s') \<in> fst (setCTE dest cte s);
            (s' = s \<lparr> ksPSpace := ksPSpace s' \<rparr>);
-           (ctes_of s' = ctes_of s(dest \<mapsto> cte));
+           (ctes_of s' = (ctes_of s)(dest \<mapsto> cte));
            (map_to_eps (ksPSpace s) = map_to_eps (ksPSpace s'));
            (map_to_ntfns (ksPSpace s) = map_to_ntfns (ksPSpace s'));
            (map_to_pml4es (ksPSpace s) = map_to_pml4es (ksPSpace s'));
@@ -470,7 +474,7 @@ proof -
     by clarsimp
   note thms = this
 
-  have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
+  have ceq: "ctes_of s' = (ctes_of s)(dest \<mapsto> cte)"
     by (rule use_valid [OF thms(1) setCTE_ctes_of_wp]) simp
 
   show ?thesis
@@ -672,7 +676,6 @@ proof (rule cor_map_relI [OF map_option_eq_dom_eq])
 
   hence "tcb_no_ctes_proj tcb = tcb_no_ctes_proj tcb'" using om
     apply -
-    apply (simp add: o_def)
     apply (drule fun_cong [where x = x])
     apply simp
     done
@@ -1062,7 +1065,6 @@ lemma cstate_relation_only_t_hrs:
   ksCurThread_' s = ksCurThread_' t;
   ksIdleThread_' s = ksIdleThread_' t;
   ksWorkUnitsCompleted_' s = ksWorkUnitsCompleted_' t;
-  intStateIRQNode_' s = intStateIRQNode_' t;
   intStateIRQTable_' s = intStateIRQTable_' t;
   x86KSASIDTable_' s = x86KSASIDTable_' t;
   x64KSCurrentUserCR3_' s = x64KSCurrentUserCR3_' t;
@@ -1072,6 +1074,7 @@ lemma cstate_relation_only_t_hrs:
   ksCurDomain_' s = ksCurDomain_' t;
   ksDomainTime_' s = ksDomainTime_' t;
   num_ioapics_' s = num_ioapics_' t;
+  ioapic_nirqs_' s = ioapic_nirqs_' t;
   x86KSIRQState_' s = x86KSIRQState_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
@@ -1088,7 +1091,6 @@ lemma rf_sr_upd:
     "(ksCurThread_' (globals x)) = (ksCurThread_' (globals y))"
     "(ksIdleThread_' (globals x)) = (ksIdleThread_' (globals y))"
     "(ksWorkUnitsCompleted_' (globals x)) = (ksWorkUnitsCompleted_' (globals y))"
-    "intStateIRQNode_'(globals x) = intStateIRQNode_' (globals y)"
     "intStateIRQTable_'(globals x) = intStateIRQTable_' (globals y)"
     "x86KSASIDTable_' (globals x) = x86KSASIDTable_' (globals y)"
     "x64KSCurrentUserCR3_' (globals x) = x64KSCurrentUserCR3_' (globals y)"
@@ -1098,6 +1100,7 @@ lemma rf_sr_upd:
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
     "num_ioapics_' (globals x) = num_ioapics_' (globals y)"
+    "ioapic_nirqs_' (globals x) = ioapic_nirqs_' (globals y)"
     "x86KSIRQState_' (globals x) = x86KSIRQState_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
@@ -1111,7 +1114,6 @@ lemma rf_sr_upd_safe[simp]:
   and     sa: "(ksSchedulerAction_' (globals (g y))) = (ksSchedulerAction_' (globals y))"
   and     ct: "(ksCurThread_' (globals (g y))) = (ksCurThread_' (globals y))"
   and     it: "(ksIdleThread_' (globals (g y))) = (ksIdleThread_' (globals y))"
-  and     isn: "intStateIRQNode_'(globals (g y)) = intStateIRQNode_' (globals y)"
   and     ist: "intStateIRQTable_'(globals (g y)) = intStateIRQTable_' (globals y)"
   and     dsi: "ksDomScheduleIdx_' (globals (g y)) = ksDomScheduleIdx_' (globals y)"
   and     cdom: "ksCurDomain_' (globals (g y)) = ksCurDomain_' (globals y)"
@@ -1121,11 +1123,12 @@ lemma rf_sr_upd_safe[simp]:
     "x64KSCurrentUserCR3_' (globals (g y)) = x64KSCurrentUserCR3_' (globals y)"
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
     "num_ioapics_' (globals (g y)) = num_ioapics_' (globals y)"
+    "ioapic_nirqs_' (globals (g y)) = ioapic_nirqs_' (globals y)"
     "x86KSIRQState_' (globals (g y)) = x86KSIRQState_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
-  using rl rq rqL1 rqL2 sa ct it isn ist arch wu gs dsi cdom dt by - (rule rf_sr_upd)
+  using assms by - (rule rf_sr_upd)
 
 (* More of a well-formed lemma, but \<dots> *)
 lemma valid_mdb_cslift_next:
@@ -1469,9 +1472,9 @@ lemma cmap_relation_cong:
    apply (erule imageI)
    done
 
-lemma ctcb_relation_null_queue_ptrs:
+lemma ctcb_relation_null_ep_ptrs:
   assumes rel: "cmap_relation mp mp' tcb_ptr_to_ctcb_ptr ctcb_relation"
-  and same: "map_option tcb_null_queue_ptrs \<circ> mp'' = map_option tcb_null_queue_ptrs \<circ> mp'"
+  and same: "map_option tcb_null_ep_ptrs \<circ> mp'' = map_option tcb_null_ep_ptrs \<circ> mp'"
   shows "cmap_relation mp mp'' tcb_ptr_to_ctcb_ptr ctcb_relation"
   using rel
   apply (rule iffD1 [OF cmap_relation_cong, OF _ map_option_eq_dom_eq, rotated -1])
@@ -1479,7 +1482,7 @@ lemma ctcb_relation_null_queue_ptrs:
    apply (rule same [symmetric])
   apply (drule compD [OF same])
   apply (case_tac b, case_tac b')
-  apply (simp add: ctcb_relation_def tcb_null_queue_ptrs_def)
+  apply (simp add: ctcb_relation_def tcb_null_ep_ptrs_def)
   done
 
 (* FIXME x64: do we still need these?
@@ -1494,7 +1497,7 @@ lemma ntfnQueue_tail_mask_4 [simp]:
 
 lemma map_to_ctes_upd_tcb_no_ctes:
   "\<lbrakk>ko_at' tcb thread s ; \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x \<rbrakk>
-  \<Longrightarrow> map_to_ctes (ksPSpace s(thread \<mapsto> KOTCB tcb')) = map_to_ctes (ksPSpace s)"
+  \<Longrightarrow> map_to_ctes ((ksPSpace s)(thread \<mapsto> KOTCB tcb')) = map_to_ctes (ksPSpace s)"
   apply (erule obj_atE')
   apply (simp add: projectKOs objBits_simps)
   apply (subst map_to_ctes_upd_tcb')
@@ -1508,16 +1511,16 @@ lemma map_to_ctes_upd_tcb_no_ctes:
 lemma update_ntfn_map_tos:
   fixes P :: "Structures_H.notification \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_eps (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pml4es (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_pml4es (ksPSpace s)"
-  and     "map_to_pdptes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_pdptes (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_eps ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pml4es ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_pml4es (ksPSpace s)"
+  and     "map_to_pdptes ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_pdptes (ksPSpace s)"
+  and     "map_to_pdes ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_pdes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
@@ -1525,16 +1528,16 @@ lemma update_ntfn_map_tos:
 lemma update_ep_map_tos:
   fixes P :: "endpoint \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pml4es (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_pml4es (ksPSpace s)"
-  and     "map_to_pdptes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_pdptes (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pml4es ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_pml4es (ksPSpace s)"
+  and     "map_to_pdptes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_pdptes (ksPSpace s)"
+  and     "map_to_pdes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_pdes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
@@ -1542,15 +1545,15 @@ lemma update_ep_map_tos:
 lemma update_tcb_map_tos:
   fixes P :: "tcb \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_eps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_ntfns (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_pml4es (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_pml4es (ksPSpace s)"
-  and     "map_to_pdptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_pdptes (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_eps ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_pml4es ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_pml4es (ksPSpace s)"
+  and     "map_to_pdptes ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_pdptes (ksPSpace s)"
+  and     "map_to_pdes ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_pdes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
@@ -1558,16 +1561,16 @@ lemma update_tcb_map_tos:
 lemma update_asidpool_map_tos:
   fixes P :: "asidpool \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pml4es (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ko))) = map_to_pml4es (ksPSpace s)"
-  and     "map_to_pdptes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ko))) = map_to_pdptes (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ptes (ksPSpace s)"
-  and     "map_to_eps  (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_eps (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pml4es ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ko))) = map_to_pml4es (ksPSpace s)"
+  and     "map_to_pdptes ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ko))) = map_to_pdptes (ksPSpace s)"
+  and     "map_to_pdes ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_pdes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ptes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_eps (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data_device (ksPSpace s)"
 
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
@@ -1576,28 +1579,28 @@ lemma update_asidpool_map_tos:
             arch_kernel_object.split_asm)
 
 lemma update_asidpool_map_to_asidpools:
-  "map_to_asidpools (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap)))
+  "map_to_asidpools ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap)))
              = (map_to_asidpools (ksPSpace s))(p \<mapsto> ap)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pte_map_to_ptes:
-  "map_to_ptes (ksPSpace s(p \<mapsto> KOArch (KOPTE pte)))
+  "map_to_ptes ((ksPSpace s)(p \<mapsto> KOArch (KOPTE pte)))
              = (map_to_ptes (ksPSpace s))(p \<mapsto> pte)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pte_map_tos:
   fixes P :: "pte \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pml4es (ksPSpace s(p \<mapsto> KOArch (KOPTE ko))) = map_to_pml4es (ksPSpace s)"
-  and     "map_to_pdptes (ksPSpace s(p \<mapsto> KOArch (KOPTE ko))) = map_to_pdptes (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_pdes (ksPSpace s)"
-  and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_eps (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pml4es ((ksPSpace s)(p \<mapsto> KOArch (KOPTE ko))) = map_to_pml4es (ksPSpace s)"
+  and     "map_to_pdptes ((ksPSpace s)(p \<mapsto> KOArch (KOPTE ko))) = map_to_pdptes (ksPSpace s)"
+  and     "map_to_pdes ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_pdes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
            split: if_split_asm if_split
@@ -1605,23 +1608,23 @@ lemma update_pte_map_tos:
        auto simp: projectKO_opts_defs)
 
 lemma update_pde_map_to_pdes:
-  "map_to_pdes (ksPSpace s(p \<mapsto> KOArch (KOPDE pde)))
+  "map_to_pdes ((ksPSpace s)(p \<mapsto> KOArch (KOPDE pde)))
              = (map_to_pdes (ksPSpace s))(p \<mapsto> pde)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pde_map_tos:
   fixes P :: "pde \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pml4es (ksPSpace s(p \<mapsto> KOArch (KOPDE ko))) = map_to_pml4es (ksPSpace s)"
-  and     "map_to_pdptes (ksPSpace s(p \<mapsto> KOArch (KOPDE ko))) = map_to_pdptes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ptes (ksPSpace s)"
-  and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_eps (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pml4es ((ksPSpace s)(p \<mapsto> KOArch (KOPDE ko))) = map_to_pml4es (ksPSpace s)"
+  and     "map_to_pdptes ((ksPSpace s)(p \<mapsto> KOArch (KOPDE ko))) = map_to_pdptes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ptes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
            split: if_split_asm if_split
@@ -1629,23 +1632,23 @@ lemma update_pde_map_tos:
        auto simp: projectKO_opts_defs)
 
 lemma update_pdpte_map_to_pdptes:
-  "map_to_pdptes (ksPSpace s(p \<mapsto> KOArch (KOPDPTE pdpte)))
+  "map_to_pdptes ((ksPSpace s)(p \<mapsto> KOArch (KOPDPTE pdpte)))
              = (map_to_pdptes (ksPSpace s))(p \<mapsto> pdpte)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pdpte_map_tos:
   fixes P :: "pdpte \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pml4es (ksPSpace s(p \<mapsto> KOArch (KOPDPTE ko))) = map_to_pml4es (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KOArch (KOPDPTE ko))) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_ptes (ksPSpace s)"
-  and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_eps (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pml4es ((ksPSpace s)(p \<mapsto> KOArch (KOPDPTE ko))) = map_to_pml4es (ksPSpace s)"
+  and     "map_to_pdes ((ksPSpace s)(p \<mapsto> KOArch (KOPDPTE ko))) = map_to_pdes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_ptes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> (KOArch (KOPDPTE pdpte)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
            split: if_split_asm if_split
@@ -1653,23 +1656,23 @@ lemma update_pdpte_map_tos:
        auto simp: projectKO_opts_defs)
 
 lemma update_pml4e_map_to_pml4es:
-  "map_to_pml4es (ksPSpace s(p \<mapsto> KOArch (KOPML4E pml4e)))
+  "map_to_pml4es ((ksPSpace s)(p \<mapsto> KOArch (KOPML4E pml4e)))
              = (map_to_pml4es (ksPSpace s))(p \<mapsto> pml4e)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pml4e_map_tos:
   fixes P :: "pml4e \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pdptes (ksPSpace s(p \<mapsto> KOArch (KOPML4E ko))) = map_to_pdptes (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KOArch (KOPML4E ko))) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_ptes (ksPSpace s)"
-  and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_eps (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pdptes ((ksPSpace s)(p \<mapsto> KOArch (KOPML4E ko))) = map_to_pdptes (ksPSpace s)"
+  and     "map_to_pdes ((ksPSpace s)(p \<mapsto> KOArch (KOPML4E ko))) = map_to_pdes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_ptes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> (KOArch (KOPML4E pml4e)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
            split: if_split_asm if_split
@@ -1754,7 +1757,6 @@ where
   | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref cg) = scast ThreadState_BlockedOnReceive"
   | "thread_state_to_tsType (Structures_H.BlockedOnSend oref badge cg cgr isc) = scast ThreadState_BlockedOnSend"
   | "thread_state_to_tsType (Structures_H.BlockedOnNotification oref) = scast ThreadState_BlockedOnNotification"
-
 
 lemma ctcb_relation_thread_state_to_tsType:
   "ctcb_relation tcb ctcb \<Longrightarrow> tsType_CL (thread_state_lift (tcbState_C ctcb)) = thread_state_to_tsType (tcbState tcb)"
@@ -1974,9 +1976,9 @@ lemma memory_cross_over:
   apply (cut_tac p=ptr in unat_mask_3_less_8)
   apply (subgoal_tac "(ptr && ~~ mask 3) + (ptr && mask 3) = ptr")
    apply (subgoal_tac "!n x. n < 8 \<longrightarrow> (unat (x::machine_word) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
-                elim!: less_SucE)[1]
-    apply (clarsimp simp add: unat64_eq_of_nat word_bits_def)
+    apply (clarsimp simp: eval_nat_numeral)
+    apply (fastforce simp: add.commute elim!: less_SucE)
+   apply (clarsimp simp: unat64_eq_of_nat word_bits_def)
   apply (simp add: add.commute word_plus_and_or_coroll2)
   done
 
@@ -2168,7 +2170,7 @@ lemma gs_set_assn_Delete_cstate_relation:
 lemma update_typ_at:
   assumes at: "obj_at' P p s"
       and tp: "\<forall>obj. P obj \<longrightarrow> koTypeOf (injectKOS obj) = koTypeOf ko"
-  shows "typ_at' T p' (s \<lparr>ksPSpace := ksPSpace s(p \<mapsto> ko)\<rparr>) = typ_at' T p' s"
+  shows "typ_at' T p' (s \<lparr>ksPSpace := (ksPSpace s)(p \<mapsto> ko)\<rparr>) = typ_at' T p' s"
   using at
   by (auto elim!: obj_atE' simp: typ_at'_def ko_wp_at'_def
            dest!: tp[rule_format]
@@ -2365,6 +2367,14 @@ lemma capTCBPtr_eq:
   apply clarsimp
   done
 
+lemma rf_sr_ctcb_queue_relation:
+  "\<lbrakk> (s, s') \<in> rf_sr; d \<le> maxDomain; p \<le> maxPriority \<rbrakk>
+  \<Longrightarrow> ctcb_queue_relation (ksReadyQueues s (d, p))
+                          (index (ksReadyQueues_' (globals s')) (cready_queues_index_to_C d p))"
+  unfolding rf_sr_def cstate_relation_def cready_queues_relation_def
+  apply (clarsimp simp: Let_def seL4_MinPrio_def minDom_def maxDom_to_H maxPrio_to_H)
+  done
+
 lemma rf_sr_sched_action_relation:
   "(s, s') \<in> rf_sr
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
@@ -2481,6 +2491,12 @@ lemma fpu_null_state_heap_update_tag_disj':
   using lift_t_heap_update_same[OF valid disj]
   by (clarsimp simp: fpu_null_state_relation_def hrs_mem_update_def hrs_htd_def
               split: prod.splits)
+
+lemma rf_sr_obj_update_helper:
+  "(s, s'\<lparr> globals := globals s' \<lparr> t_hrs_' := t_hrs_' (globals (undefined
+              \<lparr> globals := (undefined \<lparr> t_hrs_' := f (globals s') (t_hrs_' (globals s')) \<rparr>)\<rparr>))\<rparr>\<rparr>) \<in> rf_sr
+          \<Longrightarrow> (s, globals_update (\<lambda>v. t_hrs_'_update (f v) v) s') \<in> rf_sr"
+  by (simp cong: StateSpace.state.fold_congs globals.fold_congs)
 
 lemmas h_t_valid_nested_fields =
   h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]

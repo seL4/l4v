@@ -964,49 +964,6 @@ lemma tcb_queue_relation'_prev_sign:
 \<Longrightarrow> sign_extend 47 (ptr_val (getPrev tcb)) = ptr_val (getPrev tcb)"
   by (rule tcb_queue_relation_prev_sign [OF tcb_queue_relation'_queue_rel])
 
-
-lemma cready_queues_relation_null_queue_ptrs:
-  assumes rel: "cready_queues_relation mp cq aq"
-  and same: "option_map tcb_null_ep_ptrs \<circ> mp' = option_map tcb_null_ep_ptrs \<circ> mp"
-  shows "cready_queues_relation mp' cq aq"
-  using rel
-  apply (clarsimp simp: cready_queues_relation_def Let_def all_conj_distrib)
-  apply (drule spec, drule spec, drule mp, (erule conjI)+, assumption)
-  apply (clarsimp simp: tcb_queue_relation'_def)
-  apply (erule iffD2 [OF tcb_queue_relation_only_next_prev, rotated -1])
-   apply (rule ext)
-   apply (case_tac "mp' x")
-    apply (frule compD [OF same])
-    apply simp
-   apply (frule compD [OF same])
-   apply (clarsimp simp: tcb_null_ep_ptrs_def)
-   apply (case_tac z, case_tac a)
-   apply simp
-  \<comment> \<open>clag\<close>
-  apply (rule ext)
-  apply (case_tac "mp' x")
-   apply (frule compD [OF same])
-   apply simp
-  apply (frule compD [OF same])
-  apply (clarsimp simp: tcb_null_ep_ptrs_def)
-  apply (case_tac z, case_tac a)
-  apply simp
-  done
-
-lemma cready_queues_relation_not_queue_ptrs:
-  assumes rel: "cready_queues_relation mp cq aq"
-  and same: "option_map tcbSchedNext_C \<circ> mp' = option_map tcbSchedNext_C \<circ> mp"
-  "option_map tcbSchedPrev_C \<circ> mp' = option_map tcbSchedPrev_C \<circ> mp"
-  shows "cready_queues_relation mp' cq aq"
-  using rel
-  apply (clarsimp simp: cready_queues_relation_def tcb_queue_relation'_def Let_def all_conj_distrib)
-  apply (drule spec, drule spec, drule mp, (erule conjI)+, assumption)
-  apply clarsimp
-  apply (erule iffD2 [OF tcb_queue_relation_only_next_prev, rotated -1])
-   apply (rule same)
-  apply (rule same)
-  done
-
 lemma ntfn_ep_disjoint:
   assumes  srs: "sym_refs (state_refs_of' s)"
   and     epat: "ko_at' ep epptr s"
@@ -1090,8 +1047,8 @@ lemma cpspace_relation_ntfn_update_ntfn:
   and      cp: "cpspace_ntfn_relation (ksPSpace s) (t_hrs_' (globals t))"
   and     rel: "cnotification_relation (cslift t') ntfn' notification"
   and    mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
-  shows "cmap_relation (map_to_ntfns (ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')))
-           (cslift t(Ptr ntfnptr \<mapsto> notification)) Ptr (cnotification_relation (cslift t'))"
+  shows "cmap_relation (map_to_ntfns ((ksPSpace s)(ntfnptr \<mapsto> KONotification ntfn')))
+           ((cslift t)(Ptr ntfnptr \<mapsto> notification)) Ptr (cnotification_relation (cslift t'))"
   using koat invs cp rel
   apply -
   apply (subst map_comp_update)
@@ -1383,7 +1340,7 @@ lemma user_fpu_state_C_in_tcb_C_offset:
   "(typ_uinfo_t TYPE(user_fpu_state_C), n) \<in> td_set (typ_uinfo_t TYPE(tcb_C)) 0 \<Longrightarrow> n = 0"
   \<comment> \<open>Examine the fields of tcb_C.\<close>
   apply (simp add: typ_uinfo_t_def tcb_C_typ_info_unfold td_set_export_uinfo_eq td_set_adjust_ti_eq
-                   image_comp image_Un apfst_comp o_def[where f=export_uinfo]
+                   image_comp image_Un apfst_comp
               del: export_uinfo_typdesc_simp)
   apply (elim disjE)
   apply (all \<open>drule td_set_image_field_lookup[rotated]; clarsimp\<close>)
@@ -1455,14 +1412,12 @@ lemma rf_sr_tcb_update_no_queue:
                                           (t_hrs_' (globals s'));
      tcbEPNext_C ctcb = tcbEPNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
      tcbEPPrev_C ctcb = tcbEPPrev_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
-     tcbSchedNext_C ctcb = tcbSchedNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
-     tcbSchedPrev_C ctcb = tcbSchedPrev_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
      fpuState_C (tcbContext_C (tcbArch_C ctcb))
        = fpuState_C (tcbContext_C (tcbArch_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)))));
      (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
      ctcb_relation tcb' ctcb
    \<rbrakk>
-  \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>,
+  \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(thread \<mapsto> KOTCB tcb')\<rparr>,
        x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
@@ -1484,20 +1439,11 @@ lemma rf_sr_tcb_update_no_queue:
      apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
       subgoal by (clarsimp intro!: ext)
      subgoal by (clarsimp intro!: ext)
-    apply (erule cready_queues_relation_not_queue_ptrs)
-     subgoal by (clarsimp intro!: ext)
-    subgoal by (clarsimp intro!: ext)
    subgoal by (clarsimp simp: carch_state_relation_def fpu_null_state_preservation typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
-lemma rf_sr_tcb_update_no_queue_helper:
-  "(s, s'\<lparr> globals := globals s' \<lparr> t_hrs_' := t_hrs_' (globals (undefined
-              \<lparr> globals := (undefined \<lparr> t_hrs_' := f (globals s') (t_hrs_' (globals s')) \<rparr>)\<rparr>))\<rparr>\<rparr>) \<in> rf_sr
-          \<Longrightarrow> (s, globals_update (\<lambda>v. t_hrs_'_update (f v) v) s') \<in> rf_sr"
-  by (simp cong: StateSpace.state.fold_congs globals.fold_congs)
-
-lemmas rf_sr_tcb_update_no_queue2
-    = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_no_queue, simplified]
+lemmas rf_sr_tcb_update_no_queue2 =
+  rf_sr_obj_update_helper[OF rf_sr_tcb_update_no_queue, simplified]
 
 lemma tcb_queue_relation_not_in_q:
   "ctcb_ptr_to_tcb_ptr x \<notin> set xs \<Longrightarrow>
@@ -1512,7 +1458,7 @@ lemma rf_sr_tcb_update_not_in_queue:
     \<not> live' (KOTCB tcb); invs' s;
     (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
     ctcb_relation tcb' ctcb \<rbrakk>
-     \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>,
+     \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(thread \<mapsto> KOTCB tcb')\<rparr>,
            x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
@@ -1545,20 +1491,11 @@ lemma rf_sr_tcb_update_not_in_queue:
      apply (drule(1) map_to_ko_atI')
      apply (drule sym_refs_ko_atD', clarsimp+)
      subgoal by blast
-    apply (simp add: cready_queues_relation_def, erule allEI)
     apply (clarsimp simp: Let_def)
-    apply (subst tcb_queue_relation_not_in_q)
-     apply clarsimp
-     apply (drule valid_queues_obj_at'D, clarsimp)
-     apply (clarsimp simp: obj_at'_def projectKOs inQ_def)
-    subgoal by simp
    apply (simp add: carch_state_relation_def)
    subgoal by (clarsimp simp: fpu_null_state_heap_update_span_disjoint[OF tcb_at'_non_kernel_data_ref']
                               global_ioport_bitmap_heap_update_tag_disj_simps obj_at'_def projectKOs)
   by (simp add: cmachine_state_relation_def)
-
-lemmas rf_sr_tcb_update_not_in_queue2
-    = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_not_in_queue, simplified]
 
 end
 end

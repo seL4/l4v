@@ -32,7 +32,8 @@ die ()
 if [ $# -ne 1 ]
 then
     echo "Usage:" >&2
-    die "  $0 tag" >&2
+    echo "  $0 <c-parser-tag-version>"
+    die "e.g.  $0 1.20" >&2
 fi
 
 # Get the directory that this script is running in.
@@ -109,25 +110,15 @@ done
 
 # other misc files
 cp -v lib/Word_Lib/ROOT "$outputdir/src/lib/Word_Lib/"
+cp -v lib/Basics/ROOT "$outputdir/src/lib/Basics/"
+cp -v lib/ML_Utils/ROOT "$outputdir/src/lib/ML_Utils/"
 
 echo "Creating ROOTS file"
 cat >"$outputdir/src/ROOTS" <<EOF
 lib/Word_Lib
-lib
+lib/Basics
+lib/ML_Utils
 c-parser
-EOF
-
-echo "Adding ROOT file for Lib session"
-cat > "$outputdir/src/lib/ROOT" <<EOF
-(*
- * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
- *
- * SPDX-License-Identifier: BSD-2-Clause
- *)
-
-session Lib = HOL +
-  directories "ml-helpers"
-  theories "MLUtils"
 EOF
 
 echo "Rearranging directories"
@@ -183,7 +174,6 @@ sed '
 ' < standalone-parser/Makefile > "$outputdir/src/c-parser/standalone-parser/Makefile"
 popd > /dev/null
 
-
 echo "Making PDF of ctranslation file."
 cd "$outputdir/src/c-parser/doc"
 make ctranslation.pdf > /dev/null
@@ -191,22 +181,6 @@ make ctranslation.pdf > /dev/null
 mv ctranslation.pdf "$outputdir/doc"
 
 popd > /dev/null
-
-lookforlicense=$(find "$outputdir" \! -name '*.lex.sml' \! -name '*.grm.sml' \! -type d -exec grep -q @LICENSE \{\} \; -print)
-if [ -n "$lookforlicense" ]
-then
-    die "### @LICENSE detected in file(s) $lookforlicense"
-else
-    echo "No @LICENSEs remain unexpanded - good."
-fi
-
-lookformichaeln=$(find "$outputdir" \! -name RELEASES.md \! -type d -exec grep -q /michaeln \{\} \; -print)
-if [ -n "$lookformichaeln" ]
-then
-    die "### /michaeln detected in file(s) $lookformichaeln"
-else
-    echo "No occurrences of \"/michaeln\" - good."
-fi
 
 echo -n "Compressing into $stem.tar.gz: "
 mv "$tmpdir/c-parser" "$tmpdir/$stem"

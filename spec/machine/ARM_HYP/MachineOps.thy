@@ -705,11 +705,11 @@ where
 subsection "Hypervisor Banked Registers"
 
 consts'
-  vcpuHardwareRegVal :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
+  vcpuHardwareReg_val :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition
   readVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word machine_monad"
 where
-  "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareRegVal reg)"
+  "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareReg_val reg)"
 
 consts'
   writeVCPUHardwareReg_impl :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
@@ -720,19 +720,20 @@ where
 
 section "User Monad"
 
-type_synonym user_context = "register \<Rightarrow> machine_word"
+type_synonym user_regs = "register \<Rightarrow> machine_word"
+
+datatype user_context = UserContext (user_regs : user_regs)
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
-definition
-  getRegister :: "register \<Rightarrow> machine_word user_monad"
-where
-  "getRegister r \<equiv> gets (\<lambda>uc. uc r)"
+definition getRegister :: "register \<Rightarrow> machine_word user_monad" where
+  "getRegister r \<equiv> gets (\<lambda>s. user_regs s r)"
 
-definition
-  setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad"
-where
-  "setRegister r v \<equiv> modify (\<lambda>uc. uc (r := v))"
+definition modify_registers :: "(user_regs \<Rightarrow> user_regs) \<Rightarrow> user_context \<Rightarrow> user_context" where
+  "modify_registers f uc \<equiv> UserContext (f (user_regs uc))"
+
+definition setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad" where
+  "setRegister r v \<equiv> modify (\<lambda>s. UserContext ((user_regs s) (r := v)))"
 
 definition
   "getRestartPC \<equiv> getRegister FaultIP"

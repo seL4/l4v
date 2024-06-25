@@ -130,12 +130,12 @@ lemma thread_set_context_globals_equiv[Scheduler_IF_assms]:
 
 lemma arch_scheduler_affects_equiv_update[Scheduler_IF_assms]:
   "arch_scheduler_affects_equiv st s
-   \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+   \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: arch_scheduler_affects_equiv_def)
 
 lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
   "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
-     \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+     \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
 end
@@ -184,8 +184,7 @@ lemma arch_switch_to_thread_globals_equiv_scheduler[Scheduler_IF_assms]:
    arch_switch_to_thread thread
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   unfolding arch_switch_to_thread_def storeWord_def
-  by (wpsimp wp: dmo_wp modify_wp thread_get_wp'
-      | wp (once) globals_equiv_scheduler_inv'[where P="\<top>"])+
+  by (wpsimp wp: dmo_wp modify_wp thread_get_wp' globals_equiv_scheduler_inv'[where P="\<top>"])
 
 crunches arch_activate_idle_thread
   for silc_dom_equiv[Scheduler_IF_assms, wp]: "silc_dom_equiv aag st"
@@ -363,7 +362,7 @@ lemma thread_set_scheduler_affects_equiv[Scheduler_IF_assms, wp]:
                   split: option.splits kernel_object.splits)
   apply (subst arch_tcb_update_aux)
   apply simp
-  apply (subgoal_tac "s = (s\<lparr>kheap := kheap s(idle_thread s \<mapsto> TCB y)\<rparr>)", simp)
+  apply (subgoal_tac "s = (s\<lparr>kheap := (kheap s)(idle_thread s \<mapsto> TCB y)\<rparr>)", simp)
   apply (rule state.equality)
             apply (rule ext)
             apply simp+

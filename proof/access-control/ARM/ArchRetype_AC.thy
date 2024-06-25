@@ -98,7 +98,7 @@ lemma copy_global_mappings_integrity:
        \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: copy_global_mappings_def)
-  apply (wp mapM_x_wp[OF _ subset_refl] store_pde_respects)
+  apply (wp mapM_x_wp[OF _ subset_refl] store_pde_respects)+
     apply (drule subsetD[OF copy_global_mappings_index_subset])
     apply (fastforce simp: pd_shifting')
    apply wpsimp+
@@ -174,7 +174,7 @@ lemma copy_global_mappings_pas_refined:
                                valid_global_objs s \<and> valid_global_refs s \<and> pas_refined aag s)"
                  in hoare_strengthen_post)
      apply (rule mapM_x_wp[OF _ subset_refl])
-     apply (rule hoare_seq_ext)
+     apply (rule bind_wp)
       apply (unfold o_def)
     (* Use [1] so wp doesn't filter out the global_pd condition *)
       apply (wp store_pde_pas_refined store_pde_valid_kernel_mappings_map_global)[1]
@@ -329,8 +329,7 @@ lemma dmo_freeMemory_respects[Retype_AC_assms]:
   apply wp
   apply clarsimp
   apply (erule use_valid)
-   apply (wp mol_respects mapM_x_wp' storeWord_integrity_autarch)
-   apply simp
+   apply (wpsimp wp: mol_respects mapM_x_wp' storeWord_integrity_autarch)
    apply (clarsimp simp: word_size_def word_bits_def word_size_bits_def
                          upto_enum_step_shift_red[where us=2, simplified])
    apply (erule bspec)

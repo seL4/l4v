@@ -148,7 +148,6 @@ lemma mapME_x_wp:
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
   apply (subst mapME_x_mapME)
   apply wp
-  apply simp
   apply (rule mapME_wp)
    apply (rule x)
    apply assumption+
@@ -156,27 +155,7 @@ lemma mapME_x_wp:
 
 lemmas mapME_x_wp' = mapME_x_wp [OF _ subset_refl]
 
-lemma hoare_vcg_all_liftE:
-  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
-lemma hoare_vcg_const_Ball_liftE:
-  "\<lbrakk> \<And>x. x \<in> S \<Longrightarrow> \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>\<lambda>s. True\<rbrace> f \<lbrace>\<lambda>r s. True\<rbrace>, \<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x\<in>S. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x\<in>S. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
-lemma hoare_post_conjE:
-  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>,\<lbrace>E\<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>,\<lbrace>E\<rbrace>"
-  by (clarsimp simp: validE_def valid_def split_def bipred_conj_def
-              split: sum.splits)
-
-lemma hoare_vcg_conj_liftE:
-  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (subst bipred_conj_def[symmetric], rule hoare_post_conjE)
-   apply (rule hoare_vcg_precond_impE [OF x], simp)
-  apply (rule hoare_vcg_precond_impE [OF y], simp)
-  done
+lemmas hoare_post_conjE = hoare_validE_pred_conj (* FIXME: eliminate *)
 
 lemma mapME_x_accumulate_checks:
   assumes P:  "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>Q\<rbrace> f x \<lbrace>\<lambda>rv. P x\<rbrace>, \<lbrace>E\<rbrace>"
@@ -194,11 +173,11 @@ lemma mapME_x_accumulate_checks:
     show ?case
       apply (simp add: mapME_x_Cons)
       apply wp
-       apply (rule hoare_vcg_conj_liftE)
+       apply (rule hoare_vcg_conj_liftE_weaker)
         apply (wp mapME_x_wp' P P'
           hoare_vcg_const_Ball_liftE
           | simp add:Q
-          | rule hoare_post_impErr[OF P])+
+          | rule hoare_strengthen_postE[OF P])+
         using Cons.prems
         apply fastforce
       apply (wp Cons.hyps)
@@ -208,7 +187,7 @@ lemma mapME_x_accumulate_checks:
       using Cons.prems
       apply fastforce
      apply (rule hoare_pre)
-     apply (rule hoare_vcg_conj_liftE)
+     apply (rule hoare_vcg_conj_liftE_weaker)
      apply (wp Cons.prems| simp)+
     done
   qed

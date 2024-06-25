@@ -41,10 +41,8 @@ declare dxo_wp_weak[wp del]
 
  (*Some nasty hackery to get around lack of polymorphic type class operations*)
 
-lemma and_assoc: "(A and (B and C)) = (A and B and C)"
-  apply (rule ext)
-  apply simp
-done
+lemma and_assoc: "(A and (B and C)) = (A and B and C)" (* FIXME: eliminate *)
+  by (simp add: pred_conj_aci)
 
 lemma no_children_empty_desc:
   "(\<forall>c. m c \<noteq> Some slot) = (descendants_of slot m = {})"
@@ -1476,7 +1474,7 @@ end
 crunch exst[wp]: set_cap "(\<lambda>s. P (exst s))" (wp: crunch_wps simp: crunch_simps)
 
 lemma set_cap_caps_of_state3:
-  "\<lbrace>\<lambda>s. P (caps_of_state s (p \<mapsto> cap)) (cdt s)  (exst s) (is_original_cap s)\<rbrace>
+  "\<lbrace>\<lambda>s. P ((caps_of_state s) (p \<mapsto> cap)) (cdt s)  (exst s) (is_original_cap s)\<rbrace>
   set_cap cap p
   \<lbrace>\<lambda>rv s. P (caps_of_state s) (cdt s) (exst s) (is_original_cap s)\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>m mr t. P (caps_of_state s) m t mr
@@ -3124,7 +3122,7 @@ lemma empty_slot_valid_list[wp]:
   apply (simp add: empty_slot_def)
   apply (simp add: set_cdt_def update_cdt_list_def set_cdt_list_def
                    empty_slot_ext_def bind_assoc cong: if_cong)
-  apply (wp get_cap_wp static_imp_wp | wpc | wp (once) hoare_vcg_all_lift)+
+  apply (wp get_cap_wp hoare_weak_lift_imp | wpc | wp (once) hoare_vcg_all_lift)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (frule mdb_empty_abs_simple.intro)
   apply(case_tac "cdt s sl")
@@ -3841,7 +3839,7 @@ crunch valid_list[wp]: thread_set valid_list
 
 lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def
-  by (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
+  by (wp hoare_drop_imps thread_set_mdb | simp)+
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 
@@ -3856,7 +3854,7 @@ global_interpretation reset_work_units_ext_extended: is_extended "reset_work_uni
 lemma preemption_point_inv':
   "\<lbrakk>irq_state_independent_A P; \<And>f s. P (work_units_completed_update f s) = P s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (intro impI conjI | simp add: preemption_point_def o_def
-       | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp alternative_wp[where P=P]
+       | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp
        | wpc | simp add: update_work_units_def reset_work_units_def)+
   done
 

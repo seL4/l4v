@@ -6,9 +6,9 @@
 
 theory Crunch
 imports
-  WPSimp
+  Monads.WPSimp
   Lib
-  MLUtils
+  ML_Utils.ML_Utils
 keywords "crunch" "crunch_ignore" "crunches" :: thy_decl
 begin
 

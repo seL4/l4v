@@ -8,7 +8,7 @@ theory WordAbstract
 imports
   L2Defs
   ExecConcrete
-  Lib.NatBitwise
+  NatBitwise
 begin
 
 definition "WORD_MAX x \<equiv> ((2 ^ (len_of x - 1) - 1) :: int)"
@@ -249,8 +249,7 @@ lemma sint_bitwise_abstract_binops:
 lemma abstract_val_signed_bitNOT:
   "abstract_val P x sint (x' :: 'a::len signed word) \<Longrightarrow>
    abstract_val P (NOT x) sint (NOT x')"
-  by (fastforce intro: int_eq_test_bitI
-                simp: nth_sint bin_nth_ops word_nth_neq test_bit_def'[symmetric] test_bit_wi[where 'a="'a signed"])
+  by (fastforce intro: int_eq_test_bitI simp: min_less_iff_disj)
 
 lemma abstract_val_signed_unary_minus:
   "\<lbrakk> abstract_val P r sint r' \<rbrakk> \<Longrightarrow>
@@ -322,8 +321,9 @@ lemma sint_shiftl_nonneg:
   apply (drule (1) int_shiftl_lt_2p_bits[rotated])
   apply (clarsimp simp: min_def split: if_split_asm)
   apply (rule conjI; clarsimp)
-   apply (smt (z3) decr_length_less_iff diff_Suc_Suc diff_is_0_eq diff_le_mono diff_le_self
-                   diff_zero le_def less_handy_casesE nat_less_le order_refl)
+   apply (smt (verit) One_nat_def bot_nat_0.extremum_uniqueI diff_Suc_eq_diff_pred
+                      le_diff_iff le_diff_iff' len_gt_0 len_of_finite_1_def less_eq_Suc_le
+                      nat_le_Suc_less_imp)
   using less_eq_decr_length_iff nat_le_linear by blast
 
 lemma abstract_val_signed_shiftl_signed:

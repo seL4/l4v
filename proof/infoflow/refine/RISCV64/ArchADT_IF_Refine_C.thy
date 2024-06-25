@@ -47,13 +47,11 @@ qed
 
 lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and arch_extras and
-        ct_active' and sch_act_simple and
-        (\<lambda>s. \<forall>x. ksCurThread s \<notin> set (ksReadyQueues s x)))
+       (invs' and arch_extras and ct_active' and sch_act_simple)
        (UNIV \<inter> {s. isCall_' s = from_bool isCall}
              \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
        (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
-  apply (simp only: arch_extras_def pred_and_true)
+  apply (simp only: arch_extras_def pred_top_right_neutral)
   apply (rule handleInvocation_ccorres)
   done
 
@@ -119,20 +117,24 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
   apply (rule corres_gen_asm)
   apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_nonempty_def del: split_paired_All)
   apply (rule corres_gets_same)
-    apply (clarsimp simp: absKState_crelation ptable_rights_s'_def ptable_rights_s''_def
-           rf_sr_def  cstate_relation_def Let_def cstate_to_H_correct)
+    apply (fastforce dest: ex_abs_ksReadyQueues_asrt
+                     simp: absKState_crelation ptable_rights_s'_def ptable_rights_s''_def
+                           rf_sr_def cstate_relation_def Let_def cstate_to_H_correct)
    apply simp
   apply (rule corres_gets_same)
-    apply (clarsimp simp: ptable_xn_s'_def ptable_xn_s''_def ptable_attrs_s_def
-                          absKState_crelation ptable_attrs_s'_def ptable_attrs_s''_def  rf_sr_def)
+    apply (fastforce dest: ex_abs_ksReadyQueues_asrt
+                     simp: ptable_xn_s'_def ptable_xn_s''_def ptable_attrs_s_def
+                           absKState_crelation ptable_attrs_s'_def ptable_attrs_s''_def rf_sr_def)
    apply simp
   apply (rule corres_gets_same)
+    apply clarsimp
+    apply (frule ex_abs_ksReadyQueues_asrt)
     apply (clarsimp simp: absKState_crelation curthread_relation ptable_lift_s'_def ptable_lift_s''_def
                          ptable_lift_s_def rf_sr_def)
    apply simp
   apply (simp add: getCurThread_def)
   apply (rule corres_gets_same)
-    apply (simp add: absKState_crelation rf_sr_def)
+    apply (fastforce dest: ex_abs_ksReadyQueues_asrt simp: absKState_crelation rf_sr_def)
    apply simp
   apply (rule corres_gets_same)
     apply (rule fun_cong[where x=ptrFromPAddr])
@@ -169,7 +171,7 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
           apply (rule corres_underlying_split4)
           apply (rule corres_split[OF user_memory_update_corres_C])
             apply (rule corres_split[OF device_update_corres_C])
-              apply (wp select_wp | simp)+
+              apply (wp | simp)+
    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
                           invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
                   split: if_splits)

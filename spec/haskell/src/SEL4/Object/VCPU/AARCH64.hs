@@ -39,12 +39,13 @@ import {-# SOURCE #-} SEL4.Object.Interrupt
 
 import Data.Bits hiding (countTrailingZeros)
 import Data.Word(Word8, Word16, Word32, Word64)
+import Data.WordLib(countTrailingZeros)
 import Data.Array
 import Data.Maybe
 
 {- VCPU: Helper functions -}
 
--- FIXME AARCH64: can be Reader Monad
+-- FIXME: make this a Reader Monad when we move to MCS
 curVCPUActive :: Kernel Bool
 curVCPUActive = do
     vcpu <- gets (armHSCurVCPU . ksArchState)
@@ -96,6 +97,8 @@ associateVCPUTCB vcpuPtr tcbPtr = do
         _ -> return ()
     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Just vcpuPtr }) tcbPtr
     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Just tcbPtr }
+    ct <- getCurThread
+    when (tcbPtr == ct) $ vcpuSwitch (Just vcpuPtr)
     return []
 
 {- VCPU: Update functions -}
@@ -352,6 +355,8 @@ restoreVirtTimer vcpuPtr = do
     vcpuWriteReg vcpuPtr VCPURegCNTVOFF offset
     vcpuRestoreReg vcpuPtr VCPURegCNTVOFF
 
+    -- read vcpu again, so we don't have to reason about independence of vcpuWriteRegister changes
+    vcpu <- getObject vcpuPtr
     let vppi = fromJust $ irqVPPIEventIndex (IRQ irqVTimerEvent)
     let masked = (vcpuVPPIMasked vcpu) ! vppi
     safeToUnmask <- isIRQActive (IRQ irqVTimerEvent)
@@ -401,7 +406,6 @@ vcpuDisable vcpuPtrOpt = do
 armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 armvVCPUSave vcpuPtr active = do
     vcpuSaveRegRange vcpuPtr VCPURegTTBR0 VCPURegSPSR_EL1
-    doMachineOp isb
 
 vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 vcpuSave (Just (vcpuPtr, active)) = do
@@ -490,11 +494,6 @@ vcpuSwitch (Just new) = do
                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
 
 {- VGICMaintenance -}
-
--- FIXME AARCH64: try move this to a more generic location
-countTrailingZeros :: (Bits b, FiniteBits b) => b -> Int
-countTrailingZeros w =
-    length . takeWhile not . map (testBit w) $ [0 .. finiteBitSize w - 1]
 
 vgicMaintenance :: Kernel ()
 vgicMaintenance = do

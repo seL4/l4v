@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -217,7 +218,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
    update_waiting_ntfn nptr list boundtcb badge
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding update_waiting_ntfn_def
-  apply (wp static_imp_wp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels
+  apply (wp hoare_weak_lift_imp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels
             set_thread_state_pas_refined set_notification_equiv_but_for_labels
             set_simple_ko_pred_tcb_at set_simple_ko_pas_refined
             hoare_vcg_disj_lift possible_switch_to_equiv_but_for_labels
@@ -322,46 +323,23 @@ lemma no_fail_gts:
 lemma sts_noop:
    "monadic_rewrite True True (tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s))
                     (set_thread_state_ext tcb) (return ())"
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_add_get)
-   apply (rule monadic_rewrite_bind_tail)
-    apply (clarsimp simp: set_thread_state_ext_def)
-    apply (rule_tac x="tcb_state (the (get_tcb tcb x))" in monadic_rewrite_symb_exec)
-       apply (wp gts_wp | simp)+
-    apply (rule monadic_rewrite_symb_exec)
-       apply wp+
-    apply (rule monadic_rewrite_symb_exec)
-       apply wp+
-    apply (simp only: when_def)
-    apply (rule monadic_rewrite_trans)
-     apply (rule monadic_rewrite_if)
-      apply (rule monadic_rewrite_impossible[where g="return ()"])
-     apply (rule monadic_rewrite_refl)
-    apply simp
-    apply (rule monadic_rewrite_refl)
-   apply wp
+  unfolding set_thread_state_ext_def when_def
+  apply (monadic_rewrite_l monadic_rewrite_if_l_False \<open>wpsimp wp: gts_wp\<close>)
+   apply (monadic_rewrite_symb_exec_l_drop)+
+   apply (rule monadic_rewrite_refl)
   by (auto simp: pred_tcb_at_def obj_at_def is_tcb_def get_tcb_def)
 
 lemma sts_to_modify':
   "monadic_rewrite True True (tcb_at tcb and (\<lambda>s :: det_state. tcb \<noteq> cur_thread s))
      (set_thread_state tcb st)
-     (modify (\<lambda>s. s\<lparr>kheap := kheap s(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
+     (modify (\<lambda>s. s\<lparr>kheap := (kheap s)(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
   apply (clarsimp simp: set_thread_state_def set_object_def)
-  apply (rule monadic_rewrite_add_get)
-  apply (rule monadic_rewrite_bind_tail)
-   apply (rule monadic_rewrite_imp)
-    apply (rule monadic_rewrite_trans)
-     apply (simp only: bind_assoc[symmetric])
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule sts_noop)
-     apply (wpsimp wp: get_object_wp, simp)
-    apply (rule_tac x="the (get_tcb tcb x)" in monadic_rewrite_symb_exec, (wp | simp)+)
-    apply (rule_tac x="x" in  monadic_rewrite_symb_exec, (wp | simp)+)
-        apply (wpsimp wp: get_object_wp simp: a_type_def)+
-    apply (rule_tac P="(=) x" in monadic_rewrite_refl3)
-    apply (clarsimp simp add: put_def modify_def get_def bind_def)
-   apply assumption
-  apply wp
+  apply (monadic_rewrite_l sts_noop \<open>wpsimp wp: get_object_wp\<close>)
+   apply (simp add: bind_assoc)
+   apply monadic_rewrite_symb_exec_l+
+       apply (rule_tac P="\<lambda>s'. s' = s \<and> tcba = the (get_tcb tcb s)" in monadic_rewrite_pre_imp_eq)
+       apply (clarsimp simp: put_def modify_def get_def bind_def)
+      apply (wpsimp wp: get_object_wp)+
   by (clarsimp simp: get_tcb_def tcb_at_def)
 
 lemma sts_no_fail:
@@ -417,7 +395,7 @@ lemma cancel_ipc_to_blocked_nosts:
         apply (rule hoare_modifyE_var[where P="tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s)"])
         apply (clarsimp simp: tcb_at_def get_tcb_def)
        apply (simp add: modify_modify)
-       apply (rule monadic_rewrite_refl2)
+       apply (rule monadic_rewrite_is_refl)
        apply (fastforce simp add: simpler_modify_def o_def get_tcb_def)
       apply (wp gts_wp)+
   apply (simp add: set_thread_state_def bind_assoc gets_the_def)
@@ -623,6 +601,9 @@ lemma send_signal_reads_respects:
                         set_thread_state_runnable_equiv_but_for_labels get_simple_ko_wp
                         gts_wp update_waiting_ntfn_equiv_but_for_labels
                         blocked_cancel_ipc_nosts_equiv_but_for_labels
+            \<comment> \<open>FIXME: The following line is working around the fact that wp (once) doesn't invoke
+                      wp_pre. If that is changed then it could be removed.\<close>
+            | wp_pre0
             | wpc
             | wps)+
     apply (elim conjE)
@@ -917,7 +898,7 @@ lemma transfer_caps_loop_reads_respects':
     apply (rule_tac Q'="\<lambda>capd s. (capd \<noteq> NullCap
                                   \<longrightarrow> cte_wp_at (is_derived (cdt s) (obj,ind) capd) (obj, ind) s)
                                \<and> (capd \<noteq> NullCap \<longrightarrow> QM s capd)" for QM
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
      prefer 2
      apply (clarsimp simp: cte_wp_at_caps_of_state split del: if_split)
      apply (strengthen is_derived_is_transferable[mk_strg I' O], assumption, solves\<open>simp\<close>)
@@ -983,7 +964,7 @@ lemma lookup_slot_for_cnode_op_rev:
   apply (wp resolve_address_bits_rev lookup_error_on_failure_rev
             whenE_throwError_wp
          | wpc
-         | rule hoare_post_imp_R[OF hoare_True_E_R[where P="\<top>"]]
+         | rule hoare_strengthen_postE_R[OF wp_post_tautE_R]
          | simp add: split_def split del: if_split)+
   done
 
@@ -1158,7 +1139,7 @@ lemma transfer_caps_reads_respects:
      (transfer_caps mi caps endpoint receiver receive_buffer)"
   unfolding transfer_caps_def fun_app_def
   by (wp transfer_caps_loop_reads_respects get_receive_slots_rev
-         get_receive_slots_authorised hoare_vcg_all_lift static_imp_wp
+         get_receive_slots_authorised hoare_vcg_all_lift hoare_weak_lift_imp
       | wpc | simp add: ball_conj_distrib)+
 
 lemma aag_has_auth_to_read_mrs:
@@ -1382,7 +1363,7 @@ lemma receive_ipc_base_reads_respects:
                as_user_set_register_reads_respects'
         | simp | intro allI impI | rule pre_ev, wpc)+)[2]
   apply (intro allI impI)
-  apply (wp static_imp_wp set_simple_ko_reads_respects set_thread_state_reads_respects
+  apply (wp hoare_weak_lift_imp set_simple_ko_reads_respects set_thread_state_reads_respects
             setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
             possible_switch_to_reads_respects gets_cur_thread_ev set_thread_state_pas_refined
             set_simple_ko_reads_respects hoare_vcg_all_lift
@@ -1420,7 +1401,7 @@ lemma receive_ipc_reads_respects:
   apply (rename_tac epptr badge rights)
   apply (wp receive_ipc_base_reads_respects
             complete_signal_reads_respects
-            static_imp_wp set_simple_ko_reads_respects set_thread_state_reads_respects
+            hoare_weak_lift_imp set_simple_ko_reads_respects set_thread_state_reads_respects
             setup_caller_cap_reads_respects
             complete_signal_reads_respects thread_get_reads_respects
             get_thread_state_reads_respects
@@ -1530,7 +1511,7 @@ lemma send_fault_ipc_reads_respects:
             hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_all_lift
             thread_set_pas_refined cap_fault_on_failure_rev
             lookup_slot_for_thread_rev
-            lookup_slot_for_thread_authorised hoare_vcg_all_lift_R
+            lookup_slot_for_thread_authorised hoare_vcg_all_liftE_R
             thread_get_reads_respects get_cap_auth_wp[where aag=aag] get_cap_rev
             thread_set_tcb_fault_set_invs
        | wpc
@@ -1543,7 +1524,7 @@ lemma send_fault_ipc_reads_respects:
                           \<and> pas_cur_domain aag s
                           \<and> valid_fault fault
                           \<and> is_subject aag (fst (fst rv))"
-               in hoare_post_imp_R[rotated])
+               in hoare_strengthen_postE_R[rotated])
        apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
       apply (wp get_cap_auth_wp[where aag=aag] lookup_slot_for_thread_authorised
                 thread_get_reads_respects
@@ -1719,7 +1700,7 @@ next
         apply (wp cap_insert_globals_equiv'')
        apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                    and E="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
-                    in hoare_post_impErr)
+                    in hoare_strengthen_postE)
          apply (simp add: whenE_def, rule conjI)
           apply (rule impI, wp)+
          apply (simp)+
@@ -1739,7 +1720,7 @@ lemma copy_mrs_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
    copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding copy_mrs_def including no_pre
+  unfolding copy_mrs_def including classic_wp_pre
   apply (wp | wpc)+
     apply (rule_tac Q="\<lambda>_. globals_equiv s" in hoare_strengthen_post)
      apply (wp mapM_wp' | wpc)+
@@ -1919,7 +1900,7 @@ lemma cancel_ipc_blocked_globals_equiv:
    cancel_ipc a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_ipc_def
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wpc; (simp,rule blocked_cancel_ipc_globals_equiv)?)
         apply (rule hoare_pre_cont)+
@@ -1982,7 +1963,7 @@ lemma send_fault_ipc_valid_global_objs:
   apply (wp)
      apply (simp add: Let_def)
      apply (wp send_ipc_valid_global_objs | wpc)+
-    apply (rule_tac Q'="\<lambda>_. valid_global_objs" in hoare_post_imp_R)
+    apply (rule_tac Q'="\<lambda>_. valid_global_objs" in hoare_strengthen_postE_R)
      apply (wp | simp)+
   done
 
@@ -2004,7 +1985,7 @@ lemma send_fault_ipc_globals_equiv:
     apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and
                             valid_global_refs and pspace_distinct and pspace_aligned and
                             valid_global_objs and K (valid_fault fault) and valid_idle and
-                            (\<lambda>s. sym_refs (state_refs_of s))" in hoare_post_imp_R)
+                            (\<lambda>s. sym_refs (state_refs_of s))" in hoare_strengthen_postE_R)
      apply (wp | simp)+
     apply (clarsimp)
     apply (rule valid_tcb_fault_update)
@@ -2024,7 +2005,7 @@ lemma handle_fault_globals_equiv:
   unfolding handle_fault_def
   apply (wp handle_double_fault_globals_equiv)
     apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state" and
-                    E="\<lambda>_. globals_equiv st and valid_arch_state" in hoare_post_impErr)
+                    E="\<lambda>_. globals_equiv st and valid_arch_state" in hoare_strengthen_postE)
       apply (wp send_fault_ipc_globals_equiv | simp)+
   done
 

@@ -83,7 +83,7 @@ next
 qed
 
 lemma empty_fail_freeMemory [Detype_AI_asms]: "empty_fail (freeMemory ptr bits)"
-  by (simp add: freeMemory_def mapM_x_mapM)
+  by (fastforce simp: freeMemory_def mapM_x_mapM)
 
 
 lemma region_in_kernel_window_detype[simp]:
@@ -141,8 +141,9 @@ lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightar
 lemma arch_valid_obj[detype_invs_proofs]:
     "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; arch_valid_obj ao s\<rbrakk>
        \<Longrightarrow> arch_valid_obj ao (detype (untyped_range cap) s)"
-  sorry (* FIXME AARCH64 VCPU
-  by simp *)
+  by (auto dest!: hyp_refs_of
+           simp: arch_valid_obj_def valid_vcpu_def
+           split: arch_kernel_obj.splits option.splits)
 
 lemma sym_hyp_refs_detype[detype_invs_proofs]:
   "sym_refs (state_hyp_refs_of (detype (untyped_range cap) s))"
@@ -181,8 +182,15 @@ lemma tcb_arch_detype[detype_invs_proofs]:
   "\<lbrakk>ko_at (TCB t) p s; valid_arch_tcb (tcb_arch t) s\<rbrakk>
       \<Longrightarrow> valid_arch_tcb (tcb_arch t) (detype (untyped_range cap) s)"
   apply (clarsimp simp: valid_arch_tcb_def)
-  sorry (* FIXME AARCH64 VCPU
-  done *)
+  apply (drule hyp_sym_refs_ko_atD, rule hyp_refsym)
+  apply clarsimp
+  apply rotate_tac (* do not pick typ_at *)
+  apply (drule live_okE)
+   apply (clarsimp simp: live_def hyp_live_def arch_live_def obj_at_def hyp_refs_of_def
+                         refs_of_ao_def vcpu_tcb_refs_def
+                  split: kernel_object.splits arch_kernel_obj.splits option.splits)
+  apply clarsimp
+  done
 
 declare arch_state_det[simp]
 
@@ -196,8 +204,7 @@ lemma pts_of_detype[simp]:
 
 lemma ptes_of_detype_Some[simp]:
   "(ptes_of (detype S s) pt_t p = Some pte) = (table_base pt_t p \<notin> S \<and> ptes_of s pt_t p = Some pte)"
-  sorry (* FIXME AARCH64
-  by (simp add: in_omonad ptes_of_def detype_def) *)
+  by (simp add: in_omonad ptes_of_def detype_def)
 
 lemma asid_pools_of_detype:
   "asid_pools_of (detype S s) = (\<lambda>p. if p\<in>S then None else asid_pools_of s p)"
@@ -218,16 +225,14 @@ lemma pool_for_asid_detype_Some[simp]:
 lemma vspace_for_pool_detype_Some[simp]:
   "(vspace_for_pool ap asid (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
    (ap \<notin> S \<and> vspace_for_pool ap asid pools = Some p)"
-  sorry (* FIXME AARCH64
-  by (simp add: vspace_for_pool_def obind_def split: option.splits) *)
+  by (simp add: vspace_for_pool_def entry_for_pool_def obind_def split: option.splits)
 
 lemma vspace_for_asid_detype_Some[simp]:
   "(vspace_for_asid asid (detype S s) = Some p) =
    ((\<exists>ap. pool_for_asid asid s = Some ap \<and> ap \<notin> S) \<and> vspace_for_asid asid s = Some p)"
-  apply (simp add: vspace_for_asid_def obind_def asid_pools_of_detype split: option.splits)
-  apply (auto simp: pool_for_asid_def)
-  sorry (* FIXME AARCH64
-  done *)
+  by (simp add: vspace_for_asid_def obind_def asid_pools_of_detype entry_for_asid_def
+                entry_for_pool_def pool_for_asid_def
+           split: option.splits)
 
 lemma pt_walk_detype:
   "pt_walk level bot_level pt_ptr vref (ptes_of (detype S s)) = Some (bot_level, p) \<Longrightarrow>
@@ -239,9 +244,8 @@ lemma pt_walk_detype:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
-  sorry (* FIXME AARCH64
   apply fastforce
-  done *)
+  done
 
 lemma vs_lookup_table:
   "vs_lookup_table level asid vref (detype S s) = Some (level, p) \<Longrightarrow>
@@ -270,29 +274,54 @@ lemma vs_lookup_target_preserved:
   apply (fastforce intro: no_obj_refs)
   done
 
+lemma asid_table_Some_not_untyped_range:
+  "asid_table s high_bits = Some table \<Longrightarrow> table \<notin> untyped_range cap"
+  using invs_valid_asid_pool_caps[OF invs]
+  by (auto simp add: valid_asid_pool_caps_def dest: no_obj_refs)
+
 lemma valid_asid_table:
   "valid_asid_table (detype (untyped_range cap) s)"
   using valid_arch_state
   apply (clarsimp simp: valid_asid_table_def valid_arch_state_def)
   apply (drule (1) subsetD)
-  apply (clarsimp simp: ran_def)
-  apply (subgoal_tac "valid_asid_pool_caps s")
-   prefer 2
-   using invs
-   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
-  apply (simp add: valid_asid_pool_caps_def)
-  apply (erule allE, erule allE, erule (1) impE)
-  apply clarsimp
-  apply (drule no_obj_refs; simp)
+  apply (clarsimp simp: ran_def asid_table_Some_not_untyped_range)
   done
+
+lemma entry_for_pool_detype_Some[simp]:
+  "(entry_for_pool pool_ptr asid (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
+   (pool_ptr \<notin> S \<and> entry_for_pool pool_ptr asid pools = Some p)"
+  by (clarsimp simp: entry_for_pool_def in_omonad)
+
+lemma vmid_for_asid_2_detype_Some[simp]:
+  "(vmid_for_asid_2 asid table (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
+   ((\<exists>pool_ptr. table (asid_high_bits_of asid) = Some pool_ptr \<and> pool_ptr \<notin> S)
+    \<and> vmid_for_asid_2 asid table pools = Some p)"
+  by (fastforce simp: vmid_for_asid_def in_omonad)
 
 lemma vmid_inv_detype:
   "vmid_inv (detype (untyped_range cap) s)"
-  sorry (* FIXME AARCH64 *)
+  apply (prop_tac "vmid_inv s")
+   using valid_arch_state
+   apply (simp add: valid_arch_state_def)
+  apply (fastforce simp: vmid_inv_def is_inv_def asid_pools_of_detype vmid_for_asid_def
+                         in_omonad asid_table_Some_not_untyped_range)
+  done
+
+lemma vcpus_of_detype[simp]:
+  "(vcpus_of (detype S s) p = Some vcpu) = (p \<notin> S \<and> vcpus_of s p = Some vcpu)"
+  by (simp add: in_omonad detype_def)
+
+lemma vcpu_tcbs_of_detype[simp]:
+  "(vcpu_tcbs_of (detype S s) p = Some aobj) = (p \<notin> S \<and> vcpu_tcbs_of s p = Some aobj)"
+  by (simp add: in_omonad detype_def)
 
 lemma cur_vcpu_detype:
   "cur_vcpu (detype (untyped_range cap) s)"
-  sorry  (* FIXME AARCH64 VCPU *)
+  using valid_arch_state
+  apply (clarsimp simp: valid_arch_state_def cur_vcpu_def split: option.splits)
+  apply (frule obj_at_vcpu_hyp_live_of_s[THEN iffD2])
+  apply (clarsimp elim!: live_okE simp: hyp_live_strg in_opt_pred split: option.splits)
+  done
 
 lemma valid_global_arch_objs:
   "valid_global_arch_objs (detype (untyped_range cap) s)"
@@ -300,10 +329,18 @@ lemma valid_global_arch_objs:
   by (fastforce dest!: valid_global_refsD[OF globals cap]
                 simp: cap_range_def valid_global_arch_objs_def valid_arch_state_def)
 
+lemma valid_global_tables:
+  "valid_global_tables (detype (untyped_range cap) s)"
+  using valid_arch_state
+  apply (clarsimp simp: valid_global_tables_2_def valid_arch_state_def)
+  using untyped_range_in_cap_range[of cap] valid_global_refsD[OF globals cap]
+  apply (blast intro: global_pt_in_global_refs[of s])
+  done
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
-        cur_vcpu_detype vmid_inv_detype valid_global_arch_objs
+        cur_vcpu_detype vmid_inv_detype valid_global_arch_objs valid_global_tables
   unfolding valid_arch_state_def pred_conj_def
   by (simp only: valid_asid_table) simp
 
@@ -323,8 +360,7 @@ proof (rule ccontr)
     using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
   ultimately
   have "\<exists>pt. pts_of s p = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
-    sorry (* FIXME AARCH64
-    by (rule valid_vspace_objs_strongD) *)
+    by (blast dest!: valid_vspace_objs_strongD)
   with ap
   show False by (clarsimp simp: in_omonad)
 qed
@@ -353,32 +389,37 @@ lemma data_at_detype[simp]:
 
 lemma valid_vspace_obj:
   "\<lbrakk> valid_vspace_obj level ao s; vspace_objs_of s p = Some ao; \<exists>\<rhd>(level,p) s \<rbrakk> \<Longrightarrow>
-     valid_vspace_obj level ao (detype (untyped_range cap) s)"
+   valid_vspace_obj level ao (detype (untyped_range cap) s)"
   using invs
   apply (cases ao; clarsimp split del: if_split)
+   apply (rename_tac pool entry asid vref)
    apply (frule (1) vs_lookup_asid_pool_level, simp add: in_omonad vspace_obj_of_Some)
-   apply simp
-   sorry (* FIXME AARCH64
-   apply (drule vs_lookup_table_ap_step, simp add: in_omonad, assumption)
+   apply clarsimp
+   apply (drule_tac vs_lookup_table_ap_step[OF _ _ ranD])
+     apply (erule vspace_objs_of_Some_projections)
+    apply assumption
    apply clarsimp
    apply (erule (2) vs_lookup_target_preserved)
-  apply (rename_tac pt idx asid vref)
-  apply (case_tac "pt idx"; simp)
-   apply (frule_tac idx=idx in vs_lookup_table_pt_step; simp add: in_omonad)
-       apply (frule pspace_alignedD, fastforce)
-       apply (simp add: bit_simps)
-      apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
-     apply simp
-    apply fastforce
-   apply (fastforce elim: vs_lookup_target_preserved)
-  apply (frule_tac idx=idx in vs_lookup_table_pt_step; simp add: in_omonad)
-      apply (frule pspace_alignedD, fastforce)
-      apply (simp add: bit_simps)
+  apply (rename_tac pt pte asid vref)
+  apply (frule vspace_objs_of_arch_valid_obj, fastforce)
+  apply clarsimp
+  apply (case_tac pte; simp)
+   (* PagePTE *)
+   apply (frule_tac vs_lookup_table_pt_step; simp add: in_omonad)
+      apply (clarsimp simp: vspace_obj_of_def split: if_split_asm)
+      apply (drule pspace_alignedD; fastforce simp: pt_bits_def)
      apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
     apply simp
-   apply fastforce
-  apply (fastforce elim: vs_lookup_target_preserved)
-  done *)
+   apply (fastforce elim: vs_lookup_target_preserved)
+  (* PageTablePTE *)
+  apply clarsimp
+  apply (frule_tac vs_lookup_table_pt_step; simp add: in_omonad)
+     apply (clarsimp simp: vspace_obj_of_def split: if_split_asm)
+     apply (drule pspace_alignedD; fastforce simp: pt_bits_def)
+    apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
+   apply simp
+  apply (fastforce simp: pptr_from_pte_def elim: vs_lookup_target_preserved)
+  done
 
 lemma valid_vspace_obj_detype[detype_invs_proofs]: "valid_vspace_objs (detype (untyped_range cap) s)"
 proof -
@@ -455,8 +496,15 @@ proof -
   thus ?thesis by (simp add: valid_kernel_mappings_def detype_def ball_ran_eq)
 qed
 
-lemma valid_asid_map_detype[detype_invs_proofs]: "valid_asid_map (detype (untyped_range cap) s)"
-  by (simp add: valid_asid_map_def)
+lemma valid_asid_map_detype[detype_invs_proofs]:
+  "valid_asid_map (detype (untyped_range cap) s)"
+proof -
+  have "valid_asid_map s"
+    using invs by (simp add: invs_def valid_state_def)
+  thus ?thesis
+    by (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def
+                       entry_for_pool_def)
+qed
 
 lemma equal_kernel_mappings_detype[detype_invs_proofs]:
   "equal_kernel_mappings (detype (untyped_range cap) s)"

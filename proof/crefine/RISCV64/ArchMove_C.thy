@@ -93,17 +93,12 @@ lemma atg_sp':
 (* FIXME: MOVE to EmptyFail *)
 lemma empty_fail_archThreadGet [intro!, wp, simp]:
   "empty_fail (archThreadGet f p)"
-  by (simp add: archThreadGet_def getObject_def split_def)
+  by (fastforce simp: archThreadGet_def getObject_def split_def)
 
 (* FIXME: move to ainvs? *)
 lemma sign_extend_canonical_address:
   "(x = sign_extend 38 x) = canonical_address x"
   by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended canonical_bit_def)
-
-lemma ptr_range_mask_range:
-  "{ptr..ptr + 2 ^ bits - 1} = mask_range ptr bits"
-  unfolding mask_def
-  by simp
 
 lemma valid_untyped':
   notes usableUntypedRange.simps[simp del]
@@ -302,14 +297,8 @@ lemma obj_at_kernel_mappings':
    \<Longrightarrow> p \<in> kernel_mappings"
   by (clarsimp simp: pspace_in_kernel_mappings'_def obj_at'_def dom_def)
 
-crunches Arch.switchToThread
-  for valid_queues'[wp]: valid_queues'
-  (simp: crunch_simps wp: hoare_drop_imps)
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-crunches switchToIdleThread, switchToThread
-  for valid_pspace'[wp]: valid_pspace'
-  (simp: whenE_def crunch_simps wp: hoare_drop_imps)
 
 lemma getMessageInfo_less_4:
   "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
@@ -348,8 +337,7 @@ lemma asid_shiftr_low_bits_less[simplified]:
 lemma getActiveIRQ_neq_Some0x3FF':
   "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
-  apply simp
+  apply wpsimp
   done
 
 lemma getActiveIRQ_neq_Some0x3FF:
@@ -377,7 +365,7 @@ lemma length_msgRegisters[simplified size_msgRegisters_def]:
 
 lemma empty_fail_loadWordUser[intro!, simp]:
   "empty_fail (loadWordUser x)"
-  by (simp add: loadWordUser_def ef_loadWord ef_dmo')
+  by (fastforce simp: loadWordUser_def ef_loadWord ef_dmo')
 
 lemma empty_fail_getMRs[iff]:
   "empty_fail (getMRs t buf mi)"
@@ -387,26 +375,14 @@ lemma empty_fail_getReceiveSlots:
   "empty_fail (getReceiveSlots r rbuf)"
 proof -
   note
-    empty_fail_assertE[iff]
-    empty_fail_resolveAddressBits[iff]
+    empty_fail_resolveAddressBits[wp]
+    empty_fail_rethrowFailure[wp]
+    empty_fail_rethrowFailure[wp]
   show ?thesis
-  apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
-                 split: option.split)
-  apply (rule empty_fail_bind)
-   apply (simp add: capTransferFromWords_def)
-  apply (simp add: emptyOnFailure_def unifyFailure_def)
-  apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
-         simp_all add: empty_fail_whenEs)
-   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
-                        lookupSlotForThread_def liftME_def
-                        getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
-                        lookupSlotForCNodeOp_def lookupErrorOnFailure_def
-                  cong: if_cong)
-   apply (intro empty_fail_bindE,
-          simp_all add: getSlotCap_def)
-  apply (intro empty_fail_If empty_fail_bindE empty_fail_rethrowFailure impI,
-         simp_all add: empty_fail_whenEs rangeCheck_def)
-  done
+  unfolding getReceiveSlots_def loadCapTransfer_def lookupCap_def lookupCapAndSlot_def
+  by (wpsimp simp: emptyOnFailure_def unifyFailure_def lookupSlotForThread_def
+                   capTransferFromWords_def getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
+                   lookupSlotForCNodeOp_def lookupErrorOnFailure_def rangeCheck_def)
 qed
 
 lemma user_getreg_rv:

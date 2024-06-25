@@ -89,22 +89,22 @@ lemma archThreadGet_eq:
   apply simp
   done
 
-lemma get_tsType_ccorres [corres]:
+lemma get_tsType_ccorres[corres]:
   "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_longlong_' (tcb_at' thread)
-           (UNIV \<inter> {s. thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])}) []
-  (getThreadState thread) (Call thread_state_ptr_get_tsType_'proc)"
+           ({s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
+            {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
+  (getThreadState thread) (Call thread_state_get_tsType_'proc)"
   unfolding getThreadState_def
-  apply (rule ccorres_from_spec_modifies)
-      apply (rule thread_state_ptr_get_tsType_spec)
-     apply (rule thread_state_ptr_get_tsType_modifies)
-    apply simp
-   apply (frule (1) obj_at_cslift_tcb)
-   apply (clarsimp simp: typ_heap_simps)
+  apply (rule ccorres_from_spec_modifies [where P=\<top>, simplified])
+     apply (rule thread_state_get_tsType_spec)
+    apply (rule thread_state_get_tsType_modifies)
+   apply simp
   apply (frule (1) obj_at_cslift_tcb)
   apply (clarsimp simp: typ_heap_simps)
   apply (rule bexI [rotated, OF threadGet_eq], assumption)
   apply simp
-  apply (erule ctcb_relation_thread_state_to_tsType)
+  apply (drule ctcb_relation_thread_state_to_tsType)
+  apply simp
   done
 
 lemma threadGet_obj_at2:
@@ -177,7 +177,7 @@ lemma threadSet_corres_lemma:
   assumes spec: "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. P s\<rbrace> Call f {t. Q s t}"
   and      mod: "modifies_heap_spec f"
   and  rl: "\<And>\<sigma> x t ko. \<lbrakk>(\<sigma>, x) \<in> rf_sr; Q x t; x \<in> P'; ko_at' ko thread \<sigma>\<rbrakk>
-             \<Longrightarrow> (\<sigma>\<lparr>ksPSpace := ksPSpace \<sigma>(thread \<mapsto> KOTCB (g ko))\<rparr>,
+             \<Longrightarrow> (\<sigma>\<lparr>ksPSpace := (ksPSpace \<sigma>)(thread \<mapsto> KOTCB (g ko))\<rparr>,
                   t\<lparr>globals := globals x\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   and  g:  "\<And>s x. \<lbrakk>tcb_at' thread s; x \<in> P'; (s, x) \<in> rf_sr\<rbrakk> \<Longrightarrow> P x"
   shows "ccorres dc xfdc (tcb_at' thread) P' [] (threadSet g thread) (Call f)"
@@ -206,7 +206,7 @@ lemma threadSet_corres_lemma:
 
 
 lemma threadSet_ccorres_lemma4:
-  "\<lbrakk> \<And>s tcb. \<Gamma> \<turnstile> (Q s tcb) c {s'. (s \<lparr>ksPSpace := ksPSpace s(thread \<mapsto> injectKOS (F tcb))\<rparr>, s') \<in> rf_sr};
+  "\<lbrakk> \<And>s tcb. \<Gamma> \<turnstile> (Q s tcb) c {s'. (s \<lparr>ksPSpace := (ksPSpace s)(thread \<mapsto> injectKOS (F tcb))\<rparr>, s') \<in> rf_sr};
           \<And>s s' tcb tcb'. \<lbrakk> (s, s') \<in> rf_sr; P tcb; ko_at' tcb thread s;
                              cslift s' (tcb_ptr_to_ctcb_ptr thread) = Some tcb';
                              ctcb_relation tcb tcb'; P' s ; s' \<in> R\<rbrakk> \<Longrightarrow> s' \<in> Q s tcb \<rbrakk>

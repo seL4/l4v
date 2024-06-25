@@ -48,7 +48,7 @@ jobs:
     - uses: seL4/ci-actions/thylint@master
       with:
         token: ${{ secrets.READ_TOKEN }}
-    - uses: yuzutech/annotations-action@v0.2.1
+    - uses: yuzutech/annotations-action@v0.4.0
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         title: 'File annotations for theory linter'

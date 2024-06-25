@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -24,9 +25,9 @@ abbreviation
 
 (* FIXME: move *)
 lemma ccorres_return_into_rel:
-  "ccorres (\<lambda>rv rv'. r (f rv) rv') xf G G' hs a c
+  "ccorres (r \<circ> f) xf G G' hs a c
   \<Longrightarrow> ccorres r xf G G' hs (a >>= (\<lambda>rv. return (f rv))) c"
-  by (simp add: liftM_def[symmetric] o_def)
+  by (simp add: liftM_def[symmetric])
 
 lemma lookupCap_ccorres':
   "ccorres (lookup_failure_rel \<currency> ccap_relation) lookupCap_xf
@@ -248,8 +249,7 @@ lemma lookupSlotForCNodeOp_ccorres':
    apply vcg
 
   \<comment> \<open>last subgoal\<close>
-  apply (clarsimp simp: if_1_0_0  to_bool_def true_def word_size
-                        fromIntegral_def integral_inv)
+  apply (clarsimp simp: word_size fromIntegral_def integral_inv)
   apply (case_tac "cap_get_tag root = scast cap_cnode_cap")
    prefer 2 apply clarsimp
   apply (clarsimp simp: unat_of_nat32 word_sle_def)
@@ -285,7 +285,7 @@ lemma lookupSourceSlot_ccorres':
      apply simp
     apply simp
    apply (ctac add: lookupSlotForCNodeOp_ccorres')
-  apply (clarsimp simp: to_bool_def true_def false_def)
+  apply clarsimp
   done
 
 lemma lookupSourceSlot_ccorres:
@@ -315,7 +315,7 @@ lemma lookupTargetSlot_ccorres':
      apply simp
     apply simp
    apply (ctac add: lookupSlotForCNodeOp_ccorres')
-  apply (clarsimp simp: to_bool_def true_def false_def)
+  apply clarsimp
   done
 
 lemma lookupTargetSlot_ccorres:
@@ -345,7 +345,7 @@ lemma lookupPivotSlot_ccorres:
      apply simp
     apply simp
    apply (ctac add: lookupSlotForCNodeOp_ccorres)
-  apply (clarsimp simp: to_bool_def true_def false_def)
+  apply clarsimp
   done
 
 end

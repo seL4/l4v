@@ -39,6 +39,9 @@ abbreviation
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
 
+type_synonym registers_count = 20
+type_synonym registers_array = "machine_word[registers_count]"
+
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"
   apply (rule hoare_complete)
@@ -139,10 +142,6 @@ where
 abbreviation
   "ep_queue_relation \<equiv> tcb_queue_relation tcbEPNext_C tcbEPPrev_C"
 
-abbreviation
-  "sched_queue_relation \<equiv> tcb_queue_relation tcbSchedNext_C tcbSchedPrev_C"
-
-
 definition
 wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" where
 "wordSizeCase a b \<equiv> (if bitSize (undefined::word32) = 32
@@ -242,40 +241,6 @@ definition
                      None \<Rightarrow> None
                    | Some cap \<Rightarrow> Some \<lparr> cap_CL = cap,
                                        cteMDBNode_CL = mdb_node_lift (cteMDBNode_C c) \<rparr>"
-
-(* this is slightly weird, but the bitfield generator
-   masks everything with the expected bit length.
-   So we do that here too. *)
-definition
-  to_bool_bf :: "'a::len word \<Rightarrow> bool" where
-  "to_bool_bf w \<equiv> (w && mask 1) = 1"
-
-lemma to_bool_bf_0 [simp]: "\<not>to_bool_bf 0"
-  by (simp add: to_bool_bf_def)
-
-lemma to_bool_bf_1 [simp]: "to_bool_bf 1"
-  by (simp add: to_bool_bf_def mask_def)
-
-lemma to_bool_bf_and [simp]:
-  "to_bool_bf (a && b) = (to_bool_bf a \<and> to_bool_bf (b::word32))"
-  apply (clarsimp simp: to_bool_bf_def)
-  apply (rule iffI)
-   apply (subst (asm) bang_eq)
-   apply (simp add: word_size)
-   apply (rule conjI)
-    apply (rule word_eqI)
-    apply (auto simp add: word_size)[1]
-   apply (rule word_eqI)
-   apply (auto simp add: word_size)[1]
-  apply clarsimp
-  apply (rule word_eqI)
-  apply (subst (asm) bang_eq)+
-  apply (auto simp add: word_size)[1]
-  done
-
-lemma to_bool_bf_to_bool_mask:
-  "w && mask (Suc 0) = w \<Longrightarrow> to_bool_bf w = to_bool (w::word32)"
-  by (metis One_nat_def mask_eq1_nochoice fold_eq_0_to_bool mask_1 to_bool_bf_0 to_bool_bf_def)
 
 definition
   mdb_node_to_H :: "mdb_node_CL \<Rightarrow> mdbnode"
@@ -460,31 +425,31 @@ lemma maxDom_sgt_0_maxDomain:
 
 lemma num_domains_calculation:
   "num_domains = numDomains"
-  unfolding num_domains_def by eval
+  unfolding num_domains_val by eval
 
 private lemma num_domains_card_explicit:
   "num_domains = CARD(num_domains)"
-  by (simp add: num_domains_def)
+  by (simp add: num_domains_val)
 
 lemmas num_domains_index_updates =
-  index_update[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+  index_update[where 'b=num_domains, folded num_domains_card_explicit num_domains_val,
                simplified num_domains_calculation]
-  index_update2[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+  index_update2[where 'b=num_domains, folded num_domains_card_explicit num_domains_val,
                 simplified num_domains_calculation]
 
 (* C ArrayGuards will throw these at us and there is no way to avoid a proof of being less than a
    specific number expressed as a word, so we must introduce these. However, being explicit means
    lack of discipline can lead to a violation. *)
-lemma numDomains_less_numeric_explicit[simplified num_domains_def One_nat_def]:
+lemma numDomains_less_numeric_explicit[simplified num_domains_val One_nat_def]:
   "x < Kernel_Config.numDomains \<Longrightarrow> x < num_domains"
   by (simp add: num_domains_calculation)
 
-lemma numDomains_less_unat_ucast_explicit[simplified num_domains_def]:
+lemma numDomains_less_unat_ucast_explicit[simplified num_domains_val]:
   "unat x < Kernel_Config.numDomains \<Longrightarrow> (ucast (x::domain) :: machine_word) < of_nat num_domains"
   apply (rule word_less_nat_alt[THEN iffD2])
   apply transfer
   apply simp
-  apply (drule numDomains_less_numeric_explicit, simp add: num_domains_def)
+  apply (drule numDomains_less_numeric_explicit, simp add: num_domains_val)
   done
 
 lemmas maxDomain_le_unat_ucast_explicit =
@@ -509,7 +474,7 @@ value_type num_tcb_queues = "numDomains * numPriorities"
 
 lemma num_tcb_queues_calculation:
   "num_tcb_queues = numDomains * numPriorities"
-  unfolding num_tcb_queues_def by eval
+  unfolding num_tcb_queues_val by eval
 
 
 abbreviation(input)

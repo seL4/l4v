@@ -982,7 +982,7 @@ lemma do_user_op_reads_respects_g:
   apply (rule spec_equiv_valid_guard_imp)
    apply (wpsimp wp: dmo_user_memory_update_reads_respects_g dmo_device_state_update_reads_respects_g
                      dmo_setExMonitor_reads_respects_g dmo_device_state_update_reads_respects_g
-                     select_ev select_wp dmo_getExMonitor_reads_respects_g dmo_wp)
+                     select_ev dmo_getExMonitor_reads_respects_g dmo_wp)
   apply clarsimp
   apply (rule conjI)
    apply clarsimp

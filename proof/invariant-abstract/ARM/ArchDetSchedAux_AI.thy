@@ -16,7 +16,7 @@ crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
   and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
-  (wp: crunch_wps hoare_unless_wp valid_etcbs_lift)
+  (wp: crunch_wps unless_wp valid_etcbs_lift)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
@@ -100,9 +100,9 @@ crunch ct[wp]: perform_asid_control_invocation "\<lambda>s. P (cur_thread s)"
 
 crunch idle_thread[wp]: perform_asid_control_invocation "\<lambda>s. P (idle_thread s)"
 
-crunch valid_etcbs[wp]: perform_asid_control_invocation valid_etcbs (wp: static_imp_wp)
+crunch valid_etcbs[wp]: perform_asid_control_invocation valid_etcbs (wp: hoare_weak_lift_imp)
 
-crunch valid_blocked[wp]: perform_asid_control_invocation valid_blocked (wp: static_imp_wp)
+crunch valid_blocked[wp]: perform_asid_control_invocation valid_blocked (wp: hoare_weak_lift_imp)
 
 crunch schedact[wp]: perform_asid_control_invocation "\<lambda>s :: det_ext state. P (scheduler_action s)" (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
 

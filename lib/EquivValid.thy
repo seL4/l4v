@@ -235,7 +235,7 @@ abbreviation equiv_valid_rv_inv where
   "equiv_valid_rv_inv I A R P f \<equiv> equiv_valid_rv I A A R P f"
 
 lemma get_evrv:
-  "equiv_valid_rv_inv I A (I And A) \<top> get"
+  "equiv_valid_rv_inv I A (I and A) \<top> get"
   by(auto simp: equiv_valid_2_def get_def)
 
 lemma equiv_valid_rv_bind_general:
@@ -308,7 +308,7 @@ lemma get_bind_ev2:
   assumes "\<And> rv rv'. \<lbrakk>I rv rv'; A rv rv'\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P and ((=) rv)) (P' and ((=) rv')) (f rv) (f' rv')"
   shows "equiv_valid_2 I A B R P P' (get >>= f) (get >>= f')"
   apply(rule equiv_valid_2_guard_imp)
-  apply(rule_tac R'="I And A" in equiv_valid_2_bind_general)
+  apply(rule_tac R'="I and A" in equiv_valid_2_bind_general)
        apply(rule assms, simp+)
       apply(rule get_evrv)
      apply(wp get_sp)+
@@ -513,7 +513,7 @@ lemma liftME_ev:
   shows "equiv_valid_inv I A P (liftME f g)"
   apply(simp add: liftME_def)
   apply (rule bindE_ev_pre[OF returnOk_ev reads_res])
-  apply (rule hoare_True_E_R)
+  apply (rule hoareE_R_TrueI)
   apply fast
   done
 
@@ -572,10 +572,10 @@ lemmas pre_ev =
   hoare_pre
   equiv_valid_guard_imp
 
-subsection\<open>Tom instantiates wpc\<close>
+subsection\<open>wpc setup\<close>
 
 lemma wpc_helper_equiv_valid:
-  "equiv_valid D A B Q f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (equiv_valid D A B P f)"
+  "equiv_valid D A B Q f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (equiv_valid D A B P f)"
   using equiv_valid_guard_imp
   apply (simp add: wpc_helper_def)
   apply (blast)
@@ -645,7 +645,7 @@ lemma mapME_ev_pre:
    apply(subst mapME_Cons)
    apply wp
    apply fastforce
-   apply (rule hoare_True_E_R[where P="\<top>"])
+   apply (rule wp_post_tautE_R)
    apply fastforce+
   done
 

@@ -12,16 +12,16 @@
 theory HaskellLib_H
 imports
   Lib
-  NatBitwise
   More_Numeral_Type
-  NonDetMonadVCG
+  Monads.Nondet_VCG
+  Monads.Nondet_Reader_Option
 begin
 
 abbreviation (input) "flip \<equiv> swp"
 
 abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) nondet_monad
                       \<Rightarrow> ('a, 'b) nondet_monad" (infixl ">>'_" 60)
-  where "bind_drop \<equiv> (\<lambda>x y. bind x (K_bind y))"
+  where "bind_drop \<equiv> (\<lambda>x y. Nondet_Monad.bind x (K_bind y))"
 
 lemma bind_drop_test:
   "foldr bind_drop x (return ()) = sequence_x x"
@@ -60,7 +60,7 @@ declare haskell_assert_def [simp] haskell_assertE_def [simp]
 
 definition
   stateAssert :: "('a \<Rightarrow> bool) \<Rightarrow> unit list \<Rightarrow> ('a, unit) nondet_monad" where
- "stateAssert P L \<equiv> get >>= (\<lambda>s. assert (P s))"
+ "stateAssert P L \<equiv> state_assert P"
 
 definition
   haskell_fail :: "unit list \<Rightarrow> ('a, 'b) nondet_monad" where
@@ -521,5 +521,33 @@ syntax (input)
   "_listcompr" :: "'a \<Rightarrow> lc_qual \<Rightarrow> lc_quals \<Rightarrow> 'a list"  ("[_ | __")
 
 lemma "[(x,1) . x \<leftarrow> [0..10]] = [(x,1) | x \<leftarrow> [0..10]]" by (rule refl)
+
+definition ohaskell_fail :: "unit list \<Rightarrow> ('s, 'a) lookup" where
+  "ohaskell_fail = K ofail"
+
+definition ohaskell_assert :: "bool \<Rightarrow> unit list \<Rightarrow> ('s, unit) lookup" where
+  "ohaskell_assert P ls \<equiv> if P then oreturn () else ofail"
+
+lemma no_ofail_ohaskell_assert[wp]:
+  "no_ofail (\<lambda>_. P) (ohaskell_assert P [])"
+  by (clarsimp simp: no_ofail_def ohaskell_assert_def)
+
+lemma ohaskell_assert_wp[wp]:
+  "\<lblot>\<lambda>s. Q \<longrightarrow> P () s\<rblot> ohaskell_assert Q [] \<lblot>P\<rblot>"
+  apply (clarsimp simp: ohaskell_assert_def)
+  apply (intro conjI; wpsimp)
+  done
+
+lemma ohaskell_assert_sp:
+  "\<lblot>P\<rblot> ohaskell_assert Q [] \<lblot>\<lambda>_ s. P s \<and> Q\<rblot>"
+  apply (clarsimp simp: ohaskell_assert_def)
+  apply (intro conjI; wpsimp)
+  done
+
+lemma gets_the_ohaskell_assert:
+  "gets_the (ohaskell_assert P []) = assert P"
+  by (clarsimp simp: ohaskell_assert_def split: if_splits)
+
+lemmas omonad_defs = omonad_defs ohaskell_assert_def ohaskell_fail_def
 
 end

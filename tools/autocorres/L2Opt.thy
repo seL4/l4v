@@ -152,7 +152,7 @@ lemma monad_equiv_guard_conj [L2flow]:
 lemma monad_equiv_unknown [L2flow]:
     "monad_equiv P (L2_unknown name) (L2_unknown name) (\<lambda>r s. P s) (\<lambda>_ _. False)"
   apply (clarsimp simp: monad_equiv_def L2_defs)
-  apply (wp select_wp)
+  apply wp
   apply force
   done
 

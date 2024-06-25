@@ -10,6 +10,12 @@ theory Signed_Division_Word
   imports "HOL-Library.Signed_Division" "HOL-Library.Word"
 begin
 
+text \<open>
+  The following specification of division follows ISO C99, which in turn adopted the typical
+  behavior of hardware modern in the beginning of the 1990ies.
+  The underlying integer division is named ``T-division'' in \cite{leijen01}.
+\<close>
+
 instantiation word :: (len) signed_division
 begin
 
@@ -21,10 +27,6 @@ lift_definition signed_modulo_word :: \<open>'a::len word \<Rightarrow> 'a word 
   is \<open>\<lambda>k l. signed_take_bit (LENGTH('a) - Suc 0) k smod signed_take_bit (LENGTH('a) - Suc 0) l\<close>
   by (simp flip: signed_take_bit_decr_length_iff)
 
-instance ..
-
-end
-
 lemma sdiv_word_def [code]:
   \<open>v sdiv w = word_of_int (sint v sdiv sint w)\<close>
   for v w :: \<open>'a::len word\<close>
@@ -35,10 +37,22 @@ lemma smod_word_def [code]:
   for v w :: \<open>'a::len word\<close>
   by transfer simp
 
+instance proof
+  fix v w :: \<open>'a word\<close>
+  have \<open>sint v sdiv sint w * sint w + sint v smod sint w = sint v\<close>
+    by (fact sdiv_mult_smod_eq)
+  then have \<open>word_of_int (sint v sdiv sint w * sint w + sint v smod sint w) = (word_of_int (sint v) :: 'a word)\<close>
+    by simp
+  then show \<open>v sdiv w * w + v smod w = v\<close>
+    by (simp add: sdiv_word_def smod_word_def)
+qed
+
+end
+
 lemma sdiv_smod_id:
   \<open>(a sdiv b) * b + (a smod b) = a\<close>
   for a b :: \<open>'a::len word\<close>
-  by (cases \<open>sint a < 0\<close>; cases \<open>sint b < 0\<close>) (simp_all add: signed_modulo_int_def sdiv_word_def smod_word_def)
+  by (fact sdiv_mult_smod_eq)
 
 lemma signed_div_arith:
     "sint ((a::('a::len) word) sdiv b) = signed_take_bit (LENGTH('a) - 1) (sint a sdiv sint b)"
@@ -59,7 +73,7 @@ lemma word_sdiv_div0 [simp]:
 
 lemma smod_word_zero [simp]:
   \<open>w smod 0 = w\<close> for w :: \<open>'a::len word\<close>
-  by (simp add: smod_word_def signed_modulo_int_def)
+  by transfer (simp add: take_bit_signed_take_bit)
 
 lemma word_sdiv_div1 [simp]:
     "(a :: ('a::len) word) sdiv 1 = a"
@@ -124,11 +138,7 @@ lemma minus_one_smod_word_eq [simp]:
 
 lemma smod_word_alt_def:
   "(a :: ('a::len) word) smod b = a - (a sdiv b) * b"
-  apply (cases \<open>a \<noteq> - (2 ^ (LENGTH('a) - 1)) \<or> b \<noteq> - 1\<close>)
-   apply (clarsimp simp: smod_word_def sdiv_word_def signed_modulo_int_def
-     simp flip: wi_hom_sub wi_hom_mult)
-  apply (clarsimp simp: smod_word_def signed_modulo_int_def)
-  done
+  by (simp add: minus_sdiv_mult_eq_smod)
 
 lemmas sdiv_word_numeral_numeral [simp] =
   sdiv_word_def [of \<open>numeral a\<close> \<open>numeral b\<close>, simplified sint_sbintrunc sint_sbintrunc_neg]
@@ -179,8 +189,8 @@ lemma sdiv_word_max:
 proof (cases \<open>sint a = 0 \<or> sint b = 0 \<or> sgn (sint a) \<noteq> sgn (sint b)\<close>)
   case True then show ?thesis
     apply (auto simp add: sgn_if not_less signed_divide_int_def split: if_splits)
-     apply (smt (z3) pos_imp_zdiv_neg_iff zero_le_power)
-    apply (smt (z3) not_exp_less_eq_0_int pos_imp_zdiv_neg_iff)
+     apply (smt (verit) pos_imp_zdiv_neg_iff zero_le_power)
+    apply (smt (verit) not_exp_less_eq_0_int pos_imp_zdiv_neg_iff)
     done
 next
   case False

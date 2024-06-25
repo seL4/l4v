@@ -246,7 +246,7 @@ lemma com_initial_guards_extra_simps[simp]:
   "com_initial_guards (cbreak exn_upd) = UNIV"
   "com_initial_guards (ccatchbrk exn) = UNIV"
   by (simp_all add: whileAnno_def creturn_def creturn_void_def
-                    call_def block_def cbreak_def ccatchbrk_def)
+                    call_def block_def block_exn_def cbreak_def ccatchbrk_def)
 
 lemmas com_initial_guards_all_simps
     = com_initial_guards.simps com_initial_guards_extra_simps
@@ -274,7 +274,7 @@ lemma com_final_guards_extra_simps[simp]:
   "com_final_guards S (cbreak exn_upd) = UNIV"
   "com_final_guards S (ccatchbrk exn) = UNIV"
   by (simp_all add: whileAnno_def creturn_def creturn_void_def
-                    call_def block_def cbreak_def ccatchbrk_def)
+                    call_def block_def block_exn_def cbreak_def ccatchbrk_def)
 
 lemmas com_final_guards_all_simps
     = com_final_guards.simps com_final_guards_extra_simps
@@ -501,7 +501,7 @@ lemma exec_statefn_simulates_call:
             \<And>s t. f (ret1 s t) = ret2 (f s) (f t);
             \<And>s t. exec_statefn_simulates f UNIV T (save1 s t) (save2 (f s) (f t)) \<rbrakk>
       \<Longrightarrow> exec_statefn_simulates f S T (call init1 c ret1 save1) (call init2 c ret2 save2)"
-  apply (simp add: call_def block_def)
+  apply (simp add: call_def block_def block_exn_def)
   apply (intro exec_statefn_simulates_Seq exec_statefn_simulates_Catch
                exec_statefn_simulates_DynCom
                exec_statefn_simulates_Basic exec_statefn_simulates_Call

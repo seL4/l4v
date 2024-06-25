@@ -32,7 +32,7 @@ text \<open>
   (via L1_call_simpl), so the limitations of ac_corres do not apply.
 \<close>
 lemma autocorres_modifies_transfer:
-  notes select_wp[wp] hoare_seq_ext[wp]
+  notes bind_wp[wp]
   fixes \<Gamma> globals f' f_'proc modifies_eqn P xf
   assumes f'_def: "f' \<equiv> AC_call_L1 P globals xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
   assumes f_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. modifies_eqn (globals t) (globals \<sigma>)}"
@@ -413,7 +413,7 @@ fun modifies_call_tac (callee_modifies: incr_net) ctxt n = DETERM (
 
 (* VCG for trivial state invariants, such as globals modifies specs.
  * Takes vcg rules from "valid_inv". *)
-val valid_invN = Context.theory_name @{theory} ^ ".valid_inv"
+val valid_invN = Context.theory_name { long=true } @{theory} ^ ".valid_inv"
 fun modifies_vcg_tac leaf_tac ctxt n = let
   val vcg_rules = Named_Theorems.get ctxt valid_invN |> Tactic.build_net;
   fun vcg n st = Seq.make (fn () => let

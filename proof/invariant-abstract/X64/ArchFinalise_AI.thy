@@ -522,7 +522,7 @@ lemma suspend_unlive':
 
 crunch obj_at[wp]: fpu_thread_delete
   "\<lambda>s. P' (obj_at P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 lemma (* fpu_thread_delete_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
   "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
@@ -666,7 +666,7 @@ lemma flush_table_pred_tcb_at: "\<lbrace>\<lambda>s. pred_tcb_at proj P t s\<rbr
   done
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch pred_tcb_at[wp]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps set_arch_obj_simps wp: crunch_wps set_aobject_pred_tcb_at
@@ -739,7 +739,7 @@ lemma flush_table_empty:
     flush_table ac aa word b
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>"
   apply (clarsimp simp: flush_table_def set_vm_root_def)
-  apply (wp do_machine_op_obj_at  hoare_whenE_wp mapM_x_wp'
+  apply (wp do_machine_op_obj_at  whenE_wp mapM_x_wp'
     | wpc
     | simp
     | wps
@@ -1004,11 +1004,11 @@ crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
 
 crunch obj_at[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate
   "\<lambda>s. P' (obj_at P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 crunch x64_global_pdpts[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate
   "\<lambda>s. P' (x64_global_pdpts (arch_state s))"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 lemma delete_asid_empty_table_pml4:
   "\<lbrace>\<lambda>s. page_map_l4_at word s
@@ -1379,7 +1379,7 @@ lemma set_asid_pool_obj_at_ptr:
 lemma valid_arch_state_table_strg:
   "valid_arch_state s \<and> asid_pool_at p s \<and>
    Some p \<notin> x64_asid_table (arch_state s) ` (dom (x64_asid_table (arch_state s)) - {x}) \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>)"
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ran_def)
   apply (rule conjI, fastforce)
   apply (erule inj_on_fun_upd_strongerI)
@@ -1412,8 +1412,8 @@ lemma vs_lookup1_arch [simp]:
 
 lemma vs_lookup_empty_table:
   "(rs \<rhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
-     arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+  (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool Map.empty)),
+     arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<rhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (erule vs_lookupE)
   apply clarsimp
@@ -1445,8 +1445,8 @@ lemma vs_lookup_empty_table:
 
 lemma vs_lookup_pages_empty_table:
   "(rs \<unrhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
-     arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+  (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool Map.empty)),
+     arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<unrhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (subst (asm) vs_lookup_pages_def)
   apply (clarsimp simp: Image_def)
@@ -1481,7 +1481,7 @@ lemma set_asid_pool_empty_table_objs:
   set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vspace_objs
              (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
-                x64_asid_table (arch_state s)(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                (x64_asid_table (arch_state s))(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vspace_objs_def
@@ -1506,7 +1506,7 @@ lemma set_asid_pool_empty_table_lookup:
   set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vs_lookup
              (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
-                x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                (x64_asid_table (arch_state s))(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vs_lookup_def
@@ -1525,7 +1525,7 @@ lemma set_asid_pool_empty_table_lookup:
 lemma valid_ioports_asid_table_upd[iff]:
   "valid_ioports
          (s\<lparr>arch_state := arch_state s
-              \<lparr>x64_asid_table := x64_asid_table (arch_state s)
+              \<lparr>x64_asid_table := (x64_asid_table (arch_state s))
                  (asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>) = valid_ioports s"
   by (clarsimp simp: valid_ioports_def all_ioports_issued_def issued_ioports_def)
 
@@ -1536,7 +1536,7 @@ lemma set_asid_pool_invs_table:
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
        set_asid_pool p Map.empty
   \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
-                 x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                 (x64_asid_table (arch_state s))(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def valid_asid_map_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
             set_asid_pool_empty_table_objs valid_ioports_lift

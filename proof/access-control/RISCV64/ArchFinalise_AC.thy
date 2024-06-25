@@ -68,7 +68,7 @@ lemma delete_asid_pool_pas_refined[wp]:
 lemma delete_asid_pas_refined[wp]:
   "delete_asid asid pt \<lbrace>pas_refined aag\<rbrace>"
   unfolding delete_asid_def
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply (wpsimp simp: set_asid_pool_def wp: set_object_wp hoare_vcg_imp_lift' hoare_vcg_all_lift)
     apply (rule_tac Q="\<lambda>_ s. riscv_asid_table (arch_state s) = asid_table \<and>
                              ako_at (ASIDPool pool) x2 s \<and> pas_refined aag s"
@@ -121,7 +121,7 @@ lemma sbn_st_vrefs[Finalise_AC_assms]:
 lemma arch_finalise_cap_auth'[Finalise_AC_assms]:
   "\<lbrace>pas_refined aag\<rbrace> arch_finalise_cap x12 final \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag (fst rv)\<rbrace>"
   unfolding arch_finalise_cap_def
-  by (wp | wpc | simp add: comp_def hoare_post_taut[where P = \<top>] split del: if_split)+
+  by (wp | wpc | simp add: comp_def hoare_TrueI[where P = \<top>] split del: if_split)+
 
 lemma arch_finalise_cap_obj_refs[Finalise_AC_assms]:
   "\<lbrace>\<lambda>s. \<forall>x \<in> aobj_ref' acap. P x\<rbrace>
@@ -172,7 +172,7 @@ crunches set_asid_pool
 lemma set_asid_pool_tcb_states_of_state[wp]:
   "set_asid_pool p pool \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
   apply (wpsimp wp: set_object_wp_strong simp: obj_at_def  set_asid_pool_def)
-  apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
+  apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
    apply (auto simp: tcb_states_of_state_def get_tcb_def)
   done
 
@@ -266,7 +266,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
 qed
 
 lemma finalise_cap_caps_of_state_nullinv[Finalise_AC_assms]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> NullCap)))\<rbrace>
+  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   by (cases cap;
@@ -280,7 +280,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   "\<lbrace>\<lambda>_. P NullCap \<and> (\<forall>a b c. P (Zombie a b c))\<rbrace>
    finalise_cap cap is_final
    \<lbrace>\<lambda>rv _. P (fst rv)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
   apply (wp | simp add: comp_def split del: if_split | fastforce)+
   apply (rule hoare_pre)

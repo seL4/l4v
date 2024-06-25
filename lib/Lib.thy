@@ -18,6 +18,9 @@ imports
   Extract_Conjunct
   ML_Goal
   Eval_Bool
+  None_Top_Bot
+  Monads.Monad_Lib
+  Basics.CLib
   NICTATools
   "Word_Lib.WordSetup"
 begin
@@ -45,25 +48,6 @@ lemma Collect_eq:
 (* FIXME: move next to HOL.iff_allI *)
 lemma iff_impI: "\<lbrakk>P \<Longrightarrow> Q = R\<rbrakk> \<Longrightarrow> (P \<longrightarrow> Q) = (P \<longrightarrow> R)" by blast
 
-(* Long ago, I, fun_app, the verification master of darkness, unleashed an unspeakable evil
-upon the world. But a foolish proof engineer wielding an input abbreviation stepped forth
-to oppose me. Before the final blow was struck, I tore open a hole in a number of refinement
-proofs, and flung him into a broken proof state, where my evil is law. *)
-
-definition
-  fun_app :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a \<Rightarrow> 'b" (infixr "$" 10) where
-  "f $ x \<equiv> f x"
-
-declare fun_app_def [iff]
-
-lemma fun_app_cong[fundef_cong]:
-  "\<lbrakk> f x = f' x' \<rbrakk> \<Longrightarrow> (f $ x) = (f' $ x')"
-  by simp
-
-lemma fun_app_apply_cong[fundef_cong]:
-  "f x y = f' x' y' \<Longrightarrow> (f $ x) y = (f' $ x') y'"
-  by simp
-
 lemma if_apply_cong[fundef_cong]:
   "\<lbrakk> P = P'; x = x'; P' \<Longrightarrow> f x' = f' x'; \<not> P' \<Longrightarrow> g x' = g' x' \<rbrakk>
      \<Longrightarrow> (if P then f else g) x = (if P' then f' else g') x'"
@@ -78,64 +62,37 @@ lemma prod_injects:
   "p = (x,y) \<Longrightarrow> x = fst p \<and> y = snd p"
   by auto
 
-definition
-  pred_conj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "and" 35)
-where
-  "pred_conj P Q \<equiv> \<lambda>x. P x \<and> Q x"
-
-lemma pred_conj_absorb[simp]:
-  "(P and P) = P"
-  by (simp add: pred_conj_def)
-
-definition
-  pred_disj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "or" 30)
-where
-  "pred_disj P Q \<equiv> \<lambda>x. P x \<or> Q x"
-
-lemma pred_disj_absorb[simp]:
-  "(P or P) = P"
-  by (simp add: pred_disj_def)
-
-definition
-  pred_neg :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" ("not _" [40] 40)
-where
-  "pred_neg P \<equiv> \<lambda>x. \<not> P x"
-
-lemma pred_neg_simp[simp]:
-  "(not P) s \<longleftrightarrow> \<not> (P s)"
-  by (simp add: pred_neg_def)
-
-definition "K \<equiv> \<lambda>x y. x"
-
-definition
-  zipWith :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> 'c list" where
-  "zipWith f xs ys \<equiv> map (case_prod f) (zip xs ys)"
-
 primrec
   delete :: "'a \<Rightarrow> 'a list \<Rightarrow> 'a list"
 where
   "delete y [] = []"
 | "delete y (x#xs) = (if y=x then xs else x # delete y xs)"
 
-definition
- "swp f \<equiv> \<lambda>x y. f y x"
+(* Nicer names for sum discriminators and selectors *)
 
-lemma swp_apply[simp]: "swp f y x = f x y"
-  by (simp add: swp_def)
+abbreviation theLeft :: "'a + 'b \<Rightarrow> 'a" where
+  "theLeft \<equiv> projl"
 
-primrec (nonexhaustive)
-  theRight :: "'a + 'b \<Rightarrow> 'b" where
-  "theRight (Inr x) = x"
+lemmas theLeft_simps = sum.sel(1)
 
-primrec (nonexhaustive)
-  theLeft :: "'a + 'b \<Rightarrow> 'a" where
-  "theLeft (Inl x) = x"
+abbreviation theRight :: "'a + 'b \<Rightarrow> 'b" where
+  "theRight \<equiv> projr"
 
-definition
- "isLeft x \<equiv> (\<exists>y. x = Inl y)"
+lemmas theRight_simps = sum.sel(2)
 
-definition
- "isRight x \<equiv> (\<exists>y. x = Inr y)"
+abbreviation isLeft :: "'a + 'b \<Rightarrow> bool" where
+  "isLeft \<equiv> isl"
+
+lemmas isLeft_def = isl_def
+
+(* When you feel the urge to match something like "?P (isRight ?x)", consider using
+   "?P (isLeft ?x)" instead, because there is no primitive "isr", just "\<not>isl _". *)
+abbreviation isRight :: "'a + 'b \<Rightarrow> bool" where
+  "isRight \<equiv> \<lambda>x. \<not> isl x"
+
+lemma isRight_def:
+  "isRight x = (\<exists>y. x = Inr y)"
+  by (cases x; simp)
 
 definition
  "const x \<equiv> \<lambda>y. x"
@@ -238,24 +195,11 @@ lemma delete_remove1:
 
 lemma ignore_if:
   "(y and z) s \<Longrightarrow> (if x then y else z) s"
-  by (clarsimp simp: pred_conj_def)
-
-lemma zipWith_Nil2 :
-  "zipWith f xs [] = []"
-  unfolding zipWith_def by simp
+  by simp
 
 lemma isRight_right_map:
   "isRight (case_sum Inl (Inr o f) v) = isRight v"
-  by (simp add: isRight_def split: sum.split)
-
-lemma zipWith_nth:
-  "\<lbrakk> n < min (length xs) (length ys) \<rbrakk> \<Longrightarrow> zipWith f xs ys ! n = f (xs ! n) (ys ! n)"
-  unfolding zipWith_def by simp
-
-lemma length_zipWith [simp]:
-  "length (zipWith f xs ys) = min (length xs) (length ys)"
-  unfolding zipWith_def by simp
-
+  by (simp split: sum.split)
 
 lemma first_in_uptoD:
   "a \<le> b \<Longrightarrow> (a::'a::order) \<in> {a..b}"
@@ -278,10 +222,6 @@ lemma Some_helper:
 lemma in_empty_interE:
   "\<lbrakk> A \<inter> B = {}; x \<in> A; x \<in> B \<rbrakk> \<Longrightarrow> False"
   by blast
-
-lemma None_upd_eq:
-  "g x = None \<Longrightarrow> g(x := None) = g"
-  by (rule ext) simp
 
 lemma exx [iff]: "\<exists>x. x" by blast
 lemma ExNot [iff]: "Ex Not" by blast
@@ -445,6 +385,10 @@ lemma allEI:
   assumes "\<And>x. P x \<Longrightarrow> Q x"
   shows   "\<forall>x. Q x"
   using assms by (rule all_forward)
+
+lemma bexEI:
+  "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x"
+  by blast
 
 text \<open>General lemmas that should be in the library\<close>
 
@@ -636,11 +580,6 @@ lemma min_of_mono':
   unfolding min_def
   by (subst if_distrib [where f = f, symmetric], rule arg_cong [where f = f], rule if_cong [OF _ refl refl]) fact+
 
-lemma nat_diff_less:
-  fixes x :: nat
-  shows "\<lbrakk> x < y + z; z \<le> x\<rbrakk> \<Longrightarrow> x - z < y"
-  using less_diff_conv2 by blast
-
 lemma take_map_Not:
   "(take n (map Not xs) = take n xs) = (n = 0 \<or> xs = [])"
   by (cases n; simp) (cases xs; simp)
@@ -805,14 +744,6 @@ lemma in_set_zip_refl :
 lemma map_conv_upd:
   "m v = None \<Longrightarrow> m o (f (x := v)) = (m o f) (x := None)"
   by (rule ext) (clarsimp simp: o_def)
-
-lemma sum_all_ex [simp]:
-  "(\<forall>a. x \<noteq> Inl a) = (\<exists>a. x = Inr a)"
-  "(\<forall>a. x \<noteq> Inr a) = (\<exists>a. x = Inl a)"
-  by (metis Inr_not_Inl sum.exhaust)+
-
-lemma split_distrib: "case_prod (\<lambda>a b. T (f a b)) = (\<lambda>x. T (case_prod (\<lambda>a b. f a b) x))"
-  by (clarsimp simp: split_def)
 
 lemma case_sum_triv [simp]:
     "(case x of Inl x \<Rightarrow> Inl x | Inr x \<Rightarrow> Inr x) = x"
@@ -1169,10 +1100,6 @@ proof (rule set_eqI)
 qed
 
 
-lemma cart_singleton_image:
-  "S \<times> {s} = (\<lambda>v. (v, s)) ` S"
-  by auto
-
 lemma singleton_eq_o2s:
   "({x} = set_option v) = (v = Some x)"
   by (cases v, auto)
@@ -1472,16 +1399,6 @@ lemma foldl_fun_upd:
   "foldl (\<lambda>s r. s (r := g r)) f rs = (\<lambda>x. if x \<in> set rs then g x else f x)"
   by (induct rs arbitrary: f) (auto simp: fun_eq_iff)
 
-lemma all_rv_choice_fn_eq_pred:
-  "\<lbrakk> \<And>rv. P rv \<Longrightarrow> \<exists>fn. f rv = g fn \<rbrakk> \<Longrightarrow> \<exists>fn. \<forall>rv. P rv \<longrightarrow> f rv = g (fn rv)"
-  apply (rule_tac x="\<lambda>rv. SOME h. f rv = g h" in exI)
-  apply (clarsimp split: if_split)
-  by (meson someI_ex)
-
-lemma ex_const_function:
-  "\<exists>f. \<forall>s. f (f' s) = v"
-  by force
-
 lemma if_Const_helper:
   "If P (Con x) (Con y) = Con (If P x y)"
   by (simp split: if_split)
@@ -1554,6 +1471,10 @@ lemma iffE2:
 lemma list_case_If:
   "(case xs of [] \<Rightarrow> P | _ \<Rightarrow> Q) = (if xs = [] then P else Q)"
   by (rule list.case_eq_if)
+
+lemma lifted_if_collapse:
+  "(if P then \<top> else f) = (\<lambda>s. \<not>P \<longrightarrow> f s)"
+  by auto
 
 lemma remove1_Nil_in_set:
   "\<lbrakk> remove1 x xs = []; xs \<noteq> [] \<rbrakk> \<Longrightarrow> x \<in> set xs"
@@ -1992,6 +1913,37 @@ lemma length_takeWhile_gt:
   apply simp
   done
 
+lemma map_fst_filter_zip[simp]:
+ "map fst (filter (\<lambda>(_, x). P x) (zip ls (map f ls))) = filter (\<lambda>x. P (f x)) ls"
+  by (induction ls; clarsimp)
+
+lemma map_fst_dropWhile_zip[simp]:
+ "map fst (dropWhile (\<lambda>(_, x). P x) (zip ls (map f ls))) = dropWhile (\<lambda>x. P (f x)) ls"
+  by (induction ls; clarsimp)
+
+lemma map_fst_takeWhile_zip[simp]:
+ "map fst (takeWhile (\<lambda>(_, x). P x) (zip ls (map f ls))) = takeWhile (\<lambda>x. P (f x)) ls"
+  by (induction ls; clarsimp)
+
+lemma suffix_tl:
+  "suffix xs ys \<Longrightarrow> suffix (tl xs) ys"
+  apply (clarsimp simp: suffix_def)
+  apply (metis append.assoc append_Cons append_Nil list.exhaust_sel list.sel(2))
+  done
+
+lemma nonempty_proper_suffix_split:
+  "\<lbrakk>sfx \<noteq> []; sfx \<noteq> queue; suffix sfx queue\<rbrakk> \<Longrightarrow> (\<exists>xs ys. xs \<noteq> [] \<and> queue = xs @ hd sfx # ys)"
+  apply (clarsimp simp: suffix_def)
+  apply (fastforce simp: neq_Nil_conv)
+  done
+
+lemma nonempty_proper_suffix_split_distinct:
+  "\<lbrakk>sfx \<noteq> []; sfx \<noteq> queue; suffix sfx queue; distinct queue\<rbrakk>
+   \<Longrightarrow> \<exists>xs ys. xs \<noteq> [] \<and> queue = xs @ hd sfx # ys \<and> hd queue \<noteq> hd sfx"
+  apply (frule (2) nonempty_proper_suffix_split)
+  apply (cases sfx; fastforce)
+  done
+
 lemma hd_drop_conv_nth2:
   "n < length xs \<Longrightarrow> hd (drop n xs) = xs ! n"
   by (rule hd_drop_conv_nth) clarsimp
@@ -2111,6 +2063,22 @@ lemma filter_eq_If:
   "distinct xs \<Longrightarrow> filter (\<lambda>v. v = x) xs = (if x \<in> set xs then [x] else [])"
   by (induct xs) auto
 
+lemma filter_last_equals_butlast:
+  "\<lbrakk>distinct q; q \<noteq> []\<rbrakk> \<Longrightarrow> filter ((\<noteq>) (last q)) q = butlast q"
+  apply (induct q rule: length_induct)
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (fastforce simp: filter_id_conv)
+  done
+
+lemma filter_middle_distinct:
+  "\<lbrakk>distinct q; q = ys @ t # zs\<rbrakk> \<Longrightarrow> filter ((\<noteq>) t) q = ys @ zs"
+  apply (induct q rule: length_induct)
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (subst filter_True | fastforce)+
+  done
+
 lemma (in semigroup_add) foldl_assoc:
 shows "foldl (+) (x+y) zs = x + (foldl (+) y zs)"
   by (induct zs arbitrary: y) (simp_all add:add.assoc)
@@ -2118,23 +2086,6 @@ shows "foldl (+) (x+y) zs = x + (foldl (+) y zs)"
 lemma (in monoid_add) foldl_absorb0:
 shows "x + (foldl (+) 0 zs) = foldl (+) x zs"
   by (induct zs) (simp_all add:foldl_assoc)
-
-lemma foldl_conv_concat:
-  "foldl (@) xs xss = xs @ concat xss"
-proof (induct xss arbitrary: xs)
-  case Nil show ?case by simp
-next
-  interpret monoid_add "(@)" "[]" proof qed simp_all
-  case Cons then show ?case by (simp add: foldl_absorb0)
-qed
-
-lemma foldl_concat_concat:
-  "foldl (@) [] (xs @ ys) = foldl (@) [] xs @ foldl (@) [] ys"
-  by (simp add: foldl_conv_concat)
-
-lemma foldl_does_nothing:
-  "\<lbrakk> \<And>x. x \<in> set xs \<Longrightarrow> f s x = s \<rbrakk> \<Longrightarrow> foldl f s xs = s"
-  by (induct xs) auto
 
 lemma foldl_use_filter:
   "\<lbrakk> \<And>v x. \<lbrakk> \<not> g x; x \<in> set xs \<rbrakk> \<Longrightarrow> f v x = v \<rbrakk> \<Longrightarrow> foldl f v xs = foldl f v (filter g xs)"
@@ -2157,14 +2108,6 @@ lemma case_option_over_if:
   "case_option P Q (if G then Some v else None)
         = (if G then Q v else P)"
   by (simp split: if_split)+
-
-lemma map_length_cong:
-  "\<lbrakk> length xs = length ys; \<And>x y. (x, y) \<in> set (zip xs ys) \<Longrightarrow> f x = g y \<rbrakk>
-     \<Longrightarrow> map f xs = map g ys"
-  apply atomize
-  apply (erule rev_mp, erule list_induct2)
-   apply auto
-  done
 
 lemma take_min_len:
   "take (min (length xs) n) xs = take n xs"
@@ -2257,16 +2200,9 @@ lemma zip_take_triv:
   apply (case_tac as; simp)
   done
 
-lemma zip_take_triv2:
-  "length as \<le> n \<Longrightarrow> zip as (take n bs) = zip as bs"
-  apply (induct as arbitrary: n bs; simp)
-  apply (case_tac n; simp)
-  apply (case_tac bs; simp)
-  done
-
 lemma zip_take_length:
   "zip xs (take (length xs) ys) = zip xs ys"
-  by (metis order_refl zip_take_triv2)
+  by (metis length_take length_zip nat_le_linear take_all take_zip)
 
 lemma zip_singleton:
   "ys \<noteq> [] \<Longrightarrow> zip [a] ys = [(a, ys ! 0)]"
@@ -2348,7 +2284,7 @@ lemma map_of_zip_is_index:
 
 lemma map_of_zip_take_update:
   "\<lbrakk>i < length xs; length xs \<le> length ys; distinct xs\<rbrakk>
-  \<Longrightarrow> map_of (zip (take i xs) ys)(xs ! i \<mapsto> (ys ! i)) = map_of (zip (take (Suc i) xs) ys)"
+  \<Longrightarrow> (map_of (zip (take i xs) ys)) (xs ! i \<mapsto> ys ! i) = map_of (zip (take (Suc i) xs) ys)"
   apply (rule ext, rename_tac x)
   apply (case_tac "x=xs ! i"; clarsimp)
    apply (rule map_of_is_SomeI[symmetric])
@@ -2428,6 +2364,10 @@ lemma theD:
 lemma bspec_split:
   "\<lbrakk> \<forall>(a, b) \<in> S. P a b; (a, b) \<in> S \<rbrakk> \<Longrightarrow> P a b"
   by fastforce
+
+lemma all_eq_trans:
+  "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rbrakk> \<Longrightarrow> \<forall>x. P x = R x"
+  by simp
 
 lemma set_zip_same:
   "set (zip xs xs) = Id \<inter> (set xs \<times> set xs)"
@@ -2593,8 +2533,18 @@ next
     by (simp only: pv) (erule not_prefix_cases, auto intro: r1 r2 ih)
 qed
 
-lemma rsubst:
-  "\<lbrakk> P s; s = t \<rbrakk> \<Longrightarrow> P t"
+lemmas rsubst = back_subst[where a=s and b=t for s t]
+
+lemma rsubst2:
+  "\<lbrakk>P a b; a = s; b = t\<rbrakk> \<Longrightarrow> P s t"
+  by simp
+
+lemma rsubst3:
+  "\<lbrakk>P a b c ; a = s; b = t; c = u\<rbrakk> \<Longrightarrow> P s t u"
+  by simp
+
+lemma rsubst4:
+  "\<lbrakk>P a b c d; a = s; b = t; c = u; d = v\<rbrakk> \<Longrightarrow> P s t u v"
   by simp
 
 lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
@@ -2603,38 +2553,6 @@ lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<
 lemma option_Some_value_independent:
   "\<lbrakk> f x = Some v; \<And>v'. f x = Some v' \<Longrightarrow> f y = Some v' \<rbrakk> \<Longrightarrow> f y = Some v"
   by blast
-
-text \<open>Some int bitwise lemmas. Helpers for proofs about \<^file>\<open>NatBitwise.thy\<close>\<close>
-lemma int_2p_eq_shiftl:
-  "(2::int)^x = 1 << x"
-  by (simp add: shiftl_int_def)
-
-lemma nat_int_mul:
-  "nat (int a * b) = a * nat b"
-  by (simp add: nat_mult_distrib)
-
-lemma int_shiftl_less_cancel:
-  "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
-  apply (drule le_Suc_ex)
-  apply (clarsimp simp: shiftl_int_def power_add)
-  done
-
-lemma int_shiftl_lt_2p_bits:
-  "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
-  apply (clarsimp simp: shiftl_int_def)
-  by (metis bit_take_bit_iff not_less take_bit_int_eq_self_iff)
-\<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
-
-lemmas int_eq_test_bit = bin_eq_iff
-lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
-
-lemma le_nat_shrink_left:
-  "y \<le> z \<Longrightarrow> y = Suc x \<Longrightarrow> x < z"
-  by simp
-
-lemma length_ge_split:
-  "n < length xs \<Longrightarrow> \<exists>x xs'. xs = x # xs' \<and> n \<le> length xs'"
-  by (cases xs) auto
 
 text \<open>Support for defining enumerations on datatypes derived from enumerations\<close>
 lemma distinct_map_enum:
@@ -2661,11 +2579,57 @@ lemma if_option_None_eq:
   "((if P then Some x else None) = None) = (\<not>P)"
   by simp+
 
-lemmas if_option = if_option_None_eq if_option_Some if_option_Some2
+lemma option_case_all_conv:
+  "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
+  by (auto split: option.split)
+
+lemma prod_o_comp:
+  "(case x of (a, b) \<Rightarrow> f a b) \<circ> g = (case x of (a, b) \<Rightarrow> f a b \<circ> g)"
+  by (auto simp: split_def)
+
+lemma lhs_sym_eq:
+  "(a = b) = x \<longleftrightarrow> (b = a) = x"
+  by auto
+
+(* if_option is not [simp], because it can add x = y equations to the premises of the goal, which
+   get picked up by the simplifier and may lead to non-termination. *)
+lemmas if_option =
+  if_option_Some
+  if_option_Some[unfolded lhs_sym_eq]
+  if_option_Some2
+  if_option_Some2[unfolded lhs_sym_eq]
+
+(* if_option_eq should be safer, but is still not [simp], because P can be an equation, which can
+   lead to non-termination. *)
+lemmas if_option_eq =
+  if_option_None_eq
+  if_option_None_eq[unfolded lhs_sym_eq]
+  if_option_Some_eq
+  if_option_Some_eq[unfolded lhs_sym_eq]
 
 lemma not_in_ran_None_upd:
   "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
   by (auto simp: ran_def split: if_split)
+
+lemma ranD:
+  "v \<in> ran f \<Longrightarrow> \<exists>x. f x = Some v"
+  by (auto simp: ran_def)
+
+lemma fun_upd_swap:
+  "a \<noteq> c \<Longrightarrow>  hp(c := d, a := b) = hp(a := b, c := d)"
+  by fastforce
+
+lemma list_not_head:
+  "Suc 0 < length ls \<Longrightarrow> ls \<noteq> [hd ls]"
+  by (cases ls; clarsimp)
+
+lemma list_not_last:
+  "Suc 0 < length ls \<Longrightarrow> ls \<noteq> [last ls]"
+  by (cases ls; clarsimp)
+
+lemma length_tail_nonempty:
+  "Suc 0 < length list \<Longrightarrow> tl list \<noteq> []"
+  by (cases list, simp, simp)
 
 text \<open>Prevent clarsimp and others from creating Some from not None by folding this and unfolding
   again when safe.\<close>

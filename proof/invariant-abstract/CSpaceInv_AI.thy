@@ -162,12 +162,12 @@ crunch inv [wp]: lookup_cap P
 
 
 lemma cte_at_tcb_update:
-  "tcb_at t s \<Longrightarrow> cte_at slot (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = cte_at slot s"
+  "tcb_at t s \<Longrightarrow> cte_at slot (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = cte_at slot s"
   by (clarsimp simp add: cte_at_cases obj_at_def is_tcb)
 
 
 lemma valid_cap_tcb_update [simp]:
-  "tcb_at t s \<Longrightarrow> (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) \<turnstile> cap = s \<turnstile> cap"
+  "tcb_at t s \<Longrightarrow> (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) \<turnstile> cap = s \<turnstile> cap"
   apply (clarsimp simp: is_tcb elim!: obj_atE)
   apply (subgoal_tac "a_type (TCB tcba) = a_type (TCB tcb)")
    apply (rule iffI)
@@ -181,7 +181,7 @@ lemma valid_cap_tcb_update [simp]:
 
 lemma obj_at_tcb_update:
   "\<lbrakk> tcb_at t s; \<And>x y. P (TCB x) = P (TCB y)\<rbrakk> \<Longrightarrow>
-  obj_at P t' (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = obj_at P t' s"
+  obj_at P t' (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = obj_at P t' s"
   apply (simp add: obj_at_def is_tcb_def)
   apply clarsimp
   apply (case_tac ko)
@@ -191,7 +191,7 @@ lemma obj_at_tcb_update:
 
 lemma valid_thread_state_tcb_update:
   "\<lbrakk> tcb_at t s \<rbrakk> \<Longrightarrow>
-  valid_tcb_state ts (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = valid_tcb_state ts s"
+  valid_tcb_state ts (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = valid_tcb_state ts s"
   apply (unfold valid_tcb_state_def)
   apply (case_tac ts)
   apply (simp_all add: obj_at_tcb_update is_ep_def is_tcb_def is_ntfn_def)
@@ -200,7 +200,7 @@ lemma valid_thread_state_tcb_update:
 
 lemma valid_objs_tcb_update:
   "\<lbrakk>tcb_at t s; valid_tcb t tcb s; valid_objs s \<rbrakk>
-  \<Longrightarrow> valid_objs (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>)"
+  \<Longrightarrow> valid_objs (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>)"
   apply (clarsimp simp: valid_objs_def dom_def
                  elim!: obj_atE)
   apply (intro conjI impI)
@@ -217,7 +217,7 @@ lemma valid_objs_tcb_update:
 
 
 lemma obj_at_update:
-  "obj_at P t' (s \<lparr>kheap := kheap s (t \<mapsto> v)\<rparr>) =
+  "obj_at P t' (s \<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>) =
   (if t = t' then P v else obj_at P t' s)"
   by (simp add: obj_at_def)
 
@@ -225,7 +225,7 @@ lemma obj_at_update:
 lemma iflive_tcb_update:
   "\<lbrakk> if_live_then_nonz_cap s; live (TCB tcb) \<longrightarrow> ex_nonz_cap_to t s;
            obj_at (same_caps (TCB tcb)) t s \<rbrakk>
-  \<Longrightarrow> if_live_then_nonz_cap (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>)"
+  \<Longrightarrow> if_live_then_nonz_cap (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>)"
   unfolding fun_upd_def
   apply (simp add: if_live_then_nonz_cap_def, erule allEI)
   apply safe
@@ -236,7 +236,7 @@ lemma iflive_tcb_update:
 
 lemma ifunsafe_tcb_update:
   "\<lbrakk> if_unsafe_then_cap s; obj_at (same_caps (TCB tcb)) t s \<rbrakk>
-  \<Longrightarrow> if_unsafe_then_cap (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>)"
+  \<Longrightarrow> if_unsafe_then_cap (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>)"
   apply (simp add: if_unsafe_then_cap_def, elim allEI)
   apply (clarsimp dest!: caps_of_state_cteD
                    simp: cte_wp_at_after_update fun_upd_def)
@@ -247,7 +247,7 @@ lemma ifunsafe_tcb_update:
 
 lemma zombies_tcb_update:
   "\<lbrakk> zombies_final s; obj_at (same_caps (TCB tcb)) t s \<rbrakk>
-   \<Longrightarrow> zombies_final (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>)"
+   \<Longrightarrow> zombies_final (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>)"
   apply (simp add: zombies_final_def is_final_cap'_def2, elim allEI)
   apply (clarsimp simp: cte_wp_at_after_update fun_upd_def)
   done
@@ -259,14 +259,14 @@ lemma valid_idle_tcb_update:
     tcb_state t = tcb_state t'; tcb_bound_notification t = tcb_bound_notification t';
     tcb_iarch t = tcb_iarch t';
     valid_tcb p t' s \<rbrakk>
-   \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
+   \<Longrightarrow> valid_idle (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
 
 lemma valid_reply_caps_tcb_update:
   "\<lbrakk>valid_reply_caps s; ko_at (TCB t) p s; tcb_state t = tcb_state t';
     same_caps (TCB t) (TCB t') \<rbrakk>
-   \<Longrightarrow> valid_reply_caps (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
+   \<Longrightarrow> valid_reply_caps (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB t')\<rparr>)"
   apply (frule_tac P'="same_caps (TCB t')" in obj_at_weakenE, simp)
   apply (fastforce simp: valid_reply_caps_def has_reply_cap_def
                         pred_tcb_at_def obj_at_def fun_upd_def
@@ -277,13 +277,13 @@ lemma valid_reply_caps_tcb_update:
 lemma valid_reply_masters_tcb_update:
   "\<lbrakk>valid_reply_masters s; ko_at (TCB t) p s; tcb_state t = tcb_state t';
     same_caps (TCB t) (TCB t') \<rbrakk>
-   \<Longrightarrow> valid_reply_masters (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
+   \<Longrightarrow> valid_reply_masters (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: valid_reply_masters_def fun_upd_def is_tcb
                      cte_wp_at_after_update obj_at_def)
 
 lemma tcb_state_same_cte_wp_at:
   "\<lbrakk> ko_at (TCB t) p s; \<forall>(getF, v) \<in> ran tcb_cap_cases. getF t = getF t' \<rbrakk>
-     \<Longrightarrow> \<forall>P p'. cte_wp_at P p' (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)
+     \<Longrightarrow> \<forall>P p'. cte_wp_at P p' (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB t')\<rparr>)
              = cte_wp_at P p' s"
   apply (clarsimp simp add: cte_wp_at_cases obj_at_def)
   apply (case_tac "tcb_cap_cases b")
@@ -553,7 +553,7 @@ lemma set_cap_valid_objs:
         and tcb_cap_valid x p\<rbrace>
       set_cap x p \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj, simp_all split del: if_split)
    apply clarsimp
    apply (wp set_object_valid_objs)
@@ -742,7 +742,7 @@ lemma set_cap_pspace:
   assumes x: "\<And>s f'. f (kheap_update f' s) = f s"
   shows      "\<lbrace>\<lambda>s. P (f s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. P (f s)\<rbrace>"
   apply (simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj, simp_all split del: if_split cong: if_cong)
    apply (wpsimp wp: set_object_wp simp: x)+
   done
@@ -958,7 +958,7 @@ lemma set_cap_zombies:
 lemma set_cap_obj_at_other:
   "\<lbrace>\<lambda>s. P (obj_at P' p s) \<and> p \<noteq> fst p'\<rbrace> set_cap cap p' \<lbrace>\<lambda>rv s. P (obj_at P' p s)\<rbrace>"
   apply (simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_inv])
+  apply (rule bind_wp [OF _ get_object_inv])
   apply (case_tac obj, simp_all split del: if_split)
    apply (wpsimp wp: set_object_wp simp: obj_at_def)+
   done
@@ -1468,7 +1468,7 @@ lemma thread_set_mdb:
   done
 
 lemma set_cap_caps_of_state2:
-  "\<lbrace>\<lambda>s. P (caps_of_state s (p \<mapsto> cap)) (cdt s) (is_original_cap s)\<rbrace>
+  "\<lbrace>\<lambda>s. P ((caps_of_state s)(p \<mapsto> cap)) (cdt s) (is_original_cap s)\<rbrace>
   set_cap cap p
   \<lbrace>\<lambda>rv s. P (caps_of_state s) (cdt s) (is_original_cap s)\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>m mr. P (caps_of_state s) m mr
@@ -2069,7 +2069,7 @@ lemma cap_insert_obj_at_other:
 
 lemma only_idle_tcb_update:
   "\<lbrakk>only_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t' \<or> \<not>idle (tcb_state t') \<rbrakk>
-    \<Longrightarrow> only_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
+    \<Longrightarrow> only_idle (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def)
 
 lemma as_user_only_idle :

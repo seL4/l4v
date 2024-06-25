@@ -22,12 +22,12 @@ lemma foldr_data_map_insert[simp]:
 
 crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
-     wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
+     wp: hoare_drop_imps unless_wp mapME_x_inv_wp
          preemptionPoint_inv)
 
 lemma mapM_x_mapM_valid:
   "\<lbrace> P \<rbrace> mapM_x f xs \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>mapM f xs \<lbrace>\<lambda>r. Q\<rbrace>"
-  apply (simp add:NonDetMonadLemmaBucket.mapM_x_mapM)
+  apply (simp add: mapM_x_mapM)
   apply (clarsimp simp:valid_def return_def bind_def)
   apply (drule spec)
   apply (erule impE)

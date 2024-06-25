@@ -11,10 +11,6 @@ imports
   SubMonadLib
 begin
 
-lemma corres_underlying_trivial:
-  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' (=) \<top> P' f f"
-  by (auto simp add: corres_underlying_def Id_def no_fail_def)
-
 lemma hoare_spec_gen_asm:
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f \<lbrace>Q\<rbrace>"
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
@@ -100,10 +96,10 @@ lemmas mapM_x_accumulate_checks
 lemma isRight_rel_sum_comb2:
   "\<lbrakk> (f \<oplus> r) v v'; isRight v' \<rbrakk>
        \<Longrightarrow> isRight v \<and> r (theRight v) (theRight v')"
-  by (clarsimp simp: isRight_def)
+  by (cases v; clarsimp)
 
 lemma isRight_case_sum: "isRight x \<Longrightarrow> case_sum f g x = g (theRight x)"
-  by (clarsimp simp add: isRight_def)
+  by (cases x; clarsimp)
 
 lemma enumerate_append:"enumerate i (xs @ ys) = enumerate i xs @ enumerate (i + length xs) ys"
   apply (induct xs arbitrary:ys i)
@@ -513,5 +509,13 @@ lemma imp_and_strg: "Q \<and> C \<longrightarrow> (A \<longrightarrow> Q \<and> 
 lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> P \<and> B)" by simp
 
 lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
+
+lemma filter_hd_equals_tl:
+  "\<lbrakk>distinct q; q \<noteq> []\<rbrakk> \<Longrightarrow> filter ((\<noteq>) (hd q)) q = tl q"
+  apply (induct q rule: length_induct)
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (fastforce simp: filter_id_conv)
+  done
 
 end

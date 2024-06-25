@@ -115,7 +115,7 @@ lemma preemption_point_inv:
   shows
     "\<lbrakk>irq_state_independent_A P; \<And>f s. P (trans_state f s) = P s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (intro impI conjI | simp add: preemption_point_def o_def
-       | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp alternative_wp[where P=P]
+       | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp
        | wpc)+
   done
 
@@ -172,7 +172,7 @@ proof (induct args arbitrary: s rule: resolve_address_bits'.induct)
         s \<turnstile> \<lbrace>P'\<rbrace> resolve_address_bits' z args \<lbrace>Q\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
     unfolding spec_validE_def
     apply (fold validE_R_def)
-    apply (erule hoare_post_imp_R)
+    apply (erule hoare_strengthen_postE_R)
     apply simp
     done
   show ?case
@@ -237,7 +237,7 @@ lemma resolve_address_bits_cte_at:
   "\<lbrace> valid_objs and valid_cap (fst args) \<rbrace>
   resolve_address_bits args
   \<lbrace>\<lambda>rv. cte_at (fst rv)\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule resolve_address_bits_real_cte_at)
+  apply (rule hoare_strengthen_postE_R, rule resolve_address_bits_real_cte_at)
   apply (erule real_cte_at_cte)
   done
 
@@ -566,9 +566,9 @@ lemma no_True_set_nth:
   done
 
 lemma set_cap_caps_of_state_monad:
-  "(v, s') \<in> fst (set_cap cap p s) \<Longrightarrow> caps_of_state s' = (caps_of_state s (p \<mapsto> cap))"
+  "(v, s') \<in> fst (set_cap cap p s) \<Longrightarrow> caps_of_state s' = (caps_of_state s)(p \<mapsto> cap)"
   apply (drule use_valid)
-    apply (rule set_cap_caps_of_state [where P="(=) (caps_of_state s (p\<mapsto>cap))"])
+    apply (rule set_cap_caps_of_state [where P="(=) ((caps_of_state s)(p\<mapsto>cap))"])
    apply (rule refl)
   apply simp
   done
@@ -1949,15 +1949,15 @@ lemma set_free_index_valid_mdb:
   proof(intro conjI impI)
   fix s bits f r dev
   assume mdb:"untyped_mdb (cdt s) (caps_of_state s)"
-  assume cstate:"caps_of_state s cref = Some (cap.UntypedCap dev r bits f)" (is "?m cref = Some ?srccap")
-  show "untyped_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
+  assume cstate:"caps_of_state s cref = Some (UntypedCap dev r bits f)" (is "?m cref = Some ?srccap")
+  show "untyped_mdb (cdt s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
   apply (rule untyped_mdb_update_free_index
      [where capa = ?srccap and m = "caps_of_state s" and src = cref,
        unfolded free_index_update_def,simplified,THEN iffD2])
    apply (simp add:cstate mdb)+
   done
   assume arch_mdb:"valid_arch_mdb (is_original_cap s) (caps_of_state s)"
-  show "valid_arch_mdb (is_original_cap s) (caps_of_state s(cref \<mapsto> UntypedCap dev r bits idx))"
+  show "valid_arch_mdb (is_original_cap s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
   apply (rule valid_arch_mdb_updates(1)[where capa = ?srccap
                                and m="caps_of_state s" and src=cref,
                                unfolded free_index_update_def, simplified, THEN iffD2])
@@ -1987,7 +1987,7 @@ lemma set_free_index_valid_mdb:
   done
 
   note blah[simp del] = untyped_range.simps usable_untyped_range.simps
-  show "untyped_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
+  show "untyped_inc (cdt s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
   using inc cstate
   apply (unfold untyped_inc_def)
   apply (intro allI impI)
@@ -2023,11 +2023,11 @@ lemma set_free_index_valid_mdb:
    apply clarsimp+
   done
   assume "ut_revocable (is_original_cap s) (caps_of_state s)"
-  thus "ut_revocable (is_original_cap s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
+  thus "ut_revocable (is_original_cap s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
   using cstate
   by (fastforce simp:ut_revocable_def)
   assume "reply_caps_mdb (cdt s) (caps_of_state s)"
-  thus "reply_caps_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
+  thus "reply_caps_mdb (cdt s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
   using cstate
   apply (simp add:reply_caps_mdb_def del:split_paired_All split_paired_Ex)
   apply (intro allI impI conjI)
@@ -2039,7 +2039,7 @@ lemma set_free_index_valid_mdb:
   apply fastforce
   done
   assume "reply_masters_mdb (cdt s) (caps_of_state s)"
-  thus "reply_masters_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
+  thus "reply_masters_mdb (cdt s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
    apply (simp add:reply_masters_mdb_def del:split_paired_All split_paired_Ex)
    apply (intro allI impI ballI)
    apply (erule exE)
@@ -2051,7 +2051,7 @@ lemma set_free_index_valid_mdb:
   assume mdb:"mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
   and desc_inc:"descendants_inc (cdt s) (caps_of_state s)"
   and cte:"caps_of_state s cref = Some (cap.UntypedCap dev r bits f)"
-  show "descendants_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
+  show "descendants_inc (cdt s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
    using mdb cte
    apply (clarsimp simp:swp_def cte_wp_at_caps_of_state)
    apply (erule descendants_inc_minor[OF desc_inc])
@@ -2147,10 +2147,10 @@ lemma cap_insert_mdb [wp]:
    apply (rule conjI)
     apply (simp add: no_mloop_def mdb_insert_abs.parency)
     apply (intro allI impI conjI)
-            apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
+            apply (rule_tac m1 = "(caps_of_state s)(dest\<mapsto> cap)"
                         and src1 = src in iffD2[OF untyped_mdb_update_free_index,rotated,rotated])
               apply (simp add:fun_upd_twist)+
-           apply (drule_tac cs' = "caps_of_state s(src \<mapsto> max_free_index_update capa)" in descendants_inc_minor)
+           apply (drule_tac cs' = "(caps_of_state s)(src \<mapsto> max_free_index_update capa)" in descendants_inc_minor)
              apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
             apply clarsimp
            apply (subst upd_commute)
@@ -2175,7 +2175,7 @@ lemma cap_insert_mdb [wp]:
         apply (clarsimp simp:is_cap_simps free_index_update_def)+
       apply (clarsimp simp: reply_master_revocable_def is_derived_def is_master_reply_cap_def is_cap_revocable_def)
      apply clarsimp
-     apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
+     apply (rule_tac m1 = "(caps_of_state s)(dest\<mapsto> cap)"
                    and src1 = src in reply_mdb_update_free_index[THEN iffD2])
        apply ((simp add:fun_upd_twist)+)[3]
     apply (clarsimp simp:is_cap_simps is_cap_revocable_def)
@@ -2200,11 +2200,11 @@ lemma cap_insert_mdb [wp]:
    apply (erule (1) valid_arch_mdb_updates)
   apply (clarsimp)
   apply (intro impI conjI allI)
-                   apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
+                   apply (rule_tac m1 = "(caps_of_state s)(dest\<mapsto> cap)"
                               and src1 = src in iffD2[OF untyped_mdb_update_free_index,rotated,rotated])
                      apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
                       apply (simp add:fun_upd_twist)+
-                  apply (drule_tac cs' = "caps_of_state s(src \<mapsto> max_free_index_update capa)" in descendants_inc_minor)
+                  apply (drule_tac cs' = "(caps_of_state s)(src \<mapsto> max_free_index_update capa)" in descendants_inc_minor)
                     apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
                    apply clarsimp
                   apply (subst upd_commute)
@@ -2215,7 +2215,7 @@ lemma cap_insert_mdb [wp]:
                  apply (simp add: no_mloop_def)
                  apply (simp add: mdb_insert_abs_sib.parent_n_eq)
                  apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
-                apply (rule_tac m = "caps_of_state s(dest\<mapsto> cap)" and src = src in untyped_inc_update_free_index)
+                apply (rule_tac m = "(caps_of_state s)(dest\<mapsto> cap)" and src = src in untyped_inc_update_free_index)
                   apply (simp add:fun_upd_twist)+
                 apply (frule(3) mdb_insert_abs_sib.untyped_inc)
                   apply (frule_tac p = src in caps_of_state_valid,assumption)
@@ -2228,7 +2228,7 @@ lemma cap_insert_mdb [wp]:
               apply (intro impI conjI)
                apply (clarsimp simp:is_cap_simps free_index_update_def)+
              apply (clarsimp simp: reply_master_revocable_def is_derived_def is_master_reply_cap_def is_cap_revocable_def)
-            apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
+            apply (rule_tac m1 = "(caps_of_state s)(dest\<mapsto> cap)"
                       and src1 = src in iffD2[OF reply_mdb_update_free_index,rotated,rotated])
               apply (frule mdb_insert_abs_sib.reply_mdb_sib,simp+)
                apply (clarsimp simp:ut_revocable_def,case_tac src,clarsimp,simp)
@@ -3514,7 +3514,7 @@ lemma set_untyped_cap_as_full_has_reply_cap:
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. (has_reply_cap t s)\<rbrace>"
   apply (clarsimp simp:has_reply_cap_def is_reply_cap_to_def)
-  apply (wp hoare_ex_wp)
+  apply (wp hoare_vcg_ex_lift)
    apply (wp set_untyped_cap_as_full_cte_wp_at)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule_tac x = a in exI)
@@ -4225,7 +4225,7 @@ lemma set_cap_ups_of_heap[wp]:
  "\<lbrace>\<lambda>s. P (ups_of_heap (kheap s))\<rbrace> set_cap cap sl
   \<lbrace>\<lambda>_ s. P (ups_of_heap (kheap s))\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj)
   by (auto simp: valid_def in_monad obj_at_def get_object_def)
 
@@ -4251,7 +4251,7 @@ lemma set_cap_cns_of_heap[wp]:
  "\<lbrace>\<lambda>s. P (cns_of_heap (kheap s))\<rbrace> set_cap cap sl
   \<lbrace>\<lambda>_ s. P (cns_of_heap (kheap s))\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (rule bind_wp [OF _ get_object_sp])
   apply (case_tac obj)
    apply (auto simp: valid_def in_monad obj_at_def get_object_def)
   done

@@ -230,7 +230,7 @@ lemma setObject_ASIDPool_corres [corres]:
   corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p)
             (set_asid_pool p a) (setObject p a')"
   apply (simp add: set_asid_pool_def)
-  apply (corressimp search: setObject_other_corres[where P="\<lambda>_. True"]
+  apply (corresKsimp search: setObject_other_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_obj_relation_def asid_pool_relation_def)
   apply (clarsimp simp: obj_at_simps )
@@ -342,6 +342,10 @@ lemma magnitudeCheck_assert2:
   using in_magnitude_check[where x=x and n=n and s=s and s'=s and v="()"]
   by (simp add: magnitudeCheck_assert in_monad)
 
+lemma fst_fail: (* FIXME lib: move up *)
+  "fst (fail s) = {}"
+  by (simp add: fail_def)
+
 lemma getObject_get_assert:
   assumes deflt: "\<And>a b c d. (loadObject a b c d :: ('a :: pspace_storable) kernel)
                           = loadObject_default a b c d"
@@ -361,7 +365,7 @@ lemma getObject_get_assert:
   apply (simp add: lookupAround2_known1 assert_opt_def
                    obj_at'_def projectKO_def2
             split: option.split)
-  apply (clarsimp simp: fail_def fst_return conj_comms project_inject
+  apply (clarsimp simp: fst_fail fst_return conj_comms project_inject
                         objBits_def)
   apply (simp only: assert2[symmetric],
          rule bind_apply_cong[OF refl])
@@ -930,12 +934,16 @@ lemma setObject_PD_corres [corres]:
    apply (drule(1) ekheap_kheap_dom)
    apply clarsimp
    apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
+   apply (simp add: tcb_relation_cut_def
            split: Structures_A.kernel_object.splits)
-  apply (rule conjI)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pd_bits" in allE)+
    apply fastforce
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pde')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
@@ -1006,12 +1014,15 @@ lemma setObject_PT_corres [corres]:
    apply (drule(1) ekheap_kheap_dom)
    apply clarsimp
    apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits)
-  apply (rule conjI)
+   apply (simp add: tcb_relation_cut_def split: Structures_A.kernel_object.splits)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
    apply fastforce
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
@@ -1212,7 +1223,7 @@ lemma lookupPTSlot_corres [corres]:
           (pspace_aligned' and pspace_distinct')
           (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
-  apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
+  apply (corresKsimp simp: pde_relation_aligned_def lookup_failure_map_def
                       wp: get_pde_wp_valid getPDE_wp)
   by (auto simp: lookup_failure_map_def obj_at_def)
 
@@ -1317,7 +1328,7 @@ lemma createMappingEntries_corres [corres]:
           (create_mapping_entries base vptr pgsz vm_rights attrib pd)
           (createMappingEntries base vptr pgsz vm_rights' attrib' pd)"
   unfolding createMappingEntries_def mapping_map_def
-  by (cases pgsz; corressimp simp: vmattributes_map_def)
+  by (cases pgsz; corresKsimp simp: vmattributes_map_def)
 
 lemma pte_relation'_Invalid_inv [simp]:
   "pte_relation' x ARM_HYP_H.pte.InvalidPTE = (x = ARM_A.pte.InvalidPTE)"
@@ -1350,7 +1361,7 @@ lemma createMappingEntries_valid_slots' [wp]:
   apply (auto elim: is_aligned_weaken)
   done
 
-lemmas [corresc_simp] = master_pte_relation_def master_pde_relation_def
+lemmas [corresKc_simp] = master_pte_relation_def master_pde_relation_def
 
 lemma ensureSafeMapping_corres [corres]:
   "mapping_map m m' \<Longrightarrow>
@@ -1361,7 +1372,7 @@ lemma ensureSafeMapping_corres [corres]:
   unfolding mapping_map_def ensureSafeMapping_def
   apply (cases m; cases m'; simp;
          match premises in "(_ \<otimes> (=)) p p'" for p p' \<Rightarrow> \<open>cases "fst p"; cases "fst p'"\<close>; clarsimp)
-        by (corressimp corresK: mapME_x_corresK_inv
+        by (corresKsimp corresK: mapME_x_corresK_inv
                             wp: get_master_pte_wp get_master_pde_wp getPTE_wp getPDE_wp;
             auto simp add: valid_mapping_entries_def)+
 
@@ -1393,7 +1404,7 @@ lemma find_pd_for_asid_corres [@lift_corres_args, corres]:
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"
   apply (simp add: find_pd_for_asid_def findPDForASID_def liftME_def bindE_assoc)
-  apply (corressimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast lookup_failure_map_def
+  apply (corresKsimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast lookup_failure_map_def
                       wp: getPDE_wp getASID_wp
                   search: checkPDAt_corres corres_gets_asid)
   subgoal premises prems for s s'
@@ -1677,6 +1688,167 @@ lemma dmo_clearMemory_invs'[wp]:
     apply simp_all
   apply (drule clearMemory_vms')
   apply fastforce
+  done
+
+lemma pspace_aligned_cross:
+  "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
+  apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
+  apply (rename_tac p' ko')
+  apply (prop_tac "p' \<in> pspace_dom (kheap s)", fastforce)
+  apply (thin_tac "pspace_dom k = p" for k p)
+  apply (clarsimp simp: pspace_dom_def)
+  apply (drule bspec, fastforce)+
+  apply clarsimp
+  apply (rename_tac ko' a a' P ko)
+  apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
+
+       \<comment>\<open>CNode\<close>
+       apply (clarsimp simp: cte_map_def)
+       apply (simp only: cteSizeBits_def cte_level_bits_def)
+       apply (rule is_aligned_add)
+        apply (erule is_aligned_weaken, simp)
+       apply (rule is_aligned_weaken)
+        apply (rule is_aligned_mult_triv2, simp)
+
+      \<comment>\<open>TCB\<close>
+      apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
+
+     \<comment>\<open>PageTable\<close>
+     apply (clarsimp simp: archObjSize_def pteBits_def)
+     apply (rule is_aligned_add)
+      apply (erule is_aligned_weaken)
+      apply (simp add: vspace_bits_defs)
+     apply (rule is_aligned_shift)
+
+    \<comment>\<open>PageDirectory\<close>
+    apply (clarsimp simp: archObjSize_def vspace_bits_defs)
+    apply (rule is_aligned_add)
+     apply (erule is_aligned_weaken, simp)
+    apply (rule is_aligned_shift)
+
+  \<comment>\<open>DataPage\<close>
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (rule pbfs_atleast_pageBits)
+   apply (fastforce intro: is_aligned_shift is_aligned_mult_triv2)
+
+  \<comment>\<open>other_obj_relation\<close>
+  apply (simp add: other_obj_relation_def)
+  by (clarsimp simp: epSizeBits_def ntfnSizeBits_def
+              split: kernel_object.splits Structures_A.kernel_object.splits)
+     (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
+
+lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
+
+lemma objBitsKO_Data:
+  "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
+  by (simp add: objBits_def objBitsKO_def word_size_def)
+
+lemma of_bl_shift_cte_level_bits:
+  "(of_bl z :: machine_word) << cte_level_bits \<le> mask (cte_level_bits + length z)"
+  by word_bitwise
+     (simp add: test_bit_of_bl bit_simps word_size cte_level_bits_def rev_bl_order_simps)
+
+lemma obj_relation_cuts_range_limit:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
+   \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
+  apply (erule (1) obj_relation_cutsE; clarsimp)
+       apply (drule (1) wf_cs_nD)
+       apply (clarsimp simp: cte_map_def2)
+       apply (rule_tac x=cte_level_bits in exI)
+       apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+      apply (rule_tac x=tcbBlockSizeBits in exI)
+      apply (simp add: tcbBlockSizeBits_def)
+     apply (rule_tac x=pteBits in exI)
+     apply (simp add: bit_simps is_aligned_shift mask_def vspace_bits_defs)
+     apply word_bitwise
+    apply (rule_tac x=pdeBits in exI)
+    apply (simp add: bit_simps is_aligned_shift mask_def vspace_bits_defs)
+    apply word_bitwise
+   apply (rule_tac x=pageBits in exI)
+   apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
+   apply (simp add: mask_def shiftl_t2n mult_ac)
+   apply (frule word_less_power_trans2, rule pbfs_atleast_pageBits)
+    apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
+   apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
+  apply fastforce
+  done
+
+lemma obj_relation_cuts_range_mask_range:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
+   \<Longrightarrow> p' \<in> mask_range p (obj_bits ko)"
+  apply (drule (1) obj_relation_cuts_range_limit, clarsimp)
+  apply (rule conjI)
+   apply (rule word_plus_mono_right2; assumption?)
+   apply (simp add: is_aligned_no_overflow_mask)
+  apply (erule word_plus_mono_right)
+  apply (simp add: is_aligned_no_overflow_mask)
+  done
+
+lemma obj_relation_cuts_obj_bits:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
+  apply (erule (1) obj_relation_cutsE;
+          clarsimp simp: objBits_simps objBits_defs cte_level_bits_def
+                         pbfs_atleast_pageBits[simplified bit_simps] archObjSize_def pteBits_def
+                         pdeBits_def)
+    apply (simp add: vspace_bits_defs)
+   apply (simp add: vspace_bits_defs)
+  apply (cases ko; simp add: other_obj_relation_def objBits_defs
+                      split: kernel_object.splits)
+  apply (rename_tac ako', case_tac ako';
+         clarsimp simp: archObjSize_def vspace_bits_defs vcpu_bits_def
+                 split: arch_kernel_object.splits)
+  done
+
+lemma pspace_distinct_cross:
+  "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
+   pspace_distinct' s'"
+  apply (frule (1) pspace_aligned_cross)
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (rename_tac p' ko')
+  apply (rule pspace_dom_relatedE; assumption?)
+  apply (rename_tac p ko P)
+  apply (frule (1) pspace_alignedD')
+  apply (frule (1) pspace_alignedD)
+  apply (rule ps_clearI, assumption)
+   apply (case_tac ko'; simp add: objBits_simps objBits_defs obj_at_simps)
+   apply (simp split: arch_kernel_object.splits
+                 add: obj_at_simps pteBits_def pdeBits_def vspace_bits_defs vcpu_bits_def)
+  apply (rule ccontr, clarsimp)
+  apply (rename_tac x' ko_x')
+  apply (frule_tac x=x' in pspace_alignedD', assumption)
+  apply (rule_tac x=x' in pspace_dom_relatedE; assumption?)
+  apply (rename_tac x ko_x P')
+  apply (frule_tac p=x in pspace_alignedD, assumption)
+  apply (case_tac "p = x")
+   apply clarsimp
+   apply (erule (1) obj_relation_cutsE; clarsimp)
+       apply (clarsimp simp: cte_relation_def cte_map_def2 objBits_simps)
+       apply (rule_tac n=cte_level_bits in is_aligned_add_step_le'; assumption?)
+         apply (rule is_aligned_add; (rule is_aligned_shift)?)
+         apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
+        apply (rule is_aligned_add; (rule is_aligned_shift)?)
+        apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
+       apply (simp add: cte_level_bits_def cteSizeBits_def)
+      apply (clarsimp simp: pte_relation_def objBits_simps archObjSize_def)
+      apply (rule_tac n=pteBits in is_aligned_add_step_le';
+             simp add: vspace_bits_defs vcpu_bits_def)
+     apply (clarsimp simp: pde_relation_def objBits_simps archObjSize_def)
+     apply (rule_tac n=pdeBits in is_aligned_add_step_le'; simp add: vspace_bits_defs vcpu_bits_def)
+    apply (simp add: objBitsKO_Data)
+    apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
+   apply (case_tac ko;
+          simp split: if_split_asm
+                 add: is_other_obj_relation_type_CapTable a_type_def)
+   apply (rename_tac ako,
+          case_tac ako;
+          simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
+  apply (frule (1) obj_relation_cuts_obj_bits)
+  apply (drule (2) obj_relation_cuts_range_mask_range)+
+  apply (prop_tac "x' \<in> mask_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
+  apply (frule_tac x=p and y=x in pspace_distinctD; assumption?)
+  apply (drule (4) mask_range_subsetD)
+  apply (erule (2) in_empty_interE)
   done
 
 end

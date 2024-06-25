@@ -234,7 +234,7 @@ lemma pspace_relation_cte_wp_at:
    apply (clarsimp elim!: cte_wp_at_weakenE')
   apply clarsimp
   apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: other_obj_relation_def)
+  apply (clarsimp simp: tcb_relation_cut_def)
   apply (simp split: kernel_object.split_asm)
   apply (drule(2) aligned_distinct_obj_atI'[where 'a=tcb])
    apply simp
@@ -399,7 +399,7 @@ lemma resolveAddressBits_cte_at':
   resolveAddressBits cap addr depth
   \<lbrace>\<lambda>rv. cte_at' (fst rv)\<rbrace>, \<lbrace>\<lambda>rv s. True\<rbrace>"
   apply (fold validE_R_def)
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule resolveAddressBits_real_cte_at')
   apply (erule real_cte_at')
   done
@@ -743,11 +743,11 @@ lemma lookupSlotForThread_corres:
       apply clarsimp
      apply simp
     prefer 2
-    apply (rule hoare_vcg_precond_impE)
+    apply (rule hoare_weaken_preE)
      apply (rule resolve_address_bits_cte_at [unfolded validE_R_def])
     apply clarsimp
    prefer 2
-   apply (rule hoare_vcg_precond_impE)
+   apply (rule hoare_weaken_preE)
     apply (rule resolveAddressBits_cte_at')
    apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (simp add: returnOk_def split_def)
@@ -833,7 +833,7 @@ lemma setCTE_tcb_in_cur_domain':
   done
 
 lemma setCTE_ctes_of_wp [wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s (p \<mapsto> cte))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((ctes_of s) (p \<mapsto> cte))\<rbrace>
   setCTE p cte
   \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   by (simp add: setCTE_def ctes_of_setObject_cte)
@@ -938,7 +938,7 @@ lemma cteInsert_weak_cte_wp_at:
    \<lbrace>\<lambda>uu. cte_wp_at'(\<lambda>c. P (cteCap c)) p\<rbrace>"
   unfolding cteInsert_def error_def updateCap_def setUntypedCapAsFull_def
   apply (simp add: bind_assoc split del: if_split)
-  apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at static_imp_wp | simp)+
+  apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at hoare_weak_lift_imp | simp)+
    apply (wp getCTE_ctes_wp)+
    apply (clarsimp simp: isCap_simps split:if_split_asm| rule conjI)+
 done
@@ -1639,10 +1639,10 @@ lemma cte_map_pulls_tcb_to_abstract:
      \<Longrightarrow> \<exists>tcb'. kheap s x = Some (TCB tcb') \<and> tcb_relation tcb' tcb
                   \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> cte_level_bits))))"
   apply (rule pspace_dom_relatedE, assumption+)
-  apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
-  apply (clarsimp simp: other_obj_relation_def
+  apply (erule(1) obj_relation_cutsE;
+         clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        X64_A.arch_kernel_obj.split_asm)
+                        X64_A.arch_kernel_obj.split_asm if_split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -1658,8 +1658,7 @@ lemma pspace_relation_update_tcbs:
               del: dom_fun_upd)
   apply (erule conjE)
   apply (rule ballI, drule(1) bspec)
-  apply (rule conjI, simp add: other_obj_relation_def)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm)
+  apply (clarsimp simp: tcb_relation_cut_def split: Structures_A.kernel_object.split_asm)
   apply (drule bspec, fastforce)
   apply clarsimp
   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
@@ -1881,6 +1880,27 @@ lemma descendants_of_eq':
   apply simp
   done
 
+lemma setObject_cte_tcbSchedPrevs_of_use_valid_ksPSpace:
+  assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
+  assumes pre: "P (tcbSchedPrevs_of s)"
+  shows "P (ps |> tcb_of' |> tcbSchedPrev)"
+  using use_valid[OF step setObject_cte_tcbSchedPrevs_of(1)] pre
+  by auto
+
+lemma setObject_cte_tcbSchedNexts_of_use_valid_ksPSpace:
+  assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
+  assumes pre: "P (tcbSchedNexts_of s)"
+  shows "P (ps |> tcb_of' |> tcbSchedNext)"
+  using use_valid[OF step setObject_cte_tcbSchedNexts_of(1)] pre
+  by auto
+
+lemma setObject_cte_inQ_of_use_valid_ksPSpace:
+  assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
+  assumes pre: "P (inQ domain priority |< tcbs_of' s)"
+  shows "P (inQ domain priority |< (ps |> tcb_of'))"
+  using use_valid[OF step setObject_cte_inQ(1)] pre
+  by auto
+
 lemma updateCap_stuff:
   assumes "(x, s'') \<in> fst (updateCap p cap s')"
   shows "(ctes_of s'' = modify_map (ctes_of s') p (cteCap_update (K cap))) \<and>
@@ -1894,7 +1914,12 @@ lemma updateCap_stuff:
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
          (ksArchState s'' = ksArchState s') \<and>
          (pspace_aligned' s' \<longrightarrow> pspace_aligned' s'') \<and>
-         (pspace_distinct' s' \<longrightarrow> pspace_distinct' s'')" using assms
+         (pspace_distinct' s' \<longrightarrow> pspace_distinct' s'') \<and>
+         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
+         (\<forall>domain priority.
+            (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
+  using assms
   apply (clarsimp simp: updateCap_def in_monad)
   apply (drule use_valid [where P="\<lambda>s. s2 = s" for s2, OF _ getCTE_sp refl])
   apply (rule conjI)
@@ -1903,8 +1928,11 @@ lemma updateCap_stuff:
   apply (frule setCTE_pspace_only)
   apply (clarsimp simp: setCTE_def)
   apply (intro conjI impI)
-   apply (erule(1) use_valid [OF _ setObject_aligned])
-  apply (erule(1) use_valid [OF _ setObject_distinct])
+      apply (erule(1) use_valid [OF _ setObject_aligned])
+     apply (erule(1) use_valid [OF _ setObject_distinct])
+    apply (erule setObject_cte_tcbSchedPrevs_of_use_valid_ksPSpace; simp)
+   apply (erule setObject_cte_tcbSchedNexts_of_use_valid_ksPSpace; simp)
+  apply (fastforce elim: setObject_cte_inQ_of_use_valid_ksPSpace)
   done
 
 (* FIXME: move *)
@@ -1921,16 +1949,15 @@ lemma pspace_relation_cte_wp_atI':
    apply (simp split: if_split_asm)
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
+   apply (subgoal_tac "n = x - y", clarsimp)
+    apply (drule tcb_cases_related2, clarsimp)
+    apply (intro exI, rule conjI)
+     apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
+     apply fastforce
+    apply simp
+   apply clarsimp
   apply (simp add: other_obj_relation_def
-            split: Structures_A.kernel_object.split_asm
-                   X64_A.arch_kernel_obj.split_asm)
-  apply (subgoal_tac "n = x - y", clarsimp)
-   apply (drule tcb_cases_related2, clarsimp)
-   apply (intro exI, rule conjI)
-    apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
-    apply fastforce
-   apply simp
-  apply clarsimp
+            split: Structures_A.kernel_object.split_asm X64_A.arch_kernel_obj.split_asm)
   done
 
 lemma pspace_relation_cte_wp_atI:
@@ -2453,7 +2480,7 @@ lemma updateCap_corres:
   apply (clarsimp simp: in_set_cap_cte_at_swp pspace_relations_def)
   apply (drule updateCap_stuff)
   apply simp
-  apply (rule conjI)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply (rule conjI)
    prefer 2
@@ -2536,9 +2563,9 @@ lemma updateMDB_pspace_relation:
     apply (clarsimp simp: tcb_ctes_clear cte_level_bits_def objBits_defs)
    apply clarsimp
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all split: if_split_asm)[1]
-   apply (clarsimp split: Structures_A.kernel_object.split_asm
-                          X64_A.arch_kernel_obj.split_asm
+   apply (rule obj_relation_cutsE, assumption+;
+          clarsimp split: Structures_A.kernel_object.split_asm
+                          X64_A.arch_kernel_obj.split_asm if_split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))
@@ -2599,6 +2626,25 @@ lemma updateMDB_ctes_of:
 
 crunch aligned[wp]: updateMDB "pspace_aligned'"
 crunch pdistinct[wp]: updateMDB "pspace_distinct'"
+crunch tcbSchedPrevs_of[wp]: updateMDB "\<lambda>s. P (tcbSchedPrevs_of s)"
+crunch tcbSchedNexts_of[wp]: updateMDB "\<lambda>s. P (tcbSchedNexts_of s)"
+crunch inQ_opt_pred[wp]: updateMDB "\<lambda>s. P (inQ d p |< tcbs_of' s)"
+crunch inQ_opt_pred'[wp]: updateMDB "\<lambda>s. P (\<lambda>d p. inQ d p |< tcbs_of' s)"
+crunch ksReadyQueues[wp]: updateMDB "\<lambda>s. P (ksReadyQueues s)"
+  (wp: crunch_wps simp: crunch_simps setObject_def updateObject_cte)
+
+lemma setCTE_rdyq_projs[wp]:
+  "setCTE p f \<lbrace>\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                      (\<lambda>d p. inQ d p |< tcbs_of' s)\<rbrace>"
+  apply (rule hoare_lift_Pf2[where f=ksReadyQueues])
+   apply (rule hoare_lift_Pf2[where f=tcbSchedNexts_of])
+    apply (rule hoare_lift_Pf2[where f=tcbSchedPrevs_of])
+     apply wpsimp+
+  done
+
+crunches updateMDB
+  for rdyq_projs[wp]:"\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                             (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
 lemma updateMDB_the_lot:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -2621,7 +2667,11 @@ lemma updateMDB_the_lot:
          ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
          ksDomSchedule s''    = ksDomSchedule s' \<and>
          ksCurDomain s''      = ksCurDomain s' \<and>
-         ksDomainTime s''     = ksDomainTime s'"
+         ksDomainTime s''     = ksDomainTime s' \<and>
+         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
+         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         (\<forall>domain priority.
+            (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
 using assms
   apply (simp add: updateMDB_eqs updateMDB_pspace_relations split del: if_split)
   apply (frule (1) updateMDB_ctes_of)
@@ -2630,9 +2680,8 @@ using assms
    apply (erule use_valid)
     apply wp
    apply simp
-  apply (erule use_valid)
-   apply wp
-  apply simp
+  apply (erule use_valid, wpsimp wp: hoare_vcg_all_lift)
+  apply (simp add: comp_def)
   done
 
 lemma is_cap_revocable_eq:
@@ -3832,6 +3881,9 @@ lemma updateUntypedCap_descendants_of:
   apply (clarsimp simp:mdb_next_rel_def mdb_next_def split:if_splits)
   done
 
+crunches setCTE
+  for tcbQueued[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
+
 lemma setCTE_UntypedCap_corres:
   "\<lbrakk>cap_relation cap (cteCap cte); is_untyped_cap cap; idx' = idx\<rbrakk>
    \<Longrightarrow> corres dc (cte_wp_at ((=) cap) src and valid_objs and
@@ -3861,10 +3913,19 @@ lemma setCTE_UntypedCap_corres:
    apply assumption
   apply (clarsimp simp: pspace_relations_def)
   apply (subst conj_assoc[symmetric])
+  apply clarsimp
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
    apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
                     split: if_split_asm Structures_A.kernel_object.splits)
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp: ready_queues_relation_def Let_def)
+   apply (rule use_valid[OF _ setCTE_tcbSchedPrevs_of], assumption)
+   apply (rule use_valid[OF _ setCTE_tcbSchedNexts_of], assumption)
+   apply (rule use_valid[OF _ setCTE_ksReadyQueues], assumption)
+   apply (rule use_valid[OF _ setCTE_inQ_opt_pred], assumption)
+   apply (rule use_valid[OF _ set_cap_exst], assumption)
+   apply clarsimp
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
    apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
@@ -5216,11 +5277,15 @@ lemma updateMDB_the_lot':
          ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
          ksDomSchedule s''    = ksDomSchedule s' \<and>
          ksCurDomain s''      = ksCurDomain s' \<and>
-         ksDomainTime s''     = ksDomainTime s'"
+         ksDomainTime s''     = ksDomainTime s' \<and>
+         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
+         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         (\<forall>domain priority.
+            (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   apply (rule updateMDB_the_lot)
       using assms
       apply (fastforce simp: pspace_relations_def)+
-      done
+   done
 
 lemma cte_map_inj_eq':
   "\<lbrakk>(cte_map p = cte_map p');
@@ -5321,7 +5386,6 @@ lemma cteInsert_corres:
             apply (thin_tac "ksMachineState t = p" for p t)+
             apply (thin_tac "ksCurThread t = p" for p t)+
             apply (thin_tac "ksIdleThread t = p" for p t)+
-            apply (thin_tac "ksReadyQueues t = p" for p t)+
             apply (thin_tac "ksSchedulerAction t = p" for p t)+
             apply (clarsimp simp: pspace_relations_def)
             apply (rule conjI)

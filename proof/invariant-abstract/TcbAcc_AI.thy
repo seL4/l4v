@@ -72,7 +72,7 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
   apply (clarsimp simp: gets_the_member set_object_def get_object_def in_monad bind_assoc
                         gets_def put_def bind_def get_def return_def select_f_def
                  dest!: get_tcb_SomeD)
-  apply (subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
+  apply (subgoal_tac "(kheap s)(t \<mapsto> TCB v) = kheap s", simp)
   apply fastforce
   done
 
@@ -957,7 +957,7 @@ lemma ct_in_state_decomp:
   shows      "\<lbrace>\<lambda>s. Pre s \<and> t = (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state Prop\<rbrace>"
   apply (rule hoare_post_imp [where Q="\<lambda>rv s. t = cur_thread s \<and> st_tcb_at Prop t s"])
    apply (clarsimp simp add: ct_in_state_def)
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (wp x y)
   apply simp
   done

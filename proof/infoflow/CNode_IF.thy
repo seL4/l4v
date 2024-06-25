@@ -500,7 +500,7 @@ lemma gets_irq_masks_equiv_valid:
   by (fastforce simp: equiv_valid_def2 equiv_valid_2_def in_monad)
 
 lemma irq_state_increment_reads_respects_memory:
-  "equiv_valid_inv (equiv_machine_state P And equiv_irq_state)
+  "equiv_valid_inv (equiv_machine_state P and equiv_irq_state)
                    (equiv_for (\<lambda>x. aag_can_affect_label aag l \<and>
                                    pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
                               underlying_memory)
@@ -511,7 +511,7 @@ lemma irq_state_increment_reads_respects_memory:
   done
 
 lemma irq_state_increment_reads_respects_device:
-  "equiv_valid_inv (equiv_machine_state P And equiv_irq_state)
+  "equiv_valid_inv (equiv_machine_state P and equiv_irq_state)
                    (equiv_for (\<lambda>x. aag_can_affect_label aag l \<and>
                                    pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
                               device_state)
@@ -576,7 +576,7 @@ lemma preemption_point_def2:
    odE"
   apply (rule ext)
   apply (simp add: preemption_point_def OR_choiceE_def wrap_ext_bool_det_ext_ext_def
-                   ef_mk_ef work_units_limit_reached_def select_f_def)
+                   ef_mk_ef work_units_limit_reached_def select_f_def empty_fail_cond)
   apply (clarsimp simp: work_units_limit_reached_def gets_def liftE_def select_f_def get_def
                         lift_def return_def bind_def bindE_def split_def image_def
                  split: option.splits sum.splits)

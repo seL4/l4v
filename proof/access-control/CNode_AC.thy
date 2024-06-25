@@ -56,11 +56,11 @@ locale CNode_AC_1 =
        \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   and state_vrefs_tcb_upd:
     "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s; tcb_at tptr s \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   and state_vrefs_simple_type_upd:
     "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s;
        ko_at ko p s; is_simple_type ko; a_type ko = a_type (f (val :: 'b)) \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(p \<mapsto> f val)\<rparr>) = state_vrefs s"
+       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(p \<mapsto> f val)\<rparr>) = state_vrefs s"
   and a_type_arch_object_not_tcb[simp]:
     "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   and set_cap_state_vrefs:
@@ -211,7 +211,7 @@ lemma lookup_slot_for_cnode_op_authorised[wp]:
   apply (simp add: lookup_slot_for_cnode_op_def split del: if_split)
   apply (wp whenE_throwError_wp hoare_drop_imps
             resolve_address_bits_authorised
-              [THEN hoare_post_imp_R[where Q'="\<lambda>x s. is_subject aag (fst (fst x))"]]
+              [THEN hoare_strengthen_postE_R[where Q'="\<lambda>x s. is_subject aag (fst (fst x))"]]
          | wpc | fastforce)+
   done
 
@@ -246,7 +246,7 @@ lemma decode_cnode_inv_authorised:
   apply (simp add: authorised_cnode_inv_def decode_cnode_invocation_def
                    split_def whenE_def unlessE_def set_eq_iff
              cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R lsfco_cte_at
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R lsfco_cte_at
          | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)
@@ -727,7 +727,7 @@ lemmas[monad_commute_wp] =
 
 (* Sort-of VCG for monad_commute goals *)
 lemma wpc_helper_monad_commute:
-  "monad_commute P f g \<Longrightarrow> wpc_helper (P, P') (Q, Q') (monad_commute P f g)"
+  "monad_commute P f g \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (monad_commute P f g)"
   by (clarsimp simp: wpc_helper_def)
 
 wpc_setup "\<lambda>m. monad_commute P f m" wpc_helper_monad_commute
@@ -819,9 +819,6 @@ lemma set_cap_empty_slot_ext_comm:
                         assert_def fail_def)
   apply (case_tac y; simp add: return_def fail_def split: option.splits)
   done
-
-(* FIXME: MOVE *)
-lemmas bind_eqI' = NonDetMonadVCG.bind_eqI[OF _ refl]
 
 lemma K_bind_assoc:
   "(do (do f; g od); h od) = (do f; g; h od)"
@@ -972,10 +969,10 @@ lemma set_untyped_cap_as_full_is_transferable[wp]:
   using untyped_not_transferable max_free_index_update_preserve_untyped by simp
 
 lemma set_untyped_cap_as_full_is_transferable':
-  "\<lbrace>\<lambda>s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3) \<and>
+  "\<lbrace>\<lambda>s. is_transferable (((caps_of_state s)(slot2 \<mapsto> new_cap)) slot3) \<and>
         Some src_cap = (caps_of_state s slot)\<rbrace>
    set_untyped_cap_as_full src_cap new_cap slot
-   \<lbrace>\<lambda>_ s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3)\<rbrace>"
+   \<lbrace>\<lambda>_ s. is_transferable (((caps_of_state s)(slot2 \<mapsto> new_cap)) slot3)\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def)
   apply safe
   apply (wp,fastforce)+
@@ -1525,10 +1522,10 @@ lemma post_cap_deletion_cur_domain[wp]:
   by (wpsimp simp: post_cap_deletion_def)
 
 crunch cur_domain[wp]: cap_swap_for_delete, empty_slot "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 crunch cur_domain[wp]: finalise_cap "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma rec_del_cur_domain[wp]:
   "rec_del call \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"

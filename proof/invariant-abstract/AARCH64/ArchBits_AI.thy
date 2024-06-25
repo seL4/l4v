@@ -50,6 +50,18 @@ lemma invs_valid_vs_lookup[elim!]:
   "invs s \<Longrightarrow> valid_vs_lookup s "
   by (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
 
+lemma invs_vmid_inv[elim!]:
+  "invs s \<Longrightarrow> vmid_inv s"
+  by (auto simp: invs_def valid_state_def valid_arch_state_def)
+
+lemma invs_valid_vmid_table[elim!]:
+  "invs s \<Longrightarrow> valid_vmid_table s"
+  by (auto simp: invs_def valid_state_def valid_arch_state_def)
+
+lemma invs_valid_global_arch_objs[elim!]:
+  "invs s \<Longrightarrow> valid_global_arch_objs s"
+  by (clarsimp simp: invs_def valid_state_def valid_arch_state_def)
+
 lemma pbfs_atleast_pageBits:
   "pageBits \<le> pageBitsForSize sz"
   by (cases sz) (auto simp: pageBits_def)

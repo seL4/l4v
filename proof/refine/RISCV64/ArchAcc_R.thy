@@ -20,9 +20,9 @@ declare if_cong[cong] (* FIXME: if_cong *)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
-  by (clarsimp simp: asid_pools_at_eq obj_at_def)
+  by (clarsimp simp: asid_pools_at_eq obj_at_def elim!: opt_mapE)
 
-lemma corres_gets_asid:
+lemma corres_gets_asid[corres]:
   "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets (riscv_asid_table \<circ> arch_state)) (gets (riscvKSASIDTable \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
@@ -52,27 +52,38 @@ lemma pspace_aligned_cross:
   apply (clarsimp simp: pspace_dom_def)
   apply (drule bspec, fastforce)+
   apply clarsimp
+  apply (rename_tac ko' a a' P ko)
   apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
-     apply (clarsimp simp: cte_map_def)
-     apply (simp add: cteSizeBits_def cte_level_bits_def)
-     apply (rule is_aligned_add)
-      apply (erule is_aligned_weaken)
-      apply simp
-     apply (rule is_aligned_shift)
+
+      \<comment>\<open>CNode\<close>
+      apply (clarsimp simp: cte_map_def)
+      apply (simp only: cteSizeBits_def cte_level_bits_def)
+      apply (rule is_aligned_add)
+       apply (erule is_aligned_weaken, simp)
+      apply (rule is_aligned_weaken)
+       apply (rule is_aligned_shiftl_self, simp)
+
+     \<comment>\<open>TCB\<close>
+     apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
+
+    \<comment>\<open>PageTable\<close>
+    apply (clarsimp simp: archObjSize_def pteBits_def table_size_def ptTranslationBits_def pte_bits_def)
     apply (rule is_aligned_add)
      apply (erule is_aligned_weaken)
-     apply (simp add: bit_simps)
+     apply simp
     apply (rule is_aligned_shift)
+
+  \<comment>\<open>DataPage\<close>
    apply (rule is_aligned_add)
     apply (erule is_aligned_weaken)
     apply (rule pbfs_atleast_pageBits)
    apply (rule is_aligned_shift)
+
+  \<comment>\<open>other_obj_relation\<close>
   apply (simp add: other_obj_relation_def)
   apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
-                  split: kernel_object.splits Structures_A.kernel_object.splits)
-  apply (clarsimp simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
-  apply (erule is_aligned_weaken)
-  apply (simp add: bit_simps)
+                 split: kernel_object.splits Structures_A.kernel_object.splits)
+  apply (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma of_bl_shift_cte_level_bits:
@@ -84,10 +95,12 @@ lemma obj_relation_cuts_range_limit:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
    \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
   apply (erule (1) obj_relation_cutsE; clarsimp)
-     apply (drule (1) wf_cs_nD)
-     apply (clarsimp simp: cte_map_def)
-     apply (rule_tac x=cte_level_bits in exI)
-     apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+      apply (drule (1) wf_cs_nD)
+      apply (clarsimp simp: cte_map_def)
+      apply (rule_tac x=cte_level_bits in exI)
+      apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+     apply (rule_tac x=tcbBlockSizeBits in exI)
+     apply (simp add: tcbBlockSizeBits_def)
     apply (rule_tac x=pte_bits in exI)
     apply (simp add: bit_simps is_aligned_shift mask_def)
     apply word_bitwise
@@ -230,14 +243,6 @@ lemma getObject_ASIDPool_corres:
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
   done
 
-lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; ko = injectKO v \<rbrakk>
-      \<Longrightarrow> ko_at' v x s"
-  apply (simp add: obj_at'_def project_inject pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply simp
-  done
-
 lemma storePTE_cte_wp_at'[wp]:
   "storePTE ptr val \<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add: storePTE_def)
@@ -258,10 +263,10 @@ lemma storePTE_state_refs_of[wp]:
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
 
-lemma setObject_ASIDPool_corres:
-  "a = inv ASIDPool a' o ucast \<Longrightarrow>
+lemma setObject_ASIDPool_corres[corres]:
+  "\<lbrakk> a = inv ASIDPool a' o ucast; p' = p \<rbrakk> \<Longrightarrow>
   corres dc (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
-            (set_asid_pool p a) (setObject p a')"
+            (set_asid_pool p a) (setObject p' a')"
   apply (simp add: set_asid_pool_def)
   apply (rule corres_underlying_symb_exec_l[where P=P and Q="\<lambda>_. P" for P])
     apply (rule corres_no_failI; clarsimp)
@@ -333,9 +338,10 @@ lemma corres_cross_over_pte_at:
   apply assumption
   done
 
-lemma getObject_PTE_corres:
-  "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
-          (get_pte p) (getObject p)"
+lemma getObject_PTE_corres[corres]:
+  "p = p' \<Longrightarrow>
+   corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
+          (get_pte p) (getObject p')"
   apply (rule corres_cross_over_pte_at, fastforce)
   apply (simp add: getObject_def gets_map_def split_def bind_assoc)
   apply (rule corres_no_failI)
@@ -355,7 +361,7 @@ lemma getObject_PTE_corres:
   apply (clarsimp simp: pte_at_eq)
   apply (clarsimp simp: ptes_of_def)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def in_magnitude_check objBits_simps bit_simps)
-  apply (clarsimp simp: state_relation_def pspace_relation_def)
+  apply (clarsimp simp: state_relation_def pspace_relation_def elim!: opt_mapE)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pte_relation_def)
   apply (erule_tac x="table_index p" in allE)
@@ -382,6 +388,7 @@ lemma setObject_PT_corres:
               pspace_aligned and pspace_distinct) \<top>
           (set_pt (table_base p) (pt(table_index p := pte)))
           (setObject p pte')"
+  supply opt_mapE[elim!]
   apply (rule corres_cross_over_pte_at[where p=p])
    apply (simp add: pte_at_eq ptes_of_def in_omonad)
   apply (simp add: set_pt_def get_object_def bind_assoc set_object_def gets_map_def)
@@ -440,18 +447,22 @@ lemma setObject_PT_corres:
    apply (drule_tac x=p in bspec, erule domI)
    apply (simp add: other_obj_relation_def
            split: Structures_A.kernel_object.splits)
-  apply (rule conjI)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
    apply fastforce
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
-lemma storePTE_corres:
-  "pte_relation' pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and pspace_distinct) \<top> (store_pte p pte) (storePTE p pte')"
+lemma storePTE_corres[corres]:
+  "\<lbrakk> p = p'; pte_relation' pte pte' \<rbrakk> \<Longrightarrow>
+  corres dc (pte_at p and pspace_aligned and pspace_distinct) \<top> (store_pte p pte) (storePTE p' pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_assume_pre, simp add: pte_at_def)
   apply (rule corres_symb_exec_l)
@@ -497,14 +508,32 @@ lemma getPTE_wp:
   by (clarsimp simp: getObject_def split_def loadObject_default_def in_magnitude_check
                      in_monad valid_def obj_at'_def objBits_simps)
 
-lemma pt_at_lift:
-  "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
-   (pspace_aligned s \<and> pspace_distinct s \<and> pt_at ptr s \<and> ptr = ptr') \<longrightarrow>
-    \<top> s' \<longrightarrow> page_table_at' ptr' s'"
-  by ( fastforce intro!: page_table_at_cross)
+(* FIXME: use more recent guard crossing framework that don't need a specific goal form.
+          This was mostly left here to test compatibility bewtween corres and corresK methods *)
+(* only applies when ptr is available in abstract and concrete guard at the same time *)
+lemma pt_at_lift_eq:
+  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+          (pspace_aligned s \<and> pspace_distinct s \<and> pt_at ptr s) \<longrightarrow>
+          \<top> s' \<longrightarrow>
+          page_table_at' ptr s'"
+  by (fastforce intro!: page_table_at_cross)
 
-lemmas checkPTAt_corres[corresK] =
-  corres_stateAssert_implied_frame[OF pt_at_lift, folded checkPTAt_def]
+(* only applies for the "getPPtrFromHWPTE pte" pattern *)
+lemma pt_at_lift_relation:
+  "\<lbrakk> pte_relation' pte pte'; RISCV64_A.is_PageTablePTE pte \<rbrakk> \<Longrightarrow>
+   \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+          (pspace_aligned s \<and> pspace_distinct s \<and> pt_at (pptr_from_pte pte) s) \<longrightarrow>
+          \<top> s' \<longrightarrow>
+          page_table_at' (getPPtrFromHWPTE pte') s'"
+  apply (cases pte; simp)
+  apply (simp add: getPPtrFromHWPTE_def pptr_from_pte_def addr_from_ppn_def pt_at_lift_eq)
+  done
+
+lemmas checkPTAt_corres_pte[corres] =
+  corres_stateAssert_r_cross[OF pt_at_lift_relation, folded checkPTAt_def]
+
+lemmas checkPTAt_corres_eq[corres] =
+  corres_stateAssert_r_cross[OF pt_at_lift_eq, folded checkPTAt_def]
 
 lemma lookupPTSlotFromLevel_inv:
   "lookupPTSlotFromLevel level pt_ptr vptr \<lbrace>P\<rbrace>"
@@ -558,14 +587,14 @@ lemma pteAtIndex_corres:
      \<top>
      (get_pte (pt_slot_offset level pt vptr))
      (pteAtIndex level' pt vptr)"
-  by (simp add: pteAtIndex_def) (rule getObject_PTE_corres)
+  by (simp add: pteAtIndex_def getObject_PTE_corres)
 
 lemma user_region_or:
   "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
   by (simp add: user_region_def canonical_user_def le_mask_high_bits word_size)
 
 
-lemma lookupPTSlotFromLevel_corres:
+lemma lookupPTSlotFromLevel_corres[corres]:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
    corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
      (pspace_aligned and pspace_distinct and valid_vspace_objs and valid_asid_table and
@@ -651,7 +680,7 @@ next
      apply (frule (5) vs_lookup_table_is_aligned)
      apply (rule conjI)
       apply (drule (5) valid_vspace_objs_strongD)
-      apply (clarsimp simp: pte_at_def obj_at_def)
+      apply (clarsimp simp: pte_at_def obj_at_def elim!: opt_mapE)
       apply (simp add: pt_slot_offset_def)
       apply (rule is_aligned_add)
        apply (erule is_aligned_weaken)
@@ -680,7 +709,9 @@ lemma lookupPTSlot_corres:
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
-  by (corressimp corres: lookupPTSlotFromLevel_corres)
+  by corres
+
+declare RISCV64_A.pte.sel[datatype_schematic]
 
 lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
@@ -701,6 +732,8 @@ proof (induct level arbitrary: level' pt pt')
     done
 next
   case (minus level)
+
+  note minus.hyps(1)[corres]
 
   (* FIXME: unfortunate duplication from lookupPTSlotFromLevel_corres *)
   from `0 < level`
@@ -754,52 +787,37 @@ next
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
     apply (simp add: unlessE_whenE not_less)
     apply (rule corres_gen_asm, simp)
-    apply (rule corres_initial_splitE[where r'=dc])
-       apply (corressimp simp: lookup_failure_map_def)
-      apply (rule corres_splitEE[where r'=pte_relation'])
-         apply (simp, rule getObject_PTE_corres)
-        apply (rule whenE_throwError_corres)
-          apply (simp add: lookup_failure_map_def)
+    apply (corres simp: lookup_failure_map_def)
          apply (rename_tac pte pte', case_tac pte; simp add: isPageTablePTE_def)
-        apply (rule corres_if)
-          apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                                addr_from_ppn_def)
-         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], rule refl)
-        apply (clarsimp simp: checkPTAt_def)
-        apply (subst liftE_bindE, rule corres_stateAssert_implied)
-         apply (rule minus.hyps)
-          apply (simp add: minus.hyps(2))
-         apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                               addr_from_ppn_def)
-        apply clarsimp
-        apply (rule page_table_at_cross; assumption?)
-         apply (drule vs_lookup_table_pt_at; simp?)
-         apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                               addr_from_ppn_def)
-        apply (simp add: state_relation_def)
+        apply (corres term_simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def
+                                 getPPtrFromHWPTE_def addr_from_ppn_def minus.hyps(2))
        apply wpsimp+
      apply (simp add: bit0.neq_0_conv)
      apply (frule (5) vs_lookup_table_is_aligned)
      apply (rule conjI)
       apply (drule (5) valid_vspace_objs_strongD)
-      apply (clarsimp simp: pte_at_def obj_at_def)
+      apply (clarsimp simp: pte_at_def obj_at_def elim!: opt_mapE)
       apply (simp add: pt_slot_offset_def)
       apply (rule is_aligned_add)
        apply (erule is_aligned_weaken)
        apply (simp add: bit_simps)
       apply (rule is_aligned_shiftl, simp)
      apply clarsimp
-     apply (rule_tac x=asid in exI)
-     apply (rule_tac x="vref_step vref" in exI)
-     apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
      apply (rule conjI)
-      apply (clarsimp simp: level_defs)
-     apply (subst pt_walk_split_Some[where level'=level]; simp?)
-      apply (drule bit0.pred)
-      apply simp
-     apply (subst pt_walk.simps)
-     apply (simp add: in_omonad)
-    apply wpsimp
+      apply (rule_tac x=asid in exI)
+      apply (rule_tac x="vref_step vref" in exI)
+      apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
+      apply (rule conjI)
+       apply (clarsimp simp: level_defs)
+      apply (subst pt_walk_split_Some[where level'=level]; simp?)
+       apply (drule bit0.pred)
+       apply simp
+      apply (subst pt_walk.simps)
+      apply (simp add: in_omonad)
+     apply (drule (1) valid_vspace_objs_pte, fastforce)
+     apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def
+                           table_index_max_level_slots)
+    apply simp
     done
 qed
 
@@ -833,23 +851,19 @@ lemma corres_gets_global_pt [corres]:
   apply (case_tac "riscvKSGlobalPTs (ksArchState s') maxPTLevel"; simp)
   done
 
-lemmas getObject_PTE_corres'[corres] = getObject_PTE_corres[@lift_corres_args]
-lemmas storePTE_corres'[corres] = storePTE_corres[@lift_corres_args]
-
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
   "corres dc (valid_global_arch_objs and pspace_aligned and pspace_distinct and pt_at pt)
              \<top>
              (copy_global_mappings pt)
              (copyGlobalMappings pt)" (is "corres _ ?apre _ _ _")
   unfolding copy_global_mappings_def copyGlobalMappings_def objBits_simps archObjSize_def pptr_base_def
-  apply corressimp
-      apply (rule_tac P="pt_at global_pt and ?apre" and P'="\<top>"
-                in corresK_mapM_x[OF order_refl])
-        apply (corressimp simp: objBits_def mask_def wp: get_pte_wp getPTE_wp)+
-  apply (drule valid_global_arch_objs_pt_at)
-  apply (clarsimp simp: ptIndex_def ptBitsLeft_def maxPTLevel_def ptTranslationBits_def pageBits_def
-                        pt_index_def pt_bits_left_def level_defs)
-  apply (fastforce intro!: page_table_pte_atI simp add: bit_simps word_le_nat_alt word_less_nat_alt)
+  apply corres
+      apply (rule_tac P="pt_at global_pt and ?apre" and P'="\<top>" in corres_mapM_x[OF _ _ _ _ order_refl])
+         apply (corres simp: ptIndex_def ptBitsLeft_def maxPTLevel_def ptTranslationBits_def pageBits_def
+                             pt_index_def pt_bits_left_def level_defs
+                | fastforce dest!: valid_global_arch_objs_pt_at
+                            intro!: page_table_pte_atI
+                            simp: bit_simps word_le_nat_alt word_less_nat_alt)+
   done
 
 lemma arch_cap_rights_update:
@@ -958,7 +972,7 @@ lemma find_vspace_for_asid_rewite:
   apply (simp add: liftE_bindE bind_assoc exec_gets opt_map_def asid_low_bits_of_def)
   done
 
-lemma findVSpaceForASID_corres:
+lemma findVSpaceForASID_corres[corres]:
   assumes "asid' = ucast asid"
   shows "corres (lfr \<oplus> (=))
                 (valid_vspace_objs and valid_asid_table
@@ -969,7 +983,7 @@ lemma findVSpaceForASID_corres:
   using assms
   apply (simp add: findVSpaceForASID_def)
   apply (rule corres_gen_asm, simp add: ucast_down_ucast_id is_down_def target_size source_size)
-  apply (rule corres_guard_imp[where Q'="?Q"], rule monadic_rewrite_corres[where P="?P", rotated],
+  apply (rule corres_guard_imp[where Q'="?Q"], rule monadic_rewrite_corres_l[where P="?P"],
          rule find_vspace_for_asid_rewite; simp)
   apply (simp add: liftE_bindE asidRange_def flip: mask_2pm1)
   apply (rule_tac r'="\<lambda>x y. x = y o ucast"
@@ -999,14 +1013,8 @@ lemma findVSpaceForASID_corres:
       apply (simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def returnOk_def
                        lookup_failure_map_def ucast_ucast_a is_down
                   split: option.split)
-      apply clarsimp
-      apply (simp add: returnOk_liftE checkPTAt_def liftE_bindE)
-      apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
-       apply simp
-      apply clarsimp
-      apply (rule page_table_at_cross; assumption?)
-      apply fastforce
-     apply (wp getObject_inv loadObject_default_inv | simp)+
+      apply (corres corres: corres_returnTT)
+     apply (wpsimp wp: getObject_inv loadObject_default_inv)+
    apply (clarsimp simp: o_def)
    apply (rule conjI)
     apply (rule valid_asid_tableD; simp)

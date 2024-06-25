@@ -6,7 +6,7 @@
 
 theory Hoare_Sep_Tactics
 imports
-  Lib.NonDetMonadVCG
+  Monads.Nondet_VCG
   Sep_Algebra.Sep_Algebra_L4v
 begin
 
@@ -31,10 +31,10 @@ lemma hoare_eq_post: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace
   by (rule hoare_strengthen_post, assumption, clarsimp)
 
 lemma hoare_eq_postE: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>E\<rbrace>"
-  by (metis (full_types) hoare_post_impErr')
+  by (metis (full_types) hoare_strengthen_postE)
 
 lemma hoare_eq_postE_R: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>, -"
-  by (metis hoare_post_imp_R)
+  by (metis hoare_strengthen_postE_R)
 
 ML \<open>
 val sep_select_post_method =  sep_select_generic_method false [@{thm hoare_eq_post},
@@ -81,14 +81,14 @@ schematic_goal strong_sep_impl_sep_wp':
     "\<And>sep_lift.
      (\<And>R. \<lbrace>(\<lambda>s. (P \<and>* R) (sep_lift s) )\<rbrace> f \<lbrace>\<lambda>rv. (\<lambda>s. (Q rv \<and>* R) (sep_lift s))\<rbrace>) \<Longrightarrow>
      \<lbrace>(\<lambda>s. ( P \<and>* (?f Q R)) (sep_lift s))\<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s)\<rbrace>"
- apply (atomize)
- apply (erule_tac x="(\<lambda>s. \<forall>x. (Q x \<longrightarrow>* R x) s)" in allE)
- apply (rule hoare_strengthen_post)
- apply (assumption)
- apply (sep_drule (direct)  extract_all)
- apply (erule_tac x=r in allE)
- apply (sep_solve)
-done
+  apply (atomize)
+  apply (erule_tac x="(\<lambda>s. \<forall>x. (Q x \<longrightarrow>* R x) s)" in allE)
+  apply (erule hoare_strengthen_post)
+  apply (rename_tac rv s)
+  apply (sep_drule (direct)  extract_all)
+  apply (erule_tac x=rv in allE)
+  apply (sep_solve)
+  done
 
 lemma strong_sep_impl_sep_wp'':
     "\<And>sep_lift.
@@ -344,8 +344,7 @@ done
 
 
 ML \<open>
-   fun J f x = f x
-               handle _ => x   (* FIXME! exceptions *)
+   fun J f x = \<^try>\<open>f x catch _ => x\<close>
 
    fun sep_wp thms ctxt  =
    let

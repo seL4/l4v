@@ -28,7 +28,7 @@ lemma sbn_st_vrefs[Finalise_AC_assms, wp]:
 lemma arch_finalise_cap_auth'[Finalise_AC_assms]:
    "\<lbrace>pas_refined aag\<rbrace> arch_finalise_cap x12 final \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag (fst rv)\<rbrace>"
   unfolding arch_finalise_cap_def
-  by (wp | wpc | simp add: comp_def hoare_post_taut[where P = \<top>] split del: if_split)+
+  by (wp | wpc | simp add: comp_def hoare_TrueI[where P = \<top>] split del: if_split)+
 
 lemma arch_finalise_cap_obj_refs[Finalise_AC_assms]:
   "\<lbrace>\<lambda>s. \<forall>x \<in> aobj_ref' acap. P x\<rbrace>
@@ -93,7 +93,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
 qed
 
 lemma finalise_cap_caps_of_state_nullinv[Finalise_AC_assms]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> NullCap)))\<rbrace>
+  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   by (cases cap;
@@ -107,7 +107,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   "\<lbrace>\<lambda>_. P NullCap \<and> (\<forall>a b c. P (Zombie a b c))\<rbrace>
    finalise_cap cap is_final
    \<lbrace>\<lambda>rv _. P (fst rv)\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
   apply (wp | simp add: comp_def split del: if_split | fastforce)+
   apply (rule hoare_pre)

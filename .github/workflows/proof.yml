@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
-name: Proofs
+name: Proof PR
 
 on:
   push:
@@ -17,11 +17,15 @@ on:
     paths-ignore:
       - '**.md'
       - '**.txt'
-    branches-ignore:
-      - aarch64
+  workflow_dispatch:
+    inputs:
+      NUM_DOMAINS:
+        description: 'Number of domains to test'
+        type: number
+        default: 16
 
 jobs:
-  all:
+  proofs:
     name: All
     runs-on: ubuntu-latest
     strategy:
@@ -35,14 +39,24 @@ jobs:
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        NUM_DOMAINS: ${{ inputs.NUM_DOMAINS }}
+        skip_dups: true
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
+        token: ${{ secrets.READ_TOKEN }}
+        cache_bucket: ${{ secrets.CACHE_BUCKET }}
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SSH: ${{ secrets.AWS_SSH }}
         GH_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    - name: Upload kernel builds
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-builds-${{ matrix.arch }}
+        path: artifacts/kernel-builds
+        if-no-files-found: ignore
     - name: Upload logs
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: logs-${{ matrix.arch }}
         path: logs.tar.xz

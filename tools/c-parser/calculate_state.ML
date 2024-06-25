@@ -480,8 +480,12 @@ fun mk_thy_types cse install thy = let
 
   val thy = List.foldl rcddecls_phase0 thy sorted_structs
 
+  val abs_outfilnameN = (if Path.is_absolute (Path.explode outfilnameN)
+                            then outfilnameN
+                            else (Path.implode o Path.expand)
+                                   (Path.append (Resources.master_directory thy) (Path.explode outfilnameN)))
   (* Yuck, sorry *)
-  val _ = gen_umm_types_file cse outfilnameN
+  val _ = gen_umm_types_file cse abs_outfilnameN
 
   val arrays = List.filter (fn (_, sz) => sz <> 0)
                            (Binaryset.listItems (get_array_mentions cse))

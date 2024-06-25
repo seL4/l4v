@@ -278,7 +278,7 @@ lemma copy_global_mappings_globals_equiv:
   "\<lbrace>globals_equiv s and (\<lambda>s. x \<noteq> arm_global_pd (arch_state s) \<and> is_aligned x pd_bits)\<rbrace>
    copy_global_mappings x
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding copy_global_mappings_def including no_pre
+  unfolding copy_global_mappings_def including classic_wp_pre
   apply simp
   apply wp
    apply (rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda>s. x \<noteq> arm_global_pd (arch_state s) \<and>
@@ -471,30 +471,31 @@ lemma reset_untyped_cap_reads_respects_g:
         apply (frule(1) caps_of_state_valid)
         apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
                               free_index_of_def invs_valid_global_objs)
-        apply (simp add: aligned_add_aligned is_aligned_shiftl)
-        apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
+       apply (simp add: aligned_add_aligned is_aligned_shiftl)
+       apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
        apply (rule hoare_pre)
         apply (wp preemption_point_inv' set_untyped_cap_invs_simple set_cap_cte_wp_at
                   set_cap_no_overlap only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]
+                  irq_state_independent_A_conjI
                | simp)+
         apply (strengthen empty_descendants_range_in)
-         apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>] no_irq_clearMemory
-                | simp | wp (once) dmo_wp)+
-        apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
-        apply (frule(1) caps_of_state_valid)
-        apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps free_index_of_def)
-       apply (wp | simp)+
-       apply (wp delete_objects_reads_respects_g)
-      apply (simp add: if_apply_def2)
-      apply (strengthen invs_valid_global_objs)
-      apply (wp add: delete_objects_invs_ex hoare_vcg_const_imp_lift
-                     delete_objects_pspace_no_overlap_again
-                     delete_objects_valid_arch_state
-                     only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
-                del: Untyped_AI.delete_objects_pspace_no_overlap
-             | simp)+
-     apply (rule get_cap_reads_respects_g)
-    apply (wp get_cap_wp)
+        apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>] no_irq_clearMemory
+               | simp | wp (once) dmo_wp)+
+       apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
+       apply (frule(1) caps_of_state_valid)
+       apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps free_index_of_def)
+      apply (wp | simp)+
+      apply (wp delete_objects_reads_respects_g)
+     apply (simp add: if_apply_def2)
+     apply (strengthen invs_valid_global_objs)
+     apply (wp add: delete_objects_invs_ex hoare_vcg_const_imp_lift
+                    delete_objects_pspace_no_overlap_again
+                    delete_objects_valid_arch_state
+                    only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
+               del: Untyped_AI.delete_objects_pspace_no_overlap
+            | simp)+
+    apply (rule get_cap_reads_respects_g)
+   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply (frule(1) caps_of_state_valid)
   apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
@@ -583,9 +584,9 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
                and Q="\<lambda>_. invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz (If reset 0 idx)))
                                and ct_active
                                and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1} s)"
-                in hoare_post_impErr)
-     apply (rule hoare_pre, wp hoare_whenE_wp)
-      apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc)
+                in hoare_strengthen_postE)
+     apply (rule hoare_pre, wp whenE_wp)
+      apply (rule validE_validE_R, rule hoare_strengthen_postE, rule reset_untyped_cap_invs_etc)
        apply (clarsimp simp only: if_True simp_thms, intro conjI, assumption+)
       apply simp
      apply assumption

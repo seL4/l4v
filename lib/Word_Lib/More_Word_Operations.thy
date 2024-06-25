@@ -14,6 +14,7 @@ theory More_Word_Operations
     More_Misc
     Signed_Words
     Word_Lemmas
+    Many_More
     Word_EqI
 begin
 
@@ -301,13 +302,21 @@ lemma alignUp_not_aligned_eq:
   and     sz: "n < LENGTH('a)"
   shows   "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n"
 proof -
+  from \<open>n < LENGTH('a)\<close> have \<open>(2::int) ^ n < 2 ^ LENGTH('a)\<close>
+    by simp
+  with take_bit_int_less_exp [of n]
+    have *: \<open>take_bit n k < 2 ^ LENGTH('a)\<close> for k :: int
+    by (rule less_trans)
   have anz: "a mod 2 ^ n \<noteq> 0"
     by (rule not_aligned_mod_nz) fact+
-
-  then have um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0" using sz
-    by (meson Euclidean_Division.div_eq_0_iff le_m1_iff_lt measure_unat order_less_trans
-              unat_less_power word_less_sub_le word_mod_less_divisor)
-
+  then have um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0"
+    apply (transfer fixing: n) using sz
+    apply (simp flip: take_bit_eq_mod add: div_eq_0_iff)
+    apply (subst take_bit_int_eq_self)
+    using *
+     apply (auto simp add: diff_less_eq intro: less_imp_le)
+    apply (simp add: less_le)
+    done
   have "a + 2 ^ n - 1 = (a div 2 ^ n) * 2 ^ n + (a mod 2 ^ n) + 2 ^ n - 1"
     by (simp add: word_mod_div_equality)
   also have "\<dots> = (a mod 2 ^ n - 1) + (a div 2 ^ n + 1) * 2 ^ n"
@@ -722,7 +731,7 @@ definition
 
 lemma to_bool_and_1:
   "to_bool (x AND 1) \<longleftrightarrow> bit x 0"
-  by (simp add: to_bool_def and_one_eq mod_2_eq_odd)
+  by (simp add: to_bool_def word_and_1)
 
 lemma to_bool_from_bool [simp]:
   "to_bool (from_bool r) = r"
@@ -785,7 +794,7 @@ lemma from_bool_eqI:
 
 lemma from_bool_odd_eq_and:
   "from_bool (odd w) = w AND 1"
-  unfolding from_bool_def by (simp add: word_and_1)
+  unfolding from_bool_def by (simp add: word_and_1 bit_0)
 
 lemma neg_mask_in_mask_range:
   "is_aligned ptr bits \<Longrightarrow> (ptr' AND NOT(mask bits) = ptr) = (ptr' \<in> mask_range ptr bits)"
@@ -796,7 +805,7 @@ lemma neg_mask_in_mask_range:
     apply (subst word_plus_and_or_coroll, word_eqI_solve)
     apply (metis bit.disj_ac(2) bit.disj_conj_distrib2 le_word_or2 word_and_max word_or_not)
    apply clarsimp
-   apply (smt add.right_neutral eq_iff is_aligned_neg_mask_eq mask_out_add_aligned neg_mask_mono_le
+   apply (smt (verit) add.right_neutral eq_iff is_aligned_neg_mask_eq mask_out_add_aligned neg_mask_mono_le
               word_and_not)
   apply (simp add: power_overflow mask_eq_decr_exp)
   done
@@ -1013,6 +1022,104 @@ lemma aligned_mask_diff:
   using is_aligned_no_overflow_mask leD apply blast
   apply (meson aligned_add_mask_less_eq is_aligned_weaken le_less_trans)
   done
+
+lemma Suc_mask_eq_mask:
+  "\<not>bit a n \<Longrightarrow> a AND mask (Suc n) = a AND mask n" for a::"'a::len word"
+  by (metis sign_extend_def sign_extend_def')
+
+lemma word_less_high_bits:
+  fixes a::"'a::len word"
+  assumes high_bits: "\<forall>i > n. bit a i = bit b i"
+  assumes less: "a AND mask (Suc n) < b AND mask (Suc n)"
+  shows "a < b"
+proof -
+  let ?masked = "\<lambda>x. x AND NOT (mask (Suc n))"
+  from high_bits
+  have "?masked a = ?masked b"
+    by - word_eqI_solve
+  then
+  have "?masked a + (a AND mask (Suc n)) < ?masked b + (b AND mask (Suc n))"
+    by (metis AND_NOT_mask_plus_AND_mask_eq less word_and_le2 word_plus_strict_mono_right)
+  then
+  show ?thesis
+    by (simp add: AND_NOT_mask_plus_AND_mask_eq)
+qed
+
+lemma word_less_bitI:
+  fixes a :: "'a::len word"
+  assumes hi_bits: "\<forall>i > n. bit a i = bit b i"
+  assumes a_bits: "\<not>bit a n"
+  assumes b_bits: "bit b n" "n < LENGTH('a)"
+  shows "a < b"
+proof -
+  from b_bits
+  have "a AND mask n < b AND mask (Suc n)"
+    by (metis bit_mask_iff impossible_bit le2p_bits_unset leI lessI less_Suc_eq_le mask_eq_decr_exp
+              word_and_less' word_ao_nth)
+  with a_bits
+  have "a AND mask (Suc n) < b AND mask (Suc n)"
+    by (simp add: Suc_mask_eq_mask)
+  with hi_bits
+  show ?thesis
+    by (rule word_less_high_bits)
+qed
+
+lemma word_less_bitD:
+  fixes a::"'a::len word"
+  assumes less: "a < b"
+  shows "\<exists>n. (\<forall>i > n. bit a i = bit b i) \<and> \<not>bit a n \<and> bit b n"
+proof -
+  define xs where "xs \<equiv> zip (to_bl a) (to_bl b)"
+  define tk where "tk \<equiv> length (takeWhile (\<lambda>(x,y). x = y) xs)"
+  define  n where  "n \<equiv> LENGTH('a) - Suc tk"
+  have n_less: "n < LENGTH('a)"
+    by (simp add: n_def)
+  moreover
+  { fix i
+    have "\<not> i < LENGTH('a) \<Longrightarrow> bit a i = bit b i"
+      using bit_imp_le_length by blast
+    moreover
+    assume "i > n"
+    with n_less
+    have "i < LENGTH('a) \<Longrightarrow> LENGTH('a) - Suc i < tk"
+      unfolding n_def by arith
+    hence "i < LENGTH('a) \<Longrightarrow> bit a i = bit b i"
+      unfolding n_def tk_def xs_def
+      by (fastforce dest: takeWhile_take_has_property_nth simp: rev_nth simp flip: nth_rev_to_bl)
+    ultimately
+    have "bit a i = bit b i"
+      by blast
+  }
+  note all = this
+  moreover
+  from less
+  have "a \<noteq> b" by simp
+  then
+  obtain i where "to_bl a ! i \<noteq> to_bl b ! i"
+    using nth_equalityI word_bl.Rep_eqD word_rotate.lbl_lbl by blast
+  then
+  have "tk \<noteq> length xs"
+    unfolding tk_def xs_def
+    by (metis length_takeWhile_less list_eq_iff_zip_eq nat_neq_iff word_rotate.lbl_lbl)
+  then
+  have "tk < length xs"
+    using length_takeWhile_le order_le_neq_trans tk_def by blast
+  from nth_length_takeWhile[OF this[unfolded tk_def]]
+  have "fst (xs ! tk) \<noteq> snd (xs ! tk)"
+    by (clarsimp simp: tk_def)
+  with `tk < length xs`
+  have "bit a n \<noteq> bit b n"
+    by (clarsimp simp: xs_def n_def tk_def nth_rev simp flip: nth_rev_to_bl)
+  with less all
+  have "\<not>bit a n \<and> bit b n"
+    by (metis n_less order.asym word_less_bitI)
+  ultimately
+  show ?thesis by blast
+qed
+
+lemma word_less_bit_eq:
+  "(a < b) = (\<exists>n < LENGTH('a). (\<forall>i > n. bit a i = bit b i) \<and> \<not>bit a n \<and> bit b n)" for a::"'a::len word"
+  by (meson bit_imp_le_length word_less_bitD word_less_bitI)
 
 end
 

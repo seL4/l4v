@@ -570,10 +570,10 @@ lemma tcb_sched_action_reads_respects:
    apply (force intro: domtcbs simp: get_etcb_def)
   apply (simp add: equiv_valid_def2 ethread_get_def)
   apply (rule equiv_valid_rv_bind)
-    apply (wp equiv_valid_rv_trivial', simp)
+    apply (wpsimp wp: equiv_valid_rv_trivial')
    apply (rule equiv_valid_2_bind)
       prefer 2
-      apply (wp equiv_valid_rv_trivial, simp)
+      apply (wpsimp wp: equiv_valid_rv_trivial)
      apply (rule equiv_valid_2_bind)
         apply (rule_tac P=\<top> and P'=\<top> and L="{pasObjectAbs aag t}" and L'="{pasObjectAbs aag t}"
                      in ev2_invisible[OF domains_distinct])
@@ -583,7 +583,7 @@ lemma tcb_sched_action_reads_respects:
         apply (simp | wp)+
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def
                              bind_def return_def labels_are_invisible_def)
-      apply wp+
+      apply wpsimp+
   apply (force intro: domtcbs simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
   done
 
@@ -601,7 +601,7 @@ lemma possible_switch_to_reads_respects:
                               (possible_switch_to tptr)"
   apply (simp add: possible_switch_to_def ethread_get_def)
   apply (case_tac "aag_can_read aag tptr \<or> aag_can_affect aag l tptr")
-   apply (wp static_imp_wp tcb_sched_action_reads_respects | wpc | simp)+
+   apply (wp hoare_weak_lift_imp tcb_sched_action_reads_respects | wpc | simp)+
    apply (clarsimp simp: get_etcb_def)
    apply ((intro conjI impI allI
           | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE
@@ -994,7 +994,7 @@ lemma reply_cancel_ipc_reads_respects_f:
   unfolding reply_cancel_ipc_def
   apply (rule gen_asm_ev)
   apply (wp cap_delete_one_reads_respects_f_transferable[where st=st]
-            select_singleton_ev select_inv select_wp assert_wp
+            select_singleton_ev select_inv assert_wp
             reads_respects_f[OF get_cap_rev, where st=st]
             reads_respects_f[OF thread_set_reads_respects, where st=st]
             reads_respects_f[OF gets_descendants_of_revrv[folded equiv_valid_def2]]
@@ -1186,7 +1186,7 @@ proof (induct s rule: rec_del.induct, simp_all only: rec_del_fails drop_spec_ev[
      apply (wp drop_spec_ev[OF returnOk_ev_pre] drop_spec_ev[OF liftE_ev] hoareE_TrueI
                reads_respects_f[OF empty_slot_reads_respects, where st=st] empty_slot_silc_inv)
       apply (rule "1.hyps")
-     apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> is_subject aag (fst slot)" in hoare_post_imp_R)
+     apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> is_subject aag (fst slot)" in hoare_strengthen_postE_R)
       apply (wp validE_validE_R'[OF rec_del_silc_inv_not_transferable] | fastforce simp: silc_inv_def)+
     done
 next
@@ -1202,13 +1202,13 @@ next
              apply (rule_tac
                     Q'="\<lambda>rv s. emptyable (slot_rdcall (ReduceZombieCall (fst rvb) slot exposed)) s \<and>
                                (\<not> exposed \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s) \<and>
-                               is_subject aag (fst slot)" in hoare_post_imp_R)
+                               is_subject aag (fst slot)" in hoare_strengthen_postE_R)
               apply (wp rec_del_emptyable reduce_zombie_cap_to)
              apply simp
             apply (wp drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f[where st=st]
                       set_cap_silc_inv[where st=st] | simp)+
            apply (wp replace_cap_invs set_cap_cte_wp_at set_cap_sets final_cap_same_objrefs
-                     set_cap_cte_cap_wp_to  hoare_vcg_const_Ball_lift static_imp_wp
+                     set_cap_cte_cap_wp_to  hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                      drop_spec_ev[OF liftE_ev] finalise_cap_reads_respects set_cap_silc_inv
                      set_cap_only_timer_irq_inv set_cap_pas_refined_not_transferable
                   | simp add: cte_wp_at_eq_simp
@@ -1311,7 +1311,7 @@ next
             | simp add: in_monad)+
      apply (rule_tac Q'="\<lambda> _. silc_inv aag st and
                             K (pasObjectAbs aag (fst slot) \<noteq> SilcLabel \<and> is_subject aag (fst slot))"
-                  in hoare_post_imp_R)
+                  in hoare_strengthen_postE_R)
       prefer 2
       apply (clarsimp)
       apply (rule conjI, assumption)
@@ -1363,7 +1363,7 @@ lemma rec_del_Finalise_transferableE_R:
    \<lbrace>\<lambda>_. P\<rbrace>, -"
   apply (rule hoare_pre)
    apply (simp add: validE_R_def)
-   apply (rule hoare_post_impErr)
+   apply (rule hoare_strengthen_postE)
      apply (rule rec_del_Finalise_transferable)
   by force+
 
@@ -1384,7 +1384,7 @@ lemma rec_del_CTEDeleteCall_reads_respects_f:
    apply fastforce
   apply (subst rec_del.simps[abs_def])
   apply (wp when_ev reads_respects_f[OF empty_slot_reads_respects] empty_slot_silc_inv
-            rec_del_Finalise_transferable_read_respects_f hoare_vcg_all_lift_R hoare_drop_impE_R
+            rec_del_Finalise_transferable_read_respects_f hoare_vcg_all_liftE_R hoare_drop_impE_R
             rec_del_Finalise_transferableE_R
          | wpc | simp)+
   apply clarsimp

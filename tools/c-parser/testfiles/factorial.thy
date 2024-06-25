@@ -5,7 +5,7 @@
  *)
 
 theory factorial
-imports "CParser.CTranslation" MachineWords
+imports "CParser.CTranslation" "ARM/imports/MachineWords"
 begin
 
 declare hrs_simps [simp add]
@@ -324,11 +324,13 @@ lemma (in factorial_global_addresses) mem_safe_factorial:
   shows "mem_safe (\<acute>ret__ptr_to_unsigned_long :== PROC factorial(\<acute>n)) \<Gamma>"
   apply(subst mem_safe_restrict)
   apply(rule intra_mem_safe)
-   apply (insert factorial_impl free_impl alloc_impl)
+   apply (insert factorial_impl free_impl alloc_impl)[1]
    apply(drule_tac t="Some C" in sym)
-   apply(simp_all add: restrict_map_def call_def block_def whileAnno_def
-                       free_body_def alloc_body_def factorial_body_def creturn_def
-                split: if_split_asm option.splits)
-  by (force simp: intra_sc)
+   apply(simp add: restrict_map_def call_def block_def whileAnno_def block_exn_def
+                   free_body_def alloc_body_def factorial_body_def creturn_def
+              split: if_split_asm option.splits)
+   subgoal by (force simp: intra_sc)
+  apply clarsimp
+  done
 
 end

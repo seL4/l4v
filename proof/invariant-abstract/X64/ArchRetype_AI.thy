@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -53,7 +54,7 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
    apply (simp add:retype_addrs_def)
   done
 
-lemmas [wp] =  hoare_unless_wp
+lemmas [wp] =  unless_wp
 
 (* These also prove facts about copy_global_mappings *)
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"
@@ -217,7 +218,7 @@ lemma mapM_x_store_pml4e_eq_kernel_mappings_restr:
                       \<and> ko_at (ArchObj (PageMapL4 pmv')) pm' s
                       \<and> pmv (ucast x) = pmv' (ucast x)))\<rbrace>"
   apply (induct xs rule: rev_induct, simp_all add: mapM_x_Nil mapM_x_append mapM_x_singleton)
-  apply (erule hoare_seq_ext[rotated])
+  apply (erule bind_wp_fwd)
   apply (simp add: store_pml4e_def set_object_def set_arch_obj_simps cong: bind_cong)
   apply (wp get_object_wp get_pml4e_wp)
   apply (clarsimp simp: obj_at_def split del: if_split)
@@ -271,7 +272,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
      copy_global_mappings pm
    \<lbrace>\<lambda>rv s. equal_kernel_mappings (s \<lparr> kheap := restrict_map (kheap s) (- S) \<rparr>)\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (rule hoare_chain)
     apply (rule hoare_vcg_conj_lift)
      apply (rule_tac P="global_pm \<notin> (insert pm S)" in hoare_vcg_prop)
@@ -388,9 +389,9 @@ lemma copy_global_invs_mappings_restricted:
   apply (simp add: valid_pspace_def pred_conj_def)
   apply (rule hoare_conjI, wp copy_global_equal_kernel_mappings_restricted)
    apply (clarsimp simp: global_refs_def)
-  apply (rule valid_prove_more, rule hoare_vcg_conj_lift, rule hoare_TrueI)
+  apply (rule hoare_post_add, rule hoare_vcg_conj_lift, rule hoare_TrueI)
   apply (simp add: copy_global_mappings_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gets_sp])
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp[where S="{x. get_pml4_index pptr_base \<le> x
                                        \<and> x < 2 ^ (pml4_bits - word_size_bits)}"])
@@ -459,7 +460,7 @@ lemma mapM_copy_global_invs_mappings_restricted:
   apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
   apply (induct pms, simp_all only: mapM_x_Nil mapM_x_Cons K_bind_def)
    apply (wp, simp)
-  apply (rule hoare_seq_ext, assumption, thin_tac "P" for P)
+  apply (rule bind_wp, assumption, thin_tac "P" for P)
   apply (rule hoare_conjI)
    apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
    apply clarsimp

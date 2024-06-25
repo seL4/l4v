@@ -111,7 +111,7 @@ lemma asidBits_asid_bits[simp]:
                 asidHighBits_def asid_low_bits_def)
 
 lemma handleVMFault_corres:
-  "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
+  "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) \<top>
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: X64_H.handleVMFault_def handle_vm_fault_def)
   apply (rule corres_guard_imp)
@@ -347,13 +347,9 @@ lemma deleteASID_corres [corres]:
        apply (simp add: vs_refs_def)
        apply (rule image_eqI[rotated], erule graph_ofI)
        apply (simp add: mask_asid_low_bits_ucast_ucast)
-      apply wp
-      apply (simp add: o_def)
-      apply (wp getASID_wp)
-      apply clarsimp
-      apply assumption
-     apply wp+
-   apply clarsimp
+      \<comment> \<open>rewrite assumption so that the goal can refer to the C variable instead of the abstract's.\<close>
+      apply (drule Some_to_the)
+      apply (wpsimp wp: getASID_wp)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
                   dest!: invs_arch_state)
    apply blast
@@ -546,7 +542,7 @@ lemma invalidatePageStructureCacheASID_corres' [corres]:
   "corres dc \<top> \<top>
      (invalidate_page_structure_cache_asid vspace asid)
      (X64_H.invalidatePageStructureCacheASID vspace' asid')"
-  by (corressimp simp: invalidate_page_structure_cache_asid_def
+  by (corresKsimp simp: invalidate_page_structure_cache_asid_def
                        X64_H.invalidatePageStructureCacheASID_def
                        invalidateLocalPageStructureCacheASID_def
                        assms ucast_id
@@ -586,7 +582,7 @@ lemma unmapPageTable_corres:
                    apply simp
                   apply (rule invalidatePageStructureCacheASID_corres)
                  apply ((wpsimp wp: hoare_if get_pde_wp getPDE_wp)+)[8]
-         apply ((wpsimp wp: lookup_pd_slot_wp hoare_vcg_all_lift_R | wp (once) hoare_drop_imps)+)[2]
+         apply ((wpsimp wp: lookup_pd_slot_wp hoare_vcg_all_liftE_R | wp (once) hoare_drop_imps)+)[2]
        apply ((wp find_vspace_for_asid_wp)+)[4]
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_arch_caps_def
                          word_neq_0_conv[symmetric])
@@ -679,7 +675,7 @@ lemma unmapPage_corres:
                       apply (simp add: page_entry_map_def)
                      apply simp
                      apply (rule storePTE_corres')
-                     apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
+                     apply (((wpsimp  wp: hoare_vcg_all_liftE_R get_pte_wp getPTE_wp lookup_pt_slot_wp
                                     simp: unlessE_def is_aligned_pml4 if_apply_def2
                                split_del: if_split
                                 simp_del: dc_simp)+
@@ -692,7 +688,7 @@ lemma unmapPage_corres:
                      apply (simp add: page_entry_map_def)
                     apply simp
                     apply (rule storePDE_corres')
-                    apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
+                    apply (((wpsimp  wp: hoare_vcg_all_liftE_R get_pde_wp getPDE_wp lookup_pd_slot_wp
                                    simp: unlessE_def is_aligned_pml4 if_apply_def2
                               split_del: if_split
                                simp_del: dc_simp)+
@@ -705,7 +701,7 @@ lemma unmapPage_corres:
                     apply (simp add: page_entry_map_def)
                    apply simp
                    apply (rule storePDPTE_corres')
-                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
+                   apply (((wpsimp  wp: hoare_vcg_all_liftE_R get_pdpte_wp getPDPTE_wp
                                         lookup_pdpt_slot_wp
                                   simp: unlessE_def is_aligned_pml4 if_apply_def2
                              split_del: if_split
@@ -808,7 +804,7 @@ lemma message_info_from_data_eqv:
 
 lemma setMessageInfo_corres:
  "mi' = message_info_map mi \<Longrightarrow>
-  corres dc (tcb_at t) (tcb_at' t)
+  corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
          (set_message_info t mi) (setMessageInfo t mi')"
   apply (simp add: setMessageInfo_def set_message_info_def)
   apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) =
@@ -892,7 +888,7 @@ proof -
                  apply (rule corres_fail[where P=\<top> and P'=\<top>])
                  apply (simp add: same_refs_def)
                 apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                          hoare_post_taut hoare_post_taut])
+                                                          hoare_TrueI hoare_TrueI])
                 apply simp
                 apply (rule invalidatePageStructureCacheASID_corres)
                apply (wpsimp simp: invs_psp_aligned)+
@@ -911,7 +907,7 @@ proof -
                 apply (simp add: same_refs_def)
                apply simp
                apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                         hoare_post_taut hoare_post_taut])
+                                                         hoare_TrueI hoare_TrueI])
                apply (rule invalidatePageStructureCacheASID_corres)
               apply (wpsimp simp: invs_psp_aligned)+
         apply (frule (1) mapping_map_pdpte, clarsimp)
@@ -929,7 +925,7 @@ proof -
                apply (simp add: same_refs_def)
               apply simp
               apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                        hoare_post_taut hoare_post_taut])
+                                                        hoare_TrueI hoare_TrueI])
               apply (rule invalidatePageStructureCacheASID_corres)
              apply (wpsimp simp: invs_psp_aligned)+
        apply (wp arch_update_cap_invs_map set_cap_valid_page_map_inv)
@@ -954,7 +950,7 @@ proof -
    apply (simp add: perform_page_invocation_unmap_def performPageInvocationUnmap_def split_def)
     apply (rule corres_guard_imp)
      apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                               hoare_post_taut hoare_post_taut])
+                                               hoare_TrueI hoare_TrueI])
      apply (rule corres_split)
         apply (rule unmapPage_corres[OF refl refl refl refl])
        apply (rule corres_split[where r'=acap_relation])
@@ -1103,7 +1099,7 @@ lemma clear_pdpt_corres:
 
 crunches invalidatePageStructureCacheASID, unmapPageTable, unmapPageDirectory, unmapPDPT
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps hoare_vcg_all_lift_R)
+  (wp: crunch_wps hoare_vcg_all_liftE_R)
 
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 lemmas unmapPageDirectory_typ_ats[wp] = typ_at_lifts[OF unmapPageDirectory_typ_at']
@@ -1546,7 +1542,7 @@ lemma getCurrentUserCR3_wp:
 lemma setVMRoot_invs [wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
-  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+  apply (wp whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
          | wpcw
          | clarsimp simp: if_apply_def2 asid_wf_0
          | strengthen valid_cr3'_makeCR3)+
@@ -1555,7 +1551,7 @@ lemma setVMRoot_invs [wp]:
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
-  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+  apply (wp whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
          | wpcw
          | clarsimp simp: if_apply_def2 asid_wf_0
          | strengthen valid_cr3'_makeCR3)+
@@ -1711,22 +1707,6 @@ crunches storePDE, storePDPTE, storePML4E
   and norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (simp: updateObject_default_def)
 
-lemma storePDE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePDPTE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDPTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePML4E_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePML4E p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePDE_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
-
 lemma storePDE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePDE_def)
@@ -1751,10 +1731,6 @@ lemma setObject_pde_ksInt [wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
   by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
 
-lemma storePDPTE_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
-
 lemma storePDPTE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePDPTE_def)
@@ -1778,10 +1754,6 @@ lemma storePDPTE_iflive [wp]:
 lemma setObject_pdpte_ksInt [wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (pdpte::pdpte) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
   by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
-
-lemma storePML4E_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma storePML4E_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -2071,6 +2043,26 @@ crunches storePTE, storePDE, storePDPTE, storePML4E
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
+lemma storePTE_tcbs_of'[wp]:
+  "storePTE c (pte::pte) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  unfolding storePTE_def
+  by setObject_easy_cases
+
+lemma storePDE_tcbs_of'[wp]:
+  "storePDE c (pde::pde) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  unfolding storePDE_def
+  by setObject_easy_cases
+
+lemma storePDPTE_tcbs_of'[wp]:
+  "storePDPTE c (pdpte::pdpte) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  unfolding storePDPTE_def
+  by setObject_easy_cases
+
+lemma storePML4E_tcbs_of'[wp]:
+  "storePML4E c (pml4e::pml4e) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  unfolding storePML4E_def
+  by setObject_easy_cases
+
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde\<rbrace>
       storePDE p pde
@@ -2081,7 +2073,7 @@ lemma storePDE_invs[wp]:
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
@@ -2096,7 +2088,7 @@ lemma storePDPTE_invs[wp]:
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
@@ -2111,7 +2103,7 @@ lemma storePML4E_invs[wp]:
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
@@ -2138,14 +2130,6 @@ crunch norqL1[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 
 crunch norqL2[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (simp: updateObject_default_def)
-
-lemma storePTE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePTE_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma storePTE_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
@@ -2197,8 +2181,6 @@ lemma storePTE_valid_objs [wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   apply (clarsimp simp: valid_obj'_def)
   done
-
-crunch no_0_obj' [wp]: storePTE no_0_obj'
 
 lemma storePTE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
@@ -2263,7 +2245,7 @@ lemma storePTE_invs [wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
@@ -2308,14 +2290,6 @@ lemma setASIDPool_qsL1 [wp]:
 lemma setASIDPool_qsL2 [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   by (wp setObject_qs updateObject_default_inv|simp)+
-
-lemma setASIDPool_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma setASIDPool_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -2422,6 +2396,10 @@ lemma setObject_ap_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
+lemma setObject_asidpool_tcbs_of'[wp]:
+  "setObject c (asidpool::asidpool) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
 lemma setASIDPool_invs [wp]:
   "\<lbrace>invs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
@@ -2430,7 +2408,7 @@ lemma setASIDPool_invs [wp]:
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
              untyped_ranges_zero_lift
-             updateObject_default_inv
+             updateObject_default_inv valid_bitmaps_lift
            | simp add: cteCaps_of_def
            | rule setObject_ksPSpace_only)+
   apply (clarsimp simp add: setObject_def o_def)

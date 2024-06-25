@@ -188,7 +188,7 @@ lemma lookup_pt_slot_no_fail_is_subject:
 
 lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -204,7 +204,7 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
    apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-             reads_respects_f_inv'[OF ensure_no_children_rev] select_wp
+             reads_respects_f_inv'[OF ensure_no_children_rev]
              reads_respects_f_inv'[OF ensure_safe_mapping_reads_respects]
              reads_respects_f_inv'[OF resolve_vaddr_reads_respects]
              reads_respects_f_inv'[OF create_mapping_entries_rev]

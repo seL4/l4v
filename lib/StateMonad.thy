@@ -10,7 +10,7 @@
 
 chapter "Monads"
 
-theory StateMonad (* FIXME: untested/unused *)
+theory StateMonad (* unused *)
 imports Lib
 begin
 
@@ -400,34 +400,6 @@ lemma validE_def2:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> \<equiv> \<lbrace>P\<rbrace> f \<lbrace> \<lambda>r s. case r of Inr b \<Rightarrow> Q b s | Inl a \<Rightarrow> R a s \<rbrace>"
   by (unfold valid_def validE_def)
 
-(* FIXME: modernize *)
-syntax top :: "'a \<Rightarrow> bool" ("\<top>")
-       bottom :: "'a \<Rightarrow> bool" ("\<bottom>")
-
-translations
-  "\<top>" == "\<lambda>_. CONST True"
-  "\<bottom>" == "\<lambda>_. CONST False"
-
-definition
-  bipred_conj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)" (infixl "And" 96)
-where
-  "bipred_conj P Q \<equiv> \<lambda>x y. P x y \<and> Q x y"
-
-definition
-  bipred_disj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)" (infixl "Or" 91)
-where
-  "bipred_disj P Q \<equiv> \<lambda>x y. P x y \<or> Q x y"
-
-definition
-  bipred_neg :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)" ("Not _") where
-  "bipred_neg P \<equiv> \<lambda>x y. \<not> P x y"
-
-syntax toptop :: "'a \<Rightarrow> 'b \<Rightarrow> bool" ("\<top>\<top>")
-       botbot :: "'a \<Rightarrow> 'b \<Rightarrow> bool" ("\<bottom>\<bottom>")
-
-translations "\<top>\<top>" == "\<lambda>_ _. CONST True"
-             "\<bottom>\<bottom>" == "\<lambda>_ _. CONST False"
-
 definition
   pred_lift_exact :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)" ("\<guillemotleft>_,_\<guillemotright>") where
   "pred_lift_exact P Q \<equiv> \<lambda>x y. P x \<and> Q y"
@@ -445,47 +417,11 @@ lemma pred_liftI[intro!]: "\<lbrakk> P x; Q y \<rbrakk> \<Longrightarrow> \<guil
   by (simp add:pred_lift_exact_def)
 
 lemma pred_exact_split:
-  "\<guillemotleft>P,Q\<guillemotright> = (\<guillemotleft>P,\<top>\<guillemotright> And \<guillemotleft>\<top>,Q\<guillemotright>)"
-  by (simp add:pred_lift_exact_def bipred_conj_def)
-
-lemma pred_andE[elim!]: "\<lbrakk> (A and B) x; \<lbrakk> A x; B x \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  by (simp add:pred_conj_def)
-
-lemma pred_andI[intro!]: "\<lbrakk> A x; B x \<rbrakk> \<Longrightarrow> (A and B) x"
-  by (simp add:pred_conj_def)
-
-lemma bipred_conj_app[simp]: "(P And Q) x = (P x and Q x)"
-  by (simp add:pred_conj_def bipred_conj_def)
-
-lemma bipred_disj_app[simp]: "(P Or Q) x = (P x or Q x)"
-  by (simp add:pred_disj_def bipred_disj_def)
-
-lemma pred_conj_app[simp]: "(P and Q) x = (P x \<and> Q x)"
-  by (simp add:pred_conj_def)
-
-lemma pred_disj_app[simp]: "(P or Q) x = (P x \<or> Q x)"
-  by (simp add:pred_disj_def)
-
-lemma pred_notnotD[simp]: "(not not P) = P"
-  by (simp add:pred_neg_def)
-
-lemma bipred_notnotD[simp]: "(Not Not P) = P"
-  by (simp add:bipred_neg_def)
+  "\<guillemotleft>P,Q\<guillemotright> = (\<guillemotleft>P,\<top>\<guillemotright> and \<guillemotleft>\<top>,Q\<guillemotright>)"
+  by (simp add:pred_lift_exact_def pred_conj_def)
 
 lemma pred_lift_add[simp]: "\<guillemotleft>P,Q\<guillemotright> x = ((\<lambda>s. P x) and Q)"
   by (simp add:pred_lift_exact_def pred_conj_def)
-
-lemma pred_and_true[simp]: "(P and \<top>) = P"
-  by (simp add:pred_conj_def)
-
-lemma pred_and_true_var[simp]: "(\<top> and P) = P"
-  by (simp add:pred_conj_def)
-
-lemma pred_and_false[simp]: "(P and \<bottom>) = \<bottom>"
-  by (simp add:pred_conj_def)
-
-lemma pred_and_false_var[simp]: "(\<bottom> and P) = \<bottom>"
-  by (simp add:pred_conj_def)
 
 lemma seq':
   "\<lbrakk> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>;
@@ -569,8 +505,8 @@ lemma return_sp:
   by (simp add:return_def valid_def)
 
 lemma hoare_post_conj [intro!]:
-  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>"
-  by (simp add:valid_def split_def bipred_conj_def)
+  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q and R \<rbrace>"
+  by (simp add:valid_def split_def pred_conj_def)
 
 lemma hoare_pre_disj [intro!]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>; \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P or Q \<rbrace> a \<lbrace> R \<rbrace>"

@@ -191,4 +191,19 @@ lemma msb_big:
   apply (simp add: take_bit_eq_self_iff_drop_bit_eq_0 drop_bit_eq_zero_iff_not_bit_last)
   done
 
+instantiation integer :: msb
+begin
+
+context
+  includes integer.lifting
+begin
+
+lift_definition msb_integer :: \<open>integer \<Rightarrow> bool\<close> is msb .
+
+instance ..
+
+end
+
+end
+
 end

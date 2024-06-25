@@ -26,7 +26,7 @@ definition arm_global_pt_ptr :: obj_ref where
 
 (* Sufficiently aligned for irq type + cte_level_bits *)
 definition init_irq_node_ptr :: obj_ref where
-  "init_irq_node_ptr = pptr_base + 0x3000"
+  "init_irq_node_ptr = pptr_base + 0xc000"
 
 (* The highest user-virtual address that is still canonical.
    It can be larger than user_vtop, which is the highest address we allow to be mapped.
@@ -41,7 +41,6 @@ definition canonical_user :: "vspace_ref" where
 definition init_vspace_uses :: "vspace_ref \<Rightarrow> arm_vspace_region_use" where
   "init_vspace_uses p \<equiv>
      if p \<in> {pptr_base ..< pptr_base + (1 << 30)} then ArmVSpaceKernelWindow
-     else if p \<le> canonical_user then ArmVSpaceUserRegion
      else ArmVSpaceInvalidRegion"
 
 
@@ -59,8 +58,8 @@ definition init_arch_state :: arch_state where
 
 (* The user-level global table in hyp mode is entirely empty.
    Kernel-level mappings are in a separate kernel page table, which is not modeled here. *)
-definition global_pte :: "pt_index \<Rightarrow> pte" where
-  "global_pte idx \<equiv> InvalidPTE"
+definition global_pt_obj :: arch_kernel_obj where
+  "global_pt_obj \<equiv> PageTable (VSRootPT (\<lambda>_. InvalidPTE))"
 
 definition init_kheap :: kheap where
   "init_kheap \<equiv>
@@ -81,7 +80,8 @@ definition init_kheap :: kheap where
          tcb_bound_notification = None,
          tcb_mcpriority = minBound,
          tcb_arch = init_arch_tcb
-         \<rparr>
+         \<rparr>,
+     arm_global_pt_ptr \<mapsto> ArchObj global_pt_obj
     )"
 
 definition init_cdt :: cdt where

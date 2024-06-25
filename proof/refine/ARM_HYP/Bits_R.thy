@@ -76,6 +76,10 @@ lemma projectKO_tcb:
   "(projectKO_opt ko = Some t) = (ko = KOTCB t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
+lemma tcb_of'_TCB[simp]:
+  "tcb_of' (KOTCB tcb) = Some tcb"
+  by (simp add: projectKO_tcb)
+
 lemma projectKO_cte:
   "(projectKO_opt ko = Some t) = (ko = KOCTE t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
@@ -482,7 +486,7 @@ lemma constOnFailure_wp :
   apply (wp|simp)+
   done
 
-lemma corres_throwError_str [corres_concrete_rER]:
+lemma corres_throwError_str [corresK_concrete_rER]:
   "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throw b)"
   "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
  by (simp add: corres_underlyingK_def)+

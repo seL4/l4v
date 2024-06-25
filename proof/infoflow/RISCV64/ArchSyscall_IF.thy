@@ -43,7 +43,7 @@ lemma sts_authorised_for_globals_inv[Syscall_IF_assms]:
       apply wpsimp+
     apply (rename_tac page_invocation)
     apply (case_tac page_invocation)
-      apply (simp | wp hoare_ex_wp)+
+      apply (simp | wp hoare_vcg_ex_lift)+
   done
 
 lemma dmo_maskInterrupt_globals_equiv[Syscall_IF_assms, wp]:

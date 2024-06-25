@@ -38,7 +38,7 @@ lemma seL4_Untyped_Retype_has_children_wp:
   \<lbrace>\<lambda>rv s. has_children parent (kernel_state s)\<rbrace>"
   apply (clarsimp simp: has_children_def is_cdt_parent_def)
   apply (subst ex_conj_increase)+
-  apply (rule hoare_ex_wp)+
+  apply (rule hoare_vcg_ex_lift)+
   apply (rule hoare_chain)
     apply (rule seL4_Untyped_Retype_inc_no_preempt
                 [where root_size=si_cnode_size and root_cnode_cap=si_cnode_cap and obj = obj
@@ -218,7 +218,8 @@ lemma retype_untyped_wp:
            (assumption|simp add: unat_of_nat32 |rule offset_slot' [symmetric] guard_equal_si_cnode_cap)+)
     apply clarsimp
     apply sep_solve
-   apply (case_tac r)
+   apply (rename_tac rv s)
+   apply (case_tac rv)
     apply clarsimp
     apply sep_solve
    apply clarsimp
@@ -1109,7 +1110,7 @@ lemma retype_untyped_loop_inv_helper:
    apply (rule valid_rv_split)
     apply (fact retype_untyped_loop_inv_fail)
    apply (fact retype_untyped_loop_inv_success)
-  apply (case_tac r, simp_all)
+  apply (simp split: if_split_asm)
   done
 
 lemma nth_mem_sub:

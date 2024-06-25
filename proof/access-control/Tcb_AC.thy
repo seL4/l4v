@@ -60,7 +60,7 @@ lemmas itr_wps =
   restart_integrity_autarch as_user_integrity_autarch thread_set_integrity_autarch
   option_update_thread_integrity_autarch thread_set_pas_refined
   cap_insert_integrity_autarch cap_insert_pas_refined
-  hoare_vcg_all_liftE wp_throw_const_impE hoare_weak_lift_imp hoare_vcg_all_lift
+  hoare_vcg_all_liftE hoare_weak_lift_impE hoare_weak_lift_imp hoare_vcg_all_lift
   check_cap_inv[where P="valid_cap c" for c]
   check_cap_inv[where P="tcb_cap_valid c p" for c p]
   check_cap_inv[where P="cte_at p0" for p0]
@@ -257,7 +257,7 @@ lemma bind_notification_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: bind_notification_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wp set_ntfn_respects hoare_vcg_imp_lift sbn_bind_respects | wpc | clarsimp)+
   apply fastforce
   done
@@ -322,7 +322,7 @@ subsubsection\<open>@{term "pas_refined"}\<close>
 
 lemmas ita_wps = as_user_pas_refined restart_pas_refined cap_insert_pas_refined
                  thread_set_pas_refined cap_delete_pas_refined' check_cap_inv2 hoare_vcg_all_liftE
-                 wp_throw_const_impE hoare_weak_lift_imp hoare_vcg_all_lift
+                 hoare_weak_lift_impE hoare_weak_lift_imp hoare_vcg_all_lift
 
 lemma hoare_st_refl:
   "\<lbrakk> \<And>st. \<lbrace>P st\<rbrace> f \<lbrace>Q st\<rbrace>; \<And>r s st. Q st r s \<Longrightarrow> Q' r s \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P s s\<rbrace> f \<lbrace>Q'\<rbrace>"
@@ -416,7 +416,7 @@ lemma decode_set_ipc_buffer_authorised:
   apply (rule hoare_pre)
   apply (clarsimp simp: ball_Un aag_cap_auth_def split del: if_split split: prod.split
          | wp (once) derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas
-                     derive_cap_cli hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv
+                     derive_cap_cli hoare_vcg_all_liftE_R whenE_throwError_wp slot_long_running_inv
          | wpc)+
   apply (cases excaps, simp)
   apply fastforce
@@ -432,7 +432,7 @@ lemma decode_set_space_authorised:
   apply (simp cong: list.case_cong split del: if_split)
   apply (clarsimp simp: ball_Un split del: if_split
          | wp (once) derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas
-                     derive_cap_cli hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                     derive_cap_cli hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
                      whenE_throwError_wp slot_long_running_inv)+
   apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)
   apply (auto simp: aag_cap_auth_def update_cap_cli
@@ -445,7 +445,7 @@ lemma decode_tcb_configure_authorised_helper:
   "\<lbrace>K True and K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                                    \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x))
                                    \<and> authorised_tcb_inv aag set_param
-                                   \<and> is_thread_control set_param)\<rbrace>
+                                   \<and> is_ThreadControl set_param)\<rbrace>
    decode_set_space ws (ThreadCap t) slot excaps
    \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag (ThreadControl t slot (tc_new_fault_ep rv)
                                                                   None None (tc_new_croot rv)
@@ -453,7 +453,7 @@ lemma decode_tcb_configure_authorised_helper:
                                                                   (tc_new_buffer set_param))\<rbrace>, -"
   apply (rule hoare_gen_asmE)
   apply (cases set_param)
-  apply (simp_all add: is_thread_control_def decode_set_space_def authorised_tcb_inv_def
+  apply (simp_all add: decode_set_space_def authorised_tcb_inv_def
                  cong: list.case_cong option.case_cong prod.case_cong
                 split: prod.split_asm split del: if_split)
   apply (cases "excaps!0")
@@ -461,7 +461,7 @@ lemma decode_tcb_configure_authorised_helper:
   apply (rule hoare_pre)
    apply (clarsimp simp: ball_Un split del: if_split split: prod.split
         | wp (once) derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
-                  hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv)+
+                  hoare_vcg_all_liftE_R whenE_throwError_wp slot_long_running_inv)+
   apply (clarsimp cong: list.case_cong option.case_cong prod.case_cong split: prod.split_asm)
   apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)
   apply (auto simp: aag_cap_auth_def update_cap_cli

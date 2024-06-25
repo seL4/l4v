@@ -280,8 +280,8 @@ definition
       \<Rightarrow> (('a \<times> 's) option \<times> ('b \<times> 's) option) set"
 where
  "monadic_rel_optionation_form f =
-    {(x, y). (x \<noteq> None \<and> y \<noteq> None \<and> the y \<in> fst (split f (the x)))
-           \<or> (x \<noteq> None \<and> y = None \<and> snd (split f (the x)))
+    {(x, y). (x \<noteq> None \<and> y \<noteq> None \<and> the y \<in> fst (case_prod f (the x)))
+           \<or> (x \<noteq> None \<and> y = None \<and> snd (case_prod f (the x)))
            \<or> (x = None \<and> y = None)}"
 
 definition

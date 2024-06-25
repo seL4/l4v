@@ -8,8 +8,9 @@ theory CLevityCatch
 imports
   "CBaseRefine.Include_C"
   ArchMove_C
-  "CLib.LemmaBucket_C"
+  "CParser.LemmaBucket_C"
   "Lib.LemmaBucket"
+  Boolean_C
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -65,12 +66,12 @@ lemma empty_fail_getExtraCPtrs [intro!, simp]:
   "empty_fail (getExtraCPtrs sendBuffer info)"
   apply (simp add: getExtraCPtrs_def)
   apply (cases info, simp)
-  apply (cases sendBuffer, simp_all)
+  apply (cases sendBuffer; fastforce)
   done
 
 lemma empty_fail_loadCapTransfer [intro!, simp]:
   "empty_fail (loadCapTransfer a)"
-  by (simp add: loadCapTransfer_def capTransferFromWords_def)
+  by (fastforce simp: loadCapTransfer_def capTransferFromWords_def)
 
 lemma empty_fail_emptyOnFailure [intro!, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (emptyOnFailure m)"
@@ -90,7 +91,7 @@ lemma asUser_get_registers:
    apply (simp add: mapM_empty asUser_return)
    apply wp
    apply simp
-  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return)
+  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return empty_fail_cond)
   apply wp
    apply simp
    apply (rule hoare_strengthen_post)

@@ -677,7 +677,7 @@ lemma requiv_wuc_eq[intro]:
   by (simp add: reads_equiv_def2)
 
 lemma update_object_noop:
-  "kheap s ptr = Some obj \<Longrightarrow> s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr> = s"
+  "kheap s ptr = Some obj \<Longrightarrow> s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr> = s"
   by (clarsimp simp: map_upd_triv)
 
 lemma set_object_rev:
@@ -764,14 +764,14 @@ lemma gets_kheap_revrv:
 
 lemma gets_machine_state_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
-     (equiv_machine_state (aag_can_read aag or aag_can_affect aag l) And equiv_irq_state)
+     (equiv_machine_state (aag_can_read aag or aag_can_affect aag l) and equiv_irq_state)
      \<top> (gets machine_state)"
   by (fastforce simp: equiv_valid_2_def gets_def get_def return_def bind_def
                 elim: reads_equivE affects_equivE equiv_forE
                intro: equiv_forI)
 
 lemma gets_machine_state_revrv':
-  "reads_equiv_valid_rv_inv A aag (equiv_machine_state (aag_can_read aag) And equiv_irq_state)
+  "reads_equiv_valid_rv_inv A aag (equiv_machine_state (aag_can_read aag) and equiv_irq_state)
                             \<top> (gets machine_state)"
   by (fastforce simp: equiv_valid_2_def gets_def get_def return_def bind_def
                 elim: reads_equivE affects_equivE equiv_forE
@@ -892,7 +892,7 @@ context InfoFlow_IF_1 begin
 
 lemma do_machine_op_spec_reads_respects':
   assumes equiv_dmo:
-   "equiv_valid_inv (equiv_machine_state (aag_can_read aag) And equiv_irq_state)
+   "equiv_valid_inv (equiv_machine_state (aag_can_read aag) and equiv_irq_state)
                     (equiv_machine_state (aag_can_affect aag l)) Q f"
   assumes guard:
     "\<And>s. P s \<Longrightarrow> Q (machine_state s)"
@@ -948,7 +948,7 @@ lemma do_machine_op_rev:
   unfolding do_machine_op_def equiv_valid_def2
   apply (rule_tac W="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag) rv rv' \<and> equiv_irq_state rv rv'"
              and Q="\<lambda> rv s. rv = machine_state s " in equiv_valid_rv_bind)
-    apply (blast intro: equiv_valid_rv_guard_imp[OF gets_machine_state_revrv'[simplified bipred_conj_def]])
+    apply (blast intro: equiv_valid_rv_guard_imp[OF gets_machine_state_revrv'[simplified pred_conj_def]])
    apply (rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) ms' ms''"
               and Q="\<lambda> (r,ms') s. ms' = rv \<and> rv = machine_state s "
               and Q'="\<lambda> (r',ms'') s. ms'' = rv' \<and> rv' = machine_state s"

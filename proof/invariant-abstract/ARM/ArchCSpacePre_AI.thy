@@ -165,7 +165,7 @@ lemma valid_arch_mdb_simple:
   "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s);
               is_simple_cap cap; caps_of_state s src = Some capa\<rbrakk> \<Longrightarrow>
          valid_arch_mdb ((is_original_cap s) (dest := is_cap_revocable cap capa))
-                       (caps_of_state s(dest \<mapsto> cap))"
+                       ((caps_of_state s)(dest \<mapsto> cap))"
   by auto
 
 lemma valid_arch_mdb_free_index_update:
@@ -189,34 +189,34 @@ lemma set_untyped_cap_as_full_valid_arch_mdb:
 lemma valid_arch_mdb_not_arch_cap_update:
      "\<And>s cap capa. \<lbrakk>\<not>is_arch_cap cap; valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrakk>
        \<Longrightarrow> valid_arch_mdb ((is_original_cap s)(dest := True))
-            (caps_of_state s(src \<mapsto> cap, dest\<mapsto>capa))"
+            ((caps_of_state s)(src \<mapsto> cap, dest\<mapsto>capa))"
   by auto
 
 lemma valid_arch_mdb_derived_cap_update:
   "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s);
              is_derived (cdt s) src cap capa\<rbrakk> \<Longrightarrow>
            valid_arch_mdb ((is_original_cap s)(dest := is_cap_revocable cap capa))
-                           (caps_of_state s(dest \<mapsto> cap))"
+                           ((caps_of_state s)(dest \<mapsto> cap))"
   by auto
 
 lemma valid_arch_mdb_free_index_update':
   "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s); caps_of_state s src = Some capa;
                    is_untyped_cap cap\<rbrakk> \<Longrightarrow>
            valid_arch_mdb ((is_original_cap s) (dest := is_cap_revocable cap capa))
-            (caps_of_state s(dest \<mapsto> cap, src \<mapsto> max_free_index_update capa))"
+            ((caps_of_state s)(dest \<mapsto> cap, src \<mapsto> max_free_index_update capa))"
   by auto
 
 lemma valid_arch_mdb_weak_derived_update:
   "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s);
                       caps_of_state s src = Some capa; weak_derived cap capa\<rbrakk> \<Longrightarrow>
         valid_arch_mdb ((is_original_cap s) (dest := is_original_cap s src, src := False))
-            (caps_of_state s(dest \<mapsto> cap, src \<mapsto> NullCap))"
+            ((caps_of_state s)(dest \<mapsto> cap, src \<mapsto> NullCap))"
   by auto
 
 lemma valid_arch_mdb_tcb_cnode_update:
   "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
            valid_arch_mdb ((is_original_cap s) ((t, tcb_cnode_index 2) := True))
-              (caps_of_state s((t, tcb_cnode_index 2) \<mapsto> ReplyCap t True r))"
+              ((caps_of_state s)((t, tcb_cnode_index 2) \<mapsto> ReplyCap t True r))"
   by auto
 
 lemmas valid_arch_mdb_updates = valid_arch_mdb_free_index_update valid_arch_mdb_not_arch_cap_update
@@ -249,10 +249,10 @@ lemma valid_arch_mdb_null_filter:
 lemma valid_arch_mdb_untypeds:
   "\<And>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)
        \<Longrightarrow> valid_arch_mdb (\<lambda>x. x \<noteq> cref \<longrightarrow> is_original_cap s x)
-            (caps_of_state s(cref \<mapsto> default_cap tp oref sz dev))"
+            ((caps_of_state s)(cref \<mapsto> default_cap tp oref sz dev))"
   "\<And>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)
        \<Longrightarrow> valid_arch_mdb (is_original_cap s)
-            (caps_of_state s(cref \<mapsto> UntypedCap dev ptr sz idx))"
+            ((caps_of_state s)(cref \<mapsto> UntypedCap dev ptr sz idx))"
   by auto
 
 end

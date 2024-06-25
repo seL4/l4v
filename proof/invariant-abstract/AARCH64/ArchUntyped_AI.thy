@@ -299,13 +299,12 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
   apply (rule conjI)
    apply (auto simp: is_cap_simps valid_cap_def second_level_tables_def
                      obj_at_def nonempty_table_def a_type_simps in_omonad)[1]
-  sorry (* FIXME AARCH64
   apply (clarsimp simp del: imp_disjL)
   apply (case_tac "\<exists>x. x \<in> obj_refs cap")
    apply (clarsimp dest!: obj_ref_elemD)
    apply fastforce
   apply (auto simp: is_cap_simps)[1]
-  done *)
+  done
 
 
 lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
@@ -340,9 +339,8 @@ lemma nonempty_default[simp, Untyped_AI_assms]:
   "tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us)"
   apply (case_tac tp, simp_all add: default_object_def nonempty_table_def a_type_def)
   apply (rename_tac aobject_type)
-  apply (case_tac aobject_type; simp add: default_arch_object_def)
-  sorry (* FIXME AARCH64
-  done *)
+  apply (case_tac aobject_type; simp add: default_arch_object_def empty_pt_def)
+  done
 
 crunch cte_wp_at_iin[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
 
@@ -358,8 +356,7 @@ lemma obj_is_device_vui_eq[Untyped_AI_assms]:
   apply (intro impI conjI allI, simp_all add: is_frame_type_def default_object_def)
   apply (simp add: default_arch_object_def split: aobject_type.split)
   apply (auto simp: arch_is_frame_type_def)
-  sorry (* FIXME AARCH64
-  done *)
+  done
 
 end
 

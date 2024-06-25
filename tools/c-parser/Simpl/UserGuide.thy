@@ -1,28 +1,8 @@
 (*  Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      UserGuide.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
+Copyright (c) 2022 Apple Inc. All rights reserved.
 *)
 
 section \<open>User Guide \label{sec:UserGuide}\<close>
@@ -344,7 +324,7 @@ subsubsection \<open>Usage\<close>
 
 
 text\<open>Let us see how we can use procedure specifications.\<close>
-(* FIXME: maybe don't show this at all *)
+(* fixme: maybe don't show this at all *)
 lemma (in Square_impl)
   shows "\<Gamma>\<turnstile>\<lbrace>\<acute>I = 2\<rbrace> \<acute>R :== CALL Square(\<acute>I) \<lbrace>\<acute>R = 4\<rbrace>"
   txt \<open>Remember that we have already proven @{thm [source] "Square_spec"} in the locale
@@ -873,7 +853,8 @@ apply (hoare_rule HoareTotal_ProcRec2
 \<close>
   txt \<open>@{subgoals [margin=75,display]}\<close>
 apply simp_all
-  by (vcg,force)+
+by (vcg,simp)+
+
 text \<open>By doing some arithmetic we can express the termination condition with a single
 measure function.
 \<close>

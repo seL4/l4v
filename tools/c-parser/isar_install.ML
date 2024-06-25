@@ -147,7 +147,9 @@ fun get_Csyntax thy s = let
   val cpp_option =
       case Config.get_global thy cpp_path of
           "" => NONE
-        | s => SOME s
+        | s => SOME (if Path.is_absolute (Path.explode s)
+                     then s
+                     else Path.implode (Path.append (Resources.master_directory thy) (Path.explode s)))
   val cpp_error_count = Config.get_global thy report_cpp_errors
   val (ast0, _) =
       StrictCParser.parse
@@ -538,17 +540,17 @@ fun new_include s thy = C_Includes.map (fn sl => mk_thy_relative thy s::sl) thy
 
 val _ = Outer_Syntax.command @{command_keyword "new_C_include_dir"}
                             "add a directory to the include path"
-                            (P.text >> (Toplevel.theory o new_include))
+                            (P.embedded >> (Toplevel.theory o new_include))
 
 val file_inclusion = let
   val typoptions =
-      P.reserved mtypN |-- (P.$$$ "=" |-- P.text >> MachineState) ||
-      P.reserved ghosttypN |-- (P.$$$ "=" |-- P.text >> GhostState) ||
-      P.reserved rootsN |-- (P.$$$ "=" |-- (P.$$$ "[" |-- P.enum1 "," P.text --| P.$$$ "]") >> CRoots)
+      P.reserved mtypN |-- (P.$$$ "=" |-- P.embedded >> MachineState) ||
+      P.reserved ghosttypN |-- (P.$$$ "=" |-- P.embedded >> GhostState) ||
+      P.reserved rootsN |-- (P.$$$ "=" |-- (P.$$$ "[" |-- P.enum1 "," P.embedded --| P.$$$ "]") >> CRoots)
 in
     ((Scan.option (P.$$$ memsafeN)) --
      (Scan.option (P.$$$ typesN)) --
-     (Scan.option (P.$$$ defsN)) -- P.text --
+     (Scan.option (P.$$$ defsN)) -- P.embedded --
      (Scan.option
           (P.$$$ "[" |-- P.enum1 "," typoptions --| P.$$$ "]"))) >>
     (Toplevel.theory o install_C_file)
@@ -564,7 +566,7 @@ val _ =
     Outer_Syntax.command
       @{command_keyword "install_C_types"}
       "install types from a C file"
-      (P.text >> (Toplevel.theory o install_C_types))
+      (P.embedded >> (Toplevel.theory o install_C_types))
 
 end
 

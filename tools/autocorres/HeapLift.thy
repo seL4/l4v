@@ -11,7 +11,7 @@ imports
   L2Defs
   ExecConcrete
   AbstractArrays
-  "CLib.LemmaBucket_C"
+  "CParser.LemmaBucket_C"
 begin
 
 definition "L2Tcorres st A C = corresXF st (\<lambda>r _. r) (\<lambda>r _. r) \<top> A C"
@@ -157,9 +157,8 @@ definition "abs_spec st P (A :: ('a \<times> 'a) set) (C :: ('c \<times> 'c) set
 lemma L2Tcorres_spec [heap_abs]:
   "\<lbrakk> abs_spec st P A C \<rbrakk>
      \<Longrightarrow> L2Tcorres st (L2_seq (L2_guard P) (\<lambda>_. (L2_spec A))) (L2_spec C)"
-  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs image_def set_eq_UNIV
-             split_def Ball_def state_select_def abs_spec_def split: sum.splits)
-  done
+  by (monad_eq simp: corresXF_def L2Tcorres_def L2_defs image_def split_def Ball_def
+                     state_select_def abs_spec_def)
 
 lemma abs_spec_constant [heap_abs]:
   "abs_spec st \<top> {(a, b). C} {(a, b). C}"
@@ -1368,7 +1367,7 @@ lemma heap_abs_expr_c_guard_array [heap_abs]:
    apply (subst (asm) (2) set_array_addrs)
    apply force
   apply clarsimp
-  apply (erule (1) my_BallE)
+  apply (drule (1) bspec)
   apply (drule (1) valid_typ_heap_c_guard)
   apply simp
   done

@@ -167,17 +167,17 @@ lemma takeWhile_take_has_property_nth:
   "\<lbrakk> n < length (takeWhile P xs) \<rbrakk> \<Longrightarrow> P (xs ! n)"
   by (induct xs arbitrary: n; simp split: if_split_asm) (case_tac n, simp_all)
 
-lemma takeWhile_replicate:
-  "takeWhile f (replicate len x) = (if f x then replicate len x else [])"
-  by (induct_tac len) auto
-
 lemma takeWhile_replicate_empty:
   "\<not> f x \<Longrightarrow> takeWhile f (replicate len x) = []"
-  by (simp add: takeWhile_replicate)
+  by simp
 
 lemma takeWhile_replicate_id:
   "f x \<Longrightarrow> takeWhile f (replicate len x) = replicate len x"
-  by (simp add: takeWhile_replicate)
+  by simp
+
+lemma takeWhile_all:
+  "length (takeWhile P xs) = length xs \<Longrightarrow> \<forall>x \<in> set xs. P x"
+  by (induct xs) (auto split: if_split_asm)
 
 lemma nth_rev: "n < length xs \<Longrightarrow> rev xs ! n = xs ! (length xs - 1 - n)"
   using rev_nth by simp
@@ -682,5 +682,8 @@ lemma plus_minus_one_rewrite:
 
 lemma Suc_0_lt_2p_len_of: "Suc 0 < 2 ^ LENGTH('a :: len)"
   by (metis One_nat_def len_gt_0 lessI numeral_2_eq_2 one_less_power)
+
+lemma bin_rest_code: "i div 2 = drop_bit 1 i" for i :: int
+  by (simp add: drop_bit_eq_div)
 
 end

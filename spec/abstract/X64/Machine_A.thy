@@ -13,7 +13,7 @@ chapter "x64 Machine Instantiation"
 
 theory Machine_A
 imports
-  "Lib.NonDetMonad"
+  "Monads.Nondet_Monad"
   "ExecSpec.MachineTypes"
   "ExecSpec.MachineOps"
 begin

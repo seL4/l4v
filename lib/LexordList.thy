@@ -6,7 +6,7 @@
 
 theory LexordList imports
   Main
-  Eisbach_Methods (* for tests *)
+  Eisbach_Tools.Eisbach_Methods (* for tests *)
 begin
 
 text \<open>

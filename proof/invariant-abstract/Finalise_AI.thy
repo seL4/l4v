@@ -465,7 +465,7 @@ lemma cap_delete_one_caps_of_state:
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def
                    is_final_cap_def)
-  apply (rule hoare_seq_ext [OF _ get_cap_sp])
+  apply (rule bind_wp [OF _ get_cap_sp])
   apply (case_tac "can_fast_finalise cap")
    apply (wp empty_slot_caps_of_state get_cap_wp)
    apply (clarsimp simp: cte_wp_at_caps_of_state
@@ -487,7 +487,7 @@ lemma cancel_ipc_caps_of_state:
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: cancel_ipc_def reply_cancel_ipc_def
              cong: Structures_A.thread_state.case_cong)
-  apply (wpsimp wp: cap_delete_one_caps_of_state select_wp)
+  apply (wpsimp wp: cap_delete_one_caps_of_state)
      apply (rule_tac Q="\<lambda>_ s. (\<forall>p. cte_wp_at can_fast_finalise p s
                                 \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap)))
                                 \<and> P (caps_of_state s)"
@@ -626,7 +626,7 @@ lemma tcb_st_refs_no_TCBBound:
 lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   "\<lbrace>invs\<rbrace> unbind_maybe_notification ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift)
   apply simp
@@ -731,7 +731,7 @@ lemma unbind_notification_not_bound:
    \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = None) ntfnptr\<rbrace>"
   apply (simp add: unbind_notification_def)
   apply (rule hoare_pre)
-   apply (rule hoare_seq_ext[OF _ gbn_wp[where P="\<lambda>ptr _. ptr = (Some ntfnptr)"]])
+   apply (rule bind_wp[OF _ gbn_wp[where P="\<lambda>ptr _. ptr = (Some ntfnptr)"]])
    apply (rule hoare_gen_asm[where P'=\<top>, simplified])
    apply (wp sbn_obj_at_impossible simple_obj_set_prop_at | wpc | simp)+
   apply (clarsimp simp: obj_at_def)
@@ -871,7 +871,7 @@ lemma unbind_maybe_notification_emptyable[wp]:
 lemma cancel_all_signals_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_signals ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   unfolding cancel_all_signals_def unbind_maybe_notification_def
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
   apply (wp cancel_all_emptyable_helper
             hoare_vcg_const_Ball_lift
@@ -883,7 +883,7 @@ lemma cancel_all_signals_emptyable[wp]:
 lemma cancel_all_ipc_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     apply (wp, simp)
    apply (wp cancel_all_emptyable_helper hoare_vcg_const_Ball_lift
@@ -935,7 +935,7 @@ lemma cap_delete_one_deletes_reply:
                          split: if_split_asm elim!: allEI)
      apply (rule hoare_vcg_all_lift)
      apply simp
-     apply (wp static_imp_wp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)+
+     apply (wp hoare_weak_lift_imp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)+
   apply (fastforce simp: cte_wp_at_caps_of_state valid_reply_caps_def
                         is_cap_simps unique_reply_caps_def is_reply_cap_to_def
               simp del: split_paired_All)
@@ -946,7 +946,7 @@ lemma cap_delete_one_reply_st_tcb_at:
     cap_delete_one slot
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
-  apply (rule hoare_seq_ext [OF _ get_cap_sp])
+  apply (rule bind_wp [OF _ get_cap_sp])
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: cte_wp_at_caps_of_state when_def is_reply_cap_to_def)
   apply wpsimp
@@ -1019,10 +1019,10 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
 
 crunches suspend, unbind_maybe_notification, unbind_notification
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch irq_node[wp]: deleting_irq_handler "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas cancel_all_ipc_cte_irq_node[wp]
     = hoare_use_eq_irq_node [OF cancel_all_ipc_irq_node cancel_all_ipc_cte_wp_at]

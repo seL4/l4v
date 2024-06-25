@@ -19,10 +19,7 @@ fun apply_attributes attrs thm ctxt =
   in if Thm.eq_thm (thm, thm')
      then (SOME ctxt', SOME thm)
      else
-       apply_attributes attrs thm' ctxt'
-       handle e =>
-         (if Exn.is_interrupt e then Exn.reraise e else ();
-          (SOME ctxt', SOME thm'))
+       \<^try>\<open>apply_attributes attrs thm' ctxt' catch _ => (SOME ctxt', SOME thm')\<close>
   end
 
 fun repeat_attribute_cmd attr_srcs (ctxt, thm) =

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -38,11 +39,10 @@ lemma getEndpoint_obj_at':
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 lemma tcbSchedEnqueue_tcbContext[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-     tcbSchedEnqueue t'
-   \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule tcbSchedEnqueue_obj_at_unchangedT[OF all_tcbI])
-  apply simp
+  "tcbSchedEnqueue t' \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  apply (simp add: tcbSchedEnqueue_def tcbQueuePrepend_def unless_when)
+  apply (wp threadSet_obj_at' hoare_drop_imps threadGet_wp
+         | simp split: if_split)+
   done
 
 lemma setCTE_tcbContext:
@@ -53,26 +53,22 @@ lemma setCTE_tcbContext:
   apply (rule setObject_cte_obj_at_tcb', simp_all)
   done
 
-lemma seThreadState_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setThreadState a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setThreadState_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
-  done
+lemma setThreadState_tcbContext:
+ "setThreadState a b \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def tcbSchedEnqueue_def
+            tcbQueuePrepend_def rescheduleRequired_def
+  by (wp threadSet_obj_at' hoare_drop_imps threadGet_wp | wpc
+         | simp split: if_split)+
 
 lemma setBoundNotification_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setBoundNotification a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setBoundNotification_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
-  done
+ "setBoundNotification a b \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setBoundNotification_def
+  by wpsimp
 
 declare comp_apply [simp del]
 crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
-       setNotification_tcb crunch_wps seThreadState_tcbContext
+       setNotification_tcb crunch_wps setThreadState_tcbContext
    simp: crunch_simps unless_def)
 declare comp_apply [simp]
 
@@ -625,14 +621,15 @@ lemmas stored_hw_asid_get_ccorres_split
 
 lemma dmo_clearExMonitor_setCurThread_swap:
   "(do _ \<leftarrow> doMachineOp ARM_HYP.clearExMonitor;
-               setCurThread thread
-            od)
+       setCurThread thread
+    od)
     = (do _ \<leftarrow> setCurThread thread;
-            doMachineOp ARM_HYP.clearExMonitor od)"
-  apply (simp add: setCurThread_def doMachineOp_def split_def)
-  apply (rule oblivious_modify_swap[symmetric])
-  apply (intro oblivious_bind,
-         simp_all add: select_f_oblivious)
+          doMachineOp ARM_HYP.clearExMonitor
+       od)"
+  apply (clarsimp simp: ARM_HYP.clearExMonitor_def)
+  apply (simp add: doMachineOp_modify)
+  apply (rule oblivious_modify_swap)
+  apply (fastforce intro: oblivious_bind simp: setCurThread_def idleThreadNotQueued_def)
   done
 
 lemma pd_at_asid_inj':
@@ -652,18 +649,12 @@ lemma armv_contextSwitch_HWASID_fp_rewrite:
                         checkPDAt_def checkPDUniqueToASID_def
                         checkPDASIDMapMembership_def
                         stateAssert_def2[folded assert_def])
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_gets_l)
-   apply (rule monadic_rewrite_symb_exec_l)
-      apply (wpsimp)+
-     apply (simp add: empty_fail_findPDForASID empty_fail_catch)
-    apply (rule monadic_rewrite_assert monadic_rewrite_gets_l)+
-    apply (rule_tac P="asidMap asid \<noteq> None \<and> fst (the (asidMap asid)) = the (pde_stored_asid v)"
-        in monadic_rewrite_gen_asm)
-    apply (simp only: case_option_If2 simp_thms if_True if_False
-                      split_def, simp)
-    apply (rule monadic_rewrite_refl)
-   apply (wp findPDForASID_pd_at_wp | simp only: const_def)+
+  apply (wp_pre, repeat 9 monadic_rewrite_symb_exec_l) (* until hwasid <- *)
+      apply (rule_tac P="asidMap asid \<noteq> None \<and> fst (the (asidMap asid)) = the (pde_stored_asid v)"
+               in monadic_rewrite_gen_asm)
+      apply (simp add: case_option_If2 split_def)
+      apply (rule monadic_rewrite_refl)
+     apply (wpsimp wp: findPDForASID_pd_at_wp simp: empty_fail_catch)+
   apply (clarsimp simp: pd_has_hwasid_def cte_level_bits_def
                         field_simps cte_wp_at_ctes_of
                         word_0_sle_from_less
@@ -774,17 +765,19 @@ lemma switchToThread_fp_ccorres:
              ceqv, rename_tac "hw_asid_ret")
         apply (ctac(no_vcg) add: armv_contextSwitch_HWASID_ccorres)
          apply (simp add: storeWordUser_def bind_assoc case_option_If2 split_def del: Collect_const)
-         apply (simp only: dmo_clearExMonitor_setCurThread_swap dc_def[symmetric])
+         apply (simp only: dmo_clearExMonitor_setCurThread_swap)
          apply (rule ccorres_split_nothrow_novcg_dc)
+            apply (clarsimp simp: setCurThread_def)
+            apply (rule ccorres_stateAssert)
             apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply (clarsimp simp del: rf_sr_upd_safe)
-            apply (clarsimp simp: setCurThread_def simpler_modify_def rf_sr_def cstate_relation_def
+            apply (clarsimp simp: simpler_modify_def rf_sr_def cstate_relation_def
                                   Let_def carch_state_relation_def cmachine_state_relation_def)
            apply (ctac add: clearExMonitor_fp_ccorres)
           apply wp
          apply (simp add: guard_is_UNIV_def)
-        apply (wpsimp wp: dmo_contextSwitch_HWASID_atcbVCPUPtr_cases_helper hoare_vcg_all_lift
+        apply (wpsimp wp: hoare_drop_imps dmo_contextSwitch_HWASID_atcbVCPUPtr_cases_helper hoare_vcg_all_lift
                           hoare_vcg_imp_lift)
        apply (rule conseqPre, vcg, simp, rule subset_refl)
       apply (rule conseqPre, vcg, clarsimp)
@@ -846,7 +839,7 @@ lemma thread_state_ptr_set_tsType_np_spec:
   apply (clarsimp simp: typ_heap_simps')
   apply (rule exI, rule conjI[OF _ conjI [OF _ refl]])
   apply (simp_all add: thread_state_lift_def)
-  apply (auto simp: "StrictC'_thread_state_defs" mask_def)
+  apply (auto simp: ThreadState_defs mask_def)
   done
 
 lemma thread_state_ptr_mset_blockingObject_tsType_spec:
@@ -1034,10 +1027,7 @@ lemma ccorres_call_hSkip:
   apply -
   apply (rule ccorres_call_hSkip')
        apply (erule ccorres_guard_imp)
-        apply simp
-       apply clarsimp
-      apply (simp_all add: ggl xfdc_def)
-  apply (clarsimp simp: igl)
+        apply (clarsimp simp: ggl igl xfdc_def)+
   done
 
 lemma bind_case_sum_rethrow:
@@ -1165,7 +1155,7 @@ lemma isValidVTableRoot_fp_spec:
        {t. ret__unsigned_long_' t = from_bool (isValidVTableRoot_C (pd_cap_' s))}"
   apply vcg
   apply (clarsimp simp: word_sle_def word_sless_def isValidVTableRoot_fp_lemma)
-  apply (simp add: from_bool_def split: if_split)
+  apply (simp split: if_split)
   done
 
 lemma isRecvEP_endpoint_case:
@@ -1253,8 +1243,8 @@ lemma fastpath_dequeue_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                          update_tcb_map_tos typ_heap_simps')
-   apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-    apply (rule ext, simp add: tcb_null_queue_ptrs_def
+   apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+    apply (rule ext, simp add: tcb_null_ep_ptrs_def
                         split: if_split)
    apply (rule conjI)
     apply (rule cpspace_relation_ep_update_ep, assumption+)
@@ -1270,8 +1260,6 @@ lemma fastpath_dequeue_ccorres:
   apply (simp add: carch_state_relation_def typ_heap_simps'
                    cmachine_state_relation_def h_t_valid_clift_Some_iff
                    update_ep_map_tos)
-  apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 lemma st_tcb_at_not_in_ep_queue:
@@ -1409,8 +1397,8 @@ lemma fastpath_enqueue_ccorres:
    apply (rule conjI)
     apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                           typ_heap_simps')
-    apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-     apply (rule ext, simp add: tcb_null_queue_ptrs_def
+    apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+     apply (rule ext, simp add: tcb_null_ep_ptrs_def
                          split: if_split)
     apply (rule conjI)
      apply (rule_tac S="tcb_ptr_to_ctcb_ptr ` set (ksCurThread \<sigma> # list)"
@@ -1449,8 +1437,6 @@ lemma fastpath_enqueue_ccorres:
            auto dest!: map_to_ko_atI)[1]
    apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                     cmachine_state_relation_def h_t_valid_clift_Some_iff)
-   apply (erule cready_queues_relation_null_queue_ptrs)
-   apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   apply (clarsimp simp: typ_heap_simps' EPState_Recv_def mask_def
                         is_aligned_weaken[OF is_aligned_tcb_ptr_to_ctcb_ptr])
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -1458,8 +1444,8 @@ lemma fastpath_enqueue_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                          typ_heap_simps' ct_in_state'_def)
-   apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-    apply (rule ext, simp add: tcb_null_queue_ptrs_def
+   apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+    apply (rule ext, simp add: tcb_null_ep_ptrs_def
                         split: if_split)
    apply (rule conjI)
     apply (rule_tac S="{tcb_ptr_to_ctcb_ptr (ksCurThread \<sigma>)}"
@@ -1479,8 +1465,6 @@ lemma fastpath_enqueue_ccorres:
           assumption+, auto dest!: map_to_ko_atI)[1]
   apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                    cmachine_state_relation_def h_t_valid_clift_Some_iff)
-  apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 lemma setCTE_rf_sr:
@@ -1575,8 +1559,8 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
                    limited_and_simps cap_reply_cap_def
                    limited_and_simps1[OF lshift_limited_and, OF limited_and_from_bool]
                    shiftr_over_or_dist word_bw_assocs mask_def shiftl_shiftr3 word_size)
-  apply (cases m ; clarsimp)
-  apply (cases canGrant ; clarsimp)
+  apply (cases m ; clarsimp simp: true_def)
+  apply (cases canGrant ; clarsimp simp: true_def false_def)
   done
 
 lemma fastpath_copy_mrs_ccorres:
@@ -1627,7 +1611,7 @@ lemma ctes_of_Some_cte_wp_at:
   by (clarsimp simp: cte_wp_at_ctes_of)
 
 lemma user_getreg_wp:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
       asUser t (getRegister r) \<lbrace>Q\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
    apply simp
@@ -1751,8 +1735,8 @@ lemma fastpath_call_ccorres:
   notes hoare_TrueI[simp] if_cong[cong] option.case_cong[cong]
   shows "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s
-                  \<and> obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_HYP_H.capRegister = cptr
-                                 \<and>  (atcbContextGet o tcbArch) tcb ARM_HYP_H.msgInfoRegister = msginfo)
+                  \<and> obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb ARM_HYP_H.capRegister = cptr
+                                 \<and>  (user_regs o atcbContextGet o tcbArch) tcb ARM_HYP_H.msgInfoRegister = msginfo)
                         (ksCurThread s) s)
      (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
      (fastpaths SysCall) (Call fastpath_call_'proc)"
@@ -1826,7 +1810,6 @@ proof -
        apply (rule ccorres_Cond_rhs_Seq)
           apply (rule ccorres_alternative2)
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
              apply (rule slowpath_ccorres)
             apply simp
@@ -1860,9 +1843,10 @@ proof -
           apply (simp add: from_bool_0 if_1_0_0 cong: if_cong)
           apply (rule ccorres_cond_true_seq)
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
-             apply (rule slowpath_ccorres, simp+)
+             apply (erule disjE; simp; rule slowpath_ccorres)
+            apply simp
+           apply simp
           apply (vcg exspec=slowpath_noreturn_spec)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr+
@@ -1875,7 +1859,6 @@ proof -
          apply (rule ccorres_Cond_rhs_Seq)
           apply simp
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
              apply (rule slowpath_ccorres, simp+)
           apply (vcg exspec=slowpath_noreturn_spec)
@@ -1912,7 +1895,6 @@ proof -
            apply (rule ccorres_Cond_rhs_Seq)
             apply simp
             apply (rule ccorres_split_throws)
-             apply (fold dc_def)[1]
              apply (rule ccorres_call_hSkip)
                apply (rule slowpath_ccorres, simp+)
             apply (vcg exspec=slowpath_noreturn_spec)
@@ -1935,7 +1917,6 @@ proof -
              apply (rule ccorres_Cond_rhs_Seq)
               apply simp
               apply (rule ccorres_split_throws)
-               apply (fold dc_def)[1]
                apply (rule ccorres_call_hSkip)
                  apply (rule slowpath_ccorres, simp+)
               apply (vcg exspec=slowpath_noreturn_spec)
@@ -1993,29 +1974,25 @@ proof -
                         apply (simp add: ctcb_relation_unat_tcbPriority_C
                                           word_less_nat_alt linorder_not_le)
                         apply ceqv
-                       apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
-                       apply (simp add: if_1_0_0 ccap_relation_ep_helpers from_bool_0 word_le_not_less
-                                    del: Collect_const cong: call_ignore_cong)
+                       apply (simp add: from_bool_eq_if from_bool_eq_if' from_bool_0 ccorres_IF_True del: Collect_const)
 
                        apply (rule ccorres_Cond_rhs)
-                        apply (simp add: bindE_assoc del: Collect_const)
                         apply (rule ccorres_Guard_Seq)
                         apply (rule ccorres_add_return2)
                         apply (ctac add: isHighestPrio_ccorres)
-                        apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
+                        apply (simp add: from_bool_eq_if from_bool_eq_if' from_bool_0 ccorres_IF_True del: Collect_const)
                         apply (clarsimp simp: to_bool_def)
                         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
                         apply clarsimp
                         apply (rule conseqPre, vcg)
-                        apply (clarsimp simp: from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0)
+                        apply (clarsimp simp: from_bool_eq_if' word_le_not_less from_bool_0)
                         apply (clarsimp simp: return_def)
                         apply (rule wp_post_taut)
                         apply (vcg exspec=isHighestPrio_modifies)
-                       apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
                        apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0}" in ccorres_from_vcg)
                        apply (clarsimp simp: isHighestPrio_def' simpler_gets_def)
                        apply (rule conseqPre, vcg)
-                       apply clarsimp
+                       apply (clarsimp simp: from_bool_0)
                       apply clarsimp
                       apply vcg
                      apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
@@ -2029,7 +2006,6 @@ proof -
                    apply (rule ccorres_Cond_rhs_Seq)
                     apply (simp add: bindE_assoc from_bool_0 catch_throwError del: Collect_const)
                     apply (rule ccorres_split_throws)
-                     apply (fold dc_def)[1]
                      apply (rule ccorres_call_hSkip)
                        apply (rule slowpath_ccorres, simp+)
                     apply (vcg exspec=slowpath_noreturn_spec)
@@ -2048,7 +2024,6 @@ proof -
                apply (rule ccorres_Cond_rhs_Seq)
                 apply simp
                 apply (rule ccorres_split_throws)
-                 apply (fold dc_def)[1]
                  apply (rule ccorres_call_hSkip)
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
@@ -2063,7 +2038,6 @@ proof -
                   apply (rule ccorres_Cond_rhs_Seq)
                    apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def)
                    apply (rule ccorres_split_throws)
-                    apply (fold dc_def)[1]
                     apply (rule ccorres_call_hSkip)
                       apply (rule slowpath_ccorres, simp+)
                    apply (vcg exspec=slowpath_noreturn_spec)
@@ -2092,7 +2066,6 @@ proof -
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R=\<top> in ccorres_cond2', blast)
                      apply (rule ccorres_split_throws)
-                      apply (fold dc_def)[1]
                       apply (rule ccorres_call_hSkip)
                         apply (rule slowpath_ccorres, simp+)
                      apply (vcg exspec=slowpath_noreturn_spec)
@@ -2124,9 +2097,6 @@ proof -
                            apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                             apply (simp add: ctcb_relation_def cthread_state_relation_def)
                            apply simp
-                          apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                            apply (rule ext, simp split: if_split add: typ_heap_simps')
-                           apply (rule ext, simp split: if_split add: typ_heap_simps')
                           apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                            typ_heap_simps' map_comp_update projectKO_opt_tcb
                                            cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2148,7 +2118,7 @@ proof -
                                       ccorres_move_array_assertion_tcb_ctes
                                       ccorres_move_c_guard_tcb_ctes)+
                           apply csymbr
-                          apply (simp add: cteInsert_def bind_assoc dc_def[symmetric]
+                          apply (simp add: cteInsert_def bind_assoc
                                       del: Collect_const cong: call_ignore_cong)
                           apply (rule ccorres_pre_getCTE2, rename_tac curThreadReplyCTE)
                           apply (simp only: getThreadState_def)
@@ -2251,9 +2221,6 @@ proof -
                                        apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                                         apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                        apply simp
-                                      apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                        apply (rule ext, simp split: if_split)
-                                       apply (rule ext, simp split: if_split)
                                       apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                        typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                        cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2271,7 +2238,6 @@ proof -
                                        apply csymbr
                                        apply csymbr
                                        apply (rule ccorres_call_hSkip)
-                                         apply (fold dc_def)[1]
                                          apply (rule fastpath_restore_ccorres)
                                         apply simp
                                        apply simp
@@ -2298,7 +2264,7 @@ proof -
                                apply (wp updateMDB_weak_cte_wp_at)
                               apply simp
                               apply (vcg exspec=mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_modifies)
-                             apply (simp add: o_def)
+                             apply simp
                              apply (wp | simp
                                         | wp (once) updateMDB_weak_cte_wp_at
                                         | wp (once) updateMDB_cte_wp_at_other)+
@@ -2375,7 +2341,7 @@ proof -
          apply (vcg exspec=endpoint_ptr_get_epQueue_head_modifies
                     exspec=endpoint_ptr_get_state_modifies)
         apply (simp add: if_1_0_0 getSlotCap_def)
-        apply (rule valid_isRight_theRight_split)
+        apply (rule valid_isLeft_theRight_split)
         apply simp
         apply (wp getCTE_wp')
         apply (rule validE_R_abstract_rv)
@@ -2444,7 +2410,7 @@ proof -
    apply (rule conjI) (* isReceive on queued tcb state *)
     apply (fastforce simp: st_tcb_at_tcbs_of isBlockedOnReceive_def isReceive_def)
    apply clarsimp
-   apply (rule conjI, fastforce dest!: invs_queues simp: valid_queues_def)
+   apply (rule conjI, fastforce dest!: simp: valid_queues_def)
    apply (frule invs_mdb', clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
    apply (case_tac xb, clarsimp, drule(1) nullcapsD')
    apply (clarsimp simp: pde_stored_asid_def to_bool_def
@@ -2549,7 +2515,7 @@ lemmas array_assertion_abs_tcb_ctes_add
     = array_assertion_abs_tcb_ctes_add[where
           tcb="\<lambda>s. Ptr (tcb' s)" for tcb', simplified]
 
-lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
+lemmas ccorres_move_array_assertion_tcb_ctes [ccorres_pre]
     = ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(1)[where
           tcb="\<lambda>s. Ptr (tcb' s)" for tcb', simplified]]
       ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(2)]
@@ -2577,8 +2543,8 @@ lemma fastpath_reply_recv_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
        (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s
-               \<and> obj_at' (\<lambda>tcb.  (atcbContextGet o tcbArch) tcb capRegister = cptr
-                              \<and>  (atcbContextGet o tcbArch) tcb msgInfoRegister = msginfo)
+               \<and> obj_at' (\<lambda>tcb.  (user_regs o atcbContextGet o tcbArch) tcb capRegister = cptr
+                              \<and>  (user_regs o atcbContextGet o tcbArch) tcb msgInfoRegister = msginfo)
                      (ksCurThread s) s)
        (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
        (fastpaths SysReplyRecv) (Call fastpath_reply_recv_'proc)"
@@ -2654,7 +2620,6 @@ lemma fastpath_reply_recv_ccorres:
        apply (rule ccorres_Cond_rhs_Seq)
         apply (rule ccorres_alternative2)
         apply (rule ccorres_split_throws)
-         apply (fold dc_def)[1]
          apply (rule ccorres_call_hSkip)
            apply (rule slowpath_ccorres)
           apply simp
@@ -2687,9 +2652,8 @@ lemma fastpath_reply_recv_ccorres:
           apply (simp add: if_1_0_0 cong: if_cong)
           apply (rule ccorres_cond_true_seq)
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
-             apply (rule slowpath_ccorres)
+             apply (erule disjE; simp; rule slowpath_ccorres)
             apply simp
            apply simp
           apply (vcg exspec=slowpath_noreturn_spec)
@@ -2704,7 +2668,6 @@ lemma fastpath_reply_recv_ccorres:
          apply (rule ccorres_Cond_rhs_Seq)
           apply simp
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
              apply (rule slowpath_ccorres)
             apply simp
@@ -2729,7 +2692,6 @@ lemma fastpath_reply_recv_ccorres:
              apply (rule ccorres_Cond_rhs_Seq)
             apply (rule ccorres_split_throws)
              apply simp
-             apply (fold dc_def)[1]
              apply (rule ccorres_call_hSkip)
                apply (rule slowpath_ccorres, simp+)
             apply (vcg exspec=slowpath_noreturn_spec)
@@ -2759,7 +2721,6 @@ lemma fastpath_reply_recv_ccorres:
                apply (rule ccorres_Cond_rhs_Seq)
                 apply (simp del: Collect_const not_None_eq)
                 apply (rule ccorres_split_throws)
-                 apply (fold dc_def)[1]
                  apply (rule ccorres_call_hSkip)
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
@@ -2775,7 +2736,7 @@ lemma fastpath_reply_recv_ccorres:
                            and val="tcb_ptr_to_ctcb_ptr curThread"
                            in ccorres_abstract_known)
                 apply (rule Seq_weak_ceqv, rule Basic_ceqv)
-                apply (rule rewrite_xfI, clarsimp simp only: o_def)
+                apply (rule rewrite_xfI)
                 apply (rule refl)
                apply csymbr
                apply (rule ccorres_move_c_guard_cte)
@@ -2793,7 +2754,6 @@ lemma fastpath_reply_recv_ccorres:
              apply (rule ccorres_Cond_rhs_Seq)
               apply (simp cong: conj_cong)
                 apply (rule ccorres_split_throws)
-                 apply (fold dc_def)[1]
                  apply (rule ccorres_call_hSkip)
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
@@ -2813,7 +2773,6 @@ lemma fastpath_reply_recv_ccorres:
                  apply (rule ccorres_Cond_rhs_Seq)
                   apply (simp del: Collect_const not_None_eq)
                   apply (rule ccorres_split_throws)
-                   apply (fold dc_def)[1]
                    apply (rule ccorres_call_hSkip)
                      apply (rule slowpath_ccorres, simp+)
                   apply (vcg exspec=slowpath_noreturn_spec)
@@ -2835,7 +2794,6 @@ lemma fastpath_reply_recv_ccorres:
 
                     apply simp
                     apply (rule ccorres_split_throws)
-                     apply (fold dc_def)[1]
                      apply (rule ccorres_call_hSkip)
                        apply (rule slowpath_ccorres, simp+)
                     apply (vcg exspec=slowpath_noreturn_spec)
@@ -2867,7 +2825,6 @@ lemma fastpath_reply_recv_ccorres:
                       apply (rule ccorres_cond2'[where R=\<top>], blast)
 
                       apply (rule ccorres_split_throws)
-                      apply (fold dc_def)[1]
                       apply (rule ccorres_call_hSkip)
                       apply (rule slowpath_ccorres, simp+)
                       apply (vcg exspec=slowpath_noreturn_spec)
@@ -2882,7 +2839,6 @@ lemma fastpath_reply_recv_ccorres:
                       apply (rule ccorres_Cond_rhs_Seq)
                        apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def)
                        apply (rule ccorres_split_throws)
-                        apply (fold dc_def)[1]
                         apply (rule ccorres_call_hSkip)
                           apply (rule slowpath_ccorres, simp+)
                        apply (vcg exspec=slowpath_noreturn_spec)
@@ -2913,12 +2869,10 @@ lemma fastpath_reply_recv_ccorres:
 
                      apply simp
                      apply (rule ccorres_split_throws)
-                      apply (fold dc_def)[1]
                       apply (rule ccorres_call_hSkip)
                         apply (rule slowpath_ccorres, simp+)
                      apply (vcg exspec=slowpath_noreturn_spec)
                     apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def
-                                     to_bool_def
                                 del: Collect_const cong: call_ignore_cong)
 
                     apply (rule ccorres_rhs_assoc2)
@@ -2931,7 +2885,7 @@ lemma fastpath_reply_recv_ccorres:
                         apply (clarsimp simp: rf_sr_ksCurThread typ_heap_simps'
                                               h_t_valid_clift_Some_iff)
                         apply (clarsimp simp: capAligned_def isCap_simps objBits_simps
-                                              "StrictC'_thread_state_defs" mask_def)
+                                              ThreadState_defs mask_def)
                         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                               typ_heap_simps' objBits_defs)
                         apply (rule conjI)
@@ -2942,20 +2896,16 @@ lemma fastpath_reply_recv_ccorres:
                          apply (simp add: cep_relations_drop_fun_upd)
                          apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                           apply (simp add: ctcb_relation_def cthread_state_relation_def
-                                           "StrictC'_thread_state_defs" from_bool_0
-                                           to_bool_def if_1_0_0)
+                                           ThreadState_defs)
                           apply (clarsimp simp: ccap_relation_ep_helpers)
                          apply simp
-                        apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                          apply (rule ext, simp split: if_split)
-                         apply (rule ext, simp split: if_split)
                         apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                          typ_heap_simps' map_comp_update projectKO_opt_tcb
                                          cvariable_relation_upd_const ko_at_projectKO_opt)
                        apply ceqv
                       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
                       apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
-                          apply (rule fastpath_enqueue_ccorres[unfolded o_def,simplified])
+                          apply (rule fastpath_enqueue_ccorres[simplified])
                           apply simp
                          apply ceqv
                         apply (simp add: liftM_def del: Collect_const cong: call_ignore_cong)
@@ -3025,9 +2975,6 @@ lemma fastpath_reply_recv_ccorres:
                                      apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                                       apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                      apply simp
-                                    apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                      apply (rule ext, simp split: if_split)
-                                     apply (rule ext, simp split: if_split)
                                     apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                      typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                      cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -3044,7 +2991,6 @@ lemma fastpath_reply_recv_ccorres:
                                      apply csymbr
                                      apply csymbr
                                      apply (rule ccorres_call_hSkip)
-                                       apply (fold dc_def)[1]
                                        apply (rule fastpath_restore_ccorres)
                                       apply simp
                                      apply simp
@@ -3069,7 +3015,7 @@ lemma fastpath_reply_recv_ccorres:
                              apply (wp setCTE_cte_wp_at_other)
                             apply (simp del: Collect_const)
                             apply vcg
-                           apply (simp add: o_def)
+                           apply simp
                            apply (wp | simp
                                       | wp (once) updateMDB_weak_cte_wp_at
                                       | wp (once) updateMDB_cte_wp_at_other)+
@@ -3131,7 +3077,7 @@ lemma fastpath_reply_recv_ccorres:
            apply (simp del: Collect_const)
            apply vcg
           apply (simp add: if_1_0_0 getSlotCap_def)
-          apply (rule valid_isRight_theRight_split)
+          apply (rule valid_isLeft_theRight_split)
           apply (wp getCTE_wp')
           apply (rule validE_R_abstract_rv)
           apply wp
@@ -3149,8 +3095,6 @@ lemma fastpath_reply_recv_ccorres:
      apply (clarsimp simp: ct_in_state'_def obj_at_tcbs_of word_sle_def)
      apply (clarsimp simp add: invs_ksCurDomain_maxDomain')
      apply (rule conjI, fastforce)
-     apply (frule invs_queues)
-     apply (simp add: valid_queues_def)
      apply (frule tcbs_of_aligned')
       apply (simp add:invs_pspace_aligned')
      apply (frule tcbs_of_cte_wp_at_caller)
@@ -3180,6 +3124,11 @@ lemma fastpath_reply_recv_ccorres:
                            invs_valid_pde_mappings' obj_at_tcbs_of
                     dest!: isValidVTableRootD)
      apply (frule invs_mdb')
+     apply (frule invs_valid_objs')
+     apply (frule invs_valid_bitmaps)
+     apply (frule valid_bitmaps_bitmapQ_no_L1_orphans)
+     apply (frule invs_pspace_aligned')
+     apply (frule invs_pspace_distinct')
 
      apply (clarsimp simp: cte_wp_at_ctes_of tcbSlots cte_level_bits_def
                            makeObject_cte isValidVTableRoot_def
@@ -3187,10 +3136,10 @@ lemma fastpath_reply_recv_ccorres:
                            pde_stored_asid_def to_bool_def
                            valid_mdb'_def valid_tcb_state'_def
                            word_le_nat_alt[symmetric] length_msgRegisters)
-     apply (frule ko_at_valid_ep', fastforce)
      apply (rule conjI)
-      subgoal (* dest thread domain \<le> maxDomain *)
-       by (drule (1) tcbs_of_valid_tcb'[OF invs_valid_objs'], solves \<open>clarsimp simp: valid_tcb'_def\<close>)
+      apply (fastforce dest: tcbs_of_valid_tcb' simp: valid_tcb'_def opt_map_def
+                      split: option.splits)
+     apply (frule ko_at_valid_ep', fastforce)
      apply clarsimp
      apply (safe del: notI disjE)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'

@@ -12,13 +12,13 @@ build-type:             Custom
 license:                GPL-2.0-only
 author:                 Philip Derrin et. al., NICTA
 synopsis:               Executable specification for the seL4 Kernel
-tested-with:            GHC == 9.0.2
+tested-with:            GHC == 9.2.8
 homepage:               http://sel4.systems/
 
 custom-setup
   setup-depends:
-    base  == 4.15.*,
-    Cabal == 3.4.1.0
+    base  == 4.16.*,
+    Cabal == 3.6.3.*
 
 Flag FFI
     description:        Include the C language bindings
@@ -47,7 +47,7 @@ Flag ArchAArch64
 Library
     exposed-modules:        SEL4
                             SEL4.Machine.Target
-    build-depends:          mtl==2.2.*, base==4.15.*, array, containers, transformers
+    build-depends:          mtl==2.2.*, base==4.16.*, array, containers, transformers
 
     if flag(FFI)
     -- FFIBindings currently relies on POSIX signal handlers.  This could
@@ -124,6 +124,7 @@ Library
                             SEL4.Object.Instances.ARM
                             SEL4.Object.TCB.ARM
                             SEL4.Model.StateData.ARM
+                            SEL4.Model.PSpace.ARM
                             SEL4.Machine.RegisterSet.ARM
                             SEL4.Machine.Hardware.ARM
 
@@ -147,6 +148,7 @@ Library
                             SEL4.Object.VCPU.ARM
                             SEL4.Object.TCB.ARM
                             SEL4.Model.StateData.ARM
+                            SEL4.Model.PSpace.ARM
                             SEL4.Machine.RegisterSet.ARM
                             SEL4.Machine.Hardware.ARM
 
@@ -168,6 +170,7 @@ Library
                             SEL4.Object.IOPort.X64
                             SEL4.Object.TCB.X64
                             SEL4.Model.StateData.X64
+                            SEL4.Model.PSpace.X64
                             SEL4.Machine.RegisterSet.X64
                             SEL4.Machine.Hardware.X64
 
@@ -189,6 +192,7 @@ Library
                             SEL4.Object.Instances.RISCV64
                             SEL4.Object.TCB.RISCV64
                             SEL4.Model.StateData.RISCV64
+                            SEL4.Model.PSpace.RISCV64
                             SEL4.Machine.RegisterSet.RISCV64
                             SEL4.Machine.Hardware.RISCV64
 
@@ -211,6 +215,7 @@ Library
                             SEL4.Object.VCPU.AARCH64
                             SEL4.Object.TCB.AARCH64
                             SEL4.Model.StateData.AARCH64
+                            SEL4.Model.PSpace.AARCH64
                             SEL4.Machine.RegisterSet.AARCH64
                             SEL4.Machine.Hardware.AARCH64
 
@@ -224,6 +229,8 @@ Library
                             -fno-warn-unrecognised-pragmas
                             -fno-warn-unused-binds
                             -fno-warn-unused-imports -fno-warn-unused-matches
+                            -fno-warn-incomplete-record-updates
+                            -fno-warn-incomplete-uni-patterns
 
     cpp-options:
                             -- set via Setup.hs hook

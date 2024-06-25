@@ -60,7 +60,7 @@ locale Scheduler_IF_1 =
     "arch_scheduler_affects_equiv s s' \<Longrightarrow> arch_scheduler_affects_equiv s' s"
   and arch_scheduler_affects_equiv_update:
     "arch_scheduler_affects_equiv st s
-     \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+     \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   and arch_scheduler_affects_equiv_sa_update[simp]:
     "\<And>f. arch_scheduler_affects_equiv (scheduler_action_update f s) s' =
           arch_scheduler_affects_equiv s s'"
@@ -106,7 +106,7 @@ locale Scheduler_IF_1 =
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (work_units_completed s)\<rbrace>"
   and equiv_asid_equiv_update:
     "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
-       \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+       \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   and equiv_asid_cur_thread_update[simp]:
     "\<And>f. equiv_asid asid (cur_thread_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (cur_thread_update f s') = equiv_asid asid s s'"
@@ -605,7 +605,7 @@ proof -
     apply (simp add: scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d e s w i x hoare_vcg_imp_lift)
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d e s w i x hoare_vcg_imp_lift)
     apply fastforce
     done
 qed
@@ -671,7 +671,7 @@ proof -
     apply (simp add: asahi_scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d w)
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d w)
     apply clarsimp
     done
 qed
@@ -731,7 +731,7 @@ proof -
     apply (simp add: asahi_ex_scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d w x hoare_vcg_imp_lift')
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d w x hoare_vcg_imp_lift')
     apply clarsimp
     done
 qed
@@ -1431,17 +1431,13 @@ lemma when_next_domain_domain_fields:
   "\<lbrace>\<lambda>s. \<not> B \<and> domain_fields Q s\<rbrace>
    when B next_domain
    \<lbrace>\<lambda>_. domain_fields Q\<rbrace>"
-  by (wpsimp | rule hoare_pre_cont[where a=next_domain])+
+  by (wpsimp | rule hoare_pre_cont[where f=next_domain])+
 
 lemma cur_thread_cur_domain:
   "\<lbrakk> st_tcb_at ((=) st) (cur_thread s) s; \<not> idle st; invs s; guarded_pas_domain aag s \<rbrakk>
      \<Longrightarrow> pasObjectAbs aag (cur_thread s) \<in> pasDomainAbs aag (cur_domain s)"
   by (clarsimp simp: pred_tcb_at_def invs_def valid_idle_def
                      valid_state_def obj_at_def guarded_pas_domain_def)
-
-lemma valid_sched_valid_queues[intro]:
-  "valid_sched s \<Longrightarrow> valid_queues s"
-  by (simp add: valid_sched_def)
 
 lemma ethread_get_wp2:
   "\<lbrace>\<lambda>s. \<forall>etcb. etcb_at ((=) etcb) t s \<longrightarrow> Q (f etcb) s\<rbrace>
@@ -1488,7 +1484,7 @@ lemma schedule_no_domain_switch:
   apply (wpsimp wp: hoare_drop_imps simp: if_apply_def2
          | simp add: schedule_choose_new_thread_def
          | wpc
-         | rule hoare_pre_cont[where a=next_domain] )+
+         | rule hoare_pre_cont[where f=next_domain] )+
   done
 
 lemma schedule_no_domain_fields:
@@ -1500,7 +1496,7 @@ lemma schedule_no_domain_fields:
   apply (wpsimp wp: hoare_drop_imps simp: if_apply_def2
          | simp add: schedule_choose_new_thread_def
          | wpc
-         | rule hoare_pre_cont[where a=next_domain] )+
+         | rule hoare_pre_cont[where f=next_domain] )+
   done
 
 lemma set_scheduler_action_unobservable:
@@ -1687,7 +1683,7 @@ lemma schedule_choose_new_thread_schedule_affects_no_switch:
      \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
   unfolding schedule_choose_new_thread_def
   by (wpsimp wp: set_scheduler_action_unobservable choose_thread_unobservable
-                 hoare_pre_cont[where a=next_domain])
+                 hoare_pre_cont[where f=next_domain])
 
 lemma reads_respects_scheduler_invisible_no_domain_switch:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1713,7 +1709,7 @@ lemma reads_respects_scheduler_invisible_no_domain_switch:
              hoare_vcg_all_lift
              hoare_vcg_disj_lift
           | wpc | simp
-          | rule hoare_pre_cont[where a=next_domain]
+          | rule hoare_pre_cont[where f=next_domain]
           | wp (once) hoare_drop_imp[where f="set_scheduler_action choose_new_thread"])+
             (* stop on fastfail calculation *)
             apply (clarsimp simp: conj_ac cong: imp_cong conj_cong)
@@ -2221,7 +2217,7 @@ context Scheduler_IF_1 begin
 lemma scheduler_affects_equiv_update:
   "\<lbrakk> get_tcb x s = Some y; pasObjectAbs aag x \<notin> reads_scheduler aag l;
      scheduler_affects_equiv aag l st s \<rbrakk>
-     \<Longrightarrow> scheduler_affects_equiv aag l st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+     \<Longrightarrow> scheduler_affects_equiv aag l st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: scheduler_affects_equiv_def equiv_for_def equiv_asids_def
                      states_equiv_for_def scheduler_globals_frame_equiv_def
                      arch_scheduler_affects_equiv_update equiv_asid_equiv_update)
@@ -2397,7 +2393,9 @@ lemma context_update_cur_thread_snippit_cur_domain:
      (\<lambda>s. reads_scheduler_cur_domain aag l s \<and> invs s \<and> silc_inv aag st s \<and>
           (ct_idle s \<longrightarrow> uc = idle_context s) \<and> guarded_pas_domain aag s)
      (gets cur_thread >>= thread_set (tcb_arch_update (arch_tcb_context_set uc)))"
-  apply wp
+  \<comment> \<open>FIXME: maybe should make an equiv_valid_pre?\<close>
+  apply (rule equiv_valid_guard_imp)
+   apply wp
   apply (clarsimp simp: cur_thread_idle silc_inv_not_cur_thread del: notI)
   done
 

@@ -104,8 +104,7 @@ ML \<open>
 
 structure Corres_Adjust_Preconds = struct
 
-val def_intros = @{thms conjI pred_conj_app[THEN iffD2]
-    bipred_conj_app[THEN fun_cong, THEN iffD2]}
+val def_intros = @{thms conjI pred_conjI}
 
 (* apply an intro rule, splitting preconds assumptions to
    provide unique assumptions for each goal. *)

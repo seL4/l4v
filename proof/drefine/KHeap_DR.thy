@@ -82,11 +82,10 @@ termination CSpace_D.resolve_address_bits
 
 end
 
-crunch cdl_cdt [wp]: "KHeap_D.set_cap" "\<lambda>s. P (cdl_cdt s)"
- (wp: crunch_wps select_wp simp: crunch_simps)
-
-crunch cdl_cdt [wp]: "PageTableUnmap_D.cancel_all_ipc", "PageTableUnmap_D.unbind_maybe_notification" "\<lambda>s. P (cdl_cdt s)"
- (wp: crunch_wps select_wp simp: crunch_simps)
+crunches
+  "KHeap_D.set_cap", "PageTableUnmap_D.cancel_all_ipc", "PageTableUnmap_D.unbind_maybe_notification"
+  for cdl_cdt [wp]: "\<lambda>s. P (cdl_cdt s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma descendants_cdl_cdt_lift:
   "(\<And>P. \<lbrace>\<lambda>s. P (cdl_cdt s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cdl_cdt s)\<rbrace>) \<Longrightarrow>
@@ -602,7 +601,7 @@ lemma xf_cnode_contents:
 
 lemma transform_cnode_contents_upd:
   "\<lbrakk>well_formed_cnode_n sz cn; cn sl' = Some ocap'\<rbrakk> \<Longrightarrow>
-    transform_cnode_contents sz cn(nat (bl_to_bin sl') \<mapsto> transform_cap cap') =
+    (transform_cnode_contents sz cn)(nat (bl_to_bin sl') \<mapsto> transform_cap cap') =
     transform_cnode_contents sz (cn(sl' \<mapsto> cap'))"
   apply (rule ext)
   apply clarsimp
@@ -621,7 +620,7 @@ lemma transform_cnode_contents_upd:
 lemma caps_of_state_cnode_upd:
   "\<lbrakk> kheap s p' = Some (CNode sz cn); well_formed_cnode_n sz cn;
      cn sl' = Some ocap' \<rbrakk> \<Longrightarrow>
-  caps_of_state (update_kheap (kheap s(p' \<mapsto> CNode sz (cn(sl' \<mapsto> cap')))) s) =
+  caps_of_state (update_kheap ((kheap s)(p' \<mapsto> CNode sz (cn(sl' \<mapsto> cap')))) s) =
    (caps_of_state s) ((p',sl') \<mapsto> cap')"
   apply (rule ext)
   apply (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases wf_cs_upd)
@@ -2589,10 +2588,10 @@ lemma unbind_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_notification t \<lbrace>\<lambda>rv. valid_state\<rbrace>"
   supply if_cong[cong]
   apply (simp add: unbind_notification_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
+  apply (rule bind_wp [OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
   apply clarsimp
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs
        | clarsimp split del: if_split)+
   apply (intro conjI impI;
@@ -2623,7 +2622,7 @@ lemma unbind_maybe_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_maybe_notification a \<lbrace>\<lambda>rv. valid_state\<rbrace>"
   supply if_cong[cong]
   apply (simp add: unbind_maybe_notification_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_bound_tcb ntfn", clarsimp, wp, simp+)
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs
        | clarsimp split del: if_split)+
@@ -2656,10 +2655,10 @@ lemma unbind_maybe_notification_valid_state[wp]:
 lemma unbind_notification_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> IpcCancel_A.unbind_notification t \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: unbind_notification_def)
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (rule bind_wp[OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wp | clarsimp)+
   apply (auto simp: obj_at_def is_ntfn_def)
   done
@@ -2667,7 +2666,7 @@ lemma unbind_notification_valid_idle[wp]:
 lemma unbind_maybe_notification_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> IpcCancel_A.unbind_maybe_notification a \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: unbind_maybe_notification_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_bound_tcb ntfn", clarsimp, wp, simp)
   apply clarsimp
   apply (wp | clarsimp)+
@@ -2715,7 +2714,7 @@ lemma set_parent_corres:
     get_def set_cdt_def return_def bind_def)
   apply (simp add:transform_current_thread_def weak_valid_mdb_def)
   apply (rename_tac s')
-  apply (subgoal_tac "transform s'\<lparr>cdl_cdt:=cdl_cdt(transform s')
+  apply (subgoal_tac "transform s'\<lparr>cdl_cdt:=(cdl_cdt(transform s'))
     (transform_cslot_ptr slot' \<mapsto> transform_cslot_ptr pslot')\<rparr>
     = cdl_cdt_single_update (transform s') (transform_cslot_ptr slot') (transform_cslot_ptr pslot')")
    apply (clarsimp simp:cdl_cdt_transform)
@@ -2776,15 +2775,16 @@ lemma get_tcb_reply_cap_wp_original_cap:
   apply (rule hoare_post_imp
      [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb
        and tcb_at sid and valid_objs and cte_wp_at ((=) r) (sid,tcb_cnode_index 2)"])
+   apply (rename_tac rv s)
    apply clarsimp
-   apply (subgoal_tac "is_master_reply_cap r \<and> obj_ref_of r = sid")
+   apply (subgoal_tac "is_master_reply_cap rv \<and> obj_ref_of rv = sid")
     apply clarsimp
     apply (frule cte_wp_tcb_cap_valid)
      apply simp+
     apply (clarsimp simp:valid_mdb_def reply_master_revocable_def)
-    apply (drule_tac x = "obj_ref_of r" in spec)
+    apply (drule_tac x = "obj_ref_of rv" in spec)
     apply (drule_tac x = "tcb_cnode_index 2" in spec)
-    apply (drule_tac x = r in spec)
+    apply (drule_tac x = rv in spec)
     apply (drule iffD1[OF cte_wp_at_caps_of_state])+
     apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)
@@ -2819,7 +2819,7 @@ done
 
 lemma transform_objects_update_kheap_simp:
   "\<lbrakk>kheap s ptr = Some ko; ekheap s ptr = opt_etcb\<rbrakk>
-    \<Longrightarrow> transform_objects (update_kheap (kheap s(ptr \<mapsto> obj)) s) =
+    \<Longrightarrow> transform_objects (update_kheap ((kheap s)(ptr \<mapsto> obj)) s) =
     (\<lambda>x. if x \<noteq> ptr then transform_objects s x else
     (if ptr = idle_thread s then None else
            Some (transform_object (machine_state s) ptr opt_etcb obj)))"
@@ -3373,11 +3373,11 @@ lemma not_idle_thread_resolve_address_bits:
     CSpace_A.resolve_address_bits (tcb_ctable obj, blist)
             \<lbrace>\<lambda>rv s. not_idle_thread (fst (fst rv)) s \<and> valid_etcbs s\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   apply (rule validE_R_validE)
-  apply (rule_tac hoare_vcg_precond_impE_R)
+  apply (rule_tac hoare_weaken_preE_R)
    apply (rule validE_validE_R)
    apply (rule_tac Q="\<lambda>r. valid_etcbs and valid_global_refs and valid_objs and valid_idle and
                           valid_irq_node and ex_cte_cap_to (fst r)"
-          in hoare_post_impErr[where E="\<lambda>x y. True"])
+          in hoare_strengthen_postE[where E="\<lambda>x y. True"])
      apply (wp rab_cte_cap_to)
     apply (auto intro: ex_cte_cap_wp_to_not_idle)[2]
   apply (clarsimp simp:ex_cte_cap_to_def)
@@ -3472,7 +3472,7 @@ lemma dcorres_lookup_cap_and_slot:
          apply (rule get_cap_corres, rule refl)
         apply (rule dcorres_returnOk, simp)
        apply ((wp|simp)+)
-    apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_idle and valid_etcbs and real_cte_at (fst rv)"])
+    apply (rule hoare_strengthen_postE_R [where Q'="\<lambda>rv. valid_idle and valid_etcbs and real_cte_at (fst rv)"])
      apply (wp lookup_slot_real_cte_at_wp)
     apply (clarsimp simp: valid_idle_def not_idle_thread_def
                           pred_tcb_at_def obj_at_def is_cap_table_def)

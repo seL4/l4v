@@ -376,13 +376,13 @@ lemma pde_at_aligned_vptr:  (* ARMHYP *) (* 0x3C \<rightarrow> 0x78?, 24 \<right
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm if_split_asm
                  cong: kernel_object.case_cong)
-  apply (prove "is_aligned x 3")
+  apply (prop_tac "is_aligned x 3")
   subgoal
     apply (clarsimp simp: upto_enum_step_def word_shift_by_n[of _ 3, simplified])
     by (rule is_aligned_shiftl_self)
   apply (simp add: vspace_bits_defs aligned_add_aligned word_bits_conv
                    is_aligned_shiftl_self)+
-  apply (prove "pd = (x + (pd + (vptr >> pageBits + pt_bits - pte_bits << pde_bits)) && ~~ mask pd_bits)")
+  apply (prop_tac "pd = (x + (pd + (vptr >> pageBits + pt_bits - pte_bits << pde_bits)) && ~~ mask pd_bits)")
   subgoal
     apply (subst mask_lower_twice[symmetric, where n=7])
      apply (simp add: pd_bits_def pageBits_def)
@@ -561,7 +561,7 @@ lemma lookup_pt_slot_ptes_aligned_valid: (* ARMHYP *)
   apply (frule (2) valid_vspace_objsD)
   apply clarsimp
   subgoal for s _ _ x
-    apply (prove "page_table_at (ptrFromPAddr x) s")
+    apply (prop_tac "page_table_at (ptrFromPAddr x) s")
     subgoal
       by (spec "(ucast (pd + (vptr >> (pageBits + pt_bits - pte_bits) << pde_bits) && mask pd_bits >> pde_bits))";clarsimp)
     apply (rule conjI)
@@ -702,7 +702,7 @@ lemma create_mapping_entries_valid [wp]:
    apply (erule (1) page_directory_pde_at_lookupI)
    apply (wpsimp simp: valid_mapping_entries_def superSectionPDE_offsets_def vspace_bits_defs
                        lookup_pd_slot_def)
-  apply (prove "is_aligned pd 14")
+  apply (prop_tac "is_aligned pd 14")
    apply (clarsimp simp: obj_at_def add.commute invs_def valid_state_def valid_pspace_def pspace_aligned_def)
    apply (drule bspec, blast)
    apply (clarsimp simp: a_type_def vspace_bits_defs split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
@@ -1259,7 +1259,7 @@ lemma valid_objs_caps:
 lemma simpler_set_pt_def:
   "set_pt p pt =
    (\<lambda>s. if \<exists>pt. kheap s p = Some (ArchObj (PageTable pt)) then
-           ({((), s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageTable pt))\<rparr>)}, False)
+           ({((), s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageTable pt))\<rparr>)}, False)
         else ({}, True))"
   apply (rule ext)
   apply (clarsimp simp: set_pt_def set_object_def get_object_def assert_def
@@ -1275,7 +1275,7 @@ lemma simpler_set_pt_def:
 
 lemma valid_set_ptI:
   "(!!s opt. \<lbrakk>P s; kheap s p = Some (ArchObj (PageTable opt))\<rbrakk>
-         \<Longrightarrow> Q () (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageTable pt))\<rparr>))
+         \<Longrightarrow> Q () (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageTable pt))\<rparr>))
    \<Longrightarrow> \<lbrace>P\<rbrace> set_pt p pt \<lbrace>Q\<rbrace>"
   by (rule validI) (clarsimp simp: simpler_set_pt_def split: if_split_asm)
 
@@ -1340,14 +1340,14 @@ lemma set_pt_valid_vspace_objs[wp]:
   apply (clarsimp simp: valid_vspace_objs_def)
   subgoal for s opt pa rs ao
     apply (spec pa)
-    apply (prove "(\<exists>\<rhd> pa) s")
+    apply (prop_tac "(\<exists>\<rhd> pa) s")
      apply (rule exI[where x=rs])
      apply (erule vs_lookupE)
      apply clarsimp
      apply (erule vs_lookupI)
      apply (erule rtrancl.induct, simp)
      subgoal for \<dots> b c
-       apply (prove "(b \<rhd>1 c) s")
+       apply (prop_tac "(b \<rhd>1 c) s")
        apply (thin_tac "_ : rtrancl _")+
        apply (clarsimp simp add: vs_lookup1_def obj_at_def vs_refs_def
                             split: if_split_asm)
@@ -1582,7 +1582,7 @@ lemma valid_machine_stateE:
 
 lemma in_user_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj; in_user_frame q s\<rbrakk>
-    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_user_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
@@ -1590,7 +1590,7 @@ lemma in_user_frame_same_type_upd:
 
 lemma in_device_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj ; in_device_frame q s\<rbrakk>
-    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_device_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
@@ -1628,7 +1628,7 @@ lemma valid_machine_state_heap_updI:
 assumes vm : "valid_machine_state s"
 assumes tyat : "typ_at type p s"
 shows
-  " a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+  " a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: valid_machine_state_def)
   subgoal for p
    apply (rule valid_machine_stateE[OF vm,where p = p])
@@ -1933,7 +1933,7 @@ lemma set_asid_pool_vspace_objs_unmap':
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
-  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
+  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := (kheap s)(p \<mapsto> ko')\<rparr>)"
     apply (rule hoare_to_pure_kheap_upd[OF valid_vspace_obj_typ])
     by (auto simp: obj_at_def)
 
@@ -2212,8 +2212,8 @@ lemma lookup_pt_slot_looks_up [wp]: (* ARMHYP *)
   apply (clarsimp simp: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting pd_shifting_dual)
   apply (rule exI, rule conjI, assumption)
   subgoal for s _ x
-    apply (prove "ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) && ~~ mask pt_bits = ptrFromPAddr x")
-     apply (prove "is_aligned (ptrFromPAddr x) 12")
+    apply (prop_tac "ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) && ~~ mask pt_bits = ptrFromPAddr x")
+     apply (prop_tac "is_aligned (ptrFromPAddr x) 12")
       apply (drule (2) valid_vspace_objsD)
       apply clarsimp
       apply (erule_tac x="ucast (vptr >> pageBits + pt_bits - pte_bits << pde_bits >> pde_bits)" in allE)
@@ -2248,7 +2248,7 @@ lemma lookup_pt_slot_reachable [wp]: (* ARMHYP *)
   apply (simp add: pred_conj_def ex_simps [symmetric] del: ex_simps)
   apply (rule hoare_vcg_ex_lift_R1)
   apply (rule hoare_pre)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (rule lookup_pt_slot_looks_up)
    prefer 2
    apply clarsimp
@@ -2547,39 +2547,6 @@ lemma create_mapping_entries_valid_slots [wp]: (* ARMHYP *)
   apply (subst add.commute)
   apply (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)
   done
-
-lemma is_aligned_addrFromPPtr_n:
-  "\<lbrakk> is_aligned p n; n \<le> 28 \<rbrakk> \<Longrightarrow> is_aligned (Platform.ARM_HYP.addrFromPPtr p) n"
-  apply (simp add: Platform.ARM_HYP.addrFromPPtr_def)
-  apply (erule aligned_sub_aligned, simp_all)
-  apply (simp add: pptrBaseOffset_def physBase_def
-                   pptrBase_def pageBits_def)
-  apply (erule is_aligned_weaken[rotated])
-  apply (simp add: is_aligned_def)
-  done
-
-lemma is_aligned_addrFromPPtr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (Platform.ARM_HYP.addrFromPPtr p) pageBits"
-  by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
-
-lemma is_aligned_ptrFromPAddr_n:
-  "\<lbrakk>is_aligned x sz; sz\<le> 28\<rbrakk>
-  \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add:ptrFromPAddr_def pptrBaseOffset_def
-    pptrBase_def physBase_def)
-  apply (erule aligned_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add:is_aligned_def)
-  apply (simp add:word_bits_def)
-  done
-
-lemma is_aligned_ptrFromPAddr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
-  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
-
-lemma pbfs_le_28[simp]:
-  "pageBitsForSize sz \<le> 28"
-  by (cases sz; simp)
 
 lemma store_pde_lookup_pd: (* ARMHYP *)
   "\<lbrace>\<exists>\<rhd> pd and page_directory_at pd and valid_vspace_objs
@@ -3167,7 +3134,7 @@ lemma cap_refs_respects_device_region_dmo:
 
 lemma machine_op_lift_device_state[wp]:
   "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
+  by (clarsimp simp: machine_op_lift_def Nondet_VCG.valid_def bind_def
                      machine_rest_lift_def gets_def simpler_modify_def get_def return_def
                      select_def ignore_failure_def select_f_def
               split: if_splits)

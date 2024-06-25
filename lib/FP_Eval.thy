@@ -6,8 +6,8 @@
 
 theory FP_Eval
 imports
-  HOL.HOL
-  TermPatternAntiquote
+  Main
+  ML_Utils.TermPatternAntiquote
 begin
 
 text \<open>

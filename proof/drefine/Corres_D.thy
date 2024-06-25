@@ -84,7 +84,7 @@ lemma corres_free_return:
 
 lemma corres_free_set_object:
   "\<lbrakk> \<forall> s s'. s = transform s' \<and> P s \<and> P' s' \<longrightarrow>
-             s = transform ((\<lambda>s. s \<lparr>kheap := kheap s (ptr \<mapsto> obj)\<rparr>) s')\<rbrakk> \<Longrightarrow>
+             s = transform ((\<lambda>s. s \<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>) s')\<rbrakk> \<Longrightarrow>
   dcorres dc P P' (return a) (set_object ptr obj )"
   by (clarsimp simp: corres_underlying_def put_def return_def modify_def bind_def get_def
                      set_object_def get_object_def in_monad)
@@ -244,7 +244,7 @@ lemma dcorres_gets_the:
 
 lemma wpc_helper_dcorres:
   "dcorres r Q Q' f f'
-   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (dcorres r P (\<lambda>s. s \<in> P') f f')"
+   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (dcorres r P P' f f')"
   apply (clarsimp simp: wpc_helper_def)
   apply (erule corres_guard_imp)
    apply simp
@@ -273,7 +273,7 @@ lemma hoare_mapM_idempotent: "\<lbrakk> \<And> a R. \<lbrace> R \<rbrace> x a \<
   apply atomize
   apply (erule_tac x=a in allE)
   apply (erule_tac x=R in allE)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply wp
   apply assumption
   done
@@ -633,6 +633,7 @@ lemma dcorres_rhs_noop_above: "\<lbrakk> dcorres anyrel P P' (return ()) m; dcor
 lemmas dcorres_rhs_noop_below_True = dcorres_rhs_noop_below[OF _ _ hoare_TrueI hoare_TrueI]
 lemmas dcorres_rhs_noop_above_True = dcorres_rhs_noop_above[OF _ _ hoare_TrueI hoare_TrueI]
 
+\<comment> \<open>FIXME: remove\<close>
 declare hoare_TrueI[simp]
 
 lemma dcorres_dc_rhs_noop_below_gen:

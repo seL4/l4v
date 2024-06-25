@@ -90,7 +90,7 @@ next
                apply (simp add: conj_comms)
               apply (wp set_cap_P set_cap_Q replace_cap_invs
                         final_cap_same_objrefs set_cap_cte_cap_wp_to
-                        set_cap_cte_wp_at hoare_vcg_const_Ball_lift static_imp_wp
+                        set_cap_cte_wp_at hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                      | rule finalise_cap_not_reply_master
                      | simp add: in_monad)+
        apply (rule hoare_strengthen_post)
@@ -140,8 +140,7 @@ next
      apply (rule split_spec_bindE)
       apply (rule split_spec_bindE[rotated])
        apply (rule "4.hyps", assumption+)
-      apply (wp set_cap_P set_cap_Q get_cap_wp | simp)
-      apply simp
+      apply (wpsimp wp: set_cap_P set_cap_Q get_cap_wp)
      apply simp
      apply wp
     apply (clarsimp simp add: zombie_is_cap_toE)
@@ -203,11 +202,10 @@ lemma rec_del_globals_equiv:
   "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
    rec_del call
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (wp finalise_cap_globals_equiv
-            rec_del_preservation2[where Q="valid_arch_state"
-                                    and R="\<lambda>cap s. invs s \<and> valid_cap cap s
-                                                 \<and> (\<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)"])
-             apply simp
+  apply (wpsimp wp: finalise_cap_globals_equiv
+                    rec_del_preservation2[where Q="valid_arch_state"
+                                            and R="\<lambda>cap s. invs s \<and> valid_cap cap s
+                                                      \<and> (\<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)"])
             apply (wp set_cap_globals_equiv'')
             apply simp
            apply (wp empty_slot_globals_equiv)+
@@ -308,10 +306,9 @@ lemma invoke_tcb_globals_equiv:
        apply (rule_tac Q="\<lambda>_. valid_arch_state and globals_equiv st and
                               (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)"
                     in hoare_strengthen_post)
-        apply ((wp mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
-                | simp
-                | intro conjI impI
-                | clarsimp simp: no_cap_to_idle_thread)+)[6]
+        apply (wpsimp wp: mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
+                          weak_if_wp')+
+   apply (intro conjI impI; clarsimp simp: no_cap_to_idle_thread)+
   apply (simp del: invoke_tcb.simps tcb_inv_wf.simps)
   apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
             cap_insert_globals_equiv'' thread_set_globals_equiv set_mcpriority_globals_equiv
@@ -486,7 +483,7 @@ context Tcb_IF_2 begin
 
 lemma invoke_tcb_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  notes validE_valid[wp del] static_imp_wp [wp]
+  notes validE_valid[wp del] hoare_weak_lift_imp [wp]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and only_timer_irq_inv irq st' and einvs
@@ -494,14 +491,15 @@ lemma invoke_tcb_reads_respects_f:
                         and tcb_inv_wf ti and is_subject aag \<circ> cur_thread
                         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
        (invoke_tcb ti)"
-  including no_pre
+  including classic_wp_pre
   apply (case_tac ti)
          \<comment> \<open>WriteRegisters\<close>
          apply (strengthen invs_mdb
                 | wpsimp wp: when_ev restart_reads_respects_f reschedule_required_reads_respects_f
                              as_user_reads_respects_f restart_silc_inv restart_pas_refined hoare_vcg_if_lift)+
             apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. \<forall>rv. R rv s" and R=R for R, rotated])
-             apply (erule_tac x=r in allE, assumption)
+             apply (rename_tac rv s)
+             apply (erule_tac x=rv in allE, assumption)
             apply wpsimp+
          apply (solves \<open>auto intro!: det_zipWithM
                                simp: det_setRegister det_getRestartPC det_setNextPC

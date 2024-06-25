@@ -135,7 +135,7 @@ lemma decode_invocation_authorised:
              decode_arch_invocation_authorised
           | strengthen cnode_eq_strg
           | wpc | simp add: comp_def authorised_invocation_def decode_invocation_def
-                       split del: if_split del: hoare_True_E_R
+                       split del: if_split
           | wp (once) hoare_FalseE_R)+
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
@@ -201,7 +201,7 @@ lemma lcs_reply_owns:
   "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
    lookup_cap_and_slot thread ptr
    \<lbrace>\<lambda>rv _. \<forall>ep. (\<exists>m R. fst rv = ReplyCap ep m R \<and> AllowGrant \<in> R) \<longrightarrow> is_subject aag ep\<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule hoare_pre)
     apply (rule hoare_vcg_conj_lift_R [where S = "K (pas_refined aag)"])
      apply (rule lookup_cap_and_slot_cur_auth)
@@ -218,7 +218,7 @@ lemma lookup_cap_and_slot_valid_fault3:
    lookup_cap_and_slot thread cptr
    -, \<lbrace>\<lambda>ft _. valid_fault (CapFault (of_bl cptr) rp ft)\<rbrace>"
   apply (unfold validE_E_def)
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
     apply (rule lookup_cap_and_slot_valid_fault)
    apply auto
   done
@@ -279,8 +279,7 @@ lemma handle_invocation_pas_refined:
        | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
        | wpc
        | rule hoare_drop_imps
-       | simp add: if_apply_def2 conj_comms split del: if_split
-              del: hoare_True_E_R)+,
+       | simp add: if_apply_def2 conj_comms split del: if_split)+,
       (wp lookup_extra_caps_auth lookup_extra_caps_authorised decode_invocation_authorised
           lookup_cap_and_slot_authorised lookup_cap_and_slot_cur_auth as_user_pas_refined
           lookup_cap_and_slot_valid_fault3 hoare_vcg_const_imp_lift_R
@@ -301,7 +300,7 @@ lemma handle_invocation_respects:
             reply_from_kernel_integrity_autarch
             set_thread_state_integrity_autarch
             hoare_vcg_conj_lift
-            hoare_vcg_all_lift_R hoare_vcg_all_lift
+            hoare_vcg_all_liftE_R hoare_vcg_all_lift
          | rule hoare_drop_imps
          | wpc
          | simp add: if_apply_def2
@@ -333,14 +332,14 @@ lemma handle_recv_pas_refined:
   apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_signal_pas_refined
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            hoare_vcg_all_lift_R get_simple_ko_wp
+            hoare_vcg_all_liftE_R get_simple_ko_wp
          | wpc | simp
          | (rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread \<and> aag_has_auth_to aag Receive thread"
                   in hoare_strengthen_post,
             wp, clarsimp simp: invs_valid_objs invs_sym_refs))+
      apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> invs s \<and> tcb_at thread s
                               \<and> cur_thread s = thread \<and> is_subject aag (cur_thread s)
-                              \<and> is_subject aag thread" in hoare_post_imp_R [rotated])
+                              \<and> is_subject aag thread" in hoare_strengthen_postE_R [rotated])
       apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def
                              cap_rights_to_auth_def valid_fault_def)
      apply (wp user_getreg_inv | strengthen invs_vobjs_strgs | simp)+
@@ -365,7 +364,7 @@ lemma handle_recv_integrity:
                  in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
      apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> einvs s \<and> is_subject aag (cur_thread s)
                               \<and> tcb_at thread s \<and> cur_thread s = thread \<and> is_subject aag thread
-                              \<and> integrity aag X st s" in hoare_post_imp_R [rotated])
+                              \<and> integrity aag X st s" in hoare_strengthen_postE_R [rotated])
       apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def
                              cap_rights_to_auth_def valid_fault_def)
      apply wpsimp+
@@ -699,7 +698,7 @@ lemma handle_event_integrity:
                   handle_reply_respects handle_fault_integrity_autarch
                   handle_interrupt_integrity handle_vm_fault_integrity
                   handle_reply_pas_refined handle_vm_fault_valid_fault
-                  handle_reply_valid_sched alternative_wp select_wp
+                  handle_reply_valid_sched
                   hoare_vcg_conj_lift hoare_vcg_all_lift hoare_drop_imps
             simp: domain_sep_inv_def
       | rule dmo_wp hoare_vcg_E_elim
@@ -899,12 +898,12 @@ lemma schedule_integrity:
    schedule
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: schedule_def)
-  apply (wpsimp wp: alternative_wp switch_to_thread_respects' select_wp guarded_switch_to_lift
+  apply (wpsimp wp: switch_to_thread_respects' guarded_switch_to_lift
                     switch_to_idle_thread_respects choose_thread_respects gts_wp hoare_drop_imps
                     set_scheduler_action_cnt_valid_sched append_thread_queued enqueue_thread_queued
                     tcb_sched_action_enqueue_valid_blocked_except tcb_sched_action_append_integrity'
          | simp add: allActiveTCBs_def schedule_choose_new_thread_def
-         | rule hoare_pre_cont[where a=next_domain])+
+         | rule hoare_pre_cont[where f=next_domain])+
   apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def
                     valid_sched_action_def weak_valid_sched_action_def
                     valid_sched_action_switch_subject_thread)
@@ -949,14 +948,14 @@ crunch pas_refined[wp]: choose_thread "pas_refined aag"
 lemma schedule_pas_refined:
   "schedule \<lbrace>pas_refined aag\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp add: alternative_wp guarded_switch_to_lift switch_to_thread_pas_refined select_wp
-                  switch_to_idle_thread_pas_refined gts_wp
-                  guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues
-                  choose_thread_respects_pasMayEditReadyQueues
-                  next_domain_valid_sched next_domain_valid_queues gts_wp hoare_drop_imps
-                  set_scheduler_action_cnt_valid_sched enqueue_thread_queued
-                  tcb_sched_action_enqueue_valid_blocked_except
-             del: ethread_get_wp
+  apply (wp add: guarded_switch_to_lift switch_to_thread_pas_refined
+                 switch_to_idle_thread_pas_refined gts_wp
+                 guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues
+                 choose_thread_respects_pasMayEditReadyQueues
+                 next_domain_valid_sched next_domain_valid_queues gts_wp hoare_drop_imps
+                 set_scheduler_action_cnt_valid_sched enqueue_thread_queued
+                 tcb_sched_action_enqueue_valid_blocked_except
+            del: ethread_get_wp
          | wpc | simp add: schedule_choose_new_thread_def)+
   done
 
@@ -983,7 +982,7 @@ lemma ct_active_update[simp]:
 lemma set_cap_ct_active[wp]:
   "set_cap ptr c \<lbrace>ct_active \<rbrace>"
   apply (rule hoare_pre)
-  apply (wps | wpsimp wp: select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state
+  apply (wps | wpsimp wp: sts_st_tcb_at_cases thread_set_no_change_tcb_state
                     simp: crunch_simps ct_in_state_def)+
   done
 
@@ -1027,14 +1026,14 @@ lemma cancel_all_ipc_ct_active[wp]:
   done
 
 crunch ct_active[wp]: cap_swap_for_delete "ct_active"
-  (wp: crunch_wps filterM_preserved hoare_unless_wp simp: crunch_simps ignore: do_extended_op)
+  (wp: crunch_wps filterM_preserved unless_wp simp: crunch_simps ignore: do_extended_op)
 
 crunch ct_active[wp]: post_cap_deletion, empty_slot "\<lambda>s :: det_ext state. ct_active s"
   (simp: crunch_simps empty_slot_ext_def ignore: do_extended_op
-     wp: crunch_wps filterM_preserved hoare_unless_wp)
+     wp: crunch_wps filterM_preserved unless_wp)
 
 crunch cur_thread[wp]: cap_swap_for_delete, finalise_cap "\<lambda>s :: det_ext state. P (cur_thread s)"
-  (wp: select_wp dxo_wp_weak crunch_wps simp: crunch_simps)
+  (wp: dxo_wp_weak crunch_wps simp: crunch_simps)
 
 lemma rec_del_cur_thread[wp]:
   "rec_del a \<lbrace>\<lambda>s :: det_ext state. P (cur_thread s)\<rbrace>"
@@ -1139,8 +1138,7 @@ lemma call_kernel_integrity':
   apply (simp add: call_kernel_def)
   apply (simp only: spec_valid_def)
   apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues
-                    handle_interrupt_integrity dmo_wp alternative_wp
-                    select_wp handle_interrupt_pas_refined)
+                    handle_interrupt_integrity dmo_wp handle_interrupt_pas_refined)
     apply (clarsimp simp: if_fun_split)
     apply (rule_tac Q="\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs) \<and>
                                 R True (domain_sep_inv (pasMaySendIrqs aag) st' s) rv ms"
@@ -1148,7 +1146,7 @@ lemma call_kernel_integrity':
                                  (pasMaySendIrqs aag \<or> interrupt_states s (the rv) \<noteq> IRQSignal) rv ms"
                 for R in hoare_strengthen_post[rotated], fastforce simp: domain_sep_inv_def)
     apply (wpsimp wp: getActiveIRQ_rv_None hoare_drop_imps getActiveIRQ_inv)
-   apply (rule hoare_post_impErr,
+   apply (rule hoare_strengthen_postE,
       rule_tac Q="integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag
                                      and domain_sep_inv (pasMaySendIrqs aag) st'
                                      and is_subject aag \<circ> cur_thread
@@ -1182,7 +1180,7 @@ lemma call_kernel_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: call_kernel_def )
   apply (wp activate_thread_pas_refined schedule_pas_refined handle_interrupt_pas_refined
-            do_machine_op_pas_refined dmo_wp alternative_wp select_wp hoare_drop_imps getActiveIRQ_inv
+            do_machine_op_pas_refined dmo_wp hoare_drop_imps getActiveIRQ_inv
          | simp add: if_fun_split
          | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state)+
    apply (wp he_invs handle_event_pas_refined)

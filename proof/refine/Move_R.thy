@@ -72,7 +72,7 @@ lemma hoare_vcg_if_lift3:
 lemmas hoare_pre_post = hoare_pre_imp[where R="\<lambda>_. Q" and Q=Q for Q]
 
 lemmas corres_underlying_gets_pre_rhs =
-  corres_symb_exec_r[OF _ _ gets_inv no_fail_pre[OF non_fail_gets TrueI]]
+  corres_symb_exec_r[OF _ _ gets_inv no_fail_pre[OF no_fail_gets TrueI]]
 
 lemma corres_if_r':
   "\<lbrakk> G' \<Longrightarrow> corres_underlying sr nf nf' r P P' a c; \<not>G' \<Longrightarrow> corres_underlying sr nf nf' r P Q' a d \<rbrakk>
@@ -122,7 +122,7 @@ lemma corres_symb_exec_l':
        apply (rule corres_noop3)
          apply (erule x)
         apply (rule gets_wp)
-       apply (rule non_fail_gets)
+       apply (rule no_fail_gets)
       apply (rule z)
      apply (rule y)
     apply (rule gets_wp)
@@ -207,7 +207,6 @@ lemma get_mapM_x_lower:
 
 (* Move to DetSchedDomainTime_AI *)
 crunch domain_list_inv[wp]: do_user_op "\<lambda>s. P (domain_list s)"
-  (wp: select_wp)
 
 lemma next_child_child_set:
   "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>

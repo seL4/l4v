@@ -11,7 +11,7 @@ imports
   "ExecSpec.Arch_Structs_B"
   ExceptionTypes_A
   VMRights_A
-  ExecSpec.Kernel_Config_Lemmas
+  ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
 context Arch begin global_naming X64_A
@@ -310,6 +310,7 @@ record arch_state =
   x64_current_cr3           :: "X64_A.cr3"
   x64_allocated_io_ports    :: "X64_A.io_port \<Rightarrow> bool"
   x64_num_ioapics           :: "64 word"
+  x64_ioapic_nirqs          :: "machine_word \<Rightarrow> 8 word"
   x64_irq_state             :: "8 word \<Rightarrow> X64_A.X64IRQState"
 
 (* FIXME x64-vtd:

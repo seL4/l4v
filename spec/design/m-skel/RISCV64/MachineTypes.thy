@@ -8,9 +8,10 @@ chapter "RISCV 64bit Machine Types"
 
 theory MachineTypes
 imports
-  "Word_Lib.WordSetup"
-  "Lib.OptionMonadND"
-  "Lib.HaskellLib_H"
+  Word_Lib.WordSetup
+  Monads.Nondet_Empty_Fail
+  Monads.Nondet_Reader_Option
+  Lib.HaskellLib_H
   Platform
 begin
 

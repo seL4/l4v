@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -146,7 +147,7 @@ lemma setCTE_asidpool':
   "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> setCTE c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
   apply (clarsimp simp: setCTE_def)
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_post])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (clarsimp simp: obj_at'_def projectKOs)
@@ -187,21 +188,13 @@ lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
 
 lemma empty_fail_findPDForASID[iff]:
   "empty_fail (findPDForASID asid)"
-  apply (simp add: findPDForASID_def liftME_def)
-  apply (intro empty_fail_bindE, simp_all split: option.split)
-     apply (simp add: assertE_def split: if_split)
-    apply (simp add: assertE_def split: if_split)
-   apply (simp add: empty_fail_getObject)
-  apply (simp add: assertE_def liftE_bindE checkPDAt_def split: if_split)
-  done
+  unfolding findPDForASID_def checkPDAt_def
+  by (wpsimp wp: empty_fail_getObject)
 
 lemma empty_fail_findPDForASIDAssert[iff]:
   "empty_fail (findPDForASIDAssert asid)"
-  apply (simp add: findPDForASIDAssert_def catch_def
-                   checkPDAt_def checkPDUniqueToASID_def
-                   checkPDASIDMapMembership_def)
-  apply (intro empty_fail_bind, simp_all split: sum.split)
-  done
+  unfolding findPDForASIDAssert_def checkPDAt_def checkPDUniqueToASID_def checkPDASIDMapMembership_def
+  by (wpsimp wp: empty_fail_getObject)
 
 lemma vcpu_at_ko:
   "vcpu_at' p s \<Longrightarrow> \<exists>vcpu. ko_at' (vcpu::vcpu) p s"
@@ -229,7 +222,7 @@ lemma atg_sp':
 (* FIXME: MOVE to EmptyFail *)
 lemma empty_fail_archThreadGet [intro!, wp, simp]:
   "empty_fail (archThreadGet f p)"
-  by (simp add: archThreadGet_def getObject_def split_def)
+  by (fastforce simp: archThreadGet_def getObject_def split_def)
 
 lemma mab_gt_2 [simp]:
   "2 \<le> msg_align_bits" by (simp add: msg_align_bits)
@@ -415,12 +408,6 @@ lemma ko_at'_tcb_vcpu_not_NULL:
   by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
                 dest: valid_objs_valid_tcb')
 
-
-(* FIXME move *)
-lemma setVMRoot_valid_queues':
-  "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
-  by (rule valid_queues_lift'; wp)
-
 lemma vcpuEnable_valid_pspace' [wp]:
   "\<lbrace> valid_pspace' \<rbrace> vcpuEnable a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
   by (wpsimp simp: valid_pspace'_def valid_mdb'_def)
@@ -450,8 +437,6 @@ crunch ko_at'2[wp]: doMachineOp "\<lambda>s. P (ko_at' p t s)"
 crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
-crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
-
 crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
 
 crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
@@ -464,8 +449,9 @@ crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
 
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
 
+(* schematic_goal leads to Suc (Suc ..) form only *)
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 41"
+  "fromEnum (maxBound :: vcpureg) = 42"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:
@@ -493,7 +479,7 @@ lemma ps_clear_entire_slotI:
   by (fastforce simp: ps_clear_def)
 
 lemma ps_clear_ksPSpace_upd_same[simp]:
-  "ps_clear p n (s\<lparr>ksPSpace := ksPSpace s(p \<mapsto> v)\<rparr>) = ps_clear p n s"
+  "ps_clear p n (s\<lparr>ksPSpace := (ksPSpace s)(p \<mapsto> v)\<rparr>) = ps_clear p n s"
   by (fastforce simp: ps_clear_def)
 
 lemma getObject_vcpu_prop:
@@ -529,6 +515,12 @@ lemma placeNewObject_creates_object_vcpu:
   apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def archObjSize_def fun_upd_apply)
   apply (fastforce intro: ps_clear_entire_slotI simp add: field_simps)
   done
+
+(* FIXME would be interesting to generalise these kinds of lemmas to other KOs *)
+lemma placeNewObject_object_at_vcpu:
+  "\<lbrace> \<top> \<rbrace> placeNewObject v (vcpu::vcpu) 0 \<lbrace> \<lambda>_. vcpu_at' v \<rbrace>"
+  by (rule hoare_post_imp[OF _ placeNewObject_creates_object_vcpu])
+     (fastforce simp: ko_at_vcpu_at'D)
 
 lemma valid_untyped':
   notes usableUntypedRange.simps[simp del]
@@ -602,7 +594,7 @@ lemma cap_case_isPageDirectoryCap:
 
 lemma empty_fail_loadWordUser[intro!, simp]:
   "empty_fail (loadWordUser x)"
-  by (simp add: loadWordUser_def ef_loadWord ef_dmo')
+  by (fastforce simp: loadWordUser_def ef_loadWord ef_dmo')
 
 lemma empty_fail_getMRs[iff]:
   "empty_fail (getMRs t buf mi)"
@@ -612,30 +604,20 @@ lemma empty_fail_getReceiveSlots:
   "empty_fail (getReceiveSlots r rbuf)"
 proof -
   note
-    empty_fail_assertE[iff]
-    empty_fail_resolveAddressBits[iff]
+    empty_fail_resolveAddressBits[wp]
+    empty_fail_rethrowFailure[wp]
+    empty_fail_rethrowFailure[wp]
   show ?thesis
-  apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
-                 split: option.split)
-  apply (rule empty_fail_bind)
-   apply (simp add: capTransferFromWords_def)
-  apply (simp add: emptyOnFailure_def unifyFailure_def)
-  apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
-         simp_all add: empty_fail_whenEs)
-   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
-                        lookupSlotForThread_def liftME_def
-                        getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
-                        lookupSlotForCNodeOp_def lookupErrorOnFailure_def
-                  cong: if_cong)
-   apply (intro empty_fail_bindE,
-          simp_all add: getSlotCap_def)
-  apply (intro empty_fail_If empty_fail_bindE empty_fail_rethrowFailure impI,
-         simp_all add: empty_fail_whenEs rangeCheck_def)
-  done
+  unfolding getReceiveSlots_def loadCapTransfer_def lookupCap_def lookupCapAndSlot_def
+  by (wpsimp simp: emptyOnFailure_def unifyFailure_def lookupSlotForThread_def
+                   capTransferFromWords_def getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
+                   lookupSlotForCNodeOp_def lookupErrorOnFailure_def rangeCheck_def)
 qed
 
 lemma user_getreg_rv:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb r)) t\<rbrace>
+   asUser t (getRegister r)
+   \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
@@ -647,6 +629,17 @@ crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThre
   (wp: crunch_wps setObject_ksPSpace_only
    simp: unless_def updateObject_default_def crunch_simps
    ignore_del: preemptionPoint)
+
+(* this could be done as
+   lemmas addrFromPPtr_mask_6 = addrFromPPtr_mask[where n=6, simplified]
+   but that wouldn't give a sanity check of the n \<le> ... assumption  disappearing *)
+lemma addrFromPPtr_mask_6:
+  "addrFromPPtr ptr && mask 6 = ptr && mask 6"
+  by (rule addrFromPPtr_mask[where n=6, simplified])
+
+lemma ptrFromPAddr_mask_6:
+  "ptrFromPAddr ps && mask 6 = ps && mask 6"
+  by (rule ptrFromPAddr_mask[where n=6, simplified])
 
 end
 

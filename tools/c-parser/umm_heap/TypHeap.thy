@@ -440,6 +440,21 @@ lemma proj_d_lift_state:
   apply(auto simp: proj_d_def lift_state_def Let_def split: option.splits)
   done
 
+lemma proj_d_lift_state_hrs_htd_update[simp]:
+  "proj_d (lift_state (hrs_htd_update f hp)) = f (hrs_htd hp)"
+  by (cases hp) (simp add: hrs_htd_update_def proj_d_lift_state hrs_htd_def)
+
+lemma proj_d_lift_state_hrs_htd[simp]:
+  "proj_d (lift_state hp), g \<Turnstile>\<^sub>t x = hrs_htd hp, g \<Turnstile>\<^sub>t x"
+  apply (cases hp)
+  apply (simp add: proj_d_lift_state hrs_htd_def)
+  done
+
+lemma dom_lift_t_heap_update:
+  "dom (lift_t g (hrs_mem_update v hp)) = dom (lift_t g hp)"
+  by (clarsimp simp: lift_t_def lift_typ_heap_if s_valid_def hrs_htd_def hrs_mem_update_def
+                     split_def dom_def)
+
 lemma lift_state_proj [simp]:
   "wf_heap_val s \<Longrightarrow> lift_state (proj_h s,proj_d s) = s"
   apply (clarsimp simp: proj_h_def proj_d_def lift_state_def fun_eq_iff
@@ -1784,7 +1799,7 @@ lemma field_names_same:
 
 lemma lift_t_heap_update:
   "d,g \<Turnstile>\<^sub>t p \<Longrightarrow> lift_t g (heap_update p v h,d) =
-      (lift_t g (h,d) (p \<mapsto> (v::'a::mem_type)))"
+      ((lift_t g (h,d)) (p \<mapsto> (v::'a::mem_type)))"
   apply(subst lift_t_sub_field_update)
     apply fast
    apply(simp add: sub_typ_proper_def)

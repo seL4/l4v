@@ -145,7 +145,7 @@ lemma handle_reserved_irq_arch_state[Syscall_AC_assms, wp]:
   unfolding handle_reserved_irq_def by wpsimp
 
 crunch ct_active [Syscall_AC_assms, wp]: arch_post_cap_deletion "ct_active"
-  (wp: crunch_wps filterM_preserved hoare_unless_wp simp: crunch_simps ignore: do_extended_op)
+  (wp: crunch_wps filterM_preserved unless_wp simp: crunch_simps ignore: do_extended_op)
 
 crunches
   arch_post_modify_registers, arch_invoke_irq_control,

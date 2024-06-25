@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -101,7 +102,8 @@ lemma ccorres_locateSlotCap_push:
    apply (rule monadic_rewrite_bindE[OF monadic_rewrite_refl])
     apply (rule monadic_rewrite_transverse)
      apply (rule monadic_rewrite_bind_head)
-     apply (rule monadic_rewrite_stateAssert)
+     apply (rule monadic_rewrite_stateAssert[where f="return", simplified])
+    apply (rule monadic_rewrite_refl)
     apply simp
     apply (rule monadic_rewrite_refl)
    apply assumption
@@ -167,10 +169,8 @@ next
      apply (simp add: cap_get_tag_isCap split del: if_split)
      apply (thin_tac "ret__unsigned = X" for X)
      apply (rule ccorres_split_throws [where P = "?P"])
-      apply (rule_tac G' = "\<lambda>w_rightsMask. ({s. nodeCap_' s = nodeCap}
-                              \<inter> {s. unat (n_bits_' s) = guard'})"
-         in ccorres_abstract  [where xf' = w_rightsMask_'])
-       apply (rule ceqv_refl)
+      apply (rule_tac P'="{s. nodeCap_' s = nodeCap} \<inter> {s. unat (n_bits_' s) = guard'}"
+               in ccorres_inst)
       apply (rule_tac r' = "?rvr" in
           ccorres_rel_imp [where xf' = rab_xf])
        defer
@@ -182,7 +182,7 @@ next
        apply (vcg strip_guards=true) \<comment> \<open>takes a while\<close>
        apply clarsimp
       apply simp
-     apply (clarsimp simp: cap_get_tag_isCap to_bool_def)
+     apply (clarsimp simp: cap_get_tag_isCap)
   \<comment> \<open>Main thm\<close>
   proof (induct cap' cptr' guard' rule: resolveAddressBits.induct [case_names ind])
     case (ind cap cptr guard)
@@ -523,8 +523,8 @@ lemma rightsFromWord_spec:
   \<lbrace>seL4_CapRights_lift \<acute>ret__struct_seL4_CapRights_C = cap_rights_from_word_canon \<^bsup>s\<^esup>w \<rbrace>"
   apply vcg
   apply (simp add: seL4_CapRights_lift_def nth_shiftr mask_shift_simps nth_shiftr
-    cap_rights_from_word_canon_def from_bool_def word_and_1 eval_nat_numeral
-    word_sless_def word_sle_def)
+                   cap_rights_from_word_canon_def word_and_1 eval_nat_numeral
+                   word_sless_def word_sle_def)
   done
 
 

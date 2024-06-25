@@ -129,6 +129,11 @@ abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> det_ext state \<Righ
 
 lemmas valid_blocked_except_def = valid_blocked_except_2_def
 
+lemma valid_blocked_except_cur_thread[simp]:
+  "valid_blocked_except_2 (cur_thread s) queues kh sa (cur_thread s)
+   = valid_blocked_2 queues kh sa (cur_thread s)"
+  by (fastforce simp: valid_blocked_except_2_def valid_blocked_2_def)
+
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. tcb_domain t = cdom) thread ekh"
 
@@ -281,6 +286,10 @@ lemma valid_queues_lift:
   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift a)
   done
 
+lemma valid_sched_valid_queues[elim!]:
+  "valid_sched s \<Longrightarrow> valid_queues s"
+  by (clarsimp simp: valid_sched_def)
+
 lemma typ_at_st_tcb_at_lift:
   assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
   assumes st_lift: "\<And>P. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
@@ -317,7 +326,7 @@ lemma valid_blocked_lift:
   apply (rule hoare_pre)
    apply (wps c e d)
    apply (simp add: valid_blocked_def)
-   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
+   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift hoare_weak_lift_imp a)
    apply (rule hoare_convert_imp)
     apply (rule typ_at_st_tcb_at_lift)
      apply (wp a t)+
@@ -356,7 +365,7 @@ lemma weak_valid_sched_action_lift:
     shows "\<lbrace>weak_valid_sched_action\<rbrace> f \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ c])
   apply (simp add: weak_valid_sched_action_def)
-  apply (wp hoare_vcg_all_lift static_imp_wp a)
+  apply (wp hoare_vcg_all_lift hoare_weak_lift_imp a)
   done
 
 lemma switch_in_cur_domain_lift:
@@ -367,7 +376,7 @@ lemma switch_in_cur_domain_lift:
   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ b])
   apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s", OF _ c])
   apply (simp add: switch_in_cur_domain_def in_cur_domain_def)
-  apply (wp hoare_vcg_all_lift static_imp_wp a c)
+  apply (wp hoare_vcg_all_lift hoare_weak_lift_imp a c)
   done
 
 lemma valid_sched_action_lift:
@@ -382,7 +391,7 @@ lemma valid_sched_action_lift:
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ c])
    apply (simp add: is_activatable_def)
-   apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift static_imp_wp a b c d e)+
+   apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift hoare_weak_lift_imp a b c d e)+
   done
 
 lemma valid_sched_lift:
@@ -400,6 +409,10 @@ lemma valid_sched_lift:
   apply (wp valid_etcbs_lift valid_queues_lift ct_not_in_q_lift ct_in_cur_domain_lift
             valid_sched_action_lift valid_blocked_lift a b c d e f g h i hoare_vcg_conj_lift)
   done
+
+lemma valid_sched_valid_etcbs[elim!]:
+  "valid_sched s \<Longrightarrow> valid_etcbs s"
+  by (clarsimp simp: valid_sched_def)
 
 lemma valid_etcbs_tcb_etcb:
   "\<lbrakk> valid_etcbs s; kheap s ptr = Some (TCB tcb) \<rbrakk> \<Longrightarrow> \<exists>etcb. ekheap s ptr = Some etcb"

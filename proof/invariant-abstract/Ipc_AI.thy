@@ -7,7 +7,7 @@
 theory Ipc_AI
 imports
   ArchFinalise_AI
-  "Lib.WPBang"
+  "Monads.WPBang"
 begin
 
 context begin interpretation Arch .
@@ -51,7 +51,7 @@ lemma lsfco_cte_at:
   "\<lbrace>valid_objs and valid_cap cn\<rbrace>
   lookup_slot_for_cnode_op f cn idx depth
   \<lbrace>\<lambda>rv. cte_at rv\<rbrace>,-"
-  by (rule hoare_post_imp_R, rule lookup_cnode_slot_real_cte, simp add: real_cte_at_cte)
+  by (rule hoare_strengthen_postE_R, rule lookup_cnode_slot_real_cte, simp add: real_cte_at_cte)
 
 declare do_machine_op_tcb[wp]
 
@@ -113,7 +113,7 @@ lemma cap_derive_not_null_helper:
    \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> Q rv s\<rbrace>,-"
   apply (case_tac cap,
          simp_all add: is_zombie_def,
-         safe elim!: hoare_post_imp_R)
+         safe elim!: hoare_strengthen_postE_R)
    apply (wp | simp add: derive_cap_def is_zombie_def)+
   done
 
@@ -395,7 +395,7 @@ lemma lsfco_cte_wp_at_univ:
       lookup_slot_for_cnode_op f croot idx depth
    \<lbrace>\<lambda>rv. cte_wp_at (P rv) rv\<rbrace>, -"
   apply (rule hoare_gen_asmE)
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lsfco_cte_at)
   apply (clarsimp simp: cte_wp_at_def)
   done
@@ -517,7 +517,7 @@ lemma cap_insert_weak_cte_wp_at2:
    cap_insert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
   unfolding cap_insert_def
-  by (wp set_cap_cte_wp_at get_cap_wp static_imp_wp
+  by (wp set_cap_cte_wp_at get_cap_wp hoare_weak_lift_imp
       | simp add: cap_insert_def
       | unfold set_untyped_cap_as_full_def
       | auto simp: cte_wp_at_def dest!:imp)+
@@ -570,7 +570,7 @@ lemma cap_insert_assume_null:
   apply (rule hoare_name_pre_state)
   apply (erule impCE)
    apply (simp add: cap_insert_def)
-   apply (rule hoare_seq_ext[OF _ get_cap_sp])+
+   apply (rule bind_wp[OF _ get_cap_sp])+
    apply (clarsimp simp: valid_def cte_wp_at_caps_of_state in_monad
               split del: if_split)
   apply (erule hoare_pre(1))
@@ -603,16 +603,16 @@ lemma transfer_caps_loop_presM:
   apply (clarsimp simp add: Let_def split_def whenE_def
                       cong: if_cong list.case_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift static_imp_wp
+   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift hoare_weak_lift_imp
            | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
-      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at static_imp_wp)+
+      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
       apply (rule hoare_vcg_conj_liftE_R)
        apply (rule derive_cap_is_derived_foo)
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow>
           cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s)
           \<and> (cap'\<noteq> cap.NullCap \<longrightarrow> QM s cap')" for QM
-          in hoare_post_imp_R)
+          in hoare_strengthen_postE_R)
         prefer 2
         apply clarsimp
         apply assumption
@@ -1439,9 +1439,7 @@ lemmas get_tcb_ko_atI = get_tcb_ko_at [THEN iffD1]
 
 
 crunch "distinct" [wp]: set_mrs pspace_distinct
-  (wp: select_wp hoare_vcg_split_case_option mapM_wp
-       hoare_drop_imps  refl
-   simp: zipWithM_x_mapM)
+  (wp: mapM_wp simp: zipWithM_x_mapM)
 
 
 crunch "distinct" [wp]: copy_mrs pspace_distinct
@@ -1832,7 +1830,7 @@ lemma set_mrs_valid_ioc[wp]:
   apply (simp add: set_mrs_def)
   apply (wp | wpc)+
      apply (simp only: zipWithM_x_mapM_x split_def)
-     apply (wp mapM_x_wp' set_object_valid_ioc_caps static_imp_wp
+     apply (wp mapM_x_wp' set_object_valid_ioc_caps hoare_weak_lift_imp
         | simp)+
   apply (clarsimp simp: obj_at_def get_tcb_def valid_ioc_def
                   split: option.splits Structures_A.kernel_object.splits)
@@ -2030,7 +2028,7 @@ lemma update_waiting_invs:
      update_waiting_ntfn ntfnptr q bound_tcb bdg
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: update_waiting_ntfn_def)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule bind_wp[OF _ assert_sp])
   apply (rule hoare_pre)
    apply (wp |simp)+
     apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -2120,7 +2118,7 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
    \<lbrace>\<lambda>r. cte_wp_at P p\<rbrace>"
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_pre)
-   apply (wp hoare_pre_cont[where a="reply_cancel_ipc t"] gts_wp | wpc)+
+   apply (wp hoare_pre_cont[where f="reply_cancel_ipc t"] gts_wp | wpc)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
 
@@ -2128,13 +2126,13 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
 lemma sai_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to ntfn\<rbrace> send_signal ntfn bdg \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: send_signal_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfna", simp_all)
     apply (case_tac "ntfn_bound_tcb ntfna", simp_all)
      apply (wp set_ntfn_minor_invs)
      apply (clarsimp simp: obj_at_def is_ntfn invs_def valid_pspace_def
                            valid_state_def valid_obj_def valid_ntfn_def)
-    apply (rule hoare_seq_ext [OF _ gts_sp])
+    apply (rule bind_wp [OF _ gts_sp])
     apply (rule hoare_pre)
      apply (rule hoare_vcg_if_split)
       apply (wp sts_invs_minor | clarsimp split: thread_state.splits)+
@@ -2272,7 +2270,7 @@ lemma pred_tcb_clear:
 
 
 lemma pred_tcb_upd_apply:
-  "pred_tcb_at proj P t (s\<lparr>kheap := kheap s(r \<mapsto> TCB v)\<rparr>) =
+  "pred_tcb_at proj P t (s\<lparr>kheap := (kheap s)(r \<mapsto> TCB v)\<rparr>) =
   (if t = r then P (proj (tcb_to_itcb v)) else pred_tcb_at proj P t s)"
   by (simp add: pred_tcb_at_def obj_at_def)
 
@@ -2622,14 +2620,14 @@ lemma complete_signal_invs:
      complete_signal ntfnptr tcb
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: complete_signal_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp set_ntfn_minor_invs | wpc | simp)+
    apply (rule_tac Q="\<lambda>_ s. (state_refs_of s ntfnptr = ntfn_bound_refs (ntfn_bound_tcb ntfn))
                       \<and> (\<exists>T. typ_at T ntfnptr s) \<and> valid_ntfn (ntfn_set_obj ntfn IdleNtfn) s
                       \<and> ((\<exists>y. ntfn_bound_tcb ntfn = Some y) \<longrightarrow> ex_nonz_cap_to ntfnptr s)"
                       in hoare_strengthen_post)
-    apply (wp hoare_vcg_all_lift static_imp_wp hoare_vcg_ex_lift | wpc
+    apply (wp hoare_vcg_all_lift hoare_weak_lift_imp hoare_vcg_ex_lift | wpc
          | simp add: live_def valid_ntfn_def valid_bound_tcb_def split: option.splits)+
     apply ((clarsimp simp: obj_at_def state_refs_of_def)+)[2]
   apply (rule_tac obj_at_valid_objsE[OF _ invs_valid_objs]; clarsimp)
@@ -2660,13 +2658,13 @@ lemma ri_invs':
   apply (simp add: receive_ipc_def split_def)
   apply (cases cap, simp_all)
   apply (rename_tac ep badge rights)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ gbn_sp])
+  apply (rule bind_wp)
   (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_if_split)
+   apply (rule_tac R="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
-   apply (case_tac x)
+   apply (case_tac rv)
      apply (wp | rule hoare_pre, wpc | simp)+
            apply (simp add: invs_def valid_state_def valid_pspace_def)
            apply (rule hoare_pre, wp valid_irq_node_typ valid_ioports_lift)
@@ -2764,7 +2762,7 @@ lemma ri_invs':
   done
 
 lemmas ri_invs[wp]
-  = ri_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI,simplified]
+  = ri_invs'[where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI,simplified]
 
 end
 
@@ -2820,7 +2818,7 @@ lemma valid_bound_tcb_typ_at:
   "(\<And>p. \<lbrace>\<lambda>s. typ_at ATCB p s\<rbrace> f \<lbrace>\<lambda>_ s. typ_at ATCB p s\<rbrace>)
    \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_tcb tcb s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_tcb tcb s\<rbrace>"
   apply (clarsimp simp: valid_bound_tcb_def split: option.splits)
-  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at static_imp_wp)
+  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at hoare_weak_lift_imp)
   done
 
 crunch bound_tcb[wp]: set_thread_state, set_message_info, set_mrs, as_user "valid_bound_tcb t"
@@ -2845,8 +2843,8 @@ lemma rai_invs':
   apply (simp add: receive_signal_def)
   apply (cases cap, simp_all)
   apply (rename_tac ntfn badge rights)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac "ntfn_obj x")
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
+  apply (case_tac "ntfn_obj rv")
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
      apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
@@ -2887,7 +2885,7 @@ lemma rai_invs':
    apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
    apply (rule context_conjI, fastforce simp: pred_tcb_at_def obj_at_def tcb_bound_refs_def2
                                                state_refs_of_def)
-   apply (subgoal_tac "ntfn_bound_tcb x = None")
+   apply (subgoal_tac "ntfn_bound_tcb rv = None")
     apply (rule conjI, clarsimp split: option.splits)
     apply (rule conjI, erule delta_sym_refs)
       apply (fastforce simp: pred_tcb_at_def2 obj_at_def symreftype_inverse'
@@ -2904,7 +2902,7 @@ lemma rai_invs':
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift valid_ioports_lift
              as_user_no_del_ntfn[simplified ntfn_at_def2, simplified]
-             valid_irq_node_typ ball_tcb_cap_casesI static_imp_wp
+             valid_irq_node_typ ball_tcb_cap_casesI hoare_weak_lift_imp
              valid_bound_tcb_typ_at[rule_format]
              | simp add: valid_ntfn_def)+
   apply clarsimp
@@ -2921,7 +2919,7 @@ lemma rai_invs':
                   dest: valid_reply_capsD)
   done
 
-lemmas rai_invs[wp] = rai_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI,simplified]
+lemmas rai_invs[wp] = rai_invs'[where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI,simplified]
 
 end
 
@@ -2957,7 +2955,7 @@ crunch cap_to[wp]: receive_signal "ex_nonz_cap_to p"
   (wp: crunch_wps)
 
 crunch mdb[wp]: set_message_info valid_mdb
-  (wp: select_wp crunch_wps mapM_wp')
+  (wp: crunch_wps mapM_wp')
 
 lemma ep_queue_cap_to:
   "\<lbrakk> ko_at (Endpoint ep) p s; invs s;
@@ -2989,7 +2987,7 @@ lemma si_invs':
      send_ipc bl call badge cg cgr t epptr
    \<lbrace>\<lambda>r (s::'state_ext state). invs s \<and> Q s\<rbrace>"
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     (* ep=IdleEP, bl *)
     apply (cases bl, simp_all)[1]
@@ -3054,7 +3052,7 @@ lemma si_invs':
                | clarsimp simp:is_cap_simps | wpc
                | strengthen reply_cap_doesnt_exist_strg
                             disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s"]
-               | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+
+               | (wp hoare_vcg_conj_lift hoare_weak_lift_imp | wp dxo_wp_weak | simp)+
                | wp valid_ioports_lift)+
   apply (clarsimp simp: ep_redux_simps conj_ac cong: list.case_cong if_cong)
   apply (frule(1) sym_refs_ko_atD)
@@ -3111,11 +3109,11 @@ lemma hf_invs':
    apply (wpsimp wp: thread_set_invs_trivial
                      thread_set_no_change_tcb_state ex_nonz_cap_to_pres
                      thread_set_cte_wp_at_trivial
-                     hoare_vcg_all_lift_R
+                     hoare_vcg_all_liftE_R
           | clarsimp simp: tcb_cap_cases_def
           | erule disjE)+
      apply (wpe lookup_cap_ex_cap)
-     apply (wpsimp wp: hoare_vcg_all_lift_R
+     apply (wpsimp wp: hoare_vcg_all_liftE_R
         | strengthen reply_cap_doesnt_exist_strg
         | wp (once) hoare_drop_imps)+
   apply (simp add: conj_comms)
@@ -3125,7 +3123,7 @@ lemma hf_invs':
               split: Structures_A.thread_state.splits)
   done
 
-lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
+lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI TrueI TrueI,simplified]
 
 end
 
@@ -3189,7 +3187,7 @@ lemma si_blk_makes_simple:
      send_ipc True call bdg x gr t' ep
    \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_inv])
+  apply (rule bind_wp [OF _ get_simple_ko_inv])
   apply (case_tac epa, simp_all)
     apply (wp sts_st_tcb_at_cases)
     apply clarsimp
@@ -3198,8 +3196,8 @@ lemma si_blk_makes_simple:
   apply (rule hoare_gen_asm[simplified])
   apply (rename_tac list)
   apply (case_tac list, simp_all split del:if_split)
-  apply (rule hoare_seq_ext [OF _ set_simple_ko_pred_tcb_at])
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ set_simple_ko_pred_tcb_at])
+  apply (rule bind_wp [OF _ gts_sp])
   apply (case_tac recv_state, simp_all split del: if_split)
   apply (wp sts_st_tcb_at_cases setup_caller_cap_makes_simple
             hoare_drop_imps
@@ -3251,20 +3249,20 @@ lemma ri_makes_simple:
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def split_def)
   apply (case_tac cap, simp_all)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
-  apply (rule hoare_seq_ext)
-   apply (rename_tac ep I DO x CARE NOT)
-   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_if_split)
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ gbn_sp])
+  apply (rule bind_wp)
+   apply (rename_tac ep I DO rv CARE NOT)
+   apply (rule_tac R="ko_at (Endpoint rv) ep and ?pre" in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
-   apply (case_tac x, simp_all)
+   apply (case_tac rv, simp_all)
      apply (rule hoare_pre, wpc)
        apply (wp sts_st_tcb_at_cases, simp)
       apply (simp add: do_nbrecv_failed_transfer_def, wp)
      apply clarsimp
-    apply (rule hoare_seq_ext [OF _ assert_sp])
-    apply (rule hoare_seq_ext [where B="\<lambda>s. st_tcb_at simple t'"])
-     apply (rule hoare_seq_ext [OF _ gts_sp])
+    apply (rule bind_wp [OF _ assert_sp])
+    apply (rule bind_wp [where Q'="\<lambda>s. st_tcb_at simple t'"])
+     apply (rule bind_wp [OF _ gts_sp])
      apply (rule hoare_pre)
       apply (wp setup_caller_cap_makes_simple sts_st_tcb_at_cases
                 hoare_vcg_all_lift hoare_vcg_const_imp_lift

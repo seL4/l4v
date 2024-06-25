@@ -1,29 +1,9 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      VcgExTotal.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2006-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
 
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
 *)
 
 section \<open>Examples for Total Correctness\<close>
@@ -318,7 +298,10 @@ lemma (in pedal_coast_clique)
                                   measure (\<lambda>p. if p = coast_'proc then 1 else 0))
                       (\<lambda>(s,p). (\<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M,p))"])
   apply simp_all
-  apply (vcg,force)+
+  apply  vcg
+  apply  simp
+  apply vcg
+  apply simp
   done
 
 lemma (in pedal_coast_clique)
@@ -329,7 +312,10 @@ lemma (in pedal_coast_clique)
                                   measure (\<lambda>p. if p = coast_'proc then 1 else 0))
                       (\<lambda>(s,p). (\<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M,p))"])
   apply simp_all
-  apply (vcg,force)+
+  apply  vcg
+  apply  simp
+  apply vcg
+  apply simp
   done
 
 
@@ -341,7 +327,11 @@ lemma (in pedal_coast_clique)
   apply(hoare_rule HoareTotal_ProcRec2
      [where ?r= "measure (\<lambda>(s,p). \<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M + (if p = coast_'proc then 1 else 0))"])
   apply simp_all
-  apply (vcg,force)+
+  apply  vcg
+  apply  simp
+  apply  arith
+  apply vcg
+  apply simp
   done
 
 
@@ -352,8 +342,11 @@ lemma (in pedal_coast_clique)
      [where ?r= "(\<lambda>(s,p). \<^bsup>s\<^esup>N) <*mlex*> (\<lambda>(s,p). \<^bsup>s\<^esup>M) <*mlex*>
                  measure (\<lambda>(s,p). if p = coast_'proc then 1 else 0)"])
    apply  simp_all
-   apply (vcg,force)+
-  done
+   apply  vcg
+   apply  simp
+   apply vcg
+   apply simp
+   done
 
 
 lemma (in pedal_coast_clique)
@@ -363,8 +356,11 @@ lemma (in pedal_coast_clique)
      [where ?r= "measure (\<lambda>s. \<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M) <*lex*>
                  measure (\<lambda>p. if p = coast_'proc then 1 else 0)"])
    apply simp_all
-   apply (vcg,force)+
-  done
+   apply  vcg
+   apply  simp
+   apply vcg
+   apply simp
+   done
 
 
 end

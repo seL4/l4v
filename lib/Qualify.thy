@@ -64,8 +64,8 @@ fun get_new_consts old_thy consts =
     val space = #const_space (Consts.dest consts);
 
     val consts =
-      filter (fn nm => not (can (Consts.the_const (Sign.consts_of old_thy)) nm) andalso
-                       can (Consts.the_const consts) nm) new_consts
+      filter (fn nm => not (can (Consts.the_const_type (Sign.consts_of old_thy)) nm) andalso
+                       can (Consts.the_const_type consts) nm) new_consts
       |> map (fn nm => `(make_bind space old_thy) nm);
 
   in consts end;
@@ -110,7 +110,7 @@ val _ =
           Toplevel.theory (set_global_qualify {name = str, target_name = case target of SOME (nm, _) => nm | _ => str})));
 
 fun syntax_alias global_alias local_alias b name =
-  Local_Theory.declaration {syntax = true, pervasive = true} (fn phi =>
+  Local_Theory.declaration {syntax = true, pos = Position.none, pervasive = true} (fn phi =>
     let val b' = Morphism.binding phi b
     in Context.mapping (global_alias b' name) (local_alias b' name) end);
 

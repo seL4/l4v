@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -1278,6 +1279,10 @@ lemma valid_objsE [elim]:
   "\<lbrakk> valid_objs s; kheap s x = Some obj; valid_obj x obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_objs_def by (auto simp: dom_def)
 
+lemma valid_obj_arch_valid_obj:
+  "valid_obj p (ArchObj ao) s = arch_valid_obj ao s"
+  by (simp add: valid_obj_def)
+
 
 lemma obj_at_ko_at:
   "obj_at P p s \<Longrightarrow> \<exists>ko. ko_at ko p s \<and> P ko"
@@ -2299,7 +2304,7 @@ lemma valid_tcb_state_typ:
   assumes P: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb_state st s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb_state st s\<rbrace>"
   by (case_tac st,
-      simp_all add: valid_tcb_state_def hoare_post_taut
+      simp_all add: valid_tcb_state_def hoare_TrueI
                     ep_at_typ P tcb_at_typ ntfn_at_typ)
 
 lemma ntfn_at_typ_at:
@@ -2327,7 +2332,7 @@ lemma valid_ep_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_ep ep s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ep ep s\<rbrace>"
   apply (case_tac ep,
-         simp_all add: valid_ep_def hoare_post_taut tcb_at_typ)
+         simp_all add: valid_ep_def hoare_TrueI tcb_at_typ)
    apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
    apply (rule hoare_vcg_conj_lift [OF _ hoare_vcg_prop])
    apply (rule hoare_vcg_const_Ball_lift [OF P])
@@ -2340,14 +2345,14 @@ lemma valid_ntfn_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_ntfn ntfn s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ntfn ntfn s\<rbrace>"
   apply (case_tac "ntfn_obj ntfn",
-         simp_all add: valid_ntfn_def valid_bound_tcb_def hoare_post_taut tcb_at_typ)
+         simp_all add: valid_ntfn_def valid_bound_tcb_def hoare_TrueI tcb_at_typ)
     defer 2
-    apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P)+)[2]
+    apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_TrueI tcb_at_typ P)+)[2]
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])+
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_vcg_const_Ball_lift [OF P])
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
-  apply (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P)
+  apply (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_TrueI tcb_at_typ P)
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P)
   done
 
@@ -3087,8 +3092,7 @@ lemma real_cte_at_typ_valid:
 lemma dmo_aligned[wp]:
   "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: pspace_aligned_def)
+  apply wpsimp
   done
 
 lemma cte_wp_at_eqD2:
@@ -3459,6 +3463,10 @@ lemma valid_mask_vm_rights[simp]:
   "mask_vm_rights V R \<in> valid_vm_rights"
   by (simp add: mask_vm_rights_def)
 
+lemma invs_pspace_in_kernel_window[elim!]:
+  "invs s \<Longrightarrow> pspace_in_kernel_window s"
+  by (simp add: invs_def valid_state_def)
+
 lemmas invs_implies =
   invs_equal_kernel_mappings
   invs_arch_state
@@ -3484,5 +3492,16 @@ lemmas invs_implies =
   invs_hyp_sym_refs
   invs_sym_refs
   tcb_at_invs
+  invs_pspace_in_kernel_window
+
+(* Pull invs out of a complex goal and prove it only once. Use as (strengthen invs_strengthen)+,
+   best in combination with simp and potentially conj_cong. *)
+lemma invs_strengthen:
+  "invs s \<Longrightarrow> P s \<longrightarrow> invs s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> invs s \<and> Q s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> Q s \<and> invs s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (invs and Q) s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (Q and invs) s"
+  by auto
 
 end

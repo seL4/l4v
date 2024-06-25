@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -269,7 +270,7 @@ lemma mapM_x_store_pde_eq_kernel_mappings_restr:
                       \<and> ko_at (ArchObj (PageDirectory pdv')) pd' s
                       \<and> pdv (ucast x) = pdv' (ucast x)))\<rbrace>"
   apply (induct xs rule: rev_induct, simp_all add: mapM_x_Nil mapM_x_append mapM_x_singleton)
-  apply (erule hoare_seq_ext[rotated])
+  apply (erule bind_wp_fwd)
   apply (simp add: store_pde_def set_pd_def set_object_def cong: bind_cong)
   apply (wp get_object_wp get_pde_wp)
   apply (clarsimp simp: obj_at_def split del: if_split)
@@ -343,7 +344,7 @@ lemma mapM_copy_global_invs_mappings_restricted:
   apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
   apply (induct pds, simp_all only: mapM_x_Nil mapM_x_Cons K_bind_def)
    apply (wp, simp)
-  apply (rule hoare_seq_ext, assumption, thin_tac "P" for P)
+  apply (rule bind_wp, assumption, thin_tac "P" for P)
   apply (rule hoare_conjI)
    apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
    apply clarsimp

@@ -11,8 +11,12 @@
 theory NonDetMonadEx
 imports
   "Word_Lib.WordSetup"
-  "Lib.NonDetMonadLemmaBucket"
-  "Lib.OptionMonadND"
+  "Monads.Nondet_VCG"
+  "Monads.Nondet_Monad_Equations"
+  "Monads.Nondet_More_VCG"
+  "Monads.Nondet_No_Throw"
+  "Monads.Nondet_No_Fail"
+  "Monads.Nondet_Reader_Option"
 begin
 
 (*
@@ -82,7 +86,7 @@ lemma when_wp_nf [wp]:
            \<Longrightarrow> \<lbrace> if P then Q else R () \<rbrace> when P f \<lbrace> R \<rbrace>!"
   by (monad_eq simp: validNF_def valid_def no_fail_def)
 
-lemmas [wp] = hoare_whenE_wp
+lemmas [wp] = whenE_wp
 
 lemma gets_the_wp_nf [wp]:
   "\<lbrace>\<lambda>s. (f s \<noteq> None) \<and> Q (the (f s)) s\<rbrace> gets_the f \<lbrace>Q\<rbrace>!"
@@ -272,7 +276,7 @@ lemma whileLoop_to_fold:
            (\<lambda>r. return (Q r))
            i s) = return (if P i \<le> x then fold (\<lambda>i r. (Q r)) [unat (P i) ..< unat x] i else i) s"
     (is "?LHS s = return (?RHS x) s")
-  apply (subst OptionMonadND.gets_the_return [symmetric])
+  apply (subst gets_the_return [symmetric])
   apply (subst gets_the_whileLoop)
   apply (rule gets_the_to_return)
   apply (subst owhile_to_fold)

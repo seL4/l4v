@@ -12,12 +12,13 @@ imports
   "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Kernel_Config
 begin
 
 context Arch begin global_naming AARCH64
 
-type_synonym irq = "9 word" (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
+type_synonym irq_len = 9 (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
+type_synonym irq = "irq_len word"
 type_synonym paddr = machine_word
 
 abbreviation (input) "toPAddr \<equiv> id"
@@ -35,28 +36,28 @@ abbreviation (input) "fromPAddr \<equiv> id"
    of these constants.
 *)
 
-(* FIXME AARCH64: canonical bit isn't used, addresses >= 2^48 are invalid *)
+(* The canonical bit is the highest bit that can be set in a virtual address and still accepted
+   by the hardware. Any bit higher than that will be overwritten by sign extension, zero extension,
+   or result in a fault.
+   For AArch64 with hyp, addresses >= 2^48 are invalid, and sign-extension is not used by the
+   hardware. *)
 definition canonical_bit :: nat where
   "canonical_bit = 47"
 
 definition kdevBase :: machine_word where
   "kdevBase = 0x000000FFFFE00000"
 
-(* FIXME AARCH64: are powers-of-2 definitions with sanity checks better than the raw numbers here? *)
 definition kernelELFBase :: machine_word where
-  "kernelELFBase = 0x8000000000 + 0x80000000" (* 2^39 + 2^31 *)
-
-lemma "kernelELFBase = 0x8080000000" (* Sanity check with C *)
-  by (simp add: kernelELFBase_def)
+  "kernelELFBase = 2^39 + physBase"
 
 definition kernelELFPAddrBase :: machine_word where
-  "kernelELFPAddrBase = 0x80000000" (* 2^31 *)
+  "kernelELFPAddrBase = physBase"
 
 definition kernelELFBaseOffset :: machine_word where
   "kernelELFBaseOffset = kernelELFBase - kernelELFPAddrBase"
 
 definition pptrBase :: machine_word where
-  "pptrBase = 0x8000000000" (* 2^39 | FIXME AARCH64: likely to be moved to 0x0 *)
+  "pptrBase = 0x8000000000" (* 2^39 *)
 
 definition pptrUserTop :: machine_word where
   "pptrUserTop \<equiv> mask (if config_ARM_PA_SIZE_BITS_40 then 40 else 44)"
@@ -64,14 +65,8 @@ definition pptrUserTop :: machine_word where
 lemma "pptrUserTop = (if config_ARM_PA_SIZE_BITS_40 then 0xFFFFFFFFFF else 0xFFFFFFFFFFF)" (* Sanity check with C *)
   by (simp add: pptrUserTop_def mask_def)
 
-(* FIXME AARCH64: we might want to remove this for improved genericity *)
-schematic_goal pptrUserTop_def': (* direct constant definition *)
-  "AARCH64.pptrUserTop = numeral ?x"
-  by (simp add: AARCH64.pptrUserTop_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def mask_def
-           del: word_eq_numeral_iff_iszero)
-
 definition pptrTop :: machine_word where
-  "pptrTop = 0xFFFFFFFF80000000" (* FIXME AARCH64: review; copy/paste from Haskell *)
+  "pptrTop = 2^40 - 2^30" (* FIXME AARCH64: see also seL4/seL4#957 *)
 
 definition paddrBase :: machine_word where
   "paddrBase \<equiv> 0"
@@ -106,5 +101,64 @@ definition irqVTimerEvent :: irq where
 definition pageColourBits :: nat where
   "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
 
+
+section \<open>Page table sizes\<close>
+
+definition vs_index_bits :: nat where
+  "vs_index_bits \<equiv> if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat)"
+
 end
+
+(* Need to declare code equation outside Arch locale *)
+declare AARCH64.vs_index_bits_def[code]
+
+context Arch begin global_naming AARCH64
+
+lemma vs_index_bits_ge0[simp, intro!]: "0 < vs_index_bits"
+  by (simp add: vs_index_bits_def)
+
+(* A dependent-ish type in Isabelle. We use typedef here instead of value_type so that we can
+   retain a symbolic value (vs_index_bits) for the size of the type instead of getting a plain
+   number such as 9 or 10. *)
+typedef vs_index_len = "{n :: nat. n < vs_index_bits}" by auto
+
+end
+
+instantiation AARCH64.vs_index_len :: len0
+begin
+  interpretation Arch .
+  definition len_of_vs_index_len: "len_of (x::vs_index_len itself) \<equiv> CARD(vs_index_len)"
+  instance ..
+end
+
+instantiation AARCH64.vs_index_len :: len
+begin
+  interpretation Arch .
+  instance
+  proof
+   show "0 < LENGTH(vs_index_len)"
+     by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
+  qed
+end
+
+context Arch begin global_naming AARCH64
+
+type_synonym vs_index = "vs_index_len word"
+
+type_synonym pt_index_len = 9
+type_synonym pt_index = "pt_index_len word"
+
+text \<open>Sanity check:\<close>
+lemma length_vs_index_len[simp]:
+  "LENGTH(vs_index_len) = vs_index_bits"
+  by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
+
+
+section \<open>C array sizes corresponding to page table sizes\<close>
+
+value_type pt_array_len = "(2::nat) ^ LENGTH(pt_index_len)"
+value_type vs_array_len = "(2::nat) ^ vs_index_bits"
+
+end
+
 end

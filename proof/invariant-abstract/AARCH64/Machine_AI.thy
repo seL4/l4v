@@ -19,7 +19,7 @@ definition
   "no_irq f \<equiv> \<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
 
 lemma wpc_helper_no_irq:
-  "no_irq f \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (no_irq f)"
+  "no_irq f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (no_irq f)"
   by (simp add: wpc_helper_def)
 
 wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
@@ -58,7 +58,7 @@ setup \<open>
 \<close>
 
 crunch_ignore (no_irq) (add:
-  NonDetMonad.bind return "when" get gets fail
+  Nondet_Monad.bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE
@@ -87,9 +87,9 @@ lemma det_setNextPC: "det (setNextPC p)"
 
 text \<open>Failure on empty result\<close>
 
-crunches loadWord, storeWord, machine_op_lift, clearMemory
+crunches loadWord, storeWord, machine_op_lift
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (ignore: NonDetMonad.bind mapM_x simp: machine_op_lift_def)
+  (ignore: Nondet_Monad.bind mapM_x simp: machine_op_lift_def empty_fail_cond)
 
 lemmas ef_machine_op_lift = machine_op_lift_empty_fail \<comment> \<open>required for generic interface\<close>
 
@@ -100,7 +100,7 @@ definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow>
 lemma getActiveIRQ_inv[wp]:
   "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> getActiveIRQ in_kernel \<lbrace>P\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply (simp add: irq_state_independent_def)
   done
 
@@ -122,18 +122,6 @@ lemma no_fail_machine_op_lift [simp]:
   "no_fail \<top> (machine_op_lift f)"
   by (simp add: machine_op_lift_def)
 
-lemma no_fail_clearMemory[simp, wp]:
-  "no_fail (\<lambda>_. is_aligned p 3) (clearMemory p b)"
-  apply (simp add: clearMemory_def mapM_x_mapM)
-  apply (rule no_fail_pre)
-   apply (wp no_fail_mapM' no_fail_storeWord )
-  apply (clarsimp simp: upto_enum_step_def)
-  apply (erule aligned_add_aligned)
-   apply (simp add: word_size_def)
-   apply (rule is_aligned_mult_triv2 [where n = 3, simplified])
-  apply simp
-  done
-
 lemma no_fail_freeMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 3) (freeMemory p b)"
   apply (simp add: freeMemory_def mapM_x_mapM)
@@ -150,7 +138,7 @@ lemma no_fail_getActiveIRQ[wp]:
   "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
-   apply (wp non_fail_select)
+   apply wp
   apply simp
   done
 
@@ -235,9 +223,6 @@ lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
   by (wpsimp simp: storeWord_def wp: no_irq_modify)
 
-lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
-  by (wpsimp simp: clearMemory_def no_irq_mapM_x no_irq_storeWord)
-
 crunches ackInterrupt
   for (no_irq) no_irq[intro!, wp, simp]
 
@@ -291,7 +276,7 @@ crunch_ignore (valid, empty_fail, no_fail)
    grep -oE "(\w+_impl)|(get\w+)" MachineOps.thy|sort|uniq|sed "s/_impl//;s/$/,/;s/^/  /"
    with the following manual interventions:
    - remove false positives: get_def, gets_def, getFPUState, getRegister, getRestartPC
-   - add readVCPUHardwareReg (which uses non-standard "Val" instead of "_val" (FIXME AARCH64))
+   - add read_cntpct
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
 crunches
@@ -306,7 +291,6 @@ crunches
   dsb,
   enableFpuEL01,
   fpuThreadDeleteOp,
-  getDFSR,
   getESR,
   getFAR,
   get_gic_vcpu_ctrl_apr,
@@ -319,7 +303,6 @@ crunches
   get_gic_vcpu_ctrl_vmcr,
   get_gic_vcpu_ctrl_vtr,
   getHSR,
-  getIFSR,
   getMemoryRegions,
   gets,
   getSCTLR,
@@ -345,7 +328,6 @@ crunches
   switchFpuOwner,
   readVCPUHardwareReg,
   writeVCPUHardwareReg,
-  (* FIXME AARCH64: machine ops missed by the grep above: *)
   read_cntpct
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
@@ -353,7 +335,7 @@ crunches
   and device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
   and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
-  (wp: no_irq_bind ignore: empty_fail NonDetMonad.bind)
+  (wp: no_irq_bind ignore: empty_fail Nondet_Monad.bind)
 
 crunches getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
   for (no_fail) no_fail[intro!, wp, simp]
@@ -386,6 +368,30 @@ lemma dmo_valid_irq_states[wp]:
   unfolding valid_irq_states_def do_machine_op_def
   by (wpsimp, erule use_valid; assumption)
 
+text \<open>Ops that require machine-ops rules derived above\<close>
+
+\<comment> \<open>These can't be placed into the sections above, as they require the derivation of the machine op
+   properties, and those in turn rely on items in specific sections above. There are unlikely to be
+   many definitions like this in MachineOps.thy\<close>
+
+crunches clearMemory
+  for (empty_fail) empty_fail[intro!, wp, simp]
+
+lemma no_fail_clearMemory[unfolded word_size_bits_def, simp, wp]:
+  "no_fail (\<lambda>_. is_aligned p word_size_bits) (clearMemory p b)"
+  apply (simp add: clearMemory_def word_size_bits_def mapM_x_mapM)
+  apply (rule no_fail_pre)
+   apply (wp no_fail_mapM' no_fail_storeWord )
+  apply (clarsimp simp: upto_enum_step_def)
+  apply (erule aligned_add_aligned)
+   apply (simp add: word_size_def)
+   apply (rule is_aligned_mult_triv2 [where n = 3, simplified])
+  apply simp
+  done
+
+lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
+  by (wpsimp simp: clearMemory_def no_irq_mapM_x no_irq_storeWord)
+
 text \<open>Misc WP rules\<close>
 
 lemma getActiveIRQ_le_maxIRQ':
@@ -393,7 +399,7 @@ lemma getActiveIRQ_le_maxIRQ':
     getActiveIRQ in_kernel
    \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wpsimp wp: alternative_wp select_wp)
+  apply wpsimp
   apply (rule ccontr)
   apply (simp add: linorder_not_le)
   done
@@ -410,6 +416,10 @@ lemma dmo_getActiveIRQ_non_kernel[wp]:
   apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
   apply clarsimp
   done
+
+lemma dmo_gets_inv[wp]:
+  "do_machine_op (gets f) \<lbrace>P\<rbrace>"
+  unfolding do_machine_op_def by (wpsimp simp: simpler_gets_def)
 
 end
 

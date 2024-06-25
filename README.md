@@ -28,26 +28,19 @@ assistant [Isabelle/HOL][2]. For an introduction to Isabelle, see its
 [official website][2] and [documentation][3].
 
   [1]: https://github.com/seL4/l4v                   "L4.verified Repository"
-  [2]: http://isabelle.in.tum.de                     "Isabelle Website"
-  [3]: http://isabelle.in.tum.de/documentation.html  "Isabelle Documentation"
+  [2]: https://isabelle.in.tum.de                    "Isabelle Website"
+  [3]: https://isabelle.in.tum.de/documentation.html "Isabelle Documentation"
 
 <a name="setup"></a>
 Setup
 -----
 
-This repository is meant to be used as part of a Google [repo][5] setup.
-Instead of cloning it directly, follow the instructions at the [manifest git
-repo](https://github.com/seL4/verification-manifest).
+This repository is meant to be used as part of a Google [repo][5] setup. Instead
+of cloning it directly, please follow the directions for software dependencies
+and Isabelle installation in the [setup.md](docs/setup.md) file in the `docs`
+directory.
 
-  [5]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
-
-
-Dependencies
-------------
-
-For software dependencies and Isabelle setup, see the
-[setup.md](docs/setup.md) file in the `docs` directory.
-
+[5]: https://gerrit.googlesource.com/git-repo/+/HEAD/README.md
 
 Contributing
 ------------
@@ -138,71 +131,59 @@ about 16GB of RAM.
 The proofs distribute reasonably well over multiple cores, up to about 8
 cores are useful.
 
-
-jEdit
------
-
-We provide a jEdit macro that is very useful when working with large theory
-files, **goto-error**, which moves the cursor to the first error in the file.
-
-To install the macro, run the following commands in the directory
-`verification/l4v/`:
-```bash
-mkdir -p ~/.isabelle/jedit/macros
-cp misc/jedit/macros/goto-error.bsh ~/.isabelle/jedit/macros/.
-```
-
-You can add keybindings for this macro in the usual way, by going to
-`Utilities -> Global Options -> jEdit -> Shortcuts`.
-
-Additionally, our fork of Isabelle/jEdit has an updated indenter which is more
-proof-context aware than the 'original' indenter. Pressing `ctrl+i` while some
-`apply`-script text is selected should auto-indent the script while respecting
-subgoal depth and maintaining the relative indentation of multi-line `apply`
-statements.
-
 Running the Proofs
 ------------------
 
 If Isabelle is set up correctly, a full test for the proofs in this repository
-can be run with the command
+for seL4 on the `ARM` architecture can be run with the command
 
-    ./run_tests
+    L4V_ARCH=ARM ./run_tests
 
 from the directory `l4v/`.
 
-Not all of the proof sessions can be built directly with the `isabelle build` command.
-The seL4 verification proofs depend on Isabelle specifications that are
-generated from the C source code and Haskell model.
-Therefore, it's recommended to always build using the supplied makefiles,
-which will ensure that these generated specs are up to date.
+Set the environment variable `L4V_ARCH` to one of `ARM`, `ARM_HYP`, `X64`,
+`RISCV64`, or `AARCH64` to get the proofs for the respective architecture. `ARM`
+has the most complete set of proofs, the other architectures tend to support
+only a subset of the proof sessions defined for `ARM`.
+
+Not all of the proof sessions can be built directly with the `isabelle build`
+command. The seL4 proofs depend on Isabelle specifications that are generated
+from the C source code and Haskell model. Therefore, it is recommended to always
+build using the `run_tests` command or the supplied Makefiles, which will ensure
+that these generated specs are up to date.
 
 To do this, enter one level under the `l4v/` directory and run `make <session-name>`.
-For example, to build the C refinement proof session, do
+For example, to build the abstract specification, do
 
-    cd l4v/proof
-    make CRefine
-
-As another example, to build the session for the Haskell model, do
-
+    export L4V_ARCH=ARM
     cd l4v/spec
-    make ExecSpec
+    make ASpec
 
 See the `HEAPS` variable in the corresponding `Makefile` for available targets.
+The sessions that directly depend on generated sources are `ASpec`, `ExecSpec`,
+and `CKernel`. These, and all sessions that depend on them, need to be run using
+`run_tests` or `make`.
 
 Proof sessions that do not depend on generated inputs can be built directly with
 
     ./isabelle/bin/isabelle build -d . -v -b <session name>
 
-from the directory `l4v/`. For available sessions, see the corresponding
-`ROOT` files in this repository. There is roughly one session corresponding to
-each major directory in the repository.
+from the directory `l4v/`. For available sessions and their dependencies, see
+the corresponding `ROOT` files in this repository. There is roughly one session
+corresponding to each major directory in the repository.
 
 For interactively exploring, say the invariant proof of the abstract
-specification with a pre-built logic image for the abstract specification and
-all of the invariant proof's dependencies, run
+specification on `ARM`, note that in `proof/ROOT` the parent session for
+`AInvs` is `ASpec` and therefore run:
 
+    export L4V_ARCH=ARM
+    ./run_tests ASpec
     ./isabelle/bin/isabelle jedit -d . -R AInvs
 
-in `l4v/` and open one of the files in `proof/invariant-abstract`.
+or, if you prefer `make`:
 
+    export L4V_ARCH=ARM
+    cd spec; make ASpec
+    ../isabelle/bin/isabelle jedit -d . -R AInvs
+
+in `l4v/` and open one of the files in `proof/invariant-abstract`.

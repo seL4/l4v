@@ -69,10 +69,10 @@ FIXME: Move this change into AutoCorres itself, or the underlying VCG library.
 
 lemmas [wp del] =
   NonDetMonadEx.validE_whenE
-  NonDetMonadVCG.hoare_whenE_wps
+  Nondet_VCG.whenE_wps
 
 lemmas hoare_whenE_wp2 [wp] =
-  NonDetMonadVCG.hoare_whenE_wps[simplified if_apply_def2]
+  Nondet_VCG.whenE_wps[simplified if_apply_def2]
 
 section \<open>Rules for proving @{term ccorres_underlying} goals\<close>
 
@@ -256,11 +256,11 @@ method ccorres_to_corres_pre_step =
   (rule ccorres_to_corres_pre_intros | erule ccorres_to_corres_pre_elims)
 
 method ccorres_to_corres_pre_process = (
-  (elim pred_andE)?,
+  (elim inf1E inf2E)?,
   (simp only: Int_assoc)?,
   (ccorres_to_corres_pre_step+)?,
   (rule ccorres_to_corres_pre_finalise),
-  (intro pred_andI TrueI; clarsimp)
+  (intro pred_conjI TrueI; clarsimp)
 )
 
 text \<open>
@@ -296,8 +296,8 @@ lemma ccorres_to_corres_with_termination:
     "\<And>s s'. \<lbrakk> cstate_relation s (globals s'); P s; \<not> snd (dspec_f s); G s' \<rbrakk> \<Longrightarrow>
              \<Gamma> \<turnstile> Call f_'proc \<down> Normal s'"
   shows "corres_underlying {(s, s'). cstate_relation s s'} True True R P Q dspec_f ac_f"
-  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def
-  apply (clarsimp simp: corres_underlying_def ccorres_underlying_def rf_sr_def)
+  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def rf_sr_def
+  apply (clarsimp simp: corres_underlying_def ccorres_underlying_def)
   apply (rule conjI)
    apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
   apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
@@ -334,8 +334,8 @@ lemma ccorres_to_corres_no_termination:
   assumes pre: "\<And>s'. G s' \<Longrightarrow> ccorres_to_corres_pre Q \<top> Q' s'"
   assumes ret: "\<And>r s'. R r (ret_xf s') \<longleftrightarrow> R' r (ret_xf' s')"
   shows "corres_underlying {(s, s'). cstate_relation s s'} True True R P Q dspec_f ac_f"
-  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def
-  apply (clarsimp simp: ac_def corres_underlying_def ccorres_underlying_def rf_sr_def)
+  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def rf_sr_def
+  apply (clarsimp simp: ac_def corres_underlying_def ccorres_underlying_def)
   apply (rule conjI)
    apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
   apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
@@ -694,7 +694,7 @@ lemma exec_no_fault:
   using valid ce asms
   apply -
   apply (frule hoare_sound)
-  apply (clarsimp simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+  apply (clarsimp simp: Nondet_Monad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
   apply (drule spec, drule spec, drule (1) mp)
   apply auto
   done
@@ -707,7 +707,7 @@ lemma exec_no_stuck:
   using valid ce asms
   apply -
   apply (frule hoare_sound)
-  apply (clarsimp simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+  apply (clarsimp simp: Nondet_Monad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
   apply (drule spec, drule spec, drule (1) mp)
   apply auto
   done
@@ -804,17 +804,6 @@ section \<open>Additional infrastructure\<close>
 (* FIXME: Needs reorganisation. Much of the following should be moved elsewhere. *)
 
 context kernel begin
-
-lemma wpc_helper_corres_final:
-  "corres_underlying sr nf nf' rv Q Q' f f'
-   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (corres_underlying sr nf nf' rv P (\<lambda>s. s \<in> P') f f')"
-  apply (clarsimp simp: wpc_helper_def)
-  apply (erule corres_guard_imp)
-   apply auto
-  done
-
-wpc_setup "\<lambda>m. corres_underlying sr nf nf' rv P P' m f'" wpc_helper_corres_final
-wpc_setup "\<lambda>m. corres_underlying sr nf nf' rv P P' (m >>= f) f'" wpc_helper_corres_final
 
 lemma condition_const: "condition (\<lambda>_. P) L R = (if P then L else R)"
   by (simp add: condition_def split: if_splits)
@@ -932,7 +921,7 @@ lemma terminates_spec_no_fail:
       using spec_result_Normal p_spec by simp
     have L1_call_simpl_no_fail:
       "no_fail (\<lambda>s. P s s) (L1_call_simpl check_termination \<Gamma> f_'proc)"
-      apply (wpsimp simp: L1_call_simpl_def wp: non_fail_select select_wp)
+      apply (wpsimp simp: L1_call_simpl_def)
       using terminates normal by auto
     have select_f_L1_call_simpl_no_fail:
       "\<And>s. no_fail (\<lambda>_. P s s) (select_f (L1_call_simpl check_termination \<Gamma> f_'proc s))"
@@ -945,10 +934,10 @@ lemma terminates_spec_no_fail:
       using normal by auto
     show ?thesis
       apply (clarsimp simp: ac AC_call_L1_def L2_call_L1_def)
-      apply (wpsimp wp: select_f_L1_call_simpl_no_fail non_fail_select
-                wp_del: select_f_wp)
-      apply (rule hoare_strengthen_post[OF select_f_L1_call_simpl_rv], fastforce)
-      apply (wpsimp wp: select_wp nf_pre)+
+      apply (wpsimp wp_del: select_f_wp)
+            apply (rule hoare_strengthen_post[OF select_f_L1_call_simpl_rv], fastforce)
+           apply (wpsimp wp: select_f_L1_call_simpl_no_fail)+
+      apply (fastforce simp: nf_pre)
       done
   qed
 

@@ -1,29 +1,8 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      ClosureEx.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2006-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
 *)
 
 theory ClosureEx
@@ -163,13 +142,18 @@ apply (simp only: simp_thms)
 apply clarsimp
 done
 
+declare [[hoare_trace = 1]]
+
+ML \<open>
+val hoare_tacs = #hoare_tacs (Hoare.get_data @{context});
+\<close>
 lemma (in NewCounter_impl')
  shows "\<Gamma>\<turnstile> \<lbrace>1 \<le> \<acute>free\<rbrace>
              \<acute>c :== CALL NewCounter ();;
              dynCallClosure (\<lambda>s. s) upd c_' (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
                          (\<lambda>s t. Basic (\<lambda>u. u\<lparr>r_' := r_' t\<rparr>))
            \<lbrace>\<acute>r=1\<rbrace>"
-apply vcg_step
+  apply vcg_step
 apply (rule dynCallClosure)
 prefer 2
 apply vcg_step

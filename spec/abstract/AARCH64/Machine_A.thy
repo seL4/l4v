@@ -38,7 +38,7 @@ type_synonym asid_len        = 16
 type_synonym asid_rep_len    = asid_len
 type_synonym asid            = "asid_rep_len word"
 
-type_synonym vmid            = "16 word"
+type_synonym vmid            = "8 word"
 
 
 text \<open>

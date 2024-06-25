@@ -1,29 +1,9 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      Termination.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
+Copyright (c) 2022 Apple Inc. All rights reserved.
 *)
 section \<open>Terminating Programs\<close>
 
@@ -207,17 +187,24 @@ next
   qed
 qed
 
+lemma terminates_block_exn:
+"\<lbrakk>\<Gamma>\<turnstile>bdy \<down> Normal (init s);
+  \<forall>t. \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow> Normal t \<longrightarrow> \<Gamma>\<turnstile>c s t \<down> Normal (return s t)\<rbrakk>
+ \<Longrightarrow> \<Gamma>\<turnstile>block_exn init bdy return result_exn c \<down> Normal s"
+apply (unfold block_exn_def)
+apply (fastforce intro: terminates.intros elim!: exec_Normal_elim_cases
+        dest!: not_isAbrD)
+  done
+
 lemma terminates_block:
 "\<lbrakk>\<Gamma>\<turnstile>bdy \<down> Normal (init s);
   \<forall>t. \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow> Normal t \<longrightarrow> \<Gamma>\<turnstile>c s t \<down> Normal (return s t)\<rbrakk>
  \<Longrightarrow> \<Gamma>\<turnstile>block init bdy return c \<down> Normal s"
-apply (unfold block_def)
-apply (fastforce intro: terminates.intros elim!: exec_Normal_elim_cases
-        dest!: not_isAbrD)
-done
+  unfolding block_def
+  by (rule terminates_block_exn)
 
-lemma terminates_block_elim [cases set, consumes 1]:
-assumes termi: "\<Gamma>\<turnstile>block init bdy return c \<down> Normal s"
+lemma terminates_block_exn_elim [cases set, consumes 1]:
+assumes termi: "\<Gamma>\<turnstile>block_exn init bdy return result_exn c \<down> Normal s"
 assumes e: "\<lbrakk>\<Gamma>\<turnstile>bdy \<down> Normal (init s);
           \<forall>t. \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow> Normal t \<longrightarrow> \<Gamma>\<turnstile>c s t \<down> Normal (return s t)
          \<rbrakk> \<Longrightarrow> P"
@@ -227,7 +214,7 @@ proof -
     by (auto intro: exec.intros)
   with termi
   have "\<Gamma>\<turnstile>bdy \<down> Normal (init s)"
-    apply (unfold block_def)
+    apply (unfold block_exn_def)
     apply (elim terminates_Normal_elim_cases)
     by simp
   moreover
@@ -238,10 +225,10 @@ proof -
     proof -
       from exec_bdy
       have "\<Gamma>\<turnstile>\<langle>Catch (Seq (Basic init) bdy)
-                               (Seq (Basic (return s)) Throw),Normal s\<rangle> \<Rightarrow> Normal t"
+                               (Seq (Basic (\<lambda>t. result_exn (return s t) t)) Throw),Normal s\<rangle> \<Rightarrow> Normal t"
         by (fastforce intro: exec.intros)
       with termi have "\<Gamma>\<turnstile>DynCom (\<lambda>t. Seq (Basic (return s)) (c s t)) \<down> Normal t"
-        apply (unfold block_def)
+        apply (unfold block_exn_def)
         apply (elim terminates_Normal_elim_cases)
         by simp
       thus ?thesis
@@ -253,6 +240,14 @@ proof -
   ultimately show P by (iprover intro: e)
 qed
 
+lemma terminates_block_elim [cases set, consumes 1]:
+assumes termi: "\<Gamma>\<turnstile>block init bdy return c \<down> Normal s"
+assumes e: "\<lbrakk>\<Gamma>\<turnstile>bdy \<down> Normal (init s);
+          \<forall>t. \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow> Normal t \<longrightarrow> \<Gamma>\<turnstile>c s t \<down> Normal (return s t)
+         \<rbrakk> \<Longrightarrow> P"
+shows P
+  using termi e unfolding block_def by (rule terminates_block_exn_elim)
+
 
 lemma terminates_call:
 "\<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>bdy \<down> Normal (init s);
@@ -260,6 +255,16 @@ lemma terminates_call:
  \<Longrightarrow> \<Gamma>\<turnstile>call init p return c \<down> Normal s"
   apply (unfold call_def)
   apply (rule terminates_block)
+  apply  (iprover intro: terminates.intros)
+  apply (auto elim: exec_Normal_elim_cases)
+  done
+
+lemma terminates_call_exn:
+"\<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>bdy \<down> Normal (init s);
+  \<forall>t. \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow> Normal t \<longrightarrow> \<Gamma>\<turnstile>c s t \<down> Normal (return s t)\<rbrakk>
+ \<Longrightarrow> \<Gamma>\<turnstile>call_exn init p return result_exn c \<down> Normal s"
+  apply (unfold call_exn_def)
+  apply (rule terminates_block_exn)
   apply  (iprover intro: terminates.intros)
   apply (auto elim: exec_Normal_elim_cases)
   done
@@ -273,8 +278,17 @@ lemma terminates_callUndefined:
   apply (auto elim: exec_Normal_elim_cases)
   done
 
-lemma terminates_call_elim [cases set, consumes 1]:
-assumes termi: "\<Gamma>\<turnstile>call init p return c \<down> Normal s"
+lemma terminates_call_exnUndefined:
+"\<lbrakk>\<Gamma> p = None\<rbrakk>
+ \<Longrightarrow> \<Gamma>\<turnstile>call_exn init p return result_exn result \<down> Normal s"
+  apply (unfold call_exn_def)
+  apply (rule terminates_block_exn)
+  apply  (iprover intro: terminates.intros)
+  apply (auto elim: exec_Normal_elim_cases)
+  done
+
+lemma terminates_call_exn_elim [cases set, consumes 1]:
+assumes termi: "\<Gamma>\<turnstile>call_exn init p return result_exn c \<down> Normal s"
 assumes bdy: "\<And>bdy. \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>bdy \<down> Normal (init s);
      \<forall>t. \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow> Normal t \<longrightarrow> \<Gamma>\<turnstile>c s t \<down> Normal (return s t)\<rbrakk> \<Longrightarrow> P"
 assumes undef: "\<lbrakk>\<Gamma> p = None\<rbrakk> \<Longrightarrow> P"
@@ -282,8 +296,8 @@ shows P
 apply (cases "\<Gamma> p")
 apply  (erule undef)
 using termi
-apply (unfold call_def)
-apply (erule terminates_block_elim)
+apply (unfold call_exn_def)
+apply (erule terminates_block_exn_elim)
 apply (erule terminates_Normal_elim_cases)
 apply  simp
 apply  (frule (1) bdy)
@@ -292,12 +306,43 @@ apply  assumption
 apply simp
 done
 
+lemma terminates_call_elim [cases set, consumes 1]:
+assumes termi: "\<Gamma>\<turnstile>call init p return c \<down> Normal s"
+assumes bdy: "\<And>bdy. \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>bdy \<down> Normal (init s);
+     \<forall>t. \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow> Normal t \<longrightarrow> \<Gamma>\<turnstile>c s t \<down> Normal (return s t)\<rbrakk> \<Longrightarrow> P"
+assumes undef: "\<lbrakk>\<Gamma> p = None\<rbrakk> \<Longrightarrow> P"
+shows P
+  using termi bdy undef unfolding call_call_exn by (rule terminates_call_exn_elim)
+
+
 lemma terminates_dynCall:
 "\<lbrakk>\<Gamma>\<turnstile>call init (p s) return c \<down> Normal s\<rbrakk>
  \<Longrightarrow> \<Gamma>\<turnstile>dynCall init p return c \<down> Normal s"
   apply (unfold dynCall_def)
   apply (auto intro: terminates.intros terminates_call)
   done
+
+lemma terminates_guards: "\<Gamma>\<turnstile>c \<down> Normal s \<Longrightarrow> \<Gamma>\<turnstile>guards gs c \<down> Normal s"
+  by (induct gs) (auto intro: terminates.intros)
+
+lemma terminates_guards_Fault: "find (\<lambda>(f, g). s \<notin> g) gs = Some (f, g) \<Longrightarrow> \<Gamma>\<turnstile>guards gs c \<down> Normal s"
+ by (induct gs) (auto intro: terminates.intros split: if_split_asm prod.splits)
+
+lemma terminates_maybe_guard_Fault: "s \<notin> g \<Longrightarrow> \<Gamma>\<turnstile>maybe_guard f g c \<down> Normal s"
+  by (metis UNIV_I maybe_guard_def terminates.GuardFault)
+
+lemma terminates_guards_DynCom: "\<Gamma>\<turnstile>(c s) \<down> Normal s \<Longrightarrow> \<Gamma>\<turnstile>guards gs (DynCom c) \<down> Normal s"
+  by (induct gs) (auto intro: terminates.intros)
+
+lemma terminates_maybe_guard_DynCom: "\<Gamma>\<turnstile>(c s) \<down> Normal s \<Longrightarrow> \<Gamma>\<turnstile>maybe_guard f g (DynCom c) \<down> Normal s"
+  by (metis maybe_guard_def terminates.DynCom terminates.Guard terminates.GuardFault)
+
+
+lemma terminates_dynCall_exn:
+"\<lbrakk>\<Gamma>\<turnstile>call_exn init (p s) return result_exn c \<down> Normal s\<rbrakk>
+ \<Longrightarrow> \<Gamma>\<turnstile>dynCall_exn f g init p return result_exn c \<down> Normal s"
+  apply (unfold dynCall_exn_def)
+  by (rule terminates_maybe_guard_DynCom)
 
 lemma terminates_dynCall_elim [cases set, consumes 1]:
 assumes termi: "\<Gamma>\<turnstile>dynCall init p return c \<down> Normal s"
@@ -309,6 +354,34 @@ apply (elim terminates_Normal_elim_cases)
 apply fact
 done
 
+lemma terminates_guards_elim [cases set, consumes 1, case_names noFault someFault]:
+  assumes termi: "\<Gamma>\<turnstile>guards gs c \<down> Normal s"
+  assumes noFault: "\<lbrakk>\<forall>f g. (f, g) \<in> set gs \<longrightarrow> s \<in> g; \<Gamma>\<turnstile>c \<down> Normal s\<rbrakk> \<Longrightarrow> P"
+  assumes someFault: "\<And>f g. find (\<lambda>(f,g). s \<notin> g) gs = Some (f, g) \<Longrightarrow> P"
+  shows P
+  using termi noFault someFault
+  by (induct gs)
+     (auto elim: terminates_Normal_elim_cases split: if_split_asm prod.splits)
+
+lemma terminates_maybe_guard_elim [cases set, consumes 1, case_names noFault someFault]:
+  assumes termi: "\<Gamma>\<turnstile>maybe_guard f g c \<down> Normal s"
+  assumes noFault: "\<lbrakk>s \<in> g; \<Gamma>\<turnstile>c \<down> Normal s\<rbrakk> \<Longrightarrow> P"
+  assumes someFault: "s \<notin> g \<Longrightarrow> P"
+  shows P
+  using termi noFault someFault
+  by (metis maybe_guard_def terminates_Normal_elim_cases(2))
+
+lemma terminates_dynCall_exn_elim [cases set, consumes 1, case_names noFault someFault]:
+assumes termi: "\<Gamma>\<turnstile>dynCall_exn f g init p return result_exn c \<down> Normal s"
+assumes noFault: "\<lbrakk>s \<in> g;
+ \<Gamma>\<turnstile>call_exn init (p s) return result_exn c \<down> Normal s\<rbrakk> \<Longrightarrow> P"
+assumes someFault: "s \<notin> g \<Longrightarrow> P"
+shows P
+using termi noFault someFault
+  apply (unfold dynCall_exn_def)
+  apply (erule terminates_maybe_guard_elim)
+  apply (auto elim: terminates_Normal_elim_cases)
+  done
 
 (* ************************************************************************* *)
 subsection \<open>Lemmas about @{const "sequence"}, @{const "flatten"} and

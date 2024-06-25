@@ -38,6 +38,18 @@ instance
 
 end
 
+context
+  includes bit_operations_syntax
+begin
+
+lemma fixes i :: int
+  shows int_set_bit_True_conv_OR [code]: "Generic_set_bit.set_bit i n True = i OR push_bit n 1"
+  and int_set_bit_False_conv_NAND [code]: "Generic_set_bit.set_bit i n False = i AND NOT (push_bit n 1)"
+  and int_set_bit_conv_ops: "Generic_set_bit.set_bit i n b = (if b then i OR (push_bit n 1) else i AND NOT (push_bit n 1))"
+  by (simp_all add: bit_eq_iff) (auto simp add: bit_simps)
+
+end
+
 instantiation word :: (len) set_bit
 begin
 
@@ -120,5 +132,21 @@ lemma one_bit_shiftl: "set_bit 0 n True = (1 :: 'a :: len word) << n"
 
 lemma one_bit_pow: "set_bit 0 n True = (2 :: 'a :: len word) ^ n"
   by (simp add: one_bit_shiftl shiftl_def)
+
+instantiation integer :: set_bit
+begin
+
+context
+  includes integer.lifting
+begin
+
+lift_definition set_bit_integer :: \<open>integer \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> integer\<close> is set_bit .
+
+instance
+  by (standard; transfer) (simp add: bit_simps)
+
+end
+
+end
 
 end

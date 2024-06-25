@@ -30,7 +30,7 @@ crunch irq_masks[IRQMasks_IF_assms, wp]: invoke_untyped "\<lambda>s. P (irq_mask
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (  wp: select_wp crunch_wps dmo_wp no_irq
+  (  wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"
@@ -77,14 +77,14 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   apply (simp add: getActiveIRQ_def)
   apply (rule hoare_pre, rule dmo_wp)
    apply (insert irq_oracle_max_irq)
-   apply (wp alternative_wp select_wp dmo_getActiveIRQ_irq_masks)
+   apply (wp dmo_getActiveIRQ_irq_masks)
   apply clarsimp
   done
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: activate_thread "\<lambda>s. P (irq_masks_of_state s)"
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: schedule "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp alternative_wp select_wp crunch_wps simp: crunch_simps)
+  (wp: dmo_wp crunch_wps simp: crunch_simps)
 
 end
 
@@ -125,23 +125,23 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
    (* just ThreadControl left *)
    apply (simp add: split_def cong: option.case_cong)
    apply wpsimp+
-       apply (rule hoare_post_impErr[OF cap_delete_irq_masks[where P=P]])
+       apply (rule hoare_strengthen_postE[OF cap_delete_irq_masks[where P=P]])
         apply blast
        apply blast
-      apply (wpsimp wp: hoare_vcg_all_lift_R hoare_vcg_const_imp_lift_R
+      apply (wpsimp wp: hoare_vcg_all_liftE_R hoare_vcg_const_imp_lift_R hoare_vcg_all_lift hoare_drop_imps
                         checked_cap_insert_domain_sep_inv)+
       apply (rule_tac Q="\<lambda> r s. domain_sep_inv False st s \<and> P (irq_masks_of_state s)"
-                  and E="\<lambda>_ s. P (irq_masks_of_state s)" in hoare_post_impErr)
+                  and E="\<lambda>_ s. P (irq_masks_of_state s)" in hoare_strengthen_postE)
         apply (wp hoare_vcg_conj_liftE1 cap_delete_irq_masks)
        apply fastforce
       apply blast
-     apply (wpsimp wp: static_imp_wp hoare_vcg_all_lift checked_cap_insert_domain_sep_inv)+
+     apply (wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift checked_cap_insert_domain_sep_inv)+
      apply (rule_tac Q="\<lambda> r s. domain_sep_inv False st s \<and> P (irq_masks_of_state s)"
-                 and E="\<lambda>_ s. P (irq_masks_of_state s)" in hoare_post_impErr)
+                 and E="\<lambda>_ s. P (irq_masks_of_state s)" in hoare_strengthen_postE)
        apply (wp hoare_vcg_conj_liftE1 cap_delete_irq_masks)
       apply fastforce
      apply blast
-    apply (simp add: option_update_thread_def | wp static_imp_wp hoare_vcg_all_lift | wpc)+
+    apply (simp add: option_update_thread_def | wp hoare_weak_lift_imp hoare_vcg_all_lift | wpc)+
   by fastforce+
 
 lemma init_arch_objects_irq_masks:

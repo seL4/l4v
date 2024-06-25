@@ -979,7 +979,7 @@ lemma non_disjoing_subset: "\<lbrakk>A \<subseteq> B; A \<inter> C \<noteq> {}\<
 
 lemma pspace_no_overlap_same_type:
   "\<lbrakk>pspace_no_overlap S s; ko_at k p s; a_type ko = a_type k\<rbrakk>
-    \<Longrightarrow> pspace_no_overlap S (kheap_update (\<lambda>_. (kheap s(p \<mapsto> ko))) s)"
+    \<Longrightarrow> pspace_no_overlap S (kheap_update (\<lambda>_. (kheap s)(p \<mapsto> ko)) s)"
   unfolding pspace_no_overlap_def
   by (clarsimp simp: obj_at_def obj_bits_T)
 
@@ -1904,7 +1904,7 @@ locale retype_region_proofs_invs
   fixes region_in_kernel_window :: "machine_word set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   assumes valid_global_refs: "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
   assumes valid_arch_state: "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
-  assumes valid_vspace_objs': "valid_vspace_objs s \<Longrightarrow> valid_vspace_objs s'"
+  assumes valid_vspace_objs': "\<lbrakk> invs s; valid_vspace_objs s \<rbrakk> \<Longrightarrow> valid_vspace_objs s'"
   assumes valid_cap:
     "(s::'state_ext state) \<turnstile> cap \<and>
         untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}
@@ -2154,13 +2154,6 @@ lemma pspace_no_overlap_typ_at_lift:
 lemma swp_clearMemoryVM [simp]:
   "swp clearMemoryVM x = (\<lambda>_. return ())"
   by (rule ext,simp)
-
-
-(* FIXME: move *)
-lemma bind_assoc_reverse:
-  "(do x \<leftarrow> A; _ \<leftarrow> B x; C x od) =
-   (do x \<leftarrow> do x \<leftarrow> A; _ \<leftarrow> B x; return x od; C x od)"
-by (simp only: bind_assoc return_bind)
 
 
 (* FIXME: move *)
