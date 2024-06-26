@@ -807,7 +807,8 @@ lemmas simple_lift_simps =
   simple_lift_field_update_t
   c_guard_array_field
   nat_to_bin_string_simps
-
+  signed_or_unsigned
+  
 (* Old name for the above simpset. *)
 lemmas typ_simple_heap_simps = simple_lift_simps
 

@@ -9,7 +9,6 @@ theory Vanilla32
 imports Word_Mem_Encoding CTypes
 begin
 
-
 overloading typ_info_word \<equiv> typ_info_t begin
 definition
   typ_info_word: "typ_info_word (w::'a::len8 word itself) \<equiv> word_tag w"
@@ -337,7 +336,7 @@ lemma ptr_typ_name [simp]:
   by simp
 
 lemma word_typ_name [simp]:
-  "typ_name (typ_info_t TYPE('a::len8 word)) = ''word'' @ nat_to_bin_string (len_of TYPE('a))"
+  "typ_name (typ_info_t TYPE('a::len8 word)) = signed_or_unsigned_as_str TYPE('a) @ ''word'' @ nat_to_bin_string (len_of TYPE('a))"  
   by simp
 
 lemma nat_to_bin_string_word_sizes [simp]:
@@ -357,19 +356,19 @@ lemma typ_name_words [simp]:
    "typ_name (typ_info_t  TYPE(16 word)) = ''word000010''"
    "typ_name (typ_info_t  TYPE(32 word)) = ''word0000010''"
    "typ_name (typ_info_t  TYPE(64 word)) = ''word00000010''"
-  by (auto simp: typ_uinfo_t_def)
+  by (auto simp: typ_uinfo_t_def signed_or_unsigned)
 
 lemma typ_name_swords [simp]:
-   "typ_name (typ_uinfo_t TYPE(8 sword))  = ''word00010''"
-   "typ_name (typ_uinfo_t TYPE(16 sword)) = ''word000010''"
-   "typ_name (typ_uinfo_t TYPE(32 sword)) = ''word0000010''"
-   "typ_name (typ_uinfo_t TYPE(64 sword)) = ''word00000010''"
+   "typ_name (typ_uinfo_t TYPE(8 sword))  = ''sword00010''"
+   "typ_name (typ_uinfo_t TYPE(16 sword)) = ''sword000010''"
+   "typ_name (typ_uinfo_t TYPE(32 sword)) = ''sword0000010''"
+   "typ_name (typ_uinfo_t TYPE(64 sword)) = ''sword00000010''"
    (* these do not fire in a simple simp, because typ_info_word takes precedence (innermost term): *)
-   "typ_name (typ_info_t  TYPE(8 sword))  = ''word00010''"
-   "typ_name (typ_info_t  TYPE(16 sword)) = ''word000010''"
-   "typ_name (typ_info_t  TYPE(32 sword)) = ''word0000010''"
-   "typ_name (typ_info_t  TYPE(64 sword)) = ''word00000010''"
-  by (auto simp: typ_uinfo_t_def)
+   "typ_name (typ_info_t  TYPE(8 sword))  = ''sword00010''"
+   "typ_name (typ_info_t  TYPE(16 sword)) = ''sword000010''"
+   "typ_name (typ_info_t  TYPE(32 sword)) = ''sword0000010''"
+   "typ_name (typ_info_t  TYPE(64 sword)) = ''sword00000010''"
+  by (auto simp: typ_uinfo_t_def signed_or_unsigned)
 
 lemma ptr_arith[simp]:
   "(x +\<^sub>p a = y +\<^sub>p a) = ((x::('a::c_type) ptr) = (y::'a ptr))"

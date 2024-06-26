@@ -12,6 +12,6 @@ begin
 definition
   word_tag :: "'a::len8 word itself \<Rightarrow> 'a word typ_info"
 where
-  "word_tag (w::'a::len8 word itself) \<equiv> TypDesc (TypScalar (len_of TYPE('a) div 8) (len_exp TYPE('a)) \<lparr> field_access = \<lambda>v bs. (rev o word_rsplit) v, field_update = \<lambda>bs v. (word_rcat (rev bs)::'a::len8 word) \<rparr>)  (''word'' @  nat_to_bin_string (len_of TYPE('a)) )"
+  "word_tag (w::'a::len8 word itself) \<equiv> TypDesc (TypScalar (len_of TYPE('a) div 8) (len_exp TYPE('a)) \<lparr> field_access = \<lambda>v bs. (rev o word_rsplit) v, field_update = \<lambda>bs v. (word_rcat (rev bs)::'a::len8 word) \<rparr>)  (signed_or_unsigned_as_str TYPE('a) @ ''word'' @ nat_to_bin_string (len_of TYPE('a)) )"
 
 end
