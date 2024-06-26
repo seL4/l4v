@@ -1,6 +1,6 @@
 
 theory HeapTac
-imports CParser.CTranslation "../../lib/clib/TypHeapLib" "../../lib/ml-helpers/TermPatternAntiquote"
+imports CParser.CTranslation CParser.TypHeapLib "../../lib/ML_Utils/TermPatternAntiquote"
 begin
 
 text \<open> The basic idea is that we wish to take a term Q and construct a term P such that
@@ -613,16 +613,14 @@ lemmas strengthen_via_rewr_cleanup_rules [umm_cleanup] =
   heaptac_h_t_valid_ptr_safe
   heaptac_h_t_valid_h_t_valid
 
-method_setup umm_strg = {* Umm_Support.method *}
-  "Simplify lift_t/heap_update"
+method_setup umm_strg = \<open> Umm_Support.method \<close> "Simplify lift_t/heap_update"
 
-method_setup umm_strg_imp_lhs = {* Umm_Support.method_imp_lhs *}
+method_setup umm_strg_imp_lhs = \<open> Umm_Support.method_imp_lhs \<close>
   "Simplify lift_t/heap_update on the LHS of an implication"
-
-method_setup umm_strg_asms = {* Umm_Support.method_asm *}
+method_setup umm_strg_asms = \<open> Umm_Support.method_asm \<close>
   "Simplify lift_t/heap_update on the assumptions of the current goal"
 
-method_setup umm_strg_full = {* Umm_Support.method_full *}
+method_setup umm_strg_full = \<open> Umm_Support.method_full \<close>
   "Simplify lift_t/heap_update on assumptions and concl. of the current goal"
 
 lemma umm_all_cong [umm_cong]:
