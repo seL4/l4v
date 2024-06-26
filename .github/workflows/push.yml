@@ -31,3 +31,5 @@ jobs:
       - uses: seL4/ci-actions/link-check@master
         with:
           token: ${{ secrets.READ_TOKEN }}
+          # produces 403 for link checkers now:
+          exclude_urls: ".*haskellstack.org.*"
