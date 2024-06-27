@@ -223,7 +223,7 @@ lemma cteDelete_ccorres1:
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply vcg
    apply wp
-   apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R)
+   apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_strengthen_postE_R)
     apply (wp cutMon_validE_drop finaliseSlot_invs)
    apply fastforce
   apply (auto simp: cintr_def)
@@ -300,7 +300,7 @@ lemma cteDelete_invs'':
   "\<lbrace>invs' and sch_act_simple and (\<lambda>s. ex \<or> ex_cte_cap_to' ptr s)\<rbrace> cteDelete ptr ex \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (rule hoare_pre, wp finaliseSlot_invs)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (unfold validE_R_def)
     apply (rule use_spec)
     apply (rule spec_valid_conj_liftE1)
@@ -629,7 +629,7 @@ lemma reduceZombie_ccorres1:
          apply (clarsimp simp: throwError_def return_def cintr_def)
         apply vcg
        apply (wp cutMon_validE_drop)
-       apply (rule_tac Q'="\<lambda>rv. invs' and cte_at' slot and valid_cap' cap" in hoare_post_imp_R)
+       apply (rule_tac Q'="\<lambda>rv. invs' and cte_at' slot and valid_cap' cap" in hoare_strengthen_postE_R)
         apply (wp cteDelete_invs'')
        apply (clarsimp simp: cte_wp_at_ctes_of)
        apply (fastforce dest: ctes_of_valid')

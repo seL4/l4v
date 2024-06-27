@@ -294,7 +294,7 @@ lemma decode_invocation_nonep:
    decode_invocation cap cap_ref extra_caps intent
    \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
   apply (simp add: decode_invocation_def)
-  apply (wpsimp simp: o_def nonep_invocation_def simp_del: hoare_True_E_R)
+  apply (wpsimp simp: o_def nonep_invocation_def wp: wp_post_tauts)
   apply (auto simp: ep_related_cap_def)
   done
 
@@ -318,8 +318,8 @@ lemma wp_no_exception_seq_r:
       and validE_f: "\<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. P' r\<rbrace>,\<lbrace>\<lambda>r. Inv\<rbrace>"
   shows "\<lbrace>P\<rbrace> f >>=E g \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r. Inv\<rbrace>"
   apply (rule hoare_pre)
-  apply (rule hoare_vcg_seqE)
-    apply (rule hoare_post_impErr[OF validE_g])
+  apply (rule bindE_wp)
+    apply (rule hoare_strengthen_postE[OF validE_g])
      apply simp
     apply simp
    apply (wp validE_f)
@@ -396,7 +396,7 @@ lemma handle_event_syscall_no_decode_exception:
      apply (rule_tac P = " y = cur_thread \<and>
        cdl_intent_extras (cdl_tcb_intent ya) = intent_extra" in hoare_gen_asmEx)
      apply simp
-     apply (rule hoare_post_impErr[OF no_exception_conj])
+     apply (rule hoare_strengthen_postE[OF no_exception_conj])
         apply (rule_tac r = yb in lookup_extra_caps_exec)
        prefer 2
        apply (elim conjE)
@@ -406,7 +406,7 @@ lemma handle_event_syscall_no_decode_exception:
     apply (rule_tac P = "(cdl_intent_cap (cdl_tcb_intent ya)) = intent_cptr
        \<and> y = cur_thread"
        in hoare_gen_asmEx)
-    apply (rule hoare_post_impErr[OF no_exception_conj])
+    apply (rule hoare_strengthen_postE[OF no_exception_conj])
        apply simp
        apply (rule lookup_cap_and_slot_exec)
       prefer 2
@@ -578,9 +578,7 @@ lemma call_kernel_with_intent_no_fault_helper:
                 | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
          apply (case_tac r, simp_all)[1]
         apply (simp add: validE_def[symmetric])
-        apply (rule hoare_pre, wp)
-          apply (simp add: validE_def, (wp | simp add: validE_def[symmetric])+)
-          apply (wp handle_pending_interrupts_no_ntf_cap)
+        apply (wp handle_pending_interrupts_no_ntf_cap)
          apply (rule handle_event_syscall_no_decode_exception
                    [where cur_thread = root_tcb_id
                       and intent_op = intent_op
@@ -594,7 +592,7 @@ lemma call_kernel_with_intent_no_fault_helper:
              apply (rule non_ep_cap)
             apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
                  mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[2]
-          apply (rule hoare_post_impErr[OF perform_invocation_hold])
+          apply (rule hoare_strengthen_postE[OF perform_invocation_hold])
            apply (fastforce simp:sep_state_projection_def sep_any_def
              sep_map_c_def sep_conj_def)
           apply simp
@@ -838,7 +836,7 @@ lemma syscall_valid_helper_allow_error:
     apply (wp mark_tcb_intent_error_no_error)
     apply (rule hoare_drop_imp,simp)
    apply simp
-  apply (rule hoare_post_impErr)
+  apply (rule hoare_strengthen_postE)
     apply fastforce
    apply simp
   apply simp
@@ -947,7 +945,7 @@ lemma handle_event_syscall_allow_error:
      apply (rule_tac P = "
        cdl_intent_extras (cdl_tcb_intent ya) = intent_extra" in hoare_gen_asmEx)
      apply simp
-     apply (rule hoare_post_impErr[OF no_exception_conj])
+     apply (rule hoare_strengthen_postE[OF no_exception_conj])
         apply (rule_tac r = r in lookup_extra_caps_exec)
        prefer 2
        apply (elim conjE)
@@ -1071,10 +1069,7 @@ lemma call_kernel_with_intent_allow_error_helper:
                 | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
          apply (case_tac r, simp_all)[1]
         apply (simp add: validE_def[symmetric])
-        apply (rule hoare_pre, wp)
-          apply (simp add: validE_def, (wp | simp add: validE_def[symmetric])+)
-          apply (wp handle_pending_interrupts_no_ntf_cap)
-
+        apply (wp handle_pending_interrupts_no_ntf_cap)
          apply (rule handle_event_syscall_allow_error
                        [where cur_thread = root_tcb_id
                           and intent_op = intent_op
@@ -1086,13 +1081,13 @@ lemma call_kernel_with_intent_allow_error_helper:
                   apply (rule lookup_extra_caps_exec)
                  apply (rule lookup_cap_and_slot_exec)
                 apply (unfold validE_R_def)
-                apply (rule hoare_post_impErr)
+                apply (rule hoare_strengthen_postE)
                   apply (rule lookup_cap_and_slot_exec)
                  apply simp
                 apply simp
                apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
                           mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[4]
-           apply (rule hoare_post_impErr[OF perform_invocation_hold])
+           apply (rule hoare_strengthen_postE[OF perform_invocation_hold])
             apply (fastforce simp:sep_state_projection_def sep_any_def sep_map_c_def sep_conj_def)
            apply simp
           apply (wp set_restart_cap_hold)

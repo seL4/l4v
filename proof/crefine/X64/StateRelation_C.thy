@@ -16,8 +16,7 @@ definition
 definition
   "array_relation r n a c \<equiv> \<forall>i \<le> n. r (a i) (index c (unat i))"
 
-(* used for bound ntfn/tcb *)
-definition
+definition option_to_ctcb_ptr :: "machine_word option \<Rightarrow> tcb_C ptr" where
   "option_to_ctcb_ptr x \<equiv> case x of None \<Rightarrow> NULL | Some t \<Rightarrow> tcb_ptr_to_ctcb_ptr t"
 
 
@@ -192,6 +191,7 @@ where
     global_ioport_bitmap_relation (clift (t_hrs_' cstate)) (x64KSAllocatedIOPorts astate) \<and>
     fpu_null_state_relation (t_hrs_' cstate) \<and>
     x64KSNumIOAPICs astate = UCAST (32 \<rightarrow> 64) (num_ioapics_' cstate) \<and>
+    array_relation (=) (of_nat Kernel_Config.maxNumIOAPIC) (x64KSIOAPICnIRQs astate) (ioapic_nirqs_' cstate) \<and>
     array_relation x64_irq_state_relation maxIRQ (x64KSIRQState astate) (x86KSIRQState_' cstate) \<and>
     carch_globals astate"
 
@@ -439,7 +439,9 @@ where
      \<and> tcbTimeSlice atcb    = unat (tcbTimeSlice_C ctcb)
      \<and> cfault_rel (tcbFault atcb) (seL4_Fault_lift (tcbFault_C ctcb))
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))
-     \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb"
+     \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb
+     \<and> option_to_ctcb_ptr (tcbSchedPrev atcb) = tcbSchedPrev_C ctcb
+     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb"
 
 abbreviation
   "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"
@@ -776,17 +778,17 @@ definition
 where
   "cready_queues_index_to_C qdom prio \<equiv> (unat qdom) * numPriorities + (unat prio)"
 
-definition cready_queues_relation ::
-  "tcb_C typ_heap \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue) \<Rightarrow> bool"
-where
-  "cready_queues_relation h_tcb queues aqueues \<equiv>
-     \<forall>qdom prio. ((qdom \<ge> ucast minDom \<and> qdom \<le> ucast maxDom \<and>
-                  prio \<ge> ucast minPrio \<and> prio \<le> ucast maxPrio) \<longrightarrow>
-       (let cqueue = index queues (cready_queues_index_to_C qdom prio) in
-            sched_queue_relation' h_tcb (aqueues (qdom, prio)) (head_C cqueue) (end_C cqueue)))
-        \<and> (\<not> (qdom \<ge> ucast minDom \<and> qdom \<le> ucast maxDom \<and>
-                  prio \<ge> ucast minPrio \<and> prio \<le> ucast maxPrio) \<longrightarrow> aqueues (qdom, prio) = [])"
+definition ctcb_queue_relation :: "tcb_queue \<Rightarrow> tcb_queue_C \<Rightarrow> bool" where
+   "ctcb_queue_relation aqueue cqueue \<equiv>
+      head_C cqueue = option_to_ctcb_ptr (tcbQueueHead aqueue)
+      \<and> end_C cqueue = option_to_ctcb_ptr (tcbQueueEnd aqueue)"
 
+definition cready_queues_relation ::
+  "(domain \<times> priority \<Rightarrow> ready_queue) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow>  bool"
+  where
+  "cready_queues_relation aqueues cqueues \<equiv>
+     \<forall>d p. d \<le> maxDomain \<and> p \<le> maxPriority
+           \<longrightarrow> ctcb_queue_relation (aqueues (d, p)) (index cqueues (cready_queues_index_to_C d p))"
 
 abbreviation
   "cte_array_relation astate cstate
@@ -926,9 +928,7 @@ where
   "cstate_relation astate cstate \<equiv>
      let cheap = t_hrs_' cstate in
        cpspace_relation (ksPSpace astate) (underlying_memory (ksMachineState astate)) cheap \<and>
-       cready_queues_relation (clift cheap)
-                             (ksReadyQueues_' cstate)
-                             (ksReadyQueues astate) \<and>
+       cready_queues_relation (ksReadyQueues astate) (ksReadyQueues_' cstate) \<and>
        zero_ranges_are_zero (gsUntypedZeroRanges astate) cheap \<and>
        cbitmap_L1_relation (ksReadyQueuesL1Bitmap_' cstate) (ksReadyQueuesL1Bitmap astate) \<and>
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>

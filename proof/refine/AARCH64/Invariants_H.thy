@@ -9,6 +9,7 @@ theory Invariants_H
 imports
   LevityCatch
   "AInvs.ArchDetSchedSchedule_AI"
+  "Lib.Heap_List"
 begin
 
 (* global data and code of the kernel, not covered by any cap *)
@@ -141,6 +142,21 @@ definition cte_wp_at' :: "(cte \<Rightarrow> bool) \<Rightarrow> obj_ref \<Right
 abbreviation cte_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "cte_at' \<equiv> cte_wp_at' \<top>"
 
+abbreviation tcb_of' :: "kernel_object \<Rightarrow> tcb option" where
+  "tcb_of' \<equiv> projectKO_opt"
+
+abbreviation tcbs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> tcb option" where
+  "tcbs_of' s \<equiv> ksPSpace s |> tcb_of'"
+
+abbreviation tcbSchedPrevs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+   "tcbSchedPrevs_of s \<equiv> tcbs_of' s |> tcbSchedPrev"
+
+abbreviation tcbSchedNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "tcbSchedNexts_of s \<equiv> tcbs_of' s |> tcbSchedNext"
+
+abbreviation sym_heap_sched_pointers :: "global.kernel_state \<Rightarrow> bool" where
+  "sym_heap_sched_pointers s \<equiv> sym_heap (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
+
 definition tcb_cte_cases :: "machine_word \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
  "tcb_cte_cases \<equiv> [ 0 << cteSizeBits \<mapsto> (tcbCTable, tcbCTable_update),
                     1 << cteSizeBits \<mapsto> (tcbVTable, tcbVTable_update),
@@ -193,8 +209,10 @@ definition state_refs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> (
 (* the non-hyp, non-arch part of live' *)
 primrec live0' :: "Structures_H.kernel_object \<Rightarrow> bool" where
   "live0' (KOTCB tcb) =
-     (bound (tcbBoundNotification tcb) \<or>
-     (tcbState tcb \<noteq> Inactive \<and> tcbState tcb \<noteq> IdleThreadState) \<or>  tcbQueued tcb)"
+     (bound (tcbBoundNotification tcb)
+      \<or> tcbSchedPrev tcb \<noteq> None \<or> tcbSchedNext tcb \<noteq> None
+      \<or> tcbQueued tcb
+      \<or> (tcbState tcb \<noteq> Inactive \<and> tcbState tcb \<noteq> IdleThreadState))"
 | "live0' (KOCTE cte)           = False"
 | "live0' (KOEndpoint ep)       = (ep \<noteq> IdleEP)"
 | "live0' (KONotification ntfn) = (bound (ntfnBoundTCB ntfn) \<or> (\<exists>ts. ntfnObj ntfn = WaitingNtfn ts))"
@@ -252,14 +270,14 @@ definition hyp_live' :: "kernel_object \<Rightarrow> bool" where
 
 definition live' :: "kernel_object \<Rightarrow> bool" where
  "live' ko \<equiv> case ko of
-    (KOTCB tcb)           => live0' ko \<or> hyp_live' ko
-  | (KOCTE cte)           => False
-  | (KOEndpoint ep)       => live0' ko
-  | (KONotification ntfn) => live0' ko
-  | (KOUserData)          => False
-  | (KOUserDataDevice)    => False
-  | (KOKernelData)        => False
-  | (KOArch ako)          => hyp_live' ko"
+    KOTCB tcb           => live0' ko \<or> hyp_live' ko
+  | KOCTE cte           => False
+  | KOEndpoint ep       => live0' ko
+  | KONotification ntfn => live0' ko
+  | KOUserData          => False
+  | KOUserDataDevice    => False
+  | KOKernelData        => False
+  | KOArch ako          => hyp_live' ko"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -439,6 +457,7 @@ where valid_cap'_def:
   | UntypedCap d r n f \<Rightarrow>
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
+        \<and> canonical_address r
   | EndpointCap r badge x y z t \<Rightarrow> ep_at' r s
   | NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -482,6 +501,11 @@ definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
 definition   valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_tcb' \<equiv> \<lambda>t s. \<forall>v. atcbVCPUPtr t = Some v \<longrightarrow> vcpu_at' v s "
 
+abbreviation opt_tcb_at' :: "machine_word option \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "opt_tcb_at' \<equiv> none_top tcb_at'"
+
+lemmas opt_tcb_at'_def = none_top_def
+
 definition valid_tcb' :: "tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_tcb' t s \<equiv> (\<forall>(getF, setF) \<in> ran tcb_cte_cases. s \<turnstile>' cteCap (getF t))
                   \<and> valid_tcb_state' (tcbState t) s
@@ -490,6 +514,8 @@ definition valid_tcb' :: "tcb \<Rightarrow> kernel_state \<Rightarrow> bool" whe
                   \<and> tcbDomain t \<le> maxDomain
                   \<and> tcbPriority t \<le> maxPriority
                   \<and> tcbMCP t \<le> maxPriority
+                  \<and> opt_tcb_at' (tcbSchedPrev t) s
+                  \<and> opt_tcb_at' (tcbSchedNext t) s
                   \<and> valid_arch_tcb' (tcbArch t) s"
 
 definition valid_ep' :: "Structures_H.endpoint \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -497,7 +523,6 @@ definition valid_ep' :: "Structures_H.endpoint \<Rightarrow> kernel_state \<Righ
      IdleEP \<Rightarrow> True
    | SendEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts)
    | RecvEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts)"
-
 
 definition valid_bound_tcb' :: "machine_word option \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_bound_tcb' tcb_opt s \<equiv> case tcb_opt of None \<Rightarrow> True | Some t \<Rightarrow> tcb_at' t s"
@@ -511,13 +536,28 @@ definition valid_ntfn' :: "Structures_H.notification \<Rightarrow> kernel_state 
   | ActiveNtfn b \<Rightarrow> True)
   \<and> valid_bound_tcb' (ntfnBoundTCB ntfn) s"
 
+(* FIXME AARCH64: remove if unused at the end *)
 definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
 
-(* KOArch validity can be lifted from AInvs, since all cases only consist of typ_at' predicates. *)
-definition
-  valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
+definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
+  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> is_aligned vt tcbBlockSizeBits"
+
+(* This is a slight abuse of "canonical_address". What we really need to know for ADT_C in CRefine
+   is that the top pageBits bits of TablePTEs have a known value, because we shift left by pageBits.
+   What we actually know is that this is a physical address, so it is bound by the physical address
+   space size, which depending on config can be 40, 44, or 48. 48 happens to also be the bound for
+   the virtual address space, which canonical_address is for. This is good enough for our purposes. *)
+definition ppn_bounded :: "pte \<Rightarrow> bool" where
+  "ppn_bounded pte \<equiv> case pte of PageTablePTE ppn \<Rightarrow> canonical_address ppn | _ \<Rightarrow> True"
+
+definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
+  "valid_arch_obj' ako \<equiv> case ako of
+     KOPTE pte \<Rightarrow> ppn_bounded pte
+   | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
+   | _ \<Rightarrow> True"
+
+definition valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_obj' ko s \<equiv> case ko of
     KOEndpoint endpoint \<Rightarrow> valid_ep' endpoint s
   | KONotification notification \<Rightarrow> valid_ntfn' notification s
@@ -526,7 +566,7 @@ where
   | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
-  | KOArch arch_kernel_object \<Rightarrow> True"
+  | KOArch ako \<Rightarrow> valid_arch_obj' ako"
 
 definition
   pspace_aligned' :: "kernel_state \<Rightarrow> bool"
@@ -539,6 +579,9 @@ definition
 where
   "pspace_distinct' s \<equiv>
    \<forall>x \<in> dom (ksPSpace s). ps_clear x (objBitsKO (the (ksPSpace s x))) s"
+
+definition pspace_canonical' :: "kernel_state \<Rightarrow> bool" where
+  "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
 
 definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
@@ -802,6 +845,7 @@ definition
 where
   "valid_pspace' \<equiv> valid_objs' and
                    pspace_aligned' and
+                   pspace_canonical' and
                    pspace_distinct' and
                    no_0_obj' and
                    valid_mdb'"
@@ -818,10 +862,15 @@ where
 | "runnable' (Structures_H.BlockedOnSend a b c d e) = False"
 | "runnable' (Structures_H.BlockedOnNotification x) = False"
 
-definition
-  inQ :: "domain \<Rightarrow> priority \<Rightarrow> tcb \<Rightarrow> bool"
-where
- "inQ d p tcb \<equiv> tcbQueued tcb \<and> tcbPriority tcb = p \<and> tcbDomain tcb = d"
+definition inQ :: "domain \<Rightarrow> priority \<Rightarrow> tcb \<Rightarrow> bool" where
+  "inQ d p tcb \<equiv> tcbQueued tcb \<and> tcbPriority tcb = p \<and> tcbDomain tcb = d"
+
+lemma inQ_implies_tcbQueueds_of:
+  "(inQ domain priority |< tcbs_of' s') tcbPtr \<Longrightarrow> (tcbQueued |< tcbs_of' s') tcbPtr"
+  by (clarsimp simp: opt_map_def opt_pred_def inQ_def split: option.splits)
+
+defs ready_qs_runnable_def:
+  "ready_qs_runnable s \<equiv> \<forall>t. obj_at' tcbQueued t s \<longrightarrow> st_tcb_at' runnable' t s"
 
 definition
   (* for given domain and priority, the scheduler bitmap indicates a thread is in the queue *)
@@ -831,15 +880,6 @@ where
   "bitmapQ d p s \<equiv> ksReadyQueuesL1Bitmap s d !! prioToL1Index p
                      \<and> ksReadyQueuesL2Bitmap s (d, invertL1Index (prioToL1Index p))
                          !! unat (p && mask wordRadix)"
-
-definition
-  valid_queues_no_bitmap :: "kernel_state \<Rightarrow> bool"
-where
- "valid_queues_no_bitmap \<equiv> \<lambda>s.
-   (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). obj_at' (inQ d p and runnable' \<circ> tcbState) t s)
-    \<and>  distinct (ksReadyQueues s (d, p))
-    \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
-
 definition
   (* A priority is used as a two-part key into the bitmap structure. If an L2 bitmap entry
      is set without an L1 entry, updating the L1 entry (shared by many priorities) may make
@@ -863,31 +903,62 @@ where
     \<forall>d i. ksReadyQueuesL1Bitmap s d !! i \<longrightarrow> ksReadyQueuesL2Bitmap s (d, invertL1Index i) \<noteq> 0 \<and>
                                              i < l2BitmapSize"
 
-definition
-  valid_bitmapQ :: "kernel_state \<Rightarrow> bool"
-where
-  "valid_bitmapQ \<equiv> \<lambda>s. (\<forall>d p. bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> [])"
+definition valid_bitmapQ :: "kernel_state \<Rightarrow> bool" where
+  "valid_bitmapQ \<equiv> \<lambda>s. \<forall>d p. bitmapQ d p s \<longleftrightarrow> \<not> tcbQueueEmpty (ksReadyQueues s (d,p))"
 
-definition
-  valid_queues :: "kernel_state \<Rightarrow> bool"
-where
- "valid_queues \<equiv> \<lambda>s. valid_queues_no_bitmap s \<and> valid_bitmapQ s \<and>
-                     bitmapQ_no_L2_orphans s \<and> bitmapQ_no_L1_orphans s"
+definition valid_bitmaps :: "kernel_state \<Rightarrow> bool" where
+  "valid_bitmaps \<equiv> \<lambda>s. valid_bitmapQ s \<and> bitmapQ_no_L2_orphans s \<and> bitmapQ_no_L1_orphans s"
 
-definition
-  (* when a thread gets added to / removed from a queue, but before bitmap updated *)
-  valid_bitmapQ_except :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
+lemma valid_bitmaps_valid_bitmapQ[elim!]:
+  "valid_bitmaps s \<Longrightarrow> valid_bitmapQ s"
+  by (simp add: valid_bitmaps_def)
+
+lemma valid_bitmaps_bitmapQ_no_L2_orphans[elim!]:
+  "valid_bitmaps s \<Longrightarrow> bitmapQ_no_L2_orphans s"
+  by (simp add: valid_bitmaps_def)
+
+lemma valid_bitmaps_bitmapQ_no_L1_orphans[elim!]:
+  "valid_bitmaps s \<Longrightarrow> bitmapQ_no_L1_orphans s"
+  by (simp add: valid_bitmaps_def)
+
+lemma valid_bitmaps_lift:
+  assumes prq: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace>"
+  assumes prqL1: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  assumes prqL2: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  shows "f \<lbrace>valid_bitmaps\<rbrace>"
+  unfolding valid_bitmaps_def valid_bitmapQ_def bitmapQ_def
+            bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def
+  apply (rule hoare_pre)
+   apply (wps assms | wpsimp)+
+  done
+
+(* when a thread gets added to / removed from a queue, but before bitmap updated *)
+definition valid_bitmapQ_except :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_bitmapQ_except d' p' \<equiv> \<lambda>s.
-    (\<forall>d p. (d \<noteq> d' \<or> p \<noteq> p') \<longrightarrow> (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []))"
+    \<forall>d p. (d \<noteq> d' \<or> p \<noteq> p') \<longrightarrow> (bitmapQ d p s \<longleftrightarrow> \<not> tcbQueueEmpty (ksReadyQueues s (d,p)))"
 
 lemmas bitmapQ_defs = valid_bitmapQ_def valid_bitmapQ_except_def bitmapQ_def
                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def
 
-definition
-  valid_queues' :: "kernel_state \<Rightarrow> bool"
-where
- "valid_queues' \<equiv> \<lambda>s. \<forall>d p t. obj_at' (inQ d p) t s \<longrightarrow> t \<in> set (ksReadyQueues s (d, p))"
+\<comment> \<open>
+  The tcbSchedPrev and tcbSchedNext fields of a TCB are used only to indicate membership in
+  one of the ready queues. \<close>
+definition valid_sched_pointers_2 ::
+  "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<Rightarrow> bool) \<Rightarrow> bool "
+  where
+  "valid_sched_pointers_2 prevs nexts ready \<equiv>
+     \<forall>ptr. prevs ptr \<noteq> None \<or> nexts ptr \<noteq> None \<longrightarrow> ready ptr"
+
+abbreviation valid_sched_pointers :: "kernel_state \<Rightarrow> bool" where
+  "valid_sched_pointers s \<equiv>
+     valid_sched_pointers_2 (tcbSchedPrevs_of s) (tcbSchedNexts_of s) (tcbQueued |< tcbs_of' s)"
+
+lemmas valid_sched_pointers_def = valid_sched_pointers_2_def
+
+lemma valid_sched_pointersD:
+  "\<lbrakk>valid_sched_pointers s; \<not> (tcbQueued |< tcbs_of' s) t\<rbrakk>
+   \<Longrightarrow> tcbSchedPrevs_of s t = None \<and> tcbSchedNexts_of s t = None"
+  by (fastforce simp: valid_sched_pointers_def in_opt_pred opt_map_red)
 
 definition tcb_in_cur_domain' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "tcb_in_cur_domain' t \<equiv> \<lambda>s. obj_at' (\<lambda>tcb. ksCurDomain s = tcbDomain tcb) t s"
@@ -984,10 +1055,12 @@ definition max_armKSGICVCPUNumListRegs :: nat where
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
    valid_asid_table' (armKSASIDTable (ksArchState s)) \<and>
+   0 \<notin> ran (armKSVMIDTable (ksArchState s)) \<and>
    (case armHSCurVCPU (ksArchState s) of
       Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
       | _ \<Rightarrow> True) \<and>
-   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
+   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs \<and>
+   canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
 
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
@@ -1036,7 +1109,7 @@ abbreviation
 
 definition valid_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_state' \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-                      \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
+                      \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
                       \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
                       \<and> valid_idle' s
                       \<and> valid_global_refs' s \<and> valid_arch_state' s
@@ -1045,7 +1118,9 @@ definition valid_state' :: "kernel_state \<Rightarrow> bool" where
                       \<and> valid_irq_states' s
                       \<and> valid_machine_state' s
                       \<and> irqs_masked' s
-                      \<and> valid_queues' s
+                      \<and> sym_heap_sched_pointers s
+                      \<and> valid_sched_pointers s
+                      \<and> valid_bitmaps s
                       \<and> ct_not_inQ s
                       \<and> ct_idle_or_in_cur_domain' s
                       \<and> pspace_domain_valid s
@@ -1097,6 +1172,11 @@ definition
 abbreviation
   "active' st \<equiv> st = Structures_H.Running \<or> st = Structures_H.Restart"
 
+lemma runnable_eq_active': "runnable' = active'"
+  apply (rule ext)
+  apply (case_tac st, simp_all)
+  done
+
 abbreviation
   "simple' st \<equiv> st = Structures_H.Inactive \<or>
                 st = Structures_H.Running \<or>
@@ -1112,11 +1192,13 @@ abbreviation
 abbreviation(input)
  "all_invs_but_sym_refs_ct_not_inQ'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
+           \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
-           \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s
+           \<and> valid_irq_states' s \<and> irqs_masked' s
+           \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
+           \<and> valid_machine_state' s
+           \<and> cur_tcb' s \<and> ct_idle_or_in_cur_domain' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1124,12 +1206,14 @@ abbreviation(input)
 abbreviation(input)
  "all_invs_but_ct_not_inQ'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
+           \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
-           \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s
+           \<and> valid_irq_states' s \<and> irqs_masked' s
+           \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
+           \<and> valid_machine_state' s
+           \<and> cur_tcb' s \<and> ct_idle_or_in_cur_domain' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1145,12 +1229,14 @@ lemma all_invs_but_not_ct_inQ_check':
 definition
   "all_invs_but_ct_idle_or_in_cur_domain'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
+           \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
-           \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_not_inQ s
+           \<and> valid_irq_states' s \<and> irqs_masked' s
+           \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
+           \<and> valid_machine_state' s
+           \<and> cur_tcb' s \<and> ct_not_inQ s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1670,7 +1756,7 @@ lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
-    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
+    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; pspace_canonical' s; no_0_obj' s;
       valid_mdb' s \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
@@ -1788,7 +1874,7 @@ lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
   by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
-                     typ_at'_def
+                     typ_at'_def pspace_canonical'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
 
 lemma ex_cte_cap_to_pspaceI'[elim]:
@@ -2420,6 +2506,10 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       valid_bound_tcb_lift
                       valid_arch_tcb_lift'
 
+lemma valid_arch_state_armKSGlobalUserVSpace:
+  "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
+  by (simp add: valid_arch_state'_def)
+
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
   by (auto simp add: mdb_next_rel_def mdb_next_def)
@@ -2636,6 +2726,10 @@ lemma pspace_aligned_update [iff]:
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
+
+lemma pspace_canonical_update [iff]:
+  "pspace_canonical' (f s) = pspace_canonical' s"
+  by (simp add: pspace pspace_canonical'_def ps_clear_def)
 
 lemma pred_tcb_at_update [iff]:
   "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
@@ -2953,9 +3047,9 @@ lemma sch_act_wf_arch [simp]:
   "sch_act_wf sa (ksArchState_update f s) = sch_act_wf sa s"
   by (cases sa) (simp_all add: ct_in_state'_def  tcb_in_cur_domain'_def)
 
-lemma valid_queues_arch [simp]:
-  "valid_queues (ksArchState_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
+lemma valid_bitmaps_arch[simp]:
+  "valid_bitmaps (ksArchState_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
 lemma if_unsafe_then_cap_arch' [simp]:
   "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
@@ -2973,21 +3067,13 @@ lemma sch_act_wf_machine_state [simp]:
   "sch_act_wf sa (ksMachineState_update f s) = sch_act_wf sa s"
   by (cases sa) (simp_all add: ct_in_state'_def  tcb_in_cur_domain'_def)
 
-lemma valid_queues_machine_state [simp]:
-  "valid_queues (ksMachineState_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_arch' [simp]:
-  "valid_queues' (ksArchState_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues_machine_state' [simp]:
-  "valid_queues' (ksMachineState_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
 lemma valid_irq_node'_machine_state [simp]:
   "valid_irq_node' x (ksMachineState_update f s) = valid_irq_node' x s"
   by (simp add: valid_irq_node'_def)
+
+lemma valid_bitmaps_machine_state[simp]:
+  "valid_bitmaps (ksMachineState_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
 (* these should be reasonable safe for automation because of the 0 pattern *)
 lemma no_0_ko_wp' [elim!]:
@@ -3071,19 +3157,6 @@ lemma typ_at_aligned':
   "\<lbrakk> typ_at' tp p s \<rbrakk> \<Longrightarrow> is_aligned p (objBitsT tp)"
   by (clarsimp simp add: typ_at'_def ko_wp_at'_def objBitsT_koTypeOf)
 
-lemma valid_queues_obj_at'D:
-   "\<lbrakk> t \<in> set (ksReadyQueues s (d, p)); valid_queues s \<rbrakk>
-        \<Longrightarrow> obj_at' (inQ d p) t s"
-  apply (unfold valid_queues_def valid_queues_no_bitmap_def)
-  apply (elim conjE)
-  apply (drule_tac x=d in spec)
-  apply (drule_tac x=p in spec)
-  apply (clarsimp)
-  apply (drule(1) bspec)
-  apply (erule obj_at'_weakenE)
-  apply (clarsimp)
-  done
-
 lemma obj_at'_and:
   "obj_at' (P and P') t s = (obj_at' P t s \<and> obj_at' P' t s)"
   by (rule iffI, (clarsimp simp: obj_at'_def)+)
@@ -3124,21 +3197,6 @@ lemma not_pred_tcb_at'_strengthen:
 lemma obj_at'_ko_at'_prop:
   "ko_at' ko t s \<Longrightarrow> obj_at' P t s = P ko"
   by (drule obj_at_ko_at', clarsimp simp: obj_at'_def)
-
-lemma valid_queues_no_bitmap_def':
-  "valid_queues_no_bitmap =
-     (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)).
-                  obj_at' (inQ d p) t s \<and> st_tcb_at' runnable' t s) \<and>
-                  distinct (ksReadyQueues s (d, p)) \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
-  apply (rule ext, rule iffI)
-  apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_and pred_tcb_at'_def o_def
-                  elim!: obj_at'_weakenE)+
-  done
-
-lemma valid_queues_running:
-  assumes Q: "t \<in> set(ksReadyQueues s (d, p))" "valid_queues s"
-  shows "st_tcb_at' runnable' t s"
-  using assms by (clarsimp simp add: valid_queues_def valid_queues_no_bitmap_def')
 
 lemma valid_refs'_cteCaps:
   "valid_refs' S (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). S \<inter> capRange c = {})"
@@ -3224,8 +3282,16 @@ lemma invs_sch_act_wf' [elim!]:
   "invs' s \<Longrightarrow> sch_act_wf (ksSchedulerAction s) s"
   by (simp add: invs'_def valid_state'_def)
 
-lemma invs_queues [elim!]:
-  "invs' s \<Longrightarrow> valid_queues s"
+lemma invs_valid_bitmaps[elim!]:
+  "invs' s \<Longrightarrow> valid_bitmaps s"
+  by (simp add: invs'_def valid_state'_def)
+
+lemma invs_sym_heap_sched_pointers[elim!]:
+  "invs' s \<Longrightarrow> sym_heap_sched_pointers s"
+  by (simp add: invs'_def valid_state'_def)
+
+lemma invs_valid_sched_pointers[elim!]:
+  "invs' s \<Longrightarrow> valid_sched_pointers s"
   by (simp add: invs'_def valid_state'_def)
 
 lemma invs_valid_idle'[elim!]:
@@ -3236,22 +3302,24 @@ lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
 
+lemma invs_pspace_canonical'[elim!]:
+  "invs' s \<Longrightarrow> pspace_canonical' s"
+  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
+lemma valid_pspace_canonical'[elim!]:
+  "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
+  by (rule valid_pspaceE')
+
 lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
-
-lemma invs_valid_queues'_strg:
-  "invs' s \<longrightarrow> valid_queues' s"
-  by (clarsimp simp: invs'_def valid_state'_def)
-
-lemmas invs_valid_queues'[elim!] = invs_valid_queues'_strg[rule_format]
 
 lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
   by (clarsimp simp: valid_sched_def)
 
 lemma invs'_bitmapQ_no_L1_orphans:
   "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"
-  by (drule invs_queues, simp add: valid_queues_def)
+  by (simp add: invs'_def valid_state'_def valid_bitmaps_def)
 
 lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
@@ -3276,32 +3344,22 @@ lemma invs_no_0_obj'[elim!]:
 
 lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
-             bitmapQ_defs
-             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
-             irq_issued'_def irqs_masked'_def valid_machine_state'_def
-             cur_tcb'_def)
-  apply (cases "ksSchedulerAction s'")
-  apply (simp_all add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def ct_not_inQ_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs
+                        valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
+                        valid_machine_state'_def cur_tcb'_def)
+  apply (cases "ksSchedulerAction s'";
+         simp add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
+                   ct_not_inQ_def)
   done
 
 lemma invs'_gsUserPages_update[simp]:
   "invs' (gsUserPages_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
-             bitmapQ_defs
-             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
-             irq_issued'_def irqs_masked'_def valid_machine_state'_def
-             cur_tcb'_def)
-  apply (cases "ksSchedulerAction s'")
-  apply (simp_all add: ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def)
-  done
-
-lemma invs_queues_tcb_in_cur_domain':
-  "\<lbrakk> ksReadyQueues s (d, p) = x # xs; invs' s; d = ksCurDomain s\<rbrakk>
-     \<Longrightarrow> tcb_in_cur_domain' x s"
-  apply (subgoal_tac "x \<in> set (ksReadyQueues s (d, p))")
-   apply (drule (1) valid_queues_obj_at'D[OF _ invs_queues])
-   apply (auto simp: inQ_def tcb_in_cur_domain'_def elim: obj_at'_weakenE)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs
+                        valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
+                        valid_machine_state'_def cur_tcb'_def)
+  apply (cases "ksSchedulerAction s'";
+         simp add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
+                   ct_not_inQ_def)
   done
 
 lemma pred_tcb'_neq_contra:
@@ -3317,7 +3375,7 @@ lemma invs'_ksDomScheduleIdx:
 unfolding invs'_def valid_state'_def by clarsimp
 
 lemma valid_bitmap_valid_bitmapQ_exceptE:
-  "\<lbrakk> valid_bitmapQ_except d p s ; (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []) ;
+  "\<lbrakk> valid_bitmapQ_except d p s; bitmapQ d p s \<longleftrightarrow> \<not> tcbQueueEmpty (ksReadyQueues s (d,p));
      bitmapQ_no_L2_orphans s \<rbrakk>
    \<Longrightarrow> valid_bitmapQ s"
   unfolding valid_bitmapQ_def valid_bitmapQ_except_def
@@ -3337,6 +3395,59 @@ lemma mask_wordRadix_less_wordBits:
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
+
+lemma canonical_address_mask_eq:
+  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
+  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
+
+lemma canonical_address_and:
+  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
+  by (simp add: canonical_address_range word_and_le)
+
+lemma canonical_address_add:
+  assumes "is_aligned p n"
+  assumes "f < 2 ^ n"
+  assumes "n \<le> canonical_bit"
+  assumes "canonical_address p"
+  shows "canonical_address (p + f)"
+proof -
+  from `f < 2 ^ n`
+  have "f \<le> mask n"
+    by (simp add: mask_plus_1 plus_one_helper)
+
+  from `canonical_address p`
+  have "p && mask (Suc canonical_bit) = p"
+    by (simp add: canonical_address_mask_eq)
+  moreover
+  from `f \<le> mask n` `is_aligned p n`
+  have "p + f = p || f"
+    by (simp add: word_and_or_mask_aligned)
+  moreover
+  from `f \<le> mask n` `n \<le> canonical_bit`
+  have "f \<le> mask (Suc canonical_bit)"
+    using le_smaller_mask by fastforce
+  hence "f && mask (Suc canonical_bit) = f"
+    by (simp add: le_mask_imp_and_mask)
+  ultimately
+  have "(p + f) && mask (Suc canonical_bit) = p + f"
+    by (simp add: word_ao_dist)
+  thus ?thesis
+    by (simp add: canonical_address_mask_eq)
+qed
+
+lemma range_cover_canonical_address:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+   apply (drule (1) range_cover.range_cover_compare)
+   apply (clarsimp simp: word_less_nat_alt)
+   apply unat_arith
+  apply (simp add: canonical_bit_def)
+  done
 
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:

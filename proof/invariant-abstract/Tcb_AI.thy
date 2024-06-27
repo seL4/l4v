@@ -70,8 +70,8 @@ lemma set_thread_state_ct_st:
 lemma (in Tcb_AI_1) activate_invs:
   "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool)\<rbrace> activate_thread \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (unfold activate_thread_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ gets_sp])
+  apply (rule bind_wp [OF _ gts_sp])
   apply (case_tac state, simp_all)
     apply wp
     apply (clarsimp elim!: pred_tcb_weakenE
@@ -129,7 +129,7 @@ lemma setup_reply_master_nonz_cap[wp]:
 lemma restart_invs[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace> restart t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: restart_def)
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ gts_sp])
   apply (wp sts_invs_minor cancel_ipc_ex_nonz_cap_to_tcb
             hoare_vcg_disj_lift cancel_ipc_simple2
        | simp add: if_apply_def2
@@ -778,10 +778,10 @@ lemma set_set_simple_ko_has_reply[wp]:
 lemma unbind_notification_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> unbind_notification t' \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   apply (simp add: unbind_notification_def has_reply_cap_def cte_wp_at_caps_of_state)
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (rule bind_wp[OF _ gbn_sp])
   apply (case_tac ntfnptr, simp, wp, simp)
   apply (clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wp, clarsimp)
   done
 
@@ -797,7 +797,7 @@ lemma bind_notification_invs:
      bind_notification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at valid_ioports_lift
          | clarsimp simp:idle_no_ex_cap split del: if_split)+
   apply (intro conjI;
@@ -1126,7 +1126,7 @@ lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
                               \<and> is_ThreadControl set_space \<and> is_ThreadControl set_params
                               \<and> tc_target set_space = t
                               \<and> cte_at slot s \<and> ex_cte_cap_to slot s"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
        apply wp
       apply (clarsimp simp: is_ThreadControl_def cong: option.case_cong)
      apply (wp | simp add: whenE_def split del: if_split)+
@@ -1225,7 +1225,7 @@ lemma decode_tcb_inv_wf:
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp add: decode_tcb_invocation_def Let_def
               cong: if_cong split del: if_split)
-  apply (rule hoare_vcg_precond_impE_R)
+  apply (rule hoare_weaken_preE_R)
    apply wpc
    apply (wp decode_tcb_conf_wf decode_readreg_wf
              decode_writereg_wf decode_copyreg_wf
@@ -1311,10 +1311,10 @@ lemma unbind_notification_sym_refs[wp]:
      unbind_notification a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_notification_def)
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
+  apply (rule bind_wp [OF _ gbn_sp])
   apply (case_tac ntfnptr, simp_all)
    apply (wp, simp)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (wp | wpc | simp)+
   apply (rule conjI)
    apply (fastforce simp: obj_at_def pred_tcb_at_def)

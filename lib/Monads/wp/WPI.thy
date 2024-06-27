@@ -431,7 +431,7 @@ notepad begin
   apply wp
   apply (wpi wpi: Q')
   apply (wpi wpi: Q)
-  apply (rule hoare_strengthen_post[OF hoare_post_taut[where P=\<top>]])
+  apply (rule hoare_strengthen_post[OF wp_post_taut])
   apply (simp add: C)
   using C
   apply blast

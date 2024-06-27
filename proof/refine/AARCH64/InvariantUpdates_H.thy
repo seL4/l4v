@@ -38,8 +38,9 @@ lemma invs'_machine:
 proof -
   show ?thesis
     apply (cases "ksSchedulerAction s")
-    apply (simp_all add: invs'_def valid_state'_def cur_tcb'_def ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                    valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
+    apply (simp_all add: invs'_def valid_state'_def cur_tcb'_def ct_in_state'_def
+                    ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+                    valid_bitmaps_def bitmapQ_defs
                     vms ct_not_inQ_def
                     state_refs_of'_def ps_clear_def
                     valid_irq_node'_def mask
@@ -56,12 +57,13 @@ lemma invs_no_cicd'_machine:
 proof -
   show ?thesis
     apply (cases "ksSchedulerAction s")
-    apply (simp_all add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def cur_tcb'_def ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                    valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
-                    vms ct_not_inQ_def
-                    state_refs_of'_def ps_clear_def
-                    valid_irq_node'_def mask
-              cong: option.case_cong)
+    apply (simp_all add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
+                         cur_tcb'_def ct_in_state'_def ct_idle_or_in_cur_domain'_def
+                         tcb_in_cur_domain'_def valid_bitmaps_def bitmapQ_defs
+                         vms ct_not_inQ_def
+                         state_refs_of'_def ps_clear_def
+                         valid_irq_node'_def mask
+                   cong: option.case_cong)
     done
 qed
 
@@ -103,14 +105,9 @@ lemma valid_tcb'_tcbTimeSlice_update[simp]:
   "valid_tcb' (tcbTimeSlice_update f tcb) s = valid_tcb' tcb s"
   by (simp add:valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
 
-lemma valid_queues_ksSchedulerAction_update[simp]:
-  "valid_queues (ksSchedulerAction_update f s) = valid_queues s"
- unfolding valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
- by simp
-
-lemma valid_queues'_ksSchedulerAction_update[simp]:
-  "valid_queues' (ksSchedulerAction_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksSchedulerAction_update[simp]:
+   "valid_bitmaps (ksSchedulerAction_update f s) = valid_bitmaps s"
+   by (simp add: valid_bitmaps_def bitmapQ_defs)
 
 lemma ex_cte_cap_wp_to'_gsCNodes_update[simp]:
   "ex_cte_cap_wp_to' P p (gsCNodes_update f s') = ex_cte_cap_wp_to' P p s'"
@@ -145,45 +142,25 @@ lemma tcb_in_cur_domain_ct[simp]:
   "tcb_in_cur_domain' t  (ksCurThread_update f s) = tcb_in_cur_domain' t s"
   by (fastforce simp: tcb_in_cur_domain'_def)
 
-lemma valid_queues'_ksCurDomain[simp]:
-  "valid_queues' (ksCurDomain_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksCurDomain[simp]:
+  "valid_bitmaps (ksCurDomain_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksDomScheduleIdx[simp]:
-  "valid_queues' (ksDomScheduleIdx_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksDomScheduleIdx[simp]:
+  "valid_bitmaps (ksDomScheduleIdx_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksDomSchedule[simp]:
-  "valid_queues' (ksDomSchedule_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksDomSchedule[simp]:
+   "valid_bitmaps (ksDomSchedule_update f s) = valid_bitmaps s"
+   by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksDomainTime[simp]:
-  "valid_queues' (ksDomainTime_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
+lemma valid_bitmaps_ksDomainTime[simp]:
+  "valid_bitmaps (ksDomainTime_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma valid_queues'_ksWorkUnitsCompleted[simp]:
-  "valid_queues' (ksWorkUnitsCompleted_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues_ksCurDomain[simp]:
-  "valid_queues (ksCurDomain_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomScheduleIdx[simp]:
-  "valid_queues (ksDomScheduleIdx_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomSchedule[simp]:
-  "valid_queues (ksDomSchedule_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomainTime[simp]:
-  "valid_queues (ksDomainTime_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksWorkUnitsCompleted[simp]:
-  "valid_queues (ksWorkUnitsCompleted_update f s) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
+lemma valid_bitmaps_ksWorkUnitsCompleted[simp]:
+  "valid_bitmaps (ksWorkUnitsCompleted_update f s) = valid_bitmaps s"
+  by (simp add: valid_bitmaps_def bitmapQ_defs)
 
 lemma valid_irq_node'_ksCurDomain[simp]:
   "valid_irq_node' w (ksCurDomain_update f s) = valid_irq_node' w s"
@@ -260,6 +237,10 @@ lemma valid_mdb_interrupts'[simp]:
   "valid_mdb' (ksInterruptState_update f s) = valid_mdb' s"
   by (simp add: valid_mdb'_def)
 
+lemma valid_mdb'_ksReadyQueues_update[simp]:
+  "valid_mdb' (ksReadyQueues_update f s) = valid_mdb' s"
+  by (simp add: valid_mdb'_def)
+
 lemma vms_ksReadyQueues_update[simp]:
   "valid_machine_state' (ksReadyQueues_update f s) = valid_machine_state' s"
   by (simp add: valid_machine_state'_def)
@@ -284,10 +265,10 @@ lemma ct_in_state_ksSched[simp]:
 
 lemma invs'_wu [simp]:
   "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
-  apply (simp add: invs'_def cur_tcb'_def valid_state'_def Invariants_H.valid_queues_def
-                   valid_queues'_def valid_irq_node'_def valid_machine_state'_def
+  apply (simp add: invs'_def cur_tcb'_def valid_state'_def valid_bitmaps_def
+                   valid_irq_node'_def valid_machine_state'_def
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                   bitmapQ_defs valid_queues_no_bitmap_def)
+                   bitmapQ_defs)
   done
 
 lemma valid_arch_state'_interrupt[simp]:
@@ -339,9 +320,8 @@ lemma sch_act_simple_ksReadyQueuesL2Bitmap[simp]:
 
 lemma ksDomainTime_invs[simp]:
   "invs' (ksDomainTime_update f s) = invs' s"
-  by (simp add:invs'_def valid_state'_def
-    cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
-    tcb_in_cur_domain'_def valid_machine_state'_def)
+  by (simp add: invs'_def valid_state'_def cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
+                tcb_in_cur_domain'_def valid_machine_state'_def bitmapQ_defs)
 
 lemma valid_machine_state'_ksDomainTime[simp]:
   "valid_machine_state' (ksDomainTime_update f s) = valid_machine_state' s"
@@ -369,37 +349,20 @@ lemma ct_not_inQ_update_stt[simp]:
 
 lemma invs'_update_cnt[elim!]:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-   by (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues'_def
-                      valid_irq_node'_def cur_tcb'_def ct_idle_or_in_cur_domain'_def
-                      tcb_in_cur_domain'_def valid_queues_no_bitmap_def
-                      bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def)
+   by (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_irq_node'_def cur_tcb'_def
+                      ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def bitmapQ_defs)
 
 
 context begin interpretation Arch .
-
-lemma valid_arch_state'_vmid_update[simp]:
-  "valid_arch_state' (s\<lparr>ksArchState := armKSVMIDTable_update f (ksArchState s)\<rparr>) =
-   valid_arch_state' s"
-  by (auto simp: valid_arch_state'_def split: option.split)
 
 lemma valid_arch_state'_vmid_next_update[simp]:
   "valid_arch_state' (s\<lparr>ksArchState := armKSNextVMID_update f (ksArchState s)\<rparr>) =
    valid_arch_state' s"
   by (auto simp: valid_arch_state'_def split: option.split)
 
-lemma invs'_armKSVMIDTable_update[simp]:
-  "invs' (s\<lparr>ksArchState := armKSVMIDTable_update f s'\<rparr>) = invs' (s\<lparr>ksArchState := s'\<rparr>)"
-  by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
-                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
-
 lemma invs'_armKSNextVMID_update[simp]:
   "invs' (s\<lparr>ksArchState := armKSNextVMID_update f s'\<rparr>) = invs' (s\<lparr>ksArchState := s'\<rparr>)"
   by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
-                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
-
-lemma invs_no_cicd'_armKSVMIDTable_update[simp]:
-  "invs_no_cicd' (s\<lparr>ksArchState := armKSVMIDTable_update f s'\<rparr>) = invs_no_cicd' (s\<lparr>ksArchState := s'\<rparr>)"
-  by (simp add: invs_no_cicd'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
                 valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
 
 lemma invs_no_cicd'_armKSNextVMID_update[simp]:

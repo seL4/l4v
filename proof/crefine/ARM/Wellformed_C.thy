@@ -39,6 +39,9 @@ abbreviation
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
 
+type_synonym registers_count = 20
+type_synonym registers_array = "machine_word[registers_count]"
+
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"
   apply (rule hoare_complete)
@@ -138,10 +141,6 @@ where
 
 abbreviation
   "ep_queue_relation \<equiv> tcb_queue_relation tcbEPNext_C tcbEPPrev_C"
-
-abbreviation
-  "sched_queue_relation \<equiv> tcb_queue_relation tcbSchedNext_C tcbSchedPrev_C"
-
 
 definition
 wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" where
@@ -426,31 +425,31 @@ lemma maxDom_sgt_0_maxDomain:
 
 lemma num_domains_calculation:
   "num_domains = numDomains"
-  unfolding num_domains_def by eval
+  unfolding num_domains_val by eval
 
 private lemma num_domains_card_explicit:
   "num_domains = CARD(num_domains)"
-  by (simp add: num_domains_def)
+  by (simp add: num_domains_val)
 
 lemmas num_domains_index_updates =
-  index_update[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+  index_update[where 'b=num_domains, folded num_domains_card_explicit num_domains_val,
                simplified num_domains_calculation]
-  index_update2[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+  index_update2[where 'b=num_domains, folded num_domains_card_explicit num_domains_val,
                 simplified num_domains_calculation]
 
 (* C ArrayGuards will throw these at us and there is no way to avoid a proof of being less than a
    specific number expressed as a word, so we must introduce these. However, being explicit means
    lack of discipline can lead to a violation. *)
-lemma numDomains_less_numeric_explicit[simplified num_domains_def One_nat_def]:
+lemma numDomains_less_numeric_explicit[simplified num_domains_val One_nat_def]:
   "x < Kernel_Config.numDomains \<Longrightarrow> x < num_domains"
   by (simp add: num_domains_calculation)
 
-lemma numDomains_less_unat_ucast_explicit[simplified num_domains_def]:
+lemma numDomains_less_unat_ucast_explicit[simplified num_domains_val]:
   "unat x < Kernel_Config.numDomains \<Longrightarrow> (ucast (x::domain) :: machine_word) < of_nat num_domains"
   apply (rule word_less_nat_alt[THEN iffD2])
   apply transfer
   apply simp
-  apply (drule numDomains_less_numeric_explicit, simp add: num_domains_def)
+  apply (drule numDomains_less_numeric_explicit, simp add: num_domains_val)
   done
 
 lemmas maxDomain_le_unat_ucast_explicit =
@@ -475,7 +474,7 @@ value_type num_tcb_queues = "numDomains * numPriorities"
 
 lemma num_tcb_queues_calculation:
   "num_tcb_queues = numDomains * numPriorities"
-  unfolding num_tcb_queues_def by eval
+  unfolding num_tcb_queues_val by eval
 
 
 abbreviation(input)

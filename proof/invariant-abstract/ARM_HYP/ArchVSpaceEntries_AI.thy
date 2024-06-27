@@ -147,7 +147,7 @@ lemma mapM_x_store_pte_updates:
    apply wp
    apply (clarsimp simp: obj_at_def fun_upd_idem)
   apply (simp add: mapM_x_Cons)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: store_pte_def set_pt_def set_object_def)
   apply (wp get_pt_wp get_object_wp)
@@ -240,7 +240,7 @@ lemma mapM_x_store_pde_updates:
    apply wp
    apply (clarsimp simp: obj_at_def fun_upd_idem)
   apply (simp add: mapM_x_Cons)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: store_pde_def set_pd_def set_object_def)
   apply (wp get_pd_wp get_object_wp)
@@ -393,7 +393,7 @@ lemma unmap_page_table_valid_pdpt_objs[wp]:
   apply (simp add: page_table_mapped_def)
   apply (wp get_pde_wp | wpc)+
   apply simp
-  apply (rule hoare_post_impErr, rule valid_validE,
+  apply (rule hoare_strengthen_postE, rule valid_validE,
          rule find_pd_for_asid_inv, simp_all)
   done
 
@@ -439,7 +439,7 @@ lemma mapM_x_copy_pde_updates:
          ucast (f x && mask pd_bits >> 3)) ` set xs then pd y else pd' y)))) \<rparr>))\<rbrace>
      mapM_x (\<lambda>x. get_pde (p + f x) >>= store_pde (p' + f x)) xs
    \<lbrace>\<lambda>_. Q\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
    apply wp
@@ -1220,7 +1220,7 @@ lemma ensure_safe_mapping_ensures[wp]:
      apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set slots. obj_at
                 (\<lambda>ko. \<exists>pt. ko = ArchObj (PageTable pt) \<and>
                  pt (ucast (x && mask pt_bits >> 3)) = pte.InvalidPTE)
-                (hd (slot # slots) && ~~ mask pt_bits) s" in hoare_post_imp_R)
+                (hd (slot # slots) && ~~ mask pt_bits) s" in hoare_strengthen_postE_R)
       apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
           apply (wp get_master_pte_wp| wpc | simp)+
          apply clarsimp
@@ -1281,7 +1281,7 @@ lemma ensure_safe_mapping_ensures[wp]:
    apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22.
                                  obj_at (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd) \<and>
                                                    pd (ucast (x && mask pd_bits >> 3)) = InvalidPDE)
-                               (x21 && ~~ mask pd_bits) s" in hoare_post_imp_R)
+                               (x21 && ~~ mask pd_bits) s" in hoare_strengthen_postE_R)
     apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
         apply (wp get_master_pde_wp| wpc | simp)+
        apply clarsimp
@@ -1420,7 +1420,7 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
      \<comment> \<open>PageMap\<close>
      apply (rename_tac dev pg_ptr rights sz pg_map)
      apply (wpsimp simp: Let_def invocation_duplicates_valid_def page_inv_duplicates_valid_def
-                     wp: ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
+                     wp: ensure_safe_mapping_ensures[THEN hoare_strengthen_postE_R]
                          check_vp_wpR hoare_vcg_if_lift_ER find_pd_for_asid_lookup_pd_wp)
      apply (fastforce simp: invs_psp_aligned page_directory_at_aligned_pd_bits word_not_le sz
                             valid_cap_def valid_arch_cap_def lookup_pd_slot_eq

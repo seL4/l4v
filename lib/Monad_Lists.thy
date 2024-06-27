@@ -469,8 +469,8 @@ lemma filterM_distinct1:
   apply (rule rev_induct [where xs=xs])
    apply (clarsimp | wp)+
   apply (simp add: filterM_append)
-  apply (erule hoare_seq_ext[rotated])
-  apply (rule hoare_seq_ext[rotated], rule hoare_vcg_prop)
+  apply (erule bind_wp_fwd)
+  apply (rule bind_wp_fwd, rule hoare_vcg_prop)
   apply (wp, clarsimp)
   apply blast
   done
@@ -601,7 +601,7 @@ lemma mapME_set:
   and     invp: "\<And>x y. \<lbrace>R and P x\<rbrace> f y \<lbrace>\<lambda>_. P x\<rbrace>, -"
   and     invr: "\<And>x. \<lbrace>R\<rbrace> f x \<lbrace>\<lambda>_. R\<rbrace>, -"
   shows "\<lbrace>R\<rbrace> mapME f xs \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. P x s\<rbrace>, -"
-proof (rule hoare_post_imp_R [where Q' = "\<lambda>rv s. R s \<and> (\<forall>x \<in> set rv. P x s)"], induct xs)
+proof (rule hoare_strengthen_postE_R [where Q' = "\<lambda>rv s. R s \<and> (\<forall>x \<in> set rv. P x s)"], induct xs)
   case Nil
   thus ?case by (simp add: mapME_Nil | wp returnOKE_R_wp)+
 next
@@ -609,7 +609,7 @@ next
 
   have minvp: "\<And>x. \<lbrace>R and P x\<rbrace> mapME f ys \<lbrace>\<lambda>_. P x\<rbrace>, -"
     apply (rule hoare_pre)
-     apply (rule_tac Q' = "\<lambda>_ s. R s \<and> P x s" in hoare_post_imp_R)
+     apply (rule_tac Q' = "\<lambda>_ s. R s \<and> P x s" in hoare_strengthen_postE_R)
       apply (wp mapME_wp' invr invp)+
       apply simp
      apply simp
@@ -619,7 +619,7 @@ next
   show ?case
     apply (simp add: mapME_Cons)
     apply (wp)
-     apply (rule_tac Q' = "\<lambda>xs s. (R s \<and> (\<forall>x \<in> set xs. P x s)) \<and> P x s" in hoare_post_imp_R)
+     apply (rule_tac Q' = "\<lambda>xs s. (R s \<and> (\<forall>x \<in> set xs. P x s)) \<and> P rv s" in hoare_strengthen_postE_R)
       apply (wp Cons.hyps minvp)
      apply simp
     apply (fold validE_R_def)

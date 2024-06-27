@@ -1065,10 +1065,10 @@ lemma corres_submonad2:
                              OF _ _ gets_sp gets_sp])
    apply clarsimp
   apply (rule corres_underlying_split [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
-                             OF _ _ hoare_post_taut hoare_post_taut])
+                             OF _ _ hoare_TrueI hoare_TrueI])
    defer
    apply clarsimp
-   apply (rule corres_underlying_split [where r'=dc, OF _ _ hoare_post_taut hoare_post_taut])
+   apply (rule corres_underlying_split [where r'=dc, OF _ _ hoare_TrueI hoare_TrueI])
     apply (simp add: corres_modify')
    apply clarsimp
   apply (simp add: corres_underlying_def select_f_def)
@@ -1093,10 +1093,10 @@ lemma corres_submonad3:
                              OF _ _ gets_sp gets_sp])
    apply clarsimp
   apply (rule corres_underlying_split [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
-                             OF _ _ hoare_post_taut hoare_post_taut])
+                             OF _ _ hoare_TrueI hoare_TrueI])
    defer
    apply clarsimp
-   apply (rule corres_underlying_split [where r'=dc, OF _ _ hoare_post_taut hoare_post_taut])
+   apply (rule corres_underlying_split [where r'=dc, OF _ _ hoare_TrueI hoare_TrueI])
     apply (simp add: corres_modify')
    apply clarsimp
   apply (simp add: corres_underlying_def select_f_def)

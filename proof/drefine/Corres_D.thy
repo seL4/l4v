@@ -273,7 +273,7 @@ lemma hoare_mapM_idempotent: "\<lbrakk> \<And> a R. \<lbrace> R \<rbrace> x a \<
   apply atomize
   apply (erule_tac x=a in allE)
   apply (erule_tac x=R in allE)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply wp
   apply assumption
   done
@@ -633,6 +633,7 @@ lemma dcorres_rhs_noop_above: "\<lbrakk> dcorres anyrel P P' (return ()) m; dcor
 lemmas dcorres_rhs_noop_below_True = dcorres_rhs_noop_below[OF _ _ hoare_TrueI hoare_TrueI]
 lemmas dcorres_rhs_noop_above_True = dcorres_rhs_noop_above[OF _ _ hoare_TrueI hoare_TrueI]
 
+\<comment> \<open>FIXME: remove\<close>
 declare hoare_TrueI[simp]
 
 lemma dcorres_dc_rhs_noop_below_gen:

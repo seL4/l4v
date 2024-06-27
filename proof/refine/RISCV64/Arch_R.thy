@@ -132,7 +132,7 @@ lemma set_cap_device_and_range_aligned:
 lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
-         (einvs and ct_active and valid_aci i)
+         (einvs and ct_active and valid_aci i and schact_is_rct)
          (invs' and ct_active' and valid_aci' i')
          (perform_asid_control_invocation i)
          (performASIDControlInvocation i')"
@@ -262,20 +262,20 @@ lemma performASIDControlInvocation_corres:
               deleteObjects_cte_wp_at'
               deleteObjects_null_filter[where p="makePoolParent i'"])
    apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
-   apply (subgoal_tac "detype_locale x y sa" for x y)
-    prefer 2
-    apply (simp add:detype_locale_def)
-    apply (fastforce simp:cte_wp_at_caps_of_state descendants_range_def2
-            empty_descendants_range_in invs_untyped_children)
+   apply (prop_tac "detype_locale x y sa" for x y)
+    apply (simp add: detype_locale_def)
+    apply (fastforce simp: cte_wp_at_caps_of_state descendants_range_def2
+                           empty_descendants_range_in invs_untyped_children)
    apply (intro conjI)
           apply (clarsimp)
          apply (erule(1) caps_of_state_valid)
          subgoal by (fastforce simp:cte_wp_at_caps_of_state descendants_range_def2 empty_descendants_range_in)
        apply (fold_subgoals (prefix))[2]
      subgoal premises prems using prems by (clarsimp simp:invs_def valid_state_def)+
-     apply (clarsimp simp:cte_wp_at_caps_of_state)
+      apply (clarsimp simp: schact_is_rct_def)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (drule detype_locale.non_null_present)
-     apply (fastforce simp:cte_wp_at_caps_of_state)
+     apply (fastforce simp: cte_wp_at_caps_of_state)
     apply simp
    apply (frule_tac ptr = "(aa,ba)" in detype_invariants [rotated 3])
         apply fastforce
@@ -327,29 +327,30 @@ lemma performASIDControlInvocation_corres:
   apply clarsimp
   apply (frule empty_descendants_range_in')
   apply (intro conjI,
-    simp_all add: is_simple_cap'_def isCap_simps descendants_range'_def2
-                  null_filter_descendants_of'[OF null_filter_simp']
-                  capAligned_def asid_low_bits_def)
-      apply (erule descendants_range_caps_no_overlapI')
-       apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
-      apply (simp add:empty_descendants_range_in')
-     apply (simp add:word_bits_def bit_simps)
-    apply (rule is_aligned_weaken)
-     apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
-    apply (simp add:pageBits_def)
+         simp_all add: is_simple_cap'_def isCap_simps descendants_range'_def2
+                       null_filter_descendants_of'[OF null_filter_simp']
+                       capAligned_def asid_low_bits_def)
+       apply (erule descendants_range_caps_no_overlapI')
+        apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
+       apply (simp add:empty_descendants_range_in')
+      apply (simp add:word_bits_def bit_simps)
+     apply (rule is_aligned_weaken)
+      apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
+     apply (simp add:pageBits_def)
+    apply clarsimp
+    apply (drule(1) cte_cap_in_untyped_range)
+         apply (fastforce simp: cte_wp_at_ctes_of)
+        apply assumption+
+     apply fastforce
+    apply simp
    apply clarsimp
-   apply (drule(1) cte_cap_in_untyped_range)
-        apply (fastforce simp:cte_wp_at_ctes_of)
+   apply (drule (1) cte_cap_in_untyped_range)
+        apply (fastforce simp add: cte_wp_at_ctes_of)
        apply assumption+
+     apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
     apply fastforce
    apply simp
   apply clarsimp
-  apply (drule (1) cte_cap_in_untyped_range)
-       apply (fastforce simp add: cte_wp_at_ctes_of)
-      apply assumption+
-    apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-   apply fastforce
-  apply simp
   done
 
 definition
@@ -682,7 +683,7 @@ lemma decodeX64PageTableInvocation_corres:
              apply (rule leq_mask_shift)
              apply (simp add: bit_simps le_mask_high_bits word_size)
             apply ((clarsimp cong: if_cong
-                     | wp whenE_wp hoare_vcg_all_lift_R getPTE_wp get_pte_wp
+                     | wp whenE_wp hoare_vcg_all_liftE_R getPTE_wp get_pte_wp
                      | wp (once) hoare_drop_imps)+)
     apply (clarsimp simp: invs_vspace_objs invs_valid_asid_table invs_psp_aligned invs_distinct)
     apply (clarsimp simp: valid_cap_def wellformed_mapdata_def not_le below_user_vtop_in_user_region)
@@ -916,7 +917,7 @@ shows
 lemma arch_performInvocation_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
-     (einvs and ct_active and valid_arch_inv ai)
+     (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
      (invs' and ct_active' and valid_arch_inv' ai')
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
   apply (clarsimp simp: arch_perform_invocation_def
@@ -1136,7 +1137,7 @@ lemma arch_decodeInvocation_wf[wp]:
                             cte_wp_at' (\<lambda>cte. \<exists>idx. cteCap cte = (UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
                             sch_act_simple and
                             (\<lambda>s. descendants_of' (snd (excaps!0)) (ctes_of s) = {}) "
-                            in hoare_post_imp_R)
+                            in hoare_strengthen_postE_R)
            apply (simp add: lookupTargetSlot_def)
            apply wp
           apply (clarsimp simp: cte_wp_at_ctes_of asid_wf_def mask_def)
@@ -1157,15 +1158,15 @@ lemma arch_decodeInvocation_wf[wp]:
 
     \<comment> \<open>ASIDPool cap\<close>
     apply (simp add: decodeRISCVMMUInvocation_def RISCV64_H.decodeInvocation_def
-                     Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def
-               cong: if_cong split del: if_split)
-    apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp cong: if_cong)
+                     Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def)
+    apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp
+             split_del: if_split)
     apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
     apply (rule conjI)
      apply (erule cte_wp_at_weakenE')
      apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
-    apply (subst (asm) conj_assoc [symmetric])
-    apply (subst (asm) assocs_empty_dom_comp [symmetric])
+    apply (subst (asm) conj_assoc [symmetric],
+           subst (asm) assocs_empty_dom_comp [symmetric])
     apply (drule dom_hd_assocsD)
     apply (simp add: capAligned_def asid_wf_def mask_def)
     apply (elim conjE)

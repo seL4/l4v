@@ -32,7 +32,7 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
   arch_invoke_irq_handler
   "\<lambda>s. P (domain_list s)"
-  (simp: crunch_simps wp: mapM_wp' transfer_caps_loop_pres)
+  (simp: crunch_simps isFpuEnable_def wp: mapM_wp' transfer_caps_loop_pres)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)

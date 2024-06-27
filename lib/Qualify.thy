@@ -64,8 +64,8 @@ fun get_new_consts old_thy consts =
     val space = #const_space (Consts.dest consts);
 
     val consts =
-      filter (fn nm => not (can (Consts.the_const (Sign.consts_of old_thy)) nm) andalso
-                       can (Consts.the_const consts) nm) new_consts
+      filter (fn nm => not (can (Consts.the_const_type (Sign.consts_of old_thy)) nm) andalso
+                       can (Consts.the_const_type consts) nm) new_consts
       |> map (fn nm => `(make_bind space old_thy) nm);
 
   in consts end;

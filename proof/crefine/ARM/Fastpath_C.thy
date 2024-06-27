@@ -39,11 +39,10 @@ lemma getEndpoint_obj_at':
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 lemma tcbSchedEnqueue_tcbContext[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-     tcbSchedEnqueue t'
-   \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule tcbSchedEnqueue_obj_at_unchangedT[OF all_tcbI])
-  apply simp
+  "tcbSchedEnqueue t' \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  apply (simp add: tcbSchedEnqueue_def tcbQueuePrepend_def unless_when)
+  apply (wp threadSet_obj_at' hoare_drop_imps threadGet_wp
+         | simp split: if_split)+
   done
 
 lemma setCTE_tcbContext:
@@ -54,26 +53,22 @@ lemma setCTE_tcbContext:
   apply (rule setObject_cte_obj_at_tcb', simp_all)
   done
 
-lemma seThreadState_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setThreadState a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setThreadState_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
-  done
+lemma setThreadState_tcbContext:
+ "setThreadState a b \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setThreadState_def rescheduleRequired_def tcbSchedEnqueue_def
+            tcbQueuePrepend_def rescheduleRequired_def
+  by (wp threadSet_obj_at' hoare_drop_imps threadGet_wp | wpc
+         | simp split: if_split)+
 
 lemma setBoundNotification_tcbContext:
- "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-    setBoundNotification a b
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (rule setBoundNotification_obj_at_unchanged)
-  apply (clarsimp simp: atcbContext_def)+
-  done
+ "setBoundNotification a b \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  unfolding setBoundNotification_def
+  by wpsimp
 
 declare comp_apply [simp del]
 crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
-       setNotification_tcb crunch_wps seThreadState_tcbContext
+       setNotification_tcb crunch_wps setThreadState_tcbContext
    simp: crunch_simps unless_def)
 declare comp_apply [simp]
 
@@ -631,10 +626,10 @@ lemma dmo_clearExMonitor_setCurThread_swap:
             od)
     = (do _ \<leftarrow> setCurThread thread;
             doMachineOp ARM.clearExMonitor od)"
-  apply (simp add: setCurThread_def doMachineOp_def split_def)
-  apply (rule oblivious_modify_swap[symmetric])
-  apply (intro oblivious_bind,
-         simp_all add: select_f_oblivious)
+  apply (clarsimp simp: ARM.clearExMonitor_def)
+  apply (simp add: doMachineOp_modify)
+  apply (rule oblivious_modify_swap)
+  apply (fastforce intro: oblivious_bind simp: setCurThread_def idleThreadNotQueued_def)
   done
 
 lemma pd_at_asid_inj':
@@ -734,6 +729,8 @@ lemma switchToThread_fp_ccorres:
                     del: Collect_const)
         apply (simp only: dmo_clearExMonitor_setCurThread_swap)
         apply (rule ccorres_split_nothrow_novcg_dc)
+           apply (clarsimp simp: setCurThread_def)
+           apply (rule ccorres_stateAssert)
            apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp del: rf_sr_upd_safe)
@@ -743,7 +740,7 @@ lemma switchToThread_fp_ccorres:
           apply (ctac add: clearExMonitor_fp_ccorres)
          apply wp
         apply (simp add: guard_is_UNIV_def)
-       apply wp
+       apply (wp hoare_drop_imps)
       apply (simp add: bind_assoc checkPDNotInASIDMap_def
                        checkPDASIDMapMembership_def)
       apply (rule ccorres_stateAssert)
@@ -796,7 +793,7 @@ lemma thread_state_ptr_set_tsType_np_spec:
   apply (clarsimp simp: typ_heap_simps')
   apply (rule exI, rule conjI[OF _ conjI [OF _ refl]])
   apply (simp_all add: thread_state_lift_def)
-  apply (auto simp: "StrictC'_thread_state_defs" mask_def)
+  apply (auto simp: ThreadState_defs mask_def)
   done
 
 lemma thread_state_ptr_mset_blockingObject_tsType_spec:
@@ -1200,8 +1197,8 @@ lemma fastpath_dequeue_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                          update_tcb_map_tos typ_heap_simps')
-   apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-    apply (rule ext, simp add: tcb_null_queue_ptrs_def
+   apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+    apply (rule ext, simp add: tcb_null_ep_ptrs_def
                         split: if_split)
    apply (rule conjI)
     apply (rule cpspace_relation_ep_update_ep, assumption+)
@@ -1217,8 +1214,6 @@ lemma fastpath_dequeue_ccorres:
   apply (simp add: carch_state_relation_def typ_heap_simps'
                    cmachine_state_relation_def h_t_valid_clift_Some_iff
                    update_ep_map_tos)
-  apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 lemma st_tcb_at_not_in_ep_queue:
@@ -1356,8 +1351,8 @@ lemma fastpath_enqueue_ccorres:
    apply (rule conjI)
     apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                           typ_heap_simps')
-    apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-     apply (rule ext, simp add: tcb_null_queue_ptrs_def
+    apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+     apply (rule ext, simp add: tcb_null_ep_ptrs_def
                          split: if_split)
     apply (rule conjI)
      apply (rule_tac S="tcb_ptr_to_ctcb_ptr ` set (ksCurThread \<sigma> # list)"
@@ -1396,8 +1391,6 @@ lemma fastpath_enqueue_ccorres:
            auto dest!: map_to_ko_atI)[1]
    apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                     cmachine_state_relation_def h_t_valid_clift_Some_iff)
-   apply (erule cready_queues_relation_null_queue_ptrs)
-   apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   apply (clarsimp simp: typ_heap_simps' EPState_Recv_def mask_def
                         is_aligned_weaken[OF is_aligned_tcb_ptr_to_ctcb_ptr])
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -1405,8 +1398,8 @@ lemma fastpath_enqueue_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                          typ_heap_simps' ct_in_state'_def)
-   apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
-    apply (rule ext, simp add: tcb_null_queue_ptrs_def
+   apply (rule conjI, erule ctcb_relation_null_ep_ptrs)
+    apply (rule ext, simp add: tcb_null_ep_ptrs_def
                         split: if_split)
    apply (rule conjI)
     apply (rule_tac S="{tcb_ptr_to_ctcb_ptr (ksCurThread \<sigma>)}"
@@ -1426,8 +1419,6 @@ lemma fastpath_enqueue_ccorres:
           assumption+, auto dest!: map_to_ko_atI)[1]
   apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                    cmachine_state_relation_def h_t_valid_clift_Some_iff)
-  apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 lemma setCTE_rf_sr:
@@ -1574,7 +1565,7 @@ lemma ctes_of_Some_cte_wp_at:
   by (clarsimp simp: cte_wp_at_ctes_of)
 
 lemma user_getreg_wp:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
       asUser t (getRegister r) \<lbrace>Q\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
    apply simp
@@ -1698,8 +1689,8 @@ lemma fastpath_call_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s
-                  \<and> obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
-                                 \<and>  (atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msginfo)
+                  \<and> obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
+                                 \<and>  (user_regs o atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msginfo)
                         (ksCurThread s) s)
      (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
      (fastpaths SysCall) (Call fastpath_call_'proc)"
@@ -2060,9 +2051,6 @@ proof -
                            apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                             apply (simp add: ctcb_relation_def cthread_state_relation_def)
                            apply simp
-                          apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                            apply (rule ext, simp split: if_split add: typ_heap_simps')
-                           apply (rule ext, simp split: if_split add: typ_heap_simps')
                           apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                            typ_heap_simps' map_comp_update projectKO_opt_tcb
                                            cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2187,9 +2175,6 @@ proof -
                                        apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                                         apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                        apply simp
-                                      apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                        apply (rule ext, simp split: if_split)
-                                       apply (rule ext, simp split: if_split)
                                       apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                        typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                        cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2381,7 +2366,7 @@ proof -
    apply (rule conjI) (* isReceive on queued tcb state *)
     apply (fastforce simp: st_tcb_at_tcbs_of isBlockedOnReceive_def isReceive_def)
    apply clarsimp
-   apply (rule conjI, fastforce dest!: invs_queues simp: valid_queues_def)
+   apply (rule conjI, fastforce dest!: simp: valid_queues_def)
    apply (frule invs_mdb', clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
    apply (case_tac xb, clarsimp, drule(1) nullcapsD')
    apply (clarsimp simp: pde_stored_asid_def to_bool_def
@@ -2514,8 +2499,8 @@ lemma fastpath_reply_recv_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
        (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s
-               \<and> obj_at' (\<lambda>tcb.  (atcbContextGet o tcbArch) tcb capRegister = cptr
-                              \<and>  (atcbContextGet o tcbArch) tcb msgInfoRegister = msginfo)
+               \<and> obj_at' (\<lambda>tcb.  (user_regs o atcbContextGet o tcbArch) tcb capRegister = cptr
+                              \<and>  (user_regs o atcbContextGet o tcbArch) tcb msgInfoRegister = msginfo)
                      (ksCurThread s) s)
        (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
        (fastpaths SysReplyRecv) (Call fastpath_reply_recv_'proc)"
@@ -2856,7 +2841,7 @@ lemma fastpath_reply_recv_ccorres:
                         apply (clarsimp simp: rf_sr_ksCurThread typ_heap_simps'
                                               h_t_valid_clift_Some_iff)
                         apply (clarsimp simp: capAligned_def isCap_simps objBits_simps
-                                              "StrictC'_thread_state_defs" mask_def)
+                                              ThreadState_defs mask_def)
                         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                               typ_heap_simps' objBits_defs)
                         apply (rule conjI)
@@ -2867,12 +2852,9 @@ lemma fastpath_reply_recv_ccorres:
                          apply (simp add: cep_relations_drop_fun_upd)
                          apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                           apply (simp add: ctcb_relation_def cthread_state_relation_def
-                                           "StrictC'_thread_state_defs")
+                                           ThreadState_defs)
                           apply (clarsimp simp: ccap_relation_ep_helpers)
                          apply simp
-                        apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                          apply (rule ext, simp split: if_split)
-                         apply (rule ext, simp split: if_split)
                         apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                          typ_heap_simps' map_comp_update projectKO_opt_tcb
                                          cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2949,9 +2931,6 @@ lemma fastpath_reply_recv_ccorres:
                                      apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                                       apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                      apply simp
-                                    apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                      apply (rule ext, simp split: if_split)
-                                     apply (rule ext, simp split: if_split)
                                     apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                      typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                      cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -3072,8 +3051,6 @@ lemma fastpath_reply_recv_ccorres:
      apply (clarsimp simp: ct_in_state'_def obj_at_tcbs_of word_sle_def)
      apply (clarsimp simp add: invs_ksCurDomain_maxDomain')
      apply (rule conjI, fastforce)
-     apply (frule invs_queues)
-     apply (simp add: valid_queues_def)
      apply (frule tcbs_of_aligned')
       apply (simp add:invs_pspace_aligned')
      apply (frule tcbs_of_cte_wp_at_caller)
@@ -3103,6 +3080,11 @@ lemma fastpath_reply_recv_ccorres:
                            invs_valid_pde_mappings' obj_at_tcbs_of
                     dest!: isValidVTableRootD)
      apply (frule invs_mdb')
+     apply (frule invs_valid_objs')
+     apply (frule invs_valid_bitmaps)
+     apply (frule valid_bitmaps_bitmapQ_no_L1_orphans)
+     apply (frule invs_pspace_aligned')
+     apply (frule invs_pspace_distinct')
 
      apply (clarsimp simp: cte_wp_at_ctes_of tcbSlots cte_level_bits_def
                            makeObject_cte isValidVTableRoot_def
@@ -3110,10 +3092,10 @@ lemma fastpath_reply_recv_ccorres:
                            pde_stored_asid_def to_bool_def
                            valid_mdb'_def valid_tcb_state'_def
                            word_le_nat_alt[symmetric] length_msgRegisters)
-     apply (frule ko_at_valid_ep', fastforce)
      apply (rule conjI)
-      subgoal (* dest thread domain \<le> maxDomain *)
-       by (drule (1) tcbs_of_valid_tcb'[OF invs_valid_objs'], solves \<open>clarsimp simp: valid_tcb'_def\<close>)
+      apply (fastforce dest: tcbs_of_valid_tcb' simp: valid_tcb'_def opt_map_def
+                      split: option.splits)
+     apply (frule ko_at_valid_ep', fastforce)
      apply clarsimp
      apply (safe del: notI disjE)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'

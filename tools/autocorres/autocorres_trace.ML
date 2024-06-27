@@ -171,25 +171,28 @@ fun my_unify_fact_tac ctxt subproof n state =
   case my_typ_match stateterm proofterm of
      NONE => Seq.empty
    | SOME typinsts =>
+     \<^try>\<open>
      (case Thm.instantiate (TVars.make (map (fn (v, t) => (v, ctyp_of' t)) (Utils.nubBy fst typinsts)), Vars.empty) state of
        state' =>
         let val stateterm' = nth (Thm.prems_of state') (n-1) in
         case my_match stateterm' proofterm of
            NONE => Seq.empty
          | SOME substs =>
+            \<^try>\<open>
              let val substs' = Utils.nubBy #1 substs
                                |> map (fn (var, args, t') => (var, my_lambda args t'))
                                |> map (fn (v, t) => (v, cterm_of' t))
              in
-             case Thm.instantiate (TVars.empty, Vars.make substs') state of state' =>
-               (case Proof_Context.fact_tac ctxt [Variable.gen_all ctxt subproof] 1 state' |> Seq.pull of
-                   NONE => Seq.empty
-                 | r => Seq.make (fn () => r))
-             handle _ => Seq.empty
+             \<^try>\<open>
+               case Thm.instantiate (TVars.empty, Vars.make substs') state of state' =>
+                 (case Proof_Context.fact_tac ctxt [Variable.gen_all ctxt subproof] 1 state' |> Seq.pull of
+                     NONE => Seq.empty
+                   | r => Seq.make (fn () => r))
+             catch _ => Seq.empty\<close>
              end
-       handle _ => Seq.empty
+            catch _ => Seq.empty\<close>
       end)
-      handle _ => Seq.empty
+      catch _ => Seq.empty\<close>
   end
   end
 

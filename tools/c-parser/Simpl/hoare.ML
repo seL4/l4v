@@ -2,28 +2,14 @@
     Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2007 Norbert Schirmer
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
+Copyright (c) 2022 Apple Inc. All rights reserved.
 *)
 
 signature HOARE =
 sig
   datatype hoareMode = Partial | Total
   val gen_proc_rec: Proof.context -> hoareMode -> int -> thm
-  datatype state_kind = Record | Function
+  datatype state_kind = Record | Function | Other of string (* future extensions of state space *)
   datatype par_kind = In | Out
   val deco: string
   val proc_deco: string
@@ -32,12 +18,31 @@ sig
   val is_state_var: string -> bool
   val extern: Proof.context -> string -> string
   val remdeco: Proof.context -> string -> string
-  val remdeco': string -> string
+  val remdeco': Proof.context -> string -> string
   val undeco: Proof.context -> term -> term
   val varname: string -> string
   val resuffix: string -> string -> string -> string
+  type state_space = {
+     name: string,
+     is_state_type: Proof.context -> typ -> bool,
+     generalise: Proof.context -> int -> tactic,
+     state_simprocs: simproc list,
+     state_upd_simprocs: simproc list,
+     state_ex_sel_eq_simprocs: simproc list,
+
+     (* syntax *)
+     read_function_name: Proof.context -> xstring -> term,
+     is_defined: Proof.context -> xstring -> bool,
+     lookup_tr: Proof.context -> xstring -> term,
+     update_tr: Proof.context -> xstring -> term,
+     is_lookup: Proof.context -> term -> bool,
+     lookup_tr': Proof.context -> term -> term,
+     dest_update_tr': Proof.context -> term -> term * term * term option,
+     update_tr': Proof.context -> term -> term
+  }
+  type lense = {lookup: term, update : term}
   type proc_info =
-    {params: ((par_kind * string) list),
+    {params: ((par_kind * string * lense option) list),
      recursive: bool,
      state_kind: state_kind}
   type hoare_tac = (bool -> int -> tactic) -> Proof.context -> hoareMode -> int -> tactic
@@ -45,18 +50,25 @@ sig
    {proc_info: proc_info Symtab.table,
     active_procs: string list list,
     default_state_kind: state_kind,
-    generate_guard: (stamp * (Proof.context -> term -> term option)),
-    wp_tacs: (string * hoare_tac) list,
+    generate_guard: (stamp option * (Proof.context -> term -> term option)),
+    name_tr: (stamp option * (Proof.context -> bool -> string -> string)), (* bool indicates input tr: true vs. output tr: false *)
     hoare_tacs: (string * hoare_tac) list,
-    vcg_simps: thm list}
+    vcg_simps: thm list,
+    state_spaces: (string * state_space) list (* registry for state space extensions *)
+  }
   val get_data: Proof.context -> hoare_data
-  val get_params: string -> Proof.context -> (par_kind * string) list option
+  val get_params: string -> Proof.context -> (par_kind * string * lense option) list option
   val get_default_state_kind: Proof.context -> state_kind
   val get_state_kind: string -> Proof.context -> state_kind option
+  val get_default_state_space: Proof.context -> state_space option
   val clique_name: string list -> string
   val install_generate_guard: (Proof.context -> term -> term option) ->
     Context.generic -> Context.generic
   val generate_guard: Proof.context -> term -> term option
+  val install_name_tr: (Proof.context -> bool -> string -> string) ->
+    Context.generic -> Context.generic
+  val name_tr: Proof.context -> bool -> string -> string
+  val install_state_space: state_space -> Context.generic -> Context.generic
   val BasicSimpTac: Proof.context -> state_kind ->
     bool -> thm list -> (int -> tactic) -> int -> tactic
   val hoare: (Proof.context -> Proof.method) context_parser
@@ -76,14 +88,25 @@ sig
   val vcg_tac : string -> string -> string list -> Proof.context -> int -> tactic
   val hoare_rule_tac : Proof.context -> thm list -> int -> tactic
 
+  val solve_modifies_tac: Proof.context -> state_kind -> (term -> int) -> int -> tactic
+
+  val add_hoare_tacs: (string * hoare_tac) list -> Context.generic -> Context.generic
   datatype 'a bodykind = BodyTyp of 'a | BodyTerm of 'a
   val proc_specs : (bstring * string) list parser
-  val add_params : morphism -> string -> (par_kind * string) list ->
+  val add_params : morphism -> string -> (par_kind * string * lense option) list ->
                    Context.generic -> Context.generic
   val set_default_state_kind : state_kind -> Context.generic -> Context.generic
   val add_state_kind : morphism -> string -> state_kind -> Context.generic ->
                        Context.generic
   val add_recursive : morphism -> string -> Context.generic -> Context.generic
+
+  structure FunSplitState : SPLIT_STATE
+  val first_subterm: (term -> bool) -> term -> ((string * typ) list * term) option
+  val dest_string: term -> string
+  val dest_hoare_raw: term -> term * term * term * term * hoareMode * term * term * term
+  val idx: ('a -> string -> bool) -> 'a list -> string -> int
+  val sort_variables: bool Config.T
+  val destr_to_constr: term -> term
 end;
 
 structure Hoare: HOARE =
@@ -96,7 +119,7 @@ val use_generalise = Attrib.setup_config_bool @{binding hoare_use_generalise} (K
 val sort_variables = Attrib.setup_config_bool @{binding hoare_sort_variables} (K true);
 val use_cond_inv_modifies = Attrib.setup_config_bool @{binding hoare_use_cond_inv_modifies} (K true);
 
-val hoare_trace = Attrib.setup_config_bool @{binding hoare_trace} (K false);
+val hoare_trace = Attrib.setup_config_int @{binding hoare_trace} (K 0);
 
 val body_def_sfx = "_body";
 
@@ -164,6 +187,15 @@ datatype hoareMode = Partial | Total
 fun get_rule p t Partial = p
   | get_rule p t Total   = t
 
+fun get_rule' p t m Partial true = m
+  | get_rule' p t m Partial false = p
+  | get_rule' p t m Total _ = t
+
+fun get_call_rule p t p_exn t_exn Partial NONE = p
+  | get_call_rule p t p_exn t_exn Partial (SOME _) = p_exn
+  | get_call_rule p t p_exn t_exn Total NONE = t
+  | get_call_rule p t p_exn t_exn Total (SOME _) = t_exn
+
 val Guard = get_rule @{thm HoarePartial.Guard} @{thm HoareTotal.Guard};
 
 val GuardStrip = get_rule @{thm HoarePartial.GuardStrip} @{thm HoareTotal.GuardStrip};
@@ -195,19 +227,19 @@ val Throw = get_rule @{thm HoarePartial.Throw} @{thm HoareTotal.Throw};
 
 val Raise = get_rule @{thm HoarePartial.raise} @{thm HoareTotal.raise};
 
-val Catch = get_rule @{thm HoarePartial.Catch} @{thm HoareTotal.Catch};
+val Catch = get_rule' @{thm HoarePartial.Catch} @{thm HoareTotal.Catch} @{thm HoarePartial.CatchSame};
 
-val CondCatch = get_rule @{thm HoarePartial.condCatch} @{thm HoareTotal.condCatch};
+val CondCatch = get_rule' @{thm HoarePartial.condCatch} @{thm HoareTotal.condCatch}  @{thm HoarePartial.condCatchSame};
 
 val CatchSwap = get_rule @{thm HoarePartial.CatchSwap} @{thm HoareTotal.CatchSwap};
 
 val CondCatchSwap = get_rule @{thm HoarePartial.condCatchSwap} @{thm HoareTotal.condCatchSwap};
 
-val Seq = get_rule @{thm HoarePartial.Seq} @{thm HoareTotal.Seq};
+val Seq = get_rule' @{thm HoarePartial.Seq} @{thm HoareTotal.Seq} @{thm HoarePartial.SeqSame};
 
 val SeqSwap = get_rule @{thm HoarePartial.SeqSwap} @{thm HoareTotal.SeqSwap};
 
-val BSeq = get_rule @{thm HoarePartial.BSeq} @{thm HoareTotal.BSeq};
+val BSeq = get_rule' @{thm HoarePartial.BSeq} @{thm HoareTotal.BSeq} @{thm HoarePartial.BSeqSame};
 
 val Cond = get_rule @{thm HoarePartial.Cond} @{thm HoareTotal.Cond};
 
@@ -235,60 +267,79 @@ val Block = get_rule @{thm HoarePartial.Block} @{thm HoareTotal.Block};
 
 val BlockSwap = get_rule @{thm HoarePartial.BlockSwap} @{thm HoareTotal.BlockSwap};
 
-val Proc = get_rule @{thm HoarePartial.ProcSpec} @{thm HoareTotal.ProcSpec};
+val Proc = get_call_rule
+  @{thm HoarePartial.ProcSpec} @{thm HoareTotal.ProcSpec}
+  @{thm HoarePartial.Proc_exnSpec} @{thm HoareTotal.Proc_exnSpec};
 
-val ProcNoAbr = get_rule @{thm HoarePartial.ProcSpecNoAbrupt} @{thm HoareTotal.ProcSpecNoAbrupt};
+val ProcNoAbr = get_call_rule
+  @{thm HoarePartial.ProcSpecNoAbrupt} @{thm HoareTotal.ProcSpecNoAbrupt}
+  @{thm HoarePartial.Proc_exnSpecNoAbrupt} @{thm HoareTotal.Proc_exnSpecNoAbrupt};
 
 val ProcBody = get_rule @{thm HoarePartial.ProcBody} @{thm HoareTotal.ProcBody};
 
-val CallBody = get_rule @{thm HoarePartial.CallBody} @{thm HoareTotal.CallBody};
+val CallBody = get_call_rule
+  @{thm HoarePartial.CallBody} @{thm HoareTotal.CallBody}
+  @{thm HoarePartial.Call_exnBody} @{thm HoareTotal.Call_exnBody};
 
 val FCall = get_rule @{thm HoarePartial.FCall} @{thm HoareTotal.FCall};
 
 val ProcRecSpecs = get_rule @{thm HoarePartial.ProcRecSpecs} @{thm HoareTotal.ProcRecSpecs};
 
-val ProcModifyReturnSameFaults =
-      get_rule @{thm HoarePartial.ProcModifyReturnSameFaults} @{thm HoareTotal.ProcModifyReturnSameFaults};
+val ProcModifyReturnSameFaults = get_call_rule
+  @{thm HoarePartial.ProcModifyReturnSameFaults} @{thm HoareTotal.ProcModifyReturnSameFaults}
+  @{thm HoarePartial.Proc_exnModifyReturnSameFaults} @{thm HoareTotal.Proc_exnModifyReturnSameFaults};
 
-val ProcModifyReturn = get_rule @{thm HoarePartial.ProcModifyReturn} @{thm HoareTotal.ProcModifyReturn};
+val ProcModifyReturn = get_call_rule
+  @{thm HoarePartial.ProcModifyReturn} @{thm HoareTotal.ProcModifyReturn}
+  @{thm HoarePartial.Proc_exnModifyReturn} @{thm HoareTotal.Proc_exnModifyReturn};
 
-val ProcModifyReturnNoAbr = get_rule @{thm HoarePartial.ProcModifyReturnNoAbr} @{thm HoareTotal.ProcModifyReturnNoAbr};
+val ProcModifyReturnNoAbr = get_call_rule
+  @{thm HoarePartial.ProcModifyReturnNoAbr} @{thm HoareTotal.ProcModifyReturnNoAbr}
+  @{thm HoarePartial.Proc_exnModifyReturnNoAbr} @{thm HoareTotal.Proc_exnModifyReturnNoAbr};
 
 val ProcModifyReturnNoAbrSameFaultsPartial =
       @{thm HoarePartial.ProcModifyReturnNoAbrSameFaults};
 val ProcModifyReturnNoAbrSameFaultsTotal =
       @{thm HoareTotal.ProcModifyReturnNoAbrSameFaults};
-val ProcModifyReturnNoAbrSameFaults =
-      get_rule ProcModifyReturnNoAbrSameFaultsPartial ProcModifyReturnNoAbrSameFaultsTotal;
+val ProcModifyReturnNoAbrSameFaults = get_call_rule
+  ProcModifyReturnNoAbrSameFaultsPartial ProcModifyReturnNoAbrSameFaultsTotal
+  @{thm HoarePartial.Proc_exnModifyReturnNoAbrSameFaults} @{thm HoareTotal.Proc_exnModifyReturnNoAbrSameFaults};
 
 val TrivPost = get_rule @{thm HoarePartial.TrivPost} @{thm HoareTotal.TrivPost};
 
 val TrivPostNoAbr = get_rule @{thm HoarePartial.TrivPostNoAbr} @{thm HoareTotal.TrivPostNoAbr};
 
-val DynProcProcPar = get_rule @{thm HoarePartial.DynProcProcPar} @{thm HoareTotal.DynProcProcPar};
+val DynProcProcPar = get_call_rule
+  @{thm HoarePartial.DynProcProcPar} @{thm HoareTotal.DynProcProcPar}
+  @{thm HoarePartial.DynProc_exnProcPar} @{thm HoareTotal.DynProc_exnProcPar};
 
-val DynProcProcParNoAbr = get_rule @{thm HoarePartial.DynProcProcParNoAbrupt} @{thm HoareTotal.DynProcProcParNoAbrupt};
+val DynProcProcParNoAbr = get_call_rule
+  @{thm HoarePartial.DynProcProcParNoAbrupt} @{thm HoareTotal.DynProcProcParNoAbrupt}
+  @{thm HoarePartial.DynProc_exnProcParNoAbrupt} @{thm HoareTotal.DynProc_exnProcParNoAbrupt};
 
-val ProcProcParModifyReturn = get_rule @{thm HoarePartial.ProcProcParModifyReturn} @{thm HoareTotal.ProcProcParModifyReturn};
+val ProcProcParModifyReturn = get_call_rule
+  @{thm HoarePartial.ProcProcParModifyReturn} @{thm HoareTotal.ProcProcParModifyReturn}
+  @{thm HoarePartial.Proc_exnProcParModifyReturn} @{thm HoareTotal.Proc_exnProcParModifyReturn};
 
 val ProcProcParModifyReturnSameFaultsPartial =
       @{thm HoarePartial.ProcProcParModifyReturnSameFaults};
 val ProcProcParModifyReturnSameFaultsTotal =
       @{thm HoareTotal.ProcProcParModifyReturnSameFaults};
-val ProcProcParModifyReturnSameFaults =
-      get_rule ProcProcParModifyReturnSameFaultsPartial
-               ProcProcParModifyReturnSameFaultsTotal;
+val ProcProcParModifyReturnSameFaults = get_call_rule
+  ProcProcParModifyReturnSameFaultsPartial ProcProcParModifyReturnSameFaultsTotal
+  @{thm HoarePartial.ProcProcParModifyReturnSameFaults} @{thm HoareTotal.ProcProcParModifyReturnSameFaults};
 
-val ProcProcParModifyReturnNoAbr =
-      get_rule @{thm HoarePartial.ProcProcParModifyReturnNoAbr} @{thm HoareTotal.ProcProcParModifyReturnNoAbr};
+val ProcProcParModifyReturnNoAbr = get_call_rule
+  @{thm HoarePartial.ProcProcParModifyReturnNoAbr} @{thm HoareTotal.ProcProcParModifyReturnNoAbr}
+  @{thm HoarePartial.Proc_exnProcParModifyReturnNoAbr} @{thm HoareTotal.Proc_exnProcParModifyReturnNoAbr};
 
 val ProcProcParModifyReturnNoAbrSameFaultsPartial =
       @{thm HoarePartial.ProcProcParModifyReturnNoAbrSameFaults};
 val ProcProcParModifyReturnNoAbrSameFaultsTotal   =
       @{thm HoareTotal.ProcProcParModifyReturnNoAbrSameFaults};
-val ProcProcParModifyReturnNoAbrSameFaults =
-      get_rule ProcProcParModifyReturnNoAbrSameFaultsPartial
-               ProcProcParModifyReturnNoAbrSameFaultsTotal;
+val ProcProcParModifyReturnNoAbrSameFaults = get_call_rule
+  ProcProcParModifyReturnNoAbrSameFaultsPartial ProcProcParModifyReturnNoAbrSameFaultsTotal
+  @{thm HoarePartial.Proc_exnProcParModifyReturnNoAbrSameFaults}  @{thm HoareTotal.Proc_exnProcParModifyReturnNoAbrSameFaults};
 
 val DynCom = get_rule @{thm HoarePartial.DynComConseq} @{thm HoareTotal.DynComConseq};
 
@@ -389,37 +440,9 @@ fun resuffix sfx1 sfx2 s =
   suffix sfx2 (unsuffix sfx1 s)
   handle Fail _ => s;
 
-(* state space representation dependent functions *)
-
-datatype state_kind = Record | Function
-fun state_simprocs Record   = [Record.simproc]
-  | state_simprocs Function = [Record.simproc, StateFun.lookup_simproc];
-
-fun state_upd_simproc Record   = Record.upd_simproc
-  | state_upd_simproc Function = StateFun.update_simproc;
-
-fun state_ex_sel_eq_simproc Record   = Record.ex_sel_eq_simproc
-  | state_ex_sel_eq_simproc Function = StateFun.ex_lookup_eq_simproc;
-
-val state_split_simp_tac = Record.split_simp_tac
-val state_hierarchy = Record.dest_recTs
-
-
-fun stateT_id T = case (state_hierarchy T) of [] => NONE | Ts => SOME (last Ts);
-
-fun globalsT (Type (_, T :: _)) = SOME T
-  | globalsT _ = NONE;
-
-fun stateT_ids T =
-  (case stateT_id T of
-     NONE => NONE
-   | SOME sT => (case globalsT T of
-                   NONE => SOME [sT]
-                 | SOME gT => (case stateT_id gT of
-                                 NONE => SOME [sT]
-                                | SOME gT' => SOME [sT,gT'])));
-
 datatype par_kind = In | Out
+
+datatype state_kind = Record | Function | Other of string;
 
 
 (*** utilities ***)
@@ -439,100 +462,38 @@ fun chopsfx sfx str =
 
 val is_state_var = can (unsuffix deco);
 
-(* removes the suffix of the string beginning with deco.
- *  "xys_'a" --> "xys";
- * The a is also chopped, since sometimes the bound variables
- * are renamed, I think SELECT_GOAL in rename_goal is to blame
- *)
-fun remdeco' str =
-    let
-        fun chop (p::ps) (x::xs) = chop ps xs
-          | chop []      xs      = []
-          | chop (p::ps) []      = error "remdeco: code should never be reached";
-
-        fun remove prf (s as (x::xs)) = if is_prefix (op =) prf s then chop prf s
-                                        else (x::remove prf xs)
-          | remove prf [] = [];
-
-    in String.implode (remove (String.explode deco) (String.explode str)) end;
 
 fun extern ctxt s =
   (case try (Proof_Context.extern_const ctxt o Lexicon.unmark_const) s of
      NONE => s
    | SOME s' => s');
 
-fun remdeco ctxt s = remdeco' (extern ctxt s);
-
-fun undeco ctxt (Const (c, T)) = Const (remdeco ctxt c, T)
-  | undeco ctxt ((f as Const (@{syntax_const "_free"},_)) $ Free (x, T)) =
-      (*f$*)Const (remdeco' x, T)
-  | undeco ctxt (Const _ $ _ $ ((Const (@{syntax_const "_free"},_)) $ Free (x, T))) =
-      (*f$*)Const (remdeco' x, T)
-  | undeco ctxt (Free (c, T)) = Const (remdeco' c, T)
-  | undeco ctxt x = x
-
 fun varname x = x ^ deco
 
-val dest_string = map (chr o HOLogic.dest_char) o HOLogic.dest_list;
+val dest_string = implode o map (chr o HOLogic.dest_char) o HOLogic.dest_list;
 
 fun dest_string' t =
      (case try dest_string t of
-       SOME s => implode s
+       SOME s => s
       | NONE => (case t of
                    Free (s,_) => s
                  | Const (s,_) => Long_Name.base_name s
                  | _ => raise TERM ("dest_string'",[t])))
 
+val state_hierarchy = Record.dest_recTs
+fun stateT_id T = case (state_hierarchy T) of [] => NONE | Ts => SOME (last Ts);
 
-fun is_state_space_var Tids t =
-    let
-      fun is_stateT T = (case stateT_id T of NONE => 0
-                         | SOME id => if member (op =) Tids id then ~1 else 0);
-    in
-      (case t of
-         Const _ $ Abs (_,T,_) => is_stateT T
-       | Free (_,T) => is_stateT T
-       | _ => 0)
-    end;
+fun globalsT (Type (_, T :: _)) = SOME T
+  | globalsT _ = NONE;
 
-
-datatype callMode = Static | Parameter
-
-fun proc_name Static (Const (p,_)$_) = resuffix deco proc_deco (Long_Name.base_name p)
-  | proc_name Static (Const (@{const_name StateFun.lookup},_)$_$Free (p,_)$_) =
-       suffix proc_deco (remdeco' (Long_Name.base_name p))
-  | proc_name Static p = dest_string' p
-  | proc_name Parameter (Const (p,_)) = resuffix deco proc_deco (Long_Name.base_name p)
-  | proc_name Parameter (Abs (_,_,Const (p,_)$Bound 0)) =
-      resuffix deco proc_deco (Long_Name.base_name p)
-  | proc_name Parameter (Abs (_,_,Const (@{const_name StateFun.lookup},_)$_$Free (p,_)$_)) =
-      suffix proc_deco (remdeco' (Long_Name.base_name p))
-  | proc_name _ t = raise TERM ("proc_name",[t]);
-
-
-
-fun dest_call (Const (@{const_name Language.call},_)$init$pname$return$c) =
-           (init,pname,return,c,Static,true)
-  | dest_call (Const (@{const_name Language.fcall},_)$init$pname$return$_$c) =
-           (init,pname,return,c,Static,true)
-  | dest_call (Const (@{const_name Language.com.Call},_)$pname) =
-           (Bound 0,pname,Bound 0,Bound 0,Static,false)
-  | dest_call (Const (@{const_name Language.dynCall},_)$init$pname$return$c) =
-           (init,pname,return,c,Parameter,true)
-  | dest_call t = raise TERM ("Hoare.dest_call: unexpected term",[t]);
-
-fun dest_whileAnno (Const (@{const_name Language.whileAnnoG},_) $gs$b$I$V$c) =
-        (SOME gs,b,I,V,c,false)
-  | dest_whileAnno (Const (@{const_name Language.whileAnno},_) $b$I$V$c) = (NONE,b,I,V,c,false)
-  | dest_whileAnno (Const (@{const_name Language.whileAnnoGFix},_)$gs$b$I$V$c) =
-        (SOME gs,b,I,V,c,true)
-  | dest_whileAnno (Const (@{const_name Language.whileAnnoFix},_) $b$I$V$c) = (NONE,b,I,V,c,true)
-  | dest_whileAnno t = raise TERM ("Hoare.dest_while: unexpected term",[t]);
-
-fun dest_Guard (Const (@{const_name Language.com.Guard},_)$f$g$c) = (f,g,c,false)
-  | dest_Guard (Const (@{const_name Language.guaranteeStrip},_)$f$g$c) = (f,g,c,true)
-  | dest_Guard t = raise TERM ("Hoare.dest_guard: unexpected term",[t]);
-
+fun stateT_ids T =
+  (case stateT_id T of
+     NONE => NONE
+   | SOME sT => (case globalsT T of
+                   NONE => SOME [sT]
+                 | SOME gT => (case stateT_id gT of
+                                 NONE => SOME [sT]
+                                | SOME gT' => SOME [sT,gT'])));
 
 
 (*** extend theory by procedure definition ***)
@@ -546,28 +507,62 @@ fun add_declaration name decl thy =
 
 (* data kind 'HOL/hoare' *)
 
+type lense = {lookup: term, update : term}
+
 type proc_info =
-  {params: ((par_kind * string) list),
-   recursive: bool,
-   state_kind: state_kind}
+  {
+    params: ((par_kind * string * lense option) list),
+    recursive: bool,
+    state_kind: state_kind
+  };
+
+type state_space =
+  {
+    name: string,
+    is_state_type: Proof.context -> typ -> bool,
+    generalise: Proof.context -> int -> tactic,
+    state_simprocs: simproc list,
+    state_upd_simprocs: simproc list,
+    state_ex_sel_eq_simprocs: simproc list,
+    is_defined: Proof.context -> xstring -> bool,
+    read_function_name: Proof.context -> xstring -> term,
+    lookup_tr: Proof.context -> xstring -> term,
+    update_tr: Proof.context -> xstring -> term,
+    is_lookup: Proof.context -> term -> bool,
+    lookup_tr': Proof.context -> term -> term,
+    dest_update_tr': Proof.context -> term -> term * term * term option,
+    update_tr': Proof.context -> term -> term
+  };
+
 
 type hoare_tac = (bool -> int -> tactic) -> Proof.context -> hoareMode -> int -> tactic;
 
 type hoare_data =
- {proc_info: proc_info Symtab.table,
-  active_procs: string list list,
-  default_state_kind: state_kind,
-  generate_guard: (stamp * (Proof.context -> term -> term option)),
-  wp_tacs: (string * hoare_tac) list,
-  hoare_tacs: (string * hoare_tac) list,
-  vcg_simps: thm list};
+ {
+   proc_info: proc_info Symtab.table,
+   active_procs: string list list,
+   default_state_kind: state_kind,
+   generate_guard: (stamp option * (Proof.context -> term -> term option)),
+   name_tr: (stamp option * (Proof.context -> bool -> string -> string)),
+   hoare_tacs: (string * hoare_tac) list,
+   vcg_simps: thm list,
+   state_spaces: (string * state_space) list
+ };
 
 
 fun make_hoare_data proc_info active_procs default_state_kind generate_guard
-     wp_tacs hoare_tacs vcg_simps =
+     name_tr hoare_tacs vcg_simps state_spaces =
   {proc_info = proc_info, active_procs = active_procs, default_state_kind = default_state_kind,
    generate_guard = generate_guard,
-   wp_tacs = wp_tacs, hoare_tacs = hoare_tacs, vcg_simps = vcg_simps};
+   name_tr = name_tr, hoare_tacs = hoare_tacs, vcg_simps = vcg_simps, state_spaces = state_spaces};
+
+fun merge_stamped err_msg ((NONE, _), p) = p
+  | merge_stamped err_msg (p, (NONE,_)) = p
+  | merge_stamped err_msg ((SOME (stamp1:stamp), x), (SOME stamp2, _)) =
+    if stamp1 = stamp2 then (SOME stamp1, x)
+    else error err_msg;
+
+fun fast_merge merge (x, y) = if pointer_eq (x, y) then x else merge (x, y)
 
 structure Hoare_Data = Generic_Data
 (
@@ -577,32 +572,73 @@ structure Hoare_Data = Generic_Data
                (Symtab.empty: proc_info Symtab.table)
                ([]:string list list)
                (Function)
-               (stamp (),(K (K NONE)): Proof.context -> term -> term option)
+               (NONE,(K (K NONE)): Proof.context -> term -> term option)
+               (NONE,(K (K I)): Proof.context -> bool -> string -> string)
                ([]:(string * hoare_tac) list)
-               ([]:(string * hoare_tac) list)
-               ([]:thm list);
+               ([]:thm list)
+               ([]:(string * state_space) list);
 
-  (* FIXME exponential blowup due to append !? *)
-  fun merge ({proc_info = proc_info1, active_procs = active_procs1,
+  val merge = fast_merge (fn ({proc_info = proc_info1, active_procs = active_procs1,
                  default_state_kind = _,
-                  generate_guard = (stmp1,generate_gaurd1),
-                 wp_tacs = wp_tacs1, hoare_tacs = hoare_tacs1, vcg_simps = vcg_simps1},
+                  generate_guard = generate_guard1,
+                 name_tr = name_tr1, hoare_tacs = hoare_tacs1, vcg_simps = vcg_simps1, state_spaces=state_spaces1},
                 {proc_info = proc_info2, active_procs = active_procs2,
                  default_state_kind = default_state_kind2,
-                 generate_guard = (stmp2, _),
-                 wp_tacs = wp_tacs2, hoare_tacs = hoare_tacs2, vcg_simps=vcg_simps2}) : T =
-      if stmp1=stmp2 then
+                 generate_guard = generate_guard2,
+                 name_tr = name_tr2, hoare_tacs = hoare_tacs2, vcg_simps=vcg_simps2, state_spaces=state_spaces2}) =>
           make_hoare_data (Symtab.merge (K true) (proc_info1,proc_info2))
                           (active_procs1 @ active_procs2)
                           (default_state_kind2)
-                          (stmp1,generate_gaurd1)
-                          (wp_tacs1 @ wp_tacs2)
-                          (hoare_tacs1 @ hoare_tacs2)
+                          (merge_stamped
+                            "Theories have different aux. functions to generate guards, please resolve before merge"
+                            (generate_guard1, generate_guard2))
+                          (merge_stamped
+                            "Theories have different aux. functions to translate names, please resolve before merge"
+                            (name_tr1, name_tr2))
+                          (AList.merge (op =) (K true) (hoare_tacs1, hoare_tacs2))
                           (Thm.merge_thms (vcg_simps1,vcg_simps2))
-      else error ("Theories have different aux. functions to generate guards")
+                          (AList.merge (op =) (K true) (state_spaces1, state_spaces2)))
 );
 
 val get_data = Hoare_Data.get o Context.Proof;
+
+(* state space representation dependent functions *)
+
+fun get_state_space_comps sel ctxt n =
+ AList.lookup (op =) (#state_spaces (Hoare_Data.get (Context.Proof ctxt))) n
+ |> Option.map sel |> these;
+
+
+fun state_simprocs ctxt Record   = [Record.simproc]
+  | state_simprocs ctxt Function = [Record.simproc, StateFun.lookup_simproc]
+  | state_simprocs ctxt (Other n) = get_state_space_comps (#state_simprocs) ctxt n;
+
+
+fun state_upd_simprocs ctxt Record   = [Record.upd_simproc]
+  | state_upd_simprocs ctxt Function = [StateFun.update_simproc]
+  | state_upd_simprocs ctxt (Other n) = get_state_space_comps (#state_upd_simprocs) ctxt n;
+
+fun state_ex_sel_eq_simprocs ctxt Record   = [Record.ex_sel_eq_simproc]
+  | state_ex_sel_eq_simprocs ctxt Function = [StateFun.ex_lookup_eq_simproc]
+  | state_ex_sel_eq_simprocs ctxt (Other n) = get_state_space_comps (#state_ex_sel_eq_simprocs) ctxt n;
+
+val state_split_simp_tac = Record.split_simp_tac
+val state_hierarchy = Record.dest_recTs
+
+
+fun stateT_id T = case (state_hierarchy T) of [] => NONE | Ts => SOME (last Ts);
+
+fun globalsT (Type (_, T :: _)) = SOME T
+  | globalsT _ = NONE;
+
+fun stateT_ids T =
+  (case stateT_id T of
+     NONE => NONE
+   | SOME sT => (case globalsT T of
+                   NONE => SOME [sT]
+                 | SOME gT => (case stateT_id gT of
+                                 NONE => SOME [sT]
+                                | SOME gT' => SOME [sT,gT'])));
 
 
 (* access 'params' *)
@@ -625,52 +661,52 @@ datatype 'a bodykind = BodyTyp of 'a | BodyTerm of 'a
 
 fun set_default_state_kind sk context =
   let
-    val {proc_info,active_procs,default_state_kind,generate_guard,wp_tacs,hoare_tacs,
-           vcg_simps,...}
+    val {proc_info,active_procs,default_state_kind,generate_guard,name_tr,hoare_tacs,
+           vcg_simps,state_spaces, ...}
             = Hoare_Data.get context;
       val data = make_hoare_data proc_info active_procs sk
-                   generate_guard wp_tacs hoare_tacs vcg_simps;
+                   generate_guard name_tr hoare_tacs vcg_simps state_spaces;
   in Hoare_Data.put data context end;
 
 val get_default_state_kind = #default_state_kind o get_data;
 
+fun get_default_state_space ctxt =
+  case get_default_state_kind ctxt of
+     Other sp => AList.lookup (op =) (#state_spaces (Hoare_Data.get (Context.Proof ctxt))) sp
+   | _ => NONE
+
 fun add_active_procs phi ps context =
   let
-      val {proc_info,active_procs,default_state_kind,generate_guard,wp_tacs,hoare_tacs,
-           vcg_simps,...}
+      val {proc_info,active_procs,default_state_kind,generate_guard,name_tr,hoare_tacs,
+           vcg_simps,state_spaces, ...}
             = Hoare_Data.get context;
       val data = make_hoare_data proc_info
                    ((map (morph_name context phi) ps)::active_procs)
                    default_state_kind
-                   generate_guard wp_tacs hoare_tacs vcg_simps;
+                   generate_guard name_tr hoare_tacs vcg_simps state_spaces;
   in Hoare_Data.put data context end;
 
 
 fun add_hoare_tacs tacs context =
   let
-      val {proc_info,active_procs, default_state_kind, generate_guard,wp_tacs,hoare_tacs,
-           vcg_simps,...}
+      val {proc_info,active_procs, default_state_kind, generate_guard,name_tr,hoare_tacs,
+           vcg_simps,state_spaces,...}
             = Hoare_Data.get context;
       val data = make_hoare_data proc_info active_procs default_state_kind generate_guard
-                   wp_tacs (hoare_tacs@tacs) vcg_simps;
+                   name_tr (AList.merge (op =) (K true) (hoare_tacs, tacs)) vcg_simps state_spaces;
   in Hoare_Data.put data context end;
 
 fun map_vcg_simps f context =
   let
-      val {proc_info,active_procs,default_state_kind,generate_guard,wp_tacs,hoare_tacs,
-           vcg_simps,...}
+      val {proc_info,active_procs,default_state_kind,generate_guard,name_tr,hoare_tacs,
+           vcg_simps,state_spaces,...}
             = Hoare_Data.get context;
       val data = make_hoare_data proc_info active_procs default_state_kind generate_guard
-                   wp_tacs hoare_tacs (f vcg_simps);
+                   name_tr hoare_tacs (f vcg_simps) state_spaces;
   in Hoare_Data.put data context end;
 
-fun thy_attrib f = Thm.declaration_attribute (fn thm => map_vcg_simps (f thm));
-
-val vcg_simpadd = Thm.add_thm
-val vcg_simpdel = Thm.del_thm
-
-val vcg_simp_add = thy_attrib vcg_simpadd;
-val vcg_simp_del = thy_attrib vcg_simpdel;
+val vcg_simp_add = Thm.declaration_attribute (map_vcg_simps o Thm.add_thm o Thm.trim_context);
+val vcg_simp_del = Thm.declaration_attribute (map_vcg_simps o Thm.del_thm);
 
 
 (* add 'procedure' *)
@@ -687,18 +723,21 @@ fun map_proc_info_state_kind f {params,recursive,state_kind} =
      mk_proc_info params recursive (f state_kind);
 
 
+fun morph_lense phi ({lookup, update}:lense) =
+  {lookup = Morphism.term phi lookup, update = Morphism.term phi update}:lense;
 
 fun add_params phi name frmls context =
   let
-      val {proc_info,active_procs,default_state_kind,generate_guard,wp_tacs,hoare_tacs,
-           vcg_simps,...}
+      val {proc_info,active_procs,default_state_kind,generate_guard,name_tr,hoare_tacs,
+           vcg_simps,state_spaces, ...}
             = Hoare_Data.get context;
-      val params = map (apsnd (morph_name context phi)) frmls;
+      val params = map (fn (kind, name, lense_opt) =>
+            (kind, morph_name context phi name, Option.map (morph_lense phi) lense_opt)) frmls;
       val f = map_proc_info_params (K params);
       val default = f empty_proc_info;
-      val proc_info' = Symtab.map_default (morph_name context phi name,default) f proc_info;
+      val proc_info' = Symtab.map_default (morph_name context phi name, default) f proc_info;
       val data = make_hoare_data proc_info' active_procs default_state_kind
-                   generate_guard wp_tacs hoare_tacs vcg_simps;
+                   generate_guard name_tr hoare_tacs vcg_simps state_spaces;
   in Hoare_Data.put data context end;
 
 fun get_params name ctxt =
@@ -707,14 +746,14 @@ fun get_params name ctxt =
 
 fun add_recursive phi name context =
   let
-     val {proc_info,active_procs,default_state_kind,generate_guard,wp_tacs,hoare_tacs,
-          vcg_simps,...}
+     val {proc_info,active_procs,default_state_kind,generate_guard,name_tr,hoare_tacs,
+          vcg_simps,state_spaces, ...}
           = Hoare_Data.get context;
      val f = map_proc_info_recursive (K true);
      val default = f empty_proc_info;
      val proc_info'= Symtab.map_default (morph_name context phi name,default) f proc_info;
      val data = make_hoare_data proc_info' active_procs default_state_kind
-                  generate_guard wp_tacs hoare_tacs vcg_simps;
+                  generate_guard name_tr hoare_tacs vcg_simps state_spaces;
   in Hoare_Data.put data context end;
 
 fun get_recursive name ctxt =
@@ -722,14 +761,14 @@ fun get_recursive name ctxt =
 
 fun add_state_kind phi name sk context =
   let
-     val {proc_info,active_procs,default_state_kind,generate_guard,wp_tacs,hoare_tacs,
-          vcg_simps,...}
+     val {proc_info,active_procs,default_state_kind,generate_guard,name_tr,hoare_tacs,
+          vcg_simps,state_spaces,...}
           = Hoare_Data.get context;
      val f = map_proc_info_state_kind (K sk);
      val default = f empty_proc_info;
      val proc_info'= Symtab.map_default (morph_name context phi name,default) f proc_info;
      val data = make_hoare_data proc_info' active_procs default_state_kind
-                  generate_guard wp_tacs hoare_tacs vcg_simps;
+                  generate_guard name_tr hoare_tacs vcg_simps state_spaces;
   in Hoare_Data.put data context end;
 
 fun get_state_kind name ctxt =
@@ -737,14 +776,123 @@ fun get_state_kind name ctxt =
 
 fun install_generate_guard f context =
   let
-    val {proc_info,active_procs, default_state_kind, generate_guard,wp_tacs,hoare_tacs,
-         vcg_simps,...} =
+    val {proc_info,active_procs, default_state_kind, generate_guard,name_tr,hoare_tacs,
+         vcg_simps,state_spaces,...} =
          Hoare_Data.get context;
-    val data = make_hoare_data proc_info active_procs default_state_kind (stamp (), f)
-                wp_tacs hoare_tacs vcg_simps
+    val data = make_hoare_data proc_info active_procs default_state_kind (SOME (stamp ()), f)
+                name_tr hoare_tacs vcg_simps state_spaces
   in Hoare_Data.put data context end;
 
 fun generate_guard ctxt = snd (#generate_guard (get_data ctxt)) ctxt;
+
+fun install_state_space sp ctxt =
+  let
+    val {proc_info,active_procs, default_state_kind, generate_guard,name_tr,hoare_tacs,
+         vcg_simps,state_spaces,...} =
+         Hoare_Data.get ctxt;
+    val data = make_hoare_data proc_info active_procs default_state_kind generate_guard
+                name_tr hoare_tacs vcg_simps (AList.update (op =) (#name sp, sp) state_spaces)
+  in Hoare_Data.put data ctxt end;
+
+fun generalise_other ctxt name =
+  Option.map #generalise (AList.lookup (op =) (#state_spaces (get_data ctxt)) name);
+
+fun install_name_tr f ctxt =
+  let
+    val {proc_info,active_procs, default_state_kind, generate_guard,name_tr,hoare_tacs,
+         vcg_simps,state_spaces,...} =
+         Hoare_Data.get ctxt;
+    val data = make_hoare_data proc_info active_procs default_state_kind generate_guard
+                (SOME (stamp ()), f) hoare_tacs vcg_simps state_spaces
+  in Hoare_Data.put data ctxt end;
+
+fun name_tr ctxt = snd (#name_tr (get_data ctxt)) ctxt;
+
+
+(* utils for variable name decorations *)
+
+
+(* removes the suffix of the string beginning with deco.
+ *  "xys_'a" --> "xys";
+ * The a is also chopped, since sometimes the bound variables
+ * are renamed, I think SELECT_GOAL in rename_goal is to blame
+ *)
+fun remdeco' ctxt str =
+    let
+        fun chop (p::ps) (x::xs) = chop ps xs
+          | chop []      xs      = []
+          | chop (p::ps) []      = error "remdeco: code should never be reached";
+
+        fun remove prf (s as (x::xs)) = if is_prefix (op =) prf s then chop prf s
+                                        else (x::remove prf xs)
+          | remove prf [] = [];
+
+    in name_tr ctxt false (String.implode (remove (String.explode deco) (String.explode str))) end;
+
+
+fun remdeco ctxt s = remdeco' ctxt (extern ctxt s);
+
+fun undeco ctxt (Const (c, T)) = Const (remdeco ctxt c, T)
+  | undeco ctxt ((f as Const (@{syntax_const "_free"},_)) $ Free (x, T)) =
+      (*f$*)Const (remdeco' ctxt x, T)
+  | undeco ctxt (Const _ $ _ $ ((Const (@{syntax_const "_free"},_)) $ Free (x, T))) =
+      (*f$*)Const (remdeco' ctxt x, T)
+  | undeco ctxt (Free (c, T)) = Const (remdeco' ctxt c, T)
+  | undeco ctxt x = x
+
+fun is_state_space_var Tids t =
+    let
+      fun is_stateT T = (case stateT_id T of NONE => 0
+                         | SOME id => if member (op =) Tids id then ~1 else 0);
+    in
+      (case t of
+         Const _ $ Abs (_,T,_) => is_stateT T
+       | Free (_,T) => is_stateT T
+       | _ => 0)
+    end;
+
+
+datatype callMode = Static | Parameter
+
+fun proc_name ctxt Static (Const (p,_)$_) = resuffix deco proc_deco (Long_Name.base_name p)
+  | proc_name ctxt Static (Const (@{const_name StateFun.lookup},_)$_$Free (p,_)$_) =
+       suffix proc_deco (remdeco' ctxt (Long_Name.base_name p))
+  | proc_name ctxt Static p = dest_string' p
+  | proc_name ctxt Parameter (Const (p,_)) = resuffix deco proc_deco (Long_Name.base_name p)
+  | proc_name ctxt Parameter (Abs (_,_,Const (p,_)$Bound 0)) =
+      resuffix deco proc_deco (Long_Name.base_name p)
+  | proc_name ctxt Parameter (Abs (_,_,Const (@{const_name StateFun.lookup},_)$_$Free (p,_)$_)) =
+      suffix proc_deco (remdeco' ctxt (Long_Name.base_name p))
+  | proc_name _ _ t = raise TERM ("proc_name",[t]);
+
+
+fun dest_call (Const (@{const_name Language.call},_)$init$pname$return$c) =
+           (init,pname,return,c,Static,true,NONE)
+  | dest_call (Const (@{const_name Language.fcall},_)$init$pname$return$_$c) =
+           (init,pname,return,c,Static,true,NONE)
+  | dest_call (Const (@{const_name Language.com.Call},_)$pname) =
+           (Bound 0,pname,Bound 0,Bound 0,Static,false,NONE)
+  | dest_call (Const (@{const_name Language.dynCall},_)$init$pname$return$c) =
+           (init,pname,return,c,Parameter,true,NONE)
+  | dest_call (Const (@{const_name Language.call_exn},_)$init$pname$return$result_exn$c) =
+           (init,pname,return,c,Static,true,SOME result_exn)
+  | dest_call (Const (@{const_name Language.dynCall_exn},_)$init$pname$return$result_exn$c) =
+           (init,pname,return,c,Parameter,true,SOME result_exn)
+  | dest_call t = raise TERM ("Hoare.dest_call: unexpected term",[t]);
+
+
+fun dest_whileAnno (Const (@{const_name Language.whileAnnoG},_) $gs$b$I$V$c) =
+        (SOME gs,b,I,V,c,false)
+  | dest_whileAnno (Const (@{const_name Language.whileAnno},_) $b$I$V$c) = (NONE,b,I,V,c,false)
+  | dest_whileAnno (Const (@{const_name Language.whileAnnoGFix},_)$gs$b$I$V$c) =
+        (SOME gs,b,I,V,c,true)
+  | dest_whileAnno (Const (@{const_name Language.whileAnnoFix},_) $b$I$V$c) = (NONE,b,I,V,c,true)
+  | dest_whileAnno t = raise TERM ("Hoare.dest_while: unexpected term",[t]);
+
+fun dest_Guard (Const (@{const_name Language.com.Guard},_)$f$g$c) = (f,g,c,false)
+  | dest_Guard (Const (@{const_name Language.guaranteeStrip},_)$f$g$c) = (f,g,c,true)
+  | dest_Guard t = raise TERM ("Hoare.dest_guard: unexpected term",[t]);
+
 
 
 fun check_procedures_definition procs thy =
@@ -775,7 +923,7 @@ fun check_procedures_definition procs thy =
              maps (fn (name,inpars,outpars,locals,_,_,_) =>
                       duplicate_pars name (inpars @ locals) @
                       duplicate_pars name (outpars @ locals)) procs;
-        (* FIXME: Check that no global variables are used as result parameters *)
+        (* fixme: Check that no global variables are used as result parameters *)
         val errs = err_already_defined @ err_duplicate_procs @ err_duplicate_pars;
     in if null errs then () else error (cat_lines errs)
     end;
@@ -783,12 +931,13 @@ fun check_procedures_definition procs thy =
 
 fun add_parameter_info phi cname (name,(inpars,outpars,state_kind)) context =
     let fun par_deco' T = if T = "" then deco else par_deco (cname name);
-        val pars = map (fn (par,T) => (In,suffix (par_deco' T) par)) inpars@
-                   map (fn (par,T) => (Out,suffix (par_deco' T) par)) outpars;
-    in
-      context
-      |> add_params phi name pars
-      |> add_state_kind phi name state_kind
+        val pars = map (fn (par,T) => (In,suffix (par_deco' T) par, NONE)) inpars@
+                   map (fn (par,T) => (Out,suffix (par_deco' T) par, NONE)) outpars;
+
+        val ctxt_decl = context
+              |> add_params phi name pars
+              |> add_state_kind phi name state_kind
+    in ctxt_decl
     end;
 
 fun mk_loc_exp xs =
@@ -947,7 +1096,7 @@ fun procedures_definition locname procs thy =
         val bodies = map read_body name_body;
         fun dcall t =
           (case try dest_call t of
-             SOME (_,p,_,_,m,_) => SOME (proc_name m p)
+             SOME (_,p,_,_,m,_,_) => SOME (proc_name (Context.proof_of context) m p)
            | _ => NONE);
         fun in_names x = if member (op =) names x then SOME x else NONE;
         fun add_edges n = fold (fn x => Graph.add_edge (n, x));
@@ -1014,7 +1163,7 @@ fun procedures_definition locname procs thy =
       let
         val name' = unsuffix proc_deco name;
         val fixes = [Element.Fixes [(Binding.name name, SOME proc_nameT, NoSyn)]];
-        (* FIXME: may use HOLogic.typeT as soon as locale type-inference works properly *)
+        (* fixme: may use HOLogic.typeT as soon as locale type-inference works properly *)
         val pE = mk_loc_exp [intern_locale thy (suffix parametersN cname)];
         val sN = suffix signatureN  name';
       in thy
@@ -1038,7 +1187,7 @@ fun procedures_definition locname procs thy =
         val callees = filter_out (fn n => n = name) (get_calls name)
 
         val fixes = [Element.Fixes [(Binding.name name, SOME proc_nameT, NoSyn)]];
-            (* FIXME: may use HOLogic.typeT as soon as locale type-inference works properly *)
+            (* fixme: may use HOLogic.typeT as soon as locale type-inference works properly *)
         val pE = mk_loc_exp
                   (map (intern_locale thy)
                     ([lname variablesN (the (my_clique name))]@
@@ -1074,7 +1223,7 @@ fun procedures_definition locname procs thy =
       if has_body name
       then
          let
-           (* FIXME: All the read_term stuff is just because type-inference/abbrevs for
+           (* fixme: All the read_term stuff is just because type-inference/abbrevs for
             * new locale elements does not work right now;
             * We read the term to expand the abbreviations, then we print it again
             * (without folding the abbreviation) and reread as string  *)
@@ -1087,7 +1236,7 @@ fun procedures_definition locname procs thy =
                      HOLogic.mk_eq (Free (gamma,fastype_of nt --> fastype_of rhs)$nt,rhs)
            val consts = Sign.consts_of thy;
            val eqs =
-            YXML.string_of_body (Term_XML.Encode.term consts (Consts.dummy_types consts eq));
+             YXML.string_of_body (Term_XML.Encode.term consts (Consts.dummy_types consts eq));
            val assms = Element.Assumes [((Binding.name (suffix bodyP name'), []),[(eqs,[])])]
          in [assms]
          end
@@ -1328,7 +1477,12 @@ fun cond_rename_bvars cond name thm =
 
 val rename_bvars = cond_rename_bvars (K true);
 
-fun trace_tac ctxt str st = (if Config.get ctxt hoare_trace then tracing str else (); all_tac st);
+fun trace_msg ctxt str = if Config.get ctxt hoare_trace > 0 then tracing str else ()
+fun trace_tac ctxt str st = (trace_msg ctxt str; all_tac st);
+
+fun trace_subgoal_tac ctxt s i =
+    SUBGOAL (fn (prem, _) => trace_tac ctxt (s ^ (Syntax.string_of_term ctxt prem))) i
+
 
 fun error_tac str st = (error str;no_tac st);
 
@@ -1430,7 +1584,7 @@ fun mk_split_thms ctxt (vars as _::_)  =
       end;
 
     fun prove_simp simps prop =
-      let val ([prop'], _) = Variable.importT_terms [prop] ctxt  (* FIXME continue context!? *)
+      let val ([prop'], _) = Variable.importT_terms [prop] ctxt  (* fixme continue context!? *)
       in
         Goal.prove_global thy [] [] prop'
           (fn {context = goal_ctxt, ...} =>
@@ -1559,17 +1713,19 @@ fun add_foldcongsimps simps thy = FoldCongData.map (fn ss =>
  *)
 fun in_assertion_simp_tac ctxt state_kind thms i =
  let
-     val vcg_simps = #vcg_simps (get_data ctxt);
-     val fold_simps = get_foldcong_ss (Proof_Context.theory_of ctxt)
+     val thy = Proof_Context.theory_of ctxt
+     val vcg_simps = map (Thm.transfer thy) (#vcg_simps (get_data ctxt));
+     val fold_simps = get_foldcong_ss thy
+     val state_simps = Named_Theorems.get ctxt @{named_theorems "state_simp"}
  in
    EVERY [simp_tac
             (put_simpset HOL_basic_ss ctxt addsimps ([mem_Collect_eq,@{thm Set.Un_iff},@{thm Set.Int_iff},
                                      @{thm Set.empty_subsetI}, @{thm Set.empty_iff}, UNIV_I,
-                                     @{thm Hoare.Collect_False}]@thms@K_convs@vcg_simps)
-                          addsimprocs (state_simprocs state_kind)
+                                     @{thm Hoare.Collect_False}]@state_simps@thms@K_convs@vcg_simps)
+                          addsimprocs (state_simprocs ctxt state_kind)
                           |> fold Simplifier.add_cong K_congs)  i
            THEN_MAYBE
-           (simp_tac (put_simpset fold_simps ctxt addsimprocs [state_upd_simproc state_kind])  i)
+           (simp_tac (put_simpset fold_simps ctxt addsimprocs (state_upd_simprocs ctxt state_kind))  i)
          ]
  end;
 
@@ -1606,12 +1762,16 @@ fun before_set2pred_simp_tac ctxt =
 (** simplification done by full_simp_tac                                    **)
 (*****************************************************************************)
 
+val Collect_subset_to_pred =
+@{lemma \<open>(\<And>x. A x \<Longrightarrow> P x)
+   \<Longrightarrow> {x. A x} \<subseteq> {x. P x}\<close>
+ by (rule subsetI, rule CollectI, drule CollectD, assumption)}
+
+
 fun set2pred_tac ctxt i thm =
   ((before_set2pred_simp_tac ctxt i) THEN_MAYBE
           (EVERY [trace_tac ctxt "set2pred",
-                  resolve_tac ctxt [subsetI] i,
-                  resolve_tac ctxt [CollectI] i,
-                  dresolve_tac ctxt [CollectD] i,
+                  resolve_tac ctxt [Collect_subset_to_pred] i,
                   full_simp_tac (put_simpset HOL_basic_ss ctxt) i ])) thm
 
 
@@ -1627,7 +1787,7 @@ fun set2pred_tac ctxt i thm =
 
 fun MaxSimpTac ctxt tac i =
   TRY (FIRST[resolve_tac ctxt [subset_refl] i,
-      set2pred_tac ctxt i THEN_MAYBE tac i,
+      (set2pred_tac ctxt i THEN_MAYBE tac i) ORELSE tac i,
       trace_tac ctxt "final_tac failed"
       ]);
 
@@ -1667,7 +1827,7 @@ fun post_conforms_tac ctxt state_kind i =
           (fn i => (REPEAT (resolve_tac ctxt [allI,impI] i))
                     THEN (full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps
                              [mem_Collect_eq,@{thm Set.singleton_iff},@{thm Set.empty_iff},UNIV_I]
-                             addsimprocs (state_simprocs state_kind)) i))) i];
+                             addsimprocs (state_simprocs ctxt state_kind)) i))) i];
 
 
 fun dest_hoare_raw (Const(@{const_name HoarePartialDef.hoarep},_)$G$T$F$P$C$Q$A) = (P,C,Q,A,Partial,G,T,F)
@@ -1689,7 +1849,7 @@ fun dest_hoare t =
     let
       val triple =
         (strip_qnt_body @{const_name "All"} o
-          HOLogic.dest_Trueprop o strip_qnt_body @{const_name Pure.all}) t;
+          HOLogic.dest_Trueprop o Logic.strip_assums_concl) t;
     in
       dest_hoare_raw triple
     end;
@@ -1727,37 +1887,24 @@ val conseq1_ss_base =
               @K_convs @ @{thms simp_thms} @ @{thms ex_simps} @ @{thms all_simps})
     delsimps [@{thm Hoare.all_imp_to_ex}]
     |> fold Simplifier.add_cong K_congs)
-val conseq1_ss_record =
-  simpset_of (put_simpset conseq1_ss_base @{context} addsimprocs (state_simprocs Record));
-val conseq1_ss_fun =
-  simpset_of (put_simpset conseq1_ss_base @{context} addsimprocs (state_simprocs Function));
-fun conseq1_ss Record   = conseq1_ss_record
-  | conseq1_ss Function = conseq1_ss_fun;
 
 val conseq2_ss_base =
   simpset_of (put_simpset HOL_basic_ss @{context}
     addsimps (@{thms Hoare.all_imp_eq_triv} @ @{thms simp_thms} @ @{thms ex_simps} @ @{thms all_simps})
     delsimps [@{thm Hoare.all_imp_to_ex}]
     |> Simplifier.add_cong @{thm imp_cong});
-
-val conseq2_ss_record =
-  simpset_of (put_simpset conseq2_ss_base @{context}
-    addsimprocs [state_upd_simproc Record, state_ex_sel_eq_simproc Record]);
-val conseq2_ss_fun =
-  simpset_of (put_simpset conseq2_ss_base @{context}
-    addsimprocs [state_upd_simproc Function, state_ex_sel_eq_simproc Function]);
-fun conseq2_ss Record   = conseq2_ss_record
-  | conseq2_ss Function = conseq2_ss_fun;
-
 in
 
 fun raw_conseq_simp_tac ctxt state_kind thms i =
   let
     val ctxt' = Config.put simp_depth_limit 0 ctxt;
   in
-     simp_tac (put_simpset (conseq1_ss state_kind) ctxt' addsimps thms) i
+     simp_tac (put_simpset conseq1_ss_base ctxt'
+       addsimprocs (state_simprocs ctxt' state_kind)
+       addsimps thms) i
      THEN_MAYBE
-     simp_tac (put_simpset (conseq2_ss state_kind) ctxt') i
+     simp_tac (put_simpset conseq2_ss_base ctxt'
+       addsimprocs (state_upd_simprocs ctxt' state_kind @ state_ex_sel_eq_simprocs ctxt' state_kind)) i
   end
 
 end
@@ -1782,7 +1929,7 @@ fun gen_context_thms ctxt mode params G T F =
         val hoare =
           (case mode of Partial => @{const_name HoarePartialDef.hoarep}
           | Total => @{const_name HoareTotalDef.hoaret});
-        (* FIXME: Use future Proof_Context.rename_vars or make closed term and remove by hand *)
+        (* fixme: Use future Proof_Context.rename_vars or make closed term and remove by hand *)
         (*
         fun free_params ps t = foldr (fn ((x,xT),t) => snd (variant_abs (x,xT,t))) (ps,t);
         val PpQA' = mkCallQuadruple (strip_qnt_body @{const_name Pure.all} (free_params params (Term.list_all (vars,PpQA))));
@@ -1810,10 +1957,11 @@ fun gen_context_thms ctxt mode params G T F =
       let
         val vars = map fst (strip_qnt_vars @{const_name All}
                              (HOLogic.dest_Trueprop (Logic.strip_assums_concl prop)));
+        val [asmUN'] = adapt_aux_var ctxt true vars [get_aux_tvar (AsmUN mode)]
       in Goal.prove ctxt params [] prop
           (fn {context = ctxt', ...} =>
             EVERY[trace_tac ctxt' "extracting specifications from hoare context",
-                  resolve_tac ctxt' (adapt_aux_var ctxt' true vars [get_aux_tvar (AsmUN mode)]) 1,
+                  resolve_tac ctxt' [asmUN'] 1,
                   DEPTH_SOLVE_1 (resolve_tac ctxt' [subset_refl,refl] 1 ORELSE
                     ((resolve_tac ctxt' [@{thm Hoare.subset_unI1}] 1 APPEND resolve_tac ctxt' [@{thm Hoare.subset_unI2}] 1)
                      ORELSE
@@ -1826,10 +1974,11 @@ fun gen_context_thms ctxt mode params G T F =
     val specs = hoare_context_specs mode G T F;
   in map (mk_prove mode) specs end;
 
+fun is_modifies_assertion t =
+    exists_subterm (fn (Const (@{const_name Hoare.meq},_)) => true| _ => false) t
 
 fun is_modifies_clause t =
-    exists_subterm (fn (Const (@{const_name Hoare.meq},_)) => true| _ => false)
-           (#3 (dest_hoare (Logic.strip_assums_concl t)))
+  is_modifies_assertion (#3 (dest_hoare (Logic.strip_assums_concl t)))
     handle (TERM _) => false;
 val is_spec_clause = not o is_modifies_clause;
 
@@ -1843,7 +1992,7 @@ fun swap_constr_destr f (t as (Const (@{const_name Fun.id},_))) = t
   | swap_constr_destr f  (t as (Const (c,Type ("fun",[T,valT])))) =
      (Const (f c, Type ("fun",[valT,T]))
       handle Empty => raise TERM ("Hoare.swap_constr_destr",[t]))
-  | swap_constr_destr f (Const ("StateFun.map_fun",Type ("fun",   (* FIXME unknown "StateFun.map_fun" !? *)
+  | swap_constr_destr f (Const ("StateFun.map_fun",Type ("fun",   (* fixme: unknown "StateFun.map_fun" !? *)
                                              [Type ("fun",[T,valT]),
                                               Type ("fun",[Type ("fun",[xT,T']),
                                                            Type ("fun",[xT',valT'])])]))$g) =
@@ -1871,7 +2020,7 @@ fun swap_constr_destr f (t as (Const (@{const_name Fun.id},_))) = t
                            Type ("fun",[bsT,asT])]))$swap_constr_destr f g)
   | swap_constr_destr f t = raise TERM ("Hoare.swap_constr_destr",[t]);
 
-(* FIXME: unused? *)
+(* fixme: unused? *)
 val destr_to_constr =
     let
       fun convert c =
@@ -1881,17 +2030,16 @@ val destr_to_constr =
     in  swap_constr_destr convert end;
 
 fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
-                 pname return has_args _ =
+                 pname return has_args result_exn _ =
   let
     val thy = Proof_Context.theory_of ctxt;
-    val pname' = unsuffix proc_deco pname;
+    val pname' = chopsfx proc_deco pname;
     val spec = (case AList.lookup (op =) asms pname of
                  SOME s => SOME s
                | NONE =>  try (Proof_Context.get_thm ctxt) (suffix spec_sfx pname'));
-
     fun auxvars_for p t =
          (case first_subterm_dest (try dest_call) t of
-           SOME (vars,(_,p',_,_,m,_)) => (if m=Static andalso
+           SOME (vars,(_,p',_,_,m,_,_)) => (if m=Static andalso
                                            p=(dest_string' p')
                                         then SOME vars
                                         else NONE)
@@ -1916,7 +2064,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
     fun check_spec name P thm =
          (case try dest_hoare (Thm.concl_of thm) of
                SOME spc => (case try dest_call (#2 spc) of
-                             SOME (_,p,_,_,m,_) => if proc_name m p = name andalso
+                             SOME (_,p,_,_,m,_,_) => if proc_name ctxt m p = name andalso
                                                     P (Thm.concl_of thm)
                                                  then SOME (#5 spc,thm)
                                                  else NONE
@@ -1954,13 +2102,13 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
       | solve_spec ctxt' augment_rule asmUN_rule augment_emptyFaults mode Parameter _ _ i =
           (* try to infer spec out of assumptions *)
          let
-             fun tac ({context = ctxt'', prems, ...}: Subgoal.focus) =
-              (case (find_dyn_specs pname is_spec_clause prems) of
+             fun tac thms =
+              (case (find_dyn_specs pname is_spec_clause thms) of
                 (spec_mode,spec)::_
-                 => solve_spec ctxt'' augment_rule asmUN_rule augment_emptyFaults mode Parameter
+                 => solve_spec ctxt' augment_rule asmUN_rule augment_emptyFaults mode Parameter
                        (SOME spec_mode) (SOME spec) 1
                | _ => all_tac)
-         in Subgoal.FOCUS tac ctxt' i end
+         in Subgoal.FOCUS (tac o #prems) ctxt i end
 
     val strip_spec_vars = strip_qnt_vars @{const_name All} o HOLogic.dest_Trueprop;
 
@@ -1974,22 +2122,21 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                            SOME (_,_,_,_,_,_,Theta,_) => get_auxvars_for pname Theta
                           | _ => []));
 
-        fun get_call_rule Static mode is_abr  =
-            if is_abr then Proc mode else ProcNoAbr mode
-          | get_call_rule Parameter mode is_abr =
-                if is_abr then DynProcProcPar mode else DynProcProcParNoAbr mode;
+        fun get_call_rule' Static mode is_abr result_exn =
+            if is_abr then Proc mode result_exn else ProcNoAbr mode result_exn
+          | get_call_rule' Parameter mode is_abr result_exn =
+                if is_abr then DynProcProcPar mode result_exn else DynProcProcParNoAbr mode result_exn;
 
         val [call_rule,augment_ctxt_rule,asmUN_rule, augment_emptyFaults] =
                 adapt_aux_var ctxt' true spec_vars
                   (map get_aux_tvar
-                    [get_call_rule cmode mode is_abr,
+                    [get_call_rule' cmode mode is_abr result_exn,
                      AugmentContext mode,
                      AsmUN mode,
                      AugmentEmptyFaults mode]);
-
       in EVERY [resolve_tac ctxt' [call_rule] i,
                 trace_tac ctxt' "call_tac -- basic_tac -- solving spec",
-                solve_spec ctxt' augment_ctxt_rule asmUN_rule augment_emptyFaults
+                solve_spec ctxt'  augment_ctxt_rule asmUN_rule augment_emptyFaults
                            mode cmode spec_mode spec spec_goal]
       end;
 
@@ -2012,8 +2159,8 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                     | SOME (_,c,Q,spec_abr,spec_mode,_,_,_)
                       => case try dest_call c of
                            NONE => (warning msg;(true,NONE,NONE,false))
-                         | SOME (_,p,_,_,m,spec_has_args)
-                           => if proc_name m p = pname
+                         | SOME (_,p,_,_,m,spec_has_args,_)
+                           => if proc_name ctxt m p = pname
                               then if (mode=Total andalso spec_mode=Partial)
                                    then (warning msg;(true,NONE,NONE,false))
                                    else if is_empty_set spec_abr then
@@ -2036,7 +2183,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                  resolve_tac ctxt' [allI] (i+1),
                  cont_tac ctxt' (i+1),
                  trace_tac ctxt' "call_tac -- basic_tac -- simplify",
-                 conseq_simp_tac ctxt' state_kind [@{thm StateSpace.upd_globals_def}] i,
+                 conseq_simp_tac ctxt' state_kind (Named_Theorems.get ctxt @{named_theorems "state_simp"}) i,
                  trace_tac ctxt' "call_tac -- basic_tac -- STOP --"]
         end;
 
@@ -2111,8 +2258,8 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
        | modify_updatesF subst _ glob ((globs$Z)) = (glob$Bound 1) (* may_not_modify *)
        | modify_updatesF _ _ _ t = raise TERM ("gen_call_tac.modify_updatesF",[t]);
 
-     fun modify_updates Record = modify_updatesR
-       | modify_updates _ = modify_updatesF
+     fun modify_updates Function = modify_updatesF
+       | modify_updates _ (* Record and Other *) = modify_updatesR
 
 
      fun globalsT (Const (gupd,T)) = domain_type (hd (binder_types T))
@@ -2139,23 +2286,23 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
           val is_abr = not (is_empty_set modif_spec_abr);
           val emptyTheta = is_empty_set Theta;
           (*val emptyFaults = is_empty_set F;*)
-          val spec_has_args = #6 (dest_call call);
+          val (_,_,_,_,_,spec_has_args,_) = dest_call call;
           val () = if spec_has_args
               then error "procedure call in modifies-specification must be parameterless!"
               else ();
           val (mxprem,ModRet) = (case cmode of
                  Static =>
                   (8,if is_abr
-                     then if emptyTheta then (ProcModifyReturn mode)
-                          else (ProcModifyReturnSameFaults mode)
-                     else if emptyTheta then (ProcModifyReturnNoAbr mode)
-                          else (ProcModifyReturnNoAbrSameFaults mode))
+                     then if emptyTheta then (ProcModifyReturn mode result_exn)
+                          else (ProcModifyReturnSameFaults mode result_exn)
+                     else if emptyTheta then (ProcModifyReturnNoAbr mode result_exn)
+                          else (ProcModifyReturnNoAbrSameFaults mode result_exn))
                | Parameter =>
                   (9,if is_abr
-                     then if emptyTheta then (ProcProcParModifyReturn mode)
-                          else (ProcProcParModifyReturnSameFaults mode)
-                     else if emptyTheta then (ProcProcParModifyReturnNoAbr mode)
-                          else (ProcProcParModifyReturnNoAbrSameFaults mode)));
+                     then if emptyTheta then (ProcProcParModifyReturn mode result_exn)
+                          else (ProcProcParModifyReturnSameFaults mode result_exn)
+                     else if emptyTheta then (ProcProcParModifyReturnNoAbr mode result_exn)
+                          else (ProcProcParModifyReturnNoAbrSameFaults mode result_exn)));
 
           val to_prove_prem = (case cmode of Static => 0 | Parameter => 1);
           val spec_goal = if is_abr then i + mxprem - 5 else i + mxprem - 6
@@ -2170,7 +2317,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                         else return;*)
 
           val cret = Thm.cterm_of ctxt' return';
-          val (_,_,return'_var,_,_,_) = nth (Thm.prems_of ModRet) to_prove_prem
+          val (_,_,return'_var,_,_,_,_) = nth (Thm.prems_of ModRet) to_prove_prem
                                                   |> dest_hoare |> #2 |> dest_call;
 
           val ModRet' = infer_instantiate ctxt' [(#1 (dest_Var return'_var), cret)] ModRet;
@@ -2181,8 +2328,9 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                 (clarsimp_tac ((ctxt'
                   |> put_claset (claset_of @{theory_context Set})
                   |> put_simpset (simpset_of @{theory_context Set}))
-                  addsimps ([@{thm Hoare.mex_def},@{thm Hoare.meq_def},@{thm StateSpace.upd_globals_def}]@K_convs)
-                  addsimprocs (state_upd_simproc Record::(state_simprocs state_kind))
+                  addsimps ([@{thm Hoare.mex_def},@{thm Hoare.meq_def}]@K_convs@
+                             (Named_Theorems.get ctxt @{named_theorems "state_simp"}))
+                  addsimprocs (state_upd_simprocs ctxt Record @ state_simprocs ctxt state_kind)
                   |> fold Simplifier.add_cong K_congs) i)
                 THEN_MAYBE
                 EVERY [trace_tac ctxt' "modify_tac: splitting record",
@@ -2211,7 +2359,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
       |> (fn SOME res => res
            | NONE => raise TERM ("get_call_tac.modify_tac: no proper modifies spec", []));
 
-  fun specs_of_assms_tac ({context = ctxt', prems, ...}: Subgoal.focus) =
+  fun specs_of_assms_tac ({context = ctxt', prems, ...}: Subgoal.focus)  =
        (case get_spec pname is_spec_clause prems of
           SOME (_,spec) => (case get_spec pname is_modifies_clause prems of
                               SOME (_,modifies_thm) => modify_tac ctxt' (SOME spec) modifies_thm 1
@@ -2238,7 +2386,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                          basic_tac ctxt spec)))
     end;
 
-  fun inline_bdy_tac has_args i =
+  fun inline_bdy_tac has_args result_exn i =
     (case try (Proof_Context.get_thm ctxt) (suffix bodyP pname') of
        NONE => no_tac
      | SOME impl =>
@@ -2249,7 +2397,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                                 "\". Inlining procedure!");
              if has_args then
                 EVERY [trace_tac ctxt "inline_bdy_tac args",
-                       resolve_tac ctxt [CallBody mode] i,
+                       resolve_tac ctxt [CallBody mode result_exn] i,
                        resolve_tac ctxt [impl] (i+3),
                        resolve_tac ctxt [allI] (i+2),
                        resolve_tac ctxt [allI] (i+2),
@@ -2268,13 +2416,13 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
     (case cmode of
        Static => if get_recursive pname ctxt = SOME false
                  andalso is_none spec
-                 then inline_bdy_tac has_args
+                 then inline_bdy_tac has_args result_exn
                  else test_modify_in_ctxt_tac
      | Parameter =>
          (case spec of
-            NONE => (tracing "no spec found!"; Subgoal.FOCUS specs_of_assms_tac ctxt)
+            NONE => (trace_msg ctxt "no spec found!"; Subgoal.FOCUS specs_of_assms_tac ctxt)
           | SOME spec =>
-              (tracing "found spec!"; case check_spec pname is_spec_clause spec of
+              (trace_msg ctxt "found spec!"; case check_spec pname is_spec_clause spec of
                  SOME _ => test_modify_in_ctxt_tac
                | NONE => (warning ("ignoring theorem " ^ (suffix spec_sfx pname') ^
                           "; no proper specification for procedure " ^pname');
@@ -2283,10 +2431,10 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
 
 fun call_tac cont_tac mode state_kind state_space ctxt asms spec_sfx t =
   let
-     val (_,c,_,_,_,_,_,F) = dest_hoare (Logic.strip_assums_concl t);
-     fun gen_tac (_,pname,return,c,cmode,has_args) =
+     val (_,c,_,_,_,_,_,F) = dest_hoare t;
+     fun gen_tac (_,pname,return,c,cmode,has_args,result_exn) =
            gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
-                         (proc_name cmode pname) return has_args F;
+                         (proc_name ctxt cmode pname) return has_args result_exn F;
   in gen_tac (dest_call c) end
   handle TERM _ => K no_tac;
 
@@ -2323,6 +2471,7 @@ fun guard_tac ctxt strip cont_tac mode (t,i) =
                  solve_in_Faults_tac ctxt (i+2),
                  cont_tac ctxt (i+1),
                  triv_simp ctxt i]
+
   in if is_empty_set F then EVERY [trace_tac ctxt "Guard: basic_tac", basic_tac i]
     else EVERY [trace_tac ctxt "Guard: trying guarantee_tac", guarantee_tac i ORELSE basic_tac i]
   end handle TERM _ => no_tac
@@ -2336,27 +2485,33 @@ fun in_rel_simp ctxt =
   simp_tac (put_simpset HOL_basic_ss ctxt
     addsimps [@{thm Hoare.in_measure_iff},@{thm Hoare.in_lex_iff},@{thm Hoare.in_mlex_iff},@{thm Hoare.in_inv_image_iff}, @{thm split_conv}]);
 
-fun while_annotate_tac ctxt inv i st =
+fun while_annotate_tac ctxt inv state_space i st =
   let
     val annotateWhile = Thm.lift_rule (Thm.cprem_of st i) @{thm HoarePartial.reannotateWhileNoGuard};
-    val lifted_inv = fold_rev Term.abs (Logic.strip_params (Logic.get_goal (Thm.prop_of st) i)) inv;
+    val params = Logic.strip_params (Logic.get_goal (Thm.prop_of st) i)
+    val first_state_idx = find_index (fn x => state_space (Free x) <> 0) (rev params)
+    val inv = if first_state_idx > 0 then incr_boundvars first_state_idx inv else inv
+    val lifted_inv = fold_rev Term.abs params inv;
     val invVar = (#1 o strip_comb o #3 o dest_whileAnno o #2 o dest_hoare)
                   (List.last (Thm.prems_of annotateWhile));
     val annotate =
       infer_instantiate ctxt [(#1 (dest_Var invVar), Thm.cterm_of ctxt lifted_inv)] annotateWhile;
- in  ((trace_tac ctxt ("annotating While with: " ^ Syntax.string_of_term ctxt lifted_inv ))
+ in  ((trace_tac ctxt ("try annotating While with: " ^ Syntax.string_of_term ctxt lifted_inv ))
        THEN
        compose_tac ctxt (false,annotate,1) i) st
  end;
 
-fun cond_annotate_tac ctxt inv mode (_,i) st =
+fun cond_annotate_tac ctxt inv mode state_space (_,i) st =
   let
     val annotateCond = Thm.lift_rule (Thm.cprem_of st i) (CondInv' mode);
-    val lifted_inv = fold_rev Term.abs (Logic.strip_params (Logic.get_goal (Thm.prop_of st) i)) inv;
+    val params = Logic.strip_params (Logic.get_goal (Thm.prop_of st) i)
+    val first_state_idx = find_index (fn x => state_space (Free x) <> 0) (rev params)
+    val inv = if first_state_idx > 0 then incr_boundvars first_state_idx inv else inv
+    val lifted_inv = fold_rev Term.abs params inv;
     val invVar = List.last (Thm.prems_of annotateCond) |> dest_hoare |> #3 |> strip_comb |> #1;
     val annotate =
       infer_instantiate ctxt [(#1 (dest_Var invVar), Thm.cterm_of ctxt lifted_inv)] annotateCond;
-  in  ((trace_tac ctxt ("annotating Cond with: "^ Syntax.string_of_term ctxt lifted_inv))
+  in  ((trace_tac ctxt ("try annotating Cond with: "^ Syntax.string_of_term ctxt lifted_inv))
        THEN
        compose_tac ctxt (false,annotate,5) i) st
  end;
@@ -2379,13 +2534,13 @@ fun basic_while_tac ctxt state_kind cont_tac tac mode i =
      EVERY [trace_tac ctxt "basic_while_tac: basic_tac", basic_tac i]
   end;
 
-fun while_tac ctxt state_kind inv cont_tac tac mode t i=
+fun while_tac ctxt state_kind state_space inv cont_tac tac mode t i=
     let
       val basic_tac  = basic_while_tac ctxt state_kind cont_tac tac mode;
     in
         (case inv of
            NONE => basic_tac i
-         | SOME I => EVERY [while_annotate_tac ctxt I i, basic_tac i])
+         | SOME I => EVERY [while_annotate_tac ctxt I state_space i, basic_tac i])
 
     end
     handle TERM _ => no_tac
@@ -2501,9 +2656,9 @@ fun prems_tac ctxt i = TRY (resolve_tac ctxt (Assumption.all_prems_of ctxt) i);
 
 
 
-fun mk_proc_assoc thms =
+fun mk_proc_assoc ctxt thms =
   let
-    fun name (_,p,_,_,cmode,_) = proc_name cmode p;
+    fun name (_,p,_,_,cmode,_,_) = proc_name ctxt cmode p;
     fun proc_name thm = thm |> Thm.concl_of |> dest_hoare |> #2 |> dest_call |> name;
   in map (fn thm => (proc_name thm,thm)) thms end;
 
@@ -2519,7 +2674,10 @@ fun HoareTac annotate_inv exspecs
  let
      val (P,c,Q,A,_,G,T,F) = dest_hoare (Logic.strip_assums_concl
                                        (Logic.get_goal (Thm.prop_of st) 1));
-     val wp_tacs = #wp_tacs (get_data ctxt);
+     val solve_modifies = spec_sfx = modifysfx andalso annotate_inv andalso mode = Partial andalso
+            is_modifies_assertion Q andalso is_modifies_assertion A
+
+
      val hoare_tacs = #hoare_tacs (get_data ctxt);
      val params = (strip_vars (Logic.get_goal (Thm.prop_of st) 1));
      val Inv = (if annotate_inv
@@ -2530,33 +2688,36 @@ fun HoareTac annotate_inv exspecs
      val exspecthms = map (Proof_Context.get_thm ctxt) exspecs;
      val asms =
        try (fn () =>
-         mk_proc_assoc (gen_context_thms ctxt mode params G T F @ exspecthms)) ()
+         mk_proc_assoc ctxt (gen_context_thms ctxt mode params G T F @ exspecthms)) ()
        |> the_default [];
 
      fun while_annoG_tac (t,i) =
            whileAnnoG_tac ctxt (annotate_inv orelse strip_guards) mode t i;
      fun WlpTac tac i = (* WlpTac does not end with subset_refl *)
          FIRST
-         ([EVERY [resolve_tac ctxt [Seq mode] i,trace_tac ctxt "Seq",HoareRuleTac tac false ctxt (i+1)],
-          EVERY [resolve_tac ctxt [Catch mode] i,trace_tac ctxt "Catch",HoareRuleTac tac false ctxt (i+1)],
-          EVERY [resolve_tac ctxt [CondCatch mode] i,trace_tac ctxt "CondCatch",HoareRuleTac tac false ctxt (i+1)],
-          EVERY [resolve_tac ctxt [BSeq mode] i,trace_tac ctxt "BSeq",HoareRuleTac tac false ctxt (i+1)],
+
+         ([EVERY [resolve_tac ctxt [Seq mode solve_modifies]  i,trace_tac ctxt "Seq", HoareRuleTac tac false ctxt (i+1)],
+          EVERY [resolve_tac ctxt [Catch mode solve_modifies] i,trace_tac ctxt "Catch",HoareRuleTac tac false ctxt (i+1)],
+          EVERY [resolve_tac ctxt [CondCatch mode solve_modifies] i,trace_tac ctxt "CondCatch",HoareRuleTac tac false ctxt (i+1)],
+          EVERY [resolve_tac ctxt [BSeq mode solve_modifies] i,trace_tac ctxt "BSeq",HoareRuleTac tac false ctxt (i+1)],
           EVERY [resolve_tac ctxt [FCall mode] i,trace_tac ctxt "FCall"],
           EVERY [resolve_tac ctxt [GuardsNil mode] i,trace_tac ctxt "GuardsNil"],
           EVERY [resolve_tac ctxt [GuardsConsGuaranteeStrip mode] i,
                  trace_tac ctxt "GuardsConsGuaranteeStrip"],
           EVERY [resolve_tac ctxt [GuardsCons mode] i,trace_tac ctxt "GuardsCons"],
           EVERY [SUBGOAL while_annoG_tac i]
-          ]
-         @
-         map (mk_hoare_tac (fn p => HoareRuleTac tac p ctxt) ctxt mode i) wp_tacs)
+          ])
 
      and HoareRuleTac tac pre_cond ctxt i st =
-         let fun call (t,i) = call_tac (HoareRuleTac tac false)
+         let
+             val _ = if Config.get ctxt hoare_trace > 1 then
+                       print_tac ctxt ("HoareRuleTac (" ^ @{make_string} (pre_cond, i) ^ "):") st
+                     else all_tac st
+             fun call (t,i) = call_tac (HoareRuleTac tac false)
                                 mode state_kind state_space ctxt asms spec_sfx t i
 
              fun cond_tac i =  if annotate_inv andalso Config.get ctxt use_cond_inv_modifies then
-                                 EVERY[SUBGOAL (cond_annotate_tac ctxt (the Inv) mode) i,
+                                 EVERY[SUBGOAL (cond_annotate_tac ctxt (the Inv) mode state_space) i,
                                        HoareRuleTac tac false ctxt (i+4),
                                        HoareRuleTac tac false ctxt (i+3),
                                        BasicSimpTac ctxt state_kind true [] tac (i+2),
@@ -2571,12 +2732,12 @@ fun HoareTac annotate_inv exspecs
                                 EVERY[resolve_tac ctxt [SwitchCons mode] i,trace_tac ctxt "SwitchCons",
                                      HoareRuleTac tac false ctxt (i+2),
                                      HoareRuleTac tac false ctxt (i+1)];
-            fun while_tac' (t,i) = while_tac ctxt state_kind Inv
+            fun while_tac' (t,i) = while_tac ctxt state_kind state_space Inv
                                       (HoareRuleTac tac true) tac mode t i;
          in st |>
            ( (WlpTac tac i THEN HoareRuleTac tac pre_cond ctxt i)
              ORELSE
-             (FIRST([EVERY[resolve_tac ctxt [Skip mode] i,trace_tac ctxt "Skip"],
+              (TRY (FIRST([EVERY[resolve_tac ctxt [Skip mode] i, trace_tac ctxt "Skip"],
                     EVERY[resolve_tac ctxt [BasicCond mode] i, trace_tac ctxt "BasicCond",
                           assertion_simp_tac ctxt state_kind [] i],
                     (resolve_tac ctxt [Basic mode] i THEN trace_tac ctxt "Basic")
@@ -2589,8 +2750,8 @@ fun HoareTac annotate_inv exspecs
                     EVERY[resolve_tac ctxt [Throw mode] i, trace_tac ctxt "Throw"],
                     (resolve_tac ctxt [Raise mode] i THEN trace_tac ctxt "Raise")
                         THEN_MAYBE (assertion_string_eq_simp_tac ctxt state_kind [] i),
-                    cond_tac i,
-                    switch_tac i,
+                    EVERY[cond_tac i],
+                    EVERY[switch_tac i],
                     EVERY[resolve_tac ctxt [Block mode] i, trace_tac ctxt "Block",
                           resolve_tac ctxt [allI] (i+2),
                           resolve_tac ctxt [allI] (i+2),
@@ -2600,7 +2761,7 @@ fun HoareTac annotate_inv exspecs
                           HoareRuleTac tac false ctxt (i+1)],
                     SUBGOAL while_tac' i,
                     SUBGOAL (guard_tac ctxt (annotate_inv orelse strip_guards)
-                                       (HoareRuleTac tac false) mode) i,
+                               (HoareRuleTac tac false) mode THEN' (K (trace_tac ctxt "guard_tac succeeded"))) i,
                     EVERY[SUBGOAL (specAnno_tac ctxt state_kind
                                      (HoareRuleTac tac true) mode) i],
                     EVERY[SUBGOAL (whileAnnoFix_tac ctxt state_kind
@@ -2616,12 +2777,11 @@ fun HoareTac annotate_inv exspecs
                     EVERY[trace_tac ctxt "calling call_tac",SUBGOAL call i],
                     EVERY[trace_tac ctxt "LemmaAnno",SUBGOAL (lemAnno_tac ctxt state_kind mode) i]]
                     @
-                    map (mk_hoare_tac (fn p => HoareRuleTac tac p ctxt) ctxt mode i) hoare_tacs)
-              THEN (if pre_cond
-                    then EVERY [trace_tac ctxt "pre_cond",
-                                TRY (BasicSimpTac ctxt state_kind true [] tac i),
-                                             (* FIXME: Do we need TRY *)
-                                trace_tac ctxt "after BasicSimpTac"]
+                    map (mk_hoare_tac (fn p => HoareRuleTac tac p ctxt) ctxt mode i) hoare_tacs))
+              THEN (if pre_cond orelse solve_modifies
+                    then EVERY [trace_tac ctxt ("pre_cond / solve_modfies: " ^ @{make_string} (pre_cond, solve_modifies)),
+                                TRY (BasicSimpTac ctxt state_kind true (Named_Theorems.get ctxt @{named_theorems "state_simp"}) tac i),
+                                trace_tac ctxt ("after BasicSimpTac " ^ string_of_int i)]
                     else (resolve_tac ctxt [subset_refl] i))))
          end;
  in ((K (EVERY [REPEAT (resolve_tac ctxt [allI] 1), HoareRuleTac tac true ctxt 1]))
@@ -2640,7 +2800,7 @@ fun HoareStepTac strip_guards mode state_kind state_space spec_sfx ctxt tac st =
          let val (_,_,_,_,_,G,T,F) = dest_hoare (Logic.strip_assums_concl
                                                 (Logic.get_goal (Thm.prop_of st) 1));
              val params = (strip_vars (Logic.get_goal (Thm.prop_of st) 1));
-         in mk_proc_assoc (gen_context_thms ctxt mode params G T F)
+         in mk_proc_assoc ctxt (gen_context_thms ctxt mode params G T F)
          end) ()
        |> the_default [];
 
@@ -2654,11 +2814,11 @@ fun HoareStepTac strip_guards mode state_kind state_space spec_sfx ctxt tac st =
                  TRY (hyp_subst_tac_thin true ctxt i),
                  BasicSimpTac ctxt state_kind true [] tac i]
      fun while_annoG_tac (t,i) = whileAnnoG_tac ctxt strip_guards mode t i;
-
- in st |>
+     val hoare_tacs = #hoare_tacs (get_data ctxt);
+ in st |> CHANGED (
     (REPEAT (resolve_tac ctxt [allI] 1)
      THEN
-     FIRST [resolve_tac ctxt [subset_refl] 1,
+     FIRST ([resolve_tac ctxt [subset_refl] 1,
            EVERY[resolve_tac ctxt [Skip mode] 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
            EVERY[resolve_tac ctxt [BasicCond mode] 1,trace_tac ctxt "BasicCond",
                  TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
@@ -2666,9 +2826,9 @@ fun HoareStepTac strip_guards mode state_kind state_space spec_sfx ctxt tac st =
            EVERY[resolve_tac ctxt [Throw mode] 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
            EVERY[resolve_tac ctxt [Raise mode] 1,TRY (assertion_string_eq_simp_tac ctxt state_kind [] 1)],
            resolve_tac ctxt [SeqSwap mode] 1
-             THEN_MAYBE HoareStepTac strip_guards mode state_kind state_space spec_sfx
-                          ctxt tac,
-           EVERY[resolve_tac ctxt [BSeq mode] 1,
+             THEN_MAYBE TRY (HoareStepTac strip_guards mode state_kind state_space spec_sfx
+                          ctxt tac),
+           EVERY[resolve_tac ctxt [BSeq mode false] 1,
                  prefer_tac 2
                  THEN_MAYBE HoareStepTac strip_guards mode state_kind state_space spec_sfx
                               ctxt tac],
@@ -2703,9 +2863,11 @@ fun HoareStepTac strip_guards mode state_kind state_space spec_sfx ctxt tac st =
            EVERY[resolve_tac ctxt [DynCom mode] 1],
            EVERY[SUBGOAL call 1, BasicSimpTac ctxt state_kind false [] tac 1],
            EVERY[SUBGOAL (lemAnno_tac ctxt state_kind mode) 1,
-                 BasicSimpTac ctxt state_kind false [] tac 1],
-           final_simp_tac 1
-           ])
+                 BasicSimpTac ctxt state_kind false [] tac 1]
+
+           ]  @
+           map (mk_hoare_tac (K (K all_tac)) ctxt mode 1) hoare_tacs @
+           [final_simp_tac 1])))
  end;
 
 (*****************************************************************************)
@@ -2717,12 +2879,12 @@ struct
 
 val globals = @{const_name StateSpace.state.globals};
 
-fun isState (Const _$Abs (s,T,t)) =
+fun isState _ (Const _$Abs (s,T,t)) =
       (case (state_hierarchy T) of
         ((n,_)::_) => n = "StateSpace.state.state" andalso
           is_none (try dest_hoare_raw (strip_qnt_body @{const_name All} t))
       | _ => false)
-  | isState _ = false;
+  | isState _ _ = false;
 
 fun isFreeState (Free (_,T)) =
      (case (state_hierarchy T) of
@@ -2730,7 +2892,7 @@ fun isFreeState (Free (_,T)) =
       | _ => false)
   | isFreeState _ = false;
 
-val abs_state = Option.map snd o first_subterm isFreeState;
+fun abs_state _ = Option.map snd o first_subterm isFreeState;
 
 
 fun sel_eq (Const (x,_)$_) y = (x=y)
@@ -2743,8 +2905,8 @@ fun bound xs (t as (Const (x,_)$_)) =
      in if i < 0 then (length xs, xs@[t]) else (i,xs) end
   | bound xs t = raise TERM ("RecordSplitState.bound",[t]);
 
-fun abs_var _ (Const (x,T)$_) =
-     (remdeco' (Long_Name.base_name x),range_type T)
+fun abs_var ctxt (Const (x,T)$_) =
+     (remdeco' ctxt (Long_Name.base_name x),range_type T)
   | abs_var _ t = raise TERM ("RecordSplitState.abs_var",[t]);
 
 fun fld_eq (x, _) y = (x = y)
@@ -2820,7 +2982,7 @@ fun split_state ctxt s T t =
     val vars' = if Config.get ctxt sort_variables then sort_vars ctxt T vars else vars;
   in (abstract_vars vars' s t,rev vars') end;
 
-fun ex_tac ctxt _ st = Record.split_simp_tac ctxt @{thms simp_thms} (K ~1) 1 st;
+fun ex_tac ctxt _ i = Record.split_simp_tac ctxt @{thms simp_thms} (K ~1) i;
 
 end;
 
@@ -2829,12 +2991,12 @@ struct
 
 val full_globalsN = @{const_name StateSpace.state.globals};
 
-fun isState (Const _$Abs (s,T,t)) =
+fun isState _ (Const _$Abs (s,T,t)) =
       (case (state_hierarchy T) of
         ((n,_)::_) => n = "StateSpace.state.state" andalso
           is_none (try dest_hoare_raw (strip_qnt_body @{const_name All} t))
       | _ => false)
-  | isState _ = false;
+  | isState _ _ = false;
 
 fun isFreeState (Free (_,T)) =
       (case (state_hierarchy T) of
@@ -2842,10 +3004,10 @@ fun isFreeState (Free (_,T)) =
       | _ => false)
   | isFreeState _ = false;
 
-val abs_state = Option.map snd o first_subterm isFreeState;
+fun abs_state _ = Option.map snd o first_subterm isFreeState;
 
 fun comp_name t =
-    case try (implode o dest_string) t of
+    case try dest_string t of
       SOME str => str
     | NONE => (case t of
                  Free (s,_) => s
@@ -2915,13 +3077,13 @@ fun abstract_vars vars s t =
     val dummy = Bound 0;
   in fold_state_prop var app abs other 0 s dummy t end;
 
-fun sort_vars _ vars =
+fun sort_vars ctxt vars =
   let
     val fld_idx = idx (fn s1:string => fn s2 => s1 = s2);
     fun compare (_$_$n$(Const (s1,_)$_),_$_$m$(Const (s2,_)$_)) =
       let
-        val n' = remdeco' (comp_name n);
-        val m' = remdeco' (comp_name m);
+        val n' = remdeco' ctxt (comp_name n);
+        val m' = remdeco' ctxt (comp_name m);
       in if s1 = full_globalsN
          then if s2 = full_globalsN then
               string_ord (n',m')
@@ -2938,7 +3100,7 @@ fun split_state ctxt s _ t =
     val vars' = if Config.get ctxt sort_variables then sort_vars ctxt vars else vars;
   in (abstract_vars vars' s t,rev vars') end;
 
-fun abs_var _ t = (remdeco' (sel_name t), sel_type t);
+fun abs_var ctxt t = (remdeco' ctxt (sel_name t), sel_type t);
 
 (* Proof for: EX x_1 ... x_n. P x_1 ... x_n
  *            ==> EX s. P (lookup destr_1 "x_1" s) ... (lookup destr_n "x_n" s)
@@ -2962,11 +3124,10 @@ val ss =
 
 in
 
-fun ex_tac ctxt vs st =
+fun ex_tac ctxt vs = SUBGOAL (fn (goal, i) =>
   let
     val vs' = rev vs;
-    val (Const (_,exT)$_) = HOLogic.dest_Trueprop
-                             (Logic.strip_imp_concl (Logic.get_goal (Thm.prop_of st) 1));
+    val (Const (_,exT)$_) = HOLogic.dest_Trueprop (Logic.strip_imp_concl goal);
     val sT = domain_type (domain_type exT);
 
     val s0 = Const (@{const_name HOL.undefined},sT);
@@ -3014,10 +3175,14 @@ fun ex_tac ctxt vs st =
       in (compose_tac ctxt (false,inst_rule, Thm.nprems_of exI) i st) end;
 
 
-  in EVERY [REPEAT_DETERM_N (length vs) (eresolve_tac ctxt [exE] 1),
-            lift_inst_ex_tac 1,
-            simp_tac (put_simpset ss ctxt) 1
-           ] st end
+  in EVERY
+       [REPEAT_DETERM_N (length vs) (eresolve_tac ctxt [exE] i),
+        lift_inst_ex_tac i,
+        simp_tac (put_simpset ss ctxt) i
+       ]
+  end
+)
+
 end
 (* Test: What happens when there are no lookups., EX s. True *)
 
@@ -3025,11 +3190,12 @@ end
 
 end;
 
-structure GeneraliseRecord = GeneraliseFun (structure SplitState=RecordSplitState);
-structure GeneraliseStateFun = GeneraliseFun (structure SplitState=FunSplitState);
+structure GeneraliseRecord = Generalise (structure SplitState=RecordSplitState);
+structure GeneraliseStateFun = Generalise (structure SplitState=FunSplitState);
 
-fun generalise Record = GeneraliseRecord.GENERALISE
-  | generalise Function = GeneraliseStateFun.GENERALISE;
+fun generalise _ Record = GeneraliseRecord.GENERALISE
+  | generalise _ Function = GeneraliseStateFun.GENERALISE
+  | generalise ctxt (Other i) = the (generalise_other ctxt i);
 
 (*****************************************************************************)
 (** record_vanish_tac splits up the records of a verification condition,    **)
@@ -3038,7 +3204,7 @@ fun generalise Record = GeneraliseRecord.GENERALISE
 (** form "!!s Z. s=Z ==> ..., where s and Z are records                     **)
 (*****************************************************************************)
 
-(* FIXME: Check out if removing the useless vars is a performance issue.
+(* fixme: Check out if removing the useless vars is a performance issue.
    If so, maybe we can remove all useless vars at once (no iterated simplification)
    or try to avoid introducing them.
    Bevore splitting the gaol we can simplifiy the goal with state_simproc this may leed
@@ -3054,6 +3220,29 @@ fun record_vanish_tac ctxt state_kind state_space i =
           | no_spec _ = true;
         fun state_space_no_spec t = if state_space t <> 0 andalso no_spec t then
                                     ~1 else 0;
+        val state_split_tac = state_split_simp_tac ctxt rem_useless_vars_simps state_space_no_spec i
+        fun generalise_tac split_record st =
+          DETERM (generalise ctxt state_kind ctxt i) st
+          handle (exn as (TERM _)) =>
+            let
+              val _ = warning ("record_vanish_tac: generalise subgoal " ^ string_of_int i ^
+                        " failed" ^ (if split_record then ", fallback to record split:\n " else "") ^
+                        Runtime.exn_message (Runtime.exn_context (SOME ctxt) exn));
+            in
+              if split_record then
+                EVERY [
+                  state_split_tac,
+                  full_simp_tac (ctxt
+                    addsimprocs (state_simprocs ctxt state_kind @
+                      state_upd_simprocs ctxt state_kind)
+                    addsimps (Named_Theorems.get ctxt @{named_theorems "state_simp"})) i,
+                  trace_subgoal_tac ctxt "after record split and simp" i,
+                  generalise_tac false,
+                  trace_subgoal_tac ctxt "after 'generalise_tac false'" i
+                ] st
+              else all_tac st
+            end;
+
     in EVERY [trace_tac ctxt "record_vanish_tac -- START --",
               REPEAT (eresolve_tac ctxt [conjE] i),
               trace_tac ctxt "record_vanish_tac -- hyp_subst_tac ctxt --",
@@ -3063,12 +3252,8 @@ fun record_vanish_tac ctxt state_kind state_space i =
                   want to split them to avoid naming conflicts and increase performance *)
               trace_tac ctxt "record_vanish_tac -- Splitting records --",
               if Config.get ctxt use_generalise orelse state_kind = Function
-              then generalise state_kind ctxt i
-              else state_split_simp_tac ctxt rem_useless_vars_simps state_space_no_spec i
-              (*THEN_MAYBE
-              EVERY [trace_tac ctxt "record_vanish_tac -- removing useless vars --",
-                     full_simp_tac rem_useless_vars_simpset i,
-                     trace_tac ctxt "record_vanish_tac -- STOP --"]*)
+              then EVERY [generalise_tac true]
+              else state_split_tac
               ]
     end
   else
@@ -3099,7 +3284,7 @@ val state_fun_update_ss =
       @ @{thms list.inject list.distinct char.inject
       cong_exp_iff_simps simp_thms} @ K_fun_convs)
     addsimprocs [DistinctTreeProver.distinct_simproc ["distinct_fields", "distinct_fields_globals"]]
-    |> Simplifier.add_cong @{thm imp_cong} (* K_fun_congs  FIXME: Stefan fragen*)
+    |> Simplifier.add_cong @{thm imp_cong}
     |> Splitter.add_split @{thm if_split});
 
 in
@@ -3125,13 +3310,7 @@ fun solve_modifies_tac ctxt state_kind state_space i st =
       else 0
       | is_split_state t = 0;
     val simp_ctxt = put_simpset HOL_ss ctxt addsimps (@{thm Ex_True} :: @{thm Ex_False} :: Record.get_extinjects thy);
-      fun try_solve Record i = (*(SOLVE*)
-          (((fn k => (TRY (REPEAT_ALL_NEW (resolve_tac ctxt [conjI, impI, allI]) k)))
-            THEN_ALL_NEW
-          (fn k => EVERY [state_split_simp_tac ctxt [] is_split_state k,
-                          simp_tac simp_ctxt k THEN_MAYBE rename_goal ctxt remdeco' k
-                          ])) i) (*)*)
-        | try_solve _ i =
+      fun try_solve Function i =
            ((fn k => (TRY (REPEAT_ALL_NEW (resolve_tac ctxt [conjI, impI, allI]) k)))
              THEN_ALL_NEW
             (fn k => REPEAT (resolve_tac ctxt [exI] k) THEN
@@ -3139,16 +3318,22 @@ fun solve_modifies_tac ctxt state_kind state_space i st =
                      simp_tac (put_simpset state_fun_update_ss ctxt) k
                      THEN_MAYBE
                      (REPEAT_ALL_NEW (resolve_tac ctxt [conjI,impI,refl]) k))) i
+       |  try_solve _ i = (*(SOLVE*) (* Record and Others *)
+            (((fn k => (TRY (REPEAT_ALL_NEW (resolve_tac ctxt [conjI, impI, allI]) k)))
+              THEN_ALL_NEW
+            (fn k => EVERY [state_split_simp_tac ctxt [] is_split_state k,
+                            simp_tac simp_ctxt k THEN_MAYBE rename_goal ctxt (remdeco' ctxt) k
+                           ])) i) (*)*)
   in
     ((trace_tac ctxt "solve_modifies_tac" THEN
      clarsimp_tac ((ctxt
         |> put_claset (claset_of @{theory_context HOL})
         |> put_simpset (simpset_of @{theory_context Set}))
-        addsimps ([@{thm Hoare.mex_def},@{thm Hoare.meq_def}]@K_convs)
-        addsimprocs (state_upd_simproc Record::(state_simprocs Record))
+        addsimps (@{thms Hoare.mex_def Hoare.meq_def} @K_convs@(Named_Theorems.get ctxt @{named_theorems "state_simp"}))
+        addsimprocs (state_upd_simprocs ctxt Record @ state_simprocs ctxt Record)
         |> fold Simplifier.add_cong K_congs) i)
     THEN_MAYBE
-     try_solve state_kind i) st
+     (try_solve state_kind i)) st
   end;
 end
 
@@ -3158,7 +3343,7 @@ fun proc_lookup_simp_tac ctxt i st =
       val name = (Logic.concl_of_goal (Thm.prop_of st) i)
             |> dest_hoare |> #2 |> strip_comb |> #2 |> last |> strip_comb |> #2 |> last;
             (* the$(Gamma$name) or the$(strip$Gamma$name) *)
-      val pname = (unsuffix proc_deco (dest_string' name));
+      val pname = chopsfx proc_deco (dest_string' name);
       val thms =  map_filter I (map (try (Proof_Context.get_thm ctxt))
                               [suffix bodyP pname,
                                suffix (body_def_sfx^"_def") pname,
@@ -3171,9 +3356,9 @@ fun proc_lookup_in_dom_simp_tac ctxt i st =
     let
       val _$name$_  = (HOLogic.dest_Trueprop (Logic.concl_of_goal (Thm.prop_of st) i));
           (* name : Gamma *)
-      val pname = (unsuffix proc_deco (dest_string' name));
+      val pname = chopsfx proc_deco (dest_string' name);
       val thms =  map_filter I (map (try (Proof_Context.get_thm ctxt))
-                                 [suffix bodyP pname]);
+                                 [suffix bodyP pname, suffix "_def" pname]);
     in
       simp_tac (put_simpset HOL_basic_ss ctxt
         addsimps (@{thm Hoare.lookup_Some_in_dom} :: @{thm dom_strip} :: thms)) i st end) ()
@@ -3243,7 +3428,8 @@ fun HoareCallRuleTac state_kind state_space ctxt thms i st =
 
     fun basic_tac i = (((resolve_tac ctxt thms')
                        THEN_ALL_NEW
-                       (fn k => (SUBGOAL solve_sidecondition_tac k))) i)
+                       (fn k =>
+                          (SUBGOAL solve_sidecondition_tac k))) i)
   in  (basic_tac
         ORELSE'
        (fn k =>
@@ -3258,17 +3444,33 @@ fun vcg_polish_tac solve_modifies ctxt state_kind state_space i =
     if solve_modifies
     then solve_modifies_tac ctxt state_kind state_space i
     else record_vanish_tac ctxt state_kind state_space i
-         THEN_MAYBE EVERY [rename_goal ctxt remdeco' i(*,
+         THEN_MAYBE EVERY [rename_goal ctxt (remdeco' ctxt) i(*,
                            simp_tac (HOL_basic_ss addsimps @{thms simp_thms})) i*)];
 
 fun is_funtype (Type ("fun", _)) = true
   | is_funtype _ = false;
 
+fun get_state_kind_extension ctxt T =
+  let
+    val sps = #state_spaces (Hoare_Data.get (Context.Proof ctxt))
+  in
+    case find_first (fn (n, sp) => (#is_state_type sp) ctxt T) sps of
+      SOME (n, sp) => SOME n
+    | NONE => NONE
+  end
+
 fun state_kind_of ctxt T =
   let
     val thy = Proof_Context.theory_of ctxt;
     val (s,sT) = nth (fst (Record.get_recT_fields thy T)) 1;
-  in if Long_Name.base_name s = "locals" andalso is_funtype sT then Function else Record end
+  in
+    case get_state_kind_extension ctxt T of
+      SOME n => Other n
+    | _ => if Long_Name.base_name s = "locals" andalso is_funtype sT then
+             Function
+           else
+             Record
+  end
   handle Subscript => Record;
 
 fun find_state_space_in_triple ctxt t =
@@ -3373,16 +3575,21 @@ val vcg_step = gen_simp_method hoare_step_tac;
 
 val trace_hoare_users = Unsynchronized.ref false
 
-fun print_subgoal_tac ctxt s i =
-    SUBGOAL (fn (prem, _) => trace_tac ctxt (s ^ (Syntax.string_of_term ctxt prem))) i
-
 fun mk_hoare_thm thm _ ctxt _ i =
-    EVERY [resolve_tac ctxt [thm] i,
-      if !trace_hoare_users then print_subgoal_tac ctxt "Tracing: " i
+    EVERY [resolve_tac ctxt [Thm.transfer' ctxt thm] i,
+      if !trace_hoare_users then trace_subgoal_tac ctxt "Tracing: " i
       else all_tac]
 
 val vcg_hoare_add =
-    Thm.declaration_attribute (fn thm => add_hoare_tacs [(Thm.derivation_name thm, mk_hoare_thm thm)])
+  let
+    fun get_name thm =
+      case Properties.get (Thm.get_tags thm) Markup.nameN of
+        SOME n => n
+      | NONE => error ("theorem with attribute 'vcg_hoare' must have a name")
+  in
+    Thm.declaration_attribute (fn thm =>
+      add_hoare_tacs [(get_name thm, mk_hoare_thm (Thm.trim_context thm))])
+  end
 
 exception UNDEF
 val vcg_hoare_del =
@@ -3398,6 +3605,5 @@ val _ =
     #>
     Attrib.setup @{binding vcg_hoare} (Attrib.add_del vcg_hoare_add vcg_hoare_del)
       "declaration of wp rule for vcg")
-    (*#> add_wp_tacs initial_wp_tacs*)
 
 end;

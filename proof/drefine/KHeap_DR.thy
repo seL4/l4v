@@ -2588,10 +2588,10 @@ lemma unbind_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_notification t \<lbrace>\<lambda>rv. valid_state\<rbrace>"
   supply if_cong[cong]
   apply (simp add: unbind_notification_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
+  apply (rule bind_wp [OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
   apply clarsimp
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs
        | clarsimp split del: if_split)+
   apply (intro conjI impI;
@@ -2622,7 +2622,7 @@ lemma unbind_maybe_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_maybe_notification a \<lbrace>\<lambda>rv. valid_state\<rbrace>"
   supply if_cong[cong]
   apply (simp add: unbind_maybe_notification_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_bound_tcb ntfn", clarsimp, wp, simp+)
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs
        | clarsimp split del: if_split)+
@@ -2655,10 +2655,10 @@ lemma unbind_maybe_notification_valid_state[wp]:
 lemma unbind_notification_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> IpcCancel_A.unbind_notification t \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: unbind_notification_def)
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (rule bind_wp[OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wp | clarsimp)+
   apply (auto simp: obj_at_def is_ntfn_def)
   done
@@ -2666,7 +2666,7 @@ lemma unbind_notification_valid_idle[wp]:
 lemma unbind_maybe_notification_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> IpcCancel_A.unbind_maybe_notification a \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: unbind_maybe_notification_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_bound_tcb ntfn", clarsimp, wp, simp)
   apply clarsimp
   apply (wp | clarsimp)+
@@ -3373,11 +3373,11 @@ lemma not_idle_thread_resolve_address_bits:
     CSpace_A.resolve_address_bits (tcb_ctable obj, blist)
             \<lbrace>\<lambda>rv s. not_idle_thread (fst (fst rv)) s \<and> valid_etcbs s\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   apply (rule validE_R_validE)
-  apply (rule_tac hoare_vcg_precond_impE_R)
+  apply (rule_tac hoare_weaken_preE_R)
    apply (rule validE_validE_R)
    apply (rule_tac Q="\<lambda>r. valid_etcbs and valid_global_refs and valid_objs and valid_idle and
                           valid_irq_node and ex_cte_cap_to (fst r)"
-          in hoare_post_impErr[where E="\<lambda>x y. True"])
+          in hoare_strengthen_postE[where E="\<lambda>x y. True"])
      apply (wp rab_cte_cap_to)
     apply (auto intro: ex_cte_cap_wp_to_not_idle)[2]
   apply (clarsimp simp:ex_cte_cap_to_def)
@@ -3472,7 +3472,7 @@ lemma dcorres_lookup_cap_and_slot:
          apply (rule get_cap_corres, rule refl)
         apply (rule dcorres_returnOk, simp)
        apply ((wp|simp)+)
-    apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_idle and valid_etcbs and real_cte_at (fst rv)"])
+    apply (rule hoare_strengthen_postE_R [where Q'="\<lambda>rv. valid_idle and valid_etcbs and real_cte_at (fst rv)"])
      apply (wp lookup_slot_real_cte_at_wp)
     apply (clarsimp simp: valid_idle_def not_idle_thread_def
                           pred_tcb_at_def obj_at_def is_cap_table_def)

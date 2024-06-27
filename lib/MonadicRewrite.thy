@@ -524,13 +524,19 @@ lemma monadic_rewrite_assert2:
    \<Longrightarrow> monadic_rewrite F E ((\<lambda>s. Q \<longrightarrow> P s) and (\<lambda>_. Q)) (assert Q >>= f) g"
   by (auto simp add: assert_def monadic_rewrite_def fail_def split: if_split)
 
-lemma monadic_rewrite_state_assert_true:
-  "monadic_rewrite F E P (state_assert P) (return ())"
-  by (simp add: state_assert_def monadic_rewrite_def exec_get)
+(* under assumption of non-failure of LHS, we can assume any assertions for showing preconditions
+   of rewrite *)
+lemma monadic_rewrite_state_assert:
+  "monadic_rewrite F E P (f ()) g
+   \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (F \<longrightarrow> Q s \<longrightarrow> P s) \<and> (\<not>F \<longrightarrow> P s \<and> Q s))
+                      (state_assert Q >>= f) g"
+  by (fastforce simp: monadic_rewrite_def exec_get state_assert_def bind_assoc assert_def)
 
 lemma monadic_rewrite_stateAssert:
-  "monadic_rewrite F E P (stateAssert P xs) (return ())"
-  by (simp add: stateAssert_def monadic_rewrite_def exec_get)
+  "monadic_rewrite F E P (f ()) g
+   \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (F \<longrightarrow> Q s \<longrightarrow> P s) \<and> (\<not>F \<longrightarrow> P s \<and> Q s))
+                      (stateAssert Q xs >>= f) g"
+  by (fastforce simp: monadic_rewrite_def exec_get stateAssert_def bind_assoc assert_def)
 
 text \<open>Non-determinism: alternative and select\<close>
 
@@ -759,6 +765,12 @@ lemma monadic_rewrite_corres_r:
 
 lemmas corres_gets_the_bind
   = monadic_rewrite_corres_l[OF monadic_rewrite_bind_head[OF monadic_rewrite_gets_the_gets]]
+
+text \<open>Interaction with @{term oblivious}\<close>
+
+lemma oblivious_monadic_rewrite:
+  "oblivious f m \<Longrightarrow> monadic_rewrite F E \<top> (do modify f; m od) (do m; modify f od)"
+  by (clarsimp simp: monadic_rewrite_def oblivious_modify_swap)
 
 text \<open>Tool integration\<close>
 

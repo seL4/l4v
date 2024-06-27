@@ -244,7 +244,7 @@ lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
     defer
       apply ((wp irq_state_inv_triv | simp)+)[2]
     apply (simp add: split_def cong: option.case_cong)
-  by (wp hoare_vcg_all_lift_R hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
+  by (wp hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
          checked_cap_insert_domain_sep_inv cap_delete_deletes
          cap_delete_irq_state_inv[where st=st and sta=sta and irq=irq]
          cap_delete_irq_state_next[where st=st and sta=sta and irq=irq]

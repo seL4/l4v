@@ -48,9 +48,7 @@ lemma replyOnRestart_invs'[wp]:
   including no_pre
   apply (simp add: replyOnRestart_def)
   apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_weak_lift_imp)
-  apply (rule hoare_vcg_all_lift)
-  apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_vcg_all_lift rfk_ksQ)
-   apply (rule hoare_strengthen_post, rule gts_sp')
+  apply (rule hoare_strengthen_post, rule gts_sp')
   apply (clarsimp simp: pred_tcb_at')
   apply (auto elim!: pred_tcb'_weakenE st_tcb_ex_cap''
                dest: st_tcb_at_idle_thread')
@@ -415,11 +413,13 @@ lemma is_syscall_error_codes:
   by ((rule iffD2[OF is_syscall_error_code_def], intro allI,
       rule conseqPre, vcg, safe, (simp_all add: o_def)?)+)
 
-lemma syscall_error_throwError_ccorres_direct:
+lemma syscall_error_throwError_ccorres_direct_gen:
   "\<lbrakk> is_syscall_error_code f code;
+     \<And>x y g. arrel (Inl x) y = (intr_and_se_rel \<currency> g) (Inl x) y;
      \<And>err' ft'. syscall_error_to_H (f err') ft' = Some err \<rbrakk>
    \<Longrightarrow>
-   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id v' ret__unsigned_long_')
+   ccorres_underlying rf_sr \<Gamma> rrel xf
+      arrel (liftxf errstate id v' ret__unsigned_long_')
       \<top> (UNIV) (SKIP # hs)
       (throwError (Inl err)) code"
   apply (rule ccorres_from_vcg_throws)
@@ -429,27 +429,34 @@ lemma syscall_error_throwError_ccorres_direct:
   apply (simp add: syscall_error_rel_def exception_defs)
   done
 
-lemma syscall_error_throwError_ccorres_succs:
+lemma syscall_error_throwError_ccorres_succs_gen:
   "\<lbrakk> is_syscall_error_code f code;
+     \<And>x y g. arrel (Inl x) y = (intr_and_se_rel \<currency> g) (Inl x) y;
      \<And>err' ft'. syscall_error_to_H (f err') ft' = Some err \<rbrakk>
    \<Longrightarrow>
-   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id v' ret__unsigned_long_')
+   ccorres_underlying rf_sr \<Gamma> rrel xf
+      arrel (liftxf errstate id v' ret__unsigned_long_')
       \<top> (UNIV) (SKIP # hs)
       (throwError (Inl err)) (code ;; remainder)"
   apply (rule ccorres_guard_imp2,
          rule ccorres_split_throws)
-    apply (erule syscall_error_throwError_ccorres_direct)
-    apply simp
+    apply (erule syscall_error_throwError_ccorres_direct_gen; assumption)
    apply (rule HoarePartialProps.augment_Faults)
     apply (erule iffD1[OF is_syscall_error_code_def, THEN spec])
    apply simp+
   done
 
+lemmas syscall_error_throwError_ccorres_n_gen =
+    is_syscall_error_codes[THEN syscall_error_throwError_ccorres_direct_gen,
+                           simplified o_apply]
+    is_syscall_error_codes[THEN syscall_error_throwError_ccorres_succs_gen,
+                           simplified o_apply]
+
 lemmas syscall_error_throwError_ccorres_n =
-    is_syscall_error_codes[THEN syscall_error_throwError_ccorres_direct,
-                           simplified o_apply]
-    is_syscall_error_codes[THEN syscall_error_throwError_ccorres_succs,
-                           simplified o_apply]
+  syscall_error_throwError_ccorres_n_gen[where arrel="intr_and_se_rel \<currency> dc", simplified]
+
+lemmas syscall_error_throwError_ccorres_n_inl_rrel =
+  syscall_error_throwError_ccorres_n_gen[where arrel="inl_rrel (intr_and_se_rel \<currency> dc)", simplified]
 
 definition idButNot :: "'a \<Rightarrow> 'a"
 where "idButNot x = x"
@@ -655,7 +662,7 @@ lemma getMRs_tcbContext:
   apply (thin_tac "thread = t" for t)
   apply (clarsimp simp add: getMRs_def)
   apply (wp|wpc)+
-    apply (rule_tac P="n < length x" in hoare_gen_asm)
+    apply (rule_tac P="n < length rv" in hoare_gen_asm)
     apply (clarsimp simp: nth_append)
     apply (wp mapM_wp' hoare_weak_lift_imp)+
     apply simp

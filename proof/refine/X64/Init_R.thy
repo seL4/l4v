@@ -41,6 +41,7 @@ definition zeroed_arch_abstract_state ::
     x64_current_cr3        = cr3 0 0 ,
     x64_allocated_io_ports = \<bottom>,
     x64_num_ioapics        = 0,
+    x64_ioapic_nirqs       = K 0,
     x64_irq_state          = K IRQFree\<rparr>"
 
 definition zeroed_main_abstract_state ::
@@ -83,7 +84,7 @@ definition zeroed_arch_intermediate_state ::
   Arch.kernel_state
   where
   "zeroed_arch_intermediate_state \<equiv> X64KernelState Map.empty 0 [] [] [] (CR3 0 0)
-     (K X64VSpaceUserRegion) \<bottom> 0 (K X64IRQFree)"
+     (K X64VSpaceUserRegion) \<bottom> 0 (K 0) (K X64IRQFree)"
 
 definition zeroed_intermediate_state ::
   global.kernel_state
@@ -98,7 +99,7 @@ definition zeroed_intermediate_state ::
     ksDomSchedule = [],
     ksCurDomain = 0,
     ksDomainTime = 0,
-    ksReadyQueues = K [],
+    ksReadyQueues = K (TcbQueue None None),
     ksReadyQueuesL1Bitmap = K 0,
     ksReadyQueuesL2Bitmap = K 0,
     ksCurThread = 0,
@@ -119,9 +120,11 @@ lemma non_empty_refine_state_relation:
   "(zeroed_abstract_state, zeroed_intermediate_state) \<in> state_relation"
   apply (clarsimp simp: state_relation_def zeroed_state_defs state.defs)
   apply (intro conjI)
-           apply (clarsimp simp: pspace_relation_def pspace_dom_def)
-          apply (clarsimp simp: ekheap_relation_def)
-         apply (clarsimp simp: ready_queues_relation_def)
+          apply (clarsimp simp: pspace_relation_def pspace_dom_def)
+         apply (clarsimp simp: ekheap_relation_def)
+        apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def queue_end_valid_def
+                              opt_pred_def list_queue_relation_def tcbQueueEmpty_def
+                              prev_queue_head_def)
        apply (clarsimp simp: ghost_relation_def)
       apply (fastforce simp: cdt_relation_def swp_def dest: cte_wp_at_domI)
      apply (clarsimp simp: cdt_list_relation_def map_to_ctes_def)

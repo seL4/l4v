@@ -793,6 +793,9 @@ lemma corres_stateAssert_implied:
    apply (wp | rule no_fail_pre)+
   done
 
+lemmas corres_stateAssert_ignore =
+  corres_stateAssert_implied[where P=P and P'=P for P, simplified, rotated]
+
 lemma corres_stateAssert_r:
   "corres_underlying sr nf nf' r P Q f (g ()) \<Longrightarrow>
    corres_underlying sr nf nf' r P (Q and P') f (stateAssert P' [] >>= g)"
@@ -1173,6 +1176,18 @@ lemma corres_move_asm:
 
 lemmas corres_cross_over_guard = corres_move_asm[rotated]
 
+lemma corres_cross_add_guard:
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q' s';
+    corres_underlying sr nf nf' r P (P' and Q') f g\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def)
+
+lemma corres_cross_add_abs_guard:
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q s;
+    corres_underlying sr nf nf' r (P and Q)  P' f g\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def)
+
 lemma corres_either_alternate:
   "\<lbrakk> corres_underlying sr nf nf' r P Pa' a c; corres_underlying sr nf nf' r P Pb' b c \<rbrakk>
    \<Longrightarrow> corres_underlying sr nf nf' r P (Pa' or Pb') (a \<sqinter> b) c"
@@ -1251,6 +1266,18 @@ lemma corres_stateAssert_implied2:
     apply (rule g)
    apply simp
   apply simp
+  done
+
+lemma corres_stateAssert_add_assertion:
+  "\<lbrakk> corres_underlying sr nf nf' r P (Q and Q') f (g ());
+     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P Q f (stateAssert Q' [] >>= g)"
+  apply (clarsimp simp: bind_assoc stateAssert_def)
+  apply (rule corres_symb_exec_r [OF _ get_sp])
+    apply (rule corres_assume_pre)
+    apply (rule corres_assert_assume)
+     apply (erule corres_guard_imp, clarsimp+)
+   apply (wp | rule no_fail_pre)+
   done
 
 lemma corres_add_noop_lhs:

@@ -432,7 +432,7 @@ lemma find_vspace_for_asid_lookup_ref:
 
 lemma find_vspace_for_asid_lookup[wp]:
   "\<lbrace>\<top>\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>pd. \<exists>\<rhd> pd\<rbrace>,-"
-  apply (rule hoare_post_imp_R, rule find_vspace_for_asid_lookup_ref)
+  apply (rule hoare_strengthen_postE_R, rule find_vspace_for_asid_lookup_ref)
   apply auto
   done
 
@@ -447,7 +447,7 @@ proof -
      \<lbrace>\<lambda>pd. pspace_aligned and page_map_l4_at pd\<rbrace>, -"
     by wpsimp
   show ?thesis
-    apply (rule hoare_post_imp_R, rule x)
+    apply (rule hoare_strengthen_postE_R, rule x)
     apply clarsimp
     apply (erule page_map_l4_pml4e_atI)
      prefer 2
@@ -2098,11 +2098,11 @@ lemma unmap_page_vs_lookup_pages_pre:
   note ref_simps[simp] = vs_cap_ref_simps vs_ref_pages_simps
   note ucast_simps[simp] = up_ucast_inj_eq ucast_up_ucast mask_asid_low_bits_ucast_ucast ucast_ucast_id get_index_neq
   note [wp_comb del] = hoare_vcg_conj_lift
-  note [wp_comb] = hoare_post_comb_imp_conj hoare_vcg_precond_imp hoare_vcg_conj_lift
-    hoare_vcg_precond_impE[OF valid_validE]
-    hoare_vcg_precond_impE_R[OF valid_validE_R]
-    hoare_vcg_precond_impE
-    hoare_vcg_precond_impE_R
+  note [wp_comb] = hoare_post_comb_imp_conj hoare_weaken_pre hoare_vcg_conj_lift
+    hoare_weaken_preE[OF valid_validE]
+    hoare_weaken_preE_R[OF valid_validE_R]
+    hoare_weaken_preE
+    hoare_weaken_preE_R
 
   show ?thesis
     apply (clarsimp simp: unmap_page_def vs_cap_ref_simps)
@@ -2516,7 +2516,7 @@ lemma mapM_x_swp_store_empty_pt':
   apply (induct slots, simp_all add: mapM_x_Nil mapM_x_Cons)
    apply wp
    apply (clarsimp simp: obj_at_def empty_table_def fun_eq_iff)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q)
   apply (simp add: store_pte_def set_object_def set_arch_obj_simps)
   apply (wp get_object_wp | simp)
@@ -2535,7 +2535,7 @@ lemma mapM_x_swp_store_empty_pd':
   apply (induct slots, simp_all add: mapM_x_Nil mapM_x_Cons)
    apply wp
    apply (clarsimp simp: obj_at_def empty_table_def fun_eq_iff)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q)
   apply (simp add: store_pde_def set_object_def set_arch_obj_simps)
   apply (wp get_object_wp | simp)
@@ -2569,7 +2569,7 @@ lemma mapM_x_swp_store_empty_pdpt':
   apply (induct slots, simp_all add: mapM_x_Nil mapM_x_Cons)
    apply wp
    apply (clarsimp simp: obj_at_def empty_table_def fun_eq_iff)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q)
   apply (simp add: store_pdpte_def set_object_def set_arch_obj_simps)
   apply (wp get_object_wp | simp)
@@ -3309,7 +3309,7 @@ lemma unmap_page_invs[wp]:
    apply (wpc | wp | strengthen imp_consequent)+
    apply ((wp store_pde_invs store_pte_invs unlessE_wp do_machine_op_global_refs_inv get_pde_wp
              hoare_vcg_all_lift find_vspace_for_asid_lots get_pte_wp store_pdpte_invs get_pdpte_wp
-             hoare_vcg_all_lift_R
+             hoare_vcg_all_liftE_R
         | wpc | simp add: flush_all_def pdpte_ref_pages_def if_apply_def2
         | strengthen not_in_global_refs_vs_lookup
                      not_in_global_refs_vs_lookup invs_valid_vs_lookup

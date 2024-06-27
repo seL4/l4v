@@ -44,7 +44,6 @@ text \<open>
   pair of result and state when the computation did not fail.\<close>
 type_synonym ('s, 'a) tmonad = "'s \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set"
 
-
 text \<open>
   Print the type @{typ "('s,'a) tmonad"} instead of its unwieldy expansion.
   Needs an AST translation in code, because it needs to check that the state variable
@@ -67,6 +66,17 @@ print_ast_translation \<open>
 text \<open>Returns monad results, ignoring failures and traces.\<close>
 definition mres :: "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> ('a \<times> 's) set" where
   "mres r = Result -` (snd ` r)"
+
+text \<open>True if the monad has a computation resulting in Failed.\<close>
+definition failed :: "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> bool" where
+  "failed r \<equiv> Failed \<in> snd ` r"
+
+lemma failed_simps[simp]:
+  "failed {(x, y)} = (y = Failed)"
+  "failed (r \<union> r') = (failed r \<or> failed r')"
+  "\<not> failed {}"
+  by (auto simp: failed_def)
+
 
 text \<open>
   The definition of fundamental monad functions @{text return} and
@@ -489,6 +499,12 @@ text \<open>
 definition last_st_tr :: "(tmid * 's) list \<Rightarrow> 's \<Rightarrow> 's" where
   "last_st_tr tr s0 \<equiv> hd (map snd tr @ [s0])"
 
+lemma last_st_tr_simps[simp]:
+  "last_st_tr [] s = s"
+  "last_st_tr (x # xs) s = snd x"
+  "last_st_tr (tr @ tr') s = last_st_tr tr (last_st_tr tr' s)"
+  by (simp add: last_st_tr_def hd_append)+
+
 text \<open>Nondeterministically add all possible environment events to the trace.\<close>
 definition env_steps :: "('s,unit) tmonad" where
   "env_steps \<equiv>
@@ -684,8 +700,8 @@ inductive_set whileLoop_results ::
     "\<lbrakk> \<not> C r s \<rbrakk> \<Longrightarrow> ((r, s), ([], Result (r, s))) \<in> whileLoop_results C B"
   | "\<lbrakk> C r s; (ts, Failed) \<in> B r s \<rbrakk> \<Longrightarrow> ((r, s), (ts, Failed)) \<in> whileLoop_results C B"
   | "\<lbrakk> C r s; (ts, Incomplete) \<in> B r s \<rbrakk> \<Longrightarrow> ((r, s), (ts, Incomplete)) \<in> whileLoop_results C B"
-  | "\<lbrakk> C r s; (ts, Result (r', s')) \<in> B r s; ((r', s'), (ts',z)) \<in> whileLoop_results C B  \<rbrakk>
-       \<Longrightarrow> ((r, s), (ts'@ts,z)) \<in> whileLoop_results C B"
+  | "\<lbrakk> C r s; (ts, Result (r', s')) \<in> B r s; ((r', s'), (ts',z)) \<in> whileLoop_results C B; ts''=ts'@ts \<rbrakk>
+       \<Longrightarrow> ((r, s), (ts'',z)) \<in> whileLoop_results C B"
 
 \<comment> \<open>FIXME: there are fewer lemmas here than in NonDetMonad and I don't understand this well enough
   to know whether this is correct or not.\<close>
@@ -789,6 +805,12 @@ definition Await :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,unit) tmonad" whe
 
 section "Parallel combinator"
 
+text \<open>
+  Programs combined with @{text parallel} should begin with an
+  @{const env_steps} and end with @{const interference} to be wellformed.
+  This ensures that there are at least enough enough environment steps in
+  each program for their traces to be able to be matched up; without it
+  the composed program would be trivially empty.\<close>
 definition parallel :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad" where
   "parallel f g = (\<lambda>s. {(xs, rv). \<exists>f_steps. length f_steps = length xs
     \<and> (map (\<lambda>(f_step, (id, s)). (if f_step then id else Env, s)) (zip f_steps xs), rv) \<in> f s

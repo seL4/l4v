@@ -328,7 +328,7 @@ lemma unmap_page_table_reads_respects:
   apply (rule equiv_valid_guard_imp)
    apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev
              pt_lookup_from_level_reads_respects pt_lookup_from_level_is_subject
-             find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_lift_R
+             find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_liftE_R
           | wpc | simp add: sfence_def | wp (once) hoare_drop_imps)+
   apply clarsimp
   apply (frule vspace_for_asid_is_subject)
@@ -464,7 +464,7 @@ lemma copy_global_mappings_valid_arch_state:
                      and (\<lambda>s. x \<notin> global_refs s \<and> is_aligned x pt_bits)\<rbrace>
    copy_global_mappings x
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding copy_global_mappings_def including no_pre
+  unfolding copy_global_mappings_def including classic_wp_pre
   apply simp
   apply wp
    apply (rule_tac Q="\<lambda>_. valid_arch_state and valid_global_vspace_mappings and pspace_aligned

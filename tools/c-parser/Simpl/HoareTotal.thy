@@ -1,29 +1,10 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      HoareTotal.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
+Copyright (c) 2022 Apple Inc. All rights reserved.
 
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
 *)
 
 section \<open>Derived Hoare Rules for Total Correctness\<close>
@@ -475,18 +456,18 @@ using adapt
 apply blast
 done
 
-lemma Block:
+lemma Block_exn:
 assumes adapt: "P \<subseteq> {s. init s \<in> P' s}"
-assumes bdy: "\<forall>s. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s) bdy {t. return s t \<in> R s t},{t. return s t \<in> A}"
+assumes bdy: "\<forall>s. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s) bdy {t. return s t \<in> R s t},{t. result_exn (return s t) t \<in> A}"
 assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
-shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block init bdy return c) Q,A"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block_exn init bdy return result_exn c) Q,A"
 apply (rule conseq [where P'="\<lambda>Z. {s. s=Z \<and> init s \<in> P' Z}" and Q'="\<lambda>Z. Q" and
 A'="\<lambda>Z. A"])
 prefer 2
 using adapt
 apply  blast
 apply (rule allI)
-apply (unfold block_def)
+apply (unfold block_exn_def)
 apply (rule HoareTotalDef.DynCom)
 apply (rule ballI)
 apply clarsimp
@@ -501,7 +482,7 @@ apply  (rule SeqSwap)
 apply   (rule c [rule_format])
 apply  (rule Basic)
 apply  clarsimp
-apply (rule_tac R="{t. return Z t \<in> A}" in HoareTotalDef.Catch)
+apply (rule_tac R="{t. result_exn (return Z t) t \<in> A}" in HoareTotalDef.Catch)
 apply  (rule_tac R="{i. i \<in> P' Z}" in Seq)
 apply   (rule Basic)
 apply   clarsimp
@@ -513,6 +494,13 @@ apply (rule Basic)
 apply simp
 done
 
+lemma Block:
+assumes adapt: "P \<subseteq> {s. init s \<in> P' s}"
+assumes bdy: "\<forall>s. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s) bdy {t. return s t \<in> R s t},{t. return s t \<in> A}"
+assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block init bdy return c) Q,A"
+  using adapt bdy c unfolding block_def by (rule Block_exn)
+
 lemma BlockSwap:
 assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
 assumes bdy: "\<forall>s. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s) bdy {t. return s t \<in> R s t},{t. return s t \<in> A}"
@@ -521,22 +509,30 @@ shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block init bdy
   using adapt bdy c
   by (rule Block)
 
-lemma BlockSpec:
+lemma Block_exnSwap:
+assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+assumes bdy: "\<forall>s. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s) bdy {t. return s t \<in> R s t},{t. result_exn (return s t) t \<in> A}"
+assumes adapt: "P \<subseteq> {s. init s \<in> P' s}"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block_exn init bdy return result_exn c) Q,A"
+  using adapt bdy c
+  by (rule Block_exn)
+
+lemma Block_exnSpec:
   assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
                              (\<forall>t. t \<in> Q' Z \<longrightarrow> return s t \<in> R s t) \<and>
-                             (\<forall>t. t \<in> A' Z \<longrightarrow> return s t \<in> A)}"
+                             (\<forall>t. t \<in> A' Z \<longrightarrow> result_exn (return s t) t \<in> A)}"
   assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
   assumes bdy: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) bdy (Q' Z),(A' Z)"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block init bdy return c) Q,A"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block_exn init bdy return result_exn c) Q,A"
 apply (rule conseq [where P'="\<lambda>Z. {s. init s \<in> P' Z \<and>
                              (\<forall>t. t \<in> Q' Z \<longrightarrow> return s t \<in> R s t) \<and>
-                             (\<forall>t. t \<in> A' Z \<longrightarrow> return s t \<in> A)}" and Q'="\<lambda>Z. Q" and
+                             (\<forall>t. t \<in> A' Z \<longrightarrow> result_exn (return s t) t \<in> A)}" and Q'="\<lambda>Z. Q" and
 A'="\<lambda>Z. A"])
 prefer 2
 using adapt
 apply  blast
 apply (rule allI)
-apply (unfold block_def)
+apply (unfold block_exn_def)
 apply (rule HoareTotalDef.DynCom)
 apply (rule ballI)
 apply clarsimp
@@ -551,7 +547,7 @@ apply  (rule SeqSwap)
 apply   (rule c [rule_format])
 apply  (rule Basic)
 apply  clarsimp
-apply (rule_tac R="{t. return s t \<in> A}" in HoareTotalDef.Catch)
+apply (rule_tac R="{t. result_exn (return s t) t \<in> A}" in HoareTotalDef.Catch)
 apply  (rule_tac R="{i. i \<in> P' Z}" in Seq)
 apply   (rule Basic)
 apply   clarsimp
@@ -564,6 +560,15 @@ apply  (rule Throw)
 apply (rule Basic)
 apply simp
 done
+
+lemma BlockSpec:
+  assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
+                             (\<forall>t. t \<in> Q' Z \<longrightarrow> return s t \<in> R s t) \<and>
+                             (\<forall>t. t \<in> A' Z \<longrightarrow> return s t \<in> A)}"
+  assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+  assumes bdy: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) bdy (Q' Z),(A' Z)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (block init bdy return c) Q,A"
+  using adapt c bdy unfolding block_def by (rule Block_exnSpec)
 
 
 lemma Throw: "P \<subseteq> A \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P Throw Q,A"
@@ -597,6 +602,16 @@ lemma condCatchSwap: "\<lbrakk>\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<
                      \<Longrightarrow>  \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P condCatch c\<^sub>1 b c\<^sub>2 Q,A"
   by (rule condCatch)
 
+lemma Proc_exnSpec:
+  assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
+                             (\<forall>t. t \<in> Q' Z \<longrightarrow> return s t \<in> R s t) \<and>
+                             (\<forall>t. t \<in> A' Z \<longrightarrow> result_exn (return s t) t \<in> A)}"
+  assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+  assumes p: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call p (Q' Z),(A' Z)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+using adapt c p
+apply (unfold call_exn_def)
+  by (rule Block_exnSpec)
 
 lemma ProcSpec:
   assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
@@ -609,14 +624,14 @@ using adapt c p
 apply (unfold call_def)
 by (rule BlockSpec)
 
-lemma ProcSpec':
+lemma Proc_exnSpec':
   assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
                              (\<forall>t \<in> Q' Z. return s t \<in> R s t) \<and>
-                             (\<forall>t \<in> A' Z. return s t \<in> A)}"
+                             (\<forall>t \<in> A' Z. result_exn (return s t) t \<in> A)}"
   assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
   assumes p: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call p (Q' Z),(A' Z)"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call init p return c) Q,A"
-apply (rule ProcSpec [OF _ c p])
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+apply (rule Proc_exnSpec [OF _ c p])
 apply (insert adapt)
 apply clarsimp
 apply (drule (1) subsetD)
@@ -625,6 +640,26 @@ apply (rule_tac x=Z in exI)
 apply blast
 done
 
+lemma ProcSpec':
+  assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
+                             (\<forall>t \<in> Q' Z. return s t \<in> R s t) \<and>
+                             (\<forall>t \<in> A' Z. return s t \<in> A)}"
+  assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+  assumes p: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call p (Q' Z),(A' Z)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call init p return c) Q,A"
+  using adapt c p unfolding call_call_exn by (rule Proc_exnSpec')
+
+
+lemma Proc_exnSpecNoAbrupt:
+  assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
+                             (\<forall>t. t \<in> Q' Z \<longrightarrow> return s t \<in> R s t)}"
+  assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+  assumes p: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call p (Q' Z),{}"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+apply (rule Proc_exnSpec [OF _ c p])
+using adapt
+apply simp
+  done
 
 lemma ProcSpecNoAbrupt:
   assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' Z \<and>
@@ -764,8 +799,24 @@ apply (rule ProcBody [where \<Gamma>=\<Gamma>, OF _ bdy [rule_format] body])
 apply simp
 done
 
+lemma Call_exnBody:
+assumes adapt: "P \<subseteq> {s. init s \<in> P' s}"
+assumes bdy: "\<forall>s. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s) body {t. return s t \<in> R s t},{t. result_exn (return s t) t \<in> A}"
+assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+assumes body: "\<Gamma> p = Some body"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+apply (unfold call_exn_def)
+apply (rule Block_exn [OF adapt _ c])
+apply (rule allI)
+apply (rule ProcBody [where \<Gamma>=\<Gamma>, OF _ bdy [rule_format] body])
+apply simp
+  done
+
 lemmas ProcModifyReturn = HoareTotalProps.ProcModifyReturn
 lemmas ProcModifyReturnSameFaults = HoareTotalProps.ProcModifyReturnSameFaults
+
+lemmas Proc_exnModifyReturn = HoareTotalProps.Proc_exnModifyReturn
+lemmas Proc_exnModifyReturnSameFaults = HoareTotalProps.Proc_exnModifyReturnSameFaults
 
 lemma ProcModifyReturnNoAbr:
   assumes spec: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call init p return' c) Q,A"
@@ -775,6 +826,15 @@ lemma ProcModifyReturnNoAbr:
   "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),{}"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call init p return c) Q,A"
 by (rule ProcModifyReturn [OF spec result_conform _ modifies_spec]) simp
+
+lemma Proc_exnModifyReturnNoAbr:
+  assumes spec: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return' result_exn c) Q,A"
+  assumes result_conform:
+      "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> (return' s t) = (return s t)"
+  assumes modifies_spec:
+  "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),{}"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+  by (rule Proc_exnModifyReturn [OF spec result_conform _ modifies_spec]) simp
 
 
 lemma ProcModifyReturnNoAbrSameFaults:
@@ -786,21 +846,29 @@ lemma ProcModifyReturnNoAbrSameFaults:
   shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call init p return c) Q,A"
 by (rule ProcModifyReturnSameFaults [OF spec result_conform _ modifies_spec]) simp
 
+lemma Proc_exnModifyReturnNoAbrSameFaults:
+  assumes spec: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return' result_exn c) Q,A"
+  assumes result_conform:
+      "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> (return' s t) = (return s t)"
+  assumes modifies_spec:
+  "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),{}"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+  by (rule Proc_exnModifyReturnSameFaults [OF spec result_conform _ modifies_spec]) simp
 
-lemma DynProc:
+lemma DynProc_exn:
   assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' s Z \<and>
                           (\<forall>t. t \<in> Q' s Z \<longrightarrow>  return s t \<in> R s t) \<and>
-                          (\<forall>t. t \<in> A' s Z \<longrightarrow> return s t \<in> A)}"
+                          (\<forall>t. t \<in> A' s Z \<longrightarrow> result_exn (return s t) t \<in> A)}"
   assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
   assumes p: "\<forall>s\<in> P. \<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s Z) Call (p s) (Q' s Z),(A' s Z)"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P dynCall init p return c Q,A"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P dynCall_exn f UNIV init p return result_exn c Q,A"
 apply (rule conseq [where P'="\<lambda>Z. {s. s=Z \<and> s \<in> P}"
   and Q'="\<lambda>Z. Q" and A'="\<lambda>Z. A"])
 prefer 2
 using adapt
 apply  blast
 apply (rule allI)
-apply (unfold dynCall_def call_def block_def)
+apply (unfold dynCall_exn_def maybe_guard_UNIV call_exn_def block_exn_def guards.simps)
 apply (rule HoareTotalDef.DynCom)
 apply clarsimp
 apply (rule HoareTotalDef.DynCom)
@@ -834,7 +902,41 @@ apply (rule SeqSwap)
 apply  (rule c [rule_format])
 apply (rule Basic)
 apply clarsimp
-done
+  done
+
+lemma DynProc_exn_guards_cons:
+  assumes p: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P dynCall_exn f UNIV init p return result_exn c Q,A"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (g \<inter> P) dynCall_exn f g init p return result_exn c Q,A"
+  using p apply (clarsimp simp add: dynCall_exn_def maybe_guard_def)
+  apply (rule Guard)
+   apply (rule subset_refl)
+  apply assumption
+  done
+
+lemma DynProc:
+  assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' s Z \<and>
+                          (\<forall>t. t \<in> Q' s Z \<longrightarrow>  return s t \<in> R s t) \<and>
+                          (\<forall>t. t \<in> A' s Z \<longrightarrow> return s t \<in> A)}"
+  assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+  assumes p: "\<forall>s\<in> P. \<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s Z) Call (p s) (Q' s Z),(A' s Z)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P dynCall init p return c Q,A"
+  using adapt c p unfolding dynCall_dynCall_exn by (rule DynProc_exn)
+
+lemma DynProc_exn':
+  assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' s Z \<and>
+                          (\<forall>t \<in> Q' s Z. return s t \<in> R s t) \<and>
+                          (\<forall>t \<in> A' s Z. result_exn (return s t) t \<in> A)}"
+  assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+  assumes p: "\<forall>s\<in> P. \<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s Z) Call (p s) (Q' s Z),(A' s Z)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P dynCall_exn f UNIV init p return result_exn c Q,A"
+proof -
+  from adapt have "P \<subseteq> {s. \<exists>Z. init s \<in> P' s Z \<and>
+                          (\<forall>t. t \<in> Q' s Z \<longrightarrow>  return s t \<in> R s t) \<and>
+                          (\<forall>t. t \<in> A' s Z \<longrightarrow> result_exn (return s t) t \<in> A)}"
+    by blast
+  from this c p show ?thesis
+    by (rule DynProc_exn)
+qed
 
 lemma DynProc':
   assumes adapt: "P \<subseteq> {s. \<exists>Z. init s \<in> P' s Z \<and>
@@ -843,27 +945,20 @@ lemma DynProc':
   assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
   assumes p: "\<forall>s\<in> P. \<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' s Z) Call (p s) (Q' s Z),(A' s Z)"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P dynCall init p return c Q,A"
-proof -
-  from adapt have "P \<subseteq> {s. \<exists>Z. init s \<in> P' s Z \<and>
-                          (\<forall>t. t \<in> Q' s Z \<longrightarrow>  return s t \<in> R s t) \<and>
-                          (\<forall>t. t \<in> A' s Z \<longrightarrow> return s t \<in> A)}"
-    by blast
-  from this c p show ?thesis
-    by (rule DynProc)
-qed
+  using adapt c p unfolding dynCall_dynCall_exn by (rule DynProc_exn')
 
-lemma DynProcStaticSpec:
+lemma DynProc_exnStaticSpec:
 assumes adapt: "P \<subseteq> {s. s \<in> S \<and> (\<exists>Z. init s \<in> P' Z  \<and>
                             (\<forall>\<tau>. \<tau> \<in> Q' Z \<longrightarrow> return s \<tau> \<in> R s \<tau>) \<and>
-                            (\<forall>\<tau>. \<tau> \<in> A' Z \<longrightarrow> return s \<tau> \<in> A))}"
+                            (\<forall>\<tau>. \<tau> \<in> A' Z \<longrightarrow> result_exn (return s \<tau>) \<tau> \<in> A))}"
 assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
 assumes spec: "\<forall>s\<in>S. \<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call (p s) (Q' Z),(A' Z)"
-shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f UNIV init p return result_exn c) Q,A"
 proof -
   from adapt have P_S: "P \<subseteq> S"
     by blast
-  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P \<inter> S) (dynCall init p return c) Q,A"
-    apply (rule DynProc [where P'="\<lambda>s Z. P' Z" and Q'="\<lambda>s Z. Q' Z"
+  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P \<inter> S) (dynCall_exn f UNIV init p return result_exn c) Q,A"
+    apply (rule DynProc_exn [where P'="\<lambda>s Z. P' Z" and Q'="\<lambda>s Z. Q' Z"
                          and A'="\<lambda>s Z. A' Z", OF _ c])
     apply  clarsimp
     apply  (frule in_mono [rule_format, OF adapt])
@@ -876,6 +971,26 @@ proof -
 qed
 
 
+lemma DynProcStaticSpec:
+assumes adapt: "P \<subseteq> {s. s \<in> S \<and> (\<exists>Z. init s \<in> P' Z  \<and>
+                            (\<forall>\<tau>. \<tau> \<in> Q' Z \<longrightarrow> return s \<tau> \<in> R s \<tau>) \<and>
+                            (\<forall>\<tau>. \<tau> \<in> A' Z \<longrightarrow> return s \<tau> \<in> A))}"
+assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+assumes spec: "\<forall>s\<in>S. \<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call (p s) (Q' Z),(A' Z)"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using adapt c spec unfolding dynCall_dynCall_exn by (rule DynProc_exnStaticSpec)
+
+lemma DynProc_exnProcPar:
+assumes adapt: "P \<subseteq> {s. p s = q \<and> (\<exists>Z. init s \<in> P' Z  \<and>
+                            (\<forall>\<tau>. \<tau> \<in> Q' Z \<longrightarrow> return s \<tau> \<in> R s \<tau>) \<and>
+                            (\<forall>\<tau>. \<tau> \<in> A' Z \<longrightarrow> result_exn (return s \<tau>) \<tau> \<in> A))}"
+assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+assumes spec: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call q (Q' Z),(A' Z)"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f UNIV init p return result_exn c) Q,A"
+  apply (rule DynProc_exnStaticSpec [where S="{s. p s = q}",simplified, OF adapt c])
+  using spec
+  apply simp
+  done
 
 lemma DynProcProcPar:
 assumes adapt: "P \<subseteq> {s. p s = q \<and> (\<exists>Z. init s \<in> P' Z  \<and>
@@ -889,17 +1004,16 @@ shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p
   apply simp
   done
 
-
-lemma DynProcProcParNoAbrupt:
+lemma DynProc_exnProcParNoAbrupt:
 assumes adapt: "P \<subseteq> {s. p s = q \<and> (\<exists>Z. init s \<in> P' Z  \<and>
                             (\<forall>\<tau>. \<tau> \<in> Q' Z \<longrightarrow> return s \<tau> \<in> R s \<tau>))}"
 assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
 assumes spec: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call q (Q' Z),{}"
-shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f UNIV init p return result_exn c) Q,A"
 proof -
   have "P \<subseteq> {s. p s = q \<and> (\<exists> Z. init s \<in> P' Z \<and>
                       (\<forall>t. t \<in> Q' Z \<longrightarrow> return s t \<in> R s t) \<and>
-                      (\<forall>t. t \<in> {} \<longrightarrow> return s t \<in> A))}"
+                      (\<forall>t. t \<in> {} \<longrightarrow> result_exn (return s t) t \<in> A))}"
     (is "P \<subseteq> ?P'")
   proof
     fix s
@@ -918,10 +1032,41 @@ proof -
   note P = this
   show ?thesis
     apply -
-    apply (rule DynProcStaticSpec [where S="{s. p s = q}",simplified, OF P c])
+    apply (rule DynProc_exnStaticSpec [where S="{s. p s = q}",simplified, OF P c])
     apply (insert spec)
     apply auto
     done
+qed
+
+lemma DynProcProcParNoAbrupt:
+assumes adapt: "P \<subseteq> {s. p s = q \<and> (\<exists>Z. init s \<in> P' Z  \<and>
+                            (\<forall>\<tau>. \<tau> \<in> Q' Z \<longrightarrow> return s \<tau> \<in> R s \<tau>))}"
+assumes c: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
+assumes spec: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) Call q (Q' Z),{}"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using adapt c spec unfolding dynCall_dynCall_exn by (rule DynProc_exnProcParNoAbrupt)
+
+lemma DynProc_exnModifyReturnNoAbr:
+  assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return' result_exn c) Q,A"
+  assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
+                            \<longrightarrow> return' s t = return s t"
+  assumes modif_clause:
+            "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s)  (Modif \<sigma>),{}"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
+proof -
+  from ret_nrm_modif
+  have "\<forall>s t. t  \<in> (Modif (init s))
+        \<longrightarrow> return' s t = return s t"
+    by iprover
+  then
+  have ret_nrm_modif': "\<forall>s t. t \<in> (Modif (init s))
+                      \<longrightarrow> return' s t = return s t"
+    by simp
+  have ret_abr_modif': "\<forall>s t. t \<in> {}
+                        \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+    by simp
+  from to_prove ret_nrm_modif' ret_abr_modif' modif_clause show ?thesis
+    by (rule dynProc_exnModifyReturn)
 qed
 
 lemma DynProcModifyReturnNoAbr:
@@ -930,7 +1075,17 @@ lemma DynProcModifyReturnNoAbr:
                             \<longrightarrow> return' s t = return s t"
   assumes modif_clause:
             "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s)  (Modif \<sigma>),{}"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+          shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using to_prove ret_nrm_modif modif_clause unfolding dynCall_dynCall_exn
+  by (rule DynProc_exnModifyReturnNoAbr)
+
+lemma ProcDyn_exnModifyReturnNoAbrSameFaults:
+  assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return' result_exn c) Q,A"
+  assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
+                            \<longrightarrow> return' s t = return s t"
+  assumes modif_clause:
+            "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (Call (p s)) (Modif \<sigma>),{}"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
 proof -
   from ret_nrm_modif
   have "\<forall>s t. t  \<in> (Modif (init s))
@@ -941,11 +1096,12 @@ proof -
                       \<longrightarrow> return' s t = return s t"
     by simp
   have ret_abr_modif': "\<forall>s t. t \<in> {}
-                        \<longrightarrow> return' s t = return s t"
+                        \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
     by simp
   from to_prove ret_nrm_modif' ret_abr_modif' modif_clause show ?thesis
-    by (rule dynProcModifyReturn)
+    by (rule dynProc_exnModifyReturnSameFaults)
 qed
+
 
 lemma ProcDynModifyReturnNoAbrSameFaults:
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return' c) Q,A"
@@ -953,21 +1109,31 @@ lemma ProcDynModifyReturnNoAbrSameFaults:
                             \<longrightarrow> return' s t = return s t"
   assumes modif_clause:
             "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (Call (p s)) (Modif \<sigma>),{}"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+          shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using to_prove ret_nrm_modif modif_clause unfolding dynCall_dynCall_exn
+  by (rule ProcDyn_exnModifyReturnNoAbrSameFaults)
+
+lemma Proc_exnProcParModifyReturn:
+  assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
+   \<comment> \<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in
+         @{term P'}, so the vcg can simplify it.\<close>
+  assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall_exn f g init p return' result_exn c) Q,A"
+  assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
+                            \<longrightarrow> return' s t = return s t"
+  assumes ret_abr_modif: "\<forall>s t. t \<in> (ModifAbr (init s))
+                            \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+  assumes modif_clause:
+          "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} (Call q) (Modif \<sigma>),(ModifAbr \<sigma>)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
 proof -
-  from ret_nrm_modif
-  have "\<forall>s t. t  \<in> (Modif (init s))
-        \<longrightarrow> return' s t = return s t"
-    by iprover
-  then
-  have ret_nrm_modif': "\<forall>s t. t \<in> (Modif (init s))
-                      \<longrightarrow> return' s t = return s t"
-    by simp
-  have ret_abr_modif': "\<forall>s t. t \<in> {}
-                        \<longrightarrow> return' s t = return s t"
-    by simp
-  from to_prove ret_nrm_modif' ret_abr_modif' modif_clause show ?thesis
-    by (rule dynProcModifyReturnSameFaults)
+  from to_prove have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return' result_exn c) Q,A"
+    by (rule conseqPre) blast
+  from this ret_nrm_modif
+       ret_abr_modif
+  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return result_exn c) Q,A"
+    by (rule dynProc_exnModifyReturn) (insert modif_clause,auto)
+  from this q show ?thesis
+    by (rule conseqPre)
 qed
 
 lemma ProcProcParModifyReturn:
@@ -981,18 +1147,33 @@ lemma ProcProcParModifyReturn:
                             \<longrightarrow> return' s t = return s t"
   assumes modif_clause:
           "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} (Call q) (Modif \<sigma>),(ModifAbr \<sigma>)"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+        shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using q to_prove ret_nrm_modif ret_abr_modif modif_clause unfolding dynCall_dynCall_exn
+  by (rule Proc_exnProcParModifyReturn)
+
+lemma Proc_exnProcParModifyReturnSameFaults:
+  assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
+   \<comment> \<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in
+         @{term P'}, so the vcg can simplify it.\<close>
+  assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall_exn f g init p return' result_exn c) Q,A"
+  assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
+                            \<longrightarrow> return' s t = return s t"
+  assumes ret_abr_modif: "\<forall>s t. t \<in> (ModifAbr (init s))
+                            \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+  assumes modif_clause:
+          "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call q (Modif \<sigma>),(ModifAbr \<sigma>)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
 proof -
-  from to_prove have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return' c) Q,A"
+  from to_prove
+  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return' result_exn c) Q,A"
     by (rule conseqPre) blast
   from this ret_nrm_modif
        ret_abr_modif
-  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return c) Q,A"
-    by (rule dynProcModifyReturn) (insert modif_clause,auto)
+  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return result_exn c) Q,A"
+    by (rule dynProc_exnModifyReturnSameFaults) (insert modif_clause,auto)
   from this q show ?thesis
     by (rule conseqPre)
 qed
-
 
 
 lemma ProcProcParModifyReturnSameFaults:
@@ -1006,15 +1187,26 @@ lemma ProcProcParModifyReturnSameFaults:
                             \<longrightarrow> return' s t = return s t"
   assumes modif_clause:
           "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call q (Modif \<sigma>),(ModifAbr \<sigma>)"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+        shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using q to_prove ret_nrm_modif ret_abr_modif modif_clause unfolding dynCall_dynCall_exn
+  by (rule Proc_exnProcParModifyReturnSameFaults)
+
+lemma Proc_exnProcParModifyReturnNoAbr:
+  assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
+   \<comment> \<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as
+      first conjunction in @{term P'}, so the vcg can simplify it.\<close>
+  assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall_exn f g init p return' result_exn c) Q,A"
+  assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
+                            \<longrightarrow> return' s t = return s t"
+  assumes modif_clause:
+            "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} (Call q) (Modif \<sigma>),{}"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
 proof -
-  from to_prove
-  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return' c) Q,A"
+  from to_prove have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return' result_exn c) Q,A"
     by (rule conseqPre) blast
   from this ret_nrm_modif
-       ret_abr_modif
-  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return c) Q,A"
-    by (rule dynProcModifyReturnSameFaults) (insert modif_clause,auto)
+  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return result_exn c) Q,A"
+    by (rule DynProc_exnModifyReturnNoAbr) (insert modif_clause,auto)
   from this q show ?thesis
     by (rule conseqPre)
 qed
@@ -1028,17 +1220,31 @@ lemma ProcProcParModifyReturnNoAbr:
                             \<longrightarrow> return' s t = return s t"
   assumes modif_clause:
             "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} (Call q) (Modif \<sigma>),{}"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+          shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using q to_prove ret_nrm_modif modif_clause unfolding dynCall_dynCall_exn
+  by (rule Proc_exnProcParModifyReturnNoAbr)
+
+
+lemma Proc_exnProcParModifyReturnNoAbrSameFaults:
+  assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
+      \<comment> \<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as
+      first conjunction in @{term P'}, so the vcg can simplify it.\<close>
+  assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall_exn f g init p return' result_exn c) Q,A"
+  assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
+                            \<longrightarrow> return' s t = return s t"
+  assumes modif_clause:
+            "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (Call q) (Modif \<sigma>),{}"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
 proof -
-  from to_prove have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return' c) Q,A"
+  from to_prove have
+    "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return' result_exn c) Q,A"
     by (rule conseqPre) blast
   from this ret_nrm_modif
-  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return c) Q,A"
-    by (rule DynProcModifyReturnNoAbr) (insert modif_clause,auto)
+  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall_exn f g init p return result_exn c) Q,A"
+    by (rule ProcDyn_exnModifyReturnNoAbrSameFaults) (insert modif_clause,auto)
   from this q show ?thesis
     by (rule conseqPre)
 qed
-
 
 lemma ProcProcParModifyReturnNoAbrSameFaults:
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
@@ -1049,17 +1255,10 @@ lemma ProcProcParModifyReturnNoAbrSameFaults:
                             \<longrightarrow> return' s t = return s t"
   assumes modif_clause:
             "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (Call q) (Modif \<sigma>),{}"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
-proof -
-  from to_prove have
-    "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return' c) Q,A"
-    by (rule conseqPre) blast
-  from this ret_nrm_modif
-  have "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s. p s = q} \<inter> P') (dynCall init p return c) Q,A"
-    by (rule ProcDynModifyReturnNoAbrSameFaults) (insert modif_clause,auto)
-  from this q show ?thesis
-    by (rule conseqPre)
-qed
+          shows "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using q to_prove ret_nrm_modif modif_clause unfolding dynCall_dynCall_exn
+  by (rule Proc_exnProcParModifyReturnNoAbrSameFaults)
+
 
 lemma MergeGuards_iff: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P merge_guards c Q,A = \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   by (auto intro: MergeGuardsI MergeGuardsD)

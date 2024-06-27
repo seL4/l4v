@@ -1030,7 +1030,7 @@ lemma find_pd_for_asid_lookup_ref:
 
 lemma find_pd_for_asid_lookup[wp]:
   "\<lbrace>\<top>\<rbrace> find_pd_for_asid asid \<lbrace>\<lambda>pd. \<exists>\<rhd> pd\<rbrace>,-"
-  apply (rule hoare_post_imp_R, rule find_pd_for_asid_lookup_ref)
+  apply (rule hoare_strengthen_postE_R, rule find_pd_for_asid_lookup_ref)
   apply auto
   done
 
@@ -1045,7 +1045,7 @@ proof -
      \<lbrace>\<lambda>pd. pspace_aligned and page_directory_at pd\<rbrace>, -"
     by (rule hoare_pre) (wp, simp)
   show ?thesis
-    apply (rule hoare_post_imp_R, rule x)
+    apply (rule hoare_strengthen_postE_R, rule x)
     apply clarsimp
     apply (erule page_directory_pde_atI)
      prefer 2
@@ -1638,7 +1638,7 @@ lemma svr_invs [wp]:
   apply (simp add: set_vm_root_def)
   apply (rule hoare_pre)
    apply (wp whenE_wp find_pd_for_asid_inv hoare_vcg_all_lift | wpc | simp add: split_def)+
-    apply (rule_tac Q'="\<lambda>_ s. invs s \<and> x2 \<le> mask asid_bits" in hoare_post_imp_R)
+    apply (rule_tac Q'="\<lambda>_ s. invs s \<and> x2 \<le> mask asid_bits" in hoare_strengthen_postE_R)
      prefer 2
      apply simp
     apply (rule valid_validE_R)
@@ -3097,7 +3097,7 @@ lemma mapM_x_swp_store_empty_table':
   apply (induct slots, simp_all add: mapM_x_Nil mapM_x_Cons)
    apply wp
    apply (clarsimp simp: obj_at_def empty_table_def fun_eq_iff)
-  apply (rule hoare_seq_ext, assumption)
+  apply (rule bind_wp, assumption)
   apply (thin_tac "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q)
   apply (simp add: store_pte_def set_pt_def set_object_def)
   apply (wp get_object_wp)
@@ -3613,7 +3613,7 @@ lemma find_pd_for_asid_lookup_slot [wp]:
   "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace> find_pd_for_asid asid
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (lookup_pd_slot rv vptr && ~~ mask pd_bits)\<rbrace>, -"
   apply (rule hoare_pre)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (rule hoare_vcg_R_conj)
      apply (rule find_pd_for_asid_lookup)
     apply (rule find_pd_for_asid_aligned_pd)
@@ -3626,7 +3626,7 @@ lemma find_pd_for_asid_lookup_slot_large_page [wp]:
   find_pd_for_asid asid
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (x + lookup_pd_slot rv vptr && ~~ mask pd_bits)\<rbrace>, -"
   apply (rule hoare_pre)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (rule hoare_vcg_R_conj)
       apply (rule hoare_vcg_R_conj)
        apply (rule find_pd_for_asid_inv [where P="K (x \<in> set [0, 4 .e. 0x3C] \<and> is_aligned vptr 24)", THEN valid_validE_R])
@@ -3640,7 +3640,7 @@ lemma find_pd_for_asid_pde_at_add [wp]:
  "\<lbrace>K (x \<in> set [0,4 .e. 0x3C] \<and> is_aligned vptr 24) and pspace_aligned and valid_vspace_objs\<rbrace>
   find_pd_for_asid asid \<lbrace>\<lambda>rv. pde_at (x + lookup_pd_slot rv vptr)\<rbrace>, -"
   apply (rule hoare_pre)
-   apply (rule hoare_post_imp_R)
+   apply (rule hoare_strengthen_postE_R)
     apply (rule hoare_vcg_R_conj)
      apply (rule find_pd_for_asid_inv [where P=
                  "K (x \<in> set [0, 4 .e. 0x3C] \<and> is_aligned vptr 24) and pspace_aligned", THEN valid_validE_R])
@@ -3717,7 +3717,7 @@ lemma lookup_pt_slot_cap_to1[wp]:
   "\<lbrace>invs and \<exists>\<rhd>pd and K (is_aligned pd pd_bits)
                   and K (vptr < kernel_base)\<rbrace> lookup_pt_slot pd vptr
    \<lbrace>\<lambda>rv s.  \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> is_pt_cap cap \<and> rv && ~~ mask pt_bits \<in> obj_refs cap\<rbrace>,-"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lookup_pt_slot_cap_to)
   apply auto
   done
@@ -3731,7 +3731,7 @@ lemma lookup_pt_slot_cap_to_multiple1:
              (\<exists>a b. cte_wp_at (\<lambda>c. is_pt_cap c \<and> cap_asid c \<noteq> None
                                   \<and> (\<lambda>x. x && ~~ mask pt_bits) ` set [rv , rv + 4 .e. rv + 0x3C] \<subseteq> obj_refs c) (a, b) s)\<rbrace>, -"
   apply (rule hoare_gen_asmE)
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lookup_pt_slot_cap_to)
   apply (rule conjI, clarsimp)
   apply (elim exEI)
@@ -3759,7 +3759,7 @@ lemma lookup_pt_slot_cap_to_multiple[wp]:
                   and K (is_aligned vptr 16)\<rbrace>
      lookup_pt_slot pd vptr
    \<lbrace>\<lambda>rv s. \<exists>a b. cte_wp_at (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` (\<lambda>x. x + rv) ` set [0 , 4 .e. 0x3C] \<subseteq> obj_refs c) (a, b) s\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to_multiple1)
+  apply (rule hoare_strengthen_postE_R, rule lookup_pt_slot_cap_to_multiple1)
   apply (elim conjE exEI cte_wp_at_weakenE)
   apply (simp add: subset_eq p_0x3C_shift)
   done
@@ -3794,7 +3794,7 @@ lemma find_pd_for_asid_cap_to:
 lemma find_pd_for_asid_cap_to1[wp]:
   "\<lbrace>invs\<rbrace> find_pd_for_asid asid
    \<lbrace>\<lambda>rv s. \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> lookup_pd_slot rv vptr && ~~ mask pd_bits \<in> obj_refs cap\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule find_pd_for_asid_cap_to)
+  apply (rule hoare_strengthen_postE_R, rule find_pd_for_asid_cap_to)
   apply (clarsimp simp: lookup_pd_slot_pd)
   apply auto
   done
@@ -3804,7 +3804,7 @@ lemma find_pd_for_asid_cap_to2[wp]:
    \<lbrace>\<lambda>rv s. \<exists>a b. cte_wp_at
             (\<lambda>cp. lookup_pd_slot rv vptr && ~~ mask pd_bits \<in> obj_refs cp \<and> is_pd_cap cp)
                   (a, b) s\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule find_pd_for_asid_cap_to)
+  apply (rule hoare_strengthen_postE_R, rule find_pd_for_asid_cap_to)
   apply (clarsimp simp: lookup_pd_slot_pd cte_wp_at_caps_of_state)
   apply auto
   done
@@ -3812,7 +3812,7 @@ lemma find_pd_for_asid_cap_to2[wp]:
 lemma find_pd_for_asid_cap_to_multiple[wp]:
   "\<lbrace>invs and K (is_aligned vptr 24)\<rbrace> find_pd_for_asid asid
    \<lbrace>\<lambda>rv s. \<exists>x xa. cte_wp_at (\<lambda>a. (\<lambda>x. x && ~~ mask pd_bits) ` (\<lambda>x. x + lookup_pd_slot rv vptr) ` set [0 , 4 .e. 0x3C] \<subseteq> obj_refs a) (x, xa) s\<rbrace>, -"
-  apply (rule hoare_gen_asmE, rule hoare_post_imp_R, rule find_pd_for_asid_cap_to)
+  apply (rule hoare_gen_asmE, rule hoare_strengthen_postE_R, rule find_pd_for_asid_cap_to)
   apply (elim exEI, clarsimp simp: cte_wp_at_caps_of_state)
   apply (simp add: lookup_pd_slot_add_eq)
   done
@@ -3823,7 +3823,7 @@ lemma find_pd_for_asid_cap_to_multiple2[wp]:
    \<lbrace>\<lambda>rv s. \<forall>x\<in>set [0 , 4 .e. 0x3C]. \<exists>a b.
              cte_wp_at (\<lambda>cp. x + lookup_pd_slot rv vptr && ~~ mask pd_bits
                              \<in> obj_refs cp \<and> is_pd_cap cp) (a, b) s\<rbrace>, -"
-  apply (rule hoare_gen_asmE, rule hoare_post_imp_R,
+  apply (rule hoare_gen_asmE, rule hoare_strengthen_postE_R,
          rule find_pd_for_asid_cap_to)
   apply (intro ballI, elim exEI,
          clarsimp simp: cte_wp_at_caps_of_state)
@@ -3850,7 +3850,7 @@ lemma lookup_pt_slot_cap_to2:
      lookup_pt_slot pd vptr
    \<lbrace>\<lambda>rv s. \<exists>oref cref cap. caps_of_state s (oref, cref) = Some cap
          \<and> rv && ~~ mask pt_bits \<in> obj_refs cap \<and> is_pt_cap cap\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to)
+  apply (rule hoare_strengthen_postE_R, rule lookup_pt_slot_cap_to)
   apply fastforce
   done
 
@@ -3860,7 +3860,7 @@ lemma lookup_pt_slot_cap_to_multiple2:
    \<lbrace>\<lambda>rv s. \<exists>oref cref. cte_wp_at
               (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` (\<lambda>x. x + rv) ` set [0 , 4 .e. 0x3C] \<subseteq> obj_refs c \<and> is_pt_cap c)
                   (oref, cref) s\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to_multiple1)
+  apply (rule hoare_strengthen_postE_R, rule lookup_pt_slot_cap_to_multiple1)
   apply (clarsimp simp: upto_enum_step_def image_image field_simps
                         linorder_not_le[symmetric]
                  split: if_split_asm)

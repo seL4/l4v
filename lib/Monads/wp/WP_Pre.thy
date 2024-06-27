@@ -30,6 +30,11 @@ fun append_used_rule ctxt used_thms_ref tag used_thm insts =
       else Thm.prop_of used_thm
   in used_thms_ref := !used_thms_ref @ [(name, tag, inst_term)] end
 
+fun remove_last_used_thm trace used_thms_ref =
+  if trace
+  then used_thms_ref := (!used_thms_ref |> rev |> tl |> rev)
+  else ()
+
 fun trace_rule' trace ctxt callback tac rule =
   if trace
   then Trace_Schematic_Insts.trace_schematic_insts_tac ctxt callback tac rule
@@ -40,25 +45,52 @@ fun trace_rule trace ctxt used_thms_ref tag tac rule =
     (fn rule_insts => fn _ => append_used_rule ctxt used_thms_ref tag rule rule_insts)
     tac rule;
 
+fun trace_used_thm ctxt (name, tag, prop) =
+  let val adjusted_name = ThmExtras.adjust_thm_name ctxt (name, NONE) prop
+  in Pretty.block
+    (ThmExtras.pretty_adjusted_name ctxt adjusted_name ::
+     [Pretty.str ("[" ^ tag ^ "]:"),Pretty.brk 1, Syntax.unparse_term ctxt prop])
+  end
+
+fun trace_used_thms trace ctxt used_thms_ref =
+  if trace
+  then Pretty.big_list "Theorems used by wp:"
+                       (map (trace_used_thm ctxt) (!used_thms_ref))
+       |> Pretty.writeln
+       handle Size => warning ("WP tracing information was too large to print.")
+  else ();
+
 fun rtac ctxt rule = resolve_tac ctxt [rule]
 
-fun pre_tac trace ctxt pre_rules used_thms_ref i t = let
-    fun apply_rule t = trace_rule trace ctxt used_thms_ref "wp_pre" (rtac ctxt) t i
-    val t2 = FIRST (map apply_rule pre_rules) t |> Seq.hd
+(* Test whether any resulting goals can be solved by FalseE. In particular, this lets us avoid
+   weakening a precondition that is already schematic. *)
+fun test_goals ctxt pre_rules i t =
+  let
+    val t2 = FIRST (map (fn rule => rtac ctxt rule i) pre_rules) t |> Seq.hd
     val etac = TRY o eresolve_tac ctxt [@{thm FalseE}]
     fun dummy_t2 _ _ = Seq.single t2
     val t3 = (dummy_t2 THEN_ALL_NEW etac) i t |> Seq.hd
-  in if Thm.nprems_of t3 <> Thm.nprems_of t2
-    then Seq.empty else Seq.single t2 end
+  in Thm.nprems_of t3 <> Thm.nprems_of t2
+  end
+
+fun pre_tac trace ctxt pre_rules used_thms_ref i t =
+  let
+    fun apply_rule t = trace_rule trace ctxt used_thms_ref "wp_pre" (rtac ctxt) t i
+    fun t2 _ = FIRST (map apply_rule pre_rules) t |> Seq.hd
+  in if test_goals ctxt pre_rules i t
+    then Seq.empty else Seq.single (t2 ()) end
     handle Option => Seq.empty
 
-val method =
+fun pre_tac' ctxt pre_rules i t =
   let
+    val trace = Config.get ctxt wp_trace orelse Config.get ctxt wp_trace_instantiation
     val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
-  in
-    Attrib.thms >> (fn thms => fn ctxt =>
-      Method.SIMPLE_METHOD' (pre_tac (Config.get ctxt wp_trace) ctxt thms used_thms_ref))
+  in Seq.map (fn thm => (trace_used_thms trace ctxt used_thms_ref; thm))
+             (pre_tac trace ctxt pre_rules used_thms_ref i t)
   end
+
+val method =
+  Attrib.thms >> (fn thms => fn ctxt => Method.SIMPLE_METHOD' (pre_tac' ctxt thms))
 end
 \<close>
 

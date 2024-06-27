@@ -159,7 +159,7 @@ lemma unmap_page_table_respects:
   apply (rule hoare_gen_asm)
   apply (simp add: unmap_page_table_def page_table_mapped_def )
   apply (rule hoare_pre)
-   apply (wpsimp wp: store_pde_respects page_table_mapped_wp_weak get_pde_wp hoare_vcg_all_lift_R
+   apply (wpsimp wp: store_pde_respects page_table_mapped_wp_weak get_pde_wp hoare_vcg_all_liftE_R
                simp: cleanByVA_PoU_def
           | wp (once) hoare_drop_imps)+
   apply auto
@@ -372,7 +372,7 @@ lemma lookup_pt_slot_authorised3:
    \<lbrace>\<lambda>rv _.  \<forall>x\<in>set [rv, rv + 4 .e. rv + 0x3C]. is_subject aag (x && ~~ mask pt_bits)\<rbrace>, -"
   apply (rule_tac Q'="\<lambda>rv s. is_aligned rv 6 \<and> (\<forall>x\<in>set [0, 4 .e. 0x3C].
                                                   is_subject aag (x + rv && ~~ mask pt_bits))"
-               in hoare_post_imp_R)
+               in hoare_strengthen_postE_R)
   apply (rule hoare_pre)
   apply (wp lookup_pt_slot_is_aligned_6 lookup_pt_slot_authorised2)
    apply (fastforce simp: vmsz_aligned_def pd_bits_def pageBits_def)
@@ -830,7 +830,6 @@ lemma decode_arch_invocation_authorised:
           | wpc
           | simp add: authorised_asid_control_inv_def authorised_page_inv_def
                       authorised_page_directory_inv_def
-                 del: hoare_True_E_R
                  split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)

@@ -25,7 +25,7 @@ definition validNF ::
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<and> no_fail P f"
 
 lemma validNF_alt_def:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! = (\<forall>s. P s \<longrightarrow> ((\<forall>(r', s') \<in> mres (f s). Q r' s') \<and> Failed \<notin> snd ` (f s)))"
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! = (\<forall>s. P s \<longrightarrow> ((\<forall>(r', s') \<in> mres (f s). Q r' s') \<and> \<not> failed (f s)))"
   by (auto simp: validNF_def valid_def no_fail_def)
 
 definition validE_NF ::
@@ -43,7 +43,7 @@ subsection \<open>@{method wpc} setup\<close>
 lemma wpc_helper_validNF:
   "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace>! \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>!"
   unfolding wpc_helper_def
-  by clarsimp (metis hoare_vcg_precond_imp no_fail_pre validNF_def)
+  by clarsimp (metis hoare_weaken_pre no_fail_pre validNF_def)
 
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>!" wpc_helper_validNF
 
@@ -88,7 +88,7 @@ lemma validNF_no_fail:
   by (erule validNFE)
 
 lemma validNF_not_failed:
-  "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> Failed \<notin> snd ` (f s)"
+  "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> \<not> failed (f s)"
   by (clarsimp simp: validNF_def no_fail_def)
 
 lemma use_validNF:
@@ -134,7 +134,7 @@ text \<open>
   Set up combination rules for @{method wp}, which also requires a @{text wp_trip} rule for
   @{const validNF}.\<close>
 definition validNF_property :: "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool" where
-  "validNF_property Q s b \<equiv> Failed \<notin> snd ` (b s) \<and> (\<forall>(r', s') \<in> mres (b s). Q r' s')"
+  "validNF_property Q s b \<equiv> \<not> failed (b s) \<and> (\<forall>(r', s') \<in> mres (b s). Q r' s')"
 
 lemma validNF_is_triple[wp_trip]:
   "validNF P f Q = triple_judgement P f (validNF_property Q)"
@@ -177,12 +177,12 @@ lemma validNF_vcg_all_lift[wp]:
   "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>!"
   by (auto simp: validNF_def no_fail_def intro!: hoare_vcg_all_lift)
 
-lemma validNF_bind[wp_split]:
+lemma validNF_bind_wp[wp_split]:
   "\<lbrakk> \<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>!; \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>C\<rbrace>!"
   unfolding validNF_def
-  by (auto intro: hoare_seq_ext no_fail_bind[where P=Q and Q=Q for Q, simplified])
+  by (auto intro: bind_wp no_fail_bind[where P=Q and Q=Q for Q, simplified])
 
-lemmas validNF_seq_ext = validNF_bind
+lemmas validNF_bind_wp_fwd = validNF_bind_wp[rotated]
 
 
 subsection "validNF compound rules"
@@ -202,7 +202,7 @@ lemma validNF_gets[wp]:
 lemma validNF_condition[wp]:
   "\<lbrakk> \<lbrace> Q \<rbrace> A \<lbrace>P\<rbrace>!; \<lbrace> R \<rbrace> B \<lbrace>P\<rbrace>!\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>!"
   by (erule validNFE)+
-     (rule validNF; wpsimp wp: no_fail_condition)
+     (rule validNF; wpsimp)
 
 lemma validNF_assert[wp]:
   "\<lbrace> (\<lambda>s. P) and (R ()) \<rbrace> assert P \<lbrace> R \<rbrace>!"
@@ -278,13 +278,13 @@ lemma validE_NF_chain:
 
 lemma validE_NF_bind_wp[wp]:
   "\<lbrakk>\<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>!; \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>, \<lbrace>E\<rbrace>!\<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> f >>=E (\<lambda>x. g x) \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>!"
-  by (blast intro: validE_NF hoare_vcg_seqE no_fail_pre no_fail_bindE validE_validE_R validE_weaken
+  by (blast intro: validE_NF bindE_wp no_fail_pre no_fail_bindE validE_validE_R hoare_chainE
             elim!: validE_NFE)
 
 lemma validNF_catch[wp]:
   "\<lbrakk>\<And>x. \<lbrace>E x\<rbrace> handler x \<lbrace>Q\<rbrace>!; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>!\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f <catch> (\<lambda>x. handler x) \<lbrace>Q\<rbrace>!"
   unfolding validE_NF_alt_def catch_def lift_def throwError_def
-  by (clarsimp simp: validNF_return split: sum.splits elim!: validNF_bind[rotated])
+  by (clarsimp simp: validNF_return split: sum.splits elim!: validNF_bind_wp_fwd)
 
 lemma validNF_throwError[wp]:
   "\<lbrace>E e\<rbrace> throwError e \<lbrace>P\<rbrace>, \<lbrace>E\<rbrace>!"
@@ -308,7 +308,7 @@ definition validE_NF_property ::
   "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'c+'a) tmonad \<Rightarrow> bool"
   where
   "validE_NF_property Q E s b \<equiv>
-   Failed \<notin> snd ` (b s) \<and> (\<forall>(r', s') \<in> mres (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"
+   \<not> failed (b s) \<and> (\<forall>(r', s') \<in> mres (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"
 
 lemma validE_NF_is_triple[wp_trip]:
   "validE_NF P f Q E = triple_judgement P f (validE_NF_property Q E)"
@@ -330,7 +330,7 @@ lemma validE_NF_handleE'[wp]:
   "\<lbrakk> \<And>x. \<lbrace>F x\<rbrace> handler x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>!; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>F\<rbrace>! \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> f <handle2> (\<lambda>x. handler x) \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>!"
   unfolding validE_NF_alt_def handleE'_def
-  apply (erule validNF_bind[rotated])
+  apply (erule validNF_bind_wp_fwd)
   apply (clarsimp split: sum.splits)
   apply wpsimp
   done
@@ -344,7 +344,7 @@ lemma validE_NF_handleE[wp]:
 lemma validE_NF_condition[wp]:
   "\<lbrakk> \<lbrace> Q \<rbrace> A \<lbrace>P\<rbrace>,\<lbrace> E \<rbrace>!; \<lbrace> R \<rbrace> B \<lbrace>P\<rbrace>,\<lbrace> E \<rbrace>!\<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>,\<lbrace> E \<rbrace>!"
-  by (erule validE_NFE)+ (wpsimp wp: no_fail_condition validE_NF)
+  by (erule validE_NFE)+ (wpsimp wp: validE_NF)
 
 lemma hoare_assume_preNF:
   "(\<And>s. P s \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!"

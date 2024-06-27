@@ -14,7 +14,7 @@ imports
   CParser.LemmaBucket_C
   Lib.LemmaBucket
   SIMPL_Lemmas
-  Monads.Reader_Option_VCG
+  Monads.Nondet_Reader_Option
 begin
 
 declare word_neq_0_conv [simp del]
@@ -307,6 +307,14 @@ lemma ccorres_to_vcg:
   apply (frule (1) ccorres_to_vcg_with_prop[where R="\<top>\<top>"])
    apply wpsimp
   apply fastforce
+  done
+
+lemma ccorres_to_vcg_Normal:
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel} c UNIV"
+  apply (frule (1) ccorres_to_vcg_with_prop[where R="\<top>\<top>" and s=s])
+   apply wpsimp
+  apply (fastforce elim: conseqPost)
   done
 
 lemma ccorres_to_vcg_gets_the:

@@ -59,14 +59,14 @@ This module defines the machine-specific interrupt handling routines for x64.
 >
 >             -- from ioapic_map_pin_to_vector
 >             numIOAPICs <- withoutFailure $ gets (x64KSNumIOAPICs . ksArchState)
+>             ioAPICnIRQs <- withoutFailure $ gets (x64KSIOAPICnIRQs . ksArchState)
 >             when (numIOAPICs == 0) $ throw IllegalOperation
 >             rangeCheck ioapic 0 (numIOAPICs - 1)
->             rangeCheck pin 0 (Arch.ioapicIRQLines - 1)
+>             rangeCheck pin 0 (ioAPICnIRQs ioapic - 1)
 >             rangeCheck level (0::Word) 1
 >             rangeCheck polarity (0::Word) 1
 >
->             -- FIXME check semantics against toEnum, we might want == 0 here
->             let vector = (fromIntegral $ fromEnum irq) + Arch.irqIntOffset
+>             let vector = fromIntegral (fromEnum irq) + Arch.irqIntOffset
 >             return $ ArchInv.IssueIRQHandlerIOAPIC irq destSlot srcSlot ioapic
 >                 pin level polarity vector
 >

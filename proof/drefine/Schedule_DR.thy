@@ -81,7 +81,7 @@ lemma change_current_domain_and_switch_to_idle_thread_dcorres:
                     Schedule_D.switch_to_thread None
                  od)
                 switch_to_idle_thread"
-  including no_pre
+  including classic_wp_pre
   apply (clarsimp simp: Schedule_D.switch_to_thread_def switch_to_idle_thread_def)
   apply (rule dcorres_symb_exec_r)
     apply (rule corres_guard_imp)
@@ -593,7 +593,8 @@ lemma schedule_dcorres:
  * tcb context of a thread does affect the state translation to capDL
  *)
 lemma get_tcb_message_info_nextPC [simp]:
-  "get_tcb_message_info (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP := pc))) tcb) =
+  "get_tcb_message_info (tcb_arch_update (tcb_context_update
+                                            (\<lambda>ctx. UserContext ((user_regs ctx)(NextIP := pc)))) tcb) =
    get_tcb_message_info tcb"
   by (simp add: get_tcb_message_info_def
                 arch_tcb_context_get_def
@@ -601,24 +602,29 @@ lemma get_tcb_message_info_nextPC [simp]:
                 ARM.msgInfoRegister_def)
 
 lemma map_msg_registers_nextPC [simp]:
-  "map ((tcb_context tcb)(NextIP := pc)) msg_registers =
-   map (tcb_context tcb) msg_registers"
+  "map ((user_regs (tcb_context tcb))(NextIP := pc)) msg_registers =
+   map (user_regs (tcb_context tcb)) msg_registers"
   by (simp add: msg_registers_def ARM.msgRegisters_def
                 upto_enum_red fromEnum_def toEnum_def enum_register)
 
 lemma get_ipc_buffer_words_nextPC [simp]:
-  "get_ipc_buffer_words m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP := pc))) tcb) =
+  "get_ipc_buffer_words m (tcb_arch_update (tcb_context_update
+                                            (\<lambda>ctx. UserContext ((user_regs ctx)(NextIP := pc)))) tcb) =
    get_ipc_buffer_words m tcb"
   by (rule ext) (simp add: get_ipc_buffer_words_def)
 
 lemma get_tcb_mrs_nextPC [simp]:
-  "get_tcb_mrs m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP := pc))) tcb) =
+  "get_tcb_mrs m (tcb_arch_update (tcb_context_update
+                                            (\<lambda>ctx. UserContext ((user_regs ctx)(NextIP := pc)))) tcb) =
    get_tcb_mrs m tcb"
   by (simp add: get_tcb_mrs_def Let_def arch_tcb_context_get_def)
 
 lemma transform_tcb_NextIP:
-  "transform_tcb m t (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP:= pc))) tcb)
+  "transform_tcb m t (tcb_arch_update (tcb_context_update
+                                            (\<lambda>ctx. UserContext ((user_regs ctx)(NextIP := pc)))) tcb)
   = transform_tcb m t tcb"
+  apply (rule ext)
+  apply (simp add: transform_tcb_def transform_full_intent_def Let_def)
   by (auto simp add: transform_tcb_def transform_full_intent_def Let_def
                      cap_register_def ARM.capRegister_def
                      arch_tcb_context_get_def)

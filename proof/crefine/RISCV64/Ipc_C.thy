@@ -1359,18 +1359,14 @@ lemma getRestartPC_ccorres [corres]:
   done
 
 lemma asUser_tcbFault_obj_at:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace> asUser t' m
-   \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
+  "asUser t' m \<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
   apply (simp cong: if_cong)
   done
 
 lemma asUser_atcbContext_obj_at:
-  "t \<noteq> t' \<Longrightarrow>
-    \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
-      asUser t' m
-    \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  "t \<noteq> t' \<Longrightarrow> asUser t' m \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
   apply (simp add: asUser_def split_def atcbContextGet_def atcbContextSet_def)
   apply (wp threadGet_wp)
   apply simp
@@ -2798,7 +2794,7 @@ next
                  \<and> (\<forall>x\<in>set xs'. s \<turnstile>' fst x
                     \<and> cte_wp_at' (\<lambda>c. is_the_ep (cteCap c) \<longrightarrow> fst x = cteCap c) (snd x) s
                     \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable_masked (fst x) (cteCap c)) (snd x) s)"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
                 prefer 2
                  apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
                    valid_pspace_valid_objs' is_derived_capMasterCap image_def)
@@ -3224,7 +3220,7 @@ proof -
                        apply (simp add: seL4_Fault_CapFault_lift)
                        apply (clarsimp simp: is_cap_fault_def)
                       apply wp
-                      apply (rule hoare_post_imp_R, rule lsft_real_cte)
+                      apply (rule hoare_strengthen_postE_R, rule lsft_real_cte)
                       apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
                      apply (vcg exspec=lookupSlot_modifies)
                     apply vcg
@@ -3277,7 +3273,7 @@ proof -
                           liftE_bindE[symmetric])
          apply (wp mapME_length mapME_set | simp)+
            apply (rule_tac Q'="\<lambda>rv. no_0_obj' and real_cte_at' rv"
-                      in hoare_post_imp_R, wp lsft_real_cte)
+                      in hoare_strengthen_postE_R, wp lsft_real_cte)
            apply (clarsimp simp: cte_wp_at_ctes_of)
           apply (wpsimp)+
         apply (clarsimp simp: guard_is_UNIV_def
@@ -3407,7 +3403,7 @@ qed
 lemma lookupIPCBuffer_not_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer r t \<lbrace>\<lambda>rv. K (rv \<noteq> Some 0)\<rbrace>"
   apply (simp add: lookupIPCBuffer_def RISCV64_H.lookupIPCBuffer_def)
-  apply (wp hoare_post_taut haskell_assert_wp
+  apply (wp hoare_TrueI haskell_assert_wp
     | simp add: Let_def getThreadBufferSlot_def locateSlotTCB_def
     | intro conjI impI | wpc)+
   done
@@ -3816,7 +3812,6 @@ lemma copyMRsFaultReply_ccorres_syscall:
                                        msg_align_bits sanitiseRegister_def
                              simp del: upt_rec_numeral cong: if_cong register.case_cong,
                         simp_all add: word_less_nat_alt unat_add_lem[THEN iffD1] unat_of_nat)[1]
-               apply (rule_tac x=rv in exI, auto)[1]
                 apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
                                       msgRegisters_ccorres
                                       syscallMessage_ccorres
@@ -4108,7 +4103,7 @@ lemma transferCaps_local_slots:
     transferCaps tag caps ep receiver receiveBuffer
    \<lbrace>\<lambda>tag'. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
   apply (simp add: transferCaps_def pred_conj_def)
-  apply (rule hoare_seq_ext[rotated])
+  apply (rule bind_wp_fwd)
    apply (rule hoare_vcg_conj_lift)
     apply (rule get_rs_real_cte_at')
    apply (rule get_recv_slot_inv')
@@ -4174,10 +4169,6 @@ lemma doReplyTransfer_ccorres [corres]:
           \<inter> \<lbrace>\<acute>grant = from_bool grant\<rbrace>)  hs
     (doReplyTransfer sender receiver slot grant)
     (Call doReplyTransfer_'proc)"
-proof -
-  have invs_valid_queues_strg: "\<And>s. invs' s \<longrightarrow> valid_queues s"
-    by clarsimp
-  show ?thesis
   apply (cinit lift: sender_' receiver_' slot_' grant_')
    apply (rule getThreadState_ccorres_foo)
    apply (rule ccorres_assert2)
@@ -4209,7 +4200,7 @@ proof -
         apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
          apply (ctac(no_vcg) add: setThreadState_ccorres)
           apply (ctac(no_vcg) add: possibleSwitchTo_ccorres)
-         apply (wpsimp wp: sts_running_valid_queues setThreadState_st_tcb)+
+         apply (wpsimp wp: sts_valid_objs' setThreadState_st_tcb)+
         apply (wp cteDeleteOne_sch_act_wf)
        apply vcg
       apply (rule conseqPre, vcg)
@@ -4218,8 +4209,7 @@ proof -
      apply wp
      apply (simp add: cap_get_tag_isCap)
      apply (strengthen invs_weak_sch_act_wf_strg
-                       cte_wp_at_imp_consequent'[where P="\<lambda>ct. Ex (ccap_relation (cteCap ct))" for ct]
-                       invs_valid_queues_strg)
+                       cte_wp_at_imp_consequent'[where P="\<lambda>ct. Ex (ccap_relation (cteCap ct))" for ct])
      apply (simp add: cap_reply_cap_def)
      apply (wp doIPCTransfer_reply_or_replyslot)
     apply (clarsimp simp: seL4_Fault_NullFault_def ccorres_cond_iffs
@@ -4254,21 +4244,20 @@ proof -
               apply (ctac (no_vcg))
                apply (simp only: K_bind_def)
                apply (ctac add: possibleSwitchTo_ccorres)
-              apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
-             apply (ctac add: setThreadState_ccorres_valid_queues'_simple)
+              apply (wp sts_valid_objs' setThreadState_st_tcb | simp)+
+             apply (ctac add: setThreadState_ccorres_simple)
              apply wp
-            apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' hoare_weak_lift_imp
+            apply ((wp threadSet_sch_act hoare_weak_lift_imp
                        threadSet_valid_objs' threadSet_weak_sch_act_wf
                          | simp add: valid_tcb_state'_def)+)[1]
-           apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def
-                                 ThreadState_Inactive_def mask_def
-                                 option_to_ctcb_ptr_def)
+           apply (clarsimp simp: guard_is_UNIV_def ThreadState_defs mask_def option_to_ctcb_ptr_def)
 
-          apply (rule_tac Q="\<lambda>rv. valid_queues and tcb_at' receiver and valid_queues' and
+          apply (rule_tac Q="\<lambda>rv. tcb_at' receiver and
                                 valid_objs' and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain) and
-                                (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
+                                (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
+                                pspace_aligned' and pspace_distinct'" in hoare_post_imp)
            apply (clarsimp simp: inQ_def weak_sch_act_wf_def)
-          apply (wp threadSet_valid_queues threadSet_sch_act handleFaultReply_sch_act_wf)
+          apply (wp threadSet_sch_act handleFaultReply_sch_act_wf)
          apply (clarsimp simp: guard_is_UNIV_def)
         apply assumption
        apply clarsimp
@@ -4277,14 +4266,14 @@ proof -
        apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
        apply (clarsimp simp: ctcb_relation_def typ_heap_simps)
       apply wp
-      apply (strengthen vp_invs_strg' invs_valid_queues')
+      apply (strengthen vp_invs_strg')
       apply (wp cteDeleteOne_tcbFault cteDeleteOne_sch_act_wf)
      apply vcg
     apply (rule conseqPre, vcg)
     apply (simp(no_asm_use) add: gs_set_assn_Delete_cstate_relation[unfolded o_def]
                                  subset_iff rf_sr_def)
    apply (clarsimp simp: guard_is_UNIV_def option_to_ptr_def option_to_0_def
-                         ThreadState_Running_def mask_def
+                         ThreadState_defs mask_def
                          ghost_assertion_data_get_def ghost_assertion_data_set_def
                          cap_tag_defs option_to_ctcb_ptr_def
                   split: option.splits)
@@ -4293,7 +4282,6 @@ proof -
                         cap_get_tag_isCap)
   apply fastforce
   done
-qed
 
 lemma ccorres_getCTE_cte_at:
   "ccorresG rf_sr \<Gamma> r xf P P' hs (getCTE p >>= f) c
@@ -4313,7 +4301,7 @@ lemma ccorres_getCTE_cte_at:
   done
 
 lemma setupCallerCap_ccorres [corres]:
-  "ccorres dc xfdc (valid_queues and valid_pspace' and (\<lambda>s. \<forall>d p. sender \<notin> set (ksReadyQueues s (d, p)))
+  "ccorres dc xfdc (valid_pspace'
                     and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and sch_act_not sender
                     and tcb_at' sender and tcb_at' receiver
                     and tcb_at' sender and tcb_at' receiver)
@@ -4378,7 +4366,7 @@ lemma setupCallerCap_ccorres [corres]:
                           Kernel_C.tcbCaller_def)
    apply simp
    apply wp
-  apply (clarsimp simp: Kernel_C.ThreadState_BlockedOnReply_def mask_def
+  apply (clarsimp simp: ThreadState_defs mask_def
                         valid_pspace'_def tcbReplySlot_def
                         valid_tcb_state'_def Collect_const_mem
                         tcb_cnode_index_defs)
@@ -4445,23 +4433,20 @@ lemma sendIPC_dequeue_ccorres_helper:
                          typ_heap_simps')
         apply (elim conjE)
         apply (intro conjI)
-             \<comment> \<open>tcb relation\<close>
-             apply (erule ctcb_relation_null_queue_ptrs)
-             apply (clarsimp simp: comp_def)
-            \<comment> \<open>ep relation\<close>
-            apply (rule cpspace_relation_ep_update_ep, assumption+)
-             apply (simp add: cendpoint_relation_def Let_def EPState_Idle_def
-                              tcb_queue_relation'_def)
-            apply simp
-           \<comment> \<open>ntfn relation\<close>
-           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+            \<comment> \<open>tcb relation\<close>
+            apply (erule ctcb_relation_null_ep_ptrs)
+            apply (clarsimp simp: comp_def)
+           \<comment> \<open>ep relation\<close>
+           apply (rule cpspace_relation_ep_update_ep, assumption+)
+            apply (simp add: cendpoint_relation_def Let_def EPState_Idle_def
+                             tcb_queue_relation'_def)
            apply simp
-           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
-            apply simp
-           apply (erule (1) map_to_ko_atI')
-          \<comment> \<open>queue relation\<close>
-          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-          apply (clarsimp simp: comp_def)
+          \<comment> \<open>ntfn relation\<close>
+          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+          apply simp
+          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
+           apply simp
+          apply (erule (1) map_to_ko_atI')
          apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
@@ -4485,31 +4470,28 @@ lemma sendIPC_dequeue_ccorres_helper:
                         typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-             \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (rule cpspace_relation_ep_update_ep, assumption+)
-            apply (clarsimp simp: cendpoint_relation_def Let_def
-                                  isRecvEP_def isSendEP_def
-                                  tcb_queue_relation'_def valid_ep'_def
-                       simp flip: canonical_bit_def
-                           split: endpoint.splits list.splits
-                       split del: if_split)
-            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-             apply (erule (1) tcb_and_not_mask_canonical[OF invs_pspace_canonical'])
-             apply (simp add: objBits_simps')
-            apply (clarsimp split: if_split)
-           apply simp
-          \<comment> \<open>ntfn relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+           \<comment> \<open>tcb relation\<close>
+           apply (erule ctcb_relation_null_ep_ptrs)
+           apply (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (rule cpspace_relation_ep_update_ep, assumption+)
+           apply (clarsimp simp: cendpoint_relation_def Let_def
+                                 isRecvEP_def isSendEP_def
+                                 tcb_queue_relation'_def valid_ep'_def
+                      simp flip: canonical_bit_def
+                          split: endpoint.splits list.splits
+                      split del: if_split)
+           apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
+            apply (erule (1) tcb_and_not_mask_canonical[OF invs_pspace_canonical'])
+            apply (simp add: objBits_simps')
+           apply (clarsimp split: if_split)
           apply simp
-          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
-           apply simp
-          apply (erule (1) map_to_ko_atI')
-         \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         apply (clarsimp simp: comp_def)
+         \<comment> \<open>ntfn relation\<close>
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+         apply simp
+         apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
+          apply simp
+         apply (erule (1) map_to_ko_atI')
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
@@ -4534,10 +4516,10 @@ lemma rf_sr_tcb_update_twice:
                 packed_heap_update_collapse_hrs)
 
 lemma sendIPC_block_ccorres_helper:
-  "ccorres dc xfdc (tcb_at' thread and valid_queues and valid_objs' and pspace_canonical' and
+  "ccorres dc xfdc (tcb_at' thread and valid_objs' and pspace_canonical' and
+                    pspace_aligned' and pspace_distinct' and
                     sch_act_not thread and ep_at' epptr and
-                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
-                         (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))) and
+                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
                     K (bos = ThreadState_BlockedOnSend
                       \<and> epptr' = epptr \<and> badge' = badge
                       \<and> cg = from_bool canGrant \<and> cgr = from_bool canGrantReply
@@ -4590,13 +4572,13 @@ lemma sendIPC_block_ccorres_helper:
           (simp add: typ_heap_simps')+)[1]
          apply (simp add: tcb_cte_cases_def cteSizeBits_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
-                         ThreadState_BlockedOnSend_def mask_def)
+                         ThreadState_defs mask_def)
         apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend
                        split: bool.split)
        apply ceqv
       apply clarsimp
       apply ctac
-     apply (wp threadSet_weak_sch_act_wf_runnable' threadSet_valid_queues
+     apply (wp threadSet_weak_sch_act_wf_runnable'
                threadSet_valid_objs')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
@@ -4699,6 +4681,19 @@ lemma tcb_queue_relation_qend_valid':
   apply clarsimp
   apply (drule (3) tcb_queue_memberD [OF tcb_queue_relation'_queue_rel])
   apply (simp add: h_t_valid_clift_Some_iff)
+  done
+
+lemma tcb_queue'_head_end_NULL:
+  assumes qr: "tcb_queue_relation' getNext getPrev mp queue qhead qend"
+  and   tat: "\<forall>t\<in>set queue. tcb_at' t s"
+  shows "(qend = NULL) = (qhead = NULL)"
+  using qr tat
+  apply -
+  apply (erule tcb_queue_relationE')
+  apply (simp add: tcb_queue_head_empty_iff split: if_splits)
+  apply (rule tcb_at_not_NULL)
+  apply (erule bspec)
+  apply simp
   done
 
 lemma tcbEPAppend_spec:
@@ -4823,33 +4818,30 @@ lemma sendIPC_enqueue_ccorres_helper:
        apply (elim conjE)
        apply (intro conjI)
             \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (rule cpspace_relation_ep_update_ep', assumption+)
-            apply (clarsimp simp: cendpoint_relation_def Let_def
-                                  mask_def [where n=3] EPState_Send_def)
-            apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask)
-            apply (rule conjI, simp add: mask_def)
-            subgoal
-              apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-              apply (erule (1) tcb_and_not_mask_canonical)
-              by (simp (no_asm) add: tcbBlockSizeBits_def)
+           apply (erule ctcb_relation_null_ep_ptrs)
+           apply (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (rule cpspace_relation_ep_update_ep', assumption+)
+           apply (clarsimp simp: cendpoint_relation_def Let_def
+                                 mask_def [where n=3] EPState_Send_def)
+           apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask)
+           apply (rule conjI, simp add: mask_def)
+           subgoal
+             apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
+             apply (erule (1) tcb_and_not_mask_canonical)
+             by (simp (no_asm) add: tcbBlockSizeBits_def)
+          apply (simp add: isSendEP_def isRecvEP_def)
+         \<comment> \<open>ntfn relation\<close>
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+         apply simp
+         apply (rule cnotification_relation_ep_queue, assumption+)
            apply (simp add: isSendEP_def isRecvEP_def)
-          \<comment> \<open>ntfn relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
           apply simp
-          apply (rule cnotification_relation_ep_queue, assumption+)
-            apply (simp add: isSendEP_def isRecvEP_def)
-           apply simp
-          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
-          apply (erule(2) map_to_ko_at_updI')
-           apply (simp only:projectKOs injectKO_ep objBits_simps)
-           apply clarsimp
-          apply (clarsimp simp: obj_at'_def projectKOs)
-         \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         apply (clarsimp simp: comp_def)
+         apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
+         apply (erule(2) map_to_ko_at_updI')
+          apply (simp only:projectKOs injectKO_ep objBits_simps)
+          apply clarsimp
+         apply (clarsimp simp: obj_at'_def projectKOs)
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
@@ -4866,42 +4858,39 @@ lemma sendIPC_enqueue_ccorres_helper:
                        typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
-           \<comment> \<open>tcb relation\<close>
-           apply (erule ctcb_relation_null_queue_ptrs)
-           apply (clarsimp simp: comp_def)
-          \<comment> \<open>ep relation\<close>
-          apply (rule cpspace_relation_ep_update_ep', assumption+)
-           apply (clarsimp simp: cendpoint_relation_def Let_def
-                                 mask_def [where n=3] EPState_Send_def
-                          split: if_split)
-           subgoal
-             apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
-                                 valid_ep'_def
-                           dest: tcb_queue_relation_next_not_NULL)
-             apply (rule conjI, clarsimp)
-              apply (rule conjI, fastforce simp: mask_def)
-              apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-              apply (erule (1) tcb_and_not_mask_canonical)
-              apply (simp (no_asm) add: tcbBlockSizeBits_def)
+          \<comment> \<open>tcb relation\<close>
+          apply (erule ctcb_relation_null_ep_ptrs)
+          apply (clarsimp simp: comp_def)
+         \<comment> \<open>ep relation\<close>
+         apply (rule cpspace_relation_ep_update_ep', assumption+)
+          apply (clarsimp simp: cendpoint_relation_def Let_def
+                                mask_def [where n=3] EPState_Send_def
+                         split: if_split)
+          subgoal
+            apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
+                                  valid_ep'_def
+                            dest: tcb_queue_relation_next_not_NULL)
+            apply (rule conjI, clarsimp)
+             apply (rule conjI, fastforce simp: mask_def)
              apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-             apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
              apply (erule (1) tcb_and_not_mask_canonical)
              apply (simp (no_asm) add: tcbBlockSizeBits_def)
-             done
+            apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
+            apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
+            apply (erule (1) tcb_and_not_mask_canonical)
+            apply (simp (no_asm) add: tcbBlockSizeBits_def)
+            done
+         apply (simp add: isSendEP_def isRecvEP_def)
+        \<comment> \<open>ntfn relation\<close>
+        apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+        apply simp
+        apply (rule cnotification_relation_ep_queue, assumption+)
           apply (simp add: isSendEP_def isRecvEP_def)
-         \<comment> \<open>ntfn relation\<close>
-         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
          apply simp
-         apply (rule cnotification_relation_ep_queue, assumption+)
-           apply (simp add: isSendEP_def isRecvEP_def)
-          apply simp
-         apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
-         apply (erule(2) map_to_ko_at_updI')
-          apply (clarsimp simp: objBitsKO_def)
-         apply (clarsimp simp: obj_at'_def projectKOs)
-        \<comment> \<open>queue relation\<close>
-        apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-        apply (clarsimp simp: comp_def)
+        apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
+        apply (erule(2) map_to_ko_at_updI')
+         apply (clarsimp simp: objBitsKO_def)
+        apply (clarsimp simp: obj_at'_def projectKOs)
        apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
@@ -4921,8 +4910,7 @@ lemma ctcb_relation_blockingIPCCanGrantD:
 
 lemma sendIPC_ccorres [corres]:
   "ccorres dc xfdc (invs' and st_tcb_at' simple' thread
-                          and sch_act_not thread and ep_at' epptr and
-                          (\<lambda>s. \<forall>d p. thread \<notin> set (ksReadyQueues s (d, p))))
+                          and sch_act_not thread and ep_at' epptr)
      (UNIV \<inter> \<lbrace>\<acute>blocking = from_bool blocking\<rbrace>
            \<inter> \<lbrace>\<acute>do_call = from_bool do_call\<rbrace>
            \<inter> \<lbrace>\<acute>badge = badge\<rbrace>
@@ -4953,8 +4941,7 @@ lemma sendIPC_ccorres [corres]:
      apply ceqv
     apply (rule_tac A="invs' and st_tcb_at' simple' thread
                           and sch_act_not thread and ko_at' ep epptr
-                          and ep_at' epptr
-                          and (\<lambda>s. \<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))"
+                          and ep_at' epptr"
                  in ccorres_guard_imp2 [where A'=UNIV])
      apply wpc
        \<comment> \<open>RecvEP case\<close>
@@ -5002,17 +4989,15 @@ lemma sendIPC_ccorres [corres]:
               apply (ctac add: setThreadState_ccorres)
              apply (rule ccorres_return_Skip)
             apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift possibleSwitchTo_sch_act_not
-                              possibleSwitchTo_sch_act_not sts_st_tcb'
-                              possibleSwitchTo_ksQ' sts_valid_queues sts_ksQ'
+                              possibleSwitchTo_sch_act_not sts_st_tcb' sts_valid_objs'
                           simp: valid_tcb_state'_def)+
           apply vcg
-         apply (wpsimp wp: doIPCTransfer_sch_act setEndpoint_ksQ hoare_vcg_all_lift
-                          set_ep_valid_objs' setEndpoint_valid_mdb'
+         apply (wpsimp wp: doIPCTransfer_sch_act hoare_vcg_all_lift
+                           set_ep_valid_objs' setEndpoint_valid_mdb'
                 | wp (once) hoare_drop_imp
                 | strengthen sch_act_wf_weak)+
-       apply (fastforce simp: guard_is_UNIV_def ThreadState_Inactive_def Collect_const_mem
-                               ThreadState_Running_def mask_def
-                               option_to_ptr_def option_to_0_def
+       apply (fastforce simp: guard_is_UNIV_def ThreadState_defs Collect_const_mem mask_def
+                              option_to_ptr_def option_to_0_def
                         split: bool.split_asm)
 
       \<comment> \<open>IdleEP case\<close>
@@ -5129,10 +5114,10 @@ lemma ctcb_relation_blockingIPCCanGrantReplyD:
   done
 
 lemma receiveIPC_block_ccorres_helper:
-  "ccorres dc xfdc (tcb_at' thread and valid_queues and valid_objs' and pspace_canonical' and
+  "ccorres dc xfdc (tcb_at' thread and valid_objs' and pspace_canonical' and
+                    pspace_aligned' and pspace_distinct' and
                     sch_act_not thread and ep_at' epptr and
-                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
-                     (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))) and
+                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
                     K (epptr = epptr && ~~ mask 4) and
                     K (isEndpointCap cap \<and> ccap_relation cap cap'))
                    UNIV hs
@@ -5168,12 +5153,12 @@ lemma receiveIPC_block_ccorres_helper:
         apply (erule(1) rf_sr_tcb_update_no_queue_gen, (simp add: typ_heap_simps)+)
          apply (simp add: tcb_cte_cases_def cteSizeBits_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def ccap_relation_ep_helpers
-                         ThreadState_BlockedOnReceive_def mask_def cap_get_tag_isCap)
+                         ThreadState_defs mask_def cap_get_tag_isCap)
         apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
        apply ceqv
       apply clarsimp
       apply ctac
-     apply (wp threadSet_valid_queues hoare_vcg_all_lift threadSet_valid_objs'
+     apply (wp hoare_vcg_all_lift threadSet_valid_objs'
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
@@ -5239,42 +5224,38 @@ lemma receiveIPC_enqueue_ccorres_helper:
                         typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-             \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (rule cpspace_relation_ep_update_ep', assumption+)
-            apply (clarsimp simp: cendpoint_relation_def Let_def
-                                  mask_def [where n=3] EPState_Recv_def
-                           split: if_split)
-            subgoal
-              apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
-                                  valid_ep'_def
-                            dest: tcb_queue_relation_next_not_NULL)
-              apply (rule conjI, clarsimp)
-               apply (rule conjI, fastforce simp: mask_def)
-               apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-               apply (erule (1) tcb_and_not_mask_canonical)
-               apply (simp (no_asm) add: tcbBlockSizeBits_def)
+            \<comment> \<open>tcb relation\<close>
+           apply (erule ctcb_relation_null_ep_ptrs)
+           apply (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (rule cpspace_relation_ep_update_ep', assumption+)
+           apply (clarsimp simp: cendpoint_relation_def Let_def
+                                 mask_def [where n=3] EPState_Recv_def
+                          split: if_split)
+           subgoal
+             apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask valid_ep'_def
+                             dest: tcb_queue_relation_next_not_NULL)
+             apply (rule conjI, clarsimp)
+              apply (rule conjI, fastforce simp: mask_def)
               apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-              apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
               apply (erule (1) tcb_and_not_mask_canonical)
               apply (simp (no_asm) add: tcbBlockSizeBits_def)
-              done
+             apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
+             apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
+             apply (erule (1) tcb_and_not_mask_canonical)
+             apply (simp (no_asm) add: tcbBlockSizeBits_def)
+             done
+          apply (simp add: isSendEP_def isRecvEP_def)
+         \<comment> \<open>ntfn relation\<close>
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+         apply simp
+         apply (rule cnotification_relation_ep_queue, assumption+)
            apply (simp add: isSendEP_def isRecvEP_def)
-          \<comment> \<open>ntfn relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
           apply simp
-          apply (rule cnotification_relation_ep_queue, assumption+)
-            apply (simp add: isSendEP_def isRecvEP_def)
-           apply simp
-          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
-          apply (erule(2) map_to_ko_at_updI')
-           apply (clarsimp simp: objBitsKO_def)
-          apply (clarsimp simp: obj_at'_def projectKOs)
-         \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         apply (clarsimp simp: comp_def)
+         apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
+         apply (erule(2) map_to_ko_at_updI')
+          apply (clarsimp simp: objBitsKO_def)
+         apply (clarsimp simp: obj_at'_def projectKOs)
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
@@ -5291,34 +5272,31 @@ lemma receiveIPC_enqueue_ccorres_helper:
                        typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
-           \<comment> \<open>tcb relation\<close>
-           apply (erule ctcb_relation_null_queue_ptrs)
-           apply (clarsimp simp: comp_def)
-          \<comment> \<open>ep relation\<close>
-          apply (rule cpspace_relation_ep_update_ep', assumption+)
-           apply (clarsimp simp: cendpoint_relation_def Let_def
-                                 mask_def [where n=3] EPState_Recv_def)
-           apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
-                           simp flip: canonical_bit_def)
-           subgoal
-             apply (rule conjI, solves\<open>simp (no_asm) add: mask_def\<close>)
-             apply (clarsimp simp: valid_pspace'_def)
-             apply (erule (1) tcb_and_not_mask_canonical, simp (no_asm) add: tcbBlockSizeBits_def)
-             done
+          \<comment> \<open>tcb relation\<close>
+          apply (erule ctcb_relation_null_ep_ptrs)
+          apply (clarsimp simp: comp_def)
+         \<comment> \<open>ep relation\<close>
+         apply (rule cpspace_relation_ep_update_ep', assumption+)
+          apply (clarsimp simp: cendpoint_relation_def Let_def
+                                mask_def [where n=3] EPState_Recv_def)
+          apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
+                          simp flip: canonical_bit_def)
+          subgoal
+            apply (rule conjI, solves\<open>simp (no_asm) add: mask_def\<close>)
+            apply (clarsimp simp: valid_pspace'_def)
+            apply (erule (1) tcb_and_not_mask_canonical, simp (no_asm) add: tcbBlockSizeBits_def)
+            done
+         apply (simp add: isSendEP_def isRecvEP_def)
+        \<comment> \<open>ntfn relation\<close>
+        apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+        apply simp
+        apply (rule cnotification_relation_ep_queue, assumption+)
           apply (simp add: isSendEP_def isRecvEP_def)
-         \<comment> \<open>ntfn relation\<close>
-         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
          apply simp
-         apply (rule cnotification_relation_ep_queue, assumption+)
-           apply (simp add: isSendEP_def isRecvEP_def)
-          apply simp
-         apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
-         apply (erule(2) map_to_ko_at_updI')
-          apply (clarsimp simp: objBitsKO_def)
-         apply (clarsimp simp: obj_at'_def projectKOs)
-        \<comment> \<open>queue relation\<close>
-        apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-        apply (clarsimp simp: comp_def)
+        apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
+        apply (erule(2) map_to_ko_at_updI')
+         apply (clarsimp simp: objBitsKO_def)
+        apply (clarsimp simp: obj_at'_def projectKOs)
        apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: typ_heap_simps')
@@ -5387,23 +5365,20 @@ lemma receiveIPC_dequeue_ccorres_helper:
                          typ_heap_simps')
         apply (elim conjE)
         apply (intro conjI)
-             \<comment> \<open>tcb relation\<close>
-             apply (erule ctcb_relation_null_queue_ptrs)
-             apply (clarsimp simp: comp_def)
-            \<comment> \<open>ep relation\<close>
-            apply (rule cpspace_relation_ep_update_ep, assumption+)
-             apply (simp add: cendpoint_relation_def Let_def EPState_Idle_def
-                              tcb_queue_relation'_def)
-            apply simp
-           \<comment> \<open>ntfn relation\<close>
-           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+            \<comment> \<open>tcb relation\<close>
+            apply (erule ctcb_relation_null_ep_ptrs)
+            apply (clarsimp simp: comp_def)
+           \<comment> \<open>ep relation\<close>
+           apply (rule cpspace_relation_ep_update_ep, assumption+)
+            apply (simp add: cendpoint_relation_def Let_def EPState_Idle_def
+                             tcb_queue_relation'_def)
            apply simp
-           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
-           apply simp
+          \<comment> \<open>ntfn relation\<close>
+          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+          apply simp
+          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
+          apply simp
           apply (erule (1) map_to_ko_atI')
-          \<comment> \<open>queue relation\<close>
-          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-          apply (clarsimp simp: comp_def)
          apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: typ_heap_simps')
@@ -5427,31 +5402,28 @@ lemma receiveIPC_dequeue_ccorres_helper:
                         typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-            \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (rule cpspace_relation_ep_update_ep, assumption+)
-            apply (clarsimp simp: cendpoint_relation_def Let_def
-                                  isRecvEP_def isSendEP_def
-                                  tcb_queue_relation'_def valid_ep'_def
-                       simp flip: canonical_bit_def
-                           split: endpoint.splits list.splits
-                       split del: if_split)
-            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-             apply (erule (1) tcb_and_not_mask_canonical[OF invs_pspace_canonical'])
-             apply (clarsimp simp: objBits_simps')
-            apply (clarsimp split: if_split)
-           apply simp
-          \<comment> \<open>ntfn relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+           \<comment> \<open>tcb relation\<close>
+           apply (erule ctcb_relation_null_ep_ptrs)
+           apply (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (rule cpspace_relation_ep_update_ep, assumption+)
+           apply (clarsimp simp: cendpoint_relation_def Let_def
+                                 isRecvEP_def isSendEP_def
+                                 tcb_queue_relation'_def valid_ep'_def
+                      simp flip: canonical_bit_def
+                          split: endpoint.splits list.splits
+                      split del: if_split)
+           apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
+            apply (erule (1) tcb_and_not_mask_canonical[OF invs_pspace_canonical'])
+            apply (clarsimp simp: objBits_simps')
+           apply (clarsimp split: if_split)
           apply simp
-          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
-           apply simp
-          apply (erule (1) map_to_ko_atI')
-         \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         apply (clarsimp simp: comp_def)
+         \<comment> \<open>ntfn relation\<close>
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+         apply simp
+         apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
+          apply simp
+         apply (erule (1) map_to_ko_atI')
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
@@ -5568,7 +5540,6 @@ lemma receiveIPC_ccorres [corres]:
   notes option.case_cong_weak [cong]
   shows
   "ccorres dc xfdc (invs' and st_tcb_at' simple' thread and sch_act_not thread
-                          and (\<lambda>s. \<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))
                           and valid_cap' cap and K (isEndpointCap cap))
      (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
            \<inter> \<lbrace>ccap_relation cap \<acute>cap\<rbrace>
@@ -5644,7 +5615,6 @@ lemma receiveIPC_ccorres [corres]:
           apply ceqv
          apply (rule_tac A="invs' and st_tcb_at' simple' thread
                                   and sch_act_not thread
-                              and (\<lambda>s. \<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))
                                   and ko_at' ep (capEPPtr cap)"
                      in ccorres_guard_imp2 [where A'=UNIV])
            apply wpc
@@ -5784,28 +5754,25 @@ lemma receiveIPC_ccorres [corres]:
                  apply ccorres_rewrite
                  apply ctac
                    apply (ctac add: possibleSwitchTo_ccorres)
-                  apply (wpsimp wp: sts_st_tcb' sts_valid_queues)
+                  apply (wpsimp wp: sts_st_tcb' sts_valid_objs')
                  apply (vcg exspec=setThreadState_modifies)
-                apply (fastforce simp: guard_is_UNIV_def ThreadState_Inactive_def
-                                        mask_def ThreadState_Running_def cap_get_tag_isCap
-                                        ccap_relation_ep_helpers)
+                apply (fastforce simp: guard_is_UNIV_def ThreadState_defs mask_def
+                                       cap_get_tag_isCap ccap_relation_ep_helpers)
                apply (clarsimp simp: valid_tcb_state'_def)
-               apply (rule_tac Q="\<lambda>_. valid_pspace' and valid_queues
+               apply (rule_tac Q="\<lambda>_. valid_pspace'
                                        and st_tcb_at' ((=) sendState) sender and tcb_at' thread
                                        and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
-                                       and (\<lambda>s. (\<forall>a b. sender \<notin> set (ksReadyQueues s (a, b))))
                                        and sch_act_not sender and K (thread \<noteq> sender)
                                        and (\<lambda>s. ksCurDomain s \<le> maxDomain)" in hoare_post_imp)
-                apply (clarsimp simp: valid_pspace_valid_objs' pred_tcb_at'_def sch_act_wf_weak
-                                      obj_at'_def)
+                apply (fastforce simp: valid_pspace_valid_objs' pred_tcb_at'_def sch_act_wf_weak
+                                       obj_at'_def)
                apply (wpsimp simp: guard_is_UNIV_def option_to_ptr_def option_to_0_def conj_ac)+
-           apply (rule_tac Q="\<lambda>rv. valid_queues and valid_pspace'
+           apply (rule_tac Q="\<lambda>rv. valid_pspace'
                                and cur_tcb' and tcb_at' sender and tcb_at' thread
                                and sch_act_not sender and K (thread \<noteq> sender)
                                and ep_at' (capEPPtr cap)
                                and (\<lambda>s. ksCurDomain s \<le> maxDomain)
-                               and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
-                                        (\<forall>d p. sender \<notin> set (ksReadyQueues s (d, p))))"
+                               and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
                             in hoare_post_imp)
             subgoal by (auto, auto simp: st_tcb_at'_def obj_at'_def)
            apply (wp hoare_vcg_all_lift set_ep_valid_objs')
@@ -5841,14 +5808,11 @@ lemma receiveIPC_ccorres [corres]:
                                  split: if_split_asm bool.splits) (*very long *)
            apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
           apply (frule(1) sym_refs_ko_atD' [OF _ invs_sym'])
-          apply (frule invs_queues)
           apply clarsimp
           apply (rename_tac list x xa)
           apply (rule_tac P="x\<in>set list" in case_split)
            apply (clarsimp simp:st_tcb_at_refs_of_rev')
            apply (erule_tac x=x and P="\<lambda>x. st_tcb_at' P x s" for P in ballE)
-            apply (drule_tac t=x in valid_queues_not_runnable'_not_ksQ)
-             apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
             apply (subgoal_tac "sch_act_not x s")
              prefer 2
              apply (frule invs_sch_act_wf')
@@ -5926,23 +5890,20 @@ lemma sendSignal_dequeue_ccorres_helper:
                          typ_heap_simps')
         apply (elim conjE)
         apply (intro conjI)
-             \<comment> \<open>tcb relation\<close>
-             apply (erule ctcb_relation_null_queue_ptrs)
-             apply (clarsimp simp: comp_def)
-            \<comment> \<open>ep relation\<close>
-            apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-            apply simp
-            apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
-             apply simp+
-            apply (erule (1) map_to_ko_atI')
-           \<comment> \<open>ntfn relation\<close>
-           apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
-            apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def
-                             tcb_queue_relation'_def)
+            \<comment> \<open>tcb relation\<close>
+            apply (erule ctcb_relation_null_ep_ptrs)
+            apply (clarsimp simp: comp_def)
+           \<comment> \<open>ep relation\<close>
+           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
            apply simp
-          \<comment> \<open>queue relation\<close>
-          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-          apply (clarsimp simp: comp_def)
+           apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
+            apply simp+
+           apply (erule (1) map_to_ko_atI')
+          \<comment> \<open>ntfn relation\<close>
+          apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+           apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def
+                            tcb_queue_relation'_def)
+          apply simp
          apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
@@ -5968,33 +5929,30 @@ lemma sendSignal_dequeue_ccorres_helper:
                         typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-            \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-           apply simp
-           apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
-            apply simp+
-           apply (erule (1) map_to_ko_atI')
-          \<comment> \<open>ntfn relation\<close>
-          apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
-           apply (clarsimp simp: cnotification_relation_def Let_def
-                                 isWaitingNtfn_def
-                                 tcb_queue_relation'_def valid_ntfn'_def
-                          split: Structures_H.notification.splits list.splits
-                      split del: if_split)
-           apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-            apply (rule conjI)
-             subgoal by (erule (1) tcb_ptr_sign_extend_canonical[OF invs_pspace_canonical'])
-            apply (rule context_conjI)
-             subgoal by (erule (1) tcb_ptr_sign_extend_canonical[OF invs_pspace_canonical'])
-            apply clarsimp
-           apply (clarsimp split: if_split)
+           \<comment> \<open>tcb relation\<close>
+           apply (erule ctcb_relation_null_ep_ptrs)
+           apply (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
           apply simp
-         \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         apply (clarsimp simp: comp_def)
+          apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
+           apply simp+
+          apply (erule (1) map_to_ko_atI')
+         \<comment> \<open>ntfn relation\<close>
+         apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+          apply (clarsimp simp: cnotification_relation_def Let_def
+                                isWaitingNtfn_def
+                                tcb_queue_relation'_def valid_ntfn'_def
+                         split: Structures_H.notification.splits list.splits
+                     split del: if_split)
+          apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
+           apply (rule conjI)
+            subgoal by (erule (1) tcb_ptr_sign_extend_canonical[OF invs_pspace_canonical'])
+           apply (rule context_conjI)
+            subgoal by (erule (1) tcb_ptr_sign_extend_canonical[OF invs_pspace_canonical'])
+           apply clarsimp
+          apply (clarsimp split: if_split)
+         apply simp
         apply (clarsimp simp: carch_state_relation_def)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
@@ -6101,7 +6059,7 @@ lemma sendSignal_ccorres [corres]:
          apply (ctac(no_vcg) add: setThreadState_ccorres)
           apply (ctac(no_vcg) add: setRegister_ccorres)
            apply (ctac add: possibleSwitchTo_ccorres)
-          apply (wp sts_running_valid_queues sts_st_tcb_at'_cases
+          apply (wp sts_valid_objs' sts_st_tcb_at'_cases
                  | simp add: option_to_ctcb_ptr_def split del: if_split)+
         apply (rule_tac Q="\<lambda>_. tcb_at' (the (ntfnBoundTCB ntfn)) and invs'"
                  in hoare_post_imp)
@@ -6112,10 +6070,9 @@ lemma sendSignal_ccorres [corres]:
       apply (clarsimp simp: guard_is_UNIV_def option_to_ctcb_ptr_def
                             RISCV64_H.badgeRegister_def C_register_defs
                             RISCV64.badgeRegister_def RISCV64.capRegister_def
-                            "StrictC'_thread_state_defs"less_mask_eq
-                            Collect_const_mem)
+                            ThreadState_defs less_mask_eq Collect_const_mem)
       apply (case_tac ts, simp_all add: receiveBlocked_def typ_heap_simps
-                       cthread_state_relation_def "StrictC'_thread_state_defs")[1]
+                       cthread_state_relation_def ThreadState_defs)[1]
       \<comment> \<open>ActiveNtfn case\<close>
      apply (rename_tac old_badge)
      apply (rule ccorres_cond_false)
@@ -6168,12 +6125,10 @@ lemma sendSignal_ccorres [corres]:
        apply (ctac (no_vcg))
         apply (ctac add: possibleSwitchTo_ccorres)
        apply (simp)
-       apply (wp weak_sch_act_wf_lift_linear
-         setThreadState_oa_queued
-         sts_valid_queues tcb_in_cur_domain'_lift)[1]
-      apply (wp sts_valid_queues sts_runnable)
+       apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift)[1]
+      apply (wp sts_valid_objs' sts_runnable)
      apply (wp setThreadState_st_tcb set_ntfn_valid_objs' | clarsimp)+
-    apply (clarsimp simp: guard_is_UNIV_def ThreadState_Running_def mask_def
+    apply (clarsimp simp: guard_is_UNIV_def ThreadState_defs mask_def
                           badgeRegister_def C_register_defs
                           RISCV64.badgeRegister_def RISCV64.capRegister_def)
    apply (clarsimp simp: guard_is_UNIV_def NtfnState_Idle_def
@@ -6196,10 +6151,10 @@ lemma sendSignal_ccorres [corres]:
   done
 
 lemma receiveSignal_block_ccorres_helper:
-  "ccorres dc xfdc (tcb_at' thread and valid_queues and sch_act_not thread and
+  "ccorres dc xfdc (tcb_at' thread and sch_act_not thread and
                     valid_objs' and ntfn_at' ntfnptr and pspace_canonical' and
-                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
-                        (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))) and
+                    pspace_aligned' and pspace_distinct' and
+                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
                     K (ntfnptr = ntfnptr && ~~ mask 4))
                    UNIV hs
            (setThreadState (Structures_H.thread_state.BlockedOnNotification
@@ -6229,13 +6184,13 @@ lemma receiveSignal_block_ccorres_helper:
           (simp add: typ_heap_simps')+)
          apply (simp add: tcb_cte_cases_def cteSizeBits_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
-                         ThreadState_BlockedOnNotification_def mask_def
+                         ThreadState_defs mask_def
                     flip: canonical_bit_def)
         apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
        apply ceqv
       apply clarsimp
       apply ctac
-     apply (wp threadSet_valid_queues hoare_vcg_all_lift threadSet_valid_objs'
+     apply (wp hoare_vcg_all_lift threadSet_valid_objs'
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (auto simp: weak_sch_act_wf_def valid_tcb'_def tcb_cte_cases_def
@@ -6354,37 +6309,34 @@ lemma receiveSignal_enqueue_ccorres_helper:
                         typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-            \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+           \<comment> \<open>tcb relation\<close>
+           apply (erule ctcb_relation_null_ep_ptrs)
+           apply (clarsimp simp: comp_def)
+          \<comment> \<open>ep relation\<close>
+          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+          apply simp
+          apply (rule cendpoint_relation_ntfn_queue, assumption+)
+            apply (simp add: isWaitingNtfn_def)
            apply simp
-           apply (rule cendpoint_relation_ntfn_queue, assumption+)
-             apply (simp add: isWaitingNtfn_def)
-            apply simp
-           apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
-           apply (erule(2) map_to_ko_at_updI')
-            apply (clarsimp simp: objBitsKO_def)
-           apply (clarsimp simp: obj_at'_def projectKOs)
-          \<comment> \<open>ntfn relation\<close>
-          apply (rule cpspace_relation_ntfn_update_ntfn', assumption+)
-            apply (case_tac "ntfn", simp_all)[1]
-           apply (clarsimp simp: cnotification_relation_def Let_def
-                                 mask_def [where n=3] NtfnState_Waiting_def)
-           subgoal
-             apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask                                valid_ntfn'_def
-                                   dest: tcb_queue_relation_next_not_NULL)
-             apply (rule conjI, fastforce simp: mask_def)
-             apply (rule context_conjI)
-              subgoal by (fastforce simp: valid_pspace'_def objBits_simps'
-                              intro!: tcb_ptr_sign_extend_canonical
-                               dest!: st_tcb_strg'[rule_format])
-             by clarsimp
-          apply (simp add: isWaitingNtfn_def)
-         \<comment> \<open>queue relation\<close>
-         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         subgoal by (clarsimp simp: comp_def)
+          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
+          apply (erule(2) map_to_ko_at_updI')
+           apply (clarsimp simp: objBitsKO_def)
+          apply (clarsimp simp: obj_at'_def projectKOs)
+         \<comment> \<open>ntfn relation\<close>
+         apply (rule cpspace_relation_ntfn_update_ntfn', assumption+)
+           apply (case_tac "ntfn", simp_all)[1]
+          apply (clarsimp simp: cnotification_relation_def Let_def
+                                mask_def [where n=3] NtfnState_Waiting_def)
+          subgoal
+            apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask                                valid_ntfn'_def
+                                  dest: tcb_queue_relation_next_not_NULL)
+            apply (rule conjI, fastforce simp: mask_def)
+            apply (rule context_conjI)
+             subgoal by (fastforce simp: valid_pspace'_def objBits_simps'
+                             intro!: tcb_ptr_sign_extend_canonical
+                              dest!: st_tcb_strg'[rule_format])
+            by clarsimp
+         apply (simp add: isWaitingNtfn_def)
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
@@ -6401,49 +6353,46 @@ lemma receiveSignal_enqueue_ccorres_helper:
                        typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
-           \<comment> \<open>tcb relation\<close>
-           apply (erule ctcb_relation_null_queue_ptrs)
-           apply (clarsimp simp: comp_def)
-          \<comment> \<open>ep relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+          \<comment> \<open>tcb relation\<close>
+          apply (erule ctcb_relation_null_ep_ptrs)
+          apply (clarsimp simp: comp_def)
+         \<comment> \<open>ep relation\<close>
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+         apply simp
+         apply (rule cendpoint_relation_ntfn_queue, assumption+)
+           apply (simp add: isWaitingNtfn_def)
           apply simp
-          apply (rule cendpoint_relation_ntfn_queue, assumption+)
-            apply (simp add: isWaitingNtfn_def)
-           apply simp
-          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
-          apply (erule(2) map_to_ko_at_updI')
-           apply (clarsimp simp: objBitsKO_def)
-          apply (clarsimp simp: obj_at'_def projectKOs)
-         \<comment> \<open>ntfn relation\<close>
-         apply (rule cpspace_relation_ntfn_update_ntfn', assumption+)
-           apply (case_tac "ntfn", simp_all)[1]
-          apply (clarsimp simp: cnotification_relation_def Let_def
-                                mask_def [where n=3] NtfnState_Waiting_def
-                         split: if_split)
-          subgoal for _ _ ko'
-            apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
-                            dest: tcb_queue_relation_next_not_NULL)
-            apply (rule conjI, clarsimp)
-             apply (rule conjI, fastforce simp: mask_def)
-             apply (rule context_conjI)
-              subgoal by (fastforce intro!: tcb_ptr_sign_extend_canonical
-                                     dest!: st_tcb_strg'[rule_format])
-             apply clarsimp
-            apply clarsimp
+         apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
+         apply (erule(2) map_to_ko_at_updI')
+          apply (clarsimp simp: objBitsKO_def)
+         apply (clarsimp simp: obj_at'_def projectKOs)
+        \<comment> \<open>ntfn relation\<close>
+        apply (rule cpspace_relation_ntfn_update_ntfn', assumption+)
+          apply (case_tac "ntfn", simp_all)[1]
+         apply (clarsimp simp: cnotification_relation_def Let_def
+                               mask_def [where n=3] NtfnState_Waiting_def
+                        split: if_split)
+         subgoal for _ _ ko'
+           apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
+                           dest: tcb_queue_relation_next_not_NULL)
+           apply (rule conjI, clarsimp)
             apply (rule conjI, fastforce simp: mask_def)
-            apply (rule conjI)
+            apply (rule context_conjI)
              subgoal by (fastforce intro!: tcb_ptr_sign_extend_canonical
                                     dest!: st_tcb_strg'[rule_format])
-            apply (subgoal_tac "canonical_address (ntfnQueue_head_CL (notification_lift ko'))")
-             apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
-            apply (clarsimp simp: notification_lift_def canonical_address_sign_extended
-                                  sign_extended_sign_extend
-                            simp flip: canonical_bit_def)
-            done
-         apply (simp add: isWaitingNtfn_def)
-        \<comment> \<open>queue relation\<close>
-        apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-        apply (clarsimp simp: comp_def)
+            apply clarsimp
+           apply clarsimp
+           apply (rule conjI, fastforce simp: mask_def)
+           apply (rule conjI)
+            subgoal by (fastforce intro!: tcb_ptr_sign_extend_canonical
+                                   dest!: st_tcb_strg'[rule_format])
+           apply (subgoal_tac "canonical_address (ntfnQueue_head_CL (notification_lift ko'))")
+            apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
+           apply (clarsimp simp: notification_lift_def canonical_address_sign_extended
+                                 sign_extended_sign_extend
+                           simp flip: canonical_bit_def)
+           done
+        apply (simp add: isWaitingNtfn_def)
        apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs)
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
@@ -6455,7 +6404,6 @@ lemma receiveSignal_enqueue_ccorres_helper:
 lemma receiveSignal_ccorres [corres]:
   "ccorres dc xfdc (invs' and valid_cap' cap and st_tcb_at' simple' thread
                     and sch_act_not thread
-                    and (\<lambda>s. \<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))
                     and K (isNotificationCap cap))
      (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
            \<inter> \<lbrace>ccap_relation cap \<acute>cap\<rbrace>

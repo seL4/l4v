@@ -147,7 +147,7 @@ lemma setCTE_asidpool':
   "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> setCTE c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
   apply (clarsimp simp: setCTE_def)
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (clarsimp simp: obj_at'_def projectKOs)
@@ -408,12 +408,6 @@ lemma ko_at'_tcb_vcpu_not_NULL:
   by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
                 dest: valid_objs_valid_tcb')
 
-
-(* FIXME move *)
-lemma setVMRoot_valid_queues':
-  "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
-  by (rule valid_queues_lift'; wp)
-
 lemma vcpuEnable_valid_pspace' [wp]:
   "\<lbrace> valid_pspace' \<rbrace> vcpuEnable a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
   by (wpsimp simp: valid_pspace'_def valid_mdb'_def)
@@ -443,8 +437,6 @@ crunch ko_at'2[wp]: doMachineOp "\<lambda>s. P (ko_at' p t s)"
 crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
-crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
-
 crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
 
 crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
@@ -457,8 +449,9 @@ crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
 
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
 
+(* schematic_goal leads to Suc (Suc ..) form only *)
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 41"
+  "fromEnum (maxBound :: vcpureg) = 42"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:
@@ -622,7 +615,9 @@ proof -
 qed
 
 lemma user_getreg_rv:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb r)) t\<rbrace>
+   asUser t (getRegister r)
+   \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)

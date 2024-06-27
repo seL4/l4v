@@ -46,7 +46,7 @@ lemma no_throw_bindE:
   "\<lbrakk> no_throw A X; \<And>a. no_throw B (Y a); \<lbrace> A \<rbrace> X \<lbrace> \<lambda>_. B \<rbrace>,\<lbrace> \<lambda>_ _. True \<rbrace> \<rbrakk>
    \<Longrightarrow> no_throw A (X >>=E Y)"
   unfolding no_throw_def
-  using hoare_validE_cases seqE by blast
+  using hoare_validE_cases bindE_wp_fwd by blast
 
 lemma no_throw_bindE_simple:
   "\<lbrakk> no_throw \<top> L; \<And>x. no_throw \<top> (R x) \<rbrakk> \<Longrightarrow> no_throw \<top> (L >>=E R)"
@@ -98,5 +98,18 @@ lemma condition_nothrow:
 lemma no_throw_Inr:
   "\<lbrakk> x \<in> mres (A s); no_throw P A; P s \<rbrakk> \<Longrightarrow> \<exists>y. fst x = Inr y"
   by (fastforce simp: no_throw_def' split: sum.splits)
+
+lemma mres_parallel:
+  "x \<in> mres (parallel f g s) \<Longrightarrow> x \<in> mres (f s) \<and> x \<in> mres (g s)"
+  unfolding parallel_def2 mres_def
+  apply (clarsimp simp: image_def)
+  apply (auto intro!: bexI)
+  done
+
+lemma no_throw_parallel:
+  "\<lbrakk> no_throw P f \<or> no_throw Q g \<rbrakk> \<Longrightarrow> no_throw (P and Q) (parallel f g)"
+  unfolding no_throw_def'
+  apply (auto dest!: mres_parallel)
+  done
 
 end

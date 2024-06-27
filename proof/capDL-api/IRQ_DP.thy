@@ -341,7 +341,7 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
         apply (rule_tac P = "c=irq_cap" in hoare_gen_asmEx, simp)
         apply (simp add: unify decode_invocation_def)
         apply (wp)
-         apply (rule_tac P = "x = (IrqHandlerSetEndpointIntent)" in hoare_gen_asmE, simp)
+         apply (rule_tac P = "rv = (IrqHandlerSetEndpointIntent)" in hoare_gen_asmE, simp)
          apply (wp decode_invocation_irq_endpoint_rv'[where endpoint_cap=endpoint_cap and endpoint_ptr = endpoint_ptr and xs = "[]"])
         apply (unfold throw_opt_def get_irq_handler_intent_def, simp)
         apply (rule returnOk_wp)

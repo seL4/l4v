@@ -173,7 +173,7 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
   "handle_vm_fault thread fault \<equiv> case fault of
      ARMDataAbort \<Rightarrow> doE
        addr \<leftarrow> liftE $ do_machine_op getFAR;
-       fault \<leftarrow> liftE $ do_machine_op getDFSR;
+       fault \<leftarrow> liftE $ do_machine_op getESR;
        cur_v \<leftarrow> liftE $ gets (arm_current_vcpu \<circ> arch_state);
        addr \<leftarrow> if (\<exists>v. cur_v = Some (v, True)) \<comment> \<open>VCPU active\<close>
               then doE
@@ -188,7 +188,7 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
      odE
    | ARMPrefetchAbort \<Rightarrow> doE
        pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
-       fault \<leftarrow> liftE $ do_machine_op getIFSR;
+       fault \<leftarrow> liftE $ do_machine_op getESR;
        cur_v \<leftarrow> liftE $ gets (arm_current_vcpu \<circ> arch_state);
        pc \<leftarrow> if (\<exists>v. cur_v = Some (v, True)) \<comment> \<open>VCPU active\<close>
             then doE

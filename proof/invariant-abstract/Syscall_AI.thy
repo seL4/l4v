@@ -724,7 +724,7 @@ lemma lookup_extras_real_ctes[wp]:
 
 lemma lookup_extras_ctes[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. cte_at (snd x) s\<rbrace>,-"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule lookup_extras_real_ctes)
   apply (simp add: real_cte_at_cte)
   done
@@ -986,7 +986,7 @@ lemma hinv_invs':
   done
 
 lemmas hinv_invs[wp] = hinv_invs'
-  [where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI,simplified]
+  [where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI TrueI,simplified]
 
 (* FIXME: move *)
 lemma hinv_tcb[wp]:
@@ -1103,7 +1103,7 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking
        apply (simp add: split_def)
        apply (wp resolve_address_bits_valid_fault2)+
      apply (simp add: valid_fault_def)
-     apply ((wp hoare_vcg_all_lift_R lookup_cap_ex_cap
+     apply ((wp hoare_vcg_all_liftE_R lookup_cap_ex_cap
           | simp add: obj_at_def
           | simp add: conj_disj_distribL ball_conj_distrib
           | wp (once) hoare_drop_imps)+)
@@ -1146,8 +1146,6 @@ lemma hy_inv: "(\<And>s f. P (trans_state f s) = P s) \<Longrightarrow> \<lbrace
   apply (wp | simp)+
   done
 
-declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]
-
 lemma ct_active_simple [elim!]:
   "ct_active s \<Longrightarrow> st_tcb_at simple (cur_thread s) s"
   by (fastforce simp: ct_in_state_def elim!: pred_tcb_weakenE)
@@ -1165,8 +1163,8 @@ lemma tcb_caller_cap:
 lemma (in Syscall_AI) hr_invs[wp]:
   "\<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace> handle_reply \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: handle_reply_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_seq_ext [OF _ get_cap_sp])
+  apply (rule bind_wp [OF _ gets_sp])
+  apply (rule bind_wp [OF _ get_cap_sp])
   apply (rule hoare_pre)
    apply (wp | wpc)+
   apply (clarsimp simp: cte_wp_at_eq_simp)
@@ -1191,7 +1189,7 @@ lemma simple_if_Restart_Inactive:
   by simp
 
 crunch (in Syscall_AI) st_tcb_at_simple[wp]: handle_reply "st_tcb_at simple t' :: 'state_ext state \<Rightarrow> _"
-  (wp: hoare_post_taut crunch_wps sts_st_tcb_at_cases
+  (wp: hoare_TrueI crunch_wps sts_st_tcb_at_cases
        thread_set_no_change_tcb_state
      ignore: set_thread_state simp: simple_if_Restart_Inactive)
 
@@ -1222,7 +1220,7 @@ lemma do_reply_transfer_nonz_cap:
      do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: do_reply_transfer_def)
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wp cap_delete_one_cte_wp_at_preserved hoare_vcg_ex_lift | simp split del: if_split
           | wpc | strengthen ex_nonz_cap_to_tcb_strg)+
@@ -1286,7 +1284,7 @@ lemma hc_invs[wp]:
 lemma hr_ct_active[wp]:
   "\<lbrace>invs and ct_active\<rbrace> handle_reply \<lbrace>\<lambda>rv. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_reply_def)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply (rule_tac t=thread in ct_in_state_decomp)
     apply ((wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp)+)[1]
    apply (wp hoare_vcg_all_lift get_cap_wp do_reply_transfer_st_tcb_at_active
@@ -1434,7 +1432,7 @@ lemma send_fault_ipc_st_tcb_at_runnable:
      apply (clarsimp simp: Let_def)
      apply wpc
                 apply (wp send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial
-                          hoare_vcg_all_lift_R thread_get_wp
+                          hoare_vcg_all_liftE_R thread_get_wp
                         | clarsimp
                         | wp (once) hoare_drop_imps)+
   apply (clarsimp simp:  pred_tcb_at_def obj_at_def is_tcb)
@@ -1465,7 +1463,7 @@ lemma handle_recv_st_tcb_at:
   apply (rule hoare_pre)
    apply (wp handle_fault_st_tcb_at_runnable receive_ipc_st_tcb_at_runnable
              delete_caller_cap_sym_refs rai_pred_tcb_neq
-             get_simple_ko_wp hoare_drop_imps hoare_vcg_all_lift_R)
+             get_simple_ko_wp hoare_drop_imps hoare_vcg_all_liftE_R)
     apply clarsimp
     apply wp+
   apply fastforce

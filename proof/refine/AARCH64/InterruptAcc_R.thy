@@ -50,14 +50,14 @@ lemma setIRQState_invs[wp]:
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
   apply (clarsimp simp: invs'_def valid_state'_def cur_tcb'_def
-                        Invariants_H.valid_queues_def valid_queues'_def
                         valid_idle'_def valid_irq_node'_def
                         valid_arch_state'_def valid_global_refs'_def
                         global_refs'_def valid_machine_state'_def
                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
                         valid_irq_handlers'_def irq_issued'_def
                         cteCaps_of_def valid_irq_masks'_def
-                        bitmapQ_defs valid_queues_no_bitmap_def split: option.splits)
+                        bitmapQ_defs valid_bitmaps_def
+                  split: option.splits)
    apply (rule conjI, clarsimp)
    apply (clarsimp simp: irqs_masked'_def ct_not_inQ_def)
    apply (rule conjI, fastforce)
@@ -115,7 +115,7 @@ lemma preemptionPoint_inv:
   shows "\<lbrace>P\<rbrace> preemptionPoint \<lbrace>\<lambda>_. P\<rbrace>" using assms
   apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def)
   apply (wpc
-          | wp whenE_wp hoare_seq_ext [OF _ select_inv] hoare_drop_imps
+          | wp whenE_wp bind_wp [OF _ select_inv] hoare_drop_imps
           | simp)+
   done
 
@@ -150,8 +150,7 @@ lemma invs'_irq_state_independent [simp, intro!]:
           valid_idle'_def valid_global_refs'_def
           valid_arch_state'_def valid_irq_node'_def
           valid_irq_handlers'_def valid_irq_states'_def
-          irqs_masked'_def bitmapQ_defs valid_queues_no_bitmap_def
-          valid_queues'_def
+          irqs_masked'_def bitmapQ_defs valid_bitmaps_def
           pspace_domain_valid_def cur_tcb'_def
           valid_machine_state'_def tcb_in_cur_domain'_def
           ct_not_inQ_def ct_idle_or_in_cur_domain'_def

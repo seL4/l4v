@@ -52,7 +52,7 @@ lemma cancel_all_ipc_valid_objs:
   "\<lbrace>valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    cancel_all_ipc ptr \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all add: get_ep_queue_def)
     apply (wp, simp)
    apply (wp cancel_all_helper hoare_vcg_const_Ball_lift
@@ -86,7 +86,7 @@ lemma cancel_all_signals_valid_objs:
   "\<lbrace>valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    cancel_all_signals ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: cancel_all_signals_def unbind_maybe_notification_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp unbind_notification_valid_objs | wpc | simp_all add:unbind_maybe_notification_def)+
     apply (wp cancel_all_helper hoare_vcg_const_Ball_lift
@@ -202,7 +202,7 @@ crunch st_tcb_at_simple[wp]: reply_cancel_ipc "st_tcb_at simple t"
 lemma cancel_ipc_simple [wp]:
   "\<lbrace>\<top>\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   apply (simp add: cancel_ipc_def)
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ gts_sp])
   apply (case_tac state, simp_all)
          apply (wp hoare_strengthen_post [OF blocked_cancel_ipc_simple]
                    hoare_strengthen_post [OF cancel_signal_simple]
@@ -349,9 +349,9 @@ lemma refs_in_ntfn_bound_refs:
 lemma blocked_cancel_ipc_invs:
   "\<lbrace>invs and st_tcb_at ((=) st) t\<rbrace> blocked_cancel_ipc st t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: blocked_cancel_ipc_def)
-  apply (rule hoare_seq_ext [OF _ gbi_ep_sp])
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext [OF _ get_epq_sp])
+  apply (rule bind_wp [OF _ gbi_ep_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_epq_sp])
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre, wp valid_irq_node_typ sts_only_idle)
    apply (simp add: valid_tcb_state_def)
@@ -385,7 +385,7 @@ lemma cancel_signal_invs:
   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_signal_def
                    invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfna", simp_all)[1]
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
@@ -448,7 +448,7 @@ lemma reply_cancel_ipc_invs:
 lemma (in delete_one_abs) cancel_ipc_invs[wp]:
   "\<lbrace>invs\<rbrace> (cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_ipc_def)
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule bind_wp [OF _ gts_sp])
   apply (case_tac state, simp_all)
         apply (auto intro!: hoare_weaken_pre [OF return_wp]
                             hoare_weaken_pre [OF blocked_cancel_ipc_invs]
@@ -499,7 +499,7 @@ lemma blocked_cancel_ipc_valid_objs[wp]:
 lemma cancel_signal_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> cancel_signal t ntfnptr \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: cancel_signal_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
   apply (wp set_simple_ko_valid_objs
        | simp only: valid_inactive
@@ -567,8 +567,8 @@ lemma (in delete_one_abs) reply_cancel_ipc_no_reply_cap[wp]:
   shows "\<lbrace>invs and tcb_at t\<rbrace> (reply_cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply wp
-        apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) x s \<and>
-                                (\<forall>sl R. sl \<noteq> x \<longrightarrow>
+        apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) rv s \<and>
+                                (\<forall>sl R. sl \<noteq> rv \<longrightarrow>
                                   caps_of_state s sl \<noteq> Some (cap.ReplyCap t False R))"
                   in hoare_strengthen_post)
          apply (wp hoare_vcg_conj_lift hoare_vcg_all_lift
@@ -867,7 +867,7 @@ lemma cancel_all_ipc_invs_helper:
         do_extended_op reschedule_required
     od \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (subst bind_assoc[symmetric])
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply wp
    apply simp
   apply (rule hoare_pre)
@@ -912,7 +912,7 @@ lemma cancel_all_ipc_invs_helper:
 lemma cancel_all_ipc_invs:
   "\<lbrace>invs\<rbrace> cancel_all_ipc epptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all add: get_ep_queue_def)
     apply (wp, fastforce)
    apply (rule hoare_pre, rule cancel_all_ipc_invs_helper[where k=EPSend])
@@ -968,10 +968,10 @@ lemma bound_tcb_bound_notification_at:
 lemma unbind_notification_invs:
   shows "\<lbrace>invs\<rbrace> unbind_notification t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: unbind_notification_def invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
+  apply (rule bind_wp [OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
   apply clarsimp
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift
          | clarsimp split del: if_split)+
   apply (intro conjI impI;
@@ -1025,7 +1025,7 @@ lemma tcb_state_refs_no_tcb:
 lemma cancel_all_signals_invs:
   "\<lbrace>invs\<rbrace> cancel_all_signals ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_all_signals_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp cancel_all_invs_helper set_simple_ko_valid_objs valid_irq_node_typ
              hoare_vcg_const_Ball_lift valid_ioports_lift
@@ -1079,7 +1079,7 @@ lemma cancel_all_unlive_helper:
 lemma cancel_all_ipc_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all add: set_simple_ko_def get_ep_queue_def)
     apply wp
     apply (clarsimp simp: live_def elim!: obj_at_weakenE)
@@ -1096,7 +1096,7 @@ lemma cancel_all_signals_unlive[wp]:
      cancel_all_signals ntfnptr
    \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) ntfnptr\<rbrace>"
   apply (simp add: cancel_all_signals_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp
         | wpc
@@ -1146,8 +1146,8 @@ lemma cancel_badged_sends_filterM_helper':
    apply (clarsimp simp: st_tcb_at_refs_of_rev pred_tcb_at_def is_tcb
                   elim!: obj_at_weakenE)
   apply (clarsimp simp: filterM_append bind_assoc simp del: set_append distinct_append)
-  apply (drule spec, erule hoare_seq_ext[rotated])
-  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (drule spec, erule bind_wp_fwd)
+  apply (rule bind_wp [OF _ gts_sp])
   apply (rule hoare_pre,
          wpsimp wp: valid_irq_node_typ sts_only_idle hoare_vcg_const_Ball_lift)
   apply (clarsimp simp: valid_tcb_state_def)
@@ -1185,7 +1185,7 @@ lemma cancel_badged_sends_invs_helper:
 lemma cancel_badged_sends_invs[wp]:
   "\<lbrace>invs\<rbrace> cancel_badged_sends epptr badge \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_badged_sends_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep; simp)
     apply wpsimp
    apply (simp add: invs_def valid_state_def valid_pspace_def)

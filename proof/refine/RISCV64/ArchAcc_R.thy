@@ -52,27 +52,38 @@ lemma pspace_aligned_cross:
   apply (clarsimp simp: pspace_dom_def)
   apply (drule bspec, fastforce)+
   apply clarsimp
+  apply (rename_tac ko' a a' P ko)
   apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
-     apply (clarsimp simp: cte_map_def)
-     apply (simp add: cteSizeBits_def cte_level_bits_def)
-     apply (rule is_aligned_add)
-      apply (erule is_aligned_weaken)
-      apply simp
-     apply (rule is_aligned_shift)
+
+      \<comment>\<open>CNode\<close>
+      apply (clarsimp simp: cte_map_def)
+      apply (simp only: cteSizeBits_def cte_level_bits_def)
+      apply (rule is_aligned_add)
+       apply (erule is_aligned_weaken, simp)
+      apply (rule is_aligned_weaken)
+       apply (rule is_aligned_shiftl_self, simp)
+
+     \<comment>\<open>TCB\<close>
+     apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
+
+    \<comment>\<open>PageTable\<close>
+    apply (clarsimp simp: archObjSize_def pteBits_def table_size_def ptTranslationBits_def pte_bits_def)
     apply (rule is_aligned_add)
      apply (erule is_aligned_weaken)
-     apply (simp add: bit_simps)
+     apply simp
     apply (rule is_aligned_shift)
+
+  \<comment>\<open>DataPage\<close>
    apply (rule is_aligned_add)
     apply (erule is_aligned_weaken)
     apply (rule pbfs_atleast_pageBits)
    apply (rule is_aligned_shift)
+
+  \<comment>\<open>other_obj_relation\<close>
   apply (simp add: other_obj_relation_def)
   apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
-                  split: kernel_object.splits Structures_A.kernel_object.splits)
-  apply (clarsimp simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
-  apply (erule is_aligned_weaken)
-  apply (simp add: bit_simps)
+                 split: kernel_object.splits Structures_A.kernel_object.splits)
+  apply (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma of_bl_shift_cte_level_bits:
@@ -84,10 +95,12 @@ lemma obj_relation_cuts_range_limit:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
    \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
   apply (erule (1) obj_relation_cutsE; clarsimp)
-     apply (drule (1) wf_cs_nD)
-     apply (clarsimp simp: cte_map_def)
-     apply (rule_tac x=cte_level_bits in exI)
-     apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+      apply (drule (1) wf_cs_nD)
+      apply (clarsimp simp: cte_map_def)
+      apply (rule_tac x=cte_level_bits in exI)
+      apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+     apply (rule_tac x=tcbBlockSizeBits in exI)
+     apply (simp add: tcbBlockSizeBits_def)
     apply (rule_tac x=pte_bits in exI)
     apply (simp add: bit_simps is_aligned_shift mask_def)
     apply word_bitwise
@@ -228,14 +241,6 @@ lemma getObject_ASIDPool_corres:
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
-  done
-
-lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; ko = injectKO v \<rbrakk>
-      \<Longrightarrow> ko_at' v x s"
-  apply (simp add: obj_at'_def project_inject pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply simp
   done
 
 lemma storePTE_cte_wp_at'[wp]:
@@ -442,10 +447,14 @@ lemma setObject_PT_corres:
    apply (drule_tac x=p in bspec, erule domI)
    apply (simp add: other_obj_relation_def
            split: Structures_A.kernel_object.splits)
-  apply (rule conjI)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
    apply fastforce
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)

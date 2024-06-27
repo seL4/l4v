@@ -1100,43 +1100,6 @@ lemma bitmapQ_no_L2_orphans_lift:
   apply (rule hoare_vcg_prop, assumption)
   done
 
-lemma valid_queues_lift_asm:
-  assumes tat1: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and Q \<rbrace> f \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb\<rbrace>"
-  and     tat2: "\<And>tcb. \<lbrace>st_tcb_at' runnable' tcb and Q \<rbrace> f \<lbrace>\<lambda>_. st_tcb_at' runnable' tcb\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-  and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  shows   "\<lbrace>Invariants_H.valid_queues and Q\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  proof -
-    have tat:  "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and st_tcb_at' runnable' tcb and Q\<rbrace> f
-                         \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb and st_tcb_at' runnable' tcb\<rbrace>"
-      apply (rule hoare_chain [OF hoare_vcg_conj_lift [OF tat1 tat2]])
-       apply (fastforce)+
-       done
-    have tat_combined: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p and runnable' \<circ> tcbState) tcb and Q\<rbrace> f
-                         \<lbrace>\<lambda>_. obj_at' (inQ d p and runnable' \<circ> tcbState) tcb\<rbrace>"
-      apply (rule hoare_chain [OF tat])
-       apply (fastforce simp add: obj_at'_and pred_tcb_at'_def o_def)+
-      done
-    show ?thesis unfolding valid_queues_def valid_queues_no_bitmap_def
-      by (wp tat_combined prq prqL1 prqL2 valid_bitmapQ_lift bitmapQ_no_L2_orphans_lift
-             bitmapQ_no_L1_orphans_lift hoare_vcg_all_lift hoare_vcg_conj_lift hoare_Ball_helper)
-         simp_all
-  qed
-
-lemmas valid_queues_lift = valid_queues_lift_asm[where Q="\<lambda>_. True", simplified]
-
-lemma valid_queues_lift':
-  assumes tat: "\<And>d p tcb. \<lbrace>\<lambda>s. \<not> obj_at' (inQ d p) tcb s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> obj_at' (inQ d p) tcb s\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  shows   "\<lbrace>valid_queues'\<rbrace> f \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  unfolding valid_queues'_def imp_conv_disj
-  by (wp hoare_vcg_all_lift hoare_vcg_disj_lift tat prq)
-
-lemma setCTE_norq [wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueues s) \<rbrace>"
-  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
-
 lemma setCTE_norqL1 [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueuesL1Bitmap s) \<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
@@ -2676,7 +2639,7 @@ lemma updateMDB_iflive'[wp]:
      updateMDB p m
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
   apply (clarsimp simp: updateMDB_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (wp setCTE_iflive')
   apply (clarsimp elim!: cte_wp_at_weakenE')
   done
@@ -2689,7 +2652,7 @@ lemma updateCap_iflive':
      updateCap p cap
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
   apply (simp add: updateCap_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule bind_wp [OF _ getCTE_sp])
   apply (wp setCTE_iflive')
   apply (clarsimp elim!: cte_wp_at_weakenE')
   done
@@ -2881,12 +2844,6 @@ lemma setCTE_inQ[wp]:
   apply (simp add: setCTE_def)
   apply (rule setObject_cte_obj_at_tcb')
    apply (simp_all add: inQ_def)
-  done
-
-lemma setCTE_valid_queues'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp only: valid_queues'_def imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
 crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
@@ -3476,6 +3433,13 @@ crunch pspace_canonical'[wp]: cteInsert "pspace_canonical'"
 crunch pspace_in_kernel_mappings'[wp]: cteInsert "pspace_in_kernel_mappings'"
   (wp: crunch_wps)
 
+crunches cteInsert
+  for tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  and valid_bitmaps[wp]: valid_bitmaps
+  (wp: crunch_wps rule: valid_bitmaps_lift)
+
 lemma cteInsert_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)
@@ -3485,9 +3449,9 @@ lemma cteInsert_invs:
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
-                    valid_irq_node_lift valid_queues_lift' irqs_masked_lift cteInsert_norq
-              simp: st_tcb_at'_def)
+  apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift
+                    valid_irq_node_lift irqs_masked_lift cteInsert_norq
+                    sym_heap_sched_pointers_lift)
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
   done
 
@@ -3791,10 +3755,13 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ups' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cns s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cns_of_heap (kheap s))\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cns' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsCNodes s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_sa' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_rqs' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ksReadyQueues s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)
+                          (\<lambda>d p. new_inQs d p s)\<rbrace>
+                   g \<lbrace>\<lambda>rv s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                               (\<lambda>d p. inQ d p |< (tcbs_of' s))\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_di s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_index s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dl s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
@@ -3810,7 +3777,9 @@ lemma corres_caps_decomposition:
              "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
                        \<Longrightarrow> sched_act_relation (new_action s) (new_sa' s')"
              "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> ready_queues_relation (new_queues s) (new_rqs' s')"
+                       \<Longrightarrow> ready_queues_relation_2 (new_ready_queues s) (new_ksReadyQueues s')
+                                                   (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
+                                                   (\<lambda>d p. new_inQs d p s')"
              "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
                        \<Longrightarrow> revokable_relation (new_rvk s) (null_filter (new_caps s)) (new_ctes s')"
              "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
@@ -3878,8 +3847,9 @@ proof -
     apply (rule corres_underlying_decomposition [OF x])
      apply (simp add: ghost_relation_of_heap)
      apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)+
-    apply (intro z[simplified o_def] conjI | simp add: state_relation_def pspace_relations_def swp_cte_at
-          | (clarsimp, drule (1) z(6), simp add: state_relation_def pspace_relations_def swp_cte_at))+
+    apply (intro z[simplified o_def] conjI
+           | simp add: state_relation_def pspace_relations_def swp_cte_at
+           | (clarsimp, drule (1) z(6), simp add: state_relation_def))+
     done
 qed
 
@@ -3991,7 +3961,7 @@ lemma create_reply_master_corres:
   apply clarsimp
   apply (rule corres_caps_decomposition)
                                  defer
-                                 apply (wp|simp)+
+                                 apply (wp|simp add: o_def split del: if_splits)+
           apply (clarsimp simp: o_def cdt_relation_def cte_wp_at_ctes_of
                      split del: if_split cong: if_cong simp del: id_apply)
           apply (case_tac cte, clarsimp)
@@ -4368,6 +4338,9 @@ crunches setupReplyMaster
   and ready_queuesL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
   (wp: crunch_wps simp: crunch_simps rule: irqs_masked_lift)
 
 lemma setupReplyMaster_vms'[wp]:
@@ -4410,7 +4383,8 @@ lemma setupReplyMaster_invs'[wp]:
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp setupReplyMaster_valid_pspace' sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
-             valid_queues_lift cur_tcb_lift valid_queues_lift' hoare_vcg_disj_lift
+             valid_queues_lift cur_tcb_lift hoare_vcg_disj_lift sym_heap_sched_pointers_lift
+             valid_bitmaps_lift
              valid_irq_node_lift | simp)+
   apply (clarsimp simp: ex_nonz_tcb_cte_caps' valid_pspace'_def
                         objBits_simps' tcbReplySlot_def
@@ -4687,8 +4661,8 @@ lemma arch_update_setCTE_invs:
   apply (wp arch_update_setCTE_mdb valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
              arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
              valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
-             valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift setCTE_ioports'
-             setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift
+             setCTE_pred_tcb_at' irqs_masked_lift setCTE_ioports'
+             hoare_vcg_disj_lift untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: pred_tcb_at'_def)+
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
                         cte_wp_at_ctes_of isCap_simps untyped_ranges_zero_fun_upd)
@@ -6138,7 +6112,7 @@ lemma cteInsert_simple_invs:
   apply (rule hoare_pre)
    apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
    apply (wp cur_tcb_lift sch_act_wf_lift valid_queues_lift tcb_in_cur_domain'_lift
-             valid_irq_node_lift valid_queues_lift' irqs_masked_lift
+             valid_irq_node_lift irqs_masked_lift sym_heap_sched_pointers_lift
              cteInsert_simple_mdb' cteInsert_valid_globals_simple
              cteInsert_norq | simp add: pred_tcb_at'_def)+
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def
@@ -6277,6 +6251,21 @@ lemma arch_update_updateCap_invs:
   apply clarsimp
   done
 
+lemma setCTE_set_cap_ready_queues_relation_valid_corres:
+  assumes pre: "ready_queues_relation s s'"
+  assumes step_abs: "(x, t) \<in> fst (set_cap cap slot s)"
+  assumes step_conc: "(y, t') \<in> fst (setCTE slot' cap' s')"
+  shows "ready_queues_relation t t'"
+  apply (clarsimp simp: ready_queues_relation_def)
+  apply (insert pre)
+  apply (rule use_valid[OF step_abs set_cap_exst])
+  apply (rule use_valid[OF step_conc setCTE_ksReadyQueues])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedNexts_of])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedPrevs_of])
+  apply (clarsimp simp: ready_queues_relation_def Let_def)
+  using use_valid[OF step_conc setCTE_inQ_opt_pred]
+  by fast
+
 lemma updateCap_same_master:
   "\<lbrakk> cap_relation cap cap' \<rbrakk> \<Longrightarrow>
    corres dc (valid_objs and pspace_aligned and pspace_distinct and
@@ -6308,6 +6297,8 @@ lemma updateCap_same_master:
         apply assumption
        apply (clarsimp simp: pspace_relations_def)
        apply (subst conj_assoc[symmetric])
+       apply (extract_conjunct \<open>match conclusion in "ready_queues_relation a b" for a b \<Rightarrow> -\<close>)
+        subgoal by (erule setCTE_set_cap_ready_queues_relation_valid_corres; assumption)
        apply (rule conjI)
         apply (frule setCTE_pspace_only)
         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
@@ -6538,8 +6529,9 @@ lemma updateFreeIndex_forward_invs':
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp setCTE_ioports'
+                sym_heap_sched_pointers_lift valid_bitmaps_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])

@@ -493,7 +493,7 @@ lemma armv_contextSwitch_corres:
   done
 
 lemma handleVMFault_corres:
-  "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
+  "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) \<top>
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: ARM_H.handleVMFault_def)
   apply corres_cases
@@ -605,12 +605,12 @@ lemma find_pd_for_asid_pd_at_asid_again:
   apply (unfold validE_def, rule hoare_name_pre_state, fold validE_def)
   apply (case_tac "\<exists>pd. vspace_at_asid asid pd s")
    apply clarsimp
-   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> rv = pd" and E="\<bottom>\<bottom>" in hoare_post_impErr)
+   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> rv = pd" and E="\<bottom>\<bottom>" in hoare_strengthen_postE)
      apply (rule hoare_pre, wp find_pd_for_asid_valids)
      apply fastforce
     apply simp+
   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> vspace_at_asid asid rv s'"
-              and E="\<lambda>rv s'. s' = s" in hoare_post_impErr)
+              and E="\<lambda>rv s'. s' = s" in hoare_strengthen_postE)
     apply (rule hoare_pre, wp)
     apply clarsimp+
   done
@@ -881,13 +881,9 @@ lemma deleteASID_corres:
        apply (simp add: vs_refs_def)
        apply (rule image_eqI[rotated], erule graph_ofI)
        apply (simp add: mask_asid_low_bits_ucast_ucast)
-      apply wp
-      apply (simp add: o_def)
-      apply (wp getASID_wp)
-      apply clarsimp
-      apply assumption
-     apply wp+
-   apply clarsimp
+      \<comment> \<open>rewrite assumption so that the goal can refer to the C variable instead of the abstract's.\<close>
+      apply (drule Some_to_the)
+      apply (wpsimp wp: getASID_wp)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
                   dest!: invs_arch_state)
    apply blast
@@ -1142,7 +1138,7 @@ lemma storeHWASID_valid_arch' [wp]:
    apply wp
    apply (rule_tac Q'="\<lambda>rv s. valid_asid_map' (armKSASIDMap (ksArchState s))
                                 \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits"
-              in hoare_post_imp_R)
+              in hoare_strengthen_postE_R)
     apply (wp findPDForASID_inv2)+
    apply (clarsimp simp: valid_asid_map'_def)
    apply (subst conj_commute, rule context_conjI)
@@ -1595,7 +1591,7 @@ lemma unmapPage_corres:
                                   pd_aligned vmsz_aligned_def)
            apply simp
           apply wp
-          apply (rule_tac Q'="\<lambda>_. invs and vspace_at_asid asid pda" in hoare_post_imp_R)
+          apply (rule_tac Q'="\<lambda>_. invs and vspace_at_asid asid pda" in hoare_strengthen_postE_R)
            apply (wp lookup_pt_slot_inv lookup_pt_slot_cap_to2' lookup_pt_slot_cap_to_multiple2
                      store_pde_invs_unmap store_pde_pd_at_asid mapM_swp_store_pde_invs_unmap
                 | wpc | simp | wp hoare_drop_imps
@@ -2025,8 +2021,8 @@ lemma message_info_from_data_eqv:
 
 lemma setMessageInfo_corres:
  "mi' = message_info_map mi \<Longrightarrow>
-  corres dc (tcb_at t) (tcb_at' t)
-         (set_message_info t mi) (setMessageInfo t mi')"
+  corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+    (set_message_info t mi) (setMessageInfo t mi')"
   apply (simp add: setMessageInfo_def set_message_info_def)
   apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) =
                       message_info_to_data mi")
@@ -2739,14 +2735,6 @@ crunch norqL1[wp]: storePDE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 crunch norqL2[wp]: storePDE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (simp: updateObject_default_def)
 
-lemma storePDE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePDE_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
-
 lemma storePDE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePDE_def)
@@ -2889,7 +2877,17 @@ crunches storePTE, storePDE
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv)
+  (wp: setObject_ksPSpace_only updateObject_default_inv simp: o_def)
+
+lemma storePTE_tcbs_of'[wp]:
+  "storePTE c (pte::pte) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  unfolding storePTE_def
+  by setObject_easy_cases
+
+lemma storePDE_tcbs_of'[wp]:
+  "storePDE c (pde::pde) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  unfolding storePDE_def
+  by setObject_easy_cases
 
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde
@@ -2901,7 +2899,7 @@ lemma storePDE_invs[wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
+             cur_tcb_lift valid_irq_handlers_lift'' valid_bitmaps_lift sym_heap_sched_pointers_lift
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
@@ -2929,14 +2927,6 @@ crunch norqL1[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 
 crunch norqL2[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (simp: updateObject_default_def)
-
-lemma storePTE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePTE_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma storePTE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePTE p pte \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -3074,7 +3064,7 @@ lemma storePTE_invs [wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
@@ -3119,14 +3109,6 @@ lemma setASIDPool_qsL1 [wp]:
 lemma setASIDPool_qsL2 [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   by (wp setObject_qs updateObject_default_inv|simp)+
-
-lemma setASIDPool_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma setASIDPool_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -3240,6 +3222,10 @@ lemma setObject_ap_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
+lemma setObject_asidpool_tcbs_of'[wp]:
+  "setObject c (asidpool::asidpool) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
 lemma setASIDPool_invs [wp]:
   "\<lbrace>invs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
@@ -3248,7 +3234,7 @@ lemma setASIDPool_invs [wp]:
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
-             updateObject_default_inv
+             updateObject_default_inv valid_bitmaps_lift
            | simp add: cteCaps_of_def
            | rule setObject_ksPSpace_only)+
   apply (clarsimp simp add: setObject_def o_def)

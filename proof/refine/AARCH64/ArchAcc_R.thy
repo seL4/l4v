@@ -53,17 +53,23 @@ lemma pspace_aligned_cross:
   apply (clarsimp simp: pspace_dom_def)
   apply (drule bspec, fastforce)+
   apply clarsimp
+  apply (rename_tac ko' a a' P ko)
   apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
-     apply (clarsimp simp: cte_map_def)
-     apply (simp add: cteSizeBits_def cte_level_bits_def)
-     apply (rule is_aligned_add)
-      apply (erule is_aligned_weaken)
-      apply simp
-     apply (rule is_aligned_shift)
+      \<comment>\<open>CNode\<close>
+      apply (clarsimp simp: cte_map_def)
+      apply (simp only: cteSizeBits_def cte_level_bits_def)
+      apply (rule is_aligned_add)
+       apply (erule is_aligned_weaken, simp)
+      apply (rule is_aligned_weaken)
+       apply (rule is_aligned_shiftl_self, simp)
+     \<comment>\<open>TCB\<close>
+     apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
+    \<comment>\<open>PageTable\<close>
     apply (rule is_aligned_add)
      apply (erule is_aligned_weaken)
      apply (simp add: bit_simps)
     apply (rule is_aligned_shift)
+   \<comment>\<open>DataPage\<close>
    apply (rule is_aligned_add)
     apply (erule is_aligned_weaken)
     apply (rule pbfs_atleast_pageBits)
@@ -71,9 +77,7 @@ lemma pspace_aligned_cross:
   apply (simp add: other_obj_relation_def)
   apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
                   split: kernel_object.splits Structures_A.kernel_object.splits)
-  apply (clarsimp simp: archObjSize_def bit_simps
-                  split: arch_kernel_object.splits arch_kernel_obj.splits)
-   apply (erule is_aligned_weaken, simp add: bit_simps)+
+  apply (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma of_bl_shift_cte_level_bits:
@@ -85,10 +89,12 @@ lemma obj_relation_cuts_range_limit:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
    \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
   apply (erule (1) obj_relation_cutsE; clarsimp)
-     apply (drule (1) wf_cs_nD)
-     apply (clarsimp simp: cte_map_def)
-     apply (rule_tac x=cte_level_bits in exI)
-     apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+      apply (drule (1) wf_cs_nD)
+      apply (clarsimp simp: cte_map_def)
+      apply (rule_tac x=cte_level_bits in exI)
+      apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+     apply (rule_tac x=tcbBlockSizeBits in exI)
+     apply (simp add: tcbBlockSizeBits_def)
     apply (rule_tac x=pte_bits in exI)
     apply (simp add: is_aligned_shift mask_def)
     apply (rule shiftl_less_t2n)
@@ -231,14 +237,6 @@ lemma getObject_ASIDPool_corres:
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def)
-  done
-
-lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; ko = injectKO v \<rbrakk>
-      \<Longrightarrow> ko_at' v x s"
-  apply (simp add: obj_at'_def project_inject pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply simp
   done
 
 lemma storePTE_cte_wp_at'[wp]:
@@ -447,7 +445,8 @@ lemma setObject_PT_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-      apply simp
+       apply simp
+      apply clarsimp
      apply clarsimp
      apply (smt (verit, best) pspace_aligned_pts_ofD pts_of_Some pts_of_type_unique aobjs_of_Some
                               table_base_plus)
@@ -459,10 +458,14 @@ lemma setObject_PT_corres:
    apply (drule_tac x=p in bspec, erule domI)
    apply (simp add: other_obj_relation_def
            split: Structures_A.kernel_object.splits)
-  apply (rule conjI)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask (pt_bits (pt_type pt))" in allE)+
    apply fastforce
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
@@ -499,7 +502,8 @@ lemma bit_simps_corres[simp]:
   by (simp add: bit_simps bitSimps)
 
 defs checkPTAt_def:
-  "checkPTAt p \<equiv> stateAssert (\<lambda>s. \<exists>pt. page_table_at' pt p s) []"
+  "checkPTAt pt_t p \<equiv> stateAssert (\<lambda>s. page_table_at' pt_t p s \<and>
+                                        gsPTTypes (ksArchState s) p = Some pt_t) []"
 
 lemma pte_relation_must_pte:
   "pte_relation m (ArchObj (PageTable pt)) ko \<Longrightarrow> \<exists>pte. ko = (KOArch (KOPTE pte))"
@@ -526,14 +530,16 @@ lemma getPTE_wp:
   by (clarsimp simp: getObject_def split_def loadObject_default_def in_magnitude_check
                      in_monad valid_def obj_at'_def objBits_simps)
 
-lemma pt_at_lift:
+lemma check_pt_at_lift:
   "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
    (pspace_aligned s \<and> pspace_distinct s \<and> pt_at pt_t ptr s \<and> ptr = ptr') \<longrightarrow>
-    \<top> s' \<longrightarrow> page_table_at' pt_t ptr' s'"
-  by ( fastforce intro!: page_table_at_cross)
+    \<top> s' \<longrightarrow> page_table_at' pt_t ptr' s' \<and> gsPTTypes (ksArchState s') ptr' = Some pt_t"
+  apply clarsimp
+  apply (rule conjI, fastforce intro!: page_table_at_cross)
+  by (fastforce simp: ghost_relation_def obj_at_def elim!: state_relationE)
 
 lemmas checkPTAt_corres[corresK] =
-  corres_stateAssert_implied_frame[OF pt_at_lift, folded checkPTAt_def]
+  corres_stateAssert_implied_frame[OF check_pt_at_lift, folded checkPTAt_def]
 
 lemma lookupPTSlotFromLevel_inv:
   "lookupPTSlotFromLevel level pt_ptr vptr \<lbrace>P\<rbrace>"
@@ -693,20 +699,22 @@ next
          apply (rule pteAtIndex_corres, simp)
         apply (rule corres_if3)
           apply (rename_tac pte pte', case_tac pte; (simp add: isPageTablePTE_def))
-         apply (rule corres_stateAssert_implied)
+         apply (rule corres_stateAssert_implied[where P'=\<top>])
           apply (rule minus(1))
             apply (simp add: nlevel)
            apply (clarsimp simp: AARCH64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromPTE_def
                                  paddr_from_ppn_def isPagePTE_def)
           apply simp
          apply clarsimp
-         apply (rule_tac x=NormalPT_T in exI)
-         apply (rule page_table_at_cross; assumption?)
+         apply (prop_tac "pt_at NormalPT_T (getPPtrFromPTE pte) s")
           apply (drule (2) valid_vspace_objs_strongD; assumption?)
            apply simp
+          apply (simp add: state_relation_def)
           apply (clarsimp simp: pt_at_eq in_omonad AARCH64_A.is_PageTablePTE_def pptr_from_pte_def
                                 getPPtrFromPTE_def isPagePTE_def paddr_from_ppn_def)
-         apply (simp add: state_relation_def)
+         apply (frule page_table_at_cross; assumption?)
+          apply (fastforce simp: state_relation_def)
+         apply (fastforce simp: ghost_relation_def obj_at_def elim!: state_relationE)
         apply (rule corres_inst[where P=\<top> and P'=\<top>])
         apply (clarsimp simp: ptSlotIndex_def pt_slot_offset_def pt_index_def pt_bits_left_def
                               ptIndex_def ptBitsLeft_def)
@@ -746,7 +754,11 @@ lemma lookupPTSlot_corres:
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
-  by (corresKsimp corres: lookupPTSlotFromLevel_corres)
+  apply (corresKsimp corres: lookupPTSlotFromLevel_corres)
+  apply (fastforce simp: vspace_pt_at_eq pt_type_def
+                   dest!: valid_vspace_objs_strongD
+                   split: pt.splits)
+  done
 
 lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
@@ -852,19 +864,23 @@ next
                                 paddr_from_ppn_def isPagePTE_def)
          apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
         apply (clarsimp simp: checkPTAt_def)
-        apply (subst liftE_bindE, rule corres_stateAssert_implied)
+        apply (subst liftE_bindE, rule corres_stateAssert_implied[where P'=\<top>])
          apply (rule minus.hyps)
           apply (simp add: minus.hyps(2))
          apply (clarsimp simp: AARCH64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromPTE_def
                                paddr_from_ppn_def isPagePTE_def)
         apply clarsimp
-        apply (rule_tac x=NormalPT_T in exI)
-        apply (rule page_table_at_cross; assumption?)
-         apply (drule vs_lookup_table_pt_at; simp?)
-         apply (clarsimp simp: AARCH64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromPTE_def
-                               paddr_from_ppn_def isPagePTE_def)
-         apply (simp add: level_type_def split: if_split_asm)
-        apply (simp add: state_relation_def)
+        apply (prop_tac "pt_at NormalPT_T (pptr_from_pte pte) s")
+         apply (drule (2) valid_vspace_objs_strongD; assumption?)
+          apply simp
+         apply (simp add: state_relation_def)
+         apply (clarsimp simp: pt_at_eq in_omonad AARCH64_A.is_PageTablePTE_def pptr_from_pte_def
+                               getPPtrFromPTE_def isPagePTE_def paddr_from_ppn_def)
+        apply (frule page_table_at_cross; assumption?)
+         apply (fastforce simp: state_relation_def)
+        apply (clarsimp simp: AARCH64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromPTE_def
+                              paddr_from_ppn_def isPagePTE_def)
+        apply (fastforce simp: ghost_relation_def obj_at_def elim!: state_relationE)
        apply wpsimp+
      apply (simp add: vm_level.neq_0_conv)
      apply (frule (5) vs_lookup_table_is_aligned)
@@ -1087,10 +1103,13 @@ lemma findVSpaceForASID_corres:
        apply (case_tac entry')
        apply (clarsimp simp: checkPTAt_def abs_asid_entry_def)
        apply (rename_tac p)
-       apply (rule_tac Q="\<lambda>s. \<exists>pt_t. page_table_at' pt_t p s \<and> no_0_obj' s" in corres_cross_over_guard)
+       apply (rule_tac Q="\<lambda>s. page_table_at' VSRootPT_T p s \<and>
+                              gsPTTypes (ksArchState s) p = Some VSRootPT_T \<and>
+                              no_0_obj' s" in corres_cross_over_guard)
         apply clarsimp
-        apply (rule_tac x=VSRootPT_T in exI)
-        apply (erule (2) page_table_at_cross, simp add: state_relation_def)
+        apply (rule conjI)
+         apply (erule (2) page_table_at_cross, simp add: state_relation_def)
+        apply (fastforce simp: ghost_relation_def obj_at_def elim!: state_relationE)
        apply (simp add: liftE_bindE assertE_liftE)
        apply (rule corres_assert_assume)
         apply (rule corres_stateAssert_assume)

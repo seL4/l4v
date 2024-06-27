@@ -381,8 +381,7 @@ lemma kernel_entry_if_globals_equiv_scheduler:
                                and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
-  apply (wp globals_equiv_scheduler_inv' kernel_entry_if_globals_equiv)
-   apply (clarsimp)
+  apply (wpsimp wp: globals_equiv_scheduler_inv' kernel_entry_if_globals_equiv)
    apply assumption
   apply clarsimp
   done
@@ -2090,10 +2089,10 @@ lemma tcb_sched_action_reads_respects_g':
    apply (force intro: domtcbs simp: get_etcb_def)
   apply (simp add: equiv_valid_def2 ethread_get_def)
   apply (rule equiv_valid_rv_bind)
-    apply (wp equiv_valid_rv_trivial', simp)
+    apply (wpsimp wp: equiv_valid_rv_trivial')
    apply (rule equiv_valid_2_bind)
       prefer 2
-      apply (wp equiv_valid_rv_trivial, simp)
+      apply (wpsimp wp: equiv_valid_rv_trivial)
      apply (rule equiv_valid_2_bind)
         apply (rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag thread}" and
                                               L'="{pasObjectAbs aag thread}" in ev2_invisible')
@@ -2937,7 +2936,7 @@ lemma thread_get_tcb_context_reads_respects_g:
               and Q="\<top>\<top>" in equiv_valid_rv_bind)
     apply (rule thread_get_tcb_context_reads_respects_g_helper)
    apply (rule return_ev2, simp)
-  apply (rule hoare_post_taut)
+  apply (rule hoare_TrueI)
   done
 
 (* this is a little more complicated because the context isn't

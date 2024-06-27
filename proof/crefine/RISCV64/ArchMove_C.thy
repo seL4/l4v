@@ -297,14 +297,8 @@ lemma obj_at_kernel_mappings':
    \<Longrightarrow> p \<in> kernel_mappings"
   by (clarsimp simp: pspace_in_kernel_mappings'_def obj_at'_def dom_def)
 
-crunches Arch.switchToThread
-  for valid_queues'[wp]: valid_queues'
-  (simp: crunch_simps wp: hoare_drop_imps)
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-crunches switchToIdleThread, switchToThread
-  for valid_pspace'[wp]: valid_pspace'
-  (simp: whenE_def crunch_simps wp: hoare_drop_imps)
 
 lemma getMessageInfo_less_4:
   "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"

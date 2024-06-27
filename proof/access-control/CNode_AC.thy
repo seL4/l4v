@@ -211,7 +211,7 @@ lemma lookup_slot_for_cnode_op_authorised[wp]:
   apply (simp add: lookup_slot_for_cnode_op_def split del: if_split)
   apply (wp whenE_throwError_wp hoare_drop_imps
             resolve_address_bits_authorised
-              [THEN hoare_post_imp_R[where Q'="\<lambda>x s. is_subject aag (fst (fst x))"]]
+              [THEN hoare_strengthen_postE_R[where Q'="\<lambda>x s. is_subject aag (fst (fst x))"]]
          | wpc | fastforce)+
   done
 
@@ -246,7 +246,7 @@ lemma decode_cnode_inv_authorised:
   apply (simp add: authorised_cnode_inv_def decode_cnode_invocation_def
                    split_def whenE_def unlessE_def set_eq_iff
              cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R lsfco_cte_at
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R lsfco_cte_at
          | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)

@@ -49,6 +49,24 @@ lemma threadGet_eq:
   apply simp
   done
 
+lemma get_tsType_ccorres[corres]:
+  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_' (tcb_at' thread)
+           ({s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
+            {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
+  (getThreadState thread) (Call thread_state_get_tsType_'proc)"
+  unfolding getThreadState_def
+  apply (rule ccorres_from_spec_modifies [where P=\<top>, simplified])
+     apply (rule thread_state_get_tsType_spec)
+    apply (rule thread_state_get_tsType_modifies)
+   apply simp
+  apply (frule (1) obj_at_cslift_tcb)
+  apply (clarsimp simp: typ_heap_simps)
+  apply (rule bexI [rotated, OF threadGet_eq], assumption)
+  apply simp
+  apply (drule ctcb_relation_thread_state_to_tsType)
+  apply simp
+  done
+
 lemma threadGet_obj_at2:
   "\<lbrace>\<top>\<rbrace> threadGet f thread \<lbrace>\<lambda>v. obj_at' (\<lambda>t. f t = v) thread\<rbrace>"
   apply (rule hoare_post_imp)
@@ -76,13 +94,14 @@ lemma getRegister_ccorres [corres]:
        apply (drule (1) obj_at_cslift_tcb)
        apply (clarsimp simp: typ_heap_simps register_from_H_less)
        apply (clarsimp simp: getRegister_def typ_heap_simps)
-       apply (rule_tac x = "((atcbContextGet o tcbArch) ko reg, \<sigma>)" in bexI [rotated])
+       apply (rule_tac x = "((user_regs o atcbContextGet o tcbArch) ko reg, \<sigma>)" in bexI[rotated])
         apply (simp add: in_monad' asUser_def select_f_def split_def)
         apply (subst arg_cong2 [where f = "(\<in>)"])
           defer
           apply (rule refl)
          apply (erule threadSet_eq)
-        apply (clarsimp simp: ctcb_relation_def ccontext_relation_def carch_tcb_relation_def)
+        apply (clarsimp simp: ctcb_relation_def ccontext_relation_def cregs_relation_def
+                              carch_tcb_relation_def)
        apply (wp threadGet_obj_at2)+
    apply simp
   apply simp
@@ -183,6 +202,27 @@ lemma sanitiseRegister_spec:
   apply vcg
   apply (auto simp: C_register_defs sanitiseRegister_def word_0_sle_from_less
              split: register.split)
+  done
+
+lemma ccorres_pre_getObject_tcb:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>tcb. ko_at' tcb p s \<longrightarrow> P tcb s))
+                  {s. \<forall> tcb tcb'. cslift s (tcb_ptr_to_ctcb_ptr p) = Some tcb' \<and> ctcb_relation tcb tcb'
+                           \<longrightarrow> s \<in> P' tcb}
+                          hs (getObject p >>= (\<lambda>rv :: tcb. f rv)) c"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_guard_imp2)
+       apply (rule cc)
+      apply (rule conjI)
+       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
+       apply assumption
+      apply assumption
+     apply (wpsimp wp: empty_fail_getObject getTCB_wp)+
+    apply (erule cmap_relationE1[OF cmap_relation_tcb],
+           erule ko_at_projectKO_opt)
+  apply simp
   done
 
 end

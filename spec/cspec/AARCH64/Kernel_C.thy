@@ -36,10 +36,10 @@ lemma ptTranslationBits_vs_index_bits:
    is unfolded. It'd be nicer if we could also get something symbolic out of value_type, though *)
 lemma ptTranslationBits_vs_array_len':
   "2 ^ ptTranslationBits VSRootPT_T = vs_array_len"
-  by (simp add: vs_array_len_def ptTranslationBits_vs_index_bits vs_index_bits_def
+  by (simp add: vs_array_len_val ptTranslationBits_vs_index_bits vs_index_bits_def
                 Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
-lemmas ptTranslationBits_vs_array_len = ptTranslationBits_vs_array_len'[unfolded vs_array_len_def]
+lemmas ptTranslationBits_vs_array_len = ptTranslationBits_vs_array_len'[unfolded vs_array_len_val]
 
 type_synonym cghost_state =
   "(machine_word \<rightharpoonup> vmpage_size) \<times>   \<comment> \<open>Frame sizes\<close>
@@ -115,6 +115,9 @@ text \<open>Hide unqualified names conflicting with Kernel_Config names. Force u
   for these:\<close>
 hide_const (open)
   numDomains
+
+text \<open>Add a more usable name for the collection of ThreadState definitions\<close>
+lemmas ThreadState_defs = StrictC'_thread_state_defs
 
 (* hide vmpage sizes again *)
 hide_const

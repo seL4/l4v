@@ -127,9 +127,13 @@ lemma empty_fail_stateAssert[intro!, simp]:
   "empty_fail (stateAssert P l)"
   unfolding stateAssert_def by simp
 
-lemma haskell_assert_wp:
+lemma haskell_assert_wp[wp]:
   "\<lbrace>\<lambda>s. Q \<longrightarrow> P s\<rbrace> haskell_assert Q xs \<lbrace>\<lambda>_. P\<rbrace>"
   by simp wp
+
+lemma haskell_assert_inv:
+  "\<lbrace>P\<rbrace> haskell_assert Q l \<lbrace>\<lambda>_. P\<rbrace>"
+  by wpsimp
 
 lemma init_append_last:
   "xs \<noteq> [] \<Longrightarrow> init xs @ [last xs] = xs"
@@ -221,7 +225,7 @@ lemma findM_on_outcome':
 lemma findM_on_outcome:
   assumes x: "\<And>x ys. x \<in> set xs \<Longrightarrow> \<lbrace>Q None and I\<rbrace> f x \<lbrace>\<lambda>rv s. (rv \<longrightarrow> Q (Some x) s) \<and> (\<not> rv \<longrightarrow> Q None s \<and> I s)\<rbrace>"
   shows      "\<lbrace>Q None and I\<rbrace> findM f xs \<lbrace>Q\<rbrace>"
-  apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_weaken_pre)
    apply (rule findM_on_outcome' [where fn="\<lambda>s. if I s then set xs else {}"])
    apply (case_tac "x \<notin> set xs")
     apply simp
@@ -229,7 +233,7 @@ lemma findM_on_outcome:
    apply (case_tac "\<not> set xsa \<subseteq> set xs")
     apply simp
    apply simp
-   apply (rule hoare_vcg_precond_imp)
+   apply (rule hoare_weaken_pre)
     apply (rule hoare_post_imp [OF _ x])
      apply clarsimp
     apply assumption

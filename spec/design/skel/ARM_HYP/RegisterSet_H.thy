@@ -9,14 +9,14 @@ chapter "Register Set"
 theory RegisterSet_H
 imports
   "Lib.HaskellLib_H"
-  MachineTypes
+  MachineOps
 begin
 context Arch begin global_naming ARM_HYP_H
 
 definition
-  newContext :: "register => machine_word"
+  newContext :: "user_context"
 where
- "newContext \<equiv> (K 0) aLU initContext"
+ "newContext \<equiv> UserContext ((K 0) aLU initContext)"
 
 end
 end

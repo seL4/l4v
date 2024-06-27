@@ -104,7 +104,7 @@ findVSpaceForASID asid = do
     case maybeEntry of
         Just (ASIDPoolVSpace vmID ptr) -> do
             assert (ptr /= 0) "findVSpaceForASID: found null PD"
-            withoutFailure $ checkPTAt ptr
+            withoutFailure $ checkPTAt VSRootPT_T ptr
             return ptr
         _ -> throw $ InvalidRoot
 
@@ -112,9 +112,9 @@ maybeVSpaceForASID :: ASID -> Kernel (Maybe (PPtr PTE))
 maybeVSpaceForASID asid =
     liftM Just (findVSpaceForASID asid) `catchFailure` const (return Nothing)
 
--- used in proofs only, will be translated to ptable_at.
-checkPTAt :: PPtr PTE -> Kernel ()
-checkPTAt _ = return ()
+-- used in proofs only, will be translated to ptable_at + ghost state type.
+checkPTAt :: PT_Type -> PPtr PTE -> Kernel ()
+checkPTAt _ _ = return ()
 
 
 {- Locating Page Table Slots -}
@@ -173,7 +173,7 @@ lookupPTSlotFromLevel level ptPtr vPtr = do
     pte <- pteAtIndex level ptPtr vPtr
     if isPageTablePTE pte
         then do
-            checkPTAt (getPPtrFromPTE pte)
+            checkPTAt NormalPT_T (getPPtrFromPTE pte)
             lookupPTSlotFromLevel (level-1) (getPPtrFromPTE pte) vPtr
         else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
 
@@ -181,14 +181,20 @@ lookupPTSlotFromLevel level ptPtr vPtr = do
 -- a given virtual address, together with the number of bits left to translate,
 -- indicating the size of the frame.
 lookupPTSlot :: PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
-lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
+lookupPTSlot pt vptr = do
+    checkPTAt VSRootPT_T pt
+    lookupPTSlotFromLevel maxPTLevel pt vptr
 
 lookupFrame :: PPtr PTE -> VPtr -> Kernel (Maybe (Int, PAddr))
 lookupFrame vspaceRoot vPtr = do
     (bitsLeft, ptePtr) <- lookupPTSlot vspaceRoot vPtr
     pte <- getObject ptePtr
     if isPagePTE pte
-        then return $ Just (bitsLeft, pteBaseAddress pte)
+        then do
+            let baseAddr = pteBaseAddress pte
+            assert (fromPAddr baseAddr .&. mask bitsLeft == 0)
+                   "frame address must be aligned"
+            return $ Just (bitsLeft, baseAddr)
         else return Nothing
 
 {- Page Table Modification -}
@@ -198,7 +204,7 @@ lookupFrame vspaceRoot vPtr = do
 handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
 handleVMFault _ ARMDataAbort = do
     addr <- withoutFailure $ doMachineOp getFAR
-    fault <- withoutFailure $ doMachineOp getDFSR
+    fault <- withoutFailure $ doMachineOp getESR
     active <- withoutFailure $ curVCPUActive
     addr <- if active
             then do
@@ -213,7 +219,7 @@ handleVMFault _ ARMDataAbort = do
 
 handleVMFault thread ARMPrefetchAbort = do
     pc <- withoutFailure $ asUser thread $ getRestartPC
-    fault <- withoutFailure $ doMachineOp getIFSR
+    fault <- withoutFailure $ doMachineOp getESR
     active <- withoutFailure $ curVCPUActive
     pc <- if active
           then do
@@ -257,7 +263,6 @@ doFlush flushType vstart vend pstart =
                                cleanCacheRange_PoU vstart vend pstart
                                dsb
                                invalidateCacheRange_I vstart vend pstart
-                               branchFlushRange vstart vend pstart
                                isb
 
 {- Unmapping and Deletion -}
@@ -325,7 +330,7 @@ lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     if ptr == targetPtPtr
         then return slot
         else do
-            withoutFailure $ checkPTAt ptr
+            withoutFailure $ checkPTAt NormalPT_T ptr
             lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
 unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
@@ -385,6 +390,9 @@ setVMRoot tcb = do
                     capPTBasePtr = vspaceRoot }) -> do
                 vspaceRoot' <- findVSpaceForASID asid
                 when (vspaceRoot /= vspaceRoot') $ throw InvalidRoot
+                assert (fromVPtr pptrBase <= fromPPtr vspaceRoot &&
+                        fromPPtr vspaceRoot < fromVPtr pptrTop)
+                       "vspaceRoot must be in kernel window"
                 withoutFailure $ armContextSwitch vspaceRoot asid
             _ -> throw InvalidRoot)
         (\_ -> setGlobalUserVSpace)
@@ -536,6 +544,10 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     let attributes = attribsFromWord attr
     let frameSize = capFSize cap
     let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
+    let basePtr = capFBasePtr cap
+    assert (fromVPtr pptrBase <= fromPPtr basePtr &&
+            fromPPtr basePtr < fromVPtr pptrTop)
+           "cap ptr must be in kernel window"
     (vspace,asid) <- checkVSpaceRoot vspaceCap 1
     vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
     when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
@@ -550,7 +562,7 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
             when (vtop > pptrUserTop) $ throw $ InvalidArgument 0
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pgBits) $ throw $ FailedLookup False $ MissingCapability bitsLeft
-    let base = addrFromPPtr (capFBasePtr cap)
+    let base = addrFromPPtr basePtr
     return $ InvokePage $ PageMap {
         pageMapCap = cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
@@ -615,6 +627,9 @@ decodeARMPageTableInvocationMap cte cap vptr attr vspaceCap = do
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     oldPTE <- withoutFailure $ getObject slot
     when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
+    assert (fromVPtr pptrBase <= fromPPtr (capPTBasePtr cap) &&
+            fromPPtr (capPTBasePtr cap) < fromVPtr pptrTop)
+           "cap ptr must be in kernel window"
     let pte = PageTablePTE {
             ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits }
     let vptr = vptr .&. complement (mask bitsLeft)
@@ -779,12 +794,16 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
             unmapPageTable asid vaddr ptr
             let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTType cap)) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
+            doMachineOp $
+                cleanCacheRange_PoU (VPtr $ fromPPtr $ ptr)
+                                    (VPtr $ fromPPtr $ (ptr + bit (ptBits (capPTType cap)) - 1))
+                                    (addrFromPPtr ptr)
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot
     updateCap slot (ArchObjectCap $ cap { capPTMappedAddress = Nothing })
 
 
-performPageInvocation :: PageInvocation -> Kernel ()
+performPageInvocation :: PageInvocation -> Kernel [Word]
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     oldPte <- getObject slot
     let tlbFlushRequired = oldPte /= InvalidPTE
@@ -794,6 +813,7 @@ performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     when tlbFlushRequired $ do
         (asid, vaddr) <- return $ fromJust $ capFMappedAddress cap
         invalidateTLBByASIDVA asid vaddr
+    return []
 
 performPageInvocation (PageUnmap cap ctSlot) = do
     case capFMappedAddress cap of
@@ -801,23 +821,17 @@ performPageInvocation (PageUnmap cap ctSlot) = do
         _ -> return ()
     ArchObjectCap cap <- getSlotCap ctSlot
     updateCap ctSlot (ArchObjectCap $ cap { capFMappedAddress = Nothing })
+    return []
 
 performPageInvocation (PageGetAddr ptr) = do
-    let paddr = fromPAddr $ addrFromPPtr ptr
-    ct <- getCurThread
-    msgTransferred <- setMRs ct Nothing [paddr]
-    msgInfo <- return $ MI {
-            msgLength = msgTransferred,
-            msgExtraCaps = 0,
-            msgCapsUnwrapped = 0,
-            msgLabel = 0 }
-    setMessageInfo ct msgInfo
+    return [fromPAddr $ addrFromPPtr ptr]
 
 performPageInvocation (PageFlush flushType vstart vend pstart space asid) = do
     let start = VPtr $ fromPPtr $ ptrFromPAddr pstart
     let end = start + (vend - vstart)
     when (start < end) $ do
         doMachineOp $ doFlush flushType start end pstart
+    return []
 
 
 performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
@@ -849,13 +863,20 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
 performARMMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
 performARMMMUInvocation i = withoutPreemption $ do
     case i of
-        InvokeVSpace oper -> performVSpaceInvocation oper
-        InvokePageTable oper -> performPageTableInvocation oper
+        InvokeVSpace oper -> do
+            performVSpaceInvocation oper
+            return []
+        InvokePageTable oper -> do
+            performPageTableInvocation oper
+            return []
         InvokePage oper -> performPageInvocation oper
-        InvokeASIDControl oper -> performASIDControlInvocation oper
-        InvokeASIDPool oper -> performASIDPoolInvocation oper
+        InvokeASIDControl oper -> do
+            performASIDControlInvocation oper
+            return []
+        InvokeASIDPool oper -> do
+            performASIDPoolInvocation oper
+            return []
         InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
-    return $ []
 
 storePTE :: PPtr PTE -> PTE -> Kernel ()
 storePTE slot pte = do

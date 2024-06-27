@@ -10,6 +10,55 @@ imports
   SR_lemmas_C
 begin
 
+(* FIXME AARCH64: move up to CCorres_UL begin *)
+(* check RISCV for duplicates *)
+
+(* note: moving this lemma outside of kernel_m locale currently causes some proofs to fail *)
+lemma ccorres_cases:
+  assumes "P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf G G' hs a b"
+  assumes "\<not>P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf H H' hs  a b"
+  shows "ccorres_underlying srel Ga rrel xf arrel axf
+                            (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
+                            ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'}) hs
+                            a b"
+  by (cases P, auto simp: assms)
+
+lemma ccorres_dc_comp:
+  "ccorres_underlying srel G (dc \<circ> R) xf P P' hs m c = ccorres_underlying srel G dc xf P P' hs m c"
+  by simp
+
+(* FIXME AARCH64: remove from CSpace_RAB_C; also in other arches *)
+lemma ccorres_gen_asm_state:
+  assumes rl: "\<And>s. P s \<Longrightarrow> ccorres_underlying srel Ga r xf arrel axf G G' hs a c"
+  shows "ccorres_underlying srel Ga r xf arrel axf (G and P) G' hs a c"
+proof (rule ccorres_guard_imp2)
+  show "ccorres_underlying srel Ga r xf arrel axf (G and (\<lambda>_. \<exists>s. P s)) G' hs a c"
+    apply (rule ccorres_gen_asm)
+    apply (erule exE)
+    apply (erule rl)
+    done
+next
+  fix s s'
+  assume "(s, s') \<in> srel" and "(G and P) s" and "s' \<in> G'"
+  thus "(G and (\<lambda>_. \<exists>s. P s)) s \<and> s' \<in> G'"
+    by fastforce
+qed
+
+(* FIXME AARCH64: duplicates in Ipc_C and Tcb_C; also other arches *)
+lemma ccorres_abstract_known:
+  "\<lbrakk> \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' g (g' rv');
+     ccorres_underlying srel \<Gamma> rvr xf arel axf P P' hs f (g' val) \<rbrakk>
+     \<Longrightarrow> ccorres_underlying srel \<Gamma> rvr xf arel axf P (P' \<inter> {s. xf' s = val}) hs f g"
+  apply (rule ccorres_guard_imp2)
+   apply (rule_tac xf'=xf' in ccorres_abstract)
+    apply assumption
+   apply (rule_tac P="rv' = val" in ccorres_gen_asm2)
+   apply simp
+  apply simp
+  done
+
+(* move up to CCorres_UL end *)
+
 abbreviation
   "return_C \<equiv> CLanguage.creturn global_exn_var_'_update"
 lemmas return_C_def = creturn_def
@@ -286,9 +335,21 @@ lemma ccorres_return_C_errorE':
   apply simp
   done
 
+lemma ccorres_return_void_C_Seq:
+  "ccorres_underlying sr \<Gamma> r rvxf arrel xf P P' hs X return_void_C \<Longrightarrow>
+      ccorres_underlying sr \<Gamma> r rvxf arrel xf P P' hs X (return_void_C ;; Z)"
+  apply (clarsimp simp: return_void_C_def)
+  apply (erule ccorres_semantic_equiv0[rotated])
+  apply (rule semantic_equivI)
+  apply (clarsimp simp: exec_assoc[symmetric])
+  apply (rule exec_Seq_cong, simp)
+  apply (rule iffI)
+   apply (auto elim!:exec_Normal_elim_cases intro: exec.Throw exec.Seq)[1]
+  apply (auto elim!:exec_Normal_elim_cases intro: exec.Throw)
+ done
+
 context kernel
 begin
-
 
 abbreviation
   "ccorres r xf \<equiv> ccorres_underlying rf_sr \<Gamma> r xf r xf"

@@ -169,7 +169,7 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]: setBoundNotification, setNotif
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
-(simp: Let_def)
+  (simp: Let_def wp: empty_fail_getObject)
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
   (ignore_del: ThreadDecls_H.suspend)
@@ -279,7 +279,7 @@ crunch (empty_fail) empty_fail: callKernel
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
-              (\<lambda>s. scheduler_action s = resume_cur_thread) and
+              schact_is_rct and
               (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and

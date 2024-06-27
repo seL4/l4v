@@ -132,33 +132,6 @@ definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Righ
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
 
-subsection "Clearing Memory"
-
-text \<open>Clear memory contents to recycle it as user memory\<close>
-definition clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
-  "clearMemory ptr bytelength \<equiv>
-     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
-
-text \<open>Haskell simulator interface stub.\<close>
-definition clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
-  "clearMemoryVM ptr bits \<equiv> return ()"
-
-text \<open>
-  Initialize memory to be used as user memory. Note that zeroing out the memory is redundant
-  in the specifications. In any case, we cannot abstract from the call to cleanCacheRange, which
-  appears in the implementation.\<close>
-abbreviation (input) "initMemory == clearMemory"
-
-text \<open>
-  Free memory that had been initialized as user memory. While freeing memory is a no-op in the
-  implementation, we zero out the underlying memory in the specifications to avoid garbage. If we
-  know that there is no garbage, we can compute from the implementation state what the exact memory
-  content in the specifications is.\<close>
-definition freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
-  "freeMemory ptr bits \<equiv>
-     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
-
-
 subsection "User Monad and Registers"
 
 type_synonym user_regs = "register \<Rightarrow> machine_word"
@@ -221,6 +194,15 @@ definition switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarr
 consts' fpuThreadDeleteOp_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition fpuThreadDeleteOp :: "machine_word \<Rightarrow> unit machine_monad" where
   "fpuThreadDeleteOp thread_ptr \<equiv> machine_op_lift (fpuThreadDeleteOp_impl thread_ptr)"
+
+(* FIXME this machine op is used to abstract the entire lazy FPU switch interrupt mechanism,
+   which can only trigger when the current thread's FPU is disabled and it performs an FPU
+   operation. We have no model for this mechanism or the state that it caches, so for
+   verification purposes we act as if the FPU is always enabled.
+   Future lazy FPU switch overhaul will involve the state that this operation reads, at which
+   point it should become a normal function. *)
+definition isFpuEnable :: "bool machine_monad" where
+  "isFpuEnable \<equiv> return True"
 
 
 subsection "Fault Registers"
@@ -428,6 +410,35 @@ lemmas cache_machine_op_defs =
   invalidateCacheRange_RAM_def
   invalidateCacheRange_I_def
   branchFlushRange_def
+
+
+subsection "Clearing Memory"
+
+text \<open>Clear memory contents to recycle it as user memory\<close>
+definition clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
+  "clearMemory ptr bytelength \<equiv> do
+     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1];
+     cleanCacheRange_RAM ptr (ptr + of_nat bytelength - 1) (addrFromPPtr ptr)
+   od"
+
+text \<open>Haskell simulator interface stub.\<close>
+definition clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
+  "clearMemoryVM ptr bits \<equiv> return ()"
+
+text \<open>
+  Initialize memory to be used as user memory. Note that zeroing out the memory is redundant
+  in the specifications. In any case, we cannot abstract from the call to cleanCacheRange, which
+  appears in the implementation.\<close>
+abbreviation (input) "initMemory == clearMemory"
+
+text \<open>
+  Free memory that had been initialized as user memory. While freeing memory is a no-op in the
+  implementation, we zero out the underlying memory in the specifications to avoid garbage. If we
+  know that there is no garbage, we can compute from the implementation state what the exact memory
+  content in the specifications is.\<close>
+definition freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
+  "freeMemory ptr bits \<equiv>
+     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
 
 subsection "Virtual Memory"

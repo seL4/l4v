@@ -138,6 +138,8 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbFaultHandler = CPtr 0,
 >         tcbIPCBuffer = VPtr 0,
 >         tcbBoundNotification = Nothing,
+>         tcbSchedPrev = Nothing,
+>         tcbSchedNext = Nothing,
 >         tcbArch = newArchTCB }
 >     injectKO   = KOTCB
 >     projectKO o = case o of

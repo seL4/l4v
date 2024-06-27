@@ -1439,10 +1439,6 @@ lemma cur_thread_cur_domain:
   by (clarsimp simp: pred_tcb_at_def invs_def valid_idle_def
                      valid_state_def obj_at_def guarded_pas_domain_def)
 
-lemma valid_sched_valid_queues[intro]:
-  "valid_sched s \<Longrightarrow> valid_queues s"
-  by (simp add: valid_sched_def)
-
 lemma ethread_get_wp2:
   "\<lbrace>\<lambda>s. \<forall>etcb. etcb_at ((=) etcb) t s \<longrightarrow> Q (f etcb) s\<rbrace>
    ethread_get f t
@@ -2397,7 +2393,9 @@ lemma context_update_cur_thread_snippit_cur_domain:
      (\<lambda>s. reads_scheduler_cur_domain aag l s \<and> invs s \<and> silc_inv aag st s \<and>
           (ct_idle s \<longrightarrow> uc = idle_context s) \<and> guarded_pas_domain aag s)
      (gets cur_thread >>= thread_set (tcb_arch_update (arch_tcb_context_set uc)))"
-  apply wp
+  \<comment> \<open>FIXME: maybe should make an equiv_valid_pre?\<close>
+  apply (rule equiv_valid_guard_imp)
+   apply wp
   apply (clarsimp simp: cur_thread_idle silc_inv_not_cur_thread del: notI)
   done
 

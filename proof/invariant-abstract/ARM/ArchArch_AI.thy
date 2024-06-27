@@ -862,7 +862,7 @@ proof -
 
 qed
 
-lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
+lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_TrueI, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
@@ -1001,13 +1001,13 @@ lemma create_mapping_entries_parent_for_refs:
                                    superSectionPDE_offsets_def)
      apply (rule hoare_pre)
       apply wp
-      apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to)
+      apply (rule hoare_strengthen_postE_R, rule lookup_pt_slot_cap_to)
       apply (elim exEI)
       apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def)
      apply simp
     apply (rule hoare_pre)
      apply wp
-     apply (rule hoare_post_imp_R)
+     apply (rule hoare_strengthen_postE_R)
       apply (rule lookup_pt_slot_cap_to_multiple1)
      apply (elim conjE exEI cte_wp_at_weakenE)
      apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def
@@ -1049,7 +1049,7 @@ lemma find_pd_for_asid_shifting_voodoo:
   "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace>
      find_pd_for_asid asid
    \<lbrace>\<lambda>rv s. v >> 20 = rv + (v >> 20 << 2) && mask pd_bits >> 2\<rbrace>,-"
-  apply (rule hoare_post_imp_R,
+  apply (rule hoare_strengthen_postE_R,
          rule find_pd_for_asid_aligned_pd)
   apply (subst pd_shifting_dual, simp)
   apply (rule word_eqI)
@@ -1068,7 +1068,7 @@ lemma find_pd_for_asid_ref_offset_voodoo:
    \<lbrace>\<lambda>rv. (ref \<rhd> (rv + (v >> 20 << 2) && ~~ mask pd_bits))\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule_tac Q'="\<lambda>rv s. is_aligned rv 14 \<and> (ref \<rhd> rv) s"
-               in hoare_post_imp_R)
+               in hoare_strengthen_postE_R)
    apply (simp add: ucast_ucast_mask
                     mask_asid_low_bits_ucast_ucast)
    apply (fold asid_low_bits_def)
@@ -1233,7 +1233,7 @@ lemma cte_wp_at_page_cap_weaken:
 lemma find_pd_for_asid_lookup_pd_wp:
   "\<lbrace> \<lambda>s. valid_vspace_objs s \<and> (\<forall>pd. vspace_at_asid asid pd s \<and> page_directory_at pd s
     \<and> (\<exists>\<rhd> pd) s \<longrightarrow> Q pd s) \<rbrace> find_pd_for_asid asid \<lbrace> Q \<rbrace>, -"
-  apply (rule hoare_post_imp_R)
+  apply (rule hoare_strengthen_postE_R)
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_page_directory])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_lookup, simplified])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_pd_at_asid, simplified])
@@ -1318,7 +1318,7 @@ lemma arch_decode_inv_wf[wp]:
                                (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {}) and
                                cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
                                (\<lambda>s. arm_asid_table (arch_state s) free = None)"
-                         in hoare_post_imp_R)
+                         in hoare_strengthen_postE_R)
               apply (simp add: lookup_target_slot_def)
               apply wp
              apply (clarsimp simp: cte_wp_at_def)
@@ -1402,7 +1402,7 @@ lemma arch_decode_inv_wf[wp]:
                cong: if_cong)
    apply (rename_tac word option)
    apply (rule hoare_pre)
-    apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_lift_R
+    apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_liftE_R
             | wpc
             | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def split: if_splits
             | rule_tac x="fst p" in hoare_imp_eq_substR
@@ -1410,14 +1410,14 @@ lemma arch_decode_inv_wf[wp]:
          apply (rule_tac Q'="\<lambda>a b. ko_at (ArchObj (PageDirectory pd))
                                     (a + (args ! 0 >> 20 << 2) && ~~ mask pd_bits) b \<longrightarrow>
                                     pd (ucast (a + (args ! 0 >> 20 << 2) && mask pd_bits >> 2)) =
-                                    InvalidPDE \<longrightarrow> L word option p pd a b" for L in hoare_post_imp_R[rotated])
+                                    InvalidPDE \<longrightarrow> L word option p pd a b" for L in hoare_strengthen_postE_R[rotated])
           apply (intro impI)
           apply (erule impE)
            apply clarsimp
           apply (erule impE)
            apply (clarsimp split: pde.splits)
           apply assumption
-         apply ((wp whenE_throwError_wp hoare_vcg_all_lift_R
+         apply ((wp whenE_throwError_wp hoare_vcg_all_liftE_R
                     find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]
                     find_pd_for_asid_ref_offset_voodoo find_pd_for_asid_shifting_voodoo
                     find_pd_for_asid_inv
@@ -1472,7 +1472,7 @@ lemma arch_decode_inv_wf[wp]:
                       get_master_pde_wp whenE_throwError_wp
                 simp: resolve_vaddr_def valid_arch_inv_def valid_pdi_def Let_def)
         apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
          apply wpsimp+
    apply (wpsimp wp: throwError_validE_R simp: valid_cap_def mask_def)+
   done

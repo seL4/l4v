@@ -29,7 +29,8 @@ termination
   done
 
 defs
-  resolveAddressBits_decl_def [simp]:
+  resolveAddressBits_decl_def:
   "CSpaceDecls_H.resolveAddressBits \<equiv> resolveAddressBits"
+declare resolveAddressBits_decl_def[simp]
 
 end

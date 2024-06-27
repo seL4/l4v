@@ -109,7 +109,7 @@ lemma tcb_set_cap_local_via_explosion:
   unfolding sep_map_ko_def
   apply (rule hoare_gen_asmE'[simplified K_def pred_conj_def])
   apply (clarsimp simp: a_base_type_cmp_of_def)
-  apply (rule_tac E=E in hoare_post_impErr)
+  apply (rule_tac E=E in hoare_strengthen_postE)
     apply (rule hoare_pre)
      apply (rule ki_set_cap_frame)
     apply (clarsimp simp only: sep_conj_exists)
@@ -138,7 +138,7 @@ lemma cnode_set_cap_local_via_explosion:
   unfolding sep_map_ko_def
   apply (rule hoare_gen_asmE'[simplified K_def pred_conj_def])
    \<comment> \<open>concludes zero-sized cnode case\<close>
-   apply (rule_tac E=E in hoare_post_impErr)
+   apply (rule_tac E=E in hoare_strengthen_postE)
      apply (rule hoare_pre)
       apply (rule ki_set_cap_frame)
      apply (clarsimp simp only: sep_conj_exists)

@@ -887,7 +887,7 @@ qed
 
 
 lemmas aci_invs[wp] =
-  aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
+  aci_invs'[where Q=\<top>,simplified hoare_TrueI, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma obj_at_upd2:
   "obj_at P t' (s\<lparr>kheap := (kheap s)(t \<mapsto> v, x \<mapsto> v')\<rparr>) =
@@ -1078,8 +1078,8 @@ lemma is_irq_active_sp:
 lemma restore_virt_timer_valid_irq_states[wp]:
   "restore_virt_timer vcpu_ptr \<lbrace>valid_irq_states\<rbrace>"
   apply (clarsimp simp: restore_virt_timer_def is_irq_active_def liftM_def)
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ is_irq_active_sp]\<close>
-                       \<open>rule hoare_seq_ext_skip,
+  apply (repeat_unless \<open>rule bind_wp[OF _ is_irq_active_sp]\<close>
+                       \<open>rule bind_wp_fwd_skip,
                         wpsimp wp: dmo_valid_irq_states
                              simp: isb_def setHCR_def read_cntpct_def\<close>)
   apply (wpsimp simp: do_machine_op_def is_irq_active_def get_irq_state_def
@@ -1294,7 +1294,7 @@ crunch_ignore (add: select_ext find_vspace_for_asid)
 
 crunch inv [wp]: arch_decode_invocation "P"
   (wp: crunch_wps select_ext_weak_wp hoare_vcg_all_lift
-       hoare_vcg_all_lift_R hoare_drop_imps simp: crunch_simps)
+       hoare_vcg_all_liftE_R hoare_drop_imps simp: crunch_simps)
 
 
 declare lookup_slot_for_cnode_op_cap_to [wp]
@@ -1610,7 +1610,7 @@ lemma decode_asid_control_invocation_wf[wp]:
                                      and (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {})
                                      and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap False frame pageBits idx) (snd (excaps!0))
                                      and (\<lambda>s. arm_asid_table (arch_state s) free = None)"
-                  in hoare_post_imp_R)
+                  in hoare_strengthen_postE_R)
            apply (simp add: lookup_target_slot_def)
            apply wp
           apply (clarsimp simp: cte_wp_at_def)

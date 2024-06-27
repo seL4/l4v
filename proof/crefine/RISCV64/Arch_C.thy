@@ -1104,11 +1104,9 @@ lemma decodeRISCVPageTableInvocation_ccorres:
   subgoal for _ v1
     (* RISCVPageTableUnmap: C preconditions *)
     apply (drule_tac t="cteCap _" in sym)
-    apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs"
-                              mask_eq_iff_w2p word_size
-                              ct_in_state'_def st_tcb_at'_def
-                              word_sle_def word_sless_def
-                              typ_heap_simps' bit_simps)
+    apply (clarsimp simp: rf_sr_ksCurThread ThreadState_defs mask_eq_iff_w2p word_size
+                          ct_in_state'_def st_tcb_at'_def word_sle_def word_sless_def
+                          typ_heap_simps' bit_simps)
     apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
     apply clarsimp
     apply (case_tac v1; clarsimp)
@@ -1120,7 +1118,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
     (* RISCVPageTableMap: C preconditions *)
     apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
              SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-     apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+     apply (solves \<open>clarsimp simp: ThreadState_defs mask_def\<close>)
     apply (clarsimp cong: imp_cong conj_cong)
     apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
                           excaps_in_mem_def slotcap_in_mem_def
@@ -1348,7 +1346,7 @@ lemma performPageGetAddress_ccorres:
        apply clarsimp
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
-      apply (rule hoare_post_taut[of \<top>])
+      apply (rule hoare_TrueI[of \<top>])
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
      apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
@@ -1371,7 +1369,7 @@ lemma performPageGetAddress_ccorres:
                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                  apply (rule allI, rule conseqPre, vcg)
                  apply (clarsimp simp: return_def)
-                apply (rule hoare_post_taut[of \<top>])
+                apply (rule hoare_TrueI[of \<top>])
                apply (vcg exspec=setThreadState_modifies)
               apply wpsimp
              apply (vcg exspec=setRegister_modifies)
@@ -1386,29 +1384,20 @@ lemma performPageGetAddress_ccorres:
        apply clarsimp
        apply (vcg exspec=setRegister_modifies)
       apply wpsimp
-     apply (clarsimp simp: ThreadState_Running_def)
+     apply clarsimp
      apply (vcg exspec=lookupIPCBuffer_modifies)
     apply clarsimp
     apply vcg
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
    apply (auto simp: RISCV64.badgeRegister_def RISCV64_H.badgeRegister_def Kernel_C.badgeRegister_def
-                     Kernel_C.a0_def fromPAddr_def ThreadState_Running_def
+                     Kernel_C.a0_def fromPAddr_def ThreadState_defs
                      pred_tcb_at'_def obj_at'_def ct_in_state'_def)
-  done
-
-lemma vaddr_segment_nonsense3_folded:
-  "is_aligned (p :: machine_word) pageBits \<Longrightarrow>
-   (p + ((vaddr >> pageBits) && mask (pt_bits - word_size_bits) << word_size_bits) && ~~ mask pt_bits) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (simp add: bit_simps mask_def)+
-  apply (rule shiftl_less_t2n[where m=12 and n=3, simplified, OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
-   apply simp+
   done
 
 lemma vmsz_aligned_addrFromPPtr':
@@ -1453,18 +1442,6 @@ lemma slotcap_in_mem_valid:
   apply (erule(1) ctes_of_valid')
   done
 
-lemma unat_less_iff64:
-  "\<lbrakk>unat (a::machine_word) = b;c < 2^word_bits\<rbrakk>
-   \<Longrightarrow> (a < of_nat c) = (b < c)"
-  apply (rule iffI)
-    apply (drule unat_less_helper)
-    apply simp
-  apply (simp add:unat64_eq_of_nat)
-  apply (rule of_nat_mono_maybe)
-   apply (simp add:word_bits_def)
-  apply simp
-  done
-
 lemma injection_handler_if_returnOk:
   "injection_handler Inl (if a then b else returnOk c)
   = (if a then (injection_handler Inl b) else returnOk c)"
@@ -1476,11 +1453,6 @@ lemma injection_handler_if_returnOk:
 
 lemma pbfs_less: "pageBitsForSize sz < 31"
   by (case_tac sz,simp_all add: bit_simps)
-
-definition
-  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
-where
-  "to_option f x \<equiv> if f x then Some x else None"
 
 lemma cte_wp_at_eq_gsMaxObjectSize:
   "cte_wp_at' ((=) cap o cteCap) slot s
@@ -2099,7 +2071,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
 
   apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4
                    = SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-  apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+  apply (solves \<open>clarsimp simp: ThreadState_defs mask_def\<close>)
 
   apply (rule conjI)
    (* RISCVPageMap, Haskell side *)
@@ -2149,7 +2121,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
     apply (clarsimp simp: not_le rf_sr_ksCurThread isCap_simps)
     apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
              SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-     apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+     apply (solves \<open>clarsimp\<close>)
     apply (rule conjI, solves \<open>simp add: word_less_nat_alt\<close>)  (* size args < 3 *)
 
     (* get a hold of our valid caps and resolve the C heap *)
@@ -2541,7 +2513,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                         apply (rule_tac Q'=UNIV and A'="{}" in conseqPost)
                           apply (vcg exspec=ensureEmptySlot_modifies)
                          apply (frule length_ineq_not_Nil)
-                         apply (clarsimp simp: null_def ThreadState_Restart_def mask_def hd_conv_nth
+                         apply (clarsimp simp: null_def ThreadState_defs mask_def hd_conv_nth
                                                isCap_simps rf_sr_ksCurThread cap_get_tag_UntypedCap
                                                word_le_make_less asid_high_bits_def
                                          split: list.split)
@@ -2861,13 +2833,14 @@ lemma decodeRISCVMMUInvocation_ccorres:
     apply (rule conjI; clarsimp)
     apply (frule invs_arch_state')
     apply (rule conjI, clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
-    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_queues
-                          invs_sch_act_wf'
+    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_sch_act_wf'
                           unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
     apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
     apply (rule conjI; clarsimp)+
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (intro conjI)
+            apply fastforce
+           apply fastforce
           apply fastforce
          apply (fastforce elim!: pred_tcb'_weakenE)
         apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
@@ -2884,9 +2857,11 @@ lemma decodeRISCVMMUInvocation_ccorres:
      apply (clarsimp simp: le_mask_asid_bits_helper)
     apply (simp add: is_aligned_shiftl_self)
    (* RISCVASIDPoolAssign *)
-   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_queues invs_sch_act_wf')
+   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_sch_act_wf')
    apply (frule invs_arch_state', clarsimp)
    apply (intro conjI)
+          apply fastforce
+         apply fastforce
         apply fastforce
        apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
       apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
@@ -2905,8 +2880,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
   apply clarsimp
   apply (clarsimp simp: cte_wp_at_ctes_of asidHighBits_handy_convs
                         word_sle_def word_sless_def asidLowBits_handy_convs
-                        rf_sr_ksCurThread "StrictC'_thread_state_defs"
-                        mask_def[where n=4]
+                        rf_sr_ksCurThread ThreadState_defs mask_def[where n=4]
                   cong: if_cong)
   apply (clarsimp simp: ccap_relation_isDeviceCap2 objBits_simps pageBits_def case_bool_If)
   apply (rule conjI; clarsimp)

@@ -91,7 +91,7 @@ type_synonym ppn = "ppn_len word"
 text \<open>This lemma encodes @{typ ppn_len} value above as a term, so we can use it generically:\<close>
 lemma ppn_len_def':
   "ppn_len = ipa_size - pageBits"
-  by (simp add: ppn_len_def pageBits_def ipa_size_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+  by (simp add: ppn_len_val pageBits_def ipa_size_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 datatype pte =
     InvalidPTE
@@ -174,7 +174,7 @@ definition
   "default_vcpu \<equiv> \<lparr>
       vcpu_tcb    = None,
       vcpu_vgic   = default_gic_vcpu_interface,
-      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault),
+      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM),
       vcpu_vppi_masked = (\<lambda>_. False),
       vcpu_vtimer = VirtTimer 0
    \<rparr>"

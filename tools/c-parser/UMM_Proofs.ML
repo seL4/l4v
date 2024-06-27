@@ -406,28 +406,28 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
       Const(@{const_name "typ_name_itself"}, mk_itself_type recty -->
           typ_name_ty) $ Free("x", mk_itself_type recty)
   val typnameitself_rhs = mk_string recname
-  val typnameitself_triple =
-      ((Binding.name (recname ^ "_typ_name_itself"),
-        mk_defeqn(typnameitself_lhs, typnameitself_rhs)),
-       [Simplifier.simp_add])
+  val typnameitself_tuple =
+      (Binding.name (recname ^ "_typ_name_itself"),
+       mk_defeqn(typnameitself_lhs, typnameitself_rhs))
 
   (* the typ_tag definition *)
   val typtag_lhs = mk_typ_info_tm recty $ Free("x", mk_itself_type recty)
   val typtag_rhs = tag_tm
-  val typtag_triple =
-      ((Binding.name (recname ^ "_typ_tag"),
-        mk_defeqn(typtag_lhs, typtag_rhs)),
-       [])
+  val typtag_tuple =
+      (Binding.name (recname ^ "_typ_tag"),
+       mk_defeqn(typtag_lhs, typtag_rhs))
 
   val typ_info_TYPE = mk_typ_info_of recty
 
   (* make the definitions *)
   val (typnameitself_thm, typtag_thm, thy) =
-      case Global_Theory.add_defs true
-                                  [typnameitself_triple, typtag_triple] thy
+      case fold_map Global_Theory.add_def_overloaded
+                                  [typnameitself_tuple, typtag_tuple] thy
        of
           ([x,y], thy) => (x,y,thy)
         | _ => raise Fail "UMM_Proofs: Bind error"
+  val (_, thy) =
+      Global_Theory.note_thms "" ((Binding.empty, []), [([typnameitself_thm], [Simplifier.simp_add])]) thy
   val thy = add_data_thms [("typ_name_itself", [typnameitself_thm])] thy
 
   val _ = phase "MEMTYPE"

@@ -161,6 +161,8 @@ setNextPC = setRegister (Register AARCH64.NextIP)
 -- It zeros every word to ensure that user tasks cannot access any private data
 -- that might previously have been stored in the region.
 
+-- This function's abstract definition is in MachineOps.thy
+
 clearMemory :: PPtr Word -> Int -> MachineMonad ()
 clearMemory ptr byteLength = error "Unimplemented -- machine op"
 
@@ -243,13 +245,6 @@ enableFpuEL01 = error "Unimplemented - machine op"
 getFAR :: MachineMonad VPtr
 getFAR = error "Unimplemented - machine op"
 
-getDFSR :: MachineMonad Word
-getDFSR =  error "Unimplemented - machine op"
-
-getIFSR :: MachineMonad Word
-getIFSR =  error "Unimplemented - machine op"
-
-
 {- Hypervisor-specific status/control registers -}
 
 setHCR :: Word -> MachineMonad ()
@@ -297,9 +292,9 @@ data VMRights
     deriving (Show, Eq)
 
 vmRightsToBits :: VMRights -> Word
-vmRightsToBits VMKernelOnly = 1
-vmRightsToBits VMReadOnly = 2
-vmRightsToBits VMReadWrite = 3
+vmRightsToBits VMKernelOnly = 0
+vmRightsToBits VMReadOnly = 3
+vmRightsToBits VMReadWrite = 1
 
 allowWrite :: VMRights -> Bool
 allowWrite VMKernelOnly = False
@@ -395,6 +390,9 @@ debugPrint str = liftIO $ putStrLn str
 fpuThreadDeleteOp :: Word -> MachineMonad ()
 fpuThreadDeleteOp tcbPtr = error "Unimplemented callback"
 
+isFpuEnable :: MachineMonad Bool
+isFpuEnable = error "Unimplemented - lazy FPU switch abstracted as machine op"
+
 {- GIC VCPU interface -}
 
 get_gic_vcpu_ctrl_hcr :: MachineMonad Word32
@@ -445,7 +443,7 @@ check_export_arch_timer = error "Unimplemented - machine op"
 {- Constants -}
 
 hcrVCPU =  (0x80086039 :: Word) -- HCR_VCPU
-hcrNative = (0x8e28703b :: Word) -- HCR_NATIVE
+hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
 vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN

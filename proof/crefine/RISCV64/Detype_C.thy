@@ -1544,7 +1544,7 @@ lemma deleteObjects_ccorres':
              doMachineOp_modify modify_modify o_def ksPSpace_ksMSu_comm
              bind_assoc modify_machinestate_assert_cnodes_swap
              modify_modify_bind)
-  apply (rule ccorres_stateAssert_fwd)
+  apply (rule ccorres_stateAssert_fwd)+
   apply (rule ccorres_stateAssert_after)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
@@ -1680,35 +1680,11 @@ proof -
     done
 
   moreover
-  from invs have "valid_queues s" ..
-  hence "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s \<and> ko_wp_at' live' t s"
-    apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def)
-    apply (drule spec, drule spec)
-    apply clarsimp
-    apply (drule (1) bspec)
-    apply (rule conjI)
-    apply (erule obj_at'_weakenE)
-    apply simp
-    apply (simp add: obj_at'_real_def)
-    apply (erule ko_wp_at'_weakenE)
-    apply (clarsimp simp: inQ_def)
-    done
-  hence tat: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s"
-    and  tlive: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). ko_wp_at' live' t s"
-    by auto
   from sr have
-    "cready_queues_relation (clift ?th_s)
-        (ksReadyQueues_' (globals s')) (ksReadyQueues s)"
+    "cready_queues_relation (ksReadyQueues s) (ksReadyQueues_' (globals s'))"
     unfolding cready_queues_relation_def rf_sr_def cstate_relation_def
               cpspace_relation_def
     apply (clarsimp simp: Let_def all_conj_distrib)
-    apply (drule spec, drule spec, drule mp)
-    apply fastforce
-    apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+,
-           simp_all add: objBits_simps pageBits_def)[1])+
-      \<comment> \<open>waiting ...\<close>
-    apply (simp add: tcb_queue_relation_live_restrict
-                     [OF D.valid_untyped tat tlive rl])
     done
 
   moreover

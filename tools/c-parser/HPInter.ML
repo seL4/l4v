@@ -344,8 +344,8 @@ val globalsN = "_global_addresses"
 fun add_syntax (name,recp,inpars,outpars) thy = let
   open HoarePackage
   val name = suffix HoarePackage.proc_deco name
-  val pars = map (fn par => (In,varname par)) inpars@
-             map (fn par => (Out,varname par)) outpars
+  val pars = map (fn par => (In, varname par, NONE)) inpars@
+             map (fn par => (Out, varname par, NONE)) outpars
 
   val thy_decl =
       thy |> Context.theory_map (add_params Morphism.identity name pars)

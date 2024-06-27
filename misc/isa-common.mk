@@ -34,12 +34,6 @@ ifndef L4V_ARCH
   export L4V_ARCH=ARM
 endif
 
-ifdef BUILD_CACHE
-  ISABELLE_BUILD_OPTS=-o "save_skip_cache=true"
-else
-  ISABELLE_BUILD_OPTS=
-endif
-
 # Setup rules for the heaps.
 $(HEAPS): .FORCE
 	$(ISABELLE_TOOL) build -b -v ${ISABELLE_BUILD_OPTS} -d $(ROOT_PATH) $@
@@ -75,4 +69,3 @@ realclean: clean
 
 # Common targets that should be considered PHONY.
 .PHONY: all default images test
-

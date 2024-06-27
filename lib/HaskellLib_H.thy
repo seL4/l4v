@@ -14,7 +14,7 @@ imports
   Lib
   More_Numeral_Type
   Monads.Nondet_VCG
-  Monads.Reader_Option_Monad
+  Monads.Nondet_Reader_Option
 begin
 
 abbreviation (input) "flip \<equiv> swp"
@@ -527,6 +527,26 @@ definition ohaskell_fail :: "unit list \<Rightarrow> ('s, 'a) lookup" where
 
 definition ohaskell_assert :: "bool \<Rightarrow> unit list \<Rightarrow> ('s, unit) lookup" where
   "ohaskell_assert P ls \<equiv> if P then oreturn () else ofail"
+
+lemma no_ofail_ohaskell_assert[wp]:
+  "no_ofail (\<lambda>_. P) (ohaskell_assert P [])"
+  by (clarsimp simp: no_ofail_def ohaskell_assert_def)
+
+lemma ohaskell_assert_wp[wp]:
+  "\<lblot>\<lambda>s. Q \<longrightarrow> P () s\<rblot> ohaskell_assert Q [] \<lblot>P\<rblot>"
+  apply (clarsimp simp: ohaskell_assert_def)
+  apply (intro conjI; wpsimp)
+  done
+
+lemma ohaskell_assert_sp:
+  "\<lblot>P\<rblot> ohaskell_assert Q [] \<lblot>\<lambda>_ s. P s \<and> Q\<rblot>"
+  apply (clarsimp simp: ohaskell_assert_def)
+  apply (intro conjI; wpsimp)
+  done
+
+lemma gets_the_ohaskell_assert:
+  "gets_the (ohaskell_assert P []) = assert P"
+  by (clarsimp simp: ohaskell_assert_def split: if_splits)
 
 lemmas omonad_defs = omonad_defs ohaskell_assert_def ohaskell_fail_def
 

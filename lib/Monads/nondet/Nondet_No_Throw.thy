@@ -47,7 +47,7 @@ lemma no_throw_bindE:
   "\<lbrakk> no_throw A X; \<And>a. no_throw B (Y a); \<lbrace> A \<rbrace> X \<lbrace> \<lambda>_. B \<rbrace>,\<lbrace> \<lambda>_ _. True \<rbrace> \<rbrakk>
    \<Longrightarrow> no_throw A (X >>=E Y)"
   unfolding no_throw_def
-  using hoare_validE_cases seqE by blast
+  using hoare_validE_cases bindE_wp_fwd by blast
 
 lemma no_throw_bindE_simple:
   "\<lbrakk> no_throw \<top> L; \<And>x. no_throw \<top> (R x) \<rbrakk> \<Longrightarrow> no_throw \<top> (L >>=E R)"
@@ -81,7 +81,7 @@ lemma bindE_fail_propagates:
 lemma whileLoopE_nothrow:
   "\<lbrakk> \<And>x. no_throw \<top> (B x) \<rbrakk> \<Longrightarrow> no_throw \<top> (whileLoopE C B x)"
   unfolding no_throw_def
-  by (fastforce intro!: validE_whileLoopE intro: validE_weaken)
+  by (fastforce intro!: validE_whileLoopE intro: hoare_chainE)
 
 lemma handleE'_nothrow_lhs:
   "no_throw \<top> L \<Longrightarrow> no_throw \<top> (L <handle2> R)"

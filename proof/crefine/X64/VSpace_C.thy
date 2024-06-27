@@ -448,7 +448,7 @@ lemma corres_symb_exec_unknown_r:
   assumes "\<And>rv. corres_underlying sr nf nf' r P P' a (c rv)"
   shows "corres_underlying sr nf nf' r P P' a (unknown >>= c)"
   apply (simp add: unknown_def)
-  apply (rule corres_symb_exec_r[OF assms]; wp select_inv no_fail_select)
+  apply (rule corres_symb_exec_r[OF assms]; wp select_inv)
   done
 
 lemma lookupPML4Slot'_spec:
@@ -1199,7 +1199,7 @@ lemma setVMRoot_ccorres:
       apply (rule ccorres_add_return2)
       apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
        apply (rule ccorres_return_void_C)
-      apply (rule hoare_post_taut[where P=\<top>])
+      apply (rule wp_post_taut)
      apply (rule ccorres_rhs_assoc)
      apply (csymbr, rename_tac is_mapped)
      apply csymbr
@@ -1216,7 +1216,7 @@ lemma setVMRoot_ccorres:
       apply (rule ccorres_add_return2)
       apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
        apply (rule ccorres_return_void_C)
-      apply (rule hoare_post_taut[where P=\<top>])
+      apply (rule wp_post_taut)
      apply (simp add: catch_def bindE_bind_linearise bind_assoc liftE_def)
      apply (csymbr, rename_tac pml4_ptr, csymbr)
      apply (csymbr, rename_tac asid', csymbr)
@@ -1240,7 +1240,7 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_add_return2)
          apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
           apply (rule ccorres_return_void_C)
-         apply (rule hoare_post_taut[where P=\<top>])
+         apply (rule wp_post_taut)
         apply (simp add: whenE_def returnOk_def)
         apply (csymbr, rename_tac base_addr)
         apply (rule ccorres_symb_exec_r)
@@ -1250,7 +1250,7 @@ lemma setVMRoot_ccorres:
              apply (ctac add: setCurrentUserCR3_ccorres)
             apply (rule ccorres_cond_false)
             apply (rule ccorres_return_Skip)
-           apply (simp, rule hoare_post_taut[where P=\<top>])
+           apply (simp, rule wp_post_taut)
           apply vcg
          apply vcg
         apply (rule conseqPre, vcg, clarsimp)
@@ -1262,7 +1262,7 @@ lemma setVMRoot_ccorres:
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
         apply (rule ccorres_return_void_C)
-       apply (rule hoare_post_taut[where P=\<top>])
+       apply (rule wp_post_taut)
       apply (simp add: asid_wf_0, rule wp_post_tautE)
      apply (vcg exspec=findVSpaceForASID_modifies)
     apply (wpsimp wp: getSlotCap_wp)
@@ -1295,10 +1295,6 @@ lemma setVMRoot_ccorres:
   apply (frule (1) word_combine_masks[where m="0x7FFFFFFFFFFFF" and m'="0x7FF8000000000000"]; simp)
   apply (match premises in H: \<open>cr3_C.words_C _.[0] && _ = 0\<close> \<Rightarrow> \<open>insert H; word_bitwise\<close>)
   done
-
-lemma ccorres_seq_IF_False:
-  "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
-  by simp
 
 (* FIXME x64: needed? *)
 lemma ptrFromPAddr_mask6_simp[simp]:
@@ -1382,7 +1378,7 @@ lemma setMR_as_setRegister_ccorres:
      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (rule hoare_post_taut[of \<top>])
+    apply (rule hoare_TrueI[of \<top>])
    apply (vcg exspec=setRegister_modifies)
   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
   apply (subst msgRegisters_ccorres[symmetric])
@@ -1833,7 +1829,7 @@ lemma unmapPage_ccorres:
         apply ccorres_rewrite
         apply (clarsimp simp: liftE_liftM)
         apply (ctac add: invalidateTranslationSingleASID_ccorres)
-       apply clarsimp
+       apply wpsimp
       apply clarsimp
       apply (clarsimp simp: guard_is_UNIV_def conj_comms tcb_cnode_index_defs)
      apply (simp add: throwError_def)
@@ -2225,7 +2221,7 @@ lemma setCTE_asidpool':
   "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> setCTE c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
   apply (clarsimp simp: setCTE_def)
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
+  apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (clarsimp simp: obj_at'_def projectKOs)

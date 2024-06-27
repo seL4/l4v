@@ -194,7 +194,7 @@ lemma map_ensure_empty:
    apply wp
   apply (simp add: mapME_x_def sequenceE_x_def)
   apply (unfold validE_R_def)
-  apply (rule seqE[rotated])
+  apply (rule bindE_wp)
    apply (rule hoare_vcg_conj_liftE1)
     apply (fold sequenceE_x_def mapME_x_def)[1]
     apply (rule map_ensure_empty_cte_wp_at)
@@ -258,7 +258,7 @@ lemma dui_sp_helper:
   apply (intro impI conjI)
    apply wpsimp
   apply (wp get_cap_wp)
-   apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_objs and P"]
+   apply (rule hoare_strengthen_postE_R [where Q'="\<lambda>rv. valid_objs and P"]
           ; wpsimp simp: cte_wp_at_caps_of_state)
   apply simp
   done
@@ -673,7 +673,7 @@ lemma alignUp_eq:
 lemma map_ensure_empty_wp:
   "\<lbrace> \<lambda>s. (\<forall>x\<in>set xs. cte_wp_at ((=) NullCap) x s) \<longrightarrow> P () s \<rbrace>
       mapME_x ensure_empty xs \<lbrace>P\<rbrace>, -"
-  by (rule hoare_post_imp_R, rule map_ensure_empty, simp)
+  by (rule hoare_strengthen_postE_R, rule map_ensure_empty, simp)
 
 lemma cases_imp_eq:
   "((P \<longrightarrow> Q \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> Q \<longrightarrow> S)) = (Q \<longrightarrow> (P \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> S))"
@@ -2734,7 +2734,7 @@ lemma reset_untyped_cap_invs_etc:
   (is "\<lbrace>invs and valid_untyped_inv_wcap ?ui (Some ?cap) and ct_active and _\<rbrace>
     ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>")
   apply (simp add: reset_untyped_cap_def)
-  apply (rule hoare_vcg_seqE[rotated])
+  apply (rule bindE_wp_fwd)
    apply ((wp (once) get_cap_sp)+)[1]
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: if_split)
@@ -2749,8 +2749,8 @@ lemma reset_untyped_cap_invs_etc:
    apply (frule(1) caps_of_state_pspace_no_overlapD, simp+)
    apply (simp add: word_bw_assocs field_simps)
   apply (clarsimp simp: free_index_of_def split del: if_split)
-  apply (rule_tac B="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
-        and ct_active and ?psp" in hoare_vcg_seqE[rotated])
+  apply (rule_tac Q'="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
+        and ct_active and ?psp" in bindE_wp_fwd)
    apply clarsimp
    apply (rule hoare_pre)
     apply (wp hoare_vcg_ex_lift hoare_vcg_const_Ball_lift
@@ -2790,7 +2790,7 @@ lemma reset_untyped_cap_invs_etc:
     apply (simp add: valid_cap_def)
    apply simp
   apply (clarsimp simp: bits_of_def free_index_of_def)
-  apply (rule hoare_pre, rule hoare_post_impErr,
+  apply (rule hoare_pre, rule hoare_strengthen_postE,
     rule_tac P="\<lambda>i. invs and ?psp and ct_active and valid_untyped_inv_wcap ?ui
         (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ resetChunkBits)))"
       and E="\<lambda>_. invs"
@@ -3274,7 +3274,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs:
    apply (simp add: mapM_x_def sequence_x_def)
    apply wpsimp
   apply (clarsimp simp add: mapM_x_def sequence_x_def)
-  apply (rule hoare_seq_ext)
+  apply (rule bind_wp)
    apply assumption
   apply (thin_tac "valid a b c" for a b c)
   apply (rule hoare_pre)
@@ -3686,14 +3686,14 @@ lemma invoke_untyp_invs':
     show "\<lbrace>(=) s\<rbrace> invoke_untyped ?ui \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>, \<lbrace>\<lambda>_ s. invs s \<and> Q s\<rbrace>"
       using cover
       apply (simp add:mapM_x_def[symmetric] invoke_untyped_def)
-      apply (rule_tac B="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
+      apply (rule_tac Q'="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ?ui
             (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
-          " in hoare_vcg_seqE[rotated])
+          " in bindE_wp_fwd)
        apply (simp only: whenE_def)
        apply (rule hoare_pre, wp)
-         apply (rule hoare_post_impErr, rule combine_validE,
+         apply (rule hoare_strengthen_postE, rule combine_validE,
              rule reset_untyped_cap_invs_etc, rule valid_validE, rule reset_Q')
           apply (clarsimp simp only: pred_conj_def if_True, blast)
          apply (wp | simp)+
@@ -3832,7 +3832,7 @@ qed
 
 lemmas invoke_untyp_invs[wp] =
   invoke_untyp_invs'[where Q=\<top> and Q'=\<top>, simplified,
-    simplified hoare_post_taut, simplified]
+    simplified hoare_TrueI, simplified]
 
 lemmas invoke_untyped_Q
     = invoke_untyp_invs'[THEN validE_valid, THEN hoare_conjD2[unfolded pred_conj_def]]

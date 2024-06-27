@@ -1243,7 +1243,7 @@ lemma cancel_ipc_indirect_silc_inv:
     cancel_ipc t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding cancel_ipc_def
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
   apply (simp add: blocked_cancel_ipc_def split: thread_state.splits)
@@ -1294,7 +1294,7 @@ lemma update_restart_pc_silc_inv[wp]:
 lemma validE_validE_R':
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>R\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -"
   apply (rule validE_validE_R)
-  apply (erule hoare_post_impErr)
+  apply (erule hoare_strengthen_postE)
   by auto
 
 lemma finalise_cap_ret_subset_cap_irqs:
@@ -1441,7 +1441,7 @@ lemma finalise_cap_ret_is_subject:
    finalise_cap cap is_final
    \<lbrace>\<lambda>rv _ :: det_state. case (fst rv) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst rv))
                                                        | _ \<Rightarrow> True\<rbrace>"
-  including no_pre
+  including classic_wp_pre
   apply (case_tac cap, simp_all add: is_zombie_def)
              apply (wp | simp add: comp_def | rule impI | rule conjI)+
   apply (fastforce simp: valid_def dest: arch_finalise_cap_ret)
@@ -1722,7 +1722,7 @@ lemma rec_del_silc_inv_CTEDelete_transferable':
                  rec_del_Finalise_transferable
             del: wp_not_transferable
          | wpc)+
-   apply (rule hoare_post_impErr,rule rec_del_Finalise_transferable)
+   apply (rule hoare_strengthen_postE,rule rec_del_Finalise_transferable)
     apply force
    apply force
   apply (clarsimp)
@@ -2400,7 +2400,7 @@ lemma transfer_caps_silc_inv:
   apply (simp add: transfer_caps_def)
   apply (wpc | wp)+
     apply (rule_tac P = "\<forall>x \<in> set dest_slots. is_subject aag (fst x)" in hoare_gen_asm)
-    apply (wp transfer_caps_loop_pres_dest cap_insert_silc_inv)
+    apply (wpsimp wp: transfer_caps_loop_pres_dest cap_insert_silc_inv)
      apply (fastforce simp: silc_inv_def)
     apply (wp get_receive_slots_authorised hoare_vcg_all_lift hoare_vcg_imp_lift | simp)+
   apply (fastforce elim: cte_wp_at_weakenE)
@@ -2573,13 +2573,13 @@ lemma receive_ipc_silc_inv:
   apply (rule hoare_gen_asm)
   apply (simp del: AllowSend_def split: cap.splits)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ gbn_sp])
   apply (case_tac ntfnptr, simp_all)
   (* old receive case, not bound *)
    apply (rule hoare_pre, wp receive_ipc_base_silc_inv,
           clarsimp simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "isActive ntfn", simp_all)
   (* new ntfn-binding case *)
    apply (rule hoare_pre, wp, clarsimp)
@@ -2605,7 +2605,7 @@ lemma send_fault_ipc_silc_inv:
                              \<and> invs s
                              \<and> valid_fault fault
                              \<and> is_subject aag (fst (fst rv))"
-                 in hoare_post_imp_R[rotated])
+                 in hoare_strengthen_postE_R[rotated])
      apply (force dest!: cap_auth_caps_of_state
                    simp: invs_valid_objs invs_sym_refs cte_wp_at_caps_of_state aag_cap_auth_def
                          cap_auth_conferred_def cap_rights_to_auth_def)
@@ -2772,12 +2772,12 @@ lemma handle_invocation_silc_inv:
        apply (rule_tac E="\<lambda>ft. silc_inv aag st and pas_refined aag and
                                is_subject aag \<circ> cur_thread and invs and
                                (\<lambda>_. valid_fault ft \<and> is_subject aag thread)"
-                   and R="Q" and Q=Q for Q in hoare_post_impErr)
+                   and R="Q" and Q=Q for Q in hoare_strengthen_postE)
          apply (wp lookup_extra_caps_authorised lookup_extra_caps_auth | simp)+
      apply (rule_tac E="\<lambda>ft. silc_inv aag st and pas_refined aag and
                              is_subject aag \<circ> cur_thread and invs and
                              (\<lambda>_. valid_fault (CapFault x False ft) \<and> is_subject aag thread)"
-                 and R="Q" and Q=Q for Q in hoare_post_impErr)
+                 and R="Q" and Q=Q for Q in hoare_strengthen_postE)
         apply (wp lookup_cap_and_slot_authorised lookup_cap_and_slot_cur_auth | simp)+
   apply (auto intro: st_tcb_ex_cap simp: ct_in_state_def runnable_eq_active)
   done
@@ -2819,7 +2819,7 @@ lemma handle_recv_silc_inv:
                  in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
     apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s \<and>
                               is_subject aag thread \<and> tcb_at thread s \<and> cur_thread s = thread"
-                 in hoare_post_imp_R)
+                 in hoare_strengthen_postE_R)
      apply wp
     apply ((clarsimp simp add: invs_valid_objs invs_sym_refs
             | intro impI allI conjI
