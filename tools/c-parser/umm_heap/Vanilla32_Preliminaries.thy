@@ -80,7 +80,74 @@ by (simp add: len_exp_def bogus_log2lessthree_def)
 lemma lx_signed' [simp]: "len_exp (x::('a::len) signed itself) = len_exp (TYPE('a))"
   by (simp add: len_exp_def)
 
-class len8 = len +
+(* Maybe not required, but keeps everything neat *)
+class typ_num 
+
+instantiation num0 and num1 :: typ_num
+begin
+instance ..
+end
+
+instantiation bit0 and bit1 :: (typ_num) typ_num
+begin
+instance ..
+end
+
+class signed_or_unsigned =  
+  fixes signed_or_unsigned_as_str :: "'a itself \<Rightarrow> char list"
+
+instantiation num0 :: signed_or_unsigned
+begin
+
+definition
+  num0_signed_or_unsigned_def: "signed_or_unsigned_as_str (w :: num0 itself) = []" 
+
+instance ..
+end
+
+instantiation num1 :: signed_or_unsigned
+begin
+
+definition
+  num1_signed_or_unsigned_def: "signed_or_unsigned_as_str (w :: num1 itself) = []" 
+
+instance ..
+end
+
+instantiation bit0 :: (type) signed_or_unsigned
+begin
+
+definition
+  bit0_signed_or_unsigned_def: "signed_or_unsigned_as_str (w :: 'a bit0 itself) = []" 
+
+instance ..
+end
+
+instantiation bit1 :: (type) signed_or_unsigned
+begin
+
+definition
+  bit1_signed_or_unsigned_def: "signed_or_unsigned_as_str (w :: 'a bit1 itself) = []" 
+
+instance ..
+end
+
+instantiation signed :: (type) signed_or_unsigned
+begin
+
+definition
+  signed_signed_or_unsigned_def: "signed_or_unsigned_as_str (w :: 'a signed itself) = ''s''" 
+
+instance ..
+end
+
+lemmas signed_or_unsigned = num0_signed_or_unsigned_def 
+                            num1_signed_or_unsigned_def 
+                            bit0_signed_or_unsigned_def 
+                            bit1_signed_or_unsigned_def 
+                            signed_signed_or_unsigned_def 
+
+class len8 = signed_or_unsigned + len +
   (* this constraint gives us (in the most convoluted way possible) that we're only
      interested in words with a length that is divisible by 8 *)
   assumes len8_bytes: "len_of TYPE('a::len) = 8 * (2^len_exp TYPE('a))"
