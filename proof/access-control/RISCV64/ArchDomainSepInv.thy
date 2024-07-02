@@ -13,11 +13,12 @@ context Arch begin global_naming RISCV64
 
 named_theorems DomainSepInv_assms
 
-crunches arch_post_cap_deletion, set_pt, set_asid_pool, prepare_thread_delete, init_arch_objects
+crunch arch_post_cap_deletion, set_pt, set_asid_pool, prepare_thread_delete, init_arch_objects
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv crunch_wps set_asid_pool_cte_wp_at set_pt_cte_wp_at)
 
-crunch domain_sep_inv[DomainSepInv_assms, wp]: arch_finalise_cap "domain_sep_inv irqs st"
+crunch arch_finalise_cap
+  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_finalise_cap_rv[DomainSepInv_assms]:
@@ -37,7 +38,7 @@ qed
 
 context Arch begin global_naming RISCV64
 
-crunches
+crunch
   handle_reserved_irq, handle_vm_fault, perform_pg_inv_map, perform_pg_inv_unmap,
   perform_pg_inv_get_addr, perform_pt_inv_map, perform_pt_inv_unmap,
   handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,

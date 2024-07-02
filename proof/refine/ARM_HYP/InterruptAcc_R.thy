@@ -18,8 +18,10 @@ lemma getIRQSlot_corres:
                    ucast_nat_def shiftl_t2n)
   done
 
-crunch inv[wp]: get_irq_slot "P"
-crunch inv[wp]: getIRQSlot "P"
+crunch get_irq_slot
+  for inv[wp]: "P"
+crunch getIRQSlot
+  for inv[wp]: "P"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

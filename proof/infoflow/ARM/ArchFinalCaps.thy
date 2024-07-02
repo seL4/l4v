@@ -59,13 +59,13 @@ lemma set_asid_pool_silc_inv[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunches arch_finalise_cap, prepare_thread_delete, init_arch_objects
+crunch arch_finalise_cap, prepare_thread_delete, init_arch_objects
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
   (wp: crunch_wps modify_wp simp: crunch_simps ignore: set_object)
 
 declare finalise_cap_makes_halted[FinalCaps_assms]
 
-crunches handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
+crunch handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
          arch_invoke_irq_handler, arch_mask_irq_signal,
          arch_post_cap_deletion, arch_post_modify_registers,
          arch_activate_idle_thread, arch_switch_to_idle_thread, arch_switch_to_thread
@@ -170,7 +170,8 @@ lemma perform_page_directory_invocation_silc_inv:
    apply (wp | simp)+
   done
 
-crunch silc_inv[wp]: invalidate_tlb_by_asid "silc_inv aag st"
+crunch invalidate_tlb_by_asid
+  for silc_inv[wp]: "silc_inv aag st"
 
 lemma perform_page_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and valid_page_inv blah and K (authorised_page_inv aag blah)\<rbrace>

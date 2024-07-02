@@ -15,8 +15,9 @@ context Arch begin global_naming AARCH64
 
 named_theorems Deterministic_AI_assms
 
-crunch valid_list[wp, Deterministic_AI_assms]:
- vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_get_sanitise_register_info, arch_post_modify_registers valid_list
+crunch
+ vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_get_sanitise_register_info, arch_post_modify_registers
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 
 lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
@@ -24,9 +25,10 @@ lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
   unfolding vcpu_switch_def
   by wpsimp
 
-crunch valid_list[wp, Deterministic_AI_assms]:
+crunch
   cap_swap_for_delete,set_cap,finalise_cap,arch_get_sanitise_register_info,
-  arch_post_modify_registers valid_list
+  arch_post_modify_registers
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 declare get_cap_inv[Deterministic_AI_assms]
 
@@ -40,13 +42,15 @@ qed
 
 context Arch begin global_naming AARCH64
 
-crunch valid_list[wp,Deterministic_AI_assms]: arch_invoke_irq_handler valid_list
+crunch arch_invoke_irq_handler
+  for valid_list[wp,Deterministic_AI_assms]: valid_list
 
-crunch valid_list[wp]: invoke_untyped valid_list
+crunch invoke_untyped
+  for valid_list[wp]: valid_list
   (wp: crunch_wps preemption_point_inv' unless_wp mapME_x_wp'
    simp: mapM_x_def_bak crunch_simps)
 
-crunches invoke_irq_control, perform_flush
+crunch invoke_irq_control, perform_flush
   for valid_list[wp]: valid_list
 
 lemma perform_page_table_invocation_valid_list[wp]:
@@ -63,21 +67,24 @@ lemma perform_page_invocation_valid_list[wp]:
            | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits)+
   done
 
-crunch valid_list[wp]: perform_invocation valid_list
+crunch perform_invocation
+  for valid_list[wp]: valid_list
   (wp: crunch_wps simp: crunch_simps ignore: without_preemption as_user)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_invocation valid_list
+crunch handle_invocation
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps syscall_valid simp: crunch_simps
    ignore: without_preemption syscall)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle_call valid_list
+crunch handle_recv, handle_yield, handle_call
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
   "handle_vm_fault thread fault \<lbrace>valid_list\<rbrace>"
   unfolding handle_vm_fault_def by (cases fault; wpsimp)
 
-crunches vgic_maintenance, vppi_event
+crunch vgic_maintenance, vppi_event
   for valid_list[wp]: valid_list
   (wp: hoare_drop_imps)
 
@@ -89,9 +96,11 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def arch_mask_irq_signal_def
        | wp (once) hoare_drop_imps)+
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
+crunch handle_send,handle_reply
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_hypervisor_fault valid_list
+crunch handle_hypervisor_fault
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
   (simp: isFpuEnable_def)
 
 end

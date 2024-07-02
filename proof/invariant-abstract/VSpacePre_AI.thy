@@ -41,7 +41,8 @@ lemma dmo_asid_map [wp]:
   apply simp
   done
 
-crunch caps_of_state[wp]: do_machine_op "\<lambda>s. P (caps_of_state s)"
+crunch do_machine_op
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
 
 interpretation dmo: non_vspace_non_cap_op "do_machine_op f"
   by (unfold_locales; wp)

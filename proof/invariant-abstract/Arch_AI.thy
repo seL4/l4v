@@ -108,7 +108,8 @@ lemma obj_at_delete_objects:
 
 
 (* FIXME: move *)
-crunch arch [wp]: retype_region "\<lambda>s. P (arch_state s)"
+crunch retype_region
+  for arch[wp]: "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
 lemma set_free_index_final_cap:

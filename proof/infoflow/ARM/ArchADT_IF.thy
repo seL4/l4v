@@ -76,16 +76,20 @@ lemma do_user_op_if_invs[ADT_IF_assms]:
   apply (clarsimp simp: valid_state_def device_frame_in_device_region)
   done
 
-crunch domain_sep_inv[ADT_IF_assms, wp]: do_user_op_if "domain_sep_inv irqs st"
+crunch do_user_op_if
+  for domain_sep_inv[ADT_IF_assms, wp]: "domain_sep_inv irqs st"
   (ignore: user_memory_update)
 
-crunch valid_sched[ADT_IF_assms, wp]: do_user_op_if "valid_sched"
+crunch do_user_op_if
+  for valid_sched[ADT_IF_assms, wp]: "valid_sched"
   (ignore: user_memory_update)
 
-crunch irq_masks[ADT_IF_assms, wp]: do_user_op_if "\<lambda>s. P (irq_masks_of_state s)"
+crunch do_user_op_if
+  for irq_masks[ADT_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: user_memory_update wp: dmo_wp no_irq)
 
-crunch valid_list[ADT_IF_assms, wp]: do_user_op_if "valid_list"
+crunch do_user_op_if
+  for valid_list[ADT_IF_assms, wp]: "valid_list"
   (ignore: user_memory_update)
 
 lemma do_user_op_if_scheduler_action[ADT_IF_assms, wp]:
@@ -104,7 +108,7 @@ lemma do_user_op_pas_refined[ADT_IF_assms, wp]:
   apply (wp | wpc | simp)+
   done
 
-crunches do_user_op_if
+crunch do_user_op_if
   for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and cur_domain[ADT_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and idle_thread[ADT_IF_assms, wp]: "\<lambda>s. P (idle_thread s)"
@@ -119,20 +123,21 @@ lemma tcb_arch_ref_tcb_context_set[ADT_IF_assms, simp]:
   "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set tc) tcb) = tcb_arch_ref tcb"
   by (simp add: tcb_arch_ref_def)
 
-crunches arch_switch_to_idle_thread, arch_switch_to_thread
+crunch arch_switch_to_idle_thread, arch_switch_to_thread
   for pspace_aligned[ADT_IF_assms, wp]: "\<lambda>s :: det_state. pspace_aligned s"
   and valid_vspace_objs[ADT_IF_assms, wp]: "\<lambda>s :: det_state. valid_vspace_objs s"
   and valid_arch_state[ADT_IF_assms, wp]: "\<lambda>s :: det_state. valid_arch_state s"
   (wp: crunch_wps)
 
-crunches arch_activate_idle_thread, arch_switch_to_thread
+crunch arch_activate_idle_thread, arch_switch_to_thread
   for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
 
 lemma arch_activate_idle_thread_scheduler_action[ADT_IF_assms, wp]:
   "arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_activate_idle_thread_def)
 
-crunch domain_fields[ADT_IF_assms, wp]: handle_vm_fault, handle_hypervisor_fault "domain_fields P"
+crunch handle_vm_fault, handle_hypervisor_fault
+  for domain_fields[ADT_IF_assms, wp]: "domain_fields P"
   (ignore: getFAR getDFSR getIFSR)
 
 lemma arch_perform_invocation_noErr[ADT_IF_assms, wp]:
@@ -143,10 +148,12 @@ lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
   "\<lbrace>\<top>\<rbrace> arch_invoke_irq_control a -, \<lbrace>Q\<rbrace>"
   by (cases a; wpsimp)
 
-crunch irq_state[wp]: cleanCacheRange_PoU "\<lambda>s. P (irq_state s)"
+crunch cleanCacheRange_PoU
+  for irq_state[wp]: "\<lambda>s. P (irq_state s)"
   (ignore_del: cleanCacheRange_PoU cleanByVA_PoU)
 
-crunch irq_state_of_state[ADT_IF_assms, wp]: init_arch_objects "\<lambda>s. P (irq_state_of_state s)"
+crunch init_arch_objects
+  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp ignore: do_machine_op)
 
 lemma getActiveIRQ_None[ADT_IF_assms]:
@@ -339,18 +346,21 @@ lemma reset_untyped_cap_irq_state_inv[ADT_IF_assms]:
           | wp (once) dmo_wp)+
   done
 
-crunch irq_state_of_state[ADT_IF_assms, wp]:
-  handle_vm_fault, handle_hypervisor_fault "\<lambda>s. P (irq_state_of_state s)"
+crunch
+  handle_vm_fault, handle_hypervisor_fault
+  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps simp: getDFSR_def getFAR_def getIFSR_def)
 
 text \<open>Not true of invoke_untyped any more.\<close>
-crunch irq_state_of_state[ADT_IF_assms, wp]: create_cap "\<lambda>s. P (irq_state_of_state s)"
+crunch create_cap
+  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (ignore: freeMemory
       wp: dmo_wp modify_wp crunch_wps
     simp: freeMemory_def storeWord_def clearMemory_def
           machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
 
-crunch irq_state_of_state[ADT_IF_assms, wp]: arch_invoke_irq_control "\<lambda>s. P (irq_state_of_state s)"
+crunch arch_invoke_irq_control
+  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp crunch_wps simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def)
 
 end

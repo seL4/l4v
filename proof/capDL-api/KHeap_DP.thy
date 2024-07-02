@@ -129,7 +129,8 @@ lemma gets_the_invE : "\<lbrace>P\<rbrace> gets_the f \<lbrace>\<lambda>_. P\<rb
 lemma return_rv :"\<lbrace>P r\<rbrace> return (Inr r) \<lbrace>\<lambda>rv s. P rv s\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
   by (clarsimp simp: validE_def, wp, simp split: option.splits)
 
-crunch inv[wp]: throw_on_none P
+crunch throw_on_none
+  for inv[wp]: P
 
 lemma hoare_if_simp:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (if x then (\<lambda>rv s. Q rv s) else (\<lambda>rv s. Q rv s)) rv s\<rbrace>"
@@ -758,7 +759,8 @@ lemma decode_cnode_move_rvu:
   done
 
 
-crunch preserve [wp]:  decode_cnode_invocation "P"
+crunch  decode_cnode_invocation
+  for preserve[wp]: "P"
   (wp: derive_cap_wpE unlessE_wp whenE_wp hoare_drop_imps simp: if_apply_def2 throw_on_none_def)
 
 lemma decode_invocation_wp:

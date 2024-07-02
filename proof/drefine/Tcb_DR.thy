@@ -589,7 +589,7 @@ lemma restart_corres:
   apply (fastforce simp:opt_cap_tcb not_idle_thread_def)
   done
 
-crunches get_thread, getRegister
+crunch get_thread, getRegister
   for inv [wp]: P
   (ignore_del: getRegister)
 
@@ -686,8 +686,9 @@ lemma invoke_tcb_corres_copy_regs_loop:
      apply (wp|simp)+
   done
 
-crunch idle_thread_constant[wp]:
-  "Tcb_A.restart", "IpcCancel_A.suspend" "\<lambda>s::'z::state_ext state. P (idle_thread s)"
+crunch
+  "Tcb_A.restart", "IpcCancel_A.suspend"
+  for idle_thread_constant[wp]: "\<lambda>s::'z::state_ext state. P (idle_thread s)"
   (wp: dxo_wp_weak)
 
 lemma not_idle_after_restart [wp]:
@@ -717,7 +718,8 @@ lemma not_idle_after_suspend [wp]:
    apply (simp add:not_idle_thread_def invs_def valid_state_def)+
   done
 
-crunch valid_etcbs[wp]: "Tcb_A.restart"  "valid_etcbs"
+crunch "Tcb_A.restart"
+  for valid_etcbs[wp]: "valid_etcbs"
 
 (* Copy registers from one thread to another. *)
 lemma invoke_tcb_corres_copy_regs:
@@ -814,7 +816,8 @@ lemma get_cap_ex_cte_cap_wp_to:
   apply (clarsimp simp:is_cap_simps)
   done
 
-crunch idle[wp] : cap_delete "\<lambda>s. P (idle_thread s)"
+crunch cap_delete
+  for idle[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps ignore: wrap_ext_bool OR_choiceE)
 
 lemma imp_strengthen:
@@ -1466,7 +1469,8 @@ lemma option_set_mcpriority_corres:
   apply (wp set_mcpriority_transform)
   by simp
 
-crunch valid_etcbs[wp]: option_update_thread, set_priority, set_mcpriority "valid_etcbs"
+crunch option_update_thread, set_priority, set_mcpriority
+  for valid_etcbs[wp]: "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma not_idle_thread_ekheap_update[iff]:
@@ -1477,18 +1481,22 @@ lemma not_idle_thread_scheduler_action_update[iff]:
   "not_idle_thread ptr (scheduler_action_update f s) = not_idle_thread ptr s"
   by (simp add: not_idle_thread_def)
 
-crunch not_idle_thread[wp]: reschedule_required, set_priority, set_mcpriority "not_idle_thread ptr"
+crunch reschedule_required, set_priority, set_mcpriority
+  for not_idle_thread[wp]: "not_idle_thread ptr"
   (wp: crunch_wps simp: crunch_simps)
 
 
 
-crunch emptyable[wp]: tcb_sched_action "emptyable ptr"
+crunch tcb_sched_action
+  for emptyable[wp]: "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch emptyable[wp]: reschedule_required "emptyable ptr"
+crunch reschedule_required
+  for emptyable[wp]: "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch emptyable[wp]: set_priority, set_mcpriority "emptyable ptr"
+crunch set_priority, set_mcpriority
+  for emptyable[wp]: "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_priority_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_priority tptr prio \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"

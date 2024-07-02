@@ -7861,7 +7861,7 @@ lemma createObject_cnodes_have_size:
                        split: if_split_asm)
   done
 
-crunches placeNewDataObject
+crunch placeNewDataObject
   for ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps)
 
@@ -7896,7 +7896,8 @@ lemma range_cover_not_in_neqD:
   apply simp
   done
 
-crunch gsMaxObjectSize[wp]: createObject "\<lambda>s. P (gsMaxObjectSize s)"
+crunch createObject
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (simp: crunch_simps unless_def wp: crunch_wps)
 
 end

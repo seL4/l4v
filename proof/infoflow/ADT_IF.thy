@@ -765,9 +765,12 @@ definition kernel_entry_if ::
       return (r,tc)
    od"
 
-crunch cur_domain[wp]: kernel_entry_if "\<lambda>s. P (cur_domain s)"
-crunch idle_thread[wp]: kernel_entry_if "\<lambda>s::det_state. P (idle_thread s)"
-crunch cur_thread [wp]: kernel_entry_if "\<lambda>s::det_state. P (cur_thread s)"
+crunch kernel_entry_if
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+crunch kernel_entry_if
+  for idle_thread[wp]: "\<lambda>s::det_state. P (idle_thread s)"
+crunch kernel_entry_if
+  for cur_thread[wp]: "\<lambda>s::det_state. P (cur_thread s)"
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set f)) t \<lbrace>ct_active\<rbrace>"
@@ -863,10 +866,14 @@ definition schedule_if :: "user_context \<Rightarrow> (user_context,det_ext) s_m
       return tc
    od"
 
-crunch silc_inv[wp]: schedule_if "silc_inv aag st"
-crunch domain_sep_inv[wp]: schedule_if "\<lambda>s :: det_state. domain_sep_inv irqs st s"
-crunch idle_thread[wp]: activate_thread "\<lambda>s :: det_state. P (idle_thread s)"
-crunch cur_domain[wp]: activate_thread "\<lambda>s. P (cur_domain s)"
+crunch schedule_if
+  for silc_inv[wp]: "silc_inv aag st"
+crunch schedule_if
+  for domain_sep_inv[wp]: "\<lambda>s :: det_state. domain_sep_inv irqs st s"
+crunch activate_thread
+  for idle_thread[wp]: "\<lambda>s :: det_state. P (idle_thread s)"
+crunch activate_thread
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
 function (domintros) next_irq_state :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> nat" where
   "next_irq_state cur masks =
@@ -1046,15 +1053,17 @@ lemma kernel_entry_if_irq_masks:
   by (simp add: kernel_entry_if_def ran_tcb_cap_cases arch_tcb_update_aux2
       | wp handle_event_irq_masks thread_set_invs_trivial | force)+
 
-crunches schedule
+crunch schedule
   for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
   (wp: crunch_wps)
 
-crunch pas_refined[wp]: schedule_if "pas_refined aag"
+crunch schedule_if
+  for pas_refined[wp]: "pas_refined aag"
 
-crunch cur_thread: activate_thread "\<lambda>s :: det_state. P (cur_thread s)"
+crunch activate_thread
+  for cur_thread: "\<lambda>s :: det_state. P (cur_thread s)"
 
 lemma activate_thread_guarded_pas_domain[wp]:
   "activate_thread \<lbrace>guarded_pas_domain aag\<rbrace>"
@@ -1069,7 +1078,8 @@ lemma kernel_entry_if_guarded_pas_domain:
   apply (wp guarded_pas_domain_lift)
   done
 
-crunch valid_list[wp]: kernel_entry_if "valid_list"
+crunch kernel_entry_if
+  for valid_list[wp]: "valid_list"
 
 definition kernel_call_A_if ::
   "event \<Rightarrow> ((user_context \<times> det_state) \<times> bool \<times> (user_context \<times> det_state)) set" where
@@ -1098,9 +1108,12 @@ lemma handle_preemption_if_pas_refined[wp]:
   by (wpsimp wp: handle_interrupt_pas_refined getActiveIRQ_wp hoare_drop_imps
            simp: handle_preemption_if_def if_fun_split)
 
-crunch cur_domain[wp]: handle_preemption_if "\<lambda>s. P (cur_domain s)"
-crunch cur_thread[wp]: handle_preemption_if "\<lambda>s :: det_state. P (cur_thread s)"
-crunch idle_thread[wp]: handle_preemption_if "\<lambda>s :: det_state. P (idle_thread s)"
+crunch handle_preemption_if
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+crunch handle_preemption_if
+  for cur_thread[wp]: "\<lambda>s :: det_state. P (cur_thread s)"
+crunch handle_preemption_if
+  for idle_thread[wp]: "\<lambda>s :: det_state. P (idle_thread s)"
 
 lemma handle_preemption_if_guarded_pas_domain[wp]:
   "handle_preemption_if tc \<lbrace>guarded_pas_domain aag\<rbrace>"
@@ -1115,7 +1128,8 @@ lemma handle_preemption_if_irq_masks:
                              (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
   by (wp | simp)+
 
-crunch valid_list[wp]: handle_preemption_if "valid_list"
+crunch handle_preemption_if
+  for valid_list[wp]: "valid_list"
   (ignore: getActiveIRQ)
 
 definition kernel_handle_preemption_if ::
@@ -1263,7 +1277,7 @@ lemma kernel_entry_if_only_timer_irq_inv:
 end
 
 
-crunches schedule_if
+crunch schedule_if
   for valid_sched[wp]: valid_sched
   and valid_list[wp]: valid_list
 
@@ -1290,7 +1304,8 @@ definition kernel_exit_if :: "user_context \<Rightarrow> (user_context,det_ext) 
       thread_get (arch_tcb_context_get o tcb_arch) t'
   od"
 
-crunch inv[wp]: kernel_exit_if "P"
+crunch kernel_exit_if
+  for inv[wp]: "P"
 
 definition kernel_exit_A_if ::
   "((user_context \<times> det_state) \<times> sys_mode \<times> (user_context \<times> det_state)) set" where
@@ -1522,12 +1537,18 @@ locale valid_initial_state = valid_initial_state_noenabled +
 
 subsection \<open>domain_field preserved on non-interrupt kernel event\<close>
 
-crunch irq_state_of_state[wp]: cap_move "\<lambda>s. P (irq_state_of_state s)"
-crunch domain_fields[wp]: handle_yield "domain_fields P"
-crunch domain_fields[wp]: activate_thread "domain_fields P"
-crunch domain_list[wp]: kernel_entry_if "\<lambda>s. P (domain_list s)"
-crunch domain_list[wp]: handle_preemption_if "\<lambda>s. P (domain_list s)"
-crunch domain_list[wp]: schedule_if "\<lambda>s. P (domain_list s)"
+crunch cap_move
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
+crunch handle_yield
+  for domain_fields[wp]: "domain_fields P"
+crunch activate_thread
+  for domain_fields[wp]: "domain_fields P"
+crunch kernel_entry_if
+  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+crunch handle_preemption_if
+  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+crunch schedule_if
+  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma schedule_if_domain_time_nonzero':
@@ -2200,8 +2221,10 @@ definition measuref_if :: "det_state global_sys_state \<Rightarrow> det_state gl
       else (if interrupted_modes (snd s') then 2
             else (if (\<exists>b. (snd s') = KernelSchedule b) then 1 else 0)))"
 
-crunch irq_state_of_state_inv[wp]: device_memory_update "\<lambda>ms. P (irq_state ms)"
-crunch irq_masks_inv[wp]: device_memory_update "\<lambda>ms. P (irq_masks ms)"
+crunch device_memory_update
+  for irq_state_of_state_inv[wp]: "\<lambda>ms. P (irq_state ms)"
+crunch device_memory_update
+  for irq_masks_inv[wp]: "\<lambda>ms. P (irq_masks ms)"
   (wp: crunch_wps simp: crunch_simps no_irq_def)
 
 lemma next_irq_state_Suc:
@@ -2552,8 +2575,10 @@ lemma irq_state_inv_invoke_domain[wp]:
    apply (wp | clarsimp)+
   done
 
-crunch irq_state_of_state: bind_notification "\<lambda>s. P (irq_state_of_state s)"
-crunch machine_state[wp]: set_mcpriority "\<lambda>s. P (machine_state s)"
+crunch bind_notification
+  for irq_state_of_state: "\<lambda>s. P (irq_state_of_state s)"
+crunch set_mcpriority
+  for machine_state[wp]: "\<lambda>s. P (machine_state s)"
 
 lemmas bind_notification_irq_state_inv[wp] =
   irq_state_inv_triv[OF bind_notification_irq_state_of_state bind_notification_irq_masks]
@@ -2590,7 +2615,8 @@ lemma irq_state_inv_trivE':
 
 context ADT_IF_1 begin
 
-crunch irq_state_of_state[wp]: invoke_irq_control "\<lambda>s. P (irq_state_of_state s)"
+crunch invoke_irq_control
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
 
 lemma invoke_irq_control_noErr[wp]:
   "\<lbrace>\<top>\<rbrace> invoke_irq_control a -,\<lbrace>\<lambda>rv s :: det_state. Q rv s\<rbrace>"

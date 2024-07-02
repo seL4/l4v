@@ -646,7 +646,7 @@ lemma store_pte_typ_at[wp]:
   unfolding store_pte_def
   by (wpsimp wp: set_pt_typ_at simp: in_omonad pt_upd_def split: pt.split)
 
-crunches store_pte
+crunch store_pte
   for kernel_vspace[wp]: "\<lambda>s. P (arm_kernel_vspace (arch_state s))"
   (wp: hoare_drop_imps)
 
@@ -950,7 +950,8 @@ lemma cap_is_device_obj_is_device[simp]:
                 default_object_def  default_arch_object_def
          split: apiobject_type.splits aobject_type.splits)
 
-crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
+crunch storeWord
+  for device_state_inv: "\<lambda>ms. P (device_state ms)"
   (ignore_del: storeWord)
 
 (* some hyp_ref invariants *)
@@ -1042,7 +1043,7 @@ lemma invs_valid_uses[elim!]:
   "invs s \<Longrightarrow> valid_uses s"
   by (simp add: invs_def valid_state_def valid_arch_state_def)
 
-crunches set_object
+crunch set_object
   for vmid_table[wp]: "\<lambda>s. P (vmid_table s)"
   (simp: get_object_def)
 

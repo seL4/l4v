@@ -41,7 +41,7 @@ lemma ksReadyQueues_head_end_ksSchedulerAction_update[simp]:
   "ksReadyQueues_head_end (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) = ksReadyQueues_head_end s"
   by (simp add: ksReadyQueues_head_end_def)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksReadyQueues_head_end[wp]: ksReadyQueues_head_end
 
 lemma setThreadState_ksReadyQueues_head_end[wp]:
@@ -88,7 +88,7 @@ lemma ksReadyQueues_head_end_tcb_at'_ksSchedulerAction_update[simp]:
    = ksReadyQueues_head_end_tcb_at' s"
   by (simp add: ksReadyQueues_head_end_tcb_at'_def)
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for ksReadyQueues_head_end_tcb_at'[wp]: ksReadyQueues_head_end_tcb_at'
 
 lemma setThreadState_ksReadyQueues_head_end_tcb_at'[wp]:
@@ -389,7 +389,7 @@ next
     done
 qed
 
-crunches setEndpoint, setNotification
+crunch setEndpoint, setNotification
   for ksReadyQueues_head_end[wp]: ksReadyQueues_head_end
   and ksReadyQueues_head_end_tcb_at'[wp]: ksReadyQueues_head_end_tcb_at'
   (simp: updateObject_default_def)
@@ -712,7 +712,7 @@ lemma updateRestartPC_ccorres:
                     X64.faultRegister_def X64.nextInstructionRegister_def)
   done
 
-crunches updateRestartPC
+crunch updateRestartPC
   for sch_act_simple[wp]: sch_act_simple
   and valid_objs'[wp]: valid_objs'
   and tcb_at'[wp]: "tcb_at' p"
@@ -1125,7 +1125,7 @@ lemma hwASIDInvalidate_ccorres:
 
 lemmas hwASIDInvalidate_typ_at'_lifts [wp] = typ_at_lifts [OF hwASIDInvalidate_typ_at']
 
-crunches hwASIDInvalidate
+crunch hwASIDInvalidate
   for obj_at'[wp]: "\<lambda>s. P (obj_at' P' p s)"
   and valid_objs'[wp]: valid_objs'
 

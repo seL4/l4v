@@ -12,12 +12,14 @@ context Arch begin global_naming RISCV64
 
 named_theorems Tcb_IF_assms
 
-crunch riscv_global_pt[wp]: set_irq_state, suspend "\<lambda>s. P (riscv_global_pt (arch_state s))"
+crunch set_irq_state, suspend
+  for riscv_global_pt[wp]: "\<lambda>s. P (riscv_global_pt (arch_state s))"
   (wp: mapM_x_wp select_inv hoare_vcg_if_lift2 hoare_drop_imps dxo_wp_weak
    simp: unless_def
    ignore: empty_slot_ext reschedule_required)
 
-crunch riscv_global_pt[wp]: as_user, restart "\<lambda>s. P (riscv_global_pt (arch_state s))" (wp: dxo_wp_weak)
+crunch as_user, restart
+  for riscv_global_pt[wp]: "\<lambda>s. P (riscv_global_pt (arch_state s))" (wp: dxo_wp_weak)
 
 lemma cap_ne_global_pt:
   "\<lbrakk> ex_nonz_cap_to word s; valid_global_refs s; valid_global_arch_objs s \<rbrakk>
@@ -54,7 +56,7 @@ lemma no_cap_to_idle_thread''[Tcb_IF_assms]:
   apply (simp add: cap_range_def global_refs_def)
   done
 
-crunches arch_post_modify_registers
+crunch arch_post_modify_registers
   for globals_equiv[Tcb_IF_assms, wp]: "globals_equiv st"
   and valid_arch_state[Tcb_IF_assms, wp]: valid_arch_state
 

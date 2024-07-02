@@ -39,7 +39,8 @@ where
      od)
   od"
 
-crunch typ_at'[wp]: replyOnRestart "\<lambda>s. P (typ_at' T p s)"
+crunch replyOnRestart
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas replyOnRestart_typ_ats[wp] = typ_at_lifts [OF replyOnRestart_typ_at']

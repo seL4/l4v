@@ -89,7 +89,8 @@ lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
 
 context begin interpretation Arch .
 
-crunch inv'[wp]: archThreadGet P
+crunch archThreadGet
+  for inv'[wp]: P
 
 (* FIXME MOVE near thm tg_sp' *)
 lemma atg_sp':
@@ -292,10 +293,10 @@ lemma asUser_getRegister_discarded:
                         return_def fail_def stateAssert_def)
   done
 
-crunches switchToIdleThread
+crunch switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
-crunches vcpuUpdate
+crunch vcpuUpdate
   for pspace_canonical'[wp]: pspace_canonical'
 
 lemma vcpuUpdate_valid_pspace'[wp]:
@@ -391,7 +392,7 @@ lemma user_getreg_rv:
   apply (clarsimp simp: obj_at'_def getRegister_def in_monad atcbContextGet_def)
   done
 
-crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
          updateFreeIndex, preemptionPoint
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only
@@ -444,18 +445,24 @@ lemma ko_at_vcpu_at'D:
   by (fastforce simp: typ_at_to_obj_at_arches elim: obj_at'_weakenE)
 
 (* FIXME: change the original to be predicated! *)
-crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
+crunch doMachineOp
+  for pred_tcb_at'2[wp]: "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
-crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
+crunch readVCPUReg
+  for valid_objs'[wp]: "\<lambda>s. valid_objs' s"
 
-crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
+crunch readVCPUReg
+  for sch_act_wf'[wp]: "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
 
-crunch ko_at'[wp]: readVCPUReg "\<lambda>s. P (ko_at' a p s)"
+crunch readVCPUReg
+  for ko_at'[wp]: "\<lambda>s. P (ko_at' a p s)"
 
-crunch obj_at'[wp]: readVCPUReg "\<lambda>s. P (obj_at' a p s)"
+crunch readVCPUReg
+  for obj_at'[wp]: "\<lambda>s. P (obj_at' a p s)"
 
-crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
+crunch readVCPUReg
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
 
 (* schematic_goal leads to Suc (Suc ..) form only *)
 lemma fromEnum_maxBound_vcpureg_def:

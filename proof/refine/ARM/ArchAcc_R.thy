@@ -181,8 +181,10 @@ lemma storePTE_cte_wp_at'[wp]:
   apply simp
   done
 
-crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
-crunch inv[wp]: getIRQSlot "P"
+crunch setIRQState
+  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
+crunch getIRQSlot
+  for inv[wp]: "P"
 
 lemma setObject_ASIDPool_corres [corres]:
   "p = p' \<Longrightarrow> a = inv ASIDPool a' o ucast \<Longrightarrow>
@@ -1036,10 +1038,12 @@ lemma lookupPTSlot_corres [@lift_corres_args, corres]:
 
 declare in_set_zip_refl[simp]
 
-crunch typ_at' [wp]: storePDE "\<lambda>s. P (typ_at' T p s)"
+crunch storePDE
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
 
-crunch typ_at' [wp]: storePTE "\<lambda>s. P (typ_at' T p s)"
+crunch storePTE
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
 
 lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
@@ -1059,7 +1063,8 @@ lemma getObject_pde_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pde. P\<rbrace>"
   by (simp add: getObject_inv loadObject_default_inv)
 
-crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
+crunch copyGlobalMappings
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']

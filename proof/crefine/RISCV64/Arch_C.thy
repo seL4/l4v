@@ -14,7 +14,7 @@ unbundle l4v_word_context
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches unmapPageTable
+crunch unmapPageTable
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: crunch_simps)
 

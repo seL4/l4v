@@ -8,15 +8,17 @@ theory Invocation_DP
 imports KHeap_DP RWHelper_DP
 begin
 
-crunch cdl_current_domain[wp]: update_available_range, generate_object_ids, update_thread,
+crunch update_available_range, generate_object_ids, update_thread,
                                mark_tcb_intent_error, corrupt_ipc_buffer, insert_cap_sibling,
                                insert_cap_child, move_cap, invoke_irq_control, invoke_irq_handler
-                                                    "\<lambda>s. P (cdl_current_domain s)"
+  for cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
 (wp: crunch_wps unless_wp simp: split_def corrupt_intents_def)
 
-crunch cdl_irq_node [wp]:  corrupt_ipc_buffer "\<lambda>s. P (cdl_irq_node s)"
+crunch  corrupt_ipc_buffer
+  for cdl_irq_node[wp]: "\<lambda>s. P (cdl_irq_node s)"
 (wp: crunch_wps simp: corrupt_intents_def)
-crunch cdl_irq_node [wp]:  mark_tcb_intent_error "\<lambda>s. P (cdl_irq_node s)"
+crunch  mark_tcb_intent_error
+  for cdl_irq_node[wp]: "\<lambda>s. P (cdl_irq_node s)"
 (wp: crunch_wps)
 
 lemma all_scheduable_tcbs_corrupt[simp]:
@@ -148,7 +150,8 @@ lemma corrupt_frame_sep_helper[wp]:
      object_slots_def asid_reset_def update_slots_def)
   done
 
-crunch inv [wp]:  get_ipc_buffer "P"
+crunch  get_ipc_buffer
+  for inv[wp]: "P"
 (wp: crunch_wps)
 
 lemma corrupt_ipc_buffer_sep_inv[wp]:
@@ -230,28 +233,36 @@ lemma no_exception_conj':
   apply (auto split:sum.splits)
   done
 
-crunch inv[wp]: decode_untyped_invocation P
+crunch decode_untyped_invocation
+  for inv[wp]: P
   (wp: crunch_wps mapME_x_inv_wp unlessE_wp simp: crunch_simps throw_on_none_def)
 
-crunch inv[wp]: decode_irq_handler_invocation P
+crunch decode_irq_handler_invocation
+  for inv[wp]: P
   (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
-crunch inv[wp]: decode_tcb_invocation P
+crunch decode_tcb_invocation
+  for inv[wp]: P
   (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
-crunch inv[wp]: decode_domain_invocation P
+crunch decode_domain_invocation
+  for inv[wp]: P
   (wp:crunch_wps simp: liftE_bindE throw_on_none_def)
 
-crunch inv[wp]: decode_irq_control_invocation P
+crunch decode_irq_control_invocation
+  for inv[wp]: P
   (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
-crunch inv[wp]: decode_asid_control_invocation P
+crunch decode_asid_control_invocation
+  for inv[wp]: P
   (wp: crunch_wps ignore: returnOk simp: liftE_bindE throw_on_none_def)
 
-crunch inv[wp]: lookup_cap_and_slot P
+crunch lookup_cap_and_slot
+  for inv[wp]: P
   (wp:crunch_wps resolve_address_bits_wp)
 
-crunch inv[wp]: decode_page_invocation P
+crunch decode_page_invocation
+  for inv[wp]: P
   (wp: crunch_wps resolve_address_bits_wp simp: throw_on_none_def)
 
 lemma decode_page_table_invocation_inv[wp]:
@@ -282,7 +293,8 @@ lemma decode_invocation_inv[wp]:
   apply (rule hoare_pre, (wp | simp add:throw_opt_def | wpc | intro conjI impI)+)+
   done
 
-crunch inv[wp]: lookup_extra_caps P
+crunch lookup_extra_caps
+  for inv[wp]: P
   (wp:crunch_wps mapME_wp' resolve_address_bits_wp ignore: mapME)
 
 lemma nonep_invocation_simps:
@@ -419,16 +431,20 @@ lemma handle_event_syscall_no_decode_exception:
    apply (clarsimp simp:object_at_def)
   done
 
-crunch cdl_current_thread [wp]:  delete_cap_simple "\<lambda>s. P (cdl_current_thread s)"
+crunch  delete_cap_simple
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: crunch_wps simp: split_def unless_def)
 
-crunch cdl_current_thread [wp]:  mark_tcb_intent_error "\<lambda>s. P (cdl_current_thread s)"
+crunch  mark_tcb_intent_error
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: crunch_wps simp: split_def unless_def)
 
-crunch cdl_current_thread [wp]:  corrupt_ipc_buffer "\<lambda>s. P (cdl_current_thread s)"
+crunch  corrupt_ipc_buffer
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: crunch_wps simp: split_def unless_def corrupt_frame_def corrupt_intents_def)
 
-crunch cdl_current_thread [wp]:  invoke_irq_control, invoke_irq_handler "\<lambda>s. P (cdl_current_thread s)"
+crunch  invoke_irq_control, invoke_irq_handler
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
 
 
 lemma corrupt_tcb_intent_all_active_tcbs[wp]:
@@ -456,9 +472,11 @@ lemma update_thread_wp:
   apply (clarsimp simp:object_at_def)
   done
 
-crunch inv[wp]: thread_has_error P
+crunch thread_has_error
+  for inv[wp]: P
 
-crunch inv[wp]: has_restart_cap P
+crunch has_restart_cap
+  for inv[wp]: P
 
 definition
   "no_pending s \<equiv> \<forall>oid cap.
@@ -486,7 +504,8 @@ lemma send_signal_no_pending:
   apply (clarsimp simp: slots_of_def object_slots_def is_pending_cap_def)
   done
 
-crunch invs[wp]: get_active_irq P
+crunch get_active_irq
+  for invs[wp]: P
   (wp: crunch_wps)
 
 lemma handle_pending_interrupts_no_ntf_cap:
@@ -665,16 +684,19 @@ lemma cdl_cur_thread_detype:
   "cdl_current_thread (detype m s) = cdl_current_thread s"
   by (simp add:detype_def)
 
-crunch cdl_current_thread[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_thread s)"
+crunch reset_untyped_cap
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: mapME_x_inv_wp whenE_wp simp: cdl_cur_thread_detype crunch_simps)
 
 lemmas helper = valid_validE_E[OF reset_untyped_cap_cdl_current_thread]
 
-crunch cdl_current_thread[wp]: invoke_untyped "\<lambda>s. P (cdl_current_thread s)"
+crunch invoke_untyped
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: mapM_x_wp' crunch_wps unless_wp helper
        simp:cdl_cur_thread_detype crunch_simps)
 
-crunch cdl_current_thread[wp]: move_cap "\<lambda>s. P (cdl_current_thread s)"
+crunch move_cap
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: mapM_x_wp' crunch_wps unless_wp
    simp:crunch_simps)
 

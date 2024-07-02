@@ -505,7 +505,7 @@ lemma device_update_invs':
                     gets_def get_def bind_def valid_def return_def)
    by (clarsimp simp: invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
 
-crunches doMachineOp
+crunch doMachineOp
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 
 lemma doUserOp_invs':

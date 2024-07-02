@@ -372,7 +372,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
   apply (auto simp:cte_wp_at_caps_of_state)
   done
 
-crunches update_cdt
+crunch update_cdt
   for valid_ioports[wp]: "valid_ioports"
 
 lemma set_untyped_cap_as_full_ioports:
@@ -666,7 +666,7 @@ lemma set_cap_kernel_window_simple:
                         X64.cap_refs_in_kernel_windowD)
   done
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   and valid_objs[wp]: valid_objs
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"

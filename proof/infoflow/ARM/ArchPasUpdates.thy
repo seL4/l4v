@@ -12,7 +12,7 @@ context Arch begin global_naming ARM
 
 named_theorems PasUpdates_assms
 
-crunches arch_post_cap_deletion, arch_finalise_cap, prepare_thread_delete
+crunch arch_post_cap_deletion, arch_finalise_cap, prepare_thread_delete
   for domain_fields[PasUpdates_assms, wp]: "domain_fields P"
   (    wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
      simp: crunch_simps check_cap_at_def filterM_mapM unless_def
@@ -35,7 +35,7 @@ context Arch begin global_naming ARM
 
 declare init_arch_objects_exst[PasUpdates_assms]
 
-crunches arch_perform_invocation, arch_post_modify_registers,
+crunch arch_perform_invocation, arch_post_modify_registers,
          arch_invoke_irq_control, arch_invoke_irq_handler, handle_arch_fault_reply
   for domain_fields[PasUpdates_assms, wp]: "domain_fields P"
   (wp: syscall_valid crunch_wps mapME_x_inv_wp

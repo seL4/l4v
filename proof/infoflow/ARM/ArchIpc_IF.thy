@@ -272,7 +272,7 @@ lemma handle_arch_fault_reply_globals_equiv[Ipc_IF_assms]:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (wpsimp simp: handle_arch_fault_reply_def)+
 
-crunches arch_get_sanitise_register_info, handle_arch_fault_reply
+crunch arch_get_sanitise_register_info, handle_arch_fault_reply
   for valid_global_objs[Ipc_IF_assms, wp]: "valid_global_objs"
 
 end

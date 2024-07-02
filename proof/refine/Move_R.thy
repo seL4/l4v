@@ -206,7 +206,8 @@ lemma get_mapM_x_lower:
   qed
 
 (* Move to DetSchedDomainTime_AI *)
-crunch domain_list_inv[wp]: do_user_op "\<lambda>s. P (domain_list s)"
+crunch do_user_op
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
 
 lemma next_child_child_set:
   "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>

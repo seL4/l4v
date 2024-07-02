@@ -178,7 +178,7 @@ section \<open>Symbolic execution\<close>
 
 (* performing symbolic execution within a monadic_rewrite requires discharging no_fail/empty_fail
    conditions depending on RHS/LHS and flags *)
-crunches example_k, example_f
+crunch example_k, example_f
   for inv[wp]: "P"
   and (empty_fail) empty_fail[wp]
   and (no_fail) no_fail[wp]

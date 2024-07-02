@@ -178,7 +178,8 @@ lemma tcb_cap_valid_pspaceI[intro]:
   by (clarsimp simp: tcb_cap_valid_def obj_at_def pred_tcb_at_def)
 
 
-crunch valid_objs[wp]: deleted_irq_handler "valid_objs"
+crunch deleted_irq_handler
+  for valid_objs[wp]: "valid_objs"
 
 
 lemma emptyable_rvk[simp]:
@@ -199,7 +200,7 @@ lemma tcb_cp_valid_trans_state_update[simp]: "tcb_cap_valid cap sl
   apply (simp add: tcb_cap_valid_def)
   done
 
-crunches post_cap_deletion
+crunch post_cap_deletion
   for valid_objs[wp]: "valid_objs"
 
 lemma empty_slot_valid_objs[wp]:
@@ -384,7 +385,7 @@ qed
 
 lemmas (in Finalise_AI_1) obj_ref_ofI' = obj_ref_ofI[OF obj_ref_elemD]
 
-crunches post_cap_deletion
+crunch post_cap_deletion
   for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma empty_slot_deletes[wp]:
@@ -394,7 +395,8 @@ lemma empty_slot_deletes[wp]:
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
-crunch caps_of_state[wp]: post_cap_deletion "\<lambda>s. P (caps_of_state s)"
+crunch post_cap_deletion
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
 
 lemma empty_slot_final_cap_at:
   "\<lbrace>(\<lambda>s. cte_wp_at (\<lambda>c. is_final_cap' c s) p s) and K (p \<noteq> p')\<rbrace>
@@ -405,7 +407,8 @@ lemma empty_slot_final_cap_at:
   apply (fastforce simp: )?
   done
 
-crunch pred_tcb_at[wp]: empty_slot "pred_tcb_at proj P t"
+crunch empty_slot
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
 
 lemma set_cap_revokable_update:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow>
@@ -450,10 +453,12 @@ lemma empty_slot_caps_of_state:
                         fun_upd_idem)
   done
 
-crunch caps_of_state[wp]: cancel_all_ipc "\<lambda>s. P (caps_of_state s)"
+crunch cancel_all_ipc
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
-crunch caps_of_state[wp]: fast_finalise, unbind_notification "\<lambda>s. P (caps_of_state s)"
+crunch fast_finalise, unbind_notification
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps thread_set_caps_of_state_trivial
    simp: tcb_cap_cases_def)
 
@@ -476,8 +481,8 @@ lemma cap_delete_one_caps_of_state:
   apply (clarsimp simp: can_fast_finalise_def)
   done
 
-crunch caps_of_state[wp]: blocked_cancel_ipc, cancel_signal
-    "\<lambda>s. P (caps_of_state s)"
+crunch blocked_cancel_ipc, cancel_signal
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
 
 lemma cancel_ipc_caps_of_state:
   "\<lbrace>\<lambda>s. (\<forall>p. cte_wp_at can_fast_finalise p s
@@ -592,13 +597,15 @@ lemma is_final_cap'_objrefsE:
      \<Longrightarrow> is_final_cap' cap' s"
   by (simp add: is_final_cap'_def)
 
-crunch typ_at[wp]: deleting_irq_handler "\<lambda>s. P (typ_at T p s)"
+crunch deleting_irq_handler
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp:crunch_wps simp:crunch_simps unless_def assertE_def)
 
 context Finalise_AI_1 begin
 context begin
   declare if_cong[cong]
-  crunch typ_at[wp]: finalise_cap "\<lambda>(s :: 'a state). P (typ_at T p s)"
+  crunch finalise_cap
+    for typ_at[wp]: "\<lambda>(s :: 'a state). P (typ_at T p s)"
 end
 end
 
@@ -657,7 +664,8 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
                  dest!: refs_in_ntfn_q_refs)
   done
 
-crunch (in Finalise_AI_1) invs[wp]: fast_finalise "invs"
+crunch (in Finalise_AI_1) fast_finalise
+  for invs[wp]: "invs"
 
 lemma cnode_at_unlive[elim!]:
   "s \<turnstile> cap.CNodeCap ptr bits gd \<Longrightarrow> obj_at (\<lambda>ko. \<not> live ko) ptr s"
@@ -697,13 +705,16 @@ lemmas st_tcb_at_def2 = pred_tcb_at_def2[where proj=itcb_state,simplified]
 
 lemmas tcb_cap_valid_imp = mp [OF mp [OF tcb_cap_valid_imp'], rotated]
 
-crunch irq_node[wp]: cancel_all_ipc "\<lambda>s. P (interrupt_irq_node s)"
+crunch cancel_all_ipc
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch irq_node[wp]: cancel_all_signals, fast_finalise "\<lambda>s. P (interrupt_irq_node s)"
+crunch cancel_all_signals, fast_finalise
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch irq_node[wp]: cap_delete_one "\<lambda>s. P (interrupt_irq_node s)"
+crunch cap_delete_one
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma deleting_irq_handler_empty:
@@ -759,8 +770,10 @@ lemma unbind_notification_bound_tcb_at[wp]:
   apply assumption
   done
 
-crunch valid_mdb[wp]: unbind_notification "valid_mdb"
-crunch tcb_at[wp]: unbind_notification "tcb_at t"
+crunch unbind_notification
+  for valid_mdb[wp]: "valid_mdb"
+crunch unbind_notification
+  for tcb_at[wp]: "tcb_at t"
 
 lemma unbind_notification_no_cap_to_obj_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
@@ -790,7 +803,8 @@ lemma fast_finalise_lift:
   done
 
 
-crunch cte_wp_at[wp]: fast_finalise "cte_wp_at P p"
+crunch fast_finalise
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (rule: fast_finalise_lift)
 
 lemma cap_delete_one_cte_wp_at_preserved:
@@ -831,7 +845,8 @@ lemma emptyable_lift:
   done
 
 
-crunch emptyable[wp]: set_simple_ko "emptyable sl"
+crunch set_simple_ko
+  for emptyable[wp]: "emptyable sl"
   (rule: emptyable_lift)
 
 lemma sts_emptyable:
@@ -959,7 +974,8 @@ lemma get_irq_slot_emptyable[wp]:
   apply (clarsimp simp: emptyable_def is_cap_table is_tcb elim!: obj_atE)
   done
 
-crunch (in Finalise_AI_2) invs[wp]: deleting_irq_handler "invs :: 'a state \<Rightarrow> bool"
+crunch (in Finalise_AI_2) deleting_irq_handler
+  for invs[wp]: "invs :: 'a state \<Rightarrow> bool"
 
 
 locale Finalise_AI_3 = Finalise_AI_2 a b
@@ -1017,11 +1033,12 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
      prepare_thread_delete t
        \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
 
-crunches suspend, unbind_maybe_notification, unbind_notification
+crunch suspend, unbind_maybe_notification, unbind_notification
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch irq_node[wp]: deleting_irq_handler "\<lambda>s. P (interrupt_irq_node s)"
+crunch deleting_irq_handler
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas cancel_all_ipc_cte_irq_node[wp]

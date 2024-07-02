@@ -11,10 +11,12 @@ begin
 
 context Arch begin global_naming ARM_HYP
 
-crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state
+crunch arch_finalise_cap
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: swp_def)
 
-crunch (bcorres)bcorres[wp]: prepare_thread_delete truncate_state
+crunch prepare_thread_delete
+  for (bcorres) bcorres[wp]: truncate_state
   (simp: swp_def)
 
 end

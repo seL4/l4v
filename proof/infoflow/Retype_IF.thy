@@ -408,7 +408,8 @@ lemma detype_reads_respects:
   apply (fastforce intro: states_equiv_for_detype)
   done
 
-crunch irq_masks[wp]: delete_objects "\<lambda>s. P (irq_masks (machine_state s))"
+crunch delete_objects
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks (machine_state s))"
   (ignore: do_machine_op wp: dmo_wp no_irq_freeMemory no_irq simp: detype_def)
 
 end

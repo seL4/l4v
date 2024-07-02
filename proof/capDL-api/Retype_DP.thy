@@ -49,7 +49,8 @@ lemma create_objects_mapM_x':
     done
 qed
 
-crunch inv[wp]: generate_object_ids P
+crunch generate_object_ids
+  for inv[wp]: P
   (wp: crunch_wps)
 
 lemma pick_rev:
@@ -291,11 +292,13 @@ lemma reset_untyped_cap_wp:
    apply fastforce+
   done
 
-crunch cdl_current_domain[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_domain s)"
+crunch reset_untyped_cap
+  for cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
   (wp: mapM_x_wp' mapME_x_inv_wp crunch_wps unless_wp
    simp: detype_def crunch_simps)
 
-crunch cdl_current_domain[wp]: invoke_untyped "\<lambda>s. P (cdl_current_domain s)"
+crunch invoke_untyped
+  for cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
   (wp: mapM_x_wp' mapME_x_inv_wp crunch_wps unless_wp
    simp: detype_def crunch_simps validE_E_def)
 
@@ -439,11 +442,11 @@ abbreviation (input) "retype_with_kids uinv
   \<equiv> (case uinv of (InvokeUntyped (Retype uref nt ts dest has_kids n)) \<Rightarrow> has_kids)"
 
 
-crunches retype_region, update_available_range
+crunch retype_region, update_available_range
   for cdt[wp]: "\<lambda>s. P (cdl_cdt s)"
   (simp: crunch_simps corrupt_intents_def)
 
-crunches retype_region, update_available_range
+crunch retype_region, update_available_range
   for has_children[wp]: "has_children slot"
   (simp: crunch_simps corrupt_intents_def has_children_def is_cdt_parent_def)
 
@@ -533,7 +536,7 @@ lemma mark_tcb_intent_error_has_children[wp]:
   by (wpsimp simp: has_children_def is_cdt_parent_def mark_tcb_intent_error_def update_thread_def
                    set_object_def)
 
-crunches corrupt_frame, corrupt_tcb_intent, corrupt_ipc_buffer
+crunch corrupt_frame, corrupt_tcb_intent, corrupt_ipc_buffer
   for cdt[wp]: "\<lambda>s. P (cdl_cdt s)"
   (simp: crunch_simps corrupt_intents_def)
 
@@ -693,10 +696,12 @@ lemma seL4_Untyped_Retype_sep:
  * become parents, and never lose their children                      *
  **********************************************************************)
 
-crunch cdt_inc[wp]: schedule "\<lambda>s. cdl_cdt s child = parent"
+crunch schedule
+  for cdt_inc[wp]: "\<lambda>s. cdl_cdt s child = parent"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch cdt_inc[wp]: handle_pending_interrupts "\<lambda>s. cdl_cdt s child = parent"
+crunch handle_pending_interrupts
+  for cdt_inc[wp]: "\<lambda>s. cdl_cdt s child = parent"
   (wp: simp: crunch_simps)
 
 lemmas gets_the_resolve_cap_sym = gets_the_resolve_cap[symmetric]
@@ -738,17 +743,20 @@ lemma hoare_drop_impE_R:
   apply fastforce
   done
 
-crunch cdt_inc[wp]: block_thread_on_ipc "\<lambda>s. P (cdl_cdt s)"
+crunch block_thread_on_ipc
+  for cdt_inc[wp]: "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   hoare_drop_imps
   simp:crunch_simps get_thread_def
   ignore:unify_failure)
 
-crunch cdt_inc[wp]: set_untyped_cap_as_full "\<lambda>s. P (cdl_cdt s)"
+crunch set_untyped_cap_as_full
+  for cdt_inc[wp]: "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   simp:crunch_simps get_thread_def)
 
-crunch cdt_inc[wp]: mark_tcb_intent_error "\<lambda>s. P (cdl_cdt s)"
+crunch mark_tcb_intent_error
+  for cdt_inc[wp]: "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   simp:crunch_simps)
 
@@ -795,7 +803,8 @@ lemma object_at_cdl_cdt[simp]:
    = object_at P ptr s"
   by (simp add: object_at_def)
 
-crunch tcb_intent[wp]: set_parent "\<lambda>s. tcb_at' (\<lambda>tcb. P (cdl_tcb_intent tcb)) ptr s"
+crunch set_parent
+  for tcb_intent[wp]: "\<lambda>s. tcb_at' (\<lambda>tcb. P (cdl_tcb_intent tcb)) ptr s"
 
 lemma throw_on_none_wp:
   "\<lbrace>\<lambda>s. case x of None \<Rightarrow> Q s | Some y \<Rightarrow> P y s\<rbrace> throw_on_none x \<lbrace>P\<rbrace>, \<lbrace>\<lambda>r s. Q s\<rbrace>"
@@ -829,9 +838,11 @@ lemma lookup_cap_rvu':
   apply (sep_solve)
   done
 
-crunch cdl_current_thread [wp]:  handle_pending_interrupts "\<lambda>s. P (cdl_current_thread s)"
+crunch  handle_pending_interrupts
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
 
-crunch cdl_current_thread [wp]:  lookup_cap "\<lambda>s. P (cdl_current_thread s)"
+crunch  lookup_cap
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: hoare_drop_imps)
 
 lemma throw_opt_wp_valid:
@@ -880,10 +891,12 @@ lemma corrupt_intents_no_pending:
               simp: object_slots_def option.splits)
   done
 
-crunch no_pending[wp]: corrupt_ipc_buffer no_pending
+crunch corrupt_ipc_buffer
+  for no_pending[wp]: no_pending
   (wp: crunch_wps update_thread_no_pending corrupt_intents_no_pending)
 
-crunch no_pending[wp]: mark_tcb_intent_error no_pending
+crunch mark_tcb_intent_error
+  for no_pending[wp]: no_pending
   (wp: crunch_wps update_thread_no_pending corrupt_intents_no_pending)
 
 lemma detype_one_wp:
@@ -993,13 +1006,14 @@ lemma set_parent_cdl_parent:
    apply clarsimp
    done
 
-crunch cdl_parent[wp]: reset_untyped_cap "\<lambda>s. cdl_cdt s slot = Some parent"
+crunch reset_untyped_cap
+  for cdl_parent[wp]: "\<lambda>s. cdl_cdt s slot = Some parent"
    (wp: assert_inv crunch_wps mapME_x_inv_wp
     simp: crunch_simps detype_def)
 
-crunch cdl_parent[wp]: insert_cap_child, corrupt_ipc_buffer,
+crunch insert_cap_child, corrupt_ipc_buffer,
           corrupt_tcb_intent, update_thread, derive_cap, insert_cap_sibling
-      "\<lambda>s. cdl_cdt s slot = Some parent"
+  for cdl_parent[wp]: "\<lambda>s. cdl_cdt s slot = Some parent"
    (wp: crunch_wps set_parent_cdl_parent simp: crunch_simps corrupt_intents_def)
 
 lemma transfer_caps_loop_cdl_parent:
@@ -1014,7 +1028,8 @@ lemma transfer_caps_loop_cdl_parent:
 
 lemmas reset_untyped_cap_cdl2[wp] = reset_untyped_cap_cdl_parent[THEN valid_validE_E]
 
-crunch cdt_parent: inject_reply_cap "\<lambda>s. cdl_cdt s slot = Some parent"
+crunch inject_reply_cap
+  for cdt_parent: "\<lambda>s. cdl_cdt s slot = Some parent"
   (simp: crunch_simps unless_def wp: crunch_wps)
 
 lemma set_object_no_pending:
@@ -1053,7 +1068,8 @@ lemma set_cap_no_pending[wp]:
            apply (clarsimp simp: opt_cap_def slots_of_def)+
   done
 
-crunch no_pending[wp]: create_cap no_pending
+crunch create_cap
+  for no_pending[wp]: no_pending
 
 lemma default_object_no_pending_cap:
   "\<lbrakk> default_object b c d = Some x2; object_slots x2 tcb_pending_op_slot = Some cap\<rbrakk>
@@ -1074,7 +1090,8 @@ lemma create_objects_no_pending[wp]:
   done
 
 
-crunch no_pending[wp]: retype_region "no_pending"
+crunch retype_region
+  for no_pending[wp]: "no_pending"
   (wp: crunch_wps ignore: create_objects)
 
 lemma detype_no_pending:

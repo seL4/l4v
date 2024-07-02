@@ -28,7 +28,8 @@ lemma tcb_context_merge[simp]:
 
 crunch_ignore (add: OR_choice set_scheduler_action)
 
-crunch valid_global_objs[wp]: cap_move valid_global_objs
+crunch cap_move
+  for valid_global_objs[wp]: valid_global_objs
   (wp: cap_move_ext.valid_global_objs dxo_wp_weak)
 
 
@@ -404,7 +405,8 @@ qed
 end
 
 
-crunch valid_arch_state[wp]: reply_from_kernel valid_arch_state (simp: crunch_simps)
+crunch reply_from_kernel
+  for valid_arch_state[wp]: valid_arch_state (simp: crunch_simps)
 
 lemma syscall_reads_respects_f_g:
   assumes reads_res_m_fault:
@@ -799,9 +801,11 @@ lemma handle_yield_reads_respects:
   by (wpsimp wp: domains_distinct tcb_sched_action_reads_respects
            simp: handle_yield_def reads_equiv_def)
 
-crunch silc_inv[wp]: handle_yield "silc_inv aag st"
+crunch handle_yield
+  for silc_inv[wp]: "silc_inv aag st"
 
-crunch globals_equiv[wp]: handle_yield "globals_equiv st"
+crunch handle_yield
+  for globals_equiv[wp]: "globals_equiv st"
   (simp_del: reschedule_required_ext_extended.dxo_eq tcb_sched_action_extended.dxo_eq)
 
 lemma equiv_valid_hoist_guard:
@@ -822,7 +826,8 @@ lemma as_user_reads_respects_g:
    apply simp+
   done
 
-crunch globals_equiv[wp]: invoke_domain "globals_equiv st"
+crunch invoke_domain
+  for globals_equiv[wp]: "globals_equiv st"
   (wp: dxo_wp_weak ignore: reschedule_required set_domain
    simp_del: set_domain_extended.dxo_eq)
 

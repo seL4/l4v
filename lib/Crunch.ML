@@ -42,18 +42,6 @@ fun read_sections sections =
     Scan.repeat (Scan.first (map (read_section sections) sections)) >> List.concat
 
 val crunch_parser =
-    (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
-     -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.const -- Scan.optional P.term ""
-     -- Scan.optional (P.$$$ "(" |-- read_sections crunch_sections --| P.$$$ ")") []
-    )
-    >> (fn (((((crunch_instance, prp_name), att_srcs), consts), extra), wpigs) =>
-           (fn lthy =>
-             (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
-                 NONE => error ("Crunch has not been defined for " ^ crunch_instance)
-               | SOME (crunch_x, _) =>
-                   crunch_x att_srcs extra prp_name wpigs consts lthy))));
-
-val crunches_parser =
     (((P.list1 P.const --| P.$$$ "for")
      -- P.and_list1 ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
          -- Parse.opt_attribs) -- Scan.optional (P.$$$ ":" |-- P.term) "")
@@ -67,9 +55,7 @@ val crunches_parser =
                    crunch_x att_srcs extra prp_name wpigs consts lthy)) confs));
 
 (*
- example: crunch(kind) inv[wp]: f,g  P  (wp: h_P simp: .. ignore: ..)
-
- or: crunches f,g for (kind)inv: P and (kind2)inv2: Q (wp: etc)
+ example: crunch f,g for (kind) inv: P and (kind2) inv2: Q (wp: h_P simp: .. ignore: ..)
 
  where: crunch = command keyword
         kind   = instance of crunch, e.g. valid, no_fail
@@ -81,7 +67,7 @@ val crunches_parser =
         simp: ..   = simp lemmas to use
         ignore: .. = constants to ignore for unfolding
 
- will prove lemmas for f and for any constituents required.
+ will prove lemmas for f and g and for any constituents required.
  for the default crunch instance "valid", lemmas of the form
     "{P and X} f {%_. P}" will be proven.
  the additional preconditions X are propagated upwards from similar
@@ -93,14 +79,8 @@ val crunches_parser =
 val crunchP =
     Outer_Syntax.local_theory
         @{command_keyword "crunch"}
-        "crunch through monadic definitions with a given property"
-        crunch_parser
-
-val crunchesP =
-    Outer_Syntax.local_theory
-        @{command_keyword "crunches"}
         "crunch through monadic definitions with multiple properties"
-        crunches_parser
+        crunch_parser
 
 val add_sect = ("add", Parse.const >> Constant);
 val del_sect = ("del", Parse.const >> Constant);

@@ -1351,10 +1351,12 @@ lemma ev_add_pre:
   apply simp
   done
 
-crunch invs[wp]: check_active_irq_if "einvs"
+crunch check_active_irq_if
+  for invs[wp]: "einvs"
   (wp: dmo_getActiveIRQ_wp ignore: do_machine_op)
 
-crunch schact_is_rct[wp]: thread_set "schact_is_rct"
+crunch thread_set
+  for schact_is_rct[wp]: "schact_is_rct"
   (wp: get_object_wp simp: schact_is_rct_def)
 
 definition partition :: "'a subject_label agent_domain_map \<Rightarrow> det_state \<Rightarrow> 'a" where

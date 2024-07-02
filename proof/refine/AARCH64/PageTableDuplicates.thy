@@ -33,8 +33,9 @@ lemma mapM_x_mapM_valid:
 
 declare withoutPreemption_lift [wp del]
 
-crunch valid_cap'[wp]:
-  isFinalCapability "\<lambda>s. valid_cap' cap s"
+crunch
+  isFinalCapability
+  for valid_cap'[wp]: "\<lambda>s. valid_cap' cap s"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 end

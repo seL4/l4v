@@ -674,7 +674,8 @@ lemma dcorres_select_select_ext:
     dcorres rvr \<top> \<top> (select S) (select_ext a S')"
   by (clarsimp simp: select_def select_ext_def get_def bind_def return_def assert_def fail_def corres_underlying_def)
 
-crunch valid_etcbs[wp]: cap_delete "valid_etcbs"
+crunch cap_delete
+  for valid_etcbs[wp]: "valid_etcbs"
   (wp: rec_del_preservation_valid_pdpt_objs cap_revoke_preservation_valid_pdpt_objs)
 
 lemma cap_revoke_corres_helper:
@@ -1325,9 +1326,11 @@ lemma dcorres_clear_object_caps_asid_pool:
 
 lemmas valid_idle_invs_strg = invs_valid_idle_strg
 
-crunch idle[wp] : invalidate_tlb_by_asid "\<lambda>s. P (idle_thread s)"
+crunch invalidate_tlb_by_asid
+  for idle[wp]: "\<lambda>s. P (idle_thread s)"
 
-crunch st_tcb_at[wp]: invalidate_tlb_by_asid "st_tcb_at P thread"
+crunch invalidate_tlb_by_asid
+  for st_tcb_at[wp]: "st_tcb_at P thread"
 
 lemma dcorres_storeWord_mapM_x_cvt:
   "\<forall>x\<in>set ls. within_page buf x sz
@@ -1945,7 +1948,8 @@ lemma dcorres_gba_no_effect:
 context
 notes if_cong[cong]
 begin
-crunch valid_etcbs[wp]: cancel_badged_sends valid_etcbs
+crunch cancel_badged_sends
+  for valid_etcbs[wp]: valid_etcbs
 (wp: mapM_x_wp hoare_drop_imps unless_wp ignore: filterM)
 end
 
@@ -1975,7 +1979,8 @@ lemma dcorres_insert_cap_combine:
     apply (fastforce simp:cte_wp_at_def)
 done
 
-crunch valid_etcbs[wp]: cap_move_ext, cap_move "valid_etcbs"
+crunch cap_move_ext, cap_move
+  for valid_etcbs[wp]: "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma invoke_cnode_corres:
@@ -2058,7 +2063,8 @@ lemma invoke_cnode_corres:
      apply (rule dcorres_ep_cancel_badge_sends, clarsimp+)
   done
 
-crunch inv[wp]: lookup_source_slot "P"
+crunch lookup_source_slot
+  for inv[wp]: "P"
 
 lemma corres_symb_exec_r_dcE:
   "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>rv. P\<rbrace>;

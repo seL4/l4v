@@ -86,9 +86,10 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
          split del: if_split)
   done
 
-crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
+crunch set_irq_state
+  for valid_global_refs[Interrupt_AI_asms]: "valid_global_refs"
 
-crunches arch_invoke_irq_handler
+crunch arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and valid_list[wp]: valid_list
 
@@ -170,7 +171,8 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
   done
 
 
-crunch device_state_inv[wp]: resetTimer "\<lambda>ms. P (device_state ms)"
+crunch resetTimer
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma resetTimer_invs_ARCH[Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -212,7 +214,7 @@ lemma halted_eq:
   "halted st = (st = Inactive \<or> st = IdleThreadState)"
   by (cases st; simp)
 
-crunches vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+crunch vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   (wp: ex_nonz_cap_to_pres)
 
 lemma vgic_maintenance_invs[wp]:

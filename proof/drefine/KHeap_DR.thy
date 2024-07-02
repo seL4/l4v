@@ -82,7 +82,7 @@ termination CSpace_D.resolve_address_bits
 
 end
 
-crunches
+crunch
   "KHeap_D.set_cap", "PageTableUnmap_D.cancel_all_ipc", "PageTableUnmap_D.unbind_maybe_notification"
   for cdl_cdt [wp]: "\<lambda>s. P (cdl_cdt s)"
   (wp: crunch_wps simp: crunch_simps)

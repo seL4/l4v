@@ -831,7 +831,7 @@ lemma sym_refs_hyp_refs_triv[simp]: "sym_refs (state_hyp_refs_of s')"
   apply (clarsimp simp: state_hyp_refs_of_def sym_refs_def)
   by (case_tac "kheap s' x"; simp)
 
-crunches doMachineOp
+crunch doMachineOp
   for deletionIsSafe_delete_locale[wp]: "deletionIsSafe_delete_locale base magnitude"
   (simp: deletionIsSafe_delete_locale_def)
 
@@ -3011,7 +3011,8 @@ lemma curDomain_commute:
   apply auto
   done
 
-crunch inv[wp]: curDomain P
+crunch curDomain
+  for inv[wp]: P
 
 lemma placeNewObject_tcb_at':
   "\<lbrace>pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr (objBits (makeObject::tcb))
@@ -3342,13 +3343,20 @@ lemma new_cap_object_comm_helper:
    apply clarsimp
   done
 
-crunch pspace_aligned'[wp]: updateNewFreeIndex "pspace_aligned'"
-crunch pspace_canonical'[wp]: updateNewFreeIndex "pspace_canonical'"
-crunch pspace_in_kernel_mappings'[wp]: updateNewFreeIndex "pspace_in_kernel_mappings'"
-crunch pspace_distinct'[wp]: updateNewFreeIndex "pspace_distinct'"
-crunch valid_arch_state'[wp]: updateNewFreeIndex "valid_arch_state'"
-crunch pspace_no_overlap'[wp]: updateNewFreeIndex "pspace_no_overlap' ptr n"
-crunch ctes_of[wp]: updateNewFreeIndex "\<lambda>s. P (ctes_of s)"
+crunch updateNewFreeIndex
+  for pspace_aligned'[wp]: "pspace_aligned'"
+crunch updateNewFreeIndex
+  for pspace_canonical'[wp]: "pspace_canonical'"
+crunch updateNewFreeIndex
+  for pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
+crunch updateNewFreeIndex
+  for pspace_distinct'[wp]: "pspace_distinct'"
+crunch updateNewFreeIndex
+  for valid_arch_state'[wp]: "valid_arch_state'"
+crunch updateNewFreeIndex
+  for pspace_no_overlap'[wp]: "pspace_no_overlap' ptr n"
+crunch updateNewFreeIndex
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
 lemma updateNewFreeIndex_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> updateNewFreeIndex slot \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
@@ -4994,7 +5002,8 @@ lemma insertNewCap_wps[wp]:
   apply (fastforce elim!: rsubst[where P=P])
   done
 
-crunch typ_at'[wp]: insertNewCap "\<lambda>s. P (typ_at' T p s)"
+crunch insertNewCap
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
 end
