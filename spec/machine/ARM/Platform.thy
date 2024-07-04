@@ -15,14 +15,22 @@ imports
   Kernel_Config
 begin
 
-context Arch begin global_naming ARM
-
 text \<open>
   This theory lists platform-specific types and basic constants, in particular
   the types of interrupts and physical addresses, constants for the
   kernel location, the offsets between physical and virtual kernel
   addresses, as well as the range of IRQs on the platform.
 \<close>
+
+section \<open>ABI Setup\<close>
+
+(* representation of C int literals, the default for any unadorned numeral *)
+type_synonym int_literal_len = "32 signed"
+type_synonym int_word = "int_literal_len word"
+
+section \<open>Platform Constants\<close>
+
+context Arch begin global_naming ARM
 
 value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"

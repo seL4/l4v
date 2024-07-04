@@ -15,6 +15,14 @@ imports
   Kernel_Config
 begin
 
+section \<open>ABI Setup\<close>
+
+(* representation of C int literals, the default for any unadorned numeral *)
+type_synonym int_literal_len = "32 signed"
+type_synonym int_word = "int_literal_len word"
+
+section \<open>Platform Constants\<close>
+
 context Arch begin global_naming X64
 
 type_synonym irq = word8
