@@ -1,4 +1,5 @@
 <!--
+     Copyright 2024, Proofcraft Pty Ltd
      Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
 
      SPDX-License-Identifier: CC-BY-SA-4.0
@@ -6,13 +7,15 @@
 
 # Architecture Split
 
-The problem that architecture splitting ("arch_split") seeks to address is
-separating architecture-generic concepts from architecture-specific concepts in
-the proofs. Ultimately, arch_split aims to find suitable abstractions of
-architecture-specific details, so that we may prove architecture-generic lemmas
-without unfolding architecture-specific definitions, and therefore share
-architecture-generic proofs across multiple architectures. But we're not there
-yet. So far only the `ASpec` and `AInvs` sessions have really been split.
+Initially, the seL4 functional correctness proof existed for only one
+architecture and platform. When porting to other architectures, we realised
+that copying everything and fixing up the copy is not a good approach, since a
+significant proportion of the specifications and proofs are very similar. By
+splitting the specs and proofs into *generic* and *arch-specific* parts, a
+large amount of work duplication can be avoided. The Haskell spec was already
+written in a way that keeps the generic and architecture-specific definitions
+and types separated. The first arch-split was conducted during the abstract
+invariant (AInvs) proof for 32-bit ARM_HYP.
 
 We use (perhaps abuse) the Isabelle locale mechanism, together with some custom
 commands, to place architecture-specific definitions and proofs in namespaces,
@@ -20,14 +23,19 @@ to make it harder to unfold architecture-specific definitions by accident. We
 also have a collection of hacks to keep existing proofs checking while we
 continue to work towards the ultimate goal of proofs on multiple architectures.
 
-This file describes the current state of arch_split, and what still needs to be
-done.
+So far, the `ASpec` and `AInvs` sessions have been arch-split, with some work
+already done on the executable design spec (`ExecSpec`).
+
 
 ## L4V_ARCH
 
-The architecture split is controlled by an environment
-variable, `L4V_ARCH`, which is used in theory imports sections to include
-the appropriate architecture-specific theory for the currently selected
+When running a session, the `L4V_ARCH` environment variable is used to specify
+the target architecture; this affects which seL4 kernel configuration gets
+used, where Isabelle images are stored, as well as the arch-split infrastructure
+via parametrised theory imports.
+
+By using `$L4V_ARCH` in the theory imports section, we can include
+the appropriate architecture-specific theories for the currently selected
 architecture. For example:
 
 - `l4v/spec/abstract/CSpace_A.thy`
@@ -50,6 +58,7 @@ of their fully qualified names, we adopt the convention that
 architecture-specific theory names are prefixed with "Arch". We don't prefix
 with `ARM` or `X64`, because generic theories must be able to import
 architecture-specific theories without naming a particular architecture.
+
 
 ## The Arch locale
 
@@ -74,7 +83,7 @@ end
 ```
 
 All architecture-specific definitions should be placed in the Arch locale, with
-an appropriate global_naming scheme (see below).
+an appropriate `global_naming` scheme (see below).
 
 If you're not familiar with locales, you should read the [locale tutorial]. The
 `Arch` locale has no parameters and no assumptions, since we are merely using it
@@ -87,12 +96,12 @@ because the generic theories need to be able to selectively refer to types,
 constants and facts from architecture-specific theories, without naming a
 particular architecture. The mechanisms for doing this are described below.
 
-[locale tutorial]: https://isabelle.in.tum.de/website-Isabelle2021/dist/Isabelle2021/doc/locales.pdf
+[locale tutorial]: https://isabelle.in.tum.de/doc/locales.pdf
 
-## Current status
 
-The sessions `ASpec` and `AInvs` are split, but other proofs remain duplicated
-between architectures.
+## Workaround for non-split theories
+
+For many sessions, the proofs remain duplicated between architectures.
 
 As a temporary measure, we wrap existing proofs in an anonymous context block,
 in which we interpret the Arch locale. For example:
@@ -122,18 +131,25 @@ the proof can be adapted to another architecture.
 There are issues with some commands that do not work inside anonymous context
 blocks, most notably locale declarations, and locale context blocks. In these
 cases, we exit the anonymous context block before entering the locale context,
-and then interpret the Arch locale inside the locale context block (if necessary).
+and then interpret the Arch locale inside the locale context block (if
+necessary).
+
 
 ## Global naming
 
-Even though the Arch locale must have the same name on every architecture, we
-need a way to distinguish between architecture-dependent types, constants and
-lemmas which are expected to exist on every architecture, and those which are
-internal to a particular architecture. We want to be able to *refer* to the
-former in generic theories, while acknowledging that they have
-architecture-specific definitions and proofs. But we want to prevent ourselves
-from inadvertently referring to types, constants and facts which are only
-internal to a particular architecture, for example, definitions of constants.
+The Arch locale must have the same name on every architecture. However, there
+are two classes of architecture-specific types, constants and facts, i.e. those
+that:
+* only exist internal to a specific architecture (e.g. Arm-only machine op)
+* exist on all architectures, but have architecture-specific definitions
+  (e.g. a constant that gets the value of some register in thread context,
+   but *not* its definition)
+
+We want to be able to *refer* to the latter in generic theories, while
+acknowledging that they have architecture-specific definitions and proofs. We
+want to prevent, however, inadvertent references to types, constants and facts
+which are only internal to a particular architecture (e.g. definitions of
+constants).
 
 To help achieve this hiding, we provide a custom command, **global_naming**,
 that modifies the way qualified names are generated. The primary use of
@@ -156,10 +172,10 @@ definition "get_pd_of_thread ≡ ..."
 end
 
 (* Back in the global context, we can't refer to these names without naming a particular architecture! *)
-term get_pd_of_thread         (* Free variable                                                              *)
-term Arch.get_pd_of_thread    (* Free variable                                                              *)
-term ARM.get_pd_of_thread     (* Accessible, and the qualifier clearly indicates that this is ARM-specific. *)
-thm  ARM.get_pd_of_thread_def (* Also accessible.                                                           *)
+term get_pd_of_thread         (* Free variable *)
+term Arch.get_pd_of_thread    (* Free variable *)
+term ARM.get_pd_of_thread     (* Accessible; qualifier clearly indicates that this is ARM-specific. *)
+thm  ARM.get_pd_of_thread_def (* Also accessible. *)
 
 (* ... *)
 end
@@ -180,6 +196,7 @@ give *all* types, constants and lemmas with an architecture-specific
 `global_naming` scheme. Then, in generic theories, we use
 *requalification* to selectively extract just those types, constants and
 facts which are expected to exist on all architectures.
+
 
 ## Requalify
 
@@ -254,12 +271,39 @@ In a generic theory, we typically only interpret the Arch locale:
 - to keep existing proofs checking until we find time to factor out the
   architecture-dependent parts.
 
+
+### Unconventional requalification shortcut
+
+While the expected convention is to perform requalify commands in the generic
+theory as described above, there exists a shortcut for doing so in
+architecture-specific theories when outside the Arch context:
+
+```isabelle
+requalify_facts
+  ARM.user_mem_dom_cong
+
+thm user_mem_dom_cong      (* ok *)
+thm ARM.user_mem_dom_cong  (* ok *)
+thm Arch.user_mem_dom_cong (* ERROR *)
+```
+
+This immediately makes the fact available in the global context. While it is a
+violation of expected conventions and needs to be repeated in every
+arch-specific theory file, there is one important difference:
+* the `.` in `context begin interpretation Arch .` in the middle of AInvs takes 7.5s
+* `requalify_facts` in the global context is nearly instant (even for
+multiple facts).
+
+This disparity will only get worse as the Arch context grows bigger, and
+might indicate the need for some alternative functionality.
+
+
 ### Dealing with name clashes
 
 Things are a bit more complicated when a generic theory needs to refer to an
-architecture-specific thing, and there is already an architecture-generic thing
-with the same unqualified name. That is, points 1 and 2 above hold, but 3 does
-not. This happens frequently in the Haskell spec, where an architecture-generic
+architecture-specific entity when there already exists an architecture-generic
+entity with the same unqualified name. That is, points 1 and 2 above hold, but
+3 does not. This happens frequently in the Haskell spec, where a generic
 definition may refer to the corresponding architecture-specific definition. In
 this case, we would like the unqualified name to refer to the generic concept,
 and we would like to refer to the architecture-specific concept with an "Arch"
@@ -280,7 +324,7 @@ context Arch begin
 (* Here, the global_naming scheme is "Arch" by default. *)
 
 term deriveCap               (* In the Arch context, this is the deriveCap function for arch caps. *)
-term RetypeDecls_H.deriveCap (* This is the arch-generic deriveCap function.                       *)
+term RetypeDecls_H.deriveCap (* This is the arch-generic deriveCap function. *)
 
 (* The following makes Arch.deriveCap refer to the architecture-specific constant. *)
 requalify_consts deriveCap
@@ -297,22 +341,22 @@ end
 end
 
 (* Now, in the global context... *)
-term deriveCap        (* arch-generic             *)
+term deriveCap        (* arch-generic *)
 term global.deriveCap (* arch-generic alternative *)
-term Arch.deriveCap   (* arch-specific            *)
+term Arch.deriveCap   (* arch-specific *)
 
 (* Also when we interpret the Arch locale... *)
 context begin interpretation Arch .
-term deriveCap        (* arch-generic             *)
+term deriveCap        (* arch-generic *)
 term global.deriveCap (* arch-generic alternative *)
-term Arch.deriveCap   (* arch-specific            *)
+term Arch.deriveCap   (* arch-specific *)
 end
 
 (* Even when we re-enter the Arch locale... *)
 context Arch begin
-term deriveCap        (* arch-generic             *)
+term deriveCap        (* arch-generic *)
 term global.deriveCap (* arch-generic alternative *)
-term Arch.deriveCap   (* arch-specific            *)
+term Arch.deriveCap   (* arch-specific *)
 end
 
 (* ... *)
@@ -343,15 +387,16 @@ an `Arch`-qualified name.
 Note: In a generic theory, we typically *only* enter the Arch context
 to requalify names with the "Arch" qualifier.
 
-### Name clashes between abstract and Haskell specs
+
+### Name clashes between abstract and Haskell specs (i.e. `ARM_A` vs `ARM_H`)
 
 In addition to name clashes between architecture-generic and
 architecture-specific concepts, there are also many names in common between the
 abstract and Haskell specs. Previously, these were disambiguated in the
 refinement proofs by fully qualified references including theory names. For
 architecture-specific things, the introduction of the Arch locale
-(with global_naming) changed the required fully-qualified names, so many proofs
-were broken. For example, `ArchRetype_H.updateCapData_def` became
+(with `global_naming`) changed the required fully-qualified names, so many
+proofs were broken. For example, `ArchRetype_H.updateCapData_def` became
 `ArchRetype_H.ARM.updateCapData_def`.
 
 Fixing this required search-and-replace, but rather than entrench the fragility
@@ -365,10 +410,11 @@ In the future, when we are properly splitting the refinement proofs, we will may
 want to extend this approach by introducing `Arch_A` and `Arch_H`
 `global_naming` schemes to disambiguate overloaded requalified names.
 
+
 ### Name clashes with the C spec
 
 There were also some clashes between Haskell and C specs. For names generated in
-Kernel_C.thy, we simply added a Kernel_C qualifier. For names generated in
+`Kernel_C.thy`, we simply added a `Kernel_C.` qualifier. For names generated in
 Substitute.thy, we used hand-crafted abbreviations, for example:
 
 - `l4v/proof/crefine/Ipc_C.thy`
@@ -379,6 +425,12 @@ lemmas syscallMessageC_def = kernel_all_substitute.syscallMessage_def
 ```
 
 ## Managing intra-theory dependencies
+
+
+### Three-theory split (deprecated)
+
+Note: this is no longer the expected convention except for older files. See
+`Theory-specific architecture-generic locales` for new convention.
 
 Initial work on splitting invariant definitions and proofs found that
 within many theory files, there were both:
@@ -408,23 +460,28 @@ We see no reason to redo that previous work, so the above still
 describes the current state of the abstract spec and some of the
 invariants.
 
+
 ### Theory-specific architecture-generic locales
 
 For further updates, however, we have developed a new pattern which we
 hope will eliminate the need for more "Pre" theories, and only require
 the addition of Arch theories for each existing theory.
 
-In this pattern, an existing theory Foo_AI is split into two theories:
+In this pattern, an existing theory `Foo_AI` is split into two theories:
 
-- `Foo_AI` retains the architecture-generic parts, using a locale `Foo_AI`
+- `Foo_AI` retains the architecture-generic parts, using locales `Foo_AI*`
    where necessary to *assume* the existence of the appropriate
    architecture-specific parts.
+   Note: if only one locale is needed, it is named `Foo_AI` by convention,
+   otherwise naming proceeds: `Foo_AI_1`, `Foo_AI_2`, etc.
 
 - `$L4V_ARCH/ArchFoo_AI` imports `Foo_AI`, makes architecture-specific
   definitions and proofs in the `Arch` locale, and then interprets the
-  `Foo_AI` locale globally.
+  `Foo_AI*` locales globally.
 
-After the locale `Foo_AI` is interpreted, we never speak of it again.
+After the `Foo_AI*` locales are interpreted, we never speak of them again.
+
+Here is an example with a single locale:
 
 - `l4v/proof/invariant-abstract/Retype_AI.thy`
 
@@ -433,14 +490,10 @@ theory Retype_AI
 imports VSpace_AI
 begin
 
-(* Here, we declare a theory-specific locale, which we will use
-   to assume the existence of architecture-specific details. *)
+(* Declare a theory-specific locale, which we use to assume the existence
+   of architecture-specific details.
 
-locale Retype_AI
-
-(* We can make architecture-generic definitions and lemmas here... *)
-
-(* We have access to the clearMemoryVM constant, since
+   We have access to the clearMemoryVM constant, since
    it was previously requalified into the global context,
    but its definition is architecture-specific.
    Here, we assume a property that we need to continue
@@ -448,11 +501,9 @@ locale Retype_AI
    Previously, this was a lemma that unfolded
    architecture-specific details. *)
 
-context Retype_AI
-extend_locale
-  assumes clearMemoryVM_return [simp]:
-  "clearMemoryVM a b = return ()"
-end
+locale Retype_AI =
+  assumes clearMemoryVM_return[simp]:
+    "clearMemoryVM a b = return ()"
 
 (* ... *)
 
@@ -462,6 +513,15 @@ end
 lemma (in Retype_AI) swp_clearMemoryVM [simp]:
   "swp clearMemoryVM x = (λ_. return ())"
   by (rule ext, simp)
+
+(* ... *)
+
+context Retype_AI
+
+(* we can do proofs using the assumptions of Retype_AI here, as an alternative
+   to multiple (in Retype_AI) lemmas *)
+
+end
 
 (* ... *)
 
@@ -481,13 +541,13 @@ context Arch begin global_naming ARM
    to which we'll add lemmas which will be needed to discharge
    the assumptions of the Retype_AI locale. *)
 
-named_theorems Retype_AI_asms
+named_theorems Retype_AI_assms
 
 (* We prove a lemma which matches an assumption of the Retype_AI locale,
    making use of an arch-specific definition.
-   We declare the lemma as a memory of the Retype_AI_asms collection. *)
+   We declare the lemma as a memory of the Retype_AI_assms collection. *)
 
-lemma clearMemoryVM_return[simp, Retype_AI_asms]:
+lemma clearMemoryVM_return[simp, Retype_AI_assms]:
   "clearMemoryVM a b = return ()"
   by (simp add: clearMemoryVM_def)
 
@@ -504,7 +564,7 @@ end
 global_interpretation Retype_AI?: Retype_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Retype_AI_asms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact Retype_AI_assms)?)
   qed
 
 (* ... *)
@@ -512,12 +572,84 @@ global_interpretation Retype_AI?: Retype_AI
 end
 ```
 
-Note that the custom command `extend_locale` allows us to pretend that
-locales can be extended incrementally. This allows us to convert lemmas
-to locale assumptions in-place, without having to move locale
-assumptions to the point where the locale is initially declared.
+Note: `global_interpretation Retype_AI?` exports all names into the global
+context, but they are also accessible with a `Retype_AI.` prefix, which is
+useful to know in case of name collision.
 
-## Qualify
+
+### Need for multiple theory-specific architecture-generic locales
+
+In the previous section, we mentioned "locales" (plural), with the ideal case
+being a single locale. The reason we need this is due to chains of lemmas that
+look like this:
+* using AA (arch-specific) prove GB (generic)
+* using GB (generic) prove AC (arch-specific)
+* using AC (arch-specific) prove GD (generic)
+
+If we wanted to split this theory as in the single-locale example, we would end
+up with multiple theories, divided only by the arbitrariness of the dependency
+graph. Instead, we can employ multiple locales as follows.
+
+In the generic theory (e.g. `Foo_AI`) we do:
+
+```isabelle
+locale Foo_AI_1 =
+  assumes AA: (* ... *) "XXX"
+
+lemma (in Foo_AI_1) GB: "XXX"
+  by (* using AA *)
+
+locale Foo_AI2 = Foo_AI_1 +
+  assumes AC: (* ... *) "XXX"
+
+lemma (in Foo_AI_2) GD: "XXX"
+  by (* using AC *)
+```
+
+This allows instantiation of the locales in stages in the arch-specific theory
+(e.g. `ArchFoo_AI`):
+
+```isabelle
+
+context Arch begin global_naming ARM
+
+lemma AA[Foo_AI_assms]: "XXX"
+  by (* ... *)
+
+end
+
+interpretation Foo_AI_1?: Foo_AI_1
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
+  qed
+
+(* now we get access to GB in the global context *)
+
+context Arch begin global_naming ARM
+
+lemma AC[Foo_AI_assms]: "XXX"
+  by (* using GB *)
+
+end
+
+interpretation Foo_AI_2?: Foo_AI_2
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
+  qed
+
+(* now we get access to GD in the global context *)
+```
+
+While strictly speaking, there is no requirement that `Foo_AI_2` includes
+`Foo_AI_1`, in practice we always do so, since we want everything that got
+proved to be instantly available in case it's needed in the proof chain. This
+generates limited duplication: a fact from `Foo_AI_1` will be duplicated in
+`Foo_AI_2`, but not in `Foo_AI_3+`.
+
+
+## Qualifying non-locale-compatible commands
 
 Generally speaking, architecture-specific definitions and lemmas should
 be put inside the `Arch` locale, with an appropriate `global_naming` scheme.
@@ -569,6 +701,7 @@ Some caveats:
 
 In short: use sparingly and avoid when possible.
 
+
 ## HOWTO
 
 For splitting new parts of the proof, this is roughly the workflow we follow:
@@ -592,7 +725,7 @@ architecture-specific details.
 
 The workflow:
 
-- Pick a theory to work on. Co-ordinate using Jira if there are multiple people
+- Pick a theory to work on. Co-ordinate with others if there are multiple people
   working on the split.
 
 - Assuming you're starting for ARM, which has the most proofs: If there is no
@@ -623,7 +756,8 @@ The workflow:
   - Otherwise, if it's not obvious what to do, have a conversation with someone.
     We'll add more tips here as the process becomes clearer.
 
-## Other Locales
+
+## Handling existing locales
 
 Existing locales may need to be split up into architecture-generic and
 architecture-specific variants. We can do this by making a second locale
@@ -688,6 +822,7 @@ thm quasi_arch_lemma -- "Exported result"
 
 thm arch_lemma -- "Error, still private"
 ```
+
 
 ## Breaking abstraction
 
