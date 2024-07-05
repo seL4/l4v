@@ -47,6 +47,8 @@ CKernel CSpec : c-kernel design-spec
 
 CBaseRefine CRefine SimplExportAndRefine : c-kernel design-spec ASpec-files
 
+InfoFlowCBase InfoFlowC: CRefine
+
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
 	cd ../spec && $(ISABELLE_TOOL) env make c-kernel
