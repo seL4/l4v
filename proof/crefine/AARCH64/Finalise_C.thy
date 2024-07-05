@@ -1971,7 +1971,7 @@ lemma Zombie_new_spec:
 
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
-    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 9
+    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask irq_len
         = capIRQ_CL (cap_irq_handler_cap_lift ccap)"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule ccap_relation_c_valid_cap)
@@ -2923,7 +2923,7 @@ lemma finaliseCap_ccorres:
     apply clarsimp
     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
     apply (frule(1) ccap_relation_IRQHandler_mask)
-    apply (clarsimp simp: isCap_simps irqInvalid_def valid_cap'_def)
+    apply (clarsimp simp: isCap_simps irqInvalid_def valid_cap'_def irq_len_val)
     apply (rule irq_opt_relation_Some_ucast)
       apply fastforce
      apply (simp add: irqInvalid_def and_mask_eq_iff_le_mask)
@@ -2933,7 +2933,7 @@ lemma finaliseCap_ccorres:
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)
-  apply (clarsimp simp add:mask_eq_ucast_eq)
+  apply (clarsimp simp: mask_eq_ucast_eq irq_len_val)
   done
 
 lemma checkIRQ_ret_good:

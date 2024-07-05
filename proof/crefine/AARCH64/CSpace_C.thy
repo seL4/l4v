@@ -1912,7 +1912,7 @@ definition arch_cleanup_info_wf' :: "arch_capability \<Rightarrow> bool" where
 definition cleanup_info_wf' :: "capability \<Rightarrow> bool" where
   "cleanup_info_wf' cap \<equiv> case cap of
       IRQHandlerCap irq \<Rightarrow>
-        UCAST(9\<rightarrow>machine_word_len) irq \<le>  SCAST(int_literal_len\<rightarrow>machine_word_len) Kernel_C.maxIRQ
+        UCAST(irq_len\<rightarrow>machine_word_len) irq \<le>  SCAST(int_literal_len\<rightarrow>machine_word_len) Kernel_C.maxIRQ
     | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap
     | _ \<Rightarrow> True"
 
@@ -2218,7 +2218,7 @@ lemma postCapDeletion_ccorres:
   apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
   apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
                         cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def)
-  apply (simp add: mask_eq_ucast_eq)
+  apply (simp add: mask_eq_ucast_eq irq_len_val)
   done
 
 lemma emptySlot_ccorres:
@@ -2843,7 +2843,7 @@ lemma sameRegionAs_spec:
            apply (simp add: cap_irq_handler_cap_lift)
            apply (simp add: cap_to_H_def)
            apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def ucast_eq_mask
-                                 cl_valid_cap_def mask_twice from_bool_0
+                                 cl_valid_cap_def mask_twice from_bool_0 irq_len_val
                           split: if_split bool.split
                   | intro impI conjI
                   | simp)

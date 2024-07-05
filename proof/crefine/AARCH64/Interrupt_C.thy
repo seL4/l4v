@@ -308,7 +308,7 @@ lemma invokeIRQControl_expanded_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: word_le_nat_alt Kernel_C_maxIRQ)
   apply (clarsimp simp: Collect_const_mem ccap_relation_def cap_irq_handler_cap_lift
-                        cap_to_H_def c_valid_cap_def cl_valid_cap_def
+                        cap_to_H_def c_valid_cap_def cl_valid_cap_def irq_len_val
                         word_bw_assocs Kernel_C_maxIRQ ucast_and_mask_drop)
   done
 

@@ -382,13 +382,12 @@ definition
   where
   "cte_to_H cte \<equiv> CTE (cap_to_H (cap_CL cte)) (mdb_node_to_H (cteMDBNode_CL cte))"
 
-(* FIXME AARCH64 the "9" here is irq size, do we have a better abbreviation for irq bits? *)
 definition
 cl_valid_cap :: "cap_CL \<Rightarrow> bool"
 where
 "cl_valid_cap c \<equiv>
    case c of
-     Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 9 = capIRQ_CL fc)
+     Cap_irq_handler_cap fc \<Rightarrow> capIRQ_CL fc && mask irq_len = capIRQ_CL fc
    | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFVMRights_CL fc < 4 \<and> capFVMRights_CL fc \<noteq> 2
    | x \<Rightarrow> True"
 

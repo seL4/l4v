@@ -328,7 +328,7 @@ lemma decodeInvocation_ccorres:
      apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
      apply fastforce
     apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
-    apply (fastforce simp: cap_endpoint_cap_lift_def mask_eq_ucast_eq)
+    apply (fastforce simp: cap_endpoint_cap_lift_def mask_eq_ucast_eq irq_len_val)
    apply (frule ccap_relation_ep_helpers)
     apply (clarsimp simp: cap_get_tag_isCap isEndpointCap_def)
    apply clarsimp
@@ -2159,9 +2159,9 @@ proof -
       apply (drule (1) obj_at_cslift_tcb)
       apply (clarsimp simp: cfault_rel_def seL4_Fault_VPPIEvent_lift_def
                             seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def Let_def
-                            mask_eq_iff
+                            mask_eq_iff irq_len_val
                       split: if_splits)
-      apply word_eqI_solve
+      apply (simp add: ucast_and_mask ge_mask_eq irq_len_val ucast_and_mask_source word_and_le1)
       done
 
         apply (wpsimp simp: vcpuUpdate_def wp: setVCPU_VPPIMasked_invs' | wps)+
