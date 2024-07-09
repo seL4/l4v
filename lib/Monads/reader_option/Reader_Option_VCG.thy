@@ -83,6 +83,10 @@ lemma ofail_wp[wp]:
   "ovalid (\<lambda>_. True) ofail Q"
   by (simp add: ovalid_def ofail_def)
 
+lemma ask_wp[wp]:
+  "\<lblot>\<lambda>s. P s s\<rblot> ask \<lblot>P\<rblot>"
+  by (clarsimp simp: ovalid_def)
+
 lemma asks_wp[wp]:
   "ovalid (\<lambda>s. P (f s) s) (asks f) P"
   by (simp add: split_def asks_def oreturn_def obind_def ovalid_def)
