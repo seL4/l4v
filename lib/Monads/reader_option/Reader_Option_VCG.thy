@@ -250,6 +250,10 @@ lemma no_ofail_ofail[wp]:
   "no_ofail \<bottom> ofail"
   by (simp add: no_ofail_def)
 
+lemma no_ofail_ask[wp]:
+  "no_ofail \<top> ask"
+  by (simp add: no_ofail_def)
+
 lemma no_ofail_asks_simp[simp]:
   "no_ofail P (asks f)"
   unfolding asks_def oreturn_def obind_def no_ofail_def
