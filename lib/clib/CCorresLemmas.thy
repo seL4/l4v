@@ -1176,7 +1176,7 @@ proof -
 
   show ?thesis
     by (fastforce dest!: helper intermediate_Normal_state spec
-                  intro: ccorresI_empty_handler_stack cond_hoarep')
+                  intro: ccorres_empty_handler_stackI cond_hoarep')
 qed
 
 lemmas ccorres_While' = ccorres_While[where C'=UNIV, simplified]
