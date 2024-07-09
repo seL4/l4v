@@ -356,11 +356,11 @@ lemma corres_noop_ex_abs:
 lemma corres_symb_exec_r_conj_ex_abs:
   assumes z: "\<And>rv. corres_underlying sr nf nf' r Q (R' rv) x (y rv)"
   assumes y: "\<lbrace>Q'\<rbrace> m \<lbrace>R'\<rbrace>"
-  assumes x: "\<And>s. Q s \<Longrightarrow> \<lbrace>\<lambda>s'. (s, s') \<in> sr \<and> P' s'\<rbrace> m \<lbrace>\<lambda>rv s'. (s, s') \<in> sr\<rbrace>"
-  assumes nf: "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying sr Q) m"
-  shows      "corres_underlying sr nf nf' r Q (P' and Q') x (m >>= (\<lambda>rv. y rv))"
+  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>\<lambda>s'. (s, s') \<in> sr \<and> P' s'\<rbrace> m \<lbrace>\<lambda>rv s'. (s, s') \<in> sr\<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying sr P) m"
+  shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') x (m >>= (\<lambda>rv. y rv))"
 proof -
-  have P: "corres_underlying sr nf nf' dc Q P' (return undefined) m"
+  have P: "corres_underlying sr nf nf' dc P P' (return undefined) m"
     apply (rule corres_noop_ex_abs)
      apply (simp add: x)
     apply (erule nf)
