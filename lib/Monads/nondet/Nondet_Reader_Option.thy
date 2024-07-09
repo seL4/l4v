@@ -98,6 +98,11 @@ lemma gets_the_assert:
   "gets_the (oassert P) = assert P"
   by (simp add: oassert_def assert_def gets_the_fail gets_the_return)
 
+lemma gets_the_ostate_assert:
+  "gets_the (ostate_assert P) = state_assert P"
+  by (clarsimp simp: ostate_assert_def state_assert_def gets_the_Some_get gets_the_obind
+                     gets_the_assert)
+
 lemma gets_the_assert_opt:
   "gets_the (oassert_opt P) = assert_opt P"
   by (simp add: oassert_opt_def assert_opt_def gets_the_return gets_the_fail split: option.splits)
