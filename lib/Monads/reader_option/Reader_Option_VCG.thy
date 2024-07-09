@@ -58,6 +58,19 @@ lemmas owhile_add_inv = owhile_inv_def[symmetric]
 
 
 (* WP rules for ovalid. *)
+
+lemma ovalid_wp_comb1[wp_comb]:
+  "\<lbrakk> ovalid P' f Q; ovalid P f Q'; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> ovalid P f (\<lambda>r s. Q r s \<and> Q' r s)"
+  by (simp add: ovalid_def)
+
+lemma ovalid_wp_comb2[wp_comb]:
+  "\<lbrakk> ovalid P f Q; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> ovalid P' f Q"
+  by (auto simp: ovalid_def)
+
+lemma ovalid_wp_comb3[wp_comb]:
+  "\<lbrakk> ovalid P f Q; ovalid P' f Q' \<rbrakk> \<Longrightarrow> ovalid (\<lambda>s. P s \<and> P' s) f (\<lambda>r s. Q r s \<and> Q' r s)"
+  by (auto simp: ovalid_def)
+
 lemma ovalid_post_taut[wp]:
   "\<lblot>P\<rblot> f \<lblot>\<top>\<top>\<rblot>"
   by (simp add: ovalid_def)
@@ -101,6 +114,15 @@ lemma oassert_wp[wp]:
   apply (simp add: oassert_def)
   apply (intro conjI; wpsimp)
   done
+
+lemma ostate_assert_wp:
+  "\<lblot>\<lambda>s. f s \<longrightarrow> P () s\<rblot> ostate_assert f \<lblot>P\<rblot>"
+  unfolding ostate_assert_def
+  by (wpsimp wp: ask_wp)
+
+lemma ostate_assert_sp:
+  "\<lblot>P\<rblot> ostate_assert Q \<lblot>\<lambda>_ s. P s \<and> Q s\<rblot>"
+  by (wpsimp wp: ostate_assert_wp ovalid_wp_comb2)
 
 lemma ogets_wp[wp]:
   "ovalid (\<lambda>s. P (f s) s) (ogets f) P"
@@ -148,19 +170,6 @@ definition ovalid_property where "ovalid_property P x = (\<lambda>s f. (\<forall
 lemma ovalid_is_triple[wp_trip]:
   "ovalid P f Q = triple_judgement P f (ovalid_property Q (\<lambda>s f. f s))"
   by (auto simp: triple_judgement_def ovalid_def ovalid_property_def)
-
-
-lemma ovalid_wp_comb1[wp_comb]:
-  "\<lbrakk> ovalid P' f Q; ovalid P f Q'; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> ovalid P f (\<lambda>r s. Q r s \<and> Q' r s)"
-  by (simp add: ovalid_def)
-
-lemma ovalid_wp_comb2[wp_comb]:
-  "\<lbrakk> ovalid P f Q; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> ovalid P' f Q"
-  by (auto simp: ovalid_def)
-
-lemma ovalid_wp_comb3[wp_comb]:
-  "\<lbrakk> ovalid P f Q; ovalid P' f Q' \<rbrakk> \<Longrightarrow> ovalid (\<lambda>s. P s \<and> P' s) f (\<lambda>r s. Q r s \<and> Q' r s)"
-  by (auto simp: ovalid_def)
 
 
 (* WP rules for ovalidNF. *)
@@ -234,6 +243,11 @@ lemma ovalidNF_wp_comb3[wp_comb]:
 
 
 (* FIXME: WP rules for no_ofail, which might not be correct. *)
+
+lemma no_ofail_pre_imp[wp_pre]:
+  "\<lbrakk> no_ofail P f; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> no_ofail P' f"
+  by (simp add: no_ofail_def)
+
 lemma no_ofailD:
   "\<lbrakk> no_ofail P m; P s \<rbrakk> \<Longrightarrow> \<exists>y. m s = Some y"
   by (simp add: no_ofail_def)
@@ -309,6 +323,11 @@ lemma no_ofail_oassert[simp, wp]:
   "no_ofail (\<lambda>_. P) (oassert P)"
   by (simp add: oassert_def no_ofail_def)
 
+lemma no_ofail_ostate_assert[wp]:
+  "no_ofail P (ostate_assert P)"
+  unfolding ostate_assert_def
+  by wpsimp
+
 lemma no_ofail_is_triple[wp_trip]:
   "no_ofail P f = triple_judgement P f (\<lambda>s f. f s \<noteq> None)"
   by (auto simp: triple_judgement_def no_ofail_def)
@@ -354,10 +373,6 @@ lemma ovalid_pre_imp:
 lemma ovalidNF_pre_imp:
   "\<lbrakk> \<And>s. P' s \<Longrightarrow> P s; ovalidNF P f Q \<rbrakk> \<Longrightarrow> ovalidNF P' f Q"
   by (simp add: ovalidNF_def)
-
-lemma no_ofail_pre_imp[wp_pre]:
-  "\<lbrakk> no_ofail P f; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> no_ofail P' f"
-  by (simp add: no_ofail_def)
 
 lemma ovalid_post_imp:
   "\<lbrakk> \<And>r s. Q r s \<Longrightarrow> Q' r s; ovalid P f Q \<rbrakk> \<Longrightarrow> ovalid P f Q'"
