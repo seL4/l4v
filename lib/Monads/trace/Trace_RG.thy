@@ -362,6 +362,22 @@ lemma rg_FalseE[simp]:
   "\<lbrace>\<bottom>\<bottom>\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> = prefix_closed f"
   by (simp add: validI_def validIE_def)
 
+lemma rg_modifyE_var:
+  "\<lbrakk> \<And>s0 s. P s0 s \<Longrightarrow> Q s0 (f s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> modify f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
+  by (simp add: validI_def modify_def put_def get_def bind_def prefix_closed_def rely_def)
+
+lemma rg_if:
+  "\<lbrakk> P' \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<not> P' \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> if P' then f else g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  by simp
+
+lemma rg_pre_subst:
+  "\<lbrakk> P = P'; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  by (erule subst)
+
+lemma rg_post_subst:
+  "\<lbrakk> Q = Q'; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>"
+  by (erule subst)
+
 lemma rg_post_imp:
   "\<lbrakk>\<And>v s0 s. Q' v s0 s \<Longrightarrow> Q v s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by (simp add: validI_def)
