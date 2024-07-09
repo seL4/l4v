@@ -220,6 +220,10 @@ done for any type, constant or fact:
    type, constant or fact, so that the unqualified name unambiguously denotes
    the architecture-specific concept for the current architecture.
 
+Note: the `requalify_*` commands will warn when the unqualified name is already
+available in the global context (see: Dealing with name clashes). To suppress
+this warning, pass `(aliasing)` as the first parameter.
+
 We do this in a generic theory:
 
 - `l4v/proof/invariant-abstract/ADT_AI.thy`
@@ -298,6 +302,40 @@ This disparity will only get worse as the Arch context grows bigger, and
 might indicate the need for some alternative functionality.
 
 
+### Requalifying into the Arch locale
+
+The `requalify` commands support a target parameter, e.g.
+
+```isabelle
+requalify_facts (in Arch) user_mem_dom_cong
+```
+
+Which prevents exporting the name into the global theory context, exporting it
+under `Arch.` instead:
+
+```isabelle
+thm user_mem_dom_cong      (* ERROR *)
+thm ARM.user_mem_dom_cong  (* ok *)
+thm Arch.user_mem_dom_cong (* ok *)
+```
+
+This functionality can be useful when we want to give an architecture-specific
+constant/type/fact a generic name, but not mix it with generic namespace (see
+also Dealing with name clashes, as this affects lookup order inside
+interpretations).
+
+One can target any locale in this fashion, although the usefulness to arch-split
+is then decreased, since short names might not be visible past a naming prefix:
+
+```isabelle
+requalify_facts (in Some_Locale) ARM.user_mem_dom_cong
+
+thm user_mem_dom_cong             (* ERROR *)
+thm ARM.user_mem_dom_cong         (* ok *)
+thm Some_Locale.user_mem_dom_cong (* ok *)
+```
+
+
 ### Dealing with name clashes
 
 Things are a bit more complicated when a generic theory needs to refer to an
@@ -327,7 +365,7 @@ term deriveCap               (* In the Arch context, this is the deriveCap funct
 term RetypeDecls_H.deriveCap (* This is the arch-generic deriveCap function. *)
 
 (* The following makes Arch.deriveCap refer to the architecture-specific constant. *)
-requalify_consts deriveCap
+requalify_consts deriveCap   (* Warning: Name "deriveCap" already exists in theory context *)
 
 (* Unfortunately, the above also means that in a context in which Arch is interpreted,
   `deriveCap` unqualified would refer to the arch-specific constant, which may break existing proofs.
