@@ -141,6 +141,18 @@ lemma ccorresI':
   apply simp
   done
 
+text \<open> For proving low-level @{term ccorresG} statements where the concrete function always
+       returns a @{term Normal} state, and therefore, the handler stack will not be used, and can
+       be considered empty.\<close>
+lemma ccorres_empty_handler_stackI:
+  assumes rl:
+    "\<And>s s' xstate.
+      \<lbrakk>(s, s') \<in> srel; G s; s' \<in> G'; \<Gamma> \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> xstate; \<not> snd (a s)\<rbrakk>
+      \<Longrightarrow> (\<exists>t'. xstate = Normal t' \<and> (\<exists>(r, t) \<in> fst (a s). (t, t') \<in> srel \<and> rrel r (xf t')))"
+  shows "ccorresG srel \<Gamma> rrel xf G G' [] a c"
+  by (fastforce dest: rl elim: exec_handlers.cases
+                simp: ccorres_underlying_def isNormal_def isAbr_def unif_rrel_def)
+
 text \<open>A congruence rule for the program part of correspondence functions (prevents schematic
       rewriting).\<close>
 lemma ccorres_prog_only_cong:
