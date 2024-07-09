@@ -70,7 +70,11 @@ lemma gets_the_obind:
   "gets_the (f |>> g) = gets_the f >>= (\<lambda>x. gets_the (g x))"
   by (rule ext) (simp add: monad_simps obind_def split: option.splits)
 
-lemma gets_the_Some_get[simp]:
+lemma gets_the_Some_return:
+  "gets_the (\<lambda>_. Some x) = return x"
+  by (simp add: gets_the_def assert_opt_Some)
+
+lemma gets_the_Some_get:
   "gets_the Some = get"
   by (clarsimp simp: gets_the_def gets_def assert_opt_Some)
 
@@ -115,10 +119,6 @@ lemma gets_the_oapply_comp:
   "gets_the (oapply x \<circ> f) = gets_map f x"
   by (fastforce simp: gets_map_def gets_the_def o_def gets_def)
 
-lemma gets_the_Some:
-  "gets_the (\<lambda>_. Some x) = return x"
-  by (simp add: gets_the_def assert_opt_Some)
-
 lemma gets_the_oapply2_comp:
   "gets_the (oapply2 y x \<circ> f) = gets_map (swp f y) x"
   by (clarsimp simp: gets_map_def gets_the_def o_def gets_def)
@@ -136,7 +136,7 @@ lemma fst_assert_opt:
 lemmas omonad_simps [simp] =
   gets_the_opt_map assert_opt_Some gets_the_obind
   gets_the_return gets_the_fail gets_the_returnOk
-  gets_the_throwError gets_the_assert gets_the_Some
+  gets_the_throwError gets_the_assert gets_the_Some_return gets_the_Some_get
   gets_the_oapply_comp
 
 

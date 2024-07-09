@@ -227,11 +227,11 @@ lemma return_inv[iff]:
 
 lemma hoare_modifyE_var:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> modify f \<lbrace>\<lambda>_ s. Q s\<rbrace>"
-  by(simp add: valid_def modify_def put_def get_def bind_def)
+  by (simp add: valid_def modify_def put_def get_def bind_def)
 
 lemma hoare_if:
   "\<lbrakk> P' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<not> P' \<Longrightarrow> \<lbrace>P\<rbrace> g \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> if P' then f else g \<lbrace>Q\<rbrace>"
-  by (simp add: valid_def)
+  by simp
 
 lemma hoare_pre_subst:
   "\<lbrakk> P = P'; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>"
