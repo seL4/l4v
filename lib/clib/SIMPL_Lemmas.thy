@@ -401,12 +401,4 @@ lemma exec_While_final_inv'':
   apply (erule exec_elim_cases; fastforce simp: exec.WhileTrue exec.WhileFalse)
   done
 
-lemma While_inv_from_body:
-  "\<Gamma> \<turnstile> (G \<inter> C) B G \<Longrightarrow> \<Gamma> \<turnstile> G While C B G"
-  apply (drule hoare_sound)+
-  apply (rule hoare_complete)
-  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
-  by (erule exec_While_final_inv''[where I="\<lambda>s s'. s \<in> G \<longrightarrow> s' \<in> Normal ` G", THEN impE],
-      fastforce+)
-
 end
