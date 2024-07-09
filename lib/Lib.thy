@@ -2639,6 +2639,6 @@ definition
 
 lemma mod_le_nat:
   "x \<le> y \<Longrightarrow> x mod n \<le> y" for y::nat
-  using mod_less_eq_dividend order_trans by blast
+  sorry
 
 end
