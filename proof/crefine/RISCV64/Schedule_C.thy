@@ -631,6 +631,200 @@ lemma commitTime_ccorres:
   "ccorres dc xfdc \<top> UNIV [] commitTime (Call commitTime_'proc)"
 sorry (* FIXME RT: commitTime_ccorres *)
 
+lemma ccorres_pre_getReleaseQueue:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows
+    "ccorres r xf
+       (\<lambda>s. \<forall>rv. ksReleaseQueue s = rv \<longrightarrow> P rv s)
+       {s'. \<forall>rv s. (s, s') \<in> rf_sr \<and> ksReleaseQueue s = rv \<and> P rv s
+                    \<and> ctcb_queue_relation rv (ksReleaseQueue_' (globals s'))
+                   \<longrightarrow> s' \<in> P' rv} hs
+       (getReleaseQueue >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule getReleaseQueue_sp)
+     apply wpsimp
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  by fast
+
+lemma scActive_exs_valid[wp]:
+  "sc_at' scPtr s \<Longrightarrow> \<lbrace>(=) s\<rbrace> scActive scPtr \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  unfolding scActive_def
+  apply wpsimp
+  by (fastforce dest: no_ofailD[OF no_ofail_readScActive])
+
+lemma release_q_non_empty_and_ready_ccorres:
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'
+      and (\<lambda>s. \<forall>head. tcbQueueHead (ksReleaseQueue s) = Some head \<longrightarrow> active_sc_tcb_at' head s))
+     UNIV []
+     (gets_the releaseQNonEmptyAndReady)
+     (Call release_q_non_empty_and_ready_'proc)"
+  apply cinit'
+   apply (simp add: releaseQNonEmptyAndReady_def gets_the_if_distrib readReleaseQueue_def
+                    gets_the_ogets
+              flip: getReleaseQueue_def)
+   apply (rule ccorres_pre_getReleaseQueue)
+   apply (rename_tac releaseQueue)
+   apply (rule_tac xf'=ret__int_'
+               and val="from_bool (tcbQueueHead releaseQueue \<noteq> None)"
+               and R="\<lambda>s. ksReleaseQueue s = releaseQueue
+                          \<and> (\<forall>head. tcbQueueHead (ksReleaseQueue s) = Some head \<longrightarrow> tcb_at' head s)"
+               and R'=UNIV
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg)
+      apply (fastforce dest: tcb_at_not_NULL rf_sr_ctcb_queue_relation_release_queue
+                       simp: ctcb_queue_relation_def option_to_ctcb_ptr_def
+                      split: option.splits)
+     apply ceqv
+    apply (subst if_swap)
+    apply (rule ccorres_cond_seq)
+    apply ccorres_rewrite
+    apply (rule_tac Q="\<lambda>s. ksReleaseQueue s = releaseQueue" in ccorres_cond_both'[where Q'=\<top>])
+      apply fastforce
+     apply (rule ccorres_rhs_assoc)+
+     apply (clarsimp simp: gets_the_obind)
+     apply (rule ccorres_Guard_Seq)
+     apply (simp flip: threadGet_def refillReady_def)
+     apply (drule Some_to_the)
+     apply clarsimp
+     apply (rule ccorres_pre_threadGet)
+     apply (simp add: gets_the_ohaskell_assert)
+     apply (rule ccorres_assert2)
+     apply (simp flip: scActive_def)
+     apply (rule ccorres_symb_exec_l')
+        apply (rule ccorres_assert2_abs)
+        apply (rule ccorres_add_return2)
+        apply (ctac add: refill_ready_ccorres)
+          apply csymbr
+          apply (fastforce intro: ccorres_return_C')
+         apply wpsimp
+        apply (vcg exspec=refill_ready_modifies)
+       apply wpsimp+
+    apply (fastforce intro: ccorres_return_C)
+   apply vcg
+  apply (rule conjI)
+   apply (fastforce intro!: aligned'_distinct'_obj_at'I
+                      simp: active_sc_tcb_at'_def active_sc_at'_def obj_at'_def
+                            opt_pred_def opt_map_def
+                     split: option.splits)
+  apply clarsimp
+  apply (intro conjI)
+    apply (clarsimp simp: ctcb_relation_def typ_heap_simps' option_to_ctcb_ptr_def
+                          ctcb_queue_relation_def)
+   apply (clarsimp simp: to_bool_def split: if_splits)
+  apply (force dest: obj_at_cslift_tcb
+               simp: typ_heap_simps' ctcb_queue_relation_def option_to_ctcb_ptr_def)
+  done
+
+lemma tcbReleaseDequeue_ccorres:
+  "ccorres dc xfdc
+     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'
+      and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and (\<lambda>s. ksCurDomain s \<le> maxDomain)
+      and (\<lambda>s. releaseQNonEmptyAndReady s = Some True))
+     UNIV []
+     tcbReleaseDequeue
+     (Call tcbReleaseDequeue_'proc)"
+  apply cinit
+   apply (rule ccorres_stateAssert)+
+   apply (rule ccorres_pre_getReleaseQueue, rename_tac releaseQueue)
+   apply (rule_tac P="tcbQueueHead releaseQueue \<noteq> None" in ccorres_gen_asm)
+   apply (rule ccorres_symb_exec_l')
+     apply (rule ccorres_assert2_abs)
+     apply (rule_tac xf'=awakened_'
+                 and val="option_to_ctcb_ptr (tcbQueueHead releaseQueue)"
+                 and R="\<lambda>s. ksReleaseQueue s = releaseQueue"
+                 and R'=UNIV
+                  in ccorres_symb_exec_r_known_rv)
+        apply (rule conseqPre, vcg)
+        apply clarsimp
+        apply (drule rf_sr_ctcb_queue_relation_release_queue)
+        apply (clarsimp simp: ctcb_queue_relation_def)
+       apply ceqv
+      apply (ctac add: tcbReleaseRemove_ccorres)
+        apply (rule ccorres_add_return2)
+        apply (simp only: bind_assoc)
+        apply (subst ccorres_seq_skip'[symmetric])
+        apply (ctac add: possibleSwitchTo_ccorres)
+          apply (rule ccorres_stateAssert)+
+          apply (rule ccorres_return_Skip')
+         apply wpsimp
+        apply (vcg exspec=possibleSwitchTo_modifies)
+       apply wpsimp
+      apply (vcg exspec=tcbReleaseRemove_modifies)
+     apply vcg
+    apply wpsimp+
+  apply (frule releaseQNonEmptyAndReady_implies_releaseQNonEmpty)
+  by (fastforce dest: obj_at'_tcbQueueHead_ksReleaseQueue simp: option_to_ctcb_ptr_def)
+
+lemma no_ofail_releaseQNonEmptyAndReady:
+  "no_ofail (invs'
+             and (\<lambda>s. \<forall>head. tcbQueueHead (ksReleaseQueue s) = Some head
+                             \<longrightarrow> active_sc_tcb_at' head s))
+            releaseQNonEmptyAndReady"
+  unfolding releaseQNonEmptyAndReady_def readReleaseQueue_def
+  apply (wpsimp wp: ovalid_threadRead)
+  apply (clarsimp split: if_splits)
+  apply (intro conjI)
+   apply (fastforce intro!: aligned'_distinct'_obj_at'I
+                      simp: active_sc_tcb_at'_def opt_pred_def opt_map_def obj_at_simps
+                     split: option.splits)
+  apply normalise_obj_at'
+  apply (fastforce intro!: aligned'_distinct'_obj_at'I
+                     simp: active_sc_tcb_at'_def obj_at'_def opt_pred_def opt_map_def
+                    split: option.splits)
+  done
+
+lemma awaken_ccorres:
+  "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV []
+     awaken (Call awaken_'proc)"
+  (is "ccorres _ _ ?abs _ _ _ _")
+  apply (cinit simp: runReaderT_def whileAnno_def)
+   apply (rule ccorres_stateAssert)+
+   apply (rule ccorres_handlers_weaken)
+   apply (rule_tac G="\<lambda>_. ?abs
+                          and (\<lambda>s. \<forall>head. tcbQueueHead (ksReleaseQueue s) = Some head
+                                          \<longrightarrow> active_sc_tcb_at' head s)"
+                in ccorres_While'[where G'=UNIV])
+        apply (rule ccorres_guard_imp)
+          apply (ctac add: tcbReleaseDequeue_ccorres)
+         apply fastforce
+        apply fastforce
+       apply (rule ccorres_guard_imp)
+         apply (ctac add: release_q_non_empty_and_ready_ccorres)
+        apply fastforce
+       apply fastforce
+      apply (wpsimp wp: no_ofail_releaseQNonEmptyAndReady)
+     apply (clarsimp simp: pred_conj_def)
+     apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+     apply (clarsimp simp: tcbReleaseDequeue_def)
+     apply (wpsimp simp: tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt_def)
+    apply (rule conseqPre)
+     apply (rule ccorres_to_vcg_Normal'[where xf=xfdc])
+     apply (fastforce intro: ccorres_call[OF tcbReleaseDequeue_ccorres])
+    apply fastforce
+   apply clarsimp
+   apply (rule conseqPre)
+    apply (rule_tac xf=ret__unsigned_long_' in ccorres_to_vcg_Normal)
+     apply (fastforce intro: ccorres_call[OF release_q_non_empty_and_ready_ccorres])
+    apply (fastforce intro: no_ofail_gets_the no_ofail_releaseQNonEmptyAndReady)
+   apply fastforce
+  apply (clarsimp simp: tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt_def ksReleaseQueue_asrt_def
+                        list_queue_relation_def)
+  apply (frule heap_path_head')
+  apply (clarsimp simp: tcbQueueEmpty_def)
+  apply (case_tac "ts = []"; force)
+  done
+
 lemma schedule_ccorres:
   "ccorres dc xfdc invs' UNIV [] schedule (Call schedule_'proc)"
 sorry (* FIXME RT: schedule_ccorres

@@ -2116,8 +2116,8 @@ crunch setReprogramTimer, setReleaseQueue, setQueue, removeFromBitmap
    simp: crunch_simps tcb_cte_cases_def tcb_bound_refs'_def cur_tcb'_def threadSet_cur
          bitmap_fun_defs valid_machine_state'_def)
 
-crunch tcbReleaseDequeue, tcbReleaseEnqueue,
-         tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue, setQueue
+crunch tcbReleaseRemove, tcbReleaseEnqueue,
+       tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue, setQueue
   for pspace_aligned'[wp]: pspace_aligned'
   and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   and pspace_distinct'[wp]: pspace_distinct'
@@ -2147,7 +2147,7 @@ crunch tcbReleaseDequeue, tcbReleaseEnqueue,
   (wp: crunch_wps threadSet_state_refs_of'[where f'=id and g'=id]
    simp: crunch_simps tcb_cte_cases_def tcb_bound_refs'_def bitmap_fun_defs)
 
-crunch tcbReleaseDequeue, tcbReleaseEnqueue
+crunch tcbReleaseRemove, tcbReleaseEnqueue
   for valid_machine_state'[wp]: valid_machine_state'
   (wp: crunch_wps)
 
@@ -6087,19 +6087,19 @@ lemma setReleaseQueue_pred_tcb_at'[wp]:
 global_interpretation tcbReleaseRemove: typ_at_all_props' "tcbReleaseRemove tptr"
   by typ_at_props'
 
-crunch tcbReleaseDequeue, tcbQueueRemove, tcbReleaseEnqueue
+crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for valid_irq_handlers'[wp]: valid_irq_handlers'
   (wp: valid_irq_handlers_lift'')
 
-crunch tcbReleaseDequeue, tcbQueueRemove, tcbReleaseEnqueue
+crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   (wp: crunch_wps threadSet_ct_idle_or_in_cur_domain')
 
-crunch tcbReleaseDequeue, tcbQueueRemove, tcbReleaseEnqueue
+crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
   (wp: crunch_wps threadSet_ifunsafe'T simp: tcb_cte_cases_def cteSizeBits_def)
 
-crunch tcbReleaseDequeue, tcbQueueRemove, tcbReleaseEnqueue
+crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and valid_idle'[wp]: valid_idle'
   (simp: crunch_simps wp: crunch_wps threadSet_idle')
@@ -6108,14 +6108,14 @@ crunch setReleaseQueue, tcbQueueRemove, setReprogramTimer
   for valid_objs'[wp]: valid_objs'
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
-crunch tcbReleaseDequeue
+crunch tcbReleaseRemove
   for valid_objs'[wp]: valid_objs'
 
-crunch tcbReleaseDequeue, tcbQueueRemove, tcbReleaseEnqueue
+crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for pred_tcb_at'[wp]: "\<lambda>s. P' (pred_tcb_at' P obj t s)"
   (wp: crunch_wps threadSet_pred_tcb_no_state simp: tcb_to_itcb'_def)
 
-crunch tcbReleaseDequeue, tcbQueueRemove, tcbReleaseEnqueue
+crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for tcbDomain[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
   and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
   and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
@@ -6478,7 +6478,7 @@ lemma tcbReleaseRemove_sym_heap_sched_pointers[wp]:
   apply (fastforce simp: ksReleaseQueue_asrt_def opt_pred_def obj_at'_def opt_map_red)
   done
 
-crunch tcbReleaseDequeue
+crunch tcbReleaseRemove
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
 
 crunch setReprogramTimer
@@ -6573,11 +6573,6 @@ lemma tcbReleaseRemove_invs':
                     untyped_ranges_zero_lift valid_replies'_lift
               simp: cteCaps_of_def o_def)
   done
-
-lemma tcbReleaseDequeue_invs'[wp]:
-  "tcbReleaseDequeue \<lbrace>invs'\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  by (wpsimp wp: tcbReleaseRemove_invs')
 
 crunch setReleaseQueue, setReprogramTimer
   for valid_bitmapQ[wp]: valid_bitmapQ

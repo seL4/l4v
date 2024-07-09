@@ -3445,7 +3445,7 @@ lemma findTimeAfter_corres:
   apply (rule corres_gen_asm')
   apply (clarsimp simp: find_time_after_def findTimeAfter_def runReaderT_def)
   apply (rule corres_stateAssert_implied[where P=P and P'=P for P, simplified, rotated])
-   apply (fastforce simp: tcbInReleaseQueue_imp_active_sc_tc_at'_asrt_def
+   apply (fastforce simp: tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt_def
                    dest!: release_queue_active_sc_tcb_at_cross)
   apply (rule stronger_corres_guard_imp)
     apply (rule_tac P="\<lambda>r s. ?abs s \<and> suffix r ls"

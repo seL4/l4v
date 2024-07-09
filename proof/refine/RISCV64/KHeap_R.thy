@@ -5086,8 +5086,8 @@ lemma active_sc_tcb_at_cross:
   apply (clarsimp simp: active_sc_tcb_at'_def in_omonad obj_at'_def active_sc_at'_def)
   done
 
-defs tcbInReleaseQueue_imp_active_sc_tc_at'_asrt_def:
-  "tcbInReleaseQueue_imp_active_sc_tc_at'_asrt \<equiv>
+defs tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt_def:
+  "tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt \<equiv>
      \<lambda>s'. \<forall>tcbPtr.
            (tcbInReleaseQueue |< tcbs_of' s') tcbPtr
            \<longrightarrow> (tcb_at' tcbPtr s' \<and> active_sc_tcb_at' tcbPtr s')"

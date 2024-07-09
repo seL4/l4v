@@ -5015,26 +5015,6 @@ lemma schedContext_donate_ccorres:
      (schedContextDonate scPtr tcbPtr) (Call schedContext_donate_'proc)"
 sorry (* FIXME RT: schedContext_donate_ccorres *)
 
-lemma tcbReleaseDequeue_ccorres:
-  "ccorres (\<lambda>ptr ptr'. ptr' = tcb_ptr_to_ctcb_ptr ptr) ret__ptr_to_struct_tcb_C_'
-     (\<lambda>s. \<not> tcbQueueEmpty (ksReleaseQueue s) \<and> valid_objs' s) UNIV []
-     tcbReleaseDequeue (Call tcbReleaseDequeue_'proc)"
-  apply (clarsimp simp: tcbReleaseDequeue_def)
-  apply (rule ccorres_symb_exec_l'[OF _ _ getReleaseQueue_sp]; wpsimp?)
-  apply cinit'
-   apply (rule ccorres_symb_exec_r)
-     apply (ctac add: tcbReleaseRemove_ccorres)
-       apply (fastforce intro: ccorres_return_C)
-      apply wpsimp
-     apply (vcg exspec=tcbReleaseRemove_modifies)
-    apply vcg
-   apply (rule conseqPre, vcg)
-   apply clarsimp
-  apply wpsimp
-  apply (clarsimp simp: rf_sr_def cstate_relation_def ctcb_queue_relation_def option_to_ctcb_ptr_def
-                        Let_def tcbQueueEmpty_def)
-  done
-
 lemma sendIPC_ccorres [corres]:
   "ccorres dc xfdc (invs' and st_tcb_at' simple' thread
                           and sch_act_not thread and ep_at' epptr)

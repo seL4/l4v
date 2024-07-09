@@ -10816,41 +10816,26 @@ lemma active_sc_tcb_at_budget_sufficient:
   by (fastforce simp: budget_sufficient_def2 active_sc_tcb_at_def2 is_sc_active_kh_simp
                 dest: valid_refills_refill_sufficient active_scs_validE)
 
-lemma awaken_body_valid_ready_qs:
-  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> valid_release_q s \<and> active_scs_valid s
+lemma tcb_release_dequeue_valid_ready_qs:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> valid_release_q s
         \<and> release_queue s \<noteq> [] \<and> budget_ready (hd (release_queue s)) s\<rbrace>
-   awaken_body
+   tcb_release_dequeue
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  apply (clarsimp simp: awaken_body_def tcb_release_dequeue_def bind_assoc)
-  apply (rule bind_wp[OF _ gets_sp], rename_tac rq)
-  apply (rule_tac Q'="\<lambda>_ s. valid_ready_qs s \<and> st_tcb_at runnable (hd rq) s
-                           \<and> released_sc_tcb_at (hd rq) s"
-               in bind_wp_fwd)
-   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
-    apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps)
-   apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps released_sc_tcb_at_def)
-   apply (clarsimp intro!: active_sc_tcb_at_budget_sufficient)
-  apply (wpsimp wp: possible_switch_to_valid_ready_qs
-              simp: released_sc_tcb_at_def)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  unfolding tcb_release_dequeue_def
+  apply (wpsimp wp: possible_switch_to_valid_ready_qs hoare_disjI2 hoare_vcg_all_lift
+                    hoare_vcg_imp_lift')
+  apply (clarsimp simp: valid_release_q_def)
+  apply (fastforce dest: hd_in_set simp: vs_all_heap_simps obj_at_kh_kheap_simps)
   done
 
-lemma awaken_body_valid_sched_action:
-  "\<lbrace>\<lambda>s. valid_sched_action s \<and> valid_release_q s \<and> active_scs_valid s
+lemma tcb_release_dequeue_valid_sched_action:
+  "\<lbrace>\<lambda>s. valid_sched_action s \<and> valid_release_q s
         \<and> release_queue s \<noteq> [] \<and> budget_ready (hd (release_queue s)) s\<rbrace>
-   awaken_body
+   tcb_release_dequeue
    \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
-  apply (clarsimp simp: awaken_body_def tcb_release_dequeue_def bind_assoc)
-  apply (rule bind_wp[OF _ gets_sp], rename_tac rq)
-  apply (rule_tac Q'="\<lambda>_ s. valid_sched_action s \<and> st_tcb_at runnable (hd rq) s
-                           \<and> released_sc_tcb_at (hd rq) s"
-               in bind_wp_fwd)
-   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
-    apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps)
-   apply wpsimp
-   apply (fastforce intro: active_sc_tcb_at_budget_sufficient
-                     simp: released_sc_tcb_at_def valid_release_q_def)
-  apply (wpsimp simp: obj_at_kh_kheap_simps)
+  unfolding tcb_release_dequeue_def
+  apply (wpsimp wp: hoare_drop_imps)
+  apply (fastforce simp: released_sc_tcb_at_def valid_release_q_def)
   done
 
 lemma read_tcb_refill_ready_SomeD:
@@ -10985,16 +10970,16 @@ lemma awaken_valid_sched:
                           read_tcb_obj_ref_SomeD read_sched_context_SomeD
                           read_release_q_non_empty_and_ready_SomeD
                     simp: vs_all_heap_simps)
-  apply (intro hoare_vcg_conj_lift_pre_fix
-         ; (solves \<open>wpsimp simp: awaken_body_def tcb_release_dequeue_def\<close>)?)
-     apply (wpsimp wp: awaken_body_valid_ready_qs)
-    apply (wpsimp wp: possible_switch_to_not_it_ct_not_in_q simp: awaken_body_def tcb_release_dequeue_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix;
+         (solves \<open>wpsimp simp: tcb_release_dequeue_def\<close>)?)
+     apply (wpsimp wp: tcb_release_dequeue_valid_ready_qs)
+    apply (wpsimp wp: possible_switch_to_not_it_ct_not_in_q simp: tcb_release_dequeue_def)
     apply (clarsimp simp: valid_release_q_def valid_idle_def vs_all_heap_simps pred_tcb_at_def
                           obj_at_def)
     apply (fastforce dest: hd_in_set)
-   apply (wpsimp wp: awaken_body_valid_sched_action)
+   apply (wpsimp wp: tcb_release_dequeue_valid_sched_action)
   apply (wpsimp wp: possible_switch_to_valid_blocked tcb_release_remove_valid_blocked_except
-              simp: awaken_body_def tcb_release_dequeue_def)
+              simp: tcb_release_dequeue_def tcb_release_dequeue_def)
   done
 
 end
@@ -12337,9 +12322,10 @@ lemma not_schedulable_in_release_q_case:
   by (clarsimp simp: schedulable_def2 ct_in_state_def tcb_at_kh_simps runnable_eq_active)
 
 lemma awaken_valid_sched_misc[wp]:
-  "awaken \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                 (cur_thread s) (idle_thread s) (kheap s) \<rbrace>"
-  apply (wpsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  "awaken
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (kheap s)\<rbrace>"
+  apply (wpsimp simp: awaken_def tcb_release_dequeue_def)
   apply (rule whileLoop_wp)
    apply wpsimp+
   done
@@ -12401,7 +12387,7 @@ lemma possible_switch_to_scheduler_act_sane'':
 
 lemma awaken_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "awaken \<lbrace>cur_sc_in_release_q_imp_zero_consumed ::'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  apply (wpsimp simp: awaken_def tcb_release_dequeue_def)
   apply (clarsimp simp: cur_sc_in_release_q_imp_zero_consumed_def)
   apply (rule whileLoop_wp)
    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
@@ -12433,8 +12419,8 @@ lemma awaken_in_release_q:
   "\<lbrace>in_release_q t and valid_release_q and (not budget_ready t) and active_scs_valid\<rbrace>
    awaken
    \<lbrace>\<lambda>_ s. in_release_q t s\<rbrace>"
-   (is "valid ?pre _ _")
-  apply (wpsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  (is "valid ?pre _ _")
+  apply (wpsimp simp: awaken_def tcb_release_dequeue_def)
   apply (rule_tac I="\<lambda>_. ?pre" in valid_whileLoop; (solves simp)?)
   apply (clarsimp simp: pred_conj_def pred_neg_def)
   apply (intro hoare_vcg_conj_lift_pre_fix; (solves \<open>wpsimp wp: hoare_drop_imps\<close>)?)

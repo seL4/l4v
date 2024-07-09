@@ -64,9 +64,6 @@ crunch commitTime, refillNew, refillUpdate
 
 end
 
-global_interpretation tcbReleaseDequeue: typ_at_all_props' tcbReleaseDequeue
-  by typ_at_props'
-
 global_interpretation refillPopHead: typ_at_all_props' "refillPopHead scPtr"
   by typ_at_props'
 
@@ -2507,13 +2504,8 @@ lemma possibleSwitchTo_utr[wp]:
   "possibleSwitchTo t \<lbrace>untyped_ranges_zero'\<rbrace>"
   by (wpsimp simp: cteCaps_of_def o_def wp: untyped_ranges_zero_lift)
 
-lemma possibleSwitchTo_invs'[wp]:
-  "\<lbrace>invs' and st_tcb_at' runnable' tptr\<rbrace>
-   possibleSwitchTo tptr
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def)
-  apply (wpsimp wp: hoare_vcg_imp_lift threadGet_wp inReleaseQueue_wp ssa_invs')
-  done
+crunch possibleSwitchTo
+  for invs'[wp]: invs'
 
 lemma possibleSwitchTo_sch_act_not_other:
   "\<lbrace>\<lambda>s. sch_act_not t' s \<and> t' \<noteq> t\<rbrace>
@@ -2533,22 +2525,16 @@ lemma getReleaseQueue_sp:
   by wpsimp
 
 lemma releaseQNonEmptyAndReady_implies_releaseQNonEmpty:
-  "the (releaseQNonEmptyAndReady s) \<Longrightarrow> tcbQueueHead (ksReleaseQueue s) \<noteq> None"
+  "releaseQNonEmptyAndReady s = Some True \<Longrightarrow> tcbQueueHead (ksReleaseQueue s) \<noteq> None"
   by (clarsimp simp: releaseQNonEmptyAndReady_def readReleaseQueue_def obind_def omonad_defs
               split: if_splits)
 
-lemma awaken_invs':
-  "awaken \<lbrace>invs'\<rbrace>"
-  apply (clarsimp simp: awaken_def awakenBody_def)
-  apply (rule_tac I="\<lambda>_. invs'" in valid_whileLoop; simp add: runReaderT_def)
-  apply wpsimp
-   apply (wpsimp wp: tcbReleaseDequeue_invs' hoare_drop_imps)
-  apply (fastforce intro!: releaseQNonEmptyAndReady_implies_releaseQNonEmpty)
-  done
+crunch awaken
+  for invs'[wp]: invs'
+  (wp: crunch_wps)
 
-crunch tcbReleaseDequeue
-  for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P p s)"
-  and valid_replies' [wp]: valid_replies'
+crunch tcbReleaseRemove
+  for valid_replies' [wp]: valid_replies'
   (wp: crunch_wps threadSet_pred_tcb_no_state valid_replies'_lift)
 
 crunch awaken
@@ -2813,54 +2799,6 @@ lemma setReprogramTimer_corres[corres]:
   apply (simp add: state_relation_def swp_def)
   done
 
-lemma readTCBRefillReady_no_ofail:
-  "no_ofail (\<lambda>s'. obj_at' (\<lambda>tcb. \<exists>sc. tcbSchedContext tcb = Some sc \<and> sc_at' sc s') t s')
-            (readTCBRefillReady t)"
-  unfolding readTCBRefillReady_def
-  apply (wpsimp wp: ovalid_threadRead)
-  apply (clarsimp simp: obj_at'_def)
-  done
-
-lemma gets_the_readTCBRefillReady_corres:
-  "t = t' \<Longrightarrow>
-   corres (=)
-     (active_sc_tcb_at t and active_scs_valid and valid_objs and pspace_aligned and pspace_distinct)
-     (valid_objs' and pspace_bounded')
-     (gets_the (read_tcb_refill_ready t )) (gets_the (readTCBRefillReady t'))"
-  apply (clarsimp simp: read_tcb_refill_ready_def readTCBRefillReady_def read_tcb_obj_ref_def
-                        gets_the_thread_read gets_the_assert_opt
-             simp flip: threadGet_def get_sc_refill_ready_def[simplified fun_app_def]
-                        refillReady_def)
-  apply (rule stronger_corres_guard_imp)
-    apply (rule_tac r'="(=)" in corres_split[OF threadGet_corres])
-       apply (clarsimp simp: tcb_relation_def)
-      apply (rule corres_assert_opt_l)
-      apply (rule refillReady_corres)
-      apply fastforce
-     apply (wpsimp wp: thread_get_wp)
-    apply (wpsimp wp: threadGet_wp)
-   apply (clarsimp simp: vs_all_heap_simps obj_at_def is_tcb_def is_sc_obj_def)
-   apply (intro conjI)
-    apply (fastforce elim: valid_objs_valid_sched_context_size)
-   apply (fastforce elim!: active_scs_validE[rotated]
-                   intro!: valid_refills_nonempty_refills
-                     simp: vs_all_heap_simps obj_at_def is_tcb_def is_sc_obj_def)
-  apply (normalise_obj_at', rename_tac ko)
-  apply (frule cross_relF[OF _ isScActive_cross_rel])
-   apply fastforce
-  apply (prop_tac "bound (tcbSchedContext ko)")
-   apply (clarsimp simp: obj_at'_def opt_map_def pred_map_simps)
-  apply (erule valid_objs'_valid_refills')
-   apply (rule aligned'_distinct'_obj_at'I)
-      apply (clarsimp simp: obj_at'_def opt_map_def isScActive_def pred_map_simps
-                     split: option.splits)
-     apply (fastforce intro: pspace_aligned_cross)
-    apply (fastforce intro!: pspace_distinct_cross)
-   apply fastforce
-  apply (fastforce simp: is_active_sc'_def opt_pred_def opt_map_def obj_at'_def isScActive_def
-                         pred_map_simps)
-  done
-
 lemma getReleaseQueue_corres:
   "corres (\<lambda>ls q. (ls = [] \<longleftrightarrow> tcbQueueEmpty q) \<and> (ls \<noteq> [] \<longrightarrow> tcbQueueHead q = Some (hd ls))
                   \<and> queue_end_valid ls q)
@@ -2871,24 +2809,73 @@ lemma getReleaseQueue_corres:
                     simp: release_queue_relation_def list_queue_relation_def tcbQueueEmpty_def)
   done
 
+lemma scActive_inv:
+  "scActive scPtr \<lbrace>P\<rbrace>"
+  by wpsimp
+
 lemma gets_the_releaseQNonEmptyAndReady_corres:
   "corres (=)
      (valid_release_q and active_scs_valid and valid_objs and pspace_aligned and pspace_distinct)
      (valid_objs' and pspace_bounded')
      (gets_the (read_release_q_non_empty_and_ready)) (gets_the (releaseQNonEmptyAndReady))"
-  apply (clarsimp simp: read_release_q_non_empty_and_ready_def releaseQNonEmptyAndReady_def
-                        gets_the_ogets getReleaseQueue_def[symmetric] readReleaseQueue_def
-                        gets_the_if_distrib)
+  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
+   apply (fastforce dest: pspace_aligned_cross)
+  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
+   apply (fastforce dest: pspace_distinct_cross)
+  apply (simp add: read_release_q_non_empty_and_ready_def releaseQNonEmptyAndReady_def
+                   gets_the_ogets readReleaseQueue_def gets_the_if_distrib
+             flip: getReleaseQueue_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF getReleaseQueue_corres])
-      apply (rule corres_if_strong[where R=\<top> and R'=\<top> and P=\<top>])
+      apply (rule corres_if_strong[where R=\<top> and R'=\<top> and P=\<top> and P'=\<top>])
         apply (fastforce simp: tcbQueueEmpty_def)
        apply clarsimp
-      apply (rule gets_the_readTCBRefillReady_corres)
-      apply wpsimp+
-   apply (fastforce elim: valid_release_q_active_sc)
-  apply fastforce
-  done
+      apply (simp add: read_tcb_refill_ready_def read_tcb_obj_ref_def gets_the_thread_read
+                       gets_the_assert_opt gets_the_ohaskell_assert
+                 flip: threadGet_def get_sc_refill_ready_def refillReady_def)
+      apply (rule_tac r'="(=)" in corres_split[OF threadGet_corres])
+         apply (clarsimp simp: tcb_relation_def)
+        apply (rule corres_assert_opt_l)
+        apply (rule corres_assert_gen_asm2)
+        apply (simp flip: scActive_def)
+        apply (rule corres_symb_exec_r'[where Q'=\<top>])
+           apply (rule corres_assert_gen_asm2)
+           apply (rule refillReady_corres)
+           apply fastforce
+          apply wpsimp
+         apply (rule scActive_inv)
+         apply clarsimp
+        apply wpsimp
+       apply (wpsimp wp: thread_get_wp)
+      apply (rule_tac Q'="\<lambda>rv s. \<exists>scPtr. rv = Some scPtr \<and> active_sc_at' scPtr s \<and> valid_objs' s"
+                   in hoare_post_imp)
+       apply (fastforce intro: valid_objs'_valid_refills'
+                         simp: active_sc_at'_def is_active_sc'_def obj_at'_def
+                               opt_pred_def opt_map_def)
+      apply clarsimp
+      apply (drule Some_to_the)
+      apply (wpsimp wp: hoare_vcg_ex_lift threadGet_wp)
+     apply wpsimp
+    apply wpsimp
+   apply (clarsimp simp: valid_release_q_def)
+   apply (drule_tac x="hd (release_queue s)" in bspec)
+    apply fastforce
+   apply (fastforce elim!: valid_objs_valid_sched_context_size active_scs_validE[rotated]
+                   intro!: valid_refills_nonempty_refills
+                     simp: vs_all_heap_simps obj_at_def is_tcb_def is_sc_obj_def)
+  apply (clarsimp split: if_splits)
+  apply (rename_tac head)
+  apply (frule (4) release_queue_active_sc_tcb_at_cross)
+  apply (frule state_relation_release_queue_relation)
+  apply (drule_tac x=head in spec)
+  apply (clarsimp simp: release_queue_relation_def)
+  apply (frule (3) obj_at'_tcbQueueHead_ksReleaseQueue)
+  apply (clarsimp simp: tcbQueueEmpty_def)
+  apply normalise_obj_at'
+  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+  by (fastforce simp: active_sc_tcb_at'_def opt_pred_def opt_map_def
+                      obj_at'_def active_sc_at'_def  valid_bound_obj'_def valid_tcb'_def
+               split: option.splits)
 
 lemma release_queue_length_well_founded:
   "wf {((r :: unit, s :: 'a state), (r', s')). length (release_queue s) < length (release_queue s')}"
@@ -2914,21 +2901,14 @@ lemma tcb_release_dequeue_release_queue_length:
   apply (clarsimp simp: read_release_q_non_empty_and_ready_simp)
   done
 
-lemma awaken_body_release_queue_length:
-  "\<lbrace>\<lambda>s'. the (read_release_q_non_empty_and_ready s') \<and> s' = s\<rbrace>
-   awaken_body
-   \<lbrace>\<lambda>_ s'. length (release_queue s') < length (release_queue s)\<rbrace>"
-  apply (clarsimp simp: awaken_body_def)
-  apply (wpsimp wp: tcb_release_dequeue_release_queue_length hoare_drop_imps)
-  done
-
 lemma awaken_terminates:
-  "whileLoop_terminates (\<lambda>_ s. (the (read_release_q_non_empty_and_ready s))) (\<lambda>_. awaken_body) r' s"
+  "whileLoop_terminates (\<lambda>_ s. (the (read_release_q_non_empty_and_ready s)))
+                        (\<lambda>_. tcb_release_dequeue) r' s"
   apply (rule_tac R="{((r', s'), (r, s)). length (release_queue s') < length (release_queue s)}"
                in whileLoop_terminates_inv)
     apply simp
    apply clarsimp
-   apply (rule awaken_body_release_queue_length)
+   apply (rule tcb_release_dequeue_release_queue_length)
   apply (rule release_queue_length_well_founded)
   done
 
@@ -3146,28 +3126,6 @@ lemma tcbReleaseRemove_corres:
      by (auto dest!: hd_in_set simp: opt_pred_def opt_map_def fun_upd_apply split: option.splits)
   by (auto simp: in_opt_pred opt_map_red fun_upd_apply split: option.splits)
 
-lemma tcbReleaseDequeue_corres:
-  "corres (=)
-     (pspace_aligned and pspace_distinct and valid_release_q and (\<lambda>s. release_queue s \<noteq> [])
-      and ready_or_release)
-     (sym_heap_sched_pointers and valid_objs')
-     tcb_release_dequeue tcbReleaseDequeue"
-  apply (clarsimp simp: tcb_release_dequeue_def tcbReleaseDequeue_def)
-  apply (rule corres_symb_exec_l[rotated, OF _ gets_sp]; wpsimp?)
-  apply (rename_tac rlq)
-  apply (rule corres_symb_exec_r[rotated, OF getReleaseQueue_sp]; wpsimp?)
-  apply (rename_tac queue)
-  apply (rule_tac F="rlq \<noteq> [] \<and> hd rlq = the (tcbQueueHead queue)" in corres_req)
-   apply (drule state_relation_release_queue_relation)
-   apply (clarsimp simp: list_queue_relation_def release_queue_relation_def)
-   apply (fastforce dest: heap_path_head heap_ls_unique)
-  apply (corresKsimp corres: tcbReleaseRemove_corres)
-  apply (drule state_relation_release_queue_relation)
-  apply (clarsimp simp: release_queue_relation_def list_queue_relation_def)
-  apply (fastforce dest: heap_path_head
-                   simp: valid_release_q_def  vs_all_heap_simps obj_at_def is_tcb_def)
-  done
-
 lemma tcbInReleaseQueue_update_valid_tcbs'[wp]:
   "threadSet (tcbInReleaseQueue_update f) tcbPtr \<lbrace>valid_tcbs'\<rbrace>"
   by (wpsimp wp: threadSet_valid_tcbs')
@@ -3181,107 +3139,91 @@ lemma tcbQueueRemove_valid_tcbs'[wp]:
 
 crunch tcbReleaseDequeue
   for valid_tcbs'[wp]: valid_tcbs'
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  (wp: crunch_wps)
 
-crunch tcbReleaseDequeue
-  for valid_sched_pointers[wp]: valid_sched_pointers
-
-lemma tcb_release_dequeue_runnable_tcb_at_rv:
-  "\<lbrace>\<lambda>s. release_queue s \<noteq> [] \<and> valid_release_q s\<rbrace>
-   tcb_release_dequeue
-   \<lbrace>\<lambda>rv s. st_tcb_at runnable rv s\<rbrace>"
-  apply (clarsimp simp: tcb_release_dequeue_def)
-  apply wpsimp
-  apply (fastforce simp: valid_release_q_def vs_all_heap_simps obj_at_kh_kheap_simps is_tcb_def)
-  done
-
-crunch tcb_release_dequeue
-  for valid_sched_action[wp]: valid_sched_action
-  and pspace_aligned[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
-  and valid_tcbs[wp]: valid_tcbs
-  and active_sc_valid_refills[wp]: active_scs_valid
-  and ready_or_release[wp]: ready_or_release
-  and valid_ready_qs[wp]: valid_ready_qs
+crunch tcb_release_remove
+  for ready_qs_distinct[wp]: ready_qs_distinct
   and in_correct_ready_q[wp]: in_correct_ready_q
-  and ready_qs_distinct[wp]: ready_qs_distinct
-  and valid_objs[wp]: valid_objs
   (rule: in_correct_ready_q_lift simp: crunch_simps ready_qs_distinct_def)
 
-lemma tcb_release_dequeue_not_in_release_q[wp]:
-  "\<lbrace>\<top>\<rbrace> tcb_release_dequeue \<lbrace>not_in_release_q\<rbrace>"
-  unfolding tcb_release_dequeue_def
-  by wpsimp
+defs tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt_def:
+  "tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt s \<equiv>
+     \<forall>head. tcbQueueHead (ksReleaseQueue s) = Some head \<longrightarrow> active_sc_tcb_at' head s"
 
-lemma awakenBody_corres:
+lemma tcbReleaseDequeue_corres:
   "corres dc
-     (pspace_aligned and pspace_distinct and valid_objs and valid_sched_action
-      and valid_tcbs and in_correct_ready_q and ready_qs_distinct
+     (pspace_aligned and pspace_distinct and valid_sched_action
+      and valid_objs and in_correct_ready_q and ready_qs_distinct
       and active_scs_valid and ready_or_release
-      and (\<lambda>s. valid_release_q s \<and> release_queue s \<noteq> []))
-     (valid_objs' and valid_sched_pointers and sym_heap_sched_pointers
-      and pspace_aligned' and pspace_distinct' and pspace_bounded')
-     awaken_body awakenBody"
-  (is "corres _ (?abs_inv and _) ?conc _ _")
-  apply (clarsimp simp: awaken_body_def awakenBody_def)
-  apply (rule_tac P="\<lambda>rv. ?abs_inv and not_in_release_q rv and st_tcb_at runnable rv"
-              and P'="\<lambda>_. ?conc"
-               in corres_underlying_split_ex_abs)
-     apply (corres corres: tcbReleaseDequeue_corres)
-    apply clarsimp
-    apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ isRunnable_sp, rotated];
-           (solves wpsimp)?)
-     apply wpsimp
-     apply (fastforce elim!: tcb_at_cross dest: state_relation_pspace_relation simp: ex_abs_def)
-    apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ assert_sp, rotated]; (solves wpsimp)?)
-     apply wpsimp
-     apply (fastforce dest: st_tcb_at_runnable_cross
-                      simp: ex_abs_def pred_tcb_at'_def obj_at'_def runnable_eq_active')
-    apply (corres corres: possibleSwitchTo_corres)
-   apply (wpsimp wp: tcb_release_dequeue_runnable_tcb_at_rv)
-  apply wpsimp
+      and valid_release_q and (\<lambda>s. release_queue s \<noteq> []))
+     (valid_objs' and valid_sched_pointers and sym_heap_sched_pointers and pspace_bounded')
+     tcb_release_dequeue tcbReleaseDequeue"
+  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
+   apply (fastforce dest: pspace_aligned_cross)
+  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
+   apply (fastforce dest: pspace_distinct_cross)
+  apply (clarsimp simp: tcb_release_dequeue_def tcbReleaseDequeue_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (fastforce intro: ksReleaseQueue_asrt_cross)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (fastforce simp: tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt_def
+                   dest!: release_queue_active_sc_tcb_at_cross)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[OF getReleaseQueue_corres])
+      apply clarsimp
+      apply (rename_tac rlq queue)
+      apply (rule corres_symb_exec_r_conj_ex_abs_forwards)
+         apply (rule corres_assert_assume_r)
+         apply (rule_tac F="rlq \<noteq> []" in corres_gen_asm)
+         apply simp
+         apply (rule corres_split[OF tcbReleaseRemove_corres])
+            apply fastforce
+           apply (rule corres_add_noop_lhs2)
+           apply (rule corres_add_noop_rhs2)
+           apply (simp only: bind_assoc)
+           apply (rule corres_split[OF possibleSwitchTo_corres])
+              apply fastforce
+             apply (rule corres_symb_exec_r_conj_ex_abs[where P'=\<top> and P=\<top>])
+                apply (rule corres_symb_exec_r_conj_ex_abs
+                             [where P'=\<top>
+                                and P="valid_release_q and pspace_aligned and pspace_distinct
+                                       and valid_objs"])
+                   apply (rule corres_return_trivial)
+                  apply wpsimp
+                 apply wpsimp
+                apply (wpsimp wp: no_fail_stateAssert)
+                apply (clarsimp simp: ex_abs_def)
+                apply (frule (4) release_queue_active_sc_tcb_at_cross)
+                apply (fastforce dest!: state_relation_release_queue_relation
+                                        tcbQueueHead_ksReleaseQueue
+                                  simp: tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt_def
+                                        release_queue_relation_def tcbQueueEmpty_def)
+               apply wpsimp+
+             apply (wpsimp wp: no_fail_stateAssert)
+             apply (fastforce intro: ksReleaseQueue_asrt_cross simp: ex_abs_def)
+            apply wpsimp+
+   apply (fastforce dest!: hd_in_set
+                     simp: valid_release_q_def vs_all_heap_simps pred_tcb_at_def obj_at_def is_tcb_def)
+  apply (fastforce dest: state_relation_release_queue_relation heap_path_head
+                 intro!: st_tcb_at_runnable_cross
+                   simp: valid_release_q_def vs_all_heap_simps pred_tcb_at_def obj_at_def
+                         release_queue_relation_def list_queue_relation_def)
   done
-
-crunch tcb_release_dequeue
-  for weak_valid_sched_action[wp]: weak_valid_sched_action
-
-crunch awakenBody
-  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
-  (wp: crunch_wps)
 
 crunch tcbReleaseDequeue
   for weak_sch_act_wf[wp]: "\<lambda>s'. weak_sch_act_wf (ksSchedulerAction s') s'"
+  (wp: crunch_wps)
 
 crunch tcb_release_dequeue
   for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P tptr s)"
   and released_sc_tcb_at[wp]: "released_sc_tcb_at t"
 
-lemma read_tcb_refill_ready_released_sc_tcb_at:
-  "\<lbrakk>active_sc_tcb_at tcb_ptr s; read_tcb_refill_ready tcb_ptr s = Some True\<rbrakk>
-   \<Longrightarrow> released_sc_tcb_at tcb_ptr s"
-  by (fastforce dest: read_refill_head_SomeD
-                simp: read_tcb_refill_ready_def vs_all_heap_simps read_tcb_obj_ref_def
-                      thread_read_def omonad_defs oliftM_def  get_tcb_def read_sc_refill_ready_def
-                      read_sched_context_def)
-
-lemma awaken_body_valid_ready_qs:
-  "\<lbrace>\<lambda>s. valid_release_q s \<and> valid_ready_qs s \<and> read_release_q_non_empty_and_ready s = Some True\<rbrace>
-   awaken_body
-   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  apply (clarsimp simp: awaken_body_def)
-  apply (wpsimp wp: possible_switch_to_valid_ready_qs hoare_disjI2 hoare_vcg_all_lift
-                    hoare_vcg_imp_lift'
-              simp: tcb_release_dequeue_def)
-  apply (simp add: read_release_q_non_empty_and_ready_simp split: if_splits)
-  apply (rule conjI)
-   apply (fastforce dest: hd_in_set simp: valid_release_q_def vs_all_heap_simps obj_at_def)
-  apply (fastforce intro: valid_release_q_active_sc read_tcb_refill_ready_released_sc_tcb_at)
-  done
-
-crunch awaken_body
+crunch tcb_release_dequeue
   for in_correct_ready_q[wp]: in_correct_ready_q
   (rule: in_correct_ready_q_lift ignore: tcb_sched_action)
 
-crunch awaken_body
+crunch tcb_release_dequeue
   for ready_qs_distinct[wp]: ready_qs_distinct
   (rule: ready_qs_distinct_lift ignore: tcb_sched_action wp: crunch_wps)
 
@@ -3294,6 +3236,11 @@ lemma awaken_corres:
       and pspace_aligned' and pspace_distinct' and pspace_bounded')
      Schedule_A.awaken awaken"
   apply (clarsimp simp: awaken_def Schedule_A.awaken_def runReaderT_def)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce intro: ksReleaseQueue_asrt_cross)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce simp: tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt_def
+                   dest!: release_queue_active_sc_tcb_at_cross)
   apply (rule corres_whileLoop_abs; simp)
       apply (rule_tac f=read_release_q_non_empty_and_ready
                   and f'=releaseQNonEmptyAndReady
@@ -3304,16 +3251,17 @@ lemma awaken_corres:
        apply fastforce
       apply (clarsimp simp: no_ofail_def)
       apply (erule (1) valid_release_q_read_release_q_non_empty_and_ready_bound)
-     apply (corresKsimp corres: awakenBody_corres)
-     apply (fastforce simp: read_release_q_non_empty_and_ready_simp)
+     apply (corres corres: tcbReleaseDequeue_corres)
+      apply (fastforce simp: read_release_q_non_empty_and_ready_simp)
+     apply fastforce
     apply (clarsimp simp: pred_conj_def)
     apply (intro hoare_vcg_conj_lift_pre_fix;
-           (solves \<open>wpsimp simp: awaken_body_def tcb_release_dequeue_def\<close>)?)
-    apply (wpsimp wp: awaken_body_valid_sched_action)
+           (solves \<open>wpsimp simp: tcb_release_dequeue_def\<close>)?)
+    apply (wpsimp wp: tcb_release_dequeue_valid_sched_action)
     apply (frule valid_release_q_read_release_q_non_empty_and_ready_bound)
      apply fastforce
     apply (fastforce dest: read_release_q_non_empty_and_ready_True_simp)
-   apply ((wpsimp simp: awakenBody_def | wpsimp wp: hoare_drop_imps)+)[1]
+   apply ((wpsimp simp: tcbReleaseDequeue_def | wpsimp wp: hoare_drop_imps)+)[1]
   apply (fastforce intro!: awaken_terminates)
   done
 

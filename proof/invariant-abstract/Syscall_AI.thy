@@ -161,7 +161,7 @@ declare sc_and_timer_activatable[wp]
 
 lemma awaken_schact_not_rct[wp]:
   "awaken \<lbrace>\<lambda>s. scheduler_action s \<noteq> resume_cur_thread\<rbrace>"
-  unfolding awaken_def awaken_body_def tcb_release_dequeue_def possible_switch_to_def
+  unfolding awaken_def tcb_release_dequeue_def possible_switch_to_def
   apply (rule whileLoop_wp)
    apply (wpsimp wp: hoare_drop_imps simp: set_scheduler_action_def)+
   done

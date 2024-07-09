@@ -146,24 +146,17 @@ where
      else read_tcb_refill_ready (hd rq)
    }"
 
-definition tcb_release_dequeue :: "(obj_ref, 'z::state_ext) s_monad"
-where
-  "tcb_release_dequeue = do
+definition tcb_release_dequeue :: "(unit, 'z::state_ext) s_monad" where
+  "tcb_release_dequeue \<equiv> do
      rq \<leftarrow> gets release_queue;
+     assert (rq \<noteq> []);
      tcb_release_remove (hd rq);
-     return (hd rq)
+     possible_switch_to (hd rq)
    od"
 
-definition awaken_body :: "(unit, 'z::state_ext) s_monad"
-where
-  "awaken_body = do
-     awakened \<leftarrow> tcb_release_dequeue;
-     possible_switch_to awakened
-   od"
-
-definition awaken :: "(unit, 'z::state_ext) s_monad"
-where
-  "awaken \<equiv> whileLoop (\<lambda>r s. the (read_release_q_non_empty_and_ready s)) (\<lambda>_. awaken_body) ()"
+definition awaken :: "(unit, 'z::state_ext) s_monad" where
+  "awaken \<equiv> whileLoop (\<lambda>r s. the (read_release_q_non_empty_and_ready s))
+                       (\<lambda>_. tcb_release_dequeue) ()"
 
 definition max_non_empty_queue :: "(priority \<Rightarrow> ready_queue) \<Rightarrow> ready_queue" where
   "max_non_empty_queue queues \<equiv> queues (Max {prio. queues prio \<noteq> []})"

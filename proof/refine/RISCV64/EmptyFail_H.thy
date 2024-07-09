@@ -291,7 +291,7 @@ crunch tcbReleaseDequeue
 
 lemma awaken_empty_fail[intro!, wp, simp]:
   "empty_fail awaken"
-  apply (clarsimp simp: awaken_def awakenBody_def)
+  apply (clarsimp simp: awaken_def tcbReleaseDequeue_def)
   apply (wpsimp wp: empty_fail_whileLoop)
   done
 

@@ -4952,7 +4952,7 @@ lemma find_time_after_ccorres:
   (is "ccorres _ _ (?abs_inv and _) _ _ _ _")
   supply sched_context_C_size[simp del] refill_C_size[simp del]
   apply (cinit lift: new_time_' tcb_'
-               simp: runReaderT_def whileAnno_def tcbInReleaseQueue_imp_active_sc_tc_at'_asrt_def)
+               simp: runReaderT_def whileAnno_def tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt_def)
    apply (rule ccorres_stateAssert)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_add_return2)
