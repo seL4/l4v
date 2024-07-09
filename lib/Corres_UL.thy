@@ -1504,6 +1504,16 @@ lemmas corres_split_noop_rhs2
 
 lemmas corres_split_dc = corres_split[where r'=dc, simplified]
 
+lemma corres_add_noop_rhs:
+  "corres_underlying sr nf nf' r P P' f (do _ \<leftarrow> return (); g od)
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by simp
+
+lemma corres_add_noop_rhs2:
+  "corres_underlying sr nf nf' r P P' f (do _ \<leftarrow> g; return () od)
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by simp
+
 lemma isLeft_case_sum:
   "isLeft v \<Longrightarrow> (case v of Inl v' \<Rightarrow> f v' | Inr v' \<Rightarrow> g v') = f (theLeft v)"
   by (clarsimp split: sum.splits)

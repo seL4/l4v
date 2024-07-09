@@ -132,11 +132,6 @@ local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_
 
 text \<open>Extra corres_underlying rules.\<close>
 
-lemma corres_add_noop_rhs2:
-  "corres_underlying sr nf nf' r P P' f (do _ \<leftarrow> g; return () od)
-      \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by simp
-
 (* Use termination (nf=True) to avoid exs_valid *)
 lemma corres_noop2_no_exs:
   assumes x: "\<And>s. P s  \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>r. (=) s\<rbrace> \<and> empty_fail f"
