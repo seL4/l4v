@@ -1082,11 +1082,6 @@ lemma pde_opt_cap_eq:
   apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def pred_tcb_at_def)
   done
 
-lemma corres_add_noop_rhs:
-  "corres_underlying sr fl fl' r P P' f (do _ \<leftarrow> return (); g od)
-    \<Longrightarrow> corres_underlying sr fl fl' r P P' f g"
-  by simp
-
 lemma gets_the_noop_dcorres:
   "dcorres dc (\<lambda>s. f s \<noteq> None) \<top> (gets_the f) (return x)"
   by (clarsimp simp: gets_the_def corres_underlying_def exec_gets
