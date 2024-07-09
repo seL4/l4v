@@ -352,8 +352,8 @@ lemma hoarep_revert:
   done
 
 lemma intermediate_Normal_state:
-  "\<lbrakk>\<Gamma> \<turnstile> \<langle>Seq c\<^sub>1 c\<^sub>2, Normal t\<rangle> \<Rightarrow> t''; t \<in> P; \<Gamma> \<turnstile> P c\<^sub>1 Q\<rbrakk>
-   \<Longrightarrow> \<exists>t'. \<Gamma> \<turnstile> \<langle>c\<^sub>1, Normal t\<rangle> \<Rightarrow> Normal t' \<and> \<Gamma> \<turnstile> \<langle>c\<^sub>2, Normal t'\<rangle> \<Rightarrow> t''"
+  "\<lbrakk>\<Gamma> \<turnstile> \<langle>Seq c\<^sub>1 c\<^sub>2, Normal t\<rangle> \<Rightarrow> t''; \<Gamma> \<turnstile> P c\<^sub>1 Q; t \<in> P\<rbrakk>
+   \<Longrightarrow> \<exists>t'. \<Gamma> \<turnstile> \<langle>c\<^sub>1, Normal t\<rangle> \<Rightarrow> Normal t' \<and> t' \<in> Q \<and> \<Gamma> \<turnstile> \<langle>c\<^sub>2, Normal t'\<rangle> \<Rightarrow> t''"
   apply (erule exec_Normal_elim_cases(8))
   apply (insert hoarep_exec)
   apply fastforce
