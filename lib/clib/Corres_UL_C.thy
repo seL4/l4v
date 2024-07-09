@@ -64,6 +64,10 @@ lemma exec_handlers_use_hoare_nothrow_hoarep:
   apply (erule exec_handlers.cases; fastforce simp: isNormal_def isAbr_def)
   done
 
+lemma hoarep_isNormal_exec_handlers:
+  "\<lbrakk>E \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> t; isNormal t\<rbrakk> \<Longrightarrow> E \<turnstile>\<^sub>h \<langle>c # hs, s'\<rangle> \<Rightarrow> (length hs, t)"
+  by (fastforce dest: EHOther simp: isNormal_def)
+
 definition
   unif_rrel :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 'b)
                              \<Rightarrow> ('a \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 'c)
