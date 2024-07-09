@@ -19,7 +19,7 @@ jobs:
     name: 'Theory Linter'
     runs-on: ubuntu-latest
     steps:
-    - uses: seL4/ci-actions/thylint@master
+    - uses: seL4/ci-actions/thylint@testing
       with:
         token: ${{ secrets.READ_TOKEN }}
         pr_num: ${{ github.event.pull_request.number }}
