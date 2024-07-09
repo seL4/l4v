@@ -1,0 +1,32 @@
+# Copyright 2024, Proofcraft Pty Ltd
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+# Theory Linter action
+
+name: Lint
+
+# needs pull_request_target trigger for more authority on GITHUB_TOKEN when PR
+# originates on a fork
+on:
+  pull_request_target:
+  push:
+    branches:
+      - 'annotations*'
+
+jobs:
+  thylint:
+    name: 'Theory Linter'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: seL4/ci-actions/thylint@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
+        pr_num: ${{ github.event.pull_request.number }}
+    - uses: yuzutech/annotations-action@v0.5.0
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        title: 'File annotations for theory linter'
+        input: './annotations.json'
+      continue-on-error: true
+      if: always()
