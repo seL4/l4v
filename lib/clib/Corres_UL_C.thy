@@ -304,17 +304,21 @@ lemma ccorres_from_vcg_nofail:
   apply (rule hoare_complete, simp add: HoarePartialDef.valid_def)
   done
 
+lemma ccorres_to_vcg_with_prop':
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> \<not> snd (a s) \<and> s' \<in> P' \<and> (s, s') \<in> srel}
+           c {t'. \<exists>(rv, t) \<in> fst (a s). (t, t') \<in> srel \<and> rrel rv (xf t') \<and> R rv t}"
+  apply (rule hoare_complete)
+  apply (clarsimp simp: HoarePartialDef.valid_def cvalid_def no_fail_def)
+  apply (frule (5) ccorres_empty_handler_abrupt)
+  apply (fastforce elim!: ccorresE EHOther simp: unif_rrel_simps valid_def)
+  done
+
 lemma ccorres_to_vcg_with_prop:
   "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a; \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>\<rbrakk>
    \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel}
            c {t'. \<exists>(rv, t) \<in> fst (a s). (t, t') \<in> srel \<and> rrel rv (xf t') \<and> R rv t}"
-  apply (rule hoare_complete)
-  apply (clarsimp simp: HoarePartialDef.valid_def cvalid_def no_fail_def)
-  apply (drule_tac x=s in spec)
-  apply clarsimp
-  apply (frule (5) ccorres_empty_handler_abrupt)
-  apply (fastforce elim!: ccorresE EHOther simp: unif_rrel_simps valid_def)
-  done
+  by (fastforce elim: ccorres_to_vcg_with_prop' intro: conseqPre simp: no_fail_def)
 
 lemma ccorres_to_vcg:
   "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a\<rbrakk>
