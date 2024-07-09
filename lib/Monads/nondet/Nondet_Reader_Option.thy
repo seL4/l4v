@@ -70,6 +70,10 @@ lemma gets_the_obind:
   "gets_the (f |>> g) = gets_the f >>= (\<lambda>x. gets_the (g x))"
   by (rule ext) (simp add: monad_simps obind_def split: option.splits)
 
+lemma gets_the_Some_get[simp]:
+  "gets_the Some = get"
+  by (clarsimp simp: gets_the_def gets_def assert_opt_Some)
+
 lemma gets_the_return:
   "gets_the (oreturn x) = return x"
   by (simp add: monad_simps oreturn_def)
