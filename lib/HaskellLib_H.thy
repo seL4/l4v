@@ -565,6 +565,9 @@ lemma gets_the_ohaskell_assert:
   "gets_the (ohaskell_assert P []) = assert P"
   by (clarsimp simp: ohaskell_assert_def split: if_splits)
 
-lemmas omonad_defs = omonad_defs ohaskell_assert_def ohaskell_fail_def
+definition ohaskell_state_assert :: "('s \<Rightarrow> bool) \<Rightarrow> unit list \<Rightarrow> ('s, unit) lookup" where
+  "ohaskell_state_assert P L \<equiv> ostate_assert P"
+
+lemmas omonad_defs = omonad_defs ohaskell_assert_def ohaskell_state_assert_def ohaskell_fail_def
 
 end

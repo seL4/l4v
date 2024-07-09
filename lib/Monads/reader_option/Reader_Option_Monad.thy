@@ -216,6 +216,9 @@ definition oassert :: "bool \<Rightarrow> ('s, unit) lookup" where
 definition oassert_opt :: "'a option \<Rightarrow> ('s, 'a) lookup" where
   "oassert_opt r \<equiv> case r of None \<Rightarrow> ofail | Some x \<Rightarrow> oreturn x"
 
+definition ostate_assert :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, unit) lookup" where
+  "ostate_assert P \<equiv> do { s \<leftarrow> Some; oassert (P s)}"
+
 definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'b option" where
   "oapply x \<equiv> \<lambda>s. s x"
 
