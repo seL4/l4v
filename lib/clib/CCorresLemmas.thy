@@ -586,6 +586,13 @@ lemma ccorres_assert2:
               (\<lambda>s. P \<longrightarrow> G s) {s. P \<longrightarrow> s \<in> G'} hs (assert P >>= f) c"
   by (cases P, simp_all add: ccorres_fail')
 
+(* This variant only propagates the assertion into the abstract side, to aid with schematic
+   matching on the concrete side. *)
+lemma ccorres_assert2_abs:
+  "\<lbrakk> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs (f ()) c \<rbrakk>
+   \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf (\<lambda>s. P \<longrightarrow> G s) G' hs (assert P >>= f) c"
+  by (cases P, simp_all add: ccorres_fail')
+
 (* ccorres_assertE throws away the assert completely; this version provides more info *)
 (* FIXME: make this ccorres_assertE, and weaker ccorres_assertE into ccorres_assertE_weak, then
           re-examine situation with ccorres_assert and ccorres_assert2*)
