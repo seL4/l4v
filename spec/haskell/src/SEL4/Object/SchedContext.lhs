@@ -24,7 +24,7 @@ This module uses the C preprocessor to select a target architecture.
 >         refillCapacity, readRefillCapacity, getRefillCapacity, refillBudgetCheck,
 >         refillBudgetCheckRoundRobin, updateSchedContext, emptyRefill,
 >         isCurDomainExpired, refillUnblockCheck,ifCondRefillUnblockCheck,
->         readRefillReady, refillReady, tcbReleaseEnqueue, tcbQueueRemove, tcbReleaseDequeue,
+>         readRefillReady, refillReady, tcbReleaseEnqueue, tcbQueueRemove,
 >         refillSufficient, readRefillSufficient, getRefillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, getRefillFull,
@@ -32,7 +32,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindReply, schedContextSetInactive, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
 >         scReleased, setConsumed, refillResetRR, preemptionPoint, refillHdInsufficient,
->         nonOverlappingMergeRefills, headInsufficientLoop, maxReleaseTime, scActive
+>         nonOverlappingMergeRefills, headInsufficientLoop, maxReleaseTime, readScActive, scActive
 >     ) where
 
 \begin{impdetails}
@@ -803,8 +803,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > findTimeAfter :: Maybe (PPtr TCB) -> Time -> Kernel (Maybe (PPtr TCB))
 > findTimeAfter tcbPtrOpt newTime = do
->     stateAssert tcbInReleaseQueue_imp_active_sc_tc_at'_asrt
->         "Every thread in the release queue is associated with an active scheduling context"
+>     stateAssert tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt
+>         "every thread in the release queue is associated with an active scheduling context"
 >     whileLoop (\afterPtrOpt -> fromJust . runReaderT (timeAfter afterPtrOpt newTime))
 >               (\afterPtrOpt -> do
 >                   tcb <- getObject (fromJust afterPtrOpt)
@@ -847,13 +847,6 @@ This module uses the C preprocessor to select a target architecture.
 >                   stateAssert (findTimeAfter_asrt afterPtr) "tcbPtr must be in the release queue"
 >                   tcbQueueInsert tcbPtr afterPtr)
 >     threadSet (\t -> t { tcbInReleaseQueue = True }) tcbPtr
-
-> tcbReleaseDequeue :: Kernel (PPtr TCB)
-> tcbReleaseDequeue = do
->     queue <- getReleaseQueue
->     tcbPtr <- return $ fromJust $ tcbQueueHead queue
->     tcbReleaseRemove tcbPtr
->     return tcbPtr
 
 In preemptible code, the kernel may explicitly mark a preemption point with the "preemptionPoint" function. The preemption will only be taken if an interrupt has occurred and the preemption point has been called "workUnitsLimit" times.
 

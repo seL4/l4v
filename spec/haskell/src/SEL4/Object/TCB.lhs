@@ -1077,27 +1077,41 @@ On some architectures, the thread context may include registers that may be modi
 >         commitTime
 >     setCurSc ctScPtr
 
-> readTCBRefillReady :: PPtr TCB -> KernelR Bool
-> readTCBRefillReady tcbPtr = do
->      scOpt <- threadRead tcbSchedContext tcbPtr
->      readRefillReady $ fromJust scOpt
-
 > releaseQNonEmptyAndReady :: KernelR Bool
 > releaseQNonEmptyAndReady = do
 >     rq <- readReleaseQueue
 >     if (tcbQueueHead rq == Nothing)
 >       then return False
->       else readTCBRefillReady (fromJust $ tcbQueueHead rq)
+>       else do
+>           let head = fromJust (tcbQueueHead rq)
+>           scOpt <- threadRead tcbSchedContext head
+>           assert (scOpt /= Nothing) "the head of the release queue must have an associated scheduling context"
+>           let scPtr = fromJust scOpt
+>           active <- readScActive scPtr
+>           assert active "the scheduling context associated with the head of the release queue must be active"
+>           readRefillReady scPtr
 
-> awakenBody :: Kernel ()
-> awakenBody = do
->     awakened <- tcbReleaseDequeue
+> tcbReleaseDequeue :: Kernel ()
+> tcbReleaseDequeue = do
+>     stateAssert ksReleaseQueue_asrt ""
+>     stateAssert tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt
+>         "every thread in the release queue is associated with an active scheduling context"
+>     queue <- getReleaseQueue
+>     awakened <- return $ fromJust $ tcbQueueHead queue
 >     runnable <- isRunnable awakened
 >     assert runnable "the awakened thread must be runnable"
+>     tcbReleaseRemove awakened
 >     possibleSwitchTo awakened
+>     stateAssert ksReleaseQueue_asrt ""
+>     stateAssert tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt
+>         "if the release queue is not empty, then the head of the release queue is associated with an active scheduling context"
 
 > awaken :: Kernel ()
-> awaken = whileLoop (const (fromJust . runReaderT releaseQNonEmptyAndReady)) (const awakenBody) ()
+> awaken = do
+>     stateAssert ksReleaseQueue_asrt ""
+>     stateAssert tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt
+>         "every thread in the release queue is associated with an active scheduling context"
+>     whileLoop (const (fromJust . runReaderT releaseQNonEmptyAndReady)) (const tcbReleaseDequeue) ()
 
 > tcbEPFindIndex :: PPtr TCB -> [PPtr TCB] -> Int -> Kernel Int
 > tcbEPFindIndex tptr queue curIndex = do

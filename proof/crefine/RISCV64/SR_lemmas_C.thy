@@ -2237,6 +2237,11 @@ lemma rf_sr_ctcb_queue_relation:
   apply (clarsimp simp: Let_def seL4_MinPrio_def minDom_def maxDom_to_H maxPrio_to_H)
   done
 
+lemma rf_sr_ctcb_queue_relation_release_queue:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ctcb_queue_relation (ksReleaseQueue s) (ksReleaseQueue_' (globals s'))"
+  unfolding rf_sr_def cstate_relation_def cready_queues_relation_def
+  by (clarsimp simp: Let_def seL4_MinPrio_def minDom_def maxDom_to_H maxPrio_to_H)
+
 lemma rf_sr_sched_action_relation:
   "(s, s') \<in> rf_sr
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"

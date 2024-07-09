@@ -494,8 +494,14 @@ An assert that will say that the tcbInReleaseQueue flag is not set.
 An assert that will say that every thread in the release queue is associated
 with an active scheduling context.
 
-> tcbInReleaseQueue_imp_active_sc_tc_at'_asrt :: KernelState -> Bool
-> tcbInReleaseQueue_imp_active_sc_tc_at'_asrt _ = True
+> tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt :: KernelState -> Bool
+> tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt _ = True
+
+An assert that will say that if the release queue is not empty, then the head
+of the release queue is associated with an active scheduling context.
+
+> tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt :: KernelState -> Bool
+> tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt _ = True
 
 An assert that will say that the tcbQueued flag of the thread is not set.
 

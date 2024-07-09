@@ -637,13 +637,18 @@ lemma merge_overlapping_head_refill_ccorres:
   done
 
 (* FIXME RT: move to Corres_UL_C? *)
-lemma ccorres_to_vcg_Normal:
-  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a\<rbrakk>
-   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel} c UNIV"
-  apply (frule (1) ccorres_to_vcg_with_prop[where R="\<top>\<top>" and s=s])
+lemma ccorres_to_vcg_Normal':
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> \<not> snd (a s) \<and> s' \<in> P' \<and> (s, s') \<in> srel} c UNIV"
+  apply (frule ccorres_to_vcg_with_prop'[where R="\<top>\<top>" and s=s])
    apply wpsimp
   apply (fastforce elim: conseqPost)
   done
+
+lemma ccorres_to_vcg_Normal:
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel} c UNIV"
+  by (fastforce elim: ccorres_to_vcg_Normal' intro: conseqPre simp: no_fail_def)
 
 crunch scActive
  for (empty_fail) empty_fail[wp]
