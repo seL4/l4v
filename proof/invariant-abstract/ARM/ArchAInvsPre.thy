@@ -178,11 +178,11 @@ lemma device_frame_in_device_region:
 
 
 global_naming Arch
-named_theorems AInvsPre_asms
+named_theorems AInvsPre_assms
 
 
 
-lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
+lemma (* ptable_rights_imp_frame *)[AInvsPre_assms]:
   assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
          ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
@@ -225,7 +225,7 @@ end
 global_interpretation AInvsPre?: AInvsPre
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_asms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_assms)?)
   qed
 
 requalify_facts
