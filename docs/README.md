@@ -18,13 +18,17 @@ Current topics are:
 
 - [Setup](setup.md) for doing seL4 proofs
 - [Naming conventions](conventions.md) in this repository
+- [Commit message](commit-messages.md) conventions in this repository
+- [Proof style](Style.thy) rules for this repository
 - Using [`find_theorems`](find-theorems.md) effectively
 - Using [`find_consts`](find-consts.md) effectively
 - [De-duplicating proofs](de-duplicating-proofs.md)
 - [Compacting proofs](compacting-proofs.md)
 - [Architecture Split](arch-split.md) Why and How-To
 - [Haskell Assertions](haskell-assertions.md): how to use assertions in Haskell to use information from AInvs on Haskell and C levels
-- [CRefine Notes](crefine-notes.md)
+- General [CRefine Notes](crefine-notes.md)
+- [Debugging VCG](vcg-debugging.md) goals and failures in CRefine
+- [Platform branches](platform-branches.md) -- what they are and how to update them
 
 ## Plans
 
