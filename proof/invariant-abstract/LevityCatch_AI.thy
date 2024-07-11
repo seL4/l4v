@@ -13,15 +13,12 @@ begin
 (* FIXME: eliminate mapM_UNIV_wp, use mapM_wp' directly *)
 lemmas mapM_UNIV_wp = mapM_wp'
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   ptrFromPAddr addrFromPPtr
-requalify_facts
+
+arch_requalify_facts
   ptrFormPAddr_addFromPPtr
   aobj_ref_arch_cap
-
-end
 
 lemmas aobj_ref_arch_cap_simps[simp] = aobj_ref_arch_cap
 
@@ -46,7 +43,6 @@ lemmas cap_irqs_simps[simp] =
 
 declare liftE_wp[wp]
 declare case_sum_True[simp]
-declare select_singleton[simp]
 
 crunch_ignore (add: do_extended_op)
 

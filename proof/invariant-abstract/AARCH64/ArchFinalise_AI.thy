@@ -9,11 +9,9 @@ theory ArchFinalise_AI
 imports Finalise_AI
 begin
 
-context Arch begin
+context Arch begin arch_global_naming
 
 named_theorems Finalise_AI_assms
-
-global_naming AARCH64
 
 lemma valid_global_refs_asid_table_udapte [iff]:
   "valid_global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) =
@@ -1581,7 +1579,7 @@ interpretation Finalise_AI_1?: Finalise_AI_1
     by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
@@ -1620,7 +1618,7 @@ interpretation Finalise_AI_2?: Finalise_AI_2
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 crunch
   vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_save_reg_range, vgic_update_lr,
@@ -1753,7 +1751,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin global_naming AARCH64 (*FIXME: arch_split*)
+context Arch begin arch_global_naming (*FIXME: arch_split*)
 
 lemma do_machine_op_reachable_pg_cap[wp]:
   "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace>
@@ -1900,9 +1898,7 @@ lemma (* dmo_replaceable_or_arch_update *) [Finalise_AI_assms,wp]:
 
 end
 
-context begin interpretation Arch .
-requalify_consts replaceable_or_arch_update
-end
+arch_requalify_consts replaceable_or_arch_update
 
 interpretation Finalise_AI_3?: Finalise_AI_3
   where replaceable_or_arch_update = replaceable_or_arch_update
@@ -1912,7 +1908,7 @@ interpretation Finalise_AI_3?: Finalise_AI_3
     by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma typ_at_data_at_wp:
   assumes typ_wp: "\<And>a.\<lbrace>typ_at a p \<rbrace> g \<lbrace>\<lambda>s. typ_at a p\<rbrace>"
@@ -1930,7 +1926,7 @@ interpretation Finalise_AI_4?: Finalise_AI_4
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma set_asid_pool_obj_at_ptr:
   "\<lbrace>\<lambda>s. P (ArchObj (arch_kernel_obj.ASIDPool mp))\<rbrace>

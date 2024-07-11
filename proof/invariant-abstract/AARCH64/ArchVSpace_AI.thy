@@ -21,7 +21,7 @@ lemma valid_asid_map_upd[simp]:
 
 end
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 sublocale
   set_vcpu: non_vspace_non_cap_non_mem_op "set_vcpu p vcpu" +
@@ -2324,7 +2324,7 @@ lemma valid_vspace_obj:
 
 end
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma set_asid_pool_arch_objs_map:
   "\<lbrace>valid_vspace_objs and valid_arch_state and valid_global_objs and
@@ -3142,9 +3142,8 @@ crunch vcpu_switch
 
 end
 
-context begin interpretation Arch .
-requalify_facts
+(* FIXME arch_split: move to generic theory? *)
+arch_requalify_facts
   do_machine_op_valid_kernel_mappings
-end
 
 end

@@ -9,7 +9,7 @@ theory ArchDetype_AI
 imports Detype_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Detype_AI_assms
 
@@ -636,8 +636,8 @@ interpretation Detype_AI_2
         Detype_AI_2.intro
         by blast
 
-context begin interpretation Arch .
-lemma delete_objects_invs[wp]:
+(* generic consequence of architecture-specific details *)
+lemma (in Arch) delete_objects_invs[wp]:
   "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at ((=) (cap.UntypedCap dev ptr bits f)) slot s
     \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and
     invs and ct_active\<rbrace>
@@ -657,6 +657,8 @@ lemma delete_objects_invs[wp]:
   apply (drule (1) cte_wp_valid_cap)
   apply (simp add: valid_cap_def cap_aligned_def word_size_bits_def untyped_min_bits_def)
   done
-end
+
+requalify_facts Arch.delete_objects_invs
+lemmas [wp] = delete_objects_invs
 
 end

@@ -9,7 +9,7 @@ theory ArchSchedule_AI
 imports Schedule_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Schedule_AI_assms
 
@@ -28,6 +28,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
    apply wp
   by (simp add: upto.simps word_bits_def)
 
+(* FIXME arch_split: why not arch global naming? this doesn't make sense *)
 global_naming Arch
 
 lemma arch_stt_invs [wp,Schedule_AI_assms]:

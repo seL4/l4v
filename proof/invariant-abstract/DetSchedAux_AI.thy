@@ -8,10 +8,9 @@ theory DetSchedAux_AI
 imports DetSchedInvs_AI
 begin
 
-context begin interpretation Arch .
+(* (* FIXME arch_split: check it's global on other arches *)
 requalify_facts
-  invoke_untyped_st_tcb_at
-end
+  invoke_untyped_st_tcb_at *)
 
 crunch_ignore (del:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action

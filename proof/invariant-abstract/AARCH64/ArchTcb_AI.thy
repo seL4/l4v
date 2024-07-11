@@ -9,7 +9,7 @@ theory ArchTcb_AI
 imports Tcb_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Tcb_AI_assms
 
@@ -159,7 +159,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
 qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   "(cte_at p s \<and> no_cap_to_obj_dr_emp cap s \<and> valid_cap cap s \<and> invs s)
@@ -376,16 +376,15 @@ crunch invoke_tcb
 
 end
 
-context begin interpretation Arch .
-requalify_consts is_cnode_or_valid_arch
-requalify_facts invoke_tcb_typ_at
-end
-
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = AARCH64.is_cnode_or_valid_arch
 proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
 qed
+
+(* FIXME arch_split: move to global theory *)
+arch_requalify_consts is_cnode_or_valid_arch
+arch_requalify_facts invoke_tcb_typ_at
 
 end

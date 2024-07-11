@@ -9,7 +9,7 @@ theory ArchVSpaceEntries_AI
 imports VSpaceEntries_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 (* Since we're not doing anything with the index apart from returning it, this definition works
    for both, NormalPTs and VSRootPTs *)

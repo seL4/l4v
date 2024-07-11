@@ -20,26 +20,25 @@ where
   | cap.Zombie r zb n         \<Rightarrow> {(r, replicate (zombie_cte_bits zb) False)}
   | _                         \<Rightarrow> {})"
 
-context begin interpretation Arch .
-
-requalify_consts
-  vs_cap_ref
+arch_requalify_consts (A)
   unmap_page
-  clearMemory
+
+arch_requalify_consts
+  vs_cap_ref
   arch_post_cap_delete_pre
 
+(* FIXME arch_split: no global_naming *)
 requalify_facts
+  Arch.no_irq_clearMemory
+
+arch_requalify_facts
   final_cap_lift
-  no_irq_clearMemory
   valid_global_refsD
-  valid_global_refsD2
   arch_post_cap_deletion_valid_objs
   arch_post_cap_deletion_cte_wp_at
   arch_post_cap_deletion_caps_of_state
   arch_post_cap_deletion_irq_node
   arch_post_cap_deletion_invs
-
-end
 
 definition
   "post_cap_delete_pre cap cs \<equiv> case cap of

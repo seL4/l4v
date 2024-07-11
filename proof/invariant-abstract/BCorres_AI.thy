@@ -16,6 +16,16 @@ abbreviation "bcorres \<equiv> bcorres_underlying truncate_state"
 
 abbreviation "s_bcorres \<equiv> s_bcorres_underlying truncate_state"
 
+context Arch begin arch_global_naming
+
+crunch arch_post_cap_deletion
+  for (bcorres) bcorres[wp]: truncate_state
+
+end
+
+arch_requalify_facts
+  arch_post_cap_deletion_bcorres
+
 lemma dxo_bcorres[wp]:
   "bcorres (do_extended_op f) (do_extended_op f)"
   apply (simp add: do_extended_op_def)
@@ -62,16 +72,6 @@ lemma bcorres_select_ext[wp]:
   "bcorres (select_ext a A) (select_ext a A)"
   by (clarsimp simp: select_ext_def bind_def gets_def return_def select_def assert_def get_def
                      select_switch_unit_def bcorres_underlying_def s_bcorres_underlying_def fail_def)
-
-context Arch begin
-
-crunch arch_post_cap_deletion
-  for (bcorres) bcorres[wp]: truncate_state
-
-end
-
-requalify_facts
-  Arch.arch_post_cap_deletion_bcorres
 
 crunch
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot

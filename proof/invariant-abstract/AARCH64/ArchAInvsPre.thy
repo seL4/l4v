@@ -11,9 +11,7 @@ begin
 
 unbundle l4v_word_context
 
-context Arch begin
-
-global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)
@@ -143,9 +141,10 @@ proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_assms)?)
 qed
 
-requalify_facts
-  AARCH64.user_mem_dom_cong
-  AARCH64.device_mem_dom_cong
-  AARCH64.device_frame_in_device_region
+(* FIXME arch_split: move to global theory *)
+arch_requalify_facts
+  user_mem_dom_cong
+  device_mem_dom_cong
+  device_frame_in_device_region
 
 end

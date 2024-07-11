@@ -9,7 +9,7 @@ theory ArchInvariants_AI
 imports InvariantsPre_AI "Eisbach_Tools.Apply_Trace_Cmd"
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 (* compatibility with other architectures, input only *)
 abbreviation
@@ -29,7 +29,7 @@ record iarch_tcb =
   itcb_vcpu :: "obj_ref option"
 end_qualify
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 definition arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb" where
   "arch_tcb_to_iarch_tcb arch_tcb \<equiv> \<lparr> itcb_vcpu = tcb_vcpu arch_tcb \<rparr>"

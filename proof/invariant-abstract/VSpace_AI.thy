@@ -11,14 +11,14 @@ Architecture-independent VSpace invariant proofs
 theory VSpace_AI
 imports ArchVSpace_AI
 begin
-context begin interpretation Arch .
 
+(* FIXME arch_split: this should maybe have global_naming *)
 requalify_facts
-   pspace_respects_device_region_dmo
-   cap_refs_respects_device_region_dmo
-   ackInterrupt_device_state_inv
+  Arch.ackInterrupt_device_state_inv
 
-end
+arch_requalify_facts
+  pspace_respects_device_region_dmo
+  cap_refs_respects_device_region_dmo
 
 lemmas device_region_dmos = pspace_respects_device_region_dmo
 

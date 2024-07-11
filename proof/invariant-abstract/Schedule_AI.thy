@@ -27,13 +27,11 @@ locale Schedule_AI =
     assumes stit_activatable:
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool)\<rbrace>"
 
-context begin interpretation Arch .
 (* FIXME arch_split: some of these could be moved to generic theories
    so they don't need to be unqualified. *)
 requalify_facts
-  no_irq
-  no_irq_storeWord
-end
+  Arch.no_irq
+  Arch.no_irq_storeWord
 
 crunch schedule_switch_thread_fastfail
   for inv[wp]: P

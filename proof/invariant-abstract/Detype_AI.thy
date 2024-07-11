@@ -8,17 +8,13 @@ theory Detype_AI
 imports ArchRetype_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_facts
+arch_requalify_facts
   valid_arch_mdb_detype
   clearMemory_invs
   invs_irq_state_independent
   init_arch_objects_invs_from_restricted
   caps_region_kernel_window_imp
   init_arch_objects_wps
-
-end
 
 declare clearMemory_invs[wp]
 

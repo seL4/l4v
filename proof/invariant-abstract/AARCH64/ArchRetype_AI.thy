@@ -13,7 +13,7 @@ theory ArchRetype_AI
 imports Retype_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Retype_AI_assms
 
@@ -125,10 +125,7 @@ declare post_retype_invs_check_def[simp]
 
 end
 
-
-context begin interpretation Arch .
-requalify_consts post_retype_invs_check
-end
+arch_requalify_consts post_retype_invs_check
 
 definition
   post_retype_invs :: "apiobject_type \<Rightarrow> obj_ref list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -144,7 +141,7 @@ global_interpretation Retype_AI_post_retype_invs?: Retype_AI_post_retype_invs
   by (unfold_locales; fact post_retype_invs_def)
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma init_arch_objects_invs_from_restricted:
   "\<lbrace>post_retype_invs new_type refs
@@ -177,7 +174,7 @@ global_interpretation Retype_AI_slot_bits?: Retype_AI_slot_bits
   qed
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma valid_untyped_helper [Retype_AI_assms]:
   assumes valid_c : "s  \<turnstile> c"
@@ -274,6 +271,7 @@ locale retype_region_proofs_arch
 
 context retype_region_proofs begin
 
+(* FIXME arch_split: is there any way to optimise this interpretation out? we can't nest contexts *)
 interpretation Arch .
 
 lemma valid_cap:
@@ -580,7 +578,7 @@ sublocale retype_region_proofs_gen?: retype_region_proofs_gen
 end
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma unique_table_caps_null:
   "unique_table_caps_2 (null_filter caps)
@@ -683,9 +681,7 @@ lemma cap_range_respects_device_region_cong[cong]:
   by (clarsimp simp: cap_range_respects_device_region_def)
 
 
-context begin interpretation Arch .
-requalify_consts region_in_kernel_window
-end
+arch_requalify_consts region_in_kernel_window
 
 
 context retype_region_proofs_arch begin
@@ -875,7 +871,7 @@ lemmas post_retype_invs_axioms = retype_region_proofs_invs_axioms
 end
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Retype_AI_assms'
 
@@ -905,7 +901,7 @@ global_interpretation Retype_AI?: Retype_AI
   qed
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma retype_region_plain_invs:
   "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap_range_cover ptr sz

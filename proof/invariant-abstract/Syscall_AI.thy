@@ -16,16 +16,18 @@ imports
   ArchInterrupt_AI
 begin
 
-context begin interpretation Arch .
 requalify_facts
-  arch_decode_invocation_inv
-  lookup_cap_and_slot_inv
+  (* lookup_cap_and_slot_inv (* FIXME arch_split: check other arches to make sure this is global *) *)
+  Arch.resetTimer_device_state_inv
+
+arch_requalify_facts (A)
   data_to_cptr_def
+
+arch_requalify_facts
+  arch_decode_invocation_inv
   arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
   arch_invoke_irq_handler_typ_at
-  resetTimer_device_state_inv
-end
 
 lemmas [wp] =
   arch_decode_invocation_inv

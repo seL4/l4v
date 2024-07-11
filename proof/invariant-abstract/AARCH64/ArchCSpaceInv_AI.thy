@@ -12,7 +12,7 @@ theory ArchCSpaceInv_AI
 imports CSpaceInv_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 definition
    safe_ioport_insert :: "cap \<Rightarrow> cap \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
@@ -210,8 +210,6 @@ lemmas cap_vptr_simps [simp] =
 
 end
 
-context begin interpretation Arch .
-requalify_facts replace_cap_invs
-end
+arch_requalify_facts replace_cap_invs
 
 end
