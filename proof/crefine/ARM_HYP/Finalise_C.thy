@@ -963,7 +963,7 @@ lemma unbindMaybeNotification_ccorres:
 
 (* On ARM, irqInvalid is 2^16-1 (i.e. -1 in 16-bit), which, by type, is always greater than maxIRQ *)
 (* This means we could remove the cirq \<noteq> irqInvalid part in the Some clause. Currently left in for
-   proof convencience *)
+   proof convenience *)
 definition irq_opt_relation :: "irq option \<Rightarrow> machine_word \<Rightarrow> bool" where
   "irq_opt_relation airq cirq \<equiv>
      case airq of
