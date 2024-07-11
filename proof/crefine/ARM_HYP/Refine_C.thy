@@ -274,7 +274,7 @@ lemma handleSyscall_ccorres:
                  apply (subst ccorres_seq_skip'[symmetric])
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                      apply (case_tac rv; clarsimp simp: irq_type_never_invalid)
+                      apply (auto simp: irq_type_never_invalid split: option.splits)[1]
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                     apply ceqv
                    apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
@@ -303,7 +303,7 @@ lemma handleSyscall_ccorres:
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule ccorres_Guard)?
                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                     apply (case_tac rv; clarsimp simp: irq_type_never_invalid)
+                     apply (auto simp: irq_type_never_invalid split: option.splits)[1]
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                    apply ceqv
                   apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
@@ -331,7 +331,7 @@ lemma handleSyscall_ccorres:
                apply (rule ccorres_split_nothrow_novcg)
                    apply (rule ccorres_Guard)?
                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                   apply (case_tac rv; clarsimp simp: irq_type_never_invalid)
+                   apply (auto simp: irq_type_never_invalid split: option.splits)[1]
                   apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
