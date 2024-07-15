@@ -751,7 +751,8 @@ lemma slots_holding_overlapping_caps_hold_caps:
   "slot \<in> slots_holding_overlapping_caps cap s \<Longrightarrow> \<exists>cap'. cte_wp_at ((=) cap') slot s"
   by (fastforce simp: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
 
-crunch silc_inv[wp]: set_original "silc_inv aag st"
+crunch set_original
+  for silc_inv[wp]: "silc_inv aag st"
   (wp: silc_inv_triv wp_del:set_original_wp)
 
 lemma nonempty_refs:
@@ -790,7 +791,8 @@ lemma cap_points_to_label_max_free_index_update[simp]:
   apply (simp add: cap_points_to_label_def)
   done
 
-crunch silc_inv': set_untyped_cap_as_full "silc_inv aag st"
+crunch set_untyped_cap_as_full
+  for silc_inv': "silc_inv aag st"
   (wp: set_cap_silc_inv)
 
 lemmas set_untyped_cap_as_full_silc_inv[wp] = set_untyped_cap_as_full_silc_inv'[simplified]
@@ -1045,9 +1047,11 @@ lemma set_simple_ko_silc_inv[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch kheap[wp]: deleted_irq_handler "\<lambda>s. P (kheap s x)"
+crunch deleted_irq_handler
+  for kheap[wp]: "\<lambda>s. P (kheap s x)"
 
-crunch silc_inv[wp]: deleted_irq_handler "silc_inv aag st"
+crunch deleted_irq_handler
+  for silc_inv[wp]: "silc_inv aag st"
   (wp: silc_inv_triv)
 
 lemma (in is_extended') not_cte_wp_at[wp]: "I (\<lambda>s. \<not> cte_wp_at P t s)" by (rule lift_inv,simp)
@@ -1100,7 +1104,8 @@ lemma set_bound_notification_silc_inv[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch silc_inv[wp]: fast_finalise, unbind_notification "silc_inv aag st"
+crunch fast_finalise, unbind_notification
+  for silc_inv[wp]: "silc_inv aag st"
   (ignore: set_object wp: crunch_wps simp: crunch_simps)
 
 lemma slots_holding_overlapping_caps_lift:
@@ -1117,7 +1122,8 @@ lemma slots_holding_overlapping_caps_lift:
   apply (rule refl)
   done
 
-crunch cte_wp_at'[wp]: set_original "\<lambda>s. Q (cte_wp_at P slot s)"
+crunch set_original
+  for cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at P slot s)"
   (wp_del:set_original_wp)
 
 lemma slots_holding_overlapping_caps_exst_update[simp]:
@@ -1125,7 +1131,8 @@ lemma slots_holding_overlapping_caps_exst_update[simp]:
    slots_holding_overlapping_caps cap s"
   by (simp add: slots_holding_overlapping_caps_def2 ctes_wp_at_def)
 
-crunch cte_wp_at'[wp]: set_cdt "\<lambda>s. Q (cte_wp_at P slot s)"
+crunch set_cdt
+  for cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at P slot s)"
 
 lemma slots_holding_overlapping_caps_is_original_cap_update[simp]:
   "slots_holding_overlapping_caps cap (s\<lparr>is_original_cap := X\<rparr>) =
@@ -1167,7 +1174,8 @@ lemma reply_masters_mdbE:
       and "\<And>ptr'. ptr' \<in> descendants_of ptr m \<Longrightarrow> \<exists>R. cs ptr' = Some(ReplyCap t False R)"
   using rmm csr unfolding reply_masters_mdb_def by force
 
-crunch silc_inv[wp]: cancel_signal "silc_inv aag st"
+crunch cancel_signal
+  for silc_inv[wp]: "silc_inv aag st"
 
 
 context FinalCaps_1 begin
@@ -1525,7 +1533,8 @@ lemma silc_inv_irq_state_independent_A[simp, intro!]:
 
 context FinalCaps_1 begin
 
-crunch silc_inv: cap_swap_for_delete "silc_inv aag st"
+crunch cap_swap_for_delete
+  for silc_inv: "silc_inv aag st"
   (simp: crunch_simps)
 
 lemma rec_del_silc_inv':
@@ -1688,9 +1697,9 @@ lemma cdt_change_allowed_not_silc:
   done
 
 crunch_ignore (valid) (add: getActiveIRQ)
-crunch tcb_domain_map_wellformed[wp]: update_work_units, reset_work_units
-                                      "tcb_domain_map_wellformed aag"
-crunches preemption_point
+crunch update_work_units, reset_work_units
+  for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
+crunch preemption_point
   for silc_inv[wp]: "silc_inv aag st"
   and pas_refined[wp]: "pas_refined aag"
   (wp: crunch_wps OR_choiceE_weak_wp ignore_del: preemption_point)
@@ -1701,7 +1710,8 @@ lemma thread_set_tcb_registers_caps_merge_default_tcb_silc_inv[wp]:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def tcb_registers_caps_merge_def)
 
-crunch silc_inv[wp]: cancel_badged_sends "silc_inv aag st"
+crunch cancel_badged_sends
+  for silc_inv[wp]: "silc_inv aag st"
   (  wp: crunch_wps unless_wp simp: crunch_simps ignore: filterM set_object thread_set
    simp: filterM_mapM)
 
@@ -2019,11 +2029,14 @@ lemma as_user_silc_inv[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch silc_inv[wp]: store_word_offs "silc_inv aag st"
+crunch store_word_offs
+  for silc_inv[wp]: "silc_inv aag st"
 
-crunch kheap[wp]: store_word_offs "\<lambda> s. P (kheap s x)"
+crunch store_word_offs
+  for kheap[wp]: "\<lambda> s. P (kheap s x)"
 
-crunch cte_wp_at'[wp]: store_word_offs "\<lambda> s. Q (cte_wp_at P slot s)"
+crunch store_word_offs
+  for cte_wp_at'[wp]: "\<lambda> s. Q (cte_wp_at P slot s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_mrs_silc_inv[wp]:
@@ -2047,7 +2060,8 @@ lemma set_mrs_silc_inv[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch silc_inv[wp]: update_waiting_ntfn, set_message_info "silc_inv aag st"
+crunch update_waiting_ntfn, set_message_info
+  for silc_inv[wp]: "silc_inv aag st"
 
 lemma send_signal_silc_inv[wp]:
   "send_signal ntfnptr badge \<lbrace>silc_inv aag st\<rbrace>"
@@ -2350,17 +2364,22 @@ lemma new_irq_handler_caps_are_intra_label:
   apply (blast intro: aag_Control_into_owns_irq)
   done
 
-crunch silc_inv[wp]: set_irq_state "silc_inv aag st"
+crunch set_irq_state
+  for silc_inv[wp]: "silc_inv aag st"
   (wp: silc_inv_triv)
 
-crunch silc_inv[wp]: receive_signal "silc_inv aag st"
+crunch receive_signal
+  for silc_inv[wp]: "silc_inv aag st"
 
-crunch silc_inv[wp]: set_extra_badge "silc_inv aag st"
+crunch set_extra_badge
+  for silc_inv[wp]: "silc_inv aag st"
 
-crunch silc_inv[wp]: copy_mrs, set_message_info "silc_inv aag st"
+crunch copy_mrs, set_message_info
+  for silc_inv[wp]: "silc_inv aag st"
   (wp: crunch_wps)
 
-crunch silc_inv[wp]: do_fault_transfer, complete_signal "silc_inv aag st"
+crunch do_fault_transfer, complete_signal
+  for silc_inv[wp]: "silc_inv aag st"
 
 (* doesn't need sym_refs *)
 lemma valid_ep_recv_dequeue':
@@ -2613,15 +2632,18 @@ lemma send_fault_ipc_silc_inv:
           | simp add: add: lookup_cap_def split_def)+
   done
 
-crunch silc_inv[wp]: handle_fault "silc_inv aag st"
+crunch handle_fault
+  for silc_inv[wp]: "silc_inv aag st"
 
-crunch silc_inv[wp]: do_reply_transfer "silc_inv aag st"
+crunch do_reply_transfer
+  for silc_inv[wp]: "silc_inv aag st"
   (wp: thread_set_tcb_fault_update_silc_inv crunch_wps  ignore: set_object thread_set)
 
 end
 
 
-crunch silc_inv[wp]: reply_from_kernel "silc_inv aag st"
+crunch reply_from_kernel
+  for silc_inv[wp]: "silc_inv aag st"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setup_reply_master_silc_inv:
@@ -2639,10 +2661,12 @@ lemma setup_reply_master_silc_inv:
 
 context FinalCaps_1 begin
 
-crunch silc_inv: restart "silc_inv aag st"
+crunch restart
+  for silc_inv: "silc_inv aag st"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch silc_inv: suspend "silc_inv aag st"
+crunch suspend
+  for silc_inv: "silc_inv aag st"
 
 lemma same_object_as_cap_points_to_label:
   "\<lbrakk> same_object_as a cap; \<not> cap_points_to_label aag a (pasSubject aag) \<rbrakk>
@@ -2709,7 +2733,8 @@ lemma set_mcpriority_silc_inv[wp]:
   unfolding set_mcpriority_def
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
-crunch silc_inv[wp]: bind_notification "silc_inv aag st"
+crunch bind_notification
+  for silc_inv[wp]: "silc_inv aag st"
 
 (* FIXME MOVE to the previous one and replace it: keep things generic please + wps is nice *)
 lemma cap_delete_tcb[wp]:
@@ -2803,7 +2828,8 @@ lemma handle_reply_silc_inv:
                   reply_cap_rights_to_auth_def
            intro: aag_Control_into_owns)
 
-crunch silc_inv: delete_caller_cap "silc_inv aag st"
+crunch delete_caller_cap
+  for silc_inv: "silc_inv aag st"
 
 lemma handle_recv_silc_inv:
   "\<lbrace>silc_inv aag st and invs and pas_refined aag and is_subject aag \<circ> cur_thread\<rbrace>
@@ -2852,9 +2878,11 @@ lemma handle_event_silc_inv:
                  handle_hypervisor_fault_silc_inv
            simp: invs_valid_objs invs_mdb invs_sym_refs)+
 
-crunch silc_inv[wp]: activate_thread "silc_inv aag st"
+crunch activate_thread
+  for silc_inv[wp]: "silc_inv aag st"
 
-crunch silc_inv[wp]: schedule "silc_inv aag st"
+crunch schedule
+  for silc_inv[wp]: "silc_inv aag st"
   (    wp: OR_choice_weak_wp crunch_wps
    ignore: set_scheduler_action
      simp: crunch_simps)

@@ -9,7 +9,7 @@ imports
   Monads.WPSimp
   Lib
   ML_Utils.ML_Utils
-keywords "crunch" "crunch_ignore" "crunches" :: thy_decl
+keywords "crunch" "crunch_ignore" :: thy_decl
 begin
 
 named_theorems "crunch_def"

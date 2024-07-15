@@ -39,7 +39,8 @@ lemma setup_reply_master_respects:
   apply simp
   done
 
-crunch eintegrity[wp]: possible_switch_to "integrity aag X st"
+crunch possible_switch_to
+  for eintegrity[wp]: "integrity aag X st"
   (ignore: tcb_sched_action)
 
 lemma restart_integrity_autarch:
@@ -52,9 +53,11 @@ lemma restart_integrity_autarch:
          | simp add: if_apply_def2)+
   done
 
-crunch integrity_autarch: option_update_thread "integrity aag X st"
+crunch option_update_thread
+  for integrity_autarch: "integrity aag X st"
 
-crunch arch_state [wp]: cap_swap_for_delete "\<lambda>s. P (arch_state s)"
+crunch cap_swap_for_delete
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
 
 lemmas itr_wps =
   restart_integrity_autarch as_user_integrity_autarch thread_set_integrity_autarch
@@ -101,10 +104,10 @@ lemma setup_reply_master_pas_refined:
   apply (wp get_cap_wp set_cap_pas_refined set_original_wp)+
   by (force dest: cdt_NullCap simp: aag_cap_auth_master_Reply cte_wp_at_caps_of_state)
 
-crunches possible_switch_to
+crunch possible_switch_to
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
 
-crunches setup_reply_master
+crunch setup_reply_master
   for pspace_aligned[wp]: pspace_aligned
 
 lemma restart_pas_refined:
@@ -122,7 +125,8 @@ lemma option_update_thread_set_safe_lift:
      \<Longrightarrow> \<lbrace>P\<rbrace> option_update_thread t f v \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: option_update_thread_def split: option.split)
 
-crunch integrity_autarch[wp]: thread_set_priority "integrity aag X st"
+crunch thread_set_priority
+  for integrity_autarch[wp]: "integrity aag X st"
   (ignore: tcb_sched_action)
 
 lemma set_priority_integrity_autarch[wp]:
@@ -154,11 +158,14 @@ lemma gts_test[wp]:
   apply (clarsimp simp add: st_tcb_def2)
   done
 
-crunch exst[wp]: option_update_thread "\<lambda>s. P (exst s)"
+crunch option_update_thread
+  for exst[wp]: "\<lambda>s. P (exst s)"
 
-crunch pas_refined[wp]: set_mcpriority "pas_refined aag"
+crunch set_mcpriority
+  for pas_refined[wp]: "pas_refined aag"
 
-crunch integrity_autarch: set_mcpriority "integrity aag X st"
+crunch set_mcpriority
+  for integrity_autarch: "integrity aag X st"
 
 lemma (in is_extended') valid_cap_syn[wp]: "I (\<lambda>s. valid_cap_syn s a)"
   by (rule lift_inv, simp)
@@ -190,7 +197,8 @@ lemma update_cdt_wp:
 lemma parent_ofD: "m \<Turnstile> src \<leadsto> x \<Longrightarrow> m x = Some src"
   by (simp add: cdt_parent_of_def)
 
-crunch tcb_states_of_state[wp]: set_untyped_cap_as_full "\<lambda>s. P (tcb_states_of_state s)"
+crunch set_untyped_cap_as_full
+  for tcb_states_of_state[wp]: "\<lambda>s. P (tcb_states_of_state s)"
 
 (* FIXME MOVE *)
 lemma map_le_to_rtrancl:
@@ -350,7 +358,7 @@ lemma invoke_tcb_ntfn_control_pas_refined[wp]:
    apply (wp | fastforce simp: authorised_tcb_inv_def)+
   done
 
-crunches suspend, restart
+crunch suspend, restart
   for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"

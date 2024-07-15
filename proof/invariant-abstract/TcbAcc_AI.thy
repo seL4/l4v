@@ -432,7 +432,8 @@ lemma thread_set_valid_idle_trivial:
   done
 
 
-crunch it [wp]: thread_set "\<lambda>s. P (idle_thread s)"
+crunch thread_set
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
 
 
 lemma thread_set_caps_of_state_trivial:
@@ -451,7 +452,8 @@ lemma thread_set_caps_of_state_trivial:
 
 
 
-crunch irq_node[wp]: thread_set "\<lambda>s. P (interrupt_irq_node s)"
+crunch thread_set
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 
 lemma thread_set_global_refs_triv:
@@ -490,7 +492,8 @@ lemma thread_set_pspace_in_kernel_window[wp]:
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
-crunch pspace_respects_device_region[wp]: thread_set "pspace_respects_device_region"
+crunch thread_set
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: set_object_pspace_respects_device_region)
 
 lemma thread_set_cap_refs_in_kernel_window:

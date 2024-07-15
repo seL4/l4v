@@ -544,7 +544,8 @@ lemma get_irq_slot_ex_cte_cap_wp_to:
   apply clarsimp
   done
 
-crunch is_original[wp] : fast_finalise "\<lambda>s::'z::state_ext state. is_original_cap s slot"
+crunch fast_finalise
+  for is_original[wp]: "\<lambda>s::'z::state_ext state. is_original_cap s slot"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
 lemma cap_delete_one_original:

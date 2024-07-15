@@ -44,7 +44,7 @@ lemma findVSpaceForASID_vs_at_wp:
   apply (simp add: asid_low_bits_of_def ucast_ucast_a is_down ucast_ucast_mask asid_low_bits_def)
   by fastforce
 
-crunches findVSpaceForASID, haskell_fail
+crunch findVSpaceForASID, haskell_fail
   for inv[wp]: "P"
   (simp: const_def crunch_simps wp: crunch_wps ignore_del: getObject)
 
@@ -307,14 +307,14 @@ lemma getObject_PTE_corres'':
                               (get_pte p) (getObject p')"
   using assms getObject_PTE_corres by simp
 
-crunches unmapPageTable, unmapPage
+crunch unmapPageTable, unmapPage
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]: "pspace_distinct'"
   and ctes [wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps
    wp: crunch_wps getObject_inv)
 
-crunches storePTE
+crunch storePTE
   for no_0_obj'[wp]: no_0_obj'
   and valid_arch'[wp]: valid_arch_state'
   and cur_tcb'[wp]: cur_tcb'
@@ -468,7 +468,7 @@ lemma set_mrs_invs'[wp]:
          simp add: zipWithM_x_mapM split_def)+
   done
 
-crunches unmapPage
+crunch unmapPage
   for cte_at'[wp]: "cte_at' p"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -642,7 +642,7 @@ definition
     case ap of Assign asid p slot \<Rightarrow>
       cte_wp_at' (isArchCap isPageTableCap o cteCap) slot and K (0 < asid \<and> asid_wf asid)"
 
-crunches copy_global_mappings
+crunch copy_global_mappings
   for aligned[wp]: pspace_aligned
   and distinct[wp]: pspace_distinct
   (wp: crunch_wps)
@@ -675,10 +675,11 @@ lemma performASIDPoolInvocation_corres:
   apply (fastforce simp: valid_apinv'_def cte_wp_at_ctes_of)
   done
 
-crunch obj_at[wp]: setVMRoot "\<lambda>s. P (obj_at' P' t s)"
+crunch setVMRoot
+  for obj_at[wp]: "\<lambda>s. P (obj_at' P' t s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches doMachineOp
+crunch doMachineOp
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
@@ -692,7 +693,7 @@ crunches doMachineOp
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
 
-crunches sfence, setVSpaceRoot
+crunch sfence, setVSpaceRoot
   for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
 
 lemma dmo_sfence_invs'[wp]:
@@ -731,7 +732,8 @@ crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
        loadObject_default_def)
 
-crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
+crunch deleteASIDPool
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp' crunch_wps)
 
 lemma lookupPTSlot_inv:
@@ -826,12 +828,14 @@ lemma setASIDPool_invs [wp]:
   apply (clarsimp simp:  o_def)
   done
 
-crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
+crunch unmapPageTable
+  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas storePTE_Invalid_invs = storePTE_invs[where pte=InvalidPTE, simplified]
 
-crunch invs'[wp]: unmapPageTable "invs'"
+crunch unmapPageTable
+  for invs'[wp]: "invs'"
   (ignore: doMachineOp
        wp: storePTE_Invalid_invs mapM_wp' crunch_wps
      simp: crunch_simps)
@@ -846,7 +850,7 @@ lemma perform_pti_invs [wp]:
   apply (auto simp: cte_wp_at_ctes_of is_arch_update'_def isCap_simps valid_cap'_def capAligned_def)
   done
 
-crunches unmapPage
+crunch unmapPage
   for cte_wp_at': "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps lookupPTSlotFromLevel_inv simp: crunch_simps)
 
@@ -884,7 +888,7 @@ lemma storePTE_asid_pool_obj_at'[wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for asid_pool_obj_at'[wp]: "\<lambda>s. P (obj_at' (P'::asidpool \<Rightarrow> bool) p s)"
   and invs'[wp]: invs'
   (ignore: storePTE wp: crunch_wps)

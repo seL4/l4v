@@ -341,7 +341,8 @@ locale CNode_IF_1 =
      arch_globals_equiv ct it kh kh' as as' ms ms'"
 begin
 
-crunch globals_equiv[wp]: set_untyped_cap_as_full "globals_equiv st"
+crunch set_untyped_cap_as_full
+  for globals_equiv[wp]: "globals_equiv st"
 
 lemma cap_insert_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
@@ -488,7 +489,7 @@ lemma dmo_getActiveIRQ_globals_equiv:
   apply (auto simp: globals_equiv_def idle_equiv_def)
   done
 
-crunches reset_work_units, work_units_limit_reached, update_work_units
+crunch reset_work_units, work_units_limit_reached, update_work_units
   for only_timer_irq_inv[wp]: "only_timer_irq_inv irq st"
   (simp: only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
 
@@ -562,7 +563,8 @@ lemma work_units_limit_reached_reads_respects[wp]:
   apply force
   done
 
-crunch invs[wp]: work_units_limit_reached invs
+crunch work_units_limit_reached
+  for invs[wp]: invs
 
 lemma preemption_point_def2:
   "(preemption_point :: (unit,det_ext) p_monad) =

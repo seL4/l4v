@@ -49,7 +49,8 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
       | wp | intro conjI impI)+
 
-crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment, check_slot
+crunch find_vspace_for_asid, check_vp_alignment, check_slot
+  for (empty_fail) empty_fail[wp]
 
 lemma arch_decode_RISCVASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel RISCVASIDControlMakePool
@@ -135,11 +136,13 @@ lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
     finalise_cap, reset_work_units, update_work_units,
     cap_swap_for_delete, decode_invocation
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pte.splits bool.splits list.splits)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
+crunch setRegister, setNextPC
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
 end
 
@@ -150,8 +153,9 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   qed
 
 context Arch begin global_naming RISCV64
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
+crunch
   cap_delete, choose_thread
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
 (*
 global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
@@ -169,7 +173,8 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 
 context Arch begin global_naming RISCV64
 
-crunch (empty_fail) empty_fail[wp]: read_stval
+crunch read_stval
+  for (empty_fail) empty_fail[wp]
   (ignore_del: read_stval)
 
 lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:

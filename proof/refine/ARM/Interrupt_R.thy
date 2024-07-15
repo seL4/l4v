@@ -180,7 +180,7 @@ lemma unat_ucast_ucast_shenanigans[simp]:
 
 lemmas irq_const_defs = minIRQ_def
 
-crunches arch_check_irq, checkIRQ
+crunch arch_check_irq, checkIRQ
   for inv: "P"
   (simp: crunch_simps)
 

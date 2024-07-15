@@ -210,7 +210,8 @@ lemma lcs_reply_owns:
                dest: aag_Control_into_owns)
   done
 
-crunch pas_refined[wp]: reply_from_kernel "pas_refined aag"
+crunch reply_from_kernel
+  for pas_refined[wp]: "pas_refined aag"
   (simp: split_def)
 
 lemma lookup_cap_and_slot_valid_fault3:
@@ -322,7 +323,8 @@ lemma handle_invocation_respects:
   by (fastforce intro: st_tcb_ex_cap' guarded_to_cur_domain
                  simp: ct_in_state_def runnable_eq_active)
 
-crunch pas_refined[wp]: delete_caller_cap "pas_refined aag"
+crunch delete_caller_cap
+  for pas_refined[wp]: "pas_refined aag"
 
 lemma handle_recv_pas_refined:
   "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace>
@@ -346,7 +348,8 @@ lemma handle_recv_pas_refined:
   apply clarsimp
   done
 
-crunch respects[wp]: delete_caller_cap "integrity aag X st"
+crunch delete_caller_cap
+  for respects[wp]: "integrity aag X st"
 
 lemma handle_recv_integrity:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and is_subject aag \<circ> cur_thread
@@ -415,7 +418,8 @@ lemma dec_domain_time_pas_refined[wp]:
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
   done
 
-crunch pas_refined[wp]: timer_tick "pas_refined aag"
+crunch timer_tick
+  for pas_refined[wp]: "pas_refined aag"
   (wp_del: timer_tick_extended.pas_refined_tcb_domain_map_wellformed)
 
 
@@ -942,7 +946,8 @@ lemma schedule_integrity_pasMayEditReadyQueues:
    apply (clarsimp simp: obj_at_def pred_tcb_at_def)+
   done
 
-crunch pas_refined[wp]: choose_thread "pas_refined aag"
+crunch choose_thread
+  for pas_refined[wp]: "pas_refined aag"
   (wp: switch_to_thread_pas_refined switch_to_idle_thread_pas_refined crunch_wps)
 
 lemma schedule_pas_refined:
@@ -961,7 +966,8 @@ lemma schedule_pas_refined:
 
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
 
-crunch arch_state [wp]: invoke_untyped "\<lambda>s :: det_ext state. P (arch_state s)"
+crunch invoke_untyped
+  for arch_state[wp]: "\<lambda>s :: det_ext state. P (arch_state s)"
   (wp: crunch_wps preemption_point_inv mapME_x_inv_wp simp: crunch_simps sequence_x_mapM_x)
 
 crunch_ignore (add: cap_swap_ext cap_move_ext cap_insert_ext create_cap_ext set_thread_state_ext
@@ -993,7 +999,7 @@ lemma do_extended_op_ct_active[wp]:
   apply (auto simp: st_tcb_at_def obj_at_def)
   done
 
-crunches set_original, set_cdt
+crunch set_original, set_cdt
   for ct_active [wp]: "ct_active"
   (wp: crunch_wps simp: crunch_simps ct_in_state_def)
 
@@ -1025,14 +1031,17 @@ lemma cancel_all_ipc_ct_active[wp]:
   apply simp
   done
 
-crunch ct_active[wp]: cap_swap_for_delete "ct_active"
+crunch cap_swap_for_delete
+  for ct_active[wp]: "ct_active"
   (wp: crunch_wps filterM_preserved unless_wp simp: crunch_simps ignore: do_extended_op)
 
-crunch ct_active[wp]: post_cap_deletion, empty_slot "\<lambda>s :: det_ext state. ct_active s"
+crunch post_cap_deletion, empty_slot
+  for ct_active[wp]: "\<lambda>s :: det_ext state. ct_active s"
   (simp: crunch_simps empty_slot_ext_def ignore: do_extended_op
      wp: crunch_wps filterM_preserved unless_wp)
 
-crunch cur_thread[wp]: cap_swap_for_delete, finalise_cap "\<lambda>s :: det_ext state. P (cur_thread s)"
+crunch cap_swap_for_delete, finalise_cap
+  for cur_thread[wp]: "\<lambda>s :: det_ext state. P (cur_thread s)"
   (wp: dxo_wp_weak crunch_wps simp: crunch_simps)
 
 lemma rec_del_cur_thread[wp]:
@@ -1041,7 +1050,8 @@ lemma rec_del_cur_thread[wp]:
   apply (wp preemption_point_inv|simp)+
   done
 
-crunch cur_thread[wp]: cap_delete, cap_move "\<lambda>s :: det_ext state. P (cur_thread s)"
+crunch cap_delete, cap_move
+  for cur_thread[wp]: "\<lambda>s :: det_ext state. P (cur_thread s)"
 
 lemma cap_revoke_cur_thread[wp]:
   "cap_revoke a \<lbrace>\<lambda>s :: det_ext state. P (cur_thread s)\<rbrace>"
@@ -1049,7 +1059,8 @@ lemma cap_revoke_cur_thread[wp]:
   apply (wp preemption_point_inv|simp)+
   done
 
-crunch cur_thread[wp]: cancel_badged_sends "\<lambda>s. P (cur_thread s)"
+crunch cancel_badged_sends
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: mapM_wp dxo_wp_weak simp: filterM_mapM)
 
 lemma invoke_cnode_cur_thread[wp]:
@@ -1059,11 +1070,12 @@ lemma invoke_cnode_cur_thread[wp]:
   apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp split del: if_split)+
   done
 
-crunch cur_thread[wp]: handle_event "\<lambda>s :: det_ext state. P (cur_thread s)"
+crunch handle_event
+  for cur_thread[wp]: "\<lambda>s :: det_ext state. P (cur_thread s)"
   (wp: syscall_valid crunch_wps check_cap_inv dxo_wp_weak
    simp: crunch_simps ignore: syscall)
 
-crunches ethread_set, timer_tick, possible_switch_to, handle_interrupt
+crunch ethread_set, timer_tick, possible_switch_to, handle_interrupt
   for pas_cur_domain[wp]: "pas_cur_domain aag"
   (wp: crunch_wps simp: crunch_simps ignore_del: ethread_set timer_tick possible_switch_to)
 
@@ -1071,7 +1083,8 @@ lemma dxo_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s) \<rbrace> do_extended_op f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (clarsimp simp: valid_def dest!: in_dxo_idle_threadD)
 
-crunch idle_thread[wp]: throwError "\<lambda>s. P (idle_thread s)"
+crunch throwError
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
 
 lemma preemption_point_idle_thread[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
@@ -1088,14 +1101,15 @@ lemma invoke_cnode_idle_thread[wp]:
    apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp split del: if_split)+
   done
 
-crunch idle_thread[wp]: handle_event "\<lambda>s :: det_state. P (idle_thread s)"
+crunch handle_event
+  for idle_thread[wp]: "\<lambda>s :: det_state. P (idle_thread s)"
   (wp: syscall_valid crunch_wps simp: check_cap_at_def ignore: check_cap_at syscall)
 
-crunch cur_domain[wp]:
+crunch
   transfer_caps_loop, ethread_set, possible_switch_to, thread_set_priority,
   set_priority, set_domain, invoke_domain, cap_move_ext, timer_tick,
   cap_move, cancel_badged_sends, possible_switch_to
-  "\<lambda>s. P (cur_domain s)"
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps simp: filterM_mapM rule: transfer_caps_loop_pres
    ignore_del: ethread_set set_priority set_domain cap_move_ext timer_tick possible_switch_to)
 
@@ -1106,7 +1120,8 @@ lemma invoke_cnode_cur_domain[wp]:
    apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp split del: if_split)+
   done
 
-crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)"
+crunch handle_event
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: syscall_valid crunch_wps check_cap_inv
    simp: crunch_simps
    ignore: check_cap_at syscall)

@@ -810,8 +810,10 @@ lemma not_waiting_reply_slot_no_descendants:
   done*) (* RT we don't need this probably *)
 
 
-crunch ups[wp]: set_cdt "\<lambda>s. P (ups_of_heap (kheap s))"
-crunch cns[wp]: set_cdt "\<lambda>s. P (cns_of_heap (kheap s))"
+crunch set_cdt
+  for ups[wp]: "\<lambda>s. P (ups_of_heap (kheap s))"
+crunch set_cdt
+  for cns[wp]: "\<lambda>s. P (cns_of_heap (kheap s))"
 
 
 (* FIXME: move *)
@@ -1251,7 +1253,8 @@ lemma create_cap_overlap_reserved [wp]:
   done
 
 
-crunch typ_at[wp]: create_cap "\<lambda>s. P (typ_at T p s)"
+crunch create_cap
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
 lemmas create_cap_cap_table_at[wp] =
@@ -1565,11 +1568,14 @@ end
 
 declare dmo_aligned [wp]
 
-crunch pdistinct[wp]: do_machine_op "pspace_distinct"
+crunch do_machine_op
+  for pdistinct[wp]: "pspace_distinct"
 
-crunch vmdb[wp]: do_machine_op "valid_mdb"
+crunch do_machine_op
+  for vmdb[wp]: "valid_mdb"
 
-crunch mdb[wp]: do_machine_op "\<lambda>s. P (cdt s)"
+crunch do_machine_op
+  for mdb[wp]: "\<lambda>s. P (cdt s)"
 
 lemmas dmo_valid_cap[wp] = valid_cap_typ [OF do_machine_op_obj_at]
 
@@ -2337,10 +2343,12 @@ lemma detype_clear_um_simps[simp]:
   apply (simp add: clear_um_def)
   done
 
-crunch pred_tcb_at[wp]: create_cap "pred_tcb_at proj P t"
+crunch create_cap
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps)
 
-crunch tcb[wp]: create_cap "tcb_at t"
+crunch create_cap
+  for tcb[wp]: "tcb_at t"
   (simp: crunch_simps)
 
 
@@ -2615,7 +2623,8 @@ lemma pspace_no_overlap_subset:
     \<Longrightarrow> pspace_no_overlap T s"
   by (clarsimp simp: pspace_no_overlap_def disjoint_subset2)
 
-crunch cur_thread[wp]: delete_objects "\<lambda>s. P (cur_thread s)"
+crunch delete_objects
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (simp: detype_def)
 
 lemma ct_in_state_trans_state[simp]:
@@ -2824,7 +2833,8 @@ lemma create_cap_iflive[wp]:
   apply (wp new_cap_iflive set_cdt_cte_wp_at | simp)+
   done
 
-crunch cap_to_again[wp]: set_cdt "ex_cte_cap_wp_to P p"
+crunch set_cdt
+  for cap_to_again[wp]: "ex_cte_cap_wp_to P p"
   (simp: ex_cte_cap_wp_to_def)
 
 lemma create_cap_ifunsafe[wp]:
@@ -2896,7 +2906,8 @@ lemma create_cap_valid_idle[wp]:
   unfolding create_cap_def split_def set_cdt_def by (wpsimp wp: set_cap_idle)
 
 
-crunch it[wp]: create_cap "\<lambda>s. P (idle_thread s)"
+crunch create_cap
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps)
 
 
@@ -2916,7 +2927,8 @@ lemma create_cap_valid_global_refs[wp]:
   done
 
 
-crunch arch_state[wp]: create_cap "\<lambda>s. P (arch_state s)"
+crunch create_cap
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
 lemma create_cap_aobj_at:
@@ -2929,7 +2941,8 @@ lemma create_cap_valid_arch_state[wp]:
   "\<lbrace>valid_arch_state\<rbrace> create_cap type bits ut is_dev cref \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (wp valid_arch_state_lift_aobj_at create_cap_aobj_at)
 
-crunch irq_node[wp]: create_cap "\<lambda>s. P (interrupt_irq_node s)"
+crunch create_cap
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps)
 
 lemmas create_cap_valid_irq_node[wp]
@@ -2951,7 +2964,8 @@ lemma create_cap_irq_handlers[wp]:
   done
 
 
-crunch valid_vspace_objs[wp]: create_cap "valid_vspace_objs"
+crunch create_cap
+  for valid_vspace_objs[wp]: "valid_vspace_objs"
   (simp: crunch_simps)
 
 locale Untyped_AI_nonempty_table =

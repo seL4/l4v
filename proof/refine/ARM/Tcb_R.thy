@@ -393,7 +393,7 @@ lemma suspend_ResumeCurrentThread_imp_notct[wp]:
    \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
   by (wpsimp simp: suspend_def wp_del: getThreadState_only_state_wp)
 
-crunches restart, suspend
+crunch restart, suspend
   for cur_tcb'[wp]: cur_tcb'
   (wp: crunch_wps threadSet_cur ignore: threadSet)
 
@@ -1063,7 +1063,7 @@ lemma setP_invs':
   unfolding setPriority_def
   by (wpsimp wp: rescheduleRequired_invs' threadSet_priority_invs')
 
-crunches setPriority, setMCPriority
+crunch setPriority, setMCPriority
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
@@ -1337,7 +1337,8 @@ lemma setMCPriority_valid_objs'[wp]:
    apply (fastforce  simp: obj_at'_def)+
   done
 
-crunch sch_act_simple[wp]: setMCPriority sch_act_simple
+crunch setMCPriority
+  for sch_act_simple[wp]: sch_act_simple
   (wp: ssa_sch_act_simple crunch_wps rule: sch_act_simple_lift simp: crunch_simps)
 
 abbreviation "valid_option_prio \<equiv> case_option True (\<lambda>(p, auth). p \<le> maxPriority)"
@@ -2772,7 +2773,8 @@ lemma getMCP_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at' ((=) mcp
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
-crunch inv: checkPrio "P"
+crunch checkPrio
+  for inv: "P"
   (simp: crunch_simps)
 
 lemma checkPrio_wp:
@@ -3035,7 +3037,8 @@ lemma decodeSetIPCBuffer_is_tc[wp]:
   apply (clarsimp simp: isThreadControlCaps_def)
   done
 
-crunch inv[wp]: decodeSetIPCBuffer "P"
+crunch decodeSetIPCBuffer
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 lemma slotCapLongRunningDelete_corres:
@@ -3596,7 +3599,7 @@ lemma decodeTCBInv_wf:
   apply (fastforce simp: real_cte_at_not_tcb_at' objBits_defs)
   done
 
-crunches getThreadBufferSlot, setPriority, setMCPriority
+crunch getThreadBufferSlot, setPriority, setMCPriority
   for irq_states'[wp]: valid_irq_states'
   (simp: crunch_simps wp: crunch_wps)
 

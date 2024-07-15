@@ -58,7 +58,8 @@ lemma do_user_op_if_globals_equiv_scheduler[Noninterference_assms]:
   apply (auto simp: ptable_lift_s_def ptable_rights_s_def)
   done
 
-crunch silc_dom_equiv[Noninterference_assms, wp]: do_user_op_if "silc_dom_equiv aag st"
+crunch do_user_op_if
+  for silc_dom_equiv[Noninterference_assms, wp]: "silc_dom_equiv aag st"
   (ignore: do_machine_op user_memory_update wp: crunch_wps)
 
 lemma sameFor_scheduler_affects_equiv[Noninterference_assms]:

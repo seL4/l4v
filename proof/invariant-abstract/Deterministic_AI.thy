@@ -1471,7 +1471,8 @@ lemma next_slot:
   done
 end
 
-crunch exst[wp]: set_cap "(\<lambda>s. P (exst s))" (wp: crunch_wps simp: crunch_simps)
+crunch set_cap
+  for exst[wp]: "(\<lambda>s. P (exst s))" (wp: crunch_wps simp: crunch_simps)
 
 lemma set_cap_caps_of_state3:
   "\<lbrace>\<lambda>s. P ((caps_of_state s) (p \<mapsto> cap)) (cdt s)  (exst s) (is_original_cap s)\<rbrace>
@@ -3102,7 +3103,8 @@ lemma (in mdb_empty_abs') next_slot:
   apply(fastforce split: if_split_asm)
   done
 
-crunch valid_list[wp]: post_cap_deletion,set_cap valid_list
+crunch post_cap_deletion,set_cap
+  for valid_list[wp]: valid_list
   (wp: crunch_wps)
 
 interpretation empty_slot_extended: is_extended "empty_slot_ext a b"
@@ -3814,7 +3816,8 @@ lemma create_cap_valid_list[wp]:
   done
 
 
-crunch valid_list[wp]: set_extra_badge valid_list
+crunch set_extra_badge
+  for valid_list[wp]: valid_list
 
 lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
@@ -3958,9 +3961,11 @@ crunches
   for valid_list[wp]: valid_list
   (wp: mapM_x_wp' hoare_drop_imp whileLoop_valid_inv simp: is_round_robin_def crunch_simps)
 
-crunch all_but_exst[wp]: update_work_units "all_but_exst P"
+crunch update_work_units
+  for all_but_exst[wp]: "all_but_exst P"
 
-crunch all_but_exst[wp]: reset_work_units "all_but_exst P"
+crunch reset_work_units
+  for all_but_exst[wp]: "all_but_exst P"
 
 global_interpretation update_work_units_ext_extended: is_extended "update_work_units"
   by (unfold_locales; wp)
@@ -4002,7 +4007,8 @@ lemmas rec_del_valid_list[wp] = rec_del_preservation
       empty_slot_valid_list
       finalise_cap_valid_list]
 
-crunch valid_list[wp]: cap_delete valid_list
+crunch cap_delete
+  for valid_list[wp]: valid_list
   (wp: preemption_point_inv')
 
 end
@@ -4042,7 +4048,8 @@ lemma set_mcpriority_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_mcpriority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: set_mcpriority_def)
 
-crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
+crunch set_priority,set_mcpriority
+  for (empty_fail) empty_fail[wp]
 
 lemma reply_push_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>_. valid_list\<rbrace>"
@@ -4097,7 +4104,8 @@ lemma refill_budget_check_round_robin_valid_list[wp]:
   unfolding refill_budget_check_round_robin_def update_refill_tl_def update_refill_hd_def
   by (wpsimp wp: hoare_drop_imps)
 
-crunch valid_list[wp]: update_restart_pc "valid_list"
+crunch update_restart_pc
+  for valid_list[wp]: "valid_list"
 
 context Deterministic_AI_1 begin
 
@@ -4225,7 +4233,8 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
 
 context Deterministic_AI_2 begin
 
-crunch valid_list[wp]: invoke_irq_handler valid_list
+crunch invoke_irq_handler
+  for valid_list[wp]: valid_list
 
 lemma handle_event_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> handle_event e \<lbrace>\<lambda>_.valid_list\<rbrace>"

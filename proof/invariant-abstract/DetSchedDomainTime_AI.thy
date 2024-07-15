@@ -79,7 +79,7 @@ locale DetSchedDomainTime_AI =
   assumes arch_invoke_irq_handler_domain_list_inv'[wp]:
     "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
 
-crunches update_restart_pc
+crunch update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"
   and domain_time[wp]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps)
@@ -96,7 +96,7 @@ locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
 
 context DetSchedDomainTime_AI begin
 
-crunch domain_list_inv[wp]:
+crunch
   cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
   "\<lambda>s::det_state. P (domain_list s)"
   (wp: dxo_wp_weak)
@@ -248,7 +248,8 @@ lemma cap_revoke_domain_list_inv[wp]:
      (wp preemption_point_inv'|simp)+
 end
 
-crunch domain_list_inv[wp]: cancel_badged_sends "\<lambda>s. P (domain_list s)"
+crunch cancel_badged_sends
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (ignore: filterM clearMemory
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)

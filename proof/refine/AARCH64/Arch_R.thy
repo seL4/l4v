@@ -466,7 +466,8 @@ lemma ARMMMU_improve_cases:
   apply (case_tac pt_t; simp)
   done
 
-crunch inv[wp]: "AARCH64_H.decodeInvocation" "P"
+crunch "AARCH64_H.decodeInvocation"
+  for inv[wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp hoare_vcg_imp_lift'
    simp: crunch_simps ARMMMU_improve_cases)
 
@@ -1303,7 +1304,7 @@ lemma archThreadSet_VCPU_Some_corres[corres]:
   apply (simp add: arch_tcb_relation_def)
   done
 
-crunches dissociateVCPUTCB
+crunch dissociateVCPUTCB
   for no_0_obj'[wp]: no_0_obj'
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -1487,7 +1488,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-crunches performVSpaceInvocation, performARMVCPUInvocation
+crunch performVSpaceInvocation, performARMVCPUInvocation
   for tcb_at'[wp]: "\<lambda>s. tcb_at' p s"
 
 lemma invokeArch_tcb_at':
@@ -1499,7 +1500,8 @@ lemma invokeArch_tcb_at':
                   wp: performASIDControlInvocation_tcb_at')
   done
 
-crunch pspace_no_overlap'[wp]: setThreadState "pspace_no_overlap' w s"
+crunch setThreadState
+  for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
   (simp: unless_def)
 
 lemma sts_cte_cap_to'[wp]:
@@ -1762,21 +1764,24 @@ lemma arch_decodeInvocation_wf[wp]:
   apply wp
   done
 
-crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
+crunch setMRs
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
    wp: hoare_drop_imps hoare_vcg_split_case_option
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-crunch nosch [wp]: performARMMMUInvocation "\<lambda>s. P (ksSchedulerAction s)"
+crunch performARMMMUInvocation
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
-crunch st_tcb_at': performPageTableInvocation,
+crunch performPageTableInvocation,
                    performPageInvocation,
-                   performASIDPoolInvocation "st_tcb_at' P t"
+                   performASIDPoolInvocation
+  for st_tcb_at': "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps pteAtIndex_def)
 
 lemma performASIDControlInvocation_st_tcb_at':
@@ -1827,7 +1832,8 @@ lemmas arch_finalise_cap_aligned' = ArchRetypeDecls_H_AARCH64_H_finaliseCap_alig
 
 lemmas arch_finalise_cap_distinct' = ArchRetypeDecls_H_AARCH64_H_finaliseCap_distinct'
 
-crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
+crunch "Arch.finaliseCap"
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma archThreadSet_ex_nonz_cap_to'[wp]:

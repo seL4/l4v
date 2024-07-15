@@ -276,7 +276,8 @@ crunches setExtraBadge
 global_interpretation setExtraBadge: typ_at_all_props' "setExtraBadge buffer badge n"
   by typ_at_props'
 
-crunch inv'[wp]: getExtraCPtr P (wp: dmo_inv' loadWord_inv)
+crunch getExtraCPtr
+  for inv'[wp]: P (wp: dmo_inv' loadWord_inv)
 
 lemmas unifyFailure_discard2
     = corres_injection[OF id_injection unifyFailure_injection, simplified]
@@ -596,12 +597,16 @@ lemma cteInsert_cte_cap_to':
 
 declare maskCapRights_eq_null[simp]
 
-crunch ex_cte_cap_wp_to' [wp]: setExtraBadge "ex_cte_cap_wp_to' P p"
+crunch setExtraBadge
+  for ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' P p"
   (rule: ex_cte_cap_to'_pres)
 
-crunch valid_objs' [wp]: setExtraBadge valid_objs'
-crunch aligned' [wp]: setExtraBadge pspace_aligned'
-crunch distinct' [wp]: setExtraBadge pspace_distinct'
+crunch setExtraBadge
+  for valid_objs'[wp]: valid_objs'
+crunch setExtraBadge
+  for aligned'[wp]: pspace_aligned'
+crunch setExtraBadge
+  for distinct'[wp]: pspace_distinct'
 
 lemma cteInsert_assume_Null:
   "\<lbrace>P\<rbrace> cteInsert cap src dest \<lbrace>Q\<rbrace> \<Longrightarrow>
@@ -618,7 +623,8 @@ lemma cteInsert_assume_Null:
   apply simp
   done
 
-crunch mdb'[wp]: setExtraBadge valid_mdb'
+crunch setExtraBadge
+  for mdb'[wp]: valid_mdb'
 
 lemma cteInsert_weak_cte_wp_at2:
   assumes weak:"\<And>c cap. P (maskedAsFull c cap) = P c"
@@ -684,10 +690,14 @@ lemmas transferCapsToSlots_pres2
     = transferCapsToSlots_presM[where vo=False and emx=True
                                   and drv=False and pad=False, simplified]
 
-crunch pspace_aligned'[wp]: transferCapsToSlots pspace_aligned'
-crunch pspace_canonical'[wp]: transferCapsToSlots pspace_canonical'
-crunch pspace_in_kernel_mappings'[wp]: transferCapsToSlots pspace_in_kernel_mappings'
-crunch pspace_distinct'[wp]: transferCapsToSlots pspace_distinct'
+crunch transferCapsToSlots
+  for pspace_aligned'[wp]: pspace_aligned'
+crunch transferCapsToSlots
+  for pspace_canonical'[wp]: pspace_canonical'
+crunch transferCapsToSlots
+  for pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
+crunch transferCapsToSlots
+  for pspace_distinct'[wp]: pspace_distinct'
 
 lemma transferCapsToSlots_typ_at'[wp]:
    "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>
@@ -728,7 +738,8 @@ lemma transferCapsToSlots_mdb[wp]:
   apply (fastforce simp:valid_cap'_def)
   done
 
-crunch no_0' [wp]: setExtraBadge no_0_obj'
+crunch setExtraBadge
+  for no_0'[wp]: no_0_obj'
 
 lemma transferCapsToSlots_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. no_0_obj'\<rbrace>"
@@ -752,7 +763,7 @@ lemma transferCapsToSlots_vp[wp]:
   apply (fastforce simp: cte_wp_at_ctes_of dest: ctes_of_valid')
   done
 
-crunches setExtraBadge, doIPCTransfer
+crunch setExtraBadge, doIPCTransfer
   for sch_act [wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps mapME_wp' simp: zipWithM_x_mapM)
 
@@ -773,7 +784,8 @@ lemma tcts_sch_act[wp]:
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   by (wp sch_act_wf_lift tcb_in_cur_domain'_lift transferCapsToSlots_pres1)
 
-crunch state_refs_of' [wp]: setExtraBadge "\<lambda>s. P (state_refs_of' s)"
+crunch setExtraBadge
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
 
 lemma tcts_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
@@ -781,7 +793,8 @@ lemma tcts_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (wp transferCapsToSlots_pres1)
 
-crunch if_live' [wp]: setExtraBadge if_live_then_nonz_cap'
+crunch setExtraBadge
+  for if_live'[wp]: if_live_then_nonz_cap'
 
 lemma tcts_iflive[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> distinct slots \<and>
@@ -807,7 +820,8 @@ lemma transferCapsToSlots_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
   by (rule transferCapsToSlots_pres1; wp)
 
-crunch valid_global_refs' [wp]: setExtraBadge valid_global_refs'
+crunch setExtraBadge
+  for valid_global_refs'[wp]: valid_global_refs'
 
 lemma transferCapsToSlots_valid_globals [wp]:
   "\<lbrace>valid_global_refs' and valid_objs' and valid_mdb' and pspace_distinct' and pspace_aligned' and K (distinct slots)
@@ -824,7 +838,8 @@ lemma transferCapsToSlots_valid_globals [wp]:
   apply (fastforce simp:valid_cap'_def)
   done
 
-crunch irq_node' [wp]: setExtraBadge "\<lambda>s. P (irq_node' s)"
+crunch setExtraBadge
+  for irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
 
 lemma transferCapsToSlots_irq_node'[wp]:
   "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
@@ -835,7 +850,8 @@ lemma valid_irq_handlers_ctes_ofD:
        \<Longrightarrow> irq_issued' irq s"
   by (auto simp: valid_irq_handlers'_def cteCaps_of_def ran_def)
 
-crunch valid_irq_handlers' [wp]: setExtraBadge valid_irq_handlers'
+crunch setExtraBadge
+  for valid_irq_handlers'[wp]: valid_irq_handlers'
 
 lemma transferCapsToSlots_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers' and valid_objs' and valid_mdb' and pspace_distinct' and pspace_aligned'
@@ -855,7 +871,8 @@ lemma transferCapsToSlots_irq_handlers[wp]:
   apply (fastforce simp:valid_cap'_def)
   done
 
-crunch irq_state' [wp]: setExtraBadge "\<lambda>s. P (ksInterruptState s)"
+crunch setExtraBadge
+  for irq_state'[wp]: "\<lambda>s. P (ksInterruptState s)"
 
 lemma setExtraBadge_irq_states'[wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setExtraBadge buffer b n \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
@@ -919,10 +936,11 @@ lemma transferCapsToSlots_vms[wp]:
    \<lbrace>\<lambda>_ s. valid_machine_state' s\<rbrace>"
   by (wp transferCapsToSlots_pres1)
 
-crunches setExtraBadge, transferCapsToSlots
+crunch setExtraBadge, transferCapsToSlots
   for pspace_domain_valid[wp]: "pspace_domain_valid"
 
-crunch ct_not_inQ[wp]: setExtraBadge "ct_not_inQ"
+crunch setExtraBadge
+  for ct_not_inQ[wp]: "ct_not_inQ"
 
 lemma tcts_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace>
@@ -930,8 +948,10 @@ lemma tcts_ct_not_inQ[wp]:
    \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   by (wp transferCapsToSlots_pres1)
 
-crunch gsUntypedZeroRanges[wp]: setExtraBadge "\<lambda>s. P (gsUntypedZeroRanges s)"
-crunch ctes_of[wp]: setExtraBadge "\<lambda>s. P (ctes_of s)"
+crunch setExtraBadge
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunch setExtraBadge
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
 lemma tcts_zero_ranges[wp]:
   "\<lbrace>\<lambda>s. untyped_ranges_zero' s \<and> valid_pspace' s \<and> distinct slots
@@ -1178,18 +1198,23 @@ lemma copy_mrs_invs'[wp]:
     apply (wp | simp | blast)+
   done
 
-crunch aligned'[wp]: transferCaps pspace_aligned'
+crunch transferCaps
+  for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps simp: zipWithM_x_mapM)
-crunch distinct'[wp]: transferCaps pspace_distinct'
+crunch transferCaps
+  for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 crunch aligned'[wp]: copyMRs pspace_aligned'
   (wp: crunch_wps simp: crunch_simps)
-crunch pspace_canonical'[wp]: copyMRs pspace_canonical'
+crunch copyMRs
+  for pspace_canonical'[wp]: pspace_canonical'
   (wp: crunch_wps simp: crunch_simps)
-crunch pspace_in_kernel_mappings'[wp]: copyMRs pspace_in_kernel_mappings'
+crunch copyMRs
+  for pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
   (wp: crunch_wps simp: crunch_simps)
-crunch distinct'[wp]: copyMRs pspace_distinct'
+crunch copyMRs
+  for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_mrs_valid_objs' [wp]:
@@ -1198,7 +1223,8 @@ lemma set_mrs_valid_objs' [wp]:
   apply (wp asUser_valid_objs crunch_wps)
   done
 
-crunch valid_objs'[wp]: copyMRs valid_objs'
+crunch copyMRs
+  for valid_objs'[wp]: valid_objs'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setMRs_invs_bits[wp]:
@@ -1216,7 +1242,8 @@ lemma setMRs_invs_bits[wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> setMRs t buf mrs \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   by (simp add: setMRs_def zipWithM_x_mapM split_def storeWordUser_def | wp crunch_wps)+
 
-crunch no_0_obj'[wp]: setMRs no_0_obj'
+crunch setMRs
+  for no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma copyMRs_invs_bits[wp]:
@@ -1232,13 +1259,15 @@ lemma copyMRs_invs_bits[wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   by (simp add: copyMRs_def  storeWordUser_def | wp mapM_wp' | wpc)+
 
-crunch no_0_obj'[wp]: copyMRs no_0_obj'
+crunch copyMRs
+  for no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma mi_map_length[simp]: "msgLength (message_info_map mi) = mi_length mi"
   by (cases mi, simp)
 
-crunch cte_wp_at'[wp]: copyMRs "cte_wp_at' P p"
+crunch copyMRs
+  for cte_wp_at'[wp]: "cte_wp_at' P p"
   (wp: crunch_wps)
 
 lemma lookupExtraCaps_srcs[wp]:
@@ -1252,7 +1281,8 @@ lemma lookupExtraCaps_srcs[wp]:
       apply (wp | simp)+
   done
 
-crunch inv[wp]: lookupExtraCaps "P"
+crunch lookupExtraCaps
+  for inv[wp]: "P"
   (wp: crunch_wps mapME_wp' simp: crunch_simps)
 
 lemma invs_mdb_strengthen':
@@ -1457,9 +1487,11 @@ lemma doNormal_invs'[wp]:
   apply (wp hoare_vcg_const_Ball_lift | simp)+
   done
 
-crunch aligned'[wp]: doNormalTransfer pspace_aligned'
+crunch doNormalTransfer
+  for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps)
-crunch distinct'[wp]: doNormalTransfer pspace_distinct'
+crunch doNormalTransfer
+  for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps)
 
 lemma transferCaps_urz[wp]:
@@ -1475,12 +1507,14 @@ lemma transferCaps_urz[wp]:
   apply clarsimp
   done
 
-crunch gsUntypedZeroRanges[wp]: doNormalTransfer "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunch doNormalTransfer
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps transferCapsToSlots_pres1 ignore: constOnFailure)
 
 lemmas asUser_urz = untyped_ranges_zero_lift[OF asUser_gsUntypedZeroRanges]
 
-crunch urz[wp]: doNormalTransfer "untyped_ranges_zero'"
+crunch doNormalTransfer
+  for urz[wp]: "untyped_ranges_zero'"
   (ignore: asUser wp: crunch_wps asUser_urz hoare_vcg_const_Ball_lift)
 
 lemma msgFromLookupFailure_map[simp]:
@@ -2172,7 +2206,8 @@ crunches doIPCTransfer, possibleSwitchTo
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps setSchedulerAction_ct_in_domain simp: zipWithM_x_mapM)
 
-crunch tcbDomain_obj_at'[wp]: doIPCTransfer "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
+crunch doIPCTransfer
+  for tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
   (wp: crunch_wps constOnFailure_wp simp: crunch_simps)
 
 lemma tcbEPFindIndex_corres:
@@ -4493,7 +4528,8 @@ crunches sendSignal, refillUnblockCheck
   and irqs_masked'[wp]: "irqs_masked'"
   (wp: crunch_wps simp: crunch_simps o_def)
 
-crunch irqs_masked'[wp]: setBoundNotification "irqs_masked'"
+crunch setBoundNotification
+  for irqs_masked'[wp]: "irqs_masked'"
   (wp: irqs_masked_lift)
 
 lemma ct_in_state_activatable_imp_simple'[simp]:
@@ -4856,7 +4892,8 @@ lemma rfk_invs':
   apply wpsimp
   done
 
-crunch nosch[wp]: replyFromKernel "\<lambda>s. P (ksSchedulerAction s)"
+crunch replyFromKernel
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma set_tcb_obj_ref_ntfns_of[wp]:
   "set_tcb_obj_ref f t new \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
@@ -6704,7 +6741,7 @@ lemma replyUnlink_obj_at_tcb_none:
   apply (wpsimp wp: updateReply_wp_all gts_wp')
   by (auto simp: obj_at'_def objBitsKO_def)
 
-crunches possibleSwitchTo
+crunch possibleSwitchTo
   for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
 

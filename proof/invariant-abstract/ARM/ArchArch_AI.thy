@@ -172,8 +172,9 @@ lemma ucast_fst_hd_assocs:
   done
 
 
-crunch typ_at [wp]: perform_page_table_invocation, perform_page_invocation,
-         perform_asid_pool_invocation, perform_page_directory_invocation "\<lambda>s. P (typ_at T p s)"
+crunch perform_page_table_invocation, perform_page_invocation,
+         perform_asid_pool_invocation, perform_page_directory_invocation
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
 
 
@@ -938,7 +939,8 @@ lemma sts_valid_arch_inv:
   done
 
 
-crunch inv[wp]: ensure_safe_mapping "P"
+crunch ensure_safe_mapping
+  for inv[wp]: "P"
   (wp: mapME_x_inv_wp)
 
 
@@ -950,7 +952,8 @@ lemma create_mapping_entries_inv [wp]:
 
 crunch_ignore (add: select_ext)
 
-crunch inv [wp]: arch_decode_invocation "P"
+crunch arch_decode_invocation
+  for inv[wp]: "P"
   (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
 
@@ -1486,8 +1489,9 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
-           perform_asid_pool_invocation, perform_page_directory_invocation "pred_tcb_at proj P t"
+crunch perform_page_table_invocation, perform_page_invocation,
+           perform_asid_pool_invocation, perform_page_directory_invocation
+  for pred_tcb_at: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_pinv_st_tcb_at:

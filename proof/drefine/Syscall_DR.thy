@@ -1116,7 +1116,8 @@ lemma liftE_distrib':
   odE"
   by (simp add:bindE_def liftE_def bind_assoc lift_def)
 
-crunch valid_etcbs[wp]: reply_from_kernel valid_etcbs
+crunch reply_from_kernel
+  for valid_etcbs[wp]: valid_etcbs
 
 lemma dcorres_reply_from_syscall:
   "dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread thread and valid_idle and valid_etcbs)
@@ -1173,13 +1174,16 @@ lemma dcorres_reply_from_syscall:
 
 lemmas mapM_x_def_symmetric = mapM_x_def[symmetric]
 
-crunch idle[wp] : send_ipc "\<lambda>s::'z::state_ext state. P (idle_thread s)"
+crunch send_ipc
+  for idle[wp]: "\<lambda>s::'z::state_ext state. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps  ignore:clearMemory)
 
-crunch idle[wp] : send_signal "\<lambda>s::'z::state_ext state. P (idle_thread s)"
+crunch send_signal
+  for idle[wp]: "\<lambda>s::'z::state_ext state. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps  ignore:clearMemory)
 
-crunch idle[wp] : do_reply_transfer "\<lambda>s::'z::state_ext state. P (idle_thread s)"
+crunch do_reply_transfer
+  for idle[wp]: "\<lambda>s::'z::state_ext state. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps  ignore:clearMemory)
 
 lemma check_cap_at_idle:
@@ -1191,7 +1195,8 @@ done
 
 lemmas cap_revoke_preservation_flat = cap_revoke_preservation[THEN validE_valid]
 
-crunch idle[wp] : invoke_tcb, cap_move, cap_swap, cap_revoke "\<lambda>s::'z::state_ext state. P (idle_thread s)"
+crunch invoke_tcb, cap_move, cap_swap, cap_revoke
+  for idle[wp]: "\<lambda>s::'z::state_ext state. P (idle_thread s)"
   (rule: cap_revoke_preservation_flat wp: crunch_wps check_cap_at_idle dxo_wp_weak
     simp: crunch_simps ignore: check_cap_at)
 
@@ -1202,14 +1207,16 @@ lemma invoke_cnode_idle:
             | wpsimp wp: crunch_wps hoare_vcg_all_lift | rule conjI)+
   done
 
-crunch idle[wp] : arch_perform_invocation "\<lambda>s. P (idle_thread s)"
+crunch arch_perform_invocation
+  for idle[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma invoke_domain_idle:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_domain t d  \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   by  (clarsimp simp: Tcb_A.invoke_domain_def trans_state_def | wp dxo_wp_weak)+
 
-crunch idle[wp]: "Syscall_A.perform_invocation" "\<lambda>s. P (idle_thread s)"
+crunch "Syscall_A.perform_invocation"
+  for idle[wp]: "\<lambda>s. P (idle_thread s)"
 
 lemma msg_from_syscall_error_simp:
   "fst (msg_from_syscall_error rv) \<le> mask 19"
@@ -1263,7 +1270,8 @@ lemma invoke_cnode_valid_etcbs[wp]:
    apply (wp crunch_wps hoare_vcg_all_lift | wpc | simp add: split del: if_split)+
   done
 
-crunch valid_etcbs[wp]: perform_invocation valid_etcbs
+crunch perform_invocation
+  for valid_etcbs[wp]: valid_etcbs
   (wp: crunch_wps check_cap_inv simp: crunch_simps ignore: without_preemption)
 
 (*
@@ -1357,7 +1365,8 @@ lemma handle_invocation_corres:
    apply simp_all
   done
 
-crunch cur_thread[wp]: complete_signal "\<lambda>s. P (cur_thread s)"
+crunch complete_signal
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
 lemma receive_ipc_cur_thread:
   notes do_nbrecv_failed_transfer_def[simp]
@@ -1390,7 +1399,8 @@ lemma cap_delete_one_st_tcb_at_and_valid_etcbs:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st) and valid_etcbs\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv s. st_tcb_at P t s \<and> valid_etcbs s\<rbrace>"
  by (wp cap_delete_one_st_tcb_at cap_delete_one_valid_etcbs | simp)+
 
-crunch ct_it[wp]: deleted_irq_handler, cap_delete_one "\<lambda>s::'z::state_ext state. P (cur_thread s) (idle_thread s)"
+crunch deleted_irq_handler, cap_delete_one
+  for ct_it[wp]: "\<lambda>s::'z::state_ext state. P (cur_thread s) (idle_thread s)"
      (wp: crunch_wps set_thread_state_ext_extended.all_but_exst dxo_wp_weak
     simp: crunch_simps unless_def)
 
@@ -1573,7 +1583,8 @@ lemma get_active_irq_corres:
   done
 
 
-crunch valid_etcbs[wp]: "handle_reply" "valid_etcbs"
+crunch "handle_reply"
+  for valid_etcbs[wp]: "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma hr_ct_active_and_valid_etcbs:
@@ -1582,7 +1593,8 @@ lemma hr_ct_active_and_valid_etcbs:
 
 declare tcb_sched_action_transform[wp]
 
-crunch transform_inv[wp]: reschedule_required "\<lambda>s. transform s = cs"
+crunch reschedule_required
+  for transform_inv[wp]: "\<lambda>s. transform s = cs"
 
 lemma handle_hypervisor_fault_corres:
   "dcorres dc (\<lambda>_. True)

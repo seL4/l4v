@@ -937,7 +937,7 @@ lemma modifyReadyQueuesL1Bitmap_obj_at[wp]:
   apply (fastforce intro: obj_at'_pspaceI)
   done
 
-crunches setThreadState, setBoundNotification
+crunch setThreadState, setBoundNotification
   for valid_arch' [wp]: valid_arch_state'
   (simp: unless_def crunch_simps wp: crunch_wps)
 
@@ -947,9 +947,11 @@ lemma threadSet_typ_at'[wp]:
 
 lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts [OF threadSet_typ_at']
 
-crunch irq_states' [wp]: threadSet valid_irq_states'
+crunch threadSet
+  for irq_states'[wp]: valid_irq_states'
 
-crunch pspace_domain_valid [wp]: threadSet "pspace_domain_valid"
+crunch threadSet
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma threadSet_obj_at'_really_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>obj. if t = t' then P (f obj) else P obj)
@@ -1516,9 +1518,11 @@ lemma asUser_nosch[wp]:
   apply (wp hoare_drop_imps | simp)+
   done
 
-crunch aligned'[wp]: asUser pspace_aligned'
+crunch asUser
+  for aligned'[wp]: pspace_aligned'
   (simp: crunch_simps wp: crunch_wps)
-crunch distinct'[wp]: asUser pspace_distinct'
+crunch asUser
+  for distinct'[wp]: pspace_distinct'
   (simp: crunch_simps wp: crunch_wps)
 
 lemma asUser_valid_objs [wp]:
@@ -1582,7 +1586,7 @@ lemma asUser_pred_tcb_at' [wp]:
     apply (wpsimp wp: select_f_inv)+
   done
 
-crunches asUser
+crunch asUser
   for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   and cur_domain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (simp: crunch_simps wp: hoare_drop_imps getObject_tcb_inv setObject_ct_inv)
@@ -3096,7 +3100,7 @@ lemma tcb_sched_dequeue_monadic_rewrite:
   apply fastforce
   done
 
-crunches removeFromBitmap
+crunch removeFromBitmap
   for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
 
 lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur_ts) od =
@@ -3272,7 +3276,7 @@ lemma tcbQueuePrepend_valid_objs'[wp]:
   unfolding tcbQueuePrepend_def
   by (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' simp: tcbQueueEmpty_def)
 
-crunches addToBitmap
+crunch addToBitmap
   for valid_objs'[wp]: valid_objs'
   (simp: unless_def crunch_simps wp: crunch_wps)
 
@@ -3448,7 +3452,8 @@ lemma sbn'_valid_pspace'_inv[wp]:
   apply (simp add: tcb_cte_cases_def cteSizeBits_def)
   done
 
-crunch pred_tcb_at'[wp]: setQueue "\<lambda>s. P (pred_tcb_at' proj P' t s)"
+crunch setQueue
+  for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj P' t s)"
 
 lemma setQueue_sch_act:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -3723,7 +3728,8 @@ crunches scheduleTCB
   for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps hoare_vcg_if_lift2)
 
-crunch no_sa[wp]: tcbSchedDequeue "\<lambda>s. P (ksSchedulerAction s)"
+crunch tcbSchedDequeue
+  for no_sa[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma sts_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
@@ -3788,9 +3794,11 @@ lemma addToBitmap_bitmapQ:
   by (wpsimp simp: bitmap_fun_defs bitmapQ_def prioToL1Index_bit_set prioL2Index_bit_set
              simp_del: bit_exp_iff)
 
-crunch norq[wp]: addToBitmap "\<lambda>s. P (ksReadyQueues s)"
+crunch addToBitmap
+  for norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: updateObject_cte_inv hoare_drop_imps)
-crunch norq[wp]: removeFromBitmap "\<lambda>s. P (ksReadyQueues s)"
+crunch removeFromBitmap
+  for norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: updateObject_cte_inv hoare_drop_imps)
 
 lemma prioToL1Index_lt:
@@ -4716,7 +4724,8 @@ lemma lookupIPCBuffer_corres:
   using lookupIPCBuffer_corres'
   by (rule corres_guard_imp, auto simp: invs'_def)
 
-crunch inv[wp]: lookupIPCBuffer P
+crunch lookupIPCBuffer
+  for inv[wp]: P
   (wp: crunch_wps simp: crunch_simps)
 
 end
@@ -4754,7 +4763,7 @@ lemma setBoundNotification_bound_tcb:
   apply simp
   done
 
-crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
+crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -4889,7 +4898,7 @@ crunches scheduleTCB, setThreadState
 lemmas setThreadState_cap_to'[wp]
   = ex_cte_cap_to'_pres [OF setThreadState_cte_wp_at' setThreadState_ksInterruptState]
 
-crunches setThreadState, setBoundNotification
+crunch setThreadState, setBoundNotification
   for aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
   and cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at' P p s)"
@@ -4958,7 +4967,7 @@ crunches setQueue, addToBitmap, removeFromBitmap
   for iflive'[wp]: if_live_then_nonz_cap'
   and nonz_cap[wp]: "ex_nonz_cap_to' t"
 
-crunches rescheduleRequired
+crunch rescheduleRequired
   for cap_to'[wp]: "ex_nonz_cap_to' p"
 
 lemma tcbInReleaseQueue_update_tcb_cte_cases:
@@ -5157,7 +5166,7 @@ lemma bound_tcb_ex_cap'':
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 
-crunches setThreadState, setBoundNotification
+crunch setThreadState, setBoundNotification
   for arch' [wp]: "\<lambda>s. P (ksArchState s)"
   (simp: unless_def crunch_simps)
 
@@ -5166,7 +5175,8 @@ crunches setThreadState
   (wp: getObject_tcb_inv crunch_wps
    simp: updateObject_default_def unless_def crunch_simps)
 
-crunch it' [wp]: removeFromBitmap "\<lambda>s. P (ksIdleThread s)"
+crunch removeFromBitmap
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 crunches setThreadState, setBoundNotification
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
@@ -5186,7 +5196,7 @@ lemma sbn_global_reds' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
 
-crunches setThreadState, setBoundNotification
+crunch setThreadState, setBoundNotification
   for irq_states' [wp]: valid_irq_states'
   (simp: unless_def crunch_simps)
 
@@ -5204,7 +5214,7 @@ lemma tcbSchedEnqueue_ksMachine[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> tcbSchedEnqueue x \<lbrace>\<lambda>_ s. P (ksMachineState s)\<rbrace>"
   by (simp add: tcbSchedEnqueue_def unless_def setQueue_def | wp)+
 
-crunches setThreadState, setBoundNotification
+crunch setThreadState, setBoundNotification
   for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
   and pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: crunch_wps)
@@ -5308,20 +5318,26 @@ lemma setBoundNotification_ct_not_inQ:
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   by (simp add: setBoundNotification_def, wp)
 
-crunch ct_not_inQ[wp]: setQueue "ct_not_inQ"
+crunch setQueue
+  for ct_not_inQ[wp]: "ct_not_inQ"
 
 crunch ct_idle_or_in_cur_domain'[wp]: setQueue ct_idle_or_in_cur_domain'
   (simp: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
-crunch ksDomSchedule[wp]: setQueue "\<lambda>s. P (ksDomSchedule s)"
+crunch setQueue
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
 
-crunch ksCurDomain[wp]: addToBitmap "\<lambda>s. P (ksCurDomain s)"
+crunch addToBitmap
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp:  crunch_wps )
-crunch ksDomSchedule[wp]: addToBitmap "\<lambda>s. P (ksDomSchedule s)"
+crunch addToBitmap
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp:  crunch_wps )
-crunch ksCurDomain[wp]: removeFromBitmap "\<lambda>s. P (ksCurDomain s)"
+crunch removeFromBitmap
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp:  crunch_wps )
-crunch ksDomSchedule[wp]: removeFromBitmap "\<lambda>s. P (ksDomSchedule s)"
+crunch removeFromBitmap
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp:  crunch_wps )
 
 lemma addToBitmap_ct_idle_or_in_cur_domain'[wp]:
@@ -5422,7 +5438,7 @@ lemma removeFromBitmap_valid_bitmapQ[wp]:
   apply (fastforce elim: valid_bitmap_valid_bitmapQ_exceptE)
   done
 
-crunches tcbSchedDequeue
+crunch tcbSchedDequeue
   for bitmapQ_no_L1_orphans[wp]: bitmapQ_no_L1_orphans
   and bitmapQ_no_L2_orphans[wp]: bitmapQ_no_L2_orphans
   (wp: crunch_wps simp: crunch_simps)
@@ -5446,7 +5462,7 @@ lemma threadSet_bitmapQ:
   apply (wpsimp wp: threadSet_wp)
   by (clarsimp simp: bitmapQ_def)
 
-crunches tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend
+crunch tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend
   for valid_bitmapQ_except[wp]: "valid_bitmapQ_except d p"
   and valid_bitmapQ[wp]: valid_bitmapQ
   and bitmapQ[wp]: "bitmapQ tdom prio"
@@ -5498,7 +5514,7 @@ lemma tcbSchedEnqueue_valid_bitmapQ[wp]:
   apply (fastforce simp: valid_bitmaps_def valid_bitmapQ_def tcbQueueEmpty_def split: if_splits)
   done
 
-crunches tcbSchedEnqueue, tcbSchedAppend
+crunch tcbSchedEnqueue, tcbSchedAppend
   for bitmapQ_no_L1_orphans[wp]: bitmapQ_no_L1_orphans
   and bitmapQ_no_L2_orphans[wp]: bitmapQ_no_L2_orphans
 
@@ -5509,7 +5525,7 @@ lemma tcbSchedEnqueue_valid_bitmaps[wp]:
   apply (clarsimp simp: valid_bitmaps_def)
   done
 
-crunches rescheduleRequired, threadSet, setThreadState
+crunch rescheduleRequired, threadSet, setThreadState
   for valid_bitmaps[wp]: valid_bitmaps
   (rule: valid_bitmaps_lift)
 
@@ -5807,7 +5823,7 @@ lemma tcbSchedDequeue_sym_heap_sched_pointers[wp]:
                          opt_map_def obj_at'_def)
   done
 
-crunches setThreadState
+crunch setThreadState
   for valid_sched_pointers[wp]: valid_sched_pointers
   and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   (simp: crunch_simps wp: crunch_wps threadSet_valid_sched_pointers threadSet_sched_pointers)

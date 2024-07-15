@@ -12,7 +12,8 @@ imports Init_C Fastpath_Equiv Fastpath_C CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
+crunch handleVMFault
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
 end
 
@@ -836,7 +837,8 @@ lemma dom_if_rewrite:
   "dom (\<lambda>x. if P x then Some (f x) else None) = dom (\<lambda>x. if P x then Some () else None)"
   by (auto split:if_splits)
 
-crunch dmo_typ_at_pre_dom[wp]: doMachineOp "\<lambda>s. P (dom (\<lambda>x. if typ_at' T (x && ~~ mask pageBits) s then Some () else None))"
+crunch doMachineOp
+  for dmo_typ_at_pre_dom[wp]: "\<lambda>s. P (dom (\<lambda>x. if typ_at' T (x && ~~ mask pageBits) s then Some () else None))"
   (wp: crunch_wps simp: crunch_simps device_mem'_def)
 
 lemma dmo_domain_device_mem'[wp]:

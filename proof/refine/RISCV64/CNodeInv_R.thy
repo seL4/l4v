@@ -825,8 +825,10 @@ lemma cteDelete_preservation:
   apply simp
   done
 
-crunch aligned'[wp]: capSwapForDelete pspace_aligned'
-crunch distinct'[wp]: capSwapForDelete pspace_distinct'
+crunch capSwapForDelete
+  for aligned'[wp]: pspace_aligned'
+crunch capSwapForDelete
+  for distinct'[wp]: pspace_distinct'
 
 lemma cte_wp_at_ctes_ofI:
   "\<lbrakk> cte_wp_at' ((=) cte) ptr s \<rbrakk> \<Longrightarrow> ctes_of s ptr = Some cte"
@@ -4967,11 +4969,14 @@ lemma cteSwap_refs[wp]:
   apply (clarsimp simp: global_refs'_def Int_Un_distrib2)
   done
 
-crunch ksInterrupt[wp]: cteSwap "\<lambda>s. P (ksInterruptState s)"
+crunch cteSwap
+  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
 
-crunch ksArch[wp]: cteSwap "\<lambda>s. P (ksArchState s)"
+crunch cteSwap
+  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
 
-crunch typ_at'[wp]: cteSwap "\<lambda>s. P (typ_at' T p s)"
+crunch cteSwap
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma cteSwap_valid_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers' and cte_wp_at' (weak_derived' c \<circ> cteCap) c1
@@ -5038,7 +5043,7 @@ crunches cteSwap
   and valid_bitmaps[wp]: valid_bitmaps
   (wp: valid_bitmaps_lift)
 
-crunches cteSwap
+crunch cteSwap
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
@@ -5496,10 +5501,11 @@ lemma updateCap_untyped_ranges_zero_simple:
   apply (simp add: fun_eq_iff map_comp_def)
   done
 
-crunch tcb_in_cur_domain'[wp]: updateCap "tcb_in_cur_domain' t"
+crunch updateCap
+  for tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
   (wp: crunch_wps simp: crunch_simps rule: tcb_in_cur_domain'_lift)
 
-crunches updateCap
+crunch updateCap
   for valid_bitmaps[wp]: valid_bitmaps
   (rule: valid_bitmaps_lift)
 
@@ -5957,7 +5963,8 @@ lemma cteSwap_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> cteSwap cap1 slot1 cap2 slot2 \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
   by (simp add: cteSwap_def sch_act_simple_def, wp)
 
-crunch sch_act_simple[wp]: capSwapForDelete sch_act_simple
+crunch capSwapForDelete
+  for sch_act_simple[wp]: sch_act_simple
 
 lemma updateCap_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> updateCap slot newCap \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
@@ -6015,7 +6022,7 @@ lemma updateTrackedFreeIndex_no_cte_prop[wp]:
   apply (clarsimp simp: no_cte_prop_def finalise_prop_stuff_def)
   done
 
-crunches emptySlot, capSwapForDelete
+crunch emptySlot, capSwapForDelete
   for no_cte_prop[wp]: "no_cte_prop P"
   (ignore: doMachineOp wp: dmo_maskInterrupt_no_cte_prop)
 
@@ -6518,7 +6525,8 @@ lemma finaliseCap2_st_tcb_at':
                     hoare_drop_imp hoare_vcg_if_lift2 hoare_vcg_all_lift)
   done
 
-crunch st_tcb_at'[wp]: capSwapForDelete "st_tcb_at' P t"
+crunch capSwapForDelete
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
 
 lemma cteDelete_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -7735,7 +7743,8 @@ crunches invokeCNode
 global_interpretation invokeCNode: typ_at_all_props' "invokeCNode i"
   by typ_at_props'
 
-crunch st_tcb_at'[wp]: cteMove "st_tcb_at' P t"
+crunch cteMove
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps)
 
 lemma threadSet_st_tcb_at2:
@@ -7748,7 +7757,8 @@ lemma threadSet_st_tcb_at2:
   apply (clarsimp simp: obj_at'_def x)
   done
 
-crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
+crunch "cancelBadgedSends"
+  for st_tcb_at_simplish[wp]: "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
   (wp: crunch_wps threadSet_st_tcb_at2
    simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
 
@@ -8459,10 +8469,12 @@ lemma cteMove_idle'[wp]:
   apply (clarsimp simp: valid_idle'_def cte_wp_at_ctes_of weak_derived'_def)
   done
 
-crunch ksInterrupt[wp]: cteMove "\<lambda>s. P (ksInterruptState s)"
+crunch cteMove
+  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   (wp: crunch_wps)
 
-crunch ksArch[wp]: cteMove "\<lambda>s. P (ksArchState s)"
+crunch cteMove
+  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps)
 
 lemma cteMove_irq_handlers' [wp]:
@@ -8486,12 +8498,15 @@ lemma cteMove_irq_handlers' [wp]:
 lemmas cteMove_valid_irq_node'[wp]
     = valid_irq_node_lift[OF cteMove_ksInterrupt cteMove_typ_at']
 
-crunch valid_arch_state'[wp]: cteMove "valid_arch_state'"
+crunch cteMove
+  for valid_arch_state'[wp]: "valid_arch_state'"
   (wp: crunch_wps)
 
-crunch global_refs_noop[wp]: cteMove "\<lambda>s. P (global_refs' s)"
+crunch cteMove
+  for global_refs_noop[wp]: "\<lambda>s. P (global_refs' s)"
   (wp: crunch_wps)
-crunch gsMaxObjectSize[wp]: cteMove "\<lambda>s. P (gsMaxObjectSize s)"
+crunch cteMove
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps)
 
 lemma cteMove_global_refs' [wp]:
@@ -8777,7 +8792,8 @@ declare withoutPreemption_lift [wp]
 crunches capSwapForDelete
   for irq_states' [wp]: valid_irq_states'
 
-crunch irq_states' [wp]: finaliseCap valid_irq_states'
+crunch finaliseCap
+  for irq_states'[wp]: valid_irq_states'
   (wp: crunch_wps unless_wp getASID_wp no_irq_setVSpaceRoot no_irq_hwASIDFlush
    simp: crunch_simps o_def pteAtIndex_def)
 

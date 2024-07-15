@@ -368,7 +368,8 @@ lemma transfer_caps_non_null_cte_wp_at:
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
-crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
+crunch do_fault_transfer
+  for cte_wp_at[wp,Ipc_AI_assms]: "cte_wp_at P p"
 
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
@@ -449,7 +450,8 @@ context Arch begin global_naming ARM
 
 named_theorems Ipc_AI_cont_assms
 
-crunch pspace_respects_device_region[wp, Ipc_AI_cont_assms]: do_ipc_transfer "pspace_respects_device_region"
+crunch do_ipc_transfer
+  for pspace_respects_device_region[wp, Ipc_AI_cont_assms]: "pspace_respects_device_region"
   (wp: crunch_wps ignore: const_on_failure simp: crunch_simps)
 
 lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:

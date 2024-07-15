@@ -18,9 +18,11 @@ crunch aligned'[wp]: cancelAllIPC pspace_aligned'
 crunch distinct'[wp]: cancelAllIPC pspace_distinct'
   (wp: crunch_wps mapM_x_wp' simp: unless_def crunch_simps)
 
-crunch aligned'[wp]: cancelAllSignals pspace_aligned'
+crunch cancelAllSignals
+  for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps mapM_x_wp')
-crunch distinct'[wp]: cancelAllSignals pspace_distinct'
+crunch cancelAllSignals
+  for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps mapM_x_wp')
 
 lemma cancelSignal_st_tcb_at'_cases:
@@ -116,7 +118,8 @@ lemma cancelSignal_st_tcb_at':
   done
 
 context begin interpretation Arch .
-crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
+crunch emptySlot
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 end
 
 sublocale delete_one_conc_pre < delete_one: typ_at_all_props' "cteDeleteOne slot"
@@ -1753,7 +1756,7 @@ lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_no
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches setNotification
+crunch setNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
   (wp: valid_bitmaps_lift)
@@ -2027,7 +2030,7 @@ lemma setThreadState_st_tcb_at'_test_unaffected:
   apply (wpsimp wp: sts_st_tcb')
   done
 
-crunches unbindNotification, bindNotification, unbindMaybeNotification
+crunch unbindNotification, bindNotification, unbindMaybeNotification
   for st_tcb_at'[wp]: "st_tcb_at' P p"
   (wp: threadSet_pred_tcb_no_state ignore: threadSet)
 
@@ -2141,22 +2144,22 @@ lemma asUser_tcbQueued_inv[wp]:
 
 context begin interpretation Arch .
 
-crunches cancel_ipc
+crunch cancel_ipc
   for pspace_aligned[wp]: "pspace_aligned :: det_state \<Rightarrow> _"
   and pspace_distinct[wp]: "pspace_distinct :: det_state \<Rightarrow> _"
   (simp: crunch_simps wp: crunch_wps)
 
 end
 
-crunches asUser
+crunch asUser
   for valid_sched_pointers[wp]: valid_sched_pointers
   (wp: crunch_wps)
 
-crunches set_thread_state
+crunch set_thread_state
   for in_correct_ready_q[wp]: in_correct_ready_q
   (ignore_del: set_thread_state_ext)
 
-crunches set_thread_state_ext
+crunch set_thread_state_ext
   for ready_qs_distinct[wp]: ready_qs_distinct
   (wp: crunch_wps ignore_del: set_thread_state_ext)
 
@@ -3797,8 +3800,10 @@ lemma suspend_unqueued:
     apply wpsimp+
   done
 
-crunch unqueued: prepareThreadDelete "obj_at' (Not \<circ> tcbQueued) t"
-crunch inactive: prepareThreadDelete "st_tcb_at' ((=) Inactive) t'"
+crunch prepareThreadDelete
+  for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
+crunch prepareThreadDelete
+  for inactive: "st_tcb_at' ((=) Inactive) t'"
 
 end
 end

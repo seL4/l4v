@@ -51,30 +51,34 @@ lemma as_user_set_register_ev2:
     apply auto
   done
 
-crunch valid_global_refs[Arch_IF_assms, wp]: arch_post_cap_deletion "valid_global_refs"
+crunch arch_post_cap_deletion
+  for valid_global_refs[Arch_IF_assms, wp]: "valid_global_refs"
 
-crunch irq_state_of_state[Arch_IF_assms, wp]: store_word_offs "\<lambda>s. P (irq_state_of_state s)"
+crunch store_word_offs
+  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: storeWord_def)
 
-crunches set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
+crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def)
 
-crunch irq_state_of_state[Arch_IF_assms, wp]: arch_switch_to_idle_thread, arch_switch_to_thread
-  "\<lambda>s :: det_state. P (irq_state_of_state s)"
+crunch arch_switch_to_idle_thread, arch_switch_to_thread
+  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: machine_op_lift_def setVSpaceRoot_def
          machine_rest_lift_def crunch_simps storeWord_def)
 
-crunch irq_state_of_state[Arch_IF_assms, wp]: arch_invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
+crunch arch_invoke_irq_handler
+  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp simp: maskInterrupt_def plic_complete_claim_def)
 
-crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>s. P (irq_state_of_state s)"
+crunch arch_perform_invocation
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp simp: cache_machine_op_defs
    wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
-crunch irq_state_of_state[Arch_IF_assms, wp]: arch_finalise_cap, prepare_thread_delete
-  "\<lambda>s :: det_state. P (irq_state_of_state s)"
+crunch arch_finalise_cap, prepare_thread_delete
+  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: modify_wp crunch_wps dmo_wp
    simp: crunch_simps hwASIDFlush_def)
 
@@ -1194,7 +1198,8 @@ lemma arch_perform_invocation_globals_equiv:
   apply (auto simp: authorised_for_globals_arch_inv_def invs_def valid_state_def valid_arch_inv_def)
   done
 
-crunch valid_global_objs[wp]: arch_post_cap_deletion "valid_global_objs"
+crunch arch_post_cap_deletion
+  for valid_global_objs[wp]: "valid_global_objs"
 
 lemma get_thread_state_globals_equiv[wp]:
   "get_thread_state ref \<lbrace>globals_equiv s\<rbrace>"

@@ -3847,7 +3847,8 @@ lemma curDomain_commute:
   apply auto
   done
 
-crunch inv[wp]: curDomain P
+crunch curDomain
+  for inv[wp]: P
 
 lemma placeNewObject_tcb_at':
   "\<lbrace>pspace_aligned' and pspace_distinct'

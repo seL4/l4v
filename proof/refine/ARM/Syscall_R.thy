@@ -654,7 +654,8 @@ lemma active_ex_cap'[elim]:
      \<Longrightarrow> ex_nonz_cap_to' (ksCurThread s) s"
   by (fastforce simp: ct_in_state'_def elim!: st_tcb_ex_cap'')
 
-crunch it[wp]: handleFaultReply "\<lambda>s. P (ksIdleThread s)"
+crunch handleFaultReply
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
   (wp: crunch_wps)
@@ -813,7 +814,7 @@ lemma ct_active_runnable' [simp]:
   "ct_active' s \<Longrightarrow> ct_in_state' runnable' s"
   by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
-crunches tcbSchedEnqueue
+crunch tcbSchedEnqueue
   for valid_irq_node[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
   (rule: valid_irq_node_lift)
 
@@ -1191,7 +1192,8 @@ lemma st_tcb_at_idle_thread':
         \<Longrightarrow> P IdleThreadState"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
-crunch tcb_at'[wp]: replyFromKernel "tcb_at' t"
+crunch replyFromKernel
+  for tcb_at'[wp]: "tcb_at' t"
 
 (* FIXME: move *)
 lemma rct_sch_act_simple[simp]:
@@ -1239,9 +1241,10 @@ lemma tcbSchedEnqueue_valid_duplicates'[wp]:
 crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv crunch_wps)
 
-crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunch setThreadState
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
   and valid_objs[wp]: valid_objs
@@ -2248,7 +2251,8 @@ lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vpt
    apply (wp | wpcw | simp)+
   done
 
-crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
+crunch handleVMFault
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getFAR getDFSR getIFSR)
 
 lemma hv_inv_ex':
@@ -2388,7 +2392,7 @@ lemma ct_active_not_idle'[simp]:
                    elim: pred_tcb'_weakenE)+
   done
 
-crunches handleFault, receiveSignal, receiveIPC, asUser
+crunch handleFault, receiveSignal, receiveIPC, asUser
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 

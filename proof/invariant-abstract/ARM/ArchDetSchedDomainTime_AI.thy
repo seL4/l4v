@@ -12,10 +12,11 @@ context Arch begin global_naming ARM
 
 named_theorems DetSchedDomainTime_AI_assms
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
+crunch arch_finalise_cap
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
+crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
@@ -63,7 +64,8 @@ crunches handle_reserved_irq
         "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_list s)"
+crunch handle_reserved_irq
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
 end

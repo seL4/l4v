@@ -431,7 +431,7 @@ lemma set_pt_typ_at[wp]:
   unfolding set_pt_def
   by (wpsimp wp: set_object_wp simp: in_opt_map_eq obj_at_def)
 
-crunches store_pte
+crunch store_pte
   for kernel_vspace[wp]: "\<lambda>s. P (riscv_kernel_vspace (arch_state s))"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps)
@@ -721,7 +721,8 @@ lemma cap_is_device_obj_is_device[simp]:
                 default_object_def  default_arch_object_def
          split: apiobject_type.splits aobject_type.splits)
 
-crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
+crunch storeWord
+  for device_state_inv: "\<lambda>ms. P (device_state ms)"
   (ignore_del: storeWord)
 
 (* some hyp_ref invariants *)

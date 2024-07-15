@@ -1199,7 +1199,7 @@ lemma updateRestartPC_ccorres:
                     RISCV64.faultRegister_def RISCV64.nextInstructionRegister_def)
   done
 
-crunches updateRestartPC
+crunch updateRestartPC
   for sch_act_simple[wp]: sch_act_simple
   and valid_objs'[wp]: valid_objs'
   and tcb_at'[wp]: "tcb_at' p"

@@ -16,7 +16,8 @@ imports
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch sch_act_wf [wp]: replyFromKernel "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+crunch replyFromKernel
+  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 end
 
 context kernel_m begin

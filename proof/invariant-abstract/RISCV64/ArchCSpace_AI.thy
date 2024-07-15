@@ -260,7 +260,7 @@ lemma set_untyped_cap_as_full_reachable_target[wp]:
   done
 
 (* FIXME this is generic *)
-crunches set_untyped_cap_as_full
+crunch set_untyped_cap_as_full
   for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
 
 lemma is_derived_is_pt:

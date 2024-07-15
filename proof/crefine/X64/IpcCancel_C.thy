@@ -868,7 +868,8 @@ lemma setQueue_ccorres:
   apply clarsimp
   done
 
-crunch (empty_fail) empty_fail[wp]: isRunnable
+crunch isRunnable
+  for (empty_fail) empty_fail[wp]
 
 lemma tcbSchedEnqueue_ccorres:
   "ccorres dc xfdc

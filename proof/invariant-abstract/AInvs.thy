@@ -100,7 +100,8 @@ lemma device_update_invs:
   apply (clarsimp simp: cur_sc_tcb_def)
   done
 
-crunch device_state_inv[wp]: user_memory_update "\<lambda>ms. P (device_state ms)"
+crunch user_memory_update
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 (* FIXME: move or delete *)
 lemma dom_restrict_plus_eq:

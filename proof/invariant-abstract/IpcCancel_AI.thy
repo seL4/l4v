@@ -227,7 +227,7 @@ locale IpcCancel_AI =
     assumes arch_post_cap_deletion_idle_thread[wp]:
       "\<And>P acap. \<lbrace>\<lambda>(s :: 'a state). P (idle_thread s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
 
-crunches update_restart_pc
+crunch update_restart_pc
   for typ_at[wp]: "\<lambda>s. P (typ_at ty ptr s)"
   (* NB: Q needed for following has_reply_cap proof *)
   and cte_wp_at[wp]: "\<lambda>s. Q (cte_wp_at P cte s)"
@@ -1626,7 +1626,8 @@ end
 crunch cte_wp_at[wp]: blocked_cancel_ipc "cte_wp_at P p"
   (wp: crunch_wps maybeM_inv)
 
-crunch cte_wp_at[wp]: cancel_signal "cte_wp_at P p"
+crunch cancel_signal
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps)
 
 crunch cte_wp_at[wp]: reply_remove_tcb "cte_wp_at P p"
@@ -2499,7 +2500,8 @@ lemma cancel_all_signals_unlive[wp]:
 crunch cte_wp_at[wp]: cancel_all_ipc "cte_wp_at P p"
   (wp: crunch_wps mapM_x_wp)
 
-crunch cte_wp_at[wp]: cancel_all_signals "cte_wp_at P p"
+crunch cancel_all_signals
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps mapM_x_wp thread_set_cte_wp_at_trivial
    simp: tcb_cap_cases_def)
 

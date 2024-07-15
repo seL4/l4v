@@ -1032,9 +1032,11 @@ lemma trans_state_back[simp]:
 
 declare wrap_ext_op_det_ext_ext_def[simp]
 
-crunch integrity[wp]: set_thread_state_ext "integrity aag X st"
+crunch set_thread_state_ext
+  for integrity[wp]: "integrity aag X st"
 
-crunch integrity_autarch: set_thread_state "integrity aag X st"
+crunch set_thread_state
+  for integrity_autarch: "integrity aag X st"
 
 lemmas integrity_def = integrity_subjects_def
 

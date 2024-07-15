@@ -642,7 +642,7 @@ lemma device_update_invs':
    by (clarsimp simp: invs'_def valid_irq_states'_def valid_machine_state'_def
                       valid_dom_schedule'_def)
 
-crunches doMachineOp
+crunch doMachineOp
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 
 lemma doUserOp_invs':
@@ -1223,7 +1223,8 @@ lemma domain_list_rel_eq:
   "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomSchedule c) = P (domain_list a)"
   by (clarsimp simp: state_relation_def)
 
-crunch valid_objs': doUserOp, checkActiveIRQ valid_objs'
+crunch doUserOp, checkActiveIRQ
+  for valid_objs': valid_objs'
   (wp: crunch_wps)
 
 lemma ckernel_invariant:

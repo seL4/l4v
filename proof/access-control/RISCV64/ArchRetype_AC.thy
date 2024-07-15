@@ -189,7 +189,7 @@ lemma aobj_refs'_default'[Retype_AC_assms]:
    \<Longrightarrow> aobj_ref' (arch_default_cap tp oref sz dev) \<subseteq> ptr_range oref (obj_bits_api (ArchObject tp) sz)"
   by (cases tp; simp add: arch_default_cap_def ptr_range_memI obj_bits_api_def default_arch_object_def)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for inv[wp]: P
 
 lemma region_in_kernel_window_preserved:
@@ -227,7 +227,8 @@ lemma freeMemory_valid_irq_states:
   unfolding freeMemory_def
   by (wp mapM_x_wp[OF _ subset_refl] storeWord_valid_irq_states)
 
-crunch pspace_respects_device_region[wp]: freeMemory "\<lambda>ms. P (device_state ms)"
+crunch freeMemory
+  for pspace_respects_device_region[wp]: "\<lambda>ms. P (device_state ms)"
   (wp: crunch_wps)
 
 lemma dmo_freeMemory_invs[Retype_AC_assms]:
@@ -244,7 +245,8 @@ lemma dmo_freeMemory_invs[Retype_AC_assms]:
   apply auto
   done
 
-crunch global_refs[wp]: delete_objects "\<lambda>s. P (global_refs s)"
+crunch delete_objects
+  for global_refs[wp]: "\<lambda>s. P (global_refs s)"
   (ignore: do_machine_op freeMemory)
 
 lemma init_arch_objects_pas_cur_domain[Retype_AC_assms, wp]:

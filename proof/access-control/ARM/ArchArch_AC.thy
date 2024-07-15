@@ -84,21 +84,26 @@ lemma integrity_arm_next_asid[iff]:
    integrity aag X st s"
   unfolding integrity_def by simp
 
-crunch respects[wp]: arm_context_switch "integrity X aag st"
+crunch arm_context_switch
+  for respects[wp]: "integrity X aag st"
   (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateLocalTLB_ASID_def
          setHardwareASID_def set_current_pd_def ignore: do_machine_op)
 
-crunch respects[wp]: set_vm_root "integrity X aag st"
+crunch set_vm_root
+  for respects[wp]: "integrity X aag st"
   (simp: set_current_pd_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
      wp: crunch_wps ignore: do_machine_op)
 
-crunch respects[wp]: set_vm_root_for_flush "integrity X aag st"
+crunch set_vm_root_for_flush
+  for respects[wp]: "integrity X aag st"
   (wp: crunch_wps simp: set_current_pd_def crunch_simps ignore: do_machine_op)
 
-crunch respects[wp]: flush_table "integrity X aag st"
+crunch flush_table
+  for respects[wp]: "integrity X aag st"
   (wp: crunch_wps simp: invalidateLocalTLB_ASID_def crunch_simps ignore: do_machine_op)
 
-crunch respects[wp]: page_table_mapped "integrity X aag st"
+crunch page_table_mapped
+  for respects[wp]: "integrity X aag st"
 
 lemma kheap_eq_state_vrefsD:
   "kheap s p = Some ko \<Longrightarrow> state_vrefs s p = vs_refs_no_global_pts ko"
@@ -193,7 +198,8 @@ lemma perform_page_table_invocation_respects:
   apply (auto simp: valid_pti_def valid_cap_simps)
   done
 
-crunch arm_asid_table_inv [wp]: unmap_page_table "\<lambda>s. P (arm_asid_table (arch_state s))"
+crunch unmap_page_table
+  for arm_asid_table_inv[wp]: "\<lambda>s. P (arm_asid_table (arch_state s))"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma clas_update_map_data_strg:
@@ -207,7 +213,8 @@ lemmas pte_ref_simps = pte_ref_def[split_simps pte.split]
 lemmas store_pde_pas_refined_simple =
   store_pde_pas_refined[where pde=InvalidPDE, simplified pde_ref_simps, simplified]
 
-crunch pas_refined[wp]: unmap_page_table "pas_refined aag"
+crunch unmap_page_table
+  for pas_refined[wp]: "pas_refined aag"
   (wp: crunch_wps store_pde_pas_refined_simple simp: crunch_simps pde_ref_simps)
 
 lemma pde_ref_pde_ref2:
@@ -222,7 +229,8 @@ lemma mask_PTCap_eq:
           split: arch_cap.splits cap.splits bool.splits)
 
 (* FIXME MOVE *)
-crunch cdt[wp]: unmap_page_table "\<lambda>s. P (cdt s)"
+crunch unmap_page_table
+  for cdt[wp]: "\<lambda>s. P (cdt s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma is_transferable_is_arch_update:
@@ -293,7 +301,8 @@ definition authorised_page_inv :: "'a PAS \<Rightarrow> page_invocation \<Righta
    | PageFlush typ start end pstart pd asid \<Rightarrow> True
    | PageGetAddr ptr \<Rightarrow> True"
 
-crunch respects[wp]: lookup_pt_slot "integrity X aag st"
+crunch lookup_pt_slot
+  for respects[wp]: "integrity X aag st"
 
 lemma vs_refs_no_global_pts_pdI:
   "\<lbrakk> pd (ucast r) = PageTablePDE x a b; (ucast r :: 12 word) < ucast (kernel_base >> 20) \<rbrakk>
@@ -380,7 +389,8 @@ lemma lookup_pt_slot_authorised3:
   apply (simp add: p_0x3C_shift)
   done
 
-crunch respects[wp]: flush_page "integrity aag X st"
+crunch flush_page
+  for respects[wp]: "integrity aag X st"
   (simp: invalidateLocalTLB_VAASID_def ignore: do_machine_op)
 
 lemma find_pd_for_asid_pd_owned[wp]:
@@ -394,7 +404,8 @@ lemma find_pd_for_asid_pd_owned[wp]:
 lemmas store_pte_pas_refined_simple =
   store_pte_pas_refined[where pte=InvalidPTE, simplified pte_ref_simps, simplified]
 
-crunch pas_refined[wp]: unmap_page "pas_refined aag"
+crunch unmap_page
+  for pas_refined[wp]: "pas_refined aag"
   (wp: crunch_wps store_pde_pas_refined_simple store_pte_pas_refined_simple simp: crunch_simps)
 
 lemma unmap_page_respects:
@@ -479,7 +490,8 @@ proof -
 qed
 
 (* FIXME MOVE *)
-crunch cdt[wp]: unmap_page "\<lambda>s. P (cdt s)"
+crunch unmap_page
+  for cdt[wp]: "\<lambda>s. P (cdt s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma perform_page_invocation_pas_refined [wp]:
@@ -746,10 +758,12 @@ definition authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Righta
    | InvokeASIDControl aci \<Rightarrow> authorised_asid_control_inv aag aci
    | InvokeASIDPool api \<Rightarrow> authorised_asid_pool_inv aag api"
 
-crunch respects [wp]: perform_page_directory_invocation "integrity aag X st"
+crunch perform_page_directory_invocation
+  for respects[wp]: "integrity aag X st"
   (ignore: do_machine_op)
 
-crunch pas_refined [wp]: perform_page_directory_invocation "pas_refined aag"
+crunch perform_page_directory_invocation
+  for pas_refined[wp]: "pas_refined aag"
 
 lemma invoke_arch_respects:
   "\<lbrace>integrity aag X st and authorised_arch_inv aag ai and
@@ -921,10 +935,12 @@ lemma decode_arch_invocation_authorised:
     done
   done
 
-crunch pas_refined[wp]: invalidate_asid_entry "pas_refined aag"
+crunch invalidate_asid_entry
+  for pas_refined[wp]: "pas_refined aag"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch pas_refined[wp]: flush_space "pas_refined aag"
+crunch flush_space
+  for pas_refined[wp]: "pas_refined aag"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma delete_asid_pas_refined[wp]:
@@ -954,9 +970,11 @@ lemma delete_asid_pool_pas_refined [wp]:
       apply (wp mapM_wp' | simp)+
   done
 
-crunch respects[wp]: invalidate_asid_entry "integrity aag X st"
+crunch invalidate_asid_entry
+  for respects[wp]: "integrity aag X st"
 
-crunch respects[wp]: flush_space "integrity aag X st"
+crunch flush_space
+  for respects[wp]: "integrity aag X st"
   (ignore: do_machine_op
    simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def
          do_machine_op_bind empty_fail_cond)

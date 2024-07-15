@@ -31,13 +31,16 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
 
 context Arch begin global_naming RISCV64
 
-crunch valid_list[wp,Deterministic_AI_assms]: arch_invoke_irq_handler valid_list
+crunch arch_invoke_irq_handler
+  for valid_list[wp,Deterministic_AI_assms]: valid_list
 
-crunch valid_list[wp]: invoke_untyped valid_list
+crunch invoke_untyped
+  for valid_list[wp]: valid_list
   (wp: crunch_wps preemption_point_inv' unless_wp mapME_x_wp'
    simp: mapM_x_def_bak crunch_simps)
 
-crunch valid_list[wp]: invoke_irq_control valid_list
+crunch invoke_irq_control
+  for valid_list[wp]: valid_list
 
 lemma perform_page_table_invocation_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> perform_page_table_invocation a \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -65,7 +68,8 @@ lemma send_signal_valid_list[wp]: "\<lbrace>valid_list\<rbrace> send_signal para
 crunch valid_list[wp]: arch_perform_invocation, perform_invocation valid_list
   (wp: crunch_wps)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_invocation valid_list
+crunch handle_invocation
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps syscall_valid simp: crunch_simps
    ignore: without_preemption syscall)
 

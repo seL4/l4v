@@ -177,7 +177,7 @@ lemma whenE_rangeCheck_eq:
 
 lemmas irq_const_defs = maxIRQ_def minIRQ_def
 
-crunches arch_check_irq, checkIRQ
+crunch arch_check_irq, checkIRQ
   for inv: "P"
   (simp: crunch_simps)
 
@@ -285,7 +285,8 @@ lemma decodeIRQControlInvocation_corres:
                 simp: not_less unat_le_helper)
   done
 
-crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
+crunch "InterruptDecls_H.decodeIRQControlInvocation"
+  for inv[wp]: "P"
   (simp: crunch_simps wp: crunch_wps)
 
 (* Levity: added (20090201 10:50:27) *)
@@ -468,7 +469,8 @@ lemma IRQHandler_valid':
   "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
-crunch valid_mdb'[wp]: setIRQState "valid_mdb'"
+crunch setIRQState
+  for valid_mdb'[wp]: "valid_mdb'"
 
 method do_machine_op_corres
   = (rule corres_machine_op, rule corres_Id, rule refl, simp, wp)

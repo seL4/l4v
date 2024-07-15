@@ -184,7 +184,8 @@ lemma tcb_cap_valid_pspaceI[intro]:
   by (clarsimp simp: tcb_cap_valid_def obj_at_def pred_tcb_at_def)
 
 
-crunch valid_objs[wp]: deleted_irq_handler "valid_objs"
+crunch deleted_irq_handler
+  for valid_objs[wp]: "valid_objs"
 
 
 lemma tcb_cp_valid_trans_state_update[simp]: "tcb_cap_valid cap sl
@@ -192,7 +193,7 @@ lemma tcb_cp_valid_trans_state_update[simp]: "tcb_cap_valid cap sl
   apply (simp add: tcb_cap_valid_def)
   done
 
-crunches post_cap_deletion
+crunch post_cap_deletion
   for valid_objs[wp]: "valid_objs"
 
 lemma empty_slot_valid_objs[wp]:
@@ -346,7 +347,7 @@ lemma post_cap_deletion_invs:
 
 lemmas (in Finalise_AI_1) obj_ref_ofI' = obj_ref_ofI[OF obj_ref_elemD]
 
-crunches post_cap_deletion
+crunch post_cap_deletion
   for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma empty_slot_deletes[wp]:
@@ -356,7 +357,8 @@ lemma empty_slot_deletes[wp]:
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
-crunch caps_of_state[wp]: post_cap_deletion "\<lambda>s. P (caps_of_state s)"
+crunch post_cap_deletion
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
 
 lemma empty_slot_final_cap_at:
   "\<lbrace>(\<lambda>s. cte_wp_at (\<lambda>c. is_final_cap' c s) p s) and K (p \<noteq> p')\<rbrace>
@@ -916,7 +918,8 @@ lemmas st_tcb_at_def2 = pred_tcb_at_def2[where proj=itcb_state,simplified]
 
 lemmas tcb_cap_valid_imp = mp [OF mp [OF tcb_cap_valid_imp'], rotated]
 
-crunch irq_node[wp]: cancel_all_ipc "\<lambda>s. P (interrupt_irq_node s)"
+crunch cancel_all_ipc
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma sched_context_unbind_tcb_irq_node[wp]:

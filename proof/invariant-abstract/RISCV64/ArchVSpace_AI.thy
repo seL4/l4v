@@ -25,7 +25,8 @@ lemma find_vspace_for_asid_wp[wp]:
   unfolding find_vspace_for_asid_def
   by wpsimp
 
-crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
+crunch perform_page_invocation
+  for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma asid_word_bits [simp]: "asid_bits < word_bits"
@@ -52,11 +53,12 @@ lemma dmo_pt_at_asid[wp]:
   "do_machine_op f \<lbrace>vspace_at_asid a pt\<rbrace>"
   by (wpsimp simp: do_machine_op_def vspace_at_asid_def)
 
-crunch valid_vs_lookup[wp]: do_machine_op "valid_vs_lookup"
+crunch do_machine_op
+  for valid_vs_lookup[wp]: "valid_vs_lookup"
 
 lemmas ackInterrupt_irq_masks = no_irq[OF no_irq_ackInterrupt]
 
-crunches sfence, hwASIDFlush, setVSpaceRoot
+crunch sfence, hwASIDFlush, setVSpaceRoot
   for underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
 
 
@@ -203,7 +205,7 @@ definition
        and (\<lambda>s. \<forall>asid vref. vs_cap_ref_arch acap = Some (asid, vref) \<longrightarrow>
                             vspace_for_asid asid s \<noteq> aobj_ref acap)"
 
-crunches unmap_page
+crunch unmap_page
   for aligned [wp]: pspace_aligned
   and "distinct" [wp]: pspace_distinct
   and valid_objs[wp]: valid_objs
@@ -228,7 +230,7 @@ next
   from \<open>0 < level\<close>  show ?case by (subst pt_lookup_from_level_simps) (wpsimp wp: IH)
 qed
 
-crunches unmap_page_table
+crunch unmap_page_table
   for aligned[wp]: pspace_aligned
   and valid_objs[wp]: valid_objs
   and "distinct"[wp]: pspace_distinct
@@ -245,7 +247,8 @@ definition
       and K (0 < asid)
       and (\<lambda>s. pool_for_asid asid s = Some p)"
 
-crunch device_state_inv[wp]: ackInterrupt "\<lambda>ms. P (device_state ms)"
+crunch ackInterrupt
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemmas setIRQTrigger_irq_masks = no_irq[OF no_irq_setIRQTrigger]
 
@@ -359,7 +362,7 @@ lemma mdb_cte_at_store_pte[wp]:
   apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_all_lift simp: store_pte_def set_pt_def)
   done
 
-crunches store_pte
+crunch store_pte
   for global_refs[wp]: "\<lambda>s. P (global_refs s)"
 
 (* FIXME: move *)
@@ -922,16 +925,17 @@ lemma is_final_cap_caps_of_state_2D:
                         prod_eqI)
   done
 
-crunch underlying_memory[wp]: ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
-  "\<lambda>m'. underlying_memory m' p = um"
+crunch ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
+  for underlying_memory[wp]: "\<lambda>m'. underlying_memory m' p = um"
   (simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def)
 
-crunches storeWord, ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
+crunch storeWord, ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and machine_times[wp]: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
   (simp: crunch_simps storeWord_def)
 
-crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
+crunch perform_page_invocation
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region
          pspace_respects_device_region_dmo)
 
@@ -1026,7 +1030,7 @@ lemma mapM_x_typ_at[wp]:
   "mapM_x (swp store_pte InvalidPTE) slots \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   by (wpsimp wp: mapM_x_wp')
 
-crunches unmap_page_table
+crunch unmap_page_table
   for global_refs[wp]: "\<lambda>s. P (global_refs s)"
   and vspace_for_asid[wp]: "\<lambda>s. P (vspace_for_asid asid s)"
   and valid_cap[wp]: "valid_cap cap"
@@ -1164,10 +1168,12 @@ lemma perform_page_table_invocation_invs[wp]:
   "\<lbrace>invs and valid_pti pti\<rbrace> perform_page_table_invocation pti \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding perform_page_table_invocation_def by (cases pti; wpsimp)
 
-crunch cte_wp_at [wp]: unmap_page "\<lambda>s. P (cte_wp_at P' p s)"
+crunch unmap_page
+  for cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch typ_at [wp]: unmap_page "\<lambda>s. P (typ_at T p s)"
+crunch unmap_page
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas unmap_page_typ_ats [wp] = abs_typ_at_lifts [OF unmap_page_typ_at]

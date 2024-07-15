@@ -59,7 +59,7 @@ lemma arch_invoke_irq_handler_respects[Interrupt_AC_assms]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_wp mol_respects simp: maskInterrupt_def plic_complete_claim_def)
 
-crunches arch_check_irq for inv[Interrupt_AC_assms, wp]: P
+crunch arch_check_irq for inv[Interrupt_AC_assms, wp]: P
 
 end
 

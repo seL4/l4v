@@ -89,10 +89,12 @@ lemma set_object_valid_pdpt[wp]:
   apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
   done
 
-crunch valid_pdpt_objs[wp]: cap_insert, cap_swap_for_delete,empty_slot "valid_pdpt_objs"
+crunch cap_insert, cap_swap_for_delete,empty_slot
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps ignore:set_object)
 
-crunch valid_pdpt_objs[wp]: flush_page "valid_pdpt_objs"
+crunch flush_page
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma shift_0x3C_set:
@@ -374,10 +376,12 @@ lemma unmap_page_valid_pdpt[wp]:
   apply assumption
   done
 
-crunch valid_pdpt_objs[wp]: flush_table "valid_pdpt_objs"
+crunch flush_table
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch kheap[wp]: flush_table "\<lambda>s. P (kheap s)"
+crunch flush_table
+  for kheap[wp]: "\<lambda>s. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma unmap_page_table_valid_pdpt_objs[wp]:
@@ -480,11 +484,12 @@ lemmas cap_revoke_preservation_valid_pdpt_objs = cap_revoke_preservation[OF _,
 lemmas rec_del_preservation_valid_pdpt_objs = rec_del_preservation[OF _ _ _ _,
                                                     where P=valid_pdpt_objs, simplified]
 
-crunch valid_pdpt_objs[wp]: cap_delete, cap_revoke "valid_pdpt_objs"
+crunch cap_delete, cap_revoke
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (rule: rec_del_preservation_valid_pdpt_objs cap_revoke_preservation_valid_pdpt_objs)
 
-crunch valid_pdpt_objs[wp]: invalidate_tlb_by_asid, page_table_mapped
-   "valid_pdpt_objs"
+crunch invalidate_tlb_by_asid, page_table_mapped
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
 
 lemma mapM_x_copy_pde_updates:
   "\<lbrakk> \<forall>x \<in> set xs. f x && ~~ mask pd_bits = 0; is_aligned p pd_bits;
@@ -669,7 +674,8 @@ lemma non_invalid_in_pte_range:
 crunch valid_pdpt_objs[wp]: cancel_badged_sends "valid_pdpt_objs"
   (simp: crunch_simps filterM_mapM wp: crunch_wps ignore: filterM set_thread_state)
 
-crunch valid_pdpt_objs[wp]: cap_move, cap_insert "valid_pdpt_objs"
+crunch cap_move, cap_insert
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
 
 lemma invoke_cnode_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs and invs and valid_cnode_inv i\<rbrace> invoke_cnode i \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -722,7 +728,8 @@ lemma detype_valid_pdpt[elim!]:
   "valid_pdpt_objs s \<Longrightarrow> valid_pdpt_objs (detype S s)"
   by (auto simp add: detype_def ran_def)
 
-crunch valid_pdpt_objs[wp]: create_cap "valid_pdpt_objs"
+crunch create_cap
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (ignore: clearMemory simp: crunch_simps unless_def)
 
 lemma init_arch_objects_valid_pdpt:
@@ -755,7 +762,8 @@ lemma delete_objects_valid_pdpt:
   "\<lbrace>valid_pdpt_objs\<rbrace> delete_objects ptr bits \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   by (rule delete_objects_reduct) (wp detype_valid_pdpt)
 
-crunch valid_pdpt[wp]: reset_untyped_cap "valid_pdpt_objs"
+crunch reset_untyped_cap
+  for valid_pdpt[wp]: "valid_pdpt_objs"
   (wp: mapME_x_inv_wp crunch_wps simp: crunch_simps unless_def)
 
 lemma invoke_untyped_valid_pdpt[wp]:
@@ -1069,7 +1077,8 @@ lemma set_cap_page_inv_entries_safe:
     Let_def split:if_splits option.splits)
   done
 
-crunch inv[wp]: pte_check_if_mapped, pde_check_if_mapped "\<lambda>s. P s"
+crunch pte_check_if_mapped, pde_check_if_mapped
+  for inv[wp]: "\<lambda>s. P s"
 
 lemma perform_page_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and valid_page_inv pinv and page_inv_duplicates_valid pinv\<rbrace>

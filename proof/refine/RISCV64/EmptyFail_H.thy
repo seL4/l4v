@@ -61,7 +61,8 @@ lemma capFaultOnFailure_empty_fail [intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (capFaultOnFailure cptr rp m)"
   by (simp add: capFaultOnFailure_def)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: locateSlotCap
+crunch locateSlotCap
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma resolveAddressBits_spec_empty_fail:
   notes spec_empty_fail_bindE'[wp_split]
@@ -104,7 +105,8 @@ lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   apply (simp add: RISCV64_H.deriveCap_def)
   by (auto simp: isCap_simps)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: ensureNoChildren
+crunch ensureNoChildren
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
@@ -114,7 +116,8 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
       apply (simp_all add: isCap_simps)
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: setExtraBadge, cteInsert
+crunch setExtraBadge, cteInsert
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
   "empty_fail (transferCapsToSlots ep buffer n caps slots mi)"
@@ -125,7 +128,8 @@ lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
   apply (simp | wp | wpc | safe)+
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: lookupTargetSlot, ensureEmptySlot, lookupSourceSlot, lookupPivotSlot
+crunch lookupTargetSlot, ensureEmptySlot, lookupSourceSlot, lookupPivotSlot
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma decodeCNodeInvocation_empty_fail[intro!, wp, simp]:
   "empty_fail (decodeCNodeInvocation label args cap exs)"
@@ -159,7 +163,8 @@ lemma empty_fail_arch_cap_exhausted:
     \<Longrightarrow> empty_fail undefined"
   by (cases cap; simp add: isCap_simps)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: decodeRISCVMMUInvocation
+crunch decodeRISCVMMUInvocation
+  for (empty_fail) empty_fail[intro!, wp, simp]
   (simp: Let_def pteAtIndex_def wp: empty_fail_catch empty_fail_arch_cap_exhausted)
 
 lemma ignoreFailure_empty_fail[intro!, wp, simp]:
@@ -182,7 +187,8 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]:
   (simp: Let_def wp: empty_fail_whileLoop)
 end
 
-crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
+crunch "ThreadDecls_H.suspend"
+  for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
   (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
@@ -193,9 +199,11 @@ lemma empty_fail_lookupPTFromLevel[intro!, wp, simp]:
   "empty_fail (lookupPTFromLevel level ptPtr vPtr target)"
   by (induct level arbitrary: ptPtr; subst lookupPTFromLevel.simps; simp; wpsimp)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: setBoundNotification
+crunch setBoundNotification
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
+crunch finaliseCap, preemptionPoint, capSwapForDelete
+  for (empty_fail) empty_fail[intro!, wp, simp]
 (wp: empty_fail_catch simp:  Let_def ignore: lookupPTFromLevel)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
@@ -237,7 +245,8 @@ lemma assertDerived_empty_fail[intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (assertDerived src cap f)"
   by (fastforce simp: assertDerived_def)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cteDelete
+crunch cteDelete
+  for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma spec_empty_fail_unlessE':
   "\<lbrakk> \<not> P \<Longrightarrow> spec_empty_fail f s \<rbrakk> \<Longrightarrow> spec_empty_fail (unlessE P f) s"
@@ -288,7 +297,8 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc | intro conjI impI)+
   done
 
-crunch (empty_fail) empty_fail[wp, simp]: setMRs, setMessageInfo
+crunch setMRs, setMessageInfo
+  for (empty_fail) empty_fail[wp, simp]
 (wp: empty_fail_catch simp: const_def Let_def)
 
 lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:

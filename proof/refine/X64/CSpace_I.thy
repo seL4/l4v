@@ -91,7 +91,8 @@ lemma rab_inv' [wp]:
 
 lemmas rab_inv'' [wp] = rab_inv' [folded resolveAddressBits_decl_def]
 
-crunch inv [wp]: lookupCap P
+crunch lookupCap
+  for inv[wp]: P
 
 lemma updateObject_cte_inv:
   "\<lbrace>P\<rbrace> updateObject (cte :: cte) ko x y n \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -2103,13 +2104,16 @@ lemma setCTE_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setCTE p c \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   by (simp add: setCTE_def) wp
 
-crunch pspace_canonical'[wp]: setCTE "pspace_canonical'"
+crunch setCTE
+  for pspace_canonical'[wp]: "pspace_canonical'"
 
-crunch pspace_in_kernel_mappings'[wp]: setCTE "pspace_in_kernel_mappings'"
+crunch setCTE
+  for pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
 declare mresults_fail[simp]
 
-crunch idle[wp]: get_object "valid_idle"
+crunch get_object
+  for idle[wp]: "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
 end

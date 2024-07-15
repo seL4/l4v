@@ -29,7 +29,8 @@ crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitis
 (*        make_fault_message_inv[Syscall_AI_assms] *)
 
 
-crunch typ_at[wp, Syscall_AI_assms]: invoke_irq_control "\<lambda>s. P (typ_at T p s)"
+crunch invoke_irq_control
+  for typ_at[wp, Syscall_AI_assms]: "\<lambda>s. P (typ_at T p s)"
 
 lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"

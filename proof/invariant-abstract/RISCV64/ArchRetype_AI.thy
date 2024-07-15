@@ -54,7 +54,7 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
    apply (simp add:retype_addrs_def)
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for pspace_aligned[wp]:  "pspace_aligned"
   and pspace_distinct[wp]: "pspace_distinct"
   and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
@@ -63,7 +63,8 @@ crunches init_arch_objects
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps)
 
-crunch mdb_inv[wp]: store_pte "\<lambda>s. P (cdt s)"
+crunch store_pte
+  for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (ignore: clearMemory wp: crunch_wps)
 
 lemma valid_vspace_objs_pte:
@@ -88,61 +89,78 @@ lemma get_pte_wellformed[wp]:
   apply (fastforce simp: valid_objs_def dom_def valid_obj_def ptes_of_def in_opt_map_eq)
   done
 
-crunch valid_objs[wp]: init_arch_objects "valid_objs"
+crunch init_arch_objects
+  for valid_objs[wp]: "valid_objs"
   (ignore: clearMemory wp: crunch_wps)
 
-crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
+crunch init_arch_objects
+  for valid_arch_state[wp]: "valid_arch_state"
   (ignore: clearMemory set_object wp: crunch_wps)
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
 
 lemmas init_arch_objects_cap_table[wp] = cap_table_at_typ_at [OF init_arch_objects_typ_at]
 
-crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
+crunch clearMemory
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp ignore_del: clearMemory)
 
-crunch pspace_respects_device_region[wp]: reserve_region pspace_respects_device_region
-crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_device_region
+crunch reserve_region
+  for pspace_respects_device_region[wp]: pspace_respects_device_region
+crunch reserve_region
+  for cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
 
-crunch invs [wp]: reserve_region "invs"
+crunch reserve_region
+  for invs[wp]: "invs"
 
-crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"
+crunch copy_global_mappings
+  for iflive[wp]: "if_live_then_nonz_cap"
   (wp: crunch_wps)
 
-crunch zombies[wp]: copy_global_mappings "zombies_final"
+crunch copy_global_mappings
+  for zombies[wp]: "zombies_final"
   (wp: crunch_wps)
 
-crunch state_refs_of[wp]: copy_global_mappings "\<lambda>s. P (state_refs_of s)"
+crunch copy_global_mappings
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps)
 
-crunch valid_idle[wp]: copy_global_mappings "valid_idle"
+crunch copy_global_mappings
+  for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps)
 
-crunch only_idle[wp]: copy_global_mappings "only_idle"
+crunch copy_global_mappings
+  for only_idle[wp]: "only_idle"
   (wp: crunch_wps)
 
-crunch ifunsafe[wp]: copy_global_mappings "if_unsafe_then_cap"
+crunch copy_global_mappings
+  for ifunsafe[wp]: "if_unsafe_then_cap"
   (wp: crunch_wps)
 
 crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
   (wp: crunch_wps)
 
-crunch irq_node[wp]: copy_global_mappings "\<lambda>s. P (interrupt_irq_node s)"
+crunch copy_global_mappings
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
-crunch irq_states[wp]: copy_global_mappings "\<lambda>s. P (interrupt_states s)"
+crunch copy_global_mappings
+  for irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
 crunch pspace_in_kernel_window[wp]: copy_global_mappings "pspace_in_kernel_window"
   (wp: crunch_wps)
 
-crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_window"
+crunch copy_global_mappings
+  for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
   (wp: crunch_wps)
 
-crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_device_region"
+crunch copy_global_mappings
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: crunch_wps)
 
-crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
+crunch copy_global_mappings
+  for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
   (wp: crunch_wps)
 
 lemma dmo_eq_kernel_restricted [wp, Retype_AI_assms]:
@@ -1018,7 +1036,8 @@ lemma invs_update_time_stamp_independent:
 crunch irq_masks_inv[wp]: storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps ignore_del: storeWord clearMemory)
 
-crunch underlying_mem_0[wp]: clearMemory "\<lambda>s. underlying_memory s p = 0"
+crunch clearMemory
+  for underlying_mem_0[wp]: "\<lambda>s. underlying_memory s p = 0"
   (wp: crunch_wps storeWord_um_eq_0 ignore_del: clearMemory)
 
 lemma clearMemory_invs:

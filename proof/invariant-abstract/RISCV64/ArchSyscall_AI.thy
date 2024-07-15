@@ -27,7 +27,8 @@ crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply, make_fault_msg,
 crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "valid_objs"
 crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cte_wp_at P' p s)"
 
-crunch typ_at[wp, Syscall_AI_assms]: invoke_irq_control "\<lambda>s. P (typ_at T p s)"
+crunch invoke_irq_control
+  for typ_at[wp, Syscall_AI_assms]: "\<lambda>s. P (typ_at T p s)"
 
 lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"
@@ -52,7 +53,8 @@ lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding handle_vm_fault_def by (cases flt; wpsimp)
 
-crunch inv[wp]: getRegister, read_stval "P"
+crunch getRegister, read_stval
+  for inv[wp]: "P"
   (ignore_del: getRegister)
 
 lemma hv_inv_ex [Syscall_AI_assms]:

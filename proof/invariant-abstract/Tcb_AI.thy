@@ -141,7 +141,8 @@ lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (wpsimp simp: tcb_at_typ wp: restart_typ_at)
 
-crunch ex_nonz_cap_to[wp]: update_restart_pc "ex_nonz_cap_to t"
+crunch update_restart_pc
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
 
 lemma suspend_nonz_cap_to_tcb[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to t s \<and> tcb_at t s \<and> valid_objs s\<rbrace>
@@ -819,8 +820,10 @@ lemma set_mcpriority_valid_objs[wp]:
   apply (simp add: Invariants_AI.invs_valid_objs)
   done
 
-crunch valid_cap[wp]: set_mcpriority "valid_cap c"
-crunch cte_at[wp]: set_mcpriority "cte_at c"
+crunch set_mcpriority
+  for valid_cap[wp]: "valid_cap c"
+crunch set_mcpriority
+  for cte_at[wp]: "cte_at c"
 
 lemma set_mcpriority_invs[wp]:
   "\<lbrace>invs and tcb_at t\<rbrace> set_mcpriority t x \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1464,7 +1467,8 @@ lemma derived_cap_cnode_valid:
   done
 
 
-crunch inv[wp]:  decode_unbind_notification P
+crunch  decode_unbind_notification
+  for inv[wp]: P
 (simp: whenE_def)
 
 lemma decode_bind_notification_inv[wp]:

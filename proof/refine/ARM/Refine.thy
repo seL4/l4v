@@ -631,7 +631,7 @@ lemma device_update_invs':
 
 lemmas ex_abs_def = ex_abs_underlying_def[where sr=state_relation and P=G,abs_def] for G
 
-crunches doMachineOp
+crunch doMachineOp
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 
 lemma doUserOp_invs':

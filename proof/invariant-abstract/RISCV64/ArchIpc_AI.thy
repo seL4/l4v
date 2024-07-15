@@ -356,7 +356,8 @@ lemma transfer_caps_non_null_cte_wp_at:
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
-crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
+crunch do_fault_transfer
+  for cte_wp_at[wp,Ipc_AI_assms]: "cte_wp_at P p"
 
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
@@ -452,13 +453,16 @@ crunches make_arch_fault_msg
   and reply_tcb_reply_at[wp, Ipc_AI_assms]: "reply_tcb_reply_at P p"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
 
-crunch vms[wp, Ipc_AI_assms]: make_arch_fault_msg valid_machine_state
+crunch make_arch_fault_msg
+  for vms[wp, Ipc_AI_assms]: valid_machine_state
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
-crunch valid_irq_states[wp, Ipc_AI_assms]: make_arch_fault_msg "valid_irq_states"
+crunch make_arch_fault_msg
+  for valid_irq_states[wp, Ipc_AI_assms]: "valid_irq_states"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
-crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "cap_refs_respects_device_region"
+crunch make_arch_fault_msg
+  for cap_refs_respects_device_region[wp, Ipc_AI_assms]: "cap_refs_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 end
@@ -473,10 +477,12 @@ context Arch begin global_naming RISCV64
 
 named_theorems Ipc_AI_cont_assms
 
-crunch pspace_respects_device_region[wp]: make_fault_msg "pspace_respects_device_region"
+crunch make_fault_msg
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
-crunch pspace_respects_device_region[wp, Ipc_AI_cont_assms]: do_ipc_transfer "pspace_respects_device_region"
+crunch do_ipc_transfer
+  for pspace_respects_device_region[wp, Ipc_AI_cont_assms]: "pspace_respects_device_region"
   (wp: crunch_wps ignore: const_on_failure simp: crunch_simps)
 
 lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
@@ -491,7 +497,8 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
                       simp: obj_at_def is_tcb_def)+
   done
 
-crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
+crunch do_ipc_transfer
+  for state_hyp_refs_of[wp, Ipc_AI_cont_assms]: "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 lemma arch_derive_cap_untyped:

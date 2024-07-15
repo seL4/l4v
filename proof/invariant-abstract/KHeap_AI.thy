@@ -772,7 +772,8 @@ lemma valid_mdb_lift:
   apply simp
   done
 
-crunch no_cdt[wp]: set_simple_ko "\<lambda>s. P (cdt s)"
+crunch set_simple_ko
+  for no_cdt[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
 
 
@@ -1093,7 +1094,8 @@ lemma set_simple_ko_ex_cap[wp]:
   by (wp ex_nonz_cap_to_pres)
 
 
-crunch it[wp]: set_simple_ko "\<lambda>s. P (idle_thread s)"
+crunch set_simple_ko
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_simple_ko_idle[wp]:
@@ -1132,7 +1134,8 @@ lemma ep_redux_simps:
 lemma update_ep_queue_triv[simp]: "ep \<noteq> IdleEP \<Longrightarrow> update_ep_queue ep (ep_queue ep) = ep"
   by (cases ep; clarsimp simp: ep_queue_def)
 
-crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
+crunch set_simple_ko
+  for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunches set_simple_ko
@@ -1148,7 +1151,8 @@ lemma obj_at_ko_atE:
   "\<lbrakk> obj_at P ptr s; ko_at k ptr s; P k \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (clarsimp simp: obj_at_def)
 
-crunch interrupt_states[wp]: set_simple_ko "\<lambda>s. P (interrupt_states s)"
+crunch set_simple_ko
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
 lemma set_object_non_pagetable:
@@ -1177,7 +1181,7 @@ lemma do_machine_op_result[wp]:
   unfolding do_machine_op_def
   by wpsimp (erule(2) use_valid)
 
-crunches do_machine_op
+crunch do_machine_op
   for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
   and cur_tcb[wp]: cur_tcb
   and zombies[wp]: zombies_final
@@ -2019,7 +2023,8 @@ lemma thread_get_wp':
   done
 
 
-crunch inv[wp]: get_irq_slot "P"
+crunch get_irq_slot
+  for inv[wp]: "P"
 
 text \<open>some invariants on sched_context\<close>
 

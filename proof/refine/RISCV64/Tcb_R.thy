@@ -339,7 +339,7 @@ crunches restart
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' tcbPtr"
   (wp: crunch_wps threadSet_cap_to simp: crunch_simps tcb_cte_cases_def cteSizeBits_def)
 
-crunches restart
+crunch restart
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   (simp: crunch_simps wp: crunch_wps threadSet_sched_pointers threadSet_valid_sched_pointers)
@@ -1097,7 +1097,7 @@ definition
 
 end
 
-crunches setPriority, setMCPriority
+crunch setPriority, setMCPriority
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
@@ -2991,7 +2991,8 @@ lemma decodeSetIPCBuffer_is_tc[wp]:
   apply (clarsimp simp: isThreadControlCaps_def)
   done
 
-crunch inv[wp]: decodeSetIPCBuffer "P"
+crunch decodeSetIPCBuffer
+  for inv[wp]: "P"
   (simp: crunch_simps)
 
 lemma slotCapLongRunningDelete_corres:

@@ -64,16 +64,16 @@ lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
              split: if_split_asm simp: vs_refs_no_global_pts_def)
   done
 
-crunches maskInterrupt
+crunch maskInterrupt
   for underlying_memory[CNode_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
   and device_state[CNode_AC_assms, wp]: "\<lambda>s. P (device_state s)"
   (simp: maskInterrupt_def)
 
-crunches set_cdt
+crunch set_cdt
   for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
 
-crunches prepare_thread_delete, arch_finalise_cap
+crunch prepare_thread_delete, arch_finalise_cap
   for cur_domain[CNode_AC_assms, wp]:"\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
@@ -144,12 +144,12 @@ lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
   "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
   unfolding integrity_asids_def by wpsimp
 
-crunches set_original
+crunch set_original
   for state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   and state_objs_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_objs_to_policy s)"
   (simp: state_objs_to_policy_def)
 
-crunches set_cdt_list, update_cdt_list
+crunch set_cdt_list, update_cdt_list
   for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
@@ -175,7 +175,7 @@ lemma aobj_ref'_same_aobject[CNode_AC_assms]:
   "same_aobject_as ao' ao \<Longrightarrow> aobj_ref' ao = aobj_ref' ao'"
   by (cases ao; clarsimp split: arch_cap.splits)
 
-crunches set_untyped_cap_as_full
+crunch set_untyped_cap_as_full
   for valid_arch_state[CNode_AC_assms]: valid_arch_state
 
 end
@@ -318,7 +318,8 @@ lemma pas_refined_arch_state_update_not_asids[simp]:
   \<Longrightarrow> pas_refined aag (arch_state_update f s) = pas_refined aag s"
   by (simp add: pas_refined_def state_objs_to_policy_def)
 
-crunch cdt[wp]: store_pte "\<lambda>s. P (cdt s)"
+crunch store_pte
+  for cdt[wp]: "\<lambda>s. P (cdt s)"
 
 lemma store_pte_state_refs[wp]:
   "store_pte p pte \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
@@ -381,7 +382,8 @@ lemma store_pte_ekheap[wp]:
   apply simp
   done
 
-crunch asid_table_inv [wp]: store_pte "\<lambda>s. P (asid_table s)"
+crunch store_pte
+  for asid_table_inv[wp]: "\<lambda>s. P (asid_table s)"
 
 lemma store_pte_pas_refined[wp]:
   "\<lbrace>pas_refined aag and
@@ -540,7 +542,8 @@ lemma pas_refined_clear_asid:
                elim!: state_asids_to_policy_aux.cases
                split: if_split_asm)
 
-crunch integrity_autarch: set_asid_pool "integrity aag X st"
+crunch set_asid_pool
+  for integrity_autarch: "integrity aag X st"
   (wp: crunch_wps)
 
 end

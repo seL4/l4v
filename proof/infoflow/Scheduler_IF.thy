@@ -333,7 +333,8 @@ lemma silc_dom_equiv_scheduler_action_update[simp]:
   "silc_dom_equiv aag st (s\<lparr>scheduler_action := x\<rparr>) = silc_dom_equiv aag st s"
   by (simp add: silc_dom_equiv_def equiv_for_def)
 
-crunch silc_dom_equiv[wp]: set_scheduler_action "silc_dom_equiv aag st"
+crunch set_scheduler_action
+  for silc_dom_equiv[wp]: "silc_dom_equiv aag st"
   (ignore_del: set_scheduler_action)
 
 lemma schedule_globals_frame_trans_state_upd[simp]:
@@ -627,10 +628,12 @@ lemma thread_get_reads_respects_scheduler[wp]:
   apply (wpsimp simp: scheduler_affects_equiv_def states_equiv_for_def equiv_for_def get_tcb_def)
   done
 
-crunch idle_thread[wp]: guarded_switch_to,schedule "\<lambda>(s :: det_state). P (idle_thread s)"
+crunch guarded_switch_to,schedule
+  for idle_thread[wp]: "\<lambda>(s :: det_state). P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch kheap[wp]: guarded_switch_to, schedule "\<lambda>s :: det_state. P (kheap s)"
+crunch guarded_switch_to, schedule
+  for kheap[wp]: "\<lambda>s :: det_state. P (kheap s)"
   (wp: dxo_wp_weak crunch_wps simp: crunch_simps)
 
 end
@@ -1180,7 +1183,7 @@ lemma gets_read_queue_reads_respects_scheduler[wp]:
      (\<lambda>s. pasDomainAbs aag d \<inter> reads_scheduler aag l \<noteq> {}) (gets (\<lambda>s. f (ready_queues s d)))"
   by (rule gets_read_queue_ev_from_weak_sae, simp)
 
-crunches guarded_switch_to, choose_thread
+crunch guarded_switch_to, choose_thread
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and domain_fields[wp]: "domain_fields P"
   (wp: crunch_wps simp: crunch_simps)
@@ -1642,7 +1645,8 @@ lemma reads_respects_scheduler_invisible_domain_switch:
    apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_state_def valid_idle_def invs_def)+
   done
 
-crunch globals_equiv_scheduler[wp]: schedule "(\<lambda>s:: det_state. globals_equiv_scheduler st s)"
+crunch schedule
+  for globals_equiv_scheduler[wp]: "(\<lambda>s:: det_state. globals_equiv_scheduler st s)"
   (    wp: guarded_switch_to_lift crunch_wps hoare_drop_imps
    wp_del: ethread_get_wp
    ignore: guarded_switch_to

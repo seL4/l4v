@@ -3088,7 +3088,7 @@ lemma sym_heap_sched_pointers_lift:
   shows "f \<lbrace>sym_heap_sched_pointers\<rbrace>"
   by (rule_tac f=tcbSchedPrevs_of in hoare_lift_Pf2; wpsimp wp: assms)
 
-crunches setNotification
+crunch setNotification
   for tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
   and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
   and valid_sched_pointers[wp]: valid_sched_pointers

@@ -246,8 +246,10 @@ lemma storePTE_state_refs_of[wp]:
          clarsimp simp: updateObject_default_def in_monad)
   done
 
-crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
-crunch inv[wp]: getIRQSlot "P"
+crunch setIRQState
+  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
+crunch getIRQSlot
+  for inv[wp]: "P"
 
 lemma setObject_ASIDPool_corres[corres]:
   "\<lbrakk> a = inv ASIDPool a' o ucast; p' = p \<rbrakk> \<Longrightarrow>
@@ -779,7 +781,8 @@ lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE.typ_at']
 
 lemmas setObject_asid_typ_ats' [wp] = typ_at_lifts [OF setObject_asidpool.typ_at']
 
-crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
+crunch copyGlobalMappings
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']

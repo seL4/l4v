@@ -211,7 +211,8 @@ lemma no_irq_machine_rest_lift:
   apply simp
   done
 
-crunch (no_irq) no_irq[wp, simp]: machine_op_lift
+crunch machine_op_lift
+  for (no_irq) no_irq[wp, simp]
 
 lemma no_irq:
   "no_irq f \<Longrightarrow> \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"

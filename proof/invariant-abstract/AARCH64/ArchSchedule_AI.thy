@@ -48,7 +48,7 @@ lemma idle_strg:
   by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
                      pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
 
-crunches
+crunch
   vcpu_update, vgic_update, vgic_update_lr, vcpu_restore_reg_range, vcpu_save_reg_range,
   vcpu_enable, vcpu_disable, vcpu_save, vcpu_restore, vcpu_switch, vcpu_save
   for it[wp]: "\<lambda>s. P (idle_thread s)"
@@ -63,7 +63,7 @@ lemma arch_stit_tcb_at[wp]:
   "arch_switch_to_idle_thread \<lbrace>tcb_at t\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def wp: tcb_at_typ_at)
 
-crunches set_vm_root
+crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps wp: hoare_drop_imps)

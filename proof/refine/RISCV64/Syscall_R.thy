@@ -691,7 +691,8 @@ lemma active_ex_cap'[elim]:
      \<Longrightarrow> ex_nonz_cap_to' (ksCurThread s) s"
   by (fastforce simp: ct_in_state'_def elim!: st_tcb_ex_cap'')
 
-crunch it[wp]: handleFaultReply "\<lambda>s. P (ksIdleThread s)"
+crunch handleFaultReply
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
   (wp: crunch_wps)
@@ -1208,7 +1209,8 @@ lemma st_tcb_at_idle_thread':
         \<Longrightarrow> P IdleThreadState"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
-crunch tcb_at'[wp]: replyFromKernel "tcb_at' t"
+crunch replyFromKernel
+  for tcb_at'[wp]: "tcb_at' t"
 
 (* FIXME: move *)
 lemma rct_sch_act_simple[simp]:
@@ -1229,7 +1231,7 @@ lemma lookupCapAndSlot_real_cte_at'[wp]:
 lemmas set_thread_state_active_valid_sched =
   set_thread_state_runnable_valid_sched[simplified runnable_eq_active]
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
 
@@ -2237,7 +2239,8 @@ lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vpt
    apply (wp | wpcw | simp)+
   done
 
-crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
+crunch handleVMFault
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma hv_inv_ex':
   "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"

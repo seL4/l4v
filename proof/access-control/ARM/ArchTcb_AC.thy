@@ -14,7 +14,7 @@ named_theorems Tcb_AC_assms
 
 declare arch_get_sanitise_register_info_inv[Tcb_AC_assms]
 
-crunches arch_post_modify_registers
+crunch arch_post_modify_registers
   for pas_refined[Tcb_AC_assms, wp]: "pas_refined aag"
 
 lemma arch_post_modify_registers_respects[Tcb_AC_assms]:

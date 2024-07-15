@@ -53,8 +53,9 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
   by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | wpc | intro conjI impI)+
 
-crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_alignment,
+crunch find_pd_for_asid, get_master_pde, check_vp_alignment,
                    create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
+  for (empty_fail) empty_fail[wp]
   (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits)
 
 lemma arch_decode_ARMASIDControlMakePool_empty_fail:
@@ -132,7 +133,8 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
+crunch setRegister, setNextPC
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
 end
 
@@ -143,8 +145,9 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   qed
 
 context Arch begin global_naming ARM
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
+crunch
   cap_delete, choose_thread
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
 (*
 global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit

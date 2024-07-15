@@ -386,8 +386,10 @@ lemma setObject_pde_replies_of'[wp]:
 crunches storePDE, storePTE
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
-crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
-crunch inv[wp]: getIRQSlot "P"
+crunch setIRQState
+  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
+crunch getIRQSlot
+  for inv[wp]: "P"
 
 lemma setObject_ASIDPool_corres [corres]:
   "p = p' \<Longrightarrow> a = inv ASIDPool a' o ucast \<Longrightarrow>

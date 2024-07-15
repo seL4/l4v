@@ -46,7 +46,7 @@ lemma state_vrefs_clear_asid_pool:
   apply (fastforce simp: vs_refs_aux_def graph_of_def opt_map_def split: if_splits)
   done
 
-crunches set_vm_root for pas_refined[wp]: "pas_refined aag"
+crunch set_vm_root for pas_refined[wp]: "pas_refined aag"
 
 lemma delete_asid_pool_pas_refined[wp]:
   "delete_asid_pool base ptr \<lbrace>pas_refined aag\<rbrace>"
@@ -104,9 +104,11 @@ lemma arch_finalise_cap_pas_refined[wp]:
   apply (auto simp: valid_arch_cap_def wellformed_mapdata_def)
   done
 
-crunch pas_refined[wp]: prepare_thread_delete "pas_refined aag"
+crunch prepare_thread_delete
+  for pas_refined[wp]: "pas_refined aag"
 
-crunch respects[Finalise_AC_assms, wp]: prepare_thread_delete "integrity aag X st"
+crunch prepare_thread_delete
+  for respects[Finalise_AC_assms, wp]: "integrity aag X st"
 
 lemma sbn_st_vrefs[Finalise_AC_assms]:
   "\<lbrace>(\<lambda>s. P (state_vrefs s)) and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
@@ -153,7 +155,7 @@ lemma delete_asid_pool_respects[wp]:
   unfolding delete_asid_pool_def
   by (wpsimp wp: mapM_wp[OF _ subset_refl]  simp: integrity_asid_table_entry_update' integrity_def)
 
-crunches set_vm_root
+crunch set_vm_root
   for integrity_obj[wp]: "integrity_obj_state aag activate subjects st"
   and cdt[wp]: "\<lambda>s. P (cdt s)"
   and is_original_cap[wp]: "\<lambda>s. P (is_original_cap s x)"
@@ -163,7 +165,7 @@ crunches set_vm_root
   and tcb_states_of_state[wp]: "\<lambda>s. P (tcb_states_of_state s)"
   (wp: dmo_wp)
 
-crunches set_asid_pool
+crunch set_asid_pool
   for is_original_cap[wp]: "\<lambda>s. P (is_original_cap s x)"
   and cdt_list[wp]: "\<lambda>s. P (cdt_list s x)"
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s x y)"
@@ -227,7 +229,7 @@ lemma arch_finalise_cap_respects[wp]:
              intro: pas_refined_Control_into_is_subject_asid)
   done
 
-crunches arch_post_cap_deletion
+crunch arch_post_cap_deletion
   for pspace_aligned[Finalise_AC_assms, wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[Finalise_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[Finalise_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_arch_state s"

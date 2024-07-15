@@ -71,16 +71,17 @@ lemma bcorres_select_ext[wp]:
 
 context Arch begin
 
-crunch (bcorres)bcorres[wp]: arch_post_cap_deletion truncate_state
+crunch arch_post_cap_deletion
+  for (bcorres) bcorres[wp]: truncate_state
 
 end
 
 requalify_facts
   Arch.arch_post_cap_deletion_bcorres
 
-crunch (bcorres) bcorres[wp]:
+crunch
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot
-  truncate_state
+  for (bcorres) bcorres[wp]: truncate_state
   (ignore: maskInterrupt)
 
 lemma get_cap_det:
@@ -200,7 +201,8 @@ lemma fast_finalise_bcorres[wp]:
   by (cases a; wpsimp)
 *)
 
-crunch (bcorres) bcorres[wp]: get_irq_slot truncate_state (simp: gets_def)
+crunch get_irq_slot
+  for (bcorres) bcorres[wp]: truncate_state (simp: gets_def)
 
 lemma throw_on_false_bcorres[wp]:
   "bcorres f f' \<Longrightarrow>  bcorres (throw_on_false e f) (throw_on_false e f')"
@@ -214,6 +216,7 @@ lemma preemption_point_bcorres[wp]:
             update_time_stamp_def
   by wpsimp
 
-crunch (bcorres) bcorres[wp]: cap_swap_for_delete truncate_state
+crunch cap_swap_for_delete
+  for (bcorres) bcorres[wp]: truncate_state
 
 end

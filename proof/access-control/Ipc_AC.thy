@@ -12,7 +12,8 @@ section\<open>Notifications\<close>
 
 subsection\<open>@{term "pas_refined"}\<close>
 
-crunch thread_bound_ntfns[wp]: do_machine_op "\<lambda>s. P (thread_bound_ntfns s)"
+crunch do_machine_op
+  for thread_bound_ntfns[wp]: "\<lambda>s. P (thread_bound_ntfns s)"
 
 lemma cancel_ipc_receive_blocked_caps_of_state:
   "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> st_tcb_at receive_blocked t s\<rbrace>
@@ -36,7 +37,8 @@ lemma send_signal_caps_of_state[wp]:
   apply (clarsimp simp: fun_upd_def[symmetric] st_tcb_def2)
   done
 
-crunch mdb[wp]: blocked_cancel_ipc, update_waiting_ntfn "\<lambda>s. P (cdt (s :: det_ext state))"
+crunch blocked_cancel_ipc, update_waiting_ntfn
+  for mdb[wp]: "\<lambda>s. P (cdt (s :: det_ext state))"
   (wp: crunch_wps unless_wp dxo_wp_weak simp: crunch_simps)
 
 lemma cancel_ipc_receive_blocked_mdb:
@@ -61,7 +63,7 @@ lemma send_signal_mdb[wp]:
   apply (clarsimp simp: st_tcb_def2)
   done
 
-crunches possible_switch_to
+crunch possible_switch_to
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
 
 lemma update_waiting_ntfn_pas_refined:
@@ -271,7 +273,8 @@ lemma integrity_receive_blocked_chain:
   apply simp
   done
 
-crunch integrity[wp]: possible_switch_to "integrity aag X st"
+crunch possible_switch_to
+  for integrity[wp]: "integrity aag X st"
   (ignore: tcb_sched_action)
 
 abbreviation
@@ -288,7 +291,8 @@ lemma set_scheduler_action_integrity_once_ts_upd:
   apply (simp add: get_tcb_def)
   done
 
-crunch integrity_once_ts_upd: set_thread_state_ext "integrity_once_ts_upd t ts aag X st"
+crunch set_thread_state_ext
+  for integrity_once_ts_upd: "integrity_once_ts_upd t ts aag X st"
 
 lemma set_thread_state_integrity_once_ts_upd:
   "set_thread_state t ts' \<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace>"
@@ -631,7 +635,8 @@ lemma get_receive_slots_authorised:
   apply (fastforce simp: is_cap_simps)
   done
 
-crunch pas_refined[wp]: set_extra_badge "pas_refined aag"
+crunch set_extra_badge
+  for pas_refined[wp]: "pas_refined aag"
 
 lemma remove_rights_clas[simp]:
   "cap_links_asid_slot aag p (remove_rights R cap) = cap_links_asid_slot aag p cap"
@@ -682,7 +687,7 @@ lemma auth_derived_refl[simp]:
   "auth_derived cap cap"
   by (simp add: auth_derived_def)
 
-crunches set_extra_badge
+crunch set_extra_badge
   for valid_arch_state[wp]: valid_arch_state
 
 context Ipc_AC_1 begin
@@ -905,10 +910,10 @@ lemma hoare_conjDR2:
 
 context Ipc_AC_1 begin
 
-crunches do_fault_transfer
+crunch do_fault_transfer
   for pas_refined[wp]: "\<lambda>s :: det_ext state. pas_refined aag s"
 
-crunches transfer_caps, copy_mrs
+crunch transfer_caps, copy_mrs
   for valid_arch_state[wp]: valid_arch_state
   (wp: crunch_wps)
 
@@ -1368,7 +1373,8 @@ lemma do_normal_transfer_send_integrity_autarch:
                  hoare_weak_lift_imp hoare_vcg_conj_lift hoare_vcg_ball_lift lec_valid_cap')
 
 
-crunch integrity_autarch: setup_caller_cap "integrity aag X st"
+crunch setup_caller_cap
+  for integrity_autarch: "integrity aag X st"
 
 lemma do_fault_transfer_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag receiver \<and> ipc_buffer_has_auth aag receiver recv_buf)\<rbrace>
@@ -1502,7 +1508,8 @@ abbreviation sender_can_call :: "sender_payload \<Rightarrow> bool" where
 
 context Ipc_AC_1 begin
 
-crunch pred_tcb: do_ipc_transfer "\<lambda>s :: det_ext state. pred_tcb_at proj P t s"
+crunch do_ipc_transfer
+  for pred_tcb: "\<lambda>s :: det_ext state. pred_tcb_at proj P t s"
   (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
 
 lemma receive_ipc_base_integrity:
@@ -1816,7 +1823,8 @@ lemma cap_insert_ext_integrity_in_ipc_reply:
   apply fastforce
   done
 
-crunch pas_refined[wp]: handle_fault_reply "pas_refined aag"
+crunch handle_fault_reply
+  for pas_refined[wp]: "pas_refined aag"
 
 lemma handle_fault_reply_respects:
   "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
@@ -2304,7 +2312,7 @@ lemma tcb_sched_action_respects_in_ipc_autarch:
   apply (fastforce simp: trans_state_def)
   done
 
-crunches possible_switch_to, set_thread_state
+crunch possible_switch_to, set_thread_state
   for respects_in_ipc_autarch: "integrity_tcb_in_ipc aag X receiver epptr ctxt st"
   (wp: tcb_sched_action_respects_in_ipc_autarch ignore: tcb_sched_action)
 
@@ -2520,7 +2528,7 @@ lemma tcb_st_to_auth_Restart_Inactive [simp]:
 
 context Ipc_AC_2 begin
 
-crunches handle_fault_reply
+crunch handle_fault_reply
   for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
@@ -2723,7 +2731,7 @@ lemma handle_fault_reply_respects_in_fault_reply:
   "handle_fault_reply f thread label mrs \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
   by (cases f; wpsimp wp: as_user_respects_in_fault_reply handle_arch_fault_reply_typ_at)
 
-crunches set_thread_state_ext
+crunch set_thread_state_ext
   for respects_in_fault_reply: "integrity_tcb_in_fault_reply aag X receiver ctxt st"
 
 lemma thread_set_no_fault_respects_in_fault_reply:
@@ -2774,7 +2782,7 @@ lemma emptyable_not_master:
 
 context Ipc_AC_2 begin
 
-crunches do_ipc_transfer
+crunch do_ipc_transfer
   for valid_list[wp]: valid_list
   (wp: crunch_wps simp: crunch_simps)
 

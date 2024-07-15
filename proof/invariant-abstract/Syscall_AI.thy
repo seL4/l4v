@@ -501,7 +501,8 @@ lemma do_reply_transfer_typ_at[wp]:
   unfolding do_reply_transfer_def
   by (wpsimp wp: gts_wp hoare_vcg_if_lift2 hoare_drop_imps hoare_vcg_all_lift split_del: if_split)
 
-crunch typ_at[wp]: invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
+crunch invoke_irq_handler
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 
 locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
@@ -994,19 +995,24 @@ lemma valid_validE_R_eq:
   by (fastforce simp: validE_R_def validE_def valid_def split_def)
 
 
-crunch tcb_at[wp]: reply_from_kernel "tcb_at t"
+crunch reply_from_kernel
+  for tcb_at[wp]: "tcb_at t"
   (simp: crunch_simps)
 
-crunch pred_tcb_at[wp]: reply_from_kernel "pred_tcb_at proj P t"
+crunch reply_from_kernel
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (simp: crunch_simps)
 
-crunch cap_to[wp]: reply_from_kernel "ex_nonz_cap_to p"
+crunch reply_from_kernel
+  for cap_to[wp]: "ex_nonz_cap_to p"
   (simp: crunch_simps)
 
-crunch it[wp]: reply_from_kernel "\<lambda>s. P (idle_thread s)"
+crunch reply_from_kernel
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps)
 
-crunch cte_wp_at[wp]: reply_from_kernel "cte_wp_at P p"
+crunch reply_from_kernel
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (simp: crunch_simps)
 
 

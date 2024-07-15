@@ -69,21 +69,21 @@ lemma arch_scheduler_affects_equiv_ready_queues_update[Scheduler_IF_assms, simp]
   "arch_scheduler_affects_equiv s (ready_queues_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
-crunches arch_switch_to_thread, arch_switch_to_idle_thread
+crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for idle_thread[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
   and kheap[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches arch_switch_to_idle_thread
+crunch arch_switch_to_idle_thread
   for cur_domain[Scheduler_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and domain_fields[Scheduler_IF_assms, wp]: "domain_fields P"
 
-crunches arch_switch_to_idle_thread
+crunch arch_switch_to_idle_thread
   for globals_equiv[Scheduler_IF_assms, wp]: "globals_equiv st"
   and states_equiv_for[Scheduler_IF_assms, wp]: "states_equiv_for P Q R S st"
   and work_units_completed[Scheduler_IF_assms, wp]: "\<lambda>s. P (work_units_completed s)"
 
-crunches arch_activate_idle_thread
+crunch arch_activate_idle_thread
   for cur_domain[Scheduler_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and idle_thread[Scheduler_IF_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and irq_state_of_state[Scheduler_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
@@ -114,7 +114,8 @@ lemma arch_scheduler_affects_equiv_ekheap_update[Scheduler_IF_assms, simp]:
   "arch_scheduler_affects_equiv s (ekheap_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
-crunch irq_state[Scheduler_IF_assms, wp]: ackInterrupt "\<lambda>s. P (irq_state s)"
+crunch ackInterrupt
+  for irq_state[Scheduler_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
 
 lemma thread_set_context_globals_equiv[Scheduler_IF_assms]:
   "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>
@@ -200,7 +201,7 @@ lemma arch_switch_to_thread_globals_equiv_scheduler[Scheduler_IF_assms]:
   by (wpsimp wp: clearExMonitor_globals_equiv_scheduler dmo_wp modify_wp thread_get_wp'
       | wp (once) globals_equiv_scheduler_inv'[where P="\<top>"])+
 
-crunches arch_activate_idle_thread
+crunch arch_activate_idle_thread
   for silc_dom_equiv[Scheduler_IF_assms, wp]: "silc_dom_equiv aag st"
   and scheduler_affects_equiv[Scheduler_IF_assms, wp]: "scheduler_affects_equiv aag l st"
 
@@ -209,7 +210,8 @@ lemma dmo_mol_exclusive_state[wp]:
   by (wp mol_exclusive_state dmo_wp
       | simp add: split_def dmo_bind_valid writeTTBR0_def isb_def dsb_def)+
 
-crunch exclusive_state[wp]: set_vm_root "\<lambda>s. P (exclusive_state (machine_state s))"
+crunch set_vm_root
+  for exclusive_state[wp]: "\<lambda>s. P (exclusive_state (machine_state s))"
   (ignore: do_machine_op
      simp: invalidateLocalTLB_ASID_def setHardwareASID_def set_current_pd_def dsb_def isb_def
            writeTTBR0_def dmo_bind_valid crunch_simps)

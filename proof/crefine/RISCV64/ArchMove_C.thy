@@ -76,7 +76,8 @@ lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
 
 context begin interpretation Arch .
 
-crunch inv'[wp]: archThreadGet P
+crunch archThreadGet
+  for inv'[wp]: P
 
 (* FIXME MOVE near thm tg_sp' *)
 lemma atg_sp':
@@ -287,14 +288,15 @@ lemma asUser_getRegister_discarded:
                         return_def fail_def stateAssert_def)
   done
 
-crunch pspace_canonical'[wp]: setThreadState pspace_canonical'
+crunch setThreadState
+  for pspace_canonical'[wp]: pspace_canonical'
 
 lemma obj_at_kernel_mappings':
   "\<lbrakk>pspace_in_kernel_mappings' s; obj_at' P p s\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
   by (clarsimp simp: pspace_in_kernel_mappings'_def obj_at'_def dom_def)
 
-crunches switchToIdleThread
+crunch switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
 crunches switchToIdleThread
@@ -395,7 +397,7 @@ lemma user_getreg_rv:
   apply (clarsimp simp: obj_at'_def getRegister_def in_monad atcbContextGet_def)
   done
 
-crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
          updateFreeIndex, preemptionPoint
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only

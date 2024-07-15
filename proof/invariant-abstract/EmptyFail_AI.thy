@@ -67,7 +67,8 @@ crunch_ignore (empty_fail)
         decode_tcb_invocation without_preemption as_user syscall
         cap_fault_on_failure check_cap_at zipWithM filterM)
 
-crunch (empty_fail) empty_fail[wp]: set_object, get_cap
+crunch set_object, get_cap
+  for (empty_fail) empty_fail[wp]
   (simp: split_def kernel_object.splits)
 
 lemma check_cap_at_empty_fail[wp]:
@@ -82,7 +83,8 @@ lemma as_user_empty_fail[wp]:
   apply (simp | wp)+
   done
 
-crunch (empty_fail) empty_fail[wp]: get_message_info
+crunch get_message_info
+  for (empty_fail) empty_fail[wp]
   (simp: split_def kernel_object.splits)
 
 lemma cap_fault_on_failure_empty_fail[wp]:
@@ -157,7 +159,7 @@ lemma resolve_address_bits_spec_empty_fail:
 lemmas resolve_address_bits_empty_fail[wp] =
        resolve_address_bits_spec_empty_fail[THEN use_spec_empty_fail]
 
-crunch (empty_fail) empty_fail[wp]:
+crunch
   lookup_slot_for_cnode_op, decode_untyped_invocation, range_check,
   lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap
 

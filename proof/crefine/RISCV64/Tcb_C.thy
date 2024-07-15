@@ -62,7 +62,8 @@ lemma doMachineOp_sched:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch curThread [wp]: restart "\<lambda>s. P (ksCurThread s)"
+crunch restart
+  for curThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 end
