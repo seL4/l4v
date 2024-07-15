@@ -4361,7 +4361,7 @@ lemma createNewCaps_cur:
         cur_tcb' s\<rbrace>
       createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
    apply (simp add: cur_tcb'_def)
   apply (wp hoare_vcg_ex_lift createNewCaps_obj_at')
   apply (clarsimp simp: pspace_no_overlap'_def cur_tcb'_def valid_pspace'_def)
@@ -4466,7 +4466,7 @@ lemma createNewCaps_global_refs':
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (simp add: valid_global_refs'_def valid_cap_sizes'_def valid_refs'_def)
-  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
+  apply (rule_tac Q'="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
         \<or> 2 ^ capBits (cteCap cte) > gsMaxObjectSize s)) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
                  in hoare_post_imp)
    apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
@@ -5230,7 +5230,7 @@ lemma createObjects_no_cte_valid_global:
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. valid_global_refs' s\<rbrace>"
   apply (simp add: valid_global_refs'_def valid_cap_sizes'_def valid_refs'_def)
-  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
+  apply (rule_tac Q'="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
         \<or> 2 ^ capBits (cteCap cte) > gsMaxObjectSize s)) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
                  in hoare_post_imp)
    apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
@@ -5339,7 +5339,7 @@ lemma createObjects_cur':
         cur_tcb' s\<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. cur_tcb' s\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<exists>t. ksCurThread s = t \<and> tcb_at' t s"])
    apply (simp add: cur_tcb'_def)
   apply (wp hoare_vcg_ex_lift createObjects_orig_obj_at3)
   apply (clarsimp simp: cur_tcb'_def)

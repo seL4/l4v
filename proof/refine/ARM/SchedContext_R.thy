@@ -623,7 +623,7 @@ lemma schedContextDonate_weak_sch_act_wf[wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp only: schedContextDonate_def)
   apply (wpsimp wp: threadSet_weak_sch_act_wf)
-         apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated], fastforce)
+         apply (rule_tac Q'="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated], fastforce)
          apply (wpsimp wp: threadSet_weak_sch_act_wf)
         apply wpsimp+
   done
@@ -635,7 +635,7 @@ lemma schedContextDonate_valid_objs':
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
   apply (rule bind_wp[OF _ get_sc_sp'], rename_tac sc)
-  apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
+  apply (rule_tac P'="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
                in hoare_weaken_pre[rotated])
    apply (fastforce simp: sc_ko_at_valid_objs_valid_sc' obj_at'_def)
   apply (rule bind_wp_fwd_skip)
@@ -660,13 +660,13 @@ lemma tcbReleaseRemove_list_refs_of_replies'[wp]:
 lemma schedContextDonate_list_refs_of_replies' [wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
   unfolding schedContextDonate_def
-  by (wpsimp simp: comp_def | rule hoare_strengthen_post[where Q="\<lambda>_ s. P (list_refs_of_replies' s)"])+
+  by (wpsimp simp: comp_def | rule hoare_strengthen_post[where Q'="\<lambda>_ s. P (list_refs_of_replies' s)"])+
 
 lemma schedContextDonate_sch_act_wf [wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp only: schedContextDonate_def)
   apply (wpsimp wp: threadSet_sch_act threadSet_wp)
-       apply (rule_tac Q="\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated])
+       apply (rule_tac Q'="\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated])
         apply (fastforce simp: sch_act_wf_def ct_in_state'_def tcb_in_cur_domain'_def
                                pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb
                         split: if_splits)
@@ -680,11 +680,11 @@ lemma schedContextDonate_valid_idle':
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   apply (simp only: schedContextDonate_def)
   apply (wp threadSet_idle' setSchedContext_valid_idle')
-       apply (rule_tac Q="\<lambda>_ s. tcbPtr \<noteq> ksIdleThread s" in hoare_strengthen_post; wpsimp)
-      apply (rule_tac Q="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and> tcbPtr \<noteq> ksIdleThread s"
+       apply (rule_tac Q'="\<lambda>_ s. tcbPtr \<noteq> ksIdleThread s" in hoare_strengthen_post; wpsimp)
+      apply (rule_tac Q'="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and> tcbPtr \<noteq> ksIdleThread s"
                    in hoare_strengthen_post; wpsimp)
          apply (wpsimp wp: threadSet_idle' hoare_drop_imps threadSet_idle')
-        apply (rule_tac Q="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and>
+        apply (rule_tac Q'="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and>
                                  tcbPtr \<noteq> ksIdleThread s \<and> from \<noteq> ksIdleThread s"
                      in hoare_strengthen_post)
          apply wpsimp+

@@ -110,7 +110,7 @@ lemma schedule_invs[wp]:
   apply (simp add: schedule_def)
   apply (wpsimp wp: switch_to_thread_invs hoare_drop_imps sc_and_timer_invs
               simp: if_apply_def2 set_scheduler_action_def)
-    apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>_. invs" in hoare_strengthen_post)
      apply (wpsimp simp: invs_def)+
   done
 
@@ -464,7 +464,7 @@ lemma do_reply_invs[wp]:
   apply (wpsimp wp: handle_timeout_Timeout_invs hoare_vcg_all_lift hoare_drop_imps
                     refill_unblock_check_invs get_tcb_obj_ref_wp)
            apply (wpsimp wp: gts_wp)
-          apply (rule_tac Q = "\<lambda>_ s. invs s" in hoare_strengthen_post[rotated])
+          apply (rule_tac Q'="\<lambda>_ s. invs s" in hoare_strengthen_post[rotated])
            apply (clarsimp simp: pred_tcb_at_def obj_at_def runnable_eq)
           apply (wpsimp wp: sts_invs_minor2)+
               apply (intro conjI impI)
@@ -1036,7 +1036,7 @@ lemma lcs_ex_cap_to2[wp]:
   done
 
 (* FIXME AARCH64: this should really not be wp *)
-declare hoare_vcg_const_imp_lift_E[wp]
+declare hoare_vcg_const_imp_liftE_E[wp]
 
 context Syscall_AI begin
 
@@ -1113,7 +1113,7 @@ lemma hinv_invs':
         apply simp
        apply (wpsimp)
       apply (simp only: simp_thms K_def if_apply_def2)
-      apply (rule hoare_vcg_E_elim)
+      apply (rule hoare_vcg_conj_elimE)
        apply (wpsimp wp: decode_inv_inv simp: if_apply_def2)+
   apply (auto simp: ct_in_state_def cur_sc_tcb_invs fault_tcbs_valid_states_active schedulable_def'
               dest: invs_fault_tcbs_valid_states
@@ -1189,7 +1189,7 @@ lemma hw_invs[wp]:
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
              cong: if_cong split del: if_split)
   apply (wpsimp wp: get_sk_obj_ref_wp hoare_vcg_ball_lift)
-     apply (rule hoare_vcg_E_elim)
+     apply (rule hoare_vcg_conj_elimE)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
        apply (simp add: split_def)
@@ -1442,7 +1442,7 @@ lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
            apply (rule hoare_pre_cont)
           apply (wpsimp wp: hoare_drop_imp)
          apply (wpsimp wp: thread_get_wp')
-        apply (rule_tac Q="\<lambda>_. ct_active and fault_tcb_at ((=) None) t"
+        apply (rule_tac Q'="\<lambda>_. ct_active and fault_tcb_at ((=) None) t"
                in hoare_post_imp)
          apply (clarsimp simp: pred_tcb_at_def obj_at_def)
         apply (wpsimp wp: hoare_drop_imps)+
@@ -1611,7 +1611,7 @@ lemma reply_unlink_runnable[wp]:
   apply (rule bind_wp[OF _ assert_inv])
   apply (rule bind_wp[OF _ gts_sp])
   apply (rule bind_wp[OF _ assert_sp, OF hoare_gen_asm_conj])
-  apply (rule hoare_weaken_pre[where Q=\<bottom>])
+  apply (rule hoare_weaken_pre[where P'=\<bottom>])
   by (auto simp: pred_tcb_at_def obj_at_def)
 
 (* FIXME: move; this should be much higher up *)

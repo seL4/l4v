@@ -552,7 +552,7 @@ lemma cur_sc_chargeable_invoke_untypedE_R:
   supply validE_validE_E[wp del]
   unfolding invoke_untyped_def
   apply wpsimp
-    apply (rule hoare_post_imp_dc2E_actual)
+    apply (rule hoare_post_impE_E_dc_actual)
     apply (clarsimp simp: cur_sc_tcb_only_sym_bound_def tcb_at_kh_simps[symmetric])
     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
       apply (rule valid_validE, wps)
@@ -1010,14 +1010,14 @@ lemma dmo_getCurrentTime_sp[wp]:
    \<lbrace>\<lambda>rv s. (cur_time s \<le> rv) \<and> (rv \<le> - getCurrentTime_buffer - 1) \<and> P s\<rbrace>"
   apply (clarsimp simp: pred_conj_def)
   apply (intro hoare_vcg_conj_lift_pre_fix)
-    apply (rule_tac Q="valid_machine_time" in hoare_weaken_pre)
-     apply (rule_tac Q="\<lambda>rv s. cur_time s \<le> rv \<and> rv \<le> - getCurrentTime_buffer - 1"
+    apply (rule_tac P'="valid_machine_time" in hoare_weaken_pre)
+     apply (rule_tac Q'="\<lambda>rv s. cur_time s \<le> rv \<and> rv \<le> - getCurrentTime_buffer - 1"
                   in hoare_strengthen_post)
       apply (wpsimp wp: dmo_getCurrentTime_vmt_sp)
      apply simp
     apply simp
-   apply (rule_tac Q="valid_machine_time" in hoare_weaken_pre)
-    apply (rule_tac Q="\<lambda>rv s. cur_time s \<le> rv \<and> rv \<le> - getCurrentTime_buffer - 1"
+   apply (rule_tac P'="valid_machine_time" in hoare_weaken_pre)
+    apply (rule_tac Q'="\<lambda>rv s. cur_time s \<le> rv \<and> rv \<le> - getCurrentTime_buffer - 1"
                  in hoare_strengthen_post)
     apply (wpsimp wp: dmo_getCurrentTime_vmt_sp)
     apply simp
@@ -1044,7 +1044,7 @@ lemma update_time_stamp_is_refill_ready[wp]:
   unfolding update_time_stamp_def
   apply (wpsimp wp: dmo_getCurrentTime_wp)
      prefer 2
-     apply (rule_tac Q="is_refill_ready scp and (\<lambda>s. cur_time s = previous_time)"
+     apply (rule_tac P'="is_refill_ready scp and (\<lambda>s. cur_time s = previous_time)"
                   in hoare_weaken_pre[rotated], assumption)
      apply wpsimp
     apply (fastforce simp: vs_all_heap_simps refill_ready_def)
@@ -1086,7 +1086,7 @@ lemma reset_untyped_cap_cur_time_monotonic:
   apply (rule valid_validE)
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule hoare_weaken_pre)
-   apply (rule_tac Q="\<lambda>_ s. valid_machine_time s \<and> val \<le> cur_time s" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>_ s. valid_machine_time s \<and> val \<le> cur_time s" in hoare_strengthen_post)
     apply (rule mapME_x_wp_inv)
     apply (intro hoare_vcg_conj_lift_pre_fix)
      apply wpsimp

@@ -78,13 +78,13 @@ lemma setDomain_ccorres:
        apply (simp add: guard_is_UNIV_def)
       apply simp
       apply wp
-     apply (rule_tac Q="\<lambda>rv'. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+     apply (rule_tac Q'="\<lambda>rv'. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
                               and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
        apply (wpsimp wp: isSchedulable_wp)
       apply (fastforce simp: valid_pspace_valid_objs' weak_sch_act_wf_def
                       split: if_splits)
-     apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+     apply (rule_tac Q'="\<lambda>_. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
                             and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
       apply (wpsimp wp: threadSet_tcbDomain_update_invs' hoare_vcg_imp_lift'
@@ -696,7 +696,7 @@ lemma decodeCNodeInvocation_ccorres:
                                                         and valid_cap' rv and valid_objs'
                                                         and tcb_at' thread
                                                         and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
-                                           in hoare_vcg_R_conj)
+                                           in hoare_vcg_conj_liftE_R)
                                 apply (rule deriveCap_Null_helper[OF deriveCap_derived])
                                apply wp
                               apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -774,7 +774,7 @@ lemma decodeCNodeInvocation_ccorres:
                                                             and valid_cap' rv and valid_objs'
                                                             and tcb_at' thread
                                                             and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
-                                               in hoare_vcg_R_conj)
+                                               in hoare_vcg_conj_liftE_R)
                                     apply (rule deriveCap_Null_helper [OF deriveCap_derived])
                                    apply wp
                                   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -897,7 +897,7 @@ lemma decodeCNodeInvocation_ccorres:
                       apply (force simp: sysargs_rel_to_n valid_updateCapDataI
                                          invs_valid_objs' invs_valid_pspace')
                      apply (wp hoare_vcg_all_liftE_R injection_wp_E[OF refl]
-                               lsfco_cte_at' hoare_vcg_const_imp_lift_R)+
+                               lsfco_cte_at' hoare_vcg_const_imp_liftE_R)+
                     apply (simp add: Collect_const_mem word_sle_def word_sless_def
                                      all_ex_eq_helper)
                     apply (vcg exspec=lookupSourceSlot_modifies)
@@ -1255,7 +1255,7 @@ lemma decodeCNodeInvocation_ccorres:
           apply (rule ccorres_return_C_errorE, simp+)[1]
          apply vcg
         apply simp
-        apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_lift_R
+        apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_liftE_R
                   hoare_vcg_all_liftE_R lsfco_cte_at' hoare_weak_lift_imp
                 | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen
                       cong: conj_cong

@@ -681,7 +681,7 @@ lemma unmap_page_table_invs[wp]:
   apply (simp add: unmap_page_table_def)
   apply (rule hoare_pre)
    apply (wp dmo_invs | wpc | simp)+
-     apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_. invs" in hoare_post_imp)
       apply safe
        apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
                                   underlying_memory m p" in use_valid)

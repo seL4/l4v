@@ -1331,7 +1331,7 @@ lemma associateVCPUTCB_corres:
                 corres: getObject_vcpu_corres setObject_VCPU_corres vcpuSwitch_corres''
                 wp: hoare_drop_imps get_vcpu_wp getVCPU_wp
          | corres_cases_both simp: vcpu_relation_def)+
-       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
+       apply (rule_tac Q'="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
         apply wp
        apply clarsimp
        apply (rule conjI)
@@ -1339,7 +1339,7 @@ lemma associateVCPUTCB_corres:
         apply (clarsimp simp: obj_at_def in_omonad)
        apply (fastforce simp: obj_at_def in_omonad)
       apply wpsimp+
-      apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and vcpu_at' v" in hoare_strengthen_post)
+      apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' t and vcpu_at' v" in hoare_strengthen_post)
        apply wpsimp
       apply fastforce
      apply (wpsimp wp: arch_thread_get_wp archThreadGet_wp)+
@@ -1947,14 +1947,14 @@ lemma associateVCPUTCB_invs'[wp]:
   apply (clarsimp simp: associateVCPUTCB_def)
   apply (subst bind_assoc[symmetric], fold associateVCPUTCB_helper_def)
   apply wpsimp
-       apply (rule_tac Q="\<lambda>_ s. invs' s \<and> ko_wp_at' (is_vcpu' and hyp_live') vcpu s" in hoare_post_imp)
+       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ko_wp_at' (is_vcpu' and hyp_live') vcpu s" in hoare_post_imp)
         apply simp
        apply (rule hoare_vcg_conj_lift)
         apply (wpsimp wp: assoc_invs'[folded associateVCPUTCB_helper_def])
        apply (clarsimp simp: associateVCPUTCB_helper_def)
        apply (wpsimp simp: vcpu_at_is_vcpu'[symmetric])+
      apply (wpsimp wp: getVCPU_wp)
-    apply (rule_tac Q="\<lambda>_. invs' and obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = None) tcb and
+    apply (rule_tac Q'="\<lambda>_. invs' and obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = None) tcb and
                            ex_nonz_cap_to' vcpu and ex_nonz_cap_to' tcb and vcpu_at' vcpu"
                     in hoare_strengthen_post)
      apply wpsimp

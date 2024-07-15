@@ -3982,14 +3982,14 @@ lemma ensure_empty_inv[wp]:
 
 lemma get_cap_cte_wp_at2:
   "\<lbrace>cte_wp_at P p\<rbrace> get_cap p \<lbrace>\<lambda>rv s. P rv\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv. cte_wp_at (\<lambda>c. c = rv) p and cte_wp_at P p"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv. cte_wp_at (\<lambda>c. c = rv) p and cte_wp_at P p"])
    apply (clarsimp simp: cte_wp_at_def)
   apply (wp get_cap_cte_wp_at)
   done
 
 lemma get_cap_cte_wp_at3:
   "\<lbrace>not cte_wp_at (not P) p\<rbrace> get_cap p \<lbrace>\<lambda>rv s. P rv\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv. cte_wp_at (\<lambda>c. c = rv) p and not cte_wp_at (not P) p"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>rv. cte_wp_at (\<lambda>c. c = rv) p and not cte_wp_at (not P) p"])
    apply (clarsimp simp: cte_wp_at_def pred_neg_def)
   apply (wp get_cap_cte_wp_at)
   done

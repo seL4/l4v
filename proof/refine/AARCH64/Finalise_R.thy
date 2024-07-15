@@ -1823,7 +1823,7 @@ lemma isFinalCapability_inv:
   apply (simp add: isFinalCapability_def Let_def
               split del: if_split cong: if_cong)
   apply (rule hoare_pre, wp)
-   apply (rule hoare_post_imp [where Q="\<lambda>s. P"], simp)
+   apply (rule hoare_post_imp[where Q'="\<lambda>s. P"], simp)
    apply wp
   apply simp
   done
@@ -3087,7 +3087,7 @@ lemma cancelIPC_bound_tcb_at'[wp]:
   apply (simp add: getThreadReplySlot_def locateSlot_conv liftM_def)
   apply (rule hoare_pre)
    apply (wp capDeleteOne_bound_tcb_at' getCTE_ctes_of)
-   apply (rule_tac Q="\<lambda>_. bound_tcb_at' P tptr" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_. bound_tcb_at' P tptr" in hoare_post_imp)
    apply (clarsimp simp: capHasProperty_def cte_wp_at_ctes_of)
    apply (wp threadSet_pred_tcb_no_state | simp)+
   done
@@ -3712,7 +3712,7 @@ lemma no_idle_thread_cap:
 
 lemmas getCTE_no_0_obj'_helper
   = getCTE_inv
-    hoare_strengthen_post[where Q="\<lambda>_. no_0_obj'" and P=no_0_obj' and a="getCTE slot" for slot]
+    hoare_strengthen_post[where Q'="\<lambda>_. no_0_obj'" and P=no_0_obj' and a="getCTE slot" for slot]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

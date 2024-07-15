@@ -1746,7 +1746,7 @@ lemma performASIDPoolInvocation_ccorres:
            apply wp
           apply simp
           apply vcg
-         apply (rule hoare_strengthen_post[where Q="\<lambda>_. \<top>"], wp)
+         apply (rule hoare_strengthen_post[where Q'="\<lambda>_. \<top>"], wp)
          apply (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def)
         apply wp
        apply simp

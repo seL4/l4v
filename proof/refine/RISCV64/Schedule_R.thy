@@ -595,7 +595,7 @@ lemma tcbSchedDequeue_valid_mdb'[wp]:
   "\<lbrace>valid_mdb' and valid_objs'\<rbrace> tcbSchedDequeue tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   unfolding tcbSchedDequeue_def
   apply (wpsimp simp: bitmap_fun_defs setQueue_def wp: threadSet_mdb' tcbQueueRemove_valid_mdb')
-      apply (rule_tac Q="\<lambda>_. tcb_at' tcbPtr" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_. tcb_at' tcbPtr" in hoare_post_imp)
        apply (fastforce simp: tcb_cte_cases_def cteSizeBits_def)
       apply (wpsimp wp: threadGet_wp)+
   done
@@ -1913,7 +1913,7 @@ lemma refillBudgetCheckRoundRobin_invs'[wp]:
   supply if_split [split del]
   apply (simp add: refillBudgetCheckRoundRobin_def updateRefillTl_def updateRefillHd_def)
   apply (wpsimp simp:  wp: updateSchedContext_refills_invs')
-    apply (rule_tac Q="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
+    apply (rule_tac Q'="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
      apply clarsimp
      apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
      apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def
@@ -2423,7 +2423,7 @@ lemma commitTime_invs':
   apply wpsimp
        apply (wpsimp wp: updateSchedContext_invs'_indep)
       apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def sc_size_bounds_def objBitsKO_def live_sc'_def)
-      apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post)
+      apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post)
        apply (wpsimp wp: isRoundRobin_wp)
       apply (wpsimp wp: getConsumedTime_wp getCurSc_wp)+
   by (clarsimp simp: active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
@@ -2568,7 +2568,7 @@ lemma schedule_invs':
   apply (intro bind_wp[OF _ stateAssert_sp])
   apply (clarsimp simp: sch_act_wf_asrt_def)
   apply (rule_tac bind_wp, rename_tac t)
-   apply (rule_tac Q="invs' and cur_tcb'" in hoare_weaken_pre)
+   apply (rule_tac P'="invs' and cur_tcb'" in hoare_weaken_pre)
     apply (rule bind_wp_fwd_skip, wpsimp)
     apply (rule_tac bind_wp[OF _ getCurThread_sp])
     apply (rule_tac bind_wp[OF _ isSchedulable_sp])
@@ -2581,18 +2581,18 @@ lemma schedule_invs':
           apply (wpsimp wp: curDomain_wp)
          apply (wpsimp simp: scheduleSwitchThreadFastfail_def)
         apply (rename_tac tPtr x idleThread targetPrio)
-        apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
+        apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
          apply (prop_tac "st_tcb_at' runnable' tPtr s \<Longrightarrow> obj_at' (\<lambda>a. activatable' (tcbState a)) tPtr s")
           apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
          apply fastforce
         apply (wpsimp wp: threadGet_wp hoare_drop_imp hoare_vcg_ex_lift)
        apply (rename_tac tPtr x idleThread)
-       apply (rule_tac Q="\<lambda>_. invs'"
+       apply (rule_tac Q'="\<lambda>_. invs'"
                     in hoare_strengthen_post[rotated])
         apply (subst obj_at_ko_at'_eq[symmetric], simp)
        apply (wpsimp wp: threadGet_wp hoare_drop_imp hoare_vcg_ex_lift)
       apply (rename_tac tPtr x)
-      apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
+      apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
        apply (subst obj_at_ko_at'_eq[symmetric], simp)
       apply (wpsimp wp: isSchedulable_wp)
      apply (wpsimp wp: tcbSchedEnqueue_invs')
@@ -3632,7 +3632,7 @@ lemma mergeOverlappingRefills_corres:
          apply (clarsimp simp: refill_map_def)+
         apply (rule updateRefillHd_corres, simp)
         apply (clarsimp simp: refill_map_def)
-       apply (rule hoare_strengthen_post[where Q="\<lambda>_. sc_at sc_ptr", rotated])
+       apply (rule hoare_strengthen_post[where Q'="\<lambda>_. sc_at sc_ptr", rotated])
         apply (simp add: active_sc_at_equiv is_active_sc_rewrite[symmetric])
        apply (wpsimp wp: refill_pop_head_sc_active)+
    apply (clarsimp simp: obj_at_def is_sc_obj opt_map_red is_active_sc_rewrite active_sc_at_equiv
@@ -4937,9 +4937,9 @@ lemma scAndTimer_corres:
         apply (rule corres_split[OF setNextInterrupt_corres])
           apply (rule setReprogramTimer_corres)
          apply (wpsimp wp: hoare_vcg_ball_lift2| wps)+
-     apply (rule_tac Q="\<lambda>_.invs" in hoare_post_imp, fastforce)
+     apply (rule_tac Q'="\<lambda>_.invs" in hoare_post_imp, fastforce)
      apply wpsimp+
-    apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, fastforce)
+    apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp, fastforce)
     apply (wpsimp wp: switchSchedContext_invs')
    apply (clarsimp simp: valid_state_def valid_release_q_def)
   apply fastforce
@@ -5113,7 +5113,7 @@ lemma schedule_corres:
                    split: scheduler_action.splits
                    elim!: opt_mapE)
    apply (rule bind_wp_fwd_skip, solves wpsimp)+
-   apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
     apply (clarsimp simp: invs'_def)
    apply (wpsimp wp: scheduleChooseNewThread_invs' ksReadyQueuesL1Bitmap_return_wp
                simp: isHighestPrio_def scheduleSwitchThreadFastfail_def)
@@ -5432,7 +5432,7 @@ lemma schedContextDonate_corres:
                       | drule Some_to_the)+)[1]
              apply (wpsimp wp: hoare_drop_imps threadSet_sched_pointers threadSet_valid_sched_pointers)
             apply ((wpsimp | strengthen weak_valid_sched_action_strg | drule Some_to_the)+)[1]
-           apply (rule_tac Q="\<lambda>_. valid_tcbs' and sym_heap_sched_pointers and valid_sched_pointers
+           apply (rule_tac Q'="\<lambda>_. valid_tcbs' and sym_heap_sched_pointers and valid_sched_pointers
                                   and pspace_aligned' and pspace_distinct'"
                         in hoare_strengthen_post[rotated])
             apply clarsimp

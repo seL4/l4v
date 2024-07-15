@@ -650,7 +650,7 @@ lemma createObject_valid_duplicates'[wp]:
          apply (simp add: placeNewObject_def placeNewDataObject_def
                           placeNewObject'_def split_def copyGlobalMappings_def
                      split del: if_split
-           | wp unless_wp[where P="d"] unless_wp[where Q=\<top>]
+           | wp unless_wp[where P="d"] unless_wp[where P'=\<top>]
            | wpc | simp add: alignError_def split del: if_split)+
   apply (intro conjI impI)
              apply clarsimp+
@@ -1999,7 +1999,7 @@ lemma tc_valid_duplicates':
                checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
                checkCap_inv[where P=sch_act_simple]
                cteDelete_valid_duplicates'
-               hoare_vcg_const_imp_lift_R
+               hoare_vcg_const_imp_liftE_R
                typ_at_lifts [OF setPriority_typ_at']
                assertDerived_wp
                threadSet_cte_wp_at'
@@ -2185,7 +2185,7 @@ lemma handleRecv_valid_duplicates'[wp]:
    apply wp
        apply ((wp getNotification_wp | wpc | simp add: whenE_def split del: if_split)+)[1]
 
-      apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
+      apply (rule_tac Q'="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
 
                    in hoare_strengthen_postE[rotated])
 
@@ -2234,7 +2234,7 @@ lemma callKernel_valid_duplicates':
   apply (simp add: callKernel_def fastpathKernelAssertions_def)
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
-             hoare_drop_imp[where R="\<lambda>_. kernelExitAssertions"]
+             hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
              schedule_sch_act_simple he_invs' hoare_vcg_if_lift3
           | simp add: no_irq_getActiveIRQ
           | strengthen non_kernel_IRQs_strg, simp cong: conj_cong)+

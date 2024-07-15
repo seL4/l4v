@@ -263,7 +263,7 @@ lemma arch_perform_invocationE_E_inv[wp]:
 
 lemma retype_region_cur_sc_more_than_ready [wp]:
   "retype_region ptr numObjects o_bits type dev \<lbrace>cur_sc_more_than_ready\<rbrace>"
-  apply (rule_tac Q="\<lambda>_ s. \<forall>cons_time csc c_time.
+  apply (rule_tac Q'="\<lambda>_ s. \<forall>cons_time csc c_time.
     cons_time = consumed_time s \<and> csc = cur_sc s \<and> csc \<noteq> idle_sc_ptr \<and> c_time = cur_time s \<longrightarrow>
     (cons_time \<noteq> 0
     \<longrightarrow> pred_map active_scrc (sc_refill_cfgs_of s) csc
@@ -281,7 +281,7 @@ lemma retype_region_cur_sc_more_than_ready [wp]:
 
 lemma delete_objects_cur_sc_more_than_ready [wp]:
   "delete_objects ptr pagebits \<lbrace>cur_sc_more_than_ready\<rbrace>"
-  apply (rule_tac Q="\<lambda>_ s. \<forall>cons_time csc c_time.
+  apply (rule_tac Q'="\<lambda>_ s. \<forall>cons_time csc c_time.
     cons_time = consumed_time s \<and> csc = cur_sc s \<and> csc \<noteq> idle_sc_ptr \<and> c_time = cur_time s \<longrightarrow>
     (cons_time \<noteq> 0
     \<longrightarrow> pred_map active_scrc (sc_refill_cfgs_of s) csc

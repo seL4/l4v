@@ -1650,7 +1650,7 @@ lemma reply_unlink_tcb_not_live:
   "\<lbrace>reply_sc_reply_at (\<lambda>sc. sc = None) reply\<rbrace>
      reply_unlink_tcb t reply
    \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply\<rbrace>"
-  apply (rule hoare_strengthen_post[where Q="\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply"])
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply"])
   apply (wpsimp wp: sts_obj_at_impossible update_sk_obj_ref_wps gts_wp get_simple_ko_wp
               simp: reply_unlink_tcb_def is_reply)
   by (auto simp: reply_sc_reply_at_def obj_at_def live_def live_reply_def)
@@ -1700,7 +1700,7 @@ lemma blocked_cancel_ipc_unlive:
     blocked_cancel_ipc st thread rep
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) reply\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
-  apply (rule_tac Q="\<lambda>rv. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply" in hoare_strengthen_post[rotated]
+  apply (rule_tac Q'="\<lambda>rv. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply" in hoare_strengthen_post[rotated]
          , fastforce simp: obj_at_def)
   apply (simp add: blocked_cancel_ipc_def)
   apply (rule bind_wp[OF _ gbi_ep_sp])

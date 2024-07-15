@@ -214,10 +214,10 @@ lemma delete_cap_one_shrink_descendants:
         apply (rule_tac P="\<lambda>s. valid_mdb s \<and> cdt s = cdt' \<and> cdt pres = cdt' \<and> slot \<in> CSpaceAcc_A.descendants_of p (cdt s)
                                \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
                      in hoare_weaken_pre)
-         apply (rule_tac Q ="\<lambda>r s. Q r s \<and>  (mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))" for Q in hoare_strengthen_post)
+         apply (rule_tac Q'="\<lambda>r s. Q r s \<and>  (mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))" for Q in hoare_strengthen_post)
           apply (rule hoare_vcg_conj_lift)
            apply (rule delete_cdt_slot_shrink_descendants[where y= "cdt pres" and p = p])
-          apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s ) cdt'" in hoare_weaken_pre)
+          apply (rule_tac P'="\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s ) cdt'" in hoare_weaken_pre)
            apply (case_tac slot)
            apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def)
           apply (assumption)
@@ -486,7 +486,7 @@ lemma dcorres_deleting_irq_handler:
   apply (rule corres_guard_imp)
   apply (rule corres_split[OF dcorres_get_irq_slot])
     apply (simp, rule delete_cap_simple_corres,simp)
-    apply (rule hoare_weaken_pre [where Q="invs and valid_etcbs"])
+    apply (rule hoare_weaken_pre[where P'="invs and valid_etcbs"])
     including classic_wp_pre
     apply (wpsimp simp:get_irq_slot_def)+
     apply (rule irq_node_image_not_idle)
@@ -697,7 +697,7 @@ lemma dcorres_set_vm_root:
      apply wp+
       apply wpc
        apply (wp do_machine_op_wp | clarsimp)+
-     apply (rule_tac Q = "\<lambda>_ s. transform s = cs" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_ s. transform s = cs" in hoare_post_imp)
       apply simp
      apply (wpsimp wp: whenE_wp do_machine_op_wp [OF allI] hoare_drop_imps find_pd_for_asid_inv
                 simp: arm_context_switch_def get_hw_asid_def load_hw_asid_def if_apply_def2)+
@@ -796,7 +796,7 @@ lemma dcorres_flush_page:
         apply (rule hoare_conjI,rule hoare_drop_imp)
          apply (wp do_machine_op_wp|clarsimp simp:load_hw_asid_def)+
       apply (wpc|wp)+
-     apply (rule_tac Q="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
       apply (wp|clarsimp)+
 done
 
@@ -821,7 +821,7 @@ lemma dcorres_flush_table:
         apply (rule hoare_conjI,rule hoare_drop_imp)
          apply (wp do_machine_op_wp|clarsimp simp:load_hw_asid_def)+
       apply (wpc|wp)+
-     apply (rule_tac Q="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
       apply (wp|clarsimp)+
 done
 
@@ -1403,10 +1403,10 @@ lemma remain_pt_pd_relation:
   apply (subgoal_tac "ptr\<noteq> y")
    apply (simp add: store_pte_def)
    apply wp
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
+     apply (rule_tac P'="ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
                 and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_weaken_pre)
       apply (clarsimp simp: set_pt_def)
-      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
+      apply (rule_tac P'="ko_at (ArchObj (arch_kernel_obj.PageTable rv)) (ptr && ~~ mask pt_bits)
                    and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_weaken_pre)
        apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
        apply (drule_tac x= y in bspec,simp)
@@ -1427,10 +1427,10 @@ lemma remain_pd_section_relation:
        \<lbrace>\<lambda>r s. pd_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
   apply (simp add: store_pde_def)
   apply wp
-    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+    apply (rule_tac P'="ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                   and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
      apply (clarsimp simp: set_pd_def)
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+     apply (rule_tac P'="ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                 and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
       apply (clarsimp simp: pd_section_relation_def dest!: ucast_inj_mask | rule conjI)+
@@ -1449,10 +1449,10 @@ lemma remain_pd_super_section_relation:
        \<lbrace>\<lambda>r s. pd_super_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
   apply (simp add: store_pde_def)
   apply wp
-    apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+    apply (rule_tac P'="ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
      apply (clarsimp simp: set_pd_def)
-     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
+     apply (rule_tac P'="ko_at (ArchObj (arch_kernel_obj.PageDirectory rv)) (ptr && ~~ mask pd_bits)
                and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_weaken_pre)
       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
       apply (clarsimp simp: pd_super_section_relation_def dest!: ucast_inj_mask | rule conjI)+
@@ -2040,7 +2040,7 @@ lemma pd_pt_relation_page_table_mapped_wp:
     apply (simp add:get_pde_def)
     apply wp
    apply (simp add:validE_def)
-   apply (rule hoare_strengthen_post[where Q="\<lambda>rv. page_table_at w"])
+   apply (rule hoare_strengthen_post[where Q'="\<lambda>rv. page_table_at w"])
     apply wp
    apply (clarsimp simp:pd_pt_relation_def obj_at_def)+
  done
@@ -3416,7 +3416,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
       apply (wp cutMon_validE_R_drop rec_del_invs
                  | simp add: not_idle_thread_def
                  | strengthen invs_weak_valid_mdb invs_valid_idle_strg
-                 | rule hoare_vcg_E_elim[rotated])+
+                 | rule hoare_vcg_conj_elimE[rotated])+
 
     done
 next

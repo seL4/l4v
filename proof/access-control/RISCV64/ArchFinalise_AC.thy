@@ -70,7 +70,7 @@ lemma delete_asid_pas_refined[wp]:
   unfolding delete_asid_def
   apply (rule bind_wp)
    apply (wpsimp simp: set_asid_pool_def wp: set_object_wp hoare_vcg_imp_lift' hoare_vcg_all_lift)
-    apply (rule_tac Q="\<lambda>_ s. riscv_asid_table (arch_state s) = asid_table \<and>
+    apply (rule_tac Q'="\<lambda>_ s. riscv_asid_table (arch_state s) = asid_table \<and>
                              ako_at (ASIDPool pool) x2 s \<and> pas_refined aag s"
                  in hoare_strengthen_post[rotated])
      defer

@@ -2134,7 +2134,7 @@ lemma performASIDPoolInvocation_ccorres:
            apply wp
           apply simp
           apply vcg
-         apply (rule hoare_strengthen_post[where Q="\<lambda>_. \<top>"], wp)
+         apply (rule hoare_strengthen_post[where Q'="\<lambda>_. \<top>"], wp)
          apply (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def)
        apply simp
        apply vcg
@@ -2741,7 +2741,7 @@ lemma vcpu_enable_ccorres:
        apply wpsimp
       apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
      apply wpsimp+
-   apply (rule_tac Q="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
+   apply (rule_tac Q'="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
    apply wpsimp
   apply (clarsimp simp: typ_heap_simps' Collect_const_mem cvcpu_relation_def
                         cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_def

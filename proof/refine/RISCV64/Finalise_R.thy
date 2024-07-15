@@ -1788,7 +1788,7 @@ lemma isFinalCapability_inv:
   apply (simp add: isFinalCapability_def Let_def
               split del: if_split cong: if_cong)
   apply (rule hoare_pre, wp)
-   apply (rule hoare_post_imp [where Q="\<lambda>s. P"], simp)
+   apply (rule hoare_post_imp[where Q'="\<lambda>s. P"], simp)
    apply wp
   apply simp
   done
@@ -2588,7 +2588,7 @@ lemma replyPop_iflive:
                  apply (wpsimp wp: updateReply_iflive' updateReply_valid_objs')
                 apply (wpsimp wp: updateReply_iflive'_strong updateReply_valid_objs'
                             simp: valid_reply'_def)
-               apply (rule_tac Q="\<lambda>_. ?pre
+               apply (rule_tac Q'="\<lambda>_. ?pre
                                       and ex_nonz_cap_to' scPtr
                                       and (\<lambda>s. prevReplyPtrOpt \<noteq> Nothing
                                                \<longrightarrow> ex_nonz_cap_to' (fromJust prevReplyPtrOpt) s)
@@ -3470,7 +3470,7 @@ lemma unbindFromSC_invs'[wp]:
   "\<lbrace>invs' and tcb_at' t and K (t \<noteq> idle_thread_ptr)\<rbrace> unbindFromSC t \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: unbindFromSC_def sym_refs_asrt_def)
   apply (wpsimp split_del: if_split)
-     apply (rule_tac Q="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
       apply (fastforce simp: valid_obj'_def valid_sched_context'_def
                       dest!: ko_at_valid_objs')
      apply (wpsimp wp: typ_at_lifts threadGet_wp)+
@@ -3601,7 +3601,7 @@ crunch schedContextCancelYieldTo, tcbReleaseRemove
 lemma suspend_cte_wp_at':
   "suspend t \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
   unfolding updateRestartPC_def suspend_def
-  apply (wpsimp wp: hoare_vcg_imp_lift hoare_disjI2[where R="\<lambda>_. cte_wp_at' a b" for a b])
+  apply (wpsimp wp: hoare_vcg_imp_lift hoare_disjI2[where Q'="\<lambda>_. cte_wp_at' a b" for a b])
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -4386,11 +4386,11 @@ lemma unbindFromSC_corres:
            apply (wpfix add: Structures_A.sched_context.select_convs sched_context.sel)
            apply (rule schedContextCompleteYieldTo_corres)
           apply (wpsimp wp: abs_typ_at_lifts)+
-        apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
+        apply (rule_tac Q'="\<lambda>_. invs" in hoare_post_imp)
          apply (auto simp: valid_obj_def valid_sched_context_def
                     dest!: invs_valid_objs valid_objs_ko_at)[1]
         apply wpsimp
-       apply (rule_tac Q="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
+       apply (rule_tac Q'="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
         apply (fastforce simp: valid_obj'_def valid_sched_context'_def
                         dest!: ko_at_valid_objs')
        apply (wpsimp wp: typ_at_lifts get_tcb_obj_ref_wp threadGet_wp)+

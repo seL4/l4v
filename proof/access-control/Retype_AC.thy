@@ -1028,7 +1028,7 @@ lemma reset_untyped_cap_pas_refined[wp]:
    apply (wps | wp set_cap_pas_refined_not_transferable | simp add: unless_def)+
      apply (rule valid_validE)
      apply (rule_tac P="is_untyped_cap cap \<and> pas_cap_cur_auth aag cap" in hoare_gen_asm)
-     apply (rule_tac Q="\<lambda>_. cte_wp_at (\<lambda> c. \<not> is_transferable (Some c)) slot and pas_refined aag and
+     apply (rule_tac Q'="\<lambda>_. cte_wp_at (\<lambda> c. \<not> is_transferable (Some c)) slot and pas_refined aag and
                             pspace_aligned and valid_vspace_objs and valid_arch_state"
                   in hoare_strengthen_post)
       apply (rule validE_valid, rule mapME_x_inv_wp)
@@ -1056,7 +1056,7 @@ lemma invoke_untyped_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-   apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned and valid_vspace_objs
+   apply (rule_tac Q'="\<lambda>_. pas_refined aag and pspace_aligned and valid_vspace_objs
                                           and valid_arch_state and pas_cur_domain aag" in hoare_strengthen_post)
    apply (rule invoke_untyped_Q)
         apply (rule hoare_pre, wp create_cap_pas_refined)
@@ -1084,7 +1084,7 @@ lemma invoke_untyped_pas_refined:
        apply blast
       apply (rule hoare_name_pre_state, clarsimp)
       apply (rule hoare_pre, wp retype_region_pas_refined)
-       apply (rule_tac Q="\<lambda>rv. post_retype_invs tp rv and pas_cur_domain aag" in hoare_strengthen_post)
+       apply (rule_tac Q'="\<lambda>rv. post_retype_invs tp rv and pas_cur_domain aag" in hoare_strengthen_post)
         apply (wp retype_region_post_retype_invs_spec)
        apply (clarsimp simp: post_retype_invs_def invs_def valid_state_def valid_pspace_def split: if_splits)
       apply (clarsimp simp: authorised_untyped_inv_def)
@@ -1173,7 +1173,7 @@ lemma decode_untyped_invocation_authorised:
    apply (wp whenE_throwError_wp  hoare_vcg_all_lift mapME_x_inv_wp
           | simp split: untyped_invocation.splits
           | (auto)[1])+
-           apply (rule_tac Q="\<lambda>node_cap s.
+           apply (rule_tac Q'="\<lambda>node_cap s.
                               (is_cnode_cap node_cap \<longrightarrow> is_subject aag (obj_ref_of node_cap)) \<and>
                               is_subject aag (fst slot) \<and> new_type \<noteq> ArchObject ASIDPoolObj \<and>
                               (\<forall>cap. cte_wp_at ((=) cap) slot s

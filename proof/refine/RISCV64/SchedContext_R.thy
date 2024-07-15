@@ -640,7 +640,7 @@ lemma schedContextDonate_valid_objs':
 lemma schedContextDonate_list_refs_of_replies' [wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
   unfolding schedContextDonate_def
-  by (wpsimp simp: comp_def | rule hoare_strengthen_post[where Q="\<lambda>_ s. P (list_refs_of_replies' s)"])+
+  by (wpsimp simp: comp_def | rule hoare_strengthen_post[where Q'="\<lambda>_ s. P (list_refs_of_replies' s)"])+
 
 lemma schedContextDonate_valid_idle':
   "\<lbrace>\<lambda>s. valid_idle' s \<and> tcbPtr \<noteq> idle_thread_ptr \<and>
@@ -649,11 +649,11 @@ lemma schedContextDonate_valid_idle':
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   apply (simp only: schedContextDonate_def)
   apply (wp threadSet_idle' setSchedContext_valid_idle')
-       apply (rule_tac Q="\<lambda>_ s. tcbPtr \<noteq> ksIdleThread s" in hoare_strengthen_post; wpsimp)
-      apply (rule_tac Q="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and> tcbPtr \<noteq> ksIdleThread s"
+       apply (rule_tac Q'="\<lambda>_ s. tcbPtr \<noteq> ksIdleThread s" in hoare_strengthen_post; wpsimp)
+      apply (rule_tac Q'="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and> tcbPtr \<noteq> ksIdleThread s"
                    in hoare_strengthen_post; wpsimp)
          apply (wpsimp wp: threadSet_idle' hoare_drop_imps threadSet_idle')
-        apply (rule_tac Q="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and>
+        apply (rule_tac Q'="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and>
                                  tcbPtr \<noteq> ksIdleThread s \<and> from \<noteq> ksIdleThread s"
                      in hoare_strengthen_post)
          apply wpsimp+

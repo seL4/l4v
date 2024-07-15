@@ -321,9 +321,9 @@ lemma rec_del_schact_is_rct_imp_cur_sc_active:
     apply (rule use_spec)
     apply (rule rec_del_invs''[where Q="(\<lambda>s. schact_is_rct s \<longrightarrow> cur_sc_active s)"])
          apply (wpsimp | wpsimp wp: preemption_point_inv simp: ct_in_state_def)+
-       apply (rule_tac Q="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s)
+       apply (rule_tac Q'="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s)
                                 \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s) \<and> invs s"
-                   in  hoare_strengthen_post)
+                   in hoare_strengthen_post)
         apply (wpsimp wp: finalise_cap_sc_tcb_are_bound_imp_is_active_sc)
        apply blast
       apply (wpsimp wp: hoare_vcg_imp_lift')
@@ -349,10 +349,10 @@ lemma invoke_cnode_schact_is_rct_imp_cur_sc_active:
   apply (clarsimp simp: invoke_cnode_def)
   apply (cases iv; clarsimp; (intro conjI impI)?;
          (solves \<open>wpsimp wp: hoare_drop_imps cur_sc_active_lift\<close>)?)
-   apply (rule_tac Q="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_post)
     apply (wpsimp wp: cap_revoke_schact_is_rct_imp_cur_sc_active)
    apply blast
-  apply (rule_tac Q="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s" in hoare_strengthen_post)
    apply (clarsimp simp: cap_delete_def)
    apply (wpsimp wp: rec_del_schact_is_rct_imp_cur_sc_active rec_del_invs)
   apply blast
@@ -471,12 +471,12 @@ lemma handle_invocation_schact_is_rct_imp_cur_sc_active:
               apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
              apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
             apply (wpsimp wp: gts_wp')+
-      apply (rule_tac Q="\<lambda>_. ?Q" and E="\<lambda>_. ?Q" in hoare_strengthen_postE[rotated]; fastforce?)
+      apply (rule_tac Q'="\<lambda>_. ?Q" and E'="\<lambda>_. ?Q" in hoare_strengthen_postE[rotated]; fastforce?)
       apply (wpsimp wp: perform_invocation_schact_is_rct_imp_cur_sc_active)
      apply (wpsimp wp: ct_in_state_set set_thread_state_schact_is_rct_strong)
     apply (fastforce intro: cur_sc_active_active_sc_tcb_at_cur_thread
                       simp: ct_in_state_def)
-   apply (wp hoare_vcg_E_conj | simp add: split_def)+
+   apply (wp hoare_vcg_conj_liftE_E | simp add: split_def)+
   by fastforce
 
 method handle_event_schact_is_rct_imp_cur_sc_active_single for e
@@ -666,7 +666,7 @@ lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q
                            \<and> sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr s"
                in bind_wp_fwd)
    apply (intro hoare_vcg_conj_lift_pre_fix; (solves \<open>wpsimp wp: commit_time_invs\<close>)?)
-   apply (rule_tac Q="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated], simp)
+   apply (rule_tac P'="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated], simp)
     apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
    apply (rule hoare_when_cases, simp)
    apply (rule bind_wp_fwd_skip, wpsimp)+
@@ -684,7 +684,7 @@ lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q
     apply (clarsimp simp: vs_all_heap_simps sc_at_pred_n_def obj_at_def)
    apply (rule bind_wp[OF _ gets_sp])
    apply (rule hoare_if)
-    apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
      apply (clarsimp simp: schact_is_rct_def)
     apply (wpsimp wp: reschedule_cnt)
    apply (wpsimp wp: hoare_drop_imps)
@@ -754,7 +754,7 @@ lemma sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q:
    \<lbrace>\<lambda>_ s. schact_is_rct s  \<longrightarrow> ct_not_in_release_q s\<rbrace>"
   apply (clarsimp simp: sched_context_bind_tcb_def)
   apply wpsimp
-         apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+         apply (rule_tac Q'="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
           apply (clarsimp simp: schact_is_rct_def)
          apply (wpsimp wp: reschedule_cnt)
         apply wpsimp
@@ -827,14 +827,14 @@ lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
    apply (rule bind_wp)
     apply (rule return_inv)
    apply (rule hoare_when_cases, simp)
-   apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
     apply (clarsimp simp: schact_is_rct_def)
    apply (wpsimp wp: reschedule_cnt)
 
   \<comment> \<open>iv = ThreadControlSched\<close>
   apply (rename_tac target a b fault_handler mcp priority sc)
   apply (clarsimp simp: validE_R_def)
-  apply (rule_tac Q="\<lambda>s. ct_not_in_release_q s
+  apply (rule_tac P'="\<lambda>s. ct_not_in_release_q s
                          \<and> invs s \<and> schact_is_rct s \<and> tcb_at target s
                          \<and> (case sc of None \<Rightarrow> \<lambda>_. True
                                      | Some None \<Rightarrow> \<lambda>s. True
@@ -852,9 +852,9 @@ lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
                in bindE_wp_fwd)
    apply (rule hoare_weaken_preE)
     apply (subst validE_R_def[symmetric])
-    apply (rule hoare_vcg_conj_lift_R)
+    apply (rule hoare_vcg_conj_liftE_R)
      apply wpsimp
-    apply (rule hoare_vcg_conj_lift_R)
+    apply (rule hoare_vcg_conj_liftE_R)
      apply (rule valid_validE_R)
      apply (rule_tac f=cur_thread in hoare_lift_Pf2)
       apply (wpsimp wp: hoare_case_option_wp install_tcb_cap_bound_sc_tcb_at)
@@ -916,22 +916,22 @@ lemma handle_invocation_schact_is_rct_imp_ct_not_in_release_q:
       apply (wpsimp wp: hoare_vcg_imp_lift')
      apply (wpsimp wp: hoare_vcg_imp_lift')
     apply (rule hoare_weaken_preE)
-     apply (rule hoare_vcg_E_elim)
+     apply (rule hoare_vcg_conj_elimE)
       apply (wpsimp wp: handle_invocation_ct_not_in_release_qE_E hoare_drop_impE_E)
      apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q)
               apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
              apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
             apply (wpsimp wp: gts_wp')+
       apply (clarsimp simp: validE_R_def)
-      apply (rule_tac Q="\<lambda>_. ?Q" and E="\<lambda>_. ?Q" in hoare_strengthen_postE[rotated]; fastforce?)
-      apply (rule hoare_vcg_E_elim)
+      apply (rule_tac Q'="\<lambda>_. ?Q" and E'="\<lambda>_. ?Q" in hoare_strengthen_postE[rotated]; fastforce?)
+      apply (rule hoare_vcg_conj_elimE)
        apply (wpsimp wp: handle_invocation_ct_not_in_release_qE_E hoare_drop_impE_E)
       apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q)
      apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q)
      apply (wpsimp wp: ct_in_state_set set_thread_state_schact_is_rct_strong)
     apply (fastforce intro: cur_sc_active_active_sc_tcb_at_cur_thread
                       simp: ct_in_state_def)
-   apply (wp hoare_vcg_E_conj | simp add: split_def)+
+   apply (wp hoare_vcg_conj_liftE_E | simp add: split_def)+
   by fastforce
 
 lemma charge_budget_schact_is_rct_imp_ct_not_in_release_q[wp]:
@@ -940,7 +940,7 @@ lemma charge_budget_schact_is_rct_imp_ct_not_in_release_q[wp]:
   apply (rule bind_wp_fwd_skip, wpsimp)+
   apply (rule hoare_when_cases, simp)
   apply wpsimp
-      apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
        apply (clarsimp simp: schact_is_rct_def)
       apply (wpsimp wp: reschedule_cnt hoare_drop_imps)+
   done
@@ -1022,20 +1022,20 @@ lemma receive_ipc_schact_is_rct_imp_ct_not_in_release_q:
                    apply wpsimp
                   apply (wpsimp wp: hoare_vcg_imp_lift')
                  apply (wpsimp wp: hoare_vcg_imp_lift')
-                apply (rule_tac Q="\<lambda>rv s. fault_tcb_at ((=) rv) (hd x2) s
+                apply (rule_tac Q'="\<lambda>rv s. fault_tcb_at ((=) rv) (hd x2) s
                                           \<and> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
                        in hoare_strengthen_post[rotated])
                  apply clarsimp
                 apply (wpsimp wp: thread_get_wp')
                apply wpsimp
-                 apply (rule_tac Q="\<lambda>_. tcb_at (hd x2)
+                 apply (rule_tac Q'="\<lambda>_. tcb_at (hd x2)
                                         and (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
                         in hoare_strengthen_post[rotated])
                   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
                  apply wpsimp
                 apply wpsimp
                apply wpsimp
-              apply (rule_tac Q="\<lambda>_. tcb_at (hd x2)
+              apply (rule_tac Q'="\<lambda>_. tcb_at (hd x2)
                                      and (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
                      in hoare_strengthen_post[rotated])
                apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -1046,12 +1046,12 @@ lemma receive_ipc_schact_is_rct_imp_ct_not_in_release_q:
           apply (wpsimp wp: set_simple_ko_wp)
          apply wpsimp
         apply (wpsimp wp: hoare_vcg_imp_lift')
-       apply (rule_tac Q="\<lambda>_. (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
+       apply (rule_tac Q'="\<lambda>_. (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
               in hoare_strengthen_post[rotated])
         apply clarsimp
        apply (wpsimp wp: hoare_vcg_imp_lift')
       apply (wpsimp wp: get_simple_ko_wp get_tcb_obj_ref_wp)+
-   apply (rule_tac Q="\<lambda>_ s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)
+   apply (rule_tac Q'="\<lambda>_ s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)
                             \<and> (bound_tcb_at bound thread s \<longrightarrow> invs s \<and> thread = cur_thread s)"
           in hoare_strengthen_post[rotated])
     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -1196,7 +1196,7 @@ lemma handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q:
    apply (wpsimp wp: preemption_path_schact_is_rct_imp_ct_not_in_release_q)
    apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
    apply (rename_tac tcb, case_tac "tcb_state tcb"; clarsimp)
-  apply (rule hoare_vcg_E_elim[where P=P and P'=P for P, simplified])
+  apply (rule hoare_vcg_conj_elimE[where P=P and P'=P for P, simplified])
    apply (intro hoare_validE_E_conjI)
      apply (rule valid_validE_E)
      apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_not_in_release_q)
@@ -1370,7 +1370,7 @@ lemma reply_unlink_tcb_schact_is_rct_imp_ct_activatable[wp]:
 
 lemma reschedule_required_schact_is_rct_imp_ct_activatable[wp]:
   "\<lbrace>\<top>\<rbrace> reschedule_required \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
    apply (clarsimp simp: schact_is_rct_def)
   apply wpsimp
   done
@@ -1560,7 +1560,7 @@ crunch deleting_irq_handler
 
 lemma finalise_cap_schact_is_rct_imp_ct_activatable:
   "finalise_cap cap final \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (rule_tac Q="\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
+  apply (rule_tac P'="\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
                in hoare_weaken_pre[rotated])
    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   apply (cases cap; clarsimp; (intro conjI impI)?;
@@ -1596,7 +1596,7 @@ lemma rec_del_schact_is_rct_imp_ct_activatable:
      apply (rule rec_del_invs''[where Q="?Q"])
          apply ((wpsimp | wpsimp wp: hoare_vcg_imp_lift' simp: ct_in_state_def)+)[1]
         apply ((wpsimp | wpsimp wp: hoare_vcg_imp_lift' simp: ct_in_state_def)+)[1]
-       apply (rule_tac Q="\<lambda>_ s. ?Q s \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s) \<and> invs s"
+       apply (rule_tac Q'="\<lambda>_ s. ?Q s \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s) \<and> invs s"
                     in hoare_strengthen_post)
         apply (wpsimp wp: finalise_cap_schact_is_rct_imp_ct_activatable)
          apply (rule hoare_vcg_conj_lift)
@@ -1616,7 +1616,7 @@ lemma cap_revoke_schact_is_rct_imp_ct_activatable:
    cap_revoke cap
    \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (rule_tac Q="\<lambda>_. ?P" in hoare_post_imp, simp)
+  apply (rule_tac Q'="\<lambda>_. ?P" in hoare_post_imp, simp)
   apply (rule validE_valid)
   apply (rule cap_revoke_preservation)
    apply (clarsimp simp: cap_delete_def)
@@ -1679,17 +1679,17 @@ lemma invoke_tcb_schact_is_rct_imp_ct_activatable:
   (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
   apply (cases iv; clarsimp)
           apply (clarsimp simp: liftE_def bind_assoc)
-          apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+          apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
            apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
            apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
            apply wpsimp
          apply (clarsimp simp: liftE_def bind_assoc)
-         apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+         apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
           apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
          apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
          apply wpsimp
         apply (clarsimp simp: liftE_def bind_assoc)
-        apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+        apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
          apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
         apply (rule bind_wp_fwd_skip,
                solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift' crunch_wps mapM_x_wp')+\<close>)+
@@ -1763,9 +1763,9 @@ lemma invoke_cnode_schact_is_rct_imp_ct_activatable:
         apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
        apply (wpsimp wp: hoare_vcg_imp_lift')
        apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-      apply (rule_tac Q="\<lambda>s . ?Q s \<and> invs s" in hoare_weaken_pre[rotated])
+      apply (rule_tac P'="\<lambda>s . ?Q s \<and> invs s" in hoare_weaken_pre[rotated])
        apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-      apply (rule_tac Q="\<lambda>_ s. ?Q s \<and> invs s" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_ s. ?Q s \<and> invs s" in hoare_post_imp)
        apply fastforce
       apply (rule validE_valid)
       apply (rule cap_revoke_preservation)
@@ -1797,15 +1797,15 @@ lemma perform_invocation_schact_is_rct_imp_ct_activatable:
    perform_invocation block call can_donate iv
    \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   apply (cases iv; simp)
-             apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+             apply (rule_tac Q'="\<lambda>_. ct_active" in hoare_post_imp)
               apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
              apply (wpsimp wp: invoke_untyped_ct_active)
             apply (wpsimp wp: send_ipc_schact_is_rct_imp_ct_activatable)
             apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-           apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+           apply (rule_tac Q'="\<lambda>_. ct_active" in hoare_post_imp)
             apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
            apply wpsimp
-          apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+          apply (rule_tac Q'="\<lambda>_. ct_active" in hoare_post_imp)
            apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
           apply wpsimp
          apply (wpsimp wp: invoke_tcb_schact_is_rct_imp_ct_activatable)
@@ -1818,10 +1818,10 @@ lemma perform_invocation_schact_is_rct_imp_ct_activatable:
      apply (wpsimp wp: invoke_cnode_schact_is_rct_imp_ct_activatable)
     apply (wpsimp wp: hoare_drop_imps)
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-   apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_. ct_active" in hoare_post_imp)
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
    apply wpsimp
-  apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>_. ct_active" in hoare_post_imp)
    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   apply wpsimp
   done
@@ -1861,14 +1861,14 @@ lemma handle_invocation_schact_is_rct_imp_ct_activatable:
     apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_activatable)
        apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
          apply (wpsimp wp: gts_wp')+
-      apply (rule_tac Q="\<lambda>_. ?Q" and E="\<lambda>_. ?Q" in hoare_strengthen_postE[rotated]; fastforce?)
+      apply (rule_tac Q'="\<lambda>_. ?Q" and E'="\<lambda>_. ?Q" in hoare_strengthen_postE[rotated]; fastforce?)
       apply (rule valid_validE)
       apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_activatable)
      apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q
                        ct_in_state_set set_thread_state_schact_is_rct_strong)
     apply (fastforce intro: cur_sc_active_active_sc_tcb_at_cur_thread
                       simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-   apply (wp hoare_vcg_E_conj | simp add: split_def)+
+   apply (wp hoare_vcg_conj_liftE_E | simp add: split_def)+
    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
@@ -2007,23 +2007,23 @@ lemma handle_event_schact_is_rct_imp_ct_activatable:
              handle_event_schact_is_rct_imp_ct_activatable e)
 
       apply (clarsimp simp: liftE_def bind_assoc)
-      apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+      apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
        apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
       apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
       apply wpsimp
      apply (clarsimp simp: liftE_def bind_assoc)
-     apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+     apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
      apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
      apply wpsimp
     apply (clarsimp simp: liftE_def bind_assoc)
-    apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+    apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
     apply (rule bind_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift' do_machine_op_ct_in_state\<close>)+
     apply (rule bind_wp_fwd_skip, wpsimp)
     apply wpsimp
    apply (clarsimp simp: liftE_def bind_assoc)
-   apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+   apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
    apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
    apply (wpsimp wp: hoare_vcg_imp_lift')
@@ -2090,7 +2090,7 @@ lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
    apply (fastforce intro: strengthen_cur_sc_offset_sufficient)
   apply (rule bind_wp[OF _ is_round_robin_sp])
   apply (rule hoare_vcg_conj_lift_pre_fix)
-   apply (rule_tac Q="\<lambda>_ s. is_refill_ready (cur_sc s) s" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_ s. is_refill_ready (cur_sc s) s" in hoare_post_imp)
     apply (rule is_refill_ready_imp_cur_sc_offset_ready_zero; fastforce)
    apply (rule hoare_weaken_pre)
     apply (rule_tac f=cur_sc and g=cur_sc in hoare_lift_Pf_pre_conj[where R=\<top>, simplified];
@@ -2100,7 +2100,7 @@ lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
    apply (clarsimp split: if_splits)
    apply (fastforce intro: active_scs_validE
                      simp: active_sc_def vs_all_heap_simps obj_at_def current_time_bounded_def)
-  apply (rule_tac Q="\<lambda>_ s. is_refill_sufficient 0 (cur_sc s) s" in hoare_post_imp)
+  apply (rule_tac Q'="\<lambda>_ s. is_refill_sufficient 0 (cur_sc s) s" in hoare_post_imp)
    apply (clarsimp simp: vs_all_heap_simps refill_ready_no_overflow_def refill_ready_def)
   apply (rule hoare_weaken_pre)
    apply (rule_tac f=cur_sc in hoare_lift_Pf2; (solves wpsimp)?)
@@ -2262,7 +2262,7 @@ lemma choose_thread_cur_sc_offset_ready_and_sufficient:
   apply (clarsimp simp: choose_thread_def)
   apply (intro bind_wp[OF _ gets_sp])
   apply (rule hoare_if)
-   apply (rule_tac Q="\<lambda>_ s. cur_thread s = idle_thread s" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_ s. cur_thread s = idle_thread s" in hoare_post_imp)
     apply fastforce
    apply wpsimp
   apply (clarsimp simp: guarded_switch_to_def)
@@ -2346,7 +2346,7 @@ lemma choose_thread_ct_not_idle_imp_ct_released[wp]:
   apply (clarsimp simp: choose_thread_def guarded_switch_to_def)
   apply (intro bind_wp[OF _ gets_sp])
   apply (rule hoare_if)
-   apply (rule_tac Q="\<lambda>_ s. cur_thread s = idle_thread s" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>_ s. cur_thread s = idle_thread s" in hoare_post_imp)
     apply fastforce
    apply wpsimp
   apply (wpsimp wp: is_schedulable_wp thread_get_wp hoare_drop_imps)
@@ -2459,7 +2459,7 @@ lemma schedule_cur_sc_offset_ready_and_sufficient:
      apply (clarsimp simp: valid_sched_def schedulable_def2 ct_ready_if_schedulable_def
                            vs_all_heap_simps obj_at_kh_kheap_simps)
 
-    apply (rule_tac Q="\<lambda>_ s. valid_state s \<and>  cur_tcb s" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_ s. valid_state s \<and>  cur_tcb s" in hoare_post_imp)
      apply (clarsimp simp: valid_state_def)
     apply (case_tac action; clarsimp)
       apply wpsimp
@@ -2524,7 +2524,7 @@ lemma call_kernel_cur_sc_offset_ready_and_sufficient:
                      preemption_path_schact_is_rct_imp_ct_not_in_release_q)
   apply (clarsimp cong: conj_cong)
   apply (rule hoare_weaken_preE)
-   apply (rule hoare_vcg_E_elim)
+   apply (rule hoare_vcg_conj_elimE)
     apply (wpsimp wp: handle_event_valid_sched handle_event_cur_sc_chargeable
                       handle_event_scheduler_act_sane handle_event_schact_is_rct_imp_cur_sc_active
                       handle_event_schact_is_rct_imp_ct_not_in_release_q

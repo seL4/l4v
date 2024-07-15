@@ -1343,7 +1343,7 @@ lemma ri_invs[wp]:
   apply (rule bind_wp[OF _ gbn_sp[simplified pred_conj_comm]])
   apply (rule bind_wp[OF _ get_notification_default_sp])
   apply (rule hoare_weaken_pre)
-   apply (rule_tac R="receive_ipc_preconds thread ep_ptr reply reply_opt ep invs"
+   apply (rule_tac P''="receive_ipc_preconds thread ep_ptr reply reply_opt ep invs"
           in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
    prefer 2 apply (clarsimp simp: st_tcb_at_tcb_at)
@@ -1960,10 +1960,10 @@ lemma si_invs'_helper_some_reply:
         apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
         apply (wpsimp wp: sts_invs_minor2)
     apply (wpsimp wp: hoare_vcg_conj_lift wp_del: reply_push_st_tcb_at)
-     apply (rule_tac Q="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
       apply (wpsimp wp: reply_push_st_tcb_at_Inactive)
            apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-          apply (rule_tac Q="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
+          apply (rule_tac Q'="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
            apply (wpsimp wp: sts_st_tcb_at_other)
           apply (clarsimp simp: pred_tcb_at_def obj_at_def)
          apply (wpsimp wp: reply_push_invs' sts_invs_minor2')+

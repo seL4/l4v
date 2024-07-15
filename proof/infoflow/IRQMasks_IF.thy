@@ -345,7 +345,7 @@ lemma handle_event_irq_masks:
                    | wp (once) hoare_drop_imps)+\<close>)?)
   apply simp
   apply (wp handle_interrupt_irq_masks[where st=st] | wpc | simp)+
-   apply (rule_tac Q="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
+   apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
                              (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
     apply wpsimp+
   done
@@ -357,7 +357,7 @@ lemma call_kernel_irq_masks:
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   apply (simp add: call_kernel_def)
   apply (wp handle_interrupt_irq_masks[where st=st])+
-    apply (rule_tac Q="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
+    apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
                               (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
      apply (wp | simp)+
    apply (rule_tac Q="\<lambda>x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s"

@@ -203,7 +203,7 @@ lemma decodeCNodeInvocation_corres:
                      apply (rule corres_trivial)
                      subgoal by (auto simp add: whenE_def, auto simp add: returnOk_def)
                     apply (wp | wpc | simp(no_asm))+
-                apply (wp hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
+                apply (wp hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift
                           hoare_vcg_all_liftE_R hoare_vcg_all_lift lsfco_cte_at' hoare_drop_imps
                                | clarsimp)+
         subgoal by (auto elim!: valid_cnode_capI)
@@ -6020,7 +6020,7 @@ lemma reduceZombie_invs'':
           apply (wp | simp)+
          apply (rule getCTE_wp)
         apply (wp | simp)+
-      apply (rule_tac Q="\<lambda>cte s. rv = capZombiePtr cap +
+      apply (rule_tac Q'="\<lambda>cte s. rv = capZombiePtr cap +
                                       of_nat (capZombieNumber cap) * 2^cteSizeBits - 2^cteSizeBits
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
                               \<and> no_cte_prop Q s \<and> sch_act_simple s"
@@ -6416,8 +6416,8 @@ global_interpretation cteDelete: typ_at_all_props' "cteDelete slot exposed"
 
 lemma cteDelete_cte_at:
   "\<lbrace>\<top>\<rbrace> cteDelete slot bool \<lbrace>\<lambda>rv. cte_at' slot\<rbrace>"
-  apply (rule_tac Q="\<lambda>s. cte_at' slot s \<or> \<not> cte_at' slot s"
-               in hoare_pre(1))
+  apply (rule_tac P'="\<lambda>s. cte_at' slot s \<or> \<not> cte_at' slot s"
+               in hoare_weaken_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_disj_lift)
      apply (rule typ_at_lifts, rule cteDelete_typ_at')
@@ -6456,7 +6456,7 @@ lemma cteDelete_cte_wp_at_invs:
       apply (clarsimp simp: cte_wp_at_ctes_of)
      apply wp
     apply (simp add: imp_conjR conj_comms)
-    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> sch_act_simple s \<and>
+    apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> sch_act_simple s \<and>
                    (fst rv \<longrightarrow>
                        cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s) \<and>
                    (fst rv \<longrightarrow>
@@ -6467,9 +6467,9 @@ lemma cteDelete_cte_wp_at_invs:
                                          cteCap cte = NullCap \<or>
                                          (\<exists>zb n. cteCap cte = Zombie slot zb n))
                                   slot s)"
-                and E="\<lambda>rv. \<top>" in hoare_strengthen_postE)
+                and E'="\<lambda>rv. \<top>" in hoare_strengthen_postE)
       apply (wp finaliseSlot_invs finaliseSlot_removeable finaliseSlot_sch_act_simple
-                hoare_drop_imps(2)[OF finaliseSlot_irqs])
+                hoare_drop_impE_R[OF finaliseSlot_irqs])
        apply (rule hoare_strengthen_postE_R, rule finaliseSlot_abort_cases)
        apply (clarsimp simp: cte_wp_at_ctes_of dest!: isCapDs)
       apply simp
@@ -6491,7 +6491,7 @@ lemma cteDelete_cte_wp_at_invs:
                              p s"
                in hoare_strengthen_postE_R)
     apply (wp finaliseSlot_invs finaliseSlot_removeable finaliseSlot_sch_act_simple
-              hoare_drop_imps(2)[OF finaliseSlot_irqs])
+              hoare_drop_impE_R[OF finaliseSlot_irqs])
     apply (rule hoare_strengthen_postE_R [OF finaliseSlot_cte_wp_at[where p=p and P=P]])
       apply simp+
     apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -6684,7 +6684,7 @@ proof (induct rule: finalise_induct3)
           apply ((wp | simp add: locateSlot_conv)+)[2]
         apply (rule drop_spec_validE)
         apply simp
-        apply (rule_tac Q="\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)
+        apply (rule_tac Q'="\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)
                                      \<and> cte_wp_at' (\<lambda>cte. cteCap cte = fst rvb) sl s"
                          in hoare_post_imp)
          apply (clarsimp simp: o_def cte_wp_at_ctes_of capToRPO_def
@@ -7265,7 +7265,7 @@ next
                 apply (rule updateCap_corres)
                  apply simp
                 apply (simp add: is_cap_simps)
-               apply (rule_tac R="\<lambda>rv. cte_at' (cte_map ?target)" in hoare_post_add)
+               apply (rule_tac Q'="\<lambda>rv. cte_at' (cte_map ?target)" in hoare_post_add)
                apply (wp, (wp getCTE_wp)+)
               apply (clarsimp simp: cte_wp_at_ctes_of)
              apply (rule no_fail_pre, wp, simp)
@@ -7433,7 +7433,7 @@ crunch cteRevoke
 
 lemma cteRevoke_invs':
   "\<lbrace>invs' and sch_act_simple\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>rv. invs' and sch_act_simple" in hoare_strengthen_post)
    apply (wpsimp wp: cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple
                simp: sch_act_simple_def)+
   done
@@ -8820,7 +8820,7 @@ lemma cteDelete_irq_states':
   apply (simp add: cteDelete_def split_def)
   apply (wp whenE_wp)
    apply (rule hoare_strengthen_postE)
-     apply (rule hoare_valid_validE)
+     apply (rule valid_validE)
      apply (rule finaliseSlot_irq_states')
     apply simp
    apply simp

@@ -174,7 +174,7 @@ lemma blocked_ipc_st_tcb_at_general:
   apply (wpsimp simp: blocked_cancel_ipc_def
                   wp: sts_st_tcb_at_cases_strong reply_unlink_tcb_st_tcb_at hoare_weak_lift_imp
                       hoare_vcg_all_lift get_ep_queue_inv get_simple_ko_wp set_simple_ko_wps
-                      hoare_drop_imp[where R="\<lambda>rv. tcb_at t"])
+                      hoare_drop_imp[where Q'="\<lambda>rv. tcb_at t"])
   apply (rule conjI; clarsimp simp: obj_at_def pred_tcb_at_def is_ep elim: bool_to_boolE)
   done
 
@@ -184,7 +184,7 @@ lemma cancel_signal_st_tcb_at_general:
    \<lbrace>\<lambda>rv s. P (st_tcb_at P' t' s)\<rbrace>"
   by (wpsimp simp: cancel_signal_def
                wp: sts_st_tcb_at_cases_strong ntfn_cases_weak_wp hoare_weak_lift_imp
-                   set_simple_ko_pred_tcb_at hoare_drop_imp[where R="\<lambda>rv. tcb_at t"])
+                   set_simple_ko_pred_tcb_at hoare_drop_imp[where Q'="\<lambda>rv. tcb_at t"])
 
 lemma sched_context_maybe_unbind_ntfn_st_tcb_at[wp]:
   "sched_context_maybe_unbind_ntfn ntfnptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
@@ -2235,7 +2235,7 @@ lemma cancel_ipc_simple_except_awaiting_reply:
   apply (case_tac state; simp)
          prefer 8
          apply ((wpsimp wp: thread_set_no_change_tcb_pred simp: st_tcb_at_def obj_at_def)+)[4]
-     apply ((rule hoare_strengthen_post[where Q = "\<lambda>s. st_tcb_at ((=) Inactive) t"], wpsimp,
+     apply ((rule hoare_strengthen_post[where Q'="\<lambda>s. st_tcb_at ((=) Inactive) t"], wpsimp,
              clarsimp simp: st_tcb_at_def obj_at_def)+)[4]
   done
 
@@ -2500,7 +2500,7 @@ lemma cancel_all_signals_unlive[wp]:
    apply (wp
         | wpc
         | simp add: unbind_maybe_notification_def)+
-     apply (rule_tac Q="\<lambda>_. obj_at (is_ntfn and Not \<circ> live) ntfnptr" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_. obj_at (is_ntfn and Not \<circ> live) ntfnptr" in hoare_post_imp)
       apply (fastforce elim: obj_at_weakenE)
      apply (wp mapM_x_wp' sts_obj_at_impossible misc_refill_unblock_check_obj_at_impossible'
       | simp add: is_ntfn)+
@@ -2662,7 +2662,7 @@ lemma complete_yield_to_invs:
    apply wpsimp
   apply (rule bind_wp[OF _ lookup_ipc_buffer_inv])
   apply (rule bind_wp_fwd)
-   apply (rule_tac Q="K (yt_opt = Some a) and
+   apply (rule_tac P'="K (yt_opt = Some a) and
          (bound_yt_tcb_at ((=) (Some a)) tcb_ptr and
          (invs and ex_nonz_cap_to tcb_ptr))"
          in hoare_weaken_pre)

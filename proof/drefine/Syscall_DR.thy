@@ -858,7 +858,7 @@ lemma get_tcb_mrs_wp:
    apply (clarsimp simp: get_tcb_mrs_def Let_def get_tcb_message_info_def Suc_leI[OF msg_registers_lt_msg_max_length]
                          arch_tcb_context_get_def
                    split del:if_split)
-    apply (rule_tac Q="\<lambda>buf_mrs s. buf_mrs =
+    apply (rule_tac Q'="\<lambda>buf_mrs s. buf_mrs =
       (get_ipc_buffer_words (machine_state sa) obj ([Suc (length msg_registers)..<msg_max_length] @ [msg_max_length]))"
       in hoare_strengthen_post)
     apply (rule get_ipc_buffer_words[where thread=thread ])
@@ -1080,7 +1080,7 @@ lemma reply_from_kernel_error:
    apply (wp)
       apply (simp add:as_user_def split_def set_object_def get_object_def)
       apply (wp set_object_at_obj)
-     apply (rule hoare_strengthen_post[where Q = "\<lambda>x s. x \<le> mask 12"])
+     apply (rule hoare_strengthen_post[where Q'="\<lambda>x s. x \<le> mask 12"])
       apply (simp add:set_mrs_def)
       apply (wp|wpc)+
      apply (clarsimp simp:setRegister_def simpler_modify_def)
@@ -1234,7 +1234,7 @@ lemma not_master_reply_cap_lcs[wp]:
   apply wp
     apply (simp add:split_def)
     apply wp
-    apply (rule_tac Q ="\<lambda>cap. cte_wp_at (\<lambda>x. x = cap) (fst rv) and real_cte_at (fst rv)
+    apply (rule_tac Q'="\<lambda>cap. cte_wp_at (\<lambda>x. x = cap) (fst rv) and real_cte_at (fst rv)
                               and valid_reply_masters and valid_objs" in hoare_strengthen_post)
      apply (wp get_cap_cte_wp_at)
     apply clarify
@@ -1344,7 +1344,7 @@ lemma handle_invocation_corres:
         apply (wp sts_Restart_invs set_thread_state_ct_active)+
        apply (simp add: split_def msg_from_syscall_error_simp)
        apply (wp | simp add: split_def)+
-      apply (rule_tac Q="\<lambda>r s. s = s'a \<and>
+      apply (rule_tac Q'="\<lambda>r s. s = s'a \<and>
                                evalMonad (lookup_ipc_buffer False (cur_thread s'a)) s'a = Some r \<and>
                                cte_wp_at (Not \<circ> is_master_reply_cap) (snd rv) s \<and>
                                cte_wp_at ((=) (fst rv)) (snd rv) s \<and>
@@ -1377,17 +1377,17 @@ lemma receive_ipc_cur_thread:
   apply (wp|wpc|clarsimp)+
                  apply (simp add:setup_caller_cap_def)
                  apply (wp dxo_wp_weak | simp)+
-              apply (rule_tac Q="\<lambda>r s. P (cur_thread s)" in hoare_strengthen_post)
+              apply (rule_tac Q'="\<lambda>r s. P (cur_thread s)" in hoare_strengthen_post)
               apply clarsimp
              apply (wp|wpc)+
            apply clarsimp
           apply (clarsimp simp:neq_Nil_conv)
           apply (rename_tac list queue sender)
-          apply (rule_tac Q="\<lambda>r s. P (cur_thread s) \<and> tcb_at (hd list) s" in hoare_strengthen_post)
+          apply (rule_tac Q'="\<lambda>r s. P (cur_thread s) \<and> tcb_at (hd list) s" in hoare_strengthen_post)
            apply wp
           apply (clarsimp simp:st_tcb_at_def tcb_at_def)
          apply (wp get_simple_ko_wp[where f=Notification] gbn_wp | wpc | simp add: Ipc_A.isActive_def)+
-   apply (rule_tac Q="\<lambda>r s. valid_ep r s \<and> P (cur_thread s)" in hoare_strengthen_post)
+   apply (rule_tac Q'="\<lambda>r s. valid_ep r s \<and> P (cur_thread s)" in hoare_strengthen_post)
     apply (wp get_simple_ko_valid[where f=Endpoint, simplified valid_ep_def2[symmetric]])
    apply (clarsimp simp:valid_ep_def)
    apply auto[1]
@@ -1446,7 +1446,7 @@ lemma handle_recv_corres:
                  apply (rule hoare_vcg_conj_lift)
                   apply (rule_tac t1="cur_thread s'" in hoare_post_imp[OF _ cap_delete_one_st_tcb_at_and_valid_etcbs])
                   apply (fastforce simp: obj_at_def generates_pending_def st_tcb_at_def)
-                 apply (rule_tac Q="\<lambda>rv. invs and valid_etcbs" in hoare_strengthen_post)
+                 apply (rule_tac Q'="\<lambda>rv. invs and valid_etcbs" in hoare_strengthen_post)
                   apply wp
                  apply (clarsimp simp: invs_def)
                 apply clarsimp
@@ -1454,7 +1454,7 @@ lemma handle_recv_corres:
               defer(* NEED RECEIVE ASYNC IPC *)
               apply clarsimp
              apply wp+
-            apply (rule hoare_vcg_conj_liftE_R)
+            apply (rule hoare_vcg_conj_liftE_R')
              apply (rule hoare_strengthen_postE_R, rule lookup_cap_valid)
              apply (clarsimp simp: valid_cap_def)
             apply wp+
@@ -1462,7 +1462,7 @@ lemma handle_recv_corres:
           apply (wp get_simple_ko_wp |wpc)+
           apply (simp only: conj_ac)
           apply wp
-          apply (rule hoare_vcg_E_elim)
+          apply (rule hoare_vcg_conj_elimE)
            apply (simp add: lookup_cap_def lookup_slot_for_thread_def split_def)
            apply wp
             apply (rule hoare_strengthen_postE[OF resolve_address_bits_valid_fault])
@@ -1471,7 +1471,7 @@ lemma handle_recv_corres:
            apply wp
           apply (rule validE_validE_R)
           apply (clarsimp simp:validE_def)
-          apply (rule_tac Q = "\<lambda>r s. cur_thread s = cur_thread s' \<and>
+          apply (rule_tac Q'="\<lambda>r s. cur_thread s = cur_thread s' \<and>
                                 not_idle_thread (cur_thread s) s \<and>
                                 st_tcb_at active (cur_thread s) s \<and>
                                 invs s \<and> valid_etcbs s \<and>
@@ -1664,8 +1664,8 @@ lemma handle_event_corres:
       apply (rule corres_symb_exec_catch_r)
          apply (rule handle_fault_corres)
         apply (simp only: conj_comms)
-        apply (rule hoare_vcg_E_conj)
-         apply (wp handle_vm_fault_wp | rule hoare_vcg_E_conj)+
+        apply (rule hoare_vcg_conj_liftE_E)
+         apply (wp handle_vm_fault_wp | rule hoare_vcg_conj_liftE_E)+
       apply (simp add:no_fail_def)
      apply wp
      apply clarsimp

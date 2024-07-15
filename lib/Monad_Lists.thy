@@ -482,7 +482,7 @@ lemma filterM_subset:
 lemma filterM_all:
   "\<lbrakk> \<And>x y. \<lbrakk> x \<in> set xs; y \<in> set xs \<rbrakk> \<Longrightarrow> \<lbrace>P y\<rbrace> m x \<lbrace>\<lambda>rv. P y\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. \<forall>x \<in> set xs. P x s\<rbrace> filterM m xs \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. P x s\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. set rv \<subseteq> set xs \<and> (\<forall>x \<in> set xs. P x s)"
+  apply (rule_tac Q'="\<lambda>rv s. set rv \<subseteq> set xs \<and> (\<forall>x \<in> set xs. P x s)"
               in hoare_strengthen_post)
    apply (wp filterM_subset hoare_vcg_const_Ball_lift filterM_preserved)
     apply simp+

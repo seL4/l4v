@@ -267,7 +267,7 @@ lemma kernel_entry_invs:
   "\<lbrace>\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
    kernel_entry e us
    \<lbrace>\<lambda>_ s. mcs_invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
-  apply (rule_tac Q="\<lambda>_ s. (invs s \<and> (ct_running s \<or> ct_idle s))
+  apply (rule_tac Q'="\<lambda>_ s. (invs s \<and> (ct_running s \<or> ct_idle s))
                            \<and> (cur_sc_offset_ready (consumed_time s) s
                               \<and> cur_sc_offset_sufficient (consumed_time s) s)
                            \<and> valid_sched s
@@ -374,7 +374,7 @@ lemma check_active_irq_valid_machine_time[wp]:
 lemma do_user_op_invs2:
   "do_user_op f tc
    \<lbrace>\<lambda>s. mcs_invs s \<and> ct_running s\<rbrace>"
-  apply (rule_tac Q="\<lambda>_ s. (invs s \<and> ct_running s) \<and> valid_list s \<and> valid_sched s
+  apply (rule_tac Q'="\<lambda>_ s. (invs s \<and> ct_running s) \<and> valid_list s \<and> valid_sched s
                            \<and> scheduler_action s = resume_cur_thread
                            \<and> valid_domain_list s
                            \<and> cur_sc_active s \<and> ct_not_in_release_q s
@@ -504,13 +504,13 @@ lemma ckernel_invs:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: callKernel_def mcsPreemptionPoint_def)
   apply (rule hoare_pre)
-   apply (wpsimp wp: hoare_drop_imp[where R="\<lambda>_. kernelExitAssertions"] activate_invs')
+   apply (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"] activate_invs')
      apply (rule hoare_drop_imp)
      apply (wpsimp wp: schedule_invs')
     apply (wpsimp wp: stateAssert_wp)
    apply (wpsimp wp: isSchedulable_wp hoare_drop_imp)
     apply (intro iffI; clarsimp simp: isScActive_def isSchedulable_bool_def)
-   apply (rule hoare_strengthen_postE[where E="\<lambda>_. invs'" and Q=Q and R=Q for Q])
+   apply (rule hoare_strengthen_postE[where E'="\<lambda>_. invs'" and Q=Q and R=Q for Q])
      apply wpsimp
     apply (clarsimp simp: active_from_running')+
    apply wp
@@ -746,7 +746,7 @@ lemma kernel_preemption_corres:
              apply wpsimp
             apply wpsimp
            apply wpsimp
-          apply (rule_tac Q="\<lambda>_ s. bound irq \<longrightarrow> invs' s \<and> (intStateIRQTable (ksInterruptState s) (the irq) \<noteq>
+          apply (rule_tac Q'="\<lambda>_ s. bound irq \<longrightarrow> invs' s \<and> (intStateIRQTable (ksInterruptState s) (the irq) \<noteq>
                                    irqstate.IRQInactive)"
                  in hoare_strengthen_post[rotated])
            apply clarsimp
@@ -756,7 +756,7 @@ lemma kernel_preemption_corres:
         apply (wpsimp wp: isSchedulable_wp cong: conj_cong imp_cong)
        apply wpsimp
       apply wpsimp
-     apply (rule_tac Q="\<lambda>_ s. invs s \<and>  valid_sched s \<and> valid_list s \<and> scheduler_act_sane s \<and>
+     apply (rule_tac Q'="\<lambda>_ s. invs s \<and>  valid_sched s \<and> valid_list s \<and> scheduler_act_sane s \<and>
                               consumed_time_bounded s \<and> ct_not_blocked s \<and> ct_not_in_release_q s \<and>
                               current_time_bounded s \<and> cur_sc_chargeable s \<and>
                               (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s) \<and>
@@ -782,7 +782,7 @@ lemma kernel_preemption_corres:
        apply clarsimp
       apply clarsimp
      apply wpsimp
-    apply (rule_tac Q="\<lambda>irq s. invs' s \<and> sc_at' (ksCurSc s) s \<and>
+    apply (rule_tac Q'="\<lambda>irq s. invs' s \<and> sc_at' (ksCurSc s) s \<and>
                                (\<forall>irq'. irq = Some irq' \<longrightarrow>
                                          intStateIRQTable (ksInterruptState s ) irq' \<noteq> IRQInactive)"
            in hoare_post_imp)
@@ -895,7 +895,7 @@ lemma kernel_corres':
                             handle_event_valid_sched)
          apply simp
         apply (clarsimp simp: cur_sc_chargeable_def)
-       apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_strengthen_postE)
+       apply (rule_tac Q'="\<lambda>_. \<top>" and E'="\<lambda>_. invs'" in hoare_strengthen_postE)
          apply wpsimp+
       apply (rule_tac P="invs and valid_sched and current_time_bounded
                          and ct_ready_if_schedulable and scheduler_act_sane
@@ -960,7 +960,7 @@ lemma kernel_corres':
       apply (wpsimp simp: mcsPreemptionPoint_def wp: isSchedulable_wp)
      apply (wpsimp wp: dmo_getirq_inv)
      apply (clarsimp simp: isSchedulable_bool_def isScActive_def)
-    apply (rule_tac Q="\<lambda>_. invs'" and E="\<lambda>_. invs'" in hoare_strengthen_postE)
+    apply (rule_tac Q'="\<lambda>_. invs'" and E'="\<lambda>_. invs'" in hoare_strengthen_postE)
       apply (wpsimp wp: he_invs')
      apply simp
     apply clarsimp
@@ -1008,7 +1008,7 @@ lemma kernel_corres:
       apply (simp add: kernelExitAssertions_def)
       apply (fastforce intro: cur_tcb_cross simp: state_relation_def)
      apply (rule hoare_vcg_conj_lift)
-      apply (rule_tac Q="\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)" in hoare_post_imp, fastforce)
+      apply (rule_tac Q'="\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)" in hoare_post_imp, fastforce)
       apply (wp akernel_invs_det_ext)
      apply (wp call_kernel_domain_list_inv_det_ext)
     apply wpsimp

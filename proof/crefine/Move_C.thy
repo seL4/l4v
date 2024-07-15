@@ -125,7 +125,7 @@ lemma option_to_0_simps [simp]:
 lemma of_bool_from_bool: "of_bool = from_bool"
   by (rule ext, simp add: from_bool_def split: bool.split)
 
-lemma hoare_vcg_imp_lift_R:
+lemma hoare_vcg_imp_liftE_R:
   "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, -; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, - \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, -"
   by (auto simp add: valid_def validE_R_def validE_def split_def split: sum.splits)
 
@@ -641,7 +641,7 @@ lemma getMessageInfo_le3:
   including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
-  apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_. \<top>" in hoare_strengthen_post)
    apply wp
   apply (rename_tac rv s)
   apply (simp add: messageInfoFromWord_def Let_def msgExtraCapBits_def)
@@ -654,7 +654,7 @@ lemma getMessageInfo_msgLength:
   including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
-  apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
+  apply (rule_tac Q'="\<lambda>_. \<top>" in hoare_strengthen_post)
    apply wp
   apply (simp add: messageInfoFromWord_def Let_def not_less msgMaxLength_def msgLengthBits_def
             split: if_split)

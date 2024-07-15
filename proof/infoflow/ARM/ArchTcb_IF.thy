@@ -103,13 +103,13 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
    apply wp
         apply ((simp add: conj_comms(1, 2)
                 | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
-                       hoare_vcg_E_elim hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
+                       hoare_vcg_conj_elimE hoare_vcg_const_imp_liftE_R hoare_vcg_conj_liftE_R
                 | (wp check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
                       check_cap_inv2[where Q="\<lambda>_ s. t \<noteq> idle_thread s"]
                       out_invs_trivial case_option_wpE cap_delete_deletes
                       cap_delete_valid_cap cap_insert_valid_cap out_cte_at
                       cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
-                      hoare_vcg_const_imp_lift_R hoare_vcg_all_liftE_R
+                      hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R
                       thread_set_tcb_ipc_buffer_cap_cleared_invs
                       thread_set_invs_trivial[OF ball_tcb_cap_casesI]
                       hoare_vcg_all_lift thread_set_valid_cap out_emptyable
@@ -155,7 +155,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
        (invoke_tcb ti)"
   apply (simp add: split_def cong: option.case_cong)
   apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where  st=st and Q=\<top>]])
-                    apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp: when_def | wpc)+
+                    apply (wpsimp wp: hoare_vcg_const_imp_liftE_R simp: when_def | wpc)+
                     apply (rule conjI)
                      apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
                  apply ((wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
@@ -183,7 +183,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                            set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
                            cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
                            cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
-                           checked_insert_no_cap_to hoare_vcg_const_imp_lift_R hoare_vcg_conj_lift
+                           checked_insert_no_cap_to hoare_vcg_const_imp_liftE_R hoare_vcg_conj_lift
                            as_user_reads_respects_f thread_set_mdb cap_delete_invs
                       | wpc
                       | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
@@ -214,7 +214,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                       set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
                       cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
                       cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
-                      checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
+                      checked_insert_no_cap_to hoare_vcg_const_imp_liftE_R
                       as_user_reads_respects_f cap_delete_invs
                  | wpc
                  | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def when_def st_tcb_at_triv

@@ -177,10 +177,10 @@ lemma replyRemoveTCB_st_tcb_at'_sym_ref:
                     set_reply'.set_no_update[where upd="\<lambda>r. (replyPrev_update Map.empty r)"]
                     hoare_vcg_imp_lift set_reply'.get_ko_at' haskell_assert_inv
               simp: disj_imp)
-       apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
+       apply (rule_tac Q'="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
               clarsimp)
        apply wp
-      apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
+      apply (rule_tac Q'="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
              clarsimp)
       apply (wpsimp wp: gts_wp')+
   apply (clarsimp simp: obj_at'_def pred_tcb_at'_def)
@@ -768,7 +768,7 @@ lemma bindScReply_corres:
                  apply (rule updateReply_replyPrev_same_corres)
                  apply (clarsimp simp: reply_relation_def)
                 apply (wpsimp wp: updateReply_reply_projs)+
-            apply (rule_tac Q="\<lambda>_. reply_at' rptr and ko_at' sc scptr
+            apply (rule_tac Q'="\<lambda>_. reply_at' rptr and ko_at' sc scptr
                      and (\<lambda>s. heap_ls (replyPrevs_of s) (Some y) (sc_replies x))
                      and K (rptr \<notin> set (sc_replies x))"
                    in hoare_strengthen_post[rotated])
@@ -901,12 +901,12 @@ lemma bindScReply_valid_objs'[wp]:
   unfolding bindScReply_def
   supply set_sc_valid_objs'[wp del] set_sc'.valid_objs'[wp]
   apply (wpsimp wp: updateReply_valid_objs')
-       apply (rule_tac Q="\<lambda>_. valid_objs' and sc_at' scp" in hoare_strengthen_post)
+       apply (rule_tac Q'="\<lambda>_. valid_objs' and sc_at' scp" in hoare_strengthen_post)
         apply wpsimp
        apply (simp add: valid_reply'_def valid_bound_obj'_def)
       apply (wpsimp wp: updateReply_valid_objs')
      apply wpsimp
-      apply (rule_tac Q="\<lambda>_. valid_objs' and reply_at' y and reply_at' replyPtr
+      apply (rule_tac Q'="\<lambda>_. valid_objs' and reply_at' y and reply_at' replyPtr
                          and ko_at' sc scp" in hoare_strengthen_post)
        apply (wpsimp wp: updateReply_valid_objs')
       apply clarsimp

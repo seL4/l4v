@@ -171,7 +171,7 @@ lemma copy_global_mappings_reads_respects_g:
   apply simp
   apply (rule bind_ev_pre)
      prefer 3
-     apply (rule_tac Q="\<lambda>s. is_subject aag x \<and> x \<noteq> arm_global_pd (arch_state s) \<and>
+     apply (rule_tac P'="\<lambda>s. is_subject aag x \<and> x \<noteq> arm_global_pd (arch_state s) \<and>
                             pspace_aligned s \<and> valid_arch_state s" in hoare_weaken_pre)
       apply (rule gets_sp)
      apply (assumption)
@@ -283,7 +283,7 @@ lemma copy_global_mappings_globals_equiv:
   unfolding copy_global_mappings_def including classic_wp_pre
   apply simp
   apply wp
-   apply (rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda>s. x \<noteq> arm_global_pd (arch_state s) \<and>
+   apply (rule_tac Q'="\<lambda>_. globals_equiv s and (\<lambda>s. x \<noteq> arm_global_pd (arch_state s) \<and>
                                                    is_aligned x pd_bits)" in hoare_strengthen_post)
     apply (wp mapM_x_wp[OF _ subset_refl] store_pde_globals_equiv)
     apply (fastforce dest: subsetD[OF copy_global_mappings_index_subset] simp: pd_shifting')
@@ -301,7 +301,7 @@ lemma init_arch_objects_globals_equiv:
   apply (subst do_machine_op_mapM_x[OF empty_fail_cleanCacheRange_PoU])+
   apply (rule hoare_pre)
    apply (wpc | wp mapM_x_wp[OF dmo_cleanCacheRange_PoU_globals_equiv subset_refl])+
-    apply (rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs)"
+    apply (rule_tac Q'="\<lambda>_. globals_equiv s and (\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs)"
                  in hoare_strengthen_post)
      apply (wp mapM_x_wp[OF _ subset_refl] copy_global_mappings_globals_equiv
               dmo_cleanCacheRange_PoU_globals_equiv
@@ -542,11 +542,11 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
   apply (simp add: invoke_untyped_def mapM_x_def[symmetric])
   apply (wpsimp wp: mapM_x_ev'' create_cap_reads_respects_g
                     hoare_vcg_ball_lift init_arch_objects_reads_respects_g)+
-           apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post)
+           apply (rule_tac Q'="\<lambda>_. invs" in hoare_strengthen_post)
             apply (wp init_arch_objects_invs_from_restricted)
            apply (fastforce simp: invs_def)
           apply (wp retype_region_reads_respects_g[where sz=sz and slot="slot_of_untyped_inv ui"])
-         apply (rule_tac Q="\<lambda>rvc s. (\<forall>x\<in>set rvc. is_subject aag x) \<and>
+         apply (rule_tac Q'="\<lambda>rvc s. (\<forall>x\<in>set rvc. is_subject aag x) \<and>
                                     (\<forall>x\<in>set rvc. is_aligned x (obj_bits_api apiobject_type nat)) \<and>
                                     ((0::obj_ref) < of_nat (length list)) \<and>
                                     post_retype_invs apiobject_type rvc s \<and>
@@ -582,8 +582,8 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
    apply (rule_tac P="authorised_untyped_inv aag ui \<and>
                       (\<forall>p \<in> ptr_range ptr sz. is_subject aag p)" in hoare_gen_asmE)
    apply (rule validE_validE_R,
-          rule_tac E="\<top>\<top>"
-               and Q="\<lambda>_. invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz (If reset 0 idx)))
+          rule_tac E'="\<top>\<top>"
+               and Q'="\<lambda>_. invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz (If reset 0 idx)))
                                and ct_active
                                and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1} s)"
                 in hoare_strengthen_postE)
@@ -658,7 +658,7 @@ lemma reset_untyped_cap_globals_equiv:
              preemption_point_inv | simp add: unless_def)+
      apply (rule valid_validE)
      apply (rule_tac P="cap_aligned cap \<and> is_untyped_cap cap" in hoare_gen_asm)
-     apply (rule_tac Q="\<lambda>_ s. valid_global_objs s \<and> valid_arch_state s \<and> globals_equiv st s"
+     apply (rule_tac Q'="\<lambda>_ s. valid_global_objs s \<and> valid_arch_state s \<and> globals_equiv st s"
                   in hoare_strengthen_post)
       apply (rule validE_valid, rule mapME_x_wp')
       apply (rule hoare_pre)

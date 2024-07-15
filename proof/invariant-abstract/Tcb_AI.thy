@@ -62,13 +62,13 @@ lemma (in Tcb_AI_1) activate_invs:
   apply (rule bind_wp [OF _ thread_get_sp])
   apply (case_tac yt_opt, simp)
    apply (rule bind_wp [OF _ gts_sp])
-   apply (rule_tac Q="st_tcb_at ((=) rv) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+   apply (rule_tac P'="st_tcb_at ((=) rv) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
     apply (rename_tac state)
     apply (case_tac state; simp)
       apply wp
       apply (clarsimp elim!: pred_tcb_weakenE
                        simp: ct_in_state_def)
-     apply (rule_tac Q="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
+     apply (rule_tac Q'="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
      apply (rule hoare_pre)
       apply (wp sts_invs_minor ct_in_state_set)
         apply simp
@@ -80,20 +80,20 @@ lemma (in Tcb_AI_1) activate_invs:
                 elim!: st_tcb_ex_cap pred_tcb_weakenE
                        fault_tcbs_valid_states_active,
             auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
-    apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
+    apply (rule_tac Q'="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
     apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
     apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
    apply clarsimp
   apply (rule bind_wp)
    apply (rule hoare_K_bind)
    apply (rule bind_wp [OF _ gts_sp])
-   apply (rule_tac Q="st_tcb_at ((=) state) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+   apply (rule_tac P'="st_tcb_at ((=) state) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
     apply (rename_tac state)
     apply (case_tac state; simp)
       apply wp
       apply (clarsimp elim!: pred_tcb_weakenE
       simp: ct_in_state_def)
-     apply (rule_tac Q="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
+     apply (rule_tac Q'="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
      apply (rule hoare_pre)
       apply (wp sts_invs_minor ct_in_state_set)
         apply simp
@@ -104,7 +104,7 @@ lemma (in Tcb_AI_1) activate_invs:
                 elim!: st_tcb_ex_cap pred_tcb_weakenE
                        fault_tcbs_valid_states_active,
             auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
-    apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
+    apply (rule_tac Q'="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
     apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
     apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
    apply clarsimp
@@ -136,7 +136,7 @@ lemma restart_invs[wp]:
 lemma restart_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: Tcb_A.restart_def wp: thread_get_wp cancel_ipc_typ_at
-      | rule hoare_strengthen_post[where Q="\<lambda>rv s. P (typ_at T p s)"])+
+      | rule hoare_strengthen_post[where Q'="\<lambda>rv s. P (typ_at T p s)"])+
 
 lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
@@ -907,10 +907,10 @@ lemma cap_delete_deletes_fh:
                              ((p \<noteq> ptr) \<longrightarrow> cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p s)"
                in hoare_strengthen_postE_R)
    apply (rule hoare_weaken_preE_R)
-    apply (rule hoare_vcg_conj_lift_R)
+    apply (rule hoare_vcg_conj_liftE_R)
      apply (rule hoare_strengthen_postE_R[OF cap_delete_deletes])
      apply (clarsimp simp: cte_wp_at_def)
-    apply (rule hoare_vcg_const_imp_lift_R)
+    apply (rule hoare_vcg_const_imp_liftE_R)
     apply (rule cap_delete_ep)
    apply simp
   apply clarsimp
@@ -931,7 +931,7 @@ lemma install_tcb_cap_cte_wp_at_ep:
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>, -"
   apply (simp add: install_tcb_cap_def)
-  apply (wpsimp wp: checked_insert_cte_wp_at_weak cap_delete_ep hoare_vcg_const_imp_lift_R
+  apply (wpsimp wp: checked_insert_cte_wp_at_weak cap_delete_ep hoare_vcg_const_imp_liftE_R
                     hoare_vcg_if_lift_ER)
   done
 
@@ -1374,7 +1374,7 @@ lemma decode_set_space_wf[wp]:
      decode_set_space args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   unfolding decode_set_space_def
-  apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp_del: tcb_inv_wf.simps
+  apply (wpsimp wp: hoare_vcg_const_imp_liftE_R simp_del: tcb_inv_wf.simps
          | strengthen tcb_inv_set_space_strg
          | rule hoare_drop_imps)+
   apply (clarsimp simp: valid_fault_handler_def real_cte_at_cte)
@@ -1956,7 +1956,7 @@ lemma install_tcb_cap_ex_nonz_cap_to:
    apply (simp only: simp_thms if_cancel, rule valid_validE)
    apply (rule cap_delete_fh_lift[where L="not ep_at t"](* [where Q1="valid_objs and tcb_at t' and not ep_at t"] *))
       apply (wpsimp simp: ex_nonz_cap_to_def wp: hoare_vcg_ex_lift empty_slot_cte_wp_elsewhere)
-     apply (rule_tac Q="\<lambda>_. valid_objs and ex_nonz_cap_to t and not ep_at t and tcb_at t'" in hoare_strengthen_post)
+     apply (rule_tac Q'="\<lambda>_. valid_objs and ex_nonz_cap_to t and not ep_at t and tcb_at t'" in hoare_strengthen_post)
       apply (wpsimp simp: pred_neg_def wp: cancel_all_ipc_valid_objs cancel_all_ipc_tcb)
      apply (clarsimp simp: ex_nonz_cap_to_def)
      apply (rename_tac ref' x x' s ref index)

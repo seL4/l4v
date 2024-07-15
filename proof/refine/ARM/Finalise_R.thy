@@ -1723,7 +1723,7 @@ lemma isFinalCapability_inv:
   apply (simp add: isFinalCapability_def Let_def
               split del: if_split cong: if_cong)
   apply (rule hoare_pre, wp)
-   apply (rule hoare_post_imp [where Q="\<lambda>s. P"], simp)
+   apply (rule hoare_post_imp[where Q'="\<lambda>s. P"], simp)
    apply wp
   apply simp
   done
@@ -2836,7 +2836,7 @@ lemma deleteASID_invs'[wp]:
   apply (simp add: deleteASID_def cong: option.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
-    apply (rule_tac Q="\<lambda>rv. valid_obj' (injectKO rv) and invs'"
+    apply (rule_tac Q'="\<lambda>rv. valid_obj' (injectKO rv) and invs'"
               in hoare_post_imp)
      apply (rename_tac rv s)
      apply (clarsimp split: if_split_asm del: subsetI)
@@ -3685,7 +3685,7 @@ crunch schedContextCancelYieldTo, tcbReleaseRemove
 lemma suspend_cte_wp_at':
   "suspend t \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
   unfolding updateRestartPC_def suspend_def
-  apply (wpsimp wp: hoare_vcg_imp_lift hoare_disjI2[where R="\<lambda>_. cte_wp_at' a b" for a b])
+  apply (wpsimp wp: hoare_vcg_imp_lift hoare_disjI2[where Q'="\<lambda>_. cte_wp_at' a b" for a b])
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -4051,7 +4051,7 @@ lemma replyPop_valid_inQ_queues[wp]:
   apply (rule bind_wp[OF _ get_reply_sp'])
   apply (repeat_unless \<open>rule bind_wp[OF _ gts_sp']\<close>
                        \<open>rule bind_wp_fwd_skip, solves wpsimp\<close>)
-  apply (rule_tac Q="?pre and tcb_at' tcbPtr and ko_at' reply replyPtr"
+  apply (rule_tac P'="?pre and tcb_at' tcbPtr and ko_at' reply replyPtr"
          in hoare_weaken_pre[rotated])
    apply fastforce
   apply (rule bind_wp[OF _ assert_sp])
@@ -4064,12 +4064,12 @@ lemma replyPop_valid_inQ_queues[wp]:
   apply (rename_tac scp)
   apply (rule bind_wp[OF _ get_sc_sp'])
   apply (wpsimp wp: schedContextDonate_valid_inQ_queues replyUnlink_valid_objs')
-      apply (rule_tac Q="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
+      apply (rule_tac Q'="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
        apply clarsimp
       apply wpsimp
      apply (wpsimp wp: updateReply_valid_objs')
     apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def)
-   apply (rule_tac Q="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr and
+   apply (rule_tac Q'="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr and
                          (\<lambda>s. bound (replyPrev reply) \<longrightarrow>
                               (\<forall>r. valid_reply' r s \<longrightarrow>
                                    valid_reply' (replyNext_update (\<lambda>_. Some (Head scp)) r) s))"
@@ -4171,7 +4171,7 @@ lemma unbindFromSC_invs'[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: unbindFromSC_def sym_refs_asrt_def)
   apply (wpsimp split_del: if_split)
-     apply (rule_tac Q="\<lambda>_. sc_at' y and invs' and sch_act_simple" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>_. sc_at' y and invs' and sch_act_simple" in hoare_post_imp)
       apply (fastforce simp: projectKOs valid_obj'_def valid_sched_context'_def
                       dest!: ko_at_valid_objs')
      apply (wpsimp wp: typ_at_lifts threadGet_wp)+
@@ -4742,11 +4742,11 @@ lemma unbindFromSC_corres:
            apply (wpfix add: Structures_A.sched_context.select_convs sched_context.sel)
            apply (rule schedContextCompleteYieldTo_corres)
           apply (wpsimp wp: abs_typ_at_lifts)+
-        apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
+        apply (rule_tac Q'="\<lambda>_. invs" in hoare_post_imp)
          apply (auto simp: valid_obj_def valid_sched_context_def
                     dest!: invs_valid_objs valid_objs_ko_at)[1]
         apply wpsimp
-       apply (rule_tac Q="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
+       apply (rule_tac Q'="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
         apply (fastforce simp: projectKOs valid_obj'_def valid_sched_context'_def
                         dest!: ko_at_valid_objs')
        apply (wpsimp wp: typ_at_lifts get_tcb_obj_ref_wp threadGet_wp)+

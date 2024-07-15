@@ -608,7 +608,7 @@ lemma schedContextYieldTo_corres:
                                   in hoare_strengthen_post)
                             apply (wpsimp cong: conj_cong imp_cong wp: hoare_drop_imp hoare_vcg_conj_lift)
                            apply clarsimp
-                          apply (rule_tac Q="\<lambda>_. valid_objs' and cur_tcb'
+                          apply (rule_tac Q'="\<lambda>_. valid_objs' and cur_tcb'
                                                  and (\<lambda>s. scTCBs_of s scp = Some tp)
                                                  and ko_at' sc0' scp and tcb_at' ct_ptr
                                                  and valid_release_queue_iff and valid_queues and valid_queues'"
@@ -653,7 +653,7 @@ lemma schedContextYieldTo_corres:
               apply (erule (1) valid_sched_context_size_objsI)+
             apply (clarsimp simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs')
             apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)
-           apply (rule_tac Q="\<lambda>rv. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) and
+           apply (rule_tac Q'="\<lambda>rv. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) and
                                    einvs and sc_yf_sc_at ((=) None) scp and
                                    (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s \<and>
                                         sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s)"
@@ -662,7 +662,7 @@ lemma schedContextYieldTo_corres:
                             elim!: valid_sched_context_size_objsI[OF invs_valid_objs])
            apply (wpsimp wp: hoare_case_option_wp sched_context_resume_valid_sched)
            apply ((wpsimp | wps)+)[1]
-          apply (rule_tac Q="\<lambda>rv'. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
+          apply (rule_tac Q'="\<lambda>rv'. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
                                    and invs' and sc_at' scp and cur_tcb'"
                  in hoare_strengthen_post[rotated])
            apply clarsimp
@@ -672,7 +672,7 @@ lemma schedContextYieldTo_corres:
          apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
         apply (clarsimp simp: invs'_def valid_pspace'_def obj_at'_def projectKOs)
        apply wpsimp
-        apply (rule_tac Q="\<lambda>_ s. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) s \<and>
+        apply (rule_tac Q'="\<lambda>_ s. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) s \<and>
                                  invs s \<and> valid_list s \<and> valid_sched s \<and>
                                  bound_yt_tcb_at ((=) None) (cur_thread s) s \<and>
                                  sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
@@ -1430,7 +1430,7 @@ lemma invokeSchedControlConfigureFlags_corres:
 
      apply (rule hoare_when_cases, simp)
       apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-     apply (rule_tac Q="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated])
+     apply (rule_tac P'="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated])
       apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
      apply (rule bind_wp_fwd_skip, wpsimp)+
      apply wpsimp
@@ -1585,7 +1585,7 @@ lemma invokeSchedControlConfigureFlags_corres:
            apply wpsimp
           apply ((wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_valid_sched_action
                  | strengthen valid_objs_valid_tcbs)+)[1]
-         apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, fastforce)
+         apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp, fastforce)
          apply (rule schedContextResume_invs')
         apply (wpsimp wp: gts_wp)
        apply wpsimp

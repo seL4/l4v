@@ -462,11 +462,11 @@ lemma schedule_cur_domain:
   supply hoare_pre_cont[where f=next_domain, wp add]
          ethread_get_wp[wp del] if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
-               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+               apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
-               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+               apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
-      apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+      apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
        apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
   apply (clarsimp split: if_split)
   done
@@ -479,11 +479,11 @@ lemma schedule_domain_fields:
   supply hoare_pre_cont[where f=next_domain, wp add]
          ethread_get_wp[wp del] if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
-               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+               apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
-               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+               apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
-      apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+      apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
        apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
   apply (clarsimp split: if_split)
   done
@@ -495,7 +495,7 @@ lemma schedule_if_partitionIntegrity:
          schedule_if tc
          \<lbrace>\<lambda>_. partitionIntegrity aag st\<rbrace>"
   apply (simp add: schedule_if_def)
-  apply (rule_tac Q="\<lambda>rv s. integrity (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
+  apply (rule_tac Q'="\<lambda>rv s. integrity (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
                                       (scheduler_affects_globals_frame st) st s \<and>
                             domain_fields_equiv st s \<and> idle_thread s = idle_thread st \<and>
                             globals_equiv_scheduler st s \<and> silc_dom_equiv aag st s"
@@ -503,7 +503,7 @@ lemma schedule_if_partitionIntegrity:
    apply (wpsimp wp: activate_thread_integrity activate_thread_globals_equiv_scheduler
                      silc_dom_equiv_from_silc_inv_valid'[where P="\<top>"] schedule_integrity
                      hoare_vcg_all_lift domain_fields_equiv_lift[where Q="\<top>" and R="\<top>"])
-    apply (rule_tac Q="\<lambda>r s. guarded_pas_domain aag s \<and> pas_cur_domain aag s \<and>
+    apply (rule_tac Q'="\<lambda>r s. guarded_pas_domain aag s \<and> pas_cur_domain aag s \<and>
                              domain_fields_equiv st s \<and> idle_thread s = idle_thread st \<and>
                              globals_equiv_scheduler st s \<and> silc_inv aag st s \<and>
                              silc_dom_equiv aag st s \<and> invs s" in hoare_strengthen_post)
@@ -702,7 +702,7 @@ lemma kernel_entry_if_integrity:
   unfolding kernel_entry_if_def
   apply wp
      apply (rule valid_validE)
-     apply (rule_tac Q="\<lambda>_ s. integrity aag X (st\<lparr>kheap :=
+     apply (rule_tac Q'="\<lambda>_ s. integrity aag X (st\<lparr>kheap :=
                          (kheap st)(cur_thread st \<mapsto> TCB (tcb_arch_update (arch_tcb_context_set tc)
                                                             (the (get_tcb (cur_thread st) st))))\<rparr>) s
                        \<and> is_subject aag (cur_thread s)
@@ -737,7 +737,7 @@ lemma kernel_entry_if_partitionIntegrity:
                     and guarded_pas_domain aag and (\<lambda>s. ev \<noteq> Interrupt \<and> ct_active s) and (=) st\<rbrace>
    kernel_entry_if ev tc
    \<lbrace>\<lambda>_. partitionIntegrity (aag :: 'a subject_label PAS) st\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. (\<forall>X. integrity (aag\<lparr>pasMayActivate := False,
+  apply (rule_tac Q'="\<lambda>rv s. (\<forall>X. integrity (aag\<lparr>pasMayActivate := False,
                                                 pasMayEditReadyQueues := False\<rparr>) X st s) \<and>
                             domain_fields_equiv st s \<and> globals_equiv_scheduler st s \<and>
                             idle_thread s = idle_thread st \<and> silc_dom_equiv aag st s"
@@ -2330,7 +2330,7 @@ lemma schedule_if_reads_respects_g:
                   and (\<lambda>s. domain_time s > 0) and pas_refined pas) (schedule_if tc)"
   apply (simp add: schedule_if_def)
   apply (wp schedule_reads_respects_g activate_thread_reads_respects_g)
-   apply (rule_tac Q="\<lambda>rv s. guarded_pas_domain pas s \<and> invs s \<and> pas_cur_domain pas s"
+   apply (rule_tac Q'="\<lambda>rv s. guarded_pas_domain pas s \<and> invs s \<and> pas_cur_domain pas s"
                 in hoare_strengthen_post)
     apply (wp schedule_guarded_pas_domain schedule_cur_domain
            | simp add: guarded_pas_domain_def

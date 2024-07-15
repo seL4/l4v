@@ -542,8 +542,8 @@ lemma find_vspace_for_asid_lookup_slot [wp]:
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (lookup_pml4_slot rv vptr && ~~ mask pml4_bits)\<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_postE_R)
-    apply (rule hoare_vcg_R_conj)
-     apply (rule hoare_vcg_R_conj)
+    apply (rule hoare_vcg_conj_liftE_R)
+     apply (rule hoare_vcg_conj_liftE_R)
       apply (rule find_vspace_for_asid_inv [where P="\<top>", THEN valid_validE_R])
      apply (rule find_vspace_for_asid_lookup)
     apply (rule find_vspace_for_asid_aligned_pm)
@@ -1613,7 +1613,7 @@ lemma decode_page_inv_wf[wp]:
    apply (simp add: split_def split del: if_split
               cong: list.case_cong prod.case_cong)
    apply (rule hoare_pre)
-    apply (wp createMappingEntries_wf checkVP_wpR whenE_throwError_wp hoare_vcg_const_imp_lift_R
+    apply (wp createMappingEntries_wf checkVP_wpR whenE_throwError_wp hoare_vcg_const_imp_liftE_R
            | wpc | simp add: valid_arch_inv'_def valid_page_inv'_def | wp (once) hoare_drop_imps)+
    apply (clarsimp simp: neq_Nil_conv invs_valid_objs' linorder_not_le
                            cte_wp_at_ctes_of)

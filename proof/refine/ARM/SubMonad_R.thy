@@ -79,7 +79,7 @@ lemma threadSet_modify_asUser:
    apply (clarsimp simp: threadSet_def setObject_def split_def
                          updateObject_default_def)
    apply wp
-   apply (rule_tac Q="\<lambda>rv. obj_at' ((=) rv) t and ((=) st)" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>rv. obj_at' ((=) rv) t and ((=) st)" in hoare_post_imp)
     apply (clarsimp simp: asUser_replace_def Let_def obj_at'_def
                           projectKOs fun_upd_def
                    split: option.split kernel_object.split)

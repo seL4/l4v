@@ -53,7 +53,7 @@ lemma schedule_sch_act_wf:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
    schedule
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<and> ct_in_state' activatable' s"
+  apply (rule_tac Q'="\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<and> ct_in_state' activatable' s"
                in hoare_post_imp)
    apply (clarsimp simp: sch_act_wf_def)
   by (wpsimp wp: schedule_sch)
@@ -101,7 +101,7 @@ sorry (* FIXME RT: handleInterruptEntry_ccorres
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
     apply (clarsimp simp: non_kernel_IRQs_def)
    apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
@@ -291,12 +291,12 @@ sorry (* FIXME RT: handleSyscall_ccorres
                   apply wp
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
-                apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
+                apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
                  (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                              in hoare_post_imp)
                  apply (clarsimp simp: non_kernel_IRQs_def)
                 apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
-               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+               apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
                apply (simp add: invs'_def valid_state'_def)
               apply clarsimp
               apply (vcg exspec=handleInvocation_modifies)
@@ -327,12 +327,12 @@ sorry (* FIXME RT: handleSyscall_ccorres
                  apply wp
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
-               apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
+               apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                      in hoare_post_imp)
                 apply (clarsimp simp: non_kernel_IRQs_def)
                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
-              apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+              apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
              apply (vcg exspec=handleInvocation_modifies)
@@ -362,12 +362,12 @@ sorry (* FIXME RT: handleSyscall_ccorres
                 apply wp
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
-              apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
+              apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
                (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                         in hoare_post_imp)
                apply (clarsimp simp: non_kernel_IRQs_def)
               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
-             apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+             apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
             apply (vcg exspec=handleInvocation_modifies)
@@ -400,7 +400,7 @@ sorry (* FIXME RT: handleSyscall_ccorres
           apply wp[1]
          apply clarsimp
          apply wp
-         apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s"
+         apply (rule_tac Q'="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s"
                               in hoare_post_imp)
           apply (simp add: ct_in_state'_def)
          apply (wp handleReply_sane)
@@ -435,15 +435,15 @@ sorry (* FIXME RT: handleSyscall_ccorres
           | wpc
           | wp hoare_drop_imp handleReply_sane handleReply_nonz_cap_to_ct schedule_invs'
           | strengthen ct_active_not_idle'_strengthen invs_valid_objs_strengthen)+
-      apply (rule_tac  Q="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
+      apply (rule_tac Q'="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
       apply (wp hy_invs')
      apply (clarsimp simp add: liftE_def)
      apply wp
-     apply (rule_tac  Q="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
+     apply (rule_tac Q'="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
      apply (wp hy_invs')
     apply (clarsimp simp: liftE_def)
     apply (wp)
-    apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, simp)
+    apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp, simp)
     apply (wp hw_invs')
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp

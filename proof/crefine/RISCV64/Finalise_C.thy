@@ -619,14 +619,14 @@ lemma merge_overlapping_head_refill_ccorres:
         apply (fastforce simp: csched_context_relation_def)
        apply (fastforce dest: crefill_relationD
                         simp: typ_heap_simps' sc_ptr_to_crefill_ptr_def crefill_relation_def)
-      apply (rule_tac Q="\<lambda>_. ?abs and active_sc_at' scPtr" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_. ?abs and active_sc_at' scPtr" in hoare_post_imp)
        apply (clarsimp simp: active_sc_at'_def)
        apply normalise_obj_at'
        apply (frule (1) sc_ko_at_valid_objs_valid_sc')
        apply (clarsimp simp: valid_sched_context'_def)
       apply (wpsimp wp: updateRefillHd_valid_objs')
      apply vcg
-    apply (rule_tac Q="\<lambda>_.?abs and active_sc_at' scPtr" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_.?abs and active_sc_at' scPtr" in hoare_post_imp)
      apply (clarsimp simp: active_sc_at'_def)
      apply normalise_obj_at'
      apply (frule (1) sc_ko_at_valid_objs_valid_sc')
@@ -758,7 +758,7 @@ lemma refill_unblock_check_ccorres:
             apply (wpsimp wp: updateRefillHd_valid_objs')
            apply vcg
           apply (rule ccorres_return_Skip)
-         apply (rule_tac Q="\<lambda>_.?abs and active_sc_at' scPtr" in hoare_post_imp)
+         apply (rule_tac Q'="\<lambda>_.?abs and active_sc_at' scPtr" in hoare_post_imp)
           apply (clarsimp simp: active_sc_at'_def)
           apply normalise_obj_at'
           apply (frule (1) sc_ko_at_valid_objs_valid_sc')
@@ -1462,7 +1462,7 @@ lemma suspend_ccorres:
     apply clarsimp
     apply (rule conseqPre, vcg)
     apply (rule subset_refl)
-   apply (rule_tac Q="\<lambda>_ s. invs' s \<and> tcb_at' thread s \<and> sch_act_simple s
+   apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> tcb_at' thread s \<and> sch_act_simple s
                             \<and> weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp)
     apply fastforce
    apply (wpsimp wp: hoare_vcg_all_lift)

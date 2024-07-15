@@ -290,7 +290,7 @@ lemma sched_context_unbind_all_tcbs_sc_tcb_sc_at_None[wp]:
   unfolding sched_context_unbind_all_tcbs_def sched_context_unbind_tcb_def
   apply (wpsimp wp: update_sched_context_wp set_object_wp
               simp: set_tcb_obj_ref_def)
-         apply (rule_tac Q="\<top>\<top>" in hoare_strengthen_post[rotated])
+         apply (rule_tac Q'="\<top>\<top>" in hoare_strengthen_post[rotated])
           apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
          apply (wpsimp+)[7]
   apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
@@ -325,7 +325,7 @@ lemma complete_yield_to_bound_yt_tcb_a_ct[wp]:
   apply (clarsimp simp: complete_yield_to_def sched_context_cancel_yield_to_def)
   apply (wpsimp simp: obj_at_def set_tcb_obj_ref_def set_object_def fun_upd_idem
       wp: hoare_vcg_ex_lift sbn_st_tcb_at_neq lookup_ipc_buffer_inv hoare_drop_imp)
-       apply (rule_tac Q="\<lambda>_ s. bound_yt_tcb_at ((=) None) (cur_thread s) s" in hoare_strengthen_post)
+       apply (rule_tac Q'="\<lambda>_ s. bound_yt_tcb_at ((=) None) (cur_thread s) s" in hoare_strengthen_post)
         apply (wpsimp simp: pred_tcb_at_def)
        apply (clarsimp simp: pred_tcb_at_def obj_at_def)
       apply (wpsimp wp: lookup_ipc_buffer_inv hoare_drop_imp)+
@@ -1518,7 +1518,7 @@ lemma charge_budget_invs[wp]:
   apply clarsimp
   apply (rule bind_wp[OF _ gets_sp])
   apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp is_schedulable_wp)
-     apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post[rotated])
+     apply (rule_tac Q'="\<lambda>_. invs" in hoare_strengthen_post[rotated])
       apply (clarsimp simp: ct_in_state_def runnable_eq pred_tcb_at_def obj_at_def schedulable_def
                      split: option.splits)
       apply (subgoal_tac "cur_tcb s")

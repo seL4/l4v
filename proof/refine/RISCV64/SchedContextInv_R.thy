@@ -651,7 +651,7 @@ lemma schedContextYieldTo_corres:
                                   in hoare_post_imp)
                             apply (fastforce simp: schedulable_def2)
                            apply (wpsimp cong: conj_cong imp_cong wp: hoare_drop_imp hoare_vcg_conj_lift)
-                          apply (rule_tac Q="\<lambda>_. valid_objs' and cur_tcb'
+                          apply (rule_tac Q'="\<lambda>_. valid_objs' and cur_tcb'
                                                  and (\<lambda>s. scTCBs_of s scp = Some tp)
                                                  and ko_at' sc0' scp and tcb_at' ct_ptr
                                                  and sym_heap_sched_pointers and valid_sched_pointers
@@ -699,7 +699,7 @@ lemma schedContextYieldTo_corres:
               apply (erule (1) valid_sched_context_size_objsI)+
             apply (clarsimp simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs')
             apply (clarsimp simp: obj_at'_def opt_map_red)
-           apply (rule_tac Q="\<lambda>rv. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) and
+           apply (rule_tac Q'="\<lambda>rv. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) and
                                    einvs and sc_yf_sc_at ((=) None) scp and
                                    ct_active and ct_not_in_release_q and
                                    (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s \<and>
@@ -709,7 +709,7 @@ lemma schedContextYieldTo_corres:
                             elim!: valid_sched_context_size_objsI[OF invs_valid_objs])
            apply (wpsimp wp: hoare_case_option_wp sched_context_resume_valid_sched)
            apply ((wpsimp wp: sched_context_resume_not_in_release_q_other | wps)+)[1]
-          apply (rule_tac Q="\<lambda>rv'. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
+          apply (rule_tac Q'="\<lambda>rv'. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
                                    and invs' and sc_at' scp and cur_tcb'"
                  in hoare_strengthen_post[rotated])
            apply clarsimp
@@ -719,7 +719,7 @@ lemma schedContextYieldTo_corres:
          apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
         apply (clarsimp simp: invs'_def valid_pspace'_def obj_at'_def)
        apply wpsimp
-        apply (rule_tac Q="\<lambda>_ s. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) s \<and>
+        apply (rule_tac Q'="\<lambda>_ s. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) s \<and>
                                  invs s \<and> valid_list s \<and> valid_sched s \<and>
                                  bound_yt_tcb_at ((=) None) (cur_thread s) s \<and>
                                  sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s \<and>
@@ -1057,14 +1057,14 @@ lemma refillUpdate_corres:
             apply (clarsimp simp: refill_map_def)
            apply (wpsimp wp: get_refill_head_wp)
           apply (rule getRefillHead_wp)
-         apply (rule_tac Q="\<lambda>_ s. sc_at sc_ptr s \<and> is_active_sc2 sc_ptr s
+         apply (rule_tac Q'="\<lambda>_ s. sc_at sc_ptr s \<and> is_active_sc2 sc_ptr s
                                   \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s
                                   \<and> sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s"
                       in hoare_post_imp)
           apply (clarsimp simp: in_omonad is_active_sc2_def active_sc_def
                                 sc_refill_cfgs_of_scs_def map_project_simps)
          apply (wpsimp wp: update_refill_hd_is_active_sc2)
-        apply (rule_tac Q="\<lambda>_ s. sc_at' sc_ptr s \<and> valid_objs' s
+        apply (rule_tac Q'="\<lambda>_ s. sc_at' sc_ptr s \<and> valid_objs' s
                                  \<and> (\<lambda>s'. ((\<lambda>sc'. refillSize sc' < scRefillMax sc'
                                                  \<and> sc_valid_refills' sc')
                                            |< scs_of' s') sc_ptr) s \<and> active_sc_at' sc_ptr s"
@@ -1079,7 +1079,7 @@ lemma refillUpdate_corres:
      apply ((rule hoare_vcg_conj_lift hoare_drop_imps hoare_vcg_all_lift
              | wpsimp wp: update_sched_context_valid_objs_same
              | wpsimp wp: update_sched_context_wp)+)[1]
-    apply (rule_tac Q="\<lambda>_ s. sc_at' sc_ptr s \<and> valid_objs' s
+    apply (rule_tac Q'="\<lambda>_ s. sc_at' sc_ptr s \<and> valid_objs' s
                              \<and> (\<lambda>s'. ((\<lambda>sc'. refillSize sc' < scRefillMax sc'
                                              \<and> sc_valid_refills' sc')
                                       |< scs_of' s') sc_ptr) s
@@ -1383,7 +1383,7 @@ lemma invokeSchedControlConfigureFlags_corres:
 
      apply (rule hoare_when_cases, simp)
       apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-     apply (rule_tac Q="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated])
+     apply (rule_tac P'="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated])
       apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
      apply (rule bind_wp_fwd_skip, wpsimp)+
      apply wpsimp
@@ -1538,7 +1538,7 @@ lemma invokeSchedControlConfigureFlags_corres:
            apply wpsimp
           apply ((wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_valid_sched_action
                  | strengthen valid_objs_valid_tcbs)+)[1]
-         apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, fastforce)
+         apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp, fastforce)
          apply (rule schedContextResume_invs')
         apply (wpsimp wp: gts_wp)
        apply wpsimp

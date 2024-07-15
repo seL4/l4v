@@ -211,7 +211,7 @@ lemma associate_vcpu_tcb_valid_cur_vcpu:
   apply (wpsimp wp: hoare_vcg_imp_lift')
         apply (wpsimp wp: arch_thread_set_wp)
        apply (wpsimp wp: arch_thread_set_wp)
-      apply (rule_tac Q="\<lambda>_ s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s)" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>_ s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s)" in hoare_post_imp)
        apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_cur_vcpu_def active_cur_vcpu_of_def)
       by (wpsimp wp: get_vcpu_wp hoare_drop_imps)+
 
@@ -448,7 +448,7 @@ lemma rec_del_valid_cur_vcpu[wp]:
    rec_del call
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (rule_tac Q="\<lambda>_. ?pre" in hoare_post_imp, fastforce)
+  apply (rule_tac Q'="\<lambda>_. ?pre" in hoare_post_imp, fastforce)
   by (rule rec_del_preservation; wpsimp)
 
 crunch cap_delete
@@ -459,7 +459,7 @@ lemma cap_revoke_valid_cur_vcpu[wp]:
    cap_revoke slot
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (rule_tac Q="\<lambda>_. ?pre" in hoare_post_imp, fastforce)
+  apply (rule_tac Q'="\<lambda>_. ?pre" in hoare_post_imp, fastforce)
   by (wpsimp wp: cap_revoke_preservation)
 
 crunch cancel_badged_sends, invoke_irq_control, invoke_irq_handler

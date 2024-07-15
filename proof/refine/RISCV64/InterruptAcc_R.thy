@@ -365,10 +365,10 @@ lemma preemptionPoint_corres:
                       apply wpsimp+
                apply (fastforce intro!: sc_at_cross simp: sc_at'_asrt_def)
               apply wpsimp
-             apply (rule_tac Q="\<lambda>_. valid_objs'" in hoare_post_imp)
+             apply (rule_tac Q'="\<lambda>_. valid_objs'" in hoare_post_imp)
               apply fastforce
              apply wpsimp+
-        apply (rule_tac Q="\<lambda>_ s. sc_at (cur_sc s) s \<and> pspace_aligned s \<and> pspace_distinct s
+        apply (rule_tac Q'="\<lambda>_ s. sc_at (cur_sc s) s \<and> pspace_aligned s \<and> pspace_distinct s
                                  \<and> valid_objs s \<and> active_scs_valid s"
                      in hoare_post_imp)
          apply (fastforce intro!: valid_refills_nonempty_refills active_scs_validE

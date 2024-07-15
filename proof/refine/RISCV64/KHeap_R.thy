@@ -2774,7 +2774,7 @@ lemma valid_replies'[wp]:
    f p v
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
    (is "\<lbrace>?pre valid_replies'\<rbrace> _ \<lbrace>?post\<rbrace>")
-  apply (rule_tac Q="\<lambda>_. ?pre valid_replies'_alt" in hoare_post_imp;
+  apply (rule_tac Q'="\<lambda>_. ?pre valid_replies'_alt" in hoare_post_imp;
          clarsimp simp: valid_replies'_def2)
   unfolding obj_at'_real_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift ko_wp_at hoare_vcg_ex_lift)

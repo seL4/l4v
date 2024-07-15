@@ -608,7 +608,7 @@ lemma delete_objects_invs[wp]:
   apply (simp add: delete_objects_def)
   apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
    apply (rule hoare_pre)
-   apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
+   apply (rule_tac P'="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)
    apply (simp add: mapM_storeWord_clear_um[unfolded word_size_def]
                     intvl_range_conv[where 'a=machine_word_len, folded word_bits_def])
@@ -634,7 +634,7 @@ lemma delete_objects_scheduler_action [wp]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> delete_objects ptr bits
    \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   apply (wpsimp simp: delete_objects_def)
-   apply (rule hoare_strengthen_post[where Q = "\<lambda>_ s. P (scheduler_action s)"])
+   apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. P (scheduler_action s)"])
     apply (wpsimp simp: scheduler_action_detype)+
   done
 

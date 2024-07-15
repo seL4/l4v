@@ -3031,7 +3031,7 @@ lemma perform_page_directory_invocation_invs[wp]:
   apply (rule hoare_pre)
    apply (wpc | clarsimp simp: cte_wp_at_caps_of_state | wp arch_update_cap_invs_unmap_page_directory get_cap_wp)+
     apply (rule_tac P = "is_pd_cap (ArchObjectCap (PageDirectoryCap p (Some (x1, x2a))))" in hoare_gen_asm)
-    apply (rule_tac Q = "\<lambda>r. cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap p (Some (x1, x2a))))) (a,b)
+    apply (rule_tac Q'="\<lambda>r. cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap p (Some (x1, x2a))))) (a,b)
                              and invs and is_final_cap' (ArchObjectCap (PageDirectoryCap p (Some (x1, x2a))))
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PageDirectoryCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
                              and obj_at (empty_table {}) (the (aobj_ref (update_map_data
@@ -3113,7 +3113,7 @@ lemma perform_page_table_invocation_invs[wp]:
   apply (rule hoare_pre)
    apply (wpc | clarsimp simp: cte_wp_at_caps_of_state | wp arch_update_cap_invs_unmap_page_table get_cap_wp)+
     apply (rule_tac P = "is_pt_cap (ArchObjectCap (PageTableCap p (Some (x1, x2a))))" in hoare_gen_asm)
-    apply (rule_tac Q = "\<lambda>r. cte_wp_at ((=) (ArchObjectCap (PageTableCap p (Some (x1, x2a))))) (a,b)
+    apply (rule_tac Q'="\<lambda>r. cte_wp_at ((=) (ArchObjectCap (PageTableCap p (Some (x1, x2a))))) (a,b)
                              and invs and is_final_cap' (ArchObjectCap (PageTableCap p (Some (x1, x2a))))
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PageTableCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
                              and obj_at (empty_table {}) (the (aobj_ref (update_map_data
@@ -3225,7 +3225,7 @@ lemma perform_pdpt_invocation_invs[wp]:
   apply (rule hoare_pre)
    apply (wpc | clarsimp simp: cte_wp_at_caps_of_state | wp arch_update_cap_invs_unmap_pd_pointer_table get_cap_wp)+
     apply (rule_tac P = "is_pdpt_cap (ArchObjectCap (PDPointerTableCap p (Some (x1, x2a))))" in hoare_gen_asm)
-    apply (rule_tac Q = "\<lambda>r. cte_wp_at ((=) (ArchObjectCap (PDPointerTableCap p (Some (x1, x2a))))) (a,b)
+    apply (rule_tac Q'="\<lambda>r. cte_wp_at ((=) (ArchObjectCap (PDPointerTableCap p (Some (x1, x2a))))) (a,b)
                              and invs and is_final_cap' (ArchObjectCap (PDPointerTableCap p (Some (x1, x2a))))
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PDPointerTableCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
                              and obj_at (empty_table {}) (the (aobj_ref (update_map_data
@@ -3528,7 +3528,7 @@ lemma perform_page_invs [wp]:
    apply (rule hoare_pre)
     apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
          | wpc | simp add: perform_page_invocation_unmap_def)+
-        apply (rule_tac Q="\<lambda>_ s. invs s \<and>
+        apply (rule_tac Q'="\<lambda>_ s. invs s \<and>
                                  cte_wp_at (\<lambda>c. is_pg_cap c \<and>
                                    (\<forall>ref. vs_cap_ref c = Some ref \<longrightarrow>
                                           \<not> (ref \<unrhd> obj_ref_of c) s)) cslot_ptr s"

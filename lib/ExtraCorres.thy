@@ -532,14 +532,14 @@ lemma corres_whileLoop_abs_ret:
    apply (clarsimp simp: validNF_def)
    apply (rule conjI)
     apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
-      apply (rule_tac Q="\<lambda>s'. \<exists>rv s. (s, s') \<in> srel \<and> rrel rv conc_r
+      apply (rule_tac P'="\<lambda>s'. \<exists>rv s. (s, s') \<in> srel \<and> rrel rv conc_r
                                      \<and> P rv s \<and> (P' conc_r s' \<and> C' conc_r s') \<and> s' = new_s"
                    in hoare_weaken_pre[rotated])
        apply clarsimp
       apply (rule hoare_ex_pre)
       apply (rename_tac abs_r)
       apply (rule hoare_weaken_pre)
-       apply (rule_tac G="rrel abs_r conc_r" in hoare_grab_asm)
+       apply (rule_tac P'="rrel abs_r conc_r" in hoare_grab_asm)
        apply (wpsimp wp: wp_from_corres_u[OF body_corres] body_inv)
        apply (fastforce dest: nf)
       apply (fastforce dest: cond)

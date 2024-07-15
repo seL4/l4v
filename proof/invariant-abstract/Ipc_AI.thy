@@ -543,7 +543,7 @@ lemma cap_insert_assume_null:
    apply (rule bind_wp[OF _ get_cap_sp])+
    apply (clarsimp simp: valid_def cte_wp_at_caps_of_state in_monad
               split del: if_split)
-  apply (erule hoare_pre(1))
+  apply (erule hoare_weaken_pre)
   apply simp
   done
 
@@ -577,7 +577,7 @@ lemma transfer_caps_loop_presM:
            | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
       apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
-      apply (rule hoare_vcg_conj_liftE_R)
+      apply (rule hoare_vcg_conj_liftE_R')
        apply (rule derive_cap_is_derived_foo)
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow>
           cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s)
@@ -586,8 +586,8 @@ lemma transfer_caps_loop_presM:
         prefer 2
         apply clarsimp
         apply assumption
-       apply (rule hoare_vcg_conj_liftE_R)
-         apply (rule hoare_vcg_const_imp_lift_R)
+       apply (rule hoare_vcg_conj_liftE_R')
+         apply (rule hoare_vcg_const_imp_liftE_R)
         apply (rule derive_cap_is_derived)
       apply (wp derive_cap_is_derived_foo)+
   apply (clarsimp simp: cte_wp_at_caps_of_state
@@ -925,11 +925,11 @@ lemma tcl_reply':
   done
 
 lemmas tcl_reply[wp] = tcl_reply' [THEN hoare_strengthen_post
-                                        [where R="\<lambda>_. valid_reply_caps"],
+                                        [where Q="\<lambda>_. valid_reply_caps"],
                                    simplified]
 
 lemmas tcl_reply_masters[wp] = tcl_reply' [THEN hoare_strengthen_post
-                                        [where R="\<lambda>_. valid_reply_masters"],
+                                        [where Q="\<lambda>_. valid_reply_masters"],
                                    simplified]
 *)
 lemma transfer_caps_loop_irq_node[wp]:
@@ -2732,7 +2732,7 @@ lemma complete_signal_invs:
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfn"; simp)
   apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
-     apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs and tcb_at tcb"])
+     apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs and tcb_at tcb"])
       apply (wpsimp wp: abs_typ_at_lifts)
      apply (clarsimp simp: obj_at_def)
     apply (wpsimp wp: set_ntfn_minor_invs simp: as_user_def set_object_def get_object_def)+

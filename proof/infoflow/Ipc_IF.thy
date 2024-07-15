@@ -907,7 +907,7 @@ lemma transfer_caps_loop_reads_respects':
      prefer 2
      apply (clarsimp simp: cte_wp_at_caps_of_state split del: if_split)
      apply (strengthen is_derived_is_transferable[mk_strg I' O], assumption, solves\<open>simp\<close>)
-    apply (rule hoare_vcg_conj_liftE_R)
+    apply (rule hoare_vcg_conj_liftE_R')
      apply (rule derive_cap_is_derived)
     apply (wp derive_cap_is_derived_foo')
    apply wp
@@ -1606,7 +1606,7 @@ lemma do_reply_transfer_reads_respects_f:
          | wp (once) reads_respects_f[where aag=aag and st=st]
          | elim conjE
          | wp (once) hoare_drop_imps)+
-         apply (rule_tac Q="\<lambda> rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> invs s
+         apply (rule_tac Q'="\<lambda> rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> invs s
                                  \<and> is_subject aag (cur_thread s)
                                  \<and> silc_inv aag st s"
                      in hoare_strengthen_post[rotated])
@@ -1703,8 +1703,8 @@ next
          apply (rule Cons.hyps)
         apply (simp)
         apply (wp cap_insert_globals_equiv'')
-       apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
-                   and E="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
+       apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
+                   and E'="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                     in hoare_strengthen_postE)
          apply (simp add: whenE_def, rule conjI)
           apply (rule impI, wp)+
@@ -1727,12 +1727,12 @@ lemma copy_mrs_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding copy_mrs_def including classic_wp_pre
   apply (wp | wpc)+
-    apply (rule_tac Q="\<lambda>_. globals_equiv s" in hoare_strengthen_post)
+    apply (rule_tac Q'="\<lambda>_. globals_equiv s" in hoare_strengthen_post)
      apply (wp mapM_wp' | wpc)+
       apply (wp store_word_offs_globals_equiv)+
     apply fastforce
    apply simp
-   apply (rule_tac Q="\<lambda>_. globals_equiv s and valid_arch_state and (\<lambda>sa. receiver \<noteq> idle_thread sa)"
+   apply (rule_tac Q'="\<lambda>_. globals_equiv s and valid_arch_state and (\<lambda>sa. receiver \<noteq> idle_thread sa)"
                 in hoare_strengthen_post)
     apply (wp mapM_wp' as_user_globals_equiv)
     apply (simp)
@@ -1803,7 +1803,7 @@ lemma do_ipc_transfer_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_ipc_transfer_def
   apply (wp do_normal_transfer_globals_equiv do_fault_transfer_globals_equiv | wpc)+
-    apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs and
+    apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs and
                            (\<lambda>sa. receiver \<noteq> idle_thread sa) and
                            (\<lambda>sa. (\<forall>rb. recv_buffer = Some rb
                                  \<longrightarrow> auth_ipc_buffers sa receiver = ptr_range rb msg_align_bits) \<and>
@@ -1823,7 +1823,7 @@ lemma send_ipc_globals_equiv:
   unfolding send_ipc_def
   apply (wp set_simple_ko_globals_equiv set_thread_state_globals_equiv
             setup_caller_cap_globals_equiv | wpc)+
-        apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
+        apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                      in hoare_strengthen_post[rotated])
          apply (fastforce)
         apply (wp set_thread_state_globals_equiv dxo_wp_weak | simp)+
@@ -1832,7 +1832,7 @@ lemma send_ipc_globals_equiv:
      apply (clarsimp)
      apply (rule hoare_drop_imps)
      apply (wp set_simple_ko_globals_equiv)+
-   apply (rule_tac Q="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs and
+   apply (rule_tac Q'="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs and
                            valid_arch_state and valid_global_refs and pspace_distinct and
                            pspace_aligned and valid_global_objs and
                            (\<lambda>s. sym_refs (state_refs_of s)) and valid_idle"
@@ -1859,7 +1859,7 @@ lemma receive_ipc_globals_equiv:
              setup_caller_cap_globals_equiv dxo_wp_weak as_user_globals_equiv
           | wpc
           | simp split del: if_split)+
-             apply (rule hoare_strengthen_post[where Q= "\<lambda>_. globals_equiv st and valid_arch_state
+             apply (rule hoare_strengthen_post[where Q'="\<lambda>_. globals_equiv st and valid_arch_state
                                                                               and valid_global_objs"])
               apply (wp do_ipc_transfer_globals_equiv as_user_globals_equiv)
              apply clarsimp
@@ -2011,8 +2011,8 @@ lemma handle_fault_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding handle_fault_def
   apply (wp handle_double_fault_globals_equiv)
-    apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state" and
-                    E="\<lambda>_. globals_equiv st and valid_arch_state" in hoare_strengthen_postE)
+    apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_arch_state" and
+                    E'="\<lambda>_. globals_equiv st and valid_arch_state" in hoare_strengthen_postE)
       apply (wp send_fault_ipc_globals_equiv | simp)+
   done
 
@@ -2034,7 +2034,7 @@ lemma do_reply_transfer_globals_equiv:
   apply (wp set_thread_state_globals_equiv cap_delete_one_globals_equiv do_ipc_transfer_globals_equiv
             thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak
          | wpc | simp split del: if_split)+
-     apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_objs and valid_arch_state
+     apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_arch_state and valid_objs and valid_arch_state
                                              and valid_global_refs and pspace_distinct
                                              and pspace_aligned and valid_global_objs
                                              and (\<lambda>s. receiver \<noteq> idle_thread s) and valid_idle"
@@ -2049,7 +2049,7 @@ lemma handle_reply_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding handle_reply_def
   apply (wp do_reply_transfer_globals_equiv | wpc)+
-    apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
+    apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
                                             and pspace_distinct and pspace_aligned
                                             and valid_global_objs and valid_idle"
                  in hoare_strengthen_post)

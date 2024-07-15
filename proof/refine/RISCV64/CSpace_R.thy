@@ -2160,7 +2160,7 @@ lemma cteInsert_mdb' [wp]:
   cteInsert cap src dest
   \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   apply (simp add:valid_mdb'_def valid_mdb_ctes_def)
-  apply (rule_tac Q = "\<lambda>r s. valid_dlist (ctes_of s) \<and> irq_control (ctes_of s) \<and>
+  apply (rule_tac Q'="\<lambda>r s. valid_dlist (ctes_of s) \<and> irq_control (ctes_of s) \<and>
                no_0 (ctes_of s) \<and> mdb_chain_0 (ctes_of s) \<and>
                mdb_chunked (ctes_of s) \<and> untyped_mdb' (ctes_of s) \<and> untyped_inc' (ctes_of s) \<and>
                Q s" for Q

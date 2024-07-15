@@ -720,7 +720,7 @@ lemma suspend_ccorres:
         apply ceqv
        apply (ctac(no_vcg) add: setThreadState_ccorres_simple)
         apply (ctac add: tcbSchedDequeue_ccorres)
-       apply (rule_tac Q="\<lambda>_. valid_objs' and tcb_at' thread and pspace_aligned' and pspace_distinct'"
+       apply (rule_tac Q'="\<lambda>_. valid_objs' and tcb_at' thread and pspace_aligned' and pspace_distinct'"
                     in hoare_post_imp)
         apply clarsimp
        apply (wp sts_valid_objs')[1]
@@ -1519,7 +1519,7 @@ lemma unmapPageTable_ccorres:
      apply wp
     apply (fastforce simp: guard_is_UNIV_def Collect_const_mem Let_def
       shiftl_t2n field_simps lookup_pd_slot_def)
-   apply (rule_tac Q="\<lambda>rv s. (case rv of Some pd \<Rightarrow> page_directory_at' pd s | _ \<Rightarrow> True) \<and> invs' s"
+   apply (rule_tac Q'="\<lambda>rv s. (case rv of Some pd \<Rightarrow> page_directory_at' pd s | _ \<Rightarrow> True) \<and> invs' s"
              in hoare_post_imp)
     apply (clarsimp simp: lookup_pd_slot_def Let_def
                           mask_add_aligned less_pptrBase_valid_pde_offset''

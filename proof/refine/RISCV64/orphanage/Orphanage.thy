@@ -562,7 +562,7 @@ lemma tcbSchedDequeue_no_orphans[wp]:
   apply (rule hoare_allI)
   apply (rename_tac tcb_ptr)
   apply (case_tac "tcb_ptr = tcbPtr")
-   apply (rule_tac Q="\<lambda>_ s. st_tcb_at' (\<lambda>state. \<not> is_active_thread_state state) tcbPtr s"
+   apply (rule_tac Q'="\<lambda>_ s. st_tcb_at' (\<lambda>state. \<not> is_active_thread_state state) tcbPtr s"
                 in hoare_post_imp)
     apply fastforce
    apply wpsimp
@@ -851,7 +851,7 @@ proof -
      \<lbrace>\<lambda>_. no_orphans\<rbrace>"
     apply (wpsimp wp: scheduleChooseNewThread_no_orphans ssa_no_orphans
                       hoare_vcg_all_lift ThreadDecls_H_switchToThread_no_orphans)+
-     apply (rule_tac Q="\<lambda>_ s. (t = candidate \<longrightarrow> ksCurThread s = candidate) \<and>
+     apply (rule_tac Q'="\<lambda>_ s. (t = candidate \<longrightarrow> ksCurThread s = candidate) \<and>
                                (t \<noteq> candidate \<longrightarrow> sch_act_not t s)"
               in hoare_post_imp)
       apply (wpsimp wp: stt_nosch hoare_weak_lift_imp)+
@@ -1077,7 +1077,7 @@ lemma sendIPC_no_orphans [wp]:
             possibleSwitchTo_almost_no_orphans'
          | wpc
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
-  apply (rule_tac Q="\<lambda>rv. no_orphans and valid_objs' and ko_at' rv epptr
+  apply (rule_tac Q'="\<lambda>rv. no_orphans and valid_objs' and ko_at' rv epptr
                           and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
    apply (fastforce simp: valid_objs'_def valid_obj'_def valid_ep'_def obj_at'_def)
   apply (wp get_ep_sp' | clarsimp)+
@@ -1293,7 +1293,7 @@ lemma cancelAllIPC_no_orphans [wp]:
                     and I="no_orphans and (\<lambda>s. \<forall>t\<in>set list. tcb_at' t s)"
                      in mapM_x_inv_wp2
              | clarsimp simp: valid_tcb_state'_def)+
-  apply (rule_tac Q="\<lambda>rv. no_orphans and valid_objs' and pspace_aligned' and pspace_distinct' and
+  apply (rule_tac Q'="\<lambda>rv. no_orphans and valid_objs' and pspace_aligned' and pspace_distinct' and
                           ko_at' rv epptr"
                  in hoare_post_imp)
    apply (fastforce simp: valid_obj'_def valid_ep'_def obj_at'_def)
@@ -1317,7 +1317,7 @@ lemma cancelAllSignals_no_orphans [wp]:
    apply (wp sts_valid_objs' set_ntfn_valid_objs' sts_st_tcb'
             hoare_vcg_const_Ball_lift tcbSchedEnqueue_almost_no_orphans|
           clarsimp simp: valid_tcb_state'_def)+
-  apply (rule_tac Q="\<lambda>rv. no_orphans and valid_objs' and pspace_aligned' and pspace_distinct' and
+  apply (rule_tac Q'="\<lambda>rv. no_orphans and valid_objs' and pspace_aligned' and pspace_distinct' and
                           ko_at' rv ntfn"
                  in hoare_post_imp)
    apply (fastforce simp: valid_obj'_def valid_ntfn'_def obj_at'_def)
@@ -1430,7 +1430,7 @@ lemma deleteASIDPool_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding deleteASIDPool_def
   apply (wp | clarsimp)+
-     apply (rule_tac Q="\<lambda>rv s. no_orphans s" in hoare_post_imp)
+     apply (rule_tac Q'="\<lambda>rv s. no_orphans s" in hoare_post_imp)
       apply (clarsimp simp: no_orphans_def all_queued_tcb_ptrs_def
                             all_active_tcb_ptrs_def is_active_tcb_ptr_def)
      apply (wp mapM_wp_inv getObject_inv loadObject_default_inv | clarsimp)+
@@ -1536,7 +1536,7 @@ lemma cteRevoke_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<rbrace>
    cteRevoke ptr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s \<and> sch_act_simple s"
+  apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s \<and> sch_act_simple s"
                       in hoare_strengthen_post)
    apply (wp cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)+
       apply auto
@@ -1562,7 +1562,7 @@ lemma doReplyTransfer_no_orphans[wp]:
          | wpc | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
          | wp (once) hoare_drop_imps
          | strengthen sch_act_wf_weak)+
-              apply (rule_tac Q="\<lambda>rv. invs' and no_orphans" in hoare_post_imp)
+              apply (rule_tac Q'="\<lambda>rv. invs' and no_orphans" in hoare_post_imp)
                apply (fastforce simp: inQ_def)
               apply (wp hoare_drop_imps | clarsimp)+
   apply (clarsimp simp:invs'_def valid_state'_def valid_pspace'_def)
@@ -1638,7 +1638,7 @@ lemma setPriority_no_orphans[wp]:
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding setPriority_def
   apply wpsimp
-    apply (rule_tac Q="\<lambda>_ s. almost_no_orphans tptr s \<and> weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_ s. almost_no_orphans tptr s \<and> weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp)
      apply clarsimp
      apply (clarsimp simp: is_active_tcb_ptr_runnable' pred_tcb_at'_def obj_at'_def
                            almost_no_orphans_no_orphans elim!: almost_no_orphans_no_orphans')
@@ -1695,7 +1695,7 @@ lemma tc_no_orphans:
                checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
                checkCap_inv[where P=no_orphans] checkCap_inv[where P="tcb_at' a"]
                threadSet_cte_wp_at' hoare_vcg_all_liftE_R hoare_vcg_all_lift threadSet_no_orphans
-               hoare_vcg_const_imp_lift_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
+               hoare_vcg_const_imp_liftE_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
           | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
                      objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
            wp hoare_return_sp)
@@ -1823,7 +1823,7 @@ lemma performASIDControlInvocation_no_orphans [wp]:
   apply (clarsimp simp: performASIDControlInvocation_def
                   split: asidcontrol_invocation.splits)
   apply (wp hoare_weak_lift_imp | clarsimp)+
-    apply (rule_tac Q="\<lambda>rv s. no_orphans s" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>rv s. no_orphans s" in hoare_post_imp)
      apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
                            is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
     apply (wp | clarsimp simp:placeNewObject_def2)+
@@ -1907,7 +1907,7 @@ lemma handleInvocation_no_orphans [wp]:
   unfolding handleInvocation_def
   apply (rule hoare_pre)
    apply (wp syscall_valid' setThreadState_isRestart_no_orphans | wpc | clarsimp)+
-          apply (rule_tac Q="\<lambda>state s. no_orphans s \<and> invs' s \<and>
+          apply (rule_tac Q'="\<lambda>state s. no_orphans s \<and> invs' s \<and>
                              (state = Structures_H.thread_state.Restart \<longrightarrow>
                               st_tcb_at' isRestart thread s)"
                        in hoare_post_imp)
@@ -1966,7 +1966,7 @@ notes if_cong[cong] shows
   apply (clarsimp simp: whenE_def split del: if_split | wp hoare_drop_imps getNotification_wp | wpc )+ (*takes a while*)
      apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_strengthen_postE_R)
       apply (wp, fastforce)
-    apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp)
      apply (wp | clarsimp | fastforce)+
   done
 
@@ -1979,7 +1979,7 @@ lemma handleReply_no_orphans [wp]:
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpc | clarsimp)+
      apply (wp hoare_vcg_all_lift)
-      apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s \<and> tcb_at' thread s \<and>
+      apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s \<and> tcb_at' thread s \<and>
                                 valid_cap' rv s" in hoare_post_imp)
        apply (wp hoare_drop_imps | clarsimp simp: valid_cap'_def
               | clarsimp simp: invs'_def cur_tcb'_def valid_state'_def)+

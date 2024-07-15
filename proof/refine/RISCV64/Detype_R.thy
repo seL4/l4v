@@ -65,7 +65,7 @@ lemma descendants_range_in_lift':
   apply (simp only: Ball_def[unfolded imp_conv_disj])
   apply (rule hoare_pre)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift st cap_range)
-   apply (rule_tac Q = "\<lambda>r s. cte_wp_at' (\<lambda>c. capRange (cteCap c) \<inter> S = {}) x s"
+   apply (rule_tac Q'="\<lambda>r s. cte_wp_at' (\<lambda>c. capRange (cteCap c) \<inter> S = {}) x s"
       in hoare_strengthen_post)
     apply (wp cap_range)
    apply (clarsimp simp:cte_wp_at_ctes_of null_filter'_def)
@@ -1818,7 +1818,7 @@ lemma deleteObjects_invs':
      deleteObjects ptr bits
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_pre)
-   apply (rule_tac G="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
+   apply (rule_tac P'="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
    apply (clarsimp simp add: deleteObjects_def2)
    apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
    apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
@@ -1846,7 +1846,7 @@ lemma deleteObjects_sym_refs':
    deleteObjects ptr bits
    \<lbrace>\<lambda>_ s. sym_refs (state_refs_of' s)\<rbrace>"
   apply (rule hoare_pre)
-   apply (rule_tac G="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
+   apply (rule_tac P'="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
    apply (clarsimp simp add: deleteObjects_def2)
    apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
    apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
@@ -3822,7 +3822,7 @@ lemma createNewCaps_pspace_no_overlap':
          apply simp+
     apply (simp add:range_cover_def)
    apply (simp add:range_cover.sz(1)[where 'a=machine_word_len, folded word_bits_def])
-  apply (rule_tac Q = "\<lambda>r. pspace_no_overlap' (ptr + (1 + of_nat n << Types_H.getObjectSize ty us))
+  apply (rule_tac Q'="\<lambda>r. pspace_no_overlap' (ptr + (1 + of_nat n << Types_H.getObjectSize ty us))
                                               (Types_H.getObjectSize ty us) and
                            pspace_aligned' and pspace_distinct'" in hoare_strengthen_post)
    apply (case_tac ty)

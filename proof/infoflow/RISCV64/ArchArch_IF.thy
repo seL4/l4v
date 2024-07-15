@@ -395,7 +395,7 @@ lemma perform_page_invocation_reads_respects:
              mapM_ev'' store_pte_reads_respects unmap_page_reads_respects  dmo_mol_2_reads_respects
              get_cap_rev set_mrs_reads_respects set_message_info_reads_respects
           | simp add: sfence_def
-          | wpc | wp (once) hoare_drop_imps[where R="\<lambda>r s. r"])+
+          | wpc | wp (once) hoare_drop_imps[where Q'="\<lambda>r s. r"])+
   apply (clarsimp simp: authorised_page_inv_def valid_page_inv_def)
   apply (auto simp: cte_wp_at_caps_of_state authorised_slots_def cap_links_asid_slot_def
                     label_owns_asid_slot_def valid_arch_cap_def wellformed_mapdata_def
@@ -472,7 +472,7 @@ lemma copy_global_mappings_valid_arch_state:
   unfolding copy_global_mappings_def including classic_wp_pre
   apply simp
   apply wp
-   apply (rule_tac Q="\<lambda>_. valid_arch_state and valid_global_vspace_mappings and pspace_aligned
+   apply (rule_tac Q'="\<lambda>_. valid_arch_state and valid_global_vspace_mappings and pspace_aligned
                                            and (\<lambda>s. x \<notin> global_refs s \<and> is_aligned x pt_bits)"
                 in hoare_strengthen_post)
     apply (wp mapM_x_wp[OF _ subset_refl]
@@ -770,7 +770,7 @@ lemma mapM_x_swp_store_pte_globals_equiv:
                     and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
    mapM_x (swp store_pte pte) slots
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
+  apply (rule_tac Q'="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
                                         and valid_global_vspace_mappings
                                         and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)"
                in hoare_strengthen_post)
@@ -786,7 +786,7 @@ lemma mapM_x_swp_store_pte_valid_ko_at_arch[wp]:
                    and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
    mapM_x (swp store_pte A) slots
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. pspace_aligned and valid_arch_state and valid_global_vspace_mappings
+  apply (rule_tac Q'="\<lambda>_. pspace_aligned and valid_arch_state and valid_global_vspace_mappings
                                         and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)"
                in hoare_strengthen_post)
    apply (wp mapM_x_wp' store_pte_valid_arch_state_unreachable
@@ -857,7 +857,7 @@ lemma mapM_swp_store_pte_globals_equiv:
                     and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
    mapM (swp store_pte pte) slots
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
+  apply (rule_tac Q'="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
                                         and valid_global_vspace_mappings
                                         and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)"
                in hoare_strengthen_post)
@@ -873,7 +873,7 @@ lemma mapM_swp_store_pte_valid_ko_at_arch[wp]:
                     and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
    mapM (swp store_pte pte) slots
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
+  apply (rule_tac Q'="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
                                         and valid_global_vspace_mappings
                                         and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)"
                in hoare_strengthen_post)
@@ -940,7 +940,7 @@ lemma set_mrs_globals_equiv:
         apply (simp add: zipWithM_x_mapM_x)
         apply (rule conjI)
          apply (rule impI)
-         apply (rule_tac Q="\<lambda>_. globals_equiv s" in hoare_strengthen_post)
+         apply (rule_tac Q'="\<lambda>_. globals_equiv s" in hoare_strengthen_post)
           apply (wp mapM_x_wp')
           apply (simp add: split_def)
           apply (wp store_word_offs_globals_equiv)
@@ -1060,7 +1060,7 @@ lemma perform_asid_control_invocation_globals_equiv:
    (* factor out the implication -- we know what the relevant components of the
       cap referred to in the cte_wp_at are anyway from valid_aci, so just use
       those directly to simplify the reasoning later on *)
-   apply (rule_tac Q="\<lambda>a b. globals_equiv s b \<and> invs b \<and>
+   apply (rule_tac Q'="\<lambda>a b. globals_equiv s b \<and> invs b \<and>
                              word1 \<noteq> riscv_global_pt (arch_state b) \<and> word1 \<noteq> idle_thread b \<and>
                              (\<exists>idx. cte_wp_at ((=) (UntypedCap False word1 pageBits idx)) cslot_ptr2 b) \<and>
                              descendants_of cslot_ptr2 (cdt b) = {} \<and>

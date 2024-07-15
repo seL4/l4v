@@ -374,7 +374,7 @@ lemma invokeIRQHandler_corres:
        apply simp
        apply (rule corres_split_nor[OF cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
-        apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
+        apply (rule_tac Q'="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
                                   \<and> (a, b) \<noteq> irq_slot \<and> current_time_bounded s
                                   \<and> cte_wp_at (is_derived (cdt s) (a, b) cap) (a, b) s"
                       in hoare_post_imp)
@@ -712,7 +712,7 @@ lemma hint_invs[wp]:
   apply (rule conjI; rule impI)
    apply (wp dmo_maskInterrupt_True getCTE_wp'
           | wpc | simp add: doMachineOp_bind maskIrqSignal_def )+
-      apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
        apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
        apply fastforce
       apply (wp threadSet_invs_trivial | simp add: inQ_def handleReservedIRQ_def)+
