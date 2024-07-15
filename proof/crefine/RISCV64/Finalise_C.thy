@@ -716,22 +716,22 @@ lemma refill_unblock_check_ccorres:
                                        carch_state_relation_def cmachine_state_relation_def)
                 apply ceqv
                apply (clarsimp simp: whileAnno_def refillHeadOverlappingLoop_def)
+               apply (rule ccorres_handlers_weaken)
                apply (rule_tac G="\<lambda>_. ?abs and active_sc_at' scPtr" and G'=UNIV in ccorres_While')
-                     apply (rule ccorres_guard_imp)
-                       apply (ctac add: merge_overlapping_head_refill_ccorres)
-                      apply (clarsimp simp: active_sc_at'_rewrite runReaderT_def)
-                      apply (fastforce dest: use_ovalid[OF refillHeadOverlapping_refillSize]
-                                      intro: valid_objs'_valid_refills')
-                     apply clarsimp
-                    apply (clarsimp simp: runReaderT_def)
                     apply (rule ccorres_guard_imp)
-                      apply (ctac add: refill_head_overlapping_ccorres)
-                     apply clarsimp
+                      apply (ctac add: merge_overlapping_head_refill_ccorres)
+                     apply (clarsimp simp: active_sc_at'_rewrite runReaderT_def)
+                     apply (fastforce dest: use_ovalid[OF refillHeadOverlapping_refillSize]
+                                     intro: valid_objs'_valid_refills')
                     apply clarsimp
-                   apply wpsimp
-                   apply (clarsimp simp: active_sc_at'_def)
-                  apply (wpsimp wp: no_ofail_refillHeadOverlapping simp: runReaderT_def)
+                   apply (clarsimp simp: runReaderT_def)
+                   apply (rule ccorres_guard_imp)
+                     apply (ctac add: refill_head_overlapping_ccorres)
+                    apply clarsimp
+                   apply clarsimp
+                  apply wpsimp
                   apply (clarsimp simp: active_sc_at'_def)
+                  apply (wpsimp wp: no_ofail_refillHeadOverlapping simp: runReaderT_def)
                  apply (wpsimp wp: updateRefillHd_valid_objs' mergeOverlappingRefills_valid_objs')
                  apply (clarsimp simp: active_sc_at'_rewrite runReaderT_def)
                  apply (fastforce dest: use_ovalid[OF refillHeadOverlapping_refillSize]
