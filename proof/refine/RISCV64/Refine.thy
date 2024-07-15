@@ -335,7 +335,7 @@ definition
                                           \<and> (m = IdleMode \<longrightarrow> ct_idle s)
                                           \<and> (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running s)}"
 
-crunches do_user_op, check_active_irq
+crunch do_user_op, check_active_irq
   for valid_list[wp]: valid_list
   and valid_sched[wp]: valid_sched
   and sched_act[wp]: "\<lambda>s. P (scheduler_action s)"

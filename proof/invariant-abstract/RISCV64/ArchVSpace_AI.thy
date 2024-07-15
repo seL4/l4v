@@ -1964,7 +1964,8 @@ lemma valid_vspace_obj_default:
   by (cases ty; simp add: default_object_def tyunt)
 
 lemmas setDeadline_irq_masks = no_irq[OF no_irq_setDeadline]
-crunch device_state_inv[wp]: setDeadline "\<lambda>ms. P (device_state ms)"
+crunch setDeadline
+ for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma dmo_setDeadline[wp]:
   "do_machine_op (setDeadline t) \<lbrace>invs\<rbrace>"

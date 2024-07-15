@@ -594,7 +594,7 @@ lemma schedContextUnbindTCB_ctes_of[wp]:
      apply (clarsimp simp: ran_def tcb_cte_cases_def split: if_splits)
   by wpsimp+
 
-crunches setConsumed, schedContextCompleteYieldTo, unbindNotification, unbindFromSC
+crunch setConsumed, schedContextCompleteYieldTo, unbindNotification, unbindFromSC
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -622,7 +622,7 @@ lemma prepareThreadDelete_ctes_of_thread:
   "prepareThreadDelete t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by (wpsimp simp: prepareThreadDelete_def)
 
-crunches schedContextCancelYieldTo, tcbReleaseRemove, tcbSchedDequeue, unbindFromSC
+crunch schedContextCancelYieldTo, tcbReleaseRemove, tcbSchedDequeue, unbindFromSC
   for cteCaps_of[wp]: "\<lambda>s. P (cteCaps_of s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -638,7 +638,7 @@ lemma suspend_not_recursive_ctes:
   apply (clarsimp elim!: rsubst[where P=P] intro!: set_eqI)
   done
 
-crunches schedContextUnbindTCB, schedContextCompleteYieldTo, unbindNotification,
+crunch schedContextUnbindTCB, schedContextCompleteYieldTo, unbindNotification,
          prepareThreadDelete, unbindFromSC
   for not_recursive_ctes[wp]: "\<lambda>s. P (not_recursive_ctes s)"
   (simp: not_recursive_ctes_def cteCaps_of_def wp: threadSet_ctes_of)
@@ -665,7 +665,7 @@ lemma finaliseSlot_recset_wf: "wf finaliseSlot_recset"
   by (intro wf_sum_wf wf_rdcall_finalise_ord_lift wf_measure
             wf_inv_image wf_lex_prod wf_less_than)
 
-crunches getRefills, isCurDomainExpired
+crunch getRefills, isCurDomainExpired
   for inv[wp]: P
 
 lemma updateCap_implies_cte_at:
@@ -4835,7 +4835,7 @@ lemma cteSwap_iflive'[wp]:
   apply auto
   done
 
-crunches updateMDB, updateCap
+crunch updateMDB, updateCap
   for valid_replies'[wp]: valid_replies'
   (wp: valid_replies'_lift)
 
@@ -4899,7 +4899,7 @@ lemma cteSwap_valid_pspace'[wp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches cteSwap
+crunch cteSwap
   for tcb_at [wp]: "tcb_at' t"
   and sch [wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and inQ [wp]: "obj_at' (inQ d p) tcb"
@@ -5005,7 +5005,7 @@ lemma cteSwap_urz[wp]:
   apply auto
   done
 
-crunches cteSwap
+crunch cteSwap
   for valid_arch_state'[wp]: "valid_arch_state'"
   and irq_states'[wp]: "valid_irq_states'"
   and pde_mappings'[wp]: "valid_pde_mappings'"
@@ -5761,7 +5761,7 @@ lemma updateCap_cap_to':
   apply (clarsimp simp: modify_map_def cte_wp_at_ctes_of cteCaps_of_def)
   done
 
-crunches cancelSignal
+crunch cancelSignal
   for cap_to'[wp]: "ex_cte_cap_wp_to' P p"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -5808,7 +5808,7 @@ lemmas finaliseSlot_abort_cases
     = use_spec(2) [OF finaliseSlot_abort_cases',
                       folded validE_R_def finaliseSlot_def]
 
-crunches capSwapForDelete
+crunch capSwapForDelete
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   and ksIdleSC[wp]: "\<lambda>s. P (ksIdleSC s)"
 
@@ -6063,12 +6063,12 @@ lemma sch_act_simple_only_ksSchedulerAction:
   apply simp
   done
 
-crunches schedContextCompleteYieldTo, unbindMaybeNotification, schedContextMaybeUnbindNtfn,
+crunch schedContextCompleteYieldTo, unbindMaybeNotification, schedContextMaybeUnbindNtfn,
          prepareThreadDelete, setMessageInfo, schedContextUpdateConsumed, isFinalCapability,
          setQueue
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
-crunches tcbSchedEnqueue, replyClear, suspend, schedContextUnbindTCB, schedContextUnbindNtfn,
+crunch tcbSchedEnqueue, replyClear, suspend, schedContextUnbindTCB, schedContextUnbindNtfn,
          schedContextUnbindAllTCBs
   for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps
@@ -6111,7 +6111,7 @@ lemma cteDeleteOne_sch_act_simple[wp]:
   apply (wpsimp wp: haskell_assert_inv comb: sch_act_simple_lift)
   done
 
-crunches deletingIRQHandler, unbindFromSC, schedContextSetInactive, schedContextUnbindYieldFrom,
+crunch deletingIRQHandler, unbindFromSC, schedContextSetInactive, schedContextUnbindYieldFrom,
          schedContextUnbindReply
   for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps simp: crunch_simps)
@@ -6401,12 +6401,12 @@ lemma cteDelete_invs':
 declare cases_simp_conj[simp]
 
 end
-crunches capSwapForDelete
+crunch capSwapForDelete
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-crunches cteDelete
+crunch cteDelete
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (rule: cteDelete_preservation)
@@ -6514,7 +6514,7 @@ lemma cteDelete_sch_act_simple:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete,
+crunch "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete,
          schedContextMaybeUnbindNtfn, cleanReply
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (simp: crunch_simps wp: crunch_wps getObject_inv)
@@ -6631,8 +6631,8 @@ lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
 context
 notes option.case_cong_weak[cong]
 begin
-crunch rvk_prog': finaliseCap
-    "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
+crunch finaliseCap
+ for rvk_prog': "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of hoare_vcg_all_lift getObject_inv
    simp: crunch_simps unless_def o_def
    ignore: setCTE threadSet)
@@ -6910,7 +6910,7 @@ lemma spec_corres_gen_asm2:
 
 end
 
-crunches reduceZombie
+crunch reduceZombie
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -7426,7 +7426,7 @@ qed
 lemmas cteRevoke_preservation =
        validE_valid [OF use_spec(2) [OF cteRevoke_preservation']]
 
-crunches cteRevoke
+crunch cteRevoke
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (rule: cteRevoke_preservation)
@@ -7748,7 +7748,7 @@ lemmas cteRevoke_corres = use_spec_corres [OF cteRevoke_corres']
 
 end
 
-crunches invokeCNode
+crunch invokeCNode
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (ignore: filterM finaliseSlot
@@ -8634,10 +8634,14 @@ lemma cap_relation_same:
   by (clarsimp split: cap_relation_split_asm
                       arch_cap.split_asm)
 
-crunch gsUserPages[wp]: updateCap "\<lambda>s. P (gsUserPages s)"
-crunch gsCNodes[wp]:    updateCap "\<lambda>s. P (gsCNodes s)"
-crunch ksWorkUnitsCompleted[wp]: updateCap "\<lambda>s. P (ksWorkUnitsCompleted s)"
-crunch ksDomainTime[wp]: updateCap "\<lambda>s. P (ksDomainTime s)"
+crunch updateCap
+ for gsUserPages[wp]: "\<lambda>s. P (gsUserPages s)"
+crunch    updateCap
+ for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
+crunch updateCap
+ for ksWorkUnitsCompleted[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
+crunch updateCap
+ for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
 
 declare corres_False' [simp]
 
@@ -8737,7 +8741,7 @@ lemma updateCap_noop_irq_handlers:
                 add: modify_map_apply fun_upd_idem)
   done
 
-crunches updateCap
+crunch updateCap
   for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   and cur_tcb'[wp]: "cur_tcb'"
   (rule: ct_idle_or_in_cur_domain'_lift2)
@@ -8772,7 +8776,7 @@ lemmas make_zombie_or_noop_or_arch_invs
    hoare_vcg_disj_lift [OF make_zombie_invs' arch_update_updateCap_invs],
    simplified]
 
-crunches cteMove
+crunch cteMove
   for sc_at'_n[wp]: "sc_at'_n n p"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -8795,10 +8799,10 @@ lemma invokeCNode_invs' [wp]:
 
 declare withoutPreemption_lift [wp]
 
-crunches capSwapForDelete
+crunch capSwapForDelete
   for irq_states' [wp]: valid_irq_states'
 
-crunches finaliseCap
+crunch finaliseCap
   for irq_states' [wp]: valid_irq_states'
   (wp: crunch_wps unless_wp getASID_wp no_irq
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID

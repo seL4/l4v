@@ -1015,7 +1015,7 @@ lemma arch_thread_set_cte_wp_at[wp]:
     apply (clarsimp simp: tcb_cnode_map_def)+
   done
 
-crunches prepare_thread_delete, arch_finalise_cap
+crunch prepare_thread_delete, arch_finalise_cap
   for cte_wp_at[wp, Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   and cur[wp, Finalise_AI_asms]: "\<lambda>s. P (cur_thread s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
@@ -1141,7 +1141,8 @@ lemma is_arch_update_reset_page:
   done
 
 context notes if_cong[cong] begin
-crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
+crunch arch_finalise_cap
+ for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 end
 

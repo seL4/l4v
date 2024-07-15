@@ -4203,8 +4203,8 @@ crunch emptySlot, tcbSchedEnqueue, rescheduleRequired
   (wp: threadSet_obj_at'_strongish crunch_wps
     simp: crunch_simps unless_def)
 
-crunch tcbFault: setThreadState, cancelAllIPC, cancelAllSignals
-          "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
+crunch setThreadState, cancelAllIPC, cancelAllSignals
+ for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps simp: crunch_simps)
 end
 

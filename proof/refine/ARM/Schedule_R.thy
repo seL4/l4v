@@ -8,7 +8,7 @@ theory Schedule_R
 imports SchedContext_R InterruptAcc_R
 begin
 
-crunches scReleased, getReprogramTimer, getCurTime, getRefills, getReleaseQueue, refillSufficient,
+crunch scReleased, getReprogramTimer, getCurTime, getRefills, getReleaseQueue, refillSufficient,
          refillReady, isRoundRobin
   for inv[wp]: P
 
@@ -19,7 +19,7 @@ declare hoare_weak_lift_imp[wp_split del]
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
 
-crunches refillHeadOverlappingLoop, headInsufficientLoop, setRefillHd
+crunch refillHeadOverlappingLoop, headInsufficientLoop, setRefillHd
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'
   and valid_release_queue[wp]: valid_release_queue
@@ -28,11 +28,11 @@ crunches refillHeadOverlappingLoop, headInsufficientLoop, setRefillHd
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n T p s)"
   (wp: crunch_wps)
 
-crunches tcbReleaseDequeue
+crunch tcbReleaseDequeue
   for sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches refillUnblockCheck, refillBudgetCheck, ifCondRefillUnblockCheck, refillBudgetCheckRoundRobin
+crunch refillUnblockCheck, refillBudgetCheck, ifCondRefillUnblockCheck, refillBudgetCheckRoundRobin
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'
   and valid_release_queue[wp]: valid_release_queue
@@ -64,7 +64,7 @@ crunches refillUnblockCheck, refillBudgetCheck, ifCondRefillUnblockCheck, refill
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   (wp: crunch_wps valid_dom_schedule'_lift simp: crunch_simps refillSingle_def)
 
-crunches commitTime, refillNew, refillUpdate
+crunch commitTime, refillNew, refillUpdate
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -672,7 +672,7 @@ lemma tcbSchedAppend_valid_bitmaps[wp]:
   apply (clarsimp simp: valid_bitmaps_def)
   done
 
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
 
 lemma tcbSchedAppend_valid_release_queue[wp]:
@@ -684,7 +684,7 @@ lemma tcbSchedAppend_valid_release_queue[wp]:
                   wp: hoare_vcg_all_lift hoare_vcg_imp_lift' threadGet_wp)
   by (auto simp: obj_at'_def)
 
-crunches addToBitmap
+crunch addToBitmap
   for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
 
 lemma tcbSchedAppend_valid_release_queue'[wp]:
@@ -849,7 +849,7 @@ proof -
     by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_ARM_H_switchToThread_typ_at' pos])
 qed
 
-crunches doMachineOp
+crunch doMachineOp
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
 
 crunch storeWordUser
@@ -894,7 +894,7 @@ lemma valid_queues_ready_qs_distinct[elim!]:
   "valid_queues s \<Longrightarrow> ready_qs_distinct s"
   by (clarsimp simp: valid_queues_def ready_qs_distinct_def)
 
-crunches arch_switch_to_thread
+crunch arch_switch_to_thread
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
 
@@ -954,7 +954,7 @@ lemma arch_switchToIdleThread_corres:
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb obj_at'_def)
   done
 
-crunches switchToIdleThread
+crunch switchToIdleThread
   for ready_qs_runnable[wp]: "\<lambda>s. \<forall>d p. \<forall>t\<in>set (ksReadyQueues s (d, p)).
                        st_tcb_at' runnable' t s"
   (simp: crunch_simps)
@@ -1132,7 +1132,8 @@ lemma Arch_switchToThread_obj_at[wp]:
 
 declare doMachineOp_obj_at[wp]
 
-crunch valid_arch_state'[wp]: asUser "valid_arch_state'"
+crunch asUser
+ for valid_arch_state'[wp]: "valid_arch_state'"
 (wp: crunch_wps simp: crunch_simps)
 
 crunch asUser
@@ -1490,7 +1491,7 @@ lemma setCurThread_const:
 
 
 
-crunches switchToIdleThread, switchToThread, chooseThread
+crunch switchToIdleThread, switchToThread, chooseThread
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps)
 
@@ -1524,7 +1525,8 @@ lemma corres_split_sched_act:
     apply (rule corres_guard_imp, force+)+
     done
 
-crunch cur[wp]: tcbSchedEnqueue cur_tcb'
+crunch tcbSchedEnqueue
+ for cur[wp]: cur_tcb'
   (simp: unless_def)
 
 lemma is_schedulable_exs_valid[wp]:
@@ -1961,9 +1963,12 @@ lemma isHighestPrio_corres:
          apply (wpsimp simp: if_apply_def2 wp: hoare_drop_imps ksReadyQueuesL1Bitmap_return_wp)+
   done
 
-crunch inv[wp]: isHighestPrio P
-crunch inv[wp]: curDomain P
-crunch inv[wp]: scheduleSwitchThreadFastfail P
+crunch isHighestPrio
+ for inv[wp]: P
+crunch curDomain
+ for inv[wp]: P
+crunch scheduleSwitchThreadFastfail
+ for inv[wp]: P
 
 lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
   "\<lbrace>\<lambda>s. invs' s \<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. invs' \<rbrace>"
@@ -2248,7 +2253,7 @@ lemma updateRefillTl_valid_objs'[wp]:
                    simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
   done
 
-crunches scheduleUsed
+crunch scheduleUsed
   for valid_objs'[wp]: valid_objs'
   (simp: refillFull_def refillEmpty_def)
 
@@ -2289,7 +2294,7 @@ lemma updateSchedContext_valid_idle':
   apply (fastforce simp: valid_idle'_def obj_at'_def)
   done
 
-crunches scheduleUsed, updateRefillHd, refillPopHead
+crunch scheduleUsed, updateRefillHd, refillPopHead
   for valid_idle'[wp]: valid_idle'
   (wp: updateSchedContext_valid_idle')
 
@@ -2345,11 +2350,11 @@ lemma updateRefillTl_active_sc_at'[wp]:
   apply (wpsimp wp: updateSchedContext_active_sc_at' hoare_drop_imps getRefillNext_wp)
   done
 
-crunches scheduleUsed
+crunch scheduleUsed
   for active_sc_at'[wp]: "active_sc_at' scPtr"
   (wp: crunch_wps)
 
-crunches refillPopHead
+crunch refillPopHead
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' scPtr"
 
 lemma updateRefillHd_invs':
@@ -2393,7 +2398,7 @@ lemma setReprogramTimer_active_sc_at'[wp]:
   unfolding active_sc_at'_def
   by wpsimp
 
-crunches refillBudgetCheck, refillUnblockCheck
+crunch refillBudgetCheck, refillUnblockCheck
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'
   and valid_release_queue[wp]: valid_release_queue
@@ -2523,7 +2528,7 @@ lemma nonOverlappingMergeRefills_if_live_then_nonz_cap'[wp]:
       fastforce intro: if_live_then_nonz_capE'
                  simp: ko_wp_at'_def obj_at'_real_def projectKO_sc live_sc'_def)+
 
-crunches refillHeadOverlappingLoop, headInsufficientLoop
+crunch refillHeadOverlappingLoop, headInsufficientLoop
   for if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
   (wp: crunch_wps)
 
@@ -2540,7 +2545,7 @@ lemma setRefillHd_if_live_then_nonz_cap'[wp]:
   apply (wpsimp simp: setRefillHd_def)
   done
 
-crunches handleOverrunLoop
+crunch handleOverrunLoop
   for if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
   (wp: crunch_wps)
 
@@ -2567,7 +2572,7 @@ lemma nonOverlappingMergeRefills_valid_idle'[wp]:
          wpsimp simp: valid_idle'_def obj_at'_def)+
   done
 
-crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
+crunch refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
   for valid_idle'[wp]: valid_idle'
   (wp: crunch_wps)
 
@@ -2579,7 +2584,7 @@ lemma refillUnblockCheck_valid_idle'[wp]:
   apply (clarsimp simp: valid_idle'_def obj_at'_def)
   done
 
-crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
+crunch refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
   for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   (wp: crunch_wps)
 
@@ -2590,7 +2595,7 @@ lemma refillUnblockCheck_ct_idle_or_in_cur_domain'[wp]:
   apply (wpsimp wp: scActive_wp)
   done
 
-crunches refillUnblockCheck, refillBudgetCheck
+crunch refillUnblockCheck, refillBudgetCheck
   for reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and valid_replies'[wp]: valid_replies'
@@ -2602,7 +2607,7 @@ lemma refillUnblockCheck_invs':
   apply wpsimp
   done
 
-crunches ifCondRefillUnblockCheck
+crunch ifCondRefillUnblockCheck
   for invs'[wp]: invs'
   (wp: hoare_vcg_if_lift2 crunch_wps simp: crunch_simps)
 
@@ -2627,7 +2632,7 @@ lemma nonOverlappingMergeRefills_valid_objs':
                   dest!: sc_ko_at_valid_objs_valid_sc')
   done
 
-crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
+crunch refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
   for active_sc_at'[wp]: "active_sc_at' scPtr"
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   (wp: crunch_wps)
@@ -2805,7 +2810,7 @@ lemma possibleSwitchTo_weak_sch_act[wp]:
   by (auto simp: obj_at'_def weak_sch_act_wf_def tcb_in_cur_domain'_def
                  projectKO_eq ps_clear_domE)
 
-crunches possibleSwitchTo
+crunch possibleSwitchTo
   for valid_pspace'[wp]: valid_pspace'
   and valid_queues[wp]: valid_queues
   and valid_tcbs'[wp]: valid_tcbs'
@@ -2899,7 +2904,7 @@ lemma setReleaseQueue_pred_tcb_at'[wp]:
  "setReleaseQueue qs \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
   by (wpsimp simp: setReleaseQueue_def)
 
-crunches setReprogramTimer, possibleSwitchTo
+crunch setReprogramTimer, possibleSwitchTo
   for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2930,7 +2935,7 @@ lemma awaken_invs':
   apply (fastforce intro!: releaseQNonEmptyAndReady_implies_releaseQNonEmpty)
   done
 
-crunches tcbReleaseDequeue
+crunch tcbReleaseDequeue
   for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P p s)"
   and valid_replies' [wp]: valid_replies'
   (wp: crunch_wps threadSet_pred_tcb_no_state valid_replies'_lift)
@@ -2947,11 +2952,11 @@ lemma awaken_sch_act_wf[wp]:
   apply (fastforce intro!: releaseQNonEmptyAndReady_implies_releaseQNonEmpty)
   done
 
-crunches awaken
+crunch awaken
   for cur_tcb'[wp]: cur_tcb'
   (wp: crunch_wps)
 
-crunches checkDomainTime
+crunch checkDomainTime
   for invs'[wp]: invs'
   and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   and cur_tcb'[wp]: cur_tcb'
@@ -3036,7 +3041,7 @@ lemma chooseThread_nosch:
   apply (wp stt_nosch isSchedulable_wp | simp add: curDomain_def bitmap_fun_defs)+
   done
 
-crunches switchSchedContext, setNextInterrupt
+crunch switchSchedContext, setNextInterrupt
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
@@ -3103,7 +3108,8 @@ lemma rescheduleRequired_sch_act_sane[wp]:
                    setSchedulerAction_def)
   by (wp isSchedulable_wp | wpc | clarsimp)+
 
-crunch sch_act_sane[wp]: setThreadState, setBoundNotification "sch_act_sane"
+crunch setThreadState, setBoundNotification
+ for sch_act_sane[wp]: "sch_act_sane"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma weak_sch_act_wf_at_cross:
@@ -3846,7 +3852,7 @@ lemma refillPopHead_scs_of'[wp]:
   unfolding refillPopHead_def
   by (wpsimp wp: updateSchedContext_wp)
 
-crunches update_refill_hd, refill_pop_head, merge_refills, schedule_used, handle_overrun_loop_body
+crunch update_refill_hd, refill_pop_head, merge_refills, schedule_used, handle_overrun_loop_body
   for is_active_sc2[wp]: "is_active_sc2 scp"
   (wp: crunch_wps ignore: update_sched_context
    simp: crunch_simps update_refill_hd_rewrite update_sched_context_set_refills_rewrite)
@@ -3900,7 +3906,7 @@ lemma no_fail_refillPopHead[wp]:
   "no_fail (sc_at' scPtr) (refillPopHead scPtr)"
   by (wpsimp simp: refillPopHead_def obj_at'_def opt_map_def opt_pred_def objBits_simps projectKOs)
 
-crunches mergeRefills
+crunch mergeRefills
   for (no_fail) no_fail[wp]
   (simp: opt_map_red opt_pred_def obj_at_simps)
 
@@ -4395,7 +4401,7 @@ lemma non_overlapping_merge_refills_is_active_sc[wp]:
   apply (clarsimp simp: vs_all_heap_simps obj_at_def)
   done
 
-crunches non_overlapping_merge_refills
+crunch non_overlapping_merge_refills
   for valid_objs[wp]: valid_objs
 
 lemma nonOverLappingMergeRefills_valid_refills'[wp]:
@@ -4587,7 +4593,7 @@ lemma refillSingle_sp:
   apply (clarsimp simp: obj_at'_def)
   done
 
-crunches updateRefillHd, scheduleUsed
+crunch updateRefillHd, scheduleUsed
    for valid_sched_context'[wp]: "valid_sched_context' sc"
 
 lemma handleOverrunLoopBody_corres:
@@ -4688,7 +4694,7 @@ lemma scheduleUsed_valid_refills'[wp]:
   apply (wpsimp wp: refillFull_wp refillEmpty_wp)
   done
 
-crunches handle_overrun_loop_body
+crunch handle_overrun_loop_body
   for valid_objs[wp]: valid_objs
 
 lemma handleOverrunLoopBody_valid_refills'[wp]:
@@ -4815,7 +4821,7 @@ lemma get_refills_exs_valid[wp]:
   apply simp
   done
 
-crunches handleOverrunLoop
+crunch handleOverrunLoop
   for valid_refills'[wp]: "valid_refills' scPtr"
   (wp: crunch_wps)
 
@@ -4961,7 +4967,7 @@ lemma refillBudgetCheck_corres:
 
 (* schedule_corres *)
 
-crunches setReprogramTimer
+crunch setReprogramTimer
   for valid_tcbs'[wp]: valid_tcbs'
   and valid_refills'[wp]: "valid_refills' scPtr"
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
@@ -4984,7 +4990,7 @@ lemma checkDomainTime_corres:
                    simp: isCurDomainExpired_def)+
   done
 
-crunches refill_budget_check_round_robin
+crunch refill_budget_check_round_robin
   for sc_at[wp]: "sc_at sc_ptr"
   and valid_objs[wp]: valid_objs
   and pspace_aligned[wp]: pspace_aligned
@@ -5057,7 +5063,7 @@ lemma commitTime_corres:
                          is_active_sc'_def opt_map_red opt_pred_def active_sc_def)
   done
 
-crunches ifCondRefillUnblockCheck
+crunch ifCondRefillUnblockCheck
   for valid_objs'[wp]: valid_objs'
   (simp: crunch_simps)
 
@@ -5127,14 +5133,14 @@ lemma commit_time_active_sc_tcb_at[wp]:
   "commit_time \<lbrace>active_sc_tcb_at t\<rbrace>"
   by (wpsimp simp: commit_time_def)
 
-crunches switch_sched_context
+crunch switch_sched_context
   for active_sc_tcb_at[wp]: "active_sc_tcb_at t"
   and not_in_release_q[wp]: "\<lambda>s. t \<notin> set (release_queue s)"
   and pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
   (wp: crunch_wps simp: crunch_simps)
 
-crunches schedule_choose_new_thread
+crunch schedule_choose_new_thread
   for sc_at[wp]: "sc_at sc_ptr"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
@@ -5166,7 +5172,7 @@ lemma tcb_sched_action_valid_state[wp]:
   by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def valid_state_def
                wp: hoare_drop_imps hoare_vcg_all_lift)
 
-crunches setQueue, addToBitmap
+crunch setQueue, addToBitmap
   for isSchedulable_bool[wp]: "isSchedulable_bool tcbPtr"
   (simp: bitmap_fun_defs isSchedulable_bool_def isScActive_def)
 
@@ -5434,32 +5440,32 @@ lemma schedContextDonate_valid_queues'[wp]:
           | wpsimp wp: threadSet_valid_queues' hoare_vcg_imp_lift' simp: inQ_def)+
   done
 
-crunches tcbSchedDequeue
+crunch tcbSchedDequeue
   for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
 
-crunches schedContextDonate
+crunch schedContextDonate
   for vrq[wp]: valid_release_queue
   and vrq'[wp]: valid_release_queue'
   (wp: threadSet_vrq_inv threadSet_vrq'_inv simp: crunch_simps)
 
-crunches schedContextDonate
+crunch schedContextDonate
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
   (wp: threadSet_cap_to simp: tcb_cte_cases_def)
 
-crunches schedContextDonate
+crunch schedContextDonate
   for valid_irq_handlers'[wp]: "\<lambda>s. valid_irq_handlers' s"
   and valid_mdb'[wp]: valid_mdb'
   (ignore: threadSet
      simp: comp_def valid_mdb'_def crunch_simps
        wp: valid_irq_handlers_lift'' threadSet_ctes_of)
 
-crunches schedContextDonate
+crunch schedContextDonate
   for sch_act_sane[wp]: sch_act_sane
   and sch_act_simple[wp]: sch_act_simple
   and sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps simp: crunch_simps rule: sch_act_sane_lift)
 
-crunches schedContextDonate
+crunch schedContextDonate
   for no_0_obj'[wp]: no_0_obj'
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and if_unsafe_then_cap'[wp]: "if_unsafe_then_cap'"
@@ -5538,7 +5544,7 @@ lemma tcbSchedDequeue_nonq:
                   split: if_splits)
   done
 
-crunches tcbReleaseRemove
+crunch tcbReleaseRemove
   for not_queued[wp]: "\<lambda>s. t' \<notin> set (ksReadyQueues s p)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -5645,7 +5651,7 @@ lemma schedContextDonate_corres_helper:
    (when (t = cur \<or> (case rv' of SwitchToThread x \<Rightarrow> t = x | _ \<Rightarrow> False)) rescheduleRequired)"
   by (case_tac rv'; clarsimp simp: when_def)
 
-crunches tcbReleaseRemove
+crunch tcbReleaseRemove
   for valid_tcbs'[wp]: valid_tcbs'
   (wp: crunch_wps)
 

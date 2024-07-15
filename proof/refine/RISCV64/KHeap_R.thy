@@ -824,11 +824,11 @@ lemma setObject_scs_of'[wp]:
 
 lemmas setReply_replies_of' = setObject_reply_replies_of'[folded setReply_def]
 
-crunches setNotification, setEndpoint, setSchedContext
+crunch setNotification, setEndpoint, setSchedContext
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and tcbs_of'[wp]: "\<lambda>s. P (tcbs_of' s)"
 
-crunches setCTE
+crunch setCTE
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
   and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
@@ -839,7 +839,7 @@ crunches setCTE
 lemmas setSchedContext_scs_of_of' =
   setObject_sched_context_scs_of'[folded setSchedContext_def]
 
-crunches setNotification, setEndpoint, setCTE, setReply
+crunch setNotification, setEndpoint, setCTE, setReply
   for scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
 
 lemma getObject_obj_at':
@@ -3192,7 +3192,7 @@ lemma dmo_inv':
   apply simp
   done
 
-crunches doMachineOp
+crunch doMachineOp
   for cte_wp_at'2[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
@@ -3213,7 +3213,7 @@ lemma doMachineOp_invs_bits[wp]:
       | wp
       | fastforce elim: state_refs_of'_pspaceI)+
 
-crunches doMachineOp
+crunch doMachineOp
   for obj_at'[wp]: "\<lambda>s. P (obj_at' P' p s)"
   and it[wp]: "\<lambda>s. P (ksIdleThread s)"
   and idle'[wp]: "valid_idle'"

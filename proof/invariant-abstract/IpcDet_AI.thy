@@ -72,7 +72,8 @@ lemma ko_at_kheap_upd_id[simp]:
   unfolding obj_at_def fun_upd_def
   by (rule abstract_state.equality, rule ext; simp)
 
-crunch typ_at[wp]: send_ipc "\<lambda>s. P (typ_at T p s)"
+crunch send_ipc
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps mapM_wp_inv maybeM_inv simp: crunch_simps)
 
 lemma si_tcb_at [wp]:
@@ -233,7 +234,7 @@ definition receive_ipc_preamble ::
                     od
                 | _ \<Rightarrow> fail"
 
-crunches receive_ipc_preamble
+crunch receive_ipc_preamble
   for invs: "invs"
   and caps_of_state: "\<lambda>s. P (caps_of_state s)"
 
@@ -706,7 +707,7 @@ global_interpretation set_untyped_cap_as_full:
   cspace_non_astate_non_mem_op "set_untyped_cap_as_full src_cap new_cap src_slot"
   by unfold_locales (wpsimp simp: set_untyped_cap_as_full_def wp: set_cap.cspace_agnostic_obj_at)+
 
-crunches update_cdt
+crunch update_cdt
   for obj_at[wp]: "\<lambda>s. P (obj_at P' p s)"
   (simp: reply_sc_reply_at_def)
 
@@ -718,7 +719,8 @@ lemma store_word_offs_reply_sc:
   "\<lbrace>reply_sc_reply_at P r\<rbrace> store_word_offs ptr offs v \<lbrace>\<lambda>rv. reply_sc_reply_at P r\<rbrace>"
   by (wpsimp simp: store_word_offs_def do_machine_op_def reply_sc_reply_at_def)
 
-crunch bound_sc_tcb_at[wp]: do_ipc_transfer "\<lambda>s. Q (bound_sc_tcb_at P t s)"
+crunch do_ipc_transfer
+ for bound_sc_tcb_at[wp]: "\<lambda>s. Q (bound_sc_tcb_at P t s)"
   (wp: crunch_wps)
 
 lemma set_reply_tcb_rv[wp]:
@@ -787,7 +789,7 @@ lemma receive_ipc_preamble_rv:
   apply (wpsimp wp: cancel_ipc_reply_at_tcb_in[where tcbs="{}", simplified])
   by (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
 
-crunches set_message_info, transfer_caps, copy_mrs
+crunch set_message_info, transfer_caps, copy_mrs
   for valid_replies_pred[wp]: "valid_replies_pred P"
   (wp: crunch_wps)
 
@@ -802,7 +804,8 @@ lemma sched_context_update_consumed_valid_replies[wp]:
   unfolding sched_context_update_consumed_def
   by (wpsimp wp: update_sched_context_wp)
 
-crunch valid_replies[wp]: do_ipc_transfer "valid_replies_pred P"
+crunch do_ipc_transfer
+ for valid_replies[wp]: "valid_replies_pred P"
   (simp: crunch_simps wp: crunch_wps make_arch_fault_msg_valid_replies)
 
 lemma set_reply_sc_valid_replies_already_BlockedOnReply:
@@ -1094,7 +1097,7 @@ lemma reply_push_sender_sc_Some_invs:
                    elim: if_live_then_nonz_capD2)
   done
 
-crunches maybe_return_sc
+crunch maybe_return_sc
   for only_idle[wp]: only_idle
   and if_unsafe_then_cap[wp]: if_unsafe_then_cap
   and valid_global_refs[wp]: valid_global_refs
@@ -1139,7 +1142,7 @@ lemma set_sc_obj_ref_valid_tcbs[wp]:
   unfolding valid_tcbs_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
-crunches reschedule_required
+crunch reschedule_required
   for valid_tcbs[wp]: valid_tcbs
   (wp: crunch_wps)
 
@@ -1242,12 +1245,12 @@ lemma maybe_return_sc_fault_tcbs_valid_states[wp]:
   unfolding fault_tcbs_valid_states_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' maybe_return_sc_pred_tcb_at)
 
-crunches maybe_return_sc
+crunch maybe_return_sc
   for misc_proj[wp]: "\<lambda>s. P (cur_thread s) (cur_sc s) (release_queue s)
                                  (cur_domain s) (domain_time s) (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches reschedule_required
+crunch reschedule_required
   for sc_at_ppred[wp]: "sc_at_ppred proj P scp"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1303,11 +1306,11 @@ lemma maybe_return_sc_ko_at_Endpoint[wp]:
                       get_object_def)
   by (auto simp: obj_at_def)
 
-crunches receive_ipc_preamble
+crunch receive_ipc_preamble
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches if_cond_refill_unblock_check
+crunch if_cond_refill_unblock_check
   for reply_tcb_reply_at[wp]: "reply_tcb_reply_at P ptr"
   and reply_sc_reply_at[wp]: "reply_sc_reply_at P ptr"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: is_round_robin_def)
@@ -1723,7 +1726,7 @@ lemma reply_push_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp wp: reply_push_invs' simp: invs_def valid_state_def valid_pspace_def) auto
 
-crunches reply_push
+crunch reply_push
   for fault_tcb_at[wp]: "fault_tcb_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2459,7 +2462,7 @@ lemma valid_bound_sc_scheduler_action_update[simp]: (* FIXME: move *)
   "valid_bound_sc t (scheduler_action_update f s) = valid_bound_sc t s"
   by (auto simp: valid_bound_obj_def split: option.splits)
 
-crunches set_thread_state_act
+crunch set_thread_state_act
   for valid_bound_tcb[wp]: "valid_bound_tcb t"
   and valid_bound_sc[wp]: "valid_bound_sc t"
   (ignore: set_object)

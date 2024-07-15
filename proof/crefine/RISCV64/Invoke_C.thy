@@ -40,7 +40,7 @@ lemma cap_case_ThreadCap2:
   by (simp add: isCap_simps
          split: capability.split)
 
-crunches tcbSchedEnqueue
+crunch tcbSchedEnqueue
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
 lemma setDomain_ccorres:

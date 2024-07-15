@@ -32,8 +32,9 @@ lemmas valid_domain_list_def = valid_domain_list_2_def
 
 section \<open>Preservation of domain list validity\<close>
 
-crunch domain_list_inv[wp]:
-  schedule_tcb, set_thread_state "\<lambda>s. P (domain_list s)"
+crunch
+  schedule_tcb, set_thread_state
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
 
 (*
@@ -98,57 +99,65 @@ context DetSchedDomainTime_AI begin
 
 crunch
   cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
-  "\<lambda>s::det_state. P (domain_list s)"
+  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: dxo_wp_weak)
 
-crunches reply_unlink_tcb, reply_unlink_sc, tcb_sched_action
+crunch reply_unlink_tcb, reply_unlink_sc, tcb_sched_action
   for domain_list_inv[wp]:  "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps maybeM_inv select_inv gets_the_inv simp: crunch_simps set_object_def)
 
-crunches reply_remove, sched_context_unbind_tcb, sched_context_set_inactive
+crunch reply_remove, sched_context_unbind_tcb, sched_context_set_inactive
   for domain_list_inv[wp]:  "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps get_simple_ko_wp)
 
-crunch domain_list_inv[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (domain_list s)"
+crunch cancel_all_ipc, cancel_all_signals
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_x_wp' whileLoop_valid_inv)
 
-crunch domain_list_inv[wp]: finalise_cap "\<lambda>s::det_state. P (domain_list s)"
+crunch finalise_cap
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps maybeM_inv dxo_wp_weak select_inv simp: crunch_simps)
 
 lemma rec_del_domain_list[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> rec_del call \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
   by (wp rec_del_preservation preemption_point_inv' | simp)+
 
-crunch domain_list_inv[wp]: cap_delete, activate_thread "\<lambda>s::det_state. P (domain_list s)"
+crunch cap_delete, activate_thread
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imp)
 
-crunches awaken
+crunch awaken
   for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
 
-crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
+crunch commit_time
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (simp: Let_def
    wp: get_sched_context_wp get_refills_wp crunch_wps hoare_vcg_all_lift hoare_vcg_if_lift2)
 
-crunch domain_list_inv[wp]: refill_new "\<lambda>s. P (domain_list s)"
+crunch refill_new
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (simp: Let_def crunch_simps wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
 
-crunch domain_list_inv[wp]: refill_update "\<lambda>s. P (domain_list s)"
+crunch refill_update
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (simp: Let_def crunch_simps
      wp: get_refills_wp update_sched_context_wp set_refills_wp crunch_wps)
 
-crunch domain_list_inv[wp]: set_next_interrupt, switch_sched_context
-  "\<lambda>s::det_state. P (domain_list s)"
+crunch set_next_interrupt, switch_sched_context
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps)
 
 lemma sc_and_timer_domain_list[wp]:
   "sc_and_timer \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
   by (wpsimp simp: sc_and_timer_def Let_def wp: get_sched_context_wp)
 
-crunch domain_list_inv[wp]: schedule "\<lambda>s::det_state. P (domain_list s)"
+crunch schedule
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak simp: Let_def)
 
-crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s)"
+crunch send_signal
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: maybeM_inv crunch_wps)
 
 end
@@ -157,18 +166,22 @@ lemma (in DetSchedDomainTime_AI_2) handle_interrupt_domain_list[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_interrupt irq \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
   by (wpsimp simp: handle_interrupt_def wp: hoare_vcg_if_lift2 hoare_drop_imp split_del: if_split)
 
-crunch domain_list_inv[wp]: cap_insert "\<lambda>s::det_state. P (domain_list s)"
+crunch cap_insert
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imps)
 
-crunch domain_list_inv[wp]:
-  lookup_cap_and_slot,set_extra_badge "\<lambda>s. P (domain_list s)"
+crunch
+  lookup_cap_and_slot,set_extra_badge
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps)
 
-crunch domain_list_inv[wp]: postpone "\<lambda>s. P (domain_list s)"
+crunch postpone
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp)
 
 context DetSchedDomainTime_AI begin
-crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s::det_state. P (domain_list s)"
+crunch do_ipc_transfer
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
 lemma reply_push_domain_list_inv[wp]:
@@ -186,25 +199,26 @@ lemma send_fault_ipc_domain_list_inv[wp]:
  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> send_fault_ipc param_a param_b param_c param_d \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   by (wpsimp simp: send_fault_ipc_def wp: hoare_drop_imp hoare_vcg_all_lift)
 
-crunch domain_list_inv[wp]: handle_fault "\<lambda>s::det_state. P (domain_list s)"
+crunch handle_fault
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: mapM_wp hoare_drop_imps maybeM_inv dxo_wp_weak simp: crunch_simps ignore:copy_mrs)
 
-crunch domain_list_inv[wp]:
+crunch
   reply_from_kernel, create_cap
-  "\<lambda>s::det_state. P (domain_list s)"
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imps maybeM_inv dxo_wp_weak mapM_wp)
 
-crunch domain_list_inv[wp]:
+crunch
   retype_region, do_reply_transfer
-  "\<lambda>s::det_state. P (domain_list s)"
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imps maybeM_inv dxo_wp_weak mapM_wp)
 end
 
-crunches delete_objects, preemption_point, reset_untyped_cap
+crunch delete_objects, preemption_point, reset_untyped_cap
   for domain_list_inv[wp]: "\<lambda>s :: det_state. P (domain_list s)"
   (wp: crunch_wps mapME_x_inv_wp OR_choiceE_weak_wp simp: detype_def ignore_del: preemption_point)
 
-crunches
+crunch
   set_priority, restart, sched_context_bind_tcb,sched_context_bind_ntfn,
   sched_context_unbind_reply, sched_context_yield_to
   for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
@@ -212,16 +226,18 @@ crunches
 
 context DetSchedDomainTime_AI begin
 
-crunch domain_list_inv[wp]:
+crunch
   refill_budget_check,charge_budget, check_budget
-  "\<lambda>s::det_state. P (domain_list s)"
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps check_cap_inv maybeM_inv simp: Let_def)
 
-crunch domain_list_inv[wp]: invoke_untyped "\<lambda>s::det_state. P (domain_list s)"
+crunch invoke_untyped
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps
     simp: crunch_simps mapM_x_defsym)
 
-crunch domain_list_inv[wp]: invoke_tcb "\<lambda>s::det_state. P (domain_list s)"
+crunch invoke_tcb
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
  (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
 
 lemma invoke_sched_control_configure_flags_domain_list[wp]:
@@ -232,14 +248,15 @@ lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   by (wpsimp simp: invoke_sched_context_def)
 
-crunch domain_list_inv[wp]:
+crunch
   invoke_domain, invoke_irq_control, invoke_irq_handler
-  "\<lambda>s::det_state. P (domain_list s)"
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps check_cap_inv maybeM_inv)
 
 end
 
-crunch domain_list_inv[wp]: cap_move "\<lambda>s::det_state. P (domain_list s)"
+crunch cap_move
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
 
 context DetSchedDomainTime_AI begin
 lemma cap_revoke_domain_list_inv[wp]:
@@ -254,13 +271,16 @@ crunch cancel_badged_sends
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
 
-crunch domain_list[wp]: maybe_donate_sc "\<lambda>s :: det_state. P (domain_list s)"
+crunch maybe_donate_sc
+ for domain_list[wp]: "\<lambda>s :: det_state. P (domain_list s)"
   (wp: crunch_wps)
 
-crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s)"
+crunch send_signal
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imps mapM_x_wp_inv maybeM_inv simp: crunch_simps unless_def)
 
-crunch domain_list_inv[wp]: lookup_reply,lookup_cap "\<lambda>s::det_state. P (domain_list s)"
+crunch lookup_reply,lookup_cap
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
 
 context DetSchedDomainTime_AI_2 begin
 
@@ -279,10 +299,12 @@ lemma perform_invocation_domain_list_inv[wp]:
   by (cases i; wpsimp)
 
 (*
-crunch domain_list_inv[wp]: perform_invocation "\<lambda>s. P (domain_list s)"
+crunch perform_invocation
+ for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps syscall_valid maybeM_inv simp: crunch_simps ignore: without_preemption)
 *)
-crunch domain_list_inv[wp]: handle_invocation,receive_ipc,receive_signal "\<lambda>s::det_state. P (domain_list s)"
+crunch handle_invocation,receive_ipc,receive_signal
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps syscall_valid maybeM_inv simp: crunch_simps ignore: without_preemption syscall)
 
 lemma handle_recv_domain_list_inv[wp]:
@@ -291,12 +313,13 @@ lemma handle_recv_domain_list_inv[wp]:
   by (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
         split_del: if_split wp: hoare_drop_imps)
 
-crunches
+crunch
   handle_yield, handle_call, handle_vm_fault, handle_hypervisor_fault, check_domain_time
   for domain_list_inv[wp]: "\<lambda>s :: det_state. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch domain_list_inv[wp]: check_budget_restart "\<lambda>s::det_state. P (domain_list s)"
+crunch check_budget_restart
+ for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (simp: is_round_robin_def wp: hoare_drop_imps)
 
 lemma handle_event_domain_list_inv[wp]:
@@ -309,7 +332,7 @@ lemma handle_event_domain_list_inv[wp]:
              apply wpsimp+
   done
 
-crunches preemption_path
+crunch preemption_path
   for domain_list[wp]: "\<lambda>s :: det_state. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -343,11 +366,11 @@ lemma check_domain_time_domain_time_zero_imp_sched_act_choose_new_thread[wp]:
   apply (clarsimp simp: is_cur_domain_expired_def)
   done
 
-crunches set_next_interrupt
+crunch set_next_interrupt
   for domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps)
 
-crunches switch_sched_context, sc_and_timer
+crunch switch_sched_context, sc_and_timer
   for domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps)
 
@@ -364,7 +387,7 @@ lemma next_domain_domain_time_left[wp]:
 
 context DetSchedDomainTime_AI begin
 
-crunches choose_thread
+crunch choose_thread
   for domain_time_inv[wp]: "\<lambda>s :: det_state. P (domain_time s)"
   (wp: crunch_wps)
 
@@ -402,7 +425,7 @@ lemma hoare_false_imp:
 
 context DetSchedDomainTime_AI_2 begin
 
-crunches activate_thread
+crunch activate_thread
   for domain_time_inv[wp]: "\<lambda>s :: det_state. P (domain_time s)"
   (wp: crunch_wps simp: crunch_simps)
 

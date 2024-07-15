@@ -22,7 +22,7 @@ declare unless_True[simp]
 
 declare maybe_fail_bind_fail[simp]
 
-crunches setPriority
+crunch setPriority
   for cte_wp_at'[wp]: "cte_wp_at' P p"
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
   (simp: crunch_simps wp: crunch_wps)

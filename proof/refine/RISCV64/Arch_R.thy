@@ -994,11 +994,12 @@ end
 
 context begin interpretation Arch .
 
-crunch pspace_no_overlap'[wp]: setThreadState "pspace_no_overlap' w s"
+crunch setThreadState
+ for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
   (simp: unless_def wp: crunch_wps)
 
 
-crunches setThreadState
+crunch setThreadState
   for sc_at'_n[wp]: "sc_at'_n n p"
   (simp: crunch_simps wp: crunch_wps)
 

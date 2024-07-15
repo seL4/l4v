@@ -31,7 +31,7 @@ begin
 
 declare liftE_handle [simp]
 
-crunches setConsumedTime
+crunch setConsumedTime
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps)
 
@@ -40,7 +40,7 @@ lemma commitTime_sch_act_wf[wp]:
   unfolding commitTime_def
   by (wpsimp wp: isRoundRobin_wp split: if_splits)
 
-crunches setNextInterrupt, switchSchedContext
+crunch setNextInterrupt, switchSchedContext
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps)
 
@@ -665,7 +665,7 @@ lemma callKernel_withFastpath_corres_C:
 *)
 
 (* FIXME RT: move to AInvs *)
-crunches thread_set
+crunch thread_set
   for domain_time[wp]: "\<lambda>s. P (domain_time s)"
 
 lemma threadSet_all_invs_triv':

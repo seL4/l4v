@@ -763,7 +763,7 @@ lemma setObject_cte_obj_at_tcb':
                         Structures_H.kernel_object.split_asm)
   done
 
-crunches setCTE
+crunch setCTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
@@ -2447,7 +2447,7 @@ lemma updateMDB_ctes_of:
   apply simp
   done
 
-crunches updateMDB
+crunch updateMDB
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
   and ksConsumedTime[wp]: "\<lambda>s. P (ksConsumedTime s)"

@@ -1506,7 +1506,7 @@ lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longr
   apply wpsimp
   done
 
-crunches cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext
+crunch cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext
   for all_but_exst[wp]:  "all_but_exst P"
   and (empty_fail) empty_fail[wp]
   (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext)
@@ -3822,10 +3822,12 @@ crunch set_extra_badge
 lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
-crunch valid_list[wp]: tcb_sched_action,reschedule_required,tcb_release_remove "valid_list"
+crunch tcb_sched_action,reschedule_required,tcb_release_remove
+ for valid_list[wp]: "valid_list"
   (simp: unless_def thread_get_def crunch_simps wp: hoare_drop_imp)
 
-crunch valid_list[wp]: schedule_tcb "valid_list"
+crunch schedule_tcb
+ for valid_list[wp]: "valid_list"
   (simp: unless_def)
 
 lemma set_simple_ko_valid_list[wp]:
@@ -3836,7 +3838,8 @@ lemma update_sk_obj_ref_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sk_obj_ref C f p v \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def)
 
-crunch valid_list[wp]: set_thread_state valid_list
+crunch set_thread_state
+ for valid_list[wp]: valid_list
 
 lemma update_sched_context_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sched_context ptr sc \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -3891,7 +3894,8 @@ lemma test_reschedule_cdt_cdt_list[wp]:
   by (wpsimp simp: test_reschedule_def
        wp: hoare_drop_imps)
 
-crunch (empty_fail) empty_fail[wp]: test_reschedule,tcb_release_remove
+crunch test_reschedule,tcb_release_remove
+ for (empty_fail) empty_fail[wp]
 
 (*
 interpretation
@@ -3954,7 +3958,7 @@ lemma set_mrs_valid_list[wp]:
   by (wpsimp simp: set_mrs_def zipWithM_x_mapM_x split_del: if_split
         wp: hoare_drop_imp set_object_wp hoare_vcg_if_lift2 mapM_x_wp')
 
-crunches
+crunch
   cancel_all_signals, unbind_maybe_notification, sched_context_unbind_all_tcbs,
   sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_remove_tcb
@@ -4063,33 +4067,39 @@ lemma copy_mrs_valid_list[wp]:
 
 context Deterministic_AI_1 begin
 
-crunch valid_list[wp]: make_fault_msg valid_list
+crunch make_fault_msg
+ for valid_list[wp]: valid_list
   (ignore: make_arch_fault_msg)
 
-crunch valid_list[wp]: do_fault_transfer valid_list
+crunch do_fault_transfer
+ for valid_list[wp]: valid_list
   (wp: mapM_wp hoare_drop_imp ignore: make_fault_msg)
 
-crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check valid_list
+crunch transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check
+ for valid_list[wp]: valid_list
   (wp: mapM_wp hoare_drop_imp whileLoop_valid_inv)
 
 lemma send_ipc_valid_list[wp]:
   "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
    by (wpsimp simp: send_ipc_def wp: thread_get_inv hoare_drop_imp get_simple_ko_wp)
 
-crunch valid_list[wp]: send_fault_ipc,handle_timeout valid_list
+crunch send_fault_ipc,handle_timeout
+ for valid_list[wp]: valid_list
 
 end
 
-crunch (empty_fail) empty_fail[wp]: tcb_release_enqueue
+crunch tcb_release_enqueue
+ for (empty_fail) empty_fail[wp]
 
-crunch valid_list[wp]: tcb_release_enqueue "valid_list"
+crunch tcb_release_enqueue
+ for valid_list[wp]: "valid_list"
   (simp: thread_get_def crunch_simps wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
 
 lemma postpone_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> postpone r \<lbrace>\<lambda>_.valid_list\<rbrace>"
    by (wpsimp simp: postpone_def wp: hoare_drop_imp)
 
-crunches set_refills,refill_size, schedule_used
+crunch set_refills,refill_size, schedule_used
   for valid_list[wp]: valid_list
   (simp: schedule_used_defs wp: get_refills_wp)
 
@@ -4125,18 +4135,22 @@ lemma check_budget_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> check_budget \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: check_budget_def)
 
-crunch valid_list[wp]: check_budget_restart "valid_list"
+crunch check_budget_restart
+ for valid_list[wp]: "valid_list"
   (simp: thread_get_def wp: hoare_drop_imp)
 
-crunch valid_list[wp]: handle_fault "valid_list"
+crunch handle_fault
+ for valid_list[wp]: "valid_list"
   (simp: thread_get_def unless_def wp: get_object_wp)
 
 end
 
-crunch valid_list[wp]: tcb_release_enqueue "valid_list"
+crunch tcb_release_enqueue
+ for valid_list[wp]: "valid_list"
   (simp: thread_get_def wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
 
-crunch (empty_fail) empty_fail[wp]: test_possible_switch_to
+crunch test_possible_switch_to
+ for (empty_fail) empty_fail[wp]
 
 lemma test_possible_switch_to_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> test_possible_switch_to t \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4147,7 +4161,8 @@ lemma sched_context_resume_valid_list[wp]:
   by (wpsimp simp: sched_context_resume_def get_tcb_queue_def thread_get_def
           wp: get_sched_context_wp hoare_drop_imp hoare_vcg_if_lift2)
 
-crunch valid_list[wp]: blocked_cancel_ipc,cancel_signal "valid_list"
+crunch blocked_cancel_ipc,cancel_signal
+ for valid_list[wp]: "valid_list"
   (wp: crunch_wps)
 
 lemma cancel_ipc_valid_list[wp]:
@@ -4155,47 +4170,56 @@ lemma cancel_ipc_valid_list[wp]:
   by (wpsimp simp: cancel_ipc_def
       wp: hoare_drop_imp get_sched_context_wp hoare_vcg_conj_lift hoare_vcg_all_lift)
 
-crunch valid_list[wp]: sched_context_unbind_reply valid_list
+crunch sched_context_unbind_reply
+ for valid_list[wp]: valid_list
 
 lemma fast_finalise_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> fast_finalise c b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   by (cases c; wpsimp wp: gts_wp get_simple_ko_wp)
 
-crunches cap_delete_one, restart
+crunch cap_delete_one, restart
   for valid_list[wp]: "valid_list"
   (wp: hoare_drop_imp hoare_vcg_all_lift maybeM_inv crunch_wps simp: crunch_simps)
 
 context notes if_cong[cong] begin
 
-crunches update_time_stamp, check_domain_time
+crunch update_time_stamp, check_domain_time
   for valid_list[wp]: valid_list
   (wp: get_object_wp)
 
-crunch valid_list[wp]: reply_from_kernel "valid_list"
+crunch reply_from_kernel
+ for valid_list[wp]: "valid_list"
   (wp: get_object_wp)
 
-crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
+crunch sched_context_resume,suspend
+ for valid_list[wp]: "valid_list"
   (wp: get_object_wp hoare_drop_imp maybeM_inv)
 
-crunch valid_list[wp]: sched_context_bind_ntfn valid_list
-crunch valid_list[wp]: sched_context_yield_to valid_list
+crunch sched_context_bind_ntfn
+ for valid_list[wp]: valid_list
+crunch sched_context_yield_to
+ for valid_list[wp]: valid_list
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
-crunch valid_list[wp]: refill_unblock_check valid_list
+crunch refill_unblock_check
+ for valid_list[wp]: valid_list
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps is_round_robin_def)
-crunch valid_list[wp]: invoke_sched_context valid_list
+crunch invoke_sched_context
+ for valid_list[wp]: valid_list
 
-crunches refill_update, refill_new
+crunch refill_update, refill_new
   for valid_list[wp]: valid_list
   (wp: hoare_drop_imp hoare_vcg_all_lift simp: crunch_simps)
 
-crunch valid_list[wp]: commit_time valid_list
+crunch commit_time
+ for valid_list[wp]: valid_list
   (wp: crunch_wps)
 
 end
 
 context Deterministic_AI_1 begin
 
-crunch valid_list[wp]: invoke_tcb, invoke_sched_control_configure_flags "valid_list"
+crunch invoke_tcb, invoke_sched_control_configure_flags
+ for valid_list[wp]: "valid_list"
  (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
 
 end
@@ -4207,7 +4231,8 @@ lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_object
 
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
 
-crunch valid_list[wp]: maybe_donate_sc valid_list (wp: maybeM_inv)
+crunch maybe_donate_sc
+ for valid_list[wp]: valid_list (wp: maybeM_inv)
 
 locale Deterministic_AI_2 = Deterministic_AI_1 +
   assumes arch_invoke_irq_handler_valid_list[wp]:

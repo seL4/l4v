@@ -39,7 +39,7 @@ lemma set_refills_valid_objs:
   apply (clarsimp simp: valid_sched_context_def)
   done
 
-crunches set_next_interrupt, set_refills, refill_budget_check
+crunch set_next_interrupt, set_refills, refill_budget_check
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
   and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
@@ -49,10 +49,11 @@ crunches set_next_interrupt, set_refills, refill_budget_check
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps simp: Let_def)
 
-crunch reprogram_timer[wp]: commit_time "\<lambda>s. P (reprogram_timer s)"
+crunch commit_time
+ for reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps hoare_vcg_if_lift2)
 
-crunches refill_unblock_check
+crunch refill_unblock_check
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and cur_time[wp]: "\<lambda>s. P (cur_time s)"
@@ -523,11 +524,11 @@ lemma set_refills_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> set_refills ptr refills \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (wpsimp simp: set_refills_def)
 
-crunches refill_budget_check
+crunch refill_budget_check
   for ex_nonz_cap_tp[wp]: "\<lambda>s. ex_nonz_cap_to ptr s"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches head_insufficient_loop, handle_overrun_loop
+crunch head_insufficient_loop, handle_overrun_loop
   for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
   (wp: crunch_wps update_sched_context_iflive_implies)
 
@@ -543,7 +544,7 @@ lemma refill_unblock_check_refs_of[wp]:
   by (wpsimp simp: refill_unblock_check_defs reprogram_timer_update_arch.state_refs_update
                 wp:  whileLoop_valid_inv)
 
-crunches refill_budget_check, if_cond_refill_unblock_check
+crunch refill_budget_check, if_cond_refill_unblock_check
   for aligned[wp]: pspace_aligned
   and distinct[wp]: pspace_distinct
   and iflive[wp]: if_live_then_nonz_cap
@@ -609,7 +610,7 @@ lemma refill_budget_check_round_robin_invs[wp]:
   by (wpsimp simp: refill_budget_check_round_robin_def
                wp: hoare_drop_imp update_sched_context_wp)
 
-crunches schedule_used
+crunch schedule_used
   for invs[wp]: invs
   (simp: schedule_used_defs wp: crunch_wps)
 
@@ -718,7 +719,7 @@ lemma sc_consumed_update_sym_refs[wp]:
    \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
   by (wpsimp wp: update_sched_context_refs_of_same)
 
-crunches refill_unblock_check, if_cond_refill_unblock_check
+crunch refill_unblock_check, if_cond_refill_unblock_check
   for valid_irq_node[wp]: valid_irq_node
   and cur_sc_tcb[wp]: cur_sc_tcb
   (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
@@ -736,7 +737,7 @@ lemma refill_unblock_check_invs [wp]:
   apply (wpsimp simp: invs_def)
   done
 
-crunches if_cond_refill_unblock_check
+crunch if_cond_refill_unblock_check
   for valid_state[wp]: valid_state
   and invs[wp]: invs
   (wp: crunch_wps simp: crunch_simps)
@@ -773,7 +774,7 @@ lemma valid_sched_context_domain_time_update[simp]:
   "valid_sched_context p (domain_time_update f s) = valid_sched_context p s"
   by (simp add: valid_sched_context_def valid_bound_obj_def split: option.splits)
 
-crunches head_insufficient_loop, handle_overrun_loop
+crunch head_insufficient_loop, handle_overrun_loop
   for valid_replies_pred[wp]: "valid_replies_pred P"
   (wp: crunch_wps ignore: update_sched_context)
 
@@ -836,7 +837,7 @@ lemma commit_time_invs:
                       consumed_time_update_arch.state_refs_update)
   done
 
-crunches switch_sched_context
+crunch switch_sched_context
   for cur_time[wp]: "\<lambda>s. P (cur_time s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def)
@@ -879,7 +880,7 @@ lemma set_refills_bound_sc_tcb_at_ct[wp]:
   by (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
                    pred_tcb_at_def obj_at_def)
 
-crunches handle_overrun_loop, head_insufficient_loop
+crunch handle_overrun_loop, head_insufficient_loop
   for bound_sc_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at P (cur_thread s) s"
   (wp: crunch_wps ignore: update_sched_context)
 
@@ -904,7 +905,7 @@ lemma refill_unblock_check_bound_sc_tcb_at [wp]:
   apply (wpsimp wp: whileLoop_valid_inv get_refills_wp hoare_drop_imps)
   done
 
-crunches if_cond_refill_unblock_check
+crunch if_cond_refill_unblock_check
   for bound_sc_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at P (cur_thread s) s"
   (wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
 
@@ -949,7 +950,7 @@ lemma commit_time_fault_tcbs_valid_states[wp]:
                    update_refill_hd_def
                wp: hoare_drop_imps)
 
-crunches switch_sched_context
+crunch switch_sched_context
   for fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
   (wp: crunch_wps hoare_vcg_if_lift2)
 
@@ -981,7 +982,8 @@ lemma ct_in_state_cur_sc_update[iff]:
   "ct_in_state st (cur_sc_update f s) = ct_in_state st s"
   by (simp add: ct_in_state_def)
 
-crunch pred_tcb_at[wp]: commit_time "\<lambda>s. P (pred_tcb_at proj f t s)"
+crunch commit_time
+ for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj f t s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma update_sched_context_ct_in_state[wp]:
@@ -993,7 +995,7 @@ lemma set_refills_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> set_refills p r \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: set_refills_def wp: get_sched_context_wp)
 
-crunches head_insufficient_loop, handle_overrun_loop
+crunch head_insufficient_loop, handle_overrun_loop
   for ct_in_state[wp]: "ct_in_state t"
   (wp: crunch_wps)
 
@@ -1009,7 +1011,8 @@ lemma ct_in_state_domain_time_update[simp]:
   "ct_in_state st (domain_time_update f s) = ct_in_state st s"
   by (simp add: ct_in_state_def)
 
-crunch ct_in_state[wp]: commit_time "ct_in_state t"
+crunch commit_time
+ for ct_in_state[wp]: "ct_in_state t"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma refill_unblock_check_ct_in_state[wp]:
@@ -1039,7 +1042,7 @@ lemma sc_and_timer_activatable:
                   wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
 
-crunches refill_new, refill_update, commit_time
+crunch refill_new, refill_update, commit_time
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
@@ -1062,7 +1065,7 @@ lemma refill_budget_check_round_robin_sc_obj_at_n[wp]:
   "refill_budget_check_round_robin usage \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
   by (wpsimp simp: refill_budget_check_round_robin_def update_refill_hd_def update_refill_tl_def)
 
-crunches handle_overrun_loop, head_insufficient_loop
+crunch handle_overrun_loop, head_insufficient_loop
   for sc_obj_at[wp]: "\<lambda>s. Q (sc_obj_at n sc_ptr s)"
   (wp: crunch_wps)
 
@@ -1080,9 +1083,10 @@ lemma sched_context_resume_typ_at[wp]:
   by (wpsimp simp: sched_context_resume_def
       wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imp)
 
-crunch invs[wp]: set_message_info invs
+crunch set_message_info
+ for invs[wp]: invs
 
-crunches set_message_info, sched_context_update_consumed, unbind_from_sc
+crunch set_message_info, sched_context_update_consumed, unbind_from_sc
   for tcb_at[wp]: "\<lambda>s. P (tcb_at p s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps tcb_at_typ_at' maybeM_inv simp: crunch_simps)
@@ -1201,7 +1205,7 @@ lemmas is_schedulable_inv[wp] = is_schedulable_wp[where P="\<lambda>_. P" for P,
 
 declare reprogram_timer_update_arch.state_refs_update[simp]
 
-crunches sched_context_resume, test_possible_switch_to, tcb_release_remove, postpone
+crunch sched_context_resume, test_possible_switch_to, tcb_release_remove, postpone
   for aligned[wp]: pspace_aligned
   and distinct[wp]: pspace_distinct
   and iflive[wp]: if_live_then_nonz_cap
@@ -1254,11 +1258,11 @@ lemma set_tcb_queue_valid_replies[wp]:
   "set_tcb_queue d prio queue \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: set_tcb_queue_def)
 
-crunches sched_context_bind_tcb, update_sk_obj_ref
+crunch sched_context_bind_tcb, update_sk_obj_ref
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: is_round_robin_def crunch_simps)
 
-crunches get_tcb_queue, get_sc_time, get_sc_obj_ref
+crunch get_tcb_queue, get_sc_time, get_sc_obj_ref
   for inv[wp]: "P"
   (wp: hoare_drop_imps)
 
@@ -1369,7 +1373,7 @@ lemma sched_context_unbind_valid_replies[wp]:
   "tcb_release_remove tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
 
-crunches tcb_release_remove, tcb_sched_action, set_tcb_obj_ref
+crunch tcb_release_remove, tcb_sched_action, set_tcb_obj_ref
   for cur_sc_tcb[wp]: cur_sc_tcb
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
@@ -1589,7 +1593,7 @@ lemma sched_context_unbind_reply_invs[wp]:
 
 text \<open>more invs rules\<close>
 
-crunches postpone
+crunch postpone
   for valid_irq_node[wp]: valid_irq_node
   (wp: crunch_wps simp: crunch_simps)
 

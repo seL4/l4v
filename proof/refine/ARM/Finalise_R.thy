@@ -66,7 +66,7 @@ lemma emptySlot_cte_wp_cap_other:
               | wp (once) hoare_drop_imps)+
   done
 
-crunches clearUntypedFreeIndex
+crunch clearUntypedFreeIndex
   for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
 global_interpretation clearUntypedFreeIndex: typ_at_all_props' "clearUntypedFreeIndex slot"
@@ -82,17 +82,27 @@ crunch clearUntypedFreeIndex
   for cur_tcb'[wp]: "cur_tcb'"
   (wp: cur_tcb_lift)
 
-crunch ksRQ[wp]: emptySlot "\<lambda>s. P (ksReadyQueues s)"
-crunch ksRLQ[wp]: emptySlot "\<lambda>s. P (ksReleaseQueue s)"
-crunch ksRQL1[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-crunch ksRQL2[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-crunch obj_at'[wp]: postCapDeletion "\<lambda>s. Q (obj_at' P p s)"
+crunch emptySlot
+ for ksRQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
+crunch emptySlot
+ for ksRLQ[wp]: "\<lambda>s. P (ksReleaseQueue s)"
+crunch emptySlot
+ for ksRQL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunch emptySlot
+ for ksRQL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+crunch postCapDeletion
+ for obj_at'[wp]: "\<lambda>s. Q (obj_at' P p s)"
 
-crunch inQ[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (inQ d p) t s)"
-crunch tcbInReleaseQueue[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)"
-crunch tcbDomain[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
-crunch tcbPriority[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-crunch tcbQueued[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
+crunch clearUntypedFreeIndex
+ for inQ[wp]: "\<lambda>s. P (obj_at' (inQ d p) t s)"
+crunch clearUntypedFreeIndex
+ for tcbInReleaseQueue[wp]: "\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)"
+crunch clearUntypedFreeIndex
+ for tcbDomain[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
+crunch clearUntypedFreeIndex
+ for tcbPriority[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+crunch clearUntypedFreeIndex
+ for tcbQueued[wp]: "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
 
 crunch emptySlot
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
@@ -1355,7 +1365,8 @@ lemma setObject_cte_irq_masked'[wp]:
   unfolding setObject_def
   by (wpsimp simp: irqs_masked'_def Ball_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift' updateObject_cte_inv)
 
-crunch irqs_masked'[wp]: emptySlot "irqs_masked'"
+crunch emptySlot
+ for irqs_masked'[wp]: "irqs_masked'"
 
 lemma setIRQState_umm:
  "\<lbrace>\<lambda>s. P (underlying_memory (ksMachineState s))\<rbrace>
@@ -1374,7 +1385,7 @@ lemma emptySlot_vms'[wp]:
   by (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-crunches emptySlot
+crunch emptySlot
   for pspace_domain_valid[wp]: "pspace_domain_valid"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
@@ -1418,7 +1429,7 @@ lemma emptySlot_untyped_ranges[wp]:
   apply (simp add: untypedZeroRange_def isCap_simps)
   done
 
-crunches emptySlot
+crunch emptySlot
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and pspace_bounded'[wp]: pspace_bounded'
 
@@ -2178,7 +2189,7 @@ lemma finaliseCap_cases[wp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches finaliseCap
+crunch finaliseCap
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]:"pspace_distinct'"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
@@ -2291,7 +2302,7 @@ lemma schedContextUnbindNtfn_invs'[wp]:
   by (auto simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def live_ntfn'_def o_def
           elim!: if_live_then_nonz_capE')
 
-crunches schedContextMaybeUnbindNtfn
+crunch schedContextMaybeUnbindNtfn
   for invs'[wp]: invs'
   (simp: crunch_simps wp: crunch_wps ignore: setReply)
 
@@ -2302,7 +2313,7 @@ lemma replyUnlink_invs'[wp]:
   unfolding invs'_def valid_dom_schedule'_def
   by wpsimp
 
-crunches replyRemove
+crunch replyRemove
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   and if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
   and valid_global_refs'[wp]: valid_global_refs'
@@ -2329,7 +2340,7 @@ crunches replyRemove
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches replyRemove, handleFaultReply
+crunch replyRemove, handleFaultReply
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2753,7 +2764,8 @@ lemma finaliseCap_True_invs'[wp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch invs'[wp]: flushSpace "invs'" (ignore: doMachineOp)
+crunch flushSpace
+ for invs'[wp]: "invs'" (ignore: doMachineOp)
 
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = armKSASIDTable (ksArchState s) \<longrightarrow>
@@ -2875,7 +2887,7 @@ lemma prepares_delete_helper'':
   apply (clarsimp simp: removeable'_def)
   done
 
-crunches finaliseCapTrue_standin, unbindNotification
+crunch finaliseCapTrue_standin, unbindNotification
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps)
 
@@ -2916,13 +2928,13 @@ lemmas setReply_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_reply'.ctes_of]
 lemmas setQueue_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setQueue_ctes_of]
 lemmas sts_cteCaps_of[wp] = ctes_of_cteCaps_of_lift[OF sts_ctes_of]
 
-crunches replyRemoveTCB
+crunch replyRemoveTCB
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps st_tcb_at'_def wp: crunch_wps)
 
 lemmas replyRemoveTCB_cteCaps_of[wp] = ctes_of_cteCaps_of_lift[OF replyRemoveTCB_ctes_of]
 
-crunches
+crunch
   suspend, prepareThreadDelete, schedContextUnbindTCB, schedContextCompleteYieldTo,
   unbindFromSC
   for isFinal[wp]: "\<lambda>s. isFinal cap slot (cteCaps_of s)"
@@ -3113,7 +3125,7 @@ lemma schedContextUnbindTCB_invs'_helper:
                   valid_release_queue'_def valid_pspace'_def untyped_ranges_zero_inv_def
                   idle_tcb'_def state_refs_of'_def comp_def valid_idle'_asrt_def)
 
-crunches tcbReleaseRemove, tcbSchedDequeue
+crunch tcbReleaseRemove, tcbSchedDequeue
   for cur_tcb'[wp]: cur_tcb'
   (wp: cur_tcb_lift)
 
@@ -3138,7 +3150,7 @@ lemma threadSet_fault_bound_tcb_at'[wp]:
   "threadSet (tcbFault_update f) t' \<lbrace>bound_tcb_at' P t\<rbrace>"
   by (wpsimp wp: threadSet_pred_tcb_no_state)
 
-crunches replyClear
+crunch replyClear
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   (wp: crunch_wps simp: crunch_simps ignore: threadSet)
 
@@ -3164,7 +3176,7 @@ lemma capDeleteOne_bound_tcb_at':
    apply (case_tac "cteCap cte", simp_all)
    done
 
-crunches cleanReply
+crunch cleanReply
   for bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P t"
 
 lemma replyRemoveTCB_bound_sc_tcb_at'[wp]:
@@ -3177,10 +3189,10 @@ lemma schedContextCancelYieldTo_bound_tcb_at[wp]:
   unfolding schedContextCancelYieldTo_def
   by (wpsimp wp: threadSet_pred_tcb_no_state hoare_vcg_if_lift2 hoare_drop_imp)
 
-crunches prepareThreadDelete
+crunch prepareThreadDelete
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
 
-crunches suspend
+crunch suspend
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   and bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P t"
   (wp: threadSet_pred_tcb_no_state crunch_wps simp: crunch_simps)
@@ -3198,7 +3210,7 @@ lemma suspend_bound_yt_tcb_at'_None:
   apply (wpsimp wp: schedContextCancelYieldTo_bound_yt_tcb_at'_None)
   done
 
-crunches schedContextCompleteYieldTo
+crunch schedContextCompleteYieldTo
   for bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P p"
   and sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps wp: crunch_wps)
@@ -3405,7 +3417,7 @@ lemma replyClear_makes_unlive:
   apply (wpsimp wp: replyRemove_makes_unlive cancelIPC_makes_unlive gts_wp' haskell_fail_wp)
   done
 
-crunches unbindFromSC
+crunch unbindFromSC
   for bound_tcb_at'[wp]: "bound_tcb_at' P p"
   (ignore: threadSet simp: crunch_simps wp: crunch_wps)
 
@@ -3423,7 +3435,7 @@ lemma schedContextUnbindTCB_valid_queues[wp]:
              dest!: ko_at_valid_objs'_pre)
   done
 
-crunches setConsumed
+crunch setConsumed
   for valid_queues[wp]: valid_queues
   and ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
   (simp: crunch_simps wp: crunch_wps)
@@ -3435,11 +3447,11 @@ lemma schedContextCompleteYieldTo_valid_queues[wp]:
   apply (clarsimp simp: obj_at'_def)
   done
 
-crunches unbindFromSC
+crunch unbindFromSC
   for valid_queues[wp]: valid_queues
   (simp: crunch_simps wp: crunch_wps)
 
-crunches schedContextCompleteYieldTo, unbindNotification, unbindMaybeNotification
+crunch schedContextCompleteYieldTo, unbindNotification, unbindMaybeNotification
   for sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps wp: crunch_wps rule: sch_act_simple_lift)
 
@@ -3451,7 +3463,7 @@ lemma schedContextSetInactive_unlive[wp]:
                         ps_clear_upd objBits_simps scBits_simps projectKOs)
   done
 
-crunches setMessageInfo, setMRs
+crunch setMessageInfo, setMRs
   for obj_at'_sc[wp]: "obj_at' (P :: sched_context \<Rightarrow> bool) p"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -3551,7 +3563,7 @@ lemmas schedContextSetInactive_removeable'
   = prepares_delete_helper'' [OF schedContextSetInactive_unlive
                                    [where p=scPtr and scPtr=scPtr for scPtr]]
 
-crunches schedContextMaybeUnbindNtfn
+crunch schedContextMaybeUnbindNtfn
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 
 end
@@ -3666,7 +3678,7 @@ lemma cancelIPC_cte_wp_at'[wp]:
   apply wpsimp
   done
 
-crunches schedContextCancelYieldTo, tcbReleaseRemove
+crunch schedContextCancelYieldTo, tcbReleaseRemove
   for cte_wp_at'[wp]: "cte_wp_at' P p"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -3694,7 +3706,7 @@ lemma deleteASID_cte_wp_at'[wp]:
           | wpc)+
   done
 
-crunches unmapPageTable, unmapPage, unbindNotification, cancelAllIPC, cancelAllSignals,
+crunch unmapPageTable, unmapPage, unbindNotification, cancelAllIPC, cancelAllSignals,
          unbindMaybeNotification, schedContextMaybeUnbindNtfn, replyRemove,
          unbindFromSC, schedContextSetInactive, schedContextUnbindYieldFrom,
          schedContextUnbindReply, schedContextUnbindAllTCBs
@@ -3760,8 +3772,8 @@ lemma replyUnlink_st_tcb_at_simplish:
   apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift' gts_wp')
   done
 
-crunch st_tcb_at_simplish: cteDeleteOne
-            "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
+crunch cteDeleteOne
+ for st_tcb_at_simplish: "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
   (wp: crunch_wps getObject_inv threadSet_pred_tcb_no_state
    simp: crunch_simps unless_def)
 
@@ -3788,7 +3800,7 @@ lemma rescheduleRequired_oa_queued':
   apply (simp add: rescheduleRequired_def)
   by (wpsimp wp: tcbSchedEnqueue_not_st isSchedulable_wp)
 
-crunches cancelAllIPC, cancelAllSignals, unbindMaybeNotification
+crunch cancelAllIPC, cancelAllSignals, unbindMaybeNotification
   for tcbDomain_obj_at': "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -3820,7 +3832,7 @@ lemma unbindMaybeNotification_valid_tcbs'[wp]:
   "unbindMaybeNotification ntfnPtr \<lbrace>valid_tcbs'\<rbrace>"
   by (wpsimp simp: unbindMaybeNotification_def)
 
-crunches schedContextMaybeUnbindNtfn
+crunch schedContextMaybeUnbindNtfn
   for valid_queues[wp]: valid_queues
 
 lemma setSchedContext_valid_tcbs'[wp]:
@@ -3830,7 +3842,7 @@ lemma setSchedContext_valid_tcbs'[wp]:
               simp: updateObject_default_def in_monad projectKOs project_inject)
   done
 
-crunches schedContextUnbindNtfn, schedContextMaybeUnbindNtfn
+crunch schedContextUnbindNtfn, schedContextMaybeUnbindNtfn
   for valid_tcbs'[wp]: valid_tcbs'
   (wp: setSchedContext_valid_tcbs')
 
@@ -3859,7 +3871,7 @@ lemma addToBitmap_valid_sched_context[wp]:
                  split: option.splits)
   done
 
-crunches tcbSchedDequeue, tcbSchedEnqueue
+crunch tcbSchedDequeue, tcbSchedEnqueue
   for valid_sched_context'[wp]: "\<lambda>s. valid_sched_context' sc' s"
 
 lemma setQueue_valid_reply'[wp]:
@@ -3869,7 +3881,7 @@ lemma setQueue_valid_reply'[wp]:
   apply (fastforce simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
   done
 
-crunches replyClear
+crunch replyClear
   for valid_queues[wp]: valid_queues
 
 lemma finaliseCapTrue_standin_valid_queues[wp]:
@@ -3880,7 +3892,7 @@ lemma finaliseCapTrue_standin_valid_queues[wp]:
   apply (intro conjI impI; wpsimp)
   done
 
-crunches isFinalCapability
+crunch isFinalCapability
   for valid_queues[wp]: "Invariants_H.valid_queues"
   and sch_act[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   and weak_sch_act[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
@@ -3911,7 +3923,7 @@ lemma emptySlot_valid_inQ_queues [wp]:
 
 context begin interpretation Arch .
 
-crunches cancelAllIPC, cancelAllSignals, unbindNotification, unbindMaybeNotification,
+crunch cancelAllIPC, cancelAllSignals, unbindNotification, unbindMaybeNotification,
          schedContextMaybeUnbindNtfn, isFinalCapability
   for valid_inQ_queues[wp]: "valid_inQ_queues"
   (wp: crunch_wps simp: crunch_simps)
@@ -4004,7 +4016,7 @@ lemma threadSet_tcbInReleaseQueue_update_valid_inQ_queues[wp]:
   apply (fastforce simp: valid_inQ_queues_def obj_at'_def inQ_def projectKOs objBitsKO_def)
   done
 
-crunches setReprogramTimer, setReleaseQueue, tcbReleaseRemove
+crunch setReprogramTimer, setReleaseQueue, tcbReleaseRemove
   for valid_inQ_queues[wp]: valid_inQ_queues
   (simp: tcbReleaseRemove_def)
 
@@ -4073,7 +4085,7 @@ lemma replyPop_valid_inQ_queues[wp]:
                         valid_sched_context_size'_def)
   done
 
-crunches replyRemove, replyClear
+crunch replyRemove, replyClear
   for valid_inQ_queues[wp]: valid_inQ_queues
   (wp: crunch_wps simp: crunch_simps)
 
@@ -4084,7 +4096,7 @@ lemma finaliseCapTrue_standin_valid_inQ_queues[wp]:
   unfolding finaliseCapTrue_standin_def Let_def
   by wpsimp
 
-crunches isFinalCapability
+crunch isFinalCapability
   for valid_objs'[wp]: valid_objs'
   (wp: crunch_wps simp: crunch_simps)
 
@@ -4096,7 +4108,7 @@ lemma cteDeleteOne_valid_inQ_queues[wp]:
   apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift hoare_vcg_if_lift2)
   done
 
-crunches cteDeleteOne
+crunch cteDeleteOne
   for ksCurDomain[wp]:  "\<lambda>s. P (ksCurDomain s)"
   and tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
   (wp: crunch_wps simp: crunch_simps unless_def)
@@ -4148,7 +4160,7 @@ lemma deletingIRQHandler_invs' [wp]:
   apply simp
   done
 
-crunches
+crunch
   unbindFromSC, schedContextUnbindReply, schedContextUnbindNtfn, schedContextUnbindAllTCBs
   for sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps wp: crunch_wps)
@@ -5038,7 +5050,8 @@ lemma threadSet_ct_idle_or_in_cur_domain':
   apply (auto simp: obj_at'_def)
   done
 
-crunch valid_arch_state'[wp]: invalidateTLBByASID "valid_arch_state'"
+crunch invalidateTLBByASID
+ for valid_arch_state'[wp]: "valid_arch_state'"
 
 end
 

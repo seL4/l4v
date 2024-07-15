@@ -16,8 +16,9 @@ crunch_ignore (empty_fail)
   (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_stval resetTimer_impl stval_val
         pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
+crunch
   loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs, setRegister
+ for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
 end
 
@@ -29,19 +30,22 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 
 context Arch begin global_naming RISCV64
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to,set_thread_state_act
+crunch possible_switch_to,set_thread_state_act
+ for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: empty_fail_zipWithM_x)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
+crunch handle_fault
+ for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def)
 
-crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
+crunch decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params, decode_set_timeout_ep,
   decode_set_tls_base, decode_set_space
+ for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
@@ -133,7 +137,7 @@ lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
                       ifM_def update_time_stamp_def getCurrentTime_def get_sc_active_def)
   done
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
+crunch maskInterrupt, empty_slot,
     finalise_cap, reset_work_units, update_work_units,
     cap_swap_for_delete, decode_invocation
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -181,7 +185,7 @@ lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
   "empty_fail (plic_complete_claim irq)"
   by (clarsimp simp: plic_complete_claim_def)
 
-crunches handle_event, activate_thread, check_budget
+crunch handle_event, activate_thread, check_budget
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pte.splits

@@ -912,7 +912,7 @@ lemma global_refs_kheap [simp]:
   "global_refs (kheap_update f s) = global_refs s"
   by (simp add: global_refs_def)
 
-crunches set_pd
+crunch set_pd
   for global_ref [wp]: "\<lambda>s. P (global_refs s)"
   and arch [wp]: "\<lambda>s. P (arch_state s)"
   and idle [wp]: "\<lambda>s. P (idle_thread s)"
@@ -1047,7 +1047,7 @@ lemma set_pt_ifunsafe:
   including unfold_objects by (wpsimp wp: set_object_ifunsafe[THEN hoare_set_object_weaken_pre]
                                     simp: set_pt_def a_type_def)
 
-crunches set_pt
+crunch set_pt
   for global_ref [wp]: "\<lambda>s. P (global_refs s)"
   and arch [wp]: "\<lambda>s. P (arch_state s)"
   and idle [wp]: "\<lambda>s. P (idle_thread s)"
@@ -1763,7 +1763,8 @@ lemma set_asid_pool_ifunsafe [wp]:
            simp: a_type_def)
 
 
-crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
+crunch set_asid_pool
+ for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 

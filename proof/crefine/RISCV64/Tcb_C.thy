@@ -1204,11 +1204,11 @@ lemma postModifyRegisters_ccorres:
     apply (rule ccorres_return_Skip')
    by simp+
 
-crunches schedContextResume
+crunch schedContextResume
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches schedContextResume
+crunch schedContextResume
   for tcbDomain[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
   (wp: isSchedulable_wp simp: crunch_simps)
 
@@ -1218,10 +1218,10 @@ lemma schedContextResume_sch_act_wf[wp]:
   apply (rule tcb_in_cur_domain'_lift; wpsimp)
   done
 
-crunches updateRestartPC
+crunch updateRestartPC
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 
-crunches suspend
+crunch suspend
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' thread"
   (wp: crunch_wps)
 
@@ -1860,7 +1860,7 @@ lemma asUser_valid_ipc_buffer_ptr':
   "\<lbrace> valid_ipc_buffer_ptr' p \<rbrace> asUser t m \<lbrace> \<lambda>rv s. valid_ipc_buffer_ptr' p s \<rbrace>"
   by (simp add: valid_ipc_buffer_ptr'_def, wp, auto simp: valid_ipc_buffer_ptr'_def)
 
-crunches setMessageInfo, storeWordUser
+crunch setMessageInfo, storeWordUser
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
 lemma invokeTCB_ReadRegisters_ccorres:

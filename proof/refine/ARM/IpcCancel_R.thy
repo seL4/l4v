@@ -13,9 +13,11 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch aligned'[wp]: cancelAllIPC pspace_aligned'
+crunch cancelAllIPC
+ for aligned'[wp]: pspace_aligned'
   (wp: crunch_wps mapM_x_wp' simp: unless_def crunch_simps)
-crunch distinct'[wp]: cancelAllIPC pspace_distinct'
+crunch cancelAllIPC
+ for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps mapM_x_wp' simp: unless_def crunch_simps)
 
 crunch cancelAllSignals
@@ -1027,15 +1029,15 @@ lemma sched_context_donate_weak_valid_sched_action[wp]:
                  valid_sched_action_def weak_valid_sched_action_def opt_map_simps map_join_simps
            cong: conj_cong)
 
-crunches sched_context_donate
+crunch sched_context_donate
   for sc_at[wp]: "sc_at scp"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches rescheduleRequired, setQueue, tcbSchedEnqueue, tcbReleaseRemove, updateReply
+crunch rescheduleRequired, setQueue, tcbSchedEnqueue, tcbReleaseRemove, updateReply
   for scReplies_of[wp]: "\<lambda>s. P' (scReplies_of s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches updateReply, setSchedContext, updateSchedContext
+crunch updateReply, setSchedContext, updateSchedContext
   for tcbSCs_of[wp]: "\<lambda>s. P' (tcbSCs_of s)"
   and list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
   (simp: crunch_simps opt_map_Some_eta_fold wp: crunch_wps)
@@ -1046,7 +1048,7 @@ lemma scReplies_of_scTCB_update[simp]:
        \<longleftrightarrow> P (scReplies_of s)"
   by (fastforce simp: obj_at'_def projectKOs opt_map_red elim!: rsubst[where P=P])
 
-crunches schedContextDonate
+crunch schedContextDonate
   for replies_of': "\<lambda>s. P (replies_of' s)" (* this interfers with list_refs_of_replies' *)
   and scReplies_of[wp]: "\<lambda>s. P' (scReplies_of s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -1842,7 +1844,7 @@ lemma setEndpoint_pde_mappings'[wp]:
 
 end
 
-crunches cancelIPC
+crunch cancelIPC
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
@@ -1860,12 +1862,12 @@ crunches cancelIPC
   and ntfn_at'[wp]: "ntfn_at' t"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches blockedCancelIPC
+crunch blockedCancelIPC
   for valid_queues[wp]: valid_queues
   and replyNexts_replyPrevs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s)"
   (wp: crunch_wps)
 
-crunches cancelSignal, replyRemoveTCB
+crunch cancelSignal, replyRemoveTCB
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps sts_sch_act')
 
@@ -1919,7 +1921,7 @@ lemma cancelIPC_sch_act_wf[wp]:
                     replyRemoveTCB_sch_act_wf)
   done
 
-crunches getBlockingObject
+crunch getBlockingObject
   for inv: P
 
 lemma blockedCancelIPC_if_live'[wp]:
@@ -1937,7 +1939,7 @@ lemma blockedCancelIPC_valid_idle':
   apply (wpsimp wp: getEndpoint_wp)
   done
 
-crunches blockedCancelIPC
+crunch blockedCancelIPC
   for ct_not_inQ[wp]: ct_not_inQ
   and cur_tcb'[wp]: "cur_tcb'"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
@@ -2013,7 +2015,7 @@ lemma weak_sch_act_wf_lift_linear:
   apply simp_all
   done
 
-crunches cancelSignal, setBoundNotification
+crunch cancelSignal, setBoundNotification
   for sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps)
 
@@ -2052,7 +2054,7 @@ lemma cancelSignal_tcb_obj_at':
   apply (wpsimp wp: setThreadState_not_st getNotification_wp)
   done
 
-crunches replyRemoveTCB, cancelSignal, getBlockingObject, blockedCancelIPC
+crunch replyRemoveTCB, cancelSignal, getBlockingObject, blockedCancelIPC
   for obj_at'_only_st_qd_ft: "\<lambda>s. P (obj_at' (Q :: tcb \<Rightarrow> bool) t s)"
   (simp: crunch_simps pred_tcb_at'_def wp: crunch_wps)
 
@@ -2175,7 +2177,7 @@ lemma as_user_ready_qs_distinct[wp]:
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: ready_qs_distinct_def)
 
-crunches ThreadDecls_H.suspend
+crunch ThreadDecls_H.suspend
   (* FIXME RT: VER-1016 *)
   for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' t s)"
   (rule: sch_act_simple_lift
@@ -2382,10 +2384,10 @@ lemma threadSet_valid_refills'[wp]:
               dest!: opt_predD split: kernel_object.splits option.splits
               elim!: opt_mapE)
 
-crunches setThreadState
+crunch setThreadState
   for valid_refills'[wp]: "valid_refills' scp"
 
-crunches ifCondRefillUnblockCheck
+crunch ifCondRefillUnblockCheck
   for valid_objs'[wp]: valid_objs'
   and valid_tcbs'[wp]: valid_tcbs'
   (wp: hoare_vcg_if_lift2 crunch_wps simp: crunch_simps)
@@ -2443,13 +2445,13 @@ lemma restart_thread_if_no_fault_corres:
   apply (clarsimp simp: obj_at'_def projectKOs valid_tcb_state'_def)
   done
 
-crunches possibleSwitchTo
+crunch possibleSwitchTo
   for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
 global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo target"
   by typ_at_props'
 
-crunches ifCondRefillUnblockCheck
+crunch ifCondRefillUnblockCheck
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   and cur_tcb'[wp]: cur_tcb'
@@ -2480,7 +2482,7 @@ lemma cancelAllIPC_loop_body_weak_sch_act_wf:
   apply (clarsimp simp: weak_sch_act_wf_def pred_neg_def st_tcb_at'_def obj_at'_def)
   done
 
-crunches cancelAllIPC_loop_body
+crunch cancelAllIPC_loop_body
   for valid_queues'[wp]: valid_queues'
   and valid_release_queue[wp]: valid_release_queue
   and valid_release_queue'[wp]: valid_release_queue'
@@ -2803,7 +2805,7 @@ lemma refill_unblock_check_weak_valid_sched_action[wp]:
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'')
   done
 
-crunches if_cond_refill_unblock_check
+crunch if_cond_refill_unblock_check
   for weak_valid_sched_action[wp]: weak_valid_sched_action
   (simp: crunch_simps)
 
@@ -2987,7 +2989,7 @@ lemma refillUnblockCheck_refs_of'[wp]:
                   split: if_splits)
   done
 
-crunches ifCondRefillUnblockCheck
+crunch ifCondRefillUnblockCheck
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' t"
   and valid_pspace'[wp]: valid_pspace'
   and list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
@@ -3368,7 +3370,7 @@ lemma tcbSchedEnqueue_unlive_other:
   apply (fastforce simp: obj_at'_def projectKOs ko_wp_at'_def)
   done
 
-crunches scheduleTCB
+crunch scheduleTCB
   for unlive[wp]: "ko_wp_at' (Not \<circ> live') p"
   (wp: crunch_wps isSchedulable_inv simp: crunch_simps)
 
@@ -3511,11 +3513,11 @@ lemma insert_eqD:
   "A = insert a B \<Longrightarrow> a \<in> A"
   by blast
 
-crunches setSchedulerAction
+crunch setSchedulerAction
   for tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' p"
   (simp: tcb_in_cur_domain'_def wp_del: ssa_wp)
 
-crunches possibleSwitchTo
+crunch possibleSwitchTo
   for tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' p"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
@@ -3785,7 +3787,7 @@ lemma cancelBadgedSends_corres:
   apply (fastforce simp: st_tcb_at_refs_of_rev' st_tcb_at'_def obj_at'_def pred_neg_def)
   done
 
-crunches schedContextCancelYieldTo, tcbReleaseRemove
+crunch schedContextCancelYieldTo, tcbReleaseRemove
   for tcbQueued[wp]: "obj_at' (\<lambda>obj. \<not> tcbQueued obj) t"
   (wp: crunch_wps simp: crunch_simps setReleaseQueue_def setReprogramTimer_def getReleaseQueue_def)
 

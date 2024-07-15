@@ -112,7 +112,7 @@ lemma activate_invs':
 
 declare not_psubset_eq[dest!]
 
-crunches schedContextResume
+crunch schedContextResume
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
   (wp: crunch_wps)
 
@@ -127,11 +127,11 @@ lemma setThreadState_Restart_invs':
               simp: o_def pred_tcb_at'_def obj_at'_def)
   done
 
-crunches cancel_ipc
+crunch cancel_ipc
   for valid_sched_action[wp]: valid_sched_action
   (wp: crunch_wps ignore: set_object thread_set update_sched_context)
 
-crunches cancel_ipc
+crunch cancel_ipc
   for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P t"
   (wp: crunch_wps)
 
@@ -241,7 +241,7 @@ lemma restart_corres:
   apply clarsimp
   done
 
-crunches schedContextResume, ifCondRefillUnblockCheck
+crunch schedContextResume, ifCondRefillUnblockCheck
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -273,7 +273,7 @@ lemma restart_invs':
   apply (clarsimp simp: pred_tcb_at' invs'_def ct_in_state'_def)
   done
 
-crunches "ThreadDecls_H.restart"
+crunch "ThreadDecls_H.restart"
   for tcb'[wp]: "tcb_at' t"
   (wp: crunch_wps whileM_inv simp: crunch_simps)
 
@@ -286,7 +286,7 @@ lemma updateRestartPC_ex_nonz_cap_to'[wp]:
   apply (rule asUser_cap_to')
   done
 
-crunches suspend
+crunch suspend
   for cap_to': "ex_nonz_cap_to' p"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -335,7 +335,7 @@ lemma asUser_postModifyRegisters_corres:
     apply (rule corres_stateAssert_assume)
      by simp+
 
-crunches restart
+crunch restart
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' tcbPtr"
   (wp: crunch_wps threadSet_cap_to simp: crunch_simps tcb_cte_cases_def cteSizeBits_def)
 
@@ -686,7 +686,7 @@ lemma threadSetPriority_valid_objs'[wp]:
   apply (fastforce simp: valid_tcb'_def valid_cap'_def tcb_cte_cases_def cteSizeBits_def)
   done
 
-crunches threadSetPriority
+crunch threadSetPriority
   for tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
   and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
   and replyNexts_of[wp]: "\<lambda>s. P (replyNexts_of s)"
@@ -721,7 +721,7 @@ crunches threadSetPriority
   and valid_machine_state'[wp]: valid_machine_state'
   (wp: threadSet_sched_pointers)
 
-crunches threadSetPriority
+crunch threadSetPriority
   for st_tcb_at'[wp]: "\<lambda>s. st_tcb_at' Q tcbPtr s"
   (wp: threadSet_st_tcb_at2 ignore: threadSet)
 
@@ -758,7 +758,7 @@ lemma threadSetPriority_invs':
               simp: cteCaps_of_def o_def)
   done
 
-crunches reorderEp, threadSetPriority
+crunch reorderEp, threadSetPriority
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps threadSet_st_tcb_at2)
 
@@ -1601,7 +1601,7 @@ lemma installThreadBuffer_invs':
                       hoare_vcg_all_liftE_R hoare_vcg_imp_lift hoare_vcg_all_lift)+
   done
 
-crunches installTCBCap
+crunch installTCBCap
   for tcb_at'[wp]: "tcb_at' a"
   and cte_at'[wp]: "cte_at' p"
   (wp: crunch_wps checkCap_inv assertDerived_wp_weak simp: crunch_simps)
@@ -1638,7 +1638,7 @@ lemma in_correct_ready_q_is_original_cap[simp]:
   "in_correct_ready_q (is_original_cap_update f s) = in_correct_ready_q s"
   by (simp add: in_correct_ready_q_def)
 
-crunches cteInsert
+crunch cteInsert
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   (wp: crunch_wps valid_replies'_lift)
 
@@ -1825,7 +1825,7 @@ lemma sched_context_resume_weak_valid_sched_action:
   unfolding sched_context_resume_def
   by (wpsimp wp: postpone_weak_valid_sched_action thread_get_wp' is_schedulable_wp')
 
-crunches sched_context_resume
+crunch sched_context_resume
   for sc_at_ppred[wp]: "sc_at_ppred n P ptr"
   (wp: crunch_wps)
 
@@ -2059,11 +2059,11 @@ lemma threadSetPriority_ex_nonz_cap_to'[wp]:
   "threadSetPriority param_a param_b \<lbrace>ex_nonz_cap_to' p\<rbrace>"
   by (wpsimp wp: threadSet_cap_to' simp: threadSetPriority_def)
 
-crunches setPriority
+crunch setPriority
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' p"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches setMCPriority
+crunch setMCPriority
   for tcb_at'[wp]: "tcb_at' t"
   and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps simp: crunch_simps inQ_def)
@@ -2105,12 +2105,12 @@ defs tcs_cross_asrt2_def:
   "tcs_cross_asrt2 \<equiv> \<lambda>s. ready_qs_runnable s \<and> ct_active' s \<and>
                           bound_sc_tcb_at' bound (ksCurThread s) s"
 
-crunches setPriority, setMCPriority
+crunch setPriority, setMCPriority
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and cur_tcb'[wp]: cur_tcb'
   (wp: crunch_wps cur_tcb_lift)
 
-crunches schedContextYieldTo, schedContextCompleteYieldTo
+crunch schedContextYieldTo, schedContextCompleteYieldTo
   for tcb_at'[wp]: "tcb_at' tcbPtr"
   (wp: crunch_wps)
 
@@ -2337,13 +2337,13 @@ lemma threadSetPriority_bound_sc_tcb_at' [wp]:
   "threadSetPriority tptr prio \<lbrace>\<lambda>s. Q (bound_sc_tcb_at' P t s)\<rbrace>"
   by (wpsimp wp: threadSet_pred_tcb_no_state simp: threadSetPriority_def)
 
-crunches setPriority
+crunch setPriority
   for sc_tcb_sc_at'[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"
   and bound_sc_tcb_at'[wp]: "\<lambda>s. Q (bound_sc_tcb_at' P t s)"
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps)
 
-crunches setMCPriority
+crunch setMCPriority
   for sc_tcb_sc_at'[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"
   and bound_sc_tcb_at'[wp]: "\<lambda>s. Q (bound_sc_tcb_at' P t s)"
   and st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P t s)"
@@ -2351,7 +2351,7 @@ crunches setMCPriority
   and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps threadSet_pred_tcb_no_state)
 
-crunches finaliseCap, capSwapForDelete
+crunch finaliseCap, capSwapForDelete
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: crunch_wps getObject_inv cteDelete_preservation)
 
@@ -2366,7 +2366,7 @@ lemma refillPopHead_sc_tcb_sc_at'[wp]:
   apply (clarsimp simp: obj_at'_def ps_clear_upd opt_map_red objBits_simps)
   done
 
-crunches cteInsert, emptySlot, cancelAllIPC
+crunch cteInsert, emptySlot, cancelAllIPC
   for sc_tcb_sc_at'[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"
   (wp: crunch_wps simp: crunch_simps ignore: updateRefillHd)
 
@@ -2481,7 +2481,7 @@ lemma invokeTCB_corres:
   apply fastforce
   done
 
-crunches option_update_thread
+crunch option_update_thread
   for aligned[wp]: "pspace_aligned"
   and distinct[wp]: "pspace_distinct"
 
@@ -2727,7 +2727,8 @@ lemma getMCP_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at' ((=) mcp
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
-crunch inv: checkPrio "P"
+crunch checkPrio
+ for inv: "P"
   (simp: crunch_simps)
 
 lemma checkPrio_wp:
@@ -2756,7 +2757,7 @@ lemma checkPrio_lt_ct_weak':
    apply (wpsimp wp: checkPrio_lt_ct_weak)+
   done
 
-crunches checkPrio
+crunch checkPrio
   for tcb_at'[wp]: "tcb_at' t"
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' t"
 
@@ -3481,7 +3482,8 @@ lemma decodeTCBInvocation_corres:
              elim!: list_all2_mono)
   done
 
-crunch inv[wp]: decodeTCBInvocation P
+crunch decodeTCBInvocation
+ for inv[wp]: P
   (simp: crunch_simps wp: crunch_wps)
 
 lemma real_cte_at_not_tcb_at':
@@ -3551,7 +3553,7 @@ lemma decodeTCBInv_wf:
   apply (fastforce simp: real_cte_at_not_tcb_at' objBits_defs)
   done
 
-crunches getThreadBufferSlot, setPriority, setMCPriority
+crunch getThreadBufferSlot, setPriority, setMCPriority
   for irq_states'[wp]: valid_irq_states'
   (simp: crunch_simps wp: crunch_wps)
 

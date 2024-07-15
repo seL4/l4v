@@ -1761,7 +1761,7 @@ lemma valid_sched_pred_lift':
 
 \<comment> \<open>do_machine_op\<close>
 
-crunches do_machine_op
+crunch do_machine_op
   for valid_sched_pred_misc[wp]:
     "\<lambda>s. P (cur_time s) (consumed_time s) (cur_domain s) (cur_thread s) (cur_sc s) (idle_thread s)
            (ready_queues s) (release_queue s) (scheduler_action s) (kheap s)"
@@ -1926,7 +1926,7 @@ lemma is_refill_ready_machine_state_update[simp]:
   "is_refill_ready t (s\<lparr>machine_state := param_a\<rparr>) = is_refill_ready t s"
   by (clarsimp simp: is_refill_ready_def)
 
-crunches thread_set
+crunch thread_set
   for cur_time[wp]: "\<lambda>s. P (cur_time s)"
 
 (* FIXME: are these necessary? *)

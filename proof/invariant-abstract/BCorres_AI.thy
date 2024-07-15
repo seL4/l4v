@@ -176,15 +176,16 @@ lemma refill_head_overlapping_truncate[simp]:
   "refill_head_overlapping a (truncate_state s) = refill_head_overlapping a s"
   by (simp add: refill_head_overlapping_def obind_def omonad_defs)
 
-crunch (bcorres)bcorres[wp]:
+crunch
   refill_unblock_check
-  truncate_state
+ for (bcorres) bcorres[wp]: truncate_state
 
-crunch (bcorres)bcorres[wp]:
+crunch
   cancel_all_ipc, bind_notification, cancel_all_signals
-  truncate_state
+ for (bcorres) bcorres[wp]: truncate_state
 
-crunch (bcorres)bcorres[wp]: get_tcb_obj_ref, get_sk_obj_ref truncate_state
+crunch get_tcb_obj_ref, get_sk_obj_ref
+ for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def ignore: gets_the)
 
 lemma unbind_maybe_notification_bcorres[wp]:

@@ -1359,7 +1359,7 @@ crunch updateMDB, updateNewFreeIndex
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   and ksReprogramTimer[wp]: "\<lambda>s. P (ksReprogramTimer s)"
 
-crunches insertNewCap
+crunch insertNewCap
   for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
@@ -1404,10 +1404,10 @@ lemma updateNewFreeIndex_noop_psp_corres:
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
   done
 
-crunches updateMDB, updateNewFreeIndex
+crunch updateMDB, updateNewFreeIndex
   for sc_replies_of'[wp]: "\<lambda>s. P (replies_of' s) (scs_of' s)"
 
-crunches set_cap, set_cdt
+crunch set_cap, set_cdt
   for domain_index[wp]: "\<lambda>s. P (domain_index s)"
   and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps)
@@ -3297,7 +3297,7 @@ lemma retype_region_caps_overlap_reserved_ret:
    apply (clarsimp)+
   done
 
-crunches updateCap, updateFreeIndex
+crunch updateCap, updateFreeIndex
   for sc_at'_n[wp]: "sc_at'_n n p"
 
 lemma updateFreeIndex_pspace_no_overlap':
@@ -4030,7 +4030,7 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches deleteObjects
+crunch deleteObjects
   for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and irq_node[wp]: "\<lambda>s. P (irq_node' s)"
@@ -5067,7 +5067,8 @@ crunch doMachineOp
   (wp: crunch_wps)
 
 
-crunch cte_wp_at [wp]: setQueue "cte_wp_at' P p"
+crunch setQueue
+ for cte_wp_at[wp]: "cte_wp_at' P p"
   (simp: cte_wp_at_ctes_of)
 
 lemma sts_valid_untyped_inv':
@@ -5083,7 +5084,7 @@ crunch invokeUntyped
   (simp: crunch_simps zipWithM_x_mapM
      wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv)
 
-crunches insertNewCap
+crunch insertNewCap
   for no_0_obj'[wp]: no_0_obj'
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and valid_replies' [wp]: valid_replies'
@@ -5113,9 +5114,11 @@ crunch insertNewCap
 crunch insertNewCap
   for norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: crunch_wps)
-crunch state_refs_of'[wp]: insertNewCap "\<lambda>s. P (state_refs_of' s)"
+crunch insertNewCap
+ for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
-crunch if_unsafe_then_cap'[wp]: updateNewFreeIndex "if_unsafe_then_cap'"
+crunch updateNewFreeIndex
+ for if_unsafe_then_cap'[wp]: "if_unsafe_then_cap'"
 
 lemma insertNewCap_list_refs_of_replies'[wp]:
   "insertNewCap parent slot cap \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
@@ -5242,7 +5245,8 @@ crunch insertNewCap
   for pspace_domain_valid[wp]: pspace_domain_valid
   (wp: crunch_wps)
 
-crunch tcbState_inv[wp]: insertNewCap "obj_at' (\<lambda>tcb. P (tcbState tcb)) t"
+crunch insertNewCap
+ for tcbState_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbState tcb)) t"
   (wp: crunch_simps hoare_drop_imps)
 crunch insertNewCap
   for tcbDomain_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
@@ -5264,7 +5268,7 @@ crunch insertNewCap
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: crunch_simps hoare_drop_imps)
 
-crunches insertNewCap
+crunch insertNewCap
   for valid_release_queue[wp]: "valid_release_queue"
   and valid_release_queue'[wp]: "valid_release_queue'"
   (wp: crunch_wps)

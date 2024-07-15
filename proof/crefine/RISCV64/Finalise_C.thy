@@ -268,7 +268,8 @@ lemma refill_ready_ccorres:
                       h_val_field_from_bytes' sc_ptr_to_crefill_ptr_def
                split: if_splits)
 
-crunch (empty_fail) empty_fail[wp]: refillReady
+crunch refillReady
+ for (empty_fail) empty_fail[wp]
 
 (* FIXME RT: improve naming of this and other ccorres lemmas for updateSchedContext *)
 lemma updateSchedContext_ccorres_lemma:
@@ -644,7 +645,8 @@ lemma ccorres_to_vcg_Normal:
   apply (fastforce elim: conseqPost)
   done
 
-crunch (empty_fail) empty_fail[wp]: scActive
+crunch scActive
+ for (empty_fail) empty_fail[wp]
 
 lemma refill_unblock_check_ccorres:
   "ccorres dc xfdc
@@ -1204,7 +1206,8 @@ crunch updateRestartPC
   and valid_objs'[wp]: valid_objs'
   and tcb_at'[wp]: "tcb_at' p"
 
-crunch (empty_fail) empty_fail[wp]: setReleaseQueue, getReleaseQueue
+crunch setReleaseQueue, getReleaseQueue
+ for (empty_fail) empty_fail[wp]
 
 lemma threadSet_tcbInReleaseQueue_ccorres[corres]:
   "ccorres dc xfdc
@@ -1400,7 +1403,7 @@ lemma active_runnable':
   "active' state \<Longrightarrow> runnable' state"
   by fastforce
 
-crunches updateRestartPC
+crunch updateRestartPC
   for no_0_obj'[wp]: no_0_obj'
   and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps)

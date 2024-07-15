@@ -2465,7 +2465,7 @@ proof -
     done
 qed
 
-crunches cteInsert
+crunch cteInsert
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   and aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
@@ -2754,7 +2754,7 @@ lemma setCTE_idldSC[wp]:
   apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
-crunches setCTE
+crunch setCTE
   for idle_sc_at'[wp]: "\<lambda>s. idle_sc_at' p s"
 
 lemma setCTE_idle [wp]:
@@ -3051,7 +3051,7 @@ crunch cteInsert
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp:  crunch_wps )
 
-crunches cteInsert
+crunch cteInsert
   for ksIdleThread[wp]:  "\<lambda>s. P (ksIdleThread s)"
   and ksIdlSC[wp]: "\<lambda>s. P (ksIdleSC s)"
   (wp: crunch_wps)
@@ -3240,7 +3240,7 @@ lemma updateCap_replies_of'[wp]:
   unfolding updateCap_def
   by (wpsimp wp: setObject_cte_replies_of' simp: setCTE_def)
 
-crunches cteInsert
+crunch cteInsert
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and tcbInReleaseQueue[wp]: "\<lambda>s. P (obj_at' tcbInReleaseQueue tcb s)"
   (wp: crunch_wps setObject_cte_replies_of' simp: crunch_simps setCTE_def)
@@ -5785,7 +5785,7 @@ lemma updateFreeIndex_forward_valid_objs':
   apply (rule usableUntypedRange_mono1, simp_all)
   done
 
-crunches updateFreeIndex
+crunch updateFreeIndex
   for pspace_aligned'[wp]: "pspace_aligned'"
   and pspace_distinct'[wp]: "pspace_distinct'"
   and pspace_bounded'[wp]: "pspace_bounded'"

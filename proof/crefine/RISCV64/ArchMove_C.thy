@@ -299,7 +299,7 @@ lemma obj_at_kernel_mappings':
 crunch switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
-crunches switchToIdleThread
+crunch switchToIdleThread
   for valid_pspace'[wp]: valid_pspace'
   (simp: whenE_def crunch_simps wp: hoare_drop_imps)
 

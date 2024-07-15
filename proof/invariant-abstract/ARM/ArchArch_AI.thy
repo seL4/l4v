@@ -1510,7 +1510,7 @@ lemma arch_pinv_st_tcb_at:
                    perform_asid_control_invocation_st_tcb_at
                    perform_asid_pool_invocation_pred_tcb_at)
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 

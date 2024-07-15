@@ -18,7 +18,7 @@ lemma valid_reply'_updates[simp]:
   "\<And>f. valid_reply' reply (ksReleaseQueue_update f s) = valid_reply' reply s"
   by (auto simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
 
-crunches updateReply
+crunch updateReply
   for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj test t s)"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
@@ -87,7 +87,7 @@ lemma updateReply_list_refs_of_replies'_inv:
                  split: option.splits)
   done
 
-crunches cleanReply
+crunch cleanReply
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
@@ -200,7 +200,7 @@ lemma replyRemoveTCB_st_tcb_at'_sym_ref:
   apply (clarsimp simp: obj_at'_def pred_tcb_at'_def)
   done
 
-crunches cleanReply, updateReply
+crunch cleanReply, updateReply
   for valid_idle'[wp]: valid_idle'
   and ct_not_inQ[wp]: ct_not_inQ
   and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
@@ -213,7 +213,7 @@ crunches cleanReply, updateReply
   and cap_to': "ex_nonz_cap_to' t"
   and valid_mdb'[wp]: "valid_mdb'"
 
-crunches replyUnlink
+crunch replyUnlink
   for list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
   and valid_queues[wp]: valid_queues
   and ct_not_inQ[wp]: ct_not_inQ
@@ -394,7 +394,7 @@ lemma cleanReply_valid_replies'[wp]:
   apply (auto simp: opt_map_def)
   done
 
-crunches replyRemoveTCB
+crunch replyRemoveTCB
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
@@ -813,7 +813,7 @@ lemma setObject_reply_pde_mappings'[wp]:
   "setObject ptr (val :: reply) \<lbrace>valid_pde_mappings'\<rbrace>"
   by (wp valid_pde_mappings_lift')
 
-crunches bindScReply
+crunch bindScReply
   for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
   and bounded'[wp]: pspace_bounded'
@@ -842,7 +842,7 @@ crunches bindScReply
   (wp: crunch_wps hoare_vcg_all_lift valid_irq_node_lift
    simp: crunch_simps valid_mdb'_def valid_dom_schedule'_def)
 
-crunches setThreadState
+crunch setThreadState
   for sc_ko_at'[wp]: "\<lambda>s. P (ko_at' (sc :: sched_context) p s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -952,7 +952,7 @@ lemma bindScReply_valid_replies'[wp]:
       apply ((erule impCE)?; fastforce simp: obj_at'_def projectKOs elim!: opt_mapE)+
   done
 
-crunches bindScReply
+crunch bindScReply
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'
   and valid_release_queue[wp]: valid_release_queue
@@ -1017,7 +1017,7 @@ lemma setReply_valid_tcbs'[wp]:
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' set_reply'.setObject_wp
            simp: setReply_def)
 
-crunches updateReply
+crunch updateReply
   for valid_tcbs'[wp]: valid_tcbs'
 
 lemma updateReply_None_sym_refs_list_refs_of_replies'[wp]:
@@ -1096,7 +1096,7 @@ lemma sym_refs_replySCs_of_None:
               split: option.split_asm if_split_asm)
 
 (* cleanReply *)
-crunches cleanReply
+crunch cleanReply
  for valid_tcbs'[wp]: valid_tcbs'
 
 lemma no_fail_setReply [wp]:

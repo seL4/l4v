@@ -84,7 +84,7 @@ lemma set_mrs_ex_nonz_ct[wp]:
   done
 
 
-crunches set_message_info, set_mrs, set_consumed
+crunch set_message_info, set_mrs, set_consumed
   for tcb_at_ct[wp]: "\<lambda>s. tcb_at (cur_thread s) s"
   and ex_nonz_cap_to_ct[wp]: "\<lambda>s. ex_nonz_cap_to (cur_thread s) s"
   (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp
@@ -98,16 +98,17 @@ lemma set_consumed_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   by (wpsimp simp: set_consumed_def ran_tcb_cap_cases)
 
-crunch it_ct[wp]: set_thread_state_act "\<lambda>s. P (idle_thread s) (cur_thread s)"
+crunch set_thread_state_act
+ for it_ct[wp]: "\<lambda>s. P (idle_thread s) (cur_thread s)"
 
-crunches set_consumed
+crunch set_consumed
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   and valid_global_refs[wp]: "valid_global_refs"
   and pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (simp: Let_def tcb_yield_to_noncap zipWithM_x_mapM
    wp: hoare_drop_imps crunch_wps maybeM_inv ignore: lookup_ipc_buffer)
 
-crunches complete_yield_to
+crunch complete_yield_to
  for aligned[wp]: pspace_aligned
  and distinct[wp]: pspace_distinct
  and tcb_at[wp]: "tcb_at t"
@@ -178,14 +179,14 @@ lemma sched_context_cancel_yield_to_ex_nonz_cap_to[wp]:
   "sched_context_cancel_yield_to tcb_ptr \<lbrace>ex_nonz_cap_to p\<rbrace>"
   by (wpsimp simp: sched_context_cancel_yield_to_def maybeM_def get_tcb_obj_ref_def)
 
-crunches complete_yield_to
+crunch complete_yield_to
   for valid_idle[wp]: valid_idle
   and only_idle[wp]: only_idle
   and if_live[wp]: if_live_then_nonz_cap
   and ex_nonz[wp]: "ex_nonz_cap_to p"
   (wp: crunch_wps set_tcb_obj_ref_wp update_sched_context_wp simp: crunch_simps)
 
-crunches complete_yield_to
+crunch complete_yield_to
  for it_ct[wp]: "\<lambda>s. P (idle_thread s) (cur_thread s)"
   (wp: maybeM_inv lookup_ipc_buffer_inv hoare_drop_imps crunch_wps simp: crunch_simps)
 
@@ -194,7 +195,7 @@ lemma set_thread_state_bound_yt_tcb_at[wp]:
   unfolding set_thread_state_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def wp: set_object_wp)
 
-crunches set_thread_state_act
+crunch set_thread_state_act
   for kheap_cur[wp]: "\<lambda>s. P (kheap s) (cur_thread s)"
   and obj_at_cur[wp]: "\<lambda>s. P (obj_at (Q (cur_thread s)) p s)"
 
@@ -225,7 +226,7 @@ lemma complete_yield_to_bound_yt_tcb_at[wp]:
    \<lbrace>\<lambda>rv. bound_yt_tcb_at P t \<rbrace>"
   by (wpsimp simp: complete_yield_to_def wp: lookup_ipc_buffer_inv hoare_drop_imp)
 
-crunches do_machine_op, store_word_offs
+crunch do_machine_op, store_word_offs
   for pred_tcb_at_ct[wp]: "\<lambda>s. Q (pred_tcb_at proj P (cur_thread s) s)"
 
 lemma set_mrs_pred_tcb_at_ct[wp]:
@@ -295,7 +296,8 @@ lemma sched_context_unbind_all_tcbs_sc_tcb_sc_at_None[wp]:
   apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
   done
 
-crunch sc_tcb_sc_at[wp]: store_word_offs "\<lambda>s. sc_tcb_sc_at P scp s"
+crunch store_word_offs
+ for sc_tcb_sc_at[wp]: "\<lambda>s. sc_tcb_sc_at P scp s"
   (simp: crunch_simps wp: crunch_wps hoare_drop_imps)
 
 lemma sched_context_update_consumed_sc_tcb_sc_at_inv'_none[wp]:
@@ -351,10 +353,12 @@ lemma styt_sc_tcb_sc_at_not_ct[wp]:
   apply (wp get_object_wp | simp add: set_object_def sc_tcb_sc_at_def | wpc)+
   by (clarsimp simp: obj_at_def is_tcb get_tcb_def split: kernel_object.splits)
 
-crunch sc_tcb_sc_at_not_ct[wp]: do_machine_op "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
+crunch do_machine_op
+ for sc_tcb_sc_at_not_ct[wp]: "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
   (simp: crunch_simps split_def sc_tcb_sc_at_def wp: crunch_wps hoare_drop_imps)
 
-crunch sc_tcb_sc_at_not_ct[wp]: store_word_offs "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
+crunch store_word_offs
+ for sc_tcb_sc_at_not_ct[wp]: "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
   (simp: crunch_simps split_def wp: crunch_wps hoare_drop_imps ignore: do_machine_op)
 
 lemma set_mrs_sc_tcb_sc_at_not_ct[wp]:
@@ -393,7 +397,7 @@ lemma complete_yield_to_sc_tcb_sc_at[wp]:
   apply (clarsimp simp: complete_yield_to_def sched_context_cancel_yield_to_def)
   by (wpsimp wp: update_sched_context_sc_at_pred_n_no_change hoare_drop_imps)
 
-crunches set_thread_state_act
+crunch set_thread_state_act
   for ex_nonz_cap_to_ct[wp]: "\<lambda>s. ex_nonz_cap_to (cur_thread s) s"
 
 lemma sts_ex_nonz_cap_to_ct[wp]:
@@ -451,7 +455,7 @@ lemma complete_yield_to_sc_yf_sc_at_None:
                  split: option.splits dest!: sym[of "Some _"])
   done
 
-crunches sched_context_resume (* FIXME: investigate why wps doesn't work in the lemma below *)
+crunch sched_context_resume (* FIXME: investigate why wps doesn't work in the lemma below *)
   for tcb_at_ct[wp]: "\<lambda>s. tcb_at (cur_thread s) s"
   and ex_cap_ct[wp]: "\<lambda>s. ex_nonz_cap_to (cur_thread s) s"
   and state_refs_of_ct[wp]: "\<lambda>s. P (state_refs_of s) (cur_thread s)"
@@ -1219,7 +1223,8 @@ lemma invoke_sched_context_typ_at[wp]:
        simp: invoke_sched_context_def sched_context_bind_ntfn_def)
 
 context notes if_weak_cong[cong del] begin
-crunch typ_at[wp]: charge_budget "\<lambda>s. P (typ_at T p s)"
+crunch charge_budget
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imp maybeM_inv simp: Let_def)
 end
 
@@ -1232,7 +1237,7 @@ context notes if_weak_cong[cong del] begin
 
 end
 
-crunches invoke_sched_control_configure_flags
+crunch invoke_sched_control_configure_flags
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
@@ -1576,7 +1581,7 @@ lemma set_sc_obj_ref_active:
   unfolding update_sched_context_def
   by (wpsimp wp: set_object_wp get_object_wp simp: obj_at_def)
 
-crunches commit_time
+crunch commit_time
   for sc_active: "active_sc_at sc_ptr"
   (wp: set_sc_obj_ref_active whileLoop_valid_inv crunch_wps simp: crunch_simps)
 
@@ -1588,7 +1593,7 @@ lemma sc_sporadic_update_active[wp]:
   "set_sc_obj_ref sc_sporadic_update sc_ptr x \<lbrace>active_sc_at p'\<rbrace>"
   by (rule set_sc_obj_ref_active) simp
 
-crunches refill_new
+crunch refill_new
   for st_tcb_at[wp]: "\<lambda>s. \<not> st_tcb_at P tcb_ptr s"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -1611,7 +1616,7 @@ lemma invoke_sched_control_configure_flags_invs[wp]:
 
 text \<open>set_thread_state and schedcontext/schedcontrol invocations\<close>
 
-crunches set_thread_state_act
+crunch set_thread_state_act
   for st_tcb_at_tc[wp]: "\<lambda>s. st_tcb_at P (cur_thread s) s"
   and bound_yt_tcb_at_ct[wp]: "\<lambda>s. bound_yt_tcb_at P (cur_thread s) s"
   and sc_tcb_sc_at_ct[wp]: "\<lambda>s. sc_tcb_sc_at (P (cur_thread s)) t s"

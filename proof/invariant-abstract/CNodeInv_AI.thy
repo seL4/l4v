@@ -869,12 +869,12 @@ lemma not_recursive_cspaces_time_independent_simple[simp]:
 
 context CNodeInv_AI begin
 
-crunches update_time_stamp
+crunch update_time_stamp
    for not_recursive_cspaces[wp]: "\<lambda>s. P (not_recursive_cspaces s)"
    and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
    (simp: crunch_simps wp: crunch_wps)
 
-crunches preemption_point
+crunch preemption_point
   for not_recursive_cspaces[wp]: "\<lambda>s. P (not_recursive_cspaces s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: OR_choiceE_weak_wp hoare_drop_imp simp: preemption_point_def)
@@ -1030,7 +1030,8 @@ lemma cap_swap_cte_at:
 
 context CNodeInv_AI begin
 
-crunch typ_at[wp]: rec_del "\<lambda>s::'state_ext state. P (typ_at T p s)"
+crunch rec_del
+ for typ_at[wp]: "\<lambda>s::'state_ext state. P (typ_at T p s)"
   (ignore: preemption_point wp: preemption_point_inv)
 
 lemma rec_del_cte_at[wp]:
@@ -1448,7 +1449,8 @@ lemma cap_swap_pred_tcb_at[wp]:
   unfolding cap_swap_def by (wp | simp)+
 
 
-crunch refs_of[wp]: cap_swap "\<lambda>s. P (state_refs_of s)"
+crunch cap_swap
+ for refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (ignore: set_cap simp: state_refs_of_pspaceI)
 
 crunch cap_swap
@@ -1458,7 +1460,8 @@ crunch cap_swap
 crunch cap_swap
   for cur_tcb[wp]: "cur_tcb"
 
-crunch cur_sc_tcb[wp]: cap_swap "cur_sc_tcb"
+crunch cap_swap
+ for cur_sc_tcb[wp]: "cur_sc_tcb"
 
 lemma copy_of_cte_refs:
   "copy_of cap cap' \<Longrightarrow> cte_refs cap = cte_refs cap'"
@@ -1508,7 +1511,7 @@ lemma cap_swap_global_refs[wp]:
   apply (wp set_cap_globals | simp)+
   done
 
-crunches cap_swap
+crunch cap_swap
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
@@ -1553,7 +1556,7 @@ lemma cap_swap_valid_arch_caps[wp]:
 
 end
 
-crunches cap_swap
+crunch cap_swap
   for valid_kernel_mappings[wp]: valid_kernel_mappings
   and equal_kernel_mappings[wp]: equal_kernel_mappings
   and only_idle[wp]: only_idle
@@ -1579,7 +1582,7 @@ lemma cap_refs_respects_device_region_original_cap[wp]:
                 (s\<lparr>is_original_cap := ocp\<rparr>) = cap_refs_respects_device_region s"
   by (simp add:cap_refs_respects_device_region_def)
 
-crunches set_cdt
+crunch set_cdt
   for obj_at[wp]: "\<lambda>s. P (obj_at P' p s)"
 
 global_interpretation cap_swap: cspace_op "cap_swap c a c' b"
@@ -2049,7 +2052,8 @@ declare thread_set_Pmdb [wp]
 
 declare get_irq_slot_real_cte [wp]
 
-crunch cte_at_pres[wp]: empty_slot "cte_at sl"
+crunch empty_slot
+ for cte_at_pres[wp]: "cte_at sl"
 
 
 declare finalise_cap_cte_cap_to [wp]

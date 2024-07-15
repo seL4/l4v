@@ -179,7 +179,8 @@ lemma ccorres_pre_getConsumedTime:
   done
 
 (* FIXME RT: move to Refine *)
-crunch (empty_fail) empty_fail[wp, simp]: setCurTime
+crunch setCurTime
+ for (empty_fail) empty_fail[wp, simp]
 
 lemma updateTimestamp_ccorres:
   "ccorres dc xfdc \<top> UNIV [] updateTimeStamp (Call updateTimestamp_'proc)"
@@ -499,7 +500,7 @@ lemma isCurDomainExpired_ccorres:
   apply (clarsimp simp: to_bool_def numDomains_sge_1_simp split: if_splits)
   done
 
-crunches updateTimeStamp, setWorkUnits
+crunch updateTimeStamp, setWorkUnits
   for obj_at'[wp]: "\<lambda>s. P (obj_at' Q ptr s)"
   and active_sc_at'[wp]: "active_sc_at' scPtr"
   and valid_objs'[wp]: valid_objs'
@@ -507,8 +508,9 @@ crunches updateTimeStamp, setWorkUnits
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   (simp: active_sc_at'_def)
 
-crunch (empty_fail) empty_fail[wp]:
+crunch
   scActive, getRefillSufficient, getConsumedTime, isCurDomainExpired, getCurSc
+ for (empty_fail) empty_fail[wp]
 
 lemma preemptionPoint_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_') invs' UNIV []

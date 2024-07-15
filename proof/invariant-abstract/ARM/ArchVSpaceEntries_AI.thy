@@ -405,7 +405,8 @@ lemma set_simple_ko_valid_pdpt_objs[wp]:
            simp: a_type_def obj_valid_pdpt_def obj_at_def
           split: kernel_object.splits)
 
-crunch valid_pdpt_objs[wp]: possible_switch_to "valid_pdpt_objs"
+crunch possible_switch_to
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at set_object)
 
@@ -413,16 +414,20 @@ lemma schedule_tcb_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> schedule_tcb r \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   by (simp add: schedule_tcb_def | wp)+
 
-crunch valid_pdpt_objs[wp]: tcb_release_remove "valid_pdpt_objs"
+crunch tcb_release_remove
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv)
 
-crunch valid_pdpt_objs[wp]: tcb_release_enqueue "valid_pdpt_objs"
+crunch tcb_release_enqueue
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: crunch_simps)
 
-crunch valid_pdpt_objs[wp]: set_extra_badge, transfer_caps_loop "valid_pdpt_objs"
+crunch set_extra_badge, transfer_caps_loop
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: transfer_caps_loop_pres)
 
-crunch valid_pdpt_objs[wp]: reply_unlink_tcb "valid_pdpt_objs"
+crunch reply_unlink_tcb
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: get_simple_ko_wp  gts_wp ignore: set_object)
 
 lemma as_user_valid_pdpt_objs[wp]:
@@ -432,26 +437,31 @@ lemma as_user_valid_pdpt_objs[wp]:
   apply simp
   done
 
-crunch valid_pdpt_objs[wp]: send_signal, send_ipc "valid_pdpt_objs"
+crunch send_signal, send_ipc
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: get_sched_context_wp mapM_wp' maybeM_inv hoare_vcg_if_lift2 hoare_drop_imps
        transfer_caps_loop_pres whileLoop_valid_inv
   simp: zipWithM_x_mapM
   ignore: set_thread_state_act set_object test_reschedule)
 
-crunch valid_pdpt_objs[wp]: cancel_all_ipc, cancel_all_signals, unbind_maybe_notification,
+crunch cancel_all_ipc, cancel_all_signals, unbind_maybe_notification,
   sched_context_maybe_unbind_ntfn, reply_unlink_tcb,
-  sched_context_unbind_all_tcbs, sched_context_unbind_ntfn "valid_pdpt_objs"
+  sched_context_unbind_all_tcbs, sched_context_unbind_ntfn
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp mapM_x_wp' whileLoop_valid_inv ignore: tcb_release_remove
    simp: crunch_simps is_round_robin_def)
 
-crunch valid_pdpt_objs[wp]:
-sched_context_unbind_yield_from "valid_pdpt_objs"
+crunch
+sched_context_unbind_yield_from
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp mapM_x_wp' ignore: set_object)
 
-crunch valid_pdpt_objs[wp]: reply_remove "valid_pdpt_objs"
+crunch reply_remove
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: hoare_drop_imp)
 
-crunch valid_pdpt_objs[wp]: sched_context_unbind_reply "valid_pdpt_objs"
+crunch sched_context_unbind_reply
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
 
 lemma fast_finalise_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -459,13 +469,13 @@ lemma fast_finalise_valid_pdpt_objs[wp]:
       wpsimp simp: set_refills_def o_def
                wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
 
-crunches
+crunch
   prepare_thread_delete, unbind_notification, deleting_irq_handler, set_asid_pool,
   invalidate_asid_entry, unbind_from_sc, suspend, sched_context_set_inactive
   for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv simp: unless_def)
 
-crunches delete_asid_pool, arch_finalise_cap
+crunch delete_asid_pool, arch_finalise_cap
   for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
 
@@ -671,7 +681,8 @@ lemma non_invalid_in_pte_range:
   \<Longrightarrow> x \<in> pte_range pte x"
   by (case_tac pte,simp_all)
 
-crunch valid_pdpt_objs[wp]: cancel_badged_sends "valid_pdpt_objs"
+crunch cancel_badged_sends
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (simp: crunch_simps filterM_mapM wp: crunch_wps ignore: filterM set_thread_state)
 
 crunch cap_move, cap_insert
@@ -684,27 +695,33 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-crunch valid_pdpt_objs[wp]: test_possible_switch_to "valid_pdpt_objs"
+crunch test_possible_switch_to
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp)
 
 
-crunch valid_pdpt_objs[wp]: reorder_ntfn, reorder_ep, thread_set_priority, set_priority "valid_pdpt_objs"
+crunch reorder_ntfn, reorder_ep, thread_set_priority, set_priority
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_pdpt_objs[wp]: invoke_tcb, invoke_domain "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunch invoke_tcb, invoke_domain
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: check_cap_inv crunch_wps simp: crunch_simps is_round_robin_def
        ignore: check_cap_at set_object tcb_release_enqueue test_possible_switch_to)
 
-crunch valid_pdpt_objs[wp]: invoke_irq_handler "valid_pdpt_objs"
+crunch invoke_irq_handler
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
     ignore: tcb_release_remove set_object simp: unless_def)
 
-crunch valid_pdpt_objs[wp]: do_reply_transfer "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunch do_reply_transfer
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps hoare_vcg_if_lift2
    ignore: tcb_release_remove set_object tcb_release_enqueue
    simp: unless_def is_round_robin_def)
 
-crunch valid_pdpt_objs[wp]:invoke_irq_control "valid_pdpt_objs"
+crunch invoke_irq_control
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps maybeM_inv simp: crunch_simps
          ignore: clearMemory const_on_failure set_object)
 
@@ -777,10 +794,12 @@ lemma invoke_untyped_valid_pdpt[wp]:
      apply (wp | simp)+
   done
 
-crunch valid_pdpt_objs[wp]: perform_asid_control_invocation "valid_pdpt_objs"
+crunch perform_asid_control_invocation
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (ignore: delete_objects set_object wp: delete_objects_valid_pdpt hoare_weak_lift_imp)
 
-crunch valid_pdpt_objs[wp]: perform_asid_pool_invocation "valid_pdpt_objs"
+crunch perform_asid_pool_invocation
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (ignore: delete_objects set_object wp: delete_objects_valid_pdpt hoare_weak_lift_imp get_object_wp)
 
 abbreviation (input)
@@ -1150,13 +1169,15 @@ lemma perform_page_directory_valid_pdpt[wp]:
    apply (wp | wpc | simp)+
   done
 
-crunch valid_pdpt_objs[wp]: invoke_sched_context "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunch invoke_sched_context
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: mapM_x_wp' hoare_drop_imps hoare_vcg_if_lift2 simp: is_schedulable_def)
 
-crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunch end_timeslice
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2)
 
-crunches check_budget_restart, invoke_sched_control_configure_flags
+crunch check_budget_restart, invoke_sched_control_configure_flags
   for valid_pdpt_objs[wp]: "valid_pdpt_objs :: det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_valid_inv hoare_vcg_all_lift
    simp: Let_def crunch_simps ignore: tcb_release_remove)
@@ -1571,7 +1592,8 @@ lemma decode_invocation_valid_pdpt[wp]:
   apply clarsimp
   done
 
-crunch valid_pdpt_objs[wp]: handle_fault, reply_from_kernel "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunch handle_fault, reply_from_kernel
+ for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (simp: crunch_simps unless_def wp: crunch_wps)
 
 
@@ -1587,7 +1609,8 @@ lemma invocation_duplicates_valid_scheduler_action_update[simp]:
                   split: arch_invocation.splits page_table_invocation.splits
                          page_invocation.splits sum.splits)
 
-crunch invocation_duplicates_valid[wp]: set_thread_state_act "invocation_duplicates_valid i"
+crunch set_thread_state_act
+ for invocation_duplicates_valid[wp]: "invocation_duplicates_valid i"
 
 lemma set_thread_state_duplicates_valid[wp]:
   "\<lbrace>invocation_duplicates_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. invocation_duplicates_valid i\<rbrace>"
@@ -1619,23 +1642,26 @@ lemma handle_invocation_valid_pdpt[wp]:
                  intro!: st_tcb_ex_cap)
   done
 
-crunches update_time_stamp, check_domain_time
+crunch update_time_stamp, check_domain_time
   for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (simp: crunch_simps)
 
-crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunch sc_and_timer
+ for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
-crunch valid_pdpt[wp]: schedule_choose_new_thread "valid_pdpt_objs"
+crunch schedule_choose_new_thread
+ for valid_pdpt[wp]: "valid_pdpt_objs"
   (simp: Let_def wp: hoare_drop_imp)
 
-crunch valid_pdpt[wp]: activate_thread, switch_to_thread, switch_to_idle_thread,
-                       awaken "valid_pdpt_objs"
+crunch activate_thread, switch_to_thread, switch_to_idle_thread,
+                       awaken
+ for valid_pdpt[wp]: "valid_pdpt_objs"
   (simp: crunch_simps
    wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp)
 
-crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield,
+crunch handle_call, handle_recv, handle_send, handle_yield,
  handle_interrupt, handle_vm_fault, handle_hypervisor_fault
-  "valid_pdpt_objs::det_state \<Rightarrow> _"
+ for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps crunch_wps
    simp: crunch_simps Let_def whenE_def liftE_def
    ignore: check_budget_restart)
@@ -1645,7 +1671,7 @@ lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (u
   apply (wpsimp wp: hoare_drop_imps)
   done
 
-crunches check_domain_time
+crunch check_domain_time
   for pred_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s"
   and ct_running[wp]: ct_running
   (simp: crunch_simps wp: crunch_wps)

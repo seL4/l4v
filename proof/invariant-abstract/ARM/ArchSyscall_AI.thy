@@ -18,14 +18,22 @@ context Arch begin global_naming ARM
 named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_inv[Syscall_AI_assms]
-crunch pred_tcb_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. N (pred_tcb_at proj P t s)"
-crunch invs[wp,Syscall_AI_assms]: handle_arch_fault_reply "invs"
-crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply  "ex_nonz_cap_to c"
-crunch it[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (idle_thread s)"
-crunch caps[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (caps_of_state s)"
-crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cur_thread s)"
-crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "valid_objs"
-crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cte_wp_at P' p s)"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for pred_tcb_at[wp,Syscall_AI_assms]: "\<lambda>s. N (pred_tcb_at proj P t s)"
+crunch handle_arch_fault_reply
+ for invs[wp,Syscall_AI_assms]: "invs"
+crunch handle_arch_fault_reply
+ for cap_to[wp,Syscall_AI_assms]: "ex_nonz_cap_to c"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for it[wp,Syscall_AI_assms]: "\<lambda>s. P (idle_thread s)"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for caps[wp,Syscall_AI_assms]: "\<lambda>s. P (caps_of_state s)"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for cur_thread[wp,Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for valid_objs[wp,Syscall_AI_assms]: "valid_objs"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for cte_wp_at[wp,Syscall_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
 (*        make_fault_message_inv[Syscall_AI_assms] *)
 
 
@@ -90,7 +98,7 @@ lemma hh_invs[wp, Syscall_AI_assms]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (cases fault; wpsimp simp: valid_fault_def)
 
-crunches make_fault_msg
+crunch make_fault_msg
   for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
   and cur_sc[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_sc s)"
   and pred_tcb_at[wp, Syscall_AI_assms]: "pred_tcb_at proj P t"

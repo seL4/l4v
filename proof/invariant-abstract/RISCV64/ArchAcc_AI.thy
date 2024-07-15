@@ -939,7 +939,7 @@ lemma set_pt_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
   including unfold_objects by (wpsimp simp: set_pt_def)
 
-crunches set_pt
+crunch set_pt
   for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   and idle[wp]: "\<lambda>s. P (idle_thread s)"
   and irq[wp]: "\<lambda>s. P (interrupt_irq_node s)"
@@ -1621,7 +1621,8 @@ lemma set_asid_pool_ifunsafe [wp]:
   by (wpsimp simp: set_asid_pool_def)
 
 
-crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
+crunch set_asid_pool
+ for global_ref[wp]: "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
@@ -2845,7 +2846,7 @@ lemma set_pt_cur_sc_tcb[wp]:
   "set_pt p pt \<lbrace>cur_sc_tcb\<rbrace>"
   unfolding cur_sc_tcb_def by wp_pre (wpsimp|wps)+
 
-crunches store_pte
+crunch store_pte
   for cur_sc_tcb[wp]: "cur_sc_tcb"
   and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set T"
   and sch_act[wp]: "\<lambda>s. P (scheduler_action s)"

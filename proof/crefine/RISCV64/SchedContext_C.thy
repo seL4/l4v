@@ -15,7 +15,8 @@ lemma getRefillSize_exs_valid[wp]:
   "\<lbrace>(=) s\<rbrace> getRefillSize scPtr \<lbrace>\<lambda>r. (=) s\<rbrace>"
   by (wpsimp simp: getRefillSize_def)
 
-crunch (empty_fail) empty_fail[wp]: getRefillSize
+crunch getRefillSize
+ for (empty_fail) empty_fail[wp]
 
 lemma refill_add_tail_ccorres:
   "ccorres dc xfdc

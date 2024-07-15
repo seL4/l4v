@@ -1698,7 +1698,8 @@ lemma dmo_setIRQTrigger_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setIRQT
   done
 
 lemmas setDeadline_irq_masks = no_irq[OF no_irq_setDeadline]
-crunch device_state_inv[wp]: setDeadline "\<lambda>ms. P (device_state ms)"
+crunch setDeadline
+ for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 lemma dmo_setDeadline[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setDeadline t) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
   apply safe
@@ -1725,13 +1726,15 @@ lemma svr_invs [wp]:
   apply(simp add: invs_valid_objs)
   done
 
-crunch pred_tcb_at[wp]: arm_context_switch "\<lambda>s. Q (pred_tcb_at proj P t s)"
+crunch arm_context_switch
+ for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 lemma svr_pred_st_tcb[wp]:
   "set_vm_root t \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   unfolding set_vm_root_def by (wpsimp wp: get_cap_wp hoare_vcg_if_lift_ER hoare_drop_imps)
 
-crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
+crunch set_vm_root
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
@@ -3495,7 +3498,7 @@ lemma empty_table_pt_capI:
 crunch cleanCacheRange_PoC, cleanL2Range, invalidateL2Range, invalidateByVA,
                               cleanInvalidateL2Range, cleanInvalByVA, invalidateCacheRange_I,
                               branchFlushRange, ackInterrupt,setDeadline
-                           "\<lambda>m'. underlying_memory m' p = um"
+  for underlying_memory[wp]: "\<lambda>m'. underlying_memory m' p = um"
   (simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def)
 
 crunch cleanCacheRange_RAM, invalidateCacheRange_RAM,

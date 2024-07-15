@@ -96,7 +96,7 @@ lemma get_sc_obj_ref_inv[simp, wp]:
   "\<lbrace>P\<rbrace> get_sc_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
   by (wpsimp simp: get_sc_obj_ref_def get_sched_context_def get_object_def)
 
-crunches update_sched_context
+crunch update_sched_context
   for no_cdt[wp]: "\<lambda>s. P (cdt s)"
   and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
@@ -211,7 +211,7 @@ lemma update_sched_context_state_refs_of:
 
 text \<open>set_reply_obj_ref\<close>
 
-crunches update_sk_obj_ref
+crunch update_sk_obj_ref
  for aligned[wp]: pspace_aligned
  and distinct[wp]: pspace_distinct
  and cte_wp_at[wp]: "cte_wp_at P c"
@@ -343,7 +343,7 @@ lemma gscrpls_sp:
 
 text \<open>set_tcb_obj_ref/get_tcb_obj_ref\<close>
 
-crunches set_tcb_obj_ref,get_tcb_obj_ref
+crunch set_tcb_obj_ref,get_tcb_obj_ref
  for aligned[wp]: pspace_aligned
  and distinct[wp]: pspace_distinct
  and sc_at[wp]: "sc_at sc_ptr"
@@ -359,7 +359,7 @@ crunches set_tcb_obj_ref,get_tcb_obj_ref
  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (simp: Let_def wp: hoare_drop_imps)
 
-crunches get_tcb_obj_ref
+crunch get_tcb_obj_ref
  for valid_objs[wp]: valid_objs
  and iflive[wp]: "if_live_then_nonz_cap"
  and valid_mdb[wp]: valid_mdb
@@ -398,7 +398,7 @@ lemma valid_machine_state_sched_act_update[simp]:
   "valid_machine_state (scheduler_action_update f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)
 
-crunches set_thread_state_act
+crunch set_thread_state_act
  for aligned[wp]: pspace_aligned
  and it[wp]: "\<lambda>s. P (idle_thread s)"
  and distinct[wp]: pspace_distinct
@@ -528,7 +528,7 @@ lemma valid_machine_state_reprogram_timer_update[simp]:
   "valid_machine_state (reprogram_timer_update f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)
 
-crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enqueue,tcb_release_remove
+crunch tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enqueue,tcb_release_remove
  for aligned[wp]: pspace_aligned
  and it[wp]: "\<lambda>s. P (idle_thread s)"
  and distinct[wp]: pspace_distinct
@@ -727,7 +727,7 @@ lemma sched_context_donate_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> sched_context_donate scp tcbp \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
-crunches test_reschedule
+crunch test_reschedule
   for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   and if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
 
@@ -965,7 +965,8 @@ lemma reply_unlink_tcb_iflive[wp]:
   by (wpsimp simp: reply_unlink_tcb_def get_thread_state_def thread_get_def get_simple_ko_def
                    get_object_def)
 
-crunch ex_nonz_cap_to[wp]: reply_unlink_tcb, reply_unlink_sc "ex_nonz_cap_to t"
+crunch reply_unlink_tcb, reply_unlink_sc
+ for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   (wp: hoare_drop_imps)
 
 lemma reply_remove_iflive [wp]:
@@ -1251,12 +1252,12 @@ lemma refill_full_wp[wp]:
    \<lbrace>Q\<rbrace>"
   by (wpsimp simp: refill_full_def)
 
-crunches
+crunch
   get_sc_active, get_sc_refill_capacity, get_sc_refill_sufficient, get_sc_refill_ready,
   get_sc_released, get_refills, refill_full
   for inv[wp]: P
 
-crunches
+crunch
   sched_context_unbind_yield_from, sched_context_unbind_all_tcbs, postpone,
   unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
   sched_context_unbind_reply, schedule_tcb, refill_unblock_check
@@ -1302,7 +1303,7 @@ lemma charge_budget_inv[wp]: "(\<And>s f. P (trans_state f s) = P s)
 *)
 
 
-crunches sched_context_donate
+crunch sched_context_donate
   for st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P t s)"
   and fault_tcb_at[wp]: "\<lambda>s. Q (fault_tcb_at P t s)"
   and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
@@ -1325,12 +1326,12 @@ lemma sched_context_update_consumed_if_live[wp]:
                   wp: get_sched_context_wp get_object_wp)
   done
 
-crunches
+crunch
   set_irq_state, set_simple_ko
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches
+crunch
   set_tcb_queue, set_irq_state, set_simple_ko, update_sk_obj_ref, do_machine_op
   for ct_in_state[wp]: "ct_in_state P"
   (wp: ct_in_state_thread_state_lift)

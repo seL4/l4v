@@ -393,7 +393,7 @@ lemma schedContextBindNtfn_corres:
   apply clarsimp
   done
 
-crunches tcb_sched_action, complete_yield_to, reschedule_required, sched_context_resume
+crunch tcb_sched_action, complete_yield_to, reschedule_required, sched_context_resume
   for in_user_frame[wp]: "in_user_frame buf"
   (simp: crunch_simps wp: crunch_wps ignore: set_tcb_obj_ref)
 
@@ -411,7 +411,7 @@ lemma
   unfolding valid_ipc_buffer_ptr'_def
   by wpsimp+
 
-crunches schedContextCompleteYieldTo, tcbSchedEnqueue, tcbSchedDequeue,
+crunch schedContextCompleteYieldTo, tcbSchedEnqueue, tcbSchedDequeue,
          rescheduleRequired, schedContextResume
   for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' buf"
   and sc_at'[wp]: "sc_at' scp"
@@ -462,11 +462,11 @@ lemma set_tcb_obj_ref_tcb_yield_update_ct_in_state[wp]:
   apply (clarsimp simp: ct_in_state_def get_tcb_ko_at pred_tcb_at_def obj_at_def)
   done
 
-crunches set_tcb_obj_ref
+crunch set_tcb_obj_ref
   for ready_qs_distinct[wp]: ready_qs_distinct
   (rule: ready_qs_distinct_lift)
 
-crunches setSchedContext
+crunch setSchedContext
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
 
 lemma schedContextYieldTo_corres:
@@ -736,11 +736,11 @@ lemma schedContextYieldTo_corres:
   apply clarsimp
   done
 
-crunches sched_context_unbind_ntfn, sched_context_unbind_all_tcbs
+crunch sched_context_unbind_ntfn, sched_context_unbind_all_tcbs
   for sc_at[wp]: "sc_at scp"
   (wp: crunch_wps)
 
-crunches schedContextUnbindNtfn, schedContextUnbindAllTCBs
+crunch schedContextUnbindNtfn, schedContextUnbindAllTCBs
   for sc_at'[wp]: "sc_at' scp"
   (wp: crunch_wps)
 
@@ -1100,7 +1100,7 @@ lemma refillUpdate_corres:
                         is_active_sc'_def valid_refills_number'_def refillSize_def)
   done
 
-crunches maybeAddEmptyTail, setRefillHd
+crunch maybeAddEmptyTail, setRefillHd
   for invs'[wp]: invs'
   (simp: crunch_simps wp: crunch_wps)
 
@@ -1214,7 +1214,7 @@ lemma tcbSchedDequeue_valid_refills'[wp]:
          | intro conjI impI)+
   by (auto simp: obj_at_simps valid_refills'_def opt_map_def opt_pred_def split: option.splits)
 
-crunches tcbSchedDequeue, tcbReleaseRemove
+crunch tcbSchedDequeue, tcbReleaseRemove
   for ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   (wp: crunch_wps threadSet_wp getTCB_wp
    simp: setQueue_def valid_refills'_def bitmap_fun_defs crunch_simps)
@@ -1228,11 +1228,11 @@ lemma tcbReleaseRemove_valid_refills'[wp]:
        by (fastforce simp: obj_at_simps valid_refills'_def opt_map_def opt_pred_def
                     split: option.splits)+
 
-crunches commitTime, refillNew, refillUpdate
+crunch commitTime, refillNew, refillUpdate
   for ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches commitTime
+crunch commitTime
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
   (wp: crunch_wps simp: crunch_simps)
 

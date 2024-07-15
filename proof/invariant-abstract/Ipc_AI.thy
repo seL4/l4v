@@ -530,7 +530,8 @@ lemma valid_remove_rights_If[simp]:
 
 declare const_on_failure_wp [wp]
 
-crunch ex_cte_cap_wp_to [wp]: set_extra_badge, do_machine_op "ex_cte_cap_wp_to P p"
+crunch set_extra_badge, do_machine_op
+ for ex_cte_cap_wp_to[wp]: "ex_cte_cap_wp_to P p"
   (rule: ex_cte_cap_to_pres)
 
 lemma cap_insert_assume_null:
@@ -738,8 +739,10 @@ lemma get_cap_global_refs[wp]:
   apply (clarsimp simp: valid_refs_def2 valid_global_refs_def cte_wp_at_caps_of_state)
   by blast
 
-crunch pred_tcb_at [wp]: set_extra_badge "\<lambda>s. Q (pred_tcb_at proj P p s)"
-crunch idle [wp]: set_extra_badge "\<lambda>s. P (idle_thread s)"
+crunch set_extra_badge
+ for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P p s)"
+crunch set_extra_badge
+ for idle[wp]: "\<lambda>s. P (idle_thread s)"
 
 lemma (in Ipc_AI) tcl_idle[wp]:
   "\<And>ep buffer n caps slots mi.
@@ -1143,7 +1146,7 @@ lemma transfer_caps_loop_vms[wp]:
     \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
-crunches set_extra_badge
+crunch set_extra_badge
 for valid_irq_states[wp]: "valid_irq_states"
   (ignore: do_machine_op)
 
@@ -1161,7 +1164,7 @@ lemma transfer_caps_respects_device_region[wp]:
   apply (wp transfer_caps_loop_pres)
   done
 
-crunches do_machine_op, set_extra_badge
+crunch do_machine_op, set_extra_badge
   for valid_replies[wp]: valid_replies
 
 lemma transfer_caps_respects_valid_replies[wp]:
@@ -1189,7 +1192,7 @@ lemma transfer_caps_refs_respects_device_region[wp]:
   apply clarsimp+
   done
 
-crunches transfer_caps_loop
+crunch transfer_caps_loop
   for fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set TS :: 'state_ext state \<Rightarrow> _"
   (rule: transfer_caps_loop_pres wp: crunch_wps)
 
@@ -1612,7 +1615,8 @@ crunch do_ipc_transfer
 crunch set_message_info
   for vmdb[wp]: "valid_mdb :: 'state_ext state \<Rightarrow> bool"
 
-crunch vmdb[wp]: do_ipc_transfer "valid_mdb :: 'state_ext state \<Rightarrow> bool"
+crunch do_ipc_transfer
+ for vmdb[wp]: "valid_mdb :: 'state_ext state \<Rightarrow> bool"
   (ignore: as_user set_object simp: crunch_simps ball_conj_distrib
        wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_mdb)
 
@@ -1620,7 +1624,8 @@ crunch do_ipc_transfer
   for ifunsafe[wp]: "if_unsafe_then_cap :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
-crunch iflive[wp]: do_ipc_transfer "if_live_then_nonz_cap :: 'state_ext state \<Rightarrow> bool"
+crunch do_ipc_transfer
+ for iflive[wp]: "if_live_then_nonz_cap :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps sched_context_update_consumed_if_live simp: zipWithM_x_mapM gets_the_wp
    ignore: transfer_caps_loop set_object sched_context_update_consumed)
 
@@ -1631,21 +1636,25 @@ lemma sched_context_update_consumed_if_live[wp]:
    \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
   by (wpsimp simp: sched_context_update_consumed_def)
 
-crunch state_refs_of[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (state_refs_of s)"
+crunch do_ipc_transfer
+ for state_refs_of[wp]: "\<lambda>s::'state_ext state. P (state_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop set_object)
 
-crunch ct[wp]: do_ipc_transfer "cur_tcb :: 'state_ext state \<Rightarrow> bool"
+crunch do_ipc_transfer
+ for ct[wp]: "cur_tcb :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop set_object)
 
 crunch do_ipc_transfer
   for zombies[wp]: "zombies_final :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift tcl_zombies simp: crunch_simps ball_conj_distrib )
 
-crunch it[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (idle_thread s)"
+crunch do_ipc_transfer
+ for it[wp]: "\<lambda>s::'state_ext state. P (idle_thread s)"
   (wp: sched_context_update_consumed_it crunch_wps
     simp: crunch_simps zipWithM_x_mapM ignore: set_object)
 
-crunch valid_globals[wp]: do_ipc_transfer "valid_global_refs :: 'state_ext state \<Rightarrow> bool"
+crunch do_ipc_transfer
+ for valid_globals[wp]: "valid_global_refs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: crunch_simps zipWithM_x_mapM ball_conj_distrib
    ignore: set_object)
 
@@ -1658,7 +1667,8 @@ lemma set_mrs_idle[wp]:
 
 context Ipc_AI begin
 
-crunch arch[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (arch_state s)"
+crunch do_ipc_transfer
+ for arch[wp]: "\<lambda>s::'state_ext state. P (arch_state s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
 crunch do_ipc_transfer
@@ -1880,7 +1890,8 @@ crunch do_ipc_transfer
   for vms[wp]: "valid_machine_state :: 'state_ext state \<Rightarrow> bool"
   (wp: mapM_UNIV_wp)
 
-crunch valid_idle[wp]: set_message_info valid_idle
+crunch set_message_info
+ for valid_idle[wp]: valid_idle
 
 lemma copy_mrs_valid_idle [wp]:
   "\<lbrace>valid_idle :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -2079,7 +2090,7 @@ lemma cte_wp_at_reply_cap_can_fast_finalise:
 
 context Ipc_AI begin
 
-crunches do_ipc_transfer
+crunch do_ipc_transfer
   for st_tcb_at[wp]: "\<lambda>s :: 'state_ext state. Q (st_tcb_at P t s)"
   and fault_tcb_at[wp]: "\<lambda>s :: 'state_ext state. Q (fault_tcb_at P t s)"
   and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set TS :: 'state_ext state \<Rightarrow> bool"
@@ -2109,11 +2120,11 @@ lemma tcb_bound_refs_eq_restr:
   by (auto dest: refs_in_tcb_bound_refs)
 *)
 
-crunches sched_context_resume
+crunch sched_context_resume
   for valid_irq_node[wp]: valid_irq_node
   (wp: crunch_wps)
 
-crunches maybe_donate_sc
+crunch maybe_donate_sc
   for equal_kernel_mappings[wp]: equal_kernel_mappings
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
   and valid_arch_caps[wp]: valid_arch_caps
@@ -2147,7 +2158,8 @@ crunches maybe_donate_sc
   and typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
   (wp: maybeM_inv crunch_wps simp: crunch_simps is_round_robin_def)
 
-crunch typ_at[wp]: send_signal "\<lambda>s. P (typ_at T t s)"
+crunch send_signal
+ for typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
   (wp: hoare_drop_imps maybeM_inv)
 
 lemma gsc_ntfn_sp:
@@ -2243,10 +2255,12 @@ lemma st_in_waitingntfn:
                split: thread_state.splits if_splits)
   done
 
-crunch st_tcb_at[wp]: sched_context_resume "\<lambda>s. P (st_tcb_at P' t s)"
+crunch sched_context_resume
+ for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at P' t s)"
   (wp: crunch_wps)
 
-crunch valid_replies_pred[wp]: refill_unblock_check "\<lambda>s.  valid_replies_pred P s"
+crunch refill_unblock_check
+ for valid_replies_pred[wp]: "\<lambda>s.  valid_replies_pred P s"
   (wp: crunch_wps simp: crunch_simps is_round_robin_def)
 
 lemma maybe_donate_sc_st_tcb_at[wp]:
@@ -2310,7 +2324,7 @@ lemma maybe_donate_sc_sym_refs:
   apply wpsimp
   done
 
-crunches maybe_donate_sc
+crunch maybe_donate_sc
   for cur_sc_tcb[wp]: cur_sc_tcb
   and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
   (wp: crunch_wps simp: crunch_simps is_round_robin_def)
@@ -2495,7 +2509,7 @@ lemma cancel_ipc_simpler:
          clarsimp simp: only_idle_def st_tcb_at_def obj_at_def)+
   done
 
-crunches blocked_cancel_ipc, reply_remove_tcb, cancel_signal
+crunch blocked_cancel_ipc, reply_remove_tcb, cancel_signal
   for fault_tcb_at[wp]: "fault_tcb_at P t"
   (wp: thread_set_pred_tcb_at_sets_true crunch_wps)
 
@@ -2631,7 +2645,8 @@ crunch do_ipc_transfer
   for cap_to[wp]: "ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
-crunch it[wp]: receive_ipc "\<lambda>s::'state_ext state. P (idle_thread s)"
+crunch receive_ipc
+ for it[wp]: "\<lambda>s::'state_ext state. P (idle_thread s)"
   (wp: hoare_vcg_all_lift crunch_wps simp: crunch_simps)
 
 end
@@ -2735,9 +2750,11 @@ lemma complete_signal_invs:
                       simp: obj_at_def tcb_cap_cases_def is_tcb)+
   done
 
-crunch ntfn_at[wp]: set_message_info "ntfn_at ntfn"
+crunch set_message_info
+ for ntfn_at[wp]: "ntfn_at ntfn"
 
-crunch arch[wp]: set_message_info "\<lambda>s. P (arch_state s)"
+crunch set_message_info
+ for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_message_info_valid_arch [wp]:
@@ -2782,7 +2799,8 @@ lemma valid_bound_tcb_exst[iff]:
  "valid_bound_tcb t (trans_state f s) = valid_bound_tcb t s"
   by (auto simp: valid_bound_obj_def split:option.splits)
 
-crunch bound_tcb[wp]: set_message_info, set_mrs "valid_bound_tcb t"
+crunch set_message_info, set_mrs
+ for bound_tcb[wp]: "valid_bound_tcb t"
   (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object
    simp: zipWithM_x_mapM)
 
@@ -2822,14 +2840,14 @@ lemma schedule_tcb_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
 
-crunches complete_signal, do_nbrecv_failed_transfer, reply_push, receive_signal
+crunch complete_signal, do_nbrecv_failed_transfer, reply_push, receive_signal
   for cap_to[wp]: "ex_nonz_cap_to p"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: set_object set_tcb_obj_ref
        wp: cap_insert_ex_cap hoare_drop_imps crunch_wps maybeM_inv
      simp: crunch_simps)
 
-crunches get_endpoint
+crunch get_endpoint
   for inv[wp]: "P"
 
 context Ipc_AI begin
@@ -2846,7 +2864,8 @@ lemma receive_ipc_cap_to[wp]:
 
 end
 
-crunch ex_nonz_cap_to[wp]: set_message_info "ex_nonz_cap_to p"
+crunch set_message_info
+ for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
 
 lemmas is_derived_not_Null = derived_not_Null(1)
 
@@ -2870,7 +2889,8 @@ lemma ep_queue_cap_to:
   apply (erule st_tcb_ex_cap, clarsimp+)
   done
 
-crunch pred_tcb_at[wp]: set_message_info "pred_tcb_at proj P t"
+crunch set_message_info
+ for pred_tcb_at[wp]: "pred_tcb_at proj P t"
 
 lemma reschedule_required_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> reschedule_required \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
@@ -2937,7 +2957,7 @@ crunch set_mrs
   (wp: case_option_wp mapM_wp simp: crunch_simps)
 end
 
-crunches receive_signal
+crunch receive_signal
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: set_object set_tcb_obj_ref
        wp: cap_insert_ex_cap hoare_drop_imps crunch_wps maybeM_inv
@@ -2978,7 +2998,7 @@ lemma ep_ntfn_cap_case_helper:
       R)"
   by (cases x, simp_all)
 
-crunches complete_signal, do_nbrecv_failed_transfer
+crunch complete_signal, do_nbrecv_failed_transfer
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
   (wp: crunch_wps hoare_vcg_all_lift)
 

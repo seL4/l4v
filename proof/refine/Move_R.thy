@@ -418,7 +418,7 @@ lemma hd_drop_length_2_last:
   apply clarsimp
   done
 
-crunches reply_remove
+crunch reply_remove
   for scheduler_act_not[wp]: "scheduler_act_not tPtr"
   (wp: crunch_wps)
 

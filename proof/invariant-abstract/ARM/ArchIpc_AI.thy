@@ -255,7 +255,7 @@ lemma make_arch_fault_msg_inv[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t 
   apply wp
   done
 
-crunches make_fault_msg
+crunch make_fault_msg
   for invs[wp]: invs
   and tcb_at[wp]: "tcb_at t"
 
@@ -416,7 +416,8 @@ lemma cap_insert_valid_vso_at[wp]:
   apply (clarsimp simp: valid_vso_at_def)
   by (wpsimp wp: sts_obj_at_impossible sts_typ_ats hoare_vcg_ex_lift)
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (typ_at T p s)"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for typ_at[Ipc_AI_assms]: "\<lambda>s. P (typ_at T p s)"
 
 lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
   "\<lbrace>valid_vspace_objs\<rbrace>
@@ -466,7 +467,8 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
                       simp: obj_at_def is_tcb_def)+
   done
 
-crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
+crunch do_ipc_transfer
+ for state_hyp_refs_of[wp, Ipc_AI_cont_assms]: "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 lemma arch_derive_cap_untyped:

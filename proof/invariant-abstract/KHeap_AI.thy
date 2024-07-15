@@ -240,10 +240,10 @@ lemma dxo_wp_weak[wp]:
   apply (simp add: xopv[simplified trans_state_update'])
   done
 
-crunches set_thread_state
+crunch set_thread_state
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
-crunches set_scheduler_action, is_schedulable
+crunch set_scheduler_action, is_schedulable
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemma set_thread_state_typ_at[wp]:
@@ -1138,7 +1138,7 @@ crunch set_simple_ko
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches set_simple_ko
+crunch set_simple_ko
   for irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and valid_irq_node[wp]: valid_irq_node
   (wp: crunch_wps valid_irq_node_typ)
@@ -1723,9 +1723,12 @@ lemma set_mrs_caps_of_state[wp]:
   apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
-crunch obj_at[wp]: set_thread_state_act "\<lambda>s. P (obj_at P' p' s)"
-crunch arch_state[wp]: set_thread_state "\<lambda>s. P (arch_state s)"
-crunch machine[wp]: set_thread_state "\<lambda>s. P (underlying_memory (machine_state s))"
+crunch set_thread_state_act
+ for obj_at[wp]: "\<lambda>s. P (obj_at P' p' s)"
+crunch set_thread_state
+ for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+crunch set_thread_state
+ for machine[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
 
 lemma set_object_cspace:
   "cspace_agnostic_pred P' \<Longrightarrow>
@@ -1959,7 +1962,7 @@ lemma valid_irq_states_scheduler_action[simp]:
   "valid_irq_states (s\<lparr>scheduler_action := x\<rparr>) = valid_irq_states s"
   by (simp add: valid_irq_states_def)
 
-crunches
+crunch
   set_simple_ko, set_cap, thread_set, set_thread_state, set_tcb_obj_ref, update_sched_context
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
@@ -2028,7 +2031,8 @@ crunch get_irq_slot
 
 text \<open>some invariants on sched_context\<close>
 
-crunch irq_node[wp]: update_sched_context "\<lambda>s. P (interrupt_irq_node s)"
+crunch update_sched_context
+ for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 lemma update_sched_context_aligned [wp]:
  "\<lbrace>pspace_aligned\<rbrace> update_sched_context ptr v \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
@@ -2396,7 +2400,8 @@ lemma as_user_obj_at_trivial:
    \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
   by (wpsimp simp: as_user_def set_object_def get_object_def split_def obj_at_def get_tcb_SomeD)
 
-crunch obj_at_trivial: set_consumed "obj_at P t"
+crunch set_consumed
+ for obj_at_trivial: "obj_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_simple_ko_obj_at_disjoint:
@@ -2410,7 +2415,7 @@ global_interpretation set_reply_sc: non_reply_tcb_op "set_reply_obj_ref reply_sc
   apply (wpsimp wp: update_sk_obj_ref_wp)
   by (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
 
-crunches update_sk_obj_ref
+crunch update_sk_obj_ref
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
 
 lemma set_ntfn_obj_ref_sc_at_pred_n[wp]:

@@ -103,7 +103,8 @@ lemma unmap_page_table_valid_vspace_objs'[wp]:
   apply (simp add: obj_at_def)
   done
 
-crunch valid_vspace_objs'[wp]: set_simple_ko, set_thread_state "valid_vspace_objs'"
+crunch set_simple_ko, set_thread_state
+ for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps)
 
 lemma set_reply_obj_ref_valid_vspace_objs'[wp]:
@@ -114,7 +115,8 @@ lemma set_ntfn_obj_ref_valid_vspace_objs'[wp]:
   "set_ntfn_obj_ref upd r new \<lbrace>valid_vspace_objs'\<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def)
 
-crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
+crunch finalise_cap, cap_swap_for_delete, empty_slot
+ for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps preemption_point_inv hoare_vcg_all_lift
    simp: crunch_simps unless_def ignore:set_object set_thread_state_act update_sk_obj_ref)
 
@@ -163,19 +165,22 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-crunch valid_vspace_objs'[wp]: invoke_tcb "valid_vspace_objs'"
+crunch invoke_tcb
+ for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps is_round_robin_def
        ignore: check_cap_at update_sk_obj_ref)
 
-crunch valid_vspace_objs'[wp]: invoke_domain "valid_vspace_objs'"
+crunch invoke_domain
+ for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch set_extra_badge, transfer_caps_loop
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (rule: transfer_caps_loop_pres)
 
-crunch valid_vspace_objs'[wp]: send_ipc, send_signal,
-    do_reply_transfer, invoke_irq_control, invoke_irq_handler "valid_vspace_objs'"
+crunch send_ipc, send_signal,
+    do_reply_transfer, invoke_irq_control, invoke_irq_handler
+ for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps
          ignore: clearMemory const_on_failure set_object update_sk_obj_ref)
 
@@ -301,7 +306,7 @@ context
 notes if_cong[cong]
 begin
 
-crunches invoke_sched_context, invoke_sched_control_configure_flags
+crunch invoke_sched_context, invoke_sched_control_configure_flags
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (ignore: update_sk_obj_ref wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
@@ -336,7 +341,7 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
   apply (fastforce simp: ct_in_state_def)
   done
 
-crunches activate_thread,switch_to_thread, handle_hypervisor_fault,
+crunch activate_thread,switch_to_thread, handle_hypervisor_fault,
          switch_to_idle_thread, handle_call, handle_recv, handle_vm_fault,
          handle_send, handle_yield, handle_interrupt, check_budget_restart, update_time_stamp,
          schedule_choose_new_thread, activate_thread, switch_to_thread, check_domain_time
@@ -344,7 +349,7 @@ crunches activate_thread,switch_to_thread, handle_hypervisor_fault,
   (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift
    ignore: without_preemption getActiveIRQ resetTimer ackInterrupt update_sk_obj_ref)
 
-crunches awaken, sc_and_timer
+crunch awaken, sc_and_timer
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: hoare_drop_imps hoare_vcg_if_lift2 crunch_wps)
 

@@ -27,11 +27,11 @@ lemma set_cap_valid_sched_pred[wp]:
   by (wpsimp simp: set_cap_def obj_at_kh_kheap_simps vs_all_heap_simps
                wp: set_object_wp get_object_wp)
 
-crunches create_cap, cap_insert
+crunch create_cap, cap_insert
   for valid_sched_pred[wp]: "valid_sched_pred_strong P::'z::state_ext state \<Rightarrow> _"
   (wp: dxo_wp_weak crunch_wps)
 
-crunches update_cdt_list
+crunch update_cdt_list
   for valid_sched_pred[wp]: "valid_sched_pred_strong P"
   (wp: dxo_wp_weak crunch_wps)
 
@@ -92,7 +92,7 @@ context DetSchedAux_AI begin
 sublocale init_arch_objects: valid_sched_pred_locale _ "init_arch_objects t p n s r"
   by unfold_locales (rule init_arch_objects_valid_sched_pred)
 
-crunches delete_objects
+crunch delete_objects
   for valid_sched_pred_misc[wp]:
       "\<lambda>s::'state_ext state. P (cur_domain s) (cur_thread s) (idle_thread s) (consumed_time s)
                                (ready_queues s) (release_queue s) (scheduler_action s)
@@ -101,7 +101,7 @@ crunches delete_objects
    simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
    ignore: do_machine_op)
 
-crunches invoke_untyped
+crunch invoke_untyped
   for valid_sched_pred_misc[wp]:
       "\<lambda>s::'state_ext state. P (cur_domain s) (cur_thread s) (idle_thread s)
                                (ready_queues s) (release_queue s) (scheduler_action s)
@@ -139,7 +139,7 @@ lemma delete_objects_etcb_at[wp]:
 
 declare delete_objects_st_tcb_at[wp]
 
-crunches reset_untyped_cap
+crunch reset_untyped_cap
   for etcb_at[wp]: "etcb_at P t :: 'z::state_ext state \<Rightarrow> _"
   (wp: preemption_point_inv mapME_x_inv_wp crunch_wps
    simp: unless_def)
@@ -280,7 +280,7 @@ lemma retype_region_sporadic_implies[wp]:
   apply (clarsimp simp: active_sc_def default_sched_context_def)
   done
 
-crunches retype_region
+crunch retype_region
   for cur_time_cur_sc[wp]: "\<lambda>s. P (cur_time s) (cur_sc s)"
 
 lemma retype_region_active_sc_props''[wp]:
@@ -472,7 +472,7 @@ lemma retype_region_obj_at_other3_cur_time:
   apply (simp add: field_simps)
   done
 
-crunches update_cdt_list, set_cdt
+crunch update_cdt_list, set_cdt
   for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at t ts s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
 
@@ -522,10 +522,11 @@ lemma delete_objects_valid_blocked[wp]:
   by (fastforce simp: valid_blocked_defs pred_map_simps opt_map_simps map_join_simps vs_heap_simps
                split: option.splits)
 
-crunch valid_blocked[wp]: reset_untyped_cap "valid_blocked::'z::state_ext state \<Rightarrow> _"
+crunch reset_untyped_cap
+ for valid_blocked[wp]: "valid_blocked::'z::state_ext state \<Rightarrow> _"
   (wp: preemption_point_inv mapME_x_inv_wp crunch_wps simp: unless_def)
 
-crunches retype_region, delete_objects
+crunch retype_region, delete_objects
   for cur_sc[wp]: "\<lambda>(s). P (cur_sc s)"
   (simp: detype_def)
 
@@ -989,11 +990,11 @@ lemma preemption_point_valid_machine_time[wp]:
                   wp: OR_choiceE_weak_wp hoare_drop_imps)
   done
 
-crunches reset_untyped_cap
+crunch reset_untyped_cap
   for valid_machine_time[wp]: "valid_machine_time :: 'state_ext state \<Rightarrow> _ "
   (wp: crunch_wps mapME_x_wp_inv ignore: do_machine_op)
 
-crunches retype_region
+crunch retype_region
   for vmt[wp]: "(\<lambda>s. P (last_machine_time_of s) (cur_time s)) :: 'state_ext state \<Rightarrow> _"
   and pnt[wp]: "(\<lambda>s. P (last_machine_time_of s) (time_state_of s)) :: 'state_ext state \<Rightarrow> _"
 

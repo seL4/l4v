@@ -632,7 +632,7 @@ lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
   done
 
 
-crunches arch_finalise_cap, prepare_thread_delete
+crunch arch_finalise_cap, prepare_thread_delete
   for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
   and cur_thread[wp,Finalise_AI_asms]: "\<lambda>s. P (cur_thread s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
@@ -915,7 +915,8 @@ lemma replaceable_reset_pt:
 
 
 context notes if_cong[cong] begin
-crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
+crunch arch_finalise_cap
+ for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 end
 
@@ -1694,7 +1695,7 @@ crunch invalidate_tlb_by_asid
   for valid_arch_state[wp]: "valid_arch_state"
 
 context notes if_cong[cong] begin
-crunch valid_cap [wp]: unmap_page_table, invalidate_tlb_by_asid,
+crunch unmap_page_table, invalidate_tlb_by_asid,
   page_table_mapped, store_pte, delete_asid_pool, copy_global_mappings,
   arch_finalise_cap
   for valid_cap[wp]: "valid_cap c"

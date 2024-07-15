@@ -83,7 +83,7 @@ lemma tcbSchedPrev_update_ready_qs_runnable[wp]:
   by (fastforce simp: ready_qs_runnable_def pred_tcb_at'_def obj_at'_def ps_clear_upd
                split: if_splits)
 
-crunches removeFromBitmap, setQueue
+crunch removeFromBitmap, setQueue
   for ready_qs_runnable[wp]: ready_qs_runnable
   (simp: bitmap_fun_defs crunch_simps ready_qs_runnable_def)
 
@@ -429,7 +429,7 @@ lemma nextDomain_ccorres:
   done
 
 (* FIXME RT: move *)
-crunches nextDomain
+crunch nextDomain
   for valid_idle'[wp]: valid_idle'
   and ready_or_release'[wp]: ready_or_release'
   and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
@@ -514,7 +514,8 @@ lemma refill_size_length_scRefills_helper:
                    simp: refillSizeBytes_def word_bits_def)
   done
 
-crunch (empty_fail) empty_fail[wp]: getSchedContext
+crunch getSchedContext
+ for (empty_fail) empty_fail[wp]
 
 lemma refill_size_ccorres:
   "ccorres (\<lambda>rv rv'. rv = unat rv') ret__unsigned_long_'

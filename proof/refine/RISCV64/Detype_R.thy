@@ -2068,7 +2068,7 @@ lemma pspace_no_overlap'_lift:
 
 lemmas pspace_no_overlap'_lift2 = pspace_no_overlap'_lift[where Q=\<top>, simplified]
 
-crunches setCTE, insertNewCap
+crunch setCTE, insertNewCap
   for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -3501,7 +3501,7 @@ lemma new_cap_object_comm_helper:
    apply clarsimp
   done
 
-crunches updateNewFreeIndex
+crunch updateNewFreeIndex
   for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
   and pspace_bounded'[wp]: pspace_bounded'
@@ -5166,7 +5166,7 @@ lemma insertNewCap_wps[wp]:
   apply (fastforce elim!: rsubst[where P=P])
   done
 
-crunches insertNewCap
+crunch insertNewCap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and pspace_bounded'[wp]: pspace_bounded'
   (wp: crunch_wps)

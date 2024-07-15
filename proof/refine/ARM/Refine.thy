@@ -331,7 +331,7 @@ definition
                                           \<and> (m = IdleMode \<longrightarrow> ct_idle s)
                                           \<and> (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running s)}"
 
-crunches do_user_op, check_active_irq
+crunch do_user_op, check_active_irq
   for valid_list[wp]: valid_list
   and valid_sched[wp]: valid_sched
   and sched_act[wp]: "\<lambda>s. P (scheduler_action s)"
@@ -1004,7 +1004,8 @@ lemma device_mem_corres:
                          invs_def invs'_def
                          corres_underlying_def device_mem_relation)
 
-crunch domain_time_inv[wp]: thread_set "\<lambda>s. P (domain_time s)"
+crunch thread_set
+ for domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
 
 lemma entry_corres:
   "corres (=)

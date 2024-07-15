@@ -2997,7 +2997,7 @@ locale Untyped_AI_nonempty_table =
   "\<And>tp oref sz dev cref p. \<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace>
         create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv (s::'state_ext state). valid_ioports s\<rbrace>"
 
-crunches create_cap
+crunch create_cap
   for valid_kernel_mappings[wp]: valid_kernel_mappings
   and equal_kernel_mappings[wp]: equal_kernel_mappings
   and valid_asid_map[wp]: valid_asid_map

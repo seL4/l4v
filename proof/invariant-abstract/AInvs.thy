@@ -162,7 +162,7 @@ lemma schedule_ct_activateable:
   apply clarsimp
   done
 
-crunches send_signal, do_reply_transfer, invoke_irq_control, invoke_irq_handler, set_consumed,
+crunch send_signal, do_reply_transfer, invoke_irq_control, invoke_irq_handler, set_consumed,
          sched_context_resume, preemption_path, deleting_irq_handler, cancel_badged_sends, restart,
          bind_notification, awaken, check_domain_time, if_cond_refill_unblock_check, activate_thread
   for is_active_sc[wp]: "\<lambda>s. P (is_active_sc sc_ptr s)"
@@ -180,7 +180,7 @@ lemma sched_context_bind_tcb_is_active_sc[wp]:
   apply (wpsimp wp: is_schedulable_wp hoare_drop_imps)
   done
 
-crunches handle_fault, check_budget_restart, charge_budget, handle_interrupt, preemption_path
+crunch handle_fault, check_budget_restart, charge_budget, handle_interrupt, preemption_path
   for is_active_sc[wp]: "\<lambda>s. P (is_active_sc sc_ptr s)"
   (wp: crunch_wps check_cap_inv filterM_preserved simp: crunch_simps)
 
@@ -196,7 +196,7 @@ lemma handle_yield_sc_is_active_sc[wp]:
   apply (wpsimp wp: get_tcb_obj_ref_wp get_sk_obj_ref_wp)
   done
 
-crunches handle_recv
+crunch handle_recv
   for is_active_sc[wp]: "\<lambda>s. P (is_active_sc sc_ptr s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
@@ -226,17 +226,17 @@ lemma set_thread_state_schact_is_not_rct[wp]:
   apply (clarsimp simp: schact_is_rct_def)
   done
 
-crunches possible_switch_to
+crunch possible_switch_to
   for schact_is_not_rct[wp]: "\<lambda>s. \<not> schact_is_rct s"
   (wp: crunch_wps set_scheduler_action_wp simp: schact_is_rct_def)
 
-crunches restart_thread_if_no_fault, cancel_all_signals, cancel_ipc,
+crunch restart_thread_if_no_fault, cancel_all_signals, cancel_ipc,
          reply_remove, suspend, reply_remove, unbind_from_sc, set_priority, set_mcpriority,
          sched_context_bind_tcb, restart, bind_notification
   for schact_is_not_rct[wp]: "\<lambda>s. \<not> schact_is_rct s"
   (wp: crunch_wps hoare_vcg_all_lift)
 
-crunches perform_invocation, handle_fault, handle_recv, preemption_path, activate_thread, awaken,
+crunch perform_invocation, handle_fault, handle_recv, preemption_path, activate_thread, awaken,
          check_domain_time, if_cond_refill_unblock_check, handle_yield, receive_ipc_preamble
   for schact_is_not_rct[wp]: "\<lambda>s. \<not> schact_is_rct s"
   (wp: crunch_wps preemption_point_inv check_cap_inv filterM_preserved cap_revoke_preservation
@@ -534,7 +534,7 @@ lemma handle_event_schact_is_rct_imp_cur_sc_active:
       (solves \<open>handle_event_schact_is_rct_imp_cur_sc_active_misc\<close>)?,
       (solves \<open>handle_event_schact_is_rct_imp_cur_sc_active_recv e\<close>)?)
 
-crunches preemption_path
+crunch preemption_path
   for schact_is_rct_imp_cur_sc_active[wp]: "\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> cur_sc_active s"
   (wp: hoare_vcg_imp_lift' cur_sc_active_lift)
 
@@ -691,7 +691,7 @@ lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q
   apply wpsimp
   done
 
-crunches cancel_badged_sends
+crunch cancel_badged_sends
   for ct_not_in_release_q[wp]: ct_not_in_release_q
   (wp: crunch_wps preemption_point_inv check_cap_inv filterM_preserved cap_revoke_preservation
    simp: crunch_simps)
@@ -701,11 +701,11 @@ lemma invoke_cnode_ct_not_in_release_q[wp]:
   by (clarsimp simp: invoke_cnode_def)
      (cases iv; clarsimp; (intro conjI impI)?; wpsimp)
 
-crunches install_tcb_frame_cap
+crunch install_tcb_frame_cap
   for ct_not_in_release_q[wp]: ct_not_in_release_q
   (wp: crunch_wps preemption_point_inv ignore: check_cap_at simp: check_cap_at_def)
 
-crunches maybe_sched_context_unbind_tcb, bind_notification
+crunch maybe_sched_context_unbind_tcb, bind_notification
   for ct_not_in_release_q[wp]: ct_not_in_release_q
   (wp: crunch_wps)
 
@@ -722,10 +722,10 @@ lemma restart_ct_not_in_release_q_active:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   by auto
 
-crunches test_possible_switch_to
+crunch test_possible_switch_to
   for ct_not_in_release_q[wp]: ct_not_in_release_q
 
-crunches if_cond_refill_unblock_check
+crunch if_cond_refill_unblock_check
   for bound_sc_tcb_at_ct'[wp]: "\<lambda>s. Q (bound_sc_tcb_at P (cur_thread s) s)"
   (wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
 
@@ -883,7 +883,7 @@ lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-crunches invoke_irq_handler
+crunch invoke_irq_handler
   for ct_not_in_release_q[wp]: ct_not_in_release_q
 
 lemma perform_invocation_schact_is_rct_imp_ct_not_in_release_q:
@@ -945,7 +945,7 @@ lemma charge_budget_schact_is_rct_imp_ct_not_in_release_q[wp]:
       apply (wpsimp wp: reschedule_cnt hoare_drop_imps)+
   done
 
-crunches handle_yield, check_budget
+crunch handle_yield, check_budget
   for schact_is_rct_imp_ct_not_in_release_q[wp]: "\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s"
 
 lemma check_budget_restart_schact_is_rct_imp_ct_not_in_release_q[wp]:
@@ -955,7 +955,7 @@ lemma check_budget_restart_schact_is_rct_imp_ct_not_in_release_q[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift')
   done
 
-crunches handle_fault, receive_ipc_preamble, possible_switch_to, do_nbrecv_failed_transfer
+crunch handle_fault, receive_ipc_preamble, possible_switch_to, do_nbrecv_failed_transfer
   for ct_not_in_release_q[wp]: ct_not_in_release_q
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
@@ -1002,7 +1002,7 @@ lemma thread_set_tcb_fault_bound_tcb_at[wp]:
   unfolding thread_set_def set_object_def get_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
-crunches receive_ipc_preamble
+crunch receive_ipc_preamble
   for bound_tcb_at'[wp]: "\<lambda>s. P (bound_tcb_at P' tp s)"
   (wp: assert_inv ignore: thread_set)
 
@@ -1211,7 +1211,7 @@ lemma handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q:
   apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_not_in_release_q)
   done
 
-crunches awaken, check_domain_time, sc_and_timer, tcb_sched_action
+crunch awaken, check_domain_time, sc_and_timer, tcb_sched_action
   for ct_not_in_release_q[wp]: ct_not_in_release_q
   (wp: crunch_wps)
 
@@ -1302,7 +1302,7 @@ lemma activate_thread_schact_is_rct:
   apply (fastforce intro: cur_sc_active_active_sc_tcb_at_cur_thread)
   done
 
-crunches sc_and_timer
+crunch sc_and_timer
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps)
 
@@ -1393,7 +1393,7 @@ lemma sched_context_donate_schact_is_rct_imp_ct_activatable[wp]:
   apply wpsimp
   done
 
-crunches bind_sc_reply
+crunch bind_sc_reply
   for ct_in_state[wp]: "ct_in_state P"
 
 lemma reply_push_schact_is_rct_imp_ct_activatable[wp]:
@@ -1543,7 +1543,7 @@ lemma sched_context_maybe_unbind_ntfn_schact_is_rct_imp_ct_activatable[wp]:
   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-crunches fast_finalise
+crunch fast_finalise
   for schact_is_rct_imp_ct_activatable[wp]:  "\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
 
 lemma cap_delete_one_schact_is_rct_imp_ct_activatable[wp]:
@@ -1555,7 +1555,7 @@ lemma cap_delete_one_schact_is_rct_imp_ct_activatable[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift')
   done
 
-crunches deleting_irq_handler
+crunch deleting_irq_handler
   for schact_is_rct_imp_ct_activatable[wp]: "\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
 
 lemma finalise_cap_schact_is_rct_imp_ct_activatable:
@@ -1574,7 +1574,7 @@ lemma finalise_cap_schact_is_rct_imp_ct_activatable:
   apply wpsimp
   done
 
-crunches cap_swap_for_delete, empty_slot
+crunch cap_swap_for_delete, empty_slot
   for ct_in_state[wp]: "ct_in_state P :: det_state \<Rightarrow> _"
   (simp: cap_swap_ext_def wp: dxo_wp_weak)
 
@@ -1668,7 +1668,7 @@ lemma install_tcb_frame_cap_schact_is_rct_imp_ct_activatable:
   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
-crunches set_priority, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb
+crunch set_priority, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb
   for ct_in_state[wp]: "ct_in_state P"
   (wp: crunch_wps)
 
@@ -1741,7 +1741,7 @@ lemma complete_signal_cur_thread[wp]:
   apply wpsimp
   done
 
-crunches cap_move, refill_new, refill_update, set_message_info, complete_signal,
+crunch cap_move, refill_new, refill_update, set_message_info, complete_signal,
          do_nbrecv_failed_transfer
   for ct_in_state[wp]: "ct_in_state P"
   (wp: ct_in_state_thread_state_lift)
@@ -2055,7 +2055,7 @@ lemma handle_event_preemption_path_schact_is_rct_imp_ct_activatable:
                     simp: schact_is_rct_def)
   done
 
-crunches check_domain_time
+crunch check_domain_time
   for cur_sc_active[wp]: "\<lambda>s. P (cur_sc_active s)"
   and cur_sc_offset_ready[wp]: "\<lambda>s. cur_sc_offset_ready (consumed_time s) s"
   and cur_sc_offset_sufficient[wp]: "\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s"
@@ -2136,7 +2136,7 @@ lemma if_cond_refill_unblock_check_cur_sc_is_refill_sufficient[wp]:
    \<lbrace>\<lambda>_ s. is_refill_sufficient usage sc_ptr s\<rbrace>"
   by (wpsimp simp: if_cond_refill_unblock_check_def)
 
-crunches if_cond_refill_unblock_check
+crunch if_cond_refill_unblock_check
   for is_refill_ready[wp]: "is_refill_ready sc_ptr"
   and reprogram_timer[wp]: reprogram_timer
   (simp: crunch_simps
@@ -2388,7 +2388,7 @@ lemma schedule_switch_thread_branch_ct_not_idle_imp_ct_released:
                         obj_at_kh_kheap_simps)
   done
 
-crunches check_domain_time
+crunch check_domain_time
   for ct_in_state[wp]: "ct_in_state P"
 
 lemma ct_released_from_ct_ready_if_schedulable:
@@ -2483,7 +2483,7 @@ lemma schedule_cur_sc_offset_ready_and_sufficient:
   apply fastforce
   done
 
-crunches activate_thread
+crunch activate_thread
   for cur_sc_offset_ready[wp]: "\<lambda>s :: det_state. cur_sc_offset_ready (consumed_time s) s"
   and cur_sc_offset_sufficient[wp]: "\<lambda>s :: det_state. cur_sc_offset_sufficient (consumed_time s) s"
 
@@ -2546,11 +2546,11 @@ lemma call_kernel_cur_sc_offset_ready_and_sufficient:
   apply (fastforce intro: invs_strengthen_cur_sc_tcb_are_bound simp: schact_is_rct_def)
   done
 
-crunches call_kernel
+crunch call_kernel
   for current_time_bounded: "\<lambda>s :: det_state. current_time_bounded s"
   (wp: crunch_wps)
 
-crunches schedule, activate_thread
+crunch schedule, activate_thread
   for valid_machine_time[wp]: "\<lambda>s :: det_state. valid_machine_time s"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2560,7 +2560,7 @@ lemma preemption_path_valid_machine_time[wp]:
   apply (wpsimp wp: getActiveIRQ_wp is_schedulable_inv hoare_drop_imps)
   done
 
-crunches call_kernel
+crunch call_kernel
   for valid_machine_time[wp]: "\<lambda>s :: det_state. valid_machine_time s"
 
 end

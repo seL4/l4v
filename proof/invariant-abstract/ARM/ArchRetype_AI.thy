@@ -190,7 +190,8 @@ crunch copy_global_mappings
   for ifunsafe[wp]: "if_unsafe_then_cap"
   (wp: crunch_wps)
 
-crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
+crunch copy_global_mappings
+ for valid_global[wp]: "valid_global_refs"
   (wp: crunch_wps)
 
 crunch copy_global_mappings
@@ -350,8 +351,10 @@ lemma store_pde_valid_kernel_mappings_map_global:
 crunch store_pde
   for valid_asid_map[wp]: "valid_asid_map"
 
-crunch cur[wp]: store_pde "cur_tcb"
-crunch cur_sc_tcb[wp]: store_pde "cur_sc_tcb"
+crunch store_pde
+ for cur[wp]: "cur_tcb"
+crunch store_pde
+ for cur_sc_tcb[wp]: "cur_sc_tcb"
 
 lemma mapM_x_store_pde_eq_kernel_mappings_restr:
   "pd \<in> S \<and> is_aligned pd pd_bits \<and> is_aligned pd' pd_bits
@@ -460,7 +463,7 @@ lemma store_pde_vms[wp]:
  "\<lbrace>valid_machine_state\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (simp add: store_pde_def, wp) clarsimp
 
-crunches store_pde
+crunch store_pde
   for valid_irq_states[wp]: "valid_irq_states"
   and valid_replies[wp]: "valid_replies_pred P"
   and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
@@ -1389,7 +1392,7 @@ lemma caps_region_kernel_window_imp:
   apply blast
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for pred_tcb_at[wp]: "\<lambda>s. N (pred_tcb_at proj P t s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"

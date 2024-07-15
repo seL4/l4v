@@ -137,7 +137,8 @@ crunch copy_global_mappings
   for ifunsafe[wp]: "if_unsafe_then_cap"
   (wp: crunch_wps)
 
-crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
+crunch copy_global_mappings
+ for valid_global[wp]: "valid_global_refs"
   (wp: crunch_wps)
 
 crunch copy_global_mappings
@@ -148,7 +149,8 @@ crunch copy_global_mappings
   for irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
-crunch pspace_in_kernel_window[wp]: copy_global_mappings "pspace_in_kernel_window"
+crunch copy_global_mappings
+ for pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   (wp: crunch_wps)
 
 crunch copy_global_mappings
@@ -1033,7 +1035,8 @@ lemma invs_update_time_stamp_independent:
       cur_tcb_def cur_sc_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_replies_pred_pspaceI; safe; clarsimp)+
 
-crunch irq_masks_inv[wp]: storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
+crunch storeWord, clearMemory
+ for irq_masks_inv[wp]: "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps ignore_del: storeWord clearMemory)
 
 crunch clearMemory
@@ -1061,7 +1064,7 @@ lemma caps_region_kernel_window_imp:
   apply blast
   done
 
-crunches init_arch_objects
+crunch init_arch_objects
   for pred_tcb_at[wp]: "\<lambda>s. N (pred_tcb_at proj P t s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"

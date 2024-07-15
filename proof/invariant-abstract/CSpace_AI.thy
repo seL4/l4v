@@ -3316,7 +3316,7 @@ lemma set_untyped_cap_as_full_cap_zombies_final:
 global_interpretation set_untyped_cap_as_full: cspace_op "set_untyped_cap_as_full src_cap cap src"
   by (simp add: set_untyped_cap_as_full_def set_cap.cspace_op_axioms return.cspace_op_axioms)
 
-crunches set_untyped_cap_as_full
+crunch set_untyped_cap_as_full
   for fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
 
 (* FIXME: MOVE *)
@@ -3374,7 +3374,8 @@ lemma set_cap_idle_sc_at[wp]:
   "\<lbrace>idle_sc_at p'\<rbrace> set_cap cap p \<lbrace>\<lambda>_. idle_sc_at p'\<rbrace>"
   by (wpsimp simp: set_cap_def set_object_def obj_at_def get_object_def, auto)
 
-crunch idle_sc_at[wp]: cap_insert "idle_sc_at t"
+crunch cap_insert
+ for idle_sc_at[wp]: "idle_sc_at t"
   (wp: hoare_drop_imps)
 
 lemma cap_insert_idle [wp]:
@@ -3421,7 +3422,8 @@ lemma max_free_index_update_preserve_untyped:
  "is_untyped_cap c \<Longrightarrow> is_untyped_cap ( max_free_index_update c)"
   by simp
 
-crunch global_refs[wp]: set_untyped_cap_as_full "\<lambda>s. P (global_refs s)"
+crunch set_untyped_cap_as_full
+ for global_refs[wp]: "\<lambda>s. P (global_refs s)"
 
 lemma set_untyped_cap_as_full_valid_global_refs[wp]:
   "\<lbrace>valid_global_refs and cte_wp_at ((=) src_cap) src\<rbrace>

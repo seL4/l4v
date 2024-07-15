@@ -162,6 +162,7 @@ lemmas resolve_address_bits_empty_fail[wp] =
 crunch
   lookup_slot_for_cnode_op, decode_untyped_invocation, range_check,
   lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap
+  for (empty_fail) empty_fail[wp]
 
 locale EmptyFail_AI_load_word =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -360,14 +361,17 @@ lemma schedule_empty_fail[wp]:
 
 end
 *)
-crunch (empty_fail) empty_fail[wp]:
+crunch
   set_scheduler_action, next_domain, reschedule_required, get_sc_refill_capacity, check_domain_time
+ for (empty_fail) empty_fail[wp]
 
-crunch (empty_fail) empty_fail[wp, intro!, simp]:
+crunch
   possible_switch_to, awaken, schedule_switch_thread_fastfail
+ for (empty_fail) empty_fail[wp, intro!, simp]
   (wp: empty_fail_whileLoop)
 
-crunch (empty_fail) empty_fail[wp, intro!, simp]: sc_and_timer
+crunch sc_and_timer
+ for (empty_fail) empty_fail[wp, intro!, simp]
   (wp: empty_fail_setDeadline empty_fail_whileLoop simp: Let_def)
 
 lemma empty_fail_tcb_ep_find_index[wp]:

@@ -113,7 +113,7 @@ lemma decodeIRQHandlerInvocation_corres:
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
-crunches decodeIRQHandlerInvocation
+crunch decodeIRQHandlerInvocation
   for inv[wp]: "P"
   (simp: crunch_simps)
 
@@ -149,7 +149,7 @@ lemma is_irq_active_corres:
             split: irqstate.split_asm irq_state.split_asm)
   done
 
-crunches isIRQActive
+crunch isIRQActive
   for inv: "P"
 
 lemma isIRQActive_wp:
@@ -539,7 +539,7 @@ lemma performIRQControl_corres:
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   by (clarsimp simp: arch_performIRQControl_corres)
 
-crunches setIRQState
+crunch setIRQState
   for valid_cap'[wp]: "valid_cap' cap"
 
 lemma setIRQState_cte_cap_to'[wp]:
@@ -567,7 +567,7 @@ lemma dmo_setIRQTrigger_invs'[wp]:
     apply (wpsimp simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def split_def)+
   done
 
-crunches doMachineOp
+crunch doMachineOp
   for ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' P ptr"
   (wp: ex_cte_cap_to'_pres)
 
@@ -682,17 +682,17 @@ lemma handleInterrupt_corres:
                       simp: ackDeadlineIRQ_def ackInterrupt_def)
   by fastforce
 
-crunches rescheduleRequired, tcbSchedAppend
+crunch rescheduleRequired, tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
   (simp: tcbSchedEnqueue_def wp: crunch_wps)
 
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
   and irqs_masked'[wp]: irqs_masked'
   (simp: unless_def tcb_cte_cases_def cteSizeBits_def wp: crunch_wps)
 
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for ct[wp]: cur_tcb'
   (wp: cur_tcb_lift crunch_wps)
 

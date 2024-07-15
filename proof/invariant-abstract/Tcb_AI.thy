@@ -120,7 +120,8 @@ lemma cancel_ipc_no_refs:
   apply (auto elim: st_tcb_weakenE)
   done
 
-crunch invs[wp]: test_possible_switch_to invs
+crunch test_possible_switch_to
+ for invs[wp]: invs
 
 lemma restart_invs[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
@@ -151,7 +152,7 @@ lemma suspend_nonz_cap_to_tcb[wp]:
   unfolding suspend_def sched_context_cancel_yield_to_def
   by (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb hoare_drop_imps)
 
-crunches restart
+crunch restart
   for ex_nonz_cap_to[wp]: "ex_nonz_cap_to tcb_ptr"
   (wp: crunch_wps cancel_ipc_cap_to simp: crunch_simps)
 
@@ -303,7 +304,7 @@ lemma thread_set_valid_objs:
   apply simp
   done
 
-crunches tcb_release_remove
+crunch tcb_release_remove
   for valid_tcbs[wp]: valid_tcbs
   (simp: crunch_simps)
 
@@ -359,7 +360,7 @@ lemma update_sched_context_ko_at_TCB[wp]:
   apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
   done
 
-crunches restart_thread_if_no_fault
+crunch restart_thread_if_no_fault
   for valid_tcbs[wp]: valid_tcbs
   (simp: is_round_robin_def crunch_simps wp: crunch_wps)
 
@@ -452,7 +453,8 @@ lemma tcb_cap_always_valid_strg:
   by (clarsimp simp: tcb_cap_valid_def st_tcb_def2 tcb_at_def
               split: option.split_asm)
 
-crunch not_cte_wp_at[wp]: unbind_maybe_notification "\<lambda>s. \<forall>cp\<in>ran (caps_of_state s). P cp"
+crunch unbind_maybe_notification
+ for not_cte_wp_at[wp]: "\<lambda>s. \<forall>cp\<in>ran (caps_of_state s). P cp"
   (wp: thread_set_caps_of_state_trivial simp: tcb_cap_cases_def)
 
 
@@ -857,7 +859,7 @@ lemma as_user_valid_cap[wp]:
   "\<lbrace>valid_cap c\<rbrace> as_user a b \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
   by (wp valid_cap_typ)
 
-crunches sched_context_unbind_tcb, sched_context_bind_tcb
+crunch sched_context_unbind_tcb, sched_context_bind_tcb
   for valid_cap[wp]: "valid_cap c"
   and cte_wp_at[wp]: "cte_wp_at P p"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
@@ -952,23 +954,25 @@ lemma tcb_cap_valid_ep_strgs:
   "valid_fault_handler cap \<longrightarrow> tcb_cap_valid cap (t, tcb_cnode_index 4) s"
   by (auto simp: tcb_cap_valid_def st_tcb_at_def obj_at_def is_tcb)
 
-crunches install_tcb_cap
+crunch install_tcb_cap
   for valid_cap[wp]: "valid_cap cap"
   and cte_at[wp]: "cte_at p"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and cur_thread[wp]: "(\<lambda>s. P (cur_thread s))"
   (wp: crunch_wps preemption_point_inv check_cap_inv simp: crunch_simps)
 
-crunch typ_at[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (typ_at T p s)"
+crunch reorder_ntfn, reorder_ep, set_priority
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches
+crunch
   install_tcb_cap, sched_context_unbind_tcb, sched_context_bind_tcb, set_priority, thread_set
   for cap_table_at[wp]: "cap_table_at bits p"
   and tcb_at[wp]: "\<lambda>s. P (tcb_at p s)"
   (wp: cap_table_at_typ_at tcb_at_typ_at' crunch_wps)
 
-crunch ex_nonz_cap_to[wp]: unbind_notification "ex_nonz_cap_to t"
+crunch unbind_notification
+ for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
  (wp: maybeM_inv ignore: set_tcb_obj_ref)
 
 lemma sbn_has_reply[wp]:
@@ -1171,7 +1175,8 @@ lemma OR_choiceE_E_weak_wp: "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbra
   apply (simp add: validE_R_def validE_def OR_choiceE_weak_wp)
   done
 
-crunch inv: check_prio "P"
+crunch check_prio
+ for inv: "P"
   (simp: crunch_simps)
 
 lemma check_prio_wp:
@@ -1478,7 +1483,7 @@ lemma decode_bind_notification_inv[wp]:
              simp: whenE_def if_apply_def2
              split_del: if_split)
 
-crunches decode_set_timeout_ep
+crunch decode_set_timeout_ep
   for inv[wp]: P
   (simp: crunch_simps)
 
@@ -1637,7 +1642,7 @@ lemma tcb_cap_cases_tcb_mcpriority:
          getF (tcb_mcpriority_update F tcb) = getF tcb"
   by (rule ball_tcb_cap_casesI, simp+)
 
-crunches set_mcpriority
+crunch set_mcpriority
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and tcb_at[wp]: "\<lambda>s. P (tcb_at p s)"
   and cap_table_at[wp]: "cap_table_at bits p"
@@ -1659,10 +1664,12 @@ lemma set_mcpriority_no_cap_to_obj_with_diff_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref c S\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref c S\<rbrace>"
   by (simp add: set_mcpriority_def thread_set_no_cap_to_trivial tcb_cap_cases_tcb_mcpriority)
 
-crunch caps_of_state[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (caps_of_state s)"
+crunch reorder_ntfn, reorder_ep, set_priority
+ for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch no_cap_to_obj_with_diff_ref[wp]: set_priority "no_cap_to_obj_with_diff_ref a S"
+crunch set_priority
+ for no_cap_to_obj_with_diff_ref[wp]: "no_cap_to_obj_with_diff_ref a S"
   (wp: crunch_wps no_cap_to_obj_with_diff_ref_lift)
 
 lemma sc_tcb_sc_at_ready_queues_update[simp]:
@@ -1701,7 +1708,7 @@ lemma thread_set_priority_pred_tcb_at[wp]:
   apply (clarsimp simp: obj_at_def tcb_to_itcb_def dest!: get_tcb_SomeD)
   done
 
-crunches set_priority
+crunch set_priority
   for valid_cap[wp]: "valid_cap cap"
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
@@ -1709,7 +1716,8 @@ crunches set_priority
   and sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P t s)"
   (wp: crunch_wps)
 
-crunch cte_wp_at'[wp]: reorder_ntfn, reorder_ep, reschedule_required "\<lambda>s. P (cte_wp_at P' p s)"
+crunch reorder_ntfn, reorder_ep, reschedule_required
+ for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps)
 
 lemma set_priority_cte_wp_at'[wp]:
@@ -1847,7 +1855,7 @@ lemma thread_set_priority_bound_sc_tcb_at[wp]:
   apply (wpsimp wp: thread_set_wp)
   by (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
 
-crunches reorder_ntfn, reorder_ep
+crunch reorder_ntfn, reorder_ep
   for bound_sc_tcb_at[wp]: "\<lambda>s. Q (bound_sc_tcb_at P t s)"
   (wp: crunch_wps)
 
@@ -1856,7 +1864,7 @@ lemma set_priority_bound_sc_tcb_at[wp]:
   unfolding set_priority_def
   by (wpsimp simp:  wp: hoare_drop_imps)
 
-crunches cancel_all_ipc
+crunch cancel_all_ipc
   for bound_sc_tcb_at[wp]: "bound_sc_tcb_at P target"
   (wp: crunch_wps)
 
@@ -1922,7 +1930,7 @@ lemma set_simple_ko_sc_at_pred_n[wp]:
          clarsimp elim!: rsubst[where P=P] split: option.splits simp: sc_at_pred_n_def obj_at_def)
   done
 
-crunches cancel_all_ipc
+crunch cancel_all_ipc
   for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P p s)"
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   (wp: crunch_wps simp: crunch_simps is_round_robin_def)

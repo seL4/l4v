@@ -383,7 +383,7 @@ lemma setObject_pde_replies_of'[wp]:
   "setObject c (pde::pde) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
   by setObject_easy_cases
 
-crunches storePDE, storePTE
+crunch storePDE, storePTE
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 crunch setIRQState
@@ -1180,7 +1180,7 @@ lemma lookupPTSlot_corres [@lift_corres_args, corres]:
 
 declare in_set_zip_refl[simp]
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: mapM_x_wp')

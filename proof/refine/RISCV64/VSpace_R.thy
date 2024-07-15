@@ -166,7 +166,8 @@ lemma dMo_valid_arch_state'[wp]:
   apply wp
   by (clarsimp)
 
-crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
+crunch deleteASID
+ for no_0_obj'[wp]: "no_0_obj'"
   (simp: crunch_simps wp: crunch_wps getObject_inv)
 
 lemma asid_high_bits_of_ucast_ucast[simp]:
@@ -267,7 +268,7 @@ lemma deleteASIDPool_corres:
   apply clarsimp
   done
 
-crunches unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
+crunch unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
          performASIDPoolInvocation, performPageInvocation
   for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
@@ -362,7 +363,8 @@ lemma checkMappingPPtr_corres:
   apply (auto simp: whenE_def corres_returnOk)
   done
 
-crunch inv[wp]: checkMappingPPtr "P"
+crunch checkMappingPPtr
+ for inv[wp]: "P"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas liftE_get_pte_corres = getObject_PTE_corres[THEN corres_liftE_rel_sum[THEN iffD2]]
@@ -728,7 +730,8 @@ lemma setVMRoot_invs [wp]:
   by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
                  hoare_vcg_all_lift)
 
-crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
+crunch setVMRoot
+ for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
        loadObject_default_def)
 
@@ -740,7 +743,8 @@ lemma lookupPTSlot_inv:
   "lookupPTSlot pt vptr \<lbrace>P\<rbrace>"
   unfolding lookupPTSlot_def by (wp lookupPTSlotFromLevel_inv)
 
-crunch it' [wp]: deleteASID "\<lambda>s. P (ksIdleThread s)"
+crunch deleteASID
+ for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def updateObject_default_def
    wp: getObject_inv)
 
@@ -776,7 +780,7 @@ lemma storePTE_tcbs_of'[wp]:
   unfolding storePTE_def
   by setObject_easy_cases
 
-crunches storePTE
+crunch storePTE
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 lemma storePTE_invs[wp]:

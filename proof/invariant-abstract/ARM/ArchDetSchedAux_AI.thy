@@ -43,7 +43,7 @@ lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
   "init_arch_objects new_type ptr num_objects obj_sz refs \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp simp: init_arch_objects_def wp: dmo_valid_sched_pred mapM_x_wp_inv)
 
-crunches init_arch_objects
+crunch init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
   and valid_idle[wp, DetSchedAux_AI_assms]: valid_idle
@@ -156,7 +156,7 @@ lemma perform_asid_control_etcb_at:
   apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_imp_lift')
   by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
-crunches perform_asid_control_invocation
+crunch perform_asid_control_invocation
   for cur_time[wp]: "\<lambda>s. P (cur_time s)"
 
 lemma perform_asid_control_invocation_bound_sc_obj_tcb_at[wp]:
@@ -173,12 +173,12 @@ lemma perform_asid_control_invocation_bound_sc_obj_tcb_at[wp]:
       ; wpsimp wp: perform_asid_control_invocation_st_tcb_at
                    perform_asid_control_invocation_sc_at_pred_n)
 
-crunches perform_asid_control_invocation
+crunch perform_asid_control_invocation
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and valid_blocked[wp]: "valid_blocked"
   (wp: hoare_weak_lift_imp)
 
-crunches perform_asid_control_invocation
+crunch perform_asid_control_invocation
   for rqueues[wp]: "\<lambda>s. P (ready_queues s)"
   and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
@@ -259,7 +259,7 @@ lemma perform_asid_control_invocation_valid_idle:
    \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (strengthen invs_valid_idle) wpsimp
 
-crunches perform_asid_control_invocation
+crunch perform_asid_control_invocation
   for lmt[wp]: "\<lambda>s. P (last_machine_time_of s)"
   (ignore: do_machine_op
      simp: detype_def crunch_simps
@@ -289,7 +289,7 @@ lemma perform_asid_control_invocation_sporadic_implies:
   by (wpsimp wp: delete_objects_pred_map_sc_refill_cfgs_of
            comb: hoare_drop_imp)
 
-crunches perform_asid_control_invocation
+crunch perform_asid_control_invocation
   for valid_machine_time[wp]: "valid_machine_time"
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
 

@@ -861,7 +861,7 @@ lemma oblivious_switchToThread_schact:
       | simp_all add: oblivious_setVMRoot_schact idleThreadNotQueued_def)+
 
 (* FIXME move *)
-crunches getCurThread
+crunch getCurThread
   for (empty_fail) empty_fail[iff]
 
 end
@@ -889,7 +889,7 @@ lemma tcbSchedEnqueue_tcbPriority_obj_at'[wp]:
   unfolding tcbSchedEnqueue_def setQueue_def
   by wpsimp
 
-crunches scheduleTCB
+crunch scheduleTCB
   for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
 
 lemma setThreadState_tcbPriority_obj_at'[wp]:
@@ -900,7 +900,7 @@ lemma setThreadState_tcbPriority_obj_at'[wp]:
   done
 
 (* FIXME RT: move following lemmas about tcbPriority to Refine or possibly DInvs (see VER-1299) *)
-crunches unbindMaybeNotification, blockedCancelIPC, replyRemoveTCB, cancelSignal
+crunch unbindMaybeNotification, blockedCancelIPC, replyRemoveTCB, cancelSignal
   for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1482,7 +1482,7 @@ lemma lookupIPCBuffer_isolatable:
       apply (simp add: assert_isolatable thread_actions_isolatable_return | wp)+
   done
 
-crunches isSchedulable
+crunch isSchedulable
   for (empty_fail) empty_fail[wp]
 
 lemma setThreadState_rewrite_simple:

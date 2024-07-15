@@ -3356,7 +3356,7 @@ lemma getObject_valid_pde'[wp]:
   apply (clarsimp simp: projectKOs valid_obj'_def dest!: obj_at_valid_objs')
   done
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for valid_objs'[wp]: "valid_objs'"
   and pspace_aligned'[wp]: "pspace_aligned'"
   and pspace_distinct'[wp]: "pspace_distinct'"
@@ -3781,7 +3781,7 @@ lemma createObjects_state_refs_of'':
      apply simp+
   done
 
-crunches copyGlobalMappings, curDomain
+crunch copyGlobalMappings, curDomain
 for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
 and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   (wp: crunch_wps)
@@ -3935,7 +3935,8 @@ lemma createNewCaps_list_refs_of_replies':
                          pdeBits_def pteBits_def makeObject_sc makeObject_reply
              | intro conjI impI )+
 
-crunch ksReadyQueues[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueues s)"
+crunch copyGlobalMappings
+ for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: updateObject_default_inv crunch_wps)
 crunch copyGlobalMappings
   for ksReadyQueuesL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
@@ -3943,7 +3944,8 @@ crunch copyGlobalMappings
 crunch copyGlobalMappings
   for ksReadyQueuesL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: updateObject_default_inv crunch_wps)
-crunch ksReleaseQueue[wp]: copyGlobalMappings "\<lambda>s. P (ksReleaseQueue s)"
+crunch copyGlobalMappings
+ for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   (wp: updateObject_default_inv crunch_wps)
 
 crunch copyGlobalMappings
@@ -4008,7 +4010,7 @@ lemma createObjects'_qsL2[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
-crunches createObjects, createNewCaps
+crunch createObjects, createNewCaps
   for qs[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and rlqs[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and qsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
@@ -4308,7 +4310,8 @@ lemma createNewCaps_idle'[wp]:
 crunch createNewCaps
   for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps unless_def wp: crunch_wps)
-crunch gsMaxObjectSize[wp]: createNewCaps "\<lambda>s. P (gsMaxObjectSize s)"
+crunch createNewCaps
+ for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv)
 
 lemma createNewCaps_global_refs':
@@ -4798,7 +4801,7 @@ lemma createObjects_pspace_domain_valid:
   apply (simp add: objBits_def)
   done
 
-crunches copyGlobalMappings, doMachineOp
+crunch copyGlobalMappings, doMachineOp
   for pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: crunch_wps)
 

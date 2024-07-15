@@ -227,12 +227,12 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
    apply (wp ex_cte_cap_to_pres | simp add: cap_table_at_typ)+
   done
 
-crunches invoke_irq_control
+crunch invoke_irq_control
   for cur_thread[wp, Interrupt_AI_asms]: "\<lambda>s. P (cur_thread s)"
   and ct_in_state[wp, Interrupt_AI_asms]: "ct_in_state P"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches invoke_irq_handler
+crunch invoke_irq_handler
   for ct_active[wp, Interrupt_AI_asms]: "ct_active"
   (wp: gts_wp get_simple_ko_wp crunch_wps simp: crunch_simps)
 

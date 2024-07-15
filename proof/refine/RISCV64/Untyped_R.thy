@@ -1340,7 +1340,7 @@ crunch updateMDB, updateNewFreeIndex
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   and ksReprogramTimer[wp]: "\<lambda>s. P (ksReprogramTimer s)"
 
-crunches insertNewCap
+crunch insertNewCap
   for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
@@ -1352,10 +1352,12 @@ crunches insertNewCap
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 
-crunch nosch[wp]: insertNewCaps "\<lambda>s. P (ksSchedulerAction s)"
+crunch insertNewCaps
+ for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps)
 
-crunch exst[wp]: set_cdt "\<lambda>s. P (exst s)"
+crunch set_cdt
+ for exst[wp]: "\<lambda>s. P (exst s)"
 
 lemma set_original_symb_exec_l:
   "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf nf' dc P P' (set_original p b) (return x)"
@@ -1395,7 +1397,7 @@ lemma setCTE_rlq_projs[wp]:
      apply wpsimp+
   done
 
-crunches setNotification, setEndpoint, setSchedContext, setCTE
+crunch setNotification, setEndpoint, setSchedContext, setCTE
   for inQ_dom_prio_tcbs_of'[wp]: "\<lambda>s. P (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
 lemma setCTE_rdyq_projs[wp]:
@@ -1407,7 +1409,7 @@ lemma setCTE_rdyq_projs[wp]:
      apply wpsimp+
   done
 
-crunches updateMDB, updateNewFreeIndex, setCTE
+crunch updateMDB, updateNewFreeIndex, setCTE
   for sc_replies_of'[wp]: "\<lambda>s. P (replies_of' s) (scs_of' s)"
   and rlq_projs[wp]:
    "\<lambda>s. P (ksReleaseQueue s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
@@ -1415,12 +1417,12 @@ crunches updateMDB, updateNewFreeIndex, setCTE
   and rdyq_projs[wp]:
     "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
-crunches set_cap, set_cdt
+crunch set_cap, set_cdt
   for domain_index[wp]: "\<lambda>s. P (domain_index s)"
   and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps)
 
-crunches updateMDB, updateNewFreeIndex, setCTE
+crunch updateMDB, updateNewFreeIndex, setCTE
   for rdyq_projs[wp]:
     "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
@@ -3352,7 +3354,7 @@ lemma retype_region_caps_overlap_reserved_ret:
    apply (clarsimp)+
   done
 
-crunches updateCap, updateFreeIndex
+crunch updateCap, updateFreeIndex
   for sc_at'_n[wp]: "sc_at'_n n p"
 
 lemma updateFreeIndex_pspace_no_overlap':
@@ -4108,7 +4110,7 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches deleteObjects
+crunch deleteObjects
   for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and irq_node[wp]: "\<lambda>s. P (irq_node' s)"
@@ -4518,7 +4520,7 @@ crunch updateFreeIndex
 crunch updateFreeIndex
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
-crunches updateFreeIndex
+crunch updateFreeIndex
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
 
 lemma resetUntypedCap_invs_etc:
@@ -5172,7 +5174,7 @@ crunch invokeUntyped
   (simp: crunch_simps zipWithM_x_mapM
      wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv)
 
-crunches insertNewCap
+crunch insertNewCap
   for no_0_obj'[wp]: no_0_obj'
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and valid_replies' [wp]: valid_replies'

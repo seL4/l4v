@@ -219,9 +219,9 @@ context
 notes if_cong[cong]
 begin
 
-crunch machine_state_preserved:
+crunch
    set_thread_state, set_mcpriority
-    "\<lambda>s. P (machine_state s)"
+ for machine_state_preserved: "\<lambda>s. P (machine_state s)"
   (simp: split_def wp: crunch_wps)
 
 end

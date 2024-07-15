@@ -18,7 +18,7 @@ lemma getIRQSlot_corres:
                    ucast_nat_def shiftl_t2n)
   done
 
-crunches modifyWorkUnits
+crunch modifyWorkUnits
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
@@ -239,7 +239,7 @@ lemma setWorkUnits_corres[corres]:
   apply (clarsimp simp: state_relation_def)
   done
 
-crunches updateTimeStamp
+crunch updateTimeStamp
   for valid_objs'[wp]: valid_objs'
 
 lemma getCurSc_sp:
@@ -284,7 +284,7 @@ lemma get_sc_active_sp:
   apply (clarsimp simp: obj_at_def active_sc_def)
   done
 
-crunches updateTimeStamp, setWorkUnits, isCurDomainExpired
+crunch updateTimeStamp, setWorkUnits, isCurDomainExpired
   for ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
   and active_sc_at'[wp]: "active_sc_at' scPtr"
   and valid_objs'[wp]: valid_objs'
@@ -294,11 +294,12 @@ crunches updateTimeStamp, setWorkUnits, isCurDomainExpired
   (simp: active_sc_at'_def crunch_simps getDomainTime_def setDomainTime_def setConsumedTime_def
          setCurTime_def)
 
-crunches update_time_stamp
+crunch update_time_stamp
   for kheap[wp]: "\<lambda>s. P (kheap s)"
   (simp: crunch_simps)
 
-crunch (no_fail) no_fail[wp]: getCurSc
+crunch getCurSc
+ for (no_fail) no_fail[wp]
 
 lemma preemptionPoint_corres:
   "corres (dc \<oplus> dc)

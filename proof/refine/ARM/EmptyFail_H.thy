@@ -171,15 +171,17 @@ lemma empty_fail_getObject_sc [intro!, wp, simp]:
    "empty_fail (getObject p :: sched_context kernel)"
    by (simp add: empty_fail_getObject)
 
-crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "SchedContextDecls_H.postpone"
+crunch "SchedContextDecls_H.postpone"
+ for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
   (simp: getSchedContext_def)
 
 context
 notes option.case_cong_weak[cong]
 begin
-crunch (empty_fail) empty_fail[intro!, wp, simp]:
+crunch
   cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
   refillUnblockCheck, schedContextResume, ifCondRefillUnblockCheck
+ for (empty_fail) empty_fail[intro!, wp, simp]
   (simp: Let_def wp: empty_fail_whileLoop)
 end
 
@@ -268,11 +270,13 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchError f g)"
   by fastforce
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]:
+crunch
   chooseThread, getDomainTime, nextDomain, isHighestPrio, switchSchedContext, setNextInterrupt
+ for (empty_fail) empty_fail[intro!, wp, simp]
   (wp: empty_fail_catch empty_fail_setDeadline empty_fail_whileLoop)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: tcbReleaseDequeue
+crunch tcbReleaseDequeue
+ for (empty_fail) empty_fail[intro!, wp, simp]
 
 lemma awaken_empty_fail[intro!, wp, simp]:
   "empty_fail awaken"
@@ -290,7 +294,8 @@ lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:
   "empty_fail (tcbEPFindIndex t qs ci)"
   by (induct ci; subst tcbEPFindIndex.simps; wpsimp)
 
-crunch (empty_fail) empty_fail: callKernel
+crunch callKernel
+ for (empty_fail) empty_fail
   (wp: empty_fail_catch)
 
 theorem call_kernel_serial:

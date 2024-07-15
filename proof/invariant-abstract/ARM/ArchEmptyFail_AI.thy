@@ -21,8 +21,9 @@ crunch_ignore (empty_fail)
         writeContextID_impl isb_impl dsb_impl dmb_impl setHardwareASID_impl
         writeTTBR0_impl cacheRangeOp setIRQTrigger_impl)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
+crunch
   loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs, setRegister
+ for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
 end
 
@@ -34,19 +35,22 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 
 context Arch begin global_naming ARM
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to,set_thread_state_act
+crunch possible_switch_to,set_thread_state_act
+ for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: empty_fail_zipWithM_x)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
+crunch handle_fault
+ for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def)
 
-crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
+crunch decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params, decode_set_timeout_ep,
   decode_set_tls_base, decode_set_space
+ for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
@@ -125,9 +129,10 @@ lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
                       ifM_def update_time_stamp_def getCurrentTime_def get_sc_active_def)
   done
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
+crunch maskInterrupt, empty_slot,
     setHardwareASID, set_current_pd, finalise_cap, preemption_point, reset_work_units,
     update_work_units, cap_swap_for_delete, decode_invocation
+ for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def andM_def ifM_def
          option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
@@ -165,7 +170,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 
 context Arch begin global_naming ARM
 
-crunches handle_event, activate_thread, check_budget
+crunch handle_event, activate_thread, check_budget
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits

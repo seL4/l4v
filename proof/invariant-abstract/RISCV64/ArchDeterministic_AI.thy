@@ -12,9 +12,10 @@ context Arch begin global_naming RISCV64
 
 named_theorems Deterministic_AI_assms
 
-crunch valid_list[wp, Deterministic_AI_assms]:
+crunch
   cap_swap_for_delete,set_cap,finalise_cap,
-  arch_post_modify_registers,make_arch_fault_msg valid_list
+  arch_post_modify_registers,make_arch_fault_msg
+ for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
 
 declare get_cap_inv[Deterministic_AI_assms]
@@ -56,16 +57,19 @@ lemma perform_page_invocation_valid_list[wp]:
            | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits)+
   done
 
-crunch valid_list[wp]: update_waiting_ntfn, invoke_domain valid_list
+crunch update_waiting_ntfn, invoke_domain
+ for valid_list[wp]: valid_list
   (wp: crunch_wps)
-crunch valid_list[wp]: do_reply_transfer valid_list
+crunch do_reply_transfer
+ for valid_list[wp]: valid_list
  (simp: is_round_robin_def
   wp: maybeM_inv get_refills_wp hoare_vcg_if_lift2 get_sched_context_wp hoare_drop_imps)
 
 lemma send_signal_valid_list[wp]: "\<lbrace>valid_list\<rbrace> send_signal param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   by (wpsimp simp: send_signal_def wp: get_simple_ko_wp)
 
-crunch valid_list[wp]: arch_perform_invocation, perform_invocation valid_list
+crunch arch_perform_invocation, perform_invocation
+ for valid_list[wp]: valid_list
   (wp: crunch_wps)
 
 crunch handle_invocation
@@ -73,13 +77,16 @@ crunch handle_invocation
   (wp: crunch_wps syscall_valid simp: crunch_simps
    ignore: without_preemption syscall)
 
-crunch valid_list[wp]: receive_ipc valid_list
+crunch receive_ipc
+ for valid_list[wp]: valid_list
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_recv valid_list
+crunch handle_recv
+ for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: hoare_drop_imps hoare_vcg_if_lift2 simp: Let_def whenE_def)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_yield, handle_call valid_list
+crunch handle_yield, handle_call
+ for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
@@ -94,7 +101,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def arch_mask_irq_signal_def
        | wp (once) hoare_drop_imps)+
 
-crunches handle_send, handle_hypervisor_fault
+crunch handle_send, handle_hypervisor_fault
   for valid_list[wp, Deterministic_AI_assms]: valid_list
 
 named_theorems machine_ops_last_machine_time'
@@ -102,7 +109,7 @@ named_theorems arch_machine_ops_last_machine_time'
 
 lemmas [machine_ops_last_machine_time'] = storeWord_machine_times ackInterrupt_machine_times
 
-crunches storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
+crunch storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
   for machine_times[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
   (wp: crunch_wps simp: crunch_simps ignore_del: storeWord maskInterrupt clearMemory)
 

@@ -72,7 +72,7 @@ lemma arch_stit_sc_at[wp, Schedule_AI_asms]:
   apply wp
   done
 
-crunches set_vm_root
+crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps wp: hoare_drop_imps)
@@ -91,7 +91,7 @@ lemma stit_activatable[Schedule_AI_asms]:
                  elim!: pred_tcb_weaken_strongerE)
   done
 
-crunches set_vm_root
+crunch set_vm_root
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (simp: crunch_simps)
 

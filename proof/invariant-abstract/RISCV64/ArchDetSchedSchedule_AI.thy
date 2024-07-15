@@ -13,7 +13,7 @@ context Arch begin global_naming RISCV64
 named_theorems DetSchedSchedule_AI_assms
 
 (* trivial functions *)
-crunches arch_post_cap_deletion,
+crunch arch_post_cap_deletion,
          prepare_thread_delete,
          arch_post_modify_registers,
          arch_get_sanitise_register_info,
@@ -21,7 +21,7 @@ crunches arch_post_cap_deletion,
   for inv[wp]: P
 
 (* effects on last_machine_time *)
-crunches setIRQTrigger, maskInterrupt, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
+crunch setIRQTrigger, maskInterrupt, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
          ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence, plic_complete_claim
   for machine_times[wp]: "\<lambda>s. P (last_machine_time s) (time_state s)"
 
@@ -40,7 +40,7 @@ lemma misc_dmo_valid_sched_pred_strong[wp]:
   "\<And>a b. do_machine_op (storeWord a b) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   by (wpsimp wp: dmo_valid_sched_pred )+
 
-crunches arch_switch_to_thread,
+crunch arch_switch_to_thread,
          arch_switch_to_idle_thread,
          arch_finalise_cap,
          arch_invoke_irq_control,
@@ -48,14 +48,14 @@ crunches arch_switch_to_thread,
   for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps)
 
-crunches
+crunch
   perform_page_table_invocation,
   perform_page_invocation, perform_asid_pool_invocation
   for valid_sched_misc[wp]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps detype_def ignore: do_machine_op)
 
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for valid_sched_misc[wp, DetSchedSchedule_AI_assms]:
         "\<lambda>s. P (consumed_time s) (cur_time s) (cur_domain s) (cur_thread s)
                (cur_sc s) (idle_thread s) (ready_queues s) (release_queue s)
@@ -69,14 +69,17 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp]:
       | wp
       | simp add: ct_in_cur_domain_def)+
 
-crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
+crunch set_vm_root
+ for exst[wp]: "\<lambda>s. P (exst s)"
   (wp: crunch_wps whenE_wp simp: crunch_simps)
 
-crunch etcb_at[wp]: switch_to_thread "etcb_at P t"
+crunch switch_to_thread
+ for etcb_at[wp]: "etcb_at P t"
   (wp: hoare_drop_imp)
 
-crunch valid_idle [wp]:
-  arch_switch_to_idle_thread "valid_idle"
+crunch
+  arch_switch_to_idle_thread
+ for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_vm_root_valid_blocked_ct_in_q [wp]:
@@ -98,7 +101,8 @@ lemma switch_to_idle_thread_ct_not_queued [wp]:
          , fastforce)
   done
 
-crunch exst [wp]: arch_switch_to_thread "\<lambda>s. P (exst s :: det_ext)"
+crunch arch_switch_to_thread
+ for exst[wp]: "\<lambda>s. P (exst s :: det_ext)"
 
 lemma astit_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
@@ -164,10 +168,11 @@ lemma handle_vm_fault_st_tcb_cur_thread [wp]:
     apply (wp|simp)+
   done
 
-crunches arch_switch_to_thread, arch_switch_to_idle_thread
+crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for valid_list [wp]: "valid_list"
 
-crunch cur_tcb [wp]: handle_arch_fault_reply, handle_vm_fault, arch_post_modify_registers cur_tcb
+crunch handle_arch_fault_reply, handle_vm_fault, arch_post_modify_registers
+ for cur_tcb[wp]: cur_tcb
 
 (* FIXME: move out of arch *)
 lemma valid_idle_thread_state_contradiction:
@@ -183,7 +188,7 @@ lemma switch_to_idle_thread_ct_not_in_release_q[wp]:
   apply wpsimp
   by (fastforce simp: valid_release_q_def not_in_release_q_def in_queue_2_def dest!: valid_idle_thread_state_contradiction)
 
-crunches arch_switch_to_thread, arch_switch_to_idle_thread
+crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for sc_at_period[wp]: "sc_at_period P p::det_state \<Rightarrow> _"
   (simp: crunch_simps)
 
@@ -191,7 +196,7 @@ lemma machine_state_detype[simp]:
   "machine_state (detype S s) = machine_state s"
   by (clarsimp simp: valid_machine_time_def detype_def)
 
-crunches handle_hypervisor_fault, handle_reserved_irq
+crunch handle_hypervisor_fault, handle_reserved_irq
   for valid_machine_time: valid_machine_time
 
 (* Note: Proving that retype_region preserves bound_sc_tcb_at is much harder *)
@@ -203,7 +208,7 @@ lemma retype_region_not_bound_sc[wp]:
          clarsimp simp: pred_tcb_at_def sc_at_pred_def obj_at_def default_object_def
                  split: if_splits)
 
-crunches arch_perform_invocation
+crunch arch_perform_invocation
   for not_bound_sc_tcb_at[wp]: "(\<lambda>s. \<not> bound_sc_tcb_at P t s)"
   (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: retype_region delete_objects
    simp: crunch_simps)
@@ -290,7 +295,7 @@ lemma arch_perform_invocation_cur_sc_in_release_q_imp_zero_consumed [wp, DetSche
   unfolding arch_perform_invocation_def
   by (cases iv; wpsimp wp: hoare_drop_imps)
 
-crunches arch_invoke_irq_handler, arch_mask_irq_signal, handle_reserved_irq
+crunch arch_invoke_irq_handler, arch_mask_irq_signal, handle_reserved_irq
   for ct_in_state[wp]: "ct_in_state P"
 
 lemma arch_invoke_irq_handler_valid_sched_pred_strong[wp]:
@@ -301,10 +306,10 @@ lemma arch_mask_irq_signal_valid_sched_pred_strong[wp]:
   "arch_mask_irq_signal i \<lbrace> valid_sched_pred_strong P \<rbrace>"
   unfolding arch_mask_irq_signal_def by wpsimp
 
-crunches arch_switch_to_thread, arch_switch_to_idle_thread
+crunch arch_switch_to_thread, arch_switch_to_idle_thread
 for cdt_cdt_list_exst [wp]:  "\<lambda>s. P (cdt s) (cdt_list_internal (exst s))"
 
-crunches make_arch_fault_msg
+crunch make_arch_fault_msg
   for valid_sched_pred_strong[wp,DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
 
 lemma handle_hyp_fault_trivial[wp]:

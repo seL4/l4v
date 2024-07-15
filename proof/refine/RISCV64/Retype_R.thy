@@ -3482,7 +3482,7 @@ lemma createObjects_valid_pspace_untyped':
   using assms
   by (wpsimp wp: createObjects_valid_pspace' [OF mko max_d not_0 tysc cover])
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for valid_objs'[wp]: valid_objs'
   and pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
@@ -4108,7 +4108,7 @@ lemma createNewCaps_list_refs_of_replies':
                            word_size_bits_def table_size_def ptTranslationBits_def
                | intro conjI impI )+
 
-crunches copyGlobalMappings
+crunch copyGlobalMappings
   for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and ksReadyQueuesL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and ksReadyQueuesL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
@@ -4178,7 +4178,7 @@ lemma createObjects'_qsL2[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
-crunches createObjects, createNewCaps
+crunch createObjects, createNewCaps
   for qs[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and rlqs[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and qsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
@@ -4399,7 +4399,7 @@ lemma createObjects_nosch'[wp]:
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
-crunches copyGlobalMappings, createObjects, createNewCaps
+crunch copyGlobalMappings, createObjects, createNewCaps
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')

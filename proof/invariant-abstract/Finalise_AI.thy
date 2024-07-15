@@ -206,7 +206,8 @@ lemma empty_slot_valid_objs[wp]:
                  | wp (once) hoare_drop_imps)+
   done
 
-crunch typ_at[wp]: empty_slot "\<lambda>s. P (typ_at T p s)"
+crunch empty_slot
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemmas empty_slot_valid_cap[wp] = valid_cap_typ [OF empty_slot_typ_at]
 
@@ -411,10 +412,11 @@ lemma empty_slot_caps_of_state:
                         fun_upd_idem)
   done
 
-crunch caps_of_state[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (caps_of_state s)"
+crunch cancel_all_ipc, cancel_all_signals
+ for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
-crunches
+crunch
   unbind_notification, sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   unbind_maybe_notification, unbind_from_sc, sched_context_unbind_tcb,
   sched_context_unbind_yield_from, update_sk_obj_ref, sched_context_set_inactive
@@ -426,7 +428,7 @@ lemma sched_context_unbind_all_tcbs_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> sched_context_unbind_all_tcbs scref \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   by (wpsimp simp: sched_context_unbind_all_tcbs_def)
 
-crunches
+crunch
   fast_finalise, sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
   sched_context_unbind_reply, sched_context_unbind_ntfn
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
@@ -509,13 +511,16 @@ lemma deleting_irq_handler_final:
   apply simp
   done
 
-crunch cte_wp_at[wp]: update_sk_obj_ref "cte_wp_at P p"
+crunch update_sk_obj_ref
+ for cte_wp_at[wp]: "cte_wp_at P p"
 
-crunch cte_wp_at[wp]: unbind_notification "cte_wp_at P p"
+crunch unbind_notification
+ for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: maybeM_inv ignore: set_tcb_obj_ref)
 
 
-crunch cte_wp_at[wp]: sched_context_maybe_unbind_ntfn "cte_wp_at P p"
+crunch sched_context_maybe_unbind_ntfn
+ for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: maybeM_inv ignore: set_tcb_obj_ref update_sched_context)
 
 lemma sched_context_update_consumed_cte_wp_at [wp]:
@@ -523,7 +528,8 @@ lemma sched_context_update_consumed_cte_wp_at [wp]:
   by (wpsimp simp: sched_context_update_consumed_def wp: thread_set_cte_wp_at_trivial
          ball_tcb_cap_casesI | simp)
 
-crunch cte_wp_at[wp]: complete_yield_to "cte_wp_at P p"
+crunch complete_yield_to
+ for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: set_tcb_obj_ref get_sched_context)
 
 lemma sched_context_unbind_tcb_cte_wp_at[wp]:
@@ -560,17 +566,21 @@ lemma is_final_cap'_objrefsE:
      \<Longrightarrow> is_final_cap' cap' s"
   by (simp add: is_final_cap'_def)
 
-crunch typ_at[wp]: update_sk_obj_ref, get_sk_obj_ref "\<lambda>s. P (typ_at T p s)"
+crunch update_sk_obj_ref, get_sk_obj_ref
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
-crunch typ_at[wp]: fast_finalise "\<lambda>s. P (typ_at T p s)"
+crunch fast_finalise
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv crunch_wps simp: crunch_simps)
 
-crunch typ_at[wp]: deleting_irq_handler "\<lambda>s. P (typ_at T p s)"
+crunch deleting_irq_handler
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp:crunch_simps unless_def assertE_def)
 
 context Finalise_AI_1 begin
 context notes if_cong[cong] begin
-  crunch typ_at[wp]: finalise_cap "\<lambda>(s :: 'a state). P (typ_at T p s)"
+  crunch finalise_cap
+   for typ_at[wp]: "\<lambda>(s :: 'a state). P (typ_at T p s)"
   (wp: maybeM_inv get_simple_ko_wp simp: crunch_simps)
 end
 end
@@ -927,11 +937,12 @@ lemma sched_context_unbind_tcb_irq_node[wp]:
      sched_context_unbind_tcb param_a \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
 
-crunch irq_node[wp]: cancel_all_signals, fast_finalise, unbind_from_sc,reply_unlink_sc
-   "\<lambda>s. P (interrupt_irq_node s)"
+crunch cancel_all_signals, fast_finalise, unbind_from_sc,reply_unlink_sc
+ for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps maybeM_inv simp: crunch_simps unless_def)
 
-crunch irq_node[wp]: cap_delete_one "\<lambda>s. P (interrupt_irq_node s)"
+crunch cap_delete_one
+ for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps maybeM_inv simp: crunch_simps unless_def)
 
 lemma deleting_irq_handler_empty:
@@ -987,9 +998,11 @@ lemma unbind_notification_bound_tcb_at[wp]:
   apply assumption
   done
 
-crunch valid_mdb[wp]: unbind_notification "valid_mdb"
+crunch unbind_notification
+ for valid_mdb[wp]: "valid_mdb"
   (wp: maybeM_inv ignore: set_tcb_obj_ref)
-crunch tcb_at[wp]: unbind_notification "tcb_at t"
+crunch unbind_notification
+ for tcb_at[wp]: "tcb_at t"
   (wp: maybeM_inv)
 
 lemma unbind_notification_no_cap_to_obj_ref[wp]:
@@ -1033,7 +1046,8 @@ lemma reply_unlink_sc_cte_wp_at:
   unfolding reply_unlink_sc_def
   by (wpsimp wp: get_simple_ko_wp hoare_drop_imps)
 
-crunch cte_wp_at[wp]: reply_unlink_tcb,unbind_from_sc "cte_wp_at P p"
+crunch reply_unlink_tcb,unbind_from_sc
+ for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
 
 lemma set_mrs_valid_objs[wp]:
@@ -1050,7 +1064,8 @@ lemma set_mrs_valid_objs[wp]:
           apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_set_registers)
   done
 
-crunch valid_objs[wp]: set_consumed valid_objs
+crunch set_consumed
+ for valid_objs[wp]: valid_objs
   (wp: crunch_wps simp: crunch_simps ignore: update_sched_context)
 
 lemma sched_context_cancel_yield_to_valid_objs[wp]:
@@ -1090,10 +1105,11 @@ lemma cap_delete_one_cte_wp_at_preserved:
 interpretation delete_one_pre
   by (unfold_locales; wpsimp wp: cap_delete_one_cte_wp_at_preserved)
 
-crunch cte_wp_at[wp]: cancel_ipc "cte_wp_at P p"
+crunch cancel_ipc
+ for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: thread_set_cte_wp_at_trivial ball_tcb_cap_casesI)
 
-crunches
+crunch
   fast_finalise, sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
   sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_set_inactive
   for cte_wp_at[wp]: "cte_wp_at P p"
@@ -1134,7 +1150,8 @@ sublocale delete_one_abs a' for a' :: "('a :: state_ext) itself"
 
 end
 
-crunch (in Finalise_AI_2) invs[wp]: deleting_irq_handler "invs :: 'a state \<Rightarrow> bool"
+crunch (in Finalise_AI_2) deleting_irq_handler
+ for invs[wp]: "invs :: 'a state \<Rightarrow> bool"
   (wp: maybeM_inv)
 
 
@@ -1189,7 +1206,7 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
      prepare_thread_delete t
        \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
 
-crunches
+crunch
   suspend, unbind_maybe_notification, unbind_notification, deleting_irq_handler,
   sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
   sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_set_inactive
@@ -1544,7 +1561,7 @@ lemma unbind_notification_sym_refs[wp]:
           elim!: obj_at_valid_objsE
          intro!: ntfn_q_refs_no_NTFNBound)
 
-crunches test_reschedule, tcb_release_remove
+crunch test_reschedule, tcb_release_remove
   for kheap[wp]: "\<lambda>s. P (kheap s)"
   and obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -1553,7 +1570,7 @@ lemma tcb_ep_find_index_inv[wp]:
   "tcb_ep_find_index tptr qs curindex \<lbrace>P\<rbrace>"
   by (induct curindex) (wpsimp | simp add: tcb_ep_find_index.simps)+
 
-crunches tcb_ep_dequeue, tcb_ep_append
+crunch tcb_ep_dequeue, tcb_ep_append
   for inv[wp]: P
 
 lemmas complete_yield_to_final_cap[wp] =
@@ -1842,7 +1859,7 @@ lemma sched_context_cancel_yield_to_not_live:
   apply (auto simp: obj_at_def live_def live_sc_def dest: sym_ref_sc_yf)
   done
 
-crunches sched_context_update_consumed, set_message_info, store_word_offs
+crunch sched_context_update_consumed, set_message_info, store_word_offs
   for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (simp: crunch_simps wp: crunch_wps ignore: update_sched_context set_object)
 
@@ -1867,7 +1884,7 @@ lemma set_mrs_state_refs_of[wp]:
   apply (clarsimp dest!: get_tcb_SomeD)
   done
 
-crunches set_consumed
+crunch set_consumed
   for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
 
 lemma complete_yield_to_not_live:

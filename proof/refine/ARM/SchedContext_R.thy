@@ -210,7 +210,7 @@ lemma schedContextUpdateConsumed_corres:
 
 end
 
-crunches sched_context_update_consumed
+crunch sched_context_update_consumed
   for in_user_Frame[wp]: "in_user_frame buffer"
 
 lemma schedContextUpdateConsumed_valid_ipc_buffer_ptr'[wp]:
@@ -253,7 +253,7 @@ lemma schedContextUpdateConsumed_sym_refs_lis_refs_of_replies'[wp]:
   apply (clarsimp simp: opt_map_def o_def)
   done
 
-crunches schedContextUpdateConsumed
+crunch schedContextUpdateConsumed
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]:"pspace_distinct'"
   and bounded'[wp]: "pspace_bounded'"
@@ -415,7 +415,7 @@ lemma schedContextCancelYeldTo_valid_release_queue'[wp]:
   apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
   done
 
-crunches schedContextCancelYieldTo
+crunch schedContextCancelYieldTo
   for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
   and pspace_bounded'[wp]: pspace_bounded'
@@ -457,12 +457,12 @@ lemma schedContextCancelYieldTo_invs':
   apply (fastforce simp: inQ_def valid_queues_def valid_queues_no_bitmap_def)
   done
 
-crunches schedContextCompleteYieldTo
+crunch schedContextCompleteYieldTo
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and tcb_at'[wp]: "\<lambda>s. Q (tcb_at' t s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches setConsumed
+crunch setConsumed
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -586,14 +586,14 @@ lemma schedContextCompleteYieldTo_corres:
   apply (fastforce simp: valid_objs'_def valid_obj'_def)
   done
 
-crunches schedContextDonate
+crunch schedContextDonate
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
 global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
   by typ_at_props'
 
-crunches schedContextDonate
+crunch schedContextDonate
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]:"pspace_distinct'"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -603,10 +603,10 @@ crunches schedContextDonate
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and cte_wp_at'[wp]: "cte_wp_at' P p"
 
-crunches schedContextDonate
+crunch schedContextDonate
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
-crunches schedContextDonate, schedContextUnbindAllTCBs, unbindFromSC,
+crunch schedContextDonate, schedContextUnbindAllTCBs, unbindFromSC,
          schedContextSetInactive, schedContextUnbindYieldFrom, schedContextUnbindReply
   for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
   (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
@@ -615,7 +615,7 @@ lemma setSchedContext_ct_in_state'[wp]:
   "setSchedContext ptr sc \<lbrace>ct_in_state' P\<rbrace>"
   by (rule ct_in_state_thread_state_lift'; wpsimp)
 
-crunches setSchedContext
+crunch setSchedContext
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: weak_sch_act_wf_lift)
 

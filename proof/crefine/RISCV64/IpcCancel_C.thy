@@ -1776,7 +1776,8 @@ lemma tcb_at_1:
   apply (clarsimp simp add: is_aligned_def ctcb_size_bits_def)
   done
 
-crunch (empty_fail) empty_fail[wp]: inReleaseQueue, isSchedulable
+crunch inReleaseQueue, isSchedulable
+ for (empty_fail) empty_fail[wp]
 
 lemma isSchedulable_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = to_bool r') ret__unsigned_long_'

@@ -253,7 +253,8 @@ lemma all_but_exst_update[simp]:
   apply (simp add: all_but_exst_def)
   done
 
-crunch all_but_exst[wp]: cap_move_ext "all_but_exst P"
+crunch cap_move_ext
+ for all_but_exst[wp]: "all_but_exst P"
   (simp: Let_def ignore_del: cap_move_ext)
 
 crunch cap_move_ext

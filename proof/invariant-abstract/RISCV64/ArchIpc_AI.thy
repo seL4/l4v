@@ -249,7 +249,7 @@ lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \
 lemma make_arch_fault_msg_invs[wp, Ipc_AI_assms]: "make_arch_fault_msg f t \<lbrace>invs\<rbrace>"
   by (cases f; wpsimp)
 
-crunches make_fault_msg
+crunch make_fault_msg
   for invs[wp]: invs
   and tcb_at[wp]: "tcb_at t"
 
@@ -394,7 +394,8 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
        | wpc | simp add:imp)+
   done
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for typ_at[Ipc_AI_assms]: "P (typ_at T p s)"
 
 lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
   "\<lbrace>valid_vspace_objs\<rbrace>
@@ -411,7 +412,7 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
         | assumption | simp split del: if_split)+
   done
 
-crunches make_arch_fault_msg
+crunch make_arch_fault_msg
   for aligned                   [wp, Ipc_AI_assms]: "pspace_aligned"
   and distinct                  [wp, Ipc_AI_assms]: "pspace_distinct"
   and vmdb                      [wp, Ipc_AI_assms]: "valid_mdb"
@@ -447,7 +448,7 @@ crunches make_arch_fault_msg
   and bound_sc_tcb_at           [wp, Ipc_AI_assms]: "\<lambda>s. Q (bound_sc_tcb_at P p s)"
   and valid_replies             [wp]: "valid_replies_pred P"
 
-crunches make_arch_fault_msg
+crunch make_arch_fault_msg
   for obj_at[wp, Ipc_AI_assms]: "\<lambda>s. P (obj_at P' pd s)"
   and reply_sc_reply_at[wp, Ipc_AI_assms]: "reply_sc_reply_at P p"
   and reply_tcb_reply_at[wp, Ipc_AI_assms]: "reply_tcb_reply_at P p"

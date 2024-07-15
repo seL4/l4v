@@ -1304,7 +1304,8 @@ lemma set_cap_cte_wp_at_neg:
   apply wpsimp
   done
 
-crunch interrupt_states[wp]: cap_insert "\<lambda>s. P (interrupt_states s)"
+crunch cap_insert
+ for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_cap_irq_handlers:
@@ -1692,9 +1693,12 @@ lemma cur_sc_tcb_more_update[iff]:
   "cur_sc_tcb (trans_state f s) = cur_sc_tcb s"
   by (simp add: cur_sc_tcb_def)
 
-crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
-crunch cur_sc_tcb[wp]: update_cdt cur_sc_tcb (simp: cur_sc_tcb_def)
-crunch cur_sc_tcb[wp]: cap_insert cur_sc_tcb (wp: hoare_drop_imps)
+crunch cap_insert
+ for cur[wp]: cur_tcb (wp: hoare_drop_imps)
+crunch update_cdt
+ for cur_sc_tcb[wp]: cur_sc_tcb (simp: cur_sc_tcb_def)
+crunch cap_insert
+ for cur_sc_tcb[wp]: cur_sc_tcb (wp: hoare_drop_imps)
 
 lemma update_cdt_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> update_cdt f \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
@@ -2036,7 +2040,7 @@ lemma cap_insert_objs [wp]:
     | simp split del: if_split)+
   done
 
-crunches cap_insert, set_cdt
+crunch cap_insert, set_cdt
   for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   and ct [wp]: "\<lambda>s. P (cur_thread s)"
   and cur_sc [wp]: "\<lambda>s. P (cur_sc s)"

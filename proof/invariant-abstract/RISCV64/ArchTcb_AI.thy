@@ -145,13 +145,13 @@ lemma checked_insert_tcb_invs': (* arch specific *)
   apply (wpsimp wp: checked_insert_tcb_invs)
   by (auto simp: is_cap_simps is_cnode_or_valid_arch_def valid_fault_handler_def)
 
-crunches arch_post_modify_registers
+crunch arch_post_modify_registers
   for tcb_at[wp, Tcb_AI_asms]: "tcb_at a"
   and invs[wp, Tcb_AI_asms]: invs
   and ex_nonz_cap_to[wp, Tcb_AI_asms]: "ex_nonz_cap_to a"
   and fault_tcb_at[wp, Tcb_AI_asms]: "fault_tcb_at P a"
 
-crunches arch_get_sanitise_register_info
+crunch arch_get_sanitise_register_info
   for inv[wp, Tcb_AI_asms]: "P"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
@@ -360,7 +360,7 @@ lemma tcc_invs[Tcb_AI_asms]:
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by (auto simp: valid_ipc_buffer_cap valid_fault_handler_def)
 
-crunches empty_slot
+crunch empty_slot
   for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P target"
   (wp: crunch_wps)
 
@@ -495,10 +495,12 @@ lemma update_cap_valid[Tcb_AI_asms]:
                                      split: option.splits prod.splits bool.splits)
   done
 
-crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
+crunch switch_to_thread
+ for pred_tcb_at: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
+crunch invoke_tcb
+ for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps
      wp: hoare_drop_imps mapM_x_wp' check_cap_inv)
 

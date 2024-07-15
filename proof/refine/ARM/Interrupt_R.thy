@@ -108,7 +108,7 @@ lemma decodeIRQHandlerInvocation_corres:
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
-crunches decodeIRQHandlerInvocation
+crunch decodeIRQHandlerInvocation
   for inv[wp]: "P"
   (simp: crunch_simps)
 
@@ -144,7 +144,7 @@ lemma is_irq_active_corres:
             split: irqstate.split_asm irq_state.split_asm)
   done
 
-crunches isIRQActive for inv: "P"
+crunch isIRQActive for inv: "P"
 
 lemma isIRQActive_wp:
   "\<lbrace>\<lambda>s. \<forall>rv. (irq_issued' irq s \<longrightarrow> rv) \<longrightarrow> Q rv s\<rbrace> isIRQActive irq \<lbrace>Q\<rbrace>"
@@ -291,7 +291,7 @@ lemma decodeIRQControlInvocation_corres:
                simp: not_less unat_le_helper)
   done
 
-crunches "InterruptDecls_H.decodeIRQControlInvocation"
+crunch "InterruptDecls_H.decodeIRQControlInvocation"
   for inv[wp]: "P"
   (simp: crunch_simps)
 
@@ -457,7 +457,7 @@ lemma IRQHandler_valid':
   "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
-crunches setIRQState
+crunch setIRQState
   for valid_mdb'[wp]: "valid_mdb'"
 
 lemma no_fail_setIRQTrigger: "no_fail \<top> (setIRQTrigger irq trig)"
@@ -524,7 +524,7 @@ lemma performIRQControl_corres:
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   by (clarsimp simp: arch_performIRQControl_corres)
 
-crunches setIRQState
+crunch setIRQState
   for valid_cap'[wp]: "valid_cap' cap"
 
 lemma setIRQState_cte_cap_to'[wp]:
@@ -553,7 +553,7 @@ lemma dmo_setIRQTrigger_invs'[wp]:
                      machine_rest_lift_def split_def | wp)+
   done
 
-crunches doMachineOp
+crunch doMachineOp
   for ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' P ptr"
   (wp: ex_cte_cap_to'_pres)
 
@@ -670,17 +670,17 @@ lemma handleInterrupt_corres:
                       simp: ackDeadlineIRQ_def)
   done
 
-crunches rescheduleRequired, tcbSchedAppend
+crunch rescheduleRequired, tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
   (simp: tcbSchedEnqueue_def wp: crunch_wps)
 
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
   and irqs_masked'[wp]: irqs_masked'
   (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
 
-crunches tcbSchedAppend
+crunch tcbSchedAppend
   for ct[wp]: cur_tcb'
   (wp: cur_tcb_lift crunch_wps)
 

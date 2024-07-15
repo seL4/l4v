@@ -187,7 +187,7 @@ lemma setWorkUnits_corres[corres]:
   apply (clarsimp simp: state_relation_def)
   done
 
-crunches updateTimeStamp
+crunch updateTimeStamp
   for valid_objs'[wp]: valid_objs'
 
 lemma getCurSc_sp:

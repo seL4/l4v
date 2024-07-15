@@ -366,7 +366,7 @@ lemma isSchedulableBool_ksReadyQueues_update[simp]:
   "isSchedulable_bool t (ksReadyQueues_update f s) = isSchedulable_bool t s"
   by (simp add: isSchedulable_bool_def bitmap_fun_defs pred_map_simps opt_map_def isScActive_def)
 
-crunches removeFromBitmap
+crunch removeFromBitmap
   for isSchedulable_bool[wp]: "\<lambda>s. P (isSchedulable_bool tcbPtr s)"
 
 lemma tcbSchedDequeue_isSchedulable_bool[wp]:
@@ -523,12 +523,12 @@ lemma performInvocation_corres:
    apply (clarsimp+)[2]
   done
 
-crunches sendSignal, setDomain
+crunch sendSignal, setDomain
   for tcb_at'[wp]: "tcb_at' t"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T t s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
+crunch restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
          performIRQControl, InterruptDecls_H.invokeIRQHandler, sendIPC,
          invokeSchedContext, invokeSchedControlConfigureFlags, handleFault
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
@@ -578,7 +578,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
                | simp add: pred_tcb_at'_def)+
   done
 
-crunches setThreadState
+crunch setThreadState
   for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' buf"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -618,7 +618,7 @@ lemma sts_valid_inv'[wp]:
   apply (wpsimp wp: sts_valid_arch_inv')
   done
 
-crunches decodeDomainInvocation, decodeSchedContextInvocation, decodeSchedControlInvocation
+crunch decodeDomainInvocation, decodeSchedContextInvocation, decodeSchedControlInvocation
   for inv[wp]: P
   (wp: crunch_wps simp: crunch_simps)
 
@@ -627,7 +627,7 @@ lemma arch_cap_exhausted:
     \<Longrightarrow> undefined \<lbrace>P\<rbrace>"
   by (cases param_e; simp add: isCap_simps)
 
-crunches decodeInvocation
+crunch decodeInvocation
   for inv[wp]: P
   (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp)
 
@@ -694,7 +694,8 @@ lemma active_ex_cap'[elim]:
 crunch handleFaultReply
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 
-crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
+crunch handleFaultReply
+ for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps)
 
 lemma transferCaps_non_null_cte_wp_at':
@@ -732,7 +733,7 @@ lemma doNormalTransfer_non_null_cte_wp_at':
   apply (wp transferCaps_non_null_cte_wp_at' | simp add:PUC)+
   done
 
-crunches doFaultTransfer, setMRs
+crunch doFaultTransfer, setMRs
   for cte_wp_at'[wp]: "cte_wp_at' P ptr"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
@@ -797,10 +798,10 @@ lemma handleTimeout_invs':
   apply (clarsimp simp: cte_wp_at'_obj_at' tcb_cte_cases_def obj_at'_def valid_idle'_asrt_def)
   done
 
-crunches isValidTimeoutHandler
+crunch isValidTimeoutHandler
   for inv[wp]: P
 
-crunches ifCondRefillUnblockCheck
+crunch ifCondRefillUnblockCheck
   for sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps sch_act_simple_def)
 
@@ -839,7 +840,7 @@ lemma ct_active_runnable' [simp]:
   "ct_active' s \<Longrightarrow> ct_in_state' runnable' s"
   by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
-crunches tcbSchedEnqueue
+crunch tcbSchedEnqueue
   for valid_irq_node'[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
   (wp: valid_irq_node_lift )
 
@@ -910,7 +911,7 @@ lemma contextYieldToUpdateQueues_invs'_helper:
   by (fastforce simp: obj_at_simps valid_tcb'_def tcb_cte_cases_def cteSizeBits_def comp_def
                       valid_sched_context'_def valid_sched_context_size'_def inQ_def refillSize_def)
 
-crunches schedContextResume
+crunch schedContextResume
   for bound_scTCB[wp]: "obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -930,7 +931,7 @@ lemma schedContextUpdateConsumed_bound_scTCB[wp]:
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
   done
 
-crunches schedContextCompleteYieldTo
+crunch schedContextCompleteYieldTo
   for bound_scTCB[wp]: "obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr"
 
 lemma contextYieldToUpdateQueues_invs':
@@ -968,15 +969,15 @@ lemma contextYieldToUpdateQueues_invs':
     apply (wpsimp | wps)+
   done
 
-crunches schedContextResume
+crunch schedContextResume
   for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P tptr s)"
   (wp: crunch_wps threadSet_wp mapM_wp_inv simp: crunch_simps)
 
-crunches schedContextResume
+crunch schedContextResume
   for scTCBs_of[wp]: "\<lambda>s. P (scTCBs_of s)"
   (wp: crunch_wps threadSet_st_tcb_at2 mapM_wp_inv simp: crunch_simps)
 
-crunches schedContextCompleteYieldTo
+crunch schedContextCompleteYieldTo
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
   (simp: crunch_simps tcb_cte_cases_def cteSizeBits_def wp: crunch_wps threadSet_cap_to)
 
@@ -1025,7 +1026,7 @@ lemma setDomain_invs':
       apply (fastforce intro: isSchedulable_bool_runnableE)
      by (wpsimp wp: threadSet_tcbDomain_update_invs' tcbSchedDequeue_not_queued)+
 
-crunches refillNew, refillUpdate, commitTime
+crunch refillNew, refillUpdate, commitTime
   for pred_tcb_at''[wp]: "\<lambda>s. Q (pred_tcb_at' proj P tcbPtr s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
@@ -1235,11 +1236,11 @@ crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
 
-crunches reply_from_kernel
+crunch reply_from_kernel
   for valid_objs[wp]: valid_objs
   (simp: crunch_simps wp: crunch_wps)
 
-crunches replyFromKernel
+crunch replyFromKernel
   for valid_objs'[wp]: valid_objs'
   (simp: crunch_simps wp: crunch_wps)
 
@@ -1386,7 +1387,7 @@ lemma gts_imp':
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
-crunches replyFromKernel
+crunch replyFromKernel
   for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t s)"
   and cap_to'[wp]: "ex_nonz_cap_to' p"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -1534,11 +1535,11 @@ lemma lookup_reply_is_reply_cap [wp]:
   unfolding lookup_reply_def lookup_cap_def
   by (wpsimp wp: get_cap_wp)
 
-crunches lookupReply
+crunch lookupReply
   for inv[wp]: "P"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches lookup_reply
+crunch lookup_reply
   for valid_cap[wp]: "valid_cap c"
   and cte_wp_at[wp]: "\<lambda>s. Q (cte_wp_at P p s)"
 
@@ -1821,7 +1822,7 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
          apply wpsimp+
   done
 
-crunches end_timeslice, refill_reset_rr
+crunch end_timeslice, refill_reset_rr
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
   and valid_list[wp]: valid_list
@@ -1829,7 +1830,7 @@ crunches end_timeslice, refill_reset_rr
   (wp: crunch_wps set_simple_ko_valid_tcbs cur_sc_active_lift
    ignore: set_object)
 
-crunches refill_reset_rr
+crunch refill_reset_rr
   for cte_wp_at[wp]: "cte_wp_at P c"
 
 lemma handle_timeout_valid_sched_action:
@@ -1905,12 +1906,12 @@ lemma endTimeslice_invs'[wp]:
   apply (clarsimp simp: ct_in_state'_def sch_act_sane_def)
   done
 
-crunches setConsumedTime, updateSchedContext
+crunch setConsumedTime, updateSchedContext
   for sch_act_sane[wp]: sch_act_sane
   and ct_active'[wp]: ct_active'
   (simp: sch_act_sane_def ct_in_state'_def ignore: setSchedContext)
 
-crunches refillResetRR, refillBudgetCheck
+crunch refillResetRR, refillBudgetCheck
   for ct_active'[wp]: ct_active'
   and sch_act_sane[wp]: sch_act_sane
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' p"
@@ -1918,7 +1919,7 @@ crunches refillResetRR, refillBudgetCheck
   and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-crunches chargeBudget
+crunch chargeBudget
   for typ_at'[wp]: "\<lambda>s. Q (typ_at' P p s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1941,14 +1942,14 @@ lemma refillResetRR_invs'[wp]:
 lemmas refill_reset_rr_typ_ats [wp] =
   abs_typ_at_lifts [OF refill_reset_rr_typ_at]
 
-crunches refillResetRR
+crunch refillResetRR
   for ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
 
-crunches setConsumedTime, refillResetRR
+crunch setConsumedTime, refillResetRR
   for cur_tcb'[wp]: cur_tcb'
   (simp: cur_tcb'_def)
 
-crunches end_timeslice
+crunch end_timeslice
   for in_correct_ready_q[wp]: in_correct_ready_q
   and ready_qs_distinct[wp]: ready_qs_distinct
   (wp: crunch_wps ignore: set_simple_ko tcb_sched_action)
@@ -2303,7 +2304,7 @@ lemma cteInsert_sane[wp]:
             hoare_convert_imp [OF cteInsert_nosch cteInsert_ct])
   done
 
-crunches setExtraBadge, transferCaps, handleFaultReply, doIPCTransfer
+crunch setExtraBadge, transferCaps, handleFaultReply, doIPCTransfer
   for sch_act_sane [wp]: sch_act_sane
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2317,7 +2318,7 @@ lemma handleHypervisorFault_corres:
   done
 
 (* FIXME: move *)
-crunches handleVMFault,handleHypervisorFault
+crunch handleVMFault,handleHypervisorFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and cap_to'[wp]: "ex_nonz_cap_to' t"
   and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -2366,7 +2367,7 @@ lemma ct_active_not_idle'[simp]:
                    elim: pred_tcb'_weakenE)+
   done
 
-crunches handleFault, receiveSignal, receiveIPC, asUser
+crunch handleFault, receiveSignal, receiveIPC, asUser
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
@@ -2387,7 +2388,7 @@ lemma checkBudgetRestart_false:
   "\<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. Q s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. \<not> rv \<longrightarrow> Q s\<rbrace>"
   by (wpsimp wp: hoare_drop_imp)
 
-crunches checkBudget
+crunch checkBudget
   for invs'[wp]: invs'
 
 lemma checkBudgetRestart_invs'[wp]:
@@ -2402,13 +2403,13 @@ lemma checkBudgetRestart_invs'[wp]:
    apply (erule (1) if_live_then_nonz_capD')
   by (fastforce simp: live_def ko_wp_at'_def opt_map_red is_BlockedOnReply_def)+
 
-crunches check_budget
+crunch check_budget
   for cur_tcb[wp]: cur_tcb
   and pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
   (wp: crunch_wps simp: crunch_simps)
 
-crunches checkBudgetRestart
+crunch checkBudgetRestart
   for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -2426,7 +2427,7 @@ lemma invs'_ksCurTime_update[iff]:
                      bitmapQ_no_L1_orphans_def valid_irq_node'_def valid_machine_state'_def
                      valid_dom_schedule'_def valid_bitmaps_def)
 
-crunches setDomainTime, setCurTime, setConsumedTime, setExtraBadge, setReleaseQueue, setQueue,
+crunch setDomainTime, setCurTime, setConsumedTime, setExtraBadge, setReleaseQueue, setQueue,
   modifyReadyQueuesL1Bitmap, modifyReadyQueuesL2Bitmap, setReprogramTimer
   for ct_in_state'[wp]: "ct_in_state' P"
   and isSchedulable[wp]: "isSchedulable_bool p"
@@ -2435,14 +2436,14 @@ crunches setDomainTime, setCurTime, setConsumedTime, setExtraBadge, setReleaseQu
   and pred_map_sc_active_ct[wp]: "\<lambda>s. pred_map (\<lambda>p. isScActive p s) (tcbSCs_of s) (ksCurThread s)"
   (simp: ct_in_state'_def isScActive_def isSchedulable_bool_def)
 
-crunches updateTimeStamp, tcbSchedAppend, postpone
+crunch updateTimeStamp, tcbSchedAppend, postpone
   for invs'[wp]: invs'
   and ct_in_state'[wp]: "ct_in_state' P"
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   (ignore: doMachineOp wp: crunch_wps)
 
-crunches updateTimeStamp
+crunch updateTimeStamp
   for tcbSCs_of_scTCBs_of[wp]: "\<lambda>s. P (tcbSCs_of s) (scTCBs_of s)"
   and tcbs_of'_ct[wp]: "\<lambda>s. P (tcbs_of' s) (ksCurThread s)"
   and tcbSCs_of_ct[wp]: "\<lambda>s. P (tcbSCs_of s) (ksCurThread s)"
@@ -2456,21 +2457,21 @@ lemma installThreadBuffer_ksCurThread[wp]:
   unfolding installThreadBuffer_def
   by (wpsimp wp: checkCap_inv hoare_drop_imp cteDelete_preservation)
 
-crunches RISCV64_H.performInvocation
+crunch RISCV64_H.performInvocation
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: crunch_wps getObject_inv)
 
-crunches resetUntypedCap
+crunch resetUntypedCap
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: mapME_x_inv_wp preemptionPoint_inv crunch_wps)
 
-crunches performInvocation
+crunch performInvocation
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps cteRevoke_preservation filterM_preserved cteDelete_preservation
        hoare_drop_imps hoare_vcg_all_lift
    simp: crunch_simps)
 
-crunches updateTimeStamp
+crunch updateTimeStamp
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
 
 lemma he_invs'[wp]:
