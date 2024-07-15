@@ -376,7 +376,7 @@ proof -
 qed
 
 lemmas corres_symb_exec_r_conj_ex_abs_forwards =
-  corres_symb_exec_r_conj_ex_abs[where P'=P' and Q'=P' for P', simplified]
+  corres_symb_exec_r_conj_ex_abs[where P=P and Q=P for P, where P'=P' and Q'=P' for P', simplified]
 
 lemma gets_the_corres_ex_abs':
  "\<lbrakk>no_ofail P a; no_ofail (P' and ex_abs_underlying sr P) b\<rbrakk> \<Longrightarrow>
