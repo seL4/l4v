@@ -4967,27 +4967,24 @@ lemma find_time_after_ccorres:
                                   \<and> (\<forall>ptr. r = Some ptr \<longrightarrow> (tcbInReleaseQueue |< tcbs_of' s) ptr)"
                      and G'=UNIV
                       in ccorres_While')
-                prefer 2
-                apply (rule ccorres_guard_imp)
-                 apply (ctac add: time_after_ccorres)
-                apply fastforce
+              prefer 2
+              apply (rule ccorres_guard_imp)
+                apply (ctac add: time_after_ccorres)
                apply fastforce
-              apply (rule stronger_ccorres_guard_imp)
-                apply (rule ccorres_pre_getObject_tcb)
-                apply (rule ccorres_Guard)
-                apply (rule ccorres_return[where R=\<top>])
-                apply vcg
-                apply clarsimp
-                apply (erule CollectD)
-               apply fastforce
-              apply (clarsimp simp: typ_heap_simps)
-              apply (frule timeAfter_SomeTrueD)
-              apply (clarsimp simp: typ_heap_simps option_to_ctcb_ptr_def opt_pred_def opt_map_def
-                                    obj_at'_def ctcb_relation_def
-                             split: option.splits)
-             apply wpsimp
+              apply fastforce
+             apply (rule stronger_ccorres_guard_imp)
+               apply (rule ccorres_pre_getObject_tcb)
+               apply (rule ccorres_Guard)
+               apply (rule ccorres_return[where R=\<top>])
+               apply vcg
+               apply clarsimp
+               apply (erule CollectD)
+              apply fastforce
+             apply (clarsimp simp: typ_heap_simps)
              apply (frule timeAfter_SomeTrueD)
-             apply clarsimp
+             apply (clarsimp simp: typ_heap_simps option_to_ctcb_ptr_def opt_pred_def opt_map_def
+                                   obj_at'_def ctcb_relation_def
+                            split: option.splits)
             apply (wpsimp wp: no_ofail_timeAfter)
            apply (wpsimp wp: getTCB_wp)
            apply (frule timeAfter_SomeTrueD)
