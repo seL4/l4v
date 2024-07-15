@@ -168,7 +168,7 @@ where
        cdl_intent_extras = [croot],
        cdl_intent_recv_slot = None\<rparr> False"
 
-definition seL4_IRQControl_Get :: "cdl_cptr \<Rightarrow> 10 word \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool u_monad"
+definition seL4_IRQControl_Get :: "cdl_cptr \<Rightarrow> cdl_irq \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool u_monad"
 where
   "seL4_IRQControl_Get control_cap irq croot node_index node_depth \<equiv>
     do_kernel_op $ call_kernel_with_intent

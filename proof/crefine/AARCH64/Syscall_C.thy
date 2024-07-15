@@ -328,7 +328,7 @@ lemma decodeInvocation_ccorres:
      apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
      apply fastforce
     apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
-    apply (fastforce simp: cap_endpoint_cap_lift_def mask_eq_ucast_eq)
+    apply (fastforce simp: cap_endpoint_cap_lift_def mask_eq_ucast_eq irq_len_val)
    apply (frule ccap_relation_ep_helpers)
     apply (clarsimp simp: cap_get_tag_isCap isEndpointCap_def)
    apply clarsimp
@@ -1517,40 +1517,28 @@ lemma getIRQSlot_ccorres3:
               elim!: rsubst[of "\<lambda>t. _ \<in> P' t"])
 
 lemma scast_maxIRQ_less_eq:
-  fixes b :: irq
-  shows "(Kernel_C.maxIRQ <s ucast b) = (scast Kernel_C.maxIRQ < b)"
-  apply (clarsimp simp: Kernel_C.maxIRQ_def word_sless_def word_sle_def)
-  apply (simp add: sint_ucast_eq_uint is_down_def target_size_def source_size_def word_size)
-  apply uint_arith
-  apply (auto simp: uint_up_ucast is_up_def target_size_def source_size_def word_size)
-  done
+  "(Kernel_C.maxIRQ <s ucast b) = (scast Kernel_C.maxIRQ < b)" for b::irq
+  by (auto simp: Kernel_C_maxIRQ word_sless_def word_sle_def sint_ucast_eq_uint is_down
+                 word_less_def less_le_not_le maxIRQ_eq_ucast_irq_32_signed_uint)
 
 lemmas scast_maxIRQ_is_less = scast_maxIRQ_less_eq [THEN iffD1]
 
 lemma ucast_maxIRQ_is_less:
   "SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ < UCAST(irq_len \<rightarrow> 64) irq \<Longrightarrow> scast Kernel_C.maxIRQ < irq"
-  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
-  apply (subgoal_tac "LENGTH(irq_len) \<le> LENGTH(64)")
-  apply (drule less_ucast_ucast_less[where x= "0x17F" and y="irq"])
-    by (simp)+
+  by (simp add: Kernel_C_maxIRQ)
 
 lemma validIRQcastingLess:
-  "Kernel_C.maxIRQ <s ucast b \<Longrightarrow> AARCH64.maxIRQ < b"
-  by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
+  "Kernel_C.maxIRQ <s ucast b \<Longrightarrow> Kernel_Config.maxIRQ < (b::irq)"
+  by (drule scast_maxIRQ_is_less) (simp add: Kernel_C_maxIRQ)
 
 lemma scast_maxIRQ_is_not_less:
-  fixes b :: irq
-  shows "\<not> Kernel_C.maxIRQ <s ucast b \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
+  "\<not> Kernel_C.maxIRQ <s ucast b \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)" for b::irq
   by (simp add: scast_maxIRQ_less_eq)
 
 lemma ucast_maxIRQ_is_not_less:
-  "\<not> (SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ < UCAST(irq_len \<rightarrow> 64) irq) \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < irq)"
-  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
-  apply (subgoal_tac "LENGTH(irq_len) \<le> LENGTH(64)")
-   prefer 2
-   apply simp
-  apply (erule notE)
-  using ucast_up_mono by fastforce
+  "\<not> (SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ < UCAST(irq_len \<rightarrow> 64) irq) \<Longrightarrow>
+   \<not> (scast Kernel_C.maxIRQ < irq)"
+  by (simp add: Kernel_C_maxIRQ)
 
 lemma get_gic_vcpu_ctrl_misr_invs'[wp]:
   "valid invs' (doMachineOp get_gic_vcpu_ctrl_misr) (\<lambda>_. invs')"
@@ -2171,9 +2159,9 @@ proof -
       apply (drule (1) obj_at_cslift_tcb)
       apply (clarsimp simp: cfault_rel_def seL4_Fault_VPPIEvent_lift_def
                             seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def Let_def
-                            mask_eq_iff
+                            mask_eq_iff irq_len_val
                       split: if_splits)
-      apply word_eqI_solve
+      apply (simp add: ucast_and_mask ge_mask_eq irq_len_val ucast_and_mask_source word_and_le1)
       done
 
         apply (wpsimp simp: vcpuUpdate_def wp: setVCPU_VPPIMasked_invs' | wps)+
@@ -2229,15 +2217,13 @@ lemma ccorres_handleReservedIRQ:
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
-     (UNIV \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>)
+     \<lbrace>\<acute>irq = ucast irq\<rbrace>
      hs
      (handleInterrupt irq)
      (Call handleInterrupt_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (simp  add: Platform_maxIRQ del: Collect_const)
-    apply (drule ucast_maxIRQ_is_less[simplified])
-    apply (simp del: Collect_const)
+    apply (simp add:  Kernel_C_maxIRQ del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
     apply (subst doMachineOp_bind)
       apply (rule maskInterrupt_empty_fail)
@@ -2252,7 +2238,7 @@ lemma handleInterrupt_ccorres:
       apply (vcg exspec=ackInterrupt_modifies)
      apply wp
     apply (vcg exspec=maskInterrupt_modifies)
-   apply (simp add: ucast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
+   apply (simp add: Kernel_C_maxIRQ del: Collect_const)
    apply (rule ccorres_pre_getIRQState)
     apply wpc
       apply simp
@@ -2321,7 +2307,7 @@ lemma handleInterrupt_ccorres:
      apply (ctac (no_vcg) add: resetTimer_ccorres)
       apply (ctac add: ackInterrupt_ccorres )
      apply wp+
-   apply (simp add: Platform_maxIRQ maxIRQ_def del: Collect_const)
+   apply (simp del: Collect_const)
    apply (rule ccorres_move_const_guards)+
    apply (rule ccorres_cond_false_seq)
    apply (rule ccorres_cond_false_seq)
@@ -2330,32 +2316,25 @@ lemma handleInterrupt_ccorres:
      apply (ctac (no_vcg) add: ackInterrupt_ccorres)
     apply wp
    apply (vcg exspec=handleReservedIRQ_modifies)
-  apply (simp add: sint_ucast_eq_uint is_down uint_up_ucast is_up )
-  apply (clarsimp simp: word_sless_alt word_less_alt word_le_def Kernel_C.maxIRQ_def
-                        uint_up_ucast is_up_def
-                        source_size_def target_size_def word_size
-                        sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
+  apply (clarsimp simp: Kernel_C_maxIRQ not_less ucast_irq_array_guard)
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of non_kernel_IRQs_def)
   apply (clarsimp)
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
-        cte_wp_at_ctes_of ucast_ucast_b is_up)
+                        cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-      apply clarsimp
-      apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-      apply (clarsimp simp: typ_heap_simps')
-      apply (simp add: cap_get_tag_isCap)
-      apply (clarsimp simp: isCap_simps)
-      apply (frule cap_get_tag_isCap_unfolded_H_cap)
-      apply (frule cap_get_tag_to_H, assumption)
-      apply (clarsimp simp: to_bool_def)
-     apply (cut_tac un_ui_le[where b = "383::machine_word" and a = irq,
-            simplified word_size])
-     apply (simp add: ucast_eq_0 is_up_def source_size_def
-                      target_size_def word_size unat_gt_0 not_less
-           | subst array_assertion_abs_irq[rule_format, OF conjI])+
-    apply (clarsimp simp: nat_le_iff)
-    apply (clarsimp simp: IRQReserved_def)+
+       apply clarsimp
+       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+       apply (clarsimp simp: typ_heap_simps')
+       apply (simp add: cap_get_tag_isCap)
+       apply (clarsimp simp: isCap_simps)
+       apply (frule cap_get_tag_isCap_unfolded_H_cap)
+       apply (frule cap_get_tag_to_H, assumption)
+       apply (clarsimp simp: to_bool_def)
+      apply (unat_arith, simp) (* nat irq bound based on irq_len *)
+     apply (simp add: word_neq_0_conv word_less_nat_alt)
+    apply (unat_arith, simp) (* word irq bound based on irq_len *)
+   apply (clarsimp simp: IRQReserved_def)+
   done
 end
 

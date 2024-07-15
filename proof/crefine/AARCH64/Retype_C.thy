@@ -2142,7 +2142,7 @@ proof (intro impI allI)
     and cover: "range_cover ptr sz (ptBits pt_t) 1"
     and al: "is_aligned ptr (ptBits pt_t)"
     and ptr0: "ptr \<noteq> 0"
-    and sz: "(ptBits pt_t) \<le> sz"
+    and sz: "ptBits pt_t \<le> sz"
     and szb: "sz < word_bits"
     and pal: "pspace_aligned' \<sigma>"
     and pdst: "pspace_distinct' \<sigma>"
@@ -2215,7 +2215,9 @@ proof (intro impI allI)
     using al[simplified bit_simps]
     apply -
     apply (rule is_aligned_c_guard[where n="ptBits pt_t" and m=3])
-    apply (simp_all add:  align_td_array align_of_def bit_simps ptr0 split: if_split)
+    apply (simp_all add:  align_td_array align_of_def bit_simps ptr0 pt_t_def
+                          Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
+                    split: if_splits)
     done
 
   have guard'[unfolded array_len_def]: "\<forall>n < array_len. c_guard (pte_Ptr ptr +\<^sub>p int n)"
@@ -2266,7 +2268,7 @@ proof (intro impI allI)
                           pt_bits_def table_size_def power_add pte_bits_def word_size_bits_def
                           hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl
                           cvariable_array_ptr_retyps[OF szo]
-                          zero_ranges_ptr_retyps[where p="pt_Ptr ptr", simplified szo])
+                          zero_ranges_ptr_retyps[where p="vs_Ptr ptr", simplified szo])
     apply (subst h_t_valid_ptr_retyps_gen_disjoint, assumption)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
@@ -4378,7 +4380,7 @@ lemma getObjectSize_symb:
                         APIType_capBits_def objBits_simps' bit_simps
                    split: if_split)
    apply unat_arith
-  (* FIXME AARCH64 abstraction violation *)
+  (* True in either config with corresponding max vm level change *)
   apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
   done
 
@@ -5923,7 +5925,7 @@ subgoal
      apply (rule is_aligned_c_guard[where m=pte_bits], simp, simp)
        apply (simp add: align_of_array)
        apply (simp add: align_of_def bit_simps)
-      apply (simp add: bit_simps split: if_split)
+      apply (solves \<open>simp add: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def split: if_split\<close>)
      apply (simp add: bit_simps)
     apply (drule_tac p="vs_Ptr regionBase" and
                      d="hrs_htd (t_hrs_' (globals s'))" and
@@ -7162,7 +7164,7 @@ lemma ccorres_typ_region_bytes_dummy:
                    cnodes_retype_have_size_mono[where T=S]
                    tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned']
                    pte_typ_region_bytes o_def)
-  (* FIXME AARCH64 abstraction violation, need to know config_ARM_PA_SIZE_BITS_40 is False *)
+  (* True for either version of config_ARM_PA_SIZE_BITS_40 with corresponding max vm level change *)
   apply (simp add: cmap_array_typ_region_bytes_triv invs_pspace_aligned' bit_simps
                    objBitsT_simps word_bits_def zero_ranges_are_zero_typ_region_bytes
                    Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
@@ -8660,7 +8662,6 @@ shows  "ccorres dc xfdc
        subgoal premises prems using prems
          by (clarsimp simp: objBits_simps' unat_eq_def word_unat.Rep_inverse'
                             word_less_nat_alt)+
-    (* FIXME AARCH64 abstraction violation: for some of these we need to know config_ARM_PA_SIZE_BITS_40_def *)
     by (clarsimp simp: bit_simps pageBitsForSize_def framesize_to_H_def frameSizeConstants_defs
                        Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)+
 

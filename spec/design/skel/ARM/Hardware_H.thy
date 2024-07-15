@@ -47,5 +47,9 @@ context Arch begin global_naming ARM_H
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_H ONLY wordFromPDE wordFromPTE
 
+(* Kernel_Config provides a generic numeral, Haskell expects type irq *)
+abbreviation (input) maxIRQ :: irq where
+  "maxIRQ == Kernel_Config.maxIRQ"
+
 end
 end

@@ -36,18 +36,15 @@ lemma schedule_sch_act_wf:
   apply (rule schedule_invs')
   done
 
-lemma ucast_not_helper_cheating:
-  fixes a:: "10 word"
-  assumes a: "ucast a \<noteq> (0xFFFF :: word16)"
-  shows "ucast a \<noteq> (0xFFFF::32 signed word)"
-  by (word_bitwise,simp)
+(* On GICv2 and GICv3, irqInvalid is picked such it is outside the range of possible IRQs
+   by type alone. *)
+lemma irq_type_never_invalid_left:
+  "ucast irq \<noteq> irqInvalid" for irq::irq
+  unfolding irqInvalid_def
+  using ucast_less[of irq, where 'a=machine_word_len]
+  by (clarsimp simp: mask_def)
 
-lemma ucast_helper_not_maxword:
-  \<open>UCAST(10 \<rightarrow> 32) x \<noteq> 0xFFFF\<close>
-  by transfer (simp add: take_bit_eq_mod)
-
-lemmas ucast_helper_simps_32 =
-  ucast_helper_not_maxword arg_cong[where f="UCAST(16 \<rightarrow> 32)", OF minus_one_norm]
+lemmas irq_type_never_invalid = irq_type_never_invalid_left irq_type_never_invalid_left[symmetric]
 
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
@@ -61,9 +58,8 @@ proof -
    apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-    apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
     apply wpc
-     apply (simp add: irqInvalid_def ucast_helper_simps_32 mask_def)
+     apply simp
      apply (rule ccorres_symb_exec_r)
        apply (ctac (no_vcg) add: schedule_ccorres)
         apply (rule ccorres_stateAssert_after)
@@ -77,7 +73,7 @@ proof -
       apply simp
       apply vcg
      apply vcg
-    apply (clarsimp simp: irqInvalid_def ucast_ucast_b is_up ucast_helper_simps_32 mask_def)
+    apply (clarsimp simp: irq_type_never_invalid)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
        apply (rule ccorres_stateAssert_after)
@@ -88,9 +84,9 @@ proof -
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
-    apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
-   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)" in hoare_post_imp)
+    apply (solves clarsimp)
+   apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 qed
@@ -231,7 +227,6 @@ lemma ct_active_not_idle'_strengthen:
   "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   by clarsimp
 
-
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc
            (invs' and
@@ -262,14 +257,10 @@ lemma handleSyscall_ccorres:
                 apply (simp add: liftE_def bind_assoc)
                 apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
                  apply (rule ccorres_Guard)?
-                 apply (simp only: irqInvalid_def)?
-                 apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                  apply (subst ccorres_seq_skip'[symmetric])
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                      apply (case_tac rv)
-                      apply (clarsimp simp: ucast_def uint_minus_1_eq)
-                     defer
+                      apply (auto simp: irq_type_never_invalid split: option.splits)[1]
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                     apply ceqv
                    apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
@@ -277,10 +268,10 @@ lemma handleSyscall_ccorres:
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
                 apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                             in hoare_post_imp)
-                 apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
-                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+                                          (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)"
+                                in hoare_post_imp)
+                 apply (solves clarsimp)
+                apply (wp getActiveIRQ_le_maxIRQ | simp)+
                apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
                apply (simp add: invs'_def valid_state'_def)
               apply clarsimp
@@ -298,20 +289,12 @@ lemma handleSyscall_ccorres:
                 apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                apply clarsimp
                apply (rule ccorres_cond_univ)
-               apply (simp add: liftE_def bind_assoc irqInvalid_def)
+               apply (simp add: liftE_def bind_assoc)
                apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-                apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                 apply (subst ccorres_seq_skip'[symmetric])
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                     apply (case_tac rv)
-                      apply (clarsimp simp: ucast_helper_simps_32 mask_def)
-                     apply (clarsimp simp only: ucast_helper_simps_32)
-                     apply (intro iffI)
-                      apply clarsimp
-                      apply (cut_tac 'b=32 and x=a and n=10 and 'a=10 in
-                               ucast_leq_mask; simp add: mask_def)
-                     apply simp
+                     apply (auto simp: irq_type_never_invalid split: option.splits)[1]
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                    apply ceqv
                   apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
@@ -319,10 +302,10 @@ lemma handleSyscall_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
                apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                     in hoare_post_imp)
-                apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
-               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+                                         (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)"
+                               in hoare_post_imp)
+                apply (solves clarsimp)
+               apply (wp getActiveIRQ_le_maxIRQ | simp)+
               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
@@ -339,18 +322,13 @@ lemma handleSyscall_ccorres:
                apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
               apply clarsimp
               apply (rule ccorres_cond_univ)
-              apply (simp add: liftE_def bind_assoc irqInvalid_def)
+              apply (simp add: liftE_def bind_assoc)
               apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-               apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                apply (subst ccorres_seq_skip'[symmetric])
                apply (rule ccorres_split_nothrow_novcg)
                    apply (rule ccorres_Guard)?
                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                    apply (case_tac rv, clarsimp)
-                    apply (clarsimp simp: ucast_ucast_b is_up ucast_helper_simps_32 mask_def)
-                   apply (clarsimp simp: ucast_helper_simps_32)
-                   apply (cut_tac 'b=32 and x=a and n=10 and 'a=10 in
-                               ucast_leq_mask; simp add: mask_def)
+                    apply (auto simp: irq_type_never_invalid split: option.splits)[1]
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
@@ -358,11 +336,11 @@ lemma handleSyscall_ccorres:
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
               apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-               (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                        in hoare_post_imp)
-               apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
-              apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-             apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+                                        (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)"
+                              in hoare_post_imp)
+               apply (solves clarsimp)
+              apply (wp getActiveIRQ_le_maxIRQ | simp)+
+             apply (rule_tac Q=" invs'" in hoare_post_imp_dc2E, wp)
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
             apply (vcg exspec=handleInvocation_modifies)
@@ -448,9 +426,7 @@ lemma handleSyscall_ccorres:
    apply (clarsimp simp: simple_sane_strg ct_in_state'_def st_tcb_at'_def obj_at'_def
                         isReply_def)
    apply (rule conjI, fastforce)
-   prefer 2
-   apply (cut_tac 'b=32 and x=a and n=10 and 'a=10 in ucast_leq_mask)
-   by (auto simp: ucast_helper_simps_32 mask_def syscall_from_H_def Kernel_C.SysSend_def
+   by (auto simp: syscall_from_H_def Kernel_C.SysSend_def
             split: option.split_asm)
 
 lemma ccorres_corres_u:
@@ -961,17 +937,15 @@ lemma check_active_irq_corres_C:
     apply (rule corres_split)
        apply (rule ccorres_corres_u_xf)
         apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
-           apply (ctac add:getActiveIRQ_ccorres)
+           apply (ctac add: getActiveIRQ_ccorres)
           apply (rule TrueI)
          apply simp
         apply assumption
        apply (rule no_fail_dmo')
        apply (rule no_fail_getActiveIRQ)
-      apply (clarsimp simp: ucast_helper_simps_32 irqInvalid_def ucast_up_ucast_id
-                            is_up_def source_size_def target_size_def word_size mask_def
-                      split: option.splits)
-     apply (rule hoare_TrueI)+
-   apply (wp|simp)+
+      apply (rule corres_inst[where P=\<top> and P'=\<top>])
+      apply (auto simp: irq_type_never_invalid split: option.splits)[1]
+     apply wpsimp+
   done
 
 lemma refinement2_both:

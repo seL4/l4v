@@ -112,34 +112,12 @@ lemma Arch_switchToThread_obj_at_pre:
   apply (wp doMachineOp_obj_at setVMRoot_obj_at'_no_vcpu hoare_drop_imps | wpc)+
   done
 
-(* FIXME: This is cheating since ucast from 10 to 16 will never give us 0xFFFF.
-          However type of 10 word is from irq oracle so it is the oracle that matters not this lemma.
-   (Xin) *)
-lemma ucast_not_helper_cheating:
-  fixes a:: "10 word"
-  assumes a: "ucast a \<noteq> (0xFFFF :: word16)"
-  shows "ucast a \<noteq> (0xFFFF::32 signed word)"
-  by (word_bitwise,simp)
-
-lemma ucast_helper_not_maxword:
-  "UCAST(10 \<rightarrow> 32) x \<noteq> 0xFFFF"
-  apply (subgoal_tac "UCAST(10 \<rightarrow> 32) x \<le> UCAST(10 \<rightarrow> 32) max_word")
-   apply (rule notI)
-   defer
-  apply (rule ucast_up_mono_le)
-    apply simp
-   apply simp
-  by (simp add: mask_def)
-
-lemmas ucast_helper_simps_32 =
-  ucast_helper_not_maxword arg_cong[where f="UCAST(16 \<rightarrow> 32)", OF minus_one_norm]
-
 lemma addToBitmap_sets_L1Bitmap_same_dom:
   "\<lbrace>\<lambda>s. p \<le> maxPriority \<and> d' = d \<rbrace> addToBitmap d' p
        \<lbrace>\<lambda>rv s. ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrace>"
   unfolding addToBitmap_def bitmap_fun_defs
   apply wpsimp
-  by (metis nth_0 of_nat_numeral prioToL1Index_bit_set word_neq_0_conv word_or_zero)
+  by (metis nth_0 prioToL1Index_bit_set word_or_zero)
 
 context begin interpretation Arch .
 

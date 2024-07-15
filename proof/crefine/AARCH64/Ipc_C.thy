@@ -1805,7 +1805,7 @@ proof -
           apply (clarsimp simp: seL4_Fault_VPPIEvent_lift_def)
           apply (clarsimp simp: ctcb_relation_def is_cap_fault_def word_and_1 cfault_rel_def
                           split: if_split_asm option.splits)
-          apply (simp add: ucast_ucast_mask)
+          apply (simp add: ucast_ucast_mask irq_len_val word_le_mask_eq)
          apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
                          split: if_split_asm)
         apply ceqv

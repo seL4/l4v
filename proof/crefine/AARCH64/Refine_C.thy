@@ -15,10 +15,6 @@ imports
   CToCRefine
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
-end
-
 context kernel_m
 begin
 
@@ -34,35 +30,9 @@ declare liftE_handle [simp]
 
 lemma schedule_sch_act_wf:
   "\<lbrace>invs'\<rbrace> schedule \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-apply (rule hoare_post_imp)
- apply (erule invs_sch_act_wf')
-apply (rule schedule_invs')
-done
-
-lemma ucast_8_32_neq:
-  "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
-  by uint_arith (clarsimp simp: uint_up_ucast is_up)
-
-(* FIXME AARCH64 move, wrong name, eliminate magic number *)
-lemma getActiveIRQ_neq_Some0xFF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x1FF\<rbrace>"
-  apply (simp add: getActiveIRQ_def)
-  apply wpsimp
-  using irq_oracle_max_irq
-  apply (simp add: maxIRQ_def)
-  apply (drule_tac x="Suc (irq_state s)" in spec)
-  apply clarsimp
-  done
-
-(* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
-(* FIXME AARCH64 copied from Machine_R but absent on AARCH64, name is wrong *)
-lemma getActiveIRQ_neq_Some0xFF:
-  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x1FF\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  apply clarsimp
-  apply (drule use_valid, rule getActiveIRQ_neq_Some0xFF')
-   apply auto
+  apply (rule hoare_post_imp)
+   apply (erule invs_sch_act_wf')
+  apply (rule schedule_invs')
   done
 
 lemma handleInterruptEntry_ccorres:
@@ -78,7 +48,6 @@ proof -
    apply (simp add: liftE_bind bind_assoc)
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)?
-    apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
     apply wpc
      apply (simp add: irqInvalid_def mask_def)
      apply (rule ccorres_symb_exec_r)
@@ -106,10 +75,10 @@ proof -
       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
    apply simp
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> AARCH64.maxIRQ) \<and> rv \<noteq> Some 0x3FF \<and>
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ) \<and>
                              sch_act_not (ksCurThread s) s" in hoare_post_imp)
-    apply (clarsimp simp: Kernel_C.maxIRQ_def AARCH64.maxIRQ_def)
-   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+    apply (solves clarsimp)
+   apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 qed
@@ -295,7 +264,6 @@ lemma handleSyscall_ccorres:
                 apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
                  apply (rule ccorres_Guard)?
                  apply (simp only: irqInvalid_def)?
-                 apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                  apply (subst ccorres_seq_skip'[symmetric])
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
@@ -307,7 +275,7 @@ lemma handleSyscall_ccorres:
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
                 apply (subst Ex_Some_conv | strengthen invs'_irq_strg | simp
-                       | wp dmo'_getActiveIRQ_non_kernel getActiveIRQ_neq_Some0xFF)+
+                       | wp dmo'_getActiveIRQ_non_kernel)+
               apply (vcg exspec=handleInvocation_modifies)
              prefer 3
              \<comment> \<open>SysNBSend\<close>
@@ -324,7 +292,6 @@ lemma handleSyscall_ccorres:
                apply (rule ccorres_cond_univ)
                apply (simp add: liftE_def bind_assoc irqInvalid_def)
                apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-                apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                 apply (subst ccorres_seq_skip'[symmetric])
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule ccorres_Guard)?
@@ -337,7 +304,7 @@ lemma handleSyscall_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
                apply (subst Ex_Some_conv | strengthen invs'_irq_strg | simp
-                      | wp dmo'_getActiveIRQ_non_kernel getActiveIRQ_neq_Some0xFF)+
+                      | wp dmo'_getActiveIRQ_non_kernel)+
              apply (vcg exspec=handleInvocation_modifies)
             \<comment> \<open>SysCall\<close>
             apply (clarsimp simp: syscall_from_H_def syscall_defs)
@@ -353,7 +320,6 @@ lemma handleSyscall_ccorres:
               apply (rule ccorres_cond_univ)
               apply (simp add: liftE_def bind_assoc irqInvalid_def)
               apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-               apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                apply (subst ccorres_seq_skip'[symmetric])
                apply (rule ccorres_split_nothrow_novcg)
                    apply (rule ccorres_Guard)?
@@ -366,7 +332,7 @@ lemma handleSyscall_ccorres:
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
               apply (subst Ex_Some_conv | strengthen invs'_irq_strg | simp
-                     | wp dmo'_getActiveIRQ_non_kernel getActiveIRQ_neq_Some0xFF)+
+                     | wp dmo'_getActiveIRQ_non_kernel)+
             apply (vcg exspec=handleInvocation_modifies)
            prefer 2
            \<comment> \<open>SysRecv\<close>

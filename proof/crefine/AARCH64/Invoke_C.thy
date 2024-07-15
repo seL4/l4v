@@ -1463,9 +1463,9 @@ lemma getObjectSize_spec:
                          bit_simps objBits_simps' framesize_to_H_def pageBitsForSize_def
                         object_type_to_H_def Kernel_C_defs APIType_capBits_def)
   apply (simp add:nAPIObjects_def)
-  (* FIXME AARCH64 abstraction violation, looks to be not true when config_ARM_PA_SIZE_BITS_40 *)
-  apply (simp add:enum_object_type enum_apiobject_type frameSizeConstants_defs
-                  Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
+  (* True for both cases of config_ARM_PA_SIZE_BITS_40 with corresponding max vm level change *)
+  apply (simp add: enum_object_type enum_apiobject_type frameSizeConstants_defs
+                   Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
                split: if_split)
   apply unat_arith
   done

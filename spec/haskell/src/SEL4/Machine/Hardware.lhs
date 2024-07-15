@@ -70,7 +70,7 @@ An interrupt request from an external device, or from the CPU's timer, is repres
 > newtype IRQ = IRQ Arch.IRQ
 >     deriving (Enum, Bounded, Ord, Ix, Eq, Show)
 
-The maximum and minimum IRQ are given explicit constant names here. In Haskell, these are extracted from instantiation of IRQ into the Bounded class. In the formalisation, these constants are specified directly.
+The maximum and minimum IRQ are given explicit constant names here. In Haskell, these are extracted from instantiation of IRQ into the Bounded class. In the formalisation, these constants are generated and defined in Kernel_Config.thy.
 
 > minIRQ :: IRQ
 > minIRQ = minBound

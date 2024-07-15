@@ -473,7 +473,7 @@ lemma thread_bound_ntfns_transform:
   apply (rule_tac cap="infer_tcb_bound_notification (tcb_bound_notification a)" in csta_caps[where ptr="(oref, tcb_boundntfn_slot)"
                           and auth=auth and oref=oref' and s="transform s", simplified])
     apply (unfold tcb_boundntfn_slot_def)
-    apply (rule opt_cap_tcb[where sl=6, unfolded tcb_boundntfn_slot_def tcb_pending_op_slot_def tcb_slot_defs, simplified])
+    apply (rule opt_cap_tcb[where sl=tcb_boundntfn_slot, unfolded tcb_slot_defs, simplified])
       apply simp
      apply simp
     apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def pred_tcb_def2)

@@ -519,6 +519,12 @@ lemma num_tcb_queues_calculation:
   "num_tcb_queues = numDomains * numPriorities"
   unfolding num_tcb_queues_val by eval
 
+text \<open>maxIRQ interface\<close>
+
+declare Kernel_C.maxIRQ_def[code]
+
+(* FIXME: would be more uniform to have a maxIRQ in Kernel_Config for X64 as well *)
+value_type irq_array_size = "Suc (unat Kernel_C.maxIRQ)"
 
 (* Input abbreviations for API object types *)
 (* disambiguates names *)

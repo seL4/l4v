@@ -21,7 +21,7 @@ imports
 begin
 
 (* A hardware IRQ number. *)
-type_synonym cdl_irq = "10 word"
+type_synonym cdl_irq = irq
 
 (*
  * How objects are named within the kernel.
@@ -283,6 +283,9 @@ definition
 (*
  * Each TCB contains a number of cap slots, each with a specific
  * purpose. These constants define the purpose of each slot.
+ *
+ * The specific list of slots is chosen to be consistent with the output
+ * of the CapDL-tool.
  *)
 definition "tcb_cspace_slot     = (0 :: cdl_cnode_index)"
 definition "tcb_vspace_slot     = (1 :: cdl_cnode_index)"
@@ -290,7 +293,11 @@ definition "tcb_replycap_slot   = (2 :: cdl_cnode_index)"
 definition "tcb_caller_slot     = (3 :: cdl_cnode_index)"
 definition "tcb_ipcbuffer_slot  = (4 :: cdl_cnode_index)"
 definition "tcb_pending_op_slot = (5 :: cdl_cnode_index)"
-definition "tcb_boundntfn_slot  = (6 :: cdl_cnode_index)"
+definition "tcb_boundntfn_slot  = (8 :: cdl_cnode_index)"
+
+definition "tcb_slots_list \<equiv> [0..<tcb_pending_op_slot + 1] @ [tcb_boundntfn_slot]"
+abbreviation "tcb_slots \<equiv> set tcb_slots_list"
+lemmas tcb_slots_def = tcb_slots_list_def
 
 lemmas tcb_slot_defs =
   tcb_cspace_slot_def
@@ -300,6 +307,7 @@ lemmas tcb_slot_defs =
   tcb_ipcbuffer_slot_def
   tcb_pending_op_slot_def
   tcb_boundntfn_slot_def
+  tcb_slots_list_def
 
 (*
  * Getters and setters for various data types.
@@ -610,7 +618,7 @@ definition
   default_tcb :: "word8 \<Rightarrow> cdl_tcb"
 where
   "default_tcb current_domain = \<lparr>
-    cdl_tcb_caps = \<lambda>n. if n \<le> tcb_boundntfn_slot then Some NullCap else None,
+    cdl_tcb_caps = \<lambda>n. if n \<in> tcb_slots then Some NullCap else None,
     cdl_tcb_fault_endpoint = 0,
     cdl_tcb_intent = \<lparr>
       cdl_intent_op = None,

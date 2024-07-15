@@ -46,7 +46,6 @@ requalify_consts
   ackDeadlineIRQ
   resetTimer
   getCurrentTime
-  maxIRQ
   minIRQ
   timerIRQ
   word_size_bits

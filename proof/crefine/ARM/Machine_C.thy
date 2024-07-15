@@ -166,9 +166,9 @@ assumes getFAR_ccorres:
 
 assumes getActiveIRQ_ccorres:
 "\<And>in_kernel.
-  ccorres (\<lambda>(a::10 word option) c::32 word.
-       case a of None \<Rightarrow> c = 0x0000FFFF
-       | Some (x::10 word) \<Rightarrow> c = ucast x)
+  ccorres (\<lambda>(a::irq option) c::32 word.
+       case a of None \<Rightarrow> c = irqInvalid
+       | Some x \<Rightarrow> c = ucast x)
        ret__unsigned_long_'
        \<top> UNIV hs
    (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"

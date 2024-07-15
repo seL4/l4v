@@ -752,8 +752,8 @@ lemma finaliseSlot_ccorres:
              apply simp
              apply (rule ccorres_drop_cutMon,
                     rule ccorres_split_throws)
-              apply (rule_tac P="\<lambda>s. case (snd rvb) of
-                                        IRQHandlerCap irq \<Rightarrow> UCAST(10\<rightarrow>machine_word_len) irq \<le> SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
+              apply (rule_tac P="\<lambda>s. case snd rvb of
+                                        IRQHandlerCap irq \<Rightarrow> irq \<le> Kernel_Config.maxIRQ
                                       | _ \<Rightarrow> True"
                               in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
@@ -885,8 +885,7 @@ lemma finaliseSlot_ccorres:
           apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of cap_has_cleanup'_def
                          split: option.split capability.splits)
           apply (auto dest!: ctes_of_valid'
-                       simp: valid_cap'_def Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def
-                             unat_ucast word_le_nat_alt)[1]
+                       simp: valid_cap'_def Kernel_C_maxIRQ)[1]
          apply (clarsimp dest!: isCapDs)
          subgoal by (auto dest!: valid_capAligned ctes_of_valid'
                       simp: isCap_simps final_matters'_def o_def)

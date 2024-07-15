@@ -56,7 +56,7 @@ lemma set_cap_globals_equiv[CNode_IF_assms]:
 
 (* moved from ADT_IF *)
 definition irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option" where
-  "irq_at pos masks \<equiv> let i = irq_oracle pos in (if i = 0x3FF \<or> masks i then None else Some i)"
+  "irq_at pos masks \<equiv> let i = irq_oracle pos in (if masks i then None else Some i)"
 
 lemma dmo_getActiveIRQ_wp[CNode_IF_assms]:
   "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))

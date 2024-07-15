@@ -927,6 +927,35 @@ lemma unbindMaybeNotification_ccorres:
                       objBitsKO_def is_aligned_def option_to_ctcb_ptr_def tcb_at_not_NULL
              split: ntfn.splits)
 
+(* On ARM, irqInvalid is 2^16-1 (i.e. -1 in 16-bit), which, by type, is always greater than maxIRQ *)
+(* This means we could remove the cirq \<noteq> irqInvalid part in the Some clause. Currently left in for
+   proof convencience *)
+definition irq_opt_relation :: "irq option \<Rightarrow> machine_word \<Rightarrow> bool" where
+  "irq_opt_relation airq cirq \<equiv>
+     case airq of
+         Some irq \<Rightarrow> cirq = ucast irq \<and> cirq \<noteq> irqInvalid \<and> irq \<le> Kernel_Config.maxIRQ
+       | None \<Rightarrow> cirq = irqInvalid"
+
+lemma irq_opt_relation_Some_ucast:
+  "\<lbrakk> x && mask LENGTH(irq_len) = x;
+     ucast x \<le> (Kernel_Config.maxIRQ :: irq) \<or> x \<le> (Kernel_Config.maxIRQ :: machine_word) \<rbrakk>
+    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast (ucast x::irq))"
+  unfolding irq_opt_relation_def
+  apply (simp add: and_mask_eq_iff_le_mask Kernel_C_maxIRQ)
+  apply (rule conjI, solves \<open>clarsimp simp: irqInvalid_def mask_def unat_arith_simps unat_ucast\<close>)
+  apply (erule disjE, simp)
+  apply (simp add: irq_machine_le_maxIRQ_irq)
+  done
+
+lemma irq_opt_relation_Some_ucast_left:
+  "\<lbrakk> x && mask LENGTH(irq_len) = x;
+     ucast x \<le> (Kernel_Config.maxIRQ :: irq) \<or> x \<le> (Kernel_Config.maxIRQ :: machine_word) \<rbrakk>
+    \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
+  apply (rule_tac P="irq_opt_relation (Some (ucast x))" in subst[rotated])
+  apply (rule irq_opt_relation_Some_ucast[rotated]; simp)
+  apply word_eqI_solve
+  done
+
 lemma finaliseCap_True_cases_ccorres:
   "\<And>final. isEndpointCap cap \<or> isNotificationCap cap
              \<or> isReplyCap cap \<or> isDomainCap cap \<or> cap = NullCap \<Longrightarrow>
@@ -2025,7 +2054,7 @@ lemma cteDeleteOne_ccorres:
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
-   CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (irq :: 10 word))
+   CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (irq ::irq))
      = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
@@ -2063,9 +2092,10 @@ lemma deletingIRQHandler_ccorres:
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def Kernel_C.maxIRQ_def)
+                        irq_opt_relation_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
+  apply unat_arith (* only word type bounds should be left *)
+  apply simp
   done
 
 lemma Zombie_new_spec:
@@ -2082,40 +2112,9 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x1F", simplified])
   done
 
-lemma irq_opt_relation_Some_ucast:
-  "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x):: irq))"
-  using ucast_ucast_mask[where x=x and 'a=10, symmetric]
-  apply (simp add: irq_opt_relation_def)
-  apply (rule conjI, clarsimp simp: minus_one_norm irqInvalid_def Kernel_C.maxIRQ_def)
-  apply (simp only: unat_arith_simps)
-  by (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
-
-lemma irq_opt_relation_Some_ucast':
-  "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
-  apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
-  apply (rule irq_opt_relation_Some_ucast[rotated])
-    apply simp+
-  apply (rule word_eqI)
-  apply (drule_tac f = "%x. test_bit x n" in arg_cong)
-  apply (auto simp: nth_ucast word_size)
-  done
-
-lemma irq_opt_relation_Some_ucast_left:
-  "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
-  apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
-  apply (rule irq_opt_relation_Some_ucast[rotated])
-    apply simp+
-  apply (rule word_eqI)
-  apply (drule_tac f = "%x. test_bit x n" in arg_cong)
-  apply (auto simp: nth_ucast word_size)
-  done
-
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
-    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 10
+    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask irq_len
         = capIRQ_CL (cap_irq_handler_cap_lift ccap)"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule ccap_relation_c_valid_cap)
@@ -2261,7 +2260,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  ARM.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="capIRQ cap \<le> Kernel_Config.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply csymbr
@@ -2321,17 +2320,16 @@ lemma finaliseCap_ccorres:
     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
     apply (frule(1) ccap_relation_IRQHandler_mask)
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                          valid_cap'_def ARM.maxIRQ_def
-                          Kernel_C.maxIRQ_def)
-    apply (rule irq_opt_relation_Some_ucast_left, simp)
+                          valid_cap'_def Kernel_C_maxIRQ)
+    apply (rule irq_opt_relation_Some_ucast_left, simp add: irq_len_val)
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                          valid_cap'_def ARM.maxIRQ_def
-                          Kernel_C.maxIRQ_def)
+                          valid_cap'_def Kernel_C_maxIRQ)
    apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)
-  by (clarsimp simp add: mask_eq_ucast_eq)
-  end
+  by (clarsimp simp add: mask_eq_ucast_eq irq_len_val)
+
+end
 
 end

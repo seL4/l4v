@@ -107,10 +107,6 @@ type_synonym registers_array = "machine_word[registers_count]"
 type_synonym register_idx_len = machine_word_len
 type_synonym register_idx = "register_idx_len word"
 
-(* representation of C int literals, the default for any unadorned numeral *)
-type_synonym int_literal_len = "32 signed"
-type_synonym int_word = "int_literal_len word"
-
 abbreviation "user_context_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_context_C ptr"
 abbreviation "machine_word_Ptr \<equiv> Ptr :: addr \<Rightarrow> machine_word ptr"
 abbreviation "tcb_cnode_Ptr \<equiv> Ptr :: addr \<Rightarrow> tcb_cnode_array ptr"
@@ -386,13 +382,12 @@ definition
   where
   "cte_to_H cte \<equiv> CTE (cap_to_H (cap_CL cte)) (mdb_node_to_H (cteMDBNode_CL cte))"
 
-(* FIXME AARCH64 the "9" here is irq size, do we have a better abbreviation for irq bits? *)
 definition
 cl_valid_cap :: "cap_CL \<Rightarrow> bool"
 where
 "cl_valid_cap c \<equiv>
    case c of
-     Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 9 = capIRQ_CL fc)
+     Cap_irq_handler_cap fc \<Rightarrow> capIRQ_CL fc && mask irq_len = capIRQ_CL fc
    | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFVMRights_CL fc < 4 \<and> capFVMRights_CL fc \<noteq> 2
    | x \<Rightarrow> True"
 
@@ -544,6 +539,27 @@ value_type num_tcb_queues = "numDomains * numPriorities"
 lemma num_tcb_queues_calculation:
   "num_tcb_queues = numDomains * numPriorities"
   unfolding num_tcb_queues_val by eval
+
+text \<open>maxIRQ interface\<close>
+
+(* Main lemma to use when one encounters Kernel_C.maxIRQ *)
+lemma Kernel_C_maxIRQ:
+  "Kernel_C.maxIRQ = Kernel_Config.maxIRQ"
+  by (simp add: Kernel_C.maxIRQ_def Kernel_Config.maxIRQ_def)
+
+value_type irq_array_size = "Suc Kernel_Config.maxIRQ"
+
+(* For numeral array guard assertions. *)
+lemma unat_irq_array_guard[unfolded irq_array_size_val, simplified]:
+  "unat irq \<le> Kernel_Config.maxIRQ \<Longrightarrow> unat irq < irq_array_size" for irq::irq
+  by (simp add: irq_array_size_def)
+
+lemma ucast_irq_array_guard[unfolded irq_array_size_val, simplified]:
+  "irq \<le> Kernel_Config.maxIRQ \<Longrightarrow> ucast irq < (of_nat irq_array_size :: machine_word)" for irq::irq
+  apply (simp add: irq_array_size_def word_less_nat_alt word_le_nat_alt)
+  apply (rule order_le_less_trans, rule unat_ucast_le)
+  apply simp
+  done
 
 
 (* Input abbreviations for API object types *)

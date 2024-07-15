@@ -157,7 +157,7 @@ lemma checkIRQ_corres:
   apply (rule corres_guard_imp)
     apply (clarsimp simp: minIRQ_def unlessE_whenE not_le)
     apply (rule corres_whenE)
-      apply (fastforce simp: ucast_nat_def)+
+      apply fastforce+
   done
 
 lemma whenE_rangeCheck_eq:
@@ -166,20 +166,21 @@ lemma whenE_rangeCheck_eq:
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
   by (simp add: rangeCheck_def unlessE_whenE linorder_not_le[symmetric])
 
-lemmas irq_const_defs = maxIRQ_def minIRQ_def
+lemmas irq_const_defs = minIRQ_def
 
 crunches arch_check_irq, checkIRQ
   for inv: "P"
   (simp: crunch_simps)
 
 lemma arch_check_irq_valid:
-  "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_. (\<lambda>s. unat y \<le> unat maxIRQ)\<rbrace>, -"
+  "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_. (\<lambda>s. irq \<le> Kernel_Config.maxIRQ)\<rbrace>, -"
   unfolding arch_check_irq_def
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
-  by (meson le_trans unat_ucast_le word_le_not_less word_less_eq_iff_unsigned)
+  apply (simp add: not_less word_le_nat_alt)
+  done
 
 lemma arch_check_irq_valid':
-  "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_ _. unat y \<le> unat maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_ _. irq \<le> Kernel_Config.maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   by (wp arch_check_irq_valid)
 
 lemma arch_decodeIRQControlInvocation_corres:
@@ -204,8 +205,8 @@ lemma arch_decodeIRQControlInvocation_corres:
   apply (rule conjI, clarsimp)
    apply (rule corres_guard_imp)
      apply (rule corres_splitEE[OF checkIRQ_corres])
-       apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
-       apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
+       apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
+       apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
        apply (rule corres_split_eqr[OF is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
          apply (rule corres_splitEE)
@@ -255,8 +256,8 @@ lemma decodeIRQControlInvocation_corres:
   apply (rule corres_guard_imp)
     apply (simp add: whenE_rangeCheck_eq)
     apply (rule whenE_throwError_corres, clarsimp, fastforce)
-    apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
-    apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
+    apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
+    apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
     apply (rule corres_split_eqr[OF is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
       apply (rule corres_splitEE)
@@ -295,9 +296,8 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
-  apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
-                        not_less unat_le_helper unat_of_nat unat_ucast_mask)
-  apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
+  apply (clarsimp simp: invs_valid_objs' toEnum_unat_ucast
+                        le_maxIRQ_machine_less_irqBits_val irq_machine_le_maxIRQ_irq)
   done
 
 lemma decode_irq_control_valid'[wp]:
@@ -313,9 +313,8 @@ lemma decode_irq_control_valid'[wp]:
   apply (wpsimp wp: ensureEmptySlot_stronger isIRQActive_wp whenE_throwError_wp
                 simp: o_def
          | wp (once) hoare_drop_imps)+
-  apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
-                        not_less unat_le_helper unat_of_nat unat_ucast_mask)
-  apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
+  apply (clarsimp simp: invs_valid_objs' toEnum_unat_ucast
+                        le_maxIRQ_machine_less_irqBits_val irq_machine_le_maxIRQ_irq)
   done
 
 lemma valid_globals_ex_cte_cap_irq:

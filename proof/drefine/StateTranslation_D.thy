@@ -222,7 +222,7 @@ where
   "transform_intent_issue_irq_handler args \<equiv>
    case args of
       irqW#index#depth#_ \<Rightarrow>
-         Some (IrqControlIssueIrqHandlerIntent ((ucast irqW)::10 word) index depth)
+         Some (IrqControlIssueIrqHandlerIntent (ucast irqW :: irq) index depth)
     | _ \<Rightarrow> Nothing"
 
 definition
@@ -231,7 +231,7 @@ where
   "arch_transform_intent_issue_irq_handler args \<equiv>
    case args of
       irqW#trigger#index#depth#_ \<Rightarrow>
-         Some (IrqControlIssueIrqHandlerIntent ((ucast irqW)::10 word) index depth)
+         Some (IrqControlIssueIrqHandlerIntent (ucast irqW :: irq) index depth)
     | _ \<Rightarrow> Nothing"
 
 definition

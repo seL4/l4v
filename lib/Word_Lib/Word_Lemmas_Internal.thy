@@ -1060,4 +1060,32 @@ lemma scast_ucast_up_minus_1_ucast:
    apply (metis gt0_iff_gem1 msb_less_mono ucast_less_ucast_weak unsigned_0 word_upcast_neg_msb)
   by (metis less_le ucast_nat_def ucast_up_preserves_not0 unat_minus_one unat_ucast_up_simp)
 
+lemma toEnum_unat_ucast:
+  "unat w < 2^LENGTH('a) \<Longrightarrow> toEnum (unat w) = (ucast w :: 'a::len word)"
+  by (clarsimp simp: not_le)
+
+lemma aligned_intvl_neg_mask_start:
+  fixes x::"'a :: len word"
+  assumes iv: "start \<le> x" "x < start + sz"
+  assumes al: "is_aligned start n"
+  assumes sz: "sz \<le> 2^n"
+  shows "x && ~~ mask n = start"
+proof -
+  from iv sz
+  obtain y where "x = start + y" and "y \<le> mask n"
+    by (metis (no_types, opaque_lifting) add.commute diff_add_cancel order.trans leD le_plus'
+              linorder_linear mask_eq_decr_exp order_less_le word_le_minus_one_leq)
+  moreover
+  have "start + y && ~~ mask n = start"
+    by (simp add: al and_mask_0_iff_le_mask calculation is_aligned_mask_out_add_eq)
+  ultimately
+  show ?thesis by simp
+qed
+
+(* This would hold for LENGTH('a) \<le> n, but would not be suitable for simp *)
+lemma ucast_and_mask_source:
+  "LENGTH('a) < n \<Longrightarrow>
+   UCAST('a \<rightarrow> 'b::len) w && mask n = ucast w && mask LENGTH('a)" for w::"'a::len word"
+  by word_eqI (fastforce dest: test_bit_lenD)
+
 end

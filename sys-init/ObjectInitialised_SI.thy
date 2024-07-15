@@ -629,6 +629,10 @@ lemma intent_reset_cnode:
   \<Longrightarrow> obj = obj'"
   by (clarsimp simp: intent_reset_def object_type_def split: cdl_object.splits)
 
+lemma zero_in_tcb_slots[simp]:
+  "0 \<in> tcb_slots"
+  by (simp add: tcb_slot_defs)
+
 lemma intent_reset_object_slots_NullCap:
   "\<lbrakk>intent_reset (object_default_state obj) = intent_reset obj';
    slot < 2 ^ object_size_bits obj; has_slots obj\<rbrakk>

@@ -1854,10 +1854,13 @@ proof -
                           split: if_split_asm)
          apply (subgoal_tac "seL4_Fault_get_tag (tcbFault_C ko') = scast seL4_Fault_VPPIEvent")
           apply (frule seL4_Fault_lift_VPPIEvent)
+          apply clarsimp
           apply (clarsimp simp: seL4_Fault_VPPIEvent_lift_def)
           apply (clarsimp simp: ctcb_relation_def is_cap_fault_def word_and_1 cfault_rel_def
                           split: if_split_asm option.splits)
           apply (simp add: ucast_ucast_mask)
+          apply (rule less_mask_eq[symmetric])
+          apply (simp add: irq_len_val mask_def word_less_nat_alt word_le_nat_alt)
          apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
                          split: if_split_asm)
         apply ceqv

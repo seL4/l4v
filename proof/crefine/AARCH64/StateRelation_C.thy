@@ -361,12 +361,25 @@ where
   | "fault_to_H (SeL4_Fault_VPPIEvent irq) lf
           = Some (ArchFault (VPPIEvent (ucast (seL4_Fault_VPPIEvent_CL.irq_w_CL irq))))"
 
+(* On AArch64, the VPPIEvent irq field has enough space to store IRQs of all known platforms (so far
+   up to 9 bits), but there are AArch64 platforms that have a lower IRQ bit width, which is reflected
+   in the abstract type, but not the C type. This means, we need this invariant to argue that the
+   abstract VPPIEvent has enough bit width when reading from the C field. *)
+definition cfault_wf :: "seL4_Fault_CL \<Rightarrow> bool" where
+  "cfault_wf cf \<equiv>
+     case cf of
+       SeL4_Fault_VPPIEvent irq \<Rightarrow> seL4_Fault_VPPIEvent_CL.irq_w_CL irq \<le> mask irq_len
+     | _ \<Rightarrow> True"
+
+lemmas cfault_wf_simps[simp] = cfault_wf_def[split_simps seL4_Fault_CL.split]
+
 definition
   cfault_rel :: "Fault_H.fault option \<Rightarrow> seL4_Fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
 where
   "cfault_rel af cf lf \<equiv> \<exists>cf'. cf = Some cf' \<and>
-         (if (is_cap_fault cf') then (\<exists>lf'. lf = Some lf' \<and> fault_to_H cf' lf' = af)
-           else (fault_to_H cf' undefined = af))"
+                               (if is_cap_fault cf'
+                                then \<exists>lf'. lf = Some lf' \<and> fault_to_H cf' lf' = af
+                                else fault_to_H cf' undefined = af \<and> cfault_wf cf')"
 
 definition
   carch_tcb_relation :: "Structures_H.arch_tcb \<Rightarrow> arch_tcb_C \<Rightarrow> bool"
@@ -643,7 +656,7 @@ fun
   | "irqstate_to_C irqstate.IRQReserved = scast Kernel_C.IRQReserved"
 
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> 'a ptr \<Rightarrow> (machine_word[384]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> 'a ptr \<Rightarrow> (machine_word[irq_array_size]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>
@@ -743,8 +756,10 @@ where
 
 context state_rel begin
 
+value_type intState_array_size = "2^irqBits :: nat"
+
 \<comment> \<open>The IRQ node is a global array of CTEs.\<close>
-abbreviation intStateIRQNode_array_Ptr :: "(cte_C[512]) ptr" where
+abbreviation intStateIRQNode_array_Ptr :: "(cte_C[intState_array_size]) ptr" where
   "intStateIRQNode_array_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
 
 \<comment> \<open>But for compatibility with older proofs (written when the IRQ Node was a global pointer

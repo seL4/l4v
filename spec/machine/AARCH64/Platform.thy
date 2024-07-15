@@ -15,9 +15,17 @@ imports
   Kernel_Config
 begin
 
+section \<open>ABI Setup\<close>
+
+(* representation of C int literals, the default for any unadorned numeral *)
+type_synonym int_literal_len = "32 signed"
+type_synonym int_word = "int_literal_len word"
+
+section \<open>Platform Constants\<close>
+
 context Arch begin global_naming AARCH64
 
-type_synonym irq_len = 9 (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
+value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"
 type_synonym paddr = machine_word
 
@@ -88,9 +96,6 @@ definition addrFromKPPtr :: "machine_word \<Rightarrow> paddr" where
 
 definition minIRQ :: "irq" where
   "minIRQ \<equiv> 0"
-
-definition maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 383"
 
 definition irqVGICMaintenance :: irq where
   "irqVGICMaintenance \<equiv> 25"

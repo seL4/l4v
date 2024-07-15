@@ -2200,7 +2200,7 @@ lemma vspace_at_rf_sr:
    apply (simp add: align_of_def typ_info_array array_tag_def align_td_array_tag)
    apply clarsimp
    apply (drule aligned_intvl_0, simp)
-   apply (clarsimp simp: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def intvl_self)
+   apply (solves \<open>clarsimp simp: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def intvl_self\<close>)
   apply simp
   done
 

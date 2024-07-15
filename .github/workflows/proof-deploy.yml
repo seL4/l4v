@@ -38,6 +38,13 @@ jobs:
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
         num_domains: ['1', '']
+        include:
+          - arch: ARM_HYP
+            plat: exynos5
+          - arch: AARCH64
+            plat: zynqmp
+          - arch: AARCH64
+            plat: bcm2711
     # test only most recent push:
     concurrency: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
     steps:
@@ -92,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        branch: [imx8-fpu-ver, exynos5-ver]
+        branch: [imx8-fpu-ver]
     steps:
     - name: Checkout
       uses: actions/checkout@v4

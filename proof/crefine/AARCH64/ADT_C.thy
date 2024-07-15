@@ -321,8 +321,12 @@ lemma cirqstate_cancel:
 definition
   "cint_state_to_H cnode cirqs \<equiv>
    InterruptState (ptr_val cnode)
-     (\<lambda>i::irq_len word. if i \<le> scast AARCH64.maxIRQ then cirqstate_to_H (index cirqs (unat i))
-                else irqstate.IRQInactive)"
+     (\<lambda>i::irq. if i \<le> Kernel_Config.maxIRQ then cirqstate_to_H (index cirqs (unat i))
+               else irqstate.IRQInactive)"
+
+end
+
+context kernel_m begin
 
 lemma cint_rel_to_H:
   "irqs_masked' s \<Longrightarrow>
@@ -331,14 +335,17 @@ lemma cint_rel_to_H:
   apply (simp add: irqs_masked'_def)
   apply (cases "ksInterruptState s")
   apply (rename_tac "fun")
-  apply (clarsimp simp: cinterrupt_relation_def cint_state_to_H_def
-                        AARCH64.maxIRQ_def Kernel_C.maxIRQ_def)
+  apply (clarsimp simp: cinterrupt_relation_def cint_state_to_H_def)
   apply (rule ext)
-  apply clarsimp
+  apply (clarsimp simp: Kernel_C_maxIRQ split: if_split)
   apply (drule spec, erule impE, assumption)
   apply (drule_tac s="irqstate_to_C (fun i)" in sym,
          simp add: cirqstate_cancel[THEN fun_cong, simplified])
   done
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   "cstate_to_machine_H s \<equiv>
