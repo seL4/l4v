@@ -2991,7 +2991,7 @@ lemma tcbSchedContext_update_update_tcb_cte_cases:
   unfolding tcb_cte_cases_def
   by (case_tac tcb; fastforce simp: objBits_simps')
 
-crunches schedContextUnbindTCB
+crunch schedContextUnbindTCB
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
   and if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
   (wp: threadSet_ifunsafe'T threadSet_cap_to simp: tcbSchedContext_update_update_tcb_cte_cases)
@@ -3015,7 +3015,7 @@ lemma schedContextUnbindTCB_if_live_then_nonz_cap'[wp]:
   unfolding schedContextUnbindTCB_def
   by wpsimp
 
-crunches schedContextUnbindTCB
+crunch schedContextUnbindTCB, schedContextBindTCB
   for valid_bitmaps[wp]: valid_bitmaps
   and valid_replies'[wp]: valid_replies'
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
@@ -3032,9 +3032,14 @@ crunches schedContextUnbindTCB
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
+  and pspace_bounded'[wp]: pspace_bounded'
+  and pspace_canonical'[wp]: pspace_canonical'
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps valid_mdb'_lift getTCB_wp simp: crunch_simps o_def)
 
-crunches schedContextUnbindTCB
+crunch schedContextUnbindTCB
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   and untyped_ranges_zero'[wp]: untyped_ranges_zero'
@@ -3885,7 +3890,7 @@ lemma schedContextUnbindReply_invs'[wp]:
                      objBits_simps' refillSize_def)
   done
 
-crunches schedContextUnbindAllTCBs
+crunch schedContextUnbindAllTCBs
   for invs'[wp]: invs'
 
 lemma finaliseCap_invs:

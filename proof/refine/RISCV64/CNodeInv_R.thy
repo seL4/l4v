@@ -588,7 +588,7 @@ lemma suspend_ctes_of_thread:
   apply (case_tac cte, simp)
   done
 
-crunches setConsumed, schedContextCompleteYieldTo, unbindNotification, unbindFromSC
+crunch setConsumed, schedContextCompleteYieldTo, unbindNotification, unbindFromSC
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps wp: crunch_wps)
 
