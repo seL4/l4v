@@ -867,6 +867,6 @@ lemma whileM_inv:
   by (fastforce intro: whileM_wp_gen)
 
 lemmas whileM_post_inv
-  = hoare_strengthen_post[where R="\<lambda>_. Q" for Q, OF whileM_inv[where P=C for C], rotated -1]
+  = hoare_strengthen_post[where Q'="\<lambda>_. Q" for Q, OF whileM_inv[where P=C for C], rotated -1]
 
 end

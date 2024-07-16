@@ -44,12 +44,15 @@ jobs:
   thylint:
     name: 'Theory Linter'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
     - uses: seL4/ci-actions/thylint@master
       with:
         disable: sorry
         token: ${{ secrets.READ_TOKEN }}
-    - uses: yuzutech/annotations-action@v0.4.0
+    - uses: yuzutech/annotations-action@v0.5.0
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         title: 'File annotations for theory linter'

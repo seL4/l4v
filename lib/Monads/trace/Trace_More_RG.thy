@@ -19,11 +19,11 @@ lemma rg_take_disjunct:
   by (erule rg_strengthen_post, simp)
 
 lemma rg_post_add:
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> S \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s0 s. Q' r s0 s \<and> Q r s0 s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> S \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s0 s. Q' r s0 s \<and> Q r s0 s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by (erule rg_strengthen_post, simp)
 
 lemma rg_post_addE:
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ s0 s. R s0 s \<and> Q s0 s\<rbrace>,\<lbrace>T\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ s0 s. Q s0 s\<rbrace>,\<lbrace>T\<rbrace>"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ s0 s. R s0 s \<and> Q s0 s\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ s0 s. Q s0 s\<rbrace>,\<lbrace>E\<rbrace>"
   by (erule rg_strengthen_postE; simp)
 
 lemma rg_pre_add:
@@ -32,7 +32,7 @@ lemma rg_pre_add:
   by(intro conjI impI; rule rg_weaken_pre, assumption, clarsimp)
 
 lemma rg_pre_addE:
-  "(\<forall>s0 s. P s0 s \<longrightarrow> R s0 s) \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>S\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>S\<rbrace>"
+  "(\<forall>s0 s. P s0 s \<longrightarrow> R s0 s) \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (subst iff_conv_conj_imp)
   by(intro conjI impI; rule rg_weaken_preE, assumption, clarsimp)
 
@@ -85,8 +85,8 @@ lemmas rg_lift_Pf2_pre_conj = rg_lift_Pf3_pre_conj[where P="\<lambda>f _. P f" f
 lemmas rg_lift_Pf_pre_conj' = rg_lift_Pf2_pre_conj[where Q=P and P=P for P]
 
 lemma rg_if_r_and:
-  "\<lbrace>P\<rbrace>,\<lbrace>R'\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. if R r then Q r else Q' r\<rbrace>
-   = \<lbrace>P\<rbrace>,\<lbrace>R'\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s0 s. (R r \<longrightarrow> Q r s0 s) \<and> (\<not>R r \<longrightarrow> Q' r s0 s)\<rbrace>"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. if P' r then Q r else Q' r\<rbrace>
+   = \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s0 s. (P' r \<longrightarrow> Q r s0 s) \<and> (\<not>P' r \<longrightarrow> Q' r s0 s)\<rbrace>"
   by (fastforce simp: validI_def)
 
 lemma rg_convert_imp:
@@ -117,8 +117,8 @@ lemma rg_imp_eq_substR:
 
 lemma rg_split_bind_case_sum:
   assumes x: "\<And>rv. \<lbrace>E rv\<rbrace>,\<lbrace>R\<rbrace> g rv \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-             "\<And>rv. \<lbrace>S rv\<rbrace>,\<lbrace>R\<rbrace> h rv \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  assumes y: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>,\<lbrace>E\<rbrace>"
+             "\<And>rv. \<lbrace>Q' rv\<rbrace>,\<lbrace>R\<rbrace> h rv \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  assumes y: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
   shows      "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= case_sum g h \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (rule bind_twp[OF _ y[unfolded validIE_def]])
   apply (wpsimp wp: x split: sum.splits)
@@ -324,8 +324,8 @@ lemma opt_return_pres_lift_rg:
   by (wpsimp wp: x)
 
 lemma rg_weak_lift_imp_conj:
-  "\<lbrakk> \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> m -,\<lbrace>Q'\<rbrace>; \<lbrace>R\<rbrace>,\<lbrace>R\<rbrace> m -,\<lbrace>R'\<rbrace>; \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<top>\<top>\<top>\<rbrace> \<rbrakk>
-   \<Longrightarrow> \<lbrace>\<lambda>s0 s. (P \<longrightarrow> Q s0 s) \<and> R s0 s \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (P \<longrightarrow> Q' rv s0 s) \<and> R' rv s0 s\<rbrace>"
+  "\<lbrakk> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> m -,\<lbrace>Q'\<rbrace>; \<lbrace>P''\<rbrace>,\<lbrace>R\<rbrace> m -,\<lbrace>Q''\<rbrace>; \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<top>\<top>\<top>\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s0 s. (P \<longrightarrow> P' s0 s) \<and> P'' s0 s \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (P \<longrightarrow> Q' rv s0 s) \<and> Q'' rv s0 s\<rbrace>"
   apply wp_pre
   apply (rule rg_vcg_conj_lift)
    apply (rule rg_weak_lift_imp; assumption)
@@ -379,9 +379,9 @@ lemma rg_Ball_helper:
 
 lemma handy_prop_divs_rg:
   assumes x: "\<And>P. \<lbrace>\<lambda>s0 s. P (Q s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (Q' rv s0 s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s0 s. P (R s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (R' rv s0 s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s0 s. P (Q s0 s \<and> R s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (Q' rv s0 s \<and> R' rv s0 s)\<rbrace>"
-             "\<lbrace>\<lambda>s0 s. P (Q s0 s \<or> R s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (Q' rv s0 s \<or> R' rv s0 s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s0 s. P (T s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (T' rv s0 s)\<rbrace>"
+  shows      "\<lbrace>\<lambda>s0 s. P (Q s0 s \<and> T s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (Q' rv s0 s \<and> T' rv s0 s)\<rbrace>"
+             "\<lbrace>\<lambda>s0 s. P (Q s0 s \<or> T s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (Q' rv s0 s \<or> T' rv s0 s)\<rbrace>"
    apply (clarsimp simp: validI_def validI_prefix_closed[OF x(1)]
                   elim!: subst[rotated, where P=P])
    apply (rule use_validI [OF _ x(1)], assumption)
@@ -481,8 +481,8 @@ lemma twp_split_const_ifE_R:
   by (cases S, simp_all add: x y)
 
 lemma rg_disj_division:
-  "\<lbrakk> P \<or> Q; P \<Longrightarrow> \<lbrace>R\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>; Q \<Longrightarrow> \<lbrace>T\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace> \<rbrakk>
-   \<Longrightarrow> \<lbrace>\<lambda>s0 s. (P \<longrightarrow> R s0 s) \<and> (Q \<longrightarrow> T s0 s)\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>"
+  "\<lbrakk> P \<or> P'; P \<Longrightarrow> \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; P' \<Longrightarrow> \<lbrace>T\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s0 s. (P \<longrightarrow> S s0 s) \<and> (P' \<longrightarrow> T s0 s)\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by (fastforce intro: rg_weaken_pre)
 
 lemma rg_grab_asm:
