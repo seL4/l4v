@@ -1004,13 +1004,8 @@ lemma invokeSchedContext_invs':
       apply (wpsimp wp: schedContextBindTCB_invs')
       apply (clarsimp simp: pred_tcb_at'_def obj_at_simps)
      apply (wpsimp wp: schedContextBindNtfn_invs')
-    apply (rename_tac scPtr cap)
-    apply (case_tac cap; clarsimp)
-     apply wpsimp
-     using global'_sc_no_ex_cap apply fastforce
     apply wpsimp
    apply wpsimp
-   using global'_sc_no_ex_cap apply fastforce
   apply (wpsimp wp: schedContextYiedTo_invs')
   apply (fastforce simp: obj_at_simps)
   done
