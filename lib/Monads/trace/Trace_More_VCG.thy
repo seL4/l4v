@@ -154,7 +154,6 @@ lemma throwErrorE_E [wp]:
   "\<lbrace>Q e\<rbrace> throwError e -, \<lbrace>Q\<rbrace>"
   by (simp add: validE_E_def) wp
 
-\<comment> \<open>FIXME: remove these inv rules?\<close>
 lemma gets_inv [simp]:
   "\<lbrace> P \<rbrace> gets f \<lbrace> \<lambda>r. P \<rbrace>"
   by (simp add: gets_def, wp)
@@ -162,8 +161,6 @@ lemma gets_inv [simp]:
 lemma select_inv:
   "\<lbrace> P \<rbrace> select S \<lbrace> \<lambda>r. P \<rbrace>"
   by wpsimp
-
-lemmas return_inv = hoare_return_drop_var
 
 lemma assert_inv:
   "\<lbrace>P\<rbrace> assert Q \<lbrace>\<lambda>r. P\<rbrace>"

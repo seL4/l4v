@@ -15,10 +15,6 @@ begin
 
 context Arch begin global_naming AARCH64_H
 
-(* Kernel_Config provides a generic numeral, Haskell expects type irq *)
-abbreviation (input) maxIRQ :: irq where
-  "maxIRQ == Kernel_Config.maxIRQ"
-
 #INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv= Arch= NOT plic_complete_claim
 
 end

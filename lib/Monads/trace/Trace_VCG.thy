@@ -217,21 +217,17 @@ lemma hoare_FalseE[simp]:
   "\<lbrace>\<bottom>\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (simp add: valid_def validE_def)
 
-lemma hoare_return_drop_var[iff]:
+lemma return_inv[iff]:
   "\<lbrace>Q\<rbrace> return x \<lbrace>\<lambda>r. Q\<rbrace>"
   by (simp add: valid_def return_def mres_def)
 
-lemma hoare_gets[intro]:
-  "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> gets f \<lbrace>Q\<rbrace>"
-  by (simp add:valid_def gets_def get_def bind_def return_def mres_def)
-
 lemma hoare_modifyE_var:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> modify f \<lbrace>\<lambda>_ s. Q s\<rbrace>"
-  by(simp add: valid_def modify_def put_def get_def bind_def mres_def)
+  by (simp add: valid_def modify_def put_def get_def bind_def mres_def)
 
 lemma hoare_if:
   "\<lbrakk> P' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<not> P' \<Longrightarrow> \<lbrace>P\<rbrace> g \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> if P' then f else g \<lbrace>Q\<rbrace>"
-  by (simp add: valid_def)
+  by simp
 
 lemma hoare_pre_subst:
   "\<lbrakk> P = P'; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>"

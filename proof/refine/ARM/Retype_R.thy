@@ -4302,7 +4302,7 @@ lemma createNewCaps_idle'[wp]:
          apply (rename_tac apiobject_type)
          apply (case_tac apiobject_type, simp_all split del: if_split)[1]
   by (wpsimp wp: createObjects_idle'[where sz=sz] mapM_x_wp' split_del: if_split
-           simp:  curDomain_def APIType_capBits_def createObjects_def
+           simp: curDomain_def APIType_capBits_def createObjects_def
     | simp add: tcb_cte_cases_def projectKO_opt_tcb projectKO_opt_cte makeObject_tcb makeObject_cte
                 objBits_def objBitsKO_def ptBits_def pdBits_def pteBits_def pdeBits_def pageBits_def
                 scBits_simps archObjSize_def)+

@@ -1645,9 +1645,9 @@ lemma handle_event_corres:
         apply wp[1]
         apply clarsimp
         apply (frule (1) ct_running_not_idle_etc)
-        apply (fastforce simp: st_tcb_at_def obj_at_def generates_pending_def gets_def get_def
-                               valid_fault_def
-                        split: Structures_A.thread_state.splits)+
+        apply (fastforce simp: st_tcb_at_def obj_at_def generates_pending_def valid_fault_def
+                        split: Structures_A.thread_state.splits)
+       apply wpsimp+
      apply (rule corres_symb_exec_r[OF handle_fault_corres])
        apply wp[1]
        apply clarsimp

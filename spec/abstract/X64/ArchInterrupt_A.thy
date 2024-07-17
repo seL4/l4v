@@ -32,7 +32,7 @@ end
 
 context begin interpretation Arch .
 
-(* On Arm architectures, maxIRQ is defined in Kernel_Config. On RISCV64 it is defined manually. *)
+(* On Arm architectures, maxIRQ is defined in Kernel_Config. On X64 it is defined manually. *)
 requalify_consts
   maxIRQ
 

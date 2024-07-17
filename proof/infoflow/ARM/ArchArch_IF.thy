@@ -805,9 +805,10 @@ lemma arm_asid_table_update_reads_respects:
    apply (rule modify_ev2)
    apply clarsimp
    apply (drule (1) is_subject_kheap_eq[rotated])
-   apply (auto simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def equiv_for_def
-             intro!: equiv_asids_arm_asid_table_update)
-   done
+   apply (fastforce simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def equiv_for_def
+                  intro!: equiv_asids_arm_asid_table_update)
+  apply wpsimp
+  done
 
 lemma perform_asid_control_invocation_reads_respects:
   notes K_bind_ev[wp del]

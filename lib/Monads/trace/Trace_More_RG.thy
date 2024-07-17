@@ -138,6 +138,20 @@ lemma assertE_tsp:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> assertE Q \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q \<and> P s0 s\<rbrace>,\<lbrace>E\<rbrace>"
   by (wpsimp wp: assertE_wp)
 
+lemma select_inv_rg:
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> select S \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
+  by wpsimp
+
+lemma assert_inv_rg:
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> assert Q \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding assert_def
+  by (cases Q) wpsimp+
+
+lemma assert_opt_inv_rg:
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> assert_opt Q \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding assert_opt_def
+  by (cases Q) (wp | simp)+
+
 lemma case_options_weak_twp:
   "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<And>x. \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> g x \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace>P and P'\<rbrace>,\<lbrace>R\<rbrace> case opt of None \<Rightarrow> f | Some x \<Rightarrow> g x \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
