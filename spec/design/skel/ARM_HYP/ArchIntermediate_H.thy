@@ -20,6 +20,11 @@ private abbreviation (input)
         modify (\<lambda>ks. ks \<lparr> gsUserPages := (\<lambda> addr.
           if addr `~elem~` map fromPPtr addrs then Just pSize
           else gsUserPages ks addr)\<rparr>);
+        when (\<not>dev) $
+          mapM_x (\<lambda>addr. doMachineOp $
+                            cleanCacheRange_RAM addr
+                                                (addr + mask (pageBitsForSize pSize))
+                                                (addrFromPPtr addr)) addrs;
         return $ map (\<lambda>n. PageCap dev (PPtr (fromPPtr n)) VMReadWrite pSize Nothing) addrs
      od)"
 
@@ -29,6 +34,8 @@ private abbreviation (input)
       addrs \<leftarrow> createObjects regionBase numObjects (injectKO objectProto) tableSize;
       pts \<leftarrow> return (map (PPtr \<circ> fromPPtr) addrs);
       initialiseMappings pts;
+      mapM_x (\<lambda>addr. doMachineOp $
+                       cleanCacheRange_PoU addr (addr + mask tableBits) (addrFromPPtr addr)) addrs;
       return $ map (\<lambda>pt. cap pt Nothing) pts
     od)"
 
@@ -51,14 +58,11 @@ defs Arch_createNewCaps_def:
         | PageDirectoryObject \<Rightarrow>
             createNewTableCaps regionBase numObjects pdBits (makeObject::pde) PageDirectoryCap
               (\<lambda>pds. do objSize \<leftarrow> return (((1::nat) `~shiftL~` pdBits));
-                        mapM_x copyGlobalMappings pds;
-                        doMachineOp $ mapM_x (\<lambda>x. cleanCacheRange_PoU x
-                                                    (x + (fromIntegral objSize) - 1)
-                                                    (addrFromPPtr x)) pds
+                        mapM_x copyGlobalMappings pds
                      od)
         | VCPUObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject :: vcpu)) 0;
-            return $ map (\<lambda> addr. VCPUCap addr) addrs
+            return $ map (\<lambda>addr. VCPUCap addr) addrs
             od)
         )"
 
