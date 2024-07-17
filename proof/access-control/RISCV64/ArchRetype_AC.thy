@@ -250,7 +250,7 @@ crunch delete_objects
   (ignore: do_machine_op freeMemory)
 
 lemma init_arch_objects_pas_cur_domain[Retype_AC_assms, wp]:
-  "init_arch_objects tp ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
+  "init_arch_objects tp dev ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
   by wp
 
 lemma retype_region_pas_cur_domain[Retype_AC_assms, wp]:

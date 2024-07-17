@@ -4533,6 +4533,40 @@ lemma cond_second_eq_seq_ccorres:
   apply (auto elim!: exec_Normal_elim_cases intro: exec.Seq exec.CondTrue exec.CondFalse)
   done
 
+lemma placeNewDataObject_dev_ccorres:
+  "ccorresG rf_sr \<Gamma> dc xfdc
+  (createObject_hs_preconds regionBase newType us True
+      and K (APIType_capBits newType us = pageBits + us))
+  ({s. region_actually_is_bytes regionBase (2 ^ (pageBits + us)) s})
+  hs
+  (placeNewDataObject regionBase us True)
+  (global_htd_update (\<lambda>s. (ptr_retyps (2^us) (Ptr regionBase :: user_data_device_C ptr))))"
+  apply (simp add: placeNewDataObject_def ccorres_cond_univ_iff)
+  apply (rule ccorres_guard_imp, rule placeNewObject_user_data_device, simp_all)
+  apply (clarsimp simp: createObject_hs_preconds_def invs'_def
+                        valid_state'_def valid_pspace'_def)
+  done
+
+lemma placeNewDataObject_no_dev_ccorres:
+  "ccorresG rf_sr \<Gamma> dc xfdc
+  (createObject_hs_preconds regionBase newType us False
+      and K (APIType_capBits newType us = pageBits + us))
+  ({s. region_actually_is_bytes regionBase (2 ^ (pageBits + us)) s
+      \<and> (heap_list_is_zero (hrs_mem (t_hrs_' (globals s))) regionBase (2 ^ (pageBits + us)))})
+  hs
+  (placeNewDataObject regionBase us False)
+  (global_htd_update (\<lambda>s. (ptr_retyps (2^us) (Ptr regionBase :: user_data_C ptr))))"
+  apply (simp add: placeNewDataObject_def ccorres_cond_empty_iff)
+  apply (rule ccorres_guard_imp, rule placeNewObject_user_data, simp_all)
+  apply (clarsimp simp: createObject_hs_preconds_def invs'_def
+                        valid_state'_def valid_pspace'_def)
+  apply (frule range_cover.sz(1), simp add: word_bits_def)
+  done
+
+crunch placeNewDataObject
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  (simp: crunch_simps)
+
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
   shows "ccorres (\<lambda>a b. ccap_relation (ArchObjectCap a) b) ret__struct_cap_C_'
@@ -4552,179 +4586,284 @@ proof -
     apply (frule range_cover.aligned)
     apply (cut_tac t)
     apply (case_tac newType,
-           simp_all add: toAPIType_def
-               bind_assoc
-               ARMLargePageBits_def)
+           simp_all add: toAPIType_def bind_assoc ARMLargePageBits_def)
 
+         apply (in_case "SmallPageObject")
          apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
           apply (simp add: object_type_from_H_def Kernel_C_defs)
           apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
-                      ARMLargePageBits_def ARMSmallPageBits_def
-                      ARMSectionBits_def ARMSuperSectionBits_def asidInvalid_def
-                      sle_positive APIType_capBits_def shiftL_nat objBits_simps
-                      ptBits_def archObjSize_def pageBits_def word_sle_def word_sless_def
-                      fold_eq_0_to_bool)
-          apply (ccorres_remove_UNIV_guard)
-          apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-            ARM_H.createObject_def pageBits_def
-            cond_second_eq_seq_ccorres modify_gsUserPages_update
-            intro!: ccorres_rhs_assoc)
-          apply ((rule ccorres_return_C | simp | wp | vcg
-            | (rule match_ccorres, ctac add:
-                    placeNewDataObject_ccorres[where us=0 and newType=newType, simplified]
-                    gsUserPages_update_ccorres[folded modify_gsUserPages_update])
-            | (rule match_ccorres, csymbr))+)[1]
-         apply (intro conjI)
-          apply (clarsimp simp: createObject_hs_preconds_def
-                                APIType_capBits_def pageBits_def)
-         apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
-                    framesize_to_H_def cap_to_H_simps cap_small_frame_cap_lift
-                    vmrights_to_H_def mask_def vm_rights_defs)
+                           asidInvalid_def APIType_capBits_def shiftL_nat objBits_simps
+                           ptBits_def pageBits_def word_sle_def word_sless_def fold_eq_0_to_bool)
+          apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
+                                ARM_H.createObject_def pageBits_def
+                                cond_second_eq_seq_ccorres modify_gsUserPages_update
+                          intro!: ccorres_rhs_assoc)
+          apply (rule ccorres_cases[where P=deviceMemory])
+           apply clarsimp
+           apply (rule ccorres_rhs_assoc)+
+           apply (rule ccorres_split_nothrow_novcg)
+               apply (rule placeNewDataObject_dev_ccorres[where us=0 and newType=newType, simplified])
+              apply ceqv
+             apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+               apply ccorres_rewrite
+               apply csymbr
+               apply (rule ccorres_return_C; simp)
+              apply wp
+              apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                                    framesize_to_H_def cap_to_H_simps cap_small_frame_cap_lift
+                                    vmrights_to_H_def vm_rights_defs,
+                     simp add: mask_def)
+            apply wp
+           apply (simp add: guard_is_UNIV_def)
+          apply clarsimp
+          apply (rule ccorres_rhs_assoc)+
+          apply (rule ccorres_split_nothrow_novcg)
+              apply (rule placeNewDataObject_no_dev_ccorres[where us=0 and newType=newType, simplified])
+             apply ceqv
+            apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+              apply csymbr+
+              apply (rule ccorres_Guard_Seq)
+              apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+               apply ccorres_rewrite
+               apply csymbr
+               apply (rule ccorres_return_C; simp)
+              apply wp
+             apply wp
+            apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                                  framesize_to_H_def cap_to_H_simps cap_small_frame_cap_lift
+                                  vmrights_to_H_def vm_rights_defs gen_framesize_to_H_def
+                                  vm_page_size_defs)
+            apply (simp add: mask_def)
+           apply wpsimp
+          apply (simp add: guard_is_UNIV_def)
+         apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs
+                               APIType_capBits_def pageBits_def is_aligned_no_overflow_mask)
+         apply (rule conjI)
+          apply (drule is_aligned_addrFromPPtr_n, simp)
+          apply (simp add: is_aligned_no_overflow_mask)
+         apply (simp add: mask_def)
 
-        \<comment> \<open>Page objects: could possibly fix the duplication here\<close>
+        apply (in_case "LargePageObject")
         apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
          apply (simp add: object_type_from_H_def Kernel_C_defs)
          apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
-                     ARMLargePageBits_def ARMSmallPageBits_def
-                     ARMSectionBits_def ARMSuperSectionBits_def asidInvalid_def
-                     sle_positive APIType_capBits_def shiftL_nat objBits_simps
-                     ptBits_def archObjSize_def pageBits_def word_sle_def word_sless_def
-                     fold_eq_0_to_bool)
-         apply (ccorres_remove_UNIV_guard)
-         apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-           ARM_H.createObject_def pageBits_def
-           cond_second_eq_seq_ccorres modify_gsUserPages_update
-           intro!: ccorres_rhs_assoc)
-         apply ((rule ccorres_return_C | simp | wp | vcg
-           | (rule match_ccorres, ctac add:
-                   placeNewDataObject_ccorres[where us=4 and newType=newType, simplified]
-                   gsUserPages_update_ccorres[folded modify_gsUserPages_update])
-           | (rule match_ccorres, csymbr))+)[1]
-        apply (intro conjI)
-         apply (clarsimp simp: createObject_hs_preconds_def
-                               APIType_capBits_def pageBits_def)
-        apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
-                   framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
-                   vmrights_to_H_def mask_def vm_rights_defs vm_page_size_defs
-                   cl_valid_cap_def c_valid_cap_def
-                   is_aligned_neg_mask_eq_concrete[THEN sym])
+                          asidInvalid_def APIType_capBits_def shiftL_nat objBits_simps
+                          ptBits_def pageBits_def word_sle_def word_sless_def fold_eq_0_to_bool)
+         apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
+                               ARM_H.createObject_def pageBits_def
+                               cond_second_eq_seq_ccorres modify_gsUserPages_update
+                         intro!: ccorres_rhs_assoc)
+         apply (rule ccorres_cases[where P=deviceMemory])
+          apply clarsimp
+          apply (rule ccorres_rhs_assoc)+
+          apply (rule ccorres_split_nothrow_novcg)
+              apply (rule placeNewDataObject_dev_ccorres[where us=4 and newType=newType, simplified])
+             apply ceqv
+            apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+              apply ccorres_rewrite
+              apply csymbr
+              apply (rule ccorres_return_C; simp)
+             apply wp
+            apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                                  framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
+                                  vmrights_to_H_def vm_rights_defs gen_framesize_to_H_def
+                                  is_aligned_neg_mask_eq_concrete[THEN sym]
+                                  vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
+           apply wp
+          apply (simp add: guard_is_UNIV_def)
+         apply clarsimp
+         apply (rule ccorres_rhs_assoc)+
+         apply (rule ccorres_split_nothrow_novcg)
+             apply (rule placeNewDataObject_no_dev_ccorres[where us=4 and newType=newType, simplified])
+            apply ceqv
+           apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+             apply csymbr+
+             apply (rule ccorres_Guard_Seq)
+             apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+              apply ccorres_rewrite
+              apply csymbr
+              apply (rule ccorres_return_C; simp)
+             apply wp
+            apply wp
+           apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                                 framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
+                                 vmrights_to_H_def vm_rights_defs gen_framesize_to_H_def
+                                 is_aligned_neg_mask_eq_concrete[THEN sym]
+                                 vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
+          apply wpsimp
+         apply (simp add: guard_is_UNIV_def)
+        apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs
+                              APIType_capBits_def pageBits_def is_aligned_no_overflow_mask)
+        apply (rule conjI)
+         apply (drule is_aligned_addrFromPPtr_n, simp)
+         apply (simp add: is_aligned_no_overflow_mask)
+        apply (simp add: mask_def)
 
+       apply (in_case "SectionObject")
        apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
         apply (simp add: object_type_from_H_def Kernel_C_defs)
         apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
-                    ARMLargePageBits_def ARMSmallPageBits_def
-                    ARMSectionBits_def ARMSuperSectionBits_def asidInvalid_def
-                    sle_positive APIType_capBits_def shiftL_nat objBits_simps
-                    ptBits_def archObjSize_def pageBits_def word_sle_def word_sless_def
-                    fold_eq_0_to_bool)
-        apply (ccorres_remove_UNIV_guard)
-        apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-          ARM_H.createObject_def pageBits_def
-          cond_second_eq_seq_ccorres modify_gsUserPages_update
-          intro!: ccorres_rhs_assoc)
-        apply ((rule ccorres_return_C | simp | wp | vcg
-          | (rule match_ccorres, ctac add:
-                  placeNewDataObject_ccorres[where us=8 and newType=newType, simplified]
-                  gsUserPages_update_ccorres[folded modify_gsUserPages_update])
-          | (rule match_ccorres, csymbr))+)[1]
-       apply (intro conjI)
-        apply (clarsimp simp: createObject_hs_preconds_def
-                              APIType_capBits_def pageBits_def)
-       apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
-                  framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
-                  vmrights_to_H_def mask_def vm_rights_defs vm_page_size_defs
-                  cl_valid_cap_def c_valid_cap_def
-                  is_aligned_neg_mask_eq_concrete[THEN sym])
+                        asidInvalid_def APIType_capBits_def shiftL_nat objBits_simps
+                        ptBits_def pageBits_def word_sle_def word_sless_def fold_eq_0_to_bool)
+        apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
+                               ARM_H.createObject_def pageBits_def
+                               cond_second_eq_seq_ccorres modify_gsUserPages_update
+                        intro!: ccorres_rhs_assoc)
+        apply (rule ccorres_cases[where P=deviceMemory])
+         apply clarsimp
+         apply (rule ccorres_rhs_assoc)+
+         apply (rule ccorres_split_nothrow_novcg)
+             apply (rule placeNewDataObject_dev_ccorres[where us=8 and newType=newType, simplified])
+            apply ceqv
+           apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+             apply ccorres_rewrite
+             apply csymbr
+             apply (rule ccorres_return_C; simp)
+            apply wp
+           apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                                 framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
+                                 vmrights_to_H_def vm_rights_defs gen_framesize_to_H_def
+                                 is_aligned_neg_mask_eq_concrete[THEN sym]
+                                 vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
+          apply wp
+         apply (simp add: guard_is_UNIV_def)
+        apply clarsimp
+        apply (rule ccorres_rhs_assoc)+
+        apply (rule ccorres_split_nothrow_novcg)
+            apply (rule placeNewDataObject_no_dev_ccorres[where us=8 and newType=newType, simplified])
+           apply ceqv
+          apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+            apply csymbr+
+            apply (rule ccorres_Guard_Seq)
+            apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+             apply ccorres_rewrite
+             apply csymbr
+             apply (rule ccorres_return_C; simp)
+            apply wp
+           apply wp
+          apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                                framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
+                                vmrights_to_H_def vm_rights_defs gen_framesize_to_H_def
+                                is_aligned_neg_mask_eq_concrete[THEN sym]
+                                vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
+         apply wpsimp
+        apply (simp add: guard_is_UNIV_def)
+       apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs
+                             APIType_capBits_def pageBits_def is_aligned_no_overflow_mask)
+       apply (rule conjI)
+        apply (drule is_aligned_addrFromPPtr_n, simp)
+        apply (simp add: is_aligned_no_overflow_mask)
+       apply (simp add: mask_def)
 
+      apply (in_case "SuperSectionObject")
       apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
        apply (simp add: object_type_from_H_def Kernel_C_defs)
        apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
-                   ARMLargePageBits_def ARMSmallPageBits_def
-                   ARMSectionBits_def ARMSuperSectionBits_def asidInvalid_def
-                   sle_positive APIType_capBits_def shiftL_nat objBits_simps
-                   ptBits_def archObjSize_def pageBits_def word_sle_def word_sless_def
-                   fold_eq_0_to_bool)
-       apply (ccorres_remove_UNIV_guard)
-       apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-         ARM_H.createObject_def pageBits_def
-         cond_second_eq_seq_ccorres modify_gsUserPages_update
-         intro!: ccorres_rhs_assoc)
-       apply ((rule ccorres_return_C | simp | wp | vcg
-         | (rule match_ccorres, ctac add:
-                 placeNewDataObject_ccorres[where us=12 and newType=newType, simplified]
-                 gsUserPages_update_ccorres[folded modify_gsUserPages_update])
-         | (rule match_ccorres, csymbr))+)[1]
-      apply (intro conjI)
-       apply (clarsimp simp: createObject_hs_preconds_def
-                             APIType_capBits_def pageBits_def)
-      apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
-                 framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
-                 vmrights_to_H_def mask_def vm_rights_defs vm_page_size_defs
-                 cl_valid_cap_def c_valid_cap_def
-                 is_aligned_neg_mask_eq_concrete[THEN sym])
+                         asidInvalid_def APIType_capBits_def shiftL_nat objBits_simps
+                         ptBits_def pageBits_def word_sle_def word_sless_def fold_eq_0_to_bool)
+       apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
+                              ARM_H.createObject_def pageBits_def
+                              cond_second_eq_seq_ccorres modify_gsUserPages_update
+                       intro!: ccorres_rhs_assoc)
+       apply (rule ccorres_cases[where P=deviceMemory])
+        apply clarsimp
+        apply (rule ccorres_rhs_assoc)+
+        apply (rule ccorres_split_nothrow_novcg)
+            apply (rule placeNewDataObject_dev_ccorres[where us=12 and newType=newType, simplified])
+           apply ceqv
+          apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+            apply ccorres_rewrite
+            apply csymbr
+            apply (rule ccorres_return_C; simp)
+           apply wp
+          apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                                framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
+                                vmrights_to_H_def vm_rights_defs gen_framesize_to_H_def
+                                is_aligned_neg_mask_eq_concrete[THEN sym]
+                                vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
+         apply wp
+        apply (simp add: guard_is_UNIV_def)
+       apply clarsimp
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_split_nothrow_novcg)
+           apply (rule placeNewDataObject_no_dev_ccorres[where us=12 and newType=newType, simplified])
+          apply ceqv
+         apply  (ctac (no_vcg) add: gsUserPages_update_ccorres[folded modify_gsUserPages_update])
+           apply csymbr+
+           apply (rule ccorres_Guard_Seq)
+           apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+            apply ccorres_rewrite
+            apply csymbr
+            apply (rule ccorres_return_C; simp)
+           apply wp
+          apply wp
+         apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+                               framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
+                               vmrights_to_H_def vm_rights_defs gen_framesize_to_H_def
+                               is_aligned_neg_mask_eq_concrete[THEN sym]
+                               vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
+        apply wpsimp
+       apply (simp add: guard_is_UNIV_def)
+      apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs
+                            APIType_capBits_def pageBits_def is_aligned_no_overflow_mask)
+      apply (rule conjI)
+       apply (drule is_aligned_addrFromPPtr_n, simp)
+       apply (simp add: is_aligned_no_overflow_mask)
+      apply (simp add: mask_def)
 
-     \<comment> \<open>PageTableObject\<close>
+     apply (in_case "PageTableObject")
      apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
       apply (simp add: object_type_from_H_def Kernel_C_defs)
-      apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
-                  ARMLargePageBits_def ARMSmallPageBits_def
-                  ARMSectionBits_def ARMSuperSectionBits_def asidInvalid_def
-                  sle_positive APIType_capBits_def shiftL_nat objBits_simps
-                  ptBits_def archObjSize_def pageBits_def word_sle_def word_sless_def)
-      apply (ccorres_remove_UNIV_guard)
+      apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff asidInvalid_def
+                       APIType_capBits_def shiftL_nat objBits_simps
+                       ptBits_def archObjSize_def pageBits_def word_sle_def word_sless_def)
       apply (rule ccorres_rhs_assoc)+
       apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-        ARM_H.createObject_def pageBits_def)
+                            ARM_H.createObject_def pageBits_def pt_bits_def)
       apply (ctac pre only: add: placeNewObject_pte[simplified])
         apply csymbr
-        apply (rule ccorres_return_C)
-          apply simp
-         apply simp
-        apply simp
+        apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
+         apply csymbr
+         apply (rule ccorres_return_C; simp)
+        apply wp
        apply wp
       apply vcg
      apply clarify
      apply (intro conjI)
       apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct' invs_valid_global'
-                            APIType_capBits_def invs_valid_objs'
-                            invs_urz)
-     apply clarsimp
-     apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
-                framesize_to_H_def cap_to_H_simps cap_page_table_cap_lift
-                is_aligned_neg_mask_eq vmrights_to_H_def
-                Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
-                Kernel_C.VMKernelOnly_def Kernel_C.VMReadOnly_def)
-     apply (simp add: isFrameType_def)
+                            APIType_capBits_def invs_valid_objs' is_aligned_no_overflow_mask
+                            invs_urz pteBits_def)
+      apply (rule conjI, simp add: mask_def)
+      apply (drule is_aligned_addrFromPPtr_n, simp)
+      apply (simp add: is_aligned_no_overflow_mask)
+     apply (clarsimp simp: ccap_relation_def APIType_capBits_def
+                           framesize_to_H_def cap_to_H_simps cap_page_table_cap_lift
+                           vmrights_to_H_def pteBits_def vmrights_defs)
+     apply (clarsimp simp: isFrameType_def mask_def is_aligned_neg_mask_eq_concrete[THEN sym])
 
-    \<comment> \<open>PageDirectoryObject\<close>
+    apply (in_case "PageDirectoryObject")
     apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
      apply (simp add: object_type_from_H_def Kernel_C_defs)
      apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
-                asidInvalid_def sle_positive APIType_capBits_def shiftL_nat
-                objBits_simps archObjSize_def
-                ptBits_def pageBits_def pdBits_def word_sle_def word_sless_def)
-     apply (ccorres_remove_UNIV_guard)
+                      asidInvalid_def APIType_capBits_def shiftL_nat
+                      objBits_simps archObjSize_def isFrameType_def
+                      ptBits_def pageBits_def pdBits_def word_sle_def word_sless_def)
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-        ARM_H.createObject_def pageBits_def pdBits_def)
+                           ARM_H.createObject_def pageBits_def pdBits_def pd_bits_def)
      apply (ctac pre only: add: placeNewObject_pde[simplified])
        apply (ctac add: copyGlobalMappings_ccorres)
          apply csymbr
          apply (ctac add: cleanCacheRange_PoU_ccorres)
            apply csymbr
-           apply (rule ccorres_return_C)
-             apply simp
-            apply simp
-           apply simp
+           apply (rule ccorres_return_C; simp)
           apply wp
          apply clarsimp
          apply vcg
         apply wp
        apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
-                  framesize_to_H_def cap_to_H_simps cap_page_directory_cap_lift
-                  is_aligned_neg_mask_eq vmrights_to_H_def
-                  Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
-                  Kernel_C.VMKernelOnly_def Kernel_C.VMReadOnly_def)
+                             framesize_to_H_def cap_to_H_simps cap_page_directory_cap_lift
+                             vmrights_to_H_def vm_rights_defs)
        apply (vcg exspec=copyGlobalMappings_modifies)
       apply (clarsimp simp:placeNewObject_def2)
       apply (wp createObjects'_pde_mappings' createObjects'_page_directory_at_global[where sz=pdBits]
@@ -4732,22 +4871,23 @@ proof -
      apply clarsimp
      apply vcg
     apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct'
-               archObjSize_def invs_valid_global' makeObject_pde pdBits_def
-               pageBits_def range_cover.aligned projectKOs APIType_capBits_def
-               object_type_from_H_def objBits_simps pdeBits_def
-               invs_valid_objs' isFrameType_def)
+                          archObjSize_def invs_valid_global' makeObject_pde pdBits_def
+                          pageBits_def range_cover.aligned projectKOs APIType_capBits_def
+                          object_type_from_H_def objBits_simps pdeBits_def
+                          invs_valid_objs' isFrameType_def)
     apply (frule invs_arch_state')
     apply (frule range_cover.aligned)
     apply (frule is_aligned_addrFromPPtr_n, simp)
     apply (intro conjI, simp_all)
-         apply fastforce
-        apply fastforce
-       apply (clarsimp simp: pageBits_def pdeBits_def
-                             valid_arch_state'_def page_directory_at'_def pdBits_def)
-      apply (clarsimp simp: is_aligned_no_overflow'[where n=14, simplified] pdeBits_def
-                            field_simps is_aligned_mask[symmetric] mask_AND_less_0
-                            cacheLineBits_le_PageDirectoryObject_sz[unfolded APIType_capBits_def,
-                                                                    simplified])+
+           apply fastforce
+          apply fastforce
+         apply (clarsimp simp: valid_arch_state'_def page_directory_at'_def)
+        apply (simp add: mask_def)
+       apply (simp add: is_aligned_no_overflow_mask)
+      apply (drule is_aligned_addrFromPPtr_n, simp)
+      apply (simp add: is_aligned_no_overflow_mask)
+     apply (clarsimp simp: is_aligned_mask[symmetric] mask_AND_less_0)
+    apply (clarsimp simp: mask_def)
     done
 qed
 
@@ -6472,6 +6612,43 @@ lemma cleanCacheRange_PoU_preserves_bytes:
               elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
         (simp_all add: h_t_valid_field)+)
 
+lemma cleanByVA_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost, rule cleanByVA_preserves_kernel_bytes[rule_format])
+   apply simp_all
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma cleanCacheRange_PoC_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_PoC_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (clarsimp simp only: whileAnno_def)
+  apply (subst whileAnno_def[symmetric, where V=undefined
+               and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+                          \<and> byte_regions_unmodified' s t}" for s])
+  apply (rule conseqPre, vcg exspec=cleanByVA_preserves_bytes)
+  by (safe intro!: byte_regions_unmodified_hrs_mem_update
+            elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
+      (simp_all add: h_t_valid_field)+)
+
+lemma cleanCacheRange_RAM_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_RAM_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (hoare_rule HoarePartial.ProcNoRec1, rule allI)
+  apply (rule conseqPre, vcg exspec=cleanCacheRange_PoC_preserves_bytes
+                             exspec=cleanL2Range_preserves_kernel_bytes
+                             exspec=dsb_preserves_kernel_bytes)
+  apply (safe intro!: byte_regions_unmodified_hrs_mem_update
+            elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
+      (simp_all add: h_t_valid_field)+)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
 lemma hrs_htd_update_canon:
   "hrs_htd_update (\<lambda>_. f (hrs_htd hrs)) hrs = hrs_htd_update f hrs"
   by (cases hrs, simp add: hrs_htd_update_def hrs_htd_def)
@@ -6490,15 +6667,18 @@ lemma Arch_createObject_preserves_bytes:
                              exspec=copyGlobalMappings_preserves_bytes
                              exspec=addrFromPPtr_modifies
                              exspec=cleanCacheRange_PoU_preserves_bytes
-                             exspec=cap_page_directory_cap_new_modifies)
+                             exspec=cleanCacheRange_RAM_preserves_bytes
+                             exspec=cap_page_directory_cap_new_modifies) find_names ARMSmallPage_def
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update,
          (simp_all add: h_t_valid_field hrs_htd_update)+)
-            apply (safe intro!: ptr_retyp_d ptr_retyps_out)
-            apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
-                            split: object_type.split_asm apiobject_type.split_asm)
-  apply (rule byte_regions_unmodified_flip, simp)
-  apply (rule byte_regions_unmodified_trans[rotated],
-         assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
+                     apply (safe intro!: ptr_retyp_d ptr_retyps_out)
+                     apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
+                                          vm_page_size_defs
+                                     split: object_type.split_asm apiobject_type.split_asm)
+          apply (all \<open>(solves \<open>simp add: mask_def\<close>)?\<close>)
+       apply (rule byte_regions_unmodified_flip, simp,
+              rule byte_regions_unmodified_trans[rotated], assumption;
+              simp add: hrs_htd_update_canon hrs_htd_update)+
   done
 
 lemma ptr_arr_retyps_eq_outside_dom:
@@ -6648,6 +6828,16 @@ lemma insertNewCap_ccorres:
   apply (simp add: untypedZeroRange_def Let_def)
   done
 
+lemma Arch_createObject_not_untyped:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub>
+   {s} Call Arch_createObject_'proc {t. cap_get_tag (ret__struct_cap_C_' t) \<noteq> scast cap_untyped_cap}"
+  apply (rule allI, rule conseqPre)
+   apply (vcg exspec=cleanCacheRange_PoU_modifies
+              exspec=cleanCacheRange_RAM_modifies
+              exspec=copyGlobalMappings_modifies)
+  apply (clarsimp simp: cap_tag_defs vm_page_size_defs mask_def)
+  done
+
 lemma createObject_untyped_region_is_zero_bytes:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s. let tp = (object_type_to_H (t_' s));
           sz = APIType_capBits tp (unat (userSize_' s))
@@ -6659,9 +6849,8 @@ lemma createObject_untyped_region_is_zero_bytes:
    {t. cap_get_tag (ret__struct_cap_C_' t) = scast cap_untyped_cap
          \<longrightarrow> (case untypedZeroRange (cap_to_H (the (cap_lift (ret__struct_cap_C_' t)))) of None \<Rightarrow> True
           | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) t)}"
-  apply (rule allI, rule conseqPre, vcg exspec=copyGlobalMappings_modifies
-      exspec=Arch_initContext_modifies
-      exspec=cleanCacheRange_PoU_modifies)
+  apply (rule allI, rule conseqPre,
+         vcg exspec=Arch_createObject_not_untyped exspec=Arch_initContext_modifies)
   apply (clarsimp simp: cap_tag_defs)
   apply (simp add: cap_lift_untyped_cap cap_tag_defs cap_to_H_simps
                    cap_untyped_cap_lift_def object_type_from_H_def)

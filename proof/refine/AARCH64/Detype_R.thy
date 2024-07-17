@@ -2983,6 +2983,17 @@ lemma setCTE_doMachineOp_commute:
   apply (wp|clarsimp|fastforce)+
   done
 
+lemma setCTE_when_doMachineOp_commute:
+  assumes nf: "no_fail Q (doMachineOp x)"
+  shows "monad_commute (cte_at' dest and pspace_aligned' and pspace_distinct' and Q)
+  (setCTE dest cte)
+  (when P (doMachineOp x))"
+  apply (cases P; simp add: setCTE_doMachineOp_commute nf)
+  apply (rule monad_commute_guard_imp)
+   apply (rule return_commute[THEN commute_commute])
+  apply simp
+  done
+
 lemma placeNewObject_valid_arch_state:
   "\<lbrace>valid_arch_state' and
     pspace_no_overlap' ptr (objBitsKO (injectKOS val) + us) and
@@ -3191,6 +3202,11 @@ lemma monad_commute_if_weak_r:
    apply (erule monad_commute_guard_imp,simp)+
   done
 
+crunch updatePTType
+  for cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at' P p s)"
+  and pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
+
 lemma createObject_setCTE_commute:
   "monad_commute
      (cte_wp_at' (\<lambda>_. True) src and
@@ -3252,6 +3268,7 @@ lemma createObject_setCTE_commute:
                      setCTE_modify_gsUserPages_commute[of \<top>]
                      modify_wp[of "%_. \<top>"]
                      setCTE_doMachineOp_commute
+                     setCTE_when_doMachineOp_commute
                      setCTE_placeNewObject_commute
                      setCTE_updatePTType_commute
                      monad_commute_if_weak_r
@@ -3402,6 +3419,13 @@ lemma threadSet_gsUntypedZeroRanges_commute':
   apply (simp add: monad_commute_def exec_gets exec_modify)
   done
 
+lemma dmo_gsUntypedZeroRanges_commute:
+  "monad_commute \<top> (modify (\<lambda>s. s\<lparr>gsUntypedZeroRanges := f (gsUntypedZeroRanges s)\<rparr>))
+                   (doMachineOp m)"
+  apply (clarsimp simp: monad_commute_def doMachineOp_def)
+  apply monad_eq
+  by (auto simp: select_f_def)
+
 lemma createObject_gsUntypedZeroRanges_commute:
   "monad_commute
      \<top>
@@ -3420,7 +3444,7 @@ lemma createObject_gsUntypedZeroRanges_commute:
                  createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
                  return_commute return_commute[THEN commute_commute]
                  threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 monad_commute_gsUntyped_updatePTType
+                 monad_commute_gsUntyped_updatePTType dmo_gsUntypedZeroRanges_commute
           split: option.split prod.split cong: if_cong)+
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
   done
@@ -4200,8 +4224,8 @@ lemma dmo'_when_fail_comm:
 
 (* FIXME: move *)
 lemma dmo'_gets_ksPSpace_comm:
-  "doMachineOp f >>= (\<lambda>_. gets ksPSpace >>= m) =
-   gets ksPSpace >>= (\<lambda>x. doMachineOp f >>= (\<lambda>_. m x))"
+  "doMachineOp f >>= (\<lambda>y. gets ksPSpace >>= m y) =
+   gets ksPSpace >>= (\<lambda>x. doMachineOp f >>= (\<lambda>y. m y x))"
   apply (rule ext)
   apply (clarsimp simp: doMachineOp_def simpler_modify_def simpler_gets_def
                         return_def select_f_def bind_def split_def image_def)
@@ -4235,14 +4259,15 @@ proof -
     done
 qed
 
-lemma dmo'_createObjects'_comm:
+lemma dmo'_createObjects'_commute:
   assumes ef: "empty_fail f"
-  shows "do _ \<leftarrow> doMachineOp f; x \<leftarrow> createObjects' ptr n obj us; m x od =
-         do x \<leftarrow> createObjects' ptr n obj us; _ \<leftarrow> doMachineOp f; m x od"
-  apply (simp add: createObjects'_def bind_assoc split_def unless_def
-                   alignError_def dmo'_when_fail_comm[OF ef]
-                   dmo'_gets_ksPSpace_comm
-                   dmo'_ksPSpace_update_comm'[OF ef, symmetric])
+  shows "monad_commute \<top> (doMachineOp f) (createObjects' ptr n obj us)"
+  apply (clarsimp simp: createObjects'_def bind_assoc split_def unless_def
+                        alignError_def monad_commute_def
+                        dmo'_when_fail_comm[OF ef]
+                        dmo'_gets_ksPSpace_comm
+                        dmo'_ksPSpace_update_comm'[OF ef, symmetric])
+  apply (rule_tac x=s in fun_cong)
   apply (rule arg_cong_bind1)
   apply (rule arg_cong_bind1)
   apply (rename_tac u w)
@@ -4251,27 +4276,25 @@ lemma dmo'_createObjects'_comm:
   apply (simp add: assert_into_when dmo'_when_fail_comm[OF ef])
   done
 
-lemma dmo'_gsUserPages_upd_comm:
-  assumes "empty_fail f"
-  shows "doMachineOp f >>= (\<lambda>x. modify (gsUserPages_update g) >>= (\<lambda>_. m x)) =
-         modify (gsUserPages_update g) >>= (\<lambda>_. doMachineOp f >>= m)"
-proof -
-  have ksMachineState_ksPSpace_update:
-    "\<forall>s. ksMachineState (gsUserPages_update g s) = ksMachineState s"
-    by simp
-  have updates_independent:
-    "\<And>f. gsUserPages_update g \<circ> ksMachineState_update f =
-          ksMachineState_update f \<circ> gsUserPages_update g"
-    by (rule ext) simp
-  from assms
-  show ?thesis
-    apply (simp add: doMachineOp_def split_def bind_assoc)
-    apply (simp add: gets_modify_comm2[OF ksMachineState_ksPSpace_update])
-    apply (rule arg_cong_bind1)
-    apply (simp add: empty_fail_def select_f_walk[OF empty_fail_modify]
-                     modify_modify_bind updates_independent)
-    done
-qed
+lemmas map_dmo'_createObjects'_comm = dmo'_createObjects'_commute[THEN mapM_x_commute_T]
+
+lemma dmo'_ksArchState_upd_comm:
+  "monad_commute \<top> (doMachineOp m) (modify (\<lambda>s. ksArchState_update (f (ksArchState s)) s))"
+  apply (clarsimp simp: monad_commute_def doMachineOp_def)
+  apply monad_eq
+  apply (auto simp add: select_f_def)
+  done
+
+lemmas map_dmo'_ksArchState_upd_comm = dmo'_ksArchState_upd_comm[THEN mapM_x_commute_T]
+
+lemma dmo'_gsUserPages_upd_commute:
+  "monad_commute \<top> (doMachineOp f) (modify (gsUserPages_update g))"
+  apply (clarsimp simp: monad_commute_def doMachineOp_def bind_assoc)
+  apply monad_eq
+  apply (auto simp: select_f_def)
+  done
+
+lemmas dmo'_gsUserPages_upd_map_commute = dmo'_gsUserPages_upd_commute[THEN mapM_x_commute_T]
 
 lemma rewrite_step:
   assumes rewrite: "\<And>s. P s \<Longrightarrow> f s = f' s"
@@ -4670,7 +4693,6 @@ proof -
           apply (rule arg_cong2[where f=gsCNodes_update, OF ext refl])
           apply (rule ext)
           apply simp
-
          apply (in_case "HugePageObject")
          apply (simp add: Arch_createNewCaps_def
                           Retype_H.createObject_def createObjects_def bind_assoc
@@ -4682,20 +4704,23 @@ proof -
                                      getObjectSize_def objBits_simps)[6]
           apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
                            getObjectSize_def bit_simps
-                           add.commute append)
+                           add.commute append mapM_x_append mapM_x_singleton)
           apply ((subst gsUserPages_update gsCNodes_update
                         gsUserPages_upd_createObjects'_comm
-                        dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                        monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                        monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
                      | simp add: modify_modify_bind o_def)+)[1]
+
          apply (subst monad_eq, rule createObjects_Cons)
                apply (simp_all add: field_simps shiftl_t2n pageBits_def
                                     getObjectSize_def objBits_simps)[6]
          apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
                           getObjectSize_def
-                          pageBits_def add.commute append)
+                          pageBits_def add.commute append mapM_x_append mapM_x_singleton)
          apply (subst gsUserPages_update gsCNodes_update
                       gsUserPages_upd_createObjects'_comm
-                      dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                      monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
                     | simp add: modify_modify_bind o_def)+
 
         apply (in_case "VSpaceObject")
@@ -4706,8 +4731,11 @@ proof -
                                 getObjectSize_def bit_simps objBits_simps ptBits_def)+)[6]
         apply (simp add: bind_assoc placeNewObject_def2)
         apply (simp add: field_simps updatePTType_def bind_assoc gets_modify_def
-                         getObjectSize_def placeNewObject_def2 objBits_simps append)
+                         getObjectSize_def placeNewObject_def2 objBits_simps append mapM_x_append
+                         mapM_x_singleton)
         apply (subst ksArchState_update ksArchState_upd_createObjects'_comm
+                     monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                     monad_commute_simple'[OF map_dmo'_ksArchState_upd_comm]
                | simp add: modify_modify_bind o_def
                | simp only: o_def cong: if_cong)+
         apply (rule bind_apply_cong, simp)
@@ -4731,20 +4759,22 @@ proof -
               apply (simp_all add: field_simps shiftl_t2n bit_simps
                                    getObjectSize_def objBits_simps)[6]
         apply (simp add: bind_assoc placeNewObject_def2 objBits_simps bit_simps
-                         getObjectSize_def add.commute append)
+                         getObjectSize_def add.commute append mapM_x_append mapM_x_singleton)
         apply ((subst gsUserPages_update gsCNodes_update
                       gsUserPages_upd_createObjects'_comm
-                      dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                      monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
                    | simp add: modify_modify_bind o_def)+)[1]
        apply (subst monad_eq, rule createObjects_Cons)
              apply (simp_all add: field_simps shiftl_t2n pageBits_def
                                  AARCH64_H.getObjectSize_def objBits_simps)[6]
        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
                          AARCH64_H.getObjectSize_def
-                        pageBits_def add.commute append)
+                        pageBits_def add.commute append mapM_x_append mapM_x_singleton)
        apply (subst gsUserPages_update gsCNodes_update
                     gsUserPages_upd_createObjects'_comm
-                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                    monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                    monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
               | simp add: modify_modify_bind o_def)+
 
       apply (in_case "LargePageObject")
@@ -4756,19 +4786,21 @@ proof -
              apply (simp_all add: field_simps shiftl_t2n pageBits_def
                         getObjectSize_def objBits_simps)[6]
        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps bit_simps
-                        getObjectSize_def add.commute append)
+                        getObjectSize_def add.commute append mapM_x_append mapM_x_singleton)
        apply ((subst gsUserPages_update gsCNodes_update
                      gsUserPages_upd_createObjects'_comm
-                     dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                     monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                     monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
                | simp add: modify_modify_bind o_def)+)[1]
       apply (subst monad_eq, rule createObjects_Cons)
             apply (simp_all add: field_simps shiftl_t2n pageBits_def
                        AARCH64_H.getObjectSize_def objBits_simps)[6]
       apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
-                       getObjectSize_def bit_simps add.commute append)
+                       getObjectSize_def bit_simps add.commute append mapM_x_append mapM_x_singleton)
       apply (subst gsUserPages_update gsCNodes_update
                    gsUserPages_upd_createObjects'_comm
-                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                   monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                   monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
              | simp add: modify_modify_bind o_def)+
 
      apply (in_case "PageTableObject")
@@ -4779,8 +4811,11 @@ proof -
                              getObjectSize_def bit_simps objBits_simps ptBits_def)+)[6]
      apply (simp add: bind_assoc placeNewObject_def2)
      apply (simp add: field_simps updatePTType_def bind_assoc gets_modify_def
-                      getObjectSize_def placeNewObject_def2 objBits_simps append)
+                      getObjectSize_def placeNewObject_def2 objBits_simps append mapM_x_append
+                      mapM_x_singleton)
      apply (subst ksArchState_update ksArchState_upd_createObjects'_comm
+                  monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                  monad_commute_simple'[OF map_dmo'_ksArchState_upd_comm]
             | simp add: modify_modify_bind o_def
             | simp only: o_def cong: if_cong)+
      apply (rule bind_apply_cong, simp)
@@ -5029,19 +5064,20 @@ lemma ArchCreateObject_pspace_no_overlap':
      (ptr + (of_nat n << APIType_capBits ty userSize)) userSize d
    \<lbrace>\<lambda>archCap. pspace_no_overlap'
                 (ptr + (1 + of_nat n << APIType_capBits ty userSize)) sz\<rbrace>"
-  apply (rule hoare_pre)
-   apply (clarsimp simp:AARCH64_H.createObject_def)
-   apply wpc
-       apply (wp doMachineOp_psp_no_overlap
-           createObjects'_pspace_no_overlap2 hoare_when_weak_wp
-           createObjects'_psp_aligned[where sz = sz]
-           createObjects'_psp_distinct[where sz = sz]
-         | simp add: placeNewObject_def2 word_shiftl_add_distrib
-         | simp add: placeNewObject_def2 word_shiftl_add_distrib
-         | simp add: placeNewDataObject_def placeNewObject_def2 word_shiftl_add_distrib
-                     field_simps  split del: if_split
-         | clarsimp simp add: add.assoc[symmetric],wp createObjects'_pspace_no_overlap2[where n =0 and sz = sz,simplified]
-         | clarsimp simp add: APIType_capBits_def objBits_simps pageBits_def)+
+  supply if_split[split del]
+  apply (clarsimp simp:AARCH64_H.createObject_def)
+  apply wpc
+         apply (wp doMachineOp_psp_no_overlap
+                   createObjects'_pspace_no_overlap2
+                   createObjects'_psp_aligned[where sz = sz]
+                   createObjects'_psp_distinct[where sz = sz]
+                | simp add: placeNewObject_def2 word_shiftl_add_distrib
+                | simp add: placeNewObject_def2 word_shiftl_add_distrib
+                | simp add: placeNewDataObject_def placeNewObject_def2 word_shiftl_add_distrib
+                            field_simps
+                | clarsimp simp add: add.assoc[symmetric],
+                  wp createObjects'_pspace_no_overlap2[where n =0 and sz = sz,simplified]
+                | clarsimp simp add: APIType_capBits_def objBits_simps pageBits_def)+
   apply (clarsimp simp: conj_comms)
   apply (frule(1) range_cover_no_0[where p = n])
    apply simp
@@ -5070,6 +5106,7 @@ lemma ArchCreateObject_pspace_no_overlap':
   apply (intro conjI allI)
       apply (clarsimp simp: field_simps word_bits_conv
                             APIType_capBits_def shiftl_t2n objBits_simps bit_simps
+                      split: if_split
              | rule conjI | erule range_cover_le,simp)+
   done
 

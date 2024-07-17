@@ -695,8 +695,21 @@ lemma clearMemory_unused_corres_noop:
       apply (clarsimp simp: word_size_def)
       apply (drule subsetD[OF upto_enum_step_subset])
       apply simp
-     apply (rule dcorres_machine_op_noop, wp)
+     apply (rule corres_return_trivial; wp)
     apply (wp | simp)+
+  done
+
+lemma dcorres_mapM_x_machine_op_noop:
+  "\<lbrakk> \<And>m r. \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> mop r \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace> \<rbrakk>
+       \<Longrightarrow> dcorres dc \<top> \<top> (return ()) (mapM_x (\<lambda>r. do_machine_op (mop r)) xs)"
+  apply (induct xs)
+   apply (simp add: mapM_x_Nil)
+  apply (simp add: mapM_x_Cons)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_noop_rhs)
+      apply (rule dcorres_machine_op_noop, assumption)
+     apply assumption
+    apply wpsimp+
   done
 
 lemma init_arch_objects_corres_noop:
@@ -712,27 +725,31 @@ lemma init_arch_objects_corres_noop:
                      obj_refs cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {})
                \<and> valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_idle s \<and> valid_etcbs s)
         (return ())
-        (init_arch_objects ty ptr n obj_sz refs)"
+        (init_arch_objects ty dev ptr n obj_sz refs)"
   apply (simp add: init_arch_objects_def
             split: Structures_A.apiobject_type.split aobject_type.split)
-  apply (simp add: dcorres_machine_op_noop[THEN corres_guard_imp]
-                   cleanCacheRange_PoU_def machine_op_lift)
-  apply safe
-  apply (simp add:mapM_x_mapM)
+  apply (subst dcorres_machine_op_noop[THEN corres_guard_imp]
+               dcorres_mapM_x_machine_op_noop[THEN corres_guard_imp]
+         | rule cleanCacheRange_PoU_mem cleanCacheRange_RAM_mem TrueI)+
+  apply clarsimp
+  apply (rule conj_commute[THEN iffD1])
+  apply (rule context_conjI)
+   prefer 2
+   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule corres_split_noop_rhs)
       apply (rule corres_noop[where P=\<top> and P'=valid_idle])
        apply simp
-       apply (rule hoare_strengthen_post, rule mapM_wp')
+       apply (rule hoare_strengthen_post, rule mapM_x_wp')
         apply (subst eq_commute, wp copy_global_mappings_dwp)
           apply (simp add: obj_bits_api_def arch_kobj_size_def
                            default_arch_object_def pd_bits_def pageBits_def)
          apply (wp mapM_wp' dmo_dwp | simp)+
-     apply (rule corres_noop[where P=\<top> and P'=valid_idle])
-      apply (simp add: clearMemory_def do_machine_op_bind
-                   cleanCacheRange_PoU_def ef_storeWord
-                   mapM_x_mapM dom_mapM)
-      apply (wp mapM_wp' dmo_dwp | simp)+
+     apply (rule dcorres_mapM_x_machine_op_noop)
+     apply (rule cleanCacheRange_PoU_mem)
+    apply wp
+   apply simp
+  apply simp
   done
 
 lemma monad_commute_set_cap_cdt:
@@ -1200,11 +1217,8 @@ lemma clearMemory_corres_noop:
   apply (simp add: clearMemory_def freeMemory_def[symmetric]
                    do_machine_op_bind empty_fail_freeMemory)
   apply (rule corres_guard_imp)
-    apply (rule corres_add_noop_lhs)
-    apply (rule corres_split_nor)
-       apply (rule freeMemory_dcorres; simp)
-      apply (rule dcorres_machine_op_noop)
-      apply (wp | simp)+
+    apply (rule freeMemory_dcorres; simp)
+   apply (wp | simp)+
   apply (clarsimp simp: field_simps)
   done
 

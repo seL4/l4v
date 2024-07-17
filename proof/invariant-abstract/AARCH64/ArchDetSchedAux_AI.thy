@@ -19,6 +19,7 @@ crunch init_arch_objects
   and valid_queues[wp]: valid_queues
   and valid_sched_action[wp]: valid_sched_action
   and valid_sched[wp]: valid_sched
+  (wp: mapM_x_wp')
 
 (* already proved earlier *)
 declare invoke_untyped_cur_thread[DetSchedAux_AI_assms]
