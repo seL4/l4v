@@ -2721,9 +2721,9 @@ lemma corres_retype:
   done
 
 lemma init_arch_objects_APIType_map2:
-  "init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs =
+  "init_arch_objects (APIType_map2 (Inr ty)) dev ptr bits sz refs =
      (case ty of APIObjectType _ \<Rightarrow> return ()
-   | _ \<Rightarrow> init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs)"
+   | _ \<Rightarrow> init_arch_objects (APIType_map2 (Inr ty)) dev ptr bits sz refs)"
   apply (clarsimp split: X64_H.object_type.split)
   apply (simp add: init_arch_objects_def APIType_map2_def
             split: apiobject_type.split)
@@ -5579,7 +5579,7 @@ lemma createObjects_Not_tcbQueued:
 
 lemma init_arch_objects_APIType_map2_noop:
   "tp \<noteq> Inr PML4Object
-   \<longrightarrow> init_arch_objects (APIType_map2 tp) ptr n m addrs
+   \<longrightarrow> init_arch_objects (APIType_map2 tp) dev ptr n m addrs
     = return ()"
   apply (simp add: init_arch_objects_def APIType_map2_def)
   apply (cases tp, simp_all split: kernel_object.split arch_kernel_object.split
@@ -5645,7 +5645,7 @@ lemma corres_retype_region_createNewCaps:
                   \<and> valid_pspace' s \<and> valid_arch_state' s
                   \<and> range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and> n\<noteq> 0)
             (do x \<leftarrow> retype_region y n us (APIType_map2 (Inr ty)) dev :: obj_ref list det_ext_monad;
-                init_arch_objects (APIType_map2 (Inr ty)) y n us x;
+                init_arch_objects (APIType_map2 (Inr ty)) dev y n us x;
                 return x od)
             (createNewCaps ty y n us dev)"
   apply (rule_tac F="range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n

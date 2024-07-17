@@ -224,7 +224,7 @@ assumes getFAR_ccorres:
            (doMachineOp getFAR)
            (Call getFAR_'proc)"
 
-(* FIXME ARMHYP double-check this, assumption is ccorres holds regardless of in_kernel *)
+(* assumption is ccorres holds regardless of in_kernel *)
 assumes getActiveIRQ_ccorres:
 "\<And>in_kernel.
    ccorres (\<lambda>(a::irq option) c::machine_word.

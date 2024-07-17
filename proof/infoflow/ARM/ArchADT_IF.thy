@@ -148,9 +148,9 @@ lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
   "\<lbrace>\<top>\<rbrace> arch_invoke_irq_control a -, \<lbrace>Q\<rbrace>"
   by (cases a; wpsimp)
 
-crunch cleanCacheRange_PoU
+crunch cleanCacheRange_PoU, cleanCacheRange_RAM
   for irq_state[wp]: "\<lambda>s. P (irq_state s)"
-  (ignore_del: cleanCacheRange_PoU cleanByVA_PoU)
+  (ignore_del: cleanCacheRange_PoU cleanByVA_PoU cleanL2Range dsb cleanByVA)
 
 crunch init_arch_objects
   for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"

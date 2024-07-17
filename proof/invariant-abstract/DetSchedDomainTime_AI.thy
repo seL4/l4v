@@ -49,7 +49,7 @@ locale DetSchedDomainTime_AI =
   assumes handle_arch_fault_reply_domain_list_inv'[wp]:
     "\<And>P f t x y. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_arch_fault_reply f t x y \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes init_arch_objects_domain_list_inv'[wp]:
-    "\<And>P t p n s r. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> init_arch_objects t p n s r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+    "\<And>P t d p n s r. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> init_arch_objects t d p n s r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_post_modify_registers_domain_list_inv'[wp]:
     "\<And>P t p. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_post_modify_registers t p \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_list_inv'[wp]:
@@ -71,7 +71,7 @@ locale DetSchedDomainTime_AI =
   assumes handle_arch_fault_reply_domain_time_inv'[wp]:
     "\<And>P f t x y. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> handle_arch_fault_reply f t x y \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes init_arch_objects_domain_time_inv'[wp]:
-    "\<And>P t p n s r. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> init_arch_objects t p n s r \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+    "\<And>P t d p n s r. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> init_arch_objects t d p n s r \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_post_modify_registers_domain_time_inv'[wp]:
     "\<And>P t p. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_post_modify_registers t p \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_time_inv'[wp]:

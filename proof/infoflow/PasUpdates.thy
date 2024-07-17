@@ -130,7 +130,7 @@ locale PasUpdates_2 = PasUpdates_1 +
   and handle_arch_fault_reply_domain_fields[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>domain_fields P\<rbrace>"
   and init_arch_objects_domain_fields[wp]:
-    "init_arch_objects typ ptr num sz refs \<lbrace>domain_fields P\<rbrace>"
+    "init_arch_objects typ dev ptr num sz refs \<lbrace>domain_fields P\<rbrace>"
   and state_asids_to_policy_pasSubject_update:
     "state_asids_to_policy (aag\<lparr>pasSubject := subject\<rparr>) s =
      state_asids_to_policy aag s"

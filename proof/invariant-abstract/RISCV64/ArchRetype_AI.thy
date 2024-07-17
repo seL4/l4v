@@ -211,7 +211,7 @@ lemma init_arch_objects_invs_from_restricted:
   "\<lbrace>post_retype_invs new_type refs
          and (\<lambda>s. global_refs s \<inter> set refs = {})
          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
-     init_arch_objects new_type ptr bits obj_sz refs
+     init_arch_objects new_type dev ptr bits obj_sz refs
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: init_arch_objects_def split del: if_split)
   apply (rule hoare_pre)
@@ -1047,7 +1047,7 @@ crunch init_arch_objects
 
 lemma init_arch_objects_excap:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace>
-      init_arch_objects tp ptr bits us refs
+      init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
   by (wp ex_cte_cap_to_pres)
 
