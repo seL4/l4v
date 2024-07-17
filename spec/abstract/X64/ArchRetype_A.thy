@@ -27,10 +27,10 @@ definition
 text \<open>Initialise architecture-specific objects.\<close>
 
 definition
-  init_arch_objects :: "apiobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> obj_ref list
+  init_arch_objects :: "apiobject_type \<Rightarrow> bool \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> obj_ref list
    \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "init_arch_objects new_type ptr num_objects obj_sz refs
+  "init_arch_objects new_type is_device ptr num_objects obj_sz refs
     \<equiv> when (new_type = ArchObject PML4Obj) (mapM_x copy_global_mappings refs)"
 
 definition
