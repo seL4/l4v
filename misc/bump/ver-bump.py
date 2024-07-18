@@ -34,7 +34,7 @@ def main():
     with open(args.manifest, 'w') as manifest:
         found = False
         for line in lines:
-            if re.match('  \<project name="seL4" revision="[a-f0-9]{40}', line) and not found:
+            if re.match(r'  \<project name="seL4" revision="[a-f0-9]{40}', line) and not found:
                 found = True
                 manifest.write(re.sub('revision="[a-f0-9]{40}',
                                       'revision="' + args.revision, line))
