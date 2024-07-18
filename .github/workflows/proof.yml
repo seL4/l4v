@@ -9,8 +9,6 @@ on:
     paths-ignore:
       - '**.md'
       - '**.txt'
-    branches:
-      - rt
   # this action needs access to secrets.
   # The actual test runs in a no-privilege VM, so it's Ok to run on untrusted PRs.
   pull_request_target:
@@ -41,7 +39,7 @@ jobs:
         L4V_ARCH: ${{ matrix.arch }}
         NUM_DOMAINS: ${{ inputs.NUM_DOMAINS }}
         L4V_FEATURES: MCS
-        manifest: mcs.xml
+        manifest: mcs-devel.xml
         skip_dups: true
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
         token: ${{ secrets.READ_TOKEN }}
