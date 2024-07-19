@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - master
+      - rt
   repository_dispatch:
     types:
       - manifest-update
@@ -19,6 +20,7 @@ on:
 jobs:
   code:
     name: Freeze Code
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       xml: ${{ steps.repo.outputs.xml }}
@@ -28,6 +30,19 @@ jobs:
       with:
         manifest_repo: verification-manifest
         manifest: devel.xml
+
+  mcs-code:
+    name: Freeze MCS Code
+    if: github.ref == 'refs/heads/rt'
+    runs-on: ubuntu-latest
+    outputs:
+      xml: ${{ steps.repo.outputs.xml }}
+    steps:
+    - id: repo
+      uses: seL4/ci-actions/repo-checkout@master
+      with:
+        manifest_repo: verification-manifest
+        manifest: mcs-devel.xml
 
   proofs:
     name: Proof
@@ -72,6 +87,43 @@ jobs:
         name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
         path: logs.tar.xz
 
+  mcs-proofs:
+    name: MCS Proof
+    needs: mcs-code
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM, RISCV64]
+        num_domains: ['1', '']
+        plat: [""]
+    # test only most recent push:
+    concurrency: l4v-mcs-regression-${{ github.ref }}-${{ strategy.job-index }}
+    steps:
+    - name: Proofs
+      uses: seL4/ci-actions/aws-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        L4V_PLAT: ${{ matrix.plat }}
+        L4V_FEATURES: MCS
+        xml: ${{ needs.mcs-code.outputs.xml }}
+        NUM_DOMAINS: ${{ matrix.num_domains }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SSH: ${{ secrets.AWS_SSH }}
+    - name: Upload kernel builds
+      uses: actions/upload-artifact@v4
+      with:
+        name: mcs-kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
+        path: artifacts/kernel-builds
+        if-no-files-found: ignore
+    - name: Upload logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: mcs-logs-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
+        path: logs.tar.xz
+
   deploy:
     name: Deploy manifest
     runs-on: ubuntu-latest
@@ -88,6 +140,18 @@ jobs:
         token: ${{ secrets.PRIV_REPO_TOKEN }}
         tag: "l4v/proof-deploy/${{ github.event_name }}"
 
+  mcs-deploy:
+    name: Deploy MCS manifest
+    runs-on: ubuntu-latest
+    needs: [mcs-code, mcs-proofs]
+    steps:
+    - uses: seL4/ci-actions/l4v-deploy@master
+      with:
+        xml: ${{ needs.mcs-code.outputs.xml }}
+        manifest: mcs-devel.xml
+      env:
+        GH_SSH: ${{ secrets.CI_SSH }}
+
 # Automatically rebase platform branches on pushes to master.
 # This workflow here on the master branch attempts a git rebase of the platform
 # branches listed in the build matrix below. If the rebase succeeds, the rebased
@@ -97,6 +161,7 @@ jobs:
 # `<branch>`, becoming the new platform branch.
   rebase:
     name: Rebase platform branches
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
