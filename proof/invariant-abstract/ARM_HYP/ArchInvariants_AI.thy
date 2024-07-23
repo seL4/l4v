@@ -2162,7 +2162,7 @@ lemma valid_vspace_objs_lift:
   apply (rule valid_vspace_obj_typ [OF z], auto)
   done
 
-lemma acap_rights_update_id [intro!, simp]:
+lemma wf_acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
   by (auto split: arch_cap.splits)

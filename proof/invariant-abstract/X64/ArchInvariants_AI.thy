@@ -3030,7 +3030,7 @@ lemma vs_cap_ref_eq_imp_table_cap_ref_eq:
                   arch_cap_fun_lift_def
           split: cap.splits arch_cap.splits vmpage_size.splits option.splits)
 
-lemma acap_rights_update_id [intro!, simp]:
+lemma wf_acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
   by (auto split: arch_cap.splits)
