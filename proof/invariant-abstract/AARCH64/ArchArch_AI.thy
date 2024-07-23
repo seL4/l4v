@@ -1726,18 +1726,4 @@ lemma arch_pinv_st_tcb_at:
 
 end
 
-(* FIXME arch_split: move to global theory *)
-arch_requalify_consts
-  valid_arch_inv
-
-arch_requalify_facts
-  invoke_arch_tcb
-  invoke_arch_invs
-  sts_valid_arch_inv
-  arch_decode_inv_wf
-  arch_pinv_st_tcb_at
-
-declare invoke_arch_invs[wp]
-declare arch_decode_inv_wf[wp]
-
 end

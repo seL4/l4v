@@ -3142,8 +3142,4 @@ crunch vcpu_switch
 
 end
 
-(* FIXME arch_split: move to generic theory? *)
-arch_requalify_facts
-  do_machine_op_valid_kernel_mappings
-
 end

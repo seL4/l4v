@@ -22,16 +22,28 @@ begin
 arch_requalify_facts (A)
   data_to_cptr_def
 
+arch_requalify_consts
+  is_cnode_or_valid_arch
+  valid_arch_inv
+
 arch_requalify_facts
   resetTimer_device_state_inv
   arch_decode_invocation_inv
   arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
   arch_invoke_irq_handler_typ_at
+  invoke_tcb_typ_at
+  invoke_arch_tcb
+  invoke_arch_invs
+  sts_valid_arch_inv
+  arch_decode_inv_wf
+  arch_pinv_st_tcb_at
 
 lemmas [wp] =
   arch_decode_invocation_inv
   lookup_cap_and_slot_inv
+  invoke_arch_invs
+  arch_decode_inv_wf
 
 lemmas [simp] =
   data_to_cptr_def

@@ -423,10 +423,4 @@ lemma dmo_gets_inv[wp]:
 
 end
 
-arch_requalify_facts
-  det_getRegister
-  det_setRegister
-  det_getRestartPC
-  det_setNextPC
-
 end

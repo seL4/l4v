@@ -140,10 +140,4 @@ proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_assms)?)
 qed
 
-(* FIXME arch_split: move to global theory *)
-arch_requalify_facts
-  user_mem_dom_cong
-  device_mem_dom_cong
-  device_frame_in_device_region
-
 end

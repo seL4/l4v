@@ -19,8 +19,12 @@ arch_requalify_consts
 arch_requalify_facts
   ptrFormPAddr_addFromPPtr
   aobj_ref_arch_cap
+  arch_finalise_cap_bcorres
+  prepare_thread_delete_bcorres
 
 lemmas aobj_ref_arch_cap_simps[simp] = aobj_ref_arch_cap
+
+lemmas [wp] = arch_finalise_cap_bcorres prepare_thread_delete_bcorres
 
 lemma detype_arch_state:
   "arch_state (detype S s) = arch_state s"
