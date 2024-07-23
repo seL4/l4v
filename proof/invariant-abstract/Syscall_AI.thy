@@ -16,14 +16,14 @@ imports
   ArchInterrupt_AI
 begin
 
-requalify_facts
-  (* lookup_cap_and_slot_inv (* FIXME arch_split: check other arches to make sure this is global *) *)
-  Arch.resetTimer_device_state_inv
+(* requalify_facts
+  lookup_cap_and_slot_inv (* FIXME arch_split: check other arches to make sure this is global *) *)
 
 arch_requalify_facts (A)
   data_to_cptr_def
 
 arch_requalify_facts
+  resetTimer_device_state_inv
   arch_decode_invocation_inv
   arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of

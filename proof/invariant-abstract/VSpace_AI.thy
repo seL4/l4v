@@ -12,11 +12,8 @@ theory VSpace_AI
 imports ArchVSpace_AI
 begin
 
-(* FIXME arch_split: this should maybe have global_naming *)
-requalify_facts
-  Arch.ackInterrupt_device_state_inv
-
 arch_requalify_facts
+  ackInterrupt_device_state_inv
   pspace_respects_device_region_dmo
   cap_refs_respects_device_region_dmo
 

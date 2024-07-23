@@ -8,13 +8,6 @@ theory InvariantsPre_AI
 imports LevityCatch_AI
 begin
 
-(* FIXME RAF: these already appear exported to global context?!
-arch_requalify_types (A)
-  aa_type
-
-arch_requalify_consts (A)
-  aa_type *)
-
 (* FIXME: move *)
 declare ranI [intro]
 

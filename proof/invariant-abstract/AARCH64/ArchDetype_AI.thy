@@ -637,6 +637,7 @@ interpretation Detype_AI_2
         by blast
 
 (* generic consequence of architecture-specific details *)
+(* FIXME arch-split: can't this be done without this strange requalification? *)
 lemma (in Arch) delete_objects_invs[wp]:
   "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at ((=) (cap.UntypedCap dev ptr bits f)) slot s
     \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and

@@ -27,11 +27,8 @@ arch_requalify_consts
   vs_cap_ref
   arch_post_cap_delete_pre
 
-(* FIXME arch_split: no global_naming *)
-requalify_facts
-  Arch.no_irq_clearMemory
-
 arch_requalify_facts
+  no_irq_clearMemory
   final_cap_lift
   valid_global_refsD
   arch_post_cap_deletion_valid_objs

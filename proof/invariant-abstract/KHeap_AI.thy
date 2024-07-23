@@ -14,12 +14,9 @@ arch_requalify_consts
   non_vspace_obj
   vspace_obj_pred
 
-(* FIXME arch_split: these should probably be in an arch-named context *)
-requalify_facts
-  Arch.getActiveIRQ_neq_non_kernel
-  Arch.dmo_getActiveIRQ_non_kernel
-
 arch_requalify_facts
+  getActiveIRQ_neq_non_kernel
+  dmo_getActiveIRQ_non_kernel
   pspace_in_kernel_window_atyp_lift
   valid_vspace_objs_lift_weak
   vs_lookup_vspace_obj_at_lift

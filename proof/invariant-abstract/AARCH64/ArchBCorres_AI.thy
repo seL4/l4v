@@ -45,6 +45,7 @@ crunch prepare_thread_delete
 
 end
 
+(* FIXME arch_split: move to generic theory *)
 arch_requalify_facts arch_finalise_cap_bcorres prepare_thread_delete_bcorres
 
 declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]

@@ -1054,7 +1054,7 @@ lemma get_cap_caps_of_state:
   by (clarsimp simp: caps_of_state_def eq_commute)
 
 (* generic consequence of architecture-specific details *)
-(* FIXME arch_split: no global naming? *)
+(* FIXME arch_split: no global naming, immediately requalified *)
 lemma (in Arch) abj_ref_none_no_refs:
   "obj_refs c = {} \<Longrightarrow> table_cap_ref c = None"
   unfolding table_cap_ref_def

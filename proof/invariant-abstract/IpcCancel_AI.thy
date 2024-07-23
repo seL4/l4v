@@ -8,11 +8,8 @@ theory IpcCancel_AI
 imports ArchSchedule_AI
 begin
 
-(* FIXME arch_split: strange global_naming *)
-requalify_facts
-  Arch.arch_stit_invs
-
 arch_requalify_facts
+  arch_stit_invs
   arch_post_cap_deletion_pred_tcb_at
 
 declare arch_post_cap_deletion_pred_tcb_at[wp]
