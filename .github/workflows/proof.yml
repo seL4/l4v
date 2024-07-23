@@ -5,10 +5,6 @@
 name: Proof PR
 
 on:
-  push:
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
   # this action needs access to secrets.
   # The actual test runs in a no-privilege VM, so it's Ok to run on untrusted PRs.
   pull_request_target:
