@@ -78,7 +78,7 @@ arch_requalify_facts
   valid_arch_state_lift
   aobj_at_default_arch_cap_valid
   aobj_ref_default
-  acap_rights_update_id
+  wf_acap_rights_update_id
   physical_arch_cap_has_ref
   wellformed_arch_default
   valid_vspace_obj_default'
@@ -114,9 +114,9 @@ lemmas [simp] =
   iarch_tcb_context_set
   iarch_tcb_set_registers
 
-lemmas [intro!] = idle_global acap_rights_update_id
+lemmas [intro!] = idle_global wf_acap_rights_update_id
 
-lemmas [simp] = acap_rights_update_id state_hyp_refs_update
+lemmas [simp] = wf_acap_rights_update_id state_hyp_refs_update
                 tcb_arch_ref_simps hyp_live_tcb_simps hyp_refs_of_simps
 
 

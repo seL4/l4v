@@ -18,11 +18,6 @@ arch_requalify_consts
   replaceable_non_final_arch_cap
   unique_table_refs
 
-(* There are multiple arch-dependent acap_rights_update_id, one for wellformed_acap,
-   one for valid_arch_cap. Prefer the latter. *)
-arch_requalify_facts (aliasing)
-  acap_rights_update_id
-
 arch_requalify_facts
   aobj_ref_acap_rights_update
   arch_obj_size_acap_rights_update
@@ -31,6 +26,7 @@ arch_requalify_facts
   unique_table_refs_def
   valid_ipc_buffer_cap_def
   acap_rights_update_idem
+  valid_acap_rights_update_id
   cap_master_arch_cap_rights
   is_nondevice_page_cap_simps
   set_cap_hyp_refs_of
@@ -52,10 +48,10 @@ lemma is_valid_vtable_root_simps[simp]:
 
 lemmas [simp] = aobj_ref_acap_rights_update arch_obj_size_acap_rights_update
   valid_validate_vm_rights cap_master_arch_inv acap_rights_update_idem
-  cap_master_arch_cap_rights acap_rights_update_id state_hyp_refs_of_revokable
+  cap_master_arch_cap_rights valid_acap_rights_update_id state_hyp_refs_of_revokable
 
 lemmas [intro] = valid_arch_cap_acap_rights_update
-lemmas [intro!] = acap_rights_update_id
+lemmas [intro!] = valid_acap_rights_update_id
 lemmas [wp] = set_cap_hyp_refs_of
 
 lemma remove_rights_cap_valid[simp]:
