@@ -5,6 +5,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # execute this in the root repo folder
+#
+# usage:
+#
+# bump-ver-manifest          to bump seL4 revision in devel.xml
+# bump-ver-manifest --mcs    to bump seL4 revision in mcs-devel.xml
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SEL4_DIR=seL4
@@ -12,19 +17,34 @@ MANIFEST_DIR=.repo/manifests
 
 set -eo pipefail
 
-current_hash=$(grep '<project name="seL4"' "$MANIFEST_DIR/devel.xml" | sed -re 's/^.*revision="([0-9a-fA-F]+)".*$/\1/' | head -n1)
+if [ $# == 0 ]
+then
+    TAG=""
+    MANIFEST_FILE="devel.xml"
+elif [ $# == 1 ] && [ "$1" == "--mcs" ]
+then
+    TAG="mcs: "
+    MANIFEST_FILE="mcs-devel.xml"
+else
+    echo "usage: $0 [--mcs]"
+    exit 1
+fi
+
+MANIFEST="$MANIFEST_DIR/$MANIFEST_FILE"
+
+current_hash=$(grep '<project name="seL4"' "$MANIFEST" | sed -re 's/^.*revision="([0-9a-fA-F]+)".*$/\1/' | head -n1)
 current=$(git -C "$SEL4_DIR" log --oneline -n 1 "$current_hash")
 commits=$(git -C "$SEL4_DIR" log --oneline "$current_hash"..)
 latest=$(git -C "$SEL4_DIR" log --oneline -n 1)
 latest_hash=$(git -C "$SEL4_DIR" log --pretty=format:'%H' -n 1)
 
-echo "Manifest currently at: $current"
+echo "Manifest $MANIFEST_FILE currently at: $current"
 echo "New commits:"
 echo "----"
 echo "$commits"
 echo
 
-read -p "Update manifest to $latest? (y/n) " -n 1 -r
+read -p "Update $MANIFEST_FILE to $latest? (y/n) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]
 then
@@ -33,12 +53,12 @@ then
 fi
 
 echo "Generating new manifest..."
-python3 "$SCRIPT_DIR/ver-bump.py" -m "$MANIFEST_DIR/devel.xml" -r "$latest_hash"
+python3 "$SCRIPT_DIR/ver-bump.py" -m "$MANIFEST" -r "$latest_hash"
 
 echo
 echo "Committing new manifest..."
-git -C "$MANIFEST_DIR" add devel.xml
-git -C "$MANIFEST_DIR" commit -m "Bump kernel revision to '$latest'"
+git -C "$MANIFEST_DIR" add "$MANIFEST_FILE"
+git -C "$MANIFEST_DIR" commit -m "${TAG}bump kernel revision to '$latest'"
 
 echo
 echo "Pushing new manifest..."
