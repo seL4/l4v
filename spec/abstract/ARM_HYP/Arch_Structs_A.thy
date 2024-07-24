@@ -18,7 +18,7 @@ imports
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 text \<open>
 This theory provides architecture-specific definitions and datatypes
@@ -131,13 +131,13 @@ type_synonym virq = machine_word
 
 end
 
-qualify ARM_A (in Arch)
+qualify ARM_HYP_A (in Arch)
 
 record  gic_vcpu_interface =
   vgic_hcr  :: machine_word
   vgic_vmcr :: machine_word
   vgic_apr  :: machine_word
-  vgic_lr   :: "nat \<Rightarrow> ARM_A.virq"
+  vgic_lr   :: "nat \<Rightarrow> ARM_HYP_A.virq"
 
 record vcpu =
   vcpu_tcb   :: "obj_ref option"
@@ -149,7 +149,7 @@ record vcpu =
 end_qualify
 
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 definition "vcpu_sctlr vcpu \<equiv> vcpu_regs vcpu VCPURegSCTLR"
 
@@ -333,23 +333,23 @@ currently active page directory. The second component of
 
 end
 
-qualify ARM_A (in Arch)
+qualify ARM_HYP_A (in Arch)
 
 text \<open>arch\_state\<close>
 
 record arch_state =
   arm_asid_table    :: "7 word \<rightharpoonup> obj_ref"
-  arm_hwasid_table  :: "ARM_A.hw_asid \<rightharpoonup> ARM_A.asid"
-  arm_next_asid     :: ARM_A.hw_asid
-  arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"
+  arm_hwasid_table  :: "ARM_HYP_A.hw_asid \<rightharpoonup> ARM_HYP_A.asid"
+  arm_next_asid     :: ARM_HYP_A.hw_asid
+  arm_asid_map      :: "ARM_HYP_A.asid \<rightharpoonup> (ARM_HYP_A.hw_asid \<times> obj_ref)"
   arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
-  arm_kernel_vspace :: ARM_A.arm_vspace_region_uses
+  arm_kernel_vspace :: ARM_HYP_A.arm_vspace_region_uses
   arm_us_global_pd  :: obj_ref
 
 end_qualify
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 section "Type declarations for invariant definitions"
 
@@ -380,7 +380,7 @@ end
 section "Arch-specific tcb"
 
 
-qualify ARM_A (in Arch)
+qualify ARM_HYP_A (in Arch)
 
 (* arch specific part of tcb: this must have a field for user context *)
 record arch_tcb =
@@ -390,7 +390,7 @@ record arch_tcb =
 end_qualify
 
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 definition
   default_arch_tcb :: arch_tcb where

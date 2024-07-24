@@ -14,7 +14,7 @@ theory ArchDecode_A
 imports
   Interrupt_A
 begin
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 section "Helper definitions"
 

@@ -2126,7 +2126,7 @@ lemma checkMappingPPtr_corres:
          auto simp add: is_aligned_mask[symmetric]
          is_aligned_shiftr pg_entry_align_def pte_bits_def
          unlessE_def returnOk_def pte_relation_aligned_def
-         split: ARM_A.pte.split if_splits ARM_HYP_H.pte.split )
+         split: ARM_HYP_A.pte.split if_splits ARM_HYP_H.pte.split )
       apply wp+
     apply simp
    apply (simp add:is_aligned_mask[symmetric] is_aligned_shiftr pg_entry_align_def)
@@ -2137,7 +2137,7 @@ lemma checkMappingPPtr_corres:
          auto simp add: is_aligned_mask[symmetric]
          is_aligned_shiftr pg_entry_align_def pde_bits_def
          unlessE_def returnOk_def pde_relation_aligned_def
-         split: ARM_A.pde.split if_splits ARM_HYP_H.pde.split )
+         split: ARM_HYP_A.pde.split if_splits ARM_HYP_H.pde.split )
      apply wp+
    apply simp+
   done
@@ -2314,10 +2314,10 @@ lemma unmapPage_corres:
 
 definition
   "flush_type_map type \<equiv> case type of
-     ARM_A.flush_type.Clean \<Rightarrow> ARM_HYP_H.flush_type.Clean
-   | ARM_A.flush_type.Invalidate \<Rightarrow> ARM_HYP_H.flush_type.Invalidate
-   | ARM_A.flush_type.CleanInvalidate \<Rightarrow> ARM_HYP_H.flush_type.CleanInvalidate
-   | ARM_A.flush_type.Unify \<Rightarrow> ARM_HYP_H.flush_type.Unify"
+     ARM_HYP_A.flush_type.Clean \<Rightarrow> ARM_HYP_H.flush_type.Clean
+   | ARM_HYP_A.flush_type.Invalidate \<Rightarrow> ARM_HYP_H.flush_type.Invalidate
+   | ARM_HYP_A.flush_type.CleanInvalidate \<Rightarrow> ARM_HYP_H.flush_type.CleanInvalidate
+   | ARM_HYP_A.flush_type.Unify \<Rightarrow> ARM_HYP_H.flush_type.Unify"
 
 lemma doFlush_corres:
   "corres_underlying Id nf nf' dc \<top> \<top>
@@ -2338,8 +2338,8 @@ lemma doFlush_corres:
 
 definition
   "page_directory_invocation_map pdi pdi' \<equiv> case pdi of
-    ARM_A.PageDirectoryNothing \<Rightarrow> pdi' = PageDirectoryNothing
-  | ARM_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
+    ARM_HYP_A.PageDirectoryNothing \<Rightarrow> pdi' = PageDirectoryNothing
+  | ARM_HYP_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
       pdi' = PageDirectoryFlush (flush_type_map typ) start end pstart pd asid"
 
 lemma performPageDirectoryInvocation_corres:
@@ -2372,16 +2372,16 @@ lemma performPageDirectoryInvocation_corres:
 
 definition
   "page_invocation_map pgi pgi' \<equiv> case pgi of
-    ARM_A.PageMap a c ptr m \<Rightarrow>
+    ARM_HYP_A.PageMap a c ptr m \<Rightarrow>
       \<exists>c' m'. pgi' = PageMap a c' (cte_map ptr) m' \<and>
               cap_relation c c' \<and>
               mapping_map m m'
-  | ARM_A.PageUnmap c ptr \<Rightarrow>
+  | ARM_HYP_A.PageUnmap c ptr \<Rightarrow>
       \<exists>c'. pgi' = PageUnmap c' (cte_map ptr) \<and>
          acap_relation c c'
-  | ARM_A.PageFlush typ start end pstart pd asid \<Rightarrow>
+  | ARM_HYP_A.PageFlush typ start end pstart pd asid \<Rightarrow>
       pgi' = PageFlush (flush_type_map typ) start end pstart pd asid
-  | ARM_A.PageGetAddr ptr \<Rightarrow>
+  | ARM_HYP_A.PageGetAddr ptr \<Rightarrow>
       pgi' = PageGetAddr ptr"
 
 definition
@@ -2586,7 +2586,7 @@ lemma corres_store_pde_with_invalid_tail:
   "\<lbrakk> \<forall>slot \<in>set ys. \<not> is_aligned (slot >> pde_bits) (pde_align' ab); length ys < 2^word_bits \<rbrakk>
   \<Longrightarrow>corres dc ((\<lambda>s. \<forall>y\<in> set ys. pde_at y s) and pspace_aligned and valid_etcbs)
            (pspace_aligned' and pspace_distinct')
-           (mapM (swp store_pde ARM_A.pde.InvalidPDE) ys)
+           (mapM (swp store_pde ARM_HYP_A.pde.InvalidPDE) ys)
            (mapM (\<lambda>(slot, i). storePDE slot (addPDEOffset ab i)) (zip ys [1.e.of_nat (length ys)]))"
   apply (rule_tac S ="{(x,y). x = fst y \<and> x \<in> set ys}" in corres_mapM[where r = dc and r' = dc])
         apply simp
@@ -2610,7 +2610,7 @@ lemma corres_store_pte_with_invalid_tail:
   "\<lbrakk> \<forall>slot\<in> set ys. \<not> is_aligned (slot >> pte_bits) (pte_align' aa); length ys < 2^word_bits\<rbrakk>
   \<Longrightarrow> corres dc ((\<lambda>s. \<forall>y\<in>set ys. pte_at y s) and pspace_aligned and valid_etcbs)
                 (pspace_aligned' and pspace_distinct')
-             (mapM (swp store_pte ARM_A.pte.InvalidPTE) ys)
+             (mapM (swp store_pte ARM_HYP_A.pte.InvalidPTE) ys)
              (mapM (\<lambda>(slot, i). storePTE slot (addPTEOffset aa i)) (zip ys [1.e.of_nat (length ys)]))"
   apply (rule_tac S ="{(x,y). x = fst y \<and> x \<in> set ys}" in corres_mapM[where r = dc and r' = dc])
         apply simp
@@ -2693,7 +2693,7 @@ definition
   (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)"
 
 lemma set_cap_valid_page_map_inv:
-  "\<lbrace>valid_page_inv (ARM_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
+  "\<lbrace>valid_page_inv (ARM_HYP_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
   apply (simp add: valid_page_inv_def valid_page_map_inv_def)
   apply (wp set_cap_cte_wp_at_cases hoare_vcg_ex_lift| simp)+
   apply clarsimp
@@ -2872,7 +2872,7 @@ proof -
                                     and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
                   prefer 2
                   apply auto[1]
-                 apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified]
+                 apply (wp mapM_swp_store_pte_invs[where pte="ARM_HYP_A.pte.InvalidPTE", simplified]
                            hoare_vcg_ex_lift)
                  apply (wp mapM_UNIV_wp
                         | clarsimp simp add: swp_def split: prod.split simp del: fun_upd_apply)+
@@ -2932,7 +2932,7 @@ proof -
                                    and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
                  prefer 2
                  apply auto[1]
-                apply (wp mapM_swp_store_pde_invs_unmap[where pde="ARM_A.pde.InvalidPDE", simplified]
+                apply (wp mapM_swp_store_pde_invs_unmap[where pde="ARM_HYP_A.pde.InvalidPDE", simplified]
                           hoare_vcg_ex_lift)
                 apply (wp mapM_UNIV_wp store_pde_pd_at_asid | clarsimp simp add: swp_def)+
               apply (clarsimp simp add: cte_wp_at_caps_of_state  simp del: fun_upd_apply)
@@ -2960,7 +2960,7 @@ proof -
           apply (rule conjI)
            apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
            apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
-                                  ARM_A.arch_kernel_obj.splits)
+                                  ARM_HYP_A.arch_kernel_obj.splits)
           apply (rule conjI[rotated], fastforce)
           apply (erule ballEI)
           apply (clarsimp simp: pde_at_def obj_at_def
@@ -3053,11 +3053,11 @@ qed
 
 definition
   "page_table_invocation_map pti pti' \<equiv> case pti of
-     ARM_A.PageTableMap cap ptr pde p \<Rightarrow>
+     ARM_HYP_A.PageTableMap cap ptr pde p \<Rightarrow>
     \<exists>cap' pde'. pti' = PageTableMap cap' (cte_map ptr) pde' p \<and>
                 cap_relation cap cap' \<and>
                 pde_relation' pde pde' \<and> is_aligned (p >> pde_bits) (pde_align' pde')
-   | ARM_A.PageTableUnmap cap ptr \<Rightarrow>
+   | ARM_HYP_A.PageTableUnmap cap ptr \<Rightarrow>
     \<exists>cap'. pti' = PageTableUnmap cap' (cte_map ptr) \<and>
            cap_relation cap (ArchObjectCap cap')"
 
@@ -3076,7 +3076,7 @@ definition
 lemma clear_page_table_corres:
   "corres dc (pspace_aligned and page_table_at p and valid_etcbs)
              (pspace_aligned' and pspace_distinct')
-    (mapM_x (swp store_pte ARM_A.InvalidPTE)
+    (mapM_x (swp store_pte ARM_HYP_A.InvalidPTE)
        [p , p + 8 .e. p + 2 ^ ptBits - 1])
     (mapM_x (swp storePTE ARM_HYP_H.InvalidPTE)
        [p , p + 8 .e. p + 2 ^ ptBits - 1])"
@@ -3210,7 +3210,7 @@ lemma performASIDPoolInvocation_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getSlotCap_corres])
        apply simp
-      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (ARM_A.PageDirectoryCap p asid)" in corres_gen_asm)
+      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (ARM_HYP_A.PageDirectoryCap p asid)" in corres_gen_asm)
       apply clarsimp
       apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and asid_pool_at word2 and valid_etcbs and
                          cte_wp_at (\<lambda>c. cap_master_cap c =

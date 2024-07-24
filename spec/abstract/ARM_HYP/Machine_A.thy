@@ -16,7 +16,7 @@ imports
   "ExecSpec.MachineOps"
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 text \<open>
   The specification is written with abstract type names for object
@@ -127,7 +127,7 @@ context begin interpretation Arch .
   requalify_consts kernel_base idle_thread_ptr
 end
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 text \<open>Miscellaneous definitions of constants used in modelling machine
 operations.\<close>

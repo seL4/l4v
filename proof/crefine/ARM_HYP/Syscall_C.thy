@@ -1628,7 +1628,7 @@ lemma virq_virq_active_set_virqEOIIRQEN_spec':
        \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v32) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
-  apply (clarsimp simp: virq_to_H_def ARM_A.virqSetEOIIRQEN_def)
+  apply (clarsimp simp: virq_to_H_def ARM_HYP_A.virqSetEOIIRQEN_def)
   apply (case_tac virq)
   apply clarsimp
   apply (rule array_ext)
@@ -1641,7 +1641,7 @@ lemma virq_virq_invalid_set_virqEOIIRQEN_spec':
        \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v32) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
-  apply (clarsimp simp: virq_to_H_def ARM_A.virqSetEOIIRQEN_def)
+  apply (clarsimp simp: virq_to_H_def ARM_HYP_A.virqSetEOIIRQEN_def)
   apply (case_tac virq)
   apply clarsimp
   apply (rule array_ext)
@@ -1654,7 +1654,7 @@ lemma virq_virq_pending_set_virqEOIIRQEN_spec':
        \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v32) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
-  apply (clarsimp simp: virq_to_H_def ARM_A.virqSetEOIIRQEN_def)
+  apply (clarsimp simp: virq_to_H_def ARM_HYP_A.virqSetEOIIRQEN_def)
   apply (case_tac virq)
   apply clarsimp
   apply (rule array_ext)
@@ -1676,7 +1676,7 @@ lemma virqSetEOIIRQEN_id:
      virq_get_tag (virq_C (ARRAY _. idx)) \<noteq> scast virq_virq_pending;
      virq_get_tag (virq_C (ARRAY _. idx)) \<noteq> scast virq_virq_invalid \<rbrakk>
     \<Longrightarrow> virqSetEOIIRQEN idx 0 = idx"
-  apply (clarsimp simp: ARM_A.virqSetEOIIRQEN_def virq_get_tag_def virq_tag_defs mask_def
+  apply (clarsimp simp: ARM_HYP_A.virqSetEOIIRQEN_def virq_get_tag_def virq_tag_defs mask_def
                   split: if_split)
   apply (rule_tac x="idx >> 28" in two_bits_cases; simp)
   done

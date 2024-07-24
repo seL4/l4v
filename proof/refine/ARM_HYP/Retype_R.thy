@@ -29,8 +29,8 @@ where
     | Inr SectionObject \<Rightarrow> ArchObject SectionObj
     | Inr SuperSectionObject \<Rightarrow> ArchObject SuperSectionObj
     | Inl (KOArch (KOASIDPool _)) \<Rightarrow> ArchObject ASIDPoolObj
-\<comment> \<open>    | Inl (KOArch (KOVCPU _)) \<Rightarrow> ArchObject ARM_A.VCPUObj\<close> \<comment> \<open>inl? inr?\<close>
-    | Inr VCPUObject \<Rightarrow> ArchObject ARM_A.VCPUObj \<comment> \<open>inl? inr?\<close>
+\<comment> \<open>    | Inl (KOArch (KOVCPU _)) \<Rightarrow> ArchObject ARM_HYP_A.VCPUObj\<close> \<comment> \<open>inl? inr?\<close>
+    | Inr VCPUObject \<Rightarrow> ArchObject ARM_HYP_A.VCPUObj \<comment> \<open>inl? inr?\<close>
     | _ \<Rightarrow> ArchObject SmallPageObj"
 
 lemma placeNewObject_def2:

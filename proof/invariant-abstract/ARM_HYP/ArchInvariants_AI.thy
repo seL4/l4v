@@ -733,7 +733,7 @@ definition
   arch_live :: "arch_kernel_obj \<Rightarrow> bool"
 where
   "arch_live ao \<equiv> case ao of
-    ARM_A.VCPU v \<Rightarrow> bound (ARM_A.vcpu_tcb v)
+    ARM_HYP_A.VCPU v \<Rightarrow> bound (ARM_HYP_A.vcpu_tcb v)
     | _ \<Rightarrow>  False"
 
 definition

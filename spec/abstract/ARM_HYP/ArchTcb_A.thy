@@ -14,7 +14,7 @@ theory ArchTcb_A
 imports KHeap_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 definition
   sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"

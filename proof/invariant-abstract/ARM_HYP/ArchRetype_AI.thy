@@ -689,7 +689,7 @@ lemma hyp_refs_eq:
                              default_arch_tcb_def)
   apply (rename_tac ao)
   apply (clarsimp simp: refs_of_a_def ARM_HYP.vcpu_tcb_refs_def default_arch_object_def
-                        ARM_A.default_vcpu_def
+                        ARM_HYP_A.default_vcpu_def
                   split: aobject_type.splits)
   done
 

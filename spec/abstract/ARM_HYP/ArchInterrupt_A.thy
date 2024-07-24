@@ -14,7 +14,7 @@ theory ArchInterrupt_A
 imports Ipc_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 text \<open>VGIC Maintenance\<close>
 

@@ -14,7 +14,7 @@ imports
   "AInvs.ArchDetSchedSchedule_AI"
 begin
 
-context Arch begin global_naming ARM_A (*FIXME: arch-split*)
+context Arch begin global_naming ARM_HYP_A (*FIXME: arch-split*)
 
 lemmas final_matters_def = final_matters_def[simplified final_matters_arch_def]
 
@@ -1626,7 +1626,7 @@ lemma other_obj_relation_KOCTE[simp]:
   "\<not> other_obj_relation ko (KOCTE cte)"
   by (simp add: other_obj_relation_def
          split: Structures_A.kernel_object.splits
-                ARM_A.arch_kernel_obj.splits)
+                ARM_HYP_A.arch_kernel_obj.splits)
 
 lemma cte_map_pulls_tcb_to_abstract:
   "\<lbrakk> y = cte_map z; pspace_relation (kheap s) (ksPSpace s');
@@ -1639,7 +1639,7 @@ lemma cte_map_pulls_tcb_to_abstract:
   apply (erule(1) obj_relation_cutsE;
          clarsimp simp: other_obj_relation_def
                   split: Structures_A.kernel_object.split_asm
-                         ARM_A.arch_kernel_obj.split_asm if_split_asm)
+                         ARM_HYP_A.arch_kernel_obj.split_asm if_split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -1955,7 +1955,7 @@ lemma pspace_relation_cte_wp_atI':
    apply clarsimp
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
-                   ARM_A.arch_kernel_obj.split_asm)
+                   ARM_HYP_A.arch_kernel_obj.split_asm)
   done
 
 lemma pspace_relation_cte_wp_atI:
@@ -2570,7 +2570,7 @@ lemma updateMDB_pspace_relation:
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+;
           clarsimp split: Structures_A.kernel_object.split_asm
-                          ARM_A.arch_kernel_obj.split_asm if_split_asm
+                          ARM_HYP_A.arch_kernel_obj.split_asm if_split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))

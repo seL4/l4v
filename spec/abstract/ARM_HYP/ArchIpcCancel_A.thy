@@ -14,7 +14,7 @@ theory ArchIpcCancel_A
 imports CSpaceAcc_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 text \<open>Actions to be taken after a cap is deleted\<close>
 definition
