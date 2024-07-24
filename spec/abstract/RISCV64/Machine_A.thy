@@ -184,8 +184,6 @@ datatype arch_fault
 
 end
 
-context begin interpretation Arch .
-  requalify_consts idle_thread_ptr
-end
+arch_requalify_consts (A) idle_thread_ptr
 
 end

@@ -15,7 +15,7 @@ imports
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
-context begin interpretation Arch .
+context Arch begin arch_global_naming (A)
 lemmas [code] = pageBits_def ipa_size_def
 end
 

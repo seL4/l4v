@@ -134,9 +134,7 @@ definition
 
 end
 
-context begin interpretation Arch .
-  requalify_consts idle_thread_ptr
-end
+arch_requalify_consts (A) idle_thread_ptr
 
 context Arch begin global_naming X64_A
 

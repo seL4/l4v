@@ -14,12 +14,8 @@ theory TcbAcc_A
 imports CSpace_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   in_user_frame
-
-end
 
 text \<open>Store or load a word at an offset from an IPC buffer.\<close>
 definition
