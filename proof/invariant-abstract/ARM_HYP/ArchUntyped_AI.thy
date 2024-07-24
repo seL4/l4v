@@ -167,7 +167,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
   range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
                    \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
-                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (ARM_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
+                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (ARM_HYP_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
   apply (rename_tac aobject_type us n)
   apply (case_tac aobject_type)
 by (clarsimp simp:valid_cap_def default_object_def cap_aligned_def

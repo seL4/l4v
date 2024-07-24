@@ -34,12 +34,12 @@ where
   | ExceptionTypes_A.GuardMismatch n g      \<Rightarrow> Fault_H.GuardMismatch n (of_bl g) (length g)"
 
 primrec
-  arch_fault_map :: "Machine_A.ARM_A.arch_fault \<Rightarrow> ArchFault_H.ARM_HYP_H.arch_fault"
+  arch_fault_map :: "Machine_A.ARM_HYP_A.arch_fault \<Rightarrow> ArchFault_H.ARM_HYP_H.arch_fault"
 where
-  "arch_fault_map (Machine_A.ARM_A.VMFault ptr msg) = ArchFault_H.ARM_HYP_H.VMFault ptr msg"
-| "arch_fault_map (Machine_A.ARM_A.VGICMaintenance datalist) = VGICMaintenance datalist "
-| "arch_fault_map (Machine_A.ARM_A.VPPIEvent irq) = VPPIEvent irq"
-| "arch_fault_map (Machine_A.ARM_A.VCPUFault data) = VCPUFault data"
+  "arch_fault_map (Machine_A.ARM_HYP_A.VMFault ptr msg) = ArchFault_H.ARM_HYP_H.VMFault ptr msg"
+| "arch_fault_map (Machine_A.ARM_HYP_A.VGICMaintenance datalist) = VGICMaintenance datalist "
+| "arch_fault_map (Machine_A.ARM_HYP_A.VPPIEvent irq) = VPPIEvent irq"
+| "arch_fault_map (Machine_A.ARM_HYP_A.VCPUFault data) = VCPUFault data"
 
 primrec
   fault_map :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault"
@@ -141,7 +141,7 @@ where
                                 (vgic_lr v)"
 
 definition
-  vcpu_relation :: "ARM_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool"
+  vcpu_relation :: "ARM_HYP_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool"
 where
   "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
                            vgic_map (vcpu_vgic v) = vcpuVGIC v' \<and>
@@ -231,34 +231,34 @@ where
   (case (obj, obj') of
         (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
       | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
-      | (ArchObj (ARM_A.ASIDPool pool), KOArch (KOASIDPool pool'))
+      | (ArchObj (ARM_HYP_A.ASIDPool pool), KOArch (KOASIDPool pool'))
              \<Rightarrow> asid_pool_relation pool pool'
-      | (ArchObj (ARM_A.VCPU vcpu), KOArch (KOVCPU vcpu'))
+      | (ArchObj (ARM_HYP_A.VCPU vcpu), KOArch (KOVCPU vcpu'))
              \<Rightarrow> vcpu_relation vcpu vcpu'
       | _ \<Rightarrow> False)"
 
 primrec
-   pde_relation' :: "ARM_A.pde \<Rightarrow> ARM_HYP_H.pde \<Rightarrow> bool"
+   pde_relation' :: "ARM_HYP_A.pde \<Rightarrow> ARM_HYP_H.pde \<Rightarrow> bool"
 where
-  "pde_relation'  ARM_A.InvalidPDE x = (x = ARM_HYP_H.InvalidPDE)"
-| "pde_relation' (ARM_A.PageTablePDE ptr) x
+  "pde_relation'  ARM_HYP_A.InvalidPDE x = (x = ARM_HYP_H.InvalidPDE)"
+| "pde_relation' (ARM_HYP_A.PageTablePDE ptr) x
       = (x = ARM_HYP_H.PageTablePDE ptr)"
-| "pde_relation' (ARM_A.SectionPDE ptr atts rghts) x
+| "pde_relation' (ARM_HYP_A.SectionPDE ptr atts rghts) x
       = (x = ARM_HYP_H.SectionPDE ptr
                (PageCacheable \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
-| "pde_relation' (ARM_A.SuperSectionPDE ptr atts rghts) x
+| "pde_relation' (ARM_HYP_A.SuperSectionPDE ptr atts rghts) x
       = (x = ARM_HYP_H.SuperSectionPDE ptr
                (PageCacheable \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 
 
 primrec
-   pte_relation' :: "ARM_A.pte \<Rightarrow> ARM_HYP_H.pte \<Rightarrow> bool"
+   pte_relation' :: "ARM_HYP_A.pte \<Rightarrow> ARM_HYP_H.pte \<Rightarrow> bool"
 where
-  "pte_relation'  ARM_A.InvalidPTE x = (x = ARM_HYP_H.InvalidPTE)"
-| "pte_relation' (ARM_A.LargePagePTE ptr atts rghts) x
+  "pte_relation'  ARM_HYP_A.InvalidPTE x = (x = ARM_HYP_H.InvalidPTE)"
+| "pte_relation' (ARM_HYP_A.LargePagePTE ptr atts rghts) x
       = (x = ARM_HYP_H.LargePagePTE ptr (PageCacheable \<in> atts)
                                          (XNever \<in> atts) (vmrights_map rghts))"
-| "pte_relation' (ARM_A.SmallPagePTE ptr atts rghts) x
+| "pte_relation' (ARM_HYP_A.SmallPagePTE ptr atts rghts) x
       = (x = ARM_HYP_H.SmallPagePTE ptr (PageCacheable \<in> atts)
                                          (XNever \<in> atts) (vmrights_map rghts))"
 
@@ -270,7 +270,7 @@ where
   case pde of ARM_HYP_H.pde.SuperSectionPDE _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pde_align_simps[simp] =
-  pde_align'_def[split_simps ARM_A.pde.split]
+  pde_align'_def[split_simps ARM_HYP_A.pde.split]
 
 definition
   pte_align' :: "ARM_HYP_H.pte \<Rightarrow> nat"
@@ -278,17 +278,17 @@ where
  "pte_align' pte \<equiv> case pte of ARM_HYP_H.pte.LargePagePTE _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pte_align_simps[simp] =
-  pte_align'_def[split_simps ARM_A.pte.split]
+  pte_align'_def[split_simps ARM_HYP_A.pte.split]
 
 definition
   "pde_relation_aligned y pde pde' \<equiv>
    if is_aligned y (pde_align' pde') then pde_relation' pde pde'
-   else pde = ARM_A.InvalidPDE"
+   else pde = ARM_HYP_A.InvalidPDE"
 
 definition
   "pte_relation_aligned y pte pte' \<equiv>
    if is_aligned y (pte_align' pte') then pte_relation' pte pte'
-   else pte = ARM_A.InvalidPTE"
+   else pte = ARM_HYP_A.InvalidPTE"
 
 definition
  "pte_relation y \<equiv> \<lambda>ko ko'. \<exists>pt pte. ko = ArchObj (PageTable pt) \<and> ko' = KOArch (KOPTE pte)
@@ -299,17 +299,17 @@ definition
                               \<and> pde_relation_aligned y (pd y) pde"
 
 primrec
- aobj_relation_cuts :: "ARM_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
+ aobj_relation_cuts :: "ARM_HYP_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
 where
   "aobj_relation_cuts (DataPage dev sz) x =
       {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = (if dev then KOUserDataDevice else KOUserData) ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
-| "aobj_relation_cuts (ARM_A.ASIDPool pool) x =
+| "aobj_relation_cuts (ARM_HYP_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
 | "aobj_relation_cuts (PageTable pt) x =
      (\<lambda>y. (x + (ucast y << pte_bits), pte_relation y)) ` UNIV"
 | "aobj_relation_cuts (PageDirectory pd) x =
      (\<lambda>y. (x + (ucast y << pde_bits), pde_relation y)) ` UNIV"
-| "aobj_relation_cuts (ARM_A.VCPU v) x =
+| "aobj_relation_cuts (ARM_HYP_A.VCPU v) x =
      {(x, other_obj_relation)}"
 
 definition tcb_relation_cut :: "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
@@ -345,7 +345,7 @@ lemma obj_relation_cuts_def2:
                  {(x + n * 2 ^ pageBits,  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData)) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
              | _ \<Rightarrow> {(x, other_obj_relation)})"
   by (simp split: Structures_A.kernel_object.split
-                  ARM_A.arch_kernel_obj.split)
+                  ARM_HYP_A.arch_kernel_obj.split)
 
 lemma obj_relation_cuts_def3:
   "obj_relation_cuts ko x =
@@ -362,7 +362,7 @@ lemma obj_relation_cuts_def3:
    | _ \<Rightarrow> {(x, other_obj_relation)})"
   apply (simp add: obj_relation_cuts_def2 a_type_def
             split: Structures_A.kernel_object.split
-                  ARM_A.arch_kernel_obj.split)
+                  ARM_HYP_A.arch_kernel_obj.split)
   apply (clarsimp simp: well_formed_cnode_n_def length_set_helper)
   done
 
@@ -571,7 +571,7 @@ lemma obj_relation_cutsE:
   by (force simp: obj_relation_cuts_def2 is_other_obj_relation_type_def a_type_def
                   cte_relation_def pte_relation_def pde_relation_def tcb_relation_cut_def
             split: Structures_A.kernel_object.splits kernel_object.splits if_splits
-                   ARM_A.arch_kernel_obj.splits)
+                   ARM_HYP_A.arch_kernel_obj.splits)
 
 lemma eq_trans_helper:
   "\<lbrakk> x = y; P y = Q \<rbrakk> \<Longrightarrow> P x = Q"
@@ -638,7 +638,7 @@ where
        | SuperSectionObj  \<Rightarrow> SuperSectionObject
        | PageTableObj     \<Rightarrow> PageTableObject
        | PageDirectoryObj \<Rightarrow> PageDirectoryObject
-       | ARM_A.VCPUObj    \<Rightarrow> VCPUObject)"
+       | ARM_HYP_A.VCPUObj    \<Rightarrow> VCPUObject)"
 
 definition
   state_relation :: "(det_state \<times> kernel_state) set"

@@ -14,7 +14,7 @@ theory ArchCSpace_A
 imports
   ArchVSpace_A
 begin
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 definition cnode_guard_size_bits :: "nat"
 where

@@ -22,7 +22,7 @@ declare is_aligned_shiftr [intro!]
 
 definition
   "asid_ci_map i \<equiv>
-  case i of ARM_A.MakePool frame slot parent base \<Rightarrow>
+  case i of ARM_HYP_A.MakePool frame slot parent base \<Rightarrow>
   ARM_HYP_H.MakePool frame (cte_map slot) (cte_map parent) base"
 
 definition
@@ -516,7 +516,7 @@ lemma flush_type_map:
           flush_type_map (label_to_flush_type (invocation_type (mi_label mi)))"
   by (clarsimp simp: label_to_flush_type_def labelToFlushType_def flush_type_map_def
                         ARM_HYP_H.isPageFlushLabel_def ARM_HYP_H.isPDFlushLabel_def
-                 split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
+                 split: ARM_HYP_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma resolveVAddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
@@ -582,7 +582,7 @@ lemma decodeARMPageFlush_corres:
                         throwError ExceptionTypes_A.syscall_error.IllegalOperation;
                         returnOk $
                         arch_invocation.InvokePage $
-                        ARM_A.page_invocation.PageFlush \<comment> \<open>Must use word in hyp mode.\<close>
+                        ARM_HYP_A.page_invocation.PageFlush \<comment> \<open>Must use word in hyp mode.\<close>
                          (label_to_flush_type (invocation_type (mi_label mi))) (start + word)
                          (end + word - 1) pstart pd asid
                     odE
@@ -634,11 +634,11 @@ lemma vs_refs_pages_ptI:
   done
 
 lemmas vs_refs_pages_pt_largeI
-    = vs_refs_pages_ptI[where pte="ARM_A.pte.LargePagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="ARM_HYP_A.pte.LargePagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pt_smallI
-    = vs_refs_pages_ptI[where pte="ARM_A.pte.SmallPagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="ARM_HYP_A.pte.SmallPagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemma vs_refs_pages_pdI:
@@ -650,11 +650,11 @@ lemma vs_refs_pages_pdI:
   done
 
 lemmas vs_refs_pages_pd_sectionI
-    = vs_refs_pages_pdI[where pde="ARM_A.pde.SectionPDE x y z" for x y z,
+    = vs_refs_pages_pdI[where pde="ARM_HYP_A.pde.SectionPDE x y z" for x y z,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pd_supersectionI
-    = vs_refs_pages_pdI[where pde="ARM_A.pde.SuperSectionPDE x y z" for x y z,
+    = vs_refs_pages_pdI[where pde="ARM_HYP_A.pde.SuperSectionPDE x y z" for x y z,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemma get_master_pde_sp:

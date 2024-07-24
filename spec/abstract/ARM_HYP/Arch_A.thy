@@ -14,7 +14,7 @@ theory Arch_A
 imports TcbAcc_A VCPU_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming ARM_HYP_A
 
 definition "page_bits \<equiv> pageBits"
 

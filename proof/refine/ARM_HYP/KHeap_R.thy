@@ -1035,7 +1035,7 @@ lemma obj_relation_cut_same_type:
                     pte_relation_def pde_relation_def
              split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
-                    ARM_A.arch_kernel_obj.split_asm arch_kernel_object.split_asm)
+                    ARM_HYP_A.arch_kernel_obj.split_asm arch_kernel_object.split_asm)
   done
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
