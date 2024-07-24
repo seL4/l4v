@@ -1074,7 +1074,7 @@ lemma find_pd_for_asid_ref_offset_voodoo:
                in hoare_strengthen_postE_R)
    apply (simp add: ucast_ucast_mask
                     mask_asid_low_bits_ucast_ucast)
-   apply (fold asid_low_bits_def)
+   apply (fold asid_low_bits_def[simplified])
    apply (rule hoare_pre, wp find_pd_for_asid_lookup_ref)
    apply (simp add: )
   apply (simp add: pd_shifting)

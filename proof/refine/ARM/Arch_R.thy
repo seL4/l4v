@@ -888,7 +888,7 @@ shows
            apply (drule dom_hd_assocsD)
            apply (simp add: select_ext_fa[simplified free_asid_select_def]
                             free_asid_select_def o_def returnOk_liftE[symmetric]
-                 split del: if_split)
+                       split del: if_split)
            apply (thin_tac "fst a \<notin> b \<and> P" for a b P)
            apply (case_tac "isUntypedCap a \<and> capBlockSize a = objBits (makeObject::asidpool)
                             \<and> \<not> capIsDevice a")

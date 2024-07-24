@@ -57,15 +57,6 @@ definition
   is_page_cap :: "arch_cap \<Rightarrow> bool" where
   "is_page_cap c \<equiv> \<exists>x0 x1 x2 x3 x4. c = PageCap x0 x1 x2 x3 x4"
 
-definition
-  asid_high_bits :: nat where
-  "asid_high_bits \<equiv> 7"
-definition
-  asid_low_bits :: nat where
-  "asid_low_bits \<equiv> 10 :: nat"
-definition
-  asid_bits :: nat where
-  "asid_bits \<equiv> 17 :: nat"
 
 section \<open>Architecture-specific objects\<close>
 

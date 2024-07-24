@@ -1159,7 +1159,7 @@ lemma set_asid_pool_empty':
   done
 
 lemma empty_pool:
-  "(\<lambda>x. if x \<le> 2 ^ ARM_A.asid_low_bits - 1 then None else (ap :: 10 word \<rightharpoonup> word32) x) = Map.empty"
+  "(\<lambda>x. if x \<le> 2 ^ asid_low_bits - 1 then None else (ap :: 10 word \<rightharpoonup> word32) x) = Map.empty"
   apply (rule ext)
   apply (cut_tac ptr=x and 'a=10 in word_up_bound)
   apply (simp add:asid_low_bits_def)
@@ -1180,8 +1180,8 @@ lemma get_set_asid_pool:
 lemma set_asid_pool_empty:
   "set_asid_pool a Map.empty \<equiv>
    mapM_x (\<lambda>slot. get_asid_pool a >>= (\<lambda>pool. set_asid_pool a (pool(ucast slot:=None))))
-          [0 :: word32 .e. 2 ^ ARM_A.asid_low_bits - 1]"
-  using set_asid_pool_empty' [of "2 ^ ARM_A.asid_low_bits - 1" a]
+          [0 :: word32 .e. 2 ^ asid_low_bits - 1]"
+  using set_asid_pool_empty' [of "2 ^ asid_low_bits - 1" a]
   apply -
   apply (rule eq_reflection)
   apply simp
@@ -1243,7 +1243,7 @@ lemma dcorres_set_asid_pool_empty:
   "dcorres dc \<top> (valid_idle and asid_pool_at a and
                  (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)))
     (mapM_x PageTableUnmap_D.empty_slot
-                            (map (Pair a) [0 .e. 2 ^ ARM_A.asid_low_bits - 1]))
+                            (map (Pair a) [0 .e. 2 ^ asid_low_bits - 1]))
     (set_asid_pool a Map.empty)"
   apply (unfold set_asid_pool_empty)
   apply (rule dcorres_list_all2_mapM_[where F="\<lambda>x y. snd x = snd (transform_asid y)"])
@@ -1269,7 +1269,7 @@ lemma dcorres_set_asid_pool_empty:
            apply (wp | clarsimp)+
         apply simp
        apply (wp get_asid_pool_triv | clarsimp simp:typ_at_eq_kheap_obj obj_at_def swp_def)+
-     apply (subgoal_tac "(aa, snd (transform_asid y)) \<in> set (map (Pair a) [0..<2 ^ ARM_A.asid_low_bits])")
+     apply (subgoal_tac "(aa, snd (transform_asid y)) \<in> set (map (Pair a) [0..<2 ^ asid_low_bits])")
       apply clarsimp
      apply (clarsimp simp del:set_map simp: suffix_def)
     apply (wp | clarsimp simp:swp_def)+
