@@ -14,14 +14,10 @@ theory Invocations_A
 imports ArchInvocation_A
 begin
 
-context begin interpretation Arch .
-
-requalify_types
+arch_requalify_types (A)
   arch_copy_register_sets
   arch_irq_control_invocation
   arch_invocation
-
-end
 
 text \<open>These datatypes encode the arguments to the available system calls.\<close>
 

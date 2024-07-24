@@ -123,9 +123,7 @@ definition
 
 end
 
-context begin interpretation Arch .
-  requalify_consts kernel_base idle_thread_ptr
-end
+arch_requalify_consts (A) kernel_base idle_thread_ptr
 
 context Arch begin global_naming ARM_A
 

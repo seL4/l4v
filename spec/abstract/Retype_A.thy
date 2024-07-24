@@ -18,15 +18,10 @@ imports
   ArchRetype_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   arch_default_cap
   default_arch_object
   init_arch_objects
-
-end
-
 
 section "Creating Caps"
 

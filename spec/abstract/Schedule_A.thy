@@ -14,13 +14,9 @@ theory Schedule_A
 imports Arch_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   arch_switch_to_thread
   arch_switch_to_idle_thread
-
-end
 
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"

@@ -9,13 +9,11 @@ theory MachineMonad
 imports MachineTypes
 begin
 
-context begin interpretation Arch .
-
-requalify_types
+arch_requalify_types
   machine_state
   machine_state_rest
 
-requalify_consts
+arch_requalify_consts
   underlying_memory
   underlying_memory_update
   device_state
@@ -23,8 +21,6 @@ requalify_consts
   irq_masks
   machine_state_rest
   machine_state_rest_update
-
-end
 
 text \<open>
   The machine monad is used for operations on the state defined above.

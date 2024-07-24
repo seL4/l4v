@@ -30,12 +30,8 @@ definition arch_mask_irq_signal :: "irq \<Rightarrow> (unit,'z::state_ext) s_mon
 
 end
 
-context begin interpretation Arch .
-
 (* On Arm architectures, maxIRQ is defined in Kernel_Config. On X64 it is defined manually. *)
-requalify_consts
+arch_requalify_consts
   maxIRQ
-
-end
 
 end
