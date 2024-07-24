@@ -8,7 +8,7 @@ theory ExampleSystem
 imports ArchAccess_AC
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list option"

@@ -831,7 +831,7 @@ sublocale retype_region_proofs_gen?: retype_region_proofs_gen
 end
 
 
-context Arch begin global_naming X64 (*FIXME: arch_split*)
+context Arch begin global_naming X64 (*FIXME: arch-split*)
 
 definition
   valid_vs_lookup2 :: "(vs_ref list \<times> machine_word) set \<Rightarrow> (cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool"

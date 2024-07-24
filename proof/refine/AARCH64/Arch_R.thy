@@ -17,7 +17,7 @@ unbundle l4v_word_context
 
 lemmas [datatype_schematic] = cap.sel list.sel(1) list.sel(3)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare arch_cap.sel [datatype_schematic]
 declare is_aligned_shiftl [intro!]

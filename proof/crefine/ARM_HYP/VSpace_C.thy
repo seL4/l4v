@@ -9,7 +9,7 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ccorres_name_pre_C:
   "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
@@ -1218,7 +1218,7 @@ lemma rf_sr_armKSNextASID:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch invalidateASID
   for armKSNextASID[wp]: "\<lambda>s. P (armKSNextASID (ksArchState s))"
@@ -2727,7 +2727,7 @@ lemma doFlush_ccorres:
   done
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch setVMRootForFlush
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps)
@@ -3041,7 +3041,7 @@ lemmas unfold_checkMapping_return
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch flushPage
   for no_0_obj'[wp]: "no_0_obj'"
 end

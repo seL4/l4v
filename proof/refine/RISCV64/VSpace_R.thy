@@ -12,7 +12,7 @@ theory VSpace_R
 imports TcbAcc_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.

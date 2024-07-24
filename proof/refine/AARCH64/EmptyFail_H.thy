@@ -14,7 +14,7 @@ crunch_ignore (empty_fail)
         CSpaceDecls_H.resolveAddressBits
         doMachineOp suspend restart schedule)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas forM_empty_fail[intro!, wp, simp] = empty_fail_mapM[simplified forM_def[symmetric]]
 lemmas forM_x_empty_fail[intro!, wp, simp] = empty_fail_mapM_x[simplified forM_x_def[symmetric]]

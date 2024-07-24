@@ -17,7 +17,7 @@ declare word_neq_0_conv [simp del]
 instance cte_C :: array_outer_max_size
   by intro_classes simp
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma map_option_byte_to_word_heap:
   assumes disj: "\<And>(off :: 10 word) x. x<4 \<Longrightarrow> p + ucast off * 4 + x \<notin> S "
@@ -4141,7 +4141,7 @@ lemma placeNewObject_pde:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 end
 
 lemma dom_disj_union:
@@ -6356,7 +6356,7 @@ lemma APIType_capBits_min:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n dev\<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"

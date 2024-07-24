@@ -181,7 +181,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
 
 
 
-lemma copy_global_mappings_hoare_lift:(*FIXME: arch_split  \<rightarrow> these do not seem to be used globally *)
+lemma copy_global_mappings_hoare_lift:(*FIXME: arch-split  \<rightarrow> these do not seem to be used globally *)
   assumes wp: "\<And>ptr val. \<lbrace>Q\<rbrace> store_pml4e ptr val \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows       "\<lbrace>Q\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: copy_global_mappings_def)

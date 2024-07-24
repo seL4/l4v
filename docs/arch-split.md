@@ -111,7 +111,7 @@ theory Retype_R
 imports VSpace_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma placeNewObject_def2:
  "placeNewObject ptr val gb = createObjects' ptr 1 (injectKO val) gb"
@@ -199,7 +199,7 @@ architecture. If we saw such a reference in a generic theory, we would
 immediately recognise that something was wrong.
 
 The convention is that in architecture-specific theories, we initially
-give *all* types, constants and lemmas with the architecture-specific
+give *all* types, constants and lemmas the architecture-specific
 `arch_global_naming` scheme. Then, in generic theories, we use
 *requalification* to selectively extract just those types, constants and
 facts which are expected to exist on all architectures.
@@ -339,7 +339,7 @@ available unqualified until the end of the context block. Indeed, in this case,
 the only purpose of the anonymous context block is to limit the scope of this
 `interpretation`.
 
-Note: It is critical to the success of arch_split that we *never* interpret the
+Note: It is critical to the success of arch-split that we *never* interpret the
 Arch locale, *except* inside an appropriate context block.
 
 In a generic theory, we typically only interpret the Arch locale to keep
@@ -770,7 +770,7 @@ will only ever look at the heap, so this proof will always work.
 
 There are some considerations when using this strategy:
 
-1. We use the Arch locale without a `global_naming`, as its performance better
+1. We use the Arch locale without `global_naming`, as its performance is better
    than entering the Arch locale and proving the lemma there. This means its
    qualified name will be `Arch.valid_arch_cap_pspaceI`, but this is acceptable
    since:
@@ -869,7 +869,7 @@ The workflow:
     intra-theory dependencies" above.
 
 - Look in the generic theory for a block of the form
-  `context Arch begin (* FIXME: arch_split *) ... end`.
+  `context Arch begin (* FIXME: arch-split *) ... end`.
 
   - These indicate things that we've previously classified as belonging in an
     arch-specific theory.
@@ -881,7 +881,7 @@ The workflow:
 - Look for subsequent breakage in the generic theory.
 
   - If this is in a subsequent Arch block (`context Arch begin (* FIXME:
-    arch_split *) ... end`), just move that block.
+    arch-split *) ... end`), just move that block.
 
   - Otherwise, if it's not obvious what to do, have a conversation with someone.
     We'll add more tips here as the process becomes clearer.

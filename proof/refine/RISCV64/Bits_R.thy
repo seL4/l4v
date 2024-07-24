@@ -29,7 +29,7 @@ crunch_ignore (add: lookupPTSlotFromLevel lookupPTFromLevel)
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp

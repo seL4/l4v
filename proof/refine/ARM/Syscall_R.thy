@@ -12,7 +12,7 @@ theory Syscall_R
 imports Tcb_R Arch_R Interrupt_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*
 syscall has 5 sections: m_fault h_fault m_error h_error m_finalise

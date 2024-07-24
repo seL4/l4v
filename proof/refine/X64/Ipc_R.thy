@@ -8,7 +8,7 @@ theory Ipc_R
 imports Finalise_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas lookup_slot_wrapper_defs'[simp] =
    lookupSourceSlot_def lookupTargetSlot_def lookupPivotSlot_def

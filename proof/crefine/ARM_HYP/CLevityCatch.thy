@@ -13,7 +13,7 @@ imports
   Boolean_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare word_neq_0_conv [simp del]
 

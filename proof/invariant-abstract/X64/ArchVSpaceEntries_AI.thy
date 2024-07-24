@@ -8,7 +8,7 @@ theory ArchVSpaceEntries_AI
 imports VSpaceEntries_AI
 begin
 
-context Arch begin global_naming X64 (*FIXME: arch_split*)
+context Arch begin global_naming X64 (*FIXME: arch-split*)
 
 lemma a_type_pml4D:
   "a_type ko = AArch APageMapL4 \<Longrightarrow> \<exists>pm. ko = ArchObj (PageMapL4 pm)"

@@ -13,7 +13,7 @@ imports
   IsolatedThreadAction
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   "replyFromKernel_success_empty thread \<equiv> do
@@ -293,7 +293,7 @@ lemma ccap_relation_reply_helpers:
                      cap_reply_cap_lift_def word_size
               elim!: ccap_relationE)
 
-(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+(*FIXME: arch-split: C kernel names hidden by Haskell names *)
 (*FIXME: fupdate simplification issues for 2D arrays *)
 abbreviation "syscallMessageC \<equiv>  kernel_all_global_addresses.fault_messages.[unat MessageID_Syscall]"
 lemmas syscallMessageC_def = kernel_all_substitute.fault_messages_def
@@ -316,7 +316,7 @@ lemma syscallMessage_ccorres:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   "handleArchFaultReply' f sender receiver tag \<equiv> do
@@ -1016,7 +1016,7 @@ lemma setMR_ccorres_dc:
 end
 
 (* FIXME: move *)
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch setMR
   for valid_pspace'[wp]: "valid_pspace'"
 crunch setMR
