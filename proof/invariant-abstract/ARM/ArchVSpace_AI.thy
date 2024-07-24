@@ -4933,7 +4933,7 @@ lemma perform_asid_pool_invs [wp]:
     apply (rule_tac x=a in exI)
     apply (rule_tac x=b in exI)
     apply (clarsimp simp: vs_cap_ref_def mask_asid_low_bits_ucast_ucast)
-   apply (clarsimp simp: asid_low_bits_def[symmetric] ucast_ucast_mask
+   apply (clarsimp simp: asid_low_bits_def[simplified, symmetric] ucast_ucast_mask
                          word_neq_0_conv[symmetric])
    apply (erule notE, rule asid_low_high_bits, simp_all)[1]
    apply (simp add: asid_high_bits_of_def)

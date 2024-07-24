@@ -730,7 +730,7 @@ next
               apply (thin_tac "free_asid_select v \<notin> dom v")
               apply clarsimp
               apply (subgoal_tac "unat ((ucast (free_asid_select v) :: word32) << 10) mod 1024=0")
-               apply (simp add: asid_high_bits_of_shift[simplified asid_low_bits_def])
+               apply (simp add: asid_high_bits_of_shift[simplified asid_low_bits_def[simplified]])
               apply (rule shiftl_mod[where n=10, simplified])
               apply (cut_tac x="free_asid_select v" and 'a=32 in ucast_less)
                apply simp
@@ -1638,8 +1638,8 @@ proof -
         "CSpaceAcc_A.descendants_of cref (cdt s') = {}"
         "caps_of_state s' cref = Some cap"
         "cap = cap.UntypedCap False frame pageBits idx"
-        "is_aligned (base::word32) ARM_A.asid_low_bits"
-        "base < 2 ^ ARM_A.asid_bits"
+        "is_aligned (base::word32) asid_low_bits"
+        "base < 2 ^ asid_bits"
   assume relation:"arch_invocation_relation (InvokeAsidControl asid_inv)
          (arch_invocation.InvokeASIDControl (asid_control_invocation.MakePool frame cnode_ref cref base))"
   assume asid_para: "asid_inv' = asid_control_invocation.MakePool frame cnode_ref cref base"
