@@ -10,7 +10,7 @@ theory ArchInvocation_A
 imports Structures_A
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>These datatypes encode the arguments to the various possible RISCV64-specific system calls.
 Selectors are defined for various fields for convenience elsewhere.\<close>

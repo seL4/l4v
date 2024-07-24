@@ -14,7 +14,7 @@ imports
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
 This theory provides architecture-specific definitions and datatypes
@@ -321,7 +321,7 @@ record arch_state =
 
 end_qualify
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 definition
   pd_shift_bits :: "nat" where
@@ -411,7 +411,7 @@ record arch_tcb =
 
 end_qualify
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 definition
   default_arch_tcb :: arch_tcb where

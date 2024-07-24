@@ -14,7 +14,7 @@ theory Init_A
 imports Retype_A
 begin
 
-context Arch begin global_naming ARM_HYP_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   This is not a specification of true kernel

@@ -11,7 +11,7 @@ theory ArchInvocation_A
 imports Structures_A
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   These datatypes encode the arguments to the various possible AARCH64-specific system calls.

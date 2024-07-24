@@ -18,7 +18,7 @@ imports
   "ExecSpec.MachineOps"
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   The specification is written with abstract type names for object
@@ -136,7 +136,7 @@ end
 
 arch_requalify_consts (A) idle_thread_ptr
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 (* is nat_to_cref arch specific ? *)
 definition

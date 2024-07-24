@@ -10,7 +10,7 @@ theory ArchTcb_A
 imports KHeap_A
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 definition sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word" where
   "sanitise_register b r v \<equiv> case r of

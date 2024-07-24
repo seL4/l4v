@@ -15,11 +15,11 @@ imports
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
-context Arch begin arch_global_naming (A)
+context begin interpretation Arch . (* code equations must be added via interpretation *)
 lemmas [code] = pageBits_def ipa_size_def
 end
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   This theory provides architecture-specific definitions and datatypes including
@@ -157,7 +157,7 @@ record vcpu =
 
 end_qualify
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 definition "vcpu_sctlr vcpu \<equiv> vcpu_regs vcpu VCPURegSCTLR"
 
@@ -337,7 +337,7 @@ record arch_state =
 
 end_qualify
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 section "Type declarations for invariant definitions"
 
@@ -371,7 +371,7 @@ record arch_tcb =
 
 end_qualify
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 definition default_arch_tcb :: arch_tcb where
   "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_vcpu = None\<rparr>"

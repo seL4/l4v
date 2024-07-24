@@ -14,7 +14,7 @@ theory Arch_A
 imports TcbAcc_A
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 definition "page_bits \<equiv> pageBits"
 

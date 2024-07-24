@@ -14,7 +14,7 @@ theory ArchIpcCancel_A
 imports CSpaceAcc_A
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 definition
   set_ioport_mask :: "io_port \<Rightarrow> io_port \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"

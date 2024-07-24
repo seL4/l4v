@@ -18,7 +18,7 @@ imports
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
-context Arch begin global_naming ARM_HYP_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
 This theory provides architecture-specific definitions and datatypes
@@ -149,7 +149,7 @@ record vcpu =
 end_qualify
 
 
-context Arch begin global_naming ARM_HYP_A
+context Arch begin arch_global_naming (A)
 
 definition "vcpu_sctlr vcpu \<equiv> vcpu_regs vcpu VCPURegSCTLR"
 
@@ -349,7 +349,7 @@ record arch_state =
 
 end_qualify
 
-context Arch begin global_naming ARM_HYP_A
+context Arch begin arch_global_naming (A)
 
 section "Type declarations for invariant definitions"
 
@@ -390,7 +390,7 @@ record arch_tcb =
 end_qualify
 
 
-context Arch begin global_naming ARM_HYP_A
+context Arch begin arch_global_naming (A)
 
 definition
   default_arch_tcb :: arch_tcb where

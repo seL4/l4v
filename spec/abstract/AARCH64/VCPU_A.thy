@@ -19,7 +19,7 @@ definition arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad" 
   "arch_check_irq irq \<equiv> whenE (irq > maxIRQ \<or> irq < ucast minIRQ)
                           $ throwError (RangeError (ucast minIRQ) maxIRQ)"
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 section "VCPU"
 

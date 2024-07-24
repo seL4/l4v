@@ -14,7 +14,7 @@ theory ArchVSpace_A
 imports Retype_A
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 text \<open>
   These attributes are always set to @{const False} when pages are mapped.
 \<close>
