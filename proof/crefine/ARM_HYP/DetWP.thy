@@ -8,7 +8,7 @@ theory DetWP
 imports "Lib.DetWPLib" "CBaseRefine.Include_C"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma det_wp_doMachineOp [wp]:
   "det_wp (\<lambda>_. P) f \<Longrightarrow> det_wp (\<lambda>_. P) (doMachineOp f)"

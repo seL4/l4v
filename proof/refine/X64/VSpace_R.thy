@@ -11,11 +11,11 @@
 theory VSpace_R
 imports TcbAcc_R
 begin
-context Arch begin global_naming X64 (*FIXME: arch_split*)
+context Arch begin global_naming X64 (*FIXME: arch-split*)
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.

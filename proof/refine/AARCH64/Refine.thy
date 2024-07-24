@@ -17,7 +17,7 @@ imports
   PageTableDuplicates
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 text \<open>User memory content is the same on both levels\<close>
 lemma typ_at_AUserDataI:

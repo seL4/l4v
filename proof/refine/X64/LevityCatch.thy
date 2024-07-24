@@ -20,7 +20,7 @@ lemma magnitudeCheck_assert:
             split: option.split)
   apply fastforce
   done
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
   makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte
@@ -55,7 +55,7 @@ lemma updateObject_default_inv:
   "\<lbrace>P\<rbrace> updateObject_default obj ko x y n \<lbrace>\<lambda>rv. P\<rbrace>"
   unfolding updateObject_default_def
   by (simp, wp magnitudeCheck_inv alignCheck_inv projectKO_inv, simp)
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma to_from_apiType [simp]: "toAPIType (fromAPIType x) = Some x"
   by (cases x) (auto simp add: fromAPIType_def X64_H.fromAPIType_def
     toAPIType_def X64_H.toAPIType_def)

@@ -21,7 +21,7 @@ imports
   Lib.Guess_ExI
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare
   object_at_predicate_lift[simp]

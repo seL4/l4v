@@ -12,7 +12,7 @@ theory Refine_D
 imports Syscall_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 text \<open>
   Toplevel @{text dcorres} theorem.

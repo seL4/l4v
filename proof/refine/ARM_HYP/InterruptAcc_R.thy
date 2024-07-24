@@ -23,7 +23,7 @@ crunch get_irq_slot
 crunch getIRQSlot
   for inv[wp]: "P"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setIRQState_corres:
   "irq_state_relation state state' \<Longrightarrow>

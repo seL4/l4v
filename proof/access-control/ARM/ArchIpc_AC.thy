@@ -192,7 +192,7 @@ declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 end
 
 
-context is_extended begin interpretation Arch . (*FIXME: arch_split*)
+context is_extended begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   assumes li:

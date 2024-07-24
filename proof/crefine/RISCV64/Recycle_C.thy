@@ -520,7 +520,7 @@ lemma heap_to_user_data_in_user_mem'[simp]:
       apply simp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch deleteASIDPool
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv

@@ -201,7 +201,7 @@ end
 consts
   Init_C' :: "unit observable \<Rightarrow> cstate global_state set"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition "Init_C \<equiv> \<lambda>((tc,s),m,e). Init_C' ((tc, truncate_state s),m,e)"
 
@@ -604,7 +604,7 @@ lemma carch_state_to_H_correct:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma tcb_queue_rel_unique:
   "hp NULL = None \<Longrightarrow>

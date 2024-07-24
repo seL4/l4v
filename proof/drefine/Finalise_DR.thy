@@ -11,7 +11,7 @@ imports
   "AInvs.VSpaceEntries_AI"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
  "transform_pd_slot_ref x
@@ -1929,7 +1929,7 @@ lemma (in pspace_update_eq) pd_pt_relation_update[iff]:
   "pd_pt_relation a b c (f s) = pd_pt_relation a b c s"
   by (simp add: pd_pt_relation_def pspace)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch flush_page
   for cdt[wp]: "\<lambda>s. P (cdt s)"

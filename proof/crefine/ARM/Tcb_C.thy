@@ -58,7 +58,7 @@ lemma doMachineOp_sched:
   apply fastforce
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch restart
   for curThread[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -1029,7 +1029,7 @@ lemma Arch_performTransfer_ccorres:
      apply simp+
   done
 
-(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+(*FIXME: arch-split: C kernel names hidden by Haskell names *)
 abbreviation "frameRegistersC \<equiv> kernel_all_substitute.frameRegisters"
 lemmas frameRegistersC_def = kernel_all_substitute.frameRegisters_def
 abbreviation "gpRegistersC \<equiv> kernel_all_substitute.gpRegisters"

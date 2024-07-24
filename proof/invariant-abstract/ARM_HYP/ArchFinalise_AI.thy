@@ -1901,7 +1901,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin global_naming ARM_HYP (*FIXME: arch_split*)
+context Arch begin global_naming ARM_HYP (*FIXME: arch-split*)
 
 lemma arch_finalise_case_no_lookup:
   "\<lbrace>pspace_aligned and valid_vspace_objs and valid_objs and

@@ -533,7 +533,7 @@ lemma heap_to_user_data_in_user_mem'[simp]:
       apply simp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_asidpool_gs[wp]:
   "setObject ptr (vcpu::asidpool) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"

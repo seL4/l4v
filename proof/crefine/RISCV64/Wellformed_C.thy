@@ -15,7 +15,7 @@ imports
   "CSpec.Substitute"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 abbreviation
   cte_Ptr :: "word64 \<Rightarrow> cte_C ptr" where "cte_Ptr == Ptr"
@@ -246,7 +246,7 @@ record cte_CL =
   cap_CL :: cap_CL
   cteMDBNode_CL :: mdb_node_CL
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   cte_lift :: "cte_C \<rightharpoonup> cte_CL"

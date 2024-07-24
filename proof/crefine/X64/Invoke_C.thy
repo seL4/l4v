@@ -1380,7 +1380,7 @@ lemma decodeCNodeInvocation_ccorres:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas setCTE_def3 = setCTE_def2[THEN eq_reflection]
 

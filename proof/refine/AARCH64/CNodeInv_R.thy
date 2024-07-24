@@ -16,7 +16,7 @@ begin
 
 unbundle l4v_word_context
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 primrec
   valid_cnode_inv' :: "Invocations_H.cnode_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -4936,7 +4936,7 @@ lemma cteSwap_valid_pspace'[wp]:
   apply clarsimp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cteSwap
   for tcb_at[wp]: "tcb_at' t"
@@ -6638,7 +6638,7 @@ lemmas threadSet_ctesCaps_of = cteCaps_of_ctes_of_lift[OF threadSet_ctes_of]
 
 lemmas storePTE_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF storePTE_ctes]
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma vcpuSwitch_rvk_prog':
   "vcpuSwitch v \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
@@ -7895,7 +7895,7 @@ lemma (in mdb_move) m'_cap:
 context mdb_move
 begin
 
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma m_to_src:
   "m \<turnstile> p \<leadsto> src = (p \<noteq> 0 \<and> p = mdbPrev src_node)"
@@ -8426,7 +8426,7 @@ qed
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cteMove_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
@@ -8607,7 +8607,7 @@ crunch updateMDB
   for valid_bitmaps[wp]: valid_bitmaps
   (rule: valid_bitmaps_lift)
 
-(* FIXME: arch_split *)
+(* FIXME: arch-split *)
 lemma haskell_assert_inv:
   "haskell_assert Q L \<lbrace>P\<rbrace>"
   by wpsimp

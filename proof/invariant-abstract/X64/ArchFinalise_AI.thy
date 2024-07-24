@@ -1176,7 +1176,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin global_naming X64 (*FIXME: arch_split*)
+context Arch begin global_naming X64 (*FIXME: arch-split*)
 
 lemma all_Some_the_strg: "f b = None \<or> P (the (f b)) \<longrightarrow> (\<forall>a. f b = Some a \<longrightarrow> P a)"
   by auto

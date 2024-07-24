@@ -15,7 +15,7 @@ imports
   "CSpec.Substitute"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* Takes an address and ensures it can be given to a function expecting a canonical address.
    Canonical addresses on 64-bit machines aren't really 64-bit, due to bus sizes. Hence, structures
@@ -303,7 +303,7 @@ record cte_CL =
   cap_CL :: cap_CL
   cteMDBNode_CL :: mdb_node_CL
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   cte_lift :: "cte_C \<rightharpoonup> cte_CL"

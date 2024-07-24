@@ -12,7 +12,7 @@ theory StateTranslationProofs_DR
 imports StateTranslation_D
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare transform_current_domain_def [simp]
 

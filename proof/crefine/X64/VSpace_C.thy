@@ -18,7 +18,7 @@ autocorres
     c_locale = kernel_all_substitute
   ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ccorres_name_pre_C:
   "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
@@ -999,7 +999,7 @@ lemma ccorres_from_vcg_might_throw:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 end
 

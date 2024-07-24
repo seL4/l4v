@@ -25,7 +25,7 @@ end
 
 declare [[populate_globals=true]]
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* Sanity checks for array sizes. ptTranslationBits not yet available at definition site. *)
 lemma ptTranslationBits_vs_index_bits:

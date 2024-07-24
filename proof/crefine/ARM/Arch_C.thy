@@ -9,7 +9,7 @@ theory Arch_C
 imports Recycle_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch unmapPageTable
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps)

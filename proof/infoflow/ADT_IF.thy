@@ -1487,7 +1487,7 @@ locale invariant_over_ADT_if =
                                 | None \<Rightarrow> det_inv InIdleMode (snd rv)\<rbrace>"
 
 
-locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch_split *)
+locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch-split *)
   fixes s0_internal :: det_state
   fixes initial_aag :: "'a subject_label PAS"
   fixes timer_irq :: irq
