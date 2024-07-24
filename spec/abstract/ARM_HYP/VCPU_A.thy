@@ -35,7 +35,7 @@ consts
   register_mask :: "machine_word option" (* no need for option? *)
 
 
-context Arch begin global_naming ARM_HYP_A
+context Arch begin arch_global_naming (A)
 
 section "VCPU"
 

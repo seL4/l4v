@@ -16,7 +16,7 @@ imports
   ArchInvocation_A
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>This is a placeholder function. We may wish to extend the specification
   with explicitly tagging kernel data regions in memory.\<close>

@@ -11,7 +11,7 @@ theory Arch_A
 imports TcbAcc_A VCPU_A
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 fun arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad" where
   "arch_invoke_irq_control (ARMIRQControlInvocation irq handler_slot control_slot trigger) =

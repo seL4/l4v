@@ -13,7 +13,7 @@ imports
   ArchTcb_A
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 section \<open>Accessors\<close>
 

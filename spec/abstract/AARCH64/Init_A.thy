@@ -13,7 +13,7 @@ imports
   "Lib.SplitRule"
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   This is not a specification of true kernel initialisation. This theory describes a dummy

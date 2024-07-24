@@ -11,7 +11,7 @@ theory ArchVSpaceAcc_A
 imports KHeap_A
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   This part of the specification is fairly concrete as the machine architecture is visible to
