@@ -10,25 +10,25 @@ imports
   "Monads.WPBang"
 begin
 
-context begin interpretation Arch .
-requalify_consts
+arch_requalify_consts
   in_device_frame
+
 requalify_facts
+  Arch.setup_caller_cap_ioports
+  Arch.set_mrs_ioports
+  Arch.as_user_ioports
+  Arch.set_message_info_ioports
+  Arch.copy_mrs_ioports
+  Arch.store_word_offs_ioports
+  Arch.make_arch_fault_msg_ioports
+  Arch.arch_derive_cap_notzombie
+  Arch.arch_derive_cap_notIRQ
+
+arch_requalify_facts
   lookup_ipc_buffer_inv
   set_mi_invs
   as_user_hyp_refs_of
   valid_arch_arch_tcb_set_registers
-  setup_caller_cap_ioports
-  set_mrs_ioports
-  as_user_ioports
-  set_message_info_ioports
-  copy_mrs_ioports
-  store_word_offs_ioports
-  make_arch_fault_msg_ioports
-  arch_derive_cap_notzombie
-  arch_derive_cap_notIRQ
-
-end
 
 declare lookup_ipc_buffer_inv[wp]
 declare set_mi_invs[wp]

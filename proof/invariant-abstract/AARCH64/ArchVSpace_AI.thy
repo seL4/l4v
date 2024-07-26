@@ -3142,9 +3142,7 @@ crunch vcpu_switch
 
 end
 
-context begin interpretation Arch .
-requalify_facts
+arch_requalify_facts
   do_machine_op_valid_kernel_mappings
-end
 
 end

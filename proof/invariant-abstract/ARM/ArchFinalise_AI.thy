@@ -1340,9 +1340,7 @@ lemma (* dmo_replaceable_or_arch_update *) [Finalise_AI_assms,wp]:
 
 end
 
-context begin interpretation Arch .
-requalify_consts replaceable_or_arch_update
-end
+arch_requalify_consts replaceable_or_arch_update
 
 interpretation Finalise_AI_3?: Finalise_AI_3
   where replaceable_or_arch_update = replaceable_or_arch_update

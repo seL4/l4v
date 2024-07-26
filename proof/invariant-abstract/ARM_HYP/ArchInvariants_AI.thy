@@ -24,7 +24,7 @@ end_qualify
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "ARM-specific invariant definitions"
 
-qualify ARM_HYP_A (in Arch)
+qualify ARM_HYP (in Arch)
 record iarch_tcb =
   itcb_vcpu :: "obj_ref option"
 end_qualify
@@ -474,9 +474,8 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup
 
 abbreviation
   vs_lookup_abbr
@@ -560,9 +559,8 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup_pages
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup_pages
 
 abbreviation
   vs_lookup_pages_abbr

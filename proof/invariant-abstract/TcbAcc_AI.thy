@@ -8,17 +8,13 @@ theory TcbAcc_AI
 imports ArchCSpace_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_facts
+arch_requalify_facts
   valid_arch_arch_tcb_context_set
   as_user_inv
   getRegister_inv
   user_getreg_inv
 
 declare user_getreg_inv[wp]
-
-end
 
 locale TcbAcc_AI_storeWord_invs =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -1130,7 +1126,6 @@ lemma kheap_Some_state_hyp_refs_ofD:
   "kheap s p = Some ko \<Longrightarrow> state_hyp_refs_of s p = hyp_refs_of ko"
   by (rule ko_at_state_hyp_refs_ofD; simp add: obj_at_def)
 
-(* FIXME should be able to prove this in the generic context *)
 lemma sts_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_thread_state t st

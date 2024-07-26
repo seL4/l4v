@@ -25,7 +25,7 @@ end_qualify
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "X64-specific invariant definitions"
 
-qualify X64_A (in Arch)
+qualify X64 (in Arch)
 (* X64 has no interest for iarch_tcb (introduced for ARM_HYP) ,
     and we consider no non-trivial predicates of iarch_tcb,
     so an unspecified typedecl seems appropriate.
@@ -604,9 +604,8 @@ definition "second_level_tables \<equiv> arch_state.x64_global_pdpts"
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup
 
 abbreviation
   vs_lookup_abbr
@@ -706,9 +705,8 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup_pages
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup_pages
 
 abbreviation
   vs_lookup_pages_abbr

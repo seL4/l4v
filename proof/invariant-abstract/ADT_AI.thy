@@ -11,17 +11,13 @@ imports
   ArchADT_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   empty_context
   init_A_st
+
+arch_requalify_consts
   ptable_lift
   ptable_rights
-  addrFromPPtr
-  ptrFromPAddr
-
-end
 
 text \<open>
   The general refinement calculus (see theory Simulation) requires

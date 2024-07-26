@@ -8,10 +8,8 @@ theory EmptyFail_AI
 imports ArchTcb_AI
 begin
 
-context begin interpretation Arch .
 requalify_facts
-  ef_machine_op_lift
-end
+  Arch.ef_machine_op_lift
 
 lemmas [wp] = ef_ignore_failure ef_machine_op_lift
 
