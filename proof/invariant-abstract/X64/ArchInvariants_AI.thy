@@ -35,7 +35,7 @@ qualify X64_A (in Arch)
 typedecl iarch_tcb
 end_qualify
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
@@ -613,7 +613,7 @@ abbreviation
   ("_ \<rhd> _" [80,80] 81) where
   "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 abbreviation
   is_reachable_abbr :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd> _" [80] 81) where
@@ -720,7 +720,7 @@ abbreviation
   "\<exists>\<unrhd> p \<equiv> \<lambda>s. \<exists>ref. (ref \<unrhd> p) s"
 
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 definition
   "vspace_obj_fun_lift \<equiv> arch_obj_fun_lift"
@@ -1740,7 +1740,7 @@ lemma valid_ioports_update[iff]:
 
 end
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"

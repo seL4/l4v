@@ -8,7 +8,7 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 definition "non_vspace_obj \<equiv> non_arch_obj"
 definition "vspace_obj_pred \<equiv> arch_obj_pred"
@@ -22,7 +22,7 @@ locale vspace_only_obj_pred = Arch +
 sublocale vspace_only_obj_pred < arch_only_obj_pred
   using vspace_only[unfolded vspace_obj_pred_def] by unfold_locales
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 sublocale empty_table: vspace_only_obj_pred "empty_table S" for S
   by unfold_locales (simp add: vspace_obj_pred_def empty_table_def del: arch_obj_fun_lift_expand)

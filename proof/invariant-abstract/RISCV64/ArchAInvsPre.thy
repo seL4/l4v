@@ -10,9 +10,7 @@ begin
 
 unbundle l4v_word_context
 
-context Arch begin
-
-global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma canonical_not_kernel_is_user:
   "\<lbrakk> v \<notin> kernel_mappings; canonical_address v \<rbrakk> \<Longrightarrow> v \<in> user_region "

@@ -19,7 +19,7 @@ lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_assms]:
                      a_type_arch_live live_def hyp_live_def
               split: arch_cap.split_asm if_splits)
 
-global_naming X64
+arch_global_naming
 
 lemma valid_global_refs_asid_table_udapte [iff]:
   "valid_global_refs (s\<lparr>arch_state := x64_asid_table_update f (arch_state s)\<rparr>) =
@@ -626,7 +626,7 @@ interpretation Finalise_AI_1?: Finalise_AI_1
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
@@ -665,7 +665,7 @@ interpretation Finalise_AI_2?: Finalise_AI_2
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma flush_table_irq_node: "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> flush_table a b c d \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
   apply (simp add: flush_table_def)
@@ -1176,7 +1176,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin global_naming X64 (*FIXME: arch-split*)
+context Arch begin arch_global_naming (*FIXME: arch-split*)
 
 lemma all_Some_the_strg: "f b = None \<or> P (the (f b)) \<longrightarrow> (\<forall>a. f b = Some a \<longrightarrow> P a)"
   by auto
@@ -1382,7 +1382,7 @@ interpretation Finalise_AI_4?: Finalise_AI_4
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma set_asid_pool_obj_at_ptr:
   "\<lbrace>\<lambda>s. P (ArchObj (arch_kernel_obj.ASIDPool mp))\<rbrace>

@@ -8,7 +8,7 @@ theory ArchTcb_AI
 imports Tcb_AI
 begin
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems Tcb_AI_assms
 

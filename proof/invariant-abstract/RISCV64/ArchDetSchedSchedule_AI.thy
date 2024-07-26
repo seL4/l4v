@@ -8,7 +8,7 @@ theory ArchDetSchedSchedule_AI
 imports DetSchedSchedule_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems DetSchedSchedule_AI_assms
 
@@ -331,7 +331,7 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma handle_hyp_fault_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t

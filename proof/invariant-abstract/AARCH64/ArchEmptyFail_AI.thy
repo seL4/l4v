@@ -9,7 +9,7 @@ theory ArchEmptyFail_AI
 imports EmptyFail_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems EmptyFail_AI_assms
 
@@ -30,7 +30,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 crunch handle_fault
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -128,7 +128,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
 qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma empty_fail_pt_lookup_from_level[wp]:
   "empty_fail (pt_lookup_from_level level pt_ptr vptr target_pt_ptr)"
@@ -158,7 +158,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
 qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 crunch
   cap_delete, choose_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -182,7 +182,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
 qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
   "empty_fail (plic_complete_claim irq)"

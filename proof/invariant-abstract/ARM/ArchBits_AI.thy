@@ -8,7 +8,7 @@ theory ArchBits_AI
 imports Invariants_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps (caps_of_state s)"

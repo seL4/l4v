@@ -12,7 +12,7 @@ theory ArchCSpaceInvPre_AI
 imports CSpaceInvPre_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma aobj_ref_acap_rights_update[simp]:
   "aobj_ref (acap_rights_update f x) = aobj_ref x"

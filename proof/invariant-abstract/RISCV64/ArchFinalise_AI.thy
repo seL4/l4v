@@ -18,7 +18,7 @@ crunch prepare_thread_delete
 
 declare prepare_thread_delete_caps_of_state [Finalise_AI_assms]
 
-global_naming RISCV64
+arch_global_naming
 
 lemma valid_global_refs_asid_table_udapte [iff]:
   "valid_global_refs (s\<lparr>arch_state := riscv_asid_table_update f (arch_state s)\<rparr>) =
@@ -987,7 +987,7 @@ interpretation Finalise_AI_1?: Finalise_AI_1
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
@@ -1026,7 +1026,7 @@ interpretation Finalise_AI_2?: Finalise_AI_2
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 crunch prepare_thread_delete
   for irq_node[Finalise_AI_assms,wp]: "\<lambda>s. P (interrupt_irq_node s)"
@@ -1133,7 +1133,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin global_naming RISCV64 (*FIXME: arch-split*)
+context Arch begin arch_global_naming (*FIXME: arch-split*)
 
 lemma do_machine_op_reachable_pg_cap[wp]:
   "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace>
@@ -1293,7 +1293,7 @@ interpretation Finalise_AI_3?: Finalise_AI_3
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma typ_at_data_at_wp:
   assumes typ_wp: "\<And>a.\<lbrace>typ_at a p \<rbrace> g \<lbrace>\<lambda>s. typ_at a p\<rbrace>"
@@ -1311,7 +1311,7 @@ interpretation Finalise_AI_4?: Finalise_AI_4
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma set_asid_pool_obj_at_ptr:
   "\<lbrace>\<lambda>s. P (ArchObj (arch_kernel_obj.ASIDPool mp))\<rbrace>

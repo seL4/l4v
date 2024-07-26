@@ -9,7 +9,7 @@ imports VSpaceEntries_AI
 begin
 
 
-context Arch begin global_naming ARM (*FIXME: arch-split*)
+context Arch begin arch_global_naming (*FIXME: arch-split*)
 
 lemma a_type_pdD:
   "a_type ko = AArch APageDirectory \<Longrightarrow> \<exists>pd. ko = ArchObj (PageDirectory pd)"

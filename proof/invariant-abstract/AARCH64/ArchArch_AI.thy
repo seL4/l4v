@@ -11,7 +11,7 @@ begin
 
 unbundle l4v_word_context
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 definition
   "valid_aci aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>
@@ -414,7 +414,7 @@ lemma equal_kernel_mappings:
 end
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma vmid_for_asid_empty_update:
   "\<lbrakk> asid_table s asid_high = None; asid_pools_of s ap = Some Map.empty \<rbrakk> \<Longrightarrow>

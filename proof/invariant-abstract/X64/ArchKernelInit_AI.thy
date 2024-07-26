@@ -14,7 +14,7 @@ imports
   Arch_AI
 begin
 
-context Arch begin global_naming X64 (*FIXME: arch-split*)
+context Arch begin arch_global_naming (*FIXME: arch-split*)
 
 text \<open>
   Showing that there is a state that satisfies the abstract invariants.

@@ -9,7 +9,7 @@ theory ArchArch_AI
 imports Arch_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 definition
   "valid_aci aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>
@@ -398,7 +398,7 @@ lemma valid_asid_map':
 end
 
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (x64_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>

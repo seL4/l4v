@@ -11,7 +11,7 @@ imports
   ArchBitSetup_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma entry_for_asid_truncate[simp]:
   "entry_for_asid asid (truncate_state s) = entry_for_asid asid s"

@@ -9,7 +9,7 @@ imports
   BCorres2_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 named_theorems BCorres2_AI_assms
 
@@ -88,7 +88,7 @@ interpretation BCorres2_AI?: BCorres2_AI
 
 lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 crunch send_ipc,send_signal,do_reply_transfer,arch_perform_invocation
   for (bcorres) bcorres[wp]: truncate_state

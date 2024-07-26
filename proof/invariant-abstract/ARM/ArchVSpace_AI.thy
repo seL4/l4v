@@ -12,7 +12,7 @@ theory ArchVSpace_AI
 imports VSpacePre_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma kernel_base_shift_cast_le:
   fixes x :: "12 word"
@@ -1812,7 +1812,7 @@ lemma vs_lookup2:
 
 end
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma set_pd_vspace_objs_map:
   notes valid_vspace_obj.simps[simp del] and a_type_elims[rule del]
@@ -4728,7 +4728,7 @@ lemma vs_lookup_pages2:
 
 end
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma not_kernel_slot_not_global_pt:
   "\<lbrakk>pde_ref (pd x) = Some p; x \<notin> kernel_mapping_slots;

@@ -9,7 +9,7 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 definition non_vspace_obj :: "kernel_object \<Rightarrow> bool" where
   "non_vspace_obj ko \<equiv> case ko of
@@ -129,7 +129,7 @@ locale vspace_only_obj_pred = Arch +
 sublocale vspace_only_obj_pred < arch_only_obj_pred
   using vspace_pred_imp[OF vspace_only] by unfold_locales
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma valid_vspace_obj_lift:
   assumes "\<And>T p. T \<noteq> AVCPU \<Longrightarrow> f \<lbrace>typ_at (AArch T) p\<rbrace>"

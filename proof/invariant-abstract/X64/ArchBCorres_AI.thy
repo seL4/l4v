@@ -9,7 +9,7 @@ imports
   BCorres_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 crunch arch_finalise_cap
   for (bcorres) bcorres[wp]: truncate_state

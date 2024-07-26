@@ -9,7 +9,7 @@ theory ArchVCPU_AI
 imports AInvs
 begin
 
-context Arch begin global_naming ARM_HYP (*FIXME: arch-split*)
+context Arch begin arch_global_naming (*FIXME: arch-split*)
 
 definition active_cur_vcpu_of :: "'z state \<Rightarrow> obj_ref option" where
   "active_cur_vcpu_of s \<equiv> case arm_current_vcpu (arch_state s) of Some (vr, True) \<Rightarrow> Some vr

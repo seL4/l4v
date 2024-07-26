@@ -22,7 +22,7 @@ lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_assms]:
 crunch prepare_thread_delete
   for caps_of_state[wp,Finalise_AI_assms]: "\<lambda>s. P (caps_of_state s)"
 
-global_naming ARM
+arch_global_naming
 
 lemma valid_global_refs_asid_table_udapte [iff]:
   "valid_global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) =
@@ -605,7 +605,7 @@ interpretation Finalise_AI_1?: Finalise_AI_1
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
@@ -644,7 +644,7 @@ interpretation Finalise_AI_2?: Finalise_AI_2
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 crunch arch_finalise_cap
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
@@ -1134,7 +1134,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin global_naming ARM (*FIXME: arch-split*)
+context Arch begin arch_global_naming (*FIXME: arch-split*)
 
 lemma arch_finalise_case_no_lookup:
   "\<lbrace>pspace_aligned and valid_vspace_objs and valid_objs and
@@ -1351,7 +1351,7 @@ interpretation Finalise_AI_3?: Finalise_AI_3
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma typ_at_data_at_wp:
   assumes typ_wp: "\<And>a.\<lbrace>typ_at a p \<rbrace> g \<lbrace>\<lambda>s. typ_at a p\<rbrace>"
@@ -1369,7 +1369,7 @@ interpretation Finalise_AI_4?: Finalise_AI_4
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma set_asid_pool_obj_at_ptr:
   "\<lbrace>\<lambda>s. P (ArchObj (arch_kernel_obj.ASIDPool mp))\<rbrace>

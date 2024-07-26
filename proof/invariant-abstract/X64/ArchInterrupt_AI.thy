@@ -8,7 +8,7 @@ theory ArchInterrupt_AI
 imports Interrupt_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 primrec arch_irq_control_inv_valid_real :: "arch_irq_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
 where
