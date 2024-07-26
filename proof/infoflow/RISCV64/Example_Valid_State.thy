@@ -30,7 +30,7 @@ consts s0_context :: user_context
 axiomatization where
   irq_oracle_def: "RISCV64.irq_oracle \<equiv> \<lambda>pos. if pos mod 10 = 0 then 10 else 0"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 subsection \<open>We show that the authority graph does not let information flow from High to Low\<close>
 

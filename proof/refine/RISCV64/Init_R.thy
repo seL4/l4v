@@ -10,7 +10,7 @@ imports
 
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*
   This provides a very simple witness that the state relation used in the first refinement proof is

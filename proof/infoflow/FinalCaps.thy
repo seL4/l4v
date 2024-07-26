@@ -15,7 +15,7 @@ theory FinalCaps
 imports ArchInfoFlow_IF
 begin
 
-(* FIXME: arch_split: need to have a label on arch refs*)
+(* FIXME: arch-split: need to have a label on arch refs*)
 fun pasGenAbs :: "'a PAS \<Rightarrow> gen_obj_ref \<Rightarrow> 'a" where
   "pasGenAbs aag (ObjRef ref) = pasObjectAbs aag ref"
 | "pasGenAbs aag (IRQRef ref) = pasIRQAbs aag ref"

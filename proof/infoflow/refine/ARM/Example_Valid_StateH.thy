@@ -9,7 +9,7 @@ theory Example_Valid_StateH
 imports "InfoFlow.Example_Valid_State" ArchADT_IF_Refine
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 section \<open>Haskell state\<close>
 
@@ -2827,7 +2827,7 @@ axiomatization  where
   kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
   kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma timer_irq_not_outside_range[simp]:
   "\<not> Kernel_Config.maxIRQ < (timer_irq :: irq)"

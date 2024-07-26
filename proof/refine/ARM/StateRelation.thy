@@ -12,7 +12,7 @@ theory StateRelation
 imports InvariantUpdates_H
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 definition
   cte_map :: "cslot_ptr \<Rightarrow> word32"
 where

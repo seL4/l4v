@@ -10,7 +10,7 @@ theory Refine_C
 imports Init_C Fastpath_Equiv Fastpath_C CToCRefine
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch handleVMFault
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)

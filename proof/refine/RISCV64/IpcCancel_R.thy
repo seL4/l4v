@@ -9,7 +9,7 @@ imports
   Schedule_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
   for aligned'[wp]: pspace_aligned'
@@ -337,7 +337,7 @@ lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1 shiftl_t2n)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cte_wp_at_master_reply_cap_to_ex_rights:
   "cte_wp_at (is_master_reply_cap_to t) ptr
@@ -511,7 +511,7 @@ lemma (in delete_one) cancelIPC_ReplyCap_corres:
           od)
        od)"
   proof -
-  interpret Arch . (*FIXME: arch_split*)
+  interpret Arch . (*FIXME: arch-split*)
   show ?thesis
   apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
                    locateSlot_conv liftM_def tcbReplySlot_def
@@ -644,7 +644,7 @@ crunch setNotification
 lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_not t s"
   by (clarsimp simp: sch_act_simple_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch setNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
@@ -1883,7 +1883,7 @@ lemma cancelAll_unlive_helper:
   apply (clarsimp elim!: ko_wp_at'_weakenE)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma setObject_ko_wp_at':
   fixes v :: "'a :: pspace_storable"
   assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"

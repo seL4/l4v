@@ -8,7 +8,7 @@ theory Invocations_R
 imports Bits_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma invocationType_eq[simp]:
   "invocationType = invocation_type"

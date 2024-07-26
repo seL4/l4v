@@ -10,7 +10,7 @@ imports
   InterruptAcc_R
   Retype_R
 begin
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare doUnbindNotification_def[simp]
 
@@ -181,7 +181,7 @@ locale mdb_empty =
                slot (cteCap_update (%_. capability.NullCap)))
               slot (cteMDBNode_update (const nullMDBNode))"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemmas m_slot_prev = m_p_prev
 lemmas m_slot_next = m_p_next
@@ -1386,7 +1386,7 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch emptySlot
   for irqs_masked'[wp]: "irqs_masked'"
 
@@ -2019,7 +2019,7 @@ lemma (in vmdb) isFinal_untypedParent:
                    sameObjectAs_sym)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma no_fail_isFinalCapability [wp]:
   "no_fail (valid_mdb' and cte_wp_at' ((=) cte) p) (isFinalCapability cte)"
@@ -2919,7 +2919,7 @@ lemma suspend_cte_wp_at':
             | simp add: x)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch deleteASIDPool
   for cte_wp_at'[wp]: "cte_wp_at' P p"
@@ -3257,7 +3257,7 @@ lemma finaliseCap_valid_cap[wp]:
   done
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
@@ -3319,7 +3319,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma arch_finaliseCap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
@@ -3535,7 +3535,7 @@ lemma finaliseCap_corres:
   apply (clarsimp split del: if_split simp: o_def)
   apply (rule corres_guard_imp [OF arch_finaliseCap_corres], (fastforce simp: valid_sched_def)+)
   done
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma arch_recycleCap_improve_cases:
    "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;
          \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"

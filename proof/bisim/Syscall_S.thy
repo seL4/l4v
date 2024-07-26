@@ -8,7 +8,7 @@ theory Syscall_S
 imports Separation
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma syscall_bisim:
   assumes bs:

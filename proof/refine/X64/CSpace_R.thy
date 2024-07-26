@@ -53,7 +53,7 @@ locale mdb_move =
   modify_map n (mdbNext src_node)
                (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest)))"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 
 lemmas src = m_p
@@ -734,7 +734,7 @@ lemma set_cap_not_quite_corres':
                 apply (fastforce simp: c p pspace_relations_def)+
                 done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma cteMove_corres:
   assumes cr: "cap_relation cap cap'"
   notes trans_state_update'[symmetric,simp]
@@ -1130,7 +1130,7 @@ crunch cteInsert
 end
 context mdb_insert
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemma n_src_dest:
   "n \<turnstile> src \<leadsto> dest"
   by (simp add: n_direct_eq)
@@ -1673,7 +1673,7 @@ lemma is_derived_badge_derived':
   "is_derived' m src cap cap' \<Longrightarrow> badge_derived' cap cap'"
   by (simp add: is_derived'_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cteInsert_mdb_chain_0:
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and
@@ -4757,7 +4757,7 @@ locale mdb_insert_simple = mdb_insert +
   assumes safe_parent: "safe_parent_for' m src c'"
   assumes simple: "is_simple_cap' c'"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemma dest_no_parent_n:
   "n \<turnstile> dest \<rightarrow> p = False"
   using src simple safe_parent
@@ -4957,7 +4957,7 @@ lemma maskedAsFull_revokable_safe_parent:
    apply (rule conjI; clarsimp)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cteInsert_simple_corres:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
@@ -5338,7 +5338,7 @@ locale mdb_insert_simple' = mdb_insert_simple +
   fixes n'
   defines  "n' \<equiv> modify_map n (mdbNext src_node) (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest)))"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemma no_0_n' [intro!]: "no_0 n'" by (auto simp: n'_def)
 lemmas n_0_simps' [iff] = no_0_simps [OF no_0_n']
 
@@ -6093,7 +6093,7 @@ lemma updateCapFreeIndex_no_0:
     apply (clarsimp simp:cte_wp_at_ctes_of)+
 done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cteInsert_simple_mdb':
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and

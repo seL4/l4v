@@ -28,7 +28,7 @@ locale Schedule_AI =
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool)\<rbrace>"
 
 context begin interpretation Arch .
-(* FIXME arch_split: some of these could be moved to generic theories
+(* FIXME arch-split: some of these could be moved to generic theories
    so they don't need to be unqualified. *)
 requalify_facts
   no_irq

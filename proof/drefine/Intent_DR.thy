@@ -8,7 +8,7 @@ theory Intent_DR
 imports Corres_D
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition not_idle_thread:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
   where

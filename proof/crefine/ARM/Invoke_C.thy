@@ -1371,7 +1371,7 @@ lemma decodeCNodeInvocation_ccorres:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setCTE_sch_act_wf[wp]:
   "\<lbrace> \<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace>

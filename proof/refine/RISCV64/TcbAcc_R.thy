@@ -8,7 +8,7 @@ theory TcbAcc_R
 imports CSpace_R ArchMove_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare if_weak_cong [cong]
 declare hoare_in_monad_post[wp]

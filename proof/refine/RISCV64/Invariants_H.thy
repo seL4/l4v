@@ -1161,7 +1161,7 @@ locale mdb_order = mdb_next +
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Alternate split rules for preserving subgoal order"
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma ntfn_splits[split]:
   " P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
      | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
@@ -2753,7 +2753,7 @@ lemma le_maxDomain_eq_less_numDomains:
   by (auto simp: Kernel_Config.numDomains_def maxDomain_def word_le_nat_alt)
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma page_table_pte_atI':
   "page_table_at' p s \<Longrightarrow> pte_at' (p + (ucast (x::pt_index) << pte_bits)) s"
@@ -2910,7 +2910,7 @@ lemma vms_sch_act_update'[iff]:
    valid_machine_state' s"
   by (simp add: valid_machine_state'_def )
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
                     asid_high_bits_def bit_simps

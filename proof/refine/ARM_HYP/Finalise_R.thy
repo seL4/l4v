@@ -10,7 +10,7 @@ imports
   InterruptAcc_R
   Retype_R
 begin
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare doUnbindNotification_def[simp]
 
@@ -187,7 +187,7 @@ locale mdb_empty =
                slot (cteCap_update (%_. capability.NullCap)))
               slot (cteMDBNode_update (const nullMDBNode))"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemmas m_slot_prev = m_p_prev
 lemmas m_slot_next = m_p_next
@@ -1392,7 +1392,7 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch emptySlot
   for irqs_masked'[wp]: "irqs_masked'"
 
@@ -2028,7 +2028,7 @@ lemma (in vmdb) isFinal_untypedParent:
                    sameObjectAs_sym)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma no_fail_isFinalCapability [wp]:
   "no_fail (valid_mdb' and cte_wp_at' ((=) cte) p) (isFinalCapability cte)"
@@ -3274,7 +3274,7 @@ lemma suspend_tcbSchedNext_tcbSchedPrev_None:
   unfolding suspend_def
   by (wpsimp wp: hoare_drop_imps tcbSchedDequeue_tcbSchedNext_tcbSchedPrev_None_obj_at')
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma archThreadSet_tcbSchedPrevNext[wp]:
   "archThreadSet f t' \<lbrace>obj_at' (\<lambda>tcb. P (tcbSchedNext tcb) (tcbSchedPrev tcb)) t\<rbrace>"
@@ -3404,7 +3404,7 @@ lemma suspend_cte_wp_at':
              | simp add: x)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch deleteASIDPool
   for cte_wp_at'[wp]: "cte_wp_at' P p"
@@ -3742,7 +3742,7 @@ lemma finaliseCap_valid_cap[wp]:
   done
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch dissociateVCPUTCB
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
@@ -3809,7 +3809,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma sym_refs_vcpu_tcb:
   "\<lbrakk> ko_at (ArchObj (VCPU vcpu)) v s; vcpu_tcb vcpu = Some t; sym_refs (state_hyp_refs_of s) \<rbrakk> \<Longrightarrow>
@@ -4015,7 +4015,7 @@ lemmas getCTE_no_0_obj'_helper
   = getCTE_inv
     hoare_strengthen_post[where Q'="\<lambda>_. no_0_obj'" and P=no_0_obj' and f="getCTE slot" for slot]
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 context
 notes option.case_cong_weak[cong]
 begin
@@ -4087,7 +4087,7 @@ lemma finaliseCap_corres:
   apply (rule corres_guard_imp [OF arch_finaliseCap_corres], (fastforce simp: valid_sched_def)+)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma arch_recycleCap_improve_cases:
    "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;\<not> isVCPUCap cap;
          \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"

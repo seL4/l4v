@@ -13,7 +13,7 @@ theory Retype_R
 imports VSpace_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   APIType_map2 :: "kernel_object + AARCH64_H.object_type \<Rightarrow> Structures_A.apiobject_type"
@@ -1172,7 +1172,7 @@ end
 global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
   by (simp add: PSpace_update_eq_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ksMachineState_update_gs[simp]:
   "ksMachineState (update_gs tp us addrs s) = ksMachineState s"
@@ -1684,7 +1684,7 @@ end
 interpretation retype_region2_ext_extended: is_extended "retype_region2_ext ptrs type"
   by (unfold_locales; wp)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
  "retype_region2_extra_ext ptrs type \<equiv>
@@ -1703,7 +1703,7 @@ end
 interpretation retype_region2_extra_ext_extended: is_extended "retype_region2_extra_ext ptrs type"
   by (unfold_locales; wp)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   retype_region2 :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> Structures_A.apiobject_type \<Rightarrow> bool \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
@@ -2805,7 +2805,7 @@ locale retype_mdb = vmdb +
   defines "n \<equiv> \<lambda>p. if P p then Some makeObject else m p"
 begin
 
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma no_0_n: "no_0 n"
   using no_0 by (simp add: no_0_def n_def 0)
@@ -3137,7 +3137,7 @@ lemma caps_no_overlapD'':
   apply blast
 done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma valid_untyped'_helper:
   assumes valid : "valid_cap' c s"

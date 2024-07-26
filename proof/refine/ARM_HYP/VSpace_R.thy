@@ -11,14 +11,14 @@
 theory VSpace_R
 imports TcbAcc_R
 begin
-context Arch begin global_naming ARM (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch-split*)
 
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
 lemmas store_pde_typ_ats[wp] = store_pde_typ_ats abs_atyp_at_lifts[OF store_pde_typ_at]
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma option_case_all_conv:
   "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"

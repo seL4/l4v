@@ -13,7 +13,7 @@ imports
   Boolean_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* Rule previously in the simpset, now not. *)
 declare ptr_add_def' [simp]
