@@ -1,0 +1,50 @@
+# Copyright 2024 Proofcraft Pty Ltd
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+# On repository dispatch event rebase platform branches.
+
+name: Rebase
+
+on:
+  repository_dispatch:
+    types:
+      - rebase
+  # for testing:
+  workflow_dispatch:
+
+# This workflow here on the master branch attempts a git rebase of the platform
+# branches listed in the build matrix below. If the rebase succeeds, the rebased
+# branch is pushed under the name `<branch>-rebased`. This triggers the build
+# workflow on the `<branch>-rebased` branch, which will run the proofs. If the
+# proofs succeed, the `<branch>-rebased` branch is force-pushed over
+# `<branch>`, becoming the new platform branch.
+jobs:
+  rebase:
+    name: Rebase platform branches
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [imx8-fpu-ver]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+        path: l4v-${{ matrix.branch }}
+        fetch-depth: 0
+        # needed to trigger push actions on the -rebased branch
+        # (implict GITHUB_TOKEN does not trigger further push actions).
+        token: ${{ secrets.PRIV_REPO_TOKEN }}
+    - name: Rebase
+      run: |
+        cd l4v-${{ matrix.branch }}
+        git config --global user.name "seL4 CI"
+        git config --global user.email "ci@sel4.systems"
+        git rebase origin/master
+        git status
+    - name: Push
+      run: |
+        cd l4v-${{ matrix.branch }}
+        git push -f origin HEAD:${{ matrix.branch }}-rebased
