@@ -28,8 +28,6 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
   apply (simp add: upto0_7_def word_bits_def split: if_splits)
   done
 
-global_naming Arch
-
 lemma arch_stt_invs [wp,Schedule_AI_assms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)

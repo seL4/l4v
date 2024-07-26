@@ -240,8 +240,6 @@ lemma unmap_page_tcb_cap_valid:
   done
 
 
-global_naming Arch
-
 lemma (* replaceable_cdt_update *)[simp,Finalise_AI_assms]:
   "replaceable (cdt_update f s) = replaceable s"
   by (fastforce simp: replaceable_def tcb_cap_valid_def)
@@ -1196,7 +1194,6 @@ lemma arch_finalise_cap_replaceable1:
              split: cap.splits arch_cap.splits vmpage_size.splits)
 
 
-global_naming Arch
 lemma (* deleting_irq_handler_slot_not_irq_node *)[Finalise_AI_assms]:
   "\<lbrace>if_unsafe_then_cap and valid_global_refs
            and cte_wp_at (\<lambda>cp. cap_irqs cp \<noteq> {}) sl\<rbrace>
@@ -1405,7 +1402,6 @@ lemma fast_finalise_replaceable[wp]:
   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def split: cap.split_asm)
   done
 
-global_naming Arch
 lemma (* cap_delete_one_invs *) [Finalise_AI_assms,wp]:
   "\<lbrace>invs and emptyable ptr\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
@@ -1995,8 +1991,6 @@ lemma mapM_x_swp_store_invalid_pde_invs:
               where pde=InvalidPDE, simplified])
   done
 
-global_naming Arch
-
 crunch prepare_thread_delete
   for invs[wp]: invs
   (ignore: set_object)
@@ -2423,8 +2417,6 @@ lemma arch_finalise_cap_valid_cap [wp]:
   apply (simp add: arch_finalise_cap_def)
   apply (wp | wpc | clarsimp simp: split: arch_cap.split option.split bool.split | safe)+
   done
-
-global_naming Arch
 
 lemmas clearMemory_invs [wp,Finalise_AI_assms]
     = clearMemory_invs

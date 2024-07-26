@@ -16,13 +16,11 @@ imports
   ArchInterrupt_AI
 begin
 
-requalify_facts
-  Arch.resetTimer_device_state_inv
-
 arch_requalify_facts (A)
   data_to_cptr_def
 
 arch_requalify_facts
+  resetTimer_device_state_inv
   arch_decode_invocation_inv
   arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
