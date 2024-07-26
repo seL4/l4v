@@ -9,7 +9,7 @@ theory ArchVCPU_AI
 imports AInvs
 begin
 
-context Arch begin arch_global_naming (*FIXME: arch-split*)
+context Arch begin arch_global_naming
 
 (* This is similar to cur_vcpu_2, but not close enough to reuse. *)
 definition active_cur_vcpu_of :: "'z state \<Rightarrow> obj_ref option" where

@@ -203,8 +203,6 @@ lemma unmap_page_tcb_cap_valid:
   apply (wp unmap_page_tcb_at hoare_vcg_ex_lift hoare_vcg_all_lift)+
   done
 
-global_naming Arch
-
 lemma (* replaceable_cdt_update *)[simp,Finalise_AI_assms]:
   "replaceable (cdt_update f s) = replaceable s"
   by (fastforce simp: replaceable_def tcb_cap_valid_def)
@@ -460,7 +458,6 @@ lemma arch_finalise_cap_replaceable[wp]:
              split: cap.splits arch_cap.splits option.splits vmpage_size.splits)
   done
 
-global_naming Arch
 lemma (* deleting_irq_handler_slot_not_irq_node *)[Finalise_AI_assms]:
   "\<lbrace>if_unsafe_then_cap and valid_global_refs
            and cte_wp_at (\<lambda>cp. cap_irqs cp \<noteq> {}) sl\<rbrace>
@@ -647,7 +644,6 @@ lemma fast_finalise_replaceable[wp]:
   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def split: cap.split_asm)
   done
 
-global_naming Arch
 lemma (* cap_delete_one_invs *) [Finalise_AI_assms,wp]:
   "\<lbrace>invs and emptyable ptr\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
@@ -1251,8 +1247,6 @@ crunch invalidate_page_structure_cache_asid, hw_asid_invalidate
   for valid_cap: "valid_cap cap"
 crunch do_machine_op
   for valid_asid_table[wp]: "\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s"
-
-global_naming Arch
 
 lemma (* finalise_cap_invs *)[Finalise_AI_assms]:
   shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"

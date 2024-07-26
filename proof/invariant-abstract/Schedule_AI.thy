@@ -29,9 +29,9 @@ locale Schedule_AI =
 
 (* FIXME arch-split: some of these could be moved to generic theories
    so they don't need to be unqualified. *)
-requalify_facts
-  Arch.no_irq
-  Arch.no_irq_storeWord
+arch_requalify_facts
+  no_irq
+  no_irq_storeWord
 
 crunch schedule_switch_thread_fastfail
   for inv[wp]: P

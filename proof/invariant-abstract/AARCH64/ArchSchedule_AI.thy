@@ -28,8 +28,6 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
    apply wp
   by (simp add: upto.simps word_bits_def)
 
-global_naming Arch
-
 lemma arch_stt_invs [wp,Schedule_AI_assms]:
   "arch_switch_to_thread t' \<lbrace>invs\<rbrace>"
   apply (wpsimp simp: arch_switch_to_thread_def)

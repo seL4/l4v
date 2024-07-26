@@ -18,13 +18,11 @@ arch_requalify_consts
   final_matters_arch
   ups_of_heap
 
-requalify_facts
-  Arch.loadWord_inv
-
 arch_requalify_facts (A)
   update_cnode_cap_data_def
 
 arch_requalify_facts
+  loadWord_inv
   is_derived_arch_non_arch
   ups_of_heap_non_arch_upd
   master_arch_cap_obj_refs

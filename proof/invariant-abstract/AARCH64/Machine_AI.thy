@@ -69,7 +69,7 @@ crunch_ignore (no_irq) (add:
   handleE' handleE handle_elseE forM forM_x
   zipWithM ignore_failure)
 
-context Arch begin
+context Arch begin arch_global_naming
 
 text \<open>Deterministic\<close>
 
@@ -423,10 +423,10 @@ lemma dmo_gets_inv[wp]:
 
 end
 
-requalify_facts
-  Arch.det_getRegister
-  Arch.det_setRegister
-  Arch.det_getRestartPC
-  Arch.det_setNextPC
+arch_requalify_facts
+  det_getRegister
+  det_setRegister
+  det_getRestartPC
+  det_setNextPC
 
 end

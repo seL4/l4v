@@ -175,7 +175,6 @@ lemma device_frame_in_device_region:
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
 
-global_naming Arch
 named_theorems AInvsPre_assms
 
 

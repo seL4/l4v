@@ -176,7 +176,6 @@ lemma device_frame_in_device_region:
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
-global_naming Arch
 named_theorems AInvsPre_assms
 
 lemma ptable_rights_imp_frame[AInvsPre_assms]:

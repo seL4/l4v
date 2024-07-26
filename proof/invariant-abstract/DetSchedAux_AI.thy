@@ -8,9 +8,6 @@ theory DetSchedAux_AI
 imports DetSchedInvs_AI
 begin
 
-requalify_facts
-  invoke_untyped_st_tcb_at *)
-
 crunch_ignore (del:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action
   reschedule_required set_thread_state_ext

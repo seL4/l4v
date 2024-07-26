@@ -38,8 +38,6 @@ lemma clearExMonitor_invs [wp]:
                         machine_rest_lift_def in_monad select_f_def)
   done
 
-global_naming Arch
-
 lemma arch_stt_invs [wp,Schedule_AI_assms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
