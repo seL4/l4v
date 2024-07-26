@@ -18,16 +18,6 @@ imports
 begin
 
 text \<open>
-  This is used by some decode functions. VCPU decode functions are the first that need to bounds
-  check IRQs from the user.
-  \<close>
-
-definition
-  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
-  "arch_check_irq irq \<equiv> whenE (irq > maxIRQ) $ throwError (RangeError 0 maxIRQ)"
-
-text \<open>
   Some parts of some registers cannot be written by the user.
   Bits set in the mask will be preserved (used in vcpu\_write\_register).
 \<close>
@@ -38,6 +28,17 @@ consts
 context Arch begin arch_global_naming (A)
 
 section "VCPU"
+
+text \<open>
+  This is used by some decode functions. VCPU decode functions are the first that need to bounds
+  check IRQs from the user.
+  \<close>
+
+definition
+  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "arch_check_irq irq \<equiv> whenE (irq > maxIRQ) $ throwError (RangeError 0 maxIRQ)"
+
 
 subsection "VCPU: Set TCB"
 
