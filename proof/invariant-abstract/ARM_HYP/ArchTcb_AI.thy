@@ -380,11 +380,6 @@ crunch invoke_tcb
 
 end
 
-context begin interpretation Arch .
-requalify_consts is_cnode_or_valid_arch
-requalify_facts invoke_tcb_typ_at
-end
-
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = ARM_HYP.is_cnode_or_valid_arch
  proof goal_cases

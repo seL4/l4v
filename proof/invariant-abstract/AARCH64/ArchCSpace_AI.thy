@@ -599,8 +599,4 @@ lemma set_cap_kernel_window_simple:
 
 end
 
-arch_requalify_facts
-  set_cap_valid_arch_caps_simple
-  set_cap_kernel_window_simple
-
 end

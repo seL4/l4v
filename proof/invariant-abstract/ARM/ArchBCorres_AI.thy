@@ -21,8 +21,4 @@ crunch prepare_thread_delete
 
 end
 
-requalify_facts ARM.arch_finalise_cap_bcorres ARM.prepare_thread_delete_bcorres
-
-declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
-
 end

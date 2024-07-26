@@ -13,6 +13,8 @@ arch_requalify_facts
   as_user_inv
   getRegister_inv
   user_getreg_inv
+  set_cap_valid_arch_caps_simple
+  set_cap_kernel_window_simple
 
 declare user_getreg_inv[wp]
 

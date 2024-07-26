@@ -607,10 +607,6 @@ lemma arch_post_cap_deletion_invs:
   "\<lbrace>invs and (\<lambda>s. arch_post_cap_delete_pre (ArchObjectCap c) (caps_of_state s))\<rbrace> arch_post_cap_deletion c \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: arch_post_cap_delete_pre_def)
 
-end
-
-(* is this the right way? we need this fact globally but it's proven with
-   ARM_HYP defns. *)
 lemma set_cap_valid_arch_caps_simple:
   "\<lbrace>\<lambda>s. valid_arch_caps s
       \<and> valid_objs s
@@ -645,5 +641,7 @@ lemma set_cap_kernel_window_simple:
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         ARM_HYP.cap_refs_in_kernel_windowD)
   done
+
+end
 
 end

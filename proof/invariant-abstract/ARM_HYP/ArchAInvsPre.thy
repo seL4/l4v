@@ -138,9 +138,4 @@ global_interpretation AInvsPre?: AInvsPre
   case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_assms)?)
   qed
 
-requalify_facts
-  ARM_HYP.user_mem_dom_cong
-  ARM_HYP.device_mem_dom_cong
-  ARM_HYP.device_frame_in_device_region
-  ARM_HYP.is_aligned_pptrBaseOffset
 end

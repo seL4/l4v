@@ -599,12 +599,4 @@ lemma set_cap_kernel_window_simple:
 
 end
 
-context begin interpretation Arch .
-
-requalify_facts
-  set_cap_valid_arch_caps_simple
-  set_cap_kernel_window_simple
-
-end
-
 end

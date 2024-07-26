@@ -454,14 +454,4 @@ lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
 end
 end
 
-context begin interpretation Arch .
-
-requalify_facts
-  det_getRegister
-  det_setRegister
-  det_getRestartPC
-  det_setNextPC
-
-end
-
 end

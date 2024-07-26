@@ -718,9 +718,6 @@ lemma arch_post_cap_deletion_invs:
   by (wpsimp simp: arch_post_cap_deletion_def free_ioport_range_def arch_post_cap_delete_pre_def
                wp: set_ioport_mask_invs)
 
-end
-
-(* FIXME x64: these needs to be available globally but uses Arch facts *)
 lemma set_cap_valid_arch_caps_simple:
   "\<lbrace>\<lambda>s. valid_arch_caps s
       \<and> valid_objs s
@@ -729,6 +726,7 @@ lemma set_cap_valid_arch_caps_simple:
       \<and> \<not> (is_arch_cap cap)\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
+  supply vs_cap_ref_arch_def[simp del] table_cap_ref_arch_def[simp del]
   apply (wp X64.set_cap_valid_arch_caps)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid_cap)
@@ -736,26 +734,16 @@ lemma set_cap_valid_arch_caps_simple:
   apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> X64.is_pt_cap x \<and> \<not> X64.is_pd_cap x \<and> \<not> X64.is_pdpt_cap x \<and> \<not> X64.is_pml4_cap x")
    apply simp
    apply (rule conjI)
-    apply (clarsimp simp: X64.vs_cap_ref_def is_cap_simps)
+    apply (clarsimp simp: X64.vs_cap_ref_def Invariants_AI.is_cap_simps)
    apply (erule impCE)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state
                           X64.obj_ref_none_no_asid)
    apply (rule X64.no_cap_to_obj_with_diff_ref_triv, simp_all)
-   apply (rule ccontr, clarsimp simp: X64.table_cap_ref_def is_cap_simps)
+   apply (rule ccontr, clarsimp simp: X64.table_cap_ref_def Invariants_AI.is_cap_simps )
   apply (auto simp: X64.is_cap_simps)
   done
 
-lemma set_cap_kernel_window_simple:
-  "\<lbrace>\<lambda>s. cap_refs_in_kernel_window s
-      \<and> cte_wp_at (\<lambda>cap'. cap_range cap' = cap_range cap) ptr s\<rbrace>
-     set_cap cap ptr
-   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (wp X64.set_cap_cap_refs_in_kernel_window)
-  apply (clarsimp simp: cte_wp_at_caps_of_state
-                        X64.cap_refs_in_kernel_windowD)
-  done
-
-
+end
 
 end

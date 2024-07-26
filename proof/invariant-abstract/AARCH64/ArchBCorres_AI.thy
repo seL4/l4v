@@ -45,8 +45,4 @@ crunch prepare_thread_delete
 
 end
 
-arch_requalify_facts arch_finalise_cap_bcorres prepare_thread_delete_bcorres
-
-declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
-
 end
