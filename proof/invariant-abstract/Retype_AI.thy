@@ -15,14 +15,12 @@ begin
 abbreviation "up_aligned_area ptr sz \<equiv> {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}"
 abbreviation "down_aligned_area ptr sz \<equiv> {(ptr && ~~ mask sz) + (2 ^ sz - 1) .. ptr}"
 
-context begin interpretation Arch .
-requalify_facts
+arch_requalify_facts
   global_refs_kheap
   valid_vspace_obj_default
-requalify_consts
-  clearMemory
+
+arch_requalify_consts
   clearMemoryVM
-end
 
 declare global_refs_kheap[simp]
 

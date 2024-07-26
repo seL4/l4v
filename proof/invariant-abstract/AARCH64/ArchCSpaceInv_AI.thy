@@ -210,8 +210,6 @@ lemmas cap_vptr_simps [simp] =
 
 end
 
-context begin interpretation Arch .
-requalify_facts replace_cap_invs
-end
+arch_requalify_facts replace_cap_invs
 
 end

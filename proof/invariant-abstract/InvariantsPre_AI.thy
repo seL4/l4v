@@ -8,16 +8,6 @@ theory InvariantsPre_AI
 imports LevityCatch_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_types
-  aa_type
-
-requalify_consts
-  aa_type
-
-end
-
 (* FIXME: move *)
 declare ranI [intro]
 

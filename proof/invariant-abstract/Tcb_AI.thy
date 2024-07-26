@@ -8,12 +8,8 @@ theory Tcb_AI
 imports ArchCNodeInv_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_facts
+arch_requalify_facts
   arch_derive_is_arch
-
-end
 
 locale Tcb_AI_1 =
   fixes state_ext_t :: "('state_ext::state_ext) itself"

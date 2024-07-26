@@ -8,15 +8,17 @@ theory KHeap_AI
 imports ArchKHeap_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   obj_is_device
   valid_vso_at
   non_vspace_obj
   vspace_obj_pred
 
 requalify_facts
+  Arch.getActiveIRQ_neq_non_kernel
+  Arch.dmo_getActiveIRQ_non_kernel
+
+arch_requalify_facts
   pspace_in_kernel_window_atyp_lift
   valid_vspace_objs_lift_weak
   vs_lookup_vspace_obj_at_lift
@@ -57,14 +59,9 @@ requalify_facts
   default_arch_object_not_live
   default_tcb_not_live
 
-  getActiveIRQ_neq_non_kernel
-  dmo_getActiveIRQ_non_kernel
-
   valid_arch_tcb_same_type
   valid_arch_tcb_typ_at
   valid_tcb_arch_ref_lift
-
-end
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
 lemmas storeWord_device_state_hoare[wp] = storeWord_device_state_inv

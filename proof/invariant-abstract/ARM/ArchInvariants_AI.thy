@@ -24,7 +24,7 @@ end_qualify
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "ARM-specific invariant definitions"
 
-qualify ARM_A (in Arch)
+qualify ARM (in Arch)
 (* ARM has no interest for iarch_tcb (introduced for ARM_HYP) ,
     and we consider no non-trivial predicates of iarch_tcb,
     so an unspecified typedecl seems appropriate.
@@ -450,9 +450,8 @@ definition "second_level_tables \<equiv> arch_state.arm_global_pts"
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup
 
 abbreviation
   vs_lookup_abbr
@@ -534,9 +533,8 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup_pages
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup_pages
 
 abbreviation
   vs_lookup_pages_abbr

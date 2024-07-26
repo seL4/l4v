@@ -515,10 +515,7 @@ declare post_retype_invs_check_def[simp]
 
 end
 
-
-context begin interpretation Arch .
-requalify_consts post_retype_invs_check
-end
+arch_requalify_consts post_retype_invs_check
 
 definition
   post_retype_invs :: "apiobject_type \<Rightarrow> machine_word list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -961,10 +958,7 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts region_in_kernel_window
-end
-
+arch_requalify_consts region_in_kernel_window
 
 lemma cap_range_respects_device_region_cong[cong]:
   "device_state (machine_state s) = device_state (machine_state s')

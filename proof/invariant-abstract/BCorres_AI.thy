@@ -16,6 +16,25 @@ abbreviation "bcorres \<equiv> bcorres_underlying truncate_state"
 
 abbreviation "s_bcorres \<equiv> s_bcorres_underlying truncate_state"
 
+crunch_ignore (bcorres)
+  (add: Nondet_Monad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
+        select unless mapM catch bindE liftE whenE alternative cap_swap_ext
+        cap_insert_ext cap_move_ext liftM create_cap_ext
+        possible_switch_to reschedule_required set_priority
+        set_thread_state_ext tcb_sched_action timer_tick
+        lookup_error_on_failure getActiveIRQ
+        gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
+
+context Arch begin arch_global_naming
+
+crunch arch_post_cap_deletion
+  for (bcorres) bcorres[wp]: truncate_state
+
+end
+
+arch_requalify_facts
+  arch_post_cap_deletion_bcorres
+
 lemma dxo_bcorres[wp]:
   "bcorres (do_extended_op f) (do_extended_op f)"
   apply (simp add: do_extended_op_def)
@@ -49,29 +68,10 @@ lemma OR_choiceE_bcorres[wp]:
   apply force
   done
 
-crunch_ignore (bcorres)
-  (add: Nondet_Monad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
-        select unless mapM catch bindE liftE whenE alternative cap_swap_ext
-        cap_insert_ext cap_move_ext liftM create_cap_ext
-        possible_switch_to reschedule_required set_priority
-        set_thread_state_ext tcb_sched_action timer_tick
-        lookup_error_on_failure getActiveIRQ
-        gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
-
 lemma bcorres_select_ext[wp]:
   "bcorres (select_ext a A) (select_ext a A)"
   by (clarsimp simp: select_ext_def bind_def gets_def return_def select_def assert_def get_def
                      select_switch_unit_def bcorres_underlying_def s_bcorres_underlying_def fail_def)
-
-context Arch begin
-
-crunch arch_post_cap_deletion
-  for (bcorres) bcorres[wp]: truncate_state
-
-end
-
-requalify_facts
-  Arch.arch_post_cap_deletion_bcorres
 
 crunch
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot
@@ -135,8 +135,6 @@ crunch get_irq_slot
 lemma throw_on_false_bcorres[wp]:
   "bcorres f f' \<Longrightarrow>  bcorres (throw_on_false e f) (throw_on_false e f')"
   by (simp add: throw_on_false_def | wp)+
-
-crunch_ignore (bcorres) (add: getActiveIRQ)
 
 lemma preemption_point_bcorres[wp]:
   "bcorres preemption_point preemption_point"

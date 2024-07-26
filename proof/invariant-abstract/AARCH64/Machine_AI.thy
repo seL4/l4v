@@ -423,14 +423,10 @@ lemma dmo_gets_inv[wp]:
 
 end
 
-context begin interpretation Arch .
-
 requalify_facts
-  det_getRegister
-  det_setRegister
-  det_getRestartPC
-  det_setNextPC
-
-end
+  Arch.det_getRegister
+  Arch.det_setRegister
+  Arch.det_getRestartPC
+  Arch.det_setNextPC
 
 end

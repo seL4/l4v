@@ -12,14 +12,8 @@ theory Interrupt_AI
 imports ArchIpc_AI
 begin
 
-
-context begin interpretation Arch .
-requalify_consts
-  maxIRQ
-
-requalify_facts
+arch_requalify_facts
   arch_post_cap_deletion_mdb_inv
-end
 
 definition
   interrupt_derived :: "cap \<Rightarrow> cap \<Rightarrow> bool"

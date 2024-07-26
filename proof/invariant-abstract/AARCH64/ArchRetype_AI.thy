@@ -125,10 +125,7 @@ declare post_retype_invs_check_def[simp]
 
 end
 
-
-context begin interpretation Arch .
-requalify_consts post_retype_invs_check
-end
+arch_requalify_consts post_retype_invs_check
 
 definition
   post_retype_invs :: "apiobject_type \<Rightarrow> obj_ref list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -274,6 +271,7 @@ locale retype_region_proofs_arch
 
 context retype_region_proofs begin
 
+(* FIXME arch_split: is there any way to optimise this interpretation out? we can't nest contexts *)
 interpretation Arch .
 
 lemma valid_cap:
@@ -683,10 +681,7 @@ lemma cap_range_respects_device_region_cong[cong]:
   by (clarsimp simp: cap_range_respects_device_region_def)
 
 
-context begin interpretation Arch .
-requalify_consts region_in_kernel_window
-end
-
+arch_requalify_consts region_in_kernel_window
 
 context retype_region_proofs_arch begin
 

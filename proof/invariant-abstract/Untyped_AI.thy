@@ -15,21 +15,13 @@ begin
 
 unbundle l4v_word_context (* because of Lib.MonadicRewrite *)
 
-context begin interpretation Arch .
-
-requalify_consts
-  region_in_kernel_window
-  arch_default_cap
+arch_requalify_consts
   second_level_tables
   safe_ioport_insert
 
-requalify_facts
-  set_cap_valid_arch_caps_simple
-  set_cap_kernel_window_simple
+arch_requalify_facts
   set_cap_ioports'
   safe_ioport_insert_triv
-
-end
 
 primrec
   valid_untyped_inv_wcap :: "Invocations_A.untyped_invocation \<Rightarrow> cap option
@@ -527,11 +519,6 @@ lemma range_cover_stuff:
     apply (simp add: le_mask_iff[symmetric] mask_def)
     done
   qed (simp add: word_bits_def)
-
-context Arch begin
-  (*FIXME: generify proof that uses this *)
-  lemmas range_cover_stuff_arch = range_cover_stuff[unfolded word_bits_def, simplified]
-end
 
 
 lemma cte_wp_at_range_cover:
