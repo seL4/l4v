@@ -8,7 +8,7 @@ theory ArchDetype_AI
 imports Detype_AI
 begin
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems Detype_AI_assms
 

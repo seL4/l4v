@@ -8,9 +8,7 @@ theory ArchAInvsPre
 imports AInvsPre
 begin
 
-context Arch begin
-
-global_naming ARM
+context Arch begin arch_global_naming
 
 definition
   "kernel_mappings \<equiv> {x. x \<ge> kernel_base}"

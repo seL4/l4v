@@ -11,7 +11,7 @@ imports
   "Lib.Simulation"
   Invariants_AI
 begin
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma word_1FF_is_mask:
   "(0x1FF::'a::len word) = mask 9"

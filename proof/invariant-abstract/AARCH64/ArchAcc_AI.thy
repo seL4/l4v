@@ -17,7 +17,7 @@ lemma valid_vso_at[wp]:"\<lbrace>valid_vso_at level p\<rbrace> f \<lbrace>\<lamb
 
 end
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 (* Is there a lookup that leads to a page table at (level, p)? *)
 locale_abbrev ex_vs_lookup_table ::

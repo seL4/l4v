@@ -21,7 +21,7 @@ qualify RISCV64 (in Arch)
 type_synonym iarch_tcb = void
 end_qualify
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 (* compatibility with other architectures, input only *)
 abbreviation

@@ -9,7 +9,7 @@ imports
   BCorres_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma vspace_for_asid_truncate[simp]:
   "vspace_for_asid asid (truncate_state s) = vspace_for_asid asid s"

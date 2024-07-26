@@ -12,7 +12,7 @@ theory ArchVSpace_AI
 imports VSpacePre_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 (* FIXME: should go in Machine_AI, but needs dmo_invs from KHeap_AI. *)
 lemmas machine_op_lift_irq_masks = no_irq[OF no_irq_machine_op_lift]
@@ -997,7 +997,7 @@ lemma set_cap_valid_pdpte_stronger:
   by (wp valid_pdpte_lift3 set_cap_typ_at)
 end
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 (* FIXME: move *)
 context

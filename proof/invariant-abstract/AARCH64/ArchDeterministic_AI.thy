@@ -11,7 +11,7 @@ begin
 
 declare dxo_wp_weak[wp del]
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Deterministic_AI_assms
 
@@ -40,7 +40,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
 qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 crunch arch_invoke_irq_handler
   for valid_list[wp,Deterministic_AI_assms]: valid_list

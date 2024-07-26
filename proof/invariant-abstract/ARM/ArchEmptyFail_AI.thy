@@ -8,7 +8,7 @@ theory ArchEmptyFail_AI
 imports EmptyFail_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 named_theorems EmptyFail_AI_assms
 
@@ -33,7 +33,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 crunch handle_fault
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -115,7 +115,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 crunch maskInterrupt, empty_slot,
     setHardwareASID, set_current_pd, finalise_cap, preemption_point,
@@ -136,7 +136,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 crunch
   cap_delete, choose_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -160,7 +160,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 crunch possible_switch_to, handle_event, activate_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]

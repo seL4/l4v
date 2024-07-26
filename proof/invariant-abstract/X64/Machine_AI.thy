@@ -67,7 +67,7 @@ crunch_ignore (no_irq) (add:
   handleE' handleE handle_elseE forM forM_x
   zipWithM ignore_failure)
 
-context Arch begin
+context Arch begin arch_global_naming
 
 lemma det_getRegister: "det (getRegister x)"
   by (simp add: getRegister_def)

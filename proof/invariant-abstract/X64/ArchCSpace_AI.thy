@@ -12,7 +12,7 @@ theory ArchCSpace_AI
 imports CSpace_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 named_theorems CSpace_AI_assms
 
@@ -436,7 +436,7 @@ end
 global_interpretation cap_insert_crunches?: cap_insert_crunches .
 
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
   "\<lbrace>cap_refs_in_kernel_window
@@ -624,7 +624,7 @@ global_interpretation CSpace_AI?: CSpace_AI
   qed
 
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 lemma cap_insert_simple_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and

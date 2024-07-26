@@ -11,9 +11,7 @@ begin
 
 unbundle l4v_word_context
 
-context Arch begin
-
-global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)

@@ -8,7 +8,7 @@ theory ArchVSpaceEntries_AI
 imports VSpaceEntries_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 primrec pte_range :: "pte \<Rightarrow> pt_index \<Rightarrow> pt_index set" where
   "pte_range (InvalidPTE) p = {}"

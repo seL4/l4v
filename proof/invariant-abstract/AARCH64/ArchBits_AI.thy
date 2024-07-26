@@ -9,7 +9,7 @@ theory ArchBits_AI
 imports Invariants_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 (* arch-specific interpretations of update locales: *)
 

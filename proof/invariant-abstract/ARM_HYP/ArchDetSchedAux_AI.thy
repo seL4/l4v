@@ -9,7 +9,7 @@ theory ArchDetSchedAux_AI
 imports DetSchedAux_AI
 begin
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems DetSchedAux_AI_assms
 

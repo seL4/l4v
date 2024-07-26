@@ -23,7 +23,7 @@ lemma get_tcb_Some_ko_at:
   "(get_tcb p s = Some t) = ko_at (TCB t) p s"
   by (auto simp: get_tcb_def obj_at_def is_tcb_def split: kernel_object.splits option.splits)
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma kernel_base_shift_cast_le: (* ARMHYP *)
   fixes x :: "11 word"
@@ -2881,7 +2881,7 @@ lemma vs_lookup2:
 
 end
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma set_pd_vspace_objs_map: (* ARMHYP *)
   notes valid_vspace_obj.simps[simp del] and a_type_elims[rule del]
@@ -5801,7 +5801,7 @@ lemma vs_lookup_pages2:
 
 end
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma not_kernel_slot_not_global_pt: (* ARMHYP? remove? *)
   "\<lbrakk>pde_ref (pd x) = Some p;

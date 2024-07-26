@@ -8,7 +8,7 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 definition "non_vspace_obj \<equiv> non_arch_obj"
 definition "vspace_obj_pred \<equiv> arch_obj_pred"
@@ -22,7 +22,7 @@ locale vspace_only_obj_pred = Arch +
 sublocale vspace_only_obj_pred < arch_only_obj_pred
   using vspace_only[unfolded vspace_obj_pred_def] by unfold_locales
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma valid_vspace_obj_lift:
   assumes "\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>"

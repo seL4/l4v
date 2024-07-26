@@ -9,7 +9,7 @@ theory ArchUntyped_AI
 imports Untyped_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Untyped_AI_assms
 
