@@ -78,3 +78,13 @@ jobs:
         git config --global user.email "ci@sel4.systems"
         git status
         git push -f origin HEAD:imx8-fpu-ver
+
+  # Re-trigger platform branch rebase to confirm that everything is now in sync.
+  trigger-rebase:
+    name: Trigger platform branch rebase
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger rebase
+      uses: peter-evans/repository-dispatch@v3
+      with:
+        event-type: rebase
