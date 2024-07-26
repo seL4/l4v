@@ -8,7 +8,7 @@ theory CNode_DR
 imports Finalise_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   translate_cnode_invocation :: "Invocations_A.cnode_invocation \<Rightarrow> cdl_cnode_invocation"

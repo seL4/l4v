@@ -41,7 +41,7 @@ lemma zero_le_sint: "\<lbrakk> 0 \<le> (a :: machine_word); a < 0x80000000000000
   apply simp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma map_option_byte_to_word_heap:
   assumes disj: "\<And>(off :: 9 word) x. x<8 \<Longrightarrow> p + ucast off * 8 + x \<notin> S " (*9=page table index*)
@@ -7833,7 +7833,7 @@ lemma APIType_capBits_min:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n dev\<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"

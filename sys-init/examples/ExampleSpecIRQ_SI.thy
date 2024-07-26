@@ -16,7 +16,7 @@ theory ExampleSpecIRQ_SI
 imports SysInit.WellFormed_SI
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (****************************************************
  * Definitions of all the objects and capabilities. *

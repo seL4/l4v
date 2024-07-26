@@ -8,7 +8,7 @@ theory Untyped_DR
 imports CNode_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma detype_dcorres:
   "S = {ptr..ptr + 2 ^ sz - 1}

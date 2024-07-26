@@ -14,7 +14,7 @@ text \<open>
   or about to be switched to, or be in a scheduling queue.
 \<close>
 
-(*FIXME: arch_split: move up? *)
+(*FIXME: arch-split: move up? *)
 context Arch begin
 
 requalify_facts
@@ -30,7 +30,7 @@ requalify_facts
 end
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
    is_active_thread_state :: "thread_state \<Rightarrow> bool"

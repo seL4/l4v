@@ -350,7 +350,7 @@ lemma heap_to_user_data_in_user_mem'[simp]:
       apply simp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch invalidateTLBByASID
   for pde_mappings'[wp]: "valid_pde_mappings'"

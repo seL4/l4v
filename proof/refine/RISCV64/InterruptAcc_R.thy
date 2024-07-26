@@ -18,7 +18,7 @@ lemma getIRQSlot_corres:
                    ucast_nat_def shiftl_t2n)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setIRQState_corres:
   "irq_state_relation state state' \<Longrightarrow>

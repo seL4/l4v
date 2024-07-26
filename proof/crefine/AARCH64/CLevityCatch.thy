@@ -73,7 +73,7 @@ qed
 (* end holding area *)
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* Short-hand for  unfolding cumbersome machine constants *)
 (* FIXME MOVE these should be in refine, and the _eq forms should NOT be declared [simp]! *)

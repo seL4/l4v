@@ -12,7 +12,7 @@ theory ArchAcc_R
 imports SubMonad_R ArchMove_R
 begin
 
-context Arch begin global_naming X64_A (*FIXME: arch_split*)
+context Arch begin global_naming X64_A (*FIXME: arch-split*)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (X64_A.ASIDPool pool)) p s"
@@ -25,7 +25,7 @@ lemma asid_pool_at_ko:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare if_cong[cong]
 

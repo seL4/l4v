@@ -179,7 +179,7 @@ by (clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         default_arch_object_def valid_vm_rights_def  word_bits_def a_type_def)+
 
 
-lemma copy_global_mappings_hoare_lift:(*FIXME: arch_split  \<rightarrow> these do not seem to be used globally *)
+lemma copy_global_mappings_hoare_lift:(*FIXME: arch-split  \<rightarrow> these do not seem to be used globally *)
   assumes wp: "\<And>ptr val. \<lbrace>Q\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows       "\<lbrace>Q\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: copy_global_mappings_def)

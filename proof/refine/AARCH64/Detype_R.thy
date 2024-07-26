@@ -9,7 +9,7 @@ theory Detype_R
 imports Retype_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 text \<open>Establishing that the invariants are maintained
         when a region of memory is detyped, that is,
@@ -87,7 +87,7 @@ lemma descendants_range_inD':
   done
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma descendants_range'_def2:
   "descendants_range' cap p = descendants_range_in' (capRange cap) p"
@@ -465,7 +465,7 @@ lemma (in detype_locale') deletionIsSafe:
   and      vu: "valid_untyped (cap.UntypedCap d base magnitude idx) s"
   shows       "deletionIsSafe base magnitude s'"
 proof -
-  interpret Arch . (* FIXME: arch_split *)
+  interpret Arch . (* FIXME: arch-split *)
   note [simp del] = atLeastatMost_subset_iff atLeastLessThan_iff atLeastAtMost_iff
                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   have "\<And>t m r. \<exists>ptr. cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s
@@ -549,7 +549,7 @@ proof -
   thus ?thesis using cte by (auto simp: deletionIsSafe_def)
 qed
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 text \<open>Invariant preservation across concrete deletion\<close>
 
@@ -622,7 +622,7 @@ locale delete_locale =
   and      al: "is_aligned base bits"
   and    safe: "deletionIsSafe base bits s'"
 
-context delete_locale begin interpretation Arch . (*FIXME: arch_split*)
+context delete_locale begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma valid_objs: "valid_objs' s'"
   and        pa: "pspace_aligned' s'"
@@ -855,7 +855,7 @@ lemma sym_refs_TCB_hyp_live':
   done
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* FIXME: generalizes lemma SubMonadLib.corres_submonad *)
 (* FIXME: generalizes lemma SubMonad_R.corres_machine_op *)
@@ -1134,7 +1134,7 @@ lemma deleteObjects_corres:
   done
 end
 
-context delete_locale begin interpretation Arch . (*FIXME: arch_split*)
+context delete_locale begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma live_idle_untyped_range':
   "ko_wp_at' live' p s' \<or> p = idle_thread_ptr \<Longrightarrow> p \<notin> base_bits"
@@ -1445,7 +1445,7 @@ using vds
 proof (simp add: invs'_def valid_state'_def valid_pspace'_def
                  valid_mdb'_def valid_mdb_ctes_def,
        safe)
-  interpret Arch . (*FIXME: arch_split*)
+  interpret Arch . (*FIXME: arch-split*)
   let ?s = state'
   let ?ran = base_bits
 
@@ -1818,7 +1818,7 @@ lemma doMachineOp_modify:
   apply (simp add: simpler_gets_def simpler_modify_def bind_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma deleteObjects_invs':
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p

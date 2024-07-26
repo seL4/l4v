@@ -8,7 +8,7 @@ theory Arch_DR
 imports Untyped_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
  "make_arch_duplicate cap \<equiv> case cap of

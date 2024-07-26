@@ -112,7 +112,7 @@ lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_modify:
   fixes v :: "'a :: pspace_storable" shows
@@ -161,7 +161,7 @@ lemma partial_overwrite_fun_upd:
   apply (clarsimp split: if_split)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma get_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> get_tcb_state_regs (ksPSpace s p)
@@ -994,7 +994,7 @@ lemma bind_assoc:
      = do x \<leftarrow> m; y \<leftarrow> f x; g y od"
   by (rule bind_assoc)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_modify_assert:
   "\<lbrakk> updateObject v = updateObject_default v \<rbrakk>

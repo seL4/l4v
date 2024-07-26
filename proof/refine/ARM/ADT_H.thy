@@ -28,7 +28,7 @@ consts
   initBootFrames :: "word32 list"
   initDataStart :: word32
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 text \<open>
   The construction of the abstract data type
@@ -1457,7 +1457,7 @@ locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map 
 
 begin
 
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma valid_list_2 : "valid_list_2 t m"
     apply (insert assms')
@@ -1654,7 +1654,7 @@ lemma sort_cdt_list_correct:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition absCDTList where
 "absCDTList cnp h \<equiv> sort_cdt_list (absCDT cnp h) h"

@@ -23,7 +23,7 @@ downloaded from
 https://trustworthy.systems/publications/nictaabstracts/Klein_AEMSKH_14.abstract
 *)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   cdl_cap_auth_conferred :: "cdl_cap \<Rightarrow> auth set"

@@ -8,7 +8,7 @@ theory KHeap_DR
 imports Intent_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare arch_post_cap_deletion_def[simp]
 lemmas post_cap_deletion_simps[simp] = post_cap_deletion_def[simplified arch_post_cap_deletion_def]

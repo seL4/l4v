@@ -14,7 +14,7 @@ imports
   CSpace_I
 begin
 
-context Arch begin global_naming AARCH64_A (*FIXME: arch_split*)
+context Arch begin global_naming AARCH64_A (*FIXME: arch-split*)
 
 lemmas final_matters_def = final_matters_def[simplified final_matters_arch_def]
 
@@ -25,7 +25,7 @@ lemmas final_matters_simps[simp]
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma isMDBParentOf_CTE1:
   "isMDBParentOf (CTE cap node) cte =
@@ -2945,7 +2945,7 @@ locale masterCap =
   fixes cap cap'
   assumes master: "capMasterCap cap = capMasterCap cap'"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma isZombie [simp]:
   "isZombie cap' = isZombie cap" using master
@@ -3534,7 +3534,7 @@ locale mdb_insert_sib = mdb_insert_der +
            (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
            (mdbPrev_update (\<lambda>a. src) src_node))))"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 (* If dest is inserted as sibling, src can not have had children.
    If it had had children, then dest_node which is just a derived copy
@@ -3681,7 +3681,7 @@ lemma descendants:
   by (rule set_eqI) (simp add: descendants_of'_def parent_n_eq)
 
 end
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma mdb_None:
   assumes F: "\<And>p'. cte_map p \<in> descendants_of' p' m' \<Longrightarrow> False"
   assumes R: "cdt_relation (swp cte_at s) (cdt s) m'"
@@ -4534,7 +4534,7 @@ locale mdb_inv_preserve =
   \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes mdb_next:"\<And>p. mdb_next m p = mdb_next m' p"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemma preserve_stuff:
   "valid_dlist m = valid_dlist m'
  \<and> ut_revocable' m = ut_revocable' m'
@@ -5193,7 +5193,7 @@ lemma cte_map_inj_eq':
   apply (rule cte_map_inj_eq; fastforce)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma cteInsert_corres:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
         trans_state_update'[symmetric,simp]
@@ -7176,7 +7176,7 @@ lemma subtree_no_parent:
   shows "False" using assms
   by induct (auto simp: parentOf_def mdb_next_unfold)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ensureNoChildren_corres:
   "p' = cte_map p \<Longrightarrow>

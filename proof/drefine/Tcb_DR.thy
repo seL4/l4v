@@ -8,7 +8,7 @@ theory Tcb_DR
 imports Ipc_DR Arch_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*
  * A "normal" TCB is a non-idle TCB. (Idle is special, because it

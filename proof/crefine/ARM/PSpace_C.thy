@@ -8,7 +8,7 @@ theory PSpace_C
 imports Ctac_lemmas_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_obj_at_pre:
   "\<lbrakk> updateObject ko = updateObject_default ko;

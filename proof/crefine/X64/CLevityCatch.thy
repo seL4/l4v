@@ -13,7 +13,7 @@ imports
   Boolean_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* Short-hand for  unfolding cumbersome machine constants *)
 

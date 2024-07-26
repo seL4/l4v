@@ -26,7 +26,7 @@ method simp_to_elim = (drule fun_all, elim allE impE)
 
 end
 
-context Arch begin global_naming ARM_A (*FIXME: arch_split*)
+context Arch begin global_naming ARM_A (*FIXME: arch-split*)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_A.ASIDPool pool)) p s"
@@ -45,7 +45,7 @@ lemmas valid_vspace_obj_elims[rule_format, elim!] =
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*FIXME move *)
 

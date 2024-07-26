@@ -8,7 +8,7 @@ theory Schedule_DR
 imports Finalise_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* getActiveTCBs returns a subset of CapDL's all_active_tcbs. *)
 lemma getActiveTCBs_subset:

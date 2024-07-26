@@ -8,7 +8,7 @@ theory Tcb_R
 imports CNodeInv_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma asUser_setNextPC_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
@@ -1639,7 +1639,7 @@ end
 consts
   copyregsets_map :: "arch_copy_register_sets \<Rightarrow> Arch.copy_register_sets"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 primrec
   tcbinv_relation :: "tcb_invocation \<Rightarrow> tcbinvocation \<Rightarrow> bool"
