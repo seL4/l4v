@@ -8,9 +8,12 @@ theory Schedule_AI
 imports VSpace_AI
 begin
 
+arch_requalify_facts
+  no_irq
+  no_irq_storeWord
+
 abbreviation
   "activatable \<equiv> \<lambda>st. runnable st \<or> idle st"
-
 
 locale Schedule_AI =
     fixes state_ext :: "('a::state_ext) itself"
@@ -26,12 +29,6 @@ locale Schedule_AI =
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes stit_activatable:
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool)\<rbrace>"
-
-(* FIXME arch-split: some of these could be moved to generic theories
-   so they don't need to be unqualified. *)
-arch_requalify_facts
-  no_irq
-  no_irq_storeWord
 
 crunch schedule_switch_thread_fastfail
   for inv[wp]: P

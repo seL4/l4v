@@ -249,8 +249,5 @@ lemmas cap_vptr_simps [simp] =
   cap_vptr_def [simplified, split_simps cap.split arch_cap.split option.split prod.split]
 
 end
-context begin interpretation Arch .
-requalify_facts replace_cap_invs
-end
 
 end

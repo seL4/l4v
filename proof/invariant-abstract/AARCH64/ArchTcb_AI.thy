@@ -383,7 +383,4 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
 qed
 
-arch_requalify_consts is_cnode_or_valid_arch
-arch_requalify_facts invoke_tcb_typ_at
-
 end

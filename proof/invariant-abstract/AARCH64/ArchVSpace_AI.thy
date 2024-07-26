@@ -3142,7 +3142,4 @@ crunch vcpu_switch
 
 end
 
-arch_requalify_facts
-  do_machine_op_valid_kernel_mappings
-
 end

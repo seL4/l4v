@@ -264,9 +264,4 @@ interpretation AInvsPre?: AInvsPre
   case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_assms)?)
   qed
 
-requalify_facts
-  RISCV64.user_mem_dom_cong
-  RISCV64.device_mem_dom_cong
-  RISCV64.device_frame_in_device_region
-
 end

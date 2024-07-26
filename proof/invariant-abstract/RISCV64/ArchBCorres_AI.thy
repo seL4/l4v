@@ -39,8 +39,4 @@ crunch prepare_thread_delete
 
 end
 
-requalify_facts RISCV64.arch_finalise_cap_bcorres RISCV64.prepare_thread_delete_bcorres
-
-declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
-
 end

@@ -8,6 +8,12 @@ theory KHeapPre_AI
 imports Machine_AI
 begin
 
+arch_requalify_facts
+  det_getRegister
+  det_setRegister
+  det_getRestartPC
+  det_setNextPC
+
 primrec
   same_caps :: "Structures_A.kernel_object \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
 where

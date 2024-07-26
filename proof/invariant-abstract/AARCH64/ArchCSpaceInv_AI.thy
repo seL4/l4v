@@ -210,6 +210,4 @@ lemmas cap_vptr_simps [simp] =
 
 end
 
-arch_requalify_facts replace_cap_invs
-
 end

@@ -13,6 +13,7 @@ imports ArchVSpace_AI
 begin
 
 arch_requalify_facts
+  do_machine_op_valid_kernel_mappings
   ackInterrupt_device_state_inv
   pspace_respects_device_region_dmo
   cap_refs_respects_device_region_dmo

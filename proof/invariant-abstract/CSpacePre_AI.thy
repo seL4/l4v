@@ -20,6 +20,9 @@ arch_requalify_consts
   cap_asid_base
   cap_vptr
 
+arch_requalify_facts
+  replace_cap_invs
+
 lemma fun_upd_Some:
   "ms p = Some k \<Longrightarrow> (ms(a \<mapsto> b)) p = Some (if a = p then b else k)"
   by auto

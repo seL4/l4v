@@ -253,8 +253,4 @@ lemma safe_parent_cap_range_arch:
 
 end
 
-context begin interpretation Arch .
-requalify_facts replace_cap_invs
-end
-
 end
