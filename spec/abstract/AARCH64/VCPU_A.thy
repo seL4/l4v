@@ -13,15 +13,16 @@ imports
   InvocationLabels_A
 begin
 
+context Arch begin arch_global_naming (A)
+
+section "VCPU"
+
 text \<open>This is used by some decode functions. VCPU decode functions are the first that need to bounds
   check IRQs from the user.\<close>
 definition arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad" where
   "arch_check_irq irq \<equiv> whenE (irq > maxIRQ \<or> irq < ucast minIRQ)
                           $ throwError (RangeError (ucast minIRQ) maxIRQ)"
 
-context Arch begin arch_global_naming (A)
-
-section "VCPU"
 
 subsection "VCPU: Set TCB"
 
