@@ -4684,7 +4684,6 @@ lemma decodeSetTLSBase_ccorres:
    apply (clarsimp simp: ct_in_state'_def sysargs_rel_n_def n_msgRegisters_def)
    apply (auto simp: valid_tcb_state'_def
               elim!: pred_tcb'_weakenE)[1]
-  apply (simp add: ThreadState_defs mask_eq_iff_w2p word_size)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (auto simp: unat_eq_0 le_max_word_ucast_id)+

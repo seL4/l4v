@@ -923,6 +923,7 @@ lemmas seL4_Faults = seL4_Fault_UserException_def
                      seL4_Fault_UnknownSyscall_def
                      seL4_Fault_CapFault_def
                      seL4_Fault_Timeout_def
+                     seL4_Fault_NullFault_def
 
 lemmas seL4_Arch_Faults = seL4_Fault_VMFault_def
 
