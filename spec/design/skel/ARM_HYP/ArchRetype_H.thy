@@ -14,7 +14,7 @@ imports
   VCPU_H
   KI_Decls_H
 begin
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs CONTEXT ARM_HYP_H Arch.Types= ArchInv= bodies_only
 #INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs bodies_only CONTEXT ARM_HYP_H NOT isPDFlushLabel isPageFlushLabel

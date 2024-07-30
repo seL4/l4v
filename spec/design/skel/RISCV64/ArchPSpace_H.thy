@@ -11,7 +11,7 @@ imports
   ObjectInstances_H
 begin
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Model/PSpace/RISCV64.hs
 

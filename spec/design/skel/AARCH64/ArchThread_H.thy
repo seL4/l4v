@@ -15,7 +15,7 @@ imports
   ArchHypervisor_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread/AARCH64.hs CONTEXT AARCH64_H Arch=MachineOps ArchReg=MachineTypes bodies_only
 

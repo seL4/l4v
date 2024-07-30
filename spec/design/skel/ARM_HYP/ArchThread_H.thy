@@ -13,7 +13,7 @@ imports
   ArchVSpaceDecls_H
   ArchHypervisor_H
 begin
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread/ARM.lhs CONTEXT ARM_HYP_H ARMHardware=ARM_HYP bodies_only
 

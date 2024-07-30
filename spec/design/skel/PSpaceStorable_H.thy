@@ -11,13 +11,11 @@ imports
   "Lib.DataMap"
 begin
 
-context begin interpretation Arch .
-requalify_types
+arch_requalify_types (H)
   arch_kernel_object_type
 
-requalify_consts
+arch_requalify_consts (H)
   archTypeOf
-end
 
 lemma UserData_singleton [simp]:
   "(v = UserData) = True" "(UserData = v) = True"

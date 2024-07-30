@@ -12,7 +12,7 @@ imports
   "Lib.HaskellLib_H"
   MachineOps
 begin
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 definition newFPUState :: "fpu_state" where
   "newFPUState \<equiv> FPUState (K 0) 0 0 "

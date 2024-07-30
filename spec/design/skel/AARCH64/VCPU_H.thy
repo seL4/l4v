@@ -14,7 +14,7 @@ imports
   Invocations_H
   TCB_H
 begin
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT AARCH64_H
 #INCLUDE_HASKELL SEL4/Object/VCPU/AARCH64.hs CONTEXT AARCH64_H ArchInv=Arch \

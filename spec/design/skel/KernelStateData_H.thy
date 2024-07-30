@@ -18,13 +18,6 @@ imports
   ArchStateData_H
 begin
 
-context begin interpretation Arch .
-
-requalify_types
-  vmpage_size
-
-end
-
 requalify_types (in Arch)
   kernel_state
 
