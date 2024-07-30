@@ -13,7 +13,7 @@ imports
   Hardware_H
   KI_Decls_H
 begin
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs CONTEXT ARM_H Arch.Types= ArchInv= bodies_only
 #INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs bodies_only CONTEXT ARM_H NOT isPDFlushLabel isPageFlushLabel

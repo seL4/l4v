@@ -15,24 +15,21 @@ imports
   ArchTCB_H
 begin
 
-context begin interpretation Arch .
-requalify_consts
+arch_requalify_consts (H)
   decodeTransfer
-  gpRegisters
-  frameRegisters
-  getRegister
-  setNextPC
-  getRestartPC
-  sanitiseRegister
-  getSanitiseRegisterInfo
-  setRegister
   performTransfer
   msgInfoRegister
   msgRegisters
   fromVPtr
   postModifyRegisters
+  sanitiseRegister
+  getSanitiseRegisterInfo
+
+(* clobbers previously requalified abstract spec constants with design spec versions *)
+arch_requalify_consts (aliasing, H)
+  gpRegisters
+  frameRegisters
   tlsBaseRegister
-end
 
 abbreviation "mapMaybe \<equiv> option_map"
 

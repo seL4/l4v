@@ -10,6 +10,8 @@ imports
   ArchRetypeDecls_H
   ArchLabelFuns_H
 begin
+
+(* Haskell expects these with Arch prefix *)
 requalify_types (in Arch)
   copy_register_sets irqcontrol_invocation
   invocation
@@ -17,9 +19,10 @@ requalify_types (in Arch)
 #INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=Arch NOT GenInvocationLabels InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType genInvocationType
 
+(* disambiguate name clash between Arch and non-arch consts with same names *)
 context Arch begin
 context begin global_naming global
-requalify_types
+requalify_types (aliasing)
   Invocations_H.invocation
 end
 end

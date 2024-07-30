@@ -15,7 +15,7 @@ imports
   FaultHandlerDecls_H
   InterruptDecls_H
 begin
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/VCPU/AARCH64.hs CONTEXT AARCH64_H decls_only \
   ONLY countTrailingZeros irqVPPIEventIndex

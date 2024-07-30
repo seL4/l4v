@@ -13,15 +13,14 @@ imports
   ArchFaultHandler_H
 begin
 
-context begin interpretation Arch .
-requalify_consts
-  syscallMessage
-  fromVPtr
-  exceptionMessage
-  debugPrint
+arch_requalify_consts (H)
   makeArchFaultMessage
   handleArchFaultReply
-end
+
+(* clobbers previously requalified abstract spec constants with design spec versions *)
+arch_requalify_consts (aliasing, H)
+  syscallMessage
+  exceptionMessage
 
 #INCLUDE_HASKELL_PREPARSE SEL4/API/Failures.lhs
 

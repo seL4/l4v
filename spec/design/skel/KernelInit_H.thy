@@ -15,14 +15,10 @@ imports
   Thread_H
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   getMemoryRegions
   addrFromPPtr
   init_machine_state
-
-end
 
 requalify_consts (in Arch)
   newKernelState
@@ -77,11 +73,19 @@ newKernelState_def:
         ksMachineState = init_machine_state
 \<rparr>"
 
+(* disambiguate name clash between Arch and non-arch consts with same names *)
 context Arch begin
-requalify_facts
+requalify_facts (aliasing)
+   newKernelState_def
+requalify_consts (aliasing)
+   newKernelState
+
+context begin global_naming global
+requalify_facts (aliasing)
    KernelInit_H.newKernelState_def
-requalify_consts
+requalify_consts (aliasing)
    KernelInit_H.newKernelState
+end
 end
 
 end

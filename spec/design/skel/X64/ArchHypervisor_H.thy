@@ -15,7 +15,7 @@ imports
   InterruptDecls_H
 begin
 
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/X64.lhs Arch= CONTEXT X64_H decls_only ArchInv= ArchLabels=
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/X64.lhs Arch= CONTEXT X64_H bodies_only ArchInv= ArchLabels=

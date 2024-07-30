@@ -13,7 +13,7 @@ imports
   ArchHypervisor_H
 begin
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/Interrupt/RISCV64.hs CONTEXT RISCV64_H bodies_only ArchInv= Arch= NOT plic_complete_claim
 

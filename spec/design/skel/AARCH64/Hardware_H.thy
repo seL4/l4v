@@ -11,7 +11,7 @@ imports
   State_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
   NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
@@ -41,11 +41,10 @@ context Arch begin global_naming AARCH64_H
 
 end
 
-context begin interpretation Arch .
-requalify_types vmrights
-end
+arch_requalify_types (H)
+  vmrights
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H instanceproofs NOT plic_complete_claim HardwareASID VMFaultType VMPageSize VMPageEntry HypFaultType
 
@@ -53,7 +52,7 @@ context Arch begin global_naming AARCH64_H
 
 (* Kernel_Config provides a generic numeral, Haskell expects type irq *)
 abbreviation (input) maxIRQ :: irq where
-  "maxIRQ == Kernel_Config.maxIRQ"
+  "maxIRQ \<equiv> Kernel_Config.maxIRQ"
 
 end (* context AARCH64 *)
 
