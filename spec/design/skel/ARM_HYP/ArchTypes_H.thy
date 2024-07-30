@@ -19,7 +19,7 @@ begin
 
 #INCLUDE_HASKELL SEL4/API/Types/Universal.lhs all_bits
 
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Types/ARM.lhs CONTEXT ARM_HYP_H
 

@@ -14,7 +14,7 @@ imports
   KI_Decls_H
   InterruptDecls_H
 begin
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/RISCV64.hs Arch= CONTEXT RISCV64_H decls_only ArchInv= ArchLabels=

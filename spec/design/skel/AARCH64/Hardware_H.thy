@@ -11,7 +11,7 @@ imports
   State_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
   NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
@@ -45,7 +45,7 @@ context begin interpretation Arch .
 requalify_types vmrights
 end
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H instanceproofs NOT plic_complete_claim HardwareASID VMFaultType VMPageSize VMPageEntry HypFaultType
 

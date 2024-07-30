@@ -15,7 +15,7 @@ imports
   ArchObjInsts_H
 begin
 
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Invocation/X64.lhs CONTEXT X64_H decls_only NOT Invocation IRQControlInvocation
 

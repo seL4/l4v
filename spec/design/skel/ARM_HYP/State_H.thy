@@ -16,7 +16,7 @@ imports
   RegisterSet_H
   MachineOps
 begin
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"
@@ -37,7 +37,7 @@ end
 
 #INCLUDE_HASKELL Data/WordLib.lhs all_bits NOT wordBits
 
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=ARM_HYP CONTEXT ARM_HYP_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr

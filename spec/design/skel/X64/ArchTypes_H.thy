@@ -19,7 +19,7 @@ begin
 
 #INCLUDE_HASKELL SEL4/API/Types/Universal.lhs all_bits
 
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Types/X64.lhs CONTEXT X64_H
 

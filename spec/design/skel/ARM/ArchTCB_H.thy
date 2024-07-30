@@ -7,7 +7,7 @@
 theory ArchTCB_H
 imports TCBDecls_H
 begin
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/TCB/ARM.lhs RegisterSet= CONTEXT ARM_H
 

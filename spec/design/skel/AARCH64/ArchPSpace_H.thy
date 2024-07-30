@@ -11,7 +11,7 @@ imports
   ObjectInstances_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Model/PSpace/AARCH64.hs decls_only ONLY pTablePartialOverlap
 #INCLUDE_HASKELL SEL4/Model/PSpace/AARCH64.hs NOT pTablePartialOverlap

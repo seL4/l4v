@@ -15,7 +15,7 @@ imports
   PSpaceFuns_H
   ArchObjInsts_H
 begin
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM_HYP_H decls_only NOT isPageFlushLabel isPDFlushLabel Invocation IRQControlInvocation CopyRegisterSets
 

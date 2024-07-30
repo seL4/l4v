@@ -15,7 +15,7 @@ imports
   ArchVSpaceDecls_H
   ArchHypervisor_H
 begin
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs CONTEXT ARM_HYP_H bodies_only ArchInv=ArchRetypeDecls_H.ARM_HYP ArchLabels=ArchInvocationLabels_H.ARM_HYP NOT checkPDAt checkPTAt checkPDASIDMapMembership checkValidMappingSize vptrFromPPtr
 

@@ -14,7 +14,7 @@ theory State_H
 imports
   RegisterSet_H
 begin
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"
@@ -35,7 +35,7 @@ end
 
 #INCLUDE_HASKELL Data/WordLib.lhs all_bits NOT wordBits
 
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=X64 CONTEXT X64_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
 

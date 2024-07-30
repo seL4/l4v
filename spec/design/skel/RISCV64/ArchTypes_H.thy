@@ -19,7 +19,7 @@ begin
 
 #INCLUDE_HASKELL SEL4/API/Types/Universal.lhs all_bits
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Types/RISCV64.hs CONTEXT RISCV64_H
 

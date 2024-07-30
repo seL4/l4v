@@ -18,7 +18,7 @@ imports
   ArchStructures_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Model/StateData/AARCH64.hs CONTEXT AARCH64_H NOT ArmVSpaceRegionUse
 

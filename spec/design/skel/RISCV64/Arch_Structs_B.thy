@@ -12,7 +12,7 @@ theory Arch_Structs_B
 imports Setup_Locale
 begin
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Model/StateData/RISCV64.hs CONTEXT RISCV64_H ONLY RISCVVSpaceRegionUse
 

@@ -10,7 +10,7 @@ theory ArchFaultHandler_H
 imports TCB_H Structures_H
 begin
 
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 
 #INCLUDE_HASKELL_PREPARSE SEL4/API/Failures/ARM.lhs
