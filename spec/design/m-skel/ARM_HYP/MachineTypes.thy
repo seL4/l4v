@@ -14,7 +14,7 @@ imports
   Setup_Locale
   Platform
 begin
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 #INCLUDE_SETTINGS keep_constructor=hyp_fault_type
 #INCLUDE_SETTINGS keep_constructor=virt_timer
@@ -33,12 +33,9 @@ section "Types"
 
 end
 
-context begin interpretation Arch .
-requalify_types register vcpureg vppievent_irq virt_timer
+arch_requalify_types register vcpureg vppievent_irq virt_timer
 
-end
-
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP instanceproofs
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP instanceproofs ONLY VPPIEventIRQ VirtTimer
@@ -89,7 +86,7 @@ where
 
 end_qualify
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 text \<open>
   The machine monad is used for operations on the state defined above.
@@ -101,7 +98,7 @@ end
 translations
   (type) "'c ARM_HYP.machine_monad" <= (type) "(ARM_HYP.machine_state, 'c) nondet_monad"
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 text \<open>
   After kernel initialisation all IRQs are masked.
@@ -143,11 +140,9 @@ definition
 
 end
 
-context begin interpretation Arch .
-requalify_types vmpage_size
-end
+arch_requalify_types vmpage_size
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP instanceproofs ONLY HardwareASID VMFaultType HypFaultType VMPageSize
 
