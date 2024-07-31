@@ -2306,7 +2306,7 @@ lemma cteInsert_sane[wp]:
 
 crunch setExtraBadge, transferCaps, handleFaultReply, doIPCTransfer
   for sch_act_sane [wp]: sch_act_sane
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps sch_act_sane_lift simp: crunch_simps)
 
 lemma handleHypervisorFault_corres:
   "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread

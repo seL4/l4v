@@ -664,10 +664,9 @@ This module uses the C preprocessor to select a target architecture.
 >         threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) from
 >         cur <- getCurThread
 >         action <- getSchedulerAction
->         case action of
->             SwitchToThread candidate -> when (candidate == from || from == cur) rescheduleRequired
->             _ -> when (from == cur) rescheduleRequired
->     setSchedContext scPtr (sc { scTCB = Just tcbPtr })
+>         when (from == cur || action == SwitchToThread from)
+>             rescheduleRequired
+>     updateSchedContext scPtr (\sc -> sc { scTCB = Just tcbPtr })
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
 
 > invokeSchedControlConfigureFlags :: SchedControlInvocation -> Kernel ()

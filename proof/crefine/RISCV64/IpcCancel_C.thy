@@ -1877,7 +1877,7 @@ lemma rescheduleRequired_ccorres:
   "ccorres dc xfdc
      ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs' and no_0_obj'
       and pspace_aligned' and pspace_distinct')
-     UNIV []
+     UNIV hs
      rescheduleRequired (Call rescheduleRequired_'proc)"
   supply if_split[split del]
   apply cinit

@@ -920,7 +920,7 @@ lemma tcbReleaseRemove_tcbPriority[wp]:
 
 lemma schedContextDonate_tcbPriority[wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  apply (simp add: schedContextDonate_def)
+  apply (simp add: schedContextDonate_def updateSchedContext_def)
   by (wpsimp wp: hoare_drop_imps)
 
 lemma asUser_obj_at_unchangedT:

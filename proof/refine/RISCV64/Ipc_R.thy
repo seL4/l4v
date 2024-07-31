@@ -6178,35 +6178,6 @@ lemma bindScReply_valid_idle':
   unfolding bindScReply_def
   by (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift set_reply'.obj_at')
 
-lemma replyPush_valid_idle':
-  "\<lbrace>valid_idle'
-    and valid_pspace'
-    and (\<lambda>s. callerPtr \<noteq> ksIdleThread s)
-    and sym_heap_tcbSCs\<rbrace>
-   replyPush callerPtr calleePtr replyPtr canDonate
-   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
-  apply (simp only: replyPush_def)
-  supply if_split [split del]
-  apply wpsimp
-         apply (wpsimp wp: schedContextDonate_valid_idle' bindScReply_valid_idle')+
-       apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift')
-      apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift')
-     apply (wpsimp wp: threadGet_wp)+
-  apply (clarsimp simp: tcb_at'_ex_eq_all valid_pspace'_def)
-  apply (subgoal_tac "\<forall>kob. valid_reply' kob s \<longrightarrow> valid_reply' (replyTCB_update (\<lambda>_. Some callerPtr) kob) s")
-   apply (subgoal_tac "calleePtr \<noteq> idle_thread_ptr", simp)
-    apply (subgoal_tac "y \<noteq> idle_sc_ptr", simp)
-     apply (erule (3) not_idle_scTCB)
-     apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
-     apply (clarsimp simp: valid_tcb'_def)
-    apply (frule (2) not_idle_tcbSC[where p=callerPtr])
-      apply (clarsimp simp: valid_idle'_def)
-     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-   apply (clarsimp simp: valid_idle'_def idle_tcb'_def obj_at'_real_def ko_wp_at'_def)
-  apply (clarsimp simp: valid_reply'_def)
-  done
-
 lemma replyPush_untyped_ranges_zero'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>untyped_ranges_zero'\<rbrace>"
   apply (clarsimp simp: untyped_ranges_zero_inv_null_filter_cteCaps_of)
@@ -6724,8 +6695,7 @@ lemma si_invs'_helper2:
         od)
   \<lbrace>\<lambda>b s. invs' s \<and> tcb_at' d s \<and> ex_nonz_cap_to' d s
          \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) d s\<rbrace>"
-  apply (wpsimp wp: ex_nonz_cap_to_pres' schedContextDonate_invs' replyPush_invs'
-                    replyPush_valid_idle' sts_invs_minor' schedContextDonate_valid_idle'
+  apply (wpsimp wp: ex_nonz_cap_to_pres' schedContextDonate_invs' replyPush_invs' sts_invs_minor'
                     replyPush_st_tcb_at'_not_caller sts_st_tcb' threadGet_wp)
   apply (frule_tac P'="(\<lambda>st'. \<forall>rptr. st' \<noteq> BlockedOnReply rptr)" in pred_tcb'_weakenE)
    apply (clarsimp simp: is_BlockedOnReply_def)

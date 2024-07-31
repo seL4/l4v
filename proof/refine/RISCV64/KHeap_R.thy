@@ -4900,6 +4900,12 @@ lemma setSchedContext_scReplies_of:
   apply (erule back_subst[where P=P], rule ext)
   by (clarsimp simp: opt_map_def)
 
+lemma updateSchedContext_scReplies_of:
+  "(\<And>sc. scReply (f sc) = scReply sc) \<Longrightarrow> updateSchedContext scPtr f \<lbrace>\<lambda>s. P' (scReplies_of s)\<rbrace>"
+  apply (wpsimp simp: updateSchedContext_def wp: setSchedContext_scReplies_of)
+  apply (auto elim!: rsubst[where P=P'] simp: opt_map_def obj_at'_def)
+  done
+
 lemma getObject_tcb_wp:
   "\<lbrace>\<lambda>s. tcb_at' p s \<longrightarrow> (\<exists>t::tcb. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
