@@ -14,16 +14,11 @@ imports
   Invocations_H
   InvocationLabels_H
   Config_H
-  MachineExports
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (H)
   minUntypedSizeBits
   maxUntypedSizeBits
-
-end
 
 consts
   cNodeOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"

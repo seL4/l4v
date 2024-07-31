@@ -15,9 +15,7 @@ imports
   KernelInitMonad_H
 begin
 
-context begin interpretation Arch .
-requalify_consts
+arch_requalify_consts (H)
   handleHypervisorFault
-end
 
 end

@@ -12,28 +12,25 @@ chapter "Types visible in the API"
 
 theory Types_H
 imports
+  MachineExports
   ArchTypes_H
 begin
 
-context begin interpretation Arch .
-requalify_types
+arch_requalify_types (H)
   object_type
-  machine_word
   paddr
   vptr
 
-requalify_consts
+arch_requalify_consts (H)
   getObjectSize
   fromAPIType
   toAPIType
   isFrameType
   pageType
-  ptrFromPAddr
   tcbBlockSizeBits
 
-requalify_facts
+arch_requalify_facts (H)
   tcbBlockSizeBits_def
-end
 
 #INCLUDE_HASKELL SEL4/API/Types.lhs all_bits NOT wordsFromBootInfo messageInfoFromWord wordFromMessageInfo ObjectType getObjectSize fromAPIType toAPIType isFrameType pageType
 #INCLUDE_HASKELL SEL4/API/Types.lhs all_bits ONLY wordsFromBootInfo messageInfoFromWord wordFromMessageInfo

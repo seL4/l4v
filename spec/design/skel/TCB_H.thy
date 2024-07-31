@@ -15,24 +15,22 @@ imports
   ArchTCB_H
 begin
 
-context begin interpretation Arch .
-requalify_consts
+arch_requalify_consts (H)
   decodeTransfer
-  gpRegisters
-  frameRegisters
-  getRegister
-  setNextPC
-  getRestartPC
-  sanitiseRegister
-  getSanitiseRegisterInfo
-  setRegister
   performTransfer
   msgInfoRegister
   msgRegisters
   fromVPtr
   postModifyRegisters
+
+(* FIXME arch-split: not clear why this is being done this way, there's no disambiguation *)
+(* override generic names with arch-specific versions *)
+arch_requalify_consts (aliasing, H)
+  gpRegisters
+  frameRegisters
   tlsBaseRegister
-end
+  sanitiseRegister
+  getSanitiseRegisterInfo
 
 abbreviation "mapMaybe \<equiv> option_map"
 

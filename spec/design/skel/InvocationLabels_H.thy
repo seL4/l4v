@@ -10,11 +10,6 @@ theory InvocationLabels_H
 imports ArchInvocationLabels_H
 begin
 
-context begin interpretation Arch .
-requalify_types
-  arch_invocation_label
-end
-
 text \<open>
   An enumeration of all system call labels.
 \<close>
