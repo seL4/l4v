@@ -536,7 +536,7 @@ crunch InterruptDecls_H.invokeIRQHandler
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemmas invokeIRQHandler_typ_ats[wp] =
-  typ_at_lifts [OF InterruptDecls_H_invokeIRQHandler_typ_at']
+  typ_at_lifts [OF invokeIRQHandler_typ_at']
 
 crunch setDomain
   for tcb_at'[wp]: "tcb_at' tptr"
