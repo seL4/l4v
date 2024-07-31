@@ -386,12 +386,12 @@ definition csched_context_relation :: "Structures_H.sched_context \<Rightarrow> 
   "csched_context_relation asc csc \<equiv>
        scPeriod asc = scPeriod_C csc
      \<and> scConsumed asc = scConsumed_C csc
-     \<and> option_to_ptr (scTCB asc) = scTcb_C csc
+     \<and> option_to_ctcb_ptr (scTCB asc) = scTcb_C csc
      \<and> option_to_ptr (scReply asc) = scReply_C csc
      \<and> option_to_ptr (scNtfn asc) = scNotification_C csc
      \<and> scBadge asc = scBadge_C csc
      \<and> scSporadic asc = to_bool (scSporadic_C csc)
-     \<and> option_to_ptr (scYieldFrom asc) = scYieldFrom_C csc
+     \<and> option_to_ctcb_ptr (scYieldFrom asc) = scYieldFrom_C csc
      \<and> scRefillMax asc = unat (scRefillMax_C csc)
      \<and> scRefillHead asc = unat (scRefillHead_C csc)
      \<and> scRefillTail asc = unat (scRefillTail_C csc)"
