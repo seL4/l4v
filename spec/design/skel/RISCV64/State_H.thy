@@ -26,12 +26,8 @@ where
 
 end
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (H)
   wordBits
-
-end
 
 #INCLUDE_HASKELL Data/WordLib.lhs all_bits NOT wordBits
 

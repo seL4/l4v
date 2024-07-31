@@ -41,9 +41,8 @@ context Arch begin arch_global_naming (H)
 
 end
 
-context begin interpretation Arch .
-requalify_types vmrights
-end
+arch_requalify_types (H)
+  vmrights
 
 context Arch begin arch_global_naming (H)
 
@@ -53,7 +52,7 @@ context Arch begin arch_global_naming (H)
 
 (* Kernel_Config provides a generic numeral, Haskell expects type irq *)
 abbreviation (input) maxIRQ :: irq where
-  "maxIRQ == Kernel_Config.maxIRQ"
+  "maxIRQ \<equiv> Kernel_Config.maxIRQ"
 
 end (* context AARCH64 *)
 

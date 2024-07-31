@@ -21,9 +21,8 @@ text \<open>
 
 end
 
-context begin interpretation Arch .
-requalify_types arch_invocation_label
-end
+arch_requalify_types (H)
+  arch_invocation_label
 
 context Arch begin arch_global_naming (H)
 

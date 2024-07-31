@@ -52,10 +52,8 @@ where
 
 end
 
-context begin interpretation Arch .
-
-requalify_types
+(* not possible to move this requalification to generic, as some arches don't have vcpu *)
+arch_requalify_types (H)
   vcpu
 
-end
 end

@@ -16,15 +16,19 @@ context Arch begin arch_global_naming (H)
 
 end
 
-context begin interpretation Arch .
-requalify_types vmrights
-end
+arch_requalify_types (H)
+  vmrights
 
 context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64_H instanceproofs NOT VMFaultType VMPageSize VMPageEntry VMMapType HypFaultType
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64_H ONLY wordFromPDE wordFromPTE wordFromPML4E wordFromPDPTE
+
+(* Unlike on Arm architectures, maxIRQ comes from Platform definitions.
+   We provide this abbreviation to match arch-split expectations. *)
+abbreviation (input) maxIRQ :: irq where
+  "maxIRQ \<equiv> Platform.X64.maxIRQ"
 
 end (* context X64 *)
 

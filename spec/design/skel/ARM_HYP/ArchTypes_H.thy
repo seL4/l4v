@@ -75,8 +75,4 @@ interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_object_type)
 end
 
-context begin interpretation Arch .
-requalify_types object_type
-end
-
 end
