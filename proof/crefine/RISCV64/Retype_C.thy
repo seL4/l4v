@@ -4770,7 +4770,7 @@ proof (intro impI allI)
        (the (sc_of' ko))
        (from_bytes (replicate (size_of TYPE(sched_context_C)) 0))"
     unfolding csched_context_relation_def sched_context_C_size
-    apply (simp add: makeObject_sc size_of_def projectKO_opt_sc ko_def)
+    apply (simp add: makeObject_sc size_of_def projectKO_opt_sc ko_def option_to_ctcb_ptr_def)
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps sched_context_C_tag_def)
     apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def

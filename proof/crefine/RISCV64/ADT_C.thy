@@ -1143,21 +1143,21 @@ lemma map_to_cnes_eq:
   apply (clarsimp simp: projectKO_opt_cte split: kernel_object.splits)
   done
 
-lemma ksPSpace_valid_pspace_scRefs_nonzero:
-  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> valid_pspace' s; map_to_scs ah p = Some sc\<rbrakk> \<Longrightarrow>
+lemma map_to_scs_Some_scRefs_nonzero:
+  "\<lbrakk>map_to_scs (ksPSpace s) p = Some sc; valid_objs' s; no_0_obj' s\<rbrakk> \<Longrightarrow>
    scTCB sc \<noteq> Some 0 \<and> scReply sc \<noteq> Some 0 \<and> scNtfn sc \<noteq> Some 0 \<and> scYieldFrom sc \<noteq> Some 0"
-  apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
+  apply (clarsimp simp: map_comp_def split: option.splits)
   by (fastforce simp: valid_obj'_def valid_sched_context'_def)
 
 lemma scRefills_unique:
-  assumes "refill_buffer_relation ah ch gs" "refill_buffer_relation ah' ch gs"
-      and "ksPSpace s = ah \<and> ksPSpace s p = Some (KOSchedContext sc) \<and> valid_sched_context' sc s"
-      and "ksPSpace s' = ah' \<and> ksPSpace s' p = Some (KOSchedContext sc') \<and> valid_sched_context' sc' s'"
+  assumes "refill_buffer_relation (ksPSpace as) ch gs" "refill_buffer_relation (ksPSpace as') ch gs"
+      and "ksPSpace as p = Some (KOSchedContext sc)" "valid_sched_context' sc as"
+      and "ksPSpace as' p = Some (KOSchedContext sc')" "valid_sched_context' sc' s'"
   shows   "scRefills sc = scRefills sc'"
   apply (insert assms)
   apply (clarsimp simp: valid_sched_context'_def)
-  apply (frule refill_buffer_relation_crefill_relation[where ah="ksPSpace s"])
-  apply (frule refill_buffer_relation_crefill_relation[where ah="ksPSpace s'"])
+  apply (frule refill_buffer_relation_crefill_relation[where ah="ksPSpace as"])
+  apply (frule refill_buffer_relation_crefill_relation[where ah="ksPSpace as'"])
   apply (clarsimp simp: Let_def)
   apply (drule_tac x=p in spec)+
   apply (rule list_eq_iff_nth_eq[THEN iffD2])
@@ -1177,61 +1177,102 @@ lemma scRefills_unique:
 
 lemma scSize_unique:
   assumes "refill_buffer_relation ah ch gs" "refill_buffer_relation ah' ch gs"
-      and "ksPSpace s = ah \<and> ksPSpace s p = Some (KOSchedContext sc)"
-      and "ksPSpace s' = ah' \<and> ksPSpace s' p = Some (KOSchedContext sc')"
+      and "ah p = Some (KOSchedContext sc)"
+      and "ah' p = Some (KOSchedContext sc')"
   shows   "scSize sc = scSize sc'"
   apply (insert assms)
-  apply (clarsimp simp: valid_sched_context'_def)
-  apply (frule refill_buffer_relation_size_eq[where ah="ksPSpace s"])
-  apply (frule refill_buffer_relation_size_eq[where ah="ksPSpace s'"])
+  apply (frule refill_buffer_relation_size_eq[where ah=ah])
+  apply (frule refill_buffer_relation_size_eq[where ah=ah'])
   apply (clarsimp simp: Let_def)
   apply (drule_tac x=p in spec)+
   by fastforce
 
+lemma
+  assumes "pspace_aligned' as" "pspace_distinct' as" "valid_sched_context' asc as"
+  shows tcb_at'_scTCB:
+    "\<forall>tcbPtr. scTCB asc = Some tcbPtr \<longrightarrow> tcb_at' tcbPtr as"
+  and reply_at'_scReply:
+    "\<forall>replyPtr. scReply asc = Some replyPtr \<longrightarrow> reply_at' replyPtr as"
+  and ntfn_at'_scNtfn:
+    "\<forall>ntfnPtr. scNtfn asc = Some ntfnPtr \<longrightarrow> ntfn_at' ntfnPtr as"
+  and tcb_at'_scYieldFrom:
+    "\<forall>tcbPtr. scYieldFrom asc = Some tcbPtr \<longrightarrow> tcb_at' tcbPtr as"
+  using assms
+  by (clarsimp simp: valid_sched_context'_def obj_at'_def)+
+
 lemma cpspace_sched_context_relation_unique:
-  assumes rels: "cpspace_sched_context_relation ah ch" "cpspace_sched_context_relation ah' ch"
-                "refill_buffer_relation ah ch gs" "refill_buffer_relation ah' ch gs"
-      and   vs: "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s"
-      and  vs': "\<exists>s. ksPSpace s = ah' \<and> valid_pspace' s"
-  shows   "map_to_scs ah' = map_to_scs ah"
+  assumes rels: "cpspace_sched_context_relation (ksPSpace as) ch"
+                "cpspace_sched_context_relation (ksPSpace as') ch"
+                "refill_buffer_relation (ksPSpace as) ch gs"
+                "refill_buffer_relation (ksPSpace as') ch gs"
+  assumes   vs: "valid_objs' as" "no_0_obj' as"
+  assumes  vs': "valid_objs' as'" "no_0_obj' as'"
+  assumes  adb: "pspace_aligned' as" "pspace_distinct' as" "pspace_bounded' as"
+  assumes adb': "pspace_aligned' as'" "pspace_distinct' as'" "pspace_bounded' as'"
+  shows   "map_to_scs (ksPSpace as') = map_to_scs (ksPSpace as)"
   using rels
   apply (clarsimp simp: cmap_relation_def)
   apply (drule inj_image_inv[OF inj_Ptr])+
   apply simp
   apply (rule ext)
-  apply (rename_tac x)
-  apply (case_tac "x:dom (map_to_scs ah)")
+  apply (rename_tac p)
+  apply (case_tac "p \<in> dom (map_to_scs (ksPSpace as))")
    prefer 2
    apply (fastforce simp: dom_def)
   apply (drule bspec, assumption)+
-  apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
+  apply (simp add: dom_def Collect_eq, drule_tac x=p in spec)
   apply clarsimp
   apply (rename_tac sc sc')
-  apply (frule ksPSpace_valid_pspace_scRefs_nonzero[OF vs])
-  apply (frule ksPSpace_valid_pspace_scRefs_nonzero[OF vs'])
-  apply (cut_tac vs vs')
+  apply (prop_tac "valid_sched_context' sc as")
+   apply (fastforce dest: ksPSpace_valid_sched_context' map_to_ko_atI intro: vs adb map_to_ko_atI
+                    simp: obj_at'_def)
+  apply (prop_tac "valid_sched_context' sc' as'")
+   apply (fastforce dest: ksPSpace_valid_sched_context' map_to_ko_atI intro: vs' adb' map_to_ko_atI
+                    simp: obj_at'_def)
+  apply (frule map_to_scs_Some_scRefs_nonzero[OF _ vs])
+  apply (frule map_to_scs_Some_scRefs_nonzero[OF _ vs'])
+  apply (frule tcb_at'_scTCB[OF adb(1) adb(2)])
+  apply (frule tcb_at'_scTCB[OF adb'(1) adb'(2)])
+  apply (frule reply_at'_scReply[OF adb(1) adb(2)])
+  apply (frule reply_at'_scReply[OF adb'(1) adb'(2)])
+  apply (frule ntfn_at'_scNtfn[OF adb(1) adb(2)])
+  apply (frule ntfn_at'_scNtfn[OF adb'(1) adb'(2)])
+  apply (frule tcb_at'_scYieldFrom[OF adb(1) adb(2)])
+  apply (frule tcb_at'_scYieldFrom[OF adb'(1) adb'(2)])
+  apply (insert vs vs' adb adb')
   apply (clarsimp simp: valid_pspace'_def)
-  apply (rename_tac s s')
-  apply (frule (3) map_to_ko_atI)
-  apply (frule_tac v=sc in map_to_ko_atI, simp+)
-  apply (frule_tac v=sc' in map_to_ko_atI, simp+)
-  apply (clarsimp dest!: obj_at_valid_objs' split: option.splits)
-  apply (prop_tac "ksPSpace s x = Some (KOSchedContext sc)")
-   apply (clarsimp simp: map_comp_def split: option.splits)
-  apply (prop_tac "ksPSpace s' x = Some (KOSchedContext sc')")
-   apply (clarsimp simp: map_comp_def split: option.splits)
+  apply (frule (3) map_to_ko_atI[where s=as])
+  apply (frule (3) map_to_ko_atI[where s=as'])
+  apply (frule_tac p=p in scRefills_unique[where as=as and as'=as'])
+       apply force
+      apply (force simp: obj_at'_def)
+     apply force
+    apply (force simp: obj_at'_def)
+   apply force
+  apply (frule_tac p=p in scSize_unique[where ah="ksPSpace as" and ah'="ksPSpace as'"])
+     apply fastforce
+    apply (force simp: obj_at'_def)
+   apply (force simp: obj_at'_def)
   apply (thin_tac "map_to_scs x y = Some z" for x y z)+
-  apply (frule_tac s=s and s'=s' and p=x and sc=sc and sc'=sc'
-               and ah="ksPSpace s" and ah'="ksPSpace s'"
-                in scRefills_unique,
-         (fastforce simp: valid_obj'_def)+)
-  apply (frule_tac s=s and s'=s' and p=x and sc=sc and sc'=sc'
-               and ah="ksPSpace s" and ah'="ksPSpace s'"
-                in scSize_unique,
-         fastforce+)
-  apply (case_tac sc, case_tac sc', case_tac "the (clift ch (sched_context_Ptr x))")
-  by (auto simp: csched_context_relation_def option_to_ptr_def option_to_0_def
-          split: if_splits option.splits) \<comment> \<open>takes ~ a minute\<close>
+  apply (case_tac "the (clift ch (sched_context_Ptr p))")
+  apply (clarsimp simp: csched_context_relation_def)
+  apply (clarsimp simp: option_to_ctcb_ptr_def option_to_ptr_def option_to_0_def)
+  apply (rule sched_context.expand)
+  apply clarsimp
+  apply (intro conjI)
+     apply (case_tac "scTCB sc"; case_tac "scTCB sc'"; clarsimp)
+       apply (force dest!: kernel.tcb_at_not_NULL)
+      apply (force dest!: kernel.tcb_at_not_NULL)
+     apply (force simp: tcb_ptr_to_ctcb_ptr_inj)
+    apply (case_tac "scReply sc", case_tac "scReply sc'"; clarsimp)
+    apply (clarsimp split: option.splits)
+   apply (case_tac "scNtfn sc", case_tac "scNtfn sc'"; clarsimp)
+   apply (clarsimp split: option.splits)
+  apply (case_tac "scYieldFrom sc"; case_tac "scYieldFrom sc'"; clarsimp)
+    apply (force dest!: kernel.tcb_at_not_NULL)
+   apply (force dest!: kernel.tcb_at_not_NULL)
+  apply (force simp: tcb_ptr_to_ctcb_ptr_inj)
+  done
 
 lemma ksPSpace_valid_pspace_replyRefs_nonzero:
   "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> valid_pspace' s; map_to_replies ah p = Some reply\<rbrakk> \<Longrightarrow>
@@ -1308,7 +1349,8 @@ proof -
     apply (drule (1) cpspace_user_data_relation_unique)
     apply (drule (1) cpspace_device_data_relation_unique)
     apply (drule (3) cpspace_sched_context_relation_unique)
-      apply (fastforce intro: valid_pspaces)+
+               apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')+
+           apply (fastforce intro: aligned distinct bounded aligned' distinct' bounded')+
     apply (drule (1) cpspace_reply_relation_unique)
       apply (fastforce intro: valid_pspaces)+
     apply (thin_tac "cmap_relation a c f r" for a c f r)+
