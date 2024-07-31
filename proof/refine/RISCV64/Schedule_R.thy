@@ -106,9 +106,6 @@ global_interpretation refillNew: typ_at_all_props' "refillNew scPtr maxRefills b
 global_interpretation refillUpdate: typ_at_all_props' "refillUpdate  scPtr newPeriod newBudget newMaxRefills"
   by typ_at_props'
 
-global_interpretation updateSchedContext: typ_at_all_props' "updateSchedContext scPtr f"
-  by typ_at_props'
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma findM_awesome':
@@ -5255,7 +5252,7 @@ lemma schedContextDonate_if_live_then_nonz_cap':
         \<and> pspace_aligned' s \<and> pspace_distinct' s \<and>  pspace_bounded' s\<rbrace>
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  unfolding schedContextDonate_def
+  unfolding schedContextDonate_def updateSchedContext_def
   by (wpsimp wp: threadSet_iflive'T setSchedContext_iflive' hoare_vcg_all_lift threadSet_cap_to'
            simp: conj_ac cong: conj_cong
       | wp hoare_drop_imps
@@ -5268,8 +5265,6 @@ crunch schedContextDonate
   (wp: crunch_wps threadSet_sched_pointers threadSet_valid_sched_pointers hoare_vcg_all_lift
    simp: crunch_simps)
 
-(* `obj_at' (\<lambda>x. scTCB x \<noteq> Some idle_thread_ptr) scPtr s` is
-   needed because sometimes sym_refs doesn't hold in its entirety here. *)
 lemma schedContextDonate_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> bound_sc_tcb_at' ((=) None) tcbPtr s \<and>
         ex_nonz_cap_to' scPtr s \<and> ex_nonz_cap_to' tcbPtr s\<rbrace>
@@ -5369,7 +5364,7 @@ lemma schedContextDonate_corres:
                  apply (rule_tac r'=sched_act_relation in corres_split)
                     apply (rule getSchedulerAction_corres)
                    apply (rule corres_when)
-                    apply (case_tac rv; clarsimp simp: sched_act_relation_def sc_relation_def)
+                    apply (case_tac rv; fastforce simp: sched_act_relation_def sc_relation_def)
                    apply (rule rescheduleRequired_corres_weak)
                   apply wpsimp
                  apply wpsimp
@@ -5389,7 +5384,7 @@ lemma schedContextDonate_corres:
                             hoare_vcg_all_lift hoare_vcg_imp_lift')
          apply (wpsimp wp: hoare_vcg_all_lift)
         apply (rule corres_split
-                   [OF update_sc_no_reply_stack_update_ko_at'_corres
+                   [OF updateSchedContext_no_stack_update_corres
                          [where f'="scTCB_update (\<lambda>_. Some thread)"]])
               apply (clarsimp simp: sc_relation_def refillSize_def)
              apply clarsimp

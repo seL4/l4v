@@ -584,6 +584,9 @@ crunch schedContextDonate
 global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
   by typ_at_props'
 
+global_interpretation updateSchedContext: typ_at_all_props' "updateSchedContext scPtr f"
+  by typ_at_props'
+
 crunch schedContextDonate
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]:"pspace_distinct'"
@@ -625,6 +628,16 @@ lemma tcbSchedContext_update_None_valid_objs'[wp]:
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
   done
 
+lemma updateSchedContext_valid_objs'_stTCB_update_Just[wp]:
+  "\<lbrace>valid_objs' and sc_at' scPtr and tcb_at' tcbPtr\<rbrace>
+   updateSchedContext scPtr (scTCB_update (\<lambda>_. Just tcbPtr))
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply wpsimp
+  by (clarsimp simp: opt_pred_def opt_map_def valid_obj'_def
+                     valid_sched_context'_def valid_sched_context_size'_def
+                     objBits_def objBitsKO_def refillSize_def obj_at'_def
+              split: if_splits)
+
 lemma schedContextDonate_valid_objs':
   "\<lbrace>valid_objs' and tcb_at' tcbPtr
     and sym_heap_sched_pointers and valid_sched_pointers
@@ -632,45 +645,18 @@ lemma schedContextDonate_valid_objs':
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   unfolding schedContextDonate_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps)
-  by (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                simp: valid_sched_context'_def valid_sched_context_size'_def
-                      sc_size_bounds_def objBits_def objBitsKO_def refillSize_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_disj_lift)
+  by fastforce
 
 lemma schedContextDonate_list_refs_of_replies' [wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
-  unfolding schedContextDonate_def
+  unfolding schedContextDonate_def updateSchedContext_def
   by (wpsimp simp: comp_def | rule hoare_strengthen_post[where Q'="\<lambda>_ s. P (list_refs_of_replies' s)"])+
-
-lemma schedContextDonate_valid_idle':
-  "\<lbrace>\<lambda>s. valid_idle' s \<and> tcbPtr \<noteq> idle_thread_ptr \<and>
-        obj_at' (\<lambda>sc. scTCB sc \<noteq> Some idle_thread_ptr) scPtr s\<rbrace>
-   schedContextDonate scPtr tcbPtr
-   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
-  apply (simp only: schedContextDonate_def)
-  apply (wp threadSet_idle' setSchedContext_valid_idle')
-       apply (rule_tac Q'="\<lambda>_ s. tcbPtr \<noteq> ksIdleThread s" in hoare_strengthen_post; wpsimp)
-      apply (rule_tac Q'="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and> tcbPtr \<noteq> ksIdleThread s"
-                   in hoare_strengthen_post; wpsimp)
-         apply (wpsimp wp: threadSet_idle' hoare_drop_imps threadSet_idle')
-        apply (rule_tac Q'="\<lambda>_ s. valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr \<and>
-                                 tcbPtr \<noteq> ksIdleThread s \<and> from \<noteq> ksIdleThread s"
-                     in hoare_strengthen_post)
-         apply wpsimp+
-  apply (auto simp: obj_at'_def valid_idle'_def)
-  done
 
 lemma schedContextDonate_bound_tcb_sc_at[wp]:
   "\<lbrace>\<top>\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr\<rbrace>"
-   unfolding schedContextDonate_def
+   unfolding schedContextDonate_def updateSchedContext_def
    by (wpsimp wp: set_sc'.obj_at')
-
-lemma updateSchedContext_obj_at'[wp]:
-  "\<forall>sc'. objBits sc' = objBits (f' sc'::sched_context) \<Longrightarrow>
-   updateSchedContext scp f' \<lbrace>\<lambda>s. P (sc_at' p s)\<rbrace>"
-  apply (wpsimp simp: updateSchedContext_def wp: set_sc'.set_wp)
-  apply (clarsimp simp: obj_at'_def ps_clear_upd objBits_simps)
-  done
 
 (* corres rules for updateRefillHd / updateRefillTl *)
 
