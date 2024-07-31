@@ -16,6 +16,8 @@ arch_requalify_types
   vmfault_type
   hyp_fault_type
   irq
+  user_monad
+  user_context
 
 arch_requalify_consts
   getActiveIRQ
@@ -39,6 +41,11 @@ arch_requalify_consts
   clearMemory
   non_kernel_IRQs
   tlsBaseRegister
+  debugPrint
+  configureTimer
+  initL2Cache
+  ptrFromPAddr
+  pageBits
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 
