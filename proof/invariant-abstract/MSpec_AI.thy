@@ -23,6 +23,9 @@ term "s :: abstract_state"
 (* I'm also making the minfo and new_reply_tcb optional because, as far as I can tell,
    these aren't set in the notification case. *)
 record mspec_recv_oracle =
+  (* In the notification case, seL4_(Reply)Recv will just return whatever's already in the msg info
+     register. But we can't query what's in there without invoking the (unspecified) machine
+     operation to getRegister, so there's not much point asserting anything about it. *)
   minfo :: "message_info option"
   new_reply_tcb :: "tcb option"
   badge_val :: badge
@@ -87,6 +90,10 @@ term "Notification ntfn"
 term "ntfn :: notification"
 term reply_push
 term set_reply_obj_ref
+term data_to_message_info
+term lookup_extra_caps
+term copy_mrs
+term transfer_caps
 definition
   valid_ep_obj_with_message :: "mspec_state \<Rightarrow> abstract_state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
@@ -106,7 +113,18 @@ where
              _ \<Rightarrow> (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
                (case kheap s (hd q) of Some (TCB sender) \<Rightarrow>
                  (case tcb_state sender of BlockedOnSend _ data \<Rightarrow>
-                   \<comment> \<open>TODO: Assert minfo oracle corresponds to the message_info Recv would return.\<close>
+                   \<comment> \<open>TODO: Assert minfo oracle corresponds to the message_info Recv would return.
+                       This part's tricky, because it's asserting the functionality of a sequence
+                       of nondeterministic monads (lookup_extra_caps, copy_mrs, and transfer_caps)
+                       called by do_normal_transfer, when given the data read via a machine op from
+                       the sender thread's message_info register in the first place.
+                       So, it's not clear to me how to proceed unless:
+                       (1) we can derive `mi` for sure from the data coming out of that register,
+                           i.e. if that data is `d`, then `mi = data_to_message_info d, and
+                       (2) we can accurately express what `mrs_transferred` and `mi'` should be
+                           after the execution of the three monads called by do_normal_transfer.
+                   minfo oracle = MI mrs_transferred (mi_extra_caps mi')
+                                   (mi_caps_unwrapped mi') (mi_label mi) \<close>
                    badge_val oracle = sender_badge data \<and>
                    \<comment> \<open>That the sender made a call and can grant the reply is treated as
                       conditional in ASpec, but we're going to require them here as Microkit
