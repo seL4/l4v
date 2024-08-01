@@ -67,12 +67,11 @@ term "obj :: kernel_object"
 term "e :: endpoint"
 term "n :: notification"
 term handle_recv (* refer to this - we need to be making the same validity checks *)
-term receive_ipc (* This handles the EndpointCap case *)
+term receive_ipc (* This handles the EndpointCap case, but will check the bound notification *)
 term "SendEP q"
 term get_thread_state
 term "tcb_state t"
 term "p :: sender_payload"
-term receive_signal (* This handles the NotificationCap case *)
 term "Notification ntfn"
 term "ntfn :: notification"
 definition
@@ -80,22 +79,25 @@ definition
 where
   (* FIXME: Again, ideally we don't want to take the abstract_state s as an argument here. *)
   "valid_ep_obj_with_message m s i oracle \<equiv> case cur_thread_cnode m i of
+     \<comment> \<open>Microkit only checks notifications via EndpointCap, not via any standalone NotificationCap\<close>
      Some (EndpointCap ref _ rights) \<Rightarrow> AllowRead \<in> rights \<and>
        (case kheap s ref of Some (Endpoint ep) \<Rightarrow>
-         (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
-           (case kheap s (hd q) of Some (TCB sender) \<Rightarrow>
-             \<comment> \<open>TODO: Assert fst (fst oracle) corresponds to the message_info Recv would return.\<close>
-             \<comment> \<open>TODO: Assert snd (fst oracle) corresponds to the new reply cap.\<close>
-             (case tcb_state sender of BlockedOnSend _ data \<Rightarrow> snd oracle = sender_badge data |
-             _ \<Rightarrow> False) |
+         (case cur_thread_bound_notification m of Some n \<Rightarrow>
+           (case kheap s n of Some (Notification ntfn) \<Rightarrow>
+             \<comment> \<open>receive_ipc prefers to handle any waiting bound notification via complete_signal\<close>
+             (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow> snd oracle = badge
+               \<comment> \<open>TODO: Assert fst (fst oracle) corresponds to the message_info Recv would return.\<close>
+               \<comment> \<open>TODO: Assert snd (fst oracle) corresponds to the new reply cap.\<close> |
+             \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
+             _ \<Rightarrow> (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
+               (case kheap s (hd q) of Some (TCB sender) \<Rightarrow>
+                 \<comment> \<open>TODO: Assert fst (fst oracle) corresponds to the message_info Recv would return.\<close>
+                 \<comment> \<open>TODO: Assert snd (fst oracle) corresponds to the new reply cap.\<close>
+                 (case tcb_state sender of BlockedOnSend _ data \<Rightarrow> snd oracle = sender_badge data |
+                 _ \<Rightarrow> False) |
+               _ \<Rightarrow> False) |
+             _ \<Rightarrow> False)) |
            _ \<Rightarrow> False) |
-         _ \<Rightarrow> False) |
-       _ \<Rightarrow> False) |
-     Some (NotificationCap ref _ rights) \<Rightarrow> AllowRead \<in> rights \<and>
-       (case kheap s ref of Some (Notification ntfn) \<Rightarrow>
-         \<comment> \<open>TODO: Assert fst (fst oracle) corresponds to the message_info Recv would return.\<close>
-         \<comment> \<open>TODO: Assert snd (fst oracle) corresponds to the new reply cap.\<close>
-         (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow> snd oracle = badge |
          _ \<Rightarrow> False) |
        _ \<Rightarrow> False) |
      _ \<Rightarrow> False"
