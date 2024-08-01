@@ -6,7 +6,7 @@
 
 theory MSpec_AI
 imports
-  Syscall_AI
+  KHeap_AI
 begin
 
 (* From Structures_A.thy *)
@@ -39,9 +39,25 @@ record mspec_state =
   (* Dropped: (ks_recv_oracle (Maybe KernelOracle)).
      Again trying to phrase it as a predicate on the CNode contents.
      See valid_ep_obj_with_message below. *)
-  (* TODO: (ks_local_mem Mem) *)
-  (* TODO: (ks_local_mem_writable (Array Word64 Bool)) *)
-  (* TODO: (ks_local_mem_safe (Array Word64 Bool)) *)
+  (* TODO: (ks_local_mem Mem)
+     A comment in Mathieu's smt file says "shouldn't be called local mem, this can represent memory
+     in shared memory regions" - but regardless, should these be virtual or physical addresses? *)
+  (* TODO: (ks_local_mem_writable (Array Word64 Bool))
+     That this address is mapped writable for the current PD. *)
+  (* TODO: (ks_local_mem_safe (Array Word64 Bool))
+     That the current PD is the *only* one with write access to this address. *)
+
+(* The sorts of things Mathieu's smt file asserts about:
+  - ks_local_mem
+    - that seL4_(Reply)Recv modifies the ks_local_mem to store the new badge_val at the badge_ptr
+  - ks_local_mem_writable
+    - that the badge_ptr argument to seL4_(Reply)Recv is writable
+    - that for all addresses, (is_writable_mem addr mi) if the addr is writable (see relation_mmrs_mem)
+  - ks_local_mem_safe
+    - that for all addresses, if an address is safe, then nobody else has write access
+      (see relation_mmrs_mem)
+
+*)
 
 term "TCB t"
 term "t :: tcb"
@@ -82,9 +98,12 @@ term "m :: message_info"
 term "l :: msg_label"
 term do_ipc_transfer
 term do_normal_transfer
+term as_user
+term getRegister
 term "SendEP q"
 term get_thread_state
 term "tcb_state t"
+term "t :: arch_tcb"
 term "p :: sender_payload"
 term "Notification ntfn"
 term "ntfn :: notification"
@@ -94,6 +113,7 @@ term data_to_message_info
 term lookup_extra_caps
 term copy_mrs
 term transfer_caps
+term ARM.UserContext
 definition
   valid_ep_obj_with_message :: "mspec_state \<Rightarrow> abstract_state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
@@ -106,7 +126,12 @@ where
            (case kheap s n of Some (Notification ntfn) \<Rightarrow>
              \<comment> \<open>receive_ipc prefers to handle any waiting bound notification via complete_signal\<close>
              (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow>
-               minfo oracle = None \<and>
+               \<comment> \<open>we assert that the notification case leaves the value in the user's message_info
+                  register untouched from when it called seL4_Recv, so we just retrieve that here\<close>
+               minfo oracle = (case kheap s (cur_thread s) of
+                 Some (TCB t) \<Rightarrow> (case (arch_tcb_context_get (tcb_arch t)) of ARM.UserContext u \<Rightarrow>
+                   Some (data_to_message_info (u msg_info_register))) |
+                 _ \<Rightarrow> None) \<comment> \<open>FIXME: make non-optional once I've specified the ppc case too\<close> \<and>
                new_reply_tcb oracle = None \<and>
                badge_val oracle = badge |
              \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
@@ -116,13 +141,8 @@ where
                    \<comment> \<open>TODO: Assert minfo oracle corresponds to the message_info Recv would return.
                        This part's tricky, because it's asserting the functionality of a sequence
                        of nondeterministic monads (lookup_extra_caps, copy_mrs, and transfer_caps)
-                       called by do_normal_transfer, when given the data read via a machine op from
-                       the sender thread's message_info register in the first place.
-                       So, it's not clear to me how to proceed unless:
-                       (1) we can derive `mi` for sure from the data coming out of that register,
-                           i.e. if that data is `d`, then `mi = data_to_message_info d, and
-                       (2) we can accurately express what `mrs_transferred` and `mi'` should be
-                           after the execution of the three monads called by do_normal_transfer.
+                       called by do_normal_transfer - I just need to figure out how to accurately
+                       express what `mrs_transferred` and `mi'` should be after they execute.
                    minfo oracle = MI mrs_transferred (mi_extra_caps mi')
                                    (mi_caps_unwrapped mi') (mi_label mi) \<close>
                    badge_val oracle = sender_badge data \<and>
