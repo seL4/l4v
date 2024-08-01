@@ -15,11 +15,17 @@ term "s :: abstract_state"
 (* Based on KernelState in Mathieu's gordian-relation-proof *)
 
 (* The 1st member is supposed to end up being the return value of seL4_(Reply)Recv. *)
-(* The 2nd member is supposed to give us the new reply cap. *)
+(* The 2nd member was specified as a cap, but actually we don't get a new cap from the sender,
+   we simply register the new sender with the reply cap given by the caller. *)
 (* The 3rd member of the KernelOracle tuple was of type SeL4_Ntfn. My guess is this was meant
    to mean a type for the notification word. But that's only in the notification case; in the
    endpoint case, this should be the badge of the endpoint capability invoked by the sender. *)
-type_synonym mspec_recv_oracle = "(message_info \<times> cap) \<times> badge"
+(* I'm also making the minfo and new_reply_tcb optional because, as far as I can tell,
+   these aren't set in the notification case. *)
+record mspec_recv_oracle =
+  minfo :: "message_info option"
+  new_reply_tcb :: "tcb option"
+  badge_val :: badge
 
 record mspec_state =
   cur_thread_cnode :: cnode_contents
@@ -68,12 +74,19 @@ term "e :: endpoint"
 term "n :: notification"
 term handle_recv (* refer to this - we need to be making the same validity checks *)
 term receive_ipc (* This handles the EndpointCap case, but will check the bound notification *)
+term msg_info_register
+term "m :: message_info"
+term "l :: msg_label"
+term do_ipc_transfer
+term do_normal_transfer
 term "SendEP q"
 term get_thread_state
 term "tcb_state t"
 term "p :: sender_payload"
 term "Notification ntfn"
 term "ntfn :: notification"
+term reply_push
+term set_reply_obj_ref
 definition
   valid_ep_obj_with_message :: "mspec_state \<Rightarrow> abstract_state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
@@ -85,15 +98,22 @@ where
          (case cur_thread_bound_notification m of Some n \<Rightarrow>
            (case kheap s n of Some (Notification ntfn) \<Rightarrow>
              \<comment> \<open>receive_ipc prefers to handle any waiting bound notification via complete_signal\<close>
-             (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow> snd oracle = badge
-               \<comment> \<open>TODO: Assert fst (fst oracle) corresponds to the message_info Recv would return.\<close>
-               \<comment> \<open>TODO: Assert snd (fst oracle) corresponds to the new reply cap.\<close> |
+             (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow>
+               minfo oracle = None \<and>
+               new_reply_tcb oracle = None \<and>
+               badge_val oracle = badge |
              \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
              _ \<Rightarrow> (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
                (case kheap s (hd q) of Some (TCB sender) \<Rightarrow>
-                 \<comment> \<open>TODO: Assert fst (fst oracle) corresponds to the message_info Recv would return.\<close>
-                 \<comment> \<open>TODO: Assert snd (fst oracle) corresponds to the new reply cap.\<close>
-                 (case tcb_state sender of BlockedOnSend _ data \<Rightarrow> snd oracle = sender_badge data |
+                 (case tcb_state sender of BlockedOnSend _ data \<Rightarrow>
+                   \<comment> \<open>TODO: Assert minfo oracle corresponds to the message_info Recv would return.\<close>
+                   badge_val oracle = sender_badge data \<and>
+                   \<comment> \<open>That the sender made a call and can grant the reply is treated as
+                      conditional in ASpec, but we're going to require them here as Microkit
+                      will assume the sender to be following the correct ppcall convention.\<close>
+                   sender_is_call data \<and>
+                   (sender_can_grant data \<or> sender_can_grant_reply data) \<and>
+                   new_reply_tcb oracle = Some sender |
                  _ \<Rightarrow> False) |
                _ \<Rightarrow> False) |
              _ \<Rightarrow> False)) |
