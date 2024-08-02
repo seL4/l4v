@@ -329,7 +329,7 @@ where
   "vgic_update vr f \<equiv> vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_vgic := f (vcpu_vgic vcpu) \<rparr> )"
 
 definition
-  vgic_update_lr :: "obj_ref \<Rightarrow> nat \<Rightarrow> ARM_HYP_A.virq \<Rightarrow> (unit,'z::state_ext) s_monad"
+  vgic_update_lr :: "obj_ref \<Rightarrow> nat \<Rightarrow> virq \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "vgic_update_lr vr irq_idx virq \<equiv>
     vgic_update vr (\<lambda>vgic. vgic \<lparr> vgic_lr := (vgic_lr vgic)(irq_idx := virq) \<rparr>)"
