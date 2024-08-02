@@ -766,7 +766,7 @@ sublocale retype_region_proofs_gen?: retype_region_proofs_gen
 end
 
 
-context Arch begin arch_global_naming (*FIXME: arch-split*)
+context Arch begin arch_global_naming
 
 definition
   valid_vs_lookup2 :: "(vs_ref list \<times> word32) set \<Rightarrow> word32 set \<Rightarrow> (cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool"

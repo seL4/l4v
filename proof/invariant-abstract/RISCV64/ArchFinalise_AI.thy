@@ -1129,7 +1129,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin arch_global_naming (*FIXME: arch-split*)
+context Arch begin arch_global_naming
 
 lemma do_machine_op_reachable_pg_cap[wp]:
   "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace>

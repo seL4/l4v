@@ -8,7 +8,7 @@ theory ArchVSpaceEntries_AI
 imports VSpaceEntries_AI
 begin
 
-context Arch begin arch_global_naming (*FIXME: arch-split*)
+context Arch begin arch_global_naming
 
 lemma a_type_pdD:
   "a_type ko = AArch APageDirectory \<Longrightarrow> \<exists>pd. ko = ArchObj (PageDirectory pd)"
