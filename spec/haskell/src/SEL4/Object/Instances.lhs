@@ -60,7 +60,7 @@ The following are the instances of "Storable" for the four main types of kernel 
 >         _ -> typeError "SchedContext" o
 
 > instance PSpaceStorable Reply where
->     makeObject = Reply Nothing Nothing Nothing
+>     makeObject = Reply Nothing False Nothing Nothing
 >     injectKO   = KOReply
 >     projectKO o = case o of
 >         KOReply e -> return e

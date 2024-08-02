@@ -7374,13 +7374,13 @@ lemma finalise_cap_cur_sc_chargeable:
                apply wpsimp
               apply wpsimp
              apply (wpsimp wp: cancel_all_ipc_cur_sc_chargeable split: if_split)
-             apply (wpsimp wp: cancel_all_signals_cur_sc_chargeable unbind_maybe_notification_invs split: if_split)
+            apply (wpsimp wp: cancel_all_signals_cur_sc_chargeable unbind_maybe_notification_invs split: if_split)
            apply (wpsimp wp: reply_remove_cur_sc_chargeable cancel_ipc_cur_sc_chargeable
                              gts_wp get_simple_ko_wp split: if_split)
-   apply (rename_tac r R s ntfn x st)
-   apply (subgoal_tac "st_tcb_at (ipc_queued_thread_state) x s")
-    apply (clarsimp simp: obj_at_kh_kheap_simps ct_in_state_kh_simp)
-   apply (intro conjI; intro allI impI; clarsimp simp: invs_def pred_map_simps)
+           apply (rename_tac r s ntfn x st)
+           apply (subgoal_tac "st_tcb_at (ipc_queued_thread_state) x s")
+            apply (clarsimp simp: obj_at_kh_kheap_simps ct_in_state_kh_simp)
+            apply (intro conjI; intro allI impI; clarsimp simp: invs_def pred_map_simps)
            apply (subgoal_tac "(r, TCBReply) \<in> state_refs_of s x")
             apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2 tcb_st_refs_of_def
                                   pred_neg_def
@@ -15567,6 +15567,11 @@ crunch receive_ipc_preamble
   for released_if_bound[wp]: "released_if_bound_sc_tcb_at t"
   (ignore: thread_set update_sched_context wp: crunch_wps)
 
+lemma update_reply_valid_sched_pred[wp]:
+  "update_reply ptr f \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  by (wpsimp wp: update_reply_wp
+           simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps)
+
 (* Preconditions for the guts of receive_ipc, after the reply preamble *)
 abbreviation (input) receive_ipc_valid_sched_preconds ::
   "obj_ref \<Rightarrow> obj_ref \<Rightarrow> cap \<Rightarrow> obj_ref option \<Rightarrow> endpoint \<Rightarrow> ('state_ext state \<Rightarrow> bool) \<Rightarrow> 'state_ext state \<Rightarrow> bool"
@@ -15586,7 +15591,7 @@ abbreviation (input) receive_ipc_valid_sched_preconds ::
 lemma receive_ipc_blocked_valid_sched':
   assumes ep: "case ep of IdleEP \<Rightarrow> queue = [] | RecvEP q \<Rightarrow> queue = q | SendEP _ \<Rightarrow> False"
   shows "\<lbrace> receive_ipc_valid_sched_preconds t ep_ptr reply reply_opt ep invs \<rbrace>
-          receive_ipc_blocked is_blocking t ep_ptr reply_opt pl queue
+          receive_ipc_blocked is_blocking t ep_ptr ep_rights reply_opt pl queue
          \<lbrace> \<lambda>rv. valid_sched \<rbrace>"
   apply (cases reply_opt; clarsimp simp: receive_ipc_blocked_def)
    apply (wpsimp wp: set_thread_state_valid_sched)
@@ -15597,7 +15602,7 @@ lemma receive_ipc_blocked_valid_sched':
 
 lemma receive_ipc_idle_valid_sched:
   "\<lbrace> receive_ipc_valid_sched_preconds t ep_ptr reply reply_opt IdleEP invs \<rbrace>
-    receive_ipc_idle is_blocking t ep_ptr reply_opt pl
+    receive_ipc_idle is_blocking t ep_ptr ep_rights reply_opt pl
    \<lbrace> \<lambda>rv. valid_sched \<rbrace>"
   apply (rule hoare_weaken_pre, rule monadic_rewrite_refine_valid[where P''=\<top>])
   apply (rule monadic_rewrite_receive_ipc_idle)

@@ -539,7 +539,7 @@ definition capMasterCap :: "capability \<Rightarrow> capability" where
  | NotificationCap ref bdg s r \<Rightarrow> NotificationCap ref 0 True True
  | CNodeCap ref bits gd gs \<Rightarrow> CNodeCap ref bits 0 0
  | ThreadCap ref \<Rightarrow> ThreadCap ref
- | ReplyCap ref g \<Rightarrow> ReplyCap ref True
+ | ReplyCap ref \<Rightarrow> ReplyCap ref
  | UntypedCap d ref n f \<Rightarrow> UntypedCap d ref n 0
  | ArchObjectCap acap \<Rightarrow> ArchObjectCap (case acap of
       FrameCap ref rghts sz d mapdata \<Rightarrow>
@@ -580,8 +580,8 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> cap = Zombie ref tp n"
   "capMasterCap cap = UntypedCap d ref bits 0
      \<Longrightarrow> \<exists>f. cap = UntypedCap d ref bits f"
-  "capMasterCap cap = ReplyCap ref g
-     \<Longrightarrow> g \<and> (\<exists>g. cap = ReplyCap ref g)"
+  "capMasterCap cap = ReplyCap ref
+     \<Longrightarrow> cap = ReplyCap ref"
   "capMasterCap cap = ArchObjectCap (FrameCap ref rghts sz d mapdata)
      \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None
           \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (FrameCap ref rghts sz d mapdata))"
@@ -617,7 +617,7 @@ lemma capBadge_simps[simp]:
  "capBadge (ArchObjectCap cap)                = None"
  "capBadge (IRQControlCap)                    = None"
  "capBadge (IRQHandlerCap irq)                = None"
- "capBadge (ReplyCap tcb g)                   = None"
+ "capBadge (ReplyCap tcb)                     = None"
   by (simp add: capBadge_def isCap_defs)+
 
 lemma capClass_Master:
@@ -779,7 +779,7 @@ lemma capUntypedSize_simps [simp]:
   "capUntypedSize (ArchObjectCap x) = Arch.capUntypedSize x"
   "capUntypedSize (UntypedCap d r n f) = 1 << n"
   "capUntypedSize (CNodeCap r n g n2) = 1 << (objBits (undefined::cte) + n)"
-  "capUntypedSize (ReplyCap r a) = 1 << objBits (undefined :: reply)"
+  "capUntypedSize (ReplyCap r) = 1 << objBits (undefined :: reply)"
   "capUntypedSize (SchedContextCap sc sz) = 1 << sz"
   "capUntypedSize SchedControlCap = 1"
   "capUntypedSize IRQControlCap = 1"

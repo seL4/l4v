@@ -359,8 +359,7 @@ The "maskCapRights" function restricts the operations that can be performed on a
 >     capNtfnCanSend = capNtfnCanSend c && capAllowWrite r,
 >     capNtfnCanReceive = capNtfnCanReceive c && capAllowRead r }
 
-> maskCapRights r c@(ReplyCap {}) = c{
->     capReplyCanGrant = capReplyCanGrant c && capAllowGrant r }
+> maskCapRights _ c@(ReplyCap {}) = c
 
 > maskCapRights _ c@(CNodeCap {}) = c
 
@@ -409,7 +408,7 @@ New threads are placed in the current security domain, which must be the domain 
 >             return $ newCap
 >         Just ReplyObject -> do
 >             placeNewObject regionBase (makeObject :: Reply) 0
->             return $ ReplyCap (PPtr $ fromPPtr regionBase) True
+>             return $ ReplyCap (PPtr $ fromPPtr regionBase)
 >         Just CapTableObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: CTE) userSize
 >             modify (\ks -> ks { gsCNodes =
@@ -439,7 +438,7 @@ The "decodeInvocation" function parses the message, determines the operation tha
 >     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
 > decodeInvocation _ _ _ _ cap@(ReplyCap {}) _ _ _ = do
->     return $ InvokeReply (capReplyPtr cap) (capReplyCanGrant cap)
+>     return $ InvokeReply (capReplyPtr cap)
 >
 > decodeInvocation
 >         label args _ slot cap@(ThreadCap {}) extraCaps False _ =
@@ -500,9 +499,10 @@ This function just dispatches invocations to the type-specific invocation functi
 >     withoutPreemption $ sendSignal ep badge
 >     return $ []
 >
-> performInvocation _ _ _ (InvokeReply reply canGrantReply) =
+> performInvocation _ _ _ (InvokeReply reply) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
+>     canGrantReply <- liftM replyCanGrant (getReply reply)
 >     doReplyTransfer thread reply canGrantReply
 >     return $ []
 >

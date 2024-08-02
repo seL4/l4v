@@ -660,7 +660,7 @@ where
   | Structures_A.ThreadCap r \<Rightarrow> True
   | Structures_A.DomainCap \<Rightarrow> False
   | Structures_A.SchedContextCap r n \<Rightarrow> False
-  | Structures_A.ReplyCap r rights \<Rightarrow> False
+  | Structures_A.ReplyCap r \<Rightarrow> False
   | Structures_A.SchedControlCap \<Rightarrow> False
   | Structures_A.IRQControlCap \<Rightarrow> False
   | Structures_A.IRQHandlerCap irq \<Rightarrow> True
@@ -984,7 +984,7 @@ lemma cap_master_cap_simps:
   "cap_master_cap (cap.NullCap)           = cap.NullCap"
   "cap_master_cap (cap.DomainCap)         = cap.DomainCap"
   "cap_master_cap (cap.UntypedCap dev r n f)  = cap.UntypedCap dev r n 0"
-  "cap_master_cap (cap.ReplyCap r rights) = cap.ReplyCap r UNIV"
+  "cap_master_cap (cap.ReplyCap r)        = cap.ReplyCap r"
   "cap_master_cap (cap.IRQControlCap)     = cap.IRQControlCap"
   "cap_master_cap (cap.SchedContextCap r n) = cap.SchedContextCap r n"
   "cap_master_cap (cap.SchedControlCap)   = cap.SchedControlCap"
@@ -3055,15 +3055,6 @@ lemma non_arch_cap_asid_vptr_None:
     and "cap_vptr cap = None"
   using assms by (cases cap; simp add: is_cap_simps cap_asid_def cap_asid_base_def cap_vptr_def)+
 end
-
-lemma weak_derived_Reply:
-  "weak_derived (cap.ReplyCap t R) c = (\<exists> R'. c = cap.ReplyCap t R')"
-  "weak_derived c (cap.ReplyCap t R) = (\<exists> R'. c = cap.ReplyCap t R')"
-  by (auto simp: weak_derived_def copy_of_def
-                 same_object_as_def is_cap_simps
-                 non_arch_cap_asid_vptr_None[simplified is_cap_simps]
-          split: if_split_asm cap.split_asm)
-
 
 lemmas (in CSpace_AI_weak_derived) weak_derived_replies =
   weak_derived_is_reply
