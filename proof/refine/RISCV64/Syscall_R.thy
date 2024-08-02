@@ -88,8 +88,8 @@ where
      (x = InvokeEndpoint w w2 b c)"
 | "inv_relation (Invocations_A.InvokeNotification w w2) x =
      (x = InvokeNotification w w2)"
-| "inv_relation (Invocations_A.InvokeReply w grant) x =
-     (x = InvokeReply w grant)"
+| "inv_relation (Invocations_A.InvokeReply w) x =
+     (x = InvokeReply w)"
 | "inv_relation (Invocations_A.InvokeTCB i) x =
      (\<exists>i'. tcbinv_relation i i' \<and> x = InvokeTCB i')"
 | "inv_relation (Invocations_A.InvokeDomain tptr domain) x =
@@ -124,7 +124,7 @@ where
 | "valid_invocation' (InvokeDomain thread domain) = (tcb_at' thread  and K (domain \<le> maxDomain))"
 | "valid_invocation' (InvokeSchedContext i) = valid_sc_inv' i"
 | "valid_invocation' (InvokeSchedControl i) = valid_sc_ctrl_inv' i"
-| "valid_invocation' (InvokeReply reply grant) = reply_at' reply"
+| "valid_invocation' (InvokeReply reply) = reply_at' reply"
 | "valid_invocation' (InvokeIRQControl i) = irq_control_inv_valid' i"
 | "valid_invocation' (InvokeIRQHandler i) = irq_handler_inv_valid' i"
 | "valid_invocation' (InvokeCNode i) = valid_cnode_inv' i"
@@ -472,9 +472,11 @@ lemma performInvocation_corres:
               apply wpsimp+
           apply (rule corres_guard_imp)
             apply (rule corres_split_eqr[OF getCurThread_corres])
-              apply (rule corres_split_nor[OF doReplyTransfer_corres])
-                apply (rule corres_trivial, simp)
-               apply wp+
+              apply (rule corres_split[OF getReply_canGrant_corres])
+                apply clarsimp
+                apply (rule corres_split_nor[OF doReplyTransfer_corres])
+                  apply (rule corres_trivial, simp)
+                 apply (wp get_simple_ko_wp)+
            apply (clarsimp simp: tcb_at_invs)
           apply simp
          apply (clarsimp simp: liftME_def)

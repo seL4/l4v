@@ -27,7 +27,7 @@ lemma update_cap_data_closedform:
    | cap.DomainCap \<Rightarrow> cap.DomainCap
    | cap.UntypedCap d p n idx \<Rightarrow> cap.UntypedCap d p n idx
    | cap.NullCap \<Rightarrow> cap.NullCap
-   | cap.ReplyCap t rights \<Rightarrow> cap.ReplyCap t rights
+   | cap.ReplyCap t \<Rightarrow> cap.ReplyCap t
    | cap.SchedContextCap s n \<Rightarrow> cap.SchedContextCap s n
    | cap.SchedControlCap \<Rightarrow> cap.SchedControlCap
    | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap

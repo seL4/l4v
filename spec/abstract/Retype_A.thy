@@ -41,7 +41,7 @@ where
 | "default_cap EndpointObject oref s _ = EndpointCap oref 0 UNIV"
 | "default_cap NotificationObject oref s _ = NotificationCap oref 0 {AllowRead, AllowWrite}"
 | "default_cap SchedContextObject oref s _ = SchedContextCap oref (s - min_sched_context_bits)"
-| "default_cap ReplyObject oref _ _ = ReplyCap oref {AllowGrant, AllowWrite}"
+| "default_cap ReplyObject oref _ _ = ReplyCap oref"
 | "default_cap (ArchObject aobj) oref s dev = ArchObjectCap (arch_default_cap aobj oref s dev)"
 
 text \<open>Create and install a new capability to a newly created object.\<close>

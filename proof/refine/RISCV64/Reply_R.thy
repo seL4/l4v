@@ -894,6 +894,16 @@ lemma updateReply_replyTCB_invs':
           split: option.split_asm)
    by (auto simp: obj_at'_def opt_map_def)
 
+lemma updateReply_replyCanGrant_invs'[wp]:
+  "updateReply rptr (replyCanGrant_update f) \<lbrace>invs'\<rbrace>"
+  apply (simp only: invs'_def valid_pspace'_def)
+  apply (wpsimp wp: updateReply_valid_objs' updateReply_iflive' updateReply_valid_replies' updateReply_list_refs_of_replies')
+  apply (clarsimp simp: valid_replies'_def2 valid_reply'_def live_reply'_def
+                  dest: pspace_alignedD' pspace_distinctD')
+  apply (erule delta_sym_refs)
+   by (auto simp: list_refs_of_reply'_def map_set_def opt_map_def obj_at'_def
+           split: option.splits if_splits)
+
 lemma bindScReply_valid_objs'[wp]:
   "\<lbrace>valid_objs' and reply_at' replyPtr\<rbrace>
    bindScReply scp replyPtr
@@ -1070,15 +1080,6 @@ lemma sym_refs_replySCs_of_None:
 (* cleanReply *)
 crunch cleanReply
  for valid_tcbs'[wp]: valid_tcbs'
-
-lemma no_fail_setReply [wp]:
-  "no_fail (reply_at' p) (setReply p reply)"
-  unfolding setReply_def
-  by (wpsimp simp: objBits_simps)
-
-lemma no_fail_updateReply [wp]:
-  "no_fail (reply_at' rp) (updateReply rp f)"
-  unfolding updateReply_def by wpsimp
 
 lemma no_fail_cleanReply [wp]:
   "no_fail (reply_at' rp) (cleanReply rp)"

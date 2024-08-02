@@ -133,8 +133,8 @@ fun CapabilityMap :: "capability \<Rightarrow> cap" where
    cap.CNodeCap ref n (bin_to_bl l (uint L))"
 | "CapabilityMap (capability.ThreadCap ref) = cap.ThreadCap ref"
 | "CapabilityMap capability.DomainCap = cap.DomainCap"
-| "CapabilityMap (capability.ReplyCap ref gr) =
-   cap.ReplyCap ref {x. gr \<and> x = AllowGrant \<or> x = AllowWrite}"
+| "CapabilityMap (capability.ReplyCap ref) =
+   cap.ReplyCap ref"
 | "CapabilityMap (SchedContextCap sc n) = cap.SchedContextCap sc (n - min_sched_context_bits)"
 | "CapabilityMap SchedControlCap = cap.SchedControlCap"
 | "CapabilityMap capability.IRQControlCap = cap.IRQControlCap"
@@ -156,13 +156,11 @@ fun CapabilityMap :: "capability \<Rightarrow> cap" where
 lemma cap_relation_imp_CapabilityMap:
   "\<lbrakk>wellformed_cap c; cap_relation c c'\<rbrakk> \<Longrightarrow> CapabilityMap c' = c"
   apply (case_tac c; simp add: wellformed_cap_simps)
-       apply (rule set_eqI, clarsimp)
-       apply (case_tac "x", simp_all)
       apply (rule set_eqI, clarsimp)
-      apply (case_tac "x", simp_all add: word_bits_def)
-     apply clarsimp
-     apply (simp add: set_eq_iff, rule allI)
-     apply (case_tac x; clarsimp)
+      apply (case_tac "x", simp_all)
+     apply (rule set_eqI, clarsimp)
+     apply (case_tac "x", simp_all add: word_bits_def)
+    apply clarsimp
     apply (simp add: uint_of_bl_is_bl_to_bin bl_bin_bl[simplified])
    apply (simp add: zbits_map_def split: option.splits)
   apply (rename_tac arch_cap)
@@ -293,7 +291,7 @@ definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_con
    \<rparr>"
 
 definition replyMap :: "reply \<Rightarrow>  Structures_A.reply" where
-  "replyMap r = \<lparr> reply_tcb = replyTCB r, reply_sc = replySC r \<rparr>"
+  "replyMap r = \<lparr> reply_tcb = replyTCB r, reply_sc = replySC r, reply_can_grant = replyCanGrant r \<rparr>"
 
 definition absHeap ::
   "(machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow>

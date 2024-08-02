@@ -323,7 +323,7 @@ where
  | Cap_notification_cap ntfn \<Rightarrow>
     NotificationCap (capNtfnPtr_CL ntfn)(capNtfnBadge_CL ntfn)(to_bool(capNtfnCanSend_CL ntfn))
                      (to_bool(capNtfnCanReceive_CL ntfn))
- | Cap_reply_cap rc \<Rightarrow> ReplyCap (capReplyPtr_CL rc) (to_bool (capReplyCanGrant_CL rc))
+ | Cap_reply_cap rc \<Rightarrow> ReplyCap (capReplyPtr_CL rc)
  | Cap_sched_context_cap sc \<Rightarrow> SchedContextCap (capSCPtr_CL sc) (unat (capSCSizeBits_CL sc))
  | Cap_sched_control_cap sc \<Rightarrow> SchedControlCap
  | Cap_thread_cap tc \<Rightarrow>  ThreadCap(ctcb_ptr_to_tcb_ptr (Ptr (cap_thread_cap_CL.capTCBPtr_CL tc)))

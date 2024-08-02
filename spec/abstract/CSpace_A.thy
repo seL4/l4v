@@ -320,7 +320,7 @@ fun
   fast_finalise :: "cap \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "fast_finalise NullCap                 final = return ()"
-| "fast_finalise (ReplyCap r _)          final =
+| "fast_finalise (ReplyCap r)            final =
       (when final $ do
          tptr \<leftarrow> get_reply_tcb r;
          case tptr of
@@ -476,7 +476,7 @@ fun
 where
   "finalise_cap NullCap                  final = return (NullCap, NullCap)"
 | "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, NullCap)"
-| "finalise_cap (ReplyCap r _)           final =
+| "finalise_cap (ReplyCap r)             final =
       (liftM (K (NullCap, NullCap)) $ when final $ do
          tptr \<leftarrow> get_reply_tcb r;
          case tptr of
@@ -533,7 +533,7 @@ where
 definition
   can_fast_finalise :: "cap \<Rightarrow> bool" where
  "can_fast_finalise cap \<equiv> case cap of
-    ReplyCap r R \<Rightarrow> True
+    ReplyCap r \<Rightarrow> True
   | EndpointCap r b R \<Rightarrow> True
   | NotificationCap r b R \<Rightarrow> True
   | NullCap \<Rightarrow> True
@@ -721,7 +721,7 @@ where
     (is_ntfn_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (CNodeCap r bits g) c' =
     (is_cnode_cap c' \<and> obj_ref_of c' = r \<and> bits_of c' = bits)"
-| "same_region_as (ReplyCap n cr) c' = (\<exists>cr'. c' = ReplyCap n cr')"
+| "same_region_as (ReplyCap n) c' = (c' = ReplyCap n)"
 | "same_region_as (ThreadCap r) c' =
     (is_thread_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (SchedContextCap sc n) c' =
