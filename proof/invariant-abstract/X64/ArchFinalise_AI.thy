@@ -1172,10 +1172,11 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin arch_global_naming (*FIXME: arch-split*)
-
+(* FIXME: move *)
 lemma all_Some_the_strg: "f b = None \<or> P (the (f b)) \<longrightarrow> (\<forall>a. f b = Some a \<longrightarrow> P a)"
   by auto
+
+context Arch begin arch_global_naming
 
 lemma vs_cap_ref_PageCap_Some_None[simp]:
   "(vs_cap_ref (ArchObjectCap (PageCap d p R typ sz (Some v))) = None) = False"
