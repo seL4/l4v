@@ -1487,6 +1487,13 @@ crunch do_reply_transfer, handle_recv, handle_vm_fault
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM)
 
+lemma update_reply_vcpu_tcbs_of[wp]:
+  "update_reply f p \<lbrace>\<lambda>s. P (vcpu_tcbs_of s)\<rbrace>"
+  unfolding update_reply_def
+  by (wpsimp wp: get_object_wp set_object_wp
+             simp: obj_at_def in_opt_map_None_eq
+             simp_del: fun_upd_apply)
+
 crunch
   do_reply_transfer, handle_recv, handle_vm_fault, cap_delete_one, invoke_sched_context,
   invoke_sched_control_configure_flags

@@ -132,8 +132,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 > isTimeoutFault (Timeout _) = True
 > isTimeoutFault _ = False
 
-> receiveIPCBlocked :: Bool -> PPtr TCB -> PPtr Endpoint -> Maybe (PPtr Reply) -> Kernel ()
-> receiveIPCBlocked isBlocking thread epptr replyOpt = do
+> receiveIPCBlocked :: Bool -> PPtr TCB -> PPtr Endpoint -> Maybe (PPtr Reply) -> Bool -> Kernel ()
+> receiveIPCBlocked isBlocking thread epptr replyOpt recvCanGrant = do
 >     if isBlocking
 >         then do
 >             setThreadState (BlockedOnReceive {
@@ -141,21 +141,23 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                                 blockingIPCCanGrant = False,
 >                                 replyObject = replyOpt})
 >                            thread
->             when (replyOpt /= Nothing) $
+>             when (replyOpt /= Nothing) $ do
 >                 updateReply (fromJust replyOpt) (\reply -> reply { replyTCB = Just thread })
+>                 updateReply (fromJust replyOpt) (\reply -> reply { replyCanGrant = recvCanGrant })
 >             tcbEPAppend thread epptr ReceiveEPState
 >         else doNBRecvFailedTransfer thread
 
 > receiveIPC :: PPtr TCB -> Capability -> Bool -> Capability -> Kernel ()
 > receiveIPC thread cap@(EndpointCap {}) isBlocking replyCap = do
 >         let epptr = capEPPtr cap
+>         let recvCanGrant = capEPCanGrant cap
 >         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >         stateAssert valid_idle'_asrt "`valid_idle'`"
 >         stateAssert (active_tcb_at'_asrt thread) "`thread` has an `active'` thread state"
 >         assert (isReplyCap replyCap || isNullCap replyCap) "replyCap must be either a reply cap or a null cap"
 >         replyOpt <- (case replyCap of
->             ReplyCap r _ -> return (Just r)
+>             ReplyCap r -> return (Just r)
 >             NullCap -> return Nothing
 >             _ -> fail "receiveIPC: replyCap must be ReplyCap or NullCap")
 >         when (replyOpt /= Nothing) $ do
@@ -173,8 +175,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >             when (ntfnPtr /= Nothing && isBlocking) $
 >               maybeReturnSc (fromJust ntfnPtr) thread
 >             case epState ep of
->               IdleEPState -> receiveIPCBlocked isBlocking thread epptr replyOpt
->               ReceiveEPState -> receiveIPCBlocked isBlocking thread epptr replyOpt
+>               IdleEPState -> receiveIPCBlocked isBlocking thread epptr replyOpt recvCanGrant
+>               ReceiveEPState -> receiveIPCBlocked isBlocking thread epptr replyOpt recvCanGrant
 >               SendEPState -> do
 >                 let q = epQueue ep
 >                 stateAssert (tcb_queue_head_end_valid_asrt q) ""
@@ -197,6 +199,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         then do
 >                             senderSc <- threadGet tcbSchedContext sender
 >                             donate <- return ((senderSc /= Nothing) && not (isJust fault && isTimeoutFault (fromJust fault)))
+>                             updateReply (fromJust replyOpt) (\reply -> reply { replyCanGrant = recvCanGrant })
 >                             replyPush sender thread (fromJust replyOpt) donate
 >                         else setThreadState Inactive sender
 >                     else do

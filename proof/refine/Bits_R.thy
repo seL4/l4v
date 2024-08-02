@@ -75,7 +75,7 @@ lemma gen_isCap_simps:
   "isNotificationCap v = (\<exists>v0 v1 v2 v3. v = NotificationCap v0 v1 v2 v3)"
   "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4 v5. v = EndpointCap v0 v1 v2 v3 v4 v5)"
   "isUntypedCap v = (\<exists>d v0 v1 f. v = UntypedCap d v0 v1 f)"
-  "isReplyCap v = (\<exists>v0 v1. v = ReplyCap v0 v1)"
+  "isReplyCap v = (\<exists>v0. v = ReplyCap v0)"
   "isSchedContextCap v = (\<exists>v0 v1. v = SchedContextCap v0 v1)"
   "isSchedControlCap v = (v = SchedControlCap)"
   "isIRQControlCap v = (v = IRQControlCap)"
@@ -244,7 +244,7 @@ lemma capAligned_tcbI:
   done
 
 lemma capAligned_replyI:
-  "reply_at' p s \<Longrightarrow> capAligned (ReplyCap p r)"
+  "reply_at' p s \<Longrightarrow> capAligned (ReplyCap p)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def PPtr_def
                         gen_objBits_simps capUntypedPtr_def gen_isCap_simps)
   apply (fastforce dest: ko_wp_at_norm

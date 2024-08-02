@@ -253,8 +253,7 @@ lemma cap_get_tag_ReplyCap:
    assumes cr: "ccap_relation cap cap'"
    shows "(cap_get_tag cap' = scast cap_reply_cap) =
    (cap =
-       ReplyCap (capReplyPtr_CL (cap_reply_cap_lift cap'))
-                (to_bool (capReplyCanGrant_CL (cap_reply_cap_lift cap'))))"
+       ReplyCap (capReplyPtr_CL (cap_reply_cap_lift cap')))"
    using cr
    apply -
    apply (rule iffI)
@@ -1912,7 +1911,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.IRQHandlerCap v13) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_handler_cap)"
   and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"
   and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
-  and "ccap_relation (capability.ReplyCap v17 v18) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
+  and "ccap_relation (capability.ReplyCap v17) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
   and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
   and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
   and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
