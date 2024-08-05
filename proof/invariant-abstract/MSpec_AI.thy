@@ -6,7 +6,7 @@
 
 theory MSpec_AI
 imports
-  KHeap_AI
+  Syscall_AI
 begin
 
 (* From Structures_A.thy *)
@@ -86,6 +86,31 @@ where
        _ \<Rightarrow> False) |
      _ \<Rightarrow> False"
 
+(* Experimentation to find more usable lemmas about return values of monads *)
+definition
+  get_message_info_ret :: "'a state \<Rightarrow> obj_ref \<Rightarrow> message_info \<Rightarrow> bool"
+where
+  "get_message_info_ret s thread r \<equiv> \<exists>t u. the (kheap s thread) = TCB t \<and>
+    arch_tcb_context_get (tcb_arch t) = ARM.UserContext u \<and>
+    r = data_to_message_info (u msg_info_register)"
+
+lemma get_message_info_ret_valid:
+  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_message_info (cur_thread s) \<lbrace>\<lambda> r s''. get_message_info_ret s (cur_thread s) r\<rbrace>"
+  unfolding get_message_info_def get_message_info_ret_def
+  apply wp
+   unfolding as_user_def
+   apply wpsimp
+  apply wpsimp
+  apply(rename_tac y x xa)
+  apply(rule_tac x=y in exI)
+  unfolding ARM.getRegister_def get_tcb_def gets_def get_def
+  apply wpsimp
+  apply(clarsimp split:option.splits kernel_object.splits simp:bind_def return_def)
+  apply(rule_tac x="ARM.user_regs (arch_tcb_context_get (tcb_arch y))" in exI)
+  apply wpsimp
+  by (meson ARM.user_context.exhaust_sel)
+thm use_valid[OF _ get_message_info_ret_valid,simplified get_message_info_ret_def]
+
 term "is_ep_cap"
 term "k :: kheap"
 term "obj :: kernel_object"
@@ -110,12 +135,10 @@ term "ntfn :: notification"
 term reply_push
 term set_reply_obj_ref
 term data_to_message_info
-term lookup_extra_caps
-term copy_mrs
-term transfer_caps
+thm lookup_extra_caps_def copy_mrs_def transfer_caps_def
 term ARM.UserContext
 definition
-  valid_ep_obj_with_message :: "mspec_state \<Rightarrow> abstract_state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
+  valid_ep_obj_with_message :: "mspec_state \<Rightarrow> 'a state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
   (* FIXME: Again, ideally we don't want to take the abstract_state s as an argument here. *)
   "valid_ep_obj_with_message m s i oracle \<equiv> case cur_thread_cnode m i of
@@ -128,10 +151,8 @@ where
              (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow>
                \<comment> \<open>we assert that the notification case leaves the value in the user's message_info
                   register untouched from when it called seL4_Recv, so we just retrieve that here\<close>
-               minfo oracle = (case kheap s (cur_thread s) of
-                 Some (TCB t) \<Rightarrow> (case (arch_tcb_context_get (tcb_arch t)) of ARM.UserContext u \<Rightarrow>
-                   Some (data_to_message_info (u msg_info_register))) |
-                 _ \<Rightarrow> None) \<comment> \<open>FIXME: make non-optional once I've specified the ppc case too\<close> \<and>
+               get_message_info_ret s (cur_thread s) (the (minfo oracle))
+                 \<comment> \<open>FIXME: make non-optional once I've specified the ppc case too\<close> \<and>
                new_reply_tcb oracle = None \<and>
                badge_val oracle = badge |
              \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
@@ -143,8 +164,18 @@ where
                        of nondeterministic monads (lookup_extra_caps, copy_mrs, and transfer_caps)
                        called by do_normal_transfer - I just need to figure out how to accurately
                        express what `mrs_transferred` and `mi'` should be after they execute.
+                       i.e. for
+                         mi \<leftarrow> get_message_info sender;
+                         caps \<leftarrow> if grant then lookup_extra_caps sender sbuf mi <catch> K (return [])
+                           else return [];
+                         mrs_transferred \<leftarrow> copy_mrs sender sbuf receiver rbuf (mi_length mi);
+                         mi' \<leftarrow> transfer_caps mi caps endpoint receiver rbuf;
+                       express:
                    minfo oracle = MI mrs_transferred (mi_extra_caps mi')
                                    (mi_caps_unwrapped mi') (mi_label mi) \<close>
+                   \<exists> mi. get_message_info_ret s (cur_thread s) mi \<and>
+                      minfo oracle = Some (MI (mi_length mi) (mi_extra_caps mi)
+                       (mi_caps_unwrapped mi) (mi_label mi)) \<and>
                    badge_val oracle = sender_badge data \<and>
                    \<comment> \<open>That the sender made a call and can grant the reply is treated as
                       conditional in ASpec, but we're going to require them here as Microkit
