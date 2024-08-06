@@ -111,6 +111,112 @@ lemma get_message_info_ret_valid:
   by (meson ARM.user_context.exhaust_sel)
 thm use_valid[OF _ get_message_info_ret_valid,simplified get_message_info_ret_def]
 
+(* Maybe do transfer_caps first to see how caps gets used.
+  UPDATE: it never gets called, because the sender never has grant rights.
+find_theorems lookup_extra_caps
+thm lookup_extra_caps_def
+definition lookup_extra_caps_ret ::
+  "'a state \<Rightarrow> obj_ref \<Rightarrow> data option \<Rightarrow> message_info \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> bool"
+where
+  "lookup_extra_caps_ret s sender sbuf mi cs \<equiv> True"
+*)
+
+(* find_theorems(150) transfer_caps_loop valid *)
+thm transfer_caps_def transfer_caps_loop.simps
+(* Maybe also look to see if Microkit ever transfers caps via sending it to the server loop.
+  If not, then we can skip the entire transfer caps loop. *)
+
+(* Turns out Microkit won't transfers caps via channels, their endpoints shouldn't be given Grant.
+  So we can specify do_normal_transfer's behaviour under these assumptions. *)
+thm do_normal_transfer_def
+thm copy_mrs_def
+(* copy_mrs will only return the number of message registers successfully transferred *)
+definition copy_mrs_ret ::
+  "obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> length_type \<Rightarrow> length_type"
+where
+  "copy_mrs_ret sbuf rbuf n \<equiv>
+   let hardware_mrs_len = length (take (unat n) msg_registers);
+       buf_mrs_len = case (sbuf, rbuf) of
+         (Some sb_ptr, Some rb_ptr) \<Rightarrow> length [length msg_registers + 1..<Suc (unat n)] |
+         _ \<Rightarrow> 0
+    in min n (nat_to_len (hardware_mrs_len + buf_mrs_len))"
+
+lemma copy_mrs_ret_valid:
+  "\<lbrace>\<top>\<rbrace> copy_mrs sender sbuf receiver rbuf n \<lbrace>\<lambda> r _. r = copy_mrs_ret sbuf rbuf n\<rbrace>"
+  unfolding copy_mrs_def copy_mrs_ret_def
+  by wpsimp
+
+thm transfer_caps_def transfer_caps_loop.simps
+definition transfer_caps_none_ret :: "message_info \<Rightarrow> obj_ref option \<Rightarrow> message_info"
+where
+  "transfer_caps_none_ret info recv_buffer \<equiv>
+   let mi = MI (mi_length info) 0 0 (mi_label info)
+    in case recv_buffer of None \<Rightarrow> mi |
+         _ \<Rightarrow> (MI (mi_length mi) (word_of_nat 0) (mi_caps_unwrapped mi) (mi_label mi))"
+
+lemma transfer_caps_none_valid:
+  "\<lbrace>\<top>\<rbrace> transfer_caps info [] endpoint receiver recv_buffer
+   \<lbrace>\<lambda> r _. r = transfer_caps_none_ret info recv_buffer\<rbrace>"
+  unfolding transfer_caps_def transfer_caps_none_ret_def
+  by wpsimp
+
+term assert_opt
+definition
+  get_cap_ret :: "'a state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
+where
+  "get_cap_ret \<equiv> \<lambda>s (oref, cref).
+   let obj = kheap s oref;
+       caps = case obj of
+             Some (CNode sz cnode) \<Rightarrow> cnode
+           | Some (TCB tcb) \<Rightarrow> tcb_cnode_map tcb
+           | _ \<Rightarrow> \<lambda>_. None
+    in caps cref"
+
+lemma get_cap_ret_valid:
+  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_cap p \<lbrace>\<lambda> r s''. r = the (get_cap_ret s p)\<rbrace>"
+  unfolding get_cap_def get_cap_ret_def get_object_def
+  by wpsimp
+
+context Arch begin global_naming ARM_A
+term lookup_ipc_buffer
+find_theorems name:buffer_frame_slot
+definition
+  lookup_ipc_buffer_ret :: "'a state \<Rightarrow> bool \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> bool"
+where
+(*  buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
+    buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 2);
+    buffer_cap \<leftarrow> get_cap buffer_frame_slot;
+    (case buffer_cap of
+      ArchObjectCap (PageCap _ p R vms _) \<Rightarrow>
+        if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
+        then return $ Some $ p + (buffer_ptr && mask (pageBitsForSize vms))
+        else return None
+    | _ \<Rightarrow> return None)
+*)
+  "lookup_ipc_buffer_ret s is_receiver thread r \<equiv> \<exists> t. kheap s thread = Some (TCB t) \<and>
+   (let buffer_ptr = tcb_ipc_buffer t;
+        buffer_frame_slot = (thread, tcb_cnode_index 2);
+        buffer_cap = the (get_cap_ret s buffer_frame_slot)
+     in case buffer_cap of
+          ArchObjectCap (PageCap _ p R vms _) \<Rightarrow>
+            if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
+            then r = (p + (buffer_ptr && mask (pageBitsForSize vms)))
+            else False
+        | _ \<Rightarrow> False)"
+
+thm lookup_ipc_buffer_def
+lemma lookup_ipc_buffer_ret_valid:
+  "\<lbrace>\<lambda>s'. s = s'\<rbrace> lookup_ipc_buffer is_receiver thread
+   \<lbrace>\<lambda> r s''. lookup_ipc_buffer_ret s is_receiver thread (the r)\<rbrace>"
+  unfolding lookup_ipc_buffer_def lookup_ipc_buffer_ret_def
+  apply wpsimp
+  apply(wpsimp split:cap.splits)
+  (* TODO *)
+  using get_cap_ret_valid
+  oops
+end
+
+
 term "is_ep_cap"
 term "k :: kheap"
 term "obj :: kernel_object"
@@ -159,29 +265,22 @@ where
              _ \<Rightarrow> (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
                (case kheap s (hd q) of Some (TCB sender) \<Rightarrow>
                  (case tcb_state sender of BlockedOnSend _ data \<Rightarrow>
-                   \<comment> \<open>TODO: Assert minfo oracle corresponds to the message_info Recv would return.
-                       This part's tricky, because it's asserting the functionality of a sequence
-                       of nondeterministic monads (lookup_extra_caps, copy_mrs, and transfer_caps)
-                       called by do_normal_transfer - I just need to figure out how to accurately
-                       express what `mrs_transferred` and `mi'` should be after they execute.
-                       i.e. for
-                         mi \<leftarrow> get_message_info sender;
-                         caps \<leftarrow> if grant then lookup_extra_caps sender sbuf mi <catch> K (return [])
-                           else return [];
-                         mrs_transferred \<leftarrow> copy_mrs sender sbuf receiver rbuf (mi_length mi);
-                         mi' \<leftarrow> transfer_caps mi caps endpoint receiver rbuf;
-                       express:
-                   minfo oracle = MI mrs_transferred (mi_extra_caps mi')
-                                   (mi_caps_unwrapped mi') (mi_label mi) \<close>
-                   \<exists> mi. get_message_info_ret s (cur_thread s) mi \<and>
-                      minfo oracle = Some (MI (mi_length mi) (mi_extra_caps mi)
-                       (mi_caps_unwrapped mi) (mi_label mi)) \<and>
-                   badge_val oracle = sender_badge data \<and>
                    \<comment> \<open>That the sender made a call and can grant the reply is treated as
                       conditional in ASpec, but we're going to require them here as Microkit
                       will assume the sender to be following the correct ppcall convention.\<close>
                    sender_is_call data \<and>
-                   (sender_can_grant data \<or> sender_can_grant_reply data) \<and>
+                   sender_can_grant_reply data \<and>
+                   \<comment> \<open>Also assert Microkit doesn't support channel endpoints with grant rights.\<close>
+                   \<not> sender_can_grant data \<and>
+                   \<comment> \<open>Assert minfo oracle corresponds to the message_info Recv would return.\<close>
+                   \<comment> \<open>FIXME: Specify sbuf, rbuf args to do_normal_transfer - WIP\<close>
+                   (\<exists> mi sbuf rbuf.
+                      get_message_info_ret s (cur_thread s) mi \<and>
+                      (let mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi);
+                           mi' = transfer_caps_none_ret mi rbuf
+                        in minfo oracle = Some (MI mrs_transferred (mi_extra_caps mi')
+                                   (mi_caps_unwrapped mi') (mi_label mi)))) \<and>
+                   badge_val oracle = sender_badge data \<and>
                    new_reply_tcb oracle = Some sender |
                  _ \<Rightarrow> False) |
                _ \<Rightarrow> False) |
@@ -190,5 +289,9 @@ where
          _ \<Rightarrow> False) |
        _ \<Rightarrow> False) |
      _ \<Rightarrow> False"
+
+thm do_normal_transfer_def
+  do_ipc_transfer_def
+  receive_ipc_def
 
 end
