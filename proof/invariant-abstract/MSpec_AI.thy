@@ -26,7 +26,7 @@ record mspec_recv_oracle =
   (* In the notification case, seL4_(Reply)Recv will just return whatever's already in the msg info
      register. But we can't query what's in there without invoking the (unspecified) machine
      operation to getRegister, so there's not much point asserting anything about it. *)
-  minfo :: "message_info option"
+  minfo :: message_info
   new_reply_tcb :: "tcb option"
   badge_val :: badge
 
@@ -88,48 +88,27 @@ where
 
 (* Experimentation to find more usable lemmas about return values of monads *)
 definition
-  get_message_info_ret :: "'a state \<Rightarrow> obj_ref \<Rightarrow> message_info \<Rightarrow> bool"
+  get_message_info_ret :: "'a state \<Rightarrow> obj_ref \<Rightarrow> message_info option"
 where
-  "get_message_info_ret s thread r \<equiv> \<exists>t u. the (kheap s thread) = TCB t \<and>
-    arch_tcb_context_get (tcb_arch t) = ARM.UserContext u \<and>
-    r = data_to_message_info (u msg_info_register)"
+  "get_message_info_ret s thread \<equiv> case kheap s thread of
+    Some (TCB t) \<Rightarrow> (case arch_tcb_context_get (tcb_arch t) of
+      ARM.UserContext u \<Rightarrow> Some (data_to_message_info (u msg_info_register))) |
+    _ \<Rightarrow> None"
 
 lemma get_message_info_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_message_info (cur_thread s) \<lbrace>\<lambda> r s''. get_message_info_ret s (cur_thread s) r\<rbrace>"
+  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_message_info (cur_thread s)
+   \<lbrace>\<lambda> r s''. s = s'' \<and> get_message_info_ret s (cur_thread s) = Some r\<rbrace>"
   unfolding get_message_info_def get_message_info_ret_def
   apply wp
    unfolding as_user_def
    apply wpsimp
   apply wpsimp
-  apply(rename_tac y x xa)
-  apply(rule_tac x=y in exI)
   unfolding ARM.getRegister_def get_tcb_def gets_def get_def
   apply wpsimp
-  apply(clarsimp split:option.splits kernel_object.splits simp:bind_def return_def)
-  apply(rule_tac x="ARM.user_regs (arch_tcb_context_get (tcb_arch y))" in exI)
-  apply wpsimp
-  by (meson ARM.user_context.exhaust_sel)
-thm use_valid[OF _ get_message_info_ret_valid,simplified get_message_info_ret_def]
+  apply(clarsimp split:option.splits kernel_object.splits ARM.user_context.splits
+    simp:bind_def return_def)
+  using ARM.user_context.sel by force
 
-(* Maybe do transfer_caps first to see how caps gets used.
-  UPDATE: it never gets called, because the sender never has grant rights.
-find_theorems lookup_extra_caps
-thm lookup_extra_caps_def
-definition lookup_extra_caps_ret ::
-  "'a state \<Rightarrow> obj_ref \<Rightarrow> data option \<Rightarrow> message_info \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> bool"
-where
-  "lookup_extra_caps_ret s sender sbuf mi cs \<equiv> True"
-*)
-
-(* find_theorems(150) transfer_caps_loop valid *)
-thm transfer_caps_def transfer_caps_loop.simps
-(* Maybe also look to see if Microkit ever transfers caps via sending it to the server loop.
-  If not, then we can skip the entire transfer caps loop. *)
-
-(* Turns out Microkit won't transfers caps via channels, their endpoints shouldn't be given Grant.
-  So we can specify do_normal_transfer's behaviour under these assumptions. *)
-thm do_normal_transfer_def
-thm copy_mrs_def
 (* copy_mrs will only return the number of message registers successfully transferred *)
 definition copy_mrs_ret ::
   "obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> length_type \<Rightarrow> length_type"
@@ -146,7 +125,8 @@ lemma copy_mrs_ret_valid:
   unfolding copy_mrs_def copy_mrs_ret_def
   by wpsimp
 
-thm transfer_caps_def transfer_caps_loop.simps
+(* Turns out Microkit won't transfers caps via channels, their endpoints shouldn't be given Grant.
+  So we specify do_normal_transfer's behaviour under these assumptions. *)
 definition transfer_caps_none_ret :: "message_info \<Rightarrow> obj_ref option \<Rightarrow> message_info"
 where
   "transfer_caps_none_ret info recv_buffer \<equiv>
@@ -160,7 +140,6 @@ lemma transfer_caps_none_valid:
   unfolding transfer_caps_def transfer_caps_none_ret_def
   by wpsimp
 
-term assert_opt
 definition
   get_cap_ret :: "'a state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
 where
@@ -173,78 +152,52 @@ where
     in caps cref"
 
 lemma get_cap_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_cap p \<lbrace>\<lambda> r s''. r = the (get_cap_ret s p)\<rbrace>"
+  "\<lbrace>\<lambda>s'. s = s' \<and> (\<forall> cap. get_cap_ret s' p = Some cap \<longrightarrow> Q cap s')\<rbrace> get_cap p
+   \<lbrace>Q\<rbrace>"
   unfolding get_cap_def get_cap_ret_def get_object_def
   by wpsimp
 
+(* FIXME: In the long run we'll need to interface off the arch-specific parts properly.
+  But some of the return values depend on arch-specific implementations, so for now
+  while experimenting I'll just open up the Arch context and do it in here. *)
 context Arch begin global_naming ARM_A
-term lookup_ipc_buffer
-find_theorems name:buffer_frame_slot
-definition
-  lookup_ipc_buffer_ret :: "'a state \<Rightarrow> bool \<Rightarrow> 32 word \<Rightarrow> 32 word \<Rightarrow> bool"
-where
-(*  buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
-    buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 2);
-    buffer_cap \<leftarrow> get_cap buffer_frame_slot;
-    (case buffer_cap of
-      ArchObjectCap (PageCap _ p R vms _) \<Rightarrow>
-        if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
-        then return $ Some $ p + (buffer_ptr && mask (pageBitsForSize vms))
-        else return None
-    | _ \<Rightarrow> return None)
-*)
-  "lookup_ipc_buffer_ret s is_receiver thread r \<equiv> \<exists> t. kheap s thread = Some (TCB t) \<and>
-   (let buffer_ptr = tcb_ipc_buffer t;
-        buffer_frame_slot = (thread, tcb_cnode_index 2);
-        buffer_cap = the (get_cap_ret s buffer_frame_slot)
-     in case buffer_cap of
-          ArchObjectCap (PageCap _ p R vms _) \<Rightarrow>
-            if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
-            then r = (p + (buffer_ptr && mask (pageBitsForSize vms)))
-            else False
-        | _ \<Rightarrow> False)"
 
-thm lookup_ipc_buffer_def
+definition
+  lookup_ipc_buffer_ret :: "('a::state_ext) state \<Rightarrow> bool \<Rightarrow> 32 word \<Rightarrow> 32 word option"
+where
+  "lookup_ipc_buffer_ret s is_receiver thread \<equiv>
+   case get_tcb thread s of Some t \<Rightarrow>
+     (let buffer_ptr = tcb_ipc_buffer t;
+          buffer_frame_slot = (thread, tcb_cnode_index 2)
+       in case get_cap_ret s buffer_frame_slot of
+         Some (ArchObjectCap (PageCap _ p R vms _)) \<Rightarrow>
+              if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
+              then Some (p + (buffer_ptr && mask (pageBitsForSize vms)))
+              else None
+            | _ \<Rightarrow> None) |
+   _ \<Rightarrow> None"
+
 lemma lookup_ipc_buffer_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s'\<rbrace> lookup_ipc_buffer is_receiver thread
-   \<lbrace>\<lambda> r s''. lookup_ipc_buffer_ret s is_receiver thread (the r)\<rbrace>"
+  "\<lbrace>\<lambda>s'. s = s' \<and> tcb_at thread s\<rbrace>
+    lookup_ipc_buffer is_receiver thread
+   \<lbrace>\<lambda> r s''. s = s'' \<and> r = lookup_ipc_buffer_ret s'' is_receiver thread\<rbrace>"
   unfolding lookup_ipc_buffer_def lookup_ipc_buffer_ret_def
   apply wpsimp
-  apply(wpsimp split:cap.splits)
-  (* TODO *)
-  using get_cap_ret_valid
-  oops
-end
+     apply(wpsimp wp:get_cap_ret_valid)
+    apply wpsimp
+   apply(wpsimp wp:thread_get_wp)
+  apply(wpsimp simp:tcb_at_def get_tcb_def obj_at_def)
+  apply(clarsimp simp:get_cap_ret_def is_tcb_def
+    split:option.splits kernel_object.splits cap.splits arch_cap.splits)
+  by fast
 
-
-term "is_ep_cap"
-term "k :: kheap"
-term "obj :: kernel_object"
-term "e :: endpoint"
-term "n :: notification"
-term handle_recv (* refer to this - we need to be making the same validity checks *)
+(* Refer to these functions - we need to be making the same validity checks *)
+term handle_recv
 term receive_ipc (* This handles the EndpointCap case, but will check the bound notification *)
-term msg_info_register
-term "m :: message_info"
-term "l :: msg_label"
 term do_ipc_transfer
 term do_normal_transfer
-term as_user
-term getRegister
-term "SendEP q"
-term get_thread_state
-term "tcb_state t"
-term "t :: arch_tcb"
-term "p :: sender_payload"
-term "Notification ntfn"
-term "ntfn :: notification"
-term reply_push
-term set_reply_obj_ref
-term data_to_message_info
-thm lookup_extra_caps_def copy_mrs_def transfer_caps_def
-term ARM.UserContext
 definition
-  valid_ep_obj_with_message :: "mspec_state \<Rightarrow> 'a state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
+  valid_ep_obj_with_message :: "mspec_state \<Rightarrow> 'a::state_ext state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
   (* FIXME: Again, ideally we don't want to take the abstract_state s as an argument here. *)
   "valid_ep_obj_with_message m s i oracle \<equiv> case cur_thread_cnode m i of
@@ -257,8 +210,7 @@ where
              (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow>
                \<comment> \<open>we assert that the notification case leaves the value in the user's message_info
                   register untouched from when it called seL4_Recv, so we just retrieve that here\<close>
-               get_message_info_ret s (cur_thread s) (the (minfo oracle))
-                 \<comment> \<open>FIXME: make non-optional once I've specified the ppc case too\<close> \<and>
+               get_message_info_ret s (cur_thread s) = Some (minfo oracle) \<and>
                new_reply_tcb oracle = None \<and>
                badge_val oracle = badge |
              \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
@@ -273,13 +225,16 @@ where
                    \<comment> \<open>Also assert Microkit doesn't support channel endpoints with grant rights.\<close>
                    \<not> sender_can_grant data \<and>
                    \<comment> \<open>Assert minfo oracle corresponds to the message_info Recv would return.\<close>
-                   \<comment> \<open>FIXME: Specify sbuf, rbuf args to do_normal_transfer - WIP\<close>
-                   (\<exists> mi sbuf rbuf.
-                      get_message_info_ret s (cur_thread s) mi \<and>
-                      (let mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi);
+                   (\<exists> mi. get_message_info_ret s (cur_thread s) = Some mi \<and>
+                      \<comment> \<open>These are sbuf, rbuf args given by do_ipc_transfer to do_normal_transfer\<close>
+                      (let rbuf = lookup_ipc_buffer_ret s True (cur_thread s);
+                           sbuf = lookup_ipc_buffer_ret s False (hd q);
+                           \<comment> \<open>These are mrs_transferred, mi' calculated by do_normal_transfer\<close>
+                           mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi);
                            mi' = transfer_caps_none_ret mi rbuf
-                        in minfo oracle = Some (MI mrs_transferred (mi_extra_caps mi')
-                                   (mi_caps_unwrapped mi') (mi_label mi)))) \<and>
+                        \<comment> \<open>This is the final minfo written to the register by do_normal_transfer\<close>
+                        in minfo oracle = MI mrs_transferred (mi_extra_caps mi')
+                                   (mi_caps_unwrapped mi') (mi_label mi))) \<and>
                    badge_val oracle = sender_badge data \<and>
                    new_reply_tcb oracle = Some sender |
                  _ \<Rightarrow> False) |
@@ -290,8 +245,6 @@ where
        _ \<Rightarrow> False) |
      _ \<Rightarrow> False"
 
-thm do_normal_transfer_def
-  do_ipc_transfer_def
-  receive_ipc_def
+end (* Arch ARM_A *)
 
 end
