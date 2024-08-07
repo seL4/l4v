@@ -6313,9 +6313,63 @@ lemma schedContext_bindTCB_ccorres:
 
 lemma schedContext_bindNtfn_ccorres:
   "ccorres dc xfdc
-     \<top> (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace>) []
-     (schedContextBindNtfn scPtr tcbPtr) (Call schedContext_bindNtfn_'proc)"
-sorry (* FIXME RT: schedContext_bindNtfn_ccorres *)
+     (invs' and sc_at' scPtr) (\<lbrace>\<acute>ntfn = Ptr ntfnPtr\<rbrace> \<inter> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace>) []
+     (schedContextBindNtfn scPtr ntfnPtr) (Call schedContext_bindNtfn_'proc)"
+  unfolding schedContextBindNtfn_def K_bind_apply
+  apply (rule ccorres_symb_exec_l'[OF _ _stateAssert_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[OF _ _get_ntfn_sp']; (solves wpsimp)?)
+  apply (cinit' lift: ntfn_' sc_')
+   apply (rename_tac ntfn sc' ntfn')
+   apply (rule_tac P="\<lambda>s. invs' s \<and> sym_refs (state_refs_of' s)
+                          \<and> sc_at' scPtr s \<and> ko_at' ntfn ntfnPtr s"
+               and P'=UNIV
+                in ccorres_split_nothrow_novcg)
+       apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
+       apply (rule allI, rule conseqPre, vcg)
+       apply clarsimp
+       apply (frule (1) obj_at_cslift_ntfn)
+       apply (frule invs_valid_objs')
+       apply (frule (1) ntfn_ko_at_valid_objs_valid_ntfn')
+       apply normalise_obj_at'
+       apply (rule conjI)
+        apply (erule h_t_valid_clift)
+       apply (clarsimp simp: setNotification_def split_def)
+       apply (rule bexI[OF _ setObject_eq])
+           apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
+                            cpspace_relation_def update_ntfn_map_tos
+                            csched_context_relation_def typ_heap_simps')
+           apply clarsimp
+           apply (intro conjI)
+              apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+               subgoal
+                 by (fastforce intro!: obj_at'_is_canonical
+                                 simp: cnotification_relation_def Let_def
+                                       sign_extend_canonical_address
+                                split: ntfn.splits)
+               apply fastforce
+             apply (simp add: refill_buffer_relation_def image_def dom_def Let_def typ_heap_simps
+                              update_ntfn_map_tos)
+            apply (simp add: carch_state_relation_def)
+           apply (simp add: cmachine_state_relation_def)
+          apply (simp add: h_t_valid_clift_Some_iff)
+         apply (simp add: objBits_simps')
+        apply (simp add: objBits_simps)
+       apply assumption
+      apply ceqv
+     apply (rule updateSchedContext_ccorres_lemma2[where P="\<top>"])
+       apply vcg
+      apply fastforce
+     apply (clarsimp simp: typ_heap_simps)
+     apply (rule_tac sc'="scNotification_C_update (\<lambda>_. Ptr ntfnPtr) sc'a"
+                  in rf_sr_sc_update_no_refill_buffer_update2;
+            fastforce?)
+       apply (clarsimp simp: typ_heap_simps' packed_heap_update_collapse_hrs)
+      apply (clarsimp simp: csched_context_relation_def option_to_ctcb_ptr_def)
+     apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
+    apply wpsimp
+   apply (clarsimp simp: guard_is_UNIV_def)
+  apply (clarsimp simp: sym_refs_asrt_def)
+  done
 
 lemma completeSignal_ccorres:
   notes if_split[split del]
