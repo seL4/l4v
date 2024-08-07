@@ -671,12 +671,13 @@ lemma getRefillSize_exs_valid[wp]:
 
 lemma refill_add_tail_ccorres:
   "ccorres dc xfdc
-     (active_sc_at' scPtr and invs')
+     invs'
      (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> {s'. crefill_relation new (refill_' s')}) []
      (refillAddTail scPtr new) (Call refill_add_tail_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del] len_bit0[simp del]
 
-  unfolding refillAddTail_def haskell_assert_def
+  unfolding refillAddTail_def K_bind_apply haskell_assert_def
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ stateAssert_sp]; (solves wpsimp)?)
   apply (rule ccorres_symb_exec_l'[rotated, OF _ getRefillSize_sp]; (solves wpsimp)?)
   apply (rule ccorres_symb_exec_l'[rotated, OF _ get_sc_sp']; (solves wpsimp)?)
   apply (rule ccorres_symb_exec_l'[rotated, OF _ assert_sp]; (solves wpsimp)?)
@@ -998,7 +999,7 @@ lemma charge_entire_head_refill_ccorres:
   done
 
 lemma no_ofail_headRefillOverrun[wp]:
-  "no_ofail (sc_at' scPtr) (headRefillOverrun scPtr usage)"
+  "no_ofail (active_sc_at' scPtr) (headRefillOverrun scPtr usage)"
   unfolding headRefillOverrun_def
   by wpsimp
 
@@ -1011,9 +1012,9 @@ lemmas no_fail_getRefillFull[wp] =
   no_ofail_gets_the[OF no_ofail_readRefillFull, simplified getRefillFull_def[symmetric]]
 
 lemma no_ofail_readRefillTail[wp]:
-  "no_ofail (sc_at' scPtr) (readRefillTail scPtr)"
-  unfolding readRefillTail_def
-  by (wpsimp wp: no_ofail_readSchedContext)
+  "no_ofail (active_sc_at' scPtr) (readRefillTail scPtr)"
+  unfolding readRefillTail_def ohaskell_state_assert_def
+  by (wpsimp wp: no_ofail_readSchedContext simp: active_sc_at'_rewrite)
 
 lemmas no_fail_getRefillTail[wp] =
   no_ofail_gets_the[OF no_ofail_readRefillTail, simplified getRefillTail_def[symmetric]]
@@ -1048,13 +1049,13 @@ lemma no_fail_updateRefillIndex[wp]:
 lemma no_fail_chargeEntireHeadRefill:
   "no_fail (active_sc_at' scPtr and valid_objs') (chargeEntireHeadRefill scPtr usage)"
   unfolding chargeEntireHeadRefill_def scheduleUsed_def refillAddTail_def
-  apply (wpsimp wp: getRefillNext_wp getRefillSize_wp getRefillFull_wp)
+  apply (wpsimp wp: getRefillNext_wp getRefillSize_wp getRefillFull_wp no_fail_stateAssert)
           apply (rule_tac Q'="\<lambda>_. active_sc_at' scPtr and valid_objs'" in hoare_post_imp)
            apply (clarsimp simp: active_sc_at'_rewrite)
            apply normalise_obj_at'
            apply (frule (1) sc_ko_at_valid_objs_valid_sc')
            apply (clarsimp simp: opt_pred_def opt_map_def obj_at'_def objBits_simps
-                                 valid_sched_context'_def is_active_sc'_def
+                                 valid_sched_context'_def is_active_sc'_def active_sc_at'_rewrite
                           split: if_splits)
           apply wpsimp+
   apply (clarsimp simp: active_sc_at'_rewrite split: if_splits)
@@ -1087,7 +1088,6 @@ lemma handle_overrun_ccorres:
               apply fastforce
              apply fastforce
             apply wpsimp
-            apply (clarsimp simp: active_sc_at'_rewrite)
            apply wpsimp
           apply (rule conseqPre)
            apply clarsimp
@@ -1271,7 +1271,7 @@ lemma merge_nonoverlapping_head_refill_ccorres:
   done
 
 lemma no_ofail_refillHdInsufficient[wp]:
-  "no_ofail (sc_at' scPtr) (refillHdInsufficient scPtr)"
+  "no_ofail (active_sc_at' scPtr) (refillHdInsufficient scPtr)"
   unfolding refillHdInsufficient_def
   by wpsimp
 
@@ -1338,17 +1338,21 @@ lemma refill_budget_check_ccorres:
          apply (rename_tac s s' sc)
          apply (clarsimp simp: getRefillHead_def readRefillHead_def readRefillIndex_def
                                refillIndex_def readSchedContext_def getObject_def[symmetric]
-                               bind_def return_def)
-         apply (rule_tac x="(sc, s)" in bexI[rotated])
-          apply (fastforce intro: getObject_eq)
-         apply (drule refill_buffer_relation_crefill_relation)
-         apply (clarsimp simp: Let_def)
-         apply (drule_tac x=scPtr in spec)
-         apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
-         apply (drule_tac x="scRefillHead sc" in spec)
-         apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
-                               typ_heap_simps csched_context_relation_def refillHd_def
-                               sc_ptr_to_crefill_ptr_def)
+                               bind_def return_def ohaskell_state_assert_def gets_the_ostate_assert
+                               state_assert_def get_def assert_def fail_def
+                        split: if_splits)
+         apply (intro conjI impI)
+          apply (rule_tac x="(sc, s)" in bexI[rotated])
+           apply (fastforce intro: getObject_eq)
+          apply (drule refill_buffer_relation_crefill_relation)
+          apply (clarsimp simp: Let_def)
+          apply (drule_tac x=scPtr in spec)
+          apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
+          apply (drule_tac x="scRefillHead sc" in spec)
+          apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
+                                typ_heap_simps csched_context_relation_def refillHd_def
+                                sc_ptr_to_crefill_ptr_def)
+         apply (clarsimp simp: active_sc_at'_rewrite)
         apply ceqv
        apply csymbr
        apply clarsimp
@@ -1492,7 +1496,6 @@ lemma refill_budget_check_ccorres:
               apply fastforce
              apply fastforce
             apply wpsimp
-            apply (clarsimp simp: active_sc_at'_rewrite)
            apply wpsimp
           apply (rule conseqPre)
            apply clarsimp
@@ -1697,6 +1700,7 @@ lemma no_ofail_releaseQNonEmptyAndReady:
   apply normalise_obj_at'
   apply (fastforce intro!: aligned'_distinct'_obj_at'I
                      simp: active_sc_tcb_at'_def obj_at'_def opt_pred_def opt_map_def
+                           active_sc_at'_def
                     split: option.splits)
   done
 

@@ -3331,7 +3331,7 @@ lemma tcb_release_enqueue_monadic_rewrite:
 lemma gets_the_readReadyTime_corres:
   "sc_ptr = scPtr \<Longrightarrow>
    corres (=)
-     (pspace_aligned and pspace_distinct and valid_objs and is_active_sc scPtr
+     (pspace_aligned and pspace_distinct and valid_objs and is_active_sc scPtr and sc_at sc_ptr
       and active_scs_valid)
      valid_objs'
      (gets_the (read_ready_time sc_ptr)) (gets_the (readReadyTime scPtr))"
@@ -3369,8 +3369,10 @@ lemma getTCBReadyTime_corres:
   apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ assert_sp])
     apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ scActive_sp])
       apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ assert_sp])
-        apply (corres corres: gets_the_readReadyTime_corres
-                        simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+        apply (corres corres: gets_the_readReadyTime_corres)
+         apply (fastforce intro: valid_sched_context_size_objsI
+                           simp: vs_all_heap_simps obj_at_kh_kheap_simps is_sc_obj_def)
+        apply fastforce
        apply wpsimp
       apply wpsimp
       apply (clarsimp simp: ex_abs_def vs_all_heap_simps)
@@ -6987,8 +6989,8 @@ lemma doReplyTransfer_corres:
                                          invs and valid_list and scheduler_act_not recvr
                                          and current_time_bounded and st_tcb_at active recvr
                                          and valid_ready_qs and ready_or_release"
-                                  and Q'="invs' and tcb_at' recvr and sc_at' (the scopt)"
-                                  and P'="invs' and sc_at' (the scopt') and tcb_at' recvr"
+                                  and Q'="invs' and tcb_at' recvr and active_sc_at' (the scopt')"
+                                  and P'="invs' and tcb_at' recvr"
                                   and P="valid_sched_action and tcb_at recvr and current_time_bounded and
                                          sc_tcb_sc_at (\<lambda>a. a \<noteq> None) (the scopt) and
                                          active_sc_at (the scopt) and valid_refills (the scopt) and
@@ -7090,7 +7092,8 @@ lemma doReplyTransfer_corres:
                                  apply (frule (1) valid_objs_ko_at, clarsimp simp: valid_obj_def)
                                  apply (clarsimp simp: obj_at_def)
                                  apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
-                                 apply (clarsimp simp: other_obj_relation_def obj_at'_def sc_relation_def)
+                                 apply (clarsimp simp: other_obj_relation_def obj_at'_def
+                                                       sc_relation_def active_sc_at'_rewrite)
                                 apply (clarsimp simp: invs_def valid_state_def valid_pspace_def invs'_def valid_pspace'_def)
                                 apply (frule (1) valid_objs_ko_at, clarsimp simp: valid_obj_def)
                                 apply (rename_tac sc' n)
@@ -7108,8 +7111,9 @@ lemma doReplyTransfer_corres:
                                  apply (subst (asm) active_sc_at_equiv)
                                  apply (frule (1) active_scs_validE)
                                  apply (clarsimp simp: valid_refills_def2 obj_at_def)
-                                apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def
-                                                      sc_relation_def)
+                                apply (fastforce intro: active_sc_at'_cross
+                                                  simp: obj_at_def vs_all_heap_simps active_sc_def
+                                                        sc_relation_def)
                                apply wpsimp
                               apply wpsimp
                              apply (wpsimp wp: refillReady_wp)
@@ -7123,6 +7127,12 @@ lemma doReplyTransfer_corres:
                                | clarsimp split: Structures_A.kernel_object.splits)+)[1]
                        apply simp
                       apply clarsimp
+                      apply (erule active_sc_at'_cross)
+                         apply fastforce
+                        apply fastforce
+                       apply (fastforce simp: obj_at_kh_kheap_simps)
+                      apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps is_sc_obj_def
+                                     intro!: valid_sched_context_size_objsI)
                      apply (wpsimp wp: thread_get_wp')
                     apply (wpsimp wp: threadGet_wp)
                    apply (wpsimp wp: gts_wp)
@@ -7174,7 +7184,6 @@ lemma doReplyTransfer_corres:
                  apply wpsimp
                 apply (rule_tac Q'="\<lambda>_. tcb_at' recvr and invs'" in hoare_strengthen_post[rotated])
                  apply (clarsimp simp: tcb_at'_ex_eq_all invs'_def valid_pspace'_def)
-                 apply (frule (1) tcb_ko_at_valid_objs_valid_tcb', clarsimp simp: valid_tcb'_def)
                 apply (wpsimp wp: sts_invs')
                  apply (rule_tac Q'="\<lambda>_. invs' and ex_nonz_cap_to' recvr and tcb_at' recvr
                                         and (st_tcb_at' (\<lambda>st. st = Inactive) recvr)"

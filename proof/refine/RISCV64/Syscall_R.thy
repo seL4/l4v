@@ -2132,9 +2132,13 @@ lemma checkBudget_corres: (* called when ct_schedulable or in checkBudgetRestart
               apply simp
              apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-   apply (clarsimp simp: sc_refills_sc_at_def obj_at_def cur_sc_tcb_def sc_tcb_sc_at_def valid_sched_def)
+   apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def valid_sched_def)
+   apply (rule conjI)
+    apply (fastforce intro!: valid_sched_context_size_objsI
+                       simp: vs_all_heap_simps is_sc_obj_def)
    apply (drule (1) active_scs_validE[rotated])
-   apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+   apply (frule valid_refills_nonempty_refills)
+   apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps
                   split: if_split_asm)
   apply clarsimp
   done

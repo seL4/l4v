@@ -4128,21 +4128,13 @@ lemma getObject_sc_wp:
                      projectKOs obj_at'_def in_magnitude_check
               dest!: readObject_misc_ko_at')
 
-lemma getRefillNext_getSchedContext:
-  "getRefillNext scPtr index = do sc \<leftarrow> getSchedContext scPtr;
-                                  return $ if index = scRefillMax sc - 1 then 0 else index + 1
-                               od"
-  apply (clarsimp simp: getRefillNext_def readRefillNext_def readSchedContext_def
-                        getSchedContext_def getObject_def[symmetric] refillNext_def)
-  done
-
 lemma getRefillNext_wp:
   "\<lbrace>\<lambda>s. sc_at' scPtr s \<longrightarrow> (\<exists>t. ko_at' t scPtr s \<and> P (refillNext t index) s)\<rbrace>
    getRefillNext scPtr index
    \<lbrace>P\<rbrace>"
-  apply (simp add: getRefillNext_getSchedContext)
+  apply (simp add: getRefillNext_def readRefillNext_def readSchedContext_def
+             flip: getObject_def)
   apply (wpsimp wp: getObject_sc_wp)
-  apply (fastforce simp: obj_at'_def refillNext_def split: if_splits)
   done
 
 lemma readRefillSize_SomeD:
@@ -5201,5 +5193,9 @@ method add_valid_replies for rptr uses simp =
 method add_cur_tcb' =
   rule_tac Q'="\<lambda>s'. cur_tcb' s'" in corres_cross_add_guard,
   fastforce intro!: cur_tcb_cross
+
+method add_active_sc_at' for scPtr :: machine_word =
+  rule_tac Q'="\<lambda>s'. active_sc_at' scPtr s'" in corres_cross_add_guard,
+  fastforce intro!: active_sc_at'_cross
 
 end

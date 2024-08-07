@@ -3028,6 +3028,11 @@ crunch inReleaseQueue
 defs sc_at'_asrt_def:
   "sc_at'_asrt \<equiv> \<lambda>scPtr s. sc_at' scPtr s"
 
+defs active_sc_at'_asrt_def:
+  "active_sc_at'_asrt \<equiv> \<lambda>scPtr s. active_sc_at' scPtr s"
+
+declare active_sc_at'_asrt_def[simp]
+
 lemma ko_at'_valid_tcbs'_valid_tcb':
   "\<lbrakk>ko_at' ko ptr s; valid_tcbs' s\<rbrakk> \<Longrightarrow> valid_tcb' ko s"
   by (fastforce simp: valid_tcbs'_def obj_at'_def)

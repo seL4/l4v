@@ -777,8 +777,8 @@ lemma updateRefillTl_corres:
   done
 
 lemma readRefillReady_no_ofail[wp]:
-  "no_ofail (sc_at' t) (readRefillReady t)"
-  unfolding readRefillReady_def
+  "no_ofail (active_sc_at' t) (readRefillReady t)"
+  unfolding readRefillReady_def ohaskell_state_assert_def
   apply (wpsimp wp: no_ofail_readCurTime)
   done
 
@@ -791,9 +791,13 @@ lemma refillReady_corres:
       and valid_objs and pspace_aligned and pspace_distinct)
      (valid_objs' and valid_refills' scPtr)
      (get_sc_refill_ready sc_ptr) (refillReady scPtr)"
+  apply (add_active_sc_at' scPtr)
   apply (clarsimp simp: refill_ready_def refillReady_def get_sc_refill_ready_def
                         read_sc_refill_ready_def readRefillReady_def readCurTime_def gets_the_ogets
+                        ohaskell_state_assert_def gets_the_ostate_assert
              simp flip: get_refill_head_def getRefillHead_def getCurTime_def)
+  apply (rule corres_symb_exec_r[OF _ stateAssert_sp[unfolded HaskellLib_H.stateAssert_def]];
+         (solves wpsimp)?)
   apply (corres corres: getRefillHead_corres getCurTime_corres
                   simp: refill_map_def projection_rewrites)
   done
