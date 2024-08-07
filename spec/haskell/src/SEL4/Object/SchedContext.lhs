@@ -770,8 +770,7 @@ This module uses the C preprocessor to select a target architecture.
 >     when (nscOpt == tscOpt && nscOpt /= Nothing) $ do
 >         threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) tcbPtr
 >         scPtr <- return $ fromJust nscOpt
->         sc <- getSchedContext scPtr
->         setSchedContext scPtr (sc { scTCB = Nothing })
+>         updateSchedContext scPtr (\sc -> sc { scTCB = Nothing })
 >         cur <- getCurThread
 >         when (tcbPtr == cur) rescheduleRequired
 

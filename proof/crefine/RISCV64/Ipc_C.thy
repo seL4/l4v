@@ -6475,9 +6475,119 @@ lemma st_tcb_at'_ko_at':
 
 lemma maybeReturnSchedContext_ccorres:
   "ccorres dc xfdc
-     \<top> (\<lbrace>\<acute>ntfnPtr = Ptr ntfnPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []
+     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'
+      and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and ntfn_at' ntfnPtr and tcb_at' tcbPtr)
+     (\<lbrace>\<acute>ntfnPtr = Ptr ntfnPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
      (maybeReturnSc ntfnPtr tcbPtr) (Call maybeReturnSchedContext_'proc)"
-sorry (* FIXME RT: maybeReturnSchedContext_ccorres *)
+  supply Collect_const[simp del]
+  unfolding maybeReturnSc_def K_bind_apply liftM_def nested_bind fun_app_def
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ stateAssert_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ get_ntfn_sp']; (solves wpsimp)?)
+  apply (rename_tac ntfn)
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ threadGet_sp]; (solves wpsimp)?)
+  apply (cinit' lift: ntfnPtr_' tcb_')
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule_tac xf'=sc_'
+               and val="option_to_ptr (ntfnSc ntfn)"
+               and R="ko_at' ntfn ntfnPtr"
+               and R'=UNIV
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg)
+      apply clarsimp
+      apply (frule (1) obj_at_cslift_ntfn)
+      apply (clarsimp simp: typ_heap_simps cnotification_relation_def Let_def)
+     apply ceqv
+    apply clarsimp
+    apply csymbr
+    apply (rule_tac P="ntfnSc ntfn \<noteq> None" in ccorres_cases)
+     \<comment> \<open>ntfnPtr is associated with a scheduling context, so we check to see whether that
+        scheduling context is the same as the scheduling context associated with tcbPtr\<close>
+     apply (rule ccorres_cond_seq)
+     apply (rule ccorres_cond_true)
+     apply (rule ccorres_move_c_guard_tcb)
+     apply (rule_tac xf'=ret__int_'
+                 and val="from_bool (ntfnSc ntfn = tscOpt)"
+                 and R="ko_at' ntfn ntfnPtr and obj_at' (\<lambda>tcb. tcbSchedContext tcb = tscOpt) tcbPtr
+                        and valid_objs' and no_0_obj'"
+                 and R'=UNIV
+                  in ccorres_symb_exec_r_known_rv)
+        apply (rule conseqPre, vcg)
+        apply normalise_obj_at'
+        apply (rename_tac scPtr tcb)
+        apply (frule (1) obj_at_cslift_tcb)
+        apply (frule (1) ntfn_ko_at_valid_objs_valid_ntfn')
+        apply (prop_tac "sc_at' scPtr s")
+         apply (clarsimp simp: valid_ntfn'_def)
+        apply (frule (1) obj_at_cslift_sc)
+        apply clarsimp
+        apply (frule_tac p=scPtr in ko_at'_not_NULL)
+         apply fastforce
+        apply (clarsimp simp: ctcb_relation_def typ_heap_simps' from_bool_def
+                       split: bool.splits)
+        apply (metis option_to_ptr_simps option_to_ptr_not_0)
+       apply ceqv
+      apply (simp add: when_def)
+      apply (rule ccorres_cond[where R=\<top>])
+        apply fastforce
+       apply (rule ccorres_rhs_assoc)
+       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+           apply (rule ccorres_move_c_guard_tcb)+
+           apply (rule_tac Q="\<lambda>s tcb. {s'. (s, s') \<in> rf_sr \<and> ko_at' tcb tcbPtr s}"
+                        in threadSet_ccorres_lemma3[where P=\<top> and P'=\<top>, simplified])
+            apply (rule conseqPre, vcg)
+            apply clarsimp
+            apply (frule (1) obj_at_cslift_tcb[where thread=tcbPtr])
+            subgoal
+              by (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                             simp: typ_heap_simps' ctcb_relation_def option_to_ctcb_ptr_def
+                                   tcb_cte_cases_def cteSizeBits_def)
+           apply clarsimp
+          apply ceqv
+         apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+             apply (rule ccorres_move_c_guard_sc)
+             apply (rule_tac P=\<top> in updateSchedContext_ccorres_lemma2)
+               apply vcg
+              apply fastforce
+             apply clarsimp
+             apply (rule_tac sc'="scTcb_C_update (\<lambda>_. NULL) sc'"
+                          in rf_sr_sc_update_no_refill_buffer_update2;
+                    fastforce?)
+               apply (clarsimp simp: typ_heap_simps')
+              apply (clarsimp simp: csched_context_relation_def option_to_ctcb_ptr_def)
+             apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
+            apply ceqv
+           apply (rule ccorres_pre_getCurThread)
+           apply (clarsimp, rename_tac cur_thread scPtr)
+           apply (rule_tac Q="\<lambda>s. cur_thread = ksCurThread s" and Q'="\<top>" in ccorres_cond_both')
+             apply (fastforce dest: rf_sr_ksCurThread)
+            apply (ctac add: rescheduleRequired_ccorres)
+           apply (rule ccorres_return_Skip)
+          apply clarsimp
+          apply (drule Some_to_the)
+          apply (wpsimp wp: updateSchedContext_valid_objs' hoare_vcg_imp_lift')
+         apply vcg
+        apply (wpsimp wp: hoare_vcg_imp_lift')
+        apply (rule_tac Q'="\<lambda>_. sc_at' (the (ntfnSc ntfn)) and valid_objs' and no_0_obj'
+                               and pspace_aligned' and pspace_distinct'"
+                     in hoare_post_imp)
+         apply (clarsimp simp: opt_pred_def opt_map_def valid_obj'_def valid_sched_context'_def
+                               valid_sched_context_size'_def obj_at'_def refillSize_def
+                               objBits_simps
+                        split: option.splits if_splits)
+        apply wpsimp
+       apply vcg
+      apply (rule ccorres_return_Skip)
+     apply vcg
+    apply ccorres_rewrite
+    \<comment> \<open>ntfnPtr is not associated with a scheduling context, so we do nothing\<close>
+    apply clarsimp
+    apply (rule ccorres_cond_false)
+    apply (rule ccorres_return_Skip)
+   apply (vcg exspec=notification_ptr_get_ntfnSchedContext_modifies)
+  apply normalise_obj_at'
+  apply (fastforce dest: ntfn_ko_at_valid_objs_valid_ntfn' simp: valid_ntfn'_def)
+  done
 
 lemma receiveIPC_ccorres[corres]:
   notes option.case_cong_weak[cong]
