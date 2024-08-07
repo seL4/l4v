@@ -708,6 +708,10 @@ lemma curthread_relation:
   "(a, b) \<in> state_relation \<Longrightarrow> ksCurThread b = cur_thread a"
   by (simp add: state_relation_def)
 
+lemma cursc_relation:
+  "(a, b) \<in> state_relation \<Longrightarrow> ksCurSc b = cur_sc a"
+  by (simp add: state_relation_def)
+
 lemma curdomain_relation[elim!]:
   "(s, s') \<in> state_relation \<Longrightarrow> cur_domain s = ksCurDomain s'"
   by (clarsimp simp: state_relation_def)
