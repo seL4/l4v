@@ -4376,7 +4376,7 @@ lemma commitTime_corres:
              commitTime"
   supply if_split[split del]
   apply (rule_tac Q'="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
-   apply (fastforce intro: sc_at_cross simp: state_relation_def)
+   apply (fastforce intro!: sc_at_cross dest: cursc_relation)
   apply (clarsimp simp: commit_time_def commitTime_def liftM_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
    apply (corresKsimp corres: getCurSc_corres)
