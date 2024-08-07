@@ -1870,13 +1870,12 @@ lemma schedContextBindTCB_corres:
   apply (simp only: sched_context_bind_tcb_def schedContextBindTCB_def)
   apply (rule stronger_corres_guard_imp)
     apply clarsimp
-    apply (rule corres_symb_exec_r'[where Q'=\<top>])
        apply (rule corres_split_nor)
          apply (clarsimp simp: set_tcb_obj_ref_thread_set sc_relation_def)
           apply (rule threadset_corres; clarsimp simp: tcb_relation_def inQ_def)
          apply (rule corres_split_nor)
             apply (rule_tac f'="scTCB_update (\<lambda>_. Some t)"
-                         in update_sc_no_reply_stack_update_ko_at'_corres; clarsimp?)
+                         in updateSchedContext_no_stack_update_corres; clarsimp?)
              apply (clarsimp simp: sc_relation_def refillSize_def)
             apply (clarsimp simp: objBits_def objBitsKO_def)
            apply (rule corres_split[OF ifCondRefillUnblockCheck_corres])
@@ -1944,7 +1943,7 @@ lemma schedContextBindTCB_corres:
                             update_sched_context_valid_objs_same valid_ioports_lift
                             update_sched_context_iflive_update update_sched_context_refs_of_update
                             update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
-                      simp: invs'_def valid_pspace_def
+                      simp: invs'_def valid_pspace_def updateSchedContext_def
                  | rule hoare_vcg_conj_lift update_sched_context_wp)+)[2]
         apply (clarsimp simp: pred_conj_def)
         apply ((wp set_tcb_sched_context_valid_ready_qs
@@ -1959,8 +1958,9 @@ lemma schedContextBindTCB_corres:
                  threadSet_ct_idle_or_in_cur_domain' threadSet_cur threadSet_valid_replies'
                  sym_heap_sched_pointers_lift threadSet_tcbSchedNexts_of threadSet_tcbSchedPrevs_of
                  threadSet_valid_sched_pointers threadSet_tcbInReleaseQueue threadSet_tcbQueued
+                 threadSet_cap_to
               | clarsimp simp: tcb_cte_cases_def cteCaps_of_def cteSizeBits_def
-              | rule hoare_vcg_conj_lift threadSet_wp refl)+
+              | rule hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift' refl)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def)
    apply (intro conjI impI allI; (solves clarsimp)?)
             apply (fastforce simp: valid_obj_def obj_at_def sc_at_ppred_def is_sc_obj_def)
@@ -1984,17 +1984,16 @@ lemma schedContextBindTCB_corres:
     apply (subgoal_tac "ptr \<noteq> idle_sc_ptr")
      apply (clarsimp simp: invs'_def valid_pspace'_def pred_tcb_at'_def sc_at_ppred_def obj_at'_def)
      apply (intro conjI allI impI; (solves \<open>clarsimp simp: inQ_def comp_def\<close>)?)
-           apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def cteSizeBits_def)
-          subgoal
-            by (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
-                                cteSizeBits_def obj_at'_def refillSize_def)
-         apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
-                          simp: objBits_def objBitsKO_def valid_obj_size'_def
-                                valid_sched_context_size'_def)
-        apply (fastforce elim: ex_cap_to'_after_update simp: ko_wp_at'_def tcb_cte_cases_def cteSizeBits_def)
-       apply (fastforce elim: ex_cap_to'_after_update simp: ko_wp_at'_def tcb_cte_cases_def cteSizeBits_def)
-      apply (clarsimp simp: untyped_ranges_zero_inv_def cteCaps_of_def comp_def)
-     apply simp
+         apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def cteSizeBits_def)
+        subgoal
+          by (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
+                              cteSizeBits_def obj_at'_def refillSize_def)
+       apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
+                        simp: objBits_def objBitsKO_def valid_obj_size'_def
+                              valid_sched_context_size'_def)
+      apply (fastforce elim: ex_cap_to'_after_update
+                       simp: ko_wp_at'_def tcb_cte_cases_def cteSizeBits_def)
+     apply (clarsimp simp: untyped_ranges_zero_inv_def cteCaps_of_def comp_def)
     apply (fastforce simp: invs'_def dest!: global'_sc_no_ex_cap)
    apply (clarsimp simp: state_relation_def invs_def valid_state_def valid_pspace_def)
    apply (subgoal_tac "tcb_at' t s'")
@@ -2330,7 +2329,7 @@ lemma schedContextBindTCB_invs':
         bound_sc_tcb_at' (\<lambda>sc. sc = None) tcbPtr s \<and> obj_at' (\<lambda>sc. scTCB sc = None) scPtr s\<rbrace>
    schedContextBindTCB scPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: schedContextBindTCB_def)
+  apply (simp add: schedContextBindTCB_def updateSchedContext_def)
   apply (subst bind_assoc[symmetric, where m="threadSet _ _"])
   apply (rule bind_wp)+
       apply wpsimp
@@ -2348,7 +2347,7 @@ lemma schedContextBindTCB_invs':
              valid_irq_handlers_lift'' hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
              threadSet_valid_replies' threadSet_valid_sched_pointers threadSet_tcbInReleaseQueue
              sym_heap_sched_pointers_lift threadSet_tcbSchedNexts_of threadSet_tcbSchedPrevs_of
-             threadSet_tcbQueued
+             threadSet_tcbQueued hoare_vcg_all_lift hoare_vcg_imp_lift'
           | clarsimp simp: tcb_cte_cases_def cteCaps_of_def cteSizeBits_def)+
   apply (clarsimp simp: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   by (fastforce simp: pred_tcb_at'_def obj_at'_def
