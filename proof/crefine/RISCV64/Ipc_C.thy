@@ -4654,9 +4654,37 @@ lemma tcbReleaseEnqueue_ccorres:
 
 lemma postpone_ccorres:
   "ccorres dc xfdc
-     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
+     \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (postpone scPtr) (Call postpone_'proc)"
-sorry (* FIXME RT: postpone_ccorres *)
+  apply (cinit lift: sc_')
+   apply (rule ccorres_pre_getObject_sc)
+   apply clarsimp
+   apply (rename_tac sc)
+   apply (rule ccorres_assert2)
+   apply (rule ccorres_move_c_guard_sc)
+   apply (rule_tac val="option_to_ctcb_ptr (scTCB sc)"
+               and R="ko_at' sc scPtr"
+               and R'=UNIV
+               and xf'=tcb_'
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg)
+      apply (fastforce dest: obj_at_cslift_sc simp: typ_heap_simps csched_context_relation_def)
+     apply ceqv
+    apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
+     apply (ctac (no_vcg) add: tcbReleaseEnqueue_ccorres)
+      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: setReprogramTimer_def rf_sr_def cstate_relation_def Let_def
+                            modify_def get_def put_def bind_def carch_state_relation_def
+                            cmachine_state_relation_def)
+     apply wpsimp
+    apply wpsimp
+   apply vcg
+  apply (rule conjI)
+   apply (fastforce dest: sc_ko_at_valid_objs_valid_sc' simp: valid_sched_context'_def)
+  apply (clarsimp simp: option_to_ctcb_ptr_def)
+  done
 
 lemma doReplyTransfer_ccorres[corres]:
   "ccorres dc xfdc
