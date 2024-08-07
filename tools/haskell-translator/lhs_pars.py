@@ -1930,6 +1930,7 @@ syscall_m_map = {k: v+"E" for (k, v) in error_m_map.items()}
 option_m_map = {
     'return': 'oreturn',
     'assert': 'ohaskell_assert',
+    'readStateAssert': 'ohaskell_state_assert',
     'fail': 'ohaskell_fail',
     'when': 'owhen',
     'unless': 'ounless',
