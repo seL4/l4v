@@ -388,6 +388,11 @@ The function "stateAssert" is similar to "assert", except that it reads the curr
 > stateAssert :: MonadFail m => MonadState s m => (s -> Bool) -> String -> m ()
 > stateAssert f e = get >>= \s -> assert (f s) e
 
+A version of "stateAssert" that can be used within functions that are in the reader monad
+
+> readStateAssert :: MonadFail m => MonadReader s m => (s -> Bool) -> String -> m ()
+> readStateAssert f e = ask >>= \s -> assert (f s) e
+
 The "capHasProperty" function is used with "stateAssert". As explained above, it is "const True" here, but is strengthened to actually check the capability in the translation to Isabelle.
 
 > capHasProperty :: PPtr CTE -> (Capability -> Bool) -> KernelState -> Bool
