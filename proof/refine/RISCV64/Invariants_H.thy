@@ -395,6 +395,8 @@ definition state_refs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> r
 defs sym_refs_asrt_def:
   "sym_refs_asrt \<equiv> \<lambda>s. sym_refs (state_refs_of' s)"
 
+declare sym_refs_asrt_def[simp]
+
 definition live_sc' :: "sched_context \<Rightarrow> bool" where
   "live_sc' sc \<equiv> bound (scTCB sc) \<and> scTCB sc \<noteq> Some idle_thread_ptr
                   \<or> bound (scYieldFrom sc) \<or> bound (scNtfn sc) \<or> scReply sc \<noteq> None"

@@ -443,9 +443,7 @@ lemma performInvocation_corres:
                   apply (rule corres_returnOkTT)
                   apply simp
                  apply wpsimp+
-             apply (clarsimp simp: sym_refs_asrt_def)
 
-            apply (clarsimp simp: liftE_bindE)
             apply (rule corres_guard_imp)
               apply (rule corres_split[OF getCurThread_corres])
                 apply simp
