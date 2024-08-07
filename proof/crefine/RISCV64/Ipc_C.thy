@@ -6023,9 +6023,72 @@ lemma receiveIPC_dequeue_ccorres_helper:
 lemmas ccorres_pre_getBoundNotification = ccorres_pre_threadGet[where f=tcbBoundNotification, folded getBoundNotification_def]
 
 lemma schedContext_resume_ccorres:
-  "ccorres dc xfdc \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+  "ccorres dc xfdc
+     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
+     \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
      (schedContextResume scPtr) (Call schedContext_resume_'proc)"
-sorry (* FIXME RT: schedContext_resume_ccorres *)
+  supply Collect_const[simp del]
+  apply (cinit lift: sc_')
+   apply (rule ccorres_pre_getObject_sc)
+   apply (clarsimp, rename_tac sc)
+   apply (rule ccorres_assert2)
+   apply (rule_tac xf'=ret__int_'
+               and val="from_bool True"
+               and R="ko_at' sc scPtr and valid_objs' and no_0_obj'"
+               and R'=UNIV
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg, clarsimp)
+      apply (frule (1) obj_at_cslift_sc)
+      apply (clarsimp split: if_splits)
+     apply ceqv
+    apply ccorres_rewrite
+    apply (rule ccorres_rhs_assoc)
+    apply (rule ccorres_move_c_guard_sc)
+    apply (ctac add: isSchedulable_corres)
+      apply csymbr
+      apply (clarsimp simp: when_def)
+      apply (rule ccorres_cond[where R=\<top>])
+        apply (clarsimp simp: to_bool_def)
+       apply (rule ccorres_rhs_assoc)+
+       apply (ctac add: refill_ready_ccorres)
+         apply (clarsimp, rename_tac is_ready)
+         apply csymbr
+         apply (rule_tac P="to_bool is_ready" in ccorres_cases; clarsimp)
+          \<comment> \<open>the scheduling context is ready, so we proceed to check whether it is sufficient\<close>
+          apply (rule ccorres_cond_seq)
+          apply (rule ccorres_cond_true)
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac add: refill_sufficient_ccorres)
+            apply csymbr
+            apply (rule ccorres_cond[where R=\<top>])
+              apply (clarsimp simp: to_bool_def)
+             apply (ctac add: postpone_ccorres)
+            apply (rule ccorres_return_Skip)
+           apply wpsimp
+          apply (vcg exspec=refill_sufficient_modifies)
+         \<comment> \<open>the scheduling context is not ready, so we do not need to check whether it is sufficient\<close>
+         apply (rule ccorres_cond_seq)
+         apply (rule ccorres_cond_false)
+         apply ccorres_rewrite
+         apply (rule ccorres_cond_true)
+         apply (rule ccorres_symb_exec_l')
+            apply (ctac add: postpone_ccorres)
+           apply wpsimp+
+       apply (vcg exspec=refill_ready_modifies)
+      apply (rule ccorres_return_Skip)
+     apply clarsimp
+     apply (rule_tac Q'="\<lambda>_. valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'"
+                  in hoare_post_imp)
+      apply clarsimp
+     apply wpsimp
+    apply (vcg exspec=isSchedulable_modifies)
+   apply vcg
+  apply (rule conjI)
+   apply (fastforce dest: sc_ko_at_valid_objs_valid_sc' simp: valid_sched_context'_def)
+  apply (fastforce simp: typ_heap_simps csched_context_relation_def option_to_ctcb_ptr_def
+                         to_bool_def)
+  done
+
 
 lemma maybeDonateSchedContext_ccorres:
   "ccorres dc xfdc
