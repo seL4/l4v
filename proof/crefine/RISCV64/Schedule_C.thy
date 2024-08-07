@@ -593,26 +593,6 @@ lemma length_scRefills_bounded:
   apply (clarsimp simp: word_bits_def untypedBits_defs)
   done
 
-lemma sc_released_ccorres:
-  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     (active_sc_at' scPtr and valid_objs') \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (scReleased scPtr) (Call sc_released_'proc)"
-  apply (cinit simp: readScReleased_def scActive_def[symmetric] gets_the_if_distrib)
-   apply (ctac add: sc_active_ccorres)
-     apply (rule ccorres_cond[where R=\<top>])
-       apply (clarsimp simp: to_bool_def)
-      apply (simp flip: refillReady_def)
-      apply (rule ccorres_add_return2)
-      apply (ctac add: refill_ready_ccorres)
-        apply (fastforce intro: ccorres_return_C)
-       apply wpsimp
-      apply vcg
-     apply (fastforce intro: ccorres_return_C)
-    apply wpsimp
-   apply vcg
-  apply clarsimp
-  done
-
 lemma switchSchedContext_ccorres:
   "ccorres dc xfdc \<top> UNIV [] switchSchedContext (Call switchSchedContext_'proc)"
 sorry (* FIXME RT: switchSchedContext_ccorres *)
