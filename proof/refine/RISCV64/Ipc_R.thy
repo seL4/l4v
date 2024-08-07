@@ -4254,7 +4254,6 @@ lemma sendSignal_corres:
        defer
        apply (wp get_simple_ko_ko_at get_ntfn_ko')+
      apply (simp add: invs_valid_objs invs_valid_objs')+
-   apply (clarsimp simp: sym_refs_asrt_def)
   apply add_sym_refs
   apply (case_tac "ntfn_obj ntfn"; simp)
     \<comment> \<open>IdleNtfn\<close>
@@ -5051,14 +5050,13 @@ lemma maybeReturnSc_invs':
   apply (rule_tac x=tcb in exI)
   apply (clarsimp simp: invs'_def inQ_def comp_def eq_commute[where a="Some _"])
   apply (intro conjI impI allI; clarsimp?)
-      apply (clarsimp simp: untyped_ranges_zero_inv_def cteCaps_of_def comp_def)
-     apply (clarsimp simp: valid_idle'_def obj_at'_def sym_refs_asrt_def)
-     apply (drule_tac ko="tcb" and p=tptr in sym_refs_ko_atD'[rotated])
-      apply (fastforce simp: obj_at'_def)
-     apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
-     apply (fastforce elim: if_live_then_nonz_capE' simp: ko_wp_at'_def live_sc'_def)
-    apply (fastforce simp: valid_pspace'_def valid_obj'_def valid_sched_context'_def refillSize_def)
-   apply (fastforce simp: valid_obj'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+     apply (clarsimp simp: untyped_ranges_zero_inv_def cteCaps_of_def comp_def)
+    apply (drule_tac ko="tcb" and p=tptr in sym_refs_ko_atD'[rotated])
+     apply (fastforce simp: obj_at'_def)
+    apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
+    apply (fastforce elim: if_live_then_nonz_capE' simp: ko_wp_at'_def live_sc'_def)
+   apply (fastforce simp: valid_pspace'_def valid_obj'_def valid_sched_context'_def refillSize_def)
+  apply (fastforce simp: valid_obj'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
 
 crunch doIPCTransfer

@@ -4111,30 +4111,26 @@ lemma schedContextUnbindNtfn_corres:
   apply (rule corres_cross[where Q' = "sc_at' sc", OF sc_at'_cross_rel])
    apply (simp add: invs_psp_aligned invs_distinct)
   apply add_sym_refs
-  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
-   apply (simp add: get_sc_obj_ref_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split[OF get_sc_corres])
-       apply (rule corres_option_split)
-         apply (simp add: sc_relation_def)
-        apply (rule corres_return_trivial)
-       apply (simp add: update_sk_obj_ref_def bind_assoc)
-       apply (rule corres_split[OF getNotification_corres])
-         apply (rule corres_split[OF setNotification_corres])
-            apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
-           apply (rule_tac f'="scNtfn_update (\<lambda>_. None)"
-                    in update_sc_no_reply_stack_update_ko_at'_corres)
-              apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def refillSize_def)+
-          apply wpsimp+
-    apply (frule invs_valid_objs)
-    apply (frule (1) valid_objs_ko_at)
-    apply (clarsimp simp: invs_psp_aligned valid_obj_def valid_sched_context_def
-                   split: option.splits)
-   apply (clarsimp split: option.splits)
-   apply (frule (1) scNtfn_sym_refsD[OF ko_at_obj_at', simplified])
-     apply clarsimp+
-  apply normalise_obj_at'
-  apply (clarsimp simp: sym_refs_asrt_def)
+  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified, rotated], simp)
+  apply (simp add: get_sc_obj_ref_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF get_sc_corres])
+      apply (rule corres_option_split)
+        apply (simp add: sc_relation_def)
+       apply (rule corres_return_trivial)
+      apply (simp add: update_sk_obj_ref_def bind_assoc)
+      apply (rule corres_split[OF getNotification_corres])
+        apply (rule corres_split[OF setNotification_corres])
+           apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+          apply (rule_tac f'="scNtfn_update (\<lambda>_. None)"
+                   in update_sc_no_reply_stack_update_ko_at'_corres)
+             apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def refillSize_def)+
+         apply wpsimp+
+   apply (frule invs_valid_objs)
+   apply (frule (1) valid_objs_ko_at)
+   apply (clarsimp simp: invs_psp_aligned valid_obj_def valid_sched_context_def
+                  split: option.splits)
+  apply (fastforce dest: scNtfn_sym_refsD[OF ko_at_obj_at', simplified] split: option.splits)
   done
 
 lemma sched_context_maybe_unbind_ntfn_corres:
@@ -4179,7 +4175,6 @@ lemma sched_context_maybe_unbind_ntfn_corres:
        apply (frule (1) ntfnSc_sym_refsD[OF ko_at_obj_at', simplified])
         apply clarsimp+
        apply normalise_obj_at'
-      apply (clarsimp simp: sym_refs_asrt_def)
      apply (wpsimp wp: get_simple_ko_wp getNotification_wp split: option.splits)+
   done
 
