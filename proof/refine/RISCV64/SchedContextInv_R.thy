@@ -374,16 +374,18 @@ lemma decode_sc_ctrl_inv_corres:
 lemma schedContextBindNtfn_corres:
   "corres dc
      (valid_objs and sc_ntfn_sc_at ((=) None) scp
-      and (obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_sc ntfn = None) ntfnp))
+      and (obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_sc ntfn = None) ntfnp)
+      and (\<lambda>s. sym_refs (state_refs_of s)) and pspace_aligned and pspace_distinct)
      (ntfn_at' ntfnp and sc_at' scp)
      (sched_context_bind_ntfn scp ntfnp) (schedContextBindNtfn scp ntfnp)"
+  apply add_sym_refs
   unfolding sched_context_bind_ntfn_def schedContextBindNtfn_def
+  apply (rule corres_stateAssert_ignore, simp)
   apply (clarsimp simp: update_sk_obj_ref_def bind_assoc)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getNotification_corres])
       apply (rule corres_split[OF setNotification_corres])
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
-        apply (fold updateSchedContext_def)
         apply (rule updateSchedContext_no_stack_update_corres)
            apply (clarsimp simp: sc_relation_def refillSize_def)
           apply (clarsimp simp: opt_map_red)
@@ -770,7 +772,7 @@ lemma invokeSchedContext_corres:
        apply (rule corres_rel_imp)
         apply (rule schedContextBindNtfn_corres)
        apply simp
-      apply clarsimp
+      apply fastforce
      apply (clarsimp simp: obj_at'_def)
     apply (clarsimp  split: cap.split capability.split; intro conjI impI allI; clarsimp)
      apply (rule corres_guard_imp)

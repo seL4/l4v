@@ -882,7 +882,7 @@ lemma schedContextBindNtfn_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' scPtr and ex_nonz_cap_to' ntfnPtr\<rbrace>
    schedContextBindNtfn scPtr ntfnPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: schedContextBindNtfn_def)
+  apply (clarsimp simp: schedContextBindNtfn_def updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_invs' setNotification_invs' hoare_vcg_imp_lift'
                     hoare_vcg_all_lift getNotification_wp)
   apply (rule conjI)
