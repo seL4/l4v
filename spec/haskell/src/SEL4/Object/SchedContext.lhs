@@ -480,11 +480,11 @@ This module uses the C preprocessor to select a target architecture.
 >         rescheduleRequired
 
 > schedContextBindNtfn :: PPtr SchedContext -> PPtr Notification -> Kernel ()
-> schedContextBindNtfn sc ntfn = do
->     n <- getNotification ntfn
->     setNotification ntfn (n { ntfnSc = Just sc })
->     s <- getSchedContext sc
->     setSchedContext sc (s { scNtfn = Just ntfn })
+> schedContextBindNtfn scPtr ntfnPtr = do
+>     stateAssert sym_refs_asrt "Assert that `sym_refs (state_refs_of' s)` holds"
+>     ntfn <- getNotification ntfnPtr
+>     setNotification ntfnPtr (ntfn { ntfnSc = Just scPtr })
+>     updateSchedContext scPtr (\sc -> sc { scNtfn = Just ntfnPtr })
 
 > schedContextUnbindTCB :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindTCB scPtr = do
