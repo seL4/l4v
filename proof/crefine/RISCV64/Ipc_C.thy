@@ -6102,9 +6102,94 @@ lemma obj_at_cslift_ntfn:
 
 lemma maybeDonateSchedContext_ccorres:
   "ccorres dc xfdc
-     \<top> (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>ntfnPtr = Ptr ntfnPtr\<rbrace>) []
+     (tcb_at' tcbPtr and invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
+     (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>ntfnPtr = Ptr ntfnPtr\<rbrace>) hs
      (maybeDonateSc tcbPtr ntfnPtr) (Call maybeDonateSchedContext_'proc)"
-sorry (* FIXME RT: maybeDonateSchedContext_ccorres *)
+  supply Collect_const[simp del]
+  apply (cinit lift: tcb_' ntfnPtr_')
+   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_pre_threadGet)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (clarsimp simp: when_def)
+   apply (rule_tac Q="obj_at' (\<lambda>tcb. scOpt = tcbSchedContext tcb) tcbPtr
+                      and valid_objs' and no_0_obj'"
+                in ccorres_cond_both'[where Q'=\<top>])
+     apply normalise_obj_at'
+     apply (rename_tac tcb)
+     apply (frule (1) obj_at_cslift_tcb)
+     apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+     apply (case_tac "tcbSchedContext tcb";
+            clarsimp simp: ctcb_relation_def typ_heap_simps valid_tcb'_def)
+    \<comment> \<open>tcbPtr is not associated with a scheduling context, so we may potentially
+       donate to tcbPtr later\<close>
+    apply (clarsimp simp: liftM_def)
+    apply (rule ccorres_pre_getNotification)
+    apply (rename_tac ntfn)
+    apply (rule ccorres_rhs_assoc)
+    apply (rule ccorres_rhs_assoc)
+    apply (rule_tac xf'=sc_'
+                and val="option_to_ptr (ntfnSc ntfn)"
+                and R="ko_at' ntfn ntfnPtr"
+                and R'=UNIV
+                 in ccorres_symb_exec_r_known_rv)
+       apply (rule conseqPre, vcg)
+       apply clarsimp
+       apply (erule cmap_relationE1 [OF cmap_relation_ntfn])
+        apply (erule ko_at_projectKO_opt)
+       apply (clarsimp simp: typ_heap_simps cnotification_relation_def Let_def)
+      apply ceqv
+     apply csymbr
+     apply (simp add: case_option_If2)
+     apply (rule ccorres_cond_seq)
+     apply (rule_tac Q="ko_at' ntfn ntfnPtr and valid_objs' and no_0_obj'"
+                  in ccorres_cond_both'[where Q'=\<top>])
+       apply clarsimp
+       apply (frule (1) ntfn_ko_at_valid_objs_valid_ntfn')
+       apply (clarsimp simp: option_to_ptr_def option_to_0_def valid_ntfn'_def
+                      split: option.splits)
+      apply (simp add: liftM_def)
+      apply (rule ccorres_pre_getObject_sc)
+      apply (rule ccorres_move_c_guard_sc)
+      apply (rule_tac xf'=ret__int_'
+                  and val="from_bool (scTCB rv = None)"
+                  and R="ko_at' ntfn ntfnPtr and ko_at' rv (the (ntfnSc ntfn))
+                         and valid_objs' and no_0_obj'"
+                   in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+         apply (rule conseqPre, vcg)
+         apply normalise_obj_at'
+         apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+         apply (frule (1) obj_at_cslift_sc)
+         apply (force dest!: tcb_at_not_NULL
+                       simp: typ_heap_simps' option_to_ctcb_ptr_def csched_context_relation_def
+                             valid_sched_context'_def from_bool_def
+                      split: option.splits bool.splits)
+        apply ceqv
+       apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
+         apply fastforce
+        \<comment> \<open>the scheduling context associated with ntfnPtr is not bound to a TCB, so
+            we donate it to tcbPtr\<close>
+        apply (ctac add: schedContext_donate_ccorres)
+          apply (ctac add: schedContext_resume_ccorres)
+         apply clarsimp
+         apply (drule Some_to_the)
+         apply (wpsimp wp: schedContextDonate_valid_objs')
+        apply (vcg exspec=schedContext_donate_modifies)
+       apply (rule ccorres_return_Skip)
+      apply vcg
+     apply ccorres_rewrite
+     \<comment> \<open>there is no scheduling context associated with ntfnPtr\<close>
+     apply (rule ccorres_cond_false)
+     apply (rule ccorres_return_Skip)
+    apply vcg
+   apply (rule ccorres_return_Skip)
+  apply (clarsimp simp: from_bool_def)
+  apply (frule invs_valid_objs')
+  apply safe
+     apply (clarsimp simp: obj_at'_def)
+    apply (clarsimp simp: valid_ntfn'_def)
+   apply (fastforce dest: obj_at_cslift_ntfn simp: typ_heap_simps)
+  apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
+  done
 
 lemma schedContext_bindTCB_ccorres:
   "ccorres dc xfdc
