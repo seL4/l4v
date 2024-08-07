@@ -1054,7 +1054,8 @@ lemma refillUpdate_corres:
                      | wpsimp simp: updateRefillHd_def
                                 wp: updateSchedContext_wp)+)[1]
             apply (rule refillAddTail_corres[simplified dc_def])
-            apply (clarsimp simp: refill_map_def)
+             apply (clarsimp simp: refill_map_def)
+            apply simp
            apply (wpsimp wp: get_refill_head_wp)
           apply (rule getRefillHead_wp)
          apply (rule_tac Q'="\<lambda>_ s. sc_at sc_ptr s \<and> is_active_sc2 sc_ptr s

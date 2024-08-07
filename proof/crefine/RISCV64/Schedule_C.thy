@@ -781,6 +781,7 @@ lemma no_ofail_releaseQNonEmptyAndReady:
   apply normalise_obj_at'
   apply (fastforce intro!: aligned'_distinct'_obj_at'I
                      simp: active_sc_tcb_at'_def obj_at'_def opt_pred_def opt_map_def
+                           active_sc_at'_def
                     split: option.splits)
   done
 

@@ -104,6 +104,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillHead :: PPtr SchedContext -> KernelR Refill
 > readRefillHead scPtr = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillHd sc
 
@@ -115,6 +116,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillTail :: PPtr SchedContext -> KernelR Refill
 > readRefillTail scPtr = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillTl sc
 
@@ -197,6 +199,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillNext :: PPtr SchedContext -> Int -> KernelR Int
 > readRefillNext scPtr index = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillNext sc index
 
@@ -220,6 +223,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillCapacity :: PPtr SchedContext -> Ticks -> KernelR Ticks
 > readRefillCapacity scPtr usage = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- readRefillHead scPtr
 >     return $ refillCapacity usage head
 
@@ -239,6 +243,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillPopHead :: PPtr SchedContext -> Kernel Refill
 > refillPopHead scPtr = do
+>     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- getRefillHead scPtr
 >     sc <- getSchedContext scPtr
 >     next <- getRefillNext scPtr (scRefillHead sc)
@@ -247,6 +252,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillAddTail :: PPtr SchedContext -> Refill -> Kernel ()
 > refillAddTail scPtr refill = do
+>     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     size <- getRefillSize scPtr
 >     sc <- getSchedContext scPtr
 >     assert (size < scRefillMax sc) "cannot add beyond queue size"
@@ -275,6 +281,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillReady :: PPtr SchedContext -> KernelR Bool
 > readRefillReady scPtr = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- readRefillHead scPtr
 >     curTime <- readCurTime
 >     return $ rTime head <= curTime
