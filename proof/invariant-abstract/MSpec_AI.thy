@@ -30,6 +30,8 @@ record mspec_recv_oracle =
   new_reply_tcb :: "tcb option"
   badge_val :: badge
 
+datatype mspec_writable = Writable | WritableExclusive
+
 record mspec_state =
   cur_thread_cnode :: cnode_contents
   cur_thread_bound_notification :: "obj_ref option"
@@ -42,10 +44,12 @@ record mspec_state =
   (* TODO: (ks_local_mem Mem)
      A comment in Mathieu's smt file says "shouldn't be called local mem, this can represent memory
      in shared memory regions" - but regardless, should these be virtual or physical addresses? *)
+  cur_thread_mapped_mem :: "vspace_ref \<rightharpoonup> obj_ref"
   (* TODO: (ks_local_mem_writable (Array Word64 Bool))
      That this address is mapped writable for the current PD. *)
   (* TODO: (ks_local_mem_safe (Array Word64 Bool))
      That the current PD is the *only* one with write access to this address. *)
+  cur_thread_mapped_mem_writable_exclusive :: "vspace_ref \<rightharpoonup> mspec_writable"
 
 (* The sorts of things Mathieu's smt file asserts about:
   - ks_local_mem
@@ -56,9 +60,21 @@ record mspec_state =
   - ks_local_mem_safe
     - that for all addresses, if an address is safe, then nobody else has write access
       (see relation_mmrs_mem)
-
 *)
 
+definition
+  local_mem_writable :: "mspec_state \<Rightarrow> vspace_ref \<Rightarrow> bool"
+where
+  "local_mem_writable m r \<equiv> \<exists>w. cur_thread_mapped_mem_writable_exclusive m r = Some w"
+
+definition
+  local_mem_safe :: "mspec_state \<Rightarrow> vspace_ref \<Rightarrow> bool"
+where
+  "local_mem_safe m r \<equiv> cur_thread_mapped_mem_writable_exclusive m r = Some WritableExclusive"
+
+(* XXX: This is how you find consts of a given type (thanks to Tom for pointing out), but it won't
+  help so much in this instance seeing as vspace_ref is just a type_synonym for machine_word :( *)
+find_consts "vspace_ref \<Rightarrow> _"
 term "TCB t"
 term "t :: tcb"
 definition
@@ -70,7 +86,9 @@ where
        _ \<Rightarrow> \<lambda>_. None),
      cur_thread_bound_notification = (case kheap s (cur_thread s) of
        Some (TCB t) \<Rightarrow> tcb_bound_notification t |
-       _ \<Rightarrow> None)
+       _ \<Rightarrow> None),
+     cur_thread_mapped_mem = \<lambda>va.  None, \<comment> \<open>TODO\<close>
+     cur_thread_mapped_mem_writable_exclusive = \<lambda>_. None \<comment> \<open>TODO\<close>
    \<rparr>"
 
 term "is_reply_cap"
