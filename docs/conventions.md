@@ -41,7 +41,7 @@ correct material in here!
     circumstances will be transformed into `?x2.0` which is harder to work with),
     but don't overuse `'`, i.e. `x'''` is not a good name.
 
-[1]: https://isabelle.systems/conventions/naming.html
+[1]: https://web.archive.org/web/20220810201813/https://isabelle.systems/conventions/naming.html
 
 
 ## Directories
