@@ -6657,91 +6657,222 @@ lemma schedContext_bindNtfn_ccorres:
   apply (clarsimp simp: sym_refs_asrt_def)
   done
 
+crunch maybeDonateSc
+  for no_0_obj'[wp]: no_0_obj'
+  (simp: crunch_simps wp: crunch_wps)
+
 lemma completeSignal_ccorres:
-  notes if_split[split del]
-  shows
-  "ccorres dc xfdc (invs' and tcb_at' thread)
-     (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr thread\<rbrace>
-           \<inter> \<lbrace>\<acute>ntfnPtr = Ptr ntfnptr\<rbrace>) hs
-     (completeSignal ntfnptr thread)
-     (Call completeSignal_'proc)"
-   apply (cinit lift: tcb_' ntfnPtr_')
+  "ccorres dc xfdc
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and tcb_at' thread)
+     (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>ntfnPtr = Ptr ntfnptr\<rbrace>) hs
+     (completeSignal ntfnptr thread) (Call completeSignal_'proc)"
+  supply if_split[split del]
+  apply (cinit lift: tcb_' ntfnPtr_')
+   apply (rule ccorres_stateAssert)
    apply (rule_tac P="invs' and tcb_at' thread" in ccorres_gen_asm_state)
    apply clarsimp
-   apply (subgoal_tac "tcb_ptr_to_ctcb_ptr thread \<noteq> NULL")
-    prefer 2
-    apply (clarsimp simp: invs'_def valid_pspace'_def
-                          tcb_ptr_to_ctcb_ptr_def objBits_simps')
+   apply (prop_tac "tcb_ptr_to_ctcb_ptr thread \<noteq> NULL")
+    apply (clarsimp simp: invs'_def valid_pspace'_def tcb_ptr_to_ctcb_ptr_def objBits_simps')
     apply (drule sum_to_zero)
-    apply (clarsimp simp: obj_at'_def ctcb_offset_defs projectKOs objBitsKO_def
-                          is_aligned_def objBits_simps')
+    apply (clarsimp simp: obj_at'_def ctcb_offset_defs projectKOs is_aligned_def objBits_simps')
    apply clarsimp
    apply csymbr
    apply simp
    apply (rule ccorres_rhs_assoc)+
    apply (rule ccorres_pre_getNotification, rename_tac ntfn)
    apply (rule_tac xf'=ret__unsigned_longlong_'
-                and val="case ntfnObj ntfn of IdleNtfn \<Rightarrow> scast NtfnState_Idle
-                                  | WaitingNtfn _ \<Rightarrow> scast NtfnState_Waiting
-                                  | ActiveNtfn _ \<Rightarrow> scast NtfnState_Active"
-                and R="ko_at' ntfn ntfnptr"
-                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+               and val="case ntfnObj ntfn of
+                            IdleNtfn \<Rightarrow> scast NtfnState_Idle
+                          | WaitingNtfn _ \<Rightarrow> scast NtfnState_Waiting
+                          | ActiveNtfn _ \<Rightarrow> scast NtfnState_Active"
+               and R="ko_at' ntfn ntfnptr"
+                in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
       apply vcg
       apply clarsimp
-      apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_ntfn])
+      apply (erule (1) cmap_relation_ko_atE[OF cmap_relation_ntfn])
       apply (clarsimp simp: cnotification_relation_def Let_def typ_heap_simps
                      split: Structures_H.ntfn.splits)
      apply ceqv
     apply wpc
-    \<comment> \<open>IdleNtfn case\<close>
+      \<comment> \<open>IdleNtfn case\<close>
       apply (clarsimp simp: NtfnState_Idle_def NtfnState_Active_def)
       apply csymbr
       apply (rule ccorres_cond_false)
       apply (rule ccorres_fail)
-      \<comment> \<open>ActiveNtfn case\<close>
+     \<comment> \<open>ActiveNtfn case\<close>
      apply (clarsimp, csymbr, rule ccorres_cond_true)
      apply (rule ccorres_rhs_assoc)+
      apply (rename_tac word)
      apply (rule ccorres_rhs_assoc2)
-     apply (rule_tac val=word and xf'=badge___unsigned_long_' and R="ko_at' ntfn ntfnptr"
-                   in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+     apply (rule_tac val=word
+                 and xf'=badge___unsigned_long_'
+                 and R="ko_at' ntfn ntfnptr"
+                  in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply (vcg, clarsimp)
-        apply (erule(1) cmap_relation_ko_atE[OF cmap_relation_ntfn])
+        apply (erule (1) cmap_relation_ko_atE[OF cmap_relation_ntfn])
         apply (clarsimp simp: cnotification_relation_def Let_def typ_heap_simps)
        apply ceqv
-      apply (ctac(no_vcg))
-sorry (* FIXME RT: completeSignal_ccorres *) (*
-       apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV in ccorres_from_vcg)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp)
-       apply (frule(1) cmap_relation_ko_atD [OF cmap_relation_ntfn])
-       apply (clarsimp simp: typ_heap_simps setNotification_def)
-       apply (rule bexI [OF _ setObject_eq])
-           apply (simp add: rf_sr_def cstate_relation_def Let_def update_ntfn_map_tos
-                            cpspace_relation_def typ_heap_simps')
-           apply (elim conjE)
-           apply (intro conjI)
-             apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
-              apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def mask_def)
-             apply simp
-            apply (clarsimp simp: carch_state_relation_def)
-           apply (simp add: cmachine_state_relation_def)
-          apply (simp add: h_t_valid_clift_Some_iff)
-         apply (simp add: objBits_simps')
-        apply (simp add: objBits_simps)
-       apply assumption
-      apply wp
-     apply (clarsimp simp: guard_is_UNIV_def RISCV64_H.badgeRegister_def
-                           RISCV64.badgeRegister_def C_register_defs
-                           RISCV64.capRegister_def)
+      apply (ctac (no_vcg))
+       apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+       apply (rule_tac P="invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' ntfn ntfnptr"
+                    in ccorres_from_vcg[where P'=UNIV])
+           apply (rule allI, rule conseqPre, vcg)
+           apply clarsimp
+           apply (frule (1) cmap_relation_ko_atD[OF cmap_relation_ntfn])
+           apply (clarsimp simp: typ_heap_simps setNotification_def)
+           apply (rule bexI[OF _ setObject_eq])
+               apply (simp add: rf_sr_def cstate_relation_def Let_def update_ntfn_map_tos
+                                cpspace_relation_def typ_heap_simps')
+               apply (elim conjE)
+               apply (intro conjI)
+                  apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+                   apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def mask_def)
+                  apply simp
+                 apply (simp add: refill_buffer_relation_def image_def dom_def Let_def
+                                  typ_heap_simps update_ntfn_map_tos)
+                apply (clarsimp simp: carch_state_relation_def)
+               apply (simp add: cmachine_state_relation_def)
+              apply (simp add: h_t_valid_clift_Some_iff)
+             apply (simp add: objBits_simps')
+            apply (simp add: objBits_simps)
+           apply assumption
+          apply ceqv
+         apply (ctac add: maybeDonateSchedContext_ccorres)
+           apply (rule ccorres_pre_threadGet, rename_tac scOpt)
+           apply (rule ccorres_move_c_guard_tcb)
+           apply (rule_tac P="scOpt = None" in ccorres_cases)
+            apply (rule_tac xf'=ret__unsigned_long_'
+                        and val="from_bool False"
+                        and R="obj_at' (\<lambda>tcb. tcbSchedContext tcb = scOpt) thread
+                               and valid_objs' and no_0_obj'"
+                         in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+               apply (rule conseqPre, vcg)
+               apply clarsimp
+               apply (frule (1) obj_at_cslift_tcb)
+               apply normalise_obj_at'
+               apply (clarsimp simp: ctcb_relation_def typ_heap_simps)
+              apply ceqv
+             apply ccorres_rewrite
+             apply clarsimp
+             apply (rule ccorres_return_Skip)
+            apply (vcg exspec=sc_sporadic_modifies)
+           apply (clarsimp, rename_tac scPtr)
+           apply (wpfix add: option.sel)
+           apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+           apply (rule_tac xf'=ret__unsigned_long_'
+                       and val="from_bool (scSporadic sc)"
+                       and R="obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some scPtr) thread
+                              and ko_at' sc scPtr and valid_objs' and no_0_obj'"
+                        in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+              apply (rename_tac abs_state)
+              apply (rule conseqPre, vcg)
+              apply normalise_obj_at'
+              apply (frule (1) obj_at_cslift_tcb)
+              apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+              apply (prop_tac "sc_at' scPtr abs_state")
+               apply (clarsimp simp: valid_tcb'_def valid_bound_obj'_def)
+              apply (frule (1) obj_at_cslift_sc)
+              apply (clarsimp simp: ctcb_relation_def typ_heap_simps csched_context_relation_def
+                                    to_bool_def
+                             split: if_splits)
+             apply ceqv
+            apply ccorres_rewrite
+            apply (rule_tac P= "scSporadic sc" in ccorres_cases)
+             apply (clarsimp simp: from_bool_def)
+             apply ccorres_rewrite
+             apply (clarsimp simp: liftM_def)
+             apply (rule ccorres_pre_getNotification, rename_tac notification)
+             apply (rule ccorres_pre_getCurSc, rename_tac cur_sc)
+             apply (clarsimp simp: when_def)
+             apply (rule ccorres_rhs_assoc)
+             apply (rule ccorres_rhs_assoc)
+             apply (rule_tac xf'=sc_'
+                         and val="option_to_ptr (ntfnSc notification)"
+                         and R="ko_at' notification ntfnptr"
+                          in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                apply (rule conseqPre, vcg)
+                apply clarsimp
+                apply (frule (1) obj_at_cslift_ntfn)
+                apply (clarsimp simp: typ_heap_simps cnotification_relation_def Let_def)
+               apply ceqv
+              apply (rule ccorres_move_c_guard_tcb)
+              apply (rule_tac xf'=ret__int_'
+                          and val="from_bool (Some scPtr = ntfnSc notification)"
+                          and R="ko_at' notification ntfnptr
+                                 and obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some scPtr) thread
+                                 and valid_objs' and no_0_obj'"
+                           in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                 apply (rename_tac abs_state)
+                 apply (rule conseqPre, vcg)
+                 apply clarsimp
+                 apply (frule (1) obj_at_cslift_tcb)
+                 apply normalise_obj_at'
+                 apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+                 apply (prop_tac "sc_at' scPtr abs_state")
+                  apply (clarsimp simp: valid_tcb'_def)
+                 apply (clarsimp simp: typ_heap_simps ctcb_relation_def from_bool_def
+                                 split: bool.splits)
+                 apply (case_tac "ntfnSc notification"; force)
+                apply ceqv
+               apply (rule ccorres_cond_seq)
+               apply (rule_tac P="Some scPtr = ntfnSc notification" in ccorres_cases; clarsimp)
+                apply ccorres_rewrite
+                apply (rule ccorres_move_c_guard_tcb)
+                apply (rule_tac xf'=ret__int_'
+                            and val="from_bool (scPtr \<noteq> cur_sc)"
+                            and R="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some scPtr) thread s
+                                       \<and> ksCurSc s = cur_sc \<and> valid_objs' s \<and> no_0_obj' s"
+                             in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                   apply (rule conseqPre, vcg)
+                   apply normalise_obj_at'
+                   apply (frule (1) obj_at_cslift_tcb)
+                   apply (frule rf_sr_ksCurSC)
+                   apply (clarsimp simp: ctcb_relation_def typ_heap_simps split: if_splits)
+                   apply (case_tac "ntfnSc notification"; fastforce)
+                  apply ceqv
+                 apply (rule ccorres_cond[where R=\<top>])
+                   apply fastforce
+                  apply (rule ccorres_move_c_guard_tcb)
+                  apply (ctac add: refill_unblock_check_ccorres)
+                 apply (rule ccorres_return_Skip)
+                apply vcg
+               apply ccorres_rewrite
+               apply (rule ccorres_cond_false)
+               apply (rule ccorres_return_Skip)
+              apply vcg
+             apply (vcg exspec=notification_ptr_get_ntfnSchedContext_modifies)
+            apply ccorres_rewrite
+            apply (clarsimp simp: when_def)
+            apply (rule ccorres_return_Skip)
+           apply (vcg exspec=sc_sporadic_modifies)
+          apply (rule_tac Q'="\<lambda>_. valid_objs' and no_0_obj'
+                                  and pspace_aligned' and pspace_distinct' and pspace_bounded'
+                                  and tcb_at' thread"
+                       in hoare_post_imp)
+           apply (fastforce simp: obj_at'_def)
+          apply wpsimp
+         apply (vcg exspec=maybeDonateSchedContext_modifies)
+        apply (wpsimp wp: setNotification_invs')
+       apply (vcg exspec=notification_ptr_set_state_modifies)
+      apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s
+                                \<and> sym_refs (state_refs_of' s)
+                                \<and> ko_at' ntfn ntfnptr s \<and> tcb_at' thread s"
+                   in hoare_post_imp)
+       apply (fastforce dest: ntfn_ko_at_valid_objs_valid_ntfn'
+                      intro!: if_live_then_nonz_capE'
+                        simp: ko_wp_at'_def obj_at'_def live_ntfn'_def live'_def valid_ntfn'_def)
+      apply wpsimp
+     apply (clarsimp simp: guard_is_UNIV_def RISCV64_H.badgeRegister_def RISCV64.badgeRegister_def
+                           C_register_defs option_to_ptr_def option_to_0_def
+                    split: if_splits option.splits)
     \<comment> \<open>WaitingNtfn case\<close>
     apply (clarsimp simp: NtfnState_Active_def NtfnState_Waiting_def)
     apply csymbr
     apply (rule ccorres_cond_false)
     apply (rule ccorres_fail)
-   apply (clarsimp simp: guard_is_UNIV_def)
-  apply (clarsimp)
-  done *)
+   apply (clarsimp simp: guard_is_UNIV_def split: if_splits)
+  apply (clarsimp simp: notification_state_defs)
+  done
 
 lemma doNBRecvFailedTransfer_ccorres[corres]:
   "ccorres dc xfdc

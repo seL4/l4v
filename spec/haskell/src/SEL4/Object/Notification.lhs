@@ -196,6 +196,7 @@ The following function will remove the given thread from the queue of the notifi
 
 > completeSignal :: PPtr Notification -> PPtr TCB -> Kernel ()
 > completeSignal ntfnPtr tcbPtr = do
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             ActiveNtfn badge -> do
@@ -206,7 +207,7 @@ The following function will remove the given thread from the queue of the notifi
 >                 case scOpt of
 >                     Just scp -> do
 >                         sc <- getSchedContext scp
->                         when (scSporadic sc && 0 < scRefillMax sc) $ do
+>                         when (scSporadic sc) $ do
 >                             ntfnScPtr <- liftM ntfnSc $ getNotification ntfnPtr
 >                             curScPtr <- getCurSc
 >                             when (scOpt == ntfnScPtr && scp /= curScPtr) $ refillUnblockCheck scp
