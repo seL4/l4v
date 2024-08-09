@@ -30,7 +30,7 @@ lemma update_cap_data_closedform:
    | DomainCap \<Rightarrow> DomainCap
    | UntypedCap dev p n idx \<Rightarrow> UntypedCap dev p n idx
    | NullCap \<Rightarrow> NullCap
-   | ReplyCap t rights \<Rightarrow> ReplyCap t rights
+   | ReplyCap t \<Rightarrow> ReplyCap t
    | SchedContextCap s n \<Rightarrow> SchedContextCap s n
    | SchedControlCap \<Rightarrow> SchedControlCap
    | IRQControlCap \<Rightarrow> IRQControlCap

@@ -2085,7 +2085,7 @@ lemma cap_delete_one_valid_tcb_state:
   done
 
 lemma cte_wp_at_reply_cap_can_fast_finalise:
-  "cte_wp_at ((=) (cap.ReplyCap tcb R)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
+  "cte_wp_at ((=) (cap.ReplyCap tcb)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
   by (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_def)
 
 context Ipc_AI begin

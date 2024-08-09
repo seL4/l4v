@@ -46,7 +46,7 @@ lemma is_valid_vtable_root_simps[simp]:
   "\<not> is_valid_vtable_root (CNodeCap cnode_ref sz guard)"
   "\<not> is_valid_vtable_root (EndpointCap ep_ref badge R)"
   "\<not> is_valid_vtable_root (NotificationCap ep_ref badge R)"
-  "\<not> is_valid_vtable_root (ReplyCap tcb_ref R)"
+  "\<not> is_valid_vtable_root (ReplyCap tcb_ref)"
   "\<not> is_valid_vtable_root (Zombie e f g)"
   "\<not> is_valid_vtable_root (NullCap)"
   "\<not> is_valid_vtable_root (DomainCap)"
@@ -365,7 +365,7 @@ where
  | cap.ThreadCap ref \<Rightarrow> cap.ThreadCap ref
  | cap.DomainCap \<Rightarrow> cap.DomainCap
  | cap.SchedContextCap ref n \<Rightarrow> cap.SchedContextCap ref n \<comment> \<open>?\<close>
- | cap.ReplyCap ref R \<Rightarrow> cap.ReplyCap ref UNIV
+ | cap.ReplyCap ref \<Rightarrow> cap.ReplyCap ref
  | cap.UntypedCap dev ref n f \<Rightarrow> cap.UntypedCap dev ref n 0
  | cap.ArchObjectCap acap \<Rightarrow> cap.ArchObjectCap (cap_master_arch_cap acap)
  | _ \<Rightarrow> cap"
@@ -398,8 +398,8 @@ lemma cap_master_cap_eqDs1:
      \<Longrightarrow> cap = cap.SchedContextCap ref n"
   "cap_master_cap cap = cap.SchedControlCap
      \<Longrightarrow> cap = cap.SchedControlCap"
-  "cap_master_cap cap = cap.ReplyCap ref rghts
-     \<Longrightarrow> rghts = UNIV \<and> (\<exists>rghts. cap = cap.ReplyCap ref rghts)"
+  "cap_master_cap cap = cap.ReplyCap ref
+     \<Longrightarrow> cap = cap.ReplyCap ref"
   by (clarsimp simp: cap_master_cap_def
               split: cap.split_asm)+
 
@@ -423,7 +423,7 @@ lemma cap_badge_simps [simp]:
  "cap_badge (cap.CNodeCap r bits guard)            = None"
  "cap_badge (cap.ThreadCap r)                      = None"
  "cap_badge (cap.DomainCap)                        = None"
- "cap_badge (cap.ReplyCap r rights)                = None"
+ "cap_badge (cap.ReplyCap r)                       = None"
  "cap_badge (cap.IRQControlCap)                    = None"
  "cap_badge (cap.SchedContextCap sc n)             = None"
  "cap_badge (cap.SchedControlCap)                  = None"
@@ -1248,37 +1248,6 @@ lemma set_cap_valid_pspace:
   apply (simp add: valid_pspace_def)
   apply (wp set_cap_valid_objs set_cap_iflive set_cap_zombies)
   apply (clarsimp elim!: cte_wp_at_weakenE | rule conjI)+
-  done
-
-
-lemma set_object_idle [wp]:
-  "\<lbrace>valid_idle and
-     (\<lambda>s. \<exists>ko t t' sc n. ko_at ko p s \<and> (p \<noteq> idle_thread_ptr \<and> p \<noteq> idle_sc_ptr \<or>
-                   (ko = (TCB t) \<and> ko' = (TCB t') \<and>
-                    tcb_state t = tcb_state t' \<and>
-                    tcb_bound_notification t = tcb_bound_notification t' \<and>
-                    tcb_sched_context t = tcb_sched_context t' \<and>
-                    tcb_yield_to t = tcb_yield_to t' \<and>
-                    valid_arch_idle (tcb_iarch t')) \<or>
-                   (ko = (SchedContext sc n) \<and> ko' = (SchedContext sc n))))\<rbrace>
-   set_object p ko'
-   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (wpsimp wp: set_object_wp_strong)
-  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  done
-
-lemma set_object_fault_tcbs_valid_states[wp]:
-  "\<lbrace>\<lambda>s. fault_tcbs_valid_states s \<and>
-        (\<forall>t. ko' = TCB t
-             \<longrightarrow> (\<exists>t'. ko_at (TCB t') p s \<and>
-                       tcb_state t' = tcb_state t \<and>
-                       tcb_fault t' = tcb_fault t))\<rbrace>
-   set_object p ko'
-   \<lbrace>\<lambda>rv. fault_tcbs_valid_states\<rbrace>"
-  apply (wpsimp wp: set_object_wp_strong)
-  apply (clarsimp simp: fault_tcbs_valid_states_def pred_tcb_at_def obj_at_def)
-  apply (drule_tac x=p in spec)
-  apply clarsimp
   done
 
 lemma set_cap_idle[wp]:

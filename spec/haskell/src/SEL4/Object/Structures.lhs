@@ -70,8 +70,7 @@ This is the type used to represent a capability.
 >         | ArchObjectCap {
 >             capCap :: ArchCapability }
 >         | ReplyCap {
->             capReplyPtr :: PPtr Reply,
->             capReplyCanGrant :: Bool }
+>             capReplyPtr :: PPtr Reply }
 >         | UntypedCap {
 >             capIsDevice :: Bool,
 >             capPtr :: PPtr (),
@@ -245,6 +244,7 @@ list of pointers to waiting threads;
 
 > data Reply = Reply {
 >     replyTCB :: Maybe (PPtr TCB),
+>     replyCanGrant :: Bool,
 >     replyPrev :: Maybe (PPtr Reply),
 >     replyNext :: Maybe ReplyNext }
 

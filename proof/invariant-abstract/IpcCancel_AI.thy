@@ -1706,18 +1706,18 @@ crunch cancel_ipc
   (wp: assert_inv thread_set_no_change_tcb_pred)
 
 lemma fast_finalise_bound_tcb_at:
-  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt r. cap = ReplyCap tt r) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
+  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt. cap = ReplyCap tt) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   apply (case_tac cap, simp_all)
   apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift)
   done
 
 lemma get_cap_reply_cap_helper:
-  "\<lbrace>\<lambda>s. \<exists>t r. Some (ReplyCap t r) = caps_of_state s slot \<rbrace> get_cap slot \<lbrace>\<lambda>rv s. \<exists>t r. rv = ReplyCap t r\<rbrace>"
+  "\<lbrace>\<lambda>s. \<exists>t. Some (ReplyCap t) = caps_of_state s slot \<rbrace> get_cap slot \<lbrace>\<lambda>rv s. \<exists>t. rv = ReplyCap t\<rbrace>"
   by (auto simp: valid_def get_cap_caps_of_state[symmetric])
 
 
 lemma cap_delete_one_bound_tcb_at:
-  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>t r. caps_of_state s c = Some (ReplyCap t r)) \<rbrace>
+  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>t. caps_of_state s c = Some (ReplyCap t)) \<rbrace>
       cap_delete_one c \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: cap_delete_one_def unless_def
                wp: fast_finalise_bound_tcb_at hoare_vcg_if_lift2 get_cap_reply_cap_helper

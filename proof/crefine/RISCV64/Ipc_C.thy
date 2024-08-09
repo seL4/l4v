@@ -283,14 +283,6 @@ lemma ccap_relation_ep_helpers:
                      cap_endpoint_cap_lift_def word_size
               elim!: ccap_relationE)
 
-(* FIXME move *)
-lemma ccap_relation_reply_helpers:
-  "\<lbrakk> ccap_relation cap cap'; cap_get_tag cap' = scast cap_reply_cap \<rbrakk> \<Longrightarrow>
-   capReplyCanGrant_CL (cap_reply_cap_lift cap') = from_bool (capReplyCanGrant cap)"
-  by (clarsimp simp: cap_lift_reply_cap cap_to_H_simps
-                     cap_reply_cap_lift_def word_size
-              elim!: ccap_relationE)
-
 (*FIXME: arch_split: C kernel names hidden by Haskell names *)
 (*FIXME: fupdate simplification issues for 2D arrays *)
 abbreviation "syscallMessageC \<equiv>  kernel_all_global_addresses.fault_messages.[unat MessageID_Syscall]"

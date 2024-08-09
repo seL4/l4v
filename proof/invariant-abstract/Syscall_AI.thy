@@ -207,7 +207,7 @@ where
 | "valid_invocation (InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
 | "valid_invocation (InvokeTCB i) = tcb_inv_wf i"
 | "valid_invocation (InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
-| "valid_invocation (InvokeReply reply grant) = (reply_at reply and ex_nonz_cap_to reply)"
+| "valid_invocation (InvokeReply reply) = (reply_at reply and ex_nonz_cap_to reply)"
 | "valid_invocation (InvokeIRQControl i) = irq_control_inv_valid i"
 | "valid_invocation (InvokeIRQHandler i) = irq_handler_inv_valid i"
 | "valid_invocation (InvokeCNode i) = valid_cnode_inv i"

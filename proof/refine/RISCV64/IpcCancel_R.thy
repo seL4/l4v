@@ -1042,6 +1042,15 @@ crunch updateReply, setSchedContext, updateSchedContext
   and valid_sched_pointers[wp]: valid_sched_pointers
   (simp: crunch_simps opt_map_Some_eta_fold wp: crunch_wps)
 
+lemma updateReply_replyCanGrant_projs[wp]:
+  "updateReply rptr (replyCanGrant_update f)
+   \<lbrace>\<lambda>s. P (tcbSCs_of s) (scTCBs_of s) (scReplies_of s) (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
+  unfolding updateReply_def
+  apply (wpsimp | wps)+
+  apply (erule rsubst4[where P="P (tcbSCs_of s) (scTCBs_of s) (scReplies_of s) " for s])
+     apply (clarsimp simp: ext opt_map_def obj_at'_def)+
+  done
+
 lemma scReplies_of_scTCB_update[simp]:
   "\<lbrakk> ko_at' sc scp s\<rbrakk>
    \<Longrightarrow> P (\<lambda>a. if a = scp then scReply (scTCB_update (\<lambda>_. Some tp) sc) else scReplies_of s a)

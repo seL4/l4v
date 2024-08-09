@@ -415,7 +415,7 @@ where
 | "untyped_range (cap.CNodeCap r bits guard)            = {}"
 | "untyped_range (cap.ThreadCap r)                      = {}"
 | "untyped_range (cap.DomainCap)                        = {}"
-| "untyped_range (cap.ReplyCap r rights)                = {}"
+| "untyped_range (cap.ReplyCap r)                       = {}"
 | "untyped_range (cap.SchedContextCap r n)              = {}"
 | "untyped_range (cap.SchedControlCap)                  = {}"
 | "untyped_range (cap.IRQControlCap)                    = {}"
@@ -454,7 +454,7 @@ where
 | "cap_bits (CNodeCap r b m) = cte_level_bits + b"
 | "cap_bits (ThreadCap r) = obj_bits (TCB undefined)"
 | "cap_bits (DomainCap) = 0"
-| "cap_bits (ReplyCap r R) = obj_bits (Reply undefined)"
+| "cap_bits (ReplyCap r) = obj_bits (Reply undefined)"
 | "cap_bits (Zombie r zs n) =
     (case zs of None \<Rightarrow> obj_bits (TCB undefined)
             | Some n \<Rightarrow> cte_level_bits + n)"
@@ -500,8 +500,6 @@ where
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
   | SchedContextCap scp n \<Rightarrow> valid_sched_context_size n
-  | ReplyCap t rights \<Rightarrow> AllowWrite \<in> rights \<and> AllowRead \<notin> rights \<and>
-      AllowGrantReply \<notin> rights
   | _ \<Rightarrow> True"
 
 definition
@@ -515,7 +513,7 @@ where
   | CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
-  | ReplyCap r rights \<Rightarrow> reply_at r s
+  | ReplyCap r \<Rightarrow> reply_at r s
   | SchedContextCap r n \<Rightarrow> sc_obj_at n r s
   | SchedControlCap \<Rightarrow> True
   | IRQControlCap \<Rightarrow> True
@@ -538,8 +536,7 @@ where
          cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
-  | ReplyCap r rights \<Rightarrow> reply_at r s
-                          \<and> AllowWrite \<in> rights \<and> AllowRead \<notin> rights \<and> AllowGrantReply \<notin> rights
+  | ReplyCap r \<Rightarrow> reply_at r s
   | SchedContextCap r n \<Rightarrow> sc_obj_at n r s \<and> valid_sched_context_size n
   | SchedControlCap \<Rightarrow> True
   | IRQControlCap \<Rightarrow> True
@@ -573,7 +570,7 @@ where
 | "cap_class (cap.SchedControlCap)                  = SchedControlClass"
 | "cap_class (cap.IRQControlCap)                    = IRQClass"
 | "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
-| "cap_class (cap.ReplyCap tcb rights)              = PhysicalClass"
+| "cap_class (cap.ReplyCap tcb)                     = PhysicalClass"
 | "cap_class (cap.ArchObjectCap cap)                = acap_class cap"
 
 
@@ -1001,7 +998,7 @@ where
 | "cte_refs (SchedControlCap) f                    = {}"
 | "cte_refs (IRQControlCap) f                    = {}"
 | "cte_refs (IRQHandlerCap irq) f                = {(f irq, [])}"
-| "cte_refs (ReplyCap r rights) f                = {}"
+| "cte_refs (ReplyCap r) f                       = {}"
 | "cte_refs (ArchObjectCap cap) f                = {}"
 
 definition
@@ -1142,7 +1139,7 @@ definition
    \<forall>p. is_original_cap s p \<longrightarrow> cte_wp_at (\<lambda>x. x \<noteq> NullCap)  p s"
 
 definition
-  "is_reply_cap_to t \<equiv> \<lambda>cap. \<exists>rights. cap = ReplyCap t rights"
+  "is_reply_cap_to t \<equiv> \<lambda>cap. cap = ReplyCap t"
 
 definition
   "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at (is_reply_cap_to t) p s"
@@ -3011,7 +3008,7 @@ lemma is_cap_simps:
   "is_sched_context_cap cap = (\<exists>r n. cap = SchedContextCap r n)"
   "is_zombie cap = (\<exists>r b n. cap = Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x R. cap = ReplyCap x R)"
+  "is_reply_cap cap = (\<exists>x. cap = ReplyCap x)"
   by (cases cap, auto simp: is_zombie_def is_arch_cap_def
                             is_reply_cap_def)+
 
