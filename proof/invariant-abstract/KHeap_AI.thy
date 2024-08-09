@@ -2697,15 +2697,20 @@ lemma update_reply_pred_tcb_at[wp]:
   "update_reply ptr update \<lbrace>\<lambda>s. P (pred_tcb_at proj f t s)\<rbrace>"
   by (wpsimp simp: update_reply_def set_object_def get_object_def pred_tcb_at_def obj_at_def)
 
-lemma update_reply_valid_replies[wp]:
-  "update_reply ptr f \<lbrace>valid_replies_pred P\<rbrace>"
-  apply (rule hoare_lift_Pf2[where f=replies_blocked, rotated])
-   apply (wp replies_blocked_lift)
-  apply (wp replies_with_sc_lift)
-   apply (wp update_reply_wp)
-   apply (clarsimp simp: sc_replies_sc_at_def obj_at_def )
+lemma update_reply_replies_blocked[wp]:
+  "update_reply ptr f \<lbrace>\<lambda>s. P (replies_blocked s)\<rbrace>"
+  by (wpsimp wp: replies_blocked_lift)
+
+lemma update_reply_replies_with_sc[wp]:
+  "update_reply ptr f \<lbrace>\<lambda>s. P (replies_with_sc s)\<rbrace>"
+  apply (wpsimp wp: replies_with_sc_lift update_reply_wp)
+   apply (clarsimp simp: sc_replies_sc_at_def obj_at_def)
   apply clarsimp
   done
+
+lemma update_reply_valid_replies[wp]:
+  "update_reply ptr f \<lbrace>valid_replies_pred P\<rbrace>"
+  by (wp_pre, wps, wpsimp+)
 
 lemma update_reply_can_grant_reply_tcb_reply_at[wp]:
   "update_reply ptr (reply_can_grant_update f) \<lbrace>\<lambda>s. P (reply_tcb_reply_at Q t s) \<rbrace>"

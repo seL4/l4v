@@ -1475,7 +1475,8 @@ lemma reply_at'_cross:
               split: Structures_A.kernel_object.split_asm if_split_asm
                      arch_kernel_obj.split_asm)
 
-lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *)
+(* for reply update that doesn't touch the reply stack *)
+lemma set_reply_corres:
   "reply_relation ae ae' \<Longrightarrow>
   corres dc \<top>
             (obj_at' (\<lambda>ko. replyPrev_same ae' ko) ptr)
@@ -4644,7 +4645,8 @@ lemma no_fail_updateReply [wp]:
   "no_fail (reply_at' rp) (updateReply rp f)"
   unfolding updateReply_def by wpsimp
 
-lemma setReply_replyPrev_same_corres: (* for reply update that doesn't touch the reply stack *)
+(* for reply update that doesn't touch the reply stack *)
+lemma setReply_replyPrev_same_corres:
   assumes R': "reply_relation reply reply'"
   shows
     "corres dc
@@ -4773,11 +4775,7 @@ lemma updateReply_corres_Q:
               simp?)
       apply (clarsimp simp: obj_at_def)
      apply fastforce
-    apply wpsimp
-    apply (clarsimp simp: obj_at'_def)
-   apply wpsimp
-  apply wpsimp
-  apply (clarsimp simp: obj_at'_def)
+    apply (wpsimp | normalise_obj_at' | erule obj_at'_weakenE)+
   done
 
 lemma updateReply_corres:

@@ -5353,12 +5353,7 @@ crunch ifCondRefillUnblockCheck
 lemma replyCanGrant_update_valid_replies'_sc_asrt[wp]:
   shows "updateReply ptr (replyCanGrant_update f) \<lbrace>valid_replies'_sc_asrt ptr\<rbrace>"
   apply (rule valid_replies'_sc_asrt_lift; wpsimp wp: updateReply_wp_all)
-    apply (subst opt_map_upd_triv)
-     apply (clarsimp simp: opt_map_def obj_at'_def)
-    apply clarsimp
-   apply (subst opt_map_upd_triv)
-    apply (clarsimp simp: opt_map_def obj_at'_def)
-   apply clarsimp
+    apply (subst opt_map_upd_triv; clarsimp simp: opt_map_def obj_at'_def)+
   apply (fastforce simp: pred_tcb_at'_def  obj_at'_def)
   done
 
@@ -5499,13 +5494,7 @@ lemma receiveIPC_corres:
                                     prefer 5 \<comment> \<open> defer wp until corres complete \<close>
                                     apply (rule corres_split[OF setThreadState_corres], simp)
                                       apply (rule possibleSwitchTo_corres, simp)
-                                     apply (wpsimp wp: set_thread_state_valid_sched_action)
-                                    apply wpsimp
-                                   apply wpsimp
-                                  apply (wpsimp wp: updateReply_valid_objs')
-                                 apply wpsimp
-                                apply wpsimp
-                               apply clarsimp
+                                     apply (wpsimp wp: set_thread_state_valid_sched_action updateReply_valid_objs')+
                                apply (frule valid_objs_valid_tcbs)
                                apply (frule pred_tcb_at_tcb_at)
                                apply (frule (1) valid_sched_scheduler_act_not_better[OF _ st_tcb_weakenE])
