@@ -337,7 +337,7 @@ where
            sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tptr;
            maybeM (\<lambda>scp. do
              sc \<leftarrow> get_sched_context scp;
-             when (sc_sporadic sc \<and> sc_active sc) $ do
+             when (sc_sporadic sc) $ do
                ntfn_scp \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfnptr;
                cur_sc_ptr <- gets cur_sc;
                when (sc_opt = ntfn_scp \<and> scp \<noteq> cur_sc_ptr) $ refill_unblock_check scp

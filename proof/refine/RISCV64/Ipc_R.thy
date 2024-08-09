@@ -4836,7 +4836,9 @@ lemma completeSignal_corres:
       (ntfn_at' ntfnptr and tcb_at' tcb and invs' and obj_at' isActive ntfnptr)
       (complete_signal ntfnptr tcb) (completeSignal ntfnptr tcb)"
   supply opt_mapE[elim!]
+  apply add_sym_refs
   apply (simp add: complete_signal_def completeSignal_def)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule corres_guard_imp)
     apply (rule_tac R'="\<lambda>ntfn. ntfn_at' ntfnptr and tcb_at' tcb and invs'
                                and valid_ntfn' ntfn and (\<lambda>_. isActive ntfn)"
@@ -4878,7 +4880,7 @@ lemma completeSignal_corres:
                                 and P'="ko_at' sc' scp and ntfn_at' ntfnptr and valid_objs'
                                         and pspace_aligned' and pspace_distinct' and pspace_bounded'"
                             in corres_inst)
-                     apply (rule corres_guard_imp)
+                     apply (rule stronger_corres_guard_imp)
                        apply (rule corres_when2)
                         apply (clarsimp simp: sc_relation_def active_sc_def)
                        apply (rule corres_split[OF getNotification_corres])
@@ -4890,13 +4892,17 @@ lemma completeSignal_corres:
                          apply wpsimp
                         apply (wpsimp wp: get_simple_ko_wp)
                        apply (wpsimp wp: getNotification_wp)
-                      apply (clarsimp simp: obj_at_def is_ntfn)
-                      apply (drule active_scs_validE[rotated])
-                       apply (fastforce simp: vs_all_heap_simps is_sc_obj)
-                      apply (clarsimp simp: opt_map_red opt_pred_def valid_refills_def
-                                            vs_all_heap_simps rr_valid_refills_def)
-                     apply (fastforce dest!: valid_objs'_valid_refills'
-                                      simp: opt_map_red opt_pred_def is_active_sc'_def obj_at'_def)
+                      apply (clarsimp simp: conj_commute)
+                      apply (rule context_conjI)
+                       apply (frule_tac sc_ptr=scp in sporadic_implies_active)
+                        apply (clarsimp simp: projection_rewrites opt_pred_def opt_map_def)
+                       apply (clarsimp simp: opt_pred_def opt_map_def vs_all_heap_simps
+                                      split: option.splits)
+                      apply (fastforce dest: active_scs_validE[rotated]
+                                       simp: vs_all_heap_simps opt_map_red opt_pred_def
+                                             valid_refills_def rr_valid_refills_def)
+                     apply (fastforce intro!: valid_objs'_valid_refills'
+                                              sporadic_implies_active_cross)
                     apply wpsimp
                    apply wpsimp
                   apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_obj_def valid_tcb_def
@@ -5874,6 +5880,7 @@ lemma completeSignal_invs':
    completeSignal ntfnptr tcb
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: completeSignal_def)
+  apply (rule bind_wp[OF _ stateAssert_sp])
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (wpsimp wp: refillUnblockCheck_invs' threadGet_wp)
       apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs'"])
