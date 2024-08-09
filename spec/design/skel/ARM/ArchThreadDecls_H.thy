@@ -17,7 +17,7 @@ imports
   KernelInitMonad_H
 begin
 
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread/ARM.lhs CONTEXT Arch decls_only
 

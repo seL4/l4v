@@ -11,7 +11,7 @@ imports
   "Word_Lib.Enumeration"
   Setup_Locale
 begin
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 text \<open>
   An enumeration of arch-specific system call labels.
@@ -21,11 +21,10 @@ text \<open>
 
 end
 
-context begin interpretation Arch .
-requalify_types arch_invocation_label
-end
+arch_requalify_types (H)
+  arch_invocation_label
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/InvocationLabels/RISCV64.hs CONTEXT RISCV64_H instanceproofs ONLY ArchInvocationLabel
 

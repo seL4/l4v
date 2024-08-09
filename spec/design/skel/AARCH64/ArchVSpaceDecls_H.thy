@@ -11,7 +11,7 @@ theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H InvocationLabels_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT AARCH64_H
 #INCLUDE_HASKELL_PREPARSE SEL4/API/InvocationLabels/AARCH64.hs CONTEXT AARCH64

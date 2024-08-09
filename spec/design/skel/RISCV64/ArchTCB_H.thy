@@ -8,7 +8,7 @@ theory ArchTCB_H
 imports TCBDecls_H
 begin
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/TCB/RISCV64.hs RegisterSet= CONTEXT RISCV64_H
 

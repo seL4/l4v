@@ -19,27 +19,20 @@ imports
   ArchStructures_H
 begin
 
-context begin interpretation Arch .
-
-requalify_types
-  irq
+arch_requalify_types (H)
   arch_capability
-  user_context
   arch_kernel_object
   asid
   arch_tcb
 
-requalify_consts
+arch_requalify_consts (H)
   archObjSize
-  pageBits
   nullPointer
   newArchTCB
   fromPPtr
   PPtr
   atcbContextGet
   atcbContextSet
-
-end
 
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap

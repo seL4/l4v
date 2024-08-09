@@ -10,7 +10,7 @@ theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H InvocationLabels_H
 begin
 
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT X64_H
 #INCLUDE_HASKELL_PREPARSE SEL4/API/InvocationLabels/X64.lhs CONTEXT X64

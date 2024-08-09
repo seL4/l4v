@@ -12,7 +12,7 @@ theory ArchFault_H
 imports Types_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Failures/AARCH64.hs CONTEXT AARCH64_H decls_only
 #INCLUDE_HASKELL SEL4/API/Failures/AARCH64.hs CONTEXT AARCH64_H bodies_only

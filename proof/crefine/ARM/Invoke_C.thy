@@ -2623,10 +2623,10 @@ lemma ctes_of_ex_cte_cap_to':
 
 
 lemma Arch_isFrameType_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. unat \<acute>type \<le> fromEnum (maxBound::ArchTypes_H.object_type)\<rbrace>
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. unat \<acute>type \<le> fromEnum (maxBound::object_type)\<rbrace>
              Call Arch_isFrameType_'proc
   \<lbrace> \<acute>ret__unsigned_long =
-     from_bool (isFrameType ((toEnum (unat \<^bsup>s\<^esup> type))::ArchTypes_H.object_type))\<rbrace>"
+     from_bool (isFrameType ((toEnum (unat \<^bsup>s\<^esup> type))::object_type))\<rbrace>"
   apply vcg
   apply (simp add: toEnum_object_type_to_H)
   apply (frule object_type_from_to_H)

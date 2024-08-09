@@ -19,7 +19,7 @@ begin
 
 #INCLUDE_HASKELL SEL4/API/Types/Universal.lhs all_bits
 
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Types/ARM.lhs CONTEXT ARM_HYP_H
 
@@ -73,10 +73,6 @@ instantiation ARM_HYP_H.object_type :: enumeration_both
 begin
 interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_object_type)
-end
-
-context begin interpretation Arch .
-requalify_types object_type
 end
 
 end

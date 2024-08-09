@@ -14,11 +14,8 @@ theory Fault_H
 imports ArchFault_H
 begin
 
-context begin interpretation Arch .
-
-requalify_types
+arch_requalify_types (H)
   arch_fault
-end
 
 #INCLUDE_HASKELL_PREPARSE SEL4/API/Types.lhs
 #INCLUDE_HASKELL SEL4/API/Failures.lhs decls_only

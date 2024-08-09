@@ -17,7 +17,7 @@ imports
   KernelInitMonad_H
 begin
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread/RISCV64.hs CONTEXT RISCV64_H decls_only
 

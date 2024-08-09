@@ -8,7 +8,7 @@ theory ArchTCB_H
 imports TCBDecls_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/TCB/AARCH64.hs RegisterSet= CONTEXT AARCH64_H
 

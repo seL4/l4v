@@ -17,7 +17,7 @@ imports
   ArchHypervisor_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/VSpace/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv=ArchRetypeDecls_H ONLY pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft
 

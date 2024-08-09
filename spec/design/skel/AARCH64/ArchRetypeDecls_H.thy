@@ -16,7 +16,7 @@ imports
   ArchObjInsts_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/AARCH64.hs
 

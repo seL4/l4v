@@ -10,7 +10,7 @@ theory ArchHook_H
 imports KernelStateData_H
 begin
 
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 definition
   cEntryHook :: "unit kernel"
