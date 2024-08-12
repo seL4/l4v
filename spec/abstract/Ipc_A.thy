@@ -367,7 +367,7 @@ where
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
      reply \<leftarrow> (case reply_cap of
-                 ReplyCap r _ \<Rightarrow> do
+                 ReplyCap r \<Rightarrow> do
                    tptr \<leftarrow> get_reply_tcb r;
                    when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ cancel_ipc (the tptr);
                    return (Some r)
@@ -386,16 +386,21 @@ where
          of IdleEP \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
                   set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
-                  when (reply \<noteq> None) $
+                  when (reply \<noteq> None) $ do
                     set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
+                    update_reply (the reply) (reply_can_grant_update (\<lambda>_. AllowGrant \<in> rights))
+                  od;
                   set_endpoint epptr (RecvEP [thread])
                 od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread)
-            | RecvEP queue \<Rightarrow> (case is_blocking of
+          | RecvEP queue \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
                   set_thread_state thread (BlockedOnReceive epptr reply
                                                             \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
-                  when (reply \<noteq> None) $ set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
+                  when (reply \<noteq> None) $ do
+                    set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
+                    update_reply (the reply) (reply_can_grant_update (\<lambda>_. AllowGrant \<in> rights))
+                  od;
                   \<^cancel>\<open>FIXME RT: schedule_tcb?\<close>
                   qs' \<leftarrow> tcb_ep_append thread queue;
                   set_endpoint epptr (RecvEP qs')
@@ -423,6 +428,7 @@ where
                 then do
                   sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
                   donate \<leftarrow> return $ (sender_sc \<noteq> None) \<and> \<not>(case_option False is_timeout_fault fault);
+                  update_reply (the reply) (reply_can_grant_update (\<lambda>_. AllowGrant \<in> rights));
                   reply_push sender thread (the reply) donate
                 od
                 else set_thread_state sender Inactive

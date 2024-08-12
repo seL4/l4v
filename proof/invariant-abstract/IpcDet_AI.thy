@@ -227,7 +227,7 @@ definition receive_ipc_preamble ::
   where
   "receive_ipc_preamble reply t \<equiv>
     case reply of NullCap \<Rightarrow> return None
-                | ReplyCap r _ \<Rightarrow>
+                | ReplyCap r \<Rightarrow>
                     do tptr <- get_reply_tcb r;
                        when (tptr \<noteq> None \<and> the tptr \<noteq> t) $ cancel_ipc (the tptr);
                        return (Some r)
@@ -337,23 +337,29 @@ lemma tcb_ep_append_not_null [wp]:
   done
 
 definition receive_ipc_blocked ::
-  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> receiver_payload \<Rightarrow> obj_ref list \<Rightarrow>
+  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> cap_rights \<Rightarrow> obj_ref option \<Rightarrow> receiver_payload \<Rightarrow> obj_ref list \<Rightarrow>
     ('a::state_ext state, unit) nondet_monad"
   where
-  "receive_ipc_blocked is_blocking t ep_ptr reply pl queue \<equiv>
+  "receive_ipc_blocked is_blocking t ep_ptr ep_rights reply pl queue \<equiv>
     case is_blocking of True \<Rightarrow> do _ <- set_thread_state t (BlockedOnReceive ep_ptr reply pl);
-                                   _ <- when (\<exists>r. reply = Some r) (set_reply_obj_ref reply_tcb_update (the reply) (Some t));
+                                   _ <- when (\<exists>r. reply = Some r) (do
+                                          _ <- set_reply_obj_ref reply_tcb_update (the reply) (Some t);
+                                          update_reply (the reply) (reply_can_grant_update (\<lambda>_. AllowGrant \<in> ep_rights))
+                                        od);
                                    q <- tcb_ep_append t queue;
                                    set_endpoint ep_ptr (RecvEP q)
                                 od
                       | False \<Rightarrow> do_nbrecv_failed_transfer t"
 
 definition receive_ipc_idle ::
-  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> receiver_payload \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
+  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> cap_rights \<Rightarrow>  obj_ref option \<Rightarrow> receiver_payload \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
   where
-  "receive_ipc_idle is_blocking t ep_ptr reply pl \<equiv>
+  "receive_ipc_idle is_blocking t ep_ptr ep_rights reply pl \<equiv>
     case is_blocking of True \<Rightarrow> do _ <- set_thread_state t (BlockedOnReceive ep_ptr reply pl);
-                                   _ <- when (\<exists>r. reply = Some r) (set_reply_obj_ref reply_tcb_update (the reply) (Some t));
+                                   _ <- when (\<exists>r. reply = Some r) (do
+                                          _ <- set_reply_obj_ref reply_tcb_update (the reply) (Some t);
+                                          update_reply (the reply) (reply_can_grant_update (\<lambda>_. AllowGrant \<in> ep_rights))
+                                        od);
                                    set_endpoint ep_ptr (RecvEP [t])
                                 od
                       | False \<Rightarrow> do_nbrecv_failed_transfer t"
@@ -372,8 +378,8 @@ lemma monadic_rewrite_sort_queue_singleton:
   qed
 
 lemma monadic_rewrite_receive_ipc_idle:
-  "monadic_rewrite False True (tcb_at t) (receive_ipc_blocked is_blocking t ep_ptr reply pl [])
-                                         (receive_ipc_idle is_blocking t ep_ptr reply pl)"
+  "monadic_rewrite False True (tcb_at t) (receive_ipc_blocked is_blocking t ep_ptr ep_rights reply pl [])
+                                         (receive_ipc_idle is_blocking t ep_ptr ep_rights reply pl)"
   apply (cases is_blocking; simp add: receive_ipc_blocked_def receive_ipc_idle_def
                                       monadic_rewrite_guard_imp[OF monadic_rewrite_refl])
   apply (rule monadic_rewrite_bind_tail[OF _ set_thread_state_tcb])
@@ -387,8 +393,8 @@ primrec receive_ipc_preamble_rv ::
   where
   "receive_ipc_preamble_rv reply None = (\<lambda>s. reply = NullCap)"
 | "receive_ipc_preamble_rv reply (Some reply_ptr) =
-    (\<lambda>s. (\<exists>R. reply = ReplyCap reply_ptr R) \<and> reply_tcb_reply_at (\<lambda>t. t = None) reply_ptr s
-                                            \<and> reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr s)"
+    (\<lambda>s. (reply = ReplyCap reply_ptr) \<and> reply_tcb_reply_at (\<lambda>t. t = None) reply_ptr s
+                                      \<and> reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr s)"
 
 (* Preconditions for the guts of receive_ipc, after the reply preamble *)
 abbreviation (input) receive_ipc_preconds ::
@@ -434,7 +440,7 @@ global_interpretation set_reply_tcb_obj_ref:
 lemma receive_ipc_blocked_invs':
   assumes ep: "case ep of IdleEP \<Rightarrow> queue = [] | RecvEP q \<Rightarrow> queue = q | SendEP _ \<Rightarrow> False"
   shows "\<lbrace> receive_ipc_preconds t ep_ptr reply reply_opt ep invs \<rbrace>
-          receive_ipc_blocked is_blocking t ep_ptr reply_opt pl queue
+          receive_ipc_blocked is_blocking t ep_ptr ep_rights reply_opt pl queue
          \<lbrace> \<lambda>rv. invs \<rbrace>"
   proof -
     have ep_valid:
@@ -462,7 +468,7 @@ lemma receive_ipc_blocked_invs':
                                    , assumption
                                    , fastforce simp: replies_blocked_def st_tcb_at_def obj_at_def\<close>)
        apply (all \<open>rule revcut_rl[where V="ep_ptr \<noteq> t"], fastforce simp: obj_at_def pred_tcb_at_def\<close>)
-       apply (all \<open>(match premises in \<open>reply = ReplyCap r_ptr R\<close> for r_ptr R \<Rightarrow>
+       apply (all \<open>(match premises in \<open>reply = ReplyCap r_ptr\<close> for r_ptr \<Rightarrow>
                      \<open>rule revcut_rl[where V="r_ptr \<notin> {t, ep_ptr}"]\<close>
                    , fastforce simp: obj_at_def reply_tcb_reply_at_def pred_tcb_at_def)?\<close>)
        apply (all \<open>frule obj_at_state_refs_ofD; clarsimp simp: ep_queue\<close>)
@@ -478,7 +484,7 @@ lemma receive_ipc_blocked_invs':
 
 lemma receive_ipc_idle_invs:
   "\<lbrace> receive_ipc_preconds t ep_ptr reply reply_opt IdleEP invs \<rbrace>
-    receive_ipc_idle is_blocking t ep_ptr reply_opt pl
+    receive_ipc_idle is_blocking t ep_ptr ep_rights reply_opt pl
    \<lbrace> \<lambda>rv. invs \<rbrace>"
   apply (rule hoare_weaken_pre, rule monadic_rewrite_refine_valid[where P''=\<top>])
   apply (rule monadic_rewrite_receive_ipc_idle)
@@ -773,7 +779,7 @@ lemma receive_ipc_preamble_rv:
   "\<lbrace>st_tcb_at active t and invs\<rbrace> receive_ipc_preamble reply t \<lbrace>receive_ipc_preamble_rv reply\<rbrace>"
   unfolding receive_ipc_preamble_def
   apply (cases reply; clarsimp intro!: hoare_weaken_pre[OF return_wp])
-  apply (thin_tac _, rename_tac reply_ptr R)
+  apply (thin_tac _, rename_tac reply_ptr)
   apply (rule bind_wp[OF _ grt_sp]; simp?)
   apply (rename_tac t_opt)
   apply (case_tac t_opt;
@@ -1356,7 +1362,7 @@ lemma ri_invs[wp]:
              ko_at (Endpoint ep) ep_ptr s \<and> invs s"
            in bind_wp_fwd)
    apply (wpsimp wp: hoare_vcg_ball_lift split: if_split)
-    apply (fastforce dest: st_tcb_at_idle_thread split: if_split)
+   apply (fastforce dest: st_tcb_at_idle_thread split: if_split)
     (* IdleEP, RecvEP *)
   apply (case_tac ep; clarsimp simp: receive_ipc_blocked_invs[where reply=reply])
     (* SendEP *)
@@ -1440,7 +1446,7 @@ lemma ri_invs[wp]:
   apply (rule bind_wp[OF _ gsc_sp])
   apply (clarsimp)
   apply (rename_tac rply)
-  apply (wp reply_push_sender_sc_Some_invs)
+  apply (wp reply_push_sender_sc_Some_invs hoare_vcg_ball_lift receive_ipc_preamble_rv_lift)
   apply (clarsimp)
   apply (intro conjI)
      prefer 3

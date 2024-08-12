@@ -115,7 +115,7 @@ datatype cap
            \<comment> \<open>device flag, pointer, size in bits (i.e. @{text "size = 2^bits"}) and freeIndex (i.e. @{text "freeRef = obj_ref + (freeIndex * 2^4)"})\<close>
          | EndpointCap obj_ref badge cap_rights
          | NotificationCap obj_ref badge cap_rights
-         | ReplyCap obj_ref cap_rights
+         | ReplyCap obj_ref
          | CNodeCap obj_ref nat "bool list"
            \<comment> \<open>CNode ptr, number of bits translated, guard\<close>
          | ThreadCap obj_ref
@@ -175,7 +175,7 @@ definition
 
 definition
   is_reply_cap :: "cap \<Rightarrow> bool" where
-  "is_reply_cap cap \<equiv> case cap of ReplyCap _ _ \<Rightarrow> True | _ \<Rightarrow> False"
+  "is_reply_cap cap \<equiv> case cap of ReplyCap _ \<Rightarrow> True | _ \<Rightarrow> False"
 definition
   is_zombie :: "cap \<Rightarrow> bool" where
   "is_zombie cap \<equiv> case cap of Zombie _ _ _ \<Rightarrow> True | _ \<Rightarrow> False"
@@ -227,7 +227,6 @@ primrec (nonexhaustive)
 where
   "cap_rights (EndpointCap _ _ cr) = cr"
 | "cap_rights (NotificationCap _ _ cr) = cr"
-| "cap_rights (ReplyCap _ cr) = cr"
 | "cap_rights (ArchObjectCap acap) = acap_rights acap"
 end
 
@@ -240,7 +239,6 @@ definition
      EndpointCap oref badge cr \<Rightarrow> EndpointCap oref badge cr'
    | NotificationCap oref badge cr
      \<Rightarrow> NotificationCap oref badge (cr' - {AllowGrant, AllowGrantReply})
-   | ReplyCap t cr \<Rightarrow> ReplyCap t (cr' - {AllowRead, AllowGrantReply} \<union> {AllowWrite})
    | ArchObjectCap acap \<Rightarrow> ArchObjectCap (acap_rights_update cr' acap)
    | _ \<Rightarrow> cap"
 
@@ -579,11 +577,12 @@ definition
   \<rparr>"
 
 record reply =
-  reply_tcb :: "obj_ref option"
-  reply_sc     :: "obj_ref option"
+  reply_tcb       :: "obj_ref option"
+  reply_sc        :: "obj_ref option"
+  reply_can_grant :: "bool"
 
 definition
-  "default_reply = \<lparr> reply_tcb = None,  reply_sc = None \<rparr>"
+  "default_reply = \<lparr> reply_tcb = None, reply_sc = None, reply_can_grant = False \<rparr>"
 
 text \<open>
 All kernel objects are CNodes, TCBs, Endpoints, Notifications or architecture
@@ -641,7 +640,7 @@ where
 | "obj_size (CNodeCap r bits g) = 1 << (cte_level_bits + bits)"
 | "obj_size (ThreadCap r) = 1 << obj_bits (TCB undefined)"
 | "obj_size (SchedContextCap r bits) = 1 << (min_sched_context_bits + bits)"
-| "obj_size (ReplyCap r _) = 1 << obj_bits (Reply undefined)"
+| "obj_size (ReplyCap r) = 1 << obj_bits (Reply undefined)"
 | "obj_size (Zombie r zb n) = (case zb of None \<Rightarrow> 1 << obj_bits (TCB undefined)
                                         | Some n \<Rightarrow> 1 << (cte_level_bits + n))"
 | "obj_size (ArchObjectCap a) = 1 << arch_obj_size a"
@@ -798,7 +797,7 @@ primrec
   obj_refs :: "cap \<Rightarrow> obj_ref set"
 where
   "obj_refs NullCap = {}"
-| "obj_refs (ReplyCap r _) = {r}"
+| "obj_refs (ReplyCap r) = {r}"
 | "obj_refs IRQControlCap = {}"
 | "obj_refs (IRQHandlerCap irq) = {}"
 | "obj_refs (UntypedCap dev r s f) = {}"
@@ -821,7 +820,7 @@ primrec (nonexhaustive)
   obj_ref_of :: "cap \<Rightarrow> obj_ref"
 where
   "obj_ref_of (UntypedCap dev r s f) = r"
-| "obj_ref_of (ReplyCap r _) = r"
+| "obj_ref_of (ReplyCap r) = r"
 | "obj_ref_of (CNodeCap r bits guard) = r"
 | "obj_ref_of (EndpointCap r b cr) = r"
 | "obj_ref_of (NotificationCap r b cr) = r"

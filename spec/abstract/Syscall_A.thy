@@ -179,9 +179,10 @@ where
 
 | "perform_invocation _ _ _ (InvokeDomain tptr d) = invoke_domain tptr d"
 
-| "perform_invocation _ _ _ (InvokeReply reply grant) =
+| "perform_invocation _ _ _ (InvokeReply reply) =
     liftE (do
       sender \<leftarrow> gets cur_thread;
+      grant \<leftarrow> get_reply_can_grant reply;
       do_reply_transfer sender reply grant;
       return []
     od)"

@@ -132,7 +132,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s) and
    (\<lambda>s. cte_wp_at (\<lambda>cap'. \<forall>irq\<in>cap_irqs cap - cap_irqs cap'. irq_issued irq s)
          src s) and
-   (\<lambda>s. \<forall>t R. cap = ReplyCap t R \<longrightarrow>
+   (\<lambda>s. \<forall>t. cap = ReplyCap t \<longrightarrow>
             st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s))\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
    apply wp

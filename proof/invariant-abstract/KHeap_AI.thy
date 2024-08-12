@@ -58,6 +58,7 @@ requalify_facts
   state_hyp_refs_of_tcb_domain_update
   state_hyp_refs_of_tcb_priority_update
   update_sched_context_hyp_refs_of
+  update_reply_hyp_refs_of
 
   arch_valid_obj_same_type
   default_arch_object_not_live
@@ -75,6 +76,7 @@ requalify_facts
 end
 
 declare update_sched_context_hyp_refs_of[wp]
+declare update_reply_hyp_refs_of[wp]
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
 lemmas storeWord_device_state_hoare[wp] = storeWord_device_state_inv
@@ -806,6 +808,12 @@ lemma update_sched_context_revokable [wp]:
 lemma update_sched_context_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
   by (wpsimp simp: update_sched_context_def get_object_def wp: valid_mdb_lift)
+
+lemma update_reply_caps_of_state[wp]:
+  "update_reply ptr val \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp simp: update_reply_def get_object_def set_object_def)
+  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
+  done
 
 lemma cte_wp_at_after_update:
   "\<lbrakk> obj_at (same_caps val) p' s \<rbrakk>
@@ -1754,11 +1762,12 @@ interpretation
   set_tcb_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
   update_sched_context: non_aobj_non_cap_non_mem_op "update_sched_context p sc'" +
   update_sched_context: non_aobj_non_cap_non_mem_op "update_sched_context p update" +
+  update_reply: non_aobj_non_cap_non_mem_op "update_reply p update'" +
   set_tcb_yt: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_simple_ko_def set_thread_state_def
             set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
-            as_user_def set_mrs_def update_sched_context_def update_sched_context_def
+            as_user_def set_mrs_def update_sched_context_def update_sched_context_def update_reply_def
   apply -
   supply validNF_prop[wp_unsafe del]
   apply (all \<open>(wp set_object_non_arch[THEN hoare_set_object_weaken_pre] get_object_wp | wpc
@@ -1963,7 +1972,7 @@ lemma valid_irq_states_scheduler_action[simp]:
   by (simp add: valid_irq_states_def)
 
 crunch
-  set_simple_ko, set_cap, thread_set, set_thread_state, set_tcb_obj_ref, update_sched_context
+  set_simple_ko, set_cap, thread_set, set_thread_state, set_tcb_obj_ref, update_sched_context, update_reply
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
 
@@ -2342,10 +2351,10 @@ lemma get_sc_obj_ref_wp:
   by (wpsimp simp: get_sc_obj_ref_def)
 
 lemma update_sched_context_wp:
-  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
-                \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
+               \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>)\<rbrace>
    update_sched_context sc_ptr f
-   \<lbrace> \<lambda>rv. Q \<rbrace>"
+   \<lbrace>\<lambda>rv. Q\<rbrace>"
   by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
 
 lemma update_sched_context_obj_at_trivial:
@@ -2472,6 +2481,36 @@ lemma set_object_dom_shrink[wp]:
   "set_object pt obj \<lbrace>\<lambda>s. p \<notin> dom (kheap s)\<rbrace>"
   apply (wp set_object_typ_at get_object_wp | simp add: set_object_def)+
   apply (clarsimp simp: obj_at_def split: if_split_asm)
+  done
+
+lemma set_object_idle[wp]:
+  "\<lbrace>valid_idle and
+     (\<lambda>s. \<exists>ko t t' sc n. ko_at ko p s \<and> (p \<noteq> idle_thread_ptr \<and> p \<noteq> idle_sc_ptr \<or>
+                   (ko = (TCB t) \<and> ko' = (TCB t') \<and>
+                    tcb_state t = tcb_state t' \<and>
+                    tcb_bound_notification t = tcb_bound_notification t' \<and>
+                    tcb_sched_context t = tcb_sched_context t' \<and>
+                    tcb_yield_to t = tcb_yield_to t' \<and>
+                    valid_arch_idle (tcb_iarch t')) \<or>
+                   (ko = (SchedContext sc n) \<and> ko' = (SchedContext sc n))))\<rbrace>
+   set_object p ko'
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma set_object_fault_tcbs_valid_states[wp]:
+  "\<lbrace>\<lambda>s. fault_tcbs_valid_states s \<and>
+        (\<forall>t. ko' = TCB t
+             \<longrightarrow> (\<exists>t'. ko_at (TCB t') p s \<and>
+                       tcb_state t' = tcb_state t \<and>
+                       tcb_fault t' = tcb_fault t))\<rbrace>
+   set_object p ko'
+   \<lbrace>\<lambda>rv. fault_tcbs_valid_states\<rbrace>"
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (clarsimp simp: fault_tcbs_valid_states_def pred_tcb_at_def obj_at_def)
+  apply (drule_tac x=p in spec)
+  apply clarsimp
   done
 
 lemma set_aobject_zombies[wp]:
@@ -2619,5 +2658,201 @@ lemma update_sched_context_no_fail[wp]:
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def)
   done
+
+lemma update_reply_no_fail[wp]:
+  "no_fail (\<lambda>s. \<exists>reply. kheap s reply_ptr = Some (Reply reply)) (update_reply reply_ptr f)"
+  apply (clarsimp simp: update_reply_def)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma update_reply_wp:
+  "\<lbrace>\<lambda>s. \<forall>reply. ko_at (Reply reply) reply_ptr s
+                \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(reply_ptr \<mapsto> Reply (f reply))\<rparr>)\<rbrace>
+   update_reply reply_ptr f
+   \<lbrace>\<lambda>_. Q\<rbrace>"
+  by (wpsimp simp: update_reply_def wp: set_object_wp get_object_wp)
+
+lemma update_reply_obj_at_trivial:
+  "\<lbrace>obj_at P t' and K (\<forall>reply. P (Reply reply) \<longrightarrow> P (Reply (f reply)))\<rbrace>
+   update_reply reply_ptr f
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp wp: update_reply_wp simp: obj_at_def)
+
+lemma update_reply_typ_at[wp]:
+  "update_reply ptr f \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def wp: set_object_typ_at)
+
+lemmas update_reply_typ_ats [wp] = abs_typ_at_lifts [OF update_reply_typ_at]
+
+lemma update_reply_cte_wp_at[wp]:
+  "update_reply ptr f \<lbrace>cte_wp_at P p\<rbrace>"
+  by (wpsimp simp: update_reply_def set_object_def cte_wp_at_cases get_object_def)
+
+crunch update_reply
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  (wp: ex_nonz_cap_to_pres)
+
+lemma update_reply_pred_tcb_at[wp]:
+  "update_reply ptr update \<lbrace>\<lambda>s. P (pred_tcb_at proj f t s)\<rbrace>"
+  by (wpsimp simp: update_reply_def set_object_def get_object_def pred_tcb_at_def obj_at_def)
+
+lemma update_reply_replies_blocked[wp]:
+  "update_reply ptr f \<lbrace>\<lambda>s. P (replies_blocked s)\<rbrace>"
+  by (wpsimp wp: replies_blocked_lift)
+
+lemma update_reply_replies_with_sc[wp]:
+  "update_reply ptr f \<lbrace>\<lambda>s. P (replies_with_sc s)\<rbrace>"
+  apply (wpsimp wp: replies_with_sc_lift update_reply_wp)
+   apply (clarsimp simp: sc_replies_sc_at_def obj_at_def)
+  apply clarsimp
+  done
+
+lemma update_reply_valid_replies[wp]:
+  "update_reply ptr f \<lbrace>valid_replies_pred P\<rbrace>"
+  by (wp_pre, wps, wpsimp+)
+
+lemma update_reply_can_grant_reply_tcb_reply_at[wp]:
+  "update_reply ptr (reply_can_grant_update f) \<lbrace>\<lambda>s. P (reply_tcb_reply_at Q t s) \<rbrace>"
+  by (wpsimp simp: update_reply_def reply_at_ppred_def obj_at_def
+               wp: set_object_wp get_object_wp)
+
+lemma update_reply_can_grant_reply_sc_reply_at[wp]:
+  "update_reply ptr (reply_can_grant_update f) \<lbrace>\<lambda>s. P (reply_sc_reply_at Q t s) \<rbrace>"
+  by (wpsimp simp: update_reply_def reply_at_ppred_def obj_at_def
+               wp: set_object_wp get_object_wp)
+
+lemma update_reply_refs_of_same:
+ "\<lbrace>\<lambda>s. P (state_refs_of s) \<and> (\<forall>reply. refs_of_reply reply = refs_of_reply (f reply))\<rbrace>
+  update_reply ptr f
+  \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: update_reply_def set_object_def get_object_def)
+  apply (clarsimp simp: state_refs_of_def ext elim!: rsubst[where P = P])
+  done
+
+lemma update_reply_can_grant_sym_refs[wp]:
+  "update_reply ptr (reply_can_grant_update f) \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
+  by (wpsimp wp: update_reply_refs_of_same)
+
+lemma update_reply_valid_objs_same:
+  "\<lbrace>\<lambda>s. valid_objs s \<and> (\<forall>reply. valid_reply reply s \<longrightarrow> valid_reply (f reply) s)\<rbrace>
+   update_reply ref f
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (wpsimp simp: update_reply_def get_object_def)
+  apply (auto simp: valid_obj_def)
+  done
+
+lemmas reply_can_grant_update_valid_objs[wp]
+  = update_reply_valid_objs_same[where f="reply_can_grant_update f" for f,
+                                         simplified valid_reply_def, simplified]
+
+lemma update_reply_aligned[wp]:
+ "update_reply ptr v \<lbrace>pspace_aligned\<rbrace>"
+  by (wpsimp simp: update_reply_def wp: set_object_aligned get_object_wp)
+
+lemma update_reply_distinct[wp]:
+  "update_reply ptr f \<lbrace>pspace_distinct\<rbrace>"
+  by (wpsimp simp: update_reply_def wp: set_object_distinct get_object_wp)
+
+lemma update_reply_valid_ioc[wp]:
+  "update_reply ptr f \<lbrace>valid_ioc\<rbrace>"
+  by (wpsimp simp: update_reply_def obj_at_def is_tcb is_cap_table
+               wp: set_object_valid_ioc_no_caps get_object_wp)
+
+lemma update_reply_iflive_implies:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (\<forall>reply. live_reply (f reply) \<longrightarrow> live_reply reply)\<rbrace>
+   update_reply ptr f
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def obj_at_def if_live_then_nonz_cap_def live_def is_reply)
+
+lemma reply_can_grant_update_iflive[wp]:
+    "update_reply ptr (reply_can_grant_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: live_reply_def wp: update_reply_iflive_implies)
+
+lemma update_reply_zombies[wp]:
+  "update_reply ptr f \<lbrace>zombies_final\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def obj_at_def is_reply)
+
+lemma update_reply_revokable[wp]:
+  "update_reply ptr val \<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace>"
+  by (wpsimp simp: update_reply_def set_object_def get_object_def)
+
+crunch update_reply
+  for no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+
+lemma update_reply_mdb[wp]:
+  "update_reply ptr f \<lbrace>valid_mdb\<rbrace>"
+  by (wpsimp  wp: valid_mdb_lift)
+
+lemma update_reply_valid_idle[wp]:
+  "update_reply ptr f \<lbrace>valid_idle\<rbrace>"
+  apply (wpsimp simp: update_reply_def get_object_def)
+  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
+  done
+
+crunch update_reply
+ for it[wp]: "\<lambda>s. P (idle_thread s)"
+
+lemma update_reply_only_idle[wp]:
+  "update_reply ptr f \<lbrace>only_idle\<rbrace>"
+  by (wpsimp wp: only_idle_lift)
+
+lemma update_reply_ifunsafe[wp]:
+  "update_reply ptr f \<lbrace>if_unsafe_then_cap\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def obj_at_def is_reply)
+
+lemma update_reply_global_refs[wp]:
+  "update_reply ptr f \<lbrace>valid_global_refs\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def wp: valid_global_refs_cte_lift)
+
+crunch update_reply
+ for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+
+lemma update_reply_valid_irq_node[wp]:
+  "update_reply ptr f \<lbrace>valid_irq_node\<rbrace>"
+  by (wpsimp wp: valid_irq_node_typ)
+
+lemma update_reply_valid_irq_handlers[wp]:
+  "update_reply ptr f \<lbrace>valid_irq_handlers\<rbrace>"
+  apply (wpsimp simp: update_reply_def set_object_def get_object_def valid_irq_handlers_def
+                      irq_issued_def ran_def)
+  apply (subgoal_tac "caps_of_state s (a, b) = Some cap")
+   apply fastforce
+  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
+  done
+
+lemma update_reply_kernel_window[wp]:
+  "update_reply ptr f \<lbrace>pspace_in_kernel_window\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def
+               wp: set_object_pspace_in_kernel_window)
+
+lemma update_reply_cap_refs_kernel_window[wp]:
+  "update_reply ptr f \<lbrace>cap_refs_in_kernel_window\<rbrace>"
+  by (wpsimp simp: update_reply_def obj_at_def is_reply
+               wp: set_object_cap_refs_in_kernel_window get_object_wp)
+
+lemma update_reply_respect_device_region[wp]:
+  "update_reply ptr f \<lbrace>pspace_respects_device_region\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def
+               wp: set_object_pspace_respects_device_region)
+
+lemma update_reply_cap_refs_respects_device_region[wp]:
+  "update_reply ptr f \<lbrace>cap_refs_respects_device_region\<rbrace>"
+  by (wpsimp simp: update_reply_def get_object_def obj_at_def is_reply
+               wp: set_object_cap_refs_respects_device_region)
+
+lemma update_reply_fault_tcbs_valid_states[wp]:
+  "update_reply ref f \<lbrace>fault_tcbs_valid_states\<rbrace>"
+  apply (wpsimp simp: update_reply_def get_object_def)
+  done
+
+lemma update_reply_cur_tcb[wp]:
+  "update_reply ptr f \<lbrace>cur_tcb\<rbrace>"
+  by (wpsimp simp: update_reply_def set_object_def get_object_def cur_tcb_def tcb_at_def get_tcb_def)
+
+lemma update_reply_cur_sc_tcb[wp]:
+  "update_reply ptr f \<lbrace>cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: update_reply_def set_object_def get_object_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 end
