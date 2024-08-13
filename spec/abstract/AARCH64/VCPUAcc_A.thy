@@ -263,6 +263,18 @@ definition vcpu_switch :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_m
               od))
      od"
 
+text \<open>
+  Flush the current VCPU if there is one, saving any existing state before disabling VCPU mode and
+  setting it so that there is no current VCPU.\<close>
+definition vcpu_flush :: "(unit,'z::state_ext) s_monad" where
+  "vcpu_flush \<equiv> do
+     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     when (cur_v \<noteq> None) $ do
+       vcpu_save cur_v;
+       vcpu_invalidate_active
+     od
+   od"
+
 
 text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
 

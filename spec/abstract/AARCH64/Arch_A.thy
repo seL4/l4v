@@ -39,7 +39,10 @@ definition arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
   od"
 
 definition arch_prepare_next_domain :: "(unit,'z::state_ext) s_monad" where
-  "arch_prepare_next_domain \<equiv> switch_local_fpu_owner None"
+  "arch_prepare_next_domain \<equiv> do
+     vcpu_flush;
+     switch_local_fpu_owner None
+   od"
 
 definition arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_activate_idle_thread t \<equiv> return ()"
