@@ -25,7 +25,7 @@ context Arch begin arch_global_naming (H)
   ONLY vcpuUpdate vgicUpdate vgicUpdateLR vcpuSaveReg vcpuRestoreReg \
     vcpuSaveRegRange vcpuRestoreRegRange vcpuWriteReg vcpuReadReg saveVirtTimer \
     restoreVirtTimer vcpuDisable vcpuEnable vcpuRestore armvVCPUSave \
-    vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive \
+    vcpuSave vcpuSwitch vcpuFlush vcpuInvalidateActive vcpuCleanInvalidateActive \
     virqType virqSetEOIIRQEN vgicMaintenance vppiEvent curVCPUActive
 
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/AARCH64.hs Arch= CONTEXT AARCH64_H decls_only ArchInv= ArchLabels=

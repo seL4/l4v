@@ -13,7 +13,7 @@
 
 {-# LANGUAGE CPP #-}
 
-module SEL4.Object.VCPU.AARCH64(curVCPUActive, vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
+module SEL4.Object.VCPU.AARCH64(curVCPUActive, vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, vcpuFlush, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
 
 import Prelude hiding (Word)
 import SEL4.Machine
@@ -502,6 +502,13 @@ vcpuSwitch (Just new) = do
                         doMachineOp isb
                         vcpuEnable new
                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
+
+vcpuFlush :: Kernel ()
+vcpuFlush = do
+    hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+    when (hsCurVCPU /= None) $ do
+        vcpuSave hsCurVCPU
+        vcpuInvalidateActive
 
 {- VGICMaintenance -}
 
