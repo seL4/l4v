@@ -15,7 +15,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
+> module SEL4.Object.VCPU.ARM(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, vcpuFlush, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
 
 \begin{impdetails}
 
@@ -492,6 +492,13 @@ For initialisation, see makeVCPUObject.
 >                         doMachineOp isb
 >                         vcpuEnable new
 >                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
+
+> vcpuFlush :: Kernel ()
+> vcpuFlush = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     when (hsCurVCPU /= None) $ do
+>         vcpuSave hsCurVCPU
+>         vcpuInvalidateActive
 
 \subsection{VGICMaintenance}
 

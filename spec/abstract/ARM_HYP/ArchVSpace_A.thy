@@ -600,6 +600,18 @@ where
             od))
    od"
 
+text \<open>
+  Flush the current VCPU if there is one, saving any existing state before disabling VCPU mode and
+  setting it so that there is no current VCPU.\<close>
+definition vcpu_flush :: "(unit,'z::state_ext) s_monad" where
+  "vcpu_flush \<equiv> do
+     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     when (cur_v \<noteq> None) $ do
+       vcpu_save cur_v;
+       vcpu_invalidate_active
+     od
+   od"
+
 text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
 definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "associate_vcpu_tcb vr t \<equiv> do
