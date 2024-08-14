@@ -64,7 +64,7 @@ lemma set_vcpu_ct[wp]:
 
 crunch
   vcpu_update, vgic_update, vgic_update_lr, vcpu_restore_reg_range, vcpu_save_reg_range,
-  vcpu_enable, vcpu_disable, vcpu_save, vcpu_restore, vcpu_switch, vcpu_save
+  vcpu_enable, vcpu_disable, vcpu_save, vcpu_restore, vcpu_switch, vcpu_save, vcpu_flush
   for it[wp]: "\<lambda>s. P (idle_thread s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: mapM_x_wp mapM_wp subset_refl)
@@ -111,6 +111,11 @@ crunch set_vm_root, vcpu_switch
 lemma arch_stt_scheduler_action [wp, Schedule_AI_assms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def)
+
+lemma vcpu_invalidate_active_invs[wp]:
+  "vcpu_invalidate_active \<lbrace>invs\<rbrace>"
+  unfolding vcpu_invalidate_active_def
+  by (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
 
 crunch arch_prepare_next_domain
   for ct[wp, Schedule_AI_assms]: "\<lambda>s. P (cur_thread s)"

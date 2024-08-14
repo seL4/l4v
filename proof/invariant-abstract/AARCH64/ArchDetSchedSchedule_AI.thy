@@ -92,7 +92,7 @@ lemma set_asid_pool_valid_queues[wp]:
   "set_asid_pool ptr pool \<lbrace>valid_queues\<rbrace>"
   by (wpsimp wp: valid_queues_lift)
 
-crunch set_asid_pool, set_vm_root
+crunch set_asid_pool, set_vm_root, vcpu_flush
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
@@ -259,20 +259,25 @@ crunch
   for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
   (simp: Let_def)
 
-lemma as_user_ct_in_q[wp]:
-  "as_user t f \<lbrace>ct_in_q\<rbrace>"
-  unfolding ct_in_q_def
-  by (wpsimp wp: hoare_vcg_imp_lift | wps)+
-
-crunch arch_prepare_next_domain
-  for ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (ready_queues s)"
-  and ct_in_q[wp, DetSchedSchedule_AI_assms]: ct_in_q
-  and valid_blocked[wp, DetSchedSchedule_AI_assms]: valid_blocked
+crunch vcpu_flush
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
+
+lemmas vcpu_flush_typ_ats [wp] = abs_typ_at_lifts[OF vcpu_flush_typ_at]
+
+crunch vcpu_switch, arch_prepare_next_domain
+  for ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (ready_queues s)"
+  and valid_blocked[wp, DetSchedSchedule_AI_assms]: valid_blocked
+  (wp: valid_blocked_lift crunch_wps)
 
 crunch arch_prepare_set_domain
   for idle_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (idle_thread s)"
   and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
+
+lemma as_user_ct_in_q[wp]:
+  "as_user t f \<lbrace>ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  by (wpsimp wp: hoare_vcg_imp_lift | wps)+
 
 lemma vcpu_switch_ct_in_q[wp]:
   "\<lbrace>ct_in_q\<rbrace> vcpu_switch vcpu \<lbrace>\<lambda>_. ct_in_q\<rbrace>"
@@ -282,9 +287,10 @@ lemma vcpu_switch_ct_in_q[wp]:
   apply wp
   done
 
-crunch vcpu_switch
-  for valid_blocked[wp]: valid_blocked
-  (wp: valid_blocked_lift simp: crunch_simps)
+lemma arch_prepare_next_domain_ct_in_q[wp, DetSchedSchedule_AI_assms]:
+  "arch_prepare_next_domain \<lbrace>ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  by (wp_pre, wps, wpsimp+)
 
 lemma set_vm_root_valid_blocked_ct_in_q [wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
@@ -293,6 +299,7 @@ lemma set_vm_root_valid_blocked_ct_in_q [wp]:
 crunch lazy_fpu_restore
   for valid_blocked[wp]: valid_blocked
   and ct_in_q[wp]: ct_in_q
+  (wp: crunch_wps)
 
 lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
