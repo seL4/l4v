@@ -2763,7 +2763,7 @@ lemma svr_invs [wp]:
 
 crunch
   arm_context_switch, vcpu_update, vgic_update, vcpu_disable, vcpu_enable,
-  vcpu_restore, vcpu_switch, set_vm_root
+  vcpu_restore, vcpu_switch, set_vm_root, vcpu_flush
   for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: crunch_simps wp: crunch_wps mapM_x_wp)
 

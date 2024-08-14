@@ -748,13 +748,17 @@ lemma ThreadDecls_H_switchToThread_ct [wp]:
   apply (wp | clarsimp)+
   done
 
-crunch nextDomain, prepareNextDomain
+crunch nextDomain, vcpuFlush, switchLocalFpuOwner
+  for no_orphans[wp]: no_orphans
+  (wp: no_orphans_lift crunch_wps simp: Let_def)
+
+crunch nextDomain, vcpuFlush, prepareNextDomain
   for no_orphans[wp]: no_orphans
   and tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"
   and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
   and ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   and sch_act_not[wp]: "sch_act_not t"
-  (wp: no_orphans_lift simp: Let_def)
+  (wp:  crunch_wps simp: Let_def)
 
 lemma all_invs_but_ct_idle_or_in_cur_domain'_strg:
   "invs' s \<longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
@@ -926,7 +930,7 @@ proof -
         apply (clarsimp simp: conj_comms cong: conj_cong imp_cong split del: if_split)
         apply (wp hoare_vcg_imp_lift'
                | strengthen not_pred_tcb_at'_strengthen)+
-        apply (wps | wpsimp wp: tcbSchedEnqueue_all_queued_tcb_ptrs')+
+         apply (wps | wpsimp wp: tcbSchedEnqueue_all_queued_tcb_ptrs')+
     apply (fastforce simp: is_active_tcb_ptr_runnable' all_invs_but_ct_idle_or_in_cur_domain'_strg
                            invs_switchToThread_runnable')
     done
