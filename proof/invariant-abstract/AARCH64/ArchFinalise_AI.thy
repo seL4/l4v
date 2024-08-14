@@ -586,10 +586,6 @@ lemma dissociate_vcpu_tcb_if_live_then_nonz_cap[wp]:
   unfolding dissociate_vcpu_tcb_def arch_get_sanitise_register_info_def
   by (wpsimp wp: get_vcpu_wp arch_thread_get_wp hoare_drop_imps)
 
-lemma vcpu_invalidate_active_ivs[wp]: "\<lbrace>invs\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding vcpu_invalidate_active_def
-  by (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
-
 crunch dissociate_vcpu_tcb
   for cur_tcb[wp]: "cur_tcb"
   (wp: crunch_wps)

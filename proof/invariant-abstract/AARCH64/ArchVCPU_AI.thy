@@ -167,21 +167,19 @@ crunch tcb_sched_action
   for valid_cur_vcpu_cur_thread_update[wp]: "\<lambda>s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)"
 
 lemma arch_switch_to_thread_valid_cur_vcpu_cur_thread_update[wp]:
-  "\<lbrace>valid_cur_vcpu\<rbrace>
-   arch_switch_to_thread t
-   \<lbrace>\<lambda>_ s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)\<rbrace>"
   unfolding arch_switch_to_thread_def
   apply wpsimp
   by (fastforce simp: active_cur_vcpu_of_def pred_tcb_at_def obj_at_def get_tcb_def
                split: option.splits kernel_object.splits)
 
 lemma switch_to_thread_valid_cur_vcpu[wp]:
-  "switch_to_thread t \<lbrace>valid_cur_vcpu\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> switch_to_thread t \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   unfolding switch_to_thread_def
   by wpsimp
 
 lemma arch_switch_to_idle_thread_valid_cur_vcpu_cur_thread_update[wp]:
-  "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> valid_idle s \<and> t = idle_thread s\<rbrace>
+  "\<lbrace>\<lambda>s. valid_idle s \<and> t = idle_thread s\<rbrace>
    arch_switch_to_idle_thread
    \<lbrace>\<lambda>_ s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)\<rbrace>"
   unfolding arch_switch_to_idle_thread_def set_global_user_vspace_def
@@ -189,7 +187,7 @@ lemma arch_switch_to_idle_thread_valid_cur_vcpu_cur_thread_update[wp]:
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def valid_arch_idle_def)
 
 lemma switch_to_idle_thread_valid_cur_vcpu[wp]:
-  "\<lbrace>valid_cur_vcpu and valid_idle\<rbrace>
+  "\<lbrace>valid_idle\<rbrace>
    switch_to_idle_thread
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   by (wpsimp simp: switch_to_idle_thread_def)
@@ -249,9 +247,25 @@ crunch switch_local_fpu_owner
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift)
 
+lemma guarded_switch_to_cur_vcpu[wp]:
+  "\<lbrace>\<top>\<rbrace> guarded_switch_to t \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
+  by (wpsimp simp: guarded_switch_to_def)
+
+lemma choose_thread_valid_cur_vcpu[wp]:
+  "\<lbrace>valid_idle\<rbrace> choose_thread \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
+  by (wpsimp simp: choose_thread_def)
+
+crunch set_scheduler_action
+  for valid_cur_vcpu[wp]: valid_cur_vcpu
+  (simp: valid_cur_vcpu_def)
+
+lemma schedule_choose_new_thread_cur_vcpu[wp]:
+  "\<lbrace>valid_idle\<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
+  by (wpsimp simp: schedule_choose_new_thread_def)
+
 crunch schedule
   for valid_cur_vcpu[wp]: valid_cur_vcpu
-  (simp: crunch_simps valid_cur_vcpu_def active_cur_vcpu_of_def wp: crunch_wps)
+  (simp: valid_cur_vcpu_def active_cur_vcpu_of_def wp: crunch_wps)
 
 crunch cancel_all_ipc, blocked_cancel_ipc, unbind_maybe_notification, cancel_all_signals,
          bind_notification, fast_finalise, deleted_irq_handler, post_cap_deletion, cap_delete_one,

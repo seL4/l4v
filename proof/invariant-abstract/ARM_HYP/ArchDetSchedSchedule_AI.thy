@@ -43,10 +43,6 @@ crunch vcpu_disable, vcpu_enable, vcpu_restore, vcpu_save
   for pred_tcb_atP[wp]: "\<lambda>s. P (pred_tcb_at proj Q t s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma vcpu_switch_pred_tcb_at[wp]:
-  "\<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace> vcpu_switch vcpu \<lbrace>\<lambda>_ s. P (pred_tcb_at proj Q t s)\<rbrace>"
-  unfolding vcpu_switch_def by (rule hoare_pre) wpsimp+
-
 crunch set_vm_root
   for pred_tcb_atP[wp]: "\<lambda>s. P (pred_tcb_at proj Q t s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -66,8 +62,9 @@ lemma set_vcpu_valid_queues [wp]:
   "\<lbrace>valid_queues\<rbrace> set_vcpu ptr vcpu \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   by (rule valid_queues_lift; wp)
 
-crunch vcpu_switch
+crunch vcpu_switch, vcpu_flush
   for etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps)
@@ -160,18 +157,22 @@ lemma set_vcpu_is_activatable[wp]:
 crunch set_vm_root
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
-crunch vcpu_disable, vcpu_restore, vcpu_save, vcpu_switch, set_vm_root
+crunch vcpu_disable, vcpu_restore, vcpu_save, vcpu_switch, vcpu_flush, set_vm_root
   for etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
   and is_activatable[wp]: "is_activatable t"
   and valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
   (wp: crunch_wps valid_sched_lift simp: crunch_simps)
+
+crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers
+  for valid_sched_action [wp, DetSchedSchedule_AI_assms]: valid_sched_action
+  (simp: crunch_simps ignore: set_asid_pool
+   wp: crunch_wps valid_sched_action_lift[where f="set_asid_pool ptr pool" for ptr pool])
 
 crunch
   arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers,
   arch_prepare_next_domain, arch_post_set_flags, arch_prepare_set_domain
   for ct_not_in_q[wp, DetSchedSchedule_AI_assms]: ct_not_in_q
   and is_activatable[wp, DetSchedSchedule_AI_assms]: "is_activatable t"
-  and valid_sched_action[wp, DetSchedSchedule_AI_assms]: valid_sched_action
   and valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
   (wp: crunch_wps valid_sched_lift simp: crunch_simps)
 
@@ -180,6 +181,26 @@ crunch arch_switch_to_thread
     "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)"
   (simp: crunch_simps wp: assert_inv crunch_wps ignore: set_vcpu)
 
+crunch vcpu_flush
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps)
+
+lemmas vcpu_flush_typ_ats [wp] = abs_typ_at_lifts[OF vcpu_flush_typ_at]
+
+crunch vcpu_switch, arch_prepare_next_domain
+  for ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (ready_queues s)"
+  and valid_blocked[wp, DetSchedSchedule_AI_assms]: valid_blocked
+  (wp: valid_blocked_lift crunch_wps)
+
+crunch arch_prepare_set_domain
+  for idle_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (idle_thread s)"
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
+
+lemma as_user_ct_in_q[wp]:
+  "as_user t f \<lbrace>ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  by (wpsimp wp: hoare_vcg_imp_lift | wps)+
+
 lemma vcpu_switch_ct_in_q[wp]:
   "\<lbrace>ct_in_q\<rbrace> vcpu_switch vcpu \<lbrace>\<lambda>_. ct_in_q\<rbrace>"
   unfolding ct_in_q_def
@@ -187,6 +208,11 @@ lemma vcpu_switch_ct_in_q[wp]:
   apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", rotated], wp)
   apply wp
   done
+
+lemma arch_prepare_next_domain_ct_in_q[wp, DetSchedSchedule_AI_assms]:
+  "arch_prepare_next_domain \<lbrace>ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  by (wp_pre, wps, wpsimp+)
 
 crunch do_machine_op, set_vm_root, vcpu_switch
   for valid_blocked[wp]: valid_blocked
@@ -213,16 +239,6 @@ crunch
   arch_prepare_next_domain, arch_prepare_set_domain
   for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
   (simp: Let_def)
-
-crunch arch_prepare_next_domain
-  for ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (ready_queues s)"
-  and ct_in_q[wp, DetSchedSchedule_AI_assms]: ct_in_q
-  and valid_blocked[wp, DetSchedSchedule_AI_assms]: valid_blocked
-  (wp: crunch_wps)
-
-crunch arch_prepare_set_domain
-  for idle_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (idle_thread s)"
-  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
 
 lemma switch_to_idle_thread_ct_not_queued[wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_queues and valid_idle\<rbrace>
