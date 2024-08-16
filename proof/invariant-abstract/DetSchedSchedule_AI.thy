@@ -1456,8 +1456,7 @@ lemma schedule_choose_new_thread_valid_sched:
                  wp: set_scheduler_action_rct_valid_sched choose_thread_ct_not_queued
                      choose_thread_ct_activatable choose_thread_cur_dom_or_idle
                      hoare_vcg_disj_lift)+
-    apply (wpsimp wp: next_domain_valid_sched_action
-                      next_domain_valid_queues next_domain_valid_blocked next_domain_ct_in_q)+
+    apply (wpsimp wp: next_domain_valid_sched_action)+
   done
 
 lemma schedule_valid_sched:

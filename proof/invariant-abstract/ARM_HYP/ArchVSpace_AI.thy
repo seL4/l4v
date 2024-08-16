@@ -2429,27 +2429,26 @@ lemma state_hyp_refs_of_simp_eq:
    \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) p = state_hyp_refs_of s p"
   by (clarsimp simp: state_hyp_refs_of_def obj_at_def)
 
-lemma set_object_vcpu_sym_refs_hyp:
+lemma set_object_vcpu_hyp_refs_of:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of ko) p s
-      \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+      \<and> P (state_hyp_refs_of s)\<rbrace>
      set_object p ko
-   \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
    apply (wpsimp wp: set_object_wp)
-   apply (erule rsubst[where P = sym_refs])
+   apply (erule rsubst[where P = P])
    apply (rule ext)
    by (clarsimp simp: state_hyp_refs_of_def obj_at_def
                   split: option.splits if_splits)
 
-lemma set_vcpu_sym_refs_refs_hyp:
+lemma set_vcpu_hyp_refs_of:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of (ArchObj (VCPU v))) p s
-      \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+      \<and> P (state_hyp_refs_of s)\<rbrace>
      set_vcpu p v
-   \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_vcpu_def)
-  apply (wp set_object_vcpu_sym_refs_hyp hoare_drop_imp)
+  apply (wp set_object_vcpu_hyp_refs_of hoare_drop_imp)
   apply (clarsimp simp: hyp_refs_of_def)
   done
-
 
 lemma set_vcpu_valid_pspace:
   "\<lbrace>valid_obj p (ArchObj (VCPU v))
@@ -2458,7 +2457,7 @@ lemma set_vcpu_valid_pspace:
      set_vcpu p v
    \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
   apply (wpsimp simp: valid_pspace_def pred_conj_def
-                  wp: set_vcpu_if_live_then_nonz_cap_full set_vcpu_sym_refs_refs_hyp)
+                  wp: set_vcpu_if_live_then_nonz_cap_full set_vcpu_hyp_refs_of)
   apply (clarsimp simp: obj_at_def live_def)
   apply (auto simp: arch_live_def hyp_refs_of_def vcpu_tcb_refs_def hyp_live_def
               split: kernel_object.splits arch_kernel_obj.splits option.splits)
@@ -2683,49 +2682,47 @@ definition "cur_vcpu_at v s \<equiv> case v of None \<Rightarrow> True | Some (v
 
 lemma invs_current_vcpu_update:
   "\<lbrakk>cur_vcpu_at v s; valid_arch_state s\<rbrakk> \<Longrightarrow>
-      invs (s\<lparr>arch_state := arch_state s
-               \<lparr>arm_current_vcpu := v\<rparr>\<rparr>) = invs s"
+     invs (s\<lparr>arch_state := arch_state s \<lparr>arm_current_vcpu := v\<rparr>\<rparr>) = invs s"
   by (auto simp: invs_def valid_state_def cur_tcb_def cur_vcpu_at_def obj_at_conj_distrib
                     valid_global_refs_def valid_asid_map_def valid_arch_state_def
                     valid_global_objs_def valid_global_vspace_mappings_def
           split: option.split)
 
-lemma invs_current_vcpu_update': "\<lbrakk> cur_vcpu_at v s \<and> invs s \<rbrakk>
-  \<Longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := v\<rparr>\<rparr>)"
-  by (auto simp add: invs_def valid_state_def cur_tcb_def cur_vcpu_at_def obj_at_conj_distrib
-            valid_global_refs_def valid_asid_map_def valid_arch_state_def
-            valid_global_objs_def valid_global_vspace_mappings_def
-           split: option.split)
+lemma invs_current_vcpu_update':
+  "\<lbrakk> cur_vcpu_at v s; invs s \<rbrakk> \<Longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := v\<rparr>\<rparr>)"
+  apply (prop_tac "valid_arch_state s", simp add: invs_def valid_state_def)
+  apply (simp add: invs_current_vcpu_update)
+  done
 
-lemma vgic_update_sym_refs_hyp[wp]:
-  "vgic_update vcpuptr f \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+lemma vgic_update_hyp_refs_of[wp]:
+  "vgic_update vcpuptr f \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vgic_update_def vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp simp: obj_at_def)
+  by (wpsimp wp: set_vcpu_hyp_refs_of get_vcpu_wp simp: obj_at_def in_omonad)
 
-lemma vcpu_save_reg_sym_refs_hyp[wp]:
-  "vcpu_save_reg vcpuptr r \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+lemma vcpu_save_reg_hyp_refs_of[wp]:
+  "vcpu_save_reg vcpuptr r \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_save_reg_def vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
-     (simp add: obj_at_def)
+  by (wpsimp wp: set_vcpu_hyp_refs_of get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+     (simp add: obj_at_def in_omonad)
 
-lemma vcpu_update_regs_sym_refs_hyp[wp]:
-  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+lemma vcpu_update_regs_hyp_refs_of[wp]:
+  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
-     (simp add: obj_at_def)
+  by (wpsimp wp: set_vcpu_hyp_refs_of get_vcpu_wp)
+     (simp add: obj_at_def in_omonad)
 
-lemma vcpu_write_reg_sym_refs_hyp[wp]:
-  "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+lemma vcpu_write_reg_hyp_refs_of[wp]:
+  "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
 
-lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
-  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+lemma vcpu_update_vtimer_hyp_refs_of[wp]:
+  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
-     (simp add: obj_at_def)
+  by (wpsimp wp: set_vcpu_hyp_refs_of get_vcpu_wp)
+     (simp add: obj_at_def in_omonad)
 
 crunch save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save, vcpu_switch
-  for sym_refs_hyp[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
+  for hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (ignore: vcpu_update wp: crunch_wps)
 
 lemma vcpu_switch_invs[wp]:
