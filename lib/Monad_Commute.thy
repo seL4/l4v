@@ -140,6 +140,21 @@ lemma mapM_x_commute:
   apply auto
   done
 
+(* Proof needs to be different from mapM_x_commute, to eliminate "distinct" *)
+lemma mapM_x_commute_T:
+  assumes commute: "\<And>r. monad_commute \<top> (b r) a"
+  shows "monad_commute \<top> (mapM_x b xs) a"
+  apply (induct xs)
+   apply (clarsimp simp: mapM_x_Nil return_def bind_def monad_commute_def)
+  apply (clarsimp simp: mapM_x_Cons)
+  apply (rule monad_commute_guard_imp)
+   apply (rule commute_commute, rule monad_commute_split)
+     apply (rule commute_commute, assumption)
+    apply (rule commute_commute, rule commute)
+   apply wp
+  apply clarsimp
+  done
+
 lemma commute_name_pre_state:
   assumes "\<And>s. P s \<Longrightarrow> monad_commute ((=) s) f g"
   shows "monad_commute P f g"
