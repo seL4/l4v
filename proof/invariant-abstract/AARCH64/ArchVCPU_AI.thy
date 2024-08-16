@@ -176,7 +176,7 @@ lemma tcb_cur_fpu_update_active_cur_vcpu_of[wp]:
 
 crunch lazy_fpu_restore
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
-  and tcb_vcpu_at[wp]: "arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t"
+  and arch_tcb_vcpu_at[wp]: "arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t"
   (ignore: arch_thread_set wp: crunch_wps)
 
 crunch set_vm_root, set_tcb_queue, lazy_fpu_restore
