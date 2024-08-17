@@ -227,7 +227,7 @@ lemma dmo_freeMemory_globals_equiv[Retype_IF_assms]:
   done
 
 lemma init_arch_objects_reads_respects_g:
-  "reads_respects_g aag l \<top> (init_arch_objects new_type ptr num_objects obj_sz refs)"
+  "reads_respects_g aag l \<top> (init_arch_objects new_type dev ptr num_objects obj_sz refs)"
   unfolding init_arch_objects_def by wp
 
 lemma copy_global_mappings_globals_equiv:
