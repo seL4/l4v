@@ -8,7 +8,6 @@
 (*
   Requalify constants, types and facts into the current naming.
   Includes command variants that support implicitly using the L4V_ARCH environment variable.
-
 *)
 
 text \<open>See theory @{text "test/Requalify_Test.thy"} for commented examples and usage scenarios.\<close>
@@ -141,6 +140,29 @@ val get_fact_nm = (fst oo global_fact)
    global_fact are accessible in the current context. *)
 fun check_fact lthy (_, (nm, pos)) = Proof_Context.get_fact lthy (Facts.Named ((nm,pos), NONE))
 
+(* replace text in all Text nodes in YXML-encoded string entry with new_text *)
+fun replace_yxml_text new_text =
+let
+  fun tree_text (XML.Text _) = XML.Text new_text
+    | tree_text (XML.Elem (node, trees)) = (XML.Elem (node, map tree_text trees))
+in
+  YXML.string_of o tree_text o YXML.parse
+end
+
+(* These versions, prior to resolving the const/type name, override that name in the parsed
+   YXML-encoded string entry with a name that will actually resolve to something, while preserving
+   other parse data such as parsed document location.
+   This updates the document markup at the original parse location of entry with a reference to the
+   const/type named by "name", allowing the user to ctrl+click to jump to the const/type definition.
+
+   For example, if the user requested "arch_requalify_consts (A) some_const", then they are
+   targeting something like "ARM_A.some_const", and expect to be able to jump to its definition.
+
+   This isn't necessary for facts, as those use parsed position of "name" directly via
+   Proof_Context.get_fact, which appears not available for read_const/read_type_name. *)
+fun arch_const_nm lthy entry name = get_const_nm lthy (replace_yxml_text name entry)
+fun arch_type_nm lthy entry name = get_type_nm lthy (replace_yxml_text name entry)
+
 in
 
 val _ =
@@ -168,22 +190,20 @@ val _ =
    "arch_requalify_consts (H) const" becomes "requalify_consts ARM_H.const"
    This allows them to be used in a architecture-generic theory.
 
-   For consts and types, we don't perform extra checking on the results of Parse.const and Parse.typ
-   because their "strings" contain embedded syntax, which means prepending a normal string to them
-   causes malformed syntax and YXML exceptions. It shouldn't matter, we are looking up the name and
-   checking it's a constant/type anyway. *)
+   For consts and types, we need to perform text replacement in the YXML entry to combine the parse
+   location with the right const/type name (see arch_const_nm and arch_type_nm). *)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_consts}
     "alias const with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
-    (gen_requalify get_const_nm Parse.const (fn _ => fn (_, _) => ()) const_alias
-                   true)
+    (gen_requalify get_const_nm Parse.const (fn lthy => fn (e, (nm, _)) => arch_const_nm lthy e nm)
+                   const_alias true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_types}
     "alias type with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
-    (gen_requalify get_type_nm Parse.typ (fn _ => fn (_, _) => ()) type_alias
-                   true)
+    (gen_requalify get_type_nm Parse.typ (fn lthy => fn (e, (nm, _)) => arch_type_nm lthy e nm)
+                   type_alias true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_facts}
