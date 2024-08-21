@@ -1505,7 +1505,7 @@ lemma ucast_maxIRQ_is_less:
   "SCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ < UCAST(10 \<rightarrow> 32) irq \<Longrightarrow> scast Kernel_C.maxIRQ < irq"
   apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
   apply (subgoal_tac "LENGTH(10) \<le> LENGTH(32)")
-  apply (drule less_ucast_ucast_less[where x= "0x9F" and y="irq"])
+  apply (drule less_ucast_ucast_less[where x= "187" and y="irq"])
     by (simp)+
 
 lemma scast_maxIRQ_is_not_less: "(\<not> (Kernel_C.maxIRQ) <s (ucast \<circ> (ucast :: irq \<Rightarrow> 16 word)) b)  \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"

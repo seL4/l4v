@@ -72,7 +72,7 @@ definition
 
 definition
   maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 0x9F"
+  "maxIRQ \<equiv> 187"
 
 end
 

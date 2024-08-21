@@ -371,7 +371,7 @@ lemma isIRQActive_ccorres:
         (isIRQActive irq) (Call isIRQActive_'proc)"
   apply (cinit lift: irq_')
    apply (simp add: getIRQState_def getInterruptState_def)
-   apply (rule_tac P="irq \<le> ucast Kernel_C.maxIRQ \<and> unat irq < (160::nat)" in ccorres_gen_asm)
+   apply (rule_tac P="irq \<le> ucast Kernel_C.maxIRQ \<and> unat irq < (188::nat)" in ccorres_gen_asm)
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
    apply (rule allI, rule conseqPre, vcg)
    apply (clarsimp simp: simpler_gets_def word_sless_msb_less maxIRQ_def
