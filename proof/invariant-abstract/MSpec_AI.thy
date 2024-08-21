@@ -371,6 +371,33 @@ lemma handle_SysRecv_syscall_valid:
            definitely have not ensured that with the precondition and I'm not sure how, so should
            I figure out how to phrase this or am I better off trying to prove some of these kinds
            of properties on the non-MCS kernel ASpec first? *)
+         apply(clarsimp simp:valid_def mapM_wp[simplified valid_def])
+         apply auto[1]
+        apply(clarsimp simp:valid_def mapM_wp[simplified valid_def])
+        apply auto[1]
+       apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+         copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
+         simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+
+      (* 31 subgoals *)
+      unfolding sched_context_donate_def set_tcb_obj_ref_def set_object_def update_sched_context_def
+      apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
+        simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+
+      unfolding get_object_def test_reschedule_def reschedule_required_def set_scheduler_action_def
+        tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def thread_get_def
+      apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
+        simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+
+      unfolding is_schedulable_def
+      (* FIXME: Now we seem to be stuck following the kitchen sink approach. Maybe not surprising
+         for it to be once seL4 asks if the (presumably current?) thread is still schedulable?
+      apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
+        simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+      *)
   oops
 
 end (* Arch ARM_A *)
