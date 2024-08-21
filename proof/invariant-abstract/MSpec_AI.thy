@@ -12,6 +12,13 @@ begin
 (* From Structures_A.thy *)
 term "s :: abstract_state"
 
+consts
+  MICROKIT_INPUT_CAP :: cnode_index
+  MICROKIT_REPLY_CAP :: cnode_index
+
+axiomatization where microkit_input_reply_caps_distinct:
+  "MICROKIT_INPUT_CAP \<noteq> MICROKIT_REPLY_CAP"
+
 (* Based on KernelState in Mathieu's gordian-relation-proof *)
 
 (* The 1st member is supposed to end up being the return value of seL4_(Reply)Recv. *)
@@ -30,7 +37,9 @@ record mspec_recv_oracle =
   new_reply_tcb :: "tcb option"
   badge_val :: badge
 
+(* FIXME: Come back to this.
 datatype mspec_writable = Writable | WritableExclusive
+*)
 
 record mspec_state =
   cur_thread_cnode :: cnode_contents
@@ -41,19 +50,26 @@ record mspec_state =
   (* Dropped: (ks_recv_oracle (Maybe KernelOracle)).
      Again trying to phrase it as a predicate on the CNode contents.
      See valid_ep_obj_with_message below. *)
-  (* TODO: (ks_local_mem Mem)
-     A comment in Mathieu's smt file says "shouldn't be called local mem, this can represent memory
-     in shared memory regions" - but regardless, should these be virtual or physical addresses? *)
-  cur_thread_mapped_mem :: "vspace_ref \<rightharpoonup> obj_ref"
+  (* Dropped: (ks_local_mem Mem).
+     It doesn't actually seem to be used by the coupling invariant, and it was only used to assert
+     something about the returned badge value, which we can do directly on the badge register. *)
+  (* FIXME: Come back to this.
   (* TODO: (ks_local_mem_writable (Array Word64 Bool))
      That this address is mapped writable for the current PD. *)
   (* TODO: (ks_local_mem_safe (Array Word64 Bool))
      That the current PD is the *only* one with write access to this address. *)
-  cur_thread_mapped_mem_writable_exclusive :: "vspace_ref \<rightharpoonup> mspec_writable"
+  cur_thread_mem_writable :: "vspace_ref \<rightharpoonup> mspec_writable"
+  *)
 
 (* The sorts of things Mathieu's smt file asserts about:
   - ks_local_mem
     - that seL4_(Reply)Recv modifies the ks_local_mem to store the new badge_val at the badge_ptr
+      - NB: actually, from the kernel perspective it just sets the badge register, so presumably
+        the libsel4 wrapper code is the one dereferencing the user-provided badge pointer - we
+        can't check inside the kernel if that pointer is mapped because we aren't given it.
+      - NB: furthermore, it looks like the libsel4 wrapper code just trusts that the user/microkit
+        provided badge pointer (2nd argument "seL4_Word *sender") is a valid, mapped address;
+        it only checks that it isn't NULL.
   - ks_local_mem_writable
     - that the badge_ptr argument to seL4_(Reply)Recv is writable
     - that for all addresses, (is_writable_mem addr mi) if the addr is writable (see relation_mmrs_mem)
@@ -62,6 +78,7 @@ record mspec_state =
       (see relation_mmrs_mem)
 *)
 
+(* FIXME: Come back to this.
 definition
   local_mem_writable :: "mspec_state \<Rightarrow> vspace_ref \<Rightarrow> bool"
 where
@@ -72,13 +89,17 @@ definition
 where
   "local_mem_safe m r \<equiv> cur_thread_mapped_mem_writable_exclusive m r = Some WritableExclusive"
 
-(* XXX: This is how you find consts of a given type (thanks to Tom for pointing out), but it won't
-  help so much in this instance seeing as vspace_ref is just a type_synonym for machine_word :( *)
-find_consts "vspace_ref \<Rightarrow> _"
+thm ARM.addrFromKPPtr_def
+  ARM.addrFromPPtr_def
+  ARM.ptrFromPAddr_def
+  ARM.kernelELFBaseOffset_def
+  ARM.pptrBaseOffset_def
+*)
+
 term "TCB t"
 term "t :: tcb"
 definition
-  mspec_transform :: "abstract_state \<Rightarrow> mspec_state"
+  mspec_transform :: "'a::state_ext state \<Rightarrow> mspec_state"
 where
   "mspec_transform s \<equiv> \<lparr>
      cur_thread_cnode = (case kheap s (cur_thread s) of
@@ -86,18 +107,27 @@ where
        _ \<Rightarrow> \<lambda>_. None),
      cur_thread_bound_notification = (case kheap s (cur_thread s) of
        Some (TCB t) \<Rightarrow> tcb_bound_notification t |
-       _ \<Rightarrow> None),
-     cur_thread_mapped_mem = \<lambda>va.  None, \<comment> \<open>TODO\<close>
-     cur_thread_mapped_mem_writable_exclusive = \<lambda>_. None \<comment> \<open>TODO\<close>
+       _ \<Rightarrow> None)
+     \<comment> \<open>FIXME: Come back to this.
+     cur_thread_mem_writable = \<lambda>_. None \<comment> \<open>TODO\<close>
+     \<close>
    \<rparr>"
 
 term "is_reply_cap"
+
 definition
-  valid_reply_obj_for_tcb :: "mspec_state \<Rightarrow> abstract_state \<Rightarrow> cnode_index \<Rightarrow> obj_ref \<Rightarrow> bool"
+  valid_reply_obj :: "mspec_state \<Rightarrow> 'a::state_ext state \<Rightarrow> cnode_index \<Rightarrow> bool"
 where
   (* FIXME: Ideally we don't want to take the abstract_state s as an argument here,
      if we want to phrase this purely as a predicate on mspec_state m. But that means
      getting what we need of `kheap s` into the mspec_state - maybe as local_mem? *)
+  "valid_reply_obj m s i \<equiv> case cur_thread_cnode m i of
+     Some (ReplyCap rp _) \<Rightarrow> \<exists> r. kheap s rp = Some (Reply r) |
+     _ \<Rightarrow> False"
+
+definition
+  valid_reply_obj_for_tcb :: "mspec_state \<Rightarrow> 'a::state_ext state \<Rightarrow> cnode_index \<Rightarrow> obj_ref \<Rightarrow> bool"
+where
   "valid_reply_obj_for_tcb m s i tp \<equiv> case cur_thread_cnode m i of
      Some (ReplyCap rp _) \<Rightarrow> (case kheap s rp of
        Some (Reply r) \<Rightarrow> reply_tcb r = Some tp |
@@ -105,6 +135,28 @@ where
      _ \<Rightarrow> False"
 
 (* Experimentation to find more usable lemmas about return values of monads *)
+definition
+  getRegister_as_user_ret :: "'a state \<Rightarrow> obj_ref \<Rightarrow> register \<Rightarrow> machine_word option"
+where
+  "getRegister_as_user_ret s thread r \<equiv> case kheap s thread of
+    Some (TCB t) \<Rightarrow> (case arch_tcb_context_get (tcb_arch t) of
+      ARM.UserContext u \<Rightarrow> Some (u r)) |
+    _ \<Rightarrow> None"
+
+lemma getRegister_as_user_ret_valid:
+  "\<lbrace>\<lambda>s'. s = s'\<rbrace> as_user (cur_thread s) $ getRegister r
+   \<lbrace>\<lambda> r' s''. s = s'' \<and> getRegister_as_user_ret s (cur_thread s) r = Some r'\<rbrace>"
+  unfolding getRegister_as_user_ret_def
+  apply wp
+   unfolding as_user_def
+   apply wpsimp
+  apply wpsimp
+  unfolding ARM.getRegister_def get_tcb_def gets_def get_def
+  apply wpsimp
+  apply(clarsimp split:option.splits kernel_object.splits ARM.user_context.splits
+    simp:bind_def return_def)
+  using ARM.user_context.sel by force
+
 definition
   get_message_info_ret :: "'a state \<Rightarrow> obj_ref \<Rightarrow> message_info option"
 where
@@ -262,6 +314,64 @@ where
          _ \<Rightarrow> False) |
        _ \<Rightarrow> False) |
      _ \<Rightarrow> False"
+
+thm getRegister_as_user_ret_valid
+  get_message_info_ret_valid
+  copy_mrs_ret_valid
+  transfer_caps_none_valid
+  get_cap_ret_valid
+  lookup_ipc_buffer_ret_valid
+
+find_theorems name:handle_fault valid
+
+lemma handle_SysRecv_syscall_valid:
+  "\<lbrace>\<lambda>s. valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>
+      valid_ep_obj_with_message (mspec_transform s) s MICROKIT_INPUT_CAP ro\<rbrace>
+    handle_recv True True
+   \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' (cur_thread s') badge_register = Some (badge_val ro) \<and>
+      get_message_info_ret s' (cur_thread s') = Some (minfo ro)\<rbrace>"
+  unfolding handle_recv_def
+  apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+    copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
+      defer
+     apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+       copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
+      apply(wpsimp simp:Let_def)
+
+       (* 19 subgoals *)
+       unfolding receive_ipc_def
+       apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
+
+        (* 25 subgoals *)
+        unfolding complete_signal_def refill_unblock_check_def refill_head_overlapping_loop_def
+          merge_overlapping_refills_def update_refill_hd_def update_sched_context_def
+          set_object_def get_object_def refill_pop_head_def
+        apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+          copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
+
+         (* 39 subgoals *)
+         apply(rule conjI)
+          apply(force simp:getRegister_as_user_ret_def)
+         apply(force simp:get_message_info_ret_def)
+        apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+          copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
+          simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+
+       unfolding is_round_robin_def get_tcb_obj_ref_def thread_get_def maybe_donate_sc_def
+         sched_context_resume_def postpone_def tcb_release_enqueue_def
+       (* 33 subgoals *)
+       apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
+         copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
+         simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+
+        (* 48 subgoals. Noticing I'm seeing a lot of scheduling stuff here. It's occurred to me,
+           since we're on the MCS kernel, that I really can't assert that the kernel will return
+           to the original caller unless we somehow know that it won't run out of time. But I
+           definitely have not ensured that with the precondition and I'm not sure how, so should
+           I figure out how to phrase this or am I better off trying to prove some of these kinds
+           of properties on the non-MCS kernel ASpec first? *)
+  oops
 
 end (* Arch ARM_A *)
 
