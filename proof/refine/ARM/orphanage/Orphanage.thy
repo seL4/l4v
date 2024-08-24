@@ -780,7 +780,8 @@ lemma chooseThread_no_orphans [wp]:
    chooseThread
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  unfolding chooseThread_def Let_def numDomains_def curDomain_def
+  unfolding chooseThread_def Let_def
+  supply if_split[split del]
   apply (simp only: return_bind, simp)
   apply (rule hoare_seq_ext[where B="\<lambda>rv s. ?PRE s \<and> rv = ksCurDomain s"])
    apply (rule_tac B="\<lambda>rv s. ?PRE s \<and> curdom = ksCurDomain s \<and>
@@ -796,7 +797,9 @@ lemma chooseThread_no_orphans [wp]:
                           valid_queues_def st_tcb_at'_def)
     apply (fastforce dest!: lookupBitmapPriority_obj_at' elim: obj_at'_weaken
                      simp: all_active_tcb_ptrs_def)
-   apply (simp add: bitmap_fun_defs | wp)+
+   apply (wpsimp simp: bitmap_fun_defs)
+  apply (wp curDomain_or_return_0[simplified])
+    apply (wpsimp simp: curDomain_def simp: invs_no_cicd_ksCurDomain_maxDomain')+
   done
 
 lemma tcbSchedAppend_in_ksQ:
