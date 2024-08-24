@@ -35,7 +35,7 @@ definition
 
 definition
   cacheLineBits :: nat where
-  "cacheLineBits = 5"
+  "cacheLineBits = 6"
 
 definition
   cacheLine :: nat where

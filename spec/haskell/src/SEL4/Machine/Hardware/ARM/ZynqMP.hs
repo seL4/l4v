@@ -154,7 +154,7 @@ cacheCleanL2RangeCallback :: Ptr CallbackData -> PAddr -> PAddr -> IO ()
 cacheCleanL2RangeCallback _ _ _ = return ()
 
 cacheLine :: Int
-cacheLine = 32
+cacheLine = 64
 
 cacheLineBits :: Int
-cacheLineBits = 5
+cacheLineBits = 6
