@@ -876,17 +876,16 @@ crunch cur_tcb'[wp]: tcbSchedAppend cur_tcb'
 
 lemma timerTick_invs'[wp]:
   "\<lbrace>invs'\<rbrace> timerTick \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: numDomains_def timerTick_def)
-  apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
-            rescheduleRequired_all_invs_but_ct_not_inQ
-            tcbSchedAppend_invs_but_ct_not_inQ'
-       | simp add: tcb_cte_cases_def numDomains_def
-       | wpc)+
-      apply (simp add:decDomainTime_def)
-      apply wp
-     apply simp
+  apply (simp add: timerTick_def)
+  apply (wpsimp wp: threadSet_invs_trivial threadSet_pred_tcb_no_state
+                    rescheduleRequired_all_invs_but_ct_not_inQ
+                    tcbSchedAppend_invs_but_ct_not_inQ'
+                simp: tcb_cte_cases_def)
      apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp add:invs'_def valid_state'_def)
+      apply (simp add: decDomainTime_def)
+      apply wp
+     apply simp
      apply wpc
           apply (wp add: threadGet_wp threadSet_cur threadSet_timeslice_invs
                                rescheduleRequired_all_invs_but_ct_not_inQ
@@ -898,7 +897,7 @@ lemma timerTick_invs'[wp]:
                              threadSet_valid_objs' threadSet_timeslice_invs)+
        apply (wp threadGet_wp)
       apply (wp gts_wp')+
-  apply (clarsimp simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def numDomains_def)
+  apply (clarsimp simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def)
   done
 
 lemma resetTimer_invs'[wp]:
