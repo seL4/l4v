@@ -193,8 +193,7 @@ lemma decodeDomainInvocation_ccorres:
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_queues' invs_valid_objs'
                         invs_queues invs_sch_act_wf' ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
-                        mask_eq_iff_w2p mask_eq_iff_w2p word_size "StrictC'_thread_state_defs"
-                        maxDomain_def numDomains_def)
+                        mask_eq_iff_w2p mask_eq_iff_w2p word_size "StrictC'_thread_state_defs")
   apply (rule conjI)
    apply (clarsimp simp: linorder_not_le isCap_simps)
    apply (rule conjI, clarsimp simp: unat32_eq_of_nat)

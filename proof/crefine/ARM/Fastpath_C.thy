@@ -1835,6 +1835,16 @@ lemma recv_ep_queued_st_tcb_at':
   apply (clarsimp simp: isBlockedOnReceive_def projectKOs)
   done
 
+lemma getCurDomain_maxDom_ccorres_dom_':
+  "ccorres (\<lambda>rv rv'. rv' = ucast rv) dom_'
+     (\<lambda>s. ksCurDomain s \<le> maxDomain) UNIV hs
+     curDomain (\<acute>dom :== (if maxDom \<noteq> 0 then \<acute>ksCurDomain else 0))"
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  using maxDom_to_H
+  apply (clarsimp simp: curDomain_def simpler_gets_def rf_sr_ksCurDomain maxDom_def)
+  done
+
 lemma fastpath_call_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
@@ -2040,8 +2050,7 @@ proof -
              apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
              apply (rule ccorres_abstract_ksCurThread, ceqv)
              apply (rename_tac ksCurThread_x)
-             apply (simp add: maxDom_def del: Collect_const)
-               apply (ctac add: getCurDomain_ccorres_dom_')
+               apply (ctac add: getCurDomain_maxDom_ccorres_dom_')
                  apply (rename_tac curDom curDom')
                  apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
                  apply (simp add: prio_and_dom_limit_helpers del: Collect_const)
@@ -2163,13 +2172,14 @@ proof -
                     apply (rename_tac destDom)
                     apply (rule_tac C'="{s. destDom \<noteq> curDom}"
                               and Q="obj_at' ((=) destDom \<circ> tcbDomain) (hd (epQueue send_ep))
-                                       and (\<lambda>s. ksCurDomain s = curDom)"
+                                       and (\<lambda>s. ksCurDomain s = curDom \<and> curDom \<le> maxDomain
+                                                \<and> destDom \<le> maxDomain)"
                               and Q'=UNIV in ccorres_rewrite_cond_sr_Seq)
                      apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
                      apply clarsimp
                       apply (drule(1) obj_at_cslift_tcb)+
                       apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurDomain)
-                      apply (drule ctcb_relation_tcbDomain[symmetric], fastforce)
+                      apply (solves \<open>clarsimp simp: maxDomain_def numDomains_def maxDom_def\<close>)
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R=\<top> in ccorres_cond2', blast)
                      apply (rule ccorres_split_throws)
@@ -2520,6 +2530,10 @@ proof -
                          capAligned_def objBits_simps)
    apply (simp cong: conj_cong)
    apply (clarsimp simp add: invs_ksCurDomain_maxDomain')
+   apply (rule conjI) (* tcbDomain \<le> maxDomain *)
+    apply (drule invs_valid_objs')
+    apply (solves \<open>drule_tac t=x in valid_objs'_maxDomain; clarsimp simp: obj_at_tcbs_of\<close>)
+   apply clarsimp
    apply (rule conjI) (* isReceive on queued tcb state *)
     apply (fastforce simp: st_tcb_at_tcbs_of isBlockedOnReceive_def isReceive_def)
    apply clarsimp
@@ -2932,8 +2946,7 @@ lemma fastpath_reply_recv_ccorres:
                           |  rule ccorres_flip_Guard2, rule ccorres_Guard_True_Seq)+
                    apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
 
-                   apply (simp add: maxDom_def del: Collect_const)
-                   apply (ctac add: getCurDomain_ccorres_dom_')
+                   apply (ctac add: getCurDomain_maxDom_ccorres_dom_')
                      apply (rename_tac curDom curDom')
                      apply (rule_tac P="curDom \<le> maxDomain" in ccorres_gen_asm)
                      apply (simp add: prio_and_dom_limit_helpers del: Collect_const)
@@ -2976,13 +2989,15 @@ lemma fastpath_reply_recv_ccorres:
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R="obj_at' ((=) destDom \<circ> tcbDomain)
                                                   (capTCBPtr (cteCap caller_cap))
-                                        and (\<lambda>s. ksCurDomain s = curDom)"
+                                        and (\<lambda>s. ksCurDomain s = curDom \<and> curDom \<le> maxDomain
+                                                 \<and> destDom \<le> maxDomain)"
                                    in ccorres_cond2')
                       apply clarsimp
                       apply (drule(1) obj_at_cslift_tcb)+
                       apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurDomain)
                       apply (drule ctcb_relation_tcbDomain[symmetric])
-                      apply (clarsimp simp: up_ucast_inj_eq[symmetric] maxDom_def)
+                      apply (clarsimp simp: up_ucast_inj_eq[symmetric] maxDom_def
+                                            maxDomain_def numDomains_def)
 
                      apply simp
                      apply (rule ccorres_split_throws)
@@ -3260,6 +3275,10 @@ lemma fastpath_reply_recv_ccorres:
                            valid_mdb'_def valid_tcb_state'_def
                            word_le_nat_alt[symmetric] length_msgRegisters)
      apply (frule ko_at_valid_ep', fastforce)
+     apply (rule conjI) (* tcbDomain \<le> maxDomain *)
+      apply (drule invs_valid_objs')
+      apply (solves \<open>drule_tac t=v0a in valid_objs'_maxDomain; clarsimp simp: obj_at_tcbs_of\<close>)
+      apply clarsimp
      apply (safe del: notI disjE)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'
                  split: Structures_H.endpoint.split_asm)

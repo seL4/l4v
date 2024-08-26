@@ -699,8 +699,6 @@ lemma cready_queues_index_to_C_def2':
    apply simp
   apply (subst unat_mult_simple)
    apply (simp add: word_bits_def maxDom_def)
-   apply (subst (asm) word_le_nat_alt)
-   apply simp
   apply simp
   done
 
@@ -709,7 +707,7 @@ lemmas cready_queues_index_to_C_def2
 
 lemma ready_queues_index_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call ready_queues_index_'proc
-       \<lbrace>\<acute>ret__unsigned_long = (dom_' s) * 0x100 + (prio_' s)\<rbrace>"
+       \<lbrace>\<acute>ret__unsigned_long = prio_' s\<rbrace>"
   by vcg (simp add: word_sless_alt)
 
 lemma prio_to_l1index_spec:
@@ -789,7 +787,6 @@ lemma rf_sr_cbitmap_L2_relation[intro]:
   "(\<sigma>, x) \<in> rf_sr \<Longrightarrow> cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' (globals x)) (ksReadyQueuesL2Bitmap \<sigma>)"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
-
 lemma cbitmap_L1_relation_bit_set:
   fixes p :: priority
   shows
@@ -800,7 +797,7 @@ lemma cbitmap_L1_relation_bit_set:
              (ksReadyQueuesL1Bitmap_' (globals x).[unat d] || 2 ^ unat (p >> wordRadix)))
            ((ksReadyQueuesL1Bitmap \<sigma>)(d := ksReadyQueuesL1Bitmap \<sigma> d || 2 ^ prioToL1Index p))"
   apply (unfold cbitmap_L1_relation_def)
-  apply (clarsimp simp: prioToL1Index_def wordRadix_def' maxDomain_def numDomains_def word_le_nat_alt)
+  apply (clarsimp simp: prioToL1Index_def maxDomain_def numDomains_def)
   done
 
 lemma cbitmap_L2_relation_bit_set:
@@ -821,8 +818,7 @@ lemma cbitmap_L2_relation_bit_set:
                2 ^ unat (p && b')))"
   unfolding cbitmap_L2_relation_def numPriorities_def wordBits_def word_size l2BitmapSize_def'
   apply (clarsimp simp: word_size prioToL1Index_def wordRadix_def mask_def
-                        invertL1Index_def l2BitmapSize_def'
-                        maxDomain_def numDomains_def word_le_nat_alt)
+                        invertL1Index_def l2BitmapSize_def' maxDomain_def numDomains_def)
   apply (case_tac "da = d" ; clarsimp)
   done
 
@@ -871,6 +867,10 @@ lemma invert_prioToL1Index_c_simp:
 lemma c_invert_assist: "7 - (ucast (p :: priority) >> 5 :: machine_word) < 8"
   using prio_ucast_shiftr_wordRadix_helper'[simplified wordRadix_def]
   by - (rule word_less_imp_diff_less, simp_all)
+
+lemma ucast_maxPrio_less_0x100[simp]:
+  "\<And>p. p \<le> maxPriority \<Longrightarrow> UCAST(8 \<rightarrow> 32) p < 0x100"
+  by (simp add: maxPriority_def numPriorities_def) word_bitwise
 
 lemma tcbSchedEnqueue_ccorres:
   "ccorres dc xfdc
@@ -957,15 +957,16 @@ proof -
                         (globals x).[cready_queues_index_to_C (tcbDomain tcb) (tcbPriority tcb)]) = NULL")
              prefer 2
              apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL[symmetric]; simp add: valid_queues_valid_q)
-            apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def)
+            apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def numDomains_def maxDomain_def)
             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
              apply (simp add: t_hrs_ksReadyQueues_upd_absorb)
              apply (rule conjI)
               apply (clarsimp simp: l2BitmapSize_def' wordRadix_def c_invert_assist)
 
              apply (subst rf_sr_drop_bitmaps_enqueue_helper, assumption)
-               apply (fastforce intro: cbitmap_L1_relation_bit_set)
-              apply (fastforce intro: cbitmap_L2_relation_bit_set simp: wordRadix_def mask_def)
+               apply (fastforce intro: cbitmap_L1_relation_bit_set[where d=0, simplified])
+              apply (fastforce intro: cbitmap_L2_relation_bit_set[where d=0, simplified]
+                               simp: wordRadix_def mask_def)
 
             apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
                      in rf_sr_sched_queue_relation)
@@ -990,7 +991,7 @@ proof -
                      in rf_sr_sched_queue_relation)
               apply clarsimp
              apply clarsimp
-            apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def)
+            apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def numDomains_def maxDomain_def)
             apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
              apply (simp add: valid_queues_valid_q)
             apply clarsimp
@@ -1002,7 +1003,7 @@ proof -
                     in rf_sr_sched_queue_relation)
              apply clarsimp
             apply clarsimp
-           apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def)
+           apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def numDomains_def maxDomain_def)
            apply (frule_tac s=\<sigma> in tcb_queue'_head_end_NULL)
             apply (simp add: valid_queues_valid_q)
            apply clarsimp
@@ -1157,24 +1158,25 @@ lemma cbitmap_L1_relation_bit_clear:
              (ksReadyQueuesL1Bitmap_' (globals x).[unat d] && ~~ 2 ^ unat (p >> wordRadix)))
            ((ksReadyQueuesL1Bitmap \<sigma>)(d := ksReadyQueuesL1Bitmap \<sigma> d && ~~ 2 ^ prioToL1Index p))"
   apply (unfold cbitmap_L1_relation_def)
-  apply (clarsimp simp: prioToL1Index_def wordRadix_def' maxDomain_def numDomains_def word_le_nat_alt)
+  apply (clarsimp simp: prioToL1Index_def wordRadix_def' maxDomain_def numDomains_def)
   done
 
 lemma cready_queues_relation_empty_queue_helper:
-  "\<lbrakk> tcbDomain ko \<le> maxDomain ; tcbPriority ko \<le> maxPriority ;
+  "\<lbrakk> tcbPriority ko \<le> maxPriority ;
      cready_queues_relation (cslift \<sigma>') (ksReadyQueues_' (globals \<sigma>')) (ksReadyQueues \<sigma>)\<rbrakk>
    \<Longrightarrow>
    cready_queues_relation (cslift \<sigma>')
-          (Arrays.update (ksReadyQueues_' (globals \<sigma>')) (unat (tcbDomain ko) * 256 + unat (tcbPriority ko))
+          (Arrays.update (ksReadyQueues_' (globals \<sigma>')) (unat (tcbPriority ko))
             (tcb_queue_C.end_C_update (\<lambda>_. NULL)
               (head_C_update (\<lambda>_. NULL)
-                (ksReadyQueues_' (globals \<sigma>').[unat (tcbDomain ko) * 256 + unat (tcbPriority ko)]))))
-          ((ksReadyQueues \<sigma>)((tcbDomain ko, tcbPriority ko) := []))"
+                (ksReadyQueues_' (globals \<sigma>').[unat (tcbPriority ko)]))))
+          ((ksReadyQueues \<sigma>)((0, tcbPriority ko) := []))"
   unfolding cready_queues_relation_def Let_def
   using maxPrio_to_H[simp] maxDom_to_H[simp]
   apply clarsimp
+  apply (prop_tac "0 \<le> maxDomain", simp add: maxDomain_def numDomains_def)
   apply (frule (1) cready_queues_index_to_C_in_range[simplified maxDom_to_H maxPrio_to_H])
-  apply (fold cready_queues_index_to_C_def[simplified numPriorities_def])
+  apply (fold cready_queues_index_to_C_def[where qdom=0, simplified numPriorities_def, simplified])
   apply (case_tac "qdom = tcbDomain ko",
           simp_all add: prio_and_dom_limit_helpers seL4_MinPrio_def
                         minDom_def)
@@ -1206,8 +1208,7 @@ lemma cbitmap_L2_relation_bit_clear:
   unfolding cbitmap_L2_relation_def numPriorities_def wordBits_def word_size l2BitmapSize_def'
   apply (clarsimp simp: word_size prioToL1Index_def wordRadix_def mask_def
                         invertL1Index_def l2BitmapSize_def'
-                        maxDomain_def numDomains_def word_le_nat_alt)
-  apply (case_tac "da = d" ; clarsimp)
+                        maxDomain_def numDomains_def)
   done
 
 lemma tcbSchedDequeue_ccorres':
@@ -1307,6 +1308,7 @@ proof -
              apply (rule conjI; clarsimp)
               apply (rule conjI)
                apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
+              apply (prop_tac "UCAST(8 \<rightarrow> 32) (tcbDomain ko) = 0", simp add: numDomains_def maxDomain_def)
               apply (rule conjI; clarsimp)
                apply (subst rf_sr_drop_bitmaps_dequeue_helper, assumption)
                  apply (fastforce intro: cbitmap_L1_relation_bit_clear)
@@ -1314,10 +1316,9 @@ proof -
                 apply (frule rf_sr_cbitmap_L2_relation)
                 apply (clarsimp simp: cbitmap_L2_relation_def
                                       word_size prioToL1Index_def wordRadix_def mask_def
-                                      maxDomain_def numDomains_def word_le_nat_alt
+                                      maxDomain_def numDomains_def
                                       numPriorities_def wordBits_def l2BitmapSize_def'
                                       invertL1Index_def)
-                apply (case_tac "d = tcbDomain ko" ; fastforce)
 
                apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
                apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
@@ -1332,22 +1333,29 @@ proof -
                  subgoal premises prems using prems by ((fastforce simp: ksQ_tcb_at')+)
                apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
                       simp_all add: remove1_filter ksQ_tcb_at')[1]
-               (* trivial case, setting queue to empty *)
-               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                                     cmachine_state_relation_def)
-               apply (erule (2) cready_queues_relation_empty_queue_helper)
-              (* impossible case, C L2 update disagrees with Haskell update *)
-              apply (simp add: invert_prioToL1Index_c_simp)
-              apply (subst (asm) Arrays.index_update)
-               subgoal by (simp add: maxDomain_def numDomains_def word_le_nat_alt)
-              apply (subst (asm) Arrays.index_update)
-               apply (simp add: invert_l1_index_limit)
 
+              apply (simp add: invert_prioToL1Index_c_simp word_less_nat_alt invert_l1_index_limit)
+              apply (rule conjI)
+               (* trivial case, setting queue to empty *)
+               apply (subst Arrays.index_update)
+                subgoal by (simp add: maxDomain_def numDomains_def word_le_nat_alt)
+               apply (subst Arrays.index_update)
+                apply (simp add: invert_l1_index_limit)
+                apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                      cmachine_state_relation_def maxDomain_def numDomains_def)
+                apply (erule (1) cready_queues_relation_empty_queue_helper)
+
+              (* impossible case, C L2 update disagrees with Haskell update *)
+              apply (subst Arrays.index_update)
+               subgoal by (simp add: maxDomain_def numDomains_def word_le_nat_alt)
+              apply (subst Arrays.index_update)
+               apply (simp add: invert_l1_index_limit)
               apply (frule rf_sr_cbitmap_L2_relation)
               apply (drule_tac i="invertL1Index (prioToL1Index (tcbPriority ko))"
                         in cbitmap_L2_relationD, assumption)
                apply (fastforce simp: l2BitmapSize_def' invert_l1_index_limit)
-              apply (fastforce simp: prioToL1Index_def invertL1Index_def mask_def wordRadix_def)
+              apply (fastforce simp: mask_def wordRadix_def)
+
              (* impossible case *)
              apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
              apply (drule(2) filter_empty_unfiltered_contr, fastforce)
@@ -1389,13 +1397,13 @@ proof -
                     (simp | rule globals.equality)+,
                     simp_all add: clift_field_update if_Some_helper numPriorities_def
                                   cready_queues_index_to_C_def2
-                                  maxDom_to_H maxPrio_to_H
+                                  maxDom_to_H maxPrio_to_H maxDomain_def numDomains_def
                              cong: if_cong split del: if_split,
                     simp_all add: typ_heap_simps')[1]
               subgoal by (fastforce simp: tcb_null_sched_ptrs_def)
              subgoal by fastforce
 
-            apply clarsimp
+            apply (clarsimp simp: maxDomain_def numDomains_def)
             apply (rule conjI; clarsimp)
              apply (rule conjI)
               apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
@@ -1433,7 +1441,10 @@ proof -
               subgoal premises prems using prems by (fastforce simp: ksQ_tcb_at')+
             apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
                    simp_all add: remove1_filter ksQ_tcb_at')[1]
-            apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
+            apply (clarsimp simp: filter_noteq_op upd_unless_null_def)
+            apply (prop_tac "UCAST(8 \<rightarrow> 32) (tcbDomain ko) = 0")
+             apply (solves \<open>clarsimp simp: maxDomain_def numDomains_def\<close>)
+            apply clarsimp
             apply (rule conjI; clarsimp)
              apply (clarsimp simp: h_val_field_clift'
                                    h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
@@ -1445,7 +1456,7 @@ proof -
             apply (rule conjI; clarsimp)
              (* impossible case, C L2 update disagrees with Haskell update *)
              apply (subst (asm) Arrays.index_update)
-              apply (simp add: maxDomain_def numDomains_def word_le_nat_alt)
+              apply (simp add: maxDomain_def numDomains_def)
              apply (subst (asm) Arrays.index_update)
               subgoal using invert_l1_index_limit
                 by (fastforce simp add: invert_prioToL1Index_c_simp intro: nat_Suc_less_le_imp)
@@ -1462,8 +1473,8 @@ proof -
 
             (* trivial case, setting queue to empty *)
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                                  cmachine_state_relation_def)
-            apply (erule (2) cready_queues_relation_empty_queue_helper)
+                                  cmachine_state_relation_def maxDomain_def numDomains_def)
+            apply (erule (1) cready_queues_relation_empty_queue_helper)
 
            apply (frule (1) valid_queuesD')
            apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
@@ -1497,11 +1508,13 @@ proof -
                    (simp | rule globals.equality)+,
                    simp_all add: clift_field_update if_Some_helper numPriorities_def
                                  cready_queues_index_to_C_def2
-                                 maxDom_to_H maxPrio_to_H
+                                 maxDom_to_H maxPrio_to_H numDomains_def maxDomain_def
                             cong: if_cong split del: if_split)[1]
                apply (fold_subgoals (prefix))[4]
                subgoal premises prems using prems
                          by (fastforce simp: typ_heap_simps tcb_null_sched_ptrs_def)+
+           apply (prop_tac "UCAST(8 \<rightarrow> 32) (tcbDomain ko) = 0")
+            apply (solves \<open>simp add: maxDomain_def numDomains_def\<close>)
            apply (clarsimp)
            apply (rule conjI; clarsimp simp: typ_heap_simps)
             apply (rule conjI)
@@ -1686,6 +1699,7 @@ proof -
                    simp_all add: valid_queues_valid_q)[1]
              apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
+            apply (prop_tac "UCAST(8 \<rightarrow> 32) (tcbDomain tcb) = 0", simp add: numDomains_def maxDomain_def)
             apply (simp add: invert_prioToL1Index_c_simp)
             apply (rule conjI; clarsimp)
              apply (rule conjI)
@@ -1700,7 +1714,8 @@ proof -
                                   t_hrs_ksReadyQueues_upd_absorb upd_unless_null_def
                                   typ_heap_simps)[1]
                apply (fastforce simp: tcb_null_sched_ptrs_def elim: obj_at'_weaken)+
-            apply (clarsimp simp: upd_unless_null_def cready_queues_index_to_C_def numPriorities_def)
+            apply (clarsimp simp: upd_unless_null_def cready_queues_index_to_C_def numPriorities_def
+                                  numDomains_def maxDomain_def)
            apply (rule conjI; clarsimp simp: queue_in_range)
             apply (drule (1) obj_at_cslift_tcb)
             apply clarsimp
@@ -1717,7 +1732,7 @@ proof -
               apply clarsimp
              apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-            apply (clarsimp simp: upd_unless_null_def cready_queues_index_to_C_def numPriorities_def)
+            apply (clarsimp simp: upd_unless_null_def cready_queues_index_to_C_def numPriorities_def numDomains_def maxDomain_def)
            apply (drule (1) obj_at_cslift_tcb)
            apply clarsimp
            apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
@@ -1729,7 +1744,7 @@ proof -
            apply (frule_tac s=\<sigma> in tcb_queue_relation_qend_mems,
                   simp add: valid_queues_valid_q)
            apply (drule_tac qend'="tcb_ptr_to_ctcb_ptr t" and s=\<sigma> in tcbSchedAppend_update,
-                  simp_all add: valid_queues_valid_q)[1]
+                  simp_all add: valid_queues_valid_q numDomains_def maxDomain_def)[1]
              apply clarsimp
             apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
            apply (clarsimp simp: cready_queues_index_to_C_def2 numPriorities_def)
@@ -2054,6 +2069,7 @@ proof -
     apply (frule rf_sr_cbitmap_L2_relation)
     apply (fastforce simp: cbitmap_L2_relation_def)
    apply (clarsimp simp: l2BitmapSize_def')
+   apply (clarsimp simp: maxDomain_def numDomains_def)
    apply (fastforce simp: word_less_nat_alt word_le_nat_alt unat_sub unat_of_nat)
    done
 qed

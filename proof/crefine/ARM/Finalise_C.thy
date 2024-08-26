@@ -41,7 +41,7 @@ lemma tcbSchedEnqueue_cslift_spec:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: option_map2_def fun_eq_iff h_t_valid_clift
-                        h_t_valid_field[OF h_t_valid_clift])
+                        h_t_valid_field[OF h_t_valid_clift] maxDom_def)
   apply (rule conjI)
    apply (clarsimp simp: typ_heap_simps cong: if_cong)
    apply (simp split: if_split)
