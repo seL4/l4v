@@ -1436,14 +1436,6 @@ lemma valid_pde_slots_lift2:
   apply (wp hoare_vcg_ex_lift hoare_vcg_conj_lift | assumption)+
   done
 
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add:addrFromPPtr_def physMappingOffset_def
-    kernelBase_addr_def physBase_def ARM.physBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
 lemma pteCheckIfMapped_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_' \<top>
     (UNIV \<inter> {s. pte___ptr_to_struct_pte_C_' s = Ptr slot}) []
@@ -1606,9 +1598,9 @@ lemma performPageInvocationMapPTE_ccorres:
          apply simp
         apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
         apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
-        apply (simp add:addrFromPPtr_mask_5)
+        apply (simp add: addrFromPPtr_mask_cacheLineBits)
        apply (clarsimp simp:pte_range_relation_def ptr_add_def ptr_range_to_list_def
-                            addrFromPPtr_mask_5)
+                            addrFromPPtr_mask_cacheLineBits)
        apply (auto simp: valid_pte_slots'2_def upt_conv_Cons[where i=0])[1]
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
       apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def objBits_simps archObjSize_def)
@@ -1867,9 +1859,9 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
         apply (subst add_diff_eq [symmetric])
         apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
-        apply (simp add:addrFromPPtr_mask_5)
+        apply (simp add: addrFromPPtr_mask_cacheLineBits)
        apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def CTypesDefs.ptr_add_def
-                             valid_pde_slots'2_def addrFromPPtr_mask_5)
+                             valid_pde_slots'2_def addrFromPPtr_mask_cacheLineBits)
        apply (auto simp: upt_conv_Cons[where i=0])[1]
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth)
       apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def pdeBits_def)
@@ -2654,6 +2646,7 @@ lemma decodeARMFrameInvocation_ccorres:
        apply (clarsimp simp: does_not_throw_def not_le word_aligned_add_no_wrap_bounded
                       split: option.splits)
       apply (clarsimp simp: neq_Nil_conv dest!: st_tcb_at_idle_thread' interpret_excaps_eq)
+     apply (clarsimp simp: cacheLineBits_def)
      apply ((clarsimp | rule conjI | erule pred_tcb'_weakenE disjE
             | solves \<open>rule word_plus_mono_right[OF word_less_sub_1], simp,
                       subst (asm) vmsz_aligned_addrFromPPtr(3)[symmetric],
@@ -3022,13 +3015,13 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
               apply (simp add:linorder_not_le)
               apply (erule word_less_sub_1)
              apply (simp add:mask_add_aligned mask_twice)
-            apply (subgoal_tac "5 \<le> pageBitsForSize a")
+            apply (subgoal_tac "cacheLineBits \<le> pageBitsForSize a")
              apply (frule(1) is_aligned_weaken)
              apply (simp add:mask_add_aligned mask_twice)
              apply (erule order_trans[rotated])
              apply (erule flush_range_le1, simp add: linorder_not_le)
              apply (erule word_less_sub_1)
-            apply (case_tac a,simp+)[1]
+            apply (case_tac a; simp add: cacheLineBits_def)
            apply simp
            apply (vcg exspec=resolveVAddr_modifies)
           apply (rule_tac P'="{s. errstate s = find_ret}"

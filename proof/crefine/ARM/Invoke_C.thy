@@ -1515,15 +1515,6 @@ lemma pspace_no_overlap_underlying_zero_update:
   apply blast
   done
 
-lemma addrFromPPtr_mask:
-  "n \<le> 28
-    \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
-  apply (simp add: addrFromPPtr_def physMappingOffset_def kernelBase_addr_def
-                   ARM.physBase_def)
-  apply word_bitwise
-  apply simp
-  done
-
 lemma clearMemory_untyped_ccorres:
   "ccorres dc xfdc ((\<lambda>s. invs' s
               \<and> (\<exists>cap. cte_wp_at' (\<lambda>cte. cteCap cte = cap) ut_slot s
@@ -1581,7 +1572,7 @@ lemma clearMemory_untyped_ccorres:
                         word_of_nat_less reset_chunk_bits_def
                         word_bits_def unat_2p_sub_1)
   apply (strengthen is_aligned_no_wrap'[where sz=sz] is_aligned_addrFromPPtr_n)+
-  apply (simp add: addrFromPPtr_mask)
+  apply (simp add: addrFromPPtr_mask_cacheLineBits)
   apply (cases "ptr = 0")
    apply (drule subsetD, rule intvl_self, simp)
    apply (simp split: if_split_asm)

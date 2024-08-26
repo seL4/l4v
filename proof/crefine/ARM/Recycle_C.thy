@@ -382,6 +382,10 @@ lemma page_table_at_rf_sr_dom_s:
   apply (auto simp add: intvl_def shiftl_t2n)[1]
   done
 
+lemma cacheLineBits_le_ptBits:
+  "cacheLineBits \<le> ptBits"
+  by (simp add: cacheLineBits_def ptBits_def)
+
 lemma clearMemory_setObject_PTE_ccorres:
   "ccorres dc xfdc (page_table_at' ptr
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
@@ -439,7 +443,8 @@ lemma clearMemory_setObject_PTE_ccorres:
   apply (clarsimp simp: ptBits_def pageBits_def pteBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp)
   apply (clarsimp simp: is_aligned_no_overflow'[where n=10, simplified] pageBits_def
-                        field_simps is_aligned_mask[symmetric] mask_AND_less_0)
+                        field_simps is_aligned_mask[symmetric] mask_AND_less_0
+                        cacheLineBits_le_ptBits[unfolded ptBits_def pteBits_def, simplified])
   done
 
 lemma modify_gets_helper:

@@ -51,6 +51,13 @@ lemma Arch_switchToThread_obj_at_pre:
 
 context begin interpretation Arch .
 
+lemma addrFromPPtr_mask_cacheLineBits:
+  "addrFromPPtr ptr && mask cacheLineBits = ptr && mask cacheLineBits"
+  apply (simp add: addrFromPPtr_def physMappingOffset_def kernelBase_addr_def ARM.physBase_def)
+  apply word_bitwise
+  apply (simp add: mask_def cacheLineBits_def)
+  done
+
 lemma asid_pool_at'_ko:
   "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)

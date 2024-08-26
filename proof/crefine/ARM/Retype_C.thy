@@ -4623,6 +4623,10 @@ lemma cond_second_eq_seq_ccorres:
   apply (auto elim!: exec_Normal_elim_cases intro: exec.Seq exec.CondTrue exec.CondFalse)
   done
 
+lemma cacheLineBits_le_PageDirectoryObject_sz:
+  "cacheLineBits \<le> APIType_capBits PageDirectoryObject us"
+  by (simp add: cacheLineBits_def APIType_capBits_def)
+
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
   shows "ccorres (\<lambda>a b. ccap_relation (ArchObjectCap a) b) ret__struct_cap_C_'
@@ -4835,7 +4839,9 @@ proof -
        apply (clarsimp simp: pageBits_def pdeBits_def
                              valid_arch_state'_def page_directory_at'_def pdBits_def)
       apply (clarsimp simp: is_aligned_no_overflow'[where n=14, simplified] pdeBits_def
-                            field_simps is_aligned_mask[symmetric] mask_AND_less_0)+
+                            field_simps is_aligned_mask[symmetric] mask_AND_less_0
+                            cacheLineBits_le_PageDirectoryObject_sz[unfolded APIType_capBits_def,
+                                                                    simplified])+
     done
 qed
 
