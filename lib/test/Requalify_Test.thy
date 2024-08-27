@@ -269,6 +269,53 @@ arch_requalify_consts (in Arch) (A) arch_specific_const_a
 term Arch.arch_specific_const_a
 
 
+section "Specific tests"
+
+subsection \<open>Temporary requalification of, hiding of, and re-exposing of constants\<close>
+
+(* This kind of approach can be used for tools such at the C Parser, which are not aware of the Arch
+   locale and might need to refer to constants directly in internal annotations. *)
+
+context Arch begin arch_global_naming
+datatype vmpage_size =
+    ARCHSmallPage
+end
+arch_requalify_types vmpage_size
+
+context Arch begin global_naming vmpage_size
+requalify_consts ARCHSmallPage
+end
+
+(* both now visible in generic context *)
+typ vmpage_size
+term vmpage_size.ARCHSmallPage
+term ARCHSmallPage (* note: the direct constructor name is not accessible due to qualified export *)
+
+(* temporary global exposure is done, hide vmpage sizes again *)
+hide_const
+  vmpage_size.ARCHSmallPage
+
+find_consts name:ARCHSmallPage
+(* finds one constant (despite it being hidden), e.g. on ARM:
+   Requalify.ARM.vmpage_size.ARMSmallPage :: "vmpage_size"
+   but note that this constant is inaccessible from theory scope:
+   term Requalify_Test.AARCH64.vmpage_size.ARCHSmallPage
+   will result in Inaccessible constant: "Requalify_Test.ARM.vmpage_size.ARCHSmallPage" *)
+
+(* Arch-specific, in actual use replace ARCH with actual architecture such as ARM *)
+context Arch begin
+term vmpage_size.ARCHSmallPage (* despite being hidden in theory scope, it's still visible in Arch *)
+global_naming "ARCH.vmpage_size" requalify_consts ARCHSmallPage
+global_naming "ARCH" requalify_consts ARCHSmallPage
+end
+
+term ARCH.ARCHSmallPage (* now accessible under specific qualified name *)
+term ARCH.vmpage_size.ARCHSmallPage (* now accessible under specific qualified name *)
+term Requalify_Test.ARCH.vmpage_size.ARCHSmallPage (* fully qualified name *)
+(* but be aware, these are only aliases to the original constant! *)
+find_consts name:ARCHSmallPage (* still only Requalify_Test.ARM.vmpage_size.ARCHSmallPage *)
+
+
 section "Misc tests / usage examples"
 
 locale Requalify_Locale
