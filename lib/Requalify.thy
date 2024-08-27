@@ -98,21 +98,26 @@ val arch_global_opts = Scan.optional (Args.parens arch_suffix) ""
 
 in
 
-fun gen_requalify get_proper_nm parse_nm check_parsed_nm alias_fn arch =
+fun gen_requalify get_proper_nm check_parsed_nm alias_fn arch =
 let
   val options = if arch then arch_options else generic_options
 in
-  (Parse.opt_target -- options --  Scan.repeat1 (Parse.position (Scan.ahead parse_nm -- Parse.name))
+  (Parse.opt_target -- options --  Scan.repeat1 (Parse.position Parse.name)
    >> (fn ((target, (aliasing, arch_suffix)), names) =>
        Toplevel.local_theory NONE target (fn lthy =>
        let
          val global_ctxt = Proof_Context.theory_of lthy |> Proof_Context.init_global
 
-         fun requalify_entry ((entry, orig_name), pos) lthy =
+         fun requalify_entry (orig_name, pos) lthy =
          let
            val name = if arch then arch_prefix arch_suffix ^ "." ^ orig_name else orig_name
            val local_name = get_proper_nm lthy name;
-           val _ = check_parsed_nm lthy (entry, (local_name, pos));
+           (* Look up name again for purposes of document markup (i.e. ctrl+click on names).
+              Do not use the resolved qualified local_name, because while it is somehow possible to
+              create aliases/bindings to consts/type names that have been hidden with
+              hide_const/hide_type, attempting to use them with check_const/check_type_name will
+              fail with "Inaccessible" errors. *)
+           val _ = check_parsed_nm lthy (name, pos);
 
            (* Check whether the short (base) name is already available in theory context if no
               locale target is supplied and the "aliasing" option is not supplied.
@@ -136,48 +141,52 @@ val get_const_nm = ((fst o dest_Const) oo (Proof_Context.read_const {proper = tr
 val get_type_nm = ((fst o dest_Type) oo (Proof_Context.read_type_name {proper = true, strict = false}))
 val get_fact_nm = (fst oo global_fact)
 
-(* For a theorem name, we want to additionally make sure that global fact names found by
-   global_fact are accessible in the current context. *)
-fun check_fact lthy (_, (nm, pos)) = Proof_Context.get_fact lthy (Facts.Named ((nm,pos), NONE))
+(* For the arch_requalify commands, we prefix the const/type name based on L4V_ARCH and A/H option.
+   This means we have to be careful when resolving names and marking up the document.
 
-(* replace text in all Text nodes in YXML-encoded string entry with new_text *)
-fun replace_yxml_text new_text =
-let
-  fun tree_text (XML.Text _) = XML.Text new_text
-    | tree_text (XML.Elem (node, trees)) = (XML.Elem (node, map tree_text trees))
-in
-  YXML.string_of o tree_text o YXML.parse
-end
+   What is completely non-obvious is that Proof_Context.read_const and Proof_Context.read_type_name
+   are sensitive to YXML markup information embedded in the supplied string. When such information
+   is available, they will use it to mark up the document. However, in the process they will invoke
+   Input.source_content, which will make sure that the position information conforms to the content
+   length. This is *bad news* for arch_requalify, because when the user asks for "name", we treat it
+   as something like "ARM_A.name".
+   So if we use Parse.const/Parse.typ we'll get an annotated string:
+     <input delimited="false" offset="27" end_offset="31" ...>name</input>
+   If we tweak "name" to become "ARM_A.name" instead, the read_const/read_type_name functions will
+   sync the length and attempt to annotate it as:
+     <input delimited="false" offset="27" end_offset="36" ...>name</input>
+   which is a larger range than the user gave us, leading to errors about overlapping ranges.
+   This means that the nice option of using Parse.const + Proof_Context.read_const can't be used
+   here.
 
-(* These versions, prior to resolving the const/type name, override that name in the parsed
-   YXML-encoded string entry with a name that will actually resolve to something, while preserving
-   other parse data such as parsed document location.
-   This updates the document markup at the original parse location of entry with a reference to the
-   const/type named by "name", allowing the user to ctrl+click to jump to the const/type definition.
+   Instead, we use Proof_Context.check_const/check_type_name on user-supplied names along with the
+   position from Parse.position to get markup reports which we apply manually.
 
-   For example, if the user requested "arch_requalify_consts (A) some_const", then they are
-   targeting something like "ARM_A.some_const", and expect to be able to jump to its definition.
+   For theorems, document annotation appears to be included in Proof_context.get_fact. *)
 
-   This isn't necessary for facts, as those use parsed position of "name" directly via
-   Proof_Context.get_fact, which appears not available for read_const/read_type_name. *)
-fun arch_const_nm lthy entry name = get_const_nm lthy (replace_yxml_text name entry)
-fun arch_type_nm lthy entry name = get_type_nm lthy (replace_yxml_text name entry)
+fun check_const lthy (nm, pos) =
+  Proof_Context.check_const {proper = true, strict = false} lthy (nm, [pos])
+  |> #2 |> Context_Position.reports @{context}
+
+fun check_type_name lthy (nm, pos) =
+  Proof_Context.check_type_name {proper = true, strict = false} lthy (nm, pos)
+  |> #2 |> Context_Position.reports @{context}
+
+fun check_fact lthy (nm, pos) = Proof_Context.get_fact lthy (Facts.Named ((nm, pos), NONE))
 
 in
 
 val _ =
   Outer_Syntax.command @{command_keyword requalify_consts} "alias const with current naming"
-    (gen_requalify get_const_nm Parse.const (fn lthy => fn (e, _) => get_const_nm lthy e) const_alias
-                   false)
+    (gen_requalify get_const_nm check_const const_alias false)
 
 val _ =
   Outer_Syntax.command @{command_keyword requalify_types} "alias type with current naming"
-    (gen_requalify get_type_nm Parse.typ (fn lthy => fn (e, _) => get_type_nm lthy e) type_alias
-                   false)
+    (gen_requalify get_type_nm check_type_name type_alias false)
 
 val _ =
   Outer_Syntax.command @{command_keyword requalify_facts} "alias fact with current naming"
-    (gen_requalify get_fact_nm Parse.thm check_fact alias_fact false)
+    (gen_requalify get_fact_nm check_fact alias_fact false)
 
 val _ =
   Outer_Syntax.command @{command_keyword global_naming} "change global naming of context block"
@@ -188,27 +197,22 @@ val _ =
 
 (* Arch variants use the L4V_ARCH variable and an additional A/H option, so that when L4V_ARCH=ARM
    "arch_requalify_consts (H) const" becomes "requalify_consts ARM_H.const"
-   This allows them to be used in a architecture-generic theory.
-
-   For consts and types, we need to perform text replacement in the YXML entry to combine the parse
-   location with the right const/type name (see arch_const_nm and arch_type_nm). *)
+   This allows them to be used in a architecture-generic theory. *)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_consts}
     "alias const with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
-    (gen_requalify get_const_nm Parse.const (fn lthy => fn (e, (nm, _)) => arch_const_nm lthy e nm)
-                   const_alias true)
+    (gen_requalify get_const_nm check_const const_alias true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_types}
     "alias type with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
-    (gen_requalify get_type_nm Parse.typ (fn lthy => fn (e, (nm, _)) => arch_type_nm lthy e nm)
-                   type_alias true)
+    (gen_requalify get_type_nm check_type_name type_alias true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_facts}
     "alias fact with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
-    (gen_requalify get_fact_nm Parse.thm check_fact alias_fact true)
+    (gen_requalify get_fact_nm check_fact alias_fact true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_global_naming}
