@@ -115,6 +115,7 @@ where
 
 term "is_reply_cap"
 
+(* MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
 definition
   valid_reply_obj :: "mspec_state \<Rightarrow> 'a::state_ext state \<Rightarrow> cnode_index \<Rightarrow> bool"
 where
@@ -133,6 +134,7 @@ where
        Some (Reply r) \<Rightarrow> reply_tcb r = Some tp |
        _ \<Rightarrow> False) |
      _ \<Rightarrow> False"
+*)
 
 (* Experimentation to find more usable lemmas about return values of monads *)
 definition
@@ -140,29 +142,28 @@ definition
 where
   "getRegister_as_user_ret s thread r \<equiv> case kheap s thread of
     Some (TCB t) \<Rightarrow> (case arch_tcb_context_get (tcb_arch t) of
-      ARM.UserContext u \<Rightarrow> Some (u r)) |
+      AARCH64.UserContext _ u \<Rightarrow> Some (u r)) |
     _ \<Rightarrow> None"
 
 lemma getRegister_as_user_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s'\<rbrace> as_user (cur_thread s) $ getRegister r
-   \<lbrace>\<lambda> r' s''. s = s'' \<and> getRegister_as_user_ret s (cur_thread s) r = Some r'\<rbrace>"
+  "\<lbrace>\<lambda>s'. s = s'\<rbrace> as_user t $ getRegister r
+   \<lbrace>\<lambda> r' s''. s = s'' \<and> getRegister_as_user_ret s t r = Some r'\<rbrace>"
   unfolding getRegister_as_user_ret_def
   apply wp
    unfolding as_user_def
    apply wpsimp
   apply wpsimp
-  unfolding ARM.getRegister_def get_tcb_def gets_def get_def
-  apply wpsimp
-  apply(clarsimp split:option.splits kernel_object.splits ARM.user_context.splits
+  unfolding AARCH64.getRegister_def get_tcb_def gets_def get_def
+  apply(clarsimp split:option.splits kernel_object.splits AARCH64.user_context.splits
     simp:bind_def return_def)
-  using ARM.user_context.sel by force
+  using AARCH64.user_context.sel by force
 
 definition
   get_message_info_ret :: "'a state \<Rightarrow> obj_ref \<Rightarrow> message_info option"
 where
   "get_message_info_ret s thread \<equiv> case kheap s thread of
     Some (TCB t) \<Rightarrow> (case arch_tcb_context_get (tcb_arch t) of
-      ARM.UserContext u \<Rightarrow> Some (data_to_message_info (u msg_info_register))) |
+      AARCH64.UserContext _ u \<Rightarrow> Some (data_to_message_info (u msg_info_register))) |
     _ \<Rightarrow> None"
 
 lemma get_message_info_ret_valid:
@@ -173,11 +174,10 @@ lemma get_message_info_ret_valid:
    unfolding as_user_def
    apply wpsimp
   apply wpsimp
-  unfolding ARM.getRegister_def get_tcb_def gets_def get_def
-  apply wpsimp
-  apply(clarsimp split:option.splits kernel_object.splits ARM.user_context.splits
+  unfolding AARCH64.getRegister_def get_tcb_def gets_def get_def
+  apply(clarsimp split:option.splits kernel_object.splits AARCH64.user_context.splits
     simp:bind_def return_def)
-  using ARM.user_context.sel by force
+  using AARCH64.user_context.sel by force
 
 (* copy_mrs will only return the number of message registers successfully transferred *)
 definition copy_mrs_ret ::
@@ -230,17 +230,17 @@ lemma get_cap_ret_valid:
 (* FIXME: In the long run we'll need to interface off the arch-specific parts properly.
   But some of the return values depend on arch-specific implementations, so for now
   while experimenting I'll just open up the Arch context and do it in here. *)
-context Arch begin global_naming ARM_A
+context Arch begin global_naming AARCH64_A
 
 definition
-  lookup_ipc_buffer_ret :: "('a::state_ext) state \<Rightarrow> bool \<Rightarrow> 32 word \<Rightarrow> 32 word option"
+  lookup_ipc_buffer_ret :: "('a::state_ext) state \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> machine_word option"
 where
   "lookup_ipc_buffer_ret s is_receiver thread \<equiv>
    case get_tcb thread s of Some t \<Rightarrow>
      (let buffer_ptr = tcb_ipc_buffer t;
-          buffer_frame_slot = (thread, tcb_cnode_index 2)
+          buffer_frame_slot = (thread, tcb_cnode_index 4)
        in case get_cap_ret s buffer_frame_slot of
-         Some (ArchObjectCap (PageCap _ p R vms _)) \<Rightarrow>
+         Some (ArchObjectCap (FrameCap p R vms False _)) \<Rightarrow>
               if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
               then Some (p + (buffer_ptr && mask (pageBitsForSize vms)))
               else None
@@ -324,82 +324,68 @@ thm getRegister_as_user_ret_valid
 
 find_theorems name:handle_fault valid
 
+declare getRegister_as_user_ret_valid get_message_info_ret_valid copy_mrs_ret_valid
+  transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid [wp]
+
 lemma handle_SysRecv_syscall_valid:
-  "\<lbrace>\<lambda>s. valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>
+  "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
+      valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
       valid_ep_obj_with_message (mspec_transform s) s MICROKIT_INPUT_CAP ro\<rbrace>
-    handle_recv True True
+    handle_recv True
    \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' (cur_thread s') badge_register = Some (badge_val ro) \<and>
       get_message_info_ret s' (cur_thread s') = Some (minfo ro)\<rbrace>"
   unfolding handle_recv_def
-  apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-    copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
+  apply(wpsimp wp:crunch_wps)
       defer
-     apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-       copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
+     apply(wpsimp wp:crunch_wps)
       apply(wpsimp simp:Let_def)
-
-       (* 19 subgoals *)
-       unfolding receive_ipc_def
-       apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
-
-        (* 25 subgoals *)
-        unfolding complete_signal_def refill_unblock_check_def refill_head_overlapping_loop_def
-          merge_overlapping_refills_def update_refill_hd_def update_sched_context_def
-          set_object_def get_object_def refill_pop_head_def
-        apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-          copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid)
-
-         (* 39 subgoals *)
-         apply(rule conjI)
-          apply(force simp:getRegister_as_user_ret_def)
-         apply(force simp:get_message_info_ret_def)
-        apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-          copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
-          simp:getRegister_as_user_ret_def get_message_info_ret_def)+
-
-       unfolding is_round_robin_def get_tcb_obj_ref_def thread_get_def maybe_donate_sc_def
-         sched_context_resume_def postpone_def tcb_release_enqueue_def
-       (* 33 subgoals *)
-       apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-         copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
-         simp:getRegister_as_user_ret_def get_message_info_ret_def)+
-
-        (* 48 subgoals. Noticing I'm seeing a lot of scheduling stuff here. It's occurred to me,
-           since we're on the MCS kernel, that I really can't assert that the kernel will return
-           to the original caller unless we somehow know that it won't run out of time. But I
-           definitely have not ensured that with the precondition and I'm not sure how, so should
-           I figure out how to phrase this or am I better off trying to prove some of these kinds
-           of properties on the non-MCS kernel ASpec first? *)
-         apply(clarsimp simp:valid_def mapM_wp[simplified valid_def])
-         apply auto[1]
-        apply(clarsimp simp:valid_def mapM_wp[simplified valid_def])
-        apply auto[1]
-       apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-         copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
-         simp:getRegister_as_user_ret_def get_message_info_ret_def)+
-
-      (* 31 subgoals *)
-      unfolding sched_context_donate_def set_tcb_obj_ref_def set_object_def update_sched_context_def
-      apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
-        simp:getRegister_as_user_ret_def get_message_info_ret_def)+
-
-      unfolding get_object_def test_reschedule_def reschedule_required_def set_scheduler_action_def
-        tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def thread_get_def
-      apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
-        simp:getRegister_as_user_ret_def get_message_info_ret_def)+
-
-      unfolding is_schedulable_def
-      (* FIXME: Now we seem to be stuck following the kitchen sink approach. Maybe not surprising
-         for it to be once seL4 asks if the (presumably current?) thread is still schedulable?
-      apply(wpsimp wp:crunch_wps getRegister_as_user_ret_valid get_message_info_ret_valid
-        copy_mrs_ret_valid transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid
-        simp:getRegister_as_user_ret_def get_message_info_ret_def)+
-      *)
+       (* 17 subgoals *)
+       unfolding receive_ipc_def complete_signal_def
+       apply wpsimp
+        (* 24 subgoals *)
+        unfolding set_simple_ko_def setRegister_def as_user_def set_thread_state_def
+        apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp)+
+          apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+         unfolding setup_caller_cap_def
+         apply(wpsimp wp:crunch_wps set_object_wp)+
+          (* 32 subgoals *)
+          apply(rule conjI)
+           unfolding cap_insert_def
+           apply(wpsimp wp:crunch_wps)
+               (* 42 subgoals *)
+               apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+              unfolding update_cdt_def set_cdt_def set_cap_def
+              apply(wpsimp wp:crunch_wps set_object_wp get_object_wp)+
+            (* 37 subgoals *)
+            unfolding set_untyped_cap_as_full_def get_cap_def
+            apply(wpsimp wp:crunch_wps get_object_wp)+
+               apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+              apply(wpsimp wp:crunch_wps set_object_wp)+
+           apply(wpsimp wp:crunch_wps get_object_wp)
+          apply(wpsimp wp:crunch_wps get_object_wp)
+         apply wpsimp
+        apply(wpsimp wp:crunch_wps get_object_wp)
+       apply(wpsimp wp:crunch_wps get_object_wp)
+      unfolding set_thread_state_def
+      apply(wpsimp wp:crunch_wps)+
+        apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+       apply(wpsimp wp:crunch_wps set_object_wp)+
+       apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+      apply(wpsimp wp:crunch_wps set_object_wp)+
+     apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
+    apply(wpsimp wp:crunch_wps set_object_wp|clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+      unfolding do_ipc_transfer_def do_normal_transfer_def
+      apply(wpsimp wp:crunch_wps)+
+        (* 40 subgoals *)
+        apply(wpsimp wp:crunch_wps as_user_wp_thread_set_helper set_object_wp
+          simp:thread_set_def set_message_info_def)+
+       (* I think at this point we'll need to pluck out the fact that we know
+          from the precondition there are no caps to be transferred. *)
+       (* FIXME: Well whoops, I don't think it's actually in the precondition yet. *)
+       .
+       using transfer_caps_none_valid
   oops
 
-end (* Arch ARM_A *)
+end (* Arch AARCH64_A *)
 
 end
