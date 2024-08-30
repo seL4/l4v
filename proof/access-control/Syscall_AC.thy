@@ -504,7 +504,7 @@ locale Syscall_AC_1 =
   and handle_reserved_irq_arch_state[wp]:
     "\<And>P. handle_reserved_irq irq \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
   and init_arch_objects_arch_state[wp]:
-    "\<And>P. init_arch_objects new_type ptr n sz refs \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
+    "\<And>P. init_arch_objects new_type dev ptr n sz refs \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
   and getActiveIRQ_inv:
     "\<And>P. \<forall>f s. P s \<longrightarrow> P (irq_state_update f s)
           \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv. P\<rbrace>"

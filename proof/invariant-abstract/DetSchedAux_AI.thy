@@ -146,9 +146,9 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
         invoke_untyped ui
       \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   assumes init_arch_objects_valid_etcbs[wp]:
-    "\<And>t r n sz refs. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+    "\<And>t d r n sz refs. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t d r n sz refs \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   assumes init_arch_objects_valid_blocked[wp]:
-    "\<And>t r n sz refs. \<lbrace>valid_blocked\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+    "\<And>t d r n sz refs. \<lbrace>valid_blocked\<rbrace> init_arch_objects t d r n sz refs \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   assumes invoke_untyped_cur_domain[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
   assumes invoke_untyped_ready_queues[wp]:

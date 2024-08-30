@@ -177,6 +177,10 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSmallPage)})
+            when (not isDevice) $ doMachineOp $
+                cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
+                    (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSmallPage))
+                    (addrFromPPtr regionBase)
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
@@ -184,6 +188,10 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMLargePage)})
+            when (not isDevice) $ doMachineOp $
+                cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
+                    (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMLargePage))
+                    (addrFromPPtr regionBase)
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
@@ -191,17 +199,29 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMHugePage)})
+            when (not isDevice) $ doMachineOp $
+                cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
+                    (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMHugePage))
+                    (addrFromPPtr regionBase)
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMHugePage isDevice Nothing
         Arch.Types.PageTableObject -> do
             let ptSize = ptBits NormalPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
             updatePTType regionBase NormalPT_T
+            doMachineOp $
+                cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
+                    (VPtr $ fromPPtr regionBase + mask (ptBits NormalPT_T))
+                    (addrFromPPtr regionBase)
             return $ PageTableCap (pointerCast regionBase) NormalPT_T Nothing
         Arch.Types.VSpaceObject -> do
             let ptSize = ptBits VSRootPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
             updatePTType regionBase VSRootPT_T
+            doMachineOp $
+                cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
+                    (VPtr $ fromPPtr regionBase + mask (ptBits VSRootPT_T))
+                    (addrFromPPtr regionBase)
             return $ PageTableCap (pointerCast regionBase) VSRootPT_T Nothing
         Arch.Types.VCPUObject -> do
             placeNewObject regionBase (makeObject :: VCPU) 0

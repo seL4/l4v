@@ -209,25 +209,21 @@ lemma copy_global_invs_mappings_restricted':
 lemma init_arch_objects_pas_refined[Retype_AC_assms]:
   "\<lbrace>pas_refined aag and post_retype_invs tp refs and (\<lambda>s. \<forall> x\<in>set refs. x \<notin> global_refs s)
                     and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api tp obj_sz))\<rbrace>
-   init_arch_objects tp ptr bits obj_sz refs
+   init_arch_objects tp dev ptr bits obj_sz refs
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  supply if_split[split del]
   apply (rule hoare_gen_asm)
-  apply (cases tp)
-       apply (simp_all add: init_arch_objects_def)
-       apply (wp | simp)+
-  apply (rename_tac aobject_type)
-  apply (case_tac aobject_type, simp_all)
-        apply ((simp | wp)+)[5]
-   apply wp
-    apply (rule_tac Q'="\<lambda>rv. pas_refined aag and
+  apply (cases tp;
+         (wpsimp simp: init_arch_objects_def
+                 wp: mapM_x_wp'[where f="\<lambda>r. do_machine_op (m r)" for m]))
+   apply (rule_tac Q'="\<lambda>rv. pas_refined aag and
                             all_invs_but_equal_kernel_mappings_restricted (set refs) and
                             (\<lambda>s. \<forall>x \<in> set refs. x \<notin> global_refs s)" in hoare_strengthen_post)
-     apply (wp mapM_x_wp[OF _ subset_refl])
-     apply ((wp copy_global_mappings_pas_refined copy_global_invs_mappings_restricted'
-                copy_global_mappings_global_refs_inv copy_global_invs_mappings_restricted'
-             | fastforce simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)+)[2]
-   apply (wp dmo_invs hoare_vcg_const_Ball_lift valid_irq_node_typ
-         | fastforce simp: post_retype_invs_def)+
+    apply (wp mapM_x_wp[OF _ subset_refl])
+    apply ((wp copy_global_mappings_pas_refined copy_global_invs_mappings_restricted'
+               copy_global_mappings_global_refs_inv copy_global_invs_mappings_restricted'
+            | fastforce simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)+)[2]
+  apply (fastforce simp: post_retype_invs_def split: if_split)
   done
 
 lemma region_in_kernel_window_preserved:
@@ -287,7 +283,7 @@ crunch delete_objects
   (ignore: do_machine_op freeMemory)
 
 lemma init_arch_objects_pas_cur_domain[Retype_AC_assms, wp]:
-  "init_arch_objects tp ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
+  "init_arch_objects tp dev ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
   by wp
 
 lemma retype_region_pas_cur_domain[Retype_AC_assms, wp]:
@@ -366,13 +362,12 @@ lemma dmo_clearMemory_respects'[Retype_AC_assms]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding do_machine_op_def clearMemory_def
   apply (simp add: split_def cleanCacheRange_PoU_def)
-  apply wp
-  apply clarsimp
+  apply wpsimp
   apply (erule use_valid)
-   apply wp
-    apply (simp add: cleanCacheRange_RAM_def cleanCacheRange_PoC_def cacheRangeOp_def cleanL2Range_def
-                     cleanByVA_def split_def dsb_def)
-    apply (wp mol_respects mapM_x_wp' storeWord_respects)+
+   apply (wp mapM_x_wp')
+   apply (simp add: cleanCacheRange_RAM_def cleanCacheRange_PoC_def cacheRangeOp_def cleanL2Range_def
+                    cleanByVA_def split_def dsb_def)
+   apply (wp mol_respects mapM_x_wp' storeWord_respects)+
    apply (simp add: word_size_bits_def)
    apply (clarsimp simp: word_size_def word_bits_def upto_enum_step_shift_red[where us=2, simplified])
    apply (erule bspec)
@@ -396,6 +391,12 @@ lemma dmo_cleanCacheRange_PoU_respects [wp]:
   "do_machine_op (cleanCacheRange_PoU vstart vend pstart) \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_cacheRangeOp_lift simp: cleanCacheRange_PoU_def cleanByVA_PoU_def)
 
+lemma dmo_cleanCacheRange_RAM_respects [wp]:
+  "do_machine_op (cleanCacheRange_RAM vstart vend pstart) \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_cacheRangeOp_lift
+             simp: dmo_bind_valid cleanCacheRange_RAM_def cleanCacheRange_PoC_def
+                   cleanL2Range_def dsb_def cleanByVA_def)
+
 lemma dmo_mapM_x_cleanCacheRange_PoU_integrity:
   "do_machine_op (mapM_x (\<lambda>x. cleanCacheRange_PoU (f x) (g x) (h x)) refs) \<lbrace>integrity aag X st\<rbrace>"
   by (wp dmo_mapM_x_wp_inv)
@@ -403,7 +404,7 @@ lemma dmo_mapM_x_cleanCacheRange_PoU_integrity:
 lemma init_arch_objects_integrity[Retype_AC_assms]:
   "\<lbrace>integrity aag X st and K (\<forall>x\<in>set refs. is_subject aag x)
                        and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
-   init_arch_objects new_type ptr num_objects obj_sz refs
+   init_arch_objects new_type dev ptr num_objects obj_sz refs
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (cases new_type; simp add: init_arch_objects_def split del: if_split)

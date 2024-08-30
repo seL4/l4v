@@ -279,12 +279,15 @@ locale Untyped_AI_arch =
                               (kheap s)\<rparr> \<turnstile> ArchObjectCap (arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
 
   assumes init_arch_objects_descendants_range[wp]:
-  "\<And>x cref ty ptr n us y. \<lbrace>\<lambda>(s::'state_ext state). descendants_range x cref s \<rbrace> init_arch_objects ty ptr n us y
-          \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
+  "\<And>x cref ty dev ptr n us y.
+     \<lbrace>\<lambda>(s::'state_ext state). descendants_range x cref s \<rbrace>
+     init_arch_objects ty dev ptr n us y
+     \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
   assumes  init_arch_objects_caps_overlap_reserved[wp]:
-  "\<And>S ty ptr n us y. \<lbrace>\<lambda>(s::'state_ext state). caps_overlap_reserved S s\<rbrace>
-   init_arch_objects ty ptr n us y
-   \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
+  "\<And>S ty dev ptr n us y.
+     \<lbrace>\<lambda>(s::'state_ext state). caps_overlap_reserved S s\<rbrace>
+     init_arch_objects ty dev ptr n us y
+     \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   assumes delete_objects_rewrite:
   "\<And>sz ptr. \<lbrakk> word_size_bits \<le> sz; sz\<le> word_bits; ptr && ~~ mask sz = ptr \<rbrakk>
       \<Longrightarrow> delete_objects ptr sz =
@@ -3026,7 +3029,7 @@ locale Untyped_AI_nonempty_table =
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
-        init_arch_objects tp ptr bits us refs
+        init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   assumes create_cap_ioports[wp]:
   "\<And>tp oref sz dev cref p. \<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace>
@@ -3607,13 +3610,13 @@ lemma invoke_untyp_invs':
             and K (cref \<in> set slots \<and> oref \<in> set (retype_addrs ptr tp (length slots) us))
             and K (range_cover ptr sz (obj_bits_api tp us) (length slots))\<rbrace>
          create_cap tp us slot dev (cref,oref) \<lbrace>\<lambda>_. Q\<rbrace>"
- assumes init_arch_Q: "\<And>tp slot reset sz slots ptr n us refs dev.
+ assumes init_arch_Q: "\<And>tp dev slot reset sz slots ptr n us refs dev.
    ui = Invocations_A.Retype slot reset (ptr && ~~ mask sz) ptr tp us slots dev
     \<Longrightarrow> \<lbrace>Q and post_retype_invs tp refs
        and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap dev (ptr && ~~ mask sz) sz idx) slot
        and K (refs = retype_addrs ptr tp n us
          \<and> range_cover ptr sz (obj_bits_api tp us) n)\<rbrace>
-     init_arch_objects tp ptr n us refs \<lbrace>\<lambda>_. Q\<rbrace>"
+     init_arch_objects tp dev ptr n us refs \<lbrace>\<lambda>_. Q\<rbrace>"
  assumes retype_region_Q: "\<And>ptr us tp slot reset sz slots dev.
     ui = Invocations_A.Retype slot reset (ptr && ~~ mask sz) ptr tp us slots dev
     \<Longrightarrow> \<lbrace>\<lambda>s. invs s \<and> Q s

@@ -191,13 +191,13 @@ lemma cap_refs_in_kernel_windowD2:
 
 lemma init_arch_objects_descendants_range[wp,Untyped_AI_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). descendants_range x cref s \<rbrace>
-   init_arch_objects ty ptr n us y
+   init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
   unfolding init_arch_objects_def by wp
 
 lemma init_arch_objects_caps_overlap_reserved[wp,Untyped_AI_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). caps_overlap_reserved S s\<rbrace>
-   init_arch_objects ty ptr n us y
+   init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   unfolding init_arch_objects_def by wp
 
@@ -327,7 +327,7 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
-        init_arch_objects tp ptr bits us refs
+        init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   unfolding init_arch_objects_def by wpsimp
 

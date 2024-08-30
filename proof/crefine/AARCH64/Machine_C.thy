@@ -199,6 +199,13 @@ assumes cleanCacheRange_RAM_preserves_kernel_bytes:
           \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
                  \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
 
+assumes cleanCacheRange_PoU_preserves_kernel_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_PoU_'proc
+       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+           \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+                  \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
+
+
 (* Hypervisor-related machine ops *)
 
 (* ARM Hypervisor hardware register getters and setters *)
