@@ -9,101 +9,200 @@
   [0]: https://zenodo.org/badge/doi/10.5281/zenodo.591732.svg
 
 
-[The L4.verified Proofs][1]
-===========================
+## [The L4.verified Proofs][1]
 
 This is the L4.verified git repository with formal specifications and
 proofs for the seL4 microkernel.
+
+The proofs and specifications in this branch refer to seL4 version 12.0.0, with
+proofs updated for the ZynqMP platform.
 
 Most proofs in this repository are conducted in the interactive proof
 assistant [Isabelle/HOL][2]. For an introduction to Isabelle, see its
 [official website][2] and [documentation][3].
 
   [1]: https://github.com/seL4/l4v                   "L4.verified Repository"
-  [2]: http://isabelle.in.tum.de                     "Isabelle Website"
+  [2]: https://isabelle.in.tum.de/website-Isabelle2020/index.html  "Isabelle Website"
   [3]: http://isabelle.in.tum.de/documentation.html  "Isabelle Documentation"
 
-<a name="setup"></a>
-Setup
------
+## Setup
 
-This repository is meant to be used as part of a Google [repo][5] setup.
-Instead of cloning it directly, follow the instructions at the [manifest git
-repo](https://github.com/seL4/verification-manifest).
+This repository is meant to be used as part of a Google [repo][5] setup. Instead
+of cloning it directly, follow the instructions
+[below](#checking-out-the-repository-collection).
 
   [5]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
 
-### Linux Packages - Debian
-On **Buster** or **Bullseye**, to run all the tests against the
-**ARMv7-A** architecture you will need to install the following packages:
-```bash
-sudo apt-get install \
-    python3 python3-pip python3-dev \
-    gcc-arm-none-eabi build-essential libxml2-utils ccache \
-    ncurses-dev librsvg2-bin device-tree-compiler cmake \
-    ninja-build curl zlib1g-dev texlive-fonts-recommended \
-    texlive-latex-extra texlive-metapost texlive-bibtex-extra \
-    rsync
-```
+### Hardware + OS requirements
 
-There is no package for the MLton compiler on Buster or Bullseye, so you will
-need to install it from the [MLton website](http://www.mlton.org).
-
-The Haskell Stack package is unavailable on Bullseye and out-of-date on Buster,
-so you will need to install it from the [Haskell Stack
-website](https://docs.haskellstack.org/en/stable/README).
+The proofs in this repository should work on Linux on x64 machines within 16B of
+RAM. An 8-core or more CPU is recommended, but should not be required.
 
 ### Linux Packages - Ubuntu
-On **Ubuntu 18.04**, to run all the tests against the **ARMv7-A**
-architecture you will need to install the following packages:
+
+On **Ubuntu 20.04**, to run all the tests against the **ARMv7-A** architecture
+for the **ZynqMP** platform you will need to install the following packages:
+
 ```bash
-sudo apt-get install \
+supo apt update
+sudo apt install \
     python3 python3-pip python3-dev \
     gcc-arm-none-eabi build-essential libxml2-utils ccache \
-    ncurses-dev librsvg2-bin device-tree-compiler cmake \
+    libncurses-dev librsvg2-bin device-tree-compiler cmake \
     ninja-build curl zlib1g-dev texlive-fonts-recommended \
     texlive-latex-extra texlive-metapost texlive-bibtex-extra \
     mlton-compiler haskell-stack
 ```
 
+### Google repo
+
+Ubuntu 20.04 has no package for `repo`, so it has to be installed manually.
+For instance in `~/.bin`:
+
+```bash
+mkdir -p ~/.bin
+PATH=~/.bin:"${PATH}"
+curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
+chmod a+rx ~/.bin/repo
+```
+
 ### Python
-The build system for the seL4 kernel requires several python packages:
+
+The build system for the seL4 kernel requires several python packages, which are
+collected in the meta-dependency `sel4-deps`:
+
 ```bash
-sudo pip3 install --upgrade pip
-sudo pip3 install sel4-deps
+pip3 install --user --upgrade pip
+pip3 install --user sel4-deps
 ```
 
-### Haskell Stack
-After installing
-[haskell-stack](https://docs.haskellstack.org/en/stable/README), make sure
-you've adjusted your `PATH` to include `$HOME/.local/bin`, and that you're
-running an up-to-date version:
-```bash
-stack upgrade --binary-only
-which stack # should be $HOME/.local/bin/stack
+## Checking out the repository collection
+
+The seL4 repositories use the [Google `repo` tool][repo] for configuration
+control and managing sets of repositories. For verification, this means in
+particular managing the correct combinations of the proofs, the kernel sources,
+and the Isabelle/HOL theorem prover.
+
+The [verification-manifest] repository records which versions of these are known
+to work well together.
+
+To check out a consistent set of repositories for this branch, run the following
+steps:
+
+```sh
+mkdir verification
+cd verification
+repo init -b zynqmp-nofpu-ver-v12 -u https://git@github.com/seL4/verification-manifest.git
+repo sync -j 4
 ```
 
-### MacOS
-Other than the cross-compiler `gcc` toolchain, setup on MacOS should be similar
-to that on Ubuntu. To set up a cross-compiler, try the following:
-* Install `XCode` from the AppStore and its command line tools. If you are
-  running MacPorts, you have these already. Otherwise, after you have XCode
-  installed, run `gcc --version` in a terminal window. If it reports a version,
-  you're set. Otherwise it should pop up a window and prompt for installation
-  of the command line tools.
-* Install the seL4 Python dependencies, for instance using `sudo easy_install
-  sel4-deps`.  `easy_install` is part of Python's [`setuptools`][9].
-* Install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang, by
-  putting it in `~/bin`, or somewhere else in your `PATH`.
+[repo]: https://gerrit.googlesource.com/git-repo/+/HEAD/README.md
+[verification-manifest]: https://github.com/seL4/verification-manifest
 
-Contributing
-------------
 
-Contributions to this repository are welcome.
-Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for details.
+## Isabelle Setup
 
-Overview
---------
+After the repository is set up using `repo` (as per the [setup section](#setup) above), you
+should have following directory structure, where `l4v` is the repository you
+are currently looking at:
+
+```bash
+verification/
+    isabelle/
+    l4v/
+    seL4/
+```
+
+To set up Isabelle for use in `l4v/`, assuming you have no previous
+installation of Isabelle, run the following commands in the directory
+`verification/l4v/`:
+
+```bash
+mkdir -p ~/.isabelle/etc
+cp -i misc/etc/settings ~/.isabelle/etc/settings
+./isabelle/bin/isabelle components -a
+./isabelle/bin/isabelle jedit -bf
+./isabelle/bin/isabelle build -bv HOL-Word
+```
+
+These commands perform the following steps:
+
+ * create an Isabelle user settings directory.
+ * install L4.verified Isabelle settings.
+   These settings initialise the Isabelle installation to use the standard
+   Isabelle `contrib` tools from the Munich Isabelle repository and set up
+   paths such that multiple Isabelle repository installations can be used
+   side by side without interfering with each other.
+ * download `contrib` components from the Munich repository. This includes
+   Scala, a Java JDK, PolyML, and multiple external provers. You should
+   download these, even if you have these tools previously installed
+   elsewhere to make sure you have the right versions. Depending on your
+   internet connection, this may take some time.
+ * compile and build the Isabelle PIDE jEdit interface.
+ * build basic Isabelle images, including `HOL-Word` to ensure that
+   the installation works. This may take a few minutes.
+
+Alternatively, it is possible to use the official Isabelle2020 release
+bundle for your platform from the [Isabelle website][2]. In this case, the
+installation steps above can be skipped, and you would replace the directory
+`verification/isabelle/` with a symbolic link to the Isabelle home directory
+of the release version. Note that this is not recommended for development,
+since Google repo will overwrite this link when you synchronise repositories
+and Isabelle upgrades will have to be performed manually as development
+progresses.
+
+
+## Running the Proofs
+
+### Proof check
+
+If Isabelle is set up correctly, a full test for the proofs in this repository
+can be run with the command
+
+    ./run_tests
+
+from the directory `l4v/`. For the default ARM architecture and ZynqMP platform,
+the command should run and report 49 sessions as passing.
+
+### Interactive proof exploration
+
+Not all of the proof sessions can be built directly with the `isabelle build`
+command. The seL4 verification proofs depend on Isabelle specifications that are
+generated from the C source code and Haskell model. Therefore, it is recommended
+to always build using the supplied makefiles, which will ensure that these
+generated specs are up to date.
+
+To do this, enter one level under the `l4v/` directory and run `make <session-name>`.
+For example, to build the C refinement proof session, do
+
+    cd l4v/proof
+    make CRefine
+
+As another example, to build the session for the Haskell model, do
+
+    cd l4v/spec
+    make ExecSpec
+
+See the `HEAPS` variable in the corresponding `Makefile` for available targets.
+
+Proof sessions that do not depend on generated inputs can be built directly with
+
+    ./isabelle/bin/isabelle build -d . -v -b <session name>
+
+from the directory `l4v/`. For available sessions, see the corresponding
+`ROOT` files in this repository. There is roughly one session corresponding to
+each major directory in the repository.
+
+For interactively exploring, say the invariant proof of the abstract
+specification with a pre-built logic image for the abstract specification,
+run
+
+    ./isabelle/bin/isabelle jedit -d . -l ASpec
+
+in `l4v/` and open one of the files in `proof/invariant-abstract`.
+
+
+## Repository Overview
 
 The repository is organised as follows.
 
@@ -173,133 +272,4 @@ The repository is organised as follows.
 
 
   [6]: http://www.nicta.com.au/pub?id=7847           "An Isabelle Proof Method Language"
-
-
-Hardware requirements
-------------
-
-Almost all proofs in this repository should work within 4GB of RAM. Proofs
-involving the C refinement, will usually need the 64bit mode of polyml and
-about 16GB of RAM.
-
-The proofs distribute reasonably well over multiple cores, up to about 8
-cores are useful.
-
-
-Isabelle Setup
---------------
-
-After the repository is set up using `repo` (as per the [setup section](#setup) above), you
-should have following directory structure, where `l4v` is the repository you
-are currently looking at:
-
-```bash
-verification/
-    isabelle/
-    l4v/
-    seL4/
-```
-
-To set up Isabelle for use in `l4v/`, assuming you have no previous
-installation of Isabelle, run the following commands in the directory
-`verification/l4v/`:
-
-```bash
-mkdir -p ~/.isabelle/etc
-cp -i misc/etc/settings ~/.isabelle/etc/settings
-./isabelle/bin/isabelle components -a
-./isabelle/bin/isabelle jedit -bf
-./isabelle/bin/isabelle build -bv HOL-Word
-```
-
-These commands perform the following steps:
-
- * create an Isabelle user settings directory.
- * install L4.verified Isabelle settings.
-   These settings initialise the Isabelle installation to use the standard
-   Isabelle `contrib` tools from the Munich Isabelle repository and set up
-   paths such that multiple Isabelle repository installations can be used
-   side by side without interfering with each other.
- * download `contrib` components from the Munich repository. This includes
-   Scala, a Java JDK, PolyML, and multiple external provers. You should
-   download these, even if you have these tools previously installed
-   elsewhere to make sure you have the right versions. Depending on your
-   internet connection, this may take some time.
- * compile and build the Isabelle PIDE jEdit interface.
- * build basic Isabelle images, including `HOL-Word` to ensure that
-   the installation works. This may take a few minutes.
-
-Alternatively, it is possible to use the official Isabelle2020 release
-bundle for your platform from the [Isabelle website][2]. In this case, the
-installation steps above can be skipped, and you would replace the directory
-`verification/isabelle/` with a symbolic link to the Isabelle home directory
-of the release version. Note that this is not recommended for development,
-since Google repo will overwrite this link when you synchronise repositories
-and Isabelle upgrades will have to be performed manually as development
-progresses.
-
-### JEdit
-We provide a JEdit macro that is very useful when working with large theory
-files, **goto-error**, which moves the cursor to the first error in the file.
-
-To install the macro, run the following commands in the directory
-`verification/l4v/`:
-```bash
-mkdir -p ~/.isabelle/jedit/macros
-cp misc/jedit/macros/goto-error.bsh ~/.isabelle/jedit/macros/.
-```
-
-You can add keybindings for this macro in the usual way, by going to
-`Utilities -> Global Options -> jEdit -> Shortcuts`.
-
-Additionally, our fork of Isabelle/jEdit has an updated indenter which is more
-proof-context aware than the 'original' indenter. Pressing `ctrl+i` while some
-`apply`-script text is selected should auto-indent the script while respecting
-subgoal depth and maintaining the relative indentation of multi-line `apply`
-statements.
-
-Running the Proofs
-------------------
-
-If Isabelle is set up correctly, a full test for the proofs in this repository
-can be run with the command
-
-    ./run_tests
-
-from the directory `l4v/`.
-
-Not all of the proof sessions can be built directly with the `isabelle build` command.
-The seL4 verification proofs depend on Isabelle specifications that are
-generated from the C source code and Haskell model.
-Therefore, it's recommended to always build using the supplied makefiles,
-which will ensure that these generated specs are up to date.
-
-To do this, enter one level under the `l4v/` directory and run `make <session-name>`.
-For example, to build the C refinement proof session, do
-
-    cd l4v/proof
-    make CRefine
-
-As another example, to build the session for the Haskell model, do
-
-    cd l4v/spec
-    make ExecSpec
-
-See the `HEAPS` variable in the corresponding `Makefile` for available targets.
-
-Proof sessions that do not depend on generated inputs can be built directly with
-
-    ./isabelle/bin/isabelle build -d . -v -b <session name>
-
-from the directory `l4v/`. For available sessions, see the corresponding
-`ROOT` files in this repository. There is roughly one session corresponding to
-each major directory in the repository.
-
-For interactively exploring, say the invariant proof of the abstract
-specification with a pre-built logic image for the abstract specification,
-run
-
-    ./isabelle/bin/isabelle jedit -d . -l ASpec
-
-in `l4v/` and open one of the files in `proof/invariant-abstract`.
 
