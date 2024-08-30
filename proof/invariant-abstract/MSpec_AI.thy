@@ -167,8 +167,8 @@ where
     _ \<Rightarrow> None"
 
 lemma get_message_info_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_message_info (cur_thread s)
-   \<lbrace>\<lambda> r s''. s = s'' \<and> get_message_info_ret s (cur_thread s) = Some r\<rbrace>"
+  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_message_info t
+   \<lbrace>\<lambda> r s''. s = s'' \<and> get_message_info_ret s t = Some r\<rbrace>"
   unfolding get_message_info_def get_message_info_ret_def
   apply wp
    unfolding as_user_def
@@ -197,6 +197,7 @@ lemma copy_mrs_ret_valid:
 
 (* Turns out Microkit won't transfers caps via channels, their endpoints shouldn't be given Grant.
   So we specify do_normal_transfer's behaviour under these assumptions. *)
+
 definition transfer_caps_none_ret :: "message_info \<Rightarrow> obj_ref option \<Rightarrow> message_info"
 where
   "transfer_caps_none_ret info recv_buffer \<equiv>
@@ -204,11 +205,47 @@ where
     in case recv_buffer of None \<Rightarrow> mi |
          _ \<Rightarrow> (MI (mi_length mi) (word_of_nat 0) (mi_caps_unwrapped mi) (mi_label mi))"
 
+(* FIXME: We know all these things are true, I'm just not phrasing them in a way
+   that makes them usable in the context of a wp proof.
+   In particular, how do we say things about arguments to wp proofs if those arguments
+   don't immediately seem to rely on the state? *)
+
+(* need caps = [] in the precondition for this to be usable
 lemma transfer_caps_none_valid:
-  "\<lbrace>\<top>\<rbrace> transfer_caps info [] endpoint receiver recv_buffer
+  "\<lbrace>P\<rbrace> transfer_caps info [] endpoint receiver recv_buffer
    \<lbrace>\<lambda> r _. r = transfer_caps_none_ret info recv_buffer\<rbrace>"
   unfolding transfer_caps_def transfer_caps_none_ret_def
   by wpsimp
+*)
+
+(* no longer needed, just use hoare_strengthen post to achieve this
+lemma transfer_caps_loop_none:
+  "(\<forall> r s. r = MI (mi_length mi) (of_nat n) (mi_caps_unwrapped mi) (mi_label mi) \<longrightarrow> Q r s) \<Longrightarrow>
+   \<lbrace>\<lambda>s. caps = []\<rbrace> transfer_caps_loop ep rcv_buffer n caps slots mi \<lbrace>Q\<rbrace>"
+  unfolding transfer_caps_def
+  apply (wpsimp simp:Let_def split:option.splits)
+  by (clarsimp simp:valid_def return_def)
+*)
+
+lemma transfer_caps_loop_none_valid:
+  "\<lbrace>\<lambda>_. caps = []\<rbrace> transfer_caps_loop ep rcv_buffer 0 caps slots mi
+   \<lbrace>\<lambda>r _. r = MI (mi_length mi) 0 (mi_caps_unwrapped mi) (mi_label mi)\<rbrace>"
+  unfolding transfer_caps_def
+  by (clarsimp simp:valid_def return_def)
+
+lemma transfer_caps_none_valid:
+  "\<lbrace>\<lambda>_. caps = []\<rbrace> transfer_caps info caps endpoint receiver recv_buffer
+   \<lbrace>\<lambda>r s. r = transfer_caps_none_ret info recv_buffer\<rbrace>"
+  unfolding transfer_caps_def transfer_caps_none_ret_def
+  apply(clarsimp simp:Let_def)
+  apply wpsimp
+     (* ah *this* is how you use them *)
+     apply(wp only:transfer_caps_loop_none_valid[THEN hoare_strengthen_post])
+     apply clarsimp
+    apply clarsimp
+   apply wp
+  apply clarsimp
+  done
 
 definition
   get_cap_ret :: "'a state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
@@ -373,15 +410,18 @@ lemma handle_SysRecv_syscall_valid:
        apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
       apply(wpsimp wp:crunch_wps set_object_wp)+
      apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
-    apply(wpsimp wp:crunch_wps set_object_wp|clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)+
+    apply(wpsimp wp:crunch_wps set_object_wp|solves\<open>clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def\<close>)+
       unfolding do_ipc_transfer_def do_normal_transfer_def
       apply(wpsimp wp:crunch_wps)+
         (* 40 subgoals *)
         apply(wpsimp wp:crunch_wps as_user_wp_thread_set_helper set_object_wp
           simp:thread_set_def set_message_info_def)+
-       (* I think at this point we'll need to pluck out the fact that we know
-          from the precondition there are no caps to be transferred. *)
-       (* FIXME: Well whoops, I don't think it's actually in the precondition yet. *)
+        .
+        apply(wp only:transfer_caps_none_valid[THEN hoare_strengthen_post])
+        apply wpsimp
+        apply(wpsimp simp:transfer_caps_none_ret_def getRegister_as_user_ret_def get_message_info_ret_def)
+       (* FIXME: Make use of the fact that we know from the precondition there are no caps to be
+          transferred because the endpoint cap has no grant rights. *)
        .
        using transfer_caps_none_valid
   oops
