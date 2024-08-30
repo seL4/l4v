@@ -364,6 +364,95 @@ find_theorems name:handle_fault valid
 declare getRegister_as_user_ret_valid get_message_info_ret_valid copy_mrs_ret_valid
   transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid [wp]
 
+thm transfer_caps_none_ret_def get_message_info_ret_def
+
+lemma do_normal_transfer_valid:
+  "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
+      valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
+      \<comment> \<open>when do we need to assert this?
+      valid_ep_obj_with_message (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>\<close>
+      grant = False\<rbrace>
+    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
+   \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
+      get_message_info_ret s' receiver =
+      Some (transfer_caps_none_ret (the (get_message_info_ret s' sender)) rbuf)\<rbrace>"
+  apply(wpsimp wp:crunch_wps simp:do_normal_transfer_def)
+        apply(wpsimp wp:crunch_wps as_user_wp_thread_set_helper set_object_wp
+          simp:thread_set_def set_message_info_def)+
+      apply(wp only:transfer_caps_none_valid[THEN hoare_strengthen_post])
+      apply(clarsimp simp only:transfer_caps_none_ret_def)
+      apply(rule conjI)
+       (* badge_val conjunct *)
+       apply clarsimp
+       apply(clarsimp simp:Let_def)
+       apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
+       apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
+      (* message_info conjunct *)
+      apply(clarsimp simp:Let_def)
+      apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
+      apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
+      apply(rule conjI)
+       apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
+      apply clarsimp
+      apply(rule conjI)
+       apply clarsimp
+       (* sender = receiver case. can't we rule this out? FIXME *)
+       defer
+      apply clarsimp
+      apply(clarsimp split:option.splits if_splits)
+      apply(rule conjI)
+       (* kheap s sender = None case. we shouldn't have to deal with this either. FIXME *)
+       defer      
+      apply clarsimp
+      (*
+      using data_to_message_info_valid
+      apply -
+      *)
+      apply(clarsimp simp:data_to_message_info_def)
+      apply(clarsimp simp:Let_def)
+      apply(rule conjI)
+       apply clarsimp
+       apply(rule conjI)
+        (* that the message info length is the expected value of 0x78 (why 0x78?)*)
+        apply(clarsimp split:kernel_object.splits)
+        apply(rule conjI)
+         apply clarsimp
+         (* FIXME: we only care about the TCB case, get rid of the others *)
+         defer
+        apply(rule conjI)
+         apply clarsimp
+         apply(clarsimp split:user_context.splits)
+         (*
+         using data_to_message_info_valid
+         apply -
+         apply(erule_tac x="x2 msg_info_register" in meta_allE)
+         apply(clarsimp simp:valid_message_info_def)
+         apply(clarsimp simp:of_nat_def msg_max_length_def)
+         (* data_to_message_info_valid doesn't give it to us,
+            perhaps I ought to be using one of the earlier assumptions *)
+         apply(clarsimp simp:user_regs_def split:user_context.splits)
+         apply(clarsimp simp:arch_tcb_context_get_def arch_tcb_context_set_def)
+         *)
+         (* okay, not sure how to conclude the length is exactly 0x78. FIXME *)
+         defer
+        (* FIXME: don't care about the other kernel_object cases *)
+        defer
+       apply(rule conjI)
+        (* that the extra caps field of MI is 0 *)
+        defer
+       apply(rule conjI)
+        (* that the caps_unwrapped field of MI is 0 *)
+        defer
+       thm data_to_message_info_def
+       (* that the label field of MI is the expected value *)
+       apply(clarsimp split:kernel_object.splits)
+       apply(rule conjI)
+        defer
+       apply(rule conjI)
+        apply(clarsimp split:user_context.splits)
+        apply(clarsimp simp:data_to_message_info_def)
+  oops
+
 lemma handle_SysRecv_syscall_valid:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
@@ -371,59 +460,66 @@ lemma handle_SysRecv_syscall_valid:
     handle_recv True
    \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' (cur_thread s') badge_register = Some (badge_val ro) \<and>
       get_message_info_ret s' (cur_thread s') = Some (minfo ro)\<rbrace>"
-  unfolding handle_recv_def
-  apply(wpsimp wp:crunch_wps)
+  apply(wpsimp wp:crunch_wps simp:handle_recv_def)
       defer
      apply(wpsimp wp:crunch_wps)
       apply(wpsimp simp:Let_def)
        (* 17 subgoals *)
-       unfolding receive_ipc_def complete_signal_def
-       apply wpsimp
-        (* 24 subgoals *)
-        unfolding set_simple_ko_def setRegister_def as_user_def set_thread_state_def
-        apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp)+
+       apply(wpsimp simp:receive_ipc_def complete_signal_def)
+        (* 23 subgoals *)
+        apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp
+          simp:set_simple_ko_def setRegister_def as_user_def set_thread_state_def)+
           apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
-         unfolding setup_caller_cap_def
-         apply(wpsimp wp:crunch_wps set_object_wp)+
-          (* 32 subgoals *)
+         apply(wpsimp wp:crunch_wps set_object_wp simp:setup_caller_cap_def)+
+          (* 30 subgoals *)
           apply(rule conjI)
-           unfolding cap_insert_def
-           apply(wpsimp wp:crunch_wps)
-               (* 42 subgoals *)
+           apply(wpsimp wp:crunch_wps simp:cap_insert_def)
+               (* 41 subgoals *)
                apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
-              unfolding update_cdt_def set_cdt_def set_cap_def
-              apply(wpsimp wp:crunch_wps set_object_wp get_object_wp)+
-            (* 37 subgoals *)
-            unfolding set_untyped_cap_as_full_def get_cap_def
-            apply(wpsimp wp:crunch_wps get_object_wp)+
-               apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
-              apply(wpsimp wp:crunch_wps set_object_wp)+
-           apply(wpsimp wp:crunch_wps get_object_wp)
-          apply(wpsimp wp:crunch_wps get_object_wp)
-         apply wpsimp
-        apply(wpsimp wp:crunch_wps get_object_wp)
-       apply(wpsimp wp:crunch_wps get_object_wp)
-      unfolding set_thread_state_def
-      apply(wpsimp wp:crunch_wps)+
+              apply(wpsimp wp:crunch_wps set_object_wp get_object_wp
+                simp:update_cdt_def set_cdt_def set_cap_def)+
+            (* 35 subgoals *)
+            apply(wpsimp wp:crunch_wps get_object_wp simp:set_untyped_cap_as_full_def get_cap_def
+              set_thread_state_def)+
+          apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+         apply(wpsimp wp:crunch_wps set_object_wp)+
+        apply(wpsimp wp:crunch_wps get_object_wp simp:cap_insert_def)
+                 apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+                apply(wpsimp wp:crunch_wps simp:update_cdt_def set_cdt_def set_cap_def)+         
+               apply(wpsimp wp:crunch_wps set_object_wp get_object_wp)+
+           apply(wpsimp wp:crunch_wps get_object_wp simp:set_untyped_cap_as_full_def get_cap_def
+             set_thread_state_def)+
+         apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+        apply(wpsimp wp:crunch_wps set_object_wp get_object_wp)+
+      apply(wpsimp wp:crunch_wps simp:set_thread_state_def)+
         apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
        apply(wpsimp wp:crunch_wps set_object_wp)+
-       apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
-      apply(wpsimp wp:crunch_wps set_object_wp)+
-     apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
-    apply(wpsimp wp:crunch_wps set_object_wp|solves\<open>clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def\<close>)+
-      unfolding do_ipc_transfer_def do_normal_transfer_def
-      apply(wpsimp wp:crunch_wps)+
-        (* 40 subgoals *)
-        apply(wpsimp wp:crunch_wps as_user_wp_thread_set_helper set_object_wp
-          simp:thread_set_def set_message_info_def)+
-        .
-        apply(wp only:transfer_caps_none_valid[THEN hoare_strengthen_post])
-        apply wpsimp
-        apply(wpsimp simp:transfer_caps_none_ret_def getRegister_as_user_ret_def get_message_info_ret_def)
-       (* FIXME: Make use of the fact that we know from the precondition there are no caps to be
-          transferred because the endpoint cap has no grant rights. *)
-       .
-       using transfer_caps_none_valid
+      apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+     apply(wpsimp wp:crunch_wps simp:set_thread_state_def)+
+       apply(wpsimp wp:crunch_wps set_object_wp|solves\<open>clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def\<close>)+
+       apply(wpsimp wp:crunch_wps simp:do_ipc_transfer_def do_normal_transfer_def)+
+                (* 39 subgoals *)
+                apply(wpsimp wp:crunch_wps as_user_wp_thread_set_helper set_object_wp
+                  simp:thread_set_def set_message_info_def)+
+              apply(wp only:transfer_caps_none_valid[THEN hoare_strengthen_post])
+              apply clarsimp
+              apply(clarsimp simp only:transfer_caps_none_ret_def)
+              apply(rule conjI)
+               apply clarsimp
+               apply(rule conjI)
+                apply clarsimp
+                apply(rule conjI)
+                 apply clarsimp
+                 apply(rule conjI)
+                  apply(clarsimp simp:Let_def)
+                  apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
+                  apply(rule conjI)
+                   apply clarsimp
+                   apply(rule conjI)
+                    apply clarsimp
+                    apply(clarsimp split:option.splits)
+     (* FIXME: Make use of the fact that we know from the precondition there are no caps to be
+        transferred because the endpoint cap has no grant rights. *)
   oops
 
 end (* Arch AARCH64_A *)
