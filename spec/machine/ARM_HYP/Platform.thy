@@ -43,7 +43,7 @@ definition pageColourBits :: nat where
   "pageColourBits \<equiv> 2"
 
 definition cacheLineBits :: nat where
-  "cacheLineBits = 6"
+  "cacheLineBits = CONFIG_L1_CACHE_LINE_SIZE_BITS"
 
 definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
