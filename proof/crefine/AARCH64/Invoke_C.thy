@@ -1685,7 +1685,7 @@ lemma clearMemory_untyped_ccorres:
                         word_of_nat_less Kernel_Config.resetChunkBits_def
                         word_bits_def unat_2p_sub_1)
   apply (strengthen is_aligned_no_wrap'[where sz=sz] is_aligned_addrFromPPtr_n)+
-  apply (simp add: addrFromPPtr_mask_cacheLineSize pptrBaseOffset_alignment_def)
+  apply (simp add: addrFromPPtr_mask_cacheLineBits pptrBaseOffset_alignment_def)
   apply (cases "ptr = 0"; simp)
   apply (drule subsetD, rule intvl_self, simp)
   apply simp

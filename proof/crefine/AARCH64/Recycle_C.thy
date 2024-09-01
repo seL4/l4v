@@ -387,13 +387,7 @@ lemma clearMemory_PageCap_ccorres:
                         capAligned_def word_of_nat_less)
   apply (frule is_aligned_addrFromPPtr_n, simp add: pageBitsForSize_def split: vmpage_size.splits)
   apply (simp add: bit_simps pptrBaseOffset_alignment_def)+
-  apply (simp add: is_aligned_no_overflow')
-  apply (rule conjI)
-  subgoal
-    apply (prop_tac "cacheLineSize \<le> pageBitsForSize sz")
-     apply (simp add: pageBitsForSize_def bit_simps cacheLineSize_def split: vmpage_size.splits)
-    apply (simp add: is_aligned_mask[THEN iffD1] is_aligned_weaken)
-    done
+  apply (simp add: is_aligned_no_overflow' addrFromPPtr_mask_cacheLineBits)
   apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
   done
 

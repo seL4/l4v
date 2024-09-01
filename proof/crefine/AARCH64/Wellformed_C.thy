@@ -562,6 +562,50 @@ lemma ucast_irq_array_guard[unfolded irq_array_size_val, simplified]:
   done
 
 
+text \<open>cacheLineBits interface\<close>
+
+lemmas cacheLineBits_val =
+  cacheLineBits_def[unfolded Kernel_Config.CONFIG_L1_CACHE_LINE_SIZE_BITS_def]
+
+lemma cacheLineBits_leq_pageBits:
+  "cacheLineBits \<le> pageBits"
+  using cacheLineBits_sanity
+  by (simp add: pageBits_def)
+
+lemma pageBits_leq_pptrBaseOffset_alignment:
+  "pageBits \<le> pptrBaseOffset_alignment"
+  by (simp add: pageBits_def pptrBaseOffset_alignment_def)
+
+lemma cacheLineBits_leq_pptrBaseOffset_alignment:
+  "cacheLineBits \<le> pptrBaseOffset_alignment"
+  by (rule order.trans, rule cacheLineBits_leq_pageBits, rule pageBits_leq_pptrBaseOffset_alignment)
+
+lemma cacheLineBits_leq_pbfs:
+  "cacheLineBits \<le> pageBitsForSize sz"
+  by (rule order.trans, rule cacheLineBits_leq_pageBits, rule pbfs_atleast_pageBits)
+
+lemma addrFromPPtr_mask_pptrBaseOffset_alignment:
+  "n \<le> pptrBaseOffset_alignment
+   \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
+  unfolding addrFromPPtr_def
+  by (metis is_aligned_weaken mask_add_aligned pptrBaseOffset_aligned zadd_diff_inverse)
+
+lemma addrFromPPtr_mask_cacheLineBits:
+  "addrFromPPtr ptr && mask cacheLineBits = ptr && mask cacheLineBits"
+  by (rule addrFromPPtr_mask_pptrBaseOffset_alignment,
+      rule cacheLineBits_leq_pptrBaseOffset_alignment)
+
+lemma pptrBaseOffset_cacheLineBits_aligned[simp]:
+  "pptrBaseOffset && mask cacheLineBits = 0"
+  unfolding is_aligned_mask[symmetric]
+  by (rule is_aligned_weaken[OF pptrBaseOffset_aligned cacheLineBits_leq_pptrBaseOffset_alignment])
+
+lemma ptrFromPAddr_mask_cacheLineBits[simp]:
+  "ptrFromPAddr v && mask cacheLineBits = v && mask cacheLineBits"
+  by (simp add: ptrFromPAddr_def add_mask_ignore)
+
+(* end of Kernel_Config interface section *)
+
 (* Input abbreviations for API object types *)
 (* disambiguates names *)
 
@@ -644,26 +688,6 @@ abbreviation(input)
   prioInvalid :: sword32
 where
   "prioInvalid == seL4_InvalidPrio"
-
-(* caches *)
-
-definition cacheLineSize :: nat where
-  "cacheLineSize \<equiv> 6"
-
-lemma addrFromPPtr_mask_cacheLineSize:
-  "addrFromPPtr ptr && mask cacheLineSize = ptr && mask cacheLineSize"
-  apply (simp add: addrFromPPtr_def AARCH64.pptrBase_def pptrBaseOffset_def canonical_bit_def
-                   paddrBase_def cacheLineSize_def mask_def)
-  apply word_bitwise
-  done
-
-lemma pptrBaseOffset_cacheLineSize_aligned[simp]:
-  "pptrBaseOffset && mask cacheLineSize = 0"
-  by (simp add: pptrBaseOffset_def paddrBase_def pptrBase_def cacheLineSize_def mask_def)
-
-lemma ptrFromPAddr_mask_cacheLineSize[simp]:
-  "ptrFromPAddr v && mask cacheLineSize = v && mask cacheLineSize"
-  by (simp add: ptrFromPAddr_def add_mask_ignore)
 
 (* The magic 4 comes out of the bitfield generator -- this applies to all versions of the kernel. *)
 lemma ThreadState_Restart_mask[simp]:
