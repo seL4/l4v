@@ -529,6 +529,29 @@ lemma ucast_irq_array_guard[unfolded irq_array_size_val, simplified]:
   apply simp
   done
 
+
+text \<open>cacheLineBits interface\<close>
+
+lemma addrFromPPtr_mask_SuperSection:
+  "n \<le> pageBitsForSize ARMSuperSection
+   \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
+  apply (simp add: addrFromPPtr_def)
+  apply (prop_tac "pptrBaseOffset AND mask n = 0")
+   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+  apply (simp flip: mask_eqs(8))
+  done
+
+lemma ptrFromPAddr_mask_SuperSection:
+  "n \<le> pageBitsForSize ARMSuperSection
+   \<Longrightarrow> ptrFromPAddr ptr && mask n = ptr && mask n"
+  apply (simp add: ptrFromPAddr_def)
+  apply (prop_tac "pptrBaseOffset AND mask n = 0")
+   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+  apply (simp flip: mask_eqs(7))
+  done
+
+(* ------------ *)
+
 (* Input abbreviations for API object types *)
 (* disambiguates names *)
 
