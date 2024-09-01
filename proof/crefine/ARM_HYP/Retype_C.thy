@@ -5887,7 +5887,8 @@ proof -
     apply (intro conjI, simp_all add: table_bits_defs)[1]
         apply fastforce
        apply ((clarsimp simp: is_aligned_no_overflow'[where n=14, simplified]
-                              field_simps is_aligned_mask[symmetric] mask_AND_less_0)+)[3]
+                              field_simps is_aligned_mask[symmetric] mask_AND_less_0
+                              cacheLineBits_le_ptBits[unfolded ptBits_def pteBits_def, simplified])+)[3]
     \<comment> \<open>VCPU\<close>
     apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
      apply (simp add: object_type_from_H_def Kernel_C_defs)
