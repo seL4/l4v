@@ -233,7 +233,7 @@ crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThread
    simp: unless_def updateObject_default_def crunch_simps
    ignore_del: preemptionPoint)
 
-lemma addrFromPPtr_mask[simplified ARM.pageBitsForSize_simps]:
+lemma addrFromPPtr_mask_ARMSuperSection:
   "n \<le> pageBitsForSize ARMSuperSection
    \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
   apply (simp add: addrFromPPtr_def)
@@ -241,13 +241,6 @@ lemma addrFromPPtr_mask[simplified ARM.pageBitsForSize_simps]:
    apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
   apply (simp flip: mask_eqs(8))
   done
-
-(* this could be done as
-   lemmas addrFromPPtr_mask_5 = addrFromPPtr_mask[where n=5, simplified]
-   but that wouldn't give a sanity check of the n \<le> ... assumption  disappearing *)
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask 5 = ptr && mask 5"
-  by (rule addrFromPPtr_mask[where n=5, simplified])
 
 end
 

@@ -4745,7 +4745,9 @@ proof -
        apply (clarsimp simp: pageBits_def pdeBits_def
                              valid_arch_state'_def page_directory_at'_def pdBits_def)
       apply (clarsimp simp: is_aligned_no_overflow'[where n=14, simplified] pdeBits_def
-                            field_simps is_aligned_mask[symmetric] mask_AND_less_0)+
+                            field_simps is_aligned_mask[symmetric] mask_AND_less_0
+                            cacheLineBits_le_PageDirectoryObject_sz[unfolded APIType_capBits_def,
+                                                                    simplified])+
     done
 qed
 

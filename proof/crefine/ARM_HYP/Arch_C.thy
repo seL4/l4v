@@ -1742,8 +1742,7 @@ lemma performPageInvocationMapPTE_ccorres:
          apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
          apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
          apply simp
-        apply (clarsimp simp: pte_range_relation_def ptr_add_def ptr_range_to_list_def
-                              addrFromPPtr_mask_6)
+        apply (clarsimp simp: pte_range_relation_def ptr_add_def ptr_range_to_list_def)
         apply (auto simp: valid_pte_slots'2_def upt_conv_Cons[where i=0])[1]
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
        apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def objBits_simps
@@ -2122,8 +2121,7 @@ lemma performPageInvocationMapPDE_ccorres:
          apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
          apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
          apply simp
-        apply (clarsimp simp: pde_range_relation_def ptr_add_def ptr_range_to_list_def
-                              addrFromPPtr_mask_6)
+        apply (clarsimp simp: pde_range_relation_def ptr_add_def ptr_range_to_list_def)
         apply (auto simp: valid_pde_slots'2_def upt_conv_Cons[where i=0])[1]
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
        apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def objBits_simps
@@ -3149,7 +3147,7 @@ lemma decodeARMFrameInvocation_ccorres:
             intro conjI,
             (solves \<open>frule vmsz_aligned_addrFromPPtr(3)[THEN iffD2],
                        (subst mask_add_aligned mask_add_aligned_right, erule is_aligned_weaken,
-                        rule order_trans[OF _ pbfs_atleast_pageBits[simplified pageBits_def]], simp)+,
+                        rule cacheLineBits_leq_pbfs)+,
                        simp\<close>),
             fastforce simp add: ptrFromPAddr_add_left is_aligned_no_overflow3[rotated -1])+
      apply (local_method simplify_and_expand)+
@@ -3513,15 +3511,14 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
 
            \<comment> \<open>cache flush constraints\<close>
            subgoal for _ _ _ _ _ _ sz p
-             using pbfs_atleast_pageBits[simplified pageBits_def, of sz]
+             using pbfs_atleast_pageBits[of sz] cacheLineBits_leq_pageBits
              apply (intro conjI)
                 apply (erule flush_range_le)
                  apply (simp add:linorder_not_le)
                  apply (erule word_less_sub_1)
                 apply (simp add:mask_add_aligned mask_twice)
                apply (fastforce simp: mask_twice
-                                      mask_add_aligned[OF is_aligned_pageBitsForSize_minimum,
-                                                       simplified pageBits_def])
+                                      mask_add_aligned[OF is_aligned_pageBitsForSize_minimum])
               apply (simp add: ptrFromPAddr_add_left)
               apply (erule flush_range_le)
                apply (simp add:linorder_not_le)
