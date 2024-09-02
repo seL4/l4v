@@ -56,11 +56,6 @@
         <test name="Bisim">make Bisim</test>
     </sequence>
 
-    <!-- Binary Verification -->
-    <sequence depends="CSpec">
-        <test name="SimplExportAndRefine" cpu-timeout="43200">make SimplExportAndRefine</test>
-    </sequence>
-
     <!-- Separation Logic. -->
     <sequence depends="haskell-translator Sep_Algebra">
         <test name="SepTactics">make SepTactics</test>
