@@ -11,7 +11,7 @@ imports
   Word_Lib.WordSetup
   Monads.Nondet_Empty_Fail
   Monads.Nondet_Reader_Option
-  Setup_Locale
+  Lib.HaskellLib_H
   Platform
 begin
 context Arch begin arch_global_naming
@@ -136,7 +136,7 @@ definition
 
 
 (* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize hcrVCPU hcrNative vgicHCREN sctlrDefault actlrDefault gicVCPUMaxNumLR
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize hcrCommon hcrTWE hcrTWI hcrVCPU hcrNative vgicHCREN sctlrDefault actlrDefault gicVCPUMaxNumLR
 
 end
 

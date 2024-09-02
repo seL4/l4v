@@ -442,7 +442,21 @@ check_export_arch_timer = error "Unimplemented - machine op"
 
 {- Constants -}
 
-hcrVCPU =  (0x80086039 :: Word) -- HCR_VCPU
+hcrCommon :: Word
+--          HCR_VM  | HCR_RW   | HCR_AMO | HCR_IMO | HCR_FMO | HCR_TSC
+hcrCommon = bit 0  .|. bit 31 .|. bit 5 .|. bit 4 .|. bit 3 .|. bit 19
+
+hcrTWE :: Word
+hcrTWE = bit 14
+
+hcrTWI :: Word
+hcrTWI = bit 13
+
+hcrVCPU :: Word -- HCR_VCPU
+hcrVCPU = if config_DISABLE_WFI_WFE_TRAPS
+          then hcrCommon
+          else hcrCommon .|. hcrTWE .|. hcrTWI
+
 hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
@@ -455,3 +469,7 @@ gicVCPUMaxNumLR = (64 :: Int)
 -- The size of the physical address space in hyp mode can be configured on some platforms.
 config_ARM_PA_SIZE_BITS_40 :: Bool
 config_ARM_PA_SIZE_BITS_40 = error "generated from CMake config"
+
+-- Wether to trap WFI/WFE instructions or not in hyp mode
+config_DISABLE_WFI_WFE_TRAPS :: Bool
+config_DISABLE_WFI_WFE_TRAPS = error "generated from CMake config"
