@@ -116,7 +116,7 @@ known_config_keys = {
     'CONFIG_TK1_SMMU': (bool, None),
     'CONFIG_ENABLE_A9_PREFETCHER': (bool, None),
     'CONFIG_EXPORT_PMU_USER': (bool, None),
-    'CONFIG_DISABLE_WFI_WFE_TRAPS': (bool, None),
+    'CONFIG_DISABLE_WFI_WFE_TRAPS': (bool, 'config_DISABLE_WFI_WFE_TRAPS'),
     'CONFIG_SMMU_INTERRUPT_ENABLE': (bool, None),
     'CONFIG_AARCH32_FPU_ENABLE_CONTEXT_SWITCH': (bool, None),
     'CONFIG_L1_CACHE_LINE_SIZE_BITS': (nat, None),
