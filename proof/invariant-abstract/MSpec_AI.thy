@@ -366,91 +366,139 @@ declare getRegister_as_user_ret_valid get_message_info_ret_valid copy_mrs_ret_va
 
 thm transfer_caps_none_ret_def get_message_info_ret_def
 
+(* fragments that Tom typed in, related to forward reasoning - though he doesn't advise
+   to use that approach if we can do everything wp style
+  apply (rule hoare_pre)
+   apply (rule_tac P="\<not> grant" in hoare_gen_asm)
+
+  apply (rule bind_wp_fwd)
+thm get_message_info_def
+find_theorems valid get_message_info
+thm get_mi_sp
+ML_val \<open>
+ @{term "do x <- f; g od"}
+\<close>
+find_theorems Nondet_Monad.bind valid
+*)
+
+(* Tom's suggested helpers *)
+lemma asUser_setRegister_getRegister_as_user:
+  "\<lbrace>\<lambda>s. P (if t = t' \<and> r = r' then Some v else getRegister_as_user_ret s t' r')\<rbrace>
+    as_user t (setRegister r v)
+  \<lbrace>\<lambda>rv s. P (getRegister_as_user_ret s t' r')\<rbrace>"
+  sorry
+
+find_consts "_ \<Rightarrow> _ option \<Rightarrow> _ option"
+
+lemma get_message_info_ret_getRegister_as_user_ret:
+  "get_message_info_ret s t =
+    Option.map_option data_to_message_info (getRegister_as_user_ret s t msg_info_register)"
+  sorry
+
 lemma do_normal_transfer_valid:
-  "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
+  "\<lbrace>(\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
       \<comment> \<open>when do we need to assert this?
       valid_ep_obj_with_message (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>\<close>
-      grant = False\<rbrace>
+      tcb_at sender s)
+      and K (sender \<noteq> receiver \<and> grant = False)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
       get_message_info_ret s' receiver =
       Some (transfer_caps_none_ret (the (get_message_info_ret s' sender)) rbuf)\<rbrace>"
+  unfolding do_normal_transfer_def
   apply(wpsimp wp:crunch_wps simp:do_normal_transfer_def)
-        apply(wpsimp wp:crunch_wps as_user_wp_thread_set_helper set_object_wp
-          simp:thread_set_def set_message_info_def)+
+(* Advice from Tom: better to stick with wp approach and bring preconds in manually as needed
+   using hoare_gen_asm and appropriate such tools, or prove better lemmas to infer the needed
+   preconditions for given postconditions of the individual constituent functions in question. *)
+(* My brief, naive attempt to use forward reasoning:
+        (* Start with a bit of forward reasoning to bring the preconds forward *)
+        prefer 6
+        apply blast
+       prefer 6
+       apply(rule get_mi_inv)
+      prefer 5
+      find_theorems name:hoare_seq_ext
+      apply clarsimp
+      apply(rule return_sp)
+     prefer 4
+     apply(rule valid_pre_satisfies_post)
+     apply assumption
+     apply wpc
+*)
+        thm as_user_wp_thread_set_helper
+        thm get_message_info_ret_def getRegister_as_user_ret_def
+        (* setting of badge register *)
+        apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+          simp:get_message_info_ret_getRegister_as_user_ret)
+       apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
+         in hoare_gen_asm)
+       apply (simp split del: if_split)
+       (* setting of message_info register *)
+       (* apply(simp only:get_message_info_ret_getRegister_as_user_ret[symmetric]) *)
+       apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+         simp:set_message_info_def get_message_info_ret_getRegister_as_user_ret)
+      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and> caps = []"
+         in hoare_gen_asm)
+      apply clarsimp
+      (* Tom: shouldn't be needing to insert such facts in here
+      apply(rule_tac P="\<lambda>s. tcb_at sender s" in hoare_gen_asm_spec)
+       apply(rotate_tac -1)
+       apply assumption
+      *)
       apply(wp only:transfer_caps_none_valid[THEN hoare_strengthen_post])
       apply(clarsimp simp only:transfer_caps_none_ret_def)
+      (* no need for this now
       apply(rule conjI)
        (* badge_val conjunct *)
        apply clarsimp
        apply(clarsimp simp:Let_def)
        apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
        apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
+      *)
       (* message_info conjunct *)
-      apply(clarsimp simp:Let_def)
+      apply(clarsimp simp:Let_def split:option.splits)
+      (*
       apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
       apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
-      apply(rule conjI)
-       apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
-      apply clarsimp
-      apply(rule conjI)
-       apply clarsimp
-       (* sender = receiver case. can't we rule this out? FIXME *)
-       defer
-      apply clarsimp
-      apply(clarsimp split:option.splits if_splits)
-      apply(rule conjI)
-       (* kheap s sender = None case. we shouldn't have to deal with this either. FIXME *)
-       defer      
-      apply clarsimp
-      (*
+      *)
+      (* Still not sure how useful this validity predicate is *)
       using data_to_message_info_valid
       apply -
-      *)
+      apply(clarsimp simp:valid_message_info_def)
+      (* Is what's missing a predicate about mi *being* based on the message info retrieved
+         from the sender's registers, from the earlier part of do_normal_transfer? *)
       apply(clarsimp simp:data_to_message_info_def)
-      apply(clarsimp simp:Let_def)
+      apply(clarsimp simp:mi_length_def split:message_info.splits)
+      apply(erule_tac x="(mi_label mi << 12) || mrs_transferred" in meta_allE)
       apply(rule conjI)
-       apply clarsimp
-       apply(rule conjI)
-        (* that the message info length is the expected value of 0x78 (why 0x78?)*)
-        apply(clarsimp split:kernel_object.splits)
-        apply(rule conjI)
-         apply clarsimp
-         (* FIXME: we only care about the TCB case, get rid of the others *)
-         defer
-        apply(rule conjI)
-         apply clarsimp
-         apply(clarsimp split:user_context.splits)
-         (*
-         using data_to_message_info_valid
-         apply -
-         apply(erule_tac x="x2 msg_info_register" in meta_allE)
-         apply(clarsimp simp:valid_message_info_def)
-         apply(clarsimp simp:of_nat_def msg_max_length_def)
-         (* data_to_message_info_valid doesn't give it to us,
-            perhaps I ought to be using one of the earlier assumptions *)
-         apply(clarsimp simp:user_regs_def split:user_context.splits)
-         apply(clarsimp simp:arch_tcb_context_get_def arch_tcb_context_set_def)
-         *)
-         (* okay, not sure how to conclude the length is exactly 0x78. FIXME *)
-         defer
-        (* FIXME: don't care about the other kernel_object cases *)
+       apply(clarsimp simp:Let_def split:if_splits)
+        (* when the message info length v > 0x78 according to the sender, then the
+           message info length returned to the reciever should be 0x78 *)
         defer
-       apply(rule conjI)
-        (* that the extra caps field of MI is 0 *)
-        defer
-       apply(rule conjI)
-        (* that the caps_unwrapped field of MI is 0 *)
-        defer
-       thm data_to_message_info_def
-       (* that the label field of MI is the expected value *)
-       apply(clarsimp split:kernel_object.splits)
-       apply(rule conjI)
-        defer
-       apply(rule conjI)
-        apply(clarsimp split:user_context.splits)
-        apply(clarsimp simp:data_to_message_info_def)
+       (* otherwise the message info length should be v *)
+       defer
+      (*
+      apply(clarsimp simp:mi_label_def mask_def split:message_info.splits)
+      apply(clarsimp simp:of_nat_def msg_max_length_def)
+      *)
+      apply(rule conjI)
+       (* FIXME: that the extra caps field of MI is 0 *)
+       defer
+      apply(rule conjI)
+       (* FIXME: that the caps_unwrapped field of MI is 0 *)
+       defer
+      thm data_to_message_info_def
+      (* FIXME: that the label field of MI is the expected value *)
+      defer
+     (* I suspect the culprit is the use of transfer_caps_none_valid *)
+     thm transfer_caps_none_valid
+     apply wpsimp
+    apply wpsimp
+   apply wpsimp
+  apply wpsimp
+  (* use this to resolve badge_register vs msg_info_register distinctness*)
+  apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
   oops
 
 lemma handle_SysRecv_syscall_valid:
