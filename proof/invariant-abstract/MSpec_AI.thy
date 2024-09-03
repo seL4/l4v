@@ -386,21 +386,33 @@ lemma asUser_setRegister_getRegister_as_user:
   "\<lbrace>\<lambda>s. P (if t = t' \<and> r = r' then Some v else getRegister_as_user_ret s t' r')\<rbrace>
     as_user t (setRegister r v)
   \<lbrace>\<lambda>rv s. P (getRegister_as_user_ret s t' r')\<rbrace>"
-  sorry
-
-find_consts "_ \<Rightarrow> _ option \<Rightarrow> _ option"
+  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+  apply(clarsimp simp:getRegister_as_user_ret_def)
+  apply(rule conjI)
+   apply(clarsimp split:if_splits)
+    (* case: retrieving exactly the value that was set *)
+    apply(clarsimp split:user_context.splits)
+    apply(clarsimp simp:setRegister_def modify_def bind_def put_def)
+   (* case: retrieving whatever was in that unaffected register *)
+   apply(clarsimp simp:get_tcb_def split:option.splits kernel_object.splits)
+   apply(force simp:setRegister_def modify_def bind_def put_def get_def split:user_context.splits)
+  apply clarsimp
+  done
 
 lemma get_message_info_ret_getRegister_as_user_ret:
   "get_message_info_ret s t =
     Option.map_option data_to_message_info (getRegister_as_user_ret s t msg_info_register)"
-  sorry
+  by (clarsimp simp:get_message_info_ret_def getRegister_as_user_ret_def
+    split:option.splits kernel_object.splits user_context.splits)
 
 lemma do_normal_transfer_valid:
   "\<lbrace>(\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
       \<comment> \<open>when do we need to assert this?
       valid_ep_obj_with_message (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>\<close>
-      tcb_at sender s)
+      \<comment> \<open>and do we actually need this after all?
+      tcb_at sender s\<close>
+      True)
       and K (sender \<noteq> receiver \<and> grant = False)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
@@ -435,7 +447,6 @@ lemma do_normal_transfer_valid:
          in hoare_gen_asm)
        apply (simp split del: if_split)
        (* setting of message_info register *)
-       (* apply(simp only:get_message_info_ret_getRegister_as_user_ret[symmetric]) *)
        apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
          simp:set_message_info_def get_message_info_ret_getRegister_as_user_ret)
       apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and> caps = []"
