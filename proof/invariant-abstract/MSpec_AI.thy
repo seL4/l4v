@@ -228,13 +228,13 @@ lemma transfer_caps_loop_none:
 *)
 
 lemma transfer_caps_loop_none_valid:
-  "\<lbrace>\<lambda>_. caps = []\<rbrace> transfer_caps_loop ep rcv_buffer 0 caps slots mi
+  "\<lbrace>K (caps = [])\<rbrace> transfer_caps_loop ep rcv_buffer 0 caps slots mi
    \<lbrace>\<lambda>r _. r = MI (mi_length mi) 0 (mi_caps_unwrapped mi) (mi_label mi)\<rbrace>"
   unfolding transfer_caps_def
   by (clarsimp simp:valid_def return_def)
 
 lemma transfer_caps_none_valid:
-  "\<lbrace>\<lambda>_. caps = []\<rbrace> transfer_caps info caps endpoint receiver recv_buffer
+  "\<lbrace>K (caps = [])\<rbrace> transfer_caps info caps endpoint receiver recv_buffer
    \<lbrace>\<lambda>r s. r = transfer_caps_none_ret info recv_buffer\<rbrace>"
   unfolding transfer_caps_def transfer_caps_none_ret_def
   apply(clarsimp simp:Let_def)
@@ -449,7 +449,9 @@ lemma do_normal_transfer_valid:
        (* setting of message_info register *)
        apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
          simp:set_message_info_def get_message_info_ret_getRegister_as_user_ret)
-      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and> caps = []"
+      apply clarsimp
+      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
+         caps = [] \<and> mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi)"
          in hoare_gen_asm)
       apply clarsimp
       (* Tom: shouldn't be needing to insert such facts in here
@@ -457,6 +459,8 @@ lemma do_normal_transfer_valid:
        apply(rotate_tac -1)
        apply assumption
       *)
+      thm transfer_caps_none_valid[THEN hoare_strengthen_post]
+        transfer_caps_none_valid
       apply(wp only:transfer_caps_none_valid[THEN hoare_strengthen_post])
       apply(clarsimp simp only:transfer_caps_none_ret_def)
       (* no need for this now
@@ -468,43 +472,64 @@ lemma do_normal_transfer_valid:
        apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
       *)
       (* message_info conjunct *)
-      apply(clarsimp simp:Let_def split:option.splits)
+      apply(clarsimp simp:Let_def)
       (*
       apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
       apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
       *)
-      (* Still not sure how useful this validity predicate is *)
+      (* Still not sure how useful this validity predicate is
       using data_to_message_info_valid
       apply -
       apply(clarsimp simp:valid_message_info_def)
+      apply(erule_tac x="(mi_label mi << 12) || mrs_transferred" in meta_allE)
+      *)
       (* Is what's missing a predicate about mi *being* based on the message info retrieved
          from the sender's registers, from the earlier part of do_normal_transfer? *)
-      apply(clarsimp simp:data_to_message_info_def)
+      apply(clarsimp simp:data_to_message_info_def Let_def)
       apply(clarsimp simp:mi_length_def split:message_info.splits)
-      apply(erule_tac x="(mi_label mi << 12) || mrs_transferred" in meta_allE)
+(*
       apply(rule conjI)
+       (* case: no rbuf *)
        apply(clarsimp simp:Let_def split:if_splits)
-        (* when the message info length v > 0x78 according to the sender, then the
-           message info length returned to the reciever should be 0x78 *)
+       apply(rule conjI)
+        apply(clarsimp simp:copy_mrs_ret_def split:option.splits)
+        (* unfolding these bit operations doesn't seem promising
+        apply(clarsimp simp:of_nat_def min_def mask_def split:if_splits)
+        *)
         defer
-       (* otherwise the message info length should be v *)
        defer
+      (* case: some rbuf *)
+      apply clarsimp
+      apply(clarsimp simp:Let_def split:if_splits)
+      apply(rule conjI)
+       apply(clarsimp simp:copy_mrs_ret_def split:option.splits)
+      *)
+      apply(rule conjI)
+       apply clarsimp
+       (* when the message info length v > 0x78 according to the sender, then the
+          message info length returned to the receiver should be 0x78 *)
+       apply(clarsimp split:option.splits)
+        apply(rule conjI)
+         (* FIXME: that the extra caps field of MI is 0 *)
+         defer
+        apply(rule conjI)
+         (* FIXME: that the caps_unwrapped field of MI is 0 *)
+         defer
+        (* FIXME: that the label field of MI is the expected value *)
+        defer
+       defer
+       (* otherwise the message info length should be v *)
+      apply clarsimp
+      apply(clarsimp split:option.splits)
+       defer
+      defer
       (*
       apply(clarsimp simp:mi_label_def mask_def split:message_info.splits)
       apply(clarsimp simp:of_nat_def msg_max_length_def)
       *)
-      apply(rule conjI)
-       (* FIXME: that the extra caps field of MI is 0 *)
-       defer
-      apply(rule conjI)
-       (* FIXME: that the caps_unwrapped field of MI is 0 *)
-       defer
-      thm data_to_message_info_def
-      (* FIXME: that the label field of MI is the expected value *)
-      defer
-     (* I suspect the culprit is the use of transfer_caps_none_valid *)
-     thm transfer_caps_none_valid
-     apply wpsimp
+     apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
+       caps = []" in hoare_gen_asm)
+     apply(wpsimp wp:copy_mrs_ret_valid)
     apply wpsimp
    apply wpsimp
   apply wpsimp
