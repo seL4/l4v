@@ -146,12 +146,12 @@ where
     _ \<Rightarrow> None"
 
 lemma getRegister_as_user_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s'\<rbrace> as_user t $ getRegister r
-   \<lbrace>\<lambda> r' s''. s = s'' \<and> getRegister_as_user_ret s t r = Some r'\<rbrace>"
+  "\<lbrace>\<lambda>s. P s\<rbrace> as_user t $ getRegister r
+   \<lbrace>\<lambda> rv s. P s \<and> getRegister_as_user_ret s t r = Some rv\<rbrace>"
   unfolding getRegister_as_user_ret_def
   apply wp
    unfolding as_user_def
-   apply wpsimp
+   apply(wpsimp wp:set_object_wp)
   apply wpsimp
   unfolding AARCH64.getRegister_def get_tcb_def gets_def get_def
   apply(clarsimp split:option.splits kernel_object.splits AARCH64.user_context.splits
@@ -167,19 +167,51 @@ where
     _ \<Rightarrow> None"
 
 lemma get_message_info_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s'\<rbrace> get_message_info t
-   \<lbrace>\<lambda> r s''. s = s'' \<and> get_message_info_ret s t = Some r\<rbrace>"
+  "\<lbrace>P\<rbrace> get_message_info t
+   \<lbrace>\<lambda> rv s. P s \<and> get_message_info_ret s t = Some rv \<and> valid_message_info rv\<rbrace>"
   unfolding get_message_info_def get_message_info_ret_def
   apply wp
    unfolding as_user_def
-   apply wpsimp
+   apply(wpsimp wp:set_object_wp)
   apply wpsimp
   unfolding AARCH64.getRegister_def get_tcb_def gets_def get_def
   apply(clarsimp split:option.splits kernel_object.splits AARCH64.user_context.splits
     simp:bind_def return_def)
-  using AARCH64.user_context.sel by force
+  apply(rule conjI)
+   using AARCH64.user_context.sel apply force
+  by (rule data_to_message_info_valid)
+
+(* FIXME: In the long run we'll need to interface off the arch-specific parts properly.
+  But some of the return values depend on arch-specific implementations, so for now
+  while experimenting I'll just open up the Arch context and do it in here. *)
+context Arch begin global_naming AARCH64_A
+
+(* Tom's suggested helpers *)
+lemma asUser_setRegister_getRegister_as_user:
+  "\<lbrace>\<lambda>s. P (if t = t' \<and> r = r' then Some v else getRegister_as_user_ret s t' r')\<rbrace>
+    as_user t (setRegister r v)
+  \<lbrace>\<lambda>rv s. P (getRegister_as_user_ret s t' r')\<rbrace>"
+  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+  apply(clarsimp simp:getRegister_as_user_ret_def)
+  apply(rule conjI)
+   apply(clarsimp split:if_splits)
+    (* case: retrieving exactly the value that was set *)
+    apply(clarsimp split:user_context.splits)
+    apply(clarsimp simp:setRegister_def modify_def bind_def put_def)
+   (* case: retrieving whatever was in that unaffected register *)
+   apply(clarsimp simp:get_tcb_def split:option.splits kernel_object.splits)
+   apply(force simp:setRegister_def modify_def bind_def put_def get_def split:user_context.splits)
+  apply clarsimp
+  done
+
+lemma get_message_info_ret_getRegister_as_user_ret:
+  "get_message_info_ret s t =
+    Option.map_option data_to_message_info (getRegister_as_user_ret s t msg_info_register)"
+  by (clarsimp simp:get_message_info_ret_def getRegister_as_user_ret_def
+    split:option.splits kernel_object.splits user_context.splits)
 
 (* copy_mrs will only return the number of message registers successfully transferred *)
+thm copy_mrs_def
 definition copy_mrs_ret ::
   "obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> length_type \<Rightarrow> length_type"
 where
@@ -190,58 +222,75 @@ where
          _ \<Rightarrow> 0
     in min n (nat_to_len (hardware_mrs_len + buf_mrs_len))"
 
+(* not clear if we need to know that n = mi_label (the (get_message_info_ret s sender))
+   or that K (sender \<noteq> receiver \<and> receiver \<noteq> t) *)
+(* I think we have to know that n is constrained by the wellformedness requirements
+   of data_to_messageinfo_valid because it ultimately came from the sender's msg_info_register *)
 lemma copy_mrs_ret_valid:
-  "\<lbrace>\<top>\<rbrace> copy_mrs sender sbuf receiver rbuf n \<lbrace>\<lambda> r _. r = copy_mrs_ret sbuf rbuf n\<rbrace>"
+  "\<lbrace>(\<lambda>s. P (get_message_info_ret s t)) and K (t \<noteq> receiver \<and> n \<le> of_nat msg_max_length \<and>
+      (\<exists> mi. n = mi_length mi \<and> valid_message_info mi))\<rbrace>
+     copy_mrs sender sbuf receiver rbuf n
+   \<lbrace>\<lambda> r s. P (get_message_info_ret s t) \<and> r = copy_mrs_ret sbuf rbuf n\<rbrace>"
   unfolding copy_mrs_def copy_mrs_ret_def
-  by wpsimp
+  apply wpsimp
+     apply(rule conjI)
+      apply(wpsimp wp:mapM_wp simp:get_message_info_ret_def store_word_offs_def)
+       apply blast
+      apply(wpsimp wp:mapM_wp)
+     apply(wpsimp wp:mapM_wp simp:get_message_info_ret_def store_word_offs_def)
+    apply(rule_tac P="t \<noteq> receiver \<and> n \<le> of_nat msg_max_length" in hoare_gen_asm)
+    apply(clarsimp simp:get_message_info_ret_def[symmetric])
+    apply(wpsimp wp:mapM_wp)
+      apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+        simp:get_message_info_ret_getRegister_as_user_ret)
+     apply clarsimp
+     apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret[symmetric])
+     apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+       simp:get_message_info_ret_getRegister_as_user_ret)
+    apply blast
+   apply wpsimp
+  apply clarsimp
+  apply(insert valid_msg_length_strengthen)
+  apply(erule_tac x=mi in meta_allE)
+  apply clarsimp
+  apply(rule context_conjI)
+   apply(clarsimp simp:word_le_def)
+   (* FIXME: word inequalities... *)
+   defer
+  sorry
 
 (* Turns out Microkit won't transfers caps via channels, their endpoints shouldn't be given Grant.
   So we specify do_normal_transfer's behaviour under these assumptions. *)
 
 definition transfer_caps_none_ret :: "message_info \<Rightarrow> obj_ref option \<Rightarrow> message_info"
 where
-  "transfer_caps_none_ret info recv_buffer \<equiv>
-   let mi = MI (mi_length info) 0 0 (mi_label info)
-    in case recv_buffer of None \<Rightarrow> mi |
-         _ \<Rightarrow> (MI (mi_length mi) (word_of_nat 0) (mi_caps_unwrapped mi) (mi_label mi))"
+  "transfer_caps_none_ret info recv_buffer \<equiv> MI (mi_length info) 0 0 (mi_label info)"
 
 (* FIXME: We know all these things are true, I'm just not phrasing them in a way
    that makes them usable in the context of a wp proof.
    In particular, how do we say things about arguments to wp proofs if those arguments
    don't immediately seem to rely on the state? *)
-
-(* need caps = [] in the precondition for this to be usable
-lemma transfer_caps_none_valid:
-  "\<lbrace>P\<rbrace> transfer_caps info [] endpoint receiver recv_buffer
-   \<lbrace>\<lambda> r _. r = transfer_caps_none_ret info recv_buffer\<rbrace>"
-  unfolding transfer_caps_def transfer_caps_none_ret_def
-  by wpsimp
-*)
-
-(* no longer needed, just use hoare_strengthen post to achieve this
-lemma transfer_caps_loop_none:
-  "(\<forall> r s. r = MI (mi_length mi) (of_nat n) (mi_caps_unwrapped mi) (mi_label mi) \<longrightarrow> Q r s) \<Longrightarrow>
-   \<lbrace>\<lambda>s. caps = []\<rbrace> transfer_caps_loop ep rcv_buffer n caps slots mi \<lbrace>Q\<rbrace>"
-  unfolding transfer_caps_def
-  apply (wpsimp simp:Let_def split:option.splits)
-  by (clarsimp simp:valid_def return_def)
-*)
+(* NB: Turns out it's idiomatic to use `\<lbrace>P and K (state-independent assumptions on args)\<rbrace>` *)
 
 lemma transfer_caps_loop_none_valid:
-  "\<lbrace>K (caps = [])\<rbrace> transfer_caps_loop ep rcv_buffer 0 caps slots mi
-   \<lbrace>\<lambda>r _. r = MI (mi_length mi) 0 (mi_caps_unwrapped mi) (mi_label mi)\<rbrace>"
+  "\<lbrace>K (caps = []) and (\<lambda>s. P (get_message_info_ret s t))\<rbrace>
+     transfer_caps_loop ep rcv_buffer n caps slots mi
+   \<lbrace>\<lambda>r s. r = MI (mi_length mi) (of_nat n) (mi_caps_unwrapped mi) (mi_label mi) \<and>
+      P (get_message_info_ret s t)\<rbrace>"
   unfolding transfer_caps_def
   by (clarsimp simp:valid_def return_def)
 
 lemma transfer_caps_none_valid:
-  "\<lbrace>K (caps = [])\<rbrace> transfer_caps info caps endpoint receiver recv_buffer
-   \<lbrace>\<lambda>r s. r = transfer_caps_none_ret info recv_buffer\<rbrace>"
+  "\<lbrace>K (caps = []) and (\<lambda>s. P (get_message_info_ret s t))\<rbrace>
+     transfer_caps info caps endpoint receiver recv_buffer
+   \<lbrace>\<lambda>r s. r = transfer_caps_none_ret info recv_buffer \<and> P (get_message_info_ret s t)\<rbrace>"
   unfolding transfer_caps_def transfer_caps_none_ret_def
   apply(clarsimp simp:Let_def)
   apply wpsimp
      (* ah *this* is how you use them *)
      apply(wp only:transfer_caps_loop_none_valid[THEN hoare_strengthen_post])
      apply clarsimp
+     apply force
     apply clarsimp
    apply wp
   apply clarsimp
@@ -263,11 +312,6 @@ lemma get_cap_ret_valid:
    \<lbrace>Q\<rbrace>"
   unfolding get_cap_def get_cap_ret_def get_object_def
   by wpsimp
-
-(* FIXME: In the long run we'll need to interface off the arch-specific parts properly.
-  But some of the return values depend on arch-specific implementations, so for now
-  while experimenting I'll just open up the Arch context and do it in here. *)
-context Arch begin global_naming AARCH64_A
 
 definition
   lookup_ipc_buffer_ret :: "('a::state_ext) state \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> machine_word option"
@@ -361,49 +405,12 @@ thm getRegister_as_user_ret_valid
 
 find_theorems name:handle_fault valid
 
+(*
 declare getRegister_as_user_ret_valid get_message_info_ret_valid copy_mrs_ret_valid
   transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid [wp]
-
-thm transfer_caps_none_ret_def get_message_info_ret_def
-
-(* fragments that Tom typed in, related to forward reasoning - though he doesn't advise
-   to use that approach if we can do everything wp style
-  apply (rule hoare_pre)
-   apply (rule_tac P="\<not> grant" in hoare_gen_asm)
-
-  apply (rule bind_wp_fwd)
-thm get_message_info_def
-find_theorems valid get_message_info
-thm get_mi_sp
-ML_val \<open>
- @{term "do x <- f; g od"}
-\<close>
-find_theorems Nondet_Monad.bind valid
 *)
 
-(* Tom's suggested helpers *)
-lemma asUser_setRegister_getRegister_as_user:
-  "\<lbrace>\<lambda>s. P (if t = t' \<and> r = r' then Some v else getRegister_as_user_ret s t' r')\<rbrace>
-    as_user t (setRegister r v)
-  \<lbrace>\<lambda>rv s. P (getRegister_as_user_ret s t' r')\<rbrace>"
-  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
-  apply(clarsimp simp:getRegister_as_user_ret_def)
-  apply(rule conjI)
-   apply(clarsimp split:if_splits)
-    (* case: retrieving exactly the value that was set *)
-    apply(clarsimp split:user_context.splits)
-    apply(clarsimp simp:setRegister_def modify_def bind_def put_def)
-   (* case: retrieving whatever was in that unaffected register *)
-   apply(clarsimp simp:get_tcb_def split:option.splits kernel_object.splits)
-   apply(force simp:setRegister_def modify_def bind_def put_def get_def split:user_context.splits)
-  apply clarsimp
-  done
-
-lemma get_message_info_ret_getRegister_as_user_ret:
-  "get_message_info_ret s t =
-    Option.map_option data_to_message_info (getRegister_as_user_ret s t msg_info_register)"
-  by (clarsimp simp:get_message_info_ret_def getRegister_as_user_ret_def
-    split:option.splits kernel_object.splits user_context.splits)
+thm transfer_caps_none_ret_def get_message_info_ret_def
 
 lemma do_normal_transfer_valid:
   "\<lbrace>(\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
@@ -417,125 +424,67 @@ lemma do_normal_transfer_valid:
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
       get_message_info_ret s' receiver =
-      Some (transfer_caps_none_ret (the (get_message_info_ret s' sender)) rbuf)\<rbrace>"
+      (let mi = the (get_message_info_ret s' sender);
+           mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi)
+        \<comment> \<open>with grant = False, the extra_caps and caps_unwrapped end up as 0\<close>
+        in Some (MI mrs_transferred 0 0 (mi_label mi))) \<and>
+      valid_message_info (the (get_message_info_ret s' sender))\<rbrace>"
   unfolding do_normal_transfer_def
-  apply(wpsimp wp:crunch_wps simp:do_normal_transfer_def)
+  apply(wpsimp simp:do_normal_transfer_def)
 (* Advice from Tom: better to stick with wp approach and bring preconds in manually as needed
    using hoare_gen_asm and appropriate such tools, or prove better lemmas to infer the needed
    preconditions for given postconditions of the individual constituent functions in question. *)
-(* My brief, naive attempt to use forward reasoning:
-        (* Start with a bit of forward reasoning to bring the preconds forward *)
-        prefer 6
-        apply blast
-       prefer 6
-       apply(rule get_mi_inv)
-      prefer 5
-      find_theorems name:hoare_seq_ext
-      apply clarsimp
-      apply(rule return_sp)
-     prefer 4
-     apply(rule valid_pre_satisfies_post)
-     apply assumption
-     apply wpc
-*)
         thm as_user_wp_thread_set_helper
         thm get_message_info_ret_def getRegister_as_user_ret_def
         (* setting of badge register *)
         apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-          simp:get_message_info_ret_getRegister_as_user_ret)
+          simp:get_message_info_ret_getRegister_as_user_ret Let_def)
        apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
          in hoare_gen_asm)
        apply (simp split del: if_split)
        (* setting of message_info register *)
        apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
          simp:set_message_info_def get_message_info_ret_getRegister_as_user_ret)
-      apply clarsimp
+      apply(simp split del: if_split)
+      apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret[symmetric])
       apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
-         caps = [] \<and> mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi)"
-         in hoare_gen_asm)
+        caps = [] \<and> mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi) \<and>
+        valid_message_info mi" in hoare_gen_asm)
       apply clarsimp
-      (* Tom: shouldn't be needing to insert such facts in here
-      apply(rule_tac P="\<lambda>s. tcb_at sender s" in hoare_gen_asm_spec)
-       apply(rotate_tac -1)
-       apply assumption
-      *)
-      thm transfer_caps_none_valid[THEN hoare_strengthen_post]
-        transfer_caps_none_valid
-      apply(wp only:transfer_caps_none_valid[THEN hoare_strengthen_post])
-      apply(clarsimp simp only:transfer_caps_none_ret_def)
-      (* no need for this now
-      apply(rule conjI)
-       (* badge_val conjunct *)
-       apply clarsimp
+      (* Tom advised to try not to need to insert such facts, but I don't know how else yet. *)
+      apply(rule_tac P="\<lambda>s. mi = the (get_message_info_ret s sender)" in hoare_gen_asm_spec)
+       apply force
+      apply clarsimp
+      apply(wp only:transfer_caps_none_valid[where t=sender and P="valid_message_info \<circ> the",
+        THEN hoare_strengthen_post])
+       apply(clarsimp simp:valid_message_info_def)
+       apply(clarsimp simp only:transfer_caps_none_ret_def data_to_message_info_def)
        apply(clarsimp simp:Let_def)
-       apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
-       apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
-      *)
-      (* message_info conjunct *)
-      apply(clarsimp simp:Let_def)
-      (*
-      apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
-      apply(clarsimp simp:setRegister_def modify_def bind_def get_def put_def)
-      *)
-      (* Still not sure how useful this validity predicate is
-      using data_to_message_info_valid
-      apply -
-      apply(clarsimp simp:valid_message_info_def)
-      apply(erule_tac x="(mi_label mi << 12) || mrs_transferred" in meta_allE)
-      *)
-      (* Is what's missing a predicate about mi *being* based on the message info retrieved
-         from the sender's registers, from the earlier part of do_normal_transfer? *)
-      apply(clarsimp simp:data_to_message_info_def Let_def)
-      apply(clarsimp simp:mi_length_def split:message_info.splits)
-(*
-      apply(rule conjI)
-       (* case: no rbuf *)
-       apply(clarsimp simp:Let_def split:if_splits)
-       apply(rule conjI)
-        apply(clarsimp simp:copy_mrs_ret_def split:option.splits)
-        (* unfolding these bit operations doesn't seem promising
-        apply(clarsimp simp:of_nat_def min_def mask_def split:if_splits)
-        *)
-        defer
+       apply(clarsimp simp:mi_length_def split:message_info.splits)
+       (* FIXME: figure out how to prove these word inequalities *)
        defer
-      (* case: some rbuf *)
-      apply clarsimp
-      apply(clarsimp simp:Let_def split:if_splits)
-      apply(rule conjI)
-       apply(clarsimp simp:copy_mrs_ret_def split:option.splits)
-      *)
-      apply(rule conjI)
-       apply clarsimp
-       (* when the message info length v > 0x78 according to the sender, then the
-          message info length returned to the receiver should be 0x78 *)
-       apply(clarsimp split:option.splits)
-        apply(rule conjI)
-         (* FIXME: that the extra caps field of MI is 0 *)
-         defer
-        apply(rule conjI)
-         (* FIXME: that the caps_unwrapped field of MI is 0 *)
-         defer
-        (* FIXME: that the label field of MI is the expected value *)
-        defer
-       defer
-       (* otherwise the message info length should be v *)
-      apply clarsimp
-      apply(clarsimp split:option.splits)
-       defer
-      defer
-      (*
-      apply(clarsimp simp:mi_label_def mask_def split:message_info.splits)
-      apply(clarsimp simp:of_nat_def msg_max_length_def)
-      *)
+      apply simp
      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
-       caps = []" in hoare_gen_asm)
+        caps = [] \<and> valid_message_info mi" in hoare_gen_asm)
      apply(wpsimp wp:copy_mrs_ret_valid)
+    apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
+      in hoare_gen_asm)
+    apply clarsimp
     apply wpsimp
-   apply wpsimp
-  apply wpsimp
+   apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
+     in hoare_gen_asm)
+   apply clarsimp
+   apply(wpsimp wp:get_message_info_ret_valid[THEN hoare_strengthen_post])
+   apply(rule conjI)
+    (* FIXME: word inequality *)
+    defer
+   apply(rule_tac x=rv in exI)
+   apply(rule conjI)
+    apply(rule refl)
+   apply assumption
   (* use this to resolve badge_register vs msg_info_register distinctness*)
   apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
-  oops
+  sorry
 
 lemma handle_SysRecv_syscall_valid:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
