@@ -227,37 +227,72 @@ where
 (* I think we have to know that n is constrained by the wellformedness requirements
    of data_to_messageinfo_valid because it ultimately came from the sender's msg_info_register *)
 lemma copy_mrs_ret_valid:
-  "\<lbrace>(\<lambda>s. P (get_message_info_ret s t)) and K (t \<noteq> receiver \<and> n \<le> of_nat msg_max_length \<and>
+  "\<lbrace>(\<lambda>s. P (get_message_info_ret s t)) and K (t \<noteq> receiver \<and>
       (\<exists> mi. n = mi_length mi \<and> valid_message_info mi))\<rbrace>
      copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda> r s. P (get_message_info_ret s t) \<and> r = copy_mrs_ret sbuf rbuf n\<rbrace>"
   unfolding copy_mrs_def copy_mrs_ret_def
-  apply wpsimp
-     apply(rule conjI)
-      apply(wpsimp wp:mapM_wp simp:get_message_info_ret_def store_word_offs_def)
-       apply blast
-      apply(wpsimp wp:mapM_wp)
-     apply(wpsimp wp:mapM_wp simp:get_message_info_ret_def store_word_offs_def)
-    apply(rule_tac P="t \<noteq> receiver \<and> n \<le> of_nat msg_max_length" in hoare_gen_asm)
-    apply(clarsimp simp:get_message_info_ret_def[symmetric])
-    apply(wpsimp wp:mapM_wp)
-      apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-        simp:get_message_info_ret_getRegister_as_user_ret)
-     apply clarsimp
-     apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret[symmetric])
+  apply (simp del: upt_Suc)
+  (* Tom: consider removing these if they're making the goal state explode.
+  thm imp_disjL if_split *)
+  (* Tom: Also, a big risk with these is that if they split your goal into conjuncts of
+     two or more hoare triples, then solving one hoare triple might fill in the
+     precondition's schematic variable such that proving the rest might be impossible. *)
+  apply (wpsimp simp_del: upt_Suc split_del: if_split)
+    apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
+    apply(wpsimp wp:mapM_wp' simp:get_message_info_ret_def store_word_offs_def split_del: if_split)
+   apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
+   apply(wpsimp wp:mapM_wp' hoare_vcg_imp_lift split_del: if_split)
+     apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
      apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-       simp:get_message_info_ret_getRegister_as_user_ret)
-    apply blast
-   apply wpsimp
-  apply clarsimp
+       simp:get_message_info_ret_getRegister_as_user_ret split_del: if_split)
+    apply clarsimp
+    apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
+    apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+      simp:get_message_info_ret_getRegister_as_user_ret split_del: if_split)
+   apply clarsimp
+   apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret[symmetric])
+   apply(rule hoare_pre)
+    apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
+    apply(wpsimp wp:getRegister_as_user_ret_valid split_del: if_split)
+   apply(clarsimp split:option.splits)
+  apply(clarsimp simp:min_def)
   apply(insert valid_msg_length_strengthen)
   apply(erule_tac x=mi in meta_allE)
   apply clarsimp
+  apply(clarsimp simp:valid_message_info_def)
+  apply(simp only: unat_arith_simps unat_of_nat)
+  apply clarsimp
+(* Notes and other fragments from Tom above my old working:
   apply(rule context_conjI)
+   (* Tom: sometimes "apply unat_arith" might help, there might be one for words too *)
+   (* Tom: note, can't use of_nat_min because word is not a linordered_nonzero_semiring
+   using [[show_types = true, show_consts, show_sorts]]
+   thm refl[where 'a=nat]
+   find_theorems name: of_nat_min
+   print_locales
+   thm min_def
+   term linordered_nonzero_semiring
+   thm of_nat_min[where 'a="'b"]
+   using of_nat_min[where 'a="32 word" and x="length msg_registers"]
+   apply -
+   apply(erule_tac x="unat (mi_length mi)" in meta_allE)
+   *)
+   apply (simp only: unat_arith_simps unat_of_nat)
+   apply simp
+   apply (simp add: msg_max_length_def )
+thm valid_message_info_def
+find_theorems "length msg_registers"
+find_theorems name: length_m
+. (*
+   apply(clarsimp simp:plus_def)
+   apply(rule min.boundedI)
    apply(clarsimp simp:word_le_def)
+   find_theorems min "_ \<le> _"
    (* FIXME: word inequalities... *)
    defer
-  sorry
+*) *)
+  done
 
 (* Turns out Microkit won't transfers caps via channels, their endpoints shouldn't be given Grant.
   So we specify do_normal_transfer's behaviour under these assumptions. *)
@@ -420,7 +455,7 @@ lemma do_normal_transfer_valid:
       \<comment> \<open>and do we actually need this after all?
       tcb_at sender s\<close>
       True)
-      and K (sender \<noteq> receiver \<and> grant = False)\<rbrace>
+      and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
       get_message_info_ret s' receiver =
@@ -441,7 +476,7 @@ lemma do_normal_transfer_valid:
           simp:get_message_info_ret_getRegister_as_user_ret Let_def)
        apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
          in hoare_gen_asm)
-       apply (simp split del: if_split)
+       apply(simp split del: if_split)
        (* setting of message_info register *)
        apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
          simp:set_message_info_def get_message_info_ret_getRegister_as_user_ret)
@@ -451,19 +486,20 @@ lemma do_normal_transfer_valid:
         caps = [] \<and> mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi) \<and>
         valid_message_info mi" in hoare_gen_asm)
       apply clarsimp
-      (* Tom advised to try not to need to insert such facts, but I don't know how else yet. *)
+      (* Tom advised to try not to need to insert such facts, but I don't know how else yet.
       apply(rule_tac P="\<lambda>s. mi = the (get_message_info_ret s sender)" in hoare_gen_asm_spec)
        apply force
       apply clarsimp
+      *)
       apply(wp only:transfer_caps_none_valid[where t=sender and P="valid_message_info \<circ> the",
         THEN hoare_strengthen_post])
-       apply(clarsimp simp:valid_message_info_def)
-       apply(clarsimp simp only:transfer_caps_none_ret_def data_to_message_info_def)
-       apply(clarsimp simp:Let_def)
-       apply(clarsimp simp:mi_length_def split:message_info.splits)
-       (* FIXME: figure out how to prove these word inequalities *)
-       defer
-      apply simp
+      apply(clarsimp simp:valid_message_info_def)
+      apply(clarsimp simp only:transfer_caps_none_ret_def data_to_message_info_def)
+      apply(clarsimp simp:Let_def)
+      apply(clarsimp simp:mi_length_def split:message_info.splits)
+      (* FIXME: figure out how to prove these word inequalities, or carefully check I haven't
+         given myself an impossible goal. *)
+      defer
      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
         caps = [] \<and> valid_message_info mi" in hoare_gen_asm)
      apply(wpsimp wp:copy_mrs_ret_valid)
@@ -475,13 +511,9 @@ lemma do_normal_transfer_valid:
      in hoare_gen_asm)
    apply clarsimp
    apply(wpsimp wp:get_message_info_ret_valid[THEN hoare_strengthen_post])
-   apply(rule conjI)
-    (* FIXME: word inequality *)
-    defer
    apply(rule_tac x=rv in exI)
-   apply(rule conjI)
-    apply(rule refl)
-   apply assumption
+   apply clarsimp
+  apply clarsimp
   (* use this to resolve badge_register vs msg_info_register distinctness*)
   apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
   sorry
