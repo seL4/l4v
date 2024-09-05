@@ -541,8 +541,12 @@ lemma trim_shiftr_le_mask:
   "y \<le> mask n \<Longrightarrow> (x || (y::word64) >> n) = x >> n"
   sorry
 
-lemma trim_shiftl_ge_mask:
+lemma trim_shiftlr_above_mask:
   "m \<le> l - r \<Longrightarrow> (x << l >> r) && mask m = 0"
+  sorry
+
+lemma trim_shiftlr_below_mask:
+  "x \<le> mask (r - l) \<Longrightarrow> (x << l >> r) && mask m = 0"
   sorry
 
 term "(((x4 << 12) || (x2 << 7) || (x3 << 9) || x1) >> 7)"
@@ -598,7 +602,7 @@ lemma mi_to_data_to_mi:
     apply simp
    apply simp
    *)
-   apply(simp add:trim_shiftl_ge_mask) (* but the simplifier seems to know how to use it *)
+   apply(simp add:trim_shiftlr_above_mask) (* but the simplifier seems to know how to use it *)
    apply(insert shiftl_shiftr_id)
    apply(erule_tac x=7 in meta_allE)
    apply(erule_tac x=x2 in meta_allE)
@@ -621,31 +625,52 @@ lemma mi_to_data_to_mi:
    apply(erule meta_impE)
     apply(clarsimp simp:msg_max_length_def mask_def)
     apply unat_arith
-   (* FIXME: need a nicer way to get rid of x2. next approach was not useful
-   apply(insert trim_shiftr_le_mask)
+   apply(clarsimp simp:shiftr_over_or_dist bit.conj_disj_distribs)
+   apply(simp add:trim_shiftlr_above_mask) (* this handles when r < l *)
+   (* trial of lemma handling when l < r *)
+   using trim_shiftlr_below_mask[where l=7 and r=9 and m=3]
    apply(erule_tac x=x2 in meta_allE)
-   apply(rotate_tac -1) (* FIXME: fragile *)
-   apply(erule_tac x=9 in meta_allE)
-   apply(erule_tac x="(x4 << 12) || (x3 << 9)" in meta_allE)
-   apply(clarsimp simp:bit.disj_assoc msg_max_length_def)
    apply(erule meta_impE)
     apply(clarsimp simp:msg_max_extra_caps_def mask_def)
-    apply unat_arith
-   apply(clarsimp simp:bit.disj_commute)
-   *)
-   apply(clarsimp simp:shiftr_over_or_dist bit.conj_disj_distribs)
-   apply(simp add:trim_shiftl_ge_mask) (* FIXME: whoops, it doesn't handle when l < r *)
+   apply simp
    apply(erule_tac x=9 in meta_allE)
    apply(erule_tac x=x3 in meta_allE)
    apply(erule meta_impE)
     apply simp
+   (* FIXME: uh oh, how do I know anything about x3's bounds? it's not coming from  *)
    apply(erule meta_impE)
-    (* FIXME: uh oh, how do I know anything about x3's bounds? it's not coming from  *)
     defer
    apply clarsimp
-   apply(clarsimp simp:msg_max_extra_caps_def)
+   apply(clarsimp simp:mask_def)
    defer
   (* presumably we could follow a similar approach for x4 as for x2 and x3 *)
+  (* again get rid of x1. FIXME: de-duplicate. also, wouldn't this just be
+     a special case of whatever rule is used to get rid of x2, x3 here? *)
+  apply(erule_tac x=x1 in meta_allE)
+  apply(rotate_tac -1) (* FIXME: *super* annoying *)
+  apply(erule_tac x=12 in meta_allE)
+  apply(erule_tac x="(x4 << 12) || (x2 << 7) || (x3 << 9)" in meta_allE)
+  apply(clarsimp simp:bit.disj_assoc msg_max_length_def)
+  apply(erule meta_impE)
+   apply(clarsimp simp:msg_max_length_def mask_def)
+   apply unat_arith
+  apply(clarsimp simp:shiftr_over_or_dist bit.conj_disj_distribs)
+  using trim_shiftlr_below_mask[where l=7 and r=12 and m=52]
+   apply(erule_tac x=x2 in meta_allE)
+   apply(erule meta_impE)
+    apply(clarsimp simp:msg_max_extra_caps_def mask_def)
+    apply unat_arith
+   apply simp
+  using trim_shiftlr_below_mask[where l=9 and r=12 and m=52]
+  apply(erule_tac x=x3 in meta_allE)
+  apply(erule meta_impE)
+   (* FIXME: don't know anything about x3's bounds *)
+   defer
+  (* FIXME: need to know something about x4's bounds too? *)
+  apply(clarsimp simp:mask_def)
+  apply(erule_tac x=12 in meta_allE)
+  apply(erule_tac x=x4 in meta_allE)
+  apply simp
   sorry
 
 declare message_info_to_data.simps [simp del] (* proof becomes a mess if we leave these in *)
