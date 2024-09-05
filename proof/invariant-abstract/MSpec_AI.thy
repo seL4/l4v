@@ -447,17 +447,218 @@ declare getRegister_as_user_ret_valid get_message_info_ret_valid copy_mrs_ret_va
 
 thm transfer_caps_none_ret_def get_message_info_ret_def
 
+(* don't think we care about this
+lemma data_to_mi_to_data:
+  "data = message_info_to_data (data_to_message_info data)"
+  apply(case_tac data)
+  apply(clarsimp simp:data_to_message_info_def Let_def split del:if_split)
+  apply(clarsimp simp:mask_def)
+  apply(simp only:unat_arith_simps unat_of_nat)
+  apply(clarsimp simp:word_or_def word_and_def mask_def shiftl_def shiftr_def)
+  apply(rule conjI)
+   apply clarsimp
+   apply(simp only:unat_arith_simps unat_of_nat)
+   apply clarsimp
+  oops
+*)
+
+(* XXX
+lemma "valid_message_info mi \<Longrightarrow>
+  min (mi_length mi)
+   (word_of_nat (min (length msg_registers) (unat (mi_length mi))) +
+    word_of_nat (unat (mi_length mi) - length msg_registers)) =
+  min (word_of_nat (length msg_registers)) (mi_length mi)"
+  apply(clarsimp simp:min_def)
+  apply(insert valid_msg_length_strengthen)
+  apply(erule_tac x=mi in meta_allE)
+  apply(clarsimp simp:valid_message_info_def)
+  apply(simp only:unat_arith_simps unat_of_nat)
+  apply clarsimp
+*)
+
+(* this should be true if msg_max_length = 128, because mask 7 is 127 *)
+lemma mask_7_under_msg_max_idemp:
+  "unat (n::word64) \<le> msg_max_length \<Longrightarrow> n && mask 7 = n"
+  apply(simp only:and_mask_eq_iff_le_mask)
+  apply(clarsimp simp:msg_max_length_def mask_def)
+  apply unat_arith (* also try at other times: uint_arith *)
+  done
+
+lemma
+  "(x || y) && m = x && m || y && m"
+  using bit.conj_disj_distrib2
+  by blast
+
+thm le_mask_imp_and_mask
+lemma (* actually this isn't it. we really need to know it's a bit shift left of more than 7.
+  having it merely be bigger than 7 isn't enough. *)
+  "x > mask 7 \<Longrightarrow> y < mask 7 \<Longrightarrow> (x || y) && mask 7 = y"
+  apply(clarsimp simp:bit.conj_disj_distrib2)
+  find_theorems mask "_ && _ "
+  oops
+
+(* an existing lemma tells us when we shift by the mask length then mask it, we get 0 *)
+lemma "((y::word64) << 7) && mask 7 = 0"
+  using shiftl_mask_is_0
+  by blast
+
+(* generalisation when shifted *further* left of the mask. turns out this is provable
+  using exactly the same tactic as shiftl_mask_is_0 *)
+lemma shiftl_ge_mask_is_0:
+  "n \<ge> m \<Longrightarrow> ((y::word64) << n) && mask m = 0"
+  by (simp flip: take_bit_eq_mask add: take_bit_push_bit shiftl_def)
+
+lemma
+  "m \<ge> 7 \<Longrightarrow> x \<le> mask 7 \<Longrightarrow> ((y << m) || (x::word64)) && mask 7 = x && mask 7"
+  apply(clarsimp simp:bit.conj_disj_distrib2)
+  apply(simp only:shiftl_ge_mask_is_0)
+  apply clarsimp
+  done
+
+(* Johannes: Can try `apply word_bitwise` if word size is fixed. *)
+(* also potentially useful: methods word_eqI and word_eqI_solve *)
+lemma mi_to_data_to_mi_len:
+  "valid_message_info mi \<Longrightarrow>
+   unat (mi_length (data_to_message_info (message_info_to_data mi))) =
+     min msg_max_length (unat (mi_length mi))"
+  apply(case_tac mi)
+  apply(clarsimp simp:valid_message_info_def data_to_message_info_def Let_def min_def
+    split del:if_split)
+  apply(clarsimp simp:bit.conj_disj_distrib2 shiftl_ge_mask_is_0 msg_max_length_def)
+  apply(simp only:unat_arith_simps unat_of_nat)
+  apply(force simp:mask_7_under_msg_max_idemp msg_max_length_def)
+  done
+
+(*
+lemma shiftr_le_mask_is_0:
+  "y \<le> mask n \<Longrightarrow> ((y::word64) >> n) = 0"
+  sorry
+*)
+
+(* NB: These unproved helpers are used for x2 and x3 cases, but they might still be needed for
+   x4. Should determine whether that's true before deleting them to focus on x2 = x3 = 0 *)
+lemma trim_shiftr_le_mask:
+  "y \<le> mask n \<Longrightarrow> (x || (y::word64) >> n) = x >> n"
+  sorry
+
+lemma trim_shiftl_ge_mask:
+  "m \<le> l - r \<Longrightarrow> (x << l >> r) && mask m = 0"
+  sorry
+
+term "(((x4 << 12) || (x2 << 7) || (x3 << 9) || x1) >> 7)"
+term "(((x4 << 12) || (x2 << 7) || (x3 << 9)) >> 7)"
+term "a && (b << c)"
+
+lemma "a && b = b && a"
+  by (simp add:bit.conj_commute)
+
+(* FIXME: this really seems to be what we need, but is it generally true, or only
+   under certain circumstances? *)
+find_theorems data_to_message_info message_info_to_data
+lemma mi_to_data_to_mi:
+  "valid_message_info mi \<Longrightarrow>
+   data_to_message_info (message_info_to_data mi) =
+   MI (word_of_nat (min msg_max_length (unat (mi_length mi))))
+     (mi_extra_caps mi)
+     (mi_caps_unwrapped mi)
+     (mi_label mi)"
+  thm message_info_to_data_def
+  apply(case_tac mi)
+  apply(clarsimp simp:valid_message_info_def data_to_message_info_def Let_def
+    split del:if_split)
+  apply(rule conjI)
+   (* essentially redoing the mi_to_data_to_mi_len proof here *)
+   apply(clarsimp simp:bit.conj_disj_distrib2 shiftl_ge_mask_is_0 msg_max_length_def)
+   apply(simp only:unat_arith_simps unat_of_nat)
+   apply(force simp:mask_7_under_msg_max_idemp msg_max_length_def)
+  apply(insert trim_shiftr_le_mask)
+  (* XXX: Consider that proving this lemma for nonzero x2 and x3 is possibly a waste of time
+    given we're not ever transferring caps in our cases of interest for seL4_Recv anyway! *)
+  apply(rule conjI)
+   (* first we need to get rid of x1 *)
+   apply(erule_tac x=x1 in meta_allE)
+   apply(erule_tac x=7 in meta_allE)
+   apply(erule_tac x="(x4 << 12) || (x2 << 7) || (x3 << 9)" in meta_allE)
+   apply(clarsimp simp:bit.disj_assoc msg_max_length_def)
+   apply(erule meta_impE)
+    apply(clarsimp simp:msg_max_length_def mask_def)
+    apply unat_arith (* also try at other times: uint_arith *)
+   apply clarsimp
+   thm shiftl_over_or_dist shiftl_over_and_dist bit.conj_commute
+     shiftr_over_or_dist
+   apply(clarsimp simp:shiftr_over_or_dist)
+   apply(clarsimp simp:bit.conj_disj_distribs)
+   (* first attempt, instantiating it manually
+   apply(insert trim_shiftl_ge_mask)
+   apply(erule_tac x=2 in meta_allE)
+   apply(erule_tac x=12 in meta_allE)
+   apply(erule_tac x=7 in meta_allE)
+   apply(erule_tac x=x4 in meta_allE)
+   apply(erule meta_impE)
+    apply simp
+   apply simp
+   *)
+   apply(simp add:trim_shiftl_ge_mask) (* but the simplifier seems to know how to use it *)
+   apply(insert shiftl_shiftr_id)
+   apply(erule_tac x=7 in meta_allE)
+   apply(erule_tac x=x2 in meta_allE)
+   apply(erule meta_impE)
+    apply(clarsimp simp:msg_max_extra_caps_def)
+   apply(erule meta_impE)
+    apply(clarsimp simp:msg_max_extra_caps_def)
+    apply unat_arith
+   apply clarsimp
+   apply(clarsimp simp:msg_max_extra_caps_def)
+   apply(simp only:and_mask_eq_iff_le_mask)
+   apply(clarsimp simp:mask_def)
+  apply(rule conjI)
+   (* again get rid of x1. FIXME: just duplicating the long-winded pattern but should clean up *)
+   apply(erule_tac x=x1 in meta_allE)
+   apply(rotate_tac -1) (* FIXME: *super* annoying *)
+   apply(erule_tac x=9 in meta_allE)
+   apply(erule_tac x="(x4 << 12) || (x2 << 7) || (x3 << 9)" in meta_allE)
+   apply(clarsimp simp:bit.disj_assoc msg_max_length_def)
+   apply(erule meta_impE)
+    apply(clarsimp simp:msg_max_length_def mask_def)
+    apply unat_arith
+   (* FIXME: need a nicer way to get rid of x2. next approach was not useful
+   apply(insert trim_shiftr_le_mask)
+   apply(erule_tac x=x2 in meta_allE)
+   apply(rotate_tac -1) (* FIXME: fragile *)
+   apply(erule_tac x=9 in meta_allE)
+   apply(erule_tac x="(x4 << 12) || (x3 << 9)" in meta_allE)
+   apply(clarsimp simp:bit.disj_assoc msg_max_length_def)
+   apply(erule meta_impE)
+    apply(clarsimp simp:msg_max_extra_caps_def mask_def)
+    apply unat_arith
+   apply(clarsimp simp:bit.disj_commute)
+   *)
+   apply(clarsimp simp:shiftr_over_or_dist bit.conj_disj_distribs)
+   apply(simp add:trim_shiftl_ge_mask) (* FIXME: whoops, it doesn't handle when l < r *)
+   apply(erule_tac x=9 in meta_allE)
+   apply(erule_tac x=x3 in meta_allE)
+   apply(erule meta_impE)
+    apply simp
+   apply(erule meta_impE)
+    (* FIXME: uh oh, how do I know anything about x3's bounds? it's not coming from  *)
+    defer
+   apply clarsimp
+   apply(clarsimp simp:msg_max_extra_caps_def)
+   defer
+  (* presumably we could follow a similar approach for x4 as for x2 and x3 *)
+  sorry
+
+declare message_info_to_data.simps [simp del] (* proof becomes a mess if we leave these in *)
 lemma do_normal_transfer_valid:
   "\<lbrace>(\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
       \<comment> \<open>when do we need to assert this?
       valid_ep_obj_with_message (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>\<close>
-      \<comment> \<open>and do we actually need this after all?
-      tcb_at sender s\<close>
-      True)
+      P (get_message_info_ret s sender))
       and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
-   \<lbrace>\<lambda> _ s'. getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
+   \<lbrace>\<lambda> _ s'. P (get_message_info_ret s' sender) \<and>
+      getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
       get_message_info_ret s' receiver =
       (let mi = the (get_message_info_ret s' sender);
            mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi)
@@ -469,8 +670,10 @@ lemma do_normal_transfer_valid:
 (* Advice from Tom: better to stick with wp approach and bring preconds in manually as needed
    using hoare_gen_asm and appropriate such tools, or prove better lemmas to infer the needed
    preconditions for given postconditions of the individual constituent functions in question. *)
+        (*
         thm as_user_wp_thread_set_helper
         thm get_message_info_ret_def getRegister_as_user_ret_def
+        *)
         (* setting of badge register *)
         apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
           simp:get_message_info_ret_getRegister_as_user_ret Let_def)
@@ -491,26 +694,127 @@ lemma do_normal_transfer_valid:
        apply force
       apply clarsimp
       *)
-      apply(wp only:transfer_caps_none_valid[where t=sender and P="valid_message_info \<circ> the",
-        THEN hoare_strengthen_post])
-      apply(clarsimp simp:valid_message_info_def)
-      apply(clarsimp simp only:transfer_caps_none_ret_def data_to_message_info_def)
-      apply(clarsimp simp:Let_def)
-      apply(clarsimp simp:mi_length_def split:message_info.splits)
-      (* FIXME: figure out how to prove these word inequalities, or carefully check I haven't
-         given myself an impossible goal. *)
-      defer
+      apply(wp only:transfer_caps_none_valid[where t=sender, THEN hoare_strengthen_post])
+      apply(simp split del:if_split)
      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
         caps = [] \<and> valid_message_info mi" in hoare_gen_asm)
-     apply(wpsimp wp:copy_mrs_ret_valid)
+     apply(wpsimp wp:copy_mrs_ret_valid[where t=sender, THEN hoare_strengthen_post])
+     apply(simp split del:if_split)
     apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
       in hoare_gen_asm)
     apply clarsimp
     apply wpsimp
    apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
      in hoare_gen_asm)
-   apply clarsimp
-   apply(wpsimp wp:get_message_info_ret_valid[THEN hoare_strengthen_post])
+   apply(clarsimp simp:transfer_caps_none_ret_def)
+   apply(wpsimp wp:get_message_info_ret_valid[where P="\<lambda>s. P (get_message_info_ret s sender)",
+     THEN hoare_strengthen_post])
+   apply(rule conjI)
+    (* an attempt to reduce it to equality of constructor arguments, where
+       I could discharge the first using mi_to_data_to_mi_len ... *)
+    (* apply(rule mi_to_data_to_mi) *)
+    apply(insert message_info.collapse[symmetric])
+    apply(erule_tac x="data_to_message_info
+            (message_info_to_data
+              (MI (copy_mrs_ret sbuf rbuf (mi_length rv)) 0 0
+                (mi_label rv)))" in meta_allE)
+    (* well, now we can compare them field by field? apparently not so easily  *)
+    apply(insert message_info.inject)
+    apply(simp only:message_info.inject message_info.collapse[symmetric]) (* nope *)
+    (* don't know how to make this work without slogging through it, should just try
+      to go back and prove the mi_to_data_to_mi lemma properly for now... *)
+    (*
+    apply(insert valid_msg_length_strengthen)
+    apply(erule_tac x=rv in meta_allE)
+    apply(clarsimp simp:copy_mrs_ret_def valid_message_info_def
+      simp del: upt_Suc split:option.splits split del:if_split)
+    apply(clarsimp simp:data_to_message_info_def message_info_to_data.simps Let_def
+      simp del: upt_Suc split del:if_split)
+    apply(rule conjI)
+     apply(clarsimp split del:if_split)
+     apply(rule context_conjI)
+      apply(clarsimp simp:min_def)
+      apply(rule context_conjI)
+       apply clarsimp
+       apply(rule context_conjI)
+        apply clarsimp
+        apply(rule context_conjI)
+         (* apply(simp only:unat_arith_simps unat_of_nat) *)
+         apply clarsimp
+         apply(rule context_conjI)
+          apply(simp add:msg_max_length_def)
+          apply clarsimp
+          (* apply(simp only:unat_arith_simps unat_of_nat) *)
+          apply(clarsimp simp:mask_def word_or_def word_and_def)
+          (* need something that distributes word_of_int over bitwise OR, AND?
+          find_theorems word_of_int "_ OR _"
+          thm word_of_int_uint (* apparently this is already in the simp set *)
+          *)
+          apply(simp only:unat_arith_simps)
+          apply(simp only:uint_word_of_int)
+          apply clarsimp
+          using unat_of_int_64
+          apply -
+          apply(subgoal_tac "120 < nat ((uint (mi_label rv << 12) OR uint (word_of_nat (length msg_registers))) mod
+             18446744073709551616 AND
+             127)")
+           prefer 2
+           apply(erule_tac x="((uint (mi_label rv << 12) OR uint (mi_length rv)) mod
+               18446744073709551616 AND 127)" in meta_allE)
+           apply simp
+           defer
+          apply simp
+          apply(subgoal_tac "120 < ((uint (mi_label rv << 12) OR
+               uint (word_of_nat (length msg_registers))) mod
+              18446744073709551616 AND
+              127)")
+           prefer 2
+           apply(erule_tac x="((uint (mi_label rv << 12) OR
+                uint (word_of_nat (length msg_registers))) mod
+               18446744073709551616 AND
+               127)" in meta_allE)
+           apply simp
+           defer
+          apply(simp only:unat_arith_simps unat_of_nat)
+          apply clarsimp
+          
+          . (* FIXME: maybe I have painted myself into an impossible corner...
+          apply(simp (no_asm))
+          apply(simp only:unat_arith_simps unat_of_nat)
+          
+          
+          (* using unat_of_int_64[where i="0x78",simplified] *)
+. (*
+          apply(simp only:unat_of_int_64)
+
+          apply clarsimp
+find_theorems name:unat word_of_int
+          apply(simp only:bwsimps wils1)
+          apply(simp only:unat_arith_simps unat_of_nat)
+          apply clarsimp
+          apply(clarsimp simp:or_nat_def and_nat_def)
+          apply(simp only:uint_arith_simps unat_of_nat)
+          
+          apply clarsimp
+thm of_nat_inverse
+         apply(simp only:unat_word_ariths)
+         find_theorems name:word name:arith
+     apply(clarsimp simp:min_def split del:if_split)
+     apply(simp only:unat_arith_simps unat_of_nat)
+apply(simp only:uint_word_ariths)
+     apply clarsimp
+    apply(clarsimp simp:data_to_message_info_def message_info_to_data_def Let_def split del:if_split)
+    apply(insert valid_msg_length_strengthen)
+    apply(erule_tac x=rv in meta_allE)
+    apply(rule conjI)
+     apply(clarsimp simp:valid_message_info_def split del:if_split)
+     apply(simp only:unat_arith_simps unat_of_nat)
+     defer
+    apply(rule conjI)
+     apply(simp only: unat_arith_simps unat_of_nat)
+     
+    defer
+    *) *) *) defer
    apply(rule_tac x=rv in exI)
    apply clarsimp
   apply clarsimp
