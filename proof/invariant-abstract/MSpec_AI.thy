@@ -283,11 +283,8 @@ definition transfer_caps_none_ret :: "message_info \<Rightarrow> obj_ref option 
 where
   "transfer_caps_none_ret info recv_buffer \<equiv> MI (mi_length info) 0 0 (mi_label info)"
 
-(* FIXME: We know all these things are true, I'm just not phrasing them in a way
-   that makes them usable in the context of a wp proof.
-   In particular, how do we say things about arguments to wp proofs if those arguments
-   don't immediately seem to rely on the state? *)
-(* NB: Turns out it's idiomatic to use `\<lbrace>P and K (state-independent assumptions on args)\<rbrace>` *)
+(* NB: Turns out it's idiomatic to use `\<lbrace>P and K (state-independent assumptions on args)\<rbrace>`
+   to state state-independent assumptions about arguments to functions for their wp lemmas. *)
 
 lemma transfer_caps_loop_none_valid:
   "\<lbrace>K (caps = []) and (\<lambda>s. P (get_message_info_ret s t))\<rbrace>
@@ -413,51 +410,6 @@ where
        _ \<Rightarrow> False) |
      _ \<Rightarrow> False"
 
-thm getRegister_as_user_ret_valid
-  get_message_info_ret_valid
-  copy_mrs_ret_valid
-  transfer_caps_none_valid
-  get_cap_ret_valid
-  lookup_ipc_buffer_ret_valid
-
-find_theorems name:handle_fault valid
-
-(*
-declare getRegister_as_user_ret_valid get_message_info_ret_valid copy_mrs_ret_valid
-  transfer_caps_none_valid get_cap_ret_valid lookup_ipc_buffer_ret_valid [wp]
-*)
-
-thm transfer_caps_none_ret_def get_message_info_ret_def
-
-(* don't think we care about this
-lemma data_to_mi_to_data:
-  "data = message_info_to_data (data_to_message_info data)"
-  apply(case_tac data)
-  apply(clarsimp simp:data_to_message_info_def Let_def split del:if_split)
-  apply(clarsimp simp:mask_def)
-  apply(simp only:unat_arith_simps unat_of_nat)
-  apply(clarsimp simp:word_or_def word_and_def mask_def shiftl_def shiftr_def)
-  apply(rule conjI)
-   apply clarsimp
-   apply(simp only:unat_arith_simps unat_of_nat)
-   apply clarsimp
-  oops
-*)
-
-(* XXX
-lemma "valid_message_info mi \<Longrightarrow>
-  min (mi_length mi)
-   (word_of_nat (min (length msg_registers) (unat (mi_length mi))) +
-    word_of_nat (unat (mi_length mi) - length msg_registers)) =
-  min (word_of_nat (length msg_registers)) (mi_length mi)"
-  apply(clarsimp simp:min_def)
-  apply(insert valid_msg_length_strengthen)
-  apply(erule_tac x=mi in meta_allE)
-  apply(clarsimp simp:valid_message_info_def)
-  apply(simp only:unat_arith_simps unat_of_nat)
-  apply clarsimp
-*)
-
 (* this should be true if msg_max_length = 128, because mask 7 is 127 *)
 lemma mask_7_under_msg_max_idemp:
   "unat (n::word64) \<le> msg_max_length \<Longrightarrow> n && mask 7 = n"
@@ -466,36 +418,14 @@ lemma mask_7_under_msg_max_idemp:
   apply unat_arith (* also try at other times: uint_arith *)
   done
 
-lemma
-  "(x || y) && m = x && m || y && m"
-  using bit.conj_disj_distrib2
-  by blast
-
-thm le_mask_imp_and_mask
-lemma (* actually this isn't it. we really need to know it's a bit shift left of more than 7.
-  having it merely be bigger than 7 isn't enough. *)
-  "x > mask 7 \<Longrightarrow> y < mask 7 \<Longrightarrow> (x || y) && mask 7 = y"
-  apply(clarsimp simp:bit.conj_disj_distrib2)
-  find_theorems mask "_ && _ "
-  oops
-
 (* an existing lemma tells us when we shift by the mask length then mask it, we get 0 *)
-lemma "((y::word64) << 7) && mask 7 = 0"
-  using shiftl_mask_is_0
-  by blast
+thm shiftl_mask_is_0
 
 (* generalisation when shifted *further* left of the mask. turns out this is provable
   using exactly the same tactic as shiftl_mask_is_0 *)
 lemma shiftl_ge_mask_is_0:
   "n \<ge> m \<Longrightarrow> ((y::word64) << n) && mask m = 0"
   by (simp flip: take_bit_eq_mask add: take_bit_push_bit shiftl_def)
-
-lemma
-  "m \<ge> 7 \<Longrightarrow> x \<le> mask 7 \<Longrightarrow> ((y << m) || (x::word64)) && mask 7 = x && mask 7"
-  apply(clarsimp simp:bit.conj_disj_distrib2)
-  apply(simp only:shiftl_ge_mask_is_0)
-  apply clarsimp
-  done
 
 (* Johannes: Can try `apply word_bitwise` if word size is fixed. *)
 (* also potentially useful: methods word_eqI and word_eqI_solve *)
@@ -511,21 +441,6 @@ lemma mi_to_data_to_mi_len:
   apply(force simp:mask_7_under_msg_max_idemp msg_max_length_def)
   done
 
-(*
-lemma shiftr_le_mask_is_0:
-  "y \<le> mask n \<Longrightarrow> ((y::word64) >> n) = 0"
-  sorry
-*)
-
-(* NB: These unproved helpers are used for x2 and x3 cases, but they might still be needed for
-   x4. Should determine whether that's true before deleting them to focus on x2 = x3 = 0 *)
-(* I suspect this is wrong - trying to use trim_shiftlr_below_mask instead
-lemma trim_shiftr_le_mask:
-  "y \<le> mask n \<Longrightarrow> (x || (y::word64) >> n) = x >> n"
-  sorry
-*)
-
-(* this is still needed for x4 *)
 lemma trim_shiftlr_above_mask:
   "r \<le> l \<Longrightarrow> m \<le> l - r \<Longrightarrow> ((x::64 word) << l >> r) && mask m = 0"
   (* informally: if m \<le> l - r, then x << (l - r) lies outside the mask of m *)
@@ -533,31 +448,21 @@ lemma trim_shiftlr_above_mask:
   apply word_eqI
   done
 
-(* XXX: apparently this was only used for handling of x2 and x3,
-   but it now replaces use of (potentially untrue) trim_shiftr_le_mask for x1 *)
 lemma trim_shiftlr_below_mask:
   "r > l \<Longrightarrow> (x::64 word) \<le> mask (r - l) \<Longrightarrow> (x << l >> r) && mask m = 0"
   apply(simp add:shiftl_shiftr2[where b=l and c=r and a=x])
   apply word_eqI
   done
 
-term "(((x4 << 12) || (x2 << 7) || (x3 << 9) || x1) >> 7)"
-term "(((x4 << 12) || (x2 << 7) || (x3 << 9)) >> 7)"
-term "a && (b << c)"
-
-lemma "a && b = b && a"
-  by (simp add:bit.conj_commute)
-
-(* FIXME: this really seems to be what we need, but is it generally true, or only
-   under certain circumstances? *)
-find_theorems data_to_message_info message_info_to_data
 lemma mi_to_data_to_mi:
   "valid_message_info mi \<Longrightarrow>
    mi_extra_caps mi = 0 \<Longrightarrow>
    mi_caps_unwrapped mi = 0 \<Longrightarrow>
-   mi_label mi \<le> mask 52 \<Longrightarrow>
+   \<comment> \<open>I think we get this only about the produced MI by the fact that the upper 12 bits
+     of the label will be truncated by shifting the 64-bit value left by 12 bits.
+   mi_label mi \<le> mask 52 \<Longrightarrow> \<close>
    data_to_message_info (message_info_to_data mi) =
-   MI (word_of_nat (min msg_max_length (unat (mi_length mi)))) 0 0 (mi_label mi)"
+   MI (word_of_nat (min msg_max_length (unat (mi_length mi)))) 0 0 (mi_label mi && mask 52)"
   thm message_info_to_data_def
   apply(case_tac mi)
   apply(clarsimp simp:valid_message_info_def data_to_message_info_def Let_def
@@ -567,11 +472,9 @@ lemma mi_to_data_to_mi:
    apply(clarsimp simp:bit.conj_disj_distrib2 shiftl_ge_mask_is_0 msg_max_length_def)
    apply(simp only:unat_arith_simps unat_of_nat)
    apply(force simp:mask_7_under_msg_max_idemp msg_max_length_def)
-  (* for getting rid of x1 from the later conjuncts *)
+  (* for getting rid of x1 from each conjunct *)
   apply(insert trim_shiftlr_below_mask[where l=0])
   apply simp
-  (* XXX: Consider that proving this lemma for nonzero x2 and x3 is possibly a waste of time
-    given we're not ever transferring caps in our cases of interest for seL4_Recv anyway! *)
   apply(rename_tac x1 x4)
   apply(rule conjI)
    (* finish getting rid of x1 *)
@@ -584,38 +487,8 @@ lemma mi_to_data_to_mi:
     apply unat_arith (* also try at other times: uint_arith *)
    apply(clarsimp simp:shiftr_over_or_dist)
    apply(clarsimp simp:bit.conj_disj_distribs)
-   (* XXX: handling of x4, x3
-   thm shiftl_over_or_dist shiftl_over_and_dist bit.conj_commute
-     shiftr_over_or_dist
-   apply(clarsimp simp:shiftr_over_or_dist)
-   apply(clarsimp simp:bit.conj_disj_distribs)
-   (* first attempt, instantiating it manually
-   apply(insert trim_shiftl_ge_mask)
-   apply(erule_tac x=2 in meta_allE)
-   apply(erule_tac x=12 in meta_allE)
-   apply(erule_tac x=7 in meta_allE)
-   apply(erule_tac x=x4 in meta_allE)
-   apply(erule meta_impE)
-    apply simp
-   apply simp
-   *)
-   *)
-   (* still needed for x4 *)
-   apply(simp add:trim_shiftlr_above_mask) (* but the simplifier seems to know how to use it *)
-   (* XXX: handling of x2
-   apply(insert shiftl_shiftr_id)
-   apply(erule_tac x=7 in meta_allE)
-   apply(erule_tac x=x2 in meta_allE)
-   apply(erule meta_impE)
-    apply(clarsimp simp:msg_max_extra_caps_def)
-   apply(erule meta_impE)
-    apply(clarsimp simp:msg_max_extra_caps_def)
-    apply unat_arith
-   apply clarsimp
-   apply(clarsimp simp:msg_max_extra_caps_def)
-   apply(simp only:and_mask_eq_iff_le_mask)
-   apply(clarsimp simp:mask_def)
-   *)
+   (* get rid of x4 *)
+   apply(simp add:trim_shiftlr_above_mask)
   apply(rule conjI)
    apply(erule_tac x=9 in meta_allE)
    apply(erule_tac x=x1 in meta_allE)
@@ -625,27 +498,7 @@ lemma mi_to_data_to_mi:
     apply(clarsimp simp:msg_max_length_def mask_def)
     apply unat_arith
    apply(clarsimp simp:shiftr_over_or_dist bit.conj_disj_distribs)
-   (* handling of x4 *)
-   apply(simp add:trim_shiftlr_above_mask) (* this handles when r < l *)
-   (* XXX: handling of x2, x3
-   (* trial of lemma handling when l < r *)
-   using trim_shiftlr_below_mask[where l=7 and r=9 and m=3]
-   apply(erule_tac x=x2 in meta_allE)
-   apply(erule meta_impE)
-    apply(clarsimp simp:msg_max_extra_caps_def mask_def)
-   apply simp
-   apply(erule_tac x=9 in meta_allE)
-   apply(erule_tac x=x3 in meta_allE)
-   apply(erule meta_impE)
-    apply simp
-   (* FIXME: uh oh, how do I know anything about x3's bounds? it's not coming from  *)
-   apply(erule meta_impE)
-    defer
-   apply clarsimp
-   apply(clarsimp simp:mask_def)
-   defer
-  *)
-  (* presumably we could follow a similar approach for x4 as for x2 and x3 *)
+   apply(simp add:trim_shiftlr_above_mask)
   apply(erule_tac x=12 in meta_allE)
   apply(erule_tac x=x1 in meta_allE)
   apply(erule_tac x=52 in meta_allE)
@@ -654,29 +507,7 @@ lemma mi_to_data_to_mi:
    apply(clarsimp simp:msg_max_length_def mask_def)
    apply unat_arith
   apply(clarsimp simp:shiftr_over_or_dist bit.conj_disj_distribs)
-  (* XXX: handling of x2, x3
-  using trim_shiftlr_below_mask[where l=7 and r=12 and m=52]
-   apply(erule_tac x=x2 in meta_allE)
-   apply(erule meta_impE)
-    apply(clarsimp simp:msg_max_extra_caps_def mask_def)
-    apply unat_arith
-   apply simp
-  using trim_shiftlr_below_mask[where l=9 and r=12 and m=52]
-  apply(erule_tac x=x3 in meta_allE)
-  apply(erule meta_impE)
-   (* FIXME: don't know anything about x3's bounds *)
-   defer
-  *)
-  apply(insert shiftl_shiftr_id)
-  apply(erule_tac x=12 in meta_allE)
-  apply(erule_tac x=x4 in meta_allE)
-  apply simp
-  apply(erule meta_impE)
-   apply(clarsimp simp:mask_def)
-   apply unat_arith
-  apply clarsimp
-  apply(simp only:and_mask_eq_iff_le_mask)
-  done
+  by word_eqI metis
 
 declare message_info_to_data.simps [simp del] (* proof becomes a mess if we leave these in *)
 lemma do_normal_transfer_valid:
@@ -692,18 +523,15 @@ lemma do_normal_transfer_valid:
       get_message_info_ret s' receiver =
       (let mi = the (get_message_info_ret s' sender);
            mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi)
-        \<comment> \<open>with grant = False, the extra_caps and caps_unwrapped end up as 0\<close>
-        in Some (MI mrs_transferred 0 0 (mi_label mi))) \<and>
+        \<comment> \<open>With grant = False, the extra_caps and caps_unwrapped end up as 0. Moreover, the
+           conversion from MI to data format will truncate the original label's top 12 bits.\<close>
+        in Some (MI mrs_transferred 0 0 (mi_label mi && mask 52))) \<and>
       valid_message_info (the (get_message_info_ret s' sender))\<rbrace>"
   unfolding do_normal_transfer_def
   apply(wpsimp simp:do_normal_transfer_def)
-(* Advice from Tom: better to stick with wp approach and bring preconds in manually as needed
-   using hoare_gen_asm and appropriate such tools, or prove better lemmas to infer the needed
+(* Advice from Tom: better to stick with wp approach & bring in only state-independent assumptions
+   using hoare_gen_asm etc, but for state-dependent preconds, prove better lemmas to infer needed
    preconditions for given postconditions of the individual constituent functions in question. *)
-        (*
-        thm as_user_wp_thread_set_helper
-        thm get_message_info_ret_def getRegister_as_user_ret_def
-        *)
         (* setting of badge register *)
         apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
           simp:get_message_info_ret_getRegister_as_user_ret Let_def)
@@ -719,11 +547,8 @@ lemma do_normal_transfer_valid:
         caps = [] \<and> mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi) \<and>
         valid_message_info mi" in hoare_gen_asm)
       apply clarsimp
-      (* Tom advised to try not to need to insert such facts, but I don't know how else yet.
-      apply(rule_tac P="\<lambda>s. mi = the (get_message_info_ret s sender)" in hoare_gen_asm_spec)
-       apply force
-      apply clarsimp
-      *)
+      (* Note: Tom advised to try not to insert state-dependent facts using hoare_gen_asm_spec,
+         but rather try to prove wp lemmas that give the needed precondition. *)
       apply(wp only:transfer_caps_none_valid[where t=sender, THEN hoare_strengthen_post])
       apply(simp split del:if_split)
      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
@@ -752,10 +577,6 @@ lemma do_normal_transfer_valid:
      apply clarsimp
      apply(clarsimp simp:min_def)
      apply(simp only:unat_arith_simps unat_of_nat)
-    apply(erule meta_impE)
-     (* FIXME: where can we get this assumption? *)
-     find_theorems mi_label
-     defer
     using copy_mrs_ret_leq_msg_max_length
     apply force
    apply(rule_tac x=rv in exI)
@@ -763,7 +584,7 @@ lemma do_normal_transfer_valid:
   apply clarsimp
   (* use this to resolve badge_register vs msg_info_register distinctness*)
   apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
-  sorry
+  done
 
 lemma handle_SysRecv_syscall_valid:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
