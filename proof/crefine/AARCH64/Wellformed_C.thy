@@ -666,9 +666,23 @@ lemma ptrFromPAddr_mask_cacheLineSize[simp]:
   by (simp add: ptrFromPAddr_def add_mask_ignore)
 
 (* The magic 4 comes out of the bitfield generator -- this applies to all versions of the kernel. *)
-lemma ThreadState_Restart_mask[simp]:
+lemma
+  shows ThreadState_Restart_mask[simp]:
   "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
-  by (simp add: ThreadState_Restart_def mask_def)
+  and ThreadState_Inactive_mask[simp]:
+  "(scast ThreadState_Inactive::machine_word) && mask 4 = scast ThreadState_Inactive"
+  and ThreadState_Running_mask[simp]:
+  "(scast ThreadState_Running::machine_word) && mask 4 = scast ThreadState_Running"
+  and ThreadState_BlockedOnReceive_mask[simp]:
+  "(scast ThreadState_BlockedOnReceive::machine_word) && mask 4 = scast ThreadState_BlockedOnReceive"
+  and ThreadState_BlockedOnSend_mask[simp]:
+  "(scast ThreadState_BlockedOnSend::machine_word) && mask 4 = scast ThreadState_BlockedOnSend"
+  and ThreadState_BlockedOnReply_mask[simp]:
+  "(scast ThreadState_BlockedOnReply::machine_word) && mask 4 = scast ThreadState_BlockedOnReply"
+  and ThreadState_BlockedOnNotification_mask[simp]:
+  "(scast ThreadState_BlockedOnNotification::machine_word) && mask 4
+   = scast ThreadState_BlockedOnNotification"
+  by (simp add: ThreadState_defs mask_def)+
 
 lemma aligned_tcb_ctcb_not_NULL:
   assumes "is_aligned p tcbBlockSizeBits"
