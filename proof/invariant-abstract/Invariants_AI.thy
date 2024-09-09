@@ -1286,6 +1286,8 @@ lemma valid_objsE [elim]:
   "\<lbrakk> valid_objs s; kheap s x = Some obj; valid_obj x obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_objs_def by (auto simp: dom_def)
 
+\<comment> \<open>This would be a simp rule but too many existing proofs expect valid_obj and break when it is
+    preemptively simplified into arch_valid_obj.\<close>
 lemma valid_obj_arch_valid_obj:
   "valid_obj p (ArchObj ao) s = arch_valid_obj ao s"
   by (simp add: valid_obj_def)

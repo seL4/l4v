@@ -2444,6 +2444,162 @@ lemma vcpu_switch_ccorres:
         (vcpuSwitch v) (Call vcpu_switch_'proc)"
   by (cases v; clarsimp simp: vcpu_switch_ccorres_None[simplified] vcpu_switch_ccorres_Some[simplified])
 
+lemma modify_armHSCurVCPU_split:
+  "modifyArchState (armHSCurVCPU_update (\<lambda>_. p)) = do modifyArchState (armHSCurVCPU_update f);
+                                                      modifyArchState (armHSCurVCPU_update (\<lambda>_. p))
+                                                   od"
+  apply (clarsimp simp: modifyArchState_def modify_modify)
+  apply (rule ext)
+  apply (rule_tac f="\<lambda>t. modify t s" for s in arg_cong)
+  apply (rule ext)
+  apply (case_tac "ksArchState s")
+  apply clarsimp
+  done
+
+lemma modify_armHSCurVCPU_when_split:
+  "modifyArchState (armHSCurVCPU_update (\<lambda>_. p)) = do when P (modifyArchState (armHSCurVCPU_update f));
+                                                      modifyArchState (armHSCurVCPU_update (\<lambda>_. p))
+                                                   od"
+  apply (cases P; clarsimp)
+  apply (subst modify_armHSCurVCPU_split[of _ f])
+  apply simp
+  done
+
+lemma modifyArchState_armHSCurVCPU_Skip:
+  "ccorres dc xfdc (\<lambda>s. armHSCurVCPU (ksArchState s) = curvcpu) UNIV hs (modifyArchState (armHSCurVCPU_update (\<lambda>_. curvcpu))) SKIP"
+  apply (clarsimp simp: modifyArchState_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: simpler_gets_def simpler_modify_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def)
+  done
+
+lemma armHSCurVCPU_update_active_false_ccorres:
+  "ccorres dc xfdc \<top> UNIV hs
+      (modifyArchState (armHSCurVCPU_update (case_option None (\<lambda>(a, _). Some (a, False)))))
+      (Basic (\<lambda>s. globals_update (armHSVCPUActive_'_update (\<lambda>_. scast false)) s))"
+  apply (clarsimp simp: modifyArchState_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (clarsimp simp: cmachine_state_relation_def)
+  apply (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def)
+  apply (case_tac "armHSCurVCPU (ksArchState \<sigma>)"; clarsimp)
+  done
+
+lemma armHSCurVCPU_update_curv_Null_ccorres:
+  "ccorres dc xfdc (\<lambda>s. case armHSCurVCPU (ksArchState s) of None \<Rightarrow> True | Some (a,b) \<Rightarrow> \<not> b) UNIV hs
+    (modifyArchState (armHSCurVCPU_update Map.empty))
+    (Basic (\<lambda>s. globals_update (armHSCurVCPU_'_update (\<lambda>_. NULL)) s))"
+  apply (clarsimp simp: modifyArchState_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def
+                        cmachine_state_relation_def
+                 split: bool.split option.splits)
+  done
+
+lemma vcpuInvalidateActive_ccorres:
+  "ccorres dc xfdc invs' UNIV hs
+           vcpuInvalidateActive
+           (Call vcpu_invalidate_active_'proc)"
+  apply cinit
+   apply (rule ccorres_pre_getCurVCPU)
+        apply (subst modify_armHSCurVCPU_when_split)
+   apply (subst bind_assoc[symmetric])
+   apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+    apply (rule_tac Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = hsCurVCPU"
+                and Q'=UNIV
+                and C'="{s. \<exists> t. hsCurVCPU =  Some t \<and> snd t}"
+                 in ccorres_rewrite_cond_sr)
+        apply clarsimp
+        apply (frule rf_sr_ksArchState_armHSCurVCPU)
+        apply (case_tac "\<exists> t. (armHSCurVCPU \<circ> ksArchState) s =  Some t \<and> snd t")
+         apply (clarsimp simp: cur_vcpu_relation_def)
+        apply (clarsimp simp: cur_vcpu_relation_def)
+        apply (case_tac "(armHSCurVCPU \<circ> ksArchState) s"; clarsimp)
+       apply (rule_tac a=" _ >>= (\<lambda>_. when (hsCurVCPU \<noteq> None \<and> snd (the hsCurVCPU))
+                                          (modifyArchState(armHSCurVCPU_update
+                                             (\<lambda>a. case a of None \<Rightarrow> None
+                                                                  | Some (a,_) \<Rightarrow> Some (a, False)))))"
+                    in match_ccorres)
+       apply (wpc; clarsimp ; ccorres_rewrite)
+        apply (rule ccorres_return_Skip)
+       apply (rule_tac Q="\<lambda>s. (b \<longrightarrow> _ s) \<and> (\<not> b \<longrightarrow> _ s)" in  ccorres_guard_imp)
+        apply (case_tac b)
+        apply clarsimp
+        apply ccorres_rewrite
+          apply (rule ccorres_guard_imp)
+          apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+            apply (ctac add: vcpu_disable_ccorres)
+           apply ceqv
+              apply (rule armHSCurVCPU_update_active_false_ccorres)
+             apply wp
+            apply (vcg exspec=vcpu_disable_modifies)
+           apply clarsimp
+           apply assumption
+          apply simp
+         apply simp
+         apply ccorres_rewrite
+         apply (rule ccorres_return_Skip)
+        apply clarsimp
+        apply assumption
+        apply simp
+      apply ceqv
+     apply clarsimp
+     apply (rule armHSCurVCPU_update_curv_Null_ccorres)
+    apply (wpsimp simp: modifyArchState_def if_apply_def2)
+   apply (vcg exspec=vcpu_disable_modifies)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+  apply (rule UNIV_I)
+  done
+
+lemma vcpu_flush_ccorres:
+  "ccorres dc xfdc invs' UNIV [] vcpuFlush (Call vcpu_flush_'proc)"
+  apply cinit
+   apply (simp add: when_def)
+   apply (rule ccorres_pre_getCurVCPU)
+   apply (rule_tac R="\<lambda>s. armHSCurVCPU (ksArchState s) = curVCPU" in ccorres_cond)
+     apply (clarsimp simp: cur_vcpu_relation_def dest!: rf_sr_ksArchState_armHSCurVCPU split: option.splits)
+    apply (ctac add: vcpu_save_ccorres)
+      apply (ctac add: vcpuInvalidateActive_ccorres)
+     apply wpsimp
+    apply (vcg exspec=vcpu_save_modifies)
+   apply (rule ccorres_return_Skip)
+  apply (fastforce simp: cur_vcpu_relation_def invs'_HScurVCPU_vcpu_at' split: option.splits)
+  done
+
+lemma vcpu_flush_if_current_ccorres:
+  "ccorres dc xfdc invs' \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr t\<rbrace> []
+     (vcpuFlushIfCurrent t) (Call vcpu_flush_if_current_'proc)"
+  apply (cinit lift: tptr_')
+   apply (rule ccorres_pre_getCurVCPU)
+   apply (rule ccorres_pre_archThreadGet, rename_tac tcbVCPU)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule_tac C'="{s. tcbVCPU = map_option fst curVCPU}"
+               and Q="\<lambda>s. invs' s \<and> curVCPU = armHSCurVCPU (ksArchState s) \<and>
+                          (\<exists>tcb. ko_at' tcb t s \<and> (atcbVCPUPtr o tcbArch) tcb = tcbVCPU)"
+               and Q'=UNIV
+                in ccorres_rewrite_cond_sr)
+    apply clarsimp
+    apply (frule rf_sr_ksArchState_armHSCurVCPU)
+    apply (frule cmap_relation_tcb)
+    apply (erule cmap_relationE1)
+     apply (erule ko_at_projectKO_opt, rename_tac ctcb)
+    apply (fastforce simp: typ_heap_simps cur_vcpu_relation_def ctcb_relation_def carch_tcb_relation_def
+                           option_to_ptr_def option_to_0_def Collect_const_mem
+                     dest: ko_at'_tcb_vcpu_not_NULL
+                    split: option.splits)
+   apply (rule ccorres_when[where R=\<top>])
+    apply (clarsimp simp: Collect_const_mem)
+   apply (ctac add: vcpu_flush_ccorres)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
 
 lemma invs_no_cicd_sym_hyp' [elim!]:
   "invs_no_cicd' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"

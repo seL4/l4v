@@ -6,7 +6,7 @@
  *)
 
 theory ArchDeterministic_AI
-imports Deterministic_AI ArchVCPU_AI
+imports Deterministic_AI
 begin
 
 declare dxo_wp_weak[wp del]
