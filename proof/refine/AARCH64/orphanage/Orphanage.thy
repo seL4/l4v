@@ -1830,6 +1830,7 @@ lemma setDomain_no_orphans [wp]:
 crunch prepareSetDomain
   for no_orphans[wp]: no_orphans
   and cur_tcb'[wp]: cur_tcb'
+  (wp: cur_tcb_lift)
 
 lemma performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_invocation' i s \<and> ct_active' s \<and> sch_act_simple s \<rbrace>

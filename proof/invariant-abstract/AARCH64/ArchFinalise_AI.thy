@@ -1292,6 +1292,12 @@ crunch arch_finalise_cap
   for cte_wp_at[wp,Finalise_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
 
+declare arch_post_cap_deletion_cur_thread[Finalise_AI_assms]
+
+crunch arch_post_cap_deletion
+  for cur_domain[Finalise_AI_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  (wp: crunch_wps dxo_wp_weak)
+
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1
@@ -1343,7 +1349,7 @@ context Arch begin arch_global_naming
 
 crunch
   vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_save_reg_range, vgic_update_lr,
-  vcpu_save, vcpu_switch
+  vcpu_save, vcpu_switch, vcpu_flush
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps subset_refl)
 

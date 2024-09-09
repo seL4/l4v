@@ -350,6 +350,12 @@ crunch handle_spurious_irq
   for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
   and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
 
+crunch prepare_thread_delete, arch_post_cap_deletion, arch_finalise_cap
+  for cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

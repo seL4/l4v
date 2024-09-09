@@ -349,11 +349,19 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
    apply (auto simp: obj_at'_def)
   done
 
+lemma vcpuFlushIfCurrent_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct and valid_arch_state and tcb_at tptr)
+             (pspace_aligned' and pspace_distinct' and no_0_obj')
+             (vcpu_flush_if_current tptr) (vcpuFlushIfCurrent tptr)"
+  unfolding vcpu_flush_if_current_def vcpuFlushIfCurrent_def
+  by (corres wp: arch_thread_get_wp archThreadGet_wp)
+
 lemma prepareSetDomain_corres[corres]:
-  "corres dc (pspace_aligned and pspace_distinct) \<top>
-     (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
-  unfolding prepareSetDomain_def arch_prepare_set_domain_def
-  by (corres corres: gcd_corres)
+  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and valid_arch_state and tcb_at tptr)
+             (pspace_aligned' and pspace_distinct' and no_0_obj')
+             (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
+  unfolding prepareSetDomain_def arch_prepare_set_domain_def curDomain_def
+  by corres
 
 lemma setDomain_corres:
   "corres dc
@@ -411,8 +419,10 @@ lemma setDomain_corres:
 
 crunch prepareSetDomain
   for invs'[wp]: invs'
+  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and sch_act_simple[wp]: sch_act_simple
   and tcb_at'[wp]: "tcb_at' p"
+  (wp: sch_act_simple_lift)
 
 lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
@@ -476,7 +486,7 @@ lemma performInvocation_corres:
           apply (rule corres_split[OF setDomain_corres])
             apply (rule corres_trivial, simp)
            apply wpsimp+
-       apply ((clarsimp simp: invs_psp_aligned invs_distinct)+)[2]
+       apply (fastforce+)[2]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
      apply (rule corres_guard_imp)
@@ -997,9 +1007,9 @@ lemma setDomain_invs':
 
 crunch prepareSetDomain
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   and ct_in_state'[wp]: "ct_in_state' P"
-  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  (wp: ct_in_state_thread_state_lift')
+  (wp: ct_in_state_thread_state_lift' crunch_wps)
 
 lemma performInv_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and ct_active' and valid_invocation' i\<rbrace>

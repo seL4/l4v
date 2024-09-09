@@ -259,11 +259,24 @@ lemmas sch_act_sane_lift = hoare_lift_Pf2[where f="cur_thread" and P="scheduler_
 
 lemmas not_queued_def = not_queued_2_def
 
+\<comment> \<open>Not safe for wp because P could unify in a way that loops\<close>
+lemma in_cur_domain_lift_weak_gen:
+  assumes a: "\<And>P . f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+    and b: "\<And>Q. \<lbrace>\<lambda>s. P (etcb_at Q t s) \<and> P' s\<rbrace> f \<lbrace>\<lambda>_ s. P (etcb_at Q t s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (in_cur_domain t s) \<and> P' s\<rbrace> f \<lbrace>\<lambda>_ s. P (in_cur_domain t s)\<rbrace>"
+  unfolding in_cur_domain_def
+  by (wp_pre, wps a, wp b, clarsimp)
+
+lemmas in_cur_domain_lift_weak'
+  = in_cur_domain_lift_weak_gen[where P=Not] in_cur_domain_lift_weak_gen[where P=id, simplified]
+
+lemmas in_cur_domain_lift_weak = in_cur_domain_lift_weak'[where P'=\<top>, simplified]
+
 lemma valid_queues_lift:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-    shows "\<lbrace>valid_queues\<rbrace> f \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
+    and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+    and c: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+  shows "\<lbrace>valid_queues\<rbrace> f \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (simp add: valid_queues_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ b])
   apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", OF _ c])
@@ -282,7 +295,6 @@ lemma typ_at_st_tcb_at_lift:
   assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
   assumes st_lift: "\<And>P. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. \<not> st_tcb_at P t s\<rbrace>"
-
   apply (simp add: valid_def obj_at_def st_tcb_at_def)
   apply clarsimp
   apply (case_tac "kheap s t")

@@ -724,6 +724,7 @@ definition ct_in_q where
   "ct_in_q s \<equiv> st_tcb_at runnable (cur_thread s) s \<longrightarrow> (\<exists>d p. cur_thread s \<in> set (ready_queues s d p))"
 
 locale DetSchedSchedule_AI =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes arch_switch_to_idle_thread_valid_queues'[wp]:
     "\<lbrace>valid_queues\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_queues :: det_state \<Rightarrow> _\<rbrace>"
   assumes arch_switch_to_thread_valid_queues'[wp]:
@@ -822,8 +823,14 @@ locale DetSchedSchedule_AI =
     "\<And>t. \<lbrace>valid_list\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes arch_switch_to_idle_thread_valid_list'[wp]:
     "\<lbrace>valid_list\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  assumes prepare_thread_delete_idel_thread[wp] :
-    "\<And>t. prepare_thread_delete t \<lbrace>\<lambda>(s:: det_ext state). P (idle_thread s)\<rbrace>"
+  assumes prepare_thread_delete_idle_thread[wp]:
+    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
+  assumes prepare_thread_delete_cur_thread[wp]:
+    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace>"
+  assumes prepare_thread_delete_cur_domain[wp]:
+    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::'state_ext state. P (cur_domain s)\<rbrace>"
+  assumes prepare_thread_delete_etcbs_of[wp]:
+    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::'state_ext state. P (etcbs_of s)\<rbrace>"
   assumes prepare_thread_delete_ct_not_in_q'[wp]:
     "\<And>t. \<lbrace>ct_not_in_q\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_simple_sched_action'[wp]:
@@ -874,8 +881,16 @@ locale DetSchedSchedule_AI =
     "\<And>c t. arch_post_cap_deletion c \<lbrace>not_queued t :: det_state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_weak_valid_sched_action[wp] :
     "\<And>c. arch_post_cap_deletion c \<lbrace>weak_valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_cap_deletion_etcbs_of[wp]:
+    "\<And>P c. arch_post_cap_deletion c \<lbrace>\<lambda>s::'state_ext state. P (etcbs_of s)\<rbrace>"
   assumes arch_finalise_cap_idle_thread[wp] :
-    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda> (s:: det_ext state). P (idle_thread s)\<rbrace>"
+    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
+  assumes arch_finalise_cap_cur_thread[wp]:
+    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace>"
+  assumes arch_finalise_cap_cur_domain[wp]:
+    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::'state_ext state. P (cur_domain s)\<rbrace>"
+  assumes arch_finalise_cap_etcbs_of[wp]:
+    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::'state_ext state. P (etcbs_of s)\<rbrace>"
   assumes arch_invoke_irq_handler_valid_sched[wp]:
     "\<And>i. arch_invoke_irq_handler i \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   assumes arch_mask_irq_signal_valid_sched[wp]:
@@ -2024,33 +2039,77 @@ lemma set_priority_valid_sched[wp]:
   apply (auto simp: valid_sched_def valid_sched_action_def st_tcb_at_def obj_at_def not_cur_thread_def split: thread_state.splits)
   done
 
+lemma set_object_tcb_etcb_at:
+  "\<lbrace> \<lambda>s. Q (etcb_at P p s) \<and> (p = r \<longrightarrow> Q (P (etcb_of tcb))) \<rbrace>
+   set_object r (TCB tcb)
+   \<lbrace> \<lambda>_ s. Q (etcb_at P p s) \<rbrace>"
+  by (auto simp: valid_def in_monad etcb_at_def etcbs_of'_def etcb_of_def set_object_def get_object_def
+              split: kernel_object.splits)
+
+lemma thread_set_no_change_etcb_at:
+  assumes x: "\<And>tcb. Q (P (etcb_of (f tcb))) = Q (P (etcb_of tcb))"
+  shows      "thread_set f t' \<lbrace>\<lambda>s. Q (etcb_at P t s)\<rbrace>"
+  unfolding thread_set_def
+  apply (wpsimp wp: set_object_tcb_etcb_at)
+  apply (clarsimp dest!: get_tcb_SomeD
+                   simp: etcb_at_def etcbs_of'_def x)
+  done
+
+lemma fault_handler_update_in_cur_domain[wp]:
+  "option_update_thread thread (tcb_fault_handler_update \<circ> f) opt \<lbrace>\<lambda>s. P (in_cur_domain t s)\<rbrace>"
+  unfolding option_update_thread_def in_cur_domain_def
+  by (wpsimp wp: thread_set_no_change_etcb_at | wps)+
+
+lemma fault_handler_update_state_hyp_refs_of[wp]:
+  "option_update_thread thread (tcb_fault_handler_update \<circ> f) opt \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  unfolding option_update_thread_def
+  by (fastforce intro: thread_set_hyp_refs_trivial split: option.splits)
+
+crunch option_update_thread
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+
 context DetSchedSchedule_AI begin
 
-crunch
-  set_mcpriority, cap_insert, cap_delete, option_update_thread
+crunch set_mcpriority, cap_insert, cap_delete, option_update_thread
   for simple_sched_action[wp]: "simple_sched_action :: det_state \<Rightarrow> _"
 
-crunch
-  option_update_thread, set_mcpriority, finalise_cap, cap_swap_for_delete
-  for idle_thread[wp]: "\<lambda>(s:: det_state). P (idle_thread s)"
+crunch option_update_thread, set_mcpriority, cap_swap_for_delete, deleting_irq_handler
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  (wp: dxo_wp_weak)
 
-crunch
-  preemption_point
-  for idle_thread[wp]: "\<lambda>(s:: det_state). P (idle_thread s)"
-  (ignore: OR_choiceE
-   simp: OR_choiceE_def wrap_ext_bool_det_ext_ext_def crunch_simps
-   wp: crunch_wps
+crunch finalise_cap, preemption_point
+  for idle_thread[wp]: "\<lambda>s::det_state. P (idle_thread s)"
+  (wp: dxo_wp_weak OR_choiceE_weak_wp
    ignore_del: preemption_point)
 
 lemma rec_del_idle_thread[wp]:
-  "\<lbrace>\<lambda>(s:: det_ext state). P (idle_thread s)\<rbrace> rec_del call \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+  "rec_del call \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
   apply (rule rec_del_preservation)
       apply wp+
   done
 
-crunch
-  cap_delete
-  for idle_thread[wp]: "\<lambda>(s:: det_state). P (idle_thread s)"
+lemma preemption_point_in_cur_domain[wp]:
+  "preemption_point \<lbrace>\<lambda>s. in_cur_domain (t (cur_thread s)) s\<rbrace>"
+  by (wpsimp wp: preemption_point_inv)
+
+crunch cap_swap_for_delete, empty_slot, finalise_cap
+  for cur_thread[wp]: "\<lambda>s::'state_ext state. P (cur_thread s)"
+  and cur_domain[wp]: "\<lambda>s::'state_ext state. P (cur_domain s)"
+  and etcbs_of[wp]: "\<lambda>s::'state_ext state. P (etcbs_of s)"
+  (wp: crunch_wps thread_set_etcbs dxo_wp_weak
+   simp: crunch_simps)
+
+lemma rec_del_in_cur_domain[wp]:
+  "rec_del call \<lbrace>\<lambda>s::'state_ext state. in_cur_domain (t (cur_thread s)) s\<rbrace>"
+  by (wpsimp wp: rec_del_preservation in_cur_domain_lift_weak | wps)+
+
+crunch cap_delete
+  for cur_thread[wp]: "\<lambda>s::'state_ext state. P (cur_thread s)"
+  and in_cur_domain[wp]: "\<lambda>s::'state_ext state. in_cur_domain (t (cur_thread s)) s"
+  (wp: preemption_point_inv simp: crunch_simps)
+
+crunch cap_delete
+  for idle_thread[wp]: "\<lambda>s::det_state. P (idle_thread s)"
 
 crunch cap_delete
   for valid_sched[wp]: "valid_sched :: det_state \<Rightarrow> _"

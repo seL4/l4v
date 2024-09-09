@@ -2977,8 +2977,8 @@ definition cur_vcpu_at where
   "cur_vcpu_at v s \<equiv> case v of None \<Rightarrow> True | Some (vp, _) \<Rightarrow> vcpu_at vp s \<and> obj_at hyp_live vp s"
 
 lemma invs_current_vcpu_update:
-  "\<lbrakk>cur_vcpu_at v s; valid_arch_state s\<rbrakk> \<Longrightarrow>
-     invs (s\<lparr>arch_state := arch_state s \<lparr>arm_current_vcpu := v\<rparr>\<rparr>) = invs s"
+  "\<lbrakk>cur_vcpu_at v s; valid_arch_state s\<rbrakk>
+   \<Longrightarrow> invs (s\<lparr>arch_state := arch_state s \<lparr>arm_current_vcpu := v\<rparr>\<rparr>) = invs s"
   by (auto simp: invs_def valid_state_def cur_tcb_def cur_vcpu_at_def obj_at_conj_distrib
                  valid_global_refs_def valid_asid_map_def valid_arch_state_def
                  valid_global_objs_def valid_global_vspace_mappings_def cur_vcpu_def

@@ -392,6 +392,12 @@ crunch arch_switch_to_thread
   for cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
   and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
 
+crunch prepare_thread_delete, arch_post_cap_deletion, arch_finalise_cap
+  for cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  (wp: mapM_x_wp_inv_weak crunch_wps simp: crunch_simps ignore: set_object)
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
