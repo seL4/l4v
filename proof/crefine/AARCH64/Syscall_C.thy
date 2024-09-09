@@ -519,8 +519,6 @@ lemma handleDoubleFault_ccorres:
     apply (rule empty_fail_asUser)
     apply (simp add: getRestartPC_def)
    apply wp
-  apply clarsimp
-  apply (simp add: ThreadState_defs)
   apply (fastforce simp: valid_tcb_state'_def)
   done
 
@@ -895,7 +893,6 @@ lemma handleInvocation_ccorres:
                     apply auto[1]
                    apply clarsimp
                   apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
-                  apply (simp add: ThreadState_defs mask_def)
                   apply (simp add: typ_heap_simps)
                   apply (case_tac ts, simp_all add: cthread_state_relation_def)[1]
                  apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)

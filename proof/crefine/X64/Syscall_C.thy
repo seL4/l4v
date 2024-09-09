@@ -322,7 +322,6 @@ lemma decodeInvocation_ccorres:
    apply (clarsimp simp: isCap_simps cap_get_tag_to_H from_bool_neq_0)
   apply (insert ccap_relation_IRQHandler_mask, elim meta_allE, drule(1) meta_mp)
   apply (clarsimp simp: word_size)
-  apply (clarsimp simp: less_mask_eq)
   apply (clarsimp simp: cap_get_tag_isCap)
   apply (cases cp ; clarsimp simp: isCap_simps)
      apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
@@ -518,8 +517,6 @@ lemma handleDoubleFault_ccorres:
     apply (rule empty_fail_asUser)
     apply (simp add: getRestartPC_def)
    apply wp
-  apply clarsimp
-  apply (simp add: ThreadState_defs)
   apply (fastforce simp: valid_tcb_state'_def)
   done
 
@@ -893,7 +890,6 @@ lemma handleInvocation_ccorres:
                     apply auto[1]
                    apply clarsimp
                   apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
-                  apply (simp add: ThreadState_defs mask_def)
                   apply (simp add: typ_heap_simps)
                   apply (case_tac ts, simp_all add: cthread_state_relation_def)[1]
                  apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
