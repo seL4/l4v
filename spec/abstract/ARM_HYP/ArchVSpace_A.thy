@@ -612,6 +612,23 @@ definition vcpu_flush :: "(unit,'z::state_ext) s_monad" where
      od
    od"
 
+text \<open>Flush the given TCB's VCPU if it is the current VCPU.\<close>
+definition vcpu_flush_if_current :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "vcpu_flush_if_current t \<equiv> do
+     cur_vcpu \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+     when (vcpu = map_option fst cur_vcpu) vcpu_flush
+   od"
+
+(* This is defined here and not in ArchTcb_A like in non-HYP architectures due to that causing an
+   unresolvable circular dependency between ArchVSpace_A and ArchTcb_A. This location also differs
+   to AARCH64 due to that architecture introducing a specific VCPUAcc_AI file for VCPU functions. *)
+definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "arch_prepare_set_domain t new_dom \<equiv> do
+     cur_domain \<leftarrow> gets cur_domain;
+     when (cur_domain \<noteq> new_dom) $ vcpu_flush_if_current t
+   od"
+
 text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
 definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "associate_vcpu_tcb vr t \<equiv> do

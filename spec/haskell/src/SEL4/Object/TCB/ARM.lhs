@@ -69,6 +69,3 @@ There are presently no ARM-specific register subsets defined, but in future this
 
 > postSetFlags :: PPtr TCB -> TcbFlags -> Kernel ()
 > postSetFlags t flags = return ()
-
-> prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
-> prepareSetDomain t newDom = return ()

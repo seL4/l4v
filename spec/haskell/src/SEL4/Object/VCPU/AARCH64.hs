@@ -13,7 +13,7 @@
 
 {-# LANGUAGE CPP #-}
 
-module SEL4.Object.VCPU.AARCH64(curVCPUActive, vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, vcpuFlush, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
+module SEL4.Object.VCPU.AARCH64(curVCPUActive, vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, vcpuFlush, vcpuFlushIfCurrent, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
 
 import Prelude hiding (Word)
 import SEL4.Machine
@@ -38,10 +38,11 @@ import {-# SOURCE #-} SEL4.Kernel.Thread
 import {-# SOURCE #-} SEL4.Object.Interrupt
 
 import Data.Bits hiding (countTrailingZeros)
+import Data.Helpers(mapMaybe)
 import Data.Word(Word8, Word16, Word32, Word64)
 import Data.WordLib(countTrailingZeros)
 import Data.Array
-import Data.Maybe
+import Data.Maybe hiding (mapMaybe)
 
 {- VCPU: Helper functions -}
 
@@ -505,10 +506,16 @@ vcpuSwitch (Just new) = do
 
 vcpuFlush :: Kernel ()
 vcpuFlush = do
-    hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
-    when (hsCurVCPU /= None) $ do
-        vcpuSave hsCurVCPU
+    curVCPU <- gets (armHSCurVCPU . ksArchState)
+    when (curVCPU /= Nothing) $ do
+        vcpuSave curVCPU
         vcpuInvalidateActive
+
+vcpuFlushIfCurrent :: PPtr TCB -> Kernel ()
+vcpuFlushIfCurrent t = do
+    curVCPU <- gets (armHSCurVCPU . ksArchState)
+    tcbVCPU <- archThreadGet atcbVCPUPtr t
+    when (tcbVCPU == mapMaybe fst curVCPU) vcpuFlush
 
 {- VGICMaintenance -}
 

@@ -212,7 +212,13 @@ capUntypedSize (PageTableCap {}) = bit ptBits
 capUntypedSize (ASIDControlCap {}) = 0
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 
--- No arch-specific thread deletion operations needed on RISC-V platform.
+-- No arch-specific thread deletion operations needed on RISC-V.
 
 prepareThreadDelete :: PPtr TCB -> Kernel ()
 prepareThreadDelete _ = return ()
+
+-- No arch-specific operations needed before changing the domain of a TCB on
+-- RISC-V.
+
+prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+prepareSetDomain t newDom = return ()
