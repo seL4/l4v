@@ -673,6 +673,12 @@ crunch arch_finalise_cap
      wp: set_aobject_cte_wp_at crunch_wps set_object_cte_at
    ignore: set_object)
 
+declare arch_post_cap_deletion_cur_thread[Finalise_AI_assms]
+
+crunch arch_post_cap_deletion
+  for cur_domain[Finalise_AI_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  (wp: crunch_wps dxo_wp_weak)
+
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1

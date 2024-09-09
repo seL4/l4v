@@ -495,22 +495,6 @@ lemma nextDomain_ccorres:
   apply simp
   done
 
-lemma vcpu_flush_ccorres:
-  "ccorres dc xfdc invs' UNIV [] vcpuFlush (Call vcpu_flush_'proc)"
-  apply cinit
-   apply (simp add: when_def)
-   apply (rule ccorres_pre_getCurVCPU)
-   apply (rule_tac R="\<lambda>s. armHSCurVCPU (ksArchState s) = hsCurVCPU" in ccorres_cond)
-     apply (clarsimp simp: cur_vcpu_relation_def dest!: rf_sr_ksArchState_armHSCurVCPU split: option.splits)
-    apply (rule ccorres_split_nothrow_dc)
-       apply (ctac add: vcpu_save_ccorres)
-      apply (ctac add: vcpuInvalidateActive_ccorres)
-     apply wpsimp
-    apply (vcg exspec=vcpu_save_modifies)
-   apply (rule ccorres_return_Skip)
-  apply (fastforce simp: cur_vcpu_relation_def invs'_HScurVCPU_vcpu_at' split: option.splits)
-  done
-
 lemma Arch_prepareNextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] vcpuFlush (Call Arch_prepareNextDomain_'proc)"
   apply cinit'
