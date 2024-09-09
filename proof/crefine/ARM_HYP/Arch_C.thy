@@ -5230,7 +5230,6 @@ proof -
                           rf_sr_ksCurThread msgRegisters_unfold
                           valid_tcb_state'_def ThreadState_defs Kernel_C_maxIRQ
                           and_mask_eq_iff_le_mask capVCPUPtr_eq)
-    apply (clarsimp simp:  mask_def)
     done
 qed
 
