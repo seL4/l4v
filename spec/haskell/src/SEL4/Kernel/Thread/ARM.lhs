@@ -65,7 +65,9 @@ There is nothing special about idle thread activation on ARM.
 > activateIdleThread :: PPtr TCB -> Kernel ()
 > activateIdleThread _ = return ()
 
-There is nothing special that needs to be done before calling nextDomain on ARM.
+When calling nextDomain on ARM, if CONFIG_ARM_HYPERVISOR_SUPPORT is set we first
+save and clear any current VCPU state, to ensure that we do not later read from
+or write to cross-domain state.
 
 > prepareNextDomain :: Kernel ()
 > prepareNextDomain =
