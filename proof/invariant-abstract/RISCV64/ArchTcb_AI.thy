@@ -404,7 +404,8 @@ lemma tcs_invs[Tcb_AI_asms]:
    apply (intro conjI; intro allI impI)
     apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
    apply (clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ)
-   apply (clarsimp simp: obj_at_def is_ep sc_at_pred_n_def)
+   apply (fastforce dest: invs_sym_refs sym_ref_sc_tcb
+                    simp: obj_at_def is_ep sc_at_pred_n_def pred_tcb_at_def)
   apply clarsimp
   apply (drule bound_sc_tcb_at_idle_sc_idle_thread[rotated, rotated], clarsimp, clarsimp)
   apply (fastforce simp: invs_def valid_state_def sc_at_pred_n_def

@@ -265,20 +265,20 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >     tcbPtr <- case cap of
 >         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
 >         _ -> throw $ InvalidCapability 1
->     scPtr <- case scCap of
+>     scPtrOptOpt <- case scCap of
 >         SchedContextCap { capSchedContextPtr = scPtr } -> do
 >             tcbSc <- withoutFailure $ threadGet tcbSchedContext tcbPtr
->             when (tcbSc /= Nothing) $ throw IllegalOperation
+>             when (tcbSc /= Nothing && tcbSc /= Just scPtr) $ throw IllegalOperation
 >             sc <- withoutFailure $ getSchedContext scPtr
 >             when (scTCB sc /= Nothing) $ throw IllegalOperation
 >             blocked <- withoutFailure $ isBlocked tcbPtr
 >             released <- withoutFailure $ scReleased scPtr
 >             when (blocked && not released) $ throw IllegalOperation
->             return $ Just scPtr
+>             return $ if tcbSc == Just scPtr then Nothing else Just (Just scPtr)
 >         NullCap -> do
 >             curTcbPtr <- withoutFailure getCurThread
 >             when (tcbPtr == curTcbPtr) $ throw IllegalOperation
->             return Nothing
+>             return $ Just Nothing
 >         _ -> throw $ InvalidCapability 2
 >     when (not $ isValidFaultHandler fhCap) $ throw $ InvalidCapability 3
 >     return $ ThreadControlSched {
@@ -287,7 +287,7 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >         tcSchedFaultHandler = Just (fhCap, fhSlot),
 >         tcSchedMCPriority = Just (fromIntegral newMCP, authTCB),
 >         tcSchedPriority = Just (fromIntegral newPrio, authTCB),
->         tcSchedSchedContext = Just scPtr }
+>         tcSchedSchedContext = scPtrOptOpt }
 > decodeSetSchedParams _ _ _ _ = throw TruncatedMessage
 
 \subsubsection{The Set IPC Buffer Call}
@@ -505,9 +505,9 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >         installThreadBuffer target slot buffer
 >         return []
 
-> invokeTCB (ThreadControlSched target slot faultHandler mcPriority priority sc)
+> invokeTCB (ThreadControlSched target slot faultHandler mcPriority priority scPtrOptOpt)
 >   = do
->         stateAssert (tcs_cross_asrt1 target sc)
+>         stateAssert (tcs_cross_asrt1 target scPtrOptOpt)
 >             "Assert some conditions that hold in the abstract at this point"
 >         stateAssert valid_idle'_asrt
 >             "Assert that `valid_idle' s` holds"
@@ -519,14 +519,14 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >                 "Assert some conditions that hold in the abstract at this point"
 >             let priority' = mapMaybe fst priority
 >             maybe (return ()) (setPriority target) priority'
->             targetScOpt <- mapTCBPtr target tcbSchedContext
->             case sc of
+>             case scPtrOptOpt of
 >                 Nothing -> return ()
->                 Just Nothing -> case targetScOpt of
->                                     Nothing -> return ()
->                                     Just targetSc -> schedContextUnbindTCB targetSc
->                 Just (Just scPtr) ->
->                     when (sc /= Just targetScOpt) $ schedContextBindTCB scPtr target
+>                 Just Nothing -> do
+>                     targetScOpt <- threadGet tcbSchedContext target
+>                     case targetScOpt of
+>                         Nothing -> return ()
+>                         Just targetSc -> schedContextUnbindTCB targetSc
+>                 Just (Just scPtr) -> schedContextBindTCB scPtr target
 >         return []
 
 \subsubsection{Register State}
