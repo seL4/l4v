@@ -518,33 +518,135 @@ where
            conversion from MI to data format will truncate the original label's top 12 bits.\<close>
         in (MI mrs_transferred 0 0 (mi_label mi && mask 52)))"
 
+lemma asUser_setRegister_lookup_ipc_buffer_as_user:
+  "\<lbrace>\<lambda>s. P (lookup_ipc_buffer_ret s b t')\<rbrace>
+    as_user t (setRegister r v)
+  \<lbrace>\<lambda>rv s. P (lookup_ipc_buffer_ret s b t')\<rbrace>"
+(*
+  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+  apply(clarsimp simp:setRegister_def modify_def bind_def put_def get_def get_tcb_def
+    split:option.splits kernel_object.splits)
+  apply(clarsimp simp:arch_tcb_context_set_def arch_tcb_context_get_def)
+  apply(clarsimp simp:lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def split del:if_split)
+  apply(clarsimp split:option.splits kernel_object.splits cap.splits arch_cap.splits bool.splits)
+  apply(rule conjI)
+   apply clarsimp
+*)
+  oops
+
+(*
+lemma asUser_setRegister_getRegister_as_user:
+  "\<lbrace>\<lambda>s. P (if t = t' \<and> r = r' then Some v else getRegister_as_user_ret s t' r')\<rbrace>
+    as_user t (setRegister r v)
+  \<lbrace>\<lambda>rv s. P (getRegister_as_user_ret s t' r')\<rbrace>"
+*)
+thm asUser_setRegister_getRegister_as_user
+lemma asUser_setRegister_testlemma_as_user:
+  "\<lbrace>\<lambda>s. P \<comment> \<open>(get_message_info_ret s sender)\<close>
+            (getRegister_as_user_ret s t r)
+            (lookup_ipc_buffer_ret s False sender)
+            (lookup_ipc_buffer_ret s True receiver)\<rbrace>
+    as_user t (setRegister r v)
+  \<lbrace>\<lambda>rv s. P \<comment> \<open>(get_message_info_ret s sender)\<close>
+            (getRegister_as_user_ret s t r)
+            (lookup_ipc_buffer_ret s False sender)
+            (lookup_ipc_buffer_ret s True receiver)\<rbrace>"
+  sorry
+. (*
+  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+  apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret lookup_ipc_buffer_ret_def getRegister_as_user_ret_def)
+  apply(clarsimp split:option.split)
+. (*
+  apply(clarsimp simp:setRegister_def modify_def bind_def put_def get_def get_tcb_def
+    split:option.splits kernel_object.splits)
+  apply(clarsimp simp:arch_tcb_context_set_def arch_tcb_context_get_def)
+. (*
+  apply(clarsimp simp:lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def split del:if_split
+    split:option.splits kernel_object.splits cap.splits)
+  apply(clarsimp split: arch_cap.splits bool.splits)
+  apply(rule conjI)
+   apply clarsimp
+
+. (*
+
+(* original proof of asUser_setRegister_getRegister_as_user
+
+  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+  apply(clarsimp simp:getRegister_as_user_ret_def)
+  apply(rule conjI)
+   apply(clarsimp split:if_splits)
+    (* case: retrieving exactly the value that was set *)
+    apply(clarsimp split:user_context.splits)
+    apply(clarsimp simp:setRegister_def modify_def bind_def put_def)
+   (* case: retrieving whatever was in that unaffected register *)
+   apply(clarsimp simp:get_tcb_def split:option.splits kernel_object.splits)
+   apply(force simp:setRegister_def modify_def bind_def put_def get_def split:user_context.splits)
+  apply clarsimp
+  done
+*)
+*) *) *) *)
+
+lemma do_normal_transfer_lookup_ipc_buffer_inv:
+  "\<lbrace>(\<lambda>s. P (lookup_ipc_buffer_ret s b t))
+     and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
+     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
+   \<lbrace>\<lambda> _ s'. P (lookup_ipc_buffer_ret s' b t)\<rbrace>"
+  apply(wpsimp simp:do_normal_transfer_def)
+       apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+      apply(simp split del: if_split)
+      (* setting of message_info register *)
+      apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp
+        simp:set_message_info_def thread_set_def split_del: if_split)
+  oops
+
+lemma transfer_caps_none_testlemma:
+  "\<lbrace>K (caps = []) and
+   (\<lambda>s. P (get_message_info_ret s t) (lookup_ipc_buffer_ret s False t)
+            (lookup_ipc_buffer_ret s True receiver))\<rbrace>
+    transfer_caps info caps endpoint receiver recv_buffer
+  \<lbrace>\<lambda>rv s. P (get_message_info_ret s t)
+            (lookup_ipc_buffer_ret s False t)
+            (lookup_ipc_buffer_ret s True receiver)\<rbrace>"
+  sorry
+
 declare message_info_to_data.simps [simp del] (* proof becomes a mess if we leave these in *)
 lemma do_normal_transfer_valid:
   "\<lbrace>(\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
       \<comment> \<open>when do we need to assert this?
       valid_ep_obj_with_message (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>\<close>
-      P (get_message_info_ret s sender))
+      P (get_message_info_ret s sender) \<and>
+      P' (get_message_info_ret s sender) (lookup_ipc_buffer_ret s False sender) (lookup_ipc_buffer_ret s True receiver)
+      \<comment> \<open> \<and> P' (lookup_ipc_buffer_ret s False sender) \<and>
+      P'' (lookup_ipc_buffer_ret s True receiver)\<close>)
       and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda> _ s'. P (get_message_info_ret s' sender) \<and>
+      \<comment> \<open>\<and> P' (lookup_ipc_buffer_ret s' False sender) \<and>
+      P'' (lookup_ipc_buffer_ret s' True receiver)\<close>
       getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
       get_message_info_ret s' receiver = Some (do_normal_transfer_mi
         (the (get_message_info_ret s' sender)) sender sbuf rbuf) \<and>
-      valid_message_info (the (get_message_info_ret s' sender))\<rbrace>"
-  unfolding do_normal_transfer_def
+      valid_message_info (the (get_message_info_ret s' sender)) \<and>
+      P' (get_message_info_ret s sender) (lookup_ipc_buffer_ret s' False sender) (lookup_ipc_buffer_ret s' True receiver)\<rbrace>"
   apply(wpsimp simp:do_normal_transfer_def)
 (* Advice from Tom: better to stick with wp approach & bring in only state-independent assumptions
    using hoare_gen_asm etc, but for state-dependent preconds, prove better lemmas to infer needed
    preconditions for given postconditions of the individual constituent functions in question. *)
         (* setting of badge register *)
+        (*
         apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-          simp:get_message_info_ret_getRegister_as_user_ret Let_def)
+          simp:get_message_info_ret_getRegister_as_user_ret Let_def split_del: if_split)
+        *)
+        apply(wpsimp wp:asUser_setRegister_getRegister_as_user asUser_setRegister_testlemma_as_user
+          hoare_vcg_ex_lift
+          simp:get_message_info_ret_getRegister_as_user_ret Let_def split_del: if_split)
        apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
          in hoare_gen_asm)
        apply(simp split del: if_split)
        (* setting of message_info register *)
-       apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+       apply(wpsimp wp:asUser_setRegister_getRegister_as_user asUser_setRegister_testlemma_as_user
+         hoare_vcg_ex_lift
          simp:set_message_info_def get_message_info_ret_getRegister_as_user_ret)
       apply(simp split del: if_split)
       apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret[symmetric])
@@ -554,11 +656,21 @@ lemma do_normal_transfer_valid:
       apply clarsimp
       (* Note: Tom advised to try not to insert state-dependent facts using hoare_gen_asm_spec,
          but rather try to prove wp lemmas that give the needed precondition. *)
+      (*
       apply(wp only:transfer_caps_none_valid[where t=sender, THEN hoare_strengthen_post])
+      *)
+      thm transfer_caps_none_valid
+      apply(simp only:conj_assoc[symmetric])
+      apply(rule hoare_vcg_conj_lift)
+       apply(wp only:transfer_caps_none_valid[where t=sender, THEN hoare_strengthen_post])
+       apply clarsimp
+       apply assumption
+      apply(wp only:transfer_caps_none_testlemma[where t=sender, THEN hoare_strengthen_post])
       apply(simp split del:if_split)
      apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
         caps = [] \<and> valid_message_info mi" in hoare_gen_asm)
      apply(wpsimp wp:copy_mrs_ret_valid[where t=sender, THEN hoare_strengthen_post])
+     . (* DOWN TO HERE
      apply(simp split del:if_split)
     apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
       in hoare_gen_asm)
@@ -592,6 +704,29 @@ lemma do_normal_transfer_valid:
   apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
   done
 
+lemma do_normal_transfer_get_message_info_inv:
+  "\<lbrace>(\<lambda>s. P (get_message_info_ret s sender))
+    and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
+    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
+   \<lbrace>\<lambda> _ s'. P (get_message_info_ret s' sender)\<rbrace>"
+  apply(wpsimp wp: do_normal_transfer_valid[THEN hoare_strengthen_post])
+   apply force
+  apply force
+  done
+
+(* seeing as I was able to prove do_normal_transfer_get_message_info_inv from
+   do_normal_transfer_valid, I doubt that going in the opposite direction is possible *)
+lemma do_normal_transfer_minfo_ipc_buffers_inv:
+  "\<lbrace>(\<lambda>s. P (get_message_info_ret s sender)
+        (lookup_ipc_buffer_ret s False sender) (lookup_ipc_buffer_ret s True receiver))
+    and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
+    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
+   \<lbrace>\<lambda> _ s. P (get_message_info_ret s sender)
+        (lookup_ipc_buffer_ret s False sender) (lookup_ipc_buffer_ret s True receiver)\<rbrace>"
+  apply(rule hoare_weaken_pre)
+  apply(rule hoare_strengthen_post)
+  oops
+
 (* only bring these in when strictly needed *)
 declare if_split [split del]
 declare imp_disjL [simp del]
@@ -604,24 +739,71 @@ where
            sbuf = lookup_ipc_buffer_ret s False sender in
        do_normal_transfer_mi mi sender sbuf rbuf) "
 
+find_theorems conj name:assoc
 thm do_ipc_transfer_def
 lemma do_ipc_transfer_valid:
-  "\<lbrace>(\<lambda>s. P (get_message_info_ret s sender))
-      and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
+  "\<lbrace>(\<lambda>s.
+      P (get_message_info_ret s sender) \<and>
+      P' (get_message_info_ret s sender)
+        (lookup_ipc_buffer_ret s False sender) (lookup_ipc_buffer_ret s True receiver))
+      \<comment> \<open> P' (lookup_ipc_buffer_ret s False sender) \<and>
+      P'' (lookup_ipc_buffer_ret s True receiver))\<close> and
+      K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
     do_ipc_transfer sender ep badge grant receiver
     \<comment> \<open>do_ipc_transfer rve (Some x31) (sender_badge rvh) (sender_can_grant rvh) x\<close>
-   \<lbrace>\<lambda> _ s'. P (get_message_info_ret s' sender) \<and>
+   \<lbrace>\<lambda> _ s'.
+      P (get_message_info_ret s' sender) \<and>
+      P' (get_message_info_ret s' sender)
+        (lookup_ipc_buffer_ret s' False sender) (lookup_ipc_buffer_ret s' True receiver) \<and>
+      \<comment> \<open>P' (lookup_ipc_buffer_ret s' False sender) \<and>
+      P'' (lookup_ipc_buffer_ret s' True receiver) \<and>\<close>
       getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
       get_message_info_ret s' receiver =
         Some (do_ipc_transfer_mi s' (the (get_message_info_ret s' sender)) sender receiver) \<and>
       valid_message_info (the (get_message_info_ret s' sender))\<rbrace>"
   unfolding do_ipc_transfer_def
   apply wpsimp
-       apply(wpsimp wp:do_normal_transfer_valid[THEN hoare_strengthen_post] simp:Let_def)
-       apply(rule conjI)
+       (* I was tempted again to say this manually, but it doesn't seem to help
+       apply(rule_tac P="\<lambda>s. send_buffer = lookup_ipc_buffer_ret s False sender \<and>
+         recv_buffer = lookup_ipc_buffer_ret s True receiver \<and>
+         P (get_message_info_ret s sender) \<and>
+         sender \<noteq> receiver \<and> \<not> grant"
+         in hoare_gen_asm_spec'[where S=True, simplified])
+        apply assumption
+       *)
+       (*
+       apply(rule hoare_vcg_conj_lift)
+        apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_inv)
+       apply(rule hoare_vcg_conj_lift)
+        apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_inv)
+       *)
+       apply(clarsimp simp:do_ipc_transfer_mi_def)
+       apply(wpsimp wp:do_normal_transfer_valid[THEN hoare_strengthen_post])
+       apply(rule hoare_vcg_conj_lift)
+
+       apply clarsimp
+
+       apply(rule hoare_vcg_conj_lift)
+        apply(wpsimp wp:do_normal_transfer_get_message_info_inv[THEN hoare_strengthen_post])
+         apply assumption
+        apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_inv)
+. (*
+       apply(wpsimp wp:do_normal_transfer_valid[THEN hoare_strengthen_post])
+       apply(clarsimp simp:do_normal_transfer_mi_def)
+       apply(rule context_conjI)
+       find_theorems intro
+       apply clarsimp
+find_theorems name:conj
+. (*
+       apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_inv[THEN hoare_strengthen_post])
+
+       find_theorems name:comb "_ \<and> _"
+       apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_inv)
         apply simp
          apply(clarsimp simp:do_ipc_transfer_mi_def)
          (* how do we line this up? *)
+         apply(subgoal_tac "(send_buffer = (lookup_ipc_buffer_ret s False sender)) \<and> (recv_buffer =  (lookup_ipc_buffer_ret s True receiver))")
+          apply simp
   sorry
 
 
