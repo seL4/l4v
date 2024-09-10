@@ -25,7 +25,8 @@ sig
   val installed_C_files : theory
     -> {c_filename : string, locale_names : string list,
         options: (bool * bool * bool),
-        additional_options: additional_options list} list
+        additional_options: additional_options list,
+	struct_information: (string * typ * (string * typ * int CalculateState.ctype) list) list} list
 end
 
 structure IsarInstall : ISAR_INSTALL =
@@ -73,7 +74,8 @@ datatype additional_options = MachineState of string | GhostState of string | CR
 
 type install_data = {c_filename : string, locale_names : string list,
         options: (bool * bool * bool),
-        additional_options: additional_options list}
+        additional_options: additional_options list,
+	struct_information: (string * typ * (string * typ * int CalculateState.ctype) list) list }
 structure C_Installs = Theory_Data
 (struct
    type T = install_data list
@@ -454,13 +456,15 @@ in
       C_Installs.map (fn ss =>
         {c_filename = s, locale_names = [globloc, loc2],
           options = (ms, install_typs, install_defs),
-          additional_options = statetylist} :: ss) thy
+          additional_options = statetylist,
+	  struct_information = rcdinfo} :: ss) thy
     end
   else
       C_Installs.map (fn ss =>
         {c_filename = s, locale_names = [],
           options = (ms, install_typs, install_defs),
-          additional_options = statetylist} :: ss) thy
+          additional_options = statetylist,
+	  struct_information = rcdinfo} :: ss) thy
 end handle e as TYPE (s,tys,tms) =>
          (Feedback.informStr (0, s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^
