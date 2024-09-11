@@ -343,9 +343,9 @@ where
    _ \<Rightarrow> None"
 
 lemma lookup_ipc_buffer_ret_valid:
-  "\<lbrace>\<lambda>s'. s = s' \<and> tcb_at thread s\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at thread s\<rbrace>
     lookup_ipc_buffer is_receiver thread
-   \<lbrace>\<lambda> r s''. s = s'' \<and> r = lookup_ipc_buffer_ret s'' is_receiver thread\<rbrace>"
+   \<lbrace>\<lambda> r s. r = lookup_ipc_buffer_ret s is_receiver thread\<rbrace>"
   unfolding lookup_ipc_buffer_def lookup_ipc_buffer_ret_def
   apply wpsimp
      apply(wpsimp wp:get_cap_ret_valid[THEN hoare_strengthen_post])
@@ -745,22 +745,14 @@ where
            sbuf = lookup_ipc_buffer_ret s False sender in
        do_normal_transfer_mi mi sender sbuf rbuf) "
 
-find_theorems conj name:assoc
-thm do_ipc_transfer_def
 lemma do_ipc_transfer_valid:
-  "\<lbrace>(\<lambda>s.
-      \<comment> \<open> P' (get_message_info_ret s sender)
-        (lookup_ipc_buffer_ret s False sender) (lookup_ipc_buffer_ret s True receiver)) \<close>
-      P' (lookup_ipc_buffer_ret s False sender) \<and>
+  "\<lbrace>(\<lambda>s. P' (lookup_ipc_buffer_ret s False sender) \<and>
       P'' (lookup_ipc_buffer_ret s True receiver) \<and>
-      P (get_message_info_ret s sender)) and
-      K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
-    do_ipc_transfer sender ep badge grant receiver
-    \<comment> \<open>do_ipc_transfer rve (Some x31) (sender_badge rvh) (sender_can_grant rvh) x\<close>
-   \<lbrace>\<lambda> _ s'.
-      \<comment> \<open>P' (get_message_info_ret s' sender)
-        (lookup_ipc_buffer_ret s' False sender) (lookup_ipc_buffer_ret s' True receiver) \<and>\<close>
-      P' (lookup_ipc_buffer_ret s' False sender) \<and>
+      P (get_message_info_ret s sender) \<and>
+      pred_tcb_at itcb_fault ((=) None) sender s \<and> tcb_at receiver s) and
+    K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
+     do_ipc_transfer sender ep badge grant receiver
+   \<lbrace>\<lambda> _ s'. P' (lookup_ipc_buffer_ret s' False sender) \<and>
       P'' (lookup_ipc_buffer_ret s' True receiver) \<and>
       P (get_message_info_ret s' sender) \<and>
       getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
@@ -769,28 +761,54 @@ lemma do_ipc_transfer_valid:
       valid_message_info (the (get_message_info_ret s' sender))\<rbrace>"
   unfolding do_ipc_transfer_def
   apply wpsimp
-       (* I was tempted again to say this manually, but it doesn't seem to help
-       apply(rule_tac P="\<lambda>s. send_buffer = lookup_ipc_buffer_ret s False sender \<and>
-         recv_buffer = lookup_ipc_buffer_ret s True receiver \<and>
-         P (get_message_info_ret s sender) \<and>
-         sender \<noteq> receiver \<and> \<not> grant"
-         in hoare_gen_asm_spec'[where S=True, simplified])
-        apply assumption
-       *)
        apply(clarsimp simp:do_ipc_transfer_mi_def)
        apply(rule hoare_vcg_conj_lift)
         apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_ret)
        apply(rule hoare_vcg_conj_lift)
         apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_ret)
-       apply(wpsimp wp:do_normal_transfer_valid[THEN hoare_strengthen_post])
-       apply simp
+       apply(wpsimp wp:insert do_normal_transfer_valid[THEN hoare_strengthen_post])
+       apply(rule conjI)
+        apply assumption
+       apply(subgoal_tac "send_buffer = lookup_ipc_buffer_ret s False sender")
+        apply(subgoal_tac "recv_buffer = lookup_ipc_buffer_ret s True receiver")
+         apply simp
+        apply assumption
+       apply assumption
       apply(wpsimp wp:lookup_ipc_buffer_ret_valid)
-     (* DOWN TO HERE: need some lemmas or assumptions that impact do_fault_transfer? *)
-     defer
-    defer
-   apply(wpsimp wp:lookup_ipc_buffer_ret_valid)
-  apply simp
-  sorry
+     apply(rule_tac P="fault = None" in hoare_gen_asm)
+     apply wpsimp
+    apply(wpsimp wp:thread_get_wp)
+   apply(wpsimp wp:lookup_ipc_buffer_inv hoare_vcg_ex_lift hoare_vcg_conj_lift hoare_vcg_imp_lift
+     simp:obj_at_def)
+     apply(wpsimp wp:lookup_ipc_buffer_ret_valid[THEN hoare_strengthen_post])
+    apply(rule hoare_vcg_conj_lift)
+     apply(wpsimp wp:lookup_ipc_buffer_inv)
+    apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant" in hoare_gen_asm)
+    apply(wpsimp wp:lookup_ipc_buffer_ret_valid[THEN hoare_strengthen_post])
+   apply(wpsimp wp:lookup_ipc_buffer_inv)
+  by (clarsimp simp:pred_tcb_at_def obj_at_def is_tcb_def)
+
+lemma asUser_setRegister_obj_at:
+  "\<lbrace>\<lambda>s. if t = ref then (let y = the (get_tcb ref s) in
+          \<exists>b. ((), b) \<in> fst (setRegister r v (arch_tcb_context_get (tcb_arch y))) \<and>
+          P (TCB (y\<lparr>tcb_arch := arch_tcb_context_set b (tcb_arch y)\<rparr>)))
+      else obj_at P ref s\<rbrace>
+     as_user t (setRegister r v)
+   \<lbrace>\<lambda>rv s. obj_at P ref s\<rbrace>"
+  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+  apply(clarsimp simp:get_tcb_def obj_at_def split:if_splits split:kernel_object.splits)
+  by (clarsimp simp: setRegister_def modify_def bind_def get_def put_def split:user_context.splits)
+
+lemma asUser_setRegister_not_obj_at:
+  "\<lbrace>\<lambda>s. if t = ref then (let y = the (get_tcb ref s) in
+          \<exists>b. ((), b) \<in> fst (setRegister r v (arch_tcb_context_get (tcb_arch y))) \<and>
+          \<not> P (TCB (y\<lparr>tcb_arch := arch_tcb_context_set b (tcb_arch y)\<rparr>)))
+      else \<not> obj_at P ref s\<rbrace>
+     as_user t (setRegister r v)
+   \<lbrace>\<lambda>rv s. \<not> obj_at P ref s\<rbrace>"
+  apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+  apply(clarsimp simp:get_tcb_def obj_at_def split:if_splits split:kernel_object.splits)
+  by (clarsimp simp: setRegister_def modify_def bind_def get_def put_def split:user_context.splits)
 
 lemma handle_SysRecv_syscall_valid:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
@@ -804,22 +822,55 @@ lemma handle_SysRecv_syscall_valid:
      apply wpsimp
       apply(wpsimp simp:Let_def)
        (* 17 subgoals *)
+       (* used to be this, but I'm just trying to be more careful:
        apply(wpsimp simp:receive_ipc_def complete_signal_def)
         (* 23 subgoals *)
-        (* I'm not sure I actually saved myself any effort here
-        apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)+
-       apply(wpsimp wp:crunch_wps hoare_vcg_all_lift hoare_vcg_conj_lift)
-        apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
-        apply force (* XXX risky *)
-       apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post,
-         THEN hoare_vcg_ex_lift]
-         simp:get_message_info_ret_getRegister_as_user_ret)
-       apply force (* XXX risky *)
-      apply(wpsimp wp:get_simple_ko_wp)
-        *)
         apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp
           simp:set_simple_ko_def setRegister_def as_user_def set_thread_state_def)+
           apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+       *)
+       apply(wpsimp simp:receive_ipc_def complete_signal_def set_simple_ko_def)
+           (* 26 subgoals *)
+           apply(wpsimp wp:set_object_wp)
+          apply(wpsimp wp:assert_wp)
+         apply(wpsimp wp:assert_wp)
+        apply(wpsimp wp:get_object_wp)
+       apply(wpsimp wp:hoare_vcg_all_lift)
+       apply(wpsimp wp:hoare_vcg_imp_lift)
+        apply(wpsimp wp:asUser_setRegister_not_obj_at[THEN hoare_strengthen_post])
+       apply(wpsimp wp:hoare_vcg_imp_lift)
+       apply(wpsimp wp:hoare_vcg_conj_lift)
+        apply(rule_tac P="badge_val ro = x3" in hoare_gen_asm)
+        apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
+        apply(subgoal_tac "getRegister_as_user_ret s (cur_thread s) badge_register
+            \<comment> \<open> (s\<lparr>kheap :=
+                 \<lambda>a. if a = y
+                     then Some
+                           (Notification (ntfn_set_obj rvc IdleNtfn))
+                     else kheap s a\<rparr>) (cur_thread s) badge_register \<close>
+                = Some (badge_val ro)")
+         prefer 2
+         (* FIXME: I really don't get why this isn't matching. *)
+         apply assumption
+         defer
+        apply assumption
+        defer
+       apply(wpsimp wp:hoare_vcg_ex_lift simp:get_message_info_ret_getRegister_as_user_ret)
+       apply(rule_tac P="data_to_message_info z = minfo ro" in hoare_gen_asm)
+       apply(wpsimp wp:hoare_vcg_conj_lift)
+        apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
+        (* FIXME: again with this *)
+        apply assumption
+        defer
+       apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
+      apply(wpsimp wp:get_simple_ko_wp)
+     apply wpsimp
+         apply(wpsimp simp:set_simple_ko_def)
+            apply(wpsimp wp:set_object_wp)
+           apply(wpsimp wp:assert_wp)
+          apply(wpsimp wp:assert_wp)
+         apply(wpsimp wp:get_object_wp)
+         . (* hmm. similar pattern to above. DOWN TO HERE
          apply(wpsimp wp:crunch_wps set_object_wp simp:setup_caller_cap_def)+
            (* 31 subgoals *)
            apply(wpsimp wp:crunch_wps simp:cap_insert_def)
@@ -833,6 +884,8 @@ lemma handle_SysRecv_syscall_valid:
               apply(wpsimp wp:crunch_wps set_object_wp get_object_wp simp:set_thread_state_def
                     |solves\<open>clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def\<close>)+
            apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
+           apply clarsimp
+. (*
            apply force (* XXX: risky *)
           apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
          apply force (* XXX: risky *)
