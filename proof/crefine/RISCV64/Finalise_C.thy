@@ -2740,29 +2740,219 @@ lemma prepareThreadDelete_ccorres:
   apply fastforce
   done
 
+lemma option_to_ctcb_ptr_canonical:
+  "\<lbrakk>pspace_canonical' s; tcb_at' tcb s\<rbrakk>
+   \<Longrightarrow> option_to_ctcb_ptr (Some tcb)
+       = tcb_Ptr (sign_extend canonical_bit (ptr_val (tcb_ptr_to_ctcb_ptr tcb)))"
+  apply (clarsimp simp: option_to_ctcb_ptr_def)
+  apply (frule (1) obj_at'_is_canonical)
+  by (fastforce dest: canonical_address_tcb_ptr
+                simp: obj_at'_def objBits_simps' projectKOs canonical_address_sign_extended
+                      sign_extended_iff_sign_extend)
+
+lemma bindNTFN_alignment_junk:
+  "\<lbrakk> is_aligned tcb tcbBlockSizeBits; bits \<le> ctcb_size_bits \<rbrakk>
+   \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr tcb) && ~~ mask bits = ptr_val (tcb_ptr_to_ctcb_ptr tcb)"
+  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def projectKOs)
+  apply (rule is_aligned_neg_mask_eq)
+  apply (erule aligned_add_aligned)
+   apply (erule is_aligned_weaken[rotated])
+   by (auto simp add: is_aligned_def objBits_defs ctcb_offset_defs)
+
 lemma schedContext_unbindNtfn_ccorres:
   "ccorres dc xfdc
-    (invs' and sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+    (invs' and sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
     (schedContextUnbindNtfn scPtr) (Call schedContext_unbindNtfn_'proc)"
-sorry (* FIXME RT: schedContext_unbindNtfn_ccorres *)
+  supply Collect_const[simp del]
+  apply (cinit lift: sc_')
+   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+   apply (rule_tac val="from_bool True"
+               and R="sc_at' scPtr and no_0_obj'"
+               and R'=UNIV
+               and xf'=ret__int_'
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg)
+      apply (fastforce split: if_splits)
+     apply ceqv
+    apply ccorres_rewrite
+    apply (rule ccorres_move_c_guard_sc)
+    apply (rule_tac val="from_bool (scNtfn sc \<noteq> None)"
+                and R="ko_at' sc scPtr and no_0_obj' and valid_objs'"
+                and R'=UNIV
+                and xf'=ret__int_'
+                 in ccorres_symb_exec_r_known_rv)
+       apply (rule conseqPre, vcg)
+       apply (clarsimp split: if_splits)
+       apply (frule (1) obj_at_cslift_sc)
+       apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+       apply clarsimp
+       apply (intro conjI impI allI)
+        apply (clarsimp simp: typ_heap_simps csched_context_relation_def option_to_ptr_def
+                              option_to_0_def
+                       split: option.splits)
+       apply (clarsimp simp: typ_heap_simps csched_context_relation_def option_to_ptr_def
+                             option_to_0_def valid_sched_context'_def
+                      split: option.splits)
+      apply ceqv
+     apply (simp add: option.case_eq_if)
+     apply (subst if_swap)
+     apply (rule ccorres_cond_both'[where Q=\<top> and Q'="\<top>"])
+       apply fastforce
+      apply (rule ccorres_pre_getNotification, rename_tac ntfn)
+      apply (rule_tac P="\<lambda>s. invs' s \<and> sym_refs (state_refs_of' s)
+                             \<and> ko_at' sc scPtr s \<and> ko_at' ntfn (the (scNtfn sc)) s"
+                  and P'=UNIV
+                  in ccorres_split_nothrow_novcg)
+          apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
+          apply (rule allI, rule conseqPre, vcg)
+          apply clarsimp
+          apply (rename_tac ntfnPtr)
+          apply (frule cmap_relation_ntfn)
+          apply (frule (1) obj_at_cslift_sc)
+          apply (frule (1) invs'_ko_at_valid_sched_context')
+          apply normalise_obj_at'
+          apply (rename_tac sc')
+          apply (erule (1) cmap_relation_ko_atE)
+          apply (rule conjI)
+           apply (erule h_t_valid_clift)
+          apply (rule conjI)
+           apply (clarsimp simp: typ_heap_simps' csched_context_relation_def)
+          apply (clarsimp simp: setNotification_def split_def)
+          apply (rule bexI[OF _ setObject_eq])
+              apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
+                               cpspace_relation_def update_ntfn_map_tos
+                               csched_context_relation_def typ_heap_simps')
+              apply (prop_tac "scNotification_C sc' = ntfn_Ptr ntfnPtr", simp)
+              apply clarsimp
+              apply (intro conjI)
+                 apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+                  apply (clarsimp simp: cnotification_relation_def Let_def split: ntfn.splits)
+                 apply fastforce
+                apply (simp add: refill_buffer_relation_def image_def dom_def Let_def typ_heap_simps
+                                 update_ntfn_map_tos)
+               apply (simp add: carch_state_relation_def)
+              apply (simp add: cmachine_state_relation_def)
+             apply (simp add: h_t_valid_clift_Some_iff)
+            apply (simp add: objBits_simps')
+           apply (simp add: objBits_simps)
+          apply assumption
+         apply ceqv
+        apply clarsimp
+        apply (rule ccorres_move_c_guard_sc)
+        apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+          apply vcg
+         apply fastforce
+        apply clarsimp
+        apply (rule_tac sc'="scNotification_C_update (\<lambda>_. NULL) sc'"
+                     in rf_sr_sc_update_no_refill_buffer_update2;
+               fastforce?)
+          apply (clarsimp simp: typ_heap_simps')
+         apply (clarsimp simp: csched_context_relation_def)
+        apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
+       apply clarsimp
+       apply (wpsimp wp: hoare_vcg_conj_lift)
+      apply (clarsimp simp: guard_is_UNIV_def)
+     apply (rule ccorres_return_Skip)
+    apply vcg
+   apply vcg
+  apply (fastforce simp: sym_refs_asrt_def)
+  done
 
 lemma schedContext_unbindTCB_ccorres:
   "ccorres dc xfdc
-    (invs' and sc_at' scPtr) (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []
-    (schedContextUnbindTCB scPtr) (Call schedContext_unbindTCB_'proc)"
-sorry (* FIXME RT: schedContext_unbindTCB_ccorres *)
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
+     (schedContextUnbindTCB scPtr) (Call schedContext_unbindTCB_'proc)"
+  apply (cinit lift:  sc_')
+   apply (rule ccorres_stateAssert)+
+   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+   apply (rule ccorres_assert2)
+   apply (rule ccorres_pre_getCurThread)
+   apply (rule_tac val="tcb_ptr_to_ctcb_ptr (the (scTCB sc))"
+               and R="ko_at' sc scPtr and no_0_obj' and valid_objs'"
+               and R'=UNIV
+               and xf'=tcb_'
+                in ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg, clarsimp)
+      apply (frule (1) obj_at_cslift_sc)
+      apply (clarsimp simp: typ_heap_simps csched_context_relation_def option_to_ctcb_ptr_def)
+     apply ceqv
+    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+        apply (simp add: when_def)
+        apply (rule_tac R="\<lambda>s. cur = ksCurThread s" in ccorres_cond)
+          apply (fastforce dest: rf_sr_ksCurThread)
+         apply (ctac add: rescheduleRequired_ccorres)
+        apply (rule ccorres_return_Skip)
+       apply ceqv
+      apply (ctac add: tcbSchedDequeue_ccorres)
+        apply (ctac add: tcbReleaseRemove_ccorres)
+          apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+              apply (rule_tac P'="ko_at' sc scPtr and valid_objs'"
+                           in threadSet_ccorres_lemma3[where P=\<top>])
+               apply vcg
+              apply clarsimp
+              apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+              apply (rule conjI)
+               apply (clarsimp simp: typ_heap_simps valid_sched_context'_def valid_bound_obj'_def
+                              split: option.splits)
+              apply (fastforce elim!: rf_sr_tcb_update_no_queue_gen2
+                                simp: typ_heap_simps' ctcb_relation_def tcb_cte_cases_def
+                                      cteSizeBits_def)
+             apply ceqv
+            apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+              apply vcg
+             apply fastforce
+            apply clarsimp
+            apply (rule conjI)
+             apply (clarsimp simp: typ_heap_simps')
+            apply (rule_tac sc'="scTcb_C_update (\<lambda>_. NULL) sc'"
+                         in rf_sr_sc_update_no_refill_buffer_update2;
+                   fastforce?)
+              apply (clarsimp simp: typ_heap_simps')
+             apply (clarsimp simp: csched_context_relation_def option_to_ctcb_ptr_def)
+            apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
+           apply wpsimp
+          apply vcg
+         apply wpsimp
+        apply (vcg exspec=tcbReleaseRemove_modifies)
+       apply wpsimp
+      apply clarsimp
+      apply (vcg exspec=tcbSchedDequeue_modifies)
+     apply wpsimp
+    apply (vcg exspec=rescheduleRequired_modifies)
+   apply vcg
+  apply (fastforce dest: invs_valid_objs' sc_ko_at_valid_objs_valid_sc'
+                   simp: valid_sched_context'_def split: option.splits if_splits)
+  done
+
+lemma schedContext_unbindAllTCBs_ccorres:
+  "ccorres dc xfdc
+    (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
+    (schedContextUnbindAllTCBs scPtr) (Call schedContext_unbindAllTCBs_'proc)"
+  apply (cinit lift: sc_')
+   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+   apply (rule ccorres_move_c_guard_sc)
+   apply (clarsimp simp: when_def)
+   apply (rule_tac R="ko_at' sc scPtr and valid_objs' and no_0_obj'" in ccorres_cond)
+     apply clarsimp
+     apply (frule (1) obj_at_cslift_sc)
+     apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+     apply normalise_obj_at'
+     subgoal
+       by (fastforce dest!: tcb_at_not_NULL
+                      simp: typ_heap_simps valid_sched_context'_def valid_bound_obj'_def
+                            csched_context_relation_def option_to_ctcb_ptr_def
+                     split: option.splits)
+    apply (ctac add: schedContext_unbindTCB_ccorres)
+   apply (rule ccorres_return_Skip)
+  apply fastforce
+  done
 
 lemma schedContext_completeYieldTo_ccorres:
   "ccorres dc xfdc
     (invs' and tcb_at' tptr) \<lbrace>\<acute>yielder = tcb_ptr_to_ctcb_ptr tptr\<rbrace> []
     (schedContextCompleteYieldTo tptr) (Call schedContext_completeYieldTo_'proc)"
 sorry (* FIXME RT: schedContext_completeYieldTo_ccorres *)
-
-lemma schedContext_unbindAllTCBs_ccorres:
-  "ccorres dc xfdc
-    (invs' and sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-    (schedContextUnbindAllTCBs scPtr) (Call schedContext_unbindAllTCBs_'proc)"
-sorry (* FIXME RT: schedContext_unbindAllTCBs_ccorres *)
 
 lemma finaliseCap_ccorres:
   "\<And>final.

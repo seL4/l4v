@@ -1358,17 +1358,6 @@ lemma sched_context_bind_tcb_invs[wp]:
                   dest!: symreftype_inverse' split: if_splits)
   done
 
-lemma maybe_sched_context_bind_tcb_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. tcb_at tcb s \<and> (bound_sc_tcb_at (\<lambda>x. x \<noteq> Some sc) tcb s \<longrightarrow>
-                    ex_nonz_cap_to sc s \<and> ex_nonz_cap_to tcb s
-                  \<and> sc_tcb_sc_at ((=) None) sc s \<and> bound_sc_tcb_at ((=) None) tcb s))\<rbrace>
-   maybe_sched_context_bind_tcb sc tcb
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  unfolding maybe_sched_context_bind_tcb_def
-  apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
-  apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb)
-  done
-
 lemma sched_context_unbind_valid_replies[wp]:
   "tcb_release_remove tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
@@ -1732,12 +1721,6 @@ lemma maybe_sched_context_unbind_tcb_lift:
   assumes A: "\<And>scp. sched_context_unbind_tcb scp \<lbrace>P\<rbrace>"
   shows "\<And>tp. maybe_sched_context_unbind_tcb tp \<lbrace>P\<rbrace>"
   unfolding maybe_sched_context_unbind_tcb_def
-  by (wpsimp wp: A hoare_drop_imps)
-
-lemma maybe_sched_context_bind_tcb_lift:
-  assumes A: "sched_context_bind_tcb sc_ptr tcb_ptr \<lbrace>P\<rbrace>"
-  shows "maybe_sched_context_bind_tcb sc_ptr tcb_ptr \<lbrace>P\<rbrace>"
-  unfolding maybe_sched_context_bind_tcb_def
   by (wpsimp wp: A hoare_drop_imps)
 
 (* sched_context_yield_to is moved to the start of SchedContextInv_AI

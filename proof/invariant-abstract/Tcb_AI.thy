@@ -1245,12 +1245,8 @@ lemma decode_set_sched_params_wf[wp]:
   apply (rule conjI; clarsimp)
   apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def is_cap_simps sc_tcb_sc_at_def
                         sc_at_ppred_def)
-  apply (rule conjI, fastforce)
-  apply (subgoal_tac "excaps ! Suc 0 \<in> set excaps")
-   prefer 2
-   apply fastforce
-  apply (cases "excaps ! Suc 0")
-  apply (clarsimp)
+  apply (prop_tac "excaps ! Suc 0 \<in> set excaps", fastforce)
+  apply (cases "excaps ! Suc 0"; fastforce)
   done
 
 end
@@ -1865,7 +1861,7 @@ lemma set_priority_bound_sc_tcb_at[wp]:
   by (wpsimp simp:  wp: hoare_drop_imps)
 
 crunch cancel_all_ipc
-  for bound_sc_tcb_at[wp]: "bound_sc_tcb_at P target"
+  for bound_sc_tcb_at[wp]: "\<lambda>s. Q (bound_sc_tcb_at P target s)"
   (wp: crunch_wps)
 
 lemma cap_delete_fh_lift:
