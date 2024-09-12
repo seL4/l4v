@@ -810,6 +810,18 @@ lemma asUser_setRegister_not_obj_at:
   apply(clarsimp simp:get_tcb_def obj_at_def split:if_splits split:kernel_object.splits)
   by (clarsimp simp: setRegister_def modify_def bind_def get_def put_def split:user_context.splits)
 
+lemma complete_signal_ct:
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>
+     complete_signal ntfnptr tcb
+   \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  unfolding complete_signal_def
+  apply(wpsimp simp:complete_signal_def)
+     apply(wpsimp simp:set_simple_ko_def get_object_def)
+    apply(wpsimp wp:crunch_wps)
+   apply(wpsimp wp:crunch_wps)
+  apply simp
+  done
+
 lemma handle_SysRecv_syscall_valid:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
@@ -822,78 +834,108 @@ lemma handle_SysRecv_syscall_valid:
      apply wpsimp
       apply(wpsimp simp:Let_def)
        (* 17 subgoals *)
-       (* used to be this, but I'm just trying to be more careful:
+       (* more automated version *)
        apply(wpsimp simp:receive_ipc_def complete_signal_def)
         (* 23 subgoals *)
         apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp
           simp:set_simple_ko_def setRegister_def as_user_def set_thread_state_def)+
           apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
-       *)
-       apply(wpsimp simp:receive_ipc_def complete_signal_def set_simple_ko_def)
-           (* 26 subgoals *)
-           apply(wpsimp wp:set_object_wp)
-          apply(wpsimp wp:assert_wp)
-         apply(wpsimp wp:assert_wp)
-        apply(wpsimp wp:get_object_wp)
-       apply(wpsimp wp:hoare_vcg_all_lift)
-       apply(wpsimp wp:hoare_vcg_imp_lift)
-        apply(wpsimp wp:asUser_setRegister_not_obj_at[THEN hoare_strengthen_post])
-       apply(wpsimp wp:hoare_vcg_imp_lift)
-       apply(wpsimp wp:hoare_vcg_conj_lift)
-        apply(rule_tac P="badge_val ro = x3" in hoare_gen_asm)
-        apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
-        apply(subgoal_tac "getRegister_as_user_ret s (cur_thread s) badge_register
-            \<comment> \<open> (s\<lparr>kheap :=
-                 \<lambda>a. if a = y
-                     then Some
-                           (Notification (ntfn_set_obj rvc IdleNtfn))
-                     else kheap s a\<rparr>) (cur_thread s) badge_register \<close>
-                = Some (badge_val ro)")
-         prefer 2
-         (* FIXME: I really don't get why this isn't matching. *)
-         apply assumption
-         defer
-        apply assumption
-        defer
-       apply(wpsimp wp:hoare_vcg_ex_lift simp:get_message_info_ret_getRegister_as_user_ret)
-       apply(rule_tac P="data_to_message_info z = minfo ro" in hoare_gen_asm)
-       apply(wpsimp wp:hoare_vcg_conj_lift)
-        apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
-        (* FIXME: again with this *)
-        apply assumption
-        defer
-       apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
-      apply(wpsimp wp:get_simple_ko_wp)
-     apply wpsimp
-         apply(wpsimp simp:set_simple_ko_def)
-            apply(wpsimp wp:set_object_wp)
+       (* the more careful version, though I can't much tell the difference in the result:
+       apply(wpsimp simp:receive_ipc_def)
+           apply(rename_tac tcb xa x31 x32 x33 rv rvb ntfnptr)
+           apply(wpsimp simp:complete_signal_def set_simple_ko_def)
+             (* 26 subgoals *)
+             apply(wpsimp wp:set_object_wp)
+            apply(wpsimp wp:assert_wp)
            apply(wpsimp wp:assert_wp)
-          apply(wpsimp wp:assert_wp)
-         apply(wpsimp wp:get_object_wp)
-         . (* hmm. similar pattern to above. DOWN TO HERE
-         apply(wpsimp wp:crunch_wps set_object_wp simp:setup_caller_cap_def)+
+          apply(wpsimp wp:get_object_wp)
+         apply(wpsimp wp:hoare_vcg_all_lift)
+         apply(wpsimp wp:hoare_vcg_imp_lift)
+          apply(wpsimp wp:asUser_setRegister_not_obj_at[THEN hoare_strengthen_post])
+         apply(wpsimp wp:hoare_vcg_imp_lift)
+         apply(wpsimp wp:hoare_vcg_conj_lift)
+          apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
+          apply simp (* NB: this fills in a precondition with False *)
+         apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
+         apply simp (* NB: this fills in a precondition with False *)
+        apply(wpsimp wp:get_simple_ko_wp)
+       apply(wpsimp split:endpoint.splits)
+           apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
+          apply(wpsimp simp:set_thread_state_def)
+            apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+           apply(wpsimp wp:set_object_wp)
+          apply wpsimp
+         apply simp
+        apply wpsimp *)
+          (* 30 subgoals - here's where the careful and more automated proof seem to line up *)
+          apply(wpsimp wp:crunch_wps set_object_wp simp:setup_caller_cap_def)+
            (* 31 subgoals *)
            apply(wpsimp wp:crunch_wps simp:cap_insert_def)
                    (* 40 subgoals *)
                    apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+                  (* more automated version *)
                   apply(wpsimp wp:crunch_wps set_object_wp get_object_wp
                     simp:update_cdt_def set_cdt_def set_cap_def)+
                 (* 34 subgoals *)
                 apply(wpsimp wp:crunch_wps get_object_wp simp:set_untyped_cap_as_full_def get_cap_def
                   set_thread_state_def)+
+                  (* more careful version
+                  apply(wpsimp simp:update_cdt_def set_cdt_def)
+                 apply(wpsimp wp:gets_wp)
+                apply(wpsimp wp:gets_wp)
+               apply(wpsimp wp:gets_wp)
+              apply(wpsimp wp:set_object_wp get_object_wp simp:set_cap_def)
+             apply(wpsimp simp:set_untyped_cap_as_full_def)
+            apply(wpsimp wp:assert_wp)
+           apply(wpsimp wp:get_cap_wp)
+          apply(wpsimp wp:get_cap_wp)
+         apply(wpsimp simp:set_thread_state_def) *)
+              (* 32 subgoals *)
               apply(wpsimp wp:crunch_wps set_object_wp get_object_wp simp:set_thread_state_def
                     |solves\<open>clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def\<close>)+
            apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
-           apply clarsimp
-. (*
-           apply force (* XXX: risky *)
+           apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def) (* XXX: risky? *)
           apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
-         apply force (* XXX: risky *)
-        apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
-       apply force (* XXX: risky *)
-      apply(wpsimp wp:thread_get_wp simp:get_thread_state_def)+
-     (* FIXME: Make use of the fact that we know from the precondition there are no caps to be
-        transferred because the endpoint cap has no grant rights. *)
+          apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def) (* XXX: risky? *)
+         apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
+         apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def) (* XXX: risky? *)
+        apply wpsimp
+       apply(wpsimp wp:thread_get_wp simp:get_thread_state_def)
+                (* 24 subgoals *)
+                apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)
+               apply(wpsimp wp:return_wp)
+              apply(wpsimp wp:return_wp)
+             apply(wpsimp wp:assert_wp)
+            apply wpsimp
+              apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)
+             apply(wpsimp wp:return_wp)
+            apply(wpsimp simp:set_thread_state_def)
+              apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+             apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)
+            apply wpsimp
+           apply simp
+          apply wpsimp
+         apply(wpsimp wp:get_simple_ko_wp)
+        apply(wpsimp wp:thread_get_wp simp:get_bound_notification_def)
+       apply(wpsimp wp:get_simple_ko_wp)
+      apply(wpsimp simp:delete_caller_cap_def cap_delete_one_def)
+         apply(wpsimp simp:empty_slot_def)
+                (* 26 subgoals *)
+                apply(unfold post_cap_deletion_def)
+                apply simp
+                apply wpsimp
+               apply(unfold set_cap_def)
+               apply simp
+               apply(wpsimp wp:get_object_wp)
+                 apply(wpsimp wp:set_object_wp)
+                apply(wpsimp wp:get_object_wp)
+               apply clarsimp
+               apply(wpsimp wp:get_object_wp)
+              apply(wpsimp wp:set_original_wp)
+             apply wpsimp
+             apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
+             apply(clarsimp split:if_split)
+             (* bit of a mess *)
   oops
 
 end (* Arch AARCH64_A *)
