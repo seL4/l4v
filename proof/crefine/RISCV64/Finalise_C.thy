@@ -35,102 +35,217 @@ declare if_split [split del]
 definition
   "option_map2 f m = option_map f \<circ> m"
 
-lemma head_end_ksReadyQueues_':
-  "\<lbrakk> (s, s') \<in> rf_sr; ksReadyQueues_asrt s; pspace_aligned' s; pspace_distinct' s;
-     d \<le> maxDomain; p \<le> maxPriority \<rbrakk>
-   \<Longrightarrow> head_C (index (ksReadyQueues_' (globals s')) (cready_queues_index_to_C d p)) = NULL
-       \<longleftrightarrow> end_C (index (ksReadyQueues_' (globals s')) (cready_queues_index_to_C d p)) = NULL"
-  apply (frule (2) rf_sr_ctcb_queue_relation[where d=d and p=p])
-  apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
-  apply (drule_tac x=d in spec)
-  apply (drule_tac x=p in spec)
-  apply clarsimp
-  apply (frule tcbQueueHead_iff_tcbQueueEnd)
-  apply (clarsimp simp: ctcb_queue_relation_def option_to_ctcb_ptr_def split: option.splits)
-  apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
-  apply (frule (3) obj_at'_tcbQueueEnd_ksReadyQueues)
-  apply (rename_tac head "end")
-  apply (prop_tac "tcb_at' head s")
-   apply (fastforce simp: tcbQueueEmpty_def)
-  apply (prop_tac "tcb_at' end s")
-   apply (fastforce simp: tcbQueueEmpty_def)
-  apply (fastforce dest: tcb_at_not_NULL)
+lemma thread_state_ptr_set_tcbQueued_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c (cparent \<^bsup>s\<^esup>thread_state_ptr [''tcbState_C''] :: tcb_C ptr)\<rbrace>
+       Call thread_state_ptr_set_tcbQueued_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (rule allI, rule conseqPre, vcg)
+  apply clarsimp \<comment> \<open>for speed\<close>
+  apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff)
+  apply (frule h_t_valid_clift)
+  apply (clarsimp simp: packed_heap_update_collapse_hrs)
+  apply (intro conjI;
+         fwd_all_new \<open>subst parent_update_child\<close>
+                     \<open>fastforce intro!: h_t_valid_c_guard
+                                  simp: option_map2_def fun_eq_iff typ_heap_simps
+                                 split: if_splits\<close>)
   done
 
-lemma tcbSchedEnqueue_cslift_spec:
-  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. \<exists>d v. option_map2 tcbPriority_C (cslift s) \<acute>tcb = Some v
-                       \<and> unat v \<le> numPriorities
-                       \<and> option_map2 tcbDomain_C (cslift s) \<acute>tcb = Some d
-                       \<and> unat d < Kernel_Config.numDomains
-                       \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
-                           \<longrightarrow> option_map2 tcbPriority_C (cslift s)
-                                   (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
-                                           \<noteq> None
-                             \<and> option_map2 tcbDomain_C (cslift s)
-                                   (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
-                                           \<noteq> None)
-                       \<and> (head_C (index \<acute>ksReadyQueues (unat (d * 0x100 + v))) \<noteq> NULL
-                          \<longleftrightarrow> end_C (index \<acute>ksReadyQueues (unat (d * 0x100 + v))) \<noteq> NULL)\<rbrace>
+lemma thread_state_ptr_set_tsType_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c (cparent \<^bsup>s\<^esup>thread_state_ptr [''tcbState_C''] :: tcb_C ptr)\<rbrace>
+       Call thread_state_ptr_set_tsType_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (rule allI, rule conseqPre, vcg)
+  apply clarsimp \<comment> \<open>for speed\<close>
+  apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff)
+  apply (frule h_t_valid_clift)
+  apply (clarsimp simp: packed_heap_update_collapse_hrs)
+  apply (intro conjI;
+         fwd_all_new \<open>subst parent_update_child\<close>
+                     \<open>fastforce intro!: h_t_valid_c_guard
+                                  simp: option_map2_def fun_eq_iff typ_heap_simps
+                                 split: if_splits\<close>)
+  done
+
+lemma tcb_queue_prepend_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call tcb_queue_prepend_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply vcg
+  apply (clarsimp simp: option_map2_def fun_eq_iff typ_heap_simps h_t_valid_clift_Some_iff
+                 split: if_splits)
+  done
+
+lemma addToBitmap_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call addToBitmap_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply vcg
+  apply clarsimp
+  done
+
+lemma ready_queues_index_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call ready_queues_index_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (rule allI, rule conseqPre)
+  apply vcg
+  apply clarsimp
+  done
+
+lemma tcbSchedEnqueue_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. True\<rbrace>
        Call tcbSchedEnqueue_'proc
       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
   apply (hoare_rule HoarePartial.ProcNoRec1)
-  apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp simp: option_map2_def fun_eq_iff h_t_valid_clift
-                        h_t_valid_field[OF h_t_valid_clift])
-  apply (rule conjI)
-   apply (clarsimp simp: typ_heap_simps le_maxDomain_eq_less_numDomains)
-   apply unat_arith
-  apply clarsimp
-  apply (rule conjI)
-   apply (clarsimp simp: typ_heap_simps cong: if_cong)
-   apply (simp split: if_split)
-  by (auto simp: typ_heap_simps' if_Some_helper numPriorities_def
-           cong: if_cong split: if_splits)
-
-lemma setThreadState_cslift_spec:
-  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
-                 \<and> x \<noteq> 0 \<and> x \<noteq> 1
-              \<longrightarrow> (\<exists>d v. option_map2 tcbPriority_C (cslift s) (tcb_Ptr x) = Some v
-                       \<and> unat v \<le> numPriorities
-                       \<and> option_map2 tcbDomain_C (cslift s) (tcb_Ptr x) = Some d
-                       \<and> unat d < Kernel_Config.numDomains
-                       \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
-                           \<longrightarrow> option_map2 tcbPriority_C (cslift s)
-                                   (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
-                                           \<noteq> None
-                             \<and> option_map2 tcbDomain_C (cslift s)
-                                   (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
-                                           \<noteq> None)))\<rbrace>
-          Call setThreadState_'proc
-      {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
-           \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
-           \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
-           \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)
-           \<and> ksReadyQueues_' (globals s') = ksReadyQueues_' (globals s)}"
   apply (rule allI, rule conseqPre)
-   apply vcg_step
-   apply vcg_step
-    apply vcg_step
-   apply vcg_step
-    apply vcg_step
-     apply vcg_step
-    apply vcg_step
-       apply (vcg exspec=tcbSchedEnqueue_cslift_spec)
-    apply (vcg_step+)[2]
-   apply vcg_step
-      apply (vcg exspec=isSchedulable_modifies)
-     apply vcg
-    apply vcg_step
-    apply vcg_step
-       apply (vcg_step+)[1]
-      apply vcg
-     apply vcg_step+
-  apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                        fun_eq_iff option_map2_def)
-  by (simp split: if_split)
+   apply (vcg exspec=thread_state_ptr_set_tcbQueued_spec_tcb_fields
+              exspec=tcb_queue_prepend_spec_tcb_fields
+              exspec=addToBitmap_spec_tcb_fields
+              exspec=ready_queues_index_spec_tcb_fields)
+  apply simp
+  done
+
+lemma isSchedulable_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call isSchedulable_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply (vcg exspec=isRunnable_modifies)
+  apply clarsimp
+  done
+
+lemma rescheduleRequired_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call rescheduleRequired_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply (vcg exspec=tcbSchedEnqueue_spec_tcb_fields exspec=isSchedulable_spec_tcb_fields)
+  apply clarsimp
+  done
+
+lemma possibleSwitchTo_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call possibleSwitchTo_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply (vcg exspec=rescheduleRequired_spec_tcb_fields exspec=tcbSchedEnqueue_spec_tcb_fields)
+  apply clarsimp
+  done
+
+lemma setThreadState_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call setThreadState_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply (vcg exspec=rescheduleRequired_spec_tcb_fields
+             exspec=thread_state_ptr_set_tsType_spec_tcb_fields
+             exspec=isSchedulable_spec_tcb_fields)
+  apply clarsimp
+  done
+
+lemma refill_head_overlapping_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call refill_head_overlapping_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply vcg
+  apply clarsimp
+  done
+
+lemma refill_pop_head_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call refill_pop_head_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply (vcg exspec=refill_head_modifies exspec=refill_next_modifies exspec=refill_size_modifies)
+  apply (clarsimp simp: typ_heap_simps)
+  done
+
+lemma merge_overlapping_head_refill_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call merge_overlapping_head_refill_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply (vcg exspec=refill_pop_head_spec_tcb_fields exspec=refill_head_modifies
+             exspec=refill_index_modifies)
+  apply (clarsimp simp: typ_heap_simps)
+  done
+
+lemma refill_unblock_check_spec_tcb_fields:
+  "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call refill_unblock_check_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  (is "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s} ?f ({s'. ?post s s'})")
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (clarsimp simp: whileAnno_def)
+  apply (rule_tac I1="{t. ?post t s}" in subst[OF whileAnno_def])
+  apply (vcg exspec=merge_overlapping_head_refill_spec_tcb_fields
+             exspec=refill_head_overlapping_spec_tcb_fields)
+    subgoal by (clarsimp simp: option_map2_def typ_heap_simps split: if_splits)
+   apply fastforce
+  apply fastforce
+  done
+
+lemma restart_thread_if_no_fault_spec_tcb_fields:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s}
+       Call restart_thread_if_no_fault_'proc
+       {s'. option_map2 tcbEPNext_C (cslift s') = option_map2 tcbEPNext_C (cslift s)
+            \<and> option_map2 tcbEPPrev_C (cslift s') = option_map2 tcbEPPrev_C (cslift s)
+            \<and> option_map2 tcbPriority_C (cslift s') = option_map2 tcbPriority_C (cslift s)
+            \<and> option_map2 tcbDomain_C (cslift s') = option_map2 tcbDomain_C (cslift s)}"
+  apply (rule allI, rule conseqPre)
+  apply (vcg exspec=possibleSwitchTo_spec_tcb_fields exspec=setThreadState_spec_tcb_fields
+             exspec=refill_unblock_check_spec_tcb_fields)
+  apply clarsimp
+  done
 
 lemma ep_queue_relation_shift:
   "(option_map2 tcbEPNext_C (cslift s')
@@ -176,55 +291,6 @@ lemma ctcb_relation_tcbPriority_maxPriority_numPriorities:
     \<Longrightarrow> unat (tcbPriority_C tcb') < numPriorities"
   apply (subst ctcb_relation_tcbPriority[symmetric], simp)
   apply (simp add: maxPriority_def numPriorities_def word_le_nat_alt)
-  done
-
-lemma tcbSchedEnqueue_cslift_precond_discharge:
-  "\<lbrakk> (s, s') \<in> rf_sr; obj_at' (P :: tcb \<Rightarrow> bool) x s;
-     ksReadyQueues_asrt s; pspace_aligned' s; pspace_distinct' s; pspace_bounded' s;
-     valid_objs' s \<rbrakk> \<Longrightarrow>
-   (\<exists>d v. option_map2 tcbPriority_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some v
-        \<and> unat v < numPriorities
-        \<and> option_map2 tcbDomain_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some d
-        \<and> unat d < Kernel_Config.numDomains
-        \<and> (end_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))) \<noteq> NULL
-                \<longrightarrow> option_map2 tcbPriority_C (cslift s')
-                     (head_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))))
-                                    \<noteq> None
-                  \<and> option_map2 tcbDomain_C (cslift s')
-                     (head_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))))
-                                    \<noteq> None)
-        \<and> (head_C (index (ksReadyQueues_' (globals s')) (unat (d * 0x100 + v))) \<noteq> NULL
-           \<longleftrightarrow> end_C (index (ksReadyQueues_' (globals s')) (unat (d * 0x100 + v))) \<noteq> NULL))"
-  apply (drule(1) obj_at_cslift_tcb)
-  apply (clarsimp simp: typ_heap_simps' option_map2_def)
-  apply (rename_tac tcb tcb')
-  apply (frule_tac t=x in valid_objs'_maxPriority, fastforce simp: obj_at'_def)
-  apply (frule_tac t=x in valid_objs'_maxDomain, fastforce simp: obj_at'_def)
-  apply (drule_tac P="\<lambda>tcb. tcbPriority tcb \<le> maxPriority" in obj_at_ko_at2', simp)
-  apply (drule_tac P="\<lambda>tcb. tcbDomain tcb \<le> maxDomain" in obj_at_ko_at2', simp)
-  apply (simp add: ctcb_relation_tcbDomain_maxDomain_numDomains
-                   ctcb_relation_tcbPriority_maxPriority_numPriorities)
-  apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
-                in rf_sr_ctcb_queue_relation)
-    apply (simp add: maxDom_to_H maxPrio_to_H)+
-  apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb" in head_end_ksReadyQueues_', fastforce+)
-  apply (simp add: cready_queues_index_to_C_def2 numPriorities_def le_maxDomain_eq_less_numDomains)
-  apply (clarsimp simp: ctcb_relation_def)
-  apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_up_simp, simp)
-  apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
-  apply (drule_tac x="tcbDomain tcb" in spec)
-  apply (drule_tac x="tcbPriority tcb" in spec)
-  apply clarsimp
-  apply (prop_tac "tcbQueueHead ((ksReadyQueues s (tcbDomain tcb, tcbPriority tcb))) \<noteq> None")
-   apply (frule tcbQueueHead_iff_tcbQueueEnd)
-   apply (clarsimp simp: ctcb_queue_relation_def option_to_ctcb_ptr_def)
-  apply (clarsimp simp: ksReadyQueues_asrt_def)
-  apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
-  apply (clarsimp simp: tcbQueueEmpty_def)
-  apply (rename_tac queue_head)
-  apply (frule_tac thread=queue_head in obj_at_cslift_tcb)
-   apply fastforce
-  apply (clarsimp dest: obj_at_cslift_tcb simp: ctcb_queue_relation_def option_to_ctcb_ptr_def)
   done
 
 lemma isRoundRobin_ccorres:
