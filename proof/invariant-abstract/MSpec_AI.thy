@@ -379,9 +379,8 @@ where
                badge_val oracle = badge |
              \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
              _ \<Rightarrow> (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
-                \<comment> \<open>This is a bit of a hack because the oracle doesn't really identify the
-                   sender TCB, but it's useful to know this for the proofs.\<close>
-               src = (hd q) \<and>
+               src = (hd q) \<and> \<comment> \<open>This is a bit of a hack because the oracle doesn't really
+                 identify the sender TCB, but it's useful to know this for the proofs.\<close>
                (case kheap s (hd q) of Some (TCB sender) \<Rightarrow>
                  (case tcb_state sender of BlockedOnSend _ data \<Rightarrow>
                    \<comment> \<open>That the sender made a call and can grant the reply is treated as
@@ -686,7 +685,7 @@ lemma do_normal_transfer_valid:
   apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
   done
 
-lemma do_normal_transfer_get_message_info_inv:
+lemma do_normal_transfer_get_message_info:
   "\<lbrace>(\<lambda>s. P (get_message_info_ret s sender))
     and K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
@@ -715,13 +714,13 @@ lemma do_ipc_transfer_valid:
       pred_tcb_at itcb_fault ((=) None) sender s \<and> tcb_at receiver s) and
     K (sender \<noteq> receiver \<and> \<not> grant)\<rbrace>
      do_ipc_transfer sender ep badge grant receiver
-   \<lbrace>\<lambda> _ s'. P' (lookup_ipc_buffer_ret s' False sender) \<and>
-      P'' (lookup_ipc_buffer_ret s' True receiver) \<and>
-      P (get_message_info_ret s' sender) \<and>
-      getRegister_as_user_ret s' receiver badge_register = Some badge \<and>
-      get_message_info_ret s' receiver =
-        Some (do_ipc_transfer_mi s' (the (get_message_info_ret s' sender)) sender receiver) \<and>
-      valid_message_info (the (get_message_info_ret s' sender))\<rbrace>"
+   \<lbrace>\<lambda> _ s. P' (lookup_ipc_buffer_ret s False sender) \<and>
+      P'' (lookup_ipc_buffer_ret s True receiver) \<and>
+      P (get_message_info_ret s sender) \<and>
+      getRegister_as_user_ret s receiver badge_register = Some badge \<and>
+      get_message_info_ret s receiver =
+        Some (do_ipc_transfer_mi s (the (get_message_info_ret s sender)) sender receiver) \<and>
+      valid_message_info (the (get_message_info_ret s sender))\<rbrace>"
   unfolding do_ipc_transfer_def
   apply wpsimp
        apply(clarsimp simp:do_ipc_transfer_mi_def)
@@ -785,26 +784,114 @@ lemma complete_signal_ct:
   apply simp
   done
 
+lemma getRegister_as_user_ret_notif_simp:
+  "\<not> tcb_at ntfnptr s \<Longrightarrow>
+   getRegister_as_user_ret (s\<lparr>kheap :=
+      \<lambda>a. if a = ntfnptr
+          then Some (Notification (ntfn_set_obj ntfn IdleNtfn))
+          else kheap s a\<rparr>) =
+   getRegister_as_user_ret s"
+  unfolding getRegister_as_user_ret_def tcb_at_def get_tcb_def
+  apply(rule ext)
+  apply(rule ext)
+  by (clarsimp split:option.splits if_splits kernel_object.splits user_context.splits)
+
+thm handle_recv_def
+thm receive_ipc_def
+thm complete_signal_def
+
+lemma complete_signal_wp:
+  "\<lbrace>(\<lambda>s. P (getRegister_as_user_ret s t) \<and>
+    obj_at (\<lambda>ko. \<exists> badge notification. ko = Notification notification \<and>
+      ntfn_obj notification = (ActiveNtfn badge) \<and>
+      getRegister_as_user_ret s tcb badge_register = Some badge) ntfnptr s) and
+    K (ntfnptr \<noteq> tcb \<and> ntfnptr \<noteq> t)\<rbrace>
+     complete_signal ntfnptr tcb \<lbrace>\<lambda>_ s. P (getRegister_as_user_ret s t)\<rbrace>"
+  apply(wpsimp simp:complete_signal_def)
+     apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
+    apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+   apply(wpsimp wp:get_simple_ko_wp)
+  apply clarsimp
+  apply(clarsimp simp:obj_at_def)
+  apply(rule_tac P=P in subst)
+   prefer 2
+   apply assumption
+  apply(rule ext)
+  apply(clarsimp split:option.splits if_splits kernel_object.splits user_context.splits
+    simp:getRegister_as_user_ret_def get_tcb_def arch_tcb_context_get_def arch_tcb_context_set_def
+      setRegister_def modify_def bind_def get_def put_def)
+  done
+
+lemma complete_signal_lookup_ipc_buffer:
+  "\<lbrace>(\<lambda>s. P (lookup_ipc_buffer_ret s b t)) and K (ntfnptr \<noteq> t)\<rbrace>
+     complete_signal ntfnptr tcb
+    \<lbrace>\<lambda>_ s. P (lookup_ipc_buffer_ret s b t)\<rbrace>"
+  apply(wpsimp simp:complete_signal_def)
+     apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
+    apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+   apply(wpsimp wp:get_simple_ko_wp)
+  apply clarsimp
+  apply(clarsimp simp:obj_at_def)
+  apply(rule_tac P=P in subst)
+   prefer 2
+   apply assumption
+  apply(clarsimp split:option.splits if_splits kernel_object.splits
+    simp:lookup_ipc_buffer_ret_def get_tcb_def)
+   apply(clarsimp simp:get_cap_ret_def tcb_cnode_map_def vm_read_write_def vm_read_only_def)
+  apply(clarsimp simp:get_cap_ret_def tcb_cnode_map_def vm_read_write_def vm_read_only_def)
+  apply(clarsimp split:cap.splits arch_cap.splits bool.splits)
+  done
+
+(* FIXME: not sure yet how much this would help even in true. I suspect actually that I shouldn't
+   need this, as we should only be calling complete_signal on getting a notification, not a ppcall
+lemma complete_signal_preserves_received_mi:
+  "\<lbrace>(\<lambda>s. get_message_info_ret s receiver = Some
+        (do_ipc_transfer_mi s (the (get_message_info_ret s sender)) sender receiver))\<rbrace>
+     complete_signal ntfnptr tcb
+    \<lbrace>\<lambda>_ s. get_message_info_ret s receiver = Some
+        (do_ipc_transfer_mi s (the (get_message_info_ret s sender)) sender receiver)\<rbrace>"
+  apply(wpsimp simp:complete_signal_def)
+     apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
+    apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+   apply(wpsimp wp:get_simple_ko_wp)
+  apply clarsimp
+  apply(clarsimp simp:obj_at_def)
+  apply(clarsimp split:option.splits if_splits kernel_object.splits
+    simp:get_message_info_ret_def lookup_ipc_buffer_ret_def get_tcb_def)
+  oops
+*)
+
 lemma handle_SysRecv_syscall_valid:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
       P (cur_thread s) \<and>
-      P' (get_message_info_ret s sender) \<and>
       P'' (lookup_ipc_buffer_ret s False sender) \<and>
-      P''' (lookup_ipc_buffer_ret s True (cur_thread s)) \<and>
-      valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro\<rbrace>
+      P''' (lookup_ipc_buffer_ret s True receiver) \<and>
+      P' (get_message_info_ret s sender) \<and>
+      valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>
+      receiver = cur_thread s
+      \<comment> \<open>NB: Not yet sure if this is a safe assumption to make, or even needed
+      ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>
     handle_recv True
    \<lbrace>\<lambda> _ s. P (cur_thread s) \<and>
-      P' (get_message_info_ret s sender) \<and>
       P'' (lookup_ipc_buffer_ret s False sender) \<and>
-      P''' (lookup_ipc_buffer_ret s True (cur_thread s)) \<and>
-      getRegister_as_user_ret s (cur_thread s) badge_register = Some (badge_val ro) \<and>
-      get_message_info_ret s (cur_thread s) = Some
-        \<comment> \<open>Maybe best phrase in terms of the postconditions of the inner lemmas, and leave off
-           linking them up with the overall syscall preconditions later
-        (do_ipc_transfer_mi s (minfo ro) sender (cur_thread s))\<close>
-        (do_ipc_transfer_mi s (the (get_message_info_ret s sender)) sender (cur_thread s)) \<and>
-      valid_message_info (the (get_message_info_ret s sender))\<rbrace>"
+      P''' (lookup_ipc_buffer_ret s True receiver) \<and>
+      P' (get_message_info_ret s sender) \<and>
+      getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
+      (if \<exists> n ntfn badge. cur_thread_bound_notification (mspec_transform s) = Some n \<and>
+        kheap s n = Some (Notification ntfn) \<and>
+        ntfn_obj ntfn = ActiveNtfn badge
+      then \<comment> \<open>notification reqs on complete_signal\<close>
+        get_message_info_ret s receiver = Some (minfo ro)
+      else \<comment> \<open>ppcall reqs on do_ipc_transfer\<close>
+        \<comment> \<open>FIXME: We need to catch the third case where there's neither a notification or ppcall\<close>
+        get_message_info_ret s receiver = Some
+          \<comment> \<open>(do_ipc_transfer_mi s (the (get_message_info_ret s sender)) sender receiver)\<close>
+          (do_ipc_transfer_mi s (minfo ro) sender receiver)) \<and>
+      receiver = cur_thread s
+      \<comment> \<open>NB: put back if needed
+      valid_message_info (the (get_message_info_ret s sender)) \<and>
+      ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>"
   apply(wpsimp wp:crunch_wps simp:handle_recv_def)
       (* fault handling - I think in reality we want to prove that the precondition
          ensures that there is no fault to handle. skip this for now *)
@@ -823,7 +910,22 @@ lemma handle_SysRecv_syscall_valid:
           (at least, until I started mentioning the sender in the postcondition...) *)
        apply(wpsimp simp:receive_ipc_def)
            apply(rename_tac tcb xa x31 x32 x33 rv rvb ntfnptr)
-           apply(wpsimp simp:complete_signal_def set_simple_ko_def)
+           apply(rule_tac P="ntfnptr \<noteq> tcb \<and> ntfnptr \<noteq> receiver" in hoare_gen_asm)
+           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply(wpsimp wp:complete_signal_ct)
+           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply(wpsimp wp:complete_signal_lookup_ipc_buffer)
+           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply(wpsimp wp:complete_signal_lookup_ipc_buffer)
+           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply(wpsimp wp:complete_signal_wp[THEN hoare_strengthen_post] hoare_vcg_ex_lift
+              simp:get_message_info_ret_getRegister_as_user_ret)
+            apply assumption
+           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply(wpsimp wp:complete_signal_wp)
+            apply(clarsimp simp:mspec_transform_def split:option.splits)
+            .(* DOWN TO HERE
+            oops
              (* 26 subgoals *)
              apply(wpsimp wp:set_object_wp)
             apply wpsimp
@@ -842,6 +944,10 @@ lemma handle_SysRecv_syscall_valid:
           apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post]
             hoare_vcg_ex_lift
             simp:get_message_info_ret_getRegister_as_user_ret)
+
+. (*
+           apply(rule ext)
+           apply(clarsimp simp:getRegister_as_user_ret_def)
           apply assumption
           apply simp (* FIXME: this fills precondition with False, but we need to make it match *)
          apply(wpsimp wp:hoare_vcg_conj_lift)
