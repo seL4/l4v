@@ -99,7 +99,7 @@ thm ARM.addrFromKPPtr_def
 term "TCB t"
 term "t :: tcb"
 definition
-  mspec_transform :: "'a::state_ext state \<Rightarrow> mspec_state"
+  mspec_transform :: "abstract_state \<Rightarrow> mspec_state"
 where
   "mspec_transform s \<equiv> \<lparr>
      cur_thread_cnode = (case kheap s (cur_thread s) of
@@ -210,6 +210,8 @@ lemma get_message_info_ret_getRegister_as_user_ret:
   by (clarsimp simp:get_message_info_ret_def getRegister_as_user_ret_def
     split:option.splits kernel_object.splits user_context.splits)
 
+end
+
 (* copy_mrs will only return the number of message registers successfully transferred *)
 thm copy_mrs_def
 definition copy_mrs_ret ::
@@ -255,14 +257,14 @@ lemma copy_mrs_ret_valid:
    apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
    apply(wpsimp wp:mapM_wp' hoare_vcg_imp_lift split_del: if_split)
      apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
-     apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-       simp:get_message_info_ret_getRegister_as_user_ret split_del: if_split)
+     apply(wpsimp wp:AARCH64_A.asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+       simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret split_del: if_split)
     apply clarsimp
     apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
-    apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-      simp:get_message_info_ret_getRegister_as_user_ret split_del: if_split)
-   apply clarsimp
-   apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret[symmetric])
+    apply(wpsimp wp:AARCH64_A.asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+      simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret split_del: if_split)
+   apply(clarsimp simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret[symmetric]
+     split del:if_split)
    apply(rule hoare_pre)
     apply(rule_tac P="t \<noteq> receiver" in hoare_gen_asm)
     apply(wpsimp wp:getRegister_as_user_ret_valid split_del: if_split)
@@ -274,7 +276,7 @@ lemma copy_mrs_ret_valid:
   apply(clarsimp simp:valid_message_info_def)
   apply(simp only: unat_arith_simps unat_of_nat)
   apply clarsimp
-  done
+  using not_less_eq_eq by force
 
 (* Turns out Microkit won't transfers caps via channels, their endpoints shouldn't be given Grant.
   So we specify do_normal_transfer's behaviour under these assumptions. *)
@@ -335,9 +337,9 @@ where
      (let buffer_ptr = tcb_ipc_buffer t;
           buffer_frame_slot = (thread, tcb_cnode_index 4)
        in case get_cap_ret s buffer_frame_slot of
-         Some (ArchObjectCap (FrameCap p R vms False _)) \<Rightarrow>
+         Some (ArchObjectCap (AARCH64_A.FrameCap p R vms False _)) \<Rightarrow>
               if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
-              then Some (p + (buffer_ptr && mask (pageBitsForSize vms)))
+              then Some (p + (buffer_ptr && mask (AARCH64.pageBitsForSize vms)))
               else None
             | _ \<Rightarrow> None) |
    _ \<Rightarrow> None"
@@ -346,14 +348,15 @@ lemma lookup_ipc_buffer_ret_valid:
   "\<lbrace>\<lambda>s. tcb_at thread s\<rbrace>
     lookup_ipc_buffer is_receiver thread
    \<lbrace>\<lambda> r s. r = lookup_ipc_buffer_ret s is_receiver thread\<rbrace>"
-  unfolding lookup_ipc_buffer_def lookup_ipc_buffer_ret_def
+  unfolding AARCH64_A.lookup_ipc_buffer_def lookup_ipc_buffer_ret_def
   apply wpsimp
      apply(wpsimp wp:get_cap_ret_valid[THEN hoare_strengthen_post])
     apply wpsimp
    apply(wpsimp wp:thread_get_wp)
   apply(wpsimp simp:tcb_at_def get_tcb_def obj_at_def)
   by (clarsimp simp:get_cap_ret_def is_tcb_def
-    split:option.splits kernel_object.splits cap.splits arch_cap.splits)
+    vm_read_write_def vm_read_only_def AARCH64_A.arch_cap.simps
+    split:option.splits kernel_object.splits cap.splits AARCH64_A.arch_cap.splits bool.splits)
 
 (* Refer to these functions - we need to be making the same validity checks *)
 term handle_recv
@@ -361,7 +364,7 @@ term receive_ipc (* This handles the EndpointCap case, but will check the bound 
 term do_ipc_transfer
 term do_normal_transfer
 definition
-  valid_ep_obj_with_message :: "obj_ref \<Rightarrow> mspec_state \<Rightarrow> 'a::state_ext state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
+  valid_ep_obj_with_message :: "obj_ref \<Rightarrow> mspec_state \<Rightarrow> ('a::state_ext) state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
   (* FIXME: Again, ideally we don't want to take the abstract_state s as an argument here. *)
   "valid_ep_obj_with_message src m s i oracle \<equiv> case cur_thread_cnode m i of
@@ -455,6 +458,8 @@ lemma trim_shiftlr_below_mask:
   apply word_eqI
   done
 
+context Arch begin global_naming AARCH64_A
+
 lemma mi_to_data_to_mi:
   "valid_message_info mi \<Longrightarrow>
    mi_extra_caps mi = 0 \<Longrightarrow>
@@ -510,6 +515,8 @@ lemma mi_to_data_to_mi:
   apply(clarsimp simp:shiftr_over_or_dist bit.conj_disj_distribs)
   by word_eqI metis
 
+end
+
 definition do_normal_transfer_mi :: "message_info \<Rightarrow> obj_ref option
    \<Rightarrow> obj_ref option \<Rightarrow> message_info"
 where
@@ -524,11 +531,11 @@ lemma asUser_setRegister_lookup_ipc_buffer_ret:
      as_user t (setRegister r v)
    \<lbrace>\<lambda>rv s. P (lookup_ipc_buffer_ret s b t')\<rbrace>"
   apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
-  apply(clarsimp simp:setRegister_def modify_def bind_def put_def get_def)
+  apply(clarsimp simp:AARCH64.setRegister_def modify_def bind_def put_def get_def)
   (* it should come down to lookup_ipc_buffer not depending on whatever setRegister could change *)
   by (auto simp:lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def tcb_cnode_map_def
-    vm_read_write_def vm_read_only_def
-    split:option.splits kernel_object.splits cap.splits arch_cap.splits bool.splits)
+    vm_read_write_def vm_read_only_def AARCH64_A.arch_cap.simps
+    split:option.splits kernel_object.splits cap.splits AARCH64_A.arch_cap.splits bool.splits)
 
 lemma transfer_caps_loop_none_lookup_ipc_buffer:
   "\<lbrace>K (caps = []) and (\<lambda>s. P (lookup_ipc_buffer_ret s b t))\<rbrace>
@@ -556,15 +563,15 @@ lemma copy_mrs_lookup_ipc_buffer:
        lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def tcb_cnode_map_def
        vm_read_write_def vm_read_only_def
        split_del: if_split simp_del: upt_Suc
-       split:option.splits kernel_object.splits cap.splits arch_cap.splits bool.splits)
+       split:option.splits kernel_object.splits cap.splits AARCH64_A.arch_cap.splits bool.splits)
     apply(wpsimp simp:load_word_offs_def
       lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def tcb_cnode_map_def
-       vm_read_write_def vm_read_only_def
+       vm_read_write_def vm_read_only_def AARCH64_A.arch_cap.simps
        split_del: if_split simp_del: upt_Suc
-       split:option.splits kernel_object.splits cap.splits arch_cap.splits bool.splits)
+       split:option.splits kernel_object.splits cap.splits AARCH64_A.arch_cap.splits bool.splits)
     apply(clarsimp split:if_splits)
-     apply fastforce
-    apply fastforce
+     apply(fastforce simp:AARCH64_A.arch_cap.simps)
+    apply(fastforce simp:AARCH64_A.arch_cap.simps)
    apply(wpsimp wp:mapM_wp' split_del: if_split)
     apply(wpsimp wp:asUser_setRegister_lookup_ipc_buffer_ret)
    apply(wpsimp wp:getRegister_as_user_ret_valid split_del: if_split)
@@ -618,8 +625,8 @@ lemma do_normal_transfer_valid:
          apply(wpsimp wp:asUser_setRegister_lookup_ipc_buffer_ret)
         apply(rule hoare_vcg_conj_lift)
          apply(wpsimp wp:asUser_setRegister_lookup_ipc_buffer_ret)
-        apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-          simp:get_message_info_ret_getRegister_as_user_ret Let_def split_del: if_split)
+        apply(wpsimp wp:AARCH64_A.asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+          simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret Let_def split_del: if_split)
        apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register"
          in hoare_gen_asm)
        apply(simp split del: if_split)
@@ -628,10 +635,10 @@ lemma do_normal_transfer_valid:
        apply(rule hoare_vcg_conj_lift)
         apply(wpsimp wp:asUser_setRegister_lookup_ipc_buffer_ret simp:set_message_info_def)
        (* setting of message_info register *)
-       apply(wpsimp wp:asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
-         simp:set_message_info_def get_message_info_ret_getRegister_as_user_ret)
+       apply(wpsimp wp:AARCH64_A.asUser_setRegister_getRegister_as_user hoare_vcg_ex_lift
+         simp:set_message_info_def AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
       apply(simp split del: if_split)
-      apply(clarsimp simp:get_message_info_ret_getRegister_as_user_ret[symmetric])
+      apply(clarsimp simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret[symmetric])
       apply(rule_tac P="sender \<noteq> receiver \<and> \<not> grant \<and> badge_register \<noteq> msg_info_register \<and>
         caps = [] \<and> mrs_transferred = copy_mrs_ret sbuf rbuf (mi_length mi) \<and>
         valid_message_info mi" in hoare_gen_asm)
@@ -663,7 +670,7 @@ lemma do_normal_transfer_valid:
    apply(clarsimp simp:transfer_caps_none_ret_def)
    apply(wpsimp wp:get_message_info_ret_valid[where P=\<top>, THEN hoare_strengthen_post])
    apply(rule conjI)
-    using mi_to_data_to_mi
+    using AARCH64_A.mi_to_data_to_mi
     apply(erule_tac x="(MI (copy_mrs_ret sbuf rbuf (mi_length rv)) 0 0 (mi_label rv))" in meta_allE)
     apply simp
     apply(erule meta_impE)
@@ -676,14 +683,14 @@ lemma do_normal_transfer_valid:
      apply(clarsimp simp:min_def)
      apply(simp only:unat_arith_simps unat_of_nat)
     apply(clarsimp simp:do_normal_transfer_mi_def)
-    using copy_mrs_ret_leq_msg_max_length
+    using copy_mrs_ret_leq_msg_max_length do_normal_transfer_mi_def
     apply force
    apply(rule_tac x=rv in exI)
    apply clarsimp
   apply clarsimp
-  (* use this to resolve badge_register vs msg_info_register distinctness*)
-  apply(solves\<open>simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def badge_register_def msg_info_register_def\<close>)
-  done
+  (* resolve badge_register vs msg_info_register distinctness*)
+  by (simp add: AARCH64.badgeRegister_def AARCH64.msgInfoRegister_def AARCH64.register.distinct(1)
+    AARCH64_A.badge_register_def AARCH64_A.msg_info_register_def)
 
 lemma do_normal_transfer_get_message_info:
   "\<lbrace>(\<lambda>s. P (get_message_info_ret s sender))
@@ -716,6 +723,7 @@ lemma do_ipc_transfer_valid:
      do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda> _ s. P' (lookup_ipc_buffer_ret s False sender) \<and>
       P'' (lookup_ipc_buffer_ret s True receiver) \<and>
+      tcb_at sender s \<and> tcb_at receiver s \<and>
       P (get_message_info_ret s sender) \<and>
       getRegister_as_user_ret s receiver badge_register = Some badge \<and>
       get_message_info_ret s receiver =
@@ -728,6 +736,10 @@ lemma do_ipc_transfer_valid:
         apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_ret)
        apply(rule hoare_vcg_conj_lift)
         apply(wpsimp wp:do_normal_transfer_lookup_ipc_buffer_ret)
+       apply(rule hoare_vcg_conj_lift)
+        apply(wpsimp wp:do_normal_tcb)
+       apply(rule hoare_vcg_conj_lift)
+        apply(wpsimp wp:do_normal_tcb)
        apply(wpsimp wp:insert do_normal_transfer_valid[THEN hoare_strengthen_post])
        apply(rule conjI)
         apply assumption
@@ -759,7 +771,7 @@ lemma asUser_setRegister_obj_at:
    \<lbrace>\<lambda>rv s. obj_at P ref s\<rbrace>"
   apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
   apply(clarsimp simp:get_tcb_def obj_at_def split:if_splits split:kernel_object.splits)
-  by (clarsimp simp: setRegister_def modify_def bind_def get_def put_def split:user_context.splits)
+  by (clarsimp simp: AARCH64.setRegister_def modify_def bind_def get_def put_def split:AARCH64.user_context.splits)
 
 lemma asUser_setRegister_not_obj_at:
   "\<lbrace>\<lambda>s. if t = ref then (let y = the (get_tcb ref s) in
@@ -770,7 +782,7 @@ lemma asUser_setRegister_not_obj_at:
    \<lbrace>\<lambda>rv s. \<not> obj_at P ref s\<rbrace>"
   apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
   apply(clarsimp simp:get_tcb_def obj_at_def split:if_splits split:kernel_object.splits)
-  by (clarsimp simp: setRegister_def modify_def bind_def get_def put_def split:user_context.splits)
+  by (clarsimp simp: AARCH64.setRegister_def modify_def bind_def get_def put_def split:AARCH64.user_context.splits)
 
 lemma complete_signal_ct:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>
@@ -779,7 +791,7 @@ lemma complete_signal_ct:
   unfolding complete_signal_def
   apply(wpsimp simp:complete_signal_def)
      apply(wpsimp simp:set_simple_ko_def get_object_def)
-    apply(wpsimp wp:crunch_wps)
+    apply(wpsimp wp:crunch_wps Arch.as_user_cur_thread)
    apply(wpsimp wp:crunch_wps)
   apply simp
   done
@@ -794,7 +806,7 @@ lemma getRegister_as_user_ret_notif_simp:
   unfolding getRegister_as_user_ret_def tcb_at_def get_tcb_def
   apply(rule ext)
   apply(rule ext)
-  by (clarsimp split:option.splits if_splits kernel_object.splits user_context.splits)
+  by (clarsimp split:option.splits if_splits kernel_object.splits AARCH64.user_context.splits)
 
 thm handle_recv_def
 thm receive_ipc_def
@@ -817,10 +829,11 @@ lemma complete_signal_wp:
    prefer 2
    apply assumption
   apply(rule ext)
-  apply(clarsimp split:option.splits if_splits kernel_object.splits user_context.splits
-    simp:getRegister_as_user_ret_def get_tcb_def arch_tcb_context_get_def arch_tcb_context_set_def
-      setRegister_def modify_def bind_def get_def put_def)
-  done
+  apply(clarsimp split:option.splits if_splits kernel_object.splits AARCH64.user_context.splits
+    simp:getRegister_as_user_ret_def get_tcb_def AARCH64_A.arch_tcb_context_get_def
+      AARCH64_A.arch_tcb_context_set_def AARCH64.setRegister_def
+      modify_def bind_def get_def put_def)
+  by (metis AARCH64.user_context.sel(2) fun_upd_idem)
 
 lemma complete_signal_lookup_ipc_buffer:
   "\<lbrace>(\<lambda>s. P (lookup_ipc_buffer_ret s b t)) and K (ntfnptr \<noteq> t)\<rbrace>
@@ -839,8 +852,7 @@ lemma complete_signal_lookup_ipc_buffer:
     simp:lookup_ipc_buffer_ret_def get_tcb_def)
    apply(clarsimp simp:get_cap_ret_def tcb_cnode_map_def vm_read_write_def vm_read_only_def)
   apply(clarsimp simp:get_cap_ret_def tcb_cnode_map_def vm_read_write_def vm_read_only_def)
-  apply(clarsimp split:cap.splits arch_cap.splits bool.splits)
-  done
+  by (clarsimp split:cap.splits AARCH64_A.arch_cap.splits bool.splits simp:AARCH64_A.arch_cap.simps)
 
 (* FIXME: not sure yet how much this would help even in true. I suspect actually that I shouldn't
    need this, as we should only be calling complete_signal on getting a notification, not a ppcall
@@ -861,33 +873,35 @@ lemma complete_signal_preserves_received_mi:
   oops
 *)
 
-lemma handle_SysRecv_syscall_valid:
+lemma handle_SysRecv_syscall_notification:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
+      \<comment> \<open>
       P (cur_thread s) \<and>
       P'' (lookup_ipc_buffer_ret s False sender) \<and>
       P''' (lookup_ipc_buffer_ret s True receiver) \<and>
       P' (get_message_info_ret s sender) \<and>
-      valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>
+      \<close>
+      \<comment> \<open> having woes with types - bring this back in later
+      valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and> \<close>
       receiver = cur_thread s
+      \<comment> \<open> having woes with types - bring this back in later
+      (\<exists> n ntfn badge. cur_thread_bound_notification (mspec_transform s) = Some n \<and>
+        kheap s n = Some (Notification ntfn) \<and>
+        ntfn_obj ntfn = ActiveNtfn badge) \<close>
       \<comment> \<open>NB: Not yet sure if this is a safe assumption to make, or even needed
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>
     handle_recv True
-   \<lbrace>\<lambda> _ s. P (cur_thread s) \<and>
+   \<lbrace>\<lambda> _ s.
+      \<comment> \<open>
+      P (cur_thread s) \<and>
       P'' (lookup_ipc_buffer_ret s False sender) \<and>
       P''' (lookup_ipc_buffer_ret s True receiver) \<and>
       P' (get_message_info_ret s sender) \<and>
+      \<close>
       getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
-      (if \<exists> n ntfn badge. cur_thread_bound_notification (mspec_transform s) = Some n \<and>
-        kheap s n = Some (Notification ntfn) \<and>
-        ntfn_obj ntfn = ActiveNtfn badge
-      then \<comment> \<open>notification reqs on complete_signal\<close>
-        get_message_info_ret s receiver = Some (minfo ro)
-      else \<comment> \<open>ppcall reqs on do_ipc_transfer\<close>
-        \<comment> \<open>FIXME: We need to catch the third case where there's neither a notification or ppcall\<close>
-        get_message_info_ret s receiver = Some
-          \<comment> \<open>(do_ipc_transfer_mi s (the (get_message_info_ret s sender)) sender receiver)\<close>
-          (do_ipc_transfer_mi s (minfo ro) sender receiver)) \<and>
+      \<comment> \<open>notification reqs on complete_signal\<close>
+      get_message_info_ret s receiver = Some (minfo ro) \<and>
       receiver = cur_thread s
       \<comment> \<open>NB: put back if needed
       valid_message_info (the (get_message_info_ret s sender)) \<and>
@@ -911,6 +925,7 @@ lemma handle_SysRecv_syscall_valid:
        apply(wpsimp simp:receive_ipc_def)
            apply(rename_tac tcb xa x31 x32 x33 rv rvb ntfnptr)
            apply(rule_tac P="ntfnptr \<noteq> tcb \<and> ntfnptr \<noteq> receiver" in hoare_gen_asm)
+           (*
            apply(wpsimp wp:hoare_vcg_conj_lift)
             apply(wpsimp wp:complete_signal_ct)
            apply(wpsimp wp:hoare_vcg_conj_lift)
@@ -921,81 +936,94 @@ lemma handle_SysRecv_syscall_valid:
             apply(wpsimp wp:complete_signal_wp[THEN hoare_strengthen_post] hoare_vcg_ex_lift
               simp:get_message_info_ret_getRegister_as_user_ret)
             apply assumption
+           *)
            apply(wpsimp wp:hoare_vcg_conj_lift)
             apply(wpsimp wp:complete_signal_wp)
-            apply(clarsimp simp:mspec_transform_def split:option.splits)
-            .(* DOWN TO HERE
-            oops
-             (* 26 subgoals *)
-             apply(wpsimp wp:set_object_wp)
-            apply wpsimp
-           apply wpsimp
-          apply(wpsimp wp:get_object_wp)
-         apply(wpsimp wp:hoare_vcg_all_lift)
-         (* why is it asking about the kheap-modified version of the state rather than
-            the actual state in the postcondition? *)
-         apply(wpsimp wp:hoare_vcg_imp_lift)
-          apply(wpsimp wp:asUser_setRegister_not_obj_at[THEN hoare_strengthen_post])
-         apply(wpsimp wp:hoare_vcg_imp_lift)
-         apply(wpsimp wp:hoare_vcg_conj_lift)
-          (* alternatively, what is it that's so inflexible about the wp lemmas we're using
-             that they can't apply to modifications of the postcondition's state? are there
-             lemmas we can prove that ensure that they can apply in those circumstances? *)
-          apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post]
-            hoare_vcg_ex_lift
-            simp:get_message_info_ret_getRegister_as_user_ret)
+           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply(wpsimp wp:complete_signal_wp[THEN hoare_strengthen_post] hoare_vcg_ex_lift
+              simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
+            apply assumption
+           apply(wpsimp wp:complete_signal_ct)
+          apply clarsimp
+          apply(rename_tac x xa x31 x32 x33 rv rva rvb)
+          apply(rule_tac P="\<not> (rva = None \<or> \<not> isActive rvb)" in hoare_gen_asm)
+         apply wpsimp
+  oops
 
-. (*
-           apply(rule ext)
-           apply(clarsimp simp:getRegister_as_user_ret_def)
-          apply assumption
-          apply simp (* FIXME: this fills precondition with False, but we need to make it match *)
-         apply(wpsimp wp:hoare_vcg_conj_lift)
-          apply(wpsimp wp:asUser_setRegister_lookup_ipc_buffer_ret[THEN hoare_strengthen_post])
-          apply assumption
-          apply simp (* FIXME: this fills precondition with False, but we need to make it match *)
-         apply(wpsimp wp:hoare_vcg_conj_lift)
-          apply(wpsimp wp:asUser_setRegister_lookup_ipc_buffer_ret[THEN hoare_strengthen_post])
-          apply assumption
-          apply simp (* FIXME: this fills precondition with False, but we need to make it match *)
-         apply(wpsimp wp:hoare_vcg_conj_lift)
-          apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post])
-          apply assumption
-          apply simp (* FIXME: this fills precondition with False, but we need to make it match *)
-         apply(wpsimp wp:hoare_vcg_conj_lift)
-          apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post]
-            hoare_vcg_ex_lift
-            simp:get_message_info_ret_getRegister_as_user_ret)
-          apply assumption
-          apply simp (* FIXME: this fills precondition with False, but we need to make it match *)
-         apply(wpsimp wp:asUser_setRegister_getRegister_as_user[THEN hoare_strengthen_post]
-           hoare_vcg_ex_lift
-           simp:get_message_info_ret_getRegister_as_user_ret)
-         apply assumption
-         apply simp (* FIXME: this fills precondition with False, but we need to make it match *)
-        apply(wpsimp wp:get_simple_ko_wp)
-       apply(wpsimp split:endpoint.splits)
-           apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
-          apply(wpsimp simp:set_thread_state_def)
-            apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def
-              split:option.splits kernel_object.splits if_splits user_context.splits)
-            (* no, I don't think we want to be going down this road. I suspect I haven't yet
-               narrowed down the cases enough to ensure the postconditions are appropriate
-               to attempt to prove for goals that'll actually come up *)
-            apply(clarsimp simp:do_ipc_transfer_mi_def do_normal_transfer_mi_def)
-            apply(clarsimp simp:lookup_ipc_buffer_ret_def copy_mrs_ret_def)
-            . (* DOWN TO HERE
-            apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+(* FIXME: somehow need to jump through some hoops to get this from Syscall_AI - do it later *)
+thm Syscall_AI.do_ipc_transfer_cur_thread
+lemma do_ipc_transfer_cur_thread':
+  "\<lbrace>\<lambda> s. P (cur_thread s)\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  unfolding do_ipc_transfer_def
+  sorry
+
+lemma handle_SysRecv_syscall_ppcall:
+  "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
+      valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
+      \<comment> \<open>
+      P (cur_thread s) \<and>
+      P'' (lookup_ipc_buffer_ret s False sender) \<and>
+      P''' (lookup_ipc_buffer_ret s True receiver) \<and>
+      P' (get_message_info_ret s sender) \<and>
+      \<close>
+      \<comment> \<open> having woes with types - bring this back in later
+      valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and>
+      \<close>
+      tcb_at sender s \<and> tcb_at receiver s \<and>
+      receiver = cur_thread s
+      \<comment> \<open> having woes with types - bring this back in later
+      \<comment> \<open>FIXME: We need to catch the third case where there's neither a notification or ppcall\<close>
+      \<not> (\<exists> n ntfn badge. cur_thread_bound_notification (mspec_transform s) = Some n \<and>
+        kheap s n = Some (Notification ntfn) \<and>
+        ntfn_obj ntfn = ActiveNtfn badge) \<close>
+      \<comment> \<open>NB: Not yet sure if this is a safe assumption to make, or even needed
+      ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>
+    handle_recv True
+   \<lbrace>\<lambda> _ s.
+      \<comment> \<open>
+      P (cur_thread s) \<and>
+      P'' (lookup_ipc_buffer_ret s False sender) \<and>
+      P''' (lookup_ipc_buffer_ret s True receiver) \<and>
+      P' (get_message_info_ret s sender) \<and>
+      \<close>
+      tcb_at sender s \<and> tcb_at receiver s \<and> \<comment> \<open>maybe a bit overkill, but not sure I care\<close>
+      receiver = cur_thread s \<and>
+      getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
+      get_message_info_ret s receiver = Some
+        (do_ipc_transfer_mi s (the (get_message_info_ret s sender)) sender receiver)
+        \<comment> \<open>(do_ipc_transfer_mi s (minfo ro) sender receiver) \<and>\<close>
+      \<comment> \<open>NB: put back if needed
+      valid_message_info (the (get_message_info_ret s sender)) \<and>
+      ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>"
+  apply(wpsimp wp:crunch_wps simp:handle_recv_def)
+      (* fault handling - I think in reality we want to prove that the precondition
+         ensures that there is no fault to handle. skip this for now *)
+      defer
+     apply wpsimp
+      apply(wpsimp simp:Let_def)
+       (* 17 subgoals *)
+       (* more automated version *)
+       apply(wpsimp simp:receive_ipc_def)
+        (* 21 subgoals *)
+        apply(rename_tac tcb xa x31 x32 x33 rv rvb ntfnptr)
+        apply(rule_tac P="\<not> isActive rvb" in hoare_gen_asm)
+        apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp
+          simp:set_simple_ko_def AARCH64.setRegister_def as_user_def set_thread_state_def)+
+            apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def
+              do_ipc_transfer_mi_def do_normal_transfer_mi_def lookup_ipc_buffer_ret_def
+              get_cap_ret_def get_tcb_def)
            apply(wpsimp wp:set_object_wp)
           apply wpsimp
          apply simp
         apply wpsimp
-          (* 30 subgoals - here's where the careful and more automated proof seem to line up *)
+          (* 30 subgoals *)
           apply(wpsimp wp:crunch_wps set_object_wp simp:setup_caller_cap_def)+
            (* 31 subgoals *)
            apply(wpsimp wp:crunch_wps simp:cap_insert_def)
                    (* 40 subgoals *)
-                   apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
+                   apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def
+                     do_ipc_transfer_mi_def do_normal_transfer_mi_def lookup_ipc_buffer_ret_def
+                     get_cap_ret_def get_tcb_def)
                   (* more automated version *)
                   apply(wpsimp wp:crunch_wps set_object_wp get_object_wp
                     simp:update_cdt_def set_cdt_def set_cap_def)+
@@ -1015,52 +1043,69 @@ lemma handle_SysRecv_syscall_valid:
          apply(wpsimp simp:set_thread_state_def) *)
               (* 32 subgoals *)
               apply(wpsimp wp:crunch_wps set_object_wp get_object_wp simp:set_thread_state_def
-                    |solves\<open>clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def\<close>)+
-           apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
-           apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def) (* XXX: risky? *)
-          apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
-          apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def) (* XXX: risky? *)
-         apply(wpsimp wp:do_ipc_transfer_valid[THEN hoare_strengthen_post])
-         apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def) (* XXX: risky? *)
-        apply wpsimp
+                    |solves\<open>clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def
+                     do_ipc_transfer_mi_def do_normal_transfer_mi_def lookup_ipc_buffer_ret_def
+                     get_cap_ret_def get_tcb_def\<close>)+
+           apply(rename_tac dst xa ep_obj x32 x33 ntfnptr_opt ntfn x2 rvd src rvg payload)
+           apply(rule_tac P="\<not> (sender_can_grant payload) \<and> sender_badge payload = badge_val ro \<and>
+             src \<noteq> dst \<and> src = sender \<and> dst = receiver" in hoare_gen_asm)
+           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply(wpsimp wp:do_ipc_transfer_cur_thread')
+           apply(wpsimp wp:do_ipc_transfer_valid[where P=\<top> and P'=\<top> and P''=\<top>,
+             THEN hoare_strengthen_post] simp:obj_at_def)
+           apply(rule conjI)
+            apply(clarsimp simp:getRegister_as_user_ret_def
+              AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
+           apply clarsimp
+           apply(rule conjI)
+            apply(clarsimp simp:getRegister_as_user_ret_def)
+           apply(clarsimp simp:get_message_info_ret_def)
+           apply(clarsimp split:option.splits kernel_object.splits simp:is_tcb_def)
+           apply(clarsimp simp:do_ipc_transfer_mi_def do_normal_transfer_mi_def
+             lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def tcb_cnode_map_def
+             vm_read_write_def vm_read_only_def AARCH64_A.arch_cap.simps
+             split:cap.splits AARCH64_A.arch_cap.splits bool.splits)
+          apply(rename_tac dst xa ep_obj x32 x33 rv rva rvb x2 rvc rvd src rvf rvg payload)
+          (* FIXME: exclude sender_can_grant_reply for now, but might we need this for ppcall? *)
+          apply(rule_tac P="\<not> (sender_can_grant payload \<or> sender_can_grant_reply payload) \<and> sender_badge payload = badge_val ro \<and>
+            src \<noteq> dst \<and> src = sender \<and> dst = receiver" in hoare_gen_asm)
+          apply(wpsimp wp:hoare_vcg_conj_lift)
+           apply(wpsimp wp:do_ipc_transfer_cur_thread')
+          apply(wpsimp wp:do_ipc_transfer_valid[where P=\<top> and P'=\<top> and P''=\<top>,
+            THEN hoare_strengthen_post] simp:obj_at_def)
+          apply(rule conjI)
+           apply(clarsimp simp:getRegister_as_user_ret_def
+             AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
+          apply(clarsimp simp:get_message_info_ret_def)
+          apply(clarsimp split:option.splits kernel_object.splits simp:is_tcb_def)
+          apply(clarsimp simp:do_ipc_transfer_mi_def do_normal_transfer_mi_def
+            lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def tcb_cnode_map_def
+            vm_read_write_def vm_read_only_def AARCH64_A.arch_cap.simps
+            split:cap.splits AARCH64_A.arch_cap.splits bool.splits)
+         apply(rename_tac dst xa ep_obj x32 x33 rv rva rvb x2 rvc rvd src rvf rvg payload)
+         (* FIXME: might we need sender_is_call for ppcall? *)
+         apply(rule_tac P="\<not> (sender_can_grant payload \<or> sender_is_call payload) \<and> sender_badge payload = badge_val ro \<and>
+           src \<noteq> dst \<and> src = sender \<and> dst = receiver" in hoare_gen_asm)
+         apply(wpsimp wp:hoare_vcg_conj_lift)
+          apply(wpsimp wp:do_ipc_transfer_cur_thread')
+         apply(wpsimp wp:do_ipc_transfer_valid[where P=\<top> and P'=\<top> and P''=\<top>,
+           THEN hoare_strengthen_post] simp:obj_at_def)
+         apply(rule conjI)
+          apply(clarsimp simp:getRegister_as_user_ret_def
+            AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
+         apply(clarsimp simp:get_message_info_ret_def)
+         apply(clarsimp split:option.splits kernel_object.splits simp:is_tcb_def)
+         apply(clarsimp simp:do_ipc_transfer_mi_def do_normal_transfer_mi_def
+           lookup_ipc_buffer_ret_def get_cap_ret_def get_tcb_def tcb_cnode_map_def
+           vm_read_write_def vm_read_only_def AARCH64_A.arch_cap.simps
+           split:cap.splits AARCH64_A.arch_cap.splits bool.splits)
+        apply clarsimp
+        apply(wpsimp split:thread_state.splits wp:return_wp)
        apply(wpsimp wp:thread_get_wp simp:get_thread_state_def)
-                (* 24 subgoals *)
-                apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)
-               apply(wpsimp wp:return_wp)
-              apply(wpsimp wp:return_wp)
-             apply(wpsimp wp:assert_wp)
-            apply wpsimp
-              apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)
-             apply(wpsimp wp:return_wp)
-            apply(wpsimp simp:set_thread_state_def)
-              apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
-             apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)
-            apply wpsimp
-           apply simp
-          apply wpsimp
-         apply(wpsimp wp:get_simple_ko_wp)
-        apply(wpsimp wp:thread_get_wp simp:get_bound_notification_def)
-       apply(wpsimp wp:get_simple_ko_wp)
-      apply(wpsimp simp:delete_caller_cap_def cap_delete_one_def)
-         apply(wpsimp simp:empty_slot_def)
-                (* 26 subgoals *)
-                apply(unfold post_cap_deletion_def)
-                apply simp
-                apply wpsimp
-               apply(unfold set_cap_def)
-               apply simp
-               apply(wpsimp wp:get_object_wp)
-                 apply(wpsimp wp:set_object_wp)
-                apply(wpsimp wp:get_object_wp)
-               apply clarsimp
-               apply(wpsimp wp:get_object_wp)
-              apply(wpsimp wp:set_original_wp)
-             apply wpsimp
-             apply(clarsimp simp:getRegister_as_user_ret_def get_message_info_ret_def)
-             apply(clarsimp split:if_split)
-             (* bit of a mess *)
+      apply(wpsimp wp:set_object_wp get_object_wp simp:set_simple_ko_def)+
+      (* okay - we now seem to be on a different case where the recv syscall gets blocked
+         because there is no message waiting to be received. need to rule this out with
+         the precondition. *)
   oops
-
-end (* Arch AARCH64_A *)
 
 end
