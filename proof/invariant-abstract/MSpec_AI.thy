@@ -854,6 +854,24 @@ lemma complete_signal_lookup_ipc_buffer:
   apply(clarsimp simp:get_cap_ret_def tcb_cnode_map_def vm_read_write_def vm_read_only_def)
   by (clarsimp split:cap.splits AARCH64_A.arch_cap.splits bool.splits simp:AARCH64_A.arch_cap.simps)
 
+lemma complete_signal_tcb_at:
+  "\<lbrace>(\<lambda>s. P (tcb_at p s)) and K (ntfnptr \<noteq> tcb)\<rbrace>
+     complete_signal ntfnptr tcb
+   \<lbrace>\<lambda>_ s. P (tcb_at p s)\<rbrace>"
+  unfolding complete_signal_def
+  apply(wpsimp simp:complete_signal_def)
+     apply(wpsimp wp:set_object_wp simp:set_simple_ko_def get_object_def)
+    apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+   apply(wpsimp wp:get_simple_ko_wp)
+  apply clarsimp
+  apply(clarsimp simp:obj_at_def is_tcb_def)
+  apply(rule_tac P=P in subst)
+   prefer 2
+   apply assumption
+  apply(clarsimp split:option.splits if_splits kernel_object.splits
+    simp:lookup_ipc_buffer_ret_def get_tcb_def)
+  done
+
 (* FIXME: not sure yet how much this would help even in true. I suspect actually that I shouldn't
    need this, as we should only be calling complete_signal on getting a notification, not a ppcall
 lemma complete_signal_preserves_received_mi:
@@ -884,6 +902,7 @@ lemma handle_SysRecv_syscall_notification:
       \<close>
       \<comment> \<open> having woes with types - bring this back in later
       valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and> \<close>
+      tcb_at sender s \<and> tcb_at receiver s \<and>
       receiver = cur_thread s
       \<comment> \<open> having woes with types - bring this back in later
       (\<exists> n ntfn badge. cur_thread_bound_notification (mspec_transform s) = Some n \<and>
@@ -902,6 +921,7 @@ lemma handle_SysRecv_syscall_notification:
       getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
       \<comment> \<open>notification reqs on complete_signal\<close>
       get_message_info_ret s receiver = Some (minfo ro) \<and>
+      tcb_at sender s \<and> tcb_at receiver s \<and>
       receiver = cur_thread s
       \<comment> \<open>NB: put back if needed
       valid_message_info (the (get_message_info_ret s sender)) \<and>
@@ -943,11 +963,26 @@ lemma handle_SysRecv_syscall_notification:
             apply(wpsimp wp:complete_signal_wp[THEN hoare_strengthen_post] hoare_vcg_ex_lift
               simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
             apply assumption
-           apply(wpsimp wp:complete_signal_ct)
+           apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct)
           apply clarsimp
           apply(rename_tac x xa x31 x32 x33 rv rva rvb)
           apply(rule_tac P="\<not> (rva = None \<or> \<not> isActive rvb)" in hoare_gen_asm)
+          apply wpsimp
+         apply clarsimp
+         apply(rename_tac x xa x31 x32 x33 rv rva)
+         apply(rule_tac P="\<not> (rva = None)" in hoare_gen_asm)
          apply wpsimp
+         apply(wpsimp wp:get_simple_ko_wp)
+        apply clarsimp
+        apply(wpsimp wp:thread_get_wp simp:get_bound_notification_def)
+       apply wpsimp (* XXX: why was this get_endpoint discharged so easily? *)
+      apply wpsimp
+      apply(clarsimp simp:obj_at_def)
+      apply(rule_tac P="x = receiver" in hoare_gen_asm)
+      apply(wpsimp wp:delete_caller_deletes_caller[THEN hoare_strengthen_post])
+      apply(drule cte_at_pspace)
+      apply clarsimp
+      (* FIXME: figure out how to link up with lemma's precondition that `tcb_at receiver s` *)
   oops
 
 (* FIXME: somehow need to jump through some hoops to get this from Syscall_AI - do it later *)
