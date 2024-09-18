@@ -891,6 +891,57 @@ lemma complete_signal_preserves_received_mi:
   oops
 *)
 
+(*
+thm cap_delete_one_ep_at
+crunch delete_caller_cap
+  for ep_at'[wp]: "\<lambda>s. ko_at (Endpoint ep) ep_ptr s"
+  (wp: crunch_wps)
+*)
+
+(*
+lemma
+  "\<lbrace>(\<lambda>s. ko_at (Endpoint ep) ep_ptr s) and K (ep_ptr \<noteq> p)\<rbrace>
+     delete_caller_cap p
+   \<lbrace>\<lambda>_ s. ko_at (Endpoint ep) ep_ptr s\<rbrace>"
+  apply(rule_tac P="ep_ptr \<noteq> p" in hoare_gen_asm)
+  apply(wpsimp wp:crunch_wps set_object_wp get_object_wp fast_finalise_lift
+    simp:crunch_simps
+    delete_caller_cap_def cap_delete_one_def empty_slot_def post_cap_deletion_def set_cap_def
+    obj_at_def set_cdt_def cancel_all_ipc_def set_thread_state_def)
+             apply (smt (verit, del_insts) get_tcb_SomeD kernel_object.simps(15) kernel_object.simps(9) option.simps(1))
+            apply(rule_tac P="ep_ptr \<noteq> p" in hoare_gen_asm)
+            apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
+           apply(wpsimp wp:get_ep_queue_inv)
+          apply(rule_tac P="ep_ptr \<noteq> p" in hoare_gen_asm)
+          apply(wpsimp wp:get_ep_queue_inv)
+            apply(wpsimp wp:mapM_x_wp')
+            apply(wpsimp simp:set_thread_state_def wp:set_object_wp)
+            apply (smt (verit, del_insts) get_tcb_SomeD kernel_object.simps(15) kernel_object.simps(9) option.simps(1))
+           apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
+          apply(wpsimp wp:get_ep_queue_inv)
+         apply(rule_tac P="ep_ptr \<noteq> p" in hoare_gen_asm)
+         apply(wpsimp wp:get_simple_ko_wp)
+        apply clarsimp
+        apply(rule conjI)
+         apply(clarsimp split:if_splits simp:obj_at_def)
+         apply(rule conjI)
+          apply clarsimp
+         apply clarsimp
+*)
+
+
+(* FIXME: somehow need to jump through some hoops to get these from Syscall_AI - do it later *)
+thm Syscall_AI.do_ipc_transfer_cur_thread
+lemma do_ipc_transfer_cur_thread':
+  "\<lbrace>\<lambda> s. P (cur_thread s)\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  unfolding do_ipc_transfer_def
+  sorry
+
+thm Syscall_AI.cap_delete_one_cur_thread
+lemma cap_delete_one_cur_thread':
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> cap_delete_one a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  sorry
+
 lemma handle_SysRecv_syscall_notification:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
@@ -903,7 +954,8 @@ lemma handle_SysRecv_syscall_notification:
       \<comment> \<open> having woes with types - bring this back in later
       valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and> \<close>
       tcb_at sender s \<and> tcb_at receiver s \<and>
-      receiver = cur_thread s
+      receiver = cur_thread s \<and>
+      valid_objs s
       \<comment> \<open> having woes with types - bring this back in later
       (\<exists> n ntfn badge. cur_thread_bound_notification (mspec_transform s) = Some n \<and>
         kheap s n = Some (Notification ntfn) \<and>
@@ -965,32 +1017,78 @@ lemma handle_SysRecv_syscall_notification:
             apply assumption
            apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct)
           apply clarsimp
-          apply(rename_tac x xa x31 x32 x33 rv rva rvb)
-          apply(rule_tac P="\<not> (rva = None \<or> \<not> isActive rvb)" in hoare_gen_asm)
+          apply(rename_tac x xa x31 x32 x33 rv ntfnptr ntfn)
+          apply(rule_tac P="\<not> (ntfnptr = None \<or> \<not> isActive ntfn)" in hoare_gen_asm)
           apply wpsimp
          apply clarsimp
-         apply(rename_tac x xa x31 x32 x33 rv rva)
-         apply(rule_tac P="\<not> (rva = None)" in hoare_gen_asm)
-         apply wpsimp
+         apply(rename_tac x xa x31 x32 x33 rv ntfnptr)
+         apply(rule_tac P="\<not> (ntfnptr = None)" in hoare_gen_asm)
          apply(wpsimp wp:get_simple_ko_wp)
         apply clarsimp
-        apply(wpsimp wp:thread_get_wp simp:get_bound_notification_def)
-       apply wpsimp (* XXX: why was this get_endpoint discharged so easily? *)
-      apply wpsimp
-      apply(clarsimp simp:obj_at_def)
-      apply(rule_tac P="x = receiver" in hoare_gen_asm)
-      apply(wpsimp wp:delete_caller_deletes_caller[THEN hoare_strengthen_post])
-      apply(drule cte_at_pspace)
-      apply clarsimp
-      (* FIXME: figure out how to link up with lemma's precondition that `tcb_at receiver s` *)
-  oops
+        apply(wpsimp wp:gbn_wp)
+       apply(wp only:get_simple_ko_wp)
 
-(* FIXME: somehow need to jump through some hoops to get this from Syscall_AI - do it later *)
-thm Syscall_AI.do_ipc_transfer_cur_thread
-lemma do_ipc_transfer_cur_thread':
-  "\<lbrace>\<lambda> s. P (cur_thread s)\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  unfolding do_ipc_transfer_def
-  sorry
+      (* This delete_caller_cap immediately precedes the call to receive_ipc in handle_recv.
+         I think what I'll need is a bunch of lemmas to show that most of the predicates in
+         the postcondition are unaffected by delete_caller_cap. *)
+
+      apply(wpsimp wp:hoare_vcg_all_lift)
+      apply(rename_tac x xa ep_ptr x32 x33 ep)
+      apply(rule_tac P="x = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asm)
+      (* Having trouble proving this, so drop it for now
+      apply(wpsimp wp:hoare_absorb_imp)
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       find_theorems delete_caller_cap obj_at
+       (* NB: typ_at isn't strong enough, we need to know it's this specific ep *)
+       apply(wpsimp wp:delete_caller_cap_typ_at[THEN hoare_strengthen_post])
+       apply(subgoal_tac "typ_at AEndpoint ep_ptr s")
+        prefer 2
+        apply assumption
+       apply(clarsimp simp:a_type_def obj_at_def)
+      *)
+      apply(wpsimp wp:hoare_drop_imp)
+      apply(wpsimp wp:hoare_vcg_all_lift)
+      apply(wpsimp wp:hoare_absorb_imp)
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_bound_tcb_at)
+      apply(rename_tac xa ep_ptr x32 x33 ep ntfn)
+      apply(rule_tac P="\<exists>y. ntfn = Some y \<and> y \<noteq> receiver" in hoare_gen_asm)
+      apply clarsimp
+      apply(wpsimp wp:hoare_vcg_all_lift)
+      apply(rename_tac xa ep_ptr x32 x33 ep y ntfn)
+      apply(rule_tac P="isActive ntfn" in hoare_gen_asm)
+      apply clarsimp
+      (* not sure we can prove delete_caller_cap preserves obj_at for a particular ntfn object
+         for the same reason we couldn't for a specific ep object *)
+      apply(wpsimp wp:hoare_drop_imp)
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       (* FIXME: huh? this shouldn't be true at this point, which is still before receive_ipc! *)
+       defer
+      apply(wpsimp wp:hoare_vcg_conj_lift) (* NB: this goal same as X below *)
+       (* FIXME: again, this can't be right because it shouldn't be true until after receive_ipc *)
+       defer
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       defer
+      apply(wpsimp wp:hoare_vcg_conj_lift) (* NB: this goal same as X above *)
+       defer
+      apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
+     apply(wpsimp wp:throwError_wp)
+    (* FIXME: Precondition out the notification cap case, as Microkit will always use
+       receive bound notifications on endpoint caps *)
+    apply(rule_tac P="\<exists>a b c. ep_cap = EndpointCap a b c" in hoare_gen_asmE)
+    apply(wpsimp wp:throwError_wp)+
+       (* 5 subgoals (4 deferrals) *)
+       apply(wpsimp wp:lookup_cap_gets[THEN hoare_strengthen_postE_R])
+       apply(clarsimp simp:cte_wp_at_def get_cap_def)
+      (* FIXME: yeah, we're missing a relevant precondition on the syscall *)
+      defer
+     apply wpsimp
+    apply wpsimp
+   apply wpsimp
+  apply wpsimp
+  (* okay, we're back to the fault handling case. but we probably don't want these as arbitrary
+     postconditions to this (unless they're in the precondition too) *)
+  oops
 
 lemma handle_SysRecv_syscall_ppcall:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
