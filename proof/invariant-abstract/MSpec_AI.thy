@@ -812,9 +812,9 @@ thm handle_recv_def
 thm receive_ipc_def
 thm complete_signal_def
 
-lemma complete_signal_wp:
+lemma complete_signal_wp_1st_try:
   "\<lbrace>(\<lambda>s. P (getRegister_as_user_ret s t) \<and>
-    obj_at (\<lambda>ko. \<exists> badge notification. ko = Notification notification \<and>
+      obj_at (\<lambda>ko. \<exists> badge notification. ko = Notification notification \<and>
       ntfn_obj notification = (ActiveNtfn badge) \<and>
       getRegister_as_user_ret s tcb badge_register = Some badge) ntfnptr s) and
     K (ntfnptr \<noteq> tcb \<and> ntfnptr \<noteq> t)\<rbrace>
@@ -834,6 +834,27 @@ lemma complete_signal_wp:
       AARCH64_A.arch_tcb_context_set_def AARCH64.setRegister_def
       modify_def bind_def get_def put_def)
   by (metis AARCH64.user_context.sel(2) fun_upd_idem)
+
+(* TODO: Some other part of the notification handling code must be responsible for copying the
+   message info. Is `get_message_info_ret s receiver = get_message_info_ret s sender` the
+   result? Or something more subtle because it might've been done when the sender signalled
+   asynchronously, thus it may be no longer in the sender's buffer? *)
+lemma complete_signal_wp:
+  "\<lbrace>(\<lambda>s. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_obj ntfn = (ActiveNtfn badge)) ntfnptr s)
+    and K (ntfnptr \<noteq> receiver)\<rbrace>
+     complete_signal ntfnptr receiver
+   \<lbrace>\<lambda>_ s. getRegister_as_user_ret s receiver badge_register = Some badge\<rbrace>"
+  apply(wpsimp simp:complete_signal_def)
+     apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
+    apply(wpsimp wp:as_user_wp_thread_set_helper set_object_wp simp:thread_set_def)
+   apply(wpsimp wp:get_simple_ko_wp)
+  apply clarsimp
+  apply(clarsimp simp:obj_at_def)
+  apply(clarsimp split:option.splits if_splits kernel_object.splits AARCH64.user_context.splits
+    simp:getRegister_as_user_ret_def get_tcb_def AARCH64_A.arch_tcb_context_get_def
+      AARCH64_A.arch_tcb_context_set_def AARCH64.setRegister_def AARCH64.user_context.inject
+      modify_def bind_def get_def put_def)
+  done
 
 lemma complete_signal_lookup_ipc_buffer:
   "\<lbrace>(\<lambda>s. P (lookup_ipc_buffer_ret s b t)) and K (ntfnptr \<noteq> t)\<rbrace>
@@ -970,9 +991,11 @@ lemma handle_SysRecv_syscall_notification:
       P''' (lookup_ipc_buffer_ret s True receiver) \<and>
       P' (get_message_info_ret s sender) \<and>
       \<close>
-      getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
       \<comment> \<open>notification reqs on complete_signal\<close>
-      get_message_info_ret s receiver = Some (minfo ro) \<and>
+      getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
+      \<comment> \<open>FIXME: figure out the mechanism for transferring message info and how we ought
+        to express its correctness
+      get_message_info_ret s receiver = Some (minfo ro) \<and> \<close>
       tcb_at sender s \<and> tcb_at receiver s \<and>
       receiver = cur_thread s
       \<comment> \<open>NB: put back if needed
@@ -996,7 +1019,7 @@ lemma handle_SysRecv_syscall_notification:
           (at least, until I started mentioning the sender in the postcondition...) *)
        apply(wpsimp simp:receive_ipc_def)
            apply(rename_tac tcb xa x31 x32 x33 rv rvb ntfnptr)
-           apply(rule_tac P="ntfnptr \<noteq> tcb \<and> ntfnptr \<noteq> receiver" in hoare_gen_asm)
+           apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver" in hoare_gen_asm)
            (*
            apply(wpsimp wp:hoare_vcg_conj_lift)
             apply(wpsimp wp:complete_signal_ct)
@@ -1011,10 +1034,12 @@ lemma handle_SysRecv_syscall_notification:
            *)
            apply(wpsimp wp:hoare_vcg_conj_lift)
             apply(wpsimp wp:complete_signal_wp)
+           (* FIXME: figure out how to express correctness for transfer of message info
            apply(wpsimp wp:hoare_vcg_conj_lift)
-            apply(wpsimp wp:complete_signal_wp[THEN hoare_strengthen_post] hoare_vcg_ex_lift
+            apply(wpsimp wp:complete_signal_wp_1st_try[THEN hoare_strengthen_post] hoare_vcg_ex_lift
               simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
             apply assumption
+           *)
            apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct)
           apply clarsimp
           apply(rename_tac x xa x31 x32 x33 rv ntfnptr ntfn)
@@ -1062,14 +1087,7 @@ lemma handle_SysRecv_syscall_notification:
          for the same reason we couldn't for a specific ep object *)
       apply(wpsimp wp:hoare_drop_imp)
       apply(wpsimp wp:hoare_vcg_conj_lift)
-       (* FIXME: huh? this shouldn't be true at this point, which is still before receive_ipc! *)
-       defer
-      apply(wpsimp wp:hoare_vcg_conj_lift) (* NB: this goal same as X below *)
-       (* FIXME: again, this can't be right because it shouldn't be true until after receive_ipc *)
-       defer
-      apply(wpsimp wp:hoare_vcg_conj_lift)
-       defer
-      apply(wpsimp wp:hoare_vcg_conj_lift) (* NB: this goal same as X above *)
+       (* FIXME: line up with appropriate precondition on bound notification's badge *)
        defer
       apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
      apply(wpsimp wp:throwError_wp)
@@ -1077,12 +1095,11 @@ lemma handle_SysRecv_syscall_notification:
        receive bound notifications on endpoint caps *)
     apply(rule_tac P="\<exists>a b c. ep_cap = EndpointCap a b c" in hoare_gen_asmE)
     apply(wpsimp wp:throwError_wp)+
-       (* 5 subgoals (4 deferrals) *)
-       apply(wpsimp wp:lookup_cap_gets[THEN hoare_strengthen_postE_R])
-       apply(clarsimp simp:cte_wp_at_def get_cap_def)
-      (* FIXME: yeah, we're missing a relevant precondition on the syscall *)
-      defer
-     apply wpsimp
+     (* 4 subgoals (2 deferrals) *)
+     apply(wpsimp wp:lookup_cap_gets[THEN hoare_strengthen_postE_R])
+     apply(clarsimp simp:cte_wp_at_def get_cap_def)
+     (* FIXME: yeah, we're missing a relevant precondition on the syscall *)
+     defer
     apply wpsimp
    apply wpsimp
   apply wpsimp
