@@ -24,7 +24,7 @@ text \<open>
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 decls_only NOT UserContext UserMonad Word getRegister setRegister newContext
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 decls_only NOT UserContext UserMonad Word getRegister setRegister getFPUState setFPUState newContext
 (*<*)
 
 end
@@ -35,7 +35,7 @@ context Arch begin arch_global_naming
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 instanceproofs
 (*>*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 bodies_only NOT getRegister setRegister newContext
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 bodies_only NOT getRegister setRegister getFPUState setFPUState newContext
 
 section "Machine State"
 
@@ -57,6 +57,7 @@ record
   irq_state :: nat
   underlying_memory :: "word64 \<Rightarrow> word8"
   device_state :: "word64 \<Rightarrow> word8 option"
+  fpu_enabled :: bool
   machine_state_rest :: X64.machine_state_rest
 
 consts irq_oracle :: "nat \<Rightarrow> word8"
@@ -101,6 +102,7 @@ definition
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
                          device_state = Map.empty,
+                         fpu_enabled = False,
                          machine_state_rest = undefined \<rparr>"
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 ONLY VMFaultType HypFaultType VMPageSize VMMapType pageBits ptTranslationBits pageBitsForSize

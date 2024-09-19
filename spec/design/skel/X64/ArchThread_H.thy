@@ -11,6 +11,7 @@ imports
   ArchThreadDecls_H
   TCBDecls_H
   ArchVSpaceDecls_H
+  FPU_H
 begin
 
 

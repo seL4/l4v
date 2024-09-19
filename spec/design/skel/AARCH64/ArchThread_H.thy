@@ -13,6 +13,7 @@ imports
   TCBDecls_H
   ArchVSpaceDecls_H
   ArchHypervisor_H
+  FPU_H
 begin
 
 context Arch begin arch_global_naming (H)
