@@ -264,23 +264,36 @@ where
 consts'
   FPUNullState :: fpu_state
 
-consts'
-  nativeThreadUsingFPU_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-  nativeThreadUsingFPU_val :: "machine_state \<Rightarrow> bool"
-definition
-  nativeThreadUsingFPU :: "machine_word \<Rightarrow> bool machine_monad"
-where
-  "nativeThreadUsingFPU thread_ptr \<equiv> do
-       machine_op_lift (nativeThreadUsingFPU_impl thread_ptr);
-       gets nativeThreadUsingFPU_val
-  od"
+consts' readFpuState_val :: "machine_state_rest \<Rightarrow> fpu_state"
+definition readFpuState :: "fpu_state machine_monad" where
+  "readFpuState \<equiv>  do
+     state_assert fpu_enabled;
+     machine_rest_lift $ gets readFpuState_val
+   od"
 
-consts'
-  switchFpuOwner_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
-  "switchFpuOwner new_owner cpu \<equiv> machine_op_lift (switchFpuOwner_impl new_owner cpu)"
+consts' writeFpuState_impl :: "fpu_state \<Rightarrow> unit machine_rest_monad"
+definition writeFpuState :: "fpu_state \<Rightarrow> unit machine_monad" where
+  "writeFpuState val \<equiv>  do
+     state_assert fpu_enabled;
+     machine_op_lift $ writeFpuState_impl val
+   od"
+
+consts' enableFpu_impl :: "unit machine_rest_monad"
+definition enableFpu :: "unit machine_monad" where
+  "enableFpu \<equiv> do
+     machine_op_lift enableFpu_impl;
+     modify (\<lambda>s. s\<lparr>fpu_enabled := True \<rparr>)
+   od"
+
+consts' disableFpu_impl :: "unit machine_rest_monad"
+definition disableFpu :: "unit machine_monad" where
+  "disableFpu \<equiv> do
+     machine_op_lift disableFpu_impl;
+     modify (\<lambda>s. s\<lparr>fpu_enabled := False \<rparr>)
+   od"
+
+definition isFpuEnable :: "bool machine_monad" where
+  "isFpuEnable \<equiv> gets fpu_enabled"
 
 consts'
   initL2Cache_impl :: "unit machine_rest_monad"

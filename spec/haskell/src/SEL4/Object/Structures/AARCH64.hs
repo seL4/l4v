@@ -70,6 +70,11 @@ atcbContextSet uc atcb = atcb { atcbContext = uc }
 atcbContextGet :: ArchTCB -> UserContext
 atcbContextGet = atcbContext
 
+data ArchTcbFlag = FpuDisabled
+
+archTcbFlagToWord :: ArchTcbFlag -> Word
+archTcbFlagToWord (FpuDisabled) = bit 0
+
 
 {- ASID Pools -}
 
