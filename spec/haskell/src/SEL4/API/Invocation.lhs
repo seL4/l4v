@@ -83,6 +83,10 @@ The following data type defines the set of possible TCB invocation operations. T
 >         | SetTLSBase {
 >             setTLSBaseTCB :: PPtr TCB,
 >             setTLSBaseNewBase :: Word }
+>         | SetFlags {
+>             setFlagsTCB :: PPtr TCB,
+>             setFlagsClear :: Word,
+>             setFlagsSet :: Word }
 >         deriving Show
 
 \subsubsection{CNode Invocations}

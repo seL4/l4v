@@ -47,7 +47,10 @@ text \<open>Switch to a thread's virtual address space context.\<close>
 
 definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "arch_switch_to_thread t \<equiv> set_vm_root t"
+  "arch_switch_to_thread t \<equiv> do
+     set_vm_root t;
+     lazy_fpu_restore t
+   od"
 
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
@@ -55,6 +58,9 @@ definition
      thread \<leftarrow> gets idle_thread;
      set_vm_root thread
    od"
+
+definition arch_prepare_next_domain :: "(unit,'z::state_ext) s_monad" where
+  "arch_prepare_next_domain \<equiv> switch_local_fpu_owner None"
 
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where

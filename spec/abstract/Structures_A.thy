@@ -13,6 +13,7 @@ chapter "Basic Data Structures"
 
 theory Structures_A
 imports
+  ExecSpec.Structs_B
   Arch_Structs_A
   "ExecSpec.MachineExports"
 begin
@@ -367,6 +368,11 @@ datatype thread_state
 
 type_synonym priority = word8
 
+type_synonym tcb_flags = "tcb_flag set"
+
+definition word_to_tcb_flags :: "machine_word \<Rightarrow> tcb_flags" where
+  "word_to_tcb_flags w \<equiv> {flag. tcbFlagToWord flag && w \<noteq> 0}"
+
 record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
@@ -379,6 +385,7 @@ record tcb =
  tcb_fault         :: "fault option"
  tcb_bound_notification     :: "obj_ref option"
  tcb_mcpriority    :: priority
+ tcb_flags         :: tcb_flags
  tcb_arch          :: arch_tcb (* arch_tcb must have a field for user context *)
 
 
@@ -410,6 +417,7 @@ definition
       tcb_fault      = None,
       tcb_bound_notification  = None,
       tcb_mcpriority = minBound,
+      tcb_flags      = {},
       tcb_arch       = default_arch_tcb\<rparr>"
 
 text \<open>

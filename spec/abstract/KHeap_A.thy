@@ -132,7 +132,10 @@ definition
 
 definition
   set_mcpriority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad"  where
-  "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
+  "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref"
+
+definition set_flags :: "obj_ref \<Rightarrow> tcb_flags \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_flags ref flags \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_flags:=flags\<rparr>) ref"
 
 
 section "simple kernel objects"

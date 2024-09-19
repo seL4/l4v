@@ -387,11 +387,20 @@ debugPrint str = liftIO $ putStrLn str
 
 {- FPU Operations -}
 
-fpuThreadDeleteOp :: Word -> MachineMonad ()
-fpuThreadDeleteOp tcbPtr = error "Unimplemented callback"
+readFpuState :: MachineMonad AARCH64.FPUState
+readFpuState = error "Unimplemented - machine op"
+
+writeFpuState :: AARCH64.FPUState -> MachineMonad ()
+writeFpuState _ = error "Unimplemented - machine op"
+
+enableFpu :: MachineMonad ()
+enableFpu = error "Unimplemented - machine op"
+
+disableFpu :: MachineMonad ()
+disableFpu = error "Unimplemented - machine op"
 
 isFpuEnable :: MachineMonad Bool
-isFpuEnable = error "Unimplemented - lazy FPU switch abstracted as machine op"
+isFpuEnable = error "Unimplemented - machine op"
 
 {- GIC VCPU interface -}
 

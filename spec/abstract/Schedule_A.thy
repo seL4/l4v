@@ -17,6 +17,7 @@ begin
 arch_requalify_consts (A)
   arch_switch_to_thread
   arch_switch_to_idle_thread
+  arch_prepare_next_domain
 
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
@@ -34,10 +35,7 @@ where
 text \<open>Gets all schedulable threads in the system.\<close>
 definition
   allActiveTCBs :: "(obj_ref set,'z::state_ext) s_monad" where
-  "allActiveTCBs \<equiv> do
-    state \<leftarrow> get;
-    return {x. getActiveTCB x state \<noteq> None}
-   od"
+  "allActiveTCBs \<equiv> gets (\<lambda>state. {x. getActiveTCB x state \<noteq> None})"
 
 text \<open>Switches the current thread to the specified one.\<close>
 definition
@@ -100,7 +98,10 @@ definition
 definition
   "schedule_choose_new_thread \<equiv> do
      dom_time \<leftarrow> gets domain_time;
-     when (dom_time = 0) next_domain;
+     when (dom_time = 0) $ do
+       arch_prepare_next_domain;
+       next_domain
+     od;
      choose_thread;
      set_scheduler_action resume_cur_thread
    od"
@@ -166,37 +167,42 @@ end
 instantiation unit :: state_ext_sched
 begin
 
-
+\<comment> \<open>FIXME FPU: update this comment to mention the state that might be
+  saved as part of @{term arch_prepare_next_domain}\<close>
 text \<open>
   The scheduler is heavily underspecified.
   It is allowed to pick any active thread or the idle thread.
-  If the thread the scheduler picked is the current thread, it
-  may omit the call to @{const switch_to_thread}. Likewise it
-  may omit the call to @{const switch_to_idle_thread} if the
-  idle thread is the current thread.
-\<close>
+  If the current thread is active or is already the idle thread
+  then it may omit the call to @{const switch_to_thread} or
+  @{const switch_to_idle_thread} and do nothing.\<close>
+
+definition pre_choose_thread_unit :: "(unit,unit) s_monad" where
+  "pre_choose_thread_unit \<equiv> return () \<sqinter> arch_prepare_next_domain"
+
+definition choose_thread_unit :: "(unit,unit) s_monad" where
+  "choose_thread_unit \<equiv> (do
+     threads \<leftarrow> allActiveTCBs;
+     thread \<leftarrow> select threads;
+     switch_to_thread thread
+   od) \<sqinter>
+   switch_to_idle_thread"
+
 definition schedule_unit :: "(unit,unit) s_monad" where
-"schedule_unit \<equiv> (do
-   cur \<leftarrow> gets cur_thread;
-   threads \<leftarrow> allActiveTCBs;
-   thread \<leftarrow> select threads;
-   (if thread = cur then
-     return () \<sqinter> switch_to_thread thread
-   else
-     switch_to_thread thread)
- od) \<sqinter>
- (do
-   cur \<leftarrow> gets cur_thread;
-   idl \<leftarrow> gets idle_thread;
-   if idl = cur then
-     return () \<sqinter> switch_to_idle_thread
-   else switch_to_idle_thread
-  od)"
+  "schedule \<equiv> (do
+     cur \<leftarrow> gets cur_thread;
+     cur_active \<leftarrow> gets (getActiveTCB cur);
+     idl \<leftarrow> gets idle_thread;
+     if cur_active \<noteq> None \<or> idl = cur then
+       return () \<sqinter> do pre_choose_thread_unit; choose_thread_unit od
+     else
+       do pre_choose_thread_unit; choose_thread_unit od
+   od)"
 
 instance ..
 end
 
 
 lemmas schedule_def = schedule_det_ext_ext_def schedule_unit_def
+lemmas schedule_def_all = schedule_def pre_choose_thread_unit_def choose_thread_unit_def allActiveTCBs_def
 
 end

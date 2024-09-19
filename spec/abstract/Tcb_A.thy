@@ -19,6 +19,8 @@ arch_requalify_consts (A)
   sanitise_register
   arch_get_sanitise_register_info
   arch_post_modify_registers
+  arch_post_set_flags
+  arch_prepare_set_domain
 
 section "Activating Threads"
 
@@ -251,6 +253,15 @@ where
     return []
   od)"
 
+| "invoke_tcb (SetFlags tcb clearFlags setFlags) =
+  (liftE $ do
+    flags \<leftarrow> thread_get tcb_flags tcb;
+    new_flags \<leftarrow> return $ flags - clearFlags \<union> setFlags;
+    set_flags tcb new_flags;
+    arch_post_set_flags tcb new_flags;
+    return []
+  od)"
+
 definition
   set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
   "set_domain tptr new_dom \<equiv> do
@@ -262,10 +273,15 @@ definition
      when (tptr = cur) reschedule_required
    od"
 
-definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
-where
+ \<comment> \<open>FIXME FPU: @{term arch_prepare_set_domain} shouldn't be an extended op. Fixing this will require either
+      adding domains to the non-det spec, or removing the non-det spec completely.\<close>
+definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad" where
   "invoke_domain thread domain \<equiv>
-     liftE (do do_extended_op (set_domain thread domain); return [] od)"
+     liftE $ do
+       do_extended_op (arch_prepare_set_domain thread domain);
+       do_extended_op (set_domain thread domain);
+       return []
+     od"
 
 text \<open>Get all of the message registers, both from the sending thread's current
 register file and its IPC buffer.\<close>

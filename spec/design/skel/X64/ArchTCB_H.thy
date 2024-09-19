@@ -5,7 +5,9 @@
  *)
 
 theory ArchTCB_H
-imports TCBDecls_H
+imports
+  TCBDecls_H
+  FPU_H
 begin
 
 context Arch begin arch_global_naming (H)
