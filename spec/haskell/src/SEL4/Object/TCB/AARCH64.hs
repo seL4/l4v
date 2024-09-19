@@ -20,11 +20,13 @@ import SEL4.Machine(PPtr)
 import SEL4.Model
 import SEL4.Object.Structures
 import SEL4.Object.Instances()
+import SEL4.API.Types
 import SEL4.API.Failures
 import SEL4.API.Invocation.AARCH64
 import SEL4.Machine.RegisterSet(setRegister, UserMonad, VPtr(..))
 import qualified SEL4.Machine.RegisterSet as RegisterSet(Register(..))
 import SEL4.Machine.RegisterSet.AARCH64(Register(..), Word)
+import SEL4.Object.FPU.AARCH64
 import Data.Bits
 import Data.Maybe
 import Data.Word(Word8)
@@ -51,3 +53,14 @@ getSanitiseRegisterInfo t = do
 
 postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
 postModifyRegisters _ _ = return ()
+
+postSetFlags :: PPtr TCB -> TcbFlags -> Kernel ()
+postSetFlags t flags =
+    when (isFlagSet (ArchFlag FpuDisabled) flags) (fpuRelease t)
+
+-- Save and clear FPU state before setting the domain of a TCB, to ensure that
+-- we do not later write to cross-domain state.
+prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+prepareSetDomain t newDom = do
+    curDom <- curDomain
+    when (curDom /= newDom) (fpuRelease t)

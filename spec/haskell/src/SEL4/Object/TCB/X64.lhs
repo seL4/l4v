@@ -18,11 +18,13 @@ There are presently no x64-specific register subsets defined, but in future this
 > import SEL4.Machine(PPtr)
 > import SEL4.Model
 > import SEL4.Object.Structures
+> import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.X64
 > import SEL4.Machine.RegisterSet(setRegister, UserMonad, VPtr(..))
 > import qualified SEL4.Machine.RegisterSet as RegisterSet(Register(..))
 > import SEL4.Machine.RegisterSet.X64(Register(..), Word)
+> import SEL4.Object.FPU.X64
 > import Data.Bits
 
 > import Data.Word(Word8)
@@ -60,3 +62,14 @@ Here, cur = ksCurThread
 > postModifyRegisters cur dest =
 >     when (dest /= cur) $ setRegister (RegisterSet.Register ErrorRegister) 0
 
+> postSetFlags :: PPtr TCB -> TcbFlags -> Kernel ()
+> postSetFlags t flags =
+>     when (isFlagSet (ArchFlag FpuDisabled) flags) (fpuRelease t)
+
+Save and clear FPU state before setting the domain of a TCB, to ensure that
+we do not later write to cross-domain state.
+
+> prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+> prepareSetDomain t newDom = do
+>     curDom <- curDomain
+>     when (curDom /= newDom) (fpuRelease t)

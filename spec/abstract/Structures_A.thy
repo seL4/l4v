@@ -13,6 +13,7 @@ chapter "Basic Data Structures"
 
 theory Structures_A
 imports
+  ExecSpec.Structs_B
   Arch_Structs_A
   "ExecSpec.MachineExports"
 begin
@@ -369,6 +370,11 @@ type_synonym priority = word8
 
 type_synonym domain = word8
 
+type_synonym tcb_flags = "tcb_flag set"
+
+definition word_to_tcb_flags :: "machine_word \<Rightarrow> tcb_flags" where
+  "word_to_tcb_flags w \<equiv> {flag. tcbFlagToWord flag && w \<noteq> 0}"
+
 record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
@@ -384,6 +390,7 @@ record tcb =
  tcb_priority      :: priority
  tcb_time_slice    :: nat
  tcb_domain        :: domain
+ tcb_flags         :: tcb_flags
  tcb_arch          :: arch_tcb (* arch_tcb must have a field for user context *)
 
 
@@ -407,8 +414,7 @@ definition default_domain :: "domain" where
 definition default_priority :: "priority" where
   "default_priority \<equiv> minBound"
 
-definition
-  default_tcb :: "domain \<Rightarrow> tcb" where
+definition default_tcb :: "domain \<Rightarrow> tcb" where
   "default_tcb d \<equiv> \<lparr>
       tcb_ctable   = NullCap,
       tcb_vtable   = NullCap,
@@ -424,6 +430,7 @@ definition
       tcb_priority   = default_priority,
       tcb_time_slice = timeSlice,
       tcb_domain     = d,
+      tcb_flags      = {},
       tcb_arch       = default_arch_tcb\<rparr>"
 
 text \<open>

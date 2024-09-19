@@ -121,6 +121,11 @@ present on all platforms is stored here.
 > atcbContextGet :: ArchTCB -> UserContext
 > atcbContextGet = atcbContext
 
+> data ArchTcbFlag = FpuDisabled
+
+> archTcbFlagToWord :: ArchTcbFlag -> Word
+> archTcbFlagToWord (FpuDisabled) = bit 0
+
 \subsection{ASID Pools}
 
 An ASID pool is an array of pointers to page directories. This is used to implement virtual ASIDs on x64; it is not accessed by the hardware.
