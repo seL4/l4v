@@ -168,6 +168,7 @@ definition setNextPC :: "machine_word \<Rightarrow> unit user_monad" where
 
 subsection "FPU-related"
 
+\<comment> \<open>FIXME: Should this modify fpu_enabled? The C doesn't update isFPUEnabledCached when this is called directly.\<close>
 consts' enableFpuEL01_impl :: "unit machine_rest_monad"
 definition enableFpuEL01 :: "unit machine_monad" where
   "enableFpuEL01 \<equiv> machine_op_lift enableFpuEL01_impl"
@@ -178,31 +179,28 @@ definition getFPUState :: "fpu_state user_monad" where
 definition setFPUState :: "fpu_state \<Rightarrow> unit user_monad" where
   "setFPUState fc \<equiv> modify (\<lambda>s. UserContext fc (user_regs s))"
 
-consts' nativeThreadUsingFPU_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-consts' nativeThreadUsingFPU_val :: "machine_state \<Rightarrow> bool"
-definition nativeThreadUsingFPU :: "machine_word \<Rightarrow> bool machine_monad" where
-  "nativeThreadUsingFPU thread_ptr \<equiv> do
-       machine_op_lift (nativeThreadUsingFPU_impl thread_ptr);
-       gets nativeThreadUsingFPU_val
-  od"
+consts' readFpuState_val :: "machine_state_rest \<Rightarrow> fpu_state"
+definition readFpuState :: "fpu_state machine_monad" where
+  "readFpuState \<equiv>  do
+     state_assert fpu_enabled;
+     machine_rest_lift $ gets readFpuState_val
+   od"
 
-consts' switchFpuOwner_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
-  "switchFpuOwner new_owner cpu \<equiv> machine_op_lift (switchFpuOwner_impl new_owner cpu)"
+consts' writeFpuState_impl :: "fpu_state \<Rightarrow> unit machine_rest_monad"
+definition writeFpuState :: "fpu_state \<Rightarrow> unit machine_monad" where
+  "writeFpuState val \<equiv>  do
+     state_assert fpu_enabled;
+     machine_op_lift $ writeFpuState_impl val
+   od"
 
-(* FIXME this is a very high-level FPU abstraction *)
-consts' fpuThreadDeleteOp_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-definition fpuThreadDeleteOp :: "machine_word \<Rightarrow> unit machine_monad" where
-  "fpuThreadDeleteOp thread_ptr \<equiv> machine_op_lift (fpuThreadDeleteOp_impl thread_ptr)"
+definition enableFpu :: "unit machine_monad" where
+  "enableFpu \<equiv> modify (\<lambda>s. s\<lparr>fpu_enabled := True \<rparr>)"
 
-(* FIXME this machine op is used to abstract the entire lazy FPU switch interrupt mechanism,
-   which can only trigger when the current thread's FPU is disabled and it performs an FPU
-   operation. We have no model for this mechanism or the state that it caches, so for
-   verification purposes we act as if the FPU is always enabled.
-   Future lazy FPU switch overhaul will involve the state that this operation reads, at which
-   point it should become a normal function. *)
+definition disableFpu :: "unit machine_monad" where
+  "disableFpu \<equiv> modify (\<lambda>s. s\<lparr>fpu_enabled := False \<rparr>)"
+
 definition isFpuEnable :: "bool machine_monad" where
-  "isFpuEnable \<equiv> return True"
+  "isFpuEnable \<equiv> gets fpu_enabled"
 
 
 subsection "Fault Registers"
