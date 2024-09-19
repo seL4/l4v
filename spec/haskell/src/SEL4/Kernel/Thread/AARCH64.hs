@@ -19,12 +19,14 @@ import {-# SOURCE #-} SEL4.Kernel.Init
 import {-# SOURCE #-} SEL4.Object.TCB (asUser, threadGet)
 import SEL4.Machine.RegisterSet.AARCH64(Register(..))
 import SEL4.Object.VCPU.AARCH64
+import SEL4.Object.FPU.AARCH64
 
 switchToThread :: PPtr TCB -> Kernel ()
 switchToThread tcb = do
     tcbobj <- getObject tcb
     vcpuSwitch (atcbVCPUPtr $ tcbArch tcbobj)
     setVMRoot tcb
+    lazyFpuRestore tcb
 
 configureIdleThread :: PPtr TCB -> KernelInit ()
 configureIdleThread _ = error "Unimplemented init code"
@@ -36,3 +38,6 @@ switchToIdleThread = do
 
 activateIdleThread :: PPtr TCB -> Kernel ()
 activateIdleThread _ = return ()
+
+prepareNextDomain :: Kernel ()
+prepareNextDomain = switchLocalFpuOwner Nothing

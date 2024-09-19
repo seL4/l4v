@@ -8,7 +8,7 @@ chapter "x64-Specific Data Types"
 
 theory Arch_Structs_A
 imports
-  "ExecSpec.Arch_Structs_B"
+  ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
   ExecSpec.Arch_Kernel_Config_Lemmas
@@ -312,6 +312,7 @@ record arch_state =
   x64_num_ioapics           :: "64 word"
   x64_ioapic_nirqs          :: "machine_word \<Rightarrow> 8 word"
   x64_irq_state             :: "8 word \<Rightarrow> X64_A.X64IRQState"
+  x64_current_fpu_owner     :: "obj_ref option"
 
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
