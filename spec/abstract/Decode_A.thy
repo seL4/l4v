@@ -381,6 +381,14 @@ where
    odE"
 
 definition
+  decode_set_flags :: "data list \<Rightarrow> cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+where
+  "decode_set_flags args cap \<equiv> doE
+     whenE (length args < 2) $ throwError TruncatedMessage;
+     returnOk (SetFlags (obj_ref_of cap) (word_to_tcb_flags (args ! 0)) (word_to_tcb_flags (args ! 1)))
+   odE"
+
+definition
   decode_tcb_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
   (tcb_invocation,'z::state_ext) se_monad"
@@ -401,6 +409,7 @@ where
     | TCBBindNotification \<Rightarrow> decode_bind_notification cap excs
     | TCBUnbindNotification \<Rightarrow> decode_unbind_notification cap
     | TCBSetTLSBase \<Rightarrow> decode_set_tls_base args cap
+    | TCBSetFlags \<Rightarrow> decode_set_flags args cap
     | _ \<Rightarrow> throwError IllegalOperation"
 
 definition

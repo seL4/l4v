@@ -9,7 +9,7 @@ chapter "AARCH64-Specific Data Types"
 
 theory Arch_Structs_A
 imports
-  "ExecSpec.Arch_Structs_B"
+  ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
   ExecSpec.Arch_Kernel_Config_Lemmas
@@ -333,6 +333,7 @@ record arch_state =
   arm_us_global_vspace :: "obj_ref"
   arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
+  arm_current_fpu_owner :: "obj_ref option"
 
 
 end_qualify

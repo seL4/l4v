@@ -48,6 +48,7 @@ datatype tcb_invocation =
   | Resume "obj_ref"
   | NotificationControl "obj_ref" "obj_ref option"
   | SetTLSBase obj_ref machine_word
+  | SetFlags obj_ref tcb_flags tcb_flags
 
 datatype irq_control_invocation =
     IRQControl irq cslot_ptr cslot_ptr
