@@ -16,11 +16,14 @@ This module contains the architecture-specific thread switch code for X86-64bit.
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.X64
 > import {-# SOURCE #-} SEL4.Kernel.Init
+> import SEL4.Object.FPU.X64
 
 \end{impdetails}
 
 > switchToThread :: PPtr TCB -> Kernel ()
-> switchToThread tcb = setVMRoot tcb
+> switchToThread tcb = do
+>     setVMRoot tcb
+>     lazyFpuRestore tcb
 
 > configureIdleThread :: PPtr TCB -> KernelInit ()
 > configureIdleThread _ = error "Unimplemented. init code"
@@ -33,3 +36,5 @@ This module contains the architecture-specific thread switch code for X86-64bit.
 > activateIdleThread :: PPtr TCB -> Kernel ()
 > activateIdleThread _ = return ()
 
+> prepareNextDomain :: Kernel ()
+> prepareNextDomain = switchLocalFpuOwner Nothing

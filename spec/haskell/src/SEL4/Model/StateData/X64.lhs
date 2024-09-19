@@ -13,6 +13,7 @@ This module contains the architecture-specific kernel global data for the X86-64
 > import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Machine.Hardware.X64 (PML4E(..),PDPTE(..),PDE(..),PTE(..),IOPort)
+> import SEL4.Object.Structures
 > import SEL4.Object.Structures.X64
 
 > import Data.Array
@@ -43,7 +44,8 @@ This module contains the architecture-specific kernel global data for the X86-64
 >     x64KSAllocatedIOPorts :: Array IOPort Bool,
 >     x64KSNumIOAPICs       :: Word,
 >     x64KSIOAPICnIRQs      :: Word -> Word8,
->     x64KSIRQState         :: Array IRQ X64IRQState}
+>     x64KSIRQState         :: Array IRQ X64IRQState,
+>     x64KSCurFPUOwner      :: Maybe (PPtr TCB)}
 
 > newKernelState :: PAddr -> (KernelState, [PAddr])
 > newKernelState _ = error "No initial state defined for x64"
