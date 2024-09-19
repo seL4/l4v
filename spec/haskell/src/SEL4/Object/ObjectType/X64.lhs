@@ -21,6 +21,7 @@ This module contains operations on machine-specific object types for x64.
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.X64
 > import {-# SOURCE #-} SEL4.Object.IOPort.X64
+> import SEL4.Object.FPU.X64
 
 > import Data.Bits
 > import Data.Word(Word16)
@@ -397,10 +398,5 @@ Create an architecture-specific object.
 Notify the FPU when deleting a thread, in case that thread is using the FPU
 
 > prepareThreadDelete :: PPtr TCB -> Kernel ()
-> prepareThreadDelete threadPtr = fpuThreadDelete threadPtr
-
-> fpuThreadDelete :: PPtr TCB -> Kernel ()
-> fpuThreadDelete threadPtr = do
->     usingFpu <- doMachineOp $ nativeThreadUsingFPU (fromPPtr threadPtr)
->     when usingFpu $ doMachineOp (switchFpuOwner 0 0)
+> prepareThreadDelete threadPtr = fpuRelease threadPtr
 

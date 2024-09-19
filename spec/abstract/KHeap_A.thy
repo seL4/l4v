@@ -101,7 +101,6 @@ where
      set_object ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
    od"
 
-
 section "simple kernel objects"
 (* to be used for abstraction unifying kernel objects other than TCB and CNode *)
 
@@ -316,6 +315,9 @@ definition
 definition
   set_mcpriority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad"  where
   "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
+
+definition set_flags :: "obj_ref \<Rightarrow> tcb_flags \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_flags ref flags \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_flags:=flags\<rparr>) ref"
 
 
 section "User Context"
