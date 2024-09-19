@@ -181,41 +181,54 @@ definition setNextPC :: "machine_word \<Rightarrow> unit user_monad" where
 
 subsection "FPU-related"
 
-consts' enableFpuEL01_impl :: "unit machine_rest_monad"
-definition enableFpuEL01 :: "unit machine_monad" where
-  "enableFpuEL01 \<equiv> machine_op_lift enableFpuEL01_impl"
-
 definition getFPUState :: "fpu_state user_monad" where
   "getFPUState \<equiv> gets fpu_state"
 
 definition setFPUState :: "fpu_state \<Rightarrow> unit user_monad" where
   "setFPUState fc \<equiv> modify (\<lambda>s. UserContext fc (user_regs s))"
 
-consts' nativeThreadUsingFPU_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-consts' nativeThreadUsingFPU_val :: "machine_state \<Rightarrow> bool"
-definition nativeThreadUsingFPU :: "machine_word \<Rightarrow> bool machine_monad" where
-  "nativeThreadUsingFPU thread_ptr \<equiv> do
-       machine_op_lift (nativeThreadUsingFPU_impl thread_ptr);
-       gets nativeThreadUsingFPU_val
-  od"
+\<comment> \<open>This function touches the CPACR_EL1 register, which is used to enable/disable the FPU for EL0
+   and EL1 and is generally controlled by the VM. seL4 only modifies it when unconditionally enabling
+   it while disabling a VCPU, and seL4 instead toggles CPTR_EL2 to enable or disable the FPU for
+   native tasks.\<close>
+\<comment> \<open>FIXME FPU: The underlying register is saved and restored when switching between VCPUs, so this
+     will probably need to be moved out of machine\_rest\_monad.\<close>
+consts' enableFpuEL01_impl :: "unit machine_rest_monad"
+definition enableFpuEL01 :: "unit machine_monad" where
+  "enableFpuEL01 \<equiv> machine_op_lift enableFpuEL01_impl"
 
-consts' switchFpuOwner_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
-  "switchFpuOwner new_owner cpu \<equiv> machine_op_lift (switchFpuOwner_impl new_owner cpu)"
+consts' readFpuState_val :: "machine_state_rest \<Rightarrow> fpu_state"
+definition readFpuState :: "fpu_state machine_monad" where
+  "readFpuState \<equiv>  do
+     state_assert fpu_enabled;
+     machine_rest_lift $ gets readFpuState_val
+   od"
 
-(* FIXME this is a very high-level FPU abstraction *)
-consts' fpuThreadDeleteOp_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-definition fpuThreadDeleteOp :: "machine_word \<Rightarrow> unit machine_monad" where
-  "fpuThreadDeleteOp thread_ptr \<equiv> machine_op_lift (fpuThreadDeleteOp_impl thread_ptr)"
+consts' writeFpuState_impl :: "fpu_state \<Rightarrow> unit machine_rest_monad"
+definition writeFpuState :: "fpu_state \<Rightarrow> unit machine_monad" where
+  "writeFpuState val \<equiv>  do
+     state_assert fpu_enabled;
+     machine_op_lift $ writeFpuState_impl val
+   od"
 
-(* FIXME this machine op is used to abstract the entire lazy FPU switch interrupt mechanism,
-   which can only trigger when the current thread's FPU is disabled and it performs an FPU
-   operation. We have no model for this mechanism or the state that it caches, so for
-   verification purposes we act as if the FPU is always enabled.
-   Future lazy FPU switch overhaul will involve the state that this operation reads, at which
-   point it should become a normal function. *)
+\<comment> \<open>FIXME FPU: on AArch64 with hypervisor support this actually calls disableTrapFpu to enable the
+     FPU. Do we want to model that as well or are we happy to abstract it away?\<close>
+consts' enableFpu_impl :: "unit machine_rest_monad"
+definition enableFpu :: "unit machine_monad" where
+  "enableFpu \<equiv> do
+     machine_op_lift enableFpu_impl;
+     modify (\<lambda>s. s\<lparr>fpu_enabled := True \<rparr>)
+   od"
+
+consts' disableFpu_impl :: "unit machine_rest_monad"
+definition disableFpu :: "unit machine_monad" where
+  "disableFpu \<equiv> do
+     machine_op_lift disableFpu_impl;
+     modify (\<lambda>s. s\<lparr>fpu_enabled := False \<rparr>)
+   od"
+
 definition isFpuEnable :: "bool machine_monad" where
-  "isFpuEnable \<equiv> return True"
+  "isFpuEnable \<equiv> gets fpu_enabled"
 
 
 subsection "Fault Registers"
