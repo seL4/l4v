@@ -99,7 +99,7 @@ thm ARM.addrFromKPPtr_def
 term "TCB t"
 term "t :: tcb"
 definition
-  mspec_transform :: "abstract_state \<Rightarrow> mspec_state"
+  mspec_transform :: "'a::state_ext state \<Rightarrow> mspec_state"
 where
   "mspec_transform s \<equiv> \<lparr>
      cur_thread_cnode = (case kheap s (cur_thread s) of
@@ -912,6 +912,14 @@ lemma complete_signal_preserves_received_mi:
   oops
 *)
 
+lemma delete_caller_cap_active_ntfn_at:
+  "\<lbrace>(\<lambda>s. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_obj ntfn = (ActiveNtfn badge)) ntfnptr s)
+    and K (ntfnptr \<noteq> receiver)\<rbrace>
+     delete_caller_cap receiver
+   \<lbrace>\<lambda>_ s. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_obj ntfn = (ActiveNtfn badge)) ntfnptr s\<rbrace>"
+  apply(rule_tac P="ntfnptr \<noteq> receiver" in hoare_gen_asm)
+  apply(wpsimp simp:delete_caller_cap_def)
+  sorry
 (*
 thm cap_delete_one_ep_at
 crunch delete_caller_cap
@@ -963,6 +971,83 @@ lemma cap_delete_one_cur_thread':
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> cap_delete_one a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   sorry
 
+(* The original rule I think says that for all predicates P that are independent of the rights of
+   a cap, if P holds of the return value rv then it holds for all caps found at pointers to
+   irq notification objects looked up by cte_refs. So perhaps this adaptation is not that helpful.
+*)
+thm lookup_cap_cte_caps_to
+lemma lookup_cap_cte_caps_to':
+  "\<lbrace>\<lambda>s. P' s \<and> (\<forall>rs cp. P (mask_cap rs cp) = P cp)\<rbrace>
+     lookup_cap t cref
+   \<lbrace>\<lambda>rv s. P' s \<and> (P rv \<longrightarrow> (\<forall>p\<in>cte_refs rv (interrupt_irq_node s). ex_cte_cap_wp_to P p s))\<rbrace>,-"
+  by (simp add: lookup_cap_def split_def) wpsimp
+
+term valid_cap
+thm lookup_cap_gets
+lemma lookup_cap_specific:
+  "\<lbrace>valid_objs and
+    (\<lambda>s. \<exists>cref. cte_wp_at ((=) mycap) cref s \<and> valid_cap (tcb_ctable (the (get_tcb t s))) s)\<rbrace>
+     lookup_cap t c
+   \<lbrace>\<lambda>rv s. \<exists>cref msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk cap \<and> cap = mycap) cref s\<rbrace>, -"
+   (* \<lbrace>\<lambda>rv s. \<exists>cref. cte_wp_at (\<lambda>cap. rv = cap \<and> rv = ep_cap) cref s\<rbrace>, - *)
+   (* \<lbrace>\<lambda>rv s. \<exists>msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk ep_cap) cref s\<rbrace>, - *)
+  unfolding lookup_cap_def fun_app_def split_def
+  apply(rule hoare_pre)
+   apply(wpsimp)
+    apply(wpsimp wp:get_cap_wp)
+   apply wpsimp
+   apply(wpsimp wp:hoare_vcg_all_liftE_R)
+   apply(rule_tac P="cap = mycap" in hoare_gen_asmE)
+   apply clarsimp
+   apply(wpsimp wp:lookup_slot_for_thread_inv[THEN valid_validE_R,THEN hoare_strengthen_postE_R])
+   apply(rule_tac x="a" in exI)
+   apply(rule_tac x="b" in exI)
+   apply(rule_tac x="UNIV" in exI)
+   apply(clarsimp simp:cte_wp_at_def)
+   apply assumption
+  apply clarsimp
+  (* left conjunct is fine if x is wellformed, but we still don't have any way to know x = mycap *)
+  thm cap_mask_UNIV
+  sorry
+  (*
+  apply(subgoal_tac "cte_wp_at ((=) x) (a, b) s")
+   apply(rule conjI)
+    apply assumption
+       apply(clarsimp simp:cte_wp_at_def)
+   apply(clarsimp simp:cte_wp_at_def)
+   prefer 2
+  apply(rule conjI)
+   apply(clarsimp simp:cte_wp_at_def)
+   apply(drule spec)
+   apply assumption
+. (*
+find_theorems lookup_slot_for_thread
+   apply(wpsimp simp:lookup_slot_for_thread_def)
+    apply(wp only:resolve_address_bits_cte_at[THEN hoare_strengthen_postE_R])
+    apply(clarsimp simp:cte_wp_at_def)
+    apply(rule conjI)
+     apply blast
+    apply(clarsimp simp:get_cap_def)
+. (*
+    defer
+   apply clarsimp
+   apply(wpsimp wp:gets_the_wp)
+  apply clarsimp
+  oops
+     
+find_theorems resolve_address_bits
+. (*
+find_theorems lookup_slot_for_thread validE_R
+   apply(wpsimp wp:crunch_wps simp:crunch_simps)
+  apply (rule hoare_pre, wp get_cap_gets)
+  apply simp
+  done
+*) *) *) *)
+
+lemma hoare_absorb_impE_R:
+  "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,- \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>,-"
+  using hoare_strengthen_postE_R by fastforce
+
 lemma handle_SysRecv_syscall_notification:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
@@ -976,11 +1061,10 @@ lemma handle_SysRecv_syscall_notification:
       valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and> \<close>
       tcb_at sender s \<and> tcb_at receiver s \<and>
       receiver = cur_thread s \<and>
-      valid_objs s
-      \<comment> \<open> having woes with types - bring this back in later
-      (\<exists> n ntfn badge. cur_thread_bound_notification (mspec_transform s) = Some n \<and>
-        kheap s n = Some (Notification ntfn) \<and>
-        ntfn_obj ntfn = ActiveNtfn badge) \<close>
+      valid_objs s \<and>
+      (\<exists> ntfnptr ntfn. cur_thread_bound_notification (mspec_transform s) = Some ntfptr \<and>
+        kheap s ntfnptr = Some (Notification ntfn) \<and>
+        ntfn_obj ntfn = ActiveNtfn (badge_val ro))
       \<comment> \<open>NB: Not yet sure if this is a safe assumption to make, or even needed
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>
     handle_recv True
@@ -1018,8 +1102,8 @@ lemma handle_SysRecv_syscall_notification:
        (* the more careful version, though I can't much tell the difference in the result
           (at least, until I started mentioning the sender in the postcondition...) *)
        apply(wpsimp simp:receive_ipc_def)
-           apply(rename_tac tcb xa x31 x32 x33 rv rvb ntfnptr)
-           apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver" in hoare_gen_asm)
+           apply(rename_tac tcb xa ep_ptr badge rights rv rvb ntfnptr)
+           apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver \<and> badge = badge_val ro" in hoare_gen_asm)
            (*
            apply(wpsimp wp:hoare_vcg_conj_lift)
             apply(wpsimp wp:complete_signal_ct)
@@ -1042,11 +1126,11 @@ lemma handle_SysRecv_syscall_notification:
            *)
            apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct)
           apply clarsimp
-          apply(rename_tac x xa x31 x32 x33 rv ntfnptr ntfn)
+          apply(rename_tac x xa ep_ptr badge rights rv ntfnptr ntfn)
           apply(rule_tac P="\<not> (ntfnptr = None \<or> \<not> isActive ntfn)" in hoare_gen_asm)
           apply wpsimp
          apply clarsimp
-         apply(rename_tac x xa x31 x32 x33 rv ntfnptr)
+         apply(rename_tac x xa ep_ptr badge rights rv ntfnptr)
          apply(rule_tac P="\<not> (ntfnptr = None)" in hoare_gen_asm)
          apply(wpsimp wp:get_simple_ko_wp)
         apply clarsimp
@@ -1058,7 +1142,7 @@ lemma handle_SysRecv_syscall_notification:
          the postcondition are unaffected by delete_caller_cap. *)
 
       apply(wpsimp wp:hoare_vcg_all_lift)
-      apply(rename_tac x xa ep_ptr x32 x33 ep)
+      apply(rename_tac x xa ep_ptr badge rights ep)
       apply(rule_tac P="x = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asm)
       (* Having trouble proving this, so drop it for now
       apply(wpsimp wp:hoare_absorb_imp)
@@ -1076,28 +1160,192 @@ lemma handle_SysRecv_syscall_notification:
       apply(wpsimp wp:hoare_absorb_imp)
       apply(wpsimp wp:hoare_vcg_conj_lift)
        apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_bound_tcb_at)
-      apply(rename_tac xa ep_ptr x32 x33 ep ntfn)
+      apply(rename_tac xa ep_ptr badge rights ep ntfn)
       apply(rule_tac P="\<exists>y. ntfn = Some y \<and> y \<noteq> receiver" in hoare_gen_asm)
       apply clarsimp
       apply(wpsimp wp:hoare_vcg_all_lift)
-      apply(rename_tac xa ep_ptr x32 x33 ep y ntfn)
-      apply(rule_tac P="isActive ntfn" in hoare_gen_asm)
+      apply(rename_tac xa ep_ptr badge rights ep y ntfn)
+      apply(rule_tac P="isActive ntfn \<and> badge = badge_val ro" in hoare_gen_asm)
       apply clarsimp
       (* not sure we can prove delete_caller_cap preserves obj_at for a particular ntfn object
          for the same reason we couldn't for a specific ep object *)
       apply(wpsimp wp:hoare_drop_imp)
       apply(wpsimp wp:hoare_vcg_conj_lift)
-       (* FIXME: line up with appropriate precondition on bound notification's badge *)
-       defer
+       apply(wpsimp wp:delete_caller_cap_active_ntfn_at)
       apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
      apply(wpsimp wp:throwError_wp)
     (* FIXME: Precondition out the notification cap case, as Microkit will always use
        receive bound notifications on endpoint caps *)
-    apply(rule_tac P="\<exists>a b c. ep_cap = EndpointCap a b c" in hoare_gen_asmE)
-    apply(wpsimp wp:throwError_wp)+
+    apply(rule_tac P="False" in hoare_gen_asmE)
+    apply(wpsimp wp:throwError_wp)
+             (* 13 subgoals *)
+             apply(wpsimp wp:throwError_wp)
+            apply(wpsimp wp:throwError_wp)
+           apply(wpsimp wp:throwError_wp)
+          apply(wpsimp wp:throwError_wp)
+         apply(wpsimp wp:throwError_wp)
+        apply(wpsimp wp:throwError_wp)
+       apply(wpsimp wp:throwError_wp)
+      apply(wpsimp wp:throwError_wp)
+     apply clarsimp
      (* 4 subgoals (2 deferrals) *)
+     apply wpsimp
+     apply(rename_tac thread ref)
+     apply(wp only:hoare_vcg_all_liftE_R)
+     apply(rename_tac ref ep_ptr badge rights)
+     apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asmE)
+     apply clarsimp
+     apply(wpsimp wp:hoare_absorb_impE_R)
+     apply(wpsimp wp:hoare_vcg_conj_liftE_R)
+      (* still nope.
+      apply(rule_tac P1="\<lambda>rv. rv = EndpointCap ep_ptr badge rights"
+        in lookup_cap_cte_caps_to'[THEN hoare_strengthen_postE_R])
+      apply clarsimp
+      apply assumption *)
+      (* also nope, because it still references the rv, which I can't do here.
+      apply(wp only:lookup_cap_cte_caps_to'[where P="\<lambda>rv. \<exists> a b c. rv = EndpointCap a b c",THEN hoare_strengthen_postE_R])
+      apply clarsimp
+      apply(rotate_tac 2)
+      apply(erule impE)
+       apply assumption
+      *)
+      apply(rule_tac mycap1="EndpointCap ep_ptr badge rights"
+        in lookup_cap_specific[THEN hoare_strengthen_postE_R])
+      (* oh, even if the above sorried lemma is good (and I'm not sure if it is),
+         we still need to relax the rights to allow them to be masked *)
+      apply(clarsimp simp:cte_wp_at_def)
+     oops
+(*
+     (* Not strong enough.
+     apply(wpsimp wp:lookup_cap_valid[THEN hoare_strengthen_postE_R])
+     *)
+
+      find_theorems lookup_cap validE_R
+
+     apply(wp only:lookup_cap_cte_caps_to[THEN hoare_strengthen_postE_R])
+     (* Neither of these help because they fill in the P.
+        I think I need a new lemma about lookup_cap.
+     apply(rule_tac P1="\<lambda>rv. rv = EndpointCap ep_ptr badge rights"
+       in lookup_cap_cte_caps_to[THEN hoare_strengthen_postE_R])
+     apply(wp only:lookup_cap_cte_caps_to[where P="\<lambda>rv. \<exists> a b c. rv = EndpointCap a b c", THEN hoare_strengthen_postE_R])
+     *)
+. (*
+     apply(wpsimp wp:hoare_vcg_conj_liftE_R lookup_cap_gets hoare_vcg_ex_lift)
+      find_theorems lookup_cap validE_R
+      apply(wpsimp wp:lookup_cap_ex[THEN hoare_strengthen_postE_R])
+      apply(clarsimp simp:cte_wp_at_def)
+
+. (*
+
+find_theorems name:imp name:hoare name:absorb
+thm hoare_vcg_imp_liftE_R
+hoare_vcg_imp_liftE_R'
+     apply(wpsimp wp:hoare_absorb_imp[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+. (*
+(*
+     apply(rotate_tac 1)
+     apply(rule conjE)
+      prefer 2
+      apply(rule conjI)
+       apply assumption
+      apply(rotate_tac -1)
+      apply(rule conjI)
+       apply assumption
+*)
+
+      
+thm conjI
+     apply(rule conj_forward[where P=P'])
+
+
+     apply(wp only:lookup_cap_cte_caps_to[THEN hoare_strengthen_postE_R])
+     apply clarsimp
+     apply(wp only:lookup_cap_cte_caps_to[where P="\<lambda>rv. \<exists> a b c. rv = EndpointCap a b c", THEN hoare_strengthen_postE_R])
+     
+     apply(wp only:hoare_absorb_imp[THEN valid_validE_R])
+. (*
+      
+find_theorems name:conj intro
+     apply(wpsimp wp:lookup_cap_cte_caps_to[where P="\<lambda>rv. \<exists> a b c. rv = EndpointCap a b c", THEN hoare_strengthen_postE_R])
+apply assumption
+     apply wpsimp
+     apply(wpsimp wp:lookup_cap_cte_caps_to[where P="\<lambda>rv. \<exists> a b c. rv = EndpointCap a b c", THEN hoare_strengthen_postE_R])
+     apply clarsimp
+     apply(rule_tac P="thread = receiver" in hoare_gen_asmE)
+     apply clarsimp
+     apply(wp only:hoare_vcg_all_liftE_R)
+      apply(rename_tac ref ep_ptr badge rights)
+      apply(rule_tac P="receiver \<noteq> ep_ptr" in hoare_gen_asmE)
+      apply clarsimp
+find_theorems lookup_cap validE_R
+thm lookup_cap_ex
+. (*
+      apply(wpsimp wp:hoare_vcg_all_liftE_R)
+
+thm hoare_absorb_imp[THEN valid_validE_R, THEN hoare_strengthen_postE_R]
+      apply(wp hoare_absorb_imp[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+      apply clarsimp
+apply assumption
+      apply(rename_tac ref ep_ptr badge rights)
+      apply(rule_tac P="receiver \<noteq> ep_ptr" in hoare_gen_asmE)
+      apply clarsimp
+      apply(wp only:hoare_vcg_all_liftE_R)
+      apply(wp only:lookup_cap_inv[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+     apply(wp only:lookup_cap_inv[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+
+    apply assumption
+
+
+(*
+find_theorems lookup_cap
+     apply(wpsimp wp:lookup_cap_gets[THEN hoare_strengthen_postE_R])
+*)
+     apply(wpsimp wp:lookup_cap_inv[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+
+     apply(wpsimp wp:lookup_cap_gets[THEN hoare_strengthen_postE_R])
+     apply(clarsimp simp:cte_wp_at_def)
+     apply(rule conjI)
+      apply clarsimp
+      apply(rule conjI)
+       apply clarsimp
+
+     apply(wpsimp wp:hoare_vcg_all_liftE_R)
+
+
+      apply clarsimp
+(*
+     apply(wpsimp wp:lookup_cap_inv[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+apply assumption
+*)
+
+      apply(wpsimp wp:hoare_drop_impE_R)
+     apply(wpsimp wp:lookup_cap_inv[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+
+     apply clarsimp
+     apply(wpsimp wp:hoare_drop_impE_R)
+
+
+
+      apply(wpsimp wp:lookup_cap_gets[THEN hoare_strengthen_postE_R])
+
+     apply(wpsimp wp:lookup_cap_inv)
+
+      apply(wpsimp wp:hoare_drop_impE_R)
+     apply
+     apply(wpsimp wp:hoare_vcg_conj_liftE_R)
+thm lookup_cap_inv
+     apply(wpsimp wp:lookup_cap_inv)
+
+      apply wpsimp
+
+
+     apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ref" in hoare_gen_asmE)
      apply(wpsimp wp:lookup_cap_gets[THEN hoare_strengthen_postE_R])
      apply(clarsimp simp:cte_wp_at_def get_cap_def)
+     apply(rule conjI)
+      apply clarsimp
+      apply(rule conjI)
+       apply clarsimp
      (* FIXME: yeah, we're missing a relevant precondition on the syscall *)
      defer
     apply wpsimp
@@ -1106,6 +1354,7 @@ lemma handle_SysRecv_syscall_notification:
   (* okay, we're back to the fault handling case. but we probably don't want these as arbitrary
      postconditions to this (unless they're in the precondition too) *)
   oops
+*) *) *) *) *) *)
 
 lemma handle_SysRecv_syscall_ppcall:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
