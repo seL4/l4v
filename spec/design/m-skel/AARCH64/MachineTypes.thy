@@ -62,6 +62,7 @@ record
   irq_state :: nat
   underlying_memory :: "machine_word \<Rightarrow> word8"
   device_state :: "machine_word \<Rightarrow> word8 option"
+  fpu_enabled :: bool
   machine_state_rest :: AARCH64.machine_state_rest
 
 axiomatization
@@ -109,6 +110,7 @@ definition
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
                          device_state = Map.empty,
+                         fpu_enabled = False,
                          machine_state_rest = undefined \<rparr>"
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY \
