@@ -31,6 +31,7 @@ requalify_consts (aliasing)
   configureIdleThread
   switchToIdleThread
   switchToThread
+  prepareNextDomain
 
 context begin global_naming global
 

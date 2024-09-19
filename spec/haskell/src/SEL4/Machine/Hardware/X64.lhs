@@ -639,13 +639,17 @@ IRQ parameters
 
 FPU operations
 
-> nativeThreadUsingFPU :: Word -> MachineMonad Bool
-> nativeThreadUsingFPU threadPtr = do
->     cbptr <- ask
->     liftIO $ Platform.nativeThreadUsingFPU threadPtr
+> readFpuState :: MachineMonad X64.FPUState
+> readFpuState = error "Unimplemented - machine op"
 
-> switchFpuOwner :: Word -> Word -> MachineMonad ()
-> switchFpuOwner newOwner cpu = do
->     cbptr <- ask
->     liftIO $ Platform.switchFpuOwner newOwner cpu
+> writeFpuState :: X64.FPUState -> MachineMonad ()
+> writeFpuState _ = error "Unimplemented - machine op"
 
+> enableFpu :: MachineMonad ()
+> enableFpu = error "Unimplemented - machine op"
+
+> disableFpu :: MachineMonad ()
+> disableFpu = error "Unimplemented - machine op"
+
+> isFpuEnable :: MachineMonad Bool
+> isFpuEnable = error "Unimplemented - machine op"

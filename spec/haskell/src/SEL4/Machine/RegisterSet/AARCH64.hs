@@ -121,8 +121,7 @@ data FPUState = FPUState { fpuRegs :: Array Int Data.Word.Word64
 
 -- The representation of the user-level context of a thread is an array of
 -- machine words, indexed by register name for the user registers, plus the
--- state of the FPU. There are no operations on the FPU state apart from save
--- and restore at kernel entry and exit.
+-- state of the FPU.
 data UserContext = UC { fromUC :: Array Register Word,
                         fpuState :: FPUState }
   deriving Show
@@ -137,8 +136,13 @@ newFPUState = FPUState (funPartialArray (const 0) (0,63)) 0 0
 newContext :: UserContext
 newContext = UC ((funArray $ const 0)//initContext) newFPUState
 
--- Functions are provided to get and set a single register.
+-- Functions are provided to get and set a single register, or to get and set the FPU state.
 
 getRegister r = gets $ (! r) . fromUC
 
 setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (fpuState uc))
+
+getFPUState :: State UserContext FPUState
+getFPUState = gets fpuState
+
+setFPUState fc = modify (\ uc -> UC (fromUC uc) fc)
