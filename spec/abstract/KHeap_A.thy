@@ -378,6 +378,16 @@ definition read_refill_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) r_
 definition get_refill_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad" where
   "get_refill_head sc_ptr \<equiv> gets_the (read_refill_head sc_ptr)"
 
+definition read_refill_tail :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) r_monad" where
+  "read_refill_tail sc_ptr \<equiv> do {
+     sc \<leftarrow> read_sched_context sc_ptr;
+     oassert (sc_refills sc \<noteq> []);
+     oreturn (refill_tl sc)
+   }"
+
+definition get_refill_tail :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad" where
+  "get_refill_tail sc_ptr \<equiv> gets_the (read_refill_tail sc_ptr)"
+
 definition
   refill_capacity :: "time \<Rightarrow> refill \<Rightarrow> time"
 where
