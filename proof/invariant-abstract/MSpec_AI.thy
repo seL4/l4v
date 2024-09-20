@@ -1129,6 +1129,21 @@ lemma hoare_absorb_impE_R:
   "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,- \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>,-"
   using hoare_strengthen_postE_R by fastforce
 
+definition
+  "good_preconds s ro receiver \<equiv>
+     (\<exists> ntfnptr ntfn. cur_thread_bound_notification (mspec_transform s) = Some ntfnptr \<and>
+       kheap s ntfnptr = Some (Notification ntfn) \<and>
+       ntfn_obj ntfn = ActiveNtfn (badge_val ro)) \<and>
+     receiver = cur_thread s"
+
+find_theorems "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ _. \<not> _\<rbrace>"
+
+lemma handle_fault_good_preconds:
+  "handle_fault thread ex \<lbrace>\<lambda>s. \<not> good_preconds s ro receiver\<rbrace> "
+  sorry
+
+thm handle_recv_def
+thm cap_fault_on_failure_def
 lemma handle_SysRecv_syscall_notification:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
@@ -1141,11 +1156,8 @@ lemma handle_SysRecv_syscall_notification:
       \<comment> \<open> having woes with types - bring this back in later
       valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and> \<close>
       tcb_at sender s \<and> tcb_at receiver s \<and>
-      receiver = cur_thread s \<and>
       valid_objs s \<and>
-      (\<exists> ntfnptr ntfn. cur_thread_bound_notification (mspec_transform s) = Some ntfptr \<and>
-        kheap s ntfnptr = Some (Notification ntfn) \<and>
-        ntfn_obj ntfn = ActiveNtfn (badge_val ro))
+      good_preconds s ro receiver
       \<comment> \<open>NB: Not yet sure if this is a safe assumption to make, or even needed
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>
     handle_recv True
@@ -1156,23 +1168,39 @@ lemma handle_SysRecv_syscall_notification:
       P''' (lookup_ipc_buffer_ret s True receiver) \<and>
       P' (get_message_info_ret s sender) \<and>
       \<close>
-      \<comment> \<open>notification reqs on complete_signal\<close>
-      getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
+      \<comment> \<open>notification reqs on successful complete_signal\<close>
+      (good_preconds s ro receiver \<longrightarrow> \<comment> \<open>test to characterise what determines success\<close>
+        (getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
+        receiver = cur_thread s)) \<and>
       \<comment> \<open>FIXME: figure out the mechanism for transferring message info and how we ought
         to express its correctness
       get_message_info_ret s receiver = Some (minfo ro) \<and> \<close>
-      tcb_at sender s \<and> tcb_at receiver s \<and>
-      receiver = cur_thread s
+      tcb_at sender s \<and> tcb_at receiver s
       \<comment> \<open>NB: put back if needed
       valid_message_info (the (get_message_info_ret s sender)) \<and>
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>"
-  apply(wpsimp wp:crunch_wps simp:handle_recv_def)
-      (* fault handling - I think in reality we want to prove that the precondition
-         ensures that there is no fault to handle. skip this for now *)
+  unfolding handle_recv_def
+  find_theorems cap_fault_on_failure
+  apply wp
+      apply(rule_tac Q'="\<lambda>_ s. \<not> (good_preconds s ro receiver) \<and>
+        tcb_at sender s \<and> tcb_at receiver s" in hoare_post_imp)
+      apply simp
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+      apply(wpsimp wp:handle_fault_good_preconds)
+      apply(wpsimp wp:hf_tcb_at)
+     apply(wpsimp simp:Let_def)
+        (* 15 subgoals: looks like proving how ending up with a fault must imply
+           having not met the needed preconditions *)
+        apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp
+          simp:set_simple_ko_def AARCH64.setRegister_def as_user_def set_thread_state_def)+
+      (* 5 subgoals *)
+      apply(clarsimp simp:good_preconds_def mspec_transform_def obj_at_def split:option.splits kernel_object.splits)
       defer
-     apply wpsimp
-      apply(wpsimp simp:Let_def)
-       (* 17 subgoals *)
+     apply(wpsimp simp:Let_def)
+        (* 16 subgoals *)
+        (* FIXME: Now I'm really confused - where did the EndpointCap case go? Maybe it's matching
+           with a schematic postcondition left unfilled by the deferred goal above... *)
+       (* 15 subgoals *)
        (* more automated version
        apply(wpsimp simp:receive_ipc_def complete_signal_def)
         (* 23 subgoals *)
@@ -1236,7 +1264,9 @@ lemma handle_SysRecv_syscall_notification:
         apply assumption
        apply(clarsimp simp:a_type_def obj_at_def)
       *)
-      apply(wpsimp wp:hoare_drop_imp)
+      apply(wpsimp wp:hoare_absorb_imp)
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       defer
       apply(wpsimp wp:hoare_vcg_all_lift)
       apply(wpsimp wp:hoare_absorb_imp)
       apply(wpsimp wp:hoare_vcg_conj_lift)
@@ -1254,12 +1284,33 @@ lemma handle_SysRecv_syscall_notification:
       apply(wpsimp wp:hoare_vcg_conj_lift)
        apply(wpsimp wp:delete_caller_cap_active_ntfn_at)
       apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
-     apply(wpsimp wp:throwError_wp)
+    apply(rule hoare_FalseE_R)
+    apply clarsimp
     (* FIXME: Precondition out the notification cap case, as Microkit will always use
        receive bound notifications on endpoint caps *)
-    apply(rule_tac P="False" in hoare_gen_asmE)
-    apply(wpsimp wp:throwError_wp)
-             (* 13 subgoals *)
+    (* these don't do it, we just end up with False
+    apply(rule_tac P="\<exists>a b c. ep_cap = EndpointCap a b c" in hoare_gen_asmE)
+    apply(rule hoare_FalseE_R)
+    *)
+    apply(rule hoare_FalseE_R)
+    apply(rule hoare_FalseE_R)
+
+    apply(rule hoare_FalseE_R)
+
+    apply(rule hoare_FalseE_R)
+
+    apply(rule hoare_FalseE_R)
+
+    apply(rule hoare_FalseE_R)
+
+    apply(rule hoare_FalseE_R)
+
+    apply(rule hoare_FalseE_R)
+
+    apply(rule hoare_FalseE_R)
+    apply clarsimp
+. (*
+             (* 12 subgoals *)
              apply(wpsimp wp:throwError_wp)
             apply(wpsimp wp:throwError_wp)
            apply(wpsimp wp:throwError_wp)
@@ -1301,11 +1352,24 @@ lemma handle_SysRecv_syscall_notification:
       in lookup_cap_specific[THEN hoare_strengthen_postE_R])
     apply(clarsimp simp:cte_wp_at_def)
    apply clarsimp
+   term liftM term to_bl
    apply wpsimp
+thm data_to_cptr_def
    (* can't even refer to s here, too. bit of a mess, really.
       probably means I need to modify the lemma(s) to capture this (if it's even true). *)
    apply(subgoal_tac "something=the (getRegister_as_user_ret s thread cap_register)")
      oops
+
+(* This is the relevant code:
+     thread \<leftarrow> gets cur_thread;
+
+     ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
+                 getRegister cap_register;
+
+     (cap_fault_on_failure (of_bl ep_cptr) True $ doE
+        ep_cap \<leftarrow> lookup_cap thread ep_cptr;
+*)
+
 (*
      (* Not strong enough.
      apply(wpsimp wp:lookup_cap_valid[THEN hoare_strengthen_postE_R])
