@@ -1050,6 +1050,16 @@ lemma read_refill_head_wp[wp]:
 lemmas get_refill_head_wp[wp] =
   ovalid_gets_the[OF read_refill_head_wp, simplified get_refill_head_def[symmetric]]
 
+lemma read_refill_tail_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n) \<longrightarrow> Q (refill_tl sc) s\<rblot>
+   read_refill_tail sc_ptr
+   \<lblot>Q\<rblot>"
+  unfolding read_refill_tail_def
+  by wpsimp
+
+lemmas get_refill_tail_wp[wp] =
+  ovalid_gets_the[OF read_refill_tail_wp, simplified get_refill_tail_def[symmetric]]
+
 lemma read_sc_refill_ready_wp[wp]:
   "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n)
                \<longrightarrow> Q (refill_ready (cur_time s) (refill_hd sc)) s\<rblot>
@@ -1104,6 +1114,16 @@ lemma no_ofail_read_refill_head[wp]:
 lemmas no_fail_get_refill_head[wp] =
   no_ofail_gets_the[OF no_ofail_read_refill_head, simplified get_refill_head_def[symmetric]]
 
+lemma no_ofail_read_refill_tail[wp]:
+  "no_ofail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) scp s) (read_refill_tail scp)"
+  unfolding read_refill_tail_def
+  apply wpsimp
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
+
+lemmas no_fail_get_refill_tail[wp] =
+  no_ofail_gets_the[OF no_ofail_read_refill_tail, simplified get_refill_tail_def[symmetric]]
+
 lemma no_ofail_read_sc_refill_ready[wp]:
   "no_ofail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) scp s) (read_sc_refill_ready scp)"
   unfolding read_sc_refill_ready_def
@@ -1138,11 +1158,27 @@ lemma refill_pop_head_no_fail[wp]:
   unfolding refill_pop_head_def
   by wpsimp
 
-lemma non_overlapping_merge_refills_no_fail[wp]:
+lemma update_refill_hd_no_fail[wp]:
   "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s)
-            (non_overlapping_merge_refills sc_ptr)"
-  unfolding non_overlapping_merge_refills_def refill_pop_head_def
-  by (wpsimp simp: update_refill_hd_def wp: update_sched_context_wp)
+            (update_refill_hd sc_ptr f)"
+  unfolding update_refill_hd_def refill_pop_head_def
+  apply wpsimp
+  by (clarsimp simp: obj_at_def sc_at_pred_n_def)
+
+lemma set_refill_hd_no_fail[wp]:
+  "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s)
+            (set_refill_hd sc_ptr f)"
+  unfolding set_refill_hd_def refill_pop_head_def
+  by wpsimp
+
+lemma merge_nonoverlapping_head_refill_no_fail[wp]:
+  "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. 1 < length refills) sc_ptr s)
+            (merge_nonoverlapping_head_refill sc_ptr)"
+  unfolding merge_nonoverlapping_head_refill_def refill_pop_head_def
+  apply (wpsimp simp: set_refill_hd_def update_refill_hd_def wp: update_sched_context_wp)
+  apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
+  apply (case_tac "sc_refills sc"; clarsimp)
+  done
 
 lemma schedule_used_no_fail[wp]:
   "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s)
@@ -1162,21 +1198,10 @@ lemma refill_pop_head_nonempty_refills:
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def neq_Nil_lengthI)
   done
 
-lemma non_overlapping_merge_refills_nonempty_refills:
-  "\<lbrace>\<lambda>s. sc_refills_sc_at (\<lambda>refills. 1 < length refills) sc_ptr s\<rbrace>
-   non_overlapping_merge_refills sc_ptr
-   \<lbrace>\<lambda>_ s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s\<rbrace>"
-  unfolding non_overlapping_merge_refills_def update_refill_hd_def
-  apply (rule_tac Q'="\<lambda>_ s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s" in bind_wp)
-  apply (wpsimp wp: update_sched_context_wp)
-   apply (clarsimp simp: sc_at_pred_n_def obj_at_def neq_Nil_lengthI)
-  apply (wpsimp wp: refill_pop_head_nonempty_refills)
-  done
-
-lemma handle_overrun_loop_body_no_fail:
-  "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) (cur_sc s) s)
-           (handle_overrun_loop_body usage)"
-  unfolding handle_overrun_loop_body_def
+lemma charge_entire_head_refill_no_fail:
+  "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s)
+           (charge_entire_head_refill sc_ptr usage)"
+  unfolding charge_entire_head_refill_def
   apply (wpsimp simp: refill_single_def refill_size_def get_refills_def update_refill_hd_def
                   wp: refill_pop_head_no_fail refill_pop_head_nonempty_refills)
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def Suc_lessI)
