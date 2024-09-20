@@ -1030,7 +1030,7 @@ crunch refillNew, refillUpdate, commitTime
   for pred_tcb_at''[wp]: "\<lambda>s. Q (pred_tcb_at' proj P tcbPtr s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift)
 
 lemma scSBadge_update_invs'[wp]:
   "updateSchedContext scPtr (scBadge_update f) \<lbrace>invs'\<rbrace>"
@@ -1917,7 +1917,7 @@ crunch refillResetRR, refillBudgetCheck
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' p"
   and typ_at'[wp]: "\<lambda>s. Q (typ_at' P p s)"
   and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 crunch chargeBudget
   for typ_at'[wp]: "\<lambda>s. Q (typ_at' P p s)"
@@ -2414,7 +2414,7 @@ crunch check_budget
 crunch checkBudgetRestart
   for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 lemma getCurrentTime_invs'[wp]:
   "doMachineOp getCurrentTime \<lbrace>invs'\<rbrace>"

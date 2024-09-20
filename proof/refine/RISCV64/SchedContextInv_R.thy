@@ -1233,7 +1233,7 @@ crunch commitTime, refillNew, refillUpdate
 
 crunch commitTime
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 lemma invokeSchedControlConfigureFlags_corres:
   "sc_ctrl_inv_rel sc_inv sc_inv' \<Longrightarrow>

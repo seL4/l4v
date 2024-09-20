@@ -4206,8 +4206,24 @@ lemma readRefillHead_wp[wp]:
 lemmas getRefillHead_wp[wp] =
   ovalid_gets_the[OF readRefillHead_wp, simplified getRefillHead_def[symmetric]]
 
+lemma readRefillTail_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc. scs_of' s scPtr = Some sc \<longrightarrow> Q (refillTl sc) s\<rblot>
+   readRefillTail scPtr
+   \<lblot>Q\<rblot>"
+  unfolding readRefillTail_def readSchedContext_def
+  apply (wpsimp wp: set_sc'.readObject_wp)
+  apply (clarsimp simp: opt_map_def obj_at'_def)
+  done
+
+lemmas getRefillTail_wp[wp] =
+  ovalid_gets_the[OF readRefillTail_wp, simplified getRefillTail_def[symmetric]]
+
 lemma getRefillHead_sp:
   "\<lbrace>P\<rbrace> getRefillHead scPtr \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. scs_of' s scPtr = Some sc \<and> refillHd sc = rv)\<rbrace>"
+  by wpsimp
+
+lemma getRefillTail_sp:
+  "\<lbrace>P\<rbrace> getRefillTail scPtr \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. scs_of' s scPtr = Some sc \<and> refillTl sc = rv)\<rbrace>"
   by wpsimp
 
 lemma readRefillReady_wp:

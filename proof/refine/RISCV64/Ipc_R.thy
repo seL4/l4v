@@ -3964,15 +3964,6 @@ lemma schedContextResume_corres:
                         opt_map_def opt_pred_def is_active_sc'_def)
   done
 
-lemma updateRefillHd_valid_objs':
-  "\<lbrace>valid_objs' and active_sc_at' scPtr\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
-  apply wpsimp
-  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-  apply (fastforce simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
-                         valid_sched_context_size'_def objBits_def objBitsKO_def refillSize_def)
-  done
-
 lemma getCTE_cap_to_refs[wp]:
   "\<lbrace>\<top>\<rbrace> getCTE p \<lbrace>\<lambda>rv s. \<forall>r\<in>zobj_refs' (cteCap rv). ex_nonz_cap_to' r s\<rbrace>"
   apply (rule hoare_strengthen_post [OF getCTE_sp])
