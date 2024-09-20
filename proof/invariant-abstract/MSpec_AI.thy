@@ -982,67 +982,148 @@ lemma lookup_cap_cte_caps_to':
    \<lbrace>\<lambda>rv s. P' s \<and> (P rv \<longrightarrow> (\<forall>p\<in>cte_refs rv (interrupt_irq_node s). ex_cte_cap_wp_to P p s))\<rbrace>,-"
   by (simp add: lookup_cap_def split_def) wpsimp
 
+
+(* NB: tcb = (the (get_tcb t s)) *)
+thm resolve_address_bits_cte_at
+thm resolve_address_bits_real_cte_at
+lemma resolve_address_bits_specific:
+  "\<lbrace>\<lambda>s. valid_objs s \<and>
+     valid_cap mycap s \<and>
+     valid_cap (fst args) s \<and>
+     cte_wp_at ((=) mycap) mycref s \<rbrace> resolve_address_bits args
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) mycref s \<and> (fst rv) = mycref\<rbrace>,-"
+unfolding resolve_address_bits_def
+(* basing the proof structure on that of resolve_address_bits_real_cte_at *)
+proof (induct args rule: resolve_address_bits'.induct)
+  case (1 z cap cref)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]
+    apply (rename_tac obj_ref nat list)
+    apply (simp only: cap.simps)
+    apply (case_tac "nat + length list = 0")
+     apply (simp add: fail_def)
+    apply (simp only: if_False)
+    apply (simp only: K_bind_def in_bindE_R)
+    apply (elim conjE exE)
+    apply (simp only: split: if_split_asm)
+     apply (clarsimp simp add: in_monad)
+     apply (clarsimp simp add: valid_cap_def)
+     apply(clarsimp simp:cte_wp_at_def)
+     (* FIXME: but it doesn't seem there's anything for me to use relating cref and mycref?
+        Perhaps it ought to be captured by some precondition relating mycref and snd args... *)
+     defer
+    apply (simp only: K_bind_def in_bindE_R)
+    apply (elim conjE exE)
+    apply (simp only: split: if_split_asm)
+     apply (frule (8) "1.hyps")
+     apply (clarsimp simp: in_monad validE_def validE_R_def valid_def)
+     apply (frule in_inv_by_hoareD [OF get_cap_inv])
+     apply simp
+     apply (frule (1) post_by_hoare [OF get_cap_valid])
+     apply (erule allE, erule impE, blast)
+     apply (clarsimp simp: in_monad split: cap.splits)
+     apply (drule (1) bspec, simp)+
+    apply (clarsimp simp: in_monad)
+    apply (frule in_inv_by_hoareD [OF get_cap_inv])
+    apply (clarsimp simp add: valid_cap_def)
+    apply(clarsimp simp:cte_wp_at_def)
+    (* FIXME: again it's asking me to relate cref and mycref. must be missing something *)
+    sorry
+qed
+
+lemma lookup_slot_specific:
+  "\<lbrace>\<lambda>s. valid_objs s \<and>
+     valid_cap mycap s \<and>
+     valid_cap (tcb_ctable (the (get_tcb t s))) s \<and>
+     cte_wp_at ((=) mycap) cref s \<rbrace> lookup_slot_for_thread t c
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) cref s \<and> (fst rv) = cref\<rbrace>,-"
+  apply(wpsimp simp:lookup_slot_for_thread_def)
+    apply(wpsimp wp:resolve_address_bits_specific[where mycap=mycap,THEN hoare_strengthen_postE_R])
+    apply assumption
+   apply wpsimp
+  apply wpsimp
+  done
+
 term valid_cap
 thm lookup_cap_gets
 lemma lookup_cap_specific:
-  "\<lbrace>valid_objs and
-    (\<lambda>s. \<exists>cref. cte_wp_at ((=) mycap) cref s \<and> valid_cap (tcb_ctable (the (get_tcb t s))) s)\<rbrace>
+  "\<lbrace>\<lambda>s. valid_objs s \<and>
+    cte_wp_at ((=) mycap) cref s \<and>
+    valid_cap (tcb_ctable (the (get_tcb t s))) s \<and>
+    wellformed_cap mycap \<and> valid_cap mycap s\<rbrace>
      lookup_cap t c
-   \<lbrace>\<lambda>rv s. \<exists>cref msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk cap \<and> cap = mycap) cref s\<rbrace>, -"
+   \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>cap. rv = cap \<and> cap = mycap) cref s\<rbrace>, -"
    (* \<lbrace>\<lambda>rv s. \<exists>cref. cte_wp_at (\<lambda>cap. rv = cap \<and> rv = ep_cap) cref s\<rbrace>, - *)
    (* \<lbrace>\<lambda>rv s. \<exists>msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk ep_cap) cref s\<rbrace>, - *)
   unfolding lookup_cap_def fun_app_def split_def
   apply(rule hoare_pre)
    apply(wpsimp)
-    apply(wpsimp wp:get_cap_wp)
-   apply wpsimp
-   apply(wpsimp wp:hoare_vcg_all_liftE_R)
-   apply(rule_tac P="cap = mycap" in hoare_gen_asmE)
-   apply clarsimp
-   apply(wpsimp wp:lookup_slot_for_thread_inv[THEN valid_validE_R,THEN hoare_strengthen_postE_R])
-   apply(rule_tac x="a" in exI)
-   apply(rule_tac x="b" in exI)
-   apply(rule_tac x="UNIV" in exI)
-   apply(clarsimp simp:cte_wp_at_def)
-   apply assumption
+(*
+   apply(rule_tac P="a = mycap" in hoare_gen_asm)
+*)
+
+(*
+    apply(wp only:get_cap_valid)
+*)
+    apply(rule_tac P="cref = (a, b)" in hoare_gen_asm)
+
+    apply(wpsimp wp:get_cap_cte_wp_at_rv[THEN hoare_strengthen_post])
+    apply assumption
+   (*
+   apply(wpsimp wp:lookup_slot_cte_at_wp[THEN hoare_strengthen_postE_R])
+   *)
+   apply(wpsimp wp:lookup_slot_specific[where mycap=mycap and cref=cref,THEN hoare_strengthen_postE_R])
+   using cte_wp_at_lift apply fastforce
   apply clarsimp
-  (* left conjunct is fine if x is wellformed, but we still don't have any way to know x = mycap *)
-  thm cap_mask_UNIV
-  sorry
-  (*
-  apply(subgoal_tac "cte_wp_at ((=) x) (a, b) s")
+  done
+(*
    apply(rule conjI)
     apply assumption
-       apply(clarsimp simp:cte_wp_at_def)
-   apply(clarsimp simp:cte_wp_at_def)
-   prefer 2
-  apply(rule conjI)
-   apply(clarsimp simp:cte_wp_at_def)
-   apply(drule spec)
-   apply assumption
 . (*
-find_theorems lookup_slot_for_thread
-   apply(wpsimp simp:lookup_slot_for_thread_def)
-    apply(wp only:resolve_address_bits_cte_at[THEN hoare_strengthen_postE_R])
-    apply(clarsimp simp:cte_wp_at_def)
-    apply(rule conjI)
-     apply blast
-    apply(clarsimp simp:get_cap_def)
-. (*
-    defer
+   find_theorems lookup_slot_for_thread
+   apply(wpsimp wp:lookup_slot_for_thread_inv[THEN valid_validE_R,THEN hoare_strengthen_postE_R])
+
+
+(*
+     apply(clarsimp simp:cte_wp_at_def)
+
+     apply assumption
+find_theorems get_cap
+   apply wpsimp
+   apply(wpsimp wp:hoare_vcg_all_liftE_R)
+   (*
+   apply(rule_tac P="wellformed_cap mycap \<and> (\<exists>msk. cap = mask_cap msk mycap)" in hoare_gen_asmE)
+   *)
    apply clarsimp
-   apply(wpsimp wp:gets_the_wp)
+   (*
+   apply(wpsimp wp:lookup_slot_cte_at_wp[THEN hoare_strengthen_postE_R])
+*)
+   
+   apply clarsimp
+*)
+   apply wpsimp
+   apply(wpsimp wp:lookup_slot_for_thread_inv[THEN valid_validE_R,THEN hoare_strengthen_postE_R])
+   
+   apply(rule_tac x="a" in exI)
+   apply(rule_tac x="b" in exI)
+   apply(clarsimp simp:cte_wp_at_def)
+   defer
   apply clarsimp
-  oops
-     
-find_theorems resolve_address_bits
-. (*
-find_theorems lookup_slot_for_thread validE_R
-   apply(wpsimp wp:crunch_wps simp:crunch_simps)
-  apply (rule hoare_pre, wp get_cap_gets)
-  apply simp
-  done
-*) *) *) *)
+  apply(rule context_conjI)
+   prefer 2
+   apply(
+  apply(clarsimp simp:cte_wp_at_def)
+  apply(rule_tac x=msk in exI)
+   (* left conjunct is fine if x is wellformed *)
+   thm cap_mask_UNIV
+   defer
+  (* but we still don't have any way to know x = mycap *)
+  sorry
+*) *)
 
 lemma hoare_absorb_impE_R:
   "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,- \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>,-"
@@ -1209,11 +1290,21 @@ lemma handle_SysRecv_syscall_notification:
       apply(erule impE)
        apply assumption
       *)
-      apply(rule_tac mycap1="EndpointCap ep_ptr badge rights"
+      (* FIXME: is this the relationship between cref and ref? *)
+      apply(rule_tac mycap1="EndpointCap ep_ptr badge rights" and cref1="(something, ref)"
         in lookup_cap_specific[THEN hoare_strengthen_postE_R])
-      (* oh, even if the above sorried lemma is good (and I'm not sure if it is),
-         we still need to relax the rights to allow them to be masked *)
       apply(clarsimp simp:cte_wp_at_def)
+     (* these don't refer to rv, so the inv lemma should be fine *)
+     apply(wp only:lookup_cap_inv[THEN valid_validE_R, THEN hoare_strengthen_postE_R])
+    (* I'm evidently missing something in this lemma relating cref and ref - is it this? *)
+    apply(rule_tac mycap1="EndpointCap a b c" and cref1="(something, ref)"
+      in lookup_cap_specific[THEN hoare_strengthen_postE_R])
+    apply(clarsimp simp:cte_wp_at_def)
+   apply clarsimp
+   apply wpsimp
+   (* can't even refer to s here, too. bit of a mess, really.
+      probably means I need to modify the lemma(s) to capture this (if it's even true). *)
+   apply(subgoal_tac "something=the (getRegister_as_user_ret s thread cap_register)")
      oops
 (*
      (* Not strong enough.
