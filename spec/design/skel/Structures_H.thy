@@ -24,11 +24,13 @@ arch_requalify_types (H)
   arch_kernel_object
   asid
   arch_tcb
+  arch_tcb_flag
 
 arch_requalify_consts (H)
   archObjSize
   nullPointer
   newArchTCB
+  archTcbFlagToWord
   fromPPtr
   PPtr
   atcbContextGet
