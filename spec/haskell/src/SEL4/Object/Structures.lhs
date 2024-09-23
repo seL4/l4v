@@ -283,6 +283,10 @@ The TCB is used to store various data about the thread's current state:
 >         tcbSchedPrev :: Maybe (PPtr TCB),
 >         tcbSchedNext :: Maybe (PPtr TCB),
 
+\item the thread's feature flags, currently only used for fpuDisabled
+
+>         tcbFlags :: TcbFlags,
+
 \item and any arch-specific TCB contents
 
 >         tcbArch :: ArchTCB }
@@ -492,3 +496,15 @@ Various operations on the free index of an Untyped cap.
 > data TcbQueue = TcbQueue {
 >     tcbQueueHead :: Maybe (PPtr TCB),
 >     tcbQueueEnd :: Maybe (PPtr TCB) }
+
+\subsubsection{TCB Flags}
+
+> type TcbFlags = Word
+
+> data TcbFlag
+>     = NoFlag
+>     | ArchFlag ArchTcbFlag
+
+> tcbFlagToWord :: TcbFlag -> Word
+> tcbFlagToWord NoFlag = 0x0
+> tcbFlagToWord (ArchFlag archFlag) = archTcbFlagToWord archFlag

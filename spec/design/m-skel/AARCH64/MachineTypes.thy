@@ -26,7 +26,7 @@ text \<open>
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 decls_only NOT UserContext UserMonad Word getRegister setRegister newContext FPUState newFPUState
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 decls_only NOT UserContext UserMonad Word getRegister setRegister getFPUState setFPUState newContext FPUState newFPUState
 
 #INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs CONTEXT AARCH64 ONLY VPPIEventIRQ VirtTimer
 (*<*)
@@ -40,7 +40,7 @@ context Arch begin arch_global_naming
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 instanceproofs
 #INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs CONTEXT AARCH64 instanceproofs ONLY VPPIEventIRQ VirtTimer
 (*>*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 bodies_only NOT getRegister setRegister newContext newFPUState
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 bodies_only NOT getRegister setRegister getFPUState setFPUState newContext newFPUState
 
 section "Machine State"
 
