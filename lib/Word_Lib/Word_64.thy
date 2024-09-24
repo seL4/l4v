@@ -144,6 +144,10 @@ lemma word64_and_max_simp:
   using word_and_full_mask_simp [of x]
   by (simp add: numeral_eq_Suc mask_Suc_exp)
 
+lemma max_minus_one_word64:
+  "(0xFFFFFFFFFFFFFFFF :: word64) = - 1"
+  by (simp add: maxBound_word)
+
 end
 
 end
