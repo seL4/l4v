@@ -15,9 +15,11 @@ context Arch begin arch_global_naming (H)
 #INCLUDE_SETTINGS keep_constructor=asidpool
 #INCLUDE_SETTINGS keep_constructor=arch_tcb
 
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H decls_only NOT VPPIEventIRQ VirtTimer
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H decls_only NOT VPPIEventIRQ VirtTimer \
+  NOT ArchTcbFlag archTcbFlagToWord
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H instanceproofs NOT VPPIEventIRQ VirtTimer
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H bodies_only NOT makeVCPUObject
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H bodies_only NOT makeVCPUObject \
+  NOT archTcbFlagToWord
 
 (* we define makeVCPUObject_def manually because we want a total function vgicLR *)
 defs makeVCPUObject_def:
