@@ -114,6 +114,7 @@ definition init_kheap :: kheap
          tcb_priority = 0,
          tcb_time_slice = timeSlice,
          tcb_domain = default_domain,
+         tcb_flags = {},
          tcb_arch = init_arch_tcb
          \<rparr>,
       riscv_global_pt_ptr \<mapsto> init_global_pt
