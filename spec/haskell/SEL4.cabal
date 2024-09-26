@@ -169,6 +169,7 @@ Library
                             SEL4.Object.Instances.X64
                             SEL4.Object.IOPort.X64
                             SEL4.Object.TCB.X64
+                            SEL4.Object.FPU.X64
                             SEL4.Model.StateData.X64
                             SEL4.Model.PSpace.X64
                             SEL4.Machine.RegisterSet.X64

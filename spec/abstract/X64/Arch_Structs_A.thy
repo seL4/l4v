@@ -312,6 +312,7 @@ record arch_state =
   x64_num_ioapics           :: "64 word"
   x64_ioapic_nirqs          :: "machine_word \<Rightarrow> 8 word"
   x64_irq_state             :: "8 word \<Rightarrow> X64_A.X64IRQState"
+  x64_current_fpu_owner :: "obj_ref option"
 
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
@@ -408,6 +409,14 @@ qualify X64_A (in Arch)
 text \<open> Arch-specific part of a TCB: this must have at least a field for user context. \<close>
 record arch_tcb =
   tcb_context :: user_context
+
+datatype arch_tcb_flag
+  = FpuDisabled
+
+definition word_from_arch_tcb_flag :: "arch_tcb_flag \<Rightarrow> machine_word" where
+  "word_from_arch_tcb_flag flag \<equiv>
+     case flag of
+       FpuDisabled \<Rightarrow> bit 0"
 
 end_qualify
 
