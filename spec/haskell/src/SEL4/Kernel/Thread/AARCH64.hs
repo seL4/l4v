@@ -19,7 +19,6 @@ import {-# SOURCE #-} SEL4.Kernel.Init
 import {-# SOURCE #-} SEL4.Object.TCB (asUser, threadGet)
 import SEL4.Machine.RegisterSet.AARCH64(Register(..))
 import SEL4.Object.VCPU.AARCH64
-import SEL4.Object.Structures.AARCH64
 import SEL4.Object.FPU.AARCH64
 
 switchToThread :: PPtr TCB -> Kernel ()

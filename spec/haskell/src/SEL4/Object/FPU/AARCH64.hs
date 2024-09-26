@@ -33,10 +33,10 @@ switchLocalFpuOwner :: Maybe (PPtr TCB) -> Kernel ()
 switchLocalFpuOwner newOwner = do
     doMachineOp enableFpu
     curFpuOwner <- gets (armKSCurFPUOwner . ksArchState)
-    when (isJust curFpuOwner) (saveFpuState (fromJust curFpuOwner))
-    if isJust newOwner
-      then loadFpuState (fromJust newOwner)
-      else doMachineOp disableFpu
+    maybe (return ()) saveFpuState curFpuOwner
+    case newOwner of
+        Nothing -> doMachineOp disableFpu
+        Just tcbPtr -> loadFpuState tcbPtr
     modifyArchState (\s -> s { armKSCurFPUOwner = newOwner })
 
 fpuRelease :: PPtr TCB -> Kernel ()
