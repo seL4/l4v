@@ -30,3 +30,6 @@ switchToIdleThread = do
 
 activateIdleThread :: PPtr TCB -> Kernel ()
 activateIdleThread _ = return ()
+
+prepareNextDomain :: Kernel ()
+prepareNextDomain = return ()

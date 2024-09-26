@@ -136,6 +136,11 @@ present on all platforms is stored here.
 > atcbContextGet :: ArchTCB -> UserContext
 > atcbContextGet = atcbContext
 
+> type ArchTcbFlag = ()
+
+> archTcbFlagToWord :: ArchTcbFlag -> Word
+> archTcbFlagToWord _ = error "ARM does not have any arch specific flags"
+
 \subsection{ASID Pools}
 
 An ASID pool is an array of pointers to page directories. This is used to implement virtual ASIDs on ARM; it is not accessed by the hardware.

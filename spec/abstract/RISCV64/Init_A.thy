@@ -111,6 +111,7 @@ definition init_kheap :: kheap
          tcb_fault = None,
          tcb_bound_notification = None,
          tcb_mcpriority = minBound,
+         tcb_flags = {},
          tcb_arch = init_arch_tcb
          \<rparr>,
       riscv_global_pt_ptr \<mapsto> init_global_pt
