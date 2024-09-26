@@ -119,7 +119,7 @@ definition
               4 \<mapsto> EndpointCap ep_id 0 {Read},
               7 \<mapsto> PageDirectoryCap pd_b_id Real None,
               8 \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} small_section_size Real None,
-              254 \<mapsto> IrqHandlerCap 254]"
+              0x3F \<mapsto> IrqHandlerCap 0x3F]"
 
 definition
   "cnode_extra \<equiv>
@@ -160,14 +160,16 @@ definition
   irq_objects :: cdl_heap
 where
   "irq_objects \<equiv>
-  \<lambda>obj_id. if obj_id = 0x104 then Some (IRQNode (new_irq_node ntfn_id))
-           else if 0x100 \<le> obj_id \<and> obj_id < 0x200 then (Some (IRQNode empty_irq_node))
+  \<lambda>obj_id. if obj_id = 0x104
+           then Some (IRQNode (new_irq_node ntfn_id))
+           else if 0x100 \<le> obj_id \<and> obj_id \<le> 0x100 + mask LENGTH(irq_len)
+           then (Some (IRQNode empty_irq_node))
            else None"
 
 
 lemma
   "irq_objects =
-  (\<lambda>obj_id. if 0x100 \<le> obj_id \<and> obj_id < 0x200
+  (\<lambda>obj_id. if 0x100 \<le> obj_id \<and> obj_id \<le> 0x100 + mask LENGTH(irq_len)
             then (Some (IRQNode empty_irq_node))
             else None) ++
   (\<lambda>obj_id. if obj_id = 0x104 then Some (IRQNode (new_irq_node ntfn_id))
@@ -193,9 +195,9 @@ definition
                   frame_a2_id \<mapsto> Frame empty_frame,
                   frame_b_id  \<mapsto> Frame empty_section,
                   ep_id       \<mapsto> Endpoint,
-                  ntfn_id      \<mapsto> Notification,
+                  ntfn_id     \<mapsto> Notification,
                   0x104       \<mapsto> IRQNode (new_irq_node ntfn_id),
-                  0x1FE       \<mapsto> IRQNode empty_irq_node],
+                  0x13F       \<mapsto> IRQNode empty_irq_node],
    cdl_cdt = [(cnode_a2_id, 0)  \<mapsto> (cnode_extra_id, 1),
               (cnode_b_id,  4)  \<mapsto> (cnode_extra_id, 1),
               (cnode_a2_id, 10) \<mapsto> (cnode_extra_id, 2)], \<comment> \<open>All caps are orig caps,
@@ -349,7 +351,7 @@ lemma range_example_irq_node:
   done
 
 lemma irq_nodes_example_spec:
-  "irq_nodes example_spec = {obj_id. obj_id = 0x104 \<or> obj_id = 0x1FE}"
+  "irq_nodes example_spec = {obj_id. obj_id = 0x104 \<or> obj_id = 0x13F}"
   by (auto simp: irq_nodes_def example_spec_def object_at_def is_irq_node_def)
 
 (*************************
@@ -386,7 +388,7 @@ lemma cap_irq_simp [simp]:
 
 lemma example_irq_node_simps [simp]:
   "example_irq_node 4 = 0x104"
-  "example_irq_node 0xFE = 0x1FE"
+  "example_irq_node 0x3F = 0x13F"
   by (simp add: example_irq_node_def)+
 
 lemma irq_objects_simps [simp]:
@@ -473,7 +475,7 @@ lemma slots_of_example_spec_obj_ids:
 lemma irq_handler_cap_example_spec:
   "\<lbrakk>is_irqhandler_cap cap; opt_cap (obj_id, slot) example_spec = Some cap\<rbrakk>
   \<Longrightarrow> (obj_id = cnode_a2_id \<and> slot = 12) \<or>
-      (obj_id = cnode_b_id \<and> slot = 254)"
+      (obj_id = cnode_b_id \<and> slot = 0x3F)"
   by (clarsimp simp: example_spec_def opt_cap_def slots_of_def
                      object_slots_def empty_irq_node_def new_irq_node_def new_cnode_def
                      obj_defs new_cap_map_def empty_cap_map_def
@@ -483,7 +485,7 @@ lemma irq_handler_cap_example_spec:
 lemma irqhandler_cap_at_example_spec:
   "irqhandler_cap_at (obj_id, slot) example_spec
   = ((obj_id = cnode_a2_id \<and> slot = 12) \<or>
-     (obj_id = cnode_b_id \<and> slot = 254))"
+     (obj_id = cnode_b_id \<and> slot = 0x3F))"
   apply (clarsimp simp: cap_at_def)
   apply (rule iffI)
    apply clarsimp
@@ -678,13 +680,13 @@ lemma real_object_at_example_spec_simp [simp]:
   "real_object_at 0xC example_spec"
   "real_object_at 0xD example_spec"
   "\<not>real_object_at 0x104 example_spec"
-  "\<not>real_object_at 0x1FE example_spec"
+  "\<not>real_object_at 0x13F example_spec"
   by (clarsimp simp: real_object_at_example_spec)+
 
 lemma cdl_objects_example_spec_simps [simp]:
   "cdl_objects example_spec 4 = Some (Frame empty_frame)"
   "cdl_objects example_spec 0xD = Some Notification"
-  "cdl_objects example_spec 0x1FE = Some (IRQNode empty_irq_node)"
+  "cdl_objects example_spec 0x13F = Some (IRQNode empty_irq_node)"
   by (clarsimp simp: example_spec_def map_add_def)+
 
 lemma well_formed_cap_to_object_example:
@@ -728,7 +730,7 @@ lemma well_formed_cap_to_object_example:
     apply (rule_tac x=12 in exI) (* Not sure why fastforce gives up here. *)
     apply (fastforce simp: cnode_at_example_spec cnode_a2_def
                            object_slots_def new_cnode_def new_cap_map_def)
-   apply (case_tac "obj_id = 0x1FE")
+   apply (case_tac "obj_id = 0x13F")
     apply (rule_tac x=cnode_b_id in exI)
     apply (fastforce simp: cnode_at_example_spec cnode_b_def
                            object_slots_def new_cnode_def new_cap_map_def)
