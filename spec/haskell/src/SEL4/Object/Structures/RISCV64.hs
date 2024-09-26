@@ -73,6 +73,10 @@ atcbContextSet uc atcb = atcb { atcbContext = uc }
 atcbContextGet :: ArchTCB -> UserContext
 atcbContextGet = atcbContext
 
+type ArchTcbFlag = ()
+
+archTcbFlagToWord :: ArchTcbFlag -> Word
+archTcbFlagToWord _ = error "ARM does not have any arch specific flags"
 
 {- ASID Pools -}
 
