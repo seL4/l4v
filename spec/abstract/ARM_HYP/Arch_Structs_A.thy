@@ -338,6 +338,11 @@ record arch_state =
   arm_kernel_vspace :: ARM_HYP_A.arm_vspace_region_uses
   arm_us_global_pd  :: obj_ref
 
+type_synonym arch_tcb_flag = unit
+
+definition word_from_arch_tcb_flag :: "arch_tcb_flag \<Rightarrow> machine_word" where
+  "word_from_arch_tcb_flag flag \<equiv> undefined"
+
 end_qualify
 
 context Arch begin arch_global_naming (A)
