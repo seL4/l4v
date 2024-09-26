@@ -25,15 +25,15 @@ definition load_fpu_state :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad
      do_machine_op (writeFpuState fpu_state)
    od"
 
-\<comment> \<open>FIXME: maybe use a case instead of the if (depends on if wpc or if_split is easier)\<close>
+\<comment> \<open>FIXME: maybe use an if instead of the case (depends on if wpc or if\_split is easier)\<close>
 definition switch_local_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_local_fpu_owner new_owner \<equiv> do
      do_machine_op enableFpu;
      cur_fpu_owner \<leftarrow> gets (arm_current_fpu_owner \<circ> arch_state);
-     when (cur_fpu_owner \<noteq> None) $ save_fpu_state (the cur_fpu_owner);
-     if (new_owner \<noteq> None)
-     then load_fpu_state (the new_owner)
-     else do_machine_op disableFpu;
+     maybeM save_fpu_state cur_fpu_owner;
+     case new_owner of
+       None \<Rightarrow> do_machine_op disableFpu
+       | Some tcb_ptr \<Rightarrow> load_fpu_state tcb_ptr;
      modify (\<lambda>s. s \<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := new_owner\<rparr>\<rparr>)
    od"
 
@@ -46,7 +46,7 @@ definition fpu_release :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" w
 definition lazy_fpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "lazy_fpu_restore thread_ptr \<equiv> do
      flags \<leftarrow> thread_get tcb_flags thread_ptr;
-     if (ArchFlag FpuDisabled \<in> flags)
+     if ArchFlag FpuDisabled \<in> flags
      then do_machine_op disableFpu
      else do
        do_machine_op enableFpu;

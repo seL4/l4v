@@ -168,7 +168,7 @@ definition setNextPC :: "machine_word \<Rightarrow> unit user_monad" where
 
 subsection "FPU-related"
 
-\<comment> \<open>FIXME: Should this modify fpu_enabled? The C doesn't update isFPUEnabledCached when this is called directly.\<close>
+\<comment> \<open>FIXME: Should this modify @{term fpu_enabled}? The C doesn't update isFPUEnabledCached when this is called directly.\<close>
 consts' enableFpuEL01_impl :: "unit machine_rest_monad"
 definition enableFpuEL01 :: "unit machine_monad" where
   "enableFpuEL01 \<equiv> machine_op_lift enableFpuEL01_impl"

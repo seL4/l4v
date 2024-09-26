@@ -168,7 +168,7 @@ instantiation unit :: state_ext_sched
 begin
 
 \<comment> \<open>FIXME: update this comment to mention the state that might be
-  saved as part of arch_prepare_next_domain\<close>
+  saved as part of @{term arch_prepare_next_domain}\<close>
 text \<open>
   The scheduler is heavily underspecified.
   It is allowed to pick any active thread or the idle thread.
@@ -193,9 +193,9 @@ definition schedule_unit :: "(unit,unit) s_monad" where
      cur_active \<leftarrow> gets (getActiveTCB cur);
      idl \<leftarrow> gets idle_thread;
      if cur_active \<noteq> None \<or> idl = cur then
-       return () \<sqinter> (do pre_choose_thread_unit; choose_thread_unit od)
+       return () \<sqinter> do pre_choose_thread_unit; choose_thread_unit od
      else
-       (do pre_choose_thread_unit; choose_thread_unit od)
+       do pre_choose_thread_unit; choose_thread_unit od
    od)"
 
 instance ..
