@@ -183,7 +183,7 @@ lemmas ccorres_move_c_guard_ap = ccorres_move_c_guards [OF move_c_guard_ap]
 
 lemma array_assertion_abs_irq:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> True
-        \<and> (n s' \<le> 256 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+        \<and> (n s' \<le> 2^LENGTH(irq_len) \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
     \<longrightarrow> (x s' = 0 \<or> array_assertion intStateIRQNode_Ptr (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (intro allI impI disjCI2)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
