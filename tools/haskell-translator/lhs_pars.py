@@ -706,6 +706,8 @@ def typename_transform(line, header, d):
         # take off the prefix, leave Word32 or Word64 etc
         oldtype = oldtype[10:]
     oldtype = type_conv(oldtype)
+    # get rid of (), insert unit
+    oldtype = 'unit'.join(oldtype.split('()'))
     bits = oldtype.split()
     for bit in bits:
         d.typedeps.add(bit)
