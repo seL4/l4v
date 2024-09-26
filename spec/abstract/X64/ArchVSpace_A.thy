@@ -11,7 +11,9 @@ Higher level functions for manipulating virtual address spaces
 chapter "x64 VSpace Functions"
 
 theory ArchVSpace_A
-imports Retype_A
+imports
+  Retype_A
+  FPU_A
 begin
 
 context Arch begin arch_global_naming (A)
@@ -475,17 +477,9 @@ definition
         Some (ArchObj (DataPage False sz))"
 
 definition
-  fpu_thread_delete :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "fpu_thread_delete thread_ptr \<equiv> do
-    using_fpu \<leftarrow> do_machine_op (nativeThreadUsingFPU thread_ptr);
-    when using_fpu $ do_machine_op (switchFpuOwner 0 0)
-  od"
-
-definition
   prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "prepare_thread_delete thread_ptr \<equiv> fpu_thread_delete thread_ptr"
+  "prepare_thread_delete thread_ptr \<equiv> fpu_release thread_ptr"
 
 text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]
