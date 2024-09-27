@@ -333,6 +333,7 @@ record arch_state =
   arm_us_global_vspace :: "obj_ref"
   arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
+  arm_current_fpu_owner :: "obj_ref option"
 
 
 end_qualify
@@ -368,6 +369,14 @@ text \<open> Arch-specific part of a TCB: this must have at least a field for us
 record arch_tcb =
   tcb_context :: user_context
   tcb_vcpu    :: "obj_ref option"
+
+datatype arch_tcb_flag
+  = FpuDisabled
+
+definition word_from_arch_tcb_flag :: "arch_tcb_flag \<Rightarrow> machine_word" where
+  "word_from_arch_tcb_flag flag \<equiv>
+     case flag of
+       FpuDisabled \<Rightarrow> bit 0"
 
 end_qualify
 

@@ -13,6 +13,7 @@ module SEL4.Model.StateData.AARCH64 where
 import Prelude hiding (Word)
 import SEL4.Machine
 import SEL4.Machine.Hardware.AARCH64 (PTE(..), PT_Type, config_ARM_PA_SIZE_BITS_40)
+import SEL4.Object.Structures
 import SEL4.Object.Structures.AARCH64
 
 import Data.Array
@@ -41,7 +42,8 @@ data KernelState = ARMKernelState {
     armKSGlobalUserVSpace :: PPtr PTE,
     armHSCurVCPU :: Maybe (PPtr VCPU, Bool),
     armKSGICVCPUNumListRegs :: Int,
-    gsPTTypes :: Word -> Maybe PT_Type
+    gsPTTypes :: Word -> Maybe PT_Type,
+    armKSCurFPUOwner :: Maybe (PPtr TCB)
     }
 
 -- counting from 0 at bottom, i.e. number of levels = maxPTLevel + 1;

@@ -274,6 +274,11 @@ text \<open> Arch-specific part of a TCB: this must have at least a field for us
 record arch_tcb =
   tcb_context :: user_context
 
+type_synonym arch_tcb_flag = unit
+
+definition word_from_arch_tcb_flag :: "arch_tcb_flag \<Rightarrow> machine_word" where
+  "word_from_arch_tcb_flag flag \<equiv> undefined"
+
 end_qualify
 
 context Arch begin arch_global_naming (A)

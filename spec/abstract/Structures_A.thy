@@ -23,6 +23,7 @@ arch_requalify_types (A)
   arch_kernel_obj
   arch_state
   arch_tcb
+  arch_tcb_flag
   aa_type
 
 arch_requalify_consts (A)
@@ -46,6 +47,7 @@ arch_requalify_consts (A)
   untyped_min_bits
   untyped_max_bits
   msg_label_bits
+  word_from_arch_tcb_flag
 
 text \<open>
   User mode can request these objects to be created by retype:
@@ -367,6 +369,19 @@ datatype thread_state
 
 type_synonym priority = word8
 
+datatype tcb_flag
+  = ArchFlag arch_tcb_flag
+
+definition word_from_tcb_flag :: "tcb_flag \<Rightarrow> machine_word" where
+  "word_from_tcb_flag flag \<equiv>
+     case flag of
+       ArchFlag arch_flag \<Rightarrow> word_from_arch_tcb_flag arch_flag"
+
+type_synonym tcb_flags = "tcb_flag set"
+
+definition word_to_tcb_flags :: "machine_word \<Rightarrow> tcb_flags" where
+  "word_to_tcb_flags w \<equiv> {flag. word_from_tcb_flag flag && w \<noteq> 0}"
+
 record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
@@ -379,6 +394,7 @@ record tcb =
  tcb_fault         :: "fault option"
  tcb_bound_notification     :: "obj_ref option"
  tcb_mcpriority    :: priority
+ tcb_flags         :: tcb_flags
  tcb_arch          :: arch_tcb (* arch_tcb must have a field for user context *)
 
 
@@ -410,6 +426,7 @@ definition
       tcb_fault      = None,
       tcb_bound_notification  = None,
       tcb_mcpriority = minBound,
+      tcb_flags      = {},
       tcb_arch       = default_arch_tcb\<rparr>"
 
 text \<open>

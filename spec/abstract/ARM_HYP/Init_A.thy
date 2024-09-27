@@ -76,6 +76,7 @@ definition
     tcb_fault = None,
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
+    tcb_flags = {},
     tcb_arch = init_arch_tcb
   \<rparr>,
   us_global_pd_ptr \<mapsto> us_global_pd)"
