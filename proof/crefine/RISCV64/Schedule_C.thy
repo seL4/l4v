@@ -1543,8 +1543,30 @@ lemma refill_budget_check_ccorres:
   done
 
 lemma checkDomainTime_ccorres:
-  "ccorres dc xfdc \<top> UNIV [] checkDomainTime (Call checkDomainTime_'proc)"
-sorry (* FIXME RT: checkDomainTime_ccorres *)
+  "ccorres dc xfdc
+     ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs' and no_0_obj'
+      and pspace_aligned' and pspace_distinct')
+     UNIV hs
+     checkDomainTime (Call checkDomainTime_'proc)"
+  apply cinit
+   apply (ctac (no_vcg) add: isCurDomainExpired_ccorres)
+    apply (clarsimp simp: when_def)
+    apply (rule ccorres_cond[where R=\<top>])
+      apply (fastforce simp: to_bool_def)
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: setReprogramTimer_def rf_sr_def cstate_relation_def Let_def
+                               modify_def get_def put_def bind_def carch_state_relation_def
+                               cmachine_state_relation_def)
+        apply ceqv
+       apply (ctac add: rescheduleRequired_ccorres)
+      apply wpsimp
+     apply (clarsimp simp: guard_is_UNIV_def)
+    apply (fastforce intro: ccorres_return_Skip)
+   apply (wpsimp wp: hoare_drop_imps)
+  apply (clarsimp simp: guard_is_UNIV_def)
+  done
 
 lemma commitTime_ccorres:
   "ccorres dc xfdc \<top> UNIV [] commitTime (Call commitTime_'proc)"
