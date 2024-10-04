@@ -2067,7 +2067,7 @@ lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
    \<lbrace>\<lambda>_ s. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   apply (clarsimp simp: commit_time_def)
   apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sc_active_sp])
   apply (rule bind_wp)
    apply wpsimp
   apply clarsimp

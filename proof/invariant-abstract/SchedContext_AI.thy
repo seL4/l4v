@@ -814,13 +814,22 @@ lemma commit_times_invs_helper:
                   wp: valid_irq_node_typ hoare_vcg_imp_lift')
   done
 
+lemma get_sc_active_sp:
+  "\<lbrace>P\<rbrace>
+   get_sc_active sc_ptr
+   \<lbrace>\<lambda>rv s. P s
+           \<and> (\<exists>sc n. ko_at (kernel_object.SchedContext sc n) sc_ptr s \<and> rv = (0 < sc_refill_max sc))\<rbrace>"
+  apply wpsimp
+  apply (clarsimp simp: obj_at_def active_sc_def)
+  done
+
 lemma commit_time_invs:
   "commit_time \<lbrace>invs\<rbrace>"
   supply fun_upd_apply[simp del]
   apply (clarsimp simp: commit_time_def)
   apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ get_sched_context_sp])
-  apply (case_tac "sc_active sc \<and> csc \<noteq> idle_sc_ptr"; clarsimp split del: if_split simp: bind_assoc)
+  apply (rule bind_wp[OF _ get_sc_active_sp])
+  apply (case_tac "active \<and> csc \<noteq> idle_sc_ptr"; clarsimp split del: if_split simp: bind_assoc)
    apply (rule bind_wp[OF _ gets_sp])
    apply (rename_tac csc sc consumed)
    apply (case_tac "0 < consumed"; simp split del: if_split add: bind_assoc)

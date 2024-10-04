@@ -4255,8 +4255,8 @@ lemma commitTime_corres:
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
    apply (corresKsimp corres: getCurSc_corres)
   apply clarsimp
-  apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corresKsimp corres: get_sc_corres)
+  apply (rule corres_underlying_split[rotated 2, OF get_sc_active_sp scActive_sp])
+   apply (corres corres: scActive_corres)
   apply (rule corres_symb_exec_r[rotated, OF getIdleSC_sp])
     apply wpsimp
    apply (wpsimp simp: getIdleSC_def)
@@ -4270,7 +4270,6 @@ lemma commitTime_corres:
   apply (rule_tac F="idleSCPtr = idle_sc_ptr" in corres_req)
    apply (clarsimp simp: state_relation_def)
   apply (rule corres_if_split; fastforce?)
-   apply (fastforce simp: sc_relation_def active_sc_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getConsumedTime_sp])
    apply corresKsimp
   apply clarsimp
@@ -4341,6 +4340,9 @@ lemma switchSchedContext_corres:
    apply wpsimp
    apply (fastforce simp: obj_at_def pred_tcb_at_def vs_all_heap_simps)
   apply (rename_tac scp)
+  apply (rule corres_assert_gen_asm_cross
+               [where P=P and P'=P for P, where Q=Q and Q'=Q for Q, simplified])
+   apply clarsimp
   apply (rule corres_symb_exec_l[rotated, OF _ get_sched_context_sp])
     apply (rule get_sched_context_exs_valid)
     apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
