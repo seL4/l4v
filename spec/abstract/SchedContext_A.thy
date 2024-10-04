@@ -443,8 +443,8 @@ definition
 where
   "commit_time = do
     csc \<leftarrow> gets cur_sc;
-    sc \<leftarrow> get_sched_context csc;
-    when (sc_active sc \<and> csc \<noteq> idle_sc_ptr) $ do
+    active \<leftarrow> get_sc_active csc;
+    when (active \<and> csc \<noteq> idle_sc_ptr) $ do
       consumed \<leftarrow> gets consumed_time;
       when (0 < consumed) $ do
         robin \<leftarrow> is_round_robin csc;

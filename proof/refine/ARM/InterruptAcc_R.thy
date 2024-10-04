@@ -224,16 +224,6 @@ lemma isCurDomainExpired_corres[corres]:
                         state_relation_def)
   done
 
-lemma get_sc_active_sp:
-  "\<lbrace>P\<rbrace>
-   get_sc_active sc_ptr
-   \<lbrace>\<lambda>rv s. P s
-           \<and> (\<exists>sc n. ko_at (kernel_object.SchedContext sc n) sc_ptr s \<and> rv = (0 < sc_refill_max sc))\<rbrace>"
-  apply (simp add: get_sc_active_def)
-  apply wpsimp
-  apply (clarsimp simp: obj_at_def active_sc_def)
-  done
-
 lemma scActive_sp:
   "\<lbrace>P\<rbrace>
    scActive scPtr

@@ -714,9 +714,9 @@ This module uses the C preprocessor to select a target architecture.
 > commitTime :: Kernel ()
 > commitTime = do
 >     scPtr <- getCurSc
->     refillMax <- liftM scRefillMax $ getSchedContext scPtr
+>     active <- scActive scPtr
 >     idleSCPtr <- getIdleSC
->     when (refillMax > 0 && idleSCPtr /= scPtr) $ do
+>     when (active && idleSCPtr /= scPtr) $ do
 >       consumed <- getConsumedTime
 >       when (consumed > 0) $ do
 >         ifM (isRoundRobin scPtr)

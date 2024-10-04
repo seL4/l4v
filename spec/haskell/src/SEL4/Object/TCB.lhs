@@ -1068,6 +1068,7 @@ On some architectures, the thread context may include registers that may be modi
 >     curScPtr <- getCurSc
 >     ct <- getCurThread
 >     ctScOpt <- threadGet tcbSchedContext ct
+>     assert (ctScOpt /= Nothing) "the current thread must be bound to a scheduling context"
 >     ctScPtr <- return $ fromJust ctScOpt
 >     when (ctScPtr /= curScPtr) $ do
 >         setReprogramTimer True

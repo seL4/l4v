@@ -11489,25 +11489,9 @@ crunch check_domain_time, refill_budget_check, refill_budget_check_round_robin,
    simp: crunch_simps refill_budget_check_defs schedule_used_defs update_refill_tl_rewrite
    ignore: update_sched_context)
 
-lemma commit_time_sc_tcb_sc_at[wp]:
-  "commit_time \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
-  (is "_ \<lbrace>?pred\<rbrace>")
-  apply (clarsimp simp: commit_time_def)
-  apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ get_sched_context_sp])
-  apply (rule_tac Q'="\<lambda>_. ?pred" in bind_wp)
-   apply wpsimp
-  apply clarsimp
-  apply (rule hoare_when_cases, simp)
-  apply (rule bind_wp[OF _ gets_sp])
-  apply (rule_tac Q'="\<lambda>_. ?pred" in bind_wp)
-   apply (wpsimp wp: update_sched_context_wp)
-   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-  apply (wpsimp wp: update_sched_context_wp)
-  done
-
 crunch commit_time
-  for ct_not_in_q[wp]: "ct_not_in_q"
+  for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)"
+  and ct_not_in_q[wp]: "ct_not_in_q"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma head_insufficient_loop_valid_sched_action_not:
@@ -12116,8 +12100,8 @@ lemma commit_time_valid_release_q:
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding commit_time_def
   apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ get_sched_context_sp])
-  apply (case_tac "sc_active sc \<and> csc \<noteq> idle_sc_ptr"; simp add: bind_assoc)
+  apply (rule bind_wp[OF _ get_sc_active_sp])
+  apply (case_tac "active \<and> csc \<noteq> idle_sc_ptr"; simp add: bind_assoc)
    apply (rule bind_wp[OF _ gets_sp])
    apply (rename_tac csc sc consumed)
   apply (rule_tac P="\<lambda>s. \<exists>tp. bound_sc_tcb_at ((=) (Some (cur_sc s))) tp s" in hoare_pre_tautI)
@@ -12186,7 +12170,7 @@ lemma commit_time_released_ipc_queues[wp]:
   supply if_split[split del]
   apply (simp add: commit_time_def)
   apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sc_active_sp])
   apply (rule bind_wp_skip, wpsimp)
   apply (rule hoare_when_cases, simp)
   apply (rule bind_wp[OF _ gets_sp])
@@ -12211,7 +12195,7 @@ lemma commit_time_released_ipc_queues[wp]:
                          refill_budget_check_is_refill_sufficient)
    apply (fastforce simp: cur_sc_more_than_ready_def current_time_bounded_def split: if_split)
   by (fastforce simp: is_active_sc_def obj_at_def pred_map_def vs_all_heap_simps
-                      active_scs_valid_def)
+                      active_scs_valid_def active_sc_def)
 
 lemma commit_time_valid_sched_action:
   "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
@@ -12479,7 +12463,7 @@ lemma commit_time_active_scs_valid:
    \<lbrace>\<lambda>_. active_scs_valid\<rbrace>"
   unfolding commit_time_def
   apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ get_sched_context_sp])
+  apply (rule bind_wp[OF _ get_sc_active_sp])
   apply (rule bind_wp[where Q'="\<lambda>_. active_scs_valid"], wpsimp)
   apply clarsimp
   apply (rule hoare_when_cases, simp)
@@ -12493,7 +12477,7 @@ lemma commit_time_active_scs_valid:
   apply (clarsimp simp: obj_at_def cur_sc_more_than_ready_def)
   apply (subgoal_tac "cur_sc_active s";
          fastforce simp: vs_all_heap_simps consumed_time_bounded_def current_time_bounded_def
-                         refill_ready_no_overflow_def)
+                         refill_ready_no_overflow_def active_sc_def)
   done
 
 lemma commit_time_valid_blocked_except_set[wp]:
