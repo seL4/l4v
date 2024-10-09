@@ -51,7 +51,7 @@ def session_theory_deps(isabelle_dir, ROOT_dirs, sessions):
             isabelle_dir, cmdline, ignore_exit_code=True).splitlines():
         l = l.decode('utf-8')
         # 'Session HOL/HOL-Library (main timing)'
-        m = re.match(r'Session (' + session_name_re + ')/(' + session_name_re + ')(?: \(.*\))?', l)
+        m = re.match(r'Session (' + session_name_re + ')/(' + session_name_re + r')(?: \(.*\))?', l)
         if m:
             # start processing next session
             _, session = m.groups()
