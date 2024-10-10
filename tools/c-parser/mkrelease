@@ -165,10 +165,10 @@ pushd "$TOPLEVEL_DIR/tools/c-parser" > /dev/null
 cp standalone-parser/table.ML "$outputdir/src/c-parser/standalone-parser"
 echo "Cleaning up standalone-parser's Makefile"
 sed '
-  1i\
-  SML_COMPILER ?= mlton
+  /^STP_PFX :=/i\
+SML_COMPILER ?= mlton
   /^include/d
-  /General\/table.ML/,/pretty-printing/d
+  /General\/table.ML/,/unsynchronized_cache/d
   /ISABELLE_HOME/d
   /CLEAN_TARGETS/s|\$(STP_PFX)/table.ML||
 ' < standalone-parser/Makefile > "$outputdir/src/c-parser/standalone-parser/Makefile"
