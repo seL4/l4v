@@ -1859,7 +1859,6 @@ lemma deleteObjects_sym_refs':
    apply clarsimp
    apply (frule(2) delete_locale.intro, simp_all)[1]
     apply (simp add: valid_idle'_asrt_def)
-   apply (simp add: sym_refs_asrt_def)
    apply (rule subst[rotated, where P="\<lambda>s. sym_refs (state_refs_of' s)"],
           erule delete_locale.delete_sym_refs')
    apply (simp add: field_simps mask_def)
