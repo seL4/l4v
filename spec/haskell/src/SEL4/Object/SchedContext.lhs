@@ -32,7 +32,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindReply, schedContextSetInactive, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
 >         scReleased, setConsumed, refillResetRR, preemptionPoint, refillHdInsufficient,
->         nonOverlappingMergeRefills, headInsufficientLoop, maxReleaseTime, readScActive, scActive
+>         mergeNonoverlappingHeadRefill, headInsufficientLoop, maxReleaseTime, readScActive, scActive
 >     ) where
 
 \begin{impdetails}
@@ -304,17 +304,18 @@ This module uses the C preprocessor to select a target architecture.
 
 > scheduleUsed :: PPtr SchedContext -> Refill -> Kernel ()
 > scheduleUsed scPtr new = do
->     sc <- getSchedContext scPtr
->     assert (scRefillMax sc > 0) "scPtr should be active"
->     if rTime (refillTl sc) + rAmount (refillTl sc) >= rTime new
->         then updateRefillTl scPtr (\last -> last { rAmount = rAmount last + rAmount new })
+>     active <- scActive scPtr
+>     assert active "scPtr should be active"
+>     tail <- getRefillTail scPtr
+>     if rTime tail + rAmount tail >= rTime new
+>         then updateRefillTl scPtr (\last -> last { rAmount = rAmount tail + rAmount new })
 >         else do
 >           full <- getRefillFull scPtr
 >           if not full
 >              then refillAddTail scPtr new
 >              else do
->                updateRefillTl scPtr (\last -> last { rTime = rTime new - rAmount last})
->                updateRefillTl scPtr (\last -> last { rAmount = rAmount last + rAmount new})
+>                updateRefillTl scPtr (\last -> last { rTime = rTime new - rAmount tail})
+>                updateRefillTl scPtr (\last -> last { rAmount = rAmount tail + rAmount new})
 
 > refillResetRR :: PPtr SchedContext -> Kernel ()
 > refillResetRR scPtr = do
@@ -323,19 +324,17 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillHdInsufficient :: PPtr SchedContext -> KernelR Bool
 > refillHdInsufficient scPtr = do
->     sc <- readSchedContext scPtr
->     return $ rAmount (refillHd sc) < minBudget
+>     head <- readRefillHead scPtr
+>     return $ rAmount head < minBudget
 
-> nonOverlappingMergeRefills :: PPtr SchedContext -> Kernel ()
-> nonOverlappingMergeRefills scPtr = do
->     size <- getRefillSize scPtr
->     assert (1 < size) "if head is insufficient, there must be at least 2 refills"
+> mergeNonoverlappingHeadRefill :: PPtr SchedContext -> Kernel ()
+> mergeNonoverlappingHeadRefill scPtr = do
 >     old_head <- refillPopHead scPtr
 >     updateRefillHd scPtr $ \head -> head { rAmount = rAmount head + rAmount old_head }
 >     updateRefillHd scPtr $ \head -> head { rTime = rTime head - rAmount old_head}
 
 > headInsufficientLoop :: PPtr SchedContext -> Kernel ()
-> headInsufficientLoop scPtr = whileLoop (const (fromJust . runReaderT (refillHdInsufficient scPtr))) (const (nonOverlappingMergeRefills scPtr)) ()
+> headInsufficientLoop scPtr = whileLoop (const (fromJust . runReaderT (refillHdInsufficient scPtr))) (const (mergeNonoverlappingHeadRefill scPtr)) ()
 
 > mergeOverlappingRefills :: PPtr SchedContext -> Kernel ()
 > mergeOverlappingRefills scPtr = do
@@ -362,32 +361,27 @@ This module uses the C preprocessor to select a target architecture.
 > maxReleaseTime :: Word64
 > maxReleaseTime = (maxBound :: Word64) - 5 * usToTicks maxPeriodUs
 
-> headTimeBuffer :: Ticks -> KernelR Bool
-> headTimeBuffer usage = do
->     scPtr <- readCurSc
->     sc <- readSchedContext scPtr
->     return $ rAmount (refillHd sc) <= usage && rTime (refillHd sc) < maxReleaseTime
+> headRefillOverrun :: PPtr SchedContext -> Ticks -> KernelR Bool
+> headRefillOverrun scPtr usage = do
+>     head <- readRefillHead scPtr
+>     return $ rAmount head <= usage && rTime head < maxReleaseTime
 
-> handleOverrunLoopBody :: Ticks -> Kernel Ticks
-> handleOverrunLoopBody usage = do
->     scPtr <- getCurSc
->     single <- refillSingle scPtr
+> chargeEntireHeadRefill :: PPtr SchedContext -> Ticks -> Kernel Ticks
+> chargeEntireHeadRefill scPtr usage = do
+>     head <- getRefillHead scPtr
 >     sc <- getSchedContext scPtr
-
->     usage' <- return (usage - rAmount (refillHd sc))
-
+>     single <- refillSingle scPtr
 >     if single
->        then updateRefillHd scPtr $ \r -> r { rTime = rTime r + scPeriod sc}
+>        then updateRefillHd scPtr $ \r -> r { rTime = rTime head + scPeriod sc}
 >        else do
 >          old_head <- refillPopHead scPtr
 >          let new = old_head { rTime = rTime old_head + scPeriod sc}
 >          scheduleUsed scPtr new
+>     return (usage - rAmount head)
 
->     return usage'
-
-> handleOverrunLoop :: Ticks -> Kernel Ticks
-> handleOverrunLoop usage =
->     whileLoop (\usage -> fromJust . runReaderT (headTimeBuffer usage)) (\usage -> handleOverrunLoopBody usage) usage
+> handleOverrun :: PPtr SchedContext -> Ticks -> Kernel Ticks
+> handleOverrun scPtr usage =
+>     whileLoop (\usage -> fromJust . runReaderT (headRefillOverrun scPtr usage)) (\usage -> chargeEntireHeadRefill scPtr usage) usage
 
 > refillBudgetCheck :: Ticks -> Kernel ()
 > refillBudgetCheck usage = do
@@ -399,15 +393,16 @@ This module uses the C preprocessor to select a target architecture.
 >     roundRobin <- isRoundRobin scPtr
 >     assert (not roundRobin) "the current sc should not be round robin when this function is called"
 
->     usage' <- handleOverrunLoop usage
+>     usage' <- handleOverrun scPtr usage
 
->     sc <- getSchedContext scPtr
+>     head <- getRefillHead scPtr
 
->     when (usage' > 0 && rTime (refillHd sc) < maxReleaseTime) $ do
->       used <- return Refill { rTime = rTime (refillHd sc) + (scPeriod sc),
+>     when (usage' > 0 && rTime head < maxReleaseTime) $ do
+>       sc <- getSchedContext scPtr
+>       used <- return Refill { rTime = rTime head + (scPeriod sc),
 >                               rAmount = usage'}
->       updateRefillHd scPtr $ \r -> r { rAmount = rAmount r - usage' }
->       updateRefillHd scPtr $ \r -> r { rTime = rTime r + usage' }
+>       updateRefillHd scPtr $ \r -> r { rAmount = rAmount head - usage' }
+>       updateRefillHd scPtr $ \r -> r { rTime = rTime head + usage' }
 >       scheduleUsed scPtr used
 
       Ensure that the rAmount of the head refill is at least minBudget
