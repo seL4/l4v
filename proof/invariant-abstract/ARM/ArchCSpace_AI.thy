@@ -543,7 +543,7 @@ lemma is_cap_simps':
   "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x R)"
+  "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x)"
   "is_sched_context_cap cap = (\<exists>x n. cap = cap.SchedContextCap x n)"
   "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (PageCap False u v w x))"
   by (cases cap,  (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def

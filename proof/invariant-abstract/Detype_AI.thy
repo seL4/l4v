@@ -100,7 +100,7 @@ definition
   obj_reply_refs :: "cap \<Rightarrow> machine_word set"
 where
  "obj_reply_refs cap \<equiv> obj_refs cap \<union>
-   (case cap of cap.ReplyCap t R \<Rightarrow> {t} | _ \<Rightarrow> {})"
+   (case cap of cap.ReplyCap t \<Rightarrow> {t} | _ \<Rightarrow> {})"
 
 
 lemma ex_cte_cap_to_obj_ref_disj:

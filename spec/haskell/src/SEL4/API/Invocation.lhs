@@ -37,7 +37,7 @@ The following type can specify any kernel object invocation. It contains physica
 >         = InvokeUntyped UntypedInvocation
 >         | InvokeEndpoint (PPtr Endpoint) Word Bool Bool
 >         | InvokeNotification (PPtr Notification) Word
->         | InvokeReply (PPtr Reply) Bool
+>         | InvokeReply (PPtr Reply)
 >         | InvokeDomain (PPtr TCB) Domain
 >         | InvokeTCB TCBInvocation
 >         | InvokeSchedContext SchedContextInvocation

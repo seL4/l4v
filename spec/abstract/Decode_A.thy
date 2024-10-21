@@ -781,8 +781,8 @@ where
       if AllowSend \<in> rights then
         returnOk $ InvokeNotification ptr badge
       else throwError $ InvalidCapability 0
-  | ReplyCap reply rights \<Rightarrow>
-      returnOk $ InvokeReply reply (AllowGrant \<in> rights)
+  | ReplyCap reply \<Rightarrow>
+      returnOk $ InvokeReply reply
   | IRQControlCap \<Rightarrow>
       liftME InvokeIRQControl
         $ decode_irq_control_invocation label args slot (map fst excaps)

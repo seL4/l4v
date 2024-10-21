@@ -1475,7 +1475,8 @@ lemma reply_at'_cross:
               split: Structures_A.kernel_object.split_asm if_split_asm
                      arch_kernel_obj.split_asm)
 
-lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *)
+(* for reply update that doesn't touch the reply stack *)
+lemma set_reply_corres:
   "reply_relation ae ae' \<Longrightarrow>
   corres dc \<top>
             (obj_at' (\<lambda>ko. replyPrev_same ae' ko) ptr)
@@ -1857,6 +1858,14 @@ lemma get_reply_corres:
 lemma getReply_TCB_corres:
   "corres (=) (reply_at ptr) (reply_at' ptr)
      (get_reply_tcb ptr) (liftM replyTCB (getReply ptr))"
+  apply clarsimp
+  apply (rule get_reply_corres[THEN corres_rel_imp])
+  apply (clarsimp simp: reply_relation_def)
+  done
+
+lemma getReply_canGrant_corres:
+  "corres (=) (reply_at ptr) (reply_at' ptr)
+     (get_reply_can_grant ptr) (liftM replyCanGrant (getReply ptr))"
   apply clarsimp
   apply (rule get_reply_corres[THEN corres_rel_imp])
   apply (clarsimp simp: reply_relation_def)
@@ -4624,6 +4633,171 @@ lemma updateSchedContext_no_stack_update_corres:
   done
 
 (* end : updateSchedContext *)
+
+(* updateReply *)
+
+lemma no_fail_setReply [wp]:
+  "no_fail (reply_at' p) (setReply p reply)"
+  unfolding setReply_def
+  by (wpsimp simp: objBits_simps)
+
+lemma no_fail_updateReply [wp]:
+  "no_fail (reply_at' rp) (updateReply rp f)"
+  unfolding updateReply_def by wpsimp
+
+(* for reply update that doesn't touch the reply stack *)
+lemma setReply_replyPrev_same_corres:
+  assumes R': "reply_relation reply reply'"
+  shows
+    "corres dc
+       \<top>
+       (obj_at' (\<lambda>k::reply. objBits k = objBits reply') ptr
+        and obj_at' (\<lambda>ko. replyPrev_same reply' ko) ptr)
+       (set_object ptr (kernel_object.Reply reply)) (setReply ptr reply')"
+  proof -
+  have z: "\<And>s. reply_at' ptr s
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO reply')) = map_to_ctes (ksPSpace s)"
+    by (clarsimp simp: obj_at_simps)
+  show ?thesis
+    apply (insert R')
+    apply (clarsimp simp: setReply_def)
+    apply (rule corres_no_failI)
+     apply (rule no_fail_pre)
+      apply wp
+      apply clarsimp
+     apply clarsimp
+    apply clarsimp
+    apply (rename_tac s s' rv; prop_tac "reply_at ptr s")
+     apply (fastforce intro!: reply_at'_cross
+                        simp: obj_at'_def)
+    apply (clarsimp simp: obj_at_def is_reply obj_at'_def)
+    apply (unfold set_object_def setObject_def)
+    apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
+                          put_def return_def modify_def get_object_def2
+                          obj_at_def a_type_def updateObject_default_def in_magnitude_check[OF _]
+                   split: Structures_A.kernel_object.splits)
+    apply (prop_tac "obj_at (same_caps (kernel_object.Reply reply)) ptr s")
+     apply (clarsimp simp: obj_at_def is_reply)
+    apply (clarsimp simp: state_relation_def
+                          z[simplified obj_at'_def is_reply projectKO_eq projectKO_opts_defs, simplified])
+    apply (clarsimp simp: caps_of_state_after_update cte_wp_at_after_update
+                              swp_def fun_upd_def obj_at_def is_reply)
+    apply (subst conj_assoc[symmetric])
+    apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
+     apply (clarsimp simp: ghost_relation_def)
+     apply (erule_tac x=ptr in allE)+
+     apply (clarsimp simp: obj_at_def a_type_def
+                     split: Structures_A.kernel_object.splits if_split_asm)
+    apply (extract_conjunct \<open>match conclusion in "pspace_relation _ _" \<Rightarrow> -\<close>)
+    apply (fold fun_upd_def)
+    apply (simp only: pspace_relation_def simp_thms
+                      pspace_dom_update[where x="kernel_object.Reply _"
+                                          and v="kernel_object.Reply _",
+                                        simplified a_type_def, simplified])
+    apply (simp only: dom_fun_upd2 simp_thms)
+    apply (elim conjE)
+    apply (frule bspec, erule domI)
+     apply (rule ballI, drule(1) bspec)
+     apply (drule domD)
+     apply (clarsimp simp: project_inject split: if_split_asm kernel_object.split_asm)
+     apply (rename_tac reply0 obj x bb aa ba)
+     apply (drule_tac x="(aa, ba)" in bspec, simp)
+     apply clarsimp
+     apply (frule_tac ko'="kernel_object.Reply reply0" and x'=ptr
+              in obj_relation_cut_same_type)
+        apply simp+
+     apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.split_asm if_split_asm)
+    apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _" \<Rightarrow> -\<close>)
+     apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
+     apply (drule_tac x=p in spec)
+     subgoal
+       by (subst replyPrevs_of_replyPrev_same_update[simplified, where ob'=reply', simplified];
+           simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
+     by (auto simp: opt_map_def projectKO_opts_defs)
+ qed
+
+lemma setReply_update_corres_Q:
+  assumes R': "\<lbrakk>reply_relation reply reply'; Q reply; Q' reply'\<rbrakk>
+               \<Longrightarrow> reply_relation (f reply) (f' (reply'::reply))"
+  and RP_same: "replyPrev_same (f' reply') reply'"
+  shows
+    "corres dc
+       (\<lambda>s. kheap s ptr = Some (kernel_object.Reply reply) \<and> Q reply)
+       (obj_at' (\<lambda>obj. obj = reply' \<and> Q' reply') ptr)
+       (set_object ptr (kernel_object.Reply (f reply)))
+       (setReply ptr (f' reply'))"
+  apply (insert R')
+  apply (rule_tac F="reply_relation reply reply' \<and> Q reply \<and> Q' reply'" in corres_req)
+   apply (drule state_relation_pspace_relation)
+   apply clarsimp
+   apply (drule (1) pspace_relation_absD)
+   apply (clarsimp simp: obj_at'_def split: if_split_asm)
+  apply (rule corres_guard_imp)
+    apply (rule setReply_replyPrev_same_corres)
+     apply fastforce
+   apply clarsimp
+  apply (clarsimp simp: obj_at'_def objBits_simps RP_same)
+  done
+
+lemmas setReply_update_corres = setReply_update_corres_Q[where Q=\<top> and Q'=\<top>, simplified]
+
+lemma updateReply_corres_Q:
+  "\<lbrakk>\<And>reply reply'. \<lbrakk>reply_relation reply reply'; Q reply; Q' reply'\<rbrakk> \<Longrightarrow> reply_relation (f reply) (f' reply');
+    \<And>reply'. replyPrev_same (f' reply') reply'\<rbrakk> \<Longrightarrow>
+   corres dc
+     (\<lambda>s. \<exists>reply. kheap s ptr = Some (kernel_object.Reply reply) \<and> Q reply)
+     (\<lambda>s'. \<exists>reply'. ko_at' reply' ptr s' \<and> Q' reply')
+     (update_reply ptr f) (updateReply ptr f')"
+  apply (clarsimp simp: update_reply_def)
+  apply (rule corres_symb_exec_l[rotated 2, OF get_object_sp])
+    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>" for P f Q \<Rightarrow> -\<close>)
+    apply (fastforce intro: get_object_exs_valid
+                      simp: obj_at_def)
+   apply wpsimp
+   apply (clarsimp simp: obj_at_def)
+  apply (rename_tac obj)
+  apply (case_tac obj;
+         clarsimp, (solves \<open>clarsimp simp: obj_at_def is_sc_obj_def corres_underlying_def\<close>)?)
+  apply (clarsimp simp: pred_conj_def)
+  apply (rule abs_ex_lift_corres)
+  apply clarsimp
+  apply (rule corres_underlying_lift_ex2')
+  apply (rule_tac F="reply_relation reply reply' \<and> Q reply \<and> Q' reply'" in corres_req)
+   apply (drule state_relation_pspace_relation)
+   apply clarsimp
+   apply (drule (1) pspace_relation_absD)
+   apply (clarsimp simp: obj_at'_def split: if_split_asm)
+  apply (clarsimp simp: updateReply_def)
+  apply (rule corres_symb_exec_r)
+     apply (rule corres_guard_imp)
+       apply (rule_tac f=f and f'="f'" and Q=Q and Q'=Q'
+                    in setReply_update_corres_Q;
+              simp?)
+      apply (clarsimp simp: obj_at_def)
+     apply fastforce
+    apply (wpsimp | normalise_obj_at' | erule obj_at'_weakenE)+
+  done
+
+lemma updateReply_corres:
+  "\<lbrakk>\<And>reply reply'. reply_relation reply reply' \<Longrightarrow> reply_relation (f reply) (f' reply');
+    \<And>reply'. replyPrev_same (f' reply') reply'\<rbrakk> \<Longrightarrow>
+   corres dc (reply_at ptr) (reply_at' ptr) (update_reply ptr f) (updateReply ptr f')"
+  apply (corres corres: updateReply_corres_Q[where f=f and f'=f' and Q=\<top> and Q'=\<top>])
+   apply (clarsimp simp: obj_at_def is_reply)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma replyCanGrant_update_corres:
+  "\<lbrakk>\<And>can_grant canGrant. can_grant = canGrant \<Longrightarrow> f can_grant = f' canGrant\<rbrakk> \<Longrightarrow>
+   corres dc (reply_at ptr) (reply_at' ptr) (update_reply ptr (reply_can_grant_update f)) (updateReply ptr (replyCanGrant_update f'))"
+  apply (corres corres: updateReply_corres_Q[where Q=\<top> and Q'=\<top>])
+     apply (simp add: reply_relation_def)
+    apply (simp add: replyPrev_same_def)
+   apply (clarsimp simp: obj_at_def is_reply)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+(* end : updateReply *)
 
 end
 

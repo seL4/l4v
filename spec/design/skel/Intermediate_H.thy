@@ -74,7 +74,7 @@ defs createNewCaps_def:
           od)
         | Some ReplyObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::reply)) 0;
-            return $ map (\<lambda> addr. ReplyCap addr True) addrs
+            return $ map (\<lambda> addr. ReplyCap addr) addrs
           od)
         | Some ArchTypes_H.CapTableObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::cte)) userSize;

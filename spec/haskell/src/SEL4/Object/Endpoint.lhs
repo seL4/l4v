@@ -140,7 +140,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >         stateAssert valid_idle'_asrt
 >             "Assert that `valid_idle' s` holds"
 >         replyOpt <- (case replyCap of
->             ReplyCap r _ -> return (Just r)
+>             ReplyCap r -> return (Just r)
 >             NullCap -> return Nothing
 >             _ -> fail "receiveIPC: replyCap must be ReplyCap or NullCap")
 >         when (replyOpt /= Nothing) $ do
@@ -164,8 +164,9 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         blockingObject = epptr,
 >                         blockingIPCCanGrant = recvCanGrant,
 >                         replyObject = replyOpt }) thread
->                     when (replyOpt /= Nothing) $
+>                     when (replyOpt /= Nothing) $ do
 >                         updateReply (fromJust replyOpt) (\reply -> reply { replyTCB = Just thread })
+>                         updateReply (fromJust replyOpt) (\reply -> reply { replyCanGrant = recvCanGrant })
 >                     setEndpoint epptr $ RecvEP [thread]
 >                 False -> doNBRecvFailedTransfer thread
 >               RecvEP queue -> case isBlocking of
@@ -174,8 +175,9 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         blockingObject = epptr,
 >                         blockingIPCCanGrant = recvCanGrant,
 >                         replyObject = replyOpt}) thread
->                     when (replyOpt /= Nothing) $
+>                     when (replyOpt /= Nothing) $ do
 >                         updateReply (fromJust replyOpt) (\reply -> reply { replyTCB = Just thread })
+>                         updateReply (fromJust replyOpt) (\reply -> reply { replyCanGrant = recvCanGrant })
 >                     qs' <- tcbEPAppend thread queue
 >                     setEndpoint epptr $ RecvEP $ qs'
 >                 False -> doNBRecvFailedTransfer thread
@@ -199,6 +201,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                           then do
 >                               senderSc <- threadGet tcbSchedContext sender
 >                               donate <- return ((senderSc /= Nothing) && not (isJust fault && isTimeoutFault (fromJust fault)))
+>                               updateReply (fromJust replyOpt) (\reply -> reply { replyCanGrant = recvCanGrant })
 >                               replyPush sender thread (fromJust replyOpt) donate
 >                           else setThreadState Inactive sender
 >                       else do

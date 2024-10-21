@@ -1887,7 +1887,7 @@ lemma set_tcb_sched_context_valid_ioc[wp]:
                         if_split_asm)
   done
 
-crunch set_thread_state, update_sched_context
+crunch set_thread_state, update_sched_context, update_reply
   for valid_ioports[wp]: valid_ioports
   (wp: valid_ioports_lift)
 

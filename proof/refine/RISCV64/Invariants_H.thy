@@ -405,7 +405,7 @@ fun zobj_refs' :: "capability \<Rightarrow> obj_ref set" where
 | "zobj_refs' (NotificationCap r _ _ _)  = {r}"
 | "zobj_refs' (ThreadCap r)              = {r}"
 | "zobj_refs' (SchedContextCap r _)      = {r}"
-| "zobj_refs' (ReplyCap r _)             = {r}"
+| "zobj_refs' (ReplyCap r)               = {r}"
 | "zobj_refs' _                          = {}"
 
 definition ex_nonz_cap_to' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -463,7 +463,7 @@ primrec capBits :: "capability \<Rightarrow> nat" where
 | "capBits (Zombie _ z _)            = zBits z"
 | "capBits (IRQControlCap)           = 0"
 | "capBits (IRQHandlerCap _)         = 0"
-| "capBits (ReplyCap tcb m)          = objBits (undefined :: reply)"
+| "capBits (ReplyCap tcb)            = objBits (undefined :: reply)"
 | "capBits (SchedContextCap sc n)    = n"
 | "capBits SchedControlCap           = 0"
 | "capBits (ArchObjectCap x)         = acapBits x"
@@ -569,7 +569,7 @@ where valid_cap'_def:
       bits \<noteq> 0 \<and> bits + guard_sz \<le> word_bits \<and> guard && mask guard_sz = guard \<and>
       (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask bits)) s)
   | ThreadCap r \<Rightarrow> tcb_at' r s
-  | ReplyCap r m \<Rightarrow> reply_at' r s
+  | ReplyCap r \<Rightarrow> reply_at' r s
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid
   | SchedControlCap \<Rightarrow> True
@@ -830,7 +830,7 @@ where
 | "capClass (IRQControlCap)                    = IRQClass"
 | "capClass (SchedControlCap)                  = SchedControlClass"
 | "capClass (IRQHandlerCap irq)                = IRQClass"
-| "capClass (ReplyCap tcb m)                   = PhysicalClass"
+| "capClass (ReplyCap tcb)                     = PhysicalClass"
 | "capClass (ArchObjectCap cap)                = acapClass cap"
 
 definition

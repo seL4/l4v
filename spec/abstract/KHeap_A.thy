@@ -223,9 +223,20 @@ abbreviation
   set_reply :: "obj_ref \<Rightarrow> reply \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_reply \<equiv> set_simple_ko Reply"
 
+definition
+  update_reply :: "obj_ref \<Rightarrow> (reply \<Rightarrow> reply) \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "update_reply ptr f  \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     case obj of Reply reply \<Rightarrow> set_object ptr (Reply (f reply)) | _ \<Rightarrow> fail
+   od"
+
 
 abbreviation
   "get_reply_tcb r \<equiv> liftM reply_tcb (get_reply r)"
+
+abbreviation
+  "get_reply_can_grant r \<equiv> liftM reply_can_grant (get_reply r)"
 (*
 abbreviation
   "get_reply_caller r \<equiv> liftM reply_caller (get_reply r)"

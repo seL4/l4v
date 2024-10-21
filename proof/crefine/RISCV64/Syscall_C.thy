@@ -96,10 +96,9 @@ lemma performInvocation_Notification_ccorres:
 
 lemma performInvocation_Reply_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and tcb_at' sender and reply_at' reply)
+     (invs' and tcb_at' sender and reply_at' reply and obj_at' (\<lambda>reply. replyCanGrant reply = grant) reply)
      (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr sender\<rbrace>
-      \<inter> \<lbrace>\<acute>reply = reply_Ptr reply\<rbrace>
-      \<inter> \<lbrace>\<acute>canGrant = from_bool grant\<rbrace>) []
+      \<inter> \<lbrace>\<acute>reply = reply_Ptr reply\<rbrace>) []
      (liftE (doReplyTransfer sender reply grant))
      (Call performInvocation_Reply_'proc)"
   apply cinit
@@ -109,7 +108,7 @@ lemma performInvocation_Reply_ccorres:
     apply wp
    apply simp
    apply (vcg exspec=doReplyTransfer_modifies)
-  apply (simp add: rf_sr_ksCurThread)
+  apply (fastforce dest: obj_at_cslift_reply simp: creply_relation_def typ_heap_simps)
   done
 
 lemma decodeInvocation_ccorres:
