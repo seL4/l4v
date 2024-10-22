@@ -501,7 +501,7 @@ This module uses the C preprocessor to select a target architecture.
 >     tcbSchedDequeue tptr
 >     tcbReleaseRemove tptr
 >     threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) tptr
->     setSchedContext scPtr $ sc { scTCB = Nothing }
+>     updateSchedContext scPtr (\sc -> sc { scTCB = Nothing })
 
 > schedContextUnbindNtfn :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindNtfn scPtr = do
@@ -513,7 +513,7 @@ This module uses the C preprocessor to select a target architecture.
 >         Just ntfnPtr -> do
 >             ntfn <- getNotification ntfnPtr
 >             setNotification ntfnPtr (ntfn { ntfnSc = Nothing })
->             setSchedContext scPtr (sc { scNtfn = Nothing })
+>             updateSchedContext scPtr (\sc -> sc { scNtfn = Nothing })
 
 > schedContextMaybeUnbindNtfn :: PPtr Notification -> Kernel ()
 > schedContextMaybeUnbindNtfn ntfnPtr = do

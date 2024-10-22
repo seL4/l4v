@@ -1759,7 +1759,7 @@ lemma reply_unlink_tcb_bound_sc_tcb_at[wp]:
   by (wpsimp wp: hoare_drop_imp)
 
 crunch blocked_cancel_ipc, cancel_signal, test_reschedule
-  for bound_sc_tcb_at[wp]:  "bound_sc_tcb_at P t"
+  for bound_sc_tcb_at[wp]: "\<lambda>s. Q (bound_sc_tcb_at P t s)"
   (wp: crunch_wps)
 
 lemma sched_context_cancel_yield_to_not_live0:

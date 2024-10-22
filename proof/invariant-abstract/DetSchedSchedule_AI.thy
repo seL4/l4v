@@ -7633,12 +7633,12 @@ crunch if_cond_refill_unblock_check
   (wp: crunch_wps)
 
 lemma sched_context_bind_tcb_valid_sched:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> simple_sched_action s \<and> current_time_bounded s
-        \<and> pred_map_eq None (tcb_scps_of s) tcbptr
-        \<and> not_cur_thread tcbptr s \<and> sc_not_in_release_q scptr s
-        \<and> sched_context_donate_ipc_queues_precond tcbptr scptr s\<rbrace>
+  "\<lbrace>\<lambda>s. valid_sched s \<and> simple_sched_action s \<and> bound_sc_tcb_at ((=) None) tcbptr s
+        \<and> not_cur_thread tcbptr s
+        \<and> sched_context_donate_ipc_queues_precond tcbptr scptr s \<and>current_time_bounded s
+        \<and> sc_not_in_release_q scptr s\<rbrace>
    sched_context_bind_tcb scptr tcbptr
-   \<lbrace>\<lambda>y. valid_sched\<rbrace>"
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   supply if_split[split del]
   apply (clarsimp simp: sched_context_bind_tcb_def)
   apply (wpsimp wp: is_schedulable_wp' reschedule_valid_sched_const)
@@ -7675,20 +7675,10 @@ lemma sched_context_bind_tcb_valid_sched:
                simp: valid_sched_def)
    apply (subst op_equal[symmetric])
    apply (wpsimp wp: ssc_bound_sc_tcb_at)
-  apply (clarsimp simp: valid_sched_def cong: conj_cong)
-  apply (fastforce simp: in_queues_2_def valid_release_q_def vs_all_heap_simps in_queue_2_def
-                  dest!: valid_ready_qs_no_sc_not_queued)
-  done
-
-lemma maybe_sched_context_bind_tcb_valid_sched:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> simple_sched_action s \<and> bound_sc_tcb_at ((=) None) tcbptr s \<and> not_cur_thread tcbptr s
-        \<and> sched_context_donate_ipc_queues_precond tcbptr scptr s \<and> current_time_bounded s
-        \<and> sc_not_in_release_q scptr s\<rbrace>
-   maybe_sched_context_bind_tcb scptr tcbptr
-   \<lbrace>\<lambda>y. valid_sched\<rbrace>"
-  unfolding maybe_sched_context_bind_tcb_def
-  apply (wpsimp wp: sched_context_bind_tcb_valid_sched get_tcb_obj_ref_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps split: if_splits)
+  apply (clarsimp simp: valid_sched_def tcb_at_kh_simps(4) cong: conj_cong)
+  apply (drule valid_ready_qs_no_sc_not_queued[where ref=tcbptr])
+   apply (fastforce simp: pred_map_eq_def)
+  by (fastforce simp: in_queues_2_def valid_release_q_def vs_all_heap_simps in_queue_2_def)
 
 context DetSchedSchedule_AI_det_ext begin
 
@@ -7892,8 +7882,8 @@ crunch cancel_all_ipc
 context DetSchedSchedule_AI begin
 
 crunch restart, install_tcb_frame_cap, install_tcb_cap, maybe_sched_context_unbind_tcb,
-         maybe_sched_context_bind_tcb, bind_notification, invoke_sched_context,
-         invoke_sched_control_configure_flags
+       sched_context_bind_tcb, bind_notification, invoke_sched_context,
+       invoke_sched_control_configure_flags
   for current_time_bounded[wp]: "current_time_bounded :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps check_cap_inv simp: crunch_simps)
 
@@ -8095,14 +8085,14 @@ lemma tcs_valid_sched:
     and tcb_inv_wf (ThreadControlSched target slot fault_handler mcp priority sc)
     and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))
     and ct_active and ct_released and ct_not_in_release_q\<rbrace>
-     invoke_tcb (ThreadControlSched target slot fault_handler mcp priority sc)
-   \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+   invoke_tcb (ThreadControlSched target slot fault_handler mcp priority sc)
+   \<lbrace>\<lambda>_ s :: det_state. valid_sched s\<rbrace>"
   supply if_split[split del]
   apply (simp add: split_def cong: option.case_cong)
   apply (wp maybeM_wp_drop_None)
       \<comment> \<open>bind/unbind sched context\<close>
       apply (clarsimp cong: conj_cong)
-      apply (wpsimp wp: maybe_sched_context_bind_tcb_valid_sched
+      apply (wpsimp wp: sched_context_bind_tcb_valid_sched
                         maybe_sched_context_unbind_tcb_valid_sched, assumption)
      apply (strengthen not_cur_thread_2_simps)
      \<comment> \<open>set priority\<close>
@@ -8120,20 +8110,22 @@ lemma tcs_valid_sched:
    apply (rule valid_validE_R)
    apply ((wpsimp wp: hoare_vcg_all_lift install_tcb_cap_ct_active
                       hoare_vcg_imp_lift install_tcb_cap_timeout_faulted_tcb_at
-                  split: if_split
-         | rule valid_validE, wps)+)[1]
+               split: if_split
+           | rule valid_validE, wps)+)[1]
   \<comment> \<open>resolve using preconditions\<close>
   apply (clarsimp, frule tcb_at_invs, frule valid_sched_active_scs_valid)
   apply (prop_tac "active_scs_valid s \<and> released_ipc_queues s", fastforce)
-  apply (clarsimp simp: obj_at_def is_tcb)
-  apply (clarsimp simp: tcb_at_kh_simps[symmetric]
-                        pred_tcb_at_def obj_at_def sc_at_released_kh_simps released_sc_at_def
-                 split: option.splits cong: conj_cong;
-        intro conjI; (erule disjE)?;
-        clarsimp dest!: active_scs_validE
-                  simp: ipc_queued_thread_state_def2 sc_tcb_sc_at_def obj_at_def
-                 dest!: sym[of _ "tcb_sched_context _"])
-  by (drule_tac tp=x in sym_ref_tcb_sc[OF invs_sym_refs], fastforce+)+
+  apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def released_sc_at_def
+                  cong: conj_cong)
+  apply (prop_tac "\<forall>sc_ptr. sc = Some (Some sc_ptr) \<longrightarrow> sc_not_in_release_q sc_ptr s")
+   apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def vs_all_heap_simps)
+   apply (fastforce dest!: sym_ref_tcb_sc[OF invs_sym_refs])
+  by (intro conjI;
+      clarsimp simp: sc_tcb_sc_at_def obj_at_def pred_map_simps(1) tcb_at_kh_simps(3) tcb_scps.Some;
+      intro conjI impI allI;
+      fastforce intro!: active_scs_validE
+                  simp: ipc_queued_thread_state_def2 vs_all_heap_simps
+                        sc_at_released_kh_simps tcb_at_kh_simps)
 
 end
 
@@ -17319,8 +17311,8 @@ lemma tcc_cur_sc_chargeable:
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by auto
 
-crunch maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb, set_priority
-         , bind_notification
+crunch maybe_sched_context_unbind_tcb, sched_context_bind_tcb, set_priority,
+       bind_notification
   for scheduler_act_sane[wp]: scheduler_act_sane
   (wp: crunch_wps simp: crunch_simps)
 
@@ -20388,8 +20380,8 @@ lemma rec_del_consumed_time_bounded[wp]:
   done
 
 crunch restart, install_tcb_frame_cap, install_tcb_cap, maybe_sched_context_unbind_tcb,
-         maybe_sched_context_bind_tcb, bind_notification, invoke_sched_context,
-         invoke_sched_control_configure_flags
+       sched_context_bind_tcb, bind_notification, invoke_sched_context,
+       invoke_sched_control_configure_flags
   for consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps check_cap_inv simp: crunch_simps)
 
@@ -21065,7 +21057,7 @@ lemma restart_ct_not_blocked[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift' sts_ctis_neq cancel_ipc_ct_in_state get_tcb_obj_ref_wp gts_wp maybeM_inv)
   done
 
-crunch maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb
+crunch maybe_sched_context_unbind_tcb, sched_context_bind_tcb
   for ct_not_blocked[wp]: "ct_not_blocked :: 'state_ext state \<Rightarrow> _"
   (simp: crunch_simps wp: crunch_wps set_tcb_obj_ref_ct_in_state)
 
@@ -21632,8 +21624,8 @@ crunch handle_interrupt
            check_cap_inv filterM_preserved
      simp: crunch_simps)
 
-crunch do_reply_transfer, restart, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb,
-         set_priority, bind_notification
+crunch do_reply_transfer, restart, maybe_sched_context_unbind_tcb, sched_context_bind_tcb,
+       set_priority, bind_notification
   for vmt[wp]: "(\<lambda>s. P (last_machine_time_of s) (cur_time s)) :: det_state \<Rightarrow> _"
   and pnt[wp]: "(\<lambda>s. P (last_machine_time_of s) (time_state_of s)) :: det_state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps)
@@ -21816,8 +21808,7 @@ lemma sched_context_bind_tcb_cur_sc_more_than_ready[wp]:
    \<lbrace>cur_sc_more_than_ready\<rbrace>"
   unfolding sched_context_bind_tcb_def by wpsimp
 
-crunch suspend, bind_notification, maybe_sched_context_unbind_tcb,
-         maybe_sched_context_bind_tcb
+crunch suspend, bind_notification, maybe_sched_context_unbind_tcb, sched_context_bind_tcb
   for cur_sc_more_than_ready[wp]: cur_sc_more_than_ready
   (wp: crunch_wps hoare_vcg_if_lift2 simp: crunch_simps ignore: update_sched_context)
 
@@ -22357,17 +22348,17 @@ lemma maybe_sched_context_unbind_tcb_cur_sc_offset_sufficient[wp]:
   apply wpsimp
   done
 
-lemma maybe_sched_context_bind_tcb_cur_sc_offset_ready[wp]:
-  "maybe_sched_context_bind_tcb sc_ptr tcb_ptr
+lemma sched_context_bind_tcb_cur_sc_offset_ready[wp]:
+  "sched_context_bind_tcb sc_ptr tcb_ptr
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s\<rbrace>"
-  apply (clarsimp simp: maybe_sched_context_bind_tcb_def sched_context_bind_tcb_def)
+  apply (clarsimp simp: sched_context_bind_tcb_def)
   apply wpsimp
   done
 
-lemma maybe_sched_context_bind_tcb_cur_sc_offset_sufficient[wp]:
-  "maybe_sched_context_bind_tcb sc_ptr tcb_ptr
+lemma sched_context_bind_tcb_cur_sc_offset_sufficient[wp]:
+  "sched_context_bind_tcb sc_ptr tcb_ptr
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
-  apply (clarsimp simp: maybe_sched_context_bind_tcb_def sched_context_bind_tcb_def)
+  apply (clarsimp simp: sched_context_bind_tcb_def)
   apply wpsimp
   done
 
@@ -24476,8 +24467,8 @@ lemma install_tcb_cap_release_q_not_blocked_on_reply[wp]:
   done
 
 crunch sched_context_yield_to, sched_context_bind_tcb,
-         cancel_badged_sends, restart, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb,
-         sched_context_bind_tcb, bind_notification, send_signal
+       cancel_badged_sends, restart, maybe_sched_context_unbind_tcb, sched_context_bind_tcb,
+       sched_context_bind_tcb, bind_notification, send_signal
   for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   (wp: crunch_wps check_cap_inv filterM_preserved simp: crunch_simps)
 
@@ -24610,12 +24601,6 @@ lemma invoke_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
   apply (case_tac sc_ptr_opt; clarsimp)
    apply (wpsimp wp: hoare_drop_imps)
    apply (clarsimp simp: cur_sc_in_release_q_imp_zero_consumed_def)
-
-  apply (clarsimp simp: maybe_sched_context_bind_tcb_def)
-  apply (rule bind_wp[OF _ gsc_sp])
-  apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
-   apply wpsimp
-   apply (fastforce simp: cur_sc_in_release_q_imp_zero_consumed_def)
   apply wpsimp
   apply (fastforce simp: pred_tcb_at_def sc_at_pred_n_def obj_at_def vs_all_heap_simps pred_neg_def
                          is_blocked_on_reply_def
@@ -25521,14 +25506,7 @@ lemma sched_context_bind_tcb_released_if_bound[wp]:
              split: if_splits option.splits)
   done
 
-lemma maybe_sched_context_bind_tcb_released_if_bound[wp]:
-  "\<lbrace>\<lambda>s. released_if_bound_sc_tcb_at t s \<and> tcb_ptr \<noteq> t \<and> active_scs_valid s\<rbrace>
-   maybe_sched_context_bind_tcb sc_ptr tcb_ptr
-   \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t\<rbrace>"
-  unfolding maybe_sched_context_bind_tcb_def
-  by (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
-
-crunch install_tcb_frame_cap, maybe_sched_context_bind_tcb, maybe_sched_context_unbind_tcb
+crunch install_tcb_frame_cap, sched_context_bind_tcb, maybe_sched_context_unbind_tcb
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: check_cap_inv crunch_wps)
 

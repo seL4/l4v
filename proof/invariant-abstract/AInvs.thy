@@ -428,7 +428,6 @@ lemma invoke_tcb_schact_is_rct_imp_cur_sc_active:
     apply (intro conjI impI)
      apply (clarsimp simp: maybe_sched_context_unbind_tcb_def)
      apply (wpsimp wp: thread_get_wp simp: get_tcb_obj_ref_def)
-    apply (clarsimp simp: maybe_sched_context_bind_tcb_def)
     apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
    apply wpsimp
   apply (rename_tac t ntfn)
@@ -875,10 +874,7 @@ lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
   apply (clarsimp split: option.splits)
   apply (intro conjI)
    apply (wpsimp wp: hoare_drop_imps)
-  apply (clarsimp simp: maybe_sched_context_bind_tcb_def bind_assoc)
-  apply (wpsimp wp: sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q hoare_vcg_if_lift2)
-    apply (wpsimp wp: hoare_drop_imps)
-   apply wpsimp
+  apply (wpsimp wp: sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
@@ -1667,7 +1663,7 @@ lemma install_tcb_frame_cap_schact_is_rct_imp_ct_activatable:
   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
-crunch set_priority, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb
+crunch set_priority, maybe_sched_context_unbind_tcb, sched_context_bind_tcb
   for ct_in_state[wp]: "ct_in_state P"
   (wp: crunch_wps)
 
@@ -1716,7 +1712,7 @@ lemma invoke_tcb_schact_is_rct_imp_ct_activatable:
        apply (wpsimp wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)
        apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
       apply (rule bindE_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
-      apply (wpsimp wp: hoare_vcg_imp_lift')
+      apply (wpsimp wp: hoare_vcg_imp_lift' sched_context_bind_tcb_ct_in_state)
      apply wpsimp
      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
     apply wpsimp

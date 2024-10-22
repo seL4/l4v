@@ -189,7 +189,7 @@ where
     liftE $ maybeM (\<lambda>(prio, _). set_priority target prio) priority;
     liftE $ maybeM (\<lambda>scopt. case scopt of
                               None \<Rightarrow> maybe_sched_context_unbind_tcb target
-                            | Some sc_ptr \<Rightarrow> maybe_sched_context_bind_tcb sc_ptr target) sc;
+                            | Some sc_ptr \<Rightarrow> sched_context_bind_tcb sc_ptr target) sc;
     returnOk []
   odE"
 

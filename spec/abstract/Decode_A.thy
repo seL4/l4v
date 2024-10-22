@@ -316,28 +316,27 @@ where
                             (tc_new_croot space) (tc_new_vroot space) None
  odE"
 
-definition
-  decode_update_sc :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (obj_ref option,'z::state_ext) se_monad"
-where
+definition decode_update_sc ::
+  "cap \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (obj_ref option option, 'z::state_ext) se_monad" where
   "decode_update_sc cap slot sc_cap \<equiv>
     (case sc_cap of
        NullCap \<Rightarrow>
          doE tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
              ct_ptr \<leftarrow> liftE $ gets cur_thread;
              whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation;
-             returnOk None
+             returnOk $ Some None
          odE
      | SchedContextCap _ _ \<Rightarrow>
          doE tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
              sc_ptr \<leftarrow> returnOk $ obj_ref_of sc_cap;
              sc_ptr' \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
-             whenE (sc_ptr' \<noteq> None) $ throwError IllegalOperation;
+             whenE (sc_ptr' \<noteq> None \<and> sc_ptr' \<noteq> Some sc_ptr) $ throwError IllegalOperation;
              sc \<leftarrow> liftE $ get_sched_context sc_ptr;
              whenE (sc_tcb sc \<noteq> None) $ throwError IllegalOperation;
              blocked \<leftarrow> liftE $ is_blocked tcb_ptr;
              released \<leftarrow> liftE $ get_sc_released sc_ptr;
              whenE (blocked \<and> \<not>released) $ throwError IllegalOperation;
-             returnOk $ Some sc_ptr
+             returnOk $ if sc_ptr' = Some sc_ptr then None else Some (Some sc_ptr)
          odE
      | _ \<Rightarrow> throwError (InvalidCapability 2))"
 
@@ -416,9 +415,9 @@ where
      returnOk (SetTLSBase (obj_ref_of cap) (ucast (args ! 0)))
    odE"
 
-definition
-  decode_set_sched_params :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
-where
+definition decode_set_sched_params ::
+  "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+  where
   "decode_set_sched_params args cap slot extra_caps \<equiv> doE
      whenE (length args < 2) $ throwError TruncatedMessage;
      whenE (length extra_caps < 3) $ throwError TruncatedMessage;
@@ -432,11 +431,11 @@ where
        | _ \<Rightarrow> throwError (InvalidCapability 1);
      check_prio (args ! 0) auth_tcb;
      check_prio (args ! 1) auth_tcb;
-     sc \<leftarrow> decode_update_sc cap slot sc_cap;
+     sc_ptr_opt_opt \<leftarrow> decode_update_sc cap slot sc_cap;
      fh \<leftarrow> check_handler_ep 3 fh_arg;
      returnOk $ ThreadControlSched (obj_ref_of cap) slot (Some fh)
-                              (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb))
-                              (Some sc)
+                                   (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb))
+                                   sc_ptr_opt_opt
      odE"
 
 definition
