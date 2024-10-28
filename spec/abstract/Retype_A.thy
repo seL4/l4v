@@ -62,11 +62,11 @@ definition
 
 text \<open>The initial state objects of various types are in when created.\<close>
 definition
-  default_object :: "apiobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> kernel_object" where
-  "default_object api dev n \<equiv> case api of
+  default_object :: "apiobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> domain \<Rightarrow> kernel_object" where
+  "default_object api dev n d \<equiv> case api of
            Untyped \<Rightarrow> undefined
          | CapTableObject \<Rightarrow> CNode n (empty_cnode n)
-         | TCBObject \<Rightarrow> TCB default_tcb
+         | TCBObject \<Rightarrow> TCB (default_tcb d)
          | EndpointObject \<Rightarrow> Endpoint default_ep
          | NotificationObject \<Rightarrow> Notification default_notification
          | ArchObject aobj \<Rightarrow> ArchObj (default_arch_object aobj dev n)"
@@ -78,7 +78,7 @@ definition
   "obj_bits_api type obj_size_bits \<equiv> case type of
            Untyped \<Rightarrow> obj_size_bits
          | CapTableObject \<Rightarrow> obj_size_bits + slot_bits
-         | TCBObject \<Rightarrow> obj_bits (TCB default_tcb)
+         | TCBObject \<Rightarrow> obj_bits (TCB (default_tcb default_domain))
          | EndpointObject \<Rightarrow> obj_bits (Endpoint undefined)
          | NotificationObject \<Rightarrow> obj_bits (Notification undefined)
          | ArchObject aobj \<Rightarrow> obj_bits $ ArchObj $ default_arch_object aobj False obj_size_bits"
@@ -99,8 +99,8 @@ where
     ptrs \<leftarrow> return $ map (\<lambda>p. ptr_add ptr (p * obj_size)) [0..< numObjects];
     when (type \<noteq> Untyped) (do
       kh \<leftarrow> gets kheap;
-      kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits)) ptrs kh;
-      do_extended_op (retype_region_ext ptrs type);
+      cd \<leftarrow> gets cur_domain;
+      kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits cd)) ptrs kh;
       modify $ kheap_update (K kh')
     od);
     return $ ptrs
@@ -113,7 +113,7 @@ abbreviation (input) "extended_state_update \<equiv> trans_state"
 text \<open>Remove objects from a region of the heap.\<close>
 definition
   detype :: "(obj_ref set) \<Rightarrow> 'z::state_ext state \<Rightarrow> 'z::state_ext state" where
- "detype S s \<equiv> s \<lparr> kheap := (\<lambda>x. if x \<in> S then None else kheap s x), extended_state := detype_ext S (exst s)\<rparr>"
+ "detype S s \<equiv> s \<lparr> kheap := (\<lambda>x. if x \<in> S then None else kheap s x)\<rparr>"
 
 text \<open>Delete objects within a specified region.\<close>
 definition
