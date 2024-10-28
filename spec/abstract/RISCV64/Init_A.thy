@@ -111,6 +111,9 @@ definition init_kheap :: kheap
          tcb_fault = None,
          tcb_bound_notification = None,
          tcb_mcpriority = minBound,
+         tcb_priority = 0,
+         tcb_time_slice = timeSlice,
+         tcb_domain = default_domain,
          tcb_arch = init_arch_tcb
          \<rparr>,
       riscv_global_pt_ptr \<mapsto> init_global_pt
@@ -134,6 +137,12 @@ definition init_A_st :: "'z::state_ext state"
     is_original_cap = init_ioc,
     cur_thread = idle_thread_ptr,
     idle_thread = idle_thread_ptr,
+    scheduler_action = resume_cur_thread,
+    domain_list = [(0,15)],
+    domain_index = 0,
+    cur_domain = 0,
+    domain_time = 15,
+    ready_queues = const (const []),
     machine_state = init_machine_state,
     interrupt_irq_node = \<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits),
     interrupt_states = \<lambda>_. IRQInactive,
