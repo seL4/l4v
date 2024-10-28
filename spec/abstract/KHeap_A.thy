@@ -101,39 +101,6 @@ where
      set_object ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
    od"
 
-definition set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad" where
-  "set_thread_state_ext t \<equiv> do
-     ts \<leftarrow> get_thread_state t;
-     cur \<leftarrow> gets cur_thread;
-     action \<leftarrow> gets scheduler_action;
-     when (\<not> (runnable ts) \<and> cur = t \<and> action = resume_cur_thread) (set_scheduler_action choose_new_thread)
-   od"
-
-definition
-  set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_thread_state ref ts \<equiv> do
-     tcb \<leftarrow> gets_the $ get_tcb ref;
-     set_object ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
-     do_extended_op (set_thread_state_ext ref)
-   od"
-
-definition
-  set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> unit det_ext_monad" where
-  "set_priority tptr prio \<equiv> do
-     tcb_sched_action tcb_sched_dequeue tptr;
-     thread_set_priority tptr prio;
-     ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) $ do
-       cur \<leftarrow> gets cur_thread;
-       if tptr = cur then reschedule_required else possible_switch_to tptr
-     od
-   od"
-
-definition
-  set_mcpriority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad"  where
-  "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
-
 
 section "simple kernel objects"
 (* to be used for abstraction unifying kernel objects other than TCB and CNode *)
@@ -158,10 +125,11 @@ lemma proj_ko_type_ntfn[simp]:
   "(\<exists>v. partial_inv Notification  ko = Some (v::notification)) = (a_type ko = ANTFN)"
   by (cases ko; auto simp: partial_inv_def a_type_def)
 
-
 abbreviation
   "is_simple_type \<equiv> (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN})"
 
+section "getters/setters for simple kernel objects"
+(* to be used for abstraction unifying kernel objects other than TCB and CNode*)
 
 definition
   get_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
@@ -182,7 +150,6 @@ where
      assert (partial_inv f obj \<noteq> None);
      set_object ptr (f ep)
    od"
-
 
 
 section \<open>Synchronous and Asyncronous Endpoints\<close>
@@ -234,6 +201,122 @@ text \<open>Tests whether an IRQ identifier is in use.\<close>
 definition
   is_irq_active :: "irq \<Rightarrow> (bool,'z::state_ext) s_monad" where
  "is_irq_active irq \<equiv> liftM (\<lambda>st. st \<noteq> IRQInactive) $ get_irq_state irq"
+
+
+definition
+  get_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> (ready_queue, 'z::state_ext) s_monad" where
+  "get_tcb_queue d prio \<equiv> do
+     queues \<leftarrow> gets ready_queues;
+     return (queues d prio)
+   od"
+
+definition
+  set_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_tcb_queue d prio queue \<equiv>
+     modify (\<lambda>es. es\<lparr> ready_queues :=
+      (\<lambda>d' p. if d' = d \<and> p = prio then queue else ready_queues es d' p)\<rparr>)"
+
+definition
+  tcb_sched_action :: "(obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list) \<Rightarrow> obj_ref
+                        \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "tcb_sched_action action thread \<equiv> do
+     d \<leftarrow> thread_get tcb_domain thread;
+     prio \<leftarrow> thread_get tcb_priority thread;
+     queue \<leftarrow> get_tcb_queue d prio;
+     set_tcb_queue d prio (action thread queue)
+   od"
+
+definition
+  tcb_sched_enqueue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
+  "tcb_sched_enqueue thread queue \<equiv> if thread \<notin> set queue then thread # queue else queue"
+
+definition
+  tcb_sched_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
+  "tcb_sched_append thread queue \<equiv> if thread \<notin> set queue then queue @ [thread] else queue"
+
+definition
+  tcb_sched_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
+  "tcb_sched_dequeue thread queue \<equiv> filter ((\<noteq>) thread) queue"
+
+definition
+  set_scheduler_action :: "scheduler_action \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_scheduler_action action \<equiv>
+     modify (\<lambda>es. es\<lparr>scheduler_action := action\<rparr>)"
+
+definition
+  thread_set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "thread_set_priority tptr prio \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_priority := prio\<rparr>) tptr"
+
+definition
+  thread_set_time_slice :: "obj_ref \<Rightarrow> nat \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "thread_set_time_slice tptr time \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_time_slice := time\<rparr>) tptr"
+
+definition
+  thread_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "thread_set_domain tptr domain \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_domain := domain\<rparr>) tptr"
+
+definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
+  "reschedule_required \<equiv> do
+     action \<leftarrow> gets scheduler_action;
+     case action of
+       switch_thread t \<Rightarrow> tcb_sched_action (tcb_sched_enqueue) t | _ \<Rightarrow> return ();
+     set_scheduler_action choose_new_thread
+   od"
+
+definition
+  possible_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "possible_switch_to target \<equiv> do
+     cur_dom \<leftarrow> gets cur_domain;
+     target_dom \<leftarrow> thread_get tcb_domain target;
+     action \<leftarrow> gets scheduler_action;
+
+     if (target_dom \<noteq> cur_dom) then
+       tcb_sched_action tcb_sched_enqueue target
+     else if (action \<noteq> resume_cur_thread) then do
+         reschedule_required;
+         tcb_sched_action tcb_sched_enqueue target
+       od
+     else set_scheduler_action $ switch_thread target
+   od"
+
+definition
+  set_thread_state_act :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_thread_state_act tcb_ptr \<equiv> do
+    ts \<leftarrow> get_thread_state tcb_ptr;
+    cur \<leftarrow> gets cur_thread;
+    sched_act \<leftarrow> gets scheduler_action;
+    when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not> runnable ts) $ set_scheduler_action choose_new_thread
+  od"
+
+(***)
+
+definition
+  set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_thread_state ref ts \<equiv> do
+     tcb \<leftarrow> gets_the $ get_tcb ref;
+     set_object ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
+     set_thread_state_act ref
+   od"
+
+definition
+  set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_priority tptr prio \<equiv> do
+     tcb_sched_action tcb_sched_dequeue tptr;
+     thread_set_priority tptr prio;
+     ts \<leftarrow> get_thread_state tptr;
+     when (runnable ts) $ do
+       cur \<leftarrow> gets cur_thread;
+       if tptr = cur then reschedule_required else possible_switch_to tptr
+     od
+   od"
+
+definition
+  set_mcpriority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad"  where
+  "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
+
 
 section "User Context"
 
