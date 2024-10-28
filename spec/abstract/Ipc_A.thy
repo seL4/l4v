@@ -251,7 +251,7 @@ where
          do_ipc_transfer sender None 0 grant receiver;
          cap_delete_one slot;
          set_thread_state receiver Running;
-         do_extended_op (possible_switch_to receiver)
+         possible_switch_to receiver
       od
     | Some f \<Rightarrow> do
          cap_delete_one slot;
@@ -261,7 +261,7 @@ where
          restart \<leftarrow> handle_fault_reply f receiver (mi_label mi) mrs;
          thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) receiver;
          set_thread_state receiver (if restart then Restart else Inactive);
-         when restart $ do_extended_op (possible_switch_to receiver);
+         when restart $ possible_switch_to receiver;
          return ()
        od
   od"
@@ -330,7 +330,7 @@ where
                            od
                   | _ \<Rightarrow> fail;
                 set_thread_state dest Running;
-                do_extended_op (possible_switch_to dest);
+                possible_switch_to dest;
                 when call $
                   if (can_grant \<or> can_grant_reply)
                   then setup_caller_cap thread dest reply_can_grant
@@ -420,7 +420,7 @@ where
                 else set_thread_state sender Inactive
               else do
                 set_thread_state sender Running;
-                do_extended_op (possible_switch_to sender)
+                possible_switch_to sender
               od
             od
    od"
@@ -441,7 +441,7 @@ where
          ntfn_bound_tcb = bound_tcb \<rparr>;
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
-     do_extended_op (possible_switch_to dest)
+     possible_switch_to dest
 
    od"
 
@@ -470,7 +470,7 @@ where
                       cancel_ipc tcb;
                       set_thread_state tcb Running;
                       as_user tcb $ setRegister badge_register badge;
-                      do_extended_op (possible_switch_to tcb)
+                      possible_switch_to tcb
                     od
                   else set_notification ntfnptr $ ntfn_set_obj ntfn (ActiveNtfn badge)
             od

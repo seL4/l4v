@@ -44,8 +44,8 @@ definition
       cancel_ipc thread;
       setup_reply_master thread;
       set_thread_state thread Restart;
-      do_extended_op (tcb_sched_action (tcb_sched_enqueue) thread);
-      do_extended_op (possible_switch_to thread)
+      tcb_sched_action (tcb_sched_enqueue) thread;
+      possible_switch_to thread
     od
   od"
 
@@ -176,11 +176,11 @@ where
           $ check_cap_at (ThreadCap target) slot
           $ cap_insert new_cap src_slot (target, tcb_cnode_index 4);
       cur \<leftarrow> liftE $ gets cur_thread;
-      liftE $ when (target = cur) (do_extended_op reschedule_required)
+      liftE $ when (target = cur) reschedule_required
     odE);
     liftE $ case priority
               of None \<Rightarrow> return()
-               | Some (prio, _) \<Rightarrow> do_extended_op (set_priority target prio);
+               | Some (prio, _) \<Rightarrow> set_priority target prio;
     returnOk []
   odE"
 
@@ -203,7 +203,7 @@ where
         od) gpRegisters;
     cur \<leftarrow> gets cur_thread;
     arch_post_modify_registers cur dest;
-    when (dest = cur) (do_extended_op reschedule_required);
+    when (dest = cur) reschedule_required;
     return []
   od)"
 
@@ -227,7 +227,7 @@ where
     od;
     arch_post_modify_registers self dest;
     when resume_target $ restart dest;
-    when (dest = self) (do_extended_op reschedule_required);
+    when (dest = self) reschedule_required;
     return []
   od)"
 
@@ -247,25 +247,25 @@ where
   (liftE $ do
     as_user tcb $ setRegister tlsBaseRegister tls_base;
     cur \<leftarrow> gets cur_thread;
-    when (tcb = cur) (do_extended_op reschedule_required);
+    when (tcb = cur) reschedule_required;
     return []
   od)"
 
 definition
-  set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
+  set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_domain tptr new_dom \<equiv> do
      cur \<leftarrow> gets cur_thread;
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_domain tptr new_dom;
      ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) (tcb_sched_action tcb_sched_enqueue tptr);
+     when (runnable ts) $ tcb_sched_action tcb_sched_enqueue tptr;
      when (tptr = cur) reschedule_required
    od"
 
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
   "invoke_domain thread domain \<equiv>
-     liftE (do do_extended_op (set_domain thread domain); return [] od)"
+     liftE (do set_domain thread domain; return [] od)"
 
 text \<open>Get all of the message registers, both from the sending thread's current
 register file and its IPC buffer.\<close>

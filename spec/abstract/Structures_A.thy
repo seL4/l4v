@@ -367,6 +367,8 @@ datatype thread_state
 
 type_synonym priority = word8
 
+type_synonym domain = word8
+
 record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
@@ -377,8 +379,11 @@ record tcb =
  tcb_fault_handler :: cap_ref
  tcb_ipc_buffer    :: vspace_ref
  tcb_fault         :: "fault option"
- tcb_bound_notification     :: "obj_ref option"
+ tcb_bound_notification :: "obj_ref option"
  tcb_mcpriority    :: priority
+ tcb_priority      :: priority
+ tcb_time_slice    :: nat
+ tcb_domain        :: domain
  tcb_arch          :: arch_tcb (* arch_tcb must have a field for user context *)
 
 
@@ -396,9 +401,15 @@ where
 | "runnable (BlockedOnReply)        = False"
 
 
+definition default_domain :: "domain" where
+  "default_domain \<equiv> minBound"
+
+definition default_priority :: "priority" where
+  "default_priority \<equiv> minBound"
+
 definition
-  default_tcb :: tcb where
-  "default_tcb \<equiv> \<lparr>
+  default_tcb :: "domain \<Rightarrow> tcb" where
+  "default_tcb d \<equiv> \<lparr>
       tcb_ctable   = NullCap,
       tcb_vtable   = NullCap,
       tcb_reply    = NullCap,
@@ -410,6 +421,9 @@ definition
       tcb_fault      = None,
       tcb_bound_notification  = None,
       tcb_mcpriority = minBound,
+      tcb_priority   = default_priority,
+      tcb_time_slice = timeSlice,
+      tcb_domain     = d,
       tcb_arch       = default_arch_tcb\<rparr>"
 
 text \<open>
@@ -506,6 +520,14 @@ datatype irq_state =
  | IRQTimer
  | IRQReserved
 
+text \<open>The current scheduler action, which is part of the scheduling state.\<close>
+datatype scheduler_action =
+    resume_cur_thread
+  | switch_thread (sch_act_target : obj_ref)
+  | choose_new_thread
+
+type_synonym ready_queue = "obj_ref list"
+
 text \<open>The kernel state includes a heap, a capability derivation tree
 (CDT), a bitmap used to determine if a capability is the original
 capability to that object, a pointer to the current thread, a pointer
@@ -527,6 +549,12 @@ record abstract_state =
   is_original_cap    :: "cslot_ptr \<Rightarrow> bool"
   cur_thread         :: obj_ref
   idle_thread        :: obj_ref
+  scheduler_action   :: scheduler_action
+  domain_list        :: "(domain \<times> machine_word) list"
+  domain_index       :: nat
+  cur_domain         :: domain
+  domain_time        :: "machine_word"
+  ready_queues       :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
   machine_state      :: machine_state
   interrupt_irq_node :: "irq \<Rightarrow> obj_ref"
   interrupt_states   :: "irq \<Rightarrow> irq_state"
