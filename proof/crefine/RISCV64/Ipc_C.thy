@@ -4467,21 +4467,22 @@ lemma ccorres_getCTE_cte_at:
   done
 
 lemma sendIPC_dequeue_ccorres_helper:
-  "ep_ptr = Ptr ep ==>
-  ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest___ptr_to_struct_tcb_C_'
-           (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
-                  and st_tcb_at' (\<lambda>st. isBlockedOnReceive st \<and>
-                                       blockingObject st = ep) dest
-                  and ko_at' (RecvEP (dest#rest)) ep) UNIV hs
-           (setEndpoint ep $ case rest of [] \<Rightarrow> Structures_H.IdleEP
-                                        | (a#list) \<Rightarrow> Structures_H.RecvEP rest)
-        (\<acute>queue :== CALL ep_ptr_get_queue(ep_ptr);;
-         \<acute>dest___ptr_to_struct_tcb_C :== head_C \<acute>queue;;
-         \<acute>queue :== CALL tcbEPDequeue(\<acute>dest___ptr_to_struct_tcb_C,\<acute>queue);;
-         CALL ep_ptr_set_queue(ep_ptr,\<acute>queue);;
-         IF head_C \<acute>queue = Ptr 0 THEN
-             CALL endpoint_ptr_set_state(ep_ptr,scast EPState_Idle)
-         FI)"
+  "ep_ptr = Ptr ep \<Longrightarrow>
+   ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest___ptr_to_struct_tcb_C_'
+     (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+            and st_tcb_at' (\<lambda>st. isBlockedOnReceive st \<and> blockingObject st = ep) dest
+            and ko_at' (RecvEP (dest#rest)) ep
+            and K (distinct (dest # rest)))
+     UNIV hs
+     (setEndpoint ep $ case rest of [] \<Rightarrow> Structures_H.IdleEP
+                                  | (a#list) \<Rightarrow> Structures_H.RecvEP rest)
+     (\<acute>queue :== CALL ep_ptr_get_queue(ep_ptr);;
+      \<acute>dest___ptr_to_struct_tcb_C :== head_C \<acute>queue;;
+      \<acute>queue :== CALL tcbEPDequeue(\<acute>dest___ptr_to_struct_tcb_C,\<acute>queue);;
+      CALL ep_ptr_set_queue(ep_ptr,\<acute>queue);;
+      IF head_C \<acute>queue = Ptr 0 THEN
+          CALL endpoint_ptr_set_state(ep_ptr,scast EPState_Idle)
+      FI)"
   apply (rule ccorres_from_vcg)
   apply (rule allI)
   apply (rule conseqPre, vcg)
@@ -4503,6 +4504,7 @@ lemma sendIPC_dequeue_ccorres_helper:
    apply (rule_tac x=\<sigma> in exI)
    apply (intro conjI)
        apply assumption+
+     apply fastforce
     apply (drule (2) ep_to_ep_queue)
     apply (simp add: tcb_queue_relation'_def)
    apply (clarsimp simp: typ_heap_simps cendpoint_relation_def Let_def
@@ -4852,7 +4854,7 @@ lemma sendIPC_enqueue_ccorres_helper:
                 and ko_at' (ep::Structures_H.endpoint) epptr
                 and K ((ep = IdleEP \<and> queue = [thread]) \<or>
                        (\<exists>q. ep = SendEP q \<and> thread \<notin> set q \<and>
-                            queue = q @ [thread])))
+                            queue = q @ [thread] \<and> distinct q)))
            UNIV hs
            (setEndpoint epptr (Structures_H.endpoint.SendEP queue))
            (\<acute>queue :== CALL ep_ptr_get_queue(ep_Ptr epptr);;
@@ -5379,7 +5381,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
                 and ko_at' (ep::Structures_H.endpoint) epptr
                 and K ((ep = IdleEP \<and> queue = [thread]) \<or>
                        (\<exists>q. ep = RecvEP q \<and> thread \<notin> set q \<and>
-                            queue = q @ [thread])))
+                            queue = q @ [thread] \<and> distinct q)))
            UNIV hs
            (setEndpoint epptr (Structures_H.endpoint.RecvEP queue))
            (\<acute>queue :== CALL ep_ptr_get_queue(ep_Ptr epptr);;
@@ -5522,7 +5524,9 @@ lemma receiveIPC_dequeue_ccorres_helper:
            (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
                   and st_tcb_at' (\<lambda>st. isBlockedOnSend st \<and>
                                        blockingObject st = ep) sender
-                  and ko_at' (SendEP (sender#rest)) ep) UNIV hs
+                  and ko_at' (SendEP (sender # rest)) ep
+                  and K (distinct (sender # rest)))
+           UNIV hs
            (setEndpoint ep (case rest of [] \<Rightarrow> Structures_H.IdleEP
                                        | (a#list) \<Rightarrow> Structures_H.SendEP rest))
         (\<acute>queue :== CALL ep_ptr_get_queue(Ptr ep);;
@@ -5553,6 +5557,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
    apply (rule_tac x=\<sigma> in exI)
    apply (intro conjI)
        apply assumption+
+     apply fastforce
     apply (drule (2) ep_to_ep_queue)
     apply (simp add: tcb_queue_relation'_def)
    apply (clarsimp simp: typ_heap_simps cendpoint_relation_def Let_def
@@ -6085,7 +6090,8 @@ lemma sendSignal_dequeue_ccorres_helper:
            (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
                   and st_tcb_at' ((=) (BlockedOnNotification ntfn)) dest
                   and ko_at' nTFN ntfn
-                  and K (ntfnObj nTFN = WaitingNtfn (dest # rest))) UNIV hs
+                  and K (ntfnObj nTFN = WaitingNtfn (dest # rest)) and K (distinct (dest # rest)))
+           UNIV hs
            (setNotification ntfn $ ntfnObj_update (\<lambda>_. case rest of [] \<Rightarrow> Structures_H.ntfn.IdleNtfn
                                         | (a#list) \<Rightarrow> Structures_H.ntfn.WaitingNtfn rest) nTFN)
         (\<acute>ntfn_queue :== CALL ntfn_ptr_get_queue(Ptr ntfn);;
@@ -6516,7 +6522,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
                 and ko_at' (ntfn::Structures_H.notification) ntfnptr
                 and K ((ntfnObj ntfn = IdleNtfn \<and> queue = [thread]) \<or>
                        (\<exists>q. ntfnObj ntfn = WaitingNtfn q \<and> thread \<notin> set q \<and>
-                            queue = q @ [thread])))
+                            queue = q @ [thread] \<and> distinct q)))
            UNIV hs
            (setNotification ntfnptr $ ntfnObj_update (\<lambda>_. Structures_H.WaitingNtfn queue) ntfn)
            (\<acute>ntfn_queue :== CALL ntfn_ptr_get_queue(ntfn_Ptr ntfnptr);;

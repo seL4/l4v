@@ -225,7 +225,7 @@ lemmas perform_asid_pool_invocation_typ_ats [wp] =
   abs_typ_at_lifts [OF perform_asid_pool_invocation_typ_at]
 
 lemma perform_asid_control_invocation_tcb_at:
-  "\<lbrace>invs and valid_aci aci and st_tcb_at active p and
+  "\<lbrace>invs and valid_aci aci and tcb_at p and ex_nonz_cap_to p and
     K (\<forall>w a b c. aci = asid_control_invocation.MakePool w a b c \<longrightarrow> w \<noteq> p)\<rbrace>
   perform_asid_control_invocation aci
   \<lbrace>\<lambda>rv. tcb_at p\<rbrace>"
@@ -237,10 +237,6 @@ lemma perform_asid_control_invocation_tcb_at:
   apply (intro impI conjI)
     apply (clarsimp simp: retype_addrs_def obj_bits_api_def default_arch_object_def image_def ptr_add_def)
    apply (clarsimp simp: st_tcb_at_tcb_at)+
-  apply (frule st_tcb_ex_cap)
-    apply fastforce
-   apply (clarsimp split: Structures_A.thread_state.splits)
-   apply auto[1]
   apply (clarsimp simp: ex_nonz_cap_to_def valid_aci_def)
   apply (frule invs_untyped_children)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
@@ -280,9 +276,10 @@ lemma invoke_arch_tcb:
     apply fastforce
    apply (clarsimp split: Structures_A.thread_state.splits)
    apply auto[1]
-  apply (clarsimp simp: ex_nonz_cap_to_def)
+  apply (frule st_tcb_at_tcb_at)
+  apply clarsimp
   apply (frule invs_untyped_children)
-  apply (clarsimp simp:cte_wp_at_caps_of_state)
+  apply (clarsimp simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state)
   apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
       apply (simp add: cte_wp_at_caps_of_state)+
     apply fastforce

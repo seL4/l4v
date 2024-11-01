@@ -594,26 +594,11 @@ lemma tcbEPDequeueAppend_valid_ntfn'_rv:
       tcbEPAppend t qs'
    od
    \<lbrace>\<lambda>rv s. valid_ntfn' (ntfnObj_update (\<lambda>_. WaitingNtfn rv) ntfn) s\<rbrace>"
-  apply (simp only: tcbEPAppend_def tcbEPDequeue_def)
-  apply (wp tcbEPFindIndex_wp)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_ntfn'_def split: option.split)
-  apply (clarsimp simp: valid_ntfn'_def simp del: imp_disjL dest!: findIndex_member)
-  apply (intro conjI; clarsimp?)
-          apply (fastforce dest: in_set_takeD in_set_dropD)
-         apply (fastforce dest: in_set_dropD)
-        apply (fastforce dest: in_set_dropD)
-       apply (fastforce dest: in_set_dropD)
-      apply (fastforce dest: in_set_takeD)
-     apply (clarsimp simp: Int_Un_distrib set_take_disj_set_drop_if_distinct)
-     apply (rule disjoint_subset_both[OF set_take_subset set_drop_subset])
-     apply (simp add: Int_commute)
-    apply (fastforce dest: in_set_takeD)
-   apply (clarsimp simp: Int_Un_distrib set_take_disj_set_drop_if_distinct)
-   apply (fastforce dest: in_set_takeD in_set_dropD)
-  apply (clarsimp split: option.split)
-  apply (rename_tac ys zs i j tcb tcba tptr)
-  apply (case_tac ys; clarsimp)
+  apply (simp add: tcbEPAppend_def tcbEPDequeue_def bind_assoc)
+  apply (wpsimp wp: mapM_wp_lift threadGet_wp)
+      apply fastforce
+     apply (wpsimp wp: threadGet_wp)+
+  apply (fastforce simp: valid_ntfn'_def split: option.split dest!: in_set_zip1)
   done
 
 lemma reorderNtfn_invs':
@@ -639,8 +624,7 @@ lemma reorderNtfn_invs':
   done
 
 lemma set_ep_minor_invs':
-  "\<lbrace>invs' and obj_at' (\<lambda>ep. ep_q_refs_of' ep = ep_q_refs_of' val) ptr
-          and valid_ep' val
+  "\<lbrace>invs' and valid_ep' val
           and (\<lambda>s. live' (KOEndpoint val) \<longrightarrow> ex_nonz_cap_to' ptr s)\<rbrace>
    setEndpoint ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -657,25 +641,34 @@ lemma updateEpQueue_triv: "ep \<noteq> IdleEP \<Longrightarrow> updateEpQueue ep
 lemma updateEPQueue_IdleEP[simp]: "(updateEpQueue ep qs = IdleEP) = (ep = IdleEP)"
   by (cases ep; simp add: updateEpQueue_def)
 
+lemma tcbEPDequeueAppend_valid_ep'_rv:
+  "\<lbrace>valid_ep' ep and K (ep \<noteq> IdleEP \<and> epQueue ep = qs \<and> t \<in> set qs)\<rbrace>
+   do qs' \<leftarrow> tcbEPDequeue t qs;
+      tcbEPAppend t qs'
+   od
+   \<lbrace>\<lambda>rv s. valid_ep' (updateEpQueue ep rv) s\<rbrace>"
+  apply (simp add: tcbEPAppend_def tcbEPDequeue_def bind_assoc)
+  apply (wpsimp wp: mapM_wp_lift threadGet_wp)
+      apply fastforce
+     apply (wpsimp wp: threadGet_wp)+
+  by (fastforce simp: valid_ep'_def updateEpQueue_def split: endpoint.splits dest!: in_set_zip1)
+
 lemma reorderEp_invs':
   "\<lbrace>invs' and st_tcb_at' (\<lambda>st. epBlocked st = Some ntfnPtr) tptr\<rbrace>
    reorderEp ntfnPtr tptr
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp only: reorderEp_def)
   apply (subst bind_assoc[symmetric, where m="tcbEPDequeue tptr _"])
-  apply (wp set_ep_minor_invs')
+  apply (rule bind_wp | simp only: K_bind_def)+
+        apply (wp set_ep_minor_invs')
        apply (simp add: pred_conj_def live_ntfn'_def)
-       apply (wpsimp wp: getEndpoint_wp tcbEPAppend_valid_ep' tcbEPAppend_rv_wf' tcbEPAppend_rv_wf''
-                         tcbEPDequeue_valid_ep' tcbEPDequeue_rv_wf' tcbEPDequeue_rv_wf'')+
+       apply (wpsimp wp: getEndpoint_wp tcbEPDequeueAppend_valid_ep'_rv hoare_vcg_conj_lift)+
   apply (frule ep_ko_at_valid_objs_valid_ep', fastforce)
-  apply (clarsimp simp: updateEpQueue_triv sym_refs_asrt_def valid_ep'_def pred_tcb_at'_def
-                        obj_at'_def projectKO_eq projectKO_tcb projectKO_ep)
+  apply (clarsimp simp: sym_refs_asrt_def pred_tcb_at'_def obj_at'_def)
   apply (frule_tac ko=obj and p=tptr in sym_refs_ko_atD'[rotated])
-   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
-  apply (case_tac "tcbState obj"; clarsimp simp: epBlocked_def split: ntfn.splits if_splits)
-    apply (auto simp: invs'_def if_live_then_nonz_cap'_def
-                      refs_of_rev' get_refs_def ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
-               split: option.splits)
+   apply (clarsimp simp: obj_at'_def)
+  apply (case_tac "tcbState obj"; clarsimp simp: epBlocked_def split: if_splits)
+    apply (auto simp: invs'_def if_live_then_nonz_cap'_def refs_of_rev' ko_wp_at'_def)
   done
 
 lemma threadSetPriority_valid_objs'[wp]:
@@ -720,6 +713,9 @@ crunch threadSetPriority
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_machine_state'[wp]: valid_machine_state'
   (wp: threadSet_sched_pointers)
+
+global_interpretation threadSetPriority: typ_at_all_props' "threadSetPriority tptr prio"
+  by typ_at_props'
 
 crunch threadSetPriority
   for st_tcb_at'[wp]: "\<lambda>s. st_tcb_at' Q tcbPtr s"
@@ -784,17 +780,24 @@ lemma setP_invs':
   apply (fastforce simp: ready_qs_runnable_def pred_tcb_at'_def obj_at'_def)
   done
 
-lemma reorder_ntfn_corres:
-  "ntfn = ntfn' \<Longrightarrow> corres dc (invs and st_tcb_at (\<lambda>st. ntfn_blocked st = Some ntfn) t)
-                              (invs' and st_tcb_at' (\<lambda>st. ntfnBlocked st = Some ntfn) t)
-                              (reorder_ntfn ntfn t) (reorderNtfn ntfn' t)"
+lemma tcb_ep_dequeue_distinct:
+  "\<lbrace>\<lambda>_. distinct q\<rbrace> tcb_ep_dequeue t q \<lbrace>\<lambda>q' _. distinct q'\<rbrace>"
+  by (wpsimp simp: tcb_ep_dequeue_def)
+
+lemma reorderNtfn_corres:
+  "ntfn_ptr = ntfnPtr \<Longrightarrow>
+   corres dc
+     (\<lambda>s. invs s \<and> st_tcb_at (\<lambda>st. ntfn_blocked st = Some ntfn_ptr) t s
+          \<and> none_top (\<lambda>q. priority_ordered (filter ((\<noteq>) t) q) (prios_of s)) (ntfn_queues_of s ntfn_ptr))
+     (invs' and st_tcb_at' (\<lambda>st. ntfnBlocked st = Some ntfn_ptr) t)
+     (reorder_ntfn ntfn_ptr t) (reorderNtfn ntfnPtr t)"
   apply add_sym_refs
   apply (clarsimp simp: reorder_ntfn_def reorderNtfn_def)
   apply (rule corres_stateAssert_assume)
    apply (rule corres_guard_imp)
      apply (rule corres_split)
         apply (rule getNotification_corres)
-       apply (rule corres_assert_opt_assume_l)
+       apply (rule corres_assert_opt_l)
        apply (rule corres_assert_assume_r)
        apply (rule corres_split)
           apply (rule tcbEPDequeue_corres)
@@ -807,8 +810,8 @@ lemma reorder_ntfn_corres:
            apply (clarsimp simp: ntfn_relation_def)
           apply wp
          apply wp
-        apply (rule tcb_ep_dequeue_rv_wf')
-       apply (rule tcbEPDequeue_rv_wf')
+        apply (wpsimp wp: tcb_ep_dequeue_distinct)
+       apply wp
       apply (wp get_simple_ko_wp)
      apply (wp getNotification_wp)
     apply (clarsimp simp: pred_tcb_at_def obj_at_def ntfn_blocked_def)
@@ -817,13 +820,22 @@ lemma reorder_ntfn_corres:
     apply (erule (1) valid_objsE[where x=t])
     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def)
     apply (frule invs_valid_objs)
-    apply (erule (1) valid_objsE[where x=ntfn'])
+    apply (erule (1) valid_objsE[where x=ntfnPtr])
     apply (clarsimp simp: valid_obj_def valid_ntfn_def)
     apply (frule invs_sym_refs)
     apply (drule_tac p=t in sym_refs_ko_atD[rotated])
      apply (simp add: obj_at_def)
     apply clarsimp
-    apply (fastforce simp: refs_of_rev obj_at_def get_ntfn_queue_def is_tcb_def is_ntfn_def)
+    apply (rename_tac ntfn)
+    apply (case_tac "ntfn_obj ntfn"; clarsimp)
+      apply (fastforce simp: refs_of_rev obj_at_def)
+     apply (rename_tac q)
+     apply (clarsimp simp: get_ntfn_queue_def invs_psp_aligned invs_distinct)
+     apply (intro conjI impI)
+       apply (fastforce simp: refs_of_rev obj_at_def)
+      apply (fastforce simp: refs_of_rev obj_at_def)
+     apply (clarsimp simp: opt_map_def)
+    apply (fastforce simp: refs_of_rev obj_at_def)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb ntfnBlocked_def)
    apply (clarsimp split: thread_state.splits)
    apply (frule invs_valid_objs')
@@ -831,7 +843,7 @@ lemma reorder_ntfn_corres:
    apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_tcb_state'_def
                          obj_at'_def projectKO_eq projectKO_ntfn)
    apply (frule invs_valid_objs')
-   apply (erule (1) valid_objsE'[where x=ntfn'])
+   apply (erule (1) valid_objsE'[where x=ntfnPtr])
    apply (clarsimp simp: valid_obj'_def valid_ntfn'_def)
    apply (drule_tac p=t and ko=obj in sym_refs_ko_atD'[rotated])
     apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
@@ -841,69 +853,58 @@ lemma reorder_ntfn_corres:
   apply (clarsimp simp: sym_refs_asrt_def)
   done
 
-lemma reorder_ep_corres:
-  "a = a' \<Longrightarrow> corres dc (invs and st_tcb_at (\<lambda>st. ep_blocked st = Some a) t)
-                        (invs' and st_tcb_at' (\<lambda>st. epBlocked st = Some a) t)
-                        (reorder_ep a t) (reorderEp a' t)"
+lemma reorderEp_corres:
+  "ep_ptr = epPtr \<Longrightarrow>
+   corres dc
+     (\<lambda>s. invs s \<and> st_tcb_at (\<lambda>st. ep_blocked st = Some ep_ptr) t s \<and> ep_at ep_ptr s
+          \<and> none_top (\<lambda>q. priority_ordered (filter ((\<noteq>) t) q) (prios_of s)) (ep_queues_of s ep_ptr))
+     invs'
+     (reorder_ep ep_ptr t) (reorderEp epPtr t)"
   apply add_sym_refs
+  apply (rule_tac Q'="ep_at' epPtr" in corres_cross_add_guard)
+   apply (fastforce intro!: ep_at_cross simp: vs_all_heap_simps obj_at_def is_tcb_def)
   apply (clarsimp simp: reorder_ep_def reorderEp_def)
-  apply (rule corres_stateAssert_assume)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split)
-        apply (rule getEndpoint_corres)
-       apply (rename_tac ep ep')
-       apply (rule_tac F="ep \<noteq> Structures_A.endpoint.IdleEP" in corres_gen_asm)
-       apply (rule_tac r'="(=)" in corres_split)
-          apply (rule corres_trivial)
-          apply (case_tac ep; clarsimp simp: get_ep_queue_def getEpQueue_def ep_relation_def)
-         apply clarsimp
-         apply (rule corres_split)
-            apply (rule tcbEPDequeue_corres)
-            apply clarsimp
-           apply (rule corres_split)
-              apply clarsimp
-              apply (rule tcbEPAppend_corres)
-             apply (rule setEndpoint_corres)
-             apply (case_tac ep; clarsimp simp: ep_relation_def updateEpQueue_def)
-            apply wp
-           apply wp
-          apply (rule tcb_ep_dequeue_rv_wf')
-         apply (rule tcbEPDequeue_rv_wf')
+  apply (rule corres_stateAssert_assume[rotated])
+   apply (simp add: sym_refs_asrt_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split)
+       apply (rule getEndpoint_corres)
+      apply (rename_tac ep ep')
+      apply (rule_tac F="ep \<noteq> Structures_A.endpoint.IdleEP" in corres_gen_asm)
+      apply (rule_tac r'="(=)" in corres_split)
+         apply (rule corres_trivial)
+         apply (case_tac ep; clarsimp simp: get_ep_queue_def getEpQueue_def ep_relation_def)
         apply clarsimp
-        apply (wpsimp simp: get_ep_queue_def)
-       apply (wpsimp simp: getEpQueue_def)
-      apply (wp get_simple_ko_wp)
-     apply (wp getEndpoint_wp)
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def ep_blocked_def)
-    apply (frule invs_valid_objs)
-    apply (erule (1) valid_objsE[where x=t])
-    apply (clarsimp simp: valid_obj_def valid_tcb_def )
-    apply (prop_tac "ep_at a' s")
-     apply (clarsimp simp: valid_tcb_state_def split: Structures_A.thread_state.splits)
-    apply (clarsimp simp: obj_at_def)
-    apply (frule invs_valid_objs)
-    apply (erule (1) valid_objsE[where x=a'])
-    apply (clarsimp simp: valid_obj_def valid_ep_def)
-    apply (frule invs_sym_refs)
-    apply (drule_tac p=t in sym_refs_ko_atD[rotated])
-     apply (simp add: obj_at_def)
-    apply (fastforce simp: obj_at_def is_tcb_def split: if_splits Structures_A.thread_state.splits)
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb epBlocked_def)
-   apply (frule invs_valid_objs')
-   apply (erule (1) valid_objsE'[where x=t])
-   apply (clarsimp simp: valid_obj'_def valid_tcb'_def)
-   apply (prop_tac "ep_at' a' s")
-    apply (clarsimp simp: valid_tcb_state'_def obj_at'_def projectKO_eq projectKO_ep
-                   split: thread_state.splits)
-   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_ep)
-   apply (frule invs_valid_objs')
-   apply (erule (1) valid_objsE'[where x=a'])
-   apply (clarsimp simp: valid_obj'_def valid_ep'_def)
-   apply (drule_tac p=t and ko=obj in sym_refs_ko_atD'[rotated])
-    apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
-   apply (fastforce simp: refs_of_rev' ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
-                   split: thread_state.splits if_splits endpoint.splits)
-  apply (clarsimp simp: sym_refs_asrt_def)
+        apply (rule corres_split)
+           apply (rule tcbEPDequeue_corres)
+           apply clarsimp
+          apply (rule corres_split)
+             apply clarsimp
+             apply (rule tcbEPAppend_corres)
+            apply (rule setEndpoint_corres)
+            apply (case_tac ep; clarsimp simp: ep_relation_def updateEpQueue_def)
+           apply wp
+          apply wp
+         apply (wpsimp wp: tcb_ep_dequeue_distinct)
+        apply wp
+       apply (wpsimp simp: get_ep_queue_def)
+      apply (wpsimp simp: getEpQueue_def)
+     apply (wp get_simple_ko_wp)
+    apply (wp getEndpoint_wp)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def ep_blocked_def)
+   apply (frule invs_valid_objs)
+   apply (erule (1) valid_objsE[where x=t])
+   apply (clarsimp simp: valid_obj_def valid_tcb_def)
+   apply (frule invs_valid_objs)
+   apply (erule (1) valid_objsE[where x=epPtr])
+   apply (clarsimp simp: valid_obj_def valid_ep_def)
+   apply (frule invs_sym_refs)
+   apply (drule_tac p=t in sym_refs_ko_atD[rotated])
+    apply (simp add: obj_at_def)
+   subgoal
+     by (fastforce simp: obj_at_def is_tcb_def opt_map_def comp_apply eps_of_kh_def
+                  split: if_splits Structures_A.thread_state.splits endpoint.splits)
+  apply clarsimp
   done
 
 lemma threadSetPriority_valid_tcbs'[wp]:
@@ -1037,46 +1038,69 @@ lemma setPriority:
      (einvs and tcb_at t and ct_not_in_release_q)
      (invs' and (\<lambda>_. prio \<le> maxPriority))
      (set_priority t prio) (setPriority t prio)"
+  supply if_split[split del]
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
   apply (simp add: setPriority_def set_priority_def runnable'_case_thread_state_If)
+  apply (rule corres_split_forwards'[OF _ gts_sp gts_sp'])
+   apply (corres corres: getThreadState_corres)
+    apply fastforce
+   apply fastforce
+  apply (rename_tac ts ts')
+  apply (rule_tac F="ep_blocked ts = epBlocked ts' \<and> ntfn_blocked ts = ntfnBlocked ts'"
+               in corres_req)
+   apply (case_tac ts; simp add: ep_blocked_def epBlocked_def ntfn_blocked_def ntfnBlocked_def)
   apply (rule stronger_corres_guard_imp)
-    apply (rule_tac r'=thread_state_relation in corres_split)
-       apply (rule getThreadState_corres)
-      apply (rule corres_if)
-        apply (case_tac rv; simp add: thread_state_relation_def)
-       apply (rule threadSetPriority_onRunning_corres)
-      apply (rule_tac r'=dc in corres_split)
-         apply (clarsimp simp: thread_set_priority_def threadSetPriority_def)
-         apply (rule threadSet_not_queued_corres;
-                simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def cteSizeBits_def)
-        apply (rule_tac r'=dc in corres_split)
-           apply (clarsimp simp: maybeM_def case_option_If2 split del: if_split)
-           apply (rule corres_if)
-             apply (case_tac rv; simp add: ep_blocked_def epBlocked_def)
-            apply (rule reorder_ep_corres)
-            apply (case_tac rv; simp add: ep_blocked_def epBlocked_def)
-           apply clarsimp
-          apply (clarsimp simp: maybeM_def case_option_If2 split del: if_split)
-          apply (rule corres_if)
-            apply (case_tac rv; simp add: ntfn_blocked_def ntfnBlocked_def)
-           apply (rule reorder_ntfn_corres)
-           apply (case_tac rv; simp add: ntfn_blocked_def ntfnBlocked_def)
-          apply (rule corres_trivial, clarsimp)
-         apply (wpsimp wp: hoare_vcg_const_imp_lift simp: if_fun_split)
-        apply (wpsimp wp: hoare_vcg_const_imp_lift reorderEp_invs' simp: if_fun_split)
-       apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift simp: if_fun_split)
-      apply (subgoal_tac "ep_blocked rv = epBlocked rv' \<and> ntfn_blocked rv = ntfnBlocked rv'")
-       apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift
-                         threadSet_valid_objs_tcbPriority_update threadSetPriority_invs'
-                   simp: if_fun_split)
-      apply (case_tac rv; simp add: ep_blocked_def epBlocked_def ntfn_blocked_def ntfnBlocked_def)
-     apply (wp gts_wp)
-    apply (wp gts_wp')
-   apply (fastforce dest: valid_sched_valid_ready_qs valid_ready_qs_not_queued_not_runnable
-                    simp: pred_tcb_at_def obj_at_def in_ready_q_def)
-  apply (drule ready_qs_runnable_cross; clarsimp simp: ready_qs_runnable_def)
-  apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
+    apply (rule corres_if)
+      apply (case_tac ts; simp add: thread_state_relation_def)
+     apply (rule threadSetPriority_onRunning_corres)
+    apply (rule_tac r'=dc in corres_split)
+       apply (clarsimp simp: thread_set_priority_def threadSetPriority_def)
+       apply (rule threadSet_not_queued_corres;
+              simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def cteSizeBits_def)
+      apply clarsimp
+      apply (rule_tac R="epBlocked ts' = None \<and> ep_blocked ts = None" in corres_cases'; clarsimp)
+       apply (clarsimp simp: maybeM_def case_option_If2)
+       apply (rule corres_if_strong[where R=\<top> and R'=\<top>])
+         apply fastforce
+        apply (corres corres: reorderNtfn_corres[unfolded dc_def])
+       apply (rule corres_return_trivial[unfolded dc_def])
+      apply (clarsimp simp: maybeM_def case_option_If2)
+      apply (rule_tac F="ntfn_blocked ts = None \<and> ntfnBlocked ts' = None" in corres_gen_asm)
+      apply (frule_tac Some_to_the)
+      apply clarsimp
+      apply (rule reorderEp_corres[unfolded dc_def])
+      apply fastforce
+     apply (wpsimp wp: thread_set_priority_invs hoare_vcg_if_lift2 hoare_vcg_imp_lift'
+                       thread_set_priority_priority_ordered hoare_vcg_all_lift
+                 simp: none_top_def
+                split: option.splits)
+    apply (wpsimp wp: threadSetPriority_invs' hoare_vcg_if_lift2 hoare_vcg_imp_lift')
+   apply (clarsimp split: if_splits)
+   apply (frule valid_sched_valid_ready_qs)
+   apply (frule valid_sched_sorted_ipc_queues)
+   apply (frule invs_valid_objs)
+   apply (frule tcb_at_ko_at)
+   apply clarsimp
+   apply (frule (1) valid_objs_ko_at)
+   apply safe[1]
+           apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+          apply (fastforce dest!: valid_ready_qs_not_queued_not_runnable
+                            simp: pred_tcb_at_def obj_at_def comp_apply in_ready_q_def)
+         apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+        apply (clarsimp simp: sorted_ipc_queues_def none_top_def split: option.splits)
+       apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+      apply (clarsimp simp: ep_blocked_def valid_obj_def valid_tcb_def valid_tcb_state_def
+                            pred_tcb_at_def obj_at_def
+                     split: Structures_A.thread_state.splits)
+     apply (clarsimp simp: ep_blocked_def ntfn_blocked_def split: Structures_A.thread_state.splits)
+    apply (clarsimp simp: sorted_ipc_queues_def)
+    apply (drule_tac x=y in spec)
+    apply fastforce
+   apply (clarsimp simp: ep_blocked_def ntfn_blocked_def  split: Structures_A.thread_state.splits)
+  apply (fastforce dest: ready_qs_runnable_cross
+                   simp: ready_qs_runnable_def pred_tcb_at'_def obj_at'_def comp_apply
+                  split: if_splits)
   done
 
 lemma setMCPriority_corres:
@@ -1667,7 +1691,7 @@ lemma installThreadBuffer_corres:
   apply (rule corres_gen_asm2)
   apply (rule corres_guard_imp[where P=P and P'=P' and Q="P and cte_at (a, tcb_cnode_index 2)"
                                          and Q'="P' and cte_at' (cte_map (a, cap))" for P P' a cap])
-    apply (cases g, simp add: returnOk_def)
+    apply (cases g, simp add: returnOk_def comp_apply)
     apply (clarsimp simp: installThreadBuffer_corres_helper bind_liftE_distrib liftE_bindE)
     apply (rule corres_guard_imp)
       apply (rule corres_split_norE)

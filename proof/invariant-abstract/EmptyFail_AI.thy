@@ -372,10 +372,6 @@ crunch sc_and_timer
  for (empty_fail) empty_fail[wp, intro!, simp]
   (wp: empty_fail_setDeadline empty_fail_whileLoop simp: Let_def)
 
-lemma empty_fail_tcb_ep_find_index[wp]:
-  "empty_fail (tcb_ep_find_index t q n)"
-  by (induct n; wpsimp simp: tcb_ep_find_index.simps)
-
 context EmptyFail_AI_schedule begin
 
 lemma schedule_choose_new_thread_empty_fail[intro!, wp, simp]:

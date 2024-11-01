@@ -19,14 +19,58 @@ lemmas [wp] =
   init_arch_objects_pred_tcb_at
   init_arch_objects_cur_thread
 
+method set_object_easy_cases uses def final
+  = simp add: def set_object_def split_def,
+    (wp get_object_wp zipWithM_x_inv' | wp (once) hoare_drop_imp | wpc)+,
+    (fastforce simp: final obj_at_def opt_map_def eps_of_kh_def tcbs_of_kh_def a_type_def
+              intro: rsubst[where P=P]
+              split: kernel_object.splits)?
+
+lemma set_cap_eps_of[wp]:
+  "set_cap c p \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_cap_def)
+
+lemma set_cap_ntfns_of[wp]:
+  "set_cap c p \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_cap_def)
+
+lemma set_cap_prios_of[wp]:
+  "set_cap c p \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_cap_def)
+
 lemma set_cap_valid_sched_pred[wp]:
   "set_cap cap slot \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ep_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
   by (wpsimp simp: set_cap_def obj_at_kh_kheap_simps vs_all_heap_simps
                wp: set_object_wp get_object_wp)
 
-crunch create_cap, cap_insert
+crunch cap_insert
   for valid_sched_pred[wp]: "valid_sched_pred_strong P::'z::state_ext state \<Rightarrow> _"
   (wp: dxo_wp_weak crunch_wps)
+
+crunch create_cap
+  for eps_of[wp]: "\<lambda>s. P (eps_of s)"
+  and ntfns_of[wp]: "\<lambda>s. P (ntfns_of s)"
+  and cur_time[wp]: "\<lambda>s. P (cur_time s)"
+  (wp: dxo_wp_weak crunch_wps)
+
+lemma create_cap_prios_of[wp]:
+  "create_cap type bits untyped is_device dest \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
+  apply (simp add: create_cap_def set_object_def split_def)
+  by (wpsimp wp: get_object_wp dxo_wp_weak | fastforce)+
+
+lemma create_cap_valid_sched_pred[wp]:
+  "create_cap type bits untyped is_device dest \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ep_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
+  apply (wpsimp simp: create_cap_def obj_at_kh_kheap_simps vs_all_heap_simps
+                  wp: set_object_wp get_object_wp dxo_wp_weak)
+  done
 
 crunch update_cdt_list
   for valid_sched_pred[wp]: "valid_sched_pred_strong P"
@@ -40,10 +84,28 @@ lemma store_word_offs_valid_sched_pred[wp]:
   "store_word_offs ptr offs v \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp simp: store_word_offs_def wp: dmo_valid_sched_pred)
 
+lemma set_mrs_eps_of[wp]:
+ "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_mrs_def store_word_offs_def)
+
+lemma set_mrs_ntfns_of[wp]:
+ "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_mrs_def store_word_offs_def)
+
+lemma set_mrs_prios_of[wp]:
+ "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_mrs_def store_word_offs_def final: get_tcb_def)
+
 lemma set_mrs_valid_sched_pred[wp]:
   "set_mrs thread buf msgs \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ep_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
   apply (wpsimp simp: set_mrs_def wp: zipWithM_x_inv' set_object_wp)
-  by (auto simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  done
 
 global_interpretation set_mrs: valid_sched_pred_locale _ "set_mrs r t mrs"
   by unfold_locales wp
@@ -622,13 +684,85 @@ lemma released_sc_cur_time_increasing:
    \<Longrightarrow> sc_refill_cfg_sc_at (released_sc (cur_time s')) scp s'"
   by (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def word_le_nat_alt)
 
+lemma eps_of_ko_at_Some:
+  "(eps_of s p = Some ep) = ep_at_pred ((=) ep) p s"
+  by (simp add: eps_of_def ep_at_pred_def in_opt_map_eq)
+
+lemma ntfns_of_ko_at_Some:
+  "(ntfns_of s p = Some ntfn) = ntfn_at_pred ((=) ntfn) p s"
+  by (simp add: ntfn_of_def ntfn_at_pred_def in_opt_map_eq)
+     (fastforce split: kernel_object.splits)
+
+lemma eps_of_obj_at_None:
+  "(eps_of s p = None) = (\<not> (obj_at (\<lambda>obj. \<exists>ep. obj = Endpoint ep) p s))"
+  by (simp add: eps_of_def obj_at_def opt_map_def ep_of_def
+         split: option.splits kernel_object.splits)
+
+lemma ntfns_of_obj_at_None:
+  "(ntfns_of s p = None) = (\<not> (obj_at (\<lambda>obj. \<exists>ntfn. obj = Notification ntfn) p s))"
+  by (simp add: ntfn_of_def obj_at_def opt_map_def split: option.splits kernel_object.splits)
+
+lemma ep_queues_of_ep_at_pred:
+  "(ep_queues_of s p = Some q) = ep_at_pred (\<lambda>ep. ep_queue ep = q) p s"
+  by (simp add: eps_of_def ep_at_pred_def in_opt_map_eq)
+
+lemma ntfn_queues_of_ntfn_at_pred:
+  "(ntfn_queues_of s p = Some q) = ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) = q) p s"
+  by (simp add: ntfn_of_def ntfn_at_pred_def in_opt_map_eq)
+     (fastforce split: kernel_object.splits)
+
+lemma in_ep_queue_st_tcb_at:
+  "\<lbrakk>ep_queues_of s ep_ptr = Some q; t \<in> set q; valid_objs s; sym_refs (state_refs_of s)\<rbrakk>
+   \<Longrightarrow> st_tcb_at (\<lambda>st. (\<exists>data. st = BlockedOnSend ep_ptr data)
+                       \<or> (\<exists>data pl. st = BlockedOnReceive ep_ptr data pl)) t s"
+  apply (clarsimp simp: opt_map_def eps_of_kh_def split: option.splits)
+  apply (erule (1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_ep_def)
+  apply (clarsimp simp: sym_refs_def)
+  apply (erule_tac x=ep_ptr in allE)
+  apply (fastforce simp: state_refs_of_def is_tcb obj_at_def pred_tcb_at_def tcb_st_refs_of_def
+                         get_refs_def2
+                  split: thread_state.splits if_splits endpoint.splits)
+  done
+
+lemma in_ntfn_queue_st_tcb_at:
+  "\<lbrakk>ntfn_queues_of s ntfn_ptr = Some q; t \<in> set q; valid_objs s; sym_refs (state_refs_of s)\<rbrakk>
+   \<Longrightarrow> st_tcb_at (\<lambda>st. st = BlockedOnNotification ntfn_ptr) t s"
+  apply (clarsimp simp: opt_map_def split: option.splits)
+  apply (frule st_in_waitingntfn[where q=q]; fastforce?)
+  apply (rename_tac notification, case_tac notification; clarsimp)
+  apply (case_tac ntfn_obj; clarsimp)
+  done
+
+lemma tcb_at_priority_Some:
+  "tcb_at t s \<Longrightarrow> \<exists>prio. prios_of s t = Some prio"
+  by (clarsimp simp: obj_at_def opt_map_def tcb_heap_of_state_def is_tcb_def)
+     (rename_tac ko, case_tac ko; clarsimp)
+
+lemma prios_of_etcb_at:
+  "(prios_of s t = Some prio) \<longleftrightarrow> (tcb_at t s \<and> etcb_at (\<lambda>etcb. etcb_priority etcb = prio) t s)"
+  by (fastforce simp add: etcb_at_def2 in_opt_map_eq vs_all_heap_simps obj_at_def is_tcb_def)
+
 \<comment> \<open>Used for retyping Untyped memory, including ASID pool creation. Retyping may destroy objects
     if the Untyped memory is reset. But under the invariants, destruction can only occur for objects
     which are not referenced by any caps.\<close>
 lemma valid_sched_tcb_state_preservation_gen:
   assumes I: "\<And>s. I s \<Longrightarrow> ct_active s \<and> invs s"
   assumes st_tcb: "\<And>P t. \<lbrace>st_tcb_at P t and ex_nonz_cap_to t and I\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  assumes tcb_at: "\<And>t. \<lbrace>tcb_at t and ex_nonz_cap_to t and I\<rbrace> f \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
   assumes fault_tcb: "\<And>P t. \<lbrace>fault_tcb_at P t and ex_nonz_cap_to t and I\<rbrace> f \<lbrace>\<lambda>_. fault_tcb_at P t\<rbrace>"
+  assumes ep_at_queue:
+    "\<And>t q. \<lbrace>\<lambda>s. ep_at_pred (\<lambda>ep. ep_queue ep = q \<and> q \<noteq> []) t s \<and> I s\<rbrace>
+            f \<lbrace>\<lambda>_ s. ep_at_pred (\<lambda>ep. ep_queue ep = q \<and> q \<noteq> []) t s\<rbrace>"
+  assumes not_ep_at:
+    "\<And>t. \<lbrace>\<lambda>s. \<not> ep_at_pred (\<lambda>ep. ep_queue ep \<noteq> []) t s \<and> I s\<rbrace>
+          f \<lbrace>\<lambda>_ s. \<not> ep_at_pred (\<lambda>ep. ep_queue ep \<noteq> []) t s\<rbrace>"
+  assumes ntfn_at_queue:
+    "\<And>t q. \<lbrace>\<lambda>s. ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) = q \<and> q \<noteq> []) t s \<and> I s\<rbrace>
+            f \<lbrace>\<lambda>_ s. ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) = q \<and> q \<noteq> []) t s\<rbrace>"
+  assumes not_ntfn_at:
+    "\<And>t. \<lbrace>\<lambda>s. \<not> ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) \<noteq> []) t s \<and> I s\<rbrace>
+          f \<lbrace>\<lambda>_ s. \<not> ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) \<noteq> []) t s\<rbrace>"
   assumes not_ipc_queued: "\<And>t. \<lbrace>\<lambda>s. \<not> st_tcb_at ipc_queued_thread_state t s \<and> I s\<rbrace>
                                 f \<lbrace>\<lambda>_ s. \<not> st_tcb_at ipc_queued_thread_state t s\<rbrace>"
   assumes non_empty_sc_replies: "\<And>scp. \<lbrace>\<lambda>s. \<not> sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s \<and> I s\<rbrace>
@@ -830,7 +964,96 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (frule (1) non_empty_sc_replies_nonz_cap)
    apply (rule use_valid, assumption, rule sc_refill_cfg)
    by (intro conjI; assumption)
-  by simp
+  apply (prop_tac "sorted_ipc_queues s'")
+   subgoal for s r s'
+     apply (clarsimp simp: sorted_ipc_queues_def)
+     apply (rename_tac ptr)
+     apply (drule_tac x=ptr in spec)
+     apply (rule conjI)
+      apply clarsimp
+      apply (rename_tac q)
+      apply (case_tac "q = []", clarsimp)
+      apply (thin_tac "none_top _ (ntfn_queues_of s ptr)")
+      apply (clarsimp simp: none_top_def split: option.splits)
+       subgoal
+         by (fastforce dest!: use_valid[OF _ not_ep_at]
+                        simp: eps_of_obj_at_None ep_at_pred_def obj_at_def
+                              ep_queues_of_ep_at_pred)
+      apply (rename_tac q')
+      apply (prop_tac "q' \<noteq> []")
+       apply (rule ccontr)
+       subgoal
+         by (force dest!: use_valid[OF _ not_ep_at]
+                    simp: eps_of_obj_at_None ep_at_pred_def obj_at_def ep_queues_of_ep_at_pred)
+      apply (frule_tac q1=q' and t1=ptr in use_valid[OF _ ep_at_queue])
+       apply (clarsimp simp: ep_queues_of_ep_at_pred ep_at_pred_def)
+      apply (prop_tac "q' = q")
+       apply (clarsimp simp: ep_at_pred_def ep_queues_of_ep_at_pred)
+      apply clarsimp
+      apply (prop_tac "\<forall>t \<in> set q. prios_of s' t = prios_of s t")
+       apply (prop_tac "\<forall>t \<in> set q. ex_nonz_cap_to t s")
+        subgoal
+          by (fastforce intro: ep_queue_cap_to
+                         simp: ep_queues_of_ep_at_pred ep_at_pred_def obj_at_def)
+       apply clarsimp
+       apply (drule_tac x=t in bspec, fastforce)
+       apply (frule invs_valid_objs)
+       apply (frule invs_sym_refs)
+       apply (frule (3) in_ep_queue_st_tcb_at)
+       apply (frule use_valid[OF _ st_tcb], fastforce)
+       apply (frule st_tcb_at_tcb_at)
+       apply (frule tcb_at_priority_Some)
+       apply clarsimp
+       apply (frule use_valid[OF _ tcb_at], fastforce)
+       apply (frule_tac t1=t and P1="\<lambda>etcb. etcb_priority etcb = prio" in use_valid[OF _ etcb_at])
+        apply (fastforce dest: prios_of_etcb_at[THEN iffD1])
+       apply (elim impE)
+        apply (force elim!: st_tcb_weakenE)
+       apply (fastforce intro!: prios_of_etcb_at[THEN iffD2])
+      subgoal by (fastforce elim: sorted_wrt_mono_rel[rotated] simp: img_ord_def)
+     apply clarsimp
+     apply (rename_tac q)
+     apply (case_tac "q = []", clarsimp)
+     apply (thin_tac "none_top _ (ep_queues_of s ptr)")
+     apply (clarsimp simp: none_top_def split: option.splits)
+       subgoal
+         by (fastforce dest!: use_valid[OF _ not_ntfn_at]
+                        simp: ntfns_of_obj_at_None ntfn_at_pred_def obj_at_def
+                              ntfn_queues_of_ntfn_at_pred)
+     apply (rename_tac q')
+     apply (prop_tac "q' \<noteq> []")
+      apply (rule ccontr)
+      apply (frule_tac t1=ptr in use_valid[OF _ not_ntfn_at])
+       apply (clarsimp simp: ntfns_of_obj_at_None ntfn_at_pred_def obj_at_def opt_map_def)
+      apply (clarsimp simp: ntfn_queues_of_ntfn_at_pred ntfn_at_pred_def)
+     apply (clarsimp simp: eps_of_ko_at_Some ntfn_queues_of_ntfn_at_pred)
+     apply (frule_tac q1=q' and t1=ptr in use_valid[OF _ ntfn_at_queue])
+      apply (clarsimp simp: ntfn_queues_of_ntfn_at_pred ntfn_at_pred_def)
+     apply (prop_tac "q' = q")
+      apply (clarsimp simp: ntfn_at_pred_def)
+     apply clarsimp
+     apply (prop_tac "\<forall>t \<in> set q. prios_of s' t = prios_of s t")
+      apply (clarsimp simp: ntfn_at_pred_def ntfn_queue_def split: ntfn.splits)
+      apply (frule invs_valid_objs)
+      apply (frule invs_sym_refs)
+      apply (frule (4) ex_nonz_cap_to_tcb_in_waitingntfn)
+      apply (drule_tac x=t in bspec, fastforce)
+      apply (frule_tac ntfn_ptr=ptr in in_ntfn_queue_st_tcb_at[rotated])
+         apply fastforce
+        apply fastforce
+       apply (force simp: ntfn_at_pred_def opt_map_def split: option.splits)
+      apply (frule use_valid[OF _ st_tcb], fastforce)
+      apply (frule st_tcb_at_tcb_at)
+      apply (frule tcb_at_priority_Some)
+      apply clarsimp
+      apply (frule use_valid[OF _ tcb_at], fastforce)
+      apply (frule_tac t1=t and P1="\<lambda>etcb. etcb_priority etcb = prio" in use_valid[OF _ etcb_at])
+       apply (fastforce dest: prios_of_etcb_at[THEN iffD1])
+      apply (elim impE)
+       apply (force elim!: st_tcb_weakenE)
+      apply (fastforce intro!: prios_of_etcb_at[THEN iffD2])
+     by (fastforce elim: sorted_wrt_mono_rel[rotated] simp: img_ord_def)
+   by simp
 
 lemma invoke_untyped_valid_idle:
   "\<lbrace>invs and ct_active
@@ -975,6 +1198,42 @@ lemma invoke_untyped_sc_at_pred_n_live:
   unfolding sc_at_pred_n_def using live
   by (auto intro!: invoke_untyped_obj_at_live simp: cspace_agnostic_pred_def live_def)
 
+lemma ep_at_pred_def2:
+  "ep_at_pred P ptr s = obj_at (\<lambda>ko. \<exists>ep. ko = Endpoint ep \<and> P ep) ptr s"
+  by (fastforce simp: ep_at_pred_def obj_at_def)
+
+lemma ntfn_at_pred_def2:
+  "ntfn_at_pred P ptr s = obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> P ntfn) ptr s"
+  by (fastforce simp: ntfn_at_pred_def obj_at_def)
+
+(* FIXME RT: move to Untyped_AI *)
+lemma invoke_untyped_ep_at_pred_live:
+  assumes live: "\<forall>ep. P ep \<longrightarrow> (ep \<noteq> IdleEP)"
+  shows
+  "\<lbrace>\<lambda>s. Q (ep_at_pred P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_untyped_inv ui s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>rv s. Q (ep_at_pred P p s)\<rbrace>"
+  unfolding ep_at_pred_def2 using live
+  by (auto intro!: invoke_untyped_obj_at_live simp: cspace_agnostic_pred_def live_def)
+
+(* FIXME RT: move to Untyped_AI *)
+lemma invoke_untyped_ntfn_at_pred_live:
+  assumes live: "\<forall>ntfn. P ntfn \<longrightarrow> live_ntfn ntfn"
+  shows
+  "\<lbrace>\<lambda>s. Q (ntfn_at_pred P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_untyped_inv ui s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>rv s. Q (ntfn_at_pred P p s)\<rbrace>"
+  unfolding ntfn_at_pred_def2 using live
+  by (auto intro!: invoke_untyped_obj_at_live simp: cspace_agnostic_pred_def live_def)
+
 lemma ipc_queued_thread_state_live:
   "ipc_queued_thread_state (tcb_state tcb) \<Longrightarrow> live (TCB tcb)"
   by (cases "tcb_state tcb"; simp add: ipc_queued_thread_state_def live_def)
@@ -1103,6 +1362,14 @@ lemma invoke_untyped_cur_time_monotonic:
                   wp: reset_untyped_cap_cur_time_monotonic mapM_x_wp_inv)
   done
 
+(* FIXME RT: move *)
+lemma ntfn_queue_nonempty_live:
+  "ntfn_queue (ntfn_obj notification) \<noteq> [] \<Longrightarrow> live_ntfn notification"
+  apply (cases notification)
+  apply (clarsimp simp: live_ntfn_def)
+  apply (case_tac ntfn_obj; clarsimp)
+  done
+
 lemma invoke_untyped_valid_sched:
   "\<lbrace>valid_sched and valid_machine_time and invs and ct_active and valid_untyped_inv ui and
     (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
@@ -1112,17 +1379,21 @@ lemma invoke_untyped_valid_sched:
    apply (rule_tac I="invs and ct_active and valid_untyped_inv ui and valid_sched and
                       (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in valid_sched_tcb_state_preservation_gen)
-                  apply simp
-                 apply (wpsimp wp: invoke_untyped_pred_tcb_at invoke_untyped_pred_tcb_at_live
-                                   invoke_untyped_sc_at_pred_n_live[where Q="Not"]
-                                   invoke_untyped_etcb_at invoke_untyped_sc_at_pred_n
-                                   invoke_untyped_pred_map_sc_refill_cfgs_of
-                                   invoke_untyped_valid_idle invoke_untyped_valid_sched_pred_misc
-                                   invoke_untyped_cur_time_monotonic
-                                   invoke_untyped_implies_zero_budget
-                                   invoke_untyped_sporadic_implies
-                                   hoare_vcg_all_lift
-                             simp: ipc_queued_thread_state_live live_sc_def)+
+                         apply (wpsimp wp: invoke_untyped_pred_tcb_at
+                                           invoke_untyped_pred_tcb_at_live
+                                           invoke_untyped_sc_at_pred_n_live[where Q="Not"]
+                                           invoke_untyped_etcb_at invoke_untyped_sc_at_pred_n
+                                           invoke_untyped_pred_map_sc_refill_cfgs_of
+                                           invoke_untyped_valid_idle
+                                           invoke_untyped_valid_sched_pred_misc
+                                           invoke_untyped_cur_time_monotonic
+                                           invoke_untyped_implies_zero_budget
+                                           invoke_untyped_sporadic_implies
+                                           invoke_untyped_ep_at_pred_live
+                                           invoke_untyped_ntfn_at_pred_live
+                                           hoare_vcg_all_lift
+                                     simp: ipc_queued_thread_state_live live_sc_def
+                                           ntfn_queue_nonempty_live)+
   done
 
 lemma cur_sc_active_rewrite:
@@ -1388,16 +1659,6 @@ lemma distinct_not_in_takeWhile:
    apply (subst takeWhile_dropWhile_id[symmetric, of _ P])
    apply (subst set_append, auto)
   done
-
-(* FIXME: Move *)
-lemma dropWhile_dropped_P:
-  "\<lbrakk>x \<in> set queue; x \<notin> set (dropWhile P queue)\<rbrakk> \<Longrightarrow> P x"
-  by (induction queue arbitrary: x; fastforce split: if_split_asm)
-
-(* FIXME: Move *)
-lemma takeWhile_taken_P:
-  "x \<in> set (takeWhile P queue) \<Longrightarrow> P x"
-  by (induction queue arbitrary: x; fastforce split: if_split_asm)
 
 (* FIXME: remove *)
 lemmas hoare_vcg_imp_lift''

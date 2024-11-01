@@ -1212,8 +1212,7 @@ lemma ntfn_blocked_in_queueD:
 (* MOVE *)
 lemma valid_ntfn_isWaitingNtfnD:
   "\<lbrakk> valid_ntfn' ntfn s; isWaitingNtfn (ntfnObj ntfn) \<rbrakk>
-  \<Longrightarrow> (ntfnQueue (ntfnObj ntfn)) \<noteq> [] \<and> (\<forall>t\<in>set (ntfnQueue (ntfnObj ntfn)). tcb_at' t s)
-    \<and> distinct (ntfnQueue (ntfnObj ntfn))"
+  \<Longrightarrow> ntfnQueue (ntfnObj ntfn) \<noteq> [] \<and> (\<forall>t\<in>set (ntfnQueue (ntfnObj ntfn)). tcb_at' t s)"
   unfolding valid_ntfn'_def isWaitingNtfn_def
   by (clarsimp split: Structures_H.notification.splits ntfn.splits)
 
