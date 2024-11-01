@@ -305,10 +305,6 @@ crunch setMRs, setMessageInfo
   for (empty_fail) empty_fail[wp, simp]
 (wp: empty_fail_catch simp: const_def Let_def)
 
-lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:
-  "empty_fail (tcbEPFindIndex t qs ci)"
-  by (induct ci; subst tcbEPFindIndex.simps; wpsimp)
-
 crunch callKernel
  for (empty_fail) empty_fail
   (wp: empty_fail_catch)

@@ -281,6 +281,27 @@ abbreviation tcbSchedNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarro
 abbreviation sym_heap_sched_pointers :: "global.kernel_state \<Rightarrow> bool" where
   "sym_heap_sched_pointers s \<equiv> sym_heap (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
 
+abbreviation prios_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> priority" where
+  "prios_of' s \<equiv> tcbs_of' s ||> tcbPriority"
+
+abbreviation ep_of' :: "kernel_object \<Rightarrow> endpoint option" where
+  "ep_of' \<equiv> projectKO_opt"
+
+abbreviation eps_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> endpoint" where
+  "eps_of' s \<equiv> ksPSpace s |> ep_of'"
+
+abbreviation ep_queues_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
+  "ep_queues_of' s \<equiv> eps_of' s ||> epQueue"
+
+abbreviation ntfn_of' :: "kernel_object \<Rightarrow> notification option" where
+  "ntfn_of' \<equiv> projectKO_opt"
+
+abbreviation ntfns_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> notification" where
+  "ntfns_of' s \<equiv> ksPSpace s |> ntfn_of'"
+
+abbreviation ntfn_queues_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
+  "ntfn_queues_of' s \<equiv> ntfns_of' s ||> ntfnObj ||> ntfnQueue"
+
 definition tcb_cte_cases :: "machine_word \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
  "tcb_cte_cases \<equiv> [ 0 << cteSizeBits \<mapsto> (tcbCTable, tcbCTable_update),
                     1 << cteSizeBits \<mapsto> (tcbVTable, tcbVTable_update),
@@ -639,15 +660,13 @@ definition valid_tcb' :: "tcb \<Rightarrow> kernel_state \<Rightarrow> bool" whe
 definition valid_ep' :: "Structures_H.endpoint \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_ep' ep s \<equiv> case ep of
      IdleEP \<Rightarrow> True
-   | SendEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts)
-   | RecvEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts)"
+   | SendEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s))
+   | RecvEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s))"
 
 definition valid_ntfn' :: "notification \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_ntfn' ntfn s \<equiv> (case ntfnObj ntfn of
     IdleNtfn \<Rightarrow> True
-  | WaitingNtfn ts \<Rightarrow>
-      ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts
-      \<and> (case ntfnBoundTCB ntfn of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True)
+  | WaitingNtfn ts \<Rightarrow> ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s)
   | ActiveNtfn b \<Rightarrow> True)
   \<and> valid_bound_tcb' (ntfnBoundTCB ntfn) s
   \<and> valid_bound_sc' (ntfnSc ntfn) s"

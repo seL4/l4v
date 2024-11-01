@@ -33,6 +33,7 @@ This module specifies the behavior of notification objects.
 > import Data.Bits
 > import Data.List
 > import Data.Maybe(fromJust)
+> import Data.Helpers (mapMaybe, distinct)
 
 \end{impdetails}
 
@@ -135,6 +136,7 @@ If the notification object is already waiting, the current thread is blocked and
 
 >             WaitingNtfn queue -> case isBlocking of
 >                 True -> do
+>                       assert (distinct queue) "queue must be a list of distinct pointers"
 >                       setThreadState (BlockedOnNotification {
 >                                          waitingOnNotification = ntfnPtr } ) thread
 >                       qs' <- tcbEPAppend thread queue
@@ -165,6 +167,7 @@ If a notification object is deleted, then pending receive operations must be can
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             WaitingNtfn queue -> do
+>                 assert (distinct queue) "queue must be a list of distinct pointers"
 >                 setNotification ntfnPtr (ntfn { ntfnObj = IdleNtfn })
 >                 forM_ queue (\t -> do
 >                     setThreadState Restart t
@@ -185,6 +188,7 @@ The following function will remove the given thread from the queue of the notifi
 >         ntfn <- getNotification ntfnPtr
 >         assert (isWaiting (ntfnObj ntfn))
 >             "cancelSignal: notification object must be waiting"
+>         assert (distinct (ntfnQueue (ntfnObj ntfn))) "the notification queue must be a list of distinct pointers"
 >         let queue' = delete threadPtr $ ntfnQueue $ ntfnObj ntfn
 >         ntfn' <- case queue' of
 >             [] -> return $ IdleNtfn

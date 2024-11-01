@@ -169,6 +169,7 @@ lemma decodeSchedcontext_Bind_corres:
          (invs' and (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' x s))
          (decode_sched_context_bind sc_ptr excaps)
          (decodeSchedContext_Bind sc_ptr excaps')"
+  supply opt_map_Some_comp[simp del]
   apply (clarsimp simp: decode_sched_context_bind_def decodeSchedContext_Bind_def)
   apply (cases excaps; clarsimp)
   apply (rename_tac cap list)
@@ -480,6 +481,7 @@ lemma schedContextYieldTo_corres:
                   obj_at' (\<lambda>sc. \<exists>t. scTCB sc = Some t \<and> t \<noteq> ksCurThread s) scp s))
       (sched_context_yield_to scp buf) (schedContextYieldTo scp buf)"
   (is "corres _ (?abs_buf and (\<lambda>s. ?ct s \<and> ?scp s) and _ and _) (?con_buf and ?scp') _ _")
+  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply add_cur_tcb'
   unfolding sched_context_yield_to_def schedContextYieldTo_def get_sc_obj_ref_def bind_assoc
     contextYieldToUpdateQueues_def
@@ -752,6 +754,7 @@ lemma invokeSchedContext_corres:
           (invs' and sch_act_simple and valid_sc_inv' sc_inv')
           (invoke_sched_context sc_inv)
           (invokeSchedContext sc_inv')"
+  supply opt_map_Some_comp[simp del]
   apply (simp add: invoke_sched_context_def invokeSchedContext_def)
   apply (cases sc_inv; cases sc_inv'; clarsimp simp: cap_relation_def)
       apply (rule corres_rel_imp)
@@ -1247,6 +1250,7 @@ lemma invokeSchedControlConfigureFlags_corres:
           (invs' and sch_act_simple and valid_sc_ctrl_inv' sc_inv' and ct_active')
           (invoke_sched_control_configure_flags sc_inv)
           (invokeSchedControlConfigureFlags sc_inv')"
+  supply opt_map_Some_comp[simp del]
   apply (cases sc_inv)
   apply (rename_tac sc_ptr budget period mrefills badge flag)
   apply (simp add: invoke_sched_control_configure_flags_def invokeSchedControlConfigureFlags_def)

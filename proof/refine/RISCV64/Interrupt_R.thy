@@ -370,7 +370,7 @@ lemma invokeIRQHandler_corres:
              (invs' and irq_handler_inv_valid' i' and sch_act_simple)
      (invoke_irq_handler i)
      (InterruptDecls_H.invokeIRQHandler i')"
-  supply arch_invoke_irq_handler.simps[simp del]
+  supply arch_invoke_irq_handler.simps[simp del] comp_apply[simp del]
   apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
     apply (rule corres_guard_imp, rule arch_invokeIRQHandler_corres; simp)
    apply (rename_tac word cap prod)
@@ -521,6 +521,7 @@ lemma performIRQControl_corres:
              (invs' and irq_control_inv_valid' i')
      (invoke_irq_control i)
      (performIRQControl i')"
+  supply opt_map_Some_comp[simp del]
   apply (cases i, simp_all add: performIRQControl_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor[OF setIRQState_corres])
@@ -644,6 +645,7 @@ lemma handleInterrupt_corres:
      (einvs and current_time_bounded) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
   (is "corres dc ?Q ?P' ?f ?g")
+  supply comp_apply[simp del]
   apply (simp add: handle_interrupt_def handleInterrupt_def )
   apply (rule conjI[rotated]; rule impI)
    apply (rule corres_guard_imp)

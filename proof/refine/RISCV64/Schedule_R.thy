@@ -1633,6 +1633,7 @@ lemma nextDomain_corres:
 
 lemma next_domain_valid_sched[wp]:
   "\<lbrace> valid_sched and (\<lambda>s. scheduler_action s  = choose_new_thread)\<rbrace> next_domain \<lbrace> \<lambda>_. valid_sched \<rbrace>"
+  supply comp_apply[simp del]
   apply (simp add: next_domain_def Let_def)
   apply (wp, simp add: valid_sched_def valid_sched_action_2_def ct_not_in_q_2_def)
   apply (fastforce simp: valid_blocked_defs)
@@ -4958,7 +4959,7 @@ lemma schedule_corres:
              invs'
              (Schedule_A.schedule)
              schedule"
-  supply bind_return[simp del]
+  supply bind_return[simp del] comp_apply[simp del] opt_map_Some_comp[simp del]
   apply (rule corres_bind_return)
   apply (clarsimp simp: schedule_def)
   apply (subst bind_assoc[symmetric])+

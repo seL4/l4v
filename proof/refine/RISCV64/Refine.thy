@@ -195,6 +195,7 @@ lemma absKState_correct:
   assumes invs: "einvs (s :: det_ext state)" and invs': "invs' s'"
   assumes rel: "(s,s') \<in> state_relation"
   shows "absKState s' = abs_state s"
+  supply opt_map_Some_comp[simp del]
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
                       apply (rule absHeap_correct; clarsimp simp: state_relation_sc_replies_relation)
@@ -247,6 +248,7 @@ lemma kernel_entry_valid_sched:
         \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>
    kernel_entry e us
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  supply opt_map_Some_comp[simp del]
   apply (simp add: kernel_entry_def)
   apply (wp call_kernel_valid_sched thread_set_invs_trivial thread_set_ct_in_state
             hoare_weak_lift_imp hoare_vcg_disj_lift thread_set_not_state_valid_sched
@@ -267,6 +269,7 @@ lemma kernel_entry_invs:
   "\<lbrace>\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
    kernel_entry e us
    \<lbrace>\<lambda>_ s. mcs_invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
+  supply opt_map_Some_comp[simp del]
   apply (rule_tac Q'="\<lambda>_ s. (invs s \<and> (ct_running s \<or> ct_idle s))
                            \<and> (cur_sc_offset_ready (consumed_time s) s
                               \<and> cur_sc_offset_sufficient (consumed_time s) s)
@@ -346,6 +349,7 @@ crunch do_user_op, check_active_irq
   and cur_sc_offset_ready[wp]: "\<lambda>s. cur_sc_offset_ready (consumed_time s) s"
   and cur_sc_offset_sufficient[wp]: "\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s"
   and consumed_time_bounded[wp]: consumed_time_bounded
+  (simp_del: opt_map_Some_comp comp_apply)
 
 lemma device_update_valid_machine_time[wp]:
   "do_machine_op (device_memory_update ds) \<lbrace>valid_machine_time\<rbrace>"
@@ -409,7 +413,8 @@ lemma valid_sched_init[simp]:
                         valid_ready_qs_def ready_or_release_2_def in_queues_2_def
                         idle_sc_ptr_def valid_blocked_defs default_domain_def minBound_word
                         released_ipc_queues_defs active_reply_scs_def active_if_reply_sc_at_def
-                        active_sc_def MIN_REFILLS_def)
+                        active_sc_def MIN_REFILLS_def
+                        sorted_ipc_queues_def eps_of_kh_def opt_map_def)
   by (auto simp: vs_all_heap_simps active_scs_valid_def cfg_valid_refills_def
                  rr_valid_refills_def MIN_REFILLS_def bounded_release_time_def
                  default_sched_context_def MAX_PERIOD_def active_sc_def
@@ -461,6 +466,7 @@ lemma check_active_irq_invs_just_idle:
 
 lemma akernel_invariant:
   "ADT_A uop \<Turnstile> full_invs"
+  supply opt_map_Some_comp[simp del]
   unfolding full_invs_def
   apply (rule invariantI)
    apply (clarsimp simp: ADT_A_def subset_iff)
@@ -680,6 +686,7 @@ lemma kernel_preemption_corres:
                    _ <- mcsPreemptionPoint irq_opt;
                    when (\<exists>y. irq_opt = Some y) (handleInterrupt (the irq_opt))
                 od))" (is "corres _ ?P ?P' _ _")
+  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply clarsimp
    apply (frule (1) cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb])
@@ -840,6 +847,7 @@ lemma kernel_corres':
                  _ \<leftarrow> stateAssert rct_imp_activatable'_asrt [];
                  activateThread
               od)" (is "corres _ ?P ?P' _ _")
+  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   unfolding call_kernel_def
   apply add_cur_tcb'
   apply add_sym_refs
@@ -1033,6 +1041,7 @@ lemma entry_corres:
       (\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (event \<noteq> Interrupt \<longrightarrow> ct_running s))
       (invs' and valid_domain_list')
       (kernel_entry event tc) (kernelEntry event tc)"
+  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply add_cur_tcb'
   apply (rule corres_guard_imp)
@@ -1055,7 +1064,7 @@ lemma entry_corres:
             apply (rule corres_split_eqr[OF getCurThread_corres])
               apply (rule threadGet_corres)
               apply (simp add: tcb_relation_def arch_tcb_relation_def
-                               arch_tcb_context_get_def atcbContextGet_def)
+                               arch_tcb_context_get_def atcbContextGet_def comp_apply)
              apply wp+
            apply fastforce
           apply (clarsimp simp: cur_tcb'_def)
@@ -1081,13 +1090,14 @@ lemma do_user_op_corres:
   "corres (=) (einvs and ct_running)
               invs'
           (do_user_op f tc) (doUserOp f tc)"
+  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (simp add: do_user_op_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getCurThread_corres])
       apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
-         apply (fastforce dest: absKState_correct [rotated])
+         apply (fastforce dest: absKState_correct [rotated] simp: comp_apply)
         apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
-           apply (fastforce dest: absKState_correct [rotated])
+           apply (fastforce dest: absKState_correct [rotated] simp: comp_apply)
           apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
              apply (rule user_mem_corres)
             apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
@@ -1107,7 +1117,7 @@ lemma do_user_op_corres:
                     apply (rule corres_underlying_split[OF corres_machine_op,where Q = dc and Q'=dc])
                        apply (rule corres_underlying_trivial)
                        apply (wp | simp add: dc_def device_memory_update_def)+
-   apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
+   apply (fastforce simp: invs_def valid_state_def pspace_respects_device_region_def comp_apply)
   apply fastforce
   done
 
@@ -1229,6 +1239,7 @@ crunch doUserOp, checkActiveIRQ
 
 lemma ckernel_invariant:
   "ADT_H uop \<Turnstile> full_invs'"
+  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   unfolding full_invs'_def
   supply word_neq_0_conv[simp]
   supply domain_time_rel_eq[simp] domain_list_rel_eq[simp]
