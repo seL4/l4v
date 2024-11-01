@@ -16,21 +16,65 @@ lemmas arch_machine_ops_valid_sched_pred[wp] =
   arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred]
   arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred']
 
+lemma set_pt_eps_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
+lemma set_pt_ntfns_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
+lemma set_pt_tcbs_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
 lemma set_pt_valid_sched_pred[wp]:
   "set_pt ptr pt \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ep_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
   apply (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def fun_upd_def
-           split:  kernel_object.splits if_splits)
+  apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
+  done
+
+lemma set_asid_pool_eps_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
+
+lemma set_asid_pool_ntfns_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
+
+lemma set_asid_pool_tcbs_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
 
 lemma set_asid_pool_bound_sc_obj_tcb_at[wp]:
   "set_asid_pool ptr pool \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ep_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
   apply (wpsimp simp: set_asid_pool_def wp: set_object_wp_strong get_object_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def fun_upd_def
-           split:  kernel_object.splits if_splits)
+  apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
+  done
+
+crunch copy_global_mappings
+  for eps_of[wp]: "\<lambda>s. P (eps_of s)"
+  and ntfns_of[wp]: "\<lambda>s. P (ntfns_of s)"
+  and prios_of[wp]: "\<lambda>s. P (prios_of s)"
+  (wp: dxo_wp_weak crunch_wps)
 
 lemma copy_global_mappings_valid_sched_pred[wp]:
   "copy_global_mappings pd \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  by (wpsimp simp: copy_global_mappings_def store_pte_def wp: mapM_x_wp_inv)
+  apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=ep_queues_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
+  apply (wpsimp simp: copy_global_mappings_def store_pte_def wp: mapM_x_wp_inv)
+  done
 
 lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
   "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>valid_sched_pred_strong P\<rbrace>"
@@ -251,6 +295,32 @@ lemma perform_asid_control_invocation_sc_at_pred_n_live:
   unfolding sc_at_pred_n_def using live
   by (auto intro!: perform_asid_control_invocation_obj_at_live simp: cspace_agnostic_pred_def live_def)
 
+lemma perform_asid_control_invocation_ep_at_pred_live:
+  assumes live: "\<forall>ep. P ep \<longrightarrow> ep \<noteq> IdleEP"
+  shows
+  "\<lbrace>\<lambda>s. Q (ep_at_pred P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_aci aci s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>rv s. Q (ep_at_pred P p s)\<rbrace>"
+  unfolding ep_at_pred_def2 using live
+  by (auto intro!: perform_asid_control_invocation_obj_at_live simp: cspace_agnostic_pred_def live_def)
+
+lemma perform_asid_control_invocation_ntfn_at_pred_live:
+  assumes live: "\<forall>ntfn. P ntfn \<longrightarrow> live_ntfn ntfn"
+  shows
+  "\<lbrace>\<lambda>s. Q (ntfn_at_pred P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_aci aci s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>rv s. Q (ntfn_at_pred P p s)\<rbrace>"
+  unfolding ntfn_at_pred_def2 using live
+  by (auto intro!: perform_asid_control_invocation_obj_at_live simp: cspace_agnostic_pred_def live_def)
+
 lemma perform_asid_control_invocation_valid_idle:
   "\<lbrace>invs and ct_active
          and valid_aci aci
@@ -302,18 +372,22 @@ lemma perform_asid_control_invocation_valid_sched:
    apply (rule_tac I="invs and ct_active and
                       (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
           in valid_sched_tcb_state_preservation_gen)
-                 apply simp
-                 apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at
-                                   perform_asid_control_invocation_pred_tcb_at_live
-                                   perform_asid_control_invocation_sc_at_pred_n_live[where Q="Not"]
-                                   perform_asid_control_etcb_at
-                                   perform_asid_control_invocation_sc_at_pred_n
-                                   perform_asid_control_invocation_valid_idle
-                                   perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
-                                   perform_asid_control_invocation_implies_zero_budget
-                                   perform_asid_control_invocation_sporadic_implies
-                                   hoare_vcg_all_lift
-                             simp: ipc_queued_thread_state_live live_sc_def)+
+                         apply simp
+                          apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at
+                                            perform_asid_control_invocation_pred_tcb_at_live
+                                            perform_asid_control_invocation_sc_at_pred_n_live[where Q="Not"]
+                                            perform_asid_control_etcb_at
+                                            perform_asid_control_invocation_sc_at_pred_n
+                                            perform_asid_control_invocation_valid_idle
+                                            perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
+                                            perform_asid_control_invocation_implies_zero_budget
+                                            perform_asid_control_invocation_sporadic_implies
+                                            perform_asid_control_invocation_ep_at_pred_live
+                                            perform_asid_control_invocation_ntfn_at_pred_live
+                                            hoare_vcg_all_lift
+                                      simp: ipc_queued_thread_state_live live_sc_def
+                                            ntfn_queue_nonempty_live
+                                            tcb_at_st_tcb_at)+
   done
 
 lemma perform_asid_control_invocation_cur_sc_active:

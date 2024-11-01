@@ -717,6 +717,9 @@ lemma etcb_at'_pred_map:
   "\<lbrakk> etcb_at' P etcbs ref; pred_map \<top> etcbs ref \<rbrakk> \<Longrightarrow> pred_map P etcbs ref"
   by (simp add: etcb_at'_def)
 
+abbreviation prios_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> priority" where
+  "prios_of s \<equiv> tcbs_of s ||> tcb_priority"
+
 \<comment> \<open>Project scheduling contexts from the kernel heap\<close>
 
 definition sc_of :: "kernel_object \<rightharpoonup> sched_context" where
@@ -890,6 +893,9 @@ global_interpretation ep_recv_qs:
   opt_map_opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint recv_q_of RecvEP ep_recv_qs_of_eps
   using ep_recv_qs_of_eps_def recv_q_of_None recv_q_of_Some by unfold_locales
 
+abbreviation ep_queues_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
+  "ep_queues_of s \<equiv> eps_of s ||> ep_queue"
+
 \<comment> \<open>Notifications\<close>
 
 \<comment> \<open>Project notifications from the kernel heap\<close>
@@ -909,6 +915,9 @@ lemma ntfn_of_None:
 
 abbreviation ntfns_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.notification" where
   "ntfns_of \<equiv> (\<lambda>s. kheap s |> ntfn_of)"
+
+abbreviation ntfn_queues_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
+  "ntfn_queues_of s \<equiv> ntfns_of s ||> ntfn_obj ||> ntfn_queue"
 
 \<comment> \<open>Replies\<close>
 
@@ -1668,6 +1677,9 @@ type_synonym valid_sched_t
      \<Rightarrow> (obj_ref \<rightharpoonup> fault option)
      \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg)
      \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list)
+     \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list)
+     \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list)
+     \<Rightarrow> (obj_ref \<rightharpoonup> priority)
      \<Rightarrow> bool"
 
 abbreviation valid_sched_pred :: "valid_sched_t \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
@@ -1675,19 +1687,18 @@ abbreviation valid_sched_pred :: "valid_sched_t \<Rightarrow> 'z::state_ext stat
     \<lambda>s. P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s)
           (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
-          (sc_refill_cfgs_of s) (sc_replies_of s)"
+          (sc_refill_cfgs_of s) (sc_replies_of s) (ep_queues_of s) (ntfn_queues_of s) (prios_of s)"
 
 type_synonym valid_sched_strong_t
-  = "time \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list)
-           \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> time \<Rightarrow> nat \<Rightarrow> valid_sched_t"
+  = "time \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> time \<Rightarrow> nat \<Rightarrow> (obj_ref \<rightharpoonup> endpoint)
+     \<Rightarrow> (obj_ref \<rightharpoonup> notification) \<Rightarrow> valid_sched_t"
 
 \<comment> \<open>Sometimes it's useful to prove preservation of some additional projections,
     even though they are not used in valid_sched.\<close>
 abbreviation valid_sched_pred_strong :: "valid_sched_strong_t \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_sched_pred_strong P
-   \<equiv> \<lambda>s. valid_sched_pred (P (consumed_time s) (cur_sc s) (ep_send_qs_of s)
-                              (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s)
-                              (time_state_of s)) s"
+   \<equiv> \<lambda>s. valid_sched_pred (P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (last_machine_time_of s)
+                              (time_state_of s) (eps_of s) (ntfns_of s)) s"
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_pred_strengthen :: "valid_sched_t \<Rightarrow> valid_sched_strong_t" where
@@ -2348,8 +2359,8 @@ lemma active_scs_valid_lift_pre_conj:
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_ready_qs :: valid_sched_t where
   "valid_sched_valid_ready_qs ctime cdom ct it rq rlq sa etcbs tcb_sts
-                         tcb_scps tcb_faults sc_refill_cfgs sc_reps\<equiv>
-    valid_ready_qs_2 rq ctime etcbs tcb_sts tcb_scps sc_refill_cfgs"
+                              tcb_scps tcb_faults sc_refill_cfgs sc_reps ep_qs ntfn_qs prios \<equiv>
+     valid_ready_qs_2 rq ctime etcbs tcb_sts tcb_scps sc_refill_cfgs"
 
 lemma valid_ready_qsE:
   assumes v: "valid_ready_qs_2 qs ctime etcbs sts scps cfgs"
@@ -2359,10 +2370,6 @@ lemma valid_ready_qsE:
                            \<longrightarrow> valid_ready_queued_thread_2 ctime' etcbs' sts' scps' cfgs' t d p)"
   shows "valid_ready_qs_2 qs' ctime' etcbs' sts' scps' cfgs'"
   using assms by (simp add: valid_ready_qs_2_def)
-
-fun opt_ord where
-  "opt_ord (Some x) (Some y) = (x \<le> y)"
-| "opt_ord x y = (y = None \<longrightarrow> x = None)"
 
 definition sorted_release_q_2  ::
   "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref list \<Rightarrow> bool"
@@ -2430,8 +2437,8 @@ lemma ready_or_released_in_release_queue:
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_release_q :: "obj_ref set \<Rightarrow> valid_sched_t" where
   "valid_sched_valid_release_q S ctime cdom ct it rq rlq sa etcbs tcb_sts
-                               tcb_scps tcb_faults sc_refill_cfgs sc_reps\<equiv>
-    valid_release_q_except_set_2 S rlq tcb_sts tcb_scps sc_refill_cfgs"
+                               tcb_scps tcb_faults sc_refill_cfgs sc_reps ep_qs ntfn_ps prios \<equiv>
+     valid_release_q_except_set_2 S rlq tcb_sts tcb_scps sc_refill_cfgs"
 
 lemma valid_release_qE:
   assumes v: "valid_release_q_except_set_2 except queue tcb_sts tcb_scps sc_refill_cfgs"
@@ -2585,6 +2592,7 @@ lemma active_bound_sc_tcb_at:
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_ipc_queues :: valid_sched_t where
   "valid_sched_ipc_queues ctime cdom ct it rq rlq sa etcbs sts scps faults scrcs replies
+                          ep_qs ntfn_pqs prios
    \<equiv> released_ipc_queues_2 ctime sts scps faults scrcs"
 
 (* FIXME RT: move *)
@@ -2876,8 +2884,8 @@ lemma valid_blockedD:
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_blocked :: "obj_ref set \<Rightarrow> valid_sched_t" where
   "valid_sched_valid_blocked S ctime cdom ct it rq rlq sa etcbs tcb_sts
-                         tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
-    valid_blocked_except_set_2 S rq rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
+                             tcb_scps tcb_faults sc_refill_cfgs sc_reps ep_qs ntfn_ps prios \<equiv>
+     valid_blocked_except_set_2 S rq rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
 
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) ekh thread"
@@ -3009,8 +3017,56 @@ lemma active_reply_scsE:
   shows "active_reply_scs_2 replies' refill_cfgs'"
   using assms by (simp add: active_reply_scs_2_def active_if_reply_sc_at_2_def)
 
+abbreviation priority_ordered :: "obj_ref list \<Rightarrow> (obj_ref \<rightharpoonup> priority) \<Rightarrow> bool" where
+  "priority_ordered ts prios \<equiv> sorted_wrt (img_ord prios (opt_ord_rel (\<ge>))) ts"
+
+definition sorted_ipc_queues_except_set_2 ::
+  "obj_ref set \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> priority) \<Rightarrow> bool" where
+  "sorted_ipc_queues_except_set_2 except ep_qs ntfn_qs prios \<equiv>
+   \<forall>ptr. ptr \<notin> except \<longrightarrow>
+           (none_top (\<lambda>q. priority_ordered q prios) (ep_qs ptr)
+            \<and> none_top (\<lambda>q. priority_ordered q prios) (ntfn_qs ptr))"
+
+abbreviation sorted_ipc_queues_except_set :: "obj_ref set \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "sorted_ipc_queues_except_set except s \<equiv>
+     sorted_ipc_queues_except_set_2 except (ep_queues_of s) (ntfn_queues_of s) (prios_of s)"
+
+abbreviation "sorted_ipc_queues_except_2 t \<equiv> sorted_ipc_queues_except_set_2 {t}"
+abbreviation "sorted_ipc_queues_except t s \<equiv> sorted_ipc_queues_except_2 t (ep_queues_of s) (ntfn_queues_of s) (prios_of s)"
+abbreviation "sorted_ipc_queues_2 \<equiv> sorted_ipc_queues_except_set_2 {}"
+abbreviation "sorted_ipc_queues s \<equiv> sorted_ipc_queues_2 (ep_queues_of s) (ntfn_queues_of s) (prios_of s)"
+
+lemmas sorted_ipc_queues_except_set_def = sorted_ipc_queues_except_set_2_def
+lemmas sorted_ipc_queues_except_def = sorted_ipc_queues_except_set_2_def
+lemmas sorted_ipc_queues_def = sorted_ipc_queues_except_set_2_def
+
+lemma sorted_ipc_queues_endpoint_priority_ordered:
+  "\<lbrakk>sorted_ipc_queues s; ep_queues_of s ptr = Some q\<rbrakk> \<Longrightarrow> priority_ordered q (prios_of s)"
+  by (fastforce simp: sorted_ipc_queues_def dest: spec[where x=ptr])
+
+lemma sorted_ipc_queues_notification_priority_ordered:
+  "\<lbrakk>sorted_ipc_queues s; ntfn_queues_of s ptr = Some q\<rbrakk> \<Longrightarrow> priority_ordered q (prios_of s)"
+  by (fastforce simp: sorted_ipc_queues_def dest: spec[where x=ptr])
+
+lemma sorted_ipc_queues_except_set_lift_pre_conj:
+  assumes "\<And>P. \<lbrace>\<lambda>s. P (eps_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. P (eps_of s)\<rbrace>"
+  assumes "\<And>P. \<lbrace>\<lambda>s. P (ntfns_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. P (ntfns_of s)\<rbrace>"
+  assumes "\<And>P. \<lbrace>\<lambda>s. P (prios_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. P (prios_of s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. sorted_ipc_queues_except_set S s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. sorted_ipc_queues_except_set S s\<rbrace>"
+  unfolding sorted_ipc_queues_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ex_lift assms
+             split: none_top_split)
+  by (fastforce simp: none_top_def comp_def split: option.splits)
+
+lemmas sorted_ipc_queues_except_set_lift =
+  sorted_ipc_queues_except_set_lift_pre_conj[where R=\<top>, simplified]
+
+lemmas sorted_ipc_queues_lift =
+  sorted_ipc_queues_except_set_lift[where S="{}", simplified]
+
 definition valid_sched_2 where
-  "valid_sched_2 wk_vsa vbl riq ctime cdom ct it queues rlq sa etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
+  "valid_sched_2 wk_vsa vbl riq ctime cdom ct it queues rlq sa etcbs tcb_sts tcb_scps tcb_faults
+                 sc_refill_cfgs sc_reps ep_qs ntfn_qs prios \<equiv>
     valid_ready_qs_2 queues ctime etcbs tcb_sts tcb_scps sc_refill_cfgs
     \<and> valid_release_q_2 rlq tcb_sts tcb_scps sc_refill_cfgs
     \<and> ready_or_release_2 queues rlq
@@ -3021,7 +3077,8 @@ definition valid_sched_2 where
     \<and> valid_idle_etcb_2 etcbs
     \<and> (riq \<longrightarrow> released_ipc_queues_2 ctime tcb_sts tcb_scps tcb_faults sc_refill_cfgs)
     \<and> active_reply_scs_2 sc_reps sc_refill_cfgs
-    \<and> active_scs_valid_2 sc_refill_cfgs"
+    \<and> active_scs_valid_2 sc_refill_cfgs
+    \<and> sorted_ipc_queues_2 ep_qs ntfn_qs prios"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True True)"
@@ -3167,6 +3224,10 @@ lemma valid_sched_imp_except_blocked[elim!]:
 
 lemma valid_sched_ct_not_in_q[elim!]:
   "valid_sched s \<Longrightarrow> ct_not_in_q s"
+  by (simp add: valid_sched_def)
+
+lemma valid_sched_sorted_ipc_queues[elim!]:
+  "valid_sched s \<Longrightarrow> sorted_ipc_queues s"
   by (simp add: valid_sched_def)
 
 (* sched_context and other thread properties *)
@@ -3550,6 +3611,7 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+  assumes "\<And>P. \<lbrace>\<lambda>s. P (prios_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (prios_of s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
@@ -3560,13 +3622,17 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>t. \<lbrace>\<lambda>s. pred_map_eq None (tcb_scps_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rf s. pred_map_eq None (tcb_scps_of s) t\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. timeout_faulted_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. timeout_faulted_tcb_at t s\<rbrace>"
   assumes "\<And>scp. \<lbrace>\<lambda>s. active_if_reply_sc_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_if_reply_sc_at scp s\<rbrace>"
+  assumes "\<And>scp. \<lbrace>\<lambda>s. active_if_reply_sc_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_if_reply_sc_at scp s\<rbrace>"
+  assumes "\<And>P. \<lbrace>\<lambda>s. P (eps_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (eps_of s)\<rbrace>"
+  assumes "\<And>P. \<lbrace>\<lambda>s. P (ntfns_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ntfns_of s)\<rbrace>"
     shows "\<lbrace>\<lambda>s. valid_sched s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (wpsimp simp: valid_sched_def ready_or_release_def ready_or_release_def
                wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj
                    ct_in_cur_domain_lift_pre_conj valid_release_q_lift_pre_conj
                    valid_sched_action_lift_pre_conj valid_blocked_lift_pre_conj assms
                    released_ipc_queues_lift_pre_conj active_scs_valid_lift_pre_conj
-                   active_reply_scs_lift_pre_conj hoare_vcg_all_lift hoare_vcg_imp_lift)
+                   active_reply_scs_lift_pre_conj sorted_ipc_queues_except_set_lift_pre_conj
+                   hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
 

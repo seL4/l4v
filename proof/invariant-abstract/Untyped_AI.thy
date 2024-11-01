@@ -3811,12 +3811,14 @@ lemma invoke_untyped_pred_tcb_at[wp]:
   done
 
 lemma invoked_untyp_tcb[wp]:
-  "\<lbrace>invs and st_tcb_at active tptr
-        and valid_untyped_inv ui and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-     invoke_untyped ui \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. tcb_at tptr s\<rbrace>"
+  "\<lbrace>invs and ex_nonz_cap_to tptr and tcb_at tptr
+    and valid_untyped_inv ui and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_ s :: 'state_ext state. tcb_at tptr s\<rbrace>"
   apply (simp add: tcb_at_st_tcb_at)
   apply (rule hoare_pre, wp invoke_untyped_pred_tcb_at)
-  by (fastforce simp: pred_tcb_weakenE elim: runnable_nonz_cap_to[unfolded runnable_eq])
+  apply (clarsimp simp: pred_tcb_at_def)
+  done
 
 end
 

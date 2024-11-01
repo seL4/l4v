@@ -34,6 +34,7 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 
 > import Data.List
 > import Data.Maybe
+> import Data.Helpers (mapMaybe, distinct)
 
 \end{impdetails}
 
@@ -257,6 +258,7 @@ If a thread is blocking on an endpoint, then the endpoint is fetched and the thr
 >     ep <- getEndpoint epptr
 >     assert (not $ isIdle ep)
 >         "blockedCancelIPC: endpoint must not be idle"
+>     assert (distinct (epQueue ep)) "the endpoint queue of ep must be a list of distinct pointers"
 >     let queue' = delete tptr $ epQueue ep
 >     ep' <- return $ case queue' of
 >         [] -> IdleEP
@@ -309,6 +311,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >             IdleEP ->
 >                 return ()
 >             _ -> do
+>                 assert (distinct (epQueue ep)) "the endpoint queue of ep must be a list of distinct pointers"
 >                 setEndpoint epptr IdleEP
 >                 forM_ (epQueue ep) (\t -> cancelAllIPC_loop_body t)
 >                 rescheduleRequired
@@ -327,6 +330,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >         IdleEP -> return ()
 >         RecvEP {} -> return ()
 >         SendEP queue -> do
+>             assert (distinct queue) "queue must be a list of distinct pointers"
 >             setEndpoint epptr IdleEP
 >             queue' <- (flip filterM queue) $ \t -> do
 >                 st <- getThreadState t

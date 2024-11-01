@@ -1113,26 +1113,14 @@ On some architectures, the thread context may include registers that may be modi
 >         "every thread in the release queue is associated with an active scheduling context"
 >     whileLoop (const (fromJust . runReaderT releaseQNonEmptyAndReady)) (const tcbReleaseDequeue) ()
 
-> tcbEPFindIndex :: PPtr TCB -> [PPtr TCB] -> Int -> Kernel Int
-> tcbEPFindIndex tptr queue curIndex = do
->     prio <- threadGet tcbPriority tptr
->     curPrio <- threadGet tcbPriority (queue !! curIndex)
->     if prio > curPrio
->         then
->             if curIndex == 0
->                 then return 0
->                 else tcbEPFindIndex tptr queue (curIndex - 1)
->         else return (curIndex + 1)
-
 > tcbEPAppend :: PPtr TCB -> [PPtr TCB] -> Kernel [PPtr TCB]
-> tcbEPAppend tptr queue =
->     if null queue
->         then return [tptr]
->         else do
->             index <- tcbEPFindIndex tptr queue (length queue - 1)
->             return $ take index queue ++ [tptr] ++ drop index queue
+> tcbEPAppend tptr queue = do
+>     stateAssert (priority_ordered'_asrt queue) "queue must be ordered by priority"
+>     prio <- threadGet tcbPriority tptr
+>     prios <- mapM (threadGet tcbPriority) queue
+>     zprios <- return $ zip queue prios
+>     zprios' <- return $ filter (\(t, p) -> p >= prio) zprios ++ [(tptr, prio)] ++ filter (\(t, p) -> p < prio) zprios
+>     return (map fst zprios')
 
 > tcbEPDequeue :: PPtr TCB -> [PPtr TCB] -> Kernel [PPtr TCB]
-> tcbEPDequeue tptr queue = do
->     index <- return $ fromJust $ findIndex (\x -> x == tptr) queue
->     return $ take index queue ++ drop (index + 1) queue
+> tcbEPDequeue tptr queue = return $ filter (\t -> t /= tptr) queue

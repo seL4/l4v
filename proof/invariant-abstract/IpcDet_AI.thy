@@ -93,28 +93,274 @@ lemma sfi_tcb_at [wp]:
     \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
   by (wpsimp simp: send_fault_ipc_def)
 
-lemma tcb_ep_find_index_wp:
-  "\<lbrace>\<lambda>s. (\<forall>i j. 0 \<le> i \<and> i \<le> Suc sz \<longrightarrow>
-               (\<forall>tcb tcba. ko_at (TCB tcb) tptr s \<and> ko_at (TCB tcba) (queue ! j) s \<longrightarrow>
-                           (Suc j = i \<longrightarrow> tcb_priority tcba \<ge> tcb_priority tcb) \<longrightarrow>
-                           (i < j \<and> j \<le> sz \<longrightarrow> tcb_priority tcba < tcb_priority tcb) \<longrightarrow> Q i s))\<rbrace>
-   tcb_ep_find_index tptr queue sz \<lbrace>Q\<rbrace>"
-  by (induct sz) (wp thread_get_wp' | simp add: tcb_ep_find_index.simps obj_at_def le_Suc_eq)+
+lemma distinct_map_fst_filter_zip:
+  "distinct list \<Longrightarrow> distinct (map fst (filter f (zip list zp)))"
+  apply (induct list rule: length_induct)
+  using distinct_map_filter distinct_prefix map_fst_zip_prefix
+  by blast
+
+lemma get_tcb_def2:
+  "get_tcb ptr = do {
+     kobj \<leftarrow> read_object ptr;
+     case kobj of TCB tcb \<Rightarrow> oreturn tcb
+                | _ \<Rightarrow> ofail
+   }"
+  unfolding get_tcb_def
+  by (rule ext;
+      clarsimp simp: get_tcb_def omonad_defs obind_def oreturn_def
+              split: option.splits Structures_A.kernel_object.splits)+
+
+lemma get_tcb_wp:
+  "\<lblot>\<lambda>s. \<forall>tcb. kheap s tcb_ptr = Some (TCB tcb) \<longrightarrow> P tcb s\<rblot>
+   get_tcb tcb_ptr
+   \<lblot>P\<rblot>"
+  apply (simp add: get_tcb_def2 del: read_object_def)
+  apply (rule obind_wp[OF _ read_object_sp], rename_tac r)
+  apply (case_tac r; wpsimp)
+  apply (simp add: obj_at_def)
+  done
+
+lemma thread_read_wp:
+  "\<lblot>\<lambda>s. \<forall>tcb. kheap s tcb_ptr = Some (TCB tcb) \<longrightarrow> P (f tcb) s\<rblot>
+   thread_read f tcb_ptr
+   \<lblot>P\<rblot>"
+  unfolding thread_read_def
+  by (wpsimp wp: get_tcb_wp simp: oliftM_def)
+
+lemma ovalid_thread_read_sp:
+  "\<lblot>P\<rblot> thread_read f ptr \<lblot>\<lambda>rv s. \<exists>tcb. kheap s ptr = Some (TCB tcb) \<and> f tcb = rv \<and> P s\<rblot>"
+  by (wpsimp wp: thread_read_wp)
+
+lemma thread_read_no_ofail[wp]:
+  "no_ofail (tcb_at tcb_ptr) (thread_read f tcb_ptr)"
+  by (wpsimp simp: thread_read_def oliftM_def)
+
+crunch thread_get
+  for (empty_fail) empty_fail[wp]
+
+lemma no_fail_thread_get[wp]:
+  "no_fail (tcb_at tcb_ptr) (thread_get f tcb_ptr)"
+  unfolding thread_get_def
+  apply wpsimp
+  by (clarsimp simp: tcb_at_def)
+
+(* FIXME RT: move *)
+lemma append_eq:
+  "\<lbrakk>xs = zs; ys = ws\<rbrakk> \<Longrightarrow> xs @ ys = zs @ ws"
+  by fastforce
+
+(* FIXME: Should tcb_release_enqueue be defined using takeWhile/dropWhile?
+          As shown here, they're equivalent for sorted lists, so perhaps it doesn't matter. *)
+definition insort_filter :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "insort_filter P x xs \<equiv> filter P xs @ x # filter (\<lambda>x. \<not> P x) xs"
+
+definition insort_partition :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "insort_partition P x xs \<equiv> takeWhile P xs @ x # dropWhile P xs"
+
+lemma sorted_filter_takeWhile:
+  assumes tr: "transp cmp"
+  shows "sorted_wrt cmp xs \<Longrightarrow> filter (\<lambda>x. cmp x y) xs = takeWhile (\<lambda>x. cmp x y) xs"
+proof (induct xs)
+  case (Cons x xs)
+  have xs: "sorted_wrt cmp xs" and x: "\<forall>z\<in>set xs. cmp x z" using Cons.prems by auto
+  note eq = Cons.hyps[OF xs, symmetric]
+  show ?case
+    apply (clarsimp simp: eq filter_empty_conv dest!: bspec[OF x])
+    by (drule (1) transpD[OF tr], simp)
+qed auto
+
+lemma sorted_not_filter_dropWhile:
+  assumes tr: "transp cmp"
+  shows "sorted_wrt cmp xs \<Longrightarrow> filter (\<lambda>x. \<not> cmp x y) xs = dropWhile (\<lambda>x. cmp x y) xs"
+proof (induct xs)
+  case (Cons x xs)
+  have xs: "sorted_wrt cmp xs" and x: "\<forall>z\<in>set xs. cmp x z" using Cons.prems by auto
+  note eq = Cons.hyps[OF xs, symmetric]
+  show ?case
+    apply (clarsimp simp: eq filter_id_conv dest!: bspec[OF x])
+    by (drule (1) transpD[OF tr], simp)
+qed auto
+
+lemma sorted_insort_filter_eq_insort_partition:
+  assumes "transp cmp"
+  assumes "sorted_wrt cmp xs"
+  shows "insort_filter (\<lambda>x. cmp x y) x xs = insort_partition (\<lambda>x. cmp x y) x xs"
+  by (auto simp: insort_filter_def insort_partition_def
+                 sorted_filter_takeWhile[OF assms] sorted_not_filter_dropWhile[OF assms])
+
+lemma total_reflD:
+  "total {(x,y). cmp x y} \<Longrightarrow> reflp cmp \<Longrightarrow> \<not> cmp a b \<Longrightarrow> cmp b a"
+  apply (case_tac "a=b")
+   apply (fastforce dest: reflpD)
+  by (fastforce simp: total_on_def)
+
+(* FIXME: Move *)
+lemma dropWhile_dropped_P:
+  "\<lbrakk>x \<in> set queue; x \<notin> set (dropWhile P queue)\<rbrakk> \<Longrightarrow> P x"
+  by (induction queue arbitrary: x; fastforce split: if_split_asm)
+
+(* FIXME: Move *)
+lemma takeWhile_taken_P:
+  "x \<in> set (takeWhile P queue) \<Longrightarrow> P x"
+  by (induction queue arbitrary: x; fastforce split: if_split_asm)
+
+lemma sorted_insort_partition:
+  assumes tot: "total {(x,y). cmp x y}"
+  assumes tr: "transp cmp"
+  assumes re: "reflp cmp"
+  assumes sorted: "sorted_wrt cmp xs"
+  shows "sorted_wrt cmp (insort_partition (\<lambda>x. cmp x z) z xs)"
+  unfolding insort_partition_def
+  apply (clarsimp simp: sorted_wrt_append, intro conjI)
+     apply (subst sorted_filter_takeWhile[symmetric, OF tr sorted])
+     apply (rule sorted_wrt_filter, rule sorted)
+    apply (clarsimp simp: sorted_not_filter_dropWhile[symmetric, OF tr sorted])
+    apply (fastforce dest: total_reflD[OF tot re])
+   apply (subst sorted_not_filter_dropWhile[symmetric, OF tr sorted])
+   apply (rule sorted_wrt_filter, rule sorted)
+  apply (clarsimp, intro conjI)
+   apply (erule takeWhile_taken_P)
+  apply (clarsimp simp: sorted_not_filter_dropWhile[symmetric, OF tr sorted])
+  apply (drule takeWhile_taken_P)
+  apply (rule transpD[OF tr], assumption)
+  apply (fastforce dest: total_reflD[OF tot re])
+  done
+
+lemma sorted_insort_filter:
+  assumes tot: "total {(x,y). cmp x y}"
+  assumes tr: "transp cmp"
+  assumes re: "reflp cmp"
+  assumes sorted: "sorted_wrt cmp xs"
+  shows "sorted_wrt cmp (insort_filter (\<lambda>x. cmp x z) z xs)"
+  apply (subst sorted_insort_filter_eq_insort_partition[OF tr sorted])
+  by (rule sorted_insort_partition[OF tot tr re sorted])
+
+fun opt_ord_rel :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'a option \<Rightarrow> 'b option \<Rightarrow> bool"  where
+  "opt_ord_rel R (Some x) (Some y) = (R x y)"
+| "opt_ord_rel R x y = (y = None \<longrightarrow> x = None)"
+
+abbreviation opt_ord where "opt_ord \<equiv> opt_ord_rel (\<le>)"
+
+lemma gets_the_thread_read':
+  "thread_get f = gets_the \<circ> (thread_read f)"
+  by (fastforce simp: gets_the_thread_read)
+
+lemma tcb_ep_append_insort_filter:
+  "monadic_rewrite False True (\<lambda>s. tcb_at t s \<and> (\<forall>ptr \<in> set q. tcb_at ptr s))
+     (tcb_ep_append t q)
+     (do s \<leftarrow> get;
+         return $
+           insort_filter (\<lambda>t'. img_ord (\<lambda>t'. thread_read tcb_priority t' s) (opt_ord_rel (\<ge>)) t' t)
+                         t q
+      od)"
+  apply (clarsimp simp: tcb_ep_append_def)
+  apply monadic_rewrite_symb_exec_l+
+       apply monadic_rewrite_symb_exec_r+
+        apply (rule_tac P="\<lambda>s'. s' = s
+                                \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_priority tcb = prio) t s
+                                \<and> tcb_at t s \<and> (\<forall>t\<in>set q. thread_read tcb_priority t s' \<noteq> None)
+                                \<and> prios = map (\<lambda>t. the (thread_read tcb_priority t s')) q"
+                     in monadic_rewrite_guard_arg_cong)
+           apply (clarsimp simp: insort_filter_def)
+           apply (frule no_ofailD[OF thread_read_no_ofail, where f1=tcb_priority])
+           apply (fastforce dest: thread_read_SomeD[where tp=t]
+                           intro: filter_cong append_eq
+                            simp: obj_at_def img_ord_def)
+          apply (wpsimp wp: mapM_wp_inv no_fail_mapM_wp)+
+    apply (wpsimp wp: mapM_gets_the_wp thread_get_wp' simp: gets_the_thread_read')+
+  apply (clarsimp simp: obj_at_def)
+  apply (fastforce split: kernel_object.splits
+                    simp: is_tcb_def thread_read_def oliftM_def obind_def get_tcb_def
+                          map_equality_iff nth_equalityI)
+  done
+
+lemma map_fst_filter_zip_map_reduce:
+  "map fst (filter P (zip xs (map f xs))) = filter (\<lambda>x. P (x, f x)) xs"
+  by (induct xs) auto
+
+lemma distinct_zip_snd_unique:
+  "\<lbrakk>distinct xs; (a, b) \<in> set (zip xs ys); (a, b') \<in> set (zip xs ys)\<rbrakk> \<Longrightarrow> b = b'"
+  apply (induct xs arbitrary: ys, simp)
+  apply (clarsimp simp: zip_Cons1)
+  apply (erule disjE, fastforce dest!: in_set_zipE)
+  apply (erule disjE, fastforce dest!: in_set_zipE, clarsimp)
+  done
+
+lemma set_insort_filter_insert:
+  "set (insort_filter P x xs) = insert x (set xs)"
+  by (auto simp: insort_filter_def)
+
+lemma distinct_filter_iff:
+  "distinct xs \<longleftrightarrow> distinct (filter P xs) \<and> distinct (filter (Not \<circ> P) xs)"
+proof (induct xs)
+  case (Cons x xs) show ?case
+    apply (cases "x \<in> set xs"; simp)
+    by (rule Cons[simplified comp_def])
+qed auto
+
+lemma distinct_insort_filter:
+  "distinct (insort_filter P x xs) \<longleftrightarrow> x \<notin> set xs \<and> distinct xs"
+  by (auto simp: insort_filter_def distinct_filter_iff[where xs=xs and P=P, simplified comp_def]
+           simp del: distinct_filter)
+
+lemma insort_filter_cong:
+  assumes xs: "x = y" "xs = ys"
+  assumes P: "\<And>x. x \<in> set ys \<Longrightarrow> P x \<longleftrightarrow> Q x"
+  shows "insort_filter P x xs = insort_filter Q y ys"
+  unfolding insort_filter_def
+  apply (intro arg_cong2[where f=append] arg_cong2[where f=Cons] filter_cong xs)
+  by (auto simp: P)
+
+lemma transp_img_ord:
+  "transp cmp \<Longrightarrow> transp (img_ord f cmp)"
+  unfolding transp_def img_ord_def by blast
+
+lemma transp_opt_ord:
+  "transp R \<Longrightarrow> transp (opt_ord_rel R)"
+  apply (clarsimp simp: transp_def)
+  by (case_tac x; case_tac y; case_tac z; clarsimp elim!: order_trans)
+
+lemma reflp_img_ord:
+  "reflp cmp \<Longrightarrow> reflp (img_ord f cmp)"
+  unfolding reflp_def img_ord_def by blast
+
+lemma reflp_opt_ord:
+  "reflp R \<Longrightarrow> reflp (opt_ord_rel R :: ('a::preorder) option \<Rightarrow> 'a option \<Rightarrow> bool)"
+  apply (clarsimp simp: reflp_def)
+  by (case_tac x; clarsimp)
+
+lemma total_img_ord:
+  "\<lbrakk>total {(x,y). cmp x y}; reflp cmp\<rbrakk> \<Longrightarrow> total {(x,y). img_ord f cmp x y}"
+  apply (clarsimp simp: total_on_def reflp_def img_ord_def)
+  by (drule_tac x="f x" in spec; drule_tac x="f y" in spec; fastforce)
+
+lemma total_opt_ord:
+  "total {(x, y). R x y}
+   \<Longrightarrow> total {(x :: ('a::linorder) option, y). opt_ord_rel R x y}"
+  apply (clarsimp simp: total_on_def)
+  apply (case_tac x; case_tac y)
+  by (auto simp: linear)
 
 lemma tcb_ep_append_valid_SendEP:
-  "\<lbrace>valid_ep (SendEP (t#q)) and K (t \<notin> set q)\<rbrace> tcb_ep_append t q \<lbrace>\<lambda>q'. valid_ep (SendEP q')\<rbrace>"
-  apply (simp only: tcb_ep_append_def)
-  apply (case_tac q; wpsimp wp: tcb_ep_find_index_wp)
-  apply (fastforce simp: valid_ep_def set_take_disj_set_drop_if_distinct
-                   dest: in_set_takeD in_set_dropD)
+  "\<lbrace>\<lambda>s. valid_ep (SendEP (t # q)) s \<and> t \<notin> set q\<rbrace>
+   tcb_ep_append t q
+   \<lbrace>\<lambda>q'. valid_ep (SendEP q')\<rbrace>"
+  apply (wp monadic_rewrite_refine_valid[where P''=\<top>])
+     apply (rule monadic_rewrite_sym)
+     apply (rule tcb_ep_append_insort_filter)
+    apply wpsimp+
+  apply (fastforce simp: valid_ep_def insort_filter_def distinct_insort_filter)
   done
 
 lemma tcb_ep_append_valid_RecvEP:
-  "\<lbrace>valid_ep (RecvEP (t#q)) and K (t \<notin> set q)\<rbrace> tcb_ep_append t q \<lbrace>\<lambda>q'. valid_ep (RecvEP q')\<rbrace>"
-  apply (simp only: tcb_ep_append_def)
-  apply (case_tac q; wpsimp wp: tcb_ep_find_index_wp)
-  apply (fastforce simp: valid_ep_def set_take_disj_set_drop_if_distinct
-                   dest: in_set_takeD in_set_dropD)
+  "\<lbrace>\<lambda>s. valid_ep (RecvEP (t # q)) s \<and> t \<notin> set q\<rbrace>
+   tcb_ep_append t q
+   \<lbrace>\<lambda>q'. valid_ep (RecvEP q')\<rbrace>"
+  apply (wp monadic_rewrite_refine_valid[where P''=\<top>])
+     apply (rule monadic_rewrite_sym)
+     apply (rule tcb_ep_append_insort_filter)
+    apply wpsimp+
+  apply (fastforce simp: valid_ep_def insort_filter_def distinct_insort_filter)
   done
 
 lemma tcb_ep_append_valid_ep:
@@ -123,11 +369,22 @@ lemma tcb_ep_append_valid_ep:
    \<lbrace>\<lambda>q'. valid_ep (update_ep_queue ep q')\<rbrace>"
   by (cases ep) (wpsimp wp: tcb_ep_append_valid_SendEP tcb_ep_append_valid_RecvEP)+
 
+lemma set_map_fst_filter_zip:
+  "set (map fst (filter P (zip xs ys))) \<subseteq> set xs"
+  apply (induct xs, simp)
+  apply (case_tac ys; simp)
+  by (metis (mono_tags, lifting) image_Collect_subsetI insertI2 set_zip_helper)
+
 lemma tcb_ep_append_rv_wf:
-  "\<lbrace>\<top>\<rbrace> tcb_ep_append t q \<lbrace>\<lambda>rv s. set rv = set (t#q)\<rbrace>"
-  apply (simp only: tcb_ep_append_def)
-  apply (wp tcb_ep_find_index_wp)
-  apply (auto simp: set_append[symmetric])
+  "\<lbrace>\<top>\<rbrace> tcb_ep_append t q \<lbrace>\<lambda>rv s. set rv = set (t # q)\<rbrace>"
+  apply (simp add: tcb_ep_append_def)
+  apply (wpsimp wp: mapM_gets_the_wp simp: gets_the_thread_read')
+  apply (rule arg_cong[where f="\<lambda>A. insert t A"])
+  apply (simp only: set_eq_subset)
+  apply (intro conjI)
+   apply (fastforce dest: in_set_zip1)
+  apply (force dest!: in_set_impl_in_set_zip1
+                simp: image_def map_equality_iff simp flip: not_le)
   done
 
 lemma tcb_ep_append_rv_wf'[wp]:
@@ -149,25 +406,32 @@ lemma tcb_ep_append_rv_wf''':
   by (cases ep; wpsimp)
 
 lemma tcb_ep_append_distinct[wp]:
-  "\<lbrace>\<lambda>s. distinct q \<and> t \<notin> set q\<rbrace> tcb_ep_append t q \<lbrace>\<lambda>q' s. distinct q'\<rbrace>"
-  apply (simp only: tcb_ep_append_def)
-  apply (wpsimp wp: tcb_ep_find_index_wp)
-  apply (auto simp: set_take_disj_set_drop_if_distinct dest: in_set_dropD in_set_takeD)
+  "\<lbrace>\<lambda>s. distinct q \<and> t \<notin> set q \<and> tcb_at t s \<and> (\<forall>ptr \<in> set q. tcb_at ptr s)\<rbrace>
+   tcb_ep_append t q
+   \<lbrace>\<lambda>q' s. distinct q'\<rbrace>"
+  apply (wp monadic_rewrite_refine_valid[where P''=\<top>])
+     apply (rule monadic_rewrite_sym)
+     apply (rule tcb_ep_append_insort_filter)
+    apply wpsimp
+   apply wpsimp
+  apply (auto simp: insort_filter_def distinct_insort_filter)
   done
 
 lemma tcb_ep_dequeue_valid_SendEP:
   "\<lbrace>valid_ep (SendEP q) and K (t \<in> set q)\<rbrace> tcb_ep_dequeue t q \<lbrace>\<lambda>q'. valid_ep (SendEP (t#q'))\<rbrace>"
+  supply if_split[split del]
   apply (case_tac q; simp)
   apply (wpsimp simp: tcb_ep_dequeue_def valid_ep_def)
-  by (fastforce simp: findIndex_def findIndex'_app
-                dest: in_set_takeD in_set_dropD findIndex_member)
+  apply (fastforce split: if_splits)
+  done
 
 lemma tcb_ep_dequeue_valid_RecvEP:
   "\<lbrace>valid_ep (RecvEP q) and K (t \<in> set q)\<rbrace> tcb_ep_dequeue t q \<lbrace>\<lambda>q'. valid_ep (RecvEP (t#q'))\<rbrace>"
+  supply if_split[split del]
   apply (case_tac q; simp)
   apply (wpsimp simp: tcb_ep_dequeue_def valid_ep_def)
-  by (fastforce simp: findIndex_def findIndex'_app
-                dest: in_set_takeD in_set_dropD findIndex_member)
+  apply (fastforce split: if_splits)
+  done
 
 lemma tcb_ep_dequeue_valid_ep:
   "\<lbrace>valid_ep (update_ep_queue ep q) and K (ep \<noteq> IdleEP \<and> t \<in> set q)\<rbrace>
@@ -325,7 +589,7 @@ lemma get_notification_default_sp:
 lemma tcb_ep_append_not_null [wp]:
   "\<lbrace>\<top>\<rbrace> tcb_ep_append t q \<lbrace>\<lambda>rv _. rv \<noteq> []\<rbrace>"
   apply (simp only: tcb_ep_append_def)
-  apply (wpsimp wp: tcb_ep_find_index_wp)
+  apply (wpsimp wp: mapM_gets_the_wp)
   done
 
 definition receive_ipc_blocked ::
@@ -541,6 +805,10 @@ global_interpretation do_ipc_transfer: non_reply_op "do_ipc_transfer sender ep b
 global_interpretation get_sched_context: non_sc_op "get_sched_context ptr"
   by unfold_locales wpsimp
 
+lemma ep_at_pred_obj_at:
+  "ep_at_pred P p s = obj_at (\<lambda>ko. \<exists>ep. ko = Endpoint ep \<and> P ep) p s"
+  by (fastforce simp: ep_at_pred_def obj_at_def)
+
 lemma make_fault_msg_ko_at_Endpoint[wp]:
   "make_fault_msg f sender \<lbrace>\<lambda>s. P (ko_at (Endpoint ep) p s)\<rbrace>"
   by (cases f;
@@ -549,6 +817,16 @@ lemma make_fault_msg_ko_at_Endpoint[wp]:
         split_del: if_split;
       clarsimp simp: obj_at_def)
 
+lemma make_fault_msg_ep_at_pred[wp]:
+  "make_fault_msg f sender \<lbrace>\<lambda>s. Q (ep_at_pred P p s)\<rbrace>"
+  unfolding ep_at_pred_obj_at
+  apply (cases f;
+         wpsimp simp: tcb_agnostic_pred_def sched_context_update_consumed_def update_sched_context_def
+                  wp: as_user.tcb_agnostic_obj_at set_object_wp get_object_wp
+           split_del: if_split)
+  apply (fastforce elim: rsubst[where P=Q] simp: obj_at_def)
+  done
+
 lemma do_fault_transfer_ko_at_Endpoint[wp]:
   "do_fault_transfer badge sender receiver buf \<lbrace> \<lambda>s. P (ko_at (Endpoint ep) p s) \<rbrace>"
   by (wpsimp simp: do_fault_transfer_def tcb_agnostic_pred_def thread_get_def
@@ -556,10 +834,37 @@ lemma do_fault_transfer_ko_at_Endpoint[wp]:
                    set_message_info.tcb_agnostic_obj_at
                    set_mrs.tcb_agnostic_obj_at)
 
+lemma as_user_ep_at_pred[wp]:
+  "as_user tptr f \<lbrace> \<lambda>s. Q (ep_at_pred P p s) \<rbrace>"
+  unfolding ep_at_pred_obj_at
+  by (wpsimp simp: tcb_agnostic_pred_def  wp: as_user.tcb_agnostic_obj_at)
+
+lemma set_message_info_ep_at_pred[wp]:
+  "set_message_info thread info \<lbrace> \<lambda>s. Q (ep_at_pred P p s) \<rbrace>"
+  unfolding ep_at_pred_obj_at
+  by (wpsimp simp: tcb_agnostic_pred_def  wp: set_message_info.tcb_agnostic_obj_at)
+
+lemma set_mrs_info_ep_at_pred[wp]:
+  "set_mrs thread buf msgs \<lbrace> \<lambda>s. Q (ep_at_pred P p s) \<rbrace>"
+  unfolding ep_at_pred_obj_at
+  by (wpsimp simp: tcb_agnostic_pred_def wp: set_mrs.tcb_agnostic_obj_at)
+
+lemma do_fault_transfer_ep_at_pred[wp]:
+  "do_fault_transfer badge sender receiver buf \<lbrace> \<lambda>s. Q (ep_at_pred P p s) \<rbrace>"
+  by (wpsimp simp: do_fault_transfer_def  thread_get_def)
+
 lemma do_ipc_transfer_ko_at_Endpoint[wp]:
   "do_ipc_transfer sender ep_ptr badge grant receiver \<lbrace> \<lambda>s. P (ko_at (Endpoint ep) p s) \<rbrace>"
   by (wpsimp simp: do_ipc_transfer_def tcb_cspace_agnostic_pred_def
                wp: do_normal_transfer.tcb_cspace_agnostic_obj_at)
+
+lemma do_normal_transfer_ep_at_pred[wp]:
+  "do_normal_transfer sender sbuf endpoint badge grant receiver rbuf \<lbrace> \<lambda>s. Q (ep_at_pred P p s) \<rbrace>"
+  unfolding ep_at_pred_obj_at
+  by (wpsimp simp: tcb_cspace_agnostic_pred_def wp: do_normal_transfer.tcb_cspace_agnostic_obj_at)
+
+crunch do_ipc_transfer
+  for ep_at_pred[wp]: "\<lambda>s. Q (ep_at_pred P p s)"
 
 lemma do_ipc_transfer_valid_irq_node[wp]:
   "do_ipc_transfer sender ep_ptr badge grant receiver \<lbrace> valid_irq_node \<rbrace>"
@@ -1238,8 +1543,9 @@ lemma maybe_return_sc_fault_tcbs_valid_states[wp]:
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' maybe_return_sc_pred_tcb_at)
 
 crunch maybe_return_sc
-  for misc_proj[wp]: "\<lambda>s. P (cur_thread s) (cur_sc s) (release_queue s)
-                                 (cur_domain s) (domain_time s) (idle_thread s)"
+  for misc_proj[wp]: "\<lambda>s. P (cur_thread s) (idle_thread s) (domain_time s) (cur_sc s) (release_queue s)
+                            (cur_domain s) (domain_time s) (idle_thread s) (consumed_time s)
+                            (reprogram_timer s) (machine_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch reschedule_required
@@ -2606,6 +2912,7 @@ lemma rai_invs':
                           clarsimp intro!: not_BlockedOnReply_not_in_replies_blocked
                                      simp: st_tcb_at_def obj_at_def\<close>)
     apply (subgoal_tac "ntfn_bound_tcb notification = None")
+     apply (rule conjI, erule st_tcb_at_tcb_at)
      apply (rule conjI, fastforce elim: fault_tcbs_valid_states_active)
      apply (rule conjI, rule delta_sym_refs, assumption)
        apply (fastforce simp: state_refs_of_def obj_at_def st_tcb_at_def split: if_splits)
