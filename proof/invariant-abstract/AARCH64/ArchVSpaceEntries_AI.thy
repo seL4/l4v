@@ -131,14 +131,10 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
   unfolding invoke_cnode_def
   by (wpsimp wp: get_cap_wp split_del: if_split)
 
-crunch invoke_tcb
+crunch invoke_tcb, invoke_domain
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at)
-
-lemma invoke_domain_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  by (simp add: invoke_domain_def | wp)+
 
 crunch set_extra_badge, transfer_caps_loop
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
@@ -291,7 +287,8 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
 
 crunch activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
-       handle_send, handle_yield, handle_interrupt
+       handle_send, handle_yield, handle_interrupt,
+       schedule_choose_new_thread
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
@@ -302,15 +299,12 @@ lemma handle_event_valid_vspace_objs'[wp]:
   by (case_tac e; simp) (wpsimp simp: Let_def handle_vm_fault_def | wp (once) hoare_drop_imps)+
 
 lemma schedule_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
-  apply (simp add: schedule_def allActiveTCBs_def)
-  apply wp
-  apply simp
-  done
+  "schedule \<lbrace>valid_vspace_objs'\<rbrace>"
+  unfolding schedule_def by (wpsimp wp: hoare_drop_imps)
 
 lemma call_kernel_valid_vspace_objs'[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs'\<rbrace>
-      (call_kernel e) :: (unit,unit) s_monad
+   call_kernel e
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
