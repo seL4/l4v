@@ -352,13 +352,6 @@ lemma gbn_bound_tcb:
   apply (clarsimp simp: pred_tcb_at_def)
   done
 
-lemma allActiveTCBs_valid_state:
-  "\<lbrace>valid_state\<rbrace> allActiveTCBs \<lbrace>\<lambda>R s. valid_state s \<and> (\<forall>t \<in> R. st_tcb_at runnable t s) \<rbrace>"
-  apply (simp add: allActiveTCBs_def, wp)
-  apply (simp add: getActiveTCB_def pred_tcb_at_def obj_at_def get_tcb_def
-              split: option.splits if_split_asm Structures_A.kernel_object.splits)
-  done
-
 
 definition
   cap_master_cap :: "cap \<Rightarrow> cap"
@@ -1699,14 +1692,6 @@ lemma cap_insert_typ_at [wp]:
          |simp split del: if_split)+
   done
 
-lemma cur_mdb [simp]:
-  "cur_tcb (cdt_update f s) = cur_tcb s"
-  by (simp add: cur_tcb_def)
-
-lemma cur_tcb_more_update[iff]:
-  "cur_tcb (trans_state f s) = cur_tcb s"
-  by (simp add: cur_tcb_def)
-
 crunch cap_insert
   for cur[wp]: cur_tcb (wp: hoare_drop_imps)
 
@@ -1802,10 +1787,6 @@ lemma valid_cap_free_index_update[simp]:
   apply (clarsimp simp: valid_cap_def cap_aligned_def valid_untyped_def max_free_index_def)
   done
 
-
-lemma ex_nonz_cap_to_more_update[iff]:
-  "ex_nonz_cap_to w (trans_state f s) = ex_nonz_cap_to w s"
-   by (simp add: ex_nonz_cap_to_def)
 
 lemma cap_insert_ex_cap:
   "\<lbrace>ex_nonz_cap_to p\<rbrace>
