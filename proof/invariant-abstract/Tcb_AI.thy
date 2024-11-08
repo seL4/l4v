@@ -51,9 +51,6 @@ lemma ct_in_state_weaken:
   "\<lbrakk> ct_in_state Q s; \<And>st. Q st \<Longrightarrow> P st \<rbrakk> \<Longrightarrow> ct_in_state P s"
   by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
 
-lemma ct_in_state_exst_update[simp]: "ct_in_state P (trans_state f s) = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
 lemma set_thread_state_ct_st:
   "\<lbrace>\<lambda>s. if thread = cur_thread s then P st else ct_in_state P s\<rbrace>
         set_thread_state thread st
@@ -1248,15 +1245,19 @@ lemma out_pred_tcb_at_preserved:
   apply simp
   done
 
-lemma pred_tcb_at_arch_state[simp]:
-  "pred_tcb_at proj P t (arch_state_update f s) = pred_tcb_at proj P t s"
-  by (simp add: pred_tcb_at_def obj_at_def)
+lemma set_domain_invs[wp]:
+  "set_domain t d \<lbrace>invs\<rbrace>"
+  by (simp add: set_domain_def | wp)+
 
 lemma invoke_domain_invs:
   "\<lbrace>invs\<rbrace>
      invoke_domain t d
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (simp add: invoke_domain_def | wp)+
+
+lemma set_domain_typ_at[wp]:
+  "set_domain t d \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  by (simp add: set_domain_def | wp)+
 
 lemma invoke_domain_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
@@ -1347,5 +1348,10 @@ crunch set_mcpriority
 lemma set_mcpriority_no_cap_to_obj_with_diff_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref c S\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref c S\<rbrace>"
   by (simp add: set_mcpriority_def thread_set_no_cap_to_trivial tcb_cap_cases_tcb_mcpriority)
+
+lemma set_priority_invs[wp]:
+  "set_priority t p \<lbrace>invs\<rbrace>"
+  unfolding set_priority_def
+  by wpsimp
 
 end
