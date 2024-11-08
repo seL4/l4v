@@ -244,7 +244,7 @@ text \<open>
    in restore_user_context, which is currently invisible to verification.
    The effect should be modelled in the ADT. *)
 definition
-  kernel_entry :: "event \<Rightarrow> user_context \<Rightarrow> (user_context,'z::state_ext_sched) s_monad"
+  kernel_entry :: "event \<Rightarrow> user_context \<Rightarrow> (user_context,'z::state_ext) s_monad"
   where
   "kernel_entry e tc \<equiv> do
     t \<leftarrow> gets cur_thread;
@@ -257,7 +257,7 @@ definition
 
 definition
   kernel_call_A
-    :: "event \<Rightarrow> ((user_context \<times> ('a::state_ext_sched state)) \<times> mode \<times> (user_context \<times> 'a state)) set"
+    :: "event \<Rightarrow> ((user_context \<times> ('a::state_ext state)) \<times> mode \<times> (user_context \<times> 'a state)) set"
   where
   "kernel_call_A e \<equiv>
       {(s, m, s'). s' \<in> fst (split (kernel_entry e) s) \<and>
@@ -279,7 +279,7 @@ definition
   "abs_state s \<equiv> s\<lparr>machine_state:= observable_memory (machine_state s) (user_mem s)\<rparr>"
 
 definition
-  ADT_A :: "user_transition \<Rightarrow> (('a::state_ext_sched state) global_state, 'a observable, unit) data_type"
+  ADT_A :: "user_transition \<Rightarrow> (('a::state_ext state) global_state, 'a observable, unit) data_type"
 where
  "ADT_A uop \<equiv>
   \<lparr> Init = \<lambda>s. Init_A, Fin = \<lambda>((tc,s),m,e). ((tc, abs_state s),m,e),

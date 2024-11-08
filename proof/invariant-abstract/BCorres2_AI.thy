@@ -22,12 +22,35 @@ locale BCorres2_AI =
     "\<And> a b.
       bcorres (make_arch_fault_msg a b :: 'a state \<Rightarrow> _)
               (make_arch_fault_msg a b)"
-  assumes arch_switch_to_thread_bcorres[wp]:
-    "\<And>t. bcorres (arch_switch_to_thread t :: 'a state \<Rightarrow> _)
-        (arch_switch_to_thread t)"
-  assumes arch_switch_to_idle_thread_bcorres[wp]:
-    "bcorres (arch_switch_to_idle_thread :: 'a state \<Rightarrow> _)
-        arch_switch_to_idle_thread"
+
+definition all_but_exst where
+  "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
+                      (cur_thread s) (idle_thread s)
+                      (scheduler_action s) (domain_list s) (domain_index s)
+                      (cur_domain s) (domain_time s) (ready_queues s)
+                      (machine_state s) (interrupt_irq_node s)
+                      (interrupt_states s) (arch_state s))"
+
+lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
+  apply (clarsimp simp add: empty_fail_def mk_ef_def)
+  apply (drule_tac x=s in spec)
+  apply (case_tac "f s")
+  apply force
+  done
+
+lemma all_but_obvious:
+  "all_but_exst (\<lambda>kheap cdt is_original_cap cur_thread idle_thread
+       scheduler_action domain_list domain_index cur_domain domain_time
+       ready_queues machine_state interrupt_irq_node interrupt_states arch_state.
+       x = \<lparr>kheap = kheap, cdt = cdt, is_original_cap = is_original_cap, cur_thread = cur_thread,
+            idle_thread = idle_thread, scheduler_action = scheduler_action,
+            domain_list = domain_list, domain_index = domain_index, cur_domain = cur_domain,
+            domain_time = domain_time, ready_queues = ready_queues,
+            machine_state = machine_state, interrupt_irq_node = interrupt_irq_node,
+            interrupt_states = interrupt_states, arch_state = arch_state,
+         exst = (exst x)\<rparr>) x"
+  apply (simp add: all_but_exst_def)
+  done
 
 crunch deleting_irq_handler
   for (bcorres) bcorres[wp]: truncate_state
@@ -41,40 +64,6 @@ lemma update_restart_pc_bcorres[wp]:
 
 crunch suspend, finalise_cap
   for (bcorres) bcorres[wp]: truncate_state
-
-definition all_but_exst where
-  "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
-                      (cur_thread s) (idle_thread s)
-                      (machine_state s) (interrupt_irq_node s)
-                      (interrupt_states s) (arch_state s))"
-
-lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
-  apply (clarsimp simp add: empty_fail_def mk_ef_def)
-  apply (drule_tac x=s in spec)
-  apply (case_tac "f s")
-  apply force
-  done
-
-lemma all_but_obvious: "all_but_exst (\<lambda>a b c d e f g h i.
-                    x = \<lparr>kheap = a, cdt = b, is_original_cap = c,
-                     cur_thread = d, idle_thread = e,
-                     machine_state = f, interrupt_irq_node = g,
-                     interrupt_states = h, arch_state = i, exst = (exst x)\<rparr>) x"
-  apply (simp add: all_but_exst_def)
-  done
-
-lemma bluh: assumes a: "x =
-        \<lparr>kheap = kheap ba, cdt = cdt ba,
-           is_original_cap = is_original_cap ba,
-           cur_thread = cur_thread ba, idle_thread = idle_thread ba,
-           machine_state = machine_state ba,
-           interrupt_irq_node = interrupt_irq_node ba,
-           interrupt_states = interrupt_states ba,
-           arch_state = arch_state ba, exst = exst x\<rparr>"
-     shows "x\<lparr>exst := exst ba\<rparr> = ba"
-  apply (subst a)
-  apply simp
-  done
 
 lemma valid_cs_trans_state[simp]: "valid_cs a b (trans_state g s) = valid_cs a b s"
   by(simp add: valid_cs_def)
@@ -123,16 +112,16 @@ lemma dxo_ex: "((),x :: det_ext state) \<in> fst (do_extended_op f s) \<Longrigh
 locale is_extended' =
   fixes f :: "'a det_ext_monad"
   assumes a: "\<And>P. \<lbrace>all_but_exst P\<rbrace> f \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
+begin
 
-context is_extended' begin
+lemmas all_but_exst_unchanged = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def]
 
-lemmas v = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def, THEN bluh]
-
-lemma ex_st: "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow>
-       \<exists>e :: det_ext. x = (trans_state (\<lambda>_. e) s)"
-  apply (drule v)
+lemma ex_st:
+  "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow> \<exists>e :: det_ext. x = (trans_state (\<lambda>_. e) s)"
+  apply (drule all_but_exst_unchanged)
   apply (simp add: trans_state_update')
   apply (rule_tac x="exst x" in exI)
+  apply (cases s)
   apply simp
   done
 
@@ -232,6 +221,10 @@ locale is_extended = is_extended' +
 
 context is_extended begin
 
+lemma in_f_exst:
+  "(r, s') \<in> fst (f s) \<Longrightarrow> s\<lparr>exst := exst s'\<rparr> = s'"
+  by (cases s) (fastforce dest: all_but_exst_unchanged)
+
 lemma dxo_eq[simp]:
   "do_extended_op f = f"
   apply (simp add: do_extended_op_def all_but_exst_def
@@ -242,7 +235,7 @@ lemma dxo_eq[simp]:
   apply rule
    apply simp
    apply safe
-     apply (simp | force | frule v)+
+     apply (simp | force | frule in_f_exst)+
   done
 
 end
@@ -253,23 +246,13 @@ lemma all_but_exst_update[simp]:
   apply (simp add: all_but_exst_def)
   done
 
-crunch set_scheduler_action,tcb_sched_action,next_domain,
-                         cap_move_ext
+crunch cap_move_ext
   for all_but_exst[wp]: "all_but_exst P"
   (simp: Let_def ignore_del: tcb_sched_action cap_move_ext)
 
 crunch cap_move_ext
   for (empty_fail) empty_fail[wp]
   (ignore_del: cap_move_ext)
-
-global_interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
-  by (unfold_locales; wp)
-
-global_interpretation tcb_sched_action_extended: is_extended "tcb_sched_action a b"
-  by (unfold_locales; wp)
-
-global_interpretation next_domain_extended: is_extended "next_domain"
-  by (unfold_locales; wp)
 
 global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
   by (unfold_locales; wp)
@@ -353,12 +336,9 @@ lemma check_cap_at_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (check_c
   apply (wp | simp)+
   done
 
-lemma invoke_domain_bcorres[wp]: "bcorres (invoke_domain t d) (invoke_domain t d)"
-  by (simp add: invoke_domain_def, wp)
-
-lemma truncate_state_detype[simp]: "truncate_state (detype x s) = detype x (truncate_state s)"
-  apply (simp add: detype_def trans_state_def)
-  done
+lemma truncate_state_detype[simp]:
+  "truncate_state (detype x s) = detype x (truncate_state s)"
+  by (simp add: detype_def)
 
 lemma resolve_address_bits'_sbcorres:
   shows
@@ -458,23 +438,6 @@ lemma bcorres_underlying_dest: "bcorres_underlying l f k \<Longrightarrow> ((),s
   apply force
   done
 
-lemma trans_state_twice[simp]: "trans_state (\<lambda>_. e) (trans_state f s) = trans_state (\<lambda>_. e) s"
-  by (rule trans_state_update'')
-
-lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrightarrow>
-       ((),x) \<in> fst (switch_to_thread word s)
-       \<and> (\<exists>y. get_tcb word s = Some y \<and> runnable (tcb_state y))"
-  apply (clarsimp simp add: guarded_switch_to_def bind_def
-                            get_thread_state_def
-                            thread_get_def
-                            in_monad)
-  done
-
-lemma truncate_state_updates[simp]:
-  "truncate_state (scheduler_action_update f s) = truncate_state s"
-  "truncate_state (ready_queues_update g s) = truncate_state s"
-  by (rule trans_state_update'')+
-
 lemma get_before_assert_opt:
   "do s \<leftarrow> assert_opt x; s' \<leftarrow> get; f s s' od
     = do s' \<leftarrow> get; s \<leftarrow> assert_opt x; f s s' od"
@@ -492,128 +455,10 @@ lemma get_outside_alternative:
     = do s \<leftarrow> get; alternative (f s) g od"
   by (simp add: alternative_def exec_get fun_eq_iff)
 
-lemmas schedule_unfold_all = schedule_def allActiveTCBs_def
-                        get_thread_state_def thread_get_def getActiveTCB_def
-
-context BCorres2_AI begin
-
-lemma switch_thread_bcorreses:
-  "bcorres (switch_to_idle_thread :: 'a state \<Rightarrow> _) switch_to_idle_thread"
-  "bcorres (switch_to_thread t :: 'a state \<Rightarrow> _) (switch_to_thread t)"
-  apply (simp_all add: switch_to_idle_thread_def switch_to_thread_def)
-  apply (wp | simp)+
-  done
-
-lemma guarded_switch_bcorres: "s_bcorres (guarded_switch_to t :: 'a state \<Rightarrow> _) schedule s"
-  using switch_thread_bcorreses(2)[where t=t]
-  apply (clarsimp simp: schedule_unfold_all s_bcorres_underlying_def
-                        in_monad in_select
-            split del: if_split)
-  apply (drule guarded_sub_switch)
-  apply (rule_tac x=t in exI, clarsimp split del: if_split)
-  apply (drule_tac s=s in drop_sbcorres_underlying)
-  apply (clarsimp simp: s_bcorres_underlying_def)
-  apply (auto intro!: alternative_second)
-  done
-
-end
-
-lemma choose_thread_bcorres: "BCorres2_AI TYPE(det_ext)
-    \<Longrightarrow> s_bcorres choose_thread schedule s"
-  apply (frule BCorres2_AI.switch_thread_bcorreses(1))
-  apply (simp add: choose_thread_def gets_def s_bcorres_get_left
-                   BCorres2_AI.guarded_switch_bcorres)
-  apply (clarsimp simp: schedule_def s_bcorres_underlying_def)
-  apply (drule_tac s=s in drop_sbcorres_underlying)
-  apply (clarsimp simp: s_bcorres_underlying_def)
-  apply (auto intro!: alternative_second simp: exec_gets)
-  done
-
-lemma tcb_sched_action_bcorres:
-  "bcorres (tcb_sched_action a b) (return ())"
-  by (clarsimp simp: bcorres_underlying_def s_bcorres_underlying_def return_def
-              dest!: tcb_sched_action_extended.ex_st)
-
 (* FIXME move if useful *)
 lemma if_s_bcorres_underlying[wp]:
   "(P \<Longrightarrow> s_bcorres_underlying t f f' s) \<Longrightarrow> (\<not>P \<Longrightarrow> s_bcorres_underlying t g g' s)
   \<Longrightarrow> s_bcorres_underlying t (if P then f else g) (if P then f' else g') s"
   by (simp add: return_s_bcorres_underlying)
-
-lemma schedule_choose_new_thread_bcorres1:
-  "BCorres2_AI TYPE(det_ext) \<Longrightarrow> bcorres schedule_choose_new_thread schedule"
-  unfolding schedule_choose_new_thread_def
-  apply (clarsimp simp: bcorres_underlying_def)
-  apply (simp add: schedule_det_ext_ext_def s_bcorres_get_left
-                   gets_def get_thread_state_def thread_get_def gets_the_def
-                   bind_assoc get_before_assert_opt ethread_get_def schedule_switch_thread_fastfail_def
-                   when_def)
-  apply (rule conjI; clarsimp)
-   apply (rule s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
-                  OF _ choose_thread_bcorres, simplified]
-               s_bcorres_underlying_split[where f'="return ()", simplified]
-         | fastforce simp: s_bcorres_underlying_def set_scheduler_action_def
-                           when_def exec_gets simpler_modify_def return_def
-                           next_domain_def Let_def)+
-  done
-
-lemma schedule_bcorres1:
-  notes bsplits =
-          s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
-                                     OF _ choose_thread_bcorres, simplified]
-          s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
-                                     OF _ BCorres2_AI.guarded_switch_bcorres, simplified]
-          s_bcorres_underlying_split[where f'="return ()", simplified]
-  notes bdefs = schedule_det_ext_ext_def s_bcorres_get_left
-                gets_def get_thread_state_def thread_get_def gets_the_def
-                bind_assoc get_before_assert_opt ethread_get_def
-                schedule_switch_thread_fastfail_def when_def
-                tcb_sched_action_bcorres drop_sbcorres_underlying return_s_bcorres_underlying
-  notes unfolds = s_bcorres_underlying_def set_scheduler_action_def
-                   simpler_modify_def return_def
-  shows "BCorres2_AI TYPE(det_ext) \<Longrightarrow> bcorres (schedule :: (unit,det_ext) s_monad) schedule"
-  supply if_split[split del]
-  apply (clarsimp simp: bcorres_underlying_def fail_def)
-  apply (simp add: bdefs)
-  apply (simp add: assert_opt_def)
-  apply (simp split: option.split, intro conjI impI)
-   apply (simp add: s_bcorres_underlying_def fail_def)
-  apply clarsimp
-  apply (split scheduler_action.split, intro conjI impI)
-    (* resume current *)
-    subgoal for s
-      apply (clarsimp simp: s_bcorres_underlying_def schedule_def allActiveTCBs_def
-                            in_monad in_select getActiveTCB_def
-                       split: if_split)
-      apply (fastforce simp add: switch_to_idle_thread_def in_monad in_select ex_bool_eq)
-      done
-   (* switch to *)
-   subgoal for s cttcb
-     apply clarsimp
-     apply (rule bsplits)+
-      apply (simp add: bdefs)
-      apply (simp add: assert_opt_def)
-      apply (split option.split, simp, intro conjI impI)
-       apply (simp add: s_bcorres_underlying_def fail_def)
-
-      apply (clarsimp simp: ethread_get_when_def split: if_split)
-
-      apply (rule conjI; clarsimp)
-       apply (simp add: bdefs)
-       apply (simp add: assert_opt_def)
-       apply (split option.split, simp, intro conjI impI)
-        apply (simp add: s_bcorres_underlying_def fail_def)
-
-       apply (clarsimp simp: bdefs split: if_split
-              | rule conjI
-              | rule bsplits
-              | erule drop_sbcorres_underlying[OF schedule_choose_new_thread_bcorres1]
-              | fastforce simp: unfolds)+
-     done
-  apply (clarsimp simp: bdefs split: if_split
-         | rule conjI
-         | rule bsplits
-         | erule drop_sbcorres_underlying[OF schedule_choose_new_thread_bcorres1])+
-  done
 
 end

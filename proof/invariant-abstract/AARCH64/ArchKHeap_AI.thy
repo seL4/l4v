@@ -949,7 +949,7 @@ lemma pspace_respects_region_cong[cong]:
 
 definition "obj_is_device tp dev \<equiv>
   case tp of Untyped \<Rightarrow> dev
-    | _ \<Rightarrow>(case (default_object tp dev 0) of (ArchObj (DataPage dev _)) \<Rightarrow> dev
+    | _ \<Rightarrow>(case default_object tp dev 0 0 of (ArchObj (DataPage dev _)) \<Rightarrow> dev
           | _ \<Rightarrow> False)"
 
 lemma cap_is_device_obj_is_device[simp]:
@@ -992,6 +992,30 @@ lemma state_hyp_refs_of_tcb_state_update:
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
+lemma state_hyp_refs_of_tcb_domain_update:
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_domain := d\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_priority_update:
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_priority := p\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_time_slice_update:
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_time_slice := ts\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
 lemma valid_vcpu_lift:
   assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
@@ -1005,7 +1029,7 @@ lemma default_arch_object_not_live[simp]: "\<not> live (ArchObj (default_arch_ob
   by (clarsimp simp: default_arch_object_def live_def hyp_live_def arch_live_def default_vcpu_def
                split: aobject_type.splits)
 
-lemma default_tcb_not_live[simp]: "\<not> live (TCB default_tcb)"
+lemma default_tcb_not_live[simp]: "\<not> live (TCB (default_tcb d))"
   by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
 
 lemma valid_vcpu_same_type:

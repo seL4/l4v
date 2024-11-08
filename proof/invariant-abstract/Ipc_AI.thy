@@ -2705,7 +2705,7 @@ lemma ri_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_notification_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> complete_signal a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a (s::'a::state_ext state). \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> possible_switch_to a \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes scc_Q[wp]: "\<And>a b c. \<lbrace>valid_mdb and Q\<rbrace> setup_caller_cap a b c \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes dit_Q[wp]: "\<And>a b c d e. \<lbrace>valid_mdb and valid_objs and Q\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes failed_transfer_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> do_nbrecv_failed_transfer a \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2729,7 +2729,7 @@ lemma ri_invs':
            apply (simp add: invs_def valid_state_def valid_pspace_def)
            apply (rule hoare_pre, wp valid_irq_node_typ)
            apply (simp add: valid_ep_def)
-          apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified]
+          apply (wp valid_irq_node_typ sts_only_idle sts_typ_ats[simplified ep_at_def2, simplified]
                     failed_transfer_Q[simplified do_nbrecv_failed_transfer_def, simplified]
                  | simp add: live_def do_nbrecv_failed_transfer_def)+
      apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def invs_def valid_state_def valid_pspace_def)
@@ -2789,7 +2789,7 @@ lemma ri_invs':
    apply (simp add: invs_def valid_state_def valid_pspace_def)
    apply (rule hoare_pre)
     apply (wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
-              sts_ep_at_inv[simplified ep_at_def2, simplified]
+              sts_typ_ats[simplified ep_at_def2, simplified]
               failed_transfer_Q[unfolded do_nbrecv_failed_transfer_def, simplified]
               | simp add: live_def valid_ep_def do_nbrecv_failed_transfer_def
               | wpc)+
@@ -2916,7 +2916,7 @@ lemma rai_invs':
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
      apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle
-              sts_ntfn_at_inv[simplified ntfn_at_def2, simplified] | wpc
+              sts_typ_ats[simplified ntfn_at_def2, simplified] | wpc
           | simp add: live_def valid_ntfn_def do_nbrecv_failed_transfer_def)+
     apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
     apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
@@ -2941,7 +2941,7 @@ lemma rai_invs':
    apply (simp add: invs_def valid_state_def valid_pspace_def)
    apply (rule hoare_pre)
     apply (wpsimp wp: set_simple_ko_valid_objs hoare_vcg_const_Ball_lift sts_only_idle
-                      valid_irq_node_typ sts_ntfn_at_inv[simplified ntfn_at_def2, simplified]
+                      valid_irq_node_typ sts_typ_ats[simplified ntfn_at_def2, simplified]
                simp: live_def valid_ntfn_def do_nbrecv_failed_transfer_def)
    apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
    apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
@@ -3048,7 +3048,7 @@ context Ipc_AI_3 begin
 
 lemma si_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a b. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> possible_switch_to a \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes setup_caller_cap_Q[wp]: "\<And>send receive grant. \<lbrace>Q and valid_mdb\<rbrace> setup_caller_cap send receive grant \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -3065,10 +3065,11 @@ lemma si_invs':
      apply (simp add: invs_def valid_state_def valid_pspace_def)
      apply (wpsimp wp: valid_irq_node_typ)
       apply (simp add: live_def valid_ep_def)
-      apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified])
+      apply (wp valid_irq_node_typ sts_only_idle sts_typ_ats[simplified ep_at_def2, simplified])
      apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)+
      apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
+     apply (rule conjI, clarsimp simp: valid_ep_def pred_tcb_at_tcb_at)
      apply (rule conjI, subgoal_tac "t \<noteq> epptr")
        apply (drule ko_at_state_refs_ofD active_st_tcb_at_state_refs_ofD)+
        apply (erule delta_sym_refs)
@@ -3090,7 +3091,7 @@ lemma si_invs':
     apply (wpsimp wp: valid_irq_node_typ)
     apply (simp add: live_def valid_ep_def)
     apply (wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
-              sts_ep_at_inv[simplified ep_at_def2, simplified])
+              sts_typ_ats[simplified ep_at_def2, simplified])
     apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
     apply (frule ko_at_state_refs_ofD)
     apply (frule active_st_tcb_at_state_refs_ofD)
@@ -3099,6 +3100,7 @@ lemma si_invs':
      apply (clarsimp simp: valid_obj_def valid_ep_def)
      apply (rule conjI, clarsimp simp: obj_at_def is_ep_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
+     apply (rule conjI, clarsimp simp: pred_tcb_at_tcb_at)
      apply (rule conjI, erule delta_sym_refs)
        apply (fastforce split: if_split_asm)
       apply (fastforce simp: pred_tcb_at_def2
@@ -3162,7 +3164,7 @@ lemma si_invs':
 lemma hf_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a b. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> possible_switch_to a \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes setup_caller_cap_Q[wp]: "\<And>send receive grant. \<lbrace>Q and valid_mdb\<rbrace> setup_caller_cap send receive grant \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes thread_set_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> thread_set a b \<lbrace>\<lambda>_.Q\<rbrace>"
