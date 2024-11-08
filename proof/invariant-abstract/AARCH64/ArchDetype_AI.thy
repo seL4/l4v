@@ -524,9 +524,8 @@ lemma in_user_frame_eq:
                      Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
                      order_class.Icc_eq_Icc
     and [simp] = p2pm1_to_mask
-  shows "p \<notin> untyped_range cap \<Longrightarrow> in_user_frame p
-              (trans_state (\<lambda>_. detype_ext (untyped_range cap) (exst s)) s
-               \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
+  shows "p \<notin> untyped_range cap \<Longrightarrow>
+         in_user_frame p (s \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
          = in_user_frame p s"
     using cap_is_valid untyped
     apply (cases cap; simp add: in_user_frame_def valid_untyped_def valid_cap_def obj_at_def)
@@ -552,9 +551,7 @@ lemma in_device_frame_eq:
           order_class.Icc_eq_Icc
      and  p2pm1[simp] = p2pm1_to_mask
   shows "p \<notin> untyped_range cap
-       \<Longrightarrow> in_device_frame p
-              (trans_state (\<lambda>_. detype_ext (untyped_range cap) (exst s)) s
-               \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
+       \<Longrightarrow> in_device_frame p (s \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
          = in_device_frame p s"
     using cap_is_valid untyped
     unfolding in_device_frame_def

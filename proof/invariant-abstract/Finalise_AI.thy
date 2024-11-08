@@ -855,15 +855,18 @@ lemma sts_emptyable:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
+crunch tcb_sched_action, reschedule_required, possible_switch_to
+  for emptyable[wp]: "emptyable sl"
+  (wp: emptyable_lift)
 
 lemma cancel_all_emptyable_helper:
   "\<lbrace>emptyable sl and (\<lambda>s. \<forall>t \<in> set q. st_tcb_at (\<lambda>st. \<not> halted st) t s)\<rbrace>
      mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.Restart;
-                    do_extended_op (tcb_sched_enqueue_ext t) od) q
+                    tcb_sched_action tcb_sched_enqueue t od) q
    \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp [where S="set q", simplified])
-    apply (wp, simp, wp hoare_vcg_const_Ball_lift sts_emptyable sts_st_tcb_at_cases)
+    apply (wpsimp wp: hoare_vcg_const_Ball_lift sts_emptyable sts_st_tcb_at_cases)
      apply simp+
   done
 
@@ -1218,11 +1221,6 @@ lemma valid_irq_node_arch [iff]:
   by (simp add: valid_irq_node_def)
 
 (* FIXME: move *)
-lemma vms_arch_state_update[simp]:
-  "valid_machine_state (arch_state_update f s) = valid_machine_state s"
-  by (simp add: valid_machine_state_def)
-
-(* FIXME: move *)
 lemma dmo_bind_return:
   "\<lbrace>P\<rbrace> do_machine_op f \<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow>
    \<lbrace>P\<rbrace> do_machine_op (do _ \<leftarrow> f; return x od) \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -1237,12 +1235,12 @@ lemma st_tcb_at_idle_thread:
 
 lemma tcb_state_merge_tcb_state_default:
   "tcb_state (tcb_registers_caps_merge tcb tcb') = tcb_state tcb"
-  "tcb_state default_tcb = Structures_A.Inactive"
+  "tcb_state (default_tcb d) = Structures_A.Inactive"
   by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
 lemma tcb_bound_notification_merge_tcb_state_default:
   "tcb_bound_notification (tcb_registers_caps_merge tcb tcb') = tcb_bound_notification tcb"
-  "tcb_bound_notification default_tcb = None"
+  "tcb_bound_notification (default_tcb d) = None"
   by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
 (*Lift hoare triples from an instantiation to the nondeterministic hoare triple version.

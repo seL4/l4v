@@ -23,10 +23,14 @@ locale Schedule_AI =
       "\<And>t'. \<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_tcb [wp]:
       "\<And>t'. \<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (tcb_at t' :: 'a state \<Rightarrow> bool)\<rbrace>"
-    assumes arch_stt_runnable:
-      "\<And>t. \<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . (st_tcb_at runnable t :: 'a state \<Rightarrow> bool)\<rbrace>"
+    assumes arch_stt_st_tcb_at:
+      "\<And>t. arch_switch_to_thread t \<lbrace>st_tcb_at Q t :: 'a state \<Rightarrow> bool\<rbrace>"
+    assumes arch_stt_scheduler_action[wp]:
+      "\<And>t'. arch_switch_to_thread t' \<lbrace>\<lambda>s::'a state. P (scheduler_action s)\<rbrace>"
     assumes stit_invs [wp]:
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
+    assumes arch_stit_scheduler_action[wp]:
+      "\<And>t'. arch_switch_to_idle_thread \<lbrace>\<lambda>s::'a state. P (scheduler_action s)\<rbrace>"
     assumes stit_activatable:
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool)\<rbrace>"
 
@@ -58,11 +62,6 @@ lemma findM_inv:
   by (rule findM_inv', simp_all add: x)
 
 
-lemma allActiveTCBs_gets:
-  "allActiveTCBs = gets (\<lambda>state. {x. getActiveTCB x state \<noteq> None})"
-  by (simp add: allActiveTCBs_def gets_def)
-
-
 lemma postfix_tails:
   "\<lbrakk> suffix (xs # ys) (tails zs) \<rbrakk>
      \<Longrightarrow> suffix xs zs \<and> (xs # ys) = tails xs"
@@ -79,15 +78,6 @@ lemma postfix_tails:
   apply (erule suffix_ConsI)
   done
 
-
-lemma valid_irq_states_cur_thread_update[simp]:
-  "valid_irq_states (cur_thread_update f s) = valid_irq_states s"
-  by(simp add: valid_irq_states_def)
-
-lemma sct_invs:
-  "\<lbrace>invs and tcb_at t\<rbrace> modify (cur_thread_update (%_. t)) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by wp (clarsimp simp add: invs_def cur_tcb_def valid_state_def valid_idle_def
-                            valid_irq_node_def valid_machine_state_def)
 
 lemma storeWord_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
@@ -112,41 +102,21 @@ lemma dmo_kheap_arch_state[wp]:
 lemmas do_machine_op_tcb[wp] =
   do_machine_op_obj_at[where P=id and Q=is_tcb, simplified]
 
+
 lemma (in Schedule_AI) stt_tcb [wp]:
   "\<lbrace>tcb_at t\<rbrace> switch_to_thread t \<lbrace>\<lambda>_. (tcb_at t :: 'a state \<Rightarrow> bool)\<rbrace>"
   apply (simp add: switch_to_thread_def)
   apply (wp | simp)+
-   done
-
-(* FIXME - Move Invariants_AI *)
-lemma invs_exst [iff]:
-  "invs (trans_state f s) = invs s"
-  by (simp add: invs_def valid_state_def)
-
-lemma (in Schedule_AI) stt_invs [wp]:
-  "\<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: switch_to_thread_def)
-  apply wp
-     apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-    apply (rule_tac Q'="\<lambda>_. invs and tcb_at t'" in hoare_strengthen_post, wp)
-    apply (clarsimp simp: invs_def valid_state_def valid_idle_def
-                          valid_irq_node_def valid_machine_state_def)
-    apply (fastforce simp: cur_tcb_def obj_at_def
-                     elim: valid_pspace_eqI ifunsafe_pspaceI)
-   apply wp+
-  apply clarsimp
-  apply (simp add: is_tcb_def)
   done
 
 lemma (in Schedule_AI) stt_activatable:
   "\<lbrace>st_tcb_at runnable t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool) \<rbrace>"
   apply (simp add: switch_to_thread_def)
   apply (wp | simp add: ct_in_state_def)+
-     apply (rule hoare_post_imp [OF _ arch_stt_runnable])
-     apply (clarsimp elim!: pred_tcb_weakenE)
+     apply (rule hoare_post_imp [OF _ arch_stt_st_tcb_at], assumption)
     apply (rule assert_inv)
-   apply wp
-  apply assumption
+   apply (wpsimp wp: hoare_drop_imp)
+  apply (clarsimp simp: pred_tcb_weakenE)
   done
 
 
@@ -167,49 +137,5 @@ lemma OR_choice_weak_wp:
                     select_f_def gets_def return_def get_def
           split: option.splits if_split_asm)
   done
-
-locale Schedule_AI_U = Schedule_AI "TYPE(unit)"
-
-lemma (in Schedule_AI_U) schedule_invs[wp]:
-  "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,unit) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
-  apply (wp OR_choice_weak_wp dmo_invs thread_get_inv
-            do_machine_op_tcb select_ext_weak_wp when_def
-          | clarsimp simp: getActiveTCB_def get_tcb_def)+
-  done
-
-(* FIXME - move *)
-lemma get_tcb_exst_update:
-  "get_tcb p (trans_state f s) = get_tcb p s"
-  by (simp add: get_tcb_def)
-
-lemma ct_in_state_trans_update[simp]: "ct_in_state st (trans_state f s) = ct_in_state st s"
-  apply (simp add: ct_in_state_def)
-  done
-
-lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
-  "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,unit) s_monad) \<lbrace>\<lambda>rv. ct_in_state activatable \<rbrace>"
-  proof -
-  have P: "\<And>t s. ct_in_state activatable (cur_thread_update (\<lambda>_. t) s) = st_tcb_at activatable t s"
-    by (fastforce simp: ct_in_state_def pred_tcb_at_def intro: obj_at_pspaceI)
-  have Q: "\<And>s. invs s \<longrightarrow> idle_thread s = cur_thread s \<longrightarrow> ct_in_state activatable s"
-    apply (clarsimp simp: ct_in_state_def dest!: invs_valid_idle)
-    apply (clarsimp simp: valid_idle_def pred_tcb_def2)
-    done
-  show ?thesis
-    apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
-    apply (wp select_ext_weak_wp stt_activatable stit_activatable
-           | simp add: P Q)+
-    apply (clarsimp simp: getActiveTCB_def ct_in_state_def)
-    apply (rule conjI)
-     apply clarsimp
-     apply (case_tac "get_tcb (cur_thread s) s", simp_all add: ct_in_state_def)
-     apply (drule get_tcb_SomeD)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
-    apply (case_tac "get_tcb x s", simp_all)
-    apply (drule get_tcb_SomeD)
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
-    done
-qed
 
 end

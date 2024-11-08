@@ -45,10 +45,6 @@ interpretation dmo: non_vspace_non_cap_op "do_machine_op f"
 
 declare not_Some_eq_tuple[simp]
 
-lemma valid_irq_states_arch_state_update[simp]:
-  "valid_irq_states (s\<lparr>arch_state := x\<rparr>) = valid_irq_states s"
-  by(auto simp: valid_irq_states_def)
-
 lemma pull_out_P:
   "P s \<and> (\<forall>c. caps_of_state s p = Some c \<longrightarrow> Q s c) \<longrightarrow> (\<forall>c. caps_of_state s p = Some c \<longrightarrow> P s \<and> Q s c)"
   by blast
