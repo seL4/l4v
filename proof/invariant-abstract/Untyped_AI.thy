@@ -265,12 +265,12 @@ locale Untyped_AI_arch =
   "\<And>ptr sz dev us n s.\<lbrakk>pspace_no_overlap_range_cover ptr sz (s::'state_ext state) \<and> 0 < us \<and> range_cover ptr sz (obj_bits_api CapTableObject us) n \<and> ptr \<noteq> 0
        \<rbrakk>
          \<Longrightarrow> \<forall>y\<in>{0..<n}. s
-                \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
+                \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us (cur_domain s))) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
                            (kheap s)\<rparr> \<turnstile> CNodeCap (ptr_add ptr (y * 2 ^ obj_bits_api CapTableObject us)) us []"
   assumes retype_ret_valid_caps_aobj:
   "\<And>ptr sz s x6 us n dev. \<lbrakk>pspace_no_overlap_range_cover ptr sz (s::'state_ext state) \<and> x6 \<noteq> ASIDPoolObj \<and> range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0 \<comment> \<open>; tp = ArchObject x6\<close>\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
-                   \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
+                   \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us (cur_domain s))) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
                               (kheap s)\<rparr> \<turnstile> ArchObjectCap (arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
 
   assumes init_arch_objects_descendants_range[wp]:
@@ -1347,8 +1347,6 @@ lemma retype_ret_valid_caps:
       and K (range_cover ptr sz (obj_bits_api tp us) n \<and> ptr \<noteq> 0)\<rbrace>
         retype_region ptr n us tp dev\<lbrace>\<lambda>rv (s::'state_ext state). \<forall>y\<in>set rv. s \<turnstile> default_cap tp y us dev\<rbrace>"
   apply (simp add: retype_region_def split del: if_split cong: if_cong)
-  apply wp
-  apply (simp only: trans_state_update[symmetric] more_update.valid_cap_update)
   apply wp
   apply (case_tac tp,simp_all)
    defer
@@ -3020,7 +3018,7 @@ locale Untyped_AI_nonempty_table =
   "\<And>tp oref sz p dev cref.\<lbrace>cap_refs_in_kernel_window and cte_wp_at (\<lambda>c. cap_range (default_cap tp oref sz dev) \<subseteq> cap_range c) p\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. (cap_refs_in_kernel_window::'state_ext state \<Rightarrow> bool)\<rbrace>"
   assumes nonempty_default[simp]:
-  "\<And>tp S us dev. tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us)"
+  "\<And>tp S us dev. tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us d)"
   assumes nonempty_table_caps_of:
   "\<And>S ko. nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
   assumes init_arch_objects_nonempty_table:
