@@ -520,8 +520,7 @@ datatype irq_state =
  | IRQTimer
  | IRQReserved
 
-text \<open>The current scheduler action,
-  which is part of the scheduling state.\<close>
+text \<open>The current scheduler action, which is part of the scheduling state.\<close>
 datatype scheduler_action =
     resume_cur_thread
   | switch_thread (sch_act_target : obj_ref)

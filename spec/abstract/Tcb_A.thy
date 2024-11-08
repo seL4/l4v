@@ -259,7 +259,7 @@ definition
      thread_set_domain tptr new_dom;
      ts \<leftarrow> get_thread_state tptr;
      when (runnable ts) $ tcb_sched_action tcb_sched_enqueue tptr;
-     when (tptr = cur) $ reschedule_required
+     when (tptr = cur) reschedule_required
    od"
 
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
