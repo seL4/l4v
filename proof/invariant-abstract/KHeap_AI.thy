@@ -52,6 +52,9 @@ arch_requalify_facts
   state_hyp_refs_of_ntfn_update
   state_hyp_refs_of_tcb_state_update
   state_hyp_refs_of_tcb_bound_ntfn_update
+  state_hyp_refs_of_tcb_domain_update
+  state_hyp_refs_of_tcb_priority_update
+  state_hyp_refs_of_tcb_time_slice_update
   arch_valid_obj_same_type
   default_arch_object_not_live
   default_tcb_not_live
@@ -192,19 +195,15 @@ lemma dxo_wp_weak[wp]:
 crunch set_thread_state
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
-lemma sts_ep_at_inv[wp]:
-  "\<lbrace> ep_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
-  done
+crunch set_scheduler_action, get_thread_state
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
-lemma sts_ntfn_at_inv[wp]:
-  "\<lbrace> ntfn_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
-  done
+lemma set_thread_state_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_thread_state t s \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  unfolding set_thread_state_def set_thread_state_act_def
+  by (wpsimp wp: set_object_typ_at)
+
+lemmas set_thread_state_typ_ats[wp] = abs_typ_at_lifts[OF set_thread_state_typ_at]
 
 lemma sbn_ep_at_inv[wp]:
   "\<lbrace> ep_at ep \<rbrace> set_bound_notification t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
@@ -588,7 +587,7 @@ lemma ex_cte_cap_to_after_update:
      \<Longrightarrow> ex_cte_cap_wp_to P p (kheap_update (\<lambda>a b. if b = p' then Some val else kheap s b) s)"
   by (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_after_update)
 
-lemma set_object_iflive:
+lemma set_object_iflive[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and>
         (live val \<longrightarrow> ex_nonz_cap_to p s) \<and> obj_at (same_caps val) p s\<rbrace>
    set_object p val
@@ -724,6 +723,18 @@ lemma cap_refs_respects_region_cong:
                 cap_range_respects_device_region_def)
 
 lemmas device_region_congs[cong] = pspace_respects_region_cong cap_refs_respects_region_cong
+
+lemma invs_ready_queues_update[simp]:
+  "invs (ready_queues_update f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
+lemma invs_domain_time_update[simp]:
+  "invs (domain_time_update f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
+lemma invs_exst [iff]:
+  "invs (trans_state f s) = invs s"
+  by (simp add: invs_def valid_state_def)
 
 lemma dmo_invs1:
   assumes "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
@@ -898,11 +909,9 @@ lemma ep_redux_simps:
 
 crunch set_simple_ko
   for arch[wp]: "\<lambda>s. P (arch_state s)"
+  and irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps simp: crunch_simps)
-
-crunch set_simple_ko
-  for irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
 
 lemma set_simple_ko_global_refs [wp]:
   "set_simple_ko f ntfn p \<lbrace>valid_global_refs\<rbrace>"
@@ -1115,6 +1124,9 @@ locale non_aobj_non_cap_non_mem_op = non_aobj_non_mem_op f + non_aobj_non_cap_op
 
 sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
+crunch set_thread_state_act
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+
 lemma shows
   sts_caps_of_state[wp]:
     "set_thread_state t st \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
@@ -1141,6 +1153,12 @@ lemma
   apply (wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: if_split | clarsimp)+
   apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
+
+crunch set_thread_state_act
+  for obj_at[wp]: "\<lambda>s. P (obj_at P' p' s)"
+crunch set_thread_state
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and machine[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
 
 interpretation
   set_simple_ko: non_aobj_non_cap_non_mem_op "set_simple_ko c p ep" +
@@ -1289,6 +1307,10 @@ lemma valid_irq_states_triv:
   apply(drule_tac P1="\<lambda>x. x irq \<noteq> IRQInactive" in use_valid[OF _ irqs])
    apply assumption
   by blast
+
+lemma valid_irq_states_scheduler_action[simp]:
+  "valid_irq_states (s\<lparr>scheduler_action := x\<rparr>) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
 
 crunch set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notification
   for valid_irq_states[wp]: "valid_irq_states"

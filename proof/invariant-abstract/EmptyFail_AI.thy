@@ -58,8 +58,7 @@ crunch_ignore (empty_fail)
   (add: Nondet_Monad.bind bindE lift liftE liftM "when" whenE unless unlessE return fail
         assert_opt mapM mapM_x sequence_x catch handleE do_extended_op returnOk throwError
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
-        reschedule_required possible_switch_to set_thread_state_ext
-        OR_choice OR_choiceE timer_tick getRegister lookup_error_on_failure
+        OR_choice OR_choiceE getRegister lookup_error_on_failure
         mapME_x const_on_failure liftME mapME do_machine_op select
         empty_on_failure unify_failure zipWithM_x throw_on_false
         decode_tcb_invocation without_preemption as_user syscall
@@ -159,8 +158,7 @@ lemmas resolve_address_bits_empty_fail[wp] =
 
 crunch
   lookup_slot_for_cnode_op, decode_untyped_invocation, range_check,
-  lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap,
-  allActiveTCBs
+  lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap
   for (empty_fail) empty_fail[wp]
 
 locale EmptyFail_AI_load_word =
@@ -331,38 +329,33 @@ locale EmptyFail_AI_schedule = EmptyFail_AI_cap_revoke state_ext_t
     "empty_fail (switch_to_idle_thread :: (unit, 'state_ext) s_monad)"
   assumes get_thread_state_empty_fail[wp]:
     "empty_fail (get_thread_state ref :: (thread_state, 'state_ext) s_monad)"
-  assumes guarded_switch_to_empty_fail[wp]:
-    "empty_fail (guarded_switch_to thread :: (unit, 'state_ext) s_monad)"
-
-locale EmptyFail_AI_schedule_unit = EmptyFail_AI_schedule "TYPE(unit)"
-
-context EmptyFail_AI_schedule_unit begin
-
-lemma schedule_empty_fail[wp]:
-  "empty_fail (schedule :: (unit,unit) s_monad)"
-  apply (simp add: schedule_def)
-  apply (wp disjI2)
-  done
-
-end
+  assumes arch_switch_to_thread_empty_fail[wp]:
+    "empty_fail (arch_switch_to_thread t :: (unit, 'state_ext) s_monad)"
 
 crunch set_scheduler_action, next_domain, reschedule_required
   for (empty_fail) empty_fail[wp]
   (simp: scheduler_action.split ignore_del: reschedule_required)
 
-crunch ethread_get_when
-  for (empty_fail) empty_fail[wp, intro!, simp]
+context EmptyFail_AI_schedule begin
 
-locale EmptyFail_AI_schedule_det = EmptyFail_AI_schedule "TYPE(det_ext)" +
-  assumes choose_thread_empty_fail[wp]: "empty_fail choose_thread"
+lemma switch_to_thread_empty_fail[intro!, wp, simp]:
+  "empty_fail (switch_to_thread thread :: (unit,'state_ext) s_monad)"
+  by (wpsimp simp: switch_to_thread_def)
 
-context EmptyFail_AI_schedule_det begin
+lemma guarded_switch_to_empty_fail[intro!, wp, simp]:
+  "empty_fail (guarded_switch_to thread :: (unit,'state_ext) s_monad)"
+  by (wpsimp simp: guarded_switch_to_def)
 
-crunch schedule_choose_new_thread
-  for (empty_fail) empty_fail[wp, intro!, simp]
+lemma choose_thread_empty_fail[intro!, wp, simp]:
+  "empty_fail (choose_thread :: (unit,'state_ext) s_monad)"
+  by (wpsimp simp: choose_thread_def)
+
+lemma schedule_choose_new_thread_empty_fail[intro!, wp, simp]:
+  "empty_fail (schedule_choose_new_thread :: (unit,'state_ext) s_monad)"
+  by (wpsimp simp: schedule_choose_new_thread_def)
 
 lemma schedule_empty_fail'[intro!, wp, simp]:
-  "empty_fail (schedule :: (unit,det_ext) s_monad)"
+  "empty_fail (schedule :: (unit,'state_ext) s_monad)"
   apply (simp add: schedule_def schedule_switch_thread_fastfail_def)
   apply (wp | clarsimp split: scheduler_action.splits|
             intro impI conjI)+
@@ -381,26 +374,9 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
   assumes handle_interrupt_empty_fail[wp]:
     "\<And>interrupt. empty_fail (handle_interrupt interrupt :: (unit, 'state_ext) s_monad)"
 
-locale EmptyFail_AI_call_kernel_unit
-  = EmptyFail_AI_schedule_unit
-  + EmptyFail_AI_call_kernel "TYPE(unit)"
+begin
 
-context EmptyFail_AI_call_kernel_unit begin
-
-lemma call_kernel_empty_fail': "empty_fail (call_kernel a :: (unit,unit) s_monad)"
-  apply (simp add: call_kernel_def)
-  apply (wp | simp)+
-  done
-
-end
-
-locale EmptyFail_AI_call_kernel_det
-  = EmptyFail_AI_schedule_det
-  + EmptyFail_AI_call_kernel "TYPE(det_ext)"
-
-context EmptyFail_AI_call_kernel_det begin
-
-lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,det_ext) s_monad)"
+lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,'state_ext) s_monad)"
   apply (simp add: call_kernel_def)
   by (wp|simp)+
 

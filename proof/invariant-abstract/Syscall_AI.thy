@@ -45,36 +45,79 @@ lemmas [wp] =
 lemmas [simp] =
   data_to_cptr_def
 
-crunch ethread_get, ethread_get_when
-  for inv[wp]: P
 
-lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  supply if_split[split del]
-  apply (simp add: Schedule_A.schedule_def)
-  apply (wp dmo_invs thread_get_inv gts_wp
-            do_machine_op_tcb when_def hoare_vcg_all_lift
-          | wpc
-          | clarsimp simp: guarded_switch_to_def get_tcb_def choose_thread_def ethread_get_def
-                           ethread_get_when_def
-          | wp (once) hoare_drop_imps
-          | simp add: schedule_choose_new_thread_def if_apply_def2)+
+crunch next_domain
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  and valid_idle[wp]: valid_idle
+  (simp: crunch_simps)
+
+lemma next_domain_invs[wp]:
+  "next_domain \<lbrace> invs \<rbrace>"
+  unfolding next_domain_def
+  apply (wpsimp simp: Let_def)
+  apply (simp add: invs_def cur_tcb_def valid_state_def
+                   valid_mdb_def mdb_cte_at_def valid_ioc_def valid_irq_states_def
+                   valid_machine_state_def)
   done
 
-lemma schedule_choose_new_thread_ct_activatable[wp]:
-  "\<lbrace> invs \<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
-  proof -
+crunch tcb_sched_action
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  (simp: crunch_simps)
+
+lemma cur_thread_update_invs:
+  "\<lbrace>\<lambda>s. invs s \<and> tcb_at tptr s\<rbrace>
+   modify (cur_thread_update (\<lambda>_. tptr))
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: invs_def valid_state_def valid_pspace_def valid_machine_state_def
+                   state_refs_of_def cur_tcb_def)
+
+lemma switch_to_thread_invs[wp]:
+  "switch_to_thread tptr \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: switch_to_thread_def thread_get_def is_tcb
+               wp: cur_thread_update_invs)
+
+lemma guarded_switch_to_invs[wp]:
+  "guarded_switch_to thread \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: guarded_switch_to_def wp: hoare_drop_imps)
+
+lemma schedule_choose_new_thread_valid_state_cur_tcb [wp]:
+  "schedule_choose_new_thread \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: schedule_choose_new_thread_def choose_thread_def
+               wp: hoare_drop_imps)
+
+lemma schedule_invs[wp]:
+  "schedule \<lbrace>invs\<rbrace>"
+  apply (simp add: schedule_def)
+  apply (wpsimp wp: switch_to_thread_invs guarded_switch_to_invs hoare_drop_imps
+              simp: if_apply_def2 set_scheduler_action_def)
+  done
+
+lemma invs_domain_index_update[simp]:
+  "invs (domain_index_update f s) = invs s"
+  by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
+                valid_irq_states_def valid_machine_state_def cur_tcb_def)
+
+lemma invs_cur_domain_update[simp]:
+  "invs (cur_domain_update f s) = invs s"
+  by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
+                valid_irq_states_def valid_machine_state_def cur_tcb_def)
+
+lemma choose_thread_ct_activatable[wp]:
+  "\<lbrace> invs \<rbrace> choose_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
+proof -
   have P: "\<And>t s. ct_in_state activatable (cur_thread_update (\<lambda>_. t) s) = st_tcb_at activatable t s"
     by (fastforce simp: ct_in_state_def st_tcb_at_def intro: obj_at_pspaceI)
   show ?thesis
-  unfolding schedule_choose_new_thread_def choose_thread_def guarded_switch_to_def
-    apply (simp add: P set_scheduler_action_def guarded_switch_to_def choose_thread_def
-                             next_domain_def Let_def tcb_sched_action_def set_tcb_queue_def
-                             get_tcb_queue_def ethread_get_def bind_assoc)
-    apply (wpsimp wp: stt_activatable stit_activatable gts_wp)+
-    apply (force simp: ct_in_state_def pred_tcb_at_def obj_at_def invs_def valid_state_def
-                       valid_idle_def split: if_split_asm)+
-  done
+    unfolding choose_thread_def guarded_switch_to_def
+    apply (wpsimp wp: stit_activatable stt_activatable gts_wp)
+    apply (clarsimp simp:  pred_tcb_at_def obj_at_def)
+    done
 qed
+
+lemma schedule_choose_new_thread_ct_activatable[wp]:
+  "\<lbrace> invs \<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
+    unfolding schedule_choose_new_thread_def by wpsimp
 
 lemma guarded_switch_to_ct_in_state_activatable[wp]:
   "\<lbrace>\<top>\<rbrace> guarded_switch_to t \<lbrace>\<lambda>a. ct_in_state activatable\<rbrace>"
@@ -85,7 +128,7 @@ lemma guarded_switch_to_ct_in_state_activatable[wp]:
   done
 
 lemma schedule_ct_activateable[wp]:
-  "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
+  "\<lbrace>invs\<rbrace> schedule \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
   apply wp
       apply wpc
@@ -95,9 +138,10 @@ lemma schedule_ct_activateable[wp]:
        (* choose new thread *)
        apply wp
       (* switch to thread *)
-      apply wpsimp
-              apply (simp add: set_scheduler_action_def)
-              apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
+      apply (wpsimp simp: schedule_switch_thread_fastfail_def tcb_sched_action_def
+                          set_tcb_queue_def get_tcb_queue_def
+                      wp: thread_get_wp')
+     apply (wp gts_wp | wp (once) hoare_drop_imps)+
   apply (frule invs_valid_idle)
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
   done
@@ -576,13 +620,7 @@ lemma sts_mcpriority_tcb_at[wp]:
 
 lemma sts_mcpriority_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. mcpriority_tcb_at P (cur_thread s) s\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv s. mcpriority_tcb_at P (cur_thread s) s\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply (wp | simp)+
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (drule get_tcb_SomeD)
-  apply clarsimp
-  done
-
+  by (wpsimp | wps)+
 
 lemma sts_tcb_inv_wf [wp]:
   "\<lbrace>tcb_inv_wf i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
@@ -1161,10 +1199,9 @@ lemma null_cap_on_failure_wp[wp]:
 
 crunch_ignore (add:null_cap_on_failure)
 
-lemma hy_inv: "(\<And>s f. P (trans_state f s) = P s) \<Longrightarrow> \<lbrace>P\<rbrace> handle_yield \<lbrace>\<lambda>rv. P\<rbrace>"
+lemma hy_invs[wp]: "handle_yield \<lbrace>invs\<rbrace>"
   apply (simp add: handle_yield_def)
-  apply (wp | simp)+
-  done
+  by wpsimp
 
 lemma ct_active_simple [elim!]:
   "ct_active s \<Longrightarrow> st_tcb_at simple (cur_thread s) s"
@@ -1231,11 +1268,6 @@ lemma tcb_state_If_valid[simp]:
       = \<top>"
   by (rule ext, simp add: valid_tcb_state_def)
 
-lemma drop_when_dxo_wp: "(\<And>f s. P (trans_state f s) = P s ) \<Longrightarrow> \<lbrace>P\<rbrace> when b (do_extended_op e) \<lbrace>\<lambda>_.P\<rbrace>"
-  apply (clarsimp simp add: when_def)
-  apply (wp | simp)+
-  done
-
 context Syscall_AI begin
 
 lemma do_reply_transfer_nonz_cap:
@@ -1251,7 +1283,7 @@ lemma do_reply_transfer_nonz_cap:
        apply (clarsimp simp add: tcb_cap_cases_def is_cap_simps can_fast_finalise_def)
       apply (strengthen ex_tcb_cap_to_tcb_at_strg)
 
-      apply (wp drop_when_dxo_wp hoare_vcg_ex_lift
+      apply (wp hoare_when_weak_wp hoare_vcg_ex_lift
              thread_set_no_change_tcb_state thread_set_cte_wp_at_trivial
              ex_nonz_cap_to_pres [OF thread_set_cte_wp_at_trivial]
              | simp add: tcb_cap_cases_def)+
@@ -1293,7 +1325,7 @@ lemma do_reply_transfer_st_tcb_at_active:
     do_reply_transfer t t' sl grant
    \<lbrace>\<lambda>rv. st_tcb_at active t :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def is_reply_cap_to_def)
-  apply (wp drop_when_dxo_wp sts_st_tcb_at' sts_st_tcb_at_neq cap_delete_one_reply_st_tcb_at
+  apply (wp hoare_when_weak_wp sts_st_tcb_at' sts_st_tcb_at_neq cap_delete_one_reply_st_tcb_at
             hoare_drop_imps thread_set_no_change_tcb_state
             do_ipc_transfer_non_null_cte_wp_at2
        | wpc | clarsimp simp: is_reply_cap_to_def)+
@@ -1335,7 +1367,7 @@ lemma he_invs[wp]:
   apply (case_tac e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
-      apply (((rule hoare_pre, wp hvmf_active hr_invs hy_inv ) |
+      apply (((rule hoare_pre, wp hvmf_active hr_invs  ) |
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift |
                  simp add: if_apply_def2 |
                  fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
@@ -1379,11 +1411,11 @@ lemma fast_finalise_sym_refs:
   done
 
 crunch empty_slot
-  for state_refs_of[wp]: "\<lambda>s::det_ext state. P (state_refs_of s)"
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
 
 lemma delete_caller_cap_sym_refs:
-  "\<lbrace>invs\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv s::det_ext state. sym_refs (state_refs_of s) \<rbrace>"
+  "\<lbrace>invs\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s) \<rbrace>"
   apply (simp add: delete_caller_cap_def cap_delete_one_def unless_def)
   apply (wp fast_finalise_sym_refs get_cap_wp)
   apply fastforce
@@ -1483,7 +1515,7 @@ lemma delete_caller_cap_runnable[wp]:
 
 lemma handle_recv_st_tcb_at:
   "\<lbrace>invs and st_tcb_at runnable t and (\<lambda>s. cur_thread s \<noteq> t)\<rbrace> handle_recv True
-  \<lbrace>\<lambda>rv s::det_ext state. st_tcb_at runnable t s\<rbrace>"
+  \<lbrace>\<lambda>rv s. st_tcb_at runnable t s\<rbrace>"
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
              cong: if_cong)
   apply (rule hoare_pre)
