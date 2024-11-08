@@ -8,45 +8,52 @@ theory DetSchedInvs_AI
 imports ArchDeterministic_AI
 begin
 
-lemma get_etcb_rev:
-  "ekheap s p = Some etcb \<Longrightarrow> get_etcb p s = Some etcb"
-   by (clarsimp simp: get_etcb_def)
+\<comment> \<open>These records originally made up the "extended kheap" used in the
+    deterministic version of the specification but they are now part of tcb objects
+    in the main kheap. We project them together, since they are typically used together.\<close>
 
-lemma get_etcb_SomeD: "get_etcb ptr s = Some v \<Longrightarrow> ekheap s ptr = Some v"
-  apply (case_tac "ekheap s ptr", simp_all add: get_etcb_def)
-  done
+record etcb =
+  etcb_priority :: priority
+  \<comment> \<open>etcb_time_slice :: nat FIXME: time_slice was part of the ekheap but isn't used in valid_sched, do we want it here?\<close>
+  etcb_domain :: domain
 
-definition obj_at_kh where
-"obj_at_kh P ref kh \<equiv> obj_at P ref ((undefined :: det_ext state)\<lparr>kheap := kh\<rparr>)"
+definition etcb_of :: "tcb \<Rightarrow> etcb" where
+  "etcb_of t = \<lparr> etcb_priority = tcb_priority t, etcb_domain = tcb_domain t \<rparr>"
+
+definition
+  obj_at_kh :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<Rightarrow> kernel_object option) \<Rightarrow> bool"
+where
+  "obj_at_kh P ref kh \<equiv> \<exists>ko. kh ref = Some ko \<and> P ko"
 
 lemma obj_at_kh_simp[simp]: "obj_at_kh P ref (kheap st) = obj_at P ref st"
   apply (simp add: obj_at_def obj_at_kh_def)
   done
 
-
 definition st_tcb_at_kh where
-"st_tcb_at_kh test \<equiv> obj_at_kh (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
+  "st_tcb_at_kh test \<equiv> obj_at_kh (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
 
 lemma st_tcb_at_kh_simp[simp]: "st_tcb_at_kh test t (kheap st) = st_tcb_at test t st"
   apply (simp add: pred_tcb_at_def st_tcb_at_kh_def)
   done
 
+definition etcbs_of':: "(obj_ref \<Rightarrow> kernel_object option) \<Rightarrow> obj_ref \<Rightarrow> etcb option" where
+  "etcbs_of' kh \<equiv> \<lambda>p. case kh p of Some (TCB t) \<Rightarrow> Some (etcb_of t) | _ \<Rightarrow> None"
 
-definition is_etcb_at' where
-"is_etcb_at' ref ekh \<equiv> ekh ref \<noteq> None"
-
-abbreviation is_etcb_at:: "obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool" where
-"is_etcb_at ref s \<equiv> is_etcb_at' ref (ekheap s)"
-
-lemmas is_etcb_at_def = is_etcb_at'_def
+abbreviation
+  "etcbs_of \<equiv> \<lambda>s. etcbs_of' (kheap s)"
 
 definition etcb_at' :: "(etcb \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<Rightarrow> etcb option) \<Rightarrow> bool" where
-"etcb_at' P ref ekh \<equiv> case ekh ref of Some x \<Rightarrow> P x | _ \<Rightarrow> True"
+  "etcb_at' P ref ekh \<equiv> case ekh ref of Some x \<Rightarrow> P x | _ \<Rightarrow> True"
 
-abbreviation etcb_at :: "(etcb \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool" where
-"etcb_at P ref s \<equiv> etcb_at' P ref (ekheap s)"
+abbreviation etcb_at :: "(etcb \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "etcb_at P ref s \<equiv> etcb_at' P ref (etcbs_of s)"
 
 lemmas etcb_at_def = etcb_at'_def
+
+definition
+  "is_etcb_at' t ekh \<equiv> ekh t \<noteq> None"
+
+lemmas is_etcb_at_def = is_etcb_at'_def
 
 lemma etcb_at_taut[simp]: "etcb_at' \<top> ref ekh"
   apply (simp add: etcb_at'_def split: option.split)
@@ -57,23 +64,13 @@ lemma etcb_at_conj_is_etcb_at:
      = (case ekh t of None \<Rightarrow> False | Some x \<Rightarrow> P x)"
   by (simp add: is_etcb_at_def etcb_at_def split: option.splits)
 
-definition valid_etcbs_2 :: "(obj_ref \<Rightarrow> etcb option) \<Rightarrow> (obj_ref \<Rightarrow> kernel_object option) \<Rightarrow> bool"where
-"valid_etcbs_2 ekh kh \<equiv> \<forall>ptr. (st_tcb_at_kh \<top> ptr kh) = (is_etcb_at' ptr ekh)"
-
-
-abbreviation valid_etcbs :: "det_ext state \<Rightarrow> bool" where
-"valid_etcbs s \<equiv> valid_etcbs_2 (ekheap s) (kheap s)"
-
-lemmas valid_etcbs_def = valid_etcbs_2_def
-
-
 definition
   valid_idle_etcb_2 :: "(obj_ref \<Rightarrow> etcb option) \<Rightarrow> bool"
 where
-  "valid_idle_etcb_2 ekh \<equiv> etcb_at' (\<lambda>etcb. tcb_domain etcb = default_domain) idle_thread_ptr ekh"
+  "valid_idle_etcb_2 ekh \<equiv> etcb_at' (\<lambda>etcb. etcb_domain etcb = default_domain) idle_thread_ptr ekh"
 
-abbreviation valid_idle_etcb :: "det_ext state \<Rightarrow> bool" where
-  "valid_idle_etcb s \<equiv> valid_idle_etcb_2 (ekheap s)"
+abbreviation valid_idle_etcb :: "'z state \<Rightarrow> bool" where
+  "valid_idle_etcb s \<equiv> valid_idle_etcb_2 (etcbs_of s)"
 
 lemmas valid_idle_etcb_def = valid_idle_etcb_2_def
 
@@ -81,18 +78,18 @@ lemmas valid_idle_etcb_def = valid_idle_etcb_2_def
 definition not_queued_2 where
   "not_queued_2 qs t \<equiv> \<forall>d p. t \<notin> set (qs d p)"
 
-abbreviation not_queued :: "obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool" where
+abbreviation not_queued :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "not_queued t s \<equiv> not_queued_2 (ready_queues s) t"
 
 definition valid_queues_2 where
   "valid_queues_2 queues ekh kh \<equiv> (\<forall>d p.
      (\<forall>t \<in> set (queues d p). is_etcb_at' t ekh
-                           \<and> etcb_at' (\<lambda>t. tcb_priority t = p \<and> tcb_domain t = d) t ekh
+                           \<and> etcb_at' (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) t ekh
                            \<and> st_tcb_at_kh runnable t kh)
    \<and> distinct (queues d p))"
 
-abbreviation valid_queues :: "det_ext state \<Rightarrow> bool" where
-"valid_queues s \<equiv> valid_queues_2 (ready_queues s) (ekheap s) (kheap s)"
+abbreviation valid_queues :: "'z state \<Rightarrow> bool" where
+  "valid_queues s \<equiv> valid_queues_2 (ready_queues s) (etcbs_of s) (kheap s)"
 
 lemmas valid_queues_def = valid_queues_2_def
 
@@ -100,22 +97,18 @@ lemma valid_queues_def2:
   "valid_queues_2 queues ekh kh =
      (\<forall>d p. (\<forall>t \<in> set (queues d p).
               is_etcb_at' t ekh \<and>
-              (case ekh t of None \<Rightarrow> False | Some x \<Rightarrow> tcb_priority x = p \<and> tcb_domain x = d) \<and>
+              (case ekh t of None \<Rightarrow> False | Some x \<Rightarrow> etcb_priority x = p \<and> etcb_domain x = d) \<and>
               st_tcb_at_kh runnable t kh) \<and>
               distinct (queues d p))"
-  by (clarsimp simp: valid_queues_def
-                     conj_assoc[where P="is_etcb_at' t ekh \<and> (case ekh t of
-                                           None \<Rightarrow> False |
-                                           Some x \<Rightarrow> tcb_priority x = p \<and> tcb_domain x = d)"]
-                     etcb_at_conj_is_etcb_at[symmetric])
+  by (clarsimp simp: valid_queues_def etcb_at_conj_is_etcb_at[symmetric])
 
 definition valid_blocked_2 where
    "valid_blocked_2 queues kh sa ct \<equiv>
     (\<forall>t st. not_queued_2 queues t \<longrightarrow> st_tcb_at_kh ((=) st) t kh \<longrightarrow>
             t \<noteq> ct \<longrightarrow> sa \<noteq> switch_thread t \<longrightarrow> (\<not> active st))"
 
-abbreviation valid_blocked :: "det_ext state \<Rightarrow> bool" where
- "valid_blocked s \<equiv> valid_blocked_2 (ready_queues s) (kheap s) (scheduler_action s) (cur_thread s)"
+abbreviation valid_blocked :: "'z state \<Rightarrow> bool" where
+  "valid_blocked s \<equiv> valid_blocked_2 (ready_queues s) (kheap s) (scheduler_action s) (cur_thread s)"
 
 lemmas valid_blocked_def = valid_blocked_2_def
 
@@ -124,8 +117,8 @@ definition valid_blocked_except_2 where
     (\<forall>t st. t \<noteq> thread \<longrightarrow> not_queued_2 queues t \<longrightarrow> st_tcb_at_kh ((=) st) t kh \<longrightarrow>
             t \<noteq> ct \<longrightarrow> sa \<noteq> switch_thread t \<longrightarrow> (\<not> active st))"
 
-abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool" where
- "valid_blocked_except t s \<equiv> valid_blocked_except_2 t (ready_queues s) (kheap s) (scheduler_action s) (cur_thread s)"
+abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "valid_blocked_except t s \<equiv> valid_blocked_except_2 t (ready_queues s) (kheap s) (scheduler_action s) (cur_thread s)"
 
 lemmas valid_blocked_except_def = valid_blocked_except_2_def
 
@@ -135,10 +128,10 @@ lemma valid_blocked_except_cur_thread[simp]:
   by (fastforce simp: valid_blocked_except_2_def valid_blocked_2_def)
 
 definition in_cur_domain_2 where
-  "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. tcb_domain t = cdom) thread ekh"
+  "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) thread ekh"
 
-abbreviation in_cur_domain :: "obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool" where
-  "in_cur_domain thread s \<equiv> in_cur_domain_2 thread (cur_domain s) (ekheap s)"
+abbreviation in_cur_domain :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "in_cur_domain thread s \<equiv> in_cur_domain_2 thread (cur_domain s) (etcbs_of s)"
 
 lemmas in_cur_domain_def = in_cur_domain_2_def
 
@@ -147,24 +140,24 @@ definition ct_in_cur_domain_2 where
      sa = resume_cur_thread \<longrightarrow> thread = thread' \<or> in_cur_domain_2 thread cdom ekh"
 
 abbreviation ct_in_cur_domain where
-  "ct_in_cur_domain s \<equiv> ct_in_cur_domain_2 (cur_thread s) (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
+  "ct_in_cur_domain s \<equiv> ct_in_cur_domain_2 (cur_thread s) (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)"
 
 lemmas ct_in_cur_domain_def = ct_in_cur_domain_2_def
 
 definition is_activatable_2 where
-"is_activatable_2 thread sa kh \<equiv> sa = resume_cur_thread \<longrightarrow> st_tcb_at_kh activatable thread kh"
+  "is_activatable_2 thread sa kh \<equiv> sa = resume_cur_thread \<longrightarrow> st_tcb_at_kh activatable thread kh"
 
-abbreviation is_activatable :: "obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool"  where
-"is_activatable thread s \<equiv> is_activatable_2 thread (scheduler_action s) (kheap s)"
+abbreviation is_activatable :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool"  where
+  "is_activatable thread s \<equiv> is_activatable_2 thread (scheduler_action s) (kheap s)"
 
 lemmas is_activatable_def = is_activatable_2_def
 
 definition weak_valid_sched_action_2 where
-  "weak_valid_sched_action_2 sa ekh kh \<equiv>
+  "weak_valid_sched_action_2 sa kh \<equiv>
     \<forall>t. sa = switch_thread t \<longrightarrow> st_tcb_at_kh runnable t kh"
 
-abbreviation weak_valid_sched_action:: "det_ext state \<Rightarrow> bool" where
-  "weak_valid_sched_action s \<equiv> weak_valid_sched_action_2 (scheduler_action s) (ekheap s) (kheap s)"
+abbreviation weak_valid_sched_action:: "'z state \<Rightarrow> bool" where
+  "weak_valid_sched_action s \<equiv> weak_valid_sched_action_2 (scheduler_action s) (kheap s)"
 
 lemmas weak_valid_sched_action_def = weak_valid_sched_action_2_def
 
@@ -172,17 +165,17 @@ definition switch_in_cur_domain_2 where
   "switch_in_cur_domain_2 sa ekh cdom \<equiv>
     \<forall>t. sa = switch_thread t \<longrightarrow> in_cur_domain_2 t cdom ekh"
 
-abbreviation switch_in_cur_domain:: "det_ext state \<Rightarrow> bool" where
-  "switch_in_cur_domain s \<equiv> switch_in_cur_domain_2 (scheduler_action s) (ekheap s) (cur_domain s)"
+abbreviation switch_in_cur_domain:: "'z state \<Rightarrow> bool" where
+  "switch_in_cur_domain s \<equiv> switch_in_cur_domain_2 (scheduler_action s) (etcbs_of s) (cur_domain s)"
 
 lemmas switch_in_cur_domain_def = switch_in_cur_domain_2_def
 
 definition valid_sched_action_2 where
   "valid_sched_action_2 sa ekh kh ct cdom \<equiv>
-     is_activatable_2 ct sa kh \<and> weak_valid_sched_action_2 sa ekh kh \<and> switch_in_cur_domain_2 sa ekh cdom"
+     is_activatable_2 ct sa kh \<and> weak_valid_sched_action_2 sa kh \<and> switch_in_cur_domain_2 sa ekh cdom"
 
-abbreviation valid_sched_action :: "det_ext state \<Rightarrow> bool" where
-  "valid_sched_action s \<equiv> valid_sched_action_2 (scheduler_action s) (ekheap s) (kheap s) (cur_thread s) (cur_domain s)"
+abbreviation valid_sched_action :: "'z state \<Rightarrow> bool" where
+  "valid_sched_action s \<equiv> valid_sched_action_2 (scheduler_action s) (etcbs_of s) (kheap s) (cur_thread s) (cur_domain s)"
 
 lemmas valid_sched_action_def = valid_sched_action_2_def
 
@@ -194,17 +187,19 @@ abbreviation ct_not_queued where
 definition
   "ct_not_in_q_2 queues sa ct \<equiv> sa = resume_cur_thread \<longrightarrow> not_queued_2 queues ct"
 
-abbreviation ct_not_in_q :: "det_ext state \<Rightarrow> bool" where
+abbreviation ct_not_in_q :: "'z state \<Rightarrow> bool" where
   "ct_not_in_q s \<equiv> ct_not_in_q_2 (ready_queues s) (scheduler_action s) (cur_thread s)"
 
 lemmas ct_not_in_q_def = ct_not_in_q_2_def
 
 definition valid_sched_2 where
   "valid_sched_2 queues ekh sa cdom kh ct it \<equiv>
-      valid_etcbs_2 ekh kh \<and> valid_queues_2 queues ekh kh \<and> ct_not_in_q_2 queues sa ct \<and> valid_sched_action_2 sa ekh kh ct cdom \<and> ct_in_cur_domain_2 ct it sa cdom ekh \<and> valid_blocked_2 queues kh sa ct \<and> valid_idle_etcb_2 ekh"
+     valid_queues_2 queues ekh kh \<and> ct_not_in_q_2 queues sa ct \<and>
+     valid_sched_action_2 sa ekh kh ct cdom \<and> ct_in_cur_domain_2 ct it sa cdom ekh \<and>
+     valid_blocked_2 queues kh sa ct \<and> valid_idle_etcb_2 ekh"
 
-abbreviation valid_sched :: "det_ext state \<Rightarrow> bool" where
-  "valid_sched s \<equiv> valid_sched_2 (ready_queues s) (ekheap s) (scheduler_action s) (cur_domain s) (kheap s) (cur_thread s) (idle_thread s)"
+abbreviation valid_sched :: "'z state \<Rightarrow> bool" where
+  "valid_sched s \<equiv> valid_sched_2 (ready_queues s) (etcbs_of s) (scheduler_action s) (cur_domain s) (kheap s) (cur_thread s) (idle_thread s)"
 
 lemmas valid_sched_def = valid_sched_2_def
 
@@ -216,7 +211,7 @@ abbreviation einvs :: "det_ext state \<Rightarrow> bool" where
 definition not_cur_thread_2 :: "obj_ref \<Rightarrow> scheduler_action \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "not_cur_thread_2 thread sa ct \<equiv> sa = resume_cur_thread \<longrightarrow> thread \<noteq> ct"
 
-abbreviation not_cur_thread :: "obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool" where
+abbreviation not_cur_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "not_cur_thread thread s \<equiv> not_cur_thread_2 thread (scheduler_action s) (cur_thread s)"
 
 lemmas not_cur_thread_def = not_cur_thread_2_def
@@ -225,13 +220,13 @@ lemmas not_cur_thread_def = not_cur_thread_2_def
 definition simple_sched_action_2 :: "scheduler_action \<Rightarrow> bool" where
   "simple_sched_action_2 action \<equiv> (case action of switch_thread t \<Rightarrow> False | _ \<Rightarrow> True)"
 
-abbreviation simple_sched_action :: "det_state \<Rightarrow> bool" where
+abbreviation simple_sched_action :: "'z state \<Rightarrow> bool" where
   "simple_sched_action s \<equiv> simple_sched_action_2 (scheduler_action s)"
 
 lemmas simple_sched_action_def = simple_sched_action_2_def
 
 
-definition schact_is_rct :: "det_ext state \<Rightarrow> bool" where
+definition schact_is_rct :: "'z state \<Rightarrow> bool" where
   "schact_is_rct s \<equiv> scheduler_action s = resume_cur_thread"
 
 lemma schact_is_rct[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_action s = resume_cur_thread"
@@ -246,10 +241,10 @@ definition scheduler_act_not_2 where
 "scheduler_act_not_2 sa t \<equiv> sa \<noteq> switch_thread t"
 
 
-abbreviation scheduler_act_not :: "obj_ref \<Rightarrow> det_ext state  \<Rightarrow> bool" where
+abbreviation scheduler_act_not :: "obj_ref \<Rightarrow> 'z state  \<Rightarrow> bool" where
 "scheduler_act_not t s \<equiv> scheduler_act_not_2 (scheduler_action s) t"
 
-abbreviation scheduler_act_sane :: "det_ext state \<Rightarrow> bool" where
+abbreviation scheduler_act_sane :: "'z state \<Rightarrow> bool" where
 "scheduler_act_sane s \<equiv> scheduler_act_not_2 (scheduler_action s) (cur_thread s)"
 
 
@@ -264,25 +259,14 @@ lemmas sch_act_sane_lift = hoare_lift_Pf2[where f="cur_thread" and P="scheduler_
 
 lemmas not_queued_def = not_queued_2_def
 
-
-lemma valid_etcbs_lift:
-  assumes a: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
-      and b: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
-    shows "\<lbrace>valid_etcbs\<rbrace> f \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. ekheap s", OF _ b])
-  apply (simp add: valid_etcbs_def)
-  apply (simp add: tcb_at_st_tcb_at[symmetric] tcb_at_typ)
-  apply (wp hoare_vcg_all_lift a)
-  done
-
 lemma valid_queues_lift:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
-      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
     shows "\<lbrace>valid_queues\<rbrace> f \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. ekheap s", OF _ c])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", OF _ d])
   apply (simp add: valid_queues_def)
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ b])
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", OF _ c])
   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift a)
   done
 
@@ -345,13 +329,13 @@ lemma ct_not_in_q_lift:
   done
 
 lemma ct_in_cur_domain_lift:
-  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
+  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
       and b: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
       and c: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
       and d: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
       and e: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
     shows "\<lbrace>ct_in_cur_domain\<rbrace> f \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. ekheap s", OF _ a])
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ a])
   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ b])
   apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s", OF _ c])
   apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", OF _ d])
@@ -384,7 +368,7 @@ lemma valid_sched_action_lift:
   assumes b: "\<And>Q t. \<lbrace>\<lambda>s. etcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. etcb_at Q t s\<rbrace>"
   assumes c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
   assumes d: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-  assumes e: "\<And>Q t. \<lbrace>\<lambda>s. Q (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (cur_domain s)\<rbrace>"
+  assumes e: "\<And>Q. \<lbrace>\<lambda>s. Q (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (cur_domain s)\<rbrace>"
     shows "\<lbrace>valid_sched_action\<rbrace> f \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
   apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", OF _ d])
   apply (simp add: valid_sched_action_def)
@@ -396,9 +380,8 @@ lemma valid_sched_action_lift:
 
 lemma valid_sched_lift:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes b: "\<And>Q t. \<lbrace>\<lambda>s. etcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. etcb_at Q t s\<rbrace>"
   assumes c: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
-  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
+  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
   assumes e: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
   assumes f: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
   assumes g: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
@@ -406,48 +389,8 @@ lemma valid_sched_lift:
   assumes i: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
     shows "\<lbrace>valid_sched\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def)
-  apply (wp valid_etcbs_lift valid_queues_lift ct_not_in_q_lift ct_in_cur_domain_lift
-            valid_sched_action_lift valid_blocked_lift a b c d e f g h i hoare_vcg_conj_lift)
+  apply (wp valid_queues_lift ct_not_in_q_lift ct_in_cur_domain_lift
+            valid_sched_action_lift valid_blocked_lift a c d e f g h i hoare_vcg_conj_lift)
   done
-
-lemma valid_sched_valid_etcbs[elim!]:
-  "valid_sched s \<Longrightarrow> valid_etcbs s"
-  by (clarsimp simp: valid_sched_def)
-
-lemma valid_etcbs_tcb_etcb:
-  "\<lbrakk> valid_etcbs s; kheap s ptr = Some (TCB tcb) \<rbrakk> \<Longrightarrow> \<exists>etcb. ekheap s ptr = Some etcb"
-  by (force simp: valid_etcbs_def is_etcb_at_def st_tcb_at_def obj_at_def)
-
-lemma valid_etcbs_get_tcb_get_etcb:
-  "\<lbrakk> valid_etcbs s; get_tcb ptr s = Some tcb \<rbrakk> \<Longrightarrow> \<exists>etcb. get_etcb ptr s = Some etcb"
-  apply (clarsimp simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def get_etcb_def get_tcb_def
-                  split: option.splits if_split)
-  apply (erule_tac x=ptr in allE)
-  apply (clarsimp simp: get_etcb_def split: option.splits kernel_object.splits)+
-  done
-
-lemma valid_etcbs_ko_etcb:
-  "\<lbrakk> valid_etcbs s; kheap s ptr = Some ko \<rbrakk> \<Longrightarrow> \<exists>tcb. (ko = TCB tcb = (\<exists>etcb. ekheap s ptr = Some etcb))"
-  apply (clarsimp simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
-  apply (erule_tac x="ptr" in allE)
-  apply auto
-  done
-
-lemma ekheap_tcb_at:
-  "\<lbrakk>ekheap s x = Some y; valid_etcbs s\<rbrakk> \<Longrightarrow> tcb_at x s"
-  by (fastforce simp: valid_etcbs_def is_etcb_at_def st_tcb_at_def obj_at_def is_tcb_def)
-
-lemma tcb_at_is_etcb_at:
-  "\<lbrakk>tcb_at t s; valid_etcbs s\<rbrakk> \<Longrightarrow> is_etcb_at t s"
-  by (simp add: valid_etcbs_def tcb_at_st_tcb_at)
-
-lemma tcb_at_ekheap_dom:
-  "\<lbrakk>tcb_at x s; valid_etcbs s\<rbrakk> \<Longrightarrow> (\<exists>etcb. ekheap s x = Some etcb)"
-  by (auto simp: is_etcb_at_def dest: tcb_at_is_etcb_at)
-
-lemma ekheap_kheap_dom:
-  "\<lbrakk>ekheap s x = Some etcb; valid_etcbs s\<rbrakk>
-    \<Longrightarrow> \<exists>tcb. kheap s x = Some (TCB tcb)"
-  by (fastforce simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
 
 end
