@@ -48,9 +48,8 @@ defs createNewCaps_def:
 "createNewCaps t regionBase numObjects userSize dev \<equiv>
     (case toAPIType t of
           Some TCBObject \<Rightarrow> (do
-            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::tcb)) 0;
             curdom \<leftarrow> curDomain;
-            mapM_x (\<lambda>tptr. threadSet (tcbDomain_update (\<lambda>_. curdom)) tptr) addrs;
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO ((makeObject ::tcb)\<lparr>tcbDomain := curdom\<rparr>)) 0;
             return $ map (\<lambda> addr. ThreadCap addr) addrs
           od)
         | Some EndpointObject \<Rightarrow> (do

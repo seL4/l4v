@@ -357,10 +357,8 @@ New threads are placed in the current security domain, which must be the domain 
 >     let funupd = (\f x v y -> if y == x then v else f y) in
 >     case toAPIType t of
 >         Just TCBObject -> do
->             placeNewObject regionBase (makeObject :: TCB) 0
 >             curdom <- curDomain
->             threadSet (\t -> t { tcbDomain = curdom })
->                 (PPtr $ fromPPtr regionBase)
+>             placeNewObject regionBase ((makeObject :: TCB){tcbDomain = curdom}) 0
 >             return $ ThreadCap (PPtr $ fromPPtr regionBase)
 >         Just EndpointObject -> do
 >             placeNewObject regionBase (makeObject :: Endpoint) 0
