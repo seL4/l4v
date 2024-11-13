@@ -1201,7 +1201,7 @@ lemma retype_ctes_helper:
   and      al: "is_aligned ptr (objBitsKO ko)"
   and      sz: "objBitsKO ko \<le> sz"
   and     szb: "sz < word_bits"
-  and     mko: "makeObjectKO dev tp' = Some ko"
+  and     mko: "makeObjectKO dev d tp' = Some ko"
   and      rc: "range_cover ptr sz (objBitsKO ko) n"
   shows  "map_to_ctes (\<lambda>xa. if xa \<in> set (new_cap_addrs n ptr ko) then Some ko else ksPSpace s xa) =
    (\<lambda>x. if tp' = Inr (APIObjectType ArchTypes_H.apiobject_type.CapTableObject) \<and> x \<in> set (new_cap_addrs n ptr ko) \<or>
@@ -1482,7 +1482,7 @@ proof (intro impI allI)
     by (clarsimp simp:range_cover_def[where 'a=machine_word_len, folded word_bits_def])+
 
   (* obj specific *)
-  have mko: "\<And>dev. makeObjectKO dev (Inr (APIObjectType ArchTypes_H.apiobject_type.EndpointObject)) = Some ko"
+  have mko: "\<And>dev d. makeObjectKO dev d (Inr (APIObjectType ArchTypes_H.apiobject_type.EndpointObject)) = Some ko"
     by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
@@ -1596,7 +1596,7 @@ proof (intro impI allI)
     by (clarsimp simp:range_cover_def[where 'a=machine_word_len, folded word_bits_def])+
 
   (* obj specific *)
-  have mko: "\<And> dev. makeObjectKO dev (Inr (APIObjectType ArchTypes_H.apiobject_type.NotificationObject)) = Some ko" by (simp add: ko_def makeObjectKO_def)
+  have mko: "\<And> dev d. makeObjectKO dev d (Inr (APIObjectType ArchTypes_H.apiobject_type.NotificationObject)) = Some ko" by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
     "cnotification_relation (cslift x) makeObject (from_bytes (replicate (size_of TYPE(notification_C)) 0))"
@@ -1748,7 +1748,7 @@ proof (intro impI allI)
     by (clarsimp simp:range_cover_def[where 'a=machine_word_len, folded word_bits_def])+
 
   (* obj specific *)
-  have mko: "\<And>dev. makeObjectKO dev (Inr (APIObjectType  ArchTypes_H.apiobject_type.CapTableObject)) = Some ko"
+  have mko: "\<And>dev d. makeObjectKO dev d (Inr (APIObjectType  ArchTypes_H.apiobject_type.CapTableObject)) = Some ko"
     by (simp add: ko_def makeObjectKO_def)
 
   note relrl = ccte_relation_makeObject
@@ -1988,7 +1988,7 @@ proof (intro impI allI)
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 
   (* obj specific *)
-  have mko: "\<And>dev. makeObjectKO dev (Inr AARCH64_H.PageTableObject) = Some ko"
+  have mko: "\<And>dev d. makeObjectKO dev d (Inr AARCH64_H.PageTableObject) = Some ko"
     by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
@@ -2157,7 +2157,7 @@ proof (intro impI allI)
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 
   (* obj specific *)
-  have mko: "\<And>dev. makeObjectKO dev (Inr AARCH64_H.PageTableObject) = Some ko"
+  have mko: "\<And>dev d. makeObjectKO dev d (Inr AARCH64_H.PageTableObject) = Some ko"
     by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
@@ -3114,7 +3114,8 @@ end
 
 lemma cnc_tcb_helper:
   fixes p :: "tcb_C ptr"
-  defines "kotcb \<equiv> (KOTCB (makeObject :: tcb))"
+    and d :: domain
+  defines "kotcb \<equiv> KOTCB (tcbDomain_update (\<lambda>_. d) (makeObject :: tcb))"
   assumes rfsr: "(\<sigma>\<lparr>ksPSpace := ks\<rparr>, x) \<in> rf_sr"
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr p) (objBitsKO kotcb)"
   assumes ptr0: "ctcb_ptr_to_tcb_ptr p \<noteq> 0"
@@ -3127,6 +3128,7 @@ lemma cnc_tcb_helper:
   assumes empty: "region_is_bytes (ctcb_ptr_to_tcb_ptr p) (2 ^ tcbBlockSizeBits) x"
   assumes rep0: "heap_list (fst (t_hrs_' (globals x))) (2 ^ tcbBlockSizeBits) (ctcb_ptr_to_tcb_ptr p) = replicate (2 ^ tcbBlockSizeBits) 0"
   assumes kdr: "{ctcb_ptr_to_tcb_ptr p..+2 ^ tcbBlockSizeBits} \<inter> kernel_data_refs = {}"
+  assumes domrel: "ucast d = d'"
   shows "(\<sigma>\<lparr>ksPSpace := ks(ctcb_ptr_to_tcb_ptr p \<mapsto> kotcb)\<rparr>,
             globals_update
               (t_hrs_'_update
@@ -3135,7 +3137,8 @@ lemma cnc_tcb_helper:
                                      [heap_update (registers_of_tcb_Ptr p)
                                                   (array_updates (h_val (hrs_mem hrs) (registers_of_tcb_Ptr p))
                                                                  initContext_registers),
-                                      heap_update (machine_word_Ptr &(p\<rightarrow>[''tcbTimeSlice_C''])) 5])
+                                      heap_update (machine_word_Ptr &(p\<rightarrow>[''tcbTimeSlice_C''])) 5,
+                                      heap_update (machine_word_Ptr &(p\<rightarrow>[''tcbDomain_C''])) (d' :: machine_word)])
                        )) x)
            \<in> rf_sr"
   (is "(\<sigma>\<lparr>ksPSpace := ?ks\<rparr>, globals_update ?gs' x) \<in> rf_sr")
@@ -3307,7 +3310,8 @@ proof -
                          \<lparr>registers_C := array_updates (registers_C (tcbContext_C ?tcbArch_C))
                                                        initContext_registers
                             \<rparr>\<rparr>,
-                        tcbTimeSlice_C := 5\<rparr>)"
+                        tcbTimeSlice_C := 5,
+                        tcbDomain_C := d'\<rparr>)"
 
   have tdisj':
     "\<And>y. hrs_htd (t_hrs_' (globals x)) \<Turnstile>\<^sub>t y \<Longrightarrow> ptr_span p \<inter> ptr_span y \<noteq> {} \<Longrightarrow> y = p"
@@ -3358,7 +3362,7 @@ proof -
 
   have rl:
     "(\<forall>v :: 'a :: pre_storable. projectKO_opt kotcb \<noteq> Some v) \<Longrightarrow>
-    (projectKO_opt \<circ>\<^sub>m (ks(ctcb_ptr_to_tcb_ptr p \<mapsto> KOTCB makeObject)) :: machine_word \<Rightarrow> 'a option)
+    (projectKO_opt \<circ>\<^sub>m (ks(ctcb_ptr_to_tcb_ptr p \<mapsto> KOTCB (tcbDomain_update (\<lambda>_. d) makeObject))) :: machine_word \<Rightarrow> 'a option)
     = projectKO_opt \<circ>\<^sub>m ks" using pno al
     apply -
     apply (drule(2) projectKO_opt_retyp_other'[OF _ _ pal])
@@ -3371,8 +3375,9 @@ proof -
     apply (clarsimp simp: projectKOs map_comp_def split: if_split)
     done
 
-  have mko: "\<And>dev. makeObjectKO dev (Inr (APIObjectType ArchTypes_H.apiobject_type.TCBObject)) = Some kotcb"
+  have mko: "\<And>dev. makeObjectKO dev d (Inr (APIObjectType ArchTypes_H.apiobject_type.TCBObject)) = Some kotcb"
     by (simp add: makeObjectKO_def kotcb_def)
+
   note hacky_cte = retype_ctes_helper [where sz = "objBitsKO kotcb" and ko = kotcb and ptr = "ctcb_ptr_to_tcb_ptr p",
     OF pal pds pno al _ _ mko, simplified new_cap_addrs_def, simplified]
 
@@ -3413,7 +3418,7 @@ proof -
       done
   qed
 
-  ultimately have rl_cte: "(map_to_ctes (ks(ctcb_ptr_to_tcb_ptr p \<mapsto> KOTCB makeObject)) :: machine_word \<Rightarrow> cte option)
+  ultimately have rl_cte: "(map_to_ctes (ks(ctcb_ptr_to_tcb_ptr p \<mapsto> KOTCB (tcbDomain_update (\<lambda>_. d) makeObject))) :: machine_word \<Rightarrow> cte option)
     = (\<lambda>x. if x \<in> ptr_val ` (CTypesDefs.ptr_add (cte_Ptr (ctcb_ptr_to_tcb_ptr p)) \<circ> of_nat) ` {k. k < 5}
          then Some (CTE NullCap nullMDBNode)
          else map_to_ctes ks x)"
@@ -3483,19 +3488,20 @@ proof -
     done
 
   have tcb_rel:
-    "ctcb_relation makeObject ?new_tcb"
+    "ctcb_relation (tcbDomain_update (\<lambda>_. d) makeObject) ?new_tcb"
     unfolding ctcb_relation_def makeObject_tcb heap_updates_defs initContext_registers_def
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
-         apply (simp add: cthread_state_relation_def thread_state_lift_def
-                          eval_nat_numeral ThreadState_defs)
-        apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
-                              newArchTCB_def fpu_relation_def cregs_relation_def atcbContextGet_def
-                              index_foldr_update)
-        apply (case_tac r; simp add: C_register_defs index_foldr_update
-                                     atcbContext_def newArchTCB_def newContext_def
-                                     initContext_def)
-       apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)
+          apply (simp add: cthread_state_relation_def thread_state_lift_def
+                           eval_nat_numeral ThreadState_defs)
+         apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
+                               newArchTCB_def fpu_relation_def cregs_relation_def atcbContextGet_def
+                               index_foldr_update)
+         apply (case_tac r; simp add: C_register_defs index_foldr_update
+                                      atcbContext_def newArchTCB_def newContext_def
+                                      initContext_def)
+        apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)
+       apply (fastforce intro: domrel)
       apply (simp add: Kernel_Config.timeSlice_def)
      apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
                       lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
@@ -3628,6 +3634,7 @@ proof -
      apply (erule cmap_relation_retype2)
      apply (simp add:ccte_relation_nullCap nullMDBNode_def nullPointer_def)
     \<comment> \<open>tcb\<close>
+     apply (clarsimp simp: map_comp_update)
      apply (erule cmap_relation_updI2 [where dest = "ctcb_ptr_to_tcb_ptr p" and f = "tcb_ptr_to_ctcb_ptr", simplified])
      apply (rule map_comp_simps)
      apply (rule pks)
@@ -4137,7 +4144,7 @@ proof (intro impI allI)
     by (clarsimp dest!: is_aligned_weaken range_cover.aligned)
 
   (* This is a hack *)
-  have mko: "\<And>dev. makeObjectKO False (Inr object_type.SmallPageObject) = Some ko"
+  have mko: "\<And>dev d. makeObjectKO False d (Inr object_type.SmallPageObject) = Some ko"
     by (simp add: makeObjectKO_def ko_def)
 
   from sz have "3 \<le> sz" by (simp add: objBits_simps pageBits_def ko_def)
@@ -4694,16 +4701,22 @@ lemma ccorres_placeNewObject_tcb:
       and ret_zero regionBase (2 ^ tcbBlockSizeBits)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase tcbBlockSizeBits tcbBlockSizeBits 1
       \<and>  {regionBase..+2^tcbBlockSizeBits} \<inter> kernel_data_refs = {}))
-   ({s. region_actually_is_zero_bytes regionBase (2^tcbBlockSizeBits) s})
-    hs
-   (placeNewObject regionBase (makeObject :: tcb) 0)
+   ({s. region_actually_is_zero_bytes regionBase (2^tcbBlockSizeBits) s
+        \<and> ksCurDomain_' (globals s) = ucast d}) hs
+   (placeNewObject regionBase (tcbDomain_update (\<lambda>_. d) makeObject) 0)
    (\<acute>tcb :== tcb_Ptr (regionBase + 0x400);;
         (global_htd_update (\<lambda>s. ptr_retyp (Ptr (ptr_val (tcb_' s) - ctcb_offset) :: (cte_C[5]) ptr)
             \<circ> ptr_retyp (tcb_' s)));;
         (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>tcb\<rbrace>
-           (call (\<lambda>s. s\<lparr>context_' := Ptr &((Ptr &(tcb_' s\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])\<rparr>) Arch_initContext_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s' s''. Basic (\<lambda>s. s))));;
+           (call (\<lambda>s. s\<lparr>context_' := Ptr &((Ptr &(tcb_' s\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])\<rparr>)
+                 Arch_initContext_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s' s''. Basic (\<lambda>s. s))));;
         (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>tcb\<rbrace>
-           (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_update (Ptr &((tcb_' s)\<rightarrow>[''tcbTimeSlice_C''])) (5::machine_word)))) s))))"
+           (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_update (Ptr &((tcb_' s)\<rightarrow>[''tcbTimeSlice_C''])) (5::machine_word)))) s)));;
+        (Guard C_Guard {s. s \<Turnstile>\<^sub>c tcb_' s}
+          (Basic (\<lambda>s. globals_update
+                       (t_hrs_'_update
+                        (hrs_mem_update (heap_update (Ptr &(tcb_' s\<rightarrow>[''tcbDomain_C'']))
+                                        (ksCurDomain_' (globals s) :: machine_word)))) s))))"
 proof -
   let ?offs = "0x400" \<comment> \<open>2 ^ (tcbBlockSizeBits - 1)\<close>
 
@@ -4743,6 +4756,7 @@ proof -
          clarsimp simp: hrs_htd_update word_bits_def no_fail_def objBitsKO_def
                         range_cover.aligned new_cap_addrs_def tcbBlockSizeBits_def)
   apply (cut_tac \<sigma>=\<sigma> and x=x and ks="ksPSpace \<sigma>" and p="tcb_Ptr (regionBase + ctcb_offset)"
+             and d=d and d'="ucast d"
            in cnc_tcb_helper;
          clarsimp simp: ctcb_ptr_to_tcb_ptr_def objBitsKO_def range_cover.aligned tcbBlockSizeBits_def)
     apply (frule region_actually_is_bytes; clarsimp simp: region_is_bytes'_def)
@@ -4902,7 +4916,7 @@ proof (intro impI allI)
       by (simp add:word_bits_def objBits_simps ko_def pageBits_def)
 
   (* This is a hack *)
-  have mko: "\<And>dev. makeObjectKO True (Inr object_type.SmallPageObject) = Some ko"
+  have mko: "\<And>dev d. makeObjectKO True d (Inr object_type.SmallPageObject) = Some ko"
     by (simp add: makeObjectKO_def ko_def)
 
   from sz have "3 \<le> sz" by (simp add: objBits_simps pageBits_def ko_def)
@@ -6354,18 +6368,14 @@ proof -
           apply (rule ccorres_symb_exec_r)
             apply (ccorres_remove_UNIV_guard)
             apply (simp add: hrs_htd_update)
-            apply (ctac (c_lines 4) add: ccorres_placeNewObject_tcb[simplified])
+            apply (rule ccorres_pre_curDomain)
+            apply (ctac (c_lines 5) add: ccorres_placeNewObject_tcb[simplified])
               apply simp
-              apply (rule ccorres_pre_curDomain)
-              apply ctac
-                apply (rule ccorres_symb_exec_r)
-                  apply (rule ccorres_return_C, simp, simp, simp)
-                 apply vcg
-                apply (rule conseqPre, vcg, clarsimp)
-               apply wp
-              apply vcg
-             apply (simp add: obj_at'_real_def)
-             apply (wp placeNewObject_ko_wp_at')
+              apply (rule ccorres_symb_exec_r)
+                apply (rule ccorres_return_C, simp, simp, simp)
+               apply vcg
+              apply (rule conseqPre, vcg, clarsimp)
+             apply wp
             apply (vcg exspec=Arch_initContext_modifies)
            apply clarsimp
            apply vcg
