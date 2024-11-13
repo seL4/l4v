@@ -586,10 +586,18 @@ lemma cap_insert_ioports_ap:
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (simp add: cap_insert_def)
-  apply (wp get_cap_wp set_cap_ioports' set_untyped_cap_as_full_ioports
+  apply (wp get_cap_wp set_cap_ioports_safe set_untyped_cap_as_full_ioports
             set_untyped_cap_as_full_gross_ioports
-         | wpc | simp split del: if_splits)+
+         | wpc | simp split del: if_split)+
   done
+
+lemma cap_insert_valid_arch_state_ap:
+  "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
+    K (is_ap_cap cap)\<rbrace>
+   cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_ioports_ap)+
+     (simp add: valid_arch_state_def)
 
 lemma cap_insert_ap_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and
@@ -611,7 +619,7 @@ lemma cap_insert_ap_invs:
   apply (simp cong: conj_cong)
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_mdb cap_insert_iflive
-             cap_insert_zombies cap_insert_ifunsafe cap_insert_ioports_ap
+             cap_insert_zombies cap_insert_ifunsafe cap_insert_valid_arch_state_ap
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state is_cap_simps)

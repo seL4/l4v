@@ -3617,10 +3617,6 @@ lemma cap_insert_aobj_at:
   unfolding cap_insert_def update_cdt_def set_cdt_def set_untyped_cap_as_full_def
   by (wpsimp wp: set_cap.aobj_at get_cap_wp)
 
-lemma cap_insert_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift_aobj_at; wp cap_insert_aobj_at)
-
 
 crunch update_cdt
   for caps[wp]: "\<lambda>s. P (caps_of_state s)"
@@ -3745,11 +3741,11 @@ locale CSpace_AI_cap_insert =
             and cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c) src\<rbrace>
         cap_insert cap src dest
       \<lbrace>\<lambda>rv. cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes cap_insert_derived_ioports:
+  assumes cap_insert_derived_valid_arch_state:
     "\<And>src cap dest.
-      \<lbrace>valid_ioports and (\<lambda>s::'state_ext state. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
+      \<lbrace>valid_arch_state and (\<lambda>s::'state_ext state. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
         cap_insert cap src dest
-      \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+      \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
 
 lemma cap_is_device_free_index_update_simp[simp]:
   "is_untyped_cap c \<Longrightarrow> cap_is_device (max_free_index_update c) = cap_is_device c"
@@ -3902,7 +3898,7 @@ lemma cap_insert_invs[wp]:
   apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
    apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
-             valid_irq_node_typ cap_insert_valid_arch_caps cap_insert_derived_ioports)
+             valid_irq_node_typ cap_insert_valid_arch_caps cap_insert_derived_valid_arch_state)
   apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)
   done
@@ -4057,11 +4053,11 @@ locale CSpace_AI
         \<Longrightarrow> (is_physical cap \<and> cap_range cap \<noteq> {} \<and> cap_range cap \<subseteq> cap_range pcap)"
   assumes same_region_as_cap_class:
     "\<And>a b. same_region_as a b \<Longrightarrow> cap_class a = cap_class b"
-  assumes setup_reply_master_ioports[wp]:
+  assumes setup_reply_master_valid_arch[wp]:
     "\<And>t.
-      \<lbrace>valid_ioports\<rbrace>
-        setup_reply_master t
-      \<lbrace>\<lambda>rv. valid_ioports :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+      \<lbrace>valid_arch_state\<rbrace>
+      setup_reply_master t
+      \<lbrace>\<lambda>rv. valid_arch_state :: 'state_ext state \<Rightarrow> bool\<rbrace>"
 
 
 lemma lookup_cap_valid:
@@ -4381,8 +4377,7 @@ lemma setup_reply_master_globals[wp]:
 
 
 crunch setup_reply_master
-  for arch[wp]: "valid_arch_state"
-  and vspace_objs[wp]: "valid_vspace_objs"
+  for vspace_objs[wp]: "valid_vspace_objs"
   (simp: crunch_simps)
 
 lemma setup_reply_master_irq_handlers[wp]:

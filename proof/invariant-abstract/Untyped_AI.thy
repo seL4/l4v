@@ -17,11 +17,6 @@ unbundle l4v_word_context (* because of Lib.MonadicRewrite *)
 
 arch_requalify_consts
   second_level_tables
-  safe_ioport_insert
-
-arch_requalify_facts
-  set_cap_ioports'
-  safe_ioport_insert_triv
 
 primrec
   valid_untyped_inv_wcap :: "Invocations_A.untyped_invocation \<Rightarrow> cap option
@@ -299,6 +294,11 @@ locale Untyped_AI_arch =
     \<Longrightarrow> case ui of
         Retype slot reset ptr_base ptr tp us slots dev
         \<Rightarrow> obj_is_device tp dev = dev"
+  assumes set_cap_non_arch_valid_arch_state:
+  "\<And>cap ptr.
+     \<lbrace>\<lambda>s. valid_arch_state s \<and> cte_wp_at (\<lambda>_. \<not>is_arch_cap cap) ptr s\<rbrace>
+     set_cap cap ptr
+     \<lbrace>\<lambda>rv. valid_arch_state :: 'state_ext state \<Rightarrow> _ \<rbrace>"
 
 lemmas is_aligned_triv2 = Aligned.is_aligned_triv
 
@@ -2686,6 +2686,7 @@ lemma caps_of_state_pspace_no_overlapD:
   apply simp
   done
 
+context Untyped_AI_arch begin
 
 lemma set_untyped_cap_invs_simple:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s
@@ -2693,7 +2694,7 @@ lemma set_untyped_cap_invs_simple:
   \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz
       \<and> cap_is_device c = dev\<and> obj_ref_of c = ptr) cref s \<and> idx \<le> 2^ sz\<rbrace>
   set_cap (UntypedCap dev ptr sz idx) cref
- \<lbrace>\<lambda>rv s. invs s\<rbrace>"
+ \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool \<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:cte_wp_at_caps_of_state invs_def valid_state_def)
   apply (rule hoare_pre)
@@ -2702,23 +2703,22 @@ lemma set_untyped_cap_invs_simple:
    apply (simp add:valid_irq_node_def)
    apply wps
    apply (wp hoare_vcg_all_lift set_cap_irq_handlers
-     set_cap_irq_handlers cap_table_at_lift_valid set_cap_ioports'
+     set_cap_irq_handlers cap_table_at_lift_valid set_cap_non_arch_valid_arch_state
      set_cap_typ_at set_cap_valid_arch_caps_simple set_cap_kernel_window_simple
      set_cap_cap_refs_respects_device_region)
   apply (clarsimp simp del: split_paired_Ex)
   apply (strengthen exI[where x=cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps valid_pspace_def)
   apply (intro conjI; clarsimp?)
-        apply (clarsimp simp: fun_eq_iff)
-       apply (clarsimp split:cap.splits simp:is_cap_simps appropriate_cte_cap_def)
-      apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
-       apply clarsimp
-      apply (clarsimp simp: is_cap_simps ex_cte_cap_wp_to_def appropriate_cte_cap_def
-                            cte_wp_at_caps_of_state)
-     apply (clarsimp dest!:valid_global_refsD2 simp:cap_range_def)
-    apply (simp add:valid_irq_node_def)
-   apply (clarsimp simp:valid_irq_node_def)
-  apply (clarsimp intro!: safe_ioport_insert_triv simp: is_cap_simps)
+       apply (clarsimp simp: fun_eq_iff)
+      apply (clarsimp split:cap.splits simp:is_cap_simps appropriate_cte_cap_def)
+     apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
+      apply clarsimp
+     apply (clarsimp simp: is_cap_simps ex_cte_cap_wp_to_def appropriate_cte_cap_def
+                           cte_wp_at_caps_of_state)
+    apply (clarsimp dest!:valid_global_refsD2 simp:cap_range_def)
+   apply (simp add:valid_irq_node_def)
+  apply (clarsimp simp:valid_irq_node_def)
   done
 
 lemma reset_untyped_cap_invs_etc:
@@ -2729,7 +2729,7 @@ lemma reset_untyped_cap_invs_etc:
     reset_untyped_cap slot
   \<lbrace>\<lambda>_. invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz 0))
       and ct_active
-      and pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1}\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>"
+      and pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1}\<rbrace>, \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   (is "\<lbrace>invs and valid_untyped_inv_wcap ?ui (Some ?cap) and ct_active and _\<rbrace>
     ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>")
   apply (simp add: reset_untyped_cap_def)
@@ -2816,6 +2816,8 @@ lemma reset_untyped_cap_invs_etc:
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
+
+end
 
 lemma get_cap_prop_known:
   "\<lbrace>cte_wp_at (\<lambda>cp. f cp = v) slot and Q v\<rbrace> get_cap slot \<lbrace>\<lambda>rv. Q (f rv)\<rbrace>"
@@ -2975,10 +2977,6 @@ lemma create_cap_aobj_at:
   unfolding create_cap_def split_def set_cdt_def
   by (wpsimp wp: set_cap.aobj_at)
 
-lemma create_cap_valid_arch_state[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> create_cap type bits ut is_dev cref \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (wp valid_arch_state_lift_aobj_at create_cap_aobj_at)
-
 crunch create_cap
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps)
@@ -3031,9 +3029,9 @@ locale Untyped_AI_nonempty_table =
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
         init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
-  assumes create_cap_ioports[wp]:
-  "\<And>tp oref sz dev cref p. \<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace>
-        create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv (s::'state_ext state). valid_ioports s\<rbrace>"
+  assumes create_cap_valid_arch_state[wp]:
+  "\<And>tp oref sz dev cref p. \<lbrace>valid_arch_state and cte_wp_at (\<lambda>_. True) cref\<rbrace>
+        create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv (s::'state_ext state). valid_arch_state s\<rbrace>"
 
 
 crunch create_cap
