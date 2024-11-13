@@ -96,24 +96,6 @@ lemma createObject_typ_at':
   apply (clarsimp simp: is_aligned_no_overflow_mask)
   done
 
-lemma retype_region2_ext_retype_region_ArchObject:
-  "retype_region ptr n us (ArchObject x)=
-  retype_region2 ptr n us (ArchObject x)"
-  apply (rule ext)
-  apply (simp add: retype_region_def retype_region2_def bind_assoc
-                   retype_region2_ext_def retype_region_ext_def default_ext_def)
-  apply (rule ext)
-  apply (intro monad_eq_split_tail ext)+
-     apply simp
-    apply simp
-   apply (simp add:gets_def get_def bind_def return_def simpler_modify_def )
-   apply (rule_tac x = xc in fun_cong)
-   apply (rule_tac f = do_extended_op in arg_cong)
-   apply (rule ext)
-   apply simp
-  apply simp
-  done
-
 lemma set_cap_device_and_range_aligned:
   "is_aligned ptr sz \<Longrightarrow> \<lbrace>\<lambda>_. True\<rbrace>
     set_cap
@@ -165,7 +147,6 @@ lemma performASIDControlInvocation_corres:
             apply (clarsimp simp:is_cap_simps)
            apply (simp add: free_index_of_def)
           apply (rule corres_split)
-             apply (simp add: retype_region2_ext_retype_region_ArchObject )
              apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))" for F,
                                         unfolded APIType_map2_def makeObjectKO_def,
                                         THEN createObjects_corres',simplified,
@@ -315,9 +296,8 @@ lemma performASIDControlInvocation_corres:
    apply (rule conjI, rule pspace_no_overlap_subset,
          rule pspace_no_overlap_detype[OF caps_of_state_valid])
         apply (simp add:invs_psp_aligned invs_valid_objs is_aligned_neg_mask_eq)+
-   apply (clarsimp simp: detype_def clear_um_def detype_ext_def valid_sched_def valid_etcbs_def
-                         st_tcb_at_kh_def obj_at_kh_def st_tcb_at_def obj_at_def is_etcb_at_def
-                         wrap_ext_det_ext_ext_def)
+   apply (clarsimp simp: detype_def clear_um_def valid_sched_def
+                         st_tcb_at_kh_def obj_at_kh_def st_tcb_at_def obj_at_def)
   apply (simp add: detype_def clear_um_def)
   apply (drule_tac x = "cte_map (aa,ba)" in pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
     apply (simp add:invs_valid_objs)+
