@@ -610,7 +610,7 @@ lemma getIRQState_prop:
 lemma decDomainTime_corres:
   "corres dc \<top> \<top> dec_domain_time decDomainTime"
   apply (simp add:dec_domain_time_def corres_underlying_def decDomainTime_def simpler_modify_def)
-  apply (clarsimp simp:state_relation_def)
+  apply (clarsimp simp: state_relation_def cdt_relation_def)
   done
 
 lemma thread_state_case_if:
@@ -644,24 +644,24 @@ lemma timerTick_corres:
           apply (rule corres_split[where r' = dc])
              apply (rule corres_if[where Q = \<top> and Q' = \<top>])
                apply (case_tac state,simp_all)[1]
-              apply (rule_tac r'="(=)" in corres_split[OF ethreadget_corres])
-                 apply (simp add:etcb_relation_def)
+              apply (rule_tac r'="(=)" in corres_split[OF threadGet_corres])
+                 apply (simp add: tcb_relation_def)
                 apply (rename_tac ts ts')
                 apply (rule_tac R="1 < ts" in corres_cases)
                  apply (simp)
                  apply (unfold thread_set_time_slice_def)
-                 apply (rule ethread_set_corres, simp+)
-                 apply (clarsimp simp: etcb_relation_def)
+                 apply (rule threadset_corres; simp add: tcb_relation_def inQ_def)
                 apply simp
-                apply (rule corres_split[OF ethread_set_corres])
-                         apply (simp add: sch_act_wf_weak etcb_relation_def pred_conj_def)+
+                apply (rule corres_split[OF threadset_corres])
+                                apply (simp add: sch_act_wf_weak tcb_relation_def pred_conj_def inQ_def)+
                   apply (rule corres_split[OF tcbSchedAppend_corres], simp)
                     apply (rule rescheduleRequired_corres)
                    apply wp
                   apply ((wpsimp wp: tcbSchedAppend_sym_heap_sched_pointers
                                      tcbSchedAppend_valid_objs'
                           | strengthen valid_objs'_valid_tcbs')+)[1]
-                 apply ((wp thread_set_time_slice_valid_queues
+                 apply ((wpsimp wp: thread_set_valid_queues thread_set_no_change_tcb_state
+                                    thread_set_weak_valid_sched_action
                          | strengthen valid_queues_in_correct_ready_q
                                       valid_queues_ready_qs_distinct)+)[1]
                 apply ((wpsimp wp: threadSet_sched_pointers threadSet_valid_sched_pointers
@@ -681,10 +681,10 @@ lemma timerTick_corres:
                              threadSet_pred_tcb_at_state threadSet_weak_sch_act_wf
                              rescheduleRequired_weak_sch_act_wf)+
               apply (strengthen valid_queues_in_correct_ready_q valid_queues_ready_qs_distinct)
-              apply (wpsimp wp: thread_set_time_slice_valid_queues)
-             apply ((wpsimp wp: thread_set_time_slice_valid_queues
+              apply (wpsimp wp: thread_set_valid_queues thread_set_weak_valid_sched_action)
+             apply ((wpsimp wp: thread_set_valid_queues
                      | strengthen valid_queues_in_correct_ready_q valid_queues_ready_qs_distinct)+)[1]
-            apply wpsimp
+            apply (wpsimp wp: thread_get_wp)
            apply wpsimp
           apply ((wpsimp wp: threadSet_sched_pointers threadSet_valid_sched_pointers
                              threadSet_valid_objs'
@@ -692,11 +692,8 @@ lemma timerTick_corres:
                   | wp (once) hoare_drop_imp)+)[1]
          apply (wpsimp wp: gts_wp gts_wp')+
      apply (clarsimp simp: cur_tcb_def)
-     apply (frule valid_sched_valid_etcbs)
-     apply (frule (1) tcb_at_is_etcb_at)
      apply (frule valid_sched_valid_queues)
      apply (fastforce simp: pred_tcb_at_def obj_at_def valid_sched_weak_strg)
-    apply (clarsimp simp: etcb_at_def split: option.splits)
     apply fastforce
    apply (fastforce simp: valid_state'_def ct_not_inQ_def)
   apply fastforce
