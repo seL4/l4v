@@ -78,7 +78,7 @@ definition
     tcb_mcpriority = minBound,
     tcb_priority = 0,
     tcb_time_slice = timeSlice,
-    tcb_domain = 0,
+    tcb_domain = default_domain,
     tcb_arch = init_arch_tcb
   \<rparr>,
   us_global_pd_ptr \<mapsto> us_global_pd)"

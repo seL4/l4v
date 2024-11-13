@@ -94,7 +94,7 @@ definition
          tcb_mcpriority = minBound,
          tcb_priority = 0,
          tcb_time_slice = timeSlice,
-         tcb_domain = 0,
+         tcb_domain = default_domain,
          tcb_arch = init_arch_tcb
          \<rparr>,
      init_global_pml4 \<mapsto> ArchObj (PageMapL4 global_pml4),

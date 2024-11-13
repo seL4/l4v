@@ -76,7 +76,7 @@ definition
     tcb_mcpriority = minBound,
     tcb_priority = 0,
     tcb_time_slice = timeSlice,
-    tcb_domain = 0,
+    tcb_domain = default_domain,
     tcb_arch = init_arch_tcb
   \<rparr>,
   init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), \<comment> \<open>same reason as why we kept the definition of @{term init_globals_frame}\<close>

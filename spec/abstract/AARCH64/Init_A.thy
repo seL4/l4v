@@ -81,7 +81,7 @@ definition init_kheap :: kheap where
          tcb_mcpriority = minBound,
          tcb_priority = 0,
          tcb_time_slice = timeSlice,
-         tcb_domain = 0,
+         tcb_domain = default_domain,
          tcb_arch = init_arch_tcb
          \<rparr>,
      arm_global_pt_ptr \<mapsto> ArchObj global_pt_obj
