@@ -2811,9 +2811,6 @@ lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
 
-lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
-  by (clarsimp simp: valid_sched_def)
-
 lemma invs'_bitmapQ_no_L1_orphans:
   "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"
   by (simp add: invs'_def valid_state'_def valid_bitmaps_def)
@@ -2945,5 +2942,4 @@ method normalise_obj_at' =
    clarsimp simp: ko_at'_defn_def)
 
 end
-
 end
