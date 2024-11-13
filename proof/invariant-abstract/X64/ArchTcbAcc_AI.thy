@@ -173,6 +173,23 @@ lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atc
                                = tcb_context_update (\<lambda>ctx. P ctx) atcb"
   by (simp add: arch_tcb_context_set_def arch_tcb_context_get_def)
 
+crunch set_thread_state, set_bound_notification
+  for valid_ioports[wp]: valid_ioports
+  (wp: valid_ioports_lift)
+
+lemma thread_set_ioports:
+  assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
+                  getF (f tcb) = getF tcb"
+  shows
+  "\<lbrace>valid_ioports\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial y)
+
+lemma thread_set_valid_arch_state[TcbAcc_AI_assms]:
+  "(\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb)
+   \<Longrightarrow> thread_set f t \<lbrace> valid_arch_state \<rbrace>"
+  by (wp valid_arch_state_lift_ioports_aobj_at thread_set_ioports thread_set.aobj_at
+      | simp add: valid_arch_state_def)+
+
 end
 
 global_interpretation TcbAcc_AI?: TcbAcc_AI

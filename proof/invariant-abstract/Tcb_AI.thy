@@ -610,8 +610,8 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
              thread_set_valid_reply_caps_trivial
              thread_set_valid_reply_masters_trivial
              valid_irq_node_typ valid_irq_handlers_lift
-             thread_set_caps_of_state_trivial valid_ioports_lift
-             thread_set_arch_caps_trivial
+             thread_set_caps_of_state_trivial thread_set_valid_arch_state
+             thread_set_arch_caps_trivial thread_set_irq_node
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
              thread_set_valid_ioc_trivial
@@ -704,7 +704,7 @@ lemma set_mcpriority_invs[wp]:
              thread_set_arch_caps_trivial
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
-             thread_set_valid_ioc_trivial valid_ioports_lift
+             thread_set_valid_ioc_trivial thread_set_valid_arch_state
              thread_set_cap_refs_respects_device_region
               | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
               | rule conjI | erule disjE)+
@@ -800,7 +800,7 @@ lemma bind_notification_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
   apply (rule bind_wp[OF _ get_simple_ko_sp])
-  apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at valid_ioports_lift
+  apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at
          | clarsimp simp:idle_no_ex_cap split del: if_split)+
   apply (intro conjI;
     (clarsimp simp: is_ntfn idle_no_ex_cap elim!: obj_at_weakenE)?)

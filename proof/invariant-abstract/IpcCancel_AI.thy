@@ -356,7 +356,7 @@ lemma blocked_cancel_ipc_invs:
    apply (simp add: valid_tcb_state_def)
    apply (strengthen reply_cap_doesnt_exist_strg)
    apply simp
-   apply (wp valid_irq_node_typ valid_ioports_lift)
+   apply (wp valid_irq_node_typ)
   apply (subgoal_tac "ep \<noteq> Structures_A.IdleEP")
    apply (clarsimp simp: ep_redux_simps2 cong: if_cong)
    apply (frule(1) if_live_then_nonz_capD, (clarsimp simp: live_def)+)
@@ -365,10 +365,10 @@ lemma blocked_cancel_ipc_invs:
    apply (frule st_tcb_at_state_refs_ofD)
    apply (subgoal_tac "epptr \<notin> set (remove1 t queue)")
     apply (case_tac ep, simp_all add: valid_ep_def)[1]
-     apply (auto elim!: delta_sym_refs pred_tcb_weaken_strongerE
-                 simp: obj_at_def is_ep_def2 idle_not_queued refs_in_tcb_bound_refs
-                 dest: idle_no_refs
-                 split: if_split_asm)[2]
+     apply (timeit \<open>auto elim!: delta_sym_refs pred_tcb_weaken_strongerE
+                         simp: obj_at_def is_ep_def2 idle_not_queued refs_in_tcb_bound_refs
+                         dest: idle_no_refs
+                         split: if_split_asm\<close>)[2] (* slow: ~100s *)
    apply (case_tac ep, simp_all add: valid_ep_def)[1]
     apply (clarsimp, drule(1) bspec, clarsimp simp: obj_at_def is_tcb_def)+
   apply fastforce
@@ -387,7 +387,7 @@ lemma cancel_signal_invs:
   apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfna", simp_all)[1]
   apply (rule hoare_pre)
-   apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
+   apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle
            | simp add: valid_tcb_state_def
            | strengthen reply_cap_doesnt_exist_strg
            | wpc)+
@@ -878,7 +878,7 @@ lemma cancel_all_ipc_invs_helper:
    apply wp
    apply simp
   apply (rule hoare_pre)
-   apply (wp cancel_all_invs_helper hoare_vcg_const_Ball_lift valid_irq_node_typ valid_ioports_lift)
+   apply (wp cancel_all_invs_helper hoare_vcg_const_Ball_lift valid_irq_node_typ)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_ep_def live_def)
   apply (rule conjI)
    apply (fastforce simp: live_def is_ep_def elim!: obj_at_weakenE split: kernel_object.splits)
@@ -979,7 +979,7 @@ lemma unbind_notification_invs:
   apply (case_tac ntfnptr, clarsimp, wp, simp)
   apply clarsimp
   apply (rule bind_wp [OF _ get_simple_ko_sp])
-  apply (wp valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift
+  apply (wp valid_irq_node_typ set_simple_ko_valid_objs
          | clarsimp split del: if_split)+
   apply (intro conjI impI;
     (match conclusion in "sym_refs r" for r \<Rightarrow> \<open>-\<close>
@@ -1036,7 +1036,7 @@ lemma cancel_all_signals_invs:
   apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp cancel_all_invs_helper set_simple_ko_valid_objs valid_irq_node_typ
-             hoare_vcg_const_Ball_lift valid_ioports_lift
+             hoare_vcg_const_Ball_lift
         | wpc
         | simp add: live_def)+
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
@@ -1199,13 +1199,13 @@ lemma cancel_badged_sends_invs[wp]:
   apply (case_tac ep; simp)
     apply wpsimp
    apply (simp add: invs_def valid_state_def valid_pspace_def)
-   apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
+   apply (wpsimp wp: valid_irq_node_typ)
      apply (simp add: fun_upd_def[symmetric] ep_redux_simps ep_at_def2[symmetric, simplified]
                 cong: list.case_cong)
      apply (rule hoare_strengthen_post,
             rule cancel_badged_sends_filterM_helper[where epptr=epptr])
      apply (auto intro:obj_at_weakenE)[1]
-    apply (wpsimp wp: valid_irq_node_typ set_endpoint_ep_at valid_ioports_lift)
+    apply (wpsimp wp: valid_irq_node_typ set_endpoint_ep_at)
    apply (clarsimp simp: valid_ep_def conj_comms)
    apply (subst obj_at_weakenE, simp, fastforce)
     apply (clarsimp simp: is_ep_def)

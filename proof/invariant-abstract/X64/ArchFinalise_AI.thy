@@ -79,7 +79,6 @@ lemma invs_x64_asid_table_unmap:
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def
                    valid_global_objs_arch_update valid_asid_map_def)
   apply (simp add: valid_table_caps_def valid_machine_state_def second_level_tables_def)
-  apply (simp add: valid_ioports_def all_ioports_issued_def issued_ioports_def)
   done
 
 lemma delete_asid_pool_invs[wp]:
@@ -232,7 +231,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_assms]:
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
                   set_cap_irq_handlers set_cap_valid_arch_caps
                   set_cap_cap_refs_respects_device_region_NullCap
-                  set_cap_ioports_no_new_ioports
+                  set_cap_no_new_ioports_arch_valid_arch_state
       | simp add: trans_state_update[symmetric]
              del: trans_state_update fun_upd_apply
        split del: if_split )+

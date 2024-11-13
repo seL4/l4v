@@ -24,7 +24,6 @@ arch_requalify_facts
   valid_arch_caps_lift_weak
   valid_global_objs_lift_weak
   valid_asid_map_lift
-  valid_ioports_lift
   valid_kernel_mappings_lift
   equal_kernel_mappings_lift
   valid_global_vspace_mappings_lift
@@ -1000,7 +999,7 @@ crunch do_machine_op
   and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
   and kheap[wp]: "\<lambda>s. P (kheap s)"
   (simp: cur_tcb_def zombies_final_pspaceI state_refs_of_pspaceI ex_nonz_cap_to_def ct_in_state_def
-   wp: crunch_wps valid_arch_state_lift vs_lookup_vspace_obj_at_lift)
+   wp: crunch_wps valid_arch_state_lift_aobj_at vs_lookup_vspace_obj_at_lift)
 
 lemma dmo_inv:
   assumes "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1022,14 +1021,6 @@ locale non_aobj_op = fixes f
   assumes aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
                               \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
           arch_state[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
-
-context non_aobj_op begin
-
-lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift_aobj_at; wp aobj_at; simp)
-
-end
-
 
 locale non_vspace_op = fixes f
   assumes vsobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow>
@@ -1109,6 +1100,14 @@ end
 locale non_aobj_non_cap_op = non_aobj_op f + non_cap_op f for f
 
 sublocale non_aobj_non_cap_op < non_vspace_non_cap_op ..
+
+context non_aobj_non_cap_op begin
+
+lemma valid_arch_state[wp]:
+  "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (rule valid_arch_state_lift_aobj_at; wp aobj_at; simp)
+
+end
 
 (* non_vspace_op version *)
 locale non_vspace_non_cap_non_mem_op = non_vspace_non_mem_op f + non_vspace_non_cap_op f for f
@@ -1304,14 +1303,12 @@ lemma set_ntfn_minor_invs:
      set_notification ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (wp set_simple_ko_valid_objs valid_irq_node_typ
-                    valid_irq_handlers_lift valid_ioports_lift)
+  apply (wp set_simple_ko_valid_objs valid_irq_node_typ valid_irq_handlers_lift)
   apply (clarsimp simp: ntfn_at_def2
                   elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: obj_at_state_refs_ofD)
   done
-
 
 lemma tcb_cap_wp_at:
   "\<lbrakk>tcb_at t s; valid_objs s; ref \<in> dom tcb_cap_cases;

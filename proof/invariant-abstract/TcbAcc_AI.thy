@@ -172,7 +172,9 @@ locale TcbAcc_AI_valid_ipc_buffer_cap_0 =
     "(\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb) \<Longrightarrow>
         (\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb) \<Longrightarrow>
          \<lbrace>\<lambda>(s::'state_ext state). P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-
+  assumes thread_set_valid_arch_state:
+    "(\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb) \<Longrightarrow>
+       \<lbrace>\<lambda>s::'state_ext state. valid_arch_state s\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. valid_arch_state s\<rbrace>"
 
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
@@ -422,13 +424,6 @@ lemma thread_set_cap_refs_respects_device_region:
   apply (erule sym)
   done
 
-lemma thread_set_ioports:
-  assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
-                  getF (f tcb) = getF tcb"
-  shows
-  "\<lbrace>valid_ioports\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial y)
-
 (* NOTE: The function "thread_set f p" updates a TCB at p using function f.
    It should not be used to change capabilities, though. *)
 lemma thread_set_valid_ioc_trivial:
@@ -468,7 +463,7 @@ lemma thread_set_invs_trivial:
   shows      "\<lbrace>invs::'state_ext state \<Rightarrow> bool\<rbrace> thread_set f t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_weaken_pre)
-   apply (wp thread_set_valid_objs_triv thread_set_ioports
+   apply (wp thread_set_valid_objs_triv thread_set_valid_arch_state
              thread_set_refs_trivial
              thread_set_hyp_refs_trivial
              thread_set_iflive_trivial
@@ -1338,7 +1333,6 @@ locale TcbAcc_AI_pred_tcb_cap_wp_at =
         \<forall>cap. (pred_tcb_at proj P t s \<and> tcb_cap_valid cap (t, ref) s) \<longrightarrow> Q cap\<rbrakk>
       \<Longrightarrow> cte_wp_at Q (t, ref) s"
 
-
 locale TcbAcc_AI_st_tcb_at_cap_wp_at = TcbAcc_AI_pred_tcb_cap_wp_at itcb_state state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself"
 
@@ -1494,9 +1488,7 @@ lemma set_bound_notification_valid_ioc[wp]:
                         if_split_asm)
   done
 
-crunch set_thread_state, set_bound_notification
-  for valid_ioports[wp]: valid_ioports
-  (wp: valid_ioports_lift)
+lemmas [wp] = sts.valid_arch_state sbn.valid_arch_state
 
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
@@ -1563,7 +1555,6 @@ lemma sts_invs_minor2:
   apply (drule(1) valid_reply_capsD)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done (* FIXME tidy *)
-
 
 lemma sbn_invs_minor:
   "\<lbrace>bound_tcb_at (\<lambda>ntfn'. tcb_bound_refs ntfn' = tcb_bound_refs ntfn) t

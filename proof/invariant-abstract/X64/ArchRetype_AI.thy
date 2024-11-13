@@ -122,6 +122,10 @@ crunch init_arch_objects
   for valid_objs[wp]: "valid_objs"
   (ignore: clearMemory wp: crunch_wps simp: unless_def)
 
+crunch store_pml4e
+  for valid_arch_state[wp]: "valid_arch_state"
+  (wp: valid_arch_state_lift)
+
 crunch init_arch_objects
   for valid_arch_state[wp]: "valid_arch_state"
   (ignore: clearMemory set_pml4 set_object wp: crunch_wps simp: unless_def crunch_simps set_arch_obj_simps)
@@ -399,12 +403,16 @@ lemma set_object_ioports[wp]:
   by (wpsimp simp: set_object_def get_object_def valid_ioports_def caps_of_state_after_update)
 
 lemma update_aobj_ioports[wp]:
-  "\<lbrace>valid_ioports\<rbrace> set_object ptr (ArchObj obj) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  "set_object ptr (ArchObj obj) \<lbrace>\<lambda>s. P (valid_ioports s) \<rbrace> "
   apply (subst set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def valid_ioports_def caps_of_state_after_update
                  split: kernel_object.split_asm if_splits arch_kernel_obj.split_asm)
   done
+
+lemma set_object_arch_valid_arch_state[wp]:
+  "set_object ptr (ArchObj obj) \<lbrace> valid_arch_state \<rbrace> "
+  by (wp valid_arch_state_lift)
 
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pm S) s)
@@ -733,11 +741,6 @@ lemma valid_global_refs:
   apply (simp add: cte_retype cap_range_def)
   done
 
-lemma valid_arch_state:
-  "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
-  by (clarsimp simp: valid_arch_state_def obj_at_pres
-                     valid_asid_table_def valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
-
 lemma vs_refs_default [simp]:
   "vs_refs (default_object ty dev us) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt vs_refs_def
@@ -1007,6 +1010,13 @@ lemma valid_ioports:
   "valid_ioports s \<Longrightarrow> valid_ioports s'"
   by (clarsimp simp: valid_ioports_def ioports_no_overlap_eq all_ioports_issued_eq)
 
+lemma valid_arch_state:
+  "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
+  unfolding valid_arch_state_def
+  by (strengthen valid_ioports,
+      clarsimp simp: valid_arch_state_def obj_at_pres valid_asid_table_def valid_global_pts_def
+                     valid_global_pds_def valid_global_pdpts_def)
+
 lemma valid_global_objs:
   "valid_global_objs s \<Longrightarrow> valid_global_objs s'"
   apply (simp add: valid_global_objs_def valid_vso_at_def)
@@ -1148,7 +1158,7 @@ lemma post_retype_invs:
                      valid_arch_caps valid_global_objs
                      valid_vspace_objs' valid_irq_handlers
                      valid_mdb_rep2 mdb_and_revokable
-                     valid_pspace cur_tcb only_idle valid_ioports
+                     valid_pspace cur_tcb only_idle
                      valid_kernel_mappings valid_asid_map_def
                      valid_global_vspace_mappings valid_ioc vms
                      pspace_in_kernel_window pspace_respects_device_region

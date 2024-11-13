@@ -67,7 +67,6 @@ where
        (cte_wp_at ((=) cap) slot and is_final_cap' cap
             and K (is_zombie cap))"
 
-
 locale CNodeInv_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes derive_cap_objrefs:
@@ -165,10 +164,10 @@ locale CNodeInv_AI =
       \<lbrace>cap_refs_in_kernel_window and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
         cap_swap c a c' b
       \<lbrace>\<lambda>rv. cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes cap_swap_ioports[wp]:
-  "\<lbrace>valid_ioports and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+  assumes cap_swap_valid_arch[wp]:
+  "\<lbrace>valid_arch_state and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b
-   \<lbrace>\<lambda>rv (s::'state_ext state). valid_ioports s\<rbrace>"
+   \<lbrace>\<lambda>rv (s::'state_ext state). valid_arch_state s\<rbrace>"
   assumes cap_swap_vms[wp]:
     "\<And>c a c' b.
       \<lbrace>valid_machine_state :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -1915,6 +1914,11 @@ lemma cap_refs_respects_device_region_original_cap[wp]:
                 (s\<lparr>is_original_cap := ocp\<rparr>) = cap_refs_respects_device_region s"
   by (simp add:cap_refs_respects_device_region_def)
 
+lemma cap_swap_aobj_at:
+  "arch_obj_pred P' \<Longrightarrow>
+  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_swap c a c' b \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  unfolding cap_swap_def set_cdt_def by (wpsimp wp: set_cap.aobj_at)
+
 context CNodeInv_AI begin
 lemma cap_swap_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
@@ -1950,11 +1954,6 @@ lemma cap_swap_cap_refs_respects_device_region[wp]:
   apply fastforce
   done
 
-lemma cap_swap_aobj_at:
-  "arch_obj_pred P' \<Longrightarrow>
-  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_swap c (a, b) c' (aa, ba) \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
-  unfolding cap_swap_def set_cdt_def by (wpsimp wp: set_cap.aobj_at)
-
 lemma cap_swap_invs[wp]:
   "\<And>c' a c b.
   \<lbrace>invs and ex_cte_cap_wp_to (appropriate_cte_cap c') a
@@ -1968,7 +1967,7 @@ lemma cap_swap_invs[wp]:
     K (a \<noteq> b \<and> \<not> is_master_reply_cap c \<and> \<not> is_master_reply_cap c')\<rbrace>
    cap_swap c a c' b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  apply (wp cap_swap_replies cap_swap_reply_masters valid_arch_state_lift_aobj_at
+  apply (wp cap_swap_replies cap_swap_reply_masters
             cap_swap_typ_at valid_irq_node_typ cap_swap_aobj_at
          | simp
          | erule disjE
