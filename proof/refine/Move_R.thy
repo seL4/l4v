@@ -250,10 +250,4 @@ lemma check_active_irq_invs_just_idle:
         and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
   by (wpsimp simp: check_active_irq_def ct_in_state_def)
 
-lemma caps_of_state_kheap_ekheap[simp]:
-  "caps_of_state (kheap_update f (ekheap_update ef s))
-     = caps_of_state (kheap_update f s)"
-  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-  done
-
 end
