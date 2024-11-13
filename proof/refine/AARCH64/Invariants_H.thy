@@ -3314,9 +3314,6 @@ lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
 
-lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
-  by (clarsimp simp: valid_sched_def)
-
 lemma invs'_bitmapQ_no_L1_orphans:
   "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"
   by (simp add: invs'_def valid_state'_def valid_bitmaps_def)
@@ -3574,6 +3571,26 @@ instantiation AARCH64_H.pte :: no_vcpu
 begin
 interpretation Arch .
 instance by intro_classes auto
+end
+
+context Arch begin
+
+lemma objBits_less_word_bits:
+  "objBits v < word_bits"
+  unfolding objBits_simps'
+  apply (case_tac "injectKO v"; simp)
+  by (simp add: pageBits_def pteBits_def objBits_simps word_bits_def
+         split: arch_kernel_object.split)+
+
+lemma objBits_pos_power2[simp]:
+  assumes "objBits v < word_bits"
+  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
+  unfolding objBits_simps'
+  apply (insert assms)
+  apply (case_tac "injectKO v"; simp)
+  by (simp add: pageBits_def pteBits_def objBits_simps
+         split: arch_kernel_object.split)+
+
 end
 
 end
