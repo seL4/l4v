@@ -40,8 +40,6 @@ axiomatization where
 
 axiomatization where
   ckernel_init_domain_list:
-  "((tc,s),x) \<in> Init_H
-   \<Longrightarrow> length (ksDomSchedule s) > 0
-       \<and> (\<forall>(d,time) \<in> set (ksDomSchedule s). us_to_ticks (time * \<mu>s_in_ms) > 0)"
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> length (ksDomSchedule s) > 0 \<and> (\<forall>(d,time) \<in> set (ksDomSchedule s). time > 0)"
 
 end
