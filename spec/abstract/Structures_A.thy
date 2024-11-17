@@ -18,25 +18,20 @@ imports
   "ExecSpec.MachineExports"
 begin
 
-context begin interpretation Arch .
-
-requalify_types
+arch_requalify_types (A)
   aobject_type
   arch_cap
-  vm_rights
   arch_kernel_obj
   arch_state
   arch_tcb
   aa_type
 
-requalify_consts
+arch_requalify_consts (A)
   acap_rights
   acap_rights_update
   arch_kobj_size
   arch_obj_size
   aobj_ref
-  asid_high_bits
-  asid_low_bits
   arch_is_frame_type
   badge_bits
   default_arch_tcb
@@ -54,10 +49,8 @@ requalify_consts
   untyped_max_bits
   msg_label_bits
 
-requalify_facts
+arch_requalify_facts (A)
   kernelWCET_ticks_pos2
-
-end
 
 text \<open>
   User mode can request these objects to be created by retype:

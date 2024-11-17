@@ -9,7 +9,7 @@ theory IsolatedThreadAction
 imports ArchMove_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 datatype tcb_state_regs =
   TCBStateRegs (tsrState : thread_state) (tsrContext : "MachineTypes.register \<Rightarrow> machine_word")
@@ -1235,7 +1235,7 @@ lemma bind_assoc:
      = do x \<leftarrow> m; y \<leftarrow> f x; g y od"
   by (rule bind_assoc)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_modify_assert:
   "\<lbrakk> updateObject v = updateObject_default v \<rbrakk>

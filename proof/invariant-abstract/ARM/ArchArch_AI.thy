@@ -9,7 +9,7 @@ theory ArchArch_AI
 imports Arch_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 definition
   "valid_aci aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>
@@ -399,7 +399,7 @@ lemma valid_asid_map':
 end
 
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_pool_at ap s \<longrightarrow>
@@ -1079,7 +1079,7 @@ lemma find_pd_for_asid_ref_offset_voodoo:
                in hoare_strengthen_postE_R)
    apply (simp add: ucast_ucast_mask
                     mask_asid_low_bits_ucast_ucast)
-   apply (fold asid_low_bits_def)
+   apply (fold asid_low_bits_def[simplified])
    apply (rule hoare_pre, wp find_pd_for_asid_lookup_ref)
    apply (simp add: )
   apply (simp add: pd_shifting)
@@ -1524,22 +1524,13 @@ lemma arch_pinv_ct_active:
 
 end
 
-
 context begin interpretation Arch .
 
-requalify_consts
-  valid_arch_inv
-
 requalify_facts
-  invoke_arch_tcb
-  invoke_arch_invs
-  sts_valid_arch_inv
-  arch_decode_inv_wf
-  arch_pinv_st_tcb_at
   arch_pinv_ct_active
 
 end
 
-declare invoke_arch_invs[wp] arch_decode_inv_wf[wp] arch_pinv_ct_active[wp]
+declare arch_pinv_ct_active[wp]
 
 end

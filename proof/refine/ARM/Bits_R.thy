@@ -23,7 +23,7 @@ crunch_ignore (add:
   setNextPC getRestartPC assertDerived throw_on_false getObject setObject updateObject loadObject
   ifM andM orM whenM whileM haskell_assert)
 
-context Arch begin (*FIXME: arch_split*)
+context Arch begin (*FIXME: arch-split*)
 
 crunch_ignore (add:
   invalidateLocalTLB_ASID invalidateLocalTLB_VAASID
@@ -34,7 +34,7 @@ crunch_ignore (add:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp

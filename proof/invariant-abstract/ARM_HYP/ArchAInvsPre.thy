@@ -8,9 +8,7 @@ theory ArchAInvsPre
 imports AInvsPre
 begin
 
-context Arch begin
-
-global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma get_pd_of_thread_reachable:
   "get_pd_of_thread (kheap s) (arch_state s) t \<noteq> 0
@@ -97,14 +95,13 @@ lemma device_frame_in_device_region:
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
 
-global_naming Arch
-named_theorems AInvsPre_asms
+named_theorems AInvsPre_assms
 
 lemma get_page_info_0[simp]:
   "get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) 0 x = None"
   by (simp add: get_page_info_def)
 
-lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
+lemma (* ptable_rights_imp_frame *)[AInvsPre_assms]:
   assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
          ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
@@ -138,12 +135,7 @@ end
 global_interpretation AInvsPre?: AInvsPre
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_asms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_assms)?)
   qed
 
-requalify_facts
-  ARM_HYP.user_mem_dom_cong
-  ARM_HYP.device_mem_dom_cong
-  ARM_HYP.device_frame_in_device_region
-  ARM_HYP.is_aligned_pptrBaseOffset
 end

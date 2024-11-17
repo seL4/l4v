@@ -9,7 +9,7 @@ imports
   BCorres_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma vspace_for_asid_truncate[simp]:
   "vspace_for_asid asid (truncate_state s) = vspace_for_asid asid s"
@@ -38,9 +38,5 @@ crunch prepare_thread_delete
   for (bcorres) bcorres[wp]: truncate_state
 
 end
-
-requalify_facts RISCV64.arch_finalise_cap_bcorres RISCV64.prepare_thread_delete_bcorres
-
-declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
 
 end

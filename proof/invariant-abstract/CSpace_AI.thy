@@ -12,9 +12,7 @@ theory CSpace_AI
 imports ArchCSpacePre_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   irq_state_update
   irq_state
   time_state_update
@@ -24,17 +22,19 @@ requalify_consts
   final_matters_arch
   ups_of_heap
 
-requalify_facts
+arch_requalify_facts (A)
+  update_cnode_cap_data_def
+
+arch_requalify_facts
+  loadWord_inv
   is_derived_arch_non_arch
   ups_of_heap_non_arch_upd
   master_arch_cap_obj_refs
   master_arch_cap_cap_class
   same_aobject_as_commute
   arch_derive_cap_inv
-  loadWord_inv
   valid_global_refsD2
   arch_derived_is_device
-  update_cnode_cap_data_def
   safe_parent_for_arch_not_arch
   safe_parent_cap_range_arch
   valid_arch_mdb_simple
@@ -48,7 +48,6 @@ requalify_facts
   valid_arch_mdb_null_filter
   valid_arch_mdb_untypeds
   lookup_ipc_buffer_inv
-end
 
 declare set_cap_update_free_index_valid_arch_mdb[wp]
 
@@ -3047,14 +3046,14 @@ lemma weak_derived_is_reply:
                  same_object_as_def is_cap_simps
          split: if_split_asm cap.split_asm)
 
-context begin interpretation Arch .
-lemma non_arch_cap_asid_vptr_None:
+lemma (in Arch) non_arch_cap_asid_vptr_None:
   assumes "\<not> is_arch_cap cap"
   shows "cap_asid cap = None"
     and "cap_asid_base cap = None"
     and "cap_vptr cap = None"
   using assms by (cases cap; simp add: is_cap_simps cap_asid_def cap_asid_base_def cap_vptr_def)+
-end
+
+requalify_facts Arch.non_arch_cap_asid_vptr_None
 
 lemma weak_derived_Reply:
   "weak_derived (cap.ReplyCap t R) c = (\<exists> R'. c = cap.ReplyCap t R')"

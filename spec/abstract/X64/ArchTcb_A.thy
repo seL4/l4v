@@ -14,7 +14,7 @@ theory ArchTcb_A
 imports KHeap_A
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 definition
   sanitise_or_flags :: machine_word

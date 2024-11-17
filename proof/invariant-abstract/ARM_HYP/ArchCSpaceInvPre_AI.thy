@@ -11,7 +11,7 @@ CSpace invariants
 theory ArchCSpaceInvPre_AI
 imports CSpaceInvPre_AI
 begin
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma aobj_ref_acap_rights_update[simp]:
   "aobj_ref (acap_rights_update f x) = aobj_ref x"
@@ -293,7 +293,7 @@ lemma cap_master_arch_cap_rights [simp]:
   by (simp add: cap_master_arch_cap_def acap_rights_update_def
            split: arch_cap.splits)
 
-lemma acap_rights_update_id [intro!, simp]:
+lemma valid_acap_rights_update_id [intro!, simp]:
   "valid_arch_cap ac s \<Longrightarrow> acap_rights_update (acap_rights ac) ac = ac"
   unfolding acap_rights_update_def acap_rights_def valid_arch_cap_def
   by (cases ac; simp)

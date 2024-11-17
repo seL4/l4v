@@ -48,7 +48,7 @@ lemma time_state_independent_HI[intro!, simp]:
     \<Longrightarrow> time_state_independent_H P"
    by (simp add: time_state_independent_H_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma dmo_getirq_inv[wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"

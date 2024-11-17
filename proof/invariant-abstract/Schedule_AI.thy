@@ -8,6 +8,10 @@ theory Schedule_AI
 imports SchedContext_AI
 begin
 
+arch_requalify_facts
+  no_irq
+  no_irq_storeWord
+
 abbreviation
   "activatable \<equiv> \<lambda>st. runnable st \<or> idle st"
 
@@ -38,14 +42,6 @@ locale Schedule_AI =
              arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
     assumes stit_activatable:
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool)\<rbrace>"
-
-context begin interpretation Arch .
-(* FIXME arch_split: some of these could be moved to generic theories
-   so they don't need to be unqualified. *)
-requalify_facts
-  no_irq
-  no_irq_storeWord
-end
 
 crunch schedule_switch_thread_fastfail
   for inv[wp]: P

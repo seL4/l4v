@@ -9,7 +9,7 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ccorres_name_pre_C:
   "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
@@ -1218,7 +1218,7 @@ lemma rf_sr_armKSNextASID:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch invalidateASID
   for armKSNextASID[wp]: "\<lambda>s. P (armKSNextASID (ksArchState s))"
@@ -2084,7 +2084,7 @@ lemma vcpu_enable_ccorres:
    apply (rule_tac Q'="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
    apply wpsimp
   apply (clarsimp simp: typ_heap_simps' Collect_const_mem cvcpu_relation_def
-                        cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_def
+                        cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_val
          | rule conjI | simp)+
   apply (drule (1) vcpu_at_rf_sr)
   apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
@@ -2668,10 +2668,12 @@ definition
   | ARM_HYP_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
 
 lemma doFlush_ccorres:
-  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
-        \<comment> \<open>ahyp version translates ps into kernel virtual before flushing\<close>
-        \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
-        \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
+  "ccorres dc xfdc
+           (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs)
+                \<and> vs && mask cacheLineBits = ps && mask cacheLineBits
+                \<comment> \<open>arm-hyp version translates ps into kernel virtual before flushing\<close>
+                \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
+                \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)"
   apply (cinit' lift: pstart_')
@@ -2721,13 +2723,12 @@ lemma doFlush_ccorres:
                         Kernel_C.ARMPageInvalidate_Data_def Kernel_C.ARMPDInvalidate_Data_def
                         Kernel_C.ARMPageCleanInvalidate_Data_def Kernel_C.ARMPDCleanInvalidate_Data_def
                         Kernel_C.ARMPageUnify_Instruction_def Kernel_C.ARMPDUnify_Instruction_def
-                        ptrFromPAddr_mask_6
                   dest: ghost_assertion_size_logic[rotated]
                  split: ARM_HYP_H.flush_type.splits)
   done
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch setVMRootForFlush
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps)
@@ -2738,7 +2739,7 @@ context kernel_m begin
 lemma performPageFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask cacheLineBits = ps && mask cacheLineBits
                   \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter>
@@ -2911,7 +2912,7 @@ lemma setMessageInfo_ccorres:
 lemma performPageDirectoryInvocationFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask cacheLineBits = ps && mask cacheLineBits
                   \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter>
@@ -3041,7 +3042,7 @@ lemmas unfold_checkMapping_return
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch flushPage
   for no_0_obj'[wp]: "no_0_obj'"
 end
@@ -3129,18 +3130,13 @@ lemma ccorres_return_void_C':
   done
 
 lemma is_aligned_cache_preconds:
-  "\<lbrakk>is_aligned rva n; n \<ge> 7\<rbrakk> \<Longrightarrow> rva \<le> rva + 0x7F \<and>
-          addrFromPPtr rva \<le> addrFromPPtr rva + 0x7F \<and> rva && mask 6 = addrFromPPtr rva && mask 6"
+  "\<lbrakk>is_aligned rva n; n \<ge> 7\<rbrakk> \<Longrightarrow> rva \<le> rva + 0x7F \<and> addrFromPPtr rva \<le> addrFromPPtr rva + 0x7F"
   supply if_cong[cong]
   apply (drule is_aligned_weaken, simp)
   apply (rule conjI)
    apply (drule is_aligned_no_overflow, simp, unat_arith)[1]
-  apply (rule conjI)
-   apply (drule is_aligned_addrFromPPtr_n, simp)
-   apply (drule is_aligned_no_overflow, unat_arith)
-  apply (frule is_aligned_addrFromPPtr_n, simp)
-  apply (drule_tac x=7 and y=6 in is_aligned_weaken, simp)+
-  apply (simp add: is_aligned_mask)
+  apply (drule is_aligned_addrFromPPtr_n, simp)
+  apply (drule is_aligned_no_overflow, unat_arith)
   done
 
 lemma pte_pte_invalid_new_spec:
@@ -3386,7 +3382,7 @@ lemma unmapPage_ccorres:
                                    hd_map last_map typ_at_to_obj_at_arches field_simps
                                    objBits_simps archObjSize_def largePagePTEOffsets_def
                                    Let_def table_bits_defs,
-                              clarsimp dest!: is_aligned_cache_preconds)
+                              drule is_aligned_cache_preconds; clarsimp)
                  apply (simp add: upto_enum_step_def upto_enum_word largePagePTEOffsets_def Let_def)
                 apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                 apply (simp add: hd_map last_map upto_enum_step_def objBits_simps archObjSize_def

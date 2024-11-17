@@ -8,9 +8,7 @@ theory ArchAInvsPre
 imports AInvsPre
 begin
 
-context Arch begin
-
-global_naming X64
+context Arch begin arch_global_naming
 
 definition
   "kernel_mappings \<equiv> {x. x \<ge> pptr_base}"
@@ -178,10 +176,9 @@ lemma device_frame_in_device_region:
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
-global_naming Arch
-named_theorems AInvsPre_asms
+named_theorems AInvsPre_assms
 
-lemma ptable_rights_imp_frame[AInvsPre_asms]:
+lemma ptable_rights_imp_frame[AInvsPre_assms]:
   assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
          ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
@@ -223,12 +220,7 @@ end
 interpretation AInvsPre?: AInvsPre
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_asms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_assms)?)
   qed
-
-requalify_facts
-  X64.user_mem_dom_cong
-  X64.device_mem_dom_cong
-  X64.device_frame_in_device_region
 
 end

@@ -8,7 +8,7 @@ theory ArchIpc_AI
 imports Ipc_AI
 begin
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems Ipc_AI_assms
 
@@ -511,7 +511,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
 qed
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems Ipc_AI_cont_assms
 

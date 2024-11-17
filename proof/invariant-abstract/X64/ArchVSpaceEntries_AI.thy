@@ -8,7 +8,7 @@ theory ArchVSpaceEntries_AI
 imports VSpaceEntries_AI
 begin
 
-context Arch begin global_naming X64 (*FIXME: arch_split*)
+context Arch begin arch_global_naming
 
 lemma a_type_pml4D:
   "a_type ko = AArch APageMapL4 \<Longrightarrow> \<exists>pm. ko = ArchObj (PageMapL4 pm)"
@@ -528,7 +528,7 @@ lemma init_arch_objects_valid_vspace:
   "\<lbrace>valid_vspace_objs' and pspace_aligned and valid_arch_state
            and K (orefs = retype_addrs ptr type n us)
            and K (range_cover ptr sz (obj_bits_api type us) n)\<rbrace>
-     init_arch_objects type ptr n obj_sz orefs
+     init_arch_objects type dev ptr n obj_sz orefs
    \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: init_arch_objects_def)

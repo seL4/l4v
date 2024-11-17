@@ -959,7 +959,7 @@ locale ADT_IF_1 =
   and arch_invoke_irq_control_noErr[wp]:
     "\<And>Q. \<lbrace>\<top>\<rbrace> arch_invoke_irq_control ici -, \<lbrace>\<lambda>rv s :: det_state. Q rv s\<rbrace>"
   and init_arch_objects_irq_state_of_state[wp]:
-    "\<And>P. init_arch_objects new_type ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+    "\<And>P. init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and getActiveIRQ_None:
     "(None, s') \<in> fst (do_machine_op (getActiveIRQ in_kernel) (s :: det_state))
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
@@ -1487,7 +1487,7 @@ locale invariant_over_ADT_if =
                                 | None \<Rightarrow> det_inv InIdleMode (snd rv)\<rbrace>"
 
 
-locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch_split *)
+locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch-split *)
   fixes s0_internal :: det_state
   fixes initial_aag :: "'a subject_label PAS"
   fixes timer_irq :: irq

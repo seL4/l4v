@@ -11,7 +11,7 @@ imports
   "Lib.SimpStrategy"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* FIXME RT: remove *)
 declare if_weak_cong [cong]
@@ -428,7 +428,7 @@ lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1 shiftl_t2n)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma reply_mdbNext_is_descendantD:
   assumes sr: "(s, s') \<in> state_relation"
@@ -1760,7 +1760,7 @@ declare cart_singleton_empty2[simp]
 lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_not t s"
   by (clarsimp simp: sch_act_simple_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch setNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers

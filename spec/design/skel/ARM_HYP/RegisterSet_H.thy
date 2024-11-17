@@ -11,7 +11,7 @@ imports
   "Lib.HaskellLib_H"
   MachineOps
 begin
-context Arch begin global_naming ARM_HYP_H
+context Arch begin arch_global_naming (H)
 
 definition
   newContext :: "user_context"

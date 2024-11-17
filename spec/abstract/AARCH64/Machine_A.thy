@@ -12,7 +12,7 @@ imports
   "ExecSpec.MachineOps"
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   The specification is written with abstract type names for object references, user pointers,
@@ -165,8 +165,6 @@ datatype arch_fault
 
 end
 
-context begin interpretation Arch .
-  requalify_consts idle_thread_ptr
-end
+arch_requalify_consts (A) idle_thread_ptr
 
 end

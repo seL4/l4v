@@ -980,7 +980,7 @@ theorem khupd_graph_subset:
   qed
 end
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 locale_abbrev "vs_lookup_leaf ptr s \<equiv> lookup_leaf ptr (vs_lookup1 s)"
 

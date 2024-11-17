@@ -12,7 +12,7 @@ theory ArchVSpace_AI
 imports VSpacePre_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 definition kernel_mappings_only :: "(pt_index \<Rightarrow> pte) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "kernel_mappings_only pt s \<equiv>
@@ -1610,7 +1610,7 @@ lemma valid_vspace_obj:
 
 end
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma set_asid_pool_arch_objs_map:
   "\<lbrace>valid_vspace_objs and valid_arch_state and valid_global_objs and
@@ -1954,10 +1954,6 @@ lemma invs_aligned_pdD:
   "\<lbrakk> pspace_aligned s; valid_arch_state s \<rbrakk> \<Longrightarrow> is_aligned (riscv_global_pt (arch_state s)) pt_bits"
   by (clarsimp simp: valid_arch_state_def)
 
-lemma do_machine_op_valid_kernel_mappings:
-  "do_machine_op f \<lbrace>valid_kernel_mappings\<rbrace>"
-  unfolding valid_kernel_mappings_def by wp
-
 lemma valid_vspace_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   shows "ArchObj ao = default_object ty dev us d \<Longrightarrow> valid_vspace_obj level ao s'"
@@ -1978,11 +1974,6 @@ lemma dmo_setDeadline[wp]:
   apply(erule (1) use_valid[OF _ setDeadline_irq_masks])
   done
 
-end
-
-context begin interpretation Arch .
-requalify_facts
-  do_machine_op_valid_kernel_mappings
 end
 
 end

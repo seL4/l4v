@@ -11,7 +11,7 @@ begin
 
 declare dxo_wp_weak[wp del]
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems Deterministic_AI_assms
 
@@ -40,7 +40,7 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 declare arch_invoke_irq_handler_valid_list[Deterministic_AI_assms]
 

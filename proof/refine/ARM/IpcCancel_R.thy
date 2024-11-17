@@ -10,8 +10,7 @@ imports
   Reply_R
   "Lib.SimpStrategy"
 begin
-
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
  for aligned'[wp]: pspace_aligned'
@@ -435,7 +434,7 @@ lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma reply_mdbNext_is_descendantD:
   assumes sr: "(s, s') \<in> state_relation"
@@ -475,505 +474,36 @@ locale delete_one = delete_one_conc + delete_one_abs +
           (invs' and cte_at' (cte_map ptr))
           (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
 
-lemma gbep_ret':
-  "\<lbrakk> st = BlockedOnReceive epPtr r d \<or> st = BlockedOnSend epPtr p1 p2 p3 p4 \<rbrakk>
-      \<Longrightarrow> getBlockingObject st = return epPtr"
-  by (auto simp add: getBlockingObject_def epBlocked_def assert_opt_def)
-
-lemma replySC_None_not_head:
-  "replySC reply = None \<longleftrightarrow> \<not> isHead (replyNext reply)"
-  by (fastforce simp: isHead_def getHeadScPtr_def split: reply_next.split_asm option.split_asm)
-
-lemma sr_inv_sc_with_reply_None_helper:
-  "\<not> isHead (replyNext reply') \<Longrightarrow>
-   sr_inv
-     (valid_objs and pspace_aligned and pspace_distinct and valid_replies and
-      st_tcb_at ((=) (Structures_A.thread_state.BlockedOnReply rp)) t and
-      (\<lambda>s. sym_refs (state_refs_of s)) and (\<lambda>s. sc_with_reply rp s = None) and reply_at rp)
-     (valid_objs' and valid_release_queue_iff and
-      (\<lambda>s'. sym_refs (list_refs_of_replies' s')) and
-      (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' reply' rp and
-      ((\<lambda>s'. sc_with_reply' rp s' = None) and pspace_aligned' and pspace_distinct' and pspace_bounded'))
-     (do y <-
-         do y <-
-            when (\<exists>y. replyNext reply' = Some y)
-             (updateReply (theReplyNextPtr (replyNext reply'))
-               (replyPrev_update Map.empty));
-            when (\<exists>y. replyPrev reply' = Some y)
-             (updateReply (the (replyPrev reply'))
-               (replyNext_update Map.empty))
-         od;
-         cleanReply rp
-      od)"
-  apply (case_tac "replyNext reply'"; simp add: getHeadScPtr_def isHead_def split: reply_next.splits )
-   (* replyNext reply' = None *)
-   apply (case_tac "replyPrev reply'"; simp)
-    (* replyNext reply' = None & replyPrev reply' = None *)
-    apply (rule sr_inv_imp)
-      apply (rule cleanReply_sr_inv[where P=\<top> and P'=\<top>])
-     apply simp
-    apply simp
-   (* replyNext reply' = None & replyPrev reply' = Some prv_rp *)
-   apply (rename_tac prv_rp)
-   apply (rule sr_inv_bind)
-     apply (rule sr_inv_imp)
-       apply (rule cleanReply_sr_inv[where P=\<top> and P'="valid_objs' and valid_release_queue_iff
-                                                        and reply_at' rp"])
-      apply simp
-     apply simp
-    apply (rule updateReply_sr_inv)
-     apply (fastforce simp: reply_relation_def opt_map_red obj_at'_def projectKOs
-                     dest!: sym_refs_replyNext_replyPrev_sym[where rp'=rp, THEN iffD2])
-    apply clarsimp
-    apply (frule_tac rp=prv_rp in sc_replies_relation_sc_with_reply_None)
-        apply simp
-       apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)
-      apply (erule (7) sc_with_reply_replyPrev_None)
-       apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)+
-    apply (fastforce simp: projectKO_opt_sc obj_at'_def opt_map_red projectKOs)
-   apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
-  (* replyNext reply' = Some nxt_rp *)
-  apply (rename_tac nxt_rp)
-  apply (case_tac "replyPrev reply'"; simp)
-   (* replyNext reply' = Some nxt_rp & replyPrev reply' = None *)
-   apply (rule sr_inv_bind)
-     apply (rule sr_inv_imp)
-       apply (rule cleanReply_sr_inv[where P=\<top> and P'="valid_objs' and valid_release_queue_iff
-                                                        and reply_at' rp"])
-      apply simp
-     apply simp
-    apply (rule updateReply_sr_inv)
-     apply (clarsimp simp: reply_relation_def)
-    apply (clarsimp simp: projectKO_opt_sc obj_at'_def opt_map_red projectKOs sc_replies_relation_def)
-    apply (rename_tac nreply')
-    apply (rule heap_path_heap_upd_not_in, simp)
-    apply (rename_tac scp replies)
-    apply (drule_tac x=scp and y=replies in spec2, simp)
-    apply (prop_tac "rp \<notin> set replies")
-     apply (drule_tac sc=scp in valid_replies_sc_with_reply_None, simp)
-     apply (clarsimp simp: sc_replies_sc_at_def obj_at_def is_reply sc_replies_of_scs_def
-                           scs_of_kh_def map_project_def
-                    elim!: opt_mapE)
-    apply (erule (1) heap_ls_prev_not_in)
-    apply (fastforce elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD1] simp: opt_map_red)
-   apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
-  (* replyNext reply' = Some nxt_rp & replyPrev reply' = Some prv_rp *)
-  apply (rename_tac prv_rp)
-  apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and valid_replies
-                     and (\<lambda>s. sym_refs (state_refs_of s))
-                     and (\<lambda>s. sc_with_reply rp s = None)
-                     and (\<lambda>s. sc_with_reply prv_rp s = None)
-                     and (\<lambda>s. sc_with_reply nxt_rp s = None)
-                     and reply_at rp"
-             and Q'="valid_objs' and valid_release_queue_iff and reply_at' rp
-                     and pspace_aligned' and pspace_distinct'
-                     and reply_at' prv_rp and reply_at' nxt_rp
-                     and (\<lambda>s'. sc_with_reply' rp s' = None)
-                     and (\<lambda>s'. sc_with_reply' prv_rp s' = None)
-                     and (\<lambda>s'. sc_with_reply' nxt_rp s' = None)
-                     and (\<lambda>s'. sym_refs (state_refs_of' s'))
-                     and (\<lambda>s'. replyPrevs_of s' nxt_rp = Some rp)
-                     and (\<lambda>s'. replyNexts_of s' prv_rp = Some rp)"
-         in sr_inv_stronger_imp)
-    apply (rule sr_inv_bind)
-      apply (rule sr_inv_imp)
-        apply (rule cleanReply_sr_inv[where P=\<top> and P'="valid_objs' and valid_release_queue_iff
-                                                        and reply_at' rp"])
-       apply simp
-      apply simp
-     apply (rule sr_inv_bind)
-       apply (rule sr_inv_imp)
-         apply (rule updateReply_sr_inv_next[simplified])
-        apply simp
-       apply simp
-      apply (rule sr_inv_imp)
-        apply (rule updateReply_sr_inv_prev[simplified])
-       apply simp+
-     apply wpsimp
-    apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def)
-  apply clarsimp
-   apply (rule  conjI)
-    apply (fastforce simp: obj_at'_def projectKOs opt_map_red
-                    elim!: state_relationE sc_with_reply_replyPrev_None sc_with_reply_replyNext_None)
-   apply (fastforce simp: obj_at'_def projectKOs opt_map_red
-                   elim!: state_relationE sc_with_reply_replyNext_None)
-  apply (prop_tac"sc_with_reply prv_rp s = None \<and> sc_with_reply nxt_rp s = None")
-   apply (rule conjI)
-    apply (fastforce simp: obj_at'_def projectKOs opt_map_red
-                    elim!: state_relationE sc_with_reply_replyPrev_None sc_with_reply_replyNext_None)
-   apply (fastforce simp: obj_at'_def projectKOs opt_map_red
-                   elim!: state_relationE sc_with_reply_replyNext_None)
-  apply (erule state_relationE)
-  apply (clarsimp simp: sc_replies_relation_sc_with_reply_cross_eq)
-  apply (rule conjI)
-   apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (frule (1) reply_ko_at_valid_objs_valid_reply')
-  apply (clarsimp simp: valid_reply'_def valid_bound_obj'_def)
-  apply (fastforce simp: obj_at'_def projectKOs opt_map_red
-                  elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD1]
-                         sym_refs_replyNext_replyPrev_sym[THEN iffD2])
-  done
-
-lemma no_fail_sc_wtih_reply_None_helper:
-  "\<not> isHead (replyNext reply') \<Longrightarrow>
-   no_fail
-     (\<lambda>s'. (s, s') \<in> state_relation \<and>
-           (valid_objs' and valid_release_queue_iff and
-            (\<lambda>s'. sym_refs (list_refs_of_replies' s')) and
-            (\<lambda>s. sym_refs (state_refs_of' s)) and
-            ko_at' reply' rp and
-            ((\<lambda>s'. sc_with_reply' rp s' = None) and
-             pspace_aligned' and pspace_distinct' and pspace_bounded'))
-            s')
-     (do y <-
-         do y <-
-            when (\<exists>y. replyNext reply' = Some y)
-             (updateReply (theReplyNextPtr (replyNext reply'))
-               (replyPrev_update Map.empty));
-            when (\<exists>y. replyPrev reply' = Some y)
-             (updateReply (the (replyPrev reply'))
-               (replyNext_update Map.empty))
-         od;
-         cleanReply rp
-      od)"
-  apply (case_tac "replyNext reply'"; simp split del: if_split)
-   apply wpsimp
-   apply (frule (1) reply_ko_at_valid_objs_valid_reply')
-   apply (clarsimp simp: obj_at'_def projectKOs valid_reply'_def)
-  apply (rename_tac nextr; case_tac nextr; simp add: isHead_def)
-  apply (case_tac "replyPrev reply'"; simp)
-   apply (wpsimp;
-          frule (1) reply_ko_at_valid_objs_valid_reply';
-          clarsimp simp: obj_at'_def projectKOs valid_reply'_def)+
-  done
-
-lemma replyRemoveTCB_corres:
-  "corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_replies
-              and st_tcb_at ((=) (Structures_A.thread_state.BlockedOnReply rp)) t and (\<lambda>s. sym_refs (state_refs_of s)))
-             (valid_objs' and valid_release_queue_iff and (\<lambda>s'. sym_refs (list_refs_of_replies' s')))
-                (reply_remove_tcb t rp) (replyRemoveTCB t)"
-  (is "corres _ ?abs_guard ?conc_guard _ _")
-  apply add_sym_refs
-  apply (rule_tac Q="st_tcb_at' ((=) (thread_state.BlockedOnReply (Some rp))) t" in corres_cross_add_guard)
-   apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
-  apply (clarsimp simp: reply_remove_tcb_def replyRemoveTCB_def isReply_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF getThreadState_corres])
-      apply (rule corres_assert_gen_asm_l)
-      apply (rule corres_assert_gen_asm2)
-      apply (rule corres_assert_opt_assume)
-       apply (case_tac state; simp)
-       apply (drule sym[of rp], simp)
-       apply (rule_tac P'="?conc_guard and (\<lambda>s'. sym_refs (state_refs_of' s')) and reply_at' rp"
-                   and P="?abs_guard" in corres_symb_exec_r)
-                 (* get sc_with_reply *)
-          apply (rule corres_symb_exec_l)
-             apply (rename_tac reply' sc_opt)
-             apply (rule_tac P="?abs_guard and (\<lambda>s. sc_with_reply rp s = sc_opt) and reply_at rp"
-                         and P'="?conc_guard and (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' reply' rp"
-                    in corres_inst)
-             apply (rule_tac Q="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned'
-                                      and pspace_distinct' and pspace_bounded'"
-                    in corres_cross_add_guard)
-              apply (frule pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
-              apply (fastforce simp: sc_replies_relation_sc_with_reply_cross_eq
-                              dest!: state_relationD pspace_distinct_cross dest: pspace_aligned_cross)
-             apply (case_tac sc_opt; simp split del: if_split add: bind_assoc)
-
-              (** sc_with_reply rp s = None **)
-              apply (rule_tac F="replySC reply' = None" in corres_req)
-               apply (fastforce dest!: sc_with_reply_None_reply_sc_reply_at dest: replySCs_of_cross
-                                 simp: obj_at'_def projectKOs opt_map_red)
-              apply (clarsimp simp: replySC_None_not_head)
-  subgoal for reply'
-    apply (simp only: bind_assoc[symmetric])
-    apply (rule corres_symb_exec_r_sr)
-       apply (rule corres_guard_imp)
-         apply (rule replyUnlinkTcb_corres[simplified dc_def])
-        apply (clarsimp dest!: valid_objs_valid_tcbs)
-        apply (frule (1) st_tcb_reply_state_refs)
-        apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb is_reply reply_tcb_reply_at_def)
-       apply simp
-      apply (erule sr_inv_sc_with_reply_None_helper)
-     apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
-     apply (fastforce elim!: reply_ko_at_valid_objs_valid_reply')
-    apply (erule no_fail_sc_wtih_reply_None_helper)
-    done
-
-            (** sc_with_reply \<noteq> None : rp is in a reply stack **)
-             apply (rename_tac scp)
-             apply (rule_tac F="replyNext reply' \<noteq> None" in corres_req)
-              apply clarsimp
-              apply (prop_tac "sc_at scp s")
-               apply (fastforce dest!: sc_with_reply_SomeD1
-                                 simp: sc_replies_sc_at_def obj_at_def is_sc_obj_def
-                                 elim: valid_sched_context_size_objsI)
-              apply (prop_tac "sc_at' scp s'")
-               apply (fastforce dest!: state_relationD sc_at_cross)
-              apply (drule sc_with_reply'_SomeD, clarsimp)
-              apply (case_tac "hd xs = rp")
-               apply (drule heap_path_head, clarsimp)
-               apply (drule (3) sym_refs_scReplies)
-               apply (clarsimp simp: obj_at'_def projectKOs sym_heap_def elim!: opt_mapE)
-
-              apply (frule (1) heap_path_takeWhile_lookup_next)
-              apply (frule heap_path_head, clarsimp)
-              apply (prop_tac "takeWhile ((\<noteq>) rp) xs = hd xs # tl (takeWhile ((\<noteq>) rp) xs)")
-               apply (case_tac xs; simp)
-              apply (simp del: heap_path.simps)
-              apply (drule_tac p1="hd xs" and ps1="tl (takeWhile ((\<noteq>) rp) xs)"
-                     in sym_refs_reply_heap_path_doubly_linked_Nexts_rev[where p'=rp, THEN iffD1])
-               apply clarsimp
-              apply (case_tac "rev (tl (takeWhile ((\<noteq>) rp) xs))";
-                     clarsimp simp: obj_at'_def projectKOs elim!: opt_mapE)
-             apply (clarsimp simp: liftM_def bind_assoc split del: if_split)
-             apply (rename_tac next_reply)
-             apply (rule_tac Q="\<lambda>x. ?abs_guard
-                                and (\<lambda>s. \<exists>n. kheap s scp = Some (Structures_A.SchedContext x n))
-                                and (\<lambda>s. sc_with_reply rp s = Some scp)
-                                and  K (rp \<in> set (sc_replies x))"
-                    in corres_symb_exec_l)
-                apply (rename_tac sc)
-                apply (rule_tac Q="(\<lambda>s'. scReplies_of s' scp = hd_opt (sc_replies sc)) and sc_at' scp"
-                       in corres_cross_add_guard)
-                 apply (clarsimp; rule conjI)
-                  apply (frule state_relation_sc_replies_relation)
-                  apply (frule sc_replies_relation_scReplies_of[symmetric])
-                    apply (fastforce dest!: sc_at_cross valid_objs_valid_sched_context_size
-                                      simp: obj_at_def is_sc_obj_def obj_at'_def)
-                   apply (fastforce dest!: sc_at_cross valid_objs_valid_sched_context_size
-                                     simp: obj_at_def is_sc_obj_def state_relation_def obj_at'_def
-                                           projectKOs opt_map_def)
-                  apply (clarsimp simp: sc_replies_of_scs_def map_project_def opt_map_def
-                                        scs_of_kh_def)
-                 apply (fastforce dest!: state_relation_pspace_relation sc_at_cross
-                                         valid_objs_valid_sched_context_size
-                                   simp: obj_at_def is_sc_obj)
-                apply (rule corres_gen_asm')
-                apply (rule corres_symb_exec_l)
-                   apply (rename_tac replysc)
-                   apply (rule_tac P="?abs_guard and (\<lambda>s. sc_with_reply rp s = Some scp)
-                                      and obj_at (\<lambda>ko. \<exists>n. ko = Structures_A.SchedContext sc n) scp
-                                      and reply_sc_reply_at ((=) replysc) rp"
-                          in corres_inst)
-                   apply (rename_tac replysc)
-                   apply (rule_tac F="replySC reply' = replysc" in corres_req)
-               apply (fastforce dest!: replySCs_of_cross simp: obj_at'_def projectKOs opt_map_red)
-                   apply (case_tac "hd (sc_replies sc) = rp"; simp split del: if_split)
-
-                   (* hd (sc_replies sc) = rp & replysc = Some scp: rp is at the head of the queue *)
-                   (* i.e. replyNext reply'  *)
-                    apply (rule corres_guard_imp)
-                      apply (rule corres_assert_gen_asm_l2)
-                      apply (simp add: getHeadScPtr_def isHead_def neq_conv[symmetric] split: reply_next.splits)
-                      apply (rule corres_split[OF setSchedContext_scReply_update_None_corres[simplified dc_def]])
-                         apply (rule_tac Q =\<top> and
-                                         P'="valid_objs' and valid_release_queue_iff and ko_at' reply' rp" and
-                                         Q'="(\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
-                                                         \<longrightarrow> replyNexts_of s' prp = Some rp)"
-                             in corres_inst_add)
-                         apply (rule corres_symb_exec_r_sr)
-                            apply (rule corres_guard_imp)
-                             apply (rule corres_split[OF cleanReply_sc_with_reply_None_corres])
-                                apply (rule replyUnlinkTcb_corres[simplified dc_def])
-                               apply wpsimp
-                              apply wpsimp
-                             apply simp
-                            apply simp
-                           apply (clarsimp cong: conj_cong)
-                           apply (case_tac "replyPrev reply'"; simp)
-                           apply (rename_tac prev_rp)
-                           apply (rule sr_inv_imp)
-                             apply (rule_tac P =\<top> and
-                                             P'=" (\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
-                                                              \<longrightarrow> replyNexts_of s' prev_rp = Some rp)"
-                                          in updateReply_sr_inv)
-                              apply (clarsimp simp: reply_relation_def projectKOs obj_at'_def obj_at_def
-                                             elim!: opt_mapE)
-                             apply clarsimp
-                             apply (drule_tac rp=prev_rp in sc_replies_relation_replyNext_update, simp)
-                             apply simp
-                            apply simp
-                           apply clarsimp
-                          apply wpsimp
-                         apply wpsimp
-                         apply (clarsimp dest!: reply_ko_at_valid_objs_valid_reply' simp: valid_reply'_def)
-                        apply simp
-                       apply (wpsimp wp: sc_replies_update_takeWhile_sc_with_reply
-                                         sc_replies_update_takeWhile_valid_replies)
-                      apply (wpsimp wp: scReply_update_empty_sc_with_reply')
-                     apply clarsimp
-                     apply (frule_tac reply_ptr=rp and sc_ptr= scp and list="tl (sc_replies sc)"
-                            in sym_refs_reply_sc_reply_at)
-                      apply (clarsimp simp: sc_replies_sc_at_def obj_at_def is_reply)
-                      apply (metis list.sel(1) list.sel(3) list.set_cases)
-                     apply (clarsimp simp: getHeadScPtr_def reply_sc_reply_at_def obj_at_def is_reply
-                                    split: reply_next.splits)
-                     apply (frule (1) st_tcb_reply_state_refs)
-                     apply (clarsimp dest!: valid_objs_valid_tcbs
-                                      simp: obj_at_def is_reply reply_tcb_reply_at_def)
-                     apply (clarsimp simp: opt_map_red opt_map_def split: option.splits)
-                     apply (rule context_conjI; clarsimp simp: vs_heap_simps obj_at_def)
-                     apply (intro conjI)
-                      apply (metis list.sel(1) list.set_cases)
-                     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-                    apply clarsimp
-                    apply (rule conjI)
-                     apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc'
-                                      simp: valid_sched_context'_def valid_sched_context_size'_def
-                                            objBits_simps)
-                     apply (erule sym_refs_replyNext_replyPrev_sym[THEN iffD2])
-                     apply (clarsimp simp: opt_map_red obj_at'_def projectKOs)
-                    apply (frule (3) sym_refs_scReplies)
-                    apply (clarsimp simp: hd_opt_def projectKOs opt_map_red sym_heap_def
-                                   split: list.split_asm)
-                    apply (clarsimp simp: opt_map_red obj_at'_def projectKOs split: reply_next.splits)
-
-                  (* rp is in the middle of the reply stack *)
-                  (* hd (sc_replies sc) \<noteq> rp & rp \<in> set (sc_replies sc) *)
-                   apply (rule corres_guard_imp)
-                     apply (rule_tac Q="valid_objs' and valid_release_queue_iff and ko_at' reply' rp
-                                        and (\<lambda>s'. sym_refs (list_refs_of_replies' s')) and sc_at' scp
-                                        and (\<lambda>s'. sym_refs (state_refs_of' s'))
-                                        and (\<lambda>s'. sc_with_reply' rp s' = Some scp)
-                                        and (\<lambda>s'. scReplies_of s' scp = hd_opt (sc_replies sc))
-                                        and (\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
-                                                        \<longrightarrow> replyNexts_of s' prp = Some rp)"
-                            in corres_assert_gen_asm_l)
-                     apply (simp split del: if_split)
-                     apply (clarsimp simp: getHeadScPtr_def isHead_def neq_conv[symmetric]
-                                    split: reply_next.splits)
-                     apply (rename_tac nxt_rp)
-                     apply (rule stronger_corres_guard_imp)
-                       apply (rule corres_split
-                                     [OF updateReply_replyPrev_takeWhile_middle_corres])
-                           apply simp
-                          apply simp
-                         apply (rule_tac P ="?abs_guard and reply_sc_reply_at ((=) None) rp" and
-                                         Q ="\<lambda>s. sc_with_reply rp s = None" and
-                                         P'="valid_objs' and valid_release_queue_iff
-                                             and ko_at' reply' rp and sc_at' scp" and
-                                         Q'="(\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
-                                                         \<longrightarrow> replyNexts_of s' prp = Some rp)"
-                               in corres_inst_add)
-                         apply (rule corres_symb_exec_r_sr)
-                            apply (rule corres_guard_imp)
-                              apply (rule corres_split[OF cleanReply_sc_with_reply_None_corres])
-                                apply (rule replyUnlinkTcb_corres[simplified dc_def])
-                               apply wpsimp
-                              apply wpsimp
-                             apply clarsimp
-                             apply (frule (1) st_tcb_reply_state_refs, frule valid_objs_valid_tcbs)
-                             apply (fastforce simp: obj_at_def is_reply reply_tcb_reply_at_def pred_tcb_at_def)
-                            apply simp
-                           apply (clarsimp cong: conj_cong)
-                           apply (case_tac "replyPrev reply'"; simp)
-                           apply (rename_tac prev_rp)
-                           apply (rule sr_inv_imp)
-                             apply (rule_tac P =\<top> and
-                                             P'=" (\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
-                                                              \<longrightarrow> replyNexts_of s' prev_rp = Some rp)"
-                                    in updateReply_sr_inv)
-                              apply (clarsimp simp: reply_relation_def projectKOs obj_at'_def obj_at_def
-                                             elim!: opt_mapE)
-                             apply clarsimp
-                             apply (drule_tac rp=prev_rp in sc_replies_relation_replyNext_update, simp)
-                             apply simp
-                            apply simp
-                           apply clarsimp
-                          apply wpsimp
-                         apply wpsimp
-                         apply (clarsimp dest!: reply_ko_at_valid_objs_valid_reply'
-                                          simp: valid_reply'_def)
-                        apply (wpsimp wp: sc_replies_update_takeWhile_sc_with_reply
-                                          sc_replies_update_takeWhile_middle_sym_refs
-                                          sc_replies_update_takeWhile_valid_replies)
-                       apply (wpsimp wp: updateReply_valid_objs' updateReply_ko_at'_other)
-                      apply (clarsimp cong: conj_cong)
-                      apply simp
-                     apply (clarsimp simp: valid_reply'_def)
-                     apply (rule context_conjI)
-                      apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)
-                     apply (clarsimp simp: obj_at_def del: opt_mapE)
-                     apply (frule (1) valid_sched_context_objsI)
-                     apply (clarsimp simp: valid_sched_context_def del: opt_mapE)
-                     apply (frule (4) next_reply_in_sc_replies[OF state_relation_sc_replies_relation])
-                        apply (fastforce dest!: state_relationD pspace_aligned_cross pspace_distinct_cross)
-                       apply (fastforce dest!: state_relationD pspace_distinct_cross)
-                      apply (fastforce dest!: state_relationD pspace_relation_pspace_bounded')
-                     apply (clarsimp simp: obj_at'_def)
-                     apply (clarsimp simp: vs_heap_simps)
-                    apply clarsimp
-                    apply (rule conjI)
-                     apply (clarsimp simp: list_all_iff dest!: set_takeWhileD)
-                    apply (drule (2) sc_replies_middle_reply_sc_None)
-                       apply (clarsimp simp: vs_heap_simps obj_at_def elim!: opt_mapE)
-                      apply (fastforce simp: obj_at_def is_sc_obj_def elim!: valid_sched_context_size_objsI)
-                     apply (erule reply_sc_reply_at)
-                    apply (clarsimp simp: reply_sc_reply_at_def obj_at_def)
-                   apply (fastforce elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD2]
-                                     simp: opt_map_red obj_at'_def projectKOs)
-                  apply (wpsimp simp: get_sk_obj_ref_def wp: get_reply_exs_valid)
-                   apply (fastforce dest!: Reply_or_Receive_reply_at[rotated] simp: obj_at_def is_reply)
-                  apply simp
-                 apply (wpsimp wp: get_sk_obj_ref_wp)
-                 apply (clarsimp simp: obj_at_def reply_sc_reply_at_def)
-                apply (wpsimp simp: get_sk_obj_ref_def get_simple_ko_def obj_at_def
-                                wp: get_object_wp)
-                apply (prop_tac "reply_at rp s")
-                 apply (fastforce dest!: st_tcb_at_valid_st2 simp: valid_tcb_state_def)
-                apply (fastforce simp: obj_at_def is_reply partial_inv_def a_type_def)
-               apply (wpsimp wp: get_sched_context_exs_valid)
-                apply (drule sc_with_reply_SomeD)
-                apply (wpsimp simp: is_sc_obj_def
-                       | clarsimp split: Structures_A.kernel_object.splits)+
-              apply (fastforce dest!: sc_with_reply_SomeD1 simp: sc_replies_sc_at_def obj_at_def)
-             apply (wpsimp wp: get_sched_context_no_fail)
-             apply (fastforce dest!: sc_with_reply_SomeD elim!: valid_sched_context_size_objsI
-                               simp: obj_at_def is_sc_obj_def)
-            apply wpsimp
-           apply wpsimp
-           apply (fastforce dest!: st_tcb_at_valid_st2 simp: valid_tcb_state_def)
-          apply wpsimp
-         apply (wpsimp wp: get_reply_inv' wp_del: getReply_wp)
-          apply (wpsimp simp: getReply_def)
-         apply clarsimp
-        apply wpsimp
-       apply wpsimp
-      apply clarsimp
-     apply (wpsimp wp: gts_wp)
-    apply wpsimp
-   apply (clarsimp simp: st_tcb_at_tcb_at pred_tcb_at_def obj_at_def is_tcb)
-  apply clarsimp
-  apply (rule context_conjI; clarsimp)
-  apply (prop_tac "reply_at' rp s")
-   apply (fastforce dest: tcb_in_valid_state' simp: valid_tcb_state'_def)
-  apply (clarsimp, rule conjI)
-  using fold_list_refs_of_replies' apply metis
-  apply (clarsimp simp: st_tcb_at'_def obj_at'_def projectKOs)
-  apply (rename_tac tcb reply)
-  apply (case_tac "tcbState tcb"; simp)
-  done
-
-lemma setSchedContext_pop_head_corres:
-  "\<lbrakk> replyNext reply' = Some (Head ptr)  \<rbrakk> \<Longrightarrow>
-   corres dc
-          ((\<lambda>s. (sc_replies_of s |> hd_opt) ptr = Some rp)
-                and valid_objs and pspace_aligned and pspace_distinct)
-          (ko_at' reply' rp)
-          (update_sched_context ptr (sc_replies_update tl))
-          (do sc' \<leftarrow> getSchedContext ptr;
-              setSchedContext ptr (scReply_update (\<lambda>_. replyPrev reply') sc')
-           od)"
-  supply opt_mapE[elim!]
-  apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
-   apply (fastforce dest!: state_relationD simp: obj_at_def is_sc_obj_def vs_heap_simps
-                    elim!: sc_at_cross valid_objs_valid_sched_context_size)
-  apply (rule_tac Q="pspace_aligned' and pspace_distinct'" in corres_cross_add_guard)
-   apply (fastforce dest!: state_relationD elim!: pspace_aligned_cross pspace_distinct_cross)
-  apply (rule_tac Q="\<lambda>s'. scReplies_of s' ptr = Some rp" in corres_cross_add_guard)
-   apply (subst sc_replies_relation_scReplies_of[symmetric, OF state_relation_sc_replies_relation])
-      apply simp
+lemma (in delete_one) cancelIPC_ReplyCap_corres:
+  "corres dc (einvs  and st_tcb_at awaiting_reply t)
+             (invs' and st_tcb_at' awaiting_reply' t)
+      (reply_cancel_ipc t)
+      (do y \<leftarrow> threadSet (\<lambda>tcb. tcb \<lparr> tcbFault := None \<rparr>) t;
+          slot \<leftarrow> getThreadReplySlot t;
+          callerCap \<leftarrow> liftM (mdbNext \<circ> cteMDBNode) (getCTE slot);
+          when (callerCap \<noteq> nullPointer) (do
+              y \<leftarrow> stateAssert (capHasProperty callerCap (\<lambda>cap. isReplyCap cap
+                                                             \<and> \<not> capReplyMaster cap))
+                  [];
+              cteDeleteOne callerCap
+          od)
+       od)"
+  proof -
+  interpret Arch . (*FIXME: arch-split*)
+  show ?thesis
+  apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
+                   locateSlot_conv liftM_def tcbReplySlot_def
+              del: split_paired_Ex)
+  apply (rule_tac Q="\<lambda>_. invs and valid_list and valid_sched and st_tcb_at awaiting_reply t"
+              and Q'="\<lambda>_. invs' and st_tcb_at' awaiting_reply' t"
+               in corres_underlying_split)
+     apply (rule corres_guard_imp)
+       apply (rule threadset_corresT; simp?)
+          apply (simp add: tcb_relation_def fault_rel_optionation_def)
+         apply (simp add: tcb_cap_cases_def)
+        apply (simp add: tcb_cte_cases_def)
+       apply (simp add: exst_same_def)
+      apply (fastforce simp: st_tcb_at_tcb_at)
      apply clarsimp
      apply (fastforce simp: opt_map_red dest!: sc_at'_cross[OF state_relation_pspace_relation])
     apply (clarsimp simp: opt_map_red obj_at_simps)+
@@ -1756,7 +1286,7 @@ declare cart_singleton_empty2[simp]
 lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_not t s"
   by (clarsimp simp: sch_act_simple_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch setNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
@@ -3340,6 +2870,64 @@ lemma cancelAllSignals_st_tcb_at:
 
 lemmas cancelAllSignals_makes_simple[wp] =
        cancelAllSignals_st_tcb_at [where P=simple', simplified]
+
+lemma threadSet_not_tcb[wp]:
+  "\<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>
+     threadSet f t
+   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
+  by (clarsimp simp: threadSet_def valid_def getObject_def
+                     setObject_def in_monad loadObject_default_def
+                     ko_wp_at'_def projectKOs split_def in_magnitude_check
+                     objBits_simps' updateObject_default_def
+                     ps_clear_upd projectKO_opt_tcb)
+
+lemma setThreadState_not_tcb[wp]:
+  "\<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>
+     setThreadState st t
+   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
+  by (wpsimp wp: isRunnable_inv threadGet_wp hoare_drop_imps
+           simp: setThreadState_def setQueue_def
+                 rescheduleRequired_def tcbSchedEnqueue_def tcbQueuePrepend_def
+                 unless_def bitmap_fun_defs)+
+
+lemma tcbSchedEnqueue_unlive:
+  "\<lbrace>ko_wp_at' (\<lambda>x. \<not> live' x \<and> (projectKO_opt x = (None :: tcb option))) p
+    and tcb_at' t\<rbrace>
+    tcbSchedEnqueue t
+   \<lbrace>\<lambda>_. ko_wp_at' (\<lambda>x. \<not> live' x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
+  apply (simp add: tcbSchedEnqueue_def tcbQueuePrepend_def unless_def)
+  apply (wp | simp add: setQueue_def bitmap_fun_defs)+
+  done
+
+lemma cancelAll_unlive_helper:
+  "\<lbrace>\<lambda>s. (\<forall>x\<in>set xs. tcb_at' x s) \<and>
+     ko_wp_at' (\<lambda>x. \<not> live' x \<and> (projectKO_opt x = (None :: tcb option))) p s\<rbrace>
+     mapM_x (\<lambda>t. do
+                   y \<leftarrow> setThreadState Structures_H.thread_state.Restart t;
+                   tcbSchedEnqueue t
+                 od) xs
+   \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') p\<rbrace>"
+  apply (rule hoare_strengthen_post)
+   apply (rule mapM_x_wp')
+   apply (rule hoare_pre)
+    apply (wp tcbSchedEnqueue_unlive hoare_vcg_const_Ball_lift)
+   apply clarsimp
+  apply (clarsimp elim!: ko_wp_at'_weakenE)
+  done
+
+context begin interpretation Arch . (*FIXME: arch-split*)
+lemma setObject_ko_wp_at':
+  fixes v :: "'a :: pspace_storable"
+  assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"
+  assumes n: "\<And>v :: 'a. objBits v = n"
+  assumes v: "(1 :: word32) < 2 ^ n"
+  shows
+  "\<lbrace>\<lambda>s. P (injectKO v)\<rbrace> setObject p v \<lbrace>\<lambda>rv. ko_wp_at' P p\<rbrace>"
+  by (clarsimp simp: setObject_def valid_def in_monad
+                     ko_wp_at'_def x split_def n
+                     updateObject_default_def
+                     objBits_def[symmetric] ps_clear_upd
+                     in_magnitude_check v projectKOs)
 
 lemma threadSet_unlive_other:
   "\<lbrace>ko_wp_at' (Not \<circ> live') p and K (p \<noteq> t)\<rbrace>

@@ -11,7 +11,7 @@ theory ArchInterrupt_A
 imports Ipc_A
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 definition virqSetEOIIRQEN :: "virq \<Rightarrow> machine_word \<Rightarrow> virq" where
   "virqSetEOIIRQEN virq v \<equiv>

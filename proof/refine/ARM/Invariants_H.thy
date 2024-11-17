@@ -51,7 +51,7 @@ lemma le_maxDomain_eq_less_numDomains:
   by (auto simp: Kernel_Config.numDomains_def maxDomain_def word_le_nat_alt)
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Invariants on Executable Spec"
 
@@ -499,7 +499,7 @@ where
 section "Valid caps and objects (Haskell)"
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 primrec
   acapBits :: "arch_capability \<Rightarrow> nat"
 where
@@ -555,7 +555,7 @@ definition
 
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   page_table_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1586,7 +1586,7 @@ locale mdb_order = mdb_next +
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Alternate split rules for preserving subgoal order"
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma ntfn_splits[split]:
   " P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
      | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
@@ -3553,8 +3553,7 @@ lemma ex_cte_cap_to'_pres:
    apply assumption
   apply simp
   done
-
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma page_directory_pde_atI':
   "\<lbrakk> page_directory_at' p s; x < 2 ^ pageBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << 2)) s"
   by (simp add: page_directory_at'_def pageBits_def)
@@ -3729,8 +3728,7 @@ lemma vms_sch_act_update'[iff]:
   "valid_machine_state' (ksSchedulerAction_update f s) =
    valid_machine_state' s"
   by (simp add: valid_machine_state'_def )
-
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"
   "objBitsT NotificationT = ntfnSizeBits"

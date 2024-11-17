@@ -10,11 +10,7 @@ theory TCBDecls_H
 imports FaultMonad_H Invocations_H
 begin
 
-context begin interpretation Arch .
-requalify_types
-  user_monad
-end
-
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs decls_only NOT archThreadGet archThreadSet takeWhileM sort_key tcbEPFindIndex
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs decls_only \
+  NOT archThreadGet archThreadSet sanitiseRegister getSanitiseRegisterInfo takeWhileM sort_key tcbEPFindIndex
 
 end

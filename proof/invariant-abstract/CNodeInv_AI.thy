@@ -13,14 +13,10 @@ theory CNodeInv_AI
 imports ArchIpc_AI
 begin
 
-
-context begin interpretation Arch .
-requalify_facts
-  set_cap_arch
+arch_requalify_facts
   cte_at_length_limit
   arch_derive_cap_untyped
   valid_arch_mdb_cap_swap
-end
 
 declare set_cap_arch[wp]
 

@@ -15,7 +15,7 @@ begin
 
 context Arch begin
 
-(*FIXME: arch_split: move up *)
+(*FIXME: arch-split: move up *)
 requalify_types
   irqcontrol_invocation
 
@@ -23,11 +23,11 @@ lemmas [crunch_def] = decodeIRQControlInvocation_def performIRQControl_def
 
 context begin global_naming global
 
-(*FIXME: arch_split: move up *)
+(*FIXME: arch-split: move up *)
 requalify_types
   Invocations_H.irqcontrol_invocation
 
-(*FIXME: arch_split*)
+(*FIXME: arch-split*)
 requalify_facts
   Interrupt_H.decodeIRQControlInvocation_def
   Interrupt_H.performIRQControl_def
@@ -88,7 +88,7 @@ where
       ex_cte_cap_to' ptr and real_cte_at' ptr and
       (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma decodeIRQHandlerInvocation_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');

@@ -21,9 +21,6 @@ begin
 
 context begin interpretation Arch .
 
-requalify_types
-  vmpage_size
-
 requalify_consts
   usToTicks
 

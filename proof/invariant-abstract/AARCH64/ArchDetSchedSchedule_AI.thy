@@ -9,7 +9,7 @@ theory ArchDetSchedSchedule_AI
 imports DetSchedSchedule_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems DetSchedSchedule_AI_assms
 
@@ -498,7 +498,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?)
 qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma dmo_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane\<rbrace> do_machine_op f \<lbrace>\<lambda>rv. scheduler_act_sane\<rbrace>"

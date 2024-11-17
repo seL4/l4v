@@ -10,7 +10,7 @@ imports
   Types_H
   Hardware_H
 begin
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_SETTINGS keep_constructor=asidpool
 #INCLUDE_SETTINGS keep_constructor=arch_tcb

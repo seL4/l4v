@@ -8,14 +8,12 @@ theory Deterministic_AI
 imports ArchAInvsPre
 begin
 
-context begin interpretation Arch .
-requalify_facts
+arch_requalify_facts
   update_work_units_empty_fail
   reset_work_units_empty_fail
   set_domain_empty_fail
   thread_set_domain_empty_fail
   arch_post_cap_deletion_valid_list
-end
 
 lemmas [wp] =
   update_work_units_empty_fail

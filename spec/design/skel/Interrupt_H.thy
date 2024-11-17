@@ -16,35 +16,33 @@ begin
 
 context Arch begin
 
+(* match Haskell, expects these under Arch. *)
 requalify_consts
   checkIRQ
-  decodeIRQControlInvocation
-  performIRQControl
-  invokeIRQHandler
-  initInterruptController
   handleReservedIRQ
   maskIrqSignal
 
+(* disambiguate name clash between Arch and non-arch consts with same names *)
+requalify_consts (aliasing)
+  decodeIRQControlInvocation
+  invokeIRQHandler
+  performIRQControl
+  initInterruptController
+
 context begin global_naming global
-requalify_consts
+requalify_consts (aliasing)
   InterruptDecls_H.decodeIRQControlInvocation
+  InterruptDecls_H.invokeIRQHandler
   InterruptDecls_H.performIRQControl
-end
+  InterruptDecls_H.initInterruptController
 
 end
+end
 
-context begin interpretation Arch .
-
-requalify_consts
+(* override Kernel_Config const with constrained abbreviation from Hardware_H *)
+arch_requalify_consts (aliasing, H)
   maxIRQ
-  minIRQ
-  maskInterrupt
-  ackInterrupt
-  resetTimer
-  debugPrint
   deadlineIRQ
-
-end
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
 #INCLUDE_HASKELL SEL4/Object/Interrupt.lhs bodies_only

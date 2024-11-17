@@ -12,8 +12,8 @@
 set -e
 
 case $(uname) in
-  Darwin* ) TAR=gtar ; SEDIOPT="-i ''" ;;
-  * ) TAR=tar ; SEDIOPT=-i ;;
+  Darwin* ) TAR=gtar ;;
+  * ) TAR=tar ;;
 esac
 
 
@@ -145,18 +145,20 @@ echo "Hacking Makefile to remove ROOT generation."
 if ! grep -q '^testfiles/\$(L4V_ARCH)/ROOT' "$outputdir/src/c-parser/Makefile"; then
     die "failed to process c-parser/Makefile"
 fi
-sed $SEDIOPT \
+sed -i .bak \
     -e '/^testfiles\/\$(L4V_ARCH)\/ROOT/,/CParserTest/d' \
     -e '/^all_tests_\$(L4V_ARCH)\.thy/,/CParser/d' \
     "$outputdir/src/c-parser/Makefile"
+rm -f "$outputdir/src/c-parser/Makefile.bak"
 
 echo "Hacking Makefile to change root dir."
 if ! grep -q '^L4V_ROOT_DIR = ' "$outputdir/src/c-parser/Makefile"; then
     die "failed to process c-parser/Makefile"
 fi
-sed $SEDIOPT \
+sed -i .bak \
     -e 's/^L4V_ROOT_DIR = .*$/L4V_ROOT_DIR = ../' \
     "$outputdir/src/c-parser/Makefile"
+rm -f "$outputdir/src/c-parser/Makefile.bak"
 
 echo "Generating standalone-parser/table.ML"
 pushd "$TOPLEVEL_DIR/tools/c-parser" > /dev/null
@@ -165,10 +167,10 @@ pushd "$TOPLEVEL_DIR/tools/c-parser" > /dev/null
 cp standalone-parser/table.ML "$outputdir/src/c-parser/standalone-parser"
 echo "Cleaning up standalone-parser's Makefile"
 sed '
-  1i\
-  SML_COMPILER ?= mlton
+  /^STP_PFX :=/i\
+SML_COMPILER ?= mlton
   /^include/d
-  /General\/table.ML/,/pretty-printing/d
+  /General\/table.ML/,/unsynchronized_cache/d
   /ISABELLE_HOME/d
   /CLEAN_TARGETS/s|\$(STP_PFX)/table.ML||
 ' < standalone-parser/Makefile > "$outputdir/src/c-parser/standalone-parser/Makefile"
@@ -177,7 +179,7 @@ popd > /dev/null
 echo "Making PDF of ctranslation file."
 cd "$outputdir/src/c-parser/doc"
 make ctranslation.pdf > /dev/null
-/bin/rm ctranslation.{log,aux,blg,bbl,toc}
+/bin/rm -f ctranslation.{log,aux,blg,bbl,toc}
 mv ctranslation.pdf "$outputdir/doc"
 
 popd > /dev/null

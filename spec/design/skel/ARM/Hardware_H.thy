@@ -10,7 +10,7 @@ imports
   State_H
 begin
 
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 definition usToTicks :: "word64 \<Rightarrow> word64" where
   "usToTicks \<equiv> us_to_ticks"
@@ -37,11 +37,10 @@ definition maxPeriodUs :: "word64" where
 
 end
 
-context begin interpretation Arch .
-requalify_types vmrights
-end
+arch_requalify_types (H)
+  vmrights
 
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_H instanceproofs NOT HardwareASID VMFaultType VMPageSize HypFaultType
 
@@ -50,6 +49,10 @@ context Arch begin global_naming ARM_H
 (* Kernel_Config provides a generic numeral, Haskell expects type irq *)
 abbreviation (input) maxIRQ :: irq where
   "maxIRQ == Kernel_Config.maxIRQ"
+
+(* provide ARM/ARM_HYP machine op in _H global_prefix for arch-split *)
+abbreviation (input) initIRQController where
+  "initIRQController \<equiv> ARM.initIRQController"
 
 end
 end

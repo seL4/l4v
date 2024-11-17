@@ -21,7 +21,7 @@ qualify RISCV64 (in Arch)
 type_synonym iarch_tcb = void
 end_qualify
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 (* compatibility with other architectures, input only *)
 abbreviation
@@ -1092,7 +1092,7 @@ lemma aobj_at_default_arch_cap_valid:
 
 lemmas aobj_ref_default = aobj_ref_arch_cap
 
-lemma acap_rights_update_id [intro!, simp]:
+lemma wf_acap_rights_update_id [intro!, simp]:
   "wellformed_acap cap \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding acap_rights_update_def
   by (auto split: arch_cap.splits option.splits)

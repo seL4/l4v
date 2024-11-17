@@ -10,7 +10,7 @@ imports
   "Lib.Crunch_Instances_NonDet"
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 crunch_ignore (add: debugPrint clearMemory pt_lookup_from_level)
 

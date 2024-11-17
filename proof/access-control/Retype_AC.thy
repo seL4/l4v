@@ -184,15 +184,15 @@ locale Retype_AC_1 =
     "\<And>tp. is_aligned p (obj_bits_api (ArchObject tp) n)
            \<Longrightarrow> aobj_ref' (arch_default_cap tp p n dev) \<subseteq> ptr_range p (obj_bits_api (ArchObject tp) n)"
   and init_arch_objects_pas_refined:
-    "\<And>tp. \<lbrace>pas_refined aag and post_retype_invs tp refs
+    "\<And>tp dev. \<lbrace>pas_refined aag and post_retype_invs tp refs
                             and (\<lambda>s. \<forall>x\<in>set refs. x \<notin> global_refs s)
                             and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api tp obj_sz))\<rbrace>
-           init_arch_objects tp ptr bits obj_sz refs
-           \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+               init_arch_objects tp dev ptr bits obj_sz refs
+               \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   and dmo_freeMemory_invs:
     "do_machine_op (freeMemory ptr bits) \<lbrace>\<lambda>s :: det_ext state. invs s\<rbrace>"
   and init_arch_objects_pas_cur_domain[wp]:
-    "\<And>tp. init_arch_objects tp ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
+    "\<And>tp dev. init_arch_objects tp dev ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
   and retype_region_pas_cur_domain[wp]:
     "\<And>tp. retype_region ptr n us tp dev \<lbrace>pas_cur_domain aag\<rbrace>"
   and reset_untyped_cap_pas_cur_domain[wp]:
@@ -222,7 +222,7 @@ locale Retype_AC_1 =
   and init_arch_objects_integrity:
     "\<lbrace>integrity aag X st and K (\<forall>x\<in>set refs. is_subject aag x)
                          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
-     init_arch_objects new_type ptr num_objects obj_sz refs
+     init_arch_objects new_type dev ptr num_objects obj_sz refs
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   and integrity_asids_detype:
     "\<forall>r \<in> R. pasObjectAbs aag r \<in> subjects

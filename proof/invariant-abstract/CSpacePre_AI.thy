@@ -12,15 +12,16 @@ theory CSpacePre_AI
 imports ArchCSpaceInv_AI
 begin
 
-context begin interpretation Arch .
-requalify_consts
+arch_requalify_consts
   cap_asid
   is_simple_cap_arch
   is_derived_arch
   safe_parent_for_arch
   cap_asid_base
   cap_vptr
-end
+
+arch_requalify_facts
+  replace_cap_invs
 
 lemma fun_upd_Some:
   "ms p = Some k \<Longrightarrow> (ms(a \<mapsto> b)) p = Some (if a = p then b else k)"

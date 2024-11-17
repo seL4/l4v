@@ -8,20 +8,18 @@ theory TcbAcc_AI
 imports ArchCSpace_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_facts
+arch_requalify_facts
   valid_arch_arch_tcb_context_set
   as_user_inv
   getRegister_inv
   user_getreg_inv
+  set_cap_valid_arch_caps_simple
+  set_cap_kernel_window_simple
   state_hyp_refs_of_tcb_sched_context_update
   state_hyp_refs_of_tcb_yield_to_update
   global_refs_kheap
 
 declare user_getreg_inv[wp]
-
-end
 
 lemma gets_the_thread_read:
   "gets_the (thread_read f t) = thread_get f t"

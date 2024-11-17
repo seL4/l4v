@@ -8,7 +8,7 @@ theory TcbAcc_R
 imports CSpace_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare if_weak_cong [cong]
 declare hoare_in_monad_post[wp]
@@ -94,7 +94,7 @@ lemma st_tcb_at_coerce_abstract:
   apply (fastforce simp: st_tcb_at_def obj_at_def other_obj_relation_def
                          tcb_relation_def
                    split: Structures_A.kernel_object.split_asm if_split_asm
-                          ARM_A.arch_kernel_obj.split_asm)+
+                          ARM_HYP_A.arch_kernel_obj.split_asm)+
   done
 
 lemma st_tcb_at_runnable_coerce_concrete:
@@ -524,7 +524,7 @@ lemma pspace_relation_tcb_at:
   apply (erule(1) obj_relation_cutsE)
   apply (clarsimp simp: other_obj_relation_def is_tcb obj_at_def
                  split: Structures_A.kernel_object.split_asm if_split_asm
-                        ARM_A.arch_kernel_obj.split_asm)+
+                        ARM_HYP_A.arch_kernel_obj.split_asm)+
   done
 
 lemma threadSet_corres_noopT:
@@ -6070,7 +6070,7 @@ lemma set_eobject_corres':
      apply (clarsimp simp: obj_at'_def other_obj_relation_def tcb_relation_cut_def cte_relation_def
                            tcb_relation_def projectKOs
                     split: if_split_asm)+
-   apply (clarsimp simp: aobj_relation_cuts_def split: ARM_A.arch_kernel_obj.splits)
+   apply (clarsimp simp: aobj_relation_cuts_def split: ARM_HYP_A.arch_kernel_obj.splits)
    apply (rename_tac arch_kernel_obj obj d p ts)
    apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def

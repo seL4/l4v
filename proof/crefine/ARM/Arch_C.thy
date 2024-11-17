@@ -9,7 +9,7 @@ theory Arch_C
 imports Recycle_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch unmapPageTable
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -1598,9 +1598,8 @@ lemma performPageInvocationMapPTE_ccorres:
          apply simp
         apply (subst is_aligned_no_wrap', assumption, fastforce)
         apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce)
-        apply (simp add:addrFromPPtr_mask_5)
-       apply (clarsimp simp:pte_range_relation_def ptr_add_def ptr_range_to_list_def
-                            addrFromPPtr_mask_5)
+        apply simp
+       apply (clarsimp simp: pte_range_relation_def ptr_add_def ptr_range_to_list_def)
        apply (auto simp: valid_pte_slots'2_def upt_conv_Cons[where i=0])[1]
       apply (clarsimp simp: guard_is_UNIV_def hd_conv_nth last_conv_nth ucast_minus)
       apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def objBits_simps archObjSize_def)
@@ -1848,9 +1847,9 @@ lemma performPageInvocationMapPDE_ccorres:
        apply (simp add: hd_conv_nth last_conv_nth)
        apply (rule conj_assoc[where Q="a \<le> b" for a b, THEN iffD1])+
        apply (rule conjI)
- (* the inequality first *)
-        apply (clarsimp simp:valid_pde_slots'2_def pdeBits_def
-          objBits_simps archObjSize_def hd_conv_nth)
+        (* the inequality first *)
+        apply (clarsimp simp: valid_pde_slots'2_def pdeBits_def
+                              objBits_simps archObjSize_def hd_conv_nth)
         apply (clarsimp simp:pde_range_relation_def ptr_range_to_list_def ptr_add_def)
         apply (frule is_aligned_addrFromPPtr_n,simp)
         apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
@@ -1858,9 +1857,9 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (subst is_aligned_no_wrap', assumption, fastforce)
         apply (subst add_diff_eq [symmetric])
         apply (subst is_aligned_no_wrap', assumption, fastforce)
-        apply (simp add:addrFromPPtr_mask_5)
+        apply simp
        apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def CTypesDefs.ptr_add_def
-                             valid_pde_slots'2_def addrFromPPtr_mask_5)
+                             valid_pde_slots'2_def)
        apply (auto simp: upt_conv_Cons[where i=0])[1]
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth)
       apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def pdeBits_def)
@@ -2787,10 +2786,9 @@ lemma decodeARMFrameInvocation_ccorres:
                       erule is_aligned_no_wrap', clarsimp\<close>
             | solves \<open>frule vmsz_aligned_addrFromPPtr(3)[THEN iffD2],
                       (subst mask_add_aligned mask_add_aligned_right, erule is_aligned_weaken,
-                       rule order_trans[OF _ pbfs_atleast_pageBits[simplified pageBits_def]], simp)+,
+                       rule cacheLineBits_leq_pbfs)+,
                       simp\<close>)+)[1] (* 20s *)
      done
-
   (* C side *)
   apply (clarsimp simp: rf_sr_ksCurThread ThreadState_defs mask_eq_iff_w2p
                         word_size word_less_nat_alt from_bool_0 excaps_map_def cte_wp_at_ctes_of)
@@ -3146,13 +3144,12 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
               apply (simp add:linorder_not_le)
               apply (erule word_less_sub_1)
              apply (simp add:mask_add_aligned mask_twice)
-            apply (subgoal_tac "5 \<le> pageBitsForSize a")
-             apply (frule(1) is_aligned_weaken)
-             apply (simp add:mask_add_aligned mask_twice)
-             apply (erule order_trans[rotated])
-             apply (erule flush_range_le1, simp add: linorder_not_le)
-             apply (erule word_less_sub_1)
-            apply (case_tac a,simp+)[1]
+            apply (cut_tac cacheLineBits_leq_pbfs)
+            apply (frule(1) is_aligned_weaken)
+            apply (simp add:mask_add_aligned mask_twice)
+            apply (erule order_trans[rotated])
+            apply (erule flush_range_le1, simp add: linorder_not_le)
+            apply (erule word_less_sub_1)
            apply simp
            apply (vcg exspec=resolveVAddr_modifies)
           apply (rule_tac P'="{s. errstate s = find_ret}"

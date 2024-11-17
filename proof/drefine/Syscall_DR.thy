@@ -11,7 +11,7 @@ imports
   Interrupt_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*
  * Translate an abstract invocation into a corresponding

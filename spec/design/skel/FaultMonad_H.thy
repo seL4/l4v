@@ -7,13 +7,10 @@
 chapter "The Fault Monad"
 
 theory FaultMonad_H
-imports KernelStateData_H Fault_H
+imports
+  KernelStateData_H
+  Fault_H
 begin
-
-context begin interpretation Arch .
-requalify_consts
-  getActiveIRQ
-end
 
 type_synonym ('f, 'a) kernel_f = "('f + 'a) kernel"
 

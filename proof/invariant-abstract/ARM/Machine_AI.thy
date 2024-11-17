@@ -67,7 +67,7 @@ crunch_ignore (no_irq) (add:
   handleE' handleE handle_elseE forM forM_x
   zipWithM ignore_failure)
 
-context Arch begin
+context Arch begin arch_global_naming
 
 lemma det_getRegister: "det (getRegister x)"
   by (simp add: getRegister_def)
@@ -270,9 +270,8 @@ lemma no_fail_invalidateCacheRange_I[simp, wp]:
 
 lemma no_fail_invalidateCacheRange_RAM[simp, wp]:
   "no_fail \<top> (invalidateCacheRange_RAM s e p)"
-  apply (simp add: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def)
-  apply (wpsimp wp: no_fail_invalidateL2Range no_fail_invalidateByVA no_fail_dsb)
-  done
+  unfolding invalidateCacheRange_RAM_def
+  by (wpsimp wp: no_fail_invalidateL2Range no_fail_invalidateByVA no_fail_dsb)
 
 lemma no_fail_branchFlushRange[simp, wp]:
   "no_fail \<top> (branchFlushRange s e p)"
@@ -593,7 +592,7 @@ lemma no_irq_when:
 
 lemma no_irq_invalidateCacheRange_RAM[simp, wp]:
   "no_irq (invalidateCacheRange_RAM s e p)"
-  apply (simp add: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def)
+  apply (simp add: invalidateCacheRange_RAM_def)
   apply (wp no_irq_invalidateL2Range no_irq_invalidateByVA no_irq_dsb no_irq_when)
   done
 
@@ -711,12 +710,7 @@ lemma empty_fail_writeContextID: "empty_fail  writeContextID"
 lemma empty_fail_cacheRangeOp [simp, intro!]:
   assumes ef: "\<And>a b. empty_fail (oper a b)"
   shows "empty_fail (cacheRangeOp oper s e p)"
-  apply (simp add: cacheRangeOp_def mapM_x_mapM lineStart_def cacheLineBits_def cacheLine_def ef)
-  apply (rule empty_fail_bind)
-   apply (rule empty_fail_mapM)
-   apply (auto intro: ef)
-  done
-
+  by (auto simp add: cacheRangeOp_def mapM_x_mapM intro: ef)
 
 lemma empty_fail_cleanCacheRange_PoU[simp, intro!]:
   "empty_fail (cleanCacheRange_PoU s e p)"
@@ -741,7 +735,7 @@ lemma empty_fail_invalidateCacheRange_I[simp, intro!]:
 
 lemma empty_fail_invalidateCacheRange_RAM[simp, intro!]:
   "empty_fail (invalidateCacheRange_RAM s e p)"
-  by (fastforce simp: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def
+  by (fastforce simp: invalidateCacheRange_RAM_def
                       empty_fail_invalidateL2Range empty_fail_invalidateByVA empty_fail_dsb)
 
 lemma empty_fail_branchFlushRange[simp, intro!]:
@@ -769,16 +763,6 @@ lemmas msgRegisters_A_unfold
         [unfolded upto_enum_def, simplified,
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
-
-end
-
-context begin interpretation Arch .
-
-requalify_facts
-  det_getRegister
-  det_setRegister
-  det_getRestartPC
-  det_setNextPC
 
 end
 

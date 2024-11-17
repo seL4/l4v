@@ -8,7 +8,7 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 fun
   non_vspace_obj :: "kernel_object \<Rightarrow> bool"
@@ -121,7 +121,7 @@ locale vspace_only_obj_pred = Arch +
 sublocale vspace_only_obj_pred < arch_only_obj_pred
   using vspace_pred_imp[OF vspace_only] by unfold_locales
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 sublocale empty_table: vspace_only_obj_pred "empty_table S" for S
   by unfold_locales (clarsimp simp: vspace_obj_pred_def empty_table_def

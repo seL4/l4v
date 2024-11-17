@@ -11,9 +11,7 @@ begin
 
 unbundle l4v_word_context
 
-context Arch begin
-
-global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)
@@ -81,8 +79,7 @@ lemma device_frame_in_device_region:
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
-global_naming Arch
-named_theorems AInvsPre_asms
+named_theorems AInvsPre_assms
 
 lemma get_vspace_of_thread_asid_or_global_pt:
   "(\<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) t))
@@ -102,7 +99,7 @@ lemma get_page_info_gpd_kmaps:
                         table_base_pt_slot_offset[where level=max_pt_level, simplified])
   done
 
-lemma ptable_rights_imp_frame[AInvsPre_asms]:
+lemma ptable_rights_imp_frame[AInvsPre_assms]:
   assumes "valid_state s"
   shows "\<lbrakk> ptable_rights t s vptr \<noteq> {}; ptable_lift t s vptr = Some (addrFromPPtr p) \<rbrakk> \<Longrightarrow>
          in_user_frame p s \<or> in_device_frame p s"
@@ -140,12 +137,7 @@ end
 interpretation AInvsPre?: AInvsPre
 proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_asms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_assms)?)
 qed
-
-requalify_facts
-  AARCH64.user_mem_dom_cong
-  AARCH64.device_mem_dom_cong
-  AARCH64.device_frame_in_device_region
 
 end

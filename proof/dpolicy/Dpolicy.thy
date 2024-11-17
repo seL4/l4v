@@ -23,7 +23,7 @@ downloaded from
 https://trustworthy.systems/publications/nictaabstracts/Klein_AEMSKH_14.abstract
 *)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   cdl_cap_auth_conferred :: "cdl_cap \<Rightarrow> auth set"
@@ -217,26 +217,26 @@ lemmas cdl_state_objs_to_policy_cases
     = cdl_state_bits_to_policy.cases[OF cdl_state_objs_to_policy_mem[THEN iffD1]]
 
 lemma transform_asid_rev [simp]:
-  "asid \<le> 2 ^ ARM_A.asid_bits - 1 \<Longrightarrow> transform_asid_rev (transform_asid asid) = asid"
+  "asid \<le> 2 ^ MiscMachine_A.asid_bits - 1 \<Longrightarrow> transform_asid_rev (transform_asid asid) = asid"
   apply (clarsimp simp:transform_asid_def transform_asid_rev_def
-                       asid_high_bits_of_def ARM_A.asid_low_bits_def)
+                       asid_high_bits_of_def asid_low_bits_def)
   apply (subgoal_tac "asid >> 10 < 2 ^ asid_high_bits")
-   apply (simp add:ARM_A.asid_high_bits_def ARM_A.asid_bits_def)
+   apply (simp add: MiscMachine_A.asid_high_bits_def MiscMachine_A.asid_bits_def MiscMachine_A.asid_low_bits_def)
    apply (subst ucast_ucast_len)
     apply simp
    apply (subst shiftr_shiftl1)
     apply simp
    apply (subst ucast_ucast_mask)
    apply (simp add:mask_out_sub_mask)
-  apply (simp add:ARM_A.asid_high_bits_def)
-  apply (rule shiftr_less_t2n[where m=7, simplified])
-  apply (simp add:ARM_A.asid_bits_def)
+  apply (simp add: asid_high_bits_def)
+  apply (rule shiftr_less_t2n[where m=MiscMachine_A.asid_high_bits, simplified])
+  apply (simp add: MiscMachine_A.asid_bits_def MiscMachine_A.asid_high_bits_def)
   done
 
 abbreviation
   "valid_asid_mapping mapping \<equiv> (case mapping of
     None \<Rightarrow> True
-  | Some (asid, ref) \<Rightarrow> asid \<le>  2 ^ ARM_A.asid_bits - 1)"
+  | Some (asid, ref) \<Rightarrow> asid \<le>  2 ^ asid_bits - 1)"
 
 lemma transform_asid_rev_transform_mapping [simp]:
   "valid_asid_mapping mapping \<Longrightarrow>
@@ -1073,7 +1073,7 @@ lemma state_vrefs_asid_pool_transform_rev:
   "\<lbrakk> einvs s; cdl_asid_table (transform s) (fst (transform_asid asid)) = Some poolcap;
      \<not> is_null_cap poolcap; \<not> is_null_cap pdcap; pdptr = cap_object pdcap;
      opt_cap (cap_object poolcap, snd (transform_asid asid)) (transform s) = Some pdcap \<rbrakk> \<Longrightarrow>
-     (pdptr, asid && mask ARM_A.asid_low_bits, AASIDPool, Control)
+     (pdptr, asid && mask MiscMachine_A.asid_low_bits, AASIDPool, Control)
           \<in> state_vrefs s (cap_object poolcap)"
   apply (subgoal_tac "cap_object poolcap \<noteq> idle_thread s")
    prefer 2

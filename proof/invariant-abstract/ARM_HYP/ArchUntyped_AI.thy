@@ -8,7 +8,7 @@ theory ArchUntyped_AI
 imports Untyped_AI
 begin
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems Untyped_AI_assms
 
@@ -167,7 +167,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
   range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
                    \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
-                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (ARM_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
+                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (ARM_HYP_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
   apply (rename_tac aobject_type us n)
   apply (case_tac aobject_type)
 by (clarsimp simp:valid_cap_def default_object_def cap_aligned_def
@@ -179,31 +179,20 @@ by (clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         default_arch_object_def valid_vm_rights_def  word_bits_def a_type_def)+
 
 
-lemma copy_global_mappings_hoare_lift:(*FIXME: arch_split  \<rightarrow> these do not seem to be used globally *)
+lemma copy_global_mappings_hoare_lift:(*FIXME: arch-split  \<rightarrow> these do not seem to be used globally *)
   assumes wp: "\<And>ptr val. \<lbrace>Q\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows       "\<lbrace>Q\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: copy_global_mappings_def)
   done
 
 lemma init_arch_objects_hoare_lift:
-  assumes wp: "\<And>oper. \<lbrace>(P::'state_ext::state_ext state\<Rightarrow>bool)\<rbrace> do_machine_op oper \<lbrace>\<lambda>rv :: unit. Q\<rbrace>"
-              "\<And>ptr val. \<lbrace>P\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows       "\<lbrace>P and Q\<rbrace> init_arch_objects tp ptr sz us adds \<lbrace>\<lambda>rv. Q\<rbrace>"
-proof -
-  have pres: "\<And>oper. \<lbrace>P and Q\<rbrace> do_machine_op oper \<lbrace>\<lambda>rv :: unit. Q\<rbrace>"
-             "\<lbrace>P and Q\<rbrace> return () \<lbrace>\<lambda>rv. Q\<rbrace>"
-    by (wp wp | simp)+
-  show ?thesis
-    apply (simp add: init_arch_objects_def
-                  pres reserve_region_def
-           split: Structures_A.apiobject_type.split
-                  aobject_type.split)
-    apply clarsimp
-    apply (rule hoare_pre)
-     apply (wp mapM_x_wp' copy_global_mappings_hoare_lift wp)
-    apply simp
-    done
-qed
+  assumes wp: "\<And>oper. \<lbrace>(Q::'state_ext::state_ext state\<Rightarrow>bool)\<rbrace> do_machine_op oper \<lbrace>\<lambda>rv :: unit. Q\<rbrace>"
+              "\<And>ptr val. \<lbrace>Q\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. Q\<rbrace>"
+  shows       "\<lbrace>Q\<rbrace> init_arch_objects tp dev ptr sz us adds \<lbrace>\<lambda>rv. Q\<rbrace>"
+  supply if_split[split del]
+  apply (simp add: init_arch_objects_def reserve_region_def)
+  apply (wpsimp wp: mapM_x_wp' copy_global_mappings_hoare_lift wp)
+  done
 
 
 lemma cap_refs_in_kernel_windowD2:
@@ -215,28 +204,20 @@ lemma cap_refs_in_kernel_windowD2:
   done
 
 lemma init_arch_objects_descendants_range[wp,Untyped_AI_assms]:
-  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). descendants_range x cref s \<rbrace> init_arch_objects ty ptr n us y
+  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). descendants_range x cref s \<rbrace> init_arch_objects ty dev ptr n us y
           \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
-  apply (simp add:descendants_range_def)
-  apply (rule hoare_pre)
-   apply (wp retype_region_mdb init_arch_objects_hoare_lift)
-    apply (wps do_machine_op_mdb)
-    apply (wp hoare_vcg_ball_lift)
-   apply (rule hoare_pre)
-    apply (wps store_pde_mdb_inv)
-    apply wp
-   apply simp
-  apply fastforce
+  apply (simp add: descendants_range_def)
+  apply (wp retype_region_mdb init_arch_objects_hoare_lift)
+    apply (wp_pre, wps do_machine_op_mdb, wp, simp)+
+  apply simp
   done
 
 lemma init_arch_objects_caps_overlap_reserved[wp,Untyped_AI_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). caps_overlap_reserved S s\<rbrace>
-   init_arch_objects ty ptr n us y
+   init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   apply (simp add:caps_overlap_reserved_def)
-  apply (rule hoare_pre)
-   apply (wp retype_region_mdb init_arch_objects_hoare_lift)
-  apply fastforce
+  apply (wp retype_region_mdb init_arch_objects_hoare_lift)
   done
 
 lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
@@ -408,12 +389,10 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
-        init_arch_objects tp ptr bits us refs
+        init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
-  apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp unless_wp | wpc | simp add: reserve_region_def)+
+  apply (wpsimp wp: mapM_x_wp'[where f="\<lambda>r. do_machine_op (m r)" for m])
   apply (clarsimp simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
   done
 

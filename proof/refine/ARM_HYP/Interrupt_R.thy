@@ -14,7 +14,7 @@ begin
 
 context Arch begin
 
-(*FIXME: arch_split: move up *)
+(*FIXME: arch-split: move up *)
 requalify_types
   irqcontrol_invocation
 
@@ -22,11 +22,11 @@ lemmas [crunch_def] = decodeIRQControlInvocation_def performIRQControl_def
 
 context begin global_naming global
 
-(*FIXME: arch_split: move up *)
+(*FIXME: arch-split: move up *)
 requalify_types
   Invocations_H.irqcontrol_invocation
 
-(*FIXME: arch_split*)
+(*FIXME: arch-split*)
 requalify_facts
   Interrupt_H.decodeIRQControlInvocation_def
   Interrupt_H.performIRQControl_def
@@ -48,7 +48,7 @@ consts
 primrec
   arch_irq_control_inv_relation :: "arch_irq_control_invocation \<Rightarrow> Arch.irqcontrol_invocation \<Rightarrow> bool"
 where
-  "arch_irq_control_inv_relation (ARM_A.ArchIRQControlIssue i ptr1 ptr2 t) x =
+  "arch_irq_control_inv_relation (ARM_HYP_A.ArchIRQControlIssue i ptr1 ptr2 t) x =
      (x = ARM_HYP_H.IssueIRQHandler i (cte_map ptr1) (cte_map ptr2) t)"
 
 primrec
@@ -90,7 +90,7 @@ where
         ex_cte_cap_to' ptr and real_cte_at' ptr and
         (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma decodeIRQHandlerInvocation_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');
@@ -696,7 +696,7 @@ lemma timerTick_corres:
 
 lemma corres_return_VGICMaintenance [corres]:
   "corres ((=) o arch_fault_map) (K (a=b)) \<top>
-          (return (ARM_A.VGICMaintenance a)) (return (ARM_HYP_H.VGICMaintenance b))"
+          (return (ARM_HYP_A.VGICMaintenance a)) (return (ARM_HYP_H.VGICMaintenance b))"
   by simp
 
 lemma corres_gets_numlistregs [corres]:
@@ -783,8 +783,8 @@ crunch vgicUpdateLR
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma virqSetEOIIRQEN_eq[simp]:
-  "ARM_HYP_H.virqSetEOIIRQEN = ARM_A.virqSetEOIIRQEN"
-  unfolding virqSetEOIIRQEN_def ARM_A.virqSetEOIIRQEN_def
+  "ARM_HYP_H.virqSetEOIIRQEN = ARM_HYP_A.virqSetEOIIRQEN"
+  unfolding virqSetEOIIRQEN_def ARM_HYP_A.virqSetEOIIRQEN_def
   by (rule ext) auto
 
 lemma vgic_maintenance_corres [corres]:
@@ -923,7 +923,7 @@ lemma vppiEvent_corres:
            apply (rule_tac
                     Q'="\<lambda>rv. tcb_at rv and einvs
                             and (\<lambda>_. valid_fault (ExceptionTypes_A.fault.ArchFault
-                                                    (ARM_A.VPPIEvent irq)))"
+                                                    (ARM_HYP_A.VPPIEvent irq)))"
                     in hoare_post_imp)
             apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb runnable_eq pred_conj_def)
             apply (strengthen st_tcb_ex_cap'[where P=active],

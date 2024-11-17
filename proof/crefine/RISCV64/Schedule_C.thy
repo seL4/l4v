@@ -10,7 +10,7 @@ theory Schedule_C
 imports Tcb_C Retype_C
 begin
 
-(*FIXME: arch_split: move up?*)
+(*FIXME: arch-split: move up?*)
 context Arch begin
 context begin global_naming global
 requalify_facts

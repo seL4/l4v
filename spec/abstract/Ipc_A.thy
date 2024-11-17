@@ -14,12 +14,9 @@ theory Ipc_A
 imports Tcb_A ArchFault_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   make_arch_fault_msg
   handle_arch_fault_reply
-end
 
 section \<open>Getting and setting the message info register.\<close>
 

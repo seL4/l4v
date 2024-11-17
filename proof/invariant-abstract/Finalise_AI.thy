@@ -20,19 +20,17 @@ where
   | cap.Zombie r zb n         \<Rightarrow> {(r, replicate (zombie_cte_bits zb) False)}
   | _                         \<Rightarrow> {})"
 
-context begin interpretation Arch .
-
-requalify_consts
-  vs_cap_ref
+arch_requalify_consts (A)
   unmap_page
-  clearMemory
+
+arch_requalify_consts
+  vs_cap_ref
   arch_post_cap_delete_pre
 
-requalify_facts
-  final_cap_lift
+arch_requalify_facts
   no_irq_clearMemory
+  final_cap_lift
   valid_global_refsD
-  valid_global_refsD2
   arch_post_cap_deletion_valid_objs
   arch_post_cap_deletion_cte_wp_at
   arch_post_cap_deletion_caps_of_state
@@ -42,8 +40,6 @@ requalify_facts
   invs_irq_state_independent
   invs_update_time_stamp_independent
   invs_getCurrentTime_independent
-
-end
 
 declare invs_irq_state_independent[intro!, simp]
 declare invs_update_time_stamp_independent[intro!, simp]

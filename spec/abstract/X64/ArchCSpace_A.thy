@@ -15,7 +15,7 @@ imports
   ArchVSpace_A
 begin
 
-context Arch begin global_naming X64_A
+context Arch begin arch_global_naming (A)
 
 definition cnode_guard_size_bits :: "nat"
 where

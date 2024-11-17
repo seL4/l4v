@@ -12,6 +12,11 @@ theory AInvs
 imports ArchDetSchedSchedule_AI
 begin
 
+arch_requalify_facts
+  user_mem_dom_cong
+  device_mem_dom_cong
+  device_frame_in_device_region
+
 lemma st_tcb_at_nostate_upd:
   "\<lbrakk> get_tcb t s = Some y; tcb_state y = tcb_state y' \<rbrakk> \<Longrightarrow>
   st_tcb_at P t' (s \<lparr>kheap := (kheap s)(t \<mapsto> TCB y')\<rparr>) = st_tcb_at P t' s"

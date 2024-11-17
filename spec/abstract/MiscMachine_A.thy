@@ -14,12 +14,11 @@ theory MiscMachine_A
 imports Machine_A "ExecSpec.MachineExports"
 begin
 
-context begin interpretation Arch .
-
-requalify_types
+arch_requalify_types
   user_context
   user_monad
-  register
+
+arch_requalify_types (A)
   data
   obj_ref
   asid_high_len
@@ -33,7 +32,7 @@ requalify_types
   length_type
   vspace_ref
 
-requalify_consts
+arch_requalify_consts (A)
   nat_to_cref
   msg_info_register
   msg_registers
@@ -54,8 +53,6 @@ requalify_consts
   data_to_16
   data_to_cptr
   combine_ntfn_badges
-
-end
 
 (* Needs to be done here after plain type names are exported *)
 translations

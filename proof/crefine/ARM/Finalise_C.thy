@@ -1097,7 +1097,7 @@ lemma offset_xf_for_sequence:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch invalidateHWASIDEntry
   for pde_mappings'[wp]: "valid_pde_mappings'"
 end
@@ -1140,7 +1140,7 @@ lemma invalidateASIDEntry_ccorres:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch invalidateASIDEntry
   for obj_at'[wp]: "obj_at' P p"
 crunch flushSpace

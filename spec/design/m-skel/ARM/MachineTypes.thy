@@ -15,7 +15,7 @@ imports
   Platform
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 text \<open>
   An implementation of the machine's types, defining register set
@@ -29,11 +29,9 @@ section "Types"
 
 end
 
-context begin interpretation Arch .
-requalify_types register
-end
+arch_requalify_types register
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM instanceproofs
 (*>*)
@@ -89,7 +87,7 @@ axiomatization
 
 end_qualify
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 text \<open>
   The machine monad is used for operations on the state defined above.
@@ -101,7 +99,7 @@ end
 translations
   (type) "'c ARM.machine_monad" <= (type) "(ARM.machine_state, 'c) nondet_monad"
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 text \<open>
   After kernel initialisation all IRQs are masked.
@@ -145,11 +143,9 @@ definition
 
 end
 
-context begin interpretation Arch .
-requalify_types vmpage_size
-end
+arch_requalify_types vmpage_size
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM instanceproofs ONLY HardwareASID VMFaultType VMPageSize HypFaultType
 

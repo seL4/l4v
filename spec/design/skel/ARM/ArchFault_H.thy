@@ -11,7 +11,7 @@
 theory ArchFault_H
 imports Types_H
 begin
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 
 #INCLUDE_HASKELL SEL4/API/Failures/ARM.lhs CONTEXT ARM_H decls_only

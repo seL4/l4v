@@ -16,7 +16,7 @@ theory StateTranslation_D
 imports Lemmas_D
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 type_synonym kernel_object = Structures_A.kernel_object
 type_synonym tcb = Structures_A.tcb

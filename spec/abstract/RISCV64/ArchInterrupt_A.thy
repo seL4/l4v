@@ -10,7 +10,7 @@ theory ArchInterrupt_A
 imports Ipc_A
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin arch_global_naming (A)
 
 definition handle_reserved_irq :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
@@ -27,12 +27,8 @@ definition arch_mask_irq_signal :: "irq \<Rightarrow> (unit,'z::state_ext) s_mon
 
 end
 
-context begin interpretation Arch .
-
 (* On Arm architectures, maxIRQ is defined in Kernel_Config. On RISCV64 it is defined manually. *)
-requalify_consts
+arch_requalify_consts
   maxIRQ
-
-end
 
 end

@@ -1371,7 +1371,7 @@ lemma decodeCNodeInvocation_ccorres:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setCTE_sch_act_wf[wp]:
   "\<lbrace> \<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace>
@@ -1517,45 +1517,37 @@ lemma clearMemory_untyped_ccorres:
   apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
    apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits"
                 in ccorres_gen_asm)
-   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_Guard)
    apply (simp add: clearMemory_def)
-   apply (simp add: doMachineOp_bind ef_storeWord)
-   apply (rule ccorres_split_nothrow_novcg_dc)
-      apply (rule_tac P="?P" and P'="{s. region_actually_is_bytes ptr (2 ^ sz) s}"
-         in ccorres_from_vcg)
-      apply (rule allI, rule conseqPre, vcg)
-      apply clarsimp
-      apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
-                            is_aligned_no_wrap'[OF _ word32_power_less_1]
-                            unat_of_nat_eq word_bits_def)
-      apply (simp add: is_aligned_weaken is_aligned_triv[THEN is_aligned_weaken])
-      apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def]
-                            region_actually_is_bytes_dom_s)
-      apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step
-                            word_bits_def cte_wp_at_ctes_of)
-      apply (frule ctes_of_valid', clarify+)
-      apply (simp add: doMachineOp_def split_def exec_gets)
-      apply (simp add: select_f_def simpler_modify_def bind_def
-                       valid_cap_simps' capAligned_def)
-      apply (subst pspace_no_overlap_underlying_zero_update, simp+)
-       apply (case_tac sz, simp_all)[1]
-       apply (case_tac nat, simp_all)[1]
-      apply (clarsimp dest!: region_actually_is_bytes)
-      apply (drule(1) rf_sr_rep0)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                            carch_state_relation_def cmachine_state_relation_def)
-     apply csymbr
-     apply (ctac add: cleanCacheRange_RAM_ccorres)
-    apply wp
-   apply (simp add: guard_is_UNIV_def unat_of_nat
-                    word_bits_def capAligned_def word_of_nat_less)
+   apply (rule_tac P="?P" and P'="{s. region_actually_is_bytes ptr (2 ^ sz) s}" in ccorres_from_vcg)
+   apply (rule allI, rule conseqPre, vcg)
+   apply clarsimp
+   apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
+                         is_aligned_no_wrap'[OF _ word32_power_less_1]
+                         unat_of_nat_eq word_bits_def)
+   apply (simp add: is_aligned_weaken is_aligned_triv[THEN is_aligned_weaken])
+   apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def]
+                         region_actually_is_bytes_dom_s)
+   apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step
+                         word_bits_def cte_wp_at_ctes_of)
+   apply (frule ctes_of_valid', clarify+)
+   apply (simp add: doMachineOp_def split_def exec_gets)
+   apply (simp add: select_f_def simpler_modify_def bind_def
+                    valid_cap_simps' capAligned_def)
+   apply (subst pspace_no_overlap_underlying_zero_update, simp+)
+    apply (case_tac sz, simp_all)[1]
+    apply (case_tac nat, simp_all)[1]
+   apply (clarsimp dest!: region_actually_is_bytes)
+   apply (drule(1) rf_sr_rep0)
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                         carch_state_relation_def cmachine_state_relation_def)
+  apply (simp add: guard_is_UNIV_def unat_of_nat
+                   word_bits_def capAligned_def word_of_nat_less)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule ctes_of_valid', clarify+)
   apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def
                         word_of_nat_less Kernel_Config.resetChunkBits_def
                         word_bits_def unat_2p_sub_1)
-  apply (strengthen is_aligned_no_wrap'[where sz=sz] is_aligned_addrFromPPtr_n)+
-  apply (simp add: addrFromPPtr_mask)
   apply (cases "ptr = 0")
    apply (drule subsetD, rule intvl_self, simp)
    apply (simp split: if_split_asm)
@@ -2623,10 +2615,10 @@ lemma ctes_of_ex_cte_cap_to':
 
 
 lemma Arch_isFrameType_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. unat \<acute>type \<le> fromEnum (maxBound::ArchTypes_H.object_type)\<rbrace>
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. unat \<acute>type \<le> fromEnum (maxBound::object_type)\<rbrace>
              Call Arch_isFrameType_'proc
   \<lbrace> \<acute>ret__unsigned_long =
-     from_bool (isFrameType ((toEnum (unat \<^bsup>s\<^esup> type))::ArchTypes_H.object_type))\<rbrace>"
+     from_bool (isFrameType ((toEnum (unat \<^bsup>s\<^esup> type))::object_type))\<rbrace>"
   apply vcg
   apply (simp add: toEnum_object_type_to_H)
   apply (frule object_type_from_to_H)

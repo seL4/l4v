@@ -15,7 +15,7 @@ theory Arch_A
 imports CSpace_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming (A)
 
 definition "page_bits \<equiv> pageBits"
 

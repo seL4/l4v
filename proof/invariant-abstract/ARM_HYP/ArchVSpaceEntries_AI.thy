@@ -8,7 +8,7 @@ theory ArchVSpaceEntries_AI
 imports VSpaceEntries_AI
 begin
 
-context Arch begin global_naming ARM_HYP (*FIXME: arch_split*)
+context Arch begin arch_global_naming
 
 lemma a_type_pdD:
   "a_type ko = AArch APageDirectory \<Longrightarrow> \<exists>pd. ko = ArchObj (PageDirectory pd)"
@@ -600,26 +600,25 @@ lemma init_arch_objects_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and pspace_aligned and valid_arch_state
            and K (\<exists>us sz. orefs = retype_addrs ptr type n us
                \<and> range_cover ptr sz (obj_bits_api type us) n)\<rbrace>
-     init_arch_objects type ptr n obj_sz orefs
+     init_arch_objects type dev ptr n obj_sz orefs
    \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_gen_asm)+
-  apply (clarsimp simp: init_arch_objects_def
-             split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp | wpc)+
-     apply (rule_tac Q'="\<lambda>rv. valid_pdpt_objs and pspace_aligned and valid_arch_state"
-                  in hoare_post_imp, simp)
-     apply (rule mapM_x_wp')
-     apply (rule hoare_pre, wp copy_global_mappings_valid_pdpt_objs)
-     apply clarsimp
-     apply (drule_tac sz=sz in retype_addrs_aligned)
-        apply (simp add:range_cover_def)
-       apply (drule range_cover.sz,simp add:word_bits_def)
-      apply (simp add:range_cover_def)
-     apply (clarsimp simp:obj_bits_api_def pd_bits_def pageBits_def
-       arch_kobj_size_def default_arch_object_def range_cover_def)+
+  apply (clarsimp simp: init_arch_objects_def split del: if_split)
+  apply (wp | wpc)+
+     apply (wpsimp wp: mapM_x_wp' hoare_vcg_op_lift)
+    apply (wpsimp wp: mapM_x_wp' hoare_vcg_op_lift)
+   apply (rule_tac Q'="\<lambda>rv. valid_pdpt_objs and pspace_aligned and valid_arch_state"
+                   in hoare_post_imp, simp)
    apply wp
-  apply simp
+   apply (rule mapM_x_wp')
+   apply (wp copy_global_mappings_valid_pdpt_objs)
+   apply clarsimp
+   apply (drule_tac sz=sz in retype_addrs_aligned)
+      apply (simp add: range_cover_def)
+     apply (drule range_cover.sz,simp add:word_bits_def)
+    apply (simp add: range_cover_def)
+   apply (clarsimp simp: obj_bits_api_def pd_bits_def pageBits_def
+                         arch_kobj_size_def default_arch_object_def range_cover_def)+
   done
 
 lemma delete_objects_valid_pdpt:

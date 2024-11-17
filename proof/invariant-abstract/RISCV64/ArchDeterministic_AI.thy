@@ -8,7 +8,7 @@ theory ArchDeterministic_AI
 imports Deterministic_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems Deterministic_AI_assms
 
@@ -30,7 +30,7 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 crunch arch_invoke_irq_handler
   for valid_list[wp,Deterministic_AI_assms]: valid_list

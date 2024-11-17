@@ -14,7 +14,7 @@ theory State_H
 imports
   RegisterSet_H
 begin
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"
@@ -26,16 +26,14 @@ where
 
 end
 
-context begin interpretation Arch .
-
-requalify_consts
+(* Note: while this requalify and arch-generic Haskell import of WordLib.lhs could be moved to
+   a generic theory, no good candidate theory exists at the moment. *)
+arch_requalify_consts (H)
   wordBits
-
-end
 
 #INCLUDE_HASKELL Data/WordLib.lhs all_bits NOT wordBits
 
-context Arch begin global_naming RISCV64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=RISCV64 CONTEXT RISCV64_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
 

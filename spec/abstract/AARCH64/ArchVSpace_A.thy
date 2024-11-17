@@ -13,7 +13,7 @@ imports
   VCPUAcc_A
 begin
 
-context Arch begin global_naming AARCH64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   Look up a thread's IPC buffer and check that the thread has the authority to read or (in the

@@ -11,7 +11,7 @@ begin
 
 instance tcb              :: no_vcpu by intro_classes auto
 
-(*FIXME: arch_split: move up?*)
+(*FIXME: arch-split: move up?*)
 context Arch begin
 context begin global_naming global
 requalify_facts

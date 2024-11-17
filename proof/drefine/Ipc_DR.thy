@@ -8,7 +8,7 @@ theory Ipc_DR
 imports CNode_DR
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 abbreviation
   "thread_is_running y s \<equiv> st_tcb_at ((=) Structures_A.Running) y s"

@@ -17,9 +17,7 @@ imports
   "ExecSpec.InvocationLabels_H"
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   ArchDefaultExtraRegisters
   check_valid_ipc_buffer
   is_valid_vtable_root
@@ -27,9 +25,6 @@ requalify_consts
   arch_data_to_obj_type
   arch_decode_invocation
   arch_check_irq
-
-end
-
 
 text \<open>
   This theory includes definitions describing how user arguments are

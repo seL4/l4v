@@ -8,7 +8,7 @@ theory ArchCNodeInv_AI
 imports CNodeInv_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems CNodeInv_AI_assms
 
@@ -514,7 +514,7 @@ global_interpretation CNodeInv_AI?: CNodeInv_AI
 termination rec_del by (rule rec_del_termination)
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma post_cap_delete_pre_is_final_cap':
   "\<And>s.
@@ -766,7 +766,7 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
   qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
@@ -877,7 +877,7 @@ termination cap_revoke by (rule cap_revoke_termination)
 declare cap_revoke.simps[simp del]
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 crunch finalise_slot
   for typ_at[wp, CNodeInv_AI_assms]: "\<lambda>s. P (typ_at T p s)"
@@ -902,7 +902,7 @@ global_interpretation CNodeInv_AI_4?: CNodeInv_AI_4
   qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma cap_move_ioports:
   "\<lbrace>valid_ioports and cte_wp_at ((=) cap.NullCap) ptr'

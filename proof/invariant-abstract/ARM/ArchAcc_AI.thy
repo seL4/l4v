@@ -15,7 +15,7 @@ imports
  "Lib.Crunch_Instances_NonDet"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 
 bundle unfold_objects =

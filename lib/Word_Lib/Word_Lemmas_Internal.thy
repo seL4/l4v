@@ -979,6 +979,11 @@ lemma shiftr_not_max_word:
   "0 < n \<Longrightarrow> w >> n \<noteq> max_word"
   by (metis and_mask_eq_iff_shiftr_0 and_mask_not_max_word diff_less len_gt_0 shiftr_le_0 word_shiftr_lt)
 
+lemma shiftr_less_max_mask:
+  "0 < n \<Longrightarrow> x >> n < mask LENGTH('a)" for x :: "'a::len word"
+  using not_max_word_iff_less shiftr_not_max_word
+  by auto
+
 lemma word_sandwich1:
   fixes a b c :: "'a::len word"
   assumes "a < b"

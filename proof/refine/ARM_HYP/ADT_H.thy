@@ -28,7 +28,7 @@ consts
   initBootFrames :: "word32 list"
   initDataStart :: word32
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 text \<open>
   The construction of the abstract data type
@@ -72,40 +72,40 @@ lemma vm_rights_of_vmrights_map_id[simp]:
 
 definition
   absPageTable :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                  9 word \<Rightarrow> ARM_A.pte"
+                  9 word \<Rightarrow> ARM_HYP_A.pte"
   where
   "absPageTable h a \<equiv> %offs.
    case (h (a + (ucast offs << 3))) of
-     Some (KOArch (KOPTE (ARM_HYP_H.InvalidPTE))) \<Rightarrow> ARM_A.InvalidPTE
+     Some (KOArch (KOPTE (ARM_HYP_H.InvalidPTE))) \<Rightarrow> ARM_HYP_A.InvalidPTE
    | Some (KOArch (KOPTE (ARM_HYP_H.LargePagePTE p c xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         ARM_A.LargePagePTE p
+         ARM_HYP_A.LargePagePTE p
            {x. c & x=PageCacheable | xn & x=XNever}
            (vm_rights_of rights)
-       else ARM_A.InvalidPTE
+       else ARM_HYP_A.InvalidPTE
    | Some (KOArch (KOPTE (ARM_HYP_H.SmallPagePTE p c xn rights))) \<Rightarrow>
-       ARM_A.SmallPagePTE p {x. c & x=PageCacheable |
+       ARM_HYP_A.SmallPagePTE p {x. c & x=PageCacheable |
                                         xn & x=XNever} (vm_rights_of rights)"
 
 definition
   absPageDirectory :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                      11 word \<Rightarrow>  ARM_A.pde"
+                      11 word \<Rightarrow>  ARM_HYP_A.pde"
   where
   "absPageDirectory h a \<equiv> %offs.
    case (h (a + (ucast offs << 3))) of
-     Some (KOArch (KOPDE (ARM_HYP_H.InvalidPDE))) \<Rightarrow> ARM_A.InvalidPDE
+     Some (KOArch (KOPDE (ARM_HYP_H.InvalidPDE))) \<Rightarrow> ARM_HYP_A.InvalidPDE
    | Some (KOArch (KOPDE (ARM_HYP_H.PageTablePDE p))) \<Rightarrow>
-       ARM_A.PageTablePDE p
+       ARM_HYP_A.PageTablePDE p
    | Some (KOArch (KOPDE (ARM_HYP_H.SectionPDE p c xn rights))) \<Rightarrow>
-       ARM_A.SectionPDE p {x. c & x=PageCacheable |
+       ARM_HYP_A.SectionPDE p {x. c & x=PageCacheable |
                                       xn & x=XNever} (vm_rights_of rights)
    | Some (KOArch (KOPDE (ARM_HYP_H.SuperSectionPDE p c xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         ARM_A.SuperSectionPDE p
+         ARM_HYP_A.SuperSectionPDE p
            {x. c & x=PageCacheable
              | xn & x=XNever}
            (vm_rights_of rights)
-       else ARM_A.InvalidPDE"
+       else ARM_HYP_A.InvalidPDE"
 
 definition
   absVGIC :: "gicvcpuinterface \<Rightarrow> gic_vcpu_interface"
@@ -125,7 +125,7 @@ definition
   "absHeapArch h a \<equiv> %ako.
    (case ako of
      KOASIDPool (ARM_HYP_H.ASIDPool ap) \<Rightarrow>
-       Some (ARM_A.ASIDPool (\<lambda>w. ap (ucast w)))
+       Some (ARM_HYP_A.ASIDPool (\<lambda>w. ap (ucast w)))
    | KOPTE _ \<Rightarrow>
        if is_aligned a pt_bits then Some (PageTable (absPageTable h a))
        else None
@@ -258,10 +258,10 @@ lemma LookupFailureMap_lookup_failure_map:
 primrec
   ArchFaultMap :: "Fault_H.arch_fault \<Rightarrow> ExceptionTypes_A.arch_fault"
 where
-  "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VMFault p m) = Machine_A.ARM_A.arch_fault.VMFault p m"
-| "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VCPUFault w) = Machine_A.ARM_A.arch_fault.VCPUFault w"
-| "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VGICMaintenance m) = Machine_A.ARM_A.arch_fault.VGICMaintenance m"
-| "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VPPIEvent irq) = Machine_A.ARM_A.arch_fault.VPPIEvent irq"
+  "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VMFault p m) = Machine_A.ARM_HYP_A.arch_fault.VMFault p m"
+| "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VCPUFault w) = Machine_A.ARM_HYP_A.arch_fault.VCPUFault w"
+| "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VGICMaintenance m) = Machine_A.ARM_HYP_A.arch_fault.VGICMaintenance m"
+| "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VPPIEvent irq) = Machine_A.ARM_HYP_A.arch_fault.VPPIEvent irq"
 
 
 primrec
@@ -703,10 +703,10 @@ proof -
          apply (erule_tac x=offs in allE)
          apply (rename_tac pte')
          apply (case_tac pte', simp_all add: pte_relation_aligned_def vspace_bits_defs)[1]
-          apply (clarsimp split: ARM_A.pte.splits)
+          apply (clarsimp split: ARM_HYP_A.pte.splits)
           apply (rule set_eqI, clarsimp)
           apply (case_tac x, simp_all)[1]
-         apply (clarsimp split: ARM_A.pte.splits)
+         apply (clarsimp split: ARM_HYP_A.pte.splits)
          apply (rule set_eqI, clarsimp)
          apply (case_tac x, simp_all)[1]
         apply (clarsimp simp add: pde_relation_def)
@@ -746,10 +746,10 @@ proof -
        apply (erule_tac x=offs in allE)
        apply (rename_tac pde')
        apply (case_tac pde', simp_all add: pde_relation_aligned_def)[1]
-          apply (clarsimp split: ARM_A.pde.splits)+
+          apply (clarsimp split: ARM_HYP_A.pde.splits)+
         apply (rule set_eqI, clarsimp)
         apply (case_tac x, simp_all)[1]
-       apply (clarsimp split: ARM_A.pde.splits)
+       apply (clarsimp split: ARM_HYP_A.pde.splits)
        apply (rule set_eqI, clarsimp)
        apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def split: if_split_asm)
@@ -811,7 +811,7 @@ shows
   apply (erule(1) obj_relation_cutsE)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm  if_split_asm
-                        ARM_A.arch_kernel_obj.split_asm)+
+                        ARM_HYP_A.arch_kernel_obj.split_asm)+
   done
 
 text \<open>The following function can be used to reverse cte_map.\<close>
@@ -1293,7 +1293,7 @@ locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map 
 
 begin
 
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma valid_list_2 : "valid_list_2 t m"
     apply (insert assms')
@@ -1490,7 +1490,7 @@ lemma sort_cdt_list_correct:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition absCDTList where
 "absCDTList cnp h \<equiv> sort_cdt_list (absCDT cnp h) h"

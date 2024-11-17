@@ -14,7 +14,7 @@ imports
 begin
 
 
-context Arch begin global_naming X64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread/X64.lhs CONTEXT X64_H Arch=MachineOps ArchReg=MachineTypes bodies_only
 

@@ -8,7 +8,7 @@ theory ArchUntyped_AI
 imports Untyped_AI
 begin
 
-context Arch begin global_naming X64
+context Arch begin arch_global_naming
 
 named_theorems Untyped_AI_assms
 
@@ -181,7 +181,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
 
 
 
-lemma copy_global_mappings_hoare_lift:(*FIXME: arch_split  \<rightarrow> these do not seem to be used globally *)
+lemma copy_global_mappings_hoare_lift:(*FIXME: arch-split  \<rightarrow> these do not seem to be used globally *)
   assumes wp: "\<And>ptr val. \<lbrace>Q\<rbrace> store_pml4e ptr val \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows       "\<lbrace>Q\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: copy_global_mappings_def)
@@ -190,7 +190,7 @@ lemma copy_global_mappings_hoare_lift:(*FIXME: arch_split  \<rightarrow> these d
 
 lemma init_arch_objects_hoare_lift:
   assumes wp:  "\<And>ptr val. \<lbrace>P\<rbrace> store_pml4e ptr val \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows       "\<lbrace>P\<rbrace> init_arch_objects tp ptr sz us adds \<lbrace>\<lambda>rv. P\<rbrace>"
+  shows       "\<lbrace>P\<rbrace> init_arch_objects tp dev ptr sz us adds \<lbrace>\<lambda>rv. P\<rbrace>"
 proof -
   have pres: "\<lbrace>P\<rbrace> return () \<lbrace>\<lambda>rv. P\<rbrace>"
     by (wp wp | simp)+
@@ -215,7 +215,7 @@ lemma cap_refs_in_kernel_windowD2:
   done
 
 lemma init_arch_objects_descendants_range[wp,Untyped_AI_assms]:
-  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). descendants_range x cref s \<rbrace> init_arch_objects ty ptr n us y
+  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). descendants_range x cref s \<rbrace> init_arch_objects ty dev ptr n us y
           \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
   apply (simp add:descendants_range_def)
   apply (rule hoare_pre)
@@ -230,7 +230,7 @@ lemma init_arch_objects_descendants_range[wp,Untyped_AI_assms]:
 
 lemma init_arch_objects_caps_overlap_reserved[wp,Untyped_AI_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). caps_overlap_reserved S s\<rbrace>
-   init_arch_objects ty ptr n us y
+   init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   apply (simp add:caps_overlap_reserved_def)
   apply (rule hoare_pre)
@@ -533,7 +533,7 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
-        init_arch_objects tp ptr bits us refs
+        init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def split del: if_split)

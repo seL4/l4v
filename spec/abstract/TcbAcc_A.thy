@@ -14,15 +14,11 @@ theory TcbAcc_A
 imports  "./$L4V_ARCH/ArchCSpace_A"
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   in_user_frame
   as_user
   msg_max_length
   lookup_ipc_buffer
-
-end
 
 text \<open>Store or load a word at an offset from an IPC buffer.\<close>
 definition

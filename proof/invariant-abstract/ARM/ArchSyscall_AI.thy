@@ -13,7 +13,7 @@ imports
   Syscall_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 named_theorems Syscall_AI_assms
 

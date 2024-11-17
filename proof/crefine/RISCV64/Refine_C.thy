@@ -21,7 +21,7 @@ imports
   CToCRefine
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 crunch handleVMFault
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
 end

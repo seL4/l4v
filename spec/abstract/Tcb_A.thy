@@ -14,15 +14,11 @@ theory Tcb_A
 imports Schedule_A ArchTcb_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   arch_activate_idle_thread
   sanitise_register
   arch_get_sanitise_register_info
   arch_post_modify_registers
-
-end
 
 section "Activating Threads"
 

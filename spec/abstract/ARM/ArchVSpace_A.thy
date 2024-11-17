@@ -14,7 +14,7 @@ theory ArchVSpace_A
 imports Retype_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming (A)
 
 text \<open>Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual

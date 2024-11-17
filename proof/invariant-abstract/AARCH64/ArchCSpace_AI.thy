@@ -12,7 +12,7 @@ theory ArchCSpace_AI
 imports CSpace_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems CSpace_AI_assms
 
@@ -304,7 +304,7 @@ end
 global_interpretation cap_insert_crunches?: cap_insert_crunches .
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
   "\<lbrace>cap_refs_in_kernel_window
@@ -496,7 +496,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma is_cap_simps':
   "is_cnode_cap cap = (\<exists>r bits g. cap = cap.CNodeCap r bits g)"
@@ -596,14 +596,6 @@ lemma set_cap_kernel_window_simple:
   apply (wp set_cap_cap_refs_in_kernel_window)
   apply (clarsimp simp: cte_wp_at_caps_of_state cap_refs_in_kernel_windowD)
   done
-
-end
-
-context begin interpretation Arch .
-
-requalify_facts
-  set_cap_valid_arch_caps_simple
-  set_cap_kernel_window_simple
 
 end
 

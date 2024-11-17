@@ -23,7 +23,7 @@ lemma get_tcb_Some_ko_at:
   "(get_tcb p s = Some t) = ko_at (TCB t) p s"
   by (auto simp: get_tcb_def obj_at_def is_tcb_def split: kernel_object.splits option.splits)
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma kernel_base_shift_cast_le: (* ARMHYP *)
   fixes x :: "11 word"
@@ -2874,7 +2874,7 @@ lemma vs_lookup2:
 
 end
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma set_pd_vspace_objs_map: (* ARMHYP *)
   notes valid_vspace_obj.simps[simp del] and a_type_elims[rule del]
@@ -4477,16 +4477,12 @@ lemma unmap_page_table_unmapped2:
 lemma cacheRangeOp_lift[wp]:
   assumes o: "\<And>a b. \<lbrace>P\<rbrace> oper a b \<lbrace>\<lambda>_. P\<rbrace>"
   shows "\<lbrace>P\<rbrace> cacheRangeOp oper x y z \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (clarsimp simp: cacheRangeOp_def lineStart_def cacheLineBits_def cacheLine_def)
-  apply (rule hoare_pre)
-  apply (wp mapM_x_wp_inv o)
-   apply (case_tac x, simp, wp o, simp)
-  done
+  unfolding cacheRangeOp_def
+  by (wpsimp wp: mapM_x_wp_inv o)
 
 lemma cleanCacheRange_PoU_underlying_memory[wp]:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> cleanCacheRange_PoU a b c \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
+  "cleanCacheRange_PoU a b c \<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>"
   by (clarsimp simp: cleanCacheRange_PoU_def, wp)
-
 
 lemma unmap_page_table_unmapped3:
   "\<lbrace>pspace_aligned and valid_vspace_objs and page_table_at pt and
@@ -5794,7 +5790,7 @@ lemma vs_lookup_pages2:
 
 end
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma not_kernel_slot_not_global_pt: (* ARMHYP? remove? *)
   "\<lbrakk>pde_ref (pd x) = Some p;
@@ -5991,7 +5987,7 @@ lemma perform_asid_pool_invs [wp]:
     apply (rule_tac x=a in exI)
     apply (rule_tac x=b in exI)
     apply (clarsimp simp: vs_cap_ref_def mask_asid_low_bits_ucast_ucast)
-   apply (clarsimp simp: asid_low_bits_def[symmetric] ucast_ucast_mask
+   apply (clarsimp simp: asid_low_bits_def[simplified, symmetric] ucast_ucast_mask
                          word_neq_0_conv[symmetric])
    apply (erule notE, rule asid_low_high_bits, simp_all)[1]
    apply (simp add: asid_high_bits_of_def)

@@ -9,21 +9,17 @@ theory MachineExports
 imports MachineOps
 begin
 
-context begin interpretation Arch .
-
 (* Check consistency of machine_word and machine_word_len. *)
 term "id :: machine_word \<Rightarrow> machine_word_len word"
 
-requalify_types
-  machine_word
-  machine_word_len
+arch_requalify_types
   vmfault_type
   hyp_fault_type
   irq
   ticks
   time
 
-requalify_consts
+arch_requalify_consts
   getActiveIRQ
   maskInterrupt
   freeMemory
@@ -48,10 +44,14 @@ requalify_consts
   getCurrentTime
   minIRQ
   timerIRQ
-  word_size_bits
   clearMemory
   non_kernel_IRQs
   tlsBaseRegister
+  debugPrint
+  configureTimer
+  initL2Cache
+  ptrFromPAddr
+  pageBits
   configureTimer
   kernelWCET_us
   kernelWCET_ticks
@@ -113,7 +113,5 @@ lemma word_size_size_bits_nat:
 lemma word_size_size_bits_word:
   "2^word_size_bits = (word_size :: 'a :: len word)"
   by (simp add: word_size_bits_def word_size_def)
-
-end
 
 end

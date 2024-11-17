@@ -252,8 +252,6 @@ lemma range_cover_nca_neg: "\<And>x p (off :: 9 word).
   apply (simp add: pageBits_def objBits_simps)
   done
 
-lemmas unat_of_nat32' = unat_of_nat_eq[where 'a=32]
-
 lemma clearMemory_PageCap_ccorres:
   "ccorres dc xfdc (invs' and valid_cap' (ArchObjectCap (FrameCap ptr undefined sz False None))
            and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
@@ -268,30 +266,27 @@ lemma clearMemory_PageCap_ccorres:
   apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
    apply (rule_tac P="capAligned (ArchObjectCap (FrameCap ptr undefined sz False None))"
                 in ccorres_gen_asm)
-   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_Guard)
    apply (simp add: clearMemory_def)
-   apply (simp add: doMachineOp_bind)
-   apply (rule ccorres_split_nothrow_novcg_dc)
-      apply (rule_tac P="?P" in ccorres_from_vcg[where P'=UNIV])
-      apply (rule allI, rule conseqPre, vcg)
-      apply (clarsimp simp: valid_cap'_def capAligned_def
-                            is_aligned_no_wrap'[OF _ word64_power_less_1])
-      apply (prop_tac "ptr \<noteq> 0")
-       subgoal
-         apply (simp add: frame_at'_def)
-         apply (drule_tac x=0 in spec)
-         apply (clarsimp simp: pageBitsForSize_def bit_simps split: vmpage_size.splits)
-         done
-      apply simp
-      apply (prop_tac "3 \<le> pageBitsForSize sz")
-       apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
-      apply (rule conjI)
-       apply (erule is_aligned_weaken)
-       apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
-      apply (rule conjI)
-       apply (rule is_aligned_power2)
-       apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
-      apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def])
+   apply (rule_tac P="?P" in ccorres_from_vcg[where P'=UNIV])
+   apply (rule allI, rule conseqPre, vcg)
+   apply (clarsimp simp: valid_cap'_def capAligned_def
+                         is_aligned_no_wrap'[OF _ word64_power_less_1])
+   apply (prop_tac "ptr \<noteq> 0")
+    subgoal
+      apply (simp add: frame_at'_def)
+      apply (drule_tac x=0 in spec)
+      apply (clarsimp simp: pageBitsForSize_def bit_simps split: vmpage_size.splits)
+      done
+   apply simp
+   apply (prop_tac "3 \<le> pageBitsForSize sz")
+    apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
+   apply (rule conjI)
+    apply (erule is_aligned_weaken)
+    apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
+   apply (rule conjI)
+    apply (rule is_aligned_power2)
+    apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
    apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def] frame_at'_def)
    apply (simp add: flex_user_data_at_rf_sr_dom_s bit_simps)
    apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step)
@@ -308,7 +303,7 @@ lemma clearMemory_PageCap_ccorres:
     apply (erule allfEI[where f=of_nat])
     apply (clarsimp simp: bit_simps)
     apply (subst(asm) of_nat_power, assumption)
-    apply simp
+     apply simp
      apply (insert pageBitsForSize_64 [of sz])[1]
      apply (erule order_le_less_trans [rotated])
      apply simp
@@ -376,25 +371,8 @@ lemma clearMemory_PageCap_ccorres:
     apply (simp add: bit_simps)
     apply (simp add: of_nat_power[where 'a=64, folded word_bits_def])
     apply (simp add: pageBits_def ko_at_projectKO_opt[OF user_data_at_ko])
-   (* FIXME AARCH64 indentation *)
    apply (rule inj_Ptr)
-     apply csymbr
-     apply (ctac add: cleanCacheRange_RAM_ccorres)
-    apply wp
-   apply (simp add: guard_is_UNIV_def unat_of_nat
-                    word_bits_def capAligned_def word_of_nat_less)
-  apply (clarsimp simp: word_bits_def valid_cap'_def
-                        capAligned_def word_of_nat_less)
-  apply (frule is_aligned_addrFromPPtr_n, simp add: pageBitsForSize_def split: vmpage_size.splits)
-  apply (simp add: bit_simps pptrBaseOffset_alignment_def)+
-  apply (simp add: is_aligned_no_overflow')
-  apply (rule conjI)
-  subgoal
-    apply (prop_tac "cacheLineSize \<le> pageBitsForSize sz")
-     apply (simp add: pageBitsForSize_def bit_simps cacheLineSize_def split: vmpage_size.splits)
-    apply (simp add: is_aligned_mask[THEN iffD1] is_aligned_weaken)
-    done
-  apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
+  apply (clarsimp simp: word_bits_def valid_cap'_def capAligned_def word_of_nat_less)
   done
 
 declare replicate_numeral [simp]
@@ -533,7 +511,7 @@ lemma heap_to_user_data_in_user_mem'[simp]:
       apply simp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_asidpool_gs[wp]:
   "setObject ptr (vcpu::asidpool) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"

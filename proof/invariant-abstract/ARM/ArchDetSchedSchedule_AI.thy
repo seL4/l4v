@@ -8,7 +8,7 @@ theory ArchDetSchedSchedule_AI
 imports DetSchedSchedule_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 named_theorems DetSchedSchedule_AI_assms
 
@@ -350,7 +350,7 @@ global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
   case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp)
 qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma handle_reserved_irq_trivial[wp]:
   "handle_reserved_irq irq \<lbrace>Q\<rbrace>"

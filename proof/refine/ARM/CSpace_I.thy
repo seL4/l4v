@@ -12,7 +12,7 @@ theory CSpace_I
 imports ArchAcc_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas capUntypedPtr_simps[simp] = capUntypedPtr_def[split_simps capability.split, simplified PPtr_def id_def]
 lemmas arch_capUntypedPtr_simps[simp] = ARM_H.capUntypedPtr_def[split_simps arch_capability.split, simplified PPtr_def id_def]
@@ -1484,7 +1484,7 @@ lemma no_mdb_not_target:
   apply (simp add: no_mdb_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma valid_dlist_init:
   "\<lbrakk> valid_dlist m; m p = Some cte; no_mdb cte \<rbrakk> \<Longrightarrow>
   valid_dlist (m (p \<mapsto> CTE cap initMDBNode))"
@@ -1682,7 +1682,7 @@ lemma untyped_inc_init:
     apply (rule untypedRange_in_capRange)+
   apply (simp add:Int_ac)
   done
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma valid_nullcaps_init:
   "\<lbrakk> valid_nullcaps m; cap \<noteq> NullCap \<rbrakk> \<Longrightarrow> valid_nullcaps (m(p \<mapsto> CTE cap initMDBNode))"
   by (simp add: valid_nullcaps_def initMDBNode_def nullPointer_def)
@@ -1742,7 +1742,7 @@ lemma distinct_zombies_copyE:
 lemmas distinct_zombies_sameE
     = distinct_zombies_copyE [where y=x and x=x for x, simplified,
                               OF _ _ _ _ _]
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma capBits_Master:
   "capBits (capMasterCap cap) = capBits cap"
   by (clarsimp simp: capMasterCap_def split: capability.split arch_capability.split)

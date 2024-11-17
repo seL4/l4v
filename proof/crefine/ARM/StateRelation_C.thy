@@ -8,7 +8,7 @@ theory StateRelation_C
 imports Wellformed_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   "lifth p s \<equiv> the (clift (t_hrs_' s) p)"
@@ -100,7 +100,7 @@ text \<open>
   which can subsequently be instantiated for
   @{text kernel_all_global_addresses} as well as @{text kernel_all_substitute}.
 \<close>
-locale state_rel = Arch + substitute_pre + (*FIXME: arch_split*)
+locale state_rel = Arch + substitute_pre + (*FIXME: arch-split*)
   fixes armKSKernelVSpace_C :: "machine_word \<Rightarrow> arm_vspace_region_use"
 
 locale kernel = kernel_all_substitute + state_rel
@@ -134,7 +134,7 @@ where
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   cmachine_state_relation :: "machine_state \<Rightarrow> globals \<Rightarrow> bool"

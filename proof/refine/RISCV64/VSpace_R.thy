@@ -13,14 +13,14 @@ theory VSpace_R
 imports TcbAcc_R
 begin
 
-context Arch begin global_naming RISCV64 (*FIXME: arch_split*)
+context Arch begin global_naming RISCV64 (*FIXME: arch-split*)
 
 (*FIXME: move to ainvs*)
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.

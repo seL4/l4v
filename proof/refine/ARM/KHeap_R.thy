@@ -75,7 +75,7 @@ abbreviation (input)
 where
   "set_obj' ptr obj s \<equiv> set_ko' ptr (injectKO obj) s"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ovalid_readObject[wp]:
   assumes R:
@@ -128,30 +128,24 @@ lemma obj_at_getObject:
 declare projectKO_inv [wp]
 
 lemma getObject_inv:
-  "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
-  unfolding getObject_def by wpsimp
+  assumes x: "\<And>p q n ko. \<lbrace>P\<rbrace> loadObject p q n ko \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
+  by (simp add: getObject_def split_def | wp x)+
 
-lemma getObject_tcb_inv [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
-  by (rule getObject_inv)
+lemma getObject_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
+  apply (rule getObject_inv)
+  apply simp
+  apply (rule loadObject_default_inv)
+  done
+end
+(* FIXME: this should go somewhere in spec *)
+translations
+  (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
 
-lemma loadObject_default_Some [simp]:
-  "\<lbrakk>projectKO_opt ko = Some (obj::'a);
-                      is_aligned p (objBits obj); objBits obj < word_bits;
-                      case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n; q = p\<rbrakk>
-       \<Longrightarrow> bound (loadObject_default p q n ko s:: ('a::pre_storable) option)"
-  by (clarsimp simp: loadObject_default_def split_def projectKO_def obind_def
-                        alignCheck_def alignError_def magnitudeCheck_def projectKOs
-                        read_alignCheck_def read_alignError_def read_magnitudeCheck_def
-                        unless_def gets_the_def is_aligned_mask omonad_defs
-             split: option.splits) simp
+context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemmas loadObject_default_Some'[simp, intro!] = loadObject_default_Some[simplified]
-lemmas loadObject_default_Some''[simp, intro!]
-        = loadObject_default_Some[where p=p and s=s and n="snd (lookupAround2 p (ksPSpace s))" for p s,
-                                 simplified]
-
-lemma no_ofail_loadObject_default [simp]:
-  "no_ofail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> objBits obj < word_bits \<and>
+lemma no_fail_loadObject_default [wp]:
+  "no_fail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and>
                       is_aligned p (objBits obj) \<and> q = p
                       \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
            (loadObject_default p q n ko :: ('a::pre_storable) kernel_r)"

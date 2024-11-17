@@ -12,7 +12,7 @@ begin
 
 unbundle l4v_word_context
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch unmapPageTable
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
@@ -92,7 +92,7 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
    apply (clarsimp simp: guard_is_UNIV_def bit_simps split: if_split)
   apply clarsimp
   apply (frule is_aligned_addrFromPPtr_n, simp)
-  apply (simp add: is_aligned_no_overflow' addrFromPPtr_mask_cacheLineSize)
+  apply (simp add: is_aligned_no_overflow' addrFromPPtr_mask_cacheLineBits)
   apply (rule conjI)
    apply (simp add: unat_mask_eq flip: mask_2pm1)
    apply (simp add: mask_eq_exp_minus_1)
@@ -1604,7 +1604,7 @@ definition flushtype_relation :: "flush_type \<Rightarrow> machine_word \<Righta
        label \<in> scast ` {Kernel_C.ARMPageUnify_Instruction, Kernel_C.ARMVSpaceUnify_Instruction}"
 
 lemma doFlush_ccorres:
-  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask cacheLineSize = ps && mask cacheLineSize
+  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask cacheLineBits = ps && mask cacheLineBits
         \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []

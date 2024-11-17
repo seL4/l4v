@@ -22,7 +22,7 @@ crunch modifyWorkUnits
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 global_interpretation modifyWorkUnits: typ_at_all_props' "modifyWorkUnits f"
   by typ_at_props'

@@ -15,7 +15,7 @@ theory FinalCaps
 imports ArchInfoFlow_IF
 begin
 
-(* FIXME: arch_split: need to have a label on arch refs*)
+(* FIXME: arch-split: need to have a label on arch refs*)
 fun pasGenAbs :: "'a PAS \<Rightarrow> gen_obj_ref \<Rightarrow> 'a" where
   "pasGenAbs aag (ObjRef ref) = pasObjectAbs aag ref"
 | "pasGenAbs aag (IRQRef ref) = pasIRQAbs aag ref"
@@ -347,9 +347,9 @@ locale FinalCaps_1 =
   and arch_switch_to_thread_silc_inv[wp]:
     "arch_switch_to_thread t \<lbrace>silc_inv aag st\<rbrace>"
   and init_arch_objects_silc_inv[wp]:
-    "init_arch_objects typ ptr num sz refs \<lbrace>silc_inv aag st\<rbrace>"
+    "init_arch_objects typ dev ptr num sz refs \<lbrace>silc_inv aag st\<rbrace>"
   and init_arch_objects_cte_wp_at[wp]:
-    "\<And>P. init_arch_objects typ ptr num sz refs \<lbrace>\<lambda>s :: det_state. P (cte_wp_at P' slot s)\<rbrace>"
+    "\<And>P. init_arch_objects typ dev ptr num sz refs \<lbrace>\<lambda>s :: det_state. P (cte_wp_at P' slot s)\<rbrace>"
   and finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s) and cte_wp_at ((=) cap) slot\<rbrace>
      finalise_cap cap ex

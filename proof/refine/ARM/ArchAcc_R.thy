@@ -26,7 +26,7 @@ method simp_to_elim = (drule fun_all, elim allE impE)
 
 end
 
-context Arch begin global_naming ARM_A (*FIXME: arch_split*)
+context Arch begin global_naming ARM_A (*FIXME: arch-split*)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_A.ASIDPool pool)) p s"
@@ -77,7 +77,7 @@ lemmas storePDE_valid_pspace'[wp] =
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 method readObject_arch_obj_at'_method
   =  clarsimp simp: readObject_def obind_def omonad_defs split_def loadObject_default_def obj_at'_def

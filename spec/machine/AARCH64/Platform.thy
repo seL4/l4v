@@ -52,6 +52,9 @@ abbreviation (input) "fromPAddr \<equiv> id"
 definition canonical_bit :: nat where
   "canonical_bit = 47"
 
+definition cacheLineBits :: nat where
+  "cacheLineBits = CONFIG_L1_CACHE_LINE_SIZE_BITS"
+
 definition kdevBase :: machine_word where
   "kdevBase = 0x000000FFFFE00000"
 

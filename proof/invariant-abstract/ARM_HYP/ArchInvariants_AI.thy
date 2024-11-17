@@ -24,12 +24,12 @@ end_qualify
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "ARM-specific invariant definitions"
 
-qualify ARM_HYP_A (in Arch)
+qualify ARM_HYP (in Arch)
 record iarch_tcb =
   itcb_vcpu :: "obj_ref option"
 end_qualify
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
@@ -474,16 +474,15 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup
 
 abbreviation
   vs_lookup_abbr
   ("_ \<rhd> _" [80,80] 81) where
   "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 abbreviation
   is_reachable_abbr :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd> _" [80] 81) where
@@ -560,9 +559,8 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup_pages
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup_pages
 
 abbreviation
   vs_lookup_pages_abbr
@@ -574,7 +572,7 @@ abbreviation
   "\<exists>\<unrhd> p \<equiv> \<lambda>s. \<exists>ref. (ref \<unrhd> p) s"
 
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 definition
   pde_mapping_bits :: "nat"
@@ -733,7 +731,7 @@ definition
   arch_live :: "arch_kernel_obj \<Rightarrow> bool"
 where
   "arch_live ao \<equiv> case ao of
-    ARM_A.VCPU v \<Rightarrow> bound (ARM_A.vcpu_tcb v)
+    ARM_HYP_A.VCPU v \<Rightarrow> bound (ARM_HYP_A.vcpu_tcb v)
     | _ \<Rightarrow>  False"
 
 definition
@@ -1340,7 +1338,7 @@ lemma valid_vspace_objs_update' [iff]:
 
 end
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"
@@ -2162,7 +2160,7 @@ lemma valid_vspace_objs_lift:
   apply (rule valid_vspace_obj_typ [OF z], auto)
   done
 
-lemma acap_rights_update_id [intro!, simp]:
+lemma wf_acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
   by (auto split: arch_cap.splits)
@@ -2625,24 +2623,6 @@ lemma is_aligned_ptrFromPAddrD[simplified pageBitsForSize_simps]:
    \<Longrightarrow> is_aligned b a"
   by (simp add: ptrFromPAddr_def)
      (erule is_aligned_addD2, erule is_aligned_weaken[OF pptrBaseOffset_aligned])
-
-lemma addrFromPPtr_mask[simplified ARM_HYP.pageBitsForSize_simps]:
-  "n \<le> pageBitsForSize ARMSuperSection
-   \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
-  apply (simp add: addrFromPPtr_def)
-  apply (prop_tac "pptrBaseOffset AND mask n = 0")
-   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
-  apply (simp flip: mask_eqs(8))
-  done
-
-lemma ptrFromPAddr_mask[simplified ARM_HYP.pageBitsForSize_simps]:
-  "n \<le> pageBitsForSize ARMSuperSection
-   \<Longrightarrow> ptrFromPAddr ptr && mask n = ptr && mask n"
-  apply (simp add: ptrFromPAddr_def)
-  apply (prop_tac "pptrBaseOffset AND mask n = 0")
-   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
-  apply (simp flip: mask_eqs(7))
-  done
 
 end
 

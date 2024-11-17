@@ -15,7 +15,7 @@ theory Fastpath_Defs
 imports ArchMove_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
  "fastpaths sysc \<equiv> case sysc of

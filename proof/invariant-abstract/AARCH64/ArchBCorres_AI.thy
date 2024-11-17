@@ -11,7 +11,7 @@ imports
   ArchBitSetup_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma entry_for_asid_truncate[simp]:
   "entry_for_asid asid (truncate_state s) = entry_for_asid asid s"
@@ -44,9 +44,5 @@ crunch prepare_thread_delete
   for (bcorres) bcorres[wp]: truncate_state
 
 end
-
-requalify_facts AARCH64.arch_finalise_cap_bcorres AARCH64.prepare_thread_delete_bcorres
-
-declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
 
 end

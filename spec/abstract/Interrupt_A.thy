@@ -14,15 +14,11 @@ theory Interrupt_A
 imports ArchInterrupt_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   arch_invoke_irq_control
   arch_invoke_irq_handler
   handle_reserved_irq
   arch_mask_irq_signal
-end
-
 
 text \<open>The IRQControl capability can be used to create a new IRQHandler
 capability as well as to perform whatever architecture specific interrupt

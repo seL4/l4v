@@ -8,18 +8,18 @@ theory ArchDetype_AI
 imports Detype_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
-named_theorems Detype_AI_asms
+named_theorems Detype_AI_assms
 
-lemma valid_globals_irq_node[Detype_AI_asms]:
+lemma valid_globals_irq_node[Detype_AI_assms]:
     "\<lbrakk> valid_global_refs s; cte_wp_at ((=) cap) ptr s \<rbrakk>
           \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
     apply (erule(1) valid_global_refsD)
     apply (simp add: global_refs_def)
     done
 
-lemma caps_of_state_ko[Detype_AI_asms]:
+lemma caps_of_state_ko[Detype_AI_assms]:
   "valid_cap cap s
    \<Longrightarrow> is_untyped_cap cap \<or>
        cap_range cap = {} \<or>
@@ -33,7 +33,7 @@ lemma caps_of_state_ko[Detype_AI_asms]:
                     split: option.splits if_splits)+
   done
 
-lemma mapM_x_storeWord[Detype_AI_asms]:
+lemma mapM_x_storeWord[Detype_AI_assms]:
 (* FIXME: taken from Retype_C.thy and adapted wrt. the missing intvl syntax. *)
   assumes al: "is_aligned ptr word_size_bits"
   shows "mapM_x (\<lambda>x. storeWord (ptr + of_nat x * word_size) 0) [0..<n]
@@ -81,7 +81,7 @@ next
     done
 qed
 
-lemma empty_fail_freeMemory [Detype_AI_asms]: "empty_fail (freeMemory ptr bits)"
+lemma empty_fail_freeMemory [Detype_AI_assms]: "empty_fail (freeMemory ptr bits)"
   by (fastforce simp: freeMemory_def mapM_x_mapM ef_storeWord)
 
 
@@ -107,7 +107,7 @@ lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
 
-lemma valid_ioports_detype[Detype_AI_asms]:
+lemma valid_ioports_detype[Detype_AI_assms]:
   "valid_ioports s \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
   by simp
 
@@ -117,7 +117,7 @@ interpretation Detype_AI?: Detype_AI
   proof goal_cases
   interpret Arch .
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact Detype_AI_asms)?)
+  by (intro_locales; (unfold_locales; fact Detype_AI_assms)?)
   qed
 
 context detype_locale_arch begin
@@ -599,8 +599,8 @@ interpretation Detype_AI_2
         Detype_AI_2.intro
         by blast
 
-context begin interpretation Arch .
-lemma delete_objects_invs[wp]:
+(* generic consequence of architecture-specific details *)
+lemma (in Arch) delete_objects_invs[wp]:
   "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at ((=) (cap.UntypedCap dev ptr bits f)) slot s
     \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and
     invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
@@ -621,6 +621,9 @@ lemma delete_objects_invs[wp]:
   apply (simp add: valid_cap_def cap_aligned_def word_size_bits_def untyped_min_bits_def)
   done
 
+requalify_facts Arch.delete_objects_invs
+lemmas [wp] = delete_objects_invs
+
 lemma scheduler_action_detype:
   "P (scheduler_action s) \<Longrightarrow> P (scheduler_action (detype {ptr..ptr + 2 ^ bits - 1} s))"
   by (auto simp: detype_def)
@@ -637,7 +640,5 @@ lemma delete_objects_scheduler_action [wp]:
    apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. P (scheduler_action s)"])
     apply (wpsimp simp: scheduler_action_detype)+
   done
-
-end
 
 end

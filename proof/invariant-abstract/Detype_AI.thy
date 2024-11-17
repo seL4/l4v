@@ -8,9 +8,7 @@ theory Detype_AI
 imports ArchRetype_AI IpcCancel_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_facts
+arch_requalify_facts
   valid_arch_mdb_detype
   clearMemory_invs
   invs_irq_state_independent
@@ -19,8 +17,6 @@ requalify_facts
   init_arch_objects_invs_from_restricted
   caps_region_kernel_window_imp
   init_arch_objects_wps
-
-end
 
 declare clearMemory_invs[wp]
 
@@ -1108,7 +1104,7 @@ lemma dom_known_length:
   by (drule domI[where m=f], simp)
 
 
-lemma (in Detype_AI) cte_map_not_null_outside: (*FIXME: arch_split*)
+lemma (in Detype_AI) cte_map_not_null_outside: (*FIXME: arch-split*)
   "\<lbrakk> cte_wp_at ((\<noteq>) cap.NullCap) p (s :: 'a state);
      cte_wp_at ((=) cap) p' s;is_untyped_cap cap;
      descendants_range cap p' s; untyped_children_in_mdb s;

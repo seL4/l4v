@@ -11,7 +11,7 @@ imports
   "Lib.SplitRule"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma asid_high_bits_of_shift :
   "asid_high_bits_of (ucast x << asid_low_bits) = x"

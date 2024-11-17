@@ -21,6 +21,11 @@ private abbreviation (input)
         modify (\<lambda>ks. ks \<lparr> gsUserPages := (\<lambda> addr.
           if addr `~elem~` map fromPPtr addrs then Just pSize
           else gsUserPages ks addr)\<rparr>);
+        when (\<not>dev) $
+          mapM_x (\<lambda>addr. doMachineOp $
+                            cleanCacheRange_RAM addr
+                                                (addr + mask (pageBitsForSize pSize))
+                                                (addrFromPPtr addr)) addrs;
         return $ map (\<lambda>n. FrameCap  (PPtr (fromPPtr n)) VMReadWrite pSize dev Nothing) addrs
      od)"
 
@@ -35,6 +40,8 @@ private abbreviation (input)
                                            if addr `~elem~` map fromPPtr addrs then Just ptType
                                            else gsPTTypes (ksArchState ks) addr)\<rparr>\<rparr>);
       initialiseMappings pts;
+      mapM_x (\<lambda>addr. doMachineOp $
+                       cleanCacheRange_PoU addr (addr + mask tableBits) (addrFromPPtr addr)) addrs;
       return $ map (\<lambda>pt. cap pt Nothing) pts
     od)"
 
@@ -59,7 +66,7 @@ defs Arch_createNewCaps_def:
               (\<lambda>pts. return ())
         | VCPUObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject :: vcpu)) 0;
-            return $ map (\<lambda> addr. VCPUCap addr) addrs
+            return $ map (\<lambda>addr. VCPUCap addr) addrs
             od)
         )"
 

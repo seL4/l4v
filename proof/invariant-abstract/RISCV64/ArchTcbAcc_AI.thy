@@ -8,7 +8,7 @@ theory ArchTcbAcc_AI
 imports TcbAcc_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma as_user_valid_tcbs[wp]:
   "as_user ptr f \<lbrace>valid_tcbs\<rbrace>"

@@ -26,10 +26,10 @@ method simp_to_elim = (drule fun_all, elim allE impE)
 
 end
 
-context Arch begin global_naming ARM_A (*FIXME: arch_split*)
+context Arch begin global_naming ARM_HYP_A (*FIXME: arch-split*)
 
 lemma asid_pool_at_ko:
-  "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_A.ASIDPool pool)) p s"
+  "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_HYP_A.ASIDPool pool)) p s"
   apply (clarsimp simp: obj_at_def a_type_def)
   apply (case_tac ko, simp_all split: if_split_asm)
   apply (rename_tac arch_kernel_obj)
@@ -45,7 +45,7 @@ lemmas valid_vspace_obj_elims[rule_format, elim!] =
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*FIXME move *)
 
@@ -559,7 +559,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
    apply (clarsimp simp: exec_gets pde_at_def obj_at_def vspace_bits_defs mask_lower_twice2)
    apply (clarsimp simp: isSuperSection_def')
    apply (clarsimp simp: pde_relation_aligned_def is_aligned_neg_mask is_aligned_shiftr)
-   apply (clarsimp split: ARM_A.pde.splits)
+   apply (clarsimp split: ARM_HYP_A.pde.splits)
    apply (auto simp: master_pde_relation_def vmsz_aligned'_def return_def vspace_bits_defs)[1]
   apply (clarsimp simp: get_pde_def and_not_mask_twice get_pd_def bind_assoc get_object_def)
   apply (clarsimp simp: exec_gets pde_at_def obj_at_def vspace_bits_defs mask_lower_twice2)
@@ -822,7 +822,7 @@ lemma get_master_pte_corres [corres]:
    apply (clarsimp simp: exec_gets pte_at_def obj_at_def vspace_bits_defs mask_lower_twice2)
    apply (clarsimp simp: isLargePage_def')
    apply (clarsimp simp: pte_relation_aligned_def is_aligned_neg_mask is_aligned_shiftr)
-   apply (clarsimp split: ARM_A.pte.splits)
+   apply (clarsimp split: ARM_HYP_A.pte.splits)
    apply (auto simp: master_pte_relation_def vmsz_aligned'_def return_def vspace_bits_defs)[1]
   apply (clarsimp simp: get_pte_def and_not_mask_twice get_pt_def bind_assoc get_object_def)
   apply (clarsimp simp: exec_gets pte_at_def obj_at_def vspace_bits_defs mask_lower_twice2)
@@ -1211,7 +1211,7 @@ lemmas get_pde_wp_valid = hoare_add_post'[OF get_pde_valid get_pde_wp]
 
 lemma page_table_at_lift:
   "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> (ptrFromPAddr ptr) = ptr' \<longrightarrow>
-  (pspace_aligned s \<and> valid_pde (ARM_A.PageTablePDE ptr) s) \<longrightarrow>
+  (pspace_aligned s \<and> valid_pde (ARM_HYP_A.PageTablePDE ptr) s) \<longrightarrow>
   pspace_distinct' s' \<longrightarrow> page_table_at' ptr' s'"
   by (fastforce intro!: page_table_at_state_relation)
 
@@ -1319,7 +1319,7 @@ definition
   "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) False (XNever \<in> R)"
 
 definition
-  mapping_map :: "ARM_A.pte \<times> word32 list + ARM_A.pde \<times> word32 list \<Rightarrow>
+  mapping_map :: "ARM_HYP_A.pte \<times> word32 list + ARM_HYP_A.pde \<times> word32 list \<Rightarrow>
                   ARM_HYP_H.pte \<times> word32 list + ARM_HYP_H.pde \<times> word32 list \<Rightarrow> bool"
 where
   "mapping_map \<equiv> pte_relation' \<otimes> (=) \<oplus> pde_relation' \<otimes> (=)"
@@ -1338,7 +1338,7 @@ lemma createMappingEntries_corres [corres]:
   by (cases pgsz; corresKsimp simp: vmattributes_map_def)
 
 lemma pte_relation'_Invalid_inv [simp]:
-  "pte_relation' x ARM_HYP_H.pte.InvalidPTE = (x = ARM_A.pte.InvalidPTE)"
+  "pte_relation' x ARM_HYP_H.pte.InvalidPTE = (x = ARM_HYP_A.pte.InvalidPTE)"
   by (cases x) auto
 
 fun pte_vmsz_aligned' where

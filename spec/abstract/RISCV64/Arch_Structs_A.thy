@@ -14,7 +14,7 @@ imports
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin arch_global_naming (A)
 
 text \<open>
   This theory provides architecture-specific definitions and datatypes including
@@ -247,7 +247,7 @@ text \<open>
 
 end_qualify
 
-context Arch begin global_naming RISCV64_A
+context Arch begin arch_global_naming (A)
 
 section "Type declarations for invariant definitions"
 
@@ -280,7 +280,7 @@ record arch_tcb =
 
 end_qualify
 
-context Arch begin global_naming RISCV64_A
+context Arch begin arch_global_naming (A)
 
 definition default_arch_tcb :: arch_tcb
   where

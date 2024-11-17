@@ -14,19 +14,17 @@ theory IpcCancel_A
 imports ArchIpcCancel_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   arch_post_cap_deletion
   arch_gen_obj_refs
   arch_cap_cleanup_opt
+
+arch_requalify_consts
   faultRegister
   nextInstructionRegister
 
-requalify_types
+arch_requalify_types (A)
   arch_gen_obj_ref
-
-end
 
 text \<open>Scheduling context accessors.\<close>
 definition

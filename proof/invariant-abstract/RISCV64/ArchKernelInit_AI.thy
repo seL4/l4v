@@ -12,7 +12,7 @@ imports
   Arch_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 text \<open>
   Showing that there is a state that satisfies the abstract invariants.

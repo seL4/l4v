@@ -47,7 +47,7 @@ lemma doMachineOp_mapM_x:
   done
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 definition
   "asUser_fetch \<equiv> \<lambda>t s. case (ksPSpace s t) of
       Some (KOTCB tcb) \<Rightarrow> (atcbContextGet o tcbArch) tcb

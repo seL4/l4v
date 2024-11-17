@@ -9,7 +9,7 @@ theory ArchDetSchedDomainTime_AI
 imports DetSchedDomainTime_AI
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems DetSchedDomainTime_AI_assms
 
@@ -62,7 +62,7 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
 qed
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 crunch arch_perform_invocation
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"

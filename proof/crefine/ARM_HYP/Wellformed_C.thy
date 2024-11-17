@@ -14,7 +14,7 @@ imports
   "CSpec.Substitute"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 abbreviation
   cte_Ptr :: "word32 \<Rightarrow> cte_C ptr" where "cte_Ptr == Ptr"
@@ -265,7 +265,7 @@ record cte_CL =
   cap_CL :: cap_CL
   cteMDBNode_CL :: mdb_node_CL
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   cte_lift :: "cte_C \<rightharpoonup> cte_CL"
@@ -528,6 +528,101 @@ lemma ucast_irq_array_guard[unfolded irq_array_size_val, simplified]:
   apply (rule order_le_less_trans, rule unat_ucast_le)
   apply simp
   done
+
+
+text \<open>cacheLineBits interface\<close>
+
+(* only use this inside cache op functions; see Arch_Kernel_Config_Lemmas.cacheLineBits_sanity *)
+lemmas cacheLineBits_val =
+  cacheLineBits_def[unfolded Kernel_Config.CONFIG_L1_CACHE_LINE_SIZE_BITS_def]
+
+lemma cacheLineBits_le_ptBits:
+  "cacheLineBits \<le> ptBits"
+  using cacheLineBits_sanity
+  by (simp add: pt_bits_def pte_bits_def)
+
+(* This lemma and ptBits_leq_pdBits are for use with cacheLineBits_le_ptBits *)
+lemma ptBits_leq_pageBits:
+  "ptBits \<le> pageBits"
+  by (simp add: pt_bits_def pte_bits_def pageBits_def)
+
+lemma ptBits_leq_pdBits:
+  "ptBits \<le> pdBits"
+  by (simp add: pt_bits_def pd_bits_def pde_bits_def pte_bits_def)
+
+lemma cacheLineBits_leq_pageBits:
+  "cacheLineBits \<le> pageBits"
+  using ptBits_leq_pageBits cacheLineBits_le_ptBits
+  by simp
+
+lemma cacheLineBits_leq_pdBits:
+  "cacheLineBits \<le> pdBits"
+  using ptBits_leq_pdBits cacheLineBits_le_ptBits
+  by simp
+
+lemma cacheLineBits_le_machine_word:
+  "cacheLineBits < LENGTH(machine_word_len)"
+  apply (rule le_less_trans, rule cacheLineBits_le_ptBits)
+  by (simp add: pt_bits_def pte_bits_def)
+
+lemma APIType_capBits_PageDirectoryObject_pdBits:
+  "APIType_capBits PageDirectoryObject us = pdBits"
+  by (simp add: pd_bits_def APIType_capBits_def pde_bits_def)
+
+lemma cacheLineBits_le_PageDirectoryObject_sz:
+  "cacheLineBits \<le> APIType_capBits PageDirectoryObject us"
+  using APIType_capBits_PageDirectoryObject_pdBits cacheLineBits_leq_pdBits
+  by simp
+
+lemma cacheLineBits_leq_pbfs:
+  "cacheLineBits \<le> pageBitsForSize sz"
+  by (rule order.trans, rule cacheLineBits_leq_pageBits, rule pbfs_atleast_pageBits)
+
+lemma addrFromPPtr_mask_SuperSection:
+  "n \<le> pageBitsForSize ARMSuperSection
+   \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
+  apply (simp add: addrFromPPtr_def)
+  apply (prop_tac "pptrBaseOffset AND mask n = 0")
+   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+  apply (simp flip: mask_eqs(8))
+  done
+
+lemma ptrFromPAddr_mask_SuperSection:
+  "n \<le> pageBitsForSize ARMSuperSection
+   \<Longrightarrow> ptrFromPAddr ptr && mask n = ptr && mask n"
+  apply (simp add: ptrFromPAddr_def)
+  apply (prop_tac "pptrBaseOffset AND mask n = 0")
+   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+  apply (simp flip: mask_eqs(7))
+  done
+
+lemma addrFromPPtr_mask_cacheLineBits[simp]:
+  "addrFromPPtr ptr && mask cacheLineBits = ptr && mask cacheLineBits"
+  by (rule addrFromPPtr_mask_SuperSection, rule cacheLineBits_leq_pbfs)
+
+lemma ptrFromPAddr_mask_cacheLineBits[simp]:
+  "ptrFromPAddr ptr && mask cacheLineBits = ptr && mask cacheLineBits"
+  by (rule ptrFromPAddr_mask_SuperSection, rule cacheLineBits_leq_pbfs)
+
+lemma shiftr_cacheLineBits_less_mask_word_bits:
+  "x >> cacheLineBits < mask word_bits" for x :: machine_word
+  using shiftr_less_max_mask[where n=cacheLineBits and x=x] cacheLineBits_sanity
+  by (simp add: word_bits_def)
+
+
+text \<open>hcrVCPU interface\<close>
+
+arch_requalify_facts hcrCommon_def hcrTWE_def hcrTWI_def
+
+(* hcrVCPU can have two values, based on configuration. We only need need the numerical value
+   to match with C, no other computations depend on it *)
+schematic_goal hcrVCPU_val:
+  "hcrVCPU = ?val"
+  by (simp add: hcrVCPU_def hcrCommon_def hcrTWE_def hcrTWI_def
+                Kernel_Config.config_DISABLE_WFI_WFE_TRAPS_def)
+
+(* end of Kernel_Config interface section *)
+
 
 (* Input abbreviations for API object types *)
 (* disambiguates names *)

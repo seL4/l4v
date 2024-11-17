@@ -12,7 +12,7 @@ theory Syscall_R
 imports Tcb_R Arch_R Interrupt_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*
 syscall has 5 sections: m_fault h_fault m_error h_error m_finalise
@@ -535,7 +535,7 @@ crunch InterruptDecls_H.invokeIRQHandler
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemmas invokeIRQHandler_typ_ats[wp] =
-  typ_at_lifts [OF InterruptDecls_H_invokeIRQHandler_typ_at']
+  typ_at_lifts [OF invokeIRQHandler_typ_at']
 
 crunch setDomain
   for tcb_at'[wp]: "tcb_at' tptr"

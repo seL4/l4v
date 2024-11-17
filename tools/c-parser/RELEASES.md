@@ -162,3 +162,10 @@
 - Builds with Isabelle2023
 - Rearranged library session structure and included more libraries for heap
   reasoning in the release. See e.g. files TypHeapLib.thy and LemmaBucket_C.thy
+
+## 1.21
+
+- Builds with Isabelle2024
+- Updated SIMPL from the AFP
+- Ensure that umm_types.txt is saved relative to theory file
+- If cpp_path is relative, make it relative to the current theory

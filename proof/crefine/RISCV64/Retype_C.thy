@@ -46,7 +46,7 @@ lemma zero_le_sint: "\<lbrakk> 0 \<le> (a :: machine_word); a < 0x80000000000000
   apply simp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma map_option_byte_to_word_heap:
   assumes disj: "\<And>(off :: 9 word) x. x<8 \<Longrightarrow> p + ucast off * 8 + x \<notin> S " (*9=page table index*)
@@ -5723,7 +5723,7 @@ lemma placeNewObject_user_data:
   done
 
 definition
-  createObject_hs_preconds :: "machine_word \<Rightarrow> ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> kernel_state \<Rightarrow> bool"
+  createObject_hs_preconds :: "machine_word \<Rightarrow> object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "createObject_hs_preconds regionBase newType userSize d \<equiv>
      (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
@@ -5748,14 +5748,14 @@ abbreviation
 
 (* these preconds actually used throughout the proof *)
 abbreviation(input)
-  createObject_c_preconds1 :: "machine_word \<Rightarrow> ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (globals myvars) set"
+  createObject_c_preconds1 :: "machine_word \<Rightarrow> object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (globals myvars) set"
 where
   "createObject_c_preconds1 regionBase newType userSize deviceMemory \<equiv>
     {s. region_actually_is_dev_bytes regionBase (2 ^ getObjectSize newType userSize) deviceMemory s}"
 
 (* these preconds used at start of proof *)
 definition
-  createObject_c_preconds :: "machine_word \<Rightarrow> ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (globals myvars) set"
+  createObject_c_preconds :: "machine_word \<Rightarrow> object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (globals myvars) set"
 where
   "createObject_c_preconds regionBase newType userSize deviceMemory \<equiv>
   (createObject_c_preconds1 regionBase newType userSize deviceMemory
@@ -7925,7 +7925,7 @@ lemma APIType_capBits_min:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n dev\<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"

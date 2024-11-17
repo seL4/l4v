@@ -9,7 +9,7 @@ imports
   BCorres_AI
 begin
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 crunch arch_finalise_cap
   for (bcorres) bcorres[wp]: truncate_state
@@ -20,9 +20,5 @@ crunch prepare_thread_delete
   (simp: swp_def)
 
 end
-
-requalify_facts ARM_HYP.arch_finalise_cap_bcorres ARM_HYP.prepare_thread_delete_bcorres
-
-declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
 
 end

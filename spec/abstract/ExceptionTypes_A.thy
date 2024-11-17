@@ -14,9 +14,7 @@ theory ExceptionTypes_A
 imports MiscMachine_A
 begin
 
-context begin interpretation Arch .
-requalify_types arch_fault
-end
+arch_requalify_types (A) arch_fault
 
 text \<open>
   There are two types of exceptions that can occur in the kernel:

@@ -14,7 +14,7 @@ text \<open>
   or about to be switched to, or be in a scheduling queue.
 \<close>
 
-(*FIXME: arch_split: move up? *)
+(*FIXME: arch-split: move up? *)
 context Arch begin
 
 requalify_facts
@@ -30,7 +30,7 @@ requalify_facts
 end
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
    is_active_thread_state :: "thread_state \<Rightarrow> bool"
@@ -1797,11 +1797,11 @@ lemma invokeIRQControl_no_orphans [wp]:
   apply (wp | clarsimp)+
   done
 
-lemma invokeIRQHandler_no_orphans [wp]:
+lemma arch_invokeIRQHandler_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
-   invokeIRQHandler i
+   ARM_H.invokeIRQHandler i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: invokeIRQHandler_def)
+  apply (cases i, simp_all add: ARM_H.invokeIRQHandler_def)
     apply (wp | clarsimp | fastforce)+
   done
 
@@ -1939,7 +1939,7 @@ lemma setDomain_no_orphans [wp]:
   apply (fastforce simp: tcb_at_typ_at'  is_active_tcb_ptr_runnable')
   done
 
-crunch InterruptDecls_H.invokeIRQHandler
+crunch invokeIRQHandler
   for no_orphans[wp]: no_orphans
 
 lemma performInvocation_no_orphans [wp]:

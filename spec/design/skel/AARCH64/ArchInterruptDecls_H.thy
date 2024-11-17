@@ -8,7 +8,7 @@ theory ArchInterruptDecls_H
 imports RetypeDecls_H CNode_H
 begin
 
-context Arch begin global_naming AARCH64_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H decls_only ArchInv= Arch=MachineOps NOT plic_complete_claim
 

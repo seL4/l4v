@@ -315,7 +315,7 @@ locale DomainSepInv_1 =
   and arch_post_cap_deletion_domain_sep_inv[wp]:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
   and init_arch_objects_domain_sep_inv[wp]:
-    "init_arch_objects typ ptr n sz refs \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
+    "init_arch_objects typ dev ptr n sz refs \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
   and prepare_thread_delete_domain_sep_inv[wp]:
     "prepare_thread_delete t \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
   and arch_finalise_cap_rv:

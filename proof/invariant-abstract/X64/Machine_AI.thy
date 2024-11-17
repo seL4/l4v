@@ -67,7 +67,7 @@ crunch_ignore (no_irq) (add:
   handleE' handleE handle_elseE forM forM_x
   zipWithM ignore_failure)
 
-context Arch begin
+context Arch begin arch_global_naming
 
 lemma det_getRegister: "det (getRegister x)"
   by (simp add: getRegister_def)
@@ -452,16 +452,6 @@ lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
   by (simp add: out32_def)
 
 end
-end
-
-context begin interpretation Arch .
-
-requalify_facts
-  det_getRegister
-  det_setRegister
-  det_getRestartPC
-  det_setNextPC
-
 end
 
 end

@@ -15,7 +15,7 @@ begin
 
 unbundle l4v_word_context
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 primrec
   valid_cnode_inv' :: "Invocations_H.cnode_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -4913,7 +4913,7 @@ lemma cteSwap_valid_pspace'[wp]:
   apply clarsimp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cteSwap
   for tcb_at [wp]: "tcb_at' t"
@@ -7859,7 +7859,7 @@ lemma (in mdb_move) m'_cap:
 context mdb_move
 begin
 
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma m_to_src:
   "m \<turnstile> p \<leadsto> src = (p \<noteq> 0 \<and> p = mdbPrev src_node)"
@@ -8378,7 +8378,7 @@ qed
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cteMove_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s

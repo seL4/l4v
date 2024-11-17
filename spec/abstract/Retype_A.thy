@@ -18,15 +18,10 @@ imports
   ArchRetype_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   arch_default_cap
   default_arch_object
   init_arch_objects
-
-end
-
 
 section "Creating Caps"
 
@@ -197,7 +192,7 @@ doE
 
   \<comment> \<open>Create new objects.\<close>
   orefs \<leftarrow> retype_region retype_base (length slots) obj_sz new_type is_device;
-  init_arch_objects new_type retype_base (length slots) obj_sz orefs;
+  init_arch_objects new_type is_device retype_base (length slots) obj_sz orefs;
   mapM_x (create_cap new_type obj_sz src_slot is_device) (zip slots orefs)
 od odE"
 

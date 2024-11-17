@@ -12,31 +12,27 @@ theory CSpaceInv_AI
 imports ArchCSpaceInvPre_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   cap_master_arch_cap
   replaceable_final_arch_cap
   replaceable_non_final_arch_cap
   unique_table_refs
 
-requalify_facts
+arch_requalify_facts
   aobj_ref_acap_rights_update
   arch_obj_size_acap_rights_update
   valid_arch_cap_acap_rights_update
-  valid_validate_vm_rights
   cap_master_arch_inv
   unique_table_refs_def
   valid_ipc_buffer_cap_def
   acap_rights_update_idem
+  valid_acap_rights_update_id
   cap_master_arch_cap_rights
-  acap_rights_update_id
   is_nondevice_page_cap_simps
   set_cap_hyp_refs_of
   state_hyp_refs_of_revokable
   set_cap_hyp_refs_of
   is_valid_vtable_root_is_arch_cap
-end
 
 lemmas bits_of_simps[simp] = bits_of_def[split_simps cap.split]
 
@@ -54,10 +50,10 @@ lemma is_valid_vtable_root_simps[simp]:
 
 lemmas [simp] = aobj_ref_acap_rights_update arch_obj_size_acap_rights_update
   valid_validate_vm_rights cap_master_arch_inv acap_rights_update_idem
-  cap_master_arch_cap_rights acap_rights_update_id state_hyp_refs_of_revokable
+  cap_master_arch_cap_rights valid_acap_rights_update_id state_hyp_refs_of_revokable
 
 lemmas [intro] = valid_arch_cap_acap_rights_update
-lemmas [intro!] = acap_rights_update_id
+lemmas [intro!] = valid_acap_rights_update_id
 lemmas [wp] = set_cap_hyp_refs_of
 
 lemma remove_rights_cap_valid[simp]:
@@ -1044,16 +1040,13 @@ lemma get_cap_caps_of_state:
   "(fst (get_cap p s) = {(cap, s)}) = (Some cap = caps_of_state s p)"
   by (clarsimp simp: caps_of_state_def eq_commute)
 
-context Arch begin
-
-lemma abj_ref_none_no_refs:
+(* generic consequence of architecture-specific details *)
+lemma (in Arch) abj_ref_none_no_refs:
   "obj_refs c = {} \<Longrightarrow> table_cap_ref c = None"
   unfolding table_cap_ref_def
   apply (cases c; simp)
   subgoal for ac by (cases ac; simp)
   done
-
-end
 
 requalify_facts Arch.abj_ref_none_no_refs
 

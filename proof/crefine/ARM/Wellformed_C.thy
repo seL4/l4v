@@ -14,7 +14,7 @@ imports
   "CSpec.Substitute"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 abbreviation
   cte_Ptr :: "word32 \<Rightarrow> cte_C ptr" where "cte_Ptr == Ptr"
@@ -232,7 +232,7 @@ record cte_CL =
   cap_CL :: cap_CL
   cteMDBNode_CL :: mdb_node_CL
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   cte_lift :: "cte_C \<rightharpoonup> cte_CL"
@@ -494,6 +494,63 @@ lemma ucast_irq_array_guard[unfolded irq_array_size_val, simplified]:
   apply simp
   done
 
+
+text \<open>cacheLineBits interface\<close>
+
+(* only use this inside cache op functions; see Arch_Kernel_Config_Lemmas.cacheLineBits_sanity *)
+lemmas cacheLineBits_val =
+  cacheLineBits_def[unfolded Kernel_Config.CONFIG_L1_CACHE_LINE_SIZE_BITS_def]
+
+lemma cacheLineBits_le_ptBits:
+  "cacheLineBits \<le> ptBits"
+  using cacheLineBits_sanity
+  by (simp add: ptBits_def pteBits_def)
+
+lemma ptBits_leq_pageBits:
+  "ptBits \<le> pageBits"
+  by (simp add: ptBits_def pageBits_def pteBits_def)
+
+lemma ptBits_leq_pdBits:
+  "ptBits \<le> pdBits"
+  by (simp add: ptBits_def pdBits_def pteBits_def)
+
+lemma cacheLineBits_leq_pageBits:
+  "cacheLineBits \<le> pageBits"
+  using ptBits_leq_pageBits cacheLineBits_le_ptBits
+  by simp
+
+lemma cacheLineBits_leq_pdBits:
+  "cacheLineBits \<le> pdBits"
+  using ptBits_leq_pdBits cacheLineBits_le_ptBits
+  by simp
+
+lemma cacheLineBits_le_machine_word:
+  "cacheLineBits < LENGTH(machine_word_len)"
+  using pt_bits_stuff cacheLineBits_le_ptBits
+  by (simp add: word_bits_def)
+
+lemma APIType_capBits_PageDirectoryObject_pdBits:
+  "APIType_capBits PageDirectoryObject us = pdBits"
+  by (simp add: pdBits_def APIType_capBits_def pdeBits_def)
+
+lemma cacheLineBits_le_PageDirectoryObject_sz:
+  "cacheLineBits \<le> APIType_capBits PageDirectoryObject us"
+  by (simp add: APIType_capBits_PageDirectoryObject_pdBits cacheLineBits_leq_pdBits)
+
+lemma cacheLineBits_leq_pbfs:
+  "cacheLineBits \<le> pageBitsForSize sz"
+  by (rule order.trans, rule cacheLineBits_leq_pageBits, rule pbfs_atleast_pageBits)
+
+lemma addrFromPPtr_mask_cacheLineBits[simp]:
+  "addrFromPPtr ptr && mask cacheLineBits = ptr && mask cacheLineBits"
+  by (rule addrFromPPtr_mask_ARMSuperSection, rule cacheLineBits_leq_pbfs)
+
+lemma shiftr_cacheLineBits_less_mask_word_bits:
+  "x >> cacheLineBits < mask word_bits" for x :: machine_word
+  using shiftr_less_max_mask[where n=cacheLineBits and x=x] cacheLineBits_sanity
+  by (simp add: word_bits_def)
+
+(* end of Kernel_Config interface section *)
 
 abbreviation(input)
   NotificationObject :: sword32

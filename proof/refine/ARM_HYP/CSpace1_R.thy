@@ -14,7 +14,7 @@ imports
   "AInvs.ArchDetSchedSchedule_AI"
 begin
 
-context Arch begin global_naming ARM_A (*FIXME: arch_split*)
+context Arch begin global_naming ARM_HYP_A (*FIXME: arch-split*)
 
 lemmas final_matters_def = final_matters_def[simplified final_matters_arch_def]
 
@@ -25,7 +25,7 @@ lemmas final_matters_simps[simp]
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma isMDBParentOf_CTE1:
   "isMDBParentOf (CTE cap node) cte =
@@ -1626,7 +1626,7 @@ lemma other_obj_relation_KOCTE[simp]:
   "\<not> other_obj_relation ko (KOCTE cte)"
   by (simp add: other_obj_relation_def
          split: Structures_A.kernel_object.splits
-                ARM_A.arch_kernel_obj.splits)
+                ARM_HYP_A.arch_kernel_obj.splits)
 
 lemma cte_map_pulls_tcb_to_abstract:
   "\<lbrakk> y = cte_map z; pspace_relation (kheap s) (ksPSpace s');
@@ -1639,7 +1639,7 @@ lemma cte_map_pulls_tcb_to_abstract:
   apply (erule(1) obj_relation_cutsE;
          clarsimp simp: other_obj_relation_def
                   split: Structures_A.kernel_object.split_asm
-                         ARM_A.arch_kernel_obj.split_asm if_split_asm)
+                         ARM_HYP_A.arch_kernel_obj.split_asm if_split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -1955,7 +1955,7 @@ lemma pspace_relation_cte_wp_atI':
    apply clarsimp
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
-                   ARM_A.arch_kernel_obj.split_asm)
+                   ARM_HYP_A.arch_kernel_obj.split_asm)
   done
 
 lemma pspace_relation_cte_wp_atI:
@@ -2570,7 +2570,7 @@ lemma updateMDB_pspace_relation:
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+;
           clarsimp split: Structures_A.kernel_object.split_asm
-                          ARM_A.arch_kernel_obj.split_asm if_split_asm
+                          ARM_HYP_A.arch_kernel_obj.split_asm if_split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))
@@ -2981,7 +2981,7 @@ locale masterCap =
   fixes cap cap'
   assumes master: "capMasterCap cap = capMasterCap cap'"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma isZombie [simp]:
   "isZombie cap' = isZombie cap" using master
@@ -3567,7 +3567,7 @@ locale mdb_insert_sib = mdb_insert_der +
            (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
            (mdbPrev_update (\<lambda>a. src) src_node))))"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 (* If dest is inserted as sibling, src can not have had children.
    If it had had children, then dest_node which is just a derived copy
@@ -3714,7 +3714,7 @@ lemma descendants:
   by (rule set_eqI) (simp add: descendants_of'_def parent_n_eq)
 
 end
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma mdb_None:
   assumes F: "\<And>p'. cte_map p \<in> descendants_of' p' m' \<Longrightarrow> False"
   assumes R: "cdt_relation (swp cte_at s) (cdt s) m'"
@@ -4572,7 +4572,7 @@ locale mdb_inv_preserve =
   \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes mdb_next:"\<And>p. mdb_next m p = mdb_next m' p"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemma preserve_stuff:
   "valid_dlist m = valid_dlist m'
  \<and> ut_revocable' m = ut_revocable' m'
@@ -5231,7 +5231,7 @@ lemma cte_map_inj_eq':
   apply (rule cte_map_inj_eq; fastforce)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma cteInsert_corres:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
         trans_state_update'[symmetric,simp]
@@ -7231,7 +7231,7 @@ lemma subtree_no_parent:
   shows "False" using assms
   by induct (auto simp: parentOf_def mdb_next_unfold)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ensureNoChildren_corres:
   "p' = cte_map p \<Longrightarrow>

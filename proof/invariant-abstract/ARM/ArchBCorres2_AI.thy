@@ -9,7 +9,7 @@ imports
   BCorres2_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma choose_switch_or_idle:
   "((), s') \<in> fst (choose_thread s) \<Longrightarrow>

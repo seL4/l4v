@@ -12,7 +12,7 @@ theory Syscall_R
 imports Tcb_R Arch_R Interrupt_R SchedContextInv_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*
 syscall has 5 sections: m_fault h_fault m_error h_error m_finalise
@@ -504,7 +504,8 @@ crunch restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
    wp: crunch_wps checkCap_inv hoare_vcg_all_lift
    ignore: checkCapAt)
 
-end
+lemmas invokeIRQHandler_typ_ats[wp] =
+  typ_at_lifts [OF invokeIRQHandler_typ_at']
 
 global_interpretation invokeTCB: typ_at_all_props' "invokeTCB i"
   by typ_at_props'

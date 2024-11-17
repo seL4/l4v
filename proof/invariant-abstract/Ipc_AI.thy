@@ -10,11 +10,9 @@ imports
   "Monads.WPBang"
 begin
 
-context begin interpretation Arch .
-requalify_consts
+arch_requalify_consts
   in_device_frame
-requalify_facts
-  set_mi_invs
+arch_requalify_facts
   set_mrs_ioports
   as_user_ioports
   set_message_info_ioports
@@ -23,8 +21,10 @@ requalify_facts
   make_arch_fault_msg_ioports
   arch_derive_cap_notzombie
   arch_derive_cap_notIRQ
-
-end
+  lookup_ipc_buffer_inv
+  set_mi_invs
+  as_user_hyp_refs_of
+  valid_arch_arch_tcb_set_registers
 
 declare set_mi_invs[wp]
 

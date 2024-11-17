@@ -50,7 +50,7 @@ lemma empty_fail_getSlotCap [intro!, wp, simp]:
   "empty_fail (getSlotCap a)"
   unfolding getSlotCap_def by fastforce
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma empty_fail_getObject:
   "empty_fail (getObject x :: 'a :: pspace_storable kernel)"

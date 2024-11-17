@@ -18,13 +18,10 @@ imports
   Hypervisor_A
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   arch_perform_invocation
   handle_vm_fault
   handle_hypervisor_fault
-end
 
 
 text\<open>

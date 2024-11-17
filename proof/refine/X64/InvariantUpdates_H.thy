@@ -270,7 +270,7 @@ lemma valid_arch_state'_interrupt[simp]:
   "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
   by (simp add: valid_arch_state'_def cong: option.case_cong)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma valid_ioports_cr3_update[simp]:
   "valid_ioports' (s\<lparr>ksArchState := x64KSCurrentUserCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>) = valid_ioports' s"

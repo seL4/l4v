@@ -15,21 +15,13 @@ begin
 
 unbundle l4v_word_context (* because of Lib.MonadicRewrite *)
 
-context begin interpretation Arch .
-
-requalify_consts
-  region_in_kernel_window
-  arch_default_cap
+arch_requalify_consts
   second_level_tables
   safe_ioport_insert
 
-requalify_facts
-  set_cap_valid_arch_caps_simple
-  set_cap_kernel_window_simple
+arch_requalify_facts
   set_cap_ioports'
   safe_ioport_insert_triv
-
-end
 
 primrec
   valid_untyped_inv_wcap :: "Invocations_A.untyped_invocation \<Rightarrow> cap option
@@ -280,12 +272,15 @@ locale Untyped_AI_arch =
                               (kheap s)\<rparr> \<turnstile> ArchObjectCap (arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
 
   assumes init_arch_objects_descendants_range[wp]:
-  "\<And>x cref ty ptr n us y. \<lbrace>\<lambda>(s::'state_ext state). descendants_range x cref s \<rbrace> init_arch_objects ty ptr n us y
-          \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
+  "\<And>x cref ty dev ptr n us y.
+     \<lbrace>\<lambda>(s::'state_ext state). descendants_range x cref s \<rbrace>
+     init_arch_objects ty dev ptr n us y
+     \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
   assumes  init_arch_objects_caps_overlap_reserved[wp]:
-  "\<And>S ty ptr n us y. \<lbrace>\<lambda>(s::'state_ext state). caps_overlap_reserved S s\<rbrace>
-   init_arch_objects ty ptr n us y
-   \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
+  "\<And>S ty dev ptr n us y.
+     \<lbrace>\<lambda>(s::'state_ext state). caps_overlap_reserved S s\<rbrace>
+     init_arch_objects ty dev ptr n us y
+     \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   assumes delete_objects_rewrite:
   "\<And>sz ptr. \<lbrakk> word_size_bits \<le> sz; sz\<le> word_bits; ptr && ~~ mask sz = ptr \<rbrakk>
       \<Longrightarrow> delete_objects ptr sz =
@@ -533,11 +528,6 @@ lemma range_cover_stuff:
     apply (simp add: le_mask_iff[symmetric] mask_def)
     done
   qed (simp add: word_bits_def)
-
-context Arch begin
-  (*FIXME: generify proof that uses this *)
-  lemmas range_cover_stuff_arch = range_cover_stuff[unfolded word_bits_def, simplified]
-end
 
 
 lemma cte_wp_at_range_cover:
@@ -2991,7 +2981,7 @@ locale Untyped_AI_nonempty_table =
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
-        init_arch_objects tp ptr bits us refs
+        init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   assumes create_cap_ioports[wp]:
   "\<And>tp oref sz dev cref p. \<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace>
@@ -3571,7 +3561,7 @@ lemma invoke_untyp_invs':
        and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap dev (ptr && ~~ mask sz) sz idx) slot
        and K (refs = retype_addrs ptr tp (length slots) us
          \<and> range_cover ptr sz (obj_bits_api tp us) (length slots))\<rbrace>
-     init_arch_objects tp ptr (length slots) us refs \<lbrace>\<lambda>_. Q\<rbrace>"
+     init_arch_objects tp dev ptr (length slots) us refs \<lbrace>\<lambda>_. Q\<rbrace>"
  assumes retype_region_Q: "\<And>ptr us tp slot reset sz slots dev.
     ui = Invocations_A.Retype slot reset (ptr && ~~ mask sz) ptr tp us slots dev
     \<Longrightarrow> \<lbrace>\<lambda>s. invs s \<and> Q s

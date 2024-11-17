@@ -9,7 +9,7 @@ imports
   Schedule_R
   "Lib.SimpStrategy"
 begin
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
   for aligned'[wp]: pspace_aligned'
@@ -350,7 +350,7 @@ lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cte_wp_at_master_reply_cap_to_ex_rights:
   "cte_wp_at (is_master_reply_cap_to t) ptr
@@ -524,7 +524,7 @@ lemma (in delete_one) cancelIPC_ReplyCap_corres:
           od)
        od)"
   proof -
-  interpret Arch . (*FIXME: arch_split*)
+  interpret Arch . (*FIXME: arch-split*)
   show ?thesis
   apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
                    locateSlot_conv liftM_def tcbReplySlot_def
@@ -653,7 +653,7 @@ declare cart_singleton_empty2[simp]
 lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_not t s"
   by (clarsimp simp: sch_act_simple_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch setNotification
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
@@ -1217,7 +1217,7 @@ lemma do_extended_op_pspace_distinct[wp]:
   "do_extended_op f \<lbrace>pspace_distinct\<rbrace>"
   by (wpsimp simp: do_extended_op_def)
 
-context begin interpretation Arch . (* FIXME: arch_split *)
+context begin interpretation Arch . (* FIXME: arch-split *)
 
 crunch arch_post_cap_deletion
   for pspace_aligned[wp]: pspace_aligned
@@ -1269,13 +1269,13 @@ lemma (in delete_one) suspend_corres:
 
 lemma no_fail_switchFpuOwner[wp]:
   "no_fail \<top> (X64.switchFpuOwner thread cpu)"
-  by (simp add: X64.switchFpuOwner_def Arch.no_fail_machine_op_lift)
+  by (simp add: X64.switchFpuOwner_def X64.no_fail_machine_op_lift)
 
 lemma no_fail_nativeThreadUsingFPU[wp]:
   "no_fail (\<top> and \<top>) (X64.nativeThreadUsingFPU thread)"
   supply Collect_const[simp del]
   apply (simp only: X64.nativeThreadUsingFPU_def)
-  apply (wpsimp wp: Arch.no_fail_machine_op_lift)
+  apply (wpsimp wp: X64.no_fail_machine_op_lift)
   done
 
 lemma (in delete_one) prepareThreadDelete_corres:
@@ -1988,7 +1988,7 @@ lemma cancelAll_unlive_helper:
   apply (clarsimp elim!: ko_wp_at'_weakenE)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma setObject_ko_wp_at':
   fixes v :: "'a :: pspace_storable"
   assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"

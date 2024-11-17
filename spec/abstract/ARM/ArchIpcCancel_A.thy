@@ -14,7 +14,7 @@ theory ArchIpcCancel_A
 imports Sporadic_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming (A)
 
 text \<open>Actions to be taken after a cap is deleted\<close>
 definition

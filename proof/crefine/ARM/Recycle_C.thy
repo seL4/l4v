@@ -351,7 +351,7 @@ lemma heap_to_user_data_in_user_mem'[simp]:
       apply simp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch invalidateTLBByASID
   for pde_mappings'[wp]: "valid_pde_mappings'"
@@ -445,7 +445,8 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
   apply (clarsimp simp: ptBits_def pageBits_def pteBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp)
   apply (clarsimp simp: is_aligned_no_overflow'[where n=10, simplified] pageBits_def
-                        field_simps is_aligned_mask[symmetric] mask_AND_less_0)
+                        field_simps is_aligned_mask[symmetric] mask_AND_less_0
+                        cacheLineBits_le_ptBits[unfolded ptBits_def pteBits_def, simplified])
   done
 
 lemma modify_gets_helper:

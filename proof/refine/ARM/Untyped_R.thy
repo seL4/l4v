@@ -9,7 +9,7 @@
 theory Untyped_R
 imports Detype_R Invocations_R InterruptAcc_R
 begin
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 primrec
   untypinv_relation :: "Invocations_A.untyped_invocation \<Rightarrow>
@@ -1000,7 +1000,7 @@ locale mdb_insert_again =
 
 context mdb_insert_again
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemmas parent = mdb_ptr_parent.m_p
 lemmas site = mdb_ptr_site.m_p
 
@@ -1389,7 +1389,7 @@ crunch create_cap_ext
   and work_units_completed[wp]: "\<lambda>s. P (work_units_completed s)"
   (ignore_del: create_cap_ext)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma updateNewFreeIndex_noop_psp_corres:
   "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False True
@@ -1700,7 +1700,7 @@ locale mdb_insert_again_all = mdb_insert_again_child +
   fixes n'
   defines "n' \<equiv> modify_map n (mdbNext parent_node) (cteMDBNode_update (mdbPrev_update (\<lambda>a. site)))"
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemma no_0_n' [simp]: "no_0 n'"
   using no_0_n by (simp add: n'_def)
 
@@ -2661,7 +2661,7 @@ lemma caps_overlap_reserved'_D:
    apply (erule(2) impE)
   apply fastforce
   done
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemma insertNewCap_valid_mdb:
   "\<lbrace>valid_mdb' and valid_objs' and K (slot \<noteq> p) and
     caps_overlap_reserved' (untypedRange cap) and
@@ -3884,7 +3884,7 @@ lemma cte_wp_at': "cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap
       "\<forall>x\<in>set slots. ex_cte_cap_wp_to' (\<lambda>_. True) x s"
   using vui
   by (auto simp: cte_wp_at_ctes_of)
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma idx_cases:
   "((\<not> reset \<and> idx \<le> unat (ptr - (ptr && ~~ mask sz))) \<or> reset \<and> ptr = ptr && ~~ mask sz)"
@@ -4028,7 +4028,7 @@ lemma idx_le_new_offs:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch deleteObjects
   for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -4179,7 +4179,7 @@ lemma ex_tupI:
   "P (fst x) (snd x) \<Longrightarrow> \<exists>a b. P a b"
   by blast
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 (* mostly stuff about PPtr/fromPPtr, which seems pretty soft *)
 
 lemma resetUntypedCap_corres:
@@ -4414,7 +4414,7 @@ lemma ex_cte_cap_wp_to_irq_state_independent_H[simp]:
   "irq_state_independent_H (ex_cte_cap_wp_to' P slot)"
   by (simp add: ex_cte_cap_wp_to'_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma updateFreeIndex_ctes_of:
   "\<lbrace>\<lambda>s.  P (modify_map (ctes_of s) ptr (cteCap_update (capFreeIndex_update (\<lambda>_. idx))))\<rbrace>
@@ -4636,7 +4636,7 @@ lemma (in range_cover) funky_aligned:
   apply simp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 defs archOverlap_def:
   "archOverlap \<equiv> \<lambda>_ _. False"

@@ -8,7 +8,7 @@ theory ArchEmptyFail_AI
 imports EmptyFail_AI
 begin
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 named_theorems EmptyFail_AI_assms
 
@@ -33,7 +33,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 crunch handle_fault
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -123,7 +123,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 crunch vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
   for (empty_fail) empty_fail[wp]
@@ -158,7 +158,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 crunch
   cap_delete, choose_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -182,7 +182,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM_HYP
+context Arch begin arch_global_naming
 
 lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
   by (wpsimp simp: get_gic_vcpu_ctrl_eisr0_def

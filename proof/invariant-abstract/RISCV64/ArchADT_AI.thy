@@ -11,7 +11,7 @@ imports
   "Lib.Simulation"
   Invariants_AI
 begin
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 subsection \<open>Constructing a virtual-memory view\<close>
 

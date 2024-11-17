@@ -21,7 +21,7 @@ lemma koTypeOf_injectKO:
   apply (simp add: project_koType[symmetric])
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_modify_variable_size:
   fixes v :: "'a :: pspace_storable" shows
@@ -94,7 +94,7 @@ end
 translations
   (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma no_fail_loadObject_default [wp]:
   "no_fail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and>
@@ -1035,7 +1035,7 @@ lemma obj_relation_cut_same_type:
                     pte_relation_def pde_relation_def
              split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
-                    ARM_A.arch_kernel_obj.split_asm arch_kernel_object.split_asm)
+                    ARM_HYP_A.arch_kernel_obj.split_asm arch_kernel_object.split_asm)
   done
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"

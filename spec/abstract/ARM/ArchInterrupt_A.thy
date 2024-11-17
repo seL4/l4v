@@ -14,7 +14,7 @@ theory ArchInterrupt_A
 imports Ipc_A
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming (A)
 
 definition handle_reserved_irq :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
   where "handle_reserved_irq irq = return ()"

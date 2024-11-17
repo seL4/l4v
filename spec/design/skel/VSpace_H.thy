@@ -15,14 +15,10 @@ imports
   KernelInitMonad_H
 begin
 
-context begin interpretation Arch .
-requalify_consts
+arch_requalify_consts (H)
   mapKernelWindow
   activateGlobalVSpace
-  initL2Cache
   initIRQController
-  configureTimer
-
   createIPCBufferFrame
   createBIFrame
   createFramesOfRegion
@@ -36,7 +32,6 @@ requalify_consts
   checkValidIPCBuffer
   lookupIPCBuffer
   vptrFromPPtr
-end
 
 #INCLUDE_HASKELL SEL4/Kernel/VSpace.lhs Arch= ONLY initKernelVM initPlatform initCPU
 

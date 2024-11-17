@@ -8,7 +8,7 @@ theory ArchEmptyFail_AI
 imports EmptyFail_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems EmptyFail_AI_assms
 
@@ -28,7 +28,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 crunch possible_switch_to,set_thread_state_act
  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -121,7 +121,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma empty_fail_pt_lookup_from_level[wp]:
   "empty_fail (pt_lookup_from_level level pt_ptr vptr target_pt_ptr)"
@@ -156,7 +156,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 crunch
   cap_delete, choose_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
@@ -175,7 +175,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 crunch read_stval
   for (empty_fail) empty_fail[wp]

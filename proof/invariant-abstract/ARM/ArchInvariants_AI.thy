@@ -24,7 +24,7 @@ end_qualify
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "ARM-specific invariant definitions"
 
-qualify ARM_A (in Arch)
+qualify ARM (in Arch)
 (* ARM has no interest for iarch_tcb (introduced for ARM_HYP) ,
     and we consider no non-trivial predicates of iarch_tcb,
     so an unspecified typedecl seems appropriate.
@@ -34,7 +34,7 @@ qualify ARM_A (in Arch)
 typedecl iarch_tcb
 end_qualify
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
@@ -450,16 +450,15 @@ definition "second_level_tables \<equiv> arch_state.arm_global_pts"
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup
 
 abbreviation
   vs_lookup_abbr
   ("_ \<rhd> _" [80,80] 81) where
   "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 abbreviation
   is_reachable_abbr :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd> _" [80] 81) where
@@ -534,9 +533,8 @@ where
 
 end
 
-context begin interpretation Arch .
-requalify_consts vs_lookup_pages
-end
+(* needed for abbreviation *)
+arch_requalify_consts vs_lookup_pages
 
 abbreviation
   vs_lookup_pages_abbr
@@ -548,7 +546,7 @@ abbreviation
   "\<exists>\<unrhd> p \<equiv> \<lambda>s. \<exists>ref. (ref \<unrhd> p) s"
 
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 definition
   "vspace_obj_fun_lift P F c \<equiv> case c of
@@ -1349,7 +1347,7 @@ lemma valid_vspace_objs_update' [iff]:
 
 end
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"
@@ -2167,7 +2165,7 @@ lemma vs_cap_ref_eq_imp_table_cap_ref_eq:
                   arch_cap_fun_lift_def
           split: cap.splits arch_cap.splits vmpage_size.splits option.splits)
 
-lemma acap_rights_update_id [intro!, simp]:
+lemma wf_acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
   by (auto split: arch_cap.splits)

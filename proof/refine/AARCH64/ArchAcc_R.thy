@@ -15,7 +15,7 @@ begin
 
 unbundle l4v_word_context
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare if_cong[cong] (* FIXME: if_cong *)
 

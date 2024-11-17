@@ -77,7 +77,7 @@ lemma koTypeOf_injectKO:
   apply (simp add: project_koType[symmetric])
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_modify_variable_size:
   fixes v :: "'a :: pspace_storable" shows

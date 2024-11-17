@@ -9,16 +9,24 @@ theory Invariants_AI
 imports ArchInvariants_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_types
+arch_requalify_types
   iarch_tcb
 
-requalify_consts
+arch_requalify_consts (A)
+  arch_cap_is_device
+  ASIDPoolObj
+
+(* we need to know the sizes of arch objects in the generic context *)
+arch_requalify_facts (A)
+  cte_level_bits_def
+  tcb_bits_def
+  endpoint_bits_def
+  ntfn_bits_def
+
+arch_requalify_consts
   not_kernel_window
   global_refs
   arch_obj_bits_type
-  arch_cap_is_device
   is_nondevice_page_cap
   state_hyp_refs_of
   hyp_refs_of
@@ -45,8 +53,6 @@ requalify_consts
   valid_global_vspace_mappings
   pspace_in_kernel_window
 
-  ASIDPoolObj
-
   last_machine_time
   time_state
 
@@ -62,7 +68,7 @@ requalify_consts
   vs_lookup
   vs_lookup_pages
 
-requalify_facts
+arch_requalify_facts
   valid_arch_sizes
   aobj_bits_T
   valid_arch_cap_def2
@@ -77,7 +83,7 @@ requalify_facts
   valid_arch_state_lift
   aobj_at_default_arch_cap_valid
   aobj_ref_default
-  acap_rights_update_id
+  wf_acap_rights_update_id
   physical_arch_cap_has_ref
   wellformed_arch_default
   valid_vspace_obj_default'
@@ -98,12 +104,13 @@ requalify_facts
   wellformed_arch_typ
   valid_arch_tcb_pspaceI
   valid_arch_tcb_lift
-  cte_level_bits_def
   obj_ref_not_arch_gen_ref
   arch_gen_ref_not_obj_ref
   arch_gen_obj_refs_inD
   same_aobject_same_arch_gen_refs
   valid_arch_mdb_eqI
+  iarch_tcb_context_set
+  iarch_tcb_set_registers
   valid_sc_size_less_word_bits
   kernelWCET_us_pos
 
@@ -115,12 +122,10 @@ lemmas x_bit_defs [simp] =
   iarch_tcb_context_set
   iarch_tcb_set_registers
 
-end
+lemmas [intro!] = idle_global idle_sc_global wf_acap_rights_update_id
 
-lemmas [intro!] =  idle_global idle_sc_global acap_rights_update_id
-
-lemmas [simp] =  acap_rights_update_id state_hyp_refs_update idle_ptrs_neq
-                 tcb_arch_ref_simps hyp_live_tcb_simps hyp_refs_of_simps
+lemmas [simp] = wf_acap_rights_update_id state_hyp_refs_update idle_ptrs_neq
+                tcb_arch_ref_simps hyp_live_tcb_simps hyp_refs_of_simps
 
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
@@ -2111,17 +2116,13 @@ lemma cte_wp_at_pspaceI:
   "\<lbrakk> cte_wp_at P slot s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> cte_wp_at P slot s'"
   by (simp add: cte_wp_at_cases)
 
-context Arch begin
-lemma valid_arch_cap_pspaceI:
+(* generic consequence of architecture-specific details *)
+lemma (in Arch) valid_arch_cap_pspaceI:
   "\<lbrakk> valid_arch_cap acap s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap acap s'"
   unfolding valid_arch_cap_def
   by (auto intro: obj_at_pspaceI split: arch_cap.split)
-end
 
-context begin interpretation Arch .
-requalify_facts
-  valid_arch_cap_pspaceI
-end
+requalify_facts Arch.valid_arch_cap_pspaceI
 
 lemma valid_cap_pspaceI:
   "\<lbrakk> s \<turnstile> cap; kheap s = kheap s' \<rbrakk> \<Longrightarrow> s' \<turnstile> cap"
@@ -3635,11 +3636,11 @@ lemma valid_idle_lift:
 
 lemmas caps_of_state_valid_cap = cte_wp_valid_cap [OF caps_of_state_cteD]
 
-
+(* generic consequence of architecture-specific details *)
 lemma (in Arch) obj_ref_is_arch:
   "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> \<exists> ako. kheap s r = Some (ArchObj ako)"
-by (auto simp add: valid_arch_cap_def obj_at_def valid_arch_cap_ref_def split: arch_cap.splits if_splits)
-
+  by (auto simp: valid_arch_cap_def obj_at_def valid_arch_cap_ref_def
+           split: arch_cap.splits if_splits)
 
 requalify_facts Arch.obj_ref_is_arch
 
@@ -4036,7 +4037,7 @@ lemma invs_sym_refs [elim!]:
   "invs s \<Longrightarrow> sym_refs (state_refs_of s)"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
-lemma invs_hyp_sym_refs [elim!]: (* ARMHYP move and requalify *)
+lemma invs_hyp_sym_refs [elim!]:
   "invs s \<Longrightarrow> sym_refs (state_hyp_refs_of s)"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 

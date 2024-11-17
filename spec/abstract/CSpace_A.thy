@@ -19,9 +19,7 @@ imports
   "HOL-Library.Prefix_Order"
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (A)
   aobjs_of
   arch_update_cap_data
   arch_derive_cap
@@ -34,8 +32,6 @@ requalify_consts
   cnode_padding_bits
   cnode_guard_size_bits
   arch_is_cap_revocable
-
-end
 
 
 text \<open>This theory develops an abstract model of \emph{capability

@@ -12,7 +12,7 @@ theory Retype_R
 imports VSpace_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
   APIType_map2 :: "kernel_object + RISCV64_H.object_type \<Rightarrow> Structures_A.apiobject_type"
@@ -1163,7 +1163,7 @@ end
 global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
   by (simp add: PSpace_update_eq_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ksMachineState_update_gs[simp]:
   "ksMachineState (update_gs tp us addrs s) = ksMachineState s"
@@ -2699,9 +2699,9 @@ lemma corres_retype:
    by auto
 
 lemma init_arch_objects_APIType_map2:
-  "init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs =
+  "init_arch_objects (APIType_map2 (Inr ty)) dev ptr bits sz refs =
      (case ty of APIObjectType _ \<Rightarrow> return ()
-   | _ \<Rightarrow> init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs)"
+   | _ \<Rightarrow> init_arch_objects (APIType_map2 (Inr ty)) dev ptr bits sz refs)"
   apply (clarsimp split: RISCV64_H.object_type.split)
   apply (simp add: init_arch_objects_def APIType_map2_def
             split: apiobject_type.split)
@@ -2784,7 +2784,7 @@ locale retype_mdb = vmdb +
   defines "n \<equiv> \<lambda>p. if P p then Some makeObject else m p"
 begin
 
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 
 lemma no_0_n: "no_0 n"
   using no_0 by (simp add: no_0_def n_def 0)
@@ -3109,7 +3109,7 @@ lemma caps_no_overlapD'':
   apply blast
 done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma valid_untyped'_helper:
   assumes valid : "valid_cap' c s"
@@ -5505,7 +5505,7 @@ lemma createObjects_tcb_at':
   done
 
 lemma init_arch_objects_APIType_map2_noop:
-  "init_arch_objects (APIType_map2 tp) ptr n m addrs = return ()"
+  "init_arch_objects (APIType_map2 tp) dev ptr n m addrs = return ()"
   apply (simp add: init_arch_objects_def APIType_map2_def)
   done
 
@@ -5530,7 +5530,7 @@ lemma corres_retype_region_createNewCaps:
                   \<and> valid_pspace' s \<and> valid_arch_state' s
                   \<and> range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and> n\<noteq> 0)
             (do x \<leftarrow> retype_region y n us (APIType_map2 (Inr ty)) dev :: obj_ref list det_ext_monad;
-                init_arch_objects (APIType_map2 (Inr ty)) y n us x;
+                init_arch_objects (APIType_map2 (Inr ty)) dev y n us x;
                 return x od)
             (createNewCaps ty y n us dev)"
   apply (rule_tac F="range_cover y sz

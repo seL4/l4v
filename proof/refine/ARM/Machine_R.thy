@@ -22,32 +22,7 @@ lemma irq_state_independent_HI[intro!, simp]:
    \<Longrightarrow> irq_state_independent_H P"
   by (simp add: irq_state_independent_H_def)
 
-definition "getCurrentTime_independent_H (P :: kernel_state \<Rightarrow> bool)
-  \<equiv> \<forall>f s. P s \<longrightarrow>
-           P (s\<lparr>ksMachineState :=
-                       ksMachineState s\<lparr>last_machine_time :=
-                          f (last_machine_time (ksMachineState s)) (time_state (ksMachineState s))\<rparr>\<rparr>)"
-
-lemma getCurrentTime_independent_HI[intro!, simp]:
-   "\<lbrakk>\<And>s f.
-     P (s\<lparr>ksMachineState
-          := (ksMachineState s)\<lparr>last_machine_time :=
-                                f (last_machine_time (ksMachineState s)) (time_state (ksMachineState s))\<rparr>\<rparr>)
-     = P s\<rbrakk>
-    \<Longrightarrow> getCurrentTime_independent_H P"
-   by (simp add: getCurrentTime_independent_H_def)
-
-definition "time_state_independent_H (P :: kernel_state \<Rightarrow> bool)
-  \<equiv> \<forall>f s. P s \<longrightarrow>
-           P (s\<lparr>ksMachineState := ksMachineState s\<lparr>time_state := f (time_state (ksMachineState s))\<rparr>\<rparr>)"
-
-lemma time_state_independent_HI[intro!, simp]:
-   "\<lbrakk>\<And>s f. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>time_state := f (time_state (ksMachineState s))\<rparr>\<rparr>)
-            = P s\<rbrakk>
-    \<Longrightarrow> time_state_independent_H P"
-   by (simp add: time_state_independent_H_def)
-
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma dmo_getirq_inv[wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"

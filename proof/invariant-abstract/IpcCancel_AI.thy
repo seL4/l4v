@@ -8,15 +8,11 @@ theory IpcCancel_AI
 imports ArchSchedule_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_facts
+arch_requalify_facts
   arch_stit_invs
   arch_post_cap_deletion_pred_tcb_at
   arch_post_cap_deletion_cur_thread
   as_user_hyp_refs_of
-
-end
 
 declare arch_post_cap_deletion_pred_tcb_at[wp]
 declare as_user_hyp_refs_of[wp]

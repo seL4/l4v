@@ -11,7 +11,7 @@ begin
 
 unbundle l4v_word_context
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch unmapPageTable, unmapPageDirectory, unmapPDPT
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
@@ -1466,21 +1466,6 @@ lemma obj_at_pte_aligned:
   apply (clarsimp dest!:ko_at_is_aligned'
                   simp: objBits_simps archObjSize_def bit_simps
                   elim!: is_aligned_weaken)
-  done
-
-(* FIXME x64: dont know what these are for yet *)
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add:addrFromPPtr_def X64.pptrBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
-lemma addrFromPPtr_mask_6:
-  "addrFromPPtr ptr && mask (6::nat) = ptr && mask (6::nat)"
-  apply (simp add:addrFromPPtr_def X64.pptrBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
   done
 
 lemma cpde_relation_invalid:

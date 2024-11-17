@@ -8,11 +8,7 @@ theory Schedule_R
 imports SchedContext_R InterruptAcc_R
 begin
 
-crunch scReleased, getReprogramTimer, getCurTime, getRefills, getReleaseQueue, refillSufficient,
-         refillReady, isRoundRobin
-  for inv[wp]: P
-
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare hoare_weak_lift_imp[wp_split del]
 

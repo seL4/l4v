@@ -45,7 +45,7 @@ lemma setCTE_tcbContext:
   apply (rule setObject_cte_obj_at_tcb', simp_all)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setThreadState_tcbContext:
  "setThreadState st tptr \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"

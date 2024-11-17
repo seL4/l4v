@@ -26,7 +26,7 @@ crunch_ignore (add:
   emptyOnFailure clearMemoryVM null_cap_on_failure setNextPC getRestartPC assertDerived
   throw_on_false setObject getObject updateObject loadObject)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp

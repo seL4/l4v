@@ -8,16 +8,13 @@ theory CSpaceInvPre_AI
 imports ArchAcc_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   table_cap_ref
   empty_table
 
-requalify_facts
+arch_requalify_facts
   empty_table_def
   cur_tcb_more_update
-end
 
 declare cur_tcb_more_update[iff]
 
@@ -142,8 +139,9 @@ lemma empty_table_caps_of:
   "empty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
-context begin interpretation Arch .
-lemma free_index_update_test_function_stuff[simp]:
+(* FIXME arch_split: exports properties of functions that are not necessarily in global context,
+   and then they get placed in the global simpset *)
+lemma (in Arch) free_index_update_test_function_stuff[simp]:
   "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
   "gen_obj_refs (src_cap\<lparr>free_index := a\<rparr>) = gen_obj_refs src_cap"
   "vs_cap_ref (src_cap\<lparr>free_index := a\<rparr>) = vs_cap_ref src_cap"
@@ -153,6 +151,9 @@ lemma free_index_update_test_function_stuff[simp]:
   by (auto simp: cap_asid_def free_index_update_def vs_cap_ref_def
                  is_cap_simps gen_obj_refs_def
           split: cap.splits arch_cap.splits)
-end
+
+requalify_facts Arch.free_index_update_test_function_stuff
+
+lemmas [simp] = free_index_update_test_function_stuff
 
 end

@@ -16,7 +16,7 @@ theory ExampleSpec_SI
 imports SysInit.WellFormed_SI
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma object_slots_empty_object [simp]:
   "object_slots (Frame \<lparr>cdl_frame_size_bits = small_frame_size\<rparr>) slot = Some cap \<Longrightarrow> cap = NullCap"

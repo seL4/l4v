@@ -19,7 +19,7 @@ autocorres
     c_locale = kernel_all_substitute
   ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma ccorres_name_pre_C:
   "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
@@ -2744,7 +2744,7 @@ lemma vcpu_enable_ccorres:
    apply (rule_tac Q'="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
    apply wpsimp
   apply (clarsimp simp: typ_heap_simps' Collect_const_mem cvcpu_relation_def
-                        cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_def
+                        cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_val
          | rule conjI | simp)+
    apply (drule (1) vcpu_at_rf_sr)
    apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)

@@ -23,7 +23,7 @@ imports
   "AInvs.Rights_AI"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cap_has_object_NullCap [simp]:
   "\<not>cap_has_object NullCap"

@@ -15,15 +15,7 @@ imports
   "Lib.DataMap"
 begin
 
-context begin interpretation Arch .
-requalify_consts
-  fromPPtr
-  PPtr
-  freeMemory
-  storeWord
-  loadWord
-end
-
+(* Haskell expects this with Arch prefix *)
 requalify_consts (in Arch)
   deleteGhost
 

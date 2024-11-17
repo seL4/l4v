@@ -13,7 +13,7 @@ imports
   ArchHypervisor_H
 begin
 
-context Arch begin global_naming ARM_H
+context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs Arch= CONTEXT ARM_H bodies_only ArchInv=
 

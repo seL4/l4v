@@ -170,9 +170,8 @@ cacheInvalidateL2RangeCallback _ _ _ = return ()
 cacheCleanL2RangeCallback :: Ptr CallbackData -> PAddr -> PAddr -> IO ()
 cacheCleanL2RangeCallback _ _ _ = return ()
 
--- For the ARM1136
 cacheLine :: Int
-cacheLine = 32
+cacheLine = error "see Kernel_Config.thy"
 
 cacheLineBits :: Int
-cacheLineBits = 5
+cacheLineBits = error "see Kernel_Config.thy"

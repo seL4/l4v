@@ -13,13 +13,13 @@ imports
   StoreWord_C  DetWP
 begin
 
-(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+(*FIXME: arch-split: C kernel names hidden by Haskell names *)
 context kernel_m begin
 abbreviation "msgRegistersC \<equiv> kernel_all_substitute.msgRegisters"
 lemmas msgRegistersC_def = kernel_all_substitute.msgRegisters_def
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare word_neq_0_conv[simp del]
 
@@ -1201,7 +1201,7 @@ lemma getSyscallArg_ccorres_foo:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma invocation_eq_use_type:
   "\<lbrakk> value \<equiv> (value' :: 32 signed word);

@@ -111,7 +111,7 @@ theory Retype_R
 imports VSpace_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma placeNewObject_def2:
  "placeNewObject ptr val gb = createObjects' ptr 1 (injectKO val) gb"
@@ -151,11 +151,12 @@ want to prevent, however, inadvertent references to types, constants and facts
 which are only internal to a particular architecture (e.g. definitions of
 constants).
 
-To help achieve this hiding, we provide a custom command, **global_naming**,
-that modifies the way qualified names are generated. The primary use of
-`global_naming` is in architecture-specific theories, to ensure that by default,
-types, constants and lemmas are given an architecture-specific qualified name,
-even though they are part of the Arch locale.
+To help achieve this hiding, we provide the custom commands **global_naming**
+and **arch_global_naming**, which modify the way qualified names are generated.
+The primary use of these commands is in architecture-specific theories, to
+ensure that by default, types, constants and lemmas are given an
+architecture-specific qualified name, even though they are part of the Arch
+locale.
 
 - `l4v/proof/invariant-abstract/ARM/ArchADT_AI.thy`
 
@@ -169,6 +170,12 @@ begin
 
 context Arch begin global_naming ARM
 definition "get_pd_of_thread ≡ ..."
+end
+
+(* the more convenient and preferred way to achieve the above when L4V_ARCH=ARM
+   is to use arch_global_naming, spiritually equivalent to `global_naming $L4V_ARCH` *)
+context Arch begin arch_global_naming
+(* ... *)
 end
 
 (* Back in the global context, we can't refer to these names without naming a particular architecture! *)
@@ -192,8 +199,8 @@ architecture. If we saw such a reference in a generic theory, we would
 immediately recognise that something was wrong.
 
 The convention is that in architecture-specific theories, we initially
-give *all* types, constants and lemmas with an architecture-specific
-`global_naming` scheme. Then, in generic theories, we use
+give *all* types, constants and lemmas the architecture-specific
+`arch_global_naming` scheme. Then, in generic theories, we use
 *requalification* to selectively extract just those types, constants and
 facts which are expected to exist on all architectures.
 
@@ -204,8 +211,13 @@ We provide three custom commands for giving existing names new bindings
 in the global namespace: **requalify_types**, **requalify_consts**,
 **requalify_facts**, for types, constants and facts respectively. The
 new name is based on the context in which the requalification command is
-executed. We use requalification in various ways, depending on the
-situation.
+executed. As with `global_naming`, we provide `L4V_ARCH`-aware versions of
+these commands: **arch_requalify_types**, **arch_requalify_consts** and
+**arch_requalify_types**.
+
+To understand how these commands function, see `lib/test/Requalify_Test.thy`.
+
+We use requalification in various ways, depending on the situation.
 
 The most basic use is to take a name from the Arch context and make it
 available in the global context without qualification. This should be
@@ -220,7 +232,73 @@ done for any type, constant or fact:
    type, constant or fact, so that the unqualified name unambiguously denotes
    the architecture-specific concept for the current architecture.
 
-We do this in a generic theory:
+Note: the `[arch_]requalify_*` commands will warn when the unqualified name is
+already available in the global context (see: Dealing with name clashes). To
+suppress this warning, pass `(aliasing)` as the first parameter.
+
+
+### Requalifying in practice
+
+Let's use the generic theory `l4v/proof/invariant-abstract/ADT_AI.thy` as an
+example:
+
+```isabelle
+theory ADT_AI
+imports
+  "./$L4V_ARCH/ArchADT_AI"
+begin
+
+term empty_context (* Free variable. *)
+```
+
+The constant `empty_context` is not visible in the theory scope, as it was
+defined inside the Arch locale, likely with `arch_global_naming`, thus visible
+as (for example) `ARM.empty_context`. We want to make this constant available
+to generic proofs. The obvious way to do this is:
+
+```isabelle
+requalify_consts ARM.empty_context (* avoid: can only be done in Arch theories *)
+```
+
+Unfortunately, on another platforms such as RISCV64, the constant will have a
+different qualified name. We can instead appeal to `L4V_ARCH` again, since we
+already rely on it to select the correct theories for the current architecture:
+
+```isabelle
+arch_requalify_consts empty_context (* preferred *)
+
+(* The requalified constant is now available unqualified in the global context. *)
+term empty_context
+
+(* However, its definition is not. *)
+thm empty_context_def (* ERROR *)
+```
+
+In some cases, consts/types/facts may be thrown into the `Arch` context without
+further qualification. In such cases, normal requalification may be used:
+
+```isabelle
+requalify_consts Arch.empty_context (* standard locale version, likely due to missing global_naming *)
+```
+
+
+### Requalifying inside "Arch" theories
+
+While requalifying inside `Arch*` theories is possible, as seen above, it
+requires duplicating the requalify command(s) on every architecture, and so
+should be avoided. However, it is not always possible to conveniently do so,
+particularly when defining constants inside `Arch`, then having to use those
+constants to instantiate locales, before heading back into the `Arch` context.
+
+
+### Requalifying via interpretation (slow)
+
+Using `arch_requalify_*` commands still implicitly appeals to the name of the
+architecture while in a generic theory. This has the advantage of being fast and
+thus is preferred, but we describe the old interpretation method here for
+reference (for dealing with older theories or older repository versions).
+
+We can do this in a generic theory:
 
 - `l4v/proof/invariant-abstract/ADT_AI.thy`
 
@@ -261,41 +339,51 @@ available unqualified until the end of the context block. Indeed, in this case,
 the only purpose of the anonymous context block is to limit the scope of this
 `interpretation`.
 
-Note: It is critical to the success of arch_split that we *never* interpret the
+Note: It is critical to the success of arch-split that we *never* interpret the
 Arch locale, *except* inside an appropriate context block.
 
-In a generic theory, we typically only interpret the Arch locale:
+In a generic theory, we typically only interpret the Arch locale to keep
+existing proofs checking until we find time to factor out the
+architecture-dependent parts. The `.` in `context begin interpretation Arch .`
+in the middle of AInvs takes 7.5s, so repeated use of this technique should be
+avoided when possible.
 
-- to requalify names with no qualifier, or
-
-- to keep existing proofs checking until we find time to factor out the
-  architecture-dependent parts.
 
 
-### Unconventional requalification shortcut
+### Requalifying into the Arch locale
 
-While the expected convention is to perform requalify commands in the generic
-theory as described above, there exists a shortcut for doing so in
-architecture-specific theories when outside the Arch context:
+The `requalify` commands support a target parameter, e.g.
 
 ```isabelle
-requalify_facts
-  ARM.user_mem_dom_cong
-
-thm user_mem_dom_cong      (* ok *)
-thm ARM.user_mem_dom_cong  (* ok *)
-thm Arch.user_mem_dom_cong (* ERROR *)
+requalify_facts (in Arch) user_mem_dom_cong
 ```
 
-This immediately makes the fact available in the global context. While it is a
-violation of expected conventions and needs to be repeated in every
-arch-specific theory file, there is one important difference:
-* the `.` in `context begin interpretation Arch .` in the middle of AInvs takes 7.5s
-* `requalify_facts` in the global context is nearly instant (even for
-multiple facts).
+Which prevents exporting the name into the global theory context, exporting it
+under `Arch.` instead:
 
-This disparity will only get worse as the Arch context grows bigger, and
-might indicate the need for some alternative functionality.
+```isabelle
+thm user_mem_dom_cong      (* ERROR *)
+thm ARM.user_mem_dom_cong  (* ok *)
+thm Arch.user_mem_dom_cong (* ok *)
+```
+
+Generally, we want to avoid unprefixed names in the Arch locale, preferring to
+use a `global_naming` to generate a prefix instead. However, when the generic
+and arch-specific short names are identical, this functionality allows giving
+an architecture-specific constant/type/fact a generic name while not mixing it
+with generic namespace (see also "Dealing with name clashes", as this affects
+lookup order inside interpretations).
+
+One can target any locale in this fashion, although the usefulness to arch-split
+is then decreased, since short names might not be visible past a naming prefix:
+
+```isabelle
+requalify_facts (in Some_Locale) ARM.user_mem_dom_cong
+
+thm user_mem_dom_cong             (* ERROR *)
+thm ARM.user_mem_dom_cong         (* ok *)
+thm Some_Locale.user_mem_dom_cong (* ok *)
+```
 
 
 ### Dealing with name clashes
@@ -327,7 +415,7 @@ term deriveCap               (* In the Arch context, this is the deriveCap funct
 term RetypeDecls_H.deriveCap (* This is the arch-generic deriveCap function. *)
 
 (* The following makes Arch.deriveCap refer to the architecture-specific constant. *)
-requalify_consts deriveCap
+requalify_consts deriveCap   (* Warning: Name "deriveCap" already exists in theory context *)
 
 (* Unfortunately, the above also means that in a context in which Arch is interpreted,
   `deriveCap` unqualified would refer to the arch-specific constant, which may break existing proofs.
@@ -406,7 +494,16 @@ Haskell specs. We use `ARM` everywhere else. This means that the arch-specific
 references only require either an `ARM_A` or `ARM_H` qualifier. No theory
 qualifier is required, and the result is more robust to theory reorganisation.
 
-In the future, when we are properly splitting the refinement proofs, we will may
+Requalification of consts/types/facts from these prefixes should be done as
+follows:
+
+```isabelle
+arch_requalify_const some_const (* requalifies ARM.some_const *)
+arch_requalify_const (A) some_const (* requalifies ARM_A.some_const *)
+arch_requalify_const (H) some_const (* requalifies ARM_H.some_const *)
+```
+
+In the future, when we are properly splitting the refinement proofs, we may
 want to extend this approach by introducing `Arch_A` and `Arch_H`
 `global_naming` schemes to disambiguate overloaded requalified names.
 
@@ -649,6 +746,39 @@ generates limited duplication: a fact from `Foo_AI_1` will be duplicated in
 `Foo_AI_2`, but not in `Foo_AI_3+`.
 
 
+### Temporarily proving a fact in the Arch locale
+
+The concept of "generic consequences of architecture-specific properties" shows
+up in a few places. Normally, as outlined above, we prefer either exporting
+enough facts to prove the property in the generic context or requiring the
+property as a locale assumption. However, sometimes we end up in a situation
+where the same proof will work on all architectures and spelling it out with
+locale assumptions is inconvenient. For example (from `Invariants_AI`):
+
+```isabelle
+(* generic consequence of architecture-specific details *)
+lemma (in Arch) valid_arch_cap_pspaceI:
+  "⟦ valid_arch_cap acap s; kheap s = kheap s' ⟧ ⟹ valid_arch_cap acap s'"
+  unfolding valid_arch_cap_def
+  by (auto intro: obj_at_pspaceI split: arch_cap.split)
+
+requalify_facts Arch.valid_arch_cap_pspaceI
+```
+
+In this case, no matter what the architecture, the `valid_arch_cap` function
+will only ever look at the heap, so this proof will always work.
+
+There are some considerations when using this strategy:
+
+1. We use the Arch locale without `global_naming`, as its performance is better
+   than entering the Arch locale and proving the lemma there. This means its
+   qualified name will be `Arch.valid_arch_cap_pspaceI`, but this is acceptable
+   since:
+2. The lemma is immediately requalified into the generic context, so we never
+   really want to use its qualified name again.
+3. This technique is rarely used, *use sparingly*!
+
+
 ## Qualifying non-locale-compatible commands
 
 Generally speaking, architecture-specific definitions and lemmas should
@@ -739,7 +869,7 @@ The workflow:
     intra-theory dependencies" above.
 
 - Look in the generic theory for a block of the form
-  `context Arch begin (* FIXME: arch_split *) ... end`.
+  `context Arch begin (* FIXME: arch-split *) ... end`.
 
   - These indicate things that we've previously classified as belonging in an
     arch-specific theory.
@@ -751,7 +881,7 @@ The workflow:
 - Look for subsequent breakage in the generic theory.
 
   - If this is in a subsequent Arch block (`context Arch begin (* FIXME:
-    arch_split *) ... end`), just move that block.
+    arch-split *) ... end`), just move that block.
 
   - Otherwise, if it's not obvious what to do, have a conversation with someone.
     We'll add more tips here as the process becomes clearer.

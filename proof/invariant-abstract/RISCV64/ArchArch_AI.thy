@@ -11,7 +11,7 @@ begin
 
 unbundle l4v_word_context
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 definition
   "valid_aci aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>
@@ -438,7 +438,7 @@ lemma equal_kernel_mappings:
 end
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_pool_at ap s \<longrightarrow>
@@ -1349,19 +1349,11 @@ end
 
 context begin interpretation Arch .
 
-requalify_consts
-  valid_arch_inv
-
 requalify_facts
-  invoke_arch_tcb
-  invoke_arch_invs
-  sts_valid_arch_inv
-  arch_decode_inv_wf
-  arch_pinv_st_tcb_at
   arch_pinv_ct_active
 
 end
 
-lemmas [wp] = invoke_arch_invs arch_decode_inv_wf arch_pinv_ct_active
+lemmas [wp] = arch_pinv_ct_active
 
 end

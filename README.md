@@ -6,13 +6,13 @@
 
 [![DOI][0]](http://dx.doi.org/10.5281/zenodo.591732)
 [![CI](https://github.com/seL4/l4v/actions/workflows/push.yml/badge.svg)](https://github.com/seL4/l4v/actions/workflows/push.yml)
-[![Proofs](https://github.com/seL4/l4v/actions/workflows/proof-deploy.yml/badge.svg)](https://github.com/seL4/l4v/actions/workflows/proof-deploy.yml)
+[![Proofs](https://github.com/seL4/l4v/actions/workflows/proof-deploy.yml/badge.svg?branch=master)](https://github.com/seL4/l4v/actions/workflows/proof-deploy.yml?query=branch%3Amaster)
 [![Weekly Clean](https://github.com/seL4/l4v/actions/workflows/weekly-clean.yml/badge.svg)](https://github.com/seL4/l4v/actions/workflows/weekly-clean.yml)
 [![External](https://github.com/seL4/l4v/actions/workflows/external.yml/badge.svg)](https://github.com/seL4/l4v/actions/workflows/external.yml)
 
 MCS:\
 [![CI](https://github.com/seL4/l4v/actions/workflows/push.yml/badge.svg?branch=rt)](https://github.com/seL4/l4v/actions/workflows/push.yml)
-[![RT Proofs](https://github.com/seL4/l4v/actions/workflows/proof.yml/badge.svg?branch=rt)](https://github.com/seL4/l4v/actions/workflows/proof.yml)
+[![MCS Proofs](https://github.com/seL4/l4v/actions/workflows/proof-deploy.yml/badge.svg?branch=rt)](https://github.com/seL4/l4v/actions/workflows/proof-deploy.yml?query=branch%3Art)
 
   [0]: https://zenodo.org/badge/doi/10.5281/zenodo.591732.svg
 
