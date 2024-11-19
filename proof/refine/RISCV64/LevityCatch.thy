@@ -22,7 +22,7 @@ lemma magnitudeCheck_assert:
   "magnitudeCheck x y n = assert (case y of None \<Rightarrow> True | Some z \<Rightarrow> 1 << n \<le> z - x)"
   by (simp add: magnitudeCheck_def read_magnitudeCheck_assert)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
   makeObject_tcb makeObject_user_data makeObject_pte
@@ -60,7 +60,7 @@ lemma updateObject_default_inv:
   unfolding updateObject_default_def
   by (simp, wp magnitudeCheck_inv alignCheck_inv projectKO_inv, simp)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma to_from_apiType [simp]: "toAPIType (fromAPIType x) = Some x"
   by (cases x) (auto simp add: fromAPIType_def RISCV64_H.fromAPIType_def

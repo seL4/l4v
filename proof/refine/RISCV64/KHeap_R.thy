@@ -564,7 +564,7 @@ local
     @{typ reply},
     @{typ endpoint},
 
-    (*FIXME: arch_split*)
+    (*FIXME: arch-split*)
     @{typ asidpool},
     @{typ pte}
   ];
@@ -653,7 +653,7 @@ lemma setObject_typ_at'[wp]:
 global_interpretation setObject: typ_at_all_props' "setObject p v"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_cte_wp_at2':
   assumes x: "\<And>x n tcb s t. \<lbrakk> t \<in> fst (updateObject v (KOTCB tcb) ptr x n s); Q s;
@@ -2865,7 +2865,7 @@ interpretation setBoundNotification: pspace_only' "setBoundNotification ntfnPtr 
    by (simp add: setBoundNotification_def threadSet_pspace_only')
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas setNotification_cap_to'[wp]
     = ex_cte_cap_to'_pres [OF set_ntfn'.cte_wp_at' set_ntfn'.ksInterruptState]
@@ -3219,7 +3219,7 @@ crunch doMachineOp
   and idle'[wp]: "valid_idle'"
   and ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' T p s)"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
 
@@ -3434,7 +3434,7 @@ lemma ep_queued_st_tcb_at':
 
 (* cross lemmas *)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma pspace_aligned_cross:
   "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
@@ -4362,7 +4362,7 @@ lemma set_refills_is_active_sc2[wp]:
 
 (* updateSchedContext *)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* update wp rules without ko_at' *)
 lemma updateSchedContext_wp:

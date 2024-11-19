@@ -1579,7 +1579,7 @@ lemma no_fail_asUser [wp]:
     apply (wpsimp wp: hoare_drop_imps no_fail_threadGet)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma asUser_setRegister_corres:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
@@ -3349,7 +3349,7 @@ lemma threadGet_const:
   apply (clarsimp simp: obj_at'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 schematic_goal l2BitmapSize_def': (* arch specific consequence *)
   "l2BitmapSize = numeral ?X"

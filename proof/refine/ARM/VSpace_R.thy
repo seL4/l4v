@@ -1101,7 +1101,7 @@ sublocale Arch < loadHWASID: typ_at_all_props' "loadHWASID asid"
 sublocale Arch < setVMRootForFlush: typ_at_all_props' "setVMRootForFlush pd asid"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch setVMRootForFlush
   for aligned'[wp]: pspace_aligned'
@@ -1332,7 +1332,7 @@ sublocale Arch < flushPage: typ_at_all_props' "flushPage arg1 pd asid vptr"
 sublocale Arch < findPDForASID: typ_at_all_props' "findPDForASID asid"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch unmapPageTable
   for aligned'[wp]: "pspace_aligned'"
@@ -2054,7 +2054,7 @@ crunch setMRs
 global_interpretation setMRs: typ_at_all_props' "setMRs thread buffer data"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma set_mrs_invs'[wp]:
   "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
@@ -2360,7 +2360,7 @@ end
 sublocale Arch < unmapPageTable: typ_at_all_props' "unmapPageTable asid vaddr pt"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
@@ -2631,7 +2631,7 @@ sublocale Arch < performASIDPoolInvocation: typ_at_all_props' "performASIDPoolIn
 sublocale Arch < unmapPage: typ_at_all_props' "unmapPage magnitude asid vptr ptr"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma dmo_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> doMachineOp m \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"

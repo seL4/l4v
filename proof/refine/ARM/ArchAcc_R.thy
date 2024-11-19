@@ -1189,7 +1189,7 @@ end
 sublocale Arch < copyGlobalMappings: typ_at_all_props' "copyGlobalMappings newPD"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>

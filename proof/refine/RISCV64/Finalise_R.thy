@@ -88,7 +88,7 @@ crunch clearUntypedFreeIndex
 global_interpretation clearUntypedFreeIndex: typ_at_all_props' "clearUntypedFreeIndex slot"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch postCapDeletion
   for tcb_at'[wp]: "tcb_at' t"
@@ -2248,7 +2248,7 @@ lemma finaliseCap_cases[wp]:
   apply (auto simp add: isCap_simps cap_has_cleanup'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch finaliseCap
   for aligned'[wp]: pspace_aligned'
@@ -2402,7 +2402,7 @@ crunch replyRemove
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
   (simp: crunch_simps wp: crunch_wps)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch replyRemove, handleFaultReply
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
@@ -2682,7 +2682,7 @@ lemma finaliseCap_True_invs'[wp]:
     apply (wp irqs_masked_lift| simp | wpc)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = riscvKSASIDTable (ksArchState s) \<longrightarrow>
@@ -3914,7 +3914,7 @@ lemma finaliseCap_cte_cap_wp_to[wp]:
 global_interpretation unbindNotification: typ_at_all_props' "unbindNotification tcb"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma finaliseCap_valid_cap[wp]:
   "\<lbrace>valid_cap' cap\<rbrace> finaliseCap cap final flag \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
@@ -4559,7 +4559,7 @@ lemma can_fast_finalise_finaliseCap:
          = do finaliseCap cap final True; return (NullCap, NullCap) od"
   by (cases cap; simp add: finaliseCap_def isCap_simps)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma finaliseCap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
@@ -4662,7 +4662,7 @@ lemma threadSet_ct_idle_or_in_cur_domain':
   apply (auto simp: obj_at'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas final_matters'_simps = final_matters'_def [split_simps capability.split arch_capability.split]
 

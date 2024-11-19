@@ -2754,7 +2754,7 @@ end
 global_interpretation updateNewFreeIndex: typ_at_all_props' "updateNewFreeIndex slot"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma updateNewFreeIndex_valid_objs[wp]:
   "\<lbrace>valid_objs'\<rbrace> updateNewFreeIndex slot \<lbrace>\<lambda>_. valid_objs'\<rbrace>"

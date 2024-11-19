@@ -672,7 +672,7 @@ lemma deletionIsSafe_holds:
   and      vu: "valid_untyped (cap.UntypedCap d base bits idx) s"
   shows "deletionIsSafe base bits s'"
 proof -
-  interpret Arch . (* FIXME: arch_split *)
+  interpret Arch . (* FIXME: arch-split *)
   note [simp del] = atLeastAtMost_simps
 
   have arch:
@@ -1722,7 +1722,7 @@ lemma (in delete_locale) delete_sym_refs':
       state'))"
   (is "sym_refs (state_refs_of' (?state''))")
 proof -
-  interpret Arch . (*FIXME: arch_split*)
+  interpret Arch . (*FIXME: arch-split*)
   let ?s = state'
   let ?ran = base_bits
 

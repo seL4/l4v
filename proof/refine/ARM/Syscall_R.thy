@@ -549,7 +549,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
 crunch setThreadState
   for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' buf"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma sts_valid_inv'[wp]:
   "setThreadState st t \<lbrace>valid_invocation' i\<rbrace>"
@@ -1950,7 +1950,7 @@ end
 global_interpretation refillResetRR: typ_at_all_props' "refillResetRR scPtr"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma refillResetRR_invs'[wp]:
   "refillResetRR scp \<lbrace>invs'\<rbrace>"

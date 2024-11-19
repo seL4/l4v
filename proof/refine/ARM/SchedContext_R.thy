@@ -163,7 +163,7 @@ lemma updateSchedContext_invs'_indep:
   apply (frule (1) invs'_ko_at_valid_sched_context', simp)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma schedContextUpdateConsumed_corres:
  "corres (=) (sc_at scp) (sc_at' scp)
@@ -826,7 +826,7 @@ lemma readRefillReady_no_ofail[wp]:
   apply (wpsimp wp: no_ofail_readCurTime)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma get_sc_released_corres:
   "corres (=) (active_scs_valid and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)

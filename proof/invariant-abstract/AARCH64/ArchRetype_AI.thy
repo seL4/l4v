@@ -268,7 +268,7 @@ locale retype_region_proofs_arch
 
 context retype_region_proofs begin
 
-(* FIXME arch_split: is there any way to optimise this interpretation out? we can't nest contexts *)
+(* FIXME arch-split: is there any way to optimise this interpretation out? we can't nest contexts *)
 interpretation Arch .
 
 lemma valid_cap:

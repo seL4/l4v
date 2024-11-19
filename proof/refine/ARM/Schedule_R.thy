@@ -115,7 +115,7 @@ global_interpretation refillUpdate: typ_at_all_props' "refillUpdate  scPtr newPe
 global_interpretation updateSchedContext: typ_at_all_props' "updateSchedContext scPtr f"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma findM_awesome':
   assumes x: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow>

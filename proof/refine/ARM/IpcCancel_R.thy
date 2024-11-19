@@ -2971,7 +2971,7 @@ lemma setThreadState_unlive_other:
   apply (fastforce simp: ko_wp_at'_def obj_at'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma possibleSwitchTo_unlive_other:
   "\<lbrace>ko_wp_at' (Not \<circ> live') p and sch_act_not p and K (p \<noteq> t)\<rbrace>

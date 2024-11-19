@@ -377,7 +377,7 @@ lemma maskedAsFull_null_cap[simp]:
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
   by (case_tac x, auto simp:maskedAsFull_def isCap_simps )
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =
@@ -1079,7 +1079,7 @@ crunch transferCaps
 global_interpretation transferCaps: typ_at_all_props' "transferCaps info caps endpoint receiver receiveBuffer"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma isIRQControlCap_mask [simp]:
   "isIRQControlCap (maskCapRights R c) = isIRQControlCap c"
@@ -1181,7 +1181,7 @@ crunch copyMRs
 global_interpretation copyMRs: typ_at_all_props' "copyMRs s sb r rb n"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma copy_mrs_invs'[wp]:
   "\<lbrace> invs' and tcb_at' s and tcb_at' r \<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. invs' \<rbrace>"
@@ -1524,7 +1524,7 @@ lemma msgFromLookupFailure_map[simp]:
      = msg_from_lookup_failure lf"
   by (cases lf, simp_all add: lookup_failure_map_def msgFromLookupFailure_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma asUser_getRestartPC_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
@@ -1608,7 +1608,7 @@ lemmas threadget_fault_corres =
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch make_fault_msg
   for in_user_Frame[wp]: "in_user_frame buffer"
@@ -1738,7 +1738,7 @@ end
 global_interpretation doIPCTransfer: typ_at_all_props' "doIPCTransfer s e b g r"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas dit_irq_node'[wp] = valid_irq_node_lift [OF doIPCTransfer_irq_node' doIPCTransfer_typ_at']
 
@@ -1905,7 +1905,7 @@ crunch replyRemove, replyRemoveTCB, cancelSignal, cancelIPC, replyClear, cteDele
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (simp: crunch_simps wp: crunch_wps)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch handleFaultReply
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
@@ -2768,7 +2768,7 @@ global_interpretation maybeReturnSc: typ_at_all_props' "maybeReturnSc ntfnPtr tc
 global_interpretation setMessageInfo: typ_at_all_props' "setMessageInfo t info"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancel_ipc
   for cur[wp]: "cur_tcb"
@@ -5905,7 +5905,7 @@ lemma cteInsert_cap_to':
    apply (clarsimp simp: cte_wp_at_ctes_of)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch setExtraBadge, doIPCTransfer
   for cap_to'[wp]: "ex_nonz_cap_to' p"

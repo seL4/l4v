@@ -951,7 +951,7 @@ lemma updateMDB_no_0 [wp]:
   \<lbrace>\<lambda>rv s. no_0 (ctes_of s)\<rbrace>"
   by wp simp
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma isMDBParentOf_next_update [simp]:
   "isMDBParentOf (cteMDBNode_update (mdbNext_update f) cte) cte' =

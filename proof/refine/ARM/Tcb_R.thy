@@ -1091,7 +1091,7 @@ termination recursive
   apply simp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cte_map_tcb_0:
   "cte_map (t, tcb_cnode_index 0) = t"

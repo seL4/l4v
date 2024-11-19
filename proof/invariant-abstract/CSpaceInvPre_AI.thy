@@ -139,7 +139,7 @@ lemma empty_table_caps_of:
   "empty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
-(* FIXME arch_split: exports properties of functions that are not necessarily in global context,
+(* FIXME arch-split: exports properties of functions that are not necessarily in global context,
    and then they get placed in the global simpset *)
 lemma (in Arch) free_index_update_test_function_stuff[simp]:
   "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"

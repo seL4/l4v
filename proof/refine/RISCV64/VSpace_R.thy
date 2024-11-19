@@ -300,7 +300,7 @@ sublocale Arch < performASIDPoolInvocation: typ_at_all_props' "performASIDPoolIn
 sublocale Arch < performPageInvocation: typ_at_all_props' "performPageInvocation iv"
   by typ_at_props'
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma getObject_PTE_corres'':
   assumes "p' = p"

@@ -926,7 +926,7 @@ abbreviation
 abbreviation
   "revokable' a b \<equiv> global.isCapRevocable b a"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare arch_is_cap_revocable_def[simp] ARM_H.isCapRevocable_def[simp]
 

@@ -448,7 +448,7 @@ end
 
 locale detype_locale' = detype_locale + constrains s::"det_state"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 text \<open>Invariant preservation across concrete deletion\<close>
 
@@ -503,7 +503,7 @@ locale delete_locale =
 
 context delete_locale
 begin
-interpretation Arch . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch-split*)
 lemma  valid_objs: "valid_objs' s'"
   and    vreplies: "valid_replies' s'"
   and      pspace: "valid_pspace' s'"
@@ -717,7 +717,7 @@ lemma deletionIsSafe_holds:
   and     vu: "valid_untyped (cap.UntypedCap d base bits idx) s"
   shows "deletionIsSafe base bits s'"
 proof -
-  interpret Arch . (* FIXME: arch_split *)
+  interpret Arch . (* FIXME: arch-split *)
 
   have arch: "\<And> ko p. \<lbrakk> ksPSpace s' p = Some (KOArch ko); p \<in> {base..base + 2 ^ bits - 1} \<rbrakk>
                        \<Longrightarrow> 6 \<le> bits"

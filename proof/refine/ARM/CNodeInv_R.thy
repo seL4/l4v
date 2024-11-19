@@ -6512,7 +6512,7 @@ lemma cteDelete_sch_act_simple:
     apply simp+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete,
          schedContextMaybeUnbindNtfn, cleanReply
@@ -6880,7 +6880,7 @@ lemmas rec_del_concrete_unfold
   = rec_del_concrete.simps red_zombie_will_fail.simps
     if_True if_False ball_simps simp_thms
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cap_relation_removables:
   "\<lbrakk> cap_relation cap cap'; isNullCap cap' \<or> isZombie cap';
@@ -6945,7 +6945,7 @@ lemmas finaliseSlot_typ_ats[wp] = typ_at_lifts[OF finaliseSlot_typ_at']
 lemmas rec_del_valid_list_irq_state_independent[wp] =
   rec_del_preservation[OF cap_swap_for_delete_valid_list set_cap_valid_list empty_slot_valid_list finalise_cap_valid_list preemption_point_valid_list]
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma rec_del_corres:
   "\<forall>C \<in> rec_del_concrete args.
@@ -8631,7 +8631,7 @@ lemmas finalise_slot_corres'
                      simplified, folded finalise_slot_def] for slot exp
 lemmas finalise_slot_corres = use_spec_corres [OF finalise_slot_corres']
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cap_relation_same:
   "\<lbrakk> cap_relation cap cap'; cap_relation cap cap'' \<rbrakk>
