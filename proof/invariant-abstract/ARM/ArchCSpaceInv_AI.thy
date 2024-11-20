@@ -14,24 +14,6 @@ begin
 
 context Arch begin arch_global_naming
 
-definition
-   safe_ioport_insert :: "cap \<Rightarrow> cap \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
-where
-  "safe_ioport_insert newcap oldcap s \<equiv> True"
-
-declare safe_ioport_insert_def[simp]
-
-lemma safe_ioport_insert_triv:
-  "\<not>is_arch_cap newcap \<Longrightarrow> safe_ioport_insert newcap oldcap s"
-  by clarsimp
-
-lemma set_cap_ioports':
- "\<lbrace>\<lambda>s. valid_ioports s
-      \<and> cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) ptr s\<rbrace>
-    set_cap cap ptr
-  \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
-
 lemma unique_table_refs_no_cap_asidE:
   "\<lbrakk>caps_of_state s p = Some cap;
     unique_table_refs (caps_of_state s)\<rbrakk>
@@ -47,6 +29,10 @@ lemma unique_table_refs_no_cap_asidE:
 
 lemmas unique_table_refs_no_cap_asidD
      = unique_table_refs_no_cap_asidE[where S="{}"]
+
+lemma set_cap_valid_arch_state[wp]:
+  "set_cap cap ptr \<lbrace> valid_arch_state \<rbrace>"
+  by (wp valid_arch_state_lift_aobj_at_no_caps set_cap.aobj_at)
 
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s

@@ -437,7 +437,7 @@ lemma cap_swap_cap_refs_in_kernel_window[wp, CNodeInv_AI_assms]:
 
 
 lemma cap_swap_vms[wp, CNodeInv_AI_assms]:
-  "\<lbrace>valid_machine_state\<rbrace>  cap_swap c a c' b \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
+  "\<lbrace>valid_machine_state\<rbrace> cap_swap c a c' b \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
   apply (simp add: valid_machine_state_def in_user_frame_def)
   apply (wp cap_swap_typ_at
             hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_disj_lift)
@@ -534,11 +534,11 @@ lemma prepare_thread_delete_thread_cap [CNodeInv_AI_assms]:
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
   by (wpsimp simp: prepare_thread_delete_def)
 
-lemma cap_swap_ioports[wp, CNodeInv_AI_assms]:
-  "\<lbrace>valid_ioports and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
-     cap_swap c a c' b
-   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
+lemma cap_swap_valid_arch_state[wp, CNodeInv_AI_assms]:
+  "\<lbrace>valid_arch_state and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+   cap_swap c a c' b
+   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_swap_aobj_at)
 
 end
 
@@ -557,7 +557,7 @@ context Arch begin arch_global_naming
 
 lemma post_cap_delete_pre_is_final_cap':
   "\<And>rv s'' rva s''a s.
-       \<lbrakk>valid_ioports s; caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
+       \<lbrakk> caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
        \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) ((caps_of_state s)(slot \<mapsto> NullCap))"
   apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def post_cap_delete_pre_def arch_cap_cleanup_opt_def
                       split: cap.split_asm if_split_asm

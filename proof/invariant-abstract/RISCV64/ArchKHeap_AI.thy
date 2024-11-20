@@ -584,13 +584,21 @@ lemma aobjs_of_lift_aobj_at:
   apply (simp flip: aobjs_of_ako_at_Some)
   done
 
-lemma valid_arch_state_lift_aobj_at:
+(* intended for use inside Arch, as opposed to the interface lemma valid_arch_state_lift_aobj_at,
+   since this architecture does not need cap preservation for valid_arch_state *)
+lemma valid_arch_state_lift_aobj_at_no_caps:
   "f \<lbrace>valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def pt_at_eq
   apply (wp_pre, wps arch aobjs_of_lift_aobj_at)
    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)
   apply simp
   done
+
+(* interface lemma *)
+lemma valid_arch_state_lift_aobj_at:
+  assumes caps: "\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  shows "f \<lbrace>valid_arch_state\<rbrace>"
+  by (rule valid_arch_state_lift_aobj_at_no_caps)
 
 end
 end
@@ -764,14 +772,6 @@ lemma valid_arch_tcb_same_type:
   "\<lbrakk> valid_arch_tcb t s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   by (auto simp: valid_arch_tcb_def obj_at_def)
-
-
-(* interface lemma *)
-lemma valid_ioports_lift:
-  assumes x: "\<And>P. f \<lbrace>\<lambda>rv. P (caps_of_state s)\<rbrace>"
-  assumes y: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
-  shows      "f \<lbrace>valid_ioports\<rbrace>"
-  by wpsimp
 
 (* interface lemma *)
 lemma valid_arch_mdb_lift:
