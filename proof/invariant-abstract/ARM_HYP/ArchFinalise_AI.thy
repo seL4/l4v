@@ -2445,10 +2445,6 @@ lemma (* zombie_cap_two_nonidles *)[Finalise_AI_assms]:
   apply (cases ptr, auto dest: valid_idle_has_null_cap_ARCH[rotated -1])[1]
   done
 
-crunch empty_slot, finalise_cap, send_ipc, receive_ipc
-  for ioports[wp]: valid_ioports
-  (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object)
-
 lemma arch_derive_cap_notzombie[wp]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<not> is_zombie rv\<rbrace>, -"
   by (cases acap; wpsimp simp: arch_derive_cap_def is_zombie_def o_def)
