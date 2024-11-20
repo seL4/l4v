@@ -9,7 +9,6 @@ imports ArchSchedule_AI
 begin
 
 arch_requalify_facts
-  arch_stit_invs
   arch_post_cap_deletion_pred_tcb_at
   arch_post_cap_deletion_cur_thread
   as_user_hyp_refs_of

@@ -39,10 +39,12 @@ requalify_consts (aliasing)
 end
 end
 
+arch_requalify_consts
+  deadlineIRQ
+
 (* override Kernel_Config const with constrained abbreviation from Hardware_H *)
 arch_requalify_consts (aliasing, H)
   maxIRQ
-  deadlineIRQ
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
 #INCLUDE_HASKELL SEL4/Object/Interrupt.lhs bodies_only

@@ -27,7 +27,7 @@ text \<open>
   All this is done only to avoid a large number of axioms (2 for each operation).
 \<close>
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 section "The Operations"
 
@@ -84,10 +84,6 @@ consts' timerPrecision :: "64 word"
 consts' max_ticks_to_us :: "64 word"
 consts' max_us_to_ticks :: "64 word"
 
-end
-
-qualify RISCV64 (in Arch)
-
 type_synonym ticks = "64 word"
 type_synonym time  = "64 word"
 
@@ -100,6 +96,10 @@ definition \<mu>s_in_ms :: "64 word" where
 text \<open> This matches @{text "60 * 60 * MS_IN_S * US_IN_MS"} because it should be in micro-seconds. \<close>
 definition MAX_PERIOD_US :: "64 word" where
   "MAX_PERIOD_US \<equiv> 60 * 60 * 1000 * 1000"
+
+end
+
+qualify RISCV64 (in Arch)
 
 \<comment> \<open>The following notepad shows that the axioms introduced below, which provide various results
     about several constants and their conversion via us_to_ticks, are consistent.\<close>
@@ -115,13 +115,13 @@ define us_to_ticks :: "64 word \<Rightarrow> 64 word" where
 have kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
   by (simp add: kernelWCET_us_def)
 
-have MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> MAX_PERIOD_US"
-  by (simp add: kernelWCET_us_def MAX_PERIOD_US_def)
+have MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> RISCV64.MAX_PERIOD_US"
+  by (simp add: kernelWCET_us_def RISCV64.MAX_PERIOD_US_def)
 
 have ticks_per_timer_unit_non_zero: "ticks_per_timer_unit \<noteq> 0"
   by (simp add: ticks_per_timer_unit_def)
 
-have MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat max_time"
+have MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat RISCV64.max_time"
   apply (subst unat_max_word[symmetric])
   apply clarsimp
   apply (prop_tac "unat kernelWCET_us \<le> 100")
@@ -134,8 +134,8 @@ have MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < una
   done
 
 have getCurrentTime_buffer_bound:
-  "5 * unat MAX_PERIOD_US * unat ticks_per_timer_unit < unat max_time"
-  apply (fastforce simp: unat_max_word[symmetric] ticks_per_timer_unit_def MAX_PERIOD_US_def)
+  "5 * unat RISCV64.MAX_PERIOD_US * unat ticks_per_timer_unit < unat RISCV64.max_time"
+  apply (fastforce simp: unat_max_word[symmetric] ticks_per_timer_unit_def RISCV64.MAX_PERIOD_US_def)
   done
 
 have kernelWCET_pos': "0 < us_to_ticks kernelWCET_us"
@@ -150,34 +150,34 @@ have MIN_BUDGET_pos': "0 < 2 * us_to_ticks kernelWCET_us"
          | fastforce simp: kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
-have init_domain_time_pos: "0 < us_to_ticks (15 * \<mu>s_in_ms)"
+have init_domain_time_pos: "0 < us_to_ticks (15 * RISCV64.\<mu>s_in_ms)"
   apply (clarsimp simp: us_to_ticks_def word_less_nat_alt)
   apply (subst unat_mult_lem' | subst unat_div
-         | fastforce simp: \<mu>s_in_ms_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
+         | fastforce simp: RISCV64.\<mu>s_in_ms_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
-have init_domain_time_bound: "15 * unat \<mu>s_in_ms * unat ticks_per_timer_unit < unat max_time"
+have init_domain_time_bound: "15 * unat RISCV64.\<mu>s_in_ms * unat ticks_per_timer_unit < unat RISCV64.max_time"
   apply (subst unat_mult_lem'
-         | fastforce simp: \<mu>s_in_ms_def ticks_per_timer_unit_def unat_minus_one_word)+
+         | fastforce simp: RISCV64.\<mu>s_in_ms_def ticks_per_timer_unit_def unat_minus_one_word)+
   done
 
 have getCurrentTime_buffer_pos:
-  "0 < 5 * us_to_ticks MAX_PERIOD_US"
-  apply (fastforce simp: us_to_ticks_def word_less_nat_alt MAX_PERIOD_US_def
+  "0 < 5 * us_to_ticks RISCV64.MAX_PERIOD_US"
+  apply (fastforce simp: us_to_ticks_def word_less_nat_alt RISCV64.MAX_PERIOD_US_def
                          ticks_per_timer_unit_def timer_unit_def)
   done
 
 end
 
-consts' kernelWCET_us :: ticks
+consts' kernelWCET_us :: RISCV64.ticks
 
 axiomatization where
   kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
 and
-  MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> MAX_PERIOD_US"
+  MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> RISCV64.MAX_PERIOD_US"
 
-consts' ticks_per_timer_unit :: ticks
-consts' timer_unit :: ticks
+consts' ticks_per_timer_unit :: RISCV64.ticks
+consts' timer_unit :: RISCV64.ticks
 
 definition
   "us_to_ticks us = (us * ticks_per_timer_unit) div timer_unit"
@@ -185,29 +185,29 @@ definition
 axiomatization where
   ticks_per_timer_unit_non_zero: "ticks_per_timer_unit \<noteq> 0"
 and
-  MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat max_time"
+  MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat RISCV64.max_time"
 and
   \<comment> \<open>the 5 is from time_buffer_const (defined below)\<close>
   getCurrentTime_buffer_bound:
-    "5 * unat MAX_PERIOD_US * unat ticks_per_timer_unit < unat max_time"
+    "5 * unat RISCV64.MAX_PERIOD_US * unat ticks_per_timer_unit < unat RISCV64.max_time"
 and
   kernelWCET_pos': "0 < us_to_ticks kernelWCET_us"
 and
   MIN_BUDGET_pos': "0 < 2 * us_to_ticks kernelWCET_us"
 and
   \<comment> \<open>the 15 is from the domain time of the initial state\<close>
-  init_domain_time_pos: "0 < us_to_ticks (15 * \<mu>s_in_ms)"
+  init_domain_time_pos: "0 < us_to_ticks (15 * RISCV64.\<mu>s_in_ms)"
 and
   \<comment> \<open>the 15 is from the domain time of the initial state\<close>
-  init_domain_time_bound: "15 * unat \<mu>s_in_ms * unat ticks_per_timer_unit < unat max_time"
+  init_domain_time_bound: "15 * unat RISCV64.\<mu>s_in_ms * unat ticks_per_timer_unit < unat RISCV64.max_time"
 and
   \<comment> \<open>the 5 is from time_buffer_const (defined below)\<close>
-  getCurrentTime_buffer_pos: "0 < 5 * us_to_ticks MAX_PERIOD_US"
+  getCurrentTime_buffer_pos: "0 < 5 * us_to_ticks RISCV64.MAX_PERIOD_US"
 
-definition "MAX_PERIOD = us_to_ticks MAX_PERIOD_US"
+definition "MAX_PERIOD = us_to_ticks RISCV64.MAX_PERIOD_US"
 
 axiomatization
-  ticks_to_us :: "ticks \<Rightarrow> ticks"
+  ticks_to_us :: "RISCV64.ticks \<Rightarrow> RISCV64.ticks"
 
 end_qualify
 

@@ -15,10 +15,6 @@ begin
 arch_requalify_consts
   irq_state_update
   irq_state
-  time_state_update
-  time_state
-  last_machine_time_update
-  last_machine_time
   final_matters_arch
   ups_of_heap
 

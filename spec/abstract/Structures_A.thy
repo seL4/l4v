@@ -49,7 +49,7 @@ arch_requalify_consts (A)
   untyped_max_bits
   msg_label_bits
 
-arch_requalify_facts (A)
+arch_requalify_facts
   kernelWCET_ticks_pos2
 
 text \<open>

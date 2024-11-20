@@ -30,7 +30,6 @@ arch_requalify_consts
 arch_requalify_facts
   no_irq_clearMemory
   final_cap_lift
-  valid_global_refsD
   arch_post_cap_deletion_valid_objs
   arch_post_cap_deletion_cte_wp_at
   arch_post_cap_deletion_caps_of_state

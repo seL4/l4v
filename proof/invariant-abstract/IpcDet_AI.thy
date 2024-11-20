@@ -10,16 +10,8 @@ imports
   "./$L4V_ARCH/ArchIpc_AI"
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
-  make_arch_fault_msg
-
-requalify_facts
-  make_arch_fault_msg_invs
+arch_requalify_facts
   make_arch_fault_msg_valid_replies
-
-end
 
 lemma replies_with_sc_kh_update_sc:
   "sc_replies (f sc v) = sc_replies sc

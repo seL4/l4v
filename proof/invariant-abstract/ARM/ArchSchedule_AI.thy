@@ -66,7 +66,7 @@ lemma arch_stit_invs[wp, Schedule_AI_assms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. invs\<rbrace>"
   by (wpsimp wp: svr_invs simp: arch_switch_to_idle_thread_def)
 
-lemma arch_stit_tcb_at[wp, Schedule_AI_asms]:
+lemma arch_stit_tcb_at[wp, Schedule_AI_assms]:
   "\<lbrace>tcb_at t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. tcb_at t\<rbrace>"
   apply (simp add: arch_switch_to_idle_thread_def )
   apply wp
@@ -78,7 +78,7 @@ crunch set_vm_root
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (simp: crunch_simps)
 
-lemma arch_stit_sc_at[wp, Schedule_AI_asms]:
+lemma arch_stit_sc_at[wp, Schedule_AI_assms]:
   "arch_switch_to_idle_thread \<lbrace>sc_at sc_ptr\<rbrace>"
   apply (simp add: arch_switch_to_idle_thread_def)
   apply wp

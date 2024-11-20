@@ -114,9 +114,9 @@ named_theorems machine_ops_last_machine_time'
 named_theorems arch_machine_ops_last_machine_time'
 
 \<comment> \<open>crunch these separately so they don't appear in machine_ops_last_machine_time\<close>
-crunch cleanByVA_PoU, cleanCacheRange_PoU
+crunch cleanByVA_PoU, cleanCacheRange_PoU, cleanCacheRange_RAM
   for machine_times[wp, arch_machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
-  (wp: crunch_wps simp: crunch_simps ignore_del: cleanByVA_PoU)
+  (wp: crunch_wps simp: crunch_simps ignore_del: cleanByVA_PoU cleanL2Range cleanByVA)
 
 crunch storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
   for machine_times[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"

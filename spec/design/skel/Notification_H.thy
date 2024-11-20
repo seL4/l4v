@@ -14,9 +14,6 @@ theory Notification_H imports    "NotificationDecls_H"
   ObjectInstances_H
 begin
 
-arch_requalify_consts (H)
-  badgeRegister
-
 #INCLUDE_HASKELL SEL4/Object/Notification.lhs bodies_only
 
 end

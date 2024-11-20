@@ -16,8 +16,6 @@ begin
 
 arch_requalify_consts (A)
   in_user_frame
-  as_user
-  msg_max_length
   lookup_ipc_buffer
 
 text \<open>Store or load a word at an offset from an IPC buffer.\<close>

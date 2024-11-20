@@ -387,7 +387,7 @@ qed
 
 lemma init_arch_objects_obj_at_other[Untyped_AI_assms]:
   "\<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
-    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+    \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
   by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
                wp: mapM_x_wp' copy_global_mappings_obj_at_other)
 
@@ -405,7 +405,7 @@ lemma copy_global_mappings_obj_at_non_pt:
 
 lemma init_arch_objects_obj_at_non_pt:
   assumes non_pt: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
-  shows "init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  shows "init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
   by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
                wp: mapM_x_wp' copy_global_mappings_obj_at_non_pt[OF non_pt])
 

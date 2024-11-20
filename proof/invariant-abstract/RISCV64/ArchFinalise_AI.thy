@@ -291,7 +291,7 @@ lemma length_and_unat_of_bl_length:
 lemmas unbind_from_sc_final_cap[wp] =
     final_cap_lift [OF unbind_from_sc_caps_of_state]
 
-lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
+lemma (* finalise_cap_cases1 *)[Finalise_AI_assms]:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
          \<and> cte_wp_at ((=) cap) slot s\<rbrace>
      finalise_cap cap final

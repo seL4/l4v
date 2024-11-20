@@ -19,12 +19,8 @@ imports
   ArchStateData_H
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts (H)
   usToTicks
-
-end
 
 requalify_types (in Arch)
   kernel_state

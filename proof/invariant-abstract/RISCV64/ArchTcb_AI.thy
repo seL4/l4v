@@ -262,7 +262,7 @@ lemma install_tcb_cap_invs:
              elim!: cte_wp_at_weakenE)
   done
 
-lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_asms]:
+lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_assms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap and
     (\<lambda>s. \<forall>new_cap src_slot. slot_opt = Some (new_cap, src_slot)
                           \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
@@ -309,7 +309,7 @@ lemma install_tcb_frame_cap_invs:
            | wp cap_delete_ep)+)[1]
   by (clarsimp simp: is_cap_simps' valid_fault_handler_def is_cnode_or_valid_arch_def)
 
-lemma tcc_invs[Tcb_AI_asms]:
+lemma tcc_invs[Tcb_AI_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>
       invoke_tcb (ThreadControlCaps t sl fh th croot vroot buf)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -372,7 +372,7 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
   apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
   done
 
-lemma tcs_invs[Tcb_AI_asms]:
+lemma tcs_invs[Tcb_AI_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
    invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -504,10 +504,6 @@ crunch invoke_tcb
   (simp: crunch_simps
      wp: hoare_drop_imps mapM_x_wp' check_cap_inv)
 
-end
-
-context begin interpretation Arch .
-requalify_facts install_tcb_cap_invs is_cnode_or_valid_arch_is_cap_simps
 end
 
 global_interpretation Tcb_AI?: Tcb_AI

@@ -11,12 +11,8 @@ imports
 
 begin
 
-context begin interpretation Arch .
-
-requalify_facts
+arch_requalify_facts
   valid_global_refsD
-
-end
 
 lemma no_cap_to_idle_sc_ptr:
   "\<lbrakk>cte_wp_at ((=) (SchedContextCap a b)) slot s; invs s\<rbrakk> \<Longrightarrow> a \<noteq> idle_sc_ptr"

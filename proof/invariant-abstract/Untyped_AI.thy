@@ -294,17 +294,17 @@ locale Untyped_AI_arch =
         \<Rightarrow> obj_is_device tp dev = dev"
   (* FIXME: not needed? *)
   assumes init_arch_objects_obj_at_other:
-  "\<And>ptrs ty us p ptr n N P.
+  "\<And>ptrs ty dev us p ptr n N P.
     \<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
-    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
+    \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
   assumes init_arch_objects_obj_at_live:
-  "\<And>ptrs ty us p ptr n N P.
+  "\<And>ptrs ty dev us p ptr n N P.
     \<forall>ko. P ko \<longrightarrow> live ko
-    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
+    \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
   assumes init_arch_objects_obj_at_non_arch:
-  "\<And>ptrs ty us p ptr n N P.
+  "\<And>ptrs ty dev us p ptr n N P.
     \<forall>ko. P ko \<longrightarrow> non_arch_obj ko
-    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
+    \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
 
 lemmas is_aligned_triv2 = Aligned.is_aligned_triv
 

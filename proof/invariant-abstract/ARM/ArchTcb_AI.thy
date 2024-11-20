@@ -382,7 +382,7 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
   apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
   done
 
-lemma tcs_invs[Tcb_AI_asms]:
+lemma tcs_invs[Tcb_AI_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
    invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -513,12 +513,6 @@ crunch invoke_tcb
  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps
      wp: hoare_drop_imps mapM_x_wp' check_cap_inv)
-
-end
-
-context begin interpretation Arch .
-
-requalify_facts install_tcb_cap_invs is_cnode_or_valid_arch_is_cap_simps
 
 end
 

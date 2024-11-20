@@ -22,6 +22,7 @@ arch_requalify_facts (A)
   tcb_bits_def
   endpoint_bits_def
   ntfn_bits_def
+  reply_bits_def
 
 arch_requalify_consts
   not_kernel_window
@@ -53,7 +54,9 @@ arch_requalify_consts
   valid_global_vspace_mappings
   pspace_in_kernel_window
 
+  last_machine_time_update
   last_machine_time
+  time_state_update
   time_state
 
   valid_vs_lookup

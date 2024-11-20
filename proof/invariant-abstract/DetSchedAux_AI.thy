@@ -8,14 +8,11 @@ theory DetSchedAux_AI
 imports DetSchedInvs_AI
 begin
 
-context begin interpretation Arch .
-requalify_facts
-  invoke_untyped_pred_tcb_at
+arch_requalify_facts
   init_arch_objects_typ_at
   init_arch_objects_pred_tcb_at
   init_arch_objects_cur_thread
   hyp_live_default_object
-end
 
 lemmas [wp] =
   init_arch_objects_typ_at
@@ -73,11 +70,11 @@ global_interpretation cap_insert: valid_sched_pred_locale _ "cap_insert new_cap 
 locale DetSchedAux_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes init_arch_objects_valid_idle[wp]:
-    "\<And>t p n s r. init_arch_objects t p n s r \<lbrace>\<lambda>s::'state_ext state. valid_idle s\<rbrace>"
+    "\<And>t d p n s r. init_arch_objects t d p n s r \<lbrace>\<lambda>s::'state_ext state. valid_idle s\<rbrace>"
   assumes init_arch_objects_valid_sched_pred[wp]:
-    "\<And>t p n s r P. init_arch_objects t p n s r \<lbrace>valid_sched_pred_strong P::'state_ext state \<Rightarrow> _\<rbrace>"
+    "\<And>t d p n s r P. init_arch_objects t d p n s r \<lbrace>valid_sched_pred_strong P::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes init_arch_object_valid_machine_time[wp]:
-    "\<And>t p n s r. init_arch_objects t p n s r \<lbrace>valid_machine_time ::'state_ext state \<Rightarrow> _\<rbrace>"
+    "\<And>t d p n s r. init_arch_objects t d p n s r \<lbrace>valid_machine_time ::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes update_time_stamp_valid_machine_time[wp]:
     "update_time_stamp \<lbrace>valid_machine_time::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes dmo_getCurrentTime_vmt_sp:
@@ -89,7 +86,7 @@ lemmas mapM_x_defsym = mapM_x_def[symmetric]
 
 context DetSchedAux_AI begin
 
-sublocale init_arch_objects: valid_sched_pred_locale _ "init_arch_objects t p n s r"
+sublocale init_arch_objects: valid_sched_pred_locale _ "init_arch_objects t d p n s r"
   by unfold_locales (rule init_arch_objects_valid_sched_pred)
 
 crunch delete_objects
@@ -113,7 +110,7 @@ crunch invoke_untyped
 end
 
 lemma init_arch_objects_tcb_heap[wp]:
-  "init_arch_objects t p n s r \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  "init_arch_objects t d p n s r \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   apply (rule pred_map_heap_lift[where heap=tcbs_of and P=P and R=\<top>, simplified])
   apply (rule rsubst[where P="\<lambda>t. _ \<lbrace>t\<rbrace>", OF _ ext], rename_tac ref)
    apply (rule_tac N=N and P="\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> P tcb" and p=ref in init_arch_objects_obj_at_non_arch)
@@ -122,7 +119,7 @@ lemma init_arch_objects_tcb_heap[wp]:
   by (auto simp: obj_at_kh_kheap_simps pred_map_simps vs_heap_simps)
 
 lemma init_arch_objects_sc_heap[wp]:
-  "init_arch_objects t p n s r \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  "init_arch_objects t d p n s r \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
   apply (rule pred_map_heap_lift[where heap=scs_of and P=P and R=\<top>, simplified])
   apply (rule rsubst[where P="\<lambda>t. _ \<lbrace>t\<rbrace>", OF _ ext], rename_tac ref)
    apply (rule_tac N=N and P="\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P sc" and p=ref in init_arch_objects_obj_at_non_arch)

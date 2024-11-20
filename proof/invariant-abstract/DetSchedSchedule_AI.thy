@@ -8,26 +8,21 @@ theory DetSchedSchedule_AI
 imports ArchDetSchedDomainTime_AI
 begin
 
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   time_oracle
 
-requalify_facts
+arch_requalify_facts
   kernelWCET_us_non_zero
   kernelWCET_ticks_non_zero
-  do_ipc_transfer_cur_thread
-  machine_ops_last_machine_time
-  handle_arch_fault_reply_typ_at
   getCurrentTime_def
   install_tcb_cap_sc_tcb_sc_at
-
-end
+  set_simple_ko_ioports
 
 lemmas [wp] =
   do_ipc_transfer_cur_thread
   handle_arch_fault_reply_typ_at
   machine_ops_last_machine_time
+  set_simple_ko_ioports
 
 (* FIXME RT: move and rename *)
 lemma hoare_drop_assertion:
@@ -22891,7 +22886,7 @@ lemma update_waiting_ntfn_cur_sc_in_release_q_imp_zero_consumed:
    \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
   supply if_split[split del] if_cong[cong]
   apply (clarsimp simp: update_waiting_ntfn_def)
-  apply (wpsimp wp: set_thread_state_invs set_ntfn_minor_invs Arch.set_simple_ko_ioports
+  apply (wpsimp wp: set_thread_state_invs set_ntfn_minor_invs
                     maybe_donate_sc_cur_sc_in_release_q_imp_zero_consumed
                     refill_unblock_check_active_scs_valid maybeM_inv
               simp: invs_def valid_state_def valid_pspace_def)

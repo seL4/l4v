@@ -16,6 +16,8 @@ arch_requalify_types
   vmfault_type
   hyp_fault_type
   irq
+  user_monad
+  user_context
   ticks
   time
 
@@ -70,7 +72,7 @@ arch_requalify_consts
   time_buffer_const
   \<mu>s_in_ms
 
-requalify_facts
+arch_requalify_facts
   MAX_PERIOD_US_def
   MAX_PERIOD_def
   kernelWCET_ticks_def

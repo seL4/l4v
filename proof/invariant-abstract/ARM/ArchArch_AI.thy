@@ -1524,13 +1524,4 @@ lemma arch_pinv_ct_active:
 
 end
 
-context begin interpretation Arch .
-
-requalify_facts
-  arch_pinv_ct_active
-
-end
-
-declare arch_pinv_ct_active[wp]
-
 end

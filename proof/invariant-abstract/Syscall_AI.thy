@@ -26,7 +26,6 @@ arch_requalify_consts
 arch_requalify_facts
   resetTimer_device_state_inv
   arch_decode_invocation_inv
-  arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
   arch_invoke_irq_handler_typ_at
   invoke_tcb_typ_at
@@ -36,6 +35,9 @@ arch_requalify_facts
   arch_decode_inv_wf
   arch_pinv_st_tcb_at
   getCurrentTime_invs
+  install_tcb_cap_invs
+  is_cnode_or_valid_arch_is_cap_simps
+  arch_pinv_ct_active
 
 lemmas [wp] =
   arch_decode_invocation_inv
@@ -43,6 +45,7 @@ lemmas [wp] =
   invoke_arch_invs
   arch_decode_inv_wf
   getCurrentTime_invs
+  arch_pinv_ct_active
 
 lemmas [simp] =
   data_to_cptr_def

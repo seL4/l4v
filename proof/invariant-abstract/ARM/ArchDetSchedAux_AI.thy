@@ -39,8 +39,9 @@ lemma copy_global_mappings_valid_sched_pred[wp]:
   by (wpsimp simp: copy_global_mappings_def store_pde_def wp: mapM_x_wp_inv)
 
 lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
-  "init_arch_objects new_type ptr num_objects obj_sz refs \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  by (wpsimp simp: init_arch_objects_def wp: dmo_valid_sched_pred mapM_x_wp_inv)
+  "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  unfolding init_arch_objects_def
+  by (wpsimp wp: dmo_valid_sched_pred mapM_x_wp_inv)
 
 crunch init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
@@ -134,12 +135,12 @@ global_interpretation DetSchedAux_AI?: DetSchedAux_AI
     case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 (* FIXME: move? *)
 lemma init_arch_objects_obj_at_impossible:
   "\<forall>ao. \<not> P (ArchObj ao) \<Longrightarrow>
-    \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace> init_arch_objects a b c d e \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
+    \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace> init_arch_objects a b c d e f \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
   by (auto intro: init_arch_objects_obj_at_non_pd)
 
 lemma perform_asid_control_etcb_at:

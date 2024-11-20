@@ -8,11 +8,9 @@ theory DetSchedInvs_AI
 imports ArchDeterministic_AI
 begin
 
-context begin interpretation Arch .
-requalify_facts
+arch_requalify_facts
   machine_op_lift_machine_times
   machine_ops_last_machine_time
-end
 
 lemmas [wp] =
   machine_op_lift_machine_times

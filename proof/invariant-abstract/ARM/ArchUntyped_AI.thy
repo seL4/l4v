@@ -609,9 +609,9 @@ qed
 
 lemma init_arch_objects_obj_at_other[Untyped_AI_assms]:
   "\<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
-    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
-  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
-                   pd_bits_def pageBits_def
+    \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  unfolding init_arch_objects_def
+  by (wpsimp simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def
                wp: mapM_x_wp' copy_global_mappings_obj_at_other)
 
 lemma copy_global_mappings_obj_at_non_pd:
@@ -628,10 +628,9 @@ lemma copy_global_mappings_obj_at_non_pd:
 
 lemma init_arch_objects_obj_at_non_pd:
   assumes non_pd: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"
-  shows "init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
-  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
-                   pd_bits_def pageBits_def
-               wp: mapM_x_wp' copy_global_mappings_obj_at_non_pd[OF non_pd])
+  shows "init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  unfolding init_arch_objects_def
+  by (wpsimp wp: mapM_x_wp' copy_global_mappings_obj_at_non_pd[OF non_pd])
 
 lemma non_arch_non_pd:
   "\<forall>ko. P ko \<longrightarrow> non_arch_obj ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"

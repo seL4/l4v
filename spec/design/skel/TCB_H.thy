@@ -35,7 +35,6 @@ arch_requalify_consts (aliasing, H)
   tlsBaseRegister
   maxUsToTicks
   timerIRQ
-end
 
 abbreviation "mapMaybe \<equiv> option_map"
 

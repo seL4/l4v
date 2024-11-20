@@ -24,7 +24,6 @@ requalify_consts
   kernelWCETUs
   ticksToUs
   maxTicksToUs
-  getCurrentTime
   maxPeriodUs
 end
 
