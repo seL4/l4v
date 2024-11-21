@@ -8,6 +8,19 @@ theory CNode_AC
 imports ArchAccess_AC
 begin
 
+(* Note: exporting the following diverges from AInvs interfaces where valid_arch_state is
+   permitted to depend on caps (due to supporting x64). If x64 access control is to go ahead,
+   these will need more careful management. *)
+arch_requalify_facts
+  set_cap_valid_arch_state
+  cap_insert_simple_valid_arch_state
+
+lemmas [wp] = set_cap_valid_arch_state cap_insert_simple_valid_arch_state
+
+crunch set_untyped_cap_as_full
+  for valid_arch_state[wp]: valid_arch_state
+
+
 section\<open>CNode-specific AC.\<close>
 
 
@@ -32,7 +45,6 @@ crunch cap_swap_ext,cap_move_ext,empty_slot_ext
 
 crunch set_untyped_cap_as_full
   for integrity_autarch: "integrity aag X st"
-
 
 locale CNode_AC_1 =
   fixes aag :: "'a PAS"
@@ -1010,8 +1022,6 @@ locale CNode_AC_3 = CNode_AC_2 +
     "arch_post_cap_deletion irqopt \<lbrace>pas_refined aag\<rbrace>"
   and aobj_ref'_same_aobject:
     "same_aobject_as ao' ao \<Longrightarrow> aobj_ref' ao = aobj_ref' ao'"
-  and set_untyped_cap_as_full_valid_arch_state[wp]:
-    "set_untyped_cap_as_full src_cap new_cap src_slot \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
 begin
 
 lemma cap_insert_pas_refined:
