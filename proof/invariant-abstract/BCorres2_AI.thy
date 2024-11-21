@@ -112,14 +112,13 @@ lemma dxo_ex: "((),x :: det_ext state) \<in> fst (do_extended_op f s) \<Longrigh
 locale is_extended' =
   fixes f :: "'a det_ext_monad"
   assumes a: "\<And>P. \<lbrace>all_but_exst P\<rbrace> f \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
+begin
 
-context is_extended' begin
-
-lemmas v = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def]
+lemmas all_but_exst_unchanged = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def]
 
 lemma ex_st:
   "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow> \<exists>e :: det_ext. x = (trans_state (\<lambda>_. e) s)"
-  apply (drule v)
+  apply (drule all_but_exst_unchanged)
   apply (simp add: trans_state_update')
   apply (rule_tac x="exst x" in exI)
   apply (cases s)
@@ -224,10 +223,7 @@ context is_extended begin
 
 lemma in_f_exst:
   "(r, s') \<in> fst (f s) \<Longrightarrow> s\<lparr>exst := exst s'\<rparr> = s'"
-  apply (drule v)
-  apply (cases s)
-  apply simp
-  done
+  by (cases s) (fastforce dest: all_but_exst_unchanged)
 
 lemma dxo_eq[simp]:
   "do_extended_op f = f"

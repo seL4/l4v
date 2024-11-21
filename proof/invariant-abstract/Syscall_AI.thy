@@ -66,34 +66,25 @@ crunch tcb_sched_action
   (simp: crunch_simps)
 
 lemma cur_thread_update_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread \<and> tcb_at tptr s\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> tcb_at tptr s\<rbrace>
    modify (cur_thread_update (\<lambda>_. tptr))
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def valid_machine_state_def
                    state_refs_of_def cur_tcb_def)
 
-lemma switch_to_thread_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
-   switch_to_thread tptr
-   \<lbrace>\<lambda>_. invs\<rbrace>"
+lemma switch_to_thread_invs[wp]:
+  "switch_to_thread tptr \<lbrace>invs\<rbrace>"
   by (wpsimp simp: switch_to_thread_def thread_get_def is_tcb
                wp: cur_thread_update_invs)
 
-lemma guarded_switch_to_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
-   guarded_switch_to thread
-   \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: guarded_switch_to_def
-               wp: switch_to_thread_invs hoare_drop_imps)
+lemma guarded_switch_to_invs[wp]:
+  "guarded_switch_to thread \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: guarded_switch_to_def wp: hoare_drop_imps)
 
-(* still true without scheduler_action s \<noteq> resume_cur_thread, but the proof for schedule_invs
-   will be simpler with it *)
 lemma schedule_choose_new_thread_valid_state_cur_tcb [wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
-   schedule_choose_new_thread
-   \<lbrace>\<lambda>_ s. invs s\<rbrace>"
+  "schedule_choose_new_thread \<lbrace>invs\<rbrace>"
   by (wpsimp simp: schedule_choose_new_thread_def choose_thread_def
-               wp: guarded_switch_to_invs hoare_drop_imps)
+               wp: hoare_drop_imps)
 
 lemma schedule_invs[wp]:
   "schedule \<lbrace>invs\<rbrace>"

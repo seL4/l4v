@@ -108,7 +108,7 @@ crunch reset_untyped_cap
 
 lemma foldr_kh_eq:
   "foldr (\<lambda>p kh. kh(p \<mapsto> ko')) ptrs kh t = Some ko \<Longrightarrow>
-  if t \<in> set ptrs then ko = ko' else kh t = Some ko"
+   if t \<in> set ptrs then ko = ko' else kh t = Some ko"
   by (induct ptrs) (auto split: if_split_asm)
 
 lemma TCB_default_objectD[dest!]:

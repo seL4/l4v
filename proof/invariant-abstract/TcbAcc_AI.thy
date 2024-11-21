@@ -2069,65 +2069,13 @@ lemma gts_wp:
   unfolding get_thread_state_def
   by (wpsimp wp: thread_get_wp' simp: pred_tcb_at_def obj_at_def)
 
-text \<open>set_thread_state_act invariants\<close>
-
-crunch set_thread_state_act
-  for aligned[wp]: pspace_aligned
-  and it[wp]: "\<lambda>s. P (idle_thread s)"
-  and distinct[wp]: pspace_distinct
-  and tcb_at[wp]: "tcb_at tptr"
-  and st_tcb_at[wp]: "\<lambda>s. Q( st_tcb_at P tptr s)"
-  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
-  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
-  and valid_irq_states[wp]: "valid_irq_states"
-  and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
-  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
-  and cur_tcb[wp]: "cur_tcb"
-  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
-  and valid_objs[wp]: valid_objs
-  and iflive[wp]: "if_live_then_nonz_cap"
-  and nonz_cap_to[wp]: "ex_nonz_cap_to p"
-  and valid_mdb[wp]: valid_mdb
-  and zombies[wp]: zombies_final
-  and valid_irq_handlers[wp]: "valid_irq_handlers"
-  and valid_ioc[wp]: "valid_ioc"
-  and valid_idle[wp]: valid_idle
-  and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
-  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
-  and valid_arch[wp]: "valid_arch_state"
-  and ifunsafe[wp]: "if_unsafe_then_cap"
-  and only_idle[wp]: "only_idle"
-  and valid_global_objs[wp]: "valid_global_objs"
-  and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
-  and valid_arch_caps[wp]: "valid_arch_caps"
-  and v_ker_map[wp]: "valid_kernel_mappings"
-  and equal_mappings[wp]: "equal_kernel_mappings"
-  and vms[wp]: "valid_machine_state"
-  and valid_vspace_objs[wp]: "valid_vspace_objs"
-  and valid_global_refs[wp]: "valid_global_refs"
-  and valid_asid_map[wp]: "valid_asid_map"
-  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
-  and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
-  and cte_wp_at[wp]: "cte_wp_at P c"
-  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
-  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  and aligned[wp]: pspace_aligned
-  and distinct[wp]: pspace_distinct
-  and valid_objs[wp]: valid_objs
-  and cte_wp_at[wp]: "cte_wp_at P c"
-  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
-  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
-
-text \<open>possible_switch_to invariants\<close>
+text \<open>set_thread_state_act and possible_switch_to invariants\<close>
 
 lemma (in pspace_update_eq) ex_nonz_cap_to_update[iff]:
   "ex_nonz_cap_to p (f s) = ex_nonz_cap_to p s"
   by (simp add: ex_nonz_cap_to_def)
 
-crunch tcb_sched_action,reschedule_required,possible_switch_to
+crunch set_thread_state_act, tcb_sched_action, reschedule_required, possible_switch_to
   for aligned[wp]: pspace_aligned
   and it[wp]: "\<lambda>s. P (idle_thread s)"
   and distinct[wp]: pspace_distinct

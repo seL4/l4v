@@ -1858,11 +1858,6 @@ lemma possible_switch_to_valid_sched_except:
                  split: option.splits)
   done
 
-lemma thread_set_priority_neq_st_tcb_at[wp]:
-  "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s\<rbrace> thread_set_priority p t' \<lbrace>\<lambda>rv s. \<not> st_tcb_at P t s\<rbrace>"
-  unfolding thread_set_priority_def
-  by (wpsimp wp: thread_set_no_change_tcb_state_converse)
-
 lemma thread_set_priority_valid_queues_not_q:
   "\<lbrace>valid_queues and not_queued t\<rbrace> thread_set_priority t p \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   unfolding thread_set_priority_def thread_set_def
@@ -1872,10 +1867,10 @@ lemma thread_set_priority_valid_queues_not_q:
                  dest!: get_tcb_SomeD)
   by (fastforce simp: st_tcb_at_kh_def obj_at_kh_def st_tcb_at_def obj_at_def)
 
-lemma thread_set_priority_ct_not_in_q[wp]:
-  "thread_set_priority p t \<lbrace>ct_not_in_q\<rbrace>"
-  unfolding thread_set_priority_def thread_set_def
-  by (wpsimp wp: set_object_wp)
+crunch thread_set_priority
+  for neq_st_tcb_at[wp]: "\<lambda>s. \<not> st_tcb_at P t s"
+  and ct_not_in_q[wp]: ct_not_in_q
+  (wp: set_object_wp thread_set_no_change_tcb_state_converse)
 
 lemma thread_set_priority_valid_sched_action[wp]:
   "thread_set_priority p t \<lbrace>valid_sched_action\<rbrace>"
