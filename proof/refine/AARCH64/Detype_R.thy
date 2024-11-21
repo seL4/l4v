@@ -1088,8 +1088,7 @@ lemma deleteObjects_corres:
              apply simp
             apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete)
             apply (rule sym, rule ccontr, clarsimp)
-            apply (frule(2) pspace_relation_cte_wp_atI
-                            [OF state_relation_pspace_relation])
+            apply (frule(2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
             apply (elim exE)
             apply (frule(4) cte_map_not_null_outside')
              apply (rule cte_wp_at_weakenE, erule conjunct1)
