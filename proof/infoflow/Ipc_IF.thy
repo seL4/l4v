@@ -1600,9 +1600,9 @@ lemma do_reply_transfer_reads_respects_f:
             cap_delete_one_silc_inv do_ipc_transfer_silc_inv
             set_thread_state_pas_refined thread_set_fault_pas_refined'
             possible_switch_to_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-            when_ev
+            when_ev thread_set_valid_arch_state
          | wpc
-         | simp split del: if_split
+         | simp split del: if_split add: tcb_cap_cases_def
          | wp (once) reads_respects_f[where aag=aag and st=st]
          | elim conjE
          | wp (once) hoare_drop_imps)+
@@ -1987,8 +1987,10 @@ lemma send_fault_ipc_globals_equiv:
   apply (wp)
      apply (simp add: Let_def)
      apply (wp send_ipc_globals_equiv thread_set_globals_equiv thread_set_valid_objs''
-               thread_set_fault_valid_global_refs thread_set_valid_idle_trivial thread_set_refs_trivial
-            | wpc | simp)+
+               thread_set_fault_valid_global_refs thread_set_valid_idle_trivial
+               thread_set_refs_trivial thread_set_valid_arch_state
+               thread_set_tcb_fault_update_valid_mdb
+            | wpc | simp add: tcb_cap_cases_def)+
     apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and
                             valid_global_refs and pspace_distinct and pspace_aligned and
                             valid_global_objs and K (valid_fault fault) and valid_idle and
@@ -2000,8 +2002,9 @@ lemma send_fault_ipc_globals_equiv:
   done
 
 crunch send_fault_ipc
-  for valid_arch_state[wp]: valid_arch_state
-  (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps)
+  for valid_arch_statex[wp]: valid_arch_state
+  (wp: dxo_wp_weak hoare_drop_imps thread_set_valid_arch_state crunch_wps
+   simp: crunch_simps tcb_cap_cases_def)
 
 lemma handle_fault_globals_equiv:
   "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
@@ -2033,7 +2036,8 @@ lemma do_reply_transfer_globals_equiv:
   unfolding do_reply_transfer_def
   apply (wp set_thread_state_globals_equiv cap_delete_one_globals_equiv do_ipc_transfer_globals_equiv
             thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak
-         | wpc | simp split del: if_split)+
+            thread_set_valid_arch_state
+         | wpc | simp split del: if_split add: tcb_cap_cases_def)+
      apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_arch_state and valid_objs and valid_arch_state
                                              and valid_global_refs and pspace_distinct
                                              and pspace_aligned and valid_global_objs

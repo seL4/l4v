@@ -196,7 +196,7 @@ begin
 
 crunch cap_swap_for_delete
   for valid_arch_state[wp]: valid_arch_state
-  (wp: dxo_wp_weak)
+  (wp: dxo_wp_weak simp: crunch_simps)
 
 lemma rec_del_globals_equiv:
   "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>

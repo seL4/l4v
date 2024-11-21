@@ -1489,7 +1489,8 @@ crunch deleting_irq_handler
 
 crunch cancel_ipc
   for globals_equiv[wp]: "globals_equiv st"
-  (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 simp: unless_def)
+  (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 thread_set_valid_arch_state
+   simp: unless_def tcb_cap_cases_def)
 
 lemma suspend_globals_equiv[ wp]:
   "\<lbrace>globals_equiv st and (\<lambda>s. t \<noteq> idle_thread s) and valid_arch_state\<rbrace>

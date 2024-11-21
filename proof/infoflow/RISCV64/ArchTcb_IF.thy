@@ -181,6 +181,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                            cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
                            checked_insert_no_cap_to hoare_vcg_const_imp_liftE_R hoare_vcg_conj_lift
                            as_user_reads_respects_f thread_set_mdb cap_delete_invs
+                           thread_set_valid_arch_state
                       | wpc
                       | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                                   tcb_at_st_tcb_at when_def
@@ -220,6 +221,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
     apply (simp add: option_update_thread_def tcb_cap_cases_def
            | wp hoare_weak_lift_imp hoare_weak_lift_imp_conj thread_set_pas_refined
                 reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
+                thread_set_valid_arch_state
            | wpc)+
    apply (wp hoare_vcg_all_lift thread_set_tcb_fault_handler_update_invs
              thread_set_tcb_fault_handler_update_silc_inv
@@ -227,6 +229,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
              thread_set_pas_refined thread_set_emptyable thread_set_valid_cap
              thread_set_cte_at thread_set_no_cap_to_trivial
              thread_set_tcb_fault_handler_update_only_timer_irq_inv
+             thread_set_valid_arch_state
           | simp add: tcb_cap_cases_def | wpc | wp (once) hoare_drop_imp)+
   apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
   apply (clarsimp simp: invs_psp_aligned invs_vspace_objs invs_arch_state)

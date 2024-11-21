@@ -12,6 +12,15 @@ context Arch begin global_naming RISCV64
 
 named_theorems Retype_IF_assms
 
+lemma do_ipc_transfer_valid_arch_no_caps[wp]:
+  "do_ipc_transfer s ep bg grt r \<lbrace>valid_arch_state\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps do_ipc_transfer_aobj_at)
+
+lemma create_cap_valid_arch_state_no_caps[wp]:
+  "\<lbrace>valid_arch_state \<rbrace> create_cap tp sz p dev ref
+   \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_aobj_at_no_caps create_cap_aobj_at)
+
 lemma modify_underlying_memory_update_0_ev:
   "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top>
                    (modify (underlying_memory_update (\<lambda>m. m(x := word_rsplit 0 ! 7,
