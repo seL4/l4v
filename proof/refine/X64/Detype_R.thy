@@ -636,7 +636,6 @@ lemma valid_objs: "valid_objs' s'"
   and      arch: "valid_arch_state' s'"
   and      virq: "valid_irq_node' (irq_node' s') s'"
   and     virqh: "valid_irq_handlers' s'"
-  and  vioports: "valid_ioports' s'"
   and     virqs: "valid_irq_states' s'"
   and no_0_objs: "no_0_obj' s'"
   and  ctnotinQ: "ct_not_inQ s'"
@@ -1577,13 +1576,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
                      cteCaps_of_def tree_to_ctes Ball_def)
     apply (erule allEI)
     apply (clarsimp simp: ran_def)
-    done
-
-  show "valid_ioports' ?s" using vioports
-    apply (simp add: valid_ioports'_simps Ball_def cteCaps_of_def, clarsimp)
-    apply (rule conjI, rule allEI, assumption, (auto simp: ran_def)[1])
-    apply (erule allEI)
-    apply (auto simp: ran_def)
     done
 
   from irq_ctrl
