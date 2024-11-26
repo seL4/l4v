@@ -1655,7 +1655,7 @@ lemma cancel_all_invs'_helper:
   apply (rule mapM_x_inv_wp2)
    apply clarsimp
   apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift valid_ioports_lift''
+   apply (wp valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
              hoare_vcg_const_Ball_lift untyped_ranges_zero_lift sts_st_tcb'
           | simp add: cteCaps_of_def o_def)+
   apply (unfold fun_upd_apply Invariants_H.tcb_st_refs_of'_simps)
@@ -2133,7 +2133,7 @@ lemma cancelBadgedSends_filterM_helper':
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift hoare_vcg_const_Ball_lift sts_sch_act'
              sch_act_wf_lift valid_irq_handlers_lift'' cur_tcb_lift irqs_masked_lift
-             sts_st_tcb' valid_ioports_lift''
+             sts_st_tcb'
              untyped_ranges_zero_lift
         | clarsimp simp: cteCaps_of_def o_def)+
   apply (frule insert_eqD, frule state_refs_of'_elemD)
