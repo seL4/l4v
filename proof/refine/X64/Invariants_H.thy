@@ -1236,22 +1236,6 @@ where
   "all_ioports_issued' \<equiv> \<lambda>cs as. \<forall>cap \<in> ran cs. cap_ioports' cap \<subseteq> issued_ioports' as"
 
 definition
-  ioports_no_overlap' :: "(machine_word \<Rightarrow> capability option) \<Rightarrow> bool"
-where
-  "ioports_no_overlap' \<equiv> \<lambda>cs. \<forall>cap \<in> ran cs. \<forall>cap' \<in> ran cs.
-                                 cap_ioports' cap \<inter> cap_ioports' cap' \<noteq> {} \<longrightarrow>
-                                        cap_ioports' cap = cap_ioports' cap'"
-
-definition
-  valid_ioports' :: "kernel_state \<Rightarrow> bool"
-where
-  "valid_ioports' \<equiv> \<lambda>s. all_ioports_issued' (cteCaps_of s) (ksArchState s)
-                      \<and> ioports_no_overlap' (cteCaps_of s)"
-
-lemmas valid_ioports'_simps = valid_ioports'_def all_ioports_issued'_def ioports_no_overlap'_def
-                              issued_ioports'_def
-
-definition
   "irqs_masked' \<equiv> \<lambda>s. \<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive"
 
 definition
@@ -1302,7 +1286,6 @@ where
                       \<and> valid_irq_states' s
                       \<and> valid_machine_state' s
                       \<and> irqs_masked' s
-                      \<and> valid_ioports' s
                       \<and> sym_heap_sched_pointers s
                       \<and> valid_sched_pointers s
                       \<and> valid_bitmaps s
@@ -1386,7 +1369,7 @@ abbreviation(input)
            \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> ct_idle_or_in_cur_domain' s
            \<and> cur_tcb' s \<and> ct_idle_or_in_cur_domain' s
-           \<and> pspace_domain_valid s \<and> valid_ioports' s
+           \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -1401,7 +1384,7 @@ abbreviation(input)
            \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
            \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> ct_idle_or_in_cur_domain' s
-           \<and> pspace_domain_valid s \<and> valid_ioports' s
+           \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -1424,7 +1407,7 @@ definition
            \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
            \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> ct_not_inQ s
-           \<and> pspace_domain_valid s \<and> valid_ioports' s
+           \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -3012,10 +2995,6 @@ locale P_Int_Cur_update_eq =
 locale P_Arch_Idle_Int_update_eq = P_Arch_Idle_update_eq + P_Int_update_eq
 begin
 
-lemma valid_ioports_update'[iff]:
-  "valid_ioports' (f s) = valid_ioports' s"
-  by (simp add: valid_ioports'_def cteCaps_of_def pspace arch)
-
 end
 
 locale P_Arch_Idle_Int_Cur_update_eq =
@@ -3415,10 +3394,6 @@ lemma invs_arch_state' [elim!]:
   "invs' s \<Longrightarrow> valid_arch_state' s"
   by (simp add: invs'_def valid_state'_def)
 
-lemma invs_valid_ioports' [elim!]:
-  "invs' s \<Longrightarrow> valid_ioports' s"
-  by (simp add: invs'_def valid_state'_def)
-
 lemma invs_cur' [elim!]:
   "invs' s \<Longrightarrow> cur_tcb' s"
   by (simp add: invs'_def)
@@ -3508,7 +3483,7 @@ lemma invs_no_0_obj'[elim!]:
 
 lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs valid_ioports'_def
+  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs
                         valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
                         valid_machine_state'_def cur_tcb'_def)
   apply (cases "ksSchedulerAction s'";
@@ -3518,7 +3493,7 @@ lemma invs'_gsCNodes_update[simp]:
 
 lemma invs'_gsUserPages_update[simp]:
   "invs' (gsUserPages_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs valid_ioports'_def
+  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs
                         valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
                         valid_machine_state'_def cur_tcb'_def)
   apply (cases "ksSchedulerAction s'";

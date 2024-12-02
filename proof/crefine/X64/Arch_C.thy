@@ -4869,6 +4869,7 @@ lemma invokeX86PortControl_ccorres:
    apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Guard_Seq)
    apply (clarsimp simp: liftE_def bind_assoc return_returnOk)
+   apply (rule ccorres_stateAssert)
    apply (ctac add: setIOPortMask_ccorres)
      apply csymbr
      apply (ctac(no_vcg) add: cteInsert_ccorres)
