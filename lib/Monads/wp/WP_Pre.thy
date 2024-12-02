@@ -102,6 +102,9 @@ named_theorems wp_pre
 method wp_pre0 = pre_tac wp_pre
 method wp_pre = wp_pre0?
 
+experiment
+begin
+
 definition
   test_wp_pre :: "bool \<Rightarrow> bool \<Rightarrow> bool"
 where
@@ -119,5 +122,7 @@ lemma demo:
    apply (simp add: test_wp_pre_def, rule imp_refl)
   apply simp
   done
+
+end
 
 end
