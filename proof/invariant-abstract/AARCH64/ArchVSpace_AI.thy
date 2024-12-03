@@ -2580,7 +2580,7 @@ lemma valid_vspace_obj_default:
   assumes "ty \<noteq> Structures_A.apiobject_type.Untyped"
   assumes "ty = ArchObject VSpaceObj \<Longrightarrow> level = max_pt_level"
   assumes "ty = ArchObject PageTableObj \<Longrightarrow> level \<noteq> max_pt_level"
-  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_vspace_obj level ao s'"
+  shows "ArchObj ao = default_object ty dev us d \<Longrightarrow> valid_vspace_obj level ao s'"
   by (cases ty; simp add: default_object_def assms)
 
 

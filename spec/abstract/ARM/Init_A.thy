@@ -74,6 +74,9 @@ definition
     tcb_fault = None,
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
+    tcb_priority = 0,
+    tcb_time_slice = timeSlice,
+    tcb_domain = default_domain,
     tcb_arch = init_arch_tcb
   \<rparr>,
   init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), \<comment> \<open>same reason as why we kept the definition of @{term init_globals_frame}\<close>
@@ -95,6 +98,12 @@ definition
     is_original_cap = init_ioc,
     cur_thread = idle_thread_ptr,
     idle_thread = idle_thread_ptr,
+    scheduler_action = resume_cur_thread,
+    domain_list = [(0,15)],
+    domain_index = 0,
+    cur_domain = 0,
+    domain_time = 15,
+    ready_queues = const (const []),
     machine_state = init_machine_state,
     interrupt_irq_node = \<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits),
     interrupt_states = \<lambda>_. Structures_A.IRQInactive,

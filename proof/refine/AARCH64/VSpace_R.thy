@@ -350,11 +350,10 @@ lemma setObject_VCPU_corres:
   apply (simp add: set_vcpu_def)
   apply (rule corres_guard_imp)
     apply (rule setObject_other_corres [where P="\<lambda>ko::vcpu. True"], simp)
-         apply (clarsimp simp: obj_at'_def)
-         apply (erule map_to_ctes_upd_other, simp, simp)
-        apply (simp add: a_type_def is_other_obj_relation_type_def)
-       apply (simp add: objBits_simps)
-      apply simp
+        apply (clarsimp simp: obj_at'_def)
+        apply (erule map_to_ctes_upd_other, simp, simp)
+       apply (simp add: a_type_def is_other_obj_relation_type_def)
+      apply (simp add: objBits_simps)
      apply (simp add: objBits_simps vcpuBits_def pageBits_def)
     apply (simp add: other_obj_relation_def asid_pool_relation_def)
    apply (clarsimp simp: typ_at_to_obj_at'[symmetric] obj_at_def exs_valid_def

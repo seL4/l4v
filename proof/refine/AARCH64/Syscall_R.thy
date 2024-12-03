@@ -351,7 +351,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
 
 lemma setDomain_corres:
   "corres dc
-     (valid_etcbs and valid_sched and tcb_at tptr and pspace_aligned and pspace_distinct)
+     (valid_sched and tcb_at tptr and pspace_aligned and pspace_distinct)
      (invs' and sch_act_simple and tcb_at' tptr and (\<lambda>s. new_dom \<le> maxDomain))
      (set_domain tptr new_dom) (setDomain tptr new_dom)"
   apply (rule corres_gen_asm2)
@@ -360,8 +360,8 @@ lemma setDomain_corres:
     apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split[OF tcbSchedDequeue_corres], simp)
         apply (rule corres_split)
-           apply (rule ethread_set_corres; simp)
-           apply (clarsimp simp: etcb_relation_def)
+           apply (rule threadSet_not_queued_corres;
+                  simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def cteSizeBits_def)
           apply (rule corres_split[OF isRunnable_corres])
             apply simp
             apply (rule corres_split)
@@ -374,9 +374,9 @@ lemma setDomain_corres:
             apply ((wpsimp wp: hoare_drop_imps | strengthen valid_objs'_valid_tcbs')+)[1]
            apply (wpsimp wp: gts_wp)
           apply wpsimp
-         apply ((wpsimp wp: hoare_vcg_imp_lift' ethread_set_not_queued_valid_queues hoare_vcg_all_lift
-                 | strengthen valid_objs'_valid_tcbs' valid_queues_in_correct_ready_q
-                              valid_queues_ready_qs_distinct)+)[1]
+         apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift
+                           thread_set_in_correct_ready_q_not_queued thread_set_no_change_tcb_state
+                           thread_set_no_change_tcb_state_converse thread_set_weak_valid_sched_action)
         apply (rule_tac Q'="\<lambda>_. valid_objs' and sym_heap_sched_pointers and valid_sched_pointers
                                and pspace_aligned' and pspace_distinct'
                                and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' tptr"
@@ -385,7 +385,7 @@ lemma setDomain_corres:
         apply (wpsimp wp: threadSet_valid_objs' threadSet_sched_pointers
                           threadSet_valid_sched_pointers)+
        apply (rule_tac Q'="\<lambda>_ s. valid_queues s \<and> not_queued tptr s
-                                \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_etcbs s
+                                \<and> pspace_aligned s \<and> pspace_distinct s
                                 \<and> weak_valid_sched_action s"
                     in hoare_post_imp)
         apply (fastforce simp: pred_tcb_at_def obj_at_def)
@@ -399,10 +399,7 @@ lemma setDomain_corres:
        apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def)
        apply fastforce
       apply (wp hoare_vcg_all_lift tcbSchedDequeue_not_queued)+
-   apply clarsimp
-   apply (frule tcb_at_is_etcb_at)
-    apply simp+
-   apply (auto elim: tcb_at_is_etcb_at valid_objs'_maxDomain valid_objs'_maxPriority pred_tcb'_weakenE
+   apply (auto elim: valid_objs'_maxDomain valid_objs'_maxPriority pred_tcb'_weakenE
                simp: valid_sched_def valid_sched_action_def)
   done
 
@@ -1572,8 +1569,7 @@ lemma handleYield_corres:
                 | strengthen valid_objs'_valid_tcbs' valid_queues_in_correct_ready_q
                   valid_queues_ready_qs_distinct)+
    apply (simp add: invs_def valid_sched_def valid_sched_action_def cur_tcb_def
-                    tcb_at_is_etcb_at valid_state_def valid_pspace_def ct_in_state_def
-                    runnable_eq_active)
+                    valid_state_def valid_pspace_def ct_in_state_def runnable_eq_active)
   apply (fastforce simp: invs'_def valid_state'_def ct_in_state'_def sch_act_wf_weak cur_tcb'_def
                         valid_pspace_valid_objs' valid_objs'_maxDomain tcb_in_cur_domain'_def)
   done
@@ -1820,10 +1816,6 @@ lemma handleReply_nonz_cap_to_ct:
 
 crunch handleFaultReply
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
-
-crunch handle_recv
-  for valid_etcbs[wp]: "valid_etcbs"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma handleReply_handleRecv_corres:
   "corres dc (einvs and ct_running)

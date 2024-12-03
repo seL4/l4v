@@ -1504,12 +1504,10 @@ lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longr
   apply wpsimp
   done
 
-crunch cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext, set_thread_state_ext,
-         retype_region_ext
+crunch cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext
   for all_but_exst[wp]:  "all_but_exst P"
   and (empty_fail) empty_fail[wp]
-  (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext set_thread_state_ext
-               retype_region_ext)
+  (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext)
 
 interpretation cap_insert_ext_extended: is_extended "cap_insert_ext a b c d e"
   by (unfold_locales; wp)
@@ -3819,19 +3817,9 @@ crunch set_extra_badge
 lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
-crunch tcb_sched_action,reschedule_required,set_thread_state_ext
+crunch tcb_sched_action,reschedule_required
   for valid_list[wp]: "valid_list"
-  (simp: unless_def ignore_del: tcb_sched_action reschedule_required set_thread_state_ext)
-
-interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext a"
-  by (unfold_locales; wp)
-
-crunch reschedule_required
-  for all_but_exst[wp]: "all_but_exst P"
-  (ignore_del: reschedule_required)
-
-interpretation reschedule_required_ext_extended: is_extended "reschedule_required"
-  by (unfold_locales; wp)
+  (simp: unless_def)
 
 crunch fast_finalise
   for valid_list[wp]: valid_list (wp: crunch_wps)
@@ -3903,19 +3891,7 @@ lemma cap_revoke_valid_list[wp]:"\<lbrace>valid_list\<rbrace> cap_revoke a \<lbr
   apply (wp preemption_point_inv'|simp)+
   done
 
-crunch ethread_set
-  for valid_list[wp]: "valid_list"
-
 end
-
-crunch ethread_set
-  for all_but_exst[wp]: "all_but_exst P"
-
-crunch ethread_set
-  for (empty_fail) empty_fail[wp]
-
-global_interpretation ethread_set_extended: is_extended "ethread_set a b"
-  by (unfold_locales; wp)
 
 crunch cancel_badged_sends
   for valid_list[wp]: valid_list
@@ -3933,45 +3909,17 @@ lemma invoke_cnode_valid_list[wp]:
 end
 
 crunch possible_switch_to
-  for all_but_exst[wp]: "all_but_exst P"
-  and valid_list[wp]: "valid_list"
+  for valid_list[wp]: "valid_list"
   and (empty_fail) empty_fail[wp]
-  (simp: ethread_get_def ignore_del: possible_switch_to)
 
 crunch set_priority,set_mcpriority
   for valid_list[wp]: "valid_list"
-  (wp: crunch_wps ignore_del: set_priority)
-
-global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a"
-  by (unfold_locales; wp)
-
-crunch set_priority
-  for all_but_exst[wp]: "all_but_exst P"
-  (simp: ethread_get_def ignore_del: set_priority)
 
 crunch set_priority,set_mcpriority
   for (empty_fail) empty_fail[wp]
 
-global_interpretation set_priority_extended: is_extended "set_priority a b"
-  by (unfold_locales; wp)
-
-crunch set_domain
-  for all_but_exst[wp]: "all_but_exst P" (simp: ethread_get_def)
-
-global_interpretation set_domain_extended: is_extended "set_domain a b"
-  by (unfold_locales; wp)
-
-global_interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
-  by (unfold_locales; wp)
-
-crunch dec_domain_time
-  for all_but_exst[wp]: "all_but_exst P" (simp: ethread_get_def)
-
 crunch dec_domain_time
   for (empty_fail) empty_fail[wp]
-
-global_interpretation dec_domain_time_extended: is_extended "dec_domain_time"
-  by (unfold_locales; wp)
 
 crunch update_restart_pc
   for valid_list[wp]: "valid_list"
@@ -3984,25 +3932,14 @@ end
 
 lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_objects ptr bits \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding delete_objects_def
-  apply (wp | simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def)+
+  apply (wp | simp add: detype_def)+
   done
 
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
 
-lemma retype_region_ext_valid_list_ext[wp]: "\<lbrace>valid_list\<rbrace> retype_region_ext a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: retype_region_ext_def)
-
-global_interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
-  by (unfold_locales; wp)
-
 crunch timer_tick
   for valid_list[wp]: "valid_list"
-  and all_but_exst[wp]: "all_but_exst P"
   and (empty_fail) empty_fail[wp]
-  (ignore_del: timer_tick)
-
-global_interpretation timer_tick_extended: is_extended "timer_tick"
-  by (unfold_locales; wp)
 
 locale Deterministic_AI_2 = Deterministic_AI_1 +
   assumes arch_invoke_irq_handler_valid_list[wp]:
