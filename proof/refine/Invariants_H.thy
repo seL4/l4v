@@ -7,62 +7,30 @@
 
 theory Invariants_H
 imports
-  LevityCatch
-  "AInvs.ArchDetSchedSchedule_AI"
-  "Lib.Heap_List"
+  ArchInvsDefs_H
 begin
 
-(* global data and code of the kernel, not covered by any cap *)
-axiomatization
-  kernel_data_refs :: "word64 set"
+arch_requalify_consts
+  refs_of_a'
+  arch_live'
+  hyp_live'
+  azobj_refs'
+  acapBits
+  wellformed_acap'
+  tcb_hyp_refs'
+  valid_arch_cap'
+  valid_acap'
+  canonical_address
+  valid_arch_tcb'
+  valid_arch_obj'
+  isArchFrameCap
+  acapClass
+  global_refs'
+  valid_arch_state'
+  archMakeObjectT
 
-context Arch begin
-
-declare lookupPTSlotFromLevel.simps[simp del]
-declare lookupPTFromLevel.simps[simp del]
-
-lemmas haskell_crunch_def [crunch_def] =
-  deriveCap_def finaliseCap_def
-  hasCancelSendRights_def sameRegionAs_def isPhysicalCap_def
-  sameObjectAs_def updateCapData_def maskCapRights_def
-  createObject_def capUntypedPtr_def capUntypedSize_def
-  performInvocation_def decodeInvocation_def
-
-context begin global_naming global
-requalify_facts
-  Retype_H.deriveCap_def Retype_H.finaliseCap_def
-  Retype_H.hasCancelSendRights_def Retype_H.sameRegionAs_def Retype_H.isPhysicalCap_def
-  Retype_H.sameObjectAs_def Retype_H.updateCapData_def Retype_H.maskCapRights_def
-  Retype_H.createObject_def Retype_H.capUntypedPtr_def Retype_H.capUntypedSize_def
-  Retype_H.performInvocation_def Retype_H.decodeInvocation_def
-end
-
-end
-
-\<comment> \<open>---------------------------------------------------------------------------\<close>
-
+(* FIXME arch-split: review section titles *)
 section "Invariants on Executable Spec"
-
-context begin interpretation Arch .
-
-definition ps_clear :: "obj_ref \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ps_clear p n s \<equiv> (mask_range p n - {p}) \<inter> dom (ksPSpace s) = {}"
-
-definition pspace_no_overlap' :: "obj_ref \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "pspace_no_overlap' ptr bits \<equiv>
-     \<lambda>s. \<forall>x ko. ksPSpace s x = Some ko \<longrightarrow>
-                (mask_range x (objBitsKO ko)) \<inter> {ptr .. (ptr && ~~ mask bits) + mask bits} = {}"
-
-definition ko_wp_at' :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ko_wp_at' P p s \<equiv> \<exists>ko. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko) \<and> P ko \<and>
-                           ps_clear p (objBitsKO ko) s"
-
-definition obj_at' :: "('a::pspace_storable \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  obj_at'_real_def:
-  "obj_at' P p s \<equiv> ko_wp_at' (\<lambda>ko. \<exists>obj. projectKO_opt ko = Some obj \<and> P obj) p s"
-
-definition typ_at' :: "kernel_object_type \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "typ_at' T \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = T)"
 
 abbreviation ep_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "ep_at' \<equiv> obj_at' ((\<lambda>x. True) :: endpoint \<Rightarrow> bool)"
@@ -75,17 +43,6 @@ abbreviation tcb_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" 
 
 abbreviation real_cte_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "real_cte_at' \<equiv> obj_at' ((\<lambda>x. True) :: cte \<Rightarrow> bool)"
-
-abbreviation ko_at' :: "'a::pspace_storable \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ko_at' v \<equiv> obj_at' (\<lambda>k. k = v)"
-
-abbreviation
-  "vcpu_at' \<equiv> typ_at' (ArchT VCPUT)"
-
-abbreviation pte_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "pte_at' \<equiv> typ_at' (ArchT PTET)"
-
-end
 
 record itcb' =
   itcbState             :: thread_state
@@ -223,21 +180,6 @@ primrec live0' :: "Structures_H.kernel_object \<Rightarrow> bool" where
 
 (* hyp_refs *)
 
-definition tcb_vcpu_refs' :: "machine_word option \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "tcb_vcpu_refs' t \<equiv> set_option t \<times> {TCBHypRef}"
-
-definition tcb_hyp_refs' :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "tcb_hyp_refs' t \<equiv> tcb_vcpu_refs' (AARCH64_H.atcbVCPUPtr t)"
-
-definition vcpu_tcb_refs' :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "vcpu_tcb_refs' t \<equiv> set_option t \<times> {HypTCBRef}"
-
-definition refs_of_a' :: "arch_kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "refs_of_a' x \<equiv> case x of
-     AARCH64_H.KOASIDPool asidpool \<Rightarrow> {}
-   | AARCH64_H.KOPTE pte \<Rightarrow> {}
-   | AARCH64_H.KOVCPU vcpu \<Rightarrow> vcpu_tcb_refs' (AARCH64_H.vcpuTCBPtr vcpu)"
-
 definition hyp_refs_of' :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
   "hyp_refs_of' x \<equiv> case x of
      (KOTCB tcb)           \<Rightarrow> tcb_hyp_refs' (tcbArch tcb)
@@ -257,17 +199,6 @@ definition state_hyp_refs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarro
                        then hyp_refs_of' ko
                        else {}))"
 
-definition arch_live' :: "arch_kernel_object \<Rightarrow> bool" where
-  "arch_live' ao \<equiv> case ao of
-     AARCH64_H.KOVCPU vcpu \<Rightarrow> bound (AARCH64_H.vcpuTCBPtr vcpu)
-   | _ \<Rightarrow>  False"
-
-definition hyp_live' :: "kernel_object \<Rightarrow> bool" where
-  "hyp_live' ko \<equiv> case ko of
-     (KOTCB tcb) \<Rightarrow> bound (AARCH64_H.atcbVCPUPtr (tcbArch tcb))
-   | (KOArch ako) \<Rightarrow> arch_live' ako
-   |  _ \<Rightarrow> False"
-
 definition live' :: "kernel_object \<Rightarrow> bool" where
  "live' ko \<equiv> case ko of
     KOTCB tcb           => live0' ko \<or> hyp_live' ko
@@ -278,20 +209,6 @@ definition live' :: "kernel_object \<Rightarrow> bool" where
   | KOUserDataDevice    => False
   | KOKernelData        => False
   | KOArch ako          => hyp_live' ko"
-
-context begin interpretation Arch . (*FIXME: arch-split*)
-
-primrec azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
-  "azobj_refs' (ASIDPoolCap _ _) = {}"
-| "azobj_refs' ASIDControlCap = {}"
-| "azobj_refs' (FrameCap _ _ _ _ _) = {}"
-| "azobj_refs' (PageTableCap _ _ _) = {}"
-| "azobj_refs' (VCPUCap v) = {v}"
-
-lemma azobj_refs'_only_vcpu:
-  "(x \<in> azobj_refs' acap) = (acap = VCPUCap x)"
-  by (cases acap) auto
-end
 
 fun zobj_refs' :: "capability \<Rightarrow> obj_ref set" where
   "zobj_refs' NullCap                        = {}"
@@ -320,7 +237,6 @@ fun cte_refs' :: "capability \<Rightarrow> obj_ref \<Rightarrow> obj_ref set" wh
 | "cte_refs' (IRQHandlerCap irq) x     = {x + (ucast irq << cteSizeBits)}"
 | "cte_refs' _ _                       = {}"
 
-
 abbreviation irq_node' :: "kernel_state \<Rightarrow> obj_ref" where
   "irq_node' s \<equiv> intStateIRQNode (ksInterruptState s)"
 
@@ -337,17 +253,6 @@ definition if_unsafe_then_cap' :: "kernel_state \<Rightarrow> bool" where
 
 
 section "Valid caps and objects (design spec)"
-
-context begin interpretation Arch .
-
-primrec acapBits :: "arch_capability \<Rightarrow> nat" where
-  "acapBits (ASIDPoolCap _ _)       = asidLowBits + word_size_bits"
-| "acapBits ASIDControlCap          = asidHighBits + word_size_bits"
-| "acapBits (FrameCap _ _ sz _ _)   = pageBitsForSize sz"
-| "acapBits (PageTableCap _ pt_t _) = table_size pt_t"
-| "acapBits (VCPUCap v)             = vcpuBits"
-
-end
 
 primrec zBits :: "zombie_type \<Rightarrow> nat" where
   "zBits (ZombieCNode n) = objBits (undefined::cte) + n"
@@ -385,67 +290,6 @@ definition valid_untyped' :: "bool \<Rightarrow> obj_ref \<Rightarrow> nat \<Rig
 primrec zombieCTEs :: "zombie_type \<Rightarrow> nat" where
   "zombieCTEs ZombieTCB = 5"
 | "zombieCTEs (ZombieCNode n) = 2 ^ n"
-
-context begin interpretation Arch .
-
-definition page_table_at' :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "page_table_at' pt_t p \<equiv> \<lambda>s.
-    is_aligned p (ptBits pt_t) \<and>
-    (\<forall>i \<le> mask (ptTranslationBits pt_t). pte_at' (p + (i << pte_bits)) s)"
-
-lemmas vspace_table_at'_defs = page_table_at'_def
-
-abbreviation asid_pool_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
-
-definition asid_wf :: "asid \<Rightarrow> bool" where
-  "asid_wf asid \<equiv> asid \<le> mask asid_bits"
-
-definition wellformed_mapdata' :: "asid \<times> vspace_ref \<Rightarrow> bool" where
-  "wellformed_mapdata' \<equiv> \<lambda>(asid, vref). 0 < asid \<and> asid_wf asid \<and> vref \<in> user_region"
-
-definition wellformed_acap' :: "arch_capability \<Rightarrow> bool" where
-  "wellformed_acap' ac \<equiv>
-   case ac of
-     ASIDPoolCap r asid \<Rightarrow> is_aligned asid asid_low_bits \<and> asid_wf asid
-   | FrameCap r rghts sz dev  mapdata \<Rightarrow>
-       case_option True wellformed_mapdata' mapdata \<and>
-       case_option True (swp vmsz_aligned sz \<circ> snd) mapdata
-   | PageTableCap pt_t r (Some mapdata) \<Rightarrow> wellformed_mapdata' mapdata
-   | _ \<Rightarrow> True"
-
-lemmas wellformed_acap'_simps[simp] = wellformed_acap'_def[split_simps arch_capability.split]
-
-definition frame_at' :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> bool \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "frame_at' r sz dev s \<equiv>
-     \<forall>p < 2 ^ (pageBitsForSize sz - pageBits).
-       typ_at' (if dev then UserDataDeviceT else UserDataT) (r + (p << pageBits)) s"
-
-definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_cap_ref' ac s \<equiv> case ac of
-     ASIDPoolCap r as \<Rightarrow> typ_at' (ArchT ASIDPoolT) r s
-   | ASIDControlCap \<Rightarrow> True
-   | FrameCap r rghts sz dev mapdata \<Rightarrow> frame_at' r sz dev s
-   | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s
-   | VCPUCap r \<Rightarrow> vcpu_at' r s"
-
-lemmas valid_arch_cap_ref'_simps[simp] =
-  valid_arch_cap_ref'_def[split_simps arch_capability.split]
-
-definition valid_arch_cap' :: "arch_capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_cap' cap \<equiv> \<lambda>s. wellformed_acap' cap \<and> valid_arch_cap_ref' cap s"
-
-lemmas valid_arch_cap'_simps[simp] =
-  valid_arch_cap'_def[unfolded wellformed_acap'_def valid_arch_cap_ref'_def,
-                      split_simps arch_capability.split, simplified]
-
-definition arch_cap'_fun_lift :: "(arch_capability \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> capability \<Rightarrow> 'a" where
-  "arch_cap'_fun_lift P F c \<equiv> case c of ArchObjectCap ac \<Rightarrow> P ac | _ \<Rightarrow> F"
-
-lemmas arch_cap'_fun_lift_simps[simp] = arch_cap'_fun_lift_def[split_simps capability.split]
-
-definition valid_acap' :: "capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_acap' \<equiv> arch_cap'_fun_lift valid_arch_cap' \<top>"
 
 definition
   valid_cap' :: "capability \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -495,12 +339,6 @@ definition valid_bound_ntfn' :: "machine_word option \<Rightarrow> kernel_state 
   "valid_bound_ntfn' ntfn_opt s \<equiv>
      case ntfn_opt of None \<Rightarrow> True | Some a \<Rightarrow> ntfn_at' a s"
 
-definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
-  "is_device_frame_cap' cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ dev _) \<Rightarrow> dev | _ \<Rightarrow> False"
-
-definition   valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_tcb' \<equiv> \<lambda>t s. \<forall>v. atcbVCPUPtr t = Some v \<longrightarrow> vcpu_at' v s "
-
 abbreviation opt_tcb_at' :: "machine_word option \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "opt_tcb_at' \<equiv> none_top tcb_at'"
 
@@ -535,27 +373,6 @@ definition valid_ntfn' :: "Structures_H.notification \<Rightarrow> kernel_state 
      \<and> (case ntfnBoundTCB ntfn of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
   | ActiveNtfn b \<Rightarrow> True)
   \<and> valid_bound_tcb' (ntfnBoundTCB ntfn) s"
-
-(* FIXME AARCH64: remove if unused at the end *)
-definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
-
-definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
-  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> is_aligned vt tcbBlockSizeBits"
-
-(* This is a slight abuse of "canonical_address". What we really need to know for ADT_C in CRefine
-   is that the top pageBits bits of TablePTEs have a known value, because we shift left by pageBits.
-   What we actually know is that this is a physical address, so it is bound by the physical address
-   space size, which depending on config can be 40, 44, or 48. 48 happens to also be the bound for
-   the virtual address space, which canonical_address is for. This is good enough for our purposes. *)
-definition ppn_bounded :: "pte \<Rightarrow> bool" where
-  "ppn_bounded pte \<equiv> case pte of PageTablePTE ppn \<Rightarrow> canonical_address ppn | _ \<Rightarrow> True"
-
-definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
-  "valid_arch_obj' ako \<equiv> case ako of
-     KOPTE pte \<Rightarrow> ppn_bounded pte
-   | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
-   | _ \<Rightarrow> True"
 
 definition valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_obj' ko s \<equiv> case ko of
@@ -658,15 +475,6 @@ fun (sequential)
 where
    "untypedRange (UntypedCap d p n f) = {p .. p + 2 ^ n - 1}"
 |  "untypedRange c = {}"
-
-primrec
-  acapClass :: "arch_capability \<Rightarrow> capclass"
-where
-  "acapClass (ASIDPoolCap _ _)    = PhysicalClass"
-| "acapClass ASIDControlCap       = ASIDMasterClass"
-| "acapClass (FrameCap _ _ _ _ _) = PhysicalClass"
-| "acapClass (PageTableCap _ _ _) = PhysicalClass"
-| "acapClass (VCPUCap _) = PhysicalClass"
 
 primrec
   capClass :: "capability \<Rightarrow> capclass"
@@ -796,11 +604,6 @@ definition
   \<forall>p n. m p = Some (CTE IRQControlCap n) \<longrightarrow>
         mdbRevocable n \<and>
         (\<forall>p' n'. m p' = Some (CTE IRQControlCap n') \<longrightarrow> p' = p)"
-
-definition
-  isArchFrameCap :: "capability \<Rightarrow> bool"
-where
- "isArchFrameCap cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ _ _) \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
   distinct_zombie_caps :: "(machine_word \<Rightarrow> capability option) \<Rightarrow> bool"
@@ -1021,16 +824,6 @@ definition valid_irq_node' :: "machine_word \<Rightarrow> kernel_state \<Rightar
 definition valid_refs' :: "machine_word set \<Rightarrow> cte_heap \<Rightarrow> bool" where
   "valid_refs' R \<equiv> \<lambda>m. \<forall>c \<in> ran m. R \<inter> capRange (cteCap c) = {}"
 
-(* Addresses of all PTEs in a VSRoot table at p *)
-definition table_refs' :: "machine_word \<Rightarrow> machine_word set" where
-  "table_refs' p \<equiv> (\<lambda>i. p + (i << pte_bits)) ` mask_range 0 (ptTranslationBits VSRootPT_T)"
-
-definition global_refs' :: "kernel_state \<Rightarrow> obj_ref set" where
-  "global_refs' \<equiv> \<lambda>s.
-   {ksIdleThread s} \<union>
-   table_refs' (armKSGlobalUserVSpace (ksArchState s)) \<union>
-   range (\<lambda>irq :: irq. irq_node' s + (ucast irq << cteSizeBits))"
-
 definition valid_cap_sizes' :: "nat \<Rightarrow> cte_heap \<Rightarrow> bool" where
   "valid_cap_sizes' n hp \<equiv> \<forall>cte \<in> ran hp. 2 ^ capBits (cteCap cte) \<le> n"
 
@@ -1043,24 +836,6 @@ definition valid_global_refs' :: "kernel_state \<Rightarrow> bool" where
 definition pspace_domain_valid :: "kernel_state \<Rightarrow> bool" where
   "pspace_domain_valid \<equiv> \<lambda>s.
      \<forall>x ko. ksPSpace s x = Some ko \<longrightarrow> mask_range x (objBitsKO ko) \<inter> kernel_data_refs = {}"
-
-definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> bool" where
-  "valid_asid_table' table \<equiv> dom table \<subseteq> mask_range 0 asid_high_bits \<and> 0 \<notin> ran table"
-
-definition "is_vcpu' \<equiv> \<lambda>ko. \<exists>vcpu. ko = (KOArch (KOVCPU vcpu))"
-
-definition max_armKSGICVCPUNumListRegs :: nat where
-  "max_armKSGICVCPUNumListRegs \<equiv> 63"
-
-definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
-  "valid_arch_state' \<equiv> \<lambda>s.
-   valid_asid_table' (armKSASIDTable (ksArchState s)) \<and>
-   0 \<notin> ran (armKSVMIDTable (ksArchState s)) \<and>
-   (case armHSCurVCPU (ksArchState s) of
-      Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
-      | _ \<Rightarrow> True) \<and>
-   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs \<and>
-   canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
 
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
@@ -1158,10 +933,7 @@ definition
                     | UserDataT \<Rightarrow> injectKO (makeObject :: user_data)
                     | UserDataDeviceT \<Rightarrow> injectKO (makeObject :: user_data_device)
                     | KernelDataT \<Rightarrow> KOKernelData
-                    | ArchT atp \<Rightarrow> (case atp of
-                                          PTET \<Rightarrow> injectKO (makeObject :: pte)
-                                        | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool)
-                                        | VCPUT \<Rightarrow> injectKO (makeObject :: vcpu))"
+                    | ArchT atp \<Rightarrow> archMakeObjectT atp"
 
 definition
   objBitsT :: "kernel_object_type \<Rightarrow> nat"
@@ -1254,7 +1026,6 @@ abbreviation (input)
 lemma invs'_to_invs_no_cicd'_def:
   "invs' = (all_invs_but_ct_idle_or_in_cur_domain' and ct_idle_or_in_cur_domain')"
   by (fastforce simp: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def )
-end
 
 locale mdb_next =
   fixes m :: cte_heap
@@ -1271,7 +1042,7 @@ locale mdb_order = mdb_next +
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Alternate split rules for preserving subgoal order"
-context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma ntfn_splits[split]:
   " P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
      | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
@@ -1289,13 +1060,11 @@ lemma ntfn_splits[split]:
              \<not> P (f2 x2)) \<or>
        (\<exists>x3. ntfn = Structures_H.ntfn.WaitingNtfn x3 \<and>
              \<not> P (f3 x3))))"
-  by (case_tac ntfn; simp)+
+  by (rule ntfn.splits)+
+
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 
 section "Lemmas"
-
-schematic_goal wordBits_def': "wordBits = numeral ?n" (* arch-specific consequence *)
-  by (simp add: wordBits_def word_size)
 
 lemma valid_bound_ntfn'_None[simp]:
   "valid_bound_ntfn' None = \<top>"
@@ -1317,12 +1086,8 @@ lemma objBitsKO_Data:
   "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
   by (simp add: objBits_def objBitsKO_def word_size_def)
 
-lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def vcpuBits_def
-lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
-lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
-lemmas objBits_simps' = objBits_simps objBits_defs
-
-lemmas wordRadix_def' = wordRadix_def[simplified]
+(* non-gen versions are in Arch *)
+lemmas gen_objBits_simps = objBits_def objBitsKO_def
 
 lemma ps_clear_def2:
   "p \<le> p + 1 \<Longrightarrow> ps_clear p n s = ({p + 1 .. p + (1 << n) - 1} \<inter> dom (ksPSpace s) = {})"
@@ -1351,9 +1116,6 @@ lemma singleton_in_magnitude_check:
   "(x, s) \<in> fst (magnitudeCheck a b c s') \<Longrightarrow> \<forall>s'. fst (magnitudeCheck a b c s') = {(x, s')}"
   by (simp add: magnitudeCheck_def when_def in_monad return_def
          split: if_split_asm option.split_asm)
-
-lemma wordSizeCase_simp [simp]: "wordSizeCase a b = b"
-  by (simp add: wordSizeCase_def wordBits_def word_size)
 
 lemma projectKO_eq:
   "(fst (projectKO ko c) = {(obj, c)}) = (projectKO_opt ko = Some obj)"
@@ -1390,26 +1152,9 @@ lemma obj_atI' [intro?]:
   \<Longrightarrow> obj_at' P ptr s"
   unfolding obj_at'_def by (auto)
 
-lemma vcpu_at_is_vcpu':
-  "vcpu_at' v = ko_wp_at' is_vcpu' v"
-  apply (rule ext)
-  apply (clarsimp simp: typ_at'_def is_vcpu'_def ko_wp_at'_def)
-  apply (rule iffI; clarsimp?)
-  apply (case_tac ko; simp; rename_tac ako; case_tac ako; simp)
-  done
-
 lemma cte_at'_def:
   "cte_at' p s \<equiv> \<exists>cte::cte. fst (getObject p s) = {(cte,s)}"
   by (simp add: cte_wp_at'_def)
-
-
-lemma tcb_cte_cases_simps[simp]:
-  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
-  "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
-  "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
-  "tcb_cte_cases 96 = Some (tcbCaller, tcbCaller_update)"
-  "tcb_cte_cases 128 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
-  by (simp add: tcb_cte_cases_def cteSizeBits_def)+
 
 lemma refs_of'_simps[simp]:
  "refs_of' (KOTCB tcb)           = tcb_st_refs_of' (tcbState tcb) \<union> tcb_bound_refs' (tcbBoundNotification tcb)"
@@ -1484,26 +1229,6 @@ lemma refs_of_rev':
                  Structures_H.notification.splits
                  Structures_H.ntfn.splits)+
 
-lemma tcb_hyp_refs_of'_simps[simp]:
-  "tcb_hyp_refs' atcb = tcb_vcpu_refs' (atcbVCPUPtr atcb)"
-  by (auto simp: tcb_hyp_refs'_def)
-
-lemma tcb_vcpu_refs_of'_simps[simp]:
-  "tcb_vcpu_refs' (Some vc) = {(vc, TCBHypRef)}"
-  "tcb_vcpu_refs' None = {}"
-  by (auto simp: tcb_vcpu_refs'_def)
-
-lemma vcpu_tcb_refs_of'_simps[simp]:
-  "vcpu_tcb_refs' (Some tcb) = {(tcb, HypTCBRef)}"
-  "vcpu_tcb_refs' None = {}"
-  by (auto simp: vcpu_tcb_refs'_def)
-
-lemma refs_of_a'_simps[simp]:
-  "refs_of_a' (KOASIDPool p) = {}"
-  "refs_of_a' (KOPTE pt) = {}"
-  "refs_of_a' (KOVCPU v) = vcpu_tcb_refs' (vcpuTCBPtr v)"
- by (auto simp: refs_of_a'_def)
-
 lemma hyp_refs_of'_simps[simp]:
   "hyp_refs_of' (KOCTE cte) = {}"
   "hyp_refs_of' (KOTCB tcb) = tcb_hyp_refs' (tcbArch tcb)"
@@ -1514,15 +1239,6 @@ lemma hyp_refs_of'_simps[simp]:
   "hyp_refs_of' (KOKernelData) = {}"
   "hyp_refs_of' (KOArch ao) = refs_of_a' ao"
   by (auto simp: hyp_refs_of'_def)
-
-lemma hyp_refs_of_rev':
- "(x, TCBHypRef) \<in> hyp_refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (atcbVCPUPtr (tcbArch tcb) = Some x))"
- "(x, HypTCBRef) \<in> hyp_refs_of' ko =
-    (\<exists>v. ko = KOArch (KOVCPU v) \<and> (vcpuTCBPtr v = Some x))"
-  by (auto simp: hyp_refs_of'_def tcb_hyp_refs'_def tcb_vcpu_refs'_def
-                    vcpu_tcb_refs'_def refs_of_a'_def
-              split: kernel_object.splits arch_kernel_object.splits option.split)
 
 lemma ko_wp_at'_weakenE:
   "\<lbrakk> ko_wp_at' P p s; \<And>ko. P ko \<Longrightarrow> Q ko \<rbrakk> \<Longrightarrow> ko_wp_at' Q p s"
@@ -1660,20 +1376,6 @@ lemma refs_of_live':
     apply fastforce+
   done
 
-lemma hyp_refs_of_hyp_live':
-  "hyp_refs_of' ko \<noteq> {} \<Longrightarrow>   hyp_live' ko"
-  apply (cases ko, simp_all)
-   apply (rename_tac tcb_ext)
-   apply (simp add: tcb_hyp_refs'_def hyp_live'_def)
-   apply (case_tac "atcbVCPUPtr (tcbArch tcb_ext)"; clarsimp)
-  apply (clarsimp simp: hyp_live'_def arch_live'_def refs_of_a'_def vcpu_tcb_refs'_def
-                  split: arch_kernel_object.splits option.splits)
-  done
-
-lemma hyp_refs_of_live':
-  "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
-  by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')
-
 lemma if_live_then_nonz_capE':
   "\<lbrakk> if_live_then_nonz_cap' s; ko_wp_at' live' p s \<rbrakk>
      \<Longrightarrow> ex_nonz_cap_to' p s"
@@ -1703,9 +1405,6 @@ lemma if_unsafe_then_capD':
   apply (clarsimp simp: cte_wp_at'_def)
   done
 
-lemmas valid_cap_simps' =
-  valid_cap'_def[split_simps capability.split arch_capability.split]
-
 lemma max_ipc_words:
   "max_ipc_words = 0x80"
   unfolding max_ipc_words_def
@@ -1734,23 +1433,9 @@ lemma next_unfold:
    (case s c of Some cte \<Rightarrow> Some (mdbNext (cteMDBNode cte)) | None \<Rightarrow> None)"
   by (simp add: mdb_next_def split: option.split)
 
-lemma is_physical_cases:
- "(capClass cap = PhysicalClass) =
-  (case cap of NullCap                         \<Rightarrow> False
-             | DomainCap                       \<Rightarrow> False
-             | IRQControlCap                   \<Rightarrow> False
-             | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m cr                 \<Rightarrow> False
-             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
-             | _                               \<Rightarrow> True)"
-  by (simp split: capability.splits arch_capability.splits zombie_type.splits)
-
 lemma sch_act_sane_not:
   "sch_act_sane s = sch_act_not (ksCurThread s) s"
   by (auto simp: sch_act_sane_def)
-
-lemma objBits_cte_conv: "objBits (cte :: cte) = cteSizeBits"
-  by (simp add: objBits_simps word_size)
 
 lemmas valid_irq_states'_def = valid_irq_masks'_def
 
@@ -1800,8 +1485,70 @@ lemma obj_at'_pspaceI:
   "obj_at' t ref s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>  obj_at' t ref s'"
   by (auto intro!: projectKO_stateI simp: obj_at'_def ps_clear_def)
 
+lemma valid_untyped'_pspaceI:
+  "\<lbrakk>ksPSpace s = ksPSpace s'; valid_untyped' d p n idx s\<rbrakk>
+  \<Longrightarrow> valid_untyped' d p n idx s'"
+  by (simp add: valid_untyped'_def ko_wp_at'_def ps_clear_def)
+
+lemma typ_at'_pspaceI:
+  "typ_at' T p s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> typ_at' T p s'"
+  by (simp add: typ_at'_def ko_wp_at'_def ps_clear_def)
+
+(* all architectures have same slots, only cteSizeBits will vary *)
+lemma (in Arch) tcb_cte_cases_distinct_n:
+  "distinct [
+     0 << cteSizeBits :: machine_word,
+     1 << cteSizeBits,
+     2 << cteSizeBits,
+     3 << cteSizeBits,
+     4 << cteSizeBits]"
+  by (simp add: cteSizeBits_def wordSizeCase_def wordBits_def word_size)
+
+requalify_facts Arch.tcb_cte_cases_distinct_n
+
+lemmas tcb_cte_cases_neqs_n =
+  conjI[OF
+    tcb_cte_cases_distinct_n[simplified]
+    distinct_rev[THEN iffD2, OF tcb_cte_cases_distinct_n, simplified],
+    simplified conj_ac, simplified] (* remove duplicates from 0/1 simplification *)
+
+lemma tcb_cte_cases_simps[simp]:
+  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
+  "tcb_cte_cases (1 << cteSizeBits) = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases (2 << cteSizeBits) = Some (tcbReply, tcbReply_update)"
+  "tcb_cte_cases (3 << cteSizeBits) = Some (tcbCaller, tcbCaller_update)"
+  "tcb_cte_cases (4 << cteSizeBits) = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  by (simp add: tcb_cte_cases_neqs_n tcb_cte_cases_def)+
+
+lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbReplySlot_def tcbCallerSlot_def
+                      tcbIPCBufferSlot_def
+
+lemma tcb_cte_cases_distinct:
+  "distinct [
+     tcbCTableSlot << cteSizeBits :: machine_word,
+     tcbVTableSlot << cteSizeBits,
+     tcbReplySlot << cteSizeBits,
+     tcbCallerSlot << cteSizeBits,
+     tcbIPCBufferSlot << cteSizeBits]"
+  by (simp add: tcbSlot_defs tcb_cte_cases_neqs_n)
+
+lemmas tcb_cte_cases_neqs =
+  tcb_cte_cases_neqs_n
+  tcb_cte_cases_distinct[simplified]
+  distinct_rev[THEN iffD2, OF tcb_cte_cases_distinct, simplified]
+
+lemma objBits_cte_conv: "objBits (cte :: cte) = cteSizeBits"
+  by (simp add: gen_objBits_simps word_size)
+
+lemma in_alignCheck[simp]:
+  "((v, s') \<in> fst (alignCheck x n s)) = (s' = s \<and> is_aligned x n)"
+  by (simp add: alignCheck_def in_monad is_aligned_mask[symmetric]
+                alignError_def conj_comms
+          cong: conj_cong)
+
 lemma cte_wp_at'_pspaceI:
   "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
+  supply in_alignCheck[simp del]
   apply (clarsimp simp add: cte_wp_at'_def getObject_def)
   apply (drule equalityD2)
   apply (clarsimp simp: in_monad loadObject_cte gets_def
@@ -1814,45 +1561,24 @@ lemma cte_wp_at'_pspaceI:
              split: if_split_asm option.splits)
   apply (clarsimp simp: in_monad return_def alignError_def fail_def assert_opt_def
                         alignCheck_def bind_def when_def
-                        objBits_cte_conv tcbCTableSlot_def tcbVTableSlot_def
-                        tcbReplySlot_def objBits_defs
+                        objBits_cte_conv tcb_cte_cases_neqs
                  split: if_split_asm cong: image_cong
                  dest!: singleton_in_magnitude_check)
   done
 
-lemma valid_untyped'_pspaceI:
-  "\<lbrakk>ksPSpace s = ksPSpace s'; valid_untyped' d p n idx s\<rbrakk>
-  \<Longrightarrow> valid_untyped' d p n idx s'"
-  by (simp add: valid_untyped'_def ko_wp_at'_def ps_clear_def)
 
-lemma typ_at'_pspaceI:
-  "typ_at' T p s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> typ_at' T p s'"
-  by (simp add: typ_at'_def ko_wp_at'_def ps_clear_def)
-
-lemma frame_at'_pspaceI:
-  "frame_at' p sz d s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> frame_at' p sz d s'"
-  by (simp add: frame_at'_def typ_at'_def ko_wp_at'_def ps_clear_def)
-
-lemma valid_cap'_pspaceI:
-  "s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
-  unfolding valid_cap'_def
-  by (cases cap)
-     (auto intro: obj_at'_pspaceI[rotated]
-                  cte_wp_at'_pspaceI valid_untyped'_pspaceI
-                  typ_at'_pspaceI[rotated] frame_at'_pspaceI[rotated]
-            simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
-           split: arch_capability.split zombie_type.split option.splits)
-
-lemma valid_obj'_pspaceI:
-  "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
-  unfolding valid_obj'_def
-  by (cases obj)
-     (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
-                 valid_tcb_state'_def valid_bound_tcb'_def
-                 valid_bound_ntfn'_def valid_arch_tcb'_def
-           split: Structures_H.endpoint.splits Structures_H.notification.splits
-                  Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
+locale Invariants_H_pspaceI =
+  assumes valid_cap'_pspaceI:
+    "\<And>cap s s'. s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
+  assumes valid_obj'_pspaceI:
+    "\<And>obj s s'. valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
+  assumes tcb_space_clear:
+    "\<And>tcb getF setF P s x y v.
+     \<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
+       is_aligned x tcbBlockSizeBits; ps_clear x tcbBlockSizeBits s;
+       ksPSpace s x = Some (KOTCB tcb); ksPSpace s y = Some v;
+       \<lbrakk> x = y; getF = tcbCTable; setF = tcbCTable_update \<rbrakk> \<Longrightarrow> P
+      \<rbrakk> \<Longrightarrow> P"
 
 lemma pred_tcb_at'_pspaceI:
   "pred_tcb_at' proj P t s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pred_tcb_at' proj P t s'"
@@ -1870,14 +1596,14 @@ lemma state_hyp_refs_of'_pspaceI:
   "P (state_hyp_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_hyp_refs_of' s')"
   unfolding state_hyp_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
 
-lemma valid_pspace':
+lemma (in Invariants_H_pspaceI) valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
   by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
                      typ_at'_def pspace_canonical'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
 
-lemma ex_cte_cap_to_pspaceI'[elim]:
+lemma (in Invariants_H_pspaceI) ex_cte_cap_to_pspaceI'[elim]:
   "ex_cte_cap_to' p s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>
      intStateIRQNode (ksInterruptState s) = intStateIRQNode (ksInterruptState s')
      \<Longrightarrow> ex_cte_cap_to' p s'"
@@ -2109,36 +1835,7 @@ lemma in_magnitude_check3:
             split: option.split_asm)
   done
 
-lemma in_alignCheck[simp]:
-  "((v, s') \<in> fst (alignCheck x n s)) = (s' = s \<and> is_aligned x n)"
-  by (simp add: alignCheck_def in_monad is_aligned_mask[symmetric]
-                alignError_def conj_comms
-          cong: conj_cong)
-
-lemma tcb_space_clear:
-  "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
-     is_aligned x tcbBlockSizeBits; ps_clear x tcbBlockSizeBits s;
-     ksPSpace s x = Some (KOTCB tcb); ksPSpace s y = Some v;
-     \<lbrakk> x = y; getF = tcbCTable; setF = tcbCTable_update \<rbrakk> \<Longrightarrow> P
-    \<rbrakk> \<Longrightarrow> P"
-  apply (cases "x = y")
-   apply simp
-  apply (clarsimp simp: ps_clear_def mask_def add_diff_eq)
-  apply (drule_tac a=y in equals0D)
-  apply (simp add: domI)
-  apply (subgoal_tac "\<exists>z. y = x + z \<and> z < 2 ^ tcbBlockSizeBits")
-   apply (elim exE conjE)
-   apply (frule(1) is_aligned_no_wrap'[rotated, rotated])
-   apply (simp add: word_bits_conv objBits_defs)
-   apply (erule notE, subst field_simps, rule word_plus_mono_right)
-    apply (drule word_le_minus_one_leq,simp,erule is_aligned_no_wrap')
-   apply (simp add: word_bits_conv)
-  apply (simp add: objBits_defs)
-  apply (rule_tac x="y - x" in exI)
-  apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
-  done
-
-lemma tcb_ctes_clear:
+lemma (in Invariants_H_pspaceI) tcb_ctes_clear:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
      is_aligned x tcbBlockSizeBits; ps_clear x tcbBlockSizeBits s;
      ksPSpace s x = Some (KOTCB tcb) \<rbrakk>
@@ -2148,109 +1845,23 @@ lemma tcb_ctes_clear:
   apply simp
   done
 
-lemma cte_wp_at_cases':
-  shows "cte_wp_at' P p s =
-  ((\<exists>cte. ksPSpace s p = Some (KOCTE cte) \<and> is_aligned p cte_level_bits
-             \<and> P cte \<and> ps_clear p cteSizeBits s) \<or>
-   (\<exists>n tcb getF setF. ksPSpace s (p - n) = Some (KOTCB tcb) \<and> is_aligned (p - n) tcbBlockSizeBits
-             \<and> tcb_cte_cases n = Some (getF, setF) \<and> P (getF tcb) \<and> ps_clear (p - n) tcbBlockSizeBits s))"
-  (is "?LHS = ?RHS")
-  apply (rule iffI)
-   apply (clarsimp simp: cte_wp_at'_def split_def
-                         getObject_def bind_def simpler_gets_def
-                         assert_opt_def return_def fail_def
-                  split: option.splits
-                    del: disjCI)
-   apply (clarsimp simp: loadObject_cte typeError_def alignError_def
-                         fail_def return_def objBits_simps'
-                         is_aligned_mask[symmetric] alignCheck_def
-                         tcbVTableSlot_def field_simps tcbCTableSlot_def
-                         tcbReplySlot_def tcbCallerSlot_def
-                         tcbIPCBufferSlot_def
-                         lookupAround2_char1
-                         cte_level_bits_def Ball_def
-                         unless_def when_def bind_def
-                  split: kernel_object.splits if_split_asm option.splits
-                    del: disjCI)
-        apply (subst(asm) in_magnitude_check3, simp+,
-               simp split: if_split_asm, (rule disjI2)?, intro exI, rule conjI,
-               erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
-               fastforce simp add: field_simps, simp)+
-   apply (subst(asm) in_magnitude_check3, simp+)
-   apply (simp split: if_split_asm
-                add: )
-  apply (simp add: cte_wp_at'_def getObject_def split_def
-                   bind_def simpler_gets_def return_def
-                   assert_opt_def fail_def objBits_defs
-            split: option.splits)
-  apply (elim disjE conjE exE)
-   apply (erule(1) ps_clear_lookupAround2)
-     apply simp
-    apply (simp add: field_simps)
-    apply (erule is_aligned_no_wrap')
-     apply (simp add: cte_level_bits_def word_bits_conv)
-    apply (simp add: cte_level_bits_def)
-   apply (simp add: loadObject_cte unless_def alignCheck_def
-                    is_aligned_mask[symmetric] objBits_simps'
-                    cte_level_bits_def magnitudeCheck_def
-                    return_def fail_def)
-   apply (clarsimp simp: bind_def return_def when_def fail_def
-                  split: option.splits)
-   apply simp
-  apply (erule(1) ps_clear_lookupAround2)
-    prefer 3
-    apply (simp add: loadObject_cte unless_def alignCheck_def
-                     is_aligned_mask[symmetric] objBits_simps'
-                     cte_level_bits_def magnitudeCheck_def
-                     return_def fail_def tcbCTableSlot_def tcbVTableSlot_def
-                     tcbIPCBufferSlot_def tcbReplySlot_def tcbCallerSlot_def
-              split: option.split_asm)
-     apply (clarsimp simp: bind_def tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
-    apply (clarsimp simp: bind_def tcb_cte_cases_def iffD2[OF linorder_not_less]
-                          return_def cteSizeBits_def
-                   split: if_split_asm)
-   apply (subgoal_tac "p - n \<le> (p - n) + n", simp)
-   apply (erule is_aligned_no_wrap')
-    apply (simp add: word_bits_conv)
-   apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
-  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x7FF")
-   apply (simp add: field_simps)
-  apply (rule word_plus_mono_right)
-   apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
-  apply (erule is_aligned_no_wrap')
-  apply simp
-  done
 
-lemma tcb_at_cte_at':
-  "tcb_at' t s \<Longrightarrow> cte_at' t s"
-  apply (clarsimp simp add: cte_wp_at_cases' obj_at'_def projectKO_def
-                       del: disjCI)
-  apply (case_tac ko)
-   apply (simp_all add: projectKO_opt_tcb fail_def)
-  apply (rule exI[where x=0])
-  apply (clarsimp simp add: return_def objBits_simps)
-  done
+(* FIXME arch-split: naming: do we want to use the opaque naming style of Invariants_AI_2? *)
+locale Invariants_H_cte_ats =
+  assumes cte_wp_at_cases':
+    "\<And>P p s.
+      cte_wp_at' P p s =
+        ((\<exists>cte. ksPSpace s p = Some (KOCTE cte) \<and> is_aligned p cte_level_bits \<and> P cte \<and>
+                ps_clear p cteSizeBits s) \<or>
+         (\<exists>n tcb getF setF.
+            ksPSpace s (p - n) = Some (KOTCB tcb) \<and>
+            is_aligned (p - n) tcbBlockSizeBits \<and>
+            tcb_cte_cases n = Some (getF, setF) \<and> P (getF tcb) \<and>
+            ps_clear (p - n) tcbBlockSizeBits s))"
+  assumes cte_at_typ':
+    "\<And>c. cte_at' c = (\<lambda>s. typ_at' CTET c s \<or> (\<exists>n. typ_at' TCBT (c - n) s \<and> n \<in> dom tcb_cte_cases))"
 
-lemma cte_wp_atE' [consumes 1, case_names CTE TCB]:
-  assumes cte: "cte_wp_at' P ptr s"
-  and   r1: "\<And>cte.
-    \<lbrakk> ksPSpace s ptr = Some (KOCTE cte); ps_clear ptr cte_level_bits s;
-      is_aligned ptr cte_level_bits; P cte \<rbrakk> \<Longrightarrow> R"
-  and   r2: "\<And> tcb ptr' getF setF.
-  \<lbrakk> ksPSpace s ptr' = Some (KOTCB tcb); ps_clear ptr' tcbBlockSizeBits s; is_aligned ptr' tcbBlockSizeBits;
-     tcb_cte_cases (ptr - ptr') = Some (getF, setF); P (getF tcb) \<rbrakk> \<Longrightarrow> R"
-  shows "R"
-  by (rule disjE [OF iffD1 [OF cte_wp_at_cases' cte]]) (auto intro: r1 r2 simp: cte_level_bits_def objBits_defs)
-
-lemma cte_wp_at_cteI':
-  assumes "ksPSpace s ptr = Some (KOCTE cte)"
-  assumes "is_aligned ptr cte_level_bits"
-  assumes "ps_clear ptr cte_level_bits s"
-  assumes "P cte"
-  shows "cte_wp_at' P ptr s"
-  using assms by (simp add: cte_wp_at_cases' cte_level_bits_def objBits_defs)
-
-lemma cte_wp_at_tcbI':
+lemma (in Invariants_H_cte_ats) cte_wp_at_tcbI':
   assumes "ksPSpace s ptr' = Some (KOTCB tcb)"
   assumes "is_aligned ptr' tcbBlockSizeBits"
   assumes "ps_clear ptr' tcbBlockSizeBits s"
@@ -2280,7 +1891,6 @@ lemma obj_at_aligned':
   apply (erule subst[OF oab])
   done
 
-(* locateSlot *)
 lemma locateSlot_conv:
   "locateSlotBasic A B = return (A + 2 ^ cte_level_bits * B)"
   "locateSlotTCB = locateSlotBasic"
@@ -2294,13 +1904,13 @@ lemma locateSlot_conv:
                     \<or> isZombie c \<and> n = zombieCTEBits (capZombieType c)) \<and> B < 2 ^ n))
         \<or> isThreadCap c \<or> (isZombie c \<and> capZombieType c = ZombieTCB)) [];
     locateSlotBasic (capUntypedPtr c) B od)"
+  supply PPtr_def[simp] fromPPtr_def[simp]
   apply (simp_all add: locateSlotCap_def locateSlotTCB_def fun_eq_iff)
-    apply (simp add: locateSlotBasic_def objBits_simps cte_level_bits_def objBits_defs)
+    apply (simp add: locateSlotBasic_def gen_objBits_simps cteSizeBits_cte_level_bits)
    apply (simp add: locateSlotCNode_def stateAssert_def)
   apply (cases c, simp_all add: locateSlotCNode_def isZombie_def isThreadCap_def
                                 isCNodeCap_def capUntypedPtr_def stateAssert_def
                                 bind_assoc exec_get locateSlotTCB_def
-                                objBits_simps
                          split: zombie_type.split cong: option.case_cong)
   done
 
@@ -2358,19 +1968,6 @@ lemma typ_at_cte:
   apply (auto simp: projectKO_opt_cte)
   done
 
-lemma cte_at_typ':
-  "cte_at' c = (\<lambda>s. typ_at' CTET c s \<or> (\<exists>n. typ_at' TCBT (c - n) s \<and> n \<in> dom tcb_cte_cases))"
-proof -
-  have P: "\<And>ko. (koTypeOf ko = CTET) = (\<exists>cte. ko = KOCTE cte)"
-          "\<And>ko. (koTypeOf ko = TCBT) = (\<exists>tcb. ko = KOTCB tcb)"
-    by (case_tac ko, simp_all)+
-  have Q: "\<And>P f. (\<exists>x. (\<exists>y. x = f y) \<and> P x) = (\<exists>y. P (f y))"
-    by fastforce
-  show ?thesis
-    by (fastforce simp: cte_wp_at_cases' obj_at'_real_def typ_at'_def
-                        ko_wp_at'_def objBits_simps' P Q conj_comms cte_level_bits_def)
-qed
-
 lemma typ_at_lift_tcb':
   "\<lbrace>typ_at' TCBT p\<rbrace> f \<lbrace>\<lambda>_. typ_at' TCBT p\<rbrace> \<Longrightarrow> \<lbrace>tcb_at' p\<rbrace> f \<lbrace>\<lambda>_. tcb_at' p\<rbrace>"
   by (simp add: typ_at_tcb')
@@ -2387,29 +1984,26 @@ lemma typ_at_lift_cte':
   "\<lbrace>typ_at' CTET p\<rbrace> f \<lbrace>\<lambda>_. typ_at' CTET p\<rbrace> \<Longrightarrow> \<lbrace>real_cte_at' p\<rbrace> f \<lbrace>\<lambda>_. real_cte_at' p\<rbrace>"
   by (simp add: typ_at_cte)
 
-lemma typ_at_lift_cte_at':
+lemma (in Invariants_H_cte_ats) typ_at_lift_cte_at':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows      "\<lbrace>cte_at' c\<rbrace> f \<lbrace>\<lambda>rv. cte_at' c\<rbrace>"
   apply (simp only: cte_at_typ')
   apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift x)
   done
 
-lemma typ_at_lift_page_table_at':
-  assumes x: "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
-  shows "f \<lbrace>page_table_at' pt_t p\<rbrace>"
-  unfolding page_table_at'_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' x)
-
-lemma ko_wp_typ_at':
-  "ko_wp_at' P p s \<Longrightarrow> \<exists>T. typ_at' T p s"
-  by (clarsimp simp: typ_at'_def ko_wp_at'_def)
-
-lemma koType_obj_range':
+(* proof is identical for all architectures *)
+lemma (in Arch) koType_obj_range':
   "koTypeOf k = koTypeOf k' \<Longrightarrow> obj_range' p k = obj_range' p k'"
   apply (rule ccontr)
   apply (simp add: obj_range'_def objBitsKO_def archObjSize_def
             split: kernel_object.splits arch_kernel_object.splits)
   done
+
+requalify_facts Arch.koType_obj_range'
+
+lemma ko_wp_typ_at':
+  "ko_wp_at' P p s \<Longrightarrow> \<exists>T. typ_at' T p s"
+  by (clarsimp simp: typ_at'_def ko_wp_at'_def)
 
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
@@ -2437,44 +2031,6 @@ lemma typ_at_lift_valid_untyped':
   apply (clarsimp split:if_splits)
   done
 
-lemma typ_at_lift_asid_at':
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>asid_pool_at' p\<rbrace> f \<lbrace>\<lambda>_. asid_pool_at' p\<rbrace>"
-  by assumption
-
-lemma typ_at_lift_vcpu_at':
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>vcpu_at' p\<rbrace> f \<lbrace>\<lambda>_. vcpu_at' p\<rbrace>"
-  by assumption
-
-lemma typ_at_lift_frame_at':
-  assumes "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
-  shows "f \<lbrace>frame_at' p sz d\<rbrace>"
-  unfolding frame_at'_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift assms split_del: if_split)
-
-lemma typ_at_lift_valid_cap':
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
-  including no_pre
-  apply (simp add: valid_cap'_def)
-  apply wp
-  apply (case_tac cap;
-         simp add: valid_cap'_def P[of id, simplified] typ_at_lift_tcb'
-                   hoare_vcg_prop typ_at_lift_ep'
-                   typ_at_lift_ntfn' typ_at_lift_cte_at'
-                   hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
-     apply (rename_tac zombie_type nat)
-     apply (case_tac zombie_type; simp)
-      apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+
-    apply (rename_tac arch_capability)
-    apply (case_tac arch_capability,
-           simp_all add: P[of id, simplified] vspace_table_at'_defs
-                         hoare_vcg_prop All_less_Ball
-                    split del: if_split)
-       apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
-                 hoare_vcg_all_lift typ_at_lift_cte' typ_at_lift_frame_at')+
-  done
-
-
 lemma typ_at_lift_valid_irq_node':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>valid_irq_node' p\<rbrace> f \<lbrace>\<lambda>_. valid_irq_node' p\<rbrace>"
@@ -2486,29 +2042,6 @@ lemma valid_bound_tcb_lift:
   "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
   \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_at_tcb'[symmetric] split: option.splits)
-
-lemma valid_arch_tcb_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
-  apply (clarsimp simp add: valid_arch_tcb'_def)
-  apply (cases "atcbVCPUPtr tcb"; simp)
-   apply (wp x)+
-  done
-
-lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
-                      typ_at_lift_ntfn' typ_at_lift_cte'
-                      typ_at_lift_cte_at'
-                      typ_at_lift_page_table_at'
-                      typ_at_lift_asid_at'
-                      typ_at_lift_vcpu_at'
-                      typ_at_lift_valid_untyped'
-                      typ_at_lift_valid_cap'
-                      valid_bound_tcb_lift
-                      valid_arch_tcb_lift'
-
-lemma valid_arch_state_armKSGlobalUserVSpace:
-  "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
-  by (simp add: valid_arch_state'_def)
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
@@ -2675,249 +2208,9 @@ lemma valid_mdb_ctesI [intro]:
   \<Longrightarrow> valid_mdb_ctes m"
   unfolding valid_mdb_ctes_def by auto
 
-end
-locale PSpace_update_eq =
-  fixes f :: "kernel_state \<Rightarrow> kernel_state"
-  assumes pspace: "ksPSpace (f s) = ksPSpace s"
-begin
-
-lemma state_refs_of'_eq[iff]:
-  "state_refs_of' (f s) = state_refs_of' s"
-  by (rule state_refs_of'_pspaceI [OF _ pspace], rule refl)
-
-lemma state_hyp_refs_of'_eq[iff]:
-  "state_hyp_refs_of' (f s) = state_hyp_refs_of' s"
-  by (rule state_hyp_refs_of'_pspaceI [OF _ pspace], rule refl)
-
-lemma valid_space_update [iff]:
-  "valid_pspace' (f s) = valid_pspace' s"
-  by (fastforce simp: valid_pspace' pspace)
-
-lemma obj_at_update [iff]:
-  "obj_at' P p (f s) = obj_at' P p s"
-  by (fastforce intro: obj_at'_pspaceI simp: pspace)
-
-lemma ko_wp_at_update [iff]:
-  "ko_wp_at' P p (f s) = ko_wp_at' P p s"
-  by (simp add: pspace ko_wp_at'_def ps_clear_def)
-
-lemma cte_wp_at_update [iff]:
-  "cte_wp_at' P p (f s) = cte_wp_at' P p s"
-  by (fastforce intro: cte_wp_at'_pspaceI simp: pspace)
-
-lemma ex_nonz_cap_to_eq'[iff]:
-  "ex_nonz_cap_to' p (f s) = ex_nonz_cap_to' p s"
-  by (simp add: ex_nonz_cap_to'_def)
-
-lemma iflive_update [iff]:
-  "if_live_then_nonz_cap' (f s) = if_live_then_nonz_cap' s"
-  by (simp add: if_live_then_nonz_cap'_def ex_nonz_cap_to'_def)
-
-lemma valid_objs_update [iff]:
-  "valid_objs' (f s) = valid_objs' s"
-  apply (simp add: valid_objs'_def pspace)
-  apply (fastforce intro: valid_obj'_pspaceI simp: pspace)
-  done
-
-lemma pspace_aligned_update [iff]:
-  "pspace_aligned' (f s) = pspace_aligned' s"
-  by (simp add: pspace pspace_aligned'_def)
-
-lemma pspace_distinct_update [iff]:
-  "pspace_distinct' (f s) = pspace_distinct' s"
-  by (simp add: pspace pspace_distinct'_def ps_clear_def)
-
-lemma pspace_canonical_update [iff]:
-  "pspace_canonical' (f s) = pspace_canonical' s"
-  by (simp add: pspace pspace_canonical'_def ps_clear_def)
-
-lemma pred_tcb_at_update [iff]:
-  "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
-  by (simp add: pred_tcb_at'_def)
-
-lemma valid_cap_update [iff]:
-  "(f s) \<turnstile>' c = s \<turnstile>' c"
-  by (auto intro: valid_cap'_pspaceI simp: pspace)
-
-lemma typ_at_update' [iff]:
-  "typ_at' T p (f s) = typ_at' T p s"
-  by (simp add: typ_at'_def)
-
-lemma page_table_at_update' [iff]:
-  "page_table_at' pt_t p (f s) = page_table_at' pt_t p s"
-  by (simp add: page_table_at'_def)
-
-lemma frame_at_update' [iff]:
-  "frame_at' p sz d (f s) = frame_at' p sz d s"
-  by (simp add: frame_at'_def)
-
-lemma no_0_obj'_update [iff]:
-  "no_0_obj' (f s) = no_0_obj' s"
-  by (simp add: no_0_obj'_def pspace)
-
-lemma pointerInUserData_update[iff]:
-  "pointerInUserData p (f s) = pointerInUserData p s"
-  by (simp add: pointerInUserData_def)
-
-lemma pointerInDeviceData_update[iff]:
-  "pointerInDeviceData p (f s) = pointerInDeviceData p s"
-  by (simp add: pointerInDeviceData_def)
-
-lemma pspace_domain_valid_update [iff]:
-  "pspace_domain_valid (f s) = pspace_domain_valid s"
-  by (simp add: pspace_domain_valid_def pspace)
-
-end
-
-locale Arch_Idle_update_eq =
-  fixes f :: "kernel_state \<Rightarrow> kernel_state"
-  assumes arch: "ksArchState (f s) = ksArchState s"
-  assumes idle: "ksIdleThread (f s) = ksIdleThread s"
-  assumes int_nd:  "intStateIRQNode (ksInterruptState (f s))
-                    = intStateIRQNode (ksInterruptState s)"
-  assumes maxObj: "gsMaxObjectSize (f s) = gsMaxObjectSize s"
-begin
-
-lemma global_refs_update' [iff]:
-  "global_refs' (f s) = global_refs' s"
-  by (simp add: global_refs'_def arch idle int_nd)
-
-end
-
-locale P_Arch_Idle_update_eq = PSpace_update_eq + Arch_Idle_update_eq
-begin
-
-lemma valid_global_refs_update' [iff]:
-  "valid_global_refs' (f s) = valid_global_refs' s"
-  by (simp add: valid_global_refs'_def pspace arch idle maxObj)
-
-lemma valid_arch_state_update' [iff]:
-  "valid_arch_state' (f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
-
-lemma valid_idle_update' [iff]:
-  "valid_idle' (f s) = valid_idle' s"
-  by (auto simp: pspace idle)
-
-lemma ifunsafe_update [iff]:
-  "if_unsafe_then_cap' (f s) = if_unsafe_then_cap' s"
-  by (simp add: if_unsafe_then_cap'_def ex_cte_cap_to'_def int_nd)
-
-end
-
-locale Int_update_eq =
-  fixes f :: "kernel_state \<Rightarrow> kernel_state"
-  assumes int:  "ksInterruptState (f s) = ksInterruptState s"
-begin
-
-lemma irqs_masked_update [iff]:
-  "irqs_masked' (f s) = irqs_masked' s"
-  by (simp add: irqs_masked'_def int)
-
-lemma irq_issued_update'[iff]:
-  "irq_issued' irq (f s) = irq_issued' irq s"
-  by (simp add: irq_issued'_def int)
-
-end
-
-locale P_Cur_update_eq = PSpace_update_eq +
-  assumes curt: "ksCurThread (f s) = ksCurThread s"
-  assumes curd: "ksCurDomain (f s) = ksCurDomain s"
-begin
-
-lemma sch_act_wf[iff]:
-  "sch_act_wf ks (f s) = sch_act_wf ks s"
-apply (cases ks)
-apply (simp_all add: ct_in_state'_def st_tcb_at'_def tcb_in_cur_domain'_def curt curd)
-done
-
-end
-
-locale P_Int_update_eq = PSpace_update_eq + Int_update_eq
-begin
-
-lemma valid_irq_handlers_update'[iff]:
-  "valid_irq_handlers' (f s) = valid_irq_handlers' s"
-  by (simp add: valid_irq_handlers'_def cteCaps_of_def pspace)
-
-end
-
-locale P_Int_Cur_update_eq =
-          P_Int_update_eq + P_Cur_update_eq
-
-locale P_Arch_Idle_Int_update_eq = P_Arch_Idle_update_eq + P_Int_update_eq
-
-locale P_Arch_Idle_Int_Cur_update_eq =
-          P_Arch_Idle_Int_update_eq + P_Cur_update_eq
-
-interpretation sa_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksSchedulerAction_update f"
-  by unfold_locales auto
-
-interpretation ready_queue_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksReadyQueues_update f"
-  by unfold_locales auto
-
-interpretation ready_queue_bitmap1_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksReadyQueuesL1Bitmap_update f"
-  by unfold_locales auto
-
-interpretation ready_queue_bitmap2_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksReadyQueuesL2Bitmap_update f"
-  by unfold_locales auto
-
-interpretation cur_thread_update':
-  P_Arch_Idle_Int_update_eq "ksCurThread_update f"
-  by unfold_locales auto
-
-interpretation machine_state_update':
-  P_Arch_Idle_Int_Cur_update_eq "ksMachineState_update f"
-  by unfold_locales auto
-
-interpretation interrupt_state_update':
-  P_Cur_update_eq "ksInterruptState_update f"
-  by unfold_locales auto
-
-interpretation idle_update':
-  P_Int_Cur_update_eq "ksIdleThread_update f"
-  by unfold_locales auto
-
-interpretation arch_state_update':
-  P_Int_Cur_update_eq "ksArchState_update f"
-  by unfold_locales auto
-
-interpretation wu_update':
-  P_Arch_Idle_Int_Cur_update_eq "ksWorkUnitsCompleted_update f"
-  by unfold_locales auto
-
-interpretation gsCNodes_update: P_Arch_Idle_update_eq "gsCNodes_update f"
-  by unfold_locales simp_all
-
-interpretation gsUserPages_update: P_Arch_Idle_update_eq "gsUserPages_update f"
-  by unfold_locales simp_all
 lemma ko_wp_at_aligned:
   "ko_wp_at' ((=) ko) p s \<Longrightarrow> is_aligned p (objBitsKO ko)"
   by (simp add: ko_wp_at'_def)
-
-interpretation ksCurDomain:
-  P_Arch_Idle_Int_update_eq "ksCurDomain_update f"
-  by unfold_locales auto
-
-interpretation ksDomScheduleIdx:
-  P_Arch_Idle_Int_Cur_update_eq "ksDomScheduleIdx_update f"
-  by unfold_locales auto
-
-interpretation ksDomSchedule:
-  P_Arch_Idle_Int_Cur_update_eq "ksDomSchedule_update f"
-  by unfold_locales auto
-
-interpretation ksDomainTime:
-  P_Arch_Idle_Int_Cur_update_eq "ksDomainTime_update f"
-  by unfold_locales auto
-
-interpretation gsUntypedZeroRanges:
-  P_Arch_Idle_Int_Cur_update_eq "gsUntypedZeroRanges_update f"
-  by unfold_locales auto
 
 lemma ko_wp_at_norm:
   "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' ((=) ko) p s"
@@ -2953,6 +2246,252 @@ lemma ex_cte_cap_to'_pres:
   apply simp
   done
 
+
+section "kernel_state field update identities"
+
+context pspace_update_eq'
+begin
+
+lemma state_refs_of'_eq[iff]:
+  "state_refs_of' (f s) = state_refs_of' s"
+  by (rule state_refs_of'_pspaceI [OF _ pspace], rule refl)
+
+lemma state_hyp_refs_of'_eq[iff]:
+  "state_hyp_refs_of' (f s) = state_hyp_refs_of' s"
+  by (rule state_hyp_refs_of'_pspaceI [OF _ pspace], rule refl)
+
+lemma obj_at_update [iff]:
+  "obj_at' P p (f s) = obj_at' P p s"
+  by (fastforce intro: obj_at'_pspaceI simp: pspace)
+
+lemma ko_wp_at_update [iff]:
+  "ko_wp_at' P p (f s) = ko_wp_at' P p s"
+  by (simp add: pspace ko_wp_at'_def ps_clear_def)
+
+lemma pspace_aligned_update [iff]:
+  "pspace_aligned' (f s) = pspace_aligned' s"
+  by (simp add: pspace pspace_aligned'_def)
+
+lemma pspace_distinct_update [iff]:
+  "pspace_distinct' (f s) = pspace_distinct' s"
+  by (simp add: pspace pspace_distinct'_def ps_clear_def)
+
+lemma pspace_canonical_update [iff]:
+  "pspace_canonical' (f s) = pspace_canonical' s"
+  by (simp add: pspace pspace_canonical'_def ps_clear_def)
+
+lemma pred_tcb_at_update [iff]:
+  "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
+  by (simp add: pred_tcb_at'_def)
+
+lemma typ_at_update' [iff]:
+  "typ_at' T p (f s) = typ_at' T p s"
+  by (simp add: typ_at'_def)
+
+lemma no_0_obj'_update [iff]:
+  "no_0_obj' (f s) = no_0_obj' s"
+  by (simp add: no_0_obj'_def pspace)
+
+lemma pointerInUserData_update[iff]:
+  "pointerInUserData p (f s) = pointerInUserData p s"
+  by (simp add: pointerInUserData_def)
+
+lemma pointerInDeviceData_update[iff]:
+  "pointerInDeviceData p (f s) = pointerInDeviceData p s"
+  by (simp add: pointerInDeviceData_def)
+
+lemma pspace_domain_valid_update [iff]:
+  "pspace_domain_valid (f s) = pspace_domain_valid s"
+  by (simp add: pspace_domain_valid_def pspace)
+
+end
+
+lemma (in Arch_arch_idle_update_eq') global_refs_update' [iff]:
+  "global_refs' (f s) = global_refs' s"
+  by (simp add: global_refs'_def arch idle int_nd)
+
+context arch_idle_update_eq' begin
+
+(* exports from Arch locale version (safe for generic use) *)
+interpretation Arch_arch_idle_update_eq' ..
+
+lemmas global_refs_update'[iff] = global_refs_update'
+
+end
+
+context Arch_p_arch_idle_update_eq'
+begin
+
+lemma valid_global_refs_update' [iff]:
+  "valid_global_refs' (f s) = valid_global_refs' s"
+  by (simp add: valid_global_refs'_def pspace arch idle maxObj)
+
+lemma valid_arch_state_update' [iff]:
+  "valid_arch_state' (f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
+
+end
+
+context p_arch_idle_update_eq'
+begin
+
+lemma valid_idle_update' [iff]:
+  "valid_idle' (f s) = valid_idle' s"
+  by (auto simp: pspace idle)
+
+(* exports from Arch locale version (safe for generic use) *)
+interpretation Arch_p_arch_idle_update_eq' ..
+
+lemmas valid_global_refs_update'[iff] = valid_global_refs_update'
+lemmas valid_arch_state_update'[iff] = valid_arch_state_update'
+
+end
+
+context int_update_eq'
+begin
+
+lemma irqs_masked_update [iff]:
+  "irqs_masked' (f s) = irqs_masked' s"
+  by (simp add: irqs_masked'_def int)
+
+lemma irq_issued_update'[iff]:
+  "irq_issued' irq (f s) = irq_issued' irq s"
+  by (simp add: irq_issued'_def int)
+
+end
+
+context p_cur_update_eq'
+begin
+
+lemma sch_act_wf[iff]:
+  "sch_act_wf ks (f s) = sch_act_wf ks s"
+  by (cases ks; simp_all add: ct_in_state'_def st_tcb_at'_def tcb_in_cur_domain'_def curt curd)
+
+end
+
+context p_int_update_eq'
+begin
+
+lemma valid_irq_handlers_update'[iff]:
+  "valid_irq_handlers' (f s) = valid_irq_handlers' s"
+  by (simp add: valid_irq_handlers'_def cteCaps_of_def pspace)
+
+end
+
+interpretation sa_update:
+  p_arch_idle_int_cur_update_eq' "ksSchedulerAction_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> sa_update: Arch_p_arch_idle_int_cur_update_eq' "ksSchedulerAction_update f" ..
+
+interpretation ready_queue_update:
+  p_arch_idle_int_cur_update_eq' "ksReadyQueues_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ready_queue_update: Arch_p_arch_idle_int_cur_update_eq' "ksReadyQueues_update f" ..
+
+interpretation ready_queue_bitmap1_update:
+  p_arch_idle_int_cur_update_eq' "ksReadyQueuesL1Bitmap_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ready_queue_bitmap1_update:
+  Arch_p_arch_idle_int_cur_update_eq' "ksReadyQueuesL1Bitmap_update f" ..
+
+interpretation ready_queue_bitmap2_update:
+  p_arch_idle_int_cur_update_eq' "ksReadyQueuesL2Bitmap_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ready_queue_bitmap2_update:
+  Arch_p_arch_idle_int_cur_update_eq' "ksReadyQueuesL2Bitmap_update f" ..
+
+interpretation cur_thread_update':
+  p_arch_idle_int_update_eq' "ksCurThread_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> cur_thread_update':
+  Arch_p_arch_idle_int_update_eq' "ksCurThread_update f" ..
+
+interpretation machine_state_update':
+  p_arch_idle_int_cur_update_eq' "ksMachineState_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> machine_state_update':
+  Arch_p_arch_idle_int_cur_update_eq' "ksMachineState_update f" ..
+
+interpretation interrupt_state_update':
+  p_cur_update_eq' "ksInterruptState_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> interrupt_state_update':
+  Arch_p_cur_update_eq' "ksInterruptState_update f" ..
+
+interpretation idle_update':
+  p_int_cur_update_eq' "ksIdleThread_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> idle_update':
+  Arch_p_int_cur_update_eq' "ksIdleThread_update f" ..
+
+interpretation arch_state_update':
+  p_int_cur_update_eq' "ksArchState_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> arch_state_update':
+  Arch_p_int_cur_update_eq' "ksArchState_update f" ..
+
+interpretation wu_update':
+  p_arch_idle_int_cur_update_eq' "ksWorkUnitsCompleted_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> wu_update':
+  Arch_p_arch_idle_int_cur_update_eq' "ksWorkUnitsCompleted_update f" ..
+
+interpretation gsCNodes_update: p_arch_idle_update_eq' "gsCNodes_update f"
+  by unfold_locales simp_all
+
+sublocale Arch \<subseteq> gsCNodes_update: Arch_p_arch_idle_update_eq' "gsCNodes_update f" ..
+
+interpretation gsUserPages_update: p_arch_idle_update_eq' "gsUserPages_update f"
+  by unfold_locales simp_all
+
+sublocale Arch \<subseteq> gsUserPages_update: Arch_p_arch_idle_update_eq' "gsUserPages_update f" ..
+
+interpretation ksCurDomain:
+  p_arch_idle_int_update_eq' "ksCurDomain_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ksCurDomain:
+  Arch_p_arch_idle_int_update_eq' "ksCurDomain_update f" ..
+
+interpretation ksDomScheduleIdx:
+  p_arch_idle_int_cur_update_eq' "ksDomScheduleIdx_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ksDomScheduleIdx:
+  Arch_p_arch_idle_int_cur_update_eq' "ksDomScheduleIdx_update f" ..
+
+interpretation ksDomSchedule:
+  p_arch_idle_int_cur_update_eq' "ksDomSchedule_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ksDomSchedule:
+  Arch_p_arch_idle_int_cur_update_eq' "ksDomSchedule_update f" ..
+
+interpretation ksDomainTime:
+  p_arch_idle_int_cur_update_eq' "ksDomainTime_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ksDomainTime:
+  Arch_p_arch_idle_int_cur_update_eq' "ksDomainTime_update f" ..
+
+interpretation gsUntypedZeroRanges:
+  p_arch_idle_int_cur_update_eq' "gsUntypedZeroRanges_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> gsUntypedZeroRanges:
+  Arch_p_arch_idle_int_cur_update_eq' "gsUntypedZeroRanges_update f" ..
+
+
 section "Relationship of Executable Spec to Kernel Configuration"
 
 text \<open>
@@ -2966,14 +2505,6 @@ lemma le_maxDomain_eq_less_numDomains:
   shows "x \<le> unat maxDomain \<longleftrightarrow> x < Kernel_Config.numDomains"
         "y \<le> maxDomain \<longleftrightarrow> unat y < Kernel_Config.numDomains"
   by (auto simp: Kernel_Config.numDomains_def maxDomain_def word_le_nat_alt)
-
-
-context begin interpretation Arch . (*FIXME: arch-split*)
-
-lemma page_table_pte_atI':
-  "\<lbrakk> page_table_at' pt_t p s; i \<le> mask (ptTranslationBits pt_t) \<rbrakk> \<Longrightarrow>
-   pte_at' (p + (i << pte_bits)) s"
-  by (simp add: page_table_at'_def)
 
 lemma valid_global_refsD':
   "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
@@ -3051,10 +2582,6 @@ lemma valid_bitmaps_arch[simp]:
   "valid_bitmaps (ksArchState_update f s) = valid_bitmaps s"
   by (simp add: valid_bitmaps_def bitmapQ_defs)
 
-lemma if_unsafe_then_cap_arch' [simp]:
-  "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
-  by (simp add: if_unsafe_then_cap'_def ex_cte_cap_to'_def)
-
 lemma valid_idle_arch' [simp]:
   "valid_idle' (ksArchState_update f s) = valid_idle' s"
   by (simp add: valid_idle'_def)
@@ -3115,47 +2642,15 @@ lemma sch_act_wf_cases:
     ResumeCurrentThread \<Rightarrow> ct_in_state' activatable'
   | ChooseNewThread     \<Rightarrow> \<top>
   | SwitchToThread t    \<Rightarrow> \<lambda>s. st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s)"
-by (cases action) auto
-end
+  by (cases action) auto
 
-lemma (in PSpace_update_eq) cteCaps_of_update[iff]: "cteCaps_of (f s) = cteCaps_of s"
+lemma (in pspace_update_eq') cteCaps_of_update[iff]: "cteCaps_of (f s) = cteCaps_of s"
   by (simp add: cteCaps_of_def pspace)
 
 lemma vms_sch_act_update'[iff]:
   "valid_machine_state' (ksSchedulerAction_update f s) =
    valid_machine_state' s"
   by (simp add: valid_machine_state'_def )
-
-context begin interpretation Arch . (*FIXME: arch-split*)
-
-lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
-                    asid_high_bits_def bit_simps
-
-lemma objBitsT_simps:
-  "objBitsT EndpointT = epSizeBits"
-  "objBitsT NotificationT = ntfnSizeBits"
-  "objBitsT CTET = cteSizeBits"
-  "objBitsT TCBT = tcbBlockSizeBits"
-  "objBitsT UserDataT = pageBits"
-  "objBitsT UserDataDeviceT = pageBits"
-  "objBitsT KernelDataT = pageBits"
-  "objBitsT (ArchT PTET) = word_size_bits"
-  "objBitsT (ArchT ASIDPoolT) = pageBits"
-  "objBitsT (ArchT VCPUT) = vcpuBits"
-  unfolding objBitsT_def makeObjectT_def
-  by (simp add: makeObject_simps objBits_simps bit_simps')+
-
-
-lemma objBitsT_koTypeOf :
-  "(objBitsT (koTypeOf ko)) = objBitsKO ko"
-  apply (cases ko; simp add: objBits_simps objBitsT_simps)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps')
-  done
-
-lemma typ_at_aligned':
-  "\<lbrakk> typ_at' tp p s \<rbrakk> \<Longrightarrow> is_aligned p (objBitsT tp)"
-  by (clarsimp simp add: typ_at'_def ko_wp_at'_def objBitsT_koTypeOf)
 
 lemma obj_at'_and:
   "obj_at' (P and P') t s = (obj_at' P t s \<and> obj_at' P' t s)"
@@ -3342,26 +2837,6 @@ lemma invs_no_0_obj'[elim!]:
   "invs' s \<Longrightarrow> no_0_obj' s"
   by (simp add: invs'_def valid_state'_def valid_pspace'_def)
 
-lemma invs'_gsCNodes_update[simp]:
-  "invs' (gsCNodes_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs
-                        valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
-                        valid_machine_state'_def cur_tcb'_def)
-  apply (cases "ksSchedulerAction s'";
-         simp add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
-                   ct_not_inQ_def)
-  done
-
-lemma invs'_gsUserPages_update[simp]:
-  "invs' (gsUserPages_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_bitmaps_def bitmapQ_defs
-                        valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
-                        valid_machine_state'_def cur_tcb'_def)
-  apply (cases "ksSchedulerAction s'";
-         simp add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
-                   ct_not_inQ_def)
-  done
-
 lemma pred_tcb'_neq_contra:
   "\<lbrakk> pred_tcb_at' proj P p s; pred_tcb_at' proj Q p s; \<And>st. P st \<noteq> Q st \<rbrakk> \<Longrightarrow> False"
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
@@ -3386,70 +2861,45 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
   unfolding valid_bitmapQ_except_def valid_bitmapQ_def
   by simp
 
-lemma mask_wordRadix_less_wordBits:
-  assumes sz: "wordRadix \<le> size w"
-  shows "unat ((w::'a::len word) && mask wordRadix) < wordBits"
-  using word_unat_mask_lt[where m=wordRadix and w=w] assms
-  by (simp add: wordRadix_def wordBits_def')
-
-lemma priority_mask_wordRadix_size:
-  "unat ((w::priority) && mask wordRadix) < wordBits"
-  by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
-
-lemma canonical_address_mask_eq:
-  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
-  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
-
-lemma canonical_address_and:
-  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
-  by (simp add: canonical_address_range word_and_le)
-
-lemma canonical_address_add:
-  assumes "is_aligned p n"
-  assumes "f < 2 ^ n"
-  assumes "n \<le> canonical_bit"
-  assumes "canonical_address p"
-  shows "canonical_address (p + f)"
-proof -
-  from `f < 2 ^ n`
-  have "f \<le> mask n"
-    by (simp add: mask_plus_1 plus_one_helper)
-
-  from `canonical_address p`
-  have "p && mask (Suc canonical_bit) = p"
-    by (simp add: canonical_address_mask_eq)
-  moreover
-  from `f \<le> mask n` `is_aligned p n`
-  have "p + f = p || f"
-    by (simp add: word_and_or_mask_aligned)
-  moreover
-  from `f \<le> mask n` `n \<le> canonical_bit`
-  have "f \<le> mask (Suc canonical_bit)"
-    using le_smaller_mask by fastforce
-  hence "f && mask (Suc canonical_bit) = f"
-    by (simp add: le_mask_imp_and_mask)
-  ultimately
-  have "(p + f) && mask (Suc canonical_bit) = p + f"
-    by (simp add: word_ao_dist)
-  thus ?thesis
-    by (simp add: canonical_address_mask_eq)
-qed
-
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-   apply (drule (1) range_cover.range_cover_compare)
-   apply (clarsimp simp: word_less_nat_alt)
-   apply unat_arith
-  apply (simp add: canonical_bit_def)
+lemma rule_out_intv:
+  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s; a \<noteq> b \<rbrakk>
+   \<Longrightarrow> b \<notin> mask_range a (objBitsKO obj)"
+  apply (drule(1) pspace_distinctD')
+  apply (subst (asm) ps_clear_def)
+  apply (drule_tac x = b in orthD2)
+   apply fastforce
+  apply (drule neq_out_intv)
+   apply (simp add: mask_def add_diff_eq)
+  apply (simp add: mask_def add_diff_eq)
   done
 
-end
+lemma distinct_obj_range'_not_subset:
+  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s;
+     pspace_aligned' s; a \<noteq> b \<rbrakk>
+   \<Longrightarrow> \<not> obj_range' b obj' \<subseteq> obj_range' a obj"
+  unfolding obj_range'_def
+  apply (frule_tac x=a in pspace_alignedD')
+   apply assumption
+  apply (frule_tac x=b in pspace_alignedD')
+   apply assumption
+  apply (frule (3) rule_out_intv)
+  using is_aligned_no_overflow_mask
+  by fastforce
+
+lemma obj_range'_disjoint:
+  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s;
+     pspace_aligned' s; a \<noteq> b \<rbrakk>
+   \<Longrightarrow> obj_range' a obj \<inter> obj_range' b obj' = {}"
+  apply (frule_tac x=a in pspace_alignedD')
+   apply assumption
+  apply (frule_tac x=b in pspace_alignedD')
+   apply assumption
+  apply (frule_tac p=a and p'=b in aligned_mask_range_cases)
+   apply assumption
+  apply (fastforce dest: distinct_obj_range'_not_subset
+                   simp: obj_range'_def)
+  done
+
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>
   obj_at' (complicated_P (obj_at' (complicated_Q (obj_at' ...)) p s)) p s
@@ -3488,92 +2938,6 @@ method normalise_obj_at' =
    ((drule(1) ko_at_defn_uniqueD)+)?,
    clarsimp simp: ko_at'_defn_def)
 
-end
-
-add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
-  (obj_at'_real_def)
-declare upd_simps[simp]
-
-lemma neq_out_intv:
-  "\<lbrakk> a \<noteq> b; b \<notin> {a..a + c - 1} - {a} \<rbrakk> \<Longrightarrow> b \<notin> {a..a + c - 1}"
-  by simp
-
-lemma rule_out_intv:
-  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s; a \<noteq> b \<rbrakk>
-   \<Longrightarrow> b \<notin> mask_range a (objBitsKO obj)"
-  apply (drule(1) pspace_distinctD')
-  apply (subst (asm) ps_clear_def)
-  apply (drule_tac x = b in orthD2)
-   apply fastforce
-  apply (drule neq_out_intv)
-   apply (simp add: mask_def add_diff_eq)
-  apply (simp add: mask_def add_diff_eq)
-  done
-
-lemma ptr_range_mask_range:
-  "{ptr..ptr + 2 ^ bits - 1} = mask_range ptr bits"
-  unfolding mask_def
-  by simp
-
-lemma distinct_obj_range'_not_subset:
-  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s;
-     pspace_aligned' s; a \<noteq> b \<rbrakk>
-   \<Longrightarrow> \<not> obj_range' b obj' \<subseteq> obj_range' a obj"
-  unfolding obj_range'_def
-  apply (frule_tac x=a in pspace_alignedD')
-   apply assumption
-  apply (frule_tac x=b in pspace_alignedD')
-   apply assumption
-  apply (frule (3) rule_out_intv)
-  using is_aligned_no_overflow_mask
-  by fastforce
-
-lemma obj_range'_disjoint:
-  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s;
-     pspace_aligned' s; a \<noteq> b \<rbrakk>
-   \<Longrightarrow> obj_range' a obj \<inter> obj_range' b obj' = {}"
-  apply (frule_tac x=a in pspace_alignedD')
-   apply assumption
-  apply (frule_tac x=b in pspace_alignedD')
-   apply assumption
-  apply (frule_tac p=a and p'=b in aligned_mask_range_cases)
-   apply assumption
-  apply (fastforce dest: distinct_obj_range'_not_subset
-                   simp: obj_range'_def)
-  done
-
-qualify AARCH64_H (in Arch)
-
-(*
-  Then idea with this class is to be able to generically constrain
-  predicates over pspace_storable values to are not of type VCPU,
-  this is useful for invariants such as obj_at' that are trivially
-  true (sort of) if the predicate and the function (in the Hoare triple)
-  manipulate different types of objects
-*)
-
-class no_vcpu = pspace_storable +
-  assumes not_vcpu: "koType TYPE('a) \<noteq> ArchT AARCH64_H.VCPUT"
-
-instance tcb              :: no_vcpu by intro_classes auto
-instance endpoint         :: no_vcpu by intro_classes auto
-instance notification     :: no_vcpu by intro_classes auto
-instance cte              :: no_vcpu by intro_classes auto
-instance user_data        :: no_vcpu by intro_classes auto
-instance user_data_device :: no_vcpu by intro_classes auto
-
-end_qualify
-
-instantiation AARCH64_H.asidpool :: no_vcpu
-begin
-interpretation Arch .
-instance by intro_classes auto
-end
-
-instantiation AARCH64_H.pte :: no_vcpu
-begin
-interpretation Arch .
-instance by intro_classes auto
 end
 
 end
