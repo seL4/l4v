@@ -43,7 +43,7 @@ lemma updateObject_default_inv:
   by (wpsimp wp: magnitudeCheck_inv alignCheck_inv projectKO_inv)
 
 
-context begin interpretation Arch .
+context Arch begin arch_global_naming
 
 lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
