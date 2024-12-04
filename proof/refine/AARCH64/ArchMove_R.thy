@@ -16,10 +16,7 @@ begin
 lemmas cte_index_repair = mult.commute[where a="(2::'a::len word) ^ cte_level_bits"]
 lemmas cte_index_repair_sym = cte_index_repair[symmetric]
 
-lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
-  by (clarsimp simp add: invs_def valid_state_def)
-
-context begin interpretation Arch .
+context Arch begin arch_global_naming
 
 lemma get_pt_mapM_x_lower:
   assumes g: "\<And>P pt x. \<lbrace> \<lambda>s. P (kheap s pt_ptr) \<rbrace> g pt x \<lbrace> \<lambda>_ s. P (kheap s pt_ptr) \<rbrace>"
