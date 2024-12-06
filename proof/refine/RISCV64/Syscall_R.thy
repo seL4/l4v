@@ -443,9 +443,7 @@ lemma performInvocation_corres:
                   apply (rule corres_returnOkTT)
                   apply simp
                  apply wpsimp+
-             apply (clarsimp simp: sym_refs_asrt_def)
 
-            apply (clarsimp simp: liftE_bindE)
             apply (rule corres_guard_imp)
               apply (rule corres_split[OF getCurThread_corres])
                 apply simp
@@ -882,7 +880,7 @@ lemma schedContextBindNtfn_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' scPtr and ex_nonz_cap_to' ntfnPtr\<rbrace>
    schedContextBindNtfn scPtr ntfnPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: schedContextBindNtfn_def)
+  apply (clarsimp simp: schedContextBindNtfn_def updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_invs' setNotification_invs' hoare_vcg_imp_lift'
                     hoare_vcg_all_lift getNotification_wp)
   apply (rule conjI)
@@ -2130,9 +2128,13 @@ lemma checkBudget_corres: (* called when ct_schedulable or in checkBudgetRestart
               apply simp
              apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-   apply (clarsimp simp: sc_refills_sc_at_def obj_at_def cur_sc_tcb_def sc_tcb_sc_at_def valid_sched_def)
+   apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def valid_sched_def)
+   apply (rule conjI)
+    apply (fastforce intro!: valid_sched_context_size_objsI
+                       simp: vs_all_heap_simps is_sc_obj_def)
    apply (drule (1) active_scs_validE[rotated])
-   apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+   apply (frule valid_refills_nonempty_refills)
+   apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps
                   split: if_split_asm)
   apply clarsimp
   done

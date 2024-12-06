@@ -104,6 +104,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillHead :: PPtr SchedContext -> KernelR Refill
 > readRefillHead scPtr = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillHd sc
 
@@ -115,6 +116,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillTail :: PPtr SchedContext -> KernelR Refill
 > readRefillTail scPtr = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillTl sc
 
@@ -197,6 +199,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillNext :: PPtr SchedContext -> Int -> KernelR Int
 > readRefillNext scPtr index = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillNext sc index
 
@@ -220,6 +223,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillCapacity :: PPtr SchedContext -> Ticks -> KernelR Ticks
 > readRefillCapacity scPtr usage = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- readRefillHead scPtr
 >     return $ refillCapacity usage head
 
@@ -239,6 +243,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillPopHead :: PPtr SchedContext -> Kernel Refill
 > refillPopHead scPtr = do
+>     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- getRefillHead scPtr
 >     sc <- getSchedContext scPtr
 >     next <- getRefillNext scPtr (scRefillHead sc)
@@ -247,6 +252,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillAddTail :: PPtr SchedContext -> Refill -> Kernel ()
 > refillAddTail scPtr refill = do
+>     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     size <- getRefillSize scPtr
 >     sc <- getSchedContext scPtr
 >     assert (size < scRefillMax sc) "cannot add beyond queue size"
@@ -275,6 +281,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillReady :: PPtr SchedContext -> KernelR Bool
 > readRefillReady scPtr = do
+>     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- readRefillHead scPtr
 >     curTime <- readCurTime
 >     return $ rTime head <= curTime
@@ -468,9 +475,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextBindTCB :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextBindTCB scPtr tcbPtr = do
->     sc <- getSchedContext scPtr
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
->     setSchedContext scPtr $ sc { scTCB = Just tcbPtr }
+>     updateSchedContext scPtr (\sc -> sc { scTCB = Just tcbPtr })
 >     ifCondRefillUnblockCheck (Just scPtr) (Just True) (Just False)
 >     schedContextResume scPtr
 >     schedulable <- isSchedulable tcbPtr
@@ -479,11 +485,11 @@ This module uses the C preprocessor to select a target architecture.
 >         rescheduleRequired
 
 > schedContextBindNtfn :: PPtr SchedContext -> PPtr Notification -> Kernel ()
-> schedContextBindNtfn sc ntfn = do
->     n <- getNotification ntfn
->     setNotification ntfn (n { ntfnSc = Just sc })
->     s <- getSchedContext sc
->     setSchedContext sc (s { scNtfn = Just ntfn })
+> schedContextBindNtfn scPtr ntfnPtr = do
+>     stateAssert sym_refs_asrt "Assert that `sym_refs (state_refs_of' s)` holds"
+>     ntfn <- getNotification ntfnPtr
+>     setNotification ntfnPtr (ntfn { ntfnSc = Just scPtr })
+>     updateSchedContext scPtr (\sc -> sc { scNtfn = Just ntfnPtr })
 
 > schedContextUnbindTCB :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindTCB scPtr = do
@@ -769,8 +775,7 @@ This module uses the C preprocessor to select a target architecture.
 >     when (nscOpt == tscOpt && nscOpt /= Nothing) $ do
 >         threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) tcbPtr
 >         scPtr <- return $ fromJust nscOpt
->         sc <- getSchedContext scPtr
->         setSchedContext scPtr (sc { scTCB = Nothing })
+>         updateSchedContext scPtr (\sc -> sc { scTCB = Nothing })
 >         cur <- getCurThread
 >         when (tcbPtr == cur) rescheduleRequired
 

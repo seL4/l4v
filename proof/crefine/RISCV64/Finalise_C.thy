@@ -304,12 +304,17 @@ lemma isRoundRobin_ccorres:
 
 lemma refill_ready_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     (active_sc_at' scPtr and valid_objs') \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     valid_objs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (refillReady scPtr) (Call refill_ready_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
-  apply (cinit lift: sc_'
-               simp: readRefillReady_def readCurTime_def gets_the_ogets
-                     getRefillHead_def[symmetric] getCurTime_def[symmetric])
+  unfolding refillReady_def readRefillReady_def gets_the_obind ohaskell_state_assert_def
+            gets_the_ostate_assert
+  apply (rule ccorres_symb_exec_l'
+               [OF _ _ stateAssert_sp[simplified HaskellLib_H.stateAssert_def]];
+         (solves wpsimp)?)
+  apply (cinit' lift: sc_'
+                simp: readCurTime_def gets_the_ogets getRefillHead_def[symmetric]
+                      getCurTime_def[symmetric])
    apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
                 in ccorres_split_nothrow_call)
           apply (fastforce intro: refill_head_ccorres)
@@ -416,13 +421,18 @@ lemmas updateSchedContext_ccorres_lemma2 =
 
 lemma refill_next_ccorres:
   "ccorres (\<lambda>next next'. next = unat next') ret__unsigned_long_'
-     (active_sc_at' scPtr and valid_objs' and K (Suc idx < 2 ^ word_bits))
+     (valid_objs' and K (Suc idx < 2 ^ word_bits))
      (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>index = word_of_nat idx\<rbrace>) []
      (getRefillNext scPtr idx) (Call refill_next_'proc)"
   supply len_bit0[simp del]
-  apply (cinit lift: sc_' index_'
-               simp: readRefillNext_def refillNext_def readSchedContext_def getObject_def[symmetric]
-                     getSchedContext_def[symmetric])
+  unfolding getRefillNext_def readRefillNext_def gets_the_obind ohaskell_state_assert_def
+            gets_the_ostate_assert
+  apply (rule ccorres_symb_exec_l'
+               [OF _ _ stateAssert_sp[simplified HaskellLib_H.stateAssert_def]];
+         (solves wpsimp)?)
+  apply (cinit' lift: sc_' index_'
+                simp: refillNext_def readSchedContext_def getObject_def[symmetric]
+                      getSchedContext_def[symmetric])
    apply (rule ccorres_pre_getObject_sc, rename_tac sc)
    apply (rule ccorres_move_c_guard_sc)
    apply (rule ccorres_return_C; clarsimp)
@@ -452,10 +462,12 @@ lemma refill_next_ccorres:
 
 lemma refill_pop_head_ccorres:
   "ccorres crefill_relation ret__struct_refill_C_'
-     (active_sc_at' scPtr and valid_objs' and no_0_obj') \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (valid_objs' and no_0_obj') \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (refillPopHead scPtr) (Call refill_pop_head_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
-  apply (cinit lift: sc_')
+  unfolding refillPopHead_def
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply (cinit' lift: sc_')
    apply (rule ccorres_symb_exec_r)
      apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
                   in ccorres_split_nothrow_call)
@@ -804,7 +816,8 @@ lemma refill_unblock_check_ccorres:
                    apply clarsimp
                   apply wpsimp
                   apply (clarsimp simp: active_sc_at'_def)
-                  apply (wpsimp wp: no_ofail_refillHeadOverlapping simp: runReaderT_def)
+                  apply (wpsimp wp: no_ofail_refillHeadOverlapping
+                              simp: runReaderT_def active_sc_at'_def)
                  apply (wpsimp wp: updateRefillHd_valid_objs' mergeOverlappingRefills_valid_objs')
                  apply (clarsimp simp: active_sc_at'_rewrite runReaderT_def)
                  apply (fastforce dest: use_ovalid[OF refillHeadOverlapping_refillSize]

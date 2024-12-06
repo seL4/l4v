@@ -20,15 +20,16 @@ crunch getRefillSize
 
 lemma refill_add_tail_ccorres:
   "ccorres dc xfdc
-     (active_sc_at' scPtr and invs')
-     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> {s'. crefill_relation new (refill_' s')}) []
+     invs'
+     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> {s'. crefill_relation new (refill_' s')}) hs
      (refillAddTail scPtr new) (Call refill_add_tail_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del] len_bit0[simp del]
 
-  apply (simp add: refillAddTail_def)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ getRefillSize_sp]; wpsimp)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ get_sc_sp']; wpsimp?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ assert_sp]; wpsimp)
+  unfolding refillAddTail_def K_bind_apply haskell_assert_def
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ stateAssert_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ getRefillSize_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ get_sc_sp']; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[rotated, OF _ assert_sp]; (solves wpsimp)?)
 
   apply (cinit' lift: sc_' refill_' simp: updateRefillIndex_def)
    apply (rule ccorres_move_c_guard_sc)
