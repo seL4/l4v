@@ -62,7 +62,9 @@ jobs:
           - arch: AARCH64
             plat: bcm2711
     # test only most recent push:
-    concurrency: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
+    concurrency:
+      group: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
+      cancel-in-progress: true
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
@@ -98,7 +100,9 @@ jobs:
         num_domains: ['1', '']
         plat: [""]
     # test only most recent push:
-    concurrency: l4v-mcs-regression-${{ github.ref }}-${{ strategy.job-index }}
+    concurrency:
+      group: l4v-mcs-regression-${{ github.ref }}-${{ strategy.job-index }}
+      cancel-in-progress: true
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
