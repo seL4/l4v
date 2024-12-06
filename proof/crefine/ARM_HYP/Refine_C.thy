@@ -30,13 +30,14 @@ lemma schedule_sch_act_wf:
   apply (rule schedule_invs')
   done
 
-(* On GICv2 and GICv3, irqInvalid is picked such it is outside the range of possible IRQs
+(* On Arm, irqInvalid is picked such it is outside the range of possible IRQs
    by type alone. *)
 lemma irq_type_never_invalid_left:
   "ucast irq \<noteq> irqInvalid" for irq::irq
   unfolding irqInvalid_def
   using ucast_less[of irq, where 'a=machine_word_len]
-  by (clarsimp simp: mask_def)
+  apply (clarsimp simp: mask_def)
+  done
 
 lemmas irq_type_never_invalid = irq_type_never_invalid_left irq_type_never_invalid_left[symmetric]
 
