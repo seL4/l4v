@@ -66,6 +66,7 @@ text \<open>
 
     * Don't mix object and meta logic in a lemma statement.\<close>
 
+
 section \<open>Text and comments\<close>
 
 text \<open>
@@ -87,11 +88,18 @@ text \<open>
   the closing bracket on the same line as the ending text to not waste too much vertical space.
   Indent text by 2 inside the @{command text} area. This achieves visual separation.\<close>
 
+
 section \<open>Indentation\<close>
 
 text \<open>
-  Isabelle code is much easier to maintain when indented consistently. In apply style proofs we
-  indent by 2 spaces, and add an additional space for every additional subgoal.
+  Isabelle code is much easier to maintain when indented consistently.
+  When in doubt and not constrained by vertically aligning items or subgoal-count offsets, use
+  2 spaces when indenting something with respect to its container (see ``General layout`` in
+  ``Other`` section).
+
+  In apply style proofs we indent by 2 spaces, and add an additional space for every additional
+  subgoal. For instance, a command which applies when there are 3 subgoals should be indented by
+  4 spaces.
 
   In the following example, the rules iffI and conjI add a new subgoal, and fast removes a subgoal.
   The idea is that, when something breaks, the indentation tells you whether a tactic used to solve
@@ -351,6 +359,7 @@ term "
     B \<or>
   A" \<comment> \<open>NOT OK: implies this parses as @{text "((A \<and> B) \<longrightarrow> B) \<or> A"}\<close>
 
+
 section \<open>Other\<close>
 
 text \<open>
@@ -364,6 +373,7 @@ text \<open>
   Other:
     * Avoid commands that produce "legacy" warnings. Add an issue with tag cleanup if you see them
       after an Isabelle update.\<close>
+
 
 section \<open>Comments\<close>
 
