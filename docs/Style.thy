@@ -360,6 +360,71 @@ term "
   A" \<comment> \<open>NOT OK: implies this parses as @{text "((A \<and> B) \<longrightarrow> B) \<or> A"}\<close>
 
 
+section \<open>Wrapping/indenting complex rule instantiations, usually as part of @{text "_tac"} methods\<close>
+
+text \<open>
+  This section concerns @{text "_tac"} methods, which are generally used when the instantiations
+  contain bound variables. When bound variables do no occur, prefer instantiations via attribute
+  (@{text "fact[where ...]"}) as they are more general.\<close>
+
+text \<open>
+  For simple instantiations which can fit on one line, style them as follows.
+  Notes:
+    * for single-variable instantiations, do not use quotes
+    * no space between @{text "="} and the instantiation or start of quote\<close>
+
+lemma
+  "\<lbrakk>a; b\<rbrakk> \<Longrightarrow> a \<and> b"
+  apply (frule_tac P=a and Q="id b" in conjI) \<comment> \<open>GOOD\<close>
+  apply (frule_tac P="a" and Q = "id b" in conjI) \<comment> \<open>BAD: unnecessary quotes, unnecessary spacing\<close>
+  oops
+
+text \<open>
+  However, when the instantiation is complex, the instantiations, @{text "and"} and @{text "in"}
+  need to be distributed over multiple lines.\<close>
+
+lemma conjI3:
+  "\<lbrakk>a; b; c\<rbrakk> \<Longrightarrow> a \<and> b \<and> c"
+  by simp
+
+text \<open>
+  For left operator-wrapping style, use this version. It was chosen based on being space-optimising
+  and nice-looking (variable instantiations and rule all left-align, while operators right-align):\<close>
+
+lemma \<comment> \<open>left operator-wrapping pretty version - preferred\<close>
+  "\<lbrakk> x; y; z \<rbrakk> \<Longrightarrow> x \<and> y \<and> z"
+  apply (drule_tac a=x
+               and b=y
+               and c=z
+                in conjI3)
+  oops
+
+text \<open>
+  For right-operator wrapping style, use this version. It still provides the alignment of variable
+  instantiations, but provides less horizontal space for the instantiation bodies themselves:\<close>
+
+lemma \<comment> \<open>right operator-wrapping pretty version - preferred\<close>
+  "\<lbrakk> x; y; z \<rbrakk> \<Longrightarrow> x \<and> y \<and> z"
+  apply (drule_tac a=x and
+                   b=y and
+                   c=z
+                   in conjI3) \<comment> \<open>this must not go on previous line in multi-line instantiations\<close>
+  oops
+
+text \<open>
+  There is one more left-operator wrappings style we permit, but only due to legacy proofs and the
+  possibility of being understandable/generatable by tools. Please do not use it on new
+  hand-written lemmas:\<close>
+
+lemma \<comment> \<open>left operator-wrapping pretty version for tools/legacy - permitted\<close>
+  "\<lbrakk> x; y; z \<rbrakk> \<Longrightarrow> x \<and> y \<and> z"
+  apply (drule_tac a=x
+                   and b=y
+                   and c=z
+                   in conjI3)
+  oops
+
+
 section \<open>Other\<close>
 
 text \<open>
