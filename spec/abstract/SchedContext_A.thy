@@ -135,19 +135,18 @@ where
      maybe_add_empty_tail sc_ptr
    od"
 
-definition
-  schedule_used :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition schedule_used :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "schedule_used sc_ptr new \<equiv> do
      refills \<leftarrow> get_refills sc_ptr;
      assert (refills \<noteq> []);
-     if can_merge_refill (last refills) new
-     then update_refill_tl sc_ptr (r_amount_update (\<lambda>amount. amount + r_amount new))
+     tail \<leftarrow> get_refill_tail sc_ptr;
+     if can_merge_refill tail new
+     then update_refill_tl sc_ptr (\<lambda>r. r\<lparr>r_amount := r_amount tail + r_amount new\<rparr>)
      else do full \<leftarrow> refill_full sc_ptr;
              if \<not> full
              then refill_add_tail sc_ptr new
-             else do update_refill_tl sc_ptr (\<lambda>r. r\<lparr>r_time := r_time new - r_amount r\<rparr>);
-                     update_refill_tl sc_ptr (\<lambda>r. r\<lparr>r_amount := r_amount r + r_amount new\<rparr>)
+             else do update_refill_tl sc_ptr (\<lambda>r. r\<lparr>r_time := r_time new - r_amount tail\<rparr>);
+                     update_refill_tl sc_ptr (\<lambda>r. r\<lparr>r_amount := r_amount tail + r_amount new\<rparr>)
                   od
           od
    od"
@@ -162,81 +161,66 @@ where
    od"
 
 definition
-  head_insufficient :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad"
+  refill_head_insufficient :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad"
 where
-  "head_insufficient sc_ptr \<equiv>  do {
-    sc \<leftarrow> read_sched_context sc_ptr;
-    oreturn (r_amount (hd (sc_refills sc)) < MIN_BUDGET)
+  "refill_head_insufficient sc_ptr \<equiv>  do {
+    head \<leftarrow> read_refill_head sc_ptr;
+    oreturn (r_amount head < MIN_BUDGET)
   }"
 
-definition
-  non_overlapping_merge_refills :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "non_overlapping_merge_refills sc_ptr \<equiv> do
+definition merge_nonoverlapping_head_refill :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "merge_nonoverlapping_head_refill sc_ptr \<equiv> do
      old_head \<leftarrow> refill_pop_head sc_ptr;
-     update_refill_hd sc_ptr (r_time_update (\<lambda>t. t - r_amount old_head) o (r_amount_update (\<lambda>m. m + r_amount old_head)))
+     update_refill_hd sc_ptr (\<lambda>head. head\<lparr>r_amount := r_amount head + r_amount old_head\<rparr>);
+     update_refill_hd sc_ptr (\<lambda>head. head\<lparr>r_time := r_time head - r_amount old_head\<rparr>)
    od"
 
-definition
-  head_insufficient_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition head_insufficient_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "head_insufficient_loop sc_ptr
-     \<equiv> whileLoop (\<lambda>_ s. the ((head_insufficient sc_ptr) s))
-                  (\<lambda>_. non_overlapping_merge_refills sc_ptr) ()"
+     \<equiv> whileLoop (\<lambda>_ s. the ((refill_head_insufficient sc_ptr) s))
+                  (\<lambda>_. merge_nonoverlapping_head_refill sc_ptr) ()"
 
-definition
-  head_time_buffer :: "ticks \<Rightarrow> (bool, 'z::state_ext) r_monad"
-where
-  "head_time_buffer usage \<equiv> do {
-    sc_ptr \<leftarrow> ogets cur_sc;
-    sc \<leftarrow> read_sched_context sc_ptr;
-    oreturn  (r_amount (refill_hd sc) \<le> usage \<and> r_time (refill_hd sc) < MAX_RELEASE_TIME)
+definition head_refill_overrun :: "obj_ref \<Rightarrow> ticks \<Rightarrow> (bool, 'z::state_ext) r_monad" where
+  "head_refill_overrun sc_ptr usage \<equiv> do {
+    head \<leftarrow> read_refill_head sc_ptr;
+    oreturn (r_amount head \<le> usage \<and> r_time head < MAX_RELEASE_TIME)
   }"
 
-definition
-  handle_overrun_loop_body :: "ticks \<Rightarrow> (ticks, 'z::state_ext) s_monad"
-where
-  "handle_overrun_loop_body usage \<equiv> do
-     sc_ptr \<leftarrow> gets cur_sc;
-     single \<leftarrow> refill_single sc_ptr;
+definition charge_entire_head_refill :: "obj_ref \<Rightarrow> ticks \<Rightarrow> (ticks, 'z::state_ext) s_monad" where
+  "charge_entire_head_refill sc_ptr usage \<equiv> do
+     head \<leftarrow> get_refill_head sc_ptr;
      sc \<leftarrow> get_sched_context sc_ptr;
-
-     usage' \<leftarrow> return (usage - r_amount (refill_hd sc));
-
+     single \<leftarrow> refill_single sc_ptr;
      if single
-        then update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + sc_period sc))
+        then update_refill_hd sc_ptr (\<lambda>r. r\<lparr>r_time := r_time head + sc_period sc\<rparr>)
         else do old_head \<leftarrow> refill_pop_head sc_ptr;
                 schedule_used sc_ptr (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)
              od;
-     return usage'
+     return (usage - r_amount head)
    od"
 
-definition
-  handle_overrun_loop :: "ticks \<Rightarrow> (ticks, 'z::state_ext) s_monad"
-where
-  "handle_overrun_loop usage
-    \<equiv> whileLoop (\<lambda>usage s. the (head_time_buffer usage s))
-                 (\<lambda>usage. handle_overrun_loop_body usage) usage"
+definition handle_overrun :: "obj_ref \<Rightarrow> ticks \<Rightarrow> (ticks, 'z::state_ext) s_monad" where
+  "handle_overrun sc_ptr usage
+    \<equiv> whileLoop (\<lambda>usage s. the (head_refill_overrun sc_ptr usage s))
+                 (\<lambda>usage. charge_entire_head_refill sc_ptr usage)
+                 usage"
 
-definition
-  refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "refill_budget_check usage \<equiv> do
      sc_ptr \<leftarrow> gets cur_sc;
 
      robin \<leftarrow> is_round_robin sc_ptr;
      assert (\<not>robin);
 
-     usage' \<leftarrow> handle_overrun_loop usage;
+     usage' \<leftarrow> handle_overrun sc_ptr usage;
 
-     refills \<leftarrow> get_refills sc_ptr;
-     new_head_amount \<leftarrow> return (r_amount (hd refills));
+     head \<leftarrow> get_refill_head sc_ptr;
 
-     when (usage' > 0 \<and> r_time (hd refills) < MAX_RELEASE_TIME) $ do
+     when (usage' > 0 \<and> r_time head < MAX_RELEASE_TIME) $ do
        sc \<leftarrow> get_sched_context sc_ptr;
-       period \<leftarrow> return (sc_period sc);
-       used \<leftarrow> return \<lparr>r_time = r_time (hd (sc_refills sc)) + period, r_amount = usage'\<rparr>;
-       update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + usage') o (r_amount_update (\<lambda>m. m - usage')));
+       used \<leftarrow> return \<lparr>r_time = r_time head + sc_period sc, r_amount = usage'\<rparr>;
+       update_refill_hd sc_ptr (\<lambda>r. r\<lparr>r_amount := r_amount head - usage'\<rparr>);
+       update_refill_hd sc_ptr (\<lambda>r. r\<lparr>r_time := r_time head + usage'\<rparr>);
        schedule_used sc_ptr used
      od;
 

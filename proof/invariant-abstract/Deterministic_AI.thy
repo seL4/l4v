@@ -4101,11 +4101,9 @@ crunch set_refills,refill_size, schedule_used
   for valid_list[wp]: valid_list
   (simp: schedule_used_defs wp: get_refills_wp)
 
-lemma refill_budget_check_valid_list[wp]:
-  "refill_budget_check usage \<lbrace>valid_list\<rbrace>"
-  unfolding refill_budget_check_defs
-  apply (wpsimp wp: whileLoop_valid_inv | wp (once) hoare_drop_imps)+
-  done
+crunch refill_budget_check
+  for valid_list[wp]: valid_list
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma refill_budget_check_round_robin_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_budget_check_round_robin usage \<lbrace>\<lambda>_.valid_list\<rbrace>"

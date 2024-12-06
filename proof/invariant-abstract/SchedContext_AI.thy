@@ -87,10 +87,10 @@ lemmas refill_unblock_check_defs
     refill_head_overlapping_loop_def set_refill_hd_def update_refill_hd_def
 
 lemmas refill_budget_check_defs
-  = refill_budget_check_def non_overlapping_merge_refills_def merge_overlapping_refills_def
-    refill_pop_head_def head_insufficient_loop_def handle_overrun_loop_def
-    handle_overrun_loop_body_def set_refill_hd_def update_refill_hd_def refill_single_def
-    refill_size_def
+  = refill_budget_check_def merge_nonoverlapping_head_refill_def
+    refill_pop_head_def head_insufficient_loop_def handle_overrun_def charge_entire_head_refill_def
+    set_refill_hd_def update_refill_hd_def update_refill_tl_def refill_single_def refill_size_def
+    schedule_used_def refill_add_tail_def
 
 lemma update_sched_context_decompose:
    "update_sched_context scp (\<lambda>sc. f (g sc))
@@ -211,7 +211,8 @@ lemma refill_pop_head_valid_objs[wp]:
 lemma head_insufficient_loop_valid_objs[wp]:
   "head_insufficient_loop usage \<lbrace>valid_objs\<rbrace>"
   unfolding head_insufficient_loop_def
-  by (wpsimp wp: whileLoop_valid_inv simp: non_overlapping_merge_refills_def update_refill_hd_def)
+  by (wpsimp wp: whileLoop_valid_inv hoare_drop_imps
+           simp: merge_nonoverlapping_head_refill_def set_refill_hd_def)
 
 lemma schedule_used_valid_objs[wp]:
   "schedule_used sc_ptr new \<lbrace>valid_objs\<rbrace>"
@@ -220,19 +221,19 @@ lemma schedule_used_valid_objs[wp]:
   apply (clarsimp simp: obj_at_def sc_at_ppred_def valid_sched_context_def)
   done
 
-lemma handle_overrun_loop_valid_objs[wp]:
-  "handle_overrun_loop usage \<lbrace>valid_objs\<rbrace>"
-  unfolding handle_overrun_loop_def handle_overrun_loop_body_def refill_single_def refill_size_def
+lemma handle_overrun_valid_objs[wp]:
+  "handle_overrun sc_ptr usage \<lbrace>valid_objs\<rbrace>"
+  unfolding handle_overrun_def charge_entire_head_refill_def refill_single_def refill_size_def
             update_refill_hd_def
   apply (wpsimp wp: whileLoop_valid_inv
-              simp: valid_sched_context_def)
+              simp: set_refill_hd_def valid_sched_context_def)
   done
 
 lemma refill_budget_check_valid_objs[wp]:
   "refill_budget_check usage \<lbrace>valid_objs\<rbrace>"
   apply (clarsimp simp: refill_budget_check_def)
   apply (rule bind_wp_fwd_skip, solves wpsimp)+
-  apply (wpsimp wp: set_refills_valid_objs simp: update_refill_hd_def)
+  apply (wpsimp wp: set_refills_valid_objs simp: set_refill_hd_def update_refill_hd_def)
   done
 
 (* FIXME RT: move to Invariants_AI *)
@@ -524,7 +525,7 @@ crunch refill_budget_check
   for ex_nonz_cap_tp[wp]: "\<lambda>s. ex_nonz_cap_to ptr s"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch head_insufficient_loop, handle_overrun_loop
+crunch head_insufficient_loop, handle_overrun
   for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
   (wp: crunch_wps update_sched_context_iflive_implies)
 
@@ -770,7 +771,7 @@ lemma valid_sched_context_domain_time_update[simp]:
   "valid_sched_context p (domain_time_update f s) = valid_sched_context p s"
   by (simp add: valid_sched_context_def valid_bound_obj_def split: option.splits)
 
-crunch head_insufficient_loop, handle_overrun_loop
+crunch head_insufficient_loop, handle_overrun
   for valid_replies_pred[wp]: "valid_replies_pred P"
   (wp: crunch_wps ignore: update_sched_context)
 
@@ -876,7 +877,7 @@ lemma set_refills_bound_sc_tcb_at_ct[wp]:
   by (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
                    pred_tcb_at_def obj_at_def)
 
-crunch handle_overrun_loop, head_insufficient_loop
+crunch handle_overrun, head_insufficient_loop
   for bound_sc_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at P (cur_thread s) s"
   (wp: crunch_wps ignore: update_sched_context)
 
@@ -991,7 +992,7 @@ lemma set_refills_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> set_refills p r \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: set_refills_def wp: get_sched_context_wp)
 
-crunch head_insufficient_loop, handle_overrun_loop
+crunch head_insufficient_loop, handle_overrun
   for ct_in_state[wp]: "ct_in_state t"
   (wp: crunch_wps)
 
@@ -1061,13 +1062,13 @@ lemma refill_budget_check_round_robin_sc_obj_at_n[wp]:
   "refill_budget_check_round_robin usage \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
   by (wpsimp simp: refill_budget_check_round_robin_def update_refill_hd_def update_refill_tl_def)
 
-crunch handle_overrun_loop, head_insufficient_loop
+crunch handle_overrun, head_insufficient_loop
   for sc_obj_at[wp]: "\<lambda>s. Q (sc_obj_at n sc_ptr s)"
   (wp: crunch_wps)
 
 lemma refill_budget_check_sc_obj_at_n[wp]:
   "refill_budget_check usage \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
-  by (wpsimp simp: refill_budget_check_def is_round_robin_def)
+  by (wpsimp simp: refill_budget_check_def is_round_robin_def wp: hoare_drop_imp)
 
 lemma commit_time_sc_obj_at[wp]:
   "commit_time \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
