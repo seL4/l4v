@@ -98,7 +98,8 @@ text \<open>
   ``Other`` section).
 
   In apply style proofs we indent by 2 spaces, and add an additional space for every additional
-  subgoal.
+  subgoal. For instance, a command which applies when there are 3 subgoals should be indented by
+  4 spaces.
 
   In the following example, the rules iffI and conjI add a new subgoal, and fast removes a subgoal.
   The idea is that, when something breaks, the indentation tells you whether a tactic used to solve
