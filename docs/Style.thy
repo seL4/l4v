@@ -227,6 +227,43 @@ lemma test_lemma3:
          case_tac h; simp)
   done
 
+
+section \<open>Fact transformers and attributes\<close>
+
+text \<open>
+  For simple cases, standard approach applies: comma-separated list with one space after commas:\<close>
+
+lemmas attr1 = conj_absorb[THEN iffD2, OF conj_absorb, simplified] \<comment> \<open>basic case\<close>
+
+text \<open>
+  When the transform is more complex or runs out of horizontal room, wrapping is needed.
+  In most cases, reconfiguring the attributes into a vertical list should suffice:\<close>
+
+lemmas attr2 = conj_absorb[THEN iffD2,
+                           OF conj_absorb[where A="A \<and> B \<and> C \<and> D \<and> E \<and> F \<and> G" for A B C D E F G,
+                                          simplified],
+                           simplified] \<comment> \<open>simple wrapping case\<close>
+
+text \<open>
+  When terms get even larger, the transforms more complicated, or we start running into the column
+  limit, more wrapping is needed. We can gain extra space by indenting from the fact name:\<close>
+
+lemmas attr3 = conj_absorb[ \<comment> \<open>note the @{text "["} to indicate transform\<close>
+                 THEN iffD2,
+                 OF conj_absorb[where A="A \<and> B \<and> C \<and> D \<and> E \<and> F \<and> G" for A B C D E F G,
+                                simplified],
+                 simplified] \<comment> \<open>extreme wrapping case\<close>
+
+text \<open>
+  There is an important principle here: telling apart transformed/attributed facts from unaltered
+  facts at a glance. In other words avoid:\<close>
+
+lemmas attrb = conj_absorb \<comment> \<open>BAD: at first glance looks to be an unmodified fact\<close>
+                 [THEN iffD2 (*...*)]
+
+lemmas attrb2 = conj_absorb [THEN iffD2 (*...*)] \<comment> \<open>avoid: still needs some mental processing\<close>
+
+
 section \<open>Right vs left operator-wrapping\<close>
 
 text \<open>
