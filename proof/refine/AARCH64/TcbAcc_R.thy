@@ -6,7 +6,7 @@
  *)
 
 theory TcbAcc_R
-imports CSpace_R ArchMove_R
+imports CSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -4045,6 +4045,8 @@ lemma isRunnable_const:
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> isRunnable t \<lbrace>\<lambda>runnable _. runnable \<rbrace>"
   by (rule isRunnable_wp)
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma valid_ipc_buffer_ptr'D:
   assumes yv: "y < unat max_ipc_words"
   and    buf: "valid_ipc_buffer_ptr' a s"
@@ -4133,6 +4135,8 @@ lemma storeWordUser_corres:
    apply (frule (1) valid_ipc_buffer_ptr'D [OF y])
   apply (simp add: valid_ipc_buffer_ptr'_def)
   done
+
+end
 
 lemma load_word_corres:
   "corres (=) \<top>
