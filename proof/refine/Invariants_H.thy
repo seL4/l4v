@@ -2157,7 +2157,7 @@ lemma ex_cte_cap_to'_pres:
   done
 
 
-section "Idempotence over kernel_state field updates"
+section "kernel_state field update identities"
 
 context pspace_update_eq'
 begin

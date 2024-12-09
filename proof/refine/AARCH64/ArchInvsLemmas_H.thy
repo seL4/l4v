@@ -247,7 +247,7 @@ global_interpretation Invariants_H_cte_ats?: Invariants_H_cte_ats
   qed
 
 
-(* arch-specific consequences of idempotence over kernel_state field updates *)
+(* arch-specific consequences of kernel_state field update identities *)
 
 context Arch_pspace_update_eq'
 begin

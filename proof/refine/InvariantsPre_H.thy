@@ -22,7 +22,23 @@ axiomatization
   kernel_data_refs :: "word64 set"
 
 
-section \<open>Locale Setup for Idempotence over kernel_state Field Updates\<close>
+section \<open>Locale Setup for kernel_state Field Update Identities\<close>
+
+text \<open>
+  These locales identify which updates are the identity function on specific field access
+  predicates. For instance, when a function doesn't change the @{term ksPSpace} component of the
+  state, that function is the identity on all predicates that only depend on @{term ksPSpace}.\<close>
+
+text \<open>
+  Since locales can dynamically gain conclusions, we want to avoid situations where someone adds
+  a conclusion somewhere in the locale graph and is surprised that it does not appear for
+  extensions of that locale. For arch-split there is an extra complication, where the conclusions
+  might use arch-specific facts, thus needing to be in Arch.
+
+  This means that for every one the update locales, we have to add an additional Arch locale.
+  In order to not leave gaps in the locale graph, when we combine update locales, the Arch locale
+  for their combination must also see the conclusions of \emph{their} Arch locales, leading to a
+  pattern of @{text "C = A + B"} followed by @{text "ArchC = C + ArchA + ArchB"}.\<close>
 
 locale pspace_update_eq' =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"
@@ -30,7 +46,6 @@ locale pspace_update_eq' =
 
 locale Arch_pspace_update_eq' = pspace_update_eq' + Arch
 
-(* FIXME arch-split: confusing name *)
 locale arch_idle_update_eq' =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"
   assumes arch: "ksArchState (f s) = ksArchState s"
