@@ -1649,6 +1649,7 @@ lemma doFaultTransfer_invs[wp]:
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def AARCH64_H.lookupIPCBuffer_def
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
                    locateSlot_conv threadGet_def comp_def)
   apply (wp getCTE_wp getObject_tcb_wp | wpc)+
@@ -3534,6 +3535,7 @@ lemma setupCallerCap_ifunsafe[wp]:
    \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   unfolding setupCallerCap_def getThreadCallerSlot_def
             getThreadReplySlot_def locateSlot_conv
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (wp getSlotCap_cte_wp_at
        | simp add: unique_master_reply_cap' | strengthen eq_imp_strg
        | wp (once) hoare_drop_imp[where f="getCTE rs" for rs])+

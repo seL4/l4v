@@ -12,6 +12,9 @@ imports
 
 begin
 
+lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
+  by (clarsimp simp add: invs_def valid_state_def)
+
 lemma zip_map_rel:
   assumes "(x,y) \<in> set (zip xs ys)" "map f xs = map g ys"
   shows "f x = g y"
@@ -58,6 +61,15 @@ lemma unaligned_helper:
   done
 
 declare word_unat_power[symmetric, simp del]
+
+lemma neq_out_intv:
+  "\<lbrakk> a \<noteq> b; b \<notin> {a..a + c - 1} - {a} \<rbrakk> \<Longrightarrow> b \<notin> {a..a + c - 1}"
+  by simp
+
+lemma ptr_range_mask_range:
+  "{ptr..ptr + 2 ^ bits - 1} = mask_range ptr bits"
+  unfolding mask_def
+  by simp
 
 lemma oblivious_mapM_x:
   "\<forall>x\<in>set xs. oblivious f (g x) \<Longrightarrow> oblivious f (mapM_x g xs)"

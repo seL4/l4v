@@ -212,6 +212,7 @@ lemma tcb_cases_related:
   "tcb_cap_cases ref = Some (getF, setF, restr) \<Longrightarrow>
     \<exists>getF' setF'. (\<forall>x. tcb_cte_cases (cte_map (x, ref) - x) = Some (getF', setF'))
                \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF tcb) (cteCap (getF' tcb')))"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   by (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1
                 cte_map_def' tcb_relation_def
          split: if_split_asm)
