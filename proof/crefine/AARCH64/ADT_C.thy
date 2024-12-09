@@ -787,6 +787,7 @@ lemma map_to_ctes_tcb_ctes:
   "ctes_of s' = ctes_of s \<Longrightarrow>
    ko_at' tcb p s \<Longrightarrow> ko_at' tcb' p s' \<Longrightarrow>
    \<forall>x\<in>ran tcb_cte_cases. fst x tcb' = fst x tcb"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp add: ran_tcb_cte_cases)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_tcb
                  split: kernel_object.splits)
