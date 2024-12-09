@@ -1278,6 +1278,11 @@ lemma map_to_scs_from_sc_at:
   unfolding obj_at'_def
   by clarsimp
 
+lemma map_to_replies_from_reply_at:
+  "reply_at' replyPtr s \<Longrightarrow> map_to_replies (ksPSpace s) replyPtr \<noteq> None"
+  unfolding obj_at'_def
+  by clarsimp
+
 (* FIXME RT: generalise to other kernel object types *)
 lemma dom_eq:
   "\<exists>ko. ko_at' (ko :: sched_context) p s \<Longrightarrow>
@@ -1321,6 +1326,20 @@ lemma sc_at_h_t_valid:
   apply (clarsimp simp: typ_heap_simps)
   done
 
+lemma reply_at_h_t_valid:
+  "\<lbrakk> reply_at' replyPtr s; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> s' \<Turnstile>\<^sub>c reply_Ptr replyPtr"
+  apply (drule cmap_relation_reply)
+  apply (drule map_to_replies_from_reply_at)
+  apply (clarsimp simp add: cmap_relation_def)
+  apply (drule (1) bspec [OF _ domI])
+  apply (clarsimp simp add: dom_def image_def)
+  apply (drule equalityD1)
+  apply (drule subsetD)
+   apply simp
+   apply (rule exI [where x = replyPtr])
+   apply simp
+  apply (clarsimp simp: typ_heap_simps)
+  done
 
 (* MOVE *)
 lemma exs_getObject:
@@ -1782,6 +1801,18 @@ lemma obj_at_cslift_sc:
   apply (frule obj_at_ko_at')
   apply clarsimp
   apply (frule cmap_relation_sched_context)
+  apply (drule (1) cmap_relation_ko_atD)
+  apply fastforce
+  done
+
+lemma obj_at_cslift_reply:
+  fixes P :: "reply \<Rightarrow> bool"
+  shows "\<lbrakk>obj_at' P replyPtr s; (s, s') \<in> rf_sr\<rbrakk>
+         \<Longrightarrow> \<exists>ko ko'. ko_at' ko replyPtr s \<and> P ko \<and> cslift s' (Ptr replyPtr) = Some ko'
+                      \<and> creply_relation ko ko'"
+  apply (frule obj_at_ko_at')
+  apply clarsimp
+  apply (frule cmap_relation_reply)
   apply (drule (1) cmap_relation_ko_atD)
   apply fastforce
   done

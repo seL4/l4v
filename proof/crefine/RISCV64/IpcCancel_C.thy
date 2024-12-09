@@ -2914,12 +2914,120 @@ lemma reply_remove_tcb_ccorres:
     (replyRemoveTCB tptr) (Call reply_remove_tcb_'proc)"
 sorry (* FIXME RT: reply_remove_tcb_corres *)
 
+lemma updateReply_eq:
+  "\<lbrakk>ko_at' reply replyPtr s\<rbrakk>
+   \<Longrightarrow> ((), s\<lparr>ksPSpace := (ksPSpace s)(replyPtr \<mapsto> injectKO (f reply))\<rparr>)
+       \<in> fst (updateReply replyPtr f s)"
+  unfolding updateReply_def
+  apply (clarsimp simp add: in_monad)
+  apply (rule exI)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (clarsimp simp: getReply_def)
+   apply (rule getObject_eq)
+    apply simp
+   apply assumption
+  apply (frule_tac v="f reply" in setObject_eq_variable_size)
+     apply simp
+    apply (simp add: objBits_simps')
+   apply (simp add: obj_at'_def)
+   apply (rule_tac x=reply in exI)
+   apply (simp add: objBits_simps)
+  apply (clarsimp simp: setReply_def)
+  done
+
+lemma updateReply_ccorres_lemma4:
+  "\<lbrakk> \<And>s reply. \<Gamma> \<turnstile> (Q s reply) c {s'. (s\<lparr>ksPSpace := (ksPSpace s)(replyPtr \<mapsto> injectKOS (g reply))\<rparr>, s') \<in> rf_sr};
+     \<And>s s' reply reply'. \<lbrakk> (s, s') \<in> rf_sr; P reply; ko_at' reply replyPtr s;
+                           cslift s' (Ptr replyPtr) = Some reply';
+                           creply_relation reply reply'; P' s; s' \<in> R \<rbrakk> \<Longrightarrow> s' \<in> Q s reply \<rbrakk>
+   \<Longrightarrow> ccorres dc xfdc
+         (obj_at' (P :: reply \<Rightarrow> bool) replyPtr and P') R hs
+         (updateReply replyPtr g) c"
+  apply (rule ccorres_from_vcg)
+  apply (rule allI)
+  apply (case_tac "obj_at' P replyPtr \<sigma>")
+   apply (drule obj_at_ko_at', clarsimp)
+   apply (rule conseqPre, rule conseqPost)
+      apply assumption
+     apply clarsimp
+     apply (rule rev_bexI, rule updateReply_eq)
+      apply assumption
+     apply (clarsimp simp: obj_at_simps)
+     apply simp
+    apply simp
+   apply clarsimp
+   apply (drule (1) obj_at_cslift_reply, clarsimp)
+  apply simp
+  apply (rule hoare_complete')
+  apply (simp add: cnvalid_def nvalid_def)
+  done
+
+lemmas updateReply_ccorres_lemma3 = updateReply_ccorres_lemma4[where R=UNIV]
+
+lemmas updateReply_ccorres_lemma2 = updateReply_ccorres_lemma3[where P'=\<top>]
+
+lemma rf_sr_reply_update:
+  "\<lbrakk> (s, s') \<in> rf_sr;
+     ko_at' (old_reply :: reply) replyPtr s;
+     t_hrs_' (globals t) = hrs_mem_update (heap_update (reply_Ptr replyPtr) creply)
+                                          (t_hrs_' (globals s'));
+     creply_relation reply creply \<rbrakk>
+   \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(replyPtr \<mapsto> KOReply reply)\<rparr>,
+        t'\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
+  unfolding rf_sr_def cstate_relation_def cpspace_relation_def
+  apply (clarsimp simp: Let_def update_replies_map_tos)
+  apply (frule cmap_relation_ko_atD[rotated])
+   apply assumption
+  apply (erule obj_atE')
+  apply clarsimp
+  apply (clarsimp simp: map_comp_update typ_heap_simps')
+  apply (intro conjI)
+     apply (clarsimp simp: cmap_relation_def)
+    apply (clarsimp simp: map_comp_update projectKO_opt_sc typ_heap_simps' refill_buffer_relation_def)
+   apply (clarsimp simp: carch_state_relation_def typ_heap_simps')
+  apply (clarsimp simp: cmachine_state_relation_def)
+  done
+
+lemmas rf_sr_reply_update2 = rf_sr_obj_update_helper[OF rf_sr_reply_update, simplified]
+
 lemma reply_unlink_ccorres:
   "ccorres dc xfdc
-    (invs' and tcb_at' tcbPtr and reply_at' replyPtr)
-    (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>reply = Ptr replyPtr\<rbrace>) []
-    (replyUnlink tcbPtr replyPtr) (Call reply_unlink_'proc)"
-sorry (* FIXME RT: reply_unlink_ccorres *)
+    (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'
+     and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+     and st_tcb_at' (\<lambda>st. (\<exists>oref cg. st = Structures_H.BlockedOnReceive oref cg (Some replyPtr))
+                          \<or> st = Structures_H.BlockedOnReply (Some replyPtr))
+                    tcbPtr
+     and obj_at' (\<lambda>reply. replyTCB reply = Some tcbPtr) replyPtr)
+    (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
+    (replyUnlink replyPtr tcbPtr) (Call reply_unlink_'proc)"
+  apply (cinit lift: reply_' tcb_')
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_symb_exec_l)
+         apply (rule ccorres_assert)
+         apply (rule ccorres_symb_exec_l)
+            apply (rule ccorres_stateAssert)
+            apply (rule ccorres_move_c_guard_reply)
+            apply (rule ccorres_split_nothrow)
+                apply (rule updateReply_ccorres_lemma2[where P=\<top>])
+                 apply vcg
+                apply (frule (1) obj_at_cslift_reply)
+                apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
+               apply ceqv
+              apply (ctac add: setThreadState_ccorres)
+             apply (wpsimp wp: updateReply_valid_objs')
+            apply vcg
+           apply (wp gts_inv')
+          apply (wp gts_wp')
+         apply simp
+        apply wpsimp
+       apply wp
+      apply simp
+     apply wpsimp
+    apply wp
+   apply (simp add: getReply_def getObject_def split: option.splits)
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def valid_reply'_def)
+  done
 
 lemma reply_pop_ccorres:
   "ccorres dc xfdc
