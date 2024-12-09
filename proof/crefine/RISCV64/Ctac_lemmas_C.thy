@@ -46,6 +46,13 @@ lemma c_guard_abs_sc:
 
 lemmas ccorres_move_c_guard_sc[corres_pre] = ccorres_move_c_guards[OF c_guard_abs_sc]
 
+lemma c_guard_abs_reply:
+  fixes p :: "reply_C ptr"
+  shows "\<forall>s s'. (s, s') \<in> rf_sr \<and> reply_at' (ptr_val p) s \<and> True \<longrightarrow> s' \<Turnstile>\<^sub>c p"
+  by (fastforce dest!: reply_at_h_t_valid)
+
+lemmas ccorres_move_c_guard_reply = ccorres_move_c_guards[OF c_guard_abs_reply]
+
 lemma cte_array_relation_array_assertion:
   "gsCNodes s p = Some n \<Longrightarrow> cte_array_relation s cstate
     \<Longrightarrow> array_assertion (cte_Ptr p) (2 ^ n) (hrs_htd (t_hrs_' cstate))"
