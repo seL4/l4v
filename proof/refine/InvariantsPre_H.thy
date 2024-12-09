@@ -91,6 +91,16 @@ locale Arch_p_arch_idle_int_cur_update_eq' =
 
 section \<open>Kernel Objects in Memory\<close>
 
+text \<open>
+  We do not make use of the VPtr/Ptr/Register abstraction in proofs, only for type safety in Haskell\<close>
+arch_requalify_facts (H)
+  PPtr_def
+  fromPPtr_def
+  VPtr_def
+  fromVPtr_def
+  fromVPtr_update_def
+  Register_def
+
 definition ps_clear :: "obj_ref \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "ps_clear p n s \<equiv> (mask_range p n - {p}) \<inter> dom (ksPSpace s) = {}"
 
