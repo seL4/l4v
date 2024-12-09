@@ -15,6 +15,9 @@ context Arch begin arch_global_naming
 
 named_theorems Invariants_H_pspaceI_assms
 
+(* FIXME arch-split: word_size is available outside of Arch due to Word_Setup, but to provide
+   more guard rails during arch-split we are hiding the Haskell constant definition outside of
+   Arch. To be evaluated as arch-split proceeds, since it can always be made generic again. *)
 schematic_goal wordBits_def': "wordBits = numeral ?n" (* arch-specific consequence *)
   by (simp add: wordBits_def word_size)
 
@@ -28,33 +31,9 @@ lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
 
-lemma objBits_cte_conv: "objBits (cte :: cte) = cteSizeBits"
-  by (simp add: objBits_simps word_size)
-
 lemma frame_at'_pspaceI:
   "frame_at' p sz d s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> frame_at' p sz d s'"
   by (simp add: frame_at'_def typ_at'_def ko_wp_at'_def ps_clear_def)
-
-lemma cte_wp_at'_pspaceI[Invariants_H_pspaceI_assms]:
-  "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
-  supply in_alignCheck[simp del]
-  apply (clarsimp simp add: cte_wp_at'_def getObject_def)
-  apply (drule equalityD2)
-  apply (clarsimp simp: in_monad loadObject_cte gets_def
-                        get_def bind_def return_def split_def)
-  apply (case_tac b)
-        apply (simp_all add: in_monad typeError_def)
-   prefer 2
-   apply (simp add: in_monad return_def alignError_def assert_opt_def
-                    alignCheck_def magnitudeCheck_def when_def bind_def
-             split: if_split_asm option.splits)
-  apply (clarsimp simp: in_monad return_def alignError_def fail_def assert_opt_def
-                        alignCheck_def bind_def when_def
-                        objBits_cte_conv tcbCTableSlot_def tcbVTableSlot_def
-                        tcbReplySlot_def objBits_defs
-                 split: if_split_asm cong: image_cong
-                 dest!: singleton_in_magnitude_check)
-  done
 
 lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
   "s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
@@ -76,14 +55,6 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
            intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
-
-lemma tcb_cte_cases_simps[simp]:
-  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
-  "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
-  "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
-  "tcb_cte_cases 96 = Some (tcbCaller, tcbCaller_update)"
-  "tcb_cte_cases 128 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
-  by (simp add: tcb_cte_cases_def cteSizeBits_def)+
 
 lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
@@ -122,6 +93,14 @@ context Arch begin arch_global_naming
 
 named_theorems Invariants_H_cte_ats_assms
 
+(* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
+lemma raw_tcb_cte_cases_simps:
+  "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
+  "tcb_cte_cases 96 = Some (tcbCaller, tcbCaller_update)"
+  "tcb_cte_cases 128 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  by (simp add: tcb_cte_cases_def cteSizeBits_def)+
+
 lemma cte_wp_at_cases'[Invariants_H_cte_ats_assms]:
   shows "cte_wp_at' P p s =
   ((\<exists>cte. ksPSpace s p = Some (KOCTE cte) \<and> is_aligned p cte_level_bits
@@ -129,6 +108,7 @@ lemma cte_wp_at_cases'[Invariants_H_cte_ats_assms]:
    (\<exists>n tcb getF setF. ksPSpace s (p - n) = Some (KOTCB tcb) \<and> is_aligned (p - n) tcbBlockSizeBits
              \<and> tcb_cte_cases n = Some (getF, setF) \<and> P (getF tcb) \<and> ps_clear (p - n) tcbBlockSizeBits s))"
   (is "?LHS = ?RHS")
+  supply raw_tcb_cte_cases_simps[simp]
   apply (rule iffI)
    apply (clarsimp simp: cte_wp_at'_def split_def
                          getObject_def bind_def simpler_gets_def
@@ -435,6 +415,7 @@ lemma typ_at_lift_valid_cap':
                  hoare_vcg_all_lift typ_at_lift_cte' typ_at_lift_frame_at')+
   done
 
+(* FIXME arch-split: possible requalify candidate *)
 lemma valid_arch_tcb_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
@@ -443,17 +424,10 @@ lemma valid_arch_tcb_lift':
    apply (wp x)+
   done
 
-(* FIXME arch-split: do we want a gen_typ_at_lifts version? *)
-lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
-                      typ_at_lift_ntfn' typ_at_lift_cte'
-                      typ_at_lift_cte_at'
-                      typ_at_lift_page_table_at'
-                      typ_at_lift_asid_at'
-                      typ_at_lift_vcpu_at'
-                      typ_at_lift_valid_untyped'
-                      typ_at_lift_valid_cap'
-                      valid_bound_tcb_lift
-                      valid_arch_tcb_lift'
+lemmas typ_at_lifts =
+           typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
+           typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
+           typ_at_lift_page_table_at' typ_at_lift_asid_at' typ_at_lift_vcpu_at'
 
 lemma valid_arch_state_armKSGlobalUserVSpace:
   "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"

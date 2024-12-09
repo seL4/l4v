@@ -35,7 +35,7 @@ text \<open>
   extensions of that locale. For arch-split there is an extra complication, where the conclusions
   might use arch-specific facts, thus needing to be in Arch.
 
-  This means that for every one the update locales, we have to add an additional Arch locale.
+  This means that for every one of the update locales, we have to add an additional Arch locale.
   In order to not leave gaps in the locale graph, when we combine update locales, the Arch locale
   for their combination must also see the conclusions of \emph{their} Arch locales, leading to a
   pattern of @{text "C = A + B"} followed by @{text "ArchC = C + ArchA + ArchB"}.\<close>
@@ -125,5 +125,15 @@ abbreviation ko_at' :: "'a::pspace_storable \<Rightarrow> obj_ref \<Rightarrow> 
 
 abbreviation irq_node' :: "kernel_state \<Rightarrow> obj_ref" where
   "irq_node' s \<equiv> intStateIRQNode (ksInterruptState s)"
+
+(* FIXME arch-split: consider adding to simpset early in Refine, then changing over definitions *)
+(* proof is identical on all arches *)
+lemma (in Arch) cteSizeBits_cte_level_bits:
+  "cteSizeBits = cte_level_bits"
+  unfolding cteSizeBits_def cte_level_bits_def
+  by (simp add: wordSizeCase_def wordBits_def word_size)
+
+requalify_facts
+  Arch.cteSizeBits_cte_level_bits
 
 end

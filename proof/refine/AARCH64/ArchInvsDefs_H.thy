@@ -46,17 +46,6 @@ abbreviation vcpu_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool"
 abbreviation pte_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "pte_at' \<equiv> typ_at' (ArchT PTET)"
 
-(* FIXME arch-split: currently global in Invariants_H
-definition max_ipc_words :: machine_word where
-  "max_ipc_words \<equiv> capTransferDataSize + msgMaxLength + msgMaxExtraCaps + 2" *)
-
-definition tcb_cte_cases :: "machine_word \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
- "tcb_cte_cases \<equiv> [ 0 << cteSizeBits \<mapsto> (tcbCTable, tcbCTable_update),
-                    1 << cteSizeBits \<mapsto> (tcbVTable, tcbVTable_update),
-                    2 << cteSizeBits \<mapsto> (tcbReply, tcbReply_update),
-                    3 << cteSizeBits \<mapsto> (tcbCaller, tcbCaller_update),
-                    4 << cteSizeBits \<mapsto> (tcbIPCBufferFrame, tcbIPCBufferFrame_update) ]"
-
 (* hyp_refs *)
 
 definition tcb_vcpu_refs' :: "machine_word option \<Rightarrow> (obj_ref \<times> reftype) set" where

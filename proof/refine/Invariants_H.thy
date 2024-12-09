@@ -11,7 +11,6 @@ imports
 begin
 
 arch_requalify_consts
-  tcb_cte_cases
   refs_of_a'
   arch_live'
   hyp_live'
@@ -114,6 +113,13 @@ abbreviation tcbSchedNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarro
 
 abbreviation sym_heap_sched_pointers :: "global.kernel_state \<Rightarrow> bool" where
   "sym_heap_sched_pointers s \<equiv> sym_heap (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
+
+definition tcb_cte_cases :: "machine_word \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
+ "tcb_cte_cases \<equiv> [ 0 << cteSizeBits \<mapsto> (tcbCTable, tcbCTable_update),
+                    1 << cteSizeBits \<mapsto> (tcbVTable, tcbVTable_update),
+                    2 << cteSizeBits \<mapsto> (tcbReply, tcbReply_update),
+                    3 << cteSizeBits \<mapsto> (tcbCaller, tcbCaller_update),
+                    4 << cteSizeBits \<mapsto> (tcbIPCBufferFrame, tcbIPCBufferFrame_update) ]"
 
 definition max_ipc_words :: machine_word where
   "max_ipc_words \<equiv> capTransferDataSize + msgMaxLength + msgMaxExtraCaps + 2"
@@ -1080,10 +1086,7 @@ lemma objBitsKO_Data:
   "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
   by (simp add: objBits_def objBitsKO_def word_size_def)
 
-(* FIXME arch-split: why are these visible outside of Arch?! *)
-thm tcbBlockSizeBits_def epSizeBits_def word_size_def
-
-(* FIXME arch-split: useful? left after the non-gen versions moved into Arch *)
+(* non-gen versions are in Arch *)
 lemmas gen_objBits_simps = objBits_def objBitsKO_def
 
 lemma ps_clear_def2:
@@ -1491,9 +1494,80 @@ lemma typ_at'_pspaceI:
   "typ_at' T p s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> typ_at' T p s'"
   by (simp add: typ_at'_def ko_wp_at'_def ps_clear_def)
 
+(* all architectures have same slots, only cteSizeBits will vary *)
+lemma (in Arch) tcb_cte_cases_distinct_n:
+  "distinct [
+     0 << cteSizeBits :: machine_word,
+     1 << cteSizeBits,
+     2 << cteSizeBits,
+     3 << cteSizeBits,
+     4 << cteSizeBits]"
+  by (simp add: cteSizeBits_def wordSizeCase_def wordBits_def word_size)
+
+requalify_facts Arch.tcb_cte_cases_distinct_n
+
+lemmas tcb_cte_cases_neqs_n =
+  tcb_cte_cases_distinct_n[simplified]
+  distinct_rev[THEN iffD2, OF tcb_cte_cases_distinct_n, simplified]
+
+lemma tcb_cte_cases_simps[simp]:
+  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
+  "tcb_cte_cases (1 << cteSizeBits) = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases (2 << cteSizeBits) = Some (tcbReply, tcbReply_update)"
+  "tcb_cte_cases (3 << cteSizeBits) = Some (tcbCaller, tcbCaller_update)"
+  "tcb_cte_cases (4 << cteSizeBits) = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  (* FIXME arch-split: warning due to tcb_cte_cases_neqs overlapping *)
+  by (simp add: tcb_cte_cases_neqs_n tcb_cte_cases_def)+
+
+lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbReplySlot_def tcbCallerSlot_def
+                      tcbIPCBufferSlot_def
+
+lemma tcb_cte_cases_distinct:
+  "distinct [
+     tcbCTableSlot << cteSizeBits :: machine_word,
+     tcbVTableSlot << cteSizeBits,
+     tcbReplySlot << cteSizeBits,
+     tcbCallerSlot << cteSizeBits,
+     tcbIPCBufferSlot << cteSizeBits]"
+  (* FIXME arch-split: warning due to tcb_cte_cases_neqs overlapping *)
+  by (simp add: tcbSlot_defs tcb_cte_cases_neqs_n)
+
+lemmas tcb_cte_cases_neqs =
+  tcb_cte_cases_neqs_n
+  tcb_cte_cases_distinct[simplified]
+  distinct_rev[THEN iffD2, OF tcb_cte_cases_distinct, simplified]
+
+lemma objBits_cte_conv: "objBits (cte :: cte) = cteSizeBits"
+  by (simp add: gen_objBits_simps word_size)
+
+lemma in_alignCheck[simp]:
+  "((v, s') \<in> fst (alignCheck x n s)) = (s' = s \<and> is_aligned x n)"
+  by (simp add: alignCheck_def in_monad is_aligned_mask[symmetric]
+                alignError_def conj_comms
+          cong: conj_cong)
+
+lemma cte_wp_at'_pspaceI:
+  "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
+  supply in_alignCheck[simp del]
+  apply (clarsimp simp add: cte_wp_at'_def getObject_def)
+  apply (drule equalityD2)
+  apply (clarsimp simp: in_monad loadObject_cte gets_def
+                        get_def bind_def return_def split_def)
+  apply (case_tac b)
+        apply (simp_all add: in_monad typeError_def)
+   prefer 2
+   apply (simp add: in_monad return_def alignError_def assert_opt_def
+                    alignCheck_def magnitudeCheck_def when_def bind_def
+             split: if_split_asm option.splits)
+  apply (clarsimp simp: in_monad return_def alignError_def fail_def assert_opt_def
+                        alignCheck_def bind_def when_def
+                        objBits_cte_conv tcb_cte_cases_neqs
+                 split: if_split_asm cong: image_cong
+                 dest!: singleton_in_magnitude_check)
+  done
+
+
 locale Invariants_H_pspaceI =
-  assumes cte_wp_at'_pspaceI:
-    "\<And>P p s s'. \<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
   assumes valid_cap'_pspaceI:
     "\<And>cap s s'. s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
   assumes valid_obj'_pspaceI:
@@ -1760,12 +1834,6 @@ lemma in_magnitude_check3:
                    iffD2[OF linorder_not_less] when_def
             split: option.split_asm)
   done
-
-lemma in_alignCheck[simp]:
-  "((v, s') \<in> fst (alignCheck x n s)) = (s' = s \<and> is_aligned x n)"
-  by (simp add: alignCheck_def in_monad is_aligned_mask[symmetric]
-                alignError_def conj_comms
-          cong: conj_cong)
 
 lemma (in Invariants_H_pspaceI) tcb_ctes_clear:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
