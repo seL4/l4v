@@ -93,6 +93,7 @@ section \<open>Kernel Objects in Memory\<close>
 
 text \<open>
   We do not make use of the VPtr/Ptr/Register abstraction in proofs, only for type safety in Haskell\<close>
+(* FIXME arch-split: add to simpset? *)
 arch_requalify_facts (H)
   PPtr_def
   fromPPtr_def

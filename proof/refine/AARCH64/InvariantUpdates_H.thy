@@ -15,6 +15,8 @@ arch_requalify_facts
   tcb_at_cte_at'
   typ_at_lift_valid_cap'
   valid_arch_tcb_lift'
+  tcb_at_cte_at'
+  gen_objBitsT_simps
 
 (* arch-specific typ_at_lifts in Arch *)
 lemmas gen_typ_at_lifts =

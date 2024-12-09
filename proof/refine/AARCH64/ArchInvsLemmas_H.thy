@@ -10,7 +10,6 @@ imports
   Invariants_H
 begin
 
-(* FIXME arch-split: MOVE *)
 context Arch begin arch_global_naming
 
 named_theorems Invariants_H_pspaceI_assms
@@ -87,8 +86,6 @@ global_interpretation Invariants_H_pspaceI?: Invariants_H_pspaceI
   case 1 show ?case by (intro_locales; (unfold_locales; (fact Invariants_H_pspaceI_assms)?)?)
   qed
 
-(* FIXME arch-split: sort through this, we don't need all these here, but we do want to requalify
-  most/all of them, and we need lemmas from Invariants_H to prove them *)
 context Arch begin arch_global_naming
 
 named_theorems Invariants_H_cte_ats_assms
@@ -207,7 +204,7 @@ proof -
                         ko_wp_at'_def objBits_simps' P Q conj_comms cte_level_bits_def)
 qed
 
-(* FIXME arch-split: possible requalify lemma (one use in Tcb_R, one in CSpace_RAB_C) *)
+(* interface lemma *)
 lemma tcb_at_cte_at':
   "tcb_at' t s \<Longrightarrow> cte_at' t s"
   apply (clarsimp simp add: cte_wp_at_cases' obj_at'_def projectKO_def
@@ -415,7 +412,7 @@ lemma typ_at_lift_valid_cap':
                  hoare_vcg_all_lift typ_at_lift_cte' typ_at_lift_frame_at')+
   done
 
-(* FIXME arch-split: possible requalify candidate *)
+(* interface lemma *)
 lemma valid_arch_tcb_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
@@ -441,7 +438,6 @@ lemma page_table_pte_atI':
 lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
                     asid_high_bits_def bit_simps
 
-(* FIXME arch-split: do we want to export the gen ones? *)
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"
   "objBitsT NotificationT = ntfnSizeBits"
@@ -456,6 +452,9 @@ lemma objBitsT_simps:
   unfolding objBitsT_def makeObjectT_def archMakeObjectT_def
   by (simp add: makeObject_simps objBits_simps bit_simps')+
 
+(* interface lemma - exports only generic equations from objBitsT_simps *)
+lemmas gen_objBitsT_simps = objBitsT_simps(1-7)
+
 lemma objBitsT_koTypeOf:
   "(objBitsT (koTypeOf ko)) = objBitsKO ko"
   apply (cases ko; simp add: objBits_simps objBitsT_simps)
@@ -465,7 +464,6 @@ lemma objBitsT_koTypeOf:
 
 end
 
-(* FIXME arch-split: move *)
 qualify AARCH64_H (in Arch)
 
 (*
@@ -499,37 +497,5 @@ begin
 interpretation Arch .
 instance by intro_classes auto
 end
-
-(* FIXME arch-split: MOVE *)
-context Arch begin arch_global_naming
-
-(* locateSlot *)
-lemma locateSlot_conv:
-  "locateSlotBasic A B = return (A + 2 ^ cte_level_bits * B)"
-  "locateSlotTCB = locateSlotBasic"
-  "locateSlotCNode A bits B = (do
-    x \<leftarrow> stateAssert (\<lambda>s. case (gsCNodes s A) of None \<Rightarrow> False | Some n \<Rightarrow> n = bits \<and> B < 2 ^ n) [];
-    locateSlotBasic A B od)"
-  "locateSlotCap c B = (do
-    x \<leftarrow> stateAssert (\<lambda>s. ((isCNodeCap c \<or> (isZombie c \<and> capZombieType c \<noteq> ZombieTCB))
-            \<and> (case gsCNodes s (capUntypedPtr c) of None \<Rightarrow> False
-                | Some n \<Rightarrow> (isCNodeCap c \<and> n = capCNodeBits c
-                    \<or> isZombie c \<and> n = zombieCTEBits (capZombieType c)) \<and> B < 2 ^ n))
-        \<or> isThreadCap c \<or> (isZombie c \<and> capZombieType c = ZombieTCB)) [];
-    locateSlotBasic (capUntypedPtr c) B od)"
-  apply (simp_all add: locateSlotCap_def locateSlotTCB_def fun_eq_iff)
-    apply (simp add: locateSlotBasic_def objBits_simps cte_level_bits_def objBits_defs)
-   apply (simp add: locateSlotCNode_def stateAssert_def)
-  apply (cases c, simp_all add: locateSlotCNode_def isZombie_def isThreadCap_def
-                                isCNodeCap_def capUntypedPtr_def stateAssert_def
-                                bind_assoc exec_get locateSlotTCB_def
-                         split: zombie_type.split cong: option.case_cong)
-  done
-
-end
-
-(* FIXME arch-split: interface, locale? *)
-arch_requalify_facts
-  locateSlot_conv
 
 end
