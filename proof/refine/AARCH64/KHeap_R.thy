@@ -245,6 +245,7 @@ lemma updateObject_cte_is_tcb_or_cte:
     \<and> ko' = KOTCB (setF (\<lambda>x. cte) tcb) \<and> is_aligned q tcbBlockSizeBits \<and> ps_clear q tcbBlockSizeBits s) \<or>
   (\<exists>cte'. ko = KOCTE cte' \<and> ko' = KOCTE cte \<and> s' = s
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
                         tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
                         in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
@@ -1199,6 +1200,7 @@ lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
       apply (rename_tac endpoint)
       apply (case_tac endpoint; simp add: valid_ep'_def, wp)
@@ -1210,7 +1212,7 @@ lemma typ_at'_valid_obj'_lift:
     apply (case_tac "tcbState tcb";
            simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def
                      valid_bound_ntfn'_def;
-           wpsimp wp: hoare_case_option_wp hoare_case_option_wp2;
+           wpsimp wp: hoare_case_option_wp hoare_case_option_wp2 valid_arch_tcb_lift' P;
            (clarsimp split: option.splits)?)
    apply (wpsimp simp: valid_cte'_def)
   apply wp

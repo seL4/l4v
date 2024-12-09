@@ -5729,6 +5729,7 @@ lemma cte_wp_at_disj_eq':
 
 lemma valid_Zombie_cte_at':
   "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 2^cteSizeBits)) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: valid_cap'_def split: zombie_type.split_asm)
    apply (clarsimp simp: obj_at'_def objBits_simps)
    apply (subgoal_tac "tcb_cte_cases (of_nat n * 2^cteSizeBits) \<noteq> None")

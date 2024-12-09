@@ -1014,6 +1014,7 @@ lemma threadcontrol_corres_helper4:
     (checkCapAt (capability.ThreadCap a) (cte_map slot)
        (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
   \<lbrace>\<lambda>_ s. sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_tcbs' s\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (wpsimp wp:
          | strengthen invs_sym_heap_sched_pointers invs_valid_sched_pointers
                       invs_valid_objs' valid_objs'_valid_tcbs')+
@@ -1303,6 +1304,7 @@ proof -
             od odE od)
         g')" (is "corres _ ?T2_pre ?T2_pre' _ _")
     using z u
+    supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
     apply -
     apply (rule corres_guard_imp[where P=P and P'=P'
                                   and Q="P and cte_at (a, tcb_cnode_index 4)"

@@ -4437,6 +4437,7 @@ qed
 
 lemma cte_at_tcb_at_32':
   "tcb_at' t s \<Longrightarrow> cte_at' (t + 32) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: cte_at'_obj_at')
   apply (rule disjI2, rule bexI[where x=32])
    apply simp
