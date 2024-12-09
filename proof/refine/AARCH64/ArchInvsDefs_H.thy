@@ -6,8 +6,8 @@
  *)
 
 (* This theory contains the arch-dependent part of invariant definitions.
-   Due to the large amount of definitins, we opt for a Pre file rather than fixing constants in
-   locales. *)
+   Due to the large amount of definitions, we place it before Invariants_H rather than fixing
+   constants in locales. *)
 
 theory ArchInvsDefs_H
 imports
@@ -33,7 +33,6 @@ requalify_facts (aliasing)
   Retype_H.createObject_def Retype_H.capUntypedPtr_def Retype_H.capUntypedSize_def
   Retype_H.performInvocation_def Retype_H.decodeInvocation_def
 end
-
 end
 
 context Arch begin arch_global_naming

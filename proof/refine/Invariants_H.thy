@@ -174,7 +174,6 @@ primrec live0' :: "Structures_H.kernel_object \<Rightarrow> bool" where
 
 (* hyp_refs *)
 
-(* FIXME arch-split: do we want to expose this, or put it in Arch? *)
 definition hyp_refs_of' :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
   "hyp_refs_of' x \<equiv> case x of
      (KOTCB tcb)           \<Rightarrow> tcb_hyp_refs' (tcbArch tcb)
