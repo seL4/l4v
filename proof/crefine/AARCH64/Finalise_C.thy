@@ -2391,7 +2391,7 @@ lemma associateVCPUTCB_ccorres:
          apply vcg
         apply wpsimp
        apply (vcg exspec=dissociateVCPUTCB_modifies)
-      apply ((wpsimp wp: hoare_vcg_all_lift hoare_drop_imps
+      apply ((wpsimp wp: hoare_vcg_all_lift hoare_drop_imps valid_arch_tcb_lift'
               | strengthen invs_valid_objs' invs_arch_state')+)[1]
      apply (vcg exspec=dissociateVCPUTCB_modifies)
     apply (rule_tac Q'="\<lambda>_. invs' and vcpu_at' vcpuptr and tcb_at' tptr" in hoare_post_imp)
