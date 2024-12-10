@@ -2269,6 +2269,10 @@ lemma in_set_zip2:
   "(x, y) \<in> set (zip xs ys) \<Longrightarrow> y \<in> set ys"
   by (erule in_set_zipE)
 
+lemma in_set_zipD:
+  "t \<in> set (zip xs ys) \<Longrightarrow> fst t \<in> set xs \<and> snd t \<in> set ys"
+  by (clarsimp simp add: set_zip)
+
 lemma map_zip_snd_take:
   "map (\<lambda>(x, y). f y) (zip xs ys) = map f (take (length xs) ys)"
   apply (subst map_zip_snd' [symmetric, where xs=xs and ys="take (length xs) ys"], simp)
