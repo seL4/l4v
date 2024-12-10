@@ -1380,12 +1380,6 @@ lemma retype_ret_valid_caps:
  done
 end
 
-(* FIXME: move to Lib *)
-lemma set_zip_helper:
-  "t \<in> set (zip xs ys) \<Longrightarrow> fst t \<in> set xs \<and> snd t \<in> set ys"
-  by (clarsimp simp add: set_zip)
-
-
 lemma ex_cte_cap_protects:
   "\<lbrakk> ex_cte_cap_wp_to P p s; cte_wp_at ((=) (UntypedCap dev ptr bits idx)) p' s;
      descendants_range_in S p' s; untyped_children_in_mdb s; S\<subseteq> untyped_range (UntypedCap dev ptr bits idx);
@@ -3277,7 +3271,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs:
   apply (rule hoare_gen_asm)
   apply (subgoal_tac "set (zip crefs orefs) \<subseteq> set crefs \<times> set (retype_addrs ptr tp (length slots) us)")
    prefer 2
-   apply (auto dest!: set_zip_helper)[1]
+   apply (auto dest!: in_set_zipD)[1]
   apply (induct ("zip crefs orefs"))
    apply (simp add: mapM_x_def sequence_x_def)
    apply wpsimp
@@ -3567,7 +3561,7 @@ lemma retype_region_post_retype_invs_folded:
 
 lemma tup_in_fst_image_set_zipD:
   "x \<in> fst ` set (zip xs ys) \<Longrightarrow> x \<in> set xs"
-  by (auto dest!: set_zip_helper)
+  by (auto dest!: in_set_zipD)
 
 lemma distinct_map_fst_zip:
   "distinct xs \<Longrightarrow> distinct (map fst (zip xs ys))"

@@ -976,7 +976,7 @@ crunch_ignore (add: cap_swap_ext cap_move_ext cap_insert_ext create_cap_ext set_
 
 lemma zet_zip_contrapos:
   "fst t \<notin> set xs  \<Longrightarrow> t \<notin> set (zip xs ys)"
-  by (auto simp: set_zip_helper)
+  by (auto simp: in_set_zipD)
 
 lemma ct_active_update[simp]:
   "ct_active (s\<lparr>cdt := b\<rparr>) = ct_active s"
