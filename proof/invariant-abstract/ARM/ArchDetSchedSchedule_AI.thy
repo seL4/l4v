@@ -20,11 +20,6 @@ crunch
   for prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>(s:: det_ext state). P (idle_thread s)"
 
 crunch
-  arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers
-  for valid_etcbs[wp, DetSchedSchedule_AI_assms]: valid_etcbs
-  (simp: crunch_simps ignore: clearExMonitor)
-
-crunch
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers
   for valid_queues[wp, DetSchedSchedule_AI_assms]: valid_queues
   (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action clearExMonitor)
@@ -35,11 +30,9 @@ crunch
   (simp: crunch_simps ignore: clearExMonitor)
 
 crunch set_vm_root
-  for ct_not_in_q[wp]: "ct_not_in_q"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch set_vm_root
-  for ct_not_in_q'[wp]: "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"
+  for ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  and ct_not_in_q[wp]: "ct_not_in_q"
+  and ct_not_in_q'[wp]: "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
@@ -54,7 +47,7 @@ lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
 
 crunch set_vm_root
   for valid_sched_action'[wp]: "\<lambda>s. valid_sched_action_2 (scheduler_action s)
-                                                 (ekheap s) (kheap s) thread (cur_domain s)"
+                                                 (etcbs_of s) (kheap s) thread (cur_domain s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma switch_to_idle_thread_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
@@ -71,7 +64,7 @@ lemma switch_to_idle_thread_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
 
 crunch set_vm_root
   for ct_in_cur_domain'[wp]: "\<lambda>s. ct_in_cur_domain_2 t (idle_thread s)
-                                                   (scheduler_action s) (cur_domain s) (ekheap s)"
+                                                   (scheduler_action s) (cur_domain s) (etcbs_of s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
@@ -102,7 +95,7 @@ crunch set_vm_root
   (wp: crunch_wps whenE_wp simp: crunch_simps)
 
 crunch arch_switch_to_thread
-  for ct_in_cur_domain_2[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
+  for ct_in_cur_domain_2[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)"
   (simp: crunch_simps)
 
 crunch set_vm_root
@@ -142,7 +135,7 @@ lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   done
 
 lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>valid_queues and valid_etcbs and valid_idle\<rbrace>
+  "\<lbrace>valid_queues and valid_idle\<rbrace>
      switch_to_idle_thread
    \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def
@@ -192,17 +185,19 @@ lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assm
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
   by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+
 
-lemma set_pd_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> set_pd ptr pd \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_pd_def)+
+lemma set_pt_etcbs[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  unfolding set_pt_def
+  apply (wpsimp wp: set_object_wp_strong)
+  by (auto elim!: rsubst[where P=P] simp: etcbs_of'_def obj_at_def a_type_def
+           split: kernel_object.splits)
 
-lemma set_pt_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> set_pt ptr pt \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_pt_def)+
-
-lemma set_asid_pool_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_asid_pool_def)+
+lemma set_asid_pool_etcbs[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  unfolding set_asid_pool_def
+  apply (wpsimp wp: set_object_wp_strong)
+  by (auto elim!: rsubst[where P=P] simp: etcbs_of'_def obj_at_def a_type_def
+           split: kernel_object.splits)
 
 lemma set_pt_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_pt ptr pt \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
@@ -221,12 +216,6 @@ crunch
   for ct_not_in_q[wp, DetSchedSchedule_AI_assms]: ct_not_in_q
   (wp: crunch_wps hoare_drop_imps unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
-
-crunch
-  arch_finalise_cap, prepare_thread_delete
-  for valid_etcbs[wp, DetSchedSchedule_AI_assms]: valid_etcbs
-  (wp: hoare_drop_imps unless_wp select_inv mapM_x_wp mapM_wp subset_refl
-       if_fun_split simp: crunch_simps ignore: set_object thread_set)
 
 crunch
   arch_finalise_cap, prepare_thread_delete
@@ -311,11 +300,9 @@ lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
 
 crunch arch_post_cap_deletion
   for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
-  and valid_etcbs[wp, DetSchedSchedule_AI_assms]: valid_etcbs
   and ct_not_in_q[wp, DetSchedSchedule_AI_assms]: ct_not_in_q
   and simple_sched_action[wp, DetSchedSchedule_AI_assms]: simple_sched_action
   and not_cur_thread[wp, DetSchedSchedule_AI_assms]: "not_cur_thread t"
-  and is_etcb_at[wp, DetSchedSchedule_AI_assms]: "is_etcb_at t"
   and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
@@ -344,6 +331,10 @@ crunch cap_swap_for_delete, cap_move, cancel_badged_sends
   (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak
    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
    ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+
+crunch arch_switch_to_thread
+  for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
 
 end
 
