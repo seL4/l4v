@@ -17,7 +17,7 @@ lemma invs_mdb_cte':
 context retype_region_proofs begin interpretation Arch .
 
 lemma vs_refs_no_global_pts_default[simp]:
-  "vs_refs_no_global_pts (default_object ty dev us) = {}"
+  "vs_refs_no_global_pts (default_object ty dev us d) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt
                 vs_refs_no_global_pts_def pde_ref2_def pte_ref_def
                 o_def
@@ -33,12 +33,29 @@ end
 
 context retype_region_proofs' begin interpretation Arch .
 
+lemma test:
+  "pas_refined aag s \<Longrightarrow> tcb_domain_map_wellformed aag s"
+  by (simp add: pas_refined_def)
+
+\<comment> \<open>FIXME: move to pas_refined_state_objs_to_policy_subset?\<close>
+lemma pas_refined_subsets_tcb_domain_map_wellformed:
+  "\<lbrakk> pas_refined aag s;
+     state_objs_to_policy s' \<subseteq> state_objs_to_policy s;
+     state_asids_to_policy aag s' \<subseteq> state_asids_to_policy aag s;
+     state_irqs_to_policy aag s' \<subseteq> state_irqs_to_policy aag s;
+     tcb_domain_map_wellformed aag s \<Longrightarrow> tcb_domain_map_wellformed aag s';
+     interrupt_irq_node s' = interrupt_irq_node s \<rbrakk>
+     \<Longrightarrow> pas_refined aag s'"
+  by (simp add: pas_refined_def)
+     (blast dest: auth_graph_map_mono[where G="pasObjectAbs aag"])
+
 lemma pas_refined:
-  "\<lbrakk> invs s; pas_refined aag s \<rbrakk> \<Longrightarrow> pas_refined aag s'"
-  apply (erule pas_refined_state_objs_to_policy_subset)
-     apply (simp add: state_objs_to_policy_def refs_eq vrefs_eq mdb_and_revokable)
-     apply (rule subsetI, rename_tac x, case_tac x, simp)
-     apply (erule state_bits_to_policy.cases)
+  "\<lbrakk> invs s; pas_refined aag s; pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
+   \<Longrightarrow> pas_refined aag s'"
+  apply (erule pas_refined_subsets_tcb_domain_map_wellformed)
+      apply (simp add: state_objs_to_policy_def refs_eq vrefs_eq mdb_and_revokable)
+      apply (rule subsetI, rename_tac x, case_tac x, simp)
+      apply (erule state_bits_to_policy.cases)
             apply (solves \<open>auto intro!: sbta_caps intro: caps_retype split: cap.split\<close>)
            apply (solves \<open>auto intro!: sbta_untyped intro: caps_retype split: cap.split\<close>)
           apply (blast intro: state_bits_to_policy.intros)
@@ -57,7 +74,7 @@ lemma pas_refined:
     apply clarsimp
     apply (erule state_irqs_to_policy_aux.cases)
     apply (solves\<open>auto intro!: sita_controlled intro: caps_retype split: cap.split\<close>)
-   apply (rule domains_of_state)
+   apply (erule (2) tcb_domain_map_wellformed)
   apply simp
   done
 
@@ -427,7 +444,7 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
      \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
      \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
            (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                            then Some (default_object typ dev o_bits)
+                            then Some (default_object typ dev o_bits d)
                             else kheap s a\<rparr>)"
   by clarsimp
 
