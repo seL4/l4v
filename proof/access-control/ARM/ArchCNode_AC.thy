@@ -114,15 +114,12 @@ lemma list_integ_lift[CNode_AC_assms]:
     "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
      f
      \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag}  (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  assumes ekh: "\<And>P. f \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
-  assumes rq: "\<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
    apply (unfold integrity_def[abs_def] integrity_asids_def)
    apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (rule hoare_lift_Pf2[where f="ekheap"])
-    apply (simp add: tcb_states_of_state_def get_tcb_def)
-    apply (wp li[simplified tcb_states_of_state_def get_tcb_def] ekh rq)+
+   apply (simp add: tcb_states_of_state_def get_tcb_def)
+   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (simp add: tcb_states_of_state_def get_tcb_def)
   done
@@ -374,16 +371,9 @@ lemma auth_graph_map_def2:
   "auth_graph_map f S = (\<lambda>(x, auth, y). (f x, auth, f y)) ` S"
   by (auto simp add: auth_graph_map_def image_def intro: rev_bexI)
 
-(* FIXME move to AInvs *)
-lemma store_pte_ekheap[wp]:
-  "store_pte p pte \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
-  apply (simp add: store_pte_def set_pt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
-
 crunch store_pte
-  for asid_table_inv[wp]: "\<lambda>s. P (asid_table s)"
+  for etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
+  and asid_table_inv[wp]: "\<lambda>s. P (asid_table s)"
 
 lemma store_pte_pas_refined[wp]:
   "\<lbrace>pas_refined aag and
@@ -499,13 +489,6 @@ lemma set_asid_pool_thread_bound_ntfns[wp]:
   apply (clarsimp simp: thread_bound_ntfns_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm option.split)
-  done
-
-(* FIXME move to AInvs *)
-lemma set_asid_pool_ekheap[wp]:
-  "set_asid_pool p pool \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp | simp)+
   done
 
 lemma set_asid_pool_pas_refined[wp]:
