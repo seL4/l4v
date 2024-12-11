@@ -1011,21 +1011,20 @@ lemma delete_asid_respects:
   by (wpsimp wp: set_asid_pool_respects_clear hoare_vcg_all_lift
            simp: obj_at_def pas_refined_refl delete_asid_def asid_pool_integrity_def)
 
-lemma authorised_arch_inv_sa_update:
+lemma authorised_arch_inv_sa_update[simp]:
   "authorised_arch_inv aag i (scheduler_action_update (\<lambda>_. act) s) =
    authorised_arch_inv aag i s"
   by (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
               split: arch_invocation.splits page_invocation.splits)
 
+crunch set_thread_state_act
+  for authorised_arch_inv[wp]: "authorised_arch_inv aag i"
+
 lemma set_thread_state_authorised_arch_inv[wp]:
   "set_thread_state ref ts \<lbrace>authorised_arch_inv aag i\<rbrace>"
   unfolding set_thread_state_def
-  apply (wpsimp wp: dxo_wp_weak)
-     apply (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
-                    split: arch_invocation.splits page_invocation.splits)
-    apply (wpsimp wp: set_object_wp)+
-  by (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
-              split: arch_invocation.splits page_invocation.splits)
+  apply (wpsimp wp: set_object_wp)
+  by (clarsimp simp: authorised_arch_inv_def)
 
 end
 
