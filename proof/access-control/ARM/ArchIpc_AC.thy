@@ -17,6 +17,7 @@ declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
 crunch cap_insert_ext
   for integrity_asids[Ipc_AC_assms, wp]: "integrity_asids aag subjects x a st"
+  (ignore_del: cap_insert_ext) \<comment> \<open>FIXME: should these ext consts still be ignored in DetSched_AI files and beyond?\<close>
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
@@ -203,8 +204,6 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
     f
     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  assumes ekh: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
-  assumes rq: "\<And>P. \<lbrace> \<lambda>s. P (ready_queues s) \<rbrace> f \<lbrace> \<lambda>rv s. P (ready_queues s) \<rbrace>"
   shows "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
          f
          \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
@@ -212,9 +211,8 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   apply (simp del:split_paired_All)
   apply (rule hoare_pre)
    apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (rule hoare_lift_Pf2[where f="ekheap"])
-    apply (simp add: tcb_states_of_state_def get_tcb_def)
-    apply (wp li[simplified tcb_states_of_state_def get_tcb_def] ekh rq)+
+   apply (simp add: tcb_states_of_state_def get_tcb_def)
+   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (simp add: tcb_states_of_state_def get_tcb_def)
   done

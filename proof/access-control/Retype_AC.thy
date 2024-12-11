@@ -156,7 +156,7 @@ lemma sita_detype:
 lemmas pas_refined_by_subsets = pas_refined_state_objs_to_policy_subset
 
 lemma dtsa_detype: "domains_of_state (detype R s) \<subseteq> domains_of_state s"
-  by (auto simp: detype_def detype_ext_def
+  by (auto simp: detype_def etcbs_of'_def
           intro: domtcbs
           elim!: domains_of_state_aux.cases
           split: if_splits)
@@ -204,9 +204,10 @@ locale Retype_AC_1 =
   and nonzero_data_to_nat_simp:
     "\<And>x. 0 < data_to_nat x \<Longrightarrow> 0 < x"
   and retype_region_proofs'_pas_refined:
-    "\<lbrakk> retype_region_proofs' s ty us ptr sz n dev; invs s; pas_refined aag s \<rbrakk>
+    "\<lbrakk> retype_region_proofs' s ty us ptr sz n dev; invs s; pas_refined aag s;
+       pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
        \<Longrightarrow> pas_refined aag (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-                                           then Some (default_object ty dev us)
+                                           then Some (default_object ty dev us (cur_domain s))
                                            else kheap s x\<rparr>)"
   and dmo_freeMemory_respects:
     "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits
@@ -234,7 +235,7 @@ locale Retype_AC_1 =
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} p a s st \<rbrakk>
        \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s
              (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                              then Some (default_object typ dev o_bits)
+                              then Some (default_object typ dev o_bits d)
                               else kheap s a\<rparr>)"
 begin
 
@@ -243,7 +244,7 @@ lemma detype_integrity:
      \<Longrightarrow> integrity aag X st (detype refs s)"
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def integrity_asids_detype)
-  apply (clarsimp simp: detype_def detype_ext_def integrity_def)
+  apply (clarsimp simp: detype_def integrity_def)
   done
 
 lemma sta_detype:
@@ -326,14 +327,14 @@ lemma retype_region_integrity:
    retype_region ptr num_objects o_bits type dev
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)+
-  apply (simp only: retype_region_def retype_region_ext_extended.dxo_eq)
-  apply (simp only: retype_addrs_def retype_region_ext_def
+  apply (simp only: retype_region_def)
+  apply (simp only: retype_addrs_def
                     foldr_upd_app_if' fun_app_def K_bind_def)
   apply wp
   apply (clarsimp simp: not_less)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def retype_region_integrity_asids)
-  apply (fastforce intro: tro_lrefl tre_lrefl
+  apply (fastforce intro: tro_lrefl
                     dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
                     simp: image_def p_assoc_help power_sub)
   done
@@ -418,8 +419,14 @@ end
 
 context retype_region_proofs' begin
 
-lemma domains_of_state: "domains_of_state s' \<subseteq> domains_of_state s"
-  unfolding s'_def by simp
+lemma tcb_domain_map_wellformed:
+  "\<lbrakk>tcb_domain_map_wellformed aag s; pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x\<rbrakk>
+   \<Longrightarrow> tcb_domain_map_wellformed aag s'"
+  by (force simp: s'_def ps_def tcb_domain_map_wellformed_aux_def etcbs_of'_def
+                  default_object_def default_tcb_def tyunt
+           split: if_split_asm kernel_object.splits apiobject_type.splits
+            elim: domains_of_state_aux.cases
+           intro: domtcbs)
 
 (* FIXME MOVE next to cte_at_pres *)
 lemma cte_wp_at_pres:
@@ -436,79 +443,33 @@ lemma caps_of_state_pres:
 
 end
 
-
-lemma retype_region_ext_kheap_update:
-  "\<lbrace>Q xs and R xs\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. Q xs\<rbrace>
-   \<Longrightarrow> \<lbrace>\<lambda>s. Q xs (kheap_update f s) \<and> R xs (kheap_update f s)\<rbrace>
-       retype_region_ext xs ty
-       \<lbrace>\<lambda>_ s. Q xs (kheap_update f s)\<rbrace>"
-  apply (clarsimp simp: valid_def retype_region_ext_def)
-  apply (erule_tac x="kheap_update f s" in allE)
-  apply (clarsimp simp: split_def bind_def gets_def get_def return_def modify_def put_def)
-  done
-
-lemma use_retype_region_proofs_ext':
-  assumes x: "\<And>(s::det_ext state). \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s \<rbrakk>
+lemma use_retype_region_proofs':
+  assumes x: "\<And>(s::det_ext state). \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s; pas_cur_domain aag s;
+                                     \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
                                       \<Longrightarrow> Q (retype_addrs ptr ty n us)
                                             (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-                                                            then Some (default_object ty dev us )
+                                                            then Some (default_object ty dev us (cur_domain s))
                                                             else kheap s x\<rparr>)"
-  assumes y: "\<And>xs. \<lbrace>Q xs and R xs\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. Q xs\<rbrace>"
-  assumes z: "\<And>f xs s. R xs (kheap_update f s) = R xs s"
   shows
     "\<lbrakk> ty = CapTableObject \<Longrightarrow> 0 < us; \<And>s. P s \<Longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk>
        \<Longrightarrow> \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n \<and>
                 caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s \<and>
                 caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s \<and>
                 (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
-                P s \<and> R (retype_addrs ptr ty n us) s\<rbrace>
+                P s \<and> pas_cur_domain aag s \<and> (\<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x)\<rbrace>
            retype_region ptr n us ty dev \<lbrace>Q\<rbrace>"
   apply (simp add: retype_region_def split del: if_split)
-  apply (rule hoare_pre, (wp | simp)+)
-    apply (rule retype_region_ext_kheap_update[OF y])
-   apply (wp | simp)+
+  apply wpsimp
   apply (clarsimp simp: retype_addrs_fold
                         foldr_upd_app_if fun_upd_def[symmetric])
   apply safe
-    apply (rule x)
-     apply (rule retype_region_proofs.intro, simp_all)[1]
-      apply (fastforce simp: range_cover_def obj_bits_api_def z slot_bits_def2 word_bits_def)+
+   apply (rule x)
+    apply (rule retype_region_proofs.intro, simp_all)[1]
+     apply (fastforce simp: range_cover_def obj_bits_api_def slot_bits_def2 word_bits_def)+
   done
 
-lemmas use_retype_region_proofs_ext =
-  use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified] for Q
-
-
-context is_extended begin
-
-lemma pas_refined_tcb_domain_map_wellformed':
-  assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
-  shows "\<lbrace>pas_refined aag and P\<rbrace> f \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (simp add: pas_refined_def)
-  apply (wp tdmw)
-   apply (wp lift_inv)
-   apply simp+
-  done
-
-end
-
-
-lemma retype_region_ext_pas_refined:
-  "\<lbrace>pas_refined aag and pas_cur_domain aag and K (\<forall>x\<in> set xs. is_subject aag x)\<rbrace>
-   retype_region_ext xs ty
-   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  including classic_wp_pre
-  apply (subst and_assoc[symmetric])
-  apply (wp retype_region_ext_extended.pas_refined_tcb_domain_map_wellformed')
-  apply (simp add: retype_region_ext_def, wp)
-  apply (clarsimp simp: tcb_domain_map_wellformed_aux_def)
-  apply (erule domains_of_state_aux.cases)
-  apply (clarsimp simp: foldr_upd_app_if' fun_upd_def[symmetric] split: if_split_asm)
-   apply (clarsimp simp: default_ext_def default_etcb_def split: apiobject_type.splits)
-   defer
-  apply (force intro: domtcbs)
-  done
-
+lemmas use_retype_region_proofs =
+  use_retype_region_proofs'[where Q="\<lambda>_. Q" and P=Q, simplified] for Q
 
 context Retype_AC_1 begin
 
@@ -524,12 +485,10 @@ lemma retype_region_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-   apply (rule use_retype_region_proofs_ext'[where P = "invs and pas_refined aag"])
-       apply clarsimp
-       apply (erule (2) retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
-      apply (wp retype_region_ext_pas_refined)
-      apply simp
-     apply auto
+   apply (rule use_retype_region_proofs'[where P = "invs and pas_refined aag"])
+     apply clarsimp
+     apply (erule (4) retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
+    apply auto
   done
 
 end
@@ -876,14 +835,11 @@ lemma retype_region_pas_refined':
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (rule hoare_weaken_pre)
-   apply (rule use_retype_region_proofs_ext'[where P="invs and pas_refined aag"])
-       apply clarsimp
-       apply (erule (2) retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
-      apply (wp retype_region_ext_pas_refined)
-      apply simp
-     apply fastforce
-    apply fastforce
-   apply clarsimp
+   apply (rule use_retype_region_proofs'[where P="invs and pas_refined aag"])
+     apply clarsimp
+     apply (erule (4) retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
+    apply simp
+   apply fastforce
   apply clarsimp
   apply (frule valid_cap_range_untyped[OF invs_valid_objs])
    apply (fastforce simp: cte_wp_at_caps_of_state)
