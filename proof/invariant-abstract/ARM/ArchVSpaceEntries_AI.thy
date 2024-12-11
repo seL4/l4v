@@ -621,14 +621,10 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-crunch invoke_tcb
+crunch invoke_tcb, invoke_domain
   for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at)
-
-lemma invoke_domain_valid_pdpt_objs[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  by (simp add: invoke_domain_def | wp)+
 
 crunch set_extra_badge, transfer_caps_loop
   for valid_pdpt_objs[wp]: "valid_pdpt_objs"
@@ -1498,11 +1494,11 @@ lemma invocation_duplicates_valid_exst_update[simp]:
   apply (clarsimp simp add: invocation_duplicates_valid_def pti_duplicates_valid_def page_inv_duplicates_valid_def page_inv_entries_safe_def split: sum.splits invocation.splits arch_invocation.splits kernel_object.splits page_table_invocation.splits page_invocation.splits)+
   done
 
-
 lemma set_thread_state_duplicates_valid[wp]:
   "\<lbrace>invocation_duplicates_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. invocation_duplicates_valid i\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply (wp|simp)+
+  apply (simp add: set_thread_state_def set_thread_state_act_def set_scheduler_action_def
+                   get_thread_state_def thread_get_def set_object_def get_object_def)
+  apply wpsimp
   apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def
                         page_inv_duplicates_valid_def page_inv_entries_safe_def
                         Let_def
@@ -1511,7 +1507,7 @@ lemma set_thread_state_duplicates_valid[wp]:
                         page_table_invocation.split
                         page_invocation.split sum.split
                         )
-  apply (auto simp add: obj_at_def page_inv_entries_safe_def)
+   apply (auto simp add: obj_at_def page_inv_entries_safe_def)
   done
 
 lemma handle_invocation_valid_pdpt[wp]:
@@ -1525,22 +1521,21 @@ lemma handle_invocation_valid_pdpt[wp]:
      (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
 
 
-crunch handle_event, activate_thread,switch_to_thread,
-       switch_to_idle_thread
+crunch handle_event, activate_thread, switch_to_thread,
+       switch_to_idle_thread, schedule_choose_new_thread
   for valid_pdpt[wp]: "valid_pdpt_objs"
   (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
               getFAR getDFSR getIFSR OR_choice set_scheduler_action
               clearExMonitor)
 
-lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
-  apply (simp add: schedule_def allActiveTCBs_def)
-  apply wpsimp
-  done
+lemma schedule_valid_pdpt[wp]:
+  "schedule \<lbrace>valid_pdpt_objs\<rbrace>"
+  unfolding schedule_def by (wpsimp wp: hoare_drop_imps)
 
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs\<rbrace>
-      (call_kernel e) :: (unit,unit) s_monad
+   call_kernel e
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
