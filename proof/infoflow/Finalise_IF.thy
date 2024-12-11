@@ -105,9 +105,8 @@ lemma scheduler_action_states_equiv[simp]:
   "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
   by (simp add: states_equiv_for_def equiv_for_def equiv_asids_def)
 
-crunch set_thread_state_ext
+crunch set_thread_state_act
   for states_equiv[wp]: "states_equiv_for P Q R S st"
-  (ignore_del: set_thread_state_ext)
 
 end
 
@@ -124,12 +123,12 @@ lemma set_scheduler_action_reads_respects[wp]:
   by (simp add: set_scheduler_action_def equiv_valid_def2 equiv_valid_2_def modify_def bind_def put_def
                 get_def reads_equiv_scheduler_action_update affects_equiv_scheduler_action_update)
 
-lemma set_thread_state_ext_reads_respects:
-  "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state_ext ref)"
+lemma set_thread_state_act_reads_respects:
+  "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state_act ref)"
   apply (case_tac "is_subject aag ref")
-   apply (simp add: set_thread_state_ext_def when_def get_thread_state_def | wp thread_get_rev)+
+   apply (simp add: set_thread_state_act_def when_def get_thread_state_def | wp thread_get_rev)+
    apply (simp add: reads_equiv_def)
-  apply (simp add: set_thread_state_ext_def when_def)
+  apply (simp add: set_thread_state_act_def when_def)
   apply (simp add: equiv_valid_def2)
   apply (rule equiv_valid_rv_bind[where W="\<top>\<top>"])
     apply (clarsimp simp: equiv_valid_2_def get_thread_state_def thread_get_def gets_the_def
@@ -145,16 +144,16 @@ lemma set_thread_state_ext_reads_respects:
   apply force
   done
 
-lemma set_thread_state_ext_owned_reads_respects:
-  "reads_respects aag l (\<lambda>s. aag_can_read aag ref) (set_thread_state_ext ref)"
-  apply (simp add: set_thread_state_ext_def when_def get_thread_state_def | wp thread_get_rev)+
+lemma set_thread_state_act_owned_reads_respects:
+  "reads_respects aag l (\<lambda>s. aag_can_read aag ref) (set_thread_state_act ref)"
+  apply (simp add: set_thread_state_act_def when_def get_thread_state_def | wp thread_get_rev)+
   apply (simp add: reads_equiv_def)
   done
 
 lemma set_thread_state_owned_reads_respects:
   "reads_respects aag l (\<lambda>s. aag_can_read aag ref) (set_thread_state ref ts)"
   apply (simp add: set_thread_state_def)
-  apply (wp set_object_reads_respects gets_the_ev set_thread_state_ext_owned_reads_respects)
+  apply (wp set_object_reads_respects gets_the_ev set_thread_state_act_owned_reads_respects)
   by (fastforce intro: kheap_get_tcb_eq elim: reads_equivE equiv_forD)
 
 lemma set_bound_notification_owned_reads_respects:
@@ -168,9 +167,9 @@ lemma get_thread_state_runnable[wp]:
    "\<lbrace>st_tcb_at runnable ref\<rbrace> get_thread_state ref \<lbrace>\<lambda>rv _. runnable rv\<rbrace>"
   by (wpsimp wp: gts_st_tcb_at)
 
-lemma set_thread_state_ext_runnable_reads_respects:
-  "reads_respects aag l (st_tcb_at runnable ref) (set_thread_state_ext ref)"
-  apply (simp add: set_thread_state_ext_def when_def)
+lemma set_thread_state_act_runnable_reads_respects:
+  "reads_respects aag l (st_tcb_at runnable ref) (set_thread_state_act ref)"
+  apply (simp add: set_thread_state_act_def when_def)
   apply (simp add: equiv_valid_def2)
   apply (rule equiv_valid_rv_bind[where W="\<top>\<top>" and Q="\<lambda>rv _. runnable rv"])
     apply (clarsimp simp: equiv_valid_2_def get_thread_state_def thread_get_def gets_the_def
@@ -509,14 +508,6 @@ lemma ev2_symmetric:
   apply (fastforce elim: affects_equiv_sym reads_equiv_sym)
   done
 
-lemma reads_respects_ethread_get:
-  "reads_respects aag l (\<lambda>_. is_subject aag thread) (ethread_get f thread)"
-  apply (simp add: ethread_get_def)
-  apply wp
-  apply (drule aag_can_read_self)
-  apply (fastforce simp: reads_equiv_def2 get_etcb_def equiv_for_def states_equiv_for_def)
-  done
-
 lemma aag_can_read_self'[simp]:
   "aag_can_read_label aag (pasSubject aag)"
   by fastforce
@@ -532,13 +523,6 @@ lemma equiv_valid_rv_trivial':
   assumes inv: "\<And>P. f \<lbrace>P\<rbrace>"
   shows "equiv_valid_rv_inv I A \<top>\<top> Q f"
   by (auto simp: equiv_valid_2_def dest: state_unchanged[OF inv])
-
-lemma gets_cur_domain_ev:
-  "reads_equiv_valid_inv A aag \<top> (gets cur_domain)"
-  apply (rule equiv_valid_guard_imp)
-   apply wp
-  apply (simp add: reads_equiv_def)
-  done
 
 crunch set_simple_ko
   for sched_act[wp]: "\<lambda>s. P (scheduler_action s)"
@@ -561,7 +545,7 @@ lemma tcb_sched_action_reads_respects:
   apply (simp add: tcb_sched_action_def get_tcb_queue_def)
   apply (subst gets_apply)
   apply (case_tac "aag_can_read aag t \<or> aag_can_affect aag l t")
-   apply (simp add: ethread_get_def)
+   apply (simp add: thread_get_def)
    apply wp
          apply (rule_tac Q="\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag (tcb_domain rv)"
                       in equiv_valid_guard_imp)
@@ -569,11 +553,11 @@ lemma tcb_sched_action_reads_respects:
           apply (fastforce simp: reads_equiv_def affects_equiv_def equiv_for_def states_equiv_for_def)
          apply (wp | simp)+
    apply (intro conjI impI allI
-          | fastforce simp: get_etcb_def elim: reads_equivE affects_equivE equiv_forE)+
+          | fastforce simp: get_tcb_def elim: reads_equivE affects_equivE equiv_forE)+
    apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
    apply (erule_tac x="(t, tcb_domain y)" in ballE, force)
-   apply (force intro: domtcbs simp: get_etcb_def)
-  apply (simp add: equiv_valid_def2 ethread_get_def)
+   apply (force intro: domtcbs simp: get_tcb_Some etcbs_of'_def)
+  apply (simp add: equiv_valid_def2 thread_get_def)
   apply (rule equiv_valid_rv_bind)
     apply (wpsimp wp: equiv_valid_rv_trivial')
    apply (rule equiv_valid_2_bind)
@@ -589,7 +573,7 @@ lemma tcb_sched_action_reads_respects:
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def
                              bind_def return_def labels_are_invisible_def)
       apply wpsimp+
-  apply (force intro: domtcbs simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
+  apply (force intro: domtcbs simp: get_tcb_Some etcbs_of'_def pas_refined_def tcb_domain_map_wellformed_aux_def)
   done
 
 lemma reschedule_required_reads_respects[wp]:
@@ -604,10 +588,10 @@ lemma possible_switch_to_reads_respects:
   shows "reads_respects aag l (pas_refined aag and pas_cur_domain aag
                                                and (\<lambda>s. is_subject aag (cur_thread s)))
                               (possible_switch_to tptr)"
-  apply (simp add: possible_switch_to_def ethread_get_def)
+  apply (simp add: possible_switch_to_def thread_get_def)
   apply (case_tac "aag_can_read aag tptr \<or> aag_can_affect aag l tptr")
    apply (wp hoare_weak_lift_imp tcb_sched_action_reads_respects | wpc | simp)+
-   apply (clarsimp simp: get_etcb_def)
+   apply (clarsimp simp: get_tcb_def)
    apply ((intro conjI impI allI
           | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE
           | force)+)[1]
@@ -618,14 +602,17 @@ lemma possible_switch_to_reads_respects:
                   in equiv_valid_rv_bind)
        prefer 3
        apply wp
-      apply (monad_eq simp: get_etcb_def equiv_valid_2_def)
+      apply (monad_eq simp: get_tcb_def equiv_valid_2_def)
      apply (rule gen_asm_ev2')
      apply (simp add: equiv_valid_def2[symmetric])
      apply (wp tcb_sched_action_reads_respects)
      apply (simp add: reads_equiv_def)
-    apply (wp gets_cur_domain_ev)+
-  apply (clarsimp simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
-  apply (frule_tac x="(tptr, tcb_domain y)" in bspec, force intro: domtcbs)
+    apply (wp gets_cur_domain_revrv)+
+  apply (rule conjI)
+   apply (clarsimp simp: reads_equiv_def)
+  apply (clarsimp simp: get_tcb_Some)
+  apply (clarsimp simp: get_tcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
+  apply (frule_tac x="(tptr, tcb_domain y)" in bspec, force intro: domtcbs simp: etcbs_of'_def)
   apply (erule notE)
   apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
@@ -1503,18 +1490,7 @@ lemma suspend_globals_equiv[ wp]:
    suspend t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding suspend_def update_restart_pc_def
-  apply (wp tcb_sched_action_extended.globals_equiv dxo_wp_weak)
-       apply simp
-      apply (wp set_thread_state_globals_equiv)
-     apply wp+
-    apply clarsimp
-    apply (rule hoare_vcg_conj_lift)
-     prefer 2
-     apply (rule hoare_drop_imps)
-     apply wp+
-    apply (rule hoare_drop_imps)
-    apply wp+
-  apply auto
+  apply (wpsimp wp: set_thread_state_globals_equiv hoare_drop_imps)
   done
 
 crunch unbind_notification

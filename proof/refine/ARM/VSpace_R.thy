@@ -836,7 +836,7 @@ crunch deleteASID
 
 lemma deleteASID_corres:
   "corres dc
-          (invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0))
+          (invs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'
               and valid_arch_state' and cur_tcb')
           (delete_asid asid pd) (deleteASID asid pd)"
@@ -847,7 +847,7 @@ lemma deleteASID_corres:
       apply (rule_tac P="\<lambda>s. asid_high_bits_of asid \<in> dom (asidTable o ucast) \<longrightarrow>
                              asid_pool_at (the ((asidTable o ucast) (asid_high_bits_of asid))) s" and
                       P'="pspace_aligned' and pspace_distinct'" and
-                      Q="invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0) and
+                      Q="invs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0) and
                          (\<lambda>s. arm_asid_table (arch_state s) = asidTable \<circ> ucast)" in
                       corres_split)
          apply (simp add: dom_def)
@@ -855,8 +855,7 @@ lemma deleteASID_corres:
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast)
         apply (rule corres_split[OF flushSpace_corres[where pd=pd]])
           apply (rule corres_split[OF invalidateASIDEntry_corres[where pd=pd]])
-            apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
-                               and valid_etcbs"
+            apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))"
                         and P'="pspace_aligned' and pspace_distinct'"
                          in corres_split)
                apply (simp del: fun_upd_apply)
@@ -1411,7 +1410,7 @@ lemma storePDE_InvalidPDE_valid_arch_state'[wp]:
 
 lemma unmapPageTable_corres:
   "corres dc
-          (invs and valid_etcbs and page_table_at pt and
+          (invs and page_table_at pt and
            K (0 < asid \<and> is_aligned vptr 20 \<and> asid \<le> mask asid_bits))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
             and no_0_obj' and cur_tcb' and valid_objs')
@@ -1525,7 +1524,7 @@ lemma store_pte_pd_at_asid[wp]:
   done
 
 lemma unmapPage_corres:
-  "corres dc (invs and valid_etcbs and
+  "corres dc (invs and
               K (valid_unmap sz (asid,vptr) \<and> vptr < kernel_base \<and> asid \<le> mask asid_bits))
              (valid_objs' and valid_arch_state' and pspace_aligned' and
               pspace_distinct' and no_0_obj' and cur_tcb')
@@ -1545,7 +1544,7 @@ lemma unmapPage_corres:
                               and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits))
                               and valid_arch_state and valid_vspace_objs
                               and equal_kernel_mappings
-                              and pspace_aligned and valid_global_objs and valid_etcbs and
+                              and pspace_aligned and valid_global_objs and
                               K (valid_unmap sz (asid,vptr) )" and
                            P'="pspace_aligned' and pspace_distinct'" in corres_inst)
            apply clarsimp
@@ -1584,7 +1583,7 @@ lemma unmapPage_corres:
                            apply simp
                           apply simp
                          apply clarsimp
-                         apply (rule_tac P="(\<lambda>s. \<forall>x\<in>set [0, 4 .e. 0x3C]. pte_at (x + pa) s) and pspace_aligned and valid_etcbs"
+                         apply (rule_tac P="(\<lambda>s. \<forall>x\<in>set [0, 4 .e. 0x3C]. pte_at (x + pa) s) and pspace_aligned"
                                      and P'="pspace_aligned' and pspace_distinct'"
                                       in corres_guard_imp)
                            apply (rule storePTE_corres',  simp add:pte_relation_aligned_def)
@@ -1627,7 +1626,7 @@ lemma unmapPage_corres:
                              in corres_gen_asm)
                apply (simp add: is_aligned_mask[symmetric])
                apply (rule corres_split)
-                  apply (rule_tac P="page_directory_at pd and pspace_aligned and valid_etcbs
+                  apply (rule_tac P="page_directory_at pd and pspace_aligned
                                         and K (valid_unmap sz (asid, vptr))"
                               in corres_mapM [where r=dc], simp, simp)
                       prefer 5
@@ -1904,7 +1903,7 @@ crunch unmapPage
 
 lemma corres_store_pde_with_invalid_tail:
   "\<forall>slot \<in>set ys. \<not> is_aligned (slot >> 2) (pde_align' ab)
-  \<Longrightarrow>corres dc ((\<lambda>s. \<forall>y\<in> set ys. pde_at y s) and pspace_aligned and valid_etcbs)
+  \<Longrightarrow>corres dc ((\<lambda>s. \<forall>y\<in> set ys. pde_at y s) and pspace_aligned)
            (pspace_aligned' and pspace_distinct')
            (mapM (swp store_pde ARM_A.pde.InvalidPDE) ys)
            (mapM (swp storePDE ab) ys)"
@@ -1927,7 +1926,7 @@ lemma corres_store_pde_with_invalid_tail:
 
 lemma corres_store_pte_with_invalid_tail:
   "\<forall>slot\<in> set ys. \<not> is_aligned (slot >> 2) (pte_align' aa)
-  \<Longrightarrow> corres dc ((\<lambda>s. \<forall>y\<in>set ys. pte_at y s) and pspace_aligned and valid_etcbs)
+  \<Longrightarrow> corres dc ((\<lambda>s. \<forall>y\<in>set ys. pte_at y s) and pspace_aligned)
                 (pspace_aligned' and pspace_distinct')
              (mapM (swp store_pte ARM_A.pte.InvalidPTE) ys)
              (mapM (swp storePTE aa) ys)"
@@ -2127,7 +2126,7 @@ lemma same_refs_vs_cap_ref_eq:
 
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
-  shows "corres (=) (invs and valid_etcbs and valid_page_inv pgi)
+  shows "corres (=) (invs and valid_page_inv pgi)
             (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
             (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
@@ -2144,7 +2143,7 @@ proof -
                            page_invocation_map_def)
      apply (rule corres_guard_imp)
        apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv word cap (a,b) sum)
-                              and valid_etcbs and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
+                              and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
          and R'="\<lambda>_. invs' and valid_slots' m' and pspace_aligned' and valid_slots_duplicated' m'
          and pspace_distinct' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))" in corres_split)
           apply (erule updateCap_same_master)
@@ -2370,7 +2369,7 @@ definition
                                  and K (isPageTableCap cap)"
 
 lemma clear_page_table_corres:
-  "corres dc (pspace_aligned and page_table_at p and valid_etcbs)
+  "corres dc (pspace_aligned and page_table_at p)
              (pspace_aligned' and pspace_distinct')
     (mapM_x (swp store_pte ARM_A.InvalidPTE)
        [p , p + 4 .e. p + 2 ^ ptBits - 1])
@@ -2388,7 +2387,7 @@ lemma clear_page_table_corres:
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
          rule_tac r'=dc and S="(=)"
-               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
+               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
       apply (rule corres_guard_imp, rule storePTE_corres')
@@ -2409,7 +2408,7 @@ lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
    corres dc
-          (invs and valid_etcbs and valid_pti pti)
+          (invs and valid_pti pti)
           (invs' and valid_pti' pti')
           (perform_page_table_invocation pti)
           (performPageTableInvocation pti')"
@@ -2489,7 +2488,7 @@ definition
 lemma performASIDPoolInvocation_corres:
   "ap' = asid_pool_invocation_map ap \<Longrightarrow>
   corres dc
-          (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap and valid_etcbs)
+          (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap)
           (pspace_aligned' and pspace_distinct' and valid_apinv' ap')
           (perform_asid_pool_invocation ap)
           (performASIDPoolInvocation ap')"
@@ -2501,7 +2500,7 @@ lemma performASIDPoolInvocation_corres:
        apply simp
       apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (ARM_A.PageDirectoryCap p asid)" in corres_gen_asm)
       apply clarsimp
-      apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and asid_pool_at word2 and valid_etcbs and
+      apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and asid_pool_at word2 and
                          cte_wp_at (\<lambda>c. cap_master_cap c =
                                         cap_master_cap (cap.ArchObjectCap (arch_cap.PageDirectoryCap p asid))) (a,b)"
                       in corres_split)

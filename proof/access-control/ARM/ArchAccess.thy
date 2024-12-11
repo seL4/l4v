@@ -88,6 +88,11 @@ lemmas state_vrefs_upd =
   revokable_update.state_vrefs
   machine_state_update.state_vrefs
   more_update.state_vrefs
+  scheduler_action_update.state_vrefs
+  domain_index_update.state_vrefs
+  cur_domain_update.state_vrefs
+  domain_time_update.state_vrefs
+  ready_queues_update.state_vrefs
 
 end
 
@@ -159,6 +164,11 @@ lemmas integrity_asids_updates =
   interrupt_update.integrity_asids_update
   cur_thread_update.integrity_asids_update
   machine_state_update.integrity_asids_update
+  scheduler_action_update.integrity_asids_update
+  domain_index_update.integrity_asids_update
+  cur_domain_update.integrity_asids_update
+  domain_time_update.integrity_asids_update
+  ready_queues_update.integrity_asids_update
 
 (* The kheap isn't used in ARM's integrity_asids definition,
    but we need the following lemmas in some generic contexts *)

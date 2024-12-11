@@ -179,11 +179,7 @@ definition identical_updates where
 abbreviation identical_kheap_updates where
   "identical_kheap_updates s s' kh kh' \<equiv> identical_updates (kheap s) (kheap s') kh kh'"
 
-abbreviation identical_ekheap_updates where
-  "identical_ekheap_updates s s' kh kh' \<equiv> identical_updates (ekheap s) (ekheap s') kh kh'"
-
 lemmas identical_kheap_updates_def = identical_updates_def
-lemmas identical_ekheap_updates_def = identical_updates_def
 
 
 subsection \<open>Generic state equivalence\<close>
@@ -206,7 +202,6 @@ definition states_equiv_for ::
      equiv_for P kheap s s' \<and>
      equiv_machine_state P (machine_state s) (machine_state s') \<and>
      equiv_for (P \<circ> fst) cdt s s' \<and>
-     equiv_for P ekheap s s' \<and>
      equiv_for (P \<circ> fst) cdt_list s s' \<and>
      equiv_for (P \<circ> fst) is_original_cap s s' \<and>
      equiv_for Q interrupt_states s s' \<and>
