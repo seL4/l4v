@@ -64,12 +64,12 @@ begin
 
 lemma tcb_sched_action_dequeue_integrity':
   "\<lbrace>integrity aag X st and pas_refined aag and
-    (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s thread))))\<rbrace>
+    (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s thread))))\<rbrace>
    tcb_sched_action tcb_sched_dequeue thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (wpsimp simp: tcb_sched_action_def)
   apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def
-                        tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
+                        tcb_domain_map_wellformed_aux_def etcbs_of'_def obj_at_def
                  split: option.splits)
   done
 
@@ -80,10 +80,10 @@ lemma tcb_sched_action_dequeue_integrity[wp]:
   apply (simp add: tcb_sched_action_def)
   apply wp
   apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def
-                        tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
+                        tcb_domain_map_wellformed_aux_def
              split: option.splits)
-  apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
-  apply (auto intro: domtcbs)
+  apply (erule_tac x="(thread, etcb_domain (the (etcbs_of s thread)))" in ballE)
+  apply (auto simp: etcbs_of'_def obj_at_def intro: domtcbs)
   done
 
 lemma tcb_sched_action_enqueue_integrity[wp]:
@@ -91,8 +91,8 @@ lemma tcb_sched_action_enqueue_integrity[wp]:
   apply (simp add: tcb_sched_action_def)
   apply wp
   apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def
-                        tcb_domain_map_wellformed_aux_def tcb_at_def get_etcb_def
-                        tcb_sched_enqueue_def etcb_at_def
+                        tcb_domain_map_wellformed_aux_def tcb_at_def
+                        tcb_sched_enqueue_def
              split: option.splits)
   apply (metis append.simps(2))
   done
@@ -100,12 +100,12 @@ lemma tcb_sched_action_enqueue_integrity[wp]:
 text \<open>See comment for @{thm tcb_sched_action_dequeue_integrity'}\<close>
 lemma tcb_sched_action_append_integrity':
   "\<lbrace>integrity aag X st and
-    (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s thread))))\<rbrace>
+    (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s thread))))\<rbrace>
    tcb_sched_action tcb_sched_append thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: tcb_sched_action_def)
   apply wp
-  apply (clarsimp simp: integrity_def integrity_ready_queues_def etcb_at_def
+  apply (clarsimp simp: integrity_def integrity_ready_queues_def etcbs_of'_def obj_at_def
                  split: option.splits)
   done
 
@@ -116,10 +116,10 @@ lemma tcb_sched_action_append_integrity[wp]:
   apply (simp add: tcb_sched_action_def)
   apply wp
   apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def
-                        tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
+                        tcb_domain_map_wellformed_aux_def
                  split: option.splits)
-  apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
-  apply (auto intro: domtcbs)
+  apply (erule_tac x="(thread, etcb_domain (the (etcbs_of s thread)))" in ballE)
+  apply (auto simp: etcbs_of'_def obj_at_def intro: domtcbs)
   done
 
 lemma tcb_sched_action_append_integrity_pasMayEditReadyQueues:
@@ -204,23 +204,16 @@ crunch reschedule_required
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
 
 (* FIXME move to AInvs *)
-lemma tcb_sched_action_ekheap[wp]:
-  "tcb_sched_action p1 p2 \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
+lemma tcb_sched_action_etcbs_of[wp]:
+  "tcb_sched_action p1 p2 \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
   apply (simp add: tcb_sched_action_def)
-  apply wp
-  apply (simp add: etcb_at_def)
+  apply wpsimp
   done
 
 (* FIXME move to CNode *)
 lemma scheduler_action_update_pas_refined[simp]:
   "pas_refined aag (scheduler_action_update (\<lambda>_. param_a) s) = pas_refined aag s"
   by (simp add: pas_refined_def)
-
-lemma set_bound_notification_ekheap[wp]:
-  "set_bound_notification t st \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
-  apply (simp add: set_bound_notification_def)
-  apply (wp set_scheduler_action_wp | simp)+
-  done
 
 lemma sbn_thread_st_auth[wp]:
   "set_bound_notification t ntfn \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
@@ -266,6 +259,9 @@ lemma unbind_maybe_notification_pas_refined[wp]:
   apply (clarsimp simp: unbind_maybe_notification_def)
   apply (wp set_simple_ko_pas_refined hoare_drop_imps | wpc | simp)+
   done
+
+crunch possible_switch_to
+  for pas_refined[wp]: "pas_refined aag"
 
 lemma cancel_all_ipc_pas_refined[wp]:
   "cancel_all_ipc epptr \<lbrace>pas_refined aag\<rbrace>"
@@ -948,55 +944,10 @@ lemmas dmo_valid_cap[wp] = valid_cap_typ[OF do_machine_op_obj_at]
 
 context Finalise_AC_1 begin
 
-lemma set_eobject_integrity_autarch:
-  "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
-   set_eobject ptr obj
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: set_eobject_def)
-  apply wp
-  apply (simp add: integrity_subjects_def)
-  done
-
 lemma cancel_badged_sends_pas_refined[wp]:
   "cancel_badged_sends epptr badge \<lbrace>pas_refined aag\<rbrace>"
   unfolding cancel_badged_sends_def
   by (wpsimp simp: filterM_mapM wp: mapM_wp_inv set_thread_state_pas_refined get_simple_ko_wp)
-
-end
-
-
-lemma rsubst':
-  "\<lbrakk> P s s'; s=t; s'=t' \<rbrakk> \<Longrightarrow> P t t'"
-  by auto
-
-lemma thread_set_pas_refined_triv_idleT:
-  assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
-  and st: "\<And>tcb. P (tcb_state tcb) \<longrightarrow> tcb_state (f tcb) = tcb_state tcb"
-  and ba: "\<And>tcb. Q (tcb_bound_notification tcb)
-                  \<longrightarrow> tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
-  shows "\<lbrace>pas_refined aag and idle_tcb_at (\<lambda>(st, ntfn, arch). P st \<and> Q ntfn \<and> R arch) t\<rbrace>
-         thread_set f t
-         \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (simp add: pas_refined_def state_objs_to_policy_def)
-  apply (rule hoare_pre)
-   apply (wps thread_set_caps_of_state_trivial[OF cps])
-   apply (simp add: thread_set_def)
-   apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: pred_tcb_def2 fun_upd_def[symmetric]
-                   del: subsetI)
-  apply (subst state_vrefs_tcb_upd, clarsimp simp: tcb_at_def)+
-  apply (rule conjI)
-   apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"
-                for a cps cd vr ag in rsubst')
-    apply (drule get_tcb_SomeD)
-    apply (rule ext, clarsimp simp add: thread_st_auth_def get_tcb_def st tcb_states_of_state_def)
-   apply (drule get_tcb_SomeD)
-   apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba)
-  apply (clarsimp)
-  done
-
-
-context Finalise_AC_1 begin
 
 lemma cap_delete_respects:
   "\<lbrace>integrity aag X st and cdt_change_allowed' aag slot and pas_refined aag

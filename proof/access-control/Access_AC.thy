@@ -228,7 +228,7 @@ lemma is_transferable_null_filter[simp]:
 lemma tcb_domain_map_wellformed_mono:
   "\<lbrakk> domains_of_state s' \<subseteq> domains_of_state s; tcb_domain_map_wellformed pas s \<rbrakk>
      \<Longrightarrow> tcb_domain_map_wellformed pas s'"
-  by (auto simp: tcb_domain_map_wellformed_aux_def get_etcb_def)
+  by (auto simp: tcb_domain_map_wellformed_aux_def)
 
 lemma pas_refined_mem:
   "\<lbrakk> (x, auth, y) \<in> state_objs_to_policy s; pas_refined aag s \<rbrakk>
@@ -262,6 +262,17 @@ lemma pas_refined_state_objs_to_policy_subset:
      \<Longrightarrow> pas_refined aag s'"
   by (simp add: pas_refined_def)
      (blast dest: tcb_domain_map_wellformed_mono auth_graph_map_mono[where G="pasObjectAbs aag"])
+
+lemma pas_refined_subsets_tcb_domain_map_wellformed:
+  "\<lbrakk> pas_refined aag s;
+     state_objs_to_policy s' \<subseteq> state_objs_to_policy s;
+     state_asids_to_policy aag s' \<subseteq> state_asids_to_policy aag s;
+     state_irqs_to_policy aag s' \<subseteq> state_irqs_to_policy aag s;
+     tcb_domain_map_wellformed aag s \<Longrightarrow> tcb_domain_map_wellformed aag s';
+     interrupt_irq_node s' = interrupt_irq_node s \<rbrakk>
+     \<Longrightarrow> pas_refined aag s'"
+  by (simp add: pas_refined_def)
+     (blast dest: auth_graph_map_mono[where G="pasObjectAbs aag"])
 
 lemma aag_wellformed_all_auth_is_owns':
   "\<lbrakk> Control \<in> S; pas_wellformed aag \<rbrakk>
@@ -460,8 +471,6 @@ lemmas integrity_obj_simps [simp] =
   tro_lrefl[OF singletonI]
   trm_orefl[OF refl]
   trd_orefl[OF refl]
-  tre_lrefl[OF singletonI]
-  tre_orefl[OF refl]
 
 lemma cdt_change_allowedI:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* ptr; cdt_direct_change_allowed aag subjects tcbsts pptr \<rbrakk>
@@ -680,12 +689,6 @@ lemma tro_trans:
   apply clarsimp
   apply (drule_tac x = x in spec)+
   by force
-
-lemma tre_trans:
-  "\<lbrakk> (\<forall>x. integrity_eobj aag es (pasObjectAbs aag x) (ekh x) (ekh' x));
-     (\<forall>x. integrity_eobj aag es (pasObjectAbs aag x) (ekh' x) (ekh'' x)) \<rbrakk>
-     \<Longrightarrow> (\<forall>x. integrity_eobj aag es (pasObjectAbs aag x) (ekh x) (ekh'' x))"
-  by (fastforce elim!: integrity_eobj.cases intro: integrity_eobj.intros)
 
 
 subsection \<open>Integrity transitivity\<close>
@@ -968,7 +971,6 @@ proof -
     apply (frule(3) trcdtlist_trans)
     apply (frule(1) trinterrupts_trans[simplified])
     apply (frule(1) trasids_trans[simplified])
-    apply (frule(1) tre_trans[simplified])
     apply (frule(1) trrqs_trans[simplified])
     by blast
 qed
@@ -1024,15 +1026,13 @@ context Access_AC_2 begin
 
 lemma eintegrity_sa_update[simp]:
   "integrity aag X st (scheduler_action_update f s) = integrity aag X st s"
-  by (simp add: integrity_subjects_def)
+  by (auto simp add: integrity_subjects_def )
 
 lemma trans_state_back[simp]:
   "trans_state (\<lambda>_. exst s) s = s"
   by simp
 
-declare wrap_ext_op_det_ext_ext_def[simp]
-
-crunch set_thread_state_ext
+crunch set_thread_state_act
   for integrity[wp]: "integrity aag X st"
 
 crunch set_thread_state
@@ -1271,7 +1271,7 @@ lemma as_user_thread_bound_ntfn[wp]:
   done
 
 lemma tcb_domain_map_wellformed_lift:
-  assumes 1: "\<And>P. f \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
+  assumes 1: "\<And>P. f \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
   shows "f \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
   by (rule 1)
 
@@ -1534,10 +1534,6 @@ lemma integrity_mono:
                elim: reply_cap_deletion_integrity_mono cnode_integrity_mono
                      arch_integrity_obj_atomic_mono)[1]
   apply (rule conjI)
-   apply clarsimp
-   apply (drule_tac x=x in spec)+
-   apply (erule integrity_eobj.cases; auto intro: integrity_eobj.intros)
-  apply (rule conjI)
    apply (intro allI)
    apply (drule_tac x=x in spec)+
    apply (erule integrity_cdtE; auto elim: cdt_change_allowed_mono)
@@ -1576,7 +1572,7 @@ lemma tcb_domain_map_wellformed_independent[intro!, simp]:
   "tcb_domain_map_wellformed aag (s\<lparr>machine_state :=
                                     machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
    tcb_domain_map_wellformed aag s"
-  by (simp add: tcb_domain_map_wellformed_aux_def get_etcb_def)
+  by (simp add: tcb_domain_map_wellformed_aux_def)
 
 subsection\<open>Transitivity of integrity lemmas and tactics\<close>
 
