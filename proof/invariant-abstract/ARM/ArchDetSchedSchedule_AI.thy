@@ -142,7 +142,7 @@ lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   done
 
 lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>valid_queues and valid_etcbs and valid_idle\<rbrace>
+  "\<lbrace>valid_queues and valid_idle\<rbrace>
      switch_to_idle_thread
    \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def
@@ -196,9 +196,12 @@ lemma set_pd_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> set_pd ptr pd \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
   by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_pd_def)+
 
-lemma set_pt_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> set_pt ptr pt \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_pt_def)+
+lemma set_pt_etcbs[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  unfolding set_pt_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (auto elim!: rsubst[where P=P] simp: obj_at_def etcbs_of'_def split: kernel_object.splits)
+  done
 
 lemma set_asid_pool_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
@@ -311,11 +314,9 @@ lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
 
 crunch arch_post_cap_deletion
   for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
-  and valid_etcbs[wp, DetSchedSchedule_AI_assms]: valid_etcbs
   and ct_not_in_q[wp, DetSchedSchedule_AI_assms]: ct_not_in_q
   and simple_sched_action[wp, DetSchedSchedule_AI_assms]: simple_sched_action
   and not_cur_thread[wp, DetSchedSchedule_AI_assms]: "not_cur_thread t"
-  and is_etcb_at[wp, DetSchedSchedule_AI_assms]: "is_etcb_at t"
   and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
@@ -344,6 +345,10 @@ crunch cap_swap_for_delete, cap_move, cancel_badged_sends
   (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak
    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
    ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+
+crunch arch_switch_to_thread
+  for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
 
 end
 

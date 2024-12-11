@@ -155,7 +155,7 @@ lemma retype_ret_valid_caps_captable[Untyped_AI_assms]:
       \<and> range_cover ptr sz (obj_bits_api CapTableObject us) n \<and> ptr \<noteq> 0
        \<rbrakk>
          \<Longrightarrow> \<forall>y\<in>{0..<n}. s
-                \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
+                \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us (cur_domain s))) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
                            (kheap s)\<rparr> \<turnstile> CNodeCap (ptr_add ptr (y * 2 ^ obj_bits_api CapTableObject us)) us []"
 by ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         cte_level_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def

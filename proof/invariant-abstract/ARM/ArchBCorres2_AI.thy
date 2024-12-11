@@ -74,10 +74,6 @@ lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
   by (cases a; simp add: handle_arch_fault_reply_def; wp)
 
-crunch
-    arch_switch_to_thread,arch_switch_to_idle_thread
-  for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
-
 end
 
 interpretation BCorres2_AI?: BCorres2_AI
@@ -86,11 +82,9 @@ interpretation BCorres2_AI?: BCorres2_AI
   case 1 show ?case by (unfold_locales; (fact BCorres2_AI_assms)?)
   qed
 
-lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
-
 context Arch begin arch_global_naming
 
-crunch send_ipc,send_signal,do_reply_transfer,arch_perform_invocation
+crunch send_ipc,send_signal,do_reply_transfer,arch_perform_invocation,invoke_domain
   for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory loadWord cap_fault_on_failure
          storeWord lookup_error_on_failure getRestartPC getRegister mapME)
