@@ -464,12 +464,16 @@ vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
 gicVCPUMaxNumLR = (64 :: Int)
 
 
-{- Config parameter -}
+{- Config parameters -}
 
 -- The size of the physical address space in hyp mode can be configured on some platforms.
 config_ARM_PA_SIZE_BITS_40 :: Bool
 config_ARM_PA_SIZE_BITS_40 = error "generated from CMake config"
 
--- Wether to trap WFI/WFE instructions or not in hyp mode
+-- Whether to trap WFI/WFE instructions or not in hyp mode.
 config_DISABLE_WFI_WFE_TRAPS :: Bool
 config_DISABLE_WFI_WFE_TRAPS = error "generated from CMake config"
+
+-- Whether to use the GICv3. Defaults to GICv2 when set to False.
+config_ARM_GIC_V3 :: Bool
+config_ARM_GIC_V3 = error "generated from CMake config"
