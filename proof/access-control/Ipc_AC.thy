@@ -286,13 +286,13 @@ lemma set_scheduler_action_integrity_once_ts_upd:
   apply (simp add: get_tcb_def)
   done
 
-crunch set_thread_state_ext
+crunch set_thread_state_act
   for integrity_once_ts_upd: "integrity_once_ts_upd t ts aag X st"
 
 lemma set_thread_state_integrity_once_ts_upd:
   "set_thread_state t ts' \<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wpsimp wp: set_object_wp set_thread_state_ext_integrity_once_ts_upd)
+  apply (wpsimp wp: set_object_wp set_thread_state_act_integrity_once_ts_upd)
   apply (clarsimp simp: fun_upd_def dest!: get_tcb_SomeD)
   apply (simp add: get_tcb_def cong: if_cong)
   done
@@ -1729,8 +1729,7 @@ locale Ipc_AC_2 = Ipc_AC_1 +
   and empty_slot_extended_list_integ_lift_in_ipc:
     "\<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        empty_slot_ext a b
-       \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>;
-       \<And>P. empty_slot_ext a b \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>; \<And>P. empty_slot_ext a b \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
+       \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
        \<Longrightarrow> \<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
            empty_slot_ext a b
            \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
@@ -1752,7 +1751,7 @@ lemma cap_insert_ext_integrity_in_ipc_autarch:
   apply (simp add: integrity_tcb_in_ipc_def split del: if_split)
   apply (unfold integrity_def)
   apply (simp only: integrity_cdt_list_as_list_integ)
-  apply (rule hoare_lift_Pf[where f="ekheap"])
+  apply (rule hoare_lift_Pf[where f="etcbs_of"])
    apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def
                          tcb_states_of_state_def get_tcb_def
               split del: if_split cong: if_cong)
@@ -1929,7 +1928,7 @@ lemma set_original_respects_in_ipc_autarch:
   apply (subst (asm) integrity_asids_updates(6)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 lemma update_cdt_fun_upd_respects_in_ipc_autarch:
@@ -1945,7 +1944,7 @@ lemma update_cdt_fun_upd_respects_in_ipc_autarch:
   apply (subst (asm) integrity_asids_updates(2)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 lemma set_untyped_cap_as_full_integrity_tcb_in_ipc_autarch:
@@ -2081,9 +2080,9 @@ lemma do_ipc_transfer_respects_in_ipc:
 end
 
 
-lemma sts_ext_running_noop:
-  "\<lbrace>P and st_tcb_at (runnable) receiver\<rbrace> set_thread_state_ext receiver \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: set_thread_state_ext_def get_thread_state_def thread_get_def
+lemma sts_act_running_noop:
+  "\<lbrace>P and st_tcb_at (runnable) receiver\<rbrace> set_thread_state_act receiver \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: set_thread_state_act_def get_thread_state_def thread_get_def
          | wp set_scheduler_action_wp)+
   apply (clarsimp simp add: st_tcb_at_def obj_at_def get_tcb_def)
   done
@@ -2094,7 +2093,7 @@ lemma set_thread_state_running_respects_in_ipc:
    set_thread_state receiver Running
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRFinalOrCall st\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wpsimp wp: set_object_wp sts_ext_running_noop)
+  apply (wpsimp wp: set_object_wp sts_act_running_noop)
   apply (auto simp: st_tcb_at_def obj_at_def get_tcb_def
                     get_tcb_rev update_tcb_state_in_ipc
               cong: if_cong elim: update_tcb_state_in_ipc[unfolded fun_upd_def])
@@ -2161,7 +2160,7 @@ lemma set_original_respects_in_ipc_reply:
   apply (subst (asm) integrity_asids_updates(6)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 end
@@ -2191,7 +2190,7 @@ lemma update_cdt_reply_in_ipc:
   apply (subst (asm) integrity_asids_updates(2)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 end
@@ -2241,10 +2240,10 @@ lemma set_scheduler_action_respects_in_ipc_autarch:
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   unfolding set_scheduler_action_def
   apply (wpsimp simp: integrity_tcb_in_ipc_def integrity_def tcb_states_of_state_def get_tcb_def)
-  apply (subst (asm) integrity_asids_updates(4)[symmetric])
+  apply (subst (asm) integrity_asids_updates(14)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 end
@@ -2263,19 +2262,19 @@ lemma tcb_sched_action_respects_in_ipc_autarch:
   apply wp
   apply (clarsimp simp: integrity_def integrity_tcb_in_ipc_def tcb_states_of_state_def get_tcb_def
                         integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def
-                        tcb_at_def get_etcb_def tcb_sched_enqueue_def etcb_at_def
+                        tcb_at_def tcb_sched_enqueue_def etcb_at_def
                  split: option.splits)
   apply (intro conjI impI)
      apply (fastforce intro: exists_cons_append)
-    apply (subst (asm) integrity_asids_updates(4)[symmetric])
+    apply (subst (asm) integrity_asids_updates(22)[symmetric])
     apply (subst integrity_asids_updates(4)[where f=id, symmetric])
     apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-    apply (fastforce simp: trans_state_def)
+    apply (fastforce simp: trans_state_def abstract_state.defs)
    apply (fastforce intro: exists_cons_append)
-  apply (subst (asm) integrity_asids_updates(4)[symmetric])
+  apply (subst (asm) integrity_asids_updates(22)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 crunch possible_switch_to, set_thread_state
@@ -2546,7 +2545,7 @@ lemma set_thread_state_running_respects_in_ipc_reply:
    set_thread_state receiver Running
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRFinal st\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply (wp sts_ext_running_noop)
+  apply (wp sts_act_running_noop)
   apply (auto simp: st_tcb_at_def obj_at_def get_tcb_def
               cong: if_cong
              elim!: fault_tcb_atE elim: update_tcb_state_in_ipc_reply[unfolded fun_upd_def])
@@ -2587,7 +2586,7 @@ lemma set_cdt_empty_slot_respects_in_ipc_autarch:
   apply (subst (asm) integrity_asids_updates(2)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 end
@@ -2675,17 +2674,17 @@ lemma set_scheduler_action_respects_in_fault_reply:
   "set_scheduler_action action \<lbrace>integrity_tcb_in_fault_reply aag X receiver ctxt st\<rbrace>"
   unfolding set_scheduler_action_def
   apply (wpsimp simp: integrity_tcb_in_fault_reply_def integrity_def tcb_states_of_state_def get_tcb_def)
-  apply (subst (asm) integrity_asids_updates(4)[symmetric])
+  apply (subst (asm) integrity_asids_updates(14)[symmetric])
   apply (subst integrity_asids_updates(4)[where f=id, symmetric])
   apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def)
+  apply (fastforce simp: trans_state_def abstract_state.defs)
   done
 
 lemma handle_fault_reply_respects_in_fault_reply:
   "handle_fault_reply f thread label mrs \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
   by (cases f; wpsimp wp: as_user_respects_in_fault_reply handle_arch_fault_reply_typ_at)
 
-crunch set_thread_state_ext
+crunch set_thread_state_act
   for respects_in_fault_reply: "integrity_tcb_in_fault_reply aag X receiver ctxt st"
 
 lemma thread_set_no_fault_respects_in_fault_reply:
@@ -2693,7 +2692,7 @@ lemma thread_set_no_fault_respects_in_fault_reply:
    thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) thread
    \<lbrace>\<lambda>_. integrity_tcb_in_fault_reply aag X thread TRFRemoveFault st\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wp set_thread_state_ext_respects_in_fault_reply set_object_wp)
+  apply (wp set_thread_state_act_respects_in_fault_reply set_object_wp)
   apply (clarsimp simp: integrity_tcb_in_fault_reply_def)
   apply (erule tcb_in_fault_reply.cases; clarsimp dest!: get_tcb_SomeD)
   apply (rule tifr_remove_fault[OF refl refl])
@@ -2705,7 +2704,7 @@ lemma set_thread_state_respects_in_fault_reply:
    set_thread_state thread tst
    \<lbrace>\<lambda>_. integrity_tcb_in_fault_reply aag X thread TRFFinal st\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp set_thread_state_ext_respects_in_fault_reply set_object_wp)
+  apply (wp set_thread_state_act_respects_in_fault_reply set_object_wp)
   apply (clarsimp simp: integrity_tcb_in_fault_reply_def)
   apply (erule tcb_in_fault_reply.cases; clarsimp dest!: get_tcb_SomeD)
   apply (rule tifr_reply[OF refl refl])
