@@ -17,7 +17,7 @@ definition virqSetEOIIRQEN :: "virq \<Rightarrow> machine_word \<Rightarrow> vir
   "virqSetEOIIRQEN virq v \<equiv>
      if virq_type virq = 3
      then virq
-     else (virq && ~~0x80000) || ((v << 19) && 0x80000)"
+     else (virq && ~~(1 << eoiirqen_shift)) || ((v << eoiirqen_shift) && (1 << eoiirqen_shift))"
 
 definition vgic_maintenance :: "(unit,'z::state_ext) s_monad" where
   "vgic_maintenance = do
