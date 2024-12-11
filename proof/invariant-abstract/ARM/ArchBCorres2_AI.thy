@@ -15,11 +15,11 @@ named_theorems BCorres2_AI_assms
 
 crunch invoke_cnode
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
-  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set )
+  (simp: swp_def ignore: clearMemory without_preemption filterM)
 
 crunch create_cap,init_arch_objects,retype_region,delete_objects
   for (bcorres) bcorres[wp]: truncate_state
-  (ignore: freeMemory clearMemory retype_region_ext)
+  (ignore: freeMemory clearMemory)
 
 crunch set_extra_badge,derive_cap
   for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord)
@@ -28,7 +28,7 @@ crunch invoke_untyped
   for (bcorres) bcorres[wp]: truncate_state
   (ignore: sequence_x)
 
-crunch set_mcpriority,
+crunch set_mcpriority, set_priority,
           arch_get_sanitise_register_info, arch_post_modify_registers
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
@@ -142,33 +142,14 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
 lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
   by (simp add: handle_reserved_irq_def; wp)
 
-lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
-  apply (cases b)
-  apply (simp | wp)+
-  done
+crunch handle_hypervisor_fault, timer_tick
+  for (bcorres) bcorres[wp]: truncate_state
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)
   apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def
                    handle_interrupt_def Let_def arch_mask_irq_signal_def
          | intro impI conjI allI | wp | wpc)+
-  done
-
-crunch guarded_switch_to,switch_to_idle_thread
-  for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord clearExMonitor)
-
-lemma choose_switch_or_idle:
-  "((), s') \<in> fst (choose_thread s) \<Longrightarrow>
-       (\<exists>word. ((),s') \<in> fst (guarded_switch_to word s)) \<or>
-       ((),s') \<in> fst (switch_to_idle_thread s)"
-  apply (simp add: choose_thread_def)
-  apply (clarsimp simp add: switch_to_idle_thread_def bind_def gets_def
-                   arch_switch_to_idle_thread_def in_monad
-                   return_def get_def modify_def put_def
-                    get_thread_state_def
-                   thread_get_def
-                   split: if_split_asm)
-  apply force
   done
 
 end
