@@ -312,6 +312,9 @@ where
      tcb_fault              = undefined,
      tcb_bound_notification = None,
      tcb_mcpriority         = undefined,
+     tcb_priority           = undefined,
+     tcb_time_slice         = undefined,
+     tcb_domain             = 0,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
 
 
@@ -333,6 +336,9 @@ where
      tcb_fault              = undefined,
      tcb_bound_notification = None,
      tcb_mcpriority         = undefined,
+     tcb_priority           = undefined,
+     tcb_time_slice         = undefined,
+     tcb_domain             = 0,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
@@ -362,13 +368,6 @@ lemmas kh1_obj_def =
 
 definition exst1 :: "det_ext" where
   "exst1 \<equiv> \<lparr>work_units_completed_internal = undefined,
-             scheduler_action_internal = undefined,
-             ekheap_internal = \<lambda>x. None,
-             domain_list_internal = undefined,
-             domain_index_internal = undefined,
-             cur_domain_internal = undefined,
-             domain_time_internal = undefined,
-             ready_queues_internal = undefined,
              cdt_list_internal = undefined\<rparr>"
 
 definition
@@ -380,6 +379,12 @@ where
     is_original_cap = undefined,
     cur_thread = undefined,
     idle_thread = undefined,
+    scheduler_action = undefined,
+    domain_list = undefined,
+    domain_index = undefined,
+    cur_domain = undefined,
+    domain_time = undefined,
+    ready_queues = undefined,
     machine_state = undefined,
     interrupt_irq_node = (\<lambda>_. 10),
     interrupt_states = undefined,
@@ -455,9 +460,13 @@ where
          else if (asid_high_bits_of x = asid_high_bits_of asid1_3065)
           then T1 else undefined)"
 
+definition Sys1DomainMap :: "Sys1Labels agent_domain_map" where
+  "Sys1DomainMap \<equiv> (\<lambda>_. {}) (0 := {UT1, T1})"
+
 definition Sys1PAS :: "Sys1Labels PAS" where
   "Sys1PAS \<equiv> \<lparr> pasObjectAbs = Sys1AgentMap, pasASIDAbs = Sys1ASIDMap, pasIRQAbs = (\<lambda>_. IRQ1),
-              pasPolicy = Sys1AuthGraph, pasSubject = UT1, pasMayActivate = True, pasMayEditReadyQueues = True, pasMaySendIrqs = True, pasDomainAbs = undefined \<rparr>"
+               pasPolicy = Sys1AuthGraph, pasSubject = UT1, pasMayActivate = True, pasMayEditReadyQueues = True,
+               pasMaySendIrqs = True, pasDomainAbs = Sys1DomainMap \<rparr>"
 
 subsubsection \<open>Proof of pas_refined for Sys1\<close>
 
@@ -548,22 +557,28 @@ lemma thread_bound_ntfns_1:
 
 declare AllowSend_def[simp] AllowRecv_def[simp]
 
-lemma domains_of_state_s1[simp]:
-  "domains_of_state s1 = {}"
-  apply (rule equalityI)
-   apply (rule subsetI)
-   apply clarsimp
-   apply (erule domains_of_state_aux.induct)
-   apply (simp add: s1_def exst1_def)
-  apply simp
-  done
+lemma etcbs_of_s1:
+  "etcbs_of s1 = [3079 \<mapsto> etcb_of (un_TCB obj1_3079), 3080 \<mapsto> etcb_of (un_TCB obj1_3080)]"
+  by (fastforce simp: etcbs_of'_def s1_def kh1_def kh1_obj_def)
+
+lemma domains_of_state_s1:
+  "domains_of_state s1 = {(3079, 0), (3080, 0)}"
+   by (fastforce simp: etcbs_of_s1 kh1_obj_def
+                 elim: domains_of_state_aux.cases
+                split: if_split_asm
+               intro!: domtcbs)
+
+lemma tcb_domain_map_wellformed_s1:
+  "tcb_domain_map_wellformed Sys1PAS s1"
+  by (clarsimp simp: tcb_domain_map_wellformed_aux_def Sys1PAS_def domains_of_state_s1
+                        Sys1AgentMap_simps Sys1DomainMap_def)
 
 lemma "pas_refined Sys1PAS s1"
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
        subgoal by (simp add: Sys1_wellformed)
       subgoal by (simp add: irq_map_wellformed_aux_def s1_def Sys1AgentMap_simps Sys1PAS_def)
-     subgoal by (simp  add: tcb_domain_map_wellformed_aux_def)
+     subgoal by (simp add: tcb_domain_map_wellformed_s1)
     apply (clarsimp simp: auth_graph_map_def
                            Sys1PAS_def
                            state_objs_to_policy_def
@@ -851,6 +866,9 @@ where
      tcb_fault              = undefined,
      tcb_bound_notification = None,
      tcb_mcpriority         = undefined,
+     tcb_priority           = undefined,
+     tcb_time_slice         = undefined,
+     tcb_domain             = 0,
      tcb_arch          = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -872,6 +890,9 @@ where
      tcb_fault              = undefined,
      tcb_bound_notification = None,
      tcb_mcpriority         = undefined,
+     tcb_priority           = undefined,
+     tcb_time_slice         = undefined,
+     tcb_domain             = 0,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
@@ -904,6 +925,12 @@ where
     is_original_cap = undefined,
     cur_thread = undefined,
     idle_thread = undefined,
+    scheduler_action = undefined,
+    domain_list = undefined,
+    domain_index = undefined,
+    cur_domain = undefined,
+    domain_time = undefined,
+    ready_queues = undefined,
     machine_state = undefined,
     interrupt_irq_node = (\<lambda>_. 9001),
     interrupt_states = undefined,
@@ -964,10 +991,14 @@ where
      (asid2_3063 := UT2,
       asid2_3065 := T2 )"
 
+definition Sys2DomainMap :: "Sys2Labels agent_domain_map" where
+  "Sys2DomainMap \<equiv> (\<lambda>_. {}) (0 := {UT2, T2})"
+
 definition Sys2PAS :: "Sys2Labels PAS" where
   "Sys2PAS \<equiv> \<lparr> pasObjectAbs = Sys2AgentMap, pasASIDAbs = Sys2ASIDMap,
               pasIRQAbs = (\<lambda>_. IRQ2),
-              pasPolicy = Sys2AuthGraph, pasSubject = UT2, pasMayActivate = True, pasMayEditReadyQueues = True, pasMaySendIrqs = True, pasDomainAbs = undefined \<rparr>"
+              pasPolicy = Sys2AuthGraph, pasSubject = UT2, pasMayActivate = True, pasMayEditReadyQueues = True,
+              pasMaySendIrqs = True, pasDomainAbs = Sys2DomainMap \<rparr>"
 
 
 
@@ -1052,15 +1083,21 @@ lemma Sys2AgentMap_simps:
   "Sys2AgentMap 9001 = IRQ2"
   by (simp_all add: Sys2AgentMap_def)
 
-lemma domains_of_state_s2[simp]:
-  "domains_of_state s2 = {}"
-  apply (rule equalityI)
-   apply (rule subsetI)
-   apply clarsimp
-   apply (erule domains_of_state_aux.induct)
-   apply (simp add: s2_def exst1_def)
-  apply simp
-  done
+lemma etcbs_of_s2:
+  "etcbs_of s2 = [3079 \<mapsto> etcb_of (un_TCB obj2_3079), 3080 \<mapsto> etcb_of (un_TCB obj2_3080)]"
+  by (fastforce simp: etcbs_of'_def s2_def kh2_def kh2_obj_def)
+
+lemma domains_of_state_s2:
+  "domains_of_state s2 = {(3079, 0), (3080, 0)}"
+   by (fastforce simp: etcbs_of_s2 kh2_obj_def
+                 elim: domains_of_state_aux.cases
+                split: if_split_asm
+               intro!: domtcbs)
+
+lemma tcb_domain_map_wellformed_s2:
+  "tcb_domain_map_wellformed Sys2PAS s2"
+  by (clarsimp simp: tcb_domain_map_wellformed_aux_def Sys2PAS_def domains_of_state_s2
+                        Sys2AgentMap_simps Sys2DomainMap_def)
 
 lemma thread_bound_ntfns_2[simp]:
   "thread_bound_ntfns s2 = Map.empty"
@@ -1073,13 +1110,14 @@ lemma thread_bound_ntfns_2[simp]:
 lemma "pas_refined Sys2PAS s2"
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
-      apply (simp add: Sys2_wellformed)
-     apply (simp add: Sys2PAS_def s2_def Sys2AgentMap_def
-                      irq_map_wellformed_aux_def)
+       apply (simp add: Sys2_wellformed)
+      apply (simp add: Sys2PAS_def s2_def Sys2AgentMap_def
+                       irq_map_wellformed_aux_def)
+     apply (clarsimp simp: tcb_domain_map_wellformed_s2)
     apply (clarsimp simp: auth_graph_map_def
                           Sys2PAS_def
                           state_objs_to_policy_def
-                          state_bits_to_policy_def tcb_domain_map_wellformed_aux_def)+
+                          state_bits_to_policy_def)
     apply (erule state_bits_to_policyp.cases, simp_all)
          apply (drule s2_caps_of_state, clarsimp)
          apply (elim disjE, simp_all add: cap_auth_conferred_def
