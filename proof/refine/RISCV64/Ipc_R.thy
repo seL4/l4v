@@ -6445,7 +6445,7 @@ lemma cancelIPC_sym_heap_scReplies [wp]:
    cancelIPC t
    \<lbrace>\<lambda>_. sym_heap_scReplies\<rbrace>"
   unfolding cancelIPC_def
-  by (wpsimp wp: gts_wp', simp add: comp_def)
+  by (wpsimp wp: gts_wp')
 
 lemma replyTCB_is_not_ksIdleThread:
   "\<lbrakk>ko_at' reply replyPtr s; the (replyTCB reply) = ksIdleThread s; replyTCB reply = Some tcb;
