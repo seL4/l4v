@@ -21,8 +21,7 @@ definition arch_authorised_irq_ctl_inv ::
        (pasSubject aag, Control, pasIRQAbs aag irq) \<in> pasPolicy aag"
 
 lemma arch_invoke_irq_control_pas_refined[Interrupt_AC_assms]:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
+  "\<lbrace>pas_refined aag and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
                     and K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
    arch_invoke_irq_control irq_ctl_inv
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
@@ -75,7 +74,7 @@ global_interpretation Interrupt_AC_1?: Interrupt_AC_1 "arch_authorised_irq_ctl_i
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Interrupt_AC_assms)?)
+    by (unfold_locales; fact Interrupt_AC_assms)
 qed
 
 

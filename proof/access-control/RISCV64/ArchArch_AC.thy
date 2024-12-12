@@ -19,20 +19,13 @@ context Arch begin global_naming RISCV64
 named_theorems Arch_AC_assms
 
 lemma set_mrs_state_vrefs[Arch_AC_assms, wp]:
-  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
-   set_mrs thread buf msgs
-   \<lbrace>\<lambda>_ s. P (state_vrefs s)\<rbrace>"
+  "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
   apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
               simp: zipWithM_x_mapM_x split_def store_word_offs_def
          split_del: if_split)
-  apply (subst state_vrefs_eqI)
-        prefer 7
-        apply assumption
-       apply (clarsimp simp: opt_map_def)
-      apply (fastforce simp: opt_map_def aobj_of_def)
-     apply clarsimp
-    apply (auto simp: valid_arch_state_def)
+  apply (subst (asm) state_vrefs_tcb_upd[symmetric])
+   apply (auto simp: fun_upd_def get_tcb_def tcb_at_def)
   done
 
 lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
@@ -503,11 +496,9 @@ lemma perform_pt_inv_unmap_pas_refined:
   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding perform_pt_inv_unmap_def
   apply (wpsimp wp: set_cap_pas_refined get_cap_wp)
-       apply (strengthen invs_psp_aligned invs_vspace_objs invs_arch_state)
        apply wps
        apply (rule hoare_vcg_all_lift[OF hoare_vcg_imp_lift'[OF mapM_x_wp_inv]], wpsimp wp: mapM_x_wp_inv)
        apply (rule hoare_vcg_conj_lift[OF hoare_strengthen_post[OF mapM_x_swp_store_InvalidPTE_pas_refined]], assumption)
-       apply (rule hoare_vcg_conj_lift[OF hoare_strengthen_post[OF mapM_x_swp_store_pte_invs_unmap]], assumption)
        apply (wpsimp wp: pt_lookup_from_level_wrp store_pte_invs_unmap store_pte_pas_refined
                          mapM_x_wp_inv unmap_page_table_pas_refined
                          hoare_vcg_imp_lift' hoare_vcg_ball_lift hoare_vcg_all_lift)+

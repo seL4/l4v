@@ -25,19 +25,6 @@ lemma arch_finalise_cap_rv[DomainSepInv_assms]:
   "\<lbrace>\<lambda>_. P (NullCap,NullCap)\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>rv _. P rv\<rbrace>"
   unfolding arch_finalise_cap_def by wpsimp
 
-end
-
-
-global_interpretation DomainSepInv_1?: DomainSepInv_1
-proof goal_cases
-  interpret Arch .
-  case 1 show ?case
-    by (unfold_locales; (fact DomainSepInv_assms | wp init_arch_objects_inv))
-qed
-
-
-context Arch begin global_naming RISCV64
-
 crunch
   handle_reserved_irq, handle_vm_fault, perform_pg_inv_map, perform_pg_inv_unmap,
   perform_pg_inv_get_addr, perform_pt_inv_map, perform_pt_inv_unmap,
@@ -46,6 +33,30 @@ crunch
   store_asid_pool_entry, copy_global_mappings
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps)
+
+lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
+  unfolding arch_derive_cap_def
+  by wpsimp
+
+lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
+  "arch_post_modify_registers cur t \<lbrace>domain_sep_inv irqs st\<rbrace>"
+  unfolding arch_post_modify_registers_def by wpsimp
+
+declare init_arch_objects_inv[DomainSepInv_assms]
+
+end
+
+
+global_interpretation DomainSepInv_1?: DomainSepInv_1
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case
+    by (unfold_locales; fact DomainSepInv_assms)
+qed
+
+
+context Arch begin global_naming RISCV64
 
 lemma perform_page_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_page_inv pgi\<rbrace>
@@ -112,15 +123,6 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
    apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)+
   done
 
-lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
-  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
-  unfolding arch_derive_cap_def
-  by wpsimp
-
-lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
-  "arch_post_modify_registers cur t \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  unfolding arch_post_modify_registers_def by wpsimp
-
 end
 
 
@@ -128,7 +130,7 @@ global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact DomainSepInv_assms)
+    by (unfold_locales; wpsimp wp: DomainSepInv_assms)
 qed
 
 end
