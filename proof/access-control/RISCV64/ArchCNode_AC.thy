@@ -56,29 +56,28 @@ lemma sata_update2[CNode_AC_assms]:
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
                 split: if_split_asm)
 
+lemma vs_lookup_table_eqI':
+    "\<lbrakk> asid_table s' (asid_high_bits_of asid) = asid_table s (asid_high_bits_of asid);
+       \<forall>pool_ptr. asid_table s' (asid_high_bits_of asid) = Some pool_ptr
+                  \<longrightarrow> bot_level \<le> max_pt_level
+                  \<longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s') =
+                      vspace_for_pool pool_ptr asid (asid_pools_of s);
+       bot_level < max_pt_level \<longrightarrow> pts_of s' = pts_of s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
+  by (auto simp: obind_def vs_lookup_table_def asid_pool_level_eq[symmetric]
+                 pool_for_asid_def vspace_for_pool_def
+          split: option.splits)
+
 lemma state_vrefs_eqI:
-  "\<lbrakk> \<forall>bot_level asid vref level p.
-       bot_level < level \<and> vs_lookup_table level asid vref s = Some (level, p)
-       \<longrightarrow> (if level \<le> max_pt_level
-            then pts_of s' p = pts_of s p
-            else asid_pools_of s' p = asid_pools_of s p);
-     aobjs_of s' = aobjs_of s; asid_table s' = asid_table s;
-     pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-     \<Longrightarrow> state_vrefs (s' :: 'a :: state_ext state) = state_vrefs (s :: 'a :: state_ext state)"
-  apply (rule ext)
-  apply safe
-   apply (subst (asm) state_vrefs_def, clarsimp)
-   apply (fastforce intro: state_vrefsD elim: subst[OF vs_lookup_table_eqI,rotated -1])
-  apply (subst (asm) state_vrefs_def, clarsimp)
-  apply (rule state_vrefsD)
-     apply (subst vs_lookup_table_eqI; fastforce)
-    apply fastforce+
-  done
+  assumes "asid_table s' = asid_table s"
+  and "aobjs_of s' = aobjs_of s"
+  shows "state_vrefs s' = state_vrefs s"
+  apply (prop_tac "\<forall>level asid vref. vs_lookup_table level asid vref s = vs_lookup_table level asid vref s'")
+   apply (intro allI vs_lookup_table_eqI')
+  using assms by (auto simp: vspace_for_pool_def state_vrefs_def)
 
 lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
-  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
-   set_cap cap slot
-   \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
+  "set_cap cap slot \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply safe
@@ -100,14 +99,12 @@ crunch prepare_thread_delete, arch_finalise_cap
   (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:
-  "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s; tcb_at t s \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+  "tcb_at t s \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   apply (rule state_vrefs_eqI)
   by (fastforce simp: opt_map_def obj_at_def is_obj_defs valid_arch_state_def)+
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
-  "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s;
-     ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
+  "\<lbrakk> ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
      \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (case_tac ko; case_tac "f val"; clarsimp)
   by (fastforce intro!: state_vrefs_eqI simp: opt_map_def obj_at_def is_obj_defs valid_arch_state_def)+

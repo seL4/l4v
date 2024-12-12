@@ -373,7 +373,7 @@ lemma obj_refs_default':
   by (cases tp; auto simp: ptr_range_memI obj_bits_api_def dest: rev_subsetD[OF _ aobj_refs'_default'])
 
 lemma create_cap_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and
+  "\<lbrace>pas_refined aag and
     K (tp \<noteq> ArchObject ASIDPoolObj \<and> is_subject aag (fst p) \<and> is_subject aag (fst (fst ref)) \<and>
        (\<forall>x \<in> ptr_range (snd ref) (obj_bits_api tp sz). is_subject aag x) \<and>
        is_aligned (snd ref) (obj_bits_api tp sz))\<rbrace>
@@ -787,28 +787,6 @@ lemma set_free_index_invs':
    apply (fastforce simp: cte_wp_at_def)
   done
 
-lemma delete_objects_pspace_no_overlap:
-  "\<lbrace>pspace_aligned and valid_objs and cte_wp_at ((=) (UntypedCap dev ptr sz idx)) slot\<rbrace>
-   delete_objects ptr sz
-   \<lbrace>\<lambda>_. pspace_no_overlap_range_cover ptr sz\<rbrace>"
-  unfolding delete_objects_def do_machine_op_def
-  apply (wp | simp add: split_def detype_machine_state_update_comm)+
-  apply clarsimp
-  apply (rule pspace_no_overlap_detype)
-   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
-  done
-
-lemma delete_objects_pspace_no_overlap':
-  "\<lbrace>pspace_aligned and valid_objs and cte_wp_at ((=) (UntypedCap dev ptr sz idx)) slot\<rbrace>
-   delete_objects ptr sz
-   \<lbrace>\<lambda>_. pspace_no_overlap_range_cover (ptr && ~~ mask sz) sz\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (frule untyped_cap_aligned, simp)
-  apply (clarsimp)
-  apply (frule(1) cte_wp_at_valid_objs_valid_cap)
-  apply (erule use_valid, wp delete_objects_pspace_no_overlap, auto)
-  done
-
 (* FIXME: move *)
 lemma valid_cap_range_untyped:
   "\<lbrakk> valid_objs s; cte_wp_at ((=) (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s \<rbrakk>
@@ -924,22 +902,6 @@ lemma delete_objects_pas_refined:
   apply simp
   done
 
-lemma delete_objects_pspace_aligned[wp]:
-  "delete_objects ptr sz \<lbrace>pspace_aligned\<rbrace>"
-  unfolding delete_objects_def do_machine_op_def
-  apply (wp | simp add: split_def detype_machine_state_update_comm)+
-  apply clarsimp
-  apply (auto simp add: detype_def pspace_aligned_def)
-  done
-
-lemma reset_untyped_cap_pspace_aligned[wp]:
-  "reset_untyped_cap slot \<lbrace>pspace_aligned\<rbrace>"
-  apply (clarsimp simp: reset_untyped_cap_def)
-  apply (wpsimp wp: mapME_x_inv_wp )
-       apply (rule valid_validE)
-       apply (wpsimp wp: preemption_point_inv dxo_wp_weak hoare_drop_imps)+
-  done
-
 lemma valid_vspace_objs_detype:
   assumes "invs s"
   assumes "cte_wp_at (\<lambda>c. is_untyped_cap c \<and> descendants_range c ptr s
@@ -1028,8 +990,7 @@ lemma reset_untyped_cap_pas_refined[wp]:
    apply (wps | wp set_cap_pas_refined_not_transferable | simp add: unless_def)+
      apply (rule valid_validE)
      apply (rule_tac P="is_untyped_cap cap \<and> pas_cap_cur_auth aag cap" in hoare_gen_asm)
-     apply (rule_tac Q'="\<lambda>_. cte_wp_at (\<lambda> c. \<not> is_transferable (Some c)) slot and pas_refined aag and
-                            pspace_aligned and valid_vspace_objs and valid_arch_state"
+     apply (rule_tac Q'="\<lambda>_. cte_wp_at (\<lambda> c. \<not> is_transferable (Some c)) slot and pas_refined aag"
                   in hoare_strengthen_post)
       apply (rule validE_valid, rule mapME_x_inv_wp)
       apply (rule hoare_pre)
@@ -1046,7 +1007,6 @@ lemma reset_untyped_cap_pas_refined[wp]:
        apply (fastforce simp: cte_wp_at_caps_of_state)+
   apply (cases slot)
   apply (auto elim: caps_pas_cap_cur_auth_UntypedCap_idx_dev)
-       apply (fastforce simp: bits_of_def is_cap_simps)+
   done
 
 lemma invoke_untyped_pas_refined:
@@ -1056,9 +1016,8 @@ lemma invoke_untyped_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-   apply (rule_tac Q'="\<lambda>_. pas_refined aag and pspace_aligned and valid_vspace_objs
-                                          and valid_arch_state and pas_cur_domain aag" in hoare_strengthen_post)
-   apply (rule invoke_untyped_Q)
+   apply (rule_tac Q'="\<lambda>_. pas_refined aag and pas_cur_domain aag" in hoare_strengthen_post)
+    apply (rule invoke_untyped_Q)
         apply (rule hoare_pre, wp create_cap_pas_refined)
         apply (clarsimp simp: authorised_untyped_inv_def
                               range_cover.aligned ptr_range_def[symmetric]
@@ -1074,31 +1033,20 @@ lemma invoke_untyped_pas_refined:
               | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state)+
        apply (clarsimp simp: retype_addrs_aligned_range_cover
                              cte_wp_at_caps_of_state)
-       apply (rule context_conjI, clarsimp)
-        apply (drule valid_global_refsD[rotated 2])
-          apply (clarsimp simp: post_retype_invs_def split: if_split_asm)
-         apply (erule caps_of_state_cteD)
-        apply (erule notE, erule subsetD[rotated])
-        apply (rule order_trans, erule retype_addrs_subset_ptr_bits)
-        apply (simp add: field_simps word_and_le2)
-       apply blast
+       apply (drule valid_global_refsD[rotated 2])
+         apply (clarsimp simp: post_retype_invs_def split: if_split_asm)
+        apply (erule caps_of_state_cteD)
+       apply (erule notE, erule subsetD[rotated])
+       apply (rule order_trans, erule retype_addrs_subset_ptr_bits)
+       apply (simp add: field_simps word_and_le2)
       apply (rule hoare_name_pre_state, clarsimp)
       apply (rule hoare_pre, wp retype_region_pas_refined)
-       apply (rule_tac Q'="\<lambda>rv. post_retype_invs tp rv and pas_cur_domain aag" in hoare_strengthen_post)
-        apply (wp retype_region_post_retype_invs_spec)
-       apply (clarsimp simp: post_retype_invs_def invs_def valid_state_def valid_pspace_def split: if_splits)
       apply (clarsimp simp: authorised_untyped_inv_def)
       apply (strengthen range_cover_le[mk_strg I E], simp)
-      apply (intro conjI)
-        apply (intro conjI exI;
-               (erule cte_wp_at_weakenE)?,
-               clarsimp simp: field_simps word_and_le2)
-       apply (clarsimp simp: cte_wp_at_caps_of_state)
-       apply (erule caps_region_kernel_window_imp)
-        apply clarsimp
-       apply clarsimp
-       apply (fastforce simp: word_and_le2)
-      apply (fastforce simp: cte_wp_at_caps_of_state)
+      apply (intro conjI exI;
+             (erule cte_wp_at_weakenE)?,
+             clarsimp simp: field_simps word_and_le2)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
      apply (rule hoare_pre, wp set_cap_pas_refined)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
      apply (cases ui,

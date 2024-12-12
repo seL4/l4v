@@ -371,7 +371,6 @@ lemma handle_recv_integrity:
       apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def
                              cap_rights_to_auth_def valid_fault_def)
      apply wpsimp+
-  apply fastforce
   done
 
 lemma handle_reply_pas_refined[wp]:
@@ -469,30 +468,42 @@ locale Syscall_AC_1 =
     "Syscall_AC_wps (arch_activate_idle_thread t) aag"
   and arch_mask_irq_signal_integrity[simp]:
     "Syscall_AC_wps (arch_mask_irq_signal irq) aag"
-  and handle_reserved_irq_integrity[simp]:
-    "Syscall_AC_wps (handle_reserved_irq irq) aag"
-  and handle_hypervisor_fault_integrity[simp]:
-    "Syscall_AC_wps (handle_hypervisor_fault t hf_t) aag"
   and arch_switch_to_idle_thread_pas_refined[wp]:
     "arch_switch_to_idle_thread \<lbrace>pas_refined aag\<rbrace>"
   and arch_activate_idle_thread_pas_refined[wp]:
     "arch_activate_idle_thread t \<lbrace>pas_refined aag\<rbrace>"
   and arch_mask_irq_signal_pas_refined[wp]:
     "arch_mask_irq_signal irq \<lbrace>pas_refined aag\<rbrace>"
-  and handle_reserved_irq_pas_refined[wp]:
-    "handle_reserved_irq irq \<lbrace>pas_refined aag\<rbrace>"
-  and handle_hypervisor_fault_pas_refined[wp]:
-    "handle_hypervisor_fault t hf_t \<lbrace>pas_refined aag\<rbrace>"
+  and arch_mask_irq_signal_pas_cur_domain:
+    "arch_mask_irq_signal irq \<lbrace>pas_cur_domain aag\<rbrace>"
+  and handle_reserved_irq_integrity_autarch:
+    "\<lbrace>integrity aag X st and pas_refined aag and invs and (\<lambda>s. is_subject aag (cur_thread s))\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and handle_reserved_irq_integrity_idle:
+    "\<lbrace>integrity aag X st and invs and ct_idle\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and handle_reserved_irq_pas_refined:
+    "\<lbrace>\<lambda>s. pas_refined aag s \<and> invs s \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+     handle_reserved_irq irq \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  and handle_reserved_irq_pas_cur_domain:
+    "handle_reserved_irq irq \<lbrace>pas_cur_domain aag\<rbrace>"
+  and handle_hypervisor_fault_integrity_autarch:
+    "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> invs s \<and> is_subject aag thread
+                               \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+     handle_hypervisor_fault thread fault
+     \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  and handle_hypervisor_fault_pas_refined:
+    "\<lbrace>\<lambda>s. pas_refined aag s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread \<and> invs s\<rbrace>
+     handle_hypervisor_fault thread fault
+     \<lbrace>\<lambda>_ s. pas_refined aag s\<rbrace>"
   and handle_vm_fault_integrity:
     "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
      handle_vm_fault thread vmfault_type
      \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   and handle_vm_fault_pas_refined[wp]:
     "handle_vm_fault t vmf_t \<lbrace>pas_refined aag\<rbrace>"
-  and arch_mask_irq_signal_pas_cur_domain:
-    "arch_mask_irq_signal irq \<lbrace>pas_cur_domain aag\<rbrace>"
-  and handle_reserved_irq_pas_cur_domain:
-    "handle_reserved_irq irq \<lbrace>pas_cur_domain aag\<rbrace>"
   and ackInterrupt_underlying_memory_inv[wp]:
     "\<And>P. ackInterrupt irq \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
   and resetTimer_underlying_memory_inv[wp]:
@@ -555,20 +566,17 @@ sublocale Syscall_AC_1 \<subseteq> arch_activate_idle_thread: Syscall_AC_wps "ar
   by simp
 sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: Syscall_AC_wps "arch_mask_irq_signal irq" aag
   by simp
-sublocale Syscall_AC_1 \<subseteq> handle_reserved_irq: Syscall_AC_wps "handle_reserved_irq irq" aag
-  by simp
-sublocale Syscall_AC_1 \<subseteq> handle_hypervisor_fault: Syscall_AC_wps "handle_hypervisor_fault t hf_t" aag
-  by simp
 
 
 context Syscall_AC_1 begin
 
 lemma handle_interrupt_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-    handle_interrupt irq \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  "\<lbrace>pas_refined aag and invs and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+    handle_interrupt irq
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI;rule hoare_pre)
-  apply (wp send_signal_pas_refined get_cap_wp
+  apply (wp send_signal_pas_refined get_cap_wp handle_reserved_irq_pas_refined
          | wpc
          | simp add: get_irq_slot_def get_irq_state_def )+
   done
@@ -589,23 +597,6 @@ lemma timer_tick_integrity[wp]:
   apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def)
   done
 
-lemma handle_interrupt_integrity_autarch:
-  "\<lbrace>integrity aag X st and pas_refined aag and invs
-                       and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
-                       and K (is_subject_irq aag irq)\<rbrace>
-   handle_interrupt irq
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: handle_interrupt_def  cong: irq_state.case_cong)
-  apply (rule conjI; rule impI; rule hoare_pre)
-     apply (wp (once) send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
-                      ackInterrupt_device_state_inv resetTimer_device_state_inv
-            | simp add: get_irq_slot_def get_irq_state_def
-            | wp dmo_no_mem_respects
-            | wpc)+
-  apply (fastforce simp: is_cap_simps aag_cap_auth_def cap_auth_conferred_def
-                         cap_rights_to_auth_def)
-  done
-
 lemma hacky_ipc_Send:
   "\<lbrakk> abs_has_auth_to aag Notify (interrupt_irq_node s irq) p;
      pas_refined aag s; pasMaySendIrqs aag \<rbrakk>
@@ -617,27 +608,50 @@ lemma hacky_ipc_Send:
   apply simp
   done
 
-lemma handle_interrupt_integrity:
+lemma handle_interrupt_integrity_autarch:
   "\<lbrace>integrity aag X st and pas_refined aag and invs
                        and (\<lambda>s. pasMaySendIrqs aag \<or> interrupt_states s irq \<noteq> IRQSignal)
-                       and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+                       and (\<lambda>s. is_subject aag (cur_thread s))\<rbrace>
    handle_interrupt irq
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: handle_interrupt_def
-             cong: irq_state.case_cong bind_cong)
+  apply (simp add: handle_interrupt_def cong: irq_state.case_cong bind_cong)
   apply (rule conjI; rule impI; rule hoare_pre)
-     apply (wp (once) send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
-                      ackInterrupt_device_state_inv resetTimer_device_state_inv
-            | wpc
-            | simp add: get_irq_slot_def get_irq_state_def)+
-  apply clarsimp
+     apply (wpsimp wp: send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
+                       ackInterrupt_device_state_inv resetTimer_device_state_inv
+                       handle_reserved_irq_integrity_autarch
+                 simp: get_irq_slot_def get_irq_state_def)+
   apply (rule conjI, fastforce)+ \<comment> \<open>valid_objs etc.\<close>
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (rule_tac s = s in hacky_ipc_Send [where irq = irq])
-   apply (drule (1) cap_auth_caps_of_state)
-   apply (clarsimp simp: aag_cap_auth_def is_cap_simps cap_auth_conferred_def
-                         cap_rights_to_auth_def split: if_split_asm)
-  apply assumption+
+    apply (drule (1) cap_auth_caps_of_state)
+    apply (clarsimp simp: aag_cap_auth_def is_cap_simps cap_auth_conferred_def
+                          cap_rights_to_auth_def split: if_split_asm)
+   apply assumption+
+  done
+
+lemma handle_interrupt_integrity:
+  "\<lbrace>integrity aag X st and pas_refined aag and invs
+                       and (\<lambda>s. pasMaySendIrqs aag \<or> interrupt_states s irq \<noteq> IRQSignal)
+                       and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
+                       and (ct_active or ct_idle)\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (subst distrib(3))
+  apply (rule hoare_pre_disj)
+   apply (wpsimp wp: handle_interrupt_integrity_autarch)
+  apply (simp add: handle_interrupt_def cong: irq_state.case_cong bind_cong)
+  apply (rule conjI; rule impI; rule hoare_pre)
+     apply (wpsimp wp: send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
+                       ackInterrupt_device_state_inv resetTimer_device_state_inv
+                       handle_reserved_irq_integrity_idle
+                 simp: get_irq_slot_def get_irq_state_def)+
+  apply (rule conjI, fastforce)+ \<comment> \<open>valid_objs etc.\<close>
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (rule_tac s = s in hacky_ipc_Send [where irq = irq])
+    apply (drule (1) cap_auth_caps_of_state)
+    apply (clarsimp simp: aag_cap_auth_def is_cap_simps cap_auth_conferred_def
+                          cap_rights_to_auth_def split: if_split_asm)
+   apply assumption+
   done
 
 lemma handle_yield_pas_refined[wp]:
@@ -647,25 +661,22 @@ lemma handle_yield_pas_refined[wp]:
 lemma handle_event_pas_refined:
   "\<lbrace>pas_refined aag and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'
                     and einvs and schact_is_rct
-                    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> is_subject aag (cur_thread s))
+                    and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
                     and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) \<rbrace>
    handle_event ev
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (case_tac ev; simp)
-      apply (rename_tac syscall)
-      apply (case_tac syscall; simp add: handle_send_def handle_call_def)
-            apply ((wp handle_invocation_pas_refined handle_recv_pas_refined
-                       handle_fault_pas_refined
-                    | simp | clarsimp)+)
+       apply (rename_tac syscall)
+       apply (case_tac syscall; simp add: handle_send_def handle_call_def)
+              apply ((wp handle_invocation_pas_refined handle_recv_pas_refined
+                         handle_fault_pas_refined
+                      | simp | clarsimp)+)
+      apply (fastforce simp: valid_fault_def)
+     apply (wp handle_fault_pas_refined | simp)+
      apply (fastforce simp: valid_fault_def)
-    apply (wp handle_fault_pas_refined | simp)+
-    apply (fastforce simp: valid_fault_def)
-   apply (wp handle_interrupt_pas_refined handle_fault_pas_refined
-             hoare_vcg_conj_lift hoare_vcg_all_lift
-          | wpc
-          | rule hoare_drop_imps
-          | strengthen invs_vobjs_strgs invs_psp_aligned invs_vspace_objs invs_arch_state
-          | simp)+
+    apply (wpsimp wp: handle_fault_pas_refined handle_hypervisor_fault_pas_refined hoare_drop_imps
+                      handle_interrupt_pas_refined hoare_vcg_conj_lift hoare_vcg_all_lift
+                simp: ct_in_state_def)+
   done
 
 lemma valid_fault_Unknown[simp]:
@@ -692,7 +703,7 @@ lemma handle_event_integrity:
   "\<lbrace>integrity aag X st and pas_refined aag and guarded_pas_domain aag
                        and domain_sep_inv (pasMaySendIrqs aag) st'
                        and einvs and schact_is_rct
-                       and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
+                       and (\<lambda>s. is_subject aag (cur_thread s))
                        and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and ((=) st)\<rbrace>
    handle_event ev
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -700,9 +711,9 @@ lemma handle_event_integrity:
        apply (unfold handle_send_def handle_call_def)
   by (wpsimp wp: handle_recv_integrity handle_invocation_respects
                   handle_reply_respects handle_fault_integrity_autarch
-                  handle_interrupt_integrity handle_vm_fault_integrity
+                  handle_interrupt_integrity_autarch handle_vm_fault_integrity
                   handle_reply_pas_refined handle_vm_fault_valid_fault
-                  handle_reply_valid_sched
+                  handle_reply_valid_sched handle_hypervisor_fault_integrity_autarch
                   hoare_vcg_conj_lift hoare_vcg_all_lift hoare_drop_imps
             simp: domain_sep_inv_def
       | rule dmo_wp hoare_vcg_conj_elimE
@@ -730,12 +741,9 @@ lemma activate_thread_integrity:
   done
 
 lemma activate_thread_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-   activate_thread
-   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  "activate_thread \<lbrace>pas_refined aag\<rbrace>"
   unfolding activate_thread_def get_thread_state_def thread_get_def
-  apply (wpsimp wp: set_thread_state_pas_refined hoare_drop_imps)
-  done
+  by (wpsimp wp: set_thread_state_pas_refined hoare_drop_imps)
 
 lemma integrity_cur_thread[iff]:
   "integrity aag X st (s\<lparr>cur_thread := v\<rparr>) = integrity aag X st s"
@@ -1144,39 +1152,46 @@ lemma guarded_pas_domain_machine_state_update[simp]:
   by (simp add: guarded_pas_domain_def)
 
 lemma call_kernel_integrity':
-  "st \<turnstile> \<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and schact_is_rct and guarded_pas_domain aag
+  "st \<turnstile> \<lbrace>einvs and pas_refined aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
+               and schact_is_rct and guarded_pas_domain aag
                and domain_sep_inv (pasMaySendIrqs aag) st'
                and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
                and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
         call_kernel ev
         \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: call_kernel_def)
-  apply (simp only: spec_valid_def)
-  apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues
-                    handle_interrupt_integrity dmo_wp handle_interrupt_pas_refined)
+  apply (case_tac "ev = Interrupt"; clarsimp simp: call_kernel_def spec_valid_def)
+   apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues
+                     handle_interrupt_integrity handle_interrupt_pas_refined)
+    apply (rule_tac Q="\<lambda>rv s. (rv = None \<longrightarrow> P s) \<and> (\<forall>x. rv = Some x \<longrightarrow> Q x s)"
+               and Q'="\<lambda>rv s. P s \<and> (\<forall>x. rv = Some x \<longrightarrow> Q x s)"
+        for P Q in hoare_strengthen_post[rotated]; clarsimp cong: conj_cong)
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps)
+   apply (fastforce intro!: valid_sched_ct_not_queued
+                      simp: schact_is_rct_def domain_sep_inv_def guarded_pas_domain_def)
+  apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues dmo_wp
+                    handle_interrupt_integrity_autarch handle_interrupt_pas_refined )
     apply (clarsimp simp: if_fun_split)
     apply (rule_tac Q'="\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs) \<and>
                                 Q True (domain_sep_inv (pasMaySendIrqs aag) st' s) rv ms"
                 and Q="\<lambda>rv ms. Q (the rv \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)
                                  (pasMaySendIrqs aag \<or> interrupt_states s (the rv) \<noteq> IRQSignal) rv ms"
                 for Q in hoare_strengthen_post[rotated], fastforce simp: domain_sep_inv_def)
-    apply (wpsimp wp: getActiveIRQ_rv_None hoare_drop_imps getActiveIRQ_inv)
+    apply (wpsimp wp: getActiveIRQ_rv_None getActiveIRQ_inv hoare_drop_imps)
    apply (rule hoare_strengthen_postE,
-      rule_tac Q="integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag
-                                     and domain_sep_inv (pasMaySendIrqs aag) st'
-                                     and is_subject aag \<circ> cur_thread
-                                     and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)"
-            in valid_validE)
-     apply (wpsimp wp: handle_event_integrity he_invs handle_event_pas_refined
-                       handle_event_cur_thread handle_event_cur_domain
+          rule_tac Q="integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag
+                                         and domain_sep_inv (pasMaySendIrqs aag) st'
+                                         and is_subject aag \<circ> cur_thread
+                                         and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)"
+                in valid_validE)
+     apply (wpsimp wp: handle_event_integrity  handle_event_pas_refined
                        handle_event_domain_sep_inv handle_event_valid_sched)+
-    apply (fastforce simp: domain_sep_inv_def guarded_pas_domain_def)+
+  apply (fastforce simp: domain_sep_inv_def guarded_pas_domain_def)
   done
 
 lemma call_kernel_integrity:
   "\<lbrace>pas_refined aag and einvs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
                     and domain_sep_inv (pasMaySendIrqs aag) st' and schact_is_rct
-                    and guarded_pas_domain aag and is_subject aag o cur_thread
+                    and guarded_pas_domain aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
                     and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag) and (\<lambda>s. s = st)\<rbrace>
    call_kernel ev
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -1188,18 +1203,22 @@ lemma call_kernel_integrity:
   done
 
 lemma call_kernel_pas_refined:
-  "\<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and guarded_pas_domain aag
+  "\<lbrace>einvs and pas_refined aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
+          and guarded_pas_domain aag
           and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
           and schact_is_rct and pas_cur_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
    call_kernel ev
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (simp add: call_kernel_def )
-  apply (wp activate_thread_pas_refined schedule_pas_refined handle_interrupt_pas_refined
-            do_machine_op_pas_refined dmo_wp hoare_drop_imps getActiveIRQ_inv
-         | simp add: if_fun_split
-         | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state)+
-   apply (wp he_invs handle_event_pas_refined)
-  apply auto
+  apply (case_tac "ev = Interrupt"; clarsimp simp: call_kernel_def)
+   apply (wpsimp wp: activate_thread_pas_refined schedule_pas_refined handle_interrupt_pas_refined
+                     do_machine_op_pas_refined dmo_wp hoare_drop_imps getActiveIRQ_inv
+          | simp add: if_fun_split
+          | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state)+
+   apply (rule hoare_strengthen_postE,
+          rule_tac Q="pas_refined aag and invs and is_subject aag \<circ> cur_thread"
+                in valid_validE)
+     apply (wpsimp wp: he_invs handle_event_pas_refined)
+    apply auto
   done
 
 end
