@@ -29,7 +29,7 @@ definition opt_map :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> 'b option)
   "f |> g \<equiv> \<lambda>s. case f s of None \<Rightarrow> None | Some x \<Rightarrow> g x"
 
 abbreviation opt_map_Some :: "('s \<rightharpoonup> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 's \<rightharpoonup> 'b" (infixl "||>" 54) where
-  "f ||> g \<equiv> f |> (Some \<circ> g)"
+  "f ||> g \<equiv> f |> (\<lambda>s. Some (g s))"
 
 lemmas opt_map_Some_def = opt_map_def
 

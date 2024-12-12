@@ -7301,7 +7301,7 @@ lemma ccorres_typ_region_bytes_dummy:
   apply (simp add: hrs_htd_update gsCNodes_typ_region_bytes
                    cnodes_retype_have_size_mono[where T=S]
                    tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned']
-                   pte_typ_region_bytes o_def)
+                   pte_typ_region_bytes)
   (* True for either version of config_ARM_PA_SIZE_BITS_40 with corresponding max vm level change *)
   apply (simp add: cmap_array_typ_region_bytes_triv invs_pspace_aligned' bit_simps
                    objBitsT_simps word_bits_def zero_ranges_are_zero_typ_region_bytes
@@ -8005,7 +8005,7 @@ crunch placeNewDataObject
   for ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps)
 
-lemma createObject_cnodes_have_size_pt[unfolded o_def]:
+lemma createObject_cnodes_have_size_pt:
   "\<lbrace>\<lambda>s. is_aligned ptr (APIType_capBits newType userSize)
       \<and> cnodes_retype_have_size R (APIType_capBits newType userSize) (gsPTTypes (ksArchState s) ||> (\<lambda>pt_t. pt_bits pt_t - cte_level_bits))\<rbrace>
     createObject newType ptr userSize dev
@@ -8014,8 +8014,7 @@ lemma createObject_cnodes_have_size_pt[unfolded o_def]:
   apply (simp add: createObject_def)
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' | wpc | simp add: createObjects_def AARCH64_H.createObject_def updatePTType_def)+
-  apply (cases newType, simp_all add: AARCH64_H.toAPIType_def o_def)
-   apply (rule conjI, clarsimp)+
+  apply (cases newType, simp_all add: AARCH64_H.toAPIType_def)
    apply clarsimp
   supply fun_upd_def[symmetric, simp del] fun_upd_apply[simp]
   apply (clarsimp simp: APIType_capBits_def cnodes_retype_have_size_def bit_simps cte_level_bits_def
