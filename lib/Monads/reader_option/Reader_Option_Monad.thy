@@ -118,7 +118,7 @@ lemma opt_map_Some_foldr_upd:
 
 lemmas opt_map_foldr_upd_simps = opt_map_foldr_upd opt_map_Some_foldr_upd
 
-lemma opt_map_Some_comp[simp]:
+lemma opt_map_Some_comp:
   "f ||> g ||> h = f ||> h o g"
   by (fastforce simp: opt_map_def split: option.split)
 
