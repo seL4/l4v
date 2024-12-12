@@ -9,20 +9,19 @@ imports
   Interrupt_AC
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Interrupt_AC_assms
 
 definition arch_authorised_irq_ctl_inv ::
   "'a PAS \<Rightarrow> Invocations_A.arch_irq_control_invocation \<Rightarrow> bool" where
   "arch_authorised_irq_ctl_inv aag cinv \<equiv>
-     case cinv of (RISCVIRQControlInvocation irq x1 x2 trigger) \<Rightarrow>
+     case cinv of (ARMIRQControlInvocation irq x1 x2 trigger) \<Rightarrow>
        is_subject aag (fst x1) \<and> is_subject aag (fst x2) \<and>
        (pasSubject aag, Control, pasIRQAbs aag irq) \<in> pasPolicy aag"
 
 lemma arch_invoke_irq_control_pas_refined[Interrupt_AC_assms]:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
+  "\<lbrace>pas_refined aag and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
                     and K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
    arch_invoke_irq_control irq_ctl_inv
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
@@ -75,11 +74,11 @@ global_interpretation Interrupt_AC_1?: Interrupt_AC_1 "arch_authorised_irq_ctl_i
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Interrupt_AC_assms)?)
+    by (unfold_locales; (fact Interrupt_AC_assms | wp)?)
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma arch_decode_irq_control_invocation_authorised[Interrupt_AC_assms]:
   "\<lbrace>pas_refined aag and
@@ -105,7 +104,7 @@ global_interpretation Interrupt_AC_2?: Interrupt_AC_2 "arch_authorised_irq_ctl_i
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Interrupt_AC_assms)?)
+    by (unfold_locales; fact Interrupt_AC_assms)
 qed
 
 

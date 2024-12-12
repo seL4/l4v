@@ -8,7 +8,7 @@ theory ArchIpc_AC
 imports Ipc_AC
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Ipc_AC_assms
 
@@ -77,7 +77,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -184,11 +184,6 @@ lemma auth_ipc_buffers_machine_state_update[Ipc_AC_assms, simp]:
   "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers s"
   by (clarsimp simp: auth_ipc_buffers_def get_tcb_def)
 
-crunch handle_arch_fault_reply
-  for pspace_aligned[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
-  and valid_vspace_objs[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
-  and valid_arch_state[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
-
 lemma cap_insert_ext_integrity_asids_in_ipc[Ipc_AC_assms, wp]:
   "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
    \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
@@ -232,7 +227,7 @@ global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Ipc_AC_assms)?)
+    by (unfold_locales; fact Ipc_AC_assms)
 qed
 
 end

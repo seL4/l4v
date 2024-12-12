@@ -8,7 +8,7 @@ theory ArchTcb_AC
 imports Tcb_AC
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Tcb_AC_assms
 
@@ -92,9 +92,9 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
                         emptyable_def
          | rule conjI | erule pas_refined_refl)+
    apply (thin_tac "case_option _ _ _")+
-   apply (fastforce split: cap.split_asm option.split_asm)
+   apply (fastforce split: cap.split_asm option.split_asm pt_type.split_asm)
   apply (thin_tac "case_option _ _ _")+
-  apply (fastforce split: cap.split_asm option.split_asm)
+  apply (fastforce split: cap.split_asm option.split_asm pt_type.split_asm)
   done
 
 end

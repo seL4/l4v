@@ -82,7 +82,7 @@ lemma pas_refined:
 end
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Retype_AC_assms
 
@@ -97,7 +97,7 @@ lemma pts_of_detype[simp]:
   by (simp add: in_omonad detype_def)
 
 lemma ptes_of_detype_Some[simp]:
-  "(ptes_of (detype S s) p = Some pte) = (table_base p \<notin> S \<and> ptes_of s p = Some pte)"
+  "(ptes_of (detype S s) pt_t p = Some pte) = (table_base pt_t p \<notin> S \<and> ptes_of s pt_t p = Some pte)"
   by (simp add: in_omonad ptes_of_def detype_def)
 
 lemma asid_pools_of_detype:
@@ -115,14 +115,14 @@ lemma pool_for_asid_detype_Some[simp]:
 lemma vspace_for_pool_detype_Some[simp]:
   "(vspace_for_pool ap asid (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
    (ap \<notin> S \<and> vspace_for_pool ap asid pools = Some p)"
-  by (simp add: vspace_for_pool_def obind_def split: option.splits)
+  by (simp add: entry_for_pool_def vspace_for_pool_def obind_def split: option.splits)
 
 lemma vspace_for_asid_detype_Some[simp]:
   "(vspace_for_asid asid (detype S s) = Some p) =
    ((\<exists>ap. pool_for_asid asid s = Some ap \<and> ap \<notin> S) \<and> vspace_for_asid asid s = Some p)"
-  apply (simp add: vspace_for_asid_def obind_def asid_pools_of_detype split: option.splits)
-  apply (auto simp: pool_for_asid_def)
-  done
+  by (auto simp: entry_for_asid_def entry_for_pool_def pool_for_asid_def
+                 vspace_for_asid_def obind_def asid_pools_of_detype
+          split: option.splits)
 
 lemma pt_walk_detype:
   "pt_walk level bot_level pt_ptr vref (ptes_of (detype S s)) = Some (bot_level, p) \<Longrightarrow>
@@ -154,7 +154,7 @@ lemma state_vrefs_detype[Retype_AC_assms, dest]:
   apply (clarsimp simp: state_vrefs_def)
   apply (frule vs_lookup_level)
   apply (drule vs_lookup_table)
-  apply fastforce
+  apply (fastforce simp: vspace_objs_of_Some)
   done
 
 lemma sata_detype[Retype_AC_assms]:
@@ -190,7 +190,9 @@ lemma aobj_refs'_default'[Retype_AC_assms]:
   by (cases tp; simp add: arch_default_cap_def ptr_range_memI obj_bits_api_def default_arch_object_def)
 
 crunch init_arch_objects
-  for inv[wp]: P
+  for pas_refined[wp]: "pas_refined aag"
+  and integrity_autarch[wp]: "integrity aag X st"
+  (wp: crunch_wps dmo_no_mem_respects)
 
 lemma region_in_kernel_window_preserved:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
@@ -375,9 +377,9 @@ global_interpretation Retype_AC_1?: Retype_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_AC_assms | wpsimp wp: init_arch_objects_inv)?)
+    by (unfold_locales; (fact Retype_AC_assms | wpsimp))
 qed
 
-requalify_facts RISCV64.storeWord_respects
+requalify_facts AARCH64.storeWord_respects
 
 end

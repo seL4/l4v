@@ -9,13 +9,25 @@ imports
   "DomainSepInv"
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems DomainSepInv_assms
 
-crunch arch_post_cap_deletion, set_pt, set_asid_pool, prepare_thread_delete, init_arch_objects
+crunch arch_post_cap_deletion, set_pt, set_asid_pool, init_arch_objects
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv crunch_wps set_asid_pool_cte_wp_at set_pt_cte_wp_at)
+
+crunch vcpu_update
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
+  (wp: domain_sep_inv_triv crunch_wps set_asid_pool_cte_wp_at set_pt_cte_wp_at)
+
+crunch vcpu_save_reg, vcpu_invalidate_active, dissociate_vcpu_tcb, fpu_thread_delete
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  (wp: crunch_wps)
+
+crunch prepare_thread_delete
+  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  (wp: domain_sep_inv_triv crunch_wps)
 
 crunch arch_finalise_cap
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
@@ -25,6 +37,22 @@ lemma arch_finalise_cap_rv[DomainSepInv_assms]:
   "\<lbrace>\<lambda>_. P (NullCap,NullCap)\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>rv _. P rv\<rbrace>"
   unfolding arch_finalise_cap_def by wpsimp
 
+lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
+  unfolding arch_derive_cap_def
+  by wpsimp
+
+lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
+  "arch_post_modify_registers cur t \<lbrace>domain_sep_inv irqs st\<rbrace>"
+  unfolding arch_post_modify_registers_def by wpsimp
+
+crunch handle_vm_fault, handle_vm_fault, perform_pg_inv_unmap,
+       perform_pg_inv_get_addr, perform_pt_inv_map, perform_pt_inv_unmap,
+       handle_arch_fault_reply, arch_mask_irq_signal, arch_switch_to_thread,
+       arch_switch_to_idle_thread, arch_activate_idle_thread, store_asid_pool_entry
+  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  (wp: crunch_wps)
+
 end
 
 
@@ -32,28 +60,22 @@ global_interpretation DomainSepInv_1?: DomainSepInv_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact DomainSepInv_assms | wp init_arch_objects_inv))
+    by (unfold_locales; (fact DomainSepInv_assms)?)
 qed
 
+context Arch begin global_naming AARCH64
 
-context Arch begin global_naming RISCV64
-
-crunch
-  handle_reserved_irq, handle_vm_fault, perform_pg_inv_map, perform_pg_inv_unmap,
-  perform_pg_inv_get_addr, perform_pt_inv_map, perform_pt_inv_unmap,
-  handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,
-  arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread,
-  store_asid_pool_entry, copy_global_mappings
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
-  (wp: crunch_wps)
+crunch perform_pg_inv_map, perform_flush
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma perform_page_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_page_inv pgi\<rbrace>
    perform_page_invocation pgi
-   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+   \<lbrace>\<lambda>_ (s :: det_ext state). domain_sep_inv irqs st s\<rbrace>"
   apply (rule hoare_pre)
    apply (wp mapM_wp[OF _ subset_refl] set_cap_domain_sep_inv mapM_x_wp[OF _ subset_refl]
-             perform_page_invocation_domain_sep_inv_get_cap_helper hoare_weak_lift_imp
+             perform_page_invocation_domain_sep_inv_get_cap_helper
           | simp add: perform_page_invocation_def o_def | wpc)+
   done
 
@@ -73,7 +95,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
   unfolding perform_asid_control_invocation_def
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_domain_sep_inv' set_cap_domain_sep_inv
-            get_cap_domain_sep_inv_cap[where st=st] hoare_weak_lift_imp
+            get_cap_domain_sep_inv_cap[where st=st] hoare_vcg_imp_lift
          | wpc | simp )+
   done
 
@@ -84,10 +106,27 @@ lemma perform_asid_pool_invocation_domain_sep_inv:
   apply (wp set_cap_domain_sep_inv get_cap_wp | wpc | simp)+
   done
 
+lemma perform_vspace_invocation_domain_sep_inv[wp]:
+  "perform_vspace_invocation iv \<lbrace>domain_sep_inv irqs st\<rbrace>"
+  by (wpsimp simp: perform_vspace_invocation_def)
+
+crunch invoke_vcpu_inject_irq, invoke_vcpu_read_register, invoke_vcpu_write_register, invoke_vcpu_ack_vppi
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
+
+lemma associate_vcpu_tcb_domain_sep_inv[wp]:
+  "associate_vcpu_tcb a b \<lbrace>domain_sep_inv irqs st\<rbrace>"
+  unfolding associate_vcpu_tcb_def
+  by (wpsimp | wp domain_sep_inv_triv)+
+
+lemma perform_vcpu_invocation_domain_sep_inv[wp]:
+  "perform_vcpu_invocation vcpu \<lbrace>domain_sep_inv irqs st\<rbrace>"
+  unfolding perform_vcpu_invocation_def
+  by wpsimp
+
 lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:
   "\<lbrace>domain_sep_inv irqs st and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
-   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+   \<lbrace>\<lambda>_ (s :: det_ext state). domain_sep_inv irqs st s\<rbrace>"
   unfolding arch_perform_invocation_def
   apply (wpsimp wp: perform_page_table_invocation_domain_sep_inv
                     perform_page_invocation_domain_sep_inv
@@ -112,14 +151,14 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
    apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)+
   done
 
-lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
-  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
-  unfolding arch_derive_cap_def
-  by wpsimp
+crunch handle_reserved_irq, handle_hypervisor_fault
+  for domain_sep_inv[wp]:
+  "\<lambda>s :: det_ext state. domain_sep_inv irqs (st :: 's :: state_ext state) s"
+  (wp: crunch_wps simp: crunch_simps vcpu_update_def valid_vcpu_def valid_fault_def)
 
-lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
-  "arch_post_modify_registers cur t \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  unfolding arch_post_modify_registers_def by wpsimp
+\<comment> \<open>Remove the parentheses\<close>
+declare handle_reserved_irq_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
+declare handle_hypervisor_fault_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
 
 end
 

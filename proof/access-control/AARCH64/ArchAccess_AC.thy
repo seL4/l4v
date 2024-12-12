@@ -10,7 +10,7 @@ begin
 
 section\<open>Arch-specific AC proofs\<close>
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Access_AC_assms
 
@@ -59,7 +59,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma auth_ipc_buffers_tro[Access_AC_assms]:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
@@ -96,7 +96,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma ipcframe_subset_page:
   "\<lbrakk> valid_objs s; get_tcb p s = Some tcb;
@@ -163,12 +163,98 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma pas_refined_irq_state_independent[intro!, simp]:
   "pas_refined x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
    pas_refined x s"
   by (simp add: pas_refined_def)
+
+(* FIXME AARCH64: try to use in_opt_map_eq where possible *)
+lemma vspace_objs_of_Some:
+  "(vspace_objs_of s p = Some ao) = (aobjs_of s p = Some ao \<and> \<not>is_VCPU ao)"
+  by (clarsimp simp: in_opt_map_eq vspace_obj_of_Some)
+
+lemma state_irqs_to_policy_eq_caps:
+  "\<lbrakk> x \<in> state_irqs_to_policy_aux aag caps; caps = caps' \<rbrakk>
+     \<Longrightarrow> x \<in> state_irqs_to_policy_aux aag caps'"
+  by (erule subst)
+
+lemma vs_lookup_table_eqI':
+    "\<lbrakk> asid_table s' (asid_high_bits_of asid) = asid_table s (asid_high_bits_of asid);
+       \<forall>pool_ptr. asid_table s' (asid_high_bits_of asid) = Some pool_ptr
+                  \<longrightarrow> bot_level \<le> max_pt_level
+                  \<longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s') =
+                      vspace_for_pool pool_ptr asid (asid_pools_of s);
+       bot_level < max_pt_level \<longrightarrow> pts_of s' = pts_of s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
+  by (auto simp: obind_def vs_lookup_table_def asid_pool_level_eq[symmetric]
+                 pool_for_asid_def entry_for_pool_def vspace_for_pool_def
+          split: option.splits)
+
+lemma vs_refs_aux_eqI:
+  assumes "pts_of s' = pts_of s"
+  and "\<forall>p sz. data_at sz p s' = data_at sz p s"
+  and "\<forall>pool_ptr asid. (asid_pools_of s' |> oapply asid |> ogets ap_vspace) pool_ptr
+                     = (asid_pools_of s |> oapply asid |> ogets ap_vspace) pool_ptr"
+  and "aobjs_of s p = Some ao"
+  and "aobjs_of s' p = Some ao'"
+  shows "vs_refs_aux level ao = vs_refs_aux level ao'"
+  apply (insert assms)
+  apply (clarsimp simp: fun_eq_iff)
+  apply (erule_tac x=p in allE)+
+  apply (fastforce simp: vs_refs_aux_def graph_of_def image_iff opt_map_def ogets_def
+                  split: option.splits arch_kernel_obj.splits)
+  done
+
+lemma state_vrefs_eqI':
+  assumes "asid_table s' = asid_table s"
+    and "pts_of s' = pts_of s"
+    and "\<forall>p sz. data_at sz p s' = data_at sz p s"
+    and "\<forall>pool_ptr asid. (asid_pools_of s' |> oapply asid |> ogets ap_vspace) pool_ptr
+                       = (asid_pools_of s |> oapply asid |> ogets ap_vspace) pool_ptr"
+  shows "state_vrefs s' = state_vrefs s"
+  apply (insert assms)
+  apply (prop_tac "\<And>level asid vref. vs_lookup_table level asid vref s' = vs_lookup_table level asid vref s")
+   apply (rule vs_lookup_table_eqI')
+     apply (auto simp: fun_eq_iff vspace_for_pool_def entry_for_pool_def obind_def ogets_def opt_map_def)[3]
+  apply (rule ext)+
+  apply (intro equalityI subsetI; subst (asm) state_vrefs_def; clarsimp)
+
+   apply (clarsimp simp: vspace_objs_of_Some)
+   apply (case_tac "vspace_objs_of s x"; clarsimp?)
+    apply (clarsimp simp: fun_eq_iff)
+    apply (erule_tac x=x in allE)+
+    apply (fastforce simp: vspace_obj_of_def vs_refs_aux_def graph_of_def
+                           image_iff opt_map_def ogets_def is_VCPU_def
+                    split: option.splits arch_kernel_obj.splits if_splits )[1]
+   apply (prop_tac "\<forall>level. vs_refs_aux level ao = vs_refs_aux level ac")
+    apply (intro allI vs_refs_aux_eqI; fastforce simp: vspace_objs_of_Some)
+   apply (fastforce intro: state_vrefsD)
+
+  apply (clarsimp simp: vspace_objs_of_Some)
+  apply (case_tac "vspace_objs_of s' x"; clarsimp?)
+   apply (clarsimp simp: fun_eq_iff)
+   apply (erule_tac x=x in allE)+
+   apply (fastforce simp: vspace_obj_of_def vs_refs_aux_def graph_of_def
+                          image_iff opt_map_def ogets_def is_VCPU_def
+                   split: option.splits arch_kernel_obj.splits if_splits )[1]
+  apply (prop_tac "\<forall>level. vs_refs_aux level ac = vs_refs_aux level ao")
+   apply (intro allI vs_refs_aux_eqI; fastforce simp: vspace_objs_of_Some)
+  apply (fastforce intro!: state_vrefsD)
+  done
+
+lemma state_vrefs_eqI:
+  assumes "asid_table s' = asid_table s"
+    and "vspace_objs_of s' = vspace_objs_of s"
+  shows "state_vrefs s' = state_vrefs s"
+  apply (prop_tac "\<forall>level asid vref. vs_lookup_table level asid vref s = vs_lookup_table level asid vref s'")
+   apply (intro allI vs_lookup_table_eqI')
+  using assms apply (fastforce simp: obj_at_def)
+  using vspace_objs_of_aps_eq assms apply fastforce
+  using vspace_objs_of_pts_eq assms apply fastforce
+  using assms apply (fastforce simp: state_vrefs_def)
+  done
 
 end
 

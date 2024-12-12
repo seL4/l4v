@@ -8,7 +8,7 @@ theory ArchAccess
 imports Types
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 subsection \<open>Arch-specific transformation of caps into authorities\<close>
 
@@ -25,37 +25,39 @@ subsection \<open>Generating a policy from the current ASID distribution\<close>
 
 definition pte_ref2 where
   "pte_ref2 level pte \<equiv> case pte of
-     PagePTE ppn atts rights
-       \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn),
-                pageBitsForSize (vmpage_size_of_level level),
+     PagePTE paddr _ _ rights
+       \<Rightarrow> Some (ptrFromPAddr paddr,
+                pt_bits_left level,
                 vspace_cap_rights_to_auth rights)
-   | PageTablePTE ppn atts
-       \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn), 0, {Control})
+   | PageTablePTE ppn
+       \<Rightarrow> Some (ptrFromPAddr (paddr_from_ppn ppn), 0, {Control})
    | _ \<Rightarrow> None"
 
 definition vs_refs_aux :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> (obj_ref \<times> obj_ref \<times> aa_type \<times> auth) set"
   where
   "vs_refs_aux level \<equiv> \<lambda>ko. case ko of
-     ASIDPool pool \<Rightarrow> (\<lambda>(r,p). (p, ucast r, AASIDPool, Control)) ` graph_of pool
-   | PageTable pt \<Rightarrow>
-       \<Union>(r,(p, sz, auth)) \<in> graph_of (pte_ref2 level o pt) - {(x,y). x \<in> kernel_mapping_slots \<and> level = max_pt_level}.
-         (\<lambda>(p, a). (p, ucast r, APageTable, a)) ` (ptr_range p sz \<times> auth)
+     ASIDPool pool \<Rightarrow> (\<lambda>(r,p). (p, ucast r, AASIDPool, Control)) ` graph_of (option_map ap_vspace o pool)
+   | PageTable pt \<Rightarrow> (case pt of
+       VSRootPT pt \<Rightarrow> \<Union>(r,(p, sz, auth)) \<in> graph_of (pte_ref2 level o pt).
+                      (\<lambda>(p, a). (p, ucast r, APageTable VSRootPT_T, a)) ` (ptr_range p sz \<times> auth)
+     | NormalPT pt \<Rightarrow> \<Union>(r,(p, sz, auth)) \<in> graph_of (pte_ref2 level o pt).
+                      (\<lambda>(p, a). (p, ucast r, APageTable NormalPT_T, a)) ` (ptr_range p sz \<times> auth))
    | _ \<Rightarrow> {}"
 
 definition state_vrefs where
   "state_vrefs s \<equiv> \<lambda>p.
      \<Union>{vs_refs_aux lvl ao | lvl ao bot asid vref. vs_lookup_table bot asid vref s = Some (lvl, p)
-                                                   \<and> aobjs_of s p = Some ao \<and> vref \<in> user_region}"
+                                                 \<and> vspace_objs_of s p = Some ao \<and> vref \<in> user_region}"
 
 lemma state_vrefsD:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl, p);
-     aobjs_of s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
+     vspace_objs_of s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
      \<Longrightarrow> x \<in> state_vrefs s p"
   unfolding state_vrefs_def by fastforce
 
 end
 
-context Arch_p_arch_update_eq begin global_naming RISCV64
+context Arch_p_arch_update_eq begin global_naming AARCH64
 
 interpretation Arch .
 
@@ -64,7 +66,7 @@ lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
 
 end
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemmas state_vrefs_upd =
   cur_thread_update.state_vrefs
@@ -80,17 +82,18 @@ end
 context Arch begin
 
 primrec aobj_ref' where
-  "aobj_ref' (ASIDPoolCap p as) = {p}"
+  "aobj_ref' (ASIDPoolCap ref _) = {ref}"
 | "aobj_ref' ASIDControlCap = {}"
-| "aobj_ref' (FrameCap ref cR sz dev as) = ptr_range ref (pageBitsForSize sz)"
-| "aobj_ref' (PageTableCap x as3) = {x}"
+| "aobj_ref' (FrameCap ref _ sz _ _) = ptr_range ref (pageBitsForSize sz)"
+| "aobj_ref' (PageTableCap ref _ _) = {ref}"
+| "aobj_ref' (VCPUCap ref) = {ref}"
 
 fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
   "acap_asid' (FrameCap _ _ _ _ mapping) = fst ` set_option mapping"
-| "acap_asid' (PageTableCap _ mapping) = fst ` set_option mapping"
-| "acap_asid' (ASIDPoolCap _ asid)
-     = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
+| "acap_asid' (PageTableCap _ _ mapping) = fst ` set_option mapping"
+| "acap_asid' (ASIDPoolCap _ asid) = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
 | "acap_asid' ASIDControlCap = UNIV"
+| "acap_asid' (VCPUCap _) = {}"
 
 inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
   sata_asid:
@@ -109,7 +112,7 @@ inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
 
 definition
   "state_asids_to_policy_arch aag caps astate vrefs \<equiv>
-     state_asids_to_policy_aux aag caps (riscv_asid_table astate)
+     state_asids_to_policy_aux aag caps (arm_asid_table astate)
                                (vrefs :: 64 word \<Rightarrow> (64 word \<times> 64 word \<times> aa_type \<times> auth) set)"
 declare state_asids_to_policy_arch_def[simp]
 
@@ -201,21 +204,21 @@ lemma integrity_asids_kh_update:
 subsection \<open>Misc definitions\<close>
 
 fun ctxt_IP_update where
-  "ctxt_IP_update (UserContext ctxt) = UserContext (ctxt(NextIP := ctxt FaultIP))"
+  "ctxt_IP_update (UserContext fpu ctxt) = UserContext fpu (ctxt(NextIP := ctxt FaultIP))"
 
 lemma ctxt_IP_update_def:
   "ctxt_IP_update ctxt =
-   (case ctxt of (UserContext ctxt') \<Rightarrow> UserContext (ctxt'(NextIP := ctxt' FaultIP)))"
+   (case ctxt of (UserContext fpu ctxt') \<Rightarrow> UserContext fpu (ctxt'(NextIP := ctxt' FaultIP)))"
   by (cases ctxt; clarsimp)
 
 abbreviation arch_IP_update where
   "arch_IP_update arch \<equiv> arch_tcb_context_set (ctxt_IP_update (arch_tcb_context_get arch)) arch"
 
 definition asid_pool_integrity ::
-  "'a set \<Rightarrow> 'a PAS \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
+  "'a set \<Rightarrow> 'a PAS \<Rightarrow> (asid_low_index \<rightharpoonup> asid_pool_entry) \<Rightarrow> (asid_low_index \<rightharpoonup> asid_pool_entry) \<Rightarrow> bool" where
   "asid_pool_integrity subjects aag pool pool' \<equiv>
      \<forall>x. pool' x \<noteq> pool x
-         \<longrightarrow> pool' x = None \<and> aag_subjects_have_auth_to subjects aag Control (the (pool x))"
+         \<longrightarrow> pool' x = None \<and> aag_subjects_have_auth_to subjects aag Control (ap_vspace (the (pool x)))"
 
 inductive arch_integrity_obj_atomic ::
    "'a PAS \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> arch_kernel_obj \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
@@ -274,5 +277,87 @@ end
 
 declare state_vrefs_upd[simp]
 declare integrity_asids_updates[simp]
+
+
+context Arch begin global_naming AARCH64
+
+(* FIXME AARCH64: update the access control spec
+   -Parameterise arch object updates with machine state and arch state
+   -Model virtualised machine state more explicitly
+   -Specify when virtualised machine state can change (i.e. restoring from current VCPU)
+   -Specify when arm_current_vcpu can change (i.e. once current VCPU has been saved)
+   -Specify integrity constraints for FPUs
+*)
+
+\<comment> \<open>Anyone can save virtualised registers to the current VCPU\<close>
+lemma arch_troa_vcpu_save_reg:
+    "\<lbrakk> aobjs_of s vptr = Some (VCPU vcpu); ao' = VCPU vcpu';
+       option_map fst (arm_current_vcpu (arch_state s)) = Some vptr;
+       vcpu' = vcpu\<lparr>vcpu_regs := (vcpu_regs vcpu)(reg := vcpuHardwareReg_val reg (machine_state s))\<rparr> \<rbrakk>
+       \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+  sorry
+
+(* FIXME AARCH64: assert a connection to the current (or soon-to-be-switched-to) thread? *)
+\<comment> \<open>Anyone can update the virtual count offset in the current VCPU\<close>
+lemma arch_troa_vcpu_restore_vtimer:
+  "\<lbrakk> aobjs_of s vptr = Some (VCPU vcpu); ao' = VCPU vcpu';
+     option_map fst (arm_current_vcpu (arch_state s)) = Some vptr;
+     vcpu' = vcpu\<lparr>vcpu_regs := (vcpu_regs vcpu)
+                    (VCPURegCNTVOFF := vcpu_regs vcpu VCPURegCNTVOFF
+                                       + (read_cntpct_val (machine_state s)
+                                          - vtimerLastPCount (vcpu_vtimer vcpu)))\<rparr> \<rbrakk>
+     \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+  sorry
+
+\<comment> \<open>Anyone can save the physical count register to the current VCPU\<close>
+lemma arch_troa_vcpu_save_virt_timer:
+    "\<lbrakk> aobjs_of s vptr = Some (VCPU vcpu); ao' = VCPU vcpu';
+       option_map fst (arm_current_vcpu (arch_state s)) = Some vptr;
+       vcpu' = vcpu\<lparr>vcpu_vtimer := VirtTimer (read_cntpct_val (machine_state s))\<rparr> \<rbrakk>
+       \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+  sorry
+
+\<comment> \<open>Anyone can save virtualised GIC registers to the current VCPU\<close>
+lemma arch_troa_vcpu_save_vgic:
+    "\<lbrakk> aobjs_of s vptr = Some (VCPU vcpu); ao' = VCPU vcpu';
+       option_map fst (arm_current_vcpu (arch_state s)) = Some vptr;
+       vcpu' = vcpu \<lparr>vcpu_vgic := vgic\<rparr>;
+       vgic = vcpu_vgic vcpu\<lparr>vgic_hcr := gic_vcpu_ctrl_hcr_val (machine_state s)\<rparr> \<or>
+       vgic = vcpu_vgic vcpu\<lparr>vgic_vmcr := gic_vcpu_ctrl_vmcr_val (machine_state s)\<rparr> \<or>
+       vgic = vcpu_vgic vcpu\<lparr>vgic_apr := gic_vcpu_ctrl_apr_val (machine_state s)\<rparr> \<or>
+       vgic = vcpu_vgic vcpu\<lparr>vgic_lr := (vgic_lr (vcpu_vgic vcpu))
+                                        (vreg := gic_vcpu_ctrl_lr_val (of_nat vreg) (machine_state s))\<rparr> \<rbrakk>
+       \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+  sorry
+
+\<comment> \<open>Update the vmid of a pool\<close>
+lemma
+  arch_troa_asidpool_vmid:
+    "\<lbrakk> ao = ASIDPool pool; ao' = ASIDPool pool';
+       \<forall>x. (pool x = None) = (pool' x = None);
+       \<forall>x e e'. pool x = Some e \<and> pool' x = Some e'
+           \<longrightarrow> (ap_vspace e = ap_vspace e' \<and>
+               (ap_vmid e = ap_vmid e' \<or> ap_vmid e = None \<or> ap_vmid e' = None)) \<rbrakk>
+       \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+  sorry
+
+\<comment> \<open>If a VCPU belongs to the current agent, then so does its associated TCB\<close>
+lemma associated_tcb_is_subject:
+  "\<lbrakk> vcpus_of s v = Some vcpu; vcpu_tcb vcpu = Some t; is_subject aag v \<rbrakk>
+     \<Longrightarrow> is_subject aag t"
+  sorry
+
+\<comment> \<open>If a TCB belongs to the current agent, then so does its associated VCPU\<close>
+lemma associated_vcpu_is_subject:
+  "\<lbrakk> get_tcb t s = Some tcb; tcb_vcpu (tcb_arch tcb) = Some v; is_subject aag t \<rbrakk>
+     \<Longrightarrow> is_subject aag v"
+  sorry
+
+(* FIXME AARCH64: clarify when we can assume this *)
+lemma invs_valid_cur_vcpu:
+  "invs s \<Longrightarrow> valid_cur_vcpu s"
+  sorry
+
+end
 
 end
