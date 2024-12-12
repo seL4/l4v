@@ -1446,15 +1446,6 @@ lemmas obj_at_simps = obj_at_def obj_at'_def map_to_ctes_upd_other
                       is_other_obj_relation_type_def
                       a_type_def objBits_simps other_obj_relation_def pageBits_def
 
-lemma setEndpoint_corres:
-  "ep_relation e e' \<Longrightarrow>
-  corres dc (ep_at ptr) (ep_at' ptr)
-            (set_endpoint ptr e) (setEndpoint ptr e')"
-  apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
-    apply (corresK_search search: setObject_other_corres[where P="\<lambda>_. True"])
-  apply (corresKsimp wp: get_object_ret get_object_wp)+
-  by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
-
 lemma setNotification_corres:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
@@ -3739,6 +3730,18 @@ lemma ep_at_cross:
   apply (drule (1) pspace_relation_absD, clarsimp simp: other_obj_relation_def)
   apply (case_tac z; simp)
   by (fastforce dest!: aligned_distinct_ko_at'I[where 'a=endpoint] elim: obj_at'_weakenE)
+
+lemma setEndpoint_corres:
+  "ep_relation e e' \<Longrightarrow>
+   corres dc
+     (ep_at ptr and pspace_aligned and pspace_distinct) \<top>
+     (set_endpoint ptr e) (setEndpoint ptr e')"
+  apply (rule_tac Q'="ep_at' ptr" in corres_cross_add_guard)
+   apply (fastforce dest!: state_relationD elim!: ep_at_cross)
+  apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
+    apply (corresK_search search: setObject_other_corres[where P="\<lambda>_. True"])
+  apply (corresKsimp wp: get_object_ret get_object_wp)+
+  by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
 lemma ntfn_at_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"

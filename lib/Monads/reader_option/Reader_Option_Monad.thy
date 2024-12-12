@@ -29,7 +29,7 @@ definition opt_map :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> 'b option)
   "f |> g \<equiv> \<lambda>s. case f s of None \<Rightarrow> None | Some x \<Rightarrow> g x"
 
 abbreviation opt_map_Some :: "('s \<rightharpoonup> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 's \<rightharpoonup> 'b" (infixl "||>" 54) where
-  "f ||> g \<equiv> f |> (Some \<circ> g)"
+  "f ||> g \<equiv> f |> (\<lambda>s. Some (g s))"
 
 lemmas opt_map_Some_def = opt_map_def
 
@@ -118,7 +118,7 @@ lemma opt_map_Some_foldr_upd:
 
 lemmas opt_map_foldr_upd_simps = opt_map_foldr_upd opt_map_Some_foldr_upd
 
-lemma opt_map_Some_comp[simp]:
+lemma opt_map_Some_comp:
   "f ||> g ||> h = f ||> h o g"
   by (fastforce simp: opt_map_def split: option.split)
 
@@ -142,10 +142,6 @@ lemma opt_map_zero_l[simp]:
 lemma opt_map_zero_r[simp]:
   "f |> Map.empty = Map.empty"
   by (fastforce simp: opt_map_def split: option.split)
-
-lemma opt_map_Some_eta_fold:
-  "f |> (\<lambda>x. Some (g x)) = f ||> g"
-  by (simp add: o_def)
 
 lemma case_opt_map_distrib:
   "(\<lambda>s. case_option None g (f s)) |> h = (\<lambda>s. case_option None (g |> h) (f s))"

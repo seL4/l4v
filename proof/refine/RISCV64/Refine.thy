@@ -409,7 +409,8 @@ lemma valid_sched_init[simp]:
                         valid_ready_qs_def ready_or_release_2_def in_queues_2_def
                         idle_sc_ptr_def valid_blocked_defs default_domain_def minBound_word
                         released_ipc_queues_defs active_reply_scs_def active_if_reply_sc_at_def
-                        active_sc_def MIN_REFILLS_def)
+                        active_sc_def MIN_REFILLS_def
+                        sorted_ipc_queues_def eps_of_kh_def opt_map_def)
   by (auto simp: vs_all_heap_simps active_scs_valid_def cfg_valid_refills_def
                  rr_valid_refills_def MIN_REFILLS_def bounded_release_time_def
                  default_sched_context_def MAX_PERIOD_def active_sc_def
@@ -1107,7 +1108,7 @@ lemma do_user_op_corres:
                     apply (rule corres_underlying_split[OF corres_machine_op,where Q = dc and Q'=dc])
                        apply (rule corres_underlying_trivial)
                        apply (wp | simp add: dc_def device_memory_update_def)+
-   apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
+   apply (fastforce simp: invs_def valid_state_def pspace_respects_device_region_def)
   apply fastforce
   done
 

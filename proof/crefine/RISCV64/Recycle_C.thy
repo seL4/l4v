@@ -934,6 +934,7 @@ lemma cancelBadgedSends_ccorres:
       apply (rule ccorres_return_Skip)
      apply (simp add: ccorres_cond_iffs)
      apply (rule ccorres_return_Skip)
+    apply (rule ccorres_assert2)
     apply (rename_tac list)
     apply (simp add: Collect_True Collect_False endpoint_state_defs
                      ccorres_cond_iffs
@@ -964,6 +965,7 @@ lemma cancelBadgedSends_ccorres:
           subgoal by simp
          apply (simp add: refill_buffer_relation_def image_def dom_def Let_def typ_heap_simps
                           update_ep_map_tos)
+        apply (thin_tac "distinct _")
         apply (rule ccorres_symb_exec_r)
           apply (rule_tac xs=list in filterM_voodoo)
           apply (rule_tac P="\<lambda>xs s. (\<forall>x \<in> set xs \<union> set list.

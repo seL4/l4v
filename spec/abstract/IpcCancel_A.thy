@@ -300,36 +300,19 @@ where
     BlockedOnNotification r \<Rightarrow> Some r
   | _ \<Rightarrow> None"
 
-fun
-  tcb_ep_find_index :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> nat \<Rightarrow> (nat, 'z::state_ext) s_monad"
-where
-  "tcb_ep_find_index tptr qs curindex = do
+definition tcb_ep_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
+  "tcb_ep_dequeue tptr qs \<equiv> return $ filter ((\<noteq>) tptr) qs"
+
+definition tcb_ep_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
+  "tcb_ep_append tptr qs \<equiv> do
      prio \<leftarrow> thread_get tcb_priority tptr;
-     curprio \<leftarrow> thread_get tcb_priority (qs ! curindex);
-     if prio > curprio then
-       if curindex = 0 then return 0
-       else tcb_ep_find_index tptr qs (curindex - 1)
-     else return (curindex + 1)
+     prios \<leftarrow> mapM (thread_get tcb_priority) qs;
+     zprios \<leftarrow> return $ zip qs prios;
+     zprios' \<leftarrow> return $ filter (\<lambda>(_, p). p \<ge> prio) zprios
+                         @ [(tptr, prio)]
+                         @ filter (\<lambda>(_, p). p < prio) zprios;
+     return (map fst zprios')
    od"
-
-declare tcb_ep_find_index.simps[simp del]
-
-definition
-  tcb_ep_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad"
-where
-  "tcb_ep_dequeue tptr qs = do
-     index \<leftarrow> return $ the $ findIndex (\<lambda>x. x = tptr) qs;
-     return $ take index qs @ drop (index + 1) qs
-   od"
-
-definition
-  tcb_ep_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad"
-where
-  "tcb_ep_append tptr qs \<equiv>
-     if qs = [] then return [tptr]
-     else do index \<leftarrow> tcb_ep_find_index tptr qs (length qs - 1);
-             return $ take index qs @ tptr # drop index qs
-     od"
 
 text \<open>Bring endpoint queue back into priority order\<close>
 definition
