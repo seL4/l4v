@@ -1040,7 +1040,7 @@ crunch updateReply, setSchedContext, updateSchedContext
   and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
   and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
-  (simp: crunch_simps opt_map_Some_eta_fold wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma scReplies_of_scTCB_update[simp]:
   "\<lbrakk> ko_at' sc scp s\<rbrakk>
@@ -1319,7 +1319,7 @@ lemma replyPop_corres:
                                         and (\<lambda>s. tcbSCs_of s t = tcbsc)
                                         and pspace_aligned' and pspace_distinct' and pspace_bounded'"
                         in hoare_strengthen_post[rotated])
-                  apply (clarsimp split: if_split simp: valid_reply'_def opt_map_Some_eta_fold obj_at'_def)
+                  apply (clarsimp split: if_split simp: valid_reply'_def obj_at'_def)
                  apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp simp: valid_reply'_def)
                  apply (rule hoare_vcg_conj_lift)
                   apply (wpsimp wp: updateSchedContext_wp)
@@ -1335,7 +1335,7 @@ lemma replyPop_corres:
                 apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def)
                 apply (case_tac "sc_replies sc0"; simp)
                 apply (intro conjI impI allI; rename_tac ls; case_tac ls; clarsimp)
-               apply (clarsimp simp: valid_obj'_def  opt_map_red opt_map_Some_eta_fold)
+               apply (clarsimp simp: valid_obj'_def opt_map_red)
                apply (intro conjI impI)
                    apply (fastforce simp: obj_at'_def opt_map_red opt_pred_def
                                           valid_sched_context'_def valid_obj'_def valid_reply'_def
@@ -1772,59 +1772,37 @@ lemma cancelSignal_invs':
   "\<lbrace>invs' and st_tcb_at' (\<lambda>st. st = BlockedOnNotification ntfn) t\<rbrace>
    cancelSignal t ntfn
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  proof -
-    have NTFNSN: "\<And>ntfn ntfn'.
-                    \<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s \<rbrace> setNotification ntfn ntfn'
-                    \<lbrace>\<lambda>_ s. sch_act_not (ksCurThread s) s\<rbrace>"
-      apply (rule hoare_weaken_pre)
-       apply wps
-       apply (wp, simp)
-      done
-    show ?thesis
-      apply (simp add: cancelSignal_def invs'_def Let_def valid_dom_schedule'_def)
-      apply (intro bind_wp[OF _ stateAssert_sp])
-      apply (wp valid_irq_node_lift sts_sch_act' irqs_masked_lift
-                hoare_vcg_all_lift [OF set_ntfn'.ksReadyQueues]
-                setThreadState_ct_not_inQ NTFNSN set_ntfn'.get_wp
-                hoare_vcg_all_lift set_ntfn'.ksReadyQueues hoare_vcg_imp_lift'
-              | simp add: valid_tcb_state'_def list_case_If split del: if_split)+
-      apply (clarsimp simp: pred_tcb_at' ready_qs_runnable_def)
-      apply (case_tac "ntfnObj ko", simp_all add: isWaitingNtfn_def)
-      apply (rule conjI)
-       apply (clarsimp simp: valid_ntfn'_def)
-       apply normalise_obj_at'
-       apply (frule ko_at_valid_objs')
-         apply (simp add: valid_pspace_valid_objs')
-        apply (clarsimp simp: projectKO_opt_ntfn split: kernel_object.splits)
-       apply (simp add: valid_obj'_def valid_ntfn'_def)
-       apply (rule conjI, clarsimp simp: pred_tcb_at'_def obj_at'_def)
-       apply (rule conjI, erule_tac rfs'="list_refs_of_replies' s" in delta_sym_refs)
-         subgoal
-         by (auto simp: symreftype_inverse' list_refs_of_replies'_def
-                        get_refs_def2 opt_map_def
-                 split: option.splits)
-        subgoal
-        by (auto simp: symreftype_inverse' list_refs_of_replies'_def
-                       get_refs_def2 opt_map_def
-                split: option.splits)
-        apply (frule obj_at_valid_objs', clarsimp)
-        apply (clarsimp simp:  valid_obj'_def valid_ntfn'_def)
-        apply (frule st_tcb_at_state_refs_ofD')
-        apply (frule ko_at_state_refs_ofD')
-        apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
-       apply (frule obj_at_valid_objs', clarsimp)
-       apply (clarsimp simp:  valid_obj'_def valid_ntfn'_def)
-       apply (rule conjI, clarsimp split: option.splits)
-       apply (frule st_tcb_at_state_refs_ofD')
-       apply (frule ko_at_state_refs_ofD')
-       apply (rule conjI)
-        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-       apply (clarsimp simp: valid_pspace'_def)
-       apply (rule conjI)
-        apply (fastforce simp: list_refs_of_replies'_def opt_map_def o_def)
-       apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
-       done
-  qed
+  apply (simp add: cancelSignal_def invs'_def Let_def valid_dom_schedule'_def)
+  apply (intro bind_wp[OF _ stateAssert_sp])
+  apply (wp valid_irq_node_lift sts_sch_act' irqs_masked_lift
+            hoare_vcg_all_lift [OF set_ntfn'.ksReadyQueues]
+            setThreadState_ct_not_inQ set_ntfn'.get_wp
+            hoare_vcg_all_lift set_ntfn'.ksReadyQueues hoare_vcg_imp_lift'
+         | simp add: valid_tcb_state'_def list_case_If split del: if_split)+
+  apply (clarsimp simp: pred_tcb_at' ready_qs_runnable_def)
+  apply (case_tac "ntfnObj ko", simp_all add: isWaitingNtfn_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_ntfn'_def)
+   apply normalise_obj_at'
+   apply (frule ko_at_valid_objs')
+     apply (simp add: valid_pspace_valid_objs')
+    apply (clarsimp simp: projectKO_opt_ntfn split: kernel_object.splits)
+   apply (simp add: valid_obj'_def valid_ntfn'_def)
+   apply (rule conjI, clarsimp simp: pred_tcb_at'_def obj_at'_def)
+   apply (frule obj_at_valid_objs', clarsimp)
+   apply (clarsimp simp:  valid_obj'_def valid_ntfn'_def)
+   apply (frule st_tcb_at_state_refs_ofD')
+   apply (frule ko_at_state_refs_ofD')
+   apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
+  apply (frule obj_at_valid_objs', clarsimp)
+  apply (clarsimp simp:  valid_obj'_def valid_ntfn'_def)
+  apply (frule st_tcb_at_state_refs_ofD')
+  apply (frule ko_at_state_refs_ofD')
+  apply (rule conjI)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  apply (clarsimp simp: valid_pspace'_def)
+  apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
+  done
 
 lemma ep_redux_simps3:
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP (y # ys))
@@ -1948,7 +1926,7 @@ lemma valid_irq_node'_ksSchedulerAction[simp]:
 
 crunch blockedCancelIPC
   for list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
-  (simp_del: comp_apply wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemma blockedCancelIPC_invs':
   "\<lbrace>invs' and st_tcb_at' ((=) st) tptr\<rbrace>
@@ -3065,9 +3043,7 @@ lemma cancelAllIPC_invs'[wp]:
    apply (wpsimp wp: getEndpoint_wp)
   apply (clarsimp simp: invs'_def valid_ep'_def)
   apply (frule obj_at_valid_objs', fastforce)
-  apply (clarsimp simp:  valid_obj'_def)
-  apply (rule conjI)
-   apply (metis fold_list_refs_of_replies')
+  apply (clarsimp simp: valid_obj'_def)
   apply (clarsimp simp: sym_refs_asrt_def sch_act_wf_asrt_def)
   apply (rule conjI)
    apply (drule(1) sym_refs_ko_atD')
@@ -3384,14 +3360,14 @@ lemma cancelBadgedSends_filterM_helper':
   apply (clarsimp simp: filterM_append bind_assoc simp del: set_append distinct_append)
   apply (drule spec, erule bind_wp_fwd)
   apply (rule bind_wp [OF _ gts_inv'])
-  apply (simp add: opt_map_Some_eta_fold split del: if_split)
+  apply (simp split del: if_split)
   apply (rule hoare_pre)
    apply (wpsimp wp: setThreadState_state_refs_of' valid_irq_node_lift hoare_vcg_const_Ball_lift
                      valid_irq_handlers_lift'' irqs_masked_lift sts_st_tcb'
                      hoare_vcg_all_lift sts_sch_act'
                      threadGet_inv[THEN hoare_drop_imp] hoare_vcg_imp_lift'
                simp: cteCaps_of_def o_def)
-  apply (clarsimp simp: opt_map_Some_eta_fold)
+  apply clarsimp
   apply (frule insert_eqD, frule state_refs_of'_elemD)
   apply (clarsimp simp: valid_tcb_state'_def st_tcb_at_refs_of_rev')
   apply (frule pred_tcb_at')
