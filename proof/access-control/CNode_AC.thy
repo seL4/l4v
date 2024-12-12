@@ -67,18 +67,14 @@ locale CNode_AC_1 =
        state_asids_to_policy_arch aag caps (as :: arch_state) vrefs \<subseteq> pasPolicy aag \<rbrakk>
        \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   and state_vrefs_tcb_upd:
-    "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s; tcb_at tptr s \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+    "tcb_at tptr s \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   and state_vrefs_simple_type_upd:
-    "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s;
-       ko_at ko p s; is_simple_type ko; a_type ko = a_type (f (val :: 'b)) \<rbrakk>
+    "\<lbrakk> ko_at ko p s; is_simple_type ko; a_type ko = a_type (f (val :: 'b)) \<rbrakk>
        \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(p \<mapsto> f val)\<rparr>) = state_vrefs s"
   and a_type_arch_object_not_tcb[simp]:
     "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   and set_cap_state_vrefs:
-    "\<And>P. \<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
-          set_cap cap slot
-          \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
+    "\<And>P. set_cap cap slot \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
   and set_cdt_state_vrefs[wp]:
     "\<And>P. set_cdt t \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
   and set_cdt_state_asids_to_policy[wp]:
@@ -308,7 +304,7 @@ lemma sita_caps_update2:
 context CNode_AC_1 begin
 
 lemma set_cap_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and
+  "\<lbrace>pas_refined aag and
     (\<lambda>s. (is_transferable_in ptr s \<and> (\<not> Option.is_none (cdt s ptr)))
           \<longrightarrow> is_transferable_cap cap \<or>
               abs_has_auth_to aag Control (fst $ the $ cdt s ptr) (fst ptr)) and
@@ -330,8 +326,7 @@ lemma set_cap_pas_refined:
   done
 
 lemma set_cap_pas_refined_not_transferable:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and cte_wp_at (\<lambda>c. \<not>is_transferable (Some c)) ptr
+  "\<lbrace>pas_refined aag and cte_wp_at (\<lambda>c. \<not>is_transferable (Some c)) ptr
                     and K (aag_cap_auth aag (pasObjectAbs aag (fst ptr)) cap)\<rbrace>
    set_cap cap ptr
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
@@ -1025,7 +1020,7 @@ locale CNode_AC_3 = CNode_AC_2 +
 begin
 
 lemma cap_insert_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb and
+  "\<lbrace>pas_refined aag and valid_mdb and
     (\<lambda>s. (is_transferable_in src_slot s \<and> (\<not> Option.is_none (cdt s src_slot)))
          \<longrightarrow> is_transferable_cap new_cap) and
     K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
@@ -1049,7 +1044,7 @@ lemma cap_insert_pas_refined:
                  dest: aag_cdt_link_Control aag_cdt_link_DeleteDerived cap_auth_caps_of_state)
 
 lemma cap_insert_pas_refined':
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb and
+  "\<lbrace>pas_refined aag and valid_mdb and
     (\<lambda>s. cte_wp_at is_transferable_cap src_slot s \<longrightarrow> is_transferable_cap new_cap) and
     K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
                                       \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
@@ -1060,7 +1055,7 @@ lemma cap_insert_pas_refined':
                 simp: cte_wp_at_caps_of_state Option.is_none_def)
 
 lemma cap_insert_pas_refined_not_transferable:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb
+  "\<lbrace>pas_refined aag and valid_mdb
                     and not cte_wp_at is_transferable_cap src_slot
                     and K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
                                                           \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
@@ -1069,7 +1064,7 @@ lemma cap_insert_pas_refined_not_transferable:
    by (wpsimp wp: cap_insert_pas_refined')
 
 lemma cap_insert_pas_refined_same_object_as:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb
+  "\<lbrace>pas_refined aag and valid_mdb
                     and cte_wp_at (same_object_as new_cap) src_slot
                     and K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot) \<and>
                            (\<not> is_master_reply_cap new_cap) \<and> pas_cap_cur_auth aag new_cap)\<rbrace>
@@ -1081,8 +1076,7 @@ lemma cap_insert_pas_refined_same_object_as:
                 elim: is_transferable_capE split: cap.splits)
 
 lemma cap_move_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_mdb and cte_wp_at (weak_derived new_cap) src_slot
+  "\<lbrace>pas_refined aag and valid_mdb and cte_wp_at (weak_derived new_cap) src_slot
                     and cte_wp_at ((=) NullCap) dest_slot
                     and K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
                                                           \<and> pas_cap_cur_auth aag new_cap)\<rbrace>
@@ -1099,14 +1093,8 @@ lemma cap_move_pas_refined[wp]:
                 dest: invs_mdb pas_refined_mem[OF sta_cdt]
                       pas_refined_mem[OF sta_cdt_transferable])
 
-crunch set_original, set_cdt
-  for pspace_aligned[wp]: pspace_aligned
-  and valid_vspace_objs[wp]: valid_vspace_objs
-  and valid_arch_state[wp]: valid_arch_state
-
 lemma empty_slot_pas_refined[wp, wp_not_transferable]:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_mdb and K (is_subject aag (fst slot))\<rbrace>
+  "\<lbrace>pas_refined aag and valid_mdb and K (is_subject aag (fst slot))\<rbrace>
    empty_slot slot irqopt
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: empty_slot_def post_cap_deletion_def)
@@ -1119,8 +1107,7 @@ lemma empty_slot_pas_refined[wp, wp_not_transferable]:
 
 
 lemma empty_slot_pas_refined_transferable[wp_transferable]:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_mdb and (\<lambda>s. is_transferable (caps_of_state s slot))\<rbrace>
+  "\<lbrace>pas_refined aag and valid_mdb and (\<lambda>s. is_transferable (caps_of_state s slot))\<rbrace>
    empty_slot slot irqopt
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: empty_slot_def post_cap_deletion_def)
@@ -1178,7 +1165,7 @@ lemma cap_swap_pas_refined[wp]:
      by (erule subsetD;
          force simp: is_transferable_weak_derived intro!: sbta_cdt_transferable auth_graph_map_memI)+
          apply (blast intro: state_bits_to_policy.intros auth_graph_map_memI)
-   by fastforce+
+   done
 
 lemma cap_swap_for_delete_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and K (is_subject aag (fst slot) \<and> is_subject aag (fst slot'))\<rbrace>
@@ -1305,9 +1292,7 @@ lemma set_simple_ko_ekheap[wp]:
 context CNode_AC_3 begin
 
 lemma sts_st_vrefs[wp]:
-  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
-   set_thread_state t st
-   \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
+  "set_thread_state t st \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_thread_state_def del: set_thread_state_ext_extended.dxo_eq)
   apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (clarsimp simp: state_vrefs_tcb_upd obj_at_def is_obj_defs
@@ -1316,8 +1301,7 @@ lemma sts_st_vrefs[wp]:
   done
 
 lemma set_thread_state_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and
-    K (\<forall>r \<in> tcb_st_to_auth st. abs_has_auth_to aag (snd r) t (fst r))\<rbrace>
+  "\<lbrace>pas_refined aag and K (\<forall>r \<in> tcb_st_to_auth st. abs_has_auth_to aag (snd r) t (fst r))\<rbrace>
    set_thread_state t st
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
@@ -1330,17 +1314,14 @@ lemma set_thread_state_pas_refined:
   done
 
 lemma set_simple_ko_vrefs[wp]:
-  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
-   set_simple_ko f ptr (val :: 'b)
-   \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
+  "set_simple_ko f ptr (val :: 'b) \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
   apply (fastforce simp: state_vrefs_simple_type_upd obj_at_def elim!: rsubst[where P=P, OF _ ext])
   done
 
 lemma set_simple_ko_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-    set_simple_ko f ptr (ep :: 'b) \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  "set_simple_ko f ptr (ep :: 'b) \<lbrace>pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply (wp tcb_domain_map_wellformed_lift | wps)+
@@ -1348,9 +1329,7 @@ lemma set_simple_ko_pas_refined[wp]:
   done
 
 lemma thread_set_state_vrefs:
-  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
-   thread_set f t
-   \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
+  "thread_set f t \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
   apply (simp add: thread_set_def)
   apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: state_vrefs_tcb_upd obj_at_def is_obj_defs
@@ -1387,8 +1366,7 @@ lemma thread_set_pas_refined_triv:
   assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
        and st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
       and ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
-     shows "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-            thread_set f t \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+     shows "thread_set f t \<lbrace>pas_refined aag\<rbrace>"
   by (wpsimp wp: tcb_domain_map_wellformed_lift thread_set_state_vrefs
            simp: pas_refined_def state_objs_to_policy_def
       | wps thread_set_caps_of_state_trivial[OF cps]
