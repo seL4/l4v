@@ -3063,13 +3063,14 @@ crunch vcpu_disable, vcpu_restore, vcpu_save
   (wp: crunch_wps)
 
 lemma vcpu_switch_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. v \<noteq> None \<longrightarrow> obj_at hyp_live (the v) s)\<rbrace> vcpu_switch v \<lbrace> \<lambda>_ . invs \<rbrace>"
+  "\<lbrace>invs and (\<lambda>s. v \<noteq> None \<longrightarrow> vcpu_hyp_live_of s (the v))\<rbrace> vcpu_switch v \<lbrace> \<lambda>_ . invs \<rbrace>"
   unfolding vcpu_switch_def
   apply (cases v; clarsimp)
    apply (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
    apply (clarsimp simp: invs_def valid_state_def valid_arch_state_def cur_vcpu_def
                          in_omonad obj_at_def hyp_live_def arch_live_def)
   apply (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
+  apply (clarsimp simp: in_omonad obj_at_def hyp_live_def arch_live_def)
   done
 
 crunch

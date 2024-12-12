@@ -179,7 +179,7 @@ global_interpretation Syscall_AC_1?: Syscall_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Syscall_AC_assms)?)
+    by (unfold_locales; wpsimp wp: Syscall_AC_assms)
 qed
 
 end

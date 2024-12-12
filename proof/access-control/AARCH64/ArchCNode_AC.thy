@@ -10,7 +10,7 @@ begin
 
 section\<open>Arch-specific CNode AC.\<close>
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 declare arch_post_modify_registers_def[simp]
 declare arch_post_cap_deletion_def[simp]
@@ -56,26 +56,6 @@ lemma sata_update2[CNode_AC_assms]:
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
                 split: if_split_asm)
 
-lemma vs_lookup_table_eqI':
-    "\<lbrakk> asid_table s' (asid_high_bits_of asid) = asid_table s (asid_high_bits_of asid);
-       \<forall>pool_ptr. asid_table s' (asid_high_bits_of asid) = Some pool_ptr
-                  \<longrightarrow> bot_level \<le> max_pt_level
-                  \<longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s') =
-                      vspace_for_pool pool_ptr asid (asid_pools_of s);
-       bot_level < max_pt_level \<longrightarrow> pts_of s' = pts_of s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
-  by (auto simp: obind_def vs_lookup_table_def asid_pool_level_eq[symmetric]
-                 pool_for_asid_def vspace_for_pool_def
-          split: option.splits)
-
-lemma state_vrefs_eqI:
-  assumes "asid_table s' = asid_table s"
-  and "aobjs_of s' = aobjs_of s"
-  shows "state_vrefs s' = state_vrefs s"
-  apply (prop_tac "\<forall>level asid vref. vs_lookup_table level asid vref s = vs_lookup_table level asid vref s'")
-   apply (intro allI vs_lookup_table_eqI')
-  using assms by (auto simp: vspace_for_pool_def state_vrefs_def)
-
 lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
   "set_cap cap slot \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def)
@@ -85,10 +65,8 @@ lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
   by (fastforce simp: valid_arch_state_def obj_at_def opt_map_def
                split: option.splits kernel_object.splits)+
 
-crunch maskInterrupt
-  for underlying_memory[CNode_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
-  and device_state[CNode_AC_assms, wp]: "\<lambda>s. P (device_state s)"
-  (simp: maskInterrupt_def)
+declare maskInterrupt_underlying_memory_inv[CNode_AC_assms, wp]
+        maskInterrupt_device_state_inv[CNode_AC_assms, wp]
 
 crunch set_cdt
   for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
@@ -155,7 +133,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
   "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
@@ -182,7 +160,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma arch_post_cap_deletion_pas_refined[CNode_AC_assms, wp]:
   "arch_post_cap_deletion irqopt \<lbrace>pas_refined aag\<rbrace>"
@@ -220,7 +198,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma arch_derive_cap_auth_derived[CNode_AC_assms]:
   "\<lbrace>\<lambda>s. cte_wp_at (auth_derived (ArchObjectCap cap)) src_slot s\<rbrace>
@@ -324,7 +302,7 @@ global_interpretation CNode_AC_4?: CNode_AC_4
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms)?)
+    by (unfold_locales; fact CNode_AC_assms)
 qed
 
 
