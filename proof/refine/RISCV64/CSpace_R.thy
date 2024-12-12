@@ -3297,7 +3297,6 @@ lemma cteInsert_invs:
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_bitmaps_lift valid_irq_node_lift
                     irqs_masked_lift cteInsert_norq sym_heap_sched_pointers_lift)
-  apply (subst fold_list_refs_of_replies')
   by (auto simp: invs'_def valid_pspace'_def elim: valid_capAligned)
 
 lemma deriveCap_corres:
@@ -4109,7 +4108,6 @@ lemma arch_update_setCTE_invs:
             setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift valid_replies'_lift
             sym_heap_sched_pointers_lift
           | simp add: pred_tcb_at'_def)+
-  apply (subst fold_list_refs_of_replies')
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
                         cte_wp_at_ctes_of isCap_simps untyped_ranges_zero_fun_upd)
   apply (frule capMaster_eq_capBits_eq)
@@ -5937,7 +5935,6 @@ lemma updateFreeIndex_forward_invs':
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
   apply (clarsimp simp: isCap_simps valid_pspace'_def)
   apply (frule(1) valid_global_refsD_with_objSize)
-  apply (subst fold_list_refs_of_replies')
   apply clarsimp
   apply (intro conjI allI impI)
    apply (clarsimp simp: modify_map_def cteCaps_of_def ifunsafe'_def3 split:if_splits)

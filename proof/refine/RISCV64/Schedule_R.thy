@@ -2383,9 +2383,7 @@ crunch scheduleUsed, refillPopHead, handleOverrunLoop, nonOverlappingMergeRefill
 lemma refillBudgetCheck_list_refs_of_replies'[wp]:
   "refillBudgetCheck usage \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   unfolding refillBudgetCheck_def
-  apply (wpsimp wp: hoare_drop_imps)
-  apply (simp add: o_def)
-  done
+  by (wpsimp wp: hoare_drop_imps)
 
 lemma refillBudgetCheck_if_live_then_nonz_cap'[wp]:
   "refillBudgetCheck uage \<lbrace>if_live_then_nonz_cap'\<rbrace>"

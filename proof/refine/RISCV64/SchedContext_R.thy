@@ -257,10 +257,8 @@ lemma schedContextUpdateConsumed_objs'[wp]:
 
 lemma schedContextUpdateConsumed_sym_refs_lis_refs_of_replies'[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
-  apply (clarsimp simp: schedContextUpdateConsumed_def)
-  apply wpsimp
-  apply (clarsimp simp: opt_map_def o_def)
-  done
+  unfolding schedContextUpdateConsumed_def
+  by wpsimp
 
 crunch schedContextUpdateConsumed
   for aligned'[wp]: "pspace_aligned'"
