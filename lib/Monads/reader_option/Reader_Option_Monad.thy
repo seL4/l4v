@@ -143,10 +143,6 @@ lemma opt_map_zero_r[simp]:
   "f |> Map.empty = Map.empty"
   by (fastforce simp: opt_map_def split: option.split)
 
-lemma opt_map_Some_eta_fold:
-  "f |> (\<lambda>x. Some (g x)) = f ||> g"
-  by (simp add: o_def)
-
 lemma case_opt_map_distrib:
   "(\<lambda>s. case_option None g (f s)) |> h = (\<lambda>s. case_option None (g |> h) (f s))"
   by (fastforce simp: opt_map_def split: option.splits)
