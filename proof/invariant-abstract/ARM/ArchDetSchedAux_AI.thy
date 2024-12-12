@@ -32,12 +32,12 @@ lemma set_pd_ntfns_of[wp]:
   "set_pd ptr pd \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
   by (set_object_easy_cases def: set_pd_def)
 
-lemma set_pt_prios_of[wp]:
-  "set_pt ptr pt \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
+lemma set_pt_tcbs_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_pt_def)
 
-lemma set_pd_prios_of[wp]:
-  "set_pd ptr pd \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
+lemma set_pd_tcbs_of[wp]:
+  "set_pd ptr pd \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_pd_def)
 
 lemma set_pd_valid_sched_pred[wp]:

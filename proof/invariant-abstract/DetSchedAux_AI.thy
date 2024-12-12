@@ -729,12 +729,9 @@ lemma in_ntfn_queue_st_tcb_at:
   "\<lbrakk>ntfn_queues_of s ntfn_ptr = Some q; t \<in> set q; valid_objs s; sym_refs (state_refs_of s)\<rbrakk>
    \<Longrightarrow> st_tcb_at (\<lambda>st. st = BlockedOnNotification ntfn_ptr) t s"
   apply (clarsimp simp: opt_map_def split: option.splits)
-  apply (frule st_in_waitingntfn[where q=q])
-     apply (rename_tac notification, case_tac notification; clarsimp)
-     apply (case_tac ntfn_obj; clarsimp)
-    apply fastforce
-   apply fastforce
-  apply fastforce
+  apply (frule st_in_waitingntfn[where q=q]; fastforce?)
+  apply (rename_tac notification, case_tac notification; clarsimp)
+  apply (case_tac ntfn_obj; clarsimp)
   done
 
 lemma tcb_at_priority_Some:

@@ -263,13 +263,11 @@ lemma sorted_insort_filter:
   apply (subst sorted_insort_filter_eq_insort_partition[OF tr sorted])
   by (rule sorted_insort_partition[OF tot tr re sorted])
 
-fun opt_ord_R where
-  "opt_ord_R R (Some x) (Some y) = (R x y)"
-| "opt_ord_R R x y = (y = None \<longrightarrow> x = None)"
+fun opt_ord_rel :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'a option \<Rightarrow> 'b option \<Rightarrow> bool"  where
+  "opt_ord_rel R (Some x) (Some y) = (R x y)"
+| "opt_ord_rel R x y = (y = None \<longrightarrow> x = None)"
 
-definition opt_ord where "opt_ord \<equiv> opt_ord_R (\<le>)"
-
-declare opt_ord_def[simp]
+abbreviation opt_ord where "opt_ord \<equiv> opt_ord_rel (\<le>)"
 
 lemma gets_the_thread_read':
   "thread_get f = gets_the \<circ> (thread_read f)"
@@ -280,7 +278,7 @@ lemma tcb_ep_append_insort_filter:
      (tcb_ep_append t q)
      (do s \<leftarrow> get;
          return $
-           insort_filter (\<lambda>t'. img_ord (\<lambda>t'. thread_read tcb_priority t' s) (opt_ord_R (\<ge>)) t' t)
+           insort_filter (\<lambda>t'. img_ord (\<lambda>t'. thread_read tcb_priority t' s) (opt_ord_rel (\<ge>)) t' t)
                          t q
       od)"
   apply (clarsimp simp: tcb_ep_append_def)
@@ -346,7 +344,7 @@ lemma transp_img_ord:
   unfolding transp_def img_ord_def by blast
 
 lemma transp_opt_ord:
-  "transp R \<Longrightarrow> transp (opt_ord_R R)"
+  "transp R \<Longrightarrow> transp (opt_ord_rel R)"
   apply (clarsimp simp: transp_def)
   by (case_tac x; case_tac y; case_tac z; clarsimp elim!: order_trans)
 
@@ -355,7 +353,7 @@ lemma reflp_img_ord:
   unfolding reflp_def img_ord_def by blast
 
 lemma reflp_opt_ord:
-  "reflp R \<Longrightarrow> reflp (opt_ord_R R :: ('a::preorder) option \<Rightarrow> 'a option \<Rightarrow> bool)"
+  "reflp R \<Longrightarrow> reflp (opt_ord_rel R :: ('a::preorder) option \<Rightarrow> 'a option \<Rightarrow> bool)"
   apply (clarsimp simp: reflp_def)
   by (case_tac x; clarsimp)
 
@@ -366,7 +364,7 @@ lemma total_img_ord:
 
 lemma total_opt_ord:
   "total {(x, y). R x y}
-   \<Longrightarrow> total {(x :: ('a::linorder) option, y). opt_ord_R R x y}"
+   \<Longrightarrow> total {(x :: ('a::linorder) option, y). opt_ord_rel R x y}"
   apply (clarsimp simp: total_on_def)
   apply (case_tac x; case_tac y)
   by (auto simp: linear)

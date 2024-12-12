@@ -6487,14 +6487,11 @@ lemma sorted_tcb_release_enqueue_upd:
   assumes "\<forall>x \<in> set (t # queue). \<exists>y. hp x = Some y"
   shows "sorted_release_q_2 hp (tcb_release_enqueue_upd (sc_ready_times_2 hp) t queue)"
   using assms
-  apply (clarsimp simp add: sorted_release_q_2_def)
-  apply (subst tcb_release_enqueue_upd_def2, fastforce simp add: sc_ready_times_2_Some)
-  apply (unfold opt_ord_def)
-  by (erule sorted_insort_filter[
-              where cmp="img_ord (sc_ready_times_2 hp) (opt_ord_R (\<le>))" and xs=queue, rotated 3];
-      intro total_img_ord total_opt_ord totalI reflp_opt_ord transp_img_ord transp_opt_ord
-            reflp_img_ord reflp_opt_ord
-      | fastforce)+
+  apply (clarsimp simp: sorted_release_q_2_def)
+  apply (subst tcb_release_enqueue_upd_def2, fastforce simp: sc_ready_times_2_Some)
+  by (fastforce elim!: sorted_insort_filter[rotated 3]
+                intro: total_img_ord total_opt_ord totalI transp_img_ord transp_opt_ord
+                       reflp_img_ord reflp_opt_ord)
 
 lemma tcb_release_enqueue_valid_release_q[wp]:
   "\<lbrace>\<lambda>s. valid_release_q s \<and> active_sc_tcb_at t s \<and> pred_map runnable (tcb_sts_of s) t \<and> not_in_release_q t s\<rbrace>

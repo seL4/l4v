@@ -1737,27 +1737,22 @@ lemma inj_on_snd_set_zip_map:
   "distinct xs \<Longrightarrow> inj_on snd (set (zip (map f xs) xs))"
   using distinct_map by fastforce
 
-lemma monadic_rewrite_is_valid':
-  "\<lbrakk> \<And>x. monadic_rewrite False True (P' x) (g x) (g' x); \<lbrace>P\<rbrace> f \<lbrace>P'\<rbrace>;
-    \<lbrace>P\<rbrace> do x <- f; g' x od \<lbrace>Q\<rbrace> \<rbrakk>
-   \<Longrightarrow> \<lbrace>P\<rbrace> do x <- f; g x od \<lbrace>Q\<rbrace>"
-  by (fastforce simp: monadic_rewrite_def valid_def bind_def)
-
 lemma tcb_ep_dequeue_append_valid_ntfn_rv:
   "\<lbrace>valid_ntfn ntfn and K (ntfn_obj ntfn = WaitingNtfn qs \<and> t \<in> set qs)\<rbrace>
    do qs' \<leftarrow> tcb_ep_dequeue t qs;
       tcb_ep_append t qs'
    od
    \<lbrace>\<lambda>rv s. valid_ntfn (ntfn_set_obj ntfn (WaitingNtfn rv)) s\<rbrace>"
-   apply (rule monadic_rewrite_is_valid'[
-                 where P'="\<lambda>q s. tcb_at t s \<and> (\<forall>ptr \<in> set q. tcb_at ptr s)"])
-    apply (rule monadic_rewrite_guard_imp)
-     apply (rule tcb_ep_append_insort_filter)
-    apply clarsimp
-   apply (wpsimp simp: tcb_ep_append_def tcb_ep_dequeue_def)
-   apply (clarsimp simp: valid_ntfn_def split: option.split)
-  apply (simp add: tcb_ep_append_def tcb_ep_dequeue_def)
-  apply wpsimp
+  apply (rule hoare_weaken_pre)
+   apply (rule monadic_rewrite_refine_valid)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_sym)
+      apply (rule tcb_ep_append_insort_filter)
+     apply (wpsimp simp: tcb_ep_append_def tcb_ep_dequeue_def)
+    apply (clarsimp simp: valid_ntfn_def split: option.split)
+    apply (simp add: tcb_ep_append_def tcb_ep_dequeue_def)
+    apply wpsimp
+   apply fastforce
   apply (fastforce simp: valid_ntfn_def insort_filter_def distinct_insort_filter
                   split: option.splits)
   done

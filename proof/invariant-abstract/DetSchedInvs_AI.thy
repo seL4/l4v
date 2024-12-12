@@ -3018,7 +3018,7 @@ lemma active_reply_scsE:
   using assms by (simp add: active_reply_scs_2_def active_if_reply_sc_at_2_def)
 
 abbreviation priority_ordered :: "obj_ref list \<Rightarrow> (obj_ref \<rightharpoonup> priority) \<Rightarrow> bool" where
-  "priority_ordered ts prios \<equiv> sorted_wrt (img_ord prios (opt_ord_R (\<ge>))) ts"
+  "priority_ordered ts prios \<equiv> sorted_wrt (img_ord prios (opt_ord_rel (\<ge>))) ts"
 
 definition sorted_ipc_queues_except_set_2 ::
   "obj_ref set \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> priority) \<Rightarrow> bool" where
