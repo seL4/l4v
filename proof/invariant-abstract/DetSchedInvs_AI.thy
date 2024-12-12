@@ -3048,8 +3048,6 @@ lemma sorted_ipc_queues_notification_priority_ordered:
   "\<lbrakk>sorted_ipc_queues s; ntfn_queues_of s ptr = Some q\<rbrakk> \<Longrightarrow> priority_ordered q (prios_of s)"
   by (fastforce simp: sorted_ipc_queues_def dest: spec[where x=ptr])
 
-declare opt_map_Some_comp[simp del]
-
 lemma sorted_ipc_queues_except_set_lift_pre_conj:
   assumes "\<And>P. \<lbrace>\<lambda>s. P (eps_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. P (eps_of s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (ntfns_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. P (ntfns_of s)\<rbrace>"

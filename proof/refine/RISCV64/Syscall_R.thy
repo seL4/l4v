@@ -180,7 +180,6 @@ lemma decodeInvocation_corres:
             and case_option \<top> valid_ipc_buffer_ptr' buffer)
       (decode_invocation first_phase (mi_label mi) args cptr slot cap excaps buffer)
       (RetypeDecls_H.decodeInvocation (msgLabel mi') args' cptr' slot' cap' excaps' first_phase buffer)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (rule corres_gen_asm)
   apply (unfold decode_invocation_def decodeInvocation_def)
   apply (case_tac cap, simp_all only: cap.simps)
@@ -192,11 +191,11 @@ lemma decodeInvocation_corres:
             apply (rule corres_guard_imp, rule decodeUntypedInvocation_corres)
                 apply ((clarsimp simp:cte_wp_at_caps_of_state)+)[3]
              \<comment> \<open>(Async)Endpoint\<close>
-             apply (simp add: isCap_defs returnOk_def comp_apply)
+             apply (simp add: isCap_defs returnOk_def)
             apply (simp add: isCap_defs)
-            apply (clarsimp simp: returnOk_def comp_apply neq_Nil_conv)
+            apply (clarsimp simp: returnOk_def neq_Nil_conv)
            \<comment> \<open>ReplyCap\<close>
-           apply (simp add: isCap_defs Let_def returnOk_def comp_apply)
+           apply (simp add: isCap_defs Let_def returnOk_def)
           \<comment> \<open>CNodeCap\<close>
           apply (rename_tac word nat list)
           apply (simp add: isCap_defs Let_def CanModify_def
@@ -210,9 +209,9 @@ lemma decodeInvocation_corres:
          \<comment> \<open>ThreadCap\<close>
          apply (simp add: isCap_defs Let_def CanModify_def
                      split del: if_split cong: if_cong)
+         apply (clarsimp simp add: o_def)
          apply (rule corres_guard_imp)
-           apply (clarsimp simp add: o_def)
-           apply (rule decodeTCBInvocation_corres, rule refl,
+         apply (rule decodeTCBInvocation_corres, rule refl,
                   simp_all add: valid_cap_def valid_cap'_def)[3]
          apply (simp add: split_def)
          apply (rule list_all2_conj)
@@ -224,12 +223,8 @@ lemma decodeInvocation_corres:
           apply (rule decodeDomainInvocation_corres)
            apply (simp+)[4]
        \<comment> \<open>SchedContextCap\<close>
-       apply (clarsimp simp: isCap_defs)
-       apply (rule corres_guard_imp)
-         apply (clarsimp simp: o_def)
-         apply (erule decode_sc_inv_corres)
-        apply (clarsimp simp: valid_cap_def)
-       apply clarsimp
+       apply (clarsimp simp: isCap_defs o_def)
+       apply (rule corres_guard_imp, erule decode_sc_inv_corres; clarsimp simp: valid_cap_def)
       \<comment> \<open>SchedControlCap\<close>
       apply (clarsimp simp: isCap_defs o_def)
       apply (rule corres_guard_imp, rule decode_sc_ctrl_inv_corres; clarsimp)
@@ -434,12 +429,11 @@ lemma performInvocation_corres:
             and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active')
      (perform_invocation block call can_donate i) (performInvocation block call can_donate i')"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (simp add: performInvocation_def)
   apply add_sym_refs
   apply (case_tac i)
 
-             apply (clarsimp simp: liftE_bindE)
+             apply (clarsimp simp: o_def liftE_bindE)
              apply (rule corres_stateAssertE_add_assertion)
              apply (rule corres_guard_imp)
                 apply (rule corres_split_norE)
@@ -474,7 +468,7 @@ lemma performInvocation_corres:
              apply (simp add: liftE_bindE)
              apply (rule corres_split[OF sendSignal_corres])
                apply (rule corres_trivial)
-               apply (simp add: returnOk_def comp_apply)
+               apply (simp add: returnOk_def)
               apply wpsimp+
           apply (rule corres_guard_imp)
             apply (rule corres_split_eqr[OF getCurThread_corres])
@@ -499,7 +493,7 @@ lemma performInvocation_corres:
          apply (rule corres_splitEE)
             apply (simp)
             apply (erule invokeSchedContext_corres)
-           apply (rule corres_trivial, simp add: returnOk_def comp_apply)
+           apply (rule corres_trivial, simp add: returnOk_def)
           apply (wpsimp+)[4]
       \<comment> \<open>SchedControl\<close>
       apply clarsimp
@@ -515,18 +509,14 @@ lemma performInvocation_corres:
       apply (rule corres_guard_imp)
         apply (rule corres_splitEE[OF invokeCNode_corres])
            apply assumption
-          apply (rule corres_trivial, simp add: returnOk_def comp_apply)
+          apply (rule corres_trivial, simp add: returnOk_def)
          apply wp+
        apply (clarsimp+)[2]
      apply (clarsimp simp: sym_refs_asrt_def)
-    apply clarsimp
-    apply (rule corres_guard_imp)
-      apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
-      apply (fastforce intro: performIRQControl_corres)+
-   apply clarsimp
-   apply (rule corres_guard_imp)
-     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
-     apply (fastforce intro: invokeIRQHandler_corres)+
+    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
+    apply (rule corres_guard_imp, rule performIRQControl_corres; fastforce)
+   apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
+   apply (rule corres_guard_imp, rule invokeIRQHandler_corres; fastforce)
   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule arch_performInvocation_corres, assumption)
@@ -1267,7 +1257,7 @@ lemma handleInvocation_corres:
           invs'
           (handle_invocation call blocking can_donate first_phase cptr)
           (handleInvocation call blocking can_donate first_phase cptr')"
-  supply opt_mapE[elim!] comp_apply[simp del]
+  supply opt_mapE[elim!]
   apply add_cur_tcb'
   apply add_ct_not_inQ
   apply add_valid_idle'
@@ -1283,12 +1273,12 @@ lemma handleInvocation_corres:
     apply (rule corres_split_eqr[OF getCurThread_corres])
       apply (rule corres_split [OF getMessageInfo_corres])
         apply (rule syscall_corres)
-                apply (rule hinv_corres_assist, simp add: comp_apply)
+                apply (rule hinv_corres_assist, simp)
                apply (rule corres_when[OF _ handleFault_corres]; simp)
               apply (simp only: split_def)
               apply (rule corres_split[OF getMRs_corres])
-                 apply (simp add: comp_apply)
-                apply (rule decodeInvocation_corres; simp add: comp_apply)
+                 apply simp
+                apply (rule decodeInvocation_corres; simp)
                  apply (fastforce simp: list_all2_map2 list_all2_map1 elim: list_all2_mono)
                 apply (fastforce simp: list_all2_map2 list_all2_map1 elim: list_all2_mono)
                apply simp
@@ -1469,7 +1459,6 @@ lemma handleSend_corres:
            and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s))
           (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
-  supply comp_apply[simp del]
   apply add_cur_tcb'
   apply (simp add: handle_send_def handleSend_def)
   apply (rule corres_guard_imp)
@@ -1582,7 +1571,6 @@ lemma handleRecv_isBlocking_corres':
                      and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s))
                     (handle_recv isBlocking canReply) (handleRecv isBlocking canReply)"
   (is "corres dc (?pre1) (?pre2) (handle_recv _ _) (handleRecv _ _)")
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   unfolding handle_recv_def handleRecv_def Let_def
   apply add_cur_tcb'
   apply (rule_tac Q'="ct_active'" in corres_cross_add_guard)
@@ -1659,7 +1647,7 @@ lemma handleRecv_isBlocking_corres':
                        apply simp
                        apply wp
                       apply (wp getNotification_wp)
-                     apply (clarsimp simp: comp_apply)
+                     apply clarsimp
                     apply (wpsimp wp: hoare_vcg_imp_lift' simp: valid_fault_def)+
    apply (frule valid_sched_valid_release_q)
    apply (frule valid_release_q_distinct)
@@ -1737,7 +1725,6 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
      invs'
      (end_timeslice canTimeout) (endTimeslice canTimeout)"
   (is "corres _ ?pre ?pre' _ _")
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   unfolding end_timeslice_def endTimeslice_def isValidTimeoutHandler_def bind_assoc
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
@@ -1986,7 +1973,6 @@ lemma chargeBudget_corres:
      invs'
      (charge_budget consumed canTimeout) (chargeBudget consumed canTimeout True)"
   (is "corres _ (?pred and _ and cur_sc_offset_ready 0) _ _ _")
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   unfolding chargeBudget_def charge_budget_def ifM_def bind_assoc
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply clarsimp
@@ -2161,7 +2147,7 @@ lemma handleYield_corres:
      invs'
      handle_yield handleYield"
   (is "corres _ ?pre ?pre' _ _")
-  supply opt_mapE[elim!] opt_map_Some_comp[simp del]
+  supply opt_mapE[elim!]
   apply (rule_tac Q'=ct_active' in corres_cross_add_guard)
    apply (fastforce intro!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
@@ -2294,7 +2280,6 @@ lemma handleCall_corres:
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
          handle_call handleCall"
-  supply comp_apply[simp del]
   apply add_cur_tcb'
   apply (simp add: handle_call_def handleCall_def liftE_bindE handleInvocation_corres)
   apply (rule corres_stateAssertE_add_assertion[rotated])
@@ -2688,7 +2673,6 @@ lemma updateTimeStamp_checkBudgetRestart_helper:
                restart <- checkBudgetRestart;
                when restart f'
             od)"
-  supply comp_apply[simp del]
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF updateTimeStamp_corres])
       apply (rule_tac P="\<lambda> s. (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
@@ -2737,7 +2721,6 @@ lemma updateTimeStamp_checkBudgetRestart_helperE:
                restart <- liftE checkBudgetRestart;
                whenE restart f'
             odE)"
-  supply comp_apply[simp del]
   apply (rule corres_guard_imp)
     apply (rule corres_split_liftEE[OF updateTimeStamp_corres])
       apply (rule_tac P="\<lambda> s. (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
@@ -2805,7 +2788,6 @@ proof -
                      elim!: st_tcb_weakenE pred_tcb'_weakenE)+
     done
   show ?thesis
-    supply opt_map_Some_comp[simp del] comp_apply[simp del]
     apply (rule corres_cross_add_abs_guard[where Q="\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_released s"])
      apply (simp only: schact_is_rct_def[symmetric])
      apply clarsimp

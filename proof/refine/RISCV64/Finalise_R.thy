@@ -4228,11 +4228,10 @@ lemma fast_finaliseCap_corres:
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap')
            (fast_finalise cap final)
            (finaliseCap cap' final' True)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply add_sch_act_wf
   apply (cases cap, simp_all add: finaliseCap_def isCap_simps final_matters'_def
                                   corres_liftM2_simp[unfolded liftM_def]
-                                  dc_def[symmetric] when_def
+                                  o_def dc_def[symmetric] when_def
                                   can_fast_finalise_def capRemovable_def
                        split del: if_split cong: if_cong)
     (* EndpointCap *)
@@ -4268,11 +4267,11 @@ lemma fast_finaliseCap_corres:
       apply wpfix
       apply (rule replyClear_corres)
      apply (wpsimp wp: get_simple_ko_wp)+
-   apply (clarsimp simp: valid_cap_def valid_sched_valid_ready_qs comp_apply)
+   apply (clarsimp simp: valid_cap_def valid_sched_valid_ready_qs)
    apply (drule reply_tcb_state_refs;
           fastforce simp: pred_tcb_at_def obj_at_def is_blocked_thread_state_defs
                     elim: reply_object.elims)
-  apply (clarsimp simp: valid_cap'_def comp_apply)
+  apply (clarsimp simp: valid_cap'_def)
   apply (rule pred_tcb'_weakenE, erule sym_ref_replyTCB_Receive_or_Reply; fastforce)
   done
 
@@ -4327,7 +4326,6 @@ lemma schedContextUnbindTCB_corres:
   "corres dc (invs and valid_sched and sc_tcb_sc_at bound sc_ptr)
              (invs' and obj_at' (\<lambda>sc. bound (scTCB sc)) sc_ptr)
           (sched_context_unbind_tcb sc_ptr) (schedContextUnbindTCB sc_ptr)"
-  supply opt_map_Some_comp[simp del]
   apply (clarsimp simp: sched_context_unbind_tcb_def schedContextUnbindTCB_def
                         sym_refs_asrt_def valid_idle'_asrt_def cur_tcb'_asrt_def)
   apply add_sym_refs
@@ -4370,7 +4368,6 @@ lemma schedContextUnbindTCB_corres:
 lemma unbindFromSC_corres:
   "corres dc (einvs and tcb_at t and K (t \<noteq> idle_thread_ptr)) (invs' and tcb_at' t)
           (unbind_from_sc t) (unbindFromSC t)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (clarsimp simp: unbind_from_sc_def unbindFromSC_def maybeM_when)
   apply (rule corres_gen_asm)
   apply add_sym_refs
@@ -4575,7 +4572,6 @@ lemma finaliseCap_corres:
                    \<and> (final_matters' cap' \<longrightarrow>
                         final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
            (finalise_cap cap final) (finaliseCap cap' final' flag)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (case_tac "can_fast_finalise cap")
    apply (simp add: can_fast_finalise_finalise_cap)
    apply (subst can_fast_finalise_finaliseCap,
@@ -4587,7 +4583,8 @@ lemma finaliseCap_corres:
        apply (rule corres_returnTT)
        apply wpsimp+
   apply (cases cap, simp_all add: finaliseCap_def isCap_simps
-                                  corres_liftM2_simp[unfolded liftM_def] dc_def[symmetric] when_def
+                                  corres_liftM2_simp[unfolded liftM_def]
+                                  o_def dc_def[symmetric] when_def
                                   can_fast_finalise_def
                        split del: if_split cong: if_cong)
        (* CNodeCap *)
@@ -4596,7 +4593,7 @@ lemma finaliseCap_corres:
       apply add_valid_idle'
       apply (rename_tac tptr)
       apply (clarsimp simp: final_matters'_def getThreadCSpaceRoot
-                            liftM_def[symmetric] zbits_map_def)
+                            liftM_def[symmetric] o_def zbits_map_def)
       apply (rule corres_stateAssert_add_assertion[rotated])
        apply (clarsimp simp: valid_idle'_asrt_def)
       apply (rule_tac P="K (tptr \<noteq> idle_thread_ptr)" and P'="K (tptr \<noteq> idle_thread_ptr)"
@@ -4615,7 +4612,8 @@ lemma finaliseCap_corres:
       apply (clarsimp simp: valid_cap'_def)
      (* SchedContextCap *)
      apply (rename_tac scptr n)
-     apply (clarsimp simp: final_matters'_def liftM_def[symmetric] dc_def[symmetric])
+     apply (clarsimp simp: final_matters'_def liftM_def[symmetric]
+                           o_def dc_def[symmetric])
      apply (rule_tac P="K (scptr \<noteq> idle_sc_ptr)" and P'="K (scptr \<noteq> idle_sc_ptr)"
             in corres_add_guard)
       apply clarsimp
@@ -4632,10 +4630,10 @@ lemma finaliseCap_corres:
       apply (clarsimp simp: valid_cap_def)
      apply (clarsimp simp: valid_cap'_def sc_at'_n_sc_at')
     (* IRQHandlerCap *)
-    apply (clarsimp simp: final_matters'_def liftM_def[symmetric])
+    apply (clarsimp simp: final_matters'_def liftM_def[symmetric]
+                          o_def dc_def[symmetric])
     apply (rule corres_guard_imp)
-      apply (simp add: o_def)
-      apply (rule deletingIRQHandler_corres[unfolded dc_def])
+      apply (rule deletingIRQHandler_corres)
      apply simp
     apply simp
    (* ZombieCap *)

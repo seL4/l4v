@@ -140,7 +140,6 @@ lemma restart_corres:
           (einvs and tcb_at t and ex_nonz_cap_to t and current_time_bounded)
           (invs' and tcb_at' t and ex_nonz_cap_to' t)
           (Tcb_A.restart t) (ThreadDecls_H.restart t)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def test_possible_switch_to_def
                    get_tcb_obj_ref_def)
   apply (simp add: isStopped_def2 liftM_def)
@@ -150,7 +149,7 @@ lemma restart_corres:
          apply (clarsimp simp: tcb_relation_def)
         apply (rename_tac scOpt)
         apply (rule corres_when2)
-         apply (simp add: idle_tsr runnable_tsr comp_apply)
+         apply (simp add: idle_tsr runnable_tsr)
         apply (rule corres_split_nor[OF cancel_ipc_corres])
           apply (rule corres_split_nor[OF setThreadState_corres])
              apply (clarsimp simp: thread_state_relation_def)
@@ -222,7 +221,7 @@ lemma restart_corres:
         apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' t and ex_nonz_cap_to' t and st_tcb_at' simple' t"
                in hoare_strengthen_post)
          apply wpsimp
-        apply (fastforce simp: invs'_def sch_act_wf_weak valid_pspace'_def comp_apply
+        apply (fastforce simp: invs'_def sch_act_wf_weak valid_pspace'_def
                          elim: pred_tcb'_weakenE)[1]
        apply (wpsimp wp: gts_wp gts_wp' thread_get_wp' wp_del: thread_get_inv)+
    apply (frule invs_psp_aligned, frule invs_distinct)
@@ -352,7 +351,6 @@ lemma invokeTCB_WriteRegisters_corres:
           (invs' and tcb_at' dest and ex_nonz_cap_to' dest)
           (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
           (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (simp add: invokeTCB_def performTransfer_def arch_get_sanitise_register_info_def
                    frameRegisters_def gpRegisters_def getSanitiseRegisterInfo_def
                    sanitiseRegister_def sanitise_register_def)
@@ -428,7 +426,6 @@ proof -
      apply (simp | fastforce)+
     done
   show ?thesis
-    supply opt_map_Some_comp[simp del] comp_apply[simp del]
     apply (simp add: invokeTCB_def performTransfer_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF corres_when [OF refl suspend_corres]], simp)
@@ -794,7 +791,6 @@ lemma reorderNtfn_corres:
           \<and> none_top (\<lambda>q. priority_ordered (filter ((\<noteq>) t) q) (prios_of s)) (ntfn_queues_of s ntfn_ptr))
      (invs' and st_tcb_at' (\<lambda>st. ntfnBlocked st = Some ntfn_ptr) t)
      (reorder_ntfn ntfn_ptr t) (reorderNtfn ntfnPtr t)"
-  supply opt_map_Some_comp[simp del]
   apply add_sym_refs
   apply (clarsimp simp: reorder_ntfn_def reorderNtfn_def)
   apply (rule corres_stateAssert_assume)
@@ -864,7 +860,6 @@ lemma reorderEp_corres:
           \<and> none_top (\<lambda>q. priority_ordered (filter ((\<noteq>) t) q) (prios_of s)) (ep_queues_of s ep_ptr))
      invs'
      (reorder_ep ep_ptr t) (reorderEp epPtr t)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply add_sym_refs
   apply (rule_tac Q'="ep_at' epPtr" in corres_cross_add_guard)
    apply (fastforce intro!: ep_at_cross simp: vs_all_heap_simps obj_at_def is_tcb_def)
@@ -1043,8 +1038,7 @@ lemma setPriority:
      (einvs and tcb_at t and ct_not_in_release_q)
      (invs' and (\<lambda>_. prio \<le> maxPriority))
      (set_priority t prio) (setPriority t prio)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
-         if_split[split del]
+  supply if_split[split del]
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
   apply (simp add: setPriority_def set_priority_def runnable'_case_thread_state_If)
@@ -1691,7 +1685,6 @@ lemma installThreadBuffer_corres:
                            (case_option True (\<lambda>(ac, _). isArchObjectCap ac) v)) g'))
          (install_tcb_frame_cap a slot g)
          (installThreadBuffer a sl' g')"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   using assms
   apply -
   apply (simp only: install_tcb_frame_cap_def installThreadBuffer_def K_def)
@@ -1816,7 +1809,7 @@ lemma tc_corres_caps:
             apply (rule corres_split_norE)
                apply (rule installThreadBuffer_corres; clarsimp)
               apply (rule corres_trivial, clarsimp simp: returnOk_def)
-             apply (wpsimp simp_del: comp_apply opt_map_Some_comp)+
+             apply wpsimp+
            apply (wpsimp wp: install_tcb_cap_invs hoare_case_option_wpR)
           apply (wpsimp wp: installTCBCap_invs' hoare_case_option_wpR)
          apply ((wp hoare_case_option_wpR hoare_vcg_all_liftE_R hoare_vcg_const_imp_liftE_R
@@ -2168,7 +2161,6 @@ lemma tc_corres_sched:
     (invs' and tcb_inv_wf' tc_inv_sched')
     (invoke_tcb tc_inv_sched)
     (invokeTCB tc_inv_sched')"
-  supply opt_map_Some_comp[simp del]
   using assms
   apply -
   apply add_sym_refs
@@ -2481,7 +2473,6 @@ lemma invokeTCB_corres:
                 and current_time_bounded and ct_released and ct_active and ct_not_in_release_q)
          (invs' and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
           apply (rule corres_guard_imp[OF invokeTCB_WriteRegisters_corres], fastforce+)[1]
          apply (rule corres_guard_imp[OF invokeTCB_ReadRegisters_corres], simp+)[1]
@@ -2491,16 +2482,10 @@ lemma invokeTCB_corres:
       apply (clarsimp simp del: invoke_tcb.simps)
       apply (rename_tac word a b sc_fault_h mcp prio sc_opt sl' sc_fault_h')
       apply (rule corres_guard_imp[OF tc_corres_sched]; clarsimp)
-     apply (rule corres_guard_imp)
-       apply (clarsimp simp: invokeTCB_def liftM_def[symmetric] dc_def[symmetric] o_def)
-       apply (rule suspend_corres)
-      apply fastforce
-     apply fastforce
-    apply (rule corres_guard_imp)
-      apply (clarsimp simp: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
-      apply (rule restart_corres)
-     apply fastforce
-    apply fastforce
+     apply (clarsimp simp: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
+     apply (rule corres_guard_imp[OF suspend_corres]; clarsimp)
+    apply (clarsimp simp: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
+    apply (rule corres_guard_imp[OF restart_corres]; clarsimp)
    apply (clarsimp simp: invokeTCB_def)
    apply (rename_tac option)
    apply (case_tac option; clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric])
@@ -2892,7 +2877,6 @@ lemma decodeSetSchedParams_corres:
        (invs' and (\<lambda>s. s \<turnstile>' cap' \<and> (\<forall>x \<in> set extras'. s \<turnstile>' (fst x))))
        (decode_set_sched_params args cap slot extras)
        (decodeSetSchedParams args cap' slot' extras')"
-  supply opt_map_Some_comp[simp del]
   apply (clarsimp simp: is_cap_simps)
   apply (simp add: decode_set_sched_params_def decodeSetSchedParams_def decode_update_sc_def
                    check_handler_ep_def unlessE_whenE)

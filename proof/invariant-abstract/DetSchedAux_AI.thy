@@ -50,7 +50,7 @@ lemma set_cap_valid_sched_pred[wp]:
 
 crunch cap_insert
   for valid_sched_pred[wp]: "valid_sched_pred_strong P::'z::state_ext state \<Rightarrow> _"
-  (wp: dxo_wp_weak crunch_wps simp_del: opt_map_Some_comp)
+  (wp: dxo_wp_weak crunch_wps)
 
 crunch create_cap
   for eps_of[wp]: "\<lambda>s. P (eps_of s)"
@@ -74,7 +74,7 @@ lemma create_cap_valid_sched_pred[wp]:
 
 crunch update_cdt_list
   for valid_sched_pred[wp]: "valid_sched_pred_strong P"
-  (wp: dxo_wp_weak crunch_wps simp_del: opt_map_Some_comp)
+  (wp: dxo_wp_weak crunch_wps)
 
 lemma (in pspace_update_eq) is_sc_active_eq[iff]:
   "is_sc_active t (f s) = is_sc_active t s"
@@ -82,7 +82,7 @@ lemma (in pspace_update_eq) is_sc_active_eq[iff]:
 
 lemma store_word_offs_valid_sched_pred[wp]:
   "store_word_offs ptr offs v \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  by (wpsimp simp: store_word_offs_def wp: dmo_valid_sched_pred simp_del: opt_map_Some_comp)
+  by (wpsimp simp: store_word_offs_def wp: dmo_valid_sched_pred)
 
 lemma set_mrs_eps_of[wp]:
  "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
@@ -802,7 +802,6 @@ lemma valid_sched_tcb_state_preservation_gen:
     "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>
           f \<lbrace>\<lambda>r s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>"
   shows "\<lbrace>valid_sched and valid_machine_time and I\<rbrace> f \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  supply opt_map_Some_comp[simp del]
   apply (rule validI, clarsimp simp: valid_sched_def)
   apply (frule I, elim conjE, frule invs_valid_idle, frule invs_iflive)
   apply (frule use_valid

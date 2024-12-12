@@ -2146,7 +2146,6 @@ lemma (in delete_one) suspend_corres:
   "corres dc
      (einvs and tcb_at t) (invs' and tcb_at' t)
      (SchedContext_A.suspend t) (ThreadDecls_H.suspend t)"
-  supply opt_map_Some_comp[simp del]
   apply (simp add: SchedContext_A.suspend_def Thread_H.suspend_def)
   apply add_sym_refs
   apply (rule corres_stateAssert_add_assertion)
@@ -2416,7 +2415,6 @@ lemma cancelAllIPC_corres_helper:
                  and pspace_aligned' and pspace_distinct' and pspace_bounded'))
      (mapM_x cancel_all_ipc_loop_body list)
      (mapM_x cancelAllIPC_loop_body list)"
-  supply opt_map_Some_comp[simp del]
   unfolding cancel_all_ipc_loop_body_def cancelAllIPC_loop_body_def
   apply (rule_tac S="{t. (fst t = snd t) \<and> fst t \<in> set list}" in corres_mapM_x_scheme)
           apply clarsimp
@@ -2521,7 +2519,6 @@ proof -
          mapM_x cancelAllIPC_loop_body list;
          rescheduleRequired
      od)" (is "\<And>list. _ \<Longrightarrow> corres _ (?abs_guard list) (?conc_guard list) _ _")
-    supply comp_apply[simp del] opt_map_Some_comp[simp del]
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF setEndpoint_corres])
          apply (simp add: ep_relation_def)
@@ -2635,7 +2632,6 @@ lemma ntfn_cancel_corres_helper:
                           possibleSwitchTo t
                        od) list)"
   (is "corres _ _ ?conc_guard _ _")
-  supply opt_map_Some_comp[simp del]
   apply (rule corres_gen_asm')
   apply (rule corres_cross_over_guard[where Q="?conc_guard and cur_tcb'"])
    apply (fastforce simp: cur_tcb_cross)
@@ -2743,7 +2739,6 @@ lemma cancelAllSignals_corres:
   "corres dc (invs and valid_sched and ntfn_at ntfn and current_time_bounded)
              (invs' and ntfn_at' ntfn)
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
-  supply opt_map_Some_comp[simp del]
   apply add_sch_act_wf
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
   apply add_sym_refs
@@ -3478,7 +3473,6 @@ lemma restart_thread_if_no_fault_valid_sched_blocked_on_send:
         \<and> (epptr, TCBBlockedSend) \<in> state_refs_of s t \<and> t \<noteq> idle_thread s\<rbrace>
    restart_thread_if_no_fault t
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  supply opt_map_Some_comp[simp del]
   apply (wpsimp wp: restart_thread_if_no_fault_valid_sched gts_wp)
   apply (frule valid_sched_released_ipc_queues)
   apply (frule TCBBlockedSend_in_state_refs_of)
@@ -3516,7 +3510,6 @@ lemma cancelBadgedSends_corres:
   "corres dc (invs and valid_sched and ep_at epptr and current_time_bounded)
              (invs' and ep_at' epptr)
          (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply add_sym_refs
   apply add_sch_act_wf
   apply (clarsimp simp: cancel_badged_sends_def cancelBadgedSends_def)

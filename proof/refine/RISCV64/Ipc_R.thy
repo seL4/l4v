@@ -2280,7 +2280,6 @@ lemma tcbEPAppend_corres:
       and (\<lambda>s. distinct qs))
      \<top>
      (tcb_ep_append t qs) (tcbEPAppend t qs)"
-  supply opt_map_Some_comp[simp del]
   apply (rule corres_gen_asm)
   apply (clarsimp simp: tcb_ep_append_def tcbEPAppend_def split del: if_split)
   apply (rule corres_stateAssert_ignore)
@@ -2410,7 +2409,6 @@ lemma sendIPC_corres:
               and scheduler_act_not t and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s))
              invs'
              (send_ipc bl call bg cg cgr cd t ep) (sendIPC bl call bg cg cgr cd t ep)"
-  supply opt_map_Some_comp[simp del]
   apply (insert assms)
   apply add_sym_refs
   apply add_valid_idle'
@@ -4295,7 +4293,6 @@ lemma set_notification_in_correct_ready_q[wp]:
 lemma sendSignal_corres:
   "corres dc (einvs and ntfn_at ep and current_time_bounded) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
-  supply opt_map_Some_comp[simp del]
   apply (simp add: send_signal_def sendSignal_def Let_def)
   apply add_sym_refs
   apply add_valid_idle'
@@ -4861,7 +4858,7 @@ lemma completeSignal_corres:
        and valid_sched and current_time_bounded)
       (ntfn_at' ntfnptr and tcb_at' tcb and invs' and obj_at' isActive ntfnptr)
       (complete_signal ntfnptr tcb) (completeSignal ntfnptr tcb)"
-  supply opt_mapE[elim!] opt_map_Some_comp[simp del] comp_apply[simp del]
+  supply opt_mapE[elim!]
   apply (simp add: complete_signal_def completeSignal_def)
   apply (rule corres_guard_imp)
     apply (rule_tac R'="\<lambda>ntfn. ntfn_at' ntfnptr and tcb_at' tcb and invs'
@@ -5289,7 +5286,6 @@ lemma receiveIPC_corres:
              (invs' and tcb_at' thread and valid_cap' cap' and valid_cap' replyCap)
              (receive_ipc thread cap isBlocking reply_cap) (receiveIPC thread cap' isBlocking replyCap)"
     (is "corres _ (_ and ?tat and ?tex and ?rrefs) _ _ _")
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply add_sch_act_wf
   apply add_valid_idle'
   supply if_split [split del]
@@ -5418,13 +5414,13 @@ lemma receiveIPC_corres:
                                apply (frule valid_objs_valid_tcbs)
                                apply (frule pred_tcb_at_tcb_at)
                                apply (frule (1) valid_sched_scheduler_act_not_better[OF _ st_tcb_weakenE])
-                                apply (clarsimp simp: is_blocked_on_send_def comp_apply)
+                                apply (clarsimp simp: is_blocked_on_send_def)
                                apply (frule (1) not_idle_thread', clarsimp simp: is_blocked_on_send_def)
                                apply (clarsimp simp: valid_sched_def valid_idle_def
                                               split: if_splits cong: conj_cong)
                                apply (prop_tac "not_in_release_q sender s")
                                 apply (erule valid_release_q_not_in_release_q_not_runnable)
-                                apply (fastforce simp: st_tcb_at_def obj_at_def runnable_eq_active comp_apply)
+                                apply (fastforce simp: st_tcb_at_def obj_at_def runnable_eq_active)
                                apply (subgoal_tac "replyOpt \<noteq> None \<longrightarrow> the replyOpt \<notin> fst ` replies_with_sc s")
                                 apply (prop_tac "st_tcb_at (\<lambda>st. reply_object st = None) sender s")
                                  apply (fastforce elim!: pred_tcb_weakenE simp: is_blocked_on_send_def)
@@ -5473,8 +5469,7 @@ lemma receiveIPC_corres:
                           apply (clarsimp simp: vs_all_heap_simps)
                           apply (drule_tac t=t in valid_release_q_not_in_release_q_not_runnable
                                                                    [OF valid_sched_valid_release_q])
-                           apply (clarsimp simp: is_blocked_on_send_def pred_tcb_at_def obj_at_def
-                                                 comp_apply)
+                           apply (clarsimp simp: is_blocked_on_send_def pred_tcb_at_def obj_at_def)
                           apply clarsimp
                          apply (wpsimp wp: thread_get_wp')
                         apply (wpsimp wp: threadGet_wp)
@@ -5526,7 +5521,7 @@ lemma receiveIPC_corres:
                            split: list.splits if_splits)
                  apply (frule (2) ri_preamble_not_in_sc)
                  apply (frule_tac y=sender in valid_sched_scheduler_act_not_better)
-                  apply (fastforce simp: st_tcb_at_refs_of_rev comp_apply elim: st_tcb_weakenE)
+                  apply (fastforce simp: st_tcb_at_refs_of_rev elim: st_tcb_weakenE)
                  apply (prop_tac "ex_nonz_cap_to epptr s")
                   apply (fastforce simp: live_def obj_at_def is_ep elim!: if_live_then_nonz_capD2)
                  apply (case_tac "queue = []")
@@ -5536,7 +5531,7 @@ lemma receiveIPC_corres:
                   apply (frule valid_sched_sorted_ipc_queues)
                   apply (frule_tac ptr=epptr and q="sender # queue"
                                 in sorted_ipc_queues_endpoint_priority_ordered)
-                   apply (clarsimp simp: opt_map_def obj_at_def comp_apply eps_of_kh_def)
+                   apply (clarsimp simp: opt_map_def obj_at_def eps_of_kh_def)
                   apply (force elim!: sorted_wrt_subseq)
                  apply (fastforce simp: st_tcb_at_refs_of_rev elim: st_tcb_weakenE)
                 apply (fastforce simp: valid_ep'_def invs'_def split: list.split)
@@ -5561,7 +5556,6 @@ lemma receiveIPC_corres:
                 apply (fastforce dest!: valid_sched_sorted_ipc_queues
                                         sorted_ipc_queues_endpoint_priority_ordered
                                   simp: sorted_ipc_queues_def opt_map_def obj_at_def eps_of_kh_def
-                                        comp_apply
                                  split: option.splits)
                apply (clarsimp simp: invs'_def valid_pspace'_def valid_ep'_def)
                apply fastforce
@@ -5801,7 +5795,6 @@ lemma sendFaultIPC_corres:
           (invs' and valid_cap' cap')
           (send_fault_ipc thread cap f can_donate)
           (sendFaultIPC thread cap' f' can_donate)"
-  supply opt_map_Some_comp[simp del]
   using assms
   apply (clarsimp simp: send_fault_ipc_def sendFaultIPC_def)
   apply (rule corres_gen_asm)
@@ -6827,7 +6820,6 @@ lemma handleFault_corres:
                          and ex_nonz_cap_to t and K (valid_fault f))
                    (invs' and sch_act_not t and st_tcb_at' active' t and ex_nonz_cap_to' t)
                    (handle_fault t f) (handleFault t f')"
-  supply opt_map_Some_comp[simp del] comp_apply[simp del]
   apply add_valid_idle'
   using assms
   apply (simp add: handle_fault_def handleFault_def)
@@ -6966,7 +6958,6 @@ lemma doReplyTransfer_corres:
      invs'
      (do_reply_transfer sender reply grant)
      (doReplyTransfer sender reply grant)"
-  supply opt_map_Some_comp[simp del]
   apply add_cur_tcb'
   supply if_split [split del] subst_all[simp del] opt_mapE[elim!]
   apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
@@ -7257,7 +7248,7 @@ lemma doReplyTransfer_corres:
                      apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
                      apply (fastforce dest: global'_no_ex_cap simp: invs'_def split: if_split)
                     apply (wpsimp wp: threadSet_fault_invs' threadSet_pred_tcb_no_state threadSet_cur)
-                   apply (wpsimp simp_del: comp_apply)+
+                   apply wpsimp+
                apply (wpsimp wp: thread_get_wp')
               apply (wpsimp wp: threadGet_wp)
              apply (rule_tac Q'="\<lambda>_. tcb_at sender and tcb_at recvr and invs and valid_list and
@@ -7268,8 +7259,7 @@ lemma doReplyTransfer_corres:
                     in hoare_strengthen_post[rotated])
               apply (clarsimp simp: valid_sched_def invs_def valid_state_def valid_pspace_def
                                     pred_tcb_at_def obj_at_def
-                             dest!: idle_no_ex_cap
-                          simp del: comp_apply)
+                             dest!: idle_no_ex_cap)
              apply (wpsimp wp: refill_unblock_check_valid_sched
                          simp: if_cond_refill_unblock_check_def)
             apply (rule_tac Q'="\<lambda>_. tcb_at' recvr and invs' and tcb_at' sender
@@ -7286,8 +7276,7 @@ lemma doReplyTransfer_corres:
                    current_time_bounded"
                 in hoare_strengthen_post[rotated])
           apply (clarsimp simp: valid_sched_def invs_def valid_state_def valid_pspace_def
-                         dest!: idle_no_ex_cap
-                      simp del: comp_apply)
+                         dest!: idle_no_ex_cap)
           apply (erule disjE;
                  clarsimp simp: vs_all_heap_simps obj_at_def is_sc_obj opt_map_red opt_pred_def)
           apply (rule conjI)

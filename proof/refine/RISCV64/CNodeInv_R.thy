@@ -6944,7 +6944,6 @@ proof (induct rule: rec_del.induct,
                       red_zombie_will_fail.simps ball_simps(5))
   case (1 slot exposed)
   show ?case
-    supply opt_map_Some_comp[simp del] comp_apply[simp del]
     apply (clarsimp simp: cteDelete_def liftME_def bindE_assoc
                           split_def)
     apply (rule spec_corres_guard_imp)
@@ -6966,7 +6965,6 @@ next
     "\<And>P Q. \<lbrakk> P \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> (P \<longrightarrow> Q) = True"
     by simp
   show ?case
-    supply opt_map_Some_comp[simp del] comp_apply[simp del]
     apply (simp only: rec_del_concrete_unfold finaliseSlot_def)
     apply (subst rec_del_simps_ext)
     apply (subst finaliseSlot'_simps_ext)
@@ -6979,7 +6977,7 @@ next
         apply (rule spec_corres_if)
           apply auto[1]
          apply (rule drop_spec_corres, rule corres_trivial,
-                simp add: returnOk_def comp_apply)
+                simp add: returnOk_def)
         apply (rule spec_corres_splitE')
            apply simp
            apply (rule isFinalCapability_corres[where ptr=slot])
@@ -6998,7 +6996,7 @@ next
              apply (rule spec_corres_if)
                apply (erule conjunct1)
               apply (rule drop_spec_corres, rule corres_trivial,
-                     simp add: returnOk_def comp_apply)
+                     simp add: returnOk_def)
              apply (rule spec_corres_if)
                apply (erule conjunct2)
               apply (rule drop_spec_corres,
@@ -7096,7 +7094,7 @@ next
           apply (clarsimp dest!: isCapDs simp: cte_wp_at_ctes_of)
           apply (case_tac "cteCap rv'",
                  auto simp add: isCap_simps is_cap_simps final_matters'_def pred_tcb_at'_def
-                                obj_at'_def comp_apply)[1]
+                                obj_at'_def)[1]
          apply (wpsimp wp: isFinal[where x="cte_map slot"]
                      simp: is_final_cap_def)
         apply (wpsimp wp: isFinalCapability_inv hoare_weak_lift_imp isFinal
@@ -7594,7 +7592,6 @@ lemma cteRevoke_corres':
 proof (induct rule: cap_revoke.induct)
   case (1 slot s')
   show ?case
-    supply comp_apply[simp del] opt_map_Some_comp[simp del]
     apply (subst cap_revoke.simps)
     apply (subst cteRevoke.simps[abs_def])
     apply (simp add: liftE_bindE next_revoke_cap_def select_ext_def bind_assoc)
@@ -8654,7 +8651,6 @@ lemma invokeCNode_corres:
       and current_time_bounded)
      (invs' and valid_cnode_inv' ci')
      (invoke_cnode ci) (invokeCNode ci')"
-  supply comp_apply[simp del] opt_map_Some_comp[simp del]
   apply (simp add: invoke_cnode_def invokeCNode_def)
   apply (cases ci, simp_all)
        apply clarsimp
@@ -8684,7 +8680,7 @@ lemma invokeCNode_corres:
      apply (simp add: invs_def valid_state_def valid_pspace_def
                       real_cte_tcb_valid valid_cap_def2)
     apply (clarsimp simp: invs'_def valid_pspace'_def
-                          cte_wp_at_ctes_of weak_derived'_def comp_apply)
+                          cte_wp_at_ctes_of weak_derived'_def)
    apply (simp split del: if_split)
    apply (rule_tac F = "cte_map p1 \<noteq> cte_map p3" in corres_req)
     apply clarsimp
