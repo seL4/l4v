@@ -2273,6 +2273,12 @@ lemma in_set_zipD:
   "t \<in> set (zip xs ys) \<Longrightarrow> fst t \<in> set xs \<and> snd t \<in> set ys"
   by (clarsimp simp add: set_zip)
 
+lemma set_map_fst_filter_zip:
+  "set (map fst (filter P (zip xs ys))) \<subseteq> set xs"
+  apply (induct xs, simp)
+  apply (case_tac ys; simp)
+  by (metis (mono_tags, lifting) image_Collect_subsetI insertI2 in_set_zipD)
+
 lemma map_zip_snd_take:
   "map (\<lambda>(x, y). f y) (zip xs ys) = map f (take (length xs) ys)"
   apply (subst map_zip_snd' [symmetric, where xs=xs and ys="take (length xs) ys"], simp)
