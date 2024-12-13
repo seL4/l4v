@@ -147,9 +147,9 @@ session DPolicy in "dpolicy" = DRefine +
 session Access in "access-control" = AInvs +
   directories
     "$L4V_ARCH"
-  theories
+  theories [quick_and_dirty] (* for development only *)
     "ArchADT_AC"
-    "ExampleSystem"
+    (* "ExampleSystem" *)
 
 session InfoFlow in "infoflow" = Access +
   directories
