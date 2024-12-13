@@ -93,34 +93,6 @@ lemma sfi_tcb_at [wp]:
     \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
   by (wpsimp simp: send_fault_ipc_def)
 
-(* FIXME RT: move these wp and sp rules for mapM? *)
-lemma mapM_gets_the_wp:
-  "\<lbrace>\<lambda>s. \<forall>vs. map (\<lambda>t. f t s) ts = map Some vs \<longrightarrow> P vs s\<rbrace>
-   mapM (gets_the \<circ> f) ts
-   \<lbrace>P\<rbrace>"
-unfolding comp_def
-proof (induct ts arbitrary: P)
-  case Nil thus ?case by (wpsimp simp: mapM_Nil)
-next
-  case (Cons x xs) show ?case by (wpsimp simp: mapM_Cons wp: Cons)
-qed
-
-lemma mapM_gets_the_wp':
-  "\<lbrace>\<lambda>s. \<forall>vs. (\<forall>i < length vs. f (ts ! i) s = Some (vs ! i)) \<longrightarrow> P vs s\<rbrace>
-   mapM (gets_the \<circ> f) ts
-   \<lbrace>P\<rbrace>"
-  apply (wpsimp wp: mapM_gets_the_wp)
-  by (simp add: map_equality_iff)
-
-lemma mapM_gets_the_sp:
-  "\<lbrace>P\<rbrace> mapM (gets_the \<circ> f) ts \<lbrace>\<lambda>rv s. P s \<and> map (\<lambda>t. f t s) ts = map Some rv\<rbrace>"
-  by (wpsimp wp: mapM_gets_the_wp simp: comp_def)
-
-lemma mapM_gets_the_sp':
-  "\<lbrace>P\<rbrace> mapM (gets_the \<circ> f) ts \<lbrace>\<lambda>rv s. P s \<and> (\<forall>i < length rv. f (ts ! i) s = Some (rv ! i))\<rbrace>"
-  apply (wpsimp wp: mapM_gets_the_wp simp: comp_def)
-  by (simp add: map_equality_iff)
-
 lemma distinct_map_fst_filter_zip:
   "distinct list \<Longrightarrow> distinct (map fst (filter f (zip list zp)))"
   apply (induct list rule: length_induct)

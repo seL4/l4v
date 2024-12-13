@@ -2553,8 +2553,8 @@ lemma ep_ptr_set_queue_spec:
   oops
 
 lemma valid_ep_blockedD:
-  "\<lbrakk> valid_ep' ep s; (isSendEP ep \<or> isRecvEP ep) \<rbrakk>
-   \<Longrightarrow> (epQueue ep) \<noteq> [] \<and> (\<forall>t\<in>set (epQueue ep). tcb_at' t s)"
+  "\<lbrakk> valid_ep' ep s; isSendEP ep \<or> isRecvEP ep \<rbrakk>
+   \<Longrightarrow> epQueue ep \<noteq> [] \<and> (\<forall>t\<in>set (epQueue ep). tcb_at' t s)"
   unfolding valid_ep'_def isSendEP_def isRecvEP_def
   by (clarsimp split: endpoint.splits)
 
