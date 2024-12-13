@@ -3211,7 +3211,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs:
   apply (rule hoare_gen_asm)
   apply (subgoal_tac "set (zip crefs orefs) \<subseteq> set crefs \<times> set (retype_addrs ptr tp (length slots) us)")
    prefer 2
-   apply (auto dest!: set_zip_helper)[1]
+   apply (auto dest!: in_set_zipD)[1]
   apply (induct ("zip crefs orefs"))
    apply (simp add: mapM_x_def sequence_x_def)
    apply wpsimp
@@ -3503,7 +3503,7 @@ lemma retype_region_post_retype_invs_folded:
 
 lemma tup_in_fst_image_set_zipD:
   "x \<in> fst ` set (zip xs ys) \<Longrightarrow> x \<in> set xs"
-  by (auto dest!: set_zip_helper)
+  by (auto dest!: in_set_zipD)
 
 lemma distinct_map_fst_zip:
   "distinct xs \<Longrightarrow> distinct (map fst (zip xs ys))"
