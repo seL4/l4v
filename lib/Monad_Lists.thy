@@ -512,6 +512,33 @@ lemma mapM_wp':
   apply simp
   done
 
+lemma mapM_gets_the_wp:
+  "\<lbrace>\<lambda>s. \<forall>vs. map (\<lambda>t. f t s) ts = map Some vs \<longrightarrow> P vs s\<rbrace>
+   mapM (gets_the \<circ> f) ts
+   \<lbrace>P\<rbrace>"
+  unfolding comp_def
+proof (induct ts arbitrary: P)
+  case Nil thus ?case by (wpsimp simp: mapM_Nil)
+next
+  case (Cons x xs) show ?case by (wpsimp simp: mapM_Cons wp: Cons)
+qed
+
+lemma mapM_gets_the_wp_nth:
+  "\<lbrace>\<lambda>s. \<forall>vs. (\<forall>i < length vs. f (ts ! i) s = Some (vs ! i)) \<longrightarrow> P vs s\<rbrace>
+   mapM (gets_the \<circ> f) ts
+   \<lbrace>P\<rbrace>"
+  apply (wpsimp wp: mapM_gets_the_wp)
+  by (simp add: map_equality_iff)
+
+lemma mapM_gets_the_sp:
+  "\<lbrace>P\<rbrace> mapM (gets_the \<circ> f) ts \<lbrace>\<lambda>rv s. P s \<and> map (\<lambda>t. f t s) ts = map Some rv\<rbrace>"
+  by (wpsimp wp: mapM_gets_the_wp simp: comp_def)
+
+lemma mapM_gets_the_sp_nth:
+  "\<lbrace>P\<rbrace> mapM (gets_the \<circ> f) ts \<lbrace>\<lambda>rv s. P s \<and> (\<forall>i < length rv. f (ts ! i) s = Some (rv ! i))\<rbrace>"
+  apply (wpsimp wp: mapM_gets_the_wp simp: comp_def)
+  by (simp add: map_equality_iff)
+
 lemma mapM_set:
   assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. P\<rbrace>"
   assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. Q x\<rbrace>"
