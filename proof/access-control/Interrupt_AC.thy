@@ -30,8 +30,7 @@ lemma pas_refined_is_subject_irqD:
 locale Interrupt_AC_1 =
   fixes arch_authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> arch_irq_control_invocation \<Rightarrow> bool"
   assumes arch_invoke_irq_control_pas_refined:
-    "\<lbrace>pas_refined (aag :: 'a PAS) and pspace_aligned and valid_vspace_objs and valid_arch_state
-                                  and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
+    "\<lbrace>pas_refined (aag :: 'a PAS) and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
                                   and K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
      arch_invoke_irq_control irq_ctl_inv
      \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
@@ -59,8 +58,7 @@ definition authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> Invocations_A.irq_con
      | ArchIRQControl acinv \<Rightarrow> arch_authorised_irq_ctl_inv aag acinv"
 
 lemma invoke_irq_control_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_mdb and irq_control_inv_valid irq_ctl_inv
+  "\<lbrace>pas_refined aag and valid_mdb and irq_control_inv_valid irq_ctl_inv
                     and K (authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
    invoke_irq_control irq_ctl_inv
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"

@@ -244,21 +244,21 @@ definition vcpu_switch :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_m
        cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
        (case cur_v of
           None \<Rightarrow> do \<comment> \<open>switch to the new vcpu with no current one\<close>
-            vcpu_restore new;
-            modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
+            modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>);
+            vcpu_restore new
           od
         | Some (vr, active) \<Rightarrow> \<comment> \<open>switch from an existing vcpu\<close>
             (if vr \<noteq> new
             then do \<comment> \<open>different vcpu\<close>
               vcpu_save cur_v;
-              vcpu_restore new;
-              modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
+              modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>);
+              vcpu_restore new
             od
             else \<comment> \<open>same vcpu\<close>
               when (\<not> active) $ do
                 do_machine_op isb;
-                vcpu_enable new;
-                modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
+                modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>);
+                vcpu_enable new
               od))
      od"
 

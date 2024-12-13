@@ -120,8 +120,10 @@ lemma switch_vcpu_valid_cur_vcpu_cur_thread_update[wp]:
    vcpu_switch v
    \<lbrace>\<lambda>_ s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)\<rbrace>"
   unfolding vcpu_switch_def
-  apply (wpsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def)
-  by fastforce
+  apply (wpsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def
+         | rule hoare_lift_Pf[where f=arch_state])+
+  apply fastforce
+  done
 
 lemma switch_vcpu_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. arch_tcb_at (\<lambda>itcb. itcb_vcpu itcb = v) (cur_thread s) s\<rbrace>

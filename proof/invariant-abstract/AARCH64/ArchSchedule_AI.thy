@@ -31,7 +31,12 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
 lemma arch_stt_invs [wp,Schedule_AI_assms]:
   "arch_switch_to_thread t' \<lbrace>invs\<rbrace>"
   apply (wpsimp simp: arch_switch_to_thread_def)
-  by (rule sym_refs_VCPU_hyp_live; fastforce)
+  apply (clarsimp simp: obj_at_vcpu_hyp_live_of_s[symmetric] obj_at_conj_distrib)
+  apply (rule conjI)
+   apply (fastforce dest!: valid_tcb_objs[OF invs_valid_objs]
+                     simp: valid_tcb_def valid_arch_tcb_def obj_at_def is_vcpu_def)
+  apply (rule sym_refs_VCPU_hyp_live; fastforce)
+  done
 
 lemma arch_stt_tcb [wp,Schedule_AI_assms]:
   "arch_switch_to_thread t' \<lbrace>tcb_at t'\<rbrace>"

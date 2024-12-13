@@ -8,7 +8,7 @@ theory ArchIpc_AC
 imports Ipc_AC
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Ipc_AC_assms
 
@@ -66,10 +66,6 @@ lemma tcb_context_no_change[Ipc_AC_assms]:
   apply (auto simp: arch_tcb_context_set_def)
   done
 
-lemma transfer_caps_loop_valid_arch[Ipc_AC_assms]:
-  "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
-  by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
-
 end
 
 
@@ -81,7 +77,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -231,7 +227,7 @@ global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Ipc_AC_assms)?)
+    by (unfold_locales; fact Ipc_AC_assms)
 qed
 
 end
