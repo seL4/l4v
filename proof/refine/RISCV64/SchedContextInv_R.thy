@@ -791,8 +791,6 @@ lemma invokeSchedContext_corres:
          apply wpsimp+
     apply (fastforce dest!: ex_nonz_cap_to_not_idle_sc_ptr)
    apply wpsimp
-   apply (frule invs_valid_global')
-   apply (fastforce dest!: invs_valid_pspace' global'_sc_no_ex_cap)
   apply (rule corres_guard_imp)
     apply (rule corres_rel_imp)
      apply (rule schedContextYieldTo_corres)

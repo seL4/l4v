@@ -588,14 +588,6 @@ lemma suspend_ctes_of_thread:
   apply (case_tac cte, simp)
   done
 
-lemma schedContextUnbindTCB_ctes_of[wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>
-   schedContextUnbindTCB t
-   \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
-  apply (wpsimp simp: schedContextUnbindTCB_def wp: threadSet_ctes_ofT)
-     apply (clarsimp simp: ran_def tcb_cte_cases_def cteSizeBits_def split: if_splits)
-  by wpsimp+
-
 crunch setConsumed, schedContextCompleteYieldTo, unbindNotification, unbindFromSC
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps wp: crunch_wps)

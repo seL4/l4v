@@ -393,14 +393,6 @@ where
   od"
 
 definition
-  maybe_sched_context_bind_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "maybe_sched_context_bind_tcb sc_ptr tcb_ptr = do
-     sc' \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
-     when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr tcb_ptr
-   od"
-
-definition
   sched_context_set_inactive :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_set_inactive sc_ptr = do
