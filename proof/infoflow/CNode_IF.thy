@@ -310,11 +310,6 @@ lemma set_original_globals_equiv:
   unfolding set_original_def
   by (wpsimp simp: globals_equiv_def idle_equiv_def)
 
-lemma globals_equiv_exst_update[simp]:
-  "globals_equiv st (trans_state f s) =
-   globals_equiv st s"
-  by (simp add: globals_equiv_def idle_equiv_def)
-
 lemma (in is_extended') globals_equiv: "I (globals_equiv st)" by (rule lift_inv,simp)
 
 lemma domain_sep_inv_refl:

@@ -81,23 +81,20 @@ locale Scheduler_IF_1 =
           arch_scheduler_affects_equiv s s'"
     "\<And>f. arch_scheduler_affects_equiv s (domain_time_update f s') =
           arch_scheduler_affects_equiv s s'"
-  and arch_scheduler_affects_equiv_ekheap_update[simp]:
-    "\<And>f. arch_scheduler_affects_equiv (ekheap_update f s) s' =
-          arch_scheduler_affects_equiv s s'"
-    "\<And>f. arch_scheduler_affects_equiv s (ekheap_update f s') =
-          arch_scheduler_affects_equiv s s'"
   and arch_switch_to_thread_kheap[wp]:
-    "\<And>P. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
+    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
   and arch_switch_to_idle_thread_kheap[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
   and arch_switch_to_thread_idle_thread[wp]:
-    "\<And>P. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
+    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
   and arch_switch_to_idle_thread_idle_thread[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
   and arch_switch_to_idle_thread_cur_domain[wp]:
-    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
+  and arch_switch_to_thread_domain_fields[wp]:
+    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. domain_fields P s\<rbrace>"
   and arch_switch_to_idle_thread_domain_fields[wp]:
-    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (domain_time s) (domain_index s) (domain_list s)\<rbrace>"
+    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (domain_time s) (domain_index s) (domain_list s)\<rbrace>"
   and arch_switch_to_idle_thread_globals_equiv[wp]:
     "arch_switch_to_idle_thread \<lbrace>globals_equiv st\<rbrace>"
   and arch_switch_to_idle_thread_states_equiv_for[wp]:
@@ -113,9 +110,6 @@ locale Scheduler_IF_1 =
   and equiv_asid_domain_time_update[simp]:
     "\<And>f. equiv_asid asid (domain_time_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (domain_time_update f s') = equiv_asid asid s s'"
-  and equiv_asid_ekheap_update[simp]:
-    "\<And>f. equiv_asid asid (ekheap_update f s) s' = equiv_asid asid s s'"
-    "\<And>f. equiv_asid asid s (ekheap_update f s') = equiv_asid asid s s'"
   and ackInterrupt_irq_state[wp]:
     "\<And>P. ackInterrupt irq \<lbrace>\<lambda>s. P (irq_state s)\<rbrace>"
   and thread_set_context_globals_equiv:
@@ -123,7 +117,7 @@ locale Scheduler_IF_1 =
      thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
      \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
   and arch_activate_idle_thread_cur_domain[wp]:
-    "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+    "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
   and arch_activate_idle_thread_idle_thread[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
   and arch_activate_idle_thread_irq_state_of_state[wp]:
@@ -378,10 +372,10 @@ lemma silc_dom_equiv_cur_thread_update'[simp]:
   by (simp add: silc_dom_equiv_def equiv_for_def)
 
 lemma tcb_domain_wellformed:
-  "\<lbrakk> pas_refined aag s; ekheap s t = Some a \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag t \<in> pasDomainAbs aag (tcb_domain a)"
+  "\<lbrakk> pas_refined aag s; etcbs_of s t = Some a \<rbrakk>
+     \<Longrightarrow> pasObjectAbs aag t \<in> pasDomainAbs aag (etcb_domain a)"
   apply (clarsimp simp add: pas_refined_def tcb_domain_map_wellformed_aux_def)
-  apply (drule_tac x="(t,tcb_domain a)" in bspec)
+  apply (drule_tac x="(t,etcb_domain a)" in bspec)
   apply (rule domtcbs)
   apply force+
   done
@@ -405,13 +399,17 @@ lemma set_scheduler_action_rev_scheduler[wp]:
                      equiv_asids_def domain_fields_equiv_def globals_equiv_scheduler_def
                      silc_dom_equiv_def scheduler_globals_frame_equiv_def equiv_for_def)
 
-lemma globals_equiv_scheduler_cur_thread_update[simp]:
-  "globals_equiv_scheduler st (s\<lparr>cur_thread := x\<rparr>) = globals_equiv_scheduler st s"
-  by (simp add: globals_equiv_scheduler_def idle_equiv_def)
-
-lemma globals_equiv_scheduler_trans_state_update[simp]:
-  "globals_equiv_scheduler st (trans_state f s) = globals_equiv_scheduler st s"
-  by (simp add: globals_equiv_scheduler_def idle_equiv_def)
+lemma globals_equiv_scheduler_updates[simp]:
+  "\<And>f. globals_equiv_scheduler st (cur_thread_update f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (trans_state f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (cdt_update f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (is_original_cap_update f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (scheduler_action_update f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (domain_index_update f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (cur_domain_update f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (domain_time_update f s) = globals_equiv_scheduler st s"
+  "\<And>f. globals_equiv_scheduler st (ready_queues_update f s) = globals_equiv_scheduler st s"
+  by (simp add: globals_equiv_scheduler_def idle_equiv_def)+
 
 lemma states_equiv_for_cur_thread_update[simp]:
   "states_equiv_for P Q R S s (s'\<lparr>cur_thread := x\<rparr>) = states_equiv_for P Q R S s s'"
@@ -438,23 +436,13 @@ lemma get_tcb_queue_reads_respects_scheduler[wp]:
                      equiv_for_def disjoint_iff_not_equal)
   done
 
-lemma ethread_get_reads_respects_scheduler[wp]:
-  "reads_respects_scheduler aag l (K(pasObjectAbs aag t \<in> reads_scheduler aag l)) (ethread_get f t)"
+lemma thread_get_reads_respects_scheduler[wp]:
+  "reads_respects_scheduler aag l (K(pasObjectAbs aag t \<in> reads_scheduler aag l)) (thread_get f t)"
   apply (rule gen_asm_ev)
-  apply (simp add: ethread_get_def)
+  apply (simp add: thread_get_def)
   apply wp
   apply (clarsimp simp add: scheduler_affects_equiv_def states_equiv_for_def
-                            equiv_for_def get_etcb_def)
-  done
-
-lemma ethread_get_when_reads_respects_scheduler[wp]:
-  "reads_respects_scheduler aag l (K (b \<longrightarrow> pasObjectAbs aag t \<in> reads_scheduler aag l))
-    (ethread_get_when b f t)"
-  apply (simp add: ethread_get_when_def)
-  apply (rule conjI; clarsimp)
-  using ethread_get_reads_respects_scheduler
-   apply fastforce
-  apply wp
+                            equiv_for_def get_tcb_def)
   done
 
 lemma reads_respects_scheduler_cases:
@@ -470,6 +458,7 @@ lemma reads_respects_scheduler_cases:
    apply (fastforce intro: equiv_valid_guard_imp)+
   done
 
+
 lemma tcb_action_reads_respects_scheduler[wp]:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l (pas_refined aag) (tcb_sched_action f t)"
@@ -484,7 +473,9 @@ lemma tcb_action_reads_respects_scheduler[wp]:
            apply metis
           apply wp+
     apply (clarsimp simp add: etcb_at_def split: option.splits)
-    apply (frule (1) tcb_domain_wellformed)
+    apply (frule tcb_domain_wellformed[where t=t])
+     apply (fastforce simp: etcbs_of'_def obj_at_def)
+    apply (clarsimp simp: obj_at_def)
     apply blast
    apply (simp add: tcb_sched_action_def set_tcb_queue_def)
    apply (rule reads_respects_scheduler_unobservable'[where P="pas_refined aag"])
@@ -494,7 +485,9 @@ lemma tcb_action_reads_respects_scheduler[wp]:
    apply (clarsimp simp: etcb_at_def split: option.splits)
    apply (clarsimp simp: scheduler_affects_equiv_def states_equiv_for_def
                          equiv_for_def equiv_asids_def)
-   apply (frule (1) tcb_domain_wellformed)
+   apply (frule tcb_domain_wellformed[where t=t])
+    apply (fastforce simp: etcbs_of'_def obj_at_def)
+   apply (clarsimp simp: obj_at_def)
    apply (rule ext)
    apply (solves \<open>auto dest: domains_distinct[THEN pas_domains_distinct_inj]\<close>)
   apply assumption
@@ -613,19 +606,13 @@ qed
 
 lemma midstrength_scheduler_affects_equiv_unobservable:
   assumes a: "\<And>P Q R S st. f \<lbrace>states_equiv_for P Q R S st\<rbrace>"
-  assumes w: "\<And>P. f \<lbrace>\<lambda>s. P (cur_domain s) (work_units_completed s)\<rbrace>"
+  assumes w: "\<And>P. f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+  assumes x: "\<And>P. f \<lbrace>\<lambda>s. P (work_units_completed s)\<rbrace>"
   shows "f \<lbrace>midstrength_scheduler_affects_equiv aag l st\<rbrace>"
   apply (simp add: midstrength_scheduler_affects_equiv_def[abs_def])
   apply (rule hoare_pre)
-   apply (wp a w silc_dom_equiv_states_equiv_lift)
+   apply (wp a x silc_dom_equiv_states_equiv_lift | wps w)+
   apply clarsimp
-  done
-
-lemma thread_get_reads_respects_scheduler[wp]:
-  "reads_respects_scheduler aag l (K (pasObjectAbs aag t \<in> reads_scheduler aag l)) (thread_get f t)"
-  apply (rule gen_asm_ev)
-  apply (simp add: thread_get_def)
-  apply (wpsimp simp: scheduler_affects_equiv_def states_equiv_for_def equiv_for_def get_tcb_def)
   done
 
 crunch guarded_switch_to,schedule
@@ -921,18 +908,18 @@ lemma midstrength_scheduler_affects_equiv_sym[elim]:
   apply (fastforce intro: states_equiv_for_sym)
   done
 
-lemma ethread_get_oblivious_cur_thread:
-  "oblivious (cur_thread_update f) (ethread_get a b)"
-  by (wpsimp wp: oblivious_bind simp: ethread_get_def gets_the_def get_etcb_def)
+lemma thread_get_oblivious_cur_thread:
+  "oblivious (cur_thread_update f) (thread_get a b)"
+  by (wpsimp wp: oblivious_bind simp: thread_get_def gets_the_def get_tcb_def)
 
-lemma ethread_get_oblivious_schact:
-  "oblivious (scheduler_action_update f) (ethread_get a b)"
-  by (wpsimp wp: oblivious_bind simp: ethread_get_def gets_the_def get_etcb_def)
+lemma thread_get_oblivious_schact:
+  "oblivious (scheduler_action_update f) (thread_get a b)"
+  by (wpsimp wp: oblivious_bind simp: thread_get_def gets_the_def get_tcb_def)
 
 lemma tcb_action_oblivious_cur_thread:
   "oblivious (cur_thread_update a) (tcb_sched_action f t)"
    apply (simp add: tcb_sched_action_def)
-   apply (wp oblivious_bind ethread_get_oblivious_cur_thread
+   apply (wp oblivious_bind thread_get_oblivious_cur_thread
           | clarsimp simp: get_tcb_queue_def set_tcb_queue_def)+
    apply (fastforce intro: state.equality det_ext.equality)
    done
@@ -940,7 +927,7 @@ lemma tcb_action_oblivious_cur_thread:
 lemma tcb_action_oblivious_schact:
   "oblivious (scheduler_action_update a) (tcb_sched_action f t)"
    apply (simp add: tcb_sched_action_def)
-   apply (wp oblivious_bind ethread_get_oblivious_schact
+   apply (wp oblivious_bind thread_get_oblivious_schact
           | clarsimp simp: get_tcb_queue_def set_tcb_queue_def)+
    apply (fastforce intro: state.equality det_ext.equality)
    done
@@ -979,17 +966,6 @@ lemma globals_equiv_scheduler[wp]:
   by (rule lift_inv, simp)
 
 end
-
-sublocale Scheduler_IF_1 \<subseteq> tcb_sched_action_extended:
-  Scheduler_IF_is_extended' "tcb_sched_action a t" ..
-sublocale Scheduler_IF_1 \<subseteq> set_scheduler_action_extended:
-  Scheduler_IF_is_extended' "set_scheduler_action a" ..
-sublocale Scheduler_IF_1 \<subseteq> next_domain_extended:
-  Scheduler_IF_is_extended' "next_domain" ..
-sublocale Scheduler_IF_1 \<subseteq> ethread_set_extended:
-  Scheduler_IF_is_extended' "ethread_set f t" ..
-sublocale Scheduler_IF_1 \<subseteq> reschedule_required_extended:
-  Scheduler_IF_is_extended' "reschedule_required" ..
 
 
 locale Scheduler_IF_2 = Scheduler_IF_1 +
@@ -1065,6 +1041,9 @@ lemma switch_to_thread_midstrength_reads_respects_scheduler[wp]:
     apply wpsimp+
   done
 
+crunch tcb_sched_action
+  for globals_equiv_scheduler[wp]: "(\<lambda>s:: det_state. globals_equiv_scheduler st s)"
+
 lemma switch_to_thread_globals_equiv_scheduler[wp]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
    switch_to_thread thread
@@ -1108,7 +1087,7 @@ lemma switch_to_idle_thread_midstrength_reads_respects_scheduler[wp]:
            apply (rule scheduler_equiv_lift'[where P=\<top>])
                 apply (wp globals_equiv_scheduler_inv silc_dom_lift | simp)+
          apply (wp midstrength_scheduler_affects_equiv_unobservable
-                | simp | (rule hoare_pre, wps))+
+                | simp | wps)+
         apply (wp cur_thread_update_not_subject_reads_respects_scheduler arch_stit_invs
                | assumption | simp | fastforce)+
   apply (clarsimp simp: scheduler_equiv_def)
@@ -1147,7 +1126,7 @@ lemma any_valid_thread:
 
 lemma tcb_with_domain_at:
   "\<lbrakk> valid_queues s; x \<in> set (ready_queues s d p) \<rbrakk>
-     \<Longrightarrow> \<exists>t. ekheap s x = Some t \<and> (tcb_domain t) = d"
+     \<Longrightarrow> \<exists>t. etcbs_of s x = Some t \<and> (etcb_domain t) = d"
    by (fastforce simp: valid_queues_def is_etcb_at_def etcb_at_def split: option.splits)
 
 lemma if_ev_bind:
@@ -1184,8 +1163,8 @@ lemma gets_read_queue_reads_respects_scheduler[wp]:
   by (rule gets_read_queue_ev_from_weak_sae, simp)
 
 crunch guarded_switch_to, choose_thread
-  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  and domain_fields[wp]: "domain_fields P"
+  for cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
+  and domain_fields[wp]: "domain_fields P :: det_state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma cur_thread_update_unobservable:
@@ -1281,7 +1260,9 @@ lemma tcb_sched_action_unobservable:
   apply (clarsimp simp: states_equiv_for_def equiv_for_def equiv_asids_def)
   apply (rule ext)
   apply clarsimp
-  apply (frule(1) tcb_domain_wellformed)
+  apply (frule tcb_domain_wellformed[where t=t])
+   apply (fastforce simp: etcbs_of'_def obj_at_def)
+  apply (clarsimp simp: obj_at_def)
   apply (metis domains_distinct[THEN pas_domains_distinct_inj])
   done
 
@@ -1382,11 +1363,10 @@ lemma switch_to_cur_domain:
      \<Longrightarrow> pasObjectAbs aag x \<in> pasDomainAbs aag (cur_domain s)"
   apply (clarsimp simp: valid_sched_def valid_sched_action_def switch_in_cur_domain_def
                         in_cur_domain_def etcb_at_def weak_valid_sched_action_def
-                        is_etcb_at_def st_tcb_at_def obj_at_def valid_etcbs_def)
-  apply (drule_tac x=x in spec)
-  apply clarsimp
-  apply (drule(1) tcb_domain_wellformed)
-  apply simp
+                        is_etcb_at_def st_tcb_at_def obj_at_def)
+  apply (drule tcb_domain_wellformed[where t=x])
+   apply (fastforce simp: etcbs_of'_def)
+  apply (fastforce simp: etcbs_of'_def)
   done
 
 lemma equiv_valid_dc:
@@ -1442,14 +1422,6 @@ lemma cur_thread_cur_domain:
   by (clarsimp simp: pred_tcb_at_def invs_def valid_idle_def
                      valid_state_def obj_at_def guarded_pas_domain_def)
 
-lemma ethread_get_wp2:
-  "\<lbrace>\<lambda>s. \<forall>etcb. etcb_at ((=) etcb) t s \<longrightarrow> Q (f etcb) s\<rbrace>
-   ethread_get f t
-   \<lbrace>Q\<rbrace>"
-  apply wp
-  apply (clarsimp simp: etcb_at_def split: option.split)
-  done
-
 lemma switch_thread_runnable:
   "\<lbrakk> valid_sched s; scheduler_action s = switch_thread t \<rbrakk>
      \<Longrightarrow> st_tcb_at runnable t s"
@@ -1465,9 +1437,9 @@ lemma gets_highest_prio_ev_from_weak_sae:
   done
 
 lemma etcb_in_domains_of_state:
-  "\<lbrakk> is_etcb_at tcb_ptr s; etcb_at (\<lambda>t. tcb_domain t = tcb_dom) tcb_ptr s \<rbrakk>
+  "\<lbrakk> tcb_at tcb_ptr s; etcb_at (\<lambda>t. etcb_domain t = tcb_dom) tcb_ptr s \<rbrakk>
      \<Longrightarrow> (tcb_ptr, tcb_dom) \<in> domains_of_state s"
-  by (auto simp: domains_of_state_aux.simps is_etcb_at_def etcb_at_def)
+  by (auto simp: domains_of_state_aux.simps is_etcb_at_def etcb_at_def etcbs_of'_def obj_at_def is_tcb)
 
 lemma guarded_active_ct_cur_domain:
   "\<lbrakk> guarded_pas_domain aag s; ct_active s; invs s \<rbrakk>
@@ -1479,24 +1451,22 @@ lemma guarded_active_ct_cur_domain:
 context Scheduler_IF_1 begin
 
 lemma schedule_no_domain_switch:
-  "\<lbrace>(\<lambda>s. domain_time s \<noteq> 0) and (\<lambda>s. Q (cur_domain s))\<rbrace>
+  "\<lbrace>\<lambda>s::det_state. domain_time s \<noteq> 0 \<and> Q (cur_domain s)\<rbrace>
    schedule
    \<lbrace>\<lambda>r s. Q (cur_domain s)\<rbrace>"
   unfolding schedule_def
-  supply ethread_get_wp[wp del]
-  apply (wpsimp wp: hoare_drop_imps simp: if_apply_def2
+  apply (wpsimp wp: hoare_drop_imps gts_wp simp: if_apply_def2
          | simp add: schedule_choose_new_thread_def
          | wpc
          | rule hoare_pre_cont[where f=next_domain] )+
   done
 
 lemma schedule_no_domain_fields:
-  "\<lbrace>(\<lambda>s. domain_time s \<noteq> 0) and domain_fields Q\<rbrace>
+  "\<lbrace>\<lambda>s::det_state. domain_time s \<noteq> 0 \<and> domain_fields Q s\<rbrace>
    schedule
    \<lbrace>\<lambda>_. domain_fields Q\<rbrace>"
   unfolding schedule_def
-  supply ethread_get_wp[wp del]
-  apply (wpsimp wp: hoare_drop_imps simp: if_apply_def2
+  apply (wpsimp wp: hoare_drop_imps gts_wp simp: if_apply_def2
          | simp add: schedule_choose_new_thread_def
          | wpc
          | rule hoare_pre_cont[where f=next_domain] )+
@@ -1515,6 +1485,10 @@ lemma set_scheduler_action_unobservable:
 lemma sched_equiv_cur_domain[intro]:
   "scheduler_equiv aag st s \<Longrightarrow> cur_domain st = cur_domain s"
   by (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def)
+
+crunch set_scheduler_action, tcb_sched_action
+  for globals_equiv_scheduler[wp]: "globals_equiv_scheduler st"
+  and silc_dom_equiv[wp]: "silc_dom_equiv aag st"
 
 lemma reschedule_required_scheduler_equiv[wp]:
   "reschedule_required \<lbrace>scheduler_equiv aag st\<rbrace>"
@@ -1545,36 +1519,6 @@ lemma dec_domain_time_reads_respects_scheduler[wp]:
   apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def globals_equiv_scheduler_def
                         scheduler_globals_frame_equiv_def silc_dom_equiv_def states_equiv_for_def
                         scheduler_affects_equiv_def equiv_for_def equiv_asids_def idle_equiv_def)
-  done
-
-lemma ethread_set_reads_respects_scheduler:
-  "reads_respects_scheduler aag l (\<lambda>s. pasObjectAbs aag t \<in> reads_scheduler aag l)
-                            (ethread_set f t)"
-  apply (clarsimp simp: thread_set_time_slice_def ethread_set_def gets_the_def gets_def get_def
-                        bind_def put_def get_etcb_def return_def assert_opt_def set_eobject_def
-                        fail_def equiv_valid_def2 equiv_valid_2_def scheduler_equiv_def
-                        domain_fields_equiv_def globals_equiv_scheduler_def idle_equiv_def
-                 split: option.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: silc_dom_equiv_def reads_scheduler_def equiv_for_def split: if_split_asm)
-  apply (simp add: scheduler_affects_equiv_def)
-  apply clarsimp
-  apply (rule conjI)
-   apply (rule states_equiv_for_identical_ekheap_updates,assumption)
-   apply (elim states_equiv_forE equiv_forE)
-   apply (clarsimp simp: identical_ekheap_updates_def)
-  apply (clarsimp simp: scheduler_globals_frame_equiv_def)
-  done
-
-lemma ethread_set_unobservable[wp]:
-   "\<lbrace>(\<lambda>s. pasObjectAbs aag t \<notin> reads_scheduler aag l) and scheduler_affects_equiv aag l st\<rbrace>
-    ethread_set f t
-    \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
-  apply (simp add: ethread_set_def set_eobject_def)
-  apply wp
-  apply (clarsimp simp: get_etcb_def scheduler_affects_equiv_def)
-  apply (elim states_equiv_forE equiv_forE)
-  apply (clarsimp simp: equiv_for_def states_equiv_for_def equiv_asids_def)+
   done
 
 end
@@ -1647,8 +1591,7 @@ lemma reads_respects_scheduler_invisible_domain_switch:
 
 crunch schedule
   for globals_equiv_scheduler[wp]: "(\<lambda>s:: det_state. globals_equiv_scheduler st s)"
-  (    wp: guarded_switch_to_lift crunch_wps hoare_drop_imps
-   wp_del: ethread_get_wp
+  (    wp: guarded_switch_to_lift crunch_wps hoare_drop_imps dxo_wp_weak
    ignore: guarded_switch_to
      simp: crunch_simps)
 
@@ -1696,7 +1639,7 @@ lemma reads_respects_scheduler_invisible_no_domain_switch:
      (\<lambda>s. pas_refined aag s \<and> invs s \<and> valid_sched s \<and> guarded_pas_domain aag s
                             \<and> domain_time s \<noteq> 0 \<and> \<not> reads_scheduler_cur_domain aag l s)
      schedule"
-  supply ethread_get_wp[wp del] if_split[split del]
+  supply if_split[split del]
   apply (rule reads_respects_scheduler_unobservable''[where P=Q and P'=Q and Q=Q for Q])
   apply (rule hoare_pre)
      apply (rule scheduler_equiv_lift'[where P="invs and (\<lambda>s. domain_time s \<noteq> 0)"])
@@ -1716,10 +1659,12 @@ lemma reads_respects_scheduler_invisible_no_domain_switch:
           | rule hoare_pre_cont[where f=next_domain]
           | wp (once) hoare_drop_imp[where f="set_scheduler_action choose_new_thread"])+
             (* stop on fastfail calculation *)
-            apply (clarsimp simp: conj_ac cong: imp_cong conj_cong)
-            apply (wp hoare_drop_imps)[1]
-           apply (wp tcb_sched_action_unobservable gts_wp
-                     schedule_choose_new_thread_schedule_affects_no_switch)+
+            apply (wp hoare_drop_imps)
+           apply (clarsimp cong: imp_cong conj_cong)
+           apply (wp hoare_if[rotated])
+          apply (wp tcb_sched_action_unobservable gts_wp
+                    schedule_choose_new_thread_schedule_affects_no_switch
+                    hoare_vcg_all_lift hoare_vcg_imp_lift' )+
    apply (clarsimp simp: if_apply_def2)
    (* slow 15s *)
    by (safe; (fastforce simp: switch_thread_runnable
@@ -1745,8 +1690,7 @@ lemma read_respects_scheduler_switch_thread_case:
       apply wp[1]
      apply (simp add: pred_conj_def)
      apply (rule hoare_vcg_conj_lift)
-      apply (rule set_scheduler_action_extended.invs)
-     apply (wp tcb_action_reads_respects_scheduler)+
+      apply (wp tcb_action_reads_respects_scheduler)+
   apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def)
   done
 
@@ -1769,8 +1713,7 @@ lemma read_respects_scheduler_switch_thread_case_app:
       apply wp[1]
      apply (simp add: pred_conj_def)
      apply (rule hoare_vcg_conj_lift)
-      apply (rule set_scheduler_action_extended.invs)
-     apply (wp tcb_action_reads_respects_scheduler)+
+      apply (wp tcb_action_reads_respects_scheduler)+
   apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def)
   done
 
@@ -1780,7 +1723,6 @@ lemma schedule_reads_respects_scheduler_cur_domain:
   "reads_respects_scheduler aag l (invs and pas_refined aag and valid_sched
                                         and guarded_pas_domain aag
                                         and (\<lambda>s. reads_scheduler_cur_domain aag l s)) schedule"
-  supply ethread_get_wp[wp del]
   apply (simp add: schedule_def schedule_switch_thread_fastfail_def)
   apply (rule equiv_valid_guard_imp)
    apply (rule bind_ev)+
@@ -1794,20 +1736,19 @@ lemma schedule_reads_respects_scheduler_cur_domain:
            apply ((wpsimp wp: when_ev gts_wp get_thread_state_reads_respects_scheduler)+)[2]
          (* switch thread *)
          apply (rule bind_ev)+
-                       apply (rule if_ev)
-                        apply (rule read_respects_scheduler_switch_thread_case[OF domains_distinct])
-                       apply (rule if_ev)
-                        apply (rule read_respects_scheduler_switch_thread_case_app[OF domains_distinct])
-                       apply simp
-                       apply (rule ev_weaken_pre_relation)
-                        apply (rule guarded_switch_to_thread_midstrength_reads_respects_scheduler[OF domains_distinct])
-                       apply fastforce
-                      apply (rule gets_highest_prio_ev_from_weak_sae)
-                      apply fastforce
-                     apply (wpsimp wp: when_ev gts_wp get_thread_state_reads_respects_scheduler
-                                        ethread_get_when_reads_respects_scheduler
-                                        hoare_vcg_all_lift
-                             | wp (once) hoare_vcg_conj_lift hoare_drop_imps)+
+                     apply (rule if_ev)
+                      apply (rule read_respects_scheduler_switch_thread_case[OF domains_distinct])
+                     apply (rule if_ev)
+                      apply (rule read_respects_scheduler_switch_thread_case_app[OF domains_distinct])
+                     apply simp
+                     apply (rule ev_weaken_pre_relation)
+                      apply (rule guarded_switch_to_thread_midstrength_reads_respects_scheduler[OF domains_distinct])
+                     apply fastforce
+                    apply (rule gets_highest_prio_ev_from_weak_sae)
+                    apply fastforce
+                   apply (wpsimp wp: when_ev gts_wp get_thread_state_reads_respects_scheduler
+                                     hoare_vcg_all_lift
+                           | wp (once) hoare_vcg_conj_lift hoare_drop_imps)+
   (* TODO: cleanup *)
   apply (intro impI conjI allI
          ; (fastforce simp: guarded_pas_domain_def valid_sched_def
@@ -1831,7 +1772,7 @@ lemma schedule_reads_respects_scheduler_cur_domain:
                       valid_sched_def valid_sched_action_def weak_valid_sched_action_def
                       switch_in_cur_domain_def in_cur_domain_def
                split: if_splits)
-  apply (frule st_tcb_at_tcb_at, drule (1) tcb_at_is_etcb_at, drule (1) etcb_in_domains_of_state)
+  apply (frule st_tcb_at_tcb_at, drule (1) etcb_in_domains_of_state)
   apply (drule (1) bspec)
   apply simp
   by (metis Int_emptyI assms pas_domains_distinct_inj)
@@ -1840,35 +1781,14 @@ end
 
 
 lemma switch_to_cur_domain':
-  "\<lbrakk> valid_etcbs s; valid_sched_action s; scheduler_action s = switch_thread x; pas_refined aag s \<rbrakk>
+  "\<lbrakk> valid_sched_action s; scheduler_action s = switch_thread x; pas_refined aag s \<rbrakk>
      \<Longrightarrow> pasObjectAbs aag x \<in> pasDomainAbs aag (cur_domain s)"
   apply (clarsimp simp: valid_sched_def valid_sched_action_def switch_in_cur_domain_def
                         in_cur_domain_def etcb_at_def weak_valid_sched_action_def
-                        is_etcb_at_def st_tcb_at_def obj_at_def valid_etcbs_def)
-  apply (drule_tac x=x in spec)
-  apply clarsimp
-  apply (drule (1) tcb_domain_wellformed)
+                        is_etcb_at_def st_tcb_at_def obj_at_def etcbs_of'_def)
+  apply (drule tcb_domain_wellformed[where t=x])
+   apply (fastforce simp: etcbs_of'_def)
   apply simp
-  done
-
-lemma ethread_set_time_slice_valid_queues[wp]:
-  "ethread_set (tcb_time_slice_update f) t \<lbrace>valid_queues\<rbrace>"
-  apply (simp add: ethread_set_def set_eobject_def)
-  apply wp
-  apply (clarsimp simp: get_etcb_def valid_sched_def valid_etcbs_def is_etcb_at_def valid_queues_def
-                        etcb_at'_def valid_sched_action_def weak_valid_sched_action_def
-                        switch_in_cur_domain_def ct_in_cur_domain_def in_cur_domain_def)
-  apply (intro impI conjI allI ballI)
-   apply fastforce+
-  done
-
-lemma ethread_set_time_slice_valid_sched_action[wp]:
-  "ethread_set (tcb_time_slice_update f) t \<lbrace>valid_sched_action\<rbrace>"
-  apply (simp add: ethread_set_def set_eobject_def)
-  apply wp
-  apply (clarsimp simp: get_etcb_def valid_sched_def valid_etcbs_def is_etcb_at_def valid_queues_def
-                        etcb_at'_def valid_sched_action_def weak_valid_sched_action_def
-                        switch_in_cur_domain_def ct_in_cur_domain_def in_cur_domain_def)
   done
 
 lemma dec_domain_time_valid_queues[wp]:
@@ -1877,16 +1797,19 @@ lemma dec_domain_time_valid_queues[wp]:
   apply (wp | simp)+
   done
 
-lemma dec_domain_time_valid_etcbs[wp]:
-  "dec_domain_time \<lbrace>valid_etcbs\<rbrace>"
-  apply (simp add: dec_domain_time_def)
-  apply (wp | simp)+
-  done
-
 lemma dec_domain_time_valid_sched_action[wp]:
   "dec_domain_time \<lbrace>valid_sched_action\<rbrace>"
   apply (simp add: dec_domain_time_def)
   apply (wp | simp)+
+  done
+
+lemma silc_inv_not_cur_thread:
+  "\<lbrakk> silc_inv aag st s; invs s \<rbrakk> \<Longrightarrow> pasObjectAbs aag (cur_thread s) \<noteq> SilcLabel"
+  apply (clarsimp simp: silc_inv_def)
+  apply (drule_tac x="(cur_thread s)" in spec)
+  apply clarsimp
+  apply (clarsimp simp: obj_at_def invs_def cur_tcb_def is_cap_table_def is_tcb_def)
+  apply (case_tac ko, simp_all)
   done
 
 
@@ -1918,7 +1841,7 @@ lemma schedule_reads_respects_scheduler:
 lemma reschedule_required_scheduler_affects_equiv_unobservable[wp]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "\<lbrace>pas_refined aag and (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s)
-                          and valid_queues and valid_etcbs and valid_sched_action
+                          and valid_queues and valid_sched_action
                           and scheduler_equiv aag st and scheduler_affects_equiv aag l st\<rbrace>
          reschedule_required
          \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
@@ -1929,8 +1852,7 @@ lemma reschedule_required_scheduler_affects_equiv_unobservable[wp]:
 
 lemma reschedule_required_reads_respects_scheduler:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_etcbs
-                                                         and valid_sched_action)
+  shows "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_sched_action)
                                   reschedule_required"
   apply (rule reads_respects_scheduler_cases')
      apply (simp add: reschedule_required_def)
@@ -1942,8 +1864,7 @@ lemma reschedule_required_reads_respects_scheduler:
 
 lemma timer_tick_snippit:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_etcbs
-                                                         and valid_sched_action)
+  shows "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_sched_action)
                                  (when (Suc 0 < numDomains)
                                     (do x \<leftarrow> dec_domain_time;
                                         dom_time \<leftarrow> gets domain_time;
@@ -1956,31 +1877,107 @@ lemma timer_tick_snippit:
   apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def)
   done
 
+lemma thread_set_time_slice_scheduler_equiv[wp]:
+  "\<lbrace>invs and K(pasObjectAbs aag t \<noteq> SilcLabel) and scheduler_equiv aag st\<rbrace>
+   thread_set (tcb_time_slice_update f) t
+   \<lbrace>\<lambda>_. scheduler_equiv aag st\<rbrace>"
+  apply (rule scheduler_equiv_lift')
+       apply (rule globals_equiv_scheduler_inv')
+       apply (wpsimp wp: thread_set_globals_equiv | simp)+
+  apply (simp add: silc_dom_equiv_def thread_set_def)
+  apply (wp set_object_wp)
+  apply (clarsimp simp: get_tcb_def equiv_for_def split: kernel_object.splits option.splits)
+  done
+
+lemma thread_set_time_slice_scheduler_affects_equiv[wp]:
+  "\<lbrace>(\<lambda>s. t \<noteq> idle_thread s \<and> pasObjectAbs aag t \<notin> reads_scheduler aag l) and
+    scheduler_affects_equiv aag l st\<rbrace>
+   thread_set (tcb_time_slice_update f) t
+   \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
+  apply (simp add: thread_set_def)
+  apply (wp set_object_wp)
+  apply (clarsimp simp: scheduler_affects_equiv_def get_tcb_def scheduler_globals_frame_equiv_def
+                 split: option.splits kernel_object.splits)
+  apply (clarsimp simp: arch_scheduler_affects_equiv_update)
+  apply (elim states_equiv_forE equiv_forE)
+  apply (rule states_equiv_forI; simp add: equiv_for_def equiv_asids_def)
+  apply (fastforce intro!: equiv_asid_equiv_update simp: get_tcb_def)
+  done
+
+lemma thread_set_time_slice_reads_respect_scheduler[wp]:
+  "reads_respects_scheduler aag l (invs and (\<lambda>s. t \<noteq> idle_thread s \<and> pasObjectAbs aag t \<noteq> SilcLabel)
+                                        and guarded_pas_domain aag)
+                            (thread_set (tcb_time_slice_update f) t)"
+  apply (rule reads_respects_scheduler_cases[where P'=\<top>])
+     prefer 3
+     apply (rule reads_respects_scheduler_unobservable'')
+       apply (wp | simp | elim conjE)+
+    apply (simp add: thread_set_def)
+    apply wp
+    apply (fastforce simp: scheduler_affects_equiv_def get_tcb_def states_equiv_for_def equiv_for_def)+
+  done
+
+lemma thread_set_time_slice_pas_refined[wp]:
+  "thread_set (tcb_time_slice_update f) thread \<lbrace>pas_refined aag\<rbrace>"
+  by (wp thread_set_pas_refined | simp)+
+
+lemma thread_set_valid_sched_action:
+  "\<lbrakk>\<And>x. tcb_state (f x) = tcb_state x; \<And>x. etcb_of (f x) = etcb_of x\<rbrakk> \<Longrightarrow>
+   thread_set f tptr \<lbrace>valid_sched_action\<rbrace>"
+  by (rule valid_sched_action_lift; wpsimp wp: thread_set_no_change_tcb_state thread_set_etcbs)
+
 lemma timer_tick_reads_respects_scheduler_cur_domain:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l
-           (reads_scheduler_cur_domain aag l and invs and guarded_pas_domain aag
+           (reads_scheduler_cur_domain aag l and invs and guarded_pas_domain aag and silc_inv aag st
                                              and pas_refined aag and valid_sched)
            timer_tick"
   apply (simp add: timer_tick_def)
   apply (subst Let_def)
   apply (subst thread_set_time_slice_def)+
-  apply (wp when_ev reschedule_required_reads_respects_scheduler
-            ethread_set_reads_respects_scheduler
-            get_thread_state_reads_respects_scheduler gts_wp
-         | wpc | wp (once) hoare_drop_imps)+
+  apply (wpsimp wp: when_ev reschedule_required_reads_respects_scheduler thread_set_valid_queues
+                    thread_set_no_change_tcb_state thread_set_valid_sched_action
+                    thread_set_weak_valid_sched_action get_thread_state_reads_respects_scheduler gts_wp
+         | wp (once) hoare_drop_imps)+
   apply (fastforce simp: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def
                          guarded_pas_domain_def scheduler_equiv_def domain_fields_equiv_def
-                         valid_sched_def valid_sched_action_def
+                         valid_sched_def valid_sched_action_def silc_inv_not_cur_thread
                   split: option.splits
                    dest: domains_distinct[THEN pas_domains_distinct_inj])
+  done
+
+lemma thread_set_time_slice_globals_equiv_scheduler[wp]:
+  "\<lbrace>valid_arch_state and globals_equiv_scheduler st\<rbrace>
+   thread_set (tcb_time_slice_update f) x
+   \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
+  apply (rule globals_equiv_scheduler_inv')
+  by (wpsimp wp: thread_set_globals_equiv)
+
+lemma thread_set_silc_dom_equiv[wp]:
+  "\<lbrace>K (pasObjectAbs aag t \<noteq> SilcLabel) and silc_dom_equiv aag st\<rbrace>
+   thread_set f t
+   \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
+  apply (simp add: thread_set_def)
+  apply (wp dxo_wp_weak set_object_wp | simp)+
+  apply (clarsimp simp: silc_dom_equiv_def equiv_for_def)
+  done
+
+crunch reschedule_required
+  for globals_equiv_scheduler[wp]: "globals_equiv_scheduler s"
+  and silc_dom_equiv[wp]: "silc_dom_equiv aag st"
+
+(* FIXME: MOVE *)
+lemma st_tcb_at_not_idle_thread:
+  "\<lbrakk> invs s; st_tcb_at ((=) t_st) t s; t_st \<noteq> IdleThreadState \<rbrakk> \<Longrightarrow> t \<noteq> idle_thread s"
+  apply (frule st_tcb_at_tcb_at)
+  apply (fastforce dest: st_tcb_at_idle_thread)
   done
 
 lemma timer_tick_reads_respects_scheduler_unobservable:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l
            ((\<lambda>s. \<not>reads_scheduler_cur_domain aag l s) and invs and guarded_pas_domain aag
-                                                      and pas_refined aag and valid_sched)
+                                                      and pas_refined aag and valid_sched and silc_inv aag st)
            timer_tick"
   apply (simp add: timer_tick_def)
   apply (subst Let_def)
@@ -1989,20 +1986,25 @@ lemma timer_tick_reads_respects_scheduler_unobservable:
   apply (rule bind_ev_pre)
      apply (simp add: bind_assoc)
      apply (rule timer_tick_snippit[OF domains_distinct])
-    apply (rule_tac P=\<top> and P'="(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and invs and
-                                 guarded_pas_domain aag and pas_refined aag and valid_sched"
+    apply (rule_tac P="invs and silc_inv aag st"
+                and P'="(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and invs and silc_inv aag st and
+                        guarded_pas_domain aag and pas_refined aag and valid_sched"
                  in reads_respects_scheduler_unobservable'')
       apply (rule hoare_pre)
-       apply (rule scheduler_equiv_lift)
-            apply (wp gts_wp tcb_sched_action_unobservable
-                      scheduler_equiv_lift| wpc | simp)+
-     apply (clarsimp simp: etcb_at_def split: option.splits)
+       apply (rule scheduler_equiv_lift'[where P="invs and silc_inv aag st"])
+            apply (wpsimp wp: gts_wp tcb_sched_action_unobservable thread_set_valid_queues
+                              thread_set_no_change_tcb_state thread_set_valid_sched_action
+                              hoare_drop_imp[where f="thread_get f t" for f t]
+                        simp: silc_inv_not_cur_thread)+
      apply (intro impI conjI allI)
+           apply (fastforce dest: st_tcb_at_not_idle_thread)
           apply (fastforce dest!: cur_thread_cur_domain)+
-        apply ((clarsimp simp add: st_tcb_at_def obj_at_def valid_sched_def)+)[3]
+        apply ((clarsimp simp add: st_tcb_at_def obj_at_def valid_sched_def )+)[2]
+      apply (fastforce dest: st_tcb_at_not_idle_thread)
      apply (fastforce dest!: cur_thread_cur_domain)
     apply force
-   apply (wp gts_wp | wpc)+
+   apply (wpsimp wp: gts_wp thread_set_valid_queues thread_set_valid_sched_action
+                     thread_set_no_change_tcb_state thread_set_weak_valid_sched_action hoare_drop_imps)
   apply (clarsimp simp: etcb_at_def valid_sched_def st_tcb_at_def
                         obj_at_def valid_sched_action_def split: option.splits)
   done
@@ -2010,11 +2012,12 @@ lemma timer_tick_reads_respects_scheduler_unobservable:
 lemma timer_tick_reads_respects_scheduler:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l
-           (invs and guarded_pas_domain aag and pas_refined aag and valid_sched) timer_tick"
+           (invs and guarded_pas_domain aag and pas_refined aag and valid_sched and silc_inv aag st)
+            timer_tick"
   apply (rule reads_respects_scheduler_cases')
-     apply (rule timer_tick_reads_respects_scheduler_cur_domain[OF domains_distinct])
+     apply (rule timer_tick_reads_respects_scheduler_cur_domain[OF domains_distinct, where st=st])
     apply simp
-   apply (rule timer_tick_reads_respects_scheduler_unobservable[OF domains_distinct])
+   apply (rule timer_tick_reads_respects_scheduler_unobservable[OF domains_distinct, where st=st])
   apply simp
   done
 
@@ -2114,7 +2117,8 @@ lemma handle_interrupt_reads_respects_scheduler:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
     "reads_respects_scheduler aag l (invs and guarded_pas_domain aag and pas_refined aag and
-                                     valid_sched and domain_sep_inv False st and K (irq \<le> maxIRQ))
+                                     valid_sched and domain_sep_inv False st and silc_inv aag st' and
+                                     K (irq \<le> maxIRQ))
                               (handle_interrupt irq)"
   apply (simp add: handle_interrupt_def )
   apply (rule conjI; rule impI )
@@ -2138,9 +2142,6 @@ lemma thread_set_scheduler_equiv[wp]:
   apply (rule scheduler_equiv_lift')
        apply (rule globals_equiv_scheduler_inv')
        apply (wpsimp wp: thread_set_context_globals_equiv | simp)+
-  apply (simp add: silc_dom_equiv_def thread_set_def)
-  apply (wp set_object_wp)
-  apply (clarsimp simp: get_tcb_def equiv_for_def split: kernel_object.splits option.splits)
   done
 
 lemma sts_reads_respects_scheduler:
@@ -2149,7 +2150,7 @@ lemma sts_reads_respects_scheduler:
                                                       and valid_idle and (\<lambda>s. rv \<noteq> idle_thread s))
      (set_thread_state rv st)"
   apply (simp add: set_thread_state_def)
-  apply (simp add: set_thread_state_ext_def)
+  apply (simp add: set_thread_state_act_def)
   apply (wp when_ev get_thread_state_reads_respects_scheduler gts_wp set_object_wp)
   apply (clarsimp simp: get_tcb_scheduler_equiv valid_idle_def pred_tcb_at_def obj_at_def)
   done
@@ -2171,15 +2172,6 @@ lemma arch_tcb_update_aux:
   "tcb_arch_update f t = tcb_arch_update (\<lambda>_. f (tcb_arch t)) t"
   by simp
 
-lemma silc_inv_not_cur_thread:
-  "\<lbrakk> silc_inv aag st s; invs s \<rbrakk> \<Longrightarrow> pasObjectAbs aag (cur_thread s) \<noteq> SilcLabel"
-  apply (clarsimp simp: silc_inv_def)
-  apply (drule_tac x="(cur_thread s)" in spec)
-  apply clarsimp
-  apply (clarsimp simp: obj_at_def invs_def cur_tcb_def is_cap_table_def is_tcb_def)
-  apply (case_tac ko, simp_all)
-  done
-
 lemma idle_equiv_identical_kheap_updates:
   "\<lbrakk> identical_kheap_updates s t kh kh'; idle_equiv s t \<rbrakk>
      \<Longrightarrow> idle_equiv (s\<lparr>kheap := kh\<rparr>) (t\<lparr>kheap := kh'\<rparr>)"
@@ -2193,12 +2185,15 @@ lemma restart_not_idle:
      \<Longrightarrow> t \<noteq> idle_thread s"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
+crunch set_thread_state_act
+  for silc_dom_equiv[wp]: "silc_dom_equiv aag st"
+
 lemma sts_silc_dom_equiv[wp]:
   "\<lbrace>K (pasObjectAbs aag x \<noteq> SilcLabel) and silc_dom_equiv aag st\<rbrace>
    set_thread_state x f
    \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp dxo_wp_weak set_object_wp | simp)+
+  apply (wp set_object_wp | simp)+
   apply (clarsimp simp: silc_dom_equiv_def equiv_for_def)
   done
 
@@ -2231,7 +2226,7 @@ lemma sts_scheduler_affects_equiv[wp]:
    set_thread_state x Running
    \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (simp add: set_thread_state_ext_def)
+  apply (simp add: set_thread_state_act_def)
   apply (wp gts_wp set_object_wp)
   apply (intro impI conjI allI)
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
@@ -2255,13 +2250,6 @@ lemma SilcLabel_affects_scheduler_equiv:
 
 end
 
-
-(* FIXME: MOVE *)
-lemma st_tcb_at_not_idle_thread:
-  "\<lbrakk> invs s; st_tcb_at ((=) t_st) t s; t_st \<noteq> IdleThreadState \<rbrakk> \<Longrightarrow> t \<noteq> idle_thread s"
-  apply (frule st_tcb_at_tcb_at)
-  apply (fastforce dest: st_tcb_at_idle_thread)
-  done
 
 (*A function that is agnostic of its parameter with respect
   to the state space (as is the case with thread context updates)

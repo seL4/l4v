@@ -74,7 +74,7 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
   and kheap[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch arch_switch_to_idle_thread
+crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for cur_domain[Scheduler_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and domain_fields[Scheduler_IF_assms, wp]: "domain_fields P"
 
@@ -99,19 +99,9 @@ lemma equiv_asid_domain_time_update[Scheduler_IF_assms, simp]:
   "equiv_asid asid s (domain_time_update f s') = equiv_asid asid s s'"
   by (auto simp: equiv_asid_def)
 
-lemma equiv_asid_ekheap_update[Scheduler_IF_assms, simp]:
-  "equiv_asid asid (ekheap_update f s) s' = equiv_asid asid s s'"
-  "equiv_asid asid s (ekheap_update f s') = equiv_asid asid s s'"
-  by (auto simp: equiv_asid_def)
-
 lemma arch_scheduler_affects_equiv_domain_time_update[Scheduler_IF_assms, simp]:
   "arch_scheduler_affects_equiv (domain_time_update f s) s' = arch_scheduler_affects_equiv s s'"
   "arch_scheduler_affects_equiv s (domain_time_update f s') = arch_scheduler_affects_equiv s s'"
-  by (auto simp: arch_scheduler_affects_equiv_def)
-
-lemma arch_scheduler_affects_equiv_ekheap_update[Scheduler_IF_assms, simp]:
-  "arch_scheduler_affects_equiv (ekheap_update f s) s' = arch_scheduler_affects_equiv s s'"
-  "arch_scheduler_affects_equiv s (ekheap_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
 crunch ackInterrupt
@@ -222,7 +212,7 @@ lemma set_vm_root_arch_scheduler_affects_equiv[wp]:
 
 lemmas set_vm_root_scheduler_affects_equiv[wp] =
   scheduler_affects_equiv_unobservable[OF set_vm_root_states_equiv_for
-                                          set_vm_root_exst _ _ _ set_vm_root_it
+                                          set_vm_root_cur_domain _ _ _ set_vm_root_it
                                           set_vm_root_arch_scheduler_affects_equiv]
 
 lemma set_vm_root_reads_respects_scheduler[wp]:
@@ -368,6 +358,10 @@ lemma next_domain_midstrength_equiv_scheduler[Scheduler_IF_assms]:
   "equiv_valid (scheduler_equiv aag) (weak_scheduler_affects_equiv aag l)
                (midstrength_scheduler_affects_equiv aag l) \<top> next_domain"
   apply (simp add: next_domain_def)
+  apply (subst is_extended.dxo_eq)
+   apply (clarsimp simp: is_extended_def is_extended'_def is_extended_axioms_def)
+   apply wpsimp
+  apply (clarsimp simp: modify_modify)
   apply (rule ev_modify)
   apply (clarsimp simp: equiv_for_def equiv_asid_def equiv_asids_def Let_def scheduler_equiv_def
                         globals_equiv_scheduler_def silc_dom_equiv_def domain_fields_equiv_def
