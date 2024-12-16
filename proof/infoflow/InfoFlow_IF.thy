@@ -73,7 +73,6 @@ lemma states_equiv_forI:
   "\<lbrakk> equiv_for P kheap s s';
      equiv_machine_state P (machine_state s) (machine_state s');
      equiv_for (P \<circ> fst) cdt s s';
-     equiv_for P ekheap s s';
      equiv_for (P \<circ> fst) cdt_list s s';
      equiv_for (P \<circ> fst) is_original_cap s s';
      equiv_for Q interrupt_states s s';
@@ -161,17 +160,6 @@ lemma states_equiv_for_ready_queues_update:
   by (fastforce elim: equiv_forE elim!: equiv_asids_triv
                intro: equiv_forI simp: states_equiv_for_def)
 
-lemma states_equiv_for_ekheap_update:
-  "\<lbrakk> states_equiv_for P Q R S s s'; equiv_for P id (kh (ekheap s)) (kh' (ekheap s')) \<rbrakk>
-     \<Longrightarrow> states_equiv_for P Q R S (ekheap_update kh s) (ekheap_update kh' s')"
-  by (fastforce elim: equiv_forE elim!: equiv_asids_triv
-               intro: equiv_forI simp: states_equiv_for_def)
-
-lemma states_equiv_for_identical_ekheap_updates:
-  "\<lbrakk> states_equiv_for P Q R S s s'; identical_ekheap_updates s s' (kh (ekheap s)) (kh' (ekheap s')) \<rbrakk>
-     \<Longrightarrow> states_equiv_for P Q R S (ekheap_update kh s) (ekheap_update kh' s')"
-  by (fastforce simp: identical_ekheap_updates_def equiv_for_def states_equiv_for_def equiv_asids_triv)
-
 lemma states_equiv_for_identical_kheap_updates:
   "\<lbrakk> states_equiv_for P Q R S s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
      \<Longrightarrow> states_equiv_for P Q R S (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
@@ -188,7 +176,6 @@ lemma states_equiv_forE:
           "equiv_for P kheap s s'"
           "equiv_for (P \<circ> fst) cdt s s'"
           "equiv_for (P \<circ> fst) cdt_list s s'"
-          "equiv_for P ekheap s s'"
           "equiv_for (P \<circ> fst) is_original_cap s s'"
           "equiv_for Q interrupt_states s s'"
           "equiv_for Q interrupt_irq_node s s'"
@@ -223,11 +210,6 @@ lemma states_equiv_forE_cdt:
 lemma states_equiv_forE_cdt_list:
   assumes sef: "states_equiv_for P Q R S s s'"
   obtains "\<And>x. P (fst x) \<Longrightarrow> cdt_list s x = cdt_list s' x"
-  using sef by (auto simp: states_equiv_for_def elim: equiv_forE)
-
-lemma states_equiv_forE_ekheap:
-  assumes sef: "states_equiv_for P Q R S s s'"
-  obtains "\<And>x. P x \<Longrightarrow> ekheap s x = ekheap s' x"
   using sef by (auto simp: states_equiv_for_def elim: equiv_forE)
 
 lemma states_equiv_forE_is_original_cap:
@@ -322,7 +304,6 @@ lemma reads_equivE:
           "equiv_machine_state (aag_can_read aag) (machine_state s) (machine_state s')"
           "equiv_for ((aag_can_read aag) \<circ> fst) cdt s s'"
           "equiv_for ((aag_can_read aag) \<circ> fst) cdt_list s s'"
-          "equiv_for (aag_can_read aag) ekheap s s'"
           "equiv_for ((aag_can_read aag) \<circ> fst) is_original_cap s s'"
           "equiv_for (aag_can_read_irq aag) interrupt_states s s'"
           "equiv_for (aag_can_read_irq aag) interrupt_irq_node s s'"
@@ -337,6 +318,15 @@ lemma reads_equivE:
 
 
 context InfoFlow_IF_1 begin
+
+lemma globals_equiv_updates[simp]:
+  "\<And>f. globals_equiv st (trans_state f s) = globals_equiv st s"
+  "\<And>f. globals_equiv s (cdt_update f s') = globals_equiv s s'"
+  "\<And>f. globals_equiv s (is_original_cap_update f s') = globals_equiv s s'"
+  "\<And>f. globals_equiv s (scheduler_action_update f s') = globals_equiv s s'"
+  "\<And>f. globals_equiv s (domain_time_update f s') = globals_equiv s s'"
+  "\<And>f. globals_equiv s (ready_queues_update f s') = globals_equiv s s'"
+  by (simp add: globals_equiv_def idle_equiv_def)+
 
 lemma reads_equiv_machine_state_update:
   "\<lbrakk> reads_equiv aag s s'; equiv_machine_state (aag_can_read aag) kh kh'; irq_state kh = irq_state kh' \<rbrakk>
@@ -370,16 +360,6 @@ lemma reads_equiv_cdt_list_update:
   "\<lbrakk> reads_equiv aag s s'; equiv_for ((aag_can_read aag) \<circ> fst) id (kh (cdt_list s)) (kh' (cdt_list s')) \<rbrakk>
      \<Longrightarrow> reads_equiv aag (cdt_list_update kh s) (cdt_list_update kh' s')"
   by (fastforce simp: reads_equiv_def2 intro: states_equiv_for_cdt_list_update)
-
-lemma reads_equiv_identical_ekheap_updates:
-  "\<lbrakk> reads_equiv aag s s'; identical_ekheap_updates s s' (kh (ekheap s)) (kh' (ekheap s')) \<rbrakk>
-     \<Longrightarrow> reads_equiv aag (ekheap_update kh s) (ekheap_update kh' s')"
-  by (fastforce simp: reads_equiv_def2 intro: states_equiv_for_identical_ekheap_updates)
-
-lemma reads_equiv_ekheap_updates:
-  "\<lbrakk> reads_equiv aag s s'; equiv_for (aag_can_read aag) id (kh (ekheap s)) (kh' (ekheap s')) \<rbrakk>
-     \<Longrightarrow> reads_equiv aag (ekheap_update kh s) (ekheap_update kh' s')"
-  by (fastforce simp: reads_equiv_def2 intro: states_equiv_for_ekheap_update)
 
 lemma reads_equiv_is_original_cap_update:
   "\<lbrakk>reads_equiv aag s s'; equiv_for ((aag_can_read aag) \<circ> fst) id kh kh'\<rbrakk> \<Longrightarrow>
@@ -433,7 +413,6 @@ lemma affects_equivE:
           "equiv_machine_state (aag_can_affect aag l) (machine_state s) (machine_state s')"
           "equiv_for ((aag_can_affect aag l) \<circ> fst) cdt s s'"
           "equiv_for ((aag_can_affect aag l) \<circ> fst) cdt_list s s'"
-          "equiv_for (aag_can_affect aag l) ekheap s s'"
           "equiv_for ((aag_can_affect aag l) \<circ> fst) is_original_cap s s'"
           "equiv_for (aag_can_affect_irq aag l) interrupt_states s s'"
           "equiv_for (aag_can_affect_irq aag l) interrupt_irq_node s s'"
@@ -467,16 +446,6 @@ lemma affects_equiv_cdt_list_update:
   "\<lbrakk>affects_equiv aag l s s'; equiv_for ((aag_can_affect aag l) \<circ> fst) id (kh (cdt_list s)) (kh' (cdt_list s'))\<rbrakk> \<Longrightarrow>
    affects_equiv aag l (cdt_list_update kh s) (cdt_list_update kh' s')"
   by (fastforce simp: affects_equiv_def2 intro: states_equiv_for_cdt_list_update)
-
-lemma affects_equiv_identical_ekheap_updates:
-  "\<lbrakk>affects_equiv aag l s s'; identical_ekheap_updates s s' (kh (ekheap s)) (kh' (ekheap s'))\<rbrakk> \<Longrightarrow>
-    affects_equiv aag l (ekheap_update kh s) (ekheap_update kh' s')"
-  by (fastforce simp: affects_equiv_def2 intro: states_equiv_for_identical_ekheap_updates)
-
-lemma affects_equiv_ekheap_update:
-  "\<lbrakk>affects_equiv aag l s s'; equiv_for (aag_can_affect aag l) id (kh (ekheap s)) (kh' (ekheap s')) \<rbrakk> \<Longrightarrow>
-    affects_equiv aag l (ekheap_update kh s) (ekheap_update kh' s')"
-  by (fastforce simp: affects_equiv_def2 intro: states_equiv_for_ekheap_update)
 
 lemma affects_equiv_is_original_cap_update:
   "\<lbrakk>affects_equiv aag l s s'; equiv_for ((aag_can_affect aag l) \<circ> fst) id kh kh'\<rbrakk> \<Longrightarrow>
@@ -693,7 +662,6 @@ lemma lookup_error_on_failure_rev:
 
 lemma internal_exst[simp]:
   "cdt_list_internal o exst = cdt_list"
-  "ekheap_internal o exst = ekheap"
   by (simp_all add: o_def)
 
 lemma gets_kheap_revrv':
@@ -712,9 +680,9 @@ lemma gets_cdt_revrv':
 
 lemma gets_cdt_list_revrv':
   "reads_equiv_valid_rv_inv A aag (equiv_for (aag_can_read aag \<circ> fst) id) \<top> (gets cdt_list)"
-  apply(rule equiv_valid_rv_guard_imp)
-   apply(rule gets_evrv)
-  apply(fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist elim: reads_equivE)
+  apply (rule equiv_valid_rv_guard_imp)
+   apply (rule gets_evrv)
+  apply (fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist elim: reads_equivE)
   done
 
 lemma gets_is_original_cap_revrv':
@@ -791,15 +759,6 @@ lemma gets_cdt_list_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
                             (equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) id)
                             \<top> (gets cdt_list)"
-  apply (rule equiv_valid_rv_guard_imp)
-   apply (rule gets_evrv)
-  apply (fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist
-                   elim: reads_equivE affects_equivE)
-  done
-
-lemma gets_ekheap_revrv:
-  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
-                            (equiv_for (aag_can_read aag or aag_can_affect aag l) id) \<top> (gets ekheap)"
   apply (rule equiv_valid_rv_guard_imp)
    apply (rule gets_evrv)
   apply (fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist

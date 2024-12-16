@@ -348,9 +348,7 @@ lemma retype_region_globals_equiv[Retype_IF_assms]:
      retype_region p num o_bits type dev
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   apply (simp only: retype_region_def foldr_upd_app_if fun_app_def K_bind_def)
-  apply (wp dxo_wp_weak |simp)+
-      apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-     apply (wp | simp)+
+  apply (wp |simp)+
   apply clarsimp
   apply (simp only: globals_equiv_def)
   apply (clarsimp split del: if_split)

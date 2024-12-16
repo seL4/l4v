@@ -26,7 +26,7 @@ lemma tcb_context_merge[simp]:
    arch_tcb_context_get (tcb_arch tcb)"
   by (simp add: tcb_registers_caps_merge_def)
 
-crunch_ignore (add: OR_choice set_scheduler_action)
+crunch_ignore (add: OR_choice)
 
 crunch cap_move
   for valid_global_objs[wp]: valid_global_objs
@@ -511,7 +511,7 @@ lemma sts_schact_is_rct_runnable:
    \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
   apply (simp add: set_thread_state_def set_scheduler_action_def)
   apply (wpsimp wp: set_object_wp)
-     apply (simp add: set_thread_state_ext_def)
+     apply (simp add: set_thread_state_act_def)
      apply (wp modify_wp set_scheduler_action_wp gts_wp)
     apply (wpsimp wp: set_object_wp)
    apply wp
@@ -809,7 +809,6 @@ crunch handle_yield
 
 crunch handle_yield
   for globals_equiv[wp]: "globals_equiv st"
-  (simp_del: reschedule_required_ext_extended.dxo_eq tcb_sched_action_extended.dxo_eq)
 
 lemma equiv_valid_hoist_guard:
   assumes a: "Q \<Longrightarrow> equiv_valid_inv I A P f"
@@ -831,14 +830,15 @@ lemma as_user_reads_respects_g:
 
 crunch invoke_domain
   for globals_equiv[wp]: "globals_equiv st"
-  (wp: dxo_wp_weak ignore: reschedule_required set_domain
-   simp_del: set_domain_extended.dxo_eq)
 
 lemma handle_fault_globals_equiv':
   "\<lbrace>invs and globals_equiv st and K (valid_fault ex)\<rbrace>
    handle_fault thread ex
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
    by (wpsimp wp: handle_fault_globals_equiv simp: invs_imps)
+
+crunch timer_tick
+  for globals_equiv[wp]: "globals_equiv st"
 
 
 context Syscall_IF_1 begin

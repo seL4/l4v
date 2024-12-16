@@ -229,7 +229,7 @@ lemma lookup_cap_and_slot_valid_fault3:
 
 definition guarded_pas_domain where
   "guarded_pas_domain aag \<equiv>
-   \<lambda>s. cur_thread s \<noteq> idle_thread s
+   \<lambda>s::det_state. cur_thread s \<noteq> idle_thread s
        \<longrightarrow> pasObjectAbs aag (cur_thread s) \<in> pasDomainAbs aag (cur_domain s)"
 
 locale gpd_wps' =

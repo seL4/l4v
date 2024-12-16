@@ -115,8 +115,13 @@ lemma slots_holding_overlapping_caps_def':
   unfolding slots_holding_overlapping_caps_def cte_wp_at_def gen_obj_refs_def
   by blast
 
-lemma silc_inv_exst[simp]:
-  "silc_inv aag st (trans_state f s) = silc_inv aag st s"
+lemma silc_inv_updates[simp]:
+  "\<And>f. silc_inv aag st (trans_state f s) = silc_inv aag st s"
+  "\<And>f. silc_inv aag st (scheduler_action_update f s) = silc_inv aag st s"
+  "\<And>f. silc_inv aag st (domain_index_update f s) = silc_inv aag st s"
+  "\<And>f. silc_inv aag st (cur_domain_update f s) = silc_inv aag st s"
+  "\<And>f. silc_inv aag st (domain_time_update f s) = silc_inv aag st s"
+  "\<And>f. silc_inv aag st (ready_queues_update f s) = silc_inv aag st s"
   by (auto simp: silc_inv_def silc_dom_equiv_def intra_label_cap_def
                  equiv_for_def slots_holding_overlapping_caps_def)
 
@@ -1705,7 +1710,7 @@ crunch preemption_point
 
 lemma thread_set_tcb_registers_caps_merge_default_tcb_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
-   thread_set (tcb_registers_caps_merge default_tcb) word
+   thread_set (tcb_registers_caps_merge (default_tcb d)) word
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def tcb_registers_caps_merge_def)
 
@@ -1874,10 +1879,7 @@ lemma retype_region_silc_inv:
   apply (rule hoare_gen_asm)+
   apply (simp only: retype_region_def retype_addrs_def
                    foldr_upd_app_if fun_app_def K_bind_def)
-  apply (wp modify_wp dxo_wp_weak | simp)+
-       apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-      apply wp+
-  apply (clarsimp simp: not_less)
+  apply wpsimp
   apply (clarsimp simp add: silc_inv_def)
   apply (intro conjI impI allI)
     apply (fastforce simp: obj_at_def silc_inv_def
@@ -2760,6 +2762,10 @@ lemma silc_inv_cur_thread[simp]:
   by (simp add: silc_inv_def silc_dom_equiv_def equiv_for_def)
 
 
+crunch set_domain
+  for silc_inv[wp]: "silc_inv aag st"
+  (simp: tcb_cap_cases_def)
+
 context FinalCaps_2 begin
 
 lemma perform_invocation_silc_inv:
@@ -2856,6 +2862,10 @@ lemma handle_recv_silc_inv:
   apply fastforce
   done
 
+crunch timer_tick, handle_yield
+  for silc_inv[wp]: "silc_inv aag st"
+  (simp: tcb_cap_cases_def)
+
 lemma handle_interrupt_silc_inv:
   "handle_interrupt irq \<lbrace>silc_inv aag st\<rbrace>"
   unfolding handle_interrupt_def by (wpsimp wp: hoare_drop_imps)
@@ -2873,7 +2883,7 @@ lemma handle_event_silc_inv:
                  handle_recv_silc_inv
                  handle_reply_silc_inv
                  handle_interrupt_silc_inv
-                 handle_vm_fault_silc_inv hy_inv
+                 handle_vm_fault_silc_inv
                  handle_hypervisor_fault_silc_inv
            simp: invs_valid_objs invs_mdb invs_sym_refs)+
 
@@ -2882,7 +2892,7 @@ crunch activate_thread
 
 crunch schedule
   for silc_inv[wp]: "silc_inv aag st"
-  (    wp: OR_choice_weak_wp crunch_wps
+  (    wp: OR_choice_weak_wp crunch_wps dxo_wp_weak
    ignore: set_scheduler_action
      simp: crunch_simps)
 
