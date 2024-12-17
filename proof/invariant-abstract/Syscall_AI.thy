@@ -81,7 +81,7 @@ lemma guarded_switch_to_invs[wp]:
   "guarded_switch_to thread \<lbrace>invs\<rbrace>"
   by (wpsimp simp: guarded_switch_to_def wp: hoare_drop_imps)
 
-lemma schedule_choose_new_thread_valid_state_cur_tcb [wp]:
+lemma schedule_choose_new_thread_invs[wp]:
   "schedule_choose_new_thread \<lbrace>invs\<rbrace>"
   by (wpsimp simp: schedule_choose_new_thread_def choose_thread_def
                wp: hoare_drop_imps)

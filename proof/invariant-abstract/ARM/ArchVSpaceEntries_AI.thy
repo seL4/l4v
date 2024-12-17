@@ -1521,8 +1521,9 @@ lemma handle_invocation_valid_pdpt[wp]:
      (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
 
 
-crunch handle_event, activate_thread, switch_to_thread,
-       switch_to_idle_thread, schedule_choose_new_thread
+crunch
+  handle_event, activate_thread, switch_to_thread, switch_to_idle_thread,
+  schedule_choose_new_thread, arch_prepare_next_domain
   for valid_pdpt[wp]: "valid_pdpt_objs"
   (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt

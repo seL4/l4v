@@ -99,6 +99,14 @@ lemma arch_stt_scheduler_action [wp, Schedule_AI_assms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def)
 
+crunch arch_prepare_next_domain
+  for ct[wp, Schedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and activatable[wp, Schedule_AI_assms]: "ct_in_state activatable"
+  and pred_tcb_at[wp, Schedule_AI_assms]: "\<lambda>s. P (pred_tcb_at proj Q t s)"
+  and valid_idle[wp, Schedule_AI_assms]: valid_idle
+  and invs[wp, Schedule_AI_assms]: invs
+  (wp: crunch_wps ct_in_state_thread_state_lift)
+
 lemma arch_stit_scheduler_action [wp, Schedule_AI_assms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def)

@@ -2310,6 +2310,7 @@ lemma valid_arch_arch_tcb_set_registers[simp]:
 lemma tcb_arch_ref_simps[simp]:
   "\<And>f. tcb_arch_ref (tcb_ipc_buffer_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_mcpriority_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_flags_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ctable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_vtable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_reply_update f tcb) = tcb_arch_ref tcb"
