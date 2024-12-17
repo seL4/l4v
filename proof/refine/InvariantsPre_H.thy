@@ -17,11 +17,6 @@ imports
   Move_R
 begin
 
-(* global data and code of the kernel, not covered by any cap *)
-axiomatization
-  kernel_data_refs :: "word64 set"
-
-
 section \<open>Locale Setup for kernel_state Field Update Identities\<close>
 
 text \<open>
