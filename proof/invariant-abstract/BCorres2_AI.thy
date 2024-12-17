@@ -445,10 +445,12 @@ lemma get_before_assert_opt:
   apply (simp add: ext exec_get)
   done
 
-lemma s_bcorres_get_left:
+lemma s_bcorres_get_pre:
   "(s_bcorres_underlying t (get >>= f) g s)
     = (s_bcorres_underlying t (f s) g s)"
-  by (simp add: s_bcorres_underlying_def exec_get)
+  "(s_bcorres_underlying t f' (get >>= g') s)
+    = (s_bcorres_underlying t f' (g' (t s)) s)"
+  by (simp add: s_bcorres_underlying_def exec_get)+
 
 lemma get_outside_alternative:
   "alternative (get >>= f) g

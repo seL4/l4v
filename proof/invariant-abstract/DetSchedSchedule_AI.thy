@@ -880,6 +880,28 @@ locale DetSchedSchedule_AI =
     "\<And>i. arch_invoke_irq_handler i \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   assumes arch_mask_irq_signal_valid_sched[wp]:
     "\<And>irq. arch_mask_irq_signal irq \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_next_domain_scheduler_action[wp]:
+    "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
+  assumes arch_prepare_next_domain_valid_queues'[wp]:
+    "arch_prepare_next_domain \<lbrace>valid_queues :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_next_domain_valid_blocked[wp]:
+    "arch_prepare_next_domain \<lbrace>valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_next_domain_ct_in_q[wp]:
+    "arch_prepare_next_domain \<lbrace>ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_next_domain_etcb_at[wp]:
+    "\<And>P t. arch_prepare_next_domain \<lbrace>etcb_at P t :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_next_domain_valid_list[wp]:
+    "arch_prepare_next_domain \<lbrace>valid_list :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_set_flags_valid_sched[wp]:
+    "\<And>t flags. arch_post_set_flags t flags \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_set_domain_valid_sched[wp]:
+    "\<And>t d. arch_prepare_set_domain t d \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_set_domain_idle_thread[wp]:
+    "\<And>t d P. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
+  assumes arch_prepare_set_domain_scheduler_action[wp]:
+    "\<And>t d P. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
+  assumes arch_prepare_set_domain_valid_idle[wp]:
+    "\<And>t d. arch_prepare_set_domain t d \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
 
 context DetSchedSchedule_AI begin
 
@@ -2121,8 +2143,9 @@ lemma as_user_valid_sched[wp]:
                       weak_valid_sched_action_def st_tcb_at_kh_if_split
                       st_tcb_def2 valid_blocked_def)
 
-crunch bind_notification
+crunch bind_notification, set_flags
   for valid_sched[wp]: valid_sched
+  (wp: thread_set_not_state_valid_sched)
 
 crunch suspend
   for it[wp]: "\<lambda> s. P (idle_thread s)"
@@ -3272,29 +3295,20 @@ lemma thread_set_domain_not_idle_valid_sched:
 
 declare tcb_sched_action_valid_idle_etcb[wp]
 
-lemma invoke_domain_valid_sched[wp]:
+lemma set_domain_valid_sched[wp]:
   "\<lbrace>valid_sched and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)
                 and simple_sched_action and valid_idle\<rbrace>
-    invoke_domain t d \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (simp add: invoke_domain_def)
-  apply wp
-   apply (simp add: set_domain_def)
-   apply (wp gts_st_tcb_at hoare_vcg_if_lift hoare_vcg_if_lift2 hoare_vcg_imp_lift
-             hoare_vcg_disj_lift reschedule_required_valid_sched
-             tcb_sched_action_enqueue_valid_blocked
-             thread_set_domain_valid_queues_not_q
-             thread_set_domain_ssa_valid_sched_action
-             thread_set_domain_ct_in_cur_domain thread_set_domain_not_idle_valid_sched
-             thread_set_domain_not_idle_valid_idle_etcb)
-      apply (wp tcb_dequeue_not_queued tcb_sched_action_dequeue_valid_blocked_except)
-     apply simp
-     apply (wp hoare_vcg_disj_lift)
-     apply (rule_tac Q'="\<lambda>_. valid_sched and not_queued t and valid_idle and (\<lambda>s. t \<noteq> idle_thread s)" in hoare_strengthen_post)
-      apply (wp tcb_sched_action_dequeue_valid_sched_not_runnable tcb_dequeue_not_queued)
-     apply (simp add: valid_sched_def valid_sched_action_def)
-    apply simp
-    apply (wp hoare_vcg_disj_lift tcb_dequeue_not_queued tcb_sched_action_dequeue_valid_blocked_except
-              tcb_sched_action_dequeue_valid_sched_not_runnable)+
+   set_domain t d
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (simp add: set_domain_def)
+  apply (wpsimp wp: hoare_vcg_if_lift hoare_vcg_if_lift2 hoare_vcg_imp_lift hoare_vcg_disj_lift
+                    reschedule_required_valid_sched tcb_sched_action_enqueue_valid_blocked
+                    gts_st_tcb_at thread_set_domain_valid_queues_not_q
+                    thread_set_domain_not_idle_valid_idle_etcb thread_set_domain_ssa_valid_sched_action
+                    thread_set_domain_ct_in_cur_domain thread_set_domain_not_idle_valid_sched
+                    tcb_dequeue_not_queued tcb_sched_action_dequeue_valid_blocked_except
+                    tcb_sched_action_dequeue_valid_sched_not_runnable
+         | strengthen valid_sched_valid_blocked)+
   apply (clarsimp simp: valid_sched_def not_cur_thread_def valid_sched_action_def not_pred_tcb)
   apply (auto simp: st_tcb_def2 tcb_at_def)
   done
@@ -3315,6 +3329,16 @@ lemma idle_not_reply_cap':
   done
 
 context DetSchedSchedule_AI begin
+
+lemma invoke_domain_valid_sched[wp]:
+  "\<lbrace>valid_sched and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)
+                and simple_sched_action and valid_idle\<rbrace>
+   invoke_domain t d
+   \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  apply (simp add: invoke_domain_def)
+  apply (wpsimp wp: tcb_at_typ_at)
+  done
+
 lemma perform_invocation_valid_sched[wp]:
   "\<lbrace>invs and valid_invocation i and ct_active and simple_sched_action and valid_sched
          and (\<lambda>s. not_queued (cur_thread s) s)\<rbrace>
