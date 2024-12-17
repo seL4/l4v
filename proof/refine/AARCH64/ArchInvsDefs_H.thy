@@ -146,14 +146,6 @@ lemmas valid_arch_cap'_simps[simp] =
   valid_arch_cap'_def[unfolded wellformed_acap'_def valid_arch_cap_ref'_def,
                       split_simps arch_capability.split, simplified]
 
-definition arch_cap'_fun_lift :: "(arch_capability \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> capability \<Rightarrow> 'a" where
-  "arch_cap'_fun_lift P F c \<equiv> case c of ArchObjectCap ac \<Rightarrow> P ac | _ \<Rightarrow> F"
-
-lemmas arch_cap'_fun_lift_simps[simp] = arch_cap'_fun_lift_def[split_simps capability.split]
-
-definition valid_acap' :: "capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_acap' \<equiv> arch_cap'_fun_lift valid_arch_cap' \<top>"
-
 definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
   "is_device_frame_cap' cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ dev _) \<Rightarrow> dev | _ \<Rightarrow> False"
 
