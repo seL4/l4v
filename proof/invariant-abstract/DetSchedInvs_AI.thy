@@ -274,6 +274,10 @@ lemma valid_sched_valid_queues[elim!]:
   "valid_sched s \<Longrightarrow> valid_queues s"
   by (clarsimp simp: valid_sched_def)
 
+lemma valid_sched_valid_blocked[elim!]:
+  "valid_sched s \<Longrightarrow> valid_blocked s"
+  by (clarsimp simp: valid_sched_def)
+
 lemma typ_at_st_tcb_at_lift:
   assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
   assumes st_lift: "\<And>P. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
