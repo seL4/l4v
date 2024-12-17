@@ -3379,7 +3379,7 @@ lemma sts'_valid_pspace'_inv[wp]:
    apply (wp sts_valid_objs')
    apply (simp add: setThreadState_def threadSet_def
                     setQueue_def bind_assoc valid_mdb'_def)
-   apply (wp getObject_obj_at_tcb | simp)+
+   apply (wp getObject_obj_at_tcb hoare_drop_imps | simp)+
   apply (clarsimp simp: valid_mdb'_def)
   apply (drule obj_at_ko_at')
   apply clarsimp

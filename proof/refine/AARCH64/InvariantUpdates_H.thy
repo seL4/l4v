@@ -55,6 +55,20 @@ lemma valid_cap_update [iff]:
   "(f s) \<turnstile>' c = s \<turnstile>' c"
   by (auto intro: valid_cap'_pspaceI simp: pspace)
 
+(* exports from Arch locale version (safe for generic use) *)
+interpretation Arch_pspace_update_eq' ..
+
+lemmas pspace_in_kernel_mappings_update'[iff] = pspace_in_kernel_mappings_update'
+
+end
+
+context Arch_p_arch_idle_update_eq'
+begin
+
+lemma valid_arch_state_update' [iff]:
+  "valid_arch_state' (f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
+
 end
 
 context p_arch_idle_update_eq'
@@ -63,6 +77,11 @@ begin
 lemma ifunsafe_update [iff]:
   "if_unsafe_then_cap' (f s) = if_unsafe_then_cap' s"
   by (simp add: if_unsafe_then_cap'_def ex_cte_cap_to'_def int_nd)
+
+(* exports from Arch locale version (safe for generic use) *)
+interpretation Arch_p_arch_idle_update_eq' ..
+
+lemmas valid_arch_state_update'[iff] = valid_arch_state_update'
 
 end
 
@@ -121,9 +140,6 @@ lemma ct_in_current_domain_ksMachineState[simp]:
   "ct_idle_or_in_cur_domain' (ksMachineState_update p s) = ct_idle_or_in_cur_domain' s"
   by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
-(* FIXME arch-split: MOVE *)
-context Arch begin arch_global_naming
-
 (* FIXME arch-split: export? *)
 lemma invs'_machine:
   assumes mask: "irq_masks (f (ksMachineState s)) =
@@ -164,8 +180,6 @@ proof -
     done
 qed
 
-end
-
 lemma pspace_no_overlap_queues [simp]:
   "pspace_no_overlap' w sz (ksReadyQueues_update f s) = pspace_no_overlap' w sz s"
   by (simp add: pspace_no_overlap'_def)
@@ -192,20 +206,17 @@ lemma inQ_context[simp]:
   "inQ d p (tcbArch_update f tcb) = inQ d p tcb"
   by (cases tcb, simp add: inQ_def)
 
-(* FIXME arch-split: MOVE *)
-context Arch begin arch_global_naming
-
 lemma valid_tcb'_tcbQueued[simp]:
   "valid_tcb' (tcbQueued_update f tcb) = valid_tcb' tcb"
-  by (cases tcb, rule ext, simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  by (cases tcb, rule ext, simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma valid_tcb'_tcbFault_update[simp]:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
-  by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def cteSizeBits_def)
+  by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma valid_tcb'_tcbTimeSlice_update[simp]:
   "valid_tcb' (tcbTimeSlice_update f tcb) s = valid_tcb' tcb s"
-  by (simp add:valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  by (simp add:valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma invs'_wu[simp]:
   "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
@@ -215,6 +226,9 @@ lemma invs'_wu[simp]:
                    bitmapQ_defs)
   done
 
+(* FIXME arch-split: MOVE *)
+context Arch begin arch_global_naming
+
 lemma valid_arch_state'_interrupt[simp]:
   "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
   by (simp add: valid_arch_state'_def cong: option.case_cong)
@@ -223,17 +237,9 @@ end
 
 (* FIXME arch-split: locales? *)
 arch_requalify_facts
-  valid_tcb'_tcbQueued
-  valid_tcb'_tcbFault_update
-  valid_tcb'_tcbTimeSlice_update
-  invs'_wu
   valid_arch_state'_interrupt
 
 lemmas [simp] =
-  valid_tcb'_tcbQueued
-  valid_tcb'_tcbFault_update
-  valid_tcb'_tcbTimeSlice_update
-  invs'_wu
   valid_arch_state'_interrupt
 
 lemma if_unsafe_then_cap_arch'[simp]:
@@ -474,10 +480,6 @@ lemma ct_not_inQ_update_stt[simp]:
   "ct_not_inQ (s\<lparr>ksSchedulerAction := SwitchToThread t\<rparr>)"
    by (simp add: ct_not_inQ_def)
 
-
-(* FIXME arch-split: MOVE *)
-context Arch begin arch_global_naming
-
 lemma ksDomainTime_invs[simp]:
   "invs' (ksDomainTime_update f s) = invs' s"
   by (simp add: invs'_def valid_state'_def cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
@@ -487,16 +489,6 @@ lemma invs'_update_cnt[elim!]:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
    by (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_irq_node'_def cur_tcb'_def
                       ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def bitmapQ_defs)
-
-end
-
-(* FIXME arch-split: locales? *)
-arch_requalify_facts
-  ksDomainTime_invs
-  invs'_update_cnt
-
-lemmas [simp] = ksDomainTime_invs
-lemmas [elim!] = invs'_update_cnt
 
 (* FIXME arch-split: MOVE *)
 context Arch begin arch_global_naming
@@ -523,5 +515,11 @@ lemma invs'_gsTypes_update:
            cong: option.case_cong)
 
 end
+
+(* FIXME arch-split: valid_arch_mdb_ctes only exists to contain ioport_control on x64, and it is not
+   yet clear what the best way to arch-split it is, or whether it can be crossed from AInvs.
+   Therefore, for now, export the truth that it doesn't do anything on this arch beyond this point *)
+arch_requalify_facts valid_arch_mdb_ctes_def
+lemmas [simp] = valid_arch_mdb_ctes_def
 
 end

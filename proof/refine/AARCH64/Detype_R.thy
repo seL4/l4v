@@ -627,6 +627,7 @@ context delete_locale begin interpretation Arch . (*FIXME: arch-split*)
 lemma valid_objs: "valid_objs' s'"
   and        pa: "pspace_aligned' s'"
   and        pc: "pspace_canonical' s'"
+  and       pkm: "pspace_in_kernel_mappings' s'"
   and        pd: "pspace_distinct' s'"
   and       vbm: "valid_bitmaps s'"
   and sym_sched: "sym_heap_sched_pointers s'"
@@ -1455,6 +1456,9 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   show "pspace_canonical' ?s" using pc
     by (simp add: pspace_canonical'_def dom_def)
 
+  show "pspace_in_kernel_mappings' ?s" using pkm
+    by (simp add: pspace_in_kernel_mappings'_def dom_def)
+
   show pspace_distinct'_state': "pspace_distinct' ?s" using pd
     by (clarsimp simp add: pspace_distinct'_def ps_clear_def
                            dom_if_None Diff_Int_distrib)
@@ -1742,7 +1746,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
                                         (tcbQueued |< (pspace' |> tcb_of'))"
     by (clarsimp simp: valid_sched_pointers_def opt_pred_def opt_map_def)
 
-qed (clarsimp)
+qed clarsimp
 
 lemma (in delete_locale) delete_ko_wp_at':
   assumes    objs: "ko_wp_at' P p s' \<and> ex_nonz_cap_to' p s'"
