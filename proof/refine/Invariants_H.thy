@@ -28,6 +28,7 @@ arch_requalify_consts
   global_refs'
   valid_arch_state'
   archMakeObjectT
+  kernel_data_refs
 
 (* FIXME arch-split: review section titles *)
 section "Invariants on Executable Spec"
