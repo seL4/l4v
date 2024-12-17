@@ -457,7 +457,7 @@ lemma ko_at_cte_ipcbuffer:
   "ko_at' tcb p s \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbIPCBufferFrame tcb) (p + tcbIPCBufferSlot * 0x20) s"
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
   apply (erule (2) cte_wp_at_tcbI')
-   apply (fastforce simp add: tcb_cte_cases_def tcbIPCBufferSlot_def)
+   apply (fastforce simp: tcb_cte_cases_def tcbIPCBufferSlot_def cteSizeBits_def)
   apply simp
   done
 

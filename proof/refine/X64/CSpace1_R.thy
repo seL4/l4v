@@ -212,6 +212,7 @@ lemma tcb_cases_related:
   "tcb_cap_cases ref = Some (getF, setF, restr) \<Longrightarrow>
     \<exists>getF' setF'. (\<forall>x. tcb_cte_cases (cte_map (x, ref) - x) = Some (getF', setF'))
                \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF tcb) (cteCap (getF' tcb')))"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   by (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1
                 cte_map_def' tcb_relation_def
          split: if_split_asm)
@@ -336,10 +337,12 @@ lemma maskCapRights [simp]:
 
 lemma maskCap_valid [simp]:
   "s \<turnstile>' RetypeDecls_H.maskCapRights R cap = s \<turnstile>' cap"
-  by (simp    add: valid_cap'_def maskCapRights_def isCap_simps
+  apply (simp    add: valid_cap'_def maskCapRights_def isCap_simps
                    capAligned_def X64_H.maskCapRights_def
             split: capability.split arch_capability.split
         split del: if_split)
+  apply clarsimp (* FIXME arch-split: unclear why *)
+  done
 
 lemma getSlotCap_valid_cap:
   "\<lbrace>valid_objs'\<rbrace> getSlotCap t \<lbrace>\<lambda>r. valid_cap' r and cte_at' t\<rbrace>"
@@ -1496,7 +1499,7 @@ lemma ps_clear_32:
     \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
   apply (simp add: ps_clear_def)
   apply (drule equals0D[where a="p + 2^cteSizeBits"])
-  apply (simp add: dom_def add.commute objBits_defs take_bit_Suc)
+  apply (simp add: dom_def add.commute objBits_defs take_bit_Suc mask_def)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp
@@ -1619,7 +1622,7 @@ lemma tcb_cases_related2:
           \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF' tcb) (cteCap (getF tcb')))
           \<and> (\<forall>tcb tcb' cap cte. tcb_relation tcb tcb' \<longrightarrow> cap_relation cap (cteCap cte)
                         \<longrightarrow> tcb_relation (setF' (\<lambda>x. cap) tcb) (setF (\<lambda>x. cte) tcb'))"
-  apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def cte_level_bits_def
+  apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def cte_level_bits_def cteSizeBits_def
                         tcb_cap_cases_simps[simplified]
                  split: if_split_asm)
   apply (simp_all add: tcb_cnode_index_def cte_level_bits_def cte_map_def field_simps to_bl_1)
@@ -3752,7 +3755,7 @@ lemma derived_sameRegionAs:
    apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
                          is_aligned_no_overflow capRange_def
                   split: capability.splits arch_capability.splits option.splits)
-  apply (clarsimp simp: isCap_simps valid_cap'_def
+  apply (clarsimp simp: isCap_simps valid_cap'_def valid_arch_cap'_def
                         is_aligned_no_overflow capRange_def
                  split: capability.splits arch_capability.splits option.splits)
   done
@@ -4980,6 +4983,8 @@ lemma updateCapFreeIndex_irq_control:
     apply (clarsimp simp:cte_wp_at_ctes_of)+
 done
 
+context begin interpretation Arch . (* FIXME arch-split *)
+
 lemma updateCapFreeIndex_ioport_control:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
   shows
@@ -4995,6 +5000,21 @@ lemma updateCapFreeIndex_ioport_control:
   apply (rule mdb_inv_preserve_updateCap)
    apply (clarsimp simp:cte_wp_at_ctes_of)+
   done
+
+lemma setUntypedCapAsFull_ioport_control:
+  assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
+  shows
+  "\<lbrace>\<lambda>s. P (ioport_control (Q (ctes_of s))) \<and> cte_wp_at' (\<lambda>c. c = srcCTE) src s\<rbrace>
+     setUntypedCapAsFull (cteCap srcCTE) cap src
+   \<lbrace>\<lambda>r s. P (ioport_control (Q (ctes_of s)))\<rbrace>"
+  apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits,intro conjI impI)
+   apply (wp updateCapFreeIndex_ioport_control)
+    apply (clarsimp simp:cte_wp_at_ctes_of preserve)+
+  apply wp
+  apply clarsimp
+  done
+
+end
 
 lemma setUntypedCapAsFull_mdb_chunked:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
@@ -5047,19 +5067,6 @@ setUntypedCapAsFull (cteCap srcCTE) cap src
   apply wp
   apply clarsimp
 done
-
-lemma setUntypedCapAsFull_ioport_control:
-  assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
-  shows
-  "\<lbrace>\<lambda>s. P (ioport_control (Q (ctes_of s))) \<and> cte_wp_at' (\<lambda>c. c = srcCTE) src s\<rbrace>
-     setUntypedCapAsFull (cteCap srcCTE) cap src
-   \<lbrace>\<lambda>r s. P (ioport_control (Q (ctes_of s)))\<rbrace>"
-  apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits,intro conjI impI)
-   apply (wp updateCapFreeIndex_ioport_control)
-    apply (clarsimp simp:cte_wp_at_ctes_of preserve)+
-  apply wp
-  apply clarsimp
-  done
 
 lemma setUntypedCapAsFull_valid_badges:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
@@ -5220,6 +5227,8 @@ lemma mdb_inv_preserve_refl[simp]:
   "mdb_inv_preserve m m"
    by (simp add:mdb_inv_preserve_def)
 
+context begin interpretation Arch . (* FIXME arch-split *)
+
 lemma setUntypedCapAsFull_mdb[wp]:
   "\<lbrace>\<lambda>s. valid_mdb' s \<and> cte_wp_at' (\<lambda>c. c = srcCTE) slot s \<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) cap slot
@@ -5237,6 +5246,8 @@ lemma setUntypedCapAsFull_mdb[wp]:
   apply (clarsimp simp:maskedAsFull_def cte_wp_at_ctes_of split:if_splits)
   apply (erule(1) mdb_inv_preserve_updateCap)
   done
+
+end
 
 lemma (in mdb_insert_abs_sib) next_slot_no_parent':
   "\<lbrakk>valid_list_2 t m; finite_depth m; no_mloop m; m src = None\<rbrakk>
