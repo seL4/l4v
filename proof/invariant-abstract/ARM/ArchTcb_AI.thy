@@ -162,6 +162,10 @@ lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
   by (simp add: free_index_update_def table_cap_ref_def split: cap.splits)
 
+crunch arch_post_set_flags, arch_prepare_set_domain
+  for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
+  and invs[wp, Tcb_AI_assms]: "invs"
+
 
 interpretation Tcb_AI_1? : Tcb_AI_1
   where state_ext_t = state_ext_t
