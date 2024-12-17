@@ -12,14 +12,11 @@ begin
 
 arch_requalify_consts
   refs_of_a'
-  arch_live'
   hyp_live'
   azobj_refs'
   acapBits
-  wellformed_acap'
   tcb_hyp_refs'
   valid_arch_cap'
-  valid_acap'
   canonical_address
   valid_arch_tcb'
   valid_arch_obj'
@@ -28,7 +25,10 @@ arch_requalify_consts
   global_refs'
   valid_arch_state'
   archMakeObjectT
+  valid_arch_mdb_ctes
+  pspace_in_kernel_mappings'
   kernel_data_refs
+  kernel_mappings
 
 (* FIXME arch-split: review section titles *)
 section "Invariants on Executable Spec"
@@ -302,7 +302,7 @@ where valid_cap'_def:
   | UntypedCap d r n f \<Rightarrow>
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
-        \<and> canonical_address r
+        \<and> canonical_address r \<and> r \<in> kernel_mappings
   | EndpointCap r badge x y z t \<Rightarrow> ep_at' r s
   | NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -316,6 +316,11 @@ where valid_cap'_def:
                     \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap' ac s)"
+
+definition arch_cap'_fun_lift :: "(arch_capability \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> capability \<Rightarrow> 'a" where
+  "arch_cap'_fun_lift P F c \<equiv> case c of ArchObjectCap ac \<Rightarrow> P ac | _ \<Rightarrow> F"
+
+lemmas arch_cap'_fun_lift_simps[simp] = arch_cap'_fun_lift_def[split_simps capability.split]
 
 (* Use abbreviation, not syntax, so that it can be input-only *)
 abbreviation (input) valid_cap'_syn ::
@@ -384,7 +389,7 @@ definition valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state 
   | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
-  | KOArch ako \<Rightarrow> valid_arch_obj' ako"
+  | KOArch ako \<Rightarrow> valid_arch_obj' ako s"
 
 definition
   pspace_aligned' :: "kernel_state \<Rightarrow> bool"
@@ -634,7 +639,8 @@ where
                         mdb_chunked m \<and> untyped_mdb' m \<and>
                         untyped_inc' m \<and> valid_nullcaps m \<and>
                         ut_revocable' m \<and> class_links m \<and> distinct_zombies m
-                        \<and> irq_control m \<and> reply_masters_rvk_fb m"
+                        \<and> irq_control m \<and> reply_masters_rvk_fb m
+                        \<and> valid_arch_mdb_ctes m"
 
 definition
   valid_mdb' :: "kernel_state \<Rightarrow> bool"
@@ -650,6 +656,7 @@ where
   "valid_pspace' \<equiv> valid_objs' and
                    pspace_aligned' and
                    pspace_canonical' and
+                   pspace_in_kernel_mappings' and
                    pspace_distinct' and
                    no_0_obj' and
                    valid_mdb'"
@@ -1573,6 +1580,8 @@ locale Invariants_H_pspaceI =
     "\<And>cap s s'. s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
   assumes valid_obj'_pspaceI:
     "\<And>obj s s'. valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
+  assumes pspace_in_kernel_mappings'_pspaceI:
+    "\<And>s s'. pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
   assumes tcb_space_clear:
     "\<And>tcb getF setF P s x y v.
      \<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
@@ -1602,7 +1611,7 @@ lemma (in Invariants_H_pspaceI) valid_pspace':
   by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
                      typ_at'_def pspace_canonical'_def
-           intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
+           intro: valid_obj'_pspaceI valid_mdb'_pspaceI pspace_in_kernel_mappings'_pspaceI)
 
 lemma (in Invariants_H_pspaceI) ex_cte_cap_to_pspaceI'[elim]:
   "ex_cte_cap_to' p s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>
@@ -2205,7 +2214,7 @@ lemma valid_mdb_ctesI [intro]:
     caps_contained' m; mdb_chunked m; untyped_mdb' m;
     untyped_inc' m; valid_nullcaps m; ut_revocable' m;
     class_links m; distinct_zombies m; irq_control m;
-    reply_masters_rvk_fb m \<rbrakk>
+    reply_masters_rvk_fb m; valid_arch_mdb_ctes m \<rbrakk>
   \<Longrightarrow> valid_mdb_ctes m"
   unfolding valid_mdb_ctes_def by auto
 
@@ -2327,10 +2336,6 @@ lemma valid_global_refs_update' [iff]:
   "valid_global_refs' (f s) = valid_global_refs' s"
   by (simp add: valid_global_refs'_def pspace arch idle maxObj)
 
-lemma valid_arch_state_update' [iff]:
-  "valid_arch_state' (f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
-
 end
 
 context p_arch_idle_update_eq'
@@ -2344,7 +2349,6 @@ lemma valid_idle_update' [iff]:
 interpretation Arch_p_arch_idle_update_eq' ..
 
 lemmas valid_global_refs_update'[iff] = valid_global_refs_update'
-lemmas valid_arch_state_update'[iff] = valid_arch_state_update'
 
 end
 
