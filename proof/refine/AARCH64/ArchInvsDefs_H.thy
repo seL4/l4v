@@ -40,6 +40,17 @@ context Arch begin arch_global_naming
 declare lookupPTSlotFromLevel.simps[simp del]
 declare lookupPTFromLevel.simps[simp del]
 
+(* this architecture does not use kernel_mappings / pspace_in_kernel_mappings *)
+definition kernel_mappings :: "machine_word set" where
+  "kernel_mappings \<equiv> UNIV"
+
+definition pspace_in_kernel_mappings' :: "kernel_state \<Rightarrow> bool" where
+ "pspace_in_kernel_mappings' \<equiv> \<top>"
+
+(* FIXME arch-split: if pspace_in_kernel_mappings becomes part of generic interface,
+   check whether having this simp is still beneficial *)
+lemmas [simp] = pspace_in_kernel_mappings'_def kernel_mappings_def
+
 abbreviation vcpu_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "vcpu_at' \<equiv> typ_at' (ArchT VCPUT)"
 
@@ -149,7 +160,7 @@ lemmas valid_arch_cap'_simps[simp] =
 definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
   "is_device_frame_cap' cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ dev _) \<Rightarrow> dev | _ \<Rightarrow> False"
 
-definition   valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
+definition valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_tcb' \<equiv> \<lambda>t s. \<forall>v. atcbVCPUPtr t = Some v \<longrightarrow> vcpu_at' v s "
 
 definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
@@ -163,8 +174,8 @@ definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
 definition ppn_bounded :: "pte \<Rightarrow> bool" where
   "ppn_bounded pte \<equiv> case pte of PageTablePTE ppn \<Rightarrow> canonical_address ppn | _ \<Rightarrow> True"
 
-definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
-  "valid_arch_obj' ako \<equiv> case ako of
+definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_arch_obj' ako _ \<equiv> case ako of
      KOPTE pte \<Rightarrow> ppn_bounded pte
    | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
    | _ \<Rightarrow> True"
@@ -182,6 +193,9 @@ definition
   isArchFrameCap :: "capability \<Rightarrow> bool"
 where
  "isArchFrameCap cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ _ _) \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition valid_arch_mdb_ctes :: "cte_heap \<Rightarrow> bool" where
+  "valid_arch_mdb_ctes \<equiv> \<top>"
 
 (* Addresses of all PTEs in a VSRoot table at p *)
 definition table_refs' :: "machine_word \<Rightarrow> machine_word set" where
