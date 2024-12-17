@@ -1028,6 +1028,11 @@ lemma grs_distinct'[wp]:
   apply simp
   done
 
+(* FIXME arch-split: move *)
+lemma invs_pspace_in_kernel_mappings'[elim!]:
+  "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
+  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
 lemma transferCaps_corres:
   "\<lbrakk> info' = message_info_map info;
     list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x))
@@ -1042,7 +1047,7 @@ lemma transferCaps_corres:
     and (\<lambda>s. valid_message_info info)
     and transfer_caps_srcs caps)
    (tcb_at' receiver and valid_objs' and
-    pspace_aligned' and pspace_distinct' and pspace_canonical'
+    pspace_aligned' and pspace_distinct' and pspace_canonical' and pspace_in_kernel_mappings'
     and no_0_obj' and valid_mdb'
     and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
     and case_option \<top> valid_ipc_buffer_ptr' recv_buf

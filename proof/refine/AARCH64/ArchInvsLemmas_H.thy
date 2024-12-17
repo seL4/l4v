@@ -44,6 +44,12 @@ lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
             simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
            split: arch_capability.split zombie_type.split option.splits)
 
+(* FIXME arch-split: required since valid_arch_obj' takes state due to other arches *)
+lemma valid_arch_obj'_pspaceI:
+  "\<lbrakk>valid_arch_obj' obj s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_arch_obj' obj s'"
+  unfolding valid_arch_obj'_def
+  by simp
+
 lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
@@ -53,7 +59,7 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
                  valid_bound_ntfn'_def valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI valid_arch_obj'_pspaceI)
 
 lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
@@ -77,6 +83,14 @@ lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   apply (rule_tac x="y - x" in exI)
   apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
   done
+
+lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
+  "pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
+  unfolding pspace_in_kernel_mappings'_def
+  by simp
+
+(* not interesting on this architecture *)
+lemmas [simp] = pspace_in_kernel_mappings'_pspaceI
 
 end
 
@@ -236,6 +250,10 @@ lemma page_table_at_update' [iff]:
 lemma frame_at_update' [iff]:
   "frame_at' p sz d (f s) = frame_at' p sz d s"
   by (simp add: frame_at'_def)
+
+lemma pspace_in_kernel_mappings_update' [iff]:
+  "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
+  by (simp add: pspace_in_kernel_mappings'_def)
 
 end
 
