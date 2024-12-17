@@ -261,7 +261,6 @@ lemma obj_relation_cuts_obj_bits:
   apply (erule (1) obj_relation_cutsE;
           clarsimp simp: objBits_simps objBits_defs bit_simps cte_level_bits_def
                          pbfs_atleast_pageBits[simplified bit_simps])
-      prefer 5
       apply (cases ko; simp add: other_obj_relation_def objBits_defs split: kernel_object.splits)
       apply (rename_tac ako, case_tac ako; clarsimp simp: archObjSize_def)+
   done
@@ -410,6 +409,7 @@ lemma updateObject_cte_is_tcb_or_cte:
     \<and> ko' = KOTCB (setF (\<lambda>x. cte) tcb) \<and> is_aligned q tcbBlockSizeBits \<and> ps_clear q tcbBlockSizeBits s) \<or>
   (\<exists>cte'. ko = KOCTE cte' \<and> ko' = KOCTE cte \<and> s' = s
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
                         tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
                         in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
@@ -910,6 +910,7 @@ declare diff_neg_mask[simp del]
 
 lemma cte_wp_at_ctes_of:
   "cte_wp_at' P p s = (\<exists>cte. ctes_of s p = Some cte \<and> P cte)"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: cte_wp_at_cases' map_to_ctes_def Let_def
                    cte_level_bits_def objBits_simps'
           split del: if_split)
@@ -918,7 +919,7 @@ lemma cte_wp_at_ctes_of:
    apply (clarsimp simp: ps_clear_def3 field_simps
               split del: if_split)
    apply (frule is_aligned_sub_helper)
-    apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
+    apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
    apply (case_tac "n = 0")
     apply (clarsimp simp: field_simps)
    apply (subgoal_tac "ksPSpace s p = None")
@@ -1400,6 +1401,7 @@ lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
       apply (rename_tac endpoint)
       apply (case_tac endpoint; simp add: valid_ep'_def, wp)
@@ -1411,7 +1413,7 @@ lemma typ_at'_valid_obj'_lift:
     apply (case_tac "tcbState tcb";
            simp add: valid_tcb'_def valid_tcb_state'_def split_def none_top_def
                      valid_bound_ntfn'_def;
-           wpsimp wp: hoare_case_option_wp hoare_case_option_wp2;
+           wpsimp wp: hoare_case_option_wp hoare_case_option_wp2 valid_arch_tcb_lift' P;
            (clarsimp split: option.splits)?)
    apply (wpsimp simp: valid_cte'_def)
   apply (rename_tac arch_kernel_object)
@@ -1903,6 +1905,38 @@ lemma set_ntfn_state_refs_of'[wp]:
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps' fun_upd_def)
 
+(* FIXME arch-split: temporary fix for this arch *)
+lemma non_hyp_state_hyp_refs_of'[simp]:
+  "state_hyp_refs_of' s = (\<lambda>p. {})"
+  unfolding state_hyp_refs_of'_def
+  apply (rule ext)
+  by (clarsimp split: option.splits kernel_object.split
+               simp: hyp_refs_of'_def tcb_hyp_refs'_def)
+
+(* FIXME arch-split: temporary fix for this arch *)
+lemma non_hyp_hyp_refs_of'[simp]:
+  "hyp_refs_of' p = {}"
+  unfolding state_hyp_refs_of'_def
+  by (clarsimp split: option.splits kernel_object.split
+               simp: hyp_refs_of'_def tcb_hyp_refs'_def)
+
+lemma setObject_state_hyp_refs_of':
+  assumes x: "updateObject val = updateObject_default val"
+  assumes y: "(1 :: machine_word) < 2 ^ objBits val"
+  shows
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (ptr := hyp_refs_of' (injectKO val)))\<rbrace>
+     setObject ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def x in_magnitude_check y
+                 elim!: rsubst[where P=P] intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  done
+
+lemma set_ntfn_state_hyp_refs_of'[wp]:
+  "setNotification epptr ntfn \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
+  by wpsimp
+
 lemma setNotification_pred_tcb_at'[wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
   apply (simp add: pred_tcb_at'_def setNotification_def)
@@ -1987,7 +2021,7 @@ lemma setEndpoint_iflive'[wp]:
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
    apply (clarsimp simp: updateObject_default_def in_monad
                          projectKOs bind_def)
-  apply clarsimp
+  apply (clarsimp simp: live'_def)
   done
 
 declare setEndpoint_cte_wp_at'[wp]
