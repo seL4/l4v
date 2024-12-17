@@ -60,14 +60,14 @@ locale int_update_eq' =
   assumes int:  "ksInterruptState (f s) = ksInterruptState s"
 
 (* FIXME arch-split: unused, can replace by int_update_eq' to optimise *)
-locale Arch_int_update_eq' = int_update_eq' + Arch
+locale Arch_int_update_eq' = int_update_eq' + Arch_pspace_update_eq'
 
 locale p_cur_update_eq' = pspace_update_eq' +
   assumes curt: "ksCurThread (f s) = ksCurThread s"
   assumes curd: "ksCurDomain (f s) = ksCurDomain s"
 
 (* FIXME arch-split: unused, can replace by p_cur_update_eq' to optimise *)
-locale Arch_p_cur_update_eq' = p_cur_update_eq' + Arch
+locale Arch_p_cur_update_eq' = p_cur_update_eq' + Arch_pspace_update_eq'
 
 locale p_int_update_eq' = pspace_update_eq' + int_update_eq'
 locale Arch_p_int_update_eq' = Arch_pspace_update_eq' + Arch_int_update_eq' + p_int_update_eq'
@@ -121,6 +121,8 @@ abbreviation ko_at' :: "'a::pspace_storable \<Rightarrow> obj_ref \<Rightarrow> 
 
 abbreviation irq_node' :: "kernel_state \<Rightarrow> obj_ref" where
   "irq_node' s \<equiv> intStateIRQNode (ksInterruptState s)"
+
+type_synonym cte_heap = "machine_word \<Rightarrow> cte option"
 
 (* FIXME arch-split: consider adding to simpset early in Refine, then changing over definitions *)
 (* proof is identical on all arches *)
