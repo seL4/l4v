@@ -738,7 +738,7 @@ lemma threadSet_timeSlice_ccorres [corres]:
   apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def
                         fpu_null_state_heap_update_tag_disj_simps)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
-  apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def
+  apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def tcb_cte_cases_neqs
                    map_to_tcbs_upd)
   apply (simp add: cep_relations_drop_fun_upd cvariable_relation_upd_const
                    ko_at_projectKO_opt)
