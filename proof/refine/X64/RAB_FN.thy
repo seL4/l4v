@@ -80,6 +80,8 @@ lemma isCNodeCap_capUntypedPtr_capCNodePtr:
   "isCNodeCap c \<Longrightarrow> capUntypedPtr c = capCNodePtr c"
   by (clarsimp simp: isCap_simps)
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma resolveAddressBitsFn_eq:
   "monadic_rewrite F E (\<lambda>s. (isCNodeCap cap \<longrightarrow> (\<exists>slot. cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s))
         \<and> valid_objs' s \<and> cnode_caps_gsCNodes' s)
@@ -143,5 +145,7 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
   apply (simp add: isCap_simps capAligned_def word_bits_def and_mask_less')
   done
 qed
+
+end
 
 end

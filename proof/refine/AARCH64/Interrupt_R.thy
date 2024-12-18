@@ -1042,6 +1042,7 @@ lemma timerTick_invs'[wp]:
            apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
           apply (wpsimp simp: invs'_def valid_state'_def valid_pspace'_def sch_act_wf_weak)+
       apply (wp gts_wp')+
+  apply (frule invs_pspace_in_kernel_mappings')
   apply (auto simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def cong: conj_cong)
   done
 

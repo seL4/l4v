@@ -1196,6 +1196,12 @@ lemma setObject_ko_wp_at:
                  split: if_split_asm)
   done
 
+(* FIXME arch-split: not available on all arches, valid_arch_obj' has to not depend on state *)
+lemma valid_arch_obj'_valid[wp]:
+  "f \<lbrace>valid_arch_obj' ako\<rbrace>"
+  unfolding valid_arch_obj'_def
+  by wp
+
 lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
@@ -1457,6 +1463,12 @@ lemma setEndpoint_valid_mdb':
 
 crunch setEndpoint, setNotification
   for pspace_canonoical'[wp]: pspace_canonical'
+
+(* only on arches without kernel mappings *)
+lemma pspace_in_kernel_mappings'_wp[wp]:
+  "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. pspace_in_kernel_mappings'\<rbrace>"
+  unfolding pspace_in_kernel_mappings'_def
+  by wp
 
 lemma set_ep_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and valid_ep' ep\<rbrace>

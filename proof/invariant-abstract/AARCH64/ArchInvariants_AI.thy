@@ -9,6 +9,18 @@ theory ArchInvariants_AI
 imports InvariantsPre_AI "Eisbach_Tools.Apply_Trace_Cmd"
 begin
 
+\<comment> \<open>---------------------------------------------------------------------------\<close>
+section "Move this up"
+
+qualify AARCH64 (in Arch)
+
+(* FIXME: move to spec level *)
+(* global data and code of the kernel, not covered by any cap *)
+axiomatization
+  kernel_data_refs :: "word64 set"
+
+end_qualify
+
 context Arch begin arch_global_naming
 
 (* compatibility with other architectures, input only *)

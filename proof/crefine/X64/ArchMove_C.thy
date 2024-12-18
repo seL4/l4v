@@ -31,6 +31,8 @@ lemma ps_clear_is_aligned_ksPSpace_None:
                     power_overflow)
   by assumption
 
+context Arch begin arch_global_naming
+
 lemma ps_clear_is_aligned_ctes_None:
   assumes "ps_clear p tcbBlockSizeBits s"
       and "is_aligned p tcbBlockSizeBits"
@@ -169,8 +171,6 @@ lemma addToBitmap_sets_L1Bitmap_same_dom:
   apply (clarsimp simp: maxPriority_def numPriorities_def word_or_zero le_def
                         prioToL1Index_max[simplified wordRadix_def, simplified])
   done
-
-context begin interpretation Arch .
 
 lemma vmsz_aligned_aligned_pageBits:
   "vmsz_aligned ptr sz \<Longrightarrow> is_aligned ptr pageBits"
@@ -422,6 +422,7 @@ lemma valid_untyped':
   apply (frule pspace_distinctD'[OF _ pspace_distinct'])
   apply simp
   apply (frule aligned_ranges_subset_or_disjoint[OF al])
+  apply (simp only: add_mask_fold)
   apply (fold obj_range'_def)
   apply (rule iffI)
    apply auto[1]
@@ -429,14 +430,15 @@ lemma valid_untyped':
    apply (rule ccontr, simp)
    apply (simp add: Set.psubset_eq)
    apply (erule conjE)
-   apply (case_tac "obj_range' ptr' ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {}", simp)
+   apply (case_tac "obj_range' ptr' ko \<inter> mask_range ptr bits \<noteq> {}", simp)
    apply (cut_tac is_aligned_no_overflow[OF al])
-   apply (auto simp add: obj_range'_def)[1]
+   apply (auto simp add: obj_range'_def add_mask_fold)[1]
   apply (clarsimp simp add: usableUntypedRange.simps Int_commute)
-  apply (case_tac "obj_range' ptr' ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {}", simp+)
+  apply (case_tac "obj_range' ptr' ko \<inter> mask_range ptr bits \<noteq> {}", simp)
   apply (cut_tac is_aligned_no_overflow[OF al])
   apply (clarsimp simp add: obj_range'_def)
   apply (frule is_aligned_no_overflow)
+  apply (simp add: mask_def add_diff_eq)
   by (metis al intvl_range_conv' le_m1_iff_lt less_is_non_zero_p1
                nat_le_linear power_overflow sub_wrap add_0
                add_0_right word_add_increasing word_less_1 word_less_sub_1)
@@ -508,5 +510,11 @@ lemma cap_case_isPML4Cap:
   done
 
 end
+
+(* these will need to be requalified when moved *)
+arch_requalify_facts
+  empty_fail_loadWordUser
+
+lemmas [intro!, simp] = empty_fail_loadWordUser
 
 end

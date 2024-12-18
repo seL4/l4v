@@ -1200,7 +1200,7 @@ lemma cte_refs_capRange:
     apply simp
    defer
    \<comment> \<open>CNodeCap\<close>
-   apply (clarsimp simp: objBits_simps capAligned_def dest!: valid_capAligned)
+   apply (clarsimp simp: objBits_simps capAligned_def shiftl_t2n' mask_def dest!: valid_capAligned)
    apply (rename_tac word1 nat1 word2 nat2 x)
    apply (subgoal_tac "x * 2^cteSizeBits < 2 ^ (cteSizeBits + nat1)")
     apply (intro conjI)
@@ -1219,7 +1219,7 @@ lemma cte_refs_capRange:
    apply (simp add: word_bits_def)
   \<comment> \<open>Zombie\<close>
   apply (rename_tac word zombie_type nat)
-  apply (clarsimp simp: capAligned_def valid_cap'_def objBits_simps)
+  apply (clarsimp simp: capAligned_def valid_cap'_def objBits_simps shiftl_t2n' mask_def )
   apply (subgoal_tac "xa * 2^cteSizeBits < 2 ^ zBits zombie_type")
    apply (intro conjI)
     apply (erule(1) is_aligned_no_wrap')
@@ -1419,8 +1419,9 @@ lemma
   untyped_inc: "untyped_inc' m" and
   class_links: "class_links m" and
   irq_control: "irq_control m" and
-  ioport_control: "ioport_control m"
-  using valid by (simp add: valid_mdb_ctes_def)+
+  arch_mdb_ctes: "valid_arch_mdb_ctes m" (* FIXME arch-split: this should be valid_arch_mdb_ctes *)
+  using valid
+  by (simp_all add: valid_mdb_ctes_def)
 
 end (* of context vmdb *)
 
@@ -1696,7 +1697,7 @@ lemma untypedRange_not_emptyD: "untypedRange c' \<noteq> {} \<Longrightarrow> is
 
 lemma usableRange_subseteq:
   "\<lbrakk>capAligned c';isUntypedCap c'\<rbrakk> \<Longrightarrow> usableUntypedRange c' \<subseteq> untypedRange c'"
-  apply (clarsimp simp:isCap_simps capAligned_def split:if_splits)
+  apply (clarsimp simp:isCap_simps capAligned_def shiftl_t2n' mask_def field_simps split:if_splits)
   apply (erule order_trans[OF is_aligned_no_wrap'])
    apply (erule of_nat_power)
    apply (simp add:word_bits_def)+
@@ -1795,6 +1796,10 @@ lemma class_links_init:
    apply (clarsimp simp: mdb_next_unfold)
   apply (clarsimp simp: mdb_next_unfold)
   done
+
+(* FIXME arch-split: compatibility shim, can be removed by arch-wide rename *)
+abbreviation (input)
+  "isArchPageCap \<equiv> isArchFrameCap"
 
 lemma distinct_zombies_copyE:
   "\<lbrakk> distinct_zombies m; m x = Some cte;
@@ -2056,7 +2061,7 @@ lemma setCTE_valid_objs'[wp]:
   apply (clarsimp simp: prod_eq_iff lookupAround2_char1
                          updateObject_cte in_monad typeError_def
                          valid_obj'_def valid_tcb'_def valid_cte'_def
-                         tcb_cte_cases_def
+                         tcb_cte_cases_def tcb_cte_cases_neqs
                   split: kernel_object.split_asm if_split_asm)
   done
 
@@ -2093,6 +2098,8 @@ lemma getCTE_ctes_wp:
 lemma updateMDB_valid_objs'[wp]:
   "\<lbrace>valid_objs'\<rbrace> updateMDB m p \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (clarsimp simp add: updateMDB_def)
+apply (wp setCTE_valid_objs')
+
   apply (wp | simp)+
   done
 

@@ -11,10 +11,6 @@ imports
   "Lib.Heap_List"
 begin
 
-(* global data and code of the kernel, not covered by any cap *)
-axiomatization
-  kernel_data_refs :: "word64 set"
-
 context Arch begin
 
 declare lookupPTSlotFromLevel.simps[simp del]

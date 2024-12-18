@@ -8,12 +8,10 @@ theory ArchInvariants_AI
 imports InvariantsPre_AI "Eisbach_Tools.Apply_Trace_Cmd"
 begin
 
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Move this up"
 
 qualify X64 (in Arch)
-
-\<comment> \<open>---------------------------------------------------------------------------\<close>
-section "Things to Move Up"
 
 (* FIXME: move to spec level *)
 (* global data and code of the kernel, not covered by any cap *)

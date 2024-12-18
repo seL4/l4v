@@ -17,7 +17,7 @@ lemmas cte_index_repair_sym = cte_index_repair[symmetric]
 
 lemmas of_nat_inj64 = of_nat_inj[where 'a=machine_word_len, folded word_bits_def]
 
-context begin interpretation Arch .
+context Arch begin arch_global_naming
 
 lemma no_fail_in8[wp]:
   "no_fail \<top> (in8 a)"

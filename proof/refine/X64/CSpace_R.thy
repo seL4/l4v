@@ -1405,21 +1405,22 @@ lemma (in mdb_insert_der) irq_control_n:
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
+(* FIXME arch-split: locale issues here, can't place in Arch, need to re-work hierarchy *)
 lemma (in mdb_insert_der) ioport_control_n:
-  "ioport_control n"
+  "X64.ioport_control n"
   using src dest partial_is_derived'
-  apply (clarsimp simp: ioport_control_def)
+  apply (clarsimp simp: X64.ioport_control_def)
   apply (frule n_cap)
   apply (drule n_revocable)
   apply (clarsimp split: if_split_asm)
    apply (simp add: is_derived'_def isCap_simps)
-  apply (frule ioport_revocable, rule ioport_control)
+  apply (frule X64.ioport_revocable, rule arch_mdb_ctes[simplified X64.valid_arch_mdb_ctes_def])
   apply clarsimp
   apply (drule n_cap)
   apply (clarsimp split: if_split_asm)
   apply (erule disjE)
    apply (clarsimp simp: is_derived'_def isCap_simps)
-  apply (erule (1) ioport_controlD, rule ioport_control)
+  apply (erule (1) X64.ioport_controlD, rule arch_mdb_ctes[simplified X64.valid_arch_mdb_ctes_def])
   done
 
 context mdb_insert_child
@@ -2613,10 +2614,10 @@ lemma setCTE_ko_wp_at_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setCTE_iflive':
@@ -2674,10 +2675,10 @@ lemma setCTE_ko_wp_at_not_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setUntypedCapAsFull_ko_wp_not_at'[wp]:
@@ -3304,7 +3305,7 @@ lemma usableUntypedRange_empty:
     apply (rule_tac x="2 ^ capBlockSize cp - 1" in word_of_nat_le)
     apply (simp add: unat_2p_sub_1 untypedBits_defs)
    apply (simp add: field_simps is_aligned_no_overflow)
-  apply (simp add: field_simps)
+  apply (simp add: field_simps mask_def)
   done
 
 lemma restrict_map_is_map_comp:
@@ -3318,7 +3319,7 @@ lemma untypedZeroRange_to_usableCapRange:
   apply (clarsimp simp: untypedZeroRange_def split: if_split_asm)
   apply (frule(1) usableUntypedRange_empty)
   apply (clarsimp simp: isCap_simps valid_cap_simps' max_free_index_def)
-  apply (simp add: getFreeRef_def)
+  apply (simp add: getFreeRef_def mask_def add_diff_eq)
   done
 
 lemma untyped_ranges_zero_delta:
@@ -4349,6 +4350,7 @@ lemma setupReplyMaster_invs'[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
      setupReplyMaster t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp setupReplyMaster_valid_pspace' sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
@@ -4709,7 +4711,7 @@ lemma src_node_revokable [simp]:
   apply (erule disjE)
    apply (clarsimp simp: ut_revocable'_def)
   apply (clarsimp simp: isCap_simps)
-  apply (erule ioport_revocable, rule ioport_control)
+  apply (erule ioport_revocable, rule arch_mdb_ctes[simplified])
   done
 
 lemma new_child [simp]:
@@ -5738,7 +5740,7 @@ lemma ioport_control_src:
   apply (erule disjE, clarsimp simp: isCap_simps)
   apply (erule disjE, clarsimp simp: isCap_simps capRange_def)
   apply (clarsimp simp: isCap_simps split: if_split_asm)
-  apply (drule (1) ioport_controlD, rule ioport_control)
+  apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
   apply simp
   done
 
@@ -5953,6 +5955,8 @@ lemma irq' [simp]:
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
+context begin interpretation Arch . (* FIXME arch-split *)
+
 lemma ioport' [simp]:
   "ioport_control n'" using simple
   apply (clarsimp simp: ioport_control_def)
@@ -5960,14 +5964,16 @@ lemma ioport' [simp]:
   apply (drule n'_rev)
   apply (clarsimp split: if_split_asm)
    apply (simp add: is_simple_cap'_def isCap_simps)
-  apply (frule ioport_revocable, rule ioport_control)
+  apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
   apply clarsimp
   apply (drule n'_cap)
   apply (clarsimp split: if_split_asm)
   apply (erule disjE)
    apply (clarsimp simp: is_simple_cap'_def isCap_simps)
-  apply (erule (1) ioport_controlD, rule ioport_control)
+  apply (erule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
   done
+
+end
 
 lemma reply_masters_rvk_fb:
   "reply_masters_rvk_fb m"
@@ -6006,7 +6012,7 @@ lemma updateCapFreeIndex_no_0:
   apply (simp add:cte_wp_at_ctes_of)+
   apply (rule mdb_inv_preserve_updateCap)
     apply (clarsimp simp:cte_wp_at_ctes_of)+
-done
+  done
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -6124,16 +6130,14 @@ lemma locateSlot_cap_to'[wp]:
   "\<lbrace>\<lambda>s. isCNodeCap cap \<and> (\<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_wp_to' P r s)\<rbrace>
      locateSlotCNode (capCNodePtr cap) n (v && mask (capCNodeBits cap))
    \<lbrace>ex_cte_cap_wp_to' P\<rbrace>"
-  apply (simp add: locateSlot_conv)
+  apply (simp add: locateSlot_conv shiftl_t2n')
   apply wp
   apply (clarsimp dest!: isCapDs valid_capAligned
-                   simp: objBits_simps' mult.commute capAligned_def cte_level_bits_def)
+                   simp: objBits_simps' mult.commute capAligned_def cte_level_bits_def shiftl_t2n')
   apply (erule bspec)
   apply (case_tac "bits < word_bits")
-   apply simp
-   apply (rule and_mask_less_size)
-   apply (simp add: word_bits_def word_size)
-  apply (simp add: power_overflow word_bits_def)
+   apply (simp add: word_and_le1)
+  apply (simp add: power_overflow word_bits_def word_and_le1)
   done
 
 lemma rab_cap_to'':
