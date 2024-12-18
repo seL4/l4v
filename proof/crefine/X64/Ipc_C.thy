@@ -187,7 +187,7 @@ crunch getSanitiseRegisterInfo
 
 lemma empty_fail_getSanitiseRegisterInfo[wp, simp]:
   "empty_fail (getSanitiseRegisterInfo t)"
-  by (wpsimp simp: getSanitiseRegisterInfo_def wp: ArchMove_C.empty_fail_archThreadGet)
+  by (wpsimp simp: getSanitiseRegisterInfo_def wp: X64.empty_fail_archThreadGet)
 
 lemma asUser_getRegister_getSanitiseRegisterInfo_comm:
   "do
@@ -4576,7 +4576,7 @@ lemma sendIPC_block_ccorres_helper:
                               rf_sr_tcb_update_twice)
         apply (erule(1) rf_sr_tcb_update_no_queue_gen,
           (simp add: typ_heap_simps')+)[1]
-         apply (simp add: tcb_cte_cases_def)
+         apply (simp add: tcb_cte_cases_def cteSizeBits_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
                          ThreadState_defs mask_def)
         apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend
@@ -4588,7 +4588,7 @@ lemma sendIPC_block_ccorres_helper:
                threadSet_valid_objs')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
-                         tcb_cte_cases_def)
+                         tcb_cte_cases_def cteSizeBits_def)
    apply (drule obj_at'_is_canonical, simp, simp)
   apply clarsimp
   done
@@ -5165,7 +5165,7 @@ lemma receiveIPC_block_ccorres_helper:
         apply (frule h_t_valid_c_guard)
         apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice cap_get_tag_isCap)
         apply (erule(1) rf_sr_tcb_update_no_queue_gen, (simp add: typ_heap_simps)+)
-         apply (simp add: tcb_cte_cases_def)
+         apply (simp add: tcb_cte_cases_def cteSizeBits_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def ccap_relation_ep_helpers
                          ThreadState_defs mask_def cap_get_tag_isCap)
         apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
@@ -5176,7 +5176,7 @@ lemma receiveIPC_block_ccorres_helper:
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
-                         tcb_cte_cases_def obj_at'_is_canonical)
+                         tcb_cte_cases_def obj_at'_is_canonical cteSizeBits_def)
   apply clarsimp
   done
 
@@ -6217,7 +6217,7 @@ lemma receiveSignal_block_ccorres_helper:
         apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice)
         apply (erule(1) rf_sr_tcb_update_no_queue_gen,
           (simp add: typ_heap_simps')+)
-         apply (simp add: tcb_cte_cases_def)
+         apply (simp add: tcb_cte_cases_def cteSizeBits_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
                          ThreadState_defs mask_def)
         apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
@@ -6228,7 +6228,7 @@ lemma receiveSignal_block_ccorres_helper:
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (auto simp: weak_sch_act_wf_def valid_tcb'_def tcb_cte_cases_def
-                     valid_tcb_state'_def obj_at'_is_canonical)
+                     valid_tcb_state'_def obj_at'_is_canonical cteSizeBits_def)
   done
 
 lemma cpspace_relation_ntfn_update_ntfn':
