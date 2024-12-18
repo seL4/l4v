@@ -1150,7 +1150,7 @@ lemma tcb_at'_non_kernel_data_ref:
   apply (drule map_to_tcbs_from_tcb_at)
   apply (clarsimp simp: pspace_domain_valid_def map_comp_def split: option.splits)
   apply (drule spec, drule spec, drule (1) mp)
-  apply (simp add: projectKOs objBits_simps)
+  apply (simp add: projectKOs objBits_simps add_mask_fold)
   done
 
 lemmas tcb_at'_non_kernel_data_ref'

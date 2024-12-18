@@ -839,7 +839,7 @@ lemma doUnbindNotification_ccorres:
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
               apply (simp add: typ_heap_simps')+
-       apply (simp add: tcb_cte_cases_def)
+       apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply (simp add: invs'_def valid_state'_def)
      apply (wp get_ntfn_ko' | simp add: guard_is_UNIV_def)+
@@ -891,7 +891,7 @@ lemma doUnbindNotification_ccorres':
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
               apply (simp add: typ_heap_simps')+
-       apply (simp add: tcb_cte_cases_def)
+       apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply (simp add: invs'_def valid_state'_def)
      apply (wp get_ntfn_ko' | simp add: guard_is_UNIV_def)+
