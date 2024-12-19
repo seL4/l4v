@@ -218,12 +218,20 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSmallPage)})
+>             when (not isDevice) $ doMachineOp $
+>                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
+>                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSmallPage))
+>                     (addrFromPPtr regionBase)
 >             return $ mkPageCap ARMSmallPage
 >         Arch.Types.LargePageObject -> do
 >             placeNewDataObject regionBase 4 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
+>             when (not isDevice) $ doMachineOp $
+>                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
+>                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMLargePage))
+>                     (addrFromPPtr regionBase)
 >             return $ mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -234,6 +242,10 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
+>             when (not isDevice) $ doMachineOp $
+>                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
+>                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSection))
+>                     (addrFromPPtr regionBase)
 >             return $ mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -244,19 +256,26 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
+>             when (not isDevice) $ doMachineOp $
+>                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
+>                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSuperSection))
+>                     (addrFromPPtr regionBase)
 >             return $ mkPageCap ARMSuperSection
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)
 >             placeNewObject regionBase (makeObject :: PTE) ptSize
+>             doMachineOp $
+>                 cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
+>                     (VPtr $ fromPPtr regionBase + mask ptBits)
+>                     (addrFromPPtr regionBase)
 >             return $ PageTableCap (pointerCast regionBase) Nothing
 >         Arch.Types.PageDirectoryObject -> do
 >             let pdSize = pdBits - objBits (makeObject :: PDE)
->             let regionSize = (1 `shiftL` pdBits)
 >             placeNewObject regionBase (makeObject :: PDE) pdSize
 >             copyGlobalMappings (pointerCast regionBase)
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
->                       (VPtr $ fromPPtr regionBase + regionSize - 1)
+>                       (VPtr $ fromPPtr regionBase + mask pdBits)
 >                       (addrFromPPtr regionBase)
 >             return $ PageDirectoryCap (pointerCast regionBase) Nothing
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT

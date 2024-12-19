@@ -3717,7 +3717,7 @@ lemma updateFreeIndex_clear_invs':
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift setCTE_ioports'
+      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp valid_bitmaps_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def
@@ -5321,17 +5321,6 @@ lemma insertNewCap_valid_irq_handlers:
   apply auto
   done
 
-crunch updateNewFreeIndex
-  for ioports[wp]: "valid_ioports'"
-
-lemma insertNewCap_ioports':
-  "\<lbrace>valid_ioports' and safe_ioport_insert' cap NullCap\<rbrace>
-     insertNewCap parent slot cap
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (simp add: insertNewCap_def)
-  apply (wpsimp wp: setCTE_ioports' getCTE_wp)
-  by (clarsimp simp: cte_wp_at_ctes_of)
-
 crunch insertNewCap
   for irq_states'[wp]: valid_irq_states'
   and irqs_masked' [wp]: irqs_masked'
@@ -5400,12 +5389,6 @@ lemma insertNewCap_urz[wp]:
     apply (auto simp add: cteCaps_of_def untypedZeroRange_def isCap_simps)
   done
 
-lemma safe_ioport_insert'_capRange:
-  "capRange cap \<noteq> {} \<Longrightarrow> safe_ioport_insert' cap cap' s"
-  apply (clarsimp simp: safe_ioport_insert'_def)
-  apply (case_tac cap; clarsimp)
-  by (rename_tac ac, case_tac ac; clarsimp simp: capRange_def)
-
 lemma insertNewCap_invs':
   "\<lbrace>invs' and ct_active'
           and valid_cap' cap
@@ -5424,13 +5407,13 @@ lemma insertNewCap_invs':
    apply (wp insertNewCap_valid_pspace' sch_act_wf_lift
              cur_tcb_lift tcb_in_cur_domain'_lift sym_heap_sched_pointers_lift
              insertNewCap_valid_global_refs' valid_bitmaps_lift
-             valid_arch_state_lift' insertNewCap_ioports'
+             valid_arch_state_lift'
              valid_irq_node_lift insertNewCap_valid_irq_handlers)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule ctes_of_valid[rotated, where p=parent, OF valid_pspace_valid_objs'])
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (auto simp: isCap_simps sameRegionAs_def3
-            intro!: capRange_subset_capBits safe_ioport_insert'_capRange
+            intro!: capRange_subset_capBits
               elim: valid_capAligned)
   done
 

@@ -628,13 +628,6 @@ lemma safe_parent_cap_is_device:
   "safe_parent_for m p cap pcap \<Longrightarrow> cap_is_device cap = cap_is_device pcap"
   by (simp add: safe_parent_for_def)
 
-lemma cap_insert_ioports_ap:
-  "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
-        K (is_ap_cap cap)\<rbrace>
-     cap_insert cap src dest
-   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
-
 crunch cap_insert
   for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
   (wp: crunch_wps)
@@ -660,7 +653,7 @@ lemma cap_insert_ap_invs:
   apply (simp cong: conj_cong)
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_mdb cap_insert_iflive
-             cap_insert_zombies cap_insert_ifunsafe cap_insert_ioports_ap
+             cap_insert_zombies cap_insert_ifunsafe
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state is_cap_simps)

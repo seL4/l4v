@@ -88,10 +88,11 @@ Releases
 
 Current release:
 
-- [c-parser-1.20.tar.gz][1.20] (Released 2023-11-03, Isabelle 2023)
+- [c-parser-1.21.tar.gz][1.21] (Released 2024-10-11, Isabelle 2024)
 
 Older releases:
 
+- [c-parser-1.20.tar.gz][1.20] (Released 2023-11-03, Isabelle 2023)
 - [c-parser-1.19.tar.gz][1.19] (Released 2022-10-31, Isabelle 2021-1)
 - [c-parser-1.18.tar.gz][1.18] (Released 2021-10-31, Isabelle 2021)
 - [c-parser-1.17.tar.gz][1.17] (Released 2020-11-02, Isabelle 2020)
@@ -103,6 +104,7 @@ Older releases:
 - [c-parser-1.12.0.tar.gz][1.12] (Released 2012-12-05, Isabelle 2012)
 - [c-parser-1.0.tar.gz][1.0] (Released 2012-09-24, Isabelle 2011-1)
 
+[1.21]: https://github.com/seL4/l4v/releases/download/autocorres-1.11/c-parser-1.21.tar.gz
 [1.20]: https://github.com/seL4/l4v/releases/download/autocorres-1.10/c-parser-1.20.tar.gz
 [1.19]: https://github.com/seL4/l4v/releases/download/autocorres-1.9/c-parser-1.19.tar.gz
 [1.18]: https://github.com/seL4/l4v/releases/download/autocorres-1.8/c-parser-1.18.tar.gz

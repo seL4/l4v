@@ -217,6 +217,9 @@ end
 
 method_setup wpfix = \<open>WPFix.method\<close>
 
+experiment
+begin
+
 lemma demo1:
   "(\<exists>Ia Ib Ic Id Ra.
     (Ia (Suc 0) \<longrightarrow> Qa)
@@ -260,10 +263,14 @@ lemma demo2:
 \<comment> \<open>
   Shows how to use @{attribute datatype_schematic} rules as "accessors".
 \<close>
-lemma (in datatype_schem_demo) demo3:
+datatype foo = basic (a:nat) (b:int) | another nat
+
+lemma demo3:
   "\<exists>x. \<forall>a b. x (basic a b) = a"
   apply (rule exI, (rule allI)+)
-  apply (wpfix add: get_basic_0.simps) \<comment> \<open>Only exposes `a` to the schematic.\<close>
+  apply (wpfix add: foo.sel(1)) \<comment> \<open>Only exposes `a` to the schematic.\<close>
   by (rule refl)
+
+end
 
 end

@@ -131,5 +131,16 @@ lemma maxIRQ_le_mask_irq_len:
   using le_maxIRQ_machine_less_irqBits_val
   by (fastforce simp add: word_le_nat_alt word_less_nat_alt irq_len_val mask_def)
 
+
+(* cacheLineBits conditions *)
+
+(* Folding cacheLineBits_val in C functions only works reliably if cacheLineBits is not 1 and
+   not too large to conflict with other values used inside cache ops.
+   12 is ptBits, which is only available after ExecSpec. Anything > 1 and smaller than ptBits
+   works. *)
+lemma cacheLineBits_sanity:
+  "cacheLineBits \<in> {2..12}"
+  by (simp add: cacheLineBits_def Kernel_Config.CONFIG_L1_CACHE_LINE_SIZE_BITS_def)
+
 end
 end

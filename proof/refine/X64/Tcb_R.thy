@@ -681,10 +681,6 @@ lemma out_corresT:
 
 lemmas out_corres = out_corresT [OF _ all_tcbI, OF ball_tcb_cap_casesI ball_tcb_cte_casesI]
 
-crunch tcbSchedEnqueue
-  for ioports'[wp]: valid_ioports'
-  (wp: crunch_wps valid_ioports_lift'' simp: crunch_simps)
-
 lemma tcbSchedDequeue_sch_act_simple[wp]:
   "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
   by (wpsimp simp: sch_act_simple_def)
@@ -708,7 +704,6 @@ lemma threadSet_priority_invs':
             threadSet_idle'T
             valid_irq_node_lift
             valid_irq_handlers_lift''
-            valid_ioports_lift'
             threadSet_ctes_ofT
             threadSet_not_inQ
             threadSet_ct_idle_or_in_cur_domain'
@@ -911,17 +906,6 @@ lemma untyped_derived_eq_from_sameObjectAs:
 lemmas vspace_asid'_simps [simp] =
   vspace_asid'_def [split_simps capability.split arch_capability.split option.split prod.split]
 
-lemma badge_derived_safe_ioport_insert':
-  "\<lbrakk>valid_ioports' s; cteCaps_of s src_slot = Some c; badge_derived' new_cap c\<rbrakk>
-       \<Longrightarrow> safe_ioport_insert' new_cap capability.NullCap s"
-  apply (case_tac new_cap; clarsimp simp: isCap_simps)
-  apply (rename_tac ac, case_tac ac; clarsimp simp: isCap_simps)
-  apply (clarsimp simp: badge_derived'_def)
-  apply (clarsimp simp: safe_ioport_insert'_def valid_ioports'_def)
-  apply (rule conjI, clarsimp elim!: ranE simp: ioports_no_overlap'_def)
-   apply(force simp: ran_def cteCaps_of_def)
-  by (force simp: all_ioports_issued'_def ran_def cteCaps_of_def)
-
 lemma checked_insert_tcb_invs'[wp]:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) slot
          and valid_cap' new_cap
@@ -943,7 +927,6 @@ lemma checked_insert_tcb_invs'[wp]:
                         is_derived'_def untyped_derived_eq_from_sameObjectAs
                         ex_cte_cap_to'_cteCap)
   apply (erule sameObjectAsE)+
-  apply (clarsimp simp: badge_derived_safe_ioport_insert'[OF invs_valid_ioports'])
   apply (clarsimp simp: badge_derived'_def)
   apply (frule capBadgeNone_masters, simp)
   apply (rule conjI)
@@ -1090,7 +1073,7 @@ lemma threadSet_invs_trivialT2:
              threadSet_ifunsafe'T
              threadSet_global_refsT
              valid_irq_node_lift
-             valid_irq_handlers_lift'' valid_ioports_lift''
+             valid_irq_handlers_lift''
              threadSet_ctes_ofT
              threadSet_valid_dom_schedule'
              untyped_ranges_zero_lift

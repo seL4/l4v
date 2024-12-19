@@ -7,9 +7,13 @@ in [Isabelle/HOL][1]. In particular, it uses Norrish's
 abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
+Before using this version of AutoCorres, consider using [AutoCorres2]
+available from the [Archive of Formal Proofs][AFP].
+
   [1]: https://isabelle.in.tum.de/
   [2]: https://github.com/seL4/l4v/blob/master/tools/c-parser/README.md
-
+  [AutoCorres2]: https://www.isa-afp.org/entries/AutoCorres2.html
+  [AFP]: https://www.isa-afp.org
 
 
 Contents of this README
@@ -28,7 +32,7 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2023:
+AutoCorres is packaged as a theory for Isabelle2024:
 
     https://isabelle.in.tum.de
 

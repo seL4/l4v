@@ -875,12 +875,30 @@ FIXME ARMHYP consider moving to platform code?
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
-> hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU
+> hcrCommon :: Word
+> --          HCR_TSC | HCR_AMO  | HCR_IO | HCR_FMO | HCR_DC  | HCR_VM
+> hcrCommon = bit 19 .|. bit 5  .|. bit 4 .|. bit 3 .|. bit 12 .|. bit 0
+
+> hcrTWE :: Word
+> hcrTWE = bit 14
+
+> hcrTWI :: Word
+> hcrTWI = bit 13
+
+> hcrVCPU :: Word -- HCR_VCPU
+> hcrVCPU = if config_DISABLE_WFI_WFE_TRAPS
+>           then hcrCommon
+>           else hcrCommon .|. hcrTWE .|. hcrTWI
+
 > hcrNative = (0xFE8103B :: Word) -- HCR_NATIVE
 > vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
 > sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
 > actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
 > gicVCPUMaxNumLR = (64 :: Int)
+
+> -- Wether to trap WFI/WFE instructions or not in hyp mode
+> config_DISABLE_WFI_WFE_TRAPS :: Bool
+> config_DISABLE_WFI_WFE_TRAPS = error "generated from CMake config"
 
 #endif
 

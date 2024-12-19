@@ -107,14 +107,6 @@ lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
 
-lemma valid_ioports_detype[Detype_AI_assms]:
-  "valid_ioports s \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
-  apply (clarsimp simp: valid_ioports_def all_ioports_issued_def ioports_no_overlap_def issued_ioports_def more_update.caps_of_state_update)
-  apply (clarsimp simp: detype_def cap_ioports_def ran_def elim!: ranE split: if_splits cap.splits arch_cap.splits)
-  apply (rule conjI)
-   apply (force simp: ran_def)
-  by (metis (full_types) ranI)
-
 end
 
 interpretation Detype_AI?: Detype_AI
@@ -187,10 +179,20 @@ lemma tcb_arch_detype[detype_invs_proofs]:
   apply (clarsimp simp: valid_arch_tcb_def)
   done
 
+lemma valid_ioports_detype:
+  "valid_ioports s \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
+  apply (clarsimp simp: valid_ioports_def all_ioports_issued_def ioports_no_overlap_def issued_ioports_def more_update.caps_of_state_update)
+  apply (clarsimp simp: detype_def cap_ioports_def ran_def elim!: ranE split: if_splits cap.splits arch_cap.splits)
+  apply (rule conjI)
+   apply (force simp: ran_def)
+  by (metis (full_types) ranI)
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
-  apply (simp add: valid_arch_state_def valid_asid_table_def
+  unfolding valid_arch_state_def
+  apply (strengthen valid_ioports_detype,
+         simp add: valid_arch_state_def valid_asid_table_def
                    valid_global_pdpts_def valid_global_pds_def valid_global_pts_def
                    global_refs_def cap_range_def)
   apply (clarsimp simp: ran_def arch_state_det)

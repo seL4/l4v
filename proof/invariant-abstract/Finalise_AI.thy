@@ -631,7 +631,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def)
   apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift)
+   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs)
   apply simp
   apply safe
   defer 3 defer 6

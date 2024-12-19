@@ -893,7 +893,7 @@ abbreviation(input)
        and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and cur_tcb and valid_ioc and valid_machine_state and valid_ioports"
+       and cur_tcb and valid_ioc and valid_machine_state"
 
 
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:

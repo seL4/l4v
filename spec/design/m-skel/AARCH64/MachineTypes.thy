@@ -115,6 +115,7 @@ definition
   PT_Type \
   VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits \
   pageBitsForSize \
+  hcrCommon hcrTWE hcrTWI \
   hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR \
   vcpuBits
 

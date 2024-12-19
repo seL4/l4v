@@ -1,6 +1,14 @@
 AutoCorres Change Log
 =====================
 
+AutoCorres 1.11 (11 Oct 2024)
+----------------------------
+
+        * Isabelle2024 edition of both AutoCorres and the C parser.
+
+        * Further clean-up and restructure of monad libraries.
+
+
 AutoCorres 1.10 (3 Nov 2023)
 ----------------------------
 

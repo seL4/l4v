@@ -46,14 +46,6 @@ definition
   "pptrUserTop = 0x00007fffffffffff"
 
 definition
-  cacheLineBits :: nat where
-  "cacheLineBits = 5"
-
-definition
-  cacheLine :: nat where
-  "cacheLine = 2^cacheLineBits"
-
-definition
   ptrFromPAddr :: "paddr \<Rightarrow> word64" where
   "ptrFromPAddr paddr \<equiv> paddr + pptrBase"
 

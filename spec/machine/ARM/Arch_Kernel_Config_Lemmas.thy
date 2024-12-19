@@ -119,5 +119,16 @@ lemma maxIRQ_1_plus_eq_Suc_machine[simp]:
   "unat (1 + maxIRQ :: machine_word) = Suc Kernel_Config.maxIRQ"
   by (simp add: Kernel_Config.maxIRQ_def)
 
+
+(* cacheLineBits conditions *)
+
+(* Folding cacheLineBits_val in C functions only works reliably if cacheLineBits is not 1 and
+   not too large to conflict with other values used inside cache ops.
+   10 is ptBits, which is only available after ExecSpec. Anything > 1 and smaller than ptBits
+   works. *)
+lemma cacheLineBits_sanity:
+  "cacheLineBits \<in> {2..10}"
+  by (simp add: cacheLineBits_def Kernel_Config.CONFIG_L1_CACHE_LINE_SIZE_BITS_def)
+
 end
 end

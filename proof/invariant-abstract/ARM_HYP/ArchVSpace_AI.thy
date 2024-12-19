@@ -4484,16 +4484,12 @@ lemma unmap_page_table_unmapped2:
 lemma cacheRangeOp_lift[wp]:
   assumes o: "\<And>a b. \<lbrace>P\<rbrace> oper a b \<lbrace>\<lambda>_. P\<rbrace>"
   shows "\<lbrace>P\<rbrace> cacheRangeOp oper x y z \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (clarsimp simp: cacheRangeOp_def lineStart_def cacheLineBits_def cacheLine_def)
-  apply (rule hoare_pre)
-  apply (wp mapM_x_wp_inv o)
-   apply (case_tac x, simp, wp o, simp)
-  done
+  unfolding cacheRangeOp_def
+  by (wpsimp wp: mapM_x_wp_inv o)
 
 lemma cleanCacheRange_PoU_underlying_memory[wp]:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> cleanCacheRange_PoU a b c \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
+  "cleanCacheRange_PoU a b c \<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>"
   by (clarsimp simp: cleanCacheRange_PoU_def, wp)
-
 
 lemma unmap_page_table_unmapped3:
   "\<lbrace>pspace_aligned and valid_vspace_objs and page_table_at pt and

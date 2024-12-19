@@ -1868,7 +1868,7 @@ lemma final_matters_sameRegion_sameObject:
   done
 
 lemma final_matters_sameRegion_sameObject2:
-  "\<lbrakk> final_matters' cap'; \<not> isUntypedCap cap; \<not> isIRQHandlerCap cap'; \<not> isArchIOPortCap cap' \<rbrakk>
+  "\<lbrakk> final_matters' cap'; \<not> isUntypedCap cap; \<not> isIRQHandlerCap cap' \<rbrakk>
      \<Longrightarrow> sameRegionAs cap cap' = sameObjectAs cap cap'"
   apply (rule iffI)
    apply (erule sameRegionAsE)

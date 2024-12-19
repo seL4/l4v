@@ -1468,21 +1468,6 @@ lemma obj_at_pte_aligned:
                   elim!: is_aligned_weaken)
   done
 
-(* FIXME x64: dont know what these are for yet *)
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add:addrFromPPtr_def X64.pptrBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
-lemma addrFromPPtr_mask_6:
-  "addrFromPPtr ptr && mask (6::nat) = ptr && mask (6::nat)"
-  apply (simp add:addrFromPPtr_def X64.pptrBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
 lemma cpde_relation_invalid:
  "cpde_relation pdea pde \<Longrightarrow> (pde_get_tag pde = scast pde_pde_pt \<and> pde_pde_pt_CL.present_CL (pde_pde_pt_lift pde) = 0) = isInvalidPDE pdea"
   apply (simp add: cpde_relation_def Let_def)
@@ -4884,6 +4869,7 @@ lemma invokeX86PortControl_ccorres:
    apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Guard_Seq)
    apply (clarsimp simp: liftE_def bind_assoc return_returnOk)
+   apply (rule ccorres_stateAssert)
    apply (ctac add: setIOPortMask_ccorres)
      apply csymbr
      apply (ctac(no_vcg) add: cteInsert_ccorres)
@@ -5438,6 +5424,7 @@ proof -
     apply (clarsimp simp: isCap_simps decodeX64PortInvocation_def Let_def)
     apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' current_extra_caps_' cap_' buffer_' call_')
      apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
+     apply csymbr
      apply (rule ccorres_Cond_rhs) (* IN invocations *)
       apply (erule ccorres_disj_division)
        \<comment> \<open>In8\<close>

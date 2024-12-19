@@ -152,7 +152,7 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
   by fastforce+
 
 lemma init_arch_objects_irq_masks:
-  "init_arch_objects new_type ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   by (rule init_arch_objects_inv)
 
 end

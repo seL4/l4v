@@ -1392,40 +1392,13 @@ lemma postCapDeletion_irq_handlers'[wp]:
    \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   by (wpsimp simp: Retype_H.postCapDeletion_def X64_H.postCapDeletion_def)
 
-crunch deletedIRQHandler
-  for ioports'[wp]: valid_ioports'
-  (wp: valid_ioports_lift'')
-
+(* extra constraints on IO ports are not needed since there is no valid_ioports to preserve in
+   Refine *)
 definition
-  "post_cap_delete_pre' cap sl cs \<equiv> case cap of
-     IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> cs sl' \<noteq> Some cap)
-   | ArchObjectCap (IOPortCap f l) \<Rightarrow> f \<le> l \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> (\<forall>cap'. cs sl' = Some cap' \<longrightarrow> cap_ioports' cap \<inter> cap_ioports' cap' = {}))
-   | _ \<Rightarrow> False"
-
-lemma setIOPortMask_ioports':
-  "\<lbrace>valid_ioports' and (\<lambda>s. \<not> b \<longrightarrow> (\<forall>cap' \<in> ran (cteCaps_of s). cap_ioports' cap' \<inter> {f..l} = {}))\<rbrace>
-     setIOPortMask f l b
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  supply fun_upd_apply[simp del]
-  apply (clarsimp simp: setIOPortMask_def)
-  apply wpsimp
-  apply (clarsimp simp: valid_ioports'_simps foldl_map)
-  apply (case_tac b; clarsimp simp: foldl_fun_upd_value)
-   apply (drule_tac x=cap in bspec, assumption)
-   apply (clarsimp simp: subset_eq)
-  apply (drule_tac x=cap in bspec, assumption)
-  by auto
-
-lemma postCapDeletion_ioports':
-  "\<lbrace>valid_ioports' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) sl and (\<lambda>s. c \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' c sl (cteCaps_of s))\<rbrace>
-     global.postCapDeletion c
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (clarsimp simp: Retype_H.postCapDeletion_def)
-  apply (wpsimp simp: freeIOPortRange_def X64_H.postCapDeletion_def wp: setIOPortMask_ioports')
-  apply (clarsimp simp: post_cap_delete_pre'_def cte_wp_at_ctes_of elim!: ranE)
-  apply (drule_tac x=x in spec)
-  apply (clarsimp simp: valid_ioports'_simps cteCaps_of_def)
-  by (auto simp: ran_def split: if_split_asm)
+  "post_cap_delete_pre' cap sl cs \<equiv> case cap
+     of IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> cs sl' \<noteq> Some cap)
+     | ArchObjectCap (IOPortCap f l) \<Rightarrow> f \<le> l \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> cs sl' \<noteq> Some cap)
+     | _ \<Rightarrow> False"
 
 end
 
@@ -1446,49 +1419,6 @@ lemma emptySlot_valid_irq_handlers'[wp]:
                  split: option.split)
   apply auto
   done
-
-lemma updateMDB_safe_ioport_insert'[wp]:
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. safe_ioport_insert' c (cteCap cte) s) sl s\<rbrace>
-     updateMDB a b
-   \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>cte. safe_ioport_insert' c (cteCap cte) s) sl s\<rbrace>"
-  apply (clarsimp simp: safe_ioport_insert'_def)
-  apply (rule hoare_pre)
-   apply wps
-   apply (wpsimp wp: updateMDB_weak_cte_wp_at)
-  by (clarsimp simp: cte_wp_at_ctes_of)
-
-lemma clearUntypedFreeIndex_ioports'[wp]:
-  "\<lbrace>valid_ioports'\<rbrace> clearUntypedFreeIndex f \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  by (wpsimp wp: valid_ioports_lift')
-
-lemma clearUntypedFreeIndex_safe_ioport_insert'[wp]:
-  "\<lbrace>safe_ioport_insert' c c'\<rbrace> clearUntypedFreeIndex f \<lbrace>\<lambda>rv. safe_ioport_insert' c c'\<rbrace>"
-  apply (clarsimp simp: safe_ioport_insert'_def)
-  apply (rule hoare_pre)
-   apply wps
-  by wpsimp+
-
-context begin interpretation Arch .
-lemma emptySlot_ioports'[wp]:
-  "\<lbrace>\<lambda>s. valid_ioports' s \<and> cte_at' sl s
-          \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' info sl (cteCaps_of s))\<rbrace>
-     emptySlot sl info
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (simp add: emptySlot_def case_Null_If)
-  apply (rule hoare_pre)
-   apply (wpsimp wp: postCapDeletion_ioports'[where sl=sl] updateCap_ioports' updateCap_no_0
-                     updateMDB_weak_cte_wp_at hoare_vcg_const_imp_lift updateCap_cte_wp_at' getCTE_wp
-                     hoare_vcg_ex_lift
-               simp: cte_wp_at_ctes_of
-              | wp (once) hoare_drop_imps)+
-  apply (clarsimp simp: valid_ioports'_simps)
-  apply (rule conjI)
-   apply (clarsimp simp: safe_ioport_insert'_def)
-  apply (clarsimp simp: post_cap_delete_pre'_def split: capability.splits arch_capability.splits)
-   apply (auto simp: modify_map_def ran_def capAligned_def word_bits_def
-              split: if_split_asm)
-  done
-end
 
 declare setIRQState_irq_states' [wp]
 
@@ -1629,10 +1559,8 @@ lemma emptySlot_invs'[wp]:
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift cur_tcb_lift)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (clarsimp simp: post_cap_delete_pre'_def cteCaps_of_def
+  apply (wpsimp wp: valid_irq_node_lift cur_tcb_lift)
+  apply (clarsimp simp: post_cap_delete_pre'_def cteCaps_of_def cte_wp_at_ctes_of
                  split: capability.split_asm arch_capability.split_asm)
   by auto
 
@@ -2557,7 +2485,7 @@ lemma invs_asid_update_strg':
   apply (simp add: valid_state'_def)
   apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def
                    valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def
-                   tcb_in_cur_domain'_def valid_ioports'_simps)
+                   tcb_in_cur_domain'_def)
   apply (auto simp add: ran_def split: if_split_asm)
   done
 

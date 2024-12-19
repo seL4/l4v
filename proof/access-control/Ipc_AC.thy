@@ -172,6 +172,9 @@ locale Ipc_AC_1 =
     "\<And>P. make_fault_msg ft t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
   and tcb_context_no_change:
     "\<exists>ctxt. (tcb :: tcb) = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt (tcb_arch tcb)\<rparr>"
+  (* This assumption excludes x64 (its valid_arch_state includes caps) *)
+  and transfer_caps_loop_valid_arch[wp]:
+    "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
 begin
 
 lemma send_upd_ctxintegrity:
@@ -914,7 +917,7 @@ crunch do_fault_transfer
   for pas_refined[wp]: "\<lambda>s :: det_ext state. pas_refined aag s"
 
 crunch transfer_caps, copy_mrs
-  for valid_arch_state[wp]: valid_arch_state
+  for valid_arch_state[wp]: "valid_arch_state :: det_ext state \<Rightarrow> _"
   (wp: crunch_wps)
 
 lemma do_normal_transfer_pas_refined:
@@ -1067,6 +1070,7 @@ lemma send_ipc_pas_refined:
                     in hoare_strengthen_post[rotated])
         apply simp
        apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined hoare_weak_lift_imp gts_wp
+                 do_ipc_transfer_valid_arch
               | wpc
               | simp add: hoare_if_r_and)+
    apply (wp hoare_vcg_all_lift hoare_imp_lift_something | simp add: st_tcb_at_tcb_states_of_state_eq)+
@@ -1214,6 +1218,7 @@ lemma receive_ipc_base_pas_refined:
         apply (wp hoare_weak_lift_imp do_ipc_transfer_pas_refined set_simple_ko_pas_refined
                   set_thread_state_pas_refined get_simple_ko_wp hoare_vcg_all_lift
                   hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1]
+                  do_ipc_transfer_valid_arch
                | wpc
                | simp add: thread_get_def  get_thread_state_def do_nbrecv_failed_transfer_def)+
   apply (clarsimp simp: tcb_at_def [symmetric] tcb_at_st_tcb_at)
@@ -2541,9 +2546,9 @@ lemma do_reply_transfer_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (rule hoare_pre)
-  apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined
-            thread_set_pas_refined K_valid
-         | wpc | simp add: thread_get_def split del: if_split)+
+  apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined do_ipc_transfer_valid_arch
+            thread_set_pas_refined K_valid thread_set_valid_arch_state
+         | wpc | simp add: thread_get_def tcb_cap_cases_def split del: if_split)+
   (* otherwise simp does too much *)
   apply (rule hoare_strengthen_post, rule gts_inv)
    apply (rule impI)

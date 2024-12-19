@@ -33,7 +33,9 @@ jobs:
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
     # test only most recent push to PR:
-    concurrency: l4v-pr-${{ github.event.number }}-idx-${{ strategy.job-index }}
+    concurrency:
+      group: l4v-${{ github.workflow }}-${{ github.event.number }}-idx-${{ strategy.job-index }}
+      cancel-in-progress: true
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master

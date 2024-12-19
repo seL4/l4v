@@ -1576,7 +1576,7 @@ lemma set_object_invs[wp]:
     set_object ptr (ArchObj obj)
   \<lbrace> \<lambda>_. invs \<rbrace>"
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_asid_map_def)
-  apply (wp valid_irq_node_typ valid_irq_handlers_lift valid_ioports_lift
+  apply (wp valid_irq_node_typ valid_irq_handlers_lift valid_arch_state_lift
             set_aobj_valid_global_vspace_mappings set_object_valid_objs)
   apply (clarsimp simp: valid_arch_state_def valid_obj_def)
   done

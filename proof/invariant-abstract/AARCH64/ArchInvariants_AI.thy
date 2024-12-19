@@ -721,9 +721,6 @@ definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
 definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_objs \<equiv> \<top>"
 
-definition valid_ioports :: "'z::state_ext state \<Rightarrow> bool" where
-  [simp]: "valid_ioports \<equiv> \<top>"
-
 
 (* This definition is needed as interface for other architectures only.
    In other architectures, S is a set of object references (to global tables) that
@@ -3141,10 +3138,6 @@ context Arch_p_arch_update_eq begin
 
 sublocale Arch_p_asid_table_update_eq
   by unfold_locales (simp add: arch)
-
-lemma valid_ioports_update[iff]:
-  "valid_ioports (f s) = valid_ioports s"
-  by simp
 
 lemma cur_vcpu_update [iff]:
   "cur_vcpu (f s) = cur_vcpu s"

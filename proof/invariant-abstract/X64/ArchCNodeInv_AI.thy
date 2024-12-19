@@ -431,7 +431,7 @@ lemma cap_swap_cap_refs_in_kernel_window[wp, CNodeInv_AI_assms]:
   done
 
 
-lemma cap_swap_ioports[wp, CNodeInv_AI_assms]:
+lemma cap_swap_ioports[wp]:
   "\<lbrace>valid_ioports and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b
    \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
@@ -444,8 +444,15 @@ lemma cap_swap_ioports[wp, CNodeInv_AI_assms]:
                  dest!: weak_derived_cap_ioports)
   by (fastforce elim!: ranE split: if_split_asm)
 
+lemma cap_swap_valid_arch_state[wp, CNodeInv_AI_assms]:
+  "\<lbrace>valid_arch_state and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+   cap_swap c a c' b
+   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_ioports_aobj_at cap_swap_aobj_at)+
+     (simp add: valid_arch_state_def)
+
 lemma cap_swap_vms[wp, CNodeInv_AI_assms]:
-  "\<lbrace>valid_machine_state\<rbrace>  cap_swap c a c' b \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
+  "\<lbrace>valid_machine_state\<rbrace> cap_swap c a c' b \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
   apply (simp add: valid_machine_state_def in_user_frame_def)
   apply (wp cap_swap_typ_at
             hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_disj_lift)
@@ -982,6 +989,15 @@ lemma cap_move_ioports:
                  dest!: weak_derived_cap_ioports)
   by (fastforce elim!: ranE split: if_split_asm)
 
+lemma cap_move_valid_arch:
+  "\<lbrace>valid_arch_state and cte_wp_at ((=) cap.NullCap) ptr'
+    and cte_wp_at (weak_derived cap) ptr
+    and cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) ptr and K (ptr \<noteq> ptr')\<rbrace>
+   cap_move cap ptr ptr'
+   \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_ioports_typ_at cap_move_ioports cap_move_typ_at)
+     (simp add: valid_arch_state_def)
+
 lemma cap_move_invs[wp, CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and cte_wp_at ((=) cap.NullCap) ptr'
          and tcb_cap_valid cap ptr'
@@ -1001,7 +1017,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (wpe cap_move_replies)
    apply (wpe cap_move_valid_arch_caps)
    apply (wpe cap_move_valid_ioc)
-   apply (wpe cap_move_ioports)
+   apply (wpe cap_move_valid_arch)
    apply (simp add: cap_move_def set_cdt_def)
    apply (rule hoare_pre)
     apply (wp set_cap_valid_objs set_cap_idle set_cap_typ_at
@@ -1020,7 +1036,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (simp add: cap_range_NullCap valid_ipc_buffer_cap_def[where c=cap.NullCap])
    apply (simp add: is_cap_simps)
    apply (subgoal_tac "tcb_cap_valid cap.NullCap ptr s")
-    apply (simp add: tcb_cap_valid_def weak_derived_cap_is_device)
+    apply (simp add: tcb_cap_valid_def weak_derived_cap_is_device is_cap_simps)
    apply (rule tcb_cap_valid_NullCapD)
     apply (erule(1) tcb_cap_valid_caps_of_stateD)
    apply (simp add: is_cap_simps)

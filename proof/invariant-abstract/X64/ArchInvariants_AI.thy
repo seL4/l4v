@@ -1039,10 +1039,14 @@ where
      cap_ioports cap \<inter> cap_ioports cap' \<noteq> {} \<longrightarrow> cap_ioports cap = cap_ioports cap'"
 
 definition
-  valid_ioports :: "'z::state_ext state \<Rightarrow> bool"
+  valid_ioports_2 :: "(cslot_ptr \<Rightarrow> cap option) \<Rightarrow> arch_state \<Rightarrow> bool"
 where
-  "valid_ioports \<equiv> \<lambda>s. all_ioports_issued (caps_of_state s) (arch_state s) \<and>
-                      ioports_no_overlap (caps_of_state s)"
+  "valid_ioports_2 caps as \<equiv> all_ioports_issued caps as \<and> ioports_no_overlap caps"
+
+abbreviation valid_ioports where
+  "valid_ioports s \<equiv> valid_ioports_2 (caps_of_state s) (arch_state s)"
+
+lemmas valid_ioports_def = valid_ioports_2_def
 
 definition
   valid_x64_irq_state :: "(8 word \<Rightarrow> X64IRQState) \<Rightarrow> bool"
@@ -1059,7 +1063,8 @@ where
       \<and> valid_global_pds s
       \<and> valid_global_pdpts s
       \<and> valid_cr3 (x64_current_cr3 (arch_state s))
-      \<and> valid_x64_irq_state (x64_irq_state (arch_state s))"
+      \<and> valid_x64_irq_state (x64_irq_state (arch_state s))
+      \<and> valid_ioports s"
 
 definition
   vs_cap_ref_arch :: "arch_cap \<Rightarrow> vs_ref list option"
@@ -1734,7 +1739,7 @@ lemma valid_table_caps_update [iff]:
 
 lemma valid_ioports_update[iff]:
   "valid_ioports (f s) = valid_ioports s"
-  by (clarsimp simp: valid_ioports_def arch)
+  by (simp add: arch)
 
 end
 
@@ -1763,14 +1768,35 @@ lemma global_refs_lift:
   apply (rule hoare_vcg_prop)
   done
 
+(* this is the obvious version that doesn't expose IO ports, exported to generic theory *)
 lemma valid_arch_state_lift:
   assumes typs: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>_. typ_at (AArch T) p\<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  assumes caps: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   shows "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def valid_asid_table_def
                    valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
-   apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
+   apply (wp arch typs caps hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
+  done
+
+(* we usually have a rule for valid_ioports, but it often comes with side-conditions *)
+lemma valid_arch_state_lift_ioports_typ_at:
+  fixes Q
+  assumes typs: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>_. typ_at (AArch T) p\<rbrace>"
+  assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  assumes ports: "\<lbrace> Q \<rbrace> f \<lbrace>\<lambda>_. valid_ioports \<rbrace>"
+  shows "\<lbrace>valid_arch_state and Q\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  apply (simp add: valid_arch_state_def pred_conj_def)
+  apply (simp add: valid_arch_state_def valid_asid_table_def
+                   valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
+  (* we need to do this piece-wise so we can grab
+     `valid_ioports_2 (caps_of_state x) (arch_state x) \<and> Q x` at the end *)
+  apply (rule hoare_vcg_conj_lift[rotated])+
+  apply (solves \<open>wpsimp wp: ports\<close>)
+  (* the rest are trivial once arch_state is lifted out *)
+  apply (rule hoare_lift_Pf2[where f="\<lambda>s. arch_state s", OF _ arch],
+         solves \<open>wp typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift\<close>)+
   done
 
 lemma aobj_at_default_arch_cap_valid:

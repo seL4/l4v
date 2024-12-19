@@ -37,8 +37,6 @@ locale Detype_AI =
                 (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))"
   assumes empty_fail_freeMemory:
     "empty_fail (freeMemory ptr bits)"
-  assumes valid_ioports_detype:
-    "valid_ioports (s::'a state) \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
 
 lemma obj_at_detype[simp]:
   "obj_at P p (detype S s) = (p \<notin> S \<and> obj_at P p s)"
@@ -685,11 +683,6 @@ lemma valid_mdb_detype[detype_invs_lemmas]: "valid_mdb (detype (untyped_range ca
    apply (simp add: reply_master_revocable_def detype_def del: split_paired_All)
   apply (simp add: valid_arch_mdb_detype)
   done
-
-lemma valid_ioports_detype[detype_invs_lemmas]:
-  "valid_ioports (detype (untyped_range cap) s)"
-  apply (insert invs, drule invs_valid_ioports)
-  by (clarsimp simp: valid_ioports_detype)
 
 lemma untype_children_detype[detype_invs_lemmas]: "untyped_children_in_mdb (detype (untyped_range cap) s)"
   apply (insert child)

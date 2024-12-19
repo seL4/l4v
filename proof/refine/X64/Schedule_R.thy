@@ -459,7 +459,7 @@ lemma tcbSchedEnqueue_invs'[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
-                    untyped_ranges_zero_lift tcbSchedEnqueue_ct_not_inQ valid_ioports_lift'
+                    untyped_ranges_zero_lift tcbSchedEnqueue_ct_not_inQ
               simp: cteCaps_of_def o_def)
   done
 
@@ -499,8 +499,7 @@ lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
 
 crunch tcbSchedAppend, tcbSchedDequeue
   for arch'[wp]: "\<lambda>s. P (ksArchState s)"
-  and ioports'[wp]: valid_ioports'
-  (simp: unless_def wp: valid_ioports_lift'')
+  (simp: unless_def)
 
 lemma tcbSchedAppend_sch_act_wf[wp]:
   "tcbSchedAppend thread \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
@@ -992,12 +991,6 @@ lemma asUser_utr[wp]:
   apply (simp add: cteCaps_of_def)
   apply (rule hoare_pre, wp untyped_ranges_zero_lift)
   apply (simp add: o_def)
-  done
-
-lemma asUser_ioports'[wp]:
-  "\<lbrace>valid_ioports'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wpsimp wp: valid_ioports_lift'' select_f_inv threadSet_ctes_of)
   done
 
 lemma Arch_switchToThread_invs_no_cicd':

@@ -161,9 +161,8 @@ cacheInvalidateL2RangeCallback _ _ _ = return ()
 cacheCleanL2RangeCallback :: Ptr CallbackData -> PAddr -> PAddr -> IO ()
 cacheCleanL2RangeCallback _ _ _ = return ()
 
--- FIXME: This is not correct now, we do not have l2cc interface abstracted.
 cacheLine :: Int
-cacheLine = 32
+cacheLine = error "see Kernel_Config.thy"
 
 cacheLineBits :: Int
-cacheLineBits = 5
+cacheLineBits = error "see Kernel_Config.thy"

@@ -946,14 +946,9 @@ where
             vspace_at_asid asid pd s \<and> asid \<noteq> 0)"
 
 definition
-  valid_ioports :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "valid_ioports \<equiv> \<lambda>s. True"
-
-definition
   "valid_arch_mdb r cs \<equiv> True"
 
-declare valid_ioports_def[simp] valid_arch_mdb_def[simp]
+declare valid_arch_mdb_def[simp]
 
 section "Lemmas"
 
@@ -2623,24 +2618,6 @@ lemma is_aligned_ptrFromPAddrD[simplified pageBitsForSize_simps]:
    \<Longrightarrow> is_aligned b a"
   by (simp add: ptrFromPAddr_def)
      (erule is_aligned_addD2, erule is_aligned_weaken[OF pptrBaseOffset_aligned])
-
-lemma addrFromPPtr_mask[simplified ARM_HYP.pageBitsForSize_simps]:
-  "n \<le> pageBitsForSize ARMSuperSection
-   \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
-  apply (simp add: addrFromPPtr_def)
-  apply (prop_tac "pptrBaseOffset AND mask n = 0")
-   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
-  apply (simp flip: mask_eqs(8))
-  done
-
-lemma ptrFromPAddr_mask[simplified ARM_HYP.pageBitsForSize_simps]:
-  "n \<le> pageBitsForSize ARMSuperSection
-   \<Longrightarrow> ptrFromPAddr ptr && mask n = ptr && mask n"
-  apply (simp add: ptrFromPAddr_def)
-  apply (prop_tac "pptrBaseOffset AND mask n = 0")
-   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
-  apply (simp flip: mask_eqs(7))
-  done
 
 end
 

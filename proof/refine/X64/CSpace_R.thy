@@ -2991,21 +2991,6 @@ lemma cteInsert_valid_irq_handlers'[wp]:
   apply (clarsimp simp:modify_map_def split:if_splits)
 done
 
-lemma setUntypedCapAsFull_ioports'[wp]:
-  "\<lbrace>valid_ioports' and cte_wp_at' ((=) srcCTE) slot\<rbrace> setUntypedCapAsFull (cteCap srcCTE) c slot \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (clarsimp simp: setUntypedCapAsFull_def valid_ioports'_def split: if_splits)
-  apply (intro conjI impI)
-   apply (clarsimp simp:valid_def)
-   apply (drule updateCap_stuff)
-   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of valid_ioports'_simps isCap_simps modify_map_def
-                         ran_dom modify_map_dom cap_ioports'_def[split_simps capability.split])
-  apply (wp|clarsimp)+
-  done
-
-lemma updateMDB_ioports'[wp]:
-  "\<lbrace>valid_ioports'\<rbrace> updateMDB a b \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  by (wpsimp wp: valid_ioports_lift')
-
 definition
   "safe_ioport_insert' newcap oldcap \<equiv> \<lambda>s.  (cap_ioports' newcap = {} \<or>
       (\<forall>cap''\<in>ran (cteCaps_of s).
@@ -3035,56 +3020,6 @@ lemma setCTE_arch_ctes_of_wp [wp]:
   by (clarsimp simp: map_to_ctes_upd_cte ps_clear_def3 field_simps mask_def)
 
 lemmas cap_ioports'_simps[simp] = cap_ioports'_def[split_simps capability.split arch_capability.split]
-
-lemma setCTE_ioports':
-  "\<lbrace>valid_ioports' and (\<lambda>s. cte_wp_at' (\<lambda>c. safe_ioport_insert' (cteCap v) (cteCap c) s) dest s)\<rbrace>
-     setCTE dest v
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (clarsimp simp: valid_ioports'_simps updateCap_def cteCaps_of_def)
-  apply (rule hoare_pre)
-   apply (wpsimp wp: setCTE_arch_ctes_of_wp getCTE_wp)
-    apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (rule conjI)
-   apply (thin_tac "\<forall>cap\<in>ran (S (ctes_of s)). \<forall>cap'\<in>ran (S (ctes_of s)). P cap cap'" for P S)
-   apply (clarsimp simp: safe_ioport_insert'_def issued_ioports'_def elim!: ranE split: if_split_asm)
-   apply (auto simp: ran_def cteCaps_of_def split: if_splits)[2]
-  apply (thin_tac "\<forall>cap\<in>ran (S (ctes_of s)). P cap (ksArchState s)" for P S)
-  apply (clarsimp simp: safe_ioport_insert'_def issued_ioports'_def elim!: ranE split: if_split_asm)
-    apply (erule disjE)
-     apply (force simp: ran_def cteCaps_of_def split: if_splits)
-    apply (clarsimp simp: cteCaps_of_def elim!: ranE)
-    apply (metis o_apply option.simps(9) ranI)
-   apply (clarsimp simp: cteCaps_of_def elim!: ranE)
-   apply (erule disjE)
-    apply (force simp: ran_def split: if_splits)
-   apply (metis Diff_disjoint Diff_triv o_apply option.simps(9) ranI)
-  by (metis (mono_tags, opaque_lifting) o_apply option.simps(9) ranI)
-
-lemma updateCap_ioports':
-  "\<lbrace>valid_ioports' and (\<lambda>s. cte_wp_at' (\<lambda>c. safe_ioport_insert' v (cteCap c) s) dest s)\<rbrace>
-     updateCap dest v
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (clarsimp simp: updateCap_def)
-  apply (rule hoare_pre)
-   apply (wpsimp wp: setCTE_ioports' getCTE_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
-
-lemma setUntypedCapAsFull_safe_ioport_insert'[wp]:
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. safe_ioport_insert' cap (cteCap c) s) dest s\<rbrace>
-      setUntypedCapAsFull (cteCap srcCTE) cap src
-   \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>c. safe_ioport_insert' cap (cteCap c) s) dest s\<rbrace>"
-  apply (case_tac cap; clarsimp simp: setUntypedCapAsFull_def safe_ioport_insert'_def)
-  by wpsimp
-
-lemma cteInsert_ioports'[wp]:
-  "\<lbrace>valid_ioports' and safe_ioport_insert' cap NullCap\<rbrace>
-     cteInsert cap src dest
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (simp add: cteInsert_def)
-  apply (wp getCTE_wp updateCap_ioports')
-  apply (clarsimp simp:cte_wp_at_ctes_of)
-  done
 
 lemma setCTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setCTE x y \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
@@ -3473,8 +3408,7 @@ lemma cteInsert_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)
   and cte_wp_at' (untyped_derived_eq cap o cteCap) src
-  and ex_cte_cap_to' dest and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)
-  and safe_ioport_insert' cap NullCap\<rbrace>
+  and ex_cte_cap_to' dest and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s) \<rbrace>
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
@@ -4405,20 +4339,11 @@ lemma setupReplyMaster_urz[wp]:
   apply (clarsimp simp: cteCaps_of_def untypedZeroRange_def Let_def isCap_simps)
   done
 
-crunch locateSlotTCB
-  for ioports'[wp]: "valid_ioports'"
-
 lemma not_ioport_cap_cap_ioports'[simp]:"\<not>isArchIOPortCap cap \<Longrightarrow> cap_ioports' cap = {}"
   by (clarsimp simp: isCap_simps cap_ioports'_def split: capability.splits arch_capability.splits)
 
 lemma not_ioport_cap_safe_ioport_insert'[simp]: "\<not>isArchIOPortCap cap \<Longrightarrow> safe_ioport_insert' cap cap' s"
   by (clarsimp simp: safe_ioport_insert'_def isCap_simps)
-
-lemma setupReplyMaster_ioports'[wp]:
-  "\<lbrace>valid_ioports'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (wpsimp simp: setupReplyMaster_def locateSlot_conv
-                  wp: setCTE_ioports' getCTE_wp hoare_vcg_ex_lift)
-  by (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
 
 lemma setupReplyMaster_invs'[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
@@ -4689,14 +4614,6 @@ lemma setCTE_vms'[wp]:
   apply wp+
   done
 
-lemma safe_ioport_insert_same':
-  "\<lbrakk>valid_ioports' s; cte_wp_at' (\<lambda>cte. cteCap cte = cap) p s\<rbrakk> \<Longrightarrow> safe_ioport_insert' cap cap s"
-  apply (clarsimp simp: safe_ioport_insert'_def cte_wp_at_ctes_of valid_ioports'_simps
-                        cteCaps_of_def
-                 elim!: ranE)
-  apply (thin_tac "\<forall>cap\<in>ran (S (ctes_of s)). P cap (ksArchState s)" for P S)
-  by (auto simp: ran_def split: if_splits)
-
 lemma arch_update_setCTE_invs:
   "\<lbrace>cte_wp_at' (is_arch_update' cap) p and cte_wp_at' ((=) oldcte) p and invs' and valid_cap' cap\<rbrace>
   setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
@@ -4705,7 +4622,7 @@ lemma arch_update_setCTE_invs:
   apply (wp arch_update_setCTE_mdb valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
              arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
              valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
-             setCTE_pred_tcb_at' irqs_masked_lift setCTE_ioports'
+             setCTE_pred_tcb_at' irqs_masked_lift
              hoare_vcg_disj_lift untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: pred_tcb_at'_def)+
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
@@ -4719,9 +4636,7 @@ lemma arch_update_setCTE_invs:
                          untypedZeroRange_def Let_def
                          isCap_simps(1-11)[where v="ArchObjectCap ac" for ac])
   apply (rule conjI, fastforce)
-  apply (rule conjI, fastforce)
-  apply (case_tac v0; clarsimp simp: isCap_simps)
-  apply (erule_tac p=p in safe_ioport_insert_same', clarsimp simp: cte_wp_at_ctes_of)
+  apply fastforce
   done
 
 definition
@@ -6148,7 +6063,6 @@ lemma cteInsert_simple_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. safe_parent_for' (ctes_of s) src cap)
   and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)
-  and safe_ioport_insert' cap NullCap
   and cte_at' src
   and ex_cte_cap_to' dest and K (is_simple_cap' cap)\<rbrace>
   cteInsert cap src dest
@@ -6579,7 +6493,7 @@ lemma updateFreeIndex_forward_invs':
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
       apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
-                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp setCTE_ioports'
+                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
                 sym_heap_sched_pointers_lift valid_bitmaps_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def)+

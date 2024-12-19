@@ -1312,6 +1312,11 @@ lemma port_out_corres[@lift_corres_args, corres]:
      apply wpsimp+
   done
 
+defs allIOPortsIssued_asrt_def:
+  "allIOPortsIssued_asrt \<equiv> \<lambda>s. all_ioports_issued' (cteCaps_of s) (ksArchState s)"
+
+lemmas [simp] = allIOPortsIssued_asrt_def
+
 lemma perform_port_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPort x\<rbrakk>
   \<Longrightarrow> corres (dc \<oplus> (=))
@@ -1332,19 +1337,33 @@ crunch setIOPortMask
 
 lemma setIOPortMask_invs':
   "\<lbrace>invs' and (\<lambda>s. \<not> b \<longrightarrow> (\<forall>cap'\<in>ran (cteCaps_of s). cap_ioports' cap' \<inter> {f..l} = {}))\<rbrace> setIOPortMask f l b \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wpsimp wp: setIOPortMask_ioports' simp: invs'_def valid_state'_def setIOPortMask_def simp_del: fun_upd_apply)
+  apply (wpsimp wp: simp: invs'_def valid_state'_def setIOPortMask_def simp_del: fun_upd_apply)
   apply (clarsimp simp: foldl_map foldl_fun_upd_value valid_global_refs'_def global_refs'_def
                         valid_arch_state'_def valid_machine_state'_def)
-  apply (case_tac b; clarsimp simp: valid_ioports'_simps foldl_fun_upd_value)
-   apply (drule_tac x=cap in bspec, assumption)
-   apply auto[1]
-  apply (drule_tac x=cap in bspec, assumption)
+  done
+
+lemma all_ioports_issued_issuedD':
+  "\<lbrakk>all_ioports_issued' (cteCaps_of s) (ksArchState s); cteCaps_of s src = Some cap\<rbrakk> \<Longrightarrow> cap_ioports' cap \<subseteq> issued_ioports' (ksArchState s)"
+  apply (clarsimp simp: all_ioports_issued'_def)
   by auto
 
-lemma valid_ioports_issuedD':
-  "\<lbrakk>valid_ioports' s; cteCaps_of s src = Some cap\<rbrakk> \<Longrightarrow> cap_ioports' cap \<subseteq> issued_ioports' (ksArchState s)"
-  apply (clarsimp simp: valid_ioports'_def all_ioports_issued'_def)
-  by auto
+lemma all_ioports_issued_cross:
+  "\<lbrakk> (s, s') \<in> state_relation; invs s; all_ioports_issued (caps_of_state s) (arch_state s) \<rbrakk>
+   \<Longrightarrow> all_ioports_issued' (cteCaps_of s') (ksArchState s')"
+  apply (simp add: all_ioports_issued_def all_ioports_issued'_def)
+  apply (prop_tac "issued_ioports' (ksArchState s') = issued_ioports (arch_state s)")
+   apply (drule state_relationD)
+   apply (simp add: arch_state_relation_def issued_ioports_def issued_ioports'_def)
+  apply (clarsimp dest!: ranD del: subsetI simp: cteCaps_of_def)
+  apply (rename_tac p' cte')
+  apply (drule (1) pspace_relation_cte_wp_atI'[OF state_relation_pspace_relation ctes_of_cte_wpD])
+   apply clarsimp
+  apply (clarsimp dest!: Retype_AI.F[THEN iffD2] del: subsetI)
+  apply (rename_tac cap ref idx)
+  apply (drule_tac x=cap in bspec)
+   apply (fastforce simp: ran_def)
+  apply (clarsimp simp: cap_ioports_def split: cap.splits arch_cap.splits)
+  done
 
 lemma performX64PortInvocation_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPortControl x\<rbrakk> \<Longrightarrow>
@@ -1356,6 +1375,9 @@ lemma performX64PortInvocation_corres:
   apply (clarsimp simp: perform_ioport_control_invocation_def performX64PortInvocation_def
                         archinv_relation_def ioport_control_inv_relation_def)
   apply (case_tac x; clarsimp simp: bind_assoc simp del: split_paired_All)
+  apply (rule_tac corres_stateAssert_add_assertion[rotated])
+   apply (rule all_ioports_issued_cross;
+          fastforce dest!: invs_valid_ioports simp: valid_ioports_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF set_ioport_mask_corres])
       apply (rule corres_split_nor[OF cteInsert_simple_corres])
@@ -1380,7 +1402,7 @@ lemma performX64PortInvocation_corres:
   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
-  apply (drule_tac src=p in valid_ioports_issuedD'[OF invs_valid_ioports'])
+  apply (drule_tac src=p in all_ioports_issued_issuedD')
    apply (fastforce simp: cteCaps_of_def)
   apply force
   done
@@ -1972,7 +1994,6 @@ lemma invs_asid_table_strengthen':
   apply (rule conjI)
    apply (clarsimp simp: valid_pspace'_def)
   apply (simp add: valid_machine_state'_def)
-  apply (clarsimp simp: valid_ioports'_simps)
   done
 
 lemma ex_cte_not_in_untyped_range:
@@ -2183,13 +2204,13 @@ lemma arch_performInvocation_invs':
                         is_simple_cap'_def isCap_simps)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule conjI, clarsimp)
-  apply (rule conjI, clarsimp simp: safe_parent_for'_def)
-   apply (case_tac ctea)
-   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
-   apply (drule_tac src=p in valid_ioports_issuedD'[OF invs_valid_ioports'])
-    apply (fastforce simp: cteCaps_of_def)
-   apply force
-  using ranD valid_ioports_issuedD' by fastforce
+  apply (clarsimp simp: safe_parent_for'_def)
+  apply (case_tac ctea)
+  apply (clarsimp simp: isCap_simps sameRegionAs_def3)
+  apply (drule_tac src=p in all_ioports_issued_issuedD')
+   apply (fastforce simp: cteCaps_of_def)
+  apply force
+  done
 
 end
 

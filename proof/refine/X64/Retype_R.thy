@@ -2721,9 +2721,9 @@ lemma corres_retype:
   done
 
 lemma init_arch_objects_APIType_map2:
-  "init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs =
+  "init_arch_objects (APIType_map2 (Inr ty)) dev ptr bits sz refs =
      (case ty of APIObjectType _ \<Rightarrow> return ()
-   | _ \<Rightarrow> init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs)"
+   | _ \<Rightarrow> init_arch_objects (APIType_map2 (Inr ty)) dev ptr bits sz refs)"
   apply (clarsimp split: X64_H.object_type.split)
   apply (simp add: init_arch_objects_def APIType_map2_def
             split: apiobject_type.split)
@@ -4501,30 +4501,6 @@ lemma createNewCaps_irq_handlers':
   apply auto
   done
 
-lemma valid_ioports_cte_wp_at_form':
-  "(\<lambda>s. all_ioports_issued' (cteCaps_of s) f \<and> ioports_no_overlap' (cteCaps_of s)) = (\<lambda>s. (\<forall>irq. irq \<in> issued_ioports' f \<or>
-                               (\<forall>p. \<not> cte_wp_at' (\<lambda>cte. irq \<in> cap_ioports' (cteCap cte)) p s)) \<and>
-     (\<forall>sl sl' cap cap'. cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl s
-                      \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap') sl' s \<longrightarrow>
-                         cap_ioports' cap = cap_ioports' cap' \<or> cap_ioports' cap \<inter> cap_ioports' cap' = {}))"
-  by (auto simp: valid_ioports'_simps cteCaps_of_def cte_wp_at_ctes_of
-                        fun_eq_iff ran_def | blast)+
-
-lemma createNewCaps_ioports':
-  "\<lbrace>valid_ioports' and pspace_no_overlap' ptr sz
-       and pspace_aligned' and pspace_distinct'
-       and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
-     createNewCaps ty ptr n us d
-   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
-  apply (clarsimp simp: valid_ioports'_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_use_eq [where f=ksArchState, OF createNewCaps_ksArch])
-   apply (simp add: valid_ioports_cte_wp_at_form')
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift hoare_vcg_imp_lift' |
-              wp createNewCaps_cte_wp_at2)+
-  apply (clarsimp simp: makeObject_cte)
-  by (auto simp: valid_ioports'_simps cte_wp_at_ctes_of ran_def cteCaps_of_def | blast)+
-
 lemma createObjects'_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> createObjects' a b c d \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: createObjects'_def split_def)
@@ -5085,7 +5061,7 @@ proof (rule hoare_gen_asm, elim conjE)
                createNewCaps_global_refs'
                createNewCaps_valid_arch_state
                valid_irq_node_lift_asm [unfolded pred_conj_def, OF _ createNewCaps_obj_at']
-               createNewCaps_irq_handlers' createNewCaps_vms createNewCaps_ioports'
+               createNewCaps_irq_handlers' createNewCaps_vms
                createNewCaps_pred_tcb_at' cnc_ct_not_inQ
                createNewCaps_ct_idle_or_in_cur_domain'
                createNewCaps_sch_act_wf
@@ -5302,26 +5278,6 @@ lemma createObjects_no_cte_irq_handlers:
   apply auto
   done
 
-lemma createObjects_no_cte_ioports:
-  assumes no_cte: "\<And>c. projectKO_opt val \<noteq> Some (c::cte)"
-  assumes no_tcb: "\<And>t. projectKO_opt val \<noteq> Some (t::tcb)"
-  shows
-  "\<lbrace>\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
-        pspace_no_overlap' ptr sz s \<and>
-        range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0 \<and>
-        valid_ioports' s\<rbrace>
-      createObjects ptr n val gbits
-   \<lbrace>\<lambda>rv s.  valid_ioports' s\<rbrace>"
-  apply (simp add: valid_ioports'_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_use_eq[where f=ksArchState, OF createObjects_ksArch])
-   apply (clarsimp simp: valid_ioports_cte_wp_at_form' createObjects_def)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift hoare_vcg_imp_lift' |
-             wp createObjects_orig_cte_wp_at2')+
-  apply (clarsimp simp: no_cte no_tcb split_def split: option.splits)
-  apply (auto simp: valid_ioports'_simps cteCaps_of_def cte_wp_at_ctes_of ran_def | blast)+
-  done
-
 lemma createObjects_cur':
   "\<lbrace>\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
         pspace_no_overlap' ptr sz s \<and> range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0 \<and>
@@ -5451,7 +5407,7 @@ proof -
        apply (wp createObjects_idle')
       apply (wp irqs_masked_lift createObjects_no_cte_valid_global
                 createObjects_valid_arch createObjects_irq_state
-                createObjects_no_cte_irq_handlers createObjects_no_cte_ioports assms
+                createObjects_no_cte_irq_handlers assms
             | simp)+
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: createObjects_def)
@@ -5579,7 +5535,7 @@ lemma createObjects_Not_tcbQueued:
 
 lemma init_arch_objects_APIType_map2_noop:
   "tp \<noteq> Inr PML4Object
-   \<longrightarrow> init_arch_objects (APIType_map2 tp) ptr n m addrs
+   \<longrightarrow> init_arch_objects (APIType_map2 tp) dev ptr n m addrs
     = return ()"
   apply (simp add: init_arch_objects_def APIType_map2_def)
   apply (cases tp, simp_all split: kernel_object.split arch_kernel_object.split
@@ -5645,7 +5601,7 @@ lemma corres_retype_region_createNewCaps:
                   \<and> valid_pspace' s \<and> valid_arch_state' s
                   \<and> range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and> n\<noteq> 0)
             (do x \<leftarrow> retype_region y n us (APIType_map2 (Inr ty)) dev :: obj_ref list det_ext_monad;
-                init_arch_objects (APIType_map2 (Inr ty)) y n us x;
+                init_arch_objects (APIType_map2 (Inr ty)) dev y n us x;
                 return x od)
             (createNewCaps ty y n us dev)"
   apply (rule_tac F="range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n

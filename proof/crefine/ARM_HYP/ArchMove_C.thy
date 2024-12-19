@@ -617,17 +617,6 @@ crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThread
    simp: unless_def updateObject_default_def crunch_simps
    ignore_del: preemptionPoint)
 
-(* this could be done as
-   lemmas addrFromPPtr_mask_6 = addrFromPPtr_mask[where n=6, simplified]
-   but that wouldn't give a sanity check of the n \<le> ... assumption  disappearing *)
-lemma addrFromPPtr_mask_6:
-  "addrFromPPtr ptr && mask 6 = ptr && mask 6"
-  by (rule addrFromPPtr_mask[where n=6, simplified])
-
-lemma ptrFromPAddr_mask_6:
-  "ptrFromPAddr ps && mask 6 = ps && mask 6"
-  by (rule ptrFromPAddr_mask[where n=6, simplified])
-
 end
 
 end
