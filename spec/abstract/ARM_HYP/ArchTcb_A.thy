@@ -44,7 +44,7 @@ where
 definition arch_post_set_flags :: "obj_ref \<Rightarrow> tcb_flags \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_post_set_flags t flags \<equiv> return ()"
 
-definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
+definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_prepare_set_domain t new_dom \<equiv> return ()"
 
 end
