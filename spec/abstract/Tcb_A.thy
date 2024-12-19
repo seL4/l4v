@@ -273,12 +273,10 @@ definition
      when (tptr = cur) reschedule_required
    od"
 
- \<comment> \<open>FIXME FPU: @{term arch_prepare_set_domain} shouldn't be an extended op. Fixing this will require either
-      adding domains to the non-det spec, or removing the non-det spec completely.\<close>
-definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad" where
+definition invoke_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad" where
   "invoke_domain thread domain \<equiv>
      liftE $ do
-       do_extended_op (arch_prepare_set_domain thread domain);
+       arch_prepare_set_domain thread domain;
        set_domain thread domain;
        return []
      od"
