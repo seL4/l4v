@@ -1278,7 +1278,7 @@ lemma decodeX64PageTableInvocation_ccorres:
    apply (auto dest: ctes_of_valid')[1]
   (* X64PageTableUnmap *)
   apply (rule conjI)
-   apply (fastforce simp: rf_sr_ksCurThread ThreadState_defs
+   apply (fastforce simp: rf_sr_ksCurThread
                           mask_eq_iff_w2p word_size
                           ct_in_state'_def st_tcb_at'_def
                           word_sle_def word_sless_def
@@ -1312,7 +1312,6 @@ lemma decodeX64PageTableInvocation_ccorres:
                      intro!: is_aligned_addrFromPPtr[simplified bit_simps, simplified]
                      simp: vmsz_aligned_def cap_to_H_simps cap_page_table_cap_lift_def bit_simps capAligned_def)
    apply clarsimp
-   apply (rule conjI, clarsimp simp: ThreadState_defs mask_def)
    apply (rule conjI)
     (* ccap_relation *)
     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_page_table_cap_lift[THEN iffD1]
@@ -1338,7 +1337,6 @@ lemma decodeX64PageTableInvocation_ccorres:
   (* the below proof duplicates some of the sections above *)
   apply (clarsimp simp: pde_tag_defs pde_get_tag_def word_and_1)
   apply safe
-     apply (clarsimp simp: ThreadState_defs mask_def)
     (* ccap_relation *)
     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_page_table_cap_lift[THEN iffD1]
                           cap_to_H_simps asid_wf_def3[simplified asid_bits_def, simplified])
@@ -1845,7 +1843,7 @@ lemma performPageGetAddress_ccorres:
   apply (cases isCall)
    apply (auto simp: X64.badgeRegister_def X64_H.badgeRegister_def Kernel_C.badgeRegister_def
                      X64.capRegister_def Kernel_C.RDI_def Kernel_C.RSI_def fromPAddr_def
-                     ThreadState_defs pred_tcb_at'_def obj_at'_def ct_in_state'_def)
+                     pred_tcb_at'_def obj_at'_def ct_in_state'_def)
   done
 
 lemma vmsz_aligned_addrFromPPtr':
@@ -2209,7 +2207,7 @@ lemma decodeX86ModeMapPage_ccorres:
    apply (simp add: all_ex_eq_helper)
    apply (vcg exspec=createSafeMappingEntries_PDPTE_modifies)
   by (fastforce simp: invs_valid_objs' tcb_at_invs' vmsz_aligned_addrFromPPtr'
-                      valid_tcb_state'_def invs_sch_act_wf' ThreadState_defs rf_sr_ksCurThread
+                      valid_tcb_state'_def invs_sch_act_wf' rf_sr_ksCurThread
                       arch_invocation_label_defs mask_def isCap_simps)
 
 lemma valid_cap'_PageCap_kernel_mappings:
@@ -2662,8 +2660,7 @@ lemma decodeX64FrameInvocation_ccorres:
                                                                          (Some (y, a)))) cap}"
                                  and A' = "{}" in conseqPost)
                        apply (vcg exspec=createSafeMappingEntries_PTE_modifies)
-                      apply (clarsimp simp: ThreadState_defs mask_def rf_sr_ksCurThread
-                                            isCap_simps cap_pml4_cap_lift
+                      apply (clarsimp simp: rf_sr_ksCurThread isCap_simps cap_pml4_cap_lift
                                             get_capPtr_CL_def ccap_relation_PML4Cap_BasePtr)
                      apply clarsimp
                     apply (rule ccorres_Cond_rhs)
@@ -2697,8 +2694,7 @@ lemma decodeX64FrameInvocation_ccorres:
                                                                                (Some (y, a)))) cap}"
                                                  and A' = "{}" in conseqPost)
                        apply (vcg exspec=createSafeMappingEntries_PDE_modifies)
-                      apply (clarsimp simp: ThreadState_defs mask_def rf_sr_ksCurThread
-                                            isCap_simps cap_pml4_cap_lift
+                      apply (clarsimp simp: rf_sr_ksCurThread isCap_simps cap_pml4_cap_lift
                                             get_capPtr_CL_def ccap_relation_PML4Cap_BasePtr)
                      apply clarsimp
                     apply (rule ccorres_add_returnOk)
@@ -2797,7 +2793,7 @@ lemma decodeX64FrameInvocation_ccorres:
 
 
   (* C side *)
-  apply (clarsimp simp: rf_sr_ksCurThread ThreadState_defs mask_eq_iff_w2p
+  apply (clarsimp simp: rf_sr_ksCurThread mask_eq_iff_w2p
                         word_size word_less_nat_alt from_bool_0 excaps_map_def cte_wp_at_ctes_of
                         n_msgRegisters_def)
   apply (frule(1) ctes_of_valid')
@@ -3251,7 +3247,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
                          slotcap_in_mem_def)
    apply (auto dest: ctes_of_valid')[1]
   apply (rule conjI)
-   apply (clarsimp simp: rf_sr_ksCurThread ThreadState_defs
+   apply (clarsimp simp: rf_sr_ksCurThread
                          mask_eq_iff_w2p word_size
                          ct_in_state'_def st_tcb_at'_def
                          word_sle_def word_sless_def
@@ -3284,7 +3280,6 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
                      intro!: is_aligned_addrFromPPtr[simplified bit_simps, simplified]
                      simp: vmsz_aligned_def cap_to_H_simps cap_page_directory_cap_lift_def bit_simps capAligned_def)
    apply clarsimp
-   apply (rule conjI, clarsimp simp: ThreadState_defs mask_def)
    (* ccap_relation *)
    apply (rule conjI)
     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_page_directory_cap_lift[THEN iffD1]
@@ -3314,7 +3309,6 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
      context_conjI creates a mess, separate lemmas would be a bit unwieldy
   *)
   apply safe
-      apply (clarsimp simp: ThreadState_defs mask_def)
     (* ccap_relation *)
      apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_page_directory_cap_lift[THEN iffD1]
                            cap_to_H_simps asid_wf_def3[simplified asid_bits_def, simplified])
@@ -3694,7 +3688,7 @@ lemma decodeX64PDPTInvocation_ccorres:
                elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
    apply (auto simp: neq_Nil_conv excaps_in_mem_def slotcap_in_mem_def)[1]
   apply (rule conjI)
-   apply (fastforce simp: rf_sr_ksCurThread ThreadState_defs
+   apply (fastforce simp: rf_sr_ksCurThread
                           mask_eq_iff_w2p word_size
                           ct_in_state'_def st_tcb_at'_def
                           word_sle_def word_sless_def
@@ -3727,7 +3721,6 @@ lemma decodeX64PDPTInvocation_ccorres:
    apply (clarsimp simp: get_capMappedASID_CL_def)
    apply (subst cap_lift_PML4Cap_Base[symmetric]; (assumption | rule sym, assumption))
   apply (clarsimp simp: rf_sr_ksCurThread)
-  apply (rule conjI, fastforce simp: ThreadState_defs mask_def)
   (* ccap_relation *)
   apply (rule conjI)
    apply (erule ccap_relationE[where c="ArchObjectCap (PDPointerTableCap _ _)"])
@@ -4046,7 +4039,7 @@ lemma decodeX64MMUInvocation_ccorres:
                         apply (rule_tac Q'=UNIV and A'="{}" in conseqPost)
                           apply (vcg exspec=ensureEmptySlot_modifies)
                          apply (frule length_ineq_not_Nil)
-                         apply (clarsimp simp: null_def ThreadState_defs mask_def hd_conv_nth
+                         apply (clarsimp simp: null_def hd_conv_nth
                                                isCap_simps rf_sr_ksCurThread cap_get_tag_UntypedCap
                                                word_le_make_less asid_high_bits_def
                                          split: list.split)
@@ -4415,8 +4408,7 @@ lemma decodeX64MMUInvocation_ccorres:
                dest!: st_tcb_at_idle_thread'
                elim!: pred_tcb'_weakenE)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of asidHighBits_handy_convs
-                        word_sle_def word_sless_def asidLowBits_handy_convs
-                        rf_sr_ksCurThread ThreadState_defs mask_def[where n=4]
+                        word_sle_def word_sless_def asidLowBits_handy_convs rf_sr_ksCurThread
                   cong: if_cong)
   apply (clarsimp simp: ccap_relation_isDeviceCap2 objBits_simps
                         archObjSize_def pageBits_def case_bool_If)
@@ -5376,7 +5368,7 @@ proof -
       apply (clarsimp simp: ct_in_state'_def)
      apply (rule_tac P="UNIV" in conseqPre)
       apply (simp add: all_ex_eq_helper, vcg exspec=getSyscallArg_modifies)
-     apply (clarsimp simp: interpret_excaps_eq rf_sr_ksCurThread ThreadState_defs mask_def)
+     apply (clarsimp simp: interpret_excaps_eq rf_sr_ksCurThread)
      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply clarsimp
     apply (rule conjI, clarsimp simp: sysargs_rel_to_n dest!: unat_length_4_helper)
@@ -5718,7 +5710,7 @@ proof -
                           invs_sch_act_wf' ct_active_st_tcb_at_minor' rf_sr_ksCurThread
                           ucast_mask_drop[where n=16, simplified mask_def, simplified])
     apply (safe, simp_all add: unat_eq_0 unat_eq_1)
-           apply (clarsimp dest!: unat_length_2_helper simp: ThreadState_defs mask_def syscall_error_rel_def
+           apply (clarsimp dest!: unat_length_2_helper simp: syscall_error_rel_def
                                   | (thin_tac "P" for P)+, word_bitwise)+
     done
 qed
