@@ -60,7 +60,7 @@ lemma misc_dmo_valid_sched_pred_strong[wp]:
 crunch arch_switch_to_thread, arch_switch_to_idle_thread, arch_finalise_cap,
        arch_invoke_irq_control
   for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
-  (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps simp_del: comp_apply)
+  (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps)
 
 lemma handle_vm_fault_valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]:
   "handle_vm_fault thread fault_type \<lbrace>valid_sched_pred_strong P\<rbrace>"
@@ -70,8 +70,7 @@ crunch
   perform_page_table_invocation, perform_page_directory_invocation,
   perform_page_invocation, perform_asid_pool_invocation
   for valid_sched_misc[wp]: "valid_sched_pred_strong P"
-  (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps detype_def ignore: do_machine_op
-   simp_del: comp_apply)
+  (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps detype_def ignore: do_machine_op)
 
 crunch arch_perform_invocation
   for valid_sched_misc[wp, DetSchedSchedule_AI_assms]:

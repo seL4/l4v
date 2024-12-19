@@ -2513,7 +2513,6 @@ lemma call_kernel_cur_sc_offset_ready_and_sufficient:
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_offset_ready (consumed_time s) s
                        \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
-  supply comp_apply[simp del]
   apply (clarsimp simp: call_kernel_def)
   apply (simp flip: bind_assoc)
   apply (rule_tac Q'="\<lambda>_. ?Q" in bind_wp)

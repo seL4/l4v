@@ -72,8 +72,8 @@ lemma set_asid_pool_ntfns_of[wp]:
   "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
   by (set_object_easy_cases def: set_asid_pool_def)
 
-lemma set_asid_pool_prios_of[wp]:
-  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
+lemma set_asid_pool_tcbs_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_asid_pool_def)
 
 lemma set_asid_pool_bound_sc_obj_tcb_at[wp]:
