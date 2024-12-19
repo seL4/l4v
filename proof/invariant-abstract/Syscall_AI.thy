@@ -319,6 +319,11 @@ locale Systemcall_AI_Pre =
        \<lbrace> valid_objs :: 'state_ext state \<Rightarrow> _\<rbrace>
          handle_arch_fault_reply x4 t d dl
        \<lbrace>\<lambda>_ .valid_objs\<rbrace>"
+  assumes handle_arch_fault_valid_mdb[wp]:
+    "\<And> x4 t d dl.
+       \<lbrace> valid_mdb :: 'state_ext state \<Rightarrow> _\<rbrace>
+         handle_arch_fault_reply x4 t d dl
+       \<lbrace>\<lambda>_ .valid_mdb\<rbrace>"
   assumes arch_get_sanitise_register_info_pred_tcb_at[wp]:
     "\<And> P t g.
       \<lbrace> pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> _\<rbrace>
@@ -501,16 +506,15 @@ lemma do_reply_invs[wp]:
   done
 
 lemma pinv_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and>
-        scheduler_action s = resume_cur_thread\<rbrace>
-     perform_invocation blocking call can_donate i
-   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (cases i
-         ; wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs
-                simp: ct_in_state_def)
-   apply (auto simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def pred_tcb_at_def
-                     obj_at_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric]
-                     if_live_then_nonz_capD2 live_def)
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   perform_invocation blocking call can_donate i
+   \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (cases i;
+         wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs
+              simp: ct_in_state_def)
+  apply (auto simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def pred_tcb_at_def
+                    obj_at_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric]
+                    if_live_then_nonz_capD2 live_def)
   done
 
 end
@@ -571,7 +575,8 @@ lemma pinv_tcb[wp]:
     perform_invocation blocking call can_donate i
     \<lbrace>\<lambda>rv. tcb_at tptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac i, simp_all split:option.splits)
-             apply (wpsimp simp: st_tcb_at_tcb_at)+
+             apply (wpsimp simp: st_tcb_at_tcb_at)
+             apply (fastforce intro!: runnable_nonz_cap_to simp: runnable_eq_active)
             apply ((wpsimp wp: tcb_at_typ_at simp: st_tcb_at_tcb_at)+)[3]
          apply ((wpsimp simp: st_tcb_at_tcb_at)+)[5]
     apply ((simp add: tcb_at_typ, wpsimp simp: st_tcb_at_tcb_at tcb_at_typ[symmetric])+)[2]

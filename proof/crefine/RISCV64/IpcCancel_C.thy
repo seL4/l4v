@@ -164,7 +164,8 @@ lemma ntfn_ptr_set_queue_spec:
 
 lemma cancelSignal_ccorres_helper:
   "ccorres dc xfdc (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
-                    and st_tcb_at' ((=) (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn)
+                    and st_tcb_at' ((=) (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn
+                    and K (distinct (ntfnQueue (ntfnObj ntfn'))))
         UNIV
         []
         (setNotification ntfn (ntfnObj_update
@@ -2472,7 +2473,7 @@ lemma cancelSignal_ccorres[corres]:
    apply (simp only: simp_list_case_return return_bind ccorres_seq_skip)
    apply (rule ccorres_stateAssert)+
    apply (rule ccorres_pre_getNotification)
-   apply (rule ccorres_assert)
+   apply (rule ccorres_assert2)+
    apply (rule ccorres_rhs_assoc2)+
    apply (ctac (no_vcg) add: cancelSignal_ccorres_helper)
      apply (ctac add: setThreadState_ccorres)
@@ -2552,10 +2553,10 @@ lemma ep_ptr_set_queue_spec:
   oops
 
 lemma valid_ep_blockedD:
-  "\<lbrakk> valid_ep' ep s; (isSendEP ep \<or> isRecvEP ep) \<rbrakk> \<Longrightarrow> (epQueue ep) \<noteq> [] \<and> (\<forall>t\<in>set (epQueue ep). tcb_at' t s) \<and> distinct (epQueue ep)"
+  "\<lbrakk> valid_ep' ep s; isSendEP ep \<or> isRecvEP ep \<rbrakk>
+   \<Longrightarrow> epQueue ep \<noteq> [] \<and> (\<forall>t\<in>set (epQueue ep). tcb_at' t s)"
   unfolding valid_ep'_def isSendEP_def isRecvEP_def
   by (clarsimp split: endpoint.splits)
-
 
 lemma ep_to_ep_queue:
   assumes ko: "ko_at' ep' ep s"
@@ -2742,7 +2743,7 @@ lemma cancelIPC_ccorres_helper:
   "ccorres dc xfdc (invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and
          st_tcb_at' (\<lambda>st. (isBlockedOnSend st \<or> isBlockedOnReceive st)
                             \<and> blockingObject st = ep) thread
-        and ko_at' ep' ep)
+        and ko_at' ep' ep and K (distinct (epQueue ep')))
         {s. epptr_' s = Ptr ep}
         []
         (setEndpoint ep (if remove1 thread (epQueue ep') = [] then Structures_H.endpoint.IdleEP

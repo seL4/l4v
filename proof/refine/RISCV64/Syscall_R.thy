@@ -220,7 +220,7 @@ lemma decodeInvocation_corres:
         \<comment> \<open>DomainCap\<close>
         apply (clarsimp simp: isCap_defs)
         apply (rule corres_guard_imp)
-      apply (rule decodeDomainInvocation_corres)
+          apply (rule decodeDomainInvocation_corres)
            apply (simp+)[4]
        \<comment> \<open>SchedContextCap\<close>
        apply (clarsimp simp: isCap_defs o_def)
@@ -501,7 +501,7 @@ lemma performInvocation_corres:
         apply (rule corres_splitEE)
            apply (simp)
            apply (erule invokeSchedControlConfigureFlags_corres)
-          apply (rule corres_trivial, simp add: returnOk_def)
+          apply (rule corres_trivial, simp add: returnOk_def comp_apply)
          apply (wpsimp+)[4]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
@@ -1719,8 +1719,8 @@ lemma valid_sc_strengthen:
 lemma endTimeslice_corres: (* called when ct_schedulable *)
   "corres dc
      (invs and valid_list and valid_sched_action and active_scs_valid and valid_release_q
-      and valid_ready_qs and cur_sc_active and ct_active and current_time_bounded
-      and ct_not_queued and ct_not_in_release_q
+      and valid_ready_qs and sorted_ipc_queues and cur_sc_active and ct_active
+      and current_time_bounded and ct_not_queued and ct_not_in_release_q
       and cur_sc_tcb_are_bound and scheduler_act_sane and ready_or_release)
      invs'
      (end_timeslice canTimeout) (endTimeslice canTimeout)"
@@ -1966,6 +1966,7 @@ lemma chargeBudget_corres:
   "corres dc
      (invs and valid_list and valid_sched_action and active_scs_valid and valid_release_q
       and valid_ready_qs and released_ipc_queues and cur_sc_active and ready_or_release
+      and sorted_ipc_queues
       and current_time_bounded and cur_sc_chargeable and scheduler_act_sane
       and ct_not_queued and ct_not_in_release_q and ct_not_blocked
       and cur_sc_offset_ready 0)
@@ -2029,10 +2030,11 @@ lemma chargeBudget_corres:
              apply (rule hoare_strengthen_post
                               [where Q'="\<lambda>_. invs and active_scs_valid and valid_sched_action
                                             and in_correct_ready_q and ready_or_release
-                                            and ready_qs_distinct", rotated])
+                                            and sorted_ipc_queues and ready_qs_distinct", rotated])
               apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
                                     valid_sched_action_def)
-             apply (wpsimp wp: end_timeslice_invs end_timeslice_valid_sched_action)
+             apply (wpsimp wp: end_timeslice_invs end_timeslice_valid_sched_action
+                               end_timeslice_sorted_ipc_queues)
             apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs'", rotated])
              apply (clarsimp simp: invs'_def valid_pspace'_def)
             apply wpsimp
@@ -2867,8 +2869,10 @@ proof -
               apply (erule cur_sc_offset_ready_weaken_zero)
              apply (rule conjI)
               apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def cur_tcb_def is_tcb dest!: invs_cur)
-             apply (erule ct_not_blocked_cur_sc_not_blocked)
-             apply (rule ct_activatable_ct_not_blocked)
+             apply (rule conjI)
+              apply (erule ct_not_blocked_cur_sc_not_blocked)
+              apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+             apply fastforce
              apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def dest!: active_activatable)
             apply clarsimp
            apply (wpsimp wp: update_time_stamp_current_time_bounded hoare_vcg_disj_lift

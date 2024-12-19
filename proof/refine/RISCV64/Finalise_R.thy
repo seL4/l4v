@@ -4216,7 +4216,7 @@ lemma replyClear_corres:
       apply (rule corres_False'[where P'=\<top>])
      apply (wpsimp wp: gts_wp gts_wp')+
    apply (clarsimp simp: pred_tcb_at_def obj_at_def is_obj_defs invs_def valid_pspace_def valid_state_def)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def invs'_def valid_pspace'_def opt_map_Some_eta_fold)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def invs'_def valid_pspace'_def)
   done
 
 lemma fast_finaliseCap_corres:

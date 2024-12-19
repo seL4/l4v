@@ -5223,7 +5223,6 @@ lemma insertNewCap_list_refs_of_replies'[wp]:
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: getCTE_wp)
-  apply (clarsimp simp: opt_map_def list_refs_of_reply'_def o_def split: option.splits)
   done
 
 lemma insertNewCap_ifunsafe'[wp]:

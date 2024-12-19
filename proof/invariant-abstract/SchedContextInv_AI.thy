@@ -1598,7 +1598,7 @@ crunch refill_new
   (simp: crunch_simps wp: crunch_wps)
 
 lemma invoke_sched_control_configure_flags_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s\<rbrace>
    invoke_sched_control_configure_flags i
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del]

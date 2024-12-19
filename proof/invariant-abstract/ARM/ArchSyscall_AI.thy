@@ -33,6 +33,8 @@ crunch handle_arch_fault_reply, arch_get_sanitise_register_info
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
  for valid_objs[wp,Syscall_AI_assms]: "valid_objs"
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+ for valid_mdb[wp,Syscall_AI_assms]: valid_mdb
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
  for cte_wp_at[wp,Syscall_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
 (*        make_fault_message_inv[Syscall_AI_assms] *)
 

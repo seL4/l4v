@@ -2102,7 +2102,7 @@ lemma performPageInvocationMapPDE_ccorres:
           apply (simp add: typ_at_to_obj_at_arches[symmetric])
           apply ((wp mapM_x_storePDE_pde_mappings' mapM_x_wp' valid_pde_slots_lift2 | simp add: split_def)+)[2]
          apply (clarsimp simp: valid_pde_mapping'_def valid_pde_slots'2_def)
-         apply (drule set_zip_helper, clarsimp)
+         apply (drule in_set_zipD, clarsimp)
         apply clarsimp
         apply (simp add: typ_at_to_obj_at_arches)
         apply (frule bspec, erule hd_in_zip_set)

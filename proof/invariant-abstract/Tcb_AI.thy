@@ -1743,25 +1743,18 @@ lemma tcb_ep_dequeue_append_valid_ntfn_rv:
       tcb_ep_append t qs'
    od
    \<lbrace>\<lambda>rv s. valid_ntfn (ntfn_set_obj ntfn (WaitingNtfn rv)) s\<rbrace>"
-  apply (simp only: tcb_ep_append_def tcb_ep_dequeue_def)
-  apply (wp tcb_ep_find_index_wp)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_ntfn_def split: option.split)
-  apply (clarsimp simp: valid_ntfn_def simp del: imp_disjL dest!: findIndex_member)
-  apply (intro conjI; clarsimp?)
-          apply (fastforce dest: in_set_takeD in_set_dropD)
-         apply (fastforce dest: in_set_dropD)
-        apply (fastforce dest: in_set_dropD)
-       apply (fastforce dest: in_set_dropD)
-      apply (fastforce dest: in_set_takeD)
-     apply (clarsimp simp: Int_Un_distrib set_take_disj_set_drop_if_distinct)
-     apply (rule disjoint_subset_both[OF set_take_subset set_drop_subset])
-     apply (simp add: Int_commute)
-    apply (fastforce dest: in_set_takeD)
-   apply (clarsimp simp: Int_Un_distrib set_take_disj_set_drop_if_distinct)
-   apply (fastforce dest: in_set_takeD in_set_dropD)
-  apply (clarsimp split: option.split)
-  apply (case_tac ys; clarsimp)
+  apply (rule hoare_weaken_pre)
+   apply (rule monadic_rewrite_refine_valid)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_sym)
+      apply (rule tcb_ep_append_insort_filter)
+     apply (wpsimp simp: tcb_ep_append_def tcb_ep_dequeue_def)
+    apply (clarsimp simp: valid_ntfn_def split: option.split)
+    apply (simp add: tcb_ep_append_def tcb_ep_dequeue_def)
+    apply wpsimp
+   apply fastforce
+  apply (fastforce simp: valid_ntfn_def insort_filter_def distinct_insort_filter
+                  split: option.splits)
   done
 
 lemma reorder_ntfn_invs[wp]:
