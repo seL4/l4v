@@ -369,12 +369,6 @@ lemma tcb_ep_append_valid_ep:
    \<lbrace>\<lambda>q'. valid_ep (update_ep_queue ep q')\<rbrace>"
   by (cases ep) (wpsimp wp: tcb_ep_append_valid_SendEP tcb_ep_append_valid_RecvEP)+
 
-lemma set_map_fst_filter_zip:
-  "set (map fst (filter P (zip xs ys))) \<subseteq> set xs"
-  apply (induct xs, simp)
-  apply (case_tac ys; simp)
-  by (metis (mono_tags, lifting) image_Collect_subsetI insertI2 set_zip_helper)
-
 lemma tcb_ep_append_rv_wf:
   "\<lbrace>\<top>\<rbrace> tcb_ep_append t q \<lbrace>\<lambda>rv s. set rv = set (t # q)\<rbrace>"
   apply (simp add: tcb_ep_append_def)
