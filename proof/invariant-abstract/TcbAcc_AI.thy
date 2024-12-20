@@ -121,8 +121,8 @@ lemma thread_set_tcb[wp]:
   by (simp add: thread_set_typ_at [where P="\<lambda>s. s"] tcb_at_typ)
 
 lemma thread_set_no_change_tcb_pred:
-  assumes x: "\<And>tcb. proj (tcb_to_itcb (f tcb))    = proj (tcb_to_itcb tcb)"
-  shows      "\<lbrace>pred_tcb_at proj P t\<rbrace> thread_set f t' \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  assumes x: "\<And>tcb. proj (tcb_to_itcb (f tcb)) = proj (tcb_to_itcb tcb)"
+  shows      "thread_set f t' \<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace>"
   apply (simp add: thread_set_def pred_tcb_at_def)
   apply wp
    apply (rule set_object_at_obj)
@@ -703,7 +703,7 @@ lemma as_user_ex_nonz_cap_to[wp]:
   by (wp ex_nonz_cap_to_pres)
 
 lemma as_user_pred_tcb_at [wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> as_user t' m \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  "as_user t' m \<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace>"
   by (wp as_user_wp_thread_set_helper thread_set_no_change_tcb_pred
       | simp add: tcb_to_itcb_def)+
 
