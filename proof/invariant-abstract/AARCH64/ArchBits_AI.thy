@@ -33,6 +33,10 @@ sublocale p_asid_table_current_vcpu_update:
   Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>"
   by (unfold_locales) auto
 
+sublocale p_asid_table_current_vcpu_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_current_fpu_owner_update f (arch_state s)\<rparr>"
+  by (unfold_locales) auto
+
 
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps s"
