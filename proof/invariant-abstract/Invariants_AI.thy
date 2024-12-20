@@ -1825,7 +1825,7 @@ lemma valid_mdb_eqI:
   done
 
 lemma set_object_at_obj:
-  "\<lbrace> \<lambda>s. obj_at P p s \<and> (p = r \<longrightarrow> P obj) \<rbrace> set_object r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
+  "\<lbrace> \<lambda>s. Q (obj_at P p s) \<and> (p = r \<longrightarrow> Q (P obj)) \<rbrace> set_object r obj \<lbrace> \<lambda>_ s. Q (obj_at P p s) \<rbrace>"
   by (clarsimp simp: valid_def in_monad obj_at_def set_object_def get_object_def)
 
 lemma set_object_at_obj1:
@@ -3209,6 +3209,13 @@ lemma ex_nonz_cap_to_simps[simp]:
   "\<And>f. ex_nonz_cap_to p (scheduler_action_update f s) = ex_nonz_cap_to p s"
   "\<And>f. ex_nonz_cap_to w (trans_state f s) = ex_nonz_cap_to w s"
   by (simp_all add: ex_nonz_cap_to_def)
+
+lemma is_final_cap_simps[simp]:
+  "\<And>f. is_final_cap' cap (cdt_update f s) = is_final_cap' cap s"
+  "\<And>f. is_final_cap' cap (machine_state_update f s) = is_final_cap' cap s"
+  "\<And>f. is_final_cap' cap (arch_state_update f s) = is_final_cap' cap s"
+  "\<And>f. is_final_cap' cap (trans_state f s) = is_final_cap' cap s"
+  by (clarsimp simp: is_final_cap'_def2)+
 
 lemma only_idle_lift_weak:
   assumes "\<And>Q P t. \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace> f \<lbrace>\<lambda>_ s. Q (st_tcb_at P t s)\<rbrace>"
