@@ -2170,11 +2170,6 @@ lemma ioc_more_swap[simp]: "
   done
 
 
-lemma is_final_cap'_more_update[simp]:
-  "is_final_cap' cap (trans_state f s) = is_final_cap' cap s"
-  by (simp add: is_final_cap'_def)
-
-
 lemma no_cap_to_obj_with_diff_ref_more_update[simp]:
   "no_cap_to_obj_with_diff_ref cap sl (trans_state f s) =
    no_cap_to_obj_with_diff_ref cap sl s"
@@ -2183,11 +2178,6 @@ lemma no_cap_to_obj_with_diff_ref_more_update[simp]:
 end
 
 (* FIXME: irq_state stuff moved from CNodeInv_AI, not clear it makes sense here. *)
-
-lemma cte_wp_at_irq_state_independent[intro!, simp]:
-  "is_final_cap' x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = is_final_cap' x s"
-  by (simp add: is_final_cap'_def)
 
 
 lemma zombies_final_irq_state_independent[intro!, simp]:

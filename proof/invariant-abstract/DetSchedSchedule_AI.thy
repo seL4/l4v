@@ -938,12 +938,12 @@ lemma tcb_sched_action_dequeue_valid_sched_action_2_ct_upd:
   apply (clarsimp simp: etcb_at_def valid_sched_action_def split: option.split)
   done
 
-context DetSchedSchedule_AI begin
-
 lemma etcbs_of_arch_state[simp]:
   "get_tcb ref s = Some tcb \<Longrightarrow>
   etcbs_of' (\<lambda>r. if r = ref then Some (TCB (tcb_arch_update f tcb)) else kheap s r) = etcbs_of' (kheap s)"
   by (auto simp: etcbs_of_update_unrelated dest!: get_tcb_SomeD)
+
+context DetSchedSchedule_AI begin
 
 lemma as_user_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
@@ -999,11 +999,11 @@ lemma tcb_sched_action_dequeue_ct_in_cur_domain':
   apply (simp add: etcb_at_def split: option.split)
   done
 
-context DetSchedSchedule_AI begin
-
 crunch as_user
   for ct_in_cur_domain_2[wp]: "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)"
   (wp: set_object_wp)
+
+context DetSchedSchedule_AI begin
 
 lemma switch_to_thread_ct_in_cur_domain[wp]:
   "\<lbrace>\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)\<rbrace>
@@ -2127,11 +2127,6 @@ lemma restart_valid_sched[wp]:
   done
 
 end
-
-lemma etcbs_of_arch_state[simp]:
-  "get_tcb ref s = Some tcb \<Longrightarrow>
-  etcbs_of' (\<lambda>r. if r = ref then Some (TCB (tcb_arch_update f tcb)) else kheap s r) = etcbs_of' (kheap s)"
-  by (auto simp: etcbs_of_update_unrelated dest!: get_tcb_SomeD)
 
 lemma as_user_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"

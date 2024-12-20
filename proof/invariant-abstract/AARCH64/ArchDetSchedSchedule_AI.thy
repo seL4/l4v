@@ -116,7 +116,8 @@ lemma set_vcpu_valid_sched_action'[wp]:
              wp: hoare_vcg_imp_lift' hoare_vcg_all_lift | wps)+
 
 crunch
-  switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers
+  switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info,
+  arch_post_modify_registers, arch_prepare_next_domain
   for valid_queues [wp, DetSchedSchedule_AI_assms]: valid_queues
   (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action)
 
@@ -205,7 +206,9 @@ crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_
   (simp: crunch_simps ignore: set_asid_pool
    wp: valid_sched_action_lift[where f="set_asid_pool ptr pool" for ptr pool])
 
-crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers
+crunch
+  arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers,
+  arch_prepare_next_domain, arch_post_set_flags, arch_prepare_set_domain
   for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
   (simp: crunch_simps)
 
@@ -242,8 +245,28 @@ crunch
   for valid_idle[wp, DetSchedSchedule_AI_assms]: "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch arch_switch_to_idle_thread
+crunch arch_switch_to_idle_thread, arch_prepare_next_domain
   for etcb_at[wp, DetSchedSchedule_AI_assms]: "etcb_at P t"
+
+crunch
+  arch_prepare_next_domain, arch_prepare_set_domain
+  for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+  (simp: Let_def)
+
+lemma as_user_ct_in_q[wp]:
+  "as_user t f \<lbrace>ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  by (wpsimp wp: hoare_vcg_imp_lift | wps)+
+
+crunch arch_prepare_next_domain
+  for ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (ready_queues s)"
+  and ct_in_q[wp, DetSchedSchedule_AI_assms]: ct_in_q
+  and valid_blocked[wp, DetSchedSchedule_AI_assms]: valid_blocked
+  (wp: crunch_wps)
+
+crunch arch_prepare_set_domain
+  for idle_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (idle_thread s)"
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
 
 lemma vcpu_switch_ct_in_q[wp]:
   "\<lbrace>ct_in_q\<rbrace> vcpu_switch vcpu \<lbrace>\<lambda>_. ct_in_q\<rbrace>"
@@ -253,7 +276,7 @@ lemma vcpu_switch_ct_in_q[wp]:
   apply wp
   done
 
-crunch  vcpu_switch
+crunch vcpu_switch
   for valid_blocked[wp]: valid_blocked
   (wp: valid_blocked_lift simp: crunch_simps)
 
@@ -261,11 +284,9 @@ lemma set_vm_root_valid_blocked_ct_in_q [wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
   by wpsimp
 
-lemma as_user_ct_in_q[wp]:
-  "as_user tp S \<lbrace>ct_in_q\<rbrace>"
-  apply (wpsimp simp: as_user_def set_object_def get_object_def)
-  apply (clarsimp simp: ct_in_q_def st_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
-  done
+crunch lazy_fpu_restore
+  for valid_blocked[wp]: valid_blocked
+  and ct_in_q[wp]: ct_in_q
 
 lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
@@ -444,7 +465,7 @@ crunch arch_invoke_irq_control
   for valid_sched[wp, DetSchedSchedule_AI_assms]: "valid_sched"
 
 crunch
-  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread
+  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread, arch_prepare_next_domain
   for valid_list[wp, DetSchedSchedule_AI_assms]: "valid_list"
 
 crunch
