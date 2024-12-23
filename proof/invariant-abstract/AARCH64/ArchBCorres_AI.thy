@@ -38,6 +38,11 @@ lemma pt_lookup_from_level_bcorres[wp]:
   "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
   by (induct l arbitrary: r b c rule: vm_level.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
 
+\<comment> \<open>FIXME: move to BCorres_UL\<close>
+lemma maybeM_bcorres_underlying[wp]:
+  "\<lbrakk>\<And>x. y = Some x \<Longrightarrow> bcorres_underlying t (f x) (f' x)\<rbrakk> \<Longrightarrow> bcorres_underlying t (maybeM f y) (maybeM f' y)"
+  by (wpsimp simp: maybeM_def)
+
 crunch arch_finalise_cap
   for (bcorres) bcorres[wp]: truncate_state
 crunch prepare_thread_delete

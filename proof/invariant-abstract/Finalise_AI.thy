@@ -315,11 +315,6 @@ lemma (in mdb_empty_abs) no_mloop_n:
   by (simp add: no_mloop_def parency)
 
 
-lemma final_mdb_update[simp]:
-  "is_final_cap' cap (cdt_update f s) = is_final_cap' cap s"
-  by (clarsimp simp: is_final_cap'_def2)
-
-
 lemma no_cap_to_obj_with_diff_cdt_update[simp]:
   "no_cap_to_obj_with_diff_ref cap S (cdt_update f s)
         = no_cap_to_obj_with_diff_ref cap S s"
