@@ -367,7 +367,8 @@ definition
   valid_ep_obj_with_message :: "obj_ref \<Rightarrow> mspec_state \<Rightarrow> ('a::state_ext) state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
   (* FIXME: Again, ideally we don't want to take the abstract_state s as an argument here. *)
-  "valid_ep_obj_with_message src m s i oracle \<equiv> case cur_thread_cnode m i of
+  "valid_ep_obj_with_message src m s i oracle \<equiv> src \<noteq> cur_thread s \<and>
+    (case cur_thread_cnode m i of
      \<comment> \<open>Microkit only checks notifications via EndpointCap, not via any standalone NotificationCap\<close>
      Some (EndpointCap ref _ rights) \<Rightarrow> AllowRead \<in> rights \<and>
        (case kheap s ref of Some (Endpoint ep) \<Rightarrow>
@@ -412,7 +413,7 @@ where
            _ \<Rightarrow> False) |
          _ \<Rightarrow> False) |
        _ \<Rightarrow> False) |
-     _ \<Rightarrow> False"
+     _ \<Rightarrow> False)"
 
 (* this should be true if msg_max_length = 128, because mask 7 is 127 *)
 lemma mask_7_under_msg_max_idemp:
@@ -913,13 +914,17 @@ lemma complete_signal_preserves_received_mi:
 *)
 
 lemma delete_caller_cap_active_ntfn_at:
-  "\<lbrace>(\<lambda>s. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_obj ntfn = (ActiveNtfn badge)) ntfnptr s)
+  "\<lbrace>(\<lambda>s. obj_at P ntfnptr s)
     and K (ntfnptr \<noteq> receiver)\<rbrace>
      delete_caller_cap receiver
-   \<lbrace>\<lambda>_ s. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_obj ntfn = (ActiveNtfn badge)) ntfnptr s\<rbrace>"
+   \<lbrace>\<lambda>_ s. obj_at P ntfnptr s\<rbrace>"
   apply(rule_tac P="ntfnptr \<noteq> receiver" in hoare_gen_asm)
   apply(wpsimp simp:delete_caller_cap_def)
+  thm cap_delete_one_typ_at (* not strong enough *)
+  thm cap_delete_one_ntfn_at[where word=ntfnptr] (* also not strong enough *)
+  thm cap_delete_one_cte_wp_at_preserved (* not sure this really helps *)
   sorry
+
 (*
 thm cap_delete_one_ep_at
 crunch delete_caller_cap
@@ -965,11 +970,12 @@ lemma do_ipc_transfer_cur_thread':
   "\<lbrace>\<lambda> s. P (cur_thread s)\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   unfolding do_ipc_transfer_def
   sorry
-
+(* might need to use this if I start talking about cur_thread again
 thm Syscall_AI.cap_delete_one_cur_thread
 lemma cap_delete_one_cur_thread':
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> cap_delete_one a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   sorry
+*)
 
 (* The original rule I think says that for all predicates P that are independent of the rights of
    a cap, if P holds of the return value rv then it holds for all caps found at pointers to
@@ -1130,11 +1136,13 @@ lemma hoare_absorb_impE_R:
   using hoare_strengthen_postE_R by fastforce
 
 definition
-  "good_preconds s ro receiver \<equiv>
+  "good_preconds s ro sender receiver \<equiv>
+     \<comment> \<open> FIXME: Some of these might be redundant with what's in valid_ep_obj_with_message \<close>
      (\<exists> ntfnptr ntfn. cur_thread_bound_notification (mspec_transform s) = Some ntfnptr \<and>
        kheap s ntfnptr = Some (Notification ntfn) \<and>
        ntfn_obj ntfn = ActiveNtfn (badge_val ro)) \<and>
-     receiver = cur_thread s"
+     receiver = cur_thread s \<and>
+     valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro"
 
 find_theorems "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ _. \<not> _\<rbrace>"
 
@@ -1180,7 +1188,7 @@ lemma handle_SysRecv_syscall_notification:
       valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and> \<close>
       tcb_at sender s \<and> tcb_at receiver s \<and>
       valid_objs s \<and>
-      good_preconds s ro receiver
+      good_preconds s ro sender receiver
       \<comment> \<open>NB: Not yet sure if this is a safe assumption to make, or even needed
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>
     handle_recv True
@@ -1290,7 +1298,7 @@ lemma handle_SysRecv_syscall_notification:
       apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ref" in hoare_gen_asm)
       apply(wpsimp wp:hoare_absorb_imp)
       apply(wpsimp wp:hoare_vcg_conj_lift)
-       (* Having trouble proving this, so drop it for now
+       (* FIXME: Prove that deleting the caller cap doesn't impact this Endpoint object
        find_theorems delete_caller_cap obj_at
        (* NB: typ_at isn't strong enough, we need to know it's this specific ep *)
        apply(wpsimp wp:delete_caller_cap_typ_at[THEN hoare_strengthen_post])
@@ -1313,22 +1321,19 @@ lemma handle_SysRecv_syscall_notification:
       apply(rule_tac P="isActive ntfn \<and> badge = badge_val ro" in hoare_gen_asm)
       apply clarsimp
       (* not sure we can prove delete_caller_cap preserves obj_at for a particular ntfn object
-         for the same reason we couldn't for a specific ep object *)
+         for the same reason we couldn't for a specific ep object. again I think we need
+         something stronger than delete_caller_cap_typ_at *)
       apply(wpsimp wp:hoare_drop_imp)
-      (* apply(wpsimp wp:hoare_vcg_conj_lift) *)
+      apply(clarsimp simp:obj_at_def)
+      apply(wpsimp wp:hoare_vcg_ex_lift)
+      (* FIXME: Prove that deleting the caller cap doesn't impact this Notification object *) 
       defer
       (* apply(wpsimp wp:delete_caller_cap_active_ntfn_at) XXX: sorried lemma *)
      apply wpsimp
-    (* might need to use this if I start talking about cur_thread again
-      apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
-    *)
-    apply clarsimp
-    (* FIXME: Precondition out the notification cap case, as Microkit will always use
-       receive bound notifications on endpoint caps *)
-    (* these don't do it, we just end up with False
-    apply(rule_tac P="\<exists>a b c. ep_cap = EndpointCap a b c" in hoare_gen_asmE)
-    apply(rule hoare_FalseE_R)
-    *)
+     (* might need to use this if I start talking about cur_thread again
+     apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
+      *)
+     apply clarsimp
      (* 4 subgoals (2 deferrals) *)
      (* XXX: again, if we call wpsimp we're dead because False ends up in the postcondition *)
      apply(rename_tac thread ref)
@@ -1340,9 +1345,9 @@ lemma handle_SysRecv_syscall_notification:
      apply(wpsimp wp:hoare_absorb_impE_R)
      *)
      (* FIXME: I think we need new preconditions here that ensure the lookup succeeds,
-        and lemmas that say it succeeds under those preconditions. *)
-     apply(wp only:hoare_vcg_conj_liftE_weaker) (* Use this conj_lift for validE *)
-      defer
+        and new lemmas that say it succeeds under those preconditions. *)
+     (* Use this conj_lift for validE:
+     apply(wp only:hoare_vcg_conj_liftE_weaker) *)
      defer (* Old attempts below. These use validE_R but we actually need validE
               where E=False to say basically that it *must* succeed.
       (* still nope.
@@ -1368,11 +1373,18 @@ lemma handle_SysRecv_syscall_notification:
       in lookup_cap_specific[THEN hoare_strengthen_postE_R])
     apply(clarsimp simp:cte_wp_at_def)
     *)
-   apply clarsimp
-   term liftM term to_bl
+    apply clarsimp
+    term liftM term to_bl
+    apply wpsimp
    apply wpsimp
-   thm data_to_cptr_def
-   oops
+  apply(clarsimp simp:good_preconds_def valid_ep_obj_with_message_def split:option.splits)
+  apply(rule conjI)
+   apply blast
+  apply(rule_tac x=sender in exI)
+  apply blast
+  (* FIXME: Okay, all we have left is the goals about (1) delete_caller_cap not impacting this
+     message's endpoint and notification, and (2) lookup_cap succeeding for the endpoint cap *)
+  oops
 
 (* This is the relevant code:
      thread \<leftarrow> gets cur_thread;
