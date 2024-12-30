@@ -840,9 +840,12 @@ lemma complete_signal_wp_1st_try:
    message info. Is `get_message_info_ret s receiver = get_message_info_ret s sender` the
    result? Or something more subtle because it might've been done when the sender signalled
    asynchronously, thus it may be no longer in the sender's buffer? *)
+find_theorems ntfn_obj complete_signal
 lemma complete_signal_wp:
-  "\<lbrace>(\<lambda>s. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_obj ntfn = (ActiveNtfn badge)) ntfnptr s)
-    and K (ntfnptr \<noteq> receiver)\<rbrace>
+  "\<lbrace>(\<lambda>s. ntfn_at ntfnptr s \<and>
+     (\<forall>ntfn. obj_at ((=) (Notification ntfn)) ntfnptr s \<longrightarrow> ntfn_obj ntfn = ActiveNtfn badge))
+     \<comment> \<open>obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_obj ntfn = (ActiveNtfn badge)) ntfnptr s)\<close>
+   \<rbrace>
      complete_signal ntfnptr receiver
    \<lbrace>\<lambda>_ s. getRegister_as_user_ret s receiver badge_register = Some badge\<rbrace>"
   apply(wpsimp simp:complete_signal_def)
@@ -913,7 +916,9 @@ lemma complete_signal_preserves_received_mi:
   oops
 *)
 
-lemma delete_caller_cap_active_ntfn_at:
+thm cap_delete_one_ep_at
+(* too strong - surely cap_delete_one_ep_at is enough? *)
+lemma delete_caller_cap_obj_at:
   "\<lbrace>(\<lambda>s. obj_at P ntfnptr s)
     and K (ntfnptr \<noteq> receiver)\<rbrace>
      delete_caller_cap receiver
@@ -923,12 +928,12 @@ lemma delete_caller_cap_active_ntfn_at:
   thm cap_delete_one_typ_at (* not strong enough *)
   thm cap_delete_one_ntfn_at[where word=ntfnptr] (* also not strong enough *)
   thm cap_delete_one_cte_wp_at_preserved (* not sure this really helps *)
-  sorry
+  oops
 
-(*
+(* again might be unnecessarily strong even if we went through the trouble of proving it
 thm cap_delete_one_ep_at
 crunch delete_caller_cap
-  for ep_at'[wp]: "\<lambda>s. ko_at (Endpoint ep) ep_ptr s"
+  for ep_at'[wp]: "\<lambda>s. obj_at P ptr s"
   (wp: crunch_wps)
 *)
 
@@ -1173,6 +1178,16 @@ lemma hoare_gen_asmE':
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (simp add: validE_R_def validE_def valid_def) blast
 
+lemma ko_at_ep_at:
+  "(\<exists>ep. ko_at (Endpoint ep) ref s) = ep_at ref s"
+  apply(clarsimp simp add:obj_at_def is_ep_def split:kernel_object.splits)
+  by (metis kernel_object.distinct(17) kernel_object.distinct(9) kernel_object.exhaust kernel_object.simps(21) kernel_object.simps(9))
+
+lemma ko_at_ntfn_at:
+  "(\<exists>ntfn. ko_at (Notification ntfn) ref s) = ntfn_at ref s"
+  apply(clarsimp simp add:obj_at_def is_ntfn_def split:kernel_object.splits)
+  by (metis kernel_object.distinct(15) kernel_object.distinct(6) kernel_object.exhaust kernel_object.simps(16) kernel_object.simps(25))
+
 thm handle_recv_def
 thm cap_fault_on_failure_def
 lemma handle_SysRecv_syscall_notification:
@@ -1287,68 +1302,66 @@ lemma handle_SysRecv_syscall_notification:
         apply clarsimp
         apply(wpsimp wp:gbn_wp)
        apply(wp only:get_simple_ko_wp)
-
       (* This delete_caller_cap immediately precedes the call to receive_ipc in handle_recv.
          I think what I'll need is a bunch of lemmas to show that most of the predicates in
          the postcondition are unaffected by delete_caller_cap. *)
-
-      apply(wpsimp wp:hoare_vcg_all_lift)
-      (* apply(rename_tac tcb x xa ep_ptr badge rights ep) *)
-      apply(rename_tac thread ep_cptr ep_cap ref badge rights ntfn)
-      apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ref" in hoare_gen_asm)
-      apply(wpsimp wp:hoare_absorb_imp)
+      (* That deleting the caller cap doesn't impact this Endpoint object *)
       apply(wpsimp wp:hoare_vcg_conj_lift)
-       (* FIXME: Prove that deleting the caller cap doesn't impact this Endpoint object
-       find_theorems delete_caller_cap obj_at
-       (* NB: typ_at isn't strong enough, we need to know it's this specific ep *)
-       apply(wpsimp wp:delete_caller_cap_typ_at[THEN hoare_strengthen_post])
-       apply(subgoal_tac "typ_at AEndpoint ref s")
-        prefer 2
-        apply assumption
-       apply(clarsimp simp:a_type_def obj_at_def)
-       apply(clarsimp split:kernel_object.splits if_splits)
-       *)
-       defer
+      (* Note: converted to ep_at by ko_at_ep_at *)
+      apply(wpsimp wp:hoare_absorb_imp simp:ko_at_ep_at)
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       (* Note: in ep_at form, cap_delete_one_ep_at is enough to discharge it *)
+       apply(wpsimp simp:delete_caller_cap_def)
+      apply(rename_tac thread ep_cptr ep_cap ref badge rights)
+      apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ref" in hoare_gen_asm)
+      apply wpsimp
       apply(wpsimp wp:hoare_vcg_all_lift)
       apply(wpsimp wp:hoare_absorb_imp)
       apply(wpsimp wp:hoare_vcg_conj_lift)
        apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_bound_tcb_at)
+      apply wpsimp
+      (*
       apply(rename_tac xa ep_ptr badge rights ep ntfn)
       apply(rule_tac P="\<exists>y. ntfn = Some y \<and> y \<noteq> receiver" in hoare_gen_asm)
-      apply clarsimp
-      apply(wpsimp wp:hoare_vcg_all_lift)
-      apply(rename_tac xa ep_ptr badge rights ep y ntfn)
-      apply(rule_tac P="isActive ntfn \<and> badge = badge_val ro" in hoare_gen_asm)
-      apply clarsimp
-      (* not sure we can prove delete_caller_cap preserves obj_at for a particular ntfn object
-         for the same reason we couldn't for a specific ep object. again I think we need
-         something stronger than delete_caller_cap_typ_at *)
-      apply(wpsimp wp:hoare_drop_imp)
-      apply(clarsimp simp:obj_at_def)
-      apply(wpsimp wp:hoare_vcg_ex_lift)
-      (* FIXME: Prove that deleting the caller cap doesn't impact this Notification object *) 
-      defer
-      (* apply(wpsimp wp:delete_caller_cap_active_ntfn_at) XXX: sorried lemma *)
-     apply wpsimp
+      *)
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       apply(wpsimp wp:hoare_vcg_all_lift)
+       apply(wpsimp wp:hoare_absorb_imp)
+       (* That deleting the caller cap doesn't impact this Notification object *)
+       (* FIXME: This is tricker than the Endpoint object case because this demands to know other
+          facts about the Notification, not just that there is one at that address *)
+       apply(wpsimp wp:hoare_vcg_all_lift)
+       apply(rename_tac ep_cptr ep_cap ep_ref badge rights ep ntfn_ref ntfn)
+       (* first clear away the cruft we can get from state-independent assumptions *)
+       apply(rule_tac P="isActive ntfn \<and> badge = badge_val ro \<and> ntfn_ref \<noteq> receiver"
+         in hoare_gen_asm)
+       apply wpsimp
+       (* then drop the imp because there's no hope of proving it for a fixed ntfn *)
+       apply(wpsimp wp:hoare_drop_imp)
+       (* apply(wpsimp wp:hoare_vcg_conj_lift) *)
+       (* find_theorems name:"context" name:conj *)
+       (* Note: in ntfn_at form, cap_delete_one_ntfn_at is enough to discharge it *)
+       apply(wpsimp simp:delete_caller_cap_def)
+       apply(wpsimp wp:hoare_vcg_all_lift)
+       apply(wpsimp wp:hoare_drop_imp) (* XXX: Seems too easy. What's the cost to this? *)
+      apply wpsimp
      (* might need to use this if I start talking about cur_thread again
      apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
-      *)
-     apply clarsimp
-     (* 4 subgoals (2 deferrals) *)
-     (* XXX: again, if we call wpsimp we're dead because False ends up in the postcondition *)
-     apply(rename_tac thread ref)
-     apply(wp only:hoare_vcg_ex_liftE)
-     apply(rename_tac thread ref ep_ptr badge rights)
-     apply(rule_tac P="AllowRecv \<in> rights \<and> thread = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asmE')
-     apply clarsimp
-     (*
-     apply(wpsimp wp:hoare_absorb_impE_R)
      *)
-     (* FIXME: I think we need new preconditions here that ensure the lookup succeeds,
-        and new lemmas that say it succeeds under those preconditions. *)
-     (* Use this conj_lift for validE:
-     apply(wp only:hoare_vcg_conj_liftE_weaker) *)
-     defer (* Old attempts below. These use validE_R but we actually need validE
+     apply wpsimp
+    (* XXX: again, if we call wpsimp here we're dead because False ends up in the postcondition *)
+    apply(rename_tac thread ref)
+    apply(wp only:hoare_vcg_ex_liftE)
+    apply(rename_tac thread ref ep_ptr badge rights)
+    (* take care of some state-independent assumptions *)
+    apply(rule_tac P="AllowRecv \<in> rights \<and> thread = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asmE')
+    apply clarsimp
+    (* That lookup_cap succeeds for our EndpointCap *)
+    (* FIXME: Add new preconditions here that ensure the lookup succeeds,
+       and prove lemmas that say it succeeds under those preconditions. *)
+    (* Use this conj_lift for validE:
+    apply(wp only:hoare_vcg_conj_liftE_weaker) *)
+    defer (* Old attempts below. These use validE_R but we actually need validE
               where E=False to say basically that it *must* succeed.
       (* still nope.
       apply(rule_tac P1="\<lambda>rv. rv = EndpointCap ep_ptr badge rights"
@@ -1373,17 +1386,16 @@ lemma handle_SysRecv_syscall_notification:
       in lookup_cap_specific[THEN hoare_strengthen_postE_R])
     apply(clarsimp simp:cte_wp_at_def)
     *)
-    apply clarsimp
-    term liftM term to_bl
-    apply wpsimp
+   apply clarsimp
+   term liftM term to_bl
    apply wpsimp
+  apply wpsimp
   apply(clarsimp simp:good_preconds_def valid_ep_obj_with_message_def split:option.splits)
   apply(rule conjI)
    apply blast
   apply(rule_tac x=sender in exI)
   apply blast
-  (* FIXME: Okay, all we have left is the goals about (1) delete_caller_cap not impacting this
-     message's endpoint and notification, and (2) lookup_cap succeeding for the endpoint cap *)
+  (* FIXME: Okay, all we have left is the goal that lookup_cap succeeds for the endpoint cap *)
   oops
 
 (* This is the relevant code:
