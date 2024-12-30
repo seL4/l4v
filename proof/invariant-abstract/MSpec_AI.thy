@@ -1337,13 +1337,17 @@ lemma handle_SysRecv_syscall_notification:
          in hoare_gen_asm)
        apply wpsimp
        (* then drop the imp because there's no hope of proving it for a fixed ntfn *)
-       apply(wpsimp wp:hoare_drop_imp)
+       apply(wpsimp wp:hoare_drop_imp) (* XXX: creating problems later? *)
        (* apply(wpsimp wp:hoare_vcg_conj_lift) *)
        (* find_theorems name:"context" name:conj *)
        (* Note: in ntfn_at form, cap_delete_one_ntfn_at is enough to discharge it *)
        apply(wpsimp simp:delete_caller_cap_def)
        apply(wpsimp wp:hoare_vcg_all_lift)
-       apply(wpsimp wp:hoare_drop_imp) (* XXX: Seems too easy. What's the cost to this? *)
+       apply(wp only:hoare_drop_imp) (* XXX: creating problems later? *)
+       (* FIXME: the goal then becomes state independent and looks solvable trivially,
+          but this actually produces postcondition "(\<forall>x. ntfn_obj x = ActiveNtfn badge)"
+          which might be too general to prove later on. *)
+       apply wpsimp
       apply wpsimp
      (* might need to use this if I start talking about cur_thread again
      apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
@@ -1361,6 +1365,36 @@ lemma handle_SysRecv_syscall_notification:
        and prove lemmas that say it succeeds under those preconditions. *)
     (* Use this conj_lift for validE:
     apply(wp only:hoare_vcg_conj_liftE_weaker) *)
+    apply(wp only:hoare_vcg_conj_liftE_weaker)
+     defer
+    apply(wp only:hoare_vcg_conj_liftE_weaker)
+     defer
+    apply(wp only:hoare_vcg_all_liftE)
+    (* state-independent assumptions for this new forall-quantified x *)
+    (* apply(rule_tac P="\<exists>y. x = Some y" in hoare_gen_asmE') XXX: creates problems later *)
+    apply(wp only:hoare_vcg_conj_liftE_weaker)
+     defer
+    apply(wp only:hoare_vcg_conj_liftE_weaker)
+     defer
+    apply(wp only:hoare_vcg_conj_liftE_weaker)
+     defer
+    apply(wp only:hoare_vcg_conj_liftE_weaker)
+     apply(wp only:hoare_vcg_all_liftE)
+     (* state-independent assumptions for this new forall-quantified x *)
+     (* apply(rule_tac P="y = x" in hoare_gen_asmE') XXX: creates problems later *)
+     apply(wp only:hoare_vcg_conj_liftE_weaker)
+      defer
+     apply(wp only:hoare_vcg_conj_liftE_weaker)
+      defer
+     apply(wp only:hoare_vcg_conj_liftE_weaker)
+      (* FIXME: here's the problematic goal created earlier by dropping the imp *)
+      defer
+     apply(wp only:hoare_vcg_conj_liftE_weaker)
+      (* FIXME: this looks like a too-strong goal too, maybe from the previously dropped imp? *)
+      defer
+     apply(wp only:hoare_vcg_conj_liftE_weaker)
+      defer
+     defer
     defer (* Old attempts below. These use validE_R but we actually need validE
               where E=False to say basically that it *must* succeed.
       (* still nope.
