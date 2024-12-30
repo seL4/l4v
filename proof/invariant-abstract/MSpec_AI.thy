@@ -1138,9 +1138,32 @@ definition
 
 find_theorems "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ _. \<not> _\<rbrace>"
 
+(* Actually, I think we want to be saying that we do not fault.
 lemma handle_fault_good_preconds:
+  "handle_fault thread ex \<lbrace>\<lambda>s. good_preconds s ro receiver\<rbrace> "
+  sorry
+
+lemma handle_fault_not_good_preconds:
   "handle_fault thread ex \<lbrace>\<lambda>s. \<not> good_preconds s ro receiver\<rbrace> "
   sorry
+*)
+
+thm hoare_vcg_split_lift
+thm hoare_vcg_split_case_optionE
+lemma hoare_vcg_split_ep_capE[wp]:
+  "\<lbrakk>\<And>x ref badge rights. x = EndpointCap ref badge rights \<Longrightarrow>
+      \<lbrace>P x ref badge rights\<rbrace> f x ref badge rights \<lbrace>Q x\<rbrace>, \<lbrace>E x\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. (\<exists>ref badge rights. x = EndpointCap ref badge rights \<and> P x ref badge rights s)\<rbrace>
+    case x of
+      EndpointCap ref badge rights \<Rightarrow> f x ref badge rights |
+      NotificationCap ref badge rights \<Rightarrow> g x ref badge rights |
+      _ \<Rightarrow> h
+    \<lbrace>Q x\<rbrace>, \<lbrace>E x\<rbrace>"
+  by (clarsimp split:cap.splits)
+
+lemma hoare_gen_asmE':
+  "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  by (simp add: validE_R_def validE_def valid_def) blast
 
 thm handle_recv_def
 thm cap_fault_on_failure_def
@@ -1169,25 +1192,30 @@ lemma handle_SysRecv_syscall_notification:
       P' (get_message_info_ret s sender) \<and>
       \<close>
       \<comment> \<open>notification reqs on successful complete_signal\<close>
-      (good_preconds s ro receiver \<longrightarrow> \<comment> \<open>test to characterise what determines success\<close>
-        (getRegister_as_user_ret s receiver badge_register = Some (badge_val ro) \<and>
-        receiver = cur_thread s)) \<and>
+      \<comment> \<open>good_preconds s ro receiver \<and>\<close>
+      getRegister_as_user_ret s receiver badge_register = Some (badge_val ro)
       \<comment> \<open>FIXME: figure out the mechanism for transferring message info and how we ought
         to express its correctness
       get_message_info_ret s receiver = Some (minfo ro) \<and> \<close>
-      tcb_at sender s \<and> tcb_at receiver s
+      \<comment> \<open>Do we really need these?
+      tcb_at sender s \<and> tcb_at receiver s\<close>
       \<comment> \<open>NB: put back if needed
       valid_message_info (the (get_message_info_ret s sender)) \<and>
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>"
   unfolding handle_recv_def
-  find_theorems cap_fault_on_failure
   apply wp
-      apply(rule_tac Q'="\<lambda>_ s. \<not> (good_preconds s ro receiver) \<and>
-        tcb_at sender s \<and> tcb_at receiver s" in hoare_post_imp)
-      apply simp
-      apply(wpsimp wp:hoare_vcg_conj_lift)
+       apply(wp only:hoare_pre_cont)
+(*
+       apply(wpsimp wp:hoare_vcg_conj_lift)
+        apply(wpsimp wp:handle_fault_good_preconds)
+       apply(rule_tac Q'="\<lambda>_ s. (good_preconds s ro receiver)" in hoare_post_imp)
+        apply simp
+       apply(wpsimp wp:handle_fault_not_good_preconds)
       apply(wpsimp wp:handle_fault_good_preconds)
-      apply(wpsimp wp:hf_tcb_at)
+*)
+(*
+     apply simp
+      (* apply(wpsimp wp:hf_tcb_at) *)
      apply(wpsimp simp:Let_def)
         (* 15 subgoals: looks like proving how ending up with a fault must imply
            having not met the needed preconditions *)
@@ -1196,10 +1224,13 @@ lemma handle_SysRecv_syscall_notification:
       (* 5 subgoals *)
       apply(clarsimp simp:good_preconds_def mspec_transform_def obj_at_def split:option.splits kernel_object.splits)
       defer
-     apply(wpsimp simp:Let_def)
-        (* 16 subgoals *)
-        (* FIXME: Now I'm really confused - where did the EndpointCap case go? Maybe it's matching
-           with a schematic postcondition left unfilled by the deferred goal above... *)
+*)
+     apply simp
+     apply(wp only:cap_fault_wp)
+     (* XXX: if we call wpsimp we're dead because False ends up in the postcondition
+        of the lookup_cap lemma, so instead carefully split on the cases *)
+     apply(simp add:Let_def)
+     apply(wp only:hoare_vcg_split_ep_capE)
        (* 15 subgoals *)
        (* more automated version
        apply(wpsimp simp:receive_ipc_def complete_signal_def)
@@ -1211,8 +1242,9 @@ lemma handle_SysRecv_syscall_notification:
        (* the more careful version, though I can't much tell the difference in the result
           (at least, until I started mentioning the sender in the postcondition...) *)
        apply(wpsimp simp:receive_ipc_def)
-           apply(rename_tac tcb xa ep_ptr badge rights rv rvb ntfnptr)
-           apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver \<and> badge = badge_val ro" in hoare_gen_asm)
+           apply(rename_tac tcb ep_cptr ep_cap ref badge rights ep rva ntfnptr)
+           apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver \<and> badge = badge_val ro"
+             in hoare_gen_asm)
            (*
            apply(wpsimp wp:hoare_vcg_conj_lift)
             apply(wpsimp wp:complete_signal_ct)
@@ -1225,7 +1257,7 @@ lemma handle_SysRecv_syscall_notification:
               simp:get_message_info_ret_getRegister_as_user_ret)
             apply assumption
            *)
-           apply(wpsimp wp:hoare_vcg_conj_lift)
+            apply simp
             apply(wpsimp wp:complete_signal_wp)
            (* FIXME: figure out how to express correctness for transfer of message info
            apply(wpsimp wp:hoare_vcg_conj_lift)
@@ -1233,9 +1265,11 @@ lemma handle_SysRecv_syscall_notification:
               simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
             apply assumption
            *)
+(*
            apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct)
+*)
           apply clarsimp
-          apply(rename_tac x xa ep_ptr badge rights rv ntfnptr ntfn)
+          apply(rename_tac tcb x xa ep_ptr badge rights rv ntfnptr ntfn)
           apply(rule_tac P="\<not> (ntfnptr = None \<or> \<not> isActive ntfn)" in hoare_gen_asm)
           apply wpsimp
          apply clarsimp
@@ -1251,21 +1285,21 @@ lemma handle_SysRecv_syscall_notification:
          the postcondition are unaffected by delete_caller_cap. *)
 
       apply(wpsimp wp:hoare_vcg_all_lift)
-      apply(rename_tac x xa ep_ptr badge rights ep)
-      apply(rule_tac P="x = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asm)
-      (* Having trouble proving this, so drop it for now
+      (* apply(rename_tac tcb x xa ep_ptr badge rights ep) *)
+      apply(rename_tac thread ep_cptr ep_cap ref badge rights ntfn)
+      apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ref" in hoare_gen_asm)
       apply(wpsimp wp:hoare_absorb_imp)
       apply(wpsimp wp:hoare_vcg_conj_lift)
+       (* Having trouble proving this, so drop it for now
        find_theorems delete_caller_cap obj_at
        (* NB: typ_at isn't strong enough, we need to know it's this specific ep *)
        apply(wpsimp wp:delete_caller_cap_typ_at[THEN hoare_strengthen_post])
-       apply(subgoal_tac "typ_at AEndpoint ep_ptr s")
+       apply(subgoal_tac "typ_at AEndpoint ref s")
         prefer 2
         apply assumption
        apply(clarsimp simp:a_type_def obj_at_def)
-      *)
-      apply(wpsimp wp:hoare_absorb_imp)
-      apply(wpsimp wp:hoare_vcg_conj_lift)
+       apply(clarsimp split:kernel_object.splits if_splits)
+       *)
        defer
       apply(wpsimp wp:hoare_vcg_all_lift)
       apply(wpsimp wp:hoare_absorb_imp)
@@ -1281,10 +1315,13 @@ lemma handle_SysRecv_syscall_notification:
       (* not sure we can prove delete_caller_cap preserves obj_at for a particular ntfn object
          for the same reason we couldn't for a specific ep object *)
       apply(wpsimp wp:hoare_drop_imp)
-      apply(wpsimp wp:hoare_vcg_conj_lift)
-       apply(wpsimp wp:delete_caller_cap_active_ntfn_at)
+      (* apply(wpsimp wp:hoare_vcg_conj_lift) *)
+      defer
+      (* apply(wpsimp wp:delete_caller_cap_active_ntfn_at) XXX: sorried lemma *)
+     apply wpsimp
+    (* might need to use this if I start talking about cur_thread again
       apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
-    apply(rule hoare_FalseE_R)
+    *)
     apply clarsimp
     (* FIXME: Precondition out the notification cap case, as Microkit will always use
        receive bound notifications on endpoint caps *)
@@ -1292,43 +1329,22 @@ lemma handle_SysRecv_syscall_notification:
     apply(rule_tac P="\<exists>a b c. ep_cap = EndpointCap a b c" in hoare_gen_asmE)
     apply(rule hoare_FalseE_R)
     *)
-    apply(rule hoare_FalseE_R)
-    apply(rule hoare_FalseE_R)
-
-    apply(rule hoare_FalseE_R)
-
-    apply(rule hoare_FalseE_R)
-
-    apply(rule hoare_FalseE_R)
-
-    apply(rule hoare_FalseE_R)
-
-    apply(rule hoare_FalseE_R)
-
-    apply(rule hoare_FalseE_R)
-
-    apply(rule hoare_FalseE_R)
-    apply clarsimp
-. (*
-             (* 12 subgoals *)
-             apply(wpsimp wp:throwError_wp)
-            apply(wpsimp wp:throwError_wp)
-           apply(wpsimp wp:throwError_wp)
-          apply(wpsimp wp:throwError_wp)
-         apply(wpsimp wp:throwError_wp)
-        apply(wpsimp wp:throwError_wp)
-       apply(wpsimp wp:throwError_wp)
-      apply(wpsimp wp:throwError_wp)
-     apply clarsimp
      (* 4 subgoals (2 deferrals) *)
-     apply wpsimp
+     (* XXX: again, if we call wpsimp we're dead because False ends up in the postcondition *)
      apply(rename_tac thread ref)
-     apply(wp only:hoare_vcg_all_liftE_R)
-     apply(rename_tac ref ep_ptr badge rights)
-     apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asmE)
+     apply(wp only:hoare_vcg_ex_liftE)
+     apply(rename_tac thread ref ep_ptr badge rights)
+     apply(rule_tac P="AllowRecv \<in> rights \<and> thread = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asmE')
      apply clarsimp
+     (*
      apply(wpsimp wp:hoare_absorb_impE_R)
-     apply(wpsimp wp:hoare_vcg_conj_liftE_R)
+     *)
+     (* FIXME: I think we need new preconditions here that ensure the lookup succeeds,
+        and lemmas that say it succeeds under those preconditions. *)
+     apply(wp only:hoare_vcg_conj_liftE_weaker) (* Use this conj_lift for validE *)
+      defer
+     defer (* Old attempts below. These use validE_R but we actually need validE
+              where E=False to say basically that it *must* succeed.
       (* still nope.
       apply(rule_tac P1="\<lambda>rv. rv = EndpointCap ep_ptr badge rights"
         in lookup_cap_cte_caps_to'[THEN hoare_strengthen_postE_R])
@@ -1351,14 +1367,12 @@ lemma handle_SysRecv_syscall_notification:
     apply(rule_tac mycap1="EndpointCap a b c" and cref1="(something, ref)"
       in lookup_cap_specific[THEN hoare_strengthen_postE_R])
     apply(clarsimp simp:cte_wp_at_def)
+    *)
    apply clarsimp
    term liftM term to_bl
    apply wpsimp
-thm data_to_cptr_def
-   (* can't even refer to s here, too. bit of a mess, really.
-      probably means I need to modify the lemma(s) to capture this (if it's even true). *)
-   apply(subgoal_tac "something=the (getRegister_as_user_ret s thread cap_register)")
-     oops
+   thm data_to_cptr_def
+   oops
 
 (* This is the relevant code:
      thread \<leftarrow> gets cur_thread;
