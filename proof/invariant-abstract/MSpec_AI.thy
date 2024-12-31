@@ -1518,8 +1518,42 @@ lemma handle_SysRecv_syscall_notification:
    defer
   (* need to inspect the rest of these goals and ensure the initial precondition
      is usable for proving them! that or rephrase/simplify it accordingly *)
-  thm get_cap_ret_valid
-  term valid_cap_syn
+  apply(rule context_conjI)
+   apply(force simp:get_tcb_at objs_valid_tcb_ctable)
+  apply(rule context_conjI)
+   apply(force simp:wellformed_cap_simps)
+  apply(rule context_conjI)
+   defer (* FIXME *)
+  apply(rule context_conjI)
+   apply(force simp add:valid_cap_simps)
+  apply(rule context_conjI)
+   apply clarsimp
+   apply(clarsimp simp:mspec_transform_def split:option.splits kernel_object.splits)
+   apply(rule context_conjI)
+    defer (* FIXME *)
+   apply(rule context_conjI)
+    defer (* FIXME *)
+   apply clarsimp
+   apply(rule context_conjI)
+    apply(force simp add: get_tcb_rev pred_tcb_def2)
+   apply clarsimp
+   apply(rule context_conjI)
+    defer (* FIXME: this one doesn't seem right for an arbitrary xa *)
+   apply clarsimp
+   apply(rule context_conjI)
+    defer (* FIXME: this one looks like I'll need to unpack the assms more *)
+   apply(clarsimp simp:obj_at_def is_ntfn_def)
+   apply(rule context_conjI)
+    apply clarsimp
+    apply(rule context_conjI)
+     defer (* FIXME: again, all coming down to making assms more unpackable *)
+    apply clarsimp
+    defer (* FIXME *)
+   apply clarsimp
+   apply(rule context_conjI)
+    defer (* FIXME *)
+   apply clarsimp
+  apply clarsimp
   oops
 
     (* Old attempts below. These use validE_R but we actually need validE
