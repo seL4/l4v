@@ -13,16 +13,19 @@ begin
 term "s :: abstract_state"
 
 consts
+  MICROKIT_INPUT_CAP_NAT :: nat
   MICROKIT_INPUT_CAP :: cnode_index
   MICROKIT_REPLY_CAP :: cnode_index
 
 axiomatization where
   microkit_input_reply_caps_distinct:
     "MICROKIT_INPUT_CAP \<noteq> MICROKIT_REPLY_CAP" and
+  MICROKIT_INPUT_CAP_NAT_def:
+    "MICROKIT_INPUT_CAP_NAT \<equiv> 1" and
   MICROKIT_INPUT_CAP_def:
     (* FIXME: The conventional constant Microkit uses is 1, but I'm not sure that's
        raw value is what tcb_cnode_index's input corresponds to *)
-    "MICROKIT_INPUT_CAP \<equiv> tcb_cnode_index 1"
+    "MICROKIT_INPUT_CAP \<equiv> tcb_cnode_index MICROKIT_INPUT_CAP_NAT"
 
 (* Based on KernelState in Mathieu's gordian-relation-proof *)
 
@@ -1241,7 +1244,9 @@ lemma handle_SysRecv_syscall_notification:
       valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro \<and> \<close>
       tcb_at sender s \<and> tcb_at receiver s \<and>
       valid_objs s \<and>
-      good_preconds s ro sender receiver
+      good_preconds s ro sender receiver \<and>
+      \<comment> \<open>That the user has provided MICROKIT_INPUT_CAP_NAT in the cap_register\<close>
+      to_bl (the (getRegister_as_user_ret s receiver cap_register)) = MICROKIT_INPUT_CAP
       \<comment> \<open>NB: Not yet sure if this is a safe assumption to make, or even needed
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>
     handle_recv True
@@ -1266,58 +1271,16 @@ lemma handle_SysRecv_syscall_notification:
   unfolding handle_recv_def
   apply wp
        apply(wp only:hoare_pre_cont)
-(*
-       apply(wpsimp wp:hoare_vcg_conj_lift)
-        apply(wpsimp wp:handle_fault_good_preconds)
-       apply(rule_tac Q'="\<lambda>_ s. (good_preconds s ro receiver)" in hoare_post_imp)
-        apply simp
-       apply(wpsimp wp:handle_fault_not_good_preconds)
-      apply(wpsimp wp:handle_fault_good_preconds)
-*)
-(*
-     apply simp
-      (* apply(wpsimp wp:hf_tcb_at) *)
-     apply(wpsimp simp:Let_def)
-        (* 15 subgoals: looks like proving how ending up with a fault must imply
-           having not met the needed preconditions *)
-        apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp
-          simp:set_simple_ko_def AARCH64.setRegister_def as_user_def set_thread_state_def)+
-      (* 5 subgoals *)
-      apply(clarsimp simp:good_preconds_def mspec_transform_def obj_at_def split:option.splits kernel_object.splits)
-      defer
-*)
      apply simp
      apply(wp only:cap_fault_wp)
      (* XXX: if we call wpsimp we're dead because False ends up in the postcondition
         of the lookup_cap lemma, so instead carefully split on the cases *)
      apply(simp add:Let_def)
      apply(wp only:hoare_vcg_split_ep_capE)
-       (* 15 subgoals *)
-       (* more automated version
-       apply(wpsimp simp:receive_ipc_def complete_signal_def)
-        (* 23 subgoals *)
-        apply(wpsimp wp:crunch_wps set_object_wp get_simple_ko_wp get_object_wp
-          simp:set_simple_ko_def setRegister_def as_user_def set_thread_state_def)+
-          apply(force simp:getRegister_as_user_ret_def get_message_info_ret_def)
-       *)
-       (* the more careful version, though I can't much tell the difference in the result
-          (at least, until I started mentioning the sender in the postcondition...) *)
        apply(wpsimp simp:receive_ipc_def)
            apply(rename_tac tcb ep_cptr ep_cap ref badge rights ep rva ntfnptr)
            apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver \<and> badge = badge_val ro"
              in hoare_gen_asm)
-           (*
-           apply(wpsimp wp:hoare_vcg_conj_lift)
-            apply(wpsimp wp:complete_signal_ct)
-           apply(wpsimp wp:hoare_vcg_conj_lift)
-            apply(wpsimp wp:complete_signal_lookup_ipc_buffer)
-           apply(wpsimp wp:hoare_vcg_conj_lift)
-            apply(wpsimp wp:complete_signal_lookup_ipc_buffer)
-           apply(wpsimp wp:hoare_vcg_conj_lift)
-            apply(wpsimp wp:complete_signal_wp[THEN hoare_strengthen_post] hoare_vcg_ex_lift
-              simp:get_message_info_ret_getRegister_as_user_ret)
-            apply assumption
-           *)
             apply simp
             apply(wpsimp wp:complete_signal_wp)
            (* FIXME: figure out how to express correctness for transfer of message info
@@ -1325,10 +1288,7 @@ lemma handle_SysRecv_syscall_notification:
             apply(wpsimp wp:complete_signal_wp_1st_try[THEN hoare_strengthen_post] hoare_vcg_ex_lift
               simp:AARCH64_A.get_message_info_ret_getRegister_as_user_ret)
             apply assumption
-           *)
-(*
-           apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct)
-*)
+           apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct) *)
           apply clarsimp
           apply(rename_tac tcb x xa ep_ptr badge rights rv ntfnptr ntfn)
           apply(rule_tac P="\<not> (ntfnptr = None \<or> \<not> isActive ntfn)" in hoare_gen_asm)
@@ -1358,15 +1318,11 @@ lemma handle_SysRecv_syscall_notification:
       apply(wpsimp wp:hoare_vcg_conj_lift)
        apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_bound_tcb_at)
       apply wpsimp
-      (*
-      apply(rename_tac xa ep_ptr badge rights ep ntfn)
-      apply(rule_tac P="\<exists>y. ntfn = Some y \<and> y \<noteq> receiver" in hoare_gen_asm)
-      *)
       apply(wpsimp wp:hoare_vcg_conj_lift)
        apply(wpsimp wp:hoare_vcg_all_lift)
        apply(wpsimp wp:hoare_absorb_imp)
        (* That deleting the caller cap doesn't impact this Notification object *)
-       (* FIXME: This is tricker than the Endpoint object case because this demands to know other
+       (* Note: This is tricker than the Endpoint object case because this demands to know other
           facts about the Notification, not just that there is one at that address *)
        apply(wpsimp wp:hoare_vcg_all_lift)
        apply(rename_tac ep_cptr ep_cap ep_ref badge rights ep ntfn_ref ntfn)
@@ -1495,7 +1451,6 @@ lemma handle_SysRecv_syscall_notification:
    apply wpsimp
   (* okay. we're finally at the point where we can try to line up the wp-derived precondition
      with the mega-precondition I originally drafted. *)
-  (* DOWN TO HERE *)
   apply wpsimp
   apply(clarsimp simp:good_preconds_def valid_ep_obj_with_message_def
     split:option.splits cap.splits)
@@ -1503,19 +1458,30 @@ lemma handle_SysRecv_syscall_notification:
   apply(rule_tac x=ref in exI)
   apply(rule_tac x=badge in exI)
   apply(rule_tac x=rights in exI)
-  apply(rule conjI)
+  apply(rule context_conjI)
    apply(clarsimp simp:cte_wp_at_def)
-   (* various painful attempts to throw the kitchen sink at it
-   apply(clarsimp simp:cte_wp_at_def mspec_transform_def tcb_cnode_map_def
-     MICROKIT_INPUT_CAP_def
-     split:option.splits kernel_object.splits if_splits)
-   ...
-   apply(clarsimp simp:cte_wp_at_def get_cap_def mspec_transform_def split:prod.splits)
-   apply(clarsimp simp:bind_def Union_eq get_object_def gets_def get_def assert_def return_def
-     assert_opt_def fail_def
-     split:prod.splits kernel_object.split if_split option.split)
-   *)
-   defer
+   apply(simp only:get_cap_caps_of_state[simplified])
+   apply(clarsimp simp:mspec_transform_def)
+   apply(clarsimp split:option.splits)
+   apply(case_tac x2; clarsimp)
+   apply(rename_tac tcb)
+   using caps_of_state_tcb_index_trans[where p=receiver]
+   apply(erule_tac x=s in meta_allE)
+   apply(erule_tac x=tcb in meta_allE)
+   apply(erule_tac x=MICROKIT_INPUT_CAP_NAT in meta_allE)
+   apply simp
+   apply(subgoal_tac "to_bl (AARCH64.user_regs (AARCH64_A.tcb_context (tcb_arch tcb)) cap_register)
+     = tcb_cnode_index MICROKIT_INPUT_CAP_NAT")
+    apply clarsimp
+    apply(simp add: MICROKIT_INPUT_CAP_def get_tcb_rev)
+   (* We just need a requirement that says the microkit passed MICROKIT_INPUT_CAP in
+      via the cap_register *)
+   apply(clarsimp split:AARCH64.user_context.splits
+     simp:getRegister_as_user_ret_def AARCH64_A.arch_tcb_context_get_def AARCH64.user_regs_def)
+   apply(subgoal_tac "x2=x2a")
+    prefer 2
+    using AARCH64.user_context.inject apply blast
+   apply(force simp:MICROKIT_INPUT_CAP_def tcb_cnode_index_def)
   (* need to inspect the rest of these goals and ensure the initial precondition
      is usable for proving them! that or rephrase/simplify it accordingly *)
   apply(rule context_conjI)
@@ -1523,16 +1489,27 @@ lemma handle_SysRecv_syscall_notification:
   apply(rule context_conjI)
    apply(force simp:wellformed_cap_simps)
   apply(rule context_conjI)
-   defer (* FIXME *)
+   (* NB: This is asked for by lookup_cap_specific but we haven't proved it yet *)
+   find_theorems wellformed_cap valid_cap_syn
+   defer (* FIXME: maybe try prove lookup_cap_specific before jumping thru hoops for this *)
   apply(rule context_conjI)
    apply(force simp add:valid_cap_simps)
   apply(rule context_conjI)
    apply clarsimp
-   apply(clarsimp simp:mspec_transform_def split:option.splits kernel_object.splits)
+   apply(clarsimp simp:mspec_transform_def split:option.splits)
+   apply(rename_tac s ntfnptr ntfn ref badge rights ko x tcb)
+   apply(case_tac ko; clarsimp)
+   apply(rename_tac s ntfnptr ntfn ref badge rights x ko x3 y)
+   apply(case_tac ko; clarsimp)
    apply(rule context_conjI)
-    defer (* FIXME *)
+    apply(clarsimp simp:pred_tcb_def2 get_tcb_at)
+    apply(frule_tac t="cur_thread s" in get_tcb_at)
+    apply clarsimp
+    apply(rename_tac s ntfnptr ntfn ref badge rights x x3 y tcb' tcb)
+    (* DOWN TO HERE *)
+    defer (* FIXME: asking about x, which is nested pretty deeply in the assms *)
    apply(rule context_conjI)
-    defer (* FIXME *)
+    defer (* FIXME: this one's about the ReplyCap. not relevant for this case? *)
    apply clarsimp
    apply(rule context_conjI)
     apply(force simp add: get_tcb_rev pred_tcb_def2)
@@ -1541,12 +1518,12 @@ lemma handle_SysRecv_syscall_notification:
     defer (* FIXME: this one doesn't seem right for an arbitrary xa *)
    apply clarsimp
    apply(rule context_conjI)
-    defer (* FIXME: this one looks like I'll need to unpack the assms more *)
+    defer (* FIXME: the rest of the deferred FIXMEs are asking about x *)
    apply(clarsimp simp:obj_at_def is_ntfn_def)
    apply(rule context_conjI)
     apply clarsimp
     apply(rule context_conjI)
-     defer (* FIXME: again, all coming down to making assms more unpackable *)
+     defer (* FIXME *)
     apply clarsimp
     defer (* FIXME *)
    apply clarsimp
