@@ -16,8 +16,13 @@ consts
   MICROKIT_INPUT_CAP :: cnode_index
   MICROKIT_REPLY_CAP :: cnode_index
 
-axiomatization where microkit_input_reply_caps_distinct:
-  "MICROKIT_INPUT_CAP \<noteq> MICROKIT_REPLY_CAP"
+axiomatization where
+  microkit_input_reply_caps_distinct:
+    "MICROKIT_INPUT_CAP \<noteq> MICROKIT_REPLY_CAP" and
+  MICROKIT_INPUT_CAP_def:
+    (* FIXME: The conventional constant Microkit uses is 1, but I'm not sure that's
+       raw value is what tcb_cnode_index's input corresponds to *)
+    "MICROKIT_INPUT_CAP \<equiv> tcb_cnode_index 1"
 
 (* Based on KernelState in Mathieu's gordian-relation-proof *)
 
@@ -937,6 +942,15 @@ crunch delete_caller_cap
   (wp: crunch_wps)
 *)
 
+thm cap_delete_one_ntfn_at
+(* going back to supposing we have this for specific notifications
+   to see how it impacts later goals *)
+lemma delete_caller_cap_specific_ntfn_at:
+  "\<lbrace>\<lambda>s. ko_at (Notification ntfn) word s\<rbrace>
+     delete_caller_cap t
+   \<lbrace>\<lambda>_ s. ko_at (Notification ntfn) word s\<rbrace>"
+  sorry
+
 (*
 lemma
   "\<lbrace>(\<lambda>s. ko_at (Endpoint ep) ep_ptr s) and K (ep_ptr \<noteq> p)\<rbrace>
@@ -993,6 +1007,12 @@ lemma lookup_cap_cte_caps_to':
    \<lbrace>\<lambda>rv s. P' s \<and> (P rv \<longrightarrow> (\<forall>p\<in>cte_refs rv (interrupt_irq_node s). ex_cte_cap_wp_to P p s))\<rbrace>,-"
   by (simp add: lookup_cap_def split_def) wpsimp
 
+lemma lookup_cap_cte_caps_to'':
+  "\<lbrace>\<lambda>s. \<forall>rs cp. P (mask_cap rs cp) = P cp\<rbrace>
+     lookup_cap t cref
+   \<lbrace>\<lambda>rv s. P rv \<longrightarrow> (\<forall>p\<in>cte_refs rv (interrupt_irq_node s). ex_cte_cap_wp_to P p s)\<rbrace>,\<lbrace>\<lambda>rv s. False\<rbrace>"
+  oops
+  (* by (simp add: lookup_cap_def split_def) wpsimp *)
 
 (* NB: tcb = (the (get_tcb t s)) *)
 thm resolve_address_bits_cte_at
@@ -1002,8 +1022,9 @@ lemma resolve_address_bits_specific:
      valid_cap mycap s \<and>
      valid_cap (fst args) s \<and>
      cte_wp_at ((=) mycap) mycref s \<rbrace> resolve_address_bits args
-   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) mycref s \<and> (fst rv) = mycref\<rbrace>,-"
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) mycref s \<and> (fst rv) = mycref\<rbrace>, \<lbrace>\<lambda>rv s. False\<rbrace>"
 unfolding resolve_address_bits_def
+sorry (* Let's suppose for now we can prove this doesn't fail
 (* basing the proof structure on that of resolve_address_bits_real_cte_at *)
 proof (induct args rule: resolve_address_bits'.induct)
   case (1 z cap cref)
@@ -1045,19 +1066,23 @@ proof (induct args rule: resolve_address_bits'.induct)
     (* FIXME: again it's asking me to relate cref and mycref. must be missing something *)
     sorry
 qed
+*)
 
 lemma lookup_slot_specific:
   "\<lbrace>\<lambda>s. valid_objs s \<and>
      valid_cap mycap s \<and>
      valid_cap (tcb_ctable (the (get_tcb t s))) s \<and>
      cte_wp_at ((=) mycap) cref s \<rbrace> lookup_slot_for_thread t c
-   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) cref s \<and> (fst rv) = cref\<rbrace>,-"
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) cref s \<and> (fst rv) = cref\<rbrace>, \<lbrace>\<lambda>rv s. False\<rbrace>"
+  (* suppose we can prove this doesn't fail *)
+  sorry (*
   apply(wpsimp simp:lookup_slot_for_thread_def)
     apply(wpsimp wp:resolve_address_bits_specific[where mycap=mycap,THEN hoare_strengthen_postE_R])
     apply assumption
    apply wpsimp
   apply wpsimp
   done
+*)
 
 term valid_cap
 thm lookup_cap_gets
@@ -1067,7 +1092,7 @@ lemma lookup_cap_specific:
     valid_cap (tcb_ctable (the (get_tcb t s))) s \<and>
     wellformed_cap mycap \<and> valid_cap mycap s\<rbrace>
      lookup_cap t c
-   \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>cap. rv = cap \<and> cap = mycap) cref s\<rbrace>, -"
+   \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>cap. rv = cap \<and> cap = mycap) cref s\<rbrace>, \<lbrace>\<lambda>rv s. False\<rbrace>"
    (* \<lbrace>\<lambda>rv s. \<exists>cref. cte_wp_at (\<lambda>cap. rv = cap \<and> rv = ep_cap) cref s\<rbrace>, - *)
    (* \<lbrace>\<lambda>rv s. \<exists>msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk ep_cap) cref s\<rbrace>, - *)
   unfolding lookup_cap_def fun_app_def split_def
@@ -1087,8 +1112,9 @@ lemma lookup_cap_specific:
    (*
    apply(wpsimp wp:lookup_slot_cte_at_wp[THEN hoare_strengthen_postE_R])
    *)
-   apply(wpsimp wp:lookup_slot_specific[where mycap=mycap and cref=cref,THEN hoare_strengthen_postE_R])
-   using cte_wp_at_lift apply fastforce
+   apply(wpsimp wp:lookup_slot_specific[where mycap=mycap and cref=cref,THEN hoare_strengthen_postE])
+    using cte_wp_at_lift apply fastforce
+   apply clarsimp
   apply clarsimp
   done
 (*
@@ -1135,6 +1161,11 @@ find_theorems get_cap
   (* but we still don't have any way to know x = mycap *)
   sorry
 *) *)
+
+thm lookup_cap_inv
+lemma lookup_cap_invE:
+  "\<lbrace>P\<rbrace> lookup_cap t c \<lbrace>\<lambda>_. P\<rbrace>,\<lbrace>\<lambda>_ _. False\<rbrace>"
+  sorry (* FIXME: suppose we had this too... *)
 
 lemma hoare_absorb_impE_R:
   "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,- \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>,-"
@@ -1188,8 +1219,15 @@ lemma ko_at_ntfn_at:
   apply(clarsimp simp add:obj_at_def is_ntfn_def split:kernel_object.splits)
   by (metis kernel_object.distinct(15) kernel_object.distinct(6) kernel_object.exhaust kernel_object.simps(16) kernel_object.simps(25))
 
+lemma ko_at_ntfn_at':
+  "(ko_at (Notification ntfn) ref s) \<Longrightarrow> ntfn_at ref s"
+  apply(clarsimp simp add:obj_at_def is_ntfn_def split:kernel_object.splits)
+  done
+
 thm handle_recv_def
 thm cap_fault_on_failure_def
+term "(\<Union>a\<in>fst (get_object x1 s). something)"
+term "\<Union>"
 lemma handle_SysRecv_syscall_notification:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
@@ -1336,27 +1374,45 @@ lemma handle_SysRecv_syscall_notification:
        apply(rule_tac P="isActive ntfn \<and> badge = badge_val ro \<and> ntfn_ref \<noteq> receiver"
          in hoare_gen_asm)
        apply wpsimp
-       (* then drop the imp because there's no hope of proving it for a fixed ntfn *)
-       apply(wpsimp wp:hoare_drop_imp) (* XXX: creating problems later? *)
-       (* apply(wpsimp wp:hoare_vcg_conj_lift) *)
-       (* find_theorems name:"context" name:conj *)
-       (* Note: in ntfn_at form, cap_delete_one_ntfn_at is enough to discharge it *)
-       apply(wpsimp simp:delete_caller_cap_def)
+       (* then drop the imp because there's no hope of proving it for a fixed ntfn
+       apply(wpsimp wp:hoare_drop_imp) (* NB: this creates problems later. *) *)
+       apply(wpsimp wp:hoare_absorb_imp)
+       (* suppose for now we have a specific ntfn-preserving delete_caller_cap lemma *)
+       apply(wpsimp wp:delete_caller_cap_specific_ntfn_at)
+       apply(wpsimp wp:hoare_vcg_conj_lift)
+        (* find_theorems name:"context" name:conj *)
+        (* Note: in ntfn_at form, cap_delete_one_ntfn_at is enough to discharge it *)
+        apply(wpsimp simp:delete_caller_cap_def)
        apply(wpsimp wp:hoare_vcg_all_lift)
-       apply(wp only:hoare_drop_imp) (* XXX: creating problems later? *)
-       (* FIXME: the goal then becomes state independent and looks solvable trivially,
+       (* apply(wp only:hoare_drop_imp) (* NB: this creates problems later:
+          The goal then becomes state independent and looks solvable trivially,
           but this actually produces postcondition "(\<forall>x. ntfn_obj x = ActiveNtfn badge)"
-          which might be too general to prove later on. *)
-       apply wpsimp
+          which is too general to prove later on. *) *)
+       apply(wpsimp wp:hoare_absorb_imp)
+       apply(wpsimp wp:delete_caller_cap_specific_ntfn_at)
       apply wpsimp
      (* might need to use this if I start talking about cur_thread again
      apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
      *)
      apply wpsimp
-    (* XXX: again, if we call wpsimp here we're dead because False ends up in the postcondition *)
+    (* XXX: again, if we call wpsimp here we're dead because False ends up in the postcondition
+       NB: liftM_pre oddly has False as its postcondition but I couldn't see how it helps.
+    apply wpsimp *)
     apply(rename_tac thread ref)
     apply(wp only:hoare_vcg_ex_liftE)
     apply(rename_tac thread ref ep_ptr badge rights)
+    apply clarsimp
+
+(* This is the relevant code:
+     thread \<leftarrow> gets cur_thread;
+
+     ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
+                 getRegister cap_register;
+
+     (cap_fault_on_failure (of_bl ep_cptr) True $ doE
+        ep_cap \<leftarrow> lookup_cap thread ep_cptr;
+*)
+
     (* take care of some state-independent assumptions *)
     apply(rule_tac P="AllowRecv \<in> rights \<and> thread = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asmE')
     apply clarsimp
@@ -1366,38 +1422,110 @@ lemma handle_SysRecv_syscall_notification:
     (* Use this conj_lift for validE:
     apply(wp only:hoare_vcg_conj_liftE_weaker) *)
     apply(wp only:hoare_vcg_conj_liftE_weaker)
-     defer
+     thm lookup_cap_specific
+     apply(rule_tac mycap1="EndpointCap ep_ptr badge rights" and cref1="(receiver,ref)" and c1=ref
+       in lookup_cap_specific[THEN hoare_strengthen_postE])
+      apply(clarsimp simp:cte_wp_at_def)
+     apply clarsimp
+    (* if we have this, it covers the rest that don't refer to rv, all in one go *)
+    apply(wp only:lookup_cap_invE)
+    (* step by step:
     apply(wp only:hoare_vcg_conj_liftE_weaker)
-     defer
+     (* overkill, should be able to use some variant of lookup_cap_inv
+     apply(rule_tac mycap1="EndpointCap ep_ptr badge rights" and c1="ref"
+       in lookup_cap_specific[THEN hoare_strengthen_postE])
+      apply(clarsimp simp:cte_wp_at_def get_cap_def get_object_def bind_def gets_def return_def
+        assert_def get_def obj_at_def assert_opt_def fail_def
+        split:prod.splits if_splits kernel_object.splits option.splits)
+     *)
+     apply(wp only:lookup_cap_invE)
     apply(wp only:hoare_vcg_all_liftE)
     (* state-independent assumptions for this new forall-quantified x *)
     (* apply(rule_tac P="\<exists>y. x = Some y" in hoare_gen_asmE') XXX: creates problems later *)
     apply(wp only:hoare_vcg_conj_liftE_weaker)
-     defer
+     apply(wp only:lookup_cap_invE)
     apply(wp only:hoare_vcg_conj_liftE_weaker)
-     defer
+     apply(wp only:lookup_cap_invE)
     apply(wp only:hoare_vcg_conj_liftE_weaker)
-     defer
+     apply(wp only:lookup_cap_invE)
     apply(wp only:hoare_vcg_conj_liftE_weaker)
      apply(wp only:hoare_vcg_all_liftE)
      (* state-independent assumptions for this new forall-quantified x *)
      (* apply(rule_tac P="y = x" in hoare_gen_asmE') XXX: creates problems later *)
      apply(wp only:hoare_vcg_conj_liftE_weaker)
-      defer
+      apply(wp only:lookup_cap_invE)
+     apply(wp only:hoare_vcg_all_liftE)
      apply(wp only:hoare_vcg_conj_liftE_weaker)
-      defer
+      apply(wp only:lookup_cap_invE)
      apply(wp only:hoare_vcg_conj_liftE_weaker)
-      (* FIXME: here's the problematic goal created earlier by dropping the imp *)
-      defer
+      apply(wp only:lookup_cap_invE)
      apply(wp only:hoare_vcg_conj_liftE_weaker)
-      (* FIXME: this looks like a too-strong goal too, maybe from the previously dropped imp? *)
-      defer
+      apply(wp only:lookup_cap_invE)
      apply(wp only:hoare_vcg_conj_liftE_weaker)
-      defer
-     defer
-    defer (* Old attempts below. These use validE_R but we actually need validE
+      apply(wp only:lookup_cap_invE)
+     apply(wp only:lookup_cap_invE)
+    apply(wp only:lookup_cap_invE)
+    *)
+    term to_bl
+    term data_to_cptr
+    apply(clarsimp)
+    apply wpsimp
+    apply(clarsimp simp:comp_def)
+    apply wpsimp
+    apply(wpsimp wp:hoare_vcg_ex_lift)
+    apply(wpsimp wp:hoare_vcg_conj_lift)
+     apply(wpsimp wp:getRegister_as_user_ret_valid[THEN hoare_strengthen_post,simplified])
+     apply(clarsimp simp:getRegister_as_user_ret_def)
+     apply(case_tac "kheap s thread"; clarsimp)
+     apply(rename_tac thread x xa xb rv s a)
+     apply(case_tac a; clarsimp)
+     apply(clarsimp simp:AARCH64_A.arch_tcb_context_get_def)
+     apply(subgoal_tac "rv = AARCH64.user_regs (AARCH64_A.tcb_context (tcb_arch x2)) cap_register")
+      apply clarsimp
+      apply(subgoal_tac "x2 = un_TCB (the (kheap s thread))")
+       apply(thin_tac "(case AARCH64_A.tcb_context (tcb_arch x2) of
+         AARCH64.UserContext x u \<Rightarrow> Some (u cap_register)) =
+        Some (AARCH64.user_regs (AARCH64_A.tcb_context (tcb_arch x2)) cap_register)")
+       apply clarsimp
+       apply assumption
+      apply clarsimp
+     apply clarsimp
+     apply(clarsimp simp:AARCH64.user_context.sel split:AARCH64.user_context.splits)
+    apply(wpsimp wp:getRegister_as_user_ret_valid[THEN hoare_strengthen_post])
+   apply wpsimp
+  (* okay. we're finally at the point where we can try to line up the wp-derived precondition
+     with the mega-precondition I originally drafted. *)
+  (* DOWN TO HERE *)
+  apply wpsimp
+  apply(clarsimp simp:good_preconds_def valid_ep_obj_with_message_def
+    split:option.splits cap.splits)
+  apply(rename_tac s ntfnptr ntfn ref badge rights y)
+  apply(rule_tac x=ref in exI)
+  apply(rule_tac x=badge in exI)
+  apply(rule_tac x=rights in exI)
+  apply(rule conjI)
+   apply(clarsimp simp:cte_wp_at_def)
+   (* various painful attempts to throw the kitchen sink at it
+   apply(clarsimp simp:cte_wp_at_def mspec_transform_def tcb_cnode_map_def
+     MICROKIT_INPUT_CAP_def
+     split:option.splits kernel_object.splits if_splits)
+   ...
+   apply(clarsimp simp:cte_wp_at_def get_cap_def mspec_transform_def split:prod.splits)
+   apply(clarsimp simp:bind_def Union_eq get_object_def gets_def get_def assert_def return_def
+     assert_opt_def fail_def
+     split:prod.splits kernel_object.split if_split option.split)
+   *)
+   defer
+  (* need to inspect the rest of these goals and ensure the initial precondition
+     is usable for proving them! that or rephrase/simplify it accordingly *)
+  thm get_cap_ret_valid
+  term valid_cap_syn
+  oops
+
+    (* Old attempts below. These use validE_R but we actually need validE
               where E=False to say basically that it *must* succeed.
       (* still nope.
+      thm lookup_cap_cte_caps_to'
       apply(rule_tac P1="\<lambda>rv. rv = EndpointCap ep_ptr badge rights"
         in lookup_cap_cte_caps_to'[THEN hoare_strengthen_postE_R])
       apply clarsimp
@@ -1420,17 +1548,6 @@ lemma handle_SysRecv_syscall_notification:
       in lookup_cap_specific[THEN hoare_strengthen_postE_R])
     apply(clarsimp simp:cte_wp_at_def)
     *)
-   apply clarsimp
-   term liftM term to_bl
-   apply wpsimp
-  apply wpsimp
-  apply(clarsimp simp:good_preconds_def valid_ep_obj_with_message_def split:option.splits)
-  apply(rule conjI)
-   apply blast
-  apply(rule_tac x=sender in exI)
-  apply blast
-  (* FIXME: Okay, all we have left is the goal that lookup_cap succeeds for the endpoint cap *)
-  oops
 
 (* This is the relevant code:
      thread \<leftarrow> gets cur_thread;
@@ -1583,6 +1700,8 @@ thm lookup_cap_inv
   oops
 *) *) *) *) *) *)
 
+(* stuff's broken below this
+
 lemma handle_SysRecv_syscall_ppcall:
   "\<lbrace>\<lambda>s. \<comment> \<open>MCS only - no reply cap argument or related pre/postconditions on non-MCS kernel
       valid_reply_obj (mspec_transform s) s MICROKIT_REPLY_CAP \<and>\<close>
@@ -1733,5 +1852,6 @@ lemma handle_SysRecv_syscall_ppcall:
          because there is no message waiting to be received. need to rule this out with
          the precondition. *)
   oops
+*)
 
 end
