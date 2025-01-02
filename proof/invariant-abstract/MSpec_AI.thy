@@ -1335,8 +1335,9 @@ lemma handle_SysRecv_syscall_notification:
            apply(wpsimp wp:complete_signal_tcb_at complete_signal_ct) *)
           apply clarsimp
           apply(rename_tac tcb x xa ep_ptr badge rights rv ntfnptr ntfn)
-          apply(rule_tac P="\<not> (ntfnptr = None \<or> \<not> isActive ntfn)" in hoare_gen_asm)
-          apply wpsimp
+          (* apply(rule_tac P="\<not> (ntfnptr = None \<or> \<not> isActive ntfn)" in hoare_gen_asm)
+          (* ^ actually this was just a way of saying this can only arise from a contradiction *) *)
+          apply(wp only:hoare_pre_cont)
          apply clarsimp
          apply(rename_tac x xa ep_ptr badge rights rv ntfnptr)
          apply(rule_tac P="\<not> (ntfnptr = None)" in hoare_gen_asm)
@@ -1387,18 +1388,15 @@ lemma handle_SysRecv_syscall_notification:
          (* find_theorems name:"context" name:conj *)
          (* Note: in ntfn_at form, cap_delete_one_ntfn_at is enough to discharge it *)
          apply(wpsimp simp:delete_caller_cap_def)
-        (* NB: these need to be *after* any imp on ntfn and ntfn_ref to avoid a problem later *)
-        apply(rule_tac P="isActive ntfn \<and> ntfn_ref \<noteq> receiver" (* \<and> badge = badge_val ro *)
-          in hoare_gen_asm)
-        apply wpsimp
         apply(wpsimp wp:hoare_vcg_all_lift)
        (* apply(wp only:hoare_drop_imp) (* NB: this creates problems later:
           The goal then becomes state independent and looks solvable trivially,
           but this actually produces postcondition "(\<forall>x. ntfn_obj x = ActiveNtfn badge)"
           which is too general to prove later on. *) *)
        (* apply(wpsimp wp:hoare_absorb_imp) (* NB: also creates problems later *) *)
-        apply(wpsimp wp:hoare_vcg_imp_lift)
-         apply(wpsimp wp:delete_caller_cap_specific_ntfn_not_at)
+         apply(wpsimp wp:hoare_vcg_imp_lift)
+          apply(wpsimp wp:delete_caller_cap_specific_ntfn_not_at)
+         apply wpsimp
         apply wpsimp
        apply wpsimp
       apply wpsimp
@@ -1425,8 +1423,10 @@ lemma handle_SysRecv_syscall_notification:
 *)
 
     (* take care of some state-independent assumptions *)
+    (*
     apply(rule_tac P="AllowRecv \<in> rights \<and> thread = receiver \<and> receiver \<noteq> ep_ptr" in hoare_gen_asmE')
     apply clarsimp
+    *)
     (* That lookup_cap succeeds for our EndpointCap *)
     (* FIXME: Add new preconditions here that ensure the lookup succeeds,
        and prove lemmas that say it succeeds under those preconditions. *)
@@ -1535,14 +1535,13 @@ lemma handle_SysRecv_syscall_notification:
     prefer 2
     using AARCH64.user_context.inject apply blast
    apply(force simp:MICROKIT_INPUT_CAP_def tcb_cnode_index_def)
-  (* need to inspect the rest of these goals and ensure the initial precondition
-     is usable for proving them! that or rephrase/simplify it accordingly *)
   apply(rule context_conjI)
    apply(force simp:get_tcb_at objs_valid_tcb_ctable)
   apply(rule context_conjI)
    apply(force simp:wellformed_cap_simps)
   apply(rule context_conjI)
    using cte_wp_valid_cap apply blast
+  apply(clarsimp simp:AllowRecv_def)
   apply(rule context_conjI)
    apply(force simp add:valid_cap_simps)
   apply(rule context_conjI)
@@ -1556,60 +1555,10 @@ lemma handle_SysRecv_syscall_notification:
      apply(clarsimp simp:obj_at_def is_ntfn_def)
     apply(rule context_conjI)
      apply(clarsimp simp:obj_at_def)
-    apply(metis AARCH64.is_ko_to_discs(3) kernel_object.disc(9) obj_at_ko_atE)
-   (* FIXME: whoops, one left to make sure is scoped properly *)
-   apply(clarsimp simp:isActive_def)
-   apply(case_tac "ntfn_obj x")
-   apply(erule impE) (* FIXME: still essentially the same problem *)
-. (*
-   (* FIXME: The fact we're being asked to this for some arbitrary ntfnptr, not ours, is a problem.
-      I think this is coming from gbn_wp. Shouldn't we be able to show it's unique anyway? *)
-   thm gbn_wp pred_tcb_at_def pred_tcb_def2
-   term bound_tcb_at
-   apply(rename_tac s ref ep_badge rights ep ntfn n ntfnptr)
-   apply(subgoal_tac "ntfnptr = Some n")
-    prefer 2
-    apply(clarsimp simp:pred_tcb_def2)
-
-    apply(subgoal_tac "tcb_bound_notification tcb = Some n")
-     apply(thin_tac "Some n = tcb_bound_notification tcb")
-     apply simp
-(* 
-   apply(rename_tac s ref ep_badge rights ep ntfn n x ko tcb)
-   apply(case_tac ko; clarsimp)
-   apply(rename_tac s ntfnptr ntfn ref badge rights x ko x3 y)
-   apply(case_tac ko; clarsimp)
-   apply(rule context_conjI)
-    apply(clarsimp simp:pred_tcb_def2 get_tcb_at)
-    apply(frule_tac t="cur_thread s" in get_tcb_at)
-    apply clarsimp
-    apply(rename_tac s ntfnptr ntfn ref badge rights x x3 y tcb' tcb)
-    defer (* FIXME: asking about x, which is nested pretty deeply in the assms *)
-   apply(rule context_conjI)
-    defer (* FIXME: this one's about the ReplyCap. not relevant for this case? *)
-   apply clarsimp
-   apply(rule context_conjI)
-    apply(force simp add: get_tcb_rev pred_tcb_def2)
-   apply clarsimp
-   apply(rule context_conjI)
-    defer (* FIXME: this one doesn't seem right for an arbitrary xa *)
-   apply clarsimp
-   apply(rule context_conjI)
-    defer (* FIXME: the rest of the deferred FIXMEs are asking about x *)
-   apply(clarsimp simp:obj_at_def is_ntfn_def)
-   apply(rule context_conjI)
-    apply clarsimp
-    apply(rule context_conjI)
-     defer (* FIXME *)
-    apply clarsimp
-    defer (* FIXME *)
-   apply clarsimp
-   apply(rule context_conjI)
-    defer (* FIXME *)
-   apply clarsimp
-  apply clarsimp
-*)
-  oops
+    apply(clarsimp simp:obj_at_def is_tcb_def)
+   apply(clarsimp simp:obj_at_def isActive_def)
+  apply(clarsimp simp:obj_at_def is_tcb_def)
+  done
 
     (* Old attempts below. These use validE_R but we actually need validE
               where E=False to say basically that it *must* succeed.
