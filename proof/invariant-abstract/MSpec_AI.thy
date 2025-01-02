@@ -1072,8 +1072,7 @@ lemma resolve_address_bits_specific:
        (obj_ref, drop (length list) (snd args)) = mycref) \<and>\<close>
      \<comment> \<open>snd mycref = snd args \<and>  -- bit dubious in hindsight\<close>
      cte_wp_at ((=) mycap) mycref s \<rbrace> resolve_address_bits args
-   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) mycref s
-    \<comment> \<open>\<and> (fst rv) = mycref\<close>\<rbrace>,
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) mycref s \<and> (fst rv) = mycref\<rbrace>,
    \<lbrace>\<lambda>rv s. False\<rbrace>"
 unfolding resolve_address_bits_def
 thm resolve_address_bits_real_cte_at
@@ -1099,23 +1098,24 @@ proof (induct args rule: resolve_address_bits'.induct)
     apply (simp only: K_bind_def in_bindE_R)
     apply (elim conjE exE)
     apply (simp only: split: if_split_asm)
+     (* case: rest = [], so returnOk ((obj_ref, offset), []) happens *)
      apply (clarsimp simp add: in_monad)
-(*
-     apply (clarsimp simp add: valid_cap_def)
+     (* trying to get the info we need from `cte_wp_at ((=) mycap) mycref s` *)
+     using get_cap_cte_wp_at_rv[where P="\<lambda>c. (=) mycap" and p=mycref,simplified valid_def]
+     apply(erule_tac x=s in allE)
+     apply simp
+     (* XXX: oh. using get_cap_cte_wp_at_rv didn't help like I thought it would.
+        all it does is tell us that cte_wp_at holds of the return value,
+        which we'd already proved anyway *)
+     find_theorems get_cap cte_wp_at
      apply(clarsimp simp:cte_wp_at_def)
-*)
-(* Whereas
-abbreviation
-  "cap_table_at bits \<equiv> obj_at (is_cap_table bits)"
-abbreviation
-  "real_cte_at cref \<equiv> cap_table_at (length (snd cref)) (fst cref)"
-means
-  real_cte_at cref = obj_at (is_cap_table (length (snd cref))) (fst cref)
-
-we need to show merely that
-  (obj_ref, drop (length list) cref) = mycref
-where cap = CNodeCap obj_ref nat list
-*)
+     using get_cap_cte_wp_at[where p=mycref,simplified valid_def]
+     apply(erule_tac x=s in allE)
+     apply simp
+     (* XXX: get_cap_cte_wp_at isn't helpful either *)
+     apply(clarsimp simp:cte_wp_at_def)
+     defer (* FIXME: study and rework preconditions to prove this *)
+    (* case: rest \<noteq> [] *)
     apply (simp only: K_bind_def in_bindE_R)
     apply (elim conjE exE)
     apply (simp only: split: if_split_asm)
@@ -1138,16 +1138,16 @@ where cap = CNodeCap obj_ref nat list
       apply(rule context_conjI)
        apply blast
       apply(rule context_conjI)
-       apply clarsimp
-       defer (* FIXME *)
+       apply(force simp add: is_CNodeCap_def is_cap_simps)
       apply blast
      apply clarsimp
      apply (drule (1) bspec, simp)+
     apply (clarsimp simp: in_monad)
     apply (frule in_inv_by_hoareD [OF get_cap_inv])
-    apply (clarsimp simp add: valid_cap_def)
-    (* FIXME: back to the deferred goals *)
-    sorry
+    apply clarsimp
+    defer (* FIXME: study and rework preconditions to prove this *)
+   (* FIXME: back to the deferred goals *)
+   sorry
 qed
 
 lemma lookup_slot_specific:
@@ -1156,8 +1156,7 @@ lemma lookup_slot_specific:
      is_CNodeCap (tcb_ctable (the (get_tcb t s))) \<and>
      valid_cap (tcb_ctable (the (get_tcb t s))) s \<and>
      cte_wp_at ((=) mycap) cref s \<rbrace> lookup_slot_for_thread t c
-   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) cref s
-    \<comment> \<open>\<and> (fst rv) = cref\<close>\<rbrace>,
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) cref s \<and> fst rv = cref\<rbrace>,
    \<lbrace>\<lambda>rv s. False\<rbrace>"
   (* suppose we can prove this doesn't fail *)
   apply(clarsimp simp:lookup_slot_for_thread_def)
@@ -1176,22 +1175,16 @@ lemma lookup_cap_specific:
     wellformed_cap mycap \<and> valid_cap mycap s\<rbrace>
      lookup_cap t c
    \<comment> \<open>\<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>cap. rv = cap \<and> cap = mycap) cref s\<rbrace>,\<close>
-   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap \<comment> \<open>and (=) rv\<close>) cref s\<rbrace>,
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap and (=) rv) cref s\<rbrace>,
    \<lbrace>\<lambda>rv s. False\<rbrace>"
    (* \<lbrace>\<lambda>rv s. \<exists>cref. cte_wp_at (\<lambda>cap. rv = cap \<and> rv = ep_cap) cref s\<rbrace>, - *)
    (* \<lbrace>\<lambda>rv s. \<exists>msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk ep_cap) cref s\<rbrace>, - *)
   unfolding lookup_cap_def fun_app_def split_def
   apply(rule hoare_pre)
-(*
-   apply(wpsimp)
-*)
-   apply(wp only:)
-    apply wpsimp
-    (*
+   apply wpsimp
     apply(rule_tac P="cref = (a, b)" in hoare_gen_asm)
     apply(wpsimp wp:get_cap_cte_wp_at_rv[THEN hoare_strengthen_post])
     apply assumption
-    *)
    (*
    apply(wpsimp wp:lookup_slot_cte_at_wp[THEN hoare_strengthen_postE_R])
    *)
