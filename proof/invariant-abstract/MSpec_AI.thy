@@ -387,7 +387,8 @@ where
        AllowRead \<in> rights \<and>
        (\<exists>ep. obj_at ((=) (Endpoint ep)) ref s \<and>
          \<comment> \<open>cur_thread_bound_notification m of Some n\<close>
-         (\<exists>ntfnptr. bound_tcb_at ((=) ntfnptr) (cur_thread s) s \<and>
+         (\<exists>ntfnptr. bound_tcb_at ((=) ntfnptr) (cur_thread s) s) \<and>
+         (\<forall>ntfnptr. bound_tcb_at ((=) ntfnptr) (cur_thread s) s \<longrightarrow>
            \<comment> \<open>The if (ntfnptr \<noteq> None \<and> isActive ntfn) branch should be here. See receive_ipc\<close>
            (\<exists>ntfn n badge. ntfnptr = Some n \<and>
              obj_at ((=) (Notification ntfn)) n s \<and>
@@ -973,11 +974,27 @@ crunch delete_caller_cap
 thm cap_delete_one_ntfn_at
 (* going back to supposing we have this for specific notifications
    to see how it impacts later goals *)
+(* XXX: actually, we need the converse version after all
 lemma delete_caller_cap_specific_ntfn_at:
   "\<lbrace>\<lambda>s. ko_at (Notification ntfn) word s\<rbrace>
      delete_caller_cap t
    \<lbrace>\<lambda>_ s. ko_at (Notification ntfn) word s\<rbrace>"
-  sorry
+  sorry (* FIXME: prove *)
+*)
+
+lemma delete_caller_cap_not_bound_tcb_at:
+  "delete_caller_cap receiver \<lbrace>\<lambda>s. \<not> bound_tcb_at ((=) ntfn) receiver s\<rbrace>"
+  (* that the cap deletion isn't suddenly going to bind a tcb where there wasn't one.
+     seems like this ought to be true? *)
+  sorry (* FIXME: prove *)
+
+(* FIXME: Is the specificity needed? *)
+lemma delete_caller_cap_specific_ntfn_not_at:
+  "\<lbrace>\<lambda>s. \<not> ko_at (Notification ntfn) word s\<rbrace>
+     delete_caller_cap t
+   \<lbrace>\<lambda>_ s. \<not> ko_at (Notification ntfn) word s\<rbrace>"
+  (* cap deletion isn't suddenly going to create a notification where there wasn't one *)
+  sorry (* FIXME: prove *)
 
 (*
 lemma
@@ -1296,13 +1313,14 @@ lemma handle_SysRecv_syscall_notification:
       ntfn_at (the (cur_thread_bound_notification (mspec_transform s))) s\<close>\<rbrace>"
   unfolding handle_recv_def
   apply wp
-       apply(wp only:hoare_pre_cont)
+      apply(wp only:hoare_pre_cont)
      apply simp
      apply(wp only:cap_fault_wp)
      (* XXX: if we call wpsimp we're dead because False ends up in the postcondition
         of the lookup_cap lemma, so instead carefully split on the cases *)
      apply(simp add:Let_def)
      apply(wp only:hoare_vcg_split_ep_capE)
+       (* FIXME: indentation's off by one from here *)
        apply(wpsimp simp:receive_ipc_def)
            apply(rename_tac tcb ep_cptr ep_cap ref badge rights ep rva ntfnptr)
            apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver" (*  \<and> badge = badge_val ro *)
@@ -1334,7 +1352,7 @@ lemma handle_SysRecv_syscall_notification:
       (* That deleting the caller cap doesn't impact this Endpoint object *)
       apply(wpsimp wp:hoare_vcg_conj_lift)
       (* Note: converted to ep_at by ko_at_ep_at *)
-      apply(wpsimp wp:hoare_absorb_imp simp:ko_at_ep_at)
+      apply(wpsimp wp:hoare_absorb_imp simp:ko_at_ep_at) (* NB: absorb_imp maybe problematic? *)
       apply(wpsimp wp:hoare_vcg_conj_lift)
        (* Note: in ep_at form, cap_delete_one_ep_at is enough to discharge it *)
        apply(wpsimp simp:delete_caller_cap_def)
@@ -1342,42 +1360,47 @@ lemma handle_SysRecv_syscall_notification:
       apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ref" in hoare_gen_asm)
       apply wpsimp
       apply(wpsimp wp:hoare_vcg_all_lift)
-      (*apply(wpsimp wp:hoare_absorb_imp) (* FIXME: this becomes a problem later *) *)
+      thm hoare_absorb_imp
+      (*apply(wpsimp wp:hoare_absorb_imp) (* NB: this becomes a problem later *) *)
       apply(wpsimp wp:hoare_vcg_imp_lift)
-       (* FIXME: I'm not sure this fixes the problem, because later it still results in
-          trying to impose requirements on some arbitrary x *)
-       (* DOWN TO HERE *)
-       apply(rule_tac Q'="\<lambda>rv s. bound_tcb_at ((\<noteq>) ntfn) receiver s" in hoare_strengthen_post)
-        apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_bound_tcb_at)
-       apply(clarsimp simp:pred_tcb_def2)
+       apply(wp only:delete_caller_cap_not_bound_tcb_at)
       apply wpsimp
       apply(wpsimp wp:hoare_vcg_all_lift)
-       apply(wpsimp wp:hoare_absorb_imp)
+       (* apply(wpsimp wp:hoare_absorb_imp) (* NB: this becomes a problem later *) *)
+       apply(wpsimp wp:hoare_vcg_imp_lift)
        (* That deleting the caller cap doesn't impact this Notification object *)
        (* Note: This is tricker than the Endpoint object case because this demands to know other
           facts about the Notification, not just that there is one at that address *)
        apply(wpsimp wp:hoare_vcg_all_lift)
        apply(rename_tac ep_cptr ep_cap ep_ref badge rights ep ntfn_ref ntfn)
-       (* first clear away the cruft we can get from state-independent assumptions *)
-       apply(rule_tac P="isActive ntfn \<and> ntfn_ref \<noteq> receiver" (* \<and> badge = badge_val ro *)
-         in hoare_gen_asm)
-       apply wpsimp
        (* then drop the imp because there's no hope of proving it for a fixed ntfn
        apply(wpsimp wp:hoare_drop_imp) (* NB: this creates problems later. *) *)
-       apply(wpsimp wp:hoare_absorb_imp)
-       (* suppose for now we have a specific ntfn-preserving delete_caller_cap lemma *)
-       apply(wpsimp wp:delete_caller_cap_specific_ntfn_at)
+       (* apply(wpsimp wp:hoare_absorb_imp) (* NB: so does this, apparently. *) *)
+       (* suppose for now we have a specific ntfn-preserving delete_caller_cap lemma
+       apply(wpsimp wp:delete_caller_cap_specific_ntfn_at) *)
+       apply(wpsimp wp:hoare_vcg_imp_lift)
+        (* actually, we need the converse *)
+        apply(wpsimp wp:delete_caller_cap_specific_ntfn_not_at)
        apply(wpsimp wp:hoare_vcg_conj_lift)
-        (* find_theorems name:"context" name:conj *)
-        (* Note: in ntfn_at form, cap_delete_one_ntfn_at is enough to discharge it *)
-        apply(wpsimp simp:delete_caller_cap_def)
-       apply(wpsimp wp:hoare_vcg_all_lift)
+        apply(wpsimp wp:hoare_vcg_imp_lift)
+        apply(wpsimp wp:hoare_vcg_conj_lift)
+         (* find_theorems name:"context" name:conj *)
+         (* Note: in ntfn_at form, cap_delete_one_ntfn_at is enough to discharge it *)
+         apply(wpsimp simp:delete_caller_cap_def)
+        (* NB: these need to be *after* any imp on ntfn and ntfn_ref to avoid a problem later *)
+        apply(rule_tac P="isActive ntfn \<and> ntfn_ref \<noteq> receiver" (* \<and> badge = badge_val ro *)
+          in hoare_gen_asm)
+        apply wpsimp
+        apply(wpsimp wp:hoare_vcg_all_lift)
        (* apply(wp only:hoare_drop_imp) (* NB: this creates problems later:
           The goal then becomes state independent and looks solvable trivially,
           but this actually produces postcondition "(\<forall>x. ntfn_obj x = ActiveNtfn badge)"
           which is too general to prove later on. *) *)
-       apply(wpsimp wp:hoare_absorb_imp)
-       apply(wpsimp wp:delete_caller_cap_specific_ntfn_at)
+       (* apply(wpsimp wp:hoare_absorb_imp) (* NB: also creates problems later *) *)
+        apply(wpsimp wp:hoare_vcg_imp_lift)
+         apply(wpsimp wp:delete_caller_cap_specific_ntfn_not_at)
+        apply wpsimp
+       apply wpsimp
       apply wpsimp
      (* might need to use this if I start talking about cur_thread again
      apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_cur_thread')
@@ -1486,7 +1509,7 @@ lemma handle_SysRecv_syscall_notification:
   apply wpsimp
   apply(clarsimp simp:good_preconds_def valid_ep_obj_with_ntfn_def
     split:option.splits cap.splits)
-  apply(rename_tac s ref ep_badge rights ep ntfn n)
+  apply(rename_tac s ref ep_badge rights ep ntfnptr)
   apply(rule_tac x=ref in exI)
   apply(rule_tac x=ep_badge in exI)
   apply(rule_tac x=rights in exI)
@@ -1494,7 +1517,7 @@ lemma handle_SysRecv_syscall_notification:
    apply(clarsimp simp:cte_wp_at_def)
    apply(simp only:get_cap_caps_of_state[simplified])
    apply(clarsimp simp:pred_tcb_at_def obj_at_def)
-   apply(rename_tac s ref ep_badge rights ep ntfn n ko tcb)
+   apply(rename_tac s ref ep_badge rights ep ko tcb ntfn n)
    using caps_of_state_tcb_index_trans[where p=receiver]
    apply(erule_tac x=s in meta_allE)
    apply(erule_tac x=tcb in meta_allE)
@@ -1524,16 +1547,19 @@ lemma handle_SysRecv_syscall_notification:
    apply(force simp add:valid_cap_simps)
   apply(rule context_conjI)
    apply clarsimp
-   apply(case_tac x)
-    apply(clarsimp simp:pred_tcb_def2)
-    apply(rule conjI)
-     apply force
-    (* FIXME: New requirement expecting a reply cap to be present*)
-    defer
+   apply(rename_tac s ref ep_badge rights ep ntfnptr ntfnptr')
+   apply(erule_tac x=ntfnptr' in allE)
    apply clarsimp
-   apply(clarsimp simp:pred_tcb_def2)
-   apply(rule conjI)
+   apply(rule context_conjI)
     apply clarsimp
+    apply(rule context_conjI)
+     apply(clarsimp simp:obj_at_def is_ntfn_def)
+    apply(rule context_conjI)
+     apply(clarsimp simp:obj_at_def)
+    apply(metis AARCH64.is_ko_to_discs(3) kernel_object.disc(9) obj_at_ko_atE)
+   (* FIXME: whoops, one left to make sure is scoped properly *)
+   apply(clarsimp simp:isActive_def)
+   apply(case_tac "ntfn_obj x")
    apply(erule impE) (* FIXME: still essentially the same problem *)
 . (*
    (* FIXME: The fact we're being asked to this for some arbitrary ntfnptr, not ours, is a problem.
