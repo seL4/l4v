@@ -369,28 +369,56 @@ lemma lookup_ipc_buffer_ret_valid:
 (* Refer to these functions - we need to be making the same validity checks *)
 term handle_recv
 term receive_ipc (* This handles the EndpointCap case, but will check the bound notification *)
+term get_bound_notification
+term thread_get
 term do_ipc_transfer
 term do_normal_transfer
 definition
-  valid_ep_obj_with_message :: "obj_ref \<Rightarrow> mspec_state \<Rightarrow> ('a::state_ext) state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
+  valid_ep_obj_with_ntfn :: "obj_ref \<Rightarrow> mspec_state \<Rightarrow> ('a::state_ext) state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
 where
   (* FIXME: Again, ideally we don't want to take the abstract_state s as an argument here. *)
-  "valid_ep_obj_with_message src m s i oracle \<equiv> src \<noteq> cur_thread s \<and>
-    (case cur_thread_cnode m i of
+  (* FIXME: rename src to sender and refer to receiver instead of (cur_thread s) so that
+     we can use this predicate for relies and guarantees across context switch *)
+  "valid_ep_obj_with_ntfn src m s i oracle \<equiv> src \<noteq> cur_thread s \<and>
      \<comment> \<open>Microkit only checks notifications via EndpointCap, not via any standalone NotificationCap\<close>
-     Some (EndpointCap ref _ rights) \<Rightarrow> AllowRead \<in> rights \<and>
-       (case kheap s ref of Some (Endpoint ep) \<Rightarrow>
-         (case cur_thread_bound_notification m of Some n \<Rightarrow>
-           (case kheap s n of Some (Notification ntfn) \<Rightarrow>
-             \<comment> \<open>receive_ipc prefers to handle any waiting bound notification via complete_signal\<close>
-             (case ntfn_obj ntfn of ActiveNtfn badge \<Rightarrow>
-               \<comment> \<open>we assert that the notification case leaves the value in the user's message_info
-                  register untouched from when it called seL4_Recv, so we just retrieve that here\<close>
-               get_message_info_ret s (cur_thread s) = Some (minfo oracle) \<and>
-               new_reply_tcb oracle = None \<and>
-               badge_val oracle = badge |
-             \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
-             _ \<Rightarrow> (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
+     (\<exists> ref ep_badge rights.
+       \<comment> \<open>cur_thread_cnode m i = Some (EndpointCap ref something rights)\<close>
+       cte_wp_at ((=) (EndpointCap ref ep_badge rights)) (cur_thread s, MICROKIT_INPUT_CAP) s \<and>
+       AllowRead \<in> rights \<and>
+       (\<exists>ep. obj_at ((=) (Endpoint ep)) ref s \<and>
+         \<comment> \<open>cur_thread_bound_notification m of Some n\<close>
+         (\<exists>ntfnptr. bound_tcb_at ((=) ntfnptr) (cur_thread s) s \<and>
+           \<comment> \<open>The if (ntfnptr \<noteq> None \<and> isActive ntfn) branch should be here. See receive_ipc\<close>
+           (\<exists>ntfn n badge. ntfnptr = Some n \<and>
+             obj_at ((=) (Notification ntfn)) n s \<and>
+             \<comment> \<open>Note: receive_ipc handles waiting bound notifications via complete_signal\<close>
+             ntfn_obj ntfn = ActiveNtfn badge \<and>
+             \<comment> \<open>we assert that the notification case leaves the value in the user's message_info
+                register untouched from when it called seL4_Recv, so we just retrieve that here\<close>
+             get_message_info_ret s (cur_thread s) = Some (minfo oracle) \<and>
+             new_reply_tcb oracle = None \<and>
+             badge_val oracle = badge))))"
+
+definition
+  valid_ep_obj_with_ppc :: "obj_ref \<Rightarrow> mspec_state \<Rightarrow> ('a::state_ext) state \<Rightarrow> cnode_index \<Rightarrow> mspec_recv_oracle \<Rightarrow> bool"
+where
+  (* FIXME: rename src to sender and refer to receiver instead of (cur_thread s) so that
+     we can use this predicate for relies and guarantees across context switch *)
+  "valid_ep_obj_with_ppc src m s i oracle \<equiv> src \<noteq> cur_thread s \<and>
+     \<comment> \<open>Microkit only checks notifications via EndpointCap, not via any standalone NotificationCap\<close>
+     (\<exists> ref ep_badge rights.
+       \<comment> \<open>cur_thread_cnode m i = Some (EndpointCap ref something rights)\<close>
+       cte_wp_at ((=) (EndpointCap ref ep_badge rights)) (cur_thread s, MICROKIT_INPUT_CAP) s \<and>
+       AllowRead \<in> rights \<and>
+       (\<exists>ep. obj_at ((=) (Endpoint ep)) ref s \<and>
+         \<comment> \<open>cur_thread_bound_notification m of Some n\<close>
+         (\<exists>ntfnptr. bound_tcb_at ((=) ntfnptr) (cur_thread s) s) \<and>
+           \<comment> \<open>The if (ntfnptr \<noteq> None \<and> isActive ntfn) branch is be here. See receive_ipc.
+               Everything above this should be identical to valid_ep_obj_with_ntfn.
+               FIXME: Find a nice way to refactor out this redundancy.
+               FIXME: Refactor the below to be idiomatic, too.\<close>
+         \<comment> \<open>if there's no bound notification to receive, receive_ipc then checks the endpoint\<close>
+         (case ep of SendEP q \<Rightarrow> q \<noteq> [] \<and>
                src = (hd q) \<and> \<comment> \<open>This is a bit of a hack because the oracle doesn't really
                  identify the sender TCB, but it's useful to know this for the proofs.\<close>
                (case kheap s (hd q) of Some (TCB sender) \<Rightarrow>
@@ -417,11 +445,8 @@ where
                    new_reply_tcb oracle = Some sender |
                  _ \<Rightarrow> False) |
                _ \<Rightarrow> False) |
-             _ \<Rightarrow> False)) |
-           _ \<Rightarrow> False) |
-         _ \<Rightarrow> False) |
-       _ \<Rightarrow> False) |
-     _ \<Rightarrow> False)"
+             _ \<Rightarrow> False)))"
+
 
 (* this should be true if msg_max_length = 128, because mask 7 is 127 *)
 lemma mask_7_under_msg_max_idemp:
@@ -1176,12 +1201,13 @@ lemma hoare_absorb_impE_R:
 
 definition
   "good_preconds s ro sender receiver \<equiv>
-     \<comment> \<open> FIXME: Some of these might be redundant with what's in valid_ep_obj_with_message \<close>
+     \<comment> \<open> FIXME: Some of these might be redundant with what's in valid_ep_obj_with_message
      (\<exists> ntfnptr ntfn. cur_thread_bound_notification (mspec_transform s) = Some ntfnptr \<and>
        kheap s ntfnptr = Some (Notification ntfn) \<and>
        ntfn_obj ntfn = ActiveNtfn (badge_val ro)) \<and>
+     \<close>
      receiver = cur_thread s \<and>
-     valid_ep_obj_with_message sender (mspec_transform s) s MICROKIT_INPUT_CAP ro"
+     valid_ep_obj_with_ntfn sender (mspec_transform s) s MICROKIT_INPUT_CAP ro"
 
 find_theorems "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ _. \<not> _\<rbrace>"
 
@@ -1279,7 +1305,7 @@ lemma handle_SysRecv_syscall_notification:
      apply(wp only:hoare_vcg_split_ep_capE)
        apply(wpsimp simp:receive_ipc_def)
            apply(rename_tac tcb ep_cptr ep_cap ref badge rights ep rva ntfnptr)
-           apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver \<and> badge = badge_val ro"
+           apply(rule_tac P="ntfnptr \<noteq> receiver \<and> tcb = receiver" (*  \<and> badge = badge_val ro *)
              in hoare_gen_asm)
             apply simp
             apply(wpsimp wp:complete_signal_wp)
@@ -1296,8 +1322,10 @@ lemma handle_SysRecv_syscall_notification:
          apply clarsimp
          apply(rename_tac x xa ep_ptr badge rights rv ntfnptr)
          apply(rule_tac P="\<not> (ntfnptr = None)" in hoare_gen_asm)
+         apply wpsimp
          apply(wpsimp wp:get_simple_ko_wp)
         apply clarsimp
+        apply wpsimp
         apply(wpsimp wp:gbn_wp)
        apply(wp only:get_simple_ko_wp)
       (* This delete_caller_cap immediately precedes the call to receive_ipc in handle_recv.
@@ -1314,12 +1342,16 @@ lemma handle_SysRecv_syscall_notification:
       apply(rule_tac P="thread = receiver \<and> receiver \<noteq> ref" in hoare_gen_asm)
       apply wpsimp
       apply(wpsimp wp:hoare_vcg_all_lift)
-      apply(wpsimp wp:hoare_absorb_imp)
-      apply(wpsimp wp:hoare_vcg_conj_lift)
-       apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_bound_tcb_at)
+      (*apply(wpsimp wp:hoare_absorb_imp) (* FIXME: this becomes a problem later *) *)
+      apply(wpsimp wp:hoare_vcg_imp_lift)
+       (* FIXME: I'm not sure this fixes the problem, because later it still results in
+          trying to impose requirements on some arbitrary x *)
+       (* DOWN TO HERE *)
+       apply(rule_tac Q'="\<lambda>rv s. bound_tcb_at ((\<noteq>) ntfn) receiver s" in hoare_strengthen_post)
+        apply(wpsimp simp:delete_caller_cap_def wp:cap_delete_one_bound_tcb_at)
+       apply(clarsimp simp:pred_tcb_def2)
       apply wpsimp
-      apply(wpsimp wp:hoare_vcg_conj_lift)
-       apply(wpsimp wp:hoare_vcg_all_lift)
+      apply(wpsimp wp:hoare_vcg_all_lift)
        apply(wpsimp wp:hoare_absorb_imp)
        (* That deleting the caller cap doesn't impact this Notification object *)
        (* Note: This is tricker than the Endpoint object case because this demands to know other
@@ -1327,7 +1359,7 @@ lemma handle_SysRecv_syscall_notification:
        apply(wpsimp wp:hoare_vcg_all_lift)
        apply(rename_tac ep_cptr ep_cap ep_ref badge rights ep ntfn_ref ntfn)
        (* first clear away the cruft we can get from state-independent assumptions *)
-       apply(rule_tac P="isActive ntfn \<and> badge = badge_val ro \<and> ntfn_ref \<noteq> receiver"
+       apply(rule_tac P="isActive ntfn \<and> ntfn_ref \<noteq> receiver" (* \<and> badge = badge_val ro *)
          in hoare_gen_asm)
        apply wpsimp
        (* then drop the imp because there's no hope of proving it for a fixed ntfn
@@ -1452,19 +1484,17 @@ lemma handle_SysRecv_syscall_notification:
   (* okay. we're finally at the point where we can try to line up the wp-derived precondition
      with the mega-precondition I originally drafted. *)
   apply wpsimp
-  apply(clarsimp simp:good_preconds_def valid_ep_obj_with_message_def
+  apply(clarsimp simp:good_preconds_def valid_ep_obj_with_ntfn_def
     split:option.splits cap.splits)
-  apply(rename_tac s ntfnptr ntfn ref badge rights y)
+  apply(rename_tac s ref ep_badge rights ep ntfn n)
   apply(rule_tac x=ref in exI)
-  apply(rule_tac x=badge in exI)
+  apply(rule_tac x=ep_badge in exI)
   apply(rule_tac x=rights in exI)
   apply(rule context_conjI)
    apply(clarsimp simp:cte_wp_at_def)
    apply(simp only:get_cap_caps_of_state[simplified])
-   apply(clarsimp simp:mspec_transform_def)
-   apply(clarsimp split:option.splits)
-   apply(case_tac x2; clarsimp)
-   apply(rename_tac tcb)
+   apply(clarsimp simp:pred_tcb_at_def obj_at_def)
+   apply(rename_tac s ref ep_badge rights ep ntfn n ko tcb)
    using caps_of_state_tcb_index_trans[where p=receiver]
    apply(erule_tac x=s in meta_allE)
    apply(erule_tac x=tcb in meta_allE)
@@ -1489,15 +1519,37 @@ lemma handle_SysRecv_syscall_notification:
   apply(rule context_conjI)
    apply(force simp:wellformed_cap_simps)
   apply(rule context_conjI)
-   (* NB: This is asked for by lookup_cap_specific but we haven't proved it yet *)
-   find_theorems wellformed_cap valid_cap_syn
-   defer (* FIXME: maybe try prove lookup_cap_specific before jumping thru hoops for this *)
+   using cte_wp_valid_cap apply blast
   apply(rule context_conjI)
    apply(force simp add:valid_cap_simps)
   apply(rule context_conjI)
    apply clarsimp
-   apply(clarsimp simp:mspec_transform_def split:option.splits)
-   apply(rename_tac s ntfnptr ntfn ref badge rights ko x tcb)
+   apply(case_tac x)
+    apply(clarsimp simp:pred_tcb_def2)
+    apply(rule conjI)
+     apply force
+    (* FIXME: New requirement expecting a reply cap to be present*)
+    defer
+   apply clarsimp
+   apply(clarsimp simp:pred_tcb_def2)
+   apply(rule conjI)
+    apply clarsimp
+   apply(erule impE) (* FIXME: still essentially the same problem *)
+. (*
+   (* FIXME: The fact we're being asked to this for some arbitrary ntfnptr, not ours, is a problem.
+      I think this is coming from gbn_wp. Shouldn't we be able to show it's unique anyway? *)
+   thm gbn_wp pred_tcb_at_def pred_tcb_def2
+   term bound_tcb_at
+   apply(rename_tac s ref ep_badge rights ep ntfn n ntfnptr)
+   apply(subgoal_tac "ntfnptr = Some n")
+    prefer 2
+    apply(clarsimp simp:pred_tcb_def2)
+
+    apply(subgoal_tac "tcb_bound_notification tcb = Some n")
+     apply(thin_tac "Some n = tcb_bound_notification tcb")
+     apply simp
+(* 
+   apply(rename_tac s ref ep_badge rights ep ntfn n x ko tcb)
    apply(case_tac ko; clarsimp)
    apply(rename_tac s ntfnptr ntfn ref badge rights x ko x3 y)
    apply(case_tac ko; clarsimp)
@@ -1506,7 +1558,6 @@ lemma handle_SysRecv_syscall_notification:
     apply(frule_tac t="cur_thread s" in get_tcb_at)
     apply clarsimp
     apply(rename_tac s ntfnptr ntfn ref badge rights x x3 y tcb' tcb)
-    (* DOWN TO HERE *)
     defer (* FIXME: asking about x, which is nested pretty deeply in the assms *)
    apply(rule context_conjI)
     defer (* FIXME: this one's about the ReplyCap. not relevant for this case? *)
@@ -1531,6 +1582,7 @@ lemma handle_SysRecv_syscall_notification:
     defer (* FIXME *)
    apply clarsimp
   apply clarsimp
+*)
   oops
 
     (* Old attempts below. These use validE_R but we actually need validE
