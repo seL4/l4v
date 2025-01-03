@@ -1067,11 +1067,22 @@ lemma resolve_address_bits_specific:
      valid_cap mycap s \<and>
      valid_cap (fst args) s \<and>
      is_CNodeCap (fst args) \<and>
-     \<comment> \<open> FIXME: Have to work out how args and mycref relate.
+     \<comment> \<open> FIXME: Have to work out how args and mycref relate. \<close>
+     \<comment> \<open> XXX: I think I'm starting to say the right things, but in the wrong place.
+          This is saying an awful lot about what's effectively the return value of
+          the function - maybe it'd make more sense as some kind of _ret predicate
+          in terms of the return value, for which I can prove a _ret wp lemma? \<close>
      (\<exists> obj_ref nat list. fst args = CNodeCap obj_ref nat list \<and>
-       (obj_ref, drop (length list) (snd args)) = mycref) \<and>\<close>
+       (let offset = take nat (drop (length list) (snd args));
+            rest = drop (nat + length list) (snd args)
+        in (if rest = [] then (obj_ref, offset) = mycref else
+               \<forall> r bits g.
+               (if {(CNodeCap r bits g, s)} = fst (get_cap (obj_ref, offset) s)
+                 then \<exists> rest' s'. {(Inr (mycref, rest'), s')} =
+                   fst (resolve_address_bits' z (CNodeCap r bits g, rest) s)
+                 else (obj_ref, offset) = mycref)))) \<and>
      \<comment> \<open>snd mycref = snd args \<and>  -- bit dubious in hindsight\<close>
-     cte_wp_at ((=) mycap) mycref s \<rbrace> resolve_address_bits args
+     cte_wp_at ((=) mycap) mycref s \<rbrace> resolve_address_bits' z args
    \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) mycref s \<and> (fst rv) = mycref\<rbrace>,
    \<lbrace>\<lambda>rv s. False\<rbrace>"
 unfolding resolve_address_bits_def
@@ -1099,26 +1110,12 @@ proof (induct args rule: resolve_address_bits'.induct)
     apply (elim conjE exE)
     apply (simp only: split: if_split_asm)
      (* case: rest = [], so returnOk ((obj_ref, offset), []) happens *)
-     apply (clarsimp simp add: in_monad)
-     (* trying to get the info we need from `cte_wp_at ((=) mycap) mycref s` *)
-     using get_cap_cte_wp_at_rv[where P="\<lambda>c. (=) mycap" and p=mycref,simplified valid_def]
-     apply(erule_tac x=s in allE)
-     apply simp
-     (* XXX: oh. using get_cap_cte_wp_at_rv didn't help like I thought it would.
-        all it does is tell us that cte_wp_at holds of the return value,
-        which we'd already proved anyway *)
-     find_theorems get_cap cte_wp_at
-     apply(clarsimp simp:cte_wp_at_def)
-     using get_cap_cte_wp_at[where p=mycref,simplified valid_def]
-     apply(erule_tac x=s in allE)
-     apply simp
-     (* XXX: get_cap_cte_wp_at isn't helpful either *)
-     apply(clarsimp simp:cte_wp_at_def)
-     defer (* FIXME: study and rework preconditions to prove this *)
+     apply (clarsimp simp add: in_monad Let_def)
     (* case: rest \<noteq> [] *)
     apply (simp only: K_bind_def in_bindE_R)
     apply (elim conjE exE)
     apply (simp only: split: if_split_asm)
+     (* case: is_cnode_cap next_cap *)
      apply (frule "1.hyps", simp_all)
      apply clarsimp
      apply (clarsimp simp: in_monad validE_def validE_R_def valid_def)
@@ -1138,7 +1135,53 @@ proof (induct args rule: resolve_address_bits'.induct)
       apply(rule context_conjI)
        apply blast
       apply(rule context_conjI)
+       apply(clarsimp simp:is_cap_simps)
+      apply(clarsimp simp:Let_def)
+      apply(clarsimp simp:is_cap_simps)
+(*
+      apply(erule disjE) back
+       apply(subgoal_tac "ra=r \<and> bitsa=bits \<and> ga=g")
+        prefer 2
+        apply blast
+       apply clarsimp
+       (* Similarly I would've thought this would be true as well, but no?
+       apply(subgoal_tac "(aa,ba)=mycref \<and> bb=rest' \<and> b=s'")
+        prefer 2
+        apply clarsimp
+       *)
+*)
+(* do this as late as possible
+         apply(erule_tac x=r in allE)
+         apply(erule_tac x=bits in allE)
+         apply(erule_tac x=g in allE)
+*)
+.      (* DOWN TO HERE
+      apply(clarsimp split:if_split)
+       apply(rule conjI)
+        apply clarsimp
+        apply(erule disjE)
+         apply clarsimp
+         apply(erule disjE)
+          apply(reul
+          apply clarsimp
+          defer (* FIXME *)
+         apply clarsimp
+         apply(rule conjI)
+          apply clarsimp
+          defer (* FIXME *)
+         apply clarsimp
+         defer (* FIXME *)
+        apply clarsimp
+
+. (*
+           apply(clarsimp simp:cte_wp_at_def)
+         defer
+         apply clarsimp
+         
+
+. (*
        apply(force simp add: is_CNodeCap_def is_cap_simps)
+
       apply blast
      apply clarsimp
      apply (drule (1) bspec, simp)+
