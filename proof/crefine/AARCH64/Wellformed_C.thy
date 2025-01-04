@@ -86,8 +86,10 @@ abbreviation
 abbreviation
   vs_Ptr :: "machine_word \<Rightarrow> vs_ptr" where "vs_Ptr == Ptr"
 
+value_type vgic_lr_len = "max_armKSGICVCPUNumListRegs"
+
 abbreviation
-  vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
+  vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[vgic_lr_len]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
 abbreviation
   vgic_C_Ptr :: "addr \<Rightarrow> gicVCpuIface_C ptr" where "vgic_C_Ptr \<equiv> Ptr"
 abbreviation
@@ -615,6 +617,25 @@ schematic_goal hcrVCPU_val:
   "hcrVCPU = ?val"
   by (simp add: hcrVCPU_def hcrCommon_def hcrTWE_def hcrTWI_def
                 Kernel_Config.config_DISABLE_WFI_WFE_TRAPS_def)
+
+
+text \<open>@{text max_armKSGICVCPUNumListRegs} interface\<close>
+
+(* The definition is in Invariants_H, but the properties are only needed in
+   CRefine. *)
+
+schematic_goal max_armKSGICVCPUNumListRegs_val:
+  "max_armKSGICVCPUNumListRegs = numeral ?n"
+  by (simp add: max_armKSGICVCPUNumListRegs_def Kernel_Config.config_ARM_GIC_V3_def)
+
+lemma max_armKSGICVCPUNumListRegs_msb:
+  "n < max_armKSGICVCPUNumListRegs \<Longrightarrow> \<not> msb (word_of_nat n :: machine_word)"
+  by (rule not_msb_from_less)
+     (simp add: max_armKSGICVCPUNumListRegs_val word_less_nat_alt unat_of_nat)
+
+lemma max_armKSGICVCPUNumListRegs_word_bits:
+  "max_armKSGICVCPUNumListRegs \<le> word_bits"
+  by (simp add: max_armKSGICVCPUNumListRegs_val word_bits_def)
 
 (* end of Kernel_Config interface section *)
 

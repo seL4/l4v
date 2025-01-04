@@ -1804,7 +1804,7 @@ inline assembly, so we must appeal to the axiomatisation of inline assembly to s
 \<close>
 lemma preemptionPoint_hrs_htd:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call preemptionPoint_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
-  by (rule allI, rule conseqPre, vcg, clarsimp simp: asm_spec_enabled elim!: asm_specE)
+  by (rule allI, rule conseqPre, vcg exspec=isIRQPending_modifies, clarsimp simp: asm_spec_enabled elim!: asm_specE)
 
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
