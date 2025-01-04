@@ -3686,7 +3686,7 @@ lemma invokeVCPUInjectIRQ_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and vcpu_at' vcpuptr and K (idx < 64))
+       (invs' and vcpu_at' vcpuptr and K (idx < max_armKSGICVCPUNumListRegs))
        (UNIV \<inter> \<lbrace>\<acute>vcpu = Ptr vcpuptr \<rbrace>
              \<inter> \<lbrace>\<acute>index = of_nat idx \<rbrace>
              \<inter> \<lbrace> virq_to_H \<acute>virq = virq \<rbrace>)
@@ -3721,7 +3721,7 @@ lemma invokeVCPUInjectIRQ_ccorres:
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
      apply (rule allI, rule conseqPre, vcg, clarsimp simp: return_def)
     apply wpsimp+
-  apply (clarsimp simp: unat_of_nat_eq word_of_nat_less)
+  apply (clarsimp simp: unat_of_nat_eq word_of_nat_less max_armKSGICVCPUNumListRegs_val)
   apply (rule conjI)
    apply (clarsimp elim: typ_at'_no_0_objD invs_no_0_obj')
   apply (subst scast_eq_ucast; simp?)
@@ -3737,8 +3737,24 @@ lemma virq_virq_pending_EN_new_spec:
        \<lbrace> virqEOIIRQEN_' s = 1 \<longrightarrow> virq_to_H \<acute>ret__struct_virq_C = makeVIRQ (virqGroup_' s) (virqPriority_' s) (virqIRQ_' s) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
-  apply (clarsimp simp: virq_to_H_def makeVIRQ_def virq_virq_pending_def)
+  (* unfold config to match up with bitfield gen shifts *)
+  apply (clarsimp simp: virq_to_H_def make_virq_def virq_virq_pending_def
+                        Kernel_Config.config_ARM_GIC_V3_def virq_type_shift_def
+                        eoiirqen_shift_def mask_def)
   by (simp add: bit.disj_commute  bit.disj_assoc bit.disj_ac)
+
+lemma virq_virq_active_eq_is_virq_active:
+  "(of_nat (virq_type virq) = (scast virq_virq_active :: machine_word)) = is_virq_active virq"
+  apply (simp add: is_virq_active_def virq_virq_active_def)
+  apply (rule iffI; clarsimp?)
+  apply (clarsimp simp: virq_type_def)
+  done
+
+lemma virq_get_tag_eq_of_nat_virq_type:
+  "virq_get_tag virq = of_nat (virq_type (virq_to_H virq))"
+  (* config unfolding to match bitfield shift in virq_get_tag with virq_type_shift in virq_type *)
+  by (simp add: virq_to_H_def virq_type_def virq_get_tag_def virq_type_shift_def mask_def
+                Kernel_Config.config_ARM_GIC_V3_def)
 
 lemma decodeVCPUInjectIRQ_ccorres:
   notes if_cong[cong] Collect_const[simp del]
@@ -3807,98 +3823,85 @@ lemma decodeVCPUInjectIRQ_ccorres:
      apply (clarsimp simp: rangeCheck_def not_le[symmetric]
                            liftE_liftM[symmetric] liftE_bindE_assoc)
 
-       (* symbolically execute the gets on LHS *)
-       apply (rule_tac ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState,
-              rename_tac nregs)
+     (* symbolically execute the gets on LHS *)
+     apply (rule_tac ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState,
+            rename_tac nregs)
 
-    apply (rule_tac P="nregs \<le> max_armKSGICVCPUNumListRegs" in ccorres_gen_asm)
-           apply (rule_tac P="nregs \<le> max_armKSGICVCPUNumListRegs"
-                           in ccorres_cross_over_guard_no_st)
+     apply (rule_tac P="nregs < max_armKSGICVCPUNumListRegs" in ccorres_gen_asm)
+     apply (rule_tac P="nregs < max_armKSGICVCPUNumListRegs" in ccorres_cross_over_guard_no_st)
 
-       (* unfortunately directly looking at \<acute>gic_vcpu_num_list_regs means we need to abstract the
-          IF condition, and because of 32/64-bit casting we need to know \<le> max_armKSGICVCPUNumListRegs *)
-       apply (rule_tac Q="\<lambda>s. valid_arch_state' s \<and> nregs = armKSGICVCPUNumListRegs (ksArchState s)"
-                   and Q'=UNIV
-                   and C'="{s. of_nat nregs \<le> (args ! 0 >> 32) && 0xFF}"
-                 in ccorres_rewrite_cond_sr_Seq)
-        apply (clarsimp simp: not_le[symmetric] word_le_nat_alt unat_of_nat_eq)
-        apply (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                         valid_arch_state'_def max_armKSGICVCPUNumListRegs_def
-                         unat_of_nat64' unat_of_nat32')
+     (* unfortunately directly looking at \<acute>gic_vcpu_num_list_regs means we need to abstract the
+        IF condition, and because of 32/64-bit casting we need to know < max_armKSGICVCPUNumListRegs *)
+     apply (rule_tac Q="\<lambda>s. valid_arch_state' s \<and> nregs = armKSGICVCPUNumListRegs (ksArchState s)"
+                 and Q'=UNIV
+                 and C'="{s. of_nat nregs \<le> (args ! 0 >> 32) && 0xFF}"
+               in ccorres_rewrite_cond_sr_Seq)
+      apply (clarsimp simp: not_le[symmetric] word_le_nat_alt unat_of_nat_eq)
+      apply (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                       valid_arch_state'_def
+                       unat_of_nat64' unat_of_nat32')
 
-       apply (rule ccorres_Cond_rhs_Seq)
-        apply (subgoal_tac "(of_nat nregs \<le> (args ! 0 >> 32) && 0xFF)")
-         prefer 2
-  subgoal by (simp add: word_le_nat_alt not_le)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (prop_tac "(of_nat nregs \<le> (args ! 0 >> 32) && 0xFF)")
+       apply (simp add: word_le_nat_alt not_le)
 
-        apply (simp add: rangeCheck_def not_le[symmetric])
-        apply (simp add: throwError_bind invocationCatch_def
-                   cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (simp add: rangeCheck_def not_le[symmetric])
+      apply (simp add: throwError_bind invocationCatch_def
+                 cong: StateSpace.state.fold_congs globals.fold_congs)
 
     (* can't use syscall_error_throwError_ccorres_n, since one of the globals updates reads a global
        var itself: gic_vcpu_num_list_regs_', need to split off up to the first return_C else
        vcg barfs *)
-        apply (rule ccorres_split_throws)
-         apply (rule_tac P="\<lambda>s. valid_arch_state' s \<and> nregs = armKSGICVCPUNumListRegs (ksArchState s)"
-                     and P'="UNIV" in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre)
-          apply (vcg exspec=invokeVCPUInjectIRQ_modifies)
-         apply (clarsimp split: prod.splits
-                          simp: throwError_def return_def EXCEPTION_SYSCALL_ERROR_def
-                                EXCEPTION_NONE_def syscall_error_rel_def syscall_error_to_H_def
-                                syscall_error_type_defs)
-         apply (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
-        apply (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                         valid_arch_state'_def max_armKSGICVCPUNumListRegs_def
-                         unat_of_nat64' unat_of_nat32')
-        apply vcg
+      apply (rule ccorres_split_throws)
+       apply (rule_tac P="\<lambda>s. valid_arch_state' s \<and> nregs = armKSGICVCPUNumListRegs (ksArchState s)"
+                   and P'="UNIV" in ccorres_from_vcg_throws)
+       apply (rule allI, rule conseqPre)
+        apply (vcg exspec=invokeVCPUInjectIRQ_modifies)
+       apply (clarsimp split: prod.splits
+                        simp: throwError_def return_def EXCEPTION_SYSCALL_ERROR_def
+                              EXCEPTION_NONE_def syscall_error_rel_def syscall_error_to_H_def
+                              syscall_error_type_defs)
+       apply (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
+      apply (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                       valid_arch_state'_def not_le
+                       unat_of_nat64' unat_of_nat32')
+      apply vcg
 
-       apply (subgoal_tac "\<not> (of_nat nregs \<le> (args ! 0 >> 32) && 0xFF)")
-        prefer 2
-  subgoal by (simp add: word_le_nat_alt not_le)
-       apply clarsimp
-       apply (rule ccorres_move_const_guard)
-       apply (rule ccorres_move_c_guard_vcpu)
-       apply (simp add: liftM_def)
-       apply (clarsimp simp: rangeCheck_def not_le[symmetric]
-                             liftE_liftM[symmetric] liftE_bindE_assoc)
+     apply (prop_tac "\<not> (of_nat nregs \<le> (args ! 0 >> 32) && 0xFF)")
+      apply (simp add: word_le_nat_alt not_le)
+     apply clarsimp
+     apply (rule ccorres_move_const_guard)
+     apply (rule ccorres_move_c_guard_vcpu)
+     apply (simp add: liftM_def)
+     apply (clarsimp simp: rangeCheck_def not_le[symmetric]
+                           liftE_liftM[symmetric] liftE_bindE_assoc)
 
-       apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-       apply csymbr
-       apply (rule ccorres_abstract_cleanup)
-       apply (simp add: virq_virq_active_def)
+     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+     apply csymbr
+     apply (rule ccorres_abstract_cleanup)
 
-(* FIXME AARCH64 cleanup and re-indent needed in this lemma *)
+     apply (rule_tac P="ret__unsigned_longlong =
+                          of_nat (virq_type (vgicLR (vcpuVGIC vcpu)
+                                            (unat ((args ! 0 >> 32) && 0xFF))))"
+                     in ccorres_gen_asm2)
+     apply clarsimp
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (prop_tac "isVIRQActive (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
+       apply (clarsimp simp add: virq_virq_active_eq_is_virq_active)
+      apply (simp add: rangeCheck_def not_le[symmetric])
+      apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
+                 cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
 
-(* FIXME AARCH64 magic numbers: 3 here is the mask in virq_get_virqType, 28 is the shift *)
-       apply (rule_tac
-                P="ret__unsigned_longlong =
-                     (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)) >> 28) && 3"
-                in ccorres_gen_asm2)
-       apply clarsimp
-       apply (rule ccorres_Cond_rhs_Seq)
-        apply (subgoal_tac "isVIRQActive (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
-         prefer 2
-  subgoal
-           apply (clarsimp simp: isVIRQActive_def virq_type_def word_unat_eq_iff)
-           done
-
-        apply (simp add: rangeCheck_def not_le[symmetric])
-        apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
-                   cong: StateSpace.state.fold_congs globals.fold_congs)
-        apply (rule syscall_error_throwError_ccorres_n)
-        apply (simp add: syscall_error_to_H_cases)
-
-       apply (subgoal_tac "\<not> isVIRQActive (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
-               prefer 2
-  subgoal by (clarsimp simp: isVIRQActive_def virq_type_def word_unat_eq_iff)
-
-       apply clarsimp
-       apply (simp add: returnOk_bind bindE_assoc
-                        performARMMMUInvocations performARMVCPUInvocation_def)
-       apply csymbr
-       apply (subst liftE_invokeVCPUInjectIRQ_empty_return)
-       apply clarsimp
+     apply (prop_tac "\<not>is_virq_active (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
+      apply (clarsimp simp add: virq_virq_active_eq_is_virq_active)
+     apply clarsimp
+     apply (simp add: returnOk_bind bindE_assoc not_le
+                      performARMMMUInvocations performARMVCPUInvocation_def)
+     apply csymbr
+     apply (subst liftE_invokeVCPUInjectIRQ_empty_return)
+     apply clarsimp
 
      \<comment> \<open>we want the second alternative - nothing to return to user\<close>
      apply (ctac add: setThreadState_ccorres)
@@ -3923,40 +3926,26 @@ lemma decodeVCPUInjectIRQ_ccorres:
                         valid_tcb_state'_def ThreadState_defs mask_def)
 
   apply (frule invs_arch_state')
-  apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_def rf_sr_armKSGICVCPUNumListRegs)
-  apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq)
-  apply (clarsimp simp: sysargs_rel_to_n word_le_nat_alt linorder_not_less)
-  apply (clarsimp simp: valid_cap'_def)
-  apply (clarsimp simp: not_le word_le_nat_alt)
+  apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_val
+                        rf_sr_armKSGICVCPUNumListRegs isCap_simps cap_get_tag_isCap capVCPUPtr_eq
+                        sysargs_rel_to_n word_le_nat_alt linorder_not_less valid_cap'_def not_le)
 
-  apply (subgoal_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
-  prefer 2 subgoal by (erule order_le_less_trans; simp)
+  apply (prop_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
+   apply (erule order_less_trans; simp)
 
   apply (safe; clarsimp?)
-     apply (simp add: unat_eq_zero)
-    apply (subgoal_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
-     prefer 2 subgoal by (erule order_le_less_trans; simp)
-    apply (erule order_less_le_trans)
-    apply (simp add: unat_of_nat_eq)
-  apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                    elim: obj_at'_weakenE)
-  apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                    elim: obj_at'_weakenE)
-
-  apply (subgoal_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
-  prefer 2 subgoal by (erule order_le_less_trans; simp)
-  apply (erule order_less_le_trans)
+       apply (simp add: unat_eq_zero)
+      apply (erule order_less_le_trans)
+      apply (simp add: unat_of_nat_eq)
+     apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                      elim: obj_at'_weakenE)
+    apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                      elim: obj_at'_weakenE)
   apply (simp add: unat_of_nat_eq)
-  apply (clarsimp simp: typ_heap_simps')
-  apply (simp add: virq_get_tag_def mask_def shiftr_over_and_dist)
-  apply (simp add: cvcpu_relation_def cvgic_relation_def virq_to_H_def)
-  apply (clarsimp simp: cvcpu_relation_def cvgic_relation_def virq_get_tag_def
-                        shiftr_over_and_dist mask_def cvcpu_vppi_masked_relation_def)
-
-  apply (subgoal_tac "unat ((args ! 0 >> 32) && 0xFF) \<le> 63")
-   apply (rule sym)
-   apply simp
-  apply (fastforce simp: unat_of_nat_eq)
+  apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
+  apply (subgoal_tac "unat ((args ! 0 >> 32) && 0xFF) < max_armKSGICVCPUNumListRegs")
+   apply (simp add: virq_get_tag_eq_of_nat_virq_type)
+  apply (fastforce simp: unat_of_nat_eq max_armKSGICVCPUNumListRegs_val)
   done
 
 lemma decodeVCPUReadReg_ccorres:

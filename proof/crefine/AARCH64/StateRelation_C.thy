@@ -528,8 +528,8 @@ definition cvgic_relation :: "gicvcpuinterface \<Rightarrow> gicVCpuIface_C \<Ri
        gicVCpuIface_C.hcr_C cvgic = vgicHCR vgic
      \<and> gicVCpuIface_C.vmcr_C cvgic = vgicVMCR vgic
      \<and> gicVCpuIface_C.apr_C cvgic = vgicAPR vgic
-     \<and> (\<forall>i\<le>63. vgicLR vgic i = virq_to_H ((gicVCpuIface_C.lr_C cvgic).[i]))
-     \<and> (\<forall>i\<ge>64. vgicLR vgic i = 0)"
+     \<and> (\<forall>i<max_armKSGICVCPUNumListRegs. vgicLR vgic i = virq_to_H ((gicVCpuIface_C.lr_C cvgic).[i]))
+     \<and> (\<forall>i\<ge>max_armKSGICVCPUNumListRegs. vgicLR vgic i = 0)"
 
 definition cvcpu_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool" where
   "cvcpu_relation vcpu cvcpu \<equiv>

@@ -5447,7 +5447,7 @@ lemma ptr_retyp_fromzeroVCPU:
   assumes cor: "caps_overlap_reserved' {p ..+ 2 ^ vcpuBits} \<sigma>"
   assumes ptr0: "p \<noteq> 0"
   assumes kdr: "{p ..+ 2 ^ vcpuBits} \<inter> kernel_data_refs = {}"
-  assumes subr: "{p ..+ 752} \<subseteq> {p ..+ 2 ^ vcpuBits}" (is "{_ ..+ ?vcpusz} \<subseteq> _")
+  assumes subr: "{p ..+ size_of TYPE(vcpu_C)} \<subseteq> {p ..+ 2 ^ vcpuBits}" (is "{_ ..+ ?vcpusz} \<subseteq> _")
   assumes act_bytes: "region_actually_is_bytes p (2 ^ vcpuBits) \<sigma>'"
   assumes rep0: "heap_list (hrs_mem (t_hrs_' (globals \<sigma>'))) (2 ^ vcpuBits) p = replicate (2 ^ vcpuBits) 0"
   assumes "\<not> snd (placeNewObject p vcpu0 0 \<sigma>)"
@@ -5463,10 +5463,6 @@ proof -
   let ?s' = "\<sigma>\<lparr>ksPSpace := ?ks\<rparr>"
   let ?htdret = "(hrs_htd_update (ptr_retyp (vcpu_Ptr p)) (t_hrs_' (globals \<sigma>')))"
   let ?zeros = "from_bytes (replicate (size_of TYPE(vcpu_C)) 0) :: vcpu_C"
-
-  (* sanity check for the value of ?vcpusz *)
-  have "size_of TYPE(vcpu_C) = ?vcpusz"
-    by simp
 
   have ptr_al:
     "ptr_aligned (vcpu_Ptr p)" using al
@@ -5496,7 +5492,7 @@ proof -
     (is "?hl = ?rep0")
     using retyp_p' rep0
     apply (simp add: lift_t_if h_val_def)
-    apply (subst take_heap_list_le[where k="?vcpusz" and n="2^vcpuBits", symmetric])
+    apply (subst take_heap_list_le[where k="?vcpusz" and n="2^vcpuBits", simplified, symmetric])
      apply (simp add: vcpuBits_def)+
     done
 
@@ -5550,7 +5546,7 @@ proof -
      apply (case_tac r; clarsimp simp: index_foldr_update)
     apply (rule conjI, clarsimp)
      (* vgic_C array initialisation *)
-     apply (subst index_fold_update; clarsimp)
+     apply (subst index_fold_update; clarsimp simp: max_armKSGICVCPUNumListRegs_val)
     (* vppi array initialisation *)
     apply clarsimp
     apply (case_tac vppi; clarsimp)
@@ -5692,7 +5688,7 @@ proof -
     apply (subgoal_tac "region_is_bytes p ?vcpusz \<sigma>'")
      prefer 2
      apply (fastforce simp: region_actually_is_bytes[OF act_bytes]
-                            region_is_bytes_subset[OF _ subr])
+                            region_is_bytes_subset[OF _ subr, simplified])
     apply (simp add: projectKO_opt_retyp_other' objBitsKO_vcpu cl_vcpu
                      htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
     apply (subst ptr_retyp_gen_one[symmetric])+
@@ -5719,7 +5715,7 @@ lemma placeNewObject_vcpu_fromzero_ccorres:
   apply (rule ccorres_from_vcg_nofail, clarsimp)
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: rf_sr_htd_safe)
-  apply (subgoal_tac "{regionBase..+752} \<subseteq> {regionBase..+2^vcpuBits}")
+  apply (subgoal_tac "{regionBase..+size_of TYPE(vcpu_C)} \<subseteq> {regionBase..+2^vcpuBits}")
    prefer 2
    apply clarsimp
    apply (drule intvlD, clarsimp)

@@ -840,9 +840,7 @@ lemma decodeARMVCPUInvocation_corres:
      apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
      apply (corresKsimp wp: get_vcpu_wp)
      apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def
-                           valid_cap'_def valid_cap_def isVIRQActive_def is_virq_active_def
-                           virqType_def virq_type_def
-                           make_virq_def makeVIRQ_def)
+                           valid_cap'_def valid_cap_def)
     (* read register *)
     apply (clarsimp simp: decode_vcpu_read_register_def decodeVCPUReadReg_def)
     apply (cases args; clarsimp simp: isCap_simps whenE_def split: if_split)
