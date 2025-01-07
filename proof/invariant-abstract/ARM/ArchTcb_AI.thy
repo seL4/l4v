@@ -370,7 +370,6 @@ lemma update_cap_valid[Tcb_AI_assms]:
                                      split: option.splits prod.splits bool.splits)
   done
 
-
 crunch switch_to_thread
   for pred_tcb_at: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)

@@ -31,6 +31,7 @@ arch_requalify_facts
   valid_vso_at_lift
   valid_vso_at_lift_aobj_at
   valid_arch_state_lift_aobj_at
+  valid_cur_fpu_lift
   in_user_frame_lift
   in_user_frame_obj_pred_lift
   set_object_v_ker_map
@@ -205,19 +206,12 @@ lemma set_thread_state_typ_at[wp]:
 
 lemmas set_thread_state_typ_ats[wp] = abs_typ_at_lifts[OF set_thread_state_typ_at]
 
-lemma sbn_ep_at_inv[wp]:
-  "\<lbrace> ep_at ep \<rbrace> set_bound_notification t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
-  apply (simp add: set_bound_notification_def)
-  apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
-  done
+lemma set_bound_notification_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  unfolding set_bound_notification_def
+  by (wpsimp wp: set_object_typ_at)
 
-lemma sbn_ntfn_at_inv[wp]:
-  "\<lbrace> ntfn_at ep \<rbrace> set_bound_notification t ntfn \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
-  apply (simp add: set_bound_notification_def)
-  apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
-  done
+lemmas set_bound_notification_typ_ats[wp] = abs_typ_at_lifts[OF set_bound_notification_typ_at]
 
 lemma prefix_to_eq:
   "\<lbrakk> take n xs \<le> ys; length xs = length ys; drop n xs = drop n ys \<rbrakk>
@@ -595,6 +589,13 @@ lemma set_object_iflive[wp]:
   apply (wpsimp wp: set_object_wp)
   by (fastforce simp: if_live_then_nonz_cap_def obj_at_def elim!: ex_cap_to_after_update')
 
+lemma set_object_nonz_cap_to[wp]:
+  "\<lbrace>ex_nonz_cap_to t and obj_at (same_caps val) p\<rbrace>
+   set_object p val
+   \<lbrace>\<lambda>_. ex_nonz_cap_to t\<rbrace>"
+  apply (wpsimp wp: set_object_wp)
+  by (fastforce simp: if_live_then_nonz_cap_def obj_at_def elim!: ex_cap_to_after_update')
+
 lemma set_object_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap and obj_at (same_caps val) p\<rbrace>
      set_object p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
@@ -813,24 +814,20 @@ lemma as_user_typ_at[wp]:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma as_user_no_del_ntfn[wp]:
-  "\<lbrace>ntfn_at p\<rbrace> as_user t m \<lbrace>\<lambda>rv. ntfn_at p\<rbrace>"
-  by (simp add: ntfn_at_typ, rule as_user_typ_at)
+lemmas as_user_typ_ats[wp] = abs_typ_at_lifts[OF as_user_typ_at]
 
-
-lemma as_user_no_del_ep[wp]:
-  "\<lbrace>ep_at p\<rbrace> as_user t m \<lbrace>\<lambda>rv. ep_at p\<rbrace>"
-  by (simp add: ep_at_typ, rule as_user_typ_at)
 
 lemma set_simple_ko_tcb[wp]:
   "set_simple_ko f ep v \<lbrace> tcb_at t \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
-
 lemma set_simple_ko_pred_tcb_at [wp]:
-  "set_simple_ko g ep v \<lbrace> pred_tcb_at proj f t \<rbrace>"
-  by(set_simple_ko_method wp_thm: set_object_at_obj2 simp_thm: pred_tcb_at_def)
-
+  "set_simple_ko g ep v \<lbrace>\<lambda>s. P (pred_tcb_at proj f t s)\<rbrace>"
+  unfolding set_simple_ko_def set_object_def
+  apply wp
+  apply (safe; erule_tac P=P in rsubst)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def)+
+  done
 
 lemma set_endpoint_ep_at[wp]:
   "set_endpoint ptr val \<lbrace>ep_at ptr'\<rbrace>"
@@ -1192,6 +1189,12 @@ lemma store_word_offs_obj_at_P[wp]:
   unfolding store_word_offs_def
   by (wp | fastforce)+
 
+crunch set_mrs
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (simp: crunch_simps wp: crunch_wps)
+
+lemmas set_mrs_typ_ats[wp] = abs_typ_at_lifts[OF set_mrs_typ_at]
+
 interpretation
   set_mrs: non_aobj_non_cap_op "set_mrs thread buf msgs"
   apply unfold_locales
@@ -1315,6 +1318,10 @@ lemma valid_irq_states_scheduler_action[simp]:
 crunch set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notification
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
+
+crunch set_simple_ko
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
 
 lemma set_ntfn_minor_invs:
   "\<lbrace>invs and ntfn_at ptr

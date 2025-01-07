@@ -393,6 +393,9 @@ lemma valid_arch_caps: "valid_arch_caps s"
 lemma valid_arch_state: "valid_arch_state s" using invs
   by clarsimp
   (* moreover *)
+lemma valid_cur_fpu: "valid_cur_fpu s" using invs
+  by clarsimp
+  (* moreover *)
 lemma ut_mdb: "untyped_mdb (cdt s) (caps_of_state s)"
   using invs
   by (clarsimp dest!: invs_mdb simp add: valid_mdb_def)
@@ -461,6 +464,7 @@ locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
   assumes detype_invs_assms:
     "valid_idle (detype (untyped_range cap) s)"
     "valid_arch_state (detype (untyped_range cap) s)"
+    "valid_cur_fpu (detype (untyped_range cap) s)"
     "valid_vspace_objs (detype (untyped_range cap) s)"
     "valid_arch_caps (detype (untyped_range cap) s)"
     "valid_kernel_mappings (detype (untyped_range cap) s)"

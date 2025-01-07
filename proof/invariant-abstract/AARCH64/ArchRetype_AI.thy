@@ -438,6 +438,20 @@ lemma valid_global_tables':
   unfolding valid_global_tables_2_def
   by (simp add: pts_of)
 
+lemma is_tcb_cur_fpu':
+  "is_tcb_cur_fpu p s' = is_tcb_cur_fpu p s"
+  apply (clarsimp simp: s'_def ps_def is_tcb_cur_fpu_def obj_at_def)
+  apply (rule iffI; clarsimp)
+   apply (fastforce simp: default_object_def default_tcb_def default_arch_tcb_def tyunt
+                   split: apiobject_type.splits)
+  apply (erule (1) pspace_no_overlapC[OF orth _ _ cover vp])
+  done
+
+lemma valid_cur_fpu':
+  "valid_cur_fpu s \<Longrightarrow> valid_cur_fpu s'"
+  unfolding valid_cur_fpu_def
+  by (clarsimp simp: is_tcb_cur_fpu')
+
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   apply (simp add: valid_arch_state_def valid_asid_table vcpu_hyp_live_of' vmid_inv'
@@ -835,7 +849,7 @@ lemma post_retype_invs:
   apply (clarsimp simp: invs_def post_retype_invs_def valid_state_def
                      unsafe_rep2 null_filter valid_idle
                      valid_reply_caps valid_reply_masters
-                     valid_global_refs valid_arch_state
+                     valid_global_refs valid_arch_state valid_cur_fpu'
                      valid_irq_node_def obj_at_pres
                      valid_arch_caps valid_global_objs_def
                      valid_vspace_objs'[OF _ valid_arch_state_asid_table valid_pspace_aligned2]
