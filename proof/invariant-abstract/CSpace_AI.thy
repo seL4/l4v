@@ -3879,7 +3879,7 @@ lemma cap_insert_invs[wp]:
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
+   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle valid_cur_fpu_lift
              valid_irq_node_typ cap_insert_valid_arch_caps cap_insert_derived_valid_arch_state)
   apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)
@@ -3939,6 +3939,7 @@ lemma cap_swap_typ_at:
          |simp split del: if_split)+
   done
 
+lemmas cap_swap_typ_ats[wp] = abs_typ_at_lifts[OF cap_swap_typ_at]
 
 lemma cap_swap_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> cap_swap cap x cap' y \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
@@ -4269,7 +4270,7 @@ lemma no_reply_caps_for_thread:
 crunch setup_reply_master
   for tcb[wp]: "tcb_at t"
   and idle[wp]: "valid_idle"
-  (wp: set_cap_tcb simp: crunch_simps)
+  (simp: crunch_simps)
 
 lemma setup_reply_master_pspace[wp]:
   "\<lbrace>valid_pspace and tcb_at t\<rbrace> setup_reply_master t \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
@@ -4435,6 +4436,7 @@ lemma setup_reply_master_vms[wp]:
 
 crunch setup_reply_master
   for valid_irq_states[wp]: "valid_irq_states"
+  and pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 
@@ -4446,7 +4448,7 @@ lemma setup_reply_master_invs[wp]:
       setup_reply_master t
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: invs_def valid_state_def)
-  apply (wp valid_irq_node_typ
+  apply (wp valid_irq_node_typ valid_cur_fpu_lift
                  | simp add: valid_pspace_def)+
   done
 
