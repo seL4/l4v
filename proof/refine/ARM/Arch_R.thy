@@ -54,8 +54,8 @@ lemma safe_parent_strg':
    apply (drule ctes_of_valid_cap', fastforce)
    apply (clarsimp simp: valid_cap'_def capAligned_def)
    apply (drule is_aligned_no_overflow)
-   apply (clarsimp simp: capRange_def asid_low_bits_def pageBits_def)
-  apply (clarsimp simp: sameRegionAs_def2 isCap_simps capRange_def asid_low_bits_def pageBits_def)
+   apply (clarsimp simp: capRange_def asid_low_bits_def pageBits_def bit_simps')
+  apply (clarsimp simp: sameRegionAs_def2 isCap_simps capRange_def pageBits_def bit_simps')
   done
 
 lemma descendants_of'_helper:
@@ -84,11 +84,10 @@ lemma createObject_typ_at':
   apply (unfold pspace_no_overlap'_def)
   apply (erule allE)+
   apply (erule(1) impE)
-  apply (subgoal_tac "x \<in> {x..x + 2 ^ objBitsKO y - 1}")
-   apply (fastforce simp: p_assoc_help)
-  apply (rule first_in_uptoD)
+  apply (subgoal_tac "x \<in> mask_range x (objBitsKO y)")
+   apply (fastforce simp: is_aligned_neg_mask_eq)
   apply (drule(1) pspace_alignedD')
-  apply (clarsimp simp: is_aligned_no_wrap' p_assoc_help)
+  apply (clarsimp simp: is_aligned_no_overflow_mask)
   done
 
 lemma retype_region2_ext_retype_region_ArchObject:
@@ -332,7 +331,7 @@ lemma performASIDControlInvocation_corres:
        apply (erule descendants_range_caps_no_overlapI')
         apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
        apply (simp add:empty_descendants_range_in')
-      apply (simp add:word_bits_def pageBits_def)
+      apply (simp add:word_bits_def pageBits_def word_size_bits_def)
      apply (rule is_aligned_weaken)
       apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
      apply (simp add:pageBits_def)
@@ -1895,7 +1894,8 @@ lemma performASIDControlInvocation_invs' [wp]:
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
   apply (simp add: Int_commute)
   by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def
-                    archObjSize_def asid_low_bits_def word_bits_def pageBits_def
+                    asid_low_bits_def word_bits_def live'_def hyp_live'_def
+                    pageBits_def word_size_bits_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
                     null_filter_descendants_of'[OF null_filter_simp']
                     valid_cap_simps' mask_def)+

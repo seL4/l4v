@@ -14,6 +14,11 @@ context Arch begin arch_global_naming
 
 named_theorems Invariants_H_pspaceI_assms
 
+(* on 32-bit Arm, all addresses are canonical *)
+lemma pspace_canonical'_top[simp]:
+  "pspace_canonical' = \<top>"
+  by (rule ext, simp add: pspace_canonical'_def canonical_address_def)
+
 (* FIXME arch-split: word_size is available outside of Arch due to Word_Setup, but to provide
    more guard rails during arch-split we are hiding the Haskell constant definition outside of
    Arch. To be evaluated as arch-split proceeds, since it can always be made generic again. *)
@@ -22,33 +27,38 @@ schematic_goal wordBits_def': "wordBits = numeral ?n" (* arch-specific consequen
 
 lemmas wordRadix_def' = wordRadix_def[simplified]
 
-lemma wordSizeCase_simp[simp]: "wordSizeCase a b = b"
+lemma wordSizeCase_simp[simp]: "wordSizeCase a b = a"
   by (simp add: wordSizeCase_def wordBits_def word_size)
 
-lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def vcpuBits_def
+lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
 lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
-
-lemma frame_at'_pspaceI:
-  "frame_at' p sz d s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> frame_at' p sz d s'"
-  by (simp add: frame_at'_def typ_at'_def ko_wp_at'_def ps_clear_def)
 
 lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
   "s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
   unfolding valid_cap'_def
   by (cases cap)
-     (auto intro: obj_at'_pspaceI[rotated]
+     (force intro: obj_at'_pspaceI[rotated]
                   cte_wp_at'_pspaceI valid_untyped'_pspaceI
-                  typ_at'_pspaceI[rotated] frame_at'_pspaceI[rotated]
-            simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
-           split: arch_capability.split zombie_type.split option.splits)
+                  typ_at'_pspaceI[rotated]
+            simp: vspace_table_at'_defs valid_arch_cap'_def
+           split: arch_capability.split zombie_type.split option.splits)+
 
 (* FIXME arch-split: required since valid_arch_obj' takes state due to other arches *)
 lemma valid_arch_obj'_pspaceI:
   "\<lbrakk>valid_arch_obj' obj s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_arch_obj' obj s'"
-  unfolding valid_arch_obj'_def
-  by simp
+  apply (cases obj; simp)
+    apply (rename_tac asidpool)
+    apply (case_tac asidpool,
+           auto simp: page_directory_at'_def intro: typ_at'_pspaceI[rotated])[1]
+   apply (rename_tac pte)
+   apply (case_tac pte; simp add: valid_mapping'_def)
+  apply (rename_tac pde)
+  apply (case_tac pde;
+         auto simp: page_table_at'_def valid_mapping'_def
+             intro: typ_at'_pspaceI[rotated])
+  done
 
 lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
@@ -106,10 +116,11 @@ named_theorems Invariants_H_cte_ats_assms
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
 lemma raw_tcb_cte_cases_simps:
-  "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
-  "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
-  "tcb_cte_cases 96 = Some (tcbCaller, tcbCaller_update)"
-  "tcb_cte_cases 128 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
+  "tcb_cte_cases 16 = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases 32 = Some (tcbReply, tcbReply_update)"
+  "tcb_cte_cases 48 = Some (tcbCaller, tcbCaller_update)"
+  "tcb_cte_cases 64 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
   by (simp add: tcb_cte_cases_def cteSizeBits_def)+
 
 lemma cte_wp_at_cases'[Invariants_H_cte_ats_assms]:
@@ -178,7 +189,7 @@ lemma cte_wp_at_cases'[Invariants_H_cte_ats_assms]:
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
    apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
-  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x7FF")
+  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x1FF")
    apply (simp add: field_simps)
   apply (rule word_plus_mono_right)
    apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
@@ -243,17 +254,29 @@ global_interpretation Invariants_H_cte_ats?: Invariants_H_cte_ats
 context Arch_pspace_update_eq'
 begin
 
-lemma page_table_at_update' [iff]:
-  "page_table_at' pt_t p (f s) = page_table_at' pt_t p s"
-  by (simp add: page_table_at'_def)
-
-lemma frame_at_update' [iff]:
-  "frame_at' p sz d (f s) = frame_at' p sz d s"
-  by (simp add: frame_at'_def)
-
 lemma pspace_in_kernel_mappings_update' [iff]:
   "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
   by (simp add: pspace_in_kernel_mappings'_def)
+
+lemma valid_asid_table_update' [iff]:
+  "valid_asid_table' t (f s) = valid_asid_table' t s"
+  by (simp add: valid_asid_table'_def)
+
+lemma page_table_at_update' [iff]:
+  "page_table_at' p (f s) = page_table_at' p s"
+  by (simp add: page_table_at'_def)
+
+lemma page_directory_at_update' [iff]:
+  "page_directory_at' p (f s) = page_directory_at' p s"
+  by (simp add: page_directory_at'_def)
+
+lemma valid_global_pts_update' [iff]:
+  "valid_global_pts' pts (f s) = valid_global_pts' pts s"
+  by (simp add: valid_global_pts'_def)
+
+lemma valid_pde_mappings'_update [iff]:
+  "valid_pde_mappings' (f s) = valid_pde_mappings' s"
+  by (simp add: valid_pde_mappings'_def)
 
 end
 
@@ -269,105 +292,17 @@ lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
 
-lemma canonical_address_mask_eq:
-  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
-  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
-
-lemma canonical_address_and:
-  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
-  by (simp add: canonical_address_range word_and_le)
-
-lemma canonical_address_add:
-  assumes "is_aligned p n"
-  assumes "f < 2 ^ n"
-  assumes "n \<le> canonical_bit"
-  assumes "canonical_address p"
-  shows "canonical_address (p + f)"
-proof -
-  from `f < 2 ^ n`
-  have "f \<le> mask n"
-    by (simp add: mask_plus_1 plus_one_helper)
-
-  from `canonical_address p`
-  have "p && mask (Suc canonical_bit) = p"
-    by (simp add: canonical_address_mask_eq)
-  moreover
-  from `f \<le> mask n` `is_aligned p n`
-  have "p + f = p || f"
-    by (simp add: word_and_or_mask_aligned)
-  moreover
-  from `f \<le> mask n` `n \<le> canonical_bit`
-  have "f \<le> mask (Suc canonical_bit)"
-    using le_smaller_mask by fastforce
-  hence "f && mask (Suc canonical_bit) = f"
-    by (simp add: le_mask_imp_and_mask)
-  ultimately
-  have "(p + f) && mask (Suc canonical_bit) = p + f"
-    by (simp add: word_ao_dist)
-  thus ?thesis
-    by (simp add: canonical_address_mask_eq)
-qed
-
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-   apply (drule (1) range_cover.range_cover_compare)
-   apply (clarsimp simp: word_less_nat_alt)
-   apply unat_arith
-  apply (simp add: canonical_bit_def)
-  done
-
 lemma tcb_hyp_refs_of'_simps[simp]:
-  "tcb_hyp_refs' atcb = tcb_vcpu_refs' (atcbVCPUPtr atcb)"
+  "tcb_hyp_refs' atcb = {}"
   by (auto simp: tcb_hyp_refs'_def)
 
-lemma tcb_vcpu_refs_of'_simps[simp]:
-  "tcb_vcpu_refs' (Some vc) = {(vc, TCBHypRef)}"
-  "tcb_vcpu_refs' None = {}"
-  by (auto simp: tcb_vcpu_refs'_def)
-
-lemma vcpu_tcb_refs_of'_simps[simp]:
-  "vcpu_tcb_refs' (Some tcb) = {(tcb, HypTCBRef)}"
-  "vcpu_tcb_refs' None = {}"
-  by (auto simp: vcpu_tcb_refs'_def)
-
 lemma refs_of_a'_simps[simp]:
-  "refs_of_a' (KOASIDPool p) = {}"
-  "refs_of_a' (KOPTE pt) = {}"
-  "refs_of_a' (KOVCPU v) = vcpu_tcb_refs' (vcpuTCBPtr v)"
- by (auto simp: refs_of_a'_def)
-
-lemma vcpu_at_is_vcpu':
-  "vcpu_at' v = ko_wp_at' is_vcpu' v"
-  apply (rule ext)
-  apply (clarsimp simp: typ_at'_def is_vcpu'_def ko_wp_at'_def)
-  apply (rule iffI; clarsimp?)
-  apply (case_tac ko; simp; rename_tac ako; case_tac ako; simp)
-  done
-
-lemma hyp_refs_of_rev':
- "(x, TCBHypRef) \<in> hyp_refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (atcbVCPUPtr (tcbArch tcb) = Some x))"
- "(x, HypTCBRef) \<in> hyp_refs_of' ko =
-    (\<exists>v. ko = KOArch (KOVCPU v) \<and> (vcpuTCBPtr v = Some x))"
-  by (auto simp: hyp_refs_of'_def tcb_hyp_refs'_def tcb_vcpu_refs'_def
-                    vcpu_tcb_refs'_def refs_of_a'_def
-              split: kernel_object.splits arch_kernel_object.splits option.split)
+  "refs_of_a' ako = {}"
+  by (auto simp: refs_of_a'_def)
 
 lemma hyp_refs_of_hyp_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> hyp_live' ko"
-  apply (cases ko, simp_all)
-   apply (rename_tac tcb_ext)
-   apply (simp add: tcb_hyp_refs'_def hyp_live'_def)
-   apply (case_tac "atcbVCPUPtr (tcbArch tcb_ext)"; clarsimp)
-  apply (clarsimp simp: hyp_live'_def arch_live'_def refs_of_a'_def vcpu_tcb_refs'_def
-                  split: arch_kernel_object.splits option.splits)
-  done
+  by (cases ko, simp_all)
 
 lemma hyp_refs_of_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
@@ -387,25 +322,21 @@ lemma is_physical_cases:
              | _                               \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
+lemma typ_at_lift_page_directory_at':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows      "\<lbrace>page_directory_at' p\<rbrace> f \<lbrace>\<lambda>rv. page_directory_at' p\<rbrace>"
+  unfolding page_directory_at'_def All_less_Ball
+  by (wp hoare_vcg_const_Ball_lift x)
+
 lemma typ_at_lift_page_table_at':
-  assumes x: "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
-  shows "f \<lbrace>page_table_at' pt_t p\<rbrace>"
-  unfolding page_table_at'_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' x)
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows      "\<lbrace>page_table_at' p\<rbrace> f \<lbrace>\<lambda>rv. page_table_at' p\<rbrace>"
+  unfolding page_table_at'_def All_less_Ball
+  by (wp hoare_vcg_const_Ball_lift x)
 
 lemma typ_at_lift_asid_at':
   "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>asid_pool_at' p\<rbrace> f \<lbrace>\<lambda>_. asid_pool_at' p\<rbrace>"
   by assumption
-
-lemma typ_at_lift_vcpu_at':
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>vcpu_at' p\<rbrace> f \<lbrace>\<lambda>_. vcpu_at' p\<rbrace>"
-  by assumption
-
-lemma typ_at_lift_frame_at':
-  assumes "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
-  shows "f \<lbrace>frame_at' p sz d\<rbrace>"
-  unfolding frame_at'_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift assms split_del: if_split)
 
 lemma typ_at_lift_valid_cap':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
@@ -427,33 +358,41 @@ lemma typ_at_lift_valid_cap':
                          hoare_vcg_prop All_less_Ball
                     split del: if_split)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
-                 hoare_vcg_all_lift typ_at_lift_cte' typ_at_lift_frame_at')+
+                 hoare_vcg_all_lift typ_at_lift_cte')+
   done
 
 (* interface lemma *)
 lemma valid_arch_tcb_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
-  apply (clarsimp simp add: valid_arch_tcb'_def)
-  apply (cases "atcbVCPUPtr tcb"; simp)
-   apply (wp x)+
-  done
+  by (clarsimp simp add: valid_arch_tcb'_def, wp)
+
+lemma valid_pde_lift':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_pde' pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde' pde s\<rbrace>"
+  by (cases pde) (simp add: valid_mapping'_def|wp x typ_at_lift_page_table_at')+
+
+lemma valid_pte_lift':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_pte' pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte' pte s\<rbrace>"
+  by (cases pte) (simp add: valid_mapping'_def|wp x typ_at_lift_page_directory_at')+
+
+lemma valid_asid_pool_lift':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
+  by (cases ap) (simp|wp x typ_at_lift_page_directory_at' hoare_vcg_const_Ball_lift)+
 
 lemmas typ_at_lifts =
            typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
            typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
-           typ_at_lift_page_table_at' typ_at_lift_asid_at' typ_at_lift_vcpu_at'
+           typ_at_lift_page_table_at'
+           typ_at_lift_page_directory_at'
+           typ_at_lift_asid_at'
+           valid_pde_lift'
+           valid_pte_lift'
+           valid_asid_pool_lift'
 
-lemma valid_arch_state_armKSGlobalUserVSpace:
-  "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
-  by (simp add: valid_arch_state'_def)
-
-lemma page_table_pte_atI':
-  "\<lbrakk> page_table_at' pt_t p s; i \<le> mask (ptTranslationBits pt_t) \<rbrakk> \<Longrightarrow>
-   pte_at' (p + (i << pte_bits)) s"
-  by (simp add: page_table_at'_def)
-
-lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
+lemmas bit_simps' = pteBits_def pdeBits_def asidHighBits_def asid_low_bits_def word_size_bits_def
                     asid_high_bits_def bit_simps
 
 lemma objBitsT_simps:
@@ -464,9 +403,9 @@ lemma objBitsT_simps:
   "objBitsT UserDataT = pageBits"
   "objBitsT UserDataDeviceT = pageBits"
   "objBitsT KernelDataT = pageBits"
+  "objBitsT (ArchT PDET) = word_size_bits"
   "objBitsT (ArchT PTET) = word_size_bits"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
-  "objBitsT (ArchT VCPUT) = vcpuBits"
   unfolding objBitsT_def makeObjectT_def archMakeObjectT_def
   by (simp add: makeObject_simps objBits_simps bit_simps')+
 
@@ -481,40 +420,55 @@ lemma objBitsT_koTypeOf:
   apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps')
   done
 
-end
+lemma valid_duplicates'_D:
+  "\<lbrakk>vs_valid_duplicates' m; m (p::word32) = Some ko;is_aligned p' 2;
+  p && ~~ mask (vs_ptr_align ko) = p' && ~~ mask (vs_ptr_align ko)\<rbrakk>
+  \<Longrightarrow> m p' = Some ko "
+  apply (clarsimp simp:vs_valid_duplicates'_def)
+  apply (drule_tac x = p in spec)
+  apply auto
+  done
 
-qualify AARCH64_H (in Arch)
+lemma page_directory_pde_atI':
+  "\<lbrakk> page_directory_at' p s; x < 2 ^ pageBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << 2)) s"
+  by (simp add: page_directory_at'_def pageBits_def)
 
-(*
-  Then idea with this class is to be able to generically constrain
-  predicates over pspace_storable values to are not of type VCPU,
-  this is useful for invariants such as obj_at' that are trivially
-  true (sort of) if the predicate and the function (in the Hoare triple)
-  manipulate different types of objects
-*)
+lemma page_table_pte_atI':
+  "\<lbrakk> page_table_at' p s; x < 2^(ptBits - 2) \<rbrakk> \<Longrightarrow> pte_at' (p + (x << 2)) s"
+  by (simp add: page_table_at'_def pageBits_def ptBits_def pteBits_def)
 
-class no_vcpu = pspace_storable +
-  assumes not_vcpu: "koType TYPE('a) \<noteq> ArchT AARCH64_H.VCPUT"
+lemma pdBits_eq: "pdBits = pd_bits"
+  by (simp add: pd_bits_def pdBits_def pdeBits_def pageBits_def)
 
-instance tcb              :: no_vcpu by intro_classes auto
-instance endpoint         :: no_vcpu by intro_classes auto
-instance notification     :: no_vcpu by intro_classes auto
-instance cte              :: no_vcpu by intro_classes auto
-instance user_data        :: no_vcpu by intro_classes auto
-instance user_data_device :: no_vcpu by intro_classes auto
+lemma ptBits_eq: "ptBits = pt_bits"
+  by (simp add: pt_bits_def ptBits_def pteBits_def pageBits_def)
 
-end_qualify
+lemma largePagePTE_offset_eq:  "largePagePTE_offsets = largePagePTEOffsets"
+  by (simp add: largePagePTE_offsets_def largePagePTEOffsets_def pteBits_def)
 
-instantiation AARCH64_H.asidpool :: no_vcpu
-begin
-interpretation Arch .
-instance by intro_classes auto
-end
+lemma superSectionPDE_offsets_eq:  "superSectionPDE_offsets = superSectionPDEOffsets"
+  by (simp add: superSectionPDE_offsets_def superSectionPDEOffsets_def pdeBits_def)
 
-instantiation AARCH64_H.pte :: no_vcpu
-begin
-interpretation Arch .
-instance by intro_classes auto
+lemma valid_arch_state'_valid_pde_mappings'[elim!]:
+  "valid_arch_state' s \<Longrightarrow> valid_pde_mappings' s"
+  by (simp add: valid_arch_state'_def)
+
+lemma valid_pde_mapping'_simps[simp]:
+  "valid_pde_mapping' offset (InvalidPDE) = True"
+  "valid_pde_mapping' offset (SectionPDE ptr a b c d e w)
+   = valid_pde_mapping_offset' offset"
+  "valid_pde_mapping' offset (SuperSectionPDE ptr a' b' c' d' w)
+   = valid_pde_mapping_offset' offset"
+  "valid_pde_mapping' offset (PageTablePDE ptr x z'')
+   = valid_pde_mapping_offset' offset"
+  by (clarsimp simp: valid_pde_mapping'_def)+
+
+(* FIXME arch-split: possibly can go into Invariants_H *)
+lemma valid_pspaceI'[intro]:
+  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_distinct' s; valid_mdb' s; no_0_obj' s\<rbrakk>
+   \<Longrightarrow> valid_pspace' s"
+  unfolding valid_pspace'_def by simp
+
 end
 
 end

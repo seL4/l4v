@@ -1292,13 +1292,17 @@ lemma setObject_PTE_arch [wp]:
   apply simp
   done
 
+lemma setObject_asidpool_ko_at'_pde[wp]:
+  "setObject p (v::asidpool) \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
+
 lemma setObject_ASID_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   by (rule valid_arch_state_lift'; wp)
 
-lemma setObject_PDE_valid_arch [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
+lemma setObject_pte_ko_at'_pde[wp]:
+  "setObject p (v::pte) \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
 
 lemma setObject_PTE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -1342,8 +1346,6 @@ lemma setObject_pte_cur_tcb' [wp]:
   apply (rule hoare_lift_Pf [where f=ksCurThread])
    apply wp+
   done
-
-
 
 lemma page_directory_pde_at_lookupI':
   "page_directory_at' pd s \<Longrightarrow> pde_at' (lookup_pd_slot pd vptr) s"

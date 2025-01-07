@@ -214,6 +214,7 @@ lemma tcb_cases_related:
   "tcb_cap_cases ref = Some (getF, setF, restr) \<Longrightarrow>
     \<exists>getF' setF'. (\<forall>x. tcb_cte_cases (cte_map (x, ref) - x) = Some (getF', setF'))
                \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF tcb) (cteCap (getF' tcb')))"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   by (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1
                 cte_map_def' tcb_relation_def
          split: if_split_asm)
@@ -335,10 +336,12 @@ lemma maskCapRights [simp]:
 
 lemma maskCap_valid [simp]:
   "s \<turnstile>' RetypeDecls_H.maskCapRights R cap = s \<turnstile>' cap"
-  by (simp    add: valid_cap'_def maskCapRights_def isCap_simps
+  apply (simp add: valid_cap'_def maskCapRights_def isCap_simps
                    capAligned_def ARM_H.maskCapRights_def
             split: capability.split arch_capability.split
         split del: if_split)
+  apply clarsimp (* FIXME arch-split: unclear why *)
+  done
 
 lemma getSlotCap_valid_cap:
   "\<lbrace>valid_objs'\<rbrace> getSlotCap t \<lbrace>\<lambda>r. valid_cap' r and cte_at' t\<rbrace>"
@@ -1453,7 +1456,7 @@ corollary descendants_of_Null_update':
 
 lemma ps_clear_16:
   "\<lbrakk> ps_clear p tcbBlockSizeBits s; is_aligned p tcbBlockSizeBits \<rbrakk> \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
-  apply (simp add: ps_clear_def)
+  apply (simp add: ps_clear_def mask_def)
   apply (drule equals0D[where a="p + 2^cteSizeBits"])
   apply (simp add: dom_def add.commute objBits_defs take_bit_Suc)
   apply (drule mp)
@@ -1577,7 +1580,7 @@ lemma tcb_cases_related2:
           \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF' tcb) (cteCap (getF tcb')))
           \<and> (\<forall>tcb tcb' cap cte. tcb_relation tcb tcb' \<longrightarrow> cap_relation cap (cteCap cte)
                         \<longrightarrow> tcb_relation (setF' (\<lambda>x. cap) tcb) (setF (\<lambda>x. cte) tcb'))"
-  apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def cte_level_bits_def
+  apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def cte_level_bits_def cteSizeBits_def
                         tcb_cap_cases_simps[simplified]
                  split: if_split_asm)
   apply (simp_all add: tcb_cnode_index_def cte_level_bits_def cte_map_def field_simps to_bl_1)
@@ -2236,7 +2239,7 @@ lemma capRange_cap_relation:
   "\<lbrakk> cap_relation cap cap'; cap_relation cap cap' \<Longrightarrow> capClass cap' = PhysicalClass \<rbrakk>
     \<Longrightarrow> capRange cap' = {obj_ref_of cap .. obj_ref_of cap + obj_size cap - 1}"
   by (simp add: capRange_def objBits_simps' cte_level_bits_def
-                asid_low_bits_def pageBits_def zbits_map_def
+                asid_low_bits_def pageBits_def zbits_map_def word_size_bits_def
          split: cap_relation_split_asm arch_cap.split_asm
                 option.split sum.split)
 
@@ -3579,15 +3582,9 @@ lemma derived_sameRegionAs:
     apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
                           is_aligned_no_overflow capRange_def
           split:capability.splits arch_capability.splits option.splits)
-    apply (clarsimp simp: isCap_simps valid_cap'_def
+    apply (clarsimp simp: isCap_simps valid_cap'_def valid_arch_cap'_def
                           is_aligned_no_overflow capRange_def
           split:capability.splits arch_capability.splits option.splits)
-
-
-
-
-
-
   done
 
 lemma no_fail_updateMDB [wp]:
