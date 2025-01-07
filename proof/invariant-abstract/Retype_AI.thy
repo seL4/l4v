@@ -885,7 +885,7 @@ abbreviation(input)
        and valid_pspace and valid_mdb and valid_idle and only_idle
        and if_unsafe_then_cap and valid_reply_caps
        and valid_reply_masters and valid_global_refs and valid_arch_state
-       and valid_irq_node and valid_irq_handlers and valid_vspace_objs
+       and valid_cur_fpu and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_irq_states and valid_global_objs
        and valid_arch_caps and valid_kernel_mappings
        and valid_asid_map and valid_global_vspace_mappings

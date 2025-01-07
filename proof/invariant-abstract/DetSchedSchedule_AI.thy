@@ -1586,6 +1586,25 @@ lemma thread_set_not_state_valid_sched:
    \<lbrace>valid_sched\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (rule valid_sched_lift; (wpsimp wp: thread_set_no_change_tcb_state thread_set_etcbs)?)
 
+crunch arch_thread_set
+  for etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
+  and valid_queues[wp]: valid_queues
+  and weak_valid_sched_action[wp]: weak_valid_sched_action
+  and valid_sched_action[wp]: valid_sched_action
+  and valid_sched[wp]: valid_sched
+  and valid_blocked[wp]: valid_blocked
+  (wp: set_object_wp valid_queues_lift weak_valid_sched_action_lift valid_sched_action_lift
+       valid_sched_lift valid_blocked_lift)
+
+lemma arch_thread_set_is_activatable[wp]:
+  "arch_thread_set f tptr \<lbrace>is_activatable t\<rbrace>"
+  by (wpsimp simp: is_activatable_def | wps)+
+
+lemma arch_thread_set_ct_in_q[wp]:
+  "arch_thread_set f tptr \<lbrace>ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  by (wpsimp wp: hoare_vcg_imp_lift' | wps)+
+
 lemma unbind_notification_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> unbind_notification ntfnptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: unbind_notification_def)
