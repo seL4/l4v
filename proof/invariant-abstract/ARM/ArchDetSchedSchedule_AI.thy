@@ -111,6 +111,7 @@ crunch set_vm_root
 
 crunch switch_to_thread
   for etcb_at[wp, DetSchedSchedule_AI_assms]: "etcb_at P t"
+  (wp: crunch_wps)
 
 crunch
   arch_switch_to_idle_thread

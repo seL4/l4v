@@ -21,7 +21,7 @@ locale Schedule_AI =
     assumes dmo_mapM_storeWord_0_invs[wp]:
       "\<And>S. valid invs (do_machine_op (mapM (\<lambda>p. storeWord p 0) S)) (\<lambda>_. (invs :: 'a state \<Rightarrow> bool))"
     assumes arch_stt_invs [wp]:
-      "\<And>t'. \<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
+      "\<And>t'. \<lbrace>invs and ex_nonz_cap_to t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_tcb [wp]:
       "\<And>t'. \<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (tcb_at t' :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_st_tcb_at:
@@ -38,8 +38,6 @@ locale Schedule_AI =
       "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s :: 'a state. P (cur_thread s)\<rbrace>"
     assumes arch_prepare_next_domain_activatable[wp]:
       "arch_prepare_next_domain \<lbrace>ct_in_state activatable :: 'a state \<Rightarrow> bool\<rbrace>"
-    assumes arch_prepare_next_domain_pred_tcb_at[wp]:
-      "\<And>(proj :: itcb \<Rightarrow> 't) P Q t. arch_prepare_next_domain \<lbrace>\<lambda>s :: 'a state. P (pred_tcb_at proj Q t s)\<rbrace>"
     assumes arch_prepare_next_domain_st_tcb_at[wp]:
       "\<And>P Q t. arch_prepare_next_domain \<lbrace>\<lambda>s :: 'a state. P (st_tcb_at Q t s)\<rbrace>"
     assumes arch_prepare_next_domain_valid_idle[wp]:

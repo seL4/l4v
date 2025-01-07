@@ -809,6 +809,7 @@ where
 crunch tcb_sched_action, possible_switch_to
   for valid_reply_caps[wp]: valid_reply_caps
   and valid_reply_masters[wp]: valid_reply_masters
+  and valid_cur_fpu[wp]: valid_cur_fpu
 
 lemma cancel_all_invs_helper:
   "\<lbrace>all_invs_but_sym_refs
@@ -979,6 +980,10 @@ lemma bound_tcb_bound_notification_at:
                     state_refs_of_def refs_of_rev
           simp del: refs_of_simps)
   done
+
+crunch set_bound_notification
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
 
 lemma unbind_notification_invs:
   shows "\<lbrace>invs\<rbrace> unbind_notification t \<lbrace>\<lambda>rv. invs\<rbrace>"
