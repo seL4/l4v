@@ -1156,7 +1156,7 @@ lemma storeHWASID_valid_arch' [wp]:
                     checkPDUniqueToASID_def checkPDASIDMapMembership_def)
    apply wp
    apply (rule_tac Q'="\<lambda>rv s. valid_asid_map' (armKSASIDMap (ksArchState s))
-                                \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits"
+                                \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits \<and> valid_pde_mappings' s"
               in hoare_strengthen_postE_R)
     apply (wp findPDForASID_inv2)+
    apply (clarsimp simp: valid_asid_map'_def)
@@ -1374,10 +1374,40 @@ crunch pageTableMapped
   for inv[wp]: "P"
   (wp: loadObject_default_inv)
 
+(* storePDE does not preserve valid_arch_state' since it includes valid_pde_mappings' *)
+crunch storePTE
+  for valid_arch'[wp]: valid_arch_state'
+
 crunch storePDE, storePTE
   for no_0_obj'[wp]: no_0_obj'
-  and valid_arch'[wp]: valid_arch_state'
   and cur_tcb'[wp]: cur_tcb'
+  and arch'[wp]: "\<lambda>s. P (ksArchState s)"
+  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
+
+lemma storePDE_pde_mappings'[wp]:
+  "\<lbrace>valid_pde_mappings' and K (valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
+      storePDE p pde
+   \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (wp valid_pde_mappings_lift')
+   apply (rule hoare_post_imp)
+    apply (simp only: obj_at'_real_def)
+   apply (simp add: storePDE_def)
+   apply (wp setObject_ko_wp_at)
+      apply simp
+     apply (simp add: objBits_simps archObjSize_def)
+    apply (simp add: pdeBits_def)
+   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  apply assumption
+  done
+
+lemma storePDE_InvalidPDE_pde_mappings'[wp]:
+  "storePDE p InvalidPDE \<lbrace>valid_pde_mappings'\<rbrace>"
+  by (wpsimp simp: valid_pde_mapping'_def)
+
+lemma storePDE_InvalidPDE_valid_arch_state'[wp]:
+  "storePDE p InvalidPDE \<lbrace>valid_arch_state'\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift'_valid_pde_mappings')
 
 lemma unmapPageTable_corres:
   "corres dc
@@ -1402,8 +1432,7 @@ lemma unmapPageTable_corres:
           apply (wpsimp wp: store_pde_pd_at_asid store_pde_vspace_objs_invalid)+
         apply (rule hoare_vcg_conj_lift)
          apply (simp add: store_pde_def)
-         apply (wp set_pd_vs_lookup_unmap)+
-      apply (rule corres_trivial, simp)
+         apply (wpsimp wp: set_pd_vs_lookup_unmap valid_arch_state_lift'_valid_pde_mappings')+
      apply (wp page_table_mapped_wp)
     apply (wp hoare_drop_imps)[1]
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
@@ -2805,7 +2834,8 @@ lemma storePDE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs pdeBits_def)
+     apply (auto simp: updateObject_default_def in_monad projectKOs pdeBits_def
+                       live'_def hyp_live'_def)
   done
 
 lemma setObject_pde_ksInt [wp]:
@@ -2834,10 +2864,6 @@ method valid_idle'_setObject uses simp =
 lemma storePDE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>" by (valid_idle'_setObject simp: storePDE_def)
 
-crunch storePDE
-  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
-  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
-
 lemma storePDE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePDE pde p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: storePDE_def)
@@ -2847,23 +2873,6 @@ lemma storePDE_irq_states' [wp]:
 
 crunch storePDE
   for no_0_obj'[wp]: no_0_obj'
-
-lemma storePDE_pde_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings' and K (valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
-      storePDE p pde
-   \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (wp valid_pde_mappings_lift')
-   apply (rule hoare_post_imp)
-    apply (simp only: obj_at'_real_def)
-   apply (simp add: storePDE_def)
-   apply (wp setObject_ko_wp_at)
-      apply simp
-     apply (simp add: objBits_simps archObjSize_def)
-    apply (simp add: pdeBits_def)
-   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
-  apply assumption
-  done
 
 lemma storePDE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
@@ -2883,7 +2892,7 @@ lemma storePDE_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_PDE_ct)
   apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)+
+  apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pde_cur_domain[wp]:
@@ -2945,6 +2954,13 @@ lemma storePDE_tcbs_of'[wp]:
   unfolding storePDE_def
   by setObject_easy_cases
 
+lemma storePDE_valid_arch_state':
+  "\<lbrace> valid_arch_state' and (\<lambda>s. valid_pde_mapping' (p && mask pdBits) pde) \<rbrace>
+   storePDE p pde
+   \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  by (rule hoare_gen_asm')
+     (wpsimp wp: valid_arch_state_lift'_valid_pde_mappings')
+
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde
           and (\<lambda>s. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
@@ -2954,9 +2970,9 @@ lemma storePDE_invs[wp]:
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift
+             valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift'' valid_bitmaps_lift sym_heap_sched_pointers_lift
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift storePDE_valid_arch_state'
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
@@ -3005,7 +3021,8 @@ lemma storePTE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs pteBits_def)
+     apply (auto simp: updateObject_default_def in_monad projectKOs pteBits_def
+                       live'_def hyp_live'_def)
   done
 
 lemma setObject_pte_ksInt [wp]:
@@ -3081,7 +3098,7 @@ lemma storePTE_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_pte_ct)
   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pte_cur_domain[wp]:
@@ -3125,7 +3142,7 @@ lemma storePTE_invs [wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift
+             valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
@@ -3188,7 +3205,8 @@ lemma setASIDPool_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs pageBits_def)
+     apply (auto simp: updateObject_default_def in_monad projectKOs pageBits_def
+                       live'_def hyp_live'_def)
   done
 
 lemma setASIDPool_ksInt [wp]:
@@ -3244,7 +3262,9 @@ lemma setASIDPool_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_ASID_ct)
   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad
+                       live'_def hyp_live'_def comp_def)+
+
   done
 
 lemma setObject_asidpool_cur'[wp]:
@@ -3372,7 +3392,7 @@ crunch unmapPageTable
        wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
            storePDE_Invalid_invs mapM_wp' no_irq_set_current_pd
            crunch_wps
-     simp: crunch_simps setCurrentPD_to_abs)
+     simp: crunch_simps setCurrentPD_to_abs valid_pde_mapping'_def)
 
 lemma perform_pti_invs [wp]:
   "\<lbrace>invs' and valid_pti' pti\<rbrace> performPageTableInvocation pti \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -3444,8 +3464,8 @@ lemma unmapPage_invs' [wp]:
    apply (wp lookupPTSlot_inv
              mapM_storePTE_invs mapM_storePDE_invs
              hoare_vcg_const_imp_lift
-         |wpc
-         |simp)+
+          | wpc
+          | simp add: valid_pde_mapping'_def)+
   done
 
 crunch doFlush

@@ -465,7 +465,7 @@ lemma invoke_irq_handler_invs'[wp]:
     apply clarsimp+
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_to'_def
                         isCap_simps untyped_derived_eq_def)
-  apply (fastforce simp: cte_level_bits_def badge_derived'_def)+
+  apply (fastforce simp: cte_level_bits_def badge_derived'_def cteSizeBits_def shiftl_t2n)
   done
 
 lemma IRQHandler_valid':
@@ -779,7 +779,7 @@ lemma updateTimeSlice_valid_pspace[wp]:
   "\<lbrace>valid_pspace'\<rbrace> threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (wp threadSet_valid_pspace'T)
-  apply (auto simp:tcb_cte_cases_def)
+  apply (auto simp: tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma updateTimeSlice_sch_act_wf[wp]:
@@ -791,7 +791,7 @@ lemma updateTimeSlice_sch_act_wf[wp]:
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
 crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
-  (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
+  (simp: unless_def tcb_cte_cases_def tcb_cte_cases_neqs wp: crunch_wps)
 crunch tcbSchedAppend
   for irqs_masked'[wp]: irqs_masked'
   (simp: unless_def wp: crunch_wps)
