@@ -111,6 +111,7 @@ crunch set_vm_root
 
 crunch switch_to_thread
   for etcb_at[wp, DetSchedSchedule_AI_assms]: "etcb_at P t"
+  (wp: crunch_wps)
 
 crunch
   arch_switch_to_idle_thread
@@ -304,6 +305,7 @@ crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (ready_queues s)"
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+
 declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
 
 lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:

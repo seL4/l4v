@@ -513,8 +513,8 @@ lemma set_cap_a_type_inv:
   done
 
 
-lemma set_cap_tcb:
-  "\<lbrace>tcb_at p'\<rbrace> set_cap cap  p \<lbrace>\<lambda>rv. tcb_at p'\<rbrace>"
+lemma set_cap_tcb[wp]:
+  "set_cap cap  p \<lbrace>\<lambda>s. P (tcb_at p' s)\<rbrace>"
   by (clarsimp simp: tcb_at_typ intro!: set_cap_typ_at)
 
 
@@ -600,7 +600,7 @@ lemma set_cap_cur [wp]:
   done
 
 lemma set_cap_pred_tcb [wp]:
- "\<lbrace>pred_tcb_at proj P t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+ "set_cap c p \<lbrace>\<lambda>s. P' (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp get_object_wp | wpc)+
   apply (auto simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def)
@@ -1624,6 +1624,10 @@ lemma set_cap_valid_ioc[wp]:
   apply fastforce
   done
 
+crunch set_cap
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
+
 lemma descendants_inc_minor:
   "\<lbrakk>descendants_inc m cs; mdb_cte_at (\<lambda>p. \<exists>c. cs p = Some c \<and> cap.NullCap \<noteq> c) m;
    \<forall>x\<in> dom cs. cap_class (the (cs' x)) = cap_class (the (cs x)) \<and> cap_range (the (cs' x)) = cap_range (the (cs x))\<rbrakk>
@@ -2001,7 +2005,7 @@ lemma set_untyped_cap_as_full_tcb_cap_valid:
     apply (case_tac "tcb_at (fst dest) s")
       apply clarsimp
       apply (intro conjI impI allI)
-      apply (drule use_valid[OF _ set_cap_pred_tcb],simp+)
+      apply (drule use_valid[OF _ set_cap_pred_tcb[where P'=id, simplified]],simp+)
         apply (clarsimp simp: valid_ipc_buffer_cap_def is_cap_simps)
         apply (fastforce simp: tcb_at_def obj_at_def is_tcb)
     apply (clarsimp simp: tcb_at_typ)
@@ -2023,7 +2027,7 @@ lemma cap_insert_objs [wp]:
   done
 
 crunch cap_insert, set_cdt
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. P' (pred_tcb_at proj P t s)"
   (wp: hoare_drop_imps)
 
 
@@ -2053,6 +2057,10 @@ lemma cap_insert_obj_at_other:
   apply (rule hoare_pre)
    apply (wp set_cap_obj_at_other get_cap_wp|simp split del: if_split)+
   done
+
+crunch cap_insert
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: crunch_wps)
 
 lemma only_idle_tcb_update:
   "\<lbrakk>only_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t' \<or> \<not>idle (tcb_state t') \<rbrakk>

@@ -174,26 +174,4 @@ lemma set_cap_arch_obj:
   apply (clarsimp simp: obj_at_def cte_wp_at_cases)
   done
 
-lemma set_mrs_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs t buf mrs \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_mrs_def zipWithM_x_mapM split_def
-                   store_word_offs_def set_object_def get_object_def
-              cong: option.case_cong
-              split del: if_split)
-  apply (wp hoare_vcg_split_case_option)
-    apply (rule mapM_wp [where S=UNIV, simplified])
-    apply (wp | simp)+
-  apply (clarsimp simp: obj_at_def a_type_def
-                  dest!: get_tcb_SomeD)
-  done
-
-lemma set_mrs_tcb[wp]:
-  "\<lbrace> tcb_at t \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. tcb_at t \<rbrace>"
-  by (simp add: tcb_at_typ, wp)
-
-
-lemma set_mrs_ntfn_at[wp]:
-  "\<lbrace> ntfn_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. ntfn_at p \<rbrace>"
-  by (simp add: ntfn_at_typ, wp)
-
 end
