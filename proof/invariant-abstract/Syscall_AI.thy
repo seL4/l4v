@@ -73,13 +73,14 @@ lemma cur_thread_update_invs:
                    state_refs_of_def cur_tcb_def)
 
 lemma switch_to_thread_invs[wp]:
-  "switch_to_thread tptr \<lbrace>invs\<rbrace>"
+  "\<lbrace>invs and ex_nonz_cap_to tptr\<rbrace> switch_to_thread tptr \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: switch_to_thread_def thread_get_def is_tcb
                wp: cur_thread_update_invs)
 
 lemma guarded_switch_to_invs[wp]:
   "guarded_switch_to thread \<lbrace>invs\<rbrace>"
-  by (wpsimp simp: guarded_switch_to_def wp: hoare_drop_imps)
+  apply (wpsimp simp: guarded_switch_to_def wp: gts_wp)
+  by (fastforce elim: st_tcb_ex_cap' simp: runnable_eq)
 
 lemma schedule_choose_new_thread_invs[wp]:
   "schedule_choose_new_thread \<lbrace>invs\<rbrace>"

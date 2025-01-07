@@ -1575,6 +1575,40 @@ lemma thread_set_not_state_valid_sched:
    \<lbrace>valid_sched\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (rule valid_sched_lift; (wpsimp wp: thread_set_no_change_tcb_state thread_set_etcbs)?)
 
+lemma arch_thread_set_etcbs[wp]:
+  "arch_thread_set f tptr \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  unfolding arch_thread_set_def
+  by (wpsimp wp: set_object_wp)
+
+lemma arch_thread_set_valid_queues[wp]:
+  "arch_thread_set f tptr \<lbrace>valid_queues\<rbrace>"
+  by (rule valid_queues_lift; wpsimp)
+
+lemma arch_thread_set_weak_valid_sched_action[wp]:
+  "arch_thread_set f tptr \<lbrace>weak_valid_sched_action\<rbrace>"
+  by (wp weak_valid_sched_action_lift)
+
+lemma arch_thread_set_valid_sched_action[wp]:
+  "arch_thread_set f tptr \<lbrace>valid_sched_action\<rbrace>"
+  by (wp valid_sched_action_lift)
+
+lemma arch_thread_set_valid_sched[wp]:
+  "arch_thread_set f tptr \<lbrace>valid_sched\<rbrace>"
+  by (rule valid_sched_lift; (wpsimp wp: thread_set_no_change_tcb_state thread_set_etcbs)?)
+
+lemma arch_thread_set_is_activatable[wp]:
+  "arch_thread_set f tptr \<lbrace>is_activatable t\<rbrace>"
+  by (wpsimp simp: is_activatable_def | wps)+
+
+lemma arch_thread_set_ct_in_q[wp]:
+  "arch_thread_set f tptr \<lbrace>ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  by (wpsimp wp: hoare_vcg_imp_lift' | wps)+
+
+lemma arch_thread_set_valid_blocked[wp]:
+  "arch_thread_set f tptr \<lbrace>valid_blocked\<rbrace>"
+  by (wpsimp wp: valid_blocked_lift)
+
 lemma unbind_notification_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> unbind_notification ntfnptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: unbind_notification_def)

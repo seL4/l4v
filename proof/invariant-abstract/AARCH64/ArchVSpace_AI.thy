@@ -289,7 +289,7 @@ lemma set_vcpu_valid_arch_state_hyp_live:
   apply (clarsimp simp: asid_pools_of_vcpu_None_upd_idem vmid_inv_def)
   apply (rule conjI)
    apply (clarsimp simp: cur_vcpu_2_def hyp_live_vcpu_tcb in_opt_pred split: option.splits)
-  apply (clarsimp simp: valid_global_arch_objs_def obj_at_def pts_of_vcpu_None_upd_idem)
+  apply (fastforce simp: valid_global_arch_objs_def obj_at_def pts_of_vcpu_None_upd_idem)
   done
 
 lemma set_vcpu_obj_at:
@@ -568,7 +568,7 @@ lemma valid_arch_state_arm_next_vmid[simp]:
   "valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
    valid_arch_state s"
   unfolding valid_arch_state_def
-  by (clarsimp simp: valid_global_arch_objs_def vmid_inv_def)
+  by (fastforce simp: valid_global_arch_objs_def vmid_inv_def)
 
 lemma update_asid_pool_entry_vspace_objs_of:
   "\<lbrace>\<lambda>s. \<forall>pool_ptr ap entry. pool_for_asid asid s = Some pool_ptr \<longrightarrow>
@@ -720,6 +720,8 @@ lemma invalidate_vmid_entry_valid_vmid_table[wp]:
 crunch find_free_vmid
   for valid_global_tables[wp]: "valid_global_tables"
   and valid_vmid_table[wp]: valid_vmid_table
+  and arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
+  and valid_cur_fpu[wp]: valid_cur_fpu
 
 lemma find_free_vmid_valid_arch [wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
@@ -743,16 +745,6 @@ lemma valid_global_refs_vmid_table_upd[simp]:
 lemma valid_global_refs_next_vmid_upd[simp]:
   "valid_global_refs (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := x\<rparr>\<rparr>) = valid_global_refs s"
   unfolding valid_global_refs_def valid_refs_def global_refs_def
-  by simp
-
-lemma valid_machine_state_arm_vmid_table_upd[simp]:
-  "valid_machine_state (s\<lparr>arch_state := arch_state s\<lparr>arm_vmid_table := x\<rparr>\<rparr>) = valid_machine_state s"
-  unfolding valid_machine_state_def
-  by simp
-
-lemma valid_machine_state_arm_next_vmid_upd[simp]:
-  "valid_machine_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := x\<rparr>\<rparr>) = valid_machine_state s"
-  unfolding valid_machine_state_def
   by simp
 
 lemma vs_lookup_target_vspace_eq:
@@ -881,6 +873,7 @@ lemma invalidate_asid_entry_invs[wp]:
 
 crunch find_free_vmid, store_vmid
   for valid_asid_map[wp]: valid_asid_map
+  and valid_cur_fpu[wp]: valid_cur_fpu
 
 lemma find_free_vmid_invs[wp]:
   "find_free_vmid \<lbrace>invs\<rbrace>"
@@ -987,7 +980,7 @@ lemma set_vm_root_invs[wp]:
   by (wpsimp simp: if_distribR wp: get_cap_wp)
 
 crunch set_vm_root
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
@@ -2421,7 +2414,7 @@ lemma set_asid_pool_valid_arch_state:
   set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> ape))
   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def
-  by (wpsimp wp: set_asid_pool_vmid_inv|wps)+
+  by (wpsimp wp: set_asid_pool_vmid_inv | wps)+
 
 lemma set_asid_pool_invs_valid_asid_map[wp]:
   "\<lbrace>valid_asid_map and valid_asid_table and
@@ -2687,7 +2680,7 @@ lemma set_vcpu_valid_reply_masters[wp]:
   by (rule valid_reply_masters_cte_lift) wp
 
 lemma set_vcpu_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  "set_vcpu p v \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_vcpu_def set_object_def)
   including no_pre apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
@@ -2834,8 +2827,13 @@ lemma set_vcpu_valid_arch_eq_hyp:
   apply (wp set_vcpu_wp)
   apply (clarsimp simp: vmid_inv_set_vcpu asid_pools_of_vcpu_None_upd_idem pts_of_vcpu_None_upd_idem
                         valid_global_arch_objs_def pt_at_eq_set_vcpu)
-  apply (clarsimp simp: cur_vcpu_def split: option.splits)
-  by (auto simp: obj_at_def  vcpu_tcb_refs_def opt_map_def in_opt_pred split: option.splits)
+   apply (clarsimp simp: cur_vcpu_def split: option.splits)
+   by (auto simp: obj_at_def vcpu_tcb_refs_def opt_map_def in_opt_pred split: option.splits)
+
+lemma set_vcpu_valid_cur_fpu[wp]:
+  "set_vcpu p v \<lbrace>valid_cur_fpu\<rbrace>"
+  apply (wp set_vcpu_wp)
+  by (fastforce simp: valid_cur_fpu_defs)
 
 lemma set_vcpu_invs_eq_hyp:
   "\<lbrace>obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of (ArchObj (VCPU v))) p
@@ -2845,6 +2843,18 @@ lemma set_vcpu_invs_eq_hyp:
    \<lbrace> \<lambda>_. invs \<rbrace>"
   unfolding invs_def valid_state_def
   by (wpsimp wp: set_vcpu_valid_pspace set_vcpu_valid_arch_eq_hyp)
+
+lemma set_vcpu_nonz_cap_to[wp]:
+  "\<lbrace>ex_nonz_cap_to t and vcpu_at p\<rbrace>
+   set_vcpu p vcpu
+   \<lbrace>\<lambda>_. ex_nonz_cap_to t\<rbrace>"
+  unfolding set_vcpu_def
+  by (wpsimp simp: obj_at_def)
+
+lemma vcpu_update_nonz_cap_to[wp]:
+  "vcpu_update p ap \<lbrace>ex_nonz_cap_to t\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: get_vcpu_wp simp: in_omonad obj_at_def)
 
 (* FIXME: move both this and the original still in Retype_AI *)
 lemmas do_machine_op_bind =
@@ -2967,26 +2977,6 @@ lemma vcpu_disable_invs[wp]:
                       hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift')
   done
 
-lemma valid_machine_state_arch_state_update [simp]:
-  "valid_machine_state (arch_state_update f s) = valid_machine_state s"
-  by (simp add: valid_machine_state_def)
-
-lemma arm_asid_table_current_vcpu_update[simp]:
-  "arm_asid_table ((arm_current_vcpu_update v) (arch_state s)) = arm_asid_table (arch_state s)"
-  by clarsimp
-
-lemma vmid_inv_current_vcpu_update[simp]:
-  "vmid_inv (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>) = vmid_inv s"
-  by (clarsimp simp: vmid_inv_def)
-
-lemma valid_irq_node_arch_state_update [simp]:
-  "valid_irq_node (arch_state_update f s) = valid_irq_node s"
-  by (simp add: valid_irq_node_def)
-
-lemma valid_kernel_mappings_arch_state_update [simp]:
-  "valid_kernel_mappings (arch_state_update f s) = valid_kernel_mappings s"
-  by (simp add: valid_kernel_mappings_def)
-
 
 definition cur_vcpu_at where
   "cur_vcpu_at v s \<equiv> case v of None \<Rightarrow> True | Some (vp, _) \<Rightarrow> vcpu_at vp s \<and> obj_at hyp_live vp s"
@@ -3075,7 +3065,7 @@ lemma vcpu_switch_invs[wp]:
 crunch
   arm_context_switch, vcpu_update, vgic_update, vcpu_disable, vcpu_enable,
   vcpu_restore, vcpu_switch, set_vm_root
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: crunch_simps wp: crunch_wps mapM_x_wp)
 
 lemma set_vcpu_cte_wp_at[wp]:

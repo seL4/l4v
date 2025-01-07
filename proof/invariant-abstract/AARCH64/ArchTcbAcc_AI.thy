@@ -159,7 +159,7 @@ lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atc
 lemma thread_set_valid_arch_state[TcbAcc_AI_assms]:
   "(\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb)
    \<Longrightarrow> thread_set f t \<lbrace> valid_arch_state \<rbrace>"
-  by (wp valid_arch_state_lift_aobj_at_no_caps thread_set.aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps thread_set_tcb thread_set.aobj_at)
 
 end
 
@@ -177,21 +177,19 @@ lemma arch_thread_set_valid_idle[wp]:
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   by (wpsimp wp: arch_thread_set_valid_idle' simp: valid_arch_idle_def)
 
+lemma arch_thread_set_cur_fpu_False_if_live_then_nonz_cap[wp]:
+  "arch_thread_set (tcb_cur_fpu_update \<bottom>) t \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap_unchanged simp: hyp_live_def arch_tcb_live_def)
+
 lemma arch_thread_set_if_live_then_nonz_cap_None[wp]:
   "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap' simp: hyp_live_def)
+  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap_unchanged simp: hyp_live_def )
 
-lemma arch_thread_set_if_live_then_nonz_cap_Some[wp]:
-  "\<lbrace>(ex_nonz_cap_to t or obj_at live t) and if_live_then_nonz_cap\<rbrace>
-   arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcp)) t
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (simp add: arch_thread_set_def)
-  apply (wp set_object_iflive)
-  apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
-                  dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
-  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
-  done
+lemmas arch_thread_set_cur_fpu_True_if_live_then_nonz_cap[wp]
+  = arch_thread_set_if_live_then_nonz_cap'[where f="tcb_cur_fpu_update \<top>"]
+
+lemmas arch_thread_set_if_live_then_nonz_cap_Some[wp]
+  = arch_thread_set_if_live_then_nonz_cap'[where f="tcb_vcpu_update (\<lambda>_. Some vcp)" for vcp]
 
 lemma arch_thread_set_valid_objs_vcpu_None[wp]:
   "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>valid_objs\<rbrace>"
@@ -200,6 +198,10 @@ lemma arch_thread_set_valid_objs_vcpu_None[wp]:
 lemma arch_thread_set_valid_objs_vcpu_Some[wp]:
   "\<lbrace>valid_objs and vcpu_at vcpu\<rbrace> arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcpu)) t \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   by (wpsimp wp: arch_thread_set_valid_objs' simp: valid_arch_tcb_def)
+
+lemma arch_thread_set_valid_objs_cur_fpu[wp]:
+  "arch_thread_set (tcb_cur_fpu_update f) t \<lbrace>valid_objs\<rbrace>"
+  by (wpsimp wp: arch_thread_set_valid_objs')
 
 lemma arch_thread_set_unlive_hyp[wp]:
   "\<lbrace>\<lambda>s. vr \<noteq> t \<longrightarrow> obj_at (Not \<circ> hyp_live) vr s\<rbrace>
@@ -210,7 +212,7 @@ lemma arch_thread_set_unlive_hyp[wp]:
   done
 
 lemma arch_thread_set_unlive0[wp]:
-  "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>obj_at (Not \<circ> live0) vr\<rbrace>"
+  "arch_thread_set f t \<lbrace>obj_at (Not \<circ> live0) vr\<rbrace>"
   apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
   apply (clarsimp simp: obj_at_def get_tcb_def split: kernel_object.splits)
   done
@@ -230,6 +232,34 @@ lemma arch_thread_set_vcpus_of[wp]:
   apply (erule rsubst[where P=P])
   apply (clarsimp simp: obj_at_def opt_map_def)
   done
+
+\<comment> \<open>FIXME: Shouldn't state_hyp_refs_of be generic? If it was, then this and
+          arch_thread_set_sym_refs_hyp' could be generic as well\<close>
+lemma hyp_refs_update_some_tcb:
+  "\<lbrakk>kheap s v = Some (TCB tcb); hyp_refs_of (TCB tcb) = hyp_refs_of (TCB (f tcb))\<rbrakk>
+  \<Longrightarrow> P (state_hyp_refs_of (s\<lparr>kheap := (kheap s)(v \<mapsto> TCB (f tcb))\<rparr>)) = P (state_hyp_refs_of s)"
+  apply (rule_tac f=P in arg_cong)
+  apply (rule all_ext)
+  apply (clarsimp simp: state_hyp_refs_of_def)
+  done
+
+lemma arch_thread_set_sym_refs_hyp':
+  "\<lbrakk>\<And>tcb. hyp_refs_of (TCB tcb) = hyp_refs_of (TCB (tcb_arch_update f tcb))\<rbrakk>
+   \<Longrightarrow> arch_thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  apply wp
+  apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (subst arch_tcb_update_aux3)
+  apply (subst hyp_refs_update_some_tcb[where P=P and f="tcb_arch_update f"])
+    apply assumption
+   apply (clarsimp simp: refs_of_def)
+  apply assumption
+  done
+
+lemma arch_thread_set_cur_fpu_sym_refs_hyp[wp]:
+  "arch_thread_set (tcb_cur_fpu_update f) t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  by (wpsimp wp: arch_thread_set_sym_refs_hyp')
 
 end
 

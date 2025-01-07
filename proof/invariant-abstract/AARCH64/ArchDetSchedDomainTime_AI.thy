@@ -50,6 +50,8 @@ crunch
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
   (simp: crunch_simps wp: transfer_caps_loop_pres crunch_wps)
 
+declare make_arch_fault_msg_inv[DetSchedDomainTime_AI_assms]
+
 end
 
 global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
