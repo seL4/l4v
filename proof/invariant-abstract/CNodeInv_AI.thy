@@ -710,24 +710,6 @@ lemma cap_swap_fd_not_recursive:
    by (wpsimp wp: cap_swap_not_recursive get_cap_wp)
 
 
-lemma set_mrs_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs p' b m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_mrs_def bind_assoc set_object_def get_object_def)
-  apply (cases b)
-   apply simp
-   apply wp
-   apply clarsimp
-   apply (drule get_tcb_SomeD)
-   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: zipWithM_x_mapM split_def
-             split del: if_split)
-  apply (wp mapM_wp')
-  apply clarsimp
-  apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: obj_at_def)
-  done
-
-
 lemma cte_wp_and:
   "cte_wp_at (P and Q) c s = (cte_wp_at P c s \<and> cte_wp_at Q c s)"
   by (auto simp: cte_wp_at_def)
@@ -1918,6 +1900,9 @@ lemma cap_swap_aobj_at:
   "arch_obj_pred P' \<Longrightarrow>
   \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_swap c a c' b \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
   unfolding cap_swap_def set_cdt_def by (wpsimp wp: set_cap.aobj_at)
+
+crunch cap_swap
+  for valid_cur_fpu[wp]: valid_cur_fpu
 
 context CNodeInv_AI begin
 lemma cap_swap_cap_refs_respects_device_region[wp]:
