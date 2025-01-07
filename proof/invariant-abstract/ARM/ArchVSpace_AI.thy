@@ -1713,7 +1713,7 @@ lemma svr_invs [wp]:
   done
 
 crunch set_vm_root
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]

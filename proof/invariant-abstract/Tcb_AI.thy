@@ -185,6 +185,7 @@ lemma (in Tcb_AI_1) copyreg_invs:
 lemma out_invs_trivialT:
   assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
   assumes r:  "\<And>tcb v. tcb_arch_ref (fn v tcb) = tcb_arch_ref tcb" (* ARMHYP *)
+  assumes r': "\<And>tcb v. arch_tcb_live (tcb_arch (fn v tcb)) = arch_tcb_live (tcb_arch tcb)"
   assumes z: "\<And>tcb v. tcb_state  (fn v tcb) = tcb_state  tcb"
   assumes z': "\<And>tcb v. tcb_bound_notification (fn v tcb) = tcb_bound_notification tcb"
   assumes z'': "\<And>tcb v. tcb_iarch (fn v tcb) = tcb_iarch tcb"
@@ -197,8 +198,8 @@ lemma out_invs_trivialT:
                                                    | Some f \<Rightarrow> valid_fault f)"
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
-  apply (rule thread_set_invs_trivial [OF x z z' z'' w y a r])
-  apply (auto intro: r)
+  apply (rule thread_set_invs_trivial [OF x z z' z'' w y a r r'])
+  apply auto
   done
 
 lemmas out_invs_trivial = out_invs_trivialT [OF ball_tcb_cap_casesI]
@@ -613,7 +614,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
              thread_set_valid_reply_caps_trivial
              thread_set_valid_reply_masters_trivial
              valid_irq_node_typ valid_irq_handlers_lift
-             thread_set_caps_of_state_trivial thread_set_valid_arch_state
+             thread_set_caps_of_state_trivial thread_set_valid_arch_state thread_set_valid_cur_fpu
              thread_set_arch_caps_trivial thread_set_irq_node
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
@@ -707,7 +708,7 @@ lemma set_mcpriority_invs[wp]:
              thread_set_arch_caps_trivial
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
-             thread_set_valid_ioc_trivial thread_set_valid_arch_state
+             thread_set_valid_ioc_trivial thread_set_valid_arch_state thread_set_valid_cur_fpu
              thread_set_cap_refs_respects_device_region
               | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
               | rule conjI | erule disjE)+
@@ -858,7 +859,7 @@ lemma set_flags_invs[wp]:
          thread_set_arch_caps_trivial
          thread_set_only_idle
          thread_set_cap_refs_in_kernel_window
-         thread_set_valid_ioc_trivial thread_set_valid_arch_state
+         thread_set_valid_ioc_trivial thread_set_valid_arch_state thread_set_valid_cur_fpu
          thread_set_cap_refs_respects_device_region
       | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
       | rule conjI | erule disjE)+

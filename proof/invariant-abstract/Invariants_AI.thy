@@ -31,6 +31,7 @@ arch_requalify_consts
   state_hyp_refs_of
   hyp_refs_of
   hyp_live
+  arch_tcb_live
 
   wellformed_acap
   valid_arch_cap
@@ -44,6 +45,7 @@ arch_requalify_consts
   valid_arch_idle
 
   valid_arch_state
+  valid_cur_fpu
   valid_vspace_objs
   valid_arch_caps
   valid_global_objs
@@ -93,6 +95,7 @@ arch_requalify_facts
   tcb_arch_ref_simps
   hyp_live_tcb_simps
   hyp_live_tcb_def
+  arch_tcb_live_context_simps
   wellformed_arch_pspace
   wellformed_arch_typ
   valid_arch_tcb_pspaceI
@@ -115,7 +118,7 @@ lemmas [simp] =
 lemmas [intro!] = idle_global wf_acap_rights_update_id
 
 lemmas [simp] = wf_acap_rights_update_id state_hyp_refs_update
-                tcb_arch_ref_simps hyp_live_tcb_simps hyp_refs_of_simps
+                tcb_arch_ref_simps hyp_live_tcb_simps arch_tcb_live_context_simps hyp_refs_of_simps
 
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
@@ -702,7 +705,7 @@ definition live :: "kernel_object \<Rightarrow> bool"
 where
  "live ko \<equiv> case ko of
      CNode sz fun      => False
-   | TCB tcb           => live0 ko \<or> hyp_live ko
+   | TCB tcb           => live0 ko \<or> hyp_live ko \<or> arch_tcb_live (tcb_arch tcb)
    | Endpoint ep       => live0 ko
    | Notification ntfn => live0 ko
    | ArchObj ao        => hyp_live ko"
@@ -1000,6 +1003,7 @@ where
                   and valid_reply_masters
                   and valid_global_refs
                   and valid_arch_state
+                  and valid_cur_fpu
                   and valid_irq_node
                   and valid_irq_handlers
                   and valid_irq_states
@@ -1080,7 +1084,7 @@ abbreviation(input)
        and if_live_then_nonz_cap and zombies_final
        and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
        and valid_reply_caps and valid_reply_masters and valid_global_refs
-       and valid_arch_state and valid_machine_state and valid_irq_states
+       and valid_arch_state and valid_cur_fpu and valid_machine_state and valid_irq_states
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
        and equal_kernel_mappings and valid_asid_map and valid_global_vspace_mappings
@@ -2675,6 +2679,10 @@ lemma cap_refs_in_kernel_window_update [iff]:
   "cap_refs_in_kernel_window (f s) = cap_refs_in_kernel_window s"
   by (simp add: cap_refs_in_kernel_window_def arch pspace)
 
+lemma valid_cur_fpu_update [iff]:
+  "valid_cur_fpu (f s) = valid_cur_fpu s"
+  by simp
+
 end
 
 
@@ -2851,6 +2859,10 @@ lemma valid_refs_cte_lift:
   apply (rule ctes)
   done
 
+lemma valid_global_refs_arch_state_update[simp]:
+  "global_refs (arch_state_update f s) = global_refs s
+   \<Longrightarrow> valid_global_refs (arch_state_update f s) = valid_global_refs s"
+  by (simp add: valid_global_refs_def)
 
 lemma valid_global_refs_cte:
   assumes "\<And>P p. cte_wp_at P p s = cte_wp_at P p s'"
@@ -2870,7 +2882,6 @@ lemma valid_global_refs_cte_lift:
   apply (rule hoare_lift_Pf [where f="caps_of_state", OF _ ctes])
   apply (rule global_refs_lift[OF arch idle irq])
   done
-
 
 lemma has_reply_cap_cte_lift:
   assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -3217,6 +3228,10 @@ lemma is_final_cap_simps[simp]:
   "\<And>f. is_final_cap' cap (trans_state f s) = is_final_cap' cap s"
   by (clarsimp simp: is_final_cap'_def2)+
 
+lemma valid_irq_node_arch_state_updates[simp]:
+  "\<And>f. valid_irq_node (arch_state_update f s) = valid_irq_node s"
+  by (simp add: valid_irq_node_def)
+
 lemma only_idle_lift_weak:
   assumes "\<And>Q P t. \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace> f \<lbrace>\<lambda>_ s. Q (st_tcb_at P t s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
@@ -3299,6 +3314,10 @@ lemma invs_valid_pspace [elim!]:
 
 lemma invs_arch_state [elim!]:
   "invs s \<Longrightarrow> valid_arch_state s"
+  by (simp add: invs_def valid_state_def)
+
+lemma invs_cur_fpu [elim!]:
+  "invs s \<Longrightarrow> valid_cur_fpu s"
   by (simp add: invs_def valid_state_def)
 
 lemma invs_cur [elim!]:
@@ -3551,5 +3570,13 @@ lemma invs_strengthen:
   "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (invs and Q) s"
   "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (Q and invs) s"
   by auto
+
+lemma runnable_eq:
+  "runnable st = (st = Running \<or> st = Restart)"
+  by (cases st; simp)
+
+lemma halted_eq:
+  "halted st = (st = Inactive \<or> st = IdleThreadState)"
+  by (cases st; simp)
 
 end

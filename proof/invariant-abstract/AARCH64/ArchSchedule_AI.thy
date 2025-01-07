@@ -28,40 +28,88 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
    apply wp
   by (simp add: upto.simps word_bits_def)
 
-lemma invs_current_fpu_owner_update:
-  "\<lbrakk>valid_arch_state s\<rbrakk> \<Longrightarrow> invs (s\<lparr>arch_state := arch_state s \<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>) = invs s"
-  by (auto simp: invs_def valid_state_def cur_tcb_def cur_vcpu_at_def obj_at_conj_distrib
-                 valid_global_refs_def valid_asid_map_def valid_arch_state_def
-                 valid_global_objs_def valid_global_vspace_mappings_def cur_vcpu_def
-                 global_refs_def vmid_inv_def valid_global_arch_objs_def in_omonad obj_at_def
-                 hyp_live_def arch_live_def
-          split: option.splits)
+lemma set_arm_current_fpu_owner_valid_cur_fpu[wp]:
+  "set_arm_current_fpu_owner new_owner \<lbrace>valid_cur_fpu\<rbrace>"
+  unfolding set_arm_current_fpu_owner_def
+  apply (wp arch_thread_set_wp)
+  by (auto simp: valid_cur_fpu_defs valid_cur_fpu_is_tcb_cur_fpu_unique'[simplified valid_cur_fpu_defs])
 
-lemma invs_current_fpu_owner_update':
-  "\<lbrakk> invs s \<rbrakk> \<Longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>)"
-  apply (prop_tac "valid_arch_state s", simp add: invs_def valid_state_def)
-  apply (simp add: invs_current_fpu_owner_update)
-  done
+lemma set_arm_current_fpu_owner_valid_pspace[wp]:
+  "\<lbrace>valid_pspace and none_top ex_nonz_cap_to t\<rbrace>
+   set_arm_current_fpu_owner t
+   \<lbrace>\<lambda>_. valid_pspace\<rbrace>"
+  unfolding set_arm_current_fpu_owner_def valid_pspace_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_disjI1)
+  by fastforce
+
+crunch set_arm_current_fpu_owner
+  for valid_mdb[wp]: valid_mdb
+  and valid_ioc[wp]: valid_ioc
+  and valid_idle[wp]: valid_idle
+  and only_idle[wp]: only_idle
+  and if_unsafe_then_cap[wp]: if_unsafe_then_cap
+  and valid_reply_caps[wp]: valid_reply_caps
+  and valid_reply_masters[wp]: valid_reply_masters
+  and valid_global_refs[wp]: valid_global_refs
+  and valid_arch_state[wp]: valid_arch_state
+  and valid_irq_node[wp]: valid_irq_node
+  and valid_irq_handlers[wp]: valid_irq_handlers
+  and valid_machine_state[wp]: valid_machine_state
+  and valid_irq_states[wp]: valid_irq_states
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_arch_caps[wp]: valid_arch_caps
+  and valid_global_objs[wp]: valid_global_objs
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and equal_kernel_mappings[wp]: equal_kernel_mappings
+  and valid_asid_map[wp]: valid_asid_map
+  and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  and cur_tcb[wp]: cur_tcb
+  (wp: crunch_wps)
+
+lemma set_arm_current_fpu_owner_invs[wp]:
+  "\<lbrace>invs and none_top tcb_at t and none_top ex_nonz_cap_to t\<rbrace>
+   set_arm_current_fpu_owner t
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: invs_def valid_state_def)
 
 crunch save_fpu_state, load_fpu_state
   for invs[wp]: invs
+  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   (wp: dmo_invs_lift)
 
+lemmas save_fpu_state_typ_ats[wp] = abs_typ_at_lifts[OF save_fpu_state_typ_at]
+lemmas load_fpu_state_typ_ats[wp] = abs_typ_at_lifts[OF load_fpu_state_typ_at]
+
 lemma switch_local_fpu_owner_invs:
-  "switch_local_fpu_owner t \<lbrace>invs\<rbrace>"
+  "\<lbrace>invs and none_top tcb_at t and none_top ex_nonz_cap_to t\<rbrace> switch_local_fpu_owner t \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding switch_local_fpu_owner_def
-  by (wpsimp wp: dmo_invs_lift hoare_drop_imps | strengthen invs_current_fpu_owner_update')+
+  apply (wpsimp wp: dmo_invs_lift hoare_vcg_imp_lift' hoare_disjI1
+         | wpsimp wp: hoare_vcg_all_lift)+
+  by fastforce
 
 crunch lazy_fpu_restore
   for invs[wp]: invs
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  and pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj Q t s)"
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
-  (wp: dmo_invs_lift)
+  and st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at Q t s)"
+  (wp: dmo_invs_lift crunch_wps)
+
+lemmas vcpu_switch_typ_ats[wp] = abs_typ_at_lifts[OF vcpu_switch_typ_at]
+
+crunch set_vm_root, vcpu_switch
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_stt_invs [wp,Schedule_AI_assms]:
-  "arch_switch_to_thread t' \<lbrace>invs\<rbrace>"
-  apply (wpsimp simp: arch_switch_to_thread_def)
+  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding arch_switch_to_thread_def
+  apply wpsimp
+  apply (clarsimp simp: tcb_at_def)
   by (rule sym_refs_VCPU_hyp_live; fastforce)
 
 lemma arch_stt_tcb [wp,Schedule_AI_assms]:
@@ -128,7 +176,7 @@ lemma arch_stt_scheduler_action [wp, Schedule_AI_assms]:
 crunch arch_prepare_next_domain
   for ct[wp, Schedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   and activatable[wp, Schedule_AI_assms]: "ct_in_state activatable"
-  and pred_tcb_at[wp, Schedule_AI_assms]: "\<lambda>s. P (pred_tcb_at proj Q t s)"
+  and st_tcb_at[wp, Schedule_AI_assms]: "\<lambda>s. P (st_tcb_at Q t s)"
   and valid_idle[wp, Schedule_AI_assms]: valid_idle
   and invs[wp, Schedule_AI_assms]: invs
   (wp: crunch_wps ct_in_state_thread_state_lift)

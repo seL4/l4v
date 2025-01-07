@@ -119,12 +119,12 @@ crunch
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info,
   arch_post_modify_registers, arch_prepare_next_domain
   for valid_queues [wp, DetSchedSchedule_AI_assms]: valid_queues
-  (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action)
+  (simp: crunch_simps wp: crunch_wps ignore: tcb_sched_action)
 
 crunch
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers
   for weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch set_vm_root
   for ct_not_in_q[wp]: "ct_not_in_q"
@@ -199,22 +199,27 @@ crunch vcpu_disable, vcpu_restore, vcpu_save, vcpu_switch, set_vm_root
 
 crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers
   for is_activatable[wp, DetSchedSchedule_AI_assms]: "is_activatable t"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers
   for valid_sched_action [wp, DetSchedSchedule_AI_assms]: valid_sched_action
   (simp: crunch_simps ignore: set_asid_pool
-   wp: valid_sched_action_lift[where f="set_asid_pool ptr pool" for ptr pool])
+   wp: crunch_wps valid_sched_action_lift[where f="set_asid_pool ptr pool" for ptr pool])
 
 crunch
   arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers,
   arch_prepare_next_domain, arch_post_set_flags, arch_prepare_set_domain
   for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch set_vm_root
   for exst[wp]: "\<lambda>s. P (exst s)"
   (wp: crunch_wps whenE_wp simp: crunch_simps)
+
+lemma arch_thread_set_ct_in_cur_domain_2[wp]:
+  "arch_thread_set f tptr \<lbrace>\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  by wpsimp
 
 crunch arch_switch_to_thread
   for ct_in_cur_domain_2[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)"
@@ -239,6 +244,7 @@ crunch set_vm_root
 
 crunch switch_to_thread
   for etcb_at[wp, DetSchedSchedule_AI_assms]: "etcb_at P t"
+  (wp: crunch_wps)
 
 crunch
   arch_switch_to_idle_thread
