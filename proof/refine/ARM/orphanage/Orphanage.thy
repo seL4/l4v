@@ -1126,7 +1126,7 @@ lemma createObjects_no_orphans[wp]:
                         is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
   apply (simp only: imp_conv_disj pred_tcb_at'_def createObjects_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift createObjects_orig_obj_at2'[where sz=sz])
-  apply clarsimp
+  apply (clarsimp cong: option.case_cong)
   done
 
 lemma copyGlobalMappings_no_orphans[wp]:
@@ -1378,7 +1378,7 @@ lemma cancelIPC_no_orphans [wp]:
    apply (wp setThreadState_not_active_no_orphans hoare_drop_imps weak_if_wp
              threadSet_valid_objs' threadSet_no_orphans | wpc
           | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def
-                           inQ_def valid_tcb'_def tcb_cte_cases_def)+
+                           inQ_def valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)+
   done
 
 lemma asUser_almost_no_orphans:
@@ -1750,10 +1750,10 @@ lemma tc_no_orphans:
                threadSet_cte_wp_at' hoare_vcg_all_liftE_R hoare_vcg_all_lift threadSet_no_orphans
                hoare_vcg_const_imp_liftE_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
           | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
-                     objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
+                     objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def cteSizeBits_def,
            wp hoare_return_sp)
           | wpc | clarsimp)+)
-  apply (fastforce simp: objBits_defs isCap_simps dest!: isValidVTableRootD)
+  apply (fastforce simp: objBits_defs isCap_simps tcb_cte_cases_def dest!: isValidVTableRootD)
   done
 
 lemma bindNotification_no_orphans[wp]:

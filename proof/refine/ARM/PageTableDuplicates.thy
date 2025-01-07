@@ -1960,7 +1960,7 @@ lemma placeASIDPool_valid_duplicates'[wp]:
     apply (clarsimp simp:mask_lower_twice field_simps blah word_and_le2)
     apply (rule order_trans[OF and_neg_mask_plus_mask_mono[where n = 12]])
     apply (simp add:mask_def)
-   apply (simp add:obj_range'_def blah)
+   apply (simp add:obj_range'_def blah mask_def add_diff_eq)
    apply (rule is_aligned_no_overflow)
    apply (drule(2) pspace_alignedD')
   apply clarsimp

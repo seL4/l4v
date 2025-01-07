@@ -2498,7 +2498,7 @@ lemma cteInsert_valid_pspace:
   \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
   unfolding valid_pspace'_def
   apply (rule hoare_pre)
-  apply (wp cteInsert_valid_objs)
+  apply (wpsimp wp: cteInsert_valid_objs)
   apply (fastforce elim: valid_capAligned)
   done
 
@@ -2512,10 +2512,10 @@ lemma setCTE_ko_wp_at_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setCTE_iflive':
@@ -2573,10 +2573,10 @@ lemma setCTE_ko_wp_at_not_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setUntypedCapAsFull_ko_wp_not_at'[wp]:
@@ -2805,6 +2805,21 @@ lemma setCTE_arch [wp]:
   apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
+lemma setCTE_ko_at'_pde[wp]:
+  "setCTE p c \<lbrace> \<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s) \<rbrace>"
+  apply (simp add: setCTE_def)
+  apply (clarsimp simp: setObject_def in_monad split_def
+                        valid_def lookupAround2_char1
+                        obj_at'_def ps_clear_upd projectKOs
+             split del: if_split)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (clarsimp simp: updateObject_cte in_monad objBits_simps
+                        tcbCTableSlot_def tcbVTableSlot_def
+                        typeError_def
+                 split: if_split_asm
+                        Structures_H.kernel_object.split_asm)
+  done
+
 lemma setCTE_valid_arch[wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setCTE p c \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   by (wp valid_arch_state_lift' setCTE_typ_at')
@@ -2857,6 +2872,7 @@ lemma updateCap_global_refs [wp]:
 
 crunch cteInsert
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
+  and ko_at'_pde[wp]: "\<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s)"
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
 lemma cteInsert_valid_arch [wp]:
@@ -3183,7 +3199,7 @@ lemma usableUntypedRange_empty:
     apply (rule_tac x="2 ^ capBlockSize cp - 1" in word_of_nat_le)
     apply (simp add: unat_2p_sub_1 maxUntypedSizeBits_def)
    apply (simp add: field_simps is_aligned_no_overflow)
-  apply (simp add: field_simps)
+  apply (simp add: field_simps mask_def)
   done
 
 lemma restrict_map_is_map_comp:
@@ -3197,7 +3213,7 @@ lemma untypedZeroRange_to_usableCapRange:
   apply (clarsimp simp: untypedZeroRange_def split: if_split_asm)
   apply (frule(1) usableUntypedRange_empty)
   apply (clarsimp simp: isCap_simps valid_cap_simps' max_free_index_def)
-  apply (simp add: getFreeRef_def)
+  apply (simp add: getFreeRef_def mask_def add_diff_eq)
   done
 
 lemma untyped_ranges_zero_delta:
@@ -4203,6 +4219,7 @@ lemma setupReplyMaster_invs'[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
      setupReplyMaster t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp setupReplyMaster_valid_pspace' sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
@@ -5878,16 +5895,14 @@ lemma locateSlot_cap_to'[wp]:
   "\<lbrace>\<lambda>s. isCNodeCap cap \<and> (\<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_wp_to' P r s)\<rbrace>
      locateSlotCNode (capCNodePtr cap) n (v && mask (capCNodeBits cap))
    \<lbrace>ex_cte_cap_wp_to' P\<rbrace>"
-  apply (simp add: locateSlot_conv)
+  apply (simp add: locateSlot_conv shiftl_t2n)
   apply wp
   apply (clarsimp dest!: isCapDs valid_capAligned
-                   simp: objBits_simps' mult.commute capAligned_def cte_level_bits_def)
+                   simp: objBits_simps' mult.commute capAligned_def cte_level_bits_def shiftl_t2n)
   apply (erule bspec)
   apply (case_tac "bits < word_bits")
-   apply simp
-   apply (rule and_mask_less_size)
-   apply (simp add: word_bits_def word_size)
-  apply (simp add: power_overflow word_bits_def)
+   apply (simp add: word_and_le1)
+  apply (simp add: power_overflow word_bits_def word_and_le1)
   done
 
 lemma rab_cap_to'':
