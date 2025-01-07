@@ -828,6 +828,34 @@ lemma valid_arch_state_lift_aobj_at:
 end
 end
 
+\<comment> \<open>FIXME arch-split: if tcb_at and related terms were moved to InvariantsPre_AI then this lemma
+                     could go in ArchInvariants_AI.\<close>
+lemma current_fpu_owner_Some_tcb_at:
+  "\<lbrakk>arm_current_fpu_owner (arch_state s) = Some p; valid_cur_fpu s\<rbrakk> \<Longrightarrow> tcb_at p s"
+  by (auto simp: valid_cur_fpu_defs is_tcb)
+
+\<comment> \<open>FIXME arch-split: is_tcb_cur_fpu can't be defined like this because arch_tcb_at isn't defined
+                     until Invariants_AI.\<close>
+lemma is_tcb_cur_fpu_def2:
+  "is_tcb_cur_fpu \<equiv> arch_tcb_at itcb_cur_fpu"
+  by (clarsimp simp: is_tcb_cur_fpu_def pred_tcb_at_def)
+
+\<comment> \<open>Intended for use inside Arch, as opposed to the interface lemma valid_cur_fpu_lift\<close>
+lemma valid_cur_fpu_lift_arch:
+  assumes arch_tcb_at[wp]: "\<And>P p. f \<lbrace>\<lambda>s. P (arch_tcb_at itcb_cur_fpu p s)\<rbrace>"
+  assumes fpu_owner[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arm_current_fpu_owner (arch_state s))\<rbrace>"
+  shows "f \<lbrace>valid_cur_fpu\<rbrace>"
+  unfolding valid_cur_fpu_def
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. arm_current_fpu_owner (arch_state s)", rotated], rule fpu_owner)
+  by (wpsimp wp: hoare_vcg_all_lift simp: is_tcb_cur_fpu_def2)
+
+\<comment> \<open>Interface lemma\<close>
+lemma valid_cur_fpu_lift:
+  assumes arch_tcb_at[wp]: "\<And>P P' p. f \<lbrace>\<lambda>s. P (arch_tcb_at P' p s)\<rbrace>"
+  assumes arch_state[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>valid_cur_fpu\<rbrace>"
+  by (wpsimp wp: valid_cur_fpu_lift_arch)
+
 lemma equal_kernel_mappings_lift:
   assumes aobj_at: "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace>"
   assumes [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
@@ -1030,7 +1058,7 @@ lemma default_arch_object_not_live[simp]: "\<not> live (ArchObj (default_arch_ob
                split: aobject_type.splits)
 
 lemma default_tcb_not_live[simp]: "\<not> live (TCB (default_tcb d))"
-  by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
+  by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def arch_tcb_live_def)
 
 lemma valid_vcpu_same_type:
   "\<lbrakk> valid_vcpu v s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>

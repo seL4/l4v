@@ -508,22 +508,16 @@ lemma (* suspend_no_cap_to_obj_ref *)[wp,Finalise_AI_assms]:
                  dest!: obj_ref_none_no_asid[rule_format])
   done
 
-lemma suspend_unlive':
-  "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
-      suspend t
-   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-  apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
-  supply hoare_vcg_if_split[wp_split del] if_split[split del]
-  apply (wp | simp only: obj_at_exst_update)+
-     apply (simp add: obj_at_def live_def hyp_live_def)
-     apply (rule_tac Q'="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
-      supply hoare_vcg_if_split[wp_split]
-      apply wp
-     apply (auto simp: pred_tcb_def2)[1]
-    apply (simp flip: if_split)
-    apply wp
-   apply wp
-  apply simp
+crunch prepare_thread_delete
+  for no_cap_to_obj_with_diff_ref[wp]: "no_cap_to_obj_with_diff_ref cap S"
+
+lemma prepare_thread_delete_unlive[wp]:
+  "\<lbrace>tcb_at ptr and obj_at (Not \<circ> live0) ptr\<rbrace>
+   prepare_thread_delete ptr
+   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
+  unfolding prepare_thread_delete_def
+  apply (wpsimp simp: prepare_thread_delete_def)
+  apply (clarsimp simp: obj_at_def, case_tac ko; clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
   done
 
 lemma finalise_cap_replaceable [Finalise_AI_assms]:
@@ -543,39 +537,37 @@ lemma finalise_cap_replaceable [Finalise_AI_assms]:
                          o_def cap_range_def valid_arch_state_def
                          ran_tcb_cap_cases is_cap_simps
                          gen_obj_refs_subset vs_cap_ref_def)
-  apply ((cases cap;
-      simp add: replaceable_def reachable_pg_cap_def
-                       split del: if_split;
-      rule hoare_pre),
-
-    (wp suspend_unlive'[unfolded o_def]
-        suspend_final_cap[where sl=sl]
-        unbind_maybe_notification_not_bound
-        get_simple_ko_ko_at hoare_vcg_conj_lift
-        unbind_notification_valid_objs
-      | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
-                       ran_tcb_cap_cases is_cap_simps
-                       cap_range_def prepare_thread_delete_def
-                       can_fast_finalise_def
-                       gen_obj_refs_subset
-                       vs_cap_ref_def
-                       valid_ipc_buffer_cap_def
-                dest!: tcb_cap_valid_NullCapD
-                split: Structures_A.thread_state.split_asm
-      | simp cong: conj_cong
-      | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
-      | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
-      | rule conjI
-      | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
-      | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
-      | (wp (once) hoare_drop_imps,
-          wp (once) cancel_all_ipc_unlive[unfolded o_def]
-              cancel_all_signals_unlive[unfolded o_def])
-      | ((wp (once) hoare_drop_imps)?,
-         (wp (once) hoare_drop_imps)?,
-         wp (once) deleting_irq_handler_empty)
-      | wpc
-      | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)
+  apply (cases cap;
+           simp add: replaceable_def reachable_pg_cap_def is_arch_cap_def
+                split del: if_split;
+           ((wp suspend_unlive[unfolded o_def]
+                suspend_final_cap[where sl=sl]
+                prepare_thread_delete_unlive[unfolded o_def]
+                unbind_maybe_notification_not_bound
+                get_simple_ko_ko_at unbind_notification_valid_objs
+             | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
+                              ran_tcb_cap_cases is_cap_simps
+                              cap_range_def unat_of_bl_length
+                              can_fast_finalise_def
+                              gen_obj_refs_subset
+                              vs_cap_ref_def
+                              valid_ipc_buffer_cap_def
+                        dest!: tcb_cap_valid_NullCapD
+                        split: Structures_A.thread_state.split_asm
+             | simp cong: conj_cong
+             | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
+             | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
+             | rule conjI
+             | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
+             | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
+             | (wp (once) hoare_drop_imps,
+                        wp (once) cancel_all_ipc_unlive[unfolded o_def]
+                       cancel_all_signals_unlive[unfolded o_def])
+             | ((wp (once) hoare_drop_imps)?,
+                (wp (once) hoare_drop_imps)?,
+                wp (once) deleting_irq_handler_empty)
+             | wpc
+             | simp add: valid_cap_simps is_nondevice_page_cap_simps)+))
   done
 
 lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_assms]:

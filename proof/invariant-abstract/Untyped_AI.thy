@@ -3087,6 +3087,9 @@ lemma create_cap_refs_respects_device:
   apply (fastforce simp: is_cap_simps)
   done
 
+crunch create_cap
+  for valid_cur_fpu[wp]: valid_cur_fpu
+
 lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
   "\<lbrace>invs
       and cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_is_device (default_cap tp oref sz dev)  = cap_is_device c

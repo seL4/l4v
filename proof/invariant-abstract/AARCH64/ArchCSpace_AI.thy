@@ -481,7 +481,7 @@ lemma cap_insert_derived_valid_arch_state[CSpace_AI_assms]:
   "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
    cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_insert_aobj_at cap_insert_aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_insert_tcb cap_insert_aobj_at)
 
 lemma setup_reply_master_arch[CSpace_AI_assms]:
   "setup_reply_master t \<lbrace> valid_arch_state \<rbrace>"
@@ -516,7 +516,7 @@ lemma is_cap_simps':
 
 lemma cap_insert_simple_valid_arch_state[wp]:
   "cap_insert cap src dest \<lbrace> valid_arch_state\<rbrace>"
-  by (wp valid_arch_state_lift_aobj_at_no_caps cap_insert_aobj_at)+
+  by (wp valid_arch_state_lift_aobj_at_no_caps cap_insert_tcb cap_insert_aobj_at)+
 
 lemma cap_insert_simple_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and
@@ -530,7 +530,7 @@ lemma cap_insert_simple_invs:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_mdb cap_insert_iflive
-             cap_insert_zombies cap_insert_ifunsafe
+             cap_insert_zombies cap_insert_ifunsafe valid_cur_fpu_lift
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)

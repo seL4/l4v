@@ -1583,6 +1583,11 @@ lemma set_asid_pool_iflive [wp]:
   by (wp set_object_iflive)
      (clarsimp simp: obj_at_def live_def hyp_live_def arch_live_def in_omonad)
 
+lemma set_asid_pool_nonz_cap_to[wp]:
+  "set_asid_pool p ap \<lbrace>ex_nonz_cap_to t\<rbrace>"
+  unfolding set_asid_pool_def
+  by (wpsimp simp: in_omonad obj_at_def)
+
 lemma set_asid_pool_zombies [wp]:
   "set_asid_pool p ap \<lbrace>zombies_final\<rbrace>"
   unfolding set_asid_pool_def
@@ -1996,6 +2001,10 @@ lemma set_asid_pool_None_valid_asid_map[wp]:
   apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift get_object_wp)
   apply (fastforce simp: entry_for_pool_def obind_None_eq in_omonad split: if_split_asm)
   done
+
+crunch set_asid_pool
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
 
 lemma set_asid_pool_invs_unmap:
   "\<lbrace>invs and
@@ -2745,6 +2754,10 @@ lemma store_pte_valid_global_tables[wp]:
   unfolding store_pte_def valid_global_tables_2_def
   by (wpsimp wp: set_pt_pts_of simp: global_refs_def | wps)+
 
+crunch store_pte
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
+
 lemma store_pte_invs:
   "\<lbrace> invs
      and (\<lambda>s. table_base pt_t p \<notin> global_refs s)
@@ -2830,6 +2843,7 @@ crunch do_machine_op
   and vspace_at_asid[wp]: "\<lambda>s. P (vspace_at_asid a pt s)"
   and valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
   and valid_obj[wp]: "valid_obj t obj"
+  and valid_cur_fpu[wp]: valid_cur_fpu
   (simp: valid_kernel_mappings_def wp: valid_obj_typ)
 
 lemma dmo_invs_lift:
