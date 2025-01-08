@@ -141,11 +141,11 @@ lemma getObject_return:
 
 lemmas getObject_return_tcb
     = getObject_return[OF meta_eq_to_obj_eq, OF loadObject_tcb,
-                       unfolded objBits_simps', simplified]
+                       unfolded gen_objBits_simps, simplified]
 
 lemmas setObject_modify_tcb
     = setObject_modify[OF _ meta_eq_to_obj_eq, OF _ updateObject_tcb,
-                       unfolded objBits_simps', simplified]
+                       unfolded gen_objBits_simps, simplified]
 
 lemma partial_overwrite_fun_upd:
   "inj idx \<Longrightarrow>
