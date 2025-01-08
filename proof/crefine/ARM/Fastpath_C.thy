@@ -1710,7 +1710,7 @@ proof -
     apply (clarsimp simp:tcbs_of_def cte_at'_obj_at'
       split:if_splits)
     apply (drule_tac x = "0x10 * tcbVTableSlot" in bspec)
-     apply (simp add:tcb_cte_cases_def tcbVTableSlot_def)
+     apply (simp add:tcb_cte_cases_def cteSizeBits_def tcbVTableSlot_def)
     apply simp
     done
 
@@ -1720,7 +1720,7 @@ proof -
     apply (clarsimp simp:tcbs_of_def cte_at'_obj_at'
       split:if_splits)
     apply (drule_tac x = "0x10 * tcbCallerSlot" in bspec)
-     apply (simp add:tcb_cte_cases_def tcbCallerSlot_def)
+     apply (simp add:tcb_cte_cases_def cteSizeBits_def tcbCallerSlot_def)
     apply simp
     done
 
@@ -2260,7 +2260,7 @@ proof -
                                  threadSet_st_tcb_at_state threadSet_cte_wp_at'
                                  threadSet_cur
                                | simp add: cur_tcb'_def[symmetric])+
-                     apply (simp add: valid_tcb'_def tcb_cte_cases_def
+                     apply (simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def
                                       valid_tcb_state'_def)
                      apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift
                                set_ep_valid_objs'
@@ -2468,7 +2468,7 @@ lemma threadSet_tcbState_valid_objs:
      threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (wp threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemmas array_assertion_abs_tcb_ctes_add
@@ -2520,7 +2520,7 @@ lemma fastpath_reply_recv_ccorres:
     apply (clarsimp simp:tcbs_of_def cte_at'_obj_at'
       split:if_splits)
     apply (drule_tac x = "0x10 * tcbVTableSlot" in bspec)
-     apply (simp add:tcb_cte_cases_def tcbVTableSlot_def)
+     apply (simp add:tcb_cte_cases_def cteSizeBits_def tcbVTableSlot_def)
     apply simp
     done
 
@@ -2530,7 +2530,7 @@ lemma fastpath_reply_recv_ccorres:
     apply (clarsimp simp:tcbs_of_def cte_at'_obj_at'
       split:if_splits)
     apply (drule_tac x = "0x10 * tcbCallerSlot" in bspec)
-     apply (simp add:tcb_cte_cases_def tcbCallerSlot_def)
+     apply (simp add:tcb_cte_cases_def cteSizeBits_def tcbCallerSlot_def)
     apply simp
     done
 

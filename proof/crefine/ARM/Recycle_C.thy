@@ -341,10 +341,10 @@ lemma heap_to_user_data_in_user_mem'[simp]:
    apply (subst is_aligned_add_helper[THEN conjunct2,where n1 = 2])
      apply (erule aligned_add_aligned)
       apply (simp add: is_aligned_mult_triv2[where n = 2,simplified])
-     apply  (clarsimp simp: objBits_simps ARM.pageBits_def)
+     apply  (clarsimp simp: ARM.objBits_simps ARM.pageBits_def)
     apply simp
    apply (rule is_aligned_add_helper[THEN conjunct2])
-    apply (simp add: ARM.pageBits_def objBits_simps)
+    apply (simp add: ARM.pageBits_def ARM.objBits_simps)
    apply (rule word_less_power_trans2[where k = 2,simplified])
      apply (rule less_le_trans[OF ucast_less])
       apply simp+
