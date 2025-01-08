@@ -90,6 +90,7 @@ lemma getObject_state:
    apply clarsimp
    apply (erule impE)
     apply simp
+   apply (simp flip: add_mask_fold)
    apply (erule notE, rule word_diff_ls'(3))
     apply unat_arith
    apply (drule is_aligned_no_overflow, simp add: word_bits_def)
@@ -110,6 +111,7 @@ lemma getObject_state:
    apply clarsimp
    apply (erule impE)
     apply simp
+   apply (simp flip: add_mask_fold)
    apply (erule notE, rule word_diff_ls'(3))
     apply unat_arith
    apply (drule is_aligned_no_overflow)
@@ -120,6 +122,7 @@ lemma getObject_state:
    apply fastforce
   apply clarsimp
   apply (erule impE)
+   apply (simp flip: add_mask_fold)
    apply (rule word_diff_ls'(3))
    apply unat_arith
    apply (drule is_aligned_no_overflow)
@@ -185,6 +188,7 @@ lemma asUser_state:
      apply fastforce
     apply clarsimp
     apply (erule impE, simp)
+    apply (simp flip: add_mask_fold)
     apply (erule notE, rule word_diff_ls'(3))
      apply unat_arith
     apply (drule is_aligned_no_overflow)
@@ -212,6 +216,7 @@ lemma asUser_state:
      apply fastforce
     apply clarsimp
     apply (erule impE, simp)
+    apply (simp flip: add_mask_fold)
     apply (erule notE, rule word_diff_ls'(3))
      apply unat_arith
     apply (drule is_aligned_no_overflow)
@@ -223,6 +228,7 @@ lemma asUser_state:
     apply fastforce
    apply clarsimp
    apply (erule impE)
+    apply (simp flip: add_mask_fold)
     apply (rule word_diff_ls'(3))
      apply unat_arith
     apply (drule is_aligned_no_overflow)
@@ -906,7 +912,7 @@ lemma invokeTCB_ThreadControl_ccorres:
   apply (subgoal_tac "s \<turnstile>' capability.ThreadCap target")
    apply (clarsimp simp: cte_level_bits_def Kernel_C.tcbCTable_def Kernel_C.tcbVTable_def
                          tcbCTableSlot_def tcbVTableSlot_def size_of_def
-                         tcb_cte_cases_def isCap_simps
+                         tcb_cte_cases_def cteSizeBits_def isCap_simps
                   split: option.split_asm
                   dest!: isValidVTableRootD)
   apply (clarsimp simp: valid_cap'_def capAligned_def word_bits_conv
@@ -1230,6 +1236,7 @@ lemma getObject_context:
    apply clarsimp
    apply (erule impE)
     apply simp
+   apply (simp flip: add_mask_fold)
    apply (erule notE, rule word_diff_ls'(3))
     apply unat_arith
    apply (drule is_aligned_no_overflow)
@@ -1251,6 +1258,7 @@ lemma getObject_context:
    apply clarsimp
    apply (erule impE)
     apply simp
+   apply (simp flip: add_mask_fold)
    apply (erule notE, rule word_diff_ls'(3))
     apply unat_arith
    apply (drule is_aligned_no_overflow)
@@ -1261,6 +1269,7 @@ lemma getObject_context:
    apply fastforce
   apply clarsimp
   apply (erule impE)
+   apply (simp flip: add_mask_fold)
    apply (rule word_diff_ls'(3))
    apply unat_arith
    apply (drule is_aligned_no_overflow)
@@ -1326,6 +1335,7 @@ lemma asUser_context:
      apply fastforce
     apply clarsimp
     apply (erule impE, simp)
+    apply (simp flip: add_mask_fold)
     apply (erule notE, rule word_diff_ls'(3))
      apply unat_arith
     apply (drule is_aligned_no_overflow)
@@ -1337,6 +1347,7 @@ lemma asUser_context:
     apply fastforce
    apply clarsimp
    apply (erule impE)
+    apply (simp flip: add_mask_fold)
     apply (rule word_diff_ls'(3))
      apply unat_arith
     apply (drule is_aligned_no_overflow)

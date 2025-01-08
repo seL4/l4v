@@ -487,7 +487,7 @@ shows
      apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
      apply (clarsimp simp:valid_cap'_def asid_low_bits_def invs_urz)
      apply (strengthen descendants_range_in_subseteq'[mk_strg I E] refl)
-     apply simp
+     apply (simp add: word_size_bits_def)
      apply (intro conjI)
         apply (simp add:is_aligned_def)
       apply (rule descendants_range_caps_no_overlapI'[where d=isdev and cref = parent])
