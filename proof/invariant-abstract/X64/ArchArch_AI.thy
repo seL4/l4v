@@ -591,12 +591,22 @@ lemma cap_insert_ioports_ap:
          | wpc | simp split del: if_split)+
   done
 
+lemma cap_insert_ioport_control_ap:
+  "\<lbrace>ioport_control_unique and K (is_ap_cap cap)\<rbrace>
+   cap_insert cap src dest
+   \<lbrace>\<lambda>_. ioport_control_unique\<rbrace>"
+  unfolding cap_insert_def set_untyped_cap_as_full_def
+  apply (wpsimp wp: get_cap_wp set_cap_ioport_control_safe hoare_vcg_const_imp_lift)
+  apply (auto simp: cte_wp_at_caps_of_state is_cap_simps)
+  done
+
 lemma cap_insert_valid_arch_state_ap:
   "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
     K (is_ap_cap cap)\<rbrace>
    cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_ioports_ap)+
+  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_ioports_ap
+         cap_insert_ioport_control_ap)+
      (simp add: valid_arch_state_def)
 
 lemma cap_insert_ap_invs:

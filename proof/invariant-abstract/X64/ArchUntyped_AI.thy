@@ -386,6 +386,16 @@ lemma create_cap_ioports[wp]:
   by (wpsimp wp: set_cap_ioports_safe set_cdt_cte_wp_at
               simp: safe_ioport_insert_not_ioport[OF default_cap_not_ioport] create_cap_def)
 
+lemma default_cap_neq_IOPortControlCap[simp]:
+  "default_cap tp oref sz dev \<noteq> ArchObjectCap IOPortControlCap"
+  by (cases tp; simp)
+     (simp add: arch_default_cap_def split: aobject_type.split)
+
+lemma create_cap_ioport_control[wp]:
+  "create_cap tp sz p dev (cref,oref) \<lbrace>ioport_control_unique\<rbrace>"
+  unfolding create_cap_def
+  by (wpsimp simp: ioport_control_unique_def)
+
 lemma create_cap_valid_arch_state[wp, Untyped_AI_assms]:
   "\<lbrace>valid_arch_state and cte_wp_at (\<lambda>_. True) cref\<rbrace>
    create_cap tp sz p dev (cref,oref)

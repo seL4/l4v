@@ -1051,6 +1051,21 @@ definition
 where
   "valid_x64_irq_state irqState \<equiv> \<forall>irq > maxIRQ. irqState irq = IRQFree"
 
+
+(* Mainly used to discharge the Haskell assertion archMDBAssertions, which is
+   used in CRefine. The invariant says that there is only one IOPortControlCap
+   in the system. *)
+definition ioport_control_unique_2 :: "(cslot_ptr \<Rightarrow> cap option) \<Rightarrow> bool" where
+  "ioport_control_unique_2 caps \<equiv>
+     \<forall>p p'. caps p = Some (ArchObjectCap IOPortControlCap) \<longrightarrow>
+            caps p' = Some (ArchObjectCap IOPortControlCap) \<longrightarrow>
+            p' = p"
+
+locale_abbrev ioport_control_unique where
+  "ioport_control_unique s \<equiv> ioport_control_unique_2 (caps_of_state s)"
+
+lemmas ioport_control_unique_def = ioport_control_unique_2_def
+
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -1062,6 +1077,7 @@ where
       \<and> valid_global_pdpts s
       \<and> valid_cr3 (x64_current_cr3 (arch_state s))
       \<and> valid_x64_irq_state (x64_irq_state (arch_state s))
+      \<and> ioport_control_unique s
       \<and> valid_ioports s"
 
 definition
@@ -1778,23 +1794,23 @@ lemma valid_arch_state_lift:
    apply (wp arch typs caps hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
   done
 
-(* we usually have a rule for valid_ioports, but it often comes with side-conditions *)
+(* we usually have a rule for valid_ioports and ioport_control_unique, but they often come with
+   side-conditions *)
 lemma valid_arch_state_lift_ioports_typ_at:
-  fixes Q
   assumes typs: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>_. typ_at (AArch T) p\<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   assumes ports: "\<lbrace> Q \<rbrace> f \<lbrace>\<lambda>_. valid_ioports \<rbrace>"
-  shows "\<lbrace>valid_arch_state and Q\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  apply (simp add: valid_arch_state_def pred_conj_def)
+  assumes control: "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>_. ioport_control_unique\<rbrace>"
+  shows "\<lbrace>valid_arch_state and Q and P\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def valid_asid_table_def
                    valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
-  (* we need to do this piece-wise so we can grab
-     `valid_ioports_2 (caps_of_state x) (arch_state x) \<and> Q x` at the end *)
-  apply (rule hoare_vcg_conj_lift[rotated])+
-  apply (solves \<open>wpsimp wp: ports\<close>)
-  (* the rest are trivial once arch_state is lifted out *)
-  apply (rule hoare_lift_Pf2[where f="\<lambda>s. arch_state s", OF _ arch],
-         solves \<open>wp typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift\<close>)+
+  apply wp_pre
+   (* isolate the `valid_ioports_2 (caps_of_state s) (arch_state s)` at the end,
+      because we don't want wps to act on (arch_state s) there. *)
+   apply (rule hoare_vcg_conj_lift[rotated])+
+            apply (rule ports)
+           apply (wps arch | wp control typs hoare_vcg_op_lift)+
+  apply simp
   done
 
 lemma aobj_at_default_arch_cap_valid:

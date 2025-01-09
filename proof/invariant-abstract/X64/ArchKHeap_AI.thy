@@ -541,17 +541,17 @@ lemma typ_at_lift:
      (wpsimp wp: aobj_at)
 
 lemma valid_arch_state_lift_ioports_aobj_at:
-  fixes P
   assumes ioports: "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>_. valid_ioports \<rbrace>"
-  shows "\<lbrace>valid_arch_state and P\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  assumes control: "\<lbrace> Q \<rbrace> f \<lbrace>\<lambda>_. ioport_control_unique \<rbrace>"
+  shows "\<lbrace>valid_arch_state and P and Q\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def)
   apply (rule hoare_vcg_conj_lift
          | wp valid_asid_table_lift typ_at_lift valid_global_pts_lift valid_global_pds_lift
             valid_global_pdpts_lift)+
-  apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch], wp)
-  apply (rule hoare_vcg_conj_lift)
-  apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch], wp)
-  apply (wp ioports)
+    apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch], wp)
+   apply (rule hoare_vcg_conj_lift)
+    apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch], wp)
+   apply (wp control ioports)
   apply simp
   done
 

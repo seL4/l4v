@@ -419,17 +419,32 @@ lemma cap_insert_derived_ioports:
   apply (drule_tac cap=cap in valid_ioports_issuedD, simp+)
   done
 
+lemma is_derived_not_ioport_control:
+  "is_derived (cdt s) src cap cap' \<Longrightarrow> cap \<noteq> ArchObjectCap IOPortControlCap"
+  by (clarsimp simp add: is_derived_def is_derived_arch_def split: if_splits)
+
+lemma cap_insert_derived_ioport_control:
+  "\<lbrace>ioport_control_unique and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
+     cap_insert cap src dest
+   \<lbrace>\<lambda>rv. ioport_control_unique\<rbrace>"
+  unfolding cap_insert_def set_untyped_cap_as_full_def
+  apply (wpsimp wp: get_cap_wp)
+  apply (auto dest!: is_derived_not_ioport_control
+              simp: cte_wp_at_caps_of_state ioport_control_unique_def is_cap_simps)
+  done
+
 lemma cap_insert_derived_valid_arch_state[CSpace_AI_assms]:
   "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
    cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
-  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_derived_ioports)+
+  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_derived_ioports
+         cap_insert_derived_ioport_control)+
      (simp add: cap_insert_aobj_at valid_arch_state_def)
 
 lemma cap_insert_simple_ioports:
   "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
         K (is_simple_cap cap \<and> \<not>is_ap_cap cap)\<rbrace>
-     cap_insert cap src dest
+   cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (simp add: cap_insert_def)
   apply (wp get_cap_wp set_cap_ioports_safe set_untyped_cap_as_full_ioports
@@ -437,12 +452,21 @@ lemma cap_insert_simple_ioports:
          | wpc | simp split del: if_splits)+
   done
 
+lemma cap_insert_simple_ioport_control:
+  "\<lbrace>ioport_control_unique and K (is_simple_cap cap)\<rbrace>
+   cap_insert cap src dest
+   \<lbrace>\<lambda>rv. ioport_control_unique\<rbrace>"
+  unfolding cap_insert_def set_untyped_cap_as_full_def
+  by (wpsimp wp: get_cap_wp)
+     (auto simp: cte_wp_at_caps_of_state is_simple_cap_def ioport_control_unique_def)
+
 lemma cap_insert_simple_valid_arch_state:
   "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
     K (is_simple_cap cap \<and> \<not>is_ap_cap cap)\<rbrace>
    cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_simple_ioports)+
+  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_simple_ioports
+         cap_insert_simple_ioport_control)+
      (simp add: valid_arch_state_def)
 
 end
@@ -628,6 +652,11 @@ lemma setup_reply_master_ioports[wp]:
   "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (wpsimp simp: setup_reply_master_def wp: set_cap_ioports_no_new_ioports get_cap_wp)
   by (clarsimp simp: cte_wp_at_caps_of_state)
+
+lemma setup_reply_master_arch_ioport_control[wp]:
+  "setup_reply_master t \<lbrace>ioport_control_unique\<rbrace>"
+  unfolding setup_reply_master_def
+  by (wpsimp wp: get_cap_wp simp: ioport_control_unique_def)
 
 lemma setup_reply_master_arch[CSpace_AI_assms]:
   "setup_reply_master t \<lbrace> valid_arch_state \<rbrace>"

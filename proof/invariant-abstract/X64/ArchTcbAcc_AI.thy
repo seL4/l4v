@@ -182,6 +182,7 @@ lemma thread_set_valid_arch_state[TcbAcc_AI_assms]:
   "(\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb)
    \<Longrightarrow> thread_set f t \<lbrace> valid_arch_state \<rbrace>"
   by (wp valid_arch_state_lift_ioports_aobj_at thread_set_ioports thread_set.aobj_at
+         thread_set_caps_of_state_trivial
       | simp add: valid_arch_state_def)+
 
 end
