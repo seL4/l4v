@@ -885,6 +885,15 @@ lemma ioports_no_overlap_null:
    apply (case_tac cap'; clarsimp)
   by (case_tac cap; clarsimp simp: ran_null_filter)
 
+lemma null_filter_IOPortControlCap_eq[simp]:
+  "(null_filter caps p = Some (ArchObjectCap IOPortControlCap)) =
+   (caps p = Some (ArchObjectCap IOPortControlCap))"
+  by (auto simp add: null_filter_def)
+
+lemma ioport_control_null:
+  "ioport_control_unique_2 (null_filter caps) = ioport_control_unique_2 caps"
+  by (clarsimp simp: ioport_control_unique_def)
+
 lemma pspace_respects_device_regionI:
   assumes uat: "\<And>ptr sz. kheap s ptr = Some (ArchObj (DataPage False sz))
                 \<Longrightarrow> obj_range ptr (ArchObj $ DataPage False sz) \<subseteq> - device_region s"
@@ -1010,12 +1019,16 @@ lemma valid_ioports:
   "valid_ioports s \<Longrightarrow> valid_ioports s'"
   by (clarsimp simp: valid_ioports_def ioports_no_overlap_eq all_ioports_issued_eq)
 
+lemmas ioport_control_eq
+    = arg_cong[where f=ioport_control_unique_2, OF null_filter,
+               simplified ioport_control_null]
+
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   unfolding valid_arch_state_def
   by (strengthen valid_ioports,
       clarsimp simp: valid_arch_state_def obj_at_pres valid_asid_table_def valid_global_pts_def
-                     valid_global_pds_def valid_global_pdpts_def)
+                     valid_global_pds_def valid_global_pdpts_def ioport_control_eq)
 
 lemma valid_global_objs:
   "valid_global_objs s \<Longrightarrow> valid_global_objs s'"

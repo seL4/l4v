@@ -305,6 +305,8 @@ lemma invs_A:
     apply (clarsimp simp: valid_arch_state_def)
     apply (rule conjI)
      apply (clarsimp simp: valid_asid_table_def state_defs)
+    apply (prop_tac "ioport_control_unique init_A_st")
+     apply (simp add: caps_of_state_init_A_st_Null ioport_control_unique_def)
     apply (subgoal_tac "valid_ioports init_A_st")
      apply (simp add: valid_global_pts_def valid_global_pds_def valid_global_pdpts_def
                       valid_arch_state_def state_defs obj_at_def a_type_def

@@ -442,6 +442,25 @@ lemma transfer_caps_loop_ioports:
   apply clarsimp
   done
 
+lemma transfer_caps_loop_ioport_control:
+  "\<lbrace>ioport_control_unique and valid_objs and valid_mdb and K (distinct slots)
+         and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) x s)
+         and transfer_caps_srcs caps\<rbrace>
+   transfer_caps_loop ep buffer n caps slots mi
+   \<lbrace>\<lambda>rv. ioport_control_unique\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
+     apply (wp cap_insert_derived_ioport_control)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+    apply (wp valid_ioports_lift)
+   apply (clarsimp simp:cte_wp_at_caps_of_state|intro conjI ballI)+
+   apply (drule(1) bspec,clarsimp)
+   apply (frule(1) caps_of_state_valid)
+   apply (fastforce simp:valid_cap_def)
+  apply (drule(1) bspec)
+  apply clarsimp
+  done
+
 lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
   "\<And>slots caps ep buffer n mi.
     \<lbrace>valid_arch_state and valid_objs and valid_mdb and K (distinct slots)
@@ -450,7 +469,7 @@ lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (wpsimp wp: valid_arch_state_lift_ioports_aobj_at transfer_caps_loop_ioports
-                 transfer_caps_loop_aobj_at)
+                 transfer_caps_loop_ioport_control transfer_caps_loop_aobj_at)
      (simp add: valid_arch_state_def)
 
 lemma setup_caller_cap_aobj_at:
@@ -459,14 +478,22 @@ lemma setup_caller_cap_aobj_at:
   unfolding setup_caller_cap_def
   by (wpsimp wp: cap_insert_aobj_at sts.aobj_at)
 
+lemma setup_caller_cap_ioport_control[wp]:
+  "setup_caller_cap st rt grant \<lbrace>ioport_control_unique\<rbrace>"
+  unfolding setup_caller_cap_def cap_insert_def set_untyped_cap_as_full_def
+  apply (wpsimp wp: get_cap_wp split_del: if_split simp: cte_wp_at_caps_of_state)
+  apply (auto simp: ioport_control_unique_def)
+  done
+
 lemma setup_caller_cap_valid_arch[Ipc_AI_2_assms, wp]:
   "setup_caller_cap st rt grant \<lbrace>valid_arch_state\<rbrace>"
   by (wp valid_arch_state_lift_ioports_aobj_at[rotated -1] setup_caller_cap_ioports
-         setup_caller_cap_aobj_at)
+         setup_caller_cap_aobj_at)+
      (simp add: valid_arch_state_def)
 
 crunch do_ipc_transfer
   for ioports[wp]: "valid_ioports"
+  and ioport_control[wp]: "ioport_control_unique"
   (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_ioports
    simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
 

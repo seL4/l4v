@@ -49,13 +49,22 @@ lemma set_cap_ioports_safe:
     apply blast+
   done
 
+lemma set_cap_ioport_control_safe:
+ "\<lbrace>\<lambda>s. ioport_control_unique s \<and>
+       (cap = ArchObjectCap IOPortControlCap \<longrightarrow> cte_wp_at ((=) (ArchObjectCap IOPortControlCap)) ptr s) \<rbrace>
+    set_cap cap ptr
+  \<lbrace>\<lambda>rv. ioport_control_unique \<rbrace>"
+  apply wp
+  apply (auto simp: ioport_control_unique_def cte_wp_at_caps_of_state)
+  done
+
 lemma set_cap_non_arch_valid_arch_state:
  "\<lbrace>\<lambda>s. valid_arch_state s \<and> cte_wp_at (\<lambda>_. \<not>is_arch_cap cap) ptr s\<rbrace>
   set_cap cap ptr
   \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
   unfolding valid_arch_state_def
   by (wp set_cap.aobj_at valid_asid_table_lift valid_global_pts_lift valid_global_pds_lift
-         valid_global_pdpts_lift typ_at_lift set_cap_ioports_safe)+
+         valid_global_pdpts_lift typ_at_lift set_cap_ioports_safe set_cap_ioport_control_safe)+
      (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps valid_pspace_def safe_ioport_insert_triv)
 
 lemma set_cap_ioports_no_new_ioports:
@@ -80,12 +89,15 @@ lemma set_cap_ioports_no_new_ioports:
 
 lemma set_cap_no_new_ioports_arch_valid_arch_state:
  "\<lbrace>\<lambda>s. valid_arch_state s
-       \<and> cte_wp_at (\<lambda>cap'. cap_ioports cap = {} \<or> cap_ioports cap = cap_ioports cap') ptr s\<rbrace>
+       \<and> cte_wp_at (\<lambda>cap'. cap_ioports cap = {} \<or> cap_ioports cap = cap_ioports cap') ptr s
+       \<and> (cap = ArchObjectCap IOPortControlCap \<longrightarrow>
+          cte_wp_at ((=) (ArchObjectCap IOPortControlCap)) ptr s) \<rbrace>
   set_cap cap ptr
   \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
   unfolding valid_arch_state_def
   by (wp set_cap.aobj_at valid_asid_table_lift valid_global_pts_lift valid_global_pds_lift
-         valid_global_pdpts_lift typ_at_lift set_cap_ioports_no_new_ioports)+
+         valid_global_pdpts_lift typ_at_lift set_cap_ioports_no_new_ioports
+         set_cap_ioport_control_safe)+
      (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps valid_pspace_def)
 
 lemma valid_ioportsD:
@@ -110,6 +122,10 @@ lemma unique_table_refs_no_cap_asidE:
 
 lemmas unique_table_refs_no_cap_asidD
      = unique_table_refs_no_cap_asidE[where S="{}"]
+
+lemma is_ioport_control_cap_simp[simp]:
+  "is_ioport_control_cap (ArchObjectCap IOPortControlCap)"
+  by (simp add: is_ioport_control_cap_def)
 
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
@@ -213,6 +229,7 @@ lemma replace_cap_invs:
    apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
   apply clarsimp
+  apply (rule conjI, solves clarsimp)
   apply (rule conjI, solves clarsimp)
   apply (rule Ball_emptyI, simp add: gen_obj_refs_subset)
   done

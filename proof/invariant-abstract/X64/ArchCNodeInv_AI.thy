@@ -444,6 +444,30 @@ lemma cap_swap_ioports[wp]:
                  dest!: weak_derived_cap_ioports)
   by (fastforce elim!: ranE split: if_split_asm)
 
+lemma same_object_as_IOPortControlCap_eq:
+  "same_object_as cap (ArchObjectCap IOPortControlCap) = (cap = ArchObjectCap IOPortControlCap)"
+  unfolding same_object_as_def
+  by (simp split: cap.splits arch_cap.splits)
+
+lemma copy_of_IOPortControlCap_eq:
+  "(copy_of (ArchObjectCap IOPortControlCap) cap) = (cap = ArchObjectCap IOPortControlCap)"
+  unfolding copy_of_def
+  by (auto simp: is_cap_simps same_object_as_IOPortControlCap_eq)
+
+lemma weak_derived_IOPortControlCap_eq[simp]:
+  "weak_derived (ArchObjectCap IOPortControlCap) cap = (cap = ArchObjectCap IOPortControlCap)"
+  unfolding weak_derived_def
+  by (auto simp: copy_of_IOPortControlCap_eq)
+
+lemma cap_swap_ioport_control[wp]:
+  "\<lbrace>ioport_control_unique and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+   cap_swap c a c' b
+   \<lbrace>\<lambda>_. ioport_control_unique\<rbrace>"
+  apply (wpsimp wp: cap_swap_caps_of_state simp: cte_wp_at_caps_of_state)
+  apply (clarsimp simp: ioport_control_unique_def)
+  apply (cases a, cases b)
+  by (rule conjI; clarsimp)+
+
 lemma cap_swap_valid_arch_state[wp, CNodeInv_AI_assms]:
   "\<lbrace>valid_arch_state and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
    cap_swap c a c' b
@@ -988,6 +1012,16 @@ lemma cap_move_ioports:
                  elim!: ranE split: if_split_asm
                  dest!: weak_derived_cap_ioports)
   by (fastforce elim!: ranE split: if_split_asm)
+
+lemma cap_move_ioport_control[wp]:
+  "\<lbrace>ioport_control_unique and cte_wp_at (weak_derived cap) ptr\<rbrace>
+   cap_move cap ptr ptr'
+   \<lbrace>\<lambda>_. ioport_control_unique\<rbrace>"
+  apply (wpsimp wp: cap_move_caps_of_state simp: cte_wp_at_caps_of_state)
+  apply (clarsimp simp: ioport_control_unique_def)
+  apply (cases ptr)
+  apply (rule conjI; clarsimp)
+  done
 
 lemma cap_move_valid_arch:
   "\<lbrace>valid_arch_state and cte_wp_at ((=) cap.NullCap) ptr'
