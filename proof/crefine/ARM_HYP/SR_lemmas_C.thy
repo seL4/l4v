@@ -911,9 +911,9 @@ proof -
     apply (rule is_aligned_weaken[OF _ bits])
     apply (erule cte_wp_atE')
      apply assumption
-    apply (simp add: tcb_cte_cases_def field_simps split: if_split_asm)
+    apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs field_simps split: if_split_asm)
         apply (fastforce elim: aligned_add_aligned[OF _ _ cte_bits_le_tcb_bits]
-                         simp: is_aligned_def cte_level_bits_def)+
+                         simp: is_aligned_def cte_level_bits_def cteSizeBits_def)+
     apply (erule is_aligned_weaken[OF _  cte_bits_le_tcb_bits])
     done
 qed

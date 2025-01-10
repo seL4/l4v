@@ -305,7 +305,7 @@ lemma threadSet_tcbState_valid_objs:
      threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (wp threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma possibleSwitchTo_rewrite:
@@ -1766,7 +1766,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
               in cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (clarsimp simp: valid_cap_simps')
   apply (subst tcb_at_cte_at_offset,
-         assumption, simp add: tcb_cte_cases_def cte_level_bits_def tcbSlots)
+         assumption, simp add: tcb_cte_cases_def cteSizeBits_def cte_level_bits_def tcbSlots)
   apply (clarsimp simp: inj_case_bool cte_wp_at_ctes_of
                         length_msgRegisters
                         order_less_imp_le

@@ -588,7 +588,7 @@ lemma rf_sr_tcb_update_twice:
 lemma tcb_cte_cases_tcbFault_update_simp:
   "(f, u) \<in> ran tcb_cte_cases \<Longrightarrow> f (tcbFault_update (\<lambda>_. Some fault) tcb) = f tcb"
   unfolding tcb_cte_cases_def
-  by auto
+  by (auto simp: tcb_cte_cases_neqs)
 
 lemma hrs_mem_update_use_hrs_mem:
   "hrs_mem_update f = (\<lambda>hrs. (hrs_mem_update $ (\<lambda>_. f (hrs_mem hrs))) hrs)"
