@@ -128,7 +128,7 @@ crunch cancelSignal
 context delete_one_conc_pre
 begin
 
-lemmas delete_one_typ_ats[wp] = typ_at_lifts [OF delete_one_typ_at]
+lemmas delete_one_typ_ats[wp] = ARM_HYP.typ_at_lifts [OF delete_one_typ_at]
 
 lemma cancelIPC_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> cancelIPC t' \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
@@ -537,7 +537,7 @@ lemma (in delete_one) cancelIPC_ReplyCap_corres:
        apply (rule threadset_corresT; simp?)
           apply (simp add: tcb_relation_def fault_rel_optionation_def)
          apply (simp add: tcb_cap_cases_def)
-        apply (simp add: tcb_cte_cases_def cteSizeBits_def)
+        apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
        apply (simp add: exst_same_def)
       apply (fastforce simp: st_tcb_at_tcb_at)
      apply clarsimp
@@ -762,9 +762,17 @@ lemma setEndpoint_vms[wp]:
   by (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
+lemma setObject_endpoint_ko_at'_pde[wp]:
+  "setObject p (v::endpoint) \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
+
 crunch setEndpoint
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (wp: setObject_queues_unchanged_tcb updateObject_default_inv)
+
+crunch setThreadState
+  for ko_at'_pde[wp]: "\<lambda>s. P (ko_at' (pde::pde) p' s)"
 
 crunch setEndpoint
   for sch_act_not[wp]: "sch_act_not t"
@@ -1323,7 +1331,8 @@ lemma archThreadSet_corres:
   apply (simp add: arch_thread_set_def archThreadSet_def)
   apply (corresK corres: getObject_TCB_corres setObject_update_TCB_corres')
   apply wpsimp+
-  apply (auto simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
+  apply (auto simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def
+                        tcb_cte_cases_neqs)+
   done
 
 lemma archThreadSet_VCPU_None_corres[corres]:
@@ -1717,10 +1726,14 @@ proof -
   done
 qed
 
+context begin interpretation Arch . (* FIXME: arch-split *)
+
 lemma tcbSchedEnqueue_valid_pspace'[wp]:
   "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
   unfolding valid_pspace'_def
   by wpsimp
+
+end
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
@@ -2027,7 +2040,7 @@ lemma threadSet_not_tcb[wp]:
   by (clarsimp simp: threadSet_def valid_def getObject_def
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def projectKOs split_def in_magnitude_check
-                     objBits_simps' updateObject_default_def
+                     ARM_HYP.objBits_simps' updateObject_default_def
                      ps_clear_upd projectKO_opt_tcb)
 
 lemma setThreadState_not_tcb[wp]:

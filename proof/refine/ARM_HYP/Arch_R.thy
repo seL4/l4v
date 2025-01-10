@@ -54,8 +54,8 @@ lemma safe_parent_strg':
    apply (drule ctes_of_valid_cap', fastforce)
    apply (clarsimp simp: valid_cap'_def capAligned_def)
    apply (drule is_aligned_no_overflow)
-   apply (clarsimp simp: capRange_def asid_low_bits_def pageBits_def)
-  apply (clarsimp simp: sameRegionAs_def2 isCap_simps capRange_def asid_low_bits_def pageBits_def)
+   apply (clarsimp simp: capRange_def asid_low_bits_def pageBits_def bit_simps')
+  apply (clarsimp simp: sameRegionAs_def2 isCap_simps capRange_def pageBits_def bit_simps')
   done
 
 lemma descendants_of'_helper:
@@ -84,10 +84,10 @@ lemma createObject_typ_at':
   apply (unfold pspace_no_overlap'_def)
   apply (erule allE)+
   apply (erule(1) impE)
-  apply (subgoal_tac "x \<in> {x..x + 2 ^ objBitsKO y - 1}")
-   apply (fastforce simp:is_aligned_neg_mask_eq p_assoc_help)
+  apply (subgoal_tac "x \<in> mask_range x (objBitsKO y)")
+   apply fastforce
   apply (drule(1) pspace_alignedD')
-  apply (fastforce simp: is_aligned_no_wrap' p_assoc_help)
+  apply (clarsimp simp: is_aligned_no_overflow_mask)
   done
 
 lemma retype_region2_ext_retype_region_ArchObject:
