@@ -79,7 +79,7 @@ lemma getIRQSlot_real_cte[wp]:
   apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
   apply wp
   apply (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
-                        cte_level_bits_def ucast_nat_def)
+                        cte_level_bits_def ucast_nat_def cteSizeBits_def shiftl_eq_mult mult.commute)
   done
 
 lemma getIRQSlot_cte_at[wp]:

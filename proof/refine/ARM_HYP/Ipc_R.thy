@@ -349,7 +349,7 @@ lemma cteInsert_cte_wp_at:
       apply simp+
      apply (rule word_of_nat_less)
      apply simp
-    apply (simp add:p_assoc_help)
+    apply (simp add:p_assoc_help mask_def)
    apply (simp add: max_free_index_def)
   apply (clarsimp simp: maskedAsFull_def is_derived'_def badge_derived'_def
                         isCap_simps capMasterCap_def cte_wp_at_ctes_of
@@ -1742,7 +1742,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
    apply (clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             isCap_simps cte_level_bits_def field_simps)
-  apply (drule bspec [OF _ ranI [where a = "0x40"]])
+  apply (drule bspec [OF _ ranI [where a = "4 << cteSizeBits"]])
    apply simp
   apply (clarsimp simp add: valid_cap'_def)
   apply (rule conjI)
@@ -2126,7 +2126,9 @@ lemma reply_cap_end_mdb_chain:
 lemma unbindNotification_valid_objs'_strengthen:
   "valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbBoundNotification_update Map.empty tcb) s"
   "valid_ntfn' ntfn s \<longrightarrow> valid_ntfn' (ntfnBoundTCB_update Map.empty ntfn) s"
-  by (simp_all add: valid_tcb'_def valid_ntfn'_def valid_bound_tcb'_def valid_tcb_state'_def tcb_cte_cases_def split: ntfn.splits)
+  by (simp_all add: valid_tcb'_def valid_ntfn'_def valid_bound_tcb'_def valid_tcb_state'_def
+                    tcb_cte_cases_def tcb_cte_cases_neqs
+               split: ntfn.splits)
 
 crunch cteDeleteOne
   for valid_objs'[wp]: "valid_objs'"
@@ -2295,7 +2297,8 @@ lemma doReplyTransfer_corres:
               apply (rule corres_split)
                  apply (rule threadset_corresT;
                         clarsimp simp add: tcb_relation_def fault_rel_optionation_def
-                                           tcb_cap_cases_def tcb_cte_cases_def exst_same_def)
+                                           tcb_cap_cases_def tcb_cte_cases_def tcb_cte_cases_neqs
+                                           exst_same_def)
                 apply (rule_tac Q="valid_sched and cur_tcb and tcb_at receiver and pspace_aligned and pspace_distinct"
                             and Q'="tcb_at' receiver and cur_tcb'
                                       and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
@@ -2897,7 +2900,7 @@ crunch possibleSwitchTo
   and irq_handlers'[wp]: valid_irq_handlers'
   and irq_states'[wp]: valid_irq_states'
   and pde_mappigns'[wp]: valid_pde_mappings'
-  (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
+  (simp: unless_def tcb_cte_cases_def cteSizeBits_def wp: crunch_wps)
 crunch sendSignal
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -3393,6 +3396,7 @@ lemma receiveIPC_corres:
                   dest!: invs_valid_objs
                   elim!: obj_at_valid_objsE
                   split: option.splits)
+  apply clarsimp
   apply (auto simp: valid_cap'_def invs_valid_pspace' valid_obj'_def valid_tcb'_def
                     valid_bound_ntfn'_def obj_at'_def projectKOs pred_tcb_at'_def
              dest!: invs_valid_objs' obj_at_valid_objs'
@@ -3662,6 +3666,7 @@ lemma setupCallerCap_ifunsafe[wp]:
    \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   unfolding setupCallerCap_def getThreadCallerSlot_def
             getThreadReplySlot_def locateSlot_conv
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (wp getSlotCap_cte_wp_at
        | simp add: unique_master_reply_cap' | strengthen eq_imp_strg
        | wp (once) hoare_drop_imp[where f="getCTE rs" for rs])+

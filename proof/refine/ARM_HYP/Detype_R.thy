@@ -383,13 +383,13 @@ lemma cte_wp_at_delete':
   apply (drule(1) aligned_ranges_subset_or_disjoint)
   apply (subgoal_tac "{p, p - n} \<subseteq> obj_range' (p - n) (KOTCB obj)")
    apply (clarsimp simp del: atLeastAtMost_iff
-                       simp: field_simps objBits_simps obj_range'_def)
+                       simp: field_simps objBits_simps obj_range'_def mask_def)
    apply fastforce
-  apply (simp add: obj_range'_def mask_in_range[symmetric]
+  apply (simp add: obj_range'_def neg_mask_in_mask_range[symmetric]
               del: atLeastAtMost_iff)
   apply (simp add: objBits_simps)
   apply (frule(1) tcb_cte_cases_aligned_helpers)
-  apply (simp add: is_aligned_neg_mask_eq)
+  apply simp
   done
 
 lemma map_to_ctes_delete:
@@ -607,6 +607,8 @@ context delete_locale begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma valid_objs: "valid_objs' s'"
   and        pa: "pspace_aligned' s'"
+  and        pc: "pspace_canonical' s'"
+  and       pkm: "pspace_in_kernel_mappings' s'"
   and        pd: "pspace_distinct' s'"
   and       vbm: "valid_bitmaps s'"
   and sym_sched: "sym_heap_sched_pointers s'"
@@ -637,7 +639,6 @@ lemma valid_objs: "valid_objs' s'"
   and     virqs: "valid_irq_states' s'"
   and no_0_objs: "no_0_obj' s'"
   and  ctnotinQ: "ct_not_inQ s'"
-  and  pde_maps: "valid_pde_mappings' s'"
   and irqs_masked: "irqs_masked' s'"
   and      ctcd: "ct_idle_or_in_cur_domain' s'"
   and       cdm: "ksCurDomain s' \<le> maxDomain"
@@ -1289,7 +1290,7 @@ proof -
     apply (frule valid_capAligned)
     apply (case_tac "\<exists>irq. cteCap c = IRQHandlerCap irq")
      apply (insert irq_nodes_range)[1]
-     apply clarsimp
+     apply (clarsimp simp: cteSizeBits_def shiftl_t2n')
     apply (frule subsetD [OF cte_refs_capRange])
       apply simp
      apply assumption
@@ -1452,6 +1453,12 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   show "pspace_aligned' ?s" using pa
     by (simp add: pspace_aligned'_def dom_def)
 
+  show "pspace_canonical' ?s" using pc
+    by (simp add: pspace_canonical'_def)
+
+  show "pspace_in_kernel_mappings' ?s" using pkm
+    by simp
+
   show pspace_distinct'_state': "pspace_distinct' ?s" using pd
     by (clarsimp simp add: pspace_distinct'_def ps_clear_def
                            dom_if_None Diff_Int_distrib)
@@ -1600,7 +1607,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
 
   show "valid_arch_state' ?s"
     using arch global_refs2
-    apply (simp add: valid_arch_state'_def
+    apply (simp add: valid_arch_state'_def valid_pde_mappings'_def
                      global_refs'_def)
     apply (intro conjI)
      apply (simp add: valid_asid_table'_def)
@@ -1610,7 +1617,8 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
 
   show "valid_irq_node' (irq_node' s') ?s"
     using virq irq_nodes_range
-    by (simp add: valid_irq_node'_def mult.commute mult.left_commute ucast_ucast_mask_8)
+    by (simp add: valid_irq_node'_def mult.commute mult.left_commute ucast_ucast_mask_8
+                  cteSizeBits_def shiftl_t2n)
 
   show "valid_irq_handlers' ?s" using virqh
     apply (simp add: valid_irq_handlers'_def irq_issued'_def
@@ -1643,10 +1651,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   from no_0_objs
   show "no_0_obj' state'"
     by (simp add: no_0_obj'_def)
-
-  from pde_maps
-  show "valid_pde_mappings' state'"
-    by (simp add: valid_pde_mappings'_def)
 
   from irqs_masked
   show "irqs_masked' state'"
@@ -1910,11 +1914,12 @@ lemma deleteObjects_cap_to':
   apply (simp add: delete_locale_def)
   done
 
+(* FIXME arch-split: consider "- mask_range ptr bits" in conclusion *)
 lemma valid_untyped_no_overlap:
   "\<lbrakk> valid_untyped' d ptr bits idx s; is_aligned ptr bits; valid_pspace' s \<rbrakk>
   \<Longrightarrow> pspace_no_overlap' ptr bits (s\<lparr>ksPSpace := ksPSpace s |` (- {ptr .. ptr + 2 ^ bits - 1})\<rparr>)"
   apply (clarsimp simp del: atLeastAtMost_iff
-            simp: pspace_no_overlap'_def valid_cap'_def valid_untyped'_def is_aligned_neg_mask_eq)
+            simp: pspace_no_overlap'_def valid_cap'_def valid_untyped'_def)
   apply (drule_tac x=x in spec)
   apply (drule restrict_map_Some_iff[THEN iffD1])
   apply clarsimp
@@ -1926,10 +1931,10 @@ lemma valid_untyped_no_overlap:
   apply (drule (1) aligned_ranges_subset_or_disjoint)
   apply (clarsimp simp del: Int_atLeastAtMost atLeastAtMost_iff atLeastatMost_subset_iff)
   apply (elim disjE)
-    apply (subgoal_tac "ptr \<in> {x..x + 2 ^ objBitsKO ko - 1}")
-     apply (clarsimp simp:p_assoc_help)
-    apply (clarsimp simp:p_assoc_help)
-   apply fastforce+
+    apply (subgoal_tac "ptr \<in> mask_range x (objBitsKO ko)")
+     apply (clarsimp simp: p_assoc_help mask_def)
+    apply (clarsimp simp: p_assoc_help mask_def)
+   apply (fastforce simp: mask_def add_diff_eq)+
   done
 
 lemma deleteObject_no_overlap[wp]:
@@ -2168,7 +2173,8 @@ lemma pspace_no_overlapD3':
   apply (unfold pspace_no_overlap'_def)
   apply (drule spec)+
   apply (erule(1) impE)
-  apply (simp only:is_aligned_neg_mask_eq obj_range'_def p_assoc_help)
+  apply (simp only: is_aligned_neg_mask_eq obj_range'_def p_assoc_help)
+  apply (simp only: add_diff_eq ptr_range_mask_range)
   done
 
 lemma singleton_locateCTE:
@@ -2668,11 +2674,11 @@ lemma placeNewObject_modify_commute:
     apply (case_tac "x = ptr'")
      apply (subgoal_tac "objBitsKO koa = objBitsKO ko")
       apply (drule(1) pspace_no_overlapD')
-      apply (clarsimp simp:field_simps)
+      apply (clarsimp simp:field_simps mask_def)
      apply (clarsimp)
     apply (drule_tac x = x and s = s in pspace_no_overlapD'[rotated])
      apply (simp)
-    apply (clarsimp simp:field_simps)
+    apply (clarsimp simp:field_simps mask_def)
   apply (subgoal_tac "pspace_aligned'
     (ksPSpace_update (\<lambda>ps. ps(ptr' \<mapsto> f (ps ptr'))) s)")
   prefer 2
@@ -2818,10 +2824,10 @@ lemma getPDE_det:
    apply (rule conjI)
     apply (subst add.commute)
     apply (rule word_diff_ls')
-     apply (clarsimp simp: not_le plus_one_helper)
+     apply (clarsimp simp: not_le plus_one_helper mask_def)
     apply (subst add.commute)
-    apply (simp add: is_aligned_no_wrap' is_aligned_mask)
-  apply auto
+    apply (subst is_aligned_no_wrap'[simplified is_aligned_mask], assumption; simp add: mask_def)
+   apply auto
   done
 
 lemma in_dom_eq:
@@ -3020,9 +3026,9 @@ lemma modify_pde_psp_no_overlap':
   apply (intro allI impI)
   apply (clarsimp split:if_splits)
    apply (drule(1) pspace_no_overlapD')
-    apply (simp add:objBits_simps archObjSize_def field_simps)
+    apply (simp add:objBits_simps archObjSize_def field_simps mask_def)
   apply (drule(1) pspace_no_overlapD')+
-  apply (simp add:field_simps)
+  apply (simp add:field_simps mask_def)
   done
   qed
 
@@ -3241,12 +3247,15 @@ lemma setCTE_when_doMachineOp_commute:
   apply simp
   done
 
+(* FIXME arch-split: can this become a generic interface? currently the PDE precondition on ARM
+   seems to be getting in the way *)
 lemma placeNewObject_valid_arch_state:
   "\<lbrace>valid_arch_state' and
     pspace_no_overlap' ptr (objBitsKO (injectKOS val) + us) and
     pspace_aligned' and pspace_distinct' and
     K (is_aligned ptr (objBitsKO (injectKOS val) + us)) and
-    K ( (objBitsKO (injectKOS val)+ us)< word_bits)\<rbrace>
+    K ( (objBitsKO (injectKOS val)+ us)< word_bits) and
+    K (\<forall>pde. projectKO_opt (injectKOS val) = Some pde \<longrightarrow> pde = InvalidPDE) \<rbrace>
    placeNewObject ptr val us
    \<lbrace>\<lambda>rv s. valid_arch_state' s\<rbrace>"
   apply (simp add:placeNewObject_def2 split_def)
@@ -3323,9 +3332,8 @@ lemma getTCB_det:
    apply (rule conjI)
     apply (subst add.commute)
     apply (rule word_diff_ls')
-     apply (clarsimp simp:field_simps not_le plus_one_helper)
-    apply (subst add.commute)
-    apply (simp add: is_aligned_no_wrap' is_aligned_mask)
+     apply (clarsimp simp:field_simps not_le plus_one_helper mask_def)
+    apply (simp add:field_simps is_aligned_no_overflow_mask flip: is_aligned_mask)
    apply simp
   apply auto
   done
@@ -3458,7 +3466,7 @@ lemma placeNewObject_tcb_at':
   apply (wp unless_wp |wpc | simp add:alignError_def)+
   by (auto simp: obj_at'_def is_aligned_mask lookupAround2_None1
                     lookupAround2_char1 field_simps objBits_simps
-                    projectKO_opt_tcb projectKO_def return_def ps_clear_def
+                    projectKO_opt_tcb projectKO_def return_def ps_clear_def add_mask_fold
            split: if_splits
            dest!: pspace_no_overlap_disjoint')
 
@@ -3540,7 +3548,7 @@ lemma createObject_setCTE_commute:
                       placeNewObject_cte_wp_at'
                       placeNewObject_valid_arch_state placeNewObject_pd_at'[simplified]
                  | erule is_aligned_weaken
-                 | simp add: objBits_simps vspace_bits_defs vcpu_bits_def
+                 | simp add: objBits_simps vspace_bits_defs vcpu_bits_def makeObject_pde projectKOs
                              archObjSize_def split del: if_splits)+)+)
   done
 
@@ -3580,8 +3588,7 @@ lemma ctes_of_ko_at:
   (\<exists>ptr ko. (ksPSpace s ptr = Some ko \<and> p \<in> obj_range' ptr ko))"
   apply (clarsimp simp: map_to_ctes_def Let_def split: if_split_asm)
    apply (intro exI conjI, assumption)
-   apply (simp add: obj_range'_def objBits_simps' add.commute)
-   apply (simp add: is_aligned_no_wrap')
+   apply (simp add: obj_range'_def objBits_simps' is_aligned_no_overflow_mask)
   apply (intro exI conjI, assumption)
   apply (clarsimp simp: objBits_simps' obj_range'_def word_and_le2)
   apply (thin_tac "P" for P)+
@@ -3597,7 +3604,7 @@ lemma pspace_no_overlapD2':
    apply clarsimp
    apply (drule(1) pspace_no_overlapD')
    apply (erule in_empty_interE)
-    apply (simp add:obj_range'_def)
+    apply (simp add:obj_range'_def add_mask_fold)
     apply clarsimp
     apply (subst is_aligned_neg_mask_eq[symmetric])
     apply simp
@@ -3955,7 +3962,7 @@ proof -
       apply (rule is_aligned_shiftl_self)
      apply (simp add:range_cover_def)
     apply simp
-    apply (simp add:word_le_sub1 shiftl_t2n field_simps)
+    apply (simp add:word_le_sub1 shiftl_t2n field_simps mask_def)
     done
 qed
 
@@ -4034,29 +4041,27 @@ lemma pspace_no_overlap'_le:
   assumes b: "sz < word_bits"
   shows "pspace_no_overlap' ptr sz' s"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-  have diff_cancel: "\<And>a b c. (a::word32) + b - c = b + (a - c)"
+  note no_simps [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                             atLeastatMost_subset_iff atLeastLessThan_iff
+                             Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  have diff_cancel: "\<And>a b c. (a::machine_word) + b - c = b + (a - c)"
    by simp
-  have bound :"(ptr && ~~ mask sz') - (ptr && ~~ mask sz) \<le> 2 ^ sz - 2 ^ sz'"
-    by (rule neg_mask_diff_bound[OF psp(2)])
+  have bound: "(ptr && ~~ mask sz') - (ptr && ~~ mask sz) \<le> mask sz - mask sz'"
+    using neg_mask_diff_bound[OF psp(2)]
+    by (simp add: mask_def)
   show ?thesis
-  using psp
+    using psp
     apply (clarsimp simp:pspace_no_overlap'_def)
     apply (drule_tac x = x in spec)
     apply clarsimp
     apply (erule disjoint_subset2[rotated])
-    apply (clarsimp simp:blah)
-    apply (rule word_plus_mcs[OF _  is_aligned_no_overflow'])
+    apply (clarsimp simp: no_simps)
+    apply (rule word_plus_mcs[OF _  is_aligned_no_overflow_mask])
      apply (simp add:diff_cancel p_assoc_help)
      apply (rule le_plus)
-      apply (simp add:field_simps)
       apply (rule bound)
-     apply (rule word_le_minus_mono_left)
-      apply (erule two_power_increasing[OF _ b[unfolded word_bits_def]])
-     apply (rule word_1_le_power)
-     using b[unfolded word_bits_def] apply simp
-    apply (simp add:is_aligned_neg_mask)
+     apply (erule mask_mono)
+    apply simp
     done
 qed
 
@@ -4810,7 +4815,7 @@ proof -
     apply (drule(1) pspace_no_overlapD')
    apply (subst (asm) range_cover_tail_mask)
     apply simp+
-   apply (simp add:word_le_sub1 shiftl_t2n field_simps)
+   apply (simp add:word_le_sub1 shiftl_t2n field_simps mask_def)
   apply auto
   done
 qed
