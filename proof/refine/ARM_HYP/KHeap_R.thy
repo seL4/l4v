@@ -149,8 +149,8 @@ lemma no_fail_getPDE [wp]:
   apply (simp add: getObject_def split_def)
   apply (rule no_fail_pre)
    apply wp
-  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
-                      cong: conj_cong)
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
+                  cong: conj_cong option.case_cong)
   apply (rule ps_clear_lookupAround2, assumption+)
     apply simp
    apply (erule is_aligned_no_overflow)
@@ -161,8 +161,8 @@ lemma no_fail_getObject_vcpu[wp]: "no_fail (vcpu_at' vcpu) (getObject vcpu :: vc
   apply (simp add: getObject_def split_def)
   apply (rule no_fail_pre)
    apply wp
-  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
-                      cong: conj_cong)
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
+                  cong: conj_cong option.case_cong)
   apply (rule ps_clear_lookupAround2, assumption+)
     apply simp
    apply (erule is_aligned_no_overflow)
@@ -262,6 +262,7 @@ lemma updateObject_cte_is_tcb_or_cte:
     \<and> ko' = KOTCB (setF (\<lambda>x. cte) tcb) \<and> is_aligned q tcbBlockSizeBits \<and> ps_clear q tcbBlockSizeBits s) \<or>
   (\<exists>cte'. ko = KOCTE cte' \<and> ko' = KOCTE cte \<and> s' = s
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
                tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
                in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
@@ -303,27 +304,30 @@ lemma obj_at_setObject1:
   apply (rule Q)
   done
 
+(* variant which can handle \<not> (obj_at' ...) *)
+(* FIXME arch-split: adopt this version on other architectures *)
 lemma obj_at_setObject2:
   fixes v :: "'a::pspace_storable"
   fixes P :: "'b::pspace_storable \<Rightarrow> bool"
   assumes R: "\<And>ko s' (v :: 'a) oko x y n s. (ko, s') \<in> fst (updateObject v oko x y n s)
                                   \<Longrightarrow> koTypeOf ko \<noteq> koType TYPE('b)"
   shows
-  "\<lbrace> obj_at' P t \<rbrace>
+  "\<lbrace>\<lambda>s. Q (obj_at' P t s) \<rbrace>
    setObject p (v::'a)
-  \<lbrace> \<lambda>rv. obj_at' P t \<rbrace>"
+   \<lbrace> \<lambda>rv s. Q (obj_at' P t s) \<rbrace>"
   apply (simp add: setObject_def split_def)
   apply (rule bind_wp [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (drule R)
   apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (rule conjI)
-   apply (clarsimp simp: lookupAround2_char1)
-   apply (drule iffD1 [OF project_koType, OF exI])
-   apply simp
-  apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
+  apply (cut_tac bool_function_four_cases[where f=Q])
+  apply (erule disjE
+         | clarsimp dest!: iffD1[OF project_koType, OF exI] simp: ps_clear_upd lookupAround2_char1)+
   done
+
+(* FIXME arch-split: for compatibility, can probably be removed *)
+lemmas obj_at_setObject2' = obj_at_setObject2[where Q=id, simplified]
 
 lemma updateObject_ep_eta:
   "updateObject (v :: endpoint) = updateObject_default v"
@@ -737,6 +741,7 @@ declare diff_neg_mask[simp del]
 
 lemma cte_wp_at_ctes_of:
   "cte_wp_at' P p s = (\<exists>cte. ctes_of s p = Some cte \<and> P cte)"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: cte_wp_at_cases' map_to_ctes_def Let_def
                    cte_level_bits_def objBits_simps'
           split del: if_split)
@@ -745,7 +750,7 @@ lemma cte_wp_at_ctes_of:
    apply (clarsimp simp: ps_clear_def3 field_simps
               split del: if_split)
    apply (frule is_aligned_sub_helper)
-    apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
+    apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
    apply (case_tac "n = 0")
     apply (clarsimp simp: field_simps)
    apply (subgoal_tac "ksPSpace s p = None")
@@ -1226,6 +1231,7 @@ lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
       apply (rename_tac endpoint)
       apply (case_tac endpoint; simp add: valid_ep'_def, wp)
@@ -1236,7 +1242,7 @@ lemma typ_at'_valid_obj'_lift:
     apply (rename_tac tcb)
     apply (case_tac "tcbState tcb";
            simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def
-                     valid_bound_ntfn'_def;
+                     valid_bound_ntfn'_def valid_arch_tcb'_def;
            wpsimp wp: hoare_case_option_wp hoare_case_option_wp2;
            (clarsimp split: option.splits)?)
    apply (wpsimp simp: valid_cte'_def)
@@ -1986,8 +1992,18 @@ lemma valid_global_refs_lift':
       apply (wp ctes hoare_vcg_const_Ball_lift arch idle irqn maxObj)+
   done
 
+lemma valid_pde_mappings'_lift':
+  assumes pds: "\<And>(pd::pde) p P. f \<lbrace>\<lambda>s. P (ko_at' pd p s) \<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_pde_mappings' s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde_mappings' s\<rbrace>"
+  unfolding valid_pde_mappings'_def valid_pde_mapping'_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' pds)
+
+
+(* FIXME arch-split: no interface lemma prospects due to valid_pde_mappings', meaning interface
+   lemmas will be limited to preserving valid_arch_state' in most cases *)
 lemma valid_arch_state_lift':
   assumes typs: "\<And>T p P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
+  assumes pds: "\<And>(pd::pde) p P. f \<lbrace>\<lambda>s. P (ko_at' pd p s) \<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   assumes vcpu: "\<And>P p. \<lbrace>\<lambda>s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace>"
   shows "\<lbrace>valid_arch_state'\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -1997,8 +2013,36 @@ lemma valid_arch_state_lift':
   including no_pre
   apply (wp hoare_vcg_const_Ball_lift)
   apply (case_tac "armHSCurVCPU x"; simp add: split_def; wp?)
-  apply (wpsimp wp: vcpu typ_at_lifts typs)+
+  apply (wpsimp wp: vcpu typ_at_lifts typs pds valid_pde_mappings'_lift')+
   done
+
+lemma valid_arch_state_lift'_valid_pde_mappings':
+  fixes Ppde
+  assumes typs: "\<And>T p P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
+  assumes valid_pde_mappings': "\<lbrace> Ppde \<rbrace> f \<lbrace>\<lambda>_. valid_pde_mappings' \<rbrace>"
+  assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+  assumes vcpu: "\<And>P p. \<lbrace>\<lambda>s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace>"
+  shows "\<lbrace>valid_arch_state' and Ppde \<rbrace> f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def pred_conj_def)
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def
+                   valid_global_pts'_def page_directory_at'_def
+                   page_table_at'_def
+                   All_less_Ball pred_conj_def)
+  (* we need to do this piece-wise so we can grab `valid_pde_mappings' x \<and> Ppde x` at the end *)
+  apply (rule hoare_vcg_conj_lift[rotated])+
+  apply (solves \<open>wpsimp wp: valid_pde_mappings'\<close>)
+  (* the rest are trivial once arch_state is lifted out *)
+  apply (rule hoare_lift_Pf2[where f="\<lambda>s. ksArchState s", OF _ arch],
+         solves \<open>wpsimp wp: typs vcpu[simplified pred_conj_def] hoare_vcg_conj_lift
+                            hoare_vcg_const_Ball_lift hoare_vcg_conj_lift hoare_vcg_all_lift
+                            hoare_vcg_imp_lift'
+                        split: option.splits\<close>)+
+  done
+
+lemma setEndpoint_ko_at'_pde[wp]:
+  "setEndpoint ep p \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  unfolding setEndpoint_def
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
 
 lemma set_ep_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -2108,6 +2152,11 @@ lemma set_ntfn_global_refs' [wp]:
 crunch setNotification
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)" (ignore_del: setObject)
 
+lemma setNotification_ko_at'_pde[wp]:
+  "setNotification ntfn p \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  unfolding setNotification_def
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
+
 lemma set_ntfn_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (rule valid_arch_state_lift'; wp?)
@@ -2210,7 +2259,7 @@ lemma setNotification_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
   apply (wps setObject_ntfn_ct)
   apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)+
+  apply (clarsimp simp add: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setNotification_ksCurThread[wp]:

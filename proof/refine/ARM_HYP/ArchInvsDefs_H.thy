@@ -37,8 +37,8 @@ end
 
 context Arch begin arch_global_naming
 
-declare lookupPTSlotFromLevel.simps[simp del]
-declare lookupPTFromLevel.simps[simp del]
+definition canonical_address :: "machine_word \<Rightarrow> bool" where
+  "canonical_address \<equiv> \<top>" \<comment> \<open>this concept does not exist on ARM_HYP\<close>
 
 (* this architecture does not use kernel_mappings / pspace_in_kernel_mappings *)
 definition kernel_mappings :: "machine_word set" where
@@ -54,6 +54,8 @@ lemmas [simp] = pspace_in_kernel_mappings'_def kernel_mappings_def
 abbreviation vcpu_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "vcpu_at' \<equiv> typ_at' (ArchT VCPUT)"
 
+abbreviation pde_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "pde_at' \<equiv> typ_at' (ArchT PDET)"
 abbreviation pte_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "pte_at' \<equiv> typ_at' (ArchT PTET)"
 
@@ -63,33 +65,35 @@ definition tcb_vcpu_refs' :: "machine_word option \<Rightarrow> (obj_ref \<times
   "tcb_vcpu_refs' t \<equiv> set_option t \<times> {TCBHypRef}"
 
 definition tcb_hyp_refs' :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "tcb_hyp_refs' t \<equiv> tcb_vcpu_refs' (AARCH64_H.atcbVCPUPtr t)"
+  "tcb_hyp_refs' t \<equiv> tcb_vcpu_refs' (ARM_HYP_H.atcbVCPUPtr t)"
 
 definition vcpu_tcb_refs' :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set" where
   "vcpu_tcb_refs' t \<equiv> set_option t \<times> {HypTCBRef}"
 
 definition refs_of_a' :: "arch_kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
   "refs_of_a' x \<equiv> case x of
-     AARCH64_H.KOASIDPool asidpool \<Rightarrow> {}
-   | AARCH64_H.KOPTE pte \<Rightarrow> {}
-   | AARCH64_H.KOVCPU vcpu \<Rightarrow> vcpu_tcb_refs' (AARCH64_H.vcpuTCBPtr vcpu)"
+     ARM_HYP_H.KOASIDPool _ \<Rightarrow> {}
+   | ARM_HYP_H.KOPDE _ \<Rightarrow> {}
+   | ARM_HYP_H.KOPTE _ \<Rightarrow> {}
+   | ARM_HYP_H.KOVCPU vcpu \<Rightarrow> vcpu_tcb_refs' (ARM_HYP_H.vcpuTCBPtr vcpu)"
 
 definition arch_live' :: "arch_kernel_object \<Rightarrow> bool" where
   "arch_live' ao \<equiv> case ao of
-     AARCH64_H.KOVCPU vcpu \<Rightarrow> bound (AARCH64_H.vcpuTCBPtr vcpu)
+     ARM_HYP_H.KOVCPU vcpu \<Rightarrow> bound (ARM_HYP_H.vcpuTCBPtr vcpu)
    | _ \<Rightarrow>  False"
 
 definition hyp_live' :: "kernel_object \<Rightarrow> bool" where
   "hyp_live' ko \<equiv> case ko of
-     (KOTCB tcb) \<Rightarrow> bound (AARCH64_H.atcbVCPUPtr (tcbArch tcb))
+     (KOTCB tcb) \<Rightarrow> bound (ARM_HYP_H.atcbVCPUPtr (tcbArch tcb))
    | (KOArch ako) \<Rightarrow> arch_live' ako
    |  _ \<Rightarrow> False"
 
 primrec azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
   "azobj_refs' (ASIDPoolCap _ _) = {}"
 | "azobj_refs' ASIDControlCap = {}"
-| "azobj_refs' (FrameCap _ _ _ _ _) = {}"
-| "azobj_refs' (PageTableCap _ _ _) = {}"
+| "azobj_refs' (PageCap _ _ _ _ _) = {}"
+| "azobj_refs' (PageTableCap _ _) = {}"
+| "azobj_refs' (PageDirectoryCap _ _) = {}"
 | "azobj_refs' (VCPUCap v) = {v}"
 
 lemma azobj_refs'_only_vcpu:
@@ -100,115 +104,154 @@ lemma azobj_refs'_only_vcpu:
 section "Valid caps and objects (design spec)"
 
 primrec acapBits :: "arch_capability \<Rightarrow> nat" where
-  "acapBits (ASIDPoolCap _ _)       = asidLowBits + word_size_bits"
-| "acapBits ASIDControlCap          = asidHighBits + word_size_bits"
-| "acapBits (FrameCap _ _ sz _ _)   = pageBitsForSize sz"
-| "acapBits (PageTableCap _ pt_t _) = table_size pt_t"
-| "acapBits (VCPUCap v)             = vcpuBits"
+  "acapBits (ASIDPoolCap x y) = asidLowBits + 2"
+| "acapBits ASIDControlCap = asidHighBits + 2"
+| "acapBits (PageCap d x y sz z) = pageBitsForSize sz"
+| "acapBits (PageTableCap x y) = 12"
+| "acapBits (PageDirectoryCap x y) = 14"
+| "acapBits (VCPUCap v) = 12"
 
-definition page_table_at' :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "page_table_at' pt_t p \<equiv> \<lambda>s.
-    is_aligned p (ptBits pt_t) \<and>
-    (\<forall>i \<le> mask (ptTranslationBits pt_t). pte_at' (p + (i << pte_bits)) s)"
+definition page_table_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "page_table_at' x \<equiv> \<lambda>s. is_aligned x ptBits
+                          \<and> (\<forall>y < 2 ^ 9. typ_at' (ArchT PTET) (x + (y << 3)) s)"
 
-lemmas vspace_table_at'_defs = page_table_at'_def
+definition page_directory_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "page_directory_at' x \<equiv> \<lambda>s. is_aligned x pdBits
+                              \<and> (\<forall>y < 2 ^ 11. typ_at' (ArchT PDET) (x + (y << 3)) s)"
+
+lemmas vspace_table_at'_defs = page_table_at'_def page_directory_at'_def
 
 abbreviation asid_pool_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
 
-definition asid_wf :: "asid \<Rightarrow> bool" where
-  "asid_wf asid \<equiv> asid \<le> mask asid_bits"
-
-definition wellformed_mapdata' :: "asid \<times> vspace_ref \<Rightarrow> bool" where
-  "wellformed_mapdata' \<equiv> \<lambda>(asid, vref). 0 < asid \<and> asid_wf asid \<and> vref \<in> user_region"
-
-definition wellformed_acap' :: "arch_capability \<Rightarrow> bool" where
-  "wellformed_acap' ac \<equiv>
-   case ac of
-     ASIDPoolCap r asid \<Rightarrow> is_aligned asid asid_low_bits \<and> asid_wf asid
-   | FrameCap r rghts sz dev  mapdata \<Rightarrow>
-       case_option True wellformed_mapdata' mapdata \<and>
-       case_option True (swp vmsz_aligned sz \<circ> snd) mapdata
-   | PageTableCap pt_t r (Some mapdata) \<Rightarrow> wellformed_mapdata' mapdata
-   | _ \<Rightarrow> True"
-
-lemmas wellformed_acap'_simps[simp] = wellformed_acap'_def[split_simps arch_capability.split]
-
-definition frame_at' :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> bool \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "frame_at' r sz dev s \<equiv>
-     \<forall>p < 2 ^ (pageBitsForSize sz - pageBits).
-       typ_at' (if dev then UserDataDeviceT else UserDataT) (r + (p << pageBits)) s"
-
-definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_cap_ref' ac s \<equiv> case ac of
-     ASIDPoolCap r as \<Rightarrow> typ_at' (ArchT ASIDPoolT) r s
-   | ASIDControlCap \<Rightarrow> True
-   | FrameCap r rghts sz dev mapdata \<Rightarrow> frame_at' r sz dev s
-   | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s
-   | VCPUCap r \<Rightarrow> vcpu_at' r s"
-
-lemmas valid_arch_cap_ref'_simps[simp] =
-  valid_arch_cap_ref'_def[split_simps arch_capability.split]
+(* FIXME: duplicated with vmsz_aligned *)
+definition
+  "vmsz_aligned' ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
 
 definition valid_arch_cap' :: "arch_capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_cap' cap \<equiv> \<lambda>s. wellformed_acap' cap \<and> valid_arch_cap_ref' cap s"
+  "valid_arch_cap' acap s \<equiv> case acap
+   of ASIDPoolCap pool asid \<Rightarrow>
+      typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
+    | ASIDControlCap \<Rightarrow> True
+    | PageCap d ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+      (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
+      (ref + p * 2 ^ pageBits) s) \<and>
+      (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
+              0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < pptrBase) \<and>
+      rghts \<noteq> VMNoAccess
+    | PageTableCap ref mapdata \<Rightarrow>
+      page_table_at' ref s \<and>
+      (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
+              0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
+    | PageDirectoryCap ref mapdata \<Rightarrow>
+      page_directory_at' ref s \<and>
+      case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
+    | VCPUCap v \<Rightarrow> vcpu_at' v s"
 
 lemmas valid_arch_cap'_simps[simp] =
-  valid_arch_cap'_def[unfolded wellformed_acap'_def valid_arch_cap_ref'_def,
-                      split_simps arch_capability.split, simplified]
-
-definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
-  "is_device_frame_cap' cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ dev _) \<Rightarrow> dev | _ \<Rightarrow> False"
+  valid_arch_cap'_def[split_simps arch_capability.split, simplified]
 
 definition valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_tcb' \<equiv> \<lambda>t s. \<forall>v. atcbVCPUPtr t = Some v \<longrightarrow> vcpu_at' v s "
 
-definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
-  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> is_aligned vt tcbBlockSizeBits"
+definition valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
+ "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz)
+                            \<and> ptrFromPAddr x \<noteq> 0"
 
-(* This is a slight abuse of "canonical_address". What we really need to know for ADT_C in CRefine
-   is that the top pageBits bits of TablePTEs have a known value, because we shift left by pageBits.
-   What we actually know is that this is a physical address, so it is bound by the physical address
-   space size, which depending on config can be 40, 44, or 48. 48 happens to also be the bound for
-   the virtual address space, which canonical_address is for. This is good enough for our purposes. *)
-definition ppn_bounded :: "pte \<Rightarrow> bool" where
-  "ppn_bounded pte \<equiv> case pte of PageTablePTE ppn \<Rightarrow> canonical_address ppn | _ \<Rightarrow> True"
+primrec valid_pte' :: "ARM_HYP_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_pte' (InvalidPTE) = \<top>"
+  (* The first LargePagePTE is aligned to ARMLargePage, all other `duplicates' to ARMSmallPage.
+     The former is only stated in the abstract spec invariants, not here. *)
+| "valid_pte' (LargePagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSmallPage s \<and> r \<noteq> VMNoAccess)"
+| "valid_pte' (SmallPagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSmallPage s \<and> r \<noteq> VMNoAccess)"
 
-definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_obj' ako _ \<equiv> case ako of
-     KOPTE pte \<Rightarrow> ppn_bounded pte
-   | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
-   | _ \<Rightarrow> True"
+primrec valid_pde' :: "ARM_HYP_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_pde' (InvalidPDE) = \<top>"
+| "valid_pde' (SectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSection s \<and> r \<noteq> VMNoAccess)"
+  (* The first SuperSectionPDE is aligned to ARMSuperSection, all other `duplicates' to ARMSection.
+     The former is only stated in the abstract spec invariants, not here. *)
+| "valid_pde' (SuperSectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSection s \<and> r \<noteq> VMNoAccess)"
+| "valid_pde' (PageTablePDE ptr) = (\<lambda>_. is_aligned ptr ptBits)"
 
-primrec
-  acapClass :: "arch_capability \<Rightarrow> capclass"
-where
-  "acapClass (ASIDPoolCap _ _)    = PhysicalClass"
-| "acapClass ASIDControlCap       = ASIDMasterClass"
-| "acapClass (FrameCap _ _ _ _ _) = PhysicalClass"
-| "acapClass (PageTableCap _ _ _) = PhysicalClass"
-| "acapClass (VCPUCap _) = PhysicalClass"
+primrec valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_asid_pool' (ASIDPool pool)
+     = (\<lambda>s. dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
+            \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
 
-definition
-  isArchFrameCap :: "capability \<Rightarrow> bool"
-where
- "isArchFrameCap cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ _ _) \<Rightarrow> True | _ \<Rightarrow> False"
+definition valid_vcpu' :: "vcpu \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_vcpu' v \<equiv> (case vcpuTCBPtr v of
+    None \<Rightarrow> \<top>
+  | Some vt \<Rightarrow> typ_at' (TCBT) vt)"
+
+primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
+| "valid_arch_obj' (KOPDE pde) = valid_pde' pde"
+| "valid_arch_obj' (KOPTE pte) = valid_pte' pte"
+| "valid_arch_obj' (KOVCPU vcpu) = valid_vcpu' vcpu"
+
+primrec acapClass :: "arch_capability \<Rightarrow> capclass" where
+  "acapClass (ASIDPoolCap x y)      = PhysicalClass"
+| "acapClass ASIDControlCap         = ASIDMasterClass"
+| "acapClass (PageCap d x y sz z)   = PhysicalClass"
+| "acapClass (PageTableCap x y)     = PhysicalClass"
+| "acapClass (PageDirectoryCap x y) = PhysicalClass"
+| "acapClass (VCPUCap x) = PhysicalClass"
+
+definition isArchFrameCap :: "capability \<Rightarrow> bool" where
+ "isArchFrameCap cap \<equiv> case cap of ArchObjectCap (PageCap _ _ _ _ _) \<Rightarrow> True | _ \<Rightarrow> False"
+
+(* FIXME arch-split: compatibility shim, can be removed by arch-wide rename *)
+abbreviation (input)
+  "isArchPageCap \<equiv> isArchFrameCap"
+
+lemmas isArchPageCap_def = isArchFrameCap_def
 
 definition valid_arch_mdb_ctes :: "cte_heap \<Rightarrow> bool" where
   "valid_arch_mdb_ctes \<equiv> \<top>"
 
-(* Addresses of all PTEs in a VSRoot table at p *)
-definition table_refs' :: "machine_word \<Rightarrow> machine_word set" where
-  "table_refs' p \<equiv> (\<lambda>i. p + (i << pte_bits)) ` mask_range 0 (ptTranslationBits VSRootPT_T)"
+definition page_directory_refs' :: "word32 \<Rightarrow> word32 set" where
+  "page_directory_refs' x \<equiv> (\<lambda>y. x + (y << 3)) ` {y. y < 2 ^ 11}"
+
+definition page_table_refs' :: "word32 \<Rightarrow> word32 set" where
+  "page_table_refs' x \<equiv> (\<lambda>y. x + (y << 3)) ` {y. y < 2 ^ 9}"
 
 definition global_refs' :: "kernel_state \<Rightarrow> obj_ref set" where
   "global_refs' \<equiv> \<lambda>s.
-   {ksIdleThread s} \<union>
-   table_refs' (armKSGlobalUserVSpace (ksArchState s)) \<union>
-   range (\<lambda>irq :: irq. irq_node' s + (ucast irq << cteSizeBits))"
+  {ksIdleThread s, armUSGlobalPD (ksArchState s)} \<union>
+   range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
 
-definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> bool" where
-  "valid_asid_table' table \<equiv> dom table \<subseteq> mask_range 0 asid_high_bits \<and> 0 \<notin> ran table"
+definition valid_asid_table' :: "(asid \<rightharpoonup> word32) \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_asid_table' table \<equiv> \<lambda>s. dom table \<subseteq> {0 .. 2^asid_high_bits - 1}
+                                 \<and> 0 \<notin> ran table"
+
+definition valid_global_pts' :: "word32 list \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_global_pts' pts \<equiv> \<lambda>s. \<forall>p \<in> set pts. page_table_at' p s"
+
+definition valid_asid_map' :: "(word32 \<rightharpoonup> word8 \<times> word32) \<Rightarrow> bool" where
+ "valid_asid_map' m \<equiv> inj_on (option_map snd o m) (dom m)
+                      \<and> dom m \<subseteq> ({0 .. mask asid_bits} - {0})"
+
+definition
+  "pt_index_bits \<equiv> pt_bits - pte_bits"
+
+lemmas vspace_bits_defs = vspace_bits_defs pt_index_bits_def
+
+definition pd_asid_slot :: word32 where
+ "pd_asid_slot \<equiv> 0xff000000 >> (pt_index_bits + pageBits)"
+
+(* ideally, all mappings above kernel_base are global and kernel-only, and
+   of them one particular mapping is clear. at the moment all we can easily say
+   is that the mapping is clear. *)
+definition valid_pde_mapping_offset' :: "word32 \<Rightarrow> bool" where
+ "valid_pde_mapping_offset' offset \<equiv> offset \<noteq> (pd_asid_slot << pte_bits)"
+
+definition valid_pde_mapping' :: "word32 \<Rightarrow> pde \<Rightarrow> bool" where
+ "valid_pde_mapping' offset pde \<equiv> pde = InvalidPDE \<or> valid_pde_mapping_offset' offset"
+
+definition valid_pde_mappings' :: "kernel_state \<Rightarrow> bool" where
+  "valid_pde_mappings' \<equiv> \<lambda>s.
+     \<forall>x pde. ko_at' pde x s
+          \<longrightarrow> valid_pde_mapping' (x && mask pdBits) pde"
 
 definition "is_vcpu' \<equiv> \<lambda>ko. \<exists>vcpu. ko = (KOArch (KOVCPU vcpu))"
 
@@ -217,20 +260,53 @@ definition max_armKSGICVCPUNumListRegs :: nat where
 
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
-   valid_asid_table' (armKSASIDTable (ksArchState s)) \<and>
-   0 \<notin> ran (armKSVMIDTable (ksArchState s)) \<and>
-   (case armHSCurVCPU (ksArchState s) of
-      Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
-      | _ \<Rightarrow> True) \<and>
-   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs \<and>
-   canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
+    valid_asid_table' (armKSASIDTable (ksArchState s)) s \<and>
+    (case (armHSCurVCPU (ksArchState s)) of Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s | _ \<Rightarrow> True) \<and>
+    is_inv (armKSHWASIDTable (ksArchState s))
+              (option_map fst o armKSASIDMap (ksArchState s)) \<and>
+    valid_asid_map' (armKSASIDMap (ksArchState s)) \<and>
+    armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs \<and>
+    valid_pde_mappings' s"
 
 definition archMakeObjectT :: "arch_kernel_object_type \<Rightarrow> kernel_object" where
   "archMakeObjectT atp \<equiv>
      case atp
-     of PTET \<Rightarrow> injectKO (makeObject :: pte)
+     of PDET \<Rightarrow> injectKO (makeObject :: pte)
+      | PTET \<Rightarrow> injectKO (makeObject :: pte)
       | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool)
       | VCPUT \<Rightarrow> injectKO (makeObject :: vcpu)"
+
+
+section "Misc properties not directly included in invariants"
+
+definition
+  "isSuperSection pde \<equiv> case pde of SuperSectionPDE _ _ _ _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  "isLargePage pte \<equiv> case pte of LargePagePTE _ _ _ _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  "valid_pde_duplicates_at' \<equiv> \<lambda>h p.
+    \<exists>pde. h p = Some (KOArch (KOPDE pde)) \<and> isSuperSection pde \<and>
+          vmsz_aligned (pdeFrame pde) ARMSuperSection \<and>
+          (\<forall>(p',i) \<in> set (zip superSectionPDEOffsets [0.e.15]).
+              h (p + p') = Some (KOArch (KOPDE (addPDEOffset pde i))))"
+
+definition
+  "valid_pte_duplicates_at' \<equiv> \<lambda>h p.
+    \<exists>pte. h p = Some (KOArch (KOPTE pte)) \<and> isLargePage pte \<and>
+          vmsz_aligned (pteFrame pte) ARMLargePage \<and>
+          (\<forall>(p',i) \<in> set (zip largePagePTEOffsets [0.e.15]).
+              h (p + p') = Some (KOArch (KOPTE (addPTEOffset pte i))))"
+
+definition vs_valid_duplicates' where
+  "vs_valid_duplicates' \<equiv> \<lambda>h. \<forall>x::32 word.
+     case h x of
+       Some (KOArch (KOPTE pte)) \<Rightarrow>
+            isLargePage pte \<longrightarrow> valid_pte_duplicates_at' h (x && ~~ mask (pte_bits + 4))
+     | Some (KOArch (KOPDE pde)) \<Rightarrow>
+            isSuperSection pde \<longrightarrow> valid_pde_duplicates_at' h (x && ~~ mask (pde_bits + 4))
+     | _ \<Rightarrow> True"
 
 end
 end

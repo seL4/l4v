@@ -696,7 +696,7 @@ lemma no_fail_getPTE [wp]:
   apply (rule no_fail_pre)
    apply wp
   apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
-                      cong: conj_cong)
+                      cong: conj_cong option.case_cong )
   apply (rule ps_clear_lookupAround2, assumption+)
     apply simp
    apply (erule is_aligned_no_overflow)
@@ -1500,6 +1500,10 @@ lemma setObject_PTE_arch [wp]:
   apply simp
   done
 
+lemma setObject_asidpool_ko_at'_pde[wp]:
+  "setObject p (v::asidpool) \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
+
 lemma setObject_ASID_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (rule valid_arch_state_lift'; wp?)
@@ -1510,17 +1514,9 @@ lemma setObject_ASID_valid_arch [wp]:
   apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
   done
 
-lemma setObject_PDE_valid_arch [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (rule valid_arch_state_lift')
-  apply (wp setObject_typ_at')+
-  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps archObjSize_def pageBits_def, rule refl)
-   apply (simp add: pde_bits_def)
-  apply (clarsimp; rule conjI)
-   prefer 2
-   apply (clarsimp simp: pred_conj_def)
-  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
-  done
+lemma setObject_pte_ko_at'_pde[wp]:
+  "setObject p (v::pte) \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
 
 lemma setObject_PTE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -1699,6 +1695,7 @@ lemma dmo_clearMemory_invs'[wp]:
 
 lemma pspace_aligned_cross:
   "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
+  supply option.case_cong[cong]
   apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
   apply (rename_tac p' ko')
   apply (prop_tac "p' \<in> pspace_dom (kheap s)", fastforce)
@@ -1721,7 +1718,7 @@ lemma pspace_aligned_cross:
       apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
 
      \<comment>\<open>PageTable\<close>
-     apply (clarsimp simp: archObjSize_def pteBits_def)
+     apply (clarsimp simp: archObjSize_def pte_bits_def)
      apply (rule is_aligned_add)
       apply (erule is_aligned_weaken)
       apply (simp add: vspace_bits_defs)

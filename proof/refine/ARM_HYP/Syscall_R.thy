@@ -895,7 +895,7 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
     valid_machine_state' s \<and>
     cur_tcb' s \<and>
     untyped_ranges_zero' s \<and>
-    valid_pde_mappings' s \<and> pspace_domain_valid s \<and>
+    pspace_domain_valid s \<and>
     ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and>
     (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s)"
 
@@ -921,7 +921,7 @@ lemma threadSet_all_invs_but_sch_extra:
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
   apply (wp threadSet_valid_pspace'T_P[where P = False and Q = \<top> and Q' = \<top>])
-  apply (simp add:tcb_cte_cases_def)+
+  apply (simp add:tcb_cte_cases_def tcb_cte_cases_neqs)+
    apply (wp
      threadSet_valid_pspace'T_P
      threadSet_state_refs_of'T_P[where f'=id and P'=False and Q=\<top> and g'=id and Q'=\<top>]
@@ -939,7 +939,7 @@ lemma threadSet_all_invs_but_sch_extra:
      threadSet_iflive'T
      threadSet_ifunsafe'T
      untyped_ranges_zero_lift threadSet_sched_pointers threadSet_valid_sched_pointers
-     | simp add:tcb_cte_cases_def cteCaps_of_def o_def)+
+     | simp add:tcb_cte_cases_def cteCaps_of_def o_def tcb_cte_cases_neqs)+
    apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift threadSet_pred_tcb_no_state | simp)+
   apply (clarsimp simp:sch_act_simple_def o_def cteCaps_of_def)
   apply (intro conjI)
@@ -952,6 +952,9 @@ lemma threadSet_not_curthread_ct_domain:
   apply (wp hoare_vcg_imp_lift hoare_vcg_disj_lift | wps)+
   apply clarsimp
   done
+
+crunch setDomain
+  for valid_arch_state'[wp]: valid_arch_state'
 
 lemma setDomain_invs':
   "\<lbrace>invs' and sch_act_simple and ct_active' and
