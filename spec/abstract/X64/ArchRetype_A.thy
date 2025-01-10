@@ -38,7 +38,7 @@ definition
   "empty_context \<equiv> UserContext (\<lambda>_. 0) (\<lambda>_. 0)"
 
 definition init_arch_tcb :: arch_tcb where
-  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context \<rparr>"
+  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context, tcb_cur_fpu = False \<rparr>"
 
 end
 end
