@@ -942,13 +942,9 @@ lemma associate_vcpu_tcb_sym_refs_hyp[wp]:
                              sym_refs (state_hyp_refs_of s)"
                           in hoare_post_imp)
     apply (clarsimp simp: obj_at_def)
-   apply (wp arch_thread_get_tcb)
+   apply (wp arch_thread_get_obj_at)
   apply simp
   done
-
-lemma arch_thread_set_inv_neq:
-  "\<lbrace>obj_at P p and K (t \<noteq> p)\<rbrace> arch_thread_set f t \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
-  unfolding arch_thread_set_def by (wpsimp wp: set_object_wp) (simp add: obj_at_def)
 
 lemma live_vcpu [simp]:
   "live (ArchObj (VCPU (v\<lparr>vcpu_tcb := Some tcb\<rparr>)))"
@@ -966,18 +962,6 @@ lemma set_vcpu_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to t\<rbrace> set_vcpu a b \<lbrace>\<lambda>_. ex_nonz_cap_to t\<rbrace>"
   apply (wp set_vcpu_wp)
   apply (clarsimp simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state caps_of_state_VCPU_update)
-  done
-
-lemma caps_of_state_tcb_arch_update:
-  "ko_at (TCB y) t' s \<Longrightarrow> caps_of_state (s\<lparr>kheap := (kheap s)(t' \<mapsto> TCB (y\<lparr>tcb_arch := f (tcb_arch y)\<rparr>))\<rparr>) = caps_of_state s"
-  by (rule ext) (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases obj_at_def tcb_cap_cases_def)
-
-lemma arch_thread_set_ex_nonz_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to t\<rbrace> arch_thread_set f t' \<lbrace>\<lambda>_. ex_nonz_cap_to t\<rbrace>"
-  apply (wp arch_thread_set_wp)
-  apply clarsimp
-  apply (clarsimp simp: ex_nonz_cap_to_def get_tcb_Some_ko_at cte_wp_at_caps_of_state
-                        caps_of_state_tcb_arch_update)
   done
 
 crunch dissociate_vcpu_tcb
@@ -1117,14 +1101,6 @@ lemma set_vcpu_tcb_Some_hyp_live[wp]:
   apply (clarsimp simp: obj_at_def hyp_live_def arch_live_def)
   done
 
-lemma arch_thread_set_vcpus_of[wp]:
-  "arch_thread_set f p \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
-  apply (wp arch_thread_set_wp)
-  apply (clarsimp simp: get_tcb_Some_ko_at)
-  apply (erule rsubst[where P=P])
-  apply (clarsimp simp: obj_at_def opt_map_def)
-  done
-
 lemma associate_vcpu_tcb_valid_arch_state[wp]:
   "associate_vcpu_tcb vcpu tcb \<lbrace>valid_arch_state\<rbrace>"
   supply fun_upd_apply[simp del]
@@ -1156,10 +1132,8 @@ lemma associate_vcpu_tcb_valid_objs[wp]:
   "\<lbrace>valid_objs and vcpu_at vcpu\<rbrace>
    associate_vcpu_tcb vcpu tcb
    \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  by (wp arch_thread_get_wp
-      | wp (once) hoare_drop_imps
-      | wpc
-      | clarsimp simp: associate_vcpu_tcb_def valid_obj_def[abs_def] valid_vcpu_def
+  by (wpsimp simp: associate_vcpu_tcb_def valid_obj_def[abs_def] valid_vcpu_def
+               wp: arch_thread_get_wp
       | simp add: obj_at_def)+
 
 lemma associate_vcpu_tcb_invs[wp]:

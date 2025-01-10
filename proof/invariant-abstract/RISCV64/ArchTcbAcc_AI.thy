@@ -152,12 +152,6 @@ lemma arch_tcb_context_get_eq_RISCV64[TcbAcc_AI_assms]: "arch_tcb_context_get (a
   unfolding arch_tcb_context_get_def arch_tcb_context_set_def
   by simp
 
-lemma arch_tcb_update_aux2: "(\<lambda>tcb. tcb\<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>)  = tcb_arch_update f"
-  by (rule ext, simp)
-
-lemma arch_tcb_update_aux3: "tcb\<lparr>tcb_arch := f (tcb_arch tcb)\<rparr>  = tcb_arch_update f tcb"
-  by(simp)
-
 lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atcb)) atcb
                                = tcb_context_update (\<lambda>ctx. P ctx) atcb"
   by (simp add: arch_tcb_context_set_def arch_tcb_context_get_def)
@@ -174,5 +168,13 @@ global_interpretation TcbAcc_AI?: TcbAcc_AI
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact TcbAcc_AI_assms)?)
   qed
+
+context Arch begin arch_global_naming
+
+lemma arch_thread_set_valid_idle[wp]:
+  "arch_thread_set f t \<lbrace>valid_idle\<rbrace>"
+  by (wpsimp wp: arch_thread_set_valid_idle' simp: valid_arch_idle_def)
+
+end
 
 end

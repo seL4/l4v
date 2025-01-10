@@ -152,12 +152,6 @@ lemma arch_tcb_context_get_eq_AARCH64[TcbAcc_AI_assms]: "arch_tcb_context_get (a
   unfolding arch_tcb_context_get_def arch_tcb_context_set_def
   by simp
 
-lemma arch_tcb_update_aux2: "(\<lambda>tcb. tcb\<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>)  = tcb_arch_update f"
-  by (rule ext, simp)
-
-lemma arch_tcb_update_aux3: "tcb\<lparr>tcb_arch := f (tcb_arch tcb)\<rparr>  = tcb_arch_update f tcb"
-  by(simp)
-
 lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atcb)) atcb
                                = tcb_context_update (\<lambda>ctx. P ctx) atcb"
   by (simp add: arch_tcb_context_set_def arch_tcb_context_get_def)
@@ -174,5 +168,69 @@ global_interpretation TcbAcc_AI?: TcbAcc_AI
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact TcbAcc_AI_assms)?)
   qed
+
+context Arch begin arch_global_naming
+
+lemma arch_thread_set_valid_idle[wp]:
+  "\<lbrace>valid_idle and (\<lambda>s. t \<noteq> idle_thread s \<or> (\<forall>atcb. tcb_vcpu atcb = None \<longrightarrow> tcb_vcpu (f atcb) = None))\<rbrace>
+   arch_thread_set f t
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  by (wpsimp wp: arch_thread_set_valid_idle' simp: valid_arch_idle_def)
+
+lemma arch_thread_set_if_live_then_nonz_cap_None[wp]:
+  "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap' simp: hyp_live_def)
+
+lemma arch_thread_set_if_live_then_nonz_cap_Some[wp]:
+  "\<lbrace>(ex_nonz_cap_to t or obj_at live t) and if_live_then_nonz_cap\<rbrace>
+   arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcp)) t
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_iflive)
+  apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
+                  dest!: get_tcb_SomeD)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
+  done
+
+lemma arch_thread_set_valid_objs_vcpu_None[wp]:
+  "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>valid_objs\<rbrace>"
+  by (wpsimp wp: arch_thread_set_valid_objs' simp: valid_arch_tcb_def)
+
+lemma arch_thread_set_valid_objs_vcpu_Some[wp]:
+  "\<lbrace>valid_objs and vcpu_at vcpu\<rbrace> arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcpu)) t \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  by (wpsimp wp: arch_thread_set_valid_objs' simp: valid_arch_tcb_def)
+
+lemma arch_thread_set_unlive_hyp[wp]:
+  "\<lbrace>\<lambda>s. vr \<noteq> t \<longrightarrow> obj_at (Not \<circ> hyp_live) vr s\<rbrace>
+   arch_thread_set (tcb_vcpu_update Map.empty) t
+   \<lbrace>\<lambda>_. obj_at (Not \<circ> hyp_live) vr\<rbrace>"
+  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
+  apply (clarsimp simp: obj_at_def hyp_live_def)
+  done
+
+lemma arch_thread_set_unlive0[wp]:
+  "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>obj_at (Not \<circ> live0) vr\<rbrace>"
+  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
+  apply (clarsimp simp: obj_at_def get_tcb_def split: kernel_object.splits)
+  done
+
+lemma arch_thread_set_unlive_other:
+  "\<lbrace>\<lambda>s. vr \<noteq> t \<and> obj_at (Not \<circ> live) vr s\<rbrace>
+   arch_thread_set (tcb_vcpu_update Map.empty) t
+   \<lbrace>\<lambda>_. obj_at (Not \<circ> live) vr\<rbrace>"
+  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma arch_thread_set_vcpus_of[wp]:
+  "arch_thread_set f t \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
+  apply (wp arch_thread_set_wp)
+  apply (clarsimp simp: get_tcb_Some_ko_at)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: obj_at_def opt_map_def)
+  done
+
+end
 
 end
