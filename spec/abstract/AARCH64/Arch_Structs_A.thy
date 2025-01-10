@@ -369,13 +369,14 @@ text \<open> Arch-specific part of a TCB: this must have at least a field for us
 record arch_tcb =
   tcb_context :: user_context
   tcb_vcpu    :: "obj_ref option"
+  tcb_cur_fpu :: bool
 
 end_qualify
 
 context Arch begin arch_global_naming (A)
 
 definition default_arch_tcb :: arch_tcb where
-  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_vcpu = None\<rparr>"
+  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_vcpu = None, tcb_cur_fpu = False\<rparr>"
 
 text \<open>
   Accessors for @{text "tcb_context"} inside @{text "arch_tcb"}. These are later used to
