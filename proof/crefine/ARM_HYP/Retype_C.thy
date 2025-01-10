@@ -1402,7 +1402,7 @@ lemma zero_ranges_ptr_retyps:
   apply (erule disjoint_subset[rotated])
   apply (subst intvl_plus_unat_eq)
     apply clarsimp
-   apply clarsimp
+   apply (clarsimp simp: mask_def add_diff_eq)
    apply (clarsimp simp: word_unat.Rep_inject[symmetric]
                          valid_cap_simps' capAligned_def
                          unat_of_nat
@@ -2850,7 +2850,7 @@ qed
 lemma dom_tcb_cte_cases_iff:
   "(x \<in> dom tcb_cte_cases) = (\<exists>y < 5. unat x = y * 16)"
   unfolding tcb_cte_cases_def
-  by (auto simp: unat_arith_simps)
+  by (auto simp: unat_arith_simps cteSizeBits_def)
 
 lemma cmap_relation_retype2:
   assumes cm: "cmap_relation mp mp' Ptr rel"
@@ -5536,7 +5536,7 @@ proof -
      apply (clarsimp simp: ps_clear_def)
      apply (subst dom_fun_upd[simplified fun_upd_def])
      apply (simp only: option.distinct if_False)
-     apply (subgoal_tac "({x..x + 2 ^ objBitsKO y - 1} - {x}) \<inter> {p} = {}")
+     apply (subgoal_tac "({x..x + mask (objBitsKO y)} - {x}) \<inter> {p} = {}")
       apply fastforce
      apply (drule (2) pspace_no_overlapD3')
      apply (simp only: obj_range'_def)
@@ -6132,7 +6132,7 @@ lemma threadSet_domain_ccorres [corres]:
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
-  apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def)
+  apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def tcb_cte_cases_neqs)
   apply (simp add: cep_relations_drop_fun_upd
                    cvariable_relation_upd_const ko_at_projectKO_opt)
   apply (drule ko_at_projectKO_opt)
@@ -6596,6 +6596,11 @@ lemma pspace_no_overlap_induce_vcpu:
   apply (erule (1) disjoint_subset[OF vcpu_range_subseteq[simplified]])
   done
 
+(* FIXME: helps with very specific reordering in ctes_of_ko_at_strong *)
+lemma add_abc_bac:
+  "a + b + c = b + a + (c::'a::semiring)"
+  by (simp add: field_simps)
+
 lemma ctes_of_ko_at_strong:
   "\<lbrakk>ctes_of s p = Some a; is_aligned p cteSizeBits\<rbrakk> \<Longrightarrow>
   (\<exists>ptr ko. (ksPSpace s ptr = Some ko \<and> {p ..+ 2^cteSizeBits} \<subseteq> obj_range' ptr ko))"
@@ -6605,7 +6610,7 @@ lemma ctes_of_ko_at_strong:
    apply (subst intvl_range_conv[where bits=cteSizeBits])
       apply simp
      apply (simp add: word_bits_def objBits_defs)
-    apply (simp add: field_simps)
+    apply (simp add: field_simps mask_def)
   apply (intro exI conjI, assumption)
   apply (clarsimp simp: objBits_simps obj_range'_def word_and_le2)
   apply (cut_tac intvl_range_conv[where bits=cteSizeBits and ptr=p, simplified])
@@ -6618,11 +6623,14 @@ lemma ctes_of_ko_at_strong:
   apply clarsimp
   apply (thin_tac "P \<or> Q" for P Q)
   apply (erule order_trans)
-  apply (subst word_plus_and_or_coroll2[where x=p and w="mask tcbBlockSizeBits",symmetric])
-  apply (clarsimp simp: tcb_cte_cases_def field_simps split: if_split_asm;
-         simp only: p_assoc_help;
-         rule word_plus_mono_right[OF _ is_aligned_no_wrap', OF _ Aligned.is_aligned_neg_mask[OF le_refl]];
-         simp add: objBits_defs)
+  apply (simp add: add_mask_fold)
+  apply (subst and_plus_not_and[where x=p and y="mask tcbBlockSizeBits",symmetric])
+  (* we want "(p && ~~ ...)" on the left *)
+  apply (subst add_abc_bac, subst add.assoc)
+  apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap',
+                                   OF _ Aligned.is_aligned_neg_mask[OF le_refl]])
+   apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def objBits_defs mask_def split: if_split_asm)
+  apply (simp add: objBits_defs mask_def)
   done
 
 lemma pspace_no_overlap_induce_cte:
@@ -6652,7 +6660,7 @@ lemma pspace_no_overlap_induce_cte:
   apply (subst intvl_range_conv)
     apply simp
    apply (simp add: word_bits_def)
-  apply (simp add: obj_range'_def)
+  apply (simp add: obj_range'_def ptr_range_mask_range del: Int_atLeastAtMost)
   done
 
 lemma pspace_no_overlap_induce_asidpool:
@@ -7129,6 +7137,7 @@ lemma tcb_ctes_typ_region_bytes:
                         pspace_no_overlap'_def is_aligned_neg_mask_eq simp_thms
                         field_simps upto_intvl_eq[symmetric])
   apply (elim allE, drule(1) mp)
+  apply (simp add: mask_def add_diff_eq upto_intvl_eq[symmetric] del: Int_atLeastAtMost)
   apply (drule(1) pspace_alignedD')
   apply (erule disjoint_subset[rotated])
   apply (simp add: upto_intvl_eq[symmetric])
@@ -7186,7 +7195,7 @@ lemma ccorres_typ_region_bytes_dummy:
                    tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned'])
   apply (simp add: cmap_array_typ_region_bytes_triv
                invs_pspace_aligned' table_bits_defs
-               objBitsT_simps word_bits_def
+               objBitsT_simps word_bits_def[simplified word_size_bits_def]
                zero_ranges_are_zero_typ_region_bytes)
   apply (rule htd_safe_typ_region_bytes, simp)
   apply blast

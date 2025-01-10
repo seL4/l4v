@@ -4860,7 +4860,7 @@ lemma sendIPC_block_ccorres_helper:
                               rf_sr_tcb_update_twice)
         apply (erule(1) rf_sr_tcb_update_no_queue_gen,
           (simp add: typ_heap_simps')+)[1]
-         apply (simp add: tcb_cte_cases_def)
+         apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
                          ThreadState_defs mask_def)
        apply ceqv
@@ -4870,7 +4870,7 @@ lemma sendIPC_block_ccorres_helper:
                threadSet_valid_objs')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
-                         tcb_cte_cases_def)
+                         tcb_cte_cases_def tcb_cte_cases_neqs)
   apply clarsimp
   done
 
@@ -5416,7 +5416,7 @@ lemma receiveIPC_block_ccorres_helper:
         apply (frule h_t_valid_c_guard)
         apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice cap_get_tag_isCap)
         apply (erule(1) rf_sr_tcb_update_no_queue_gen, (simp add: typ_heap_simps)+)
-         apply (simp add: tcb_cte_cases_def)
+         apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
         apply (simp add: ctcb_relation_def cthread_state_relation_def ccap_relation_ep_helpers
                          ThreadState_defs mask_def cap_get_tag_isCap)
        apply ceqv
@@ -5426,7 +5426,7 @@ lemma receiveIPC_block_ccorres_helper:
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
-                         tcb_cte_cases_def)
+                         tcb_cte_cases_def tcb_cte_cases_neqs)
   apply clarsimp
   done
 
@@ -6421,7 +6421,7 @@ lemma receiveSignal_block_ccorres_helper:
         apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice)
         apply (erule(1) rf_sr_tcb_update_no_queue_gen,
           (simp add: typ_heap_simps')+)
-         apply (simp add: tcb_cte_cases_def)
+         apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
                          ThreadState_defs mask_def)
        apply ceqv
@@ -6430,7 +6430,7 @@ lemma receiveSignal_block_ccorres_helper:
      apply (wp hoare_vcg_all_lift threadSet_valid_objs'
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
-   apply (auto simp: weak_sch_act_wf_def valid_tcb'_def tcb_cte_cases_def
+   apply (auto simp: weak_sch_act_wf_def valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs
                      valid_tcb_state'_def)
   done
 
