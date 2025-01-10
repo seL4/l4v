@@ -17,6 +17,7 @@ arch_requalify_facts
   set_cap_kernel_window_simple
 
 declare user_getreg_inv[wp]
+declare valid_arch_arch_tcb_context_set[simp]
 
 locale TcbAcc_AI_storeWord_invs =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -1826,5 +1827,310 @@ lemma thread_set_ct_in_state:
   apply wp
   apply simp
   done
+
+crunch arch_thread_get
+  for inv[wp]: "P"
+
+lemma arch_thread_get_wp:
+  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s \<longrightarrow> Q (f (tcb_arch tcb)) s\<rbrace> arch_thread_get f t \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp: arch_thread_get_def)
+  apply (auto dest!: get_tcb_ko_atD)
+  done
+
+lemma arch_thread_get_obj_at:
+  "\<lbrace>\<top>\<rbrace>
+   arch_thread_get f p
+   \<lbrace>\<lambda>rv s. \<exists>t. obj_at (\<lambda>tcb. tcb = (TCB t) \<and> rv = f (tcb_arch t)) p s\<rbrace>"
+  apply (simp add: arch_thread_get_def)
+  apply wp
+  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply simp
+  done
+
+lemma arch_thread_set_is_thread_set:
+  "arch_thread_set f t = thread_set (tcb_arch_update f) t"
+  by (simp add: thread_set_def arch_thread_set_def cong: tcb.fold_congs)
+
+(* arch_thread_set invariants *)
+lemma arch_thread_set_wp:
+  "\<lbrace>\<lambda>s. get_tcb p s \<noteq> None \<longrightarrow>
+          Q (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB (the (get_tcb p s)\<lparr>tcb_arch := f (tcb_arch (the (get_tcb p s)))\<rparr>))\<rparr>)\<rbrace>
+   arch_thread_set f p
+   \<lbrace>\<lambda>_. Q\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_wp)
+  apply simp
+  done
+
+lemma arch_thread_set_caps_of_state[wp]:
+  "arch_thread_set f t \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
+  apply (clarsimp simp: fun_upd_def)
+  apply (frule get_tcb_ko_atD)
+  apply (auto simp: caps_of_state_after_update obj_at_def tcb_cap_cases_def)
+  done
+
+lemma arch_thread_set_final_cap[wp]:
+  "arch_thread_set f t \<lbrace>is_final_cap' cap\<rbrace>"
+  by (wpsimp simp: is_final_cap'_def2 cte_wp_at_caps_of_state)
+
+crunch arch_thread_set
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps set_object_typ_at)
+
+lemmas arch_thread_set_typ_ats[wp] = abs_typ_at_lifts[OF arch_thread_set_typ_at]
+
+interpretation
+  arch_thread_set: non_aobj_non_cap_non_mem_op "arch_thread_set f t"
+  by (unfold_locales;
+        ((wpsimp)?;
+        wpsimp wp: set_object_non_arch simp: non_arch_objs arch_thread_set_def)?)
+
+lemma arch_thread_set_cur_tcb[wp]:
+  "arch_thread_set f t \<lbrace>cur_tcb\<rbrace>"
+  unfolding cur_tcb_def[abs_def]
+  apply (rule hoare_lift_Pf [where f=cur_thread])
+   apply (simp add: tcb_at_typ)
+   apply wp
+  apply (simp add: arch_thread_set_def)
+  apply (wp hoare_drop_imp)
+  apply simp
+  done
+
+lemma cte_wp_at_update_some_tcb:
+  "\<lbrakk>kheap s v = Some (TCB tcb) ; tcb_cnode_map tcb = tcb_cnode_map (f tcb)\<rbrakk>
+  \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := (kheap s)(v \<mapsto> TCB (f tcb))\<rparr>) = cte_wp_at P p s"
+  apply (clarsimp simp: cte_wp_at_cases2 dest!: get_tcb_SomeD)
+  done
+
+lemma arch_tcb_update_aux2:
+  "(\<lambda>tcb. tcb\<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>) = tcb_arch_update f"
+  by (rule ext, simp)
+
+lemma arch_tcb_update_aux3:
+  "tcb\<lparr>tcb_arch := f (tcb_arch tcb)\<rparr> = tcb_arch_update f tcb"
+  by (simp)
+
+lemma arch_thread_set_cap_refs_respects_device_region[wp]:
+  "arch_thread_set f t \<lbrace>cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  apply wp
+  apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (subst cap_refs_respects_region_cong)
+    prefer 3
+    apply assumption
+   apply (rule cte_wp_caps_of_lift)
+   apply (subst arch_tcb_update_aux3)
+   apply (rule_tac cte_wp_at_update_some_tcb, assumption)
+   apply (simp add: tcb_cnode_map_def)+
+  done
+
+lemma arch_thread_set_pspace_respects_device_region[wp]:
+  "arch_thread_set f t \<lbrace>pspace_respects_device_region\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp get_object_wp set_object_pspace_respects_device_region)
+  apply clarsimp
+  done
+
+lemma arch_thread_set_cap_refs_in_kernel_window[wp]:
+  "arch_thread_set f t \<lbrace>cap_refs_in_kernel_window\<rbrace>"
+  unfolding cap_refs_in_kernel_window_def[abs_def]
+  apply (rule hoare_lift_Pf [where f="\<lambda>s. not_kernel_window s"])
+  apply (rule valid_refs_cte_lift)
+  apply wp+
+  done
+
+crunch arch_thread_set
+  for valid_irq_states[wp]: valid_irq_states
+  and interrupt_state[wp]: "\<lambda>s. P (interrupt_states s)"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemmas arch_thread_set_valid_irq_handlers[wp]
+  = valid_irq_handlers_lift[OF arch_thread_set.caps arch_thread_set_interrupt_state]
+
+lemmas arch_thread_set_valid_irq_node[wp]
+  = valid_irq_node_typ[OF arch_thread_set_typ_at arch_thread_set_interrupt_irq_node]
+
+lemma arch_thread_set_valid_global_refs[wp]:
+  "arch_thread_set f t \<lbrace>valid_global_refs\<rbrace>"
+  by (rule valid_global_refs_cte_lift) wp+
+
+lemma arch_thread_set_valid_reply_masters[wp]:
+  "arch_thread_set f t \<lbrace>valid_reply_masters\<rbrace>"
+  by (rule valid_reply_masters_cte_lift) wp
+
+lemma arch_thread_set_pred_tcb_at[wp_unsafe]:
+  "\<lbrace>pred_tcb_at proj P t and K (proj_not_field proj tcb_arch_update)\<rbrace>
+   arch_thread_set f t'
+   \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  apply wp
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev
+                  dest!: get_tcb_SomeD)
+  done
+
+lemma arch_thread_set_valid_reply_caps[wp]:
+  "arch_thread_set f t \<lbrace>valid_reply_caps\<rbrace>"
+  by (rule valid_reply_caps_st_cte_lift)
+     (wpsimp wp: arch_thread_set_pred_tcb_at)+
+
+lemma arch_thread_set_if_unsafe_then_cap[wp]:
+  "arch_thread_set f t \<lbrace>if_unsafe_then_cap\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp get_object_wp set_object_ifunsafe)
+  apply (clarsimp simp: ran_tcb_cap_cases)
+  done
+
+lemma arch_thread_set_only_idle[wp]:
+  "arch_thread_set f t \<lbrace>only_idle\<rbrace>"
+  by (wpsimp wp: only_idle_lift arch_thread_set_pred_tcb_at)
+
+lemma arch_thread_set_valid_ioc[wp]:
+  "arch_thread_set f t \<lbrace>valid_ioc\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  apply (wp set_object_valid_ioc_caps)
+  apply (clarsimp simp add: valid_ioc_def
+                  simp del: fun_upd_apply
+                  dest!: get_tcb_SomeD)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (subst arch_tcb_update_aux3)
+  apply (subst cte_wp_at_update_some_tcb,assumption)
+   apply (clarsimp simp: tcb_cnode_map_def)+
+  done
+
+lemma arch_thread_set_valid_mdb[wp]:
+  "arch_thread_set f t \<lbrace>valid_mdb\<rbrace>"
+  by (wpsimp wp: valid_mdb_lift get_object_wp simp: arch_thread_set_def)
+
+lemma arch_thread_set_zombies_final[wp]:
+  "arch_thread_set f t \<lbrace>zombies_final\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp get_object_wp set_object_zombies)
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (subst get_tcb_rev)
+   apply assumption
+  apply simp
+  apply (subst get_tcb_rev, assumption, simp)+
+  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
+  done
+
+lemma arch_thread_set_if_live_then_nonz_cap':
+  "\<forall>y. hyp_live (TCB (y\<lparr>tcb_arch := f (tcb_arch y)\<rparr>)) \<longrightarrow> hyp_live (TCB y) \<Longrightarrow>
+   \<lbrace>if_live_then_nonz_cap\<rbrace> arch_thread_set f t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_iflive)
+  apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
+                  dest!: get_tcb_SomeD)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
+  apply (erule_tac x=t in allE, drule mp; assumption?)
+  apply (clarsimp simp: live_def)
+  done
+
+lemma arch_thread_set_valid_idle':
+  "\<lbrace>valid_idle and
+    (\<lambda>s. t \<noteq> idle_thread s \<or>
+         (\<forall>atcb. valid_arch_idle (arch_tcb_to_iarch_tcb atcb) \<longrightarrow>
+                   valid_arch_idle (arch_tcb_to_iarch_tcb (f atcb))))\<rbrace>
+   arch_thread_set f t
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  by (wpsimp wp: arch_thread_set_wp
+           simp: valid_idle_def get_tcb_def pred_tcb_at_def obj_at_def)
+
+lemma arch_thread_set_valid_objs':
+  "\<lbrace>\<lambda>s. valid_objs s \<and> (\<forall>atcb. valid_arch_tcb atcb s \<longrightarrow> valid_arch_tcb (f atcb) s)\<rbrace>
+   arch_thread_set f t
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_valid_objs)
+  apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
+  apply (erule_tac x=t in allE)
+  apply (clarsimp simp: dom_def)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def)
+  done
+
+lemma arch_thread_set_valid_objs_context[wp]:
+  "arch_thread_set (arch_tcb_context_set uc) t \<lbrace>valid_objs\<rbrace>"
+  by (wpsimp wp: arch_thread_set_valid_objs')
+
+lemma arch_thread_set_pspace_in_kernel_window[wp]:
+  "arch_thread_set f t \<lbrace>pspace_in_kernel_window\<rbrace>"
+  by (rule pspace_in_kernel_window_atyp_lift, wp+)
+
+lemma arch_thread_set_pspace_distinct[wp]:
+  "arch_thread_set f t\<lbrace>pspace_distinct\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_distinct)
+  apply (clarsimp simp: get_object_def obj_at_def
+                  dest!: get_tcb_SomeD)
+  done
+
+lemma arch_thread_set_pspace_aligned[wp]:
+  "arch_thread_set f t \<lbrace>pspace_aligned\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_aligned)
+  apply (clarsimp simp: obj_at_def get_object_def
+                  dest!: get_tcb_SomeD)
+  done
+
+lemma sym_refs_update_some_tcb:
+  "\<lbrakk>kheap s v = Some (TCB tcb) ; refs_of (TCB tcb) = refs_of (TCB (f tcb))\<rbrakk>
+  \<Longrightarrow> sym_refs (state_refs_of (s\<lparr>kheap := (kheap s)(v \<mapsto> TCB (f tcb))\<rparr>)) = sym_refs (state_refs_of s)"
+  apply (rule_tac f=sym_refs in arg_cong)
+  apply (rule all_ext)
+  apply (clarsimp simp: sym_refs_def state_refs_of_def)
+  done
+
+lemma arch_thread_sym_refs[wp]:
+  "arch_thread_set f t \<lbrace>\<lambda>s. sym_refs (state_refs_of s)\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  apply wp
+  apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (subst arch_tcb_update_aux3)
+  apply (subst sym_refs_update_some_tcb[where f="tcb_arch_update f"])
+    apply assumption
+   apply (clarsimp simp: refs_of_def)
+  apply assumption
+  done
+
+lemma arch_thread_set_cte_wp_at[wp]:
+  "arch_thread_set f t \<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_wp)
+  apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (subst arch_tcb_update_aux3)
+  apply (subst cte_wp_at_update_some_tcb[where f="tcb_arch_update f"])
+    apply (clarsimp simp: tcb_cnode_map_def)+
+  done
+
+lemma arch_thread_set_inv_neq:
+  "\<lbrace>obj_at P p and K (t \<noteq> p)\<rbrace> arch_thread_set f t \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+  unfolding arch_thread_set_def by (wpsimp wp: set_object_wp) (simp add: obj_at_def)
+
+lemma caps_of_state_tcb_arch_update:
+  "ko_at (TCB y) t' s \<Longrightarrow> caps_of_state (s\<lparr>kheap := (kheap s)(t' \<mapsto> TCB (y\<lparr>tcb_arch := f (tcb_arch y)\<rparr>))\<rparr>) = caps_of_state s"
+  by (rule ext) (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases obj_at_def tcb_cap_cases_def)
+
+lemma arch_thread_set_ex_nonz_cap_to[wp]:
+  "arch_thread_set f t' \<lbrace>ex_nonz_cap_to t\<rbrace>"
+  apply (wp arch_thread_set_wp)
+  apply clarsimp
+  apply (clarsimp simp: ex_nonz_cap_to_def get_tcb_Some_ko_at cte_wp_at_caps_of_state
+                        caps_of_state_tcb_arch_update)
+  done
+
+crunch arch_thread_set
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  and exst[wp]: "\<lambda>s. P (exst s)"
+  (wp: set_object_wp)
 
 end

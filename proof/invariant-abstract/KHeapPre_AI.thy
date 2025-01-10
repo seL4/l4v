@@ -140,6 +140,14 @@ lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (T
 lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
   by (simp add: tcb_at_def)
 
+lemma get_tcb_None_tcb_at:
+  "(get_tcb p s = None) = (\<not>tcb_at p s)"
+  by (auto simp: get_tcb_def obj_at_def is_tcb_def split: kernel_object.splits option.splits)
+
+lemma get_tcb_Some_ko_at:
+  "(get_tcb p s = Some t) = ko_at (TCB t) p s"
+  by (auto simp: get_tcb_def obj_at_def is_tcb_def split: kernel_object.splits option.splits)
+
 lemma typ_at_same_type:
   assumes "typ_at T p s" "a_type k = a_type ko" "kheap s p' = Some ko"
   shows "typ_at T p (s\<lparr>kheap := (kheap s)(p' \<mapsto> k)\<rparr>)"
