@@ -867,7 +867,7 @@ lemma checkCapAt_cteInsert_corres:
      apply clarsimp
      apply (rule conjI, fastforce)+
      apply (cases src_slot)
-     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (clarsimp simp: cte_wp_at_caps_of_state invs_arch_state)
      apply (rule conjI)
       apply (frule same_object_as_cap_master)
       apply (clarsimp simp: cap_master_cap_simps is_cnode_or_valid_arch_def

@@ -198,13 +198,6 @@ primrec acapClass :: "arch_capability \<Rightarrow> capclass" where
 | "acapClass (IOPortCap x y) = IOPortClass"
 | "acapClass IOPortControlCap = IOPortClass"
 
-(* IOPortControl caps are unique and always revocable *)
-definition
-  "ioport_control m \<equiv>
-  \<forall>p n. m p = Some (CTE (ArchObjectCap IOPortControlCap) n) \<longrightarrow>
-        mdbRevocable n \<and>
-        (\<forall>p' n'. m p' = Some (CTE (ArchObjectCap IOPortControlCap) n') \<longrightarrow> p' = p)"
-
 definition
   isArchFrameCap :: "capability \<Rightarrow> bool"
 where
@@ -220,11 +213,6 @@ definition
   isArchIOPortCap :: "capability \<Rightarrow> bool"
 where
   "isArchIOPortCap cap \<equiv> case cap of ArchObjectCap (IOPortCap f l) \<Rightarrow> True | _ \<Rightarrow> False"
-
-definition valid_arch_mdb_ctes :: "cte_heap \<Rightarrow> bool" where
-  "valid_arch_mdb_ctes \<equiv> ioport_control"
-
-lemmas [simp] = valid_arch_mdb_ctes_def
 
 definition table_refs' :: "machine_word \<Rightarrow> machine_word set" where
   "table_refs' x \<equiv> (\<lambda>y. x + (y << word_size_bits)) ` {y. y < 2^ptTranslationBits}"

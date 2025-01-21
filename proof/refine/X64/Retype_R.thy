@@ -3029,15 +3029,6 @@ lemma irq_control_n:
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
-lemma ioport_control_n:
-  "ioport_control n"
-  apply (clarsimp simp add: ioport_control_def)
-  apply (simp add: n_Some_eq split: if_split_asm)
-  apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
-  apply clarsimp
-  apply (erule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-  done
-
 lemma dist_z_m: "distinct_zombies m"
   using valid by auto
 
@@ -3065,7 +3056,7 @@ lemma valid_n:
   by (simp add: valid_mdb_ctes_def dlist_n no_0_n mdb_chain_0_n
                 valid_badges_n caps_contained_n untyped_mdb_n
                 untyped_inc_n mdb_chunked_n valid_nullcaps_n ut_rev_n
-                class_links_n irq_control_n dist_z_n ioport_control_n
+                class_links_n irq_control_n dist_z_n
                 reply_masters_rvk_fb_n)
 
 end

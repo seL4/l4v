@@ -1418,8 +1418,7 @@ lemma
   untyped_mdb: "untyped_mdb' m" and
   untyped_inc: "untyped_inc' m" and
   class_links: "class_links m" and
-  irq_control: "irq_control m" and
-  arch_mdb_ctes: "valid_arch_mdb_ctes m" (* FIXME arch-split: this should be valid_arch_mdb_ctes *)
+  irq_control: "irq_control m"
   using valid
   by (simp_all add: valid_mdb_ctes_def)
 
@@ -1956,35 +1955,6 @@ lemma irq_control_init:
   apply (erule (1) irq_controlD, rule ctrl)
   done
 
-definition
-  "no_ioport' m \<equiv> \<forall>p cte. m p = Some cte \<longrightarrow> cteCap cte \<noteq> (ArchObjectCap IOPortControlCap)"
-
-lemma no_ioportD':
-  "\<lbrakk> m p = Some (CTE (ArchObjectCap IOPortControlCap) n); no_ioport' m \<rbrakk> \<Longrightarrow> False"
-  unfolding no_ioport'_def
-  apply (erule allE, erule allE, erule (1) impE)
-  apply auto
-  done
-
-lemma ioport_control_init:
-  assumes no_ioport: "cap = (ArchObjectCap IOPortControlCap) \<longrightarrow> no_ioport' m"
-  assumes ctrl: "ioport_control m"
-  shows "ioport_control (m(p \<mapsto> CTE cap initMDBNode))"
-  using no_ioport
-  apply (clarsimp simp: ioport_control_def)
-  apply (rule conjI)
-   apply (clarsimp simp: initMDBNode_def)
-   apply (erule (1) no_ioportD')
-  apply clarsimp
-  apply (frule ioport_revocable, rule ctrl)
-  apply clarsimp
-  apply (rule conjI)
-   apply clarsimp
-   apply (erule (1) no_ioportD')
-  apply clarsimp
-  apply (erule (1) ioport_controlD, rule ctrl)
-  done
-
 lemma valid_mdb_ctes_init:
   "\<lbrakk> valid_mdb_ctes m; m p = Some cte; no_mdb cte;
      caps_no_overlap' m (capRange cap); s \<turnstile>' cap;
@@ -2019,10 +1989,8 @@ lemma valid_mdb_ctes_init:
    apply (rule valid_capAligned, erule(1) ctes_of_valid_cap')
   apply (rule conjI)
    apply (erule (1) irq_control_init)
-  apply (rule conjI)
-   apply (simp add: ran_def reply_masters_rvk_fb_def)
-   apply (auto simp: initMDBNode_def)[1]
-  apply (erule (1) ioport_control_init)
+  apply (simp add: ran_def reply_masters_rvk_fb_def)
+  apply (auto simp: initMDBNode_def)[1]
   done
 
 lemma setCTE_state_refs_of'[wp]:

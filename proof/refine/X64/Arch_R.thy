@@ -139,6 +139,7 @@ lemma performASIDControlInvocation_corres:
   apply (cases i)
   apply (rename_tac word1 prod1 prod2 word2)
   apply (clarsimp simp: asid_ci_map_def)
+  apply (rename_tac p slot p' slot' word2)
   apply (simp add: perform_asid_control_invocation_def placeNewObject_def2
                    performASIDControlInvocation_def)
   apply (rule corres_name_pre)
@@ -197,7 +198,7 @@ lemma performASIDControlInvocation_corres:
                apply wp+
            apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
            apply (strengthen invs_valid_objs invs_distinct
-                             invs_psp_aligned invs_mdb
+                             invs_psp_aligned invs_mdb invs_arch_state
                   | simp cong:conj_cong)+
            apply (wp retype_region_plain_invs[where sz = pageBits]
                      retype_cte_wp_at[where sz = pageBits])+
@@ -269,9 +270,9 @@ lemma performASIDControlInvocation_corres:
               deleteObjects_null_filter[where p="makePoolParent i'"])
    apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
    apply (prop_tac "detype_locale x y sa" for x y)
-    apply (simp add: detype_locale_def)
-    apply (fastforce simp: cte_wp_at_caps_of_state descendants_range_def2
-                           empty_descendants_range_in invs_untyped_children)
+    apply (clarsimp simp: detype_locale_def cte_wp_at_caps_of_state)
+    apply (rule conjI, assumption, rule conjI, solves simp) (* force instantiation to Untyped cap *)
+    apply (fastforce simp: descendants_range_def2 empty_descendants_range_in invs_untyped_children)
    apply (intro conjI)
           apply (clarsimp)
          apply (erule(1) caps_of_state_valid)
@@ -283,7 +284,7 @@ lemma performASIDControlInvocation_corres:
     apply (drule detype_locale.non_null_present)
      apply (fastforce simp:cte_wp_at_caps_of_state)
     apply simp
-   apply (frule_tac ptr = "(aa,ba)" in detype_invariants [rotated 3])
+   apply (frule_tac ptr = "(p', slot')" in detype_invariants [rotated 3])
         apply fastforce
        apply simp
       apply (simp add: cte_wp_at_caps_of_state)
@@ -311,7 +312,7 @@ lemma performASIDControlInvocation_corres:
      apply (simp add:empty_descendants_range_in)+
    apply (rule conjI)
     apply clarsimp
-    apply (drule_tac p = "(aa,ba)" in cap_refs_in_kernel_windowD2[OF caps_of_state_cteD])
+    apply (drule_tac p = "(p', slot')" in cap_refs_in_kernel_windowD2[OF caps_of_state_cteD])
      apply fastforce
     apply (clarsimp simp: region_in_kernel_window_def valid_cap_def
                           cap_aligned_def is_aligned_neg_mask_eq detype_def clear_um_def)
@@ -321,7 +322,7 @@ lemma performASIDControlInvocation_corres:
    apply (clarsimp simp: detype_def clear_um_def detype_ext_def valid_sched_def valid_etcbs_def
             st_tcb_at_kh_def obj_at_kh_def st_tcb_at_def obj_at_def is_etcb_at_def)
   apply (simp add: detype_def clear_um_def)
-  apply (drule_tac x = "cte_map (aa,ba)" in pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+  apply (drule_tac x = "cte_map (p', slot')" in pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
     apply (simp add:invs_valid_objs)+
   apply clarsimp
   apply (drule cte_map_inj_eq)
@@ -1392,7 +1393,7 @@ lemma performX64PortInvocation_corres:
       apply wpsimp
      apply (clarsimp simp: is_simple_cap_def is_cap_simps)
      apply wpsimp
-     apply (strengthen invs_distinct[mk_strg] invs_psp_aligned_strg invs_strgs)
+     apply (strengthen invs_distinct[mk_strg] invs_psp_aligned_strg invs_strgs invs_arch_state)
      apply (wpsimp wp: set_ioport_mask_invs set_ioport_mask_safe_parent_for)
     apply (clarsimp simp: is_simple_cap'_def isCap_simps)
     apply wpsimp

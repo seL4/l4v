@@ -212,9 +212,6 @@ abbreviation (input)
 
 lemmas isArchPageCap_def = isArchFrameCap_def
 
-definition valid_arch_mdb_ctes :: "cte_heap \<Rightarrow> bool" where
-  "valid_arch_mdb_ctes \<equiv> \<top>"
-
 definition page_directory_refs' :: "word32 \<Rightarrow> word32 set" where
   "page_directory_refs' x \<equiv> (\<lambda>y. x + (y << 3)) ` {y. y < 2 ^ 11}"
 

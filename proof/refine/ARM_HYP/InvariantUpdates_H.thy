@@ -483,10 +483,4 @@ lemma invs'_update_cnt[elim!]:
    by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def cur_tcb'_def
                       ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def bitmapQ_defs)
 
-(* FIXME arch-split: valid_arch_mdb_ctes only exists to contain ioport_control on x64, and it is not
-   yet clear what the best way to arch-split it is, or whether it can be crossed from AInvs.
-   Therefore, for now, export the truth that it doesn't do anything on this arch beyond this point *)
-arch_requalify_facts valid_arch_mdb_ctes_def
-lemmas [simp] = valid_arch_mdb_ctes_def
-
 end

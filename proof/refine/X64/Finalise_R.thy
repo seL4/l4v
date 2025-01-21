@@ -1060,19 +1060,6 @@ lemma irq_control_n [simp]: "irq_control n"
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
-lemma ioport_control_n [simp]: "ioport_control n"
-  using slot
-  apply (clarsimp simp: ioport_control_def)
-  apply (frule n_revokable)
-  apply (drule n_cap)
-  apply (clarsimp split: if_split_asm)
-  apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
-  apply clarsimp
-  apply (drule n_cap)
-  apply (clarsimp simp: if_split_asm)
-  apply (erule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-  done
-
 lemma reply_masters_rvk_fb_m: "reply_masters_rvk_fb m"
   using valid by auto
 

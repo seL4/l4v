@@ -1416,6 +1416,20 @@ lemma assert_isolatable:
                 thread_actions_isolatable_returns
                 thread_actions_isolatable_fail)
 
+lemma archMDBAssertions_isolatable:
+  "thread_actions_isolatable idx (stateAssert archMDBAssertions [])"
+  unfolding stateAssert_def archMDBAssertions_def
+  apply (clarsimp simp: thread_actions_isolatable_def)
+  apply (simp add: isolate_thread_actions_def bind_assoc split_def)
+  apply (simp add: bind_select_f_bind[symmetric] select_f_returns)
+  apply (clarsimp simp: monadic_rewrite_def exec_gets getSchedulerAction_def
+                        map_to_ctes_partial_overwrite)
+  apply (simp add: select_f_asserts)
+  apply (clarsimp simp: exec_modify o_def return_def)
+  apply (simp add: ksPSpace_update_partial_id)
+  apply (simp add: return_def fail_def modify_def get_def put_def assert_def bind_def)
+  done
+
 lemma cteInsert_isolatable:
   "thread_actions_isolatable idx (cteInsert cap src dest)"
   supply if_split[split del] if_cong[cong]
@@ -1424,7 +1438,8 @@ lemma cteInsert_isolatable:
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if
                thread_actions_isolatable_returns assert_isolatable
-               getCTE_isolatable setCTE_isolatable)
+               getCTE_isolatable setCTE_isolatable
+               archMDBAssertions_isolatable)
   apply (wp | simp)+
   done
 

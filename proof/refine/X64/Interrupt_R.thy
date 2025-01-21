@@ -500,6 +500,13 @@ crunch X64_H.updateIRQState
   and ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' a b"
   (simp: ex_cte_cap_wp_to'_def valid_mdb'_def)
 
+crunch set_irq_state
+  for valid_arch_state[wp]: valid_arch_state
+
+lemma maxUserIRQ_le_maxIRQ:
+  "X64.maxUserIRQ \<le> maxIRQ"
+  by (simp add: X64.maxUserIRQ_def maxIRQ_def)
+
 lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid x2)
@@ -516,10 +523,12 @@ lemma arch_performIRQControl_corres:
             apply (rule setIRQState_corres)
             apply (simp add: irq_state_relation_def)
            apply (rule cteInsert_simple_corres)
-             apply (wpsimp simp: IRQHandler_valid IRQHandler_valid' | wps)+
+             apply (wpsimp simp: IRQHandler_valid IRQHandler_valid'
+                    | strengthen invs_arch_state
+                    | wps)+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                           is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                          safe_parent_for_def)
+                          safe_parent_for_def order_trans[OF _ maxUserIRQ_le_maxIRQ])
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
                       IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
    apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
@@ -533,10 +542,12 @@ lemma arch_performIRQControl_corres:
          apply (rule setIRQState_corres)
          apply (simp add: irq_state_relation_def)
         apply (rule cteInsert_simple_corres)
-          apply (wpsimp simp: IRQHandler_valid IRQHandler_valid' | wps)+
+           apply (wpsimp simp: IRQHandler_valid IRQHandler_valid'
+                  | strengthen invs_arch_state
+                 | wps)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                             is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                            safe_parent_for_def)
+                            safe_parent_for_def order_trans[OF _ maxUserIRQ_le_maxIRQ])
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
                       IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
