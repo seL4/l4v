@@ -2692,14 +2692,6 @@ lemma irq_control_n' [simp]:
   apply (clarsimp simp: modify_map_if split: if_split_asm)
   done
 
-lemma ioport_control_n' [simp]:
-  "ioport_control n'"
-  using arch_mdb_ctes[simplified] phys
-  apply (clarsimp simp: ioport_control_def)
-  apply (clarsimp simp: n'_def n_def)
-  apply (clarsimp simp: modify_map_if split: if_split_asm)
-  done
-
 lemma dist_z_m:
   "distinct_zombies m"
   using valid by auto

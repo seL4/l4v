@@ -4781,55 +4781,6 @@ lemma irq_control_n: "irq_control n"
   apply clarsimp
   done
 
-context begin interpretation Arch . (* FIXME arch-split *)
-
-lemma ioport_control_n: "ioport_control n"
-  using src dest dest_derived src_derived
-  apply (clarsimp simp: ioport_control_def)
-  apply (frule revokable)
-  apply (drule n_cap)
-  apply (clarsimp split: if_split_asm)
-    apply (clarsimp simp: weak_derived'_def)
-    apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
-    apply clarsimp
-    apply (drule n_cap)
-    apply (split if_split_asm)
-     apply (thin_tac "capability.ArchObjectCap X64_H.IOPortControlCap = dcap")
-     apply clarsimp
-    apply (clarsimp split: if_split_asm)
-     apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-     apply simp
-    apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-    apply simp
-   apply (clarsimp simp: weak_derived'_def)
-   apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
-   apply clarsimp
-   apply (drule n_cap)
-    apply (split if_split_asm)
-     apply clarsimp
-    apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-    apply simp
-   apply (split if_split_asm)
-    apply (thin_tac "capability.ArchObjectCap X64_H.IOPortControlCap = scap")
-    apply clarsimp
-   apply (clarsimp split: if_split_asm)
-   apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-   apply simp
-  apply (clarsimp simp: weak_derived'_def)
-  apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
-  apply clarsimp
-  apply (drule n_cap)
-  apply (clarsimp split: if_split_asm)
-    apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-    apply simp
-   apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-   apply clarsimp
-  apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-  apply clarsimp
-  done
-
-end
-
 lemma distinct_zombies_m:
   "distinct_zombies m"
   using valid by auto
@@ -4874,9 +4825,9 @@ lemma cteSwap_valid_mdb_helper:
   shows "valid_mdb_ctes n"
   using cteSwap_chain cteSwap_dlist_helper cteSwap_valid_badges
         cteSwap_chunked caps_contained untyped_mdb_n untyped_inc_n
-        nullcaps_n ut_rev_n class_links_n irq_control_n ioport_control_n
+        nullcaps_n ut_rev_n class_links_n irq_control_n
         distinct_zombies_n reply_masters_rvk_fb_n
-  by (auto simp: untyped_eq X64.valid_arch_mdb_ctes_def)
+  by (auto simp: untyped_eq)
 
 end
 
@@ -5732,10 +5683,7 @@ lemma make_zombie_invs':
     apply (subgoal_tac "cap \<noteq> IRQControlCap")
      apply (clarsimp simp: irq_control_def)
     apply (clarsimp simp: isCap_simps)
-   apply (rule conjI[rotated])
-    apply (subgoal_tac "cap \<noteq> ArchObjectCap IOPortControlCap")
-     apply (clarsimp simp: ioport_control_def)
-    apply (clarsimp simp: isCap_simps)
+   apply (clarsimp simp: isCap_simps)
    apply (simp add: reply_masters_rvk_fb_def, erule ball_ran_fun_updI)
    apply (clarsimp simp: isCap_simps)
   apply (clarsimp simp: modify_map_apply)
@@ -8491,28 +8439,6 @@ proof
      apply (drule (1) irq_controlD, rule irq_control)
      apply simp
     apply (erule (1) irq_controlD, rule irq_control)
-    done
-
-  show "valid_arch_mdb_ctes m'" using src dest parency
-    apply (clarsimp simp: ioport_control_def)
-    apply (frule m'_revocable)
-    apply (drule m'_cap)
-    apply (clarsimp split: if_split_asm)
-     apply (clarsimp simp add: weak_derived'_def)
-     apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
-     apply clarsimp
-     apply (drule m'_cap)
-     apply (clarsimp split: if_split_asm)
-     apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-     apply simp
-    apply (frule ioport_revocable, rule arch_mdb_ctes[simplified])
-    apply clarsimp
-    apply (drule m'_cap)
-    apply (clarsimp split: if_split_asm)
-     apply (clarsimp simp: weak_derived'_def)
-     apply (drule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
-     apply simp
-    apply (erule (1) ioport_controlD, rule arch_mdb_ctes[simplified])
     done
 
   have distz: "distinct_zombies m"

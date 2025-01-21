@@ -200,9 +200,6 @@ definition
 where
  "isArchFrameCap cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ _ _) \<Rightarrow> True | _ \<Rightarrow> False"
 
-definition valid_arch_mdb_ctes :: "cte_heap \<Rightarrow> bool" where
-  "valid_arch_mdb_ctes \<equiv> \<top>"
-
 (* Addresses of all PTEs in a VSRoot table at p *)
 definition table_refs' :: "machine_word \<Rightarrow> machine_word set" where
   "table_refs' p \<equiv> (\<lambda>i. p + (i << pte_bits)) ` mask_range 0 (ptTranslationBits VSRootPT_T)"

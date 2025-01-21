@@ -8371,9 +8371,6 @@ proof
     apply (erule (1) irq_controlD, rule irq_control)
     done
 
-  show "valid_arch_mdb_ctes m'"
-    by simp
-
   have distz: "distinct_zombies m"
     using valid by (simp add: valid_mdb_ctes_def)
 

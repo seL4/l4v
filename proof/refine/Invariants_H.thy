@@ -26,7 +26,6 @@ arch_requalify_consts
   global_refs'
   valid_arch_state'
   archMakeObjectT
-  valid_arch_mdb_ctes
   pspace_in_kernel_mappings'
   kernel_data_refs
   kernel_mappings
@@ -413,8 +412,6 @@ where
   "valid_objs' s \<equiv> \<forall>obj \<in> ran (ksPSpace s). valid_obj' obj s"
 
 
-type_synonym cte_heap = "machine_word \<Rightarrow> cte option"
-
 definition
   map_to_ctes :: "(machine_word \<rightharpoonup> kernel_object) \<Rightarrow> cte_heap"
 where
@@ -640,8 +637,7 @@ where
                         mdb_chunked m \<and> untyped_mdb' m \<and>
                         untyped_inc' m \<and> valid_nullcaps m \<and>
                         ut_revocable' m \<and> class_links m \<and> distinct_zombies m
-                        \<and> irq_control m \<and> reply_masters_rvk_fb m
-                        \<and> valid_arch_mdb_ctes m"
+                        \<and> irq_control m \<and> reply_masters_rvk_fb m"
 
 definition
   valid_mdb' :: "kernel_state \<Rightarrow> bool"
@@ -2215,7 +2211,7 @@ lemma valid_mdb_ctesI [intro]:
     caps_contained' m; mdb_chunked m; untyped_mdb' m;
     untyped_inc' m; valid_nullcaps m; ut_revocable' m;
     class_links m; distinct_zombies m; irq_control m;
-    reply_masters_rvk_fb m; valid_arch_mdb_ctes m \<rbrakk>
+    reply_masters_rvk_fb m \<rbrakk>
   \<Longrightarrow> valid_mdb_ctes m"
   unfolding valid_mdb_ctes_def by auto
 

@@ -475,6 +475,9 @@ lemma setIRQTrigger_corres:
             | simp add: dc_def)+
   done
 
+crunch set_irq_state
+  for valid_arch_state[wp]: valid_arch_state
+
 lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid x2)

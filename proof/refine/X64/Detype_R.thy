@@ -628,7 +628,6 @@ lemma valid_objs: "valid_objs' s'"
   and    ut_rev: "ut_revocable' (ctes_of s')"
   and    dist_z: "distinct_zombies (ctes_of s')"
   and  irq_ctrl: "irq_control (ctes_of s')"
-  and ioport_ctrl: "ioport_control (ctes_of s')"
   and    clinks: "class_links (ctes_of s')"
   and  rep_r_fb: "reply_masters_rvk_fb (ctes_of s')"
   and      idle: "valid_idle' s'"
@@ -1585,10 +1584,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   from irq_ctrl
   show "irq_control ?ctes'"
     by (clarsimp simp: irq_control_def)
-
-  from ioport_ctrl
-  show "valid_arch_mdb_ctes ?ctes'"
-    by (clarsimp simp: ioport_control_def)
 
   from dist_z
   show "distinct_zombies ?ctes'"

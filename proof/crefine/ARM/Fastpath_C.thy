@@ -2083,6 +2083,7 @@ proof -
                           apply (rule ccorres_assert2)
                           apply (rule ccorres_pre_threadGet, rename_tac destState)
                           apply (rule_tac P="isReceive destState" in ccorres_gen_asm)
+                          apply (rule ccorres_stateAssert)
                           apply (rule ccorres_pre_getCTE2, rename_tac curThreadReplyCTE2)
                           apply (rule ccorres_pre_getCTE2, rename_tac destCallerCTE)
                           apply (rule ccorres_assert2)+
@@ -2246,6 +2247,7 @@ proof -
                         apply (rule conseqPre, vcg, clarsimp)
                        apply (simp add: cte_level_bits_def field_simps shiftl_t2n
                                         ctes_of_Some_cte_wp_at
+                                        archMDBAssertions_def
                                    del: all_imp_to_ex cong: imp_cong conj_cong)
                        apply (wp hoare_vcg_all_lift threadSet_ctes_of
                                  hoare_vcg_imp_lift' threadSet_valid_objs'

@@ -516,10 +516,4 @@ lemma invs'_gsTypes_update:
 
 end
 
-(* FIXME arch-split: valid_arch_mdb_ctes only exists to contain ioport_control on x64, and it is not
-   yet clear what the best way to arch-split it is, or whether it can be crossed from AInvs.
-   Therefore, for now, export the truth that it doesn't do anything on this arch beyond this point *)
-arch_requalify_facts valid_arch_mdb_ctes_def
-lemmas [simp] = valid_arch_mdb_ctes_def
-
 end

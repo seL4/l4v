@@ -33,15 +33,6 @@ lemma ps_clear_is_aligned_ksPSpace_None:
 
 context Arch begin arch_global_naming
 
-lemma ps_clear_is_aligned_ctes_None:
-  assumes "ps_clear p tcbBlockSizeBits s"
-      and "is_aligned p tcbBlockSizeBits"
-  shows "ksPSpace s (p + 2*2^cteSizeBits) = None"
-    and "ksPSpace s (p + 3*2^cteSizeBits) = None"
-    and "ksPSpace s (p + 4*2^cteSizeBits) = None"
-  by (auto intro: assms ps_clear_is_aligned_ksPSpace_None
-            simp: objBits_defs mask_def)+
-
 lemma word_shift_by_3:
   "x * 8 = (x::'a::len word) << 3"
   by (simp add: shiftl_t2n)
@@ -74,6 +65,15 @@ where
 
 (* FIXME: move to GenericLib *)
 lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
+
+lemma ps_clear_is_aligned_ctes_None:
+  assumes "ps_clear p tcbBlockSizeBits s"
+      and "is_aligned p tcbBlockSizeBits"
+  shows "ksPSpace s (p + 2*2^cteSizeBits) = None"
+    and "ksPSpace s (p + 3*2^cteSizeBits) = None"
+    and "ksPSpace s (p + 4*2^cteSizeBits) = None"
+  by (auto intro: assms ps_clear_is_aligned_ksPSpace_None
+            simp: objBits_defs mask_def)+
 
 crunch archThreadGet
   for inv'[wp]: P

@@ -373,15 +373,6 @@ lemma page_map_l4_pml4e_atI':
   "\<lbrakk> page_map_l4_at' p s; x < 2^ptTranslationBits \<rbrakk> \<Longrightarrow> pml4e_at' (p + (x << word_size_bits)) s"
   by (simp add: page_map_l4_at'_def pageBits_def)
 
-lemma ioport_controlD:
-  "\<lbrakk> m p = Some (CTE (ArchObjectCap IOPortControlCap) n); m p' = Some (CTE (ArchObjectCap IOPortControlCap) n');
-    ioport_control m \<rbrakk> \<Longrightarrow> p' = p"
-  unfolding ioport_control_def by blast
-
-lemma ioport_revocable:
-  "\<lbrakk> m p = Some (CTE (ArchObjectCap IOPortControlCap) n); ioport_control m \<rbrakk> \<Longrightarrow> mdbRevocable n"
-  unfolding ioport_control_def by blast
-
 lemma tcb_hyp_refs_of'_simps[simp]:
   "tcb_hyp_refs' atcb = {}"
   by (auto simp: tcb_hyp_refs'_def)

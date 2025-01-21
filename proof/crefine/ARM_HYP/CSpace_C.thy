@@ -1050,6 +1050,7 @@ lemma cteInsert_ccorres:
                             simp del: return_bind
                             simp add: Collect_const)
    apply (rule ccorres_move_c_guard_cte)
+   apply (rule ccorres_stateAssert)
    apply (ctac pre: ccorres_pre_getCTE)
      apply (rule ccorres_move_c_guard_cte)
      apply (ctac pre: ccorres_pre_getCTE)
@@ -1103,7 +1104,7 @@ lemma cteInsert_ccorres:
     apply (frule valid_cap_untyped_inv)
     apply clarsimp
    apply (rule conjI)
-    apply (case_tac ctea)
+    apply (case_tac cte)
     apply (clarsimp simp: isUntypedCap_def split: capability.splits)
     apply (frule valid_cap_untyped_inv[OF ctes_of_valid_cap'])
      apply fastforce
