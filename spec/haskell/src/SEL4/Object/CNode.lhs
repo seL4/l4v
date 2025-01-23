@@ -231,6 +231,15 @@ The following functions define the operations that can be performed by a CNode i
 
 \subsubsection{Inserting New Capabilities}
 
+\begin{impdetails}
+
+Arch assertions for the refinement proof. Content is defined in Isabelle.
+
+> archMDBAssertions :: KernelState -> Bool
+> archMDBAssertions _ = error "defined in Isabelle"
+
+\end{impdetails}
+
 > setUntypedCapAsFull :: Capability -> Capability -> PPtr CTE -> Kernel ()
 > setUntypedCapAsFull srcCap newCap srcSlot = do
 >         if (isUntypedCap srcCap && isUntypedCap newCap &&
@@ -241,6 +250,12 @@ Insertion of new capabilities copied from existing capabilities is performed by 
 
 > cteInsert :: Capability -> PPtr CTE -> PPtr CTE -> Kernel ()
 > cteInsert newCap srcSlot destSlot = do
+
+\begin{impdetails}
+
+>         stateAssert archMDBAssertions "architecture dependent MDB assertions must hold"
+
+\end{impdetails}
 
 First, fetch the capability table entry for the source.
 

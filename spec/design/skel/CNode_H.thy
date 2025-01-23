@@ -31,6 +31,7 @@ where
   p s"
 by auto
 
-#INCLUDE_HASKELL SEL4/Object/CNode.lhs bodies_only NOT finaliseSlot cteRevoke cteDeleteOne noReplyCapsFor
+#INCLUDE_HASKELL SEL4/Object/CNode.lhs bodies_only NOT finaliseSlot cteRevoke \
+  cteDeleteOne noReplyCapsFor archMDBAssertions
 
 end
