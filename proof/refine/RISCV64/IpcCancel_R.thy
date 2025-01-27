@@ -3225,7 +3225,7 @@ lemma tcbSchedEnqueue_unlive_other:
    tcbSchedEnqueue t
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') p\<rbrace>"
   apply (simp add: tcbSchedEnqueue_def tcbQueuePrepend_def)
-  apply (wpsimp wp: threadGet_wp threadSet_unlive_other)
+  apply (wpsimp wp: threadGet_wp threadSet_unlive_other hoare_vcg_imp_lift')
   apply (normalise_obj_at', rename_tac tcb)
   apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
   apply (drule_tac x="tcbDomain tcb" in spec)
