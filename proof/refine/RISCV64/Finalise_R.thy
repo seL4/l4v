@@ -3114,7 +3114,8 @@ lemma tcbReleaseRemove_tcbSchedNext_tcbSchedPrev_None:
    tcbReleaseRemove t
    \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None) t\<rbrace>"
   apply (clarsimp simp: tcbReleaseRemove_def)
-  apply (wpsimp wp: tcbQueueRemove_tcbSchedNext_tcbSchedPrev_None inReleaseQueue_wp)
+  apply (wpsimp wp: tcbQueueRemove_tcbSchedNext_tcbSchedPrev_None inReleaseQueue_wp
+                    hoare_vcg_ex_lift threadSet_sched_pointers)
   apply (clarsimp simp: valid_sched_pointers_def)
   apply (drule_tac x=t in spec)
   apply (fastforce simp: ksReleaseQueue_asrt_def opt_pred_def obj_at'_def opt_map_def)

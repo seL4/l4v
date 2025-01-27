@@ -3597,9 +3597,10 @@ lemma tcbReleaseEnqueue_corres:
     apply (corres corres: setReprogramTimer_corres)
 
    \<comment> \<open>prepend t\<close>
+   apply (simp add: bind_assoc)
    apply (rule corres_from_valid_det)
       apply (fastforce intro: det_wp_modify det_wp_pre)
-     apply (wpsimp simp: tcbQueuePrepend_def wp: hoare_vcg_if_lift2)
+     apply (wpsimp simp: tcbQueuePrepend_def wp: hoare_vcg_imp_lift' hoare_vcg_if_lift2)
     apply (clarsimp simp: ex_abs_def)
     apply (frule state_relation_release_queue_relation)
     apply (clarsimp simp: release_queue_relation_def list_queue_relation_def)
@@ -3615,37 +3616,25 @@ lemma tcbReleaseEnqueue_corres:
 
     \<comment> \<open>ready_queues_relation\<close>
     apply (drule set_release_queue_new_state)
-    apply (wpsimp wp: threadSet_ready_queues_relation simp: tcbQueuePrepend_def)
-    apply (clarsimp simp: ready_queues_relation_def release_queue_relation_def)
-    apply (force dest!: hd_in_set ready_or_release'D1 simp: tcbQueueEmpty_def)
+    apply (wpsimp wp: tcbQueuePrepend_list_queue_relation_other threadSet_sched_pointers
+                      hoare_vcg_all_lift threadSet_inQ
+                simp: ready_queues_relation_def ready_queue_relation_def Let_def
+           | wps)+
+    apply (rule_tac x="release_queue s" in exI)
+    subgoal
+      by (auto dest!: ready_or_release_disjoint simp: release_queue_relation_def not_queued_def)
 
    \<comment> \<open>release_queue_relation\<close>
    apply (drule set_release_queue_new_state)
-   apply (clarsimp simp: tcbQueuePrepend_def)
-   apply (wpsimp wp: threadSet_wp simp: setReleaseQueue_def)
-   apply (drule valid_sched_pointersD[where t=t])
-     apply (clarsimp simp: in_opt_pred opt_map_red obj_at'_def)
-    apply (clarsimp simp: in_opt_pred opt_map_red obj_at'_def)
-   apply (case_tac "release_queue s = []"; clarsimp simp: tcbQueueEmpty_def)
-    apply (clarsimp simp: list_queue_relation_def heap_path.simps queue_end_valid_def obj_at'_def
-                          opt_pred_def prev_queue_head_def release_queue_relation_def opt_map_def
-                   split: if_splits)
-   apply (clarsimp simp: release_queue_relation_def list_queue_relation_def split: if_splits)
-   apply (frule heap_path_head, fastforce)
-   apply (drule heap_ls_prepend[where new=t])
-     apply (clarsimp simp: not_in_release_q_def)
-    apply assumption
-   apply (drule obj_at'_prop)+
-   apply clarsimp
-   apply (prop_tac "t \<noteq> hd (release_queue s)")
-    apply (clarsimp dest!: hd_in_set simp: not_in_release_q_def)
-   apply (rule conjI)
-    apply (subst opt_map_upd_triv)
-     apply (clarsimp simp: opt_map_def split: if_splits)
-    apply clarsimp
-   subgoal
-     by (force simp: queue_end_valid_def prev_queue_head_def opt_pred_def opt_map_def
-              split: if_splits option.splits)
+   apply (clarsimp simp: release_queue_relation_def)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply ((wpsimp wp: tcbQueuePrepend_list_queue_relation threadSet_sched_pointers | wps)+)[1]
+    apply (frule (1) valid_sched_pointersD[where t=t];
+           clarsimp simp: not_in_release_q_2_def in_opt_pred opt_map_red obj_at'_def)
+   apply (rule hoare_allI, rename_tac t')
+   apply (case_tac "t' = t"; clarsimp)
+    apply (wpsimp wp: threadSet_wp hoare_vcg_all_lift)
+   apply (wpsimp wp: threadSet_opt_pred_other)
 
   apply (simp add: bind_assoc)
   apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ assert_sp, rotated]; wpsimp?)
@@ -3663,7 +3652,7 @@ lemma tcbReleaseEnqueue_corres:
    \<comment> \<open>append t\<close>
    apply (rule corres_from_valid_det)
      apply (fastforce intro: det_wp_modify det_wp_pre)
-    apply (wpsimp simp: tcbQueueAppend_def wp: hoare_vcg_if_lift2)
+    apply (wpsimp simp: tcbQueueAppend_def wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift')
     apply (clarsimp simp: ex_abs_def)
     apply (frule state_relation_release_queue_relation)
     apply (fastforce intro!: tcb_at_cross dest!: last_in_set
@@ -3677,35 +3666,23 @@ lemma tcbReleaseEnqueue_corres:
 
     \<comment> \<open>ready_queues_relation\<close>
     apply (drule set_release_queue_new_state)
-    apply (wpsimp wp: threadSet_ready_queues_relation threadSet_tcbInReleaseQueue
-                simp: tcbQueueAppend_def setReleaseQueue_def tcbQueueEmpty_def
-            simp_del: comp_apply)
-    subgoal
-      by (force dest!: tcbQueueEnd_ksReleaseQueue last_in_set ready_or_release'D1
-                 simp: release_queue_relation_def tcbQueueEmpty_def)
+    apply (wpsimp wp: tcbQueueAppend_list_queue_relation_other threadSet_sched_pointers
+                      hoare_vcg_all_lift threadSet_inQ
+                simp: ready_queues_relation_def ready_queue_relation_def Let_def
+           | wps)+
+    apply (rule_tac x="release_queue s" in exI)
+    subgoal by (auto dest!: ready_or_release_disjoint simp: release_queue_relation_def not_queued_def)
 
-   \<comment> \<open>release_queue_relation\<close>
    apply (drule set_release_queue_new_state)
-   apply (clarsimp simp: tcbQueueAppend_def)
-   apply (wpsimp wp: threadSet_wp simp: setReleaseQueue_def)
-   apply (clarsimp simp: release_queue_relation_def list_queue_relation_def tcbQueueEmpty_def
-                         queue_end_valid_def)
-   apply (drule valid_sched_pointersD[where t=t])
-     apply (clarsimp simp: in_opt_pred opt_map_red obj_at'_def)
-    apply (clarsimp simp: in_opt_pred opt_map_red obj_at'_def)
-   apply (prop_tac "t \<noteq> last (release_queue s)")
-    apply (force dest!: last_in_set simp: not_in_release_q_def)
-   apply (drule (1) heap_ls_append[where new=t])
-    apply (clarsimp simp: not_in_release_q_def)
-   apply clarsimp
-   apply (drule obj_at'_prop)+
-   apply (rule conjI)
-    apply (clarsimp simp: opt_map_def)
-   apply (rule conjI)
-    apply (rule prev_queue_head_heap_upd)
-     apply (clarsimp simp: prev_queue_head_def opt_map_def split: if_splits)
-    apply (clarsimp dest!: hd_in_set simp: opt_map_def opt_pred_def split: option.splits)
-   apply (clarsimp simp: opt_map_def opt_pred_def split: if_splits option.splits)
+   apply (clarsimp simp: release_queue_relation_def)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply ((wpsimp wp: tcbQueueAppend_list_queue_relation threadSet_sched_pointers | wps)+)[1]
+    apply (frule (1) valid_sched_pointersD[where t=t];
+           clarsimp simp: not_in_release_q_2_def in_opt_pred opt_map_red obj_at'_def)
+   apply (rule hoare_allI, rename_tac t')
+   apply (case_tac "t' = t"; clarsimp)
+    apply (wpsimp wp: threadSet_wp hoare_vcg_all_lift)
+   apply (wpsimp wp: threadSet_opt_pred_other)
 
   \<comment> \<open>insert t into the middle of the release queue\<close>
   apply (rule corres_split_forwards'
@@ -3772,63 +3749,39 @@ lemma tcbReleaseEnqueue_corres:
          (solves \<open>frule set_release_queue_projs_inv, wpsimp simp: swp_def\<close>)?)
 
    \<comment> \<open>ready_queues_relation\<close>
-   apply (drule set_release_queue_new_state)
-   apply (wpsimp wp: threadSet_ready_queues_relation getTCB_wp simp: tcbQueueInsert_def)
+    apply (drule set_release_queue_new_state)
+    apply (wpsimp wp: tcbQueueInsert_list_queue_relation_other threadSet_sched_pointers
+                      hoare_vcg_all_lift threadSet_inQ
+                simp: ready_queues_relation_def ready_queue_relation_def Let_def
+           | wps)+
+   apply (rename_tac s' tcb' d p)
    apply (intro conjI)
-    apply (erule in_ready_q_tcbQueued_eq[THEN arg_cong_Not, THEN iffD1])
-    apply (erule ready_or_released_in_release_queue)
-    subgoal by (force dest!: set_mono_suffix hd_in_set simp: in_release_q_def)
-   apply (cut_tac ls="release_queue s" and p="hd sfx" in list_queue_relation_neighbour_in_set)
-      apply (force simp: release_queue_relation_def)
-     apply fastforce
+    apply (clarsimp simp: not_queued_def)
+   apply (rule_tac x="release_queue s" in exI)
+   apply (intro conjI)
+     apply (rule_tac x="ksReleaseQueue s'" in exI)
+     subgoal by (auto simp: release_queue_relation_def)
     subgoal by (force dest!: set_mono_suffix hd_in_set)
-   apply (erule in_ready_q_tcbQueued_eq[THEN arg_cong_Not, THEN iffD1])
-   apply (erule ready_or_released_in_release_queue)
-   apply (clarsimp simp: in_release_q_def opt_map_def obj_at'_def)
+   subgoal by (auto dest!: ready_or_release_disjoint)
 
-   \<comment> \<open>release_queue_relation\<close>
+  \<comment> \<open>release_queue_relation\<close>
   apply (drule set_release_queue_new_state)
-  apply (frule valid_release_q_distinct)
-  apply (frule (3) nonempty_proper_suffix_split_distinct)
-  apply clarsimp
-  apply (rename_tac xs ys)
-  apply (clarsimp simp: tcbQueueInsert_def bind_assoc)
-  \<comment> \<open>forwards step in order to name beforePtr below\<close>
-  apply (rule bind_wp[OF _ stateAssert_sp])
-  apply (rule bind_wp[OF _ get_tcb_sp'], rename_tac after_tcb)
-  apply (rule bind_wp[OF _ assert_sp])
-  apply (rule hoare_ex_pre_conj[simplified conj_commute], rename_tac beforePtr)
-  apply (wpsimp wp: threadSet_wp getTCB_wp)
-  apply normalise_obj_at'
-  apply (drule obj_at'_prop)+
-  apply (clarsimp simp: release_queue_relation_def list_queue_relation_def)
-  apply (frule (2) heap_path_sym_heap_non_nil_lookup_prev)
-  apply (prop_tac "hd sfx \<noteq> t", fastforce simp: in_queue_2_def)
-  apply (prop_tac "beforePtr \<noteq> t", clarsimp simp: opt_map_def in_queue_2_def)
-  apply (cut_tac xs=xs and ys="hd sfx # ys" and new=t in list_insert_before_distinct)
-    subgoal by fastforce
-   apply fastforce
-  apply (drule heap_ls_list_insert_before[where new=t])
-     apply (clarsimp simp: in_queue_2_def)
+  apply (clarsimp simp: release_queue_relation_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+   apply (clarsimp simp: suffix_def)
+   apply (subst list_insert_before_distinct)
+     apply (clarsimp simp: valid_release_q_def)
     apply fastforce
-   apply fastforce
-  apply (prop_tac "beforePtr = last xs", clarsimp simp: opt_map_def)
-  apply clarsimp
-  apply (rule conjI)
-   apply (subst opt_map_upd_triv)
-    apply (clarsimp simp: opt_map_red)
-   apply fastforce
-  apply (rule conjI)
-   apply (clarsimp simp: queue_end_valid_def)
-  apply (rule conjI)
-   apply (case_tac "hd xs = last xs")
-    apply (clarsimp simp: prev_queue_head_def opt_map_def)
-   apply (intro prev_queue_head_heap_upd)
-      apply force
-     apply force
-    apply force
-   apply (force dest!: heap_ls_distinct hd_in_set)
-  apply (clarsimp simp: opt_pred_def opt_map_def split: if_splits option.splits)
+   apply ((wpsimp wp: tcbQueueInsert_list_queue_relation threadSet_sched_pointers | wps)+)[1]
+   apply (frule (1) valid_sched_pointersD[where t=t];
+          clarsimp simp: not_in_release_q_2_def in_opt_pred opt_map_red obj_at'_def)
+  apply (clarsimp simp: not_in_release_q_def)
+  apply (frule_tac before="hd sfx" in set_list_insert_before[where new=t])
+   apply (force dest!: set_mono_suffix hd_in_set)
+  apply (rule hoare_allI, rename_tac t')
+  apply (case_tac "t' = t")
+   apply (wpsimp wp: threadSet_wp hoare_vcg_all_lift hoare_drop_imps)
+  apply (wpsimp wp: threadSet_opt_pred_other)
   done
 
 lemma postpone_corres:
@@ -4722,13 +4675,9 @@ lemma tcbReleaseEnqueue_if_live_then_nonz_cap'[wp]:
   apply (clarsimp simp: ksReleaseQueue_asrt_def)
   apply (frule (3) obj_at'_tcbQueueHead_ksReleaseQueue)
   apply (frule (3) obj_at'_tcbQueueEnd_ksReleaseQueue)
-  apply (intro conjI impI allI; clarsimp simp: tcbQueueEmpty_def)
-   apply (fastforce elim!: if_live_then_nonz_capE'
-                     dest: heap_path_head intro: aligned'_distinct'_ko_wp_at'I
-                     simp: opt_pred_def opt_map_def obj_at'_def)
-  apply (fastforce elim!: if_live_then_nonz_capE' intro: aligned'_distinct'_ko_wp_at'I
-                    simp: queue_end_valid_def opt_pred_def opt_map_def obj_at'_def)
-  done
+  by (fastforce elim!: if_live_then_nonz_capE'
+                 dest: heap_path_head intro: aligned'_distinct'_ko_wp_at'I
+                 simp: tcbQueueEmpty_def opt_pred_def opt_map_def obj_at'_def)+
 
 crunch tcbReleaseEnqueue
   for valid_bitmaps[wp]: valid_bitmaps

@@ -2364,15 +2364,383 @@ lemma in_correct_ready_qD:
    \<Longrightarrow> tcb_domain tcb = d \<and> tcb_priority tcb = p "
   by (fastforce simp: in_correct_ready_q_def vs_all_heap_simps)
 
-lemma ready_or_release'D1:
-  "\<lbrakk>ready_or_release' s'; (tcbInReleaseQueue |< tcbs_of' s') tcbPtr\<rbrakk>
-   \<Longrightarrow> \<not> (tcbQueued |< tcbs_of' s') tcbPtr"
-  by (clarsimp simp: ready_or_release'_def opt_pred_def opt_map_def split: option.splits)
+lemma threadSet_heap_ls_other:
+  "\<lbrace>\<lambda>s. heap_ls (tcbSchedNexts_of s) st ls \<and> t \<notin> set ls\<rbrace>
+   threadSet F t
+   \<lbrace>\<lambda>_ s. heap_ls (tcbSchedNexts_of s) st ls\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (fastforce dest: heap_path_heap_upd_not_in)
 
-lemma ready_or_release'D2:
-  "\<lbrakk>ready_or_release' s'; (tcbQueued |< tcbs_of' s') tcbPtr\<rbrakk>
-   \<Longrightarrow> \<not> (tcbInReleaseQueue |< tcbs_of' s') tcbPtr"
-  by (clarsimp simp: ready_or_release'_def opt_pred_def opt_map_def split: option.splits)
+lemma threadSet_prev_queue_head_other:
+  "\<lbrace>\<lambda>s. prev_queue_head q (tcbSchedPrevs_of s)
+        \<and> (\<exists>ls. heap_ls (tcbSchedNexts_of s) (tcbQueueHead q) ls \<and> t \<notin> set ls)\<rbrace>
+   threadSet F t
+   \<lbrace>\<lambda>_ s. prev_queue_head q (tcbSchedPrevs_of s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  apply (frule heap_path_head')
+  apply (fastforce simp: prev_queue_head_def dest: heap_path_not_Nil hd_in_set)
+  done
+
+lemma list_queue_relation_neighbour_in_set:
+  "\<lbrakk>list_queue_relation ls q hp hp'; sym_heap hp hp'; p \<in> set ls\<rbrakk>
+   \<Longrightarrow> \<forall>nbr. (hp p = Some nbr \<longrightarrow> nbr \<in> set ls) \<and> (hp' p = Some nbr \<longrightarrow> nbr \<in> set ls)"
+  apply (rule heap_ls_neighbour_in_set)
+     apply (fastforce simp: list_queue_relation_def)
+    apply fastforce
+   apply (clarsimp simp: list_queue_relation_def prev_queue_head_def)
+  apply fastforce
+  done
+
+lemma tcbQueueRemove_list_queue_relation_other:
+  "\<lbrace>\<lambda>s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> sym_heap_sched_pointers s
+        \<and> (\<exists>ls'. list_queue_relation ls' queue' (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                 \<and> tcbPtr \<in> set ls' \<and> set ls \<inter> set ls' = {})\<rbrace>
+   tcbQueueRemove queue' tcbPtr
+   \<lbrace>\<lambda>_ s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  unfolding tcbQueueRemove_def list_queue_relation_def
+  apply (wpsimp wp: threadSet_prev_queue_head_other threadSet_heap_ls_other getTCB_wp
+                    hoare_vcg_ex_lift)
+  by (fastforce dest: list_queue_relation_neighbour_in_set[where p=tcbPtr, rotated 2]
+                simp: list_queue_relation_def opt_map_def obj_at'_def)
+
+lemma tcbQueuePrepend_list_queue_relation_other:
+  "\<lbrace>\<lambda>s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> (\<exists>ls'. list_queue_relation ls' queue' (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                 \<and> tcbPtr \<notin> set ls \<and> set ls \<inter> set ls' = {})\<rbrace>
+   tcbQueuePrepend queue' tcbPtr
+   \<lbrace>\<lambda>_ s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  unfolding tcbQueuePrepend_def list_queue_relation_def
+  apply (wpsimp wp: threadSet_prev_queue_head_other threadSet_heap_ls_other hoare_vcg_ex_lift)
+  by (fastforce dest: list_queue_relation_nil[THEN arg_cong_Not, THEN iffD2, rotated] heap_path_head
+                simp: list_queue_relation_def)
+
+lemma tcbQueueAppend_list_queue_relation_other:
+  "\<lbrace>\<lambda>s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> sym_heap_sched_pointers s
+        \<and> (\<exists>ls'. list_queue_relation ls' queue' (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                 \<and> tcbPtr \<notin> set ls \<and> set ls \<inter> set ls' = {})\<rbrace>
+   tcbQueueAppend queue' tcbPtr
+   \<lbrace>\<lambda>_ s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  unfolding tcbQueueAppend_def list_queue_relation_def
+  apply (wpsimp wp: threadSet_prev_queue_head_other threadSet_heap_ls_other hoare_vcg_ex_lift)
+  by (fastforce dest: list_queue_relation_nil[THEN arg_cong_Not, THEN iffD2, rotated] heap_path_head
+                simp: list_queue_relation_def queue_end_valid_def)
+
+lemma tcbQueueInsert_list_queue_relation_other:
+  "\<lbrace>\<lambda>s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> sym_heap_sched_pointers s
+        \<and> tcbPtr \<notin> set ls
+        \<and> (\<exists>ls' queue'. list_queue_relation ls' queue' (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                        \<and> afterPtr \<in> set ls' \<and> set ls \<inter> set ls' = {})\<rbrace>
+   tcbQueueInsert tcbPtr afterPtr
+   \<lbrace>\<lambda>_ s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  unfolding tcbQueueInsert_def list_queue_relation_def
+  apply (wpsimp wp: threadSet_prev_queue_head_other threadSet_heap_ls_other getTCB_wp
+                    hoare_vcg_ex_lift)
+  by (force dest!: heap_ls_neighbour_in_set[where p=afterPtr] intro!: exI[where x=ls]
+             simp: prev_queue_head_def opt_map_def obj_at'_def)
+
+lemma tcbQueued_update_tcbInReleaseQueue[wp]:
+  "threadSet (tcbQueued_update f) tcbPtr \<lbrace>\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)\<rbrace>"
+  by (wpsimp wp: threadSet_tcbInReleaseQueue)
+
+lemma threadSet_tcbPriority:
+  "(\<And>tcb. tcbPriority (F tcb) = tcbPriority tcb) \<Longrightarrow>
+   threadSet F t \<lbrace>\<lambda>s. P ((\<lambda>tcb. Q (tcbPriority tcb)) |< tcbs_of' s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (fastforce elim: rsubst[where P=P] simp: opt_pred_def opt_map_def obj_at'_def)
+
+lemma threadSet_tcbDomain:
+  "(\<And>tcb. tcbDomain (F tcb) = tcbDomain tcb) \<Longrightarrow>
+   threadSet F t \<lbrace>\<lambda>s. P ((\<lambda>tcb. Q (tcbDomain tcb)) |< tcbs_of' s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (fastforce elim: rsubst[where P=P] simp: opt_pred_def opt_map_def obj_at'_def)
+
+lemma ready_or_release_disjoint:
+  "ready_or_release s \<Longrightarrow> set (ready_queues s d p) \<inter> set (release_queue s) = {}"
+  by (fastforce simp: ready_or_release_def in_ready_q_def not_in_release_q_def)
+
+lemma setQueue_ksReadyQueues_other:
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s (d, p)) \<and> (domain \<noteq> d \<or> priority \<noteq> p)\<rbrace>
+   setQueue domain priority ts
+   \<lbrace>\<lambda>_ s. P (ksReadyQueues s (d, p))\<rbrace>"
+  by (wpsimp simp: setQueue_def)
+
+lemma tcbQueued_update_inQ_other:
+  "\<lbrace>\<lambda>s. P (inQ d p |< tcbs_of' s)
+        \<and> ((\<lambda>tcb. tcbDomain tcb \<noteq> d \<or> tcbPriority tcb \<noteq> p) |< tcbs_of' s) tcbPtr\<rbrace>
+   threadSet (tcbQueued_update f) tcbPtr
+   \<lbrace>\<lambda>_ s. P (inQ d p |< tcbs_of' s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (fastforce elim: rsubst[where P=P] simp: inQ_def opt_pred_def opt_map_def obj_at'_def)
+
+lemma threadSet_inQ:
+  "\<lbrakk>\<And>tcb. tcbPriority (F tcb) = tcbPriority tcb; \<And>tcb. tcbDomain (F tcb) = tcbDomain tcb;
+    \<And>tcb. tcbQueued (F tcb) = tcbQueued tcb\<rbrakk>
+   \<Longrightarrow> threadSet F tcbPtr \<lbrace>\<lambda>s. P (inQ d p |< tcbs_of' s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (fastforce elim: rsubst[where P=P] simp: inQ_def opt_pred_def opt_map_def obj_at'_def)
+
+crunch tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend, tcbQueueInsert
+  for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
+  and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and tcbInReleaseQueue_opt_pred[wp]: "\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)"
+  and tcbQueued_opt_pred[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
+  and tcbPriority_opt_pred[wp]: "\<lambda>s. P ((\<lambda>tcb. Q (tcbPriority tcb)) |< tcbs_of' s)"
+  and tcbDomain_opt_pred[wp]: "\<lambda>s. P ((\<lambda>tcb. Q (tcbDomain tcb)) |< tcbs_of' s)"
+  and inQ_opt_pred[wp]: "\<lambda>s. P (inQ d p |< tcbs_of' s)"
+  (wp: crunch_wps threadSet_tcbPriority threadSet_tcbDomain threadSet_inQ
+       threadSet_tcbInReleaseQueue threadSet_tcbQueued
+   ignore: threadSet)
+
+lemma set_butlast:
+  "distinct list \<Longrightarrow> set (butlast list) = (set list) - {last list}"
+  by (induct list, simp+, fastforce)
+
+\<comment> \<open>
+  A direct analogue of tcbQueueRemove, used in tcb_sched_dequeue' below, so that within the proof of
+  tcbQueueRemove_corres, we may reason in terms of the list operations used within this function
+  rather than @{term filter}.\<close>
+definition tcb_queue_remove :: "'a \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "tcb_queue_remove a ls \<equiv>
+     if ls = [a]
+     then []
+     else if a = hd ls
+          then tl ls
+          else if a = last ls
+               then butlast ls
+               else list_remove ls a"
+
+lemma set_tcb_queue_remove:
+  "distinct ls \<Longrightarrow> set (tcb_queue_remove t ls) = set ls - {t}"
+  by (auto dest: set_remove1_eq[where x=t]
+           simp: tcb_queue_remove_def set_butlast list_remove_removed)
+
+lemma tcb_queue_remove_middle:
+  "distinct (xs @ tcbPtr # ys) \<Longrightarrow> tcb_queue_remove tcbPtr (xs @ tcbPtr # ys) = xs @ ys"
+  by (cases xs; fastforce simp: tcb_queue_remove_def list_remove_none)
+
+lemma in_queue_not_head_or_not_tail_length_gt_1:
+  "\<lbrakk>tcbPtr \<in> set ls; tcbQueueHead q \<noteq> Some tcbPtr \<or> tcbQueueEnd q \<noteq> Some tcbPtr;
+    list_queue_relation ls q nexts prevs\<rbrakk>
+   \<Longrightarrow> Suc 0 < length ls"
+  by (cases ls; fastforce simp: list_queue_relation_def queue_end_valid_def)
+
+lemma tcbQueueRemove_list_queue_relation:
+  "\<lbrace>\<lambda>s. list_queue_relation ls q (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> sym_heap_sched_pointers s
+        \<and> tcbPtr \<in> set ls\<rbrace>
+   tcbQueueRemove q tcbPtr
+   \<lbrace>\<lambda>q' s. list_queue_relation (tcb_queue_remove tcbPtr ls) q' (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  supply heap_path_append[simp del] distinct_append[simp del]
+  apply (clarsimp simp: tcbQueueRemove_def)
+  apply (wpsimp wp: threadSet_wp getTCB_wp)
+  apply (intro conjI impI allI)
+     \<comment> \<open>ls is a singleton list containing tcbPtr\<close>
+     apply (clarsimp simp: list_queue_relation_def queue_end_valid_def prev_queue_head_def
+                           tcb_queue_remove_def heap_ls_unique heap_path_last_end)
+     apply (frule heap_ls_distinct)
+     apply (cases ls; clarsimp)
+    \<comment> \<open>tcbPtr is the head of ls\<close>
+    apply (clarsimp simp: list_queue_relation_def)
+    apply (frule heap_path_head')
+    apply (frule set_list_mem_nonempty)
+    apply (frule in_queue_not_head_or_not_tail_length_gt_1)
+      apply fastforce
+     apply (force dest!: spec simp: list_queue_relation_def)
+    apply (intro conjI)
+      apply (frule list_not_head)
+      apply (clarsimp simp: tcb_queue_remove_def)
+      apply (frule length_tail_nonempty)
+      apply (frule (2) heap_ls_next_of_hd)
+      apply (drule (1) heap_ls_remove_head_not_singleton)
+      apply (clarsimp simp: opt_map_red opt_map_upd_triv obj_at'_def)
+     apply (cases ls; clarsimp simp: queue_end_valid_def tcb_queue_remove_def)
+    apply (clarsimp simp: prev_queue_head_def tcb_queue_remove_def opt_map_def obj_at'_def)
+   \<comment> \<open>tcbPtr is the last element of ls\<close>
+   apply (clarsimp simp: list_queue_relation_def)
+   apply (intro conjI)
+     apply (frule in_queue_not_head_or_not_tail_length_gt_1)
+       apply fast
+      apply (force dest!: spec simp: list_queue_relation_def)
+     apply (clarsimp simp: queue_end_valid_def)
+     apply (frule list_not_last)
+     apply (clarsimp simp: tcb_queue_remove_def)
+     apply (frule length_gt_1_imp_butlast_nonempty)
+     apply (frule (3) heap_ls_prev_of_last)
+     apply (intro conjI impI; clarsimp?)
+      apply (cases ls; clarsimp)
+     apply (drule (1) heap_ls_remove_last_not_singleton)
+     apply (force elim!: rsubst3[where P=heap_ls] simp: opt_map_def obj_at'_def)
+    apply (clarsimp simp: queue_end_valid_def tcb_queue_remove_def)
+    apply (frule heap_ls_prev_of_last)
+       apply (cases ls; clarsimp)
+      apply (fastforce intro: butlast_nonempty_length)
+     apply fastforce
+    apply (cases ls; force simp: opt_map_def obj_at'_def)
+   apply (clarsimp simp: prev_queue_head_def opt_map_def obj_at'_def)
+  \<comment> \<open>tcbPtr is in the middle of ls\<close>
+  apply (clarsimp simp: list_queue_relation_def)
+  apply (frule heap_ls_distinct)
+  apply (frule split_list)
+  apply (elim exE)
+  apply (rename_tac xs ys)
+  apply (prop_tac "xs \<noteq> [] \<and> ys \<noteq> []", fastforce simp: queue_end_valid_def)
+  apply clarsimp
+  apply (frule (2) ptr_in_middle_prev_next[where ptr=tcbPtr])
+   apply fastforce
+  apply (frule tcb_queue_remove_middle)
+  apply clarsimp
+  apply (intro conjI)
+    apply (drule (2) heap_ls_remove_middle)
+    apply (fastforce elim!: rsubst3[where P=heap_ls] simp: opt_map_def obj_at'_def)
+   apply (simp add: queue_end_valid_def)
+  apply (subst opt_map_upd_triv)
+   apply (clarsimp simp: prev_queue_head_def tcb_queue_remove_def opt_map_def obj_at'_def)
+  apply (intro prev_queue_head_heap_upd)
+    apply assumption
+   apply (frule heap_path_head')
+   apply (prop_tac "the (tcbQueueHead q) \<in> set xs")
+    apply (fastforce simp: hd_append)
+   apply (fastforce simp: hd_append distinct_append opt_map_def obj_at'_def)
+  apply fastforce
+  done
+
+lemma tcbQueuePrepend_list_queue_relation:
+  "\<lbrace>\<lambda>s. list_queue_relation ls q (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> sym_heap_sched_pointers s
+        \<and> tcbPtr \<notin> set ls \<and> (tcbSchedNexts_of s) tcbPtr = None \<and> (tcbSchedPrevs_of s) tcbPtr = None\<rbrace>
+   tcbQueuePrepend q tcbPtr
+   \<lbrace>\<lambda>q' s. list_queue_relation (tcbPtr # ls) q' (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  supply if_split[split del]
+  apply (clarsimp simp: tcbQueuePrepend_def tcbQueueEmpty_def)
+  apply (wpsimp wp: threadSet_wp getTCB_wp)
+  apply (intro conjI impI allI)
+   \<comment> \<open>ls was originally empty\<close>
+   apply (clarsimp simp: list_queue_relation_def queue_end_valid_def prev_queue_head_def)
+  \<comment> \<open>ls was not originally empty\<close>
+  apply (clarsimp simp: list_queue_relation_def)
+  apply (frule heap_path_not_Nil)
+  apply (frule (1) heap_path_head)
+  apply (drule (2) heap_ls_prepend[where new=tcbPtr])
+  apply (rule conjI)
+    apply (fastforce elim: rsubst3[where P=heap_ls]
+                     simp: opt_map_upd_triv opt_map_def obj_at'_def split: if_splits)
+  apply (clarsimp simp: queue_end_valid_def prev_queue_head_def opt_map_def obj_at'_def
+                 split: if_splits)
+  done
+
+(* FIXME RT: move *)
+lemma heap_upd_cong:
+  "\<lbrakk>hp = hp'; p = p'\<rbrakk> \<Longrightarrow> hp(p := val) = hp' (p' := val)"
+  by fastforce
+
+lemma tcbQueueAppend_list_queue_relation:
+  "\<lbrace>\<lambda>s. list_queue_relation ls q (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> sym_heap_sched_pointers s
+        \<and> tcbPtr \<notin> set ls
+        \<and> (tcbSchedNexts_of s) tcbPtr = None \<and> (tcbSchedPrevs_of s) tcbPtr = None\<rbrace>
+   tcbQueueAppend q tcbPtr
+   \<lbrace>\<lambda>q' s. list_queue_relation (ls @ [tcbPtr]) q' (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  supply heap_path_append[simp del] if_split[split del]
+  apply (clarsimp simp: tcbQueueAppend_def tcbQueueEmpty_def)
+  apply (wpsimp wp: threadSet_wp getTCB_wp)
+  apply (intro conjI impI allI)
+   \<comment> \<open>ls was originally empty\<close>
+   apply (clarsimp simp: list_queue_relation_def queue_end_valid_def prev_queue_head_def)
+  \<comment> \<open>ls was not originally empty\<close>
+  apply (clarsimp simp: list_queue_relation_def)
+  apply (frule heap_path_not_Nil)
+  apply (frule (1) heap_path_head)
+  apply (drule (2) heap_ls_append[where new=tcbPtr])
+  apply (rule conjI)
+   apply (erule rsubst3[where P=heap_ls])
+     apply (subst opt_map_upd_triv)
+      apply (fastforce simp: opt_map_def obj_at'_def)
+     apply (clarsimp simp: queue_end_valid_def)
+     apply (subst fun_upd_swap)
+      apply fastforce
+     apply (simp add: opt_map_upd_triv_None opt_map_upd_triv obj_at'_def)
+    apply simp
+   apply simp
+  apply (force simp: queue_end_valid_def prev_queue_head_def opt_map_def obj_at'_def split: if_splits)
+  done
+
+lemma tcbQueueInsert_list_queue_relation:
+  "\<lbrace>\<lambda>s. list_queue_relation (xs @ ys) q (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+        \<and> sym_heap_sched_pointers s
+        \<and> tcbPtr \<notin> set (xs @ ys) \<and> xs \<noteq> [] \<and> ys \<noteq> [] \<and> afterPtr = hd ys
+        \<and> (tcbSchedNexts_of s) tcbPtr = None \<and> (tcbSchedPrevs_of s) tcbPtr = None\<rbrace>
+   tcbQueueInsert tcbPtr afterPtr
+   \<lbrace>\<lambda>_ s. list_queue_relation (xs @ tcbPtr # ys) q (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  supply heap_path_append[simp del]
+  apply (clarsimp simp: tcbQueueInsert_def bind_assoc)
+  apply (rule bind_wp[OF _ get_tcb_sp'], rename_tac after_tcb)
+  apply (rule bind_wp[OF _ assert_sp])
+  apply (rule hoare_ex_pre_conj[simplified conj_commute], rename_tac beforePtr)
+  apply (wpsimp wp: threadSet_wp getTCB_wp)
+  apply (clarsimp simp: list_queue_relation_def)
+  apply normalise_obj_at'
+  apply (frule heap_ls_distinct)
+  apply (frule heap_path_head')
+  apply (frule nonempty_proper_suffix_split_distinct[where queue="xs @ ys" and sfx=ys])
+     apply fastforce
+    apply (clarsimp simp: suffix_def)
+   apply simp
+  apply (clarsimp, rename_tac xs' ys')
+  apply (frule (2) heap_path_sym_heap_non_nil_lookup_prev)
+  apply (prop_tac "hd ys \<noteq> tcbPtr", fastforce)
+  apply (prop_tac "beforePtr \<noteq> tcbPtr", clarsimp simp: obj_at'_def opt_map_def in_queue_2_def)
+   apply (metis Un_iff last_in_set set_append)
+  apply (cut_tac xs=xs and ys=ys and new=tcbPtr in list_insert_before_distinct)
+    apply (metis distinct_append)
+   apply fastforce
+  apply (drule heap_ls_list_insert_before[where new=tcbPtr])
+     apply (metis Un_iff set_append)
+    apply fastforce
+   apply fastforce
+  apply (prop_tac "beforePtr = last xs'", clarsimp simp: obj_at'_def opt_map_def)
+  apply (rule conjI)
+   apply (erule rsubst3[where P=heap_ls])
+     apply (subst fun_upd_swap)
+      apply fastforce
+     apply (rule heap_upd_cong)
+      apply (subst fun_upd_swap)
+       apply fastforce
+      apply (fastforce simp: fun_upd_swap opt_map_red obj_at'_def opt_map_upd_triv)
+     apply fastforce
+    apply fastforce
+   apply fastforce
+  apply (rule conjI)
+   apply (cases ys; fastforce simp: append_Cons_eq_iff queue_end_valid_def)
+  apply (fastforce simp: prev_queue_head_def obj_at'_def opt_map_red split: if_splits)
+  done
+
+lemma setQueue_sets_queue[wp]:
+  "\<And>d p ts P. \<lbrace> \<lambda>s. P ts \<rbrace> setQueue d p ts \<lbrace>\<lambda>rv s. P (ksReadyQueues s (d, p)) \<rbrace>"
+  unfolding setQueue_def
+  by (wp, simp)
+
+lemma threadSet_opt_pred_other:
+  "t' \<noteq> t \<Longrightarrow> threadSet F t' \<lbrace>\<lambda>s. P ((prop |< tcbs_of' s) t)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (clarsimp simp: obj_at'_def opt_pred_def)
+
+lemma tcbQueued_True_makes_inQ:
+  "\<lbrace>\<lambda>s. ((\<lambda>tcb. tcbPriority tcb = priority) |< tcbs_of' s) tcbPtr
+        \<and> ((\<lambda>tcb. tcbDomain tcb = domain) |< tcbs_of' s) tcbPtr\<rbrace>
+   threadSet (tcbQueued_update (\<lambda>_. True)) tcbPtr
+   \<lbrace>\<lambda>_ s. (inQ domain priority |< tcbs_of' s) tcbPtr\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (clarsimp simp: inQ_def opt_pred_def opt_map_def obj_at'_def)
+
+lemma tcbQueued_False_makes_not_inQ:
+  "\<lbrace>\<top>\<rbrace>
+   threadSet (tcbQueued_update (\<lambda>_. False)) tcbPtr
+   \<lbrace>\<lambda>_ s. \<not> (inQ domain priority |< tcbs_of' s) tcbPtr\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (clarsimp simp: inQ_def opt_pred_def opt_map_def obj_at'_def)
 
 lemma tcbSchedEnqueue_corres:
   "tcb_ptr = tcbPtr \<Longrightarrow>
@@ -2382,7 +2750,6 @@ lemma tcbSchedEnqueue_corres:
      (sym_heap_sched_pointers and valid_sched_pointers and valid_tcbs')
      (tcb_sched_action tcb_sched_enqueue tcb_ptr) (tcbSchedEnqueue tcbPtr)"
   supply if_split[split del]
-         heap_path_append[simp del] fun_upd_apply[simp del] distinct_append[simp del]
   apply (rule_tac Q'="st_tcb_at' runnable' tcbPtr" in corres_cross_add_guard)
    apply (fastforce intro!: st_tcb_at_runnable_cross simp: vs_all_heap_simps obj_at_def is_tcb_def)
   apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
@@ -2439,9 +2806,14 @@ lemma tcbSchedEnqueue_corres:
     apply (wpsimp wp: hoare_vcg_if_lift hoare_vcg_ex_lift)
    apply (corres corres: addToBitmap_if_null_noop_corres)
 
+  apply (rule_tac F="tdom = domain \<and> prio = priority" in corres_req)
+   apply (fastforce dest: pspace_relation_tcb_domain_priority state_relation_pspace_relation
+                    simp: obj_at_def obj_at'_def)
+  apply clarsimp
+
   apply (rule corres_from_valid_det)
     apply (fastforce intro: det_wp_modify det_wp_pre simp: set_tcb_queue_def)
-   apply (wpsimp simp: tcbQueuePrepend_def wp: hoare_vcg_if_lift2 | drule Some_to_the)+
+   apply (wpsimp simp: tcbQueuePrepend_def wp: hoare_vcg_imp_lift' hoare_vcg_if_lift2)
    apply (clarsimp simp: ex_abs_def split: if_splits)
    apply (frule state_relation_ready_queues_relation)
    apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def)
@@ -2455,141 +2827,60 @@ lemma tcbSchedEnqueue_corres:
          (solves \<open>frule singleton_eqD, frule set_tcb_queue_projs_inv, wpsimp simp: swp_def\<close>)?)
 
    apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. release_queue_relation t\<rbrace>" for t \<Rightarrow> \<open>-\<close>\<close>)
-   apply (wpsimp wp: threadSet_release_queue_relation threadSet_tcbInReleaseQueue
-               simp: tcbQueuePrepend_def)
-   apply normalise_obj_at'
-   apply (rename_tac s' tcb)
-   apply (prop_tac "release_queue_relation t s'")
-    apply (force dest!: set_tcb_queue_projs_inv simp: release_queue_relation_def)
-   apply simp
-   apply (rule impI)
-   apply (erule ready_or_release'D2)
-   apply (rule inQ_implies_tcbQueueds_of)
-   apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def)
-   apply (cut_tac d="tcbDomain tcb" and p="tcbPriority tcb" in tcbQueueHead_ksReadyQueues)
-     apply fast
-    apply fast
-   apply force
+   apply (frule_tac d=domain and p=priority in ready_or_release_disjoint)
+   apply (drule set_tcb_queue_projs_inv)
+   apply (wpsimp wp: tcbQueuePrepend_list_queue_relation_other hoare_vcg_ex_lift
+                     threadSet_sched_pointers
+               simp: release_queue_relation_def setQueue_def
+          | wps)+
+   apply (rule_tac x="ready_queues s (tcbDomain tcba) (tcbPriority tcb)" in exI)
+   apply (auto simp: ready_queues_relation_def ready_queue_relation_def Let_def)[1]
 
   \<comment> \<open>ready_queues_relation\<close>
   apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def)
   apply (intro hoare_allI)
   apply (drule singleton_eqD)
   apply (drule set_tcb_queue_new_state)
-  apply (wpsimp wp: threadSet_wp simp: setQueue_def tcbQueuePrepend_def)
-  apply normalise_obj_at'
-  apply (clarsimp simp: obj_at_def)
-  apply (rename_tac s' tcb' tcb)
-  apply (frule_tac t=tcbPtr in pspace_relation_tcb_domain_priority)
-    apply (force simp: obj_at_def)
-   apply (force simp: obj_at'_def)
-  apply (clarsimp split: if_splits)
-  apply (cut_tac ts="ready_queues s d p" in list_queue_relation_nil)
-   apply (force dest!: spec simp: list_queue_relation_def)
-  apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
-              in list_queue_relation_nil)
-   apply (force dest!: spec simp: list_queue_relation_def)
-  apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)" and s'=s'
-              in obj_at'_tcbQueueEnd_ksReadyQueues)
-      apply fast
-     apply auto[1]
-    apply fastforce
-   apply fastforce
-  apply (cut_tac xs="ready_queues s d p" and st="tcbQueueHead (ksReadyQueues s' (d, p))"
-              in heap_path_head')
-   apply (auto dest: spec simp: list_queue_relation_def tcbQueueEmpty_def)[1]
-  apply (cut_tac xs="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
-             and st="tcbQueueHead (ksReadyQueues s' (tcb_domain tcb, tcb_priority tcb))"
-              in heap_path_head')
-   apply (auto dest: spec simp: list_queue_relation_def tcbQueueEmpty_def)[1]
-  apply (clarsimp simp: list_queue_relation_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
 
-  apply (case_tac "\<not> (d = tcb_domain tcb \<and> p = tcb_priority tcb)")
-   apply (cut_tac d=d and d'="tcb_domain tcb" and p=p and p'="tcb_priority tcb"
-               in ready_queues_disjoint)
-      apply force
+     apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ s. maxDomain < d \<longrightarrow> _\<rbrace>" for d \<Rightarrow> \<open>-\<close>\<close>)
+     apply (wpsimp wp: threadSet_wp getTCB_wp simp: setQueue_def tcbQueuePrepend_def)
+     apply (frule valid_tcbs'_maxDomain[where t=tcbPtr])
+      apply fastforce
+     subgoal by (force simp: obj_at'_def tcbQueueEmpty_def split: if_split)
+
+    apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ s. maxPriority < d \<longrightarrow> _\<rbrace>" for d \<Rightarrow> \<open>-\<close>\<close>)
+    apply (wpsimp wp: threadSet_wp getTCB_wp simp: setQueue_def tcbQueuePrepend_def)
+    apply (frule valid_tcbs'_maxPriority[where t=tcbPtr])
      apply fastforce
+    subgoal by (force simp: obj_at'_def tcbQueueEmpty_def split: if_split)
+
+   apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ s. list_queue_relation _ _ _ _ \<rbrace>" \<Rightarrow> \<open>-\<close>\<close>)
+   apply (clarsimp simp: obj_at_def)
+   apply (case_tac "d \<noteq> tcb_domain tcb \<or> p \<noteq> tcb_priority tcb")
+    apply (wpsimp wp: tcbQueuePrepend_list_queue_relation_other setQueue_ksReadyQueues_other
+                      threadSet_sched_pointers hoare_vcg_ex_lift
+           | wps)+
+    apply (intro conjI)
+      subgoal by fastforce
+     apply (rule_tac x="ready_queues s (tcb_domain tcb) (tcb_priority tcb)" in exI)
+     apply (auto dest!: in_correct_ready_qD simp: ready_queues_disjoint
+                 split: if_splits)[1]
     apply fastforce
-   apply (prop_tac "tcbPtr \<notin> set (ready_queues s d p)")
-    apply (force simp: in_correct_ready_qD)
-   apply (intro conjI impI; simp)
+   apply ((wpsimp wp: tcbQueuePrepend_list_queue_relation threadSet_sched_pointers | wps)+)[1]
+   apply (fastforce dest!: valid_sched_pointersD[where t=tcbPtr]
+                     simp: in_opt_pred opt_map_red obj_at'_def)
 
-         \<comment> \<open>the ready queue was originally empty\<close>
-         apply (rule heap_path_heap_upd_not_in)
-          apply (clarsimp simp: fun_upd_apply split: if_splits)
-         apply fastforce
-        apply (clarsimp simp: queue_end_valid_def fun_upd_apply split: if_splits)
-       apply (rule prev_queue_head_heap_upd)
-        apply (clarsimp simp: fun_upd_apply split: if_splits)
-       apply (case_tac "ready_queues s d p";
-              clarsimp simp: fun_upd_apply tcbQueueEmpty_def split: if_splits)
-      apply (clarsimp simp: inQ_def in_opt_pred fun_upd_apply obj_at'_def split: if_splits)
-     apply (clarsimp simp: fun_upd_apply split: if_splits)
-    apply (clarsimp simp: fun_upd_apply split: if_splits)
-
-   \<comment> \<open>the ready queue was not originally empty\<close>
-   apply clarsimp
-   apply (prop_tac "the (tcbQueueHead (ksReadyQueues s' (tcb_domain tcb, tcb_priority tcb)))
-                    \<notin> set (ready_queues s d p)")
-    apply (erule orthD2)
-    apply (clarsimp simp: tcbQueueEmpty_def)
-   apply (intro conjI impI allI)
-        apply (intro heap_path_heap_upd_not_in)
-          apply (clarsimp simp: fun_upd_apply split: if_splits)
-         apply simp
-        apply fastforce
-       apply (clarsimp simp: queue_end_valid_def fun_upd_apply split: if_splits)
-      apply (intro prev_queue_head_heap_upd)
-        apply (force simp: fun_upd_apply split: if_splits)
-       apply (case_tac "ready_queues s d p";
-              force simp: fun_upd_apply tcbQueueEmpty_def split: if_splits)
-      apply (clarsimp simp: fun_upd_apply inQ_def split: if_splits)
-      apply (case_tac "ready_queues s d p"; force simp: tcbQueueEmpty_def)
-     apply (case_tac "t = tcbPtr")
-      apply (clarsimp simp: inQ_def fun_upd_apply obj_at'_def split: if_splits)
-     apply (case_tac "t = the (tcbQueueHead (ksReadyQueues s' (tcb_domain tcb, tcb_priority tcb)))")
-      apply (clarsimp simp: inQ_def opt_pred_def opt_map_def obj_at'_def fun_upd_apply
-                     split: option.splits)
-      apply metis
-     apply (clarsimp simp: inQ_def in_opt_pred opt_map_def fun_upd_apply)
-    apply (clarsimp simp: fun_upd_apply split: if_splits)
-   apply (clarsimp simp: fun_upd_apply split: if_splits)
-
-  \<comment> \<open>d = tcb_domain tcb \<and> p = tcb_priority tcb\<close>
-  apply clarsimp
-  apply (drule_tac x="tcb_domain tcb" in spec)
-  apply (drule_tac x="tcb_priority tcb" in spec)
-  apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
-              in tcbQueueHead_iff_tcbQueueEnd)
-   apply (force simp: list_queue_relation_def)
-  apply (frule valid_tcbs'_maxDomain[where t=tcbPtr], fastforce)
-  apply (frule valid_tcbs'_maxPriority[where t=tcbPtr], fastforce)
-  apply (drule valid_sched_pointersD[where t=tcbPtr])
-    apply (clarsimp simp: in_opt_pred opt_map_red obj_at'_def)
-   apply (clarsimp simp: in_opt_pred opt_map_red obj_at'_def)
-  apply (intro conjI; clarsimp simp: tcbQueueEmpty_def)
-
-   \<comment> \<open>the ready queue was originally empty\<close>
-   apply (force simp: inQ_def in_opt_pred fun_upd_apply queue_end_valid_def prev_queue_head_def
-                      opt_map_red obj_at'_def
-               split: if_splits)
-
-   \<comment> \<open>the ready queue was not originally empty\<close>
-  apply (drule obj_at'_prop)+
-  apply clarsimp
-  apply (drule (2) heap_ls_prepend[where new=tcbPtr])
-  apply (rule conjI)
-   apply (clarsimp simp: fun_upd_apply)
-  apply (rule conjI)
-   apply (subst opt_map_upd_triv)
-    apply (clarsimp simp: opt_map_def obj_at'_def fun_upd_apply split: if_splits)
-   apply (clarsimp simp: fun_upd_apply split: if_splits)
-  apply (rule conjI)
-   apply (clarsimp simp: fun_upd_apply queue_end_valid_def)
-  apply (rule conjI)
-   apply (clarsimp simp: prev_queue_head_def fun_upd_apply opt_map_def split: if_splits)
-  by (auto dest!: hd_in_set simp: inQ_def in_opt_pred opt_map_def fun_upd_apply
-           split: if_splits option.splits)
+  apply (rule hoare_allI, rename_tac t')
+  apply (case_tac "d \<noteq> domain \<or> p \<noteq> priority")
+   apply (wpsimp wp: tcbQueued_update_inQ_other hoare_vcg_disj_lift
+               simp: opt_pred_disj[simplified pred_disj_def, symmetric] simp_del: disj_not1)
+   apply (clarsimp simp: opt_map_def opt_pred_def obj_at'_def split: option.splits if_splits)
+  apply (case_tac "t' = tcbPtr")
+   apply (wpsimp wp: tcbQueued_True_makes_inQ)
+   apply (clarsimp simp: opt_pred_def opt_map_def obj_at'_def)
+  apply (wpsimp wp: threadSet_opt_pred_other)
+  done
 
 definition weak_sch_act_wf :: "scheduler_action \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "weak_sch_act_wf sa s \<equiv> \<forall>t. sa = SwitchToThread t \<longrightarrow> tcb_at' t s"
@@ -3045,20 +3336,6 @@ lemma gets_the_exec: "f s \<noteq> None \<Longrightarrow>  (do x \<leftarrow> ge
                    return_def assert_opt_def)
   done
 
-\<comment> \<open>
-  A direct analogue of tcbQueueRemove, used in tcb_sched_dequeue' below, so that within the proof of
-  tcbQueueRemove_corres, we may reason in terms of the list operations used within this function
-  rather than @{term filter}.\<close>
-definition tcb_queue_remove :: "'a \<Rightarrow> 'a list \<Rightarrow> 'a list" where
-  "tcb_queue_remove a ls \<equiv>
-     if ls = [a]
-     then []
-     else if a = hd ls
-          then tl ls
-          else if a = last ls
-               then butlast ls
-               else list_remove ls a"
-
 definition tcb_sched_dequeue' :: "obj_ref \<Rightarrow> unit det_ext_monad" where
   "tcb_sched_dequeue' tcb_ptr \<equiv> do
      d \<leftarrow> thread_get tcb_domain tcb_ptr;
@@ -3272,7 +3549,7 @@ lemma tcbSchedPrev_update_valid_objs'[wp]:
 
 lemma tcbQueuePrepend_valid_objs'[wp]:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> tcb_at' tcbPtr s
-        \<and> (\<not> tcbQueueEmpty queue \<longrightarrow> tcb_at' (the (tcbQueueHead queue)) s)\<rbrace>
+        \<and> (\<forall>head. tcbQueueHead queue = Some head \<longrightarrow> tcb_at' head s)\<rbrace>
    tcbQueuePrepend queue tcbPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   unfolding tcbQueuePrepend_def
@@ -3287,10 +3564,13 @@ lemma tcbSchedEnqueue_valid_objs'[wp]:
    tcbSchedEnqueue tcbPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   unfolding tcbSchedEnqueue_def setQueue_def
-  apply (wpsimp wp: threadSet_valid_objs' threadGet_wp)
+  apply (wpsimp wp: threadSet_valid_objs' threadGet_wp hoare_vcg_all_lift)
   apply normalise_obj_at'
-  apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues
-                    simp: ready_queue_relation_def ksReadyQueues_asrt_def)
+  apply (rename_tac tcb head)
+  apply (clarsimp simp: ksReadyQueues_asrt_def ready_queue_relation_def)
+  apply (drule_tac x="tcbDomain tcb" in spec)
+  apply (drule_tac x="tcbPriority tcb" in spec)
+  apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues simp: tcbQueueEmpty_def)
   done
 
 crunch rescheduleRequired, removeFromBitmap, scheduleTCB
@@ -3308,7 +3588,7 @@ lemma tcbQueueRemove_valid_objs'[wp]:
 lemma tcbSchedDequeue_valid_objs'[wp]:
   "tcbSchedDequeue t \<lbrace>valid_objs'\<rbrace>"
   unfolding tcbSchedDequeue_def setQueue_def
-  by (wpsimp wp: threadSet_valid_objs')
+  by (wpsimp wp: threadSet_valid_objs' threadGet_wp)
 
 lemma sts_valid_objs':
   "\<lbrace>valid_objs' and valid_tcb_state' st and pspace_aligned' and pspace_distinct'\<rbrace>
@@ -3985,11 +4265,6 @@ lemma setQueue_bitmapQ_no_L2_orphans[wp]:
   unfolding setQueue_def bitmapQ_no_L2_orphans_def null_def
   by (wp, auto)
 
-lemma setQueue_sets_queue[wp]:
-  "\<And>d p ts P. \<lbrace> \<lambda>s. P ts \<rbrace> setQueue d p ts \<lbrace>\<lambda>rv s. P (ksReadyQueues s (d, p)) \<rbrace>"
-  unfolding setQueue_def
-  by (wp, simp)
-
 crunch setQueue
   for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
 
@@ -4005,17 +4280,11 @@ crunch tcbSchedEnqueue
 
 lemma tcbSchedPrev_update_tcbInReleaseQueues[wp]:
   "threadSet (tcbSchedPrev_update f) tcbPtr \<lbrace>\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)\<rbrace>"
-  apply (wpsimp wp: threadSet_wp)
-  apply (fastforce simp: obj_at'_def opt_pred_def opt_map_def
-                  split: option.splits elim!: rsubst[where P=P])
-  done
+  by (wpsimp wp: threadSet_tcbInReleaseQueue)
 
 lemma tcbSchedNext_update_tcbInReleaseQueue[wp]:
   "threadSet (tcbSchedNext_update f) tcbPtr \<lbrace>\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)\<rbrace>"
-  apply (wpsimp wp: threadSet_wp)
-  apply (fastforce simp: obj_at'_def opt_pred_def opt_map_def
-                  split: option.splits elim!: rsubst[where P=P])
-  done
+  by (wpsimp wp: threadSet_tcbInReleaseQueue)
 
 crunch tcbSchedEnqueue
   for valid_dom_schedule'_misc[wp]: "\<lambda>s. P (ksDomScheduleIdx s) (ksDomSchedule s)"
@@ -4138,7 +4407,7 @@ lemma tcbQueued_update_valid_tcbs'[wp]:
 
 lemma tcbQueuePrepend_valid_tcbs'[wp]:
   "\<lbrace>\<lambda>s. valid_tcbs' s \<and> tcb_at' tcbPtr s
-        \<and> (\<not> tcbQueueEmpty queue \<longrightarrow> tcb_at' (the (tcbQueueHead queue)) s)\<rbrace>
+        \<and> (\<forall>head. tcbQueueHead queue = Some head \<longrightarrow> tcb_at' head s)\<rbrace>
    tcbQueuePrepend queue tcbPtr
    \<lbrace>\<lambda>_. valid_tcbs'\<rbrace>"
   unfolding tcbQueuePrepend_def
@@ -4149,9 +4418,13 @@ lemma tcbSchedEnqueue_valid_tcbs':
    tcbSchedEnqueue thread
    \<lbrace>\<lambda>_. valid_tcbs'\<rbrace>"
   apply (clarsimp simp: tcbSchedEnqueue_def setQueue_def bitmap_fun_defs)
-  apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' threadGet_wp)
-  apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues
-                    simp: ready_queue_relation_def ksReadyQueues_asrt_def obj_at'_def)
+  apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' threadGet_wp hoare_vcg_all_lift)
+  apply normalise_obj_at'
+  apply (rename_tac tcb head)
+  apply (clarsimp simp: ksReadyQueues_asrt_def ready_queue_relation_def)
+  apply (drule_tac x="tcbDomain tcb" in spec)
+  apply (drule_tac x="tcbPriority tcb" in spec)
+  apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues simp: tcbQueueEmpty_def)
   done
 
 lemma setSchedulerAction_valid_tcbs'[wp]:
@@ -4834,12 +5107,10 @@ lemma tcbSchedDequeue_tcbState_obj_at'[wp]:
 
 lemma tcbSchedDequeue_pred_tcb_at'[wp]:
   "tcbSchedDequeue t \<lbrace>\<lambda>s. Q (pred_tcb_at' proj P t' s)\<rbrace>"
-  apply (rule_tac P=Q in P_bool_lift)
-   apply (simp add: tcbSchedDequeue_def tcbQueueRemove_def)
-   apply (wp threadSet_pred_tcb_no_state getTCB_wp threadGet_wp | clarsimp simp: tcb_to_itcb'_def)+
-  apply (simp add: tcbSchedDequeue_def tcbQueueRemove_def)
-  apply (wp threadSet_pred_tcb_no_state getTCB_wp threadGet_wp | clarsimp simp: tcb_to_itcb'_def)+
-  done
+  by (rule_tac P=Q in P_bool_lift;
+      simp add: tcbSchedDequeue_def tcbQueueRemove_def,
+      (wp threadSet_pred_tcb_no_state getTCB_wp threadGet_wp hoare_vcg_all_lift hoare_drop_imps
+       | clarsimp simp: tcb_to_itcb'_def)+)
 
 crunch tcbQueueRemove
   for pred_tcb_at'[wp]: "\<lambda>s. P' (pred_tcb_at' proj P t' s)"
@@ -5001,6 +5272,14 @@ lemma tcbSchedPrev_update_ctes_of[wp]:
   "threadSet (tcbSchedPrev_update f) x \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
   by (wpsimp wp: threadSet_ctes_ofT simp: tcbSchedPrev_update_tcb_cte_cases)
 
+lemma tcbQueued_ex_nonz_cap_to'[wp]:
+  "threadSet (tcbQueued_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
+  by (wpsimp wp: threadSet_cap_to simp: tcbQueued_update_tcb_cte_cases)
+
+lemma tcbInReleaseQueue_ex_nonz_cap_to'[wp]:
+  "threadSet (tcbInReleaseQueue_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
+  by (wpsimp wp: threadSet_cap_to simp: tcbInReleaseQueue_update_tcb_cte_cases)
+
 lemma tcbSchedNext_ex_nonz_cap_to'[wp]:
   "threadSet (tcbSchedNext_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
   by (wpsimp wp: threadSet_cap_to simp: tcbSchedNext_update_tcb_cte_cases)
@@ -5053,20 +5332,22 @@ lemma tcbQueueRemove_ex_nonz_cap_to'[wp]:
 
 lemma tcbQueuePrepend_if_live_then_nonz_cap':
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' tcbPtr s
-        \<and> (\<not> tcbQueueEmpty q \<longrightarrow> ex_nonz_cap_to' (the (tcbQueueHead q)) s)\<rbrace>
+        \<and> (\<forall>head. tcbQueueHead q = Some head \<longrightarrow> ex_nonz_cap_to' head s)\<rbrace>
    tcbQueuePrepend q tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  unfolding tcbQueuePrepend_def
+  unfolding tcbQueuePrepend_def tcbQueueEmpty_def
   by (wpsimp wp: tcbSchedPrev_update_iflive' tcbSchedNext_update_iflive'
                  hoare_vcg_if_lift2 hoare_vcg_imp_lift')
 
 lemma tcbQueueAppend_if_live_then_nonz_cap':
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' tcbPtr s
-        \<and> (\<not> tcbQueueEmpty q \<longrightarrow> ex_nonz_cap_to' (the (tcbQueueEnd q)) s)\<rbrace>
+        \<and> (\<forall>end. tcbQueueEnd q = Some end \<longrightarrow> ex_nonz_cap_to' end s)
+        \<and> (\<exists>ls. list_queue_relation ls q (tcbSchedNexts_of s) (tcbSchedPrevs_of s))\<rbrace>
    tcbQueueAppend q tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  unfolding tcbQueueAppend_def
-  by (wpsimp wp: tcbSchedPrev_update_iflive' tcbSchedNext_update_iflive')
+  unfolding tcbQueueAppend_def tcbQueueEmpty_def
+  apply (wpsimp wp: tcbSchedPrev_update_iflive' tcbSchedNext_update_iflive')
+  by (fastforce dest: tcbQueueHead_iff_tcbQueueEnd)
 
 lemma tcbQueueInsert_if_live_then_nonz_cap':
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' tcbPtr and valid_objs' and sym_heap_sched_pointers\<rbrace>
@@ -5089,7 +5370,8 @@ lemma tcbSchedEnqueue_iflive'[wp]:
    tcbSchedEnqueue tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding tcbSchedEnqueue_def
-  apply (wpsimp wp: tcbQueuePrepend_if_live_then_nonz_cap' threadGet_wp)
+  apply (wpsimp wp: tcbQueuePrepend_if_live_then_nonz_cap' threadGet_wp hoare_vcg_imp_lift'
+                    hoare_vcg_all_lift)
   apply (normalise_obj_at', rename_tac tcb)
   apply (frule_tac p=tcbPtr in if_live_then_nonz_capE')
    apply (fastforce simp: ko_wp_at'_def obj_at'_def )
@@ -5098,10 +5380,8 @@ lemma tcbSchedEnqueue_iflive'[wp]:
   apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
   apply (drule_tac x="tcbDomain tcb" in spec)
   apply (drule_tac x="tcbPriority tcb" in spec)
-  apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues
-                    simp: ko_wp_at'_def inQ_def opt_pred_def opt_map_def obj_at'_def
-                   split: option.splits)
-  done
+  by (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues
+                 simp: ko_wp_at'_def inQ_def obj_at'_def tcbQueueEmpty_def)
 
 crunch scheduleTCB
   for if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
@@ -5514,7 +5794,7 @@ lemma tcbSchedEnqueue_valid_bitmapQ[wp]:
   unfolding tcbSchedEnqueue_def
   apply (wpsimp simp: tcbQueuePrepend_def
                   wp: setQueue_valid_bitmapQ' addToBitmap_valid_bitmapQ_except addToBitmap_bitmapQ
-                      threadGet_wp)
+                      threadGet_wp threadSet_bitmapQ)
   apply (fastforce simp: valid_bitmaps_def valid_bitmapQ_def tcbQueueEmpty_def split: if_splits)
   done
 
@@ -5585,14 +5865,6 @@ lemma tcbSchedAppend_valid_sched_pointers[wp]:
               split: if_splits option.splits;
       fastforce)
 
-lemma in_queue_not_head_or_not_tail_length_gt_1:
-  "\<lbrakk>tcbPtr \<in> set ls; tcbQueueHead q \<noteq> Some tcbPtr \<or> tcbQueueEnd q \<noteq> Some tcbPtr;
-    list_queue_relation ls q nexts prevs\<rbrakk>
-   \<Longrightarrow> Suc 0 < length ls"
-  apply (clarsimp simp: list_queue_relation_def)
-  apply (cases ls; fastforce simp: queue_end_valid_def)
-  done
-
 lemma monadic_rewrite_threadSet_same:
   "monadic_rewrite F E (obj_at' (\<lambda>tcb :: tcb. f tcb = tcb) tcbPtr)
      (threadSet f tcbPtr) (return ())"
@@ -5607,16 +5879,6 @@ lemma monadic_rewrite_threadSet_same:
      apply fastforce
     apply (wpsimp wp: getTCB_wp)+
   apply (clarsimp simp: obj_at'_def)
-  done
-
-lemma list_queue_relation_neighbour_in_set:
-  "\<lbrakk>list_queue_relation ls q hp hp'; sym_heap hp hp'; p \<in> set ls\<rbrakk>
-   \<Longrightarrow> \<forall>nbr. (hp p = Some nbr \<longrightarrow> nbr \<in> set ls) \<and> (hp' p = Some nbr \<longrightarrow> nbr \<in> set ls)"
-  apply (rule heap_ls_neighbour_in_set)
-     apply (fastforce simp: list_queue_relation_def)
-    apply fastforce
-   apply (clarsimp simp: list_queue_relation_def prev_queue_head_def)
-  apply fastforce
   done
 
 lemma tcbSchedDequeue_valid_sched_pointers[wp]:
@@ -5644,21 +5906,22 @@ lemma tcbSchedDequeue_valid_sched_pointers[wp]:
      apply (simp add: fun_upd_def opt_pred_def)
     \<comment> \<open>tcbPtr is the head of the ready queue\<close>
     subgoal
-      by (auto dest!: heap_ls_last_None
-                simp: valid_sched_pointers_def fun_upd_apply prev_queue_head_def
-                      inQ_def opt_pred_def opt_map_def obj_at'_def
-               split: if_splits option.splits)
-   \<comment> \<open>tcbPtr is the end of the ready queue\<close>
-   subgoal
-     by (auto dest!: heap_ls_last_None
-               simp: valid_sched_pointers_def queue_end_valid_def inQ_def opt_pred_def
-                     opt_map_def fun_upd_apply obj_at'_def
-              split: if_splits option.splits)
-  \<comment> \<open>tcbPtr is in the middle of the ready queue\<close>
-  apply (intro conjI impI allI)
-  by (clarsimp simp: valid_sched_pointers_def inQ_def opt_pred_def opt_map_def fun_upd_apply obj_at'_def
+      by (clarsimp simp: valid_sched_pointers_def fun_upd_apply prev_queue_head_def
+                     inQ_def opt_pred_def opt_map_def obj_at'_def
               split: if_splits option.splits;
-      auto)
+          auto)
+   \<comment> \<open>tcbPtr is the end of the ready queue\<close>
+   apply (frule heap_ls_last_None)
+    apply (fastforce simp: fun_upd_apply opt_map_def obj_at'_def)
+   subgoal
+     by (clarsimp simp: valid_sched_pointers_def inQ_def opt_pred_def
+                        opt_map_def fun_upd_apply obj_at'_def queue_end_valid_def
+                 split: if_splits option.splits;
+         auto)
+  \<comment> \<open>tcbPtr is in the middle of the ready queue\<close>
+  by (auto simp: valid_sched_pointers_def inQ_def opt_pred_def opt_map_def fun_upd_apply
+                     obj_at'_def
+          split: if_splits option.splits)
 
 lemma tcbQueueRemove_sym_heap_sched_pointers:
   "\<lbrace>\<lambda>s. sym_heap_sched_pointers s
@@ -5791,41 +6054,39 @@ lemma tcbSchedEnqueue_sym_heap_sched_pointers[wp]:
    tcbSchedEnqueue tcbPtr
    \<lbrace>\<lambda>_. sym_heap_sched_pointers\<rbrace>"
   unfolding tcbSchedEnqueue_def
-  apply (wpsimp wp: tcbQueuePrepend_sym_heap_sched_pointers threadGet_wp
-              simp: addToBitmap_def bitmap_fun_defs)
+  apply (wpsimp wp: tcbQueuePrepend_sym_heap_sched_pointers threadGet_wp threadSet_sched_pointers
+              simp: addToBitmap_def bitmap_fun_defs | wps)+
   apply (normalise_obj_at', rename_tac tcb)
   apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
   apply (drule_tac x="tcbDomain tcb" in spec)
   apply (drule_tac x="tcbPriority tcb" in spec)
-  apply (fastforce dest!: spec[where x=tcbPtr] inQ_implies_tcbQueueds_of
-                    simp: valid_sched_pointers_def opt_pred_def opt_map_def obj_at'_def)
-  done
+  by (fastforce dest!: spec[where x=tcbPtr] inQ_implies_tcbQueueds_of
+                 simp: valid_sched_pointers_def opt_pred_def opt_map_def obj_at'_def)
 
 lemma tcbSchedAppend_sym_heap_sched_pointers[wp]:
   "\<lbrace>sym_heap_sched_pointers and valid_sched_pointers\<rbrace>
    tcbSchedAppend tcbPtr
    \<lbrace>\<lambda>_. sym_heap_sched_pointers\<rbrace>"
   unfolding tcbSchedAppend_def
-  apply (wpsimp wp: tcbQueueAppend_sym_heap_sched_pointers threadGet_wp
+  apply (wpsimp wp: tcbQueueAppend_sym_heap_sched_pointers threadGet_wp threadSet_sched_pointers
               simp: addToBitmap_def bitmap_fun_defs)
   apply (normalise_obj_at', rename_tac tcb)
   apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
   apply (drule_tac x="tcbDomain tcb" in spec)
   apply (drule_tac x="tcbPriority tcb" in spec)
-  apply (fastforce dest!: spec[where x=tcbPtr] inQ_implies_tcbQueueds_of
-                    simp: valid_sched_pointers_def opt_pred_def opt_map_def obj_at'_def)
-  done
+  by (fastforce dest!: spec[where x=tcbPtr] inQ_implies_tcbQueueds_of
+                 simp: valid_sched_pointers_def opt_pred_def opt_map_def obj_at'_def)
 
 lemma tcbSchedDequeue_sym_heap_sched_pointers[wp]:
   "\<lbrace>sym_heap_sched_pointers and valid_sched_pointers\<rbrace>
    tcbSchedDequeue tcbPtr
    \<lbrace>\<lambda>_. sym_heap_sched_pointers\<rbrace>"
   unfolding tcbSchedDequeue_def
-  apply (wpsimp wp: tcbQueueRemove_sym_heap_sched_pointers hoare_vcg_if_lift2 threadGet_wp
-              simp: bitmap_fun_defs)
-  apply (fastforce simp: ready_queue_relation_def ksReadyQueues_asrt_def inQ_def opt_pred_def
-                         opt_map_def obj_at'_def)
-  done
+  apply (wpsimp wp: tcbQueueRemove_sym_heap_sched_pointers threadGet_wp threadSet_sched_pointers
+              simp: bitmap_fun_defs
+         | wps)+
+  by (fastforce simp: ready_queue_relation_def ksReadyQueues_asrt_def inQ_def opt_pred_def
+                      opt_map_def obj_at'_def)
 
 crunch setThreadState
   for valid_sched_pointers[wp]: valid_sched_pointers
@@ -6110,6 +6371,7 @@ crunch setReleaseQueue, tcbQueueRemove, setReprogramTimer
 
 crunch tcbReleaseRemove
   for valid_objs'[wp]: valid_objs'
+  (simp: crunch_simps)
 
 crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for pred_tcb_at'[wp]: "\<lambda>s. P' (pred_tcb_at' P obj t s)"
@@ -6153,25 +6415,17 @@ lemma tcbReleaseRemove_if_live_then_nonz_cap'[wp]:
   "\<lbrace>if_live_then_nonz_cap' and valid_objs' and sym_heap_sched_pointers\<rbrace>
    tcbReleaseRemove tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  apply (clarsimp simp: tcbReleaseRemove_def setReleaseQueue_def)
-  apply (wpsimp wp: tcbQueueRemove_if_live_then_nonz_cap' inReleaseQueue_wp)
-  apply (fastforce elim: if_live_then_nonz_capE'
-                   simp: obj_at'_def ko_wp_at'_def)
-  done
+  unfolding tcbReleaseRemove_def setReleaseQueue_def
+  apply (wpsimp wp: tcbQueueRemove_if_live_then_nonz_cap' inReleaseQueue_wp threadSet_valid_objs')
+  by (fastforce elim: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def)
 
 lemma tcbSchedPrev_update_tcbQueueds_of[wp]:
   "threadSet (tcbSchedPrev_update f) tcbPtr \<lbrace>\<lambda>s. P (tcbQueued |< tcbs_of' s)\<rbrace>"
-  apply (wpsimp wp: threadSet_wp)
-  apply (erule rsubst[where P=P])
-  apply (fastforce simp: opt_pred_def obj_at'_def opt_map_def split: option.splits)
-  done
+  by (wpsimp wp: threadSet_tcbQueued)
 
 lemma tcbSchedNext_update_tcbQueueds_of[wp]:
   "threadSet (tcbSchedNext_update f) tcbPtr \<lbrace>\<lambda>s. P (tcbQueued |< tcbs_of' s)\<rbrace>"
-  apply (wpsimp wp: threadSet_wp)
-  apply (erule rsubst[where P=P])
-  apply (fastforce simp: opt_pred_def obj_at'_def opt_map_def split: option.splits)
-  done
+  by (wpsimp wp: threadSet_tcbQueued)
 
 lemma setReprogramTimer_ready_or_release'[wp]:
   "setReprogramTimer reprogramTimer \<lbrace>ready_or_release'\<rbrace>"
@@ -6208,9 +6462,6 @@ crunch removeFromBitmap
 crunch removeFromBitmap
   for release_queue_relation[wp]: "release_queue_relation s"
   and ready_queues_relation[wp]: "ready_queues_relation s"
-  and list_queue_relation[wp]:
-   "\<lambda>s'. list_queue_relation ts (P (ksReadyQueues s'))
-                             (tcbSchedNexts_of s') (tcbSchedPrevs_of s')"
   (simp: bitmap_fun_defs release_queue_relation_def ready_queues_relation_def)
 
 lemma ready_or_release'_inQ:
@@ -6225,8 +6476,7 @@ lemma tcbSchedDequeue_corres:
       and pspace_aligned and pspace_distinct)
      (sym_heap_sched_pointers and valid_objs')
      (tcb_sched_action tcb_sched_dequeue tcb_ptr) (tcbSchedDequeue tcbPtr)"
-  supply heap_path_append[simp del] fun_upd_apply[simp del] distinct_append[simp del]
-         list_remove_append[simp del]
+  supply if_split[split del]
   apply (rule_tac Q'="tcb_at' tcbPtr" in corres_cross_add_guard)
    apply (fastforce intro!: tcb_at_cross simp: vs_all_heap_simps obj_at_def is_tcb_def)
   apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
@@ -6236,7 +6486,7 @@ lemma tcbSchedDequeue_corres:
   apply (rule monadic_rewrite_corres_l[where P=P and Q=P for P, simplified])
    apply (rule monadic_rewrite_guard_imp[OF tcb_sched_dequeue_monadic_rewrite])
    apply (clarsimp simp: ready_qs_distinct_def)
-  apply (clarsimp simp: tcb_sched_dequeue'_def get_tcb_queue_def tcbSchedDequeue_def  getQueue_def
+  apply (clarsimp simp: tcb_sched_dequeue'_def get_tcb_queue_def tcbSchedDequeue_def getQueue_def
                         unless_def when_def)
   apply (rule corres_symb_exec_l[OF _ _ thread_get_sp]; wpsimp?)
   apply (rename_tac dom)
@@ -6251,235 +6501,93 @@ lemma tcbSchedDequeue_corres:
   apply (rule corres_if_strong'; fastforce?)
    apply (intro iffI)
     apply (frule state_relation_ready_queues_relation)
-    apply (fastforce dest: in_ready_q_tcbQueued_eq[THEN iffD1]
-                     simp: obj_at'_def obj_at_def in_ready_q_def opt_pred_def opt_map_def)
+    apply (fastforce dest!: in_ready_q_tcbQueued_eq[THEN iffD1]
+                      simp: obj_at'_def obj_at_def in_ready_q_def opt_pred_def opt_map_def)
    apply (frule state_relation_ready_queues_relation)
    apply (frule in_ready_q_tcbQueued_eq[THEN iffD2, where t1=tcb_ptr])
     apply (fastforce simp: obj_at'_def opt_pred_def opt_map_def)
    apply (fastforce simp: in_correct_ready_q_def vs_all_heap_simps obj_at_def in_ready_q_def)
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; wpsimp?)
+  apply (rename_tac dom')
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; wpsimp?)
-  apply (rule corres_symb_exec_r[OF _ gets_sp]; wpsimp?)
+  apply (rename_tac prio')
+
+  apply (rule_tac F="dom' = dom \<and> prio' = prio" in corres_req)
+   apply (fastforce dest: pspace_relation_tcb_domain_priority state_relation_pspace_relation
+                    simp: obj_at_def obj_at'_def)
+  apply clarsimp
 
   apply (rule corres_from_valid_det)
     apply (fastforce intro: det_wp_modify det_wp_pre simp: set_tcb_queue_def)
-   apply (wpsimp wp: tcbQueueRemove_no_fail)
+   apply ((wpsimp wp: tcbQueueRemove_no_fail hoare_vcg_ex_lift
+                      threadSet_sched_pointers threadSet_valid_objs'
+           | wps)+)[1]
    apply (fastforce dest: state_relation_ready_queues_relation
-                    simp: ex_abs_def ready_queues_relation_def ready_queue_relation_def Let_def
-                          inQ_def opt_pred_def opt_map_def obj_at'_def)
+                    simp: ex_abs_def ready_queues_relation_def ready_queue_relation_def Let_def)
   apply (clarsimp simp: state_relation_def)
   apply (intro hoare_vcg_conj_lift_pre_fix;
          (solves \<open>frule singleton_eqD, frule set_tcb_queue_projs_inv, wpsimp simp: swp_def\<close>)?)
 
    apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. release_queue_relation t\<rbrace>" for t \<Rightarrow> \<open>-\<close>\<close>)
-   apply (simp add: tcbQueueRemove_def)
-   apply (wpsimp wp: threadSet_release_queue_relation threadSet_tcbInReleaseQueue
-                     getTCB_wp hoare_vcg_imp_lift')
-   apply normalise_obj_at'
-   apply (drule obj_at'_prop)+
-   apply (rename_tac s' tcb)
-   apply (cut_tac p=tcbPtr and ls="ready_queues s dom prio" in list_queue_relation_neighbour_in_set)
-      apply (fastforce dest!: spec simp: ready_queues_relation_def ready_queue_relation_def Let_def)
-     apply fastforce
-    apply fastforce
-   apply (prop_tac "release_queue_relation t s'")
-    apply (force dest!: set_tcb_queue_projs_inv simp: release_queue_relation_def)
-   apply (drule_tac domain=dom and prio=prio in ready_or_release'_inQ)
-   apply (force simp: opt_map_def ready_queues_relation_def ready_queue_relation_def Let_def
-               split: option.splits)
+   apply (frule_tac d=dom and p=prio in ready_or_release_disjoint)
+   apply (drule set_tcb_queue_projs_inv)
+   apply (wpsimp wp: tcbQueueRemove_list_queue_relation_other hoare_vcg_ex_lift
+                     threadSet_sched_pointers
+               simp: release_queue_relation_def
+          | wps)+
+   apply (rule_tac x="ready_queues s (tcbDomain tcba) (tcbPriority tcb)" in exI)
+   apply (auto simp: ready_queues_relation_def ready_queue_relation_def Let_def)[1]
 
   \<comment> \<open>ready_queues_relation\<close>
   apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def)
   apply (intro hoare_allI)
   apply (drule singleton_eqD)
   apply (drule set_tcb_queue_new_state)
-  apply (wpsimp wp: threadSet_wp getTCB_wp simp: setQueue_def tcbQueueRemove_def split_del: if_split)
-  apply normalise_obj_at'
-  apply (drule tcb_at_ko_at)+
-  apply clarsimp
-  apply (rename_tac s' tcb' tcb)
-  apply (clarsimp simp: obj_at_def)
-  apply (frule_tac t=tcbPtr in pspace_relation_tcb_domain_priority)
-    apply (fastforce simp: obj_at_def)
-   apply (fastforce simp: obj_at'_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
 
-  apply (case_tac "d \<noteq> tcb_domain tcb \<or> p \<noteq> tcb_priority tcb")
-   apply clarsimp
-   apply (cut_tac p=tcbPtr and ls="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
-               in list_queue_relation_neighbour_in_set)
-      apply (fastforce dest!: spec)
-     apply fastforce
-    apply fastforce
-   apply (cut_tac xs="ready_queues s d p" in heap_path_head')
-    apply (force dest!: spec simp: ready_queues_relation_def Let_def list_queue_relation_def)
-   apply (cut_tac d=d and d'="tcb_domain tcb" and p=p and p'="tcb_priority tcb"
-               in ready_queues_disjoint)
+     apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ s. maxDomain < d \<longrightarrow> _\<rbrace>" for d \<Rightarrow> \<open>-\<close>\<close>)
+     apply (wpsimp wp: threadSet_wp getTCB_wp simp: setQueue_def tcbQueueRemove_def)
+     apply (force simp: obj_at_def tcbQueueEmpty_def split: if_split)
+
+    apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ s. maxPriority < d \<longrightarrow> _\<rbrace>" for d \<Rightarrow> \<open>-\<close>\<close>)
+    apply (wpsimp wp: threadSet_wp getTCB_wp simp: setQueue_def tcbQueueRemove_def)
+    apply (force simp: obj_at_def tcbQueueEmpty_def split: if_split)
+
+   apply (find_goal \<open>match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ s. list_queue_relation _ _ _ _ \<rbrace>" \<Rightarrow> \<open>-\<close>\<close>)
+   apply (case_tac "d \<noteq> dom \<or> p \<noteq> prio")
+    apply (clarsimp simp: obj_at_def obj_at'_def)
+    apply (wpsimp wp: tcbQueueRemove_list_queue_relation_other setQueue_ksReadyQueues_other
+                      threadSet_sched_pointers hoare_vcg_ex_lift
+           | wps)+
+    apply (frule (2) pspace_relation_tcb_domain_priority[where t=tcbPtr])
+    apply (intro conjI)
       apply fastforce
-     apply fastforce
+     apply (rule_tac x="ready_queues s (tcb_domain tcb) (tcb_priority tcb)" in exI)
+     apply (auto simp: ready_queues_disjoint split: if_splits)[1]
     apply fastforce
-   apply (cut_tac ts="ready_queues s d p" in list_queue_relation_nil)
-    apply fast
-   apply (clarsimp simp: tcbQueueEmpty_def)
-   apply (prop_tac "Some tcbPtr \<noteq> tcbQueueHead (ksReadyQueues s' (d, p))")
-    apply (metis hd_in_set not_emptyI option.sel option.simps(2))
-   apply (prop_tac "tcbPtr \<notin> set (ready_queues s d p)")
-    apply blast
-   apply (clarsimp simp: list_queue_relation_def)
-   apply (intro conjI; clarsimp)
+   apply ((wpsimp wp: tcbQueueRemove_list_queue_relation threadSet_sched_pointers | wps)+)[1]
 
-    \<comment> \<open>the ready queue is the singleton consisting of tcbPtr\<close>
-    apply (intro conjI)
-         apply (force intro!: heap_path_heap_upd_not_in simp: fun_upd_apply)
-        apply (clarsimp simp: queue_end_valid_def fun_upd_apply)
-       apply (force simp: prev_queue_head_heap_upd fun_upd_apply)
-      apply (clarsimp simp: inQ_def in_opt_pred fun_upd_apply)
-     apply (clarsimp simp: fun_upd_apply)
-    apply (clarsimp simp: fun_upd_apply)
-
-   apply (intro conjI; clarsimp)
-
-    \<comment> \<open>tcbPtr is the head of the ready queue\<close>
-    apply (intro conjI)
-         apply (intro heap_path_heap_upd_not_in)
-           apply (force simp: fun_upd_apply)
-          apply (force simp: not_emptyI opt_map_red obj_at'_def)
-         apply assumption
-        apply (clarsimp simp: queue_end_valid_def fun_upd_apply)
-       apply (clarsimp simp: prev_queue_head_def fun_upd_apply)
-      apply (clarsimp simp: inQ_def opt_pred_def opt_map_def fun_upd_apply obj_at'_def
-                     split: option.splits)
-     apply (clarsimp simp: fun_upd_apply)
-    apply (clarsimp simp: fun_upd_apply)
-   apply (intro conjI; clarsimp)
-
-    \<comment> \<open>tcbPtr is the end of the ready queue\<close>
-    apply (intro conjI)
-         apply (intro heap_path_heap_upd_not_in)
-           apply (simp add: fun_upd_apply)
-          apply (force simp: not_emptyI opt_map_red obj_at'_def)
-         apply (clarsimp simp: inQ_def opt_pred_def opt_map_def fun_upd_apply split: option.splits)
-        apply (clarsimp simp: queue_end_valid_def fun_upd_apply)
-       apply (force simp: prev_queue_head_def fun_upd_apply opt_map_red opt_map_upd_triv obj_at'_def)
-      apply (clarsimp simp: inQ_def opt_pred_def opt_map_def fun_upd_apply obj_at'_def
-                     split: option.splits)
-     apply (clarsimp simp: fun_upd_apply)
-    apply (clarsimp simp: fun_upd_apply)
-
-   \<comment> \<open>tcbPtr is in the middle of the ready queue\<close>
-    apply (intro conjI)
-     apply (intro heap_path_heap_upd_not_in)
-        apply (simp add: fun_upd_apply)
-       apply (force simp: not_emptyI opt_map_red obj_at'_def)
-      apply (force simp: not_emptyI opt_map_red obj_at'_def)
-     apply fastforce
-    apply (clarsimp simp: opt_map_red opt_map_upd_triv obj_at'_def)
-    apply (intro prev_queue_head_heap_upd)
-      apply (force dest!: spec)
-     apply (metis hd_in_set not_emptyI option.sel option.simps(2))
-    apply fastforce
-   subgoal
-     by (clarsimp simp: inQ_def opt_map_def opt_pred_def fun_upd_apply obj_at'_def
-                 split: if_splits option.splits)
-
-  \<comment> \<open>d = tcb_domain tcb \<and> p = tcb_priority tcb\<close>
+  apply (rule hoare_allI, rename_tac t')
+  apply (case_tac "d \<noteq> dom \<or> p \<noteq> prio")
+   apply (wpsimp wp: tcbQueued_update_inQ_other hoare_vcg_disj_lift hoare_drop_imp
+               simp: opt_pred_disj[simplified pred_disj_def, symmetric]
+           simp_del: disj_not1 fun_upd_apply)
+   apply (clarsimp simp: opt_map_def opt_pred_def obj_at'_def split: if_splits)
   apply clarsimp
-  apply (drule_tac x="tcb_domain tcb" in spec)
-  apply (drule_tac x="tcb_priority tcb" in spec)
-  apply (clarsimp simp: list_queue_relation_def)
-  apply (frule heap_path_head')
-  apply (frule heap_ls_distinct)
-  apply (intro conjI; clarsimp simp: tcbQueueEmpty_def)
-
-   \<comment> \<open>the ready queue is the singleton consisting of tcbPtr\<close>
-   apply (intro conjI)
-      apply (simp add: fun_upd_apply tcb_queue_remove_def queue_end_valid_def heap_ls_unique
-                       heap_path_last_end)
-     apply (simp add: fun_upd_apply tcb_queue_remove_def queue_end_valid_def heap_ls_unique
-                      heap_path_last_end)
-    apply (simp add: fun_upd_apply prev_queue_head_def)
-   apply (case_tac "ready_queues s (tcb_domain tcb) (tcb_priority tcb)";
-          clarsimp simp: tcb_queue_remove_def inQ_def opt_pred_def fun_upd_apply)
-  apply (intro conjI; clarsimp)
-
-   \<comment> \<open>tcbPtr is the head of the ready queue\<close>
-   apply (frule set_list_mem_nonempty)
-   apply (frule in_queue_not_head_or_not_tail_length_gt_1)
-     apply fastforce
-    apply (fastforce simp: list_queue_relation_def)
-   apply (frule list_not_head)
-   apply (clarsimp simp: tcb_queue_remove_def)
-   apply (frule length_tail_nonempty)
-   apply (frule (2) heap_ls_next_of_hd)
-   apply (intro conjI)
-      apply (drule (1) heap_ls_remove_head_not_singleton)
-      apply (clarsimp simp: opt_map_red opt_map_upd_triv fun_upd_apply obj_at'_def)
-     apply (clarsimp simp: queue_end_valid_def fun_upd_apply last_tl)
-    apply (clarsimp simp: prev_queue_head_def fun_upd_apply obj_at'_def)
-   apply (case_tac "ready_queues s (tcb_domain tcb) (tcb_priority tcb)";
-          clarsimp simp: inQ_def opt_pred_def opt_map_def obj_at'_def fun_upd_apply
-                  split: option.splits)
-  apply (intro conjI; clarsimp)
-
-   \<comment> \<open>tcbPtr is the end of the ready queue\<close>
-   apply (frule set_list_mem_nonempty)
-   apply (frule in_queue_not_head_or_not_tail_length_gt_1)
-     apply fast
-    apply (force dest!: spec simp: list_queue_relation_def)
-   apply (clarsimp simp: queue_end_valid_def)
-   apply (frule list_not_last)
-   apply (clarsimp simp: tcb_queue_remove_def)
-   apply (frule length_gt_1_imp_butlast_nonempty)
-   apply (frule (3) heap_ls_prev_of_last)
-   apply (intro conjI impI; clarsimp?)
-      apply (drule (1) heap_ls_remove_last_not_singleton)
-      apply (drule obj_at'_prop)+
-      apply (force elim!: rsubst3[where P=heap_ls] simp: opt_map_def fun_upd_apply)
-     apply (clarsimp simp: opt_map_def fun_upd_apply obj_at'_def)
-    apply (clarsimp simp: prev_queue_head_def fun_upd_apply obj_at'_def opt_map_def)
-   apply (clarsimp simp: inQ_def opt_pred_def opt_map_def  fun_upd_apply obj_at'_def
-                  split: option.splits)
-   apply (meson distinct_in_butlast_not_last in_set_butlastD last_in_set not_last_in_set_butlast)
-
-  \<comment> \<open>tcbPtr is in the middle of the ready queue\<close>
-  apply (frule set_list_mem_nonempty)
-  apply (frule split_list)
-  apply clarsimp
-  apply (rename_tac xs ys)
-  apply (prop_tac "xs \<noteq> [] \<and> ys \<noteq> []", fastforce simp: queue_end_valid_def)
-  apply clarsimp
-  apply (frule (2) ptr_in_middle_prev_next)
-   apply fastforce
-  apply (clarsimp simp: tcb_queue_remove_def)
-  apply (prop_tac "tcbPtr \<noteq> last xs")
-   apply (clarsimp simp: distinct_append)
-  apply (prop_tac "tcbPtr \<noteq> hd ys")
-   apply (fastforce dest: hd_in_set simp: distinct_append)
-  apply (prop_tac "last xs \<noteq> hd ys")
-   apply (metis distinct_decompose2 hd_Cons_tl last_in_set)
-  apply (prop_tac "list_remove (xs @ tcbPtr # ys) tcbPtr = xs @ ys")
-   apply (simp add: list_remove_middle_distinct del: list_remove_append)
-  apply (drule obj_at'_prop)+
-  apply clarsimp
-  apply (intro conjI impI allI; (solves \<open>clarsimp simp: distinct_append\<close>)?)
-     apply (fastforce elim!: rsubst3[where P=heap_ls]
-                      dest!: heap_ls_remove_middle hd_in_set last_in_set
-                       simp: distinct_append not_emptyI opt_map_def fun_upd_apply)
-    apply (clarsimp simp: queue_end_valid_def fun_upd_apply)
-   apply (case_tac xs;
-          fastforce simp: prev_queue_head_def opt_map_def fun_upd_apply distinct_append)
-  apply (clarsimp simp: inQ_def opt_pred_def opt_map_def fun_upd_apply distinct_append
-                 split: option.splits)
+  apply (subst set_tcb_queue_remove)
+   apply (clarsimp simp: ready_qs_distinct_def)
+  apply (case_tac "t' = tcbPtr")
+   apply (wpsimp wp: tcbQueued_False_makes_not_inQ)
+  apply (wpsimp wp: threadSet_opt_pred_other)
   done
 
 lemma tcbReleaseRemove_sym_heap_sched_pointers[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>sym_heap_sched_pointers\<rbrace>"
-  apply (clarsimp simp: tcbReleaseRemove_def setReleaseQueue_def)
-  apply (wpsimp wp: tcbQueueRemove_sym_heap_sched_pointers inReleaseQueue_wp)
-  apply (fastforce simp: ksReleaseQueue_asrt_def opt_pred_def obj_at'_def opt_map_red)
-  done
-
-crunch tcbReleaseRemove
-  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  unfolding tcbReleaseRemove_def
+  apply (wpsimp wp: tcbQueueRemove_sym_heap_sched_pointers inReleaseQueue_wp
+                    threadSet_sched_pointers
+         | wps)+
+  by (fastforce simp: ksReleaseQueue_asrt_def opt_pred_def obj_at'_def opt_map_red)
 
 crunch setReprogramTimer
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
@@ -6500,6 +6608,11 @@ lemma tcbSchedPrev_update_valid_mdb'[wp]:
   apply (fastforce simp: obj_at'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
   done
 
+lemma tcbInReleaseQueue_update_valid_mdb'[wp]:
+  "\<lbrace>valid_mdb' and tcb_at' tcbPtr\<rbrace> threadSet (tcbInReleaseQueue_update f) tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
+  apply (wpsimp wp: threadSet_mdb')
+  by (fastforce simp: obj_at'_def tcb_cte_cases_def cteSizeBits_def)
+
 lemma tcbQueueRemove_valid_mdb':
   "\<lbrace>\<lambda>s. valid_mdb' s \<and> valid_objs' s\<rbrace> tcbQueueRemove q tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   unfolding tcbQueueRemove_def
@@ -6512,17 +6625,21 @@ crunch setReleaseQueue
   for valid_mdb'[wp]: valid_mdb'
   (simp: valid_mdb'_def)
 
+lemma tcbInReleaseQueue_update_valid_objs'[wp]:
+  "threadSet (tcbInReleaseQueue_update f) tcbPtr \<lbrace>valid_objs'\<rbrace>"
+  by (wpsimp wp: threadSet_valid_objs')
+
+lemma tcbQueued_update_valid_objs'[wp]:
+  "threadSet (tcbQueued_update f) tcbPtr \<lbrace>valid_objs'\<rbrace>"
+  by (wpsimp wp: threadSet_valid_objs')
+
 lemma tcbReleaseRemove_valid_mdb'[wp]:
   "\<lbrace>valid_mdb' and valid_objs' and sym_heap_sched_pointers\<rbrace>
    tcbReleaseRemove tcbPtr
    \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   unfolding tcbReleaseRemove_def
-  apply (wpsimp simp: setReleaseQueue_def wp: threadSet_mdb' tcbQueueRemove_valid_mdb')
-      apply (rule_tac Q'="\<lambda>_. tcb_at' tcbPtr" in hoare_post_imp)
-       apply (fastforce simp: tcb_cte_cases_def cteSizeBits_def)
-      apply (wpsimp wp: inReleaseQueue_wp)+
-  apply (fastforce simp: ksReleaseQueue_asrt_def obj_at'_def opt_map_def)
-  done
+  apply (wpsimp simp: setReleaseQueue_def wp: tcbQueueRemove_valid_mdb' inReleaseQueue_wp)
+  by (fastforce simp: ksReleaseQueue_asrt_def obj_at'_def opt_map_def)
 
 crunch setReprogramTimer
   for obj_at'[wp]: "\<lambda>s. Q (obj_at' P ptr s)"

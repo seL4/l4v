@@ -372,7 +372,7 @@ crunch removeFromBitmap
 lemma tcbSchedDequeue_isSchedulable_bool[wp]:
   "tcbSchedDequeue tcbPtr \<lbrace>\<lambda>s. P (isSchedulable_bool tcbPtr' s)\<rbrace>"
   unfolding tcbSchedDequeue_def tcbQueueRemove_def setQueue_def
-  by (wpsimp wp: threadSet_isSchedulable_bool_fields_inv getTCB_wp threadGet_wp)
+  by (wpsimp wp: threadSet_isSchedulable_bool_fields_inv getTCB_wp threadGet_wp hoare_drop_imps)
 
 lemma setDomain_corres:
   "corres dc

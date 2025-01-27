@@ -1216,17 +1216,16 @@ lemma tcbSchedDequeue_valid_refills'[wp]:
 
 crunch tcbSchedDequeue, tcbReleaseRemove
   for ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
-  (wp: crunch_wps threadSet_wp getTCB_wp
-   simp: setQueue_def valid_refills'_def bitmap_fun_defs crunch_simps)
+  (wp: simp: crunch_simps)
+
+crunch setReleaseQueue
+  for valid_refills'[wp]: "valid_refills' scPtr"
+  (simp: valid_refills'_def)
 
 lemma tcbReleaseRemove_valid_refills'[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>valid_refills' scPtr\<rbrace>"
-  apply (clarsimp simp: tcbReleaseRemove_def tcbQueueRemove_def)
-  apply (wpsimp wp: threadSet_wp threadGet_wp getTCB_wp inReleaseQueue_wp
-              simp: bitmap_fun_defs setReleaseQueue_def setReprogramTimer_def
-         | intro conjI impI)+
-       by (fastforce simp: obj_at_simps valid_refills'_def opt_map_def opt_pred_def
-                    split: option.splits)+
+  unfolding tcbReleaseRemove_def tcbQueueRemove_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps)
 
 crunch commitTime, refillNew, refillUpdate
   for ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
