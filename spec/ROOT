@@ -36,8 +36,8 @@ session ASpec in "abstract" = Word_Lib +
   directories
     "$L4V_ARCH"
   theories
-    "Syscall_A"
     "Intro_Doc"
+    "Syscall_A"
     "Glossary_Doc"
     (* "KernelInit_A" *)
   document_files
