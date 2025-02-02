@@ -28,7 +28,7 @@ chapter "Specifications"
 
 (* Session on which most other sessions build. *)
 session ASpec in "abstract" = Word_Lib +
-  options [document=pdf]
+  options [document=pdf, document_output="output/$L4V_ARCH"]
   sessions
     "HOL-Library"
     Lib
