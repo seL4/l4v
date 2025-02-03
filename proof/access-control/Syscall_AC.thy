@@ -521,6 +521,28 @@ locale Syscall_AC_1 =
               set_thread_state thread Structures_A.thread_state.Running
      od
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and arch_prepare_next_domain_respects[wp]:
+    "arch_prepare_next_domain \<lbrace>integrity aag X st\<rbrace>"
+  assumes arch_prepare_next_domain_pas_refined[wp]:
+    "arch_prepare_next_domain \<lbrace>pas_refined aag\<rbrace>"
+  assumes arch_prepare_next_domain_ct_not_in_q[wp]:
+    "arch_prepare_next_domain \<lbrace>ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_next_domain_valid_sched_action[wp]:
+    "arch_prepare_next_domain \<lbrace>valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_next_domain_ct_in_cur_domain[wp]:
+    "arch_prepare_next_domain \<lbrace>ct_in_cur_domain :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_prepare_set_domain_cur_thread[wp]:
+    "\<And>P. arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
+  assumes arch_post_set_flags_cur_thread[wp]:
+    "\<And>P. arch_post_set_flags t flags \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
+  assumes arch_prepare_set_domain_idle_thread[wp]:
+    "\<And>P. arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
+  assumes arch_post_set_flags_idle_thread[wp]:
+    "\<And>P. arch_post_set_flags t flags \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
+  assumes arch_prepare_set_domain_cur_domain[wp]:
+    "\<And>P. arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
+  assumes arch_post_set_flags_cur_domain[wp]:
+    "\<And>P. arch_post_set_flags t flags \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
 
 
 sublocale Syscall_AC_1 \<subseteq> prepare_thread_delete: gpd_wps' "prepare_thread_delete p"

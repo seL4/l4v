@@ -325,6 +325,12 @@ locale DomainSepInv_1 =
     "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s :: det_ext state. domain_sep_inv_cap irqs rv\<rbrace>,-"
   and arch_post_modify_registers_domain_sep_inv[wp]:
     "arch_post_modify_registers cur t \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
+  and arch_prepare_set_domain_domain_sep_inv[wp]:
+    "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
+  and arch_prepare_next_domain_domain_sep_inv[wp]:
+    "arch_prepare_next_domain \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
+  and arch_post_set_flags_domain_sep_inv[wp]:
+    "arch_post_set_flags t flags \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
   and handle_arch_fault_reply_domain_sep_inv[wp]:
     "handle_arch_fault_reply vmf thread d ds \<lbrace>\<lambda>s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
   and handle_vm_fault_domain_sep_inv[wp]:
@@ -429,6 +435,8 @@ lemmas thread_set_tcb_domain_update_domain_sep_inv[wp]
   = thread_set_domain_sep_inv_triv[where f="tcb_domain_update f" for f, simplified ran_tcb_cap_cases, simplified]
 lemmas thread_set_tcb_registers_caps_merge_default_tcb_domain_sep_inv[wp]
   = thread_set_domain_sep_inv_triv[where f="tcb_registers_caps_merge tcb" for tcb, simplified ran_tcb_cap_cases tcb_registers_caps_merge_def, simplified]
+lemmas thread_set_tcb_flags_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_flags_update f" for f, simplified ran_tcb_cap_cases, simplified]
 
 crunch as_user
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
@@ -875,12 +883,16 @@ lemma checked_cap_insert_domain_sep_inv:
   apply (erule (1) same_object_as_domain_sep_inv_cap)
   done
 
-crunch bind_notification, set_mcpriority, set_priority, invoke_domain
+crunch bind_notification, set_mcpriority, set_priority
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (ignore: thread_set)
 
 
 context DomainSepInv_1 begin
+
+crunch invoke_domain, set_flags
+  for domain_sep_inv[wp]: "domain_sep_inv irqs (st :: 'state_ext state) :: det_ext state \<Rightarrow> _"
+  (ignore: thread_set)
 
 lemma invoke_tcb_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and tcb_inv_wf tinv\<rbrace>
