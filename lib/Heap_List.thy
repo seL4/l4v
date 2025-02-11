@@ -53,6 +53,10 @@ lemma heap_path_None[simp]:
   "heap_path hp None xs end = (xs = [] \<and> end = None)"
   by (cases xs, auto)
 
+lemma heap_path_not_Nil:
+  "heap_ls hp (Some st) ls \<Longrightarrow> ls \<noteq> []"
+  by fastforce
+
 lemma heap_ls_unique:
   "\<lbrakk> heap_ls hp x xs; heap_ls hp x ys \<rbrakk> \<Longrightarrow> xs = ys"
   by (induct xs arbitrary: ys x; simp) (case_tac ys; clarsimp)
