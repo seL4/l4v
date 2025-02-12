@@ -144,6 +144,8 @@ lemma restart_corres:
           (Tcb_A.restart t) (ThreadDecls_H.restart t)"
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def test_possible_switch_to_def
                    get_tcb_obj_ref_def)
+  apply (rule corres_stateAssert_ignore, simp add: sch_act_wf_asrt_def)+
+   apply (fastforce elim!: sch_act_wf_cross)
   apply (simp add: isStopped_def2 liftM_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getThreadState_corres])
@@ -254,25 +256,19 @@ lemma restart_invs':
   apply (simp add: isStopped_def2)
   apply (wp setThreadState_nonqueued_state_update getSchedulable_wp
             cancelIPC_simple setThreadState_st_tcb)
+         apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
+          apply wpsimp
+         apply (clarsimp simp: schedulable'_def pred_map_pred_conj[simplified pred_conj_def]
+                               projectKO_opt_tcb pred_map_def pred_tcb_at'_def
+                               obj_at'_real_def ko_wp_at'_def
+                        elim!: opt_mapE)
+         apply (wpsimp wp: hoare_vcg_imp_lift')
         apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
-         apply wpsimp
-        apply (clarsimp simp: schedulable'_def pred_map_pred_conj[simplified pred_conj_def]
-                              projectKO_opt_tcb pred_map_def pred_tcb_at'_def
-                              obj_at'_real_def ko_wp_at'_def
-                       elim!: opt_mapE)
-        apply (wpsimp wp: hoare_vcg_imp_lift')
-       apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
-       apply fastforce
-      apply (wpsimp wp: ifCondRefillUnblockCheck_invs' hoare_vcg_imp_lift')
-     apply (wpsimp wp: setThreadState_nonqueued_state_update setThreadState_st_tcb
-                       hoare_vcg_if_lift2)
-     apply clarsimp
-     apply wp+
-   apply (clarsimp simp: comp_def)
-   apply (rule hoare_strengthen_post[OF gts_sp'])
-   prefer 2
-   apply assumption
-  apply (clarsimp simp: pred_tcb_at' invs'_def ct_in_state'_def)
+         apply fastforce
+        apply (wpsimp wp: ifCondRefillUnblockCheck_invs' hoare_vcg_imp_lift')
+       apply (wpsimp wp: setThreadState_nonqueued_state_update setThreadState_st_tcb
+                         hoare_vcg_if_lift2)
+      apply (wpsimp wp: gts_wp')+
   done
 
 crunch "ThreadDecls_H.restart"
