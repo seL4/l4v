@@ -46,7 +46,7 @@ fun trace_rule trace ctxt used_thms_ref tag tac rule =
     tac rule;
 
 fun trace_used_thm ctxt (name, tag, prop) =
-  let val adjusted_name = ThmExtras.adjust_thm_name ctxt (name, NONE) prop
+  let val adjusted_name = ThmExtras.adjust_thm_name ctxt (Thm_Name.short name, NONE) prop
   in Pretty.block
     (ThmExtras.pretty_adjusted_name ctxt adjusted_name ::
      [Pretty.str ("[" ^ tag ^ "]:"),Pretty.brk 1, Syntax.unparse_term ctxt prop])
@@ -84,7 +84,7 @@ fun pre_tac trace ctxt pre_rules used_thms_ref i t =
 fun pre_tac' ctxt pre_rules i t =
   let
     val trace = Config.get ctxt wp_trace orelse Config.get ctxt wp_trace_instantiation
-    val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
+    val used_thms_ref = Unsynchronized.ref [] : (Thm_Name.T * string * term) list Unsynchronized.ref
   in Seq.map (fn thm => (trace_used_thms trace ctxt used_thms_ref; thm))
              (pre_tac trace ctxt pre_rules used_thms_ref i t)
   end

@@ -198,7 +198,7 @@ definition obind :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> ('s,'b) look
 
 (* Enable "do { .. }" syntax *)
 adhoc_overloading
-  Monad_Syntax.bind obind
+  Monad_Syntax.bind \<rightleftharpoons> obind
 
 definition ofail :: "('s, 'a) lookup" where
   "ofail = K None"
