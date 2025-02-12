@@ -117,7 +117,7 @@ fun zip_subgoal assume tac (ctxt,st : thm) = if Thm.nprems_of st = 0 then Seq.si
 let
   fun bind_prems st' =
   let
-    val prems = Drule.cprems_of st';
+    val prems = Thm.cprems_of st';
     val (asms, ctxt') = Assumption.add_assumes prems ctxt;
     val ctxt'' = fold add_rule_prem asms ctxt';
     val st'' = Goal.conclude (Drule.implies_elim_list st' (map Thm.assume prems));

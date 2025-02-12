@@ -64,10 +64,10 @@ fun split_thm prefix ctxt t = let
       | params (@{term "(\<longrightarrow>)"} $ _ $ t) Ts = (Ts, SOME @{typ bool}) :: params t Ts
       | params _ Ts = [(Ts, NONE)]
     val ps = params t []
-    val Ps = Variable.variant_frees ctxt [t]
+    val Ps = Variable.variant_names (Variable.declare_names t ctxt)
         (replicate (length ps) (prefix, @{typ bool}))
         |> map Free
-    val Qs = Variable.variant_frees ctxt [t]
+    val Qs = Variable.variant_names (Variable.declare_names t ctxt)
         (map (fn (ps, T) => case T of NONE => ("Q", ps ---> @{typ bool})
                 | SOME T => ("R", ps ---> T)) ps)
         |> map Free
