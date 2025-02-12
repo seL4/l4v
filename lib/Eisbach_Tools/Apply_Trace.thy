@@ -133,9 +133,9 @@ fun used_facts' f get_fact thm =
 fun used_pbody_facts ctxt thm =
   let
     val nm = Thm.get_name_hint thm;
-    val get_fact = most_local_fact_of ctxt;
+    val get_fact = most_local_fact_of ctxt o Thm_Name.short;
   in
-    used_facts' (fn nm' => nm' = "" orelse nm' = nm) get_fact thm
+    used_facts' (fn nm' => fst nm' = "" orelse nm' = nm) get_fact thm
     |> Inttab.dest |> map_filter snd |> map snd |> map (apsnd (Thm.prop_of))
   end
 
@@ -229,7 +229,7 @@ let
       val q = Find_Theorems.read_query pos' raw_query;
       val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q
                     |> snd
-                    |> map ThmExtras.fact_ref_to_name;
+                    |> map ThmExtras.adjusted_thm_name;
 
       (* Only consider theorems from our query. *)
 
