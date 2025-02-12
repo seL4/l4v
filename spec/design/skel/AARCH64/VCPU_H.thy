@@ -22,8 +22,8 @@ context Arch begin arch_global_naming (H)
     vcpuSaveRegRange vcpuRestoreRegRange vcpuWriteReg vcpuReadReg saveVirtTimer \
     restoreVirtTimer vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch \
     vcpuInvalidateActive vcpuCleanInvalidateActive countTrailingZeros virqType \
-    virqSetEOIIRQEN vgicMaintenance vppiEvent irqVPPIEventIndex armvVCPUSave \
-    curVCPUActive
+    virqTypeShift eoiirqenShift virqSetEOIIRQEN vgicMaintenance vppiEvent \
+    irqVPPIEventIndex armvVCPUSave curVCPUActive
 
 end
 end

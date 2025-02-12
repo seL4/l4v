@@ -166,5 +166,25 @@ lemma preemptionPoint_invs [wp]:
   "\<lbrace>invs'\<rbrace> preemptionPoint \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wp preemptionPoint_inv | clarsimp)+
 
+lemma virqType_eq[simp]:
+  "virqType = virq_type"
+  unfolding virqType_def virq_type_def virq_type_shift_def virqTypeShift_def
+  by simp
+
+lemma virqSetEOIIRQEN_eq[simp]:
+  "AARCH64_H.virqSetEOIIRQEN = AARCH64_A.virqSetEOIIRQEN"
+  unfolding virqSetEOIIRQEN_def AARCH64_A.virqSetEOIIRQEN_def eoiirqenShift_def eoiirqen_shift_def
+  by (simp cong: if_cong)
+
+lemma isVIRQActive_eq[simp]:
+  "isVIRQActive = is_virq_active"
+  unfolding isVIRQActive_def is_virq_active_def
+  by simp
+
+lemma makeVIRQ_eq[simp]:
+  "makeVIRQ = make_virq"
+  unfolding make_virq_def makeVIRQ_def
+  by (clarsimp simp: virq_type_shift_def eoiirqen_shift_def virqTypeShift_def eoiirqenShift_def)
+
 end
 end

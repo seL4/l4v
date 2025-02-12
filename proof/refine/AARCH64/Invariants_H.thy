@@ -1050,7 +1050,7 @@ definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightar
 definition "is_vcpu' \<equiv> \<lambda>ko. \<exists>vcpu. ko = (KOArch (KOVCPU vcpu))"
 
 definition max_armKSGICVCPUNumListRegs :: nat where
-  "max_armKSGICVCPUNumListRegs \<equiv> 63"
+  "max_armKSGICVCPUNumListRegs \<equiv> if config_ARM_GIC_V3 then 16 else 64"
 
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
@@ -1059,7 +1059,7 @@ definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
    (case armHSCurVCPU (ksArchState s) of
       Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
       | _ \<Rightarrow> True) \<and>
-   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs \<and>
+   armKSGICVCPUNumListRegs (ksArchState s) < max_armKSGICVCPUNumListRegs \<and>
    canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
 
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
