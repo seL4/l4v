@@ -325,7 +325,8 @@ fun detach_rule_result_annotations ctxt st =
 \<close>
 fun instantiate_terms ctxt bounds var_insts term =
   let
-    val vars = Variable.variant_frees ctxt (term :: map #2 var_insts) bounds
+    val ctxt' = fold Variable.declare_names  (term :: map #2 var_insts) ctxt
+    val vars = Variable.variant_names ctxt' bounds
     fun var_inst_beta term term' =
       (term, Term.betapplys (term', map Free vars))
     val var_insts' = map (uncurry var_inst_beta) var_insts
