@@ -12,7 +12,7 @@ theory Termination imports Semantic begin
 subsection \<open>Inductive Characterisation: \<open>\<Gamma>\<turnstile>c\<down>s\<close>\<close>
 
 inductive "terminates"::"('s,'p,'f) body \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'f) xstate \<Rightarrow> bool"
-  ("_\<turnstile>_ \<down> _" [60,20,60] 89)
+  (\<open>_\<turnstile>_ \<down> _\<close> [60,20,60] 89)
   for  \<Gamma>::"('s,'p,'f) body"
 where
   Skip: "\<Gamma>\<turnstile>Skip \<down>(Normal s)"

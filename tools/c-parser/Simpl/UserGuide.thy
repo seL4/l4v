@@ -15,7 +15,7 @@ begin
 
 (*<*)
 syntax
- "_statespace_updates" :: "('a \<Rightarrow> 'b) \<Rightarrow> updbinds \<Rightarrow> ('a \<Rightarrow> 'b)" ("_\<langle>_\<rangle>" [900,0] 900)
+ "_statespace_updates" :: "('a \<Rightarrow> 'b) \<Rightarrow> updbinds \<Rightarrow> ('a \<Rightarrow> 'b)" (\<open>_\<langle>_\<rangle>\<close> [900,0] 900)
 (*>*)
 
 

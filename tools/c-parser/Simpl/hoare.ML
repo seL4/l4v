@@ -1508,7 +1508,7 @@ fun split_pair_apps ctxt thm =
               let
                 val len = length args;
                 val (argTs,bdyT) = strip_type vT;
-                val (z, _) = Name.variant "z" (fold Term.declare_term_frees args Name.context);
+                val (z, _) = Name.variant "z" (fold Term.declare_free_names args Name.context);
                 val frees = map (apfst (fn i => z^string_of_int i))
                                 (0 upto (len - 1) ~~ argTs);
                 fun splitT (Type (@{type_name Product_Type.prod}, [T1, T2])) = T1::splitT T2
@@ -1934,7 +1934,7 @@ fun gen_context_thms ctxt mode params G T F =
         fun free_params ps t = foldr (fn ((x,xT),t) => snd (variant_abs (x,xT,t))) (ps,t);
         val PpQA' = mkCallQuadruple (strip_qnt_body @{const_name Pure.all} (free_params params (Term.list_all (vars,PpQA))));
         *)
-        val params' = (Variable.variant_frees ctxt [PpQA] params);
+        val params' = Variable.variant_names (Variable.declare_names PpQA ctxt) params;
         val bnds = map Bound (0 upto (length vars  - 1));
         fun free_params_vars t = subst_bounds (bnds @ rev (map Free params' ), t)
         fun free_params t = subst_bounds (rev (map Free params' ), t)
