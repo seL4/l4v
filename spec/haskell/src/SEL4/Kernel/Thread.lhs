@@ -158,12 +158,13 @@ The invoked thread will return to the instruction that caused it to enter the ke
 
 > restart :: PPtr TCB -> Kernel ()
 > restart target = do
+>     stateAssert sch_act_wf_asrt ""
 >     stopped <- isStopped target
 >     scOpt <- threadGet tcbSchedContext target
 >     when stopped $ do
 >         cancelIPC target
 >         setThreadState Restart target
->         ifCondRefillUnblockCheck scOpt (Just True) (Just False)
+>         ifCondRefillUnblockCheck scOpt (Just False) (Just False)
 >         when (isJust scOpt) $ schedContextResume (fromJust scOpt)
 >         schedulable <- getSchedulable target
 >         when schedulable $ possibleSwitchTo target

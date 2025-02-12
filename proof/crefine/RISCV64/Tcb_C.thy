@@ -1104,37 +1104,138 @@ lemma invokeTCB_ThreadControlSched_ccorres:
                    tcb_cnode_index_defs ccap_relation_def cap_thread_cap_lift cap_to_H_def
                    isCap_simps)
 
+crunch setThreadState, cancelIPC
+  for obj_at'_tcbSchedContext[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbSchedContext tcb)) t' s)"
+  and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
+  (wp: threadSet_obj_at'_no_state crunch_wps)
+
+crunch replyUnlink, cleanReply
+  for obj_at'_sc[wp]: "\<lambda>s. Q (obj_at' (P :: sched_context \<Rightarrow> bool) scPtr s)"
+  (wp: crunch_wps)
+
+crunch replyRemoveTCB, cancelIPC
+  for obj_at'_scSporadic[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scSporadic sc)) scPtr s)"
+  (wp: updateSchedContext_sc_obj_at'_inv crunch_wps)
+
+crunch schedContextResume
+  for no_0_obj'[wp]: no_0_obj'
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma schedContext_resume_ccorres_when_Some:
+  "ccorres dc xfdc
+     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
+     \<lbrace>\<acute>sc = option_to_ptr (scOpt)\<rbrace> hs
+     (if (\<exists>y. scOpt = Some y) then schedContextResume (the scOpt) else return ())
+     (Call schedContext_resume_'proc)"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_cases[where P="\<exists>y. scOpt = Some y"
+                                and H=\<top> and H'="\<lbrace>\<acute>sc = option_to_ptr (scOpt)\<rbrace>"])
+     apply (fastforce dest: Some_to_the intro: schedContext_resume_ccorres)
+    apply (cinit' lift: sc_')
+     apply csymbr
+     apply ccorres_rewrite
+     apply (rule ccorres_cond_false)
+     apply (rule ccorres_return_Skip)
+    apply (clarsimp split: if_splits)
+   apply fastforce
+  apply fastforce
+  done
+
 lemma restart_ccorres:
   "ccorres dc xfdc
-     (invs' and tcb_at' thread) {s. target_' s = tcb_ptr_to_ctcb_ptr thread} []
+     (invs' and tcb_at' thread) \<lbrace>\<acute>target = tcb_ptr_to_ctcb_ptr thread\<rbrace> hs
      (restart thread) (Call restart_'proc)"
   apply (cinit lift: target_')
-sorry (* FIXME RT: restart_ccorres
-   apply (ctac(no_vcg) add: isStopped_ccorres)
-    apply (simp only: when_def)
-    apply (rule ccorres_cond2[where R=\<top>])
-      apply (simp add: to_bool_def Collect_const_mem)
-     apply (rule ccorres_rhs_assoc)+
-     apply (ctac(no_vcg) add: cancelIPC_ccorres1[OF cteDeleteOne_ccorres])
-      apply (ctac(no_vcg) add: setupReplyMaster_ccorres)
-       apply (ctac(no_vcg))
-        apply (ctac(no_vcg) add: tcbSchedEnqueue_ccorres)
-         apply (ctac add: possibleSwitchTo_ccorres)
-        apply (wp weak_sch_act_wf_lift)[1]
-       apply (wp sts_valid_objs' setThreadState_st_tcb)[1]
-      apply (simp add: valid_tcb_state'_def)
-      apply wp
-      apply (wp (once) sch_act_wf_lift, (wp tcb_in_cur_domain'_lift)+)
-     apply (rule hoare_strengthen_post)
-      apply (rule hoare_vcg_conj_lift)
-       apply (rule delete_one_conc_fr.cancelIPC_invs)
-
-      apply (rule cancelIPC_tcb_at'[where t=thread])
-     apply fastforce
-    apply (rule ccorres_return_Skip)
-   apply (wp hoare_drop_imps)
-  apply (auto simp: Collect_const_mem mask_def ThreadState_defs)
-  done *)
+   apply (rule ccorres_stateAssert)
+   apply (ctac add: isStopped_ccorres)
+     apply (simp only: when_def)
+     apply (rule ccorres_pre_threadGet, rename_tac scOpt)
+     apply (rule ccorres_cond2[where R=\<top>])
+       apply (simp add: to_bool_def Collect_const_mem)
+      apply (rule ccorres_rhs_assoc)+
+      apply (ctac add: cancelIPC_ccorres)
+        apply (ctac add: setThreadState_ccorres)
+          apply (rule ccorres_move_c_guard_tcb)
+          apply (rule_tac xf'=sc_'
+                      and val="option_to_ptr scOpt"
+                      and R="obj_at' (\<lambda>tcb. tcbSchedContext tcb = scOpt) thread"
+                       in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+             apply (rule conseqPre, vcg)
+             apply normalise_obj_at'
+             apply (frule (1) obj_at_cslift_tcb)
+             apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
+            apply ceqv
+           apply (clarsimp simp: ifCondRefillUnblockCheck_def)
+           apply (rule ccorres_rhs_assoc2)
+           apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+               apply (clarsimp simp: when_def)
+               apply (rule_tac P="scOpt = None" in ccorres_cases)
+                apply clarsimp
+                apply (rule_tac xf'=ret__unsigned_long_'
+                            and val=0
+                             in ccorres_symb_exec_r_known_rv[where R=\<top> and R'=UNIV])
+                   apply (rule conseqPre, vcg)
+                   apply clarsimp
+                  apply ceqv
+                 apply ccorres_rewrite
+                 apply (rule ccorres_return_Skip)
+                apply (vcg exspec=sc_sporadic_modifies)
+               apply clarsimp
+               apply (rename_tac scPtr)
+               apply wpfix
+               apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+               apply (rule ccorres_pre_getCurSc, rename_tac cur_sc)
+               apply (rule_tac xf'=ret__unsigned_long_'
+                           and val="from_bool (scSporadic sc)"
+                           and R="obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some scPtr) thread
+                                  and obj_at' (\<lambda>sc'. scSporadic sc' = scSporadic sc) scPtr
+                                  and no_0_obj'"
+                            in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                  apply (rule conseqPre, vcg)
+                  apply normalise_obj_at'
+                  apply (frule (1) obj_at_cslift_sc)
+                  apply (clarsimp simp: typ_heap_simps csched_context_relation_def to_bool_def
+                                 split: if_splits)
+                 apply ceqv
+                apply (rule_tac R="\<lambda>s. cur_sc = ksCurSc s" in ccorres_cond)
+                  apply clarsimp
+                  apply (frule rf_sr_ksCurSC)
+                  apply (simp add: ptr_val_inj)
+                 apply (ctac add: refill_unblock_check_ccorres)
+                apply (rule ccorres_return_Skip)
+               apply (vcg exspec=sc_sporadic_modifies)
+              apply ceqv
+             apply (ctac add: schedContext_resume_ccorres_when_Some)
+               apply (ctac add: isSchedulable_ccorres)
+                 apply (rule ccorres_cond[where R=\<top>])
+                   apply (fastforce simp: to_bool_def)
+                  apply (ctac add: possibleSwitchTo_ccorres)
+                 apply (rule ccorres_return_Skip)
+                apply (wpsimp wp: getSchedulable_wp)
+               apply (vcg exspec=isSchedulable_modifies)
+              apply (wpsimp wp: hoare_drop_imps)
+             apply (vcg exspec=schedContext_resume_modifies)
+            apply wpsimp
+           apply (vcg exspec=refill_unblock_check_modifies)
+          apply vcg
+         apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> no_0_obj' s
+                                   \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s
+                                   \<and> obj_at' (\<lambda>tcb. tcbSchedContext tcb = scOpt) thread s
+                                   \<and> weak_sch_act_wf (ksSchedulerAction s) s
+                                   \<and> ksCurDomain s \<le> maxDomain"
+                      in hoare_post_imp)
+          apply (clarsimp simp: obj_at'_def split: if_splits)
+         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+        apply (vcg exspec=setThreadState_modifies)
+       apply ((wpsimp wp: hoare_vcg_all_lift | strengthen invs'_implies)+)[1]
+      apply (vcg exspec=cancelIPC_modifies)
+     apply (rule ccorres_return_Skip)
+    apply (wpsimp wp: gts_wp' simp: isStopped_def)
+   apply (vcg exspec=isStopped_modifies)
+  apply (fastforce simp: sch_act_wf_asrt_def obj_at'_def)
+  done
 
 lemma setNextPC_ccorres:
   "ccorres dc xfdc \<top>
