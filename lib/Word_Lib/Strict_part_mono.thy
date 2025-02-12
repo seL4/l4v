@@ -5,7 +5,7 @@
  *)
 
 theory Strict_part_mono
-  imports "HOL-Library.Word" More_Word
+  imports "HOL-Library.Word"
 begin
 
 definition
@@ -35,22 +35,27 @@ lemma strict_part_mono_reverseE:
   by (rule ccontr) (fastforce simp: linorder_not_le strict_part_mono_def)
 
 lemma two_power_strict_part_mono:
-  "strict_part_mono {..LENGTH('a) - 1} (\<lambda>x. (2 :: 'a :: len word) ^ x)"
+  \<open>strict_part_mono {..LENGTH('a) - 1} (\<lambda>x. (2 :: 'a::len word) ^ x)\<close>
 proof -
-  { fix n
-    have "n < LENGTH('a) \<Longrightarrow> strict_part_mono {..n} (\<lambda>x. (2 :: 'a :: len word) ^ x)"
-    proof (induct n)
-      case 0 then show ?case by simp
-    next
-      case (Suc n)
-      from Suc.prems
-      have "2 ^ n < (2 :: 'a :: len word) ^ Suc n"
-        using power_strict_increasing unat_power_lower word_less_nat_alt by fastforce
-      with Suc
-      show ?case by (subst strict_part_mono_by_steps) simp
-    qed
-  }
-  then show ?thesis by simp
+  have \<open>strict_part_mono {..n} (\<lambda>x. (2 :: 'a::len word) ^ x)\<close>
+    if \<open>n < LENGTH('a)\<close> for n
+  using that proof (induction n)
+    case 0
+    then show ?case
+      by simp
+  next
+    case (Suc n)
+    then have \<open>strict_part_mono {..n} ((^) (2 :: 'a::len word))\<close>
+      by simp
+    moreover have \<open>2 ^ n < (2::nat) ^ Suc n\<close>
+      by simp
+    with Suc.prems have \<open>word_of_nat (2 ^ n) < (word_of_nat (2 ^ Suc n) :: 'a word)\<close>
+      by (simp only: of_nat_word_less_iff take_bit_of_exp) simp
+    ultimately show ?case
+      by (subst strict_part_mono_by_steps) simp
+  qed
+  then show ?thesis
+    by simp
 qed
 
 end

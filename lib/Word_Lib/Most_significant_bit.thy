@@ -2,6 +2,7 @@
  * Copyright Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
+Proofs tidied by LCP, 2024-09
  *)
 
 (* Author: Jeremy Dawson, NICTA *)
@@ -104,7 +105,7 @@ lemma word_msb_0 [simp]: "\<not> msb (0::'a::len word)"
   by (simp add: msb_word_iff_bit)
 
 lemma word_msb_1 [simp]: "msb (1::'a::len word) \<longleftrightarrow> LENGTH('a) = 1"
-  by (simp add: msb_word_iff_bit le_Suc_eq)
+  by (simp add: bit_last_iff msb_word_iff_bit)
 
 lemma word_msb_nth: "msb w = bit (uint w) (LENGTH('a) - 1)"
   for w :: "'a::len word"
@@ -124,50 +125,34 @@ lemma msb_shift: "msb w \<longleftrightarrow> w >> LENGTH('a) - 1 \<noteq> 0"
 lemmas word_ops_msb = msb1 [unfolded msb_nth [symmetric, unfolded One_nat_def]]
 
 lemma word_sint_msb_eq: "sint x = uint x - (if msb x then 2 ^ size x else 0)"
-  apply (cases \<open>LENGTH('a)\<close>)
-  apply (simp_all add: msb_word_iff_bit word_size)
-  apply transfer
-  apply (simp add: signed_take_bit_eq_take_bit_minus)
-  done
+proof (cases \<open>LENGTH('a)\<close>)
+  case 0
+  then show ?thesis by auto
+next
+  case (Suc n)
+  then show ?thesis
+    apply (simp add: msb_word_iff_bit)
+    apply transfer
+    by (auto simp: signed_take_bit_eq_take_bit_minus)
+qed
 
 lemma word_sle_msb_le: "x <=s y \<longleftrightarrow> (msb y \<longrightarrow> msb x) \<and> ((msb x \<and> \<not> msb y) \<or> x \<le> y)"
-  apply (simp add: word_sle_eq word_sint_msb_eq word_size word_le_def)
-  apply safe
-   apply (rule order_trans[OF _ uint_ge_0])
-   apply (simp add: order_less_imp_le)
-  apply (erule notE[OF leD])
-  apply (rule order_less_le_trans[OF _ uint_ge_0])
-  apply simp
-  done
+  by (smt (verit) word_less_eq_iff_unsigned word_msb_sint word_sint_msb_eq word_sle_eq wsst_TYs(3))
 
 lemma word_sless_msb_less: "x <s y \<longleftrightarrow> (msb y \<longrightarrow> msb x) \<and> ((msb x \<and> \<not> msb y) \<or> x < y)"
   by (auto simp add: word_sless_eq word_sle_msb_le)
 
 lemma not_msb_from_less:
   "(v :: 'a word) < 2 ^ (LENGTH('a :: len) - 1) \<Longrightarrow> \<not> msb v"
-  apply (clarsimp simp add: msb_nth)
-  apply (drule less_mask_eq)
-  apply (drule word_eqD, drule(1) iffD2)
-  apply (simp add: bit_simps)
-  done
+  using bang_is_le linorder_not_le msb_word_eq by blast
 
 lemma sint_eq_uint:
   "\<not> msb x \<Longrightarrow> sint x = uint x"
-  apply (cases \<open>LENGTH('a)\<close>)
-  apply (simp_all add: msb_word_iff_bit)
-  apply transfer
-  apply (simp add: signed_take_bit_eq_take_bit_minus)
-  done
+  by (simp add: word_sint_msb_eq)
 
 lemma scast_eq_ucast:
   "\<not> msb x \<Longrightarrow> scast x = ucast x"
-  apply (cases \<open>LENGTH('a)\<close>)
-  apply simp
-  apply (rule bit_word_eqI)
-  apply (auto simp add: bit_signed_iff bit_unsigned_iff min_def msb_word_eq)
-  apply (erule notE)
-  apply (metis le_less_Suc_eq test_bit_bin)
-  done
+  by (simp add: scast_eq sint_eq_uint)
 
 lemma msb_ucast_eq:
     "LENGTH('a) = LENGTH('b) \<Longrightarrow>
@@ -175,21 +160,15 @@ lemma msb_ucast_eq:
   by (simp add: msb_word_eq bit_simps)
 
 lemma msb_big:
-  \<open>msb a \<longleftrightarrow> 2 ^ (LENGTH('a) - Suc 0) \<le> a\<close>
-  for a :: \<open>'a::len word\<close>
-  using bang_is_le [of a \<open>LENGTH('a) - Suc 0\<close>]
-  apply (auto simp add: msb_nth word_le_not_less)
-  apply (rule ccontr)
-  apply (erule notE)
-  apply (rule ccontr)
-  apply (clarsimp simp: not_less)
-  apply (subgoal_tac "a = take_bit (LENGTH('a) - Suc 0) a")
-   apply (cut_tac and_mask_less' [where w=a and n="LENGTH('a) - Suc 0"])
-    apply auto
-  apply (simp flip: take_bit_eq_mask)
-  apply (rule sym)
-  apply (simp add: take_bit_eq_self_iff_drop_bit_eq_0 drop_bit_eq_zero_iff_not_bit_last)
-  done
+  fixes a :: \<open>'a::len word\<close>
+  shows \<open>msb a \<longleftrightarrow> 2 ^ (LENGTH('a) - Suc 0) \<le> a\<close>  (is "_ = ?R")
+proof
+  show "msb a \<Longrightarrow> ?R"
+    by (simp add: bang_is_le msb_nth)
+  show "?R \<Longrightarrow> msb a"
+    unfolding msb_word_iff_bit
+    by (metis Suc_pred diff_Suc_less leD le_less_Suc_eq len_gt_0 less_2p_is_upper_bits_unset)
+qed
 
 instantiation integer :: msb
 begin
@@ -205,5 +184,9 @@ instance ..
 end
 
 end
+
+lemma msb_integer_code [code]:
+  \<open>msb k \<longleftrightarrow> k < 0\<close> for k :: integer
+  including integer.lifting by transfer (simp add: msb_int_def)
 
 end

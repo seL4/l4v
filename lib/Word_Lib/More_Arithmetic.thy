@@ -2,6 +2,7 @@
  * Copyright Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
+Proofs tidied by LCP, 2024-09
  *)
 
 section \<open>Arithmetic lemmas\<close>
@@ -53,7 +54,7 @@ qed
 lemma nat_le_power_trans:
   fixes n :: nat
   shows "\<lbrakk>n \<le> 2 ^ (m - k); k \<le> m\<rbrakk> \<Longrightarrow> 2 ^ k * n \<le> 2 ^ m"
-  by (metis le_add_diff_inverse mult_le_mono2 semiring_normalization_rules(26))
+  by (simp add: less_eq_div_iff_mult_less_eq mult.commute power_diff)
 
 lemma nat_add_offset_less:
   fixes x :: nat
@@ -81,42 +82,35 @@ proof (induct n arbitrary: m)
   then show ?case by simp
 next
   case (Suc n)
-
-  have ih: "\<And>m. 2 ^ n * q < 2 ^ m \<Longrightarrow> q < 2 ^ (m - n)"
-    and prem: "2 ^ Suc n * q < 2 ^ m" by fact+
-
-  show ?case
-  proof (cases m)
-    case 0
-    then show ?thesis using Suc by simp
-  next
-    case (Suc m')
-    then show ?thesis using prem
-      by (simp add: ac_simps ih)
-  qed
+  then show ?case
+  by (cases m) auto
 qed
 
 lemma power_2_mult_step_le:
-  "\<lbrakk>n' \<le> n; 2 ^ n' * k' < 2 ^ n * k\<rbrakk> \<Longrightarrow> 2 ^ n' * (k' + 1) \<le> 2 ^ n * (k::nat)"
-  apply (cases "n'=n", simp)
-   apply (metis Suc_leI le_refl mult_Suc_right mult_le_mono semiring_normalization_rules(7))
-  apply (drule (1) le_neq_trans)
-  apply clarsimp
-  apply (subgoal_tac "\<exists>m. n = n' + m")
-   prefer 2
-   apply (simp add: le_Suc_ex)
-  apply (clarsimp simp: power_add)
-  apply (metis Suc_leI mult.assoc mult_Suc_right nat_mult_le_cancel_disj)
-  done
+  assumes "n' \<le> n" and less: "2^n' * k' < 2^n * k"
+  shows "2 ^ n' * (k' + 1) \<le> 2 ^ n * (k::nat)"
+proof (cases "n'=n")
+  case True
+  then show ?thesis
+    by (metis Suc_eq_plus1 Suc_leI less mult.commute mult_le_mono1 mult_less_cancel2)
+next
+  case False
+  with assms have "n' < n"
+    by simp
+  then obtain m where "n = n' + m"
+    using assms less_eqE by blast
+  moreover have "k'+1 \<le> 2 ^ m * k"
+    by (smt (verit, ccfv_threshold) Suc_eq_plus1 Suc_leI calculation less linorder_not_le mult.assoc mult.commute mult_le_mono1 power_add)
+  ultimately show ?thesis
+    by (metis mult.assoc mult_le_mono2 power_add)
+qed
 
 lemma nat_mult_power_less_eq:
   "b > 0 \<Longrightarrow> (a * b ^ n < (b :: nat) ^ m) = (a < b ^ (m - n))"
   using mult_less_cancel2[where m = a and k = "b ^ n" and n="b ^ (m - n)"]
         mult_less_cancel2[where m="a * b ^ (n - m)" and k="b ^ m" and n=1]
-  apply (simp only: power_add[symmetric] nat_minus_add_max)
-  apply (simp only: power_add[symmetric] nat_minus_add_max ac_simps)
-  apply (simp add: max_def split: if_split_asm)
-  done
+  by (smt (verit,del_insts) diff_is_0_eq leI le_add_diff_inverse2 less_one 
+      mult.assoc mult_eq_0_iff not_less_iff_gr_or_eq power_0 power_add zero_less_power)
 
 lemma diff_diff_less:
   "(i < m - (m - (n :: nat))) = (i < m \<and> i < n)"
@@ -139,5 +133,9 @@ lemma msrevs:
   "(k * n + m) mod n = m mod n"
   for n :: nat
   by simp_all
+
+lemma eq_mod_iff: "0 < n \<Longrightarrow> b = b mod n \<longleftrightarrow> 0 \<le> b \<and> b < n"
+  for b n :: int
+  by (metis pos_mod_bound pos_mod_sign zmod_trivial_iff)
 
 end
