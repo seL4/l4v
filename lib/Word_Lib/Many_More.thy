@@ -10,13 +10,11 @@ theory Many_More
     "HOL-Library.Word"
     More_Word
     Even_More_List
+
 begin
 
 lemma nat_less_mult_monoish: "\<lbrakk> a < b; c < (d :: nat) \<rbrakk> \<Longrightarrow> (a + 1) * (c + 1) <= b * d"
-  apply (drule Suc_leI)+
-  apply (drule(1) mult_le_mono)
-  apply simp
-  done
+  by (meson less_iff_succ_less_eq mult_le_mono)
 
 context
   includes bit_operations_syntax
@@ -28,8 +26,7 @@ lemma if_and_helper:
 
 end
 
-lemma eq_eqI:
-  "a = b \<Longrightarrow> (a = x) = (b = x)"
+lemma eq_eqI: "a = b \<Longrightarrow> (a = x) = (b = x)"
   by simp
 
 lemma map2_Cons_2_3:
@@ -38,9 +35,7 @@ lemma map2_Cons_2_3:
 
 lemma map2_xor_replicate_False:
   "map2 (\<lambda>x y. x \<longleftrightarrow> \<not> y) xs (replicate n False) = take n xs"
-  apply (induct xs arbitrary: n, simp)
-  apply (case_tac n; simp)
-  done
+  by (induct xs arbitrary: n) (simp_all add: take_Cons' zip_replicate2)
 
 lemma plus_Collect_helper:
   "(+) x ` {xa. P (xa :: 'a :: len word)} = {xa. P (xa - x)}"
@@ -57,28 +52,22 @@ lemma range_subset_eq2:
 lemma nat_mod_power_lem:
   fixes a :: nat
   shows "1 < a \<Longrightarrow> a ^ n mod a ^ m = (if m \<le> n then 0 else a ^ n)"
-  apply (clarsimp)
-  apply (clarsimp simp add: le_iff_add power_add)
-  done
+  by (simp add: le_imp_power_dvd)
 
 lemma i_hate_words_helper:
   "i \<le> (j - k :: nat) \<Longrightarrow> i \<le> j"
   by simp
 
 lemma i_hate_words:
-  "unat (a :: 'a word) \<le> unat (b :: 'a :: len word) - Suc 0
-    \<Longrightarrow> a \<noteq> -1"
-  apply (frule i_hate_words_helper)
-  apply (subst(asm) word_le_nat_alt[symmetric])
-  apply (clarsimp simp only: word_minus_one_le)
-  apply (simp only: linorder_not_less[symmetric])
-  apply (erule notE)
-  apply (rule diff_Suc_less)
-  apply (subst neq0_conv[symmetric])
-  apply (subst unat_eq_0)
-  apply (rule notI, drule arg_cong[where f="(+) 1"])
-  apply simp
-  done
+  fixes a b :: "'a::len word"
+  assumes "unat a \<le> unat b - Suc 0"
+  shows "a \<noteq> -1"
+proof -
+  have "a \<le> b"
+    using assms i_hate_words_helper word_le_nat_alt by blast
+  then show ?thesis
+    by (metis assms diff_Suc_less linorder_not_le unat_max_word_pos word_order.extremum_uniqueI)
+qed
 
 lemma If_eq_obvious:
   "x \<noteq> z \<Longrightarrow> ((if P then x else y) = z) = (\<not> P \<and> y = z)"
@@ -141,20 +130,12 @@ lemma replicate_numeral [simp]: "replicate (numeral k) x = x # replicate (pred_n
 lemma list_exhaust_size_gt0:
   assumes "\<And>a list. y = a # list \<Longrightarrow> P"
   shows "0 < length y \<Longrightarrow> P"
-  apply (cases y)
-   apply simp
-  apply (rule assms)
-  apply fastforce
-  done
+  using assms list.exhaust by auto
 
 lemma list_exhaust_size_eq0:
   assumes "y = [] \<Longrightarrow> P"
   shows "length y = 0 \<Longrightarrow> P"
-  apply (cases y)
-   apply (rule assms)
-   apply simp
-  apply simp
-  done
+  using assms by blast
 
 lemma size_Cons_lem_eq: "y = xa # list \<Longrightarrow> size y = Suc k \<Longrightarrow> size list = k"
   by auto
@@ -197,11 +178,7 @@ lemma drop_eq_mono:
   assumes le: "m \<le> n"
   assumes drop: "drop m xs = drop m ys"
   shows "drop n xs = drop n ys"
-proof -
-  have ex: "\<exists>p. n = p + m" by (rule exI[of _ "n - m"]) (simp add: le)
-  then obtain p where p: "n = p + m" by blast
-  show ?thesis unfolding p drop_drop[symmetric] drop by simp
-qed
+  by (metis drop drop_drop le le_add_diff_inverse2)
 
 lemma drop_Suc_nth:
   "n < length xs \<Longrightarrow> drop n xs = xs!n # drop (Suc n) xs"
@@ -274,21 +251,13 @@ next
       by (rule iffD2 [OF Min_ge_iff [OF insert.hyps(1) insert.hyps(2)] fx])
 
     show ?case
-      apply (subst Min_insert [OF insert.hyps(1) insert.hyps(2)])
-      apply (subst mv [symmetric])
-      apply (auto simp: min_def mlt)
-      done
+      using Min_insert2 fx insert.hyps(1) mv by blast
   next
     assume "m \<in> F"
-    then have mf: "Min F = m"
-      by (rule insert.hyps(4) [OF _ fx])
-
-    show ?case
-      apply (subst Min_insert [OF insert.hyps(1) insert.hyps(2)])
-      apply (subst mf)
-      apply (rule iffD2 [OF _ yx])
-      apply (auto simp: min_def)
-      done
+    then have "Min F = m"
+      by (simp add: fx insert.hyps(4))
+    then show ?case
+      using insert.hyps yx by auto
   qed
 qed
 
@@ -302,10 +271,7 @@ lemma funpow_minus_simp: "0 < n \<Longrightarrow> f ^^ n = f \<circ> f ^^ (n - 1
   by (auto dest: gr0_implies_Suc)
 
 lemma rco_alt: "(f \<circ> g) ^^ n \<circ> f = f \<circ> (g \<circ> f) ^^ n"
-  apply (rule ext)
-  apply (induct n)
-   apply (simp_all add: o_def)
-  done
+  by (induct n) (auto simp: fun_eq_iff)
 
 lemma union_sub:
   "\<lbrakk>B \<subseteq> A; C \<subseteq> B\<rbrakk> \<Longrightarrow> (A - B) \<union> (B - C) = (A - C)"
@@ -317,10 +283,7 @@ lemma insert_sub:
 
 lemma ran_upd:
   "\<lbrakk> inj_on f (dom f); f y = Some z \<rbrakk> \<Longrightarrow> ran (\<lambda>x. if x = y then None else f x) = ran f - {z}"
-  unfolding ran_def
-  apply (rule set_eqI)
-  apply simp
-  by (metis domI inj_on_eq_iff option.sel)
+  by (force simp: ran_def inj_on_def domIff)
 
 lemma if_apply_def2:
   "(if P then F else G) = (\<lambda>x. (P \<longrightarrow> F x) \<and> (\<not> P \<longrightarrow> G x))"
@@ -376,30 +339,18 @@ lemma not_empty_eq:
 lemma range_subset_lower:
   fixes c :: "'a ::linorder"
   shows "\<lbrakk> {a..b} \<subseteq> {c..d}; x \<in> {a..b} \<rbrakk> \<Longrightarrow> c \<le> a"
-  apply (frule (1) subsetD)
-  apply (rule classical)
-  apply clarsimp
-  done
+  by auto
 
 lemma range_subset_upper:
   fixes c :: "'a ::linorder"
   shows "\<lbrakk> {a..b} \<subseteq> {c..d}; x \<in> {a..b} \<rbrakk> \<Longrightarrow> b \<le> d"
-  apply (frule (1) subsetD)
-  apply (rule classical)
-  apply clarsimp
-  done
+  by auto
 
 lemma range_subset_eq:
   fixes a::"'a::linorder"
   assumes non_empty: "a \<le> b"
   shows "({a..b} \<subseteq> {c..d}) = (c \<le> a \<and> b \<le> d)"
-  apply (insert non_empty)
-  apply (rule iffI)
-   apply (frule range_subset_lower [where x=a], simp)
-   apply (drule range_subset_upper [where x=a], simp)
-   apply simp
-  apply auto
-  done
+  by (simp add: non_empty)
 
 lemma range_eq:
   fixes a::"'a::linorder"
@@ -411,19 +362,13 @@ lemma range_strict_subset_eq:
   fixes a::"'a::linorder"
   assumes non_empty: "a \<le> b"
   shows "({a..b} \<subset> {c..d}) = (c \<le> a \<and> b \<le> d \<and> (a = c \<longrightarrow> b \<noteq> d))"
-  apply (insert non_empty)
-  apply (subst psubset_eq)
-  apply (subst range_subset_eq, assumption+)
-  apply (subst range_eq, assumption+)
-  apply simp
-  done
+  by (simp add: non_empty psubset_eq)
 
 lemma range_subsetI:
   fixes x :: "'a :: order"
-  assumes xX: "X \<le> x"
-  and     yY: "y \<le> Y"
+  assumes "X \<le> x" and "y \<le> Y"
   shows   "{x .. y} \<subseteq> {X .. Y}"
-  using xX yY by auto
+  using assms by auto
 
 lemma set_False [simp]:
   "(set bs \<subseteq> {False}) = (True \<notin> set bs)" by auto
@@ -550,11 +495,7 @@ lemmas pl_pl_mm' = add.commute [THEN [2] trans, THEN pl_pl_mm]
 
 lemma less_le_mult': "w * c < b * c \<Longrightarrow> 0 \<le> c \<Longrightarrow> (w + 1) * c \<le> b * c"
   for b c w :: int
-  apply (rule mult_right_mono)
-   apply (rule zless_imp_add1_zle)
-   apply (erule (1) mult_right_less_imp_less)
-  apply assumption
-  done
+  using mult_less_cancel_right by fastforce
 
 lemma less_le_mult: "w * c < b * c \<Longrightarrow> 0 \<le> c \<Longrightarrow> w * c + c \<le> b * c"
   for b c w :: int
@@ -582,13 +523,7 @@ lemma given_quot: "f > 0 \<Longrightarrow> (f * l + (f - 1)) div f = l"
 
 lemma given_quot_alt: "f > 0 \<Longrightarrow> (l * f + f - Suc 0) div f = l"
   for f l :: nat
-  apply (frule given_quot)
-  apply (rule trans)
-   prefer 2
-   apply (erule asm_rl)
-  apply (rule_tac f="\<lambda>n. n div f" in arg_cong)
-  apply (simp add : ac_simps)
-  done
+  by (metis Nat.add_diff_assoc One_nat_def Suc_leI given_quot mult.commute)
 
 lemma x_power_minus_1:
   fixes x :: "'a :: {ab_group_add, power, numeral, one}"
@@ -621,11 +556,7 @@ lemma nat_le_Suc_less_imp:
 
 lemma power_sub_int:
   "\<lbrakk> m \<le> n; 0 < b \<rbrakk> \<Longrightarrow> b ^ n div b ^ m = (b ^ (n - m) :: int)"
-  apply (subgoal_tac "\<exists>n'. n = m + n'")
-   apply (clarsimp simp: power_add)
-  apply (rule exI[where x="n - m"])
-  apply simp
-  done
+  by (simp add: power_diff)
 
 lemma nat_Suc_less_le_imp:
   "(k::nat) < Suc n \<Longrightarrow> k \<le> n"
@@ -645,11 +576,7 @@ lemma nat_power_minus_less:
 
 lemma less_le_mult_nat':
   "w * c < b * c ==> 0 \<le> c ==> Suc w * c \<le> b * (c::nat)"
-  apply (rule mult_right_mono)
-   apply (rule Suc_leI)
-   apply (erule (1) mult_right_less_imp_less)
-  apply assumption
-  done
+  by (meson Suc_leI mult_le_cancel2 mult_less_cancel2)
 
 lemma less_le_mult_nat:
   \<open>0 < c \<and> w < b \<Longrightarrow> c + w * c \<le> b * c\<close> for b c w :: nat

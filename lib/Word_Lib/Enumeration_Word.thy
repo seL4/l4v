@@ -2,6 +2,7 @@
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
+Proofs tidied by LCP, 2024-09
  *)
 
 (* Author: Thomas Sewell *)
@@ -9,11 +10,7 @@
 section "Enumeration Instances for Words"
 
 theory Enumeration_Word
-  imports
-    "HOL-Library.Word"
-    More_Word
-    Enumeration
-    Even_More_List
+  imports More_Word Enumeration Even_More_List
 begin
 
 lemma length_word_enum: "length (enum :: 'a :: len word list) = 2 ^ LENGTH('a)"
@@ -48,10 +45,10 @@ instance
 end
 
 definition
-  upto_enum_step :: "('a :: len) word \<Rightarrow> 'a word \<Rightarrow> 'a word \<Rightarrow> 'a word list" ("[_ , _ .e. _]")
+  upto_enum_step :: "('a :: len) word \<Rightarrow> 'a word \<Rightarrow> 'a word \<Rightarrow> 'a word list"
+    (\<open>(\<open>notation=\<open>mixfix upto_enum_step\<close>\<close>[_ , _ .e. _])\<close>)
 where
-  "upto_enum_step a b c \<equiv>
-      if c < a then [] else map (\<lambda>x. a + x * (b - a)) [0 .e. (c - a) div (b - a)]"
+  "[a , b .e. c] \<equiv> if c < a then [] else map (\<lambda>x. a + x * (b - a)) [0 .e. (c - a) div (b - a)]"
   (* in the wraparound case, bad things happen. *)
 
 lemma maxBound_word:
@@ -76,93 +73,46 @@ lemma upto_enum_red':
 proof -
   have lt': "unat X < 2 ^ LENGTH('a)"
     by (rule unat_lt2p)
-
-  show ?thesis
-    apply (subst upto_enum_red)
-    apply (simp del: upt.simps)
-    apply (subst Suc_unat_diff_1 [OF lt])
-    apply (rule map_cong [OF refl])
-    apply (rule toEnum_of_nat)
-    apply simp
-    apply (erule order_less_trans [OF _ lt'])
-    done
+  have "map (toEnum::nat \<Rightarrow> 'a word) [0..<unat X] = map word_of_nat [0..<unat X]"
+    using order_less_trans by fastforce
+  then show ?thesis
+    by (simp add: Suc_unat_diff_1 lt upto_enum_red)
 qed
 
 lemma upto_enum_red2:
   assumes szv: "sz < LENGTH('a :: len)"
   shows "[(0:: 'a :: len word) .e. 2 ^ sz - 1] =
   map of_nat [0 ..< 2 ^ sz]" using szv
-  apply (subst unat_power_lower[OF szv, symmetric])
-  apply (rule upto_enum_red')
-  apply (subst word_le_nat_alt, simp)
-  done
+  by (simp add: upto_enum_red' word_1_le_power)
 
 lemma upto_enum_step_red:
   assumes szv: "sz < LENGTH('a)"
   and   usszv: "us \<le> sz"
-  shows "[0 :: 'a :: len word , 2 ^ us .e. 2 ^ sz - 1] =
-  map (\<lambda>x. of_nat x * 2 ^ us) [0 ..< 2 ^ (sz - us)]" using szv
-  unfolding upto_enum_step_def
-  apply (subst if_not_P)
-   apply (rule leD)
-   apply (subst word_le_nat_alt)
-   apply (subst unat_minus_one)
-    apply simp
-   apply simp
-  apply simp
-  apply (subst upto_enum_red)
-  apply (simp del: upt.simps)
-  apply (subst Suc_div_unat_helper [where 'a = 'a, OF szv usszv, symmetric])
-  apply clarsimp
-  apply (subst toEnum_of_nat)
-   apply (erule order_less_trans)
-   using szv
-   apply simp
-  apply simp
-  done
+  shows "[0 :: 'a :: len word , 2 ^ us .e. 2 ^ sz - 1] 
+       = map (\<lambda>x. of_nat x * 2 ^ us) [0 ..< 2 ^ (sz - us)]" 
+proof -
+  have "\<And>n. \<lbrakk>n < 2 ^ (sz - us)\<rbrakk> \<Longrightarrow> toEnum n * 2 ^ us = (word_of_nat n * 2 ^ us :: 'a word)"
+    using szv nat_less_le order_le_less_trans by fastforce
+  with assms show ?thesis  
+    by (simp add: upto_enum_step_def upto_enum_red Suc_div_unat_helper)
+qed
 
-lemma upto_enum_word:
-  "[x .e. y] = map of_nat [unat x ..< Suc (unat y)]"
-  apply (subst upto_enum_red)
-  apply clarsimp
-  apply (subst toEnum_of_nat)
-   prefer 2
-   apply (rule refl)
-  apply (erule disjE, simp)
-  apply clarsimp
-  apply (erule order_less_trans)
-  apply simp
-  done
+lemma upto_enum_word: "[x .e. y] = map of_nat [unat x ..< Suc (unat y)]"
+  unfolding upto_enum_red
+  using order_less_trans toEnum_of_nat by force
 
 lemma word_upto_Cons_eq:
   "x < y \<Longrightarrow> [x::'a::len word .e. y] = x # [x + 1 .e. y]"
-  apply (subst upto_enum_red)
-  apply (subst upt_conv_Cons)
-  apply simp_all
-   apply unat_arith
-  apply (simp only: list.map list.inject upto_enum_red to_from_enum simp_thms)
-  apply simp_all
-  apply unat_arith
-  done
+  unfolding upto_enum_red
+  using lessI less_is_non_zero_p1 unatSuc2 unat_mono upt_conv_Cons by fastforce
 
 lemma distinct_enum_upto:
   "distinct [(0 :: 'a::len word) .e. b]"
 proof -
   have "\<And>(b::'a word). [0 .e. b] = nths enum {..< Suc (fromEnum b)}"
-    apply (subst upto_enum_red)
-    apply (subst nths_upt_eq_take)
-    apply (subst enum_word_def)
-    apply (subst take_map)
-    apply (subst take_upt)
-     apply (simp only: add_0 fromEnum_unat)
-     apply (rule order_trans [OF _ order_eq_refl])
-      apply (rule Suc_leI [OF unat_lt2p])
-     apply simp
-    apply clarsimp
-    apply (rule toEnum_of_nat)
-    apply (erule order_less_trans [OF _ unat_lt2p])
-    done
-
+    unfolding upto_enum_red nths_upt_eq_take enum_word_def
+    using order_less_trans toEnum_of_nat
+    by (fastforce simp: take_map Suc_leI)
   then show ?thesis
     by (rule ssubst) (rule distinct_nthsI, simp)
 qed
@@ -170,36 +120,30 @@ qed
 lemma upto_enum_set_conv [simp]:
   fixes a :: "'a :: len word"
   shows "set [a .e. b] = {x. a \<le> x \<and> x \<le> b}"
-  apply (subst upto_enum_red)
-  apply (subst set_map)
-  apply safe
-    apply simp
-    apply clarsimp
-    apply (erule disjE)
-     apply simp
-     apply (erule iffD2 [OF word_le_nat_alt])
-    apply clarsimp
-  apply simp_all
-    apply (metis le_unat_uoi nat_less_le toEnum_of_nat unsigned_less word_le_nat_alt)
-   apply (metis le_unat_uoi less_or_eq_imp_le toEnum_of_nat unsigned_less word_le_nat_alt)
-    apply (rule_tac x="fromEnum x" in image_eqI)
-   apply clarsimp
-  apply clarsimp
-  apply transfer
-  apply auto
-  done
+proof -
+  have "a \<le> b"
+    if "unat a \<le> unat b"
+    using that word_less_eq_iff_unsigned by blast
+  moreover have "a \<le> toEnum m"
+    if "unat a \<le> m" "m < unat b" for m
+    using that
+    by (metis fromEnum_unat le_unat_uoi nat_less_le to_from_enum word_le_nat_alt)
+  moreover have "toEnum n \<le> b"
+    if "unat a \<le> n" "n < unat b" for n
+    using that
+    by (metis fromEnum_unat le_unat_uoi nat_less_le to_from_enum word_of_nat_le)
+  moreover have "w \<in> toEnum ` {x. unat a \<le> unat b \<and> (x = unat b \<or> unat a \<le> x \<and> x < unat b)}"
+    if "a \<le> w" and "w \<le> b" for w :: "'a word"
+    using that
+    by (smt (verit, del_insts) order.order_iff_strict order.trans fromEnum_unat imageI mem_Collect_eq to_from_enum unat_mono)
+  ultimately show ?thesis
+    by (auto simp: upto_enum_red)
+qed
 
 lemma upto_enum_less:
-  assumes xin: "x \<in> set [(a::'a::len word).e.2 ^ n - 1]"
-  and     nv:  "n < LENGTH('a::len)"
+  assumes "x \<in> set [(a::'a::len word).e.2 ^ n - 1]" and "n < LENGTH('a::len)"
   shows   "x < 2 ^ n"
-proof (cases n)
-  case 0
-  then show ?thesis using xin by simp
-next
-  case (Suc m)
-  show ?thesis using xin nv le_m1_iff_lt p2_gt_0 by auto
-qed
+  using assms by auto
 
 lemma upto_enum_len_less:
   "\<lbrakk> n \<le> length [a, b .e. c]; n \<noteq> 0 \<rbrakk> \<Longrightarrow> a \<le> c"
@@ -217,7 +161,7 @@ lemma map_length_unfold_one:
   assumes xv: "Suc (unat x) < 2 ^ LENGTH('a)"
   and     ax: "a < x"
   shows   "map f [a .e. x] = f a # map f [a + 1 .e. x]"
-  by (subst word_upto_Cons_eq, auto, fact+)
+  by (simp add: ax word_upto_Cons_eq)
 
 lemma upto_enum_set_conv2:
   fixes a :: "'a::len word"
@@ -227,73 +171,44 @@ lemma upto_enum_set_conv2:
 lemma length_upto_enum [simp]:
   fixes a :: "'a :: len word"
   shows "length [a .e. b] = Suc (unat b) - unat a"
-  apply (simp add: word_le_nat_alt upto_enum_red)
-  apply (clarsimp simp: Suc_diff_le)
-  done
+  by (metis length_map length_upt upto_enum_word)
 
 lemma length_upto_enum_cases:
   fixes a :: "'a::len word"
   shows "length [a .e. b] = (if a \<le> b then Suc (unat b) - unat a else 0)"
-  apply (case_tac "a \<le> b")
-   apply (clarsimp)
-  apply (clarsimp simp: upto_enum_def)
-  apply unat_arith
-  done
+  by (simp add: word_le_nat_alt)
 
 lemma length_upto_enum_less_one:
-  "\<lbrakk>a \<le> b; b \<noteq> 0\<rbrakk>
-  \<Longrightarrow> length [a .e. b - 1] = unat (b - a)"
-  apply clarsimp
-  apply (subst unat_sub[symmetric], assumption)
-  apply clarsimp
-  done
+  "\<lbrakk>a \<le> b; b \<noteq> 0\<rbrakk> \<Longrightarrow> length [a .e. b - 1] = unat (b - a)"
+  by (simp add: unat_sub)
 
-lemma drop_upto_enum:
-  "drop (unat n) [0 .e. m] = [n .e. m]"
-  apply (clarsimp simp: upto_enum_def)
-  apply (induct m, simp)
-  by (metis drop_map drop_upt plus_nat.add_0)
+lemma drop_upto_enum: "drop (unat n) [0 .e. m] = [n .e. m]"
+  by (induction m) (auto simp: upto_enum_def drop_map)
 
 lemma distinct_enum_upto' [simp]:
   "distinct [a::'a::len word .e. b]"
-  apply (subst drop_upto_enum [symmetric])
-  apply (rule distinct_drop)
-  apply (rule distinct_enum_upto)
-  done
+  by (metis distinct_drop distinct_enum_upto drop_upto_enum)
 
 lemma length_interval:
   "\<lbrakk>set xs = {x. (a::'a::len word) \<le> x \<and> x \<le> b}; distinct xs\<rbrakk>
   \<Longrightarrow> length xs = Suc (unat b) - unat a"
-  apply (frule distinct_card)
-  apply (subgoal_tac "set xs = set [a .e. b]")
-   apply (cut_tac distinct_card [where xs="[a .e. b]"])
-    apply (subst (asm) length_upto_enum)
-    apply clarsimp
-   apply (rule distinct_enum_upto')
-  apply simp
-  done
+  by (metis distinct_card distinct_enum_upto' length_upto_enum upto_enum_set_conv)
 
 lemma enum_word_div:
-  fixes v :: "'a :: len word" shows
-  "\<exists>xs ys. enum = xs @ [v] @ ys
-             \<and> (\<forall>x \<in> set xs. x < v)
-             \<and> (\<forall>y \<in> set ys. v < y)"
-  apply (simp only: enum_word_def)
-  apply (subst upt_add_eq_append'[where j="unat v"])
-    apply simp
-   apply (rule order_less_imp_le, simp)
-  apply (simp add: upt_conv_Cons)
-  apply (intro exI conjI)
-    apply fastforce
-   apply clarsimp
-   apply (drule of_nat_mono_maybe[rotated, where 'a='a])
-    apply simp
-   apply simp
-  apply (clarsimp simp: Suc_le_eq)
-  apply (drule of_nat_mono_maybe[rotated, where 'a='a])
-   apply simp
-  apply simp
-  done
+  fixes v :: "'a :: len word" 
+  shows "\<exists>xs ys. enum = xs @ [v] @ ys \<and> (\<forall>x \<in> set xs. x < v) \<and> (\<forall>y \<in> set ys. v < y)"
+proof -
+  have \<section>: "[0..<2 ^ LENGTH('a)] = ([0..<unat v] @ [unat v..<2 ^ LENGTH('a)])"
+    by (simp add: order_less_imp_le upt_add_eq_append')
+  have "\<And>n. \<lbrakk>unat v < n; n < 2 ^ LENGTH('a)\<rbrakk> \<Longrightarrow> v < word_of_nat n"
+    using unat_ucast_less_no_overflow by blast
+  moreover
+  have "\<forall>w\<in>set (map word_of_nat [0..<unat v]). w < v"
+    using word_of_nat_less by force
+  ultimately show ?thesis
+    unfolding enum_word_def order_less_imp_le upt_add_eq_append' \<section>
+    by (force simp add: upt_conv_Cons)
+qed
 
 lemma remdups_enum_upto:
   fixes s::"'a::len word"
