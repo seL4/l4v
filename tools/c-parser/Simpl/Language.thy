@@ -1017,7 +1017,7 @@ consts inter_guards:: "('s,'p,'f) com \<times> ('s,'p,'f) com \<Rightarrow> ('s,
 
 abbreviation
   inter_guards_syntax :: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com option"
-           ("_ \<inter>\<^sub>g _" [20,20] 19)
+           (\<open>_ \<inter>\<^sub>g _\<close> [20,20] 19)
   where "c \<inter>\<^sub>g d == inter_guards (c,d)"
 
 recdef inter_guards "inv_image com_rel fst"
@@ -1167,7 +1167,7 @@ lemmas inter_guards_simps = inter_guards_Skip inter_guards_Basic inter_guards_Sp
 subsubsection \<open>Subset on Guards: \<open>c\<^sub>1 \<subseteq>\<^sub>g c\<^sub>2\<close>\<close>
 
 inductive subseteq_guards :: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> bool"
-  ("_ \<subseteq>\<^sub>g _" [20,20] 19) where
+  (\<open>_ \<subseteq>\<^sub>g _\<close> [20,20] 19) where
   "Skip \<subseteq>\<^sub>g Skip"
 | "f1 = f2 \<Longrightarrow> Basic f1 \<subseteq>\<^sub>g Basic f2"
 | "r1 = r2 \<Longrightarrow> Spec r1 \<subseteq>\<^sub>g Spec r2"
