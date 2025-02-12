@@ -18,22 +18,22 @@ context
 begin
 
 abbreviation
-  wordNOT  :: "'a::len word \<Rightarrow> 'a word"      ("~~ _" [70] 71)
+  wordNOT  :: "'a::len word \<Rightarrow> 'a word"      (\<open>(\<open>open_block notation=\<open>prefix ~~\<close>\<close>~~ _)\<close> [70] 71)
 where
   "~~ x == NOT x"
 
 abbreviation
-  wordAND  :: "'a::len word \<Rightarrow> 'a word \<Rightarrow> 'a word" (infixr "&&" 64)
+  wordAND  :: "'a::len word \<Rightarrow> 'a word \<Rightarrow> 'a word" (infixr \<open>&&\<close> 64)
 where
   "a && b == a AND b"
 
 abbreviation
-  wordOR   :: "'a::len word \<Rightarrow> 'a word \<Rightarrow> 'a word" (infixr "||"  59)
+  wordOR   :: "'a::len word \<Rightarrow> 'a word \<Rightarrow> 'a word" (infixr \<open>||\<close>  59)
 where
   "a || b == a OR b"
 
 abbreviation
-  wordXOR  :: "'a::len word \<Rightarrow> 'a word \<Rightarrow> 'a word" (infixr "xor" 59)
+  wordXOR  :: "'a::len word \<Rightarrow> 'a word \<Rightarrow> 'a word" (infixr \<open>xor\<close> 59)
 where
   "a xor b == a XOR b"
 
