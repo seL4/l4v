@@ -55,7 +55,7 @@ fun find_names ctxt thm =
 fun pretty_find_names ctxt thm =
   let
     val results = find_names ctxt thm;
-    val position_markup = Position.markup (Position.thread_data ()) Markup.position;
+    val position_markup = Position.markup (Position.thread_data ());
   in
     ((Pretty.mark position_markup (Pretty.keyword1 "find_names")) ::
       Par_List.map (Pretty.item o (pretty_ref ctxt)) results)
