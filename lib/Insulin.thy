@@ -55,7 +55,7 @@
 
 theory Insulin
 imports
-  Pure
+  Main
 keywords
   "desugar_term" "desugar_thm" "desugar_goal" :: diag
 begin
@@ -134,7 +134,8 @@ fun desugar_reconst ctxt (tr as XML.Elem ((tag, attrs), children))
           (* try to look up the const's info *)
           case Syntax.read_term ctxt name
                |> Thm.cterm_of ctxt
-               |> Proof_Display.pp_cterm (fn _ => Proof_Context.theory_of ctxt)
+               |> Thm.term_of
+               |> Syntax.pretty_term ctxt
                |> Pretty.string_of
                |> dropQuotes
                |> YXML.parse
