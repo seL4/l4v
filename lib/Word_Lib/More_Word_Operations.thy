@@ -149,7 +149,7 @@ proof (rule ext)+
     fix q
     assume \<open>q < LENGTH('a)\<close>
     then show \<open>bit (sign_extend n w) q \<longleftrightarrow> bit (signed_take_bit n w) q\<close>
-      by (simp add: bit.disj_conj_distrib2 sign_extend_def signed_take_bit_eq_if_negative 
+      by (simp add: bit.disj_conj_distrib2 sign_extend_def signed_take_bit_eq_if_negative
           signed_take_bit_eq_if_positive take_bit_eq_mask)
   qed
 qed
@@ -292,13 +292,13 @@ proof -
   also have "\<dots> = (a mod 2 ^ n - 1) + (a div 2 ^ n + 1) * 2 ^ n"
     by (simp add: field_simps)
   finally have \<section>: "a + 2 ^ n - 1 = a mod 2 ^ n - 1 + (a div 2 ^ n + 1) * 2 ^ n" .
-  have "2 ^ n + word_of_nat (unat a div 2 ^ n) * 2 ^ n 
+  have "2 ^ n + word_of_nat (unat a div 2 ^ n) * 2 ^ n
            = (word_of_nat (unat a div 2 ^ n) + 1) * 2 ^ n"
     by (smt (verit) sz add.commute mult.commute mult_Suc_right of_nat_Suc of_nat_add of_nat_mult word_unat_power)
   then show "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n" using sz
-    unfolding alignUp_def 
+    unfolding alignUp_def
     apply (simp add: \<section> flip: mask_eq_decr_exp)
-    by (smt (verit) div_eq_0_iff add.commute is_alignedI mult.commute power_eq_0_iff um 
+    by (smt (verit) div_eq_0_iff add.commute is_alignedI mult.commute power_eq_0_iff um
         unat_is_aligned_add word_eq_unatI zero_neq_numeral)
 qed
 
@@ -712,7 +712,7 @@ lemma neg_mask_in_mask_range:
 proof -
   have "ptr' AND NOT (mask bits) \<le> ptr'"
     if "ptr = ptr' AND NOT (mask bits)"
-    using that word_and_le2 by auto    
+    using that word_and_le2 by auto
   moreover have "ptr' \<le> (ptr' AND NOT (mask bits)) + mask bits"
     if "ptr = ptr' AND NOT (mask bits)"
     using that by (simp add: and_neg_mask_plus_mask_mono)
@@ -750,7 +750,7 @@ proof -
     for x :: "'a word"
   proof -
     obtain y where "x = ptr + y" "y < 2 ^ bits"
-      by (metis x and_mask_less' assms atLeastAtMost_iff bit.double_compl neg_mask_in_mask_range 
+      by (metis x and_mask_less' assms atLeastAtMost_iff bit.double_compl neg_mask_in_mask_range
           word_plus_and_or_coroll2)
     then show ?thesis
       using that assms by (simp add: is_aligned_add_conv)
@@ -772,9 +772,9 @@ proof -
             of_bl_rep_False word_bl.Rep_inverse)
     qed
     show "ptr \<le> x"
-      using assms y is_aligned_no_wrap' by auto 
+      using assms y is_aligned_no_wrap' by auto
     show "x \<le> ptr + mask bits"
-      by (metis assms y le_mask_iff_lt_2n word_bl.Rep_eqD word_plus_mono_right 
+      by (metis assms y le_mask_iff_lt_2n word_bl.Rep_eqD word_plus_mono_right
           is_aligned_no_overflow_mask)
   qed
   ultimately show ?thesis
@@ -787,7 +787,7 @@ lemma mask_range_to_bl:
         = {x. take (LENGTH('a) - bits) (to_bl x) = take (LENGTH('a) - bits) (to_bl ptr)}"
   apply (frule is_aligned_get_word_bits, assumption)
   using mask_range_to_bl'
-   apply blast 
+   apply blast
   using power_overflow mask_eq_decr_exp
   by (smt (verit, del_insts) Collect_cong Collect_mem_eq diff_is_0_eq' is_aligned_beyond_length is_aligned_neg_mask2 linorder_not_le mask_range_to_bl' neg_mask_in_mask_range take0)
 
@@ -814,7 +814,7 @@ next
   assume szv': "sz < LENGTH('a)"
   hence blah: "2 ^ (sz - sz') < (2 :: nat) ^ LENGTH('a)"
     using szv by auto
-  show ?thesis 
+  show ?thesis
   proof -
     have "ptr \<le> ptr + x"
       if "ptr + x \<le> ptr + x + mask sz'"
@@ -868,7 +868,7 @@ proof -
     then have "take_bit (n - m) (drop_bit m x) < 2 ^ (n - m)"
       by (metis drop_bit_take_bit shiftr_def take_bit_eq_mask)
     then have "p + (x AND mask n >> m << m) AND NOT (mask bits) = ptr"
-      using assms 
+      using assms
       by (smt (verit) AND_NOT_mask_plus_AND_mask_eq and_not_mask eq_p eq_ptr is_aligned_neg_mask_weaken
           word_bw_assocs(1) word_bw_comms(1))
     then show ?thesis
@@ -881,7 +881,7 @@ qed
 lemma word_clz_sint_upper[simp]:
   "LENGTH('a) \<ge> 3 \<Longrightarrow> sint (of_nat (word_clz (w :: 'a :: len word)) :: 'a sword) \<le> int (LENGTH('a))"
   using word_clz_max [of w]
-  by (smt (verit, ccfv_SIG) id_apply of_int_eq_id of_nat_le_0_iff of_nat_mono semiring_1_class.of_nat_0 
+  by (smt (verit, ccfv_SIG) id_apply of_int_eq_id of_nat_le_0_iff of_nat_mono semiring_1_class.of_nat_0
       signed_of_nat signed_take_bit_int_eq_self sint_range' wsst_TYs(3))
 
 lemma word_clz_sint_lower[simp]:
@@ -925,7 +925,7 @@ proof
     by simp
   then show ?P by (simp add: signed_of_nat bit_iff_odd)
   show ?Q
-    by (smt (verit, best) "*" id_apply of_int_eq_id of_nat_0_le_iff of_nat_mono signed_of_nat 
+    by (smt (verit, best) "*" id_apply of_int_eq_id of_nat_0_le_iff of_nat_mono signed_of_nat
         signed_take_bit_int_eq_self sint_range')
 qed
 

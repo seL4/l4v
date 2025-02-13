@@ -316,7 +316,7 @@ lemma Suc_div_unat_helper:
 proof -
   note usv = order_le_less_trans [OF usszv szv]
 
-  from usszv obtain q where qv: "sz = us + q" 
+  from usszv obtain q where qv: "sz = us + q"
     by (auto simp: le_iff_add)
   have "Suc (unat (((2:: 'a word) ^ sz - 1) div 2 ^ us)) =
     (2 ^ us + unat ((2:: 'a word) ^ sz - 1)) div 2 ^ us"
@@ -782,7 +782,7 @@ proof -
     by (metis less_imp_diff_less power_minus_is_div unat_less_power unat_of_nat_len word_less_two_pow_divD word_nchotomy)
   moreover have "(word_of_nat k::'a word) < 2 ^ n div 2 ^ m"
     if "k < 2 ^ n div 2 ^ m" for k
-    using that assms   
+    using that assms
     by (metis order_le_less_trans two_pow_div_gt_le unat_div unat_power_lower word_of_nat_less)
   ultimately show ?thesis
     by (auto simp: word_of_nat_less)
@@ -1722,7 +1722,7 @@ lemma mask_lower_twice2:
 lemma ucast_and_neg_mask:
   "ucast (x AND NOT (mask n)) = ucast x AND NOT (mask n)"
 proof (rule bit_word_eqI)
-  fix m 
+  fix m
   show "bit (ucast (x AND NOT (mask n))::'a word) m = bit ((ucast x::'a word) AND NOT (mask n)) m"
     by (smt (verit) bit_and_iff bit_word_ucast_iff neg_mask_test_bit)
 qed
@@ -1919,8 +1919,8 @@ proof
              take_bit LENGTH('c) (concat_bit LENGTH('b) (uint d) (uint c))"
     by (simp add: word_of_int_eq_iff)
   then show "b = d \<and> a = c"
-    using that concat_bit_eq_iff 
-    by (metis (no_types, lifting) concat_bit_assoc concat_bit_of_zero_2 concat_bit_take_bit_eq 
+    using that concat_bit_eq_iff
+    by (metis (no_types, lifting) concat_bit_assoc concat_bit_of_zero_2 concat_bit_take_bit_eq
         take_bit_tightened uint_sint unsigned_word_eqI)
 qed auto
 
@@ -1982,7 +1982,7 @@ proof -
   from sint_range' [where x=a] sint_range' [where x=b]
   have assms: \<open>- (2 ^ n) \<le> k\<close> \<open>k < 2 ^ n\<close> \<open>- (2 ^ n) \<le> l\<close> \<open>l < 2 ^ n\<close>
     by simp_all
-  have aux: \<open>signed_take_bit n x 
+  have aux: \<open>signed_take_bit n x
            = (if x < - (2 ^ n) then x + 2 * (2 ^ n)
               else if x \<ge> 2 ^ n then x - 2 * (2 ^ n) else x)\<close>
     if x: \<open>- 3 * (2 ^ n) \<le> x \<and> x < 3 * (2 ^ n)\<close> for x :: int
