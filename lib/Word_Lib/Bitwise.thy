@@ -148,7 +148,7 @@ proof (cases "n < size w")
   case True
   then show ?thesis
     by (simp add: bl_sshiftr takefill_last_def word_size takefill_alt
-           rev_take last_rev drop_nonempty_def)    
+           rev_take last_rev drop_nonempty_def)
 next
   case False
   then have \<section>: "(w >>> n) = of_bl (replicate (size w) (msb w))"
@@ -176,11 +176,11 @@ proof (rule nth_equalityI)
   show "length (rev (to_bl (scast x::'a word))) = length (takefill_last False (len_of (TYPE('a)::'a itself)) (rev (to_bl x)))"
     by (simp add: word_size takefill_last_def)
 next
-  fix i 
+  fix i
   assume "i < length (rev (to_bl (scast x::'a word)))"
   then show "rev (to_bl (scast x::'a word)) ! i = takefill_last False (LENGTH('a)) (rev (to_bl x)) ! i"
   apply (cases "LENGTH('b)")
-     apply (auto simp: nth_scast takefill_last_def nth_takefill word_size rev_nth 
+     apply (auto simp: nth_scast takefill_last_def nth_takefill word_size rev_nth
         to_bl_nth less_Suc_eq_le last_rev msb_nth simp flip: word_msb_alt)
   done
 qed
@@ -267,11 +267,11 @@ lemma rev_bl_order_bl_to_bin:
     rev_bl_order False xs ys = (bl_to_bin (rev xs) < bl_to_bin (rev ys))"
 proof (induct xs ys rule: list_induct2)
   case Nil
-  then show ?case 
+  then show ?case
     by (auto simp: rev_bl_order_simps(1))
 next
   case (Cons x xs y ys)
-  then show ?case 
+  then show ?case
     apply (simp add: rev_bl_order_simps bl_to_bin_app_cat)
     apply (auto simp add: bl_to_bin_def add1_zle_eq concat_bit_Suc)
     done

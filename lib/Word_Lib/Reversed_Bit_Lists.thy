@@ -349,7 +349,7 @@ lemma bin_nth_of_bl:
 
 lemma bl_to_bin_eq:
   \<open>bl_to_bin bs = horner_sum of_bool 2 (rev bs)\<close>
-  by (simp add: bl_to_bin_def bl_to_bin_aux_eq) 
+  by (simp add: bl_to_bin_def bl_to_bin_aux_eq)
 
 primrec bin_to_bl_aux :: "nat \<Rightarrow> int \<Rightarrow> bool list \<Rightarrow> bool list"
   where
@@ -617,7 +617,7 @@ next
     case False
     with Suc  show ?thesis
       by (simp add: not_le split: nat_diff_split)
-  qed   
+  qed
 qed
 
 lemma drop_bin2bl: "drop m (bin_to_bl n bin) = bin_to_bl (n - m) bin"
@@ -816,7 +816,7 @@ proof (induction n arbitrary: bin)
   then show ?case by auto
 next
   case (Suc n)
-  then show ?case 
+  then show ?case
     apply (case_tac bin rule: bin_exhaust, simp)
     apply (simp add: bin_to_bl_aux_alt ac_simps)
     done
@@ -834,7 +834,7 @@ next
   obtain a x b y where "bina = of_bool a + 2 * x" "binb = of_bool b + 2 * y"
     by (meson bin_exhaust)
   with Suc show ?case
-    apply simp   
+    apply simp
     by (auto simp: bin_to_bl_aux_alt rbl_succ ac_simps)
 qed
 
@@ -911,7 +911,7 @@ next
   obtain a x b y where "v = of_bool a + 2 * x" "w = of_bool b + 2 * y"
     by (meson bin_exhaust)
   with Suc show ?case
-    by (cases a; simp add: bin_to_bl_def)   
+    by (cases a; simp add: bin_to_bl_def)
 qed
 
 lemma bl_or_aux_bin:
@@ -1020,7 +1020,7 @@ lemma to_bl_eq_rev:
 
 lemma of_bl_rev_eq: \<open>of_bl (rev bs) = horner_sum of_bool 2 bs\<close>
 proof (rule bit_word_eqI)
-  fix n 
+  fix n
   assume "n < LENGTH('a)"
   show "bit (of_bl (rev bs)::'a word) n = bit (horner_sum of_bool (2::'a word) bs) n"
     using bit_horner_sum_bit_word_iff bit_of_bl_iff by fastforce
@@ -1352,7 +1352,7 @@ lemma bshiftr1_bl: "to_bl (bshiftr1 b w) = b # butlast (to_bl w)"
 
 lemma shiftl1_of_bl: "shiftl1 (of_bl bl) = of_bl (bl @ [False])"
 proof (rule bit_word_eqI)
-  fix n 
+  fix n
   assume "n < LENGTH('a)"
   then
   show "bit (shiftl1 (of_bl bl::'a word)) n = bit (of_bl (bl @ [False])::'a word) n"
@@ -1431,7 +1431,7 @@ lemma take_sshiftr':
   shows "hd (to_bl (w >>> n)) = hd (to_bl w) \<and> take n (to_bl (w >>> n)) = replicate n (hd (to_bl w))"
 proof (cases n)
   case 0
-  then show ?thesis 
+  then show ?thesis
     by auto
 next
   case (Suc nat)
@@ -1618,7 +1618,7 @@ lemma word_rcat_bl:
   \<open>word_rcat wl = of_bl (concat (map to_bl wl))\<close>
 proof -
   define ws where \<open>ws = rev wl\<close>
-  moreover 
+  moreover
   have "word_of_int (horner_sum of_bool 2 (concat (map (\<lambda>x. map (bit x) [0..<LENGTH('b)]) ws))) =
         horner_sum of_bool 2 (concat (map (\<lambda>x. map (bit x) [0..<LENGTH('b)]) ws))"
     by transfer simp
@@ -1944,7 +1944,7 @@ lemma xor_2p_to_bl:
 proof -
   have "map (bit (x XOR 2 ^ n)) (rev [0..<LENGTH('a)]) = map (bit x) (rev [Suc n..<LENGTH('a)]) @ (\<not> rev (map (bit x) (rev [0..<LENGTH('a)])) ! n) # map (bit x) (rev [0..<n])"
     if "n < LENGTH('a)"
-    using that 
+    using that
     by (intro nth_equalityI) (auto simp: bit_simps rev_nth nth_append Suc_diff_Suc)
   then show ?thesis
     by (auto simp: to_bl_eq_rev take_map drop_map take_rev drop_rev bit_simps)

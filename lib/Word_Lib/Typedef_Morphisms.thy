@@ -99,7 +99,7 @@ lemma td_conds:
     fr \<circ> norm = norm \<circ> fr \<longleftrightarrow> norm \<circ> fr \<circ> norm = fr \<circ> norm \<and> norm \<circ> fr \<circ> norm = norm \<circ> fr"
   by (metis fun.map_comp)
 
-lemma fn_comm_power: 
+lemma fn_comm_power:
   assumes "fa \<circ> tr = tr \<circ> fr"
   shows "fa ^^ n \<circ> tr = tr \<circ> fr ^^ n"
 proof -
