@@ -302,7 +302,7 @@ end
 (* Exception rewrite conversion. *)
 fun except_rewrite_conv ctxt do_opt =
   Simplifier.asm_full_rewrite (
-    put_simpset HOL_basic_ss (Utils.set_hidden_ctxt ctxt)
+    put_simpset HOL_basic_ss (Context_Position.set_visible false ctxt)
         addsimps (Utils.get_rules ctxt @{named_theorems L1except})
         addsimps (if do_opt then Utils.get_rules ctxt @{named_theorems L1opt} else [])
         addsimprocs simprocs)
