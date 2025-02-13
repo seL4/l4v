@@ -47,24 +47,20 @@ val eval_nat = eval (mk_constname_tab [@{term "Suc 0"}, @{term "Suc 1"},
 val eval_int = eval (mk_constname_tab [@{term "0 :: int"}, @{term "1 :: int"},
     @{term "18 :: int"}, @{term "(-9) :: int"}])
 
-val eval_bool_simproc = Simplifier.make_simproc @{context}
-  { name = "eval_bool", lhss = [@{term "b :: bool"}], proc = K eval_bool, identifier = [] }
-val eval_nat_simproc = Simplifier.make_simproc @{context}
-  { name = "eval_nat", lhss = [@{term "n :: nat"}], proc = K eval_nat, identifier = [] }
-val eval_int_simproc = Simplifier.make_simproc @{context}
-  { name = "eval_int", lhss = [@{term "i :: int"}], proc = K eval_int, identifier = [] }
+val eval_bool_simproc = \<^simproc_setup>\<open>eval_bool ("b :: bool") = \<open>K eval_bool\<close>\<close>
+val eval_nat_simproc = \<^simproc_setup>\<open>eval_nat ("n :: nat") = \<open>K eval_nat\<close>\<close>
+val eval_int_simproc = \<^simproc_setup>\<open>eval_int ("i :: int") = \<open>K eval_int\<close>\<close>
 
 end
 \<close>
 
 method_setup eval_bool = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
-    (CHANGED o full_simp_tac (clear_simpset ctxt
-        addsimprocs [Eval_Simproc.eval_bool_simproc])))\<close>
+    (CHANGED o full_simp_tac (clear_simpset ctxt addsimprocs [@{simproc eval_bool}])))\<close>
     "use code generator setup to simplify booleans in goals to True or False"
 
 method_setup eval_int_nat = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
     (CHANGED o full_simp_tac (clear_simpset ctxt
-        addsimprocs [Eval_Simproc.eval_nat_simproc, Eval_Simproc.eval_int_simproc])))\<close>
+        addsimprocs [@{simproc eval_nat}, @{simproc eval_int}])))\<close>
     "use code generator setup to simplify nats and ints in goals to values"
 
 add_try_method eval_bool

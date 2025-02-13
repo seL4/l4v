@@ -45,7 +45,7 @@ val _ =
                val (thm, lthy') = Local_Theory.background_theory_result (add_def lthy (b', str)) lthy;
                val (_, lthy'') = Local_Theory.note ((b,[]), [thm]) lthy'
                val lthy''' = Local_Theory.raw_theory
-                               (Global_Theory.hide_fact true (Thm.derivation_name thm)) lthy''
+                               (Global_Theory.hide_fact true (Thm_Name.short (Thm.derivation_name thm))) lthy''
           in lthy''' end)));
 
 
