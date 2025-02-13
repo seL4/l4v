@@ -95,7 +95,7 @@ proof -
   have "sint (- (1::'a word)) = - 1"
     by simp
   then show ?thesis
-    by (metis int_sdiv_simps(1) mult_1 mult_minus_left scast_eq scast_id 
+    by (metis int_sdiv_simps(1) mult_1 mult_minus_left scast_eq scast_id
         sdiv_minus_eq sdiv_word_def signed_1 wi_hom_neg)
 qed
 
@@ -136,7 +136,7 @@ lemma one_smod_word_eq [simp]:
 
 lemma minus_one_sdiv_word_eq [simp]:
   \<open>- 1 sdiv w = - (1 sdiv w)\<close> for w :: \<open>'a::len word\<close>
-  by (metis (mono_tags, opaque_lifting) minus_sdiv_eq of_int_minus sdiv_word_def signed_1 sint_n1  
+  by (metis (mono_tags, opaque_lifting) minus_sdiv_eq of_int_minus sdiv_word_def signed_1 sint_n1
       word_sdiv_div1 word_sdiv_div_minus1)
 
 lemma minus_one_smod_word_eq [simp]:

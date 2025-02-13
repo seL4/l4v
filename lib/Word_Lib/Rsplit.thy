@@ -181,12 +181,12 @@ lemma bin_rsplit_l [rule_format]:
   using wf_less_than
 proof (induct m arbitrary: bin rule: wf_induct_rule)
   case (less m)
-  then have "bin_rsplitl_aux n (m - n) (drop_bit (min m n) bin) [] 
+  then have "bin_rsplitl_aux n (m - n) (drop_bit (min m n) bin) []
            = bin_rsplit_aux n (m - n) (drop_bit n (take_bit m bin)) []"
     if "0 < m" and "0 < n"
     using that  by (simp add: drop_bit_take_bit min_def rsplit_def_auxs)
   then show ?case
-    unfolding bin_rsplitl_def bin_rsplit_def 
+    unfolding bin_rsplitl_def bin_rsplit_def
     apply (subst bin_rsplitl_aux.simps)
     apply (clarsimp simp: Let_def ac_simps split: prod.split)
     by (metis rsplit_aux_alts)
@@ -197,7 +197,7 @@ lemma bin_rsplit_lemma: "sc - n + (n + lb * n) \<le> m * n \<longleftrightarrow>
 proof (cases "sc \<ge> n")
   case False
   with that show ?thesis
-    using linorder_le_less_linear [of m lb] 
+    using linorder_le_less_linear [of m lb]
     by (smt (verit, ccfv_SIG) Nat.le_diff_conv2 add_leD2 diff_is_0_eq' le0 mult_Suc mult_le_cancel2 not_less_eq_eq order_trans)
 qed auto
 
@@ -290,7 +290,7 @@ proof -
   have "bit (rev sw ! k) m = bit (map uint (rev sw) ! k) m"
     by (simp add: assms(3) word_test_bit_def)
   also have "... = bit (uint w) (k * size (hd sw) + m)"
-    using assms  
+    using assms
     by (simp add: bin_nth_rsplit bit_take_bit_iff rev_map unsigned_of_int
         word_rsplit_def word_size)
   also have "... = bit w (k * size (hd sw) + m)"
@@ -336,7 +336,7 @@ lemmas dtle = xtrans(4) [OF tdle mult.commute]
 
 lemma word_rcat_rsplit: "word_rcat (word_rsplit w) = w"
 proof (rule word_eqI)
-  fix n 
+  fix n
   assume "n < size (word_rcat (word_rsplit w::'b word list)::'a word)"
   then have n: "n < LENGTH('a)"
     by (simp add: word_size)
@@ -358,28 +358,28 @@ lemma size_word_rsplit_rcat_size:
 lemma word_rsplit_rcat_size:
   fixes ws :: "'a::len word list"
   defines "frcw \<equiv> word_rcat ws"
-  assumes "size frcw = length ws * LENGTH('a)" 
+  assumes "size frcw = length ws * LENGTH('a)"
   shows "word_rsplit frcw = ws"
 proof (intro nth_equalityI word_eqI)
   show "length (word_rsplit frcw::'a word list) = length ws"
     using size_word_rsplit_rcat_size assms by blast
 next
   fix i n
-  assume \<section>: "i < length (word_rsplit frcw::'a word list)" 
+  assume \<section>: "i < length (word_rsplit frcw::'a word list)"
     "n < size (word_rsplit frcw ! i::'a word)"
   then have n: "n < LENGTH('a)"
     by (simp add: word_size)
-  then have *: "(length ws - Suc i) * LENGTH('a) + n < length ws * LENGTH('a)" 
+  then have *: "(length ws - Suc i) * LENGTH('a) + n < length ws * LENGTH('a)"
     using assms div_eq_0_iff td_gal_lt by fastforce
   have i: "i < length ws"
     by (metis \<section> assms(2) length_word_rsplit_even_size)
-  then have **: "bit (word_rcat ws :: 'b word) ((length ws - Suc i) * LENGTH('a) + n) 
+  then have **: "bit (word_rcat ws :: 'b word) ((length ws - Suc i) * LENGTH('a) + n)
       = bit (ws ! i) n"
-    using n assms * 
+    using n assms *
     by (auto simp add: test_bit_rcat [OF refl refl] rev_nth word_size)
   then show "bit (word_rsplit frcw ! i::'a word) n = bit (ws ! i) n"
     using n i assms test_bit_rsplit_alt
-    by (metis (mono_tags, lifting) len_gt_0 length_word_rsplit_even_size 
+    by (metis (mono_tags, lifting) len_gt_0 length_word_rsplit_even_size
          word_size zero_less_mult_pos2)
 qed
 
@@ -393,5 +393,5 @@ proof -
     using assms
     by (intro nth_equalityI word_eqI) (auto simp add: test_bit_rsplit_alt word_size bit_simps rev_nth)
 qed
-    
+
 end
