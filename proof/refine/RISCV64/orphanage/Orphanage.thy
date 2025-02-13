@@ -1674,6 +1674,7 @@ lemma tc_no_orphans:
     K (valid_option_prio d \<and> valid_option_prio mcp) \<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (rule hoare_gen_asm)
   apply (rule hoare_gen_asm)
   apply (rule hoare_gen_asm)

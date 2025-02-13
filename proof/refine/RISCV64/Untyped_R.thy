@@ -482,7 +482,7 @@ lemma ctes_of_ko:
       \<comment> \<open>ASID control\<close>
       apply clarsimp
      \<comment> \<open>ASIDPool\<close>
-     apply (clarsimp simp: valid_cap'_def valid_acap'_def valid_arch_cap_ref'_def typ_at'_def ko_wp_at'_def)
+     apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def ko_wp_at'_def)
      apply (intro exI conjI, assumption)
      apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
      apply (case_tac ko; simp)
@@ -491,7 +491,7 @@ lemma ctes_of_ko:
               simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
     \<comment> \<open>Frame case\<close>
     apply (rename_tac word vmrights vmpage_size option)
-    apply (clarsimp simp: valid_cap'_def valid_acap'_def valid_arch_cap_ref'_def typ_at'_def
+    apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def
                           ko_wp_at'_def capAligned_def)
     apply (frule_tac ptr = ptr and sz = "pageBits" in
                      nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
@@ -505,7 +505,7 @@ lemma ctes_of_ko:
           (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
   \<comment> \<open>PT case\<close>
    apply (rename_tac word option)
-   apply (clarsimp simp: valid_cap'_def valid_acap'_def valid_arch_cap_ref'_def obj_at'_def bit_simps
+   apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def obj_at'_def bit_simps
                          page_table_at'_def typ_at'_def ko_wp_at'_def)
    apply (frule_tac ptr=ptr and sz=3 in
                   nasty_range[where 'a=machine_word_len and bz="ptBits", folded word_bits_def,

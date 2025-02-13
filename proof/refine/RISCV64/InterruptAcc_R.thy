@@ -59,10 +59,7 @@ lemma setIRQState_invs[wp]:
                         bitmapQ_defs valid_bitmaps_def)
   apply (rule conjI, clarsimp)
   apply (clarsimp simp: irqs_masked'_def ct_not_inQ_def)
-  apply (rule conjI; clarsimp)
-   apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-  apply (rule conjI)
-   apply fastforce
+  apply (rule conjI, fastforce)
   apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 

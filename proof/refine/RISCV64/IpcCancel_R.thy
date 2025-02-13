@@ -120,7 +120,7 @@ crunch cancelSignal
 context delete_one_conc_pre
 begin
 
-lemmas delete_one_typ_ats[wp] = typ_at_lifts [OF delete_one_typ_at]
+lemmas delete_one_typ_ats[wp] = gen_typ_at_lifts [OF delete_one_typ_at]
 
 lemma cancelIPC_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> cancelIPC t' \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
@@ -719,7 +719,6 @@ lemma cancelSignal_invs':
       apply (rule conjI)
        apply (case_tac "ntfnBoundTCB rv")
         apply (clarsimp elim!: if_live_state_refsE)+
-      apply (rule conjI, clarsimp split: option.splits)
       apply (clarsimp dest!: idle'_no_refs)
       done
   qed
@@ -790,6 +789,12 @@ crunch setEndpoint
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
   (wp: valid_bitmaps_lift simp: updateObject_default_def)
+
+(* FIXME arch-split: non-hyp arches only, this is a duplicate (locales?) *)
+lemma sym_refs_empty[simp]:
+  "sym_refs (\<lambda>p. {}) = True"
+  unfolding sym_refs_def
+  by simp
 
 lemma (in delete_one_conc) cancelIPC_invs[wp]:
   shows "\<lbrace>tcb_at' t and invs'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1846,7 +1851,7 @@ lemma threadSet_not_tcb[wp]:
   by (clarsimp simp: threadSet_def valid_def getObject_def
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def split_def in_magnitude_check
-                     objBits_simps' updateObject_default_def
+                     RISCV64.objBits_simps' updateObject_default_def
                      ps_clear_upd projectKO_opt_tcb)
 
 lemma setThreadState_not_tcb[wp]:
@@ -1921,7 +1926,7 @@ lemma tcbSchedEnqueue_unlive_other:
   apply (frule (1) tcbQueueHead_ksReadyQueues)
   apply (drule_tac x=p in spec)
   apply (fastforce dest!: inQ_implies_tcbQueueds_of
-                    simp: tcbQueueEmpty_def ko_wp_at'_def opt_pred_def opt_map_def
+                    simp: tcbQueueEmpty_def ko_wp_at'_def opt_pred_def opt_map_def live'_def
                    split: option.splits)
   done
 
@@ -1952,6 +1957,7 @@ lemma cancelAllIPC_unlive:
   apply (frule(1) obj_at_valid_objs')
   apply (intro conjI impI)
   apply (clarsimp simp: valid_obj'_def valid_ep'_def obj_at'_def pred_tcb_at'_def ko_wp_at'_def
+                        live'_def
                  split: endpoint.split_asm)+
   done
 
@@ -1964,11 +1970,11 @@ lemma cancelAllSignals_unlive:
   apply (rule bind_wp [OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfn", simp_all add: setNotification_def)
     apply wp
-    apply (fastforce simp: obj_at'_real_def
+    apply (fastforce simp: obj_at'_real_def live'_def
                      dest: obj_at_conj'
                      elim: ko_wp_at'_weakenE)
    apply wp
-   apply (fastforce simp: obj_at'_real_def
+   apply (fastforce simp: obj_at'_real_def live'_def
                     dest: obj_at_conj'
                     elim: ko_wp_at'_weakenE)
   apply (wp rescheduleRequired_unlive)
@@ -1979,7 +1985,7 @@ lemma cancelAllSignals_unlive:
   apply (intro conjI[rotated])
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
    apply (simp add: projectKO_opt_tcb)
-  apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def obj_at'_def)+
+  apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def obj_at'_def live'_def)+
   done
 
 crunch tcbSchedEnqueue
@@ -2072,7 +2078,7 @@ lemma cancelBadgedSends_invs[wp]:
   apply (frule obj_at_valid_objs', clarsimp)
   apply (clarsimp simp: valid_obj'_def valid_ep'_def)
   apply (frule if_live_then_nonz_capD', simp add: obj_at'_real_def)
-   apply clarsimp
+   apply (clarsimp simp: live'_def)
   apply (frule(1) sym_refs_ko_atD')
   apply (clarsimp simp add: fun_upd_idem
                             st_tcb_at_refs_of_rev')

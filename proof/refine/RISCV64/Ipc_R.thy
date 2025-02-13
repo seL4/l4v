@@ -1686,6 +1686,7 @@ lemma doFaultTransfer_invs[wp]:
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def RISCV64_H.lookupIPCBuffer_def
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
                    locateSlot_conv threadGet_def comp_def)
   apply (wp getCTE_wp getObject_tcb_wp | wpc)+
@@ -3572,6 +3573,7 @@ lemma setupCallerCap_ifunsafe[wp]:
    \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   unfolding setupCallerCap_def getThreadCallerSlot_def
             getThreadReplySlot_def locateSlot_conv
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (wp getSlotCap_cte_wp_at
        | simp add: unique_master_reply_cap' | strengthen eq_imp_strg
        | wp (once) hoare_drop_imp[where f="getCTE rs" for rs])+
@@ -3739,12 +3741,13 @@ lemma completeSignal_invs:
                            \<and> ntfnptr \<noteq> ksIdleThread s"
                           in hoare_strengthen_post)
      apply ((wp hoare_vcg_ex_lift hoare_weak_lift_imp | wpc | simp add: valid_ntfn'_def)+)[1]
-    apply (clarsimp simp: obj_at'_def state_refs_of'_def typ_at'_def ko_wp_at'_def split: option.splits)
+    apply (clarsimp simp: obj_at'_def state_refs_of'_def typ_at'_def ko_wp_at'_def live'_def
+                    split: option.splits)
     apply (blast dest: ntfn_q_refs_no_bound_refs')
    apply wp
   apply (subgoal_tac "valid_ntfn' ntfn s")
    apply (subgoal_tac "ntfnptr \<noteq> ksIdleThread s")
-    apply (fastforce simp: valid_ntfn'_def valid_bound_tcb'_def ko_at_state_refs_ofD'
+    apply (fastforce simp: valid_ntfn'_def valid_bound_tcb'_def ko_at_state_refs_ofD' live'_def
                      elim: obj_at'_weakenE
                            if_live_then_nonz_capD'[OF invs_iflive'
                                                       obj_at'_real_def[THEN meta_eq_to_obj_eq,
@@ -3943,7 +3946,7 @@ lemma rai_invs'[wp]:
      apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts
                setThreadState_ct_not_inQ
                asUser_urz
-            | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def | wpc)+
+            | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def live'_def | wpc)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "capNtfnPtr cap \<noteq> t")
@@ -3981,7 +3984,7 @@ lemma rai_invs'[wp]:
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
              setThreadState_ct_not_inQ typ_at_lifts
              asUser_urz
-        | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def | wpc)+
+        | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def live'_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
   apply (frule_tac t=t in not_in_ntfnQueue)
      apply (simp)
