@@ -88,12 +88,12 @@ lemma upto_enum_red2:
 lemma upto_enum_step_red:
   assumes szv: "sz < LENGTH('a)"
   and   usszv: "us \<le> sz"
-  shows "[0 :: 'a :: len word , 2 ^ us .e. 2 ^ sz - 1] 
-       = map (\<lambda>x. of_nat x * 2 ^ us) [0 ..< 2 ^ (sz - us)]" 
+  shows "[0 :: 'a :: len word , 2 ^ us .e. 2 ^ sz - 1]
+       = map (\<lambda>x. of_nat x * 2 ^ us) [0 ..< 2 ^ (sz - us)]"
 proof -
   have "\<And>n. \<lbrakk>n < 2 ^ (sz - us)\<rbrakk> \<Longrightarrow> toEnum n * 2 ^ us = (word_of_nat n * 2 ^ us :: 'a word)"
     using szv nat_less_le order_le_less_trans by fastforce
-  with assms show ?thesis  
+  with assms show ?thesis
     by (simp add: upto_enum_step_def upto_enum_red Suc_div_unat_helper)
 qed
 
@@ -195,7 +195,7 @@ lemma length_interval:
   by (metis distinct_card distinct_enum_upto' length_upto_enum upto_enum_set_conv)
 
 lemma enum_word_div:
-  fixes v :: "'a :: len word" 
+  fixes v :: "'a :: len word"
   shows "\<exists>xs ys. enum = xs @ [v] @ ys \<and> (\<forall>x \<in> set xs. x < v) \<and> (\<forall>y \<in> set ys. v < y)"
 proof -
   have \<section>: "[0..<2 ^ LENGTH('a)] = ([0..<unat v] @ [unat v..<2 ^ LENGTH('a)])"
