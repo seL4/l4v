@@ -278,7 +278,7 @@ fun calc_call_graph fn_infos = let
           cmp = String.compare,
           graph = Symtab.lookup fn_callees_lists #> the,
           converse = Symtab.lookup fn_callers_lists #> the
-        } (Symtab.keys fn_callees_lists |> sort String.compare)
+        } (Symtab.keys fn_callees_lists |> sort_strings)
         |> map Symset.make;
 
   val fn_callees = Symtab.map (K Symset.make) fn_callees_lists;

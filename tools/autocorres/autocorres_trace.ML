@@ -61,7 +61,6 @@ signature AUTOCORRES_TRACE = sig
         Proof.context -> (cterm -> thm) -> thm -> bool -> thm * SimpTrace option
 
   val print_ac_trace: thm RuleTrace -> string
-  val print_ac_simp_trace: SimpTrace -> string
 
   val writeFile: string -> string -> unit
 end;
@@ -71,7 +70,7 @@ structure AutoCorresTrace: AUTOCORRES_TRACE = struct
 (*
  * Custom unifier for trace_solve_tac.
  * Isabelle's built-in unifier has several problems:
- * 1. It gives up when the unifications become “complicated”, even if it is
+ * 1. It gives up when the unifications become "complicated", even if it is
  *    only due to variables needing large instantiations.
  *    This happens for trace_solve_tac because it unifies subgoals with subgoal proofs,
  *    thus it may instantiate a variable to an entire program term.
@@ -347,44 +346,27 @@ fun fconv_rule_maybe_traced ctxt conv thm do_trace =
 
 (* Display and debugging utils *)
 local
-fun dropQuotes s = if String.isPrefix "\"" s andalso String.isSuffix "\"" s
-                       then String.substring (s, 1, String.size s - 2) else s
-
-fun cterm_to_string no_markup =
-  Proof_Display.pp_cterm (fn _ => @{theory Pure})
-  #> Pretty.string_of
-  #> YXML.parse_body
-  #> (if no_markup then XML.content_of else YXML.string_of_body)
-  #> dropQuotes
-
-fun intercalate _ [] = []
-  | intercalate _ [x] = [x]
-  | intercalate l (x::xs) = x :: l @ intercalate l xs
+fun print_term ctxt t =
+  Pretty.pure_string_of (Syntax.pretty_term ctxt t)
 
 fun print_ac_trace' indent (RuleTrace tr) =
-  let val print_cterm = cterm_to_string true
-      val print_thm = Thm.cprop_of #> print_cterm
-      val indent' = indent ^ "  "
+  let
+    val ctxt = ML_PP.toplevel_context ()
+    val print_cterm = print_term ctxt o Thm.term_of
+    val print_thm = print_term ctxt o Thm.prop_of
+    val indent2 = indent ^ "  "
   in
     indent ^ "Subgoal: " ^ print_cterm (#input tr) ^ "\n" ^
     indent ^ "Output:  " ^ print_thm (#output tr) ^ "\n" ^
     (if null (#trace tr) then indent ^ "Proof: " ^ print_thm (#step tr |> fst) ^ "\n" else
        indent ^ "Proof:\n" ^
-       indent' ^ "Step: " ^ print_thm (#step tr |> fst) ^ "\n\n" ^
-       String.concat (map (print_ac_trace' indent') (#trace tr) |> intercalate ["\n"]))
+       indent2 ^ "Step: " ^ print_thm (#step tr |> fst) ^ "\n\n" ^
+       cat_lines (map (print_ac_trace' indent2) (#trace tr)))
   end
 
 in
 val print_ac_trace = print_ac_trace' ""
 
-fun print_ac_simp_trace (SimpTrace tr) =
-  let val print_cterm = cterm_to_string true
-      val print_thm = Thm.cprop_of #> print_cterm
-  in
-    "Equation: " ^ print_thm(#equation tr) ^ "\n" ^
-    "Thms: \n" ^
-    String.concat (map (fn (name, thm) => name ^ ": " ^ print_cterm thm) (#thms tr) |> intercalate ["\n"])
-  end
 end
 
 fun writeFile filename string =
