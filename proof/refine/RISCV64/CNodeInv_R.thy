@@ -5604,7 +5604,7 @@ lemma make_zombie_invs':
                                \<and> bound_tcb_at' ((=) None) p' s
                                \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
                                                 \<and> tcbSchedPrev tcb = None) p' s")
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def)
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def live'_def hyp_live'_def)
    apply (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
                  dest!: isCapDs)
@@ -5731,6 +5731,7 @@ lemma cte_wp_at_disj_eq':
 
 lemma valid_Zombie_cte_at':
   "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 2^cteSizeBits)) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: valid_cap'_def split: zombie_type.split_asm)
    apply (clarsimp simp: obj_at'_def objBits_simps)
    apply (subgoal_tac "tcb_cte_cases (of_nat n * 2^cteSizeBits) \<noteq> None")
@@ -8374,6 +8375,9 @@ proof
      apply simp
     apply (erule (1) irq_controlD, rule irq_control)
     done
+
+  show "valid_arch_mdb_ctes m'"
+    by simp
 
   have distz: "distinct_zombies m"
     using valid by (simp add: valid_mdb_ctes_def)

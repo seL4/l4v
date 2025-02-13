@@ -843,7 +843,7 @@ lemma detype_tcbSchedNexts_of:
   apply (clarsimp simp: opt_map_def)
   apply (rule ext)
   apply (rename_tac s)
-  apply (clarsimp simp: ko_wp_at'_def split: option.splits)
+  apply (clarsimp simp: ko_wp_at'_def live'_def split: option.splits)
   apply (drule_tac x=s in spec)
   apply force
   done
@@ -857,7 +857,7 @@ lemma detype_tcbSchedPrevs_of:
   apply (clarsimp simp: opt_map_def)
   apply (rule ext)
   apply (rename_tac s)
-  apply (clarsimp simp: ko_wp_at'_def split: option.splits)
+  apply (clarsimp simp: ko_wp_at'_def live'_def split: option.splits)
   apply (drule_tac x=s in spec)
   apply force
   done
@@ -871,7 +871,7 @@ lemma detype_inQ:
   apply (clarsimp simp: opt_map_def)
   apply (rule ext)
   apply (rename_tac s)
-  apply (clarsimp simp: inQ_def opt_pred_def ko_wp_at'_def split: option.splits)
+  apply (clarsimp simp: inQ_def opt_pred_def ko_wp_at'_def live'_def split: option.splits)
   apply (drule_tac x=s in spec)
   apply force
   done
@@ -1023,7 +1023,7 @@ lemma untyped_range_live_idle':
 lemma valid_obj':
   "\<lbrakk> valid_obj' obj s'; ko_wp_at' ((=) obj) p s'; sym_heap_sched_pointers s' \<rbrakk>
    \<Longrightarrow> valid_obj' obj state'"
-  apply (case_tac obj, simp_all add: valid_obj'_def)
+  apply (case_tac obj, simp_all add: valid_obj'_def valid_arch_obj'_def)
      apply (rename_tac endpoint)
      apply (case_tac endpoint, simp_all add: valid_ep'_def)[1]
       apply (clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs])
@@ -1050,20 +1050,23 @@ lemma valid_obj':
      apply fastforce
     apply simp
    apply (intro conjI)
+       apply (rename_tac tcb)
+       apply (case_tac "tcbState tcb"; clarsimp simp: valid_tcb_state'_def  dest!: refs_notRange)
       apply (rename_tac tcb)
-      apply (case_tac "tcbState tcb"; clarsimp simp: valid_tcb_state'_def  dest!: refs_notRange)
-     apply (rename_tac tcb)
-     apply (case_tac "tcbState tcb";
-            clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
-                    dest!: refs_notRange split: option.splits)
+      apply (case_tac "tcbState tcb";
+             clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
+                     dest!: refs_notRange split: option.splits)
+     apply (clarsimp simp: none_top_bool_cases)
+     apply (rename_tac prev)
+     apply (cut_tac P=live' and p=prev in live_notRange; fastforce?)
+     apply (fastforce dest: sym_heapD2[where p'=p]
+                      simp: opt_map_def ko_wp_at'_def obj_at'_def live'_def)
     apply (clarsimp simp: none_top_bool_cases)
-    apply (rename_tac prev)
-    apply (cut_tac P=live' and p=prev in live_notRange; fastforce?)
-    apply (fastforce dest: sym_heapD2[where p'=p] simp: opt_map_def ko_wp_at'_def obj_at'_def)
-   apply (clarsimp simp: none_top_bool_cases)
-   apply (rename_tac "next")
-   apply (cut_tac P=live' and p="next" in live_notRange; fastforce?)
-   apply (fastforce dest!: sym_heapD1[where p=p] simp: opt_map_def ko_wp_at'_def obj_at'_def)
+    apply (rename_tac "next")
+    apply (cut_tac P=live' and p="next" in live_notRange; fastforce?)
+    apply (fastforce dest!: sym_heapD1[where p=p]
+                     simp: opt_map_def ko_wp_at'_def obj_at'_def live'_def)
+   apply (clarsimp simp: valid_arch_tcb'_def)
   apply (clarsimp simp: valid_cte'_def)
   apply (rule_tac p=p in valid_cap2)
   apply (clarsimp simp: ko_wp_at'_def objBits_simps' cte_level_bits_def[symmetric])
@@ -1082,7 +1085,7 @@ lemma tcbSchedNexts_of_pspace':
    apply (case_tac "ksPSpace s' p"; clarsimp)
    apply (rename_tac obj)
    apply (case_tac "tcb_of' obj"; clarsimp)
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
    apply (fastforce simp: pspace_alignedD' pspace_distinctD')
   apply (clarsimp simp: opt_map_def split: option.splits)
   done
@@ -1098,14 +1101,14 @@ lemma tcbSchedPrevs_of_pspace':
    apply (case_tac "ksPSpace s' p"; clarsimp)
    apply (rename_tac obj)
    apply (case_tac "tcb_of' obj"; clarsimp)
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
    apply (fastforce simp: pspace_alignedD' pspace_distinctD')
   apply (clarsimp simp: opt_map_def split: option.splits)
   done
 
 lemma st_tcb:
   "\<And>P p. \<lbrakk> st_tcb_at' P p s'; \<not> P Inactive; \<not> P IdleThreadState \<rbrakk> \<Longrightarrow> st_tcb_at' P p state'"
-  by (fastforce simp: pred_tcb_at'_def obj_at'_real_def
+  by (fastforce simp: pred_tcb_at'_def obj_at'_real_def live'_def
                 dest: live_notRange)
 
 lemma irq_nodes_global:
@@ -1551,7 +1554,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (clarsimp simp: obj_at'_real_def)
     apply (frule if_live_then_nonz_capE'[OF iflive, OF ko_wp_at'_weakenE])
      apply clarsimp
-     apply (case_tac "tcbState obj"; clarsimp)
+     apply (case_tac "tcbState obj"; clarsimp simp: live'_def)
     apply (clarsimp dest!: ex_nonz_cap_notRange)
     done
 
@@ -1567,7 +1570,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
                     OF ct_act [unfolded ct_in_state'_def st_tcb_at'_def]])
     apply (clarsimp simp: obj_at'_real_def)
     apply (frule if_live_then_nonz_capE'[OF iflive, OF ko_wp_at'_weakenE])
-     apply clarsimp
+     apply (clarsimp simp: live'_def)
      apply (case_tac "tcbState obj"; clarsimp)
     apply (clarsimp dest!: ex_nonz_cap_notRange elim!: ko_wp_at'_weakenE)
     done
@@ -1728,7 +1731,7 @@ lemma deleteObjects_st_tcb_at':
     apply (rule conjI)
      apply (fastforce elim: ko_wp_at'_weakenE simp: projectKO_opt_tcb)
     apply (erule if_live_then_nonz_capD' [rotated])
-     apply clarsimp
+     apply (clarsimp simp: live'_def)
     apply (clarsimp simp: invs'_def valid_state'_def)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def
                   field_simps ko_wp_at'_def ps_clear_def

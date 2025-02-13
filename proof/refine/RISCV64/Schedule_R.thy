@@ -320,14 +320,14 @@ lemma tcbSchedAppend_iflive'[wp]:
   unfolding tcbSchedAppend_def
   apply (wpsimp wp: tcbQueueAppend_if_live_then_nonz_cap' threadGet_wp simp: bitmap_fun_defs)
   apply (frule_tac p=tcbPtr in if_live_then_nonz_capE')
-   apply (fastforce simp: ko_wp_at'_def st_tcb_at'_def obj_at'_def runnable_eq_active')
+   apply (fastforce simp: ko_wp_at'_def st_tcb_at'_def obj_at'_def runnable_eq_active' live'_def)
   apply (clarsimp simp: tcbQueueEmpty_def)
   apply (erule if_live_then_nonz_capE')
   apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
   apply (drule_tac x="tcbDomain tcb" in spec)
   apply (drule_tac x="tcbPriority tcb" in spec)
   apply (fastforce dest!: obj_at'_tcbQueueEnd_ksReadyQueues
-                    simp: ko_wp_at'_def inQ_def obj_at'_def tcbQueueEmpty_def)
+                    simp: ko_wp_at'_def inQ_def obj_at'_def tcbQueueEmpty_def live'_def)
   done
 
 lemma tcbSchedDequeue_iflive'[wp]:
@@ -336,7 +336,7 @@ lemma tcbSchedDequeue_iflive'[wp]:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: tcbSchedDequeue_def)
   apply (wpsimp wp: tcbQueueRemove_if_live_then_nonz_cap' threadGet_wp)
-  apply (fastforce elim: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def)
+  apply (fastforce elim: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def live'_def)
   done
 
 crunch tcbSchedAppend, tcbSchedDequeue, tcbSchedEnqueue
@@ -1154,7 +1154,7 @@ lemma no_longer_inQ[simp]:
 lemma iflive_inQ_nonz_cap_strg:
   "if_live_then_nonz_cap' s \<and> obj_at' (inQ d prio) t s
           \<longrightarrow> ex_nonz_cap_to' t s"
-  by (clarsimp simp: obj_at'_real_def inQ_def
+  by (clarsimp simp: obj_at'_real_def inQ_def live'_def
               elim!: if_live_then_nonz_capE' ko_wp_at'_weakenE)
 
 lemmas iflive_inQ_nonz_cap[elim]

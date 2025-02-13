@@ -5,7 +5,7 @@
  *)
 
 theory TcbAcc_R
-imports CSpace_R ArchMove_R
+imports CSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -225,7 +225,8 @@ lemma update_valid_tcb'[simp]:
   "\<And>f. valid_tcb' tcb (ksReadyQueues_update f s) = valid_tcb' tcb s"
   "\<And>f. valid_tcb' tcb (ksSchedulerAction_update f s) = valid_tcb' tcb s"
   "\<And>f. valid_tcb' tcb (ksDomainTime_update f s) = valid_tcb' tcb s"
-  by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_tcb'_def valid_bound_ntfn'_def
+  by (auto simp: valid_tcb'_def valid_arch_tcb'_def valid_tcb_state'_def valid_bound_tcb'_def
+                 valid_bound_ntfn'_def
           split: option.splits thread_state.splits)
 
 lemma update_valid_tcbs'[simp]:
@@ -842,6 +843,7 @@ lemma threadSet_valid_pspace'T_P:
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             bspec_split [OF spec [OF x]] z
                             split_paired_Ball y u w v w' p n)
+  apply (simp add: valid_arch_tcb'_def) (* FIXME arch-split: non-hyp only *)
   done
 
 lemmas threadSet_valid_pspace'T =
@@ -925,12 +927,12 @@ lemma threadSet_iflive'T:
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wp setObject_tcb_iflive' getObject_tcb_wp)
-  apply (clarsimp simp: obj_at'_def)
+  apply (clarsimp simp: obj_at'_def live'_def hyp_live'_def)
   apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])+
   apply (rule conjI)
    apply (rule impI, clarsimp)
    apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def live'_def hyp_live'_def)
   apply (clarsimp simp: bspec_split [OF spec [OF x]])
   done
 
@@ -1504,7 +1506,7 @@ lemma asUser_valid_tcbs'[wp]:
   "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wpsimp wp: threadSet_valid_tcbs' hoare_drop_imps
-              simp: valid_tcb'_def tcb_cte_cases_def objBits_simps')
+              simp: valid_tcb'_def valid_arch_tcb'_def tcb_cte_cases_def objBits_simps')
   done
 
 lemma asUser_corres':
@@ -1637,10 +1639,10 @@ crunch asUser
 
 lemma asUser_valid_objs [wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wp threadSet_valid_objs' hoare_drop_imps
-             | simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)+
-  done
+  by (simp add: asUser_def split_def)
+     (wpsimp wp: threadSet_valid_objs' hoare_drop_imps
+             simp: valid_tcb'_def tcb_cte_cases_def valid_arch_tcb'_def cteSizeBits_def
+                   atcbContextSet_def)+
 
 lemma asUser_valid_pspace'[wp]:
   "\<lbrace>valid_pspace'\<rbrace> asUser t m \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
@@ -4402,6 +4404,7 @@ qed
 
 lemma cte_at_tcb_at_32':
   "tcb_at' t s \<Longrightarrow> cte_at' (t + 32) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: cte_at'_obj_at')
   apply (rule disjI2, rule bexI[where x=32])
    apply simp
@@ -4830,7 +4833,7 @@ lemma tcbQueueRemove_if_live_then_nonz_cap':
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
   apply (force dest: sym_heapD2[where p'=tcbPtr] sym_heapD1[where p=tcbPtr]
                elim: if_live_then_nonz_capE'
-               simp: valid_tcb'_def opt_map_def obj_at'_def ko_wp_at'_def)
+               simp: valid_tcb'_def opt_map_def obj_at'_def ko_wp_at'_def live'_def)
   done
 
 lemma tcbQueueRemove_ex_nonz_cap_to'[wp]:
@@ -4865,12 +4868,12 @@ lemma tcbQueueInsert_if_live_then_nonz_cap':
   apply (wpsimp wp: tcbSchedPrev_update_iflive' tcbSchedNext_update_iflive' getTCB_wp)
   apply (intro conjI)
    apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
   apply (erule if_live_then_nonz_capE')
   apply (frule_tac p'=afterPtr in sym_heapD2)
    apply (fastforce simp: opt_map_def obj_at'_def)
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
-  apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def obj_at'_def opt_map_def)
+  apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def obj_at'_def opt_map_def live'_def)
   done
 
 lemma tcbSchedEnqueue_iflive'[wp]:
@@ -4882,14 +4885,14 @@ lemma tcbSchedEnqueue_iflive'[wp]:
   apply normalise_obj_at'
   apply (rename_tac tcb)
   apply (frule_tac p=tcbPtr in if_live_then_nonz_capE')
-   apply (fastforce simp: ko_wp_at'_def obj_at'_def)
+   apply (fastforce simp: ko_wp_at'_def obj_at'_def live'_def)
   apply clarsimp
   apply (erule if_live_then_nonz_capE')
   apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
   apply (drule_tac x="tcbDomain tcb" in spec)
   apply (drule_tac x="tcbPriority tcb" in spec)
   apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues
-                    simp: ko_wp_at'_def inQ_def opt_pred_def opt_map_def obj_at'_def
+                    simp: ko_wp_at'_def inQ_def opt_pred_def opt_map_def obj_at'_def live'_def
                    split: option.splits)
   done
 
@@ -4928,14 +4931,14 @@ crunch setThreadState, setBoundNotification
 lemma st_tcb_ex_cap'':
   "\<lbrakk> st_tcb_at' P t s; if_live_then_nonz_cap' s;
      \<And>st. P st \<Longrightarrow> st \<noteq> Inactive \<and> \<not> idle' st \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' t s"
-  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def live'_def
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 
 lemma bound_tcb_ex_cap'':
   "\<lbrakk> bound_tcb_at' P t s; if_live_then_nonz_cap' s;
      \<And>ntfn. P ntfn \<Longrightarrow> bound ntfn \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' t s"
-  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def live'_def
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 

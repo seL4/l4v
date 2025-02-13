@@ -18,7 +18,7 @@ lemmas cte_index_repair_sym = cte_index_repair[symmetric]
 lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
   by (clarsimp simp add: invs_def valid_state_def)
 
-context begin interpretation Arch .
+context Arch begin arch_global_naming
 
 (* Move to Arch_Structs_A *)
 definition ppn_len :: nat where
