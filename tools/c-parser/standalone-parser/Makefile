@@ -53,8 +53,11 @@ include $(STP_PFX)/../Makefile
 STP_CLEAN_TARGETS := $(STPARSERS) $(TOKENIZERS) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML
 
 $(STP_PFX)/table.ML: $(ISABELLE_HOME)/src/Pure/General/table.ML $(STP_PFX)/Makefile
-	sed -e '/\(\* cache \*\)/,/final.declarations/d' < $< | \
-	sed -e "s/^  val unsynchronized_cache:.*a/  (* removed unsynchronized_cache *)/" > $@
+	sed -e '/\(\* cache \*\)/,/final declarations of this structure/d' < $< | \
+  sed -e "s/^  type 'a cache_ops.*int./  (* removed type 'a cache_ops *)/" | \
+  sed -e "s/^  val unsynchronized_cache:.*cache_ops/  (* removed unsynchronized_cache *)/" | \
+  sed -e "s/^  val apply_unsynchronized_cache.*a/  (* removed apply_unsynchronized_cache *)/" > $@
+
 
 $(ARCH_DIRS):
 	mkdir -p $@
