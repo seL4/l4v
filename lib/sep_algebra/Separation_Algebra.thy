@@ -14,7 +14,6 @@ chapter "Abstract Separation Algebra"
 theory Separation_Algebra
 imports
   Arbitrary_Comm_Monoid
-  "HOL-Library.Adhoc_Overloading"
 begin
 
 text \<open>This theory is the main abstract separation algebra development\<close>
@@ -698,8 +697,8 @@ consts
 notation (latex output) sep_conj_lifted ("\<And>\<^sup>* _" [60] 90)
 notation (latex output) sep_map_list_conj ("\<And>\<^sup>* _" [60] 90)
 
-adhoc_overloading sep_conj_lifted sep_list_conj
-adhoc_overloading sep_conj_lifted sep_set_conj
+adhoc_overloading sep_conj_lifted \<rightleftharpoons> sep_list_conj
+adhoc_overloading sep_conj_lifted \<rightleftharpoons> sep_set_conj
 
 
 (* FIXME. Add notation for sep_map_list_conj, and consider unifying with sep_map_set_conj. *)
