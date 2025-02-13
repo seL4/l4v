@@ -1384,7 +1384,7 @@ lemma performASIDControlInvocation_invs' [wp]:
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
   apply (simp add: Int_commute)
   by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def
-                    asid_low_bits_def word_bits_def
+                    asid_low_bits_def word_bits_def live'_def hyp_live'_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
                     null_filter_descendants_of'[OF null_filter_simp'] bit_simps
                     valid_cap_simps' mask_def kernel_mappings_canonical)

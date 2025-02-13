@@ -2519,10 +2519,10 @@ lemma setCTE_ko_wp_at_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setCTE_iflive':
@@ -2580,10 +2580,10 @@ lemma setCTE_ko_wp_at_not_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setUntypedCapAsFull_ko_wp_not_at'[wp]:
@@ -4204,6 +4204,7 @@ lemma setupReplyMaster_invs'[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
      setupReplyMaster t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp setupReplyMaster_valid_pspace' sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift

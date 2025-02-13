@@ -465,8 +465,11 @@ lemma invoke_irq_handler_invs'[wp]:
   done
 
 lemma IRQHandler_valid':
-  "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid)"
+  "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
+  (* "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid)" *)
+  (* FIXME arch-split: BROKEN, needs a separate valid_arch_irq on all platforms *)
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
+thm IRQHandler_valid valid_cap_def (* on AInvs, we do not consider irqInvalid?! *)
 
 crunch setIRQState
   for valid_mdb'[wp]: "valid_mdb'"

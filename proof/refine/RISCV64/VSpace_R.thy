@@ -814,7 +814,7 @@ lemma storePTE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad)
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def)
   done
 
 lemma setObject_pte_ksInt [wp]:
@@ -935,7 +935,7 @@ lemma storePTE_valid_objs[wp]:
   "storePTE p pte \<lbrace>valid_objs'\<rbrace>"
   apply (simp add: storePTE_def doMachineOp_def split_def)
   apply (rule hoare_pre, rule setObject_valid_objs'[where P=\<top>])
-   apply (clarsimp simp: updateObject_default_def in_monad  valid_obj'_def)
+   apply (clarsimp simp: updateObject_default_def in_monad valid_obj'_def valid_arch_obj'_def)
   apply simp
   done
 
@@ -950,7 +950,7 @@ lemma storePTE_invs[wp]:
 lemma setASIDPool_valid_objs [wp]:
   "setObject p (ap::asidpool) \<lbrace>valid_objs'\<rbrace>"
   apply (wp setObject_valid_objs'[where P=\<top>])
-   apply (clarsimp simp: updateObject_default_def in_monad valid_obj'_def)
+   apply (clarsimp simp: updateObject_default_def in_monad valid_obj'_def valid_arch_obj'_def)
   apply simp
   done
 
@@ -1006,7 +1006,7 @@ lemma setASIDPool_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad pageBits_def)
+     apply (auto simp: updateObject_default_def in_monad pageBits_def live'_def hyp_live'_def)
   done
 
 lemma setASIDPool_ksInt [wp]:
