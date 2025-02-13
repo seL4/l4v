@@ -1137,7 +1137,7 @@ lemma abs_spec_modify_global[heap_abs]:
 (* FIXME: move to Word_Lib *)
 lemma uint_scast:
   "uint (scast x :: 'a word) = uint (x :: 'a::len signed word)"
-  by (metis len_signed scast_nop2 uint_word_of_int_eq word_uint.Rep_inverse)
+  by (metis len_signed scast_nop_2 uint_word_of_int_eq word_uint.Rep_inverse)
 
 lemma to_bytes_signed_word:
   "to_bytes (x :: 'a::len8 signed word) p = to_bytes (scast x :: 'a word) p"
