@@ -2,7 +2,6 @@
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
-Proofs tidied by LCP, 2024-09
  *)
 
 section "Word Alignment"
@@ -415,10 +414,12 @@ lemma is_aligned_no_wrap''':
          \<Longrightarrow> unat ptr + off < 2 ^ LENGTH('a)"
   by (metis is_alignedE le_add_diff_inverse2 less_imp_le mult.commute nat_add_offset_less unat_mult_power_lem)
 
+
+(* this is not an actual elim rule, we need to preserve is_aligned, otherwise we lose information *)
 lemma is_aligned_get_word_bits:
   fixes p :: "'a::len word"
   assumes "is_aligned p n"
-  obtains "n < LENGTH('a)" | "p = 0" "n \<ge> LENGTH('a)"
+  obtains "is_aligned p n" "n < LENGTH('a)" | "is_aligned p n" "p = 0" "n \<ge> LENGTH('a)"
   by (meson assms is_aligned_beyond_length linorder_not_le)
 
 lemma aligned_small_is_0:
@@ -532,7 +533,7 @@ lemma add_mask_lower_bits:
 proof -
   have "x AND p = 0"
     by (metis assms bit_and_iff bit_imp_le_length is_aligned_nth not_le_imp_less word_exists_nth)
-  moreover 
+  moreover
   have "(x OR p) AND NOT (mask n) = x"
   proof (rule bit_word_eqI)
     fix k
@@ -888,7 +889,7 @@ lemma aligned_add_offset_less:
 proof (cases "y = 0 \<or> z = 0")
   case True
   then show ?thesis
-    using \<open>x<y\<close> by auto 
+    using \<open>x<y\<close> by auto
 next
   case False
   with y is_aligned_get_word_bits have \<section>: "n < LENGTH('a)" "z \<noteq> 0"
@@ -896,7 +897,8 @@ next
   then have "x \<le> y - 2 ^ n"
     by (simp add: aligned_at_least_t2n_diff assms(3) x y)
   with assms show ?thesis
-    by (smt (verit, ccfv_SIG) False diff_add_cancel is_aligned_and_not_zero is_aligned_no_wrap' not_less olen_add_eqv word_sub_mono2)
+    by (smt (verit, ccfv_SIG) False diff_add_cancel is_aligned_and_not_zero is_aligned_no_wrap'
+                              not_less olen_add_eqv word_sub_mono2)
 qed
 
 lemma gap_between_aligned:
@@ -967,7 +969,8 @@ next
   moreover
   from nm have "m - n \<le> 2 ^ s2 - 1"
     by - (rule word_diff_ls', (simp add: field_simps)+)
-  then have \<section>: "(2::'a word) ^ s1 * of_nat (mq - 2 ^ sq * nq) < 2 ^ s2" using mn s2wb by (simp add: field_simps)
+  then have \<section>: "(2::'a word) ^ s1 * of_nat (mq - 2 ^ sq * nq) < 2 ^ s2"
+    using mn s2wb by (simp add: field_simps)
   then have "of_nat (mq - 2 ^ sq * nq) < (2::'a word) ^ (s2 - s1)"
   proof (rule word_power_less_diff)
     have mm: "mq - 2 ^ sq * nq < 2 ^ (LENGTH('a) - s1)" using mq by simp
@@ -977,7 +980,8 @@ next
       using of_nat_power by blast
   qed
   then have "mq - 2 ^ sq * nq < 2 ^ (s2 - s1)" using mq s2wb
-    by (smt (verit, best) \<section> diff_le_self nat_power_less_diff order_le_less_trans unat_less_power unat_mult_power_lem)
+    by (smt (verit, best) \<section> diff_le_self nat_power_less_diff order_le_less_trans unat_less_power
+                          unat_mult_power_lem)
   ultimately show ?thesis
     by auto
 qed
@@ -1004,7 +1008,7 @@ qed
 
 lemmas is_aligned_addD2 =
        is_aligned_addD1[OF subst[OF add.commute,
-                                 of "%x. is_aligned x n" for n]]
+                                 of "\<lambda>x. is_aligned x n" for n]]
 
 lemma is_aligned_add:
   "\<lbrakk>is_aligned p n; is_aligned q n\<rbrakk> \<Longrightarrow> is_aligned (p + q) n"
@@ -1018,12 +1022,13 @@ lemma aligned_shift:
     shows "(x + y) >> n = y >> n"
 proof (subst word_plus_and_or_coroll)
   show "x AND y = 0"
-    using assms 
+    using assms
     by (meson le_less_trans is_aligned_andI2 is_aligned_less_sz word_and_le2)
 next
   show "x OR y >> n = y >> n"
     unfolding shiftr_def
-    by (metis x drop_bit_or less_mask_eq or.left_neutral take_bit_eq_mask take_bit_eq_self_iff_drop_bit_eq_0)
+    by (metis x drop_bit_or less_mask_eq or.left_neutral take_bit_eq_mask
+              take_bit_eq_self_iff_drop_bit_eq_0)
 qed
 
 lemma aligned_shift':
@@ -1082,22 +1087,23 @@ proof (cases "m = 0")
   then show ?thesis using off ak by simp
 next
   case False
-
   from ak have ak1: "a + 1 \<le> k" by (rule inc_le)
   then have "(a + 1) * 2 ^ m \<noteq> 0"
     by (meson ak kw less_is_non_zero_p1 mw order_le_less_trans word_power_nonzero)
   then have "(a * 2 ^ m) + off < ((a + 1) * 2 ^ m)" using kw mw
-    by (simp add: distrib_right is_aligned_mult_triv2 is_aligned_no_overflow'' off word_plus_strict_mono_right)
+    by (simp add: distrib_right is_aligned_mult_triv2 is_aligned_no_overflow'' off
+                  word_plus_strict_mono_right)
   also have "\<dots> \<le> k * 2 ^ m" using ak1 mw kw False
-    by (simp add: less_2p_is_upper_bits_unset nat_mult_power_less_eq unat_less_power word_mult_le_mono1)
+    by (simp add: less_2p_is_upper_bits_unset nat_mult_power_less_eq unat_less_power
+                  word_mult_le_mono1)
   finally show ?thesis .
 qed
 
 lemma offset_not_aligned:
   "\<lbrakk> is_aligned (p::'a::len word) n; i > 0; i < 2 ^ n; n < LENGTH('a)\<rbrakk> \<Longrightarrow>
    \<not> is_aligned (p + of_nat i) n"
-  by (metis of_nat_power Word.of_nat_neq_0 add.commute add.right_neutral is_aligned_addD1 is_aligned_less_sz 
-is_aligned_no_wrap''' unat_0)
+  by (metis of_nat_power Word.of_nat_neq_0 add.commute add.right_neutral is_aligned_addD1
+            is_aligned_less_sz is_aligned_no_wrap''' unat_0)
 
 lemma le_or_mask:
   "w \<le> w' \<Longrightarrow> w OR mask x \<le> w' OR mask x"
