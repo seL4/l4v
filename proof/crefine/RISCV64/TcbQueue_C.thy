@@ -1390,7 +1390,7 @@ lemma rf_sr_tcb_update_not_in_queue:
   apply (subgoal_tac "\<forall>rf. \<not> ko_wp_at' (\<lambda>ko. rf \<in> refs_of' ko) thread s")
   prefer 2
    apply clarsimp
-   apply (auto simp: obj_at'_def ko_wp_at'_def)[1]
+   apply (auto simp: obj_at'_def ko_wp_at'_def live'_def)[1]
   apply (intro conjI)
       subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])

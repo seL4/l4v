@@ -188,7 +188,7 @@ crunch getSanitiseRegisterInfo
 
 lemma empty_fail_getSanitiseRegisterInfo[wp, simp]:
   "empty_fail (getSanitiseRegisterInfo t)"
-  by (wpsimp simp: getSanitiseRegisterInfo_def wp: ArchMove_C.empty_fail_archThreadGet)
+  by (wpsimp simp: getSanitiseRegisterInfo_def wp: RISCV64.empty_fail_archThreadGet)
 
 lemma asUser_getRegister_getSanitiseRegisterInfo_comm:
   "do
