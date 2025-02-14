@@ -157,6 +157,12 @@ lemmas valid_arch_cap'_simps[simp] =
   valid_arch_cap'_def[unfolded wellformed_acap'_def valid_arch_cap_ref'_def,
                       split_simps arch_capability.split, simplified]
 
+definition arch_valid_irq :: "irq \<Rightarrow> bool" where
+  "arch_valid_irq irq \<equiv> irq \<le> maxIRQ"
+
+(* within the Arch locale, we want automatic expansion of the valid irq conditions *)
+lemmas [simp] = arch_valid_irq_def
+
 definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
   "is_device_frame_cap' cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ dev _) \<Rightarrow> dev | _ \<Rightarrow> False"
 

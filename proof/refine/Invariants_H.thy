@@ -20,6 +20,7 @@ arch_requalify_consts
   canonical_address
   valid_arch_tcb'
   valid_arch_obj'
+  arch_valid_irq
   isArchFrameCap
   acapClass
   global_refs'
@@ -311,7 +312,7 @@ where valid_cap'_def:
   | ThreadCap r \<Rightarrow> tcb_at' r s
   | ReplyCap r m x \<Rightarrow> tcb_at' r s
   | IRQControlCap \<Rightarrow> True
-  | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
+  | IRQHandlerCap irq \<Rightarrow> arch_valid_irq irq \<comment> \<open>arch-dependent maxIRQ bound and invalidIRQ constraint\<close>
   | Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
                     \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
