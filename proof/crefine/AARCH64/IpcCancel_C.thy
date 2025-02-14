@@ -1746,7 +1746,7 @@ lemma ksReadyQueuesL1Bitmap_word_log2_max:
   "\<lbrakk>valid_bitmaps s; ksReadyQueuesL1Bitmap s d \<noteq> 0\<rbrakk>
    \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < l2BitmapSize"
   unfolding valid_bitmaps_def
-  by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
+  by (fastforce dest: bit_word_log2 bitmapQ_no_L1_orphansD)
 
 lemma word_log2_max_word64[simp]:
   "word_log2 (w :: 64 word) < 64"
@@ -1768,7 +1768,7 @@ lemma ksReadyQueuesL2Bitmap_nonzeroI:
    unfolding valid_bitmaps_def
    apply clarsimp
    apply (frule bitmapQ_no_L1_orphansD)
-    apply (erule word_log2_nth_same)
+    apply (erule bit_word_log2)
    apply clarsimp
    done
 
@@ -1803,7 +1803,7 @@ proof -
     apply (subst unat_sub)
      apply (clarsimp simp: l2BitmapSize_def')
      apply (rule word_of_nat_le)
-     apply (drule word_log2_nth_same)
+     apply (drule bit_word_log2)
      apply (clarsimp simp: l2BitmapSize_def')
     apply (clarsimp simp: invertL1Index_def l2BitmapSize_def')
     apply (simp add: unat_of_nat_eq)
@@ -1859,7 +1859,7 @@ proof -
     apply (simp add: word_clz_word_log2_fixup)
     apply (clarsimp simp: unsigned_word_log2 cbitmap_L1_relation_def maxDomain_le_unat_ucast_explicit
                           order_trans[OF word_clz_sint_upper] order_trans[OF word_clz_sint_lower])
-    apply (frule bitmapQ_no_L1_orphansD, erule word_log2_nth_same)
+    apply (frule bitmapQ_no_L1_orphansD, erule bit_word_log2)
     apply (rule conjI, fastforce simp: invertL1Index_def l2BitmapSize_def')
     apply (rule conjI, fastforce)
     apply (rule conjI, fastforce)
