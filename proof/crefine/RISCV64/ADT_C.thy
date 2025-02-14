@@ -345,7 +345,7 @@ lemma unat_ucast_mask_pageBits_shift:
 lemma mask_pageBits_shift_sum:
   "unat n = unat (p && mask 3) \<Longrightarrow>
   (p && ~~ mask pageBits) + (p && mask pageBits >> 3) * 8 + n = (p::machine_word)"
-  apply (clarsimp simp: ArchMove_C.word_shift_by_3)
+  apply (clarsimp simp: RISCV64.word_shift_by_3)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size pageBits_def nth_shiftl nth_shiftr word_ops_nth_size)
@@ -713,6 +713,7 @@ lemma map_to_ctes_tcb_ctes:
   "ctes_of s' = ctes_of s \<Longrightarrow>
    ko_at' tcb p s \<Longrightarrow> ko_at' tcb' p s' \<Longrightarrow>
    \<forall>x\<in>ran tcb_cte_cases. fst x tcb' = fst x tcb"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp add: ran_tcb_cte_cases)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_tcb
                  split: kernel_object.splits)
@@ -1196,14 +1197,14 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
   by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace]
-                 valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_bound_tcb'_def
+                 valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_arch_tcb'_def
           split: thread_state.splits option.splits)
 
 lemma ksPSpace_eq_imp_valid_objs'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_objs' s' = valid_objs' s"
   using assms
-  by (clarsimp simp: valid_objs'_def valid_obj'_def valid_ep'_def
+  by (clarsimp simp: valid_objs'_def valid_obj'_def valid_ep'_def valid_arch_obj'_def
                      ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
