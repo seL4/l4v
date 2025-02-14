@@ -1775,8 +1775,7 @@ proof -
     apply (case_tac "pageBits \<le> bits")
      apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
      apply clarsimp
-     apply (rule aligned_range_offset_mem
-       [where 'a=32, folded word_bits_def, simplified, OF _ _ al _ wb])
+     apply (rule aligned_range_offset_mem[simplified, OF _ _ al])
        apply assumption+
     apply (rule iffI[rotated], simp)
     apply (simp add: objBits_simps projectKOs)
@@ -1828,8 +1827,7 @@ proof -
     apply (case_tac "pageBits \<le> bits")
      apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
      apply clarsimp
-     apply (rule aligned_range_offset_mem
-       [where 'a=32, folded word_bits_def, simplified, OF _ _ al _ wb])
+     apply (rule aligned_range_offset_mem[simplified, OF _ _ al])
        apply assumption+
     apply (rule iffI[rotated], simp)
     apply (simp add: objBits_simps projectKOs)

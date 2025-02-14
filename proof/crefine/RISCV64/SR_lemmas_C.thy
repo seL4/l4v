@@ -2133,7 +2133,6 @@ lemmas h_t_valid_fields_clift =
 lemma numDomains_sge_1_simp:
   "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"
   apply (simp add: word_sless_alt sint_numDomains_to_H)
-  apply (subst nat_less_as_int, simp)
   done
 
 lemma unat_scast_numDomains:
