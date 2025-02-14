@@ -54,6 +54,9 @@ val eval_int_simproc = \<^simproc_setup>\<open>eval_int ("i :: int") = \<open>K 
 end
 \<close>
 
+(* simproc_setup declares them globally, remove again *)
+declare [[simproc del: eval_bool eval_nat eval_int]]
+
 method_setup eval_bool = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
     (CHANGED o full_simp_tac (clear_simpset ctxt addsimprocs [@{simproc eval_bool}])))\<close>
     "use code generator setup to simplify booleans in goals to True or False"
