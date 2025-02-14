@@ -31,6 +31,8 @@ lemma ps_clear_is_aligned_ksPSpace_None:
                     power_overflow)
   by assumption
 
+context Arch begin arch_global_naming
+
 lemma ps_clear_is_aligned_ctes_None:
   assumes "ps_clear p tcbBlockSizeBits s"
       and "is_aligned p tcbBlockSizeBits"
@@ -72,8 +74,6 @@ where
 
 (* FIXME: move to GenericLib *)
 lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
-
-context begin interpretation Arch .
 
 crunch archThreadGet
   for inv'[wp]: P
@@ -404,5 +404,11 @@ crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThread
    ignore_del: preemptionPoint)
 
 end
+
+(* these will need to be requalified when moved *)
+arch_requalify_facts
+  empty_fail_loadWordUser
+
+lemmas [intro!, simp] = empty_fail_loadWordUser
 
 end
