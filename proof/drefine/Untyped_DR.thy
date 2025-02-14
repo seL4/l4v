@@ -405,7 +405,7 @@ lemma transform_empty_cnode:
   "transform_cnode_contents o_bits (empty_cnode o_bits) = empty_cap_map o_bits"
   apply (simp add: transform_cnode_contents_def dom_empty_cnode)
   apply (rule ext, simp add: option_map_join_def empty_cap_map_def
-                             nat_to_bl_def len_bin_to_bl_aux empty_cnode_def)
+                             nat_to_bl_def size_bin_to_bl_aux empty_cnode_def)
   done
 
 lemma transform_default_tcb:
