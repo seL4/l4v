@@ -129,6 +129,13 @@ definition arch_cap'_fun_lift :: "(arch_capability \<Rightarrow> 'a) \<Rightarro
 
 lemmas arch_cap'_fun_lift_simps[simp] = arch_cap'_fun_lift_def[split_simps capability.split]
 
+(* on RISCV64, there is an invalid IRQ within the bound of maxIRQ *)
+definition arch_valid_irq :: "irq \<Rightarrow> bool" where
+  "arch_valid_irq irq \<equiv> irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid"
+
+(* within the Arch locale, we want automatic expansion of the valid irq conditions *)
+lemmas [simp] = arch_valid_irq_def
+
 definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
   "is_device_frame_cap' cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ _ dev _) \<Rightarrow> dev | _ \<Rightarrow> False"
 
