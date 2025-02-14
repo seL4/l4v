@@ -408,7 +408,7 @@ fun abstract_upds ctxt t = let
     val upds = inner (betapply (t, Bound 0)) |> List.rev
     val xs = map (dest_Const #> snd #> domain_type
             #> curry (op -->) sT #> pair "x") upds
-        |> Variable.variant_frees ctxt [] |> map Free
+        |> Variable.variant_names ctxt |> map Free
     val upd = Abs ("s", sT, fold (fn (u, x) => fn s => u $ (x $ Bound 0) $ s)
         (upds ~~ xs) (Bound 0))
   in (upd, xs) end
