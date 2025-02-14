@@ -466,7 +466,7 @@ lemma caps1_0x7_well_formed: "well_formed_cnode_n 10 caps1_0x7"
   apply (clarsimp simp: empty_cnode_def dom_def)
   apply (rule set_eqI, clarsimp)
   apply (rule iffI)
-   apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
+   apply (elim disjE, insert size_bin_to_bl, simp_all)[1]
   apply clarsimp
   done
 
@@ -476,7 +476,7 @@ lemma caps1_0x6_well_formed: "well_formed_cnode_n 10 caps1_0x6"
   apply (clarsimp simp: empty_cnode_def dom_def)
   apply (rule set_eqI, clarsimp)
   apply (rule iffI)
-   apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
+   apply (elim disjE, insert size_bin_to_bl, simp_all)[1]
   apply clarsimp
   done
 
@@ -992,7 +992,7 @@ lemma caps2_0x7_well_formed: "well_formed_cnode_n 10 caps2_0x7"
   apply (clarsimp simp: empty_cnode_def dom_def)
   apply (rule set_eqI, clarsimp)
   apply (rule iffI)
-   apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
+   apply (elim disjE, insert size_bin_to_bl, simp_all)[1]
   apply clarsimp
   done
 
@@ -1002,7 +1002,7 @@ lemma caps2_0x6_well_formed: "well_formed_cnode_n 10 caps2_0x6"
   apply (clarsimp simp: empty_cnode_def dom_def)
   apply (rule set_eqI, clarsimp)
   apply (rule iffI)
-   apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
+   apply (elim disjE, insert size_bin_to_bl, simp_all)[1]
   apply clarsimp
   done
 
