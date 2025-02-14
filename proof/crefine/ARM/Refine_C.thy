@@ -794,7 +794,8 @@ lemma user_memory_update_corres_C:
                              Nondet_Monad.bind_def return_def)
    apply (thin_tac P for P)+
    apply (case_tac a, clarsimp)
-   apply (case_tac ksMachineStatea, clarsimp)
+   apply (rename_tac ksM)
+   apply (case_tac ksM, clarsimp)
    apply (rule ext)
    apply (simp add: foldl_fun_upd_value dom_def split: option.splits)
   apply clarsimp

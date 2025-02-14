@@ -572,7 +572,7 @@ fun do_modifies_recursive ctxt fn_info (prog_info: ProgramInfo.prog_info) (calle
 
   (* Finally, we extract theorems for individual functions. *)
   val final_thms =
-    HOLogic.conj_elims ctxt combined_thm
+    HOLogic.conj_elims combined_thm
     |> map (fn thm =>
         thm
         |> Thm.equal_elim (Raw_Simplifier.rewrite ctxt true @{thms All_to_all} (Thm.cprop_of thm))
