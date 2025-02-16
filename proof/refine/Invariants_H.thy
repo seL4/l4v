@@ -2846,6 +2846,10 @@ lemma pred_tcb'_neq_contra:
   "\<lbrakk> pred_tcb_at' proj P p s; pred_tcb_at' proj Q p s; \<And>st. P st \<noteq> Q st \<rbrakk> \<Longrightarrow> False"
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
 
+lemma not_pred_tcb':
+  "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
+  by (auto simp: pred_tcb_at'_def obj_at'_def)
+
 lemma invs'_ksDomSchedule:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomSchedule s = KernelStateData_H.ksDomSchedule (newKernelState undefined)"
 unfolding invs'_def valid_state'_def by clarsimp
