@@ -365,17 +365,22 @@ section "Arch-specific TCB"
 
 qualify AARCH64_A (in Arch)
 
-text \<open> Arch-specific part of a TCB: this must have at least a field for user context. \<close>
+text \<open>
+  Arch-specific part of a TCB: this must have at least a field for user context.
+  @{text tcb_cur_fpu} is a ghost variable used to used to track within the tcb whether it is the
+  current fpu owner, so that we are able to determine whether a tcb is live without needing to look
+  at global state.\<close>
 record arch_tcb =
   tcb_context :: user_context
   tcb_vcpu    :: "obj_ref option"
+  tcb_cur_fpu :: bool
 
 end_qualify
 
 context Arch begin arch_global_naming (A)
 
 definition default_arch_tcb :: arch_tcb where
-  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_vcpu = None\<rparr>"
+  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_vcpu = None, tcb_cur_fpu = False\<rparr>"
 
 text \<open>
   Accessors for @{text "tcb_context"} inside @{text "arch_tcb"}. These are later used to

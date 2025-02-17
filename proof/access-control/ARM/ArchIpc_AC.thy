@@ -12,7 +12,7 @@ context Arch begin global_naming ARM_A
 
 named_theorems Ipc_AC_assms
 
-declare make_fault_message_inv[Ipc_AC_assms]
+declare make_fault_msg_inv[Ipc_AC_assms]
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
 crunch cap_insert_ext

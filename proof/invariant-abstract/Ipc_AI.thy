@@ -19,7 +19,6 @@ arch_requalify_facts
   lookup_ipc_buffer_inv
   set_mi_invs
   as_user_hyp_refs_of
-  valid_arch_arch_tcb_set_registers
 
 declare lookup_ipc_buffer_inv[wp]
 declare set_mi_invs[wp]
@@ -475,6 +474,15 @@ lemma transfer_caps_loop_aobj_at:
   apply assumption
   done
 
+lemma transfer_caps_loop_typ_at[wp]:
+   "\<And>P T p ep buffer n caps slots mi.
+      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
+        transfer_caps_loop ep buffer n caps slots mi
+      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  by (wp transfer_caps_loop_pres)
+
+lemmas transfer_caps_loop_typ_ats[wp] = abs_typ_at_lifts[OF transfer_caps_loop_typ_at]
+
 end
 
 (* FIXME: can some of these assumptions be proved with lifting lemmas? *)
@@ -596,7 +604,9 @@ locale Ipc_AI_2 = Ipc_AI state_ext_t some_t
   assumes make_arch_fault_msg_cap_refs_respects_device_region[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_pred_tcb[wp]:
-    "\<And> P (proj :: itcb \<Rightarrow> 't) ft t . make_arch_fault_msg ft t \<lbrace>pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+    "\<And> Q P (proj :: itcb \<Rightarrow> 't) ft t p. make_arch_fault_msg ft t \<lbrace>\<lambda>s::'state_ext state. Q (pred_tcb_at proj P p s)\<rbrace>"
+  assumes make_arch_fault_msg_arch_tcb_at[wp]:
+    "\<And> Q P ft t p. make_arch_fault_msg ft t \<lbrace>\<lambda>s::'state_ext state. Q (arch_tcb_at P p s)\<rbrace>"
   assumes do_fault_transfer_invs[wp]:
     "\<And>receiver badge sender recv_buf.
       \<lbrace>invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -678,13 +688,6 @@ lemma get_mi_valid[wp]:
 lemma mask_cap_vs_cap_ref[simp]:
   "vs_cap_ref (mask_cap msk cap) = vs_cap_ref cap"
   by (simp add: mask_cap_def)
-
-lemma transfer_caps_loop_typ_at[wp]:
-   "\<And>P T p ep buffer n caps slots mi.
-      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
-        transfer_caps_loop ep buffer n caps slots mi
-      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wp transfer_caps_loop_pres)
 
 lemma transfer_loop_aligned[wp]:
   "\<And>ep buffer n caps slots mi.
@@ -1166,6 +1169,10 @@ lemma transfer_caps_refs_respects_device_region[wp]:
   apply clarsimp+
   done
 
+crunch transfer_caps_loop
+  for valid_cur_fpu[wp]: "valid_cur_fpu ::'state_ext state \<Rightarrow> _"
+  (rule: transfer_caps_loop_pres)
+
 lemma transfer_caps_loop_invs[wp]:
   "\<And>slots.
     \<lbrace>\<lambda>s::'state_ext state. invs s
@@ -1388,13 +1395,13 @@ lemma set_mrs_valid_objs [wp]:
   apply (cases a)
    apply (simp add: set_mrs_redux)
    apply (wp thread_set_valid_objs_triv)
-       apply (auto simp: tcb_cap_cases_def)[1]
-      apply (simp add: valid_arch_arch_tcb_set_registers)+
+          apply (auto simp: tcb_cap_cases_def)[1]
+         apply simp+
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
                    store_word_offs_def
             split del: if_split)
   apply (wp mapM_wp' thread_set_valid_objs_triv | simp)+
-      apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_set_registers)
+         apply (auto simp: tcb_cap_cases_def)
   done
 
 
@@ -1644,6 +1651,12 @@ crunch do_ipc_transfer
 crunch do_ipc_transfer
   for valid_globals[wp]: "valid_global_refs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
+
+crunch do_ipc_transfer
+  for arch_tcb_at[wp]: "\<lambda>s::'state_ext state. Q (arch_tcb_at P t s)"
+  and arch_state[wp]: "\<lambda>s::'state_ext state. P (arch_state s)"
+  and valid_cur_fpu[wp]: "valid_cur_fpu :: 'state_ext state \<Rightarrow> bool"
+  (wp: crunch_wps valid_cur_fpu_lift rule: transfer_caps_loop_pres)
 
 end
 
@@ -2312,17 +2325,11 @@ lemma pred_tcb_upd_apply:
 
 crunch setup_caller_cap
   for aligned[wp]: "pspace_aligned"
+  and "distinct"[wp]: "pspace_distinct"
+  and cur_tcb[wp]: "cur_tcb"
+  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and valid_cur_fpu[wp]: valid_cur_fpu
   (wp: crunch_wps)
-
-crunch setup_caller_cap
-  for "distinct"[wp]: "pspace_distinct"
-  (wp: crunch_wps)
-
-crunch setup_caller_cap
-  for cur_tcb[wp]: "cur_tcb"
-
-crunch setup_caller_cap
-  for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
 
 lemma setup_caller_cap_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s) (sender := {r \<in> state_refs_of s sender. snd r = TCBBound}))\<rbrace>
@@ -2969,7 +2976,7 @@ lemma rai_invs':
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift
-             as_user_no_del_ntfn[simplified ntfn_at_def2, simplified]
+             as_user_typ_ats(2)[simplified ntfn_at_def2, simplified]
              valid_irq_node_typ ball_tcb_cap_casesI hoare_weak_lift_imp
              valid_bound_tcb_typ_at[rule_format]
              | simp add: valid_ntfn_def)+
@@ -3275,6 +3282,7 @@ lemma si_blk_makes_simple:
   apply (case_tac list, simp_all split del:if_split)
   apply (rule bind_wp [OF _ set_simple_ko_pred_tcb_at])
   apply (rule bind_wp [OF _ gts_sp])
+  apply (rename_tac recv_state)
   apply (case_tac recv_state, simp_all split del: if_split)
   apply (wp sts_st_tcb_at_cases setup_caller_cap_makes_simple
             hoare_drop_imps
