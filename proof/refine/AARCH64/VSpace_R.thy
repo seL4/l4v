@@ -1619,11 +1619,6 @@ lemma take_vmid_minBound_maxBound:
   using leq_maxBound[where x=next_vmid]
   by (simp add: word_le_nat_alt init_def upto_enum_word minBound_word)
 
-(* FIXME AARCH64: move to SubMonad *)
-lemmas corres_machine_op_Id = corres_machine_op[OF corres_Id]
-lemmas corres_machine_op_Id_eq[corres_term] = corres_machine_op_Id[where r="(=)"]
-lemmas corres_machine_op_Id_dc[corres_term] = corres_machine_op_Id[where r="dc::unit \<Rightarrow> unit \<Rightarrow> bool"]
-
 lemma invalidateVMIDEntry_corres[corres]:
   "vmid' = vmid \<Longrightarrow>
    corres dc \<top> \<top> (invalidate_vmid_entry vmid) (invalidateVMIDEntry vmid')"

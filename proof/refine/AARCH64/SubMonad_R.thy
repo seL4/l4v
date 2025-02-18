@@ -27,6 +27,10 @@ lemma corres_machine_op:
    apply (simp_all add: state_relation_def swp_def)
   done
 
+lemmas corres_machine_op_Id = corres_machine_op[OF corres_Id]
+lemmas corres_machine_op_Id_dc[corres_term] = corres_machine_op_Id[where r="dc::unit \<Rightarrow> unit \<Rightarrow> bool"]
+lemmas corres_machine_op_Id_eq[corres_term] = corres_machine_op_Id[where r="(=)"]
+
 lemma doMachineOp_mapM:
   assumes "\<And>x. empty_fail (m x)"
   shows "doMachineOp (mapM m l) = mapM (doMachineOp \<circ> m) l"
