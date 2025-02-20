@@ -319,7 +319,7 @@ lemma set_thread_state_valid_tcb[wp]:
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule_tac Q'="\<lambda>_. valid_tcb ptr tcb" in bind_wp_fwd)
    apply (wpsimp wp: set_object_valid_tcbs)
-  apply (wpsimp wp: set_object_valid_tcbs update_valid_tcb is_schedulable_inv hoare_vcg_if_lift2
+  apply (wpsimp wp: set_object_valid_tcbs update_valid_tcb hoare_vcg_if_lift2
                     hoare_vcg_conj_lift hoare_drop_imps
               simp: set_scheduler_action_def update_valid_tcb)
   done
@@ -333,8 +333,7 @@ lemma set_thread_state_valid_tcbs[wp]:
    apply (fastforce simp: valid_tcbs_def obj_at_def
                    intro: valid_tcb_state_update)
   apply (clarsimp simp: valid_tcbs_def)
-  apply (wpsimp wp: is_schedulable_inv hoare_vcg_if_lift2 hoare_vcg_conj_lift hoare_drop_imps
-              simp: set_scheduler_action_def)
+  apply (wpsimp wp: hoare_drop_imps)
   done
 
 lemma reply_unlink_tcb_valid_tcbs[wp]:

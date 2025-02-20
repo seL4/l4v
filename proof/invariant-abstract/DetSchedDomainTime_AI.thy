@@ -344,7 +344,7 @@ lemma call_kernel_domain_list_inv_det_ext:
   unfolding call_kernel_def preemption_path_def
   apply (wp)
    apply (simp add: schedule_def)
-   apply (wpsimp wp: without_preemption_wp is_schedulable_wp hoare_vcg_all_lift hoare_drop_imps
+   apply (wpsimp wp: without_preemption_wp hoare_vcg_all_lift hoare_drop_imps
                simp: if_apply_def2)+
   done
 
@@ -409,11 +409,10 @@ lemma schedule_domain_time_left:
                            \<and> valid_domain_list s"
                 in bind_wp_fwd)
    apply wpsimp
-  apply clarsimp
   apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ is_schedulable_sp])
+  apply (rule bind_wp[OF _ gets_sp])
   apply (rule bind_wp[OF _  gets_sp], rename_tac action)
-  apply (case_tac action; wpsimp wp: is_schedulable_wp hoare_vcg_const_imp_lift hoare_drop_imps)
+  apply (case_tac action; wpsimp wp: hoare_vcg_const_imp_lift hoare_drop_imps)
   done
 
 end

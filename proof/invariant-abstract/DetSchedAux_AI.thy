@@ -76,10 +76,6 @@ crunch update_cdt_list
   for valid_sched_pred[wp]: "valid_sched_pred_strong P"
   (wp: dxo_wp_weak crunch_wps)
 
-lemma (in pspace_update_eq) is_sc_active_eq[iff]:
-  "is_sc_active t (f s) = is_sc_active t s"
-  using pspace by (simp add: is_sc_active_def)
-
 lemma store_word_offs_valid_sched_pred[wp]:
   "store_word_offs ptr offs v \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp simp: store_word_offs_def wp: dmo_valid_sched_pred)
@@ -109,14 +105,6 @@ lemma set_mrs_valid_sched_pred[wp]:
 
 global_interpretation set_mrs: valid_sched_pred_locale _ "set_mrs r t mrs"
   by unfold_locales wp
-
-lemma set_cap_is_sc_active[wp]:
- "\<lbrace>is_sc_active t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. is_sc_active t\<rbrace>"
-  apply (simp add: set_cap_def set_object_def split_def)
-  apply (wp get_object_wp | wpc)+
-  apply (clarsimp simp: is_sc_active_def obj_at_def
-       | intro impI conjI | rule_tac x=scp in exI)+
-  done
 
 global_interpretation set_cap: valid_sched_pred_locale _ "set_cap c p"
   by unfold_locales wp
@@ -1448,9 +1436,6 @@ lemma set_tcb_queue_wp:
    \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: set_tcb_queue_def) (auto elim!: rsubst[of P])
 
-lemma get_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbrace> get_tcb_queue t p \<lbrace>P\<rbrace>"
-  by (wpsimp simp: get_tcb_queue_def)
-
 lemma enqueue_distinct[intro!]: "distinct queue \<Longrightarrow> distinct (tcb_sched_enqueue thread queue)"
   by (simp add: tcb_sched_enqueue_def)
 
@@ -1732,18 +1717,6 @@ lemma valid_blocked_except_set_switch_thread:
   by (fastforce simp: valid_blocked_defs)
 
 (* end : valid_blocked_except \<rightarrow> valid_blocked lemmas *)
-
-lemma schedulable_unfold2:
-  "((is_schedulable_opt tp s) = Some X)
-   \<Longrightarrow> tcb_at tp s
-   \<Longrightarrow> (X = (st_tcb_at runnable tp s \<and> active_sc_tcb_at  tp s \<and> \<not>(in_release_queue tp s)))"
-  by (clarsimp simp: is_schedulable_opt_def obj_at_kh_kheap_simps vs_all_heap_simps
-              split: option.splits)
-
-lemma is_sc_active_detype[simp]:
-  "(is_sc_active t (detype S s))
-    = (is_sc_active t s \<and> t \<notin> S)"
-  by (clarsimp simp add: is_sc_active_def detype_def)
 
 lemma bound_sc_obj_tcb_at_detype:
   "bound_sc_obj_tcb_at (P s) t (detype S s)

@@ -1561,7 +1561,7 @@ lemma reschedule_required_cur_sc_tcb':
   supply set_scheduler_action_cur_sc_tcb [wp del]
   unfolding reschedule_required_def
   by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
-                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
+                   set_tcb_queue_def get_tcb_queue_def thread_get_def
                    cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma maybe_return_sc_cur_sc_tcb[wp]:
@@ -2793,13 +2793,13 @@ lemma schedule_tcb_invs':
   apply (rule hoare_vcg_disj_lift[where Q = "\<lambda>_. invs" and Q' = "\<lambda>_. invs", simplified])
    apply (simp add: schedule_tcb_def)
    apply (rule bind_wp[OF _ gets_sp])
-   apply (rule bind_wp[OF _ gets_sp])
-   apply (rule bind_wp[OF _ is_schedulable_sp])
+   apply (rule bind_wp[OF _ gets_sp])+
    apply (simp add: when_def reschedule_required_def)
    apply (intro conjI)
     prefer 2
     apply (wpsimp wp: hoare_pre_cont)
-    apply (clarsimp simp: is_schedulable_opt_def pred_tcb_at_def obj_at_def get_tcb_def)
+    apply (clarsimp simp: schedulable_def pred_tcb_at_def obj_at_def opt_pred_def opt_map_def
+                          opt_map_red tcbs_of_kh_def)
    apply clarsimp
    apply (rule bind_wp[OF _ gets_sp])
    apply (case_tac action; simp)

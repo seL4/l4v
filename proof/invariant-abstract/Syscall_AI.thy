@@ -150,11 +150,10 @@ proof -
   show ?thesis
     unfolding choose_thread_def guarded_switch_to_def
     apply (wpsimp wp: stit_activatable stt_activatable split_del: if_split wp_del: get_sched_context_wp)
-         apply (wpsimp wp: is_schedulable_wp)
-        apply (wpsimp wp: assert_wp)
        apply (wpsimp simp: thread_get_def)+
-    apply (clarsimp simp: schedulable_def pred_tcb_at_def obj_at_def
-        dest!: get_tcb_SomeD split: option.splits)
+    apply (fastforce simp: schedulable_def pred_tcb_at_def obj_at_def opt_pred_def opt_map_def
+                           tcbs_of_kh_def
+                    split: option.splits)
     done
 qed
 
@@ -165,11 +164,11 @@ lemma schedule_choose_new_thread_ct_activatable[wp]:
 lemma guarded_switch_to_ct_in_state_activatable[wp]:
   "\<lbrace>\<top>\<rbrace> guarded_switch_to t \<lbrace>\<lambda>a. ct_in_state activatable\<rbrace>"
   unfolding guarded_switch_to_def
-  apply (wpsimp wp: hoare_vcg_imp_lift gts_wp is_schedulable_wp stt_activatable assert_wp
+  apply (wpsimp wp: hoare_vcg_imp_lift gts_wp stt_activatable assert_wp
              simp: thread_get_def)
-  apply (clarsimp simp: schedulable_def get_tcb_ko_at st_tcb_at_def obj_at_def
-                 split: option.splits)
-  done
+  by (fastforce simp: schedulable_def pred_tcb_at_def obj_at_def opt_pred_def opt_map_def
+                      tcbs_of_kh_def
+               split: option.splits)
 
 declare sc_and_timer_activatable[wp]
 
@@ -1069,13 +1068,11 @@ lemma cur_sc_tcb_invs:
                      obj_at_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric])
 
 lemma stsa_schedulable_scheduler_action:
-  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and>
-        schedulable thread s\<rbrace>
+  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and> schedulable thread s\<rbrace>
    set_thread_state_act thread
    \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   apply (simp add: set_thread_state_act_def)
   apply (rule bind_wp[OF _ hoare_gets_sp])+
-  apply (rule bind_wp[OF _ is_schedulable_sp'])
   apply (simp add: when_def)
   apply (intro conjI)
    apply (wpsimp wp: hoare_pre_cont)
@@ -1083,15 +1080,14 @@ lemma stsa_schedulable_scheduler_action:
   done
 
 lemma sts_schedulable_scheduler_action:
-  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and>
-        schedulable thread s\<rbrace>
+  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and> schedulable thread s\<rbrace>
    set_thread_state thread Restart
   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  unfolding set_thread_state_def
   apply (wpsimp wp: stsa_schedulable_scheduler_action set_object_wp simp: set_thread_state_def)
-  apply (fastforce simp: schedulable_def is_sc_active_def get_tcb_def
-                         in_release_queue_def
-                  split: option.splits kernel_object.splits)
-  done
+  by (force simp: schedulable_def opt_pred_def opt_map_def tcbs_of_kh_def scs_of_kh_def
+                  get_tcb_def
+           split: option.splits)
 
 lemma hinv_invs':
   fixes Q :: "'state_ext state \<Rightarrow> bool" and calling blocking
@@ -1111,10 +1107,9 @@ lemma hinv_invs':
   assumes sts_Q[wp]:
     "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-    "\<lbrace>invs and Q and (\<lambda>s. scheduler_action s = resume_cur_thread) and
-      ct_schedulable\<rbrace>
-       handle_invocation calling blocking can_donate first_phase cptr
-     \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
+    "\<lbrace>\<lambda>s. invs s \<and> Q s \<and> scheduler_action s = resume_cur_thread \<and> ct_schedulable s\<rbrace>
+     handle_invocation calling blocking can_donate first_phase cptr
+     \<lbrace>\<lambda>_ s. invs s \<and> Q s\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
   apply (wpsimp wp: syscall_valid sts_invs_minor2 rfk_invs split_del: if_split)+
@@ -1132,9 +1127,10 @@ lemma hinv_invs':
       apply (simp only: simp_thms K_def if_apply_def2)
       apply (rule hoare_vcg_conj_elimE)
        apply (wpsimp wp: decode_inv_inv simp: if_apply_def2)+
-  apply (auto simp: ct_in_state_def cur_sc_tcb_invs fault_tcbs_valid_states_active schedulable_def'
-              dest: invs_fault_tcbs_valid_states
-              elim: st_tcb_ex_cap)
+   apply (fastforce intro!: st_tcb_ex_cap[rotated, where P=runnable]
+                      simp: schedulable_def pred_tcb_at_def obj_at_def opt_pred_def opt_map_def
+                            tcbs_of_kh_def runnable_eq_active
+                     split: option.splits if_splits)
   done
 
 lemmas hinv_invs[wp] = hinv_invs'
@@ -1144,7 +1140,7 @@ lemma get_cap_reg_inv[wp]: "\<lbrace>P\<rbrace> get_cap_reg r \<lbrace>\<lambda>
   by (wpsimp simp: get_cap_reg_def)
 
 lemma hs_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s = resume_cur_thread \<and> ct_schedulable s\<rbrace>
    handle_send blocking
    \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule validE_valid)
@@ -1303,7 +1299,7 @@ lemma do_reply_transfer_nonz_cap:
       | rule conjI)+
 
 lemma hc_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s = resume_cur_thread \<and> ct_schedulable s\<rbrace>
    handle_call
    \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (simp add: handle_call_def) wpsimp
@@ -1315,11 +1311,8 @@ lemma select_insert:
   by (simp add: alternative_def select_def return_def)
 
 lemma update_time_stamp_ct_in_release_queue [wp]:
-  "update_time_stamp
-   \<lbrace>\<lambda>s. P (in_release_queue (cur_thread s) s)\<rbrace>"
-  by (wpsimp simp: update_time_stamp_def do_machine_op_def
-                   is_sc_active_def get_tcb_def in_release_queue_def
-            split: option.splits)
+  "update_time_stamp \<lbrace>\<lambda>s. P (in_release_queue (cur_thread s) s)\<rbrace>"
+  by (wpsimp simp: update_time_stamp_def in_release_queue_def)
 
 lemma update_time_stamp_invs[wp]:
   "update_time_stamp \<lbrace>invs\<rbrace>"
@@ -1350,10 +1343,13 @@ crunch preemption_point
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (rule: preemption_point_inv simp: cur_sc_tcb_def ignore_del: preemption_point)
 
+lemma update_time_stamp_schedulable[wp]:
+  "update_time_stamp \<lbrace>schedulable t\<rbrace>"
+  by (wpsimp simp: schedulable_def wp: hoare_vcg_ex_lift update_time_stamp_wp)
+
 lemma update_time_stamp_ct_schedulable[wp]:
   "update_time_stamp \<lbrace>ct_schedulable\<rbrace>"
-  by (wpsimp simp: schedulable_def' in_release_queue_def
-               wp: hoare_vcg_ex_lift update_time_stamp_wp)
+  by (wps | wpsimp)+
 
 crunch thread_set
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"

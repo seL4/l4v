@@ -29,13 +29,12 @@ lemma pred_tcb_at_upd_apply:
 
 lemma thread_set_tcb_arch_ct_schedulable[wp]:
   "thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set us (tcb_arch tcb)\<rparr>) t \<lbrace>ct_schedulable\<rbrace>"
+  apply (clarsimp simp: schedulable_def)
   apply (simp add: thread_set_def)
   apply (rule bind_wp[OF _ assert_get_tcb_ko'])
   apply (wpsimp wp: set_object_wp)
-  apply (fastforce simp: schedulable_def is_sc_active_def get_tcb_def ko_atD
-                         in_release_queue_def
-                  split: option.splits )
-  done
+  by (fastforce simp: obj_at_def opt_pred_def opt_map_def tcbs_of_kh_def scs_of_kh_def
+               split: option.splits)
 
 lemma thread_set_tcb_arch_ct_not_running[wp]:
   "thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set us (tcb_arch tcb)\<rparr>) t \<lbrace>\<lambda>s. \<not> ct_running s\<rbrace>"
@@ -53,7 +52,7 @@ lemma akernel_invs:
    (call_kernel e) :: (unit, unit) s_monad
    \<lbrace>\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def preemption_path_def
-  apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs is_schedulable_wp
+  apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs
                     update_time_stamp_invs hoare_drop_imps hoare_vcg_all_lift hoare_vcg_if_lift2)
   apply (fastforce intro: schact_is_rct_ct_active_sc
                     simp: schedulable_def2 ct_in_state_def pred_tcb_at_def obj_at_def)
@@ -65,7 +64,7 @@ lemma akernel_invs_det_ext:
    (call_kernel e) :: (unit, det_ext) s_monad
    \<lbrace>\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def preemption_path_def
-  apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs is_schedulable_wp
+  apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs
                     update_time_stamp_invs hoare_drop_imps hoare_vcg_all_lift hoare_vcg_if_lift2)
   apply (fastforce intro: schact_is_rct_ct_active_sc
                     simp: schedulable_def2 ct_in_state_def pred_tcb_at_def obj_at_def)
@@ -151,7 +150,7 @@ lemma schedule_ct_activateable:
         apply (wpsimp simp: schedule_switch_thread_fastfail_def tcb_sched_action_def
                             set_tcb_queue_def get_tcb_queue_def
                         wp: thread_get_wp' stt_activatable)
-       apply (wp add: is_schedulable_wp)+
+       apply wp+
     apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs and valid_sched"])
      apply wp
     apply (subgoal_tac "\<forall>x. scheduler_action s = switch_thread x \<longrightarrow> st_tcb_at activatable x s")
@@ -174,15 +173,13 @@ crunch send_signal, do_reply_transfer, invoke_irq_control, invoke_irq_handler, s
 
 lemma sched_context_yield_to_is_active_sc[wp]:
   "sched_context_yield_to sc_ptr' buffer \<lbrace>\<lambda>s. P (is_active_sc sc_ptr s)\<rbrace>"
-  apply (clarsimp simp: sched_context_yield_to_def)
-  apply (wpsimp wp: is_schedulable_wp hoare_drop_imps)
-  done
+  unfolding sched_context_yield_to_def
+  by (wpsimp wp: hoare_drop_imps)
 
 lemma sched_context_bind_tcb_is_active_sc[wp]:
   "sched_context_bind_tcb sc_ptr' tcb_ptr \<lbrace>\<lambda>s. P (is_active_sc sc_ptr s)\<rbrace>"
-  apply (clarsimp simp: sched_context_bind_tcb_def if_cond_refill_unblock_check_def)
-  apply (wpsimp wp: is_schedulable_wp hoare_drop_imps)
-  done
+  unfolding sched_context_bind_tcb_def if_cond_refill_unblock_check_def
+  by (wpsimp wp: hoare_drop_imps)
 
 crunch handle_fault, check_budget_restart, charge_budget, handle_interrupt, preemption_path
   for is_active_sc[wp]: "\<lambda>s. P (is_active_sc sc_ptr s)"
@@ -226,7 +223,7 @@ lemma invoke_sched_context_cur_sc_tcb_are_bound_imp_cur_sc_active:
 lemma set_thread_state_schact_is_not_rct[wp]:
   "set_thread_state ref ts \<lbrace>\<lambda>s. \<not> schact_is_rct s\<rbrace>"
   apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
-  apply (wpsimp wp: set_scheduler_action_wp is_schedulable_wp set_object_wp)
+  apply (wpsimp wp: set_scheduler_action_wp set_object_wp)
   apply (clarsimp simp: schact_is_rct_def)
   done
 
@@ -586,14 +583,13 @@ lemma choose_thread_active_sc_tcb_at_cur_thread:
   apply (clarsimp simp: guarded_switch_to_def)
   apply (rule bind_wp[OF _ thread_get_sp])
   apply (rule bind_wp[OF _ assert_opt_sp])
-  apply (rule bind_wp[OF _ is_schedulable_sp])
+  apply (rule bind_wp[OF _ gets_sp])
   apply (rule bind_wp[OF _ assert_sp])
   apply (wpsimp wp: switch_to_thread_active_sc_tcb_at_cur_thread hoare_vcg_imp_lift')
   apply (frule hd_max_non_empty_queue_in_ready_queues)
   apply (prop_tac "tcb_at (hd (max_non_empty_queue (ready_queues s (cur_domain s)))) s")
    apply (clarsimp simp: obj_at_def is_tcb_def)
-  apply (frule schedulable_unfold)
-  apply (clarsimp simp: vs_all_heap_simps obj_at_def pred_tcb_at_def is_sc_active_def2)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_def pred_tcb_at_def schedulable_def2)
   done
 
 lemma schedule_choose_new_thread_active_sc_tcb_at_cur_thread:
@@ -621,9 +617,7 @@ lemma schedule_cur_sc_active:
   apply (clarsimp simp: schedule_def)
   apply (rule bind_wp_fwd_skip, wpsimp wp: awaken_valid_sched hoare_vcg_imp_lift')
   apply (rule bind_wp_fwd_skip, wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
-  apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ is_schedulable_sp])
-  apply (rule bind_wp[OF _ gets_sp], rename_tac action)
+  apply (rule bind_wp[OF _ gets_sp])+
   apply (rule bind_wp[OF sc_and_timer_cur_sc_active])
   apply (case_tac action; clarsimp)
     apply wpsimp
@@ -761,8 +755,7 @@ lemma sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q:
          apply (rule_tac Q'="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
           apply (clarsimp simp: schact_is_rct_def)
          apply (wpsimp wp: reschedule_cnt)
-        apply wpsimp
-       apply (wpsimp wp: is_schedulable_wp)
+        apply wpsimp+
       apply (wpsimp wp: hoare_drop_imps sched_context_resume_ct_not_in_release_q
                         update_sched_context_wp set_object_wp
                   simp: set_tcb_obj_ref_def)+
@@ -1241,9 +1234,7 @@ lemma schedule_ct_not_in_release_q:
   apply (clarsimp simp: schedule_def)
   apply (rule bind_wp_fwd_skip, wpsimp wp: awaken_valid_sched hoare_vcg_imp_lift')
   apply (rule bind_wp_fwd_skip, wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
-  apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ is_schedulable_sp'])
-  apply (rule bind_wp[OF _ gets_sp], rename_tac action)
+  apply (rule bind_wp[OF _ gets_sp])+
   apply (rule bind_wp)
    apply wpsimp
   apply (case_tac action; clarsimp)
@@ -1286,10 +1277,9 @@ lemma set_thread_state_Running_schact_is_rct:
   apply (rule bind_wp[OF _ gets_the_get_tcb_sp])
   apply (rule_tac Q'="\<lambda>_ s. ?pre s \<and> st_tcb_at ((=) Running) thread s" in bind_wp_fwd)
    apply (wpsimp simp: set_scheduler_action_def
-                   wp: is_schedulable_wp hoare_vcg_if_lift2 set_object_wp)
+                   wp: hoare_vcg_if_lift2 set_object_wp)
    apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
   apply (intro bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ is_schedulable_sp'])
   apply (rule hoare_when_cases)
    apply (clarsimp simp: schact_is_rct_def)
   apply (fastforce intro: st_tcb_weakenE hoare_pre_cont hoare_weaken_pre
@@ -1359,7 +1349,7 @@ lemma set_thread_state_schact_is_rct_imp_ct_activatable[wp]:
   "set_thread_state ref ts \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
   apply (wpsimp simp: set_scheduler_action_def
-                  wp: is_schedulable_wp set_object_wp)
+                  wp: set_object_wp)
   apply (clarsimp simp: schact_is_rct_def ct_in_state_def pred_tcb_at_def obj_at_def
                         schedulable_def2 get_tcb_def)
   done
@@ -2270,8 +2260,7 @@ lemma choose_thread_cur_sc_offset_ready_and_sufficient:
     apply fastforce
    apply wpsimp
   apply (clarsimp simp: guarded_switch_to_def)
-  apply (wpsimp wp: switch_to_thread_cur_sc_offset_ready_and_sufficient is_schedulable_wp
-                    thread_get_wp)
+  apply (wpsimp wp: switch_to_thread_cur_sc_offset_ready_and_sufficient thread_get_wp)
   apply (clarsimp simp: obj_at_def)
   apply (frule hd_max_non_empty_queue_in_ready_queues)
   apply (fastforce simp: valid_ready_qs_def vs_all_heap_simps in_ready_q_def)
@@ -2353,7 +2342,7 @@ lemma choose_thread_ct_not_idle_imp_ct_released[wp]:
    apply (rule_tac Q'="\<lambda>_ s. cur_thread s = idle_thread s" in hoare_post_imp)
     apply fastforce
    apply wpsimp
-  apply (wpsimp wp: is_schedulable_wp thread_get_wp hoare_drop_imps)
+  apply (wpsimp wp: thread_get_wp hoare_drop_imps)
   apply (clarsimp simp: obj_at_def vs_all_heap_simps valid_ready_qs_def)
   apply (frule hd_max_non_empty_queue_in_ready_queues)
   apply (fastforce simp: valid_ready_qs_def vs_all_heap_simps in_ready_q_def)
@@ -2415,9 +2404,7 @@ lemma schedule_cur_sc_offset_ready_and_sufficient:
    apply fastforce
   apply (rule bind_wp_fwd_skip)
    apply (wpsimp wp: hoare_vcg_imp_lift' awaken_valid_sched hoare_vcg_ex_lift awaken_valid_sched)
-  apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ is_schedulable_sp'])
-  apply (rule bind_wp[OF _ gets_sp])
+  apply (rule bind_wp[OF _ gets_sp])+
   apply (simp flip: bind_assoc)
   apply (rule bind_wp[OF sc_and_timer_cur_sc_offset_ready_and_sufficient_consumed_time])
   apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -2560,9 +2547,8 @@ crunch schedule, activate_thread
 
 lemma preemption_path_valid_machine_time[wp]:
   "preemption_path \<lbrace>\<lambda>s :: det_state. valid_machine_time s\<rbrace>"
-  apply (clarsimp simp: preemption_path_def)
-  apply (wpsimp wp: getActiveIRQ_wp is_schedulable_inv hoare_drop_imps)
-  done
+  unfolding preemption_path_def
+  by (wpsimp wp: getActiveIRQ_wp hoare_drop_imps)
 
 crunch call_kernel
   for valid_machine_time[wp]: "\<lambda>s :: det_state. valid_machine_time s"
