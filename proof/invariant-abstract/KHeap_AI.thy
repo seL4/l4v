@@ -238,7 +238,7 @@ lemma dxo_wp_weak[wp]:
 crunch set_thread_state
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
-crunch set_scheduler_action, is_schedulable
+crunch set_scheduler_action
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemma set_thread_state_typ_at[wp]:
@@ -1687,7 +1687,7 @@ lemma no_ofail_read_object[simp]:
 
 lemma stsa_caps_of_state[wp]:
   "set_thread_state_act t \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
-  unfolding set_thread_state_act_def set_scheduler_action_def is_schedulable_def by wpsimp
+  unfolding set_thread_state_act_def set_scheduler_action_def by wpsimp
 
 lemma shows
   sts_caps_of_state[wp]:
@@ -2218,59 +2218,6 @@ lemma assert_get_tcb_ko':
   by (clarsimp simp: valid_def in_monad gets_the_def get_tcb_def
                      obj_at_def
                split: option.splits Structures_A.kernel_object.splits)
-
-(* is_schedulable lemmas *)
-lemma is_schedulable_wp:
-  "\<lbrace>\<lambda>s. \<forall>t. schedulable tcb_ptr s = t \<longrightarrow> P t s\<rbrace> is_schedulable tcb_ptr \<lbrace>P\<rbrace>"
-  apply (clarsimp simp: is_schedulable_def)
-  apply (rule bind_wp[OF _ assert_get_tcb_ko'])
-  apply (case_tac "tcb_sched_context tcb"; clarsimp)
-   apply (wpsimp simp: schedulable_def obj_at_def get_tcb_rev)
-  by (wpsimp simp: schedulable_def obj_at_def get_tcb_rev is_sc_active_def
-               wp: get_sched_context_wp)
-
-lemma is_schedulable_sp:
-  "\<lbrace>P\<rbrace> is_schedulable tp \<lbrace>\<lambda>rv. (\<lambda>s. rv = the (is_schedulable_opt tp s)) and P\<rbrace>"
-  apply (clarsimp simp: is_schedulable_def)
-  apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb wp: get_sched_context_wp)
-  apply(rule conjI)
-   apply (clarsimp simp: Option.is_none_def is_schedulable_opt_def get_tcb_def)
-  by (clarsimp simp: is_schedulable_opt_def get_tcb_def is_sc_active_def split: option.splits)
-
-lemma is_schedulable_sp':
-  "\<lbrace>P\<rbrace> is_schedulable tp \<lbrace>\<lambda>rv. (\<lambda>s. rv = schedulable tp s) and P\<rbrace>"
-  by (wpsimp wp: is_schedulable_wp)
-
-lemma schedulable_unfold:
-  "tcb_at tp s  \<Longrightarrow>
-   is_schedulable_opt tp s
-   = Some (st_tcb_at runnable tp s
-           \<and> bound_sc_tcb_at (\<lambda>spo. \<exists>sp. spo = Some sp \<and> is_sc_active sp s) tp s
-           \<and> \<not> (in_release_queue tp s))"
-  by (clarsimp simp: is_schedulable_opt_def get_tcb_rev is_tcb pred_tcb_at_def obj_at_def
-              split: option.splits)
-
-lemma is_sc_active_def2:
-  "(is_sc_active scp s) = (\<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_active sc)"
-  unfolding is_sc_active_def
-  apply (clarsimp split: option.splits)
-  apply (case_tac x2; simp)
-  done
-
-lemma schedulable_def':
-  "schedulable t s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) t s
-                             \<and> sc_at_pred sc_active scp s)
-                             \<and> st_tcb_at active t s
-                             \<and> \<not>(in_release_queue t s))"
-  unfolding schedulable_def
-  apply (rule iffI)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_sc_active_def2 active_sc_def sc_at_pred_n_def
-                         runnable_eq_active split: option.splits
-                   dest!: get_tcb_SomeD)
-  apply (fastforce simp: pred_tcb_at_def obj_at_def is_sc_active_def2 active_sc_def get_tcb_def sc_at_pred_n_def
-                        runnable_eq_active split: option.splits
-                  dest!: get_tcb_SomeD)
-  done
 
 lemma update_sched_context_obj_at_impossible:
   "\<lbrakk> \<And>np n. \<not> (P (SchedContext np n)) \<rbrakk> \<Longrightarrow>

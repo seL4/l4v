@@ -854,7 +854,8 @@ lemma oblivious_switchToThread_schact:
                    getCurThread_def setCurThread_def liftM_def
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
-                   pointerInUserData_def isRunnable_def isStopped_def threadGet_getObject
+                   pointerInUserData_def isRunnable_def readRunnable_def threadGet_def[symmetric]
+                   isStopped_def threadGet_getObject
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs ready_qs_runnable_def
                    ready_or_release'_asrt_def ksReadyQueues_asrt_def)
   by (safe intro!: oblivious_bind oblivious_tcbQueueRemove
@@ -1482,13 +1483,14 @@ lemma lookupIPCBuffer_isolatable:
       apply (simp add: assert_isolatable thread_actions_isolatable_return | wp)+
   done
 
-crunch isSchedulable
+crunch getSchedulable
   for (empty_fail) empty_fail[wp]
 
 lemma setThreadState_rewrite_simple:
   "monadic_rewrite True True
-     (\<lambda>s. ((runnable' st \<and> pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s)
-            \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of s) (ksCurThread s))
+     (\<lambda>s. ((runnable' st
+            \<and> active_sc_tcb_at' (ksCurThread s) s
+            \<and> (Not \<circ> tcbInReleaseQueue |< tcbs_of' s) (ksCurThread s))
            \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<or> t \<noteq> ksCurThread s)
           \<and> tcb_at' t s)
      (setThreadState st t)
@@ -1497,18 +1499,17 @@ lemma setThreadState_rewrite_simple:
   apply (simp add: setThreadState_def scheduleTCB_def when_def)
   apply (monadic_rewrite_l monadic_rewrite_if_l_False
            \<open>wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at'
-                       isSchedulable_wp threadSet_wp\<close>)
+                       getSchedulable_wp threadSet_wp\<close>)
    (* take the threadSet, drop everything until return () *)
    apply (rule monadic_rewrite_trans[OF monadic_rewrite_bind_tail])
      apply (rule monadic_rewrite_symb_exec_l_drop)+
            apply (rule monadic_rewrite_refl)
           apply (wpsimp simp: getCurThread_def
-                        wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at')+
+                          wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at')+
    apply (rule monadic_rewrite_refl)
-  apply (clarsimp simp: isSchedulable_bool_def pred_map_simps obj_at_simps vs_all_heap_simps
-                        opt_map_def isScActive_def
-                 split: option.splits if_splits)
-  by (metis Structures_H.kernel_object.distinct(75) map_upd_eqD1)
+  apply (fastforce simp: schedulable'_def obj_at_simps opt_map_def opt_pred_def active_sc_tcb_at'_def
+                  split: option.splits if_splits)
+  done
 
 end
 

@@ -1501,10 +1501,9 @@ lemma inReleaseQueue_wp:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (tcbInReleaseQueue tcb) s)\<rbrace>
    inReleaseQueue t
    \<lbrace>P\<rbrace>"
-  apply (simp add: inReleaseQueue_def)
-  apply (wp threadGet_wp)
-  apply (clarsimp simp: obj_at'_def)
-  done
+  unfolding inReleaseQueue_def readInReleaseQueue_def
+  apply (wpsimp wp: threadGet_wp)
+  by (fastforce dest!: threadRead_SomeD simp: obj_at'_def)
 
 lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1725,10 +1724,10 @@ lemma isStopped_def2:
 
 lemma isRunnable_def2:
   "isRunnable t = liftM runnable' (getThreadState t)"
-  apply (simp add: isRunnable_def liftM_def)
+  apply (simp add: isRunnable_def readRunnable_def liftM_def getThreadState_def
+             flip: threadGet_def)
   apply (rule bind_eqI, rule ext, rule arg_cong)
-  apply (case_tac state)
-  apply (clarsimp)+
+  apply (rename_tac state, case_tac state; clarsimp)
   done
 
 lemma isBlocked_inv[wp]:
@@ -2223,30 +2222,28 @@ lemma ready_queues_disjoint:
   apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def)
   done
 
+lemma readRunnable_SomeD:
+  "readRunnable t s = Some y \<Longrightarrow> \<exists>tcb. ko_at' tcb t s \<and> y = runnable' (tcbState tcb)"
+  apply (clarsimp simp: readRunnable_def)
+  apply (drule threadRead_SomeD)
+  apply clarsimp
+  apply (case_tac "tcbState tcb"; fastforce)
+  done
+
+lemmas isRunnable_sp' =
+  gets_the_sp[where f="readRunnable tcb_ptr" for tcb_ptr, simplified isRunnable_def[symmetric]]
+
 lemma isRunnable_sp:
-  "\<lbrace>P\<rbrace>
-   isRunnable tcb_ptr
-   \<lbrace>\<lambda>rv s. \<exists>tcb'. ko_at' tcb' tcb_ptr s
-                  \<and> (rv = (tcbState tcb' = Running \<or> tcbState tcb' = Restart))
-           \<and> P s\<rbrace>"
-  unfolding isRunnable_def getThreadState_def
-  apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp simp: threadGet_getObject)
-  apply (fastforce simp: obj_at'_def split: Structures_H.thread_state.splits)
-  done
+  "\<lbrace>Q\<rbrace> isRunnable t \<lbrace>\<lambda>rv s. st_tcb_at' runnable' t s = rv \<and> Q s\<rbrace>"
+  by wpsimp
 
-lemma isRunnable_sp':
-  "\<lbrace>P\<rbrace>
-   isRunnable tcb_ptr
-   \<lbrace>\<lambda>rv s. (rv = st_tcb_at' active' tcb_ptr s) \<and> P s\<rbrace>"
-  apply (clarsimp simp: isRunnable_def getThreadState_def)
-  apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp
-              simp: threadGet_getObject)
-  apply (fastforce simp: obj_at'_def st_tcb_at'_def
-                  split: Structures_H.thread_state.splits)
-  done
+lemma no_ofail_readRunnable[wp]:
+  "no_ofail (tcb_at' tcbPtr) (readRunnable tcbPtr)"
+  unfolding readRunnable_def
+  by wpsimp
 
-crunch isRunnable
- for (no_fail) no_fail[wp]
+lemmas no_fail_isRunnable[wp] =
+  no_ofail_gets_the[OF no_ofail_readRunnable, simplified isRunnable_def[symmetric]]
 
 defs ksReadyQueues_asrt_def:
   "ksReadyQueues_asrt
@@ -2773,8 +2770,6 @@ lemma tcbSchedEnqueue_corres:
    apply (fastforce intro: ksReleaseQueue_asrt_cross)
   apply (rule corres_symb_exec_r[OF _ isRunnable_sp]; (solves wpsimp)?)
   apply (rule corres_symb_exec_r[OF _ assert_sp, rotated]; (solves wpsimp)?)
-   apply wpsimp
-   apply (fastforce simp: st_tcb_at'_def runnable_eq_active' obj_at'_def)
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; (solves wpsimp)?)
   apply (subst if_distrib[where f="set_tcb_queue domain prio" for domain prio])
   apply (rule corres_if_strong')
@@ -2952,16 +2947,24 @@ lemma threadGet_obj_at'_bool_field:
    by (wpsimp wp: threadGet_wp
             simp: obj_at'_def)
 
-crunch inReleaseQueue, getReleaseQueue, setReleaseQueue
+crunch getReleaseQueue, setReleaseQueue
  for (no_fail) no_fail[wp]
+
+lemma no_ofail_readInReleaseQueue[wp]:
+  "no_ofail (tcb_at' tcbPtr) (readInReleaseQueue tcbPtr)"
+  unfolding readInReleaseQueue_def
+  by wpsimp
+
+lemmas no_fail_inReleaseQueue[wp] =
+  no_ofail_gets_the[OF no_ofail_readInReleaseQueue, simplified inReleaseQueue_def[symmetric]]
 
 lemma inReleaseQueue_sp:
   "\<lbrace>P\<rbrace>
    inReleaseQueue tcb_ptr
    \<lbrace>\<lambda>rv s. \<exists>tcb'. ko_at' tcb' tcb_ptr s \<and> rv = (tcbInReleaseQueue tcb') \<and> P s\<rbrace>"
-  unfolding inReleaseQueue_def
+  unfolding inReleaseQueue_def readInReleaseQueue_def
   apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp simp: threadGet_getObject)
-  apply (clarsimp simp: obj_at'_def)
+  apply (clarsimp dest!: threadRead_SomeD simp: obj_at'_def)
   done
 
 lemma inReleaseQueue_corres:
@@ -2988,7 +2991,8 @@ lemma isRunnable_corres:
           (ko_at' tcb_conc t)
           (return (runnable (tcb_state tcb_abs)))
           (isRunnable t)"
-  unfolding isRunnable_def getThreadState_def
+  apply (clarsimp simp: isRunnable_def readRunnable_def getThreadState_def
+             simp flip: threadGet_def)
   apply (rule corres_symb_exec_r[where Q'="\<lambda>rv s. tcbState tcb_conc = rv"])
      apply (case_tac "tcb_state tcb_abs"; clarsimp simp: tcb_relation_def)
     apply (wpsimp wp: threadGet_wp)
@@ -3040,57 +3044,111 @@ lemma ko_at'_valid_tcbs'_valid_tcb':
 defs valid_tcbs'_asrt_def:
   "valid_tcbs'_asrt \<equiv> valid_tcbs'"
 
-lemma isSchedulable_corres:
+declare valid_tcbs'_asrt_def[simp]
+
+definition schedulable' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "schedulable' tcbPtr s' \<equiv>
+   (runnable' |< (tcbs_of' s' ||> tcbState)) tcbPtr
+   \<and> active_sc_tcb_at' tcbPtr s'
+   \<and> (Not \<circ> tcbInReleaseQueue |< tcbs_of' s') tcbPtr"
+
+lemma getSchedulable_wp:
+  "\<lbrace>\<lambda>s. \<forall>t. schedulable' tcbPtr s = t \<and> tcb_at' tcbPtr s \<longrightarrow> P t s\<rbrace> getSchedulable tcbPtr \<lbrace>P\<rbrace>"
+  apply (clarsimp simp: getSchedulable_def readSchedulable_def
+                        ohaskell_state_assert_def gets_the_if_distrib)
+  apply (subst gets_the_obind inReleaseQueue_def[symmetric] scActive_def[symmetric]
+               isRunnable_def[symmetric] threadGet_def[symmetric] gets_the_ostate_assert)+
+  apply (wpsimp wp: inReleaseQueue_wp threadGet_wp)
+  apply normalise_obj_at'
+  apply (fastforce elim!: rsubst2[where P=P]
+                    simp: schedulable'_def opt_pred_def opt_map_def obj_at'_def
+                          active_sc_tcb_at'_def)
+  done
+
+lemma getSchedulable_sp:
+  "\<lbrace>P\<rbrace> getSchedulable tcbPtr \<lbrace>\<lambda>rv s. rv = schedulable' tcbPtr s \<and> P s\<rbrace>"
+  by (wpsimp wp: getSchedulable_wp)
+
+lemma isSchedulable_inv[wp]:
+  "getSchedulable tcbPtr \<lbrace>P\<rbrace>"
+  by (wpsimp wp: getSchedulable_wp)
+
+lemma no_ofail_readSchedulable[wp]:
+  "no_ofail (tcb_at' tcbPtr and valid_tcbs') (readSchedulable tcbPtr)"
+  apply (clarsimp simp: readSchedulable_def readSchedContext_def ohaskell_state_assert_def)
+  apply (wpsimp wp: ovalid_inv ovalid_wp_comb3 ovalid_if_lift2 ovalid_threadRead)
+  apply normalise_obj_at'
+  apply (fastforce dest: ko_at'_valid_tcbs'_valid_tcb' simp: valid_tcb'_def valid_bound_obj'_def)
+  done
+
+lemma runnable_tsr:
+  "thread_state_relation ts ts' \<Longrightarrow> runnable' ts' = runnable ts"
+  by (case_tac ts, auto)
+
+lemma runnable_runnable'_eq:
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; tcb_at t s\<rbrakk>
+   \<Longrightarrow> (runnable |< (tcbs_of s ||> tcb_state)) t = (runnable' |< (tcbs_of' s' ||> tcbState)) t"
+  apply (frule state_relation_pspace_relation)
+  apply (frule (3) tcb_at_cross)
+  apply (clarsimp simp: obj_at_def is_tcb_def)
+  by (fastforce dest: pspace_relation_tcb_relation[where ptr=t] runnable_tsr
+                simp: obj_at'_def tcb_relation_def opt_pred_def opt_map_def tcbs_of_kh_def
+               split: Structures_A.kernel_object.splits)
+
+lemma sc_active_cross_eq:
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; tcb_at t s; valid_tcbs' s'\<rbrakk>
+   \<Longrightarrow> (sc_active |< (tcbs_of s |> tcb_sched_context |> scs_of s)) t = active_sc_tcb_at' t s'"
+  apply (clarsimp simp: active_sc_tcb_at'_def)
+  apply (frule state_relation_pspace_relation)
+  apply (frule (3) tcb_at_cross)
+  apply normalise_obj_at'
+  apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
+  apply (clarsimp simp: obj_at_def is_tcb_def)
+  apply (rename_tac ko, case_tac ko; clarsimp)
+  apply (rename_tac tcb)
+  apply (clarsimp simp: obj_at'_def)
+  apply (frule (2) pspace_relation_tcb_relation[where ptr=t])
+  apply (case_tac "tcb_sched_context tcb = None")
+   apply (clarsimp simp: tcb_relation_def opt_pred_def opt_map_def tcbs_of_kh_def)
+  apply clarsimp
+  apply (rename_tac scPtr)
+  apply (prop_tac "sc_at' scPtr s'")
+   apply (clarsimp simp: valid_tcb'_def valid_bound_obj'_def tcb_relation_def split: option.splits)
+  apply (frule (1) sc_at'_cross)
+  apply (clarsimp simp: obj_at_def is_sc_obj_def)
+  by (auto dest: pspace_relation_sc_relation
+           simp: tcb_relation_def opt_pred_def opt_map_def tcbs_of_kh_def scs_of_kh_def
+                 sc_relation_def active_sc_def obj_at'_def
+          split: Structures_A.kernel_object.splits option.splits)
+
+lemma in_release_q_inReleaseQueue_eq:
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>
+   \<Longrightarrow> t \<in> set (release_queue s) = (tcbInReleaseQueue |< (tcbs_of' s')) t"
+  by (fastforce dest!: state_relation_release_queue_relation
+                 simp: release_queue_relation_def opt_pred_def opt_map_def obj_at'_def)
+
+lemma schedulable_schedulable'_eq:
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; tcb_at t s; valid_tcbs' s'\<rbrakk>
+   \<Longrightarrow> schedulable t s = schedulable' t s'"
+  apply (clarsimp simp: schedulable_def schedulable'_def)
+  apply (intro conj_cong)
+    apply (fastforce dest: runnable_runnable'_eq)
+   apply (fastforce dest: sc_active_cross_eq)
+  apply (force dest!: in_release_q_inReleaseQueue_eq simp: opt_pred_def opt_map_def
+               split: option.splits)
+  done
+
+lemma getSchedulable_corres:
   "corres (=)
      (valid_tcbs and pspace_aligned and pspace_distinct and tcb_at t) valid_tcbs'
-     (is_schedulable t) (isSchedulable t)"
+     (gets (schedulable t)) (getSchedulable t)"
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
-  apply (clarsimp simp: is_schedulable_def isSchedulable_def Option.is_none_def)
-  apply (rule corres_symb_exec_l[OF _ _ gets_the_sp])
-    apply (rule corres_symb_exec_r[OF _ isRunnable_sp])
-      apply (rule corres_symb_exec_r[OF _ threadGet_sp])
-        apply (rule corres_stateAssert_add_assertion)
-         apply (rule corres_if_strong')
-           apply clarsimp
-           apply normalise_obj_at'
-           apply (frule state_relation_pspace_relation)
-           apply (frule pspace_relation_tcb_relation)
-             apply (fastforce dest: get_tcb_ko_atD simp: obj_at_def)
-            apply (fastforce simp: obj_at'_def)
-           apply (clarsimp simp: tcb_relation_def)
-          apply corres
-         apply clarsimp
-         apply (rule corres_symb_exec_l[OF _ _ get_sched_context_sp])
-           apply (rule corres_symb_exec_r[OF _ scActive_sp])
-             apply (rule corres_symb_exec_l[OF _ _ gets_sp])
-               apply (rule corres_symb_exec_r[OF _ inReleaseQueue_sp])
-                 apply clarsimp
-                 apply normalise_obj_at'
-                 apply (frule state_relation_pspace_relation)
-                 apply (frule pspace_relation_tcb_relation[where ptr=t])
-                   apply (fastforce dest: get_tcb_ko_atD simp: tcb_at_def obj_at_def)
-                  apply (fastforce simp: obj_at'_def)
-                 apply (rule conj_cong)
-                  apply (clarsimp simp: tcb_relation_def)
-                  apply (case_tac "tcb_state tcb"; clarsimp)
-                 apply (rule conj_cong)
-                  apply (force dest!: pspace_relation_sc_relation
-                                simp: obj_at_def obj_at'_def active_sc_def
-                                      tcb_relation_def sc_relation_def)
-                 apply (drule state_relation_release_queue_relation)
-                 apply (clarsimp simp: release_queue_relation_def list_queue_relation_def
-                                       in_queue_2_def obj_at'_def opt_pred_def opt_map_def
-                                split: option.splits)
-                apply wpsimp+
-           apply (fastforce simp: valid_tcbs'_def valid_tcb'_def obj_at'_def)
-          apply (rule get_sched_context_exs_valid)
-          apply (fastforce dest!: get_tcb_SomeD intro: sc_atD1
-                            simp: valid_tcbs_def obj_at_def valid_tcb_def)
-         apply wpsimp
-         apply (fastforce dest!: get_tcb_SomeD intro: sc_atD1
-                           simp: valid_tcbs_def obj_at_def valid_tcb_def)
-        apply (wpsimp simp: tcb_at_def valid_tcbs'_asrt_def)+
+  apply (rule corres_bind_return2)
+  apply (rule corres_symb_exec_r[OF _ getSchedulable_sp, rotated]; (solves wpsimp)?)
+   apply (wpsimp simp: getSchedulable_def wp: no_ofail_gets_the)
+  apply (rule corres_gets_return_trivial)
+  apply (fastforce dest: schedulable_schedulable'_eq)
   done
 
 lemma get_simple_ko_exs_valid:
@@ -3105,41 +3163,6 @@ lemmas get_reply_exs_valid[wp] =
   get_simple_ko_exs_valid[where C=kernel_object.Reply, simplified]
 lemmas get_endpoint_exs_valid[wp] =
   get_simple_ko_exs_valid[where C=kernel_object.Endpoint, simplified]
-
-lemma conjunct_rewrite:
-  "P = P' \<and> Q = Q' \<and> R = R' \<Longrightarrow> (P \<and> Q \<and> R) = (P' \<and> Q' \<and> R')"
-  by simp
-
-definition isScActive :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "isScActive scPtr s' \<equiv> pred_map (\<lambda>sc. 0 < scRefillMax sc) (scs_of' s') scPtr"
-
-abbreviation ct_isSchedulable :: "kernel_state \<Rightarrow> bool" where
-  "ct_isSchedulable \<equiv> ct_active'
-                       and (\<lambda>s. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s))
-                       and (\<lambda>s. pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of s) (ksCurThread s))"
-
-definition isSchedulable_bool :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "isSchedulable_bool tcbPtr s'
-    \<equiv> pred_map (\<lambda>tcb. runnable' (tcbState tcb) \<and> \<not> tcbInReleaseQueue tcb) (tcbs_of' s') tcbPtr
-      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') tcbPtr"
-
-lemma isSchedulable_wp:
-  "\<lbrace>\<lambda>s. \<forall>t. isSchedulable_bool tcbPtr s = t \<and> tcb_at' tcbPtr s \<longrightarrow> P t s\<rbrace> isSchedulable tcbPtr \<lbrace>P\<rbrace>"
-  apply (clarsimp simp: isSchedulable_def)
-  apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb inReleaseQueue_def
-                  wp: threadGet_wp getTCB_wp)
-  apply (fastforce elim: rsubst2[where P=P]
-                   simp: isSchedulable_bool_def isScActive_def obj_at'_def
-                         pred_tcb_at'_def pred_map_simps in_opt_map_eq)
-  done
-
-lemma isSchedulable_sp:
-  "\<lbrace>P\<rbrace> isSchedulable tcbPtr \<lbrace>\<lambda>rv. (\<lambda>s. rv = isSchedulable_bool tcbPtr s) and P\<rbrace>"
-  by (wpsimp wp: isSchedulable_wp)
-
-lemma isSchedulable_inv[wp]:
-  "isSchedulable tcbPtr \<lbrace>P\<rbrace>"
-  by (wpsimp wp: isSchedulable_wp)
 
 \<comment> \<open>In sched_context_donate, weak_valid_sched_action does not propagate backwards over the statement
     where from_tptr's sched context is set to None because it requires the thread associated with a
@@ -3173,20 +3196,17 @@ lemma rescheduleRequired_corres_weak:
    apply (corresKsimp corres: setSchedulerAction_corres)
   apply (case_tac action; clarsimp?)
   apply (rename_tac tp)
-  apply (rule corres_underlying_split[OF _ _ is_schedulable_sp' isSchedulable_inv, rotated 2])
-   apply (corresKsimp corres: isSchedulable_corres)
+  apply (rule corres_underlying_split[OF _ _ gets_sp isSchedulable_inv, rotated 2])
+   apply (corresKsimp corres: getSchedulable_corres)
    apply (clarsimp simp: weaker_valid_sched_action_def obj_at_def vs_all_heap_simps is_tcb_def)
   apply (clarsimp simp: when_def)
 
   apply (rule corres_symb_exec_l[OF _ thread_get_exs_valid thread_get_sp , rotated])
     apply (clarsimp simp: weaker_valid_sched_action_def vs_all_heap_simps obj_at_def is_tcb_def)
    apply (wpsimp simp: thread_get_def get_tcb_def weaker_valid_sched_action_def vs_all_heap_simps)
-
-  apply (rule corres_symb_exec_l[OF _ _ assert_opt_sp, rotated])
-    apply wpsimp
-    apply (clarsimp simp: obj_at_def schedulable_def get_tcb_def split: option.splits)
-   apply wpsimp
-   apply (clarsimp simp: obj_at_def schedulable_def get_tcb_def split: option.splits)
+  apply (rule corres_assert_opt_assume_lhs[rotated])
+    apply (clarsimp simp: obj_at_def schedulable_def opt_pred_def opt_map_def tcbs_of_kh_def
+                   split: option.splits)
 
   apply (rule corres_symb_exec_l[OF _ _ get_sc_refill_sufficient_sp, rotated])
     apply (rule get_sc_refill_sufficient_exs_valid)
@@ -3207,7 +3227,7 @@ lemma rescheduleRequired_corres_weak:
     apply (fastforce intro: valid_refills_nonempty_refills active_scs_validE
                       simp: obj_at_def vs_all_heap_simps schedulable_def2)
 
- apply (rule stronger_corres_guard_imp)
+  apply (rule stronger_corres_guard_imp)
     apply (rule corres_assert_assume_l)
     apply (rule tcbSchedEnqueue_corres)
     apply simp
@@ -3392,18 +3412,6 @@ lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur
   apply (simp add: get_thread_state_def thread_get_def)
   done
 
-lemma thread_get_isRunnable_corres:
-  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-              (thread_get (\<lambda>tcb. runnable (tcb_state tcb)) t) (isRunnable t)"
-  apply (simp add: isRunnable_def getThreadState_def threadGet_getObject thread_get_def)
-  apply (fold liftM_def)
-  apply simp
-  apply (rule corres_rel_imp)
-   apply (rule getObject_TCB_corres)
-  apply (clarsimp simp add: tcb_relation_def thread_state_relation_def)
-  apply (case_tac "tcb_state x",simp_all)
-  done
-
 lemma setObject_tcbState_update_corres:
   "\<lbrakk>thread_state_relation ts ts'; tcb_relation tcb tcb'\<rbrakk> \<Longrightarrow>
    corres dc
@@ -3430,12 +3438,12 @@ lemma scheduleTCB_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF getCurThread_corres])
       apply (rule corres_split [OF getSchedulerAction_corres], rename_tac sched_action)
-        apply (rule corres_split [OF isSchedulable_corres])
+        apply (rule corres_split [OF getSchedulable_corres])
           apply (clarsimp simp: when_def)
           apply (intro conjI impI; (clarsimp simp: sched_act_relation_def)?)
            apply (rule rescheduleRequired_corres)
           apply (case_tac sched_act; clarsimp)
-         apply (wpsimp wp: isSchedulable_wp)+
+         apply (wpsimp wp: getSchedulable_wp)+
   done
 
 lemma set_thread_state_act_corres:
@@ -3448,8 +3456,8 @@ lemma set_thread_state_act_corres:
    apply (corres corres: getCurThread_corres)
   apply (rule corres_split_forwards'[OF _ gets_sp getSchedulerAction_sp])
    apply (corres corres: getSchedulerAction_corres)
-  apply (rule corres_split_forwards'[OF _ is_schedulable_sp isSchedulable_sp])
-   apply (corres corres: isSchedulable_corres)
+  apply (rule corres_split_forwards'[OF _ gets_sp getSchedulable_sp])
+   apply (corres corres: getSchedulable_corres)
   apply (clarsimp simp: when_def split del: if_split)
   apply (rule corres_if_split)
     apply (case_tac sched_act; clarsimp)
@@ -3845,37 +3853,26 @@ lemma rescheduleRequired_sch_act'[wp]:
   "\<lbrace>\<top>\<rbrace>
    rescheduleRequired
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wpsimp simp: rescheduleRequired_def wp: isSchedulable_wp)
+  by (wpsimp simp: rescheduleRequired_def wp: getSchedulable_wp)
 
 lemma sts_weak_sch_act_wf[wp]:
   "setThreadState st t \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   unfolding setThreadState_def scheduleTCB_def
   apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift hoare_vcg_all_lift
-                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. rv" for x]
-                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x]
+                    hoare_pre_cont[where f="getSchedulable x" and P="\<lambda>rv _. rv" for x]
+                    hoare_pre_cont[where f="getSchedulable x" and P="\<lambda>rv _. \<not>rv" for x]
               simp: weak_sch_act_wf_def)
   done
 
-lemma threadSet_isSchedulable_bool_nochange:
-  "\<lbrace>\<lambda>s. runnable' st \<and> isSchedulable_bool t s\<rbrace>
+lemma threadSet_schedulable':
+  "\<lbrace>\<lambda>s. runnable' st \<and> active_sc_tcb_at' t s \<and> (Not \<circ> tcbInReleaseQueue |< tcbs_of' s) t\<rbrace>
    threadSet (tcbState_update (\<lambda>_. st)) t
-   \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
-  unfolding isSchedulable_bool_def threadSet_def
+   \<lbrace>\<lambda>_. schedulable' t\<rbrace>"
+  unfolding schedulable'_def threadSet_def
   apply (rule bind_wp[OF _ getObject_tcb_sp])
-  apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def)
-  apply (fastforce simp: pred_map_def isScActive_def elim!: opt_mapE)
-  done
-
-lemma threadSet_isSchedulable_bool:
-  "\<lbrace>\<lambda>s. runnable' st
-      \<and> pred_map (\<lambda>tcb. \<not>(tcbInReleaseQueue tcb)) (tcbs_of' s) t
-      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of s) t\<rbrace>
-   threadSet (tcbState_update (\<lambda>_. st)) t
-   \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
-  unfolding isSchedulable_bool_def threadSet_def
-  apply (rule bind_wp[OF _ getObject_tcb_sp])
-  apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def)
-  apply (fastforce simp: pred_map_def isScActive_def elim!: opt_mapE)
+  apply (wpsimp wp: setObject_tcb_wp)
+  apply (fastforce simp: opt_pred_def opt_map_def obj_at'_def active_sc_tcb_at'_def
+                  split: option.splits)
   done
 
 lemma setObject_queued_pred_tcb_at'[wp]:
@@ -3942,13 +3939,13 @@ lemma tcbSchedDequeue_sch_act_wf[wp]:
       | wp sch_act_wf_lift | simp add: if_apply_def2)+
 
 lemma scheduleTCB_sch_act_wf:
-  "\<lbrace>\<lambda>s. \<not>(t = ksCurThread s \<and> ksSchedulerAction s = ResumeCurrentThread
-        \<and> \<not> pred_map (\<lambda>tcb. runnable' (tcbState tcb)) (tcbs_of' s) t)
+  "\<lbrace>\<lambda>s. \<not> (t = ksCurThread s \<and> ksSchedulerAction s = ResumeCurrentThread
+           \<and> \<not> (runnable' |< (tcbs_of' s ||> tcbState)) t)
         \<longrightarrow> (sch_act_wf (ksSchedulerAction s) s)\<rbrace>
    scheduleTCB t
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: scheduleTCB_def)
-  by (wpsimp wp: isSchedulable_wp  simp: isSchedulable_bool_def pred_map_def opt_map_Some)
+  unfolding scheduleTCB_def
+  by (wpsimp wp: getSchedulable_wp simp: schedulable'_def)
 
 lemma sts_sch_act':
   "\<lbrace>\<lambda>s. (\<not> runnable' st \<longrightarrow> sch_act_not t s) \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -3963,7 +3960,7 @@ lemma sts_sch_act':
                             (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                                sch_act_wf (ksSchedulerAction s) s)"
            in hoare_post_imp)
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def elim!: opt_mapE)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def opt_pred_def opt_map_def)
   apply (simp only: imp_conv_disj)
   apply (wpsimp wp: threadSet_pred_tcb_at_state threadSet_sch_act_wf hoare_vcg_disj_lift)
   done
@@ -3983,7 +3980,7 @@ lemma sts_sch_act[wp]:
                             (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                                sch_act_wf (ksSchedulerAction s) s)"
            in hoare_post_imp)
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def elim!: opt_mapE)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def opt_pred_def opt_map_def elim!: opt_mapE)
   apply (simp only: imp_conv_disj)
   apply (wpsimp wp: threadSet_pred_tcb_at_state threadSet_sch_act_wf hoare_vcg_disj_lift)
   apply (fastforce simp: sch_act_simple_def)
@@ -4442,7 +4439,8 @@ lemma rescheduleRequired_valid_tcbs'[wp]:
    rescheduleRequired
    \<lbrace>\<lambda>_. valid_tcbs'\<rbrace>"
   apply (clarsimp simp: rescheduleRequired_def)
-  apply (rule bind_wp_fwd_skip, wpsimp wp: tcbSchedEnqueue_valid_tcbs' update_valid_tcb' isSchedulable_wp)+
+  apply (rule bind_wp_fwd_skip,
+         wpsimp wp: tcbSchedEnqueue_valid_tcbs' update_valid_tcb' getSchedulable_wp)+
   apply (wpsimp wp: update_valid_tcb')
   done
 
@@ -5434,7 +5432,7 @@ lemma setThreadState_if_unsafe_then_cap'[wp]:
   apply (rule bind_wp_fwd_skip)
    apply (rule threadSet_ifunsafe'T)
    apply (clarsimp simp: tcb_cte_cases_def objBits_simps')
-  apply (wpsimp wp: isSchedulable_wp)
+  apply (wpsimp wp: getSchedulable_wp)
   done
 
 crunch setBoundNotification

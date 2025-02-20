@@ -22,7 +22,7 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.API.Types
 > import SEL4.Kernel.CSpace(lookupCap)
 > import SEL4.Kernel.Thread(schedule, activateThread)
-> import SEL4.Model.StateData(KernelState, Kernel, getCurThread, doMachineOp, stateAssert, rct_imp_activatable'_asrt)
+> import SEL4.Model.StateData(KernelState, Kernel, getCurThread, doMachineOp, stateAssert, rct_imp_activatable'_asrt, cur_tcb'_asrt)
 > import SEL4.Model.Preemption(withoutPreemption)
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser, mcsPreemptionPoint)
@@ -40,6 +40,8 @@ faults, and system calls; the set of possible events is defined in
 > callKernel :: Event -> Kernel ()
 > callKernel ev = do
 >     stateAssert fastpathKernelAssertions "Fast path assertions must hold"
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     runExceptT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do
 >                       irq_opt <- doMachineOp (getActiveIRQ True)

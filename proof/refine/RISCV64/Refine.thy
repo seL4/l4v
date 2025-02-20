@@ -495,30 +495,22 @@ lemma akernel_invariant:
   done
 
 lemma ckernel_invs:
-  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s))
-    and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle')
-    and (\<lambda>s. is_active_sc' (ksCurSc s) s) and sym_heap_tcbSCs
-    and (\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s)
-    and (\<lambda>s. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s))
+  "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s)
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: callKernel_def mcsPreemptionPoint_def)
-  apply (rule hoare_pre)
-   apply (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"] activate_invs')
-     apply (rule hoare_drop_imp)
-     apply (wpsimp wp: schedule_invs')
-    apply (wpsimp wp: stateAssert_wp)
-   apply (wpsimp wp: isSchedulable_wp hoare_drop_imp)
-    apply (intro iffI; clarsimp simp: isScActive_def isSchedulable_bool_def)
-   apply (rule hoare_strengthen_postE[where E'="\<lambda>_. invs'" and Q=Q and Q'=Q for Q])
-     apply wpsimp
-    apply (clarsimp simp: active_from_running')+
-   apply wp
-  apply (clarsimp simp: sym_heap_def pred_map_def)
-  apply (rule_tac x="ksCurSc s" in exI)
-  apply (clarsimp simp: obj_at_simps is_active_sc'_def isScActive_def opt_map_red pred_map_def
-                        opt_pred_def)
+  apply (simp add: callKernel_def mcsPreemptionPoint_def cur_tcb'_asrt_def)
+  apply (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"] activate_invs')
+       apply (rule hoare_drop_imp)
+       apply (wpsimp wp: schedule_invs')
+      apply (wpsimp wp: stateAssert_wp)
+     apply (wpsimp wp: getSchedulable_wp hoare_drop_imp)
+      apply (intro iffI; clarsimp simp: schedulable'_def active_sc_tcb_at'_def)
+     apply (rule hoare_strengthen_postE[where E'="\<lambda>_. invs'" and Q=Q and Q'=Q for Q])
+       apply wpsimp
+      apply (clarsimp simp: active_from_running')+
+    apply wp+
+  apply clarsimp
   done
 
 (* abstract and haskell have identical domain list fields *)
@@ -578,30 +570,17 @@ lemma threadSet_sym_heap_tcbSCs:
   done
 
 lemma kernelEntry_invs':
-  "\<lbrace> invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
+  "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
     and (ct_running' or ct_idle')
-    and (\<lambda>s. is_active_sc' (ksCurSc s) s) and sym_heap_tcbSCs
-    and (\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s)
-    and (\<lambda>s. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s))
+    and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s)
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
     and valid_domain_list' \<rbrace>
   kernelEntry e tc
   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (rule_tac P'1="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some (ksCurSc s)) (ksCurThread s) s"
-         in hoare_pre_add[THEN iffD2])
-   apply (clarsimp simp: obj_at'_tcb_scs_of_equiv obj_at'_sc_tcbs_of_equiv sym_heap_def)
-   apply (fastforce simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def)
-  apply (simp add: kernelEntry_def)
-  apply (wpsimp wp: ckernel_invs threadSet_invs_trivial threadSet_state_refs_of'[where f'=id and g'=id]
-                    threadSet_ct_in_state' hoare_weak_lift_imp hoare_vcg_disj_lift threadSet_sym_heap_tcbSCs
-              simp: tcb_bound_refs'_def
-         | wps)+
-    apply (rule hoare_vcg_conj_lift)
-     apply (wpsimp wp: threadSet_wp)
-    apply (wpsimp wp: threadSet_invs_trivial; simp?)
-    apply (wpsimp wp: threadSet_ct_running' hoare_weak_lift_imp)+
-  apply (fastforce simp: obj_at'_def  pred_map_def opt_map_red)
-  done
+  unfolding kernelEntry_def
+  by (wpsimp wp: ckernel_invs threadSet_invs_trivial threadSet_ct_in_state' hoare_weak_lift_imp
+                 hoare_vcg_disj_lift threadSet_schedulable'_fields_inv
+      | wps)+
 
 lemma absKState_correct':
   "\<lbrakk>einvs s; invs' s'; (s,s') \<in> state_relation\<rbrakk>
@@ -693,14 +672,14 @@ lemma kernel_preemption_corres:
        apply (rule no_fail_getActiveIRQ)
       apply (clarsimp simp: dc_def[symmetric])
       apply (rule corres_split_eqr[OF getCurThread_corres])
-        apply (rule corres_split_eqr[OF isSchedulable_corres])
+        apply (rule corres_split_eqr[OF getSchedulable_corres])
           apply (rename_tac irq ct sched)
           apply (rule corres_split[OF corres_if2])
                apply simp
               apply (rule_tac P="?P and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sched = schedulable ct s)
                                  and K sched"
                          and P'="?P' and (\<lambda>s. ct = ksCurThread s)
-                                 and (\<lambda>s. sched = isSchedulable_bool ct s)"
+                                 and (\<lambda>s. sched = schedulable' ct s)"
                      in corres_inst)
               apply (rule corres_gen_asm')
               apply(rule corres_guard_imp)
@@ -753,8 +732,8 @@ lemma kernel_preemption_corres:
            apply clarsimp
           apply (wpsimp wp: hoare_vcg_imp_lift')
          apply clarsimp
-         apply (wpsimp wp: is_schedulable_wp')
-        apply (wpsimp wp: isSchedulable_wp cong: conj_cong imp_cong)
+         apply wpsimp
+        apply (wpsimp wp: getSchedulable_wp cong: conj_cong imp_cong)
        apply wpsimp
       apply wpsimp
      apply (rule_tac Q'="\<lambda>_ s. invs s \<and>  valid_sched s \<and> valid_list s \<and> scheduler_act_sane s \<and>
@@ -829,7 +808,8 @@ lemma kernel_corres':
               and (\<lambda>s. scheduler_action s = resume_cur_thread))
              invs'
              (call_kernel event)
-             (do _ \<leftarrow> runExceptT $
+             (do _ \<leftarrow> stateAssert cur_tcb'_asrt [];
+                 _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
                         (\<lambda>_. withoutPreemption $ do
                                irq_opt <- doMachineOp (getActiveIRQ True);
@@ -846,37 +826,21 @@ lemma kernel_corres':
   apply add_sym_refs
   apply (rule_tac Q'="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread" in corres_cross_add_guard)
    apply (fastforce intro!: resume_cur_thread_cross)
-  apply (rule_tac Q'="\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s" in corres_cross_add_guard)
-   apply (fastforce intro!: ct_running_cross)
+  apply (rule_tac Q'="\<lambda>s'. event \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s') s'"
+               in corres_cross_add_guard)
+   apply (frule curthread_relation)
+   apply clarsimp
+   apply (erule schedulable_schedulable'_eq[THEN iffD1], fastforce+)
+   apply (clarsimp simp: schedulable_def2)
+   apply (rule conjI)
+    apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (fastforce intro: schact_is_rct_ct_active_sc)
   apply (rule_tac Q'="ct_running' or ct_idle'" in corres_cross_add_guard)
    apply (simp only: pred_disj_def)
    apply (rule ct_running_or_idle_cross, fastforce+)
-  apply (rule_tac Q'="\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s" in corres_cross_add_guard)
-   apply (fastforce simp: invs_def valid_state_def valid_pspace_def intro!: cur_sc_tcb_cross)
-  apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
-         in corres_cross_add_guard)
-   apply clarsimp
-   apply (rule ct_not_in_release_q_cross)
-       apply fastforce
-      apply (simp add: state_relation_def)
-     apply (simp add: state_relation_def)
-    apply fastforce
-   apply simp
-  apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') (ksCurThread s')"
-               in corres_cross_add_guard)
-   apply clarsimp
-   apply (frule invs_cur_sc_tcb_symref, clarsimp simp: schact_is_rct)
-   apply (prop_tac "sc_at (cur_sc s) s")
-    apply (frule invs_cur_sc_tcb)
-    apply (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj)
-    apply (erule (1) valid_sched_context_size_objsI[OF invs_valid_objs])
-   apply (frule (4) active_sc_at'_cross[OF _ invs_psp_aligned invs_distinct])
-   apply (clarsimp simp: active_sc_at'_def obj_at'_def projectKOs cur_tcb'_def pred_tcb_at_def
-                         is_sc_obj obj_at_def  pred_map_def isScActive_def
-                  dest!: state_relationD)
-   apply (rule_tac x="cur_sc s" in exI, clarsimp simp: opt_map_red)
-   apply (frule_tac x="ksCurThread s'" in pspace_relation_absD, simp)
-   subgoal by (fastforce simp: tcb_relation_cut_def tcb_relation_def)
+  apply (rule corres_stateAssert_ignore)
+   apply (clarsimp simp: cur_tcb'_asrt_def)
+  apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        apply (rule corres_split_handle[OF handleEvent_corres])
@@ -958,9 +922,9 @@ lemma kernel_corres':
              | strengthen ct_not_blocked_imp_ct_not_blocked_on_receive
                           ct_not_blocked_imp_ct_not_blocked_on_ntfn)+)[1]
     apply (wpsimp wp: he_invs')
-      apply (wpsimp simp: mcsPreemptionPoint_def wp: isSchedulable_wp)
+      apply (wpsimp simp: mcsPreemptionPoint_def wp: getSchedulable_wp)
      apply (wpsimp wp: dmo_getirq_inv)
-     apply (clarsimp simp: isSchedulable_bool_def isScActive_def)
+     apply (clarsimp simp: schedulable'_def active_sc_tcb_at'_def)
     apply (rule_tac Q'="\<lambda>_. invs'" and E'="\<lambda>_. invs'" in hoare_strengthen_postE)
       apply (wpsimp wp: he_invs')
      apply simp
@@ -980,7 +944,10 @@ lemma kernel_corres':
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                           invs_strengthen_cur_sc_tcb_are_bound)
    apply simp
-  apply (clarsimp simp: active_from_running')
+  apply clarsimp
+  apply (frule schedulable'_runnableE)
+   apply (clarsimp simp: cur_tcb'_def)
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def ct_in_state'_def)
   done
 
 lemma kernel_corres:
@@ -1268,37 +1235,28 @@ lemma ckernel_invariant:
      apply (rule hoare_weaken_pre)
       apply (rule kernelEntry_invs')
      apply clarsimp
-     apply (rename_tac s' s; intro conjI)
-            apply (frule_tac s=s in invs_sym_refs)
-            apply (frule_tac s'=s' in state_refs_of_cross_eq)
-              apply fastforce
-             apply fastforce
-            apply force
-           apply clarsimp
-           apply (erule (1) ct_running_cross)
-            apply fastforce
-           apply fastforce
-          apply (erule (1) ct_running_or_idle_cross)
-           apply fastforce
+     apply (rename_tac s' s)
+     apply (frule_tac a=s and b=s' in curthread_relation)
+     apply (intro conjI)
+        apply (frule_tac s=s in invs_sym_refs)
+        apply (frule_tac s'=s' in state_refs_of_cross_eq)
           apply fastforce
-         apply (prop_tac "cur_sc s = ksCurSc s'", fastforce dest!: state_relationD)
-         apply (prop_tac "sc_at (cur_sc s) s")
-          apply (rule cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb]; simp)
-         apply (prop_tac "sc_at' (ksCurSc s') s'")
-          apply (rule sc_at_cross[OF state_relation_pspace_relation invs_psp_aligned invs_distinct]; simp)
-         apply (prop_tac "is_active_sc' (ksCurSc s') s'")
-          apply (rule is_active_sc'2_cross[OF _ invs_psp_aligned invs_distinct], simp+)
-        apply (clarsimp simp: invs'_def valid_pspace'_def, rule sym_refs_tcbSCs; simp?)
-        apply (clarsimp simp: invs_def valid_state_def valid_pspace_def state_refs_of_cross_eq)
-       apply (fastforce dest!: cur_sc_tcb_cross[simplified schact_is_rct_def]
-                         simp: invs_def valid_state_def valid_pspace_def)
-      apply (clarsimp simp: invs'_def)
-      apply (prop_tac "cur_tcb' s'")
-       apply (rule cur_tcb_cross[OF invs_cur invs_psp_aligned invs_distinct]; simp?)
-      apply (rule_tac s=s and s'=s' in ct_not_in_release_q_cross)
-         apply blast
-        apply (erule state_relation_release_queue_relation)
-       apply (erule curthread_relation[symmetric])
+         apply fastforce
+        apply clarsimp
+        apply (erule (1) ct_running_cross)
+         apply fastforce
+        apply fastforce
+       apply (erule (1) ct_running_or_idle_cross)
+        apply fastforce
+       apply fastforce
+      apply clarsimp
+      apply (erule schedulable_schedulable'_eq[THEN iffD1], fastforce+)
+      apply (clarsimp simp: schedulable_def2)
+      apply (rule conjI)
+       apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+      apply (rule schact_is_rct_ct_active_sc)
+        apply fastforce
+       apply (clarsimp simp: schact_is_rct_def)
       apply fastforce
      apply (rule_tac a=s in resume_cur_thread_cross)
       apply assumption

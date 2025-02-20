@@ -321,13 +321,13 @@ theorem call_kernel_serial:
                 (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s) and
                 (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
-            (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
-              (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) s' \<rbrakk>
+            (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s) and (ct_running' or ct_idle') and
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) s' \<rbrakk>
     \<Longrightarrow> fst (call_kernel event s) \<noteq> {}"
   apply (cut_tac m = "call_kernel event" in corres_underlying_serial)
     apply (rule kernel_corres)
    apply (rule callKernel_empty_fail)
+  apply (drule spec[where x=s])
   apply auto
   done
 

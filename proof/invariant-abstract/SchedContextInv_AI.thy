@@ -487,8 +487,7 @@ lemma sched_context_yield_to_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def get_sc_obj_ref_def
            split_del: if_split
                   wp: valid_irq_node_typ hoare_vcg_if_lift2 thread_get_inv hoare_drop_imp
-                      valid_ioports_lift update_sched_context_valid_idle)
-  apply (clarsimp cong: conj_cong)
+                      valid_ioports_lift update_sched_context_valid_idle hoare_vcg_all_lift)
   apply (intro conjI; clarsimp simp: cur_tcb_def)
     apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
     apply (fastforce dest!: valid_objs_valid_sched_context_size)
@@ -1517,12 +1516,13 @@ lemma charge_budget_invs[wp]:
   unfolding charge_budget_def is_round_robin_def
   apply clarsimp
   apply (rule bind_wp[OF _ gets_sp])
-  apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp is_schedulable_wp)
+  apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp)
      apply (rule_tac Q'="\<lambda>_. invs" in hoare_strengthen_post[rotated])
       apply (clarsimp simp: ct_in_state_def runnable_eq pred_tcb_at_def obj_at_def schedulable_def
                      split: option.splits)
       apply (subgoal_tac "cur_tcb s")
-       apply (clarsimp simp: get_tcb_def cur_tcb_def tcb_at_def is_tcb split: option.splits kernel_object.splits)
+       apply (clarsimp simp: runnable_eq opt_pred_def opt_map_def tcbs_of_kh_def
+                       split: option.splits)
       apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp
                         hoare_vcg_all_lift  sc_consumed_add_invs refill_budget_check_invs
                   simp: Let_def)+
@@ -1530,7 +1530,9 @@ lemma charge_budget_invs[wp]:
   apply (clarsimp simp: ct_in_state_def schedulable_def pred_tcb_at_def obj_at_def get_tcb_def
                         cur_tcb_def
                  split: kernel_object.splits if_splits)
-  by (metis (no_types, lifting) option.case_eq_if runnable_eq)
+       apply (clarsimp simp: runnable_eq opt_pred_def opt_map_def tcbs_of_kh_def
+                       split: option.splits)
+  done
 
 lemma check_budget_invs[wp]:
   "\<lbrace>\<lambda>s. invs s\<rbrace> check_budget \<lbrace>\<lambda>rv. invs \<rbrace>"

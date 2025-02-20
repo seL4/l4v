@@ -565,7 +565,7 @@ lemma schedContextYieldTo_corres:
             apply (rename_tac tp)
             apply (simp only: option.sel pred_conj_def simp_thms(21))
             apply (rule corres_guard_imp)
-              apply (rule corres_split_eqr[OF isSchedulable_corres])
+              apply (rule corres_split_eqr[OF getSchedulable_corres])
                 apply (rename_tac sched)
                 apply (rule corres_split_eqr)
                    apply (rule_tac P="?abs_buf and sc_yf_sc_at ((=) None) scp and ?ct and ?scp
@@ -689,8 +689,7 @@ lemma schedContextYieldTo_corres:
                  apply (clarsimp simp:obj_at'_def)
                  apply (wpsimp wp: thread_get_wp hoare_case_option_wp)+
                    apply (wpsimp wp: threadGet_wp)+
-               apply (wpsimp wp: is_schedulable_wp)
-              apply (wpsimp wp: isSchedulable_wp)
+              apply (wpsimp wp: getSchedulable_wp)
              apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
                              cong: conj_cong imp_cong if_cong)
              apply (rule context_conjI;
@@ -699,8 +698,9 @@ lemma schedContextYieldTo_corres:
               apply (fastforce simp: valid_obj_def obj_at_def valid_sched_context_def)
              apply (intro conjI impI; clarsimp simp: is_tcb pred_tcb_at_def obj_at_def)
               apply (erule (1) valid_sched_context_size_objsI)+
-            apply (clarsimp simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs')
-            apply (clarsimp simp: obj_at'_def opt_map_red)
+            apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
+                             simp: valid_sched_context'_def valid_bound_obj'_def obj_at'_def
+                                   opt_map_red)
            apply (rule_tac Q'="\<lambda>rv. (case buf of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> in_user_frame x) and
                                    einvs and sc_yf_sc_at ((=) None) scp and
                                    ct_active and ct_not_in_release_q and
