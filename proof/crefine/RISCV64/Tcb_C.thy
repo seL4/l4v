@@ -1210,7 +1210,7 @@ crunch schedContextResume
 
 crunch schedContextResume
   for tcbDomain[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
-  (wp: isSchedulable_wp simp: crunch_simps)
+  (wp: getSchedulable_wp simp: crunch_simps)
 
 lemma schedContextResume_sch_act_wf[wp]:
   "schedContextResume scPtr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"

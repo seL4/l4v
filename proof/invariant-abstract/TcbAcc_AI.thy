@@ -794,7 +794,7 @@ lemma idle_thread_idle[wp]:
 
 lemma set_thread_state_act_valid_objs[wp]:
  "set_thread_state_act t \<lbrace>valid_objs\<rbrace>"
-  unfolding set_thread_state_act_def set_scheduler_action_def is_schedulable_def
+  unfolding set_thread_state_act_def set_scheduler_action_def
   by wpsimp
 
 lemma set_thread_state_valid_objs[wp]:
@@ -1194,7 +1194,7 @@ crunch set_thread_state_act
 
 lemma set_thread_state_act_cur_sc_tcb [wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> set_thread_state_act tcb_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: set_thread_state_act_def set_scheduler_action_def is_schedulable_def
+  by (wpsimp simp: set_thread_state_act_def set_scheduler_action_def
                    cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma sts_cur_tcb [wp]:

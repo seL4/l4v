@@ -474,7 +474,7 @@ This module uses the C preprocessor to select a target architecture.
 >     updateSchedContext scPtr (\sc -> sc { scTCB = Just tcbPtr })
 >     ifCondRefillUnblockCheck (Just scPtr) (Just True) (Just False)
 >     schedContextResume scPtr
->     schedulable <- isSchedulable tcbPtr
+>     schedulable <- getSchedulable tcbPtr
 >     when schedulable $ do
 >         tcbSchedEnqueue tcbPtr
 >         rescheduleRequired
@@ -595,7 +595,7 @@ This module uses the C preprocessor to select a target architecture.
 >     tptrOpt <- return $ scTCB sc
 >     assert (tptrOpt /= Nothing) "schedContextResume: option of TCB pointer must not be Nothing"
 >     tptr <- return $ fromJust tptrOpt
->     schedulable <- isSchedulable tptr
+>     schedulable <- getSchedulable tptr
 >     when schedulable $ do
 >         ready <- refillReady scPtr
 >         sufficient <- getRefillSufficient scPtr 0
@@ -605,7 +605,7 @@ This module uses the C preprocessor to select a target architecture.
 > contextYieldToUpdateQueues scPtr = do
 >     sc <- getSchedContext scPtr
 >     tptr <- return $ fromJust $ scTCB sc
->     schedulable <- isSchedulable tptr
+>     schedulable <- getSchedulable tptr
 >     if schedulable
 >         then do
 >             ctPtr <- getCurThread

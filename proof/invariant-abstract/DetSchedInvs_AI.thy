@@ -588,25 +588,6 @@ end
 
 \<comment> \<open>Project threads from the kernel heap\<close>
 
-definition tcb_of :: "kernel_object \<rightharpoonup> tcb" where
-  "tcb_of ko \<equiv> case ko of TCB tcb \<Rightarrow> Some tcb | _ \<Rightarrow> None"
-
-lemmas tcb_of_simps [simp] = tcb_of_def [split_simps kernel_object.split]
-
-lemma tcb_of_Some[simp]:
-  "tcb_of ko = Some tcb \<longleftrightarrow> ko = TCB tcb"
-  by (cases ko; simp)
-
-lemma tcb_of_None:
-  "tcb_of ko = None \<longleftrightarrow> (\<forall>tcb. ko \<noteq> TCB tcb)"
-  by (cases ko; simp)
-
-definition tcbs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> tcb" where
-  "tcbs_of_kh kh \<equiv> kh |> tcb_of"
-
-abbreviation tcbs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> tcb" where
-  "tcbs_of s \<equiv> tcbs_of_kh (kheap s)"
-
 lemmas tcb_heap_of_state_def = tcbs_of_kh_def[of "kheap s" for s :: "'z state"]
 
 global_interpretation tcb_heap: opt_map_cons_def_locale _ tcb_of tcbs_of_kh TCB
@@ -721,25 +702,6 @@ abbreviation prios_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> prior
   "prios_of s \<equiv> tcbs_of s ||> tcb_priority"
 
 \<comment> \<open>Project scheduling contexts from the kernel heap\<close>
-
-definition sc_of :: "kernel_object \<rightharpoonup> sched_context" where
-  "sc_of ko \<equiv> case ko of SchedContext sc _ \<Rightarrow> Some sc | _ \<Rightarrow> None"
-
-lemmas sc_of_simps [simp] = sc_of_def [split_simps kernel_object.split]
-
-lemma sc_of_Some[simp]:
-  "sc_of ko = Some sc \<longleftrightarrow> (\<exists>n. ko = SchedContext sc n)"
- by (cases ko; simp)
-
-lemma sc_of_None:
-  "sc_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> SchedContext sc n)"
- by (cases ko; simp)
-
-definition scs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> sched_context" where
-  "scs_of_kh kh \<equiv> kh |> sc_of"
-
-abbreviation scs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> sched_context" where
-  "scs_of s \<equiv> scs_of_kh (kheap s)"
 
 lemmas sc_heap_of_state_def = scs_of_kh_def[of "kheap s" for s :: "'z state"]
 
@@ -1426,11 +1388,6 @@ abbreviation active_scrc :: "sc_refill_cfg \<Rightarrow> bool" where
 
 lemmas active_scrc_def = active_sc_def
 
-lemma is_sc_active_kh_simp[obj_at_kh_kheap_simps]:
-  "is_sc_active scp s = pred_map active_scrc (sc_refill_cfgs_of s) scp"
-  by (auto simp: is_sc_active_def vs_all_heap_simps
-          split: option.splits kernel_object.splits)
-
 abbreviation is_active_sc :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "is_active_sc scp s \<equiv> pred_map active_scrc (sc_refill_cfgs_of s) scp"
 
@@ -1612,15 +1569,10 @@ abbreviation bound_sc_obj_tcb_at_kh :: "(sc_refill_cfg \<Rightarrow> bool) \<Rig
 abbreviation bound_sc_obj_tcb_at :: "(sc_refill_cfg \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "bound_sc_obj_tcb_at P t s \<equiv> pred_map2' P (tcb_scps_of s) (sc_refill_cfgs_of s) t"
 
-lemma is_schedulable_opt_Some:
-  "is_schedulable_opt t s = Some X \<Longrightarrow>
-          st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> (in_release_queue t s) \<longleftrightarrow> X"
-  by (clarsimp simp: is_schedulable_opt_def vs_all_heap_simps obj_at_kh_kheap_simps
-              split: option.splits)
-
 lemma schedulable_def2:
   "schedulable t s = (st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> (in_release_queue t s))"
   by (clarsimp simp: schedulable_def vs_all_heap_simps obj_at_kh_kheap_simps
+                     opt_pred_def opt_map_def pred_map_def map_join_def in_release_queue_def
               split: option.splits)
 
 \<comment> \<open>Like refill_ready', but using unat addition to avoid the need to reason about overflow.\<close>
@@ -3831,10 +3783,7 @@ lemma budget_ready_def3:
 lemma active_sc_tcb_at_fold:
   "(\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) t s \<and> sc_at_pred sc_active scp s)
    = active_sc_tcb_at t s"
-  apply (intro iffI)
-  apply (clarsimp simp: pred_tcb_at_def sc_at_pred_n_def obj_at_def vs_all_heap_simps is_sc_active_def2 split: option.splits)
-  apply (fastforce simp: pred_tcb_at_def sc_at_pred_n_def obj_at_def vs_all_heap_simps is_sc_active_def2 split: option.splits)
-  done
+  by (fastforce simp: pred_tcb_at_def sc_at_pred_n_def obj_at_def vs_all_heap_simps)
 
 (* valid_refills for tcb_scps_of *)
 definition

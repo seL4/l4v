@@ -420,29 +420,25 @@ lemma isStopped_ccorres [corres]:
     apply (simp add: ThreadState_defs)+
   done
 
-lemma isRunnable_ccorres [corres]:
+lemma isRunnable_ccorres[corres]:
   "ccorres (\<lambda>r r'. r = to_bool r') ret__unsigned_long_'
-  (tcb_at' thread) (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread})  []
-  (isRunnable thread) (Call isRunnable_'proc)"
-  apply (cinit lift: thread_' simp: getThreadState_def)
+    (tcb_at' thread) {s. thread_' s = tcb_ptr_to_ctcb_ptr thread} hs
+    (isRunnable thread) (Call isRunnable_'proc)"
+  apply (cinit lift: thread_' simp: readRunnable_def threadGet_def[symmetric] getThreadState_def)
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_cond_weak)
+      apply (fastforce intro: ccorres_return_C)
      apply (rule ccorres_return_C)
-        apply (simp)
-       apply (simp)
-      apply (simp)
-     apply (simp add: ccorres_cond_iffs)
-     apply (rule ccorres_return_C)
-       apply (simp)
-      apply (simp)
-     apply (simp)
-    apply (vcg)
+       apply simp
+      apply simp
+     apply simp
+    apply vcg
    apply (rule conseqPre)
-    apply (vcg)
-   apply (clarsimp)
-  apply (clarsimp)
+    apply vcg
+   apply clarsimp
+  apply clarsimp
   apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType
                  split: thread_state.splits)
        apply (simp add: ThreadState_defs)+
@@ -1777,31 +1773,34 @@ lemma tcb_at_1:
   apply (clarsimp simp add: is_aligned_def ctcb_size_bits_def)
   done
 
-crunch inReleaseQueue, isSchedulable
+crunch inReleaseQueue, getSchedulable
  for (empty_fail) empty_fail[wp]
 
-lemma isSchedulable_ccorres [corres]:
+lemma isSchedulable_ccorres[corres]:
   "ccorres (\<lambda>r r'. r = to_bool r') ret__unsigned_long_'
-     (tcb_at' tcbPtr and no_0_obj') \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> []
-     (isSchedulable tcbPtr) (Call isSchedulable_'proc)"
+     (tcb_at' tcbPtr and no_0_obj') \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> hs
+     (getSchedulable tcbPtr) (Call isSchedulable_'proc)"
   supply Collect_const[simp del]
          if_split[split del]
-  apply (cinit lift: thread_')
+  apply (cinit lift: thread_'
+               simp: readSchedulable_def isRunnable_def[symmetric] threadGet_def[symmetric]
+                     gets_the_if_distrib ohaskell_state_assert_def gets_the_ostate_assert)
+   apply (subst gets_the_obind scActive_def[symmetric] inReleaseQueue_def[symmetric]
+                fun_app_def Nondet_Reader_Option.gets_the_return)+
    apply (ctac add: isRunnable_ccorres)
      apply (rename_tac runnable)
      apply csymbr
-     apply (rule ccorres_pre_threadGet)
+     apply (rule ccorres_pre_threadGet, rename_tac scPtrOpt)
      apply clarsimp
      apply (rule_tac P="to_bool runnable" in ccorres_cases; clarsimp simp: to_bool_def)
       apply ccorres_rewrite
       apply (rule ccorres_move_c_guard_tcb)
-      apply (rule ccorres_stateAssert)
+      apply (rule ccorres_stateAssert[simplified HaskellLib_H.stateAssert_def])
       apply (rule_tac xf'=ret__int_'
                   and val="from_bool (scPtrOpt \<noteq> None)"
                   and R="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = scPtrOpt) tcbPtr s
                              \<and> valid_tcbs' s \<and> no_0_obj' s"
-                  and R'=UNIV
-                   in ccorres_symb_exec_r_known_rv)
+                   in ccorres_symb_exec_r_known_rv[where R'=UNIV])
          apply (rule conseqPre, vcg)
          apply normalise_obj_at'
          apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
@@ -1832,7 +1831,7 @@ lemma isSchedulable_ccorres [corres]:
           apply (rule ccorres_cond_true)
           apply (rule ccorres_rhs_assoc)
           apply (rule ccorres_move_c_guard_tcb)
-          apply (clarsimp simp: inReleaseQueue_def)
+          apply (clarsimp simp: inReleaseQueue_def readInReleaseQueue_def simp flip: threadGet_def)
           apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
                        in ccorres_split_nothrow)
               apply (rule threadGet_vcg_corres)
@@ -1853,6 +1852,8 @@ lemma isSchedulable_ccorres [corres]:
            apply wpsimp+
        apply (vcg expsec=sc_active_modifies)
       apply vcg
+     \<comment> \<open>the TCB is not runnable, so we already know that it is not schedulable, and we do not need
+         to perform any further checks\<close>
      apply ccorres_rewrite
      apply (rule ccorres_cond_seq)
      apply (rule ccorres_cond_false)
@@ -1860,7 +1861,7 @@ lemma isSchedulable_ccorres [corres]:
      apply (rule ccorres_cond_seq)
      apply (rule ccorres_cond_false)
      apply ccorres_rewrite
-     apply (rule ccorres_stateAssert)
+     apply (rule ccorres_stateAssert[simplified HaskellLib_H.stateAssert_def])
      apply (rule ccorres_if_lhs)
       apply (fastforce intro: ccorres_return_C)
      apply clarsimp
@@ -1871,8 +1872,7 @@ lemma isSchedulable_ccorres [corres]:
    apply (vcg exspec=isRunnable_modifies)
   apply normalise_obj_at'
   apply (frule (1) obj_at_cslift_tcb)
-  by (fastforce simp: valid_tcbs'_asrt_def obj_at'_def to_bool_def typ_heap_simps ctcb_relation_def
-               split: if_splits)
+  by (fastforce simp: obj_at'_def to_bool_def typ_heap_simps ctcb_relation_def split: if_splits)
 
 lemma rescheduleRequired_ccorres:
   "ccorres dc xfdc
@@ -1913,7 +1913,7 @@ lemma rescheduleRequired_ccorres:
              apply (clarsimp simp: to_bool_def split: if_split)
             apply (ctac add: tcbSchedEnqueue_ccorres)
            apply (rule ccorres_return_Skip)
-          apply (wpsimp wp: isSchedulable_wp)
+          apply (wpsimp wp: getSchedulable_wp)
          apply (vcg exspec=isSchedulable_modifies)
         apply (clarsimp simp: to_bool_def)
         apply (rule ccorres_cond_false)
@@ -2239,7 +2239,7 @@ lemma possibleSwitchTo_ccorres:
                 and xf'=ret__int_'
                 and P'="\<lbrace>\<acute>ret__int = from_bool (\<exists>scPtr. scOpt = Some scPtr)\<rbrace>"
                  in ccorres_split_nothrow)
-        apply (clarsimp simp: inReleaseQueue_def)
+        apply (clarsimp simp: inReleaseQueue_def readInReleaseQueue_def simp flip: threadGet_def)
         apply (rule threadGet_vcg_corres_P_P')
         apply (rule allI, rule conseqPre, vcg)
         apply clarsimp
@@ -2327,7 +2327,7 @@ lemma scheduleTCB_ccorres:
           apply (fastforce simp: to_bool_def)
          apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
         apply (rule ccorres_return_Skip)
-       apply (wpsimp wp: isSchedulable_wp)
+       apply (wpsimp wp: getSchedulable_wp)
       apply ccorres_rewrite
       apply (rule ccorres_cond_false)
       apply (rule ccorres_symb_exec_l')
@@ -2423,7 +2423,7 @@ lemma scheduleTCB_ccorres_simple:
           apply (fastforce simp: to_bool_def)
          apply (ctac (no_vcg) add: rescheduleRequired_ccorres_simple)
         apply (rule ccorres_return_Skip)
-       apply (wpsimp wp: isSchedulable_wp)
+       apply (wpsimp wp: getSchedulable_wp)
       apply ccorres_rewrite
       apply (rule ccorres_cond_false)
       apply (rule ccorres_symb_exec_l')

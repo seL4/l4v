@@ -11,11 +11,58 @@ Functions to access kernel memory.
 chapter \<open>Accessing the Kernel Heap\<close>
 
 theory KHeap_A
-imports Exceptions_A
+imports Exceptions_A Lib.SplitRule
 begin
+
+section "Projection from the Kernel Heap"
 
 text \<open>This theory gives auxiliary getter and setter methods
 for kernel objects.\<close>
+
+section "Projection from the Kernel Heap"
+
+definition tcb_of :: "kernel_object \<rightharpoonup> tcb" where
+  "tcb_of ko \<equiv> case ko of TCB tcb \<Rightarrow> Some tcb | _ \<Rightarrow> None"
+
+lemmas tcb_of_simps [simp] = tcb_of_def [split_simps kernel_object.split]
+
+lemma tcb_of_Some[simp]:
+  "tcb_of ko = Some tcb \<longleftrightarrow> ko = TCB tcb"
+  by (cases ko; simp)
+
+lemma tcb_of_None:
+  "tcb_of ko = None \<longleftrightarrow> (\<forall>tcb. ko \<noteq> TCB tcb)"
+  by (cases ko; simp)
+
+(* FIXME RT: Consider eliminating in favour of a direct definition below in terms of kheap.
+             Note that this definition is used as part of the pred_map locale setup. *)
+definition tcbs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> tcb" where
+  "tcbs_of_kh kh \<equiv> kh |> tcb_of"
+
+abbreviation tcbs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> tcb" where
+  "tcbs_of s \<equiv> tcbs_of_kh (kheap s)"
+
+definition sc_of :: "kernel_object \<rightharpoonup> sched_context" where
+  "sc_of ko \<equiv> case ko of SchedContext sc _ \<Rightarrow> Some sc | _ \<Rightarrow> None"
+
+lemmas sc_of_simps [simp] = sc_of_def [split_simps kernel_object.split]
+
+lemma sc_of_Some[simp]:
+  "sc_of ko = Some sc \<longleftrightarrow> (\<exists>n. ko = SchedContext sc n)"
+ by (cases ko; simp)
+
+lemma sc_of_None:
+  "sc_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> SchedContext sc n)"
+ by (cases ko; simp)
+
+(* FIXME RT: Consider eliminating in favour of a direct definition below in terms of kheap.
+             Note that this definition is used as part of the pred_map locale setup. *)
+definition scs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> sched_context" where
+  "scs_of_kh kh \<equiv> kh |> sc_of"
+
+abbreviation scs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> sched_context" where
+  "scs_of s \<equiv> scs_of_kh (kheap s)"
+
 
 section "General Object Access"
 
@@ -304,50 +351,11 @@ definition
 where
   "in_release_queue tcb_ptr \<equiv> \<lambda>s. tcb_ptr \<in> set (release_queue s)"
 
-definition
-  is_schedulable :: "obj_ref \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
-where
-  "is_schedulable tcb_ptr \<equiv> do
-    tcb \<leftarrow> gets_the $ get_tcb tcb_ptr;
-    if Option.is_none (tcb_sched_context tcb)
-    then return False
-    else do
-      sc \<leftarrow> get_sched_context $ the $ tcb_sched_context tcb;
-      is_runnable \<leftarrow> return (runnable (tcb_state tcb));
-      in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
-      return (is_runnable \<and> sc_active sc \<and> \<not>in_release_q)
-    od
-  od"
-
-definition
-  is_sc_active :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "is_sc_active sp \<equiv> (\<lambda>s.
-     case kheap s sp of
-       Some (SchedContext sc _) \<Rightarrow> sc_active sc
-     | _ \<Rightarrow> False)"
-
-definition
-  is_schedulable_opt :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
-where
-  "is_schedulable_opt tcb_ptr \<equiv> \<lambda>s.
-     case get_tcb tcb_ptr s of None \<Rightarrow> None
-     | Some tcb \<Rightarrow>
-       (case tcb_sched_context tcb of None => Some False
-        | Some sc_ptr =>
-            Some (runnable (tcb_state tcb) \<and> (is_sc_active sc_ptr s)
-            \<and> \<not>(in_release_queue tcb_ptr s)))"
-
-definition
-  schedulable :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "schedulable tcb_ptr \<equiv> \<lambda>s.
-     case get_tcb tcb_ptr s of None \<Rightarrow> False
-     | Some tcb \<Rightarrow>
-       (case tcb_sched_context tcb of None => False
-        | Some sc_ptr =>
-            (runnable (tcb_state tcb) \<and> (is_sc_active sc_ptr s)
-              \<and> \<not>(in_release_queue tcb_ptr s)))"
+definition schedulable :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "schedulable t s \<equiv>
+   (runnable |< (tcbs_of s ||> tcb_state)) t
+   \<and> (sc_active |< (tcbs_of s |> tcb_sched_context |> scs_of s)) t
+   \<and> t \<notin> set (release_queue s)"
 
 abbreviation ct_schedulable where
   "ct_schedulable s \<equiv> schedulable (cur_thread s) s"
@@ -517,7 +525,7 @@ definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
      action \<leftarrow> gets scheduler_action;
      case action of
        switch_thread t \<Rightarrow> do
-         sched \<leftarrow> is_schedulable t;
+         sched \<leftarrow> gets (schedulable t);
          when sched $ do
            sc_opt \<leftarrow> thread_get tcb_sched_context t;
            scp \<leftarrow> assert_opt sc_opt;
@@ -537,7 +545,7 @@ where
   "schedule_tcb tcb_ptr \<equiv> do
     cur \<leftarrow> gets cur_thread;
     sched_act \<leftarrow> gets scheduler_action;
-    schedulable \<leftarrow> is_schedulable tcb_ptr;
+    schedulable \<leftarrow> gets (schedulable tcb_ptr);
     when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ reschedule_required
   od"
 
@@ -547,7 +555,7 @@ where
   "set_thread_state_act tcb_ptr \<equiv> do
     cur \<leftarrow> gets cur_thread;
     sched_act \<leftarrow> gets scheduler_action;
-    schedulable \<leftarrow> is_schedulable tcb_ptr;
+    schedulable \<leftarrow> gets (schedulable tcb_ptr);
     when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ set_scheduler_action choose_new_thread
   od"
 

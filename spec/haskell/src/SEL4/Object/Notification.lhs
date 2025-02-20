@@ -69,7 +69,7 @@ mark the notification object as active.
 >                         setThreadState Running tcb
 >                         asUser tcb $ setRegister badgeRegister badge
 >                         maybeDonateSc tcb ntfnPtr
->                         schedulable <- isSchedulable tcb
+>                         schedulable <- getSchedulable tcb
 >                         when schedulable $ possibleSwitchTo tcb
 >                         scOpt <- threadGet tcbSchedContext tcb
 >                         ifCondRefillUnblockCheck scOpt (Just True) (Just True)
@@ -88,7 +88,7 @@ If the notification object is waiting, a thread is removed from its queue and th
 >                 setThreadState Running dest
 >                 asUser dest $ setRegister badgeRegister badge
 >                 maybeDonateSc dest ntfnPtr
->                 schedulable <- isSchedulable dest
+>                 schedulable <- getSchedulable dest
 >                 when schedulable $ possibleSwitchTo dest
 >                 scOpt <- threadGet tcbSchedContext dest
 >                 ifCondRefillUnblockCheck scOpt (Just True) (Just True)

@@ -157,6 +157,10 @@ lemma in_release_queue_truncate[simp]:
   "in_release_queue t (truncate_state s) = in_release_queue t s"
   by (simp add: in_release_queue_def)
 
+lemma schedulable_truncate[simp]:
+  "schedulable t (truncate_state s) = schedulable t s"
+  by (simp add: schedulable_def)
+
 lemma gets_the_tcb_bcorres[wp]:
   "bcorres (gets_the (get_tcb t)) (gets_the (get_tcb t))"
   unfolding gets_the_def by wpsimp

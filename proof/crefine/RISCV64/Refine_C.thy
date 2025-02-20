@@ -1048,36 +1048,22 @@ lemma refinement2_both:
            simp add: sch_act_simple_def)
      apply (clarsimp simp: ex_abs_def full_invs_def)
      apply (intro conjI)
-             apply (frule_tac s=abstract_state in invs_sym_refs)
-             apply (frule_tac s'=haskell_state in state_refs_of_cross_eq)
-               apply fastforce
-              apply fastforce
-             apply force
-            apply clarsimp
-            apply (erule (1) ct_running_cross)
-             apply fastforce
-            apply fastforce
-           apply (rule ct_running_or_idle_cross; simp?; fastforce)
-          apply (prop_tac "cur_sc abstract_state = ksCurSc haskell_state",
-                 fastforce dest!: state_relationD)
-          apply (prop_tac "sc_at (cur_sc abstract_state) abstract_state")
-           apply (rule cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb]; simp)
-          apply (prop_tac "sc_at' (ksCurSc haskell_state) haskell_state")
-           apply (rule sc_at_cross[OF state_relation_pspace_relation invs_psp_aligned invs_distinct]; simp)
-          apply (prop_tac "is_active_sc' (ksCurSc haskell_state) haskell_state")
-           apply (rule is_active_sc'2_cross[OF _ invs_psp_aligned invs_distinct], simp+)
-         apply (clarsimp simp: invs'_def valid_pspace'_def)
-         apply (rule sym_refs_tcbSCs; simp?)
-         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def state_refs_of_cross_eq)
-        apply (fastforce dest!: cur_sc_tcb_cross[simplified schact_is_rct_def]
-                          simp: invs_def valid_state_def valid_pspace_def)
-       apply (prop_tac "cur_tcb' haskell_state")
-        apply (rule cur_tcb_cross[OF invs_cur invs_psp_aligned invs_distinct]; simp?)
-       apply (frule_tac s=abstract_state and s'=haskell_state in ct_not_in_release_q_cross)
+         apply (frule_tac s=abstract_state in invs_sym_refs)
+         apply (frule_tac s'=haskell_state in state_refs_of_cross_eq)
+           apply fastforce
           apply fastforce
-         apply (clarsimp simp: cur_tcb'_def dest!: state_relationD)
-        apply fastforce
-       apply fastforce
+         apply clarsimp
+         apply (erule (1) ct_running_cross)
+          apply fastforce
+         apply fastforce
+        apply (rule ct_running_or_idle_cross; simp?; fastforce)
+       apply (frule curthread_relation)
+       apply clarsimp
+       apply (erule schedulable_schedulable'_eq[THEN iffD1], fastforce+)
+       apply (clarsimp simp: schedulable_def2)
+       apply (rule conjI)
+        apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+       apply (force elim!: schact_is_rct_ct_active_sc)
       apply (frule_tac a=abstract_state in resume_cur_thread_cross; fastforce)
      apply (clarsimp simp: state_relation_def)
     apply (fastforce simp: ct_running'_C)

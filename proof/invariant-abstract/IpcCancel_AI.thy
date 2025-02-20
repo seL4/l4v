@@ -1006,7 +1006,7 @@ lemma reply_unlink_sc_invs:
 
 lemma set_thread_state_act_inv:
   "(\<And>s. P (s\<lparr>scheduler_action := choose_new_thread\<rparr>) = P s) \<Longrightarrow> set_thread_state_act t \<lbrace>P\<rbrace>"
-  by (wpsimp simp: set_thread_state_act_def set_scheduler_action_def is_schedulable_def)
+  by (wpsimp simp: set_thread_state_act_def set_scheduler_action_def)
 
 lemma state_refs_of_scheduler_action_kheap[simp]:
   "state_refs_of (s\<lparr>scheduler_action := sa, kheap := h\<rparr>) = state_refs_of (s\<lparr>kheap := h\<rparr>)"

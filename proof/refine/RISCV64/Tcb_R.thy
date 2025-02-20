@@ -159,9 +159,9 @@ lemma restart_corres:
               apply (rule corres_split[OF corres_when2])
                   apply clarsimp
                  apply (rule schedContextResume_corres)
-                apply (rule corres_split[OF isSchedulable_corres])
+                apply (rule corres_split[OF getSchedulable_corres])
                   apply (rule corres_when2 [OF _ possibleSwitchTo_corres]; (solves simp)?)
-                 apply (wpsimp wp: is_schedulable_wp isSchedulable_wp)+
+                 apply (wpsimp wp: getSchedulable_wp)+
                apply (rule_tac Q'="\<lambda>_. invs and valid_sched_action and active_scs_valid
                                       and in_correct_ready_q and ready_qs_distinct
                                       and ready_or_release and tcb_at t"
@@ -250,20 +250,20 @@ lemma restart_invs':
    ThreadDecls_H.restart t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding restart_def
   apply (simp add: isStopped_def2)
-  apply (wp setThreadState_nonqueued_state_update isSchedulable_wp
+  apply (wp setThreadState_nonqueued_state_update getSchedulable_wp
             cancelIPC_simple setThreadState_st_tcb)
-       apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
-        apply wpsimp
-        apply (clarsimp simp: isSchedulable_bool_def pred_map_pred_conj[simplified pred_conj_def]
+        apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
+         apply wpsimp
+        apply (clarsimp simp: schedulable'_def pred_map_pred_conj[simplified pred_conj_def]
                               projectKO_opt_tcb pred_map_def pred_tcb_at'_def
                               obj_at'_real_def ko_wp_at'_def
                        elim!: opt_mapE)
-       apply (wpsimp wp: hoare_vcg_imp_lift')
-      apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
-       apply (fastforce elim: isSchedulable_bool_runnableE)
-       apply (wpsimp wp: ifCondRefillUnblockCheck_invs' hoare_vcg_imp_lift')
-      apply (wpsimp wp: setThreadState_nonqueued_state_update setThreadState_st_tcb
-                        hoare_vcg_if_lift2)
+        apply (wpsimp wp: hoare_vcg_imp_lift')
+       apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
+       apply fastforce
+      apply (wpsimp wp: ifCondRefillUnblockCheck_invs' hoare_vcg_imp_lift')
+     apply (wpsimp wp: setThreadState_nonqueued_state_update setThreadState_st_tcb
+                       hoare_vcg_if_lift2)
      apply clarsimp
      apply wp+
    apply (clarsimp simp: comp_def)
@@ -512,7 +512,7 @@ lemma isRunnable_corres':
      (get_thread_state t) (isRunnable t')"
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
-  apply (simp add: isRunnable_def)
+  apply (simp add: isRunnable_def readRunnable_def flip: threadGet_def getThreadState_def)
   apply (subst bind_return[symmetric])
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getThreadState_corres'], simp)
@@ -1847,7 +1847,7 @@ lemma sched_context_resume_weak_valid_sched_action:
    sched_context_resume scp
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   unfolding sched_context_resume_def
-  by (wpsimp wp: postpone_weak_valid_sched_action thread_get_wp' is_schedulable_wp')
+  by (wpsimp wp: postpone_weak_valid_sched_action thread_get_wp')
 
 crunch sched_context_resume
   for sc_at_ppred[wp]: "sc_at_ppred n P ptr"
@@ -1882,15 +1882,15 @@ lemma schedContextBindTCB_corres:
              apply (rule corres_split_nor)
                 apply (rule schedContextResume_corres)
                apply (rule corres_split_eqr)
-                  apply (rule isSchedulable_corres)
+                  apply (rule getSchedulable_corres)
                  apply (rule corres_when, simp)
                  apply (rule corres_split_nor)
                     apply (rule tcbSchedEnqueue_corres, simp)
                    apply (rule rescheduleRequired_corres)
                   apply wp
                  apply (wpsimp wp: tcbSchedEnqueue_valid_tcbs')
-                apply (wpsimp wp: is_schedulable_wp)
-               apply (wpsimp wp: threadGet_wp getTCB_wp isSchedulable_wp simp: inReleaseQueue_def)
+                apply wpsimp
+               apply (wpsimp wp: threadGet_wp getTCB_wp getSchedulable_wp simp: inReleaseQueue_def)
               apply (rule_tac Q'="\<lambda>rv. valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s)) and
                                       weak_valid_sched_action and active_scs_valid and
                                       sc_tcb_sc_at ((=) (Some t)) ptr and current_time_bounded and
@@ -2333,8 +2333,8 @@ lemma schedContextBindTCB_invs':
   apply (subst bind_assoc[symmetric, where m="threadSet _ _"])
   apply (rule bind_wp)+
       apply wpsimp
-     apply (wpsimp wp: isSchedulable_wp)
-    apply (clarsimp simp: isSchedulable_bool_runnableE)
+     apply (wpsimp wp: getSchedulable_wp)
+    apply clarsimp
     apply (wp (once) hoare_drop_imps)
      apply (wp hoare_vcg_imp_lift')
      apply (wp hoare_drop_imps)

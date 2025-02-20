@@ -273,7 +273,7 @@ where
   "sched_context_resume sc_ptr \<equiv> do
      sc \<leftarrow> get_sched_context sc_ptr;
      tptr \<leftarrow> assert_opt $ sc_tcb sc;
-     sched \<leftarrow> is_schedulable tptr;
+     sched \<leftarrow> gets (schedulable tptr);
      when sched $ do
        ts \<leftarrow> thread_get tcb_state tptr;
        ready \<leftarrow> get_sc_refill_ready sc_ptr;
@@ -357,7 +357,7 @@ definition
   test_possible_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "test_possible_switch_to tcb_ptr = do
-    sched \<leftarrow> is_schedulable tcb_ptr;
+    sched \<leftarrow> gets (schedulable tcb_ptr);
     when sched $ possible_switch_to tcb_ptr
   od"
 
@@ -369,7 +369,7 @@ where
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     if_sporadic_active_cur_sc_test_refill_unblock_check (Some sc_ptr);
     sched_context_resume sc_ptr;
-    sched <- is_schedulable tcb_ptr;
+    sched \<leftarrow> gets (schedulable tcb_ptr);
     when sched $ do
       tcb_sched_action tcb_sched_enqueue tcb_ptr;
       reschedule_required

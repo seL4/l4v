@@ -831,7 +831,7 @@ lemma  sched_context_unbind_tcb_sc_yf_helper[wp]:
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
   apply (clarsimp simp: sched_context_unbind_tcb_def get_sc_obj_ref_def tcb_release_remove_def
                         tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
-                        reschedule_required_def set_scheduler_action_def is_schedulable_def
+                        reschedule_required_def set_scheduler_action_def
                   cong: scheduler_action.case_cong)
   apply (rule bind_wp[OF _ get_sched_context_sp])
   by (wpsimp wp: thread_get_wp')

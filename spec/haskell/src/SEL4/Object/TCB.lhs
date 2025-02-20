@@ -1018,7 +1018,7 @@ On some architectures, the thread context may include registers that may be modi
 >           (refillBudgetCheck consumed)
 >       updateSchedContext scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
 >     setConsumedTime 0
->     whenM ((return isCurCPU) `andM` (getCurThread >>= isSchedulable)) $ do
+>     whenM ((return isCurCPU) `andM` (getCurThread >>= getSchedulable)) $ do
 >       endTimeslice canTimeoutFault
 >       rescheduleRequired
 >       setReprogramTimer True
@@ -1049,7 +1049,7 @@ On some architectures, the thread context may include registers that may be modi
 > mcsPreemptionPoint :: Maybe IRQ -> Kernel ()
 > mcsPreemptionPoint irq_opt = do
 >     curThread <- getCurThread
->     isschedulable <- isSchedulable curThread
+>     isschedulable <- getSchedulable curThread
 >     if isschedulable
 >         then do
 >             checkBudget

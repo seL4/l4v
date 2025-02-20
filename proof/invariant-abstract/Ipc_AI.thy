@@ -2889,13 +2889,6 @@ lemma ep_queue_cap_to:
 crunch set_message_info
  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
 
-lemma reschedule_required_pred_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> reschedule_required \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  supply if_cong[cong]
-  by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
-                   set_tcb_queue_def get_tcb_queue_def thread_get_def
-             wp: hoare_drop_imps is_schedulable_wp)
-
 lemma schedule_tcb_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P t'\<rbrace> schedule_tcb t \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
   by (wpsimp simp: schedule_tcb_def wp: reschedule_required_pred_tcb_at)

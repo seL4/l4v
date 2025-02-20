@@ -1317,7 +1317,8 @@ lemma threadSet_tcbInReleaseQueue_ccorres[corres]:
 lemma tcbReleaseRemove_ccorres:
   "ccorres dc xfdc valid_objs' \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> []
      (tcbReleaseRemove tcbPtr) (Call tcbReleaseRemove_'proc)"
-  apply (cinit lift: tcb_' simp: inReleaseQueue_def when_def)
+  apply (cinit lift: tcb_'
+               simp: inReleaseQueue_def when_def readInReleaseQueue_def threadGet_def[symmetric])
    apply (rule ccorres_stateAssert)+
    apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
                 in ccorres_split_nothrow)
@@ -1473,15 +1474,6 @@ lemma schedContext_cancelYieldTo_ccorres:
    apply force
   apply (fastforce dest: typ_heap_simps' split: if_splits)
   done
-
-lemma threadSet_isSchedulable_bool:
-  "\<lbrakk>\<forall>tcb. tcbState tcb = tcbState (f tcb); \<forall>tcb. tcbInReleaseQueue tcb = tcbInReleaseQueue (f tcb);
-    \<forall>tcb. tcbSchedContext tcb = tcbSchedContext (f tcb)\<rbrakk>
-   \<Longrightarrow> threadSet f t \<lbrace>\<lambda>s. P (isSchedulable_bool t s)\<rbrace>"
-  apply (wpsimp wp: threadSet_wp)
-  apply (erule_tac P=P in back_subst)
-  by (fastforce simp: pred_map_simps isSchedulable_bool_def isScActive_def opt_map_def obj_at_simps
-               split: if_splits option.splits)
 
 lemma active_runnable':
   "active' state \<Longrightarrow> runnable' state"

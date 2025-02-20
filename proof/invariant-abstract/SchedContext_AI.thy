@@ -1198,8 +1198,6 @@ lemma sched_context_unbind_ntfn_invs[wp]:
   apply (clarsimp simp: valid_idle_def obj_at_def)
   done
 
-lemmas is_schedulable_inv[wp] = is_schedulable_wp[where P="\<lambda>_. P" for P, simplified]
-
 declare reprogram_timer_update_arch.state_refs_update[simp]
 
 crunch sched_context_resume, test_possible_switch_to, tcb_release_remove, postpone
@@ -1295,7 +1293,7 @@ lemma possible_switch_to_cur_sc_tcb[wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> possible_switch_to tcb \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: possible_switch_to_def tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
                    thread_get_def reschedule_required_def set_scheduler_action_def
-                   is_schedulable_def get_tcb_obj_ref_def cur_sc_tcb_def sc_tcb_sc_at_def
+                   get_tcb_obj_ref_def cur_sc_tcb_def sc_tcb_sc_at_def
                    obj_at_def)
 
 lemma test_possible_switch_to_cur_sc_tcb[wp]:
@@ -1333,7 +1331,7 @@ lemma tcb_sched_action_cur_sc_tcb [wp]:
 lemma reschedule_required_cur_sc_tcb [wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> reschedule_required \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
-                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
+                   set_tcb_queue_def get_tcb_queue_def thread_get_def
                    cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma sched_context_bind_tcb_invs[wp]:
@@ -1380,7 +1378,7 @@ crunch tcb_release_remove, tcb_sched_action, set_tcb_obj_ref
 lemma reschedule_required_cur_sc [wp]:
   "\<lbrace>\<lambda>s. P (cur_sc s)\<rbrace> reschedule_required \<lbrace>\<lambda>rv s. P (cur_sc s)\<rbrace>"
   by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
-                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
+                   set_tcb_queue_def get_tcb_queue_def thread_get_def
                    cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma reschedule_required_scheduler_action [wp]:
@@ -1388,7 +1386,7 @@ lemma reschedule_required_scheduler_action [wp]:
    reschedule_required
    \<lbrace>\<lambda>rv s. scheduler_action s \<noteq> resume_cur_thread\<rbrace>"
   by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
-                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
+                   set_tcb_queue_def get_tcb_queue_def thread_get_def
                    cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma sched_context_unbind_tcb_invs_helper:
@@ -1440,7 +1438,7 @@ lemma reschedule_required_sc_ptr [wp]:
    reschedule_required
    \<lbrace>\<lambda>rv s. (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)\<rbrace>"
   by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
-                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
+                   set_tcb_queue_def get_tcb_queue_def thread_get_def
                    cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma sched_context_unbind_tcb_invs[wp]:
@@ -1598,10 +1596,18 @@ lemma postpone_invs[wp]:
   "postpone t \<lbrace>invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
 
+lemma get_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbrace> get_tcb_queue t p \<lbrace>P\<rbrace>"
+  by (wpsimp simp: get_tcb_queue_def)
+
 lemma sched_context_resume_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_resume scptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: sched_context_resume_def get_tcb_queue_def is_schedulable_def is_tcb
-               wp: thread_get_wp)
+  unfolding sched_context_resume_def
+  apply (wpsimp wp: get_tcb_queue_wp thread_get_wp)
+  apply (auto simp: obj_at_def schedulable_def opt_map_def opt_pred_def)
+  apply (frule invs_sym_refs)
+  apply (drule (2) sym_ref_sc_tcb)
+  apply (clarsimp simp: is_obj_defs)
+  done
 
 lemma set_sc_obj_ref_invs_no_change:
   "\<lbrakk> \<forall>sc. sc_replies (f (\<lambda>_. x) sc) = sc_replies sc;
@@ -1679,8 +1685,8 @@ lemma set_scheduler_action_invs[wp]:
   done
 
 lemma reschedule_required_invs[wp]:
-  "\<lbrace>invs\<rbrace> reschedule_required \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: reschedule_required_def wp: is_schedulable_wp hoare_drop_imps hoare_vcg_all_lift)
+  "reschedule_required \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: reschedule_required_def wp: hoare_drop_imps)
 
 lemma possible_switch_to_invs[wp]:
   "\<lbrace>invs\<rbrace> possible_switch_to target \<lbrace>\<lambda>rv. invs\<rbrace>"

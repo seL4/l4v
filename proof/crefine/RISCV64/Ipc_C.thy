@@ -6044,7 +6044,7 @@ lemma schedContext_resume_ccorres:
     apply ccorres_rewrite
     apply (rule ccorres_rhs_assoc)
     apply (rule ccorres_move_c_guard_sc)
-    apply (ctac add: isSchedulable_corres)
+    apply (ctac add: isSchedulable_ccorres)
       apply csymbr
       apply (clarsimp simp: when_def)
       apply (rule ccorres_cond[where R=\<top>])
@@ -6285,7 +6285,7 @@ lemma schedContext_bindTCB_ccorres:
                 apply wpsimp
                apply (vcg exspec=tcbSchedEnqueue_modifies)
               apply (rule ccorres_return_Skip)
-             apply (wpsimp wp: isSchedulable_wp)
+             apply (wpsimp wp: getSchedulable_wp)
             apply (vcg exspec=isSchedulable_modifies)
            apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> no_0_obj' s
                                      \<and> pspace_aligned' s \<and> pspace_distinct' s

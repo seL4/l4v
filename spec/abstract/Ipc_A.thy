@@ -450,7 +450,7 @@ where
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
      maybe_donate_sc dest ntfnptr;
-     schedulable <- is_schedulable dest;
+     schedulable <- gets (schedulable dest);
      when schedulable $ possible_switch_to dest;
      scopt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
      if_sporadic_active_cur_sc_assert_refill_unblock_check scopt
@@ -482,7 +482,7 @@ where
                       set_thread_state tcb Running;
                       as_user tcb $ setRegister badge_register badge;
                       maybe_donate_sc tcb ntfnptr;
-                      schedulable <- is_schedulable tcb;
+                      schedulable <- gets (schedulable tcb);
                       when schedulable $ possible_switch_to tcb;
                       scopt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb;
                       if_sporadic_active_cur_sc_assert_refill_unblock_check scopt
@@ -694,8 +694,8 @@ where
          od;
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
-    sched \<leftarrow> is_schedulable ct;
-    when (sched) $ do
+    sched \<leftarrow> gets (schedulable ct);
+    when sched $ do
       end_timeslice canTimeout;
       reschedule_required;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)

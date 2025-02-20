@@ -422,7 +422,7 @@ definition preemption_path where
   "preemption_path \<equiv> do
       irq \<leftarrow> do_machine_op (getActiveIRQ True);
       ct \<leftarrow> gets cur_thread;
-      schedulable \<leftarrow> is_schedulable ct;
+      schedulable \<leftarrow> gets (schedulable ct);
       if schedulable then do check_budget;
                              return ()
                           od

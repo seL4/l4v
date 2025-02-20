@@ -2780,10 +2780,6 @@ lemma valid_sched_weak_strg:
   "valid_sched s \<longrightarrow> weak_valid_sched_action s"
   by (simp add: valid_sched_def valid_sched_action_def)
 
-lemma runnable_tsr:
-  "thread_state_relation ts ts' \<Longrightarrow> runnable' ts' = runnable ts"
-  by (case_tac ts, auto)
-
 lemma idle_tsr:
   "thread_state_relation ts ts' \<Longrightarrow> idle' ts' = idle ts"
   by (case_tac ts, auto)
@@ -3573,9 +3569,7 @@ lemma tcbReleaseEnqueue_corres:
        apply (wpsimp wp: get_tcb_ready_time_wp)
        apply (fastforce simp: queue_end_valid_def)
       apply wpsimp
-      apply blast
      apply wpsimp
-     apply blast
     apply (rule_tac R="A and K (\<not> tcbQueueEmpty queue)" and A=A for A
                  in orM_corres'[where R'=A' and A'=A' for A', simplified])
        apply corres
@@ -3585,7 +3579,6 @@ lemma tcbReleaseEnqueue_corres:
       apply fastforce
      apply wpsimp
     apply wpsimp
-    apply force
 
    \<comment> \<open>deal with the reprogramming of the timer\<close>
    apply (simp add: bind_assoc)
@@ -3858,7 +3851,7 @@ lemma schedContextResume_corres:
       apply (rule corres_split_eqr)
          apply (clarsimp simp: sc_relation_def)
          apply (rule corres_guard_imp)
-           apply (rule isSchedulable_corres)
+           apply (rule getSchedulable_corres)
           apply (prop_tac "(valid_objs and tcb_at (the (sc_tcb sc))
                                        and pspace_aligned and pspace_distinct) s")
            apply assumption
@@ -3911,8 +3904,8 @@ lemma schedContextResume_corres:
         apply (rule no_fail_pre)
          apply (wpsimp simp: thread_get_def)
         apply (clarsimp simp: tcb_at_def)
-       apply (wp is_schedulable_wp)
-      apply (wp isSchedulable_wp)
+       apply wp
+      apply (wp getSchedulable_wp)
      apply wp
     apply wp
    apply (subgoal_tac "sc_tcb_sc_at (\<lambda>t. bound_sc_tcb_at (\<lambda>sc. sc = Some ptr) (the t) s) ptr s ")
@@ -3921,20 +3914,21 @@ lemma schedContextResume_corres:
 
     apply (intro conjI; (clarsimp simp: invs_def valid_state_def; fail)?)
      apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
-    apply (clarsimp simp: schedulable_def get_tcb_def obj_at_kh_kheap_simps)
+    apply (clarsimp simp: schedulable_def2 get_tcb_def obj_at_kh_kheap_simps)
     apply (rename_tac t; prop_tac "budget_sufficient t s")
      apply (erule active_valid_budget_sufficient)
-     apply (clarsimp simp: vs_all_heap_simps)
+     apply (clarsimp simp: schedulable_def2)
+    apply (prop_tac "is_active_sc ptr s")
+     apply (fastforce simp: vs_all_heap_simps)
+    apply clarsimp
+    apply (frule (1) active_scs_validE)
+    apply (frule valid_refills_nonempty_refills)
     apply (intro conjI impI)
-          apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                                 opt_map_red opt_pred_def MIN_REFILLS_def
-                          dest!: active_scs_validE split: if_split_asm)
-         apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                         dest!: active_scs_validE)
-        apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
-                               valid_ready_queued_thread_2_def in_ready_q_def)
+          apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def)
+         apply fastforce
+        apply (fastforce simp: vs_all_heap_simps)
        apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
-                               valid_ready_queued_thread_2_def in_ready_q_def)
+                              valid_ready_queued_thread_2_def in_ready_q_def)
       apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
                              valid_ready_queued_thread_2_def in_ready_q_def)
      apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
@@ -3957,13 +3951,13 @@ lemma schedContextResume_corres:
      apply (erule (1) valid_sched_context_size_objsI, simp)
    apply (clarsimp simp: sc_relation_def projection_rewrites obj_at_simps opt_map_red)
   apply (frule_tac x=y in pspace_relation_absD[OF _ state_relation_pspace_relation]; simp)
-  apply (clarsimp simp: obj_at'_def isSchedulable_bool_def projection_rewrites
+  apply (clarsimp simp: obj_at'_def schedulable'_def projection_rewrites
                         tcb_relation_cut_def tcb_relation_def)
   apply (drule sym[where s="Some ptr"])
-  apply (clarsimp simp: projection_rewrites isScActive_def opt_map_red)
+  apply (clarsimp simp: projection_rewrites opt_map_red)
   apply (erule (1) valid_objsE')
   apply (clarsimp simp: valid_obj'_def valid_sched_context'_def sc_relation_def valid_refills'_def
-                        opt_map_def opt_pred_def is_active_sc'_def)
+                        opt_map_def opt_pred_def is_active_sc'_def active_sc_tcb_at'_def)
   done
 
 lemma getCTE_cap_to_refs[wp]:
@@ -4273,7 +4267,7 @@ lemma sendSignal_corres:
              apply (simp add: badgeRegister_def badge_register_def)
              apply (rule corres_split[OF asUser_setRegister_corres])
                apply (rule corres_split[OF maybeDonateSc_corres])
-                 apply (rule corres_split[OF isSchedulable_corres])
+                 apply (rule corres_split[OF getSchedulable_corres])
                    apply (rule corres_split[OF corres_when], simp)
                       apply (rule possibleSwitchTo_corres; (solves simp)?)
                      apply (rule corres_split_eqr[OF get_tcb_obj_ref_corres])
@@ -4292,8 +4286,8 @@ lemma sendSignal_corres:
                    apply (rule_tac Q'="\<lambda>_. tcb_at' a and valid_objs'" in hoare_strengthen_post[rotated])
                     apply (clarsimp simp: obj_at'_def split: option.split)
                    apply wpsimp
-                  apply (wpsimp wp: is_schedulable_wp)
-                 apply (wpsimp wp: isSchedulable_wp)
+                  apply wpsimp
+                 apply (wpsimp wp: getSchedulable_wp)
                 apply (rule_tac Q'="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and tcb_at a
                                        and valid_sched_action and active_scs_valid
                                        and in_correct_ready_q and ready_qs_distinct
@@ -4365,7 +4359,7 @@ lemma sendSignal_corres:
          apply (simp add: badgeRegister_def badge_register_def)
          apply (rule corres_split[OF asUser_setRegister_corres])
            apply (rule corres_split[OF maybeDonateSc_corres])
-             apply (rule corres_split[OF isSchedulable_corres])
+             apply (rule corres_split[OF getSchedulable_corres])
                apply (rule corres_split[OF corres_when], simp)
                   apply (rule possibleSwitchTo_corres; (solves simp)?)
                  apply (rule corres_split_eqr[OF get_tcb_obj_ref_corres])
@@ -4384,8 +4378,8 @@ lemma sendSignal_corres:
                apply (rule_tac Q'="\<lambda>_. tcb_at' (hd list) and valid_objs'" in hoare_strengthen_post[rotated])
                 apply (clarsimp simp: obj_at'_def split: option.split)
                apply wpsimp
-              apply (wpsimp wp: is_schedulable_wp)
-             apply (wpsimp wp: isSchedulable_wp)
+              apply wpsimp
+             apply (wpsimp wp: getSchedulable_wp)
             apply (rule_tac Q'="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and tcb_at (hd list)
                                    and valid_sched_action and active_scs_valid
                                    and in_correct_ready_q and ready_qs_distinct and ready_or_release"
@@ -4716,9 +4710,9 @@ lemma sai_invs'[wp]:
      apply (case_tac "ntfnBoundTCB nTFN"; clarsimp)
       apply (wp setNotification_invs')
       apply (clarsimp simp: valid_ntfn'_def)
-     apply (wp isSchedulable_wp)
+     apply (wp getSchedulable_wp)
            apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
-            apply (clarsimp simp: isSchedulable_bool_def isSchedulable_bool_runnableE)
+            apply (clarsimp simp: schedulable'_def)
            apply (wpsimp wp: maybeDonateSc_invs' setThreadState_Running_invs'
                              setNotification_invs' gts_wp' cancelIPC_simple
                        simp: o_def
@@ -4734,9 +4728,9 @@ lemma sai_invs'[wp]:
    \<comment> \<open>WaitingNtfn\<close>
    apply (rename_tac list)
    apply (case_tac list; clarsimp)
-   apply (wp isSchedulable_wp)
+   apply (wp getSchedulable_wp)
        apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
-        apply (clarsimp simp: isSchedulable_bool_def isSchedulable_bool_runnableE)
+        apply (clarsimp simp: schedulable'_def)
        apply (wp maybeDonateSc_invs' setThreadState_Running_invs' setNotification_invs')+
    apply (clarsimp cong: conj_cong simp: valid_ntfn'_def)
    apply (rule conjI)
@@ -6950,7 +6944,8 @@ lemma doReplyTransfer_corres:
                      apply wpsimp
                     apply (clarsimp split: option.splits)
                    apply (clarsimp split: option.splits simp: valid_pspace'_def)
-                  apply (clarsimp simp: isRunnable_def get_tcb_obj_ref_def)
+                  apply (clarsimp simp: isRunnable_def readRunnable_def get_tcb_obj_ref_def
+                             simp flip: getThreadState_def threadGet_def)
                   (* solve remaining corres goals *)
                   apply (rule corres_split [OF getThreadState_corres])
                     apply (rule corres_split [OF threadGet_corres[where r="(=)"]])
