@@ -379,13 +379,23 @@ lemmas corres_symb_exec_r_conj_ex_abs_forwards =
   corres_symb_exec_r_conj_ex_abs[where P=P and Q=P for P, where P'=P' and Q'=P' for P', simplified]
 
 lemma gets_the_corres_ex_abs':
- "\<lbrakk>no_ofail P a; no_ofail (P' and ex_abs_underlying sr P) b\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>no_ofail P a; no_ofail (P' and ex_abs_underlying sr P) b\<rbrakk> \<Longrightarrow>
    corres_underlying sr False True r P P' (gets_the a) (gets_the b)
    = (\<forall>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<longrightarrow> r (the (a s)) (the (b s')))"
   by (fastforce simp: gets_the_def no_ofail_def corres_underlying_def split_def exec_gets
                       assert_opt_def fail_def return_def ex_abs_underlying_def)
 
 lemmas gets_the_corres_ex_abs = gets_the_corres_ex_abs'[THEN iffD2]
+
+lemma gets_gets_the_corres_ex_abs':
+  "no_ofail (P' and ex_abs_underlying sr P) b \<Longrightarrow>
+   corres_underlying sr False True r P P' (gets a) (gets_the b)
+   = (\<forall>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<longrightarrow> r (a s) (the (b s')))"
+  apply (frule gets_the_corres_ex_abs'[where a="ogets a" and r=r, rotated])
+   apply wpsimp
+  apply (clarsimp simp: gets_the_ogets)
+  apply (clarsimp simp: ogets_def)
+  done
 
 lemma gets_the_corres':
  "\<lbrakk>no_ofail P a; no_ofail P' b\<rbrakk> \<Longrightarrow>
