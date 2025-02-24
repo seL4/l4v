@@ -105,7 +105,7 @@ lemma threadGet_exs_valid[wp]:
 
 lemma isRunnable_exs_valid[wp]:
   "tcb_at' t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> isRunnable t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  unfolding isRunnable_def getThreadState_def
+  apply (clarsimp simp: isRunnable_def readRunnable_def simp flip: threadGet_def)
   by (wpsimp wp: exs_getObject)
 
 (* FIXME: move *)
@@ -313,7 +313,7 @@ proof -
           apply assumption
          apply (rule conseqPre, vcg)
          apply clarsimp
-        apply (wpsimp wp: isSchedulable_wp)+
+        apply (wpsimp wp: getSchedulable_wp)+
        apply (clarsimp simp: Let_def guard_is_UNIV_def ctcb_queue_relation_def
                              option_to_ctcb_ptr_def cready_queues_index_to_C_def numPriorities_def
                              le_maxDomain_eq_less_numDomains unat_trans_ucast_helper queue_in_range

@@ -81,17 +81,17 @@ lemma setDomain_ccorres:
      apply (rule_tac Q'="\<lambda>rv'. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
                               and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
-       apply (wpsimp wp: isSchedulable_wp)
+       apply (wpsimp wp: getSchedulable_wp)
       apply (fastforce simp: valid_pspace_valid_objs' weak_sch_act_wf_def
                       split: if_splits)
      apply (rule_tac Q'="\<lambda>_. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
                             and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
       apply (wpsimp wp: threadSet_tcbDomain_update_invs' hoare_vcg_imp_lift'
-                        threadSet_isSchedulable_bool)+
+                        threadSet_schedulable')+
     apply (simp add: guard_is_UNIV_def)
    apply (wpsimp wp: tcbSchedDequeue_not_queued hoare_vcg_all_lift hoare_vcg_imp_lift')
-  apply (fastforce simp: isSchedulable_bool_def pred_map_simps opt_map_def obj_at_simps)
+  apply fastforce
   done
 
 lemma decodeDomainInvocation_ccorres:

@@ -3240,8 +3240,8 @@ lemma rescheduleRequired_unlive[wp]:
   "rescheduleRequired \<lbrace>ko_wp_at' (Not \<circ> live') p\<rbrace>"
   supply comp_apply[simp del]
   unfolding rescheduleRequired_def
-  apply (wpsimp wp: isSchedulable_wp tcbSchedEnqueue_unlive_other)
-  apply (fastforce simp: isSchedulable_bool_def pred_map_simps ko_wp_at'_def opt_map_def o_def)
+  apply (wpsimp wp: getSchedulable_wp tcbSchedEnqueue_unlive_other)
+  apply (fastforce simp: schedulable'_def opt_pred_def  obj_at'_def ko_wp_at'_def opt_map_def o_def)
   done
 
 crunch scheduleTCB

@@ -19,7 +19,7 @@ We use the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Model SEL4.Machine SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Types #-}
-% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbQueueEmpty tcbQueuePrepend tcbQueueAppend tcbQueueInsert tcbQueueRemove tcbSchedEnqueue tcbSchedDequeue rescheduleRequired scheduleTCB isSchedulable possibleSwitchTo endTimeslice inReleaseQueue tcbReleaseRemove tcbSchedAppend switchToThread #-}
+% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbQueueEmpty tcbQueuePrepend tcbQueueAppend tcbQueueInsert tcbQueueRemove tcbSchedEnqueue tcbSchedDequeue rescheduleRequired scheduleTCB getSchedulable possibleSwitchTo endTimeslice inReleaseQueue tcbReleaseRemove tcbSchedAppend switchToThread #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -101,26 +101,32 @@ The following function is used by the scheduler to determine whether a
 particular thread is ready to run. Note that the idle thread is not considered
 runnable; this is to prevent it being inserted in the scheduler queue.
 
-> isRunnable :: PPtr TCB -> Kernel Bool
-> isRunnable thread = do
->         state <- getThreadState thread
+> readRunnable :: PPtr TCB -> KernelR Bool
+> readRunnable thread = do
+>         state <- threadRead tcbState thread
 >         return $ case state of
 >             Running -> True
 >             Restart -> True
 >             _ -> False
 
-> isSchedulable :: PPtr TCB -> Kernel Bool
-> isSchedulable tcbPtr = do
->     runnable <- isRunnable tcbPtr
->     scPtrOpt <- threadGet tcbSchedContext tcbPtr
->     stateAssert valid_tcbs'_asrt "valid_tcbs' holds"
+> isRunnable :: PPtr TCB -> Kernel Bool
+> isRunnable thread = getsJust (readRunnable thread)
+
+> readSchedulable :: PPtr TCB -> KernelR Bool
+> readSchedulable tcbPtr = do
+>     runnable <- readRunnable tcbPtr
+>     scPtrOpt <- threadRead tcbSchedContext tcbPtr
+>     readStateAssert valid_tcbs'_asrt "valid_tcbs' holds"
 >     if scPtrOpt == Nothing
 >         then return False
 >         else do
 >             let scPtr = fromJust scPtrOpt
->             active <- scActive scPtr
->             inReleaseQ <- inReleaseQueue tcbPtr
+>             active <- readScActive scPtr
+>             inReleaseQ <- readInReleaseQueue tcbPtr
 >             return $ runnable && active && not inReleaseQ
+
+> getSchedulable :: PPtr TCB -> Kernel Bool
+> getSchedulable tcbPtr = getsJust (readSchedulable tcbPtr)
 
 \subsubsection{Suspending a Thread}
 
@@ -158,7 +164,7 @@ The invoked thread will return to the instruction that caused it to enter the ke
 >         setThreadState Restart target
 >         ifCondRefillUnblockCheck scOpt (Just True) (Just False)
 >         when (isJust scOpt) $ schedContextResume (fromJust scOpt)
->         schedulable <- isSchedulable target
+>         schedulable <- getSchedulable target
 >         when schedulable $ possibleSwitchTo target
 
 \subsection{IPC Transfers}
@@ -369,7 +375,7 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 >     awaken
 >     checkDomainTime
 >     curThread <- getCurThread
->     isSchedulable <- isSchedulable curThread
+>     getSchedulable <- getSchedulable curThread
 >     action <- getSchedulerAction
 >     case action of
 
@@ -381,7 +387,7 @@ An IPC operation may request that the scheduler switch to a specific thread.
 We check here that the candidate has the highest priority in the system.
 
 >         SwitchToThread candidate -> do
->             when isSchedulable (tcbSchedEnqueue curThread)
+>             when getSchedulable (tcbSchedEnqueue curThread)
 >
 >             idleThread <- getIdleThread
 >             targetPrio <- threadGet tcbPriority candidate
@@ -396,7 +402,7 @@ We check here that the candidate has the highest priority in the system.
 >                     tcbSchedEnqueue candidate
 >                     setSchedulerAction ChooseNewThread
 >                     scheduleChooseNewThread
->                 else if isSchedulable && curPrio == targetPrio
+>                 else if getSchedulable && curPrio == targetPrio
 >                     then do
 >                         tcbSchedAppend candidate
 >                         setSchedulerAction ChooseNewThread
@@ -408,7 +414,7 @@ We check here that the candidate has the highest priority in the system.
 If the current thread is no longer runnable, has used its entire timeslice, an IPC cancellation has potentially woken multiple higher priority threads, or the domain timeslice is exhausted, then we scan the scheduler queues to choose a new thread. In the last case, we switch to the next domain beforehand.
 
 >         ChooseNewThread -> do
->             when isSchedulable $ tcbSchedEnqueue curThread
+>             when getSchedulable $ tcbSchedEnqueue curThread
 >             scheduleChooseNewThread
 
 >     scAndTimer
@@ -475,7 +481,7 @@ Note also that the level 2 bitmap array is stored in reverse in order to get bet
 > scheduleTCB tcbPtr = do
 >     curThread <- getCurThread
 >     action <- getSchedulerAction
->     schedulable <- isSchedulable tcbPtr
+>     schedulable <- getSchedulable tcbPtr
 >     when (tcbPtr == curThread && action == ResumeCurrentThread && not schedulable) $ rescheduleRequired
 
 \subsubsection{Switching Threads}
@@ -512,7 +518,7 @@ The following function is used to alter a thread's domain.
 >         curThread <- getCurThread
 >         tcbSchedDequeue tptr
 >         threadSet (\t -> t { tcbDomain = newdom }) tptr
->         schedulable <- isSchedulable tptr
+>         schedulable <- getSchedulable tptr
 >         when schedulable $ tcbSchedEnqueue tptr
 >         when (tptr == curThread) $ rescheduleRequired
 
@@ -594,7 +600,7 @@ This function is called when the system state has changed sufficiently that the 
 >     action <- getSchedulerAction
 >     case action of
 >         SwitchToThread target -> do
->              sched <- isSchedulable target
+>              sched <- getSchedulable target
 >              when sched $ tcbSchedEnqueue target
 >         _ -> return ()
 >     setSchedulerAction ChooseNewThread
@@ -837,9 +843,12 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 >                     tcbSchedAppend ct
 >                 else postpone scPtr
 
+> readInReleaseQueue :: PPtr TCB -> KernelR Bool
+> readInReleaseQueue tcbPtr = do
+>     threadRead tcbInReleaseQueue tcbPtr
+
 > inReleaseQueue :: PPtr TCB -> Kernel Bool
-> inReleaseQueue tcbPtr = do
->     threadGet tcbInReleaseQueue tcbPtr
+> inReleaseQueue tcbPtr = getsJust (readInReleaseQueue tcbPtr)
 
 > tcbReleaseRemove :: PPtr TCB -> Kernel ()
 > tcbReleaseRemove tcbPtr = do

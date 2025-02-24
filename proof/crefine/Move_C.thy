@@ -936,7 +936,7 @@ lemma sts_running_ksReadyQueuesL1Bitmap[wp]:
   unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def
   apply wpsimp
          apply (rule hoare_pre_cont)
-        by (wpsimp wp: hoare_drop_imps isSchedulable_wp)+
+        by (wpsimp wp: hoare_drop_imps getSchedulable_wp)+
 
 lemma asUser_obj_at_not_queued[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace> asUser t m \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace>"

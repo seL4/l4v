@@ -3885,7 +3885,7 @@ lemma tcb_release_remove_cdt_cdt_list[wp]:
 
 lemma reschedule_required_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reschedule_required \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reschedule_required_def thread_get_def wp: is_schedulable_wp hoare_drop_imp)
+  by (wpsimp simp: reschedule_required_def thread_get_def wp: hoare_drop_imp)
 
 lemma test_reschedule_cdt_cdt_list[wp]:
    "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> test_reschedule r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"

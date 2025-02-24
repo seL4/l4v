@@ -33,7 +33,7 @@ definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_m
   "guarded_switch_to thread \<equiv> do
      sc_opt \<leftarrow> thread_get tcb_sched_context thread;
      scp \<leftarrow> assert_opt sc_opt;
-     sched \<leftarrow> is_schedulable thread;
+     sched \<leftarrow> gets (schedulable thread);
      assert sched;
      switch_to_thread thread
    od"
@@ -240,7 +240,7 @@ definition
      awaken;
      check_domain_time;
      ct \<leftarrow> gets cur_thread;
-     ct_schdble \<leftarrow> is_schedulable ct;
+     ct_schdble \<leftarrow> gets (schedulable ct);
      action \<leftarrow> gets scheduler_action;
      (case action
        of resume_cur_thread \<Rightarrow> return ()
@@ -279,7 +279,7 @@ where
       sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
       tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
 
-      schedulable <- is_schedulable tcb_ptr;
+      schedulable <- gets (schedulable tcb_ptr);
       if schedulable then do
         ct_ptr \<leftarrow> gets cur_thread;
         prios \<leftarrow> thread_get tcb_priority tcb_ptr;

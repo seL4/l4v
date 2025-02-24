@@ -381,7 +381,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
          apply (rule valid_validE)
          apply (wpsimp)
          apply (fastforce simp: ct_in_state_def pred_tcb_weakenE)
-        apply (wpsimp wp: is_schedulable_wp hoare_vcg_all_lift hoare_drop_imps hoare_vcg_if_lift2)
+        apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps hoare_vcg_if_lift2)
        apply wpsimp
     (***)
       apply (rule_tac Q'="\<lambda>_. valid_vspace_objs'" in bind_wp_fwd)
@@ -391,7 +391,9 @@ lemma call_kernel_valid_vspace_objs'[wp]:
            valid_vspace_objs' and
            (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in bind_wp_fwd)
         apply wpsimp
-        apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def')
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def opt_pred_def opt_map_def
+                              tcbs_of_kh_def
+                       split: option.splits)
        apply (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and valid_vspace_objs'"
                        in bind_wp_fwd)
         apply (wpsimp wp: check_budget_restart_true)
@@ -404,7 +406,9 @@ lemma call_kernel_valid_vspace_objs'[wp]:
            valid_vspace_objs' and
            (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in bind_wp_fwd)
        apply wpsimp
-       apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def')
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def opt_pred_def opt_map_def
+                              tcbs_of_kh_def
+                       split: option.splits)
       apply (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and valid_vspace_objs'"
                       in bind_wp_fwd)
        apply (wpsimp wp: check_budget_restart_true)
@@ -419,7 +423,9 @@ lemma call_kernel_valid_vspace_objs'[wp]:
            valid_vspace_objs' and
            (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in bind_wp_fwd)
      apply wpsimp
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def')
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def opt_pred_def opt_map_def
+                           tcbs_of_kh_def
+                    split: option.splits)
     apply (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            valid_vspace_objs'" in bind_wp_fwd)
      apply (wpsimp wp: check_budget_restart_true)

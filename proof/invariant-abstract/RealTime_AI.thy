@@ -1296,7 +1296,7 @@ lemma sched_context_update_consumed_cap_to[wp]:
 lemma schedule_tcb_is_original_cap[wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_ s. P (is_original_cap s)\<rbrace>"
   by (wpsimp simp: schedule_tcb_def reschedule_required_def set_scheduler_action_def
-                   tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def is_schedulable_def
+                   tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
                    get_sched_context_def get_object_def thread_get_def)
 
 lemma get_sched_context_inv[wp]: "\<lbrace>P\<rbrace> get_sched_context sc_ptr \<lbrace>\<lambda>_. P\<rbrace>"
