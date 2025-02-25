@@ -707,25 +707,6 @@ lemma ccorres_case_bools:
    apply (auto simp: P Q)
   done
 
-lemma ccorres_cond_both':
-  assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> Q s \<and> Q' s' \<longrightarrow> P = (s' \<in> P')"
-  and     ac: "P \<Longrightarrow> ccorres_underlying sr G r xf arrel axf R R' hs a c"
-  and     bd: "\<not> P \<Longrightarrow> ccorres_underlying sr G r xf arrel axf U U' hs b d"
-  shows  "ccorres_underlying sr G r xf arrel axf
-          (Q and (\<lambda>s. P \<longrightarrow> R s) and (\<lambda>s. \<not> P \<longrightarrow> U s))
-          (Collect Q' \<inter> {s. (s \<in> P' \<longrightarrow> s \<in> R') \<and> (s \<notin> P' \<longrightarrow> s \<in> U')})
-          hs
-          (if P then a else b) (Cond P' c d)"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_if_lhs)
-    apply (rule ccorres_cond_true)
-    apply (erule ac)
-   apply (rule ccorres_cond_false)
-   apply (erule bd)
-  apply clarsimp
-  apply (frule abs[rule_format, OF conjI], simp+)
-  done
-
 lemma pageBitsForSize_32 [simp]:
   "pageBitsForSize sz < 64"
   by (cases sz, auto simp: bit_simps)
