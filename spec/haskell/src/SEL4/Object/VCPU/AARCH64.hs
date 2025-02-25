@@ -206,18 +206,26 @@ invokeVCPUWriteReg vcpuPtr reg val = do
 
 {- VCPU: inject IRQ -}
 
+-- bit position of type field in virq bitfield struct
+virqTypeShift = if config_ARM_GIC_V3 then 62 else 28
+
+-- bit position of eoiirqen field in virq bitfield struct
+eoiirqenShift = if config_ARM_GIC_V3 then 32+9 else 19
+
 -- analogous to virq_virq_pending_new in C, with virqEOIIRQEN set
 makeVIRQ :: Word -> Word -> Word -> VIRQ
 makeVIRQ grp prio irq =
-    ((grp .&. 1) `shiftL` groupShift) .|. ((prio .&. 0x1F) `shiftL` prioShift) .|.
-    (irq .&. 0x3FF) .|. irqPending .|. eoiirqen
-    where groupShift = 30
-          prioShift = 23
-          irqPending = bit 28
-          eoiirqen = bit 19
+    ((grp .&. 1) `shiftL` groupShift) .|.((prio .&. prioMask) `shiftL` prioShift) .|.
+    (irq .&. irqMask) .|. irqPending .|. eoiirqen
+    where groupShift = if config_ARM_GIC_V3 then 60 else 30
+          prioShift = if config_ARM_GIC_V3 then 48 else 23
+          irqPending = bit virqTypeShift
+          eoiirqen = bit eoiirqenShift
+          irqMask = mask (if config_ARM_GIC_V3 then 32 else 10)
+          prioMask = mask (if config_ARM_GIC_V3 then 8 else 5)
 
 virqType :: Word -> Int
-virqType virq = fromIntegral $ (virq `shiftR` 28) .&. 3
+virqType virq = fromIntegral $ (virq `shiftR` virqTypeShift) .&. 3
 
 -- combination of virq_get_virqType and virq_virq_active
 isVIRQActive :: VIRQ -> Bool
@@ -229,7 +237,8 @@ virqSetEOIIRQEN :: VIRQ -> Word -> VIRQ
 virqSetEOIIRQEN virq v =
     if virqType virq == 3
     then virq
-    else (virq .&. complement 0x80000) .|. ((v `shiftL` 19) .&. 0x80000)
+    else (virq .&. complement (bit eoiirqenShift)) .|.
+         ((v `shiftL` eoiirqenShift) .&. bit eoiirqenShift)
 
 decodeVCPUInjectIRQ :: [Word] -> ArchCapability ->
         KernelF SyscallError ArchInv.Invocation

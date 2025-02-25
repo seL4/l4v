@@ -624,7 +624,7 @@ lemma carch_state_to_H_correct:
    apply (simp add: ccur_vcpu_to_H_correct)
   apply (rule conjI)
   using valid[simplified valid_arch_state'_def]
-   apply (clarsimp simp: max_armKSGICVCPUNumListRegs_def unat_of_nat_eq)
+   apply (clarsimp simp: max_armKSGICVCPUNumListRegs_val unat_of_nat_eq)
   apply (simp add: pt_t)
   done
 
@@ -1018,7 +1018,7 @@ lemma cpspace_vcpu_relation_unique:
    apply clarsimp
    apply (rule ext)
    apply (rename_tac r)
-   apply (case_tac "64 \<le> r"; simp)
+   apply (case_tac "max_armKSGICVCPUNumListRegs \<le> r"; simp)
   apply (rule conjI)
    apply (rule ext, blast)
   apply (rule conjI, blast)

@@ -37,7 +37,9 @@ context Arch begin arch_global_naming (H)
   enableFpuEL01 \
   getFAR getDFSR getIFSR getHSR setHCR getESR  getSCTLR setSCTLR \
   addressTranslateS1 \
-  readVCPUHardwareReg writeVCPUHardwareReg vcpuBits
+  readVCPUHardwareReg writeVCPUHardwareReg vcpuBits \
+  config_DISABLE_WFI_WFE_TRAPS \
+  config_ARM_GIC_V3
 
 end
 

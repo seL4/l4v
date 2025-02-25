@@ -1564,7 +1564,10 @@ lemma virq_virq_active_set_virqEOIIRQEN_spec':
   apply (case_tac virq)
   apply clarsimp
   apply (rule array_ext)
-  apply (clarsimp simp: virq_get_tag_def virq_tag_defs mask_def virq_type_def split: if_split)
+  (* unfold config to match up with bitfield gen *)
+  apply (clarsimp simp: virq_get_tag_def virq_tag_defs mask_def virq_type_def
+                        virq_type_shift_def eoiirqen_shift_def Kernel_Config.config_ARM_GIC_V3_def
+                  split: if_split)
   done
 
 lemma virq_virq_invalid_set_virqEOIIRQEN_spec':
@@ -1577,7 +1580,10 @@ lemma virq_virq_invalid_set_virqEOIIRQEN_spec':
   apply (case_tac virq)
   apply clarsimp
   apply (rule array_ext)
-  apply (clarsimp simp: virq_get_tag_def virq_tag_defs mask_def virq_type_def split: if_split)
+  (* unfold config to match up with bitfield gen *)
+  apply (clarsimp simp: virq_get_tag_def virq_tag_defs mask_def virq_type_def
+                        virq_type_shift_def eoiirqen_shift_def Kernel_Config.config_ARM_GIC_V3_def
+                  split: if_split)
   done
 
 lemma virq_virq_pending_set_virqEOIIRQEN_spec':
@@ -1590,16 +1596,10 @@ lemma virq_virq_pending_set_virqEOIIRQEN_spec':
   apply (case_tac virq)
   apply clarsimp
   apply (rule array_ext)
-  apply (clarsimp simp: virq_get_tag_def virq_tag_defs mask_def virq_type_def split: if_split)
-  done
-
-lemma gic_vcpu_num_list_regs_cross_over:
-  "\<lbrakk> of_nat (armKSGICVCPUNumListRegs (ksArchState s)) = gic_vcpu_num_list_regs_' t;
-     valid_arch_state' s \<rbrakk>
-   \<Longrightarrow> gic_vcpu_num_list_regs_' t \<le> 0x3F"
-  apply (drule sym, simp)
-  apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
-  apply (clarsimp simp: word_le_nat_alt unat_of_nat)
+  (* unfold config to match up with bitfield gen *)
+  apply (clarsimp simp: virq_get_tag_def virq_tag_defs mask_def virq_type_def
+                        virq_type_shift_def eoiirqen_shift_def Kernel_Config.config_ARM_GIC_V3_def
+                  split: if_split)
   done
 
 lemma virqSetEOIIRQEN_id:
@@ -1608,13 +1608,15 @@ lemma virqSetEOIIRQEN_id:
      virq_get_tag (virq_C (ARRAY _. idx)) \<noteq> scast virq_virq_invalid \<rbrakk>
     \<Longrightarrow> virqSetEOIIRQEN idx 0 = idx"
   apply (clarsimp simp: AARCH64_A.virqSetEOIIRQEN_def virq_get_tag_def virq_tag_defs mask_def
-                        virq_type_def
+                        virq_type_def eoiirqen_shift_def
                   split: if_split)
-  apply (rule_tac x="idx >> 28" in two_bits_cases; simp)
+  (* unfold config to match up with bitfield gen *)
+  apply (rule_tac x="idx >> virq_type_shift" in two_bits_cases;
+         simp add: virq_type_shift_def Kernel_Config.config_ARM_GIC_V3_def)
   done
 
 lemma vgicUpdateLR_ccorres_armHSCurVCPU:
-  "\<lbrakk> v' = v ; n' = n ; n \<le> 63 \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> v' = v ; n' = n ; n < max_armKSGICVCPUNumListRegs \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc
        (\<lambda>s. (\<exists>active. armHSCurVCPU (ksArchState s) = Some (vcpuptr,active) \<and>
                       vcpu_at' vcpuptr s))
@@ -1653,8 +1655,12 @@ lemma vgicUpdateLR_ccorres_armHSCurVCPU:
                             typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
       apply (erule (1) cmap_relation_updI
              ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def cvcpu_vppi_masked_relation_def
+                        simp del: fun_upd_apply
              ; (rule refl)?)
-      apply (fastforce simp: virq_to_H_def split: if_split)
+      (* needs max_armKSGICVCPUNumListRegs_val so it can prove CARD side condition in
+         simp rule Arrays.index_update2 *)
+      apply (rule conjI, clarsimp simp: max_armKSGICVCPUNumListRegs_val split: if_split)
+      apply (fastforce split: if_split)
      apply (clarsimp simp add: objBits_simps bit_simps)+
   apply (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def split: option.splits)
   done
@@ -1664,6 +1670,12 @@ definition
   eisr_calc :: "32 word \<Rightarrow> 32 word \<Rightarrow> nat"
 where
   "eisr_calc eisr0 eisr1 \<equiv> if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1 + 32"
+
+(* This lives here in the woods, because we don't want it to be widely used.
+   It is only for meant for matching against the corrsponding numeral in C. *)
+schematic_goal max_armKSGICVCPUNumListRegs_int_val:
+  "int max_armKSGICVCPUNumListRegs = numeral ?n"
+  by (simp add: max_armKSGICVCPUNumListRegs_val)
 
 lemma ccorres_vgicMaintenance:
   notes Collect_const[simp del]
@@ -1763,15 +1775,6 @@ proof -
     using word_ctz_le[of x]
     by (simp add: signed_of_nat signed_take_bit_int_eq_self)
 
-  have sint_int_ctz_ge_0:
-    "0 \<le> sint (word_of_nat (word_ctz x) :: int_word)" for x :: "32 word"
-    using word_ctz_le[of x]
-    by (simp add: signed_of_nat bit_iff_odd)
-
-  have sint_int_ctz_less_32:
-    "x \<noteq> 0 \<Longrightarrow> sint (word_of_nat (word_ctz x) :: int_word) < 32" for x :: "32 word"
-    by (drule word_ctz_less, simp add: signed_of_nat signed_take_bit_int_eq_self)
-
   have unat_of_nat_ctz_plus_32s:
     "unat (of_nat (word_ctz w) + (0x20 :: int_word)) = word_ctz w + 32" for w :: "32 word"
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
@@ -1782,18 +1785,30 @@ proof -
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_mw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
-  have eisr_calc_le:
-    "eisr0 = 0 \<longrightarrow> eisr1 \<noteq> 0
-     \<Longrightarrow> eisr_calc eisr0 eisr1 \<le> 63"
-    for eisr0 and eisr1
-    using word_ctz_le[where w=eisr0]  word_ctz_less[where w=eisr1]
-    by (clarsimp simp: eisr_calc_def split: if_splits)
-
   have of_nat_word_ctz_0x21helper:
     "0x21 + word_of_nat (word_ctz w) \<noteq> (0 :: int_word)" for w :: "32 word"
     apply (subst unat_arith_simps, simp)
     apply (subst unat_add_lem'; clarsimp simp: unat_of_nat_ctz_smw)
     using word_ctz_le[where w=w, simplified]
+    by simp
+
+  have maxListRegs_unat_id:
+    "\<And>n. n < max_armKSGICVCPUNumListRegs \<Longrightarrow> unat (of_nat n :: machine_word) = n"
+    by (simp add: max_armKSGICVCPUNumListRegs_val unat_of_nat)
+
+  have maxListRegs_sint_ge_0:
+    "\<And>n. n < max_armKSGICVCPUNumListRegs \<Longrightarrow> 0 \<le> sint (word_of_nat n :: int_word)"
+    by (simp add: max_armKSGICVCPUNumListRegs_val int_eq_sint)
+
+  have maxListRegs_sint_less:
+    "\<And>n. n < max_armKSGICVCPUNumListRegs \<Longrightarrow>
+          sint (word_of_nat n :: int_word) < int max_armKSGICVCPUNumListRegs"
+    by (simp add: max_armKSGICVCPUNumListRegs_val int_eq_sint)
+
+  (* needs "simp del: of_nat_add" when it is used, because rhs will loop otherwise *)
+  have of_nat_ctz_plus_32s:
+    "(of_nat (word_ctz w) + 0x20 :: int_word) = (of_nat (word_ctz w + 32) :: int_word)"
+    for w :: "32 word"
     by simp
 
   show ?thesis
@@ -1826,6 +1841,7 @@ proof -
        apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_misr_ccorres)
         apply (rule ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState[simplified comp_def],
                rename_tac num_list_regs)
+        apply (rule_tac P="num_list_regs < max_armKSGICVCPUNumListRegs" in ccorres_gen_asm)
         apply clarsimp
         apply (rule ccorres_Cond_rhs_Seq ; (clarsimp simp: vgicHCREN_def))
          apply (rule ccorres_rhs_assoc)+
@@ -1850,7 +1866,7 @@ proof -
           apply (simp add: if_to_top_of_bind)
           apply (rule_tac C'="{s. eisr0 = 0 \<and> eisr1 = 0
                                    \<or> num_list_regs \<le> eisr_calc eisr0 eisr1}"
-                     and Q="\<lambda>s. num_list_regs \<le> 63"
+                     and Q="\<lambda>s. num_list_regs < max_armKSGICVCPUNumListRegs"
                      and Q'="{s. gic_vcpu_num_list_regs_' (globals s) = of_nat num_list_regs}"
                      in ccorres_rewrite_cond_sr_Seq)
            apply clarsimp
@@ -1859,7 +1875,8 @@ proof -
       by (clarsimp split: if_splits simp: eisr_calc_def word_le_nat_alt unat_of_nat_eq
                                           of_nat_eq_signed_scast of_nat_word_ctz_0x21helper
                                           ctz_add_0x20_int_mw_eq scast_int_mw_ctz_eq
-                                          ctz_add_0x20_unat_mw_eq less_trans[OF word_ctz_less])
+                                          ctz_add_0x20_unat_mw_eq less_trans[OF word_ctz_less]
+                                          maxListRegs_unat_id)
           apply (rule ccorres_Cond_rhs_Seq)
 
            (* check if current thread is runnable, if so handle fault *)
@@ -1929,9 +1946,8 @@ proof -
                    (* active *)
                    apply (rule ccorres_move_const_guards)+
                    apply (rule vgicUpdateLR_ccorres_armHSCurVCPU ; clarsimp simp: word_ctz_le)
-                    apply (fastforce dest: word_ctz_less
-                                     simp: eisr_calc_def unat_of_nat_ctz_smw unat_of_nat_ctz_plus_32s)
-                   apply (erule eisr_calc_le)
+                   apply (fastforce dest: word_ctz_less
+                                    simp: eisr_calc_def unat_of_nat_ctz_smw unat_of_nat_ctz_plus_32s)
                   apply ceqv
 
                  (* check if current thread is runnable, if so handle fault *)
@@ -2014,13 +2030,14 @@ proof -
        apply (rule_tac Q'="\<lambda>_ s. ?PRE s \<and> armHSCurVCPU (ksArchState s) = Some (vcpuPtr, active)" in hoare_post_imp)
         apply clarsimp
     subgoal for _ _ eisr0 eisr1
-      apply (clarsimp simp: invs'_HScurVCPU_vcpu_at' valid_arch_state'_def max_armKSGICVCPUNumListRegs_def dest!: invs_arch_state')
-      using sint_ctz[where x=eisr0, simplified]
-      apply (clarsimp simp: word_sless_alt word_sle_eq sint_int_ctz_ge_0 split: if_split)
-      using sint_ctz[where x=eisr1, simplified]
-      apply (subst signed_arith_sint; clarsimp simp: word_size; simp add: sint_int_ctz_ge_0)
-      using sint_ctz[where x=eisr1, simplified]
-      apply (subst signed_arith_sint; clarsimp simp: word_size; simp add: sint_int_ctz_less_32)
+      apply (clarsimp simp: invs'_HScurVCPU_vcpu_at' valid_arch_state'_def dest!: invs_arch_state')
+      apply (clarsimp simp: eisr_calc_def not_le word_sless_alt word_sle_eq)
+      (* fold max_armKSGICVCPUNumListRegs_int_val to prevent arithmetic with the "+ 32" term *)
+      apply (fold max_armKSGICVCPUNumListRegs_int_val)
+      apply (drule (1) less_trans)
+      apply (auto simp: maxListRegs_sint_ge_0 maxListRegs_sint_less of_nat_ctz_plus_32s
+                  simp del: of_nat_add
+                  split: if_split)
       done
        apply clarsimp
        apply wpsimp+
