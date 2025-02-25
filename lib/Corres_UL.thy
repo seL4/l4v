@@ -105,6 +105,17 @@ lemma corres_gets[simp, corres_no_simp]:
   (\<forall> s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<longrightarrow> r (a s) (b s'))"
   by (simp add: simpler_gets_def corres_singleton)
 
+lemma corres_gets_return:
+  "corres_underlying sr nf nf' r P P' (gets f) (return v)
+   = (\<forall>s s'. ((s, s') \<in> sr \<and> P s \<and> P' s') \<longrightarrow> r (f s) v)"
+  by (fastforce simp: corres_underlying_def gets_def get_def return_def bind_def)
+
+text \<open>A safer non-rewrite version of @{thm corres_gets_return} \<close>
+lemma corres_gets_return_trivial:
+  "(\<And>s s'. \<lbrakk>(s, s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> r (f s) v)
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' (gets f) (return v)"
+  by (fastforce simp: corres_gets_return)
+
 lemma corres_throwError[simp, corres_no_simp]:
   "corres_underlying sr nf nf' r P P' (throwError a) (throwError b) =
    ((\<exists>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr) \<longrightarrow> r (Inl a) (Inl b))"
