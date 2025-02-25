@@ -905,11 +905,24 @@ qed
 lemma corres_inst: "corres_underlying sr nf nf' r P P' f g \<Longrightarrow> corres_underlying sr nf nf' r P P' f g" .
 
 lemma corres_assert_opt_assume:
-  assumes "\<And>x. P' = Some x \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g x)"
-  assumes "\<And>s. Q s \<Longrightarrow> P' \<noteq> None"
-  shows "corres_underlying sr nf nf' r P Q f (assert_opt P' >>= g)" using assms
-  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def
-                 corres_underlying_def split: option.splits)
+  "\<lbrakk>\<And>x. opt = Some x \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g x); \<And>s. Q s \<Longrightarrow> opt \<noteq> None\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P Q f (assert_opt opt >>= g)"
+  by (fastforce simp: bind_def return_def corres_underlying_def)
+
+lemma corres_assert_opt_assume':
+  "(\<And>x. opt = Some x \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g x))
+   \<Longrightarrow> corres_underlying sr nf nf' r P (Q and K (opt \<noteq> None)) f (assert_opt opt >>= g)"
+  by (fastforce intro: corres_gen_asm2 stronger_corres_guard_imp corres_assert_opt_assume)
+
+lemma corres_assert_opt_assume_lhs:
+  "\<lbrakk>\<And>x. opt = Some x \<Longrightarrow> corres_underlying sr nf nf' r P Q (f x) g; \<And>s. P s \<Longrightarrow> opt \<noteq> None\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P Q (assert_opt opt >>= f) g"
+  by (fastforce simp: bind_def return_def corres_underlying_def)
+
+lemma corres_assert_opt_assume_lhs':
+  "(\<And>x. opt = Some x \<Longrightarrow> corres_underlying sr nf nf' r P Q (f x) g)
+   \<Longrightarrow> corres_underlying sr nf nf' r (P and K (opt \<noteq> None)) Q (assert_opt opt >>= f) g"
+  by (fastforce intro: corres_gen_asm stronger_corres_guard_imp corres_assert_opt_assume_lhs)
 
 lemma corres_assert_opt[corres]:
   "r x x' \<Longrightarrow>
