@@ -1019,6 +1019,10 @@ lemma gets_the_wp': (* FIXME: should prefer this one in [wp] *)
   unfolding gets_the_def
   by (wpsimp wp: bind_wp_fwd gets_wp assert_opt_wp)
 
+lemma gets_the_sp:
+  "\<lbrace>Q\<rbrace> gets_the f \<lbrace>\<lambda>rv s. f s = Some rv \<and> Q s\<rbrace>"
+  by (wpsimp wp: gets_the_wp')
+
 lemma gets_map_wp:
   "\<lbrace>\<lambda>s. f s p \<noteq> None \<longrightarrow> Q (the (f s p)) s\<rbrace> gets_map f p \<lbrace>Q\<rbrace>"
   unfolding gets_map_def

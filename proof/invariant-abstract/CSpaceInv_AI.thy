@@ -76,10 +76,6 @@ lemma get_bound_notification_inv[simp]:
   apply (wp, simp)
   done
 
-lemma gets_the_sp:
-  "\<lbrace> Q \<rbrace> gets_the f \<lbrace>\<lambda>rv s. f s = Some rv \<and> Q s\<rbrace>"
-  by wpsimp
-
 lemma gets_the_get_tcb_sp:
   "\<lbrace> Q \<rbrace> gets_the (get_tcb thread) \<lbrace>\<lambda>t. Q and ko_at (TCB t) thread\<rbrace>"
   by wpsimp
