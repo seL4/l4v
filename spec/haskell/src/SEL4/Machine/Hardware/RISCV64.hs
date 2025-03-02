@@ -93,7 +93,7 @@ pptrTop :: VPtr
 pptrTop = VPtr 0xFFFFFFFF80000000
 
 kernelELFPAddrBase :: PAddr
-kernelELFPAddrBase = toPAddr $ (fromPAddr Platform.physBase) + 0x4000000
+kernelELFPAddrBase = Platform.physBase
 
 kernelELFBase :: VPtr
 kernelELFBase = VPtr $ fromVPtr pptrTop + (fromPAddr kernelELFPAddrBase .&. (mask 30))
