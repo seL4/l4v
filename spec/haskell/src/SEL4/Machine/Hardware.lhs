@@ -66,7 +66,7 @@ Depending on the architecture, real physical addresses may be the same as the ad
 
 An interrupt request from an external device, or from the CPU's timer, is represented by the type "IRQ".
 
-> newtype IRQ = IRQ Arch.IRQ
+> newtype IRQ = IRQ { theIRQ :: Arch.IRQ }
 >     deriving (Enum, Bounded, Ord, Ix, Eq, Show)
 
 The maximum and minimum IRQ are given explicit constant names here. In Haskell, these are extracted from instantiation of IRQ into the Bounded class. In the formalisation, these constants are generated and defined in Kernel_Config.thy.

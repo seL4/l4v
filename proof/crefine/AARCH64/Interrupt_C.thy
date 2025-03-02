@@ -15,9 +15,17 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
   "ccorres dc xfdc
        invs' (UNIV \<inter> {s. irq_' s = ucast irq}) []
      (InterruptDecls_H.invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
-  apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
+  (* C has "if (config_set(CONFIG_ARM_GIC_V3_SUPPORT))", which will render as IF 0 = 1 or IF 1 = 1.
+     Pretend we don't know what the result of that is and make a case distinction that matches
+     the condition up with config_ARM_GIC_V3. *)
+  apply (cinit (no_ccorres_rewrite)
+               lift: irq_'
+               simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def dmo_if)
+   apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
+     apply (simp add: Kernel_Config.config_ARM_GIC_V3_def) (* match C condition *)
+    apply (ctac add: deactivateInterrupt_ccorres)
    apply (ctac add: maskInterrupt_ccorres)
-  apply simp
+  apply (simp add: theIRQ_def)
   done
 
 lemma getIRQSlot_ccorres:

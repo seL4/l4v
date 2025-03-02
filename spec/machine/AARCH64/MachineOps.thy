@@ -92,8 +92,13 @@ definition debugPrint :: "unit list \<Rightarrow> unit machine_monad" where
 
 subsection \<open>Interrupt Controller\<close>
 
+(* Interface function for the Haskell IRQ wrapper type *)
 definition IRQ :: "irq \<Rightarrow> irq" where
   "IRQ \<equiv> id"
+
+(* Interface function for the Haskell IRQ wrapper type *)
+definition theIRQ :: "irq \<Rightarrow> irq" where
+  "theIRQ \<equiv> id"
 
 consts' setIRQTrigger_impl :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_rest_monad"
 definition setIRQTrigger :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
@@ -130,6 +135,14 @@ definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad" where
 
 definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
+
+text \<open>Only exists on GICv3 platforms. We model interrupt deactivation as unmasking
+  for the purposes of the interrupt oracle.\<close>
+definition deactivateInterrupt :: "irq \<Rightarrow> unit machine_monad" where
+  "deactivateInterrupt irq \<equiv> do
+     assert config_ARM_GIC_V3;
+     maskInterrupt False irq
+   od"
 
 
 subsection "User Monad and Registers"

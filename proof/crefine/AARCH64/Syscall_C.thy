@@ -2229,6 +2229,24 @@ lemma ccorres_handleReservedIRQ:
                   simp flip: word_unat.Rep_inject split: if_splits)
   done
 
+(* Because of a case distinction, this proof occurs multiple times in handleInterrupt_ccorres below.
+   The proof is carefully manual to match up the C expression
+   "if (!config_set(CONFIG_ARM_GIC_V3_SUPPORT))", which renders as IF False or IF True in Simpl,
+   with config_ARM_GIC_V3 from the spec side. *)
+method maybe_maskInterrupt_before_ack =
+    simp only: maskIrqSignal_def when_def,
+    rule ccorres_cond_seq,
+    rule ccorres_cond_both[where P="\<lambda>_. \<not>config_ARM_GIC_V3" and R=\<top>],
+       simp add: Kernel_Config.config_ARM_GIC_V3_def, (* match up !config_set(..) condition *)
+      rule ccorres_gen_asm[where P="\<not>config_ARM_GIC_V3"],
+      simp,
+      ctac (no_vcg) add: maskInterrupt_ccorres,
+       ctac add: ackInterrupt_ccorres,
+      wp,
+     rule ccorres_gen_asm[where P="config_ARM_GIC_V3"],
+     simp,
+     ctac add: ackInterrupt_ccorres
+
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
@@ -2236,19 +2254,20 @@ lemma handleInterrupt_ccorres:
      hs
      (handleInterrupt irq)
      (Call handleInterrupt_'proc)"
-  apply (cinit lift: irq_' cong: call_ignore_cong)
+  (* Use (no_ccorres_rewrite) to avoid rewriting the static condition coming out of
+     "if (!config_set(CONFIG_ARM_GIC_V3_SUPPORT))" in C *)
+  apply (cinit (no_ccorres_rewrite) lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add:  Kernel_C_maxIRQ del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
     apply (subst doMachineOp_bind)
       apply (rule maskInterrupt_empty_fail)
      apply (rule ackInterrupt_empty_fail)
+    apply ccorres_rewrite
     apply (ctac add: maskInterrupt_ccorres)
       apply (subst bind_return_unit[where f="doMachineOp (ackInterrupt irq)"])
       apply (ctac add: ackInterrupt_ccorres)
-        apply (rule ccorres_split_throws)
-         apply (rule ccorres_return_void_C)
-        apply vcg
+        apply (rule ccorres_return_void_C)
        apply wp
       apply (vcg exspec=ackInterrupt_modifies)
      apply wp
@@ -2285,31 +2304,26 @@ lemma handleInterrupt_ccorres:
          apply csymbr
          apply csymbr
          apply (ctac (no_vcg) add: sendSignal_ccorres)
-          apply (simp add: maskIrqSignal_def)
-          apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-           apply (ctac add: ackInterrupt_ccorres)
-          apply wp+
+          apply maybe_maskInterrupt_before_ack
+         apply clarsimp
+         apply wp
         apply (simp del: Collect_const)
         apply (rule ccorres_cond_true_seq)
         apply (rule ccorres_rhs_assoc)+
         apply csymbr+
         apply (rule ccorres_cond_false_seq)
-        apply (simp add: maskIrqSignal_def)
-        apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-         apply (ctac add: ackInterrupt_ccorres)
-        apply wp
+        apply (rule ccorres_seq_skip[THEN iffD2])
+        apply maybe_maskInterrupt_before_ack
        apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0 \<and> cap_get_tag cap \<noteq> scast cap_notification_cap}" in ccorres_inst)
        apply (clarsimp simp: isCap_simps simp del: Collect_const)
        apply (case_tac rva, simp_all del: Collect_const)[1]
                   prefer 3
                   apply metis
-                 apply ((simp add: maskIrqSignal_def,
-                        rule ccorres_guard_imp2,
+                 apply ((rule ccorres_guard_imp2,
                         rule ccorres_cond_false_seq, simp,
-                        rule ccorres_cond_false_seq, simp,
-                        ctac (no_vcg) add: maskInterrupt_ccorres,
-                        ctac (no_vcg) add: ackInterrupt_ccorres,
-                        wp, simp)+)
+                        rule ccorres_cond_false_seq, rule ccorres_seq_skip[THEN iffD2],
+                        maybe_maskInterrupt_before_ack,
+                        simp)+)[11]
       apply (wpsimp wp: getSlotCap_wp)
      apply simp
      apply vcg

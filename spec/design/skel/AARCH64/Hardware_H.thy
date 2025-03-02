@@ -15,7 +15,7 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
   NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
-  loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt \
+  loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt deactivateInterrupt \
   configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory \
   clearMemoryVM initMemory freeMemory setHardwareASID wordFromPDE wordFromPTE \
   VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize toPAddr \
