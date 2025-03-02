@@ -334,16 +334,16 @@ lemma valid_globals_ex_cte_cap_irq:
   apply (simp add: global_refs'_def cte_level_bits_def cteSizeBits_def shiftl_t2n mult.commute mult.left_commute)
   done
 
-lemma no_fail_plic_complete_claim [simp, wp]:
-  "no_fail \<top> (AARCH64.plic_complete_claim irw)"
-  unfolding AARCH64.plic_complete_claim_def
-  by (rule no_fail_machine_op_lift)
+lemma no_fail_deactivateInterrupt[wp, simp]:
+  "config_ARM_GIC_V3 \<Longrightarrow> no_fail \<top> (deactivateInterrupt irq)"
+  unfolding deactivateInterrupt_def
+  by wpsimp
 
 lemma arch_invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc \<top> \<top> (arch_invoke_irq_handler i) (AARCH64_H.invokeIRQHandler i')"
-  apply (cases i; clarsimp simp: AARCH64_H.invokeIRQHandler_def)
-  apply (rule corres_machine_op, rule corres_Id; simp?)
+  apply (cases i; clarsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def)
+  apply (intro conjI impI; rule corres_machine_op, rule corres_Id; simp?)
   done
 
 
@@ -429,9 +429,16 @@ lemma doMachineOp_maskInterrupt_False[wp]:
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 
+lemma doMachineOp_deactivateInterrupt[wp]:
+  "\<lbrace> \<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive \<and> config_ARM_GIC_V3 \<rbrace>
+   doMachineOp (deactivateInterrupt irq)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding deactivateInterrupt_def
+  by (cases config_ARM_GIC_V3; wpsimp)
+
 lemma invoke_arch_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> AARCH64_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (cases i; wpsimp simp: AARCH64_H.invokeIRQHandler_def)
+  by (cases i; (wpsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def | rule conjI)+)
 
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>

@@ -62,6 +62,12 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
+(* This function is only implemented on GICv3 configs, hence the precondition *)
+assumes deactivateInterrupt_ccorres:
+  "ccorres dc xfdc (\<lambda>_. config_ARM_GIC_V3) (\<lbrace>\<acute>irq = ucast irq\<rbrace>) []
+           (doMachineOp (deactivateInterrupt irq))
+           (Call deactivateInterrupt_'proc)"
+
 (* This is a simplification until complete FPU handling is added at a future date *)
 assumes fpuThreadDelete_ccorres:
   "ccorres dc xfdc (tcb_at' thread) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs

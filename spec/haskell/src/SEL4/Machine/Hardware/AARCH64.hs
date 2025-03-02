@@ -382,6 +382,9 @@ maskInterrupt maskI irq = do
     cbptr <- ask
     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
+deactivateInterrupt :: IRQ -> MachineMonad ()
+deactivateInterrupt irq = error "Unimplemented - GICv3 machine op"
+
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
 

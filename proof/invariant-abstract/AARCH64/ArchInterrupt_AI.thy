@@ -82,10 +82,10 @@ lemma maskInterrupt_invs_ARCH[Interrupt_AI_assms]:
                          cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
-crunch plic_complete_claim
+crunch plic_complete_claim (* FIXME AARCH64: remove plic_complete_claim *)
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
-lemma dmo_plic_complete_claim[wp]:
+lemma dmo_plic_complete_claim[wp]: (* FIXME AARCH64: remove plic_complete_claim *)
   "do_machine_op (plic_complete_claim irq) \<lbrace>invs\<rbrace>"
   apply (wp dmo_invs)
   apply (auto simp: plic_complete_claim_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
@@ -108,6 +108,14 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_assms]:
 
 crunch set_irq_state
   for valid_global_refs[Interrupt_AI_assms]: "valid_global_refs"
+
+lemma deactivateInterrupt_invs:
+  "\<lbrace>invs and (\<lambda>s. interrupt_states s irq \<noteq> IRQInactive) and K config_ARM_GIC_V3\<rbrace>
+   do_machine_op (deactivateInterrupt irq)
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  unfolding deactivateInterrupt_def
+  by (cases config_ARM_GIC_V3; simp)
+     (wpsimp wp: maskInterrupt_invs)
 
 lemma invoke_irq_handler_invs'[Interrupt_AI_assms]:
   assumes dmo_ex_inv[wp]: "\<And>f. \<lbrace>invs and ex_inv\<rbrace> do_machine_op f \<lbrace>\<lambda>rv::unit. ex_inv\<rbrace>"
@@ -139,8 +147,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_assms]:
    done
   show ?thesis
   apply (cases i, simp_all)
-    apply (wp dmo_plic_complete_claim maskInterrupt_invs)
-    apply simp+
+    apply (rule conjI; wpsimp wp: deactivateInterrupt_invs maskInterrupt_invs)
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)
     apply (wp valid_cap_typ [OF cap_delete_one_typ_at])
