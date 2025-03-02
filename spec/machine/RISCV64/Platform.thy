@@ -116,7 +116,7 @@ lemma "kdevBase = 0xFFFFFFFFC0000000" (* Sanity check with C *)
 
 definition kernelELFPAddrBase :: machine_word
   where
-  "kernelELFPAddrBase = physBase + 0x4000000"
+  "kernelELFPAddrBase = physBase"
 
 definition pptrTop :: machine_word
   where
