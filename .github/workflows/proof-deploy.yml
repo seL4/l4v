@@ -55,12 +55,18 @@ jobs:
         num_domains: ['1', '']
         plat: ['']
         include:
+          - arch: ARM
+            plat: exynos4
+          - arch: ARM
+            plat: hikey
           - arch: ARM_HYP
             plat: exynos5
           - arch: AARCH64
             plat: zynqmp
           - arch: AARCH64
             plat: bcm2711
+          - arch: AARCH64
+            plat: imx8mm
     # test only most recent push:
     concurrency:
       group: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
