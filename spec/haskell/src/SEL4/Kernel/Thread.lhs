@@ -368,6 +368,10 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 
 > schedule :: Kernel ()
 > schedule = do
+>     stateAssert valid_idle'_asrt
+>         "Assert that `valid_idle' s` holds"
+>     stateAssert valid_domain_list'_asrt
+>         "Assert that `valid_domain_list'` holds"
 >     stateAssert sch_act_wf_asrt
 >         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >     stateAssert cur_tcb'_asrt
@@ -375,7 +379,6 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 >     awaken
 >     checkDomainTime
 >     curThread <- getCurThread
->     getSchedulable <- getSchedulable curThread
 >     action <- getSchedulerAction
 >     case action of
 
@@ -387,11 +390,12 @@ An IPC operation may request that the scheduler switch to a specific thread.
 We check here that the candidate has the highest priority in the system.
 
 >         SwitchToThread candidate -> do
->             when getSchedulable (tcbSchedEnqueue curThread)
+>             isSchedulable <- getSchedulable curThread
+>             when isSchedulable (tcbSchedEnqueue curThread)
 >
 >             idleThread <- getIdleThread
 >             targetPrio <- threadGet tcbPriority candidate
->             curPrio <- if (curThread /= idleThread) then (threadGet tcbPriority curThread) else (return 0)
+>             curPrio <- threadGet tcbPriority curThread
 >             fastfail <- scheduleSwitchThreadFastfail curThread idleThread curPrio targetPrio
 >
 >             curDom <- curDomain
@@ -402,7 +406,7 @@ We check here that the candidate has the highest priority in the system.
 >                     tcbSchedEnqueue candidate
 >                     setSchedulerAction ChooseNewThread
 >                     scheduleChooseNewThread
->                 else if getSchedulable && curPrio == targetPrio
+>                 else if isSchedulable && curPrio == targetPrio
 >                     then do
 >                         tcbSchedAppend candidate
 >                         setSchedulerAction ChooseNewThread
@@ -414,7 +418,8 @@ We check here that the candidate has the highest priority in the system.
 If the current thread is no longer runnable, has used its entire timeslice, an IPC cancellation has potentially woken multiple higher priority threads, or the domain timeslice is exhausted, then we scan the scheduler queues to choose a new thread. In the last case, we switch to the next domain beforehand.
 
 >         ChooseNewThread -> do
->             when getSchedulable $ tcbSchedEnqueue curThread
+>             isSchedulable <- getSchedulable curThread
+>             when isSchedulable $ tcbSchedEnqueue curThread
 >             scheduleChooseNewThread
 
 >     scAndTimer

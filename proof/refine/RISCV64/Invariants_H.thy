@@ -1365,6 +1365,12 @@ defs sch_act_sane_asrt_def:
 defs ct_not_ksQ_asrt_def:
   "ct_not_ksQ_asrt \<equiv> \<lambda>s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s"
 
+(* abstract and haskell have identical domain list fields *)
+abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" where
+  "valid_domain_list' \<equiv> \<lambda>s. valid_domain_list_2 (ksDomSchedule s)"
+
+lemmas valid_domain_list'_def = valid_domain_list_2_def
+
 
 subsection "Derived concepts"
 

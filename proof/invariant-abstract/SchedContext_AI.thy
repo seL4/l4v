@@ -817,11 +817,9 @@ lemma commit_times_invs_helper:
 lemma get_sc_active_sp:
   "\<lbrace>P\<rbrace>
    get_sc_active sc_ptr
-   \<lbrace>\<lambda>rv s. P s
-           \<and> (\<exists>sc n. ko_at (kernel_object.SchedContext sc n) sc_ptr s \<and> rv = (0 < sc_refill_max sc))\<rbrace>"
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s \<and> rv = (0 < sc_refill_max sc))\<rbrace>"
   apply wpsimp
-  apply (clarsimp simp: obj_at_def active_sc_def)
-  done
+  by (clarsimp simp: obj_at_def active_sc_def)
 
 lemma commit_time_invs:
   "commit_time \<lbrace>invs\<rbrace>"

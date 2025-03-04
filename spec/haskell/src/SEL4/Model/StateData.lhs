@@ -547,3 +547,8 @@ An assert that will say that priority_ordered' holds of the given list
 
 > priority_ordered'_asrt :: [PPtr TCB] -> KernelState -> Bool
 > priority_ordered'_asrt _ _ = True
+
+An assert that will say that valid_domain_list' holds
+
+> valid_domain_list'_asrt :: KernelState -> Bool
+> valid_domain_list'_asrt _ = True

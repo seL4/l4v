@@ -3081,6 +3081,9 @@ lemma no_ofail_readSchedulable[wp]:
   apply (fastforce dest: ko_at'_valid_tcbs'_valid_tcb' simp: valid_tcb'_def valid_bound_obj'_def)
   done
 
+lemmas no_fail_getSchedulable[wp] =
+  no_ofail_gets_the[OF no_ofail_readSchedulable, simplified getSchedulable_def[symmetric]]
+
 lemma runnable_tsr:
   "thread_state_relation ts ts' \<Longrightarrow> runnable' ts' = runnable ts"
   by (case_tac ts, auto)
@@ -3146,7 +3149,6 @@ lemma getSchedulable_corres:
    apply (fastforce intro: tcb_at_cross)
   apply (rule corres_bind_return2)
   apply (rule corres_symb_exec_r[OF _ getSchedulable_sp, rotated]; (solves wpsimp)?)
-   apply (wpsimp simp: getSchedulable_def wp: no_ofail_gets_the)
   apply (rule corres_gets_return_trivial)
   apply (fastforce dest: schedulable_schedulable'_eq)
   done

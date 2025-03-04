@@ -438,11 +438,7 @@ crunch nextDomain
 
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
-     (\<lambda>s. invs' s \<and> valid_idle' s
-          \<and> ksSchedulerAction s = ChooseNewThread \<and> ready_or_release' s
-          \<and> valid_domain_list' s
-          \<and> (\<forall>d p. d > maxDomain \<or> p > maxPriority \<longrightarrow> tcbQueueHead (ksReadyQueues s (d, p)) = None)
-          \<and> ksReadyQueues_asrt s)
+     (\<lambda>s. invs' s \<and> valid_idle' s \<and> ksSchedulerAction s = ChooseNewThread \<and> valid_domain_list' s)
      UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
          y \<leftarrow> when (domainTime = 0) nextDomain;
@@ -2285,250 +2281,343 @@ lemma setNextInterrupt_ccorres:
   apply (fastforce simp: obj_at'_def active_sc_at'_def)
   done
 
+lemma ccorres_pre_getReprogramTimer:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. ksReprogramTimer s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. to_bool (ksReprogram_' (globals s)) = rv \<longrightarrow> s \<in> P' rv }
+                          hs (getReprogramTimer >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (simp add: getReprogramTimer_def)
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def getReprogramTimer_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_ksReprogramTimer)
+  done
+
+lemma setSchedulerAction_valid_idle'[wp]:
+  "setSchedulerAction act \<lbrace>valid_idle'\<rbrace>"
+  by wpsimp
+
+lemma setSchedulerAction_valid_domain_list'[wp]:
+  "setSchedulerAction act \<lbrace>valid_domain_list'\<rbrace>"
+  by wpsimp
+
+crunch tcbSchedAppend
+  for valid_idle'[wp]: valid_idle'
+  (ignore: threadSet wp: threadSet_idle')
+
+crunch checkDomainTime, awaken
+  for valid_domain_list'[wp]: valid_domain_list'
+  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (simp: crunch_simps wp: crunch_wps)
+
 lemma schedule_ccorres:
   "ccorres dc xfdc invs' UNIV [] schedule (Call schedule_'proc)"
-sorry (* FIXME RT: schedule_ccorres
   supply Collect_const [simp del]
   supply prio_and_dom_limit_helpers[simp]
-  supply Collect_const_mem [simp]
+  supply sch_act_wf_asrt_def[simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
   supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
          ccorres_IF_True[simp] if_cong[cong]
-  apply (cinit)
-   apply (rule ccorres_pre_getCurThread)
-   apply (rule ccorres_pre_getSchedulerAction)
-   apply wpc
-     (* toplevel case: action is resume current thread *)
-     apply (rule ccorres_cond_false_seq)
-     apply simp
-     apply (rule_tac P=\<top> and P'="{s. ksSchedulerAction_' (globals s) = NULL }" in ccorres_from_vcg)
-     apply (clarsimp simp: return_def split: prod.splits)
-     apply (rule conseqPre, vcg, clarsimp)
-    (* toplevel case: action is choose new thread *)
-    apply (rule ccorres_cond_true_seq)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    (* ct runnable? *)
-    apply (ctac add: isRunnable_ccorres, rename_tac runnable)
-      apply (clarsimp simp: to_bool_def)
-      apply (rule ccorres_split_nothrow_dc)
-         (* enqueue if runnable *)
-         apply (simp add: when_def)
-         apply (rule ccorres_cond[where R=\<top>], clarsimp)
-         apply csymbr
-         apply (ctac add: tcbSchedEnqueue_ccorres)
-         apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-         apply (clarsimp, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
-        apply (rule ccorres_cond_true_seq)
-        (* isolate haskell part before setting thread action *)
-        apply (simp add: scheduleChooseNewThread_def)
-        apply (rule ccorres_lhs_assoc)+
-        apply (rule ccorres_split_nothrow_dc)
-           apply (simp add: bind_assoc)
-           apply (ctac add: scheduleChooseNewThread_ccorres)
-          apply (ctac(no_simp) add: ccorres_setSchedulerAction)
-          apply (wpsimp simp: cscheduler_action_relation_def
-                 | vcg exspec=scheduleChooseNewThread_modifies exspec=tcbSchedEnqueue_modifies)+
-   (* toplevel case: action is switch to candidate *)
-   apply (rename_tac candidate)
-   apply (rule_tac P="\<lambda>s. ksSchedulerAction s = SwitchToThread candidate \<and> invs' s" in ccorres_cross_over_guard)
-   apply (rule ccorres_cond_true_seq)
-   apply (rule ccorres_rhs_assoc)+
-   apply csymbr
-   (* ct runnable? *)
-   apply (ctac add: isRunnable_ccorres, rename_tac runnable runnable')
-     apply (clarsimp simp: to_bool_def)
-     apply (rule ccorres_split_nothrow_dc)
-        (* enqueue if runnable *)
-        apply (simp add: when_def)
-        apply (rule ccorres_cond[where R=\<top>], clarsimp)
-        apply csymbr
-        apply (ctac add: tcbSchedEnqueue_ccorres)
-        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-        apply (clarsimp, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-       apply (rule ccorres_cond_false_seq)
-
-       apply (rule_tac xf'=was_runnable_' in ccorres_abstract, ceqv)
-       apply (rename_tac was_runnable')
-       apply (rule_tac P="was_runnable' = runnable'" in ccorres_gen_asm2, clarsimp)
-       apply (rule ccorres_symb_exec_l3[OF _ git_wp _ empty_fail_getIdleThread], rename_tac it)
-        apply (rule ccorres_pre_threadGet, rename_tac targetPrio)
-        apply (rule ccorres_pre_threadGet, rename_tac curPrio)
-        apply (rule ccorres_rhs_assoc)+
-        apply (rule_tac xf'=candidate_' and val="tcb_ptr_to_ctcb_ptr candidate"
-                 and R="\<lambda>s. ksSchedulerAction s = SwitchToThread candidate" and R'=UNIV
-                 in ccorres_symb_exec_r_known_rv)
+  apply cinit
+   apply (rule ccorres_stateAssert)+
+   apply (ctac (no_vcg) add: awaken_ccorres)
+    apply (ctac (no_vcg) add: checkDomainTime_ccorres)
+     apply (rule ccorres_pre_getCurThread)
+     apply (rule ccorres_pre_getSchedulerAction)
+     apply (rule ccorres_rhs_assoc2)
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+         apply wpc
+           (* toplevel case: action is resume current thread *)
+           apply (rule ccorres_cond_false_seq)
+           apply (rule_tac P="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread"
+                        in ccorres_from_vcg[where P'=UNIV])
+           apply (clarsimp simp: return_def split: prod.splits)
            apply (rule conseqPre, vcg, clarsimp)
-           apply (fastforce dest!: rf_sr_cscheduler_relation simp: cscheduler_action_relation_def)
-          apply ceqv
-         (* split off fastfail calculation *)
-         apply (rule ccorres_rhs_assoc2)
-         apply (rule ccorres_rhs_assoc2)
-         apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'=fastfail_' in ccorres_split_nothrow)
-             apply (clarsimp simp: scheduleSwitchThreadFastfail_def)
-             apply (rule ccorres_cond_seq2[THEN iffD1])
-             apply (rule_tac xf'=ret__int_' and val="from_bool (curThread = it)"
-                      and R="\<lambda>s. it = ksIdleThread s \<and> curThread = ksCurThread s" and R'=UNIV
-                      in ccorres_symb_exec_r_known_rv)
-                apply (rule conseqPre, vcg, fastforce simp: rf_sr_ksCurThread rf_sr_ksIdleThread)
-               apply ceqv
-              apply clarsimp
-              apply (rule ccorres_cond2'[where R=\<top>], fastforce)
-               apply clarsimp
-               apply (rule ccorres_return[where R'=UNIV], clarsimp, vcg)
-              apply (rule_tac P="\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) curThread s
-                                     \<and> curThread = ksCurThread s
-                                     \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = targetPrio) candidate s"
-                       and P'=UNIV in ccorres_from_vcg)
-              apply clarsimp
-              apply (rule conseqPre, vcg)
-              apply (clarsimp simp: return_def cur_tcb'_def rf_sr_ksCurThread)
-              apply (drule (1) obj_at_cslift_tcb)+
-              apply (clarsimp simp: typ_heap_simps ctcb_relation_def split: if_split)
-              apply unat_arith
-              apply clarsimp
-             apply vcg
-            apply ceqv
-           (* fastfail calculation complete *)
-           apply (rename_tac fastfail fastfail')
-           apply (rule ccorres_pre_curDomain)
-           (* rest of the calculation: fastfail \<and> \<not> highest *)
-           apply (rule ccorres_rhs_assoc2)
-           apply (rule_tac r'="\<lambda>hprio rv'. to_bool rv' = (fastfail \<and> \<not>hprio)" and xf'=ret__int_'
-                    in ccorres_split_nothrow)
-               apply (csymbr)
-               apply (clarsimp simp: to_bool_def)
-               apply (rule ccorres_Cond_rhs ; clarsimp)
-                apply (rule ccorres_move_c_guard_tcb)
-                apply (rule ccorres_add_return2)
-                apply (ctac add: isHighestPrio_ccorres, clarsimp)
-                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-                  apply (rule ccorres_return)
-                  apply (rule conseqPre, vcg)
-                  apply (clarsimp simp: to_bool_def)
-                 apply (rule wp_post_taut)
-                apply (vcg exspec=isHighestPrio_modifies)
-               apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0}" in ccorres_from_vcg)
-               apply clarsimp
-               apply (rule conseqPre, vcg)
-               apply (fastforce simp: isHighestPrio_def' gets_def return_def get_def
-                                       Nondet_Monad.bind_def
-                                split: prod.split)
-              apply ceqv
-             apply (clarsimp simp: to_bool_def)
-             (* done with calculation of main acceptance criterion for candidate *)
-             apply (rule ccorres_cond_seq)
-             apply (rule ccorres_cond[where R=\<top>], blast)
-              (* candidate is not the best one, enqueue and choose new thread *)
+           apply (frule rf_sr_sched_action_relation)
+           apply (clarsimp simp: cscheduler_action_relation_def)
+          (* toplevel case: action is choose new thread *)
+          apply (rule ccorres_cond_true_seq)
+          apply (rule ccorres_rhs_assoc)+
+          apply csymbr
+          (* ct runnable? *)
+          apply (ctac add: isSchedulable_ccorres, rename_tac schedulable)
+            apply (clarsimp simp: to_bool_def)
+            apply (rule ccorres_split_nothrow_dc)
+               (* enqueue if runnable *)
+               apply (simp add: when_def)
+               apply (rule ccorres_cond[where R=\<top>], clarsimp)
+                apply csymbr
+                apply (ctac add: tcbSchedEnqueue_ccorres)
+               apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+               apply (clarsimp, rule conseqPre, vcg)
+               apply (clarsimp simp: return_def)
+              apply (rule ccorres_cond_true_seq)
+              (* isolate haskell part before setting thread action *)
+              apply (simp add: scheduleChooseNewThread_def bind_assoc)
+              apply (rule ccorres_stateAssert)
+              apply (rule ccorres_lhs_assoc)+
+              apply (rule ccorres_split_nothrow_dc)
+                 apply (simp add: bind_assoc)
+                 apply (ctac add: scheduleChooseNewThread_ccorres)
+                apply (ctac (no_simp) add: ccorres_setSchedulerAction)
+                apply (wpsimp simp: cscheduler_action_relation_def wp: hoare_drop_imps
+                       | vcg exspec=scheduleChooseNewThread_modifies
+                             exspec=tcbSchedEnqueue_modifies
+                             exspec=isSchedulable_modifies)+
+         (* toplevel case: action is switch to candidate *)
+         apply (rename_tac candidate)
+         apply (rule_tac P="\<lambda>s. ksSchedulerAction s = SwitchToThread candidate
+                                \<and> invs' s \<and> cur_tcb' s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                      in ccorres_cross_over_guard)
+         apply (rule ccorres_cond_true_seq)
+         apply (rule ccorres_rhs_assoc)+
+         apply csymbr
+         (* ct runnable? *)
+         apply (ctac add: isSchedulable_ccorres, rename_tac schedulable)
+           apply (clarsimp simp: to_bool_def)
+           apply (rule ccorres_split_nothrow_dc)
+              (* enqueue if runnable *)
+              apply (simp add: when_def)
+              apply (rule ccorres_cond[where R=\<top>], clarsimp)
+               apply csymbr
+               apply (ctac add: tcbSchedEnqueue_ccorres)
+              apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+              apply (clarsimp, rule conseqPre, vcg)
+              apply (clarsimp simp: return_def)
+             apply (rule ccorres_cond_false_seq)
+             apply (rule_tac xf'=was_runnable_' in ccorres_abstract, ceqv)
+             apply (rename_tac schedulable)
+             apply (rule_tac P="schedulable = schedulablea" in ccorres_gen_asm2, clarsimp)
+             apply (rule ccorres_symb_exec_l3[OF _ git_wp _ empty_fail_getIdleThread], rename_tac it)
+              apply (rule ccorres_pre_threadGet, rename_tac targetPrio)
+              apply (rule ccorres_pre_threadGet, rename_tac curPrio)
               apply (rule ccorres_rhs_assoc)+
-              apply (ctac add: tcbSchedEnqueue_ccorres)
-                apply clarsimp
-                apply (ctac(no_simp) add: ccorres_setSchedulerAction)
-                   apply (clarsimp simp: cscheduler_action_relation_def)
-                  (* isolate haskell part before setting thread action *)
-                  apply (simp add: scheduleChooseNewThread_def)
-                  apply (rule ccorres_lhs_assoc)+
-                  apply (rule ccorres_split_nothrow_dc)
-                     apply (simp add: bind_assoc)
-                     apply (ctac add: scheduleChooseNewThread_ccorres)
-                    apply (ctac(no_simp) add: ccorres_setSchedulerAction)
-                    apply (wpsimp simp: cscheduler_action_relation_def)+
-                  apply (vcg exspec=scheduleChooseNewThread_modifies)
-                 apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct del: ssa_wp)
-                apply (clarsimp | vcg exspec=tcbSchedEnqueue_modifies | wp wp_post_taut)+
-             (* secondary check, when on equal prio and ct was running, prefer ct *)
-             apply (rule ccorres_rhs_assoc)
-             apply (rule_tac xf'=ret__int_' and val="from_bool (runnable' \<noteq> 0 \<and> curPrio = targetPrio)"
-                      and R="\<lambda>s. curThread = ksCurThread s
-                                 \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) (ksCurThread s) s
-                                 \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = targetPrio) candidate s"
-                      and R'=UNIV
-                      in ccorres_symb_exec_r_known_rv)
-                apply clarsimp
-                apply (rule conseqPre, vcg)
-                apply (clarsimp simp: cur_tcb'_def rf_sr_ksCurThread)
-
-                apply (drule (1) obj_at_cslift_tcb)+
-                apply (clarsimp simp: typ_heap_simps ctcb_relation_def split: if_split)
-                apply (solves \<open>unat_arith, rule iffI; simp\<close>)
-               apply ceqv
-              apply clarsimp
-              apply (rule ccorres_cond_seq)
-              apply (rule ccorres_cond[where R=\<top>], blast)
-               (* candidate does not beat running ct, append and choose new thread *)
-               apply (rule ccorres_rhs_assoc)+
-               apply (ctac add: tcbSchedAppend_ccorres)
+              apply (rule_tac xf'=candidate_' and val="tcb_ptr_to_ctcb_ptr candidate"
+                           and R="\<lambda>s. ksSchedulerAction s = SwitchToThread candidate"
+                            in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                 apply (rule conseqPre, vcg, clarsimp)
+                 apply (fastforce dest!: rf_sr_sched_action_relation
+                                   simp: cscheduler_action_relation_def)
+                apply ceqv
+               (* split off fastfail calculation *)
+               apply (rule ccorres_rhs_assoc2)
+               apply (rule ccorres_rhs_assoc2)
+               apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'=fastfail_'
+                            in ccorres_split_nothrow)
+                   apply (clarsimp simp: scheduleSwitchThreadFastfail_def)
+                   apply (rule ccorres_cond_seq2[THEN iffD1])
+                   apply (rule_tac xf'=ret__int_' and val="from_bool (curThread = it)"
+                               and R="\<lambda>s. it = ksIdleThread s \<and> curThread = ksCurThread s"
+                                in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                      apply (rule conseqPre, vcg,
+                             fastforce simp: rf_sr_ksCurThread rf_sr_ksIdleThread)
+                     apply ceqv
+                    apply clarsimp
+                    apply (rule ccorres_cond2'[where R=\<top>], fastforce)
+                     apply clarsimp
+                     apply (rule ccorres_return[where R'=UNIV], clarsimp, vcg)
+                    apply (rule_tac P="\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) curThread s
+                                           \<and> curThread = ksCurThread s
+                                           \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = targetPrio) candidate s"
+                                 in ccorres_from_vcg[where P'=UNIV ])
+                    apply clarsimp
+                    apply (rule conseqPre, vcg)
+                    apply (clarsimp simp: return_def cur_tcb'_def rf_sr_ksCurThread)
+                    apply (drule (1) obj_at_cslift_tcb)+
+                    apply (clarsimp simp: typ_heap_simps ctcb_relation_def split: if_split)
+                    apply unat_arith
+                    apply clarsimp
+                   apply vcg
+                  apply ceqv
+                 (* fastfail calculation complete *)
+                 apply (rename_tac fastfail fastfail')
+                 apply (rule ccorres_pre_curDomain)
+                 (* rest of the calculation: fastfail \<and> \<not> highest *)
+                 apply (rule ccorres_rhs_assoc2)
+                 apply (rule_tac r'="\<lambda>hprio rv'. to_bool rv' = (fastfail \<and> \<not>hprio)" and xf'=ret__int_'
+                              in ccorres_split_nothrow)
+                     apply csymbr
+                     apply (clarsimp simp: to_bool_def)
+                     apply (rule ccorres_Cond_rhs; clarsimp)
+                      apply (rule ccorres_move_c_guard_tcb)
+                      apply (rule ccorres_add_return2)
+                      apply (ctac add: isHighestPrio_ccorres, clarsimp)
+                        apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+                        apply (rule ccorres_return)
+                        apply (rule conseqPre, vcg)
+                        apply (clarsimp simp: to_bool_def)
+                       apply (rule wp_post_taut)
+                      apply (vcg exspec=isHighestPrio_modifies)
+                     apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0}" in ccorres_from_vcg)
+                     apply clarsimp
+                     apply (rule conseqPre, vcg)
+                     apply (fastforce simp: isHighestPrio_def' gets_def return_def get_def
+                                            Nondet_Monad.bind_def
+                                     split: prod.split)
+                    apply ceqv
+                   apply (clarsimp simp: to_bool_def)
+                   (* done with calculation of main acceptance criterion for candidate *)
+                   apply (rule ccorres_cond_seq)
+                   apply (rule ccorres_cond[where R=\<top>], blast)
+                    (* candidate is not the best one, enqueue and choose new thread *)
+                    apply (rule ccorres_rhs_assoc)+
+                    apply (ctac add: tcbSchedEnqueue_ccorres)
+                      apply clarsimp
+                      apply (ctac (no_simp) add: ccorres_setSchedulerAction)
+                         apply (clarsimp simp: cscheduler_action_relation_def)
+                        (* isolate haskell part before setting thread action *)
+                        apply (simp add: scheduleChooseNewThread_def)
+                        apply (rule ccorres_lhs_assoc)+
+                        apply (rule ccorres_split_nothrow_dc)
+                           apply (simp add: bind_assoc)
+                           apply (rule ccorres_stateAssert)
+                           apply (ctac add: scheduleChooseNewThread_ccorres)
+                          apply (ctac (no_simp) add: ccorres_setSchedulerAction)
+                          apply (wpsimp simp: cscheduler_action_relation_def)+
+                        apply (vcg exspec=scheduleChooseNewThread_modifies)
+                       apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct hoare_drop_imp
+                                 del: ssa_wp)
+                      apply (clarsimp | vcg exspec=tcbSchedEnqueue_modifies | wp wp_post_taut)+
+                   (* secondary check, when on equal prio and ct was running, prefer ct *)
+                   apply (rule ccorres_rhs_assoc)
+                   apply (rule_tac xf'=ret__int_'
+                               and val="from_bool (schedulablea \<noteq> 0 \<and> curPrio = targetPrio)"
+                               and R="\<lambda>s. curThread = ksCurThread s
+                                          \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) curThread s
+                                          \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = targetPrio) candidate s"
+                                in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                      apply clarsimp
+                      apply (rule conseqPre, vcg)
+                      apply (clarsimp simp: cur_tcb'_def rf_sr_ksCurThread)
+                      apply (drule (1) obj_at_cslift_tcb)+
+                      apply (clarsimp simp: typ_heap_simps ctcb_relation_def split: if_split)
+                      apply (solves \<open>unat_arith, rule iffI; simp\<close>)
+                     apply ceqv
+                    apply clarsimp
+                    apply (rule ccorres_cond_seq)
+                    apply (rule ccorres_cond[where R=\<top>], blast)
+                     (* candidate does not beat running ct, append and choose new thread *)
+                     apply (rule ccorres_rhs_assoc)+
+                     apply (ctac add: tcbSchedAppend_ccorres)
+                       apply clarsimp
+                       apply (ctac(no_simp) add: ccorres_setSchedulerAction)
+                          apply (clarsimp simp: cscheduler_action_relation_def)
+                         (* isolate haskell part before setting thread action *)
+                         apply (simp add: scheduleChooseNewThread_def)
+                         apply (rule ccorres_lhs_assoc)+
+                         apply (rule ccorres_split_nothrow_dc)
+                            apply (simp add: bind_assoc)
+                            apply (rule ccorres_stateAssert)
+                            apply (ctac add: scheduleChooseNewThread_ccorres)
+                           apply (ctac(no_simp) add: ccorres_setSchedulerAction)
+                           apply (wpsimp simp: cscheduler_action_relation_def)+
+                         apply (vcg exspec=scheduleChooseNewThread_modifies)
+                        apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct hoare_drop_imp
+                                  del: ssa_wp)
+                       apply (clarsimp | vcg exspec=tcbSchedAppend_modifies | wp wp_post_taut)+
+                    (* candidate is best, switch to it *)
+                    apply (ctac add: switchToThread_ccorres)
+                      apply clarsimp
+                      apply (ctac(no_simp) add: ccorres_setSchedulerAction)
+                      apply (clarsimp simp: cscheduler_action_relation_def)
+                     apply (wpsimp wp: wp_post_taut)
+                    apply (vcg exspec=switchToThread_modifies)
+                   apply clarsimp
+                   apply vcg
+                  apply clarsimp
+                  apply (wp | wp (once) hoare_drop_imp)+
                  apply clarsimp
-                 apply (ctac(no_simp) add: ccorres_setSchedulerAction)
-                    apply (clarsimp simp: cscheduler_action_relation_def)
-                   (* isolate haskell part before setting thread action *)
-                   apply (simp add: scheduleChooseNewThread_def)
-                   apply (rule ccorres_lhs_assoc)+
-                   apply (rule ccorres_split_nothrow_dc)
-                      apply (simp add: bind_assoc)
-                      apply (ctac add: scheduleChooseNewThread_ccorres)
-                     apply (ctac(no_simp) add: ccorres_setSchedulerAction)
-                     apply (wpsimp simp: cscheduler_action_relation_def)+
-                   apply (vcg exspec=scheduleChooseNewThread_modifies)
-                  apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct del: ssa_wp)
-                 apply (clarsimp | vcg exspec=tcbSchedAppend_modifies | wp wp_post_taut)+
-              (* candidate is best, switch to it *)
-              apply (ctac add: switchToThread_ccorres)
+                 apply (vcg exspec=isHighestPrio_modifies)
                 apply clarsimp
-                apply (ctac(no_simp) add: ccorres_setSchedulerAction)
-                apply (clarsimp simp: cscheduler_action_relation_def)
-               apply (wpsimp wp: wp_post_taut)
-              apply (vcg exspec=switchToThread_modifies)
+                apply (wp (once) hoare_drop_imps)
+                 apply wp
+                apply (clarsimp simp: conj_ac invs_valid_objs' cong: conj_cong)
+                apply wp
+               apply (clarsimp, vcg)
+              apply (clarsimp, vcg)
              apply clarsimp
-             apply vcg
+             apply (strengthen ko_at'_obj_at'_field)
+             apply (clarsimp cong: imp_cong simp: ko_at'_obj_at'_field)
+             apply wp
             apply clarsimp
-            apply (strengthen invs'_invs_no_cicd')
-            apply (wp | wp (once) hoare_drop_imp)+
-           apply clarsimp
-           apply (vcg exspec=isHighestPrio_modifies)
-          apply clarsimp
-          apply (wp (once) hoare_drop_imps)
-           apply wp
-          apply (strengthen strenghten_False_imp[where P="a = ResumeCurrentThread" for a])
-          apply (clarsimp simp: conj_ac invs_valid_objs' cong: conj_cong)
-          apply wp
-         apply (clarsimp, vcg exspec=tcbSchedEnqueue_modifies)
-        apply (clarsimp, vcg exspec=tcbSchedEnqueue_modifies)
-       apply clarsimp
-       apply (strengthen ko_at'_obj_at'_field)
-       apply (clarsimp cong: imp_cong simp: ko_at'_obj_at'_field)
-       apply wp
-      apply clarsimp
-      (* when runnable tcbSchedEnqueue curThread *)
-      apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> ksCurThread s = curThread
-                                \<and> ksSchedulerAction s = SwitchToThread candidate" in hoare_post_imp)
-       apply (clarsimp simp: invs'_bitmapQ_no_L1_orphans invs_ksCurDomain_maxDomain')
-       apply (fastforce dest: invs_sch_act_wf')
-
-      apply wpsimp+
-     apply (vcg exspec=tcbSchedEnqueue_modifies)
-    apply wp
-   apply vcg
-
-  apply (clarsimp simp: tcb_at_invs' rf_sr_ksCurThread if_apply_def2 invs_valid_objs')
-  apply (frule invs_sch_act_wf')
-  apply (frule tcb_at_invs')
-  apply (frule invs_pspace_aligned')
-  apply (frule invs_pspace_distinct')
+            (* when runnable tcbSchedEnqueue curThread *)
+            apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ksCurThread s = curThread
+                                      \<and> ksSchedulerAction s = SwitchToThread candidate
+                                      \<and> valid_idle' s \<and> valid_domain_list' s"
+                         in hoare_post_imp)
+             apply (fastforce simp: invs'_bitmapQ_no_L1_orphans invs_ksCurDomain_maxDomain')
+            apply wpsimp+
+           apply (vcg exspec=tcbSchedEnqueue_modifies)
+          apply (wpsimp wp: getSchedulable_wp)
+         apply vcg
+        apply ceqv
+       apply (clarsimp simp: scAndTimer_def)
+       apply (simp add: bind_assoc)
+       apply (ctac add: switchSchedContext_ccorres)
+         apply (rule ccorres_pre_getReprogramTimer)
+         apply (rule ccorres_seq_skip'[THEN iffD1])
+         apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+             apply (clarsimp simp: when_def)
+             apply (rule_tac R="\<lambda>s. ksReprogramTimer s = reprogram" in ccorres_cond)
+               apply clarsimp
+               apply (frule rf_sr_ksReprogramTimer)
+               apply (fastforce simp: to_bool_def)
+              apply (ctac add: setNextInterrupt_ccorres)
+                apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+                apply (rule allI, rule conseqPre, vcg)
+                apply (clarsimp simp: setReprogramTimer_def rf_sr_def cstate_relation_def Let_def
+                                      modify_def get_def put_def bind_def carch_state_relation_def
+                                      cmachine_state_relation_def)
+               apply wpsimp
+              apply (vcg exspec=setNextInterrupt_modifies)
+             apply (rule ccorres_return_Skip)
+            apply ceqv
+           apply (rule ccorres_add_return2)
+           apply (rule ccorres_stateAssert)
+           apply (rule ccorres_return_Skip)
+          apply wpsimp
+         apply (vcg exspec=setNextInterrupt_modifies)
+        apply (wpsimp wp: switchSchedContext_invs' hoare_drop_imps)
+       apply (vcg exspec=switchSchedContext_modifies)
+      apply ((wpsimp wp: hoare_drop_imps ssa_invs' scheduleChooseNewThread_invs'
+              | fold cur_tcb'_def
+              | strengthen invs'_implies)+)[1]
+     apply (clarsimp simp: guard_is_UNIV_def)
+    apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> valid_idle' s \<and> valid_domain_list' s
+                              \<and> cur_tcb' s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                 in hoare_post_imp)
+     apply (fastforce simp: cur_tcb'_def)
+    apply (wpsimp wp: hoare_drop_imps ssa_invs' scheduleChooseNewThread_invs')
+   apply ((wpsimp | strengthen invs'_implies)+)[1]
+  apply clarsimp
   apply (rule conjI)
-   apply (clarsimp dest!: rf_sr_cscheduler_relation simp: cscheduler_action_relation_def)
-  apply (rule conjI; clarsimp)
-   apply (frule (1) obj_at_cslift_tcb)
-   apply (clarsimp simp: cscheduler_action_relation_def typ_heap_simps
-                  split: scheduler_action.splits)
-  apply (frule (1) obj_at_cslift_tcb)
-  apply (clarsimp dest!: rf_sr_cscheduler_relation invs_sch_act_wf'
-                  simp: cscheduler_action_relation_def)
-  apply (intro conjI impI allI; clarsimp simp: typ_heap_simps ctcb_relation_def)
-     apply (fastforce simp: tcb_at_not_NULL tcb_at_1 dest: pred_tcb_at')+
-  done *)
+   apply fastforce
+  apply clarsimp
+  apply (rule conjI, clarsimp simp: cscheduler_action_relation_def)+
+  apply clarsimp
+  apply (rule conjI)
+   apply (fastforce simp: clift_Some_eq_valid rf_sr_def rf_sr_ksCurThread cur_tcb'_def
+                  intro!: tcb_at_h_t_valid)
+  apply (rule conjI)
+  subgoal
+    by (safe;
+        clarsimp intro!: obj_at'_weakenE dest!: tcb_at_1 pred_tcb_at'
+                   simp: weak_sch_act_wf_def cscheduler_action_relation_def typ_heap_simps
+                         ctcb_relation_def true_def false_def;
+        fastforce split: if_splits)
+  apply (fastforce simp: weak_sch_act_wf_def cscheduler_action_relation_def dest!: tcb_at_not_NULL)
+  done
 
 (* FIXME: move *)
 lemma map_to_tcbs_upd:
