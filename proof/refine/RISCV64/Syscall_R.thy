@@ -1866,7 +1866,6 @@ lemma handleTimeout_Timeout_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: handleTimeout_def)
   apply (wpsimp wp: sendFaultIPC_invs' set_tcb'.getObject_wp' simp: isValidTimeoutHandler_def)
-  apply (clarsimp simp: valid_idle'_asrt_def)
   apply (rule conjI; clarsimp simp: obj_at'_real_def pred_tcb_at'_def)
    apply (drule invs_iflive')
    apply (erule (1) if_live_then_nonz_capD')
