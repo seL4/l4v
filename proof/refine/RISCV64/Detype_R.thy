@@ -1786,7 +1786,6 @@ lemma deleteObjects_null_filter:
    apply (subgoal_tac "ksPSpace (s\<lparr>ksMachineState := snd ((), b)\<rparr>) =
                        ksPSpace s", simp only:, simp)
   apply (unfold_locales, simp_all)
-   apply (clarsimp simp: deletionIsSafe_def sym_refs_asrt_def valid_idle'_asrt_def)+
   done
 
 lemma deleteObjects_descendants:
@@ -1858,7 +1857,6 @@ lemma deleteObjects_sym_refs':
   apply (subgoal_tac "is_aligned ptr bits \<and> 3 \<le> bits \<and> bits < word_bits",simp)
    apply clarsimp
    apply (frule(2) delete_locale.intro, simp_all)[1]
-    apply (simp add: valid_idle'_asrt_def)
    apply (rule subst[rotated, where P="\<lambda>s. sym_refs (state_refs_of' s)"],
           erule delete_locale.delete_sym_refs')
    apply (simp add: field_simps mask_def)

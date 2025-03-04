@@ -1630,7 +1630,6 @@ lemma deleteObjects_ccorres':
              bind_assoc modify_machinestate_assert_cnodes_swap
              modify_modify_bind)
   apply (rule ccorres_stateAssert_fwd)+
-  apply (clarsimp simp: sym_refs_asrt_def valid_idle'_asrt_def)
   apply (rule ccorres_stateAssert_after)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)

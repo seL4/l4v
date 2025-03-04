@@ -1238,6 +1238,8 @@ definition valid_idle' :: "kernel_state \<Rightarrow> bool" where
 defs valid_idle'_asrt_def:
   "valid_idle'_asrt \<equiv> \<lambda>s. valid_idle' s"
 
+declare valid_idle'_asrt_def[simp]
+
 lemma valid_idle'_tcb_at':
   "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_sc_at' idle_sc_ptr s"
   by (clarsimp simp: valid_idle'_def)
@@ -1354,6 +1356,8 @@ definition
 
 defs cur_tcb'_asrt_def:
   "cur_tcb'_asrt \<equiv> \<lambda>s. cur_tcb' s"
+
+declare cur_tcb'_asrt_def[simp]
 
 defs sch_act_sane_asrt_def:
   "sch_act_sane_asrt \<equiv> \<lambda>s. sch_act_sane s"
