@@ -3427,6 +3427,10 @@ lemma ep_queued_st_tcb_at':
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
+lemma valid_domain_list_cross:
+  "\<lbrakk>valid_domain_list s; (s, s') \<in> state_relation\<rbrakk> \<Longrightarrow> valid_domain_list' s'"
+  by (clarsimp simp: state_relation_def)
+
 lemma pspace_aligned_cross:
   "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
   apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)

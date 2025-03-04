@@ -2456,15 +2456,6 @@ lemma tc_sched_invs':
               dest!: global'_no_ex_cap)
   done
 
-lemma setSchedulerAction_invs'[wp]:
-  "\<lbrace>invs' and sch_act_wf sa\<rbrace>
-   setSchedulerAction sa
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: setSchedulerAction_def)
-  apply wp
-  apply (clarsimp simp add: invs'_def valid_irq_node'_def valid_dom_schedule'_def bitmapQ_defs)
-  done
-
 lemma invokeTCB_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (dc \<oplus> (=))

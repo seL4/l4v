@@ -513,12 +513,6 @@ lemma ckernel_invs:
   apply clarsimp
   done
 
-(* abstract and haskell have identical domain list fields *)
-abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" where
-  "valid_domain_list' \<equiv> \<lambda>s. valid_domain_list_2 (ksDomSchedule s)"
-
-lemmas valid_domain_list'_def = valid_domain_list_2_def
-
 (* nothing extra needed on this architecture *)
 defs fastpathKernelAssertions_def:
   "fastpathKernelAssertions \<equiv> \<lambda>s. True"
@@ -805,7 +799,8 @@ lemma kernel_corres':
               and ct_not_in_release_q and cur_sc_active
               and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
               and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
-              and (\<lambda>s. scheduler_action s = resume_cur_thread))
+              and (\<lambda>s. scheduler_action s = resume_cur_thread)
+              and valid_domain_list)
              invs'
              (call_kernel event)
              (do _ \<leftarrow> stateAssert cur_tcb'_asrt [];
@@ -851,7 +846,8 @@ lemma kernel_corres':
                                  (schact_is_rct s \<longrightarrow> ct_in_state activatable s) \<and>
                                  (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s) \<and>
                                  ct_not_blocked s \<and> current_time_bounded s \<and>
-                                 ct_not_in_release_q s \<and> consumed_time_bounded s"
+                                 ct_not_in_release_q s \<and> consumed_time_bounded s \<and>
+                                 valid_domain_list s"
                in hoare_strengthen_postE[where Q=Q and Q'=Q for Q])
           apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_activatable
                             handle_event_schact_is_rct_imp_cur_sc_active call_kernel_schact_is_rct
@@ -868,7 +864,7 @@ lemma kernel_corres':
                          and (\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s)
                          and (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)
                          and cur_sc_more_than_ready and consumed_time_bounded
-                         and cur_sc_in_release_q_imp_zero_consumed"
+                         and cur_sc_in_release_q_imp_zero_consumed and valid_domain_list"
                   and P'=invs' in corres_inst)
       apply (rule corres_stateAssert_add_assertion)
        apply (simp add: rct_imp_activatable'_asrt_def)
@@ -878,7 +874,8 @@ lemma kernel_corres':
                               and cur_sc_active and schact_is_rct
                               and ct_in_state activatable
                               and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s \<and>
-                                       cur_sc_offset_sufficient (consumed_time s) s)"
+                                       cur_sc_offset_sufficient (consumed_time s) s)
+                              and valid_domain_list"
                        and P'="invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)"
                   in corres_inst)
            apply (rule corres_stateAssert_add_assertion)
