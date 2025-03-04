@@ -66,7 +66,6 @@ arch_requalify_consts
   us_to_ticks
   ticks_to_us
   setDeadline
-  timerPrecision
   max_time
   getCurrentTime_buffer
   time_buffer_const

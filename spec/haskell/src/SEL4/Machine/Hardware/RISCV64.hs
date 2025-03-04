@@ -334,7 +334,7 @@ getCurrentTime = do
     liftIO $ Platform.getCurrentTime cbptr
 
 timerPrecision :: Word64
-timerPrecision = usToTicks 2
+timerPrecision = usToTicks 1
 
 usToTicks :: Word64 -> Word64
 usToTicks _ = undefined

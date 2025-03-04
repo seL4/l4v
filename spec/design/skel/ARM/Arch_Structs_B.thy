@@ -9,11 +9,19 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports Main Setup_Locale
+imports Main Setup_Locale MachineExports
 begin
 context Arch begin arch_global_naming (H)
 
+definition usToTicks :: "word64 \<Rightarrow> word64" where
+  "usToTicks \<equiv> us_to_ticks"
+
 #INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs CONTEXT ARM_H ONLY ArmVSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_H ONLY timerPrecision
 
 end
+
+arch_requalify_consts (H)
+  timerPrecision
+
 end
