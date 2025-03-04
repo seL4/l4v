@@ -221,11 +221,18 @@ The following functions are used within this module to access the global interru
 
 > setNextInterrupt :: Kernel ()
 > setNextInterrupt = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
+>     stateAssert ksReleaseQueue_asrt ""
 >     curTm <- getCurTime
 >     curTh <- getCurThread
 >     scOpt <- threadGet tcbSchedContext curTh
->     sc <- getSchedContext $ fromJust scOpt
->     next_interrupt <- return $ curTm + rAmount (refillHd sc)
+>     assert (scOpt /= Nothing) "the current thread must be associated with a scheduling context"
+>     scPtr <- return $ fromJust scOpt
+>     active <- scActive scPtr
+>     assert active "the scheduling context associated with the current thread must be active"
+>     ctHeadRefill <- getRefillHead scPtr
+>     next_interrupt <- return $ curTm + rAmount ctHeadRefill
 >     next_interrupt <-
 >        if numDomains > 1
 >            then do
@@ -238,7 +245,11 @@ The following functions are used within this module to access the global interru
 >             then return next_interrupt
 >             else do
 >                 rqSCOpt <- threadGet tcbSchedContext (fromJust $ tcbQueueHead rq)
->                 rqSC <- getSchedContext $ fromJust rqSCOpt
->                 return $ min (rTime (refillHd rqSC)) next_interrupt
+>                 assert (rqSCOpt /= Nothing) "the head of the release queue must be associated with a scheduling context"
+>                 rqScPtr <- return $ fromJust rqSCOpt
+>                 active <- scActive rqScPtr
+>                 assert active "the scheduling context associated with the head of the release queue must be active"
+>                 rlqHeadRefill <- getRefillHead rqScPtr
+>                 return $ min (rTime rlqHeadRefill) next_interrupt
 >     doMachineOp $ setDeadline (next_interrupt - timerPrecision)
 

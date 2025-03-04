@@ -67,6 +67,10 @@ assumes setIRQTrigger_ccorres:
            (doMachineOp (RISCV64.setIRQTrigger irq trigger))
            (Call setIRQTrigger_'proc)"
 
+assumes setDeadline_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>deadline = deadline\<rbrace> []
+     (doMachineOp (setDeadline deadline)) (Call setDeadline_'proc)"
+
 assumes getCurrentTime_ccorres:
   "ccorres (=) ret__unsigned_longlong_' \<top> UNIV hs
      (doMachineOp getCurrentTime) (Call getCurrentTime_'proc)"
@@ -443,6 +447,11 @@ lemma getKernelWcetTicks_spec:
   apply (insert MIN_BUDGET_bound)
   apply (simp add: kernelWCETTicks_def kernelWCET_ticks_def usToTicks_def kernelWCET_us_def)
   done
+
+lemma getTimerPrecision_spec:
+  "\<forall>s. \<Gamma>\<turnstile> {s} Call getTimerPrecision_'proc \<lbrace>\<acute>ret__unsigned_longlong = timerPrecision\<rbrace>"
+  apply vcg
+  by (simp add: timerPrecision_def)
 
 end
 end

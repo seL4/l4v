@@ -72,8 +72,8 @@ where
      cur_th \<leftarrow> gets cur_thread;
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context cur_th;
      sc_ptr \<leftarrow> assert_opt sc_opt;
-     sc \<leftarrow> get_sched_context sc_ptr;
-     next_interrupt \<leftarrow> return $ cur_tm + r_amount (refill_hd sc);
+     ct_head_refill \<leftarrow> get_refill_head sc_ptr;
+     next_interrupt \<leftarrow> return $ cur_tm + r_amount ct_head_refill;
      next_interrupt \<leftarrow>
      if numDomains > 1 then do
        domain_tm \<leftarrow> gets domain_time;
@@ -84,8 +84,8 @@ where
      next_interrupt \<leftarrow> if rq = [] then return next_interrupt else do
        rqsc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context (hd rq);
        rqsc_ptr \<leftarrow> assert_opt rqsc_opt;
-       rqsc \<leftarrow> get_sched_context rqsc_ptr;
-       return $ min (r_time (refill_hd rqsc)) next_interrupt
+       rlq_head_refill \<leftarrow> get_refill_head rqsc_ptr;
+       return $ min (r_time rlq_head_refill) next_interrupt
      od;
      do_machine_op $ setDeadline (next_interrupt - timerPrecision)
   od"
