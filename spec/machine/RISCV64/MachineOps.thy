@@ -80,7 +80,6 @@ definition configureTimer :: "irq machine_monad"
    od"
 
 consts' maxTimer_us :: "64 word"
-consts' timerPrecision :: "64 word"
 consts' max_ticks_to_us :: "64 word"
 consts' max_us_to_ticks :: "64 word"
 
