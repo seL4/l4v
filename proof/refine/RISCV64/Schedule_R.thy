@@ -2864,39 +2864,9 @@ lemma awaken_corres:
   apply (fastforce intro!: awaken_terminates)
   done
 
-lemma setDeadline_corres:
+lemma setDeadline_corres[corres]:
   "dl = dl' \<Longrightarrow> corres_underlying Id False True dc \<top> \<top> (setDeadline dl) (setDeadline dl')"
   by (simp, rule corres_underlying_trivial_gen; wpsimp simp: setDeadline_def)
-
-(* This is not particularly insightful, it just shortens setNextInterrupt_corres *)
-lemma setNextInterrupt_corres_helper:
-  "\<lbrakk>valid_objs' s'; (s, s') \<in> state_relation; active_sc_tcb_at t s;
-    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
-    \<Longrightarrow> \<exists>tcb. ko_at' tcb t s' \<and> sc_at' (the (tcbSchedContext tcb)) s' \<and>
-        (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> sc_valid_refills' ko)"
-  apply (subgoal_tac "\<exists>tcb'. ko_at' (tcb'  :: tcb) t s'", clarsimp)
-   apply (clarsimp simp: pred_map_def vs_all_heap_simps)
-   apply (rename_tac tcb' scp tcb sc n)
-   apply (frule_tac pspace_relation_absD, erule state_relation_pspace_relation)
-   apply (clarsimp simp: other_obj_relation_def)
-   apply (subgoal_tac "z = KOTCB tcb'", clarsimp)
-    apply (rule_tac x=tcb' in exI, simp add: tcb_relation_cut_def)
-    apply (prop_tac "tcbSchedContext tcb' = Some scp", clarsimp simp: tcb_relation_def, simp)
-    apply (subgoal_tac "sc_at' scp s'", clarsimp)
-     apply (frule_tac x=scp in pspace_relation_absD, erule state_relation_pspace_relation)
-     apply (frule (1) valid_sched_context_size_objsI, clarsimp)
-     apply (subgoal_tac "z = KOSchedContext ko", clarsimp)
-      apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
-      apply (clarsimp simp: valid_sched_context'_def sc_relation_def active_sc_def)
-     apply (case_tac z; clarsimp simp: obj_at'_def)
-    apply (erule cross_relF [OF _ sc_at'_cross_rel], clarsimp simp: obj_at_def is_sc_obj)
-    apply (erule (1) valid_sched_context_size_objsI)
-   apply (case_tac z; clarsimp simp: obj_at'_def)
-  apply (subgoal_tac "tcb_at t s")
-   apply (frule cross_relF [OF _ tcb_at'_cross_rel], clarsimp, assumption)
-   apply (clarsimp simp: obj_at'_def)
-  apply (clarsimp simp: obj_at_def vs_all_heap_simps pred_map_def is_tcb)
-  done
 
 lemma threadGet_wp':
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
@@ -2914,82 +2884,97 @@ crunch restart, suspend
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps simp: crunch_simps)
 
+lemma getDomainTime_sp:
+  "\<lbrace>P\<rbrace> getDomainTime \<lbrace>\<lambda>rv s. rv = ksDomainTime s \<and> P s\<rbrace>"
+  by wpsimp
+
+lemma active_sc_tcb_at_tcb_at:
+  "active_sc_tcb_at tcb_ptr s \<Longrightarrow> tcb_at tcb_ptr s"
+  by (clarsimp simp: vs_all_heap_simps obj_at_def is_tcb_def)
+
 lemma setNextInterrupt_corres:
-  "corres dc ((\<lambda>s. active_sc_tcb_at (cur_thread s) s)
-              and (\<lambda>s. \<forall>t \<in> set (release_queue s). active_sc_tcb_at t s)
-              and valid_objs and pspace_aligned and pspace_distinct)
-             valid_objs'
-             set_next_interrupt
-             setNextInterrupt"
-  unfolding setNextInterrupt_def set_next_interrupt_def
-  apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[OF getCurTime_corres])
-      apply (rule corres_split[OF getCurThread_corres], simp)
-        apply (rule corres_split_eqr[OF get_tcb_obj_ref_corres])
-           apply (clarsimp simp: tcb_relation_def)
-          apply (rule corres_assert_opt_assume_l)
-          apply (rule corres_split[OF get_sc_corres])
-            apply (rule_tac F="sc_valid_refills' rv'" in corres_gen_asm2)
-            apply (rule corres_split[OF corres_if])
-                 apply clarsimp
-                apply (rule corres_split[OF getDomainTime_corres])
-                  apply (simp only: fun_app_def)
-                  apply (rule corres_return_eq_same)
-                  apply (clarsimp simp: refill_hd_relation refill_map_def)
-                 apply wpsimp
-                apply wpsimp
-               apply (rule corres_return_eq_same)
-               apply (clarsimp simp: refill_hd_relation refill_map_def)
-              apply (rule corres_split [OF getReleaseQueue_corres])
-                apply (rename_tac rlq queue)
-                apply (rule_tac r'="(=)" in corres_split)
-                   apply (rule_tac R="\<lambda>s. release_queue s = rlq"
-                               and R'="\<lambda>s. ksReleaseQueue s = queue"
-                                in corres_if_strong)
-                     apply (drule state_relation_release_queue_relation)
-                     apply (fastforce simp: release_queue_relation_def tcbQueueEmpty_def)
-                   apply (rule corres_return_eq_same)
-                    apply simp
-                   apply (rule_tac r'="(=)" in corres_split[OF get_tcb_obj_ref_corres'])
-                       apply (clarsimp simp: tcb_relation_def)
-                      apply fastforce
-                     apply (rule corres_assert_opt_assume_l)
-                     apply simp
-                     apply (rule corres_split [OF get_sc_corres])
-                       apply (rule_tac F="sc_valid_refills' rqSC" in corres_gen_asm2)
-                       apply (rule corres_return_eq_same)
-                       apply (clarsimp simp: refill_hd_relation refill_map_def)
-                      apply wpsimp
-                     apply wpsimp
-                    apply (wpsimp wp: get_tcb_obj_ref_wp)
-                   apply (wpsimp wp: threadGet_wp')
-                  apply (rule corres_machine_op)
-                  apply (simp del: dc_simp, rule setDeadline_corres, simp)
-                 apply (wpsimp wp: get_tcb_obj_ref_wp threadGet_wp')+
-   apply (fastforce intro!: valid_sched_context_size_objsI
-                      dest: list.set_sel(1)
-                      simp: vs_all_heap_simps obj_at_def is_tcb_def is_sc_obj_def)
-  apply (clarsimp split: if_splits)
-  apply (subgoal_tac "(\<exists>tcb. ko_at' tcb (ksCurThread s') s' \<and>
-                    sc_at' (the (tcbSchedContext tcb)) s' \<and>
-                    (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> sc_valid_refills' ko)) \<and>
-                    (tcbQueueHead (ksReleaseQueue s') \<noteq> None \<longrightarrow>
-                     (\<exists>tcb. ko_at' tcb (the (tcbQueueHead (ksReleaseQueue s'))) s' \<and>
-                    sc_at' (the (tcbSchedContext tcb)) s' \<and>
-                    (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> sc_valid_refills' ko)))")
-   apply blast
-  apply (intro conjI impI)
-   apply (prop_tac "ksCurThread s' = cur_thread s", clarsimp simp: state_relation_def, simp)
-   apply (rule setNextInterrupt_corres_helper; simp)
-  apply (clarsimp simp: state_relation_def release_queue_relation_def)
-  apply (rule setNextInterrupt_corres_helper; simp?)
-   apply (clarsimp simp: state_relation_def release_queue_relation_def list_queue_relation_def)+
-  apply (frule heap_path_head)
+  "corres dc
+     ((\<lambda>s. active_sc_tcb_at (cur_thread s) s)
+      and (\<lambda>s. \<forall>t \<in> set (release_queue s). active_sc_tcb_at t s)
+      and active_scs_valid and valid_objs and pspace_aligned and pspace_distinct)
+     valid_objs'
+     set_next_interrupt setNextInterrupt"
+  apply (clarsimp simp: setNextInterrupt_def set_next_interrupt_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (fastforce dest: curthread_relation intro!: tcb_at_cross
+                    simp: cur_tcb'_def vs_all_heap_simps obj_at_kh_kheap_simps is_tcb_def)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce intro: ksReleaseQueue_asrt_cross)
+  apply (rule corres_split_forwards'[OF _ gets_sp getCurTime_sp])
+   apply corres
+  apply (rule corres_split_forwards'[OF _ gets_sp getCurThread_sp])
+   apply corres
+  apply (rule corres_split_forwards'[OF _ gsc_sp threadGet_sp, where r'="(=)"])
+   apply (corres corres: get_tcb_obj_ref_corres')
+     apply (clarsimp simp: tcb_relation_def)
+    apply (fastforce simp: cur_tcb'_def vs_all_heap_simps obj_at_kh_kheap_simps is_tcb_def)
+   apply simp
+  apply (rule corres_assert_opt_assume_lhs[rotated])
+   apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  apply clarsimp
+  apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ scActive_sp, rotated]; (solves wpsimp)?)
+   apply wpsimp
+   apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb' simp: valid_tcb'_def)
+  apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ assert_sp, rotated]; (solves wpsimp)?)
+   apply wpsimp
+   apply (fastforce dest!: active_sc_tcb_at_cross
+                     simp: ex_abs_def obj_at'_def active_sc_tcb_at'_def opt_pred_def opt_map_def)
+  apply (rule corres_split_forwards'[OF _ get_refill_head_sp getRefillHead_sp])
+   apply (corres corres: getRefillHead_corres)
+    apply (fastforce elim!: active_scs_validE[rotated]
+                    intro!: sc_at_pred_n_sc_at valid_refills_nonempty_refills
+                      simp: vs_all_heap_simps obj_at_kh_kheap_simps)
    apply fastforce
-  apply (drule_tac x="hd (release_queue s)" in bspec)
-   apply (rule hd_in_set)
-   apply fastforce
-  apply fastforce
+  apply (rule corres_split_skip[where r'="(=)"]; (solves wpsimp)?)
+    apply wpsimp
+    apply (clarsimp simp: obj_at'_def)
+   apply (rule corres_if_strong')
+     apply fastforce
+    apply (rule corres_split_forwards'[OF _ gets_sp getDomainTime_sp])
+     apply corres
+    apply (clarsimp simp: refill_map_def)
+    apply (metis refill.select_convs(2))
+   apply (clarsimp simp: refill_map_def)
+   apply (metis refill.select_convs(2))
+  apply (rule corres_split_forwards'[OF _ gets_sp getReleaseQueue_sp])
+   apply (corres corres: getReleaseQueue_corres)
+  apply (rule corres_split_skip[where r'="(=)"]; (solves wpsimp)?)
+     apply (wpsimp wp: hoare_drop_imps)
+    apply (wpsimp wp: hoare_drop_imps)
+    apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+   apply (rule corres_if_strong')
+     apply (clarsimp simp: tcbQueueEmpty_def)
+    apply fastforce
+   apply (rule corres_split_forwards'[OF _ gsc_sp threadGet_sp, where r'="(=)"])
+    apply (corres corres: get_tcb_obj_ref_corres')
+      apply (clarsimp simp: tcb_relation_def)
+     apply (fastforce dest: hd_in_set intro: active_sc_tcb_at_tcb_at)
+    apply fastforce
+   apply (rule corres_assert_opt_assume_lhs[rotated])
+    apply (fastforce dest: hd_in_set simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+   apply clarsimp
+   apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ scActive_sp, rotated]; (solves wpsimp)?)
+    apply wpsimp
+    apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb' simp: valid_tcb'_def)
+   apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ assert_sp, rotated]; (solves wpsimp)?)
+    apply wpsimp
+    apply (force dest!: hd_in_set bspec active_sc_tcb_at_cross
+                  simp: ex_abs_def obj_at'_def active_sc_tcb_at'_def opt_pred_def opt_map_def)
+   apply (rule corres_split_forwards'[OF _ get_refill_head_sp getRefillHead_sp])
+    apply (corres corres: getRefillHead_corres)
+     apply (fastforce dest: hd_in_set
+                     elim!: active_scs_validE[rotated]
+                    intro!: sc_at_pred_n_sc_at valid_refills_nonempty_refills
+                      simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+    apply fastforce
+   apply (clarsimp simp: refill_map_def)
+   apply (metis refill.select_convs(1))
+  apply (corres corres: corres_machine_op)
   done
 
 (* refillUnblockCheck_corres *)
