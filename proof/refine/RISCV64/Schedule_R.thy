@@ -1891,21 +1891,58 @@ lemma setRefillHd_active_sc_at'[wp]:
   apply (wpsimp wp: updateSchedContext_active_sc_at')
   done
 
-lemma setReprogramTimer_obj_at'[wp]:
-  "setReprogramTimer b \<lbrace>\<lambda>s. Q (obj_at' P t s)\<rbrace>"
-  unfolding active_sc_at'_def
-  by (wpsimp simp: setReprogramTimer_def)
+crunch refillNew, refillUpdate, tcbReleaseRemove, tcbSchedDequeue, commitTime
+  for obj_at'_scTCB[wp]: "\<lambda>s. obj_at' (\<lambda>sc. P (scTCB sc)) scPtr s"
+  and obj_at'_sc_objBits[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc :: sched_context. P (objBits sc)) scPtr s)"
+  (simp: crunch_simps
+   wp: updateSchedContext_sc_obj_at'_inv crunch_wps hoare_vcg_all_lift ignore: updateSchedContext)
 
-lemma setReprogramTimer_active_sc_at'[wp]:
-  "setReprogramTimer b \<lbrace>active_sc_at' scPtr\<rbrace>"
-  unfolding active_sc_at'_def
-  by wpsimp
+crunch refillNew, refillUpdate, tcbReleaseRemove, tcbSchedDequeue, commitTime
+  for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift)
 
-crunch refillBudgetCheck, refillUnblockCheck
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n T p s)"
-  and active_sc_at'[wp]: "active_sc_at' scPtr"
+crunch refillNew, refillUpdate, tcbReleaseRemove, tcbSchedDequeue, commitTime
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  (wp: weak_sch_act_wf_lift crunch_wps simp: crunch_simps maybeAddEmptyTail_def)
+
+crunch refillBudgetCheckRoundRobin, refillBudgetCheck
+  for active_sc_at'[wp]: "active_sc_at' scPtr"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
+
+lemma scConsumed_update_active_sc_at'[wp]:
+  "updateSchedContext scPtr (scConsumed_update f) \<lbrace>active_sc_at' scPtr'\<rbrace>"
+  apply (wp updateSchedContext_wp)
+  by (fastforce simp: active_sc_at'_def obj_at'_def objBits_simps' opt_map_def split: if_splits)
+
+lemma active_sc_at'_ksReadyQueues_update[simp]:
+  "active_sc_at' scPtr (ksReadyQueues_update f s) = active_sc_at' scPtr s"
+  by (clarsimp simp: active_sc_at'_def)
+
+lemma active_sc_at'_ksReadyQueuesL1Bitmap_update[simp]:
+  "active_sc_at' scPtr (ksReadyQueuesL1Bitmap_update f s) = active_sc_at' scPtr s"
+  by (clarsimp simp: active_sc_at'_def)
+
+lemma active_sc_at'_ksReadyQueuesL2Bitmap_update[simp]:
+  "active_sc_at' scPtr (ksReadyQueuesL2Bitmap_update f s) = active_sc_at' scPtr s"
+  by (clarsimp simp: active_sc_at'_def)
+
+lemma active_sc_at'_ksReleaseQueue_update[simp]:
+  "active_sc_at' scPtr (ksReleaseQueue_update f s) = active_sc_at' scPtr s"
+  by (clarsimp simp: active_sc_at'_def)
+
+lemma active_sc_at'_ksReprogramTimer[simp]:
+  "active_sc_at' scPtr (ksReprogramTimer_update f s) = active_sc_at' scPtr s"
+  by (clarsimp simp: active_sc_at'_def)
+
+lemma threadSet_active_sc_at'[wp]:
+  "threadSet F tcbPtr \<lbrace>active_sc_at' scPtr\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  by (fastforce simp: active_sc_at'_def obj_at'_def)
+
+crunch tcbSchedDequeue, tcbReleaseRemove, mergeOverlappingRefills, commitTime
+  for active_sc_at'[wp]: "active_sc_at' scPtr"
+  (wp: crunch_wps ignore: threadSet simp: crunch_simps)
 
 lemma updateRefillHd_valid_objs'[wp]:
   "updateRefillHd scPtr f \<lbrace>valid_objs'\<rbrace>"

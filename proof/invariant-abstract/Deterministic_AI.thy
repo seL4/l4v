@@ -4215,8 +4215,8 @@ end
 context Deterministic_AI_1 begin
 
 crunch invoke_tcb, invoke_sched_control_configure_flags
- for valid_list[wp]: "valid_list"
- (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
+ for valid_list[wp]: valid_list
+ (wp: crunch_wps check_cap_inv mapM_x_wp' simp: crunch_simps)
 
 end
 

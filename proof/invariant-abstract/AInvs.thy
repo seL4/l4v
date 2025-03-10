@@ -215,7 +215,7 @@ lemma invoke_sched_context_cur_sc_tcb_are_bound_imp_cur_sc_active:
   apply (cases iv; clarsimp)
   apply (rule hoare_weaken_pre)
    apply (rule_tac f=cur_sc in hoare_lift_Pf2)
-    apply wpsimp
+    apply ((wpsimp | wp (once) hoare_drop_imps)+)[1]
    apply (wpsimp wp: update_sched_context_wp hoare_vcg_all_lift hoare_drop_imps)
   apply (clarsimp simp: active_sc_def MIN_REFILLS_def vs_all_heap_simps)
   done
@@ -674,18 +674,20 @@ lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q
    apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr)
   apply (rule_tac Q'="?post" in bind_wp_fwd)
    apply (rule hoare_when_cases, simp)
-   apply (rule bind_wp[OF _ assert_opt_sp])
-   apply (rule bind_wp[OF _ gts_sp])
-   apply (rule_tac Q'="\<lambda>_ s. in_release_q (cur_thread s) s \<longrightarrow> tcb_ptr = cur_thread s"
+   apply (rule_tac Q'="\<lambda>_ s. sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr s
+                             \<and> (in_release_q (cur_thread s) s
+                                \<longrightarrow> heap_ref_eq (cur_thread s) sc_ptr (sc_tcbs_of s))"
                 in bind_wp_fwd)
     apply (wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_ct_not_in_release_q)
-    apply (clarsimp simp: vs_all_heap_simps sc_at_pred_n_def obj_at_def)
+   apply (rule bind_wp[OF _ assert_opt_sp])
+   apply (rule bind_wp[OF _ gts_sp])
    apply (rule bind_wp[OF _ gets_sp])
    apply (rule hoare_if)
     apply (rule_tac Q'="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
      apply (clarsimp simp: schact_is_rct_def)
     apply (wpsimp wp: reschedule_cnt)
    apply (wpsimp wp: hoare_drop_imps)
+   apply (clarsimp simp: vs_all_heap_simps obj_at_def sc_at_ppred_def)
   apply wpsimp
   done
 
