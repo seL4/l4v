@@ -682,7 +682,9 @@ This module uses the C preprocessor to select a target architecture.
 
 >         if period == budget
 >            then refillNew scPtr minRefills budget 0
->            else if (0 < scRefillMax sc && scTCB sc /= Nothing)
+>            else do
+>                active <- scActive scPtr
+>                if (active && scTCB sc /= Nothing)
 >                    then do
 >                      runnable <- isRunnable $ fromJust $ scTCB sc
 >                      if runnable
@@ -691,8 +693,8 @@ This module uses the C preprocessor to select a target architecture.
 >                    else refillNew scPtr mRefills budget period
 
 >         when (scTCB sc /= Nothing) $ do
->             runnable <- isRunnable $ fromJust $ scTCB sc
 >             schedContextResume scPtr
+>             runnable <- isRunnable $ fromJust $ scTCB sc
 >             ctPtr <- getCurThread
 >             if (fromJust $ scTCB sc) == ctPtr
 >                 then rescheduleRequired

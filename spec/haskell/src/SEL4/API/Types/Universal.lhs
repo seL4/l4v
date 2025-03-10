@@ -42,4 +42,4 @@ The following is the definition of the seven object types that are always availa
 > minSchedContextBits = 7
 
 > schedContextSporadicFlag :: Int
-> schedContextSporadicFlag = 1
+> schedContextSporadicFlag = 0

@@ -1420,6 +1420,10 @@ lemma invokeSchedControlConfigureFlags_corres:
        apply fastforce
       apply fastforce
 
+     apply (rule corres_split_forwards'[OF _ get_sc_active_sp scActive_sp])
+      apply (corres corres: scActive_corres)
+       apply fastforce
+      apply fastforce
      apply (rule corres_if_split)
        apply (clarsimp simp: sc_relation_def)
 
@@ -1464,7 +1468,7 @@ lemma invokeSchedControlConfigureFlags_corres:
         apply (clarsimp simp: MIN_REFILLS_def)
        apply (clarsimp simp: valid_refills_number'_def MIN_REFILLS_def)
       apply fastforce
-     apply simp
+     apply fastforce
 
     apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
     apply (rule hoare_if)
@@ -1475,6 +1479,7 @@ lemma invokeSchedControlConfigureFlags_corres:
       apply (clarsimp simp: current_time_bounded_def active_sc_def MIN_REFILLS_def)
      apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
 
+    apply (rule bind_wp[OF _ get_sc_active_sp])
     apply (rule hoare_if)
      apply (rule bind_wp_fwd_skip, wpsimp)
      apply (rule bind_wp[OF _ gts_sp])
@@ -1509,26 +1514,16 @@ lemma invokeSchedControlConfigureFlags_corres:
     apply wps_conj_solves
      apply (wpsimp wp: refillNew_invs')
     apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def)
-   apply (rule hoare_if)
-    apply wps_conj_solves
-    apply (rule bind_wp[OF _ isRunnable_sp])
-    apply (rule hoare_if)
-     apply (wpsimp wp: refillUpdate_invs')
-     apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def)
-    apply (wpsimp wp: refillNew_invs')
-    apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def)
-   apply wps_conj_solves
-   apply (wpsimp wp: refillNew_invs')
-   apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def)
+   apply (wpsimp wp: refillNew_invs' refillUpdate_invs' | wps)+
 
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[where r'=dc])
        apply (rule corres_when)
         apply (clarsimp simp: sc_relation_def)
-       apply (rule corres_assert_opt_l)
-       apply (rule corres_split[OF isRunnable_corres'])
-          apply (clarsimp simp: sc_relation_def Some_to_the split: if_splits)
-         apply (rule corres_split[OF schedContextResume_corres])
+       apply (rule corres_split[OF schedContextResume_corres])
+         apply (rule corres_assert_opt_l)
+         apply (rule corres_split[OF isRunnable_corres'])
+            apply (clarsimp simp: sc_relation_def Some_to_the split: if_splits)
            apply (rule corres_split[OF getCurThread_corres])
              apply (rule corres_if)
                apply (fastforce dest!: Some_to_the simp: sc_relation_def)
@@ -1538,22 +1533,24 @@ lemma invokeSchedControlConfigureFlags_corres:
              apply (fastforce simp: sc_relation_def Some_to_the)
             apply wpsimp
            apply wpsimp
-          apply ((wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_valid_sched_action
-                 | strengthen valid_objs_valid_tcbs)+)[1]
-         apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp, fastforce)
-         apply (rule schedContextResume_invs')
-        apply (wpsimp wp: gts_wp)
-       apply wpsimp
+          apply (wpsimp wp: gts_wp)
+         apply (wpsimp wp: gts_wp)
+        apply ((wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_valid_sched_action
+                           hoare_vcg_ex_lift hoare_vcg_all_lift
+                | strengthen valid_objs_valid_tcbs)+)[1]
+       apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp, fastforce)
+       apply (rule schedContextResume_invs')
+      apply (wpsimp wp: gts_wp)
       apply (rule corres_split[OF updateSchedContext_no_stack_update_corres])
             apply (clarsimp simp: sc_relation_def)
            apply fastforce
           apply (clarsimp simp: objBits_simps)
          apply (clarsimp simp: objBits_simps)
         apply (rule updateSchedContext_no_stack_update_corres)
-            apply clarsimp
-           apply (clarsimp simp: sc_relation_def)
-          apply fastforce
-         apply (clarsimp simp: objBits_simps)
+           apply clarsimp
+          apply (clarsimp simp: sc_relation_def)
+         apply fastforce
+        apply (clarsimp simp: objBits_simps)
         apply wpsimp+
    apply (fastforce simp: sc_at_pred_n_def obj_at_def schact_is_rct_def pred_tcb_at_def
                    intro: valid_sched_action_weak_valid_sched_action)

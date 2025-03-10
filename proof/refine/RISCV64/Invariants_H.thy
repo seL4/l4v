@@ -3484,6 +3484,10 @@ lemma vms_sch_act_update'[iff]:
    valid_machine_state' s"
   by (simp add: valid_machine_state'_def )
 
+lemma objBits_sched_context_update[simp]:
+  "(\<And>sc. scSize (f sc) = scSize sc) \<Longrightarrow> objBits (f sc) = objBits sc"
+  by (simp add: objBits_simps)
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
