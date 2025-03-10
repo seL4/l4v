@@ -138,8 +138,8 @@ FIXME ARMHYP move HyperReg definition (to Hardware?)
 
 > data SGISignalInvocation
 >     = SGISignalGenerate {
->         sgiIRQ :: SGIIRQ,
->         sgiTargets :: SGITargetMask }
+>         sgiIRQ :: Word,
+>         sgiTargets :: Word }
 >     deriving (Show, Eq)
 
 #ifdef CONFIG_ARM_SMMU
@@ -190,8 +190,8 @@ The ARM platform requires an interrupt control call to record whether the interr
 >         issueHandlerControllerSlot :: PPtr CTE,
 >         issueHandlerTrigger :: Bool }
 >     | IssueSGISignal {
->         issueSGIIRQ :: SGIIRQ,
->         issueSGITargets :: SGITargetMask,
+>         issueSGIIRQ :: Word,
+>         issueSGITargets :: Word,
 >         issueSGIControlSlot,
 >         issueSGISlot :: PPtr CTE }
 >     deriving (Show, Eq)

@@ -43,8 +43,8 @@ data ArchCapability
     | VCPUCap {
         capVCPUPtr :: PPtr VCPU }
     | SGISignalCap {
-        capSGIIRQ :: SGIIRQ,
-        capSGITargetMask :: SGITargetMask }
+        capSGIIRQ :: Word,
+        capSGITargetMask :: Word }
     deriving (Eq, Show)
 
 {- The range of allowable sizes for Untyped objects depends on addressable memory size. -}

@@ -111,8 +111,8 @@ data VCPUInvocation
 
 data SGISignalInvocation
     = SGISignalGenerate {
-        sgiIRQ :: SGIIRQ,
-        sgiTargets :: SGITargetMask }
+        sgiIRQ :: Word,
+        sgiTargets :: Word }
     deriving (Show, Eq)
 
 {- Interrupt Control -}
@@ -124,8 +124,8 @@ data IRQControlInvocation
         issueHandlerControllerSlot :: PPtr CTE,
         issueHandlerTrigger :: Bool }
     | IssueSGISignal {
-        issueSGIIRQ :: SGIIRQ,
-        issueSGITargets :: SGITargetMask,
+        issueSGIIRQ :: Word,
+        issueSGITargets :: Word,
         issueSGIControlSlot,
         issueSGISlot :: PPtr CTE }
     deriving (Show, Eq)

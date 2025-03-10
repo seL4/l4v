@@ -2125,13 +2125,13 @@ case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) ->
         )
     else ->13
 
-case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal, irqW:targetsW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal, irqW:targetW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
       (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger,
         irqW#triggerW#index#depth#_, cnode#_) => ->1
     | (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger, _, _) => ->2
     | (ArchInvocationLabel ARMIRQIssueSGISignal,
-        irqW#targetsW#index#depth#_, cnode#_) => ->3
+        irqW#targetW#index#depth#_, cnode#_) => ->3
     | (ArchInvocationLabel ARMIRQIssueSGISignal, _, _) => ->4
     | _ => ->5
 
@@ -2199,13 +2199,13 @@ case \x of ((a@FrameCap { capFBasePtr = ptrA }), (b@FrameCap {})) -> ((SGISignal
     then ->2
     else ->3
 
-case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,_,_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal, irqW:targetsW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,_,_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal, irqW:targetW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
       (ArchInvocationLabel ARMIRQIssueIRQHandler,
         irqW#triggerW#index#depth#_, cnode#_) => ->1
     | (ArchInvocationLabel ARMIRQIssueIRQHandler, _, _) => ->2
     | (ArchInvocationLabel ARMIRQIssueSGISignal,
-        irqW#targetsW#index#depth#_, cnode#_) => ->3
+        irqW#targetW#index#depth#_, cnode#_) => ->3
     | (ArchInvocationLabel ARMIRQIssueSGISignal, _, _) => ->4
     | _ => ->5
 

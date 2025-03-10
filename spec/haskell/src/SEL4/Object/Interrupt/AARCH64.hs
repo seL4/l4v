@@ -30,6 +30,9 @@ import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqInvalid)
 import SEL4.Object.VCPU.TARGET (vgicMaintenance, vppiEvent, irqVPPIEventIndex)
 import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqVGICMaintenance, irqVTimerEvent, irqSMMU)
 
+isSGITargetValid :: Word -> Bool
+isSGITargetValid target = target < fromIntegral Arch.gicNumTargets
+
 decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
         KernelF SyscallError ArchInv.IRQControlInvocation
 decodeIRQControlInvocation label args srcSlot extraCaps =
@@ -48,13 +51,12 @@ decodeIRQControlInvocation label args srcSlot extraCaps =
         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) ->
             throw TruncatedMessage
         (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,
-         irqW:targetsW:index:depth:_, cnode:_) -> do
+         irqW:targetW:index:depth:_, cnode:_) -> do
             rangeCheck irqW 0 (Arch.numSGIs - 1)
-            rangeCheck targetsW 0 (mask Arch.gicNumTargets :: Word)
+            unless (isSGITargetValid targetW) $ throw $ InvalidArgument 1
             sgiSlot <- lookupTargetSlot cnode (CPtr index) (fromIntegral depth)
             ensureEmptySlot sgiSlot
-            return $ ArchInv.IssueSGISignal (fromIntegral irqW) (fromIntegral targetsW)
-                                            srcSlot sgiSlot
+            return $ ArchInv.IssueSGISignal irqW targetW srcSlot sgiSlot
         (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) ->
             throw TruncatedMessage
         _ -> throw IllegalOperation
