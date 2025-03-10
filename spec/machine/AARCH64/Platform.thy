@@ -48,6 +48,9 @@ type_synonym sgi_irq = "sgi_irq_len word"
 
 value_type sgi_target = gicNumTargets
 
+abbreviation sgi_target_of :: "'a::len word \<Rightarrow> sgi_target" where
+  "sgi_target_of w \<equiv> of_nat (unat w)"
+
 (* Physical addresses *)
 type_synonym paddr = machine_word
 abbreviation (input) "toPAddr \<equiv> id"

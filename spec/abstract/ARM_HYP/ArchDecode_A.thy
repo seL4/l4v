@@ -275,6 +275,9 @@ definition
   else if n = 6 then Some VCPUObj
   else None"
 
+definition sgi_target_valid :: "machine_word \<Rightarrow> bool" where
+  "sgi_target_valid t \<equiv> t < gicNumTargets"
+
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
   where
@@ -301,16 +304,16 @@ definition arch_decode_irq_control_invocation ::
       else if invocation_type label = ArchInvocationLabel ARMIRQIssueSGISignal
       then if length args \<ge> 4 \<and> length cps \<ge> 1
         then let irq_word = args ! 0;
-                 targets_word = args ! 1;
+                 target_word = args ! 1;
                  index = args ! 2;
                  depth = args ! 3;
                  cnode = cps ! 0
         in doE
           range_check irq_word 0 (of_nat numSGIs - 1);
-          range_check targets_word 0 (mask gicNumTargets);
+          unless (sgi_target_valid target_word) $ throwError InvalidArgument;
           dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
           ensure_empty dest_slot;
-          returnOk $ IssueSGISignal (ucast irq_word) (ucast targets_word) src_slot dest_slot
+          returnOk $ IssueSGISignal (ucast irq_word) (sgi_target_of target_word) src_slot dest_slot
         odE
       else throwError TruncatedMessage
     else throwError IllegalOperation)"

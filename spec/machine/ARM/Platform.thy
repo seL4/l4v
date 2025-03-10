@@ -55,6 +55,9 @@ type_synonym sgi_irq = "sgi_irq_len word"
 
 value_type sgi_target = gicNumTargets
 
+abbreviation sgi_target_of :: "'a::len word \<Rightarrow> sgi_target" where
+  "sgi_target_of w \<equiv> of_nat (unat w)"
+
 (* guaranteed to succeed, because of value_type *)
 lemma gicNumTargets_sgi_target_len:
   "gicNumTargets = LENGTH(sgi_mask_len)"
