@@ -553,7 +553,7 @@ definition "refill_size_bytes = 16"
 definition max_num_refills :: "nat \<Rightarrow> nat" where (* max for extra_refills + MIN_REFILLS; refill_abosolute_max in C *)
   "max_num_refills sz = ((2 ^ sz) - sizeof_sched_context_t) div refill_size_bytes"
 
-definition "sc_sporadic_flag = 1"
+definition "sc_sporadic_flag = 0"
 
 definition
   default_sched_context :: sched_context where
