@@ -37,31 +37,30 @@ value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"
 
 (* Software-generated interrupts *)
+definition numSGIs_bits :: nat where
+  "numSGIs_bits = 4"
+
 definition numSGIs :: nat where
-  "numSGIs = 16"
+  "numSGIs = 2^numSGIs_bits"
+
+definition gicNumTargets_bits :: nat where
+  "gicNumTargets_bits \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 5 else 3"
 
 definition gicNumTargets :: nat where
-  "gicNumTargets \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 16 else 8"
+  "gicNumTargets \<equiv> 2^gicNumTargets_bits"
 
 end
 
-(* Need to declare code equation outside Arch locale. These are used in value_type below. *)
-lemmas [code] = ARM.numSGIs_def ARM.gicNumTargets_def
+(* Need to declare code equation outside Arch locale. Used in value_type below. *)
+lemmas [code] = ARM.numSGIs_bits_def ARM.gicNumTargets_bits_def
 
 context Arch begin global_naming ARM
 
-value_type sgi_irq_len = numSGIs
+value_type sgi_irq_len = numSGIs_bits
 type_synonym sgi_irq = "sgi_irq_len word"
 
-value_type sgi_target = gicNumTargets
-
-abbreviation sgi_target_of :: "'a::len word \<Rightarrow> sgi_target" where
-  "sgi_target_of w \<equiv> of_nat (unat w)"
-
-(* guaranteed to succeed, because of value_type *)
-lemma gicNumTargets_sgi_target_len:
-  "gicNumTargets = LENGTH(sgi_mask_len)"
-  by (simp add: gicNumTargets_def Kernel_Config.config_ARM_GIC_V3_def)
+value_type sgi_target_len = gicNumTargets_bits
+type_synonym sgi_target = "sgi_target_len word"
 
 (* Physical addresses *)
 type_synonym paddr = machine_word
