@@ -21,7 +21,7 @@ This module defines the low-level ARM hardware interface.
 
 > import Control.Monad.Reader
 > import Data.Bits
-> import Data.Word(Word8, Word32, Word64)
+> import Data.Word(Word8, Word16, Word32, Word64)
 > import Data.Ix
 
 \end{impdetails}
@@ -810,8 +810,6 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 \subsection{GIC VCPU interface}
 
-FIXME ARMHYP consider moving to platform code?
-
 > vgicIRQActive :: Word
 > vgicIRQActive = 2 `shiftL` 28
 
@@ -902,3 +900,18 @@ FIXME ARMHYP consider moving to platform code?
 
 #endif
 
+\subsection{SGI}
+
+> numSGIs :: Int
+> numSGIs = error "defined in machine/AARCH64/Platform.thy"
+
+> gicSGITargetMaskBits :: Int
+> gicSGITargetMaskBits = error "defined in machine/AARCH64/Platform.thy"
+
+> -- the C bitfield definition reserves 16 bit each in the cap; only 8 bits are used for GICv2
+> type SGIIRQ = Word16
+> type SGITargetMask = Word16
+
+> -- the machine op uses word_t (and irq_t which is also word_t in C)
+> ipiSendTarget :: Word -> Word -> MachineMonad ()
+> ipiSendTarget irq targets = error "Unimplemented - machine op"

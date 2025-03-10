@@ -4077,6 +4077,21 @@ lemma isEPsrc:
   "isEndpointCap scap = isEndpointCap src_cap"
   by (rule master_srcI, rule isCap_Master)
 
+lemma isIRQControl_src:
+  "(scap = IRQControlCap) = (src_cap = IRQControlCap)"
+  using src_derived
+  by (auto simp: isCap_simps weak_derived'_def)
+
+lemma isSGI_src:
+  "isArchSGISignalCap scap = isArchSGISignalCap src_cap"
+  using src_derived
+  by (fastforce simp: isCap_simps weak_derived'_def)
+
+lemma isIRQHandler_src:
+  "isIRQHandlerCap scap = isIRQHandlerCap src_cap"
+  using src_derived
+  by (fastforce simp: isCap_simps weak_derived'_def)
+
 lemma isEPbadge_src:
   "isEndpointCap src_cap \<Longrightarrow> capEPBadge scap = capEPBadge src_cap"
   using src_derived
@@ -4095,6 +4110,18 @@ lemma isEPdest:
   "isEndpointCap dcap = isEndpointCap dest_cap"
   using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
 
+lemma isSGI_dest:
+  "isArchSGISignalCap dcap = isArchSGISignalCap dest_cap"
+  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
+
+lemma isIRQHandler_dest:
+  "isIRQHandlerCap dcap = isIRQHandlerCap dest_cap"
+  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
+
+lemma isIRQControl_dest:
+  "(dcap = IRQControlCap) = (dest_cap = IRQControlCap)"
+  using dest_derived by (auto simp: isCap_simps weak_derived'_def)
+
 lemma isEPbadge_dest:
   "isEndpointCap dest_cap \<Longrightarrow> capEPBadge dcap = capEPBadge dest_cap"
   using dest_derived by (auto simp: weak_derived'_def isCap_simps)
@@ -4110,6 +4137,32 @@ lemma isNTFNbadge_dest:
 lemmas ep_simps =
   isEPsrc isEPbadge_src isNTFNsrc isNTFNbadge_src
   isEPdest isEPbadge_dest isNTFNdest isNTFNbadge_dest
+
+lemma SGI_dcap_neq:
+  "isArchSGISignalCap dest_cap \<Longrightarrow> (cap \<noteq> dcap) = (cap \<noteq> dest_cap)"
+  using dest_derived
+  by (auto simp: weak_derived'_def isCap_simps)
+
+lemma SGI_dcap_neq_cap:
+  "isArchSGISignalCap cap \<Longrightarrow> (dcap \<noteq> cap) = (dest_cap \<noteq> cap)"
+  using dest_derived
+  by (auto simp: weak_derived'_def isCap_simps)
+
+lemma SGI_scap_neq:
+  "isArchSGISignalCap src_cap \<Longrightarrow> (cap \<noteq> scap) = (cap \<noteq> src_cap)"
+  using src_derived
+  by (auto simp: weak_derived'_def isCap_simps)
+
+lemma SGI_scap_neq_cap:
+  "isArchSGISignalCap cap \<Longrightarrow> (scap \<noteq> cap) = (src_cap \<noteq> cap)"
+  using src_derived
+  by (auto simp: weak_derived'_def isCap_simps)
+
+lemmas cap_simps =
+  ep_simps
+  isIRQControl_src isSGI_src isIRQHandler_src
+  isIRQControl_dest isSGI_dest isIRQHandler_dest
+  SGI_dcap_neq SGI_dcap_neq_cap SGI_scap_neq SGI_scap_neq_cap
 
 end
 
@@ -4131,13 +4184,9 @@ proof -
     apply (frule_tac p=p in n_cap)
     apply (frule_tac p=p' in n_cap)
     apply (drule badge_n)+
-    apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep
-                          ep_simps region_simps
-                    split: if_split_asm)
-       apply fastforce
-      apply fastforce
-     apply fastforce
-    apply fastforce
+    apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep cap_simps region_simps
+                    split: if_split_asm;
+           blast)
     done
 qed
 
@@ -4257,7 +4306,7 @@ proof -
     apply (case_tac "p = dest")
      apply simp
      apply (case_tac "p' = src")
-      apply (clarsimp simp add: region_simps)
+      apply (clarsimp simp add: region_simps cap_simps)
       apply (erule_tac x=src in allE)
       apply (erule_tac x=dest in allE)
       apply clarsimp
@@ -4288,7 +4337,7 @@ proof -
       apply simp
       apply (case_tac "p'' = src", simp)
       apply simp
-     apply (clarsimp simp: region_simps)
+     apply (clarsimp simp: region_simps cap_simps)
      apply (erule_tac x=src in allE)
      apply clarsimp
      apply (erule_tac x="s_d_swap p' src dest" in allE)
@@ -4329,7 +4378,7 @@ proof -
     apply (case_tac "p'=dest")
      apply clarsimp
      apply (case_tac "p=src")
-      apply (clarsimp simp: region_simps)
+      apply (clarsimp simp: region_simps cap_simps)
       apply (erule_tac x=dest in allE)
       apply (erule_tac x=src in allE)
       apply clarsimp
@@ -4412,7 +4461,7 @@ proof -
      apply clarsimp
      apply (erule_tac x="dest" in allE)
      apply (erule_tac x="s_d_swap p' src dest" in allE)
-     apply (clarsimp simp: region_simps)
+     apply (clarsimp simp: region_simps cap_simps)
      apply (erule impE)
       apply (clarsimp simp: s_d_swap_def)
      apply clarsimp
@@ -5482,7 +5531,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     apply (frule(1) Fin1)
     apply (rule disjE [OF cases])
      apply (clarsimp simp: ztc_sameRegion ztc1 ztc2 sameObjectAs_def3)
-     apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap,
+     apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap, isIRQControlCap cap,
                                 isUntypedCap cap, isArchFrameCap cap,
                                 capRange cap)" in  master_eqE,
              simp add: isCap_Master capRange_Master del: isNullCap)+
@@ -5574,28 +5623,28 @@ lemma make_zombie_invs':
        | simp split del: if_split)+
   apply clarsimp
   apply (intro conjI[rotated])
-        apply (clarsimp simp: cte_wp_at_ctes_of)
-        apply (auto simp: untypedZeroRange_def isCap_simps)[1]
-      apply (clarsimp simp: modify_map_def ran_def split del: if_split
-                     split: if_split_asm)
-       apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of isCap_simps)
-      apply auto[1]
+         apply (clarsimp simp: cte_wp_at_ctes_of)
+         apply (auto simp: untypedZeroRange_def isCap_simps)[1]
+        apply (clarsimp simp: modify_map_def ran_def split del: if_split
+                       split: if_split_asm)
+         apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of isCap_simps)
+        apply auto[1]
 
-     apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
-                    dest!: ztc_phys capBits_capUntyped_capRange)
-     apply (frule(1) capBits_capUntyped_capRange, simp)
-     apply (clarsimp dest!: valid_global_refsD_with_objSize)
+       apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
+                      dest!: ztc_phys capBits_capUntyped_capRange)
+       apply (frule(1) capBits_capUntyped_capRange, simp)
+       apply (clarsimp dest!: valid_global_refsD_with_objSize)
 
-     apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
-                    dest!: ztc_phys capBits_capUntyped_capRange)
-     apply (frule(1) capBits_capUntyped_capRange, simp)
-     apply (clarsimp dest!: valid_global_refsD_with_objSize)
+      apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
+                     dest!: ztc_phys capBits_capUntyped_capRange)
+      apply (frule(1) capBits_capUntyped_capRange, simp)
+      apply (clarsimp dest!: valid_global_refsD_with_objSize)
 
-    apply (auto elim: if_unsafe_then_capD' simp: isCap_simps)[1]
+     apply (auto elim: if_unsafe_then_capD' simp: isCap_simps)[1]
 
-     apply (clarsimp simp: cte_wp_at_ctes_of)
-     apply (drule bspec[where x=sl], simp)
-     apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: cte_wp_at_ctes_of)
+    apply (drule bspec[where x=sl], simp)
+    apply (clarsimp simp: isCap_simps)
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (subgoal_tac "st_tcb_at' ((=) Inactive) p' s
                                \<and> obj_at' (Not \<circ> tcbQueued) p' s
@@ -5624,13 +5673,23 @@ lemma make_zombie_invs':
    apply (simp add: valid_badges_def del: fun_upd_apply)
    apply clarify
    apply (thin_tac "\<not> isUntypedCap cap" for cap)
-   apply (clarsimp simp: isCap_simps split: if_split_asm)
-     subgoal by ((elim disjE | clarsimp simp: isCap_simps)+)
-    subgoal by (fastforce simp: isCap_simps sameRegionAs_def3)
-   apply (clarsimp simp: mdb_next_unfold)
-   apply (erule_tac x=p in allE)
-   apply (erule_tac x="mdbNext node" in allE)
+   apply (rule conjI; clarsimp)
+    apply (clarsimp simp: isCap_simps split: if_split_asm)
+      subgoal by ((elim disjE | clarsimp simp: isCap_simps)+)
+     subgoal by (fastforce simp: isCap_simps sameRegionAs_def3)
+    apply (clarsimp simp: mdb_next_unfold)
+    apply (erule_tac x=p in allE)
+    apply (erule_tac x="mdbNext node" in allE)
    subgoal by simp
+   apply (clarsimp simp: isCap_simps split: if_split_asm)
+    apply (erule_tac x=sl in allE)
+    apply simp
+    apply (erule_tac x=p' in allE)
+    apply (solves \<open>clarsimp simp: mdb_next_unfold\<close>)
+   apply (erule_tac x=p in allE)
+   apply simp
+   apply (erule_tac x=p' in allE)
+   apply (solves \<open>clarsimp simp: mdb_next_unfold\<close>)
   apply (rule conjI)
    apply clarsimp
    apply (erule (1) caps_contained_subrange, simp)
@@ -5654,7 +5713,7 @@ lemma make_zombie_invs':
                  apply (rule vmdb.intro, simp add: valid_mdb'_def)
                 apply assumption
                apply (simp add: cteCaps_of_def)
-              apply (clarsimp simp: isCap_simps)
+              apply (clarsimp simp: isCap_simps, fastforce) (* needs unfolding before fastforce *)
              apply assumption
             apply (clarsimp simp: isCap_simps)
            apply assumption
@@ -7765,8 +7824,9 @@ qed
 lemmas cteRevoke_corres = use_spec_corres [OF cteRevoke_corres']
 
 lemma arch_recycleCap_improve_cases:
-   "\<lbrakk> \<not> isFrameCap cap; \<not> isPageTableCap cap; \<not> isVCPUCap cap; \<not> isASIDControlCap cap \<rbrakk>
-    \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
+  "\<lbrakk> \<not>isFrameCap cap; \<not>isPageTableCap cap; \<not>isVCPUCap cap; \<not>isASIDControlCap cap;
+     \<not>isSGISignalCap cap \<rbrakk>
+   \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
   by (cases cap, simp_all add: isCap_simps)
 
 crunch invokeCNode
@@ -8103,6 +8163,11 @@ lemma m'_revocable:
   apply (clarsimp simp: m'_def n_def modify_map_if nullMDBNode_def split: if_split_asm)
   done
 
+lemma isIRQHandlerCap_cap'[simp]:
+  "isIRQHandlerCap cap' = isIRQHandlerCap src_cap"
+  using parency unfolding weak_derived'_def
+  by (auto simp: weak_derived'_def isCap_simps)
+
 lemma cteMove_valid_mdb_helper:
   "(isUntypedCap cap' \<Longrightarrow> cap' = src_cap) \<Longrightarrow>valid_mdb_ctes m'"
 proof
@@ -8227,6 +8292,11 @@ proof
     apply simp
     done
 
+  from parency
+  have SGI_src_cap: "isArchSGISignalCap src_cap \<Longrightarrow> cap' = src_cap"
+    unfolding weak_derived'_def
+    by (clarsimp simp: isCap_simps)
+
   from valid
   have "valid_badges m" ..
   thus "valid_badges m'" using src dest parency
@@ -8234,13 +8304,15 @@ proof
     apply (drule m'_badged)+
     apply (drule m'_next)
     apply (clarsimp simp add: weak_derived'_def split: if_split_asm)
-      apply (erule_tac x=src in allE, erule_tac x=p' in allE,
-             erule allE, erule impE, erule exI)
+       apply (erule_tac x=src in allE, erule_tac x=p' in allE,
+              erule allE, erule impE, erule exI)
+       apply (clarsimp simp: SGI_src_cap)
+      apply (erule_tac x=p in allE, erule_tac x=src in allE,
+              erule allE, erule impE, erule exI)
       apply clarsimp
-     apply (erule_tac x=p in allE, erule_tac x=src in allE,
-             erule allE, erule impE, erule exI)
-     apply clarsimp
-    by fastforce
+     apply (clarsimp simp: isCap_simps)
+    apply blast
+    done
 
   from valid
   have "caps_contained' m" by (simp add: valid_mdb_ctes_def)

@@ -87,6 +87,8 @@ where
         arch_capability.PageTableCap word data)"
 | "acap_relation (arch_cap.PageDirectoryCap word data) c  = (c =
         arch_capability.PageDirectoryCap word data)"
+| "acap_relation (arch_cap.SGISignalCap irq targets) c  = (c =
+        arch_capability.SGISignalCap irq (ucast targets))"
 
 primrec
   cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool"
@@ -724,7 +726,7 @@ lemmas isCap_defs =
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
-  isDomainCap_def
+  isDomainCap_def isSGISignalCap_def
 
 lemma isCNodeCap_cap_map [simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"

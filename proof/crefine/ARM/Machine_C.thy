@@ -192,6 +192,12 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
+assumes ipi_send_target_ccorres:
+  "\<And>irq targets hs. ccorres dc xfdc
+                       \<top> (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>cpuTargetList = targets \<rbrace>) hs
+                       (doMachineOp (ipiSendTarget irq targets))
+                       (Call ipi_send_target_'proc)"
+
 assumes invalidateLocalTLB_VAASID_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateLocalTLB_VAASID_'proc) UNIV"
 
