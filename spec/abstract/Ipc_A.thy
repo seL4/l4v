@@ -753,19 +753,21 @@ where
 
     if period = budget
     then refill_new sc_ptr MIN_REFILLS budget 0
-    else if 0 < sc_refill_max sc \<and> sc_tcb sc \<noteq> None
-         then do tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
-                 st \<leftarrow> get_thread_state tcb_ptr;
-                 if runnable st
-                 then refill_update sc_ptr period budget mrefills
-                 else refill_new sc_ptr mrefills budget period
-              od
-         else refill_new sc_ptr mrefills budget period;
+    else do active \<leftarrow> get_sc_active sc_ptr;
+            if active \<and> sc_tcb sc \<noteq> None
+            then do tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
+                    st \<leftarrow> get_thread_state tcb_ptr;
+                    if runnable st
+                    then refill_update sc_ptr period budget mrefills
+                    else refill_new sc_ptr mrefills budget period
+                 od
+            else refill_new sc_ptr mrefills budget period
+         od;
 
     when (sc_tcb sc \<noteq> None) $ do
+      sched_context_resume sc_ptr;
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
       st \<leftarrow> get_thread_state tcb_ptr;
-      sched_context_resume sc_ptr;
       ct \<leftarrow> gets cur_thread;
       if tcb_ptr = ct then reschedule_required
       else when (runnable st) $ possible_switch_to tcb_ptr

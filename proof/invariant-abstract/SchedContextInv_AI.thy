@@ -1238,7 +1238,7 @@ end
 
 crunch invoke_sched_control_configure_flags
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma invoke_sched_context_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"

@@ -584,11 +584,249 @@ lemma schedContext_updateConsumed_ccorres:
 sorry (* FIXME RT: schedContext_updateConsumed_ccorres *)
 
 lemma invokeSchedControl_ConfigureFlags_ccorres:
-  "ccorres dc xfdc
-     invs' UNIV []
-     (invokeSchedControlConfigureFlags iv)
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and valid_sc_ctrl_inv'
+            (InvokeSchedControlConfigureFlags scPtr budget period mRefills badge flags))
+     (\<lbrace>\<acute>target___ptr_to_struct_sched_context_C = Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>\<acute>budget = budget\<rbrace> \<inter> \<lbrace>\<acute>period = period\<rbrace> \<inter> \<lbrace>\<acute>max_refills = of_nat mRefills\<rbrace>
+      \<inter> \<lbrace>\<acute>badge___unsigned_long = badge\<rbrace> \<inter> \<lbrace>\<acute>flags = flags\<rbrace>) hs
+     (liftE (invokeSchedControlConfigureFlags
+              (InvokeSchedControlConfigureFlags scPtr budget period mRefills badge flags)))
      (Call invokeSchedControl_ConfigureFlags_'proc)"
-sorry (* FIXME RT: invokeSchedControl_ConfigureFlags_ccorres *)
+  supply Collect_const [simp del]
+  apply (cinit' lift: target___ptr_to_struct_sched_context_C_' budget_' period_' max_refills_'
+                      badge___unsigned_long_' flags_'
+                simp: invokeSchedControlConfigureFlags_def gets_bind_ign liftE_liftM)
+   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+   apply (rule ccorres_move_c_guard_sc)
+   apply (rule_tac xf'=thread_'
+               and val="option_to_ctcb_ptr (scTCB sc)"
+               and R="obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr and valid_objs'"
+                in ccorres_symb_exec_r_known_rv[where R'="UNIV"])
+      apply (rule conseqPre, vcg)
+      apply (fastforce dest: obj_at_cslift_sc simp: csched_context_relation_def typ_heap_simps)
+     apply ceqv
+    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+        apply (clarsimp simp: when_def)
+        apply (rule_tac Q="obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr and valid_objs'"
+                     in ccorres_cond_both'[where Q'=\<top>])
+          apply normalise_obj_at'
+          apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+          apply (clarsimp simp: valid_sched_context'_def option_to_ctcb_ptr_def)
+          apply (case_tac "scTCB sc"; clarsimp)
+          apply (fastforce dest: tcb_at_not_NULL)
+         (* target sc is associated with a thread, which we remove from scheduler queues,
+            and then possibly commit the time *)
+         apply clarsimp
+         apply (drule Some_to_the)
+         apply (clarsimp simp: option_to_ctcb_ptr_def split: option.splits)
+         apply (rule ccorres_rhs_assoc)
+         apply (ctac (no_vcg) add: tcbReleaseRemove_ccorres)
+          apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
+           apply (rule ccorres_pre_getCurSc)
+           apply (rule_tac Q="\<lambda>s. curSc = ksCurSc s" in ccorres_cond_both'[where Q'=\<top>])
+             apply (fastforce dest: rf_sr_ksCurSC)
+            apply (ctac (no_vcg) add: commitTime_ccorres)
+           apply (rule ccorres_return_Skip)
+          apply (wpsimp wp: hoare_drop_imps)
+         apply (wpsimp wp: tcbReleaseRemove_invs')
+        apply (rule ccorres_return_Skip)
+       apply ceqv
+      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+          apply (rule ccorres_cond_both'[where Q="\<top>" and Q'=\<top>])
+            apply fastforce
+           apply (ctac (no_vcg) add: refill_new_ccorres)
+          apply clarsimp
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac (no_vcg) add: sc_active_ccorres, rename_tac active)
+           apply csymbr
+           apply clarsimp
+           apply (rule_tac P="to_bool active" in ccorres_cases)
+            apply ccorres_rewrite
+            apply (rule ccorres_cond_seq)
+            apply (rule ccorres_cond_true)
+            apply (rule_tac xf'=ret__int_'
+                        and val="from_bool (scTCB sc \<noteq> None)"
+                        and R="obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr and valid_objs'"
+                         in ccorres_symb_exec_r_known_rv[where R'="UNIV"])
+               apply (rule conseqPre, vcg)
+               apply normalise_obj_at'
+               apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+               apply (frule (1) obj_at_cslift_sc)
+               apply (clarsimp simp: option_to_ctcb_ptr_def valid_sched_context'_def)
+               apply (case_tac "scTCB sc"; clarsimp)
+               apply (fastforce dest: tcb_at_not_NULL)
+              apply ceqv
+             apply (rule ccorres_cond_seq)
+             apply (rule ccorres_cond_both'[where Q="\<top>" and Q'=\<top>])
+               apply fastforce
+              apply clarsimp
+              apply (drule Some_to_the)
+              apply (clarsimp simp: option_to_ctcb_ptr_def split: option.splits)
+              apply (rule ccorres_rhs_assoc)+
+              apply (ctac (no_vcg) add: isRunnable_ccorres)
+               apply csymbr
+               apply (rule ccorres_cond_both'[where Q="\<top>" and Q'=\<top>])
+                 apply (clarsimp simp: to_bool_def)
+                apply (ctac (no_vcg) add: refill_update_ccorres)
+               apply (ctac (no_vcg) add: refill_new_ccorres)
+              apply wpsimp
+             (* target sc is not associated with a thread, so we call refill_new *)
+             apply ccorres_rewrite
+             apply (rule ccorres_cond_false)
+             apply (ctac add: refill_new_ccorres)
+            apply vcg
+           (* target sc is not active, so we call refill_new *)
+           apply (clarsimp simp: to_bool_def)
+           apply ccorres_rewrite
+           apply (rule ccorres_cond_seq)
+           apply (rule ccorres_cond_false)
+           apply ccorres_rewrite
+           apply (rule ccorres_cond_false)
+           apply ccorres_rewrite
+           apply (ctac (no_vcg) add: refill_new_ccorres)
+          apply wpsimp
+         apply ceqv
+        apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+            apply (clarsimp simp: when_def)
+            apply (rule_tac Q="obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr and valid_objs'"
+                         in ccorres_cond_both'[where Q'=\<top>])
+              apply normalise_obj_at'
+              apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+              apply (frule (1) obj_at_cslift_sc)
+              apply (clarsimp simp: option_to_ctcb_ptr_def valid_sched_context'_def)
+              apply (case_tac "scTCB sc"; clarsimp)
+              apply (fastforce dest: tcb_at_not_NULL)
+             apply (rule ccorres_rhs_assoc)
+             apply (ctac add: schedContext_resume_ccorres)
+               apply (rule ccorres_rhs_assoc)+
+               apply (ctac add: isRunnable_ccorres, rename_tac runnable)
+                 apply (rule ccorres_pre_getCurThread, rename_tac ctPtr)
+                 apply (rule ccorres_cond_seq)
+                 apply ccorres_rewrite
+                 apply clarsimp
+                 apply (drule Some_to_the)
+                 apply (rule_tac P="the (scTCB sc) = ctPtr" in ccorres_cases)
+                  (* the target sc is associated with the current thread,
+                     so we call rescheduleRequired *)
+                  apply clarsimp
+                  apply (rule ccorres_cond_false)
+                  apply ccorres_rewrite
+                  apply (rule ccorres_cond_true)
+                  apply (ctac add: rescheduleRequired_ccorres)
+                 apply (clarsimp simp: when_def to_bool_def)
+                 apply (rule_tac Q="\<lambda>s. ctPtr = ksCurThread s" in ccorres_cond_both'[where Q'=\<top>])
+                   apply (clarsimp dest!: rf_sr_ksCurThread simp: option_to_ctcb_ptr_def)
+                  (* the target sc is not associated with the current thread, but is associated
+                     with a runnable thread, so we call possibleSwitchTo *)
+                  apply (rule ccorres_add_return2)
+                  apply (ctac add: possibleSwitchTo_ccorres)
+                    apply (rule ccorres_cond_false)
+                    apply (rule ccorres_return_Skip)
+                   apply wpsimp
+                  apply (vcg exspec=possibleSwitchTo_modifies)
+                 (* the target sc is associated with a thread that is not runnable - do nothing *)
+                 apply (rule ccorres_cond_false)
+                 apply (rule ccorres_return_Skip)
+                apply wpsimp
+               apply (vcg exspec=isRunnable_modifies)
+              apply (rule_tac Q'="\<lambda>_ s. tcb_at' (the (scTCB sc)) s
+                                        \<and> weak_sch_act_wf (ksSchedulerAction s) s
+                                        \<and> ksCurDomain s \<le> maxDomain \<and> valid_objs' s \<and> no_0_obj' s
+                                        \<and> pspace_aligned' s \<and> pspace_distinct' s"
+                           in hoare_post_imp)
+               apply clarsimp
+              apply wpsimp
+             apply (vcg exspec=schedContext_resume_modifies)
+            apply ccorres_rewrite
+            apply (rule ccorres_return_Skip)
+           apply ceqv
+          apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+              apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+                apply vcg
+               apply simp
+              apply (fastforce intro: rf_sr_sc_update_no_refill_buffer_update2
+                                      refill_buffer_relation_sc_no_refills_update
+                                simp: typ_heap_simps' csched_context_relation_def)
+             apply ceqv
+            apply (rule ccorres_add_return2)
+            apply (rule ccorres_split_nothrow)
+                apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+                  apply vcg
+                 apply simp
+                apply (fastforce intro: rf_sr_sc_update_no_refill_buffer_update2
+                                        refill_buffer_relation_sc_no_refills_update
+                                  simp: typ_heap_simps' csched_context_relation_def
+                                        seL4_SchedContext_Sporadic_def schedContextSporadicFlag_def
+                                        nth_is_and_neq_0
+                                 split: if_splits)
+               apply ceqv
+              apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+              apply (rule allI, rule conseqPre, vcg)
+              apply (clarsimp simp: return_def)
+             apply wpsimp
+            apply vcg
+           apply wpsimp
+          apply (clarsimp simp: guard_is_UNIV_def)
+         apply wpsimp
+        apply (clarsimp simp: guard_is_UNIV_def)
+       apply ((wpsimp wp: refillNew_invs' hoare_vcg_imp_lift' hoare_vcg_if_lift2
+               | strengthen invs'_implies)+)[1]
+           apply (drule Some_to_the)
+           apply ((wpsimp wp: refillUpdate_invs' | strengthen invs'_implies)+)[1]
+          apply clarsimp
+          apply (drule Some_to_the)
+          apply ((wpsimp wp: refillNew_invs' | strengthen invs'_implies)+)[1]
+         apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr s
+                                   \<and> (\<exists>n. sc_at'_n n scPtr s \<and> valid_refills_number' mRefills n)
+                                   \<and> ex_nonz_cap_to' scPtr s \<and> MIN_REFILLS \<le> mRefills
+                                   \<and> (\<exists>tcbPtr. scTCB sc = Some tcbPtr \<longrightarrow> tcb_at' tcbPtr s)
+                                   \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                      in hoare_post_imp)
+          apply (clarsimp split: if_splits)
+          apply normalise_obj_at'
+          apply (intro conjI;
+                 fastforce dest!: invs'_ko_at_valid_sched_context' simp: valid_sched_context'_def)
+         apply (wpsimp wp: isRunnable_wp)
+        apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr s
+                                  \<and> MIN_REFILLS \<le> mRefills
+                                  \<and> (\<exists>tcbPtr. scTCB sc = Some tcbPtr \<longrightarrow> tcb_at' tcbPtr s)
+                                  \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                     in hoare_post_imp)
+         apply normalise_obj_at'
+         apply (intro conjI impI allI;
+                fastforce dest!: invs'_ko_at_valid_sched_context' simp: valid_sched_context'_def
+                          split: if_splits)
+        apply ((wpsimp wp: refillNew_invs' hoare_vcg_ex_lift | strengthen invs'_implies)+)[1]
+       apply wpsimp
+      apply (clarsimp simp: guard_is_UNIV_def option_to_ctcb_ptr_def split: option.splits)
+     apply (rule_tac Q'="\<lambda>_ s. invs' s
+                               \<and> obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr s
+                               \<and> (\<exists>n. sc_at'_n n scPtr s \<and> valid_refills_number' mRefills n)
+                               \<and> MIN_REFILLS \<le> mRefills \<and> ex_nonz_cap_to' scPtr s
+                               \<and> (\<exists>tcbPtr. scTCB sc = Some tcbPtr \<longrightarrow> tcb_at' tcbPtr s)
+                               \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                  in hoare_post_imp)
+      apply clarsimp
+      subgoal
+        by (intro conjI impI allI;
+            normalise_obj_at'?,
+            fastforce dest!: invs'_ko_at_valid_sched_context'
+                      intro: obj_at'_weakenE
+                       simp: valid_refills_number'_def valid_sched_context'_def MIN_REFILLS_def
+                             objBits_simps active_sc_at'_def)
+     apply (wpsimp wp: commitTime_invs' hoare_vcg_ex_lift)
+      apply (drule Some_to_the)
+      apply (wpsimp wp: commitTime_invs' hoare_vcg_ex_lift)
+     apply (wpsimp wp: commitTime_invs' tcbReleaseRemove_invs' hoare_vcg_ex_lift)
+    apply (clarsimp simp: guard_is_UNIV_def to_bool_def from_bool_def MIN_REFILLS_def)
+   apply vcg
+  apply (clarsimp split: if_splits)
+  apply (intro conjI impI allI;
+         fastforce dest!: invs'_ko_at_valid_sched_context' intro: obj_at'_weakenE
+                    simp: valid_sched_context'_def)
+  done
 
 end
 
