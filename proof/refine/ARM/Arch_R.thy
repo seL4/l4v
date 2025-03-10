@@ -1217,7 +1217,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-crunches performSGISignalGenerate
+crunch performSGISignalGenerate
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
 
 lemma invokeArch_tcb_at':

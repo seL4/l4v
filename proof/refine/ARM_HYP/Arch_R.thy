@@ -2432,7 +2432,7 @@ lemma performARMVCPUInvocation_invs'[wp]:
   "\<lbrace>invs' and valid_vcpuinv' i\<rbrace> performARMVCPUInvocation i \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding performARMVCPUInvocation_def valid_vcpuinv'_def by wpsimp
 
-crunches ipiSendTarget
+crunch ipiSendTarget
   for um[wp]: "\<lambda>ms. P (underlying_memory ms)"
 
 lemma performSGISignalInvocation_invs[wp]:

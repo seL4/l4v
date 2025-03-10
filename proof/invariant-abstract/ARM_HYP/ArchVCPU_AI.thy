@@ -603,7 +603,7 @@ lemma perform_vcpu_invocation_valid_cur_vcpu:
   unfolding perform_vcpu_invocation_def
   by (wpsimp wp: associate_vcpu_tcb_valid_cur_vcpu)
 
-crunches perform_sgi_invocation
+crunch perform_sgi_invocation
   for valid_cur_vcpu[wp]: valid_cur_vcpu
 
 lemma perform_invocation_valid_cur_vcpu[wp]:

@@ -84,7 +84,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
          | wpc | simp )+
   done
 
-crunches perform_sgi_invocation, perform_asid_pool_invocation
+crunch perform_sgi_invocation, perform_asid_pool_invocation
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
 lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:

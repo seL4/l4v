@@ -235,7 +235,7 @@ lemma ucast_asid_high_btis_of_le [simp]:
   apply (simp add: asid_high_bits_def)
   done
 
-crunches perform_sgi_invocation
+crunch perform_sgi_invocation
   for tcb_at[wp]: "\<lambda>s. P (tcb_at t s)"
 
 lemma invoke_arch_tcb:

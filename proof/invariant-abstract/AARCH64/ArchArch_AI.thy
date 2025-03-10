@@ -241,7 +241,7 @@ lemma ucast_asid_high_btis_of_le [simp]:
   apply (simp add: asid_high_bits_def)
   done
 
-crunches perform_sgi_invocation
+crunch perform_sgi_invocation
   for tcb_at[wp]: "\<lambda>s. P (tcb_at t s)"
 
 lemma invoke_arch_tcb:
@@ -1271,10 +1271,8 @@ crunch_ignore (add: select_ext find_vspace_for_asid)
 
 crunch arch_decode_invocation
   for inv[wp]: "P"
-
-crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_ext_weak_wp hoare_vcg_all_lift
-       hoare_vcg_all_liftE_R hoare_drop_imps simp: crunch_simps)
+  (wp: crunch_wps select_ext_weak_wp hoare_vcg_all_liftE_R hoare_drop_imps
+   simp: crunch_simps)
 
 
 declare lookup_slot_for_cnode_op_cap_to [wp]
