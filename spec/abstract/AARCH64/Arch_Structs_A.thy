@@ -52,7 +52,7 @@ datatype arch_cap =
       (acap_obj : obj_ref)
   | SGISignalCap
       (acap_sgi_irq : sgi_irq)
-      (acap_sgi_target_mask : sgi_target_mask)
+      (acap_sgi_target : sgi_target)
 
 
 text \<open>Update the mapping data saved in a frame or page table capability.\<close>

@@ -53,13 +53,7 @@ context Arch begin global_naming ARM_HYP
 value_type sgi_irq_len = numSGIs
 type_synonym sgi_irq = "sgi_irq_len word"
 
-value_type sgi_mask_len = gicNumTargets
-type_synonym sgi_target_mask = "sgi_mask_len word"
-
-(* guaranteed to succeed, because of value_type *)
-lemma gicNumTargets_sgi_target_len:
-  "gicNumTargets = LENGTH(sgi_mask_len)"
-  by (simp add: gicNumTargets_def Kernel_Config.config_ARM_GIC_V3_def)
+value_type sgi_target = gicNumTargets
 
 (* Physical addresses *)
 type_synonym paddr = machine_word

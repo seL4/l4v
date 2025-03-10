@@ -36,7 +36,7 @@ datatype cdl_tcb_invocation =
   | SetTLSBase cdl_object_id
 
 datatype arch_cdl_irq_control_invocation =
-    ARMIssueSGISignal sgi_irq sgi_target_mask cdl_cap_ref cdl_cap_ref
+    ARMIssueSGISignal sgi_irq sgi_target cdl_cap_ref cdl_cap_ref
 
 datatype cdl_irq_control_invocation =
     IssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref

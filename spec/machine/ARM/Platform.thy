@@ -53,8 +53,7 @@ context Arch begin global_naming ARM
 value_type sgi_irq_len = numSGIs
 type_synonym sgi_irq = "sgi_irq_len word"
 
-value_type sgi_mask_len = gicNumTargets
-type_synonym sgi_target_mask = "sgi_mask_len word"
+value_type sgi_target = gicNumTargets
 
 (* guaranteed to succeed, because of value_type *)
 lemma gicNumTargets_sgi_target_len:

@@ -58,7 +58,7 @@ datatype page_invocation
          (page_get_paddr: obj_ref)
 
 datatype sgi_signal_invocation =
-    SGISignalGenerate (sgi_irq : sgi_irq) (sgi_targets : sgi_target_mask)
+    SGISignalGenerate (sgi_irq : sgi_irq) (sgi_target : sgi_target)
 
 datatype arch_invocation
      = InvokePageTable page_table_invocation
@@ -76,7 +76,7 @@ datatype arch_irq_control_invocation =
     ArchIRQControlIssue irq cslot_ptr cslot_ptr bool
   | IssueSGISignal
       (issue_sgi_irq : sgi_irq)
-      (issue_sgi_targets : sgi_target_mask)
+      (issue_sgi_target : sgi_target)
       (issue_control_slot : cslot_ptr)
       (issue_sgi_slot : cslot_ptr)
 

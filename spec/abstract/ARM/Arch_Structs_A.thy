@@ -48,7 +48,7 @@ datatype arch_cap =
  | PageDirectoryCap obj_ref "asid option"
  | SGISignalCap
      (acap_sgi_irq : sgi_irq)
-     (acap_sgi_target_mask : sgi_target_mask)
+     (acap_sgi_target : sgi_target)
 
 lemmas arch_cap_cases =
   arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
