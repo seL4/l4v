@@ -4085,16 +4085,6 @@ crunch postpone, schedContextResume, maybeDonateSc
   and valid_objs'[wp]: valid_objs'
   (simp: crunch_simps wp: crunch_wps)
 
-lemma updateSchedContext_sc_obj_at':
-  "\<lbrace>if scPtr = scPtr' then (\<lambda>s. \<forall>ko. ko_at' ko scPtr' s \<longrightarrow> P (f ko)) else obj_at' P scPtr'\<rbrace>
-   updateSchedContext scPtr f
-   \<lbrace>\<lambda>rv. obj_at' P scPtr'\<rbrace>"
-  supply if_split [split del]
-  apply (simp add: updateSchedContext_def)
-  apply (wpsimp wp: set_sc'.obj_at')
-  apply (clarsimp split: if_splits simp: obj_at'_real_def ko_wp_at'_def)
-  done
-
 lemma refillPopHead_bound_tcb_sc_at[wp]:
   "refillPopHead scPtr \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) t\<rbrace>"
   supply if_split [split del]

@@ -4398,6 +4398,22 @@ lemma no_fail_updateSchedContext[wp]:
            (updateSchedContext ptr f)"
   by (wpsimp simp: updateSchedContext_def obj_at'_def projectKOs opt_map_def opt_pred_def)
 
+lemma updateSchedContext_sc_obj_at':
+  "\<lbrace>if scPtr = scPtr' then (\<lambda>s. \<forall>ko. ko_at' ko scPtr' s \<longrightarrow> P (f ko)) else obj_at' P scPtr'\<rbrace>
+   updateSchedContext scPtr f
+   \<lbrace>\<lambda>rv. obj_at' P scPtr'\<rbrace>"
+  supply if_split [split del]
+  apply (simp add: updateSchedContext_def)
+  apply (wpsimp wp: set_sc'.obj_at')
+  apply (clarsimp split: if_splits simp: obj_at'_real_def ko_wp_at'_def)
+  done
+
+lemma updateSchedContext_sc_obj_at'_inv:
+  "(\<And>sc. P (f sc) = P sc) \<Longrightarrow> updateSchedContext scPtr f \<lbrace>\<lambda>s. Q (obj_at' P scPtr' s)\<rbrace>"
+  unfolding updateSchedContext_def
+  by (wpsimp wp: set_sc'.obj_at')
+     (clarsimp split: if_splits simp: obj_at'_real_def ko_wp_at'_def)
+
 lemma update_sched_context_rewrite:
   "monadic_rewrite False True (sc_obj_at n scp)
     (update_sched_context scp f)
