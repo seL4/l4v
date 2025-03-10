@@ -59,7 +59,7 @@ definition arch_decode_irq_control_invocation ::
                  cnode = cps ! 0
         in doE
           range_check irq_word 0 (of_nat numSGIs - 1);
-          range_check targets_word 0 (mask gicSGITargetMaskBits);
+          range_check targets_word 0 (mask gicNumTargets);
           dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
           ensure_empty dest_slot;
           returnOk $ IssueSGISignal (ucast irq_word) (ucast targets_word) src_slot dest_slot

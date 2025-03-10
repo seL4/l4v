@@ -40,26 +40,26 @@ type_synonym irq = "irq_len word"
 definition numSGIs :: nat where
   "numSGIs = 16"
 
-definition gicSGITargetMaskBits :: nat where
-  "gicSGITargetMaskBits \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 16 else 8"
+definition gicNumTargets :: nat where
+  "gicNumTargets \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 16 else 8"
 
 end
 
 (* Need to declare code equation outside Arch locale. These are used in value_type below. *)
-lemmas [code] = ARM_HYP.numSGIs_def ARM_HYP.gicSGITargetMaskBits_def
+lemmas [code] = ARM_HYP.numSGIs_def ARM_HYP.gicNumTargets_def
 
 context Arch begin global_naming ARM_HYP
 
 value_type sgi_irq_len = numSGIs
 type_synonym sgi_irq = "sgi_irq_len word"
 
-value_type sgi_mask_len = gicSGITargetMaskBits
+value_type sgi_mask_len = gicNumTargets
 type_synonym sgi_target_mask = "sgi_mask_len word"
 
 (* guaranteed to succeed, because of value_type *)
-lemma gicSGITargetMaskBits_sgi_target_len:
-  "gicSGITargetMaskBits = LENGTH(sgi_mask_len)"
-  by (simp add: gicSGITargetMaskBits_def Kernel_Config.config_ARM_GIC_V3_def)
+lemma gicNumTargets_sgi_target_len:
+  "gicNumTargets = LENGTH(sgi_mask_len)"
+  by (simp add: gicNumTargets_def Kernel_Config.config_ARM_GIC_V3_def)
 
 (* Physical addresses *)
 type_synonym paddr = machine_word

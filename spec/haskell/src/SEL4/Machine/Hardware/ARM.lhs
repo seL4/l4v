@@ -916,8 +916,8 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > numSGIs :: Int
 > numSGIs = error "defined in machine/AARCH64/Platform.thy"
 
-> gicSGITargetMaskBits :: Int
-> gicSGITargetMaskBits = error "defined in machine/AARCH64/Platform.thy"
+> gicNumTargets :: Int
+> gicNumTargets = error "defined in machine/AARCH64/Platform.thy"
 
 > -- the C bitfield definition reserves 16 bit each in the cap; only 8 bits are used for GICv2
 > type SGIIRQ = Word16

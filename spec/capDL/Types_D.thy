@@ -23,7 +23,7 @@ begin
 
 context begin interpretation Arch .
 requalify_types irq sgi_irq sgi_target_mask
-requalify_consts numSGIs gicSGITargetMaskBits
+requalify_consts numSGIs gicNumTargets
 end
 
 (* A hardware IRQ number. *)

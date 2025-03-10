@@ -59,7 +59,7 @@ This module defines the machine-specific interrupt handling routines.
 >         (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,
 >          irqW:targetsW:index:depth:_, cnode:_) -> do
 >             rangeCheck irqW 0 (Arch.numSGIs - 1)
->             rangeCheck targetsW 0 (mask Arch.gicSGITargetMaskBits :: Word)
+>             rangeCheck targetsW 0 (mask Arch.gicNumTargets :: Word)
 >             sgiSlot <- lookupTargetSlot cnode (CPtr index) (fromIntegral depth)
 >             ensureEmptySlot sgiSlot
 >             return $ ArchInv.IssueSGISignal (fromIntegral irqW) (fromIntegral targetsW)
