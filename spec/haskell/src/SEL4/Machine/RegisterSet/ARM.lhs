@@ -99,6 +99,11 @@ This module defines the ARM register set.
 
 > vcpuRegSavedWhenDisabled :: VCPUReg -> Bool
 > vcpuRegSavedWhenDisabled VCPURegSCTLR = True
+> vcpuRegSavedWhenDisabled VCPURegCNTV_CTL  = True
+> vcpuRegSavedWhenDisabled VCPURegCNTV_CVALhigh = True
+> vcpuRegSavedWhenDisabled VCPURegCNTV_CVALlow = True
+> vcpuRegSavedWhenDisabled VCPURegCNTVOFFhigh = True
+> vcpuRegSavedWhenDisabled VCPURegCNTVOFFlow = True
 > vcpuRegSavedWhenDisabled _ = False
 
 #endif
