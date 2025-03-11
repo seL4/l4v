@@ -102,6 +102,9 @@ vcpuRegNum = fromEnum (maxBound :: VCPUReg)
 vcpuRegSavedWhenDisabled :: VCPUReg -> Bool
 vcpuRegSavedWhenDisabled VCPURegSCTLR = True
 vcpuRegSavedWhenDisabled VCPURegCNTV_CTL = True
+vcpuRegSavedWhenDisabled VCPURegCNTV_CVAL = True
+vcpuRegSavedWhenDisabled VCPURegCNTVOFF = True
+vcpuRegSavedWhenDisabled VCPURegCNTKCTL_EL1 = True
 vcpuRegSavedWhenDisabled VCPURegCPACR = True
 vcpuRegSavedWhenDisabled _ = False
 
