@@ -46,7 +46,7 @@ if "ISABELLE_PROCESS" not in os.environ or "ISABELLE_TOOL" not in os.environ:
     print("Run this from within 'isabelle env'.")
     sys.exit(1)
 
-THY_DATA = """
+THY_DATA = r"""
 theory UmmTypesFile
   imports CParser.CTranslation
 begin
