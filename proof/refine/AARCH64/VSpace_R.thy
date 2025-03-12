@@ -555,9 +555,10 @@ lemma vcpuSave_corres:
                           apply (clarsimp, fold dc_def)
                           apply (rule vgicUpdateLR_corres)
                          apply wpsimp+
-                    apply (rule vcpuSaveRegRange_corres)
-                    apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
-                                simp: if_apply_def2)+
+                    apply (rule corres_split[OF corres_when[OF refl vcpuSaveReg_corres]])
+                      apply (rule vcpuSaveRegRange_corres)
+                     apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
+                                 simp: if_apply_def2)+
   done
 
 lemma vcpuDisable_corres:

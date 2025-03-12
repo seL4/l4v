@@ -414,6 +414,7 @@ vcpuDisable vcpuPtrOpt = do
 
 armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 armvVCPUSave vcpuPtr active = do
+    when active $ vcpuSaveReg vcpuPtr VCPURegCPACR
     vcpuSaveRegRange vcpuPtr VCPURegTTBR0 VCPURegSPSR_EL1
 
 vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()

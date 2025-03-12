@@ -2008,7 +2008,7 @@ lemma armv_vcpu_save_ccorres:
    apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
     apply (ctac (no_vcg) add: isb_ccorres)
    apply wpsimp
-  apply (clarsimp split: if_splits simp: seL4_VCPUReg_SPSRfiq_def fromEnum_def enum_vcpureg)
+  apply (clarsimp split: if_splits simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
   done
 
 lemma vcpu_disable_ccorres:
@@ -2179,7 +2179,7 @@ lemma vcpu_restore_ccorres:
         apply (wpsimp simp: guard_is_UNIV_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv
                | rule UNIV_I
                | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
-        apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_SPSRfiq_def)
+        apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_defs)
        apply (clarsimp simp: guard_is_UNIV_def)
       apply (wpsimp simp: vcpu_at_ko'_eq wp: hoare_vcg_imp_lift')+
   apply (rule conjI)
