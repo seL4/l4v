@@ -4361,11 +4361,11 @@ lemma decodeARMVCPUInvocation_ccorres:
 lemma invokeSGISignalGenerate_ccorres:
   "ccorres (\<lambda>reply exc. reply = [] \<and> exc = scast EXCEPTION_NONE) ret__unsigned_long_'
      \<top>
-     (\<lbrace> \<acute>irq = ucast irq \<rbrace> \<inter> \<lbrace> \<acute>targets = ucast targets \<rbrace>) hs
-     (performSGISignalGenerate (SGISignalGenerate irq targets))
+     (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = ucast target \<rbrace>) hs
+     (performSGISignalGenerate (SGISignalGenerate irq target))
      (Call invokeSGISignalGenerate_'proc)"
-  apply (cinit lift:  irq_' targets_')
-  apply (ctac (no_vcg) add: ipi_send_target_ccorres)
+  apply (cinit lift:  irq_' target___unsigned_long_')
+  apply (ctac (no_vcg) add: plat_sendSGI_ccorres)
     apply (rule ccorres_return_C; simp)
    apply wp
   apply clarsimp

@@ -376,8 +376,7 @@ where
                                              else None))
  | Cap_domain_cap \<Rightarrow> DomainCap
  | Cap_vcpu_cap vcpu \<Rightarrow> ArchObjectCap (VCPUCap (capVCPUPtr_CL vcpu))
- | Cap_sgi_signal_cap sgi \<Rightarrow> ArchObjectCap (SGISignalCap (ucast (capSGIIRQ_CL sgi))
-                                                         (ucast (capSGITargetMask_CL sgi)))"
+ | Cap_sgi_signal_cap sgi \<Rightarrow> ArchObjectCap (SGISignalCap (capSGIIRQ_CL sgi) (capSGITarget_CL sgi))"
 
 
 

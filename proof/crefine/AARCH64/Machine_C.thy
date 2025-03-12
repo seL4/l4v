@@ -68,11 +68,11 @@ assumes deactivateInterrupt_ccorres:
            (doMachineOp (deactivateInterrupt irq))
            (Call deactivateInterrupt_'proc)"
 
-assumes ipi_send_target_ccorres:
-  "\<And>irq targets hs. ccorres dc xfdc
-                       \<top> (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>cpuTargetList = targets \<rbrace>) hs
-                       (doMachineOp (ipiSendTarget irq targets))
-                       (Call ipi_send_target_'proc)"
+(* FIXME SGI: rename ipiSendTarget irq targets to sendSGI irq target *)
+assumes plat_sendSGI_ccorres:
+  "\<And>irq target hs. ccorres dc xfdc \<top> (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = target \<rbrace>) hs
+                      (doMachineOp (ipiSendTarget irq target))
+                      (Call plat_sendSGI_'proc)"
 
 (* This is a simplification until complete FPU handling is added at a future date *)
 assumes fpuThreadDelete_ccorres:

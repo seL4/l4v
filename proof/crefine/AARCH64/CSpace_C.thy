@@ -2508,25 +2508,27 @@ lemma ccap_relation_capFSize_CL_less_3:
   by (clarsimp simp: c_valid_cap_def cl_valid_cap_def cap_lift_def Let_def cap_tag_defs
                      cap_frame_cap_lift_def)
 
-(* 16 from bitfield gen; width of field *)
+(* 32 from bitfield gen; width of field.
+   Could be as small as sgi_target_len, but that varies with config, so bitfield gen chooses
+   a static number. *)
 lemma capSGITargetMask_CL_mask[simp]:
   "cap_get_tag cap = scast cap_sgi_signal_cap \<Longrightarrow>
-   capSGITargetMask_CL (cap_sgi_signal_cap_lift cap) && mask 16 =
-   capSGITargetMask_CL (cap_sgi_signal_cap_lift cap)"
+   capSGITarget_CL (cap_sgi_signal_cap_lift cap) && mask 32 =
+   capSGITarget_CL (cap_sgi_signal_cap_lift cap)"
   by (simp add: cap_sgi_signal_cap_lift_def cap_lift_def Let_def cap_tag_defs)
 
-(* 16 from bitfield gen; width of field *)
-lemma capSGIcapSGIIRQ_CL_mask[simp]:
+(* sgi_irq_len matches width of field in bitfield gen *)
+lemma capSGIcapSGIIRQ_CL_mask[unfolded sgi_irq_len_val, simp]:
   "cap_get_tag cap = scast cap_sgi_signal_cap \<Longrightarrow>
-   capSGIIRQ_CL (cap_sgi_signal_cap_lift cap) && mask 16 =
+   capSGIIRQ_CL (cap_sgi_signal_cap_lift cap) && mask sgi_irq_len =
    capSGIIRQ_CL (cap_sgi_signal_cap_lift cap)"
-  by (simp add: cap_sgi_signal_cap_lift_def cap_lift_def Let_def cap_tag_defs)
+  by (simp add: cap_sgi_signal_cap_lift_def cap_lift_def Let_def cap_tag_defs sgi_irq_len_val)
 
 lemma Arch_sameRegionAs_spec:
   notes cap_get_tag = ccap_rel_cap_get_tag_cases_arch2'
   shows
     "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>  ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
-                   ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
+                         ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
     Call Arch_sameRegionAs_'proc
     \<lbrace>  \<acute>ret__unsigned_long = from_bool (Arch.sameRegionAs capa capb) \<rbrace>"
   supply if_cong[cong]
@@ -2538,15 +2540,14 @@ lemma Arch_sameRegionAs_spec:
            (frule (1) cap_get_tag[where cap'=cap_b]; (frule cap_lifts[where c=cap_b, THEN iffD1])?);
            simp add: cap_tag_defs isCap_simps ucast_eq_mask split: if_splits;
            clarsimp simp: ccap_relation_def cap_to_H_def c_valid_cap_def cl_valid_cap_def Let_def)
-       subgoal by (clarsimp simp: cap_frame_cap_lift_def'[simplified cap_tag_defs]
-                                  framesize_to_H_def pageBitsForSize_def field_simps
-                                  pageBits_def ptTranslationBits_def mask_def
-                            split: vmpage_size.splits if_splits)
-      subgoal by (clarsimp simp: cap_lift_def cap_tag_defs cap_vspace_cap_lift_def cap_to_H_def
-                           split: option.splits)
-     subgoal by (clarsimp simp: cap_lift_def cap_tag_defs cap_page_table_cap_lift_def cap_to_H_def
+      subgoal by (clarsimp simp: cap_frame_cap_lift_def'[simplified cap_tag_defs]
+                                 framesize_to_H_def pageBitsForSize_def field_simps
+                                 pageBits_def ptTranslationBits_def mask_def
+                           split: vmpage_size.splits if_splits)
+     subgoal by (clarsimp simp: cap_lift_def cap_tag_defs cap_vspace_cap_lift_def cap_to_H_def
                           split: option.splits)
-    by (clarsimp simp: ucast_eq_mask cap_tag_defs)
+    by (clarsimp simp: cap_lift_def cap_tag_defs cap_page_table_cap_lift_def cap_to_H_def
+                 split: option.splits)
   done
 
 (* combination of cap_get_capSizeBits + cap_get_archCapSizeBits from C *)

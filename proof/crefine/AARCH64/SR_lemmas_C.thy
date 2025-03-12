@@ -388,8 +388,8 @@ lemma cap_get_tag_VCPUCap:
 lemma cap_get_tag_SGISignalCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_sgi_signal_cap)
-          = (cap = ArchObjectCap (SGISignalCap (ucast (capSGIIRQ_CL (cap_sgi_signal_cap_lift cap')))
-                                               (ucast (capSGITargetMask_CL (cap_sgi_signal_cap_lift cap')))))"
+          = (cap = ArchObjectCap (SGISignalCap (capSGIIRQ_CL (cap_sgi_signal_cap_lift cap'))
+                                               (capSGITarget_CL (cap_sgi_signal_cap_lift cap'))))"
   using cr
   apply -
   apply (rule iffI)
