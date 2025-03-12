@@ -2660,9 +2660,14 @@ lemma armv_vcpu_save_ccorres:
      (\<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>active = from_bool act \<rbrace>) hs
      (armvVCPUSave vcpuptr act) (Call armv_vcpu_save_'proc)"
   apply (cinit lift: vcpu_' active_')
-   apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
-  apply wpsimp
-  apply (clarsimp split: if_splits simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
+   apply (rule ccorres_split_nothrow_novcg[of _ _ dc xfdc])
+       apply (rule ccorres_when[where R=\<top>])
+        apply (clarsimp split: if_splits)
+       apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+      apply ceqv
+     apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
+    apply wpsimp
+   apply (auto simp: guard_is_UNIV_def seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
   done
 
 lemma vcpu_disable_ccorres:

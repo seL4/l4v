@@ -71,6 +71,7 @@ nextInstructionRegister = NextIP
 
 data VCPUReg =
       VCPURegSCTLR
+    | VCPURegCPACR
     | VCPURegTTBR0
     | VCPURegTTBR1
     | VCPURegTCR
@@ -78,7 +79,6 @@ data VCPUReg =
     | VCPURegAMAIR
     | VCPURegCIDR
     | VCPURegACTLR
-    | VCPURegCPACR
     | VCPURegAFSR0
     | VCPURegAFSR1
     | VCPURegESR
