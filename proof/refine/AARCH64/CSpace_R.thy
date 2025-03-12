@@ -1257,10 +1257,10 @@ lemma derived_region2 [simp]:
   sameRegionAs cap c' = sameRegionAs cap src_cap"
   by (clarsimp simp add: badge_derived'_def sameRegionAs_def2)
 
-lemma derived_sgi_signal [simp]:
-  "badge_derived' c' src_cap \<Longrightarrow>
-  isArchSGISignalCap c' = isArchSGISignalCap src_cap"
-  by (clarsimp simp add: badge_derived'_def intro!: capMasterCap_isArchSGISignalCap)
+lemma derived_mdb_chunked_arch_assms [simp]:
+  "badge_derived' c' src_cap \<Longrightarrow> mdb_chunked_arch_assms c' = mdb_chunked_arch_assms src_cap"
+  by (clarsimp simp: badge_derived'_def mdb_chunked_arch_assms_def
+               intro!: capMasterCap_isArchSGISignalCap)
 
 lemma chunked_n:
   assumes b: "badge_derived' c' src_cap"
@@ -2160,6 +2160,22 @@ lemma cteInsert_valid_dlist:
   apply clarsimp+
   done
 
+lemma valid_arch_badges_mdbPrev_update[simp]:
+  "valid_arch_badges cap cap' (mdbPrev_update f node) = valid_arch_badges cap cap' node"
+  by (simp add: valid_arch_badges_def)
+
+lemma valid_arch_badges_master_eq:
+  "capMasterCap src_cap = capMasterCap cap \<Longrightarrow>
+   valid_arch_badges src_cap cap' node = valid_arch_badges cap cap' node"
+  by (auto simp: valid_arch_badges_def isCap_simps)
+
+lemmas valid_arch_badges_master = valid_arch_badges_master_eq[THEN iffD1]
+
+lemma valid_arch_badges_firstBadged:
+  "\<lbrakk> valid_arch_badges cap cap' node; mdbFirstBadged node = mdbFirstBadged node' \<rbrakk> \<Longrightarrow>
+   valid_arch_badges cap cap' node'"
+  by (simp add: valid_arch_badges_def)
+
 lemma cteInsert_mdb' [wp]:
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and valid_objs' and
    (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s) \<rbrace>
@@ -2346,7 +2362,7 @@ proof -
       apply (clarsimp simp: Retype_H.isCapRevocable_def isCapRevocable_def badge_derived'_def)
       apply (rule conjI, clarsimp)
        apply (rule conjI; clarsimp simp: isCap_simps)
-       apply (clarsimp simp: isCap_simps)
+       apply (clarsimp simp: isCap_simps valid_arch_badges_def)
      apply (clarsimp simp:modify_map_cases valid_badges_def)
      apply (frule_tac x=src in spec, erule_tac x=word1 in allE, erule allE, erule impE)
       apply fastforce
@@ -2356,7 +2372,7 @@ proof -
      apply (rule conjI, clarsimp)
       (* clarsimp first for speed *)
       apply (rule conjI; clarsimp simp: isCap_simps; fastforce simp: isCap_simps sameRegionAs_def)
-     apply (solves \<open>clarsimp simp: isCap_simps\<close>)
+     apply (erule (1) valid_arch_badges_master)
     apply (case_tac "word1 = p'")
      apply (clarsimp simp:modify_map_cases valid_badges_def mdb_next_unfold src0 dest0 no0)+
     apply (case_tac "p = dest")
@@ -2367,7 +2383,10 @@ proof -
     apply (drule_tac x = p in spec, drule_tac x = "mdbNext mdbnode" in spec)
     apply (rule conjI, clarsimp)
      subgoal by (auto simp: isCap_simps sameRegionAs_def) (* slowish *)
-    by (fastforce simp: isCap_simps)
+    apply clarsimp
+    apply (case_tac "src \<noteq> mdbNext mdbnode", fastforce)
+    apply (case_tac "word1 = p "; clarsimp; erule valid_arch_badges_firstBadged; simp)
+    done
 
   from badge
   have isUntyped_eq: "isUntypedCap cap = isUntypedCap src_cap"
@@ -4323,14 +4342,14 @@ lemma arch_update_setCTE_mdb:
    apply (clarsimp simp: valid_badges_def mdb_next_pres simp del: fun_upd_apply)
    apply (clarsimp simp: is_arch_update'_def)
    apply (clarsimp split: if_split_asm)
-     apply (clarsimp simp: isCap_simps)
-     prefer 3
+     apply (clarsimp simp: isCap_simps valid_arch_badges_def)
+    prefer 3
   subgoal by fastforce
-    apply (fastforce simp: isCap_simps)
+    apply (fastforce simp: isCap_simps valid_arch_badges_def)
    apply (erule_tac x=pa in allE)
    apply (erule_tac x=p in allE)
    apply simp
-   apply (simp add: sameRegionAs_def3 isCap_simps)
+   apply (simp add: sameRegionAs_def3 isCap_simps valid_arch_badges_def)
    apply (rule conjI, clarsimp, (rule conjI; solves clarsimp))+ (* fastforce takes too long *)
    apply (solves clarsimp)
   apply (rule conjI)
@@ -4361,7 +4380,7 @@ lemma arch_update_setCTE_mdb:
      apply (erule_tac x=p' in allE)
      apply (clarsimp simp: masterCap.sameRegionAs)
      apply (simp add: masterCap.sameRegionAs is_chunk_def mdb_next_trans_next_pres
-                      mdb_next_rtrans_next_pres masterCap.isArchSGISignalCap)
+                      mdb_next_rtrans_next_pres mdb_chunked_arch_assms_def masterCap.isArchSGISignalCap)
      subgoal by fastforce
     apply (erule_tac x=pa in allE)
     apply (erule_tac x=p in allE)
@@ -4547,7 +4566,7 @@ lemma valid_badges_IRQControlD:
      m \<turnstile> p \<leadsto> p' \<rbrakk> \<Longrightarrow>
    mdbFirstBadged n'"
   unfolding valid_badges_def
-  by (fastforce simp: isCap_simps)
+  by (fastforce simp: isCap_simps valid_arch_badges_def)
 
 end
 
@@ -5442,16 +5461,18 @@ lemma valid_badges' [simp]:
    apply (insert valid_badges)[1]
    apply (simp add: valid_badges_def)
    apply blast
-  apply (clarsimp split: if_split_asm)
-    apply (clarsimp simp: Retype_H.isCapRevocable_def isCapRevocable_def safe_parent_for'_def isCap_simps)
+  (* valid_arch_badges *)
+  apply (clarsimp simp: split: if_split_asm)
+    apply (clarsimp simp: Retype_H.isCapRevocable_def isCapRevocable_def safe_parent_for'_def
+                          isCap_simps valid_badges_def valid_arch_badges_def)
    apply (insert valid_badges)[1]
    apply (simp add: valid_badges_def)
    apply (erule_tac x=src in allE)
    apply simp
    apply (erule_tac x=p' in allE)
-   apply (clarsimp simp: safe_parent_for'_def isCap_simps)
+   apply (clarsimp simp: safe_parent_for'_def isCap_simps valid_arch_badges_def)
   apply (insert valid_badges)[1]
-  apply (simp add: valid_badges_def)
+  apply (simp add: valid_badges_def valid_arch_badges_def)
   apply blast
   done
 
@@ -5688,7 +5709,7 @@ lemma chunked' [simp]:
     apply clarsimp
     apply (drule (1) trancl_rtrancl_trancl)
     apply simp
-   apply clarsimp
+   apply (clarsimp simp: mdb_chunked_arch_assms_def)
    apply (drule (1) c'_new)
    apply (erule (1) notE)
   apply (case_tac "p=src")
@@ -5705,7 +5726,7 @@ lemma chunked' [simp]:
      prefer 2
      apply (drule (3) irq_control_src)
      apply simp
-    apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
     apply (drule (1) irq_controlD, rule irq_control, erule (1) notE)
   apply (drule not_irq_parentD)
   apply clarsimp

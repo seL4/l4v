@@ -100,8 +100,8 @@ lemma azobj_refs'_only_vcpu:
 
 section "Valid caps and objects (design spec)"
 
-definition isArchSGISignalCap :: "capability ⇒ bool" where
-  "isArchSGISignalCap cap ≡ ∃irq targets. cap = ArchObjectCap (SGISignalCap irq targets)"
+definition isArchSGISignalCap :: "capability \<Rightarrow> bool" where
+  "isArchSGISignalCap cap \<equiv> \<exists>irq targets. cap = ArchObjectCap (SGISignalCap irq targets)"
 
 primrec acapBits :: "arch_capability \<Rightarrow> nat" where
   "acapBits (ASIDPoolCap _ _)       = asidLowBits + word_size_bits"
@@ -151,7 +151,7 @@ definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<
    | FrameCap r rghts sz dev mapdata \<Rightarrow> frame_at' r sz dev s
    | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s
    | VCPUCap r \<Rightarrow> vcpu_at' r s
-   | SGISignalCap _ _ ⇒ True"
+   | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_ref'_simps[simp] =
   valid_arch_cap_ref'_def[split_simps arch_capability.split]
@@ -201,6 +201,13 @@ where
 | "acapClass (PageTableCap _ _ _) = PhysicalClass"
 | "acapClass (VCPUCap _)          = PhysicalClass"
 | "acapClass (SGISignalCap _ _)   = IRQClass"
+
+definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
+  "valid_arch_badges cap cap' node' \<equiv>
+     isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged node'"
+
+definition mdb_chunked_arch_assms :: "capability \<Rightarrow> bool" where
+  "mdb_chunked_arch_assms cap \<equiv> \<not>isArchSGISignalCap cap"
 
 definition
   isArchFrameCap :: "capability \<Rightarrow> bool"

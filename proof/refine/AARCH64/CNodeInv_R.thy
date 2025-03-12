@@ -4082,11 +4082,6 @@ lemma isIRQControl_src:
   using src_derived
   by (auto simp: isCap_simps weak_derived'_def)
 
-lemma isSGI_src:
-  "isArchSGISignalCap scap = isArchSGISignalCap src_cap"
-  using src_derived
-  by (fastforce simp: isCap_simps weak_derived'_def)
-
 lemma isIRQHandler_src:
   "isIRQHandlerCap scap = isIRQHandlerCap src_cap"
   using src_derived
@@ -4108,10 +4103,6 @@ lemma isNTFNbadge_src:
 
 lemma isEPdest:
   "isEndpointCap dcap = isEndpointCap dest_cap"
-  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
-
-lemma isSGI_dest:
-  "isArchSGISignalCap dcap = isArchSGISignalCap dest_cap"
   using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
 
 lemma isIRQHandler_dest:
@@ -4138,6 +4129,19 @@ lemmas ep_simps =
   isEPsrc isEPbadge_src isNTFNsrc isNTFNbadge_src
   isEPdest isEPbadge_dest isNTFNdest isNTFNbadge_dest
 
+(* FIXME arch-split: arch dependent part of mdb_swap proofs, no arch_global_naming because of locale *)
+context begin
+interpretation Arch .
+
+lemma isSGI_src:
+  "isArchSGISignalCap scap = isArchSGISignalCap src_cap"
+  using src_derived
+  by (fastforce simp: isCap_simps weak_derived'_def)
+
+lemma isSGI_dest:
+  "isArchSGISignalCap dcap = isArchSGISignalCap dest_cap"
+  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
+
 lemma SGI_dcap_neq:
   "isArchSGISignalCap dest_cap \<Longrightarrow> (cap \<noteq> dcap) = (cap \<noteq> dest_cap)"
   using dest_derived
@@ -4158,11 +4162,40 @@ lemma SGI_scap_neq_cap:
   using src_derived
   by (auto simp: weak_derived'_def isCap_simps)
 
+
+(* export to generic below *)
+
+lemma mdb_chunked_arch_assms_scap[simp]:
+  "mdb_chunked_arch_assms scap =  mdb_chunked_arch_assms src_cap"
+  by (simp add: mdb_chunked_arch_assms_def isSGI_src)
+
+lemma mdb_chunked_arch_assms_dcap[simp]:
+  "mdb_chunked_arch_assms dcap =  mdb_chunked_arch_assms dest_cap"
+  by (simp add: mdb_chunked_arch_assms_def isSGI_dest)
+
+
+lemma valid_arch_badges_src[simp]:
+  "valid_arch_badges scap c node = valid_arch_badges src_cap c node"
+  by (simp add: valid_arch_badges_def SGI_scap_neq_cap)
+
+lemma valid_arch_badges_dest[simp]:
+  "valid_arch_badges c dcap node = valid_arch_badges c dest_cap node"
+  by (simp add: valid_arch_badges_def isSGI_dest SGI_dcap_neq)
+
+lemma valid_arch_badges_dest'[simp]:
+  "valid_arch_badges dcap c node = valid_arch_badges dest_cap c node"
+  by (simp add: valid_arch_badges_def  SGI_dcap_neq_cap)
+
+lemma valid_arch_badges_src'[simp]:
+  "valid_arch_badges c scap node = valid_arch_badges c src_cap node"
+  by (simp add: valid_arch_badges_def isSGI_src SGI_scap_neq)
+
+end
+
 lemmas cap_simps =
   ep_simps
-  isIRQControl_src isSGI_src isIRQHandler_src
-  isIRQControl_dest isSGI_dest isIRQHandler_dest
-  SGI_dcap_neq SGI_dcap_neq_cap SGI_scap_neq SGI_scap_neq_cap
+  isIRQControl_src isIRQHandler_src
+  isIRQControl_dest isIRQHandler_dest
 
 end
 
@@ -4186,7 +4219,7 @@ proof -
     apply (drule badge_n)+
     apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep cap_simps region_simps
                     split: if_split_asm;
-           blast)
+           blast intro: valid_arch_badges_firstBadged)
     done
 qed
 
@@ -5681,7 +5714,7 @@ lemma make_zombie_invs':
     apply (erule_tac x=p in allE)
     apply (erule_tac x="mdbNext node" in allE)
    subgoal by simp
-   apply (clarsimp simp: isCap_simps split: if_split_asm)
+   apply (clarsimp simp: isCap_simps valid_arch_badges_def split: if_split_asm)
     apply (erule_tac x=sl in allE)
     apply simp
     apply (erule_tac x=p' in allE)
@@ -5710,11 +5743,10 @@ lemma make_zombie_invs':
     apply (simp only: modify_map_apply)
     apply (rule use_update_ztc_two [OF descendants_of_update_ztc])
             apply (rule exEI, rule vmdb.isFinal_untypedParent)
-                 apply (rule vmdb.intro, simp add: valid_mdb'_def)
-                apply assumption
-               apply (simp add: cteCaps_of_def)
-              apply (clarsimp simp: isCap_simps, fastforce) (* needs unfolding before fastforce *)
-             apply assumption
+                apply (rule vmdb.intro, simp add: valid_mdb'_def)
+               apply assumption
+              apply (simp add: cteCaps_of_def)
+             apply (clarsimp simp: isCap_simps, fastforce) (* needs unfolding before fastforce *)
             apply (clarsimp simp: isCap_simps)
            apply assumption
           apply (simp add: disj_comms)
@@ -8084,6 +8116,10 @@ lemma sameRegion_cap'_src [simp]:
          ; fastforce simp: sameRegionAs_def AARCH64_H.sameRegionAs_def isCap_simps split: if_split_asm)+
   done
 
+lemma mdb_chunked_arch_assms_src[simp]:
+  "mdb_chunked_arch_assms cap' = mdb_chunked_arch_assms src_cap"
+  by (simp add: mdb_chunked_arch_assms_def)
+
 lemma chunked':
   "mdb_chunked m'"
   using chunked
@@ -8300,7 +8336,7 @@ proof
   from valid
   have "valid_badges m" ..
   thus "valid_badges m'" using src dest parency
-    apply (clarsimp simp: valid_badges_def2)
+    apply (clarsimp simp: valid_badges_def2 valid_arch_badges_def)
     apply (drule m'_badged)+
     apply (drule m'_next)
     apply (clarsimp simp add: weak_derived'_def split: if_split_asm)

@@ -70,7 +70,7 @@ primrec acap_relation :: "arch_cap \<Rightarrow> arch_capability \<Rightarrow> b
 | "acap_relation (arch_cap.VCPUCap vcpu) c  = (c =
         arch_capability.VCPUCap vcpu)"
 | "acap_relation (arch_cap.SGISignalCap irq trigger) c  = (c =
-        arch_capability.SGISignalCap irq (ucast trigger))"
+        arch_capability.SGISignalCap (ucast irq) (ucast trigger))"
 
 primrec cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool" where
   "cap_relation Structures_A.NullCap c =

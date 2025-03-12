@@ -141,7 +141,7 @@ crunch emptySlot
 lemma mdb_chunked2D:
   "\<lbrakk> mdb_chunked m; m \<turnstile> p \<leadsto> p'; m \<turnstile> p' \<leadsto> p'';
      m p = Some (CTE cap nd); m p'' = Some (CTE cap'' nd'');
-     sameRegionAs cap cap''; p \<noteq> p''; \<not>isArchSGISignalCap cap \<rbrakk>
+     sameRegionAs cap cap''; p \<noteq> p''; mdb_chunked_arch_assms cap \<rbrakk>
      \<Longrightarrow> \<exists>cap' nd'. m p' = Some (CTE cap' nd') \<and> sameRegionAs cap cap'"
   apply (subgoal_tac "\<exists>cap' nd'. m p' = Some (CTE cap' nd')")
    apply (clarsimp simp add: mdb_chunked_def)
@@ -497,7 +497,6 @@ proof -
     apply clarsimp
     apply (rule conjI)
      prefer 2
-     apply clarsimp
      apply (drule_tac p=p in n_cap)
      apply (frule n_cap)
      apply (drule n_badged)
@@ -507,9 +506,9 @@ proof -
      apply (case_tac "p'=slot", simp add: isCap_simps)
      apply clarsimp
      apply (case_tac "p = mdbPrev s_node")
-      apply clarsimp
+      apply (clarsimp simp: valid_arch_badges_def)
       apply blast
-     apply fastforce
+     apply (fastforce simp: valid_arch_badges_def)
     apply (drule_tac p=p in n_cap)
     apply (frule n_cap)
     apply (drule n_badged)
@@ -532,7 +531,7 @@ proof -
          apply (intro disjI1)
          apply (fastforce simp:isCap_simps capMasterCap_def split:capability.splits)
         apply clarsimp
-       apply (clarsimp simp: isCap_simps)
+       apply (clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
       apply clarsimp
       apply (erule sameRegionAsE, auto simp: isCap_simps capMasterCap_def split:capability.splits)[1]
      (* instantiating known valid_badges on both sides to transitively
@@ -683,7 +682,7 @@ proof induct
      apply (frule(2) mdb_chunked2D [OF chunked prev_slot_next m_slot_next])
         apply (clarsimp simp: isMDBParentOf_CTE)
        apply simp
-      apply assumption
+      apply (simp add: mdb_chunked_arch_assms_def)
      apply (simp add: slot)
      apply (clarsimp simp add: isMDBParentOf_CTE)
      apply (insert valid_badges)[1]
@@ -727,7 +726,7 @@ proof induct
     apply (clarsimp simp: valid_badges_def)
     apply (erule_tac x="slot" in allE)
     apply (erule_tac x="mdbNext s_node" in allE)
-    apply (simp add: slot m_p_next isCap_simps)
+    apply (simp add: slot m_p_next isCap_simps valid_arch_badges_def)
     done
 next
   case (trans_parent c c')
@@ -775,7 +774,7 @@ next
          apply (prop_tac "m \<turnstile> p \<leadsto>\<^sup>+ mdbNext s_node")
           apply (erule trancl_trans)
           apply fastforce
-         apply simp
+         apply (simp add: mdb_chunked_arch_assms_def)
          apply (erule impE)
           apply clarsimp
          apply clarsimp
@@ -817,7 +816,7 @@ next
        apply (clarsimp simp: valid_badges_def)
        apply (erule_tac x="slot" in allE)
        apply (erule_tac x="mdbNext s_node" in allE)
-       apply (simp add: slot m_p_next isCap_simps)
+       apply (simp add: slot m_p_next isCap_simps valid_arch_badges_def)
       apply (rule m_slot_next)
      apply simp
     apply (erule n_parent_of, simp, simp)
@@ -1944,7 +1943,7 @@ lemma final_matters_sameRegion_sameObject:
   done
 
 lemma final_matters_sameRegion_sameObject2:
-  "\<lbrakk> final_matters' cap'; \<not> isUntypedCap cap; \<not> isIRQHandlerCap cap'; \<not>isArchSGISignalCap cap' \<rbrakk>
+  "\<lbrakk> final_matters' cap'; \<not> isUntypedCap cap; \<not> isIRQHandlerCap cap' \<rbrakk>
      \<Longrightarrow> sameRegionAs cap cap' = sameObjectAs cap cap'"
   apply (rule iffI)
    apply (erule sameRegionAsE)
@@ -1957,6 +1956,10 @@ lemma final_matters_sameRegion_sameObject2:
   apply (erule sameObjectAs_sameRegionAs)
   done
 
+lemma final_matters_mdb_chunked_arch_assms:
+  "final_matters' cap \<Longrightarrow> mdb_chunked_arch_assms cap"
+  by (clarsimp simp: mdb_chunked_arch_assms_def isCap_simps final_matters'_def)
+
 lemma notFinal_prev_or_next:
   "\<lbrakk> \<not> isFinal cap x (cteCaps_of s); mdb_chunked (ctes_of s);
       valid_dlist (ctes_of s); no_0 (ctes_of s);
@@ -1967,7 +1970,7 @@ lemma notFinal_prev_or_next:
               \<and> sameObjectAs cap cap')"
   apply (erule not_FinalE)
    apply (clarsimp simp: isCap_simps final_matters'_def)
-  apply (prop_tac "\<not> isArchSGISignalCap cap", clarsimp simp: isCap_simps final_matters'_def)
+  apply (frule final_matters_mdb_chunked_arch_assms)
   apply (clarsimp simp: mdb_chunked_def cte_wp_at_ctes_of cteCaps_of_def
                    del: disjCI)
   apply (erule_tac x=x in allE, erule_tac x=p in allE)
@@ -2117,8 +2120,7 @@ lemma isFinal_no_descendants:
 
 lemma (in vmdb) isFinal_untypedParent:
   assumes x: "m slot = Some cte" "isFinal (cteCap cte) slot (option_map cteCap o m)"
-             "final_matters' (cteCap cte) \<and>
-              \<not> isIRQHandlerCap (cteCap cte) \<and> \<not>isArchSGISignalCap (cteCap cte)"
+             "final_matters' (cteCap cte) \<and> \<not> isIRQHandlerCap (cteCap cte)"
   shows
   "m \<turnstile> x \<rightarrow> slot \<Longrightarrow>
   (\<exists>cte'. m x = Some cte' \<and> isUntypedCap (cteCap cte') \<and> RetypeDecls_H.sameRegionAs (cteCap cte') (cteCap cte))"
@@ -2138,6 +2140,7 @@ lemma (in vmdb) isFinal_untypedParent:
   apply clarsimp
   apply (drule isMDBParent_sameRegion)
   apply simp
+  apply (frule final_matters_mdb_chunked_arch_assms)
   apply (rule classical, simp)
   apply (simp add: final_matters_sameRegion_sameObject2
                    sameObjectAs_sym)

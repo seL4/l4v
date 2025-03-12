@@ -375,7 +375,8 @@ definition
 
 definition sgi_invocation_map :: "sgi_signal_invocation \<Rightarrow> sgisignal_invocation" where
   "sgi_invocation_map sgii \<equiv>
-     case sgii of AARCH64_A.SGISignalGenerate irq targets \<Rightarrow> SGISignalGenerate irq (ucast targets)"
+     case sgii of AARCH64_A.SGISignalGenerate irq targets \<Rightarrow>
+       SGISignalGenerate (ucast irq) (ucast targets)"
 
 (* FIXME AARCH64: move to VSpace_R where valid_psi is *)
 definition

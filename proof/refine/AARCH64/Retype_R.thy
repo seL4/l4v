@@ -2802,6 +2802,14 @@ lemma descendants_of_retype':
 lemma capRange_Null [simp]: "capRange NullCap = {}"
   by (simp add: capRange_def)
 
+lemma valid_arch_badges_not_arch:
+  "\<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
+  by (auto simp: isCap_simps valid_arch_badges_def)
+
+lemma valid_arch_badges_NullCap[simp]:
+  "valid_arch_badges cap NullCap node"
+  by (simp add: valid_arch_badges_not_arch isCap_simps)
+
 end
 
 locale retype_mdb = vmdb +

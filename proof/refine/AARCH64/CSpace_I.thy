@@ -470,7 +470,7 @@ proof (unfold valid_badges_def, clarify)
               capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
               capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
               mdbFirstBadged n')) \<and>
-        (isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged n')"
+        valid_arch_badges cap cap' n'"
     using c c' v by (fastforce simp: valid_badges_def)
 qed
 
@@ -968,7 +968,7 @@ proof clarify
   assume p': "m' p' = Some (CTE c' n')"
   assume r: "sameRegionAs c c'"
   assume neq: "p \<noteq> p'"
-  assume cap_exception: "\<not> isArchSGISignalCap c"
+  assume arch_assm: "mdb_chunked_arch_assms c"
 
   note no_region = caps_no_overlap'_no_region [OF no_c valid no_v]
 
@@ -1009,7 +1009,7 @@ proof clarify
    "(m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> m \<turnstile> p' \<leadsto>\<^sup>+ p) \<and>
     (m \<turnstile> p \<leadsto>\<^sup>+ p' \<longrightarrow> is_chunk m c p p') \<and>
     (m \<turnstile> p' \<leadsto>\<^sup>+ p \<longrightarrow> is_chunk m c' p' p)"
-    using chunked p p' neq r cap_exception
+    using chunked p p' neq r arch_assm
     unfolding mdb_chunked_def m'_def
     by simp
 

@@ -176,7 +176,8 @@ lemma isIRQControlCapDescendant_ex:
 
 lemma acap_relation_SGISignalCap:
   "acap_relation acap (SGISignalCap irq targets) =
-   (\<exists>targets'. acap = arch_cap.SGISignalCap irq targets' \<and> targets = ucast targets')"
+   (\<exists>irq' targets'. acap = arch_cap.SGISignalCap irq' targets' \<and>
+                    irq = ucast irq' \<and> targets = ucast targets')"
   by (cases acap) auto
 
 lemma same_region_as_relation:
@@ -204,7 +205,7 @@ lemma same_region_as_relation:
 
 lemma acap_relation_SGISignalCapD:
   "acap_relation acap (SGISignalCap irq targets) \<Longrightarrow>
-   acap = arch_cap.SGISignalCap irq (ucast targets)"
+   acap = arch_cap.SGISignalCap (ucast irq) (ucast targets)"
   by (cases acap) (auto simp: ucast_down_ucast_id is_down)
 
 lemma can_be_is:
@@ -3399,8 +3400,8 @@ lemma valid_badges_def2:
     capBadge cap \<noteq> capBadge cap' \<longrightarrow>
     capBadge cap' \<noteq> Some 0 \<longrightarrow>
     mdbFirstBadged node') \<and>
-   (isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged node'))"
-  apply (simp add: valid_badges_def)
+   valid_arch_badges cap cap' node')"
+  apply (simp add: valid_badges_def valid_arch_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
   apply (case_tac cap; clarsimp simp: isCap_simps)
       by (fastforce simp: sameRegionAs_def3 isCap_simps)+
@@ -3842,6 +3843,25 @@ lemma sameRegionAs_SGISignalCap2[simp]:
                  isIRQControlCapDescendant_def
            split: if_splits)
 
+definition
+  "arch_mdb_preservation cap cap' \<equiv> isArchSGISignalCap cap = isArchSGISignalCap cap'"
+
+lemma arch_mdb_preservation_refl[simp, intro!]:
+  "arch_mdb_preservation cap cap"
+  by (simp add: arch_mdb_preservation_def)
+
+lemma arch_mdb_preservation_sym:
+  "arch_mdb_preservation cap cap' = arch_mdb_preservation cap' cap"
+  by (auto simp: arch_mdb_preservation_def)
+
+lemma arch_mdb_preservation_non_arch:
+  "\<lbrakk> \<not>isArchObjectCap cap; \<not>isArchObjectCap cap' \<rbrakk> \<Longrightarrow> arch_mdb_preservation cap cap'"
+  by (simp add: arch_mdb_preservation_def isCap_simps)
+
+lemma arch_mdb_preservation_Untyped[simp]:
+  "arch_mdb_preservation (UntypedCap d p sz idx) (UntypedCap d' p' sz' idx')"
+  by (simp add: arch_mdb_preservation_non_arch isCap_simps)
+
 lemma parentOf_preserve_oneway:
   assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
   assumes sameRegion:
@@ -3857,7 +3877,7 @@ lemma parentOf_preserve_oneway:
                      (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte')) \<and>
                      (isEndpointCap (cteCap cte) \<longrightarrow> capEPBadge (cteCap cte) =
                                                      capEPBadge (cteCap cte')) \<and>
-                     isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte') \<and>
+                     arch_mdb_preservation (cteCap cte) (cteCap cte') \<and>
                      cteMDBNode cte = cteMDBNode cte'"
   assumes node:"\<And>p. mdb_next m p = mdb_next m' p"
   shows "m \<turnstile> p parentOf x \<Longrightarrow> m'  \<turnstile> p parentOf x"
@@ -3879,7 +3899,7 @@ lemma parentOf_preserve_oneway:
                split: cte.splits if_split_asm); clarsimp)
     apply (clarsimp simp: sameRegionAs_def isCap_simps Let_def)
    apply (clarsimp simp: sameRegionAs_def isCap_simps Let_def)
-  apply (clarsimp split: if_splits)
+  apply (clarsimp simp: arch_mdb_preservation_def split: if_splits)
   apply blast
   done
 
@@ -3898,13 +3918,15 @@ lemma parentOf_preserve:
                      (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte')) \<and>
                      (isEndpointCap (cteCap cte) \<longrightarrow> capEPBadge (cteCap cte) =
                                                      capEPBadge (cteCap cte')) \<and>
-                     isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte') \<and>
+                     arch_mdb_preservation (cteCap cte) (cteCap cte') \<and>
                      cteMDBNode cte = cteMDBNode cte'"
   assumes node: "\<And>p. mdb_next m p = mdb_next m' p"
   shows "(m  \<turnstile> p parentOf x) = (m'  \<turnstile> p parentOf x)"
   apply (rule iffI)
    apply (rule parentOf_preserve_oneway[OF dom sameRegion misc node]; assumption)
-  apply (rule parentOf_preserve_oneway, auto simp: dom sameRegion misc node)
+  using misc
+  apply (subst (asm) arch_mdb_preservation_sym)
+  apply (rule parentOf_preserve_oneway, auto simp: dom sameRegion node)
   done
 
 lemma updateUntypedCap_descendants_of:
@@ -4359,7 +4381,7 @@ lemma mdb_chunked_preserve_oneway:
     "\<And>x cte cte'.
        \<lbrakk> m x = Some cte; m' x = Some cte'\<rbrakk> \<Longrightarrow>
            cteMDBNode cte = cteMDBNode cte'
-         \<and> isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte')
+         \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
          \<and> sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
          \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes node: "\<And>p. mdb_next m p = mdb_next m' p"
@@ -4392,7 +4414,7 @@ lemma mdb_chunked_preserve_oneway:
        apply (simp add: sameRegion)
       apply (rule node)
      apply assumption
-    apply clarsimp
+    apply (clarsimp simp: mdb_chunked_arch_assms_def arch_mdb_preservation_def)
    apply (rule connect_eqv_singleE)
    apply (clarsimp simp:mdb_next_rel_def node)
   apply (rule connect_eqv_singleE)
@@ -4405,7 +4427,7 @@ lemma mdb_chunked_preserve:
     "\<And>x cte cte'.
        \<lbrakk> m x = Some cte; m' x = Some cte' \<rbrakk> \<Longrightarrow>
            cteMDBNode cte = cteMDBNode cte'
-         \<and> isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte')
+         \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
          \<and> sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
          \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes node: "\<And>p. mdb_next m p = mdb_next m' p"
@@ -4417,7 +4439,7 @@ lemma mdb_chunked_preserve:
     apply (simp add:dom[symmetric])
    apply (frule sameRegion)
     apply assumption
-   apply simp
+   apply (simp add: arch_mdb_preservation_sym)
   apply (simp add:node)
   done
 
@@ -4430,7 +4452,7 @@ lemma valid_badges_preserve_oneway:
          \<and> (isNotificationCap (cteCap cte) \<longrightarrow> capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte'))
          \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
          \<and> (isEndpointCap (cteCap cte) \<longrightarrow> capEPBadge (cteCap cte) = capEPBadge (cteCap cte'))
-         \<and> isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte')
+         \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
          \<and> isIRQHandlerCap (cteCap cte) = isIRQHandlerCap (cteCap cte')
          \<and> isIRQControlCap (cteCap cte) = isIRQControlCap (cteCap cte')
          \<and> cteMDBNode cte = cteMDBNode cte'"
@@ -4460,16 +4482,16 @@ lemma valid_badges_preserve_oneway:
     apply fastforce
    apply (drule(1) misc)+
    apply (clarsimp simp: isCap_simps sameRegionAs_def split: if_splits)
-  apply clarsimp
+  apply (clarsimp simp: valid_arch_badges_def)
   apply (thin_tac "sameRegionAs _ _ \<longrightarrow> _")
   apply (erule impE)
    apply (drule(1) misc)+
-   apply clarsimp
+   apply (clarsimp simp: arch_mdb_preservation_def)
   apply (erule impE)
    apply clarsimp
    apply (prop_tac "isArchSGISignalCap m_cap'")
     apply (drule(1) misc)+
-    apply clarsimp
+    apply (clarsimp simp: arch_mdb_preservation_def)
    apply (prop_tac "sameRegionAs m_cap' m_cap'", solves \<open>clarsimp simp: isCap_simps\<close>)
    apply (drule (1) sameRegion)+
    apply (erule conjE)
@@ -4488,7 +4510,7 @@ lemma valid_badges_preserve:
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte')
+  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
   \<and> isIRQHandlerCap (cteCap cte) = isIRQHandlerCap (cteCap cte')
   \<and> isIRQControlCap (cteCap cte) = isIRQControlCap (cteCap cte')
   \<and> cteMDBNode cte = cteMDBNode cte'"
@@ -4498,10 +4520,10 @@ lemma valid_badges_preserve:
   assumes mdb_next:"\<And>p. mdb_next m p = mdb_next m' p"
   shows "valid_badges m = valid_badges m'"
   apply (rule iffI)
-    apply (rule valid_badges_preserve_oneway[OF dom misc sameRegion mdb_next])
-    apply assumption+
-  apply (rule valid_badges_preserve_oneway)
-  apply (simp add:dom misc sameRegion mdb_next)+
+   apply (rule valid_badges_preserve_oneway[OF dom misc sameRegion mdb_next]; assumption)
+  using misc
+  apply (subst (asm) arch_mdb_preservation_sym)
+  apply (rule valid_badges_preserve_oneway; simp add:dom sameRegion mdb_next)
   done
 
 lemma mdb_untyped'_preserve_oneway:
@@ -4513,7 +4535,7 @@ lemma mdb_untyped'_preserve_oneway:
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte')
+  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
   \<and> cteMDBNode cte = cteMDBNode cte'"
   assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow> cteMDBNode cte = cteMDBNode cte'
@@ -4557,7 +4579,7 @@ lemma untyped_mdb'_preserve:
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte')
+  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
   \<and> cteMDBNode cte = cteMDBNode cte'"
   assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow> cteMDBNode cte = cteMDBNode cte'
@@ -4571,7 +4593,7 @@ lemma untyped_mdb'_preserve:
       apply (simp add:dom misc sameRegion range mdb_next)+
   apply (erule mdb_untyped'_preserve_oneway[rotated -1])
      apply (simp add:dom[symmetric])
-    apply (frule(1) misc,simp)
+    apply (frule(1) misc, simp add: arch_mdb_preservation_sym)
    apply (frule(1) sameRegion,simp)
   apply (simp add:mdb_next[symmetric])+
   done
@@ -4628,7 +4650,7 @@ locale mdb_inv_preserve =
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> isArchSGISignalCap (cteCap cte) = isArchSGISignalCap (cteCap cte')
+  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
   \<and> isIRQHandlerCap (cteCap cte) = isIRQHandlerCap (cteCap cte')
   \<and> untypedRange (cteCap cte) = untypedRange (cteCap cte')
   \<and> capClass (cteCap cte) = capClass (cteCap cte')
@@ -5213,7 +5235,7 @@ lemma setUntypedCapAsFull_cte_wp_at:
   done
 
 lemma mdb_inv_preserve_sym:"mdb_inv_preserve a b \<Longrightarrow> mdb_inv_preserve b a"
- by (simp add:mdb_inv_preserve_def)
+ by (simp add:mdb_inv_preserve_def arch_mdb_preservation_sym[THEN iffD1])
 
 
 lemma mdb_inv_preserve_refl[simp]:

@@ -49,7 +49,7 @@ where
   "arch_irq_control_inv_relation (AARCH64_A.ARMIRQControlInvocation i ptr ptr' t) x =
      (x = AARCH64_H.IssueIRQHandler i (cte_map ptr) (cte_map ptr') t)"
 | "arch_irq_control_inv_relation (AARCH64_A.IssueSGISignal irq targets ptr ptr') x =
-     (x = AARCH64_H.IssueSGISignal irq (ucast targets) (cte_map ptr) (cte_map ptr'))"
+     (x = AARCH64_H.IssueSGISignal (ucast irq) (ucast targets) (cte_map ptr) (cte_map ptr'))"
 
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"
@@ -192,11 +192,21 @@ lemma arch_check_irq_valid':
   "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_ _. irq \<le> Kernel_Config.maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   by (wp arch_check_irq_valid)
 
-(* 16 is hard-coded in Haskell and bitfield generator as width of "targets" field in SGISignal cap *)
-lemma sgi_target_mask_bits_ucast_targets:
-  "(targets :: machine_word) \<le> mask gicSGITargetMaskBits \<Longrightarrow>
-   (ucast targets :: 16 word) = ucast (ucast targets :: sgi_target_mask)"
-  by (simp add: gicSGITargetMaskBits_sgi_target_len) word_eqI_solve
+lemma isSGITargetValid_eq:
+  "isSGITargetValid w = sgi_target_valid w"
+  unfolding isSGITargetValid_def sgi_target_valid_def
+  by simp
+
+lemma sgi_target_cast[simp]:
+  "sgi_target_valid w \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
+  unfolding sgi_target_valid_def gicNumTargets_def
+  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val)
+
+lemma sgi_irq_cast:
+  "w \<le> word_of_nat numSGIs - 1 \<Longrightarrow> ucast (ucast w :: sgi_irq) = (w :: machine_word)"
+  unfolding numSGIs_def
+  by (simp flip: sgi_irq_len_def
+           add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt)
 
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -204,7 +214,7 @@ lemma arch_decodeIRQControlInvocation_corres:
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
      (invs' and (\<lambda>s. \<forall>cp \<in> set caps'. s \<turnstile>' cp))
      (arch_decode_irq_control_invocation label args slot caps)
-     (AARCH64_H.decodeIRQControlInvocation label args (cte_map slot) caps')"
+     (Arch.decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: arch_decode_irq_control_invocation_def
                         AARCH64_H.decodeIRQControlInvocation_def Let_def)
   apply (rule conjI; clarsimp)
@@ -220,7 +230,7 @@ lemma arch_decodeIRQControlInvocation_corres:
   apply (rule conjI, clarsimp)
    apply (simp add: range_check_def rangeCheck_def)
    apply (corres corres: lookupSlotForCNodeOp_corres ensureEmptySlot_corres corres_returnOkTT
-                 term_simp: numSGIs_def sgi_target_mask_bits_ucast_targets)
+                 term_simp: numSGIs_def isSGITargetValid_eq sgi_irq_cast)
     apply fastforce
    apply fastforce
   \<comment>\<open>ARMIRQIssueIRQHandler\<close>
@@ -307,7 +317,7 @@ lemma arch_decode_irq_control_valid'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> (\<forall>cap \<in> set caps. s \<turnstile>' cap)
         \<and> (\<forall>cap \<in> set caps. \<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_to' r s)
         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot s\<rbrace>
-     AARCH64_H.decodeIRQControlInvocation label args slot caps
+     Arch.decodeIRQControlInvocation label args slot caps
    \<lbrace>arch_irq_control_inv_valid'\<rbrace>,-"
   apply (clarsimp simp add: AARCH64_H.decodeIRQControlInvocation_def Let_def split_def
                             rangeCheck_def unlessE_whenE
@@ -362,7 +372,7 @@ lemma no_fail_deactivateInterrupt[wp, simp]:
 
 lemma arch_invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
-   corres dc \<top> \<top> (arch_invoke_irq_handler i) (AARCH64_H.invokeIRQHandler i')"
+   corres dc \<top> \<top> (arch_invoke_irq_handler i) (Arch.invokeIRQHandler i')"
   apply (cases i; clarsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def)
   apply (intro conjI impI; rule corres_machine_op, rule corres_Id; simp?)
   done
@@ -458,7 +468,7 @@ lemma doMachineOp_deactivateInterrupt[wp]:
   by (cases config_ARM_GIC_V3; wpsimp)
 
 lemma invoke_arch_irq_handler_invs'[wp]:
-  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> AARCH64_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> Arch.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (cases i; (wpsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def | rule conjI)+)
 
 lemma invoke_irq_handler_invs'[wp]:
@@ -596,7 +606,7 @@ lemma dmo_setIRQTrigger_invs'[wp]:
   done
 
 lemma arch_invoke_irq_control_invs'[wp]:
-  "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> AARCH64_H.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> Arch.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: AARCH64_H.performIRQControl_def)
   apply (rule hoare_pre)
    apply (wpsimp wp: cteInsert_simple_invs simp: cte_wp_at_ctes_of isCap_simps IRQ_def)
