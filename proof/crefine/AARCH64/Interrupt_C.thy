@@ -359,6 +359,12 @@ lemma sgi_target_valid_sgi_target_len:
   "isSGITargetValid w = (w < 2^sgi_target_len)"
   by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def)
 
+(* 32 is from width of field in bitfield generator for sgi target.
+   Written as mask so it also works on 32 bit words. *)
+lemma sgi_target_len_mask_32:
+  "2 ^ sgi_target_len \<le> (mask 32 :: machine_word)"
+  by (simp add: sgi_target_len_val mask_def)
+
 lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and cte_at' controlSlot and K (isSGITargetValid target \<and> irq < of_nat numSGIs))
@@ -381,13 +387,13 @@ lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
   apply clarsimp
   apply (erule notE)
   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_lift_def
-                        cap_sgi_signal_cap_lift_def Let_def cap_tag_defs
-                        cap_to_H_def ucast_and_mask_drop)
-  sorry (* FIXME SGI: masks *)
-
-lemma ucast_ucast_mask_le_64_32:
-  "n \<le> 32 \<Longrightarrow> UCAST (32 \<rightarrow> 64) (UCAST (64 \<rightarrow> 32) x && mask n) = x && mask n"
-  by (simp add: ucast_and_mask[symmetric], word_bitwise, clarsimp)
+                        cap_sgi_signal_cap_lift_def Let_def cap_tag_defs cap_to_H_def
+                        sgi_target_valid_sgi_target_len numSGIs_def)
+  apply (rule conjI; rule le_mask_imp_and_mask[symmetric])
+   apply (simp add: numSGIs_bits_def mask_def word_le_nat_alt word_less_nat_alt)
+  apply (rule order_trans[OF _ sgi_target_len_mask_32])
+  apply simp
+  done
 
 (* Bundle of definitions for minIRQ, maxIRQ, minUserIRQ, etc *)
 lemmas c_irq_const_defs = irq_const_defs
