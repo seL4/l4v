@@ -878,6 +878,10 @@ lemma vcpuRestoreRegRange_corres[corres]:
      apply (wpsimp wp: vcpuRestoreReg_corres)+
   done
 
+crunch check_export_arch_timer
+  for (no_fail) no_fail[intro!, wp, simp]
+  (simp: check_export_arch_timer_def)
+
 lemma saveVirtTimer_corres[corres]:
   "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
              (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
@@ -887,12 +891,15 @@ lemma saveVirtTimer_corres[corres]:
       apply (rule corres_split_dc[OF corres_machine_op], (rule corres_Id; simp))
         apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))+
             apply (rule corres_split_dc[OF vcpuWriteReg_corres], simp)+
-                    apply (rule corres_split_eqr[OF corres_machine_op])
-                       apply (rule corres_Id; simp)
-                      apply (fold dc_def)
-                      apply (rule vcpuUpdate_corres)
-                      apply (simp add: vcpu_relation_def)
-                     apply wpsimp+
+                    apply (rule corres_split_dc[OF vcpuSaveReg_corres], simp)
+                      apply (rule corres_split_eqr[OF corres_machine_op], simp)
+                         apply (rule corres_Id; simp)
+                        apply (rule corres_split_eqr[OF corres_machine_op], simp)
+                           apply (rule corres_Id; simp)
+                          apply (fold dc_def)
+                          apply (rule vcpuUpdate_corres)
+                          apply (simp add: vcpu_relation_def)
+                         apply wpsimp+
   done
 
 lemma isIRQActive_corres:
@@ -912,21 +919,23 @@ lemma restoreVirtTimer_corres[corres]:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF vcpuReadReg_corres], simp)
       apply (rule corres_split_eqr[OF vcpuReadReg_corres])
-        apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))+
-            apply (rule corres_split[OF getObject_vcpu_corres])
-              apply (rule corres_split_eqr[OF vcpuReadReg_corres])
+        apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))
+          apply (rule corres_split_dc[OF vcpuRestoreReg_corres])
+            apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))
+              apply (rule corres_split[OF getObject_vcpu_corres])
                 apply (rule corres_split_eqr[OF vcpuReadReg_corres])
-                  apply (clarsimp simp: vcpu_relation_def)
-                  apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
-                      apply (rule corres_split_dc[OF corres_machine_op])
-                         apply (rule corres_Id; simp)
-                        apply (rule corres_split_eqr[OF isIRQActive_corres])
-                          apply (rule corres_split_dc[OF corres_when], simp)
-                             apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
-                             apply (rule corres_machine_op, simp)
-                             apply (rule corres_Id; wpsimp)
-                            apply (rule vcpuRestoreReg_corres)
-                           apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
+                  apply (rule corres_split_eqr[OF vcpuReadReg_corres])
+                    apply (clarsimp simp: vcpu_relation_def)
+                    apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
+                        apply (rule corres_split_dc[OF corres_machine_op])
+                           apply (rule corres_Id; simp)
+                          apply (rule corres_split_eqr[OF isIRQActive_corres])
+                            apply (rule corres_split_dc[OF corres_when], simp)
+                               apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
+                               apply (rule corres_machine_op, simp)
+                               apply (rule corres_Id; wpsimp)
+                              apply (rule vcpuRestoreReg_corres)
+                             apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
   done
 
 lemma vcpuSave_corres:
@@ -3890,6 +3899,17 @@ lemma getIRQState_wp:
   unfolding getIRQState_def getInterruptState_def
   by (wpsimp simp: comp_def)
 
+crunch check_export_arch_timer
+  for (no_irq) no_irq[wp]
+
+lemma check_export_arch_timer_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (check_export_arch_timer) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply (wpsimp wp: check_export_arch_timer_underlying_memory)+
+  done
+
 lemma saveVirtTimer_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> saveVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def read_cntpct_def get_cntv_off_64_def
@@ -4149,6 +4169,12 @@ lemma read_writeVCPUHardwareReg_invs'[wp]:
   by ((wpsimp wp: dmo_invs' no_irq no_irq_writeVCPUHardwareReg)
        , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
        , (wpsimp simp: writeVCPUHardwareReg_def readVCPUHardwareReg_def)+)+
+
+lemma check_export_arch_timer_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp check_export_arch_timer \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (wpsimp wp: dmo_invs' no_irq no_irq_check_export_arch_timer
+      , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
+      , (wpsimp simp: check_export_arch_timer_def)+)
 
 lemma vcpuWriteReg_invs'[wp]:
   "vcpuWriteReg vcpu_ptr r v \<lbrace>invs'\<rbrace>"

@@ -869,6 +869,9 @@ FIXME ARMHYP consider moving to platform code?
 > read_cntpct :: MachineMonad Word64
 > read_cntpct = error "FIXME ARMHYP Unimplemented callback"
 
+> check_export_arch_timer :: MachineMonad ()
+> check_export_arch_timer = error "FIXME ARMHYP Unimplemented callback"
+
 #endif
 
 \subsection{Constants}

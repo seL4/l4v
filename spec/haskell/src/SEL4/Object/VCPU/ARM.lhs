@@ -339,6 +339,8 @@ For initialisation, see makeVCPUObject.
 >     vcpuWriteReg vcpuPtr VCPURegCNTV_CVALlow (fromIntegral cval)
 >     vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ cntvoff `shiftR` 32)
 >     vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral cntvoff)
+>     vcpuSaveReg vcpuPtr VCPURegCNTKCTL
+>     doMachineOp check_export_arch_timer
 >     cntpct <- doMachineOp read_cntpct
 >     vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuVTimer = VirtTimer cntpct })
 
@@ -348,6 +350,7 @@ For initialisation, see makeVCPUObject.
 >     cvalLow <- vcpuReadReg vcpuPtr VCPURegCNTV_CVALlow
 >     let cval = ((fromIntegral cvalHigh :: Word64) `shiftL` 32) .|. (fromIntegral cvalLow :: Word64)
 >     doMachineOp $ set_cntv_cval_64 cval
+>     vcpuRestoreReg vcpuPtr VCPURegCNTKCTL
 >     current_cntpct <- doMachineOp read_cntpct
 >     vcpu <- getObject vcpuPtr
 >     let lastPCount =  vtimerLastPCount (vcpuVTimer vcpu)
