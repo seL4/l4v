@@ -92,6 +92,8 @@ where
         arch_capability.PageDirectoryCap word data)"
 | "acap_relation (arch_cap.VCPUCap vcpu) c  = (c =
         arch_capability.VCPUCap vcpu)"
+| "acap_relation (arch_cap.SGISignalCap irq trigger) c  = (c =
+        arch_capability.SGISignalCap irq (ucast trigger))"
 
 primrec
   cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool"
@@ -747,7 +749,7 @@ lemmas isCap_defs =
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
-  isDomainCap_def isVCPUCap_def
+  isDomainCap_def isVCPUCap_def isSGISignalCap_def
 
 lemma isCNodeCap_cap_map [simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"
