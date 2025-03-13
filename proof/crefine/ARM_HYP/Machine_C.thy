@@ -330,6 +330,11 @@ assumes read_cntpct_ccorres:
            (doMachineOp read_cntpct)
            (Call read_cntpct_'proc)"
 
+assumes check_export_arch_timer_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp check_export_arch_timer)
+           (Call check_export_arch_timer_'proc)"
+
 assumes get_cntv_cval_64_ccorres:
   "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
            (doMachineOp get_cntv_cval_64)

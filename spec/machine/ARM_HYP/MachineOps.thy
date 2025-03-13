@@ -700,6 +700,13 @@ definition
 where
   "read_cntpct \<equiv> gets read_cntpct_val"
 
+consts'
+  check_export_arch_timer_impl :: "unit machine_rest_monad"
+definition
+  check_export_arch_timer :: "unit machine_monad"
+where
+  "check_export_arch_timer \<equiv> machine_op_lift check_export_arch_timer_impl"
+
 subsection "Hypervisor Banked Registers"
 
 consts'
