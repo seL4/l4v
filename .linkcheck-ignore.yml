@@ -1,0 +1,7 @@
+# Copyright 2025, Proofcraft Pty Ltd
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+urls:
+  - ".*haskellstack.org.*"
+  - https://doi.org/10.1145/1190215.1190234
