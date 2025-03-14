@@ -1,4 +1,4 @@
-# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+# Copyright 2025, Proofcraft Pty Ltd
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -9,27 +9,12 @@ on:
   push:
     branches:
       - master
-      - rt
-      - aarch64
   pull_request:
-  # for testing:
   workflow_dispatch:
 
 jobs:
-  check:
-    name: License Check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: seL4/ci-actions/license-check@master
-      with:
-        token: ${{ secrets.READ_TOKEN }}
-
-  links:
-    name: Links
-    runs-on: ubuntu-latest
-    steps:
-      - uses: seL4/ci-actions/link-check@master
-        with:
-          token: ${{ secrets.READ_TOKEN }}
-          # produces 403 for link checkers now:
-          exclude_urls: ".*haskellstack.org.*"
+  checks:
+    name: Checks
+    uses: seL4/ci-actions/.github/workflows/push.yml@master
+    secrets:
+      token: ${{ secrets.READ_TOKEN }}
