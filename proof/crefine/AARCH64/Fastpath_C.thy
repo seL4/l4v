@@ -757,14 +757,15 @@ lemma switchToThread_fp_ccorres:
     apply (rule ccorres_assert2)
     apply csymbr
     apply (ctac (no_vcg) add: armv_contextSwitch_HWASID_ccorres[where vmid=vmid])
-     apply (clarsimp simp: setCurThread_def)
-     apply (rule ccorres_stateAssert)
-     apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-     apply (clarsimp, rule conseqPre, vcg)
-     apply (clarsimp simp: setCurThread_def simpler_modify_def rf_sr_def cstate_relation_def
-                           Let_def carch_state_relation_def cmachine_state_relation_def)
-    apply (wp hoare_drop_imp)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
+     apply (ctac (no_vcg) add: lazyFPURestore_ccorres)
+      apply (clarsimp simp: setCurThread_def)
+      apply (rule ccorres_stateAssert)
+      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+      apply (clarsimp, rule conseqPre, vcg)
+      apply (clarsimp simp: setCurThread_def simpler_modify_def rf_sr_def cstate_relation_def
+                            Let_def carch_state_relation_def cmachine_state_relation_def)
+     apply (wp hoare_drop_imp)
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
 
   apply (rule conjI)
    (* haskell precondition *)
