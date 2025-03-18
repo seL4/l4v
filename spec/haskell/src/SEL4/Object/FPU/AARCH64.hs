@@ -42,7 +42,7 @@ switchLocalFpuOwner newOwner = do
 fpuRelease :: PPtr TCB -> Kernel ()
 fpuRelease tcbPtr = do
     curFpuOwner <- gets (armKSCurFPUOwner . ksArchState)
-    when (curFpuOwner /= Just tcbPtr) (switchLocalFpuOwner Nothing)
+    when (curFpuOwner == Just tcbPtr) (switchLocalFpuOwner Nothing)
 
 lazyFpuRestore :: PPtr TCB -> Kernel ()
 lazyFpuRestore tcbPtr = do
@@ -50,5 +50,7 @@ lazyFpuRestore tcbPtr = do
     if (isFlagSet (ArchFlag FpuDisabled) flags)
       then doMachineOp disableFpu
       else do
-          doMachineOp enableFpu
-          switchLocalFpuOwner (Just tcbPtr)
+          curFpuOwner <- gets (armKSCurFPUOwner . ksArchState)
+          if curFpuOwner == Just tcbPtr
+            then doMachineOp enableFpu
+            else switchLocalFpuOwner (Just tcbPtr)
