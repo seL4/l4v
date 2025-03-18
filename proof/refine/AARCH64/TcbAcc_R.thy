@@ -461,7 +461,7 @@ lemma ball_tcb_cte_casesI:
   by (simp add: tcb_cte_cases_def cteSizeBits_def)
 
 lemma all_tcbI:
-  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q r s. P (Thread a b c d e f g h i j k l m n p q r s) \<rbrakk>
+  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q r s t. P (Thread a b c d e f g h i j k l m n p q r s t) \<rbrakk>
    \<Longrightarrow> \<forall>tcb. P tcb"
   by (rule allI, case_tac tcb, simp)
 
@@ -1729,6 +1729,12 @@ lemma asUser_tcbPriority_inv[wp]:
   apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
   done
 
+lemma asUser_tcbState_inv[wp]:
+  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace>"
+  apply (simp add: asUser_def threadGet_def)
+  apply (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
+  done
+
 lemma asUser_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
     asUser t m \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
@@ -1980,6 +1986,12 @@ lemma pspace_relation_update_concrete_tcb:
   "\<lbrakk>pspace_relation s s'; s ptr = Some (TCB tcb); s' ptr = Some (KOTCB otcb');
     tcb_relation tcb tcb'\<rbrakk>
    \<Longrightarrow> pspace_relation s (s'(ptr \<mapsto> KOTCB tcb'))"
+  by (fastforce dest: pspace_relation_update_tcbs simp: map_upd_triv)
+
+lemma pspace_relation_update_abstract_tcb:
+  "\<lbrakk>pspace_relation s s'; s ptr = Some (TCB tcb); s' ptr = Some (KOTCB otcb');
+    tcb_relation tcb' otcb'\<rbrakk>
+   \<Longrightarrow> pspace_relation (s(ptr \<mapsto> TCB tcb')) s'"
   by (fastforce dest: pspace_relation_update_tcbs simp: map_upd_triv)
 
 lemma threadSet_pspace_relation:

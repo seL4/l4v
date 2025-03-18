@@ -95,6 +95,10 @@ lemma dmos_invs_no_cicd'[wp]:
   "\<And>r. doMachineOp (readVCPUHardwareReg r) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>r v. doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs_no_cicd'\<rbrace>"
   "doMachineOp check_export_arch_timer \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp enableFpu \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp disableFpu \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp (writeFpuState val) \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp readFpuState \<lbrace>invs_no_cicd'\<rbrace>"
   by (wp dmo_invs_no_cicd_lift')+
 
 lemma dmos_invs'[wp]:
@@ -114,6 +118,10 @@ lemma dmos_invs'[wp]:
   "\<And>r. doMachineOp (readVCPUHardwareReg r) \<lbrace>invs'\<rbrace>"
   "\<And>r v. doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs'\<rbrace>"
   "doMachineOp check_export_arch_timer \<lbrace>invs'\<rbrace>"
+  "doMachineOp enableFpu \<lbrace>invs'\<rbrace>"
+  "doMachineOp disableFpu \<lbrace>invs'\<rbrace>"
+  "doMachineOp (writeFpuState val) \<lbrace>invs'\<rbrace>"
+  "doMachineOp readFpuState \<lbrace>invs'\<rbrace>"
   by (wp dmo_invs_lift')+
 
 lemma valid_irq_node_lift_asm:

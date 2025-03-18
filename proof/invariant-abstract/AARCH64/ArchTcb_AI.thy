@@ -148,6 +148,12 @@ crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
   and invs[wp, Tcb_AI_assms]: "invs"
 
+lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
+
+crunch arch_prepare_set_domain
+  for pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  (wp: crunch_wps)
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
