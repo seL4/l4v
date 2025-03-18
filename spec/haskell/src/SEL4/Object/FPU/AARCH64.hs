@@ -13,7 +13,7 @@ import SEL4.Model
 import SEL4.Object.Structures
 import SEL4.Machine.Hardware.AARCH64
 import SEL4.Machine.RegisterSet.AARCH64
-import SEL4.Model.StateData.AARCH64
+import SEL4.Model.StateData.AARCH64 hiding (KernelState)
 import {-# SOURCE #-} SEL4.Object.TCB(asUser, threadGet)
 
 import Data.Bits
@@ -29,10 +29,16 @@ loadFpuState tcbPtr = do
     fpuState <- asUser tcbPtr getFPUState
     doMachineOp (writeFpuState fpuState)
 
+-- We do not need all of cur_fpu_valid in the refinement proof, but do need to
+-- cross over the constraint that the current fpu owner is a TCB.
+fpuOwner_asrt :: KernelState -> Bool
+fpuOwner_asrt _ = True
+
 switchLocalFpuOwner :: Maybe (PPtr TCB) -> Kernel ()
 switchLocalFpuOwner newOwner = do
-    doMachineOp enableFpu
     curFpuOwner <- gets (armKSCurFPUOwner . ksArchState)
+    stateAssert fpuOwner_asrt "there is a TCB at armKSCurFPUOwner"
+    doMachineOp enableFpu
     maybe (return ()) saveFpuState curFpuOwner
     case newOwner of
         Nothing -> doMachineOp disableFpu
