@@ -452,7 +452,7 @@ lemma tcbFault_submonad_args:
 lemma threadGet_stateAssert_gets:
   "threadGet ext t = do stateAssert (tcb_at' t) []; gets (thread_fetch ext t) od"
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
-  apply (wp threadGet_wp | clarsimp simp: obj_at'_def thread_fetch_def projectKOs)+
+  apply (wp threadGet_wp | clarsimp simp: obj_at'_def thread_fetch_def)+
   done
 
 lemma threadGet_tcbFault_submonad_fn:
@@ -466,6 +466,31 @@ lemma threadGet_tcbFault_submonad_fn:
   apply (clarsimp simp: in_monad bind_def gets_def get_def return_def
                         submonad_args.args(3) [OF tcbFault_submonad_args]
                         select_f_def modify_def put_def)
+  done
+
+lemma is_stateAssert_modify:
+  "\<lbrakk> \<forall>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) (replace s)\<rbrace>; \<forall>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_ _. guard s\<rbrace>;
+     empty_fail f; no_fail guard f \<rbrakk>
+   \<Longrightarrow> f = do stateAssert guard []; modify replace od"
+  apply (rule ext)
+  apply (rename_tac s)
+  apply (clarsimp simp: bind_def empty_fail_def valid_def no_fail_def
+                        stateAssert_def assert_def simpler_modify_def get_def
+                        return_def fail_def image_def split_def)
+  apply (case_tac "f s")
+  apply (intro conjI impI)
+   apply (drule_tac x=s in spec)+
+   apply (subgoal_tac "\<forall>x\<in>fst (f s). fst x = () \<and> snd x = replace s")
+    apply fastforce
+   apply clarsimp
+  apply (drule_tac x=s in spec)+
+  apply fastforce
+  done
+
+lemma threadSet_stateAssert_modify:
+  "threadSet f t = do stateAssert (tcb_at' t) []; modify (thread_replace (\<lambda>_. f) t ()) od"
+  apply (rule is_stateAssert_modify [OF _ _ empty_fail_threadSet no_fail_threadSet])
+  apply (wp threadSet_wp | clarsimp simp: obj_at'_def thread_replace_def)+
   done
 
 lemmas asUser_return = submonad.return [OF submonad_asUser]
