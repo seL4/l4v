@@ -203,7 +203,14 @@ lemma arch_thread_set_valid_objs_cur_fpu[wp]:
   "arch_thread_set (tcb_cur_fpu_update f) t \<lbrace>valid_objs\<rbrace>"
   by (wpsimp wp: arch_thread_set_valid_objs')
 
-lemma arch_thread_set_unlive_hyp[wp]:
+lemma arch_thread_set_cur_fpu_hyp_live[wp]:
+  "arch_thread_set (tcb_cur_fpu_update f) t \<lbrace>obj_at (Not \<circ> hyp_live) vr\<rbrace>"
+  apply (wpsimp wp: arch_thread_set_wp)
+  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: get_tcb_def hyp_live_def split: kernel_object.splits)
+  done
+
+lemma arch_thread_set_vcpu_None_unlive_hyp[wp]:
   "\<lbrace>\<lambda>s. vr \<noteq> t \<longrightarrow> obj_at (Not \<circ> hyp_live) vr s\<rbrace>
    arch_thread_set (tcb_vcpu_update Map.empty) t
    \<lbrace>\<lambda>_. obj_at (Not \<circ> hyp_live) vr\<rbrace>"
