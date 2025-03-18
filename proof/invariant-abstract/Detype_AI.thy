@@ -1042,7 +1042,7 @@ lemma (in Detype_AI) cte_map_not_null_outside: (*FIXME: arch-split*)
   apply (drule(1) valid_globals_irq_node, fastforce simp: cap_range_def)
   done
 
-
+(* FIXME: move *)
 lemma corres_submonad2:
   "\<lbrakk> submonad f r g fn; submonad f' r' g' fn';
      \<forall>s s'. (s, s') \<in> sr \<and> g s \<and> g' s' \<longrightarrow> (f s, f' s') \<in> ssr;
@@ -1068,7 +1068,7 @@ lemma corres_submonad2:
   apply fastforce
   done
 
-
+(* FIXME: move *)
 lemma corres_submonad3:
   "\<lbrakk>submonad f r g fn; submonad f' r' g' fn';
     \<forall>s s'. (s, s') \<in> sr \<and> g s \<and> g' s' \<longrightarrow> (f s, f' s') \<in> ssr;

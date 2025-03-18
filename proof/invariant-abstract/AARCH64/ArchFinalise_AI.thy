@@ -1128,21 +1128,16 @@ lemma prepare_thread_delete_no_cap_to_obj_ref[wp]:
   by (wpsimp simp: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
 
 crunch fpu_release
-  for obj_at_triv: "obj_at \<top> p"
-  (wp: as_user_wp_thread_set_helper thread_set.aobj_at arch_thread_set.aobj_at crunch_wps
-   simp: arch_obj_pred_def)
+  for unlive[wp]: "obj_at (Not \<circ> live0) ptr"
+  and unlive_hyp[wp]: "obj_at (Not \<circ> hyp_live) ptr"
+  (simp: o_def_not wp: crunch_wps ignore: arch_thread_set)
 
 lemma prepare_thread_delete_unlive_hyp:
   "\<lbrace>obj_at \<top> ptr\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> hyp_live) ptr\<rbrace>"
   apply (simp add: prepare_thread_delete_def)
-  apply (rule bind_wp[OF _ fpu_release_obj_at_triv])
-  apply (wpsimp wp: hoare_vcg_imp_lift' arch_thread_get_wp )
+  apply (wpsimp wp: hoare_vcg_imp_lift' arch_thread_get_wp)
   apply (clarsimp simp: obj_at_def hyp_live_def)
   done
-
-crunch fpu_release
-  for unlive[wp]: "obj_at (Not \<circ> live0) ptr"
-  (simp: o_def_not wp: crunch_wps)
 
 crunch prepare_thread_delete
   for unlive0: "obj_at (Not \<circ> live0) t"
@@ -1208,6 +1203,12 @@ lemma fpu_release_unlive_arch_tcb[wp]:
    \<lbrace>\<lambda>_. obj_at (Not \<circ> arch_tcb_live') t\<rbrace>"
   unfolding fpu_release_def
   by (wpsimp simp: valid_cur_fpu_defs arch_tcb_live'_defs is_tcb)
+
+crunch dissociate_vcpu_tcb
+  for arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
+  and arch_tcb_cur_fpu[wp]: "\<lambda>s. P (arch_tcb_at itcb_cur_fpu p s)"
+  and valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: crunch_wps valid_cur_fpu_lift_arch arch_thread_set_no_change_arch_tcb_at)
 
 lemma prepare_thread_delete_unlive_arch_tcb:
   "\<lbrace>valid_cur_fpu and tcb_at ptr\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> arch_tcb_live') ptr\<rbrace>"
