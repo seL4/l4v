@@ -1065,11 +1065,11 @@ lemma access_ti_list_word8_array:
 lemma coerce_memset_to_heap_update:
   "heap_update_list x (replicateHider (size_of (TYPE (tcb_C))) 0)
       = heap_update (tcb_Ptr x)
-             (tcb_C.tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0))
+             (tcb_C.tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0)) 0
                                                       (user_fpu_state_C (FCP (\<lambda>x. 0)) 0 0))
                                                       NULL)
                           (thread_state_C (FCP (\<lambda>x. 0)))
-                          (NULL)
+                          0 NULL
                           (seL4_Fault_C (FCP (\<lambda>x. 0)))
                           (lookup_fault_C (FCP (\<lambda>x. 0)))
                             0 0 0 0 0 0 NULL NULL NULL NULL)"

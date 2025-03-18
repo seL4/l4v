@@ -93,9 +93,43 @@ lemma setDomain_ccorres:
                          invs'_def valid_state'_def valid_pspace'_def)
   done
 
+lemma prepareSetDomain_ccorres:
+  "ccorres dc xfdc
+      (invs' and tcb_at' t)
+      (\<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>dom = ucast d\<rbrace>) []
+      (prepareSetDomain t d) (Call prepareSetDomain_'proc)"
+  apply (cinit lift: tptr_' dom_')
+   apply (rule ccorres_pre_curDomain)
+   apply (rule_tac C'="{s. curDom \<noteq> ucast d}"
+               and Q="\<lambda>s. curDom = ksCurDomain s"
+               and Q'=UNIV
+                in ccorres_rewrite_cond_sr)
+    apply (clarsimp simp: rf_sr_ksCurDomain)
+   apply (rule ccorres_when[where R=\<top>])
+    apply clarsimp
+   apply (ctac add: fpuRelease_ccorres)
+  apply clarsimp
+  done
+
 lemma active_runnable':
   "active' state \<Longrightarrow> runnable' state"
   by (fastforce simp: runnable'_def)
+
+lemma invokeDomainSetSet_ccorres:
+  "ccorres dc xfdc
+      (invs' and tcb_at' t and sch_act_simple
+             and (\<lambda>s. d \<le> maxDomain))
+      (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>domain = ucast d\<rbrace>) []
+      (do x <- prepareSetDomain t d;
+               setDomain t d
+       od)
+      (Call invokeDomainSetSet_'proc)"
+  apply (cinit' lift: tcb_' domain_')
+   apply (simp add: liftE_def bind_assoc)
+   apply (ctac (no_vcg) add: prepareSetDomain_ccorres)
+    apply (ctac (no_vcg) add: setDomain_ccorres)
+   apply wpsimp+
+  done
 
 lemma decodeDomainInvocation_ccorres:
   notes Collect_const[simp del]
@@ -179,11 +213,12 @@ lemma decodeDomainInvocation_ccorres:
                                  performInvocation_def liftE_bindE bind_assoc)
        apply (ctac add: setThreadState_ccorres)
          apply csymbr
-         apply (ctac add: setDomain_ccorres)
+         apply (subst bind_assoc[symmetric])
+         apply (ctac add: invokeDomainSetSet_ccorres)
            apply (rule ccorres_alternative2)
            apply (ctac add: ccorres_return_CE)
           apply wp
-         apply (vcg exspec=setDomain_modifies)
+         apply (vcg exspec=invokeDomainSetSet_modifies)
         apply (wp sts_invs_minor')
        apply (vcg exspec=setThreadState_modifies)
       apply wp

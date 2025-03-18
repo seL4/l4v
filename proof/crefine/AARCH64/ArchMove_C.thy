@@ -231,13 +231,16 @@ lemma unat_ucast_prio_L1_cmask_simp:
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
+crunch lazyFpuRestore
+  for tcbQueued[wp]: "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'"
+
 (* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
 lemma Arch_switchToThread_obj_at_pre:
   "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: AARCH64_H.switchToThread_def)
-  apply (wp asUser_obj_at_notQ doMachineOp_obj_at hoare_drop_imps|wpc)+
+  unfolding AARCH64_H.switchToThread_def
+  apply (wpsimp wp: asUser_obj_at_notQ doMachineOp_obj_at hoare_drop_imps simp: comp_def)
   done
 
 lemma loadWordUser_submonad_fn:
