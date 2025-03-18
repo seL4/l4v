@@ -1891,7 +1891,7 @@ lemma ccorres_handleReservedIRQ:
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
-     (UNIV \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>) hs
+     \<lbrace>\<acute>irq = ucast irq\<rbrace> hs
      (handleInterrupt irq) (Call handleInterrupt_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -1968,16 +1968,24 @@ lemma handleInterrupt_ccorres:
       apply (wpsimp wp: getSlotCap_wp simp: maskIrqSignal_def)
      apply simp
      apply vcg
-sorry (* FIXME RT: handleInterrupt_ccorres
     apply (simp add: bind_assoc)
     apply (rule ccorres_move_const_guards)+
     apply (rule ccorres_cond_false_seq)
     apply (rule ccorres_cond_true_seq)
     apply (rule ccorres_rhs_assoc)+
-    apply (ctac (no_vcg) add: timerTick_ccorres)
-     apply (ctac (no_vcg) add: resetTimer_ccorres)
-      apply (ctac add: ackInterrupt_ccorres )
-     apply wp+
+    apply (ctac add: ackDeadlineIRQ_ccorres)
+      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+          apply (rule_tac ccorres_from_vcg[where P=\<top> and P'=UNIV])
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: setReprogramTimer_def modify_def get_def put_def bind_def
+                                rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                cmachine_state_relation_def)
+         apply ceqv
+        apply (ctac add: ackInterrupt_ccorres )
+       apply wp+
+      apply vcg
+     apply wpsimp
+    apply (vcg exspec=ackDeadlineIRQ_modifies)
    apply (simp add: Platform_maxIRQ maxIRQ_def del: Collect_const)
    apply (rule ccorres_move_const_guards)+
    apply (rule ccorres_cond_false_seq)
@@ -2013,7 +2021,8 @@ sorry (* FIXME RT: handleInterrupt_ccorres
            | subst array_assertion_abs_irq[rule_format, OF conjI])+
     apply (clarsimp simp:nat_le_iff)
     apply (clarsimp simp: IRQReserved_def)+
-  done *)
+  done
+
 end
 
 end

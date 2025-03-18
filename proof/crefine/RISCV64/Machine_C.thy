@@ -57,6 +57,11 @@ assumes ackInterrupt_ccorres:
            (doMachineOp (ackInterrupt irq))
            (Call ackInterrupt_'proc)"
 
+assumes ackDeadlineIRQ_ccorres:
+  "ccorres dc xfdc \<top> UNIV hs
+           (doMachineOp ackDeadlineIRQ)
+           (Call ackDeadlineIRQ_'proc)"
+
 assumes plic_complete_claim_ccorres:
   "ccorres dc xfdc \<top> \<lbrace>\<acute>irq = ucast irq\<rbrace> []
            (doMachineOp (plic_complete_claim irq))
