@@ -769,8 +769,8 @@ lemma fastpath_callKernel_SysCall_corres:
                                  apply (rule activateThread_simple_rewrite)
                                 apply (rule monadic_rewrite_refl)
                                apply wp
-                              apply (wp setCurThread_ct_in_state)
-                             apply (simp only: st_tcb_at'_def[symmetric])
+                              apply (wpsimp wp: setCurThread_ct_in_state simp: comp_def)
+                             apply (simp only: st_tcb_at'_def[simplified comp_def, symmetric])
                              apply (wp, clarsimp simp: cur_tcb'_def ct_in_state'_def)
                             apply (simp add: getThreadCallerSlot_def getThreadReplySlot_def
                                              locateSlot_conv ct_in_state'_def cur_tcb'_def)
@@ -837,6 +837,7 @@ lemma fastpath_callKernel_SysCall_corres:
                                  threadGet_vcpu_isolatable[simplified o_def]
                                  vcpuSwitch_isolatable[THEN thread_actions_isolatableD] vcpuSwitch_isolatable
                                  setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
+                                 lazyFpuRestore_isolatable[THEN thread_actions_isolatableD] lazyFpuRestore_isolatable
                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable
                                  kernelExitAssertions_isolatable[THEN thread_actions_isolatableD]
                                  kernelExitAssertions_isolatable
@@ -1802,6 +1803,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                   threadGet_vcpu_isolatable[THEN thread_actions_isolatableD, simplified o_def]
                                   threadGet_vcpu_isolatable[simplified o_def]
                                   vcpuSwitch_isolatable[THEN thread_actions_isolatableD] vcpuSwitch_isolatable
+                                  lazyFpuRestore_isolatable[THEN thread_actions_isolatableD] lazyFpuRestore_isolatable
                                   zipWithM_setRegister_simple
                                   zipWithM_setRegister_simple_modify_registers
                                   thread_actions_isolatable_bind
