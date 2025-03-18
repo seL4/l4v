@@ -57,8 +57,10 @@ definition lazy_fpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_mon
      if ArchFlag FpuDisabled \<in> flags
      then do_machine_op disableFpu
      else do
-       do_machine_op enableFpu;
-       switch_local_fpu_owner (Some thread_ptr)
+       cur_fpu_owner \<leftarrow> gets (x64_current_fpu_owner \<circ> arch_state);
+       if cur_fpu_owner = Some thread_ptr
+       then do_machine_op enableFpu
+       else switch_local_fpu_owner (Some thread_ptr)
      od
    od"
 
