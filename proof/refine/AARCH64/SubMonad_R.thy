@@ -20,12 +20,17 @@ interpretation submonad_doMachineOp:
   submonad ksMachineState "(ksMachineState_update \<circ> K)" \<top> doMachineOp
   by (rule submonad_doMachineOp)
 
+lemma corres_machine_op':
+  assumes P: "corres_underlying Id False True r P P' x x'"
+  shows      "corres r (P \<circ> machine_state) (P' \<circ> ksMachineState) (do_machine_op x) (doMachineOp x')"
+  apply (rule corres_submonad3 [OF submonad_do_machine_op submonad_doMachineOp _ _ _ _ P])
+   apply (simp_all add: state_relation_def swp_def)
+  done
+
 lemma corres_machine_op:
   assumes P: "corres_underlying Id False True r \<top> \<top> x x'"
   shows      "corres r \<top> \<top> (do_machine_op x) (doMachineOp x')"
-  apply (rule corres_submonad [OF submonad_do_machine_op submonad_doMachineOp _ _ P])
-   apply (simp_all add: state_relation_def swp_def)
-  done
+  by (rule corres_machine_op'[OF P, simplified])
 
 lemmas corres_machine_op_Id = corres_machine_op[OF corres_Id]
 lemmas corres_machine_op_Id_dc[corres_term] = corres_machine_op_Id[where r="dc::unit \<Rightarrow> unit \<Rightarrow> bool"]

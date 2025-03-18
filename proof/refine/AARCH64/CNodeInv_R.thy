@@ -623,11 +623,14 @@ lemma unbindNotification_ctes_of_thread:
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by wp
 
+crunch fpuRelease
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
+
 lemma prepareThreadDelete_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
-  by (wpsimp simp: prepareThreadDelete_def fpuThreadDelete_def)
+  by (wpsimp simp: prepareThreadDelete_def)
 
 lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
@@ -654,7 +657,7 @@ lemma prepareThreadDelete_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  by (wpsimp simp: prepareThreadDelete_def not_recursive_ctes_def cteCaps_of_def fpuThreadDelete_def)
+  by (wpsimp simp: prepareThreadDelete_def not_recursive_ctes_def cteCaps_of_def)
 
 definition
   finaliseSlot_recset :: "((machine_word \<times> bool \<times> kernel_state) \<times> (machine_word \<times> bool \<times> kernel_state)) set"

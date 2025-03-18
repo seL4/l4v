@@ -29,9 +29,7 @@ context begin interpretation Arch . (*FIXME: arch-split*)
   system.
 *)
 
-definition zeroed_arch_abstract_state ::
-  arch_state
-  where
+definition zeroed_arch_abstract_state :: arch_state where
   "zeroed_arch_abstract_state \<equiv> \<lparr>
     arm_asid_table    = Map.empty,
     arm_kernel_vspace = K ArmVSpaceUserRegion,
@@ -39,12 +37,11 @@ definition zeroed_arch_abstract_state ::
     arm_next_vmid = 0,
     arm_us_global_vspace = 0,
     arm_current_vcpu = None,
-    arm_gicvcpu_numlistregs = 0
+    arm_gicvcpu_numlistregs = 0,
+    arm_current_fpu_owner = None
   \<rparr>"
 
-definition zeroed_main_abstract_state ::
-  abstract_state
-  where
+definition zeroed_main_abstract_state :: abstract_state where
   "zeroed_main_abstract_state \<equiv> \<lparr>
     kheap = Map.empty,
     cdt = Map.empty,
@@ -63,30 +60,22 @@ definition zeroed_main_abstract_state ::
     arch_state = zeroed_arch_abstract_state
   \<rparr>"
 
-definition zeroed_extended_state ::
-  det_ext
-  where
+definition zeroed_extended_state :: det_ext where
   "zeroed_extended_state \<equiv> \<lparr>
     work_units_completed_internal = 0,
     cdt_list_internal = K []
   \<rparr>"
 
-definition zeroed_abstract_state ::
-  det_state
-  where
+definition zeroed_abstract_state :: det_state where
   "zeroed_abstract_state \<equiv> abstract_state.extend zeroed_main_abstract_state
                            (state.fields zeroed_extended_state)"
 
-definition zeroed_arch_intermediate_state ::
-  Arch.kernel_state
-  where
+definition zeroed_arch_intermediate_state :: Arch.kernel_state where
   "zeroed_arch_intermediate_state \<equiv>
     ARMKernelState Map.empty (K ArmVSpaceUserRegion)
-                   Map.empty 0 0 None 0 Map.empty"
+                   Map.empty 0 0 None 0 Map.empty None"
 
-definition zeroed_intermediate_state ::
-  global.kernel_state
-  where
+definition zeroed_intermediate_state :: global.kernel_state where
   "zeroed_intermediate_state \<equiv> \<lparr>
     ksPSpace = Map.empty,
     gsUserPages = Map.empty,
