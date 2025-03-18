@@ -3433,7 +3433,7 @@ proof -
     done
 
   let ?tcb_arch = "tcbArch_C undefined
-    \<lparr> tcbContext_C := tcbContext_C (tcbArch_C undefined)
+    \<lparr> tcbContext_C := StrictC'_padding_C_update (\<lambda>_. 0) (tcbContext_C (tcbArch_C undefined)
          \<lparr>registers_C :=
            foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<37] \<comment> \<open>n_contextRegisters\<close>
              (registers_C (tcbContext_C (tcbArch_C undefined))),
@@ -3443,7 +3443,7 @@ proof -
                           fpsr_C := 0,
                           fpcr_C := 0
                         \<rparr>
-         \<rparr>,
+         \<rparr>),
       tcbVCPU_C := vcpu_Ptr 0
     \<rparr>"
 
@@ -3469,7 +3469,8 @@ proof -
        tcbFaultHandler_C := 0, tcbIPCBuffer_C := 0,
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
        tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
-       tcbBoundNotification_C := ntfn_Ptr 0\<rparr>"
+       tcbBoundNotification_C := ntfn_Ptr 0,
+       flags_C := 0\<rparr>"
 
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)
