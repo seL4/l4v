@@ -400,11 +400,11 @@ definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
 
 definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "prepare_thread_delete thread_ptr \<equiv> do
-     fpu_release thread_ptr;
      t_vcpu \<leftarrow> arch_thread_get tcb_vcpu thread_ptr;
      case t_vcpu of
        Some v \<Rightarrow> dissociate_vcpu_tcb v thread_ptr
-     | None \<Rightarrow> return ()
+     | None \<Rightarrow> return ();
+     fpu_release thread_ptr
    od"
 
 end

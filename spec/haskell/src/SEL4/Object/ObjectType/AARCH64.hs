@@ -299,8 +299,8 @@ capUntypedSize (SGISignalCap {}) = 0 -- invalid case, use C default
 
 prepareThreadDelete :: PPtr TCB -> Kernel ()
 prepareThreadDelete thread = do
-    fpuRelease thread
     tcbVCPU <- archThreadGet atcbVCPUPtr thread
     case tcbVCPU of
       Just ptr -> dissociateVCPUTCB ptr thread
       _ -> return ()
+    fpuRelease thread
