@@ -13,7 +13,9 @@ imports
 begin
 context Arch begin arch_global_naming (H)
 
-#INCLUDE_HASKELL SEL4/Object/FPU/AARCH64.hs CONTEXT AARCH64_H ArchInv=Arch
+#INCLUDE_HASKELL SEL4/Object/FPU/AARCH64.hs CONTEXT AARCH64_H decls_only ArchInv=Arch ONLY fpuOwner_asrt
+
+#INCLUDE_HASKELL SEL4/Object/FPU/AARCH64.hs CONTEXT AARCH64_H ArchInv=Arch NOT fpuOwner_asrt
 
 end
 end
