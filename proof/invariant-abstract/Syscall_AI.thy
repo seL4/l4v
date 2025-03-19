@@ -1423,9 +1423,9 @@ lemma send_fault_ipc_ct_active_for_timeout[wp]:
 
 lemma handle_timeout_ct_active[wp]:
   "\<lbrace>\<lambda>s. ct_active s \<and> tptr \<noteq> cur_thread s\<rbrace>
-     handle_timeout tptr f
+   handle_timeout tptr f
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp simp: handle_timeout_def)
+  by (wpsimp simp: handle_timeout_def is_valid_timeout_handler_def wp: get_cap_wp)
 
 lemma do_reply_transfer_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace>

@@ -776,25 +776,14 @@ lemma isReply_awaiting_reply':
   by (case_tac st, (clarsimp simp add: isReply_def isBlockedOnReply_def)+)
 
 lemma handleTimeout_invs':
-  "\<lbrace>invs' and st_tcb_at' active' tptr and sch_act_not tptr and ex_nonz_cap_to' tptr\<rbrace>
+  "\<lbrace>invs' and st_tcb_at' active' tptr and ex_nonz_cap_to' tptr\<rbrace>
    handleTimeout tptr timeout
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: handleTimeout_def)
-  apply wpsimp
-      apply (rename_tac tcb)
-      apply (rule_tac Q'="\<lambda>_. invs'"
-                  and E'="\<lambda>_. invs' and valid_idle' and st_tcb_at' active' tptr and sch_act_not tptr
-                             and (\<lambda>s. False \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) tptr s)
-                             and ex_nonz_cap_to' tptr
-                             and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte
-                                                                               = cteCap (tcbTimeoutHandler tcb))
-                                                                        (tptr + n) s)"
-                   in hoare_strengthen_postE)
-        apply (rule sfi_invs_plus')
-       apply (wpsimp wp: getTCB_wp
-                   simp: isValidTimeoutHandler_def)+
-  apply (clarsimp simp: cte_wp_at'_obj_at' tcb_cte_cases_def obj_at'_def valid_idle'_asrt_def)
-  done
+  unfolding handleTimeout_def
+  apply (wpsimp wp: sendFaultIPC_invs' getTCB_wp getSlotCap_wp
+              simp: isValidTimeoutHandler_def getThreadTimeoutHandlerSlot_def locateSlot_conv)+
+  apply normalise_obj_at'
+  by (fastforce dest: cap_in_tcbTimeoutHandlerSlot)
 
 crunch isValidTimeoutHandler
   for inv[wp]: P
@@ -1824,8 +1813,8 @@ lemma handle_timeout_valid_sched_action:
       \<and> (is_timeout_fault ex \<and> active_sc_tcb_at tptr s \<or> released_if_bound_sc_tcb_at tptr s)\<rbrace>
    handle_timeout tptr ex
    \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def
-  apply (wpsimp wp: send_fault_ipc_valid_sched_action)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  apply (wpsimp wp: send_fault_ipc_valid_sched_action get_cap_wp)
   done
 
 lemma end_timeslice_valid_sched_action:
@@ -1858,25 +1847,6 @@ lemma sendFaultIPC_invs':
   apply (intro conjI impI allI; (fastforce simp: inQ_def)?)
    apply (clarsimp simp: invs'_def obj_at'_def)
   apply (fastforce simp: ex_nonz_cap_to'_def cte_wp_at'_def)
-  done
-
-lemma handleTimeout_Timeout_invs':
-  "\<lbrace>invs' and st_tcb_at' active' tptr\<rbrace>
-   handleTimeout tptr (Timeout badge)
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: handleTimeout_def)
-  apply (wpsimp wp: sendFaultIPC_invs' set_tcb'.getObject_wp' simp: isValidTimeoutHandler_def)
-  apply (rule conjI; clarsimp simp: obj_at'_real_def pred_tcb_at'_def)
-   apply (drule invs_iflive')
-   apply (erule (1) if_live_then_nonz_capD')
-   apply (fastforce simp: live_def)
-  apply (clarsimp simp: ko_wp_at'_def opt_map_red)
-  apply (rule_tac x="4 << cteSizeBits" in bexI)
-   apply (clarsimp simp: cte_wp_at_cases')
-   apply (drule_tac x="4 << cteSizeBits" in spec)
-   apply (clarsimp simp: objBits_simps cteSizeBits_def)
-   apply fastforce
-  apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def)
   done
 
 lemma endTimeslice_invs'[wp]:

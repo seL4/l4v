@@ -4081,8 +4081,9 @@ lemma send_ipc_valid_list[wp]:
   "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
    by (wpsimp simp: send_ipc_def wp: thread_get_inv hoare_drop_imp get_simple_ko_wp)
 
-crunch send_fault_ipc,handle_timeout
- for valid_list[wp]: valid_list
+crunch send_fault_ipc, handle_timeout
+  for valid_list[wp]: valid_list
+  (wp: crunch_wps)
 
 end
 

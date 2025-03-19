@@ -554,14 +554,23 @@ definition send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Ri
        | _ \<Rightarrow> fail"
 
 text \<open>timeout fault\<close>
-definition handle_timeout :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+
+definition is_valid_timeout_handler :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad" where
+  "is_valid_timeout_handler tptr \<equiv> do
+     timeout_handler_slot \<leftarrow> return (get_tcb_timeout_handler_ptr tptr);
+     timeout_handler_cap \<leftarrow> get_cap timeout_handler_slot;
+     return (is_ep_cap timeout_handler_cap)
+   od"
+
+definition handle_timeout :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "handle_timeout tptr ex \<equiv> do
-     tcb \<leftarrow> gets_the $ get_tcb tptr;
-     assert (is_ep_cap (tcb_timeout_handler tcb));
-     send_fault_ipc tptr (tcb_timeout_handler tcb) ex False <catch> K (return False);
+     valid \<leftarrow> is_valid_timeout_handler tptr;
+     assert valid;
+     timeout_handler_slot \<leftarrow> return (get_tcb_timeout_handler_ptr tptr);
+     timeout_handler_cap \<leftarrow> get_cap timeout_handler_slot;
+     send_fault_ipc tptr timeout_handler_cap ex False;
      return ()
-  od"
+   od"
 
 text \<open>If a fault message cannot be sent then leave the thread inactive.\<close>
 definition

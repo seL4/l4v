@@ -33,8 +33,11 @@ This module contains functions that determine how recoverable faults encountered
 
 > isValidTimeoutHandler :: PPtr TCB -> Kernel Bool
 > isValidTimeoutHandler tptr = do
->     tcb <- getObject tptr
->     case cteCap (tcbTimeoutHandler tcb) of
+>     stateAssert (tcb_at'_asrt tptr)
+>         "Assert that there is a TCB at tptr"
+>     timeoutHandlerSlot <- getThreadTimeoutHandlerSlot tptr
+>     timeoutHandlerCap <- getSlotCap timeoutHandlerSlot
+>     case timeoutHandlerCap of
 >         EndpointCap {} -> return True
 >         _ -> return False
 
@@ -72,8 +75,9 @@ When a thread faults, the kernel attempts to send a fault IPC to the fault handl
 >         "Assert that `valid_idle' s` holds"
 >     valid <- isValidTimeoutHandler tptr
 >     assert valid "no valid timeout handler"
->     tcb <- getObject tptr
->     sendFaultIPC tptr (cteCap (tcbTimeoutHandler tcb)) timeout False `catchFailure` const (return False)
+>     timeoutHandlerSlot <- getThreadTimeoutHandlerSlot tptr
+>     timeoutHandlerCap <- getSlotCap timeoutHandlerSlot
+>     sendFaultIPC tptr timeoutHandlerCap timeout False
 >     return ()
 
 If a thread causes a fault, then an IPC containing details of the fault is sent to a fault handler endpoint specified in the thread's TCB.
