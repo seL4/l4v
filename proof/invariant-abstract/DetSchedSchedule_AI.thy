@@ -8,6 +8,10 @@ theory DetSchedSchedule_AI
 imports ArchDetSchedDomainTime_AI
 begin
 
+arch_requalify_facts tcb_sched_action_valid_idle_etcb
+
+lemmas [wp] = tcb_sched_action_valid_idle_etcb
+
 crunch do_machine_op
   for ct_not_in_q[wp]: "ct_not_in_q"
 
@@ -220,8 +224,6 @@ abbreviation valid_sched_except_blocked_2 where
 abbreviation valid_sched_except_blocked :: "'z state \<Rightarrow> bool" where
   "valid_sched_except_blocked s \<equiv> valid_sched_except_blocked_2 (ready_queues s) (etcbs_of s) (scheduler_action s) (cur_domain s) (kheap s) (cur_thread s) (idle_thread s)"
 
-declare valid_idle_etcb_lift[wp]
-
 lemma tcb_sched_action_enqueue_valid_sched[wp]:
   "\<lbrace>valid_sched_except_blocked and st_tcb_at runnable thread and not_cur_thread thread and valid_blocked_except thread\<rbrace>
      tcb_sched_action tcb_sched_enqueue thread
@@ -298,6 +300,7 @@ lemma set_scheduler_action_rct_valid_blocked:
 
 crunch set_scheduler_action
   for etcb_at[wp]: "etcb_at P t"
+  and valid_idle_etcb[wp]: valid_idle_etcb
 
 lemma set_scheduler_action_rct_valid_sched:
   "\<lbrace>valid_sched and ct_not_queued
@@ -369,7 +372,8 @@ lemma set_scheduler_action_cnt_valid_blocked_except:
 
 lemma set_scheduler_action_cnt_weak_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace> set_scheduler_action choose_new_thread \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  by (simp add: valid_sched_def simple_sched_action_def split: scheduler_action.splits | wp set_scheduler_action_cnt_valid_blocked)+
+  by (simp add: valid_sched_def simple_sched_action_def split: scheduler_action.splits
+      | wp set_scheduler_action_cnt_valid_blocked)+
 
 lemma reschedule_required_valid_queues[wp]:
   "\<lbrace>valid_queues and weak_valid_sched_action\<rbrace>
@@ -451,6 +455,7 @@ lemma reschedule_required_valid_blocked_except:
 
 crunch reschedule_required
   for etcb_at[wp]: "etcb_at P t"
+  and valid_idle_etcb[wp]: valid_idle_etcb
 
 lemma reschedule_required_valid_sched:
   "\<lbrace>valid_queues and weak_valid_sched_action and valid_blocked and valid_idle_etcb\<rbrace>
@@ -1059,6 +1064,7 @@ lemma switch_to_thread_valid_blocked[wp]:
 
 crunch switch_to_thread
   for etcb_at[wp]: "etcb_at P t :: det_state \<Rightarrow> _"
+  and valid_idle_etcb[wp]: "valid_idle_etcb :: det_state \<Rightarrow> _"
 
 lemma switch_to_thread_valid_sched:
   "\<lbrace>is_activatable t and in_cur_domain t and valid_sched_action and valid_queues and valid_blocked and ct_in_q and valid_idle_etcb\<rbrace>
@@ -1191,6 +1197,8 @@ context DetSchedSchedule_AI begin
 
 crunch switch_to_idle_thread
   for etcb_at[wp]: "etcb_at P t :: det_state \<Rightarrow> _"
+  and valid_idle_etcb[wp]: "valid_idle_etcb :: det_state \<Rightarrow> _"
+  (wp: valid_idle_etcb_lift)
 
 lemma switch_to_idle_thread_valid_sched:
   "\<lbrace>valid_sched_action and valid_idle and valid_queues and valid_blocked and ct_in_q and valid_idle_etcb\<rbrace>
@@ -1303,6 +1311,10 @@ crunch next_domain
   (simp: Let_def wp: dxo_wp_weak)
 
 context DetSchedSchedule_AI begin
+
+crunch arch_prepare_next_domain
+  for valid_idle_etcb[wp]: "valid_idle_etcb :: det_state \<Rightarrow> _"
+  (wp: valid_idle_etcb_lift)
 
 lemma choose_thread_ct_not_queued:
   "\<lbrace> valid_queues and valid_idle \<rbrace> choose_thread \<lbrace>\<lambda>_. ct_not_queued :: det_state \<Rightarrow> _\<rbrace>"
@@ -1894,7 +1906,7 @@ lemma thread_set_priority_ct_in_cur_domain[wp]:
 lemma thread_set_priority_valid_idle_etcb[wp]:
   "thread_set_priority t p \<lbrace>valid_idle_etcb\<rbrace>"
   unfolding thread_set_priority_def thread_set_def
-  apply (wpsimp wp: set_object_wp wp_del: valid_idle_etcb_lift)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: valid_idle_etcb_def etcbs_of'_def etcb_at'_def dest!: get_tcb_SomeD)
   done
 
@@ -2067,6 +2079,7 @@ crunch empty_slot, cancel_ipc
 
 crunch setup_reply_master
   for etcb_at[wp]: "etcb_at P t"
+  and valid_idle_etcb[wp]: valid_idle_etcb
 
 lemma restart_valid_sched[wp]:
   "\<lbrace>valid_sched and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> restart thread \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
@@ -2377,8 +2390,6 @@ lemma cancel_badged_sends_filterM_valid_blocked[wp]:
   done
 
 lemma cancel_badged_sends_filterM_valid_idle_etcb[wp]:
-  notes valid_idle_etcb_lift[wp del]
-  shows
    "\<lbrace>valid_idle_etcb\<rbrace>
       filterM (\<lambda>t. do st \<leftarrow> get_thread_state t;
                       if blocking_ipc_badge st = badge
@@ -2392,7 +2403,7 @@ lemma cancel_badged_sends_filterM_valid_idle_etcb[wp]:
   apply (rule rev_induct[where xs=xs])
    apply simp
   apply (clarsimp simp: filterM_append)
-  apply (wp  | simp | wp valid_idle_etcb_lift)+
+  apply (wp  | simp | wp)+
   done
 
 lemma cancel_badged_sends_valid_sched[wp]:
@@ -3162,8 +3173,6 @@ end
 lemma simple_sched_action_sched_act_not[simp]:
   "simple_sched_action s \<Longrightarrow> scheduler_act_not t s"
   by (fastforce simp: simple_sched_action_def scheduler_act_not_def)
-
-declare valid_idle_etcb_lift[wp del]
 
 crunch thread_set_domain
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
