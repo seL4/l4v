@@ -1327,12 +1327,223 @@ lemma endTimeslice_ccorres:
                         seL4_Fault_Timeout_lift_def seL4_Fault_lift_def csched_context_relation_def)
   done
 
+lemma weak_sch_act_wf_ksConsumedTime_update[simp]:
+  "weak_sch_act_wf (ksSchedulerAction s) (ksConsumedTime_update f s)
+   = weak_sch_act_wf (ksSchedulerAction s) s"
+  by (clarsimp simp: weak_sch_act_wf_def)
+
+crunch endTimeslice, setConsumedTime, refillResetRR, refillBudgetCheck, checkBudget
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
+
+crunch getIdleSC
+ for (empty_fail) empty_fail[wp]
+
 lemma chargeBudget_ccorres:
   "ccorres dc xfdc
      invs'
-     (\<lbrace>\<acute>consumed = consumed\<rbrace> \<inter> \<lbrace>\<acute>canTimeoutFault = from_bool canTimeoutFault\<rbrace>) []
-     (chargeBudget consumed canTimeoutFault isCurCPU) (Call chargeBudget_'proc)"
-sorry (* FIXME RT: chargeBudget_ccorres *)
+     (\<lbrace>\<acute>consumed = consumed\<rbrace> \<inter> \<lbrace>\<acute>canTimeoutFault = from_bool canTimeoutFault\<rbrace>) hs
+     (chargeBudget consumed canTimeoutFault) (Call chargeBudget_'proc)"
+  supply sched_context_C_size[simp del] refill_C_size[simp del]
+  supply Collect_const[simp del]
+  unfolding chargeBudget_def K_bind_apply
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+  apply (rule ccorres_symb_exec_l'[OF _ _ getCurSc_sp]; (solves wpsimp)?)+
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[OF _ _ getIdleSC_sp]; (solves wpsimp)?)
+  apply (cinit' lift: consumed_' canTimeoutFault_')
+   apply (rule ccorres_split_nothrow)
+       apply (clarsimp simp: when_def)
+       apply (rule_tac Q="\<lambda>s. ksCurSc s = scPtr \<and> ksIdleSC s = idleSCPtr"
+                    in ccorres_cond_both'[where Q'=\<top>])
+         apply clarsimp
+         apply (frule rf_sr_ksCurSC)
+         apply (fastforce dest!: rf_sr_ksIdleSC)
+        apply (clarsimp simp: ifM_def bind_assoc)
+        apply (rule ccorres_rhs_assoc)
+        apply (ctac add: isRoundRobin_ccorres)
+          apply (rule ccorres_split_nothrow)
+             apply (rule ccorres_cond[where R=\<top>])
+               apply (fastforce simp: to_bool_def)
+               apply (clarsimp simp: refillResetRR_def)
+               apply (rule ccorres_rhs_assoc)+
+               apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s)))
+                                              (ret__ptr_to_struct_refill_C_' s)"
+                            in ccorres_split_nothrow)
+                   apply (fastforce intro: ccorres_call[OF refill_head_ccorres])
+                  apply ceqv
+                 apply (rule ccorres_Guard_Seq)
+                 apply csymbr
+                 apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s)))
+                                                (ret__ptr_to_struct_refill_C_' s)"
+                              in ccorres_split_nothrow)
+                     apply (fastforce intro: ccorres_call[OF refill_tail_ccorres])
+                    apply ceqv
+                   apply (rule ccorres_Guard_Seq)
+                   apply csymbr
+                   apply (rule ccorres_rhs_assoc2)
+                   apply (rule ccorres_split_nothrow)
+                       apply (clarsimp simp: updateRefillHd_def)
+                       apply (rule_tac P'="active_sc_at' scPtr and (\<lambda>s. ksCurSc s = scPtr) and invs'"
+                                    in updateSchedContext_ccorres_lemma3[
+                                         where P="\<lambda>sc. scRefillHead sc < length (scRefills sc)"])
+                         apply vcg
+                        apply fastforce
+                       apply clarsimp
+                       apply (rename_tac sc sc')
+                       apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
+                       apply (frule rf_sr_refill_buffer_relation)
+                       apply (frule rf_sr_ksCurSC)
+                       apply (frule_tac n="scRefillHead sc" in h_t_valid_refill, fastforce+)
+                       apply (intro conjI)
+                          apply (clarsimp simp: typ_heap_simps)
+                         apply (rule disjCI2)
+                         apply (rule_tac n="length (scRefills sc)" in array_assertion_shrink_right)
+                          apply (fastforce intro: sc_at_array_assertion')
+                         apply (clarsimp simp: typ_heap_simps csched_context_relation_def)
+                        apply (clarsimp simp: sc_ptr_to_crefill_ptr_def typ_heap_simps
+                                              csched_context_relation_def)
+                       apply (clarsimp simp: crefill_relation_def csched_context_relation_def)
+                       apply (frule rf_sr_refill_buffer_relation)
+                       apply (frule h_t_valid_clift_Some_iff[THEN iffD1])
+                       apply (clarsimp cong: StateSpace.state.fold_congs)
+                       apply (rule_tac old_sc=sc and n="scRefillHead sc"
+                                   and fa="rAmount_update (\<lambda>_. rAmount rv + rAmount rva)"
+                                    in rf_sr_refill_update2; fastforce?)
+                          apply (fastforce simp: sched_context.expand)
+                         apply (clarsimp simp: typ_heap_simps)
+                         apply (fastforce simp: typ_heap_simps' sc_ptr_to_crefill_ptr_def
+                                                crefill_relation_def)
+                        apply (fastforce simp: csched_context_relation_def)
+                       apply (fastforce dest: crefill_relationD
+                                        simp: typ_heap_simps' sc_ptr_to_crefill_ptr_def
+                                              crefill_relation_def)
+                      apply ceqv
+                     apply (clarsimp simp: updateRefillTl_def)
+                     apply (rule_tac P'="active_sc_at' scPtr and (\<lambda>s. ksCurSc s = scPtr) and invs'"
+                                  in updateSchedContext_ccorres_lemma3[
+                                       where P="\<lambda>sc. scRefillTail sc < length (scRefills sc)"])
+                       apply vcg
+                      apply fastforce
+                     apply clarsimp
+                     apply (rename_tac sc sc')
+                     apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
+                     apply (frule rf_sr_refill_buffer_relation)
+                     apply (frule rf_sr_ksCurSC)
+                     apply (frule_tac n="scRefillTail sc" in h_t_valid_refill, fastforce+)
+                     apply (intro conjI)
+                        apply (clarsimp simp: typ_heap_simps)
+                       apply (rule disjCI2)
+                       apply (rule_tac n="length (scRefills sc)" in array_assertion_shrink_right)
+                        apply (fastforce intro: sc_at_array_assertion')
+                       apply (clarsimp simp: typ_heap_simps csched_context_relation_def)
+                      apply (clarsimp simp: sc_ptr_to_crefill_ptr_def typ_heap_simps
+                                            csched_context_relation_def)
+                     apply (clarsimp simp: crefill_relation_def csched_context_relation_def)
+                     apply (frule rf_sr_refill_buffer_relation)
+                     apply (frule h_t_valid_clift_Some_iff[THEN iffD1])
+                     apply (clarsimp cong: StateSpace.state.fold_congs)
+                     apply (rule_tac old_sc=sc and n="scRefillTail sc"
+                                 and fa="rAmount_update (\<lambda>_. 0)"
+                                  in rf_sr_refill_update2; fastforce?)
+                        apply (fastforce simp: sched_context.expand)
+                       apply (clarsimp simp: typ_heap_simps)
+                       apply (fastforce simp: typ_heap_simps' sc_ptr_to_crefill_ptr_def
+                                              crefill_relation_def)
+                      apply (fastforce simp: csched_context_relation_def)
+                     apply (fastforce dest: crefill_relationD
+                                      simp: typ_heap_simps' sc_ptr_to_crefill_ptr_def
+                                            crefill_relation_def)
+                    apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> active_sc_at' scPtr s \<and> ksCurSc s = scPtr"
+                                 in hoare_post_imp)
+                     apply (clarsimp simp: active_sc_at'_def)
+                     apply normalise_obj_at'
+                     apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
+                     apply (clarsimp simp: valid_sched_context'_def)
+                    apply (wpsimp wp: updateRefillHd_invs')
+                   apply vcg
+                  apply wpsimp
+                 apply vcg
+                apply wpsimp
+               apply vcg
+              apply (ctac add: refill_budget_check_ccorres)
+             apply ceqv
+            apply (rule_tac P'="\<lambda>s. ksCurSc s = scPtr"
+                         in updateSchedContext_ccorres_lemma3[where P=\<top>])
+              apply vcg
+             apply simp
+            apply clarsimp
+            apply (rule conjI)
+             apply (frule (1) obj_at_cslift_sc)
+             apply (clarsimp dest!: rf_sr_ksCurSC simp: typ_heap_simps)
+            subgoal
+              by (fastforce dest: rf_sr_ksCurSC
+                           intro: rf_sr_sc_update_no_refill_buffer_update2
+                                  refill_buffer_relation_sc_no_refills_update
+                            simp: typ_heap_simps' csched_context_relation_def option_to_ctcb_ptr_def)
+           apply wpsimp
+          apply (vcg exspec=refill_budget_check_modifies)
+         apply (wpsimp wp: hoare_drop_imps)
+        apply (vcg exspec=isRoundRobin_modifies)
+       apply (rule ccorres_return_Skip)
+      apply ceqv
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+         apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: setConsumedTime_def rf_sr_def cstate_relation_def Let_def
+                               modify_def get_def put_def bind_def carch_state_relation_def
+                               cmachine_state_relation_def)
+        apply ceqv
+       apply (rule ccorres_pre_getCurThread)
+       apply (ctac add: isSchedulable_ccorres)
+         apply (clarsimp simp: when_def)
+         apply (rule ccorres_cond[where R=\<top>])
+           apply (fastforce simp: to_bool_def)
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac add: endTimeslice_ccorres)
+            apply (ctac add: rescheduleRequired_ccorres)
+              apply (rule_tac ccorres_from_vcg[where P=\<top> and P'=UNIV])
+              apply (rule allI, rule conseqPre, vcg)
+              apply (clarsimp simp: setReprogramTimer_def modify_def get_def put_def bind_def
+                                    rf_sr_def cstate_relation_def Let_def
+                                    carch_state_relation_def cmachine_state_relation_def)
+             apply wpsimp
+            apply (vcg exspec=rescheduleRequired_modifies)
+           apply ((wpsimp wp: endTimeslice_invs' | strengthen invs'_implies)+)[1]
+          apply (vcg exspec=endTimeslice_modifies)
+         apply (rule ccorres_return_Skip)
+        apply (wpsimp wp: getSchedulable_wp)
+       apply (vcg exspec=isSchedulable_modifies)
+      apply ((wpsimp simp: cur_tcb'_def[symmetric] wp: hoare_vcg_imp_lift'
+              | rule hoare_lift_Pf2[where f=ksCurThread])+)[1]
+     apply vcg
+    apply ((wpsimp wp: updateSchedContext_invs'_indep hoare_vcg_imp_lift'
+                       updateSchedContext_schedulable' isRoundRobin_wp
+            | strengthen invs'_implies | wps)+)[1]
+   apply (vcg exspec=isRoundRobin_modifies exspec=refill_budget_check_modifies)
+  apply (rule conjI)
+   apply (clarsimp simp: active_sc_at'_rewrite cong: conj_cong split: if_splits)
+   apply normalise_obj_at'
+   apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
+   apply (fastforce intro!: schedulable'_imp_ct_active'
+                      simp: valid_sched_context'_def is_active_sc'_def
+                            opt_pred_def opt_map_def obj_at'_def)
+  apply (clarsimp simp: active_sc_at'_def)
+  apply (normalise_obj_at', rename_tac sc)
+  apply (frule sc_ko_at_valid_objs_valid_sc')
+   apply fastforce
+  apply (frule (1) obj_at_cslift_sc)
+  apply (frule rf_sr_refill_buffer_relation)
+  apply (frule_tac n="scRefillHead sc" in h_t_valid_refill; fastforce?)
+    apply (clarsimp simp: valid_sched_context'_def)
+   apply fastforce
+  apply (frule_tac n="scRefillTail sc" in h_t_valid_refill; fastforce?)
+    apply (clarsimp simp: valid_sched_context'_def)
+   apply fastforce
+  apply (frule rf_sr_ksCurSC)
+  apply (fastforce simp: csched_context_relation_def crefill_relation_def typ_heap_simps
+                         h_val_field_from_bytes' sc_ptr_to_crefill_ptr_def)
+  done
 
 lemma checkBudget_ccorres:
   "ccorres dc xfdc invs' UNIV []

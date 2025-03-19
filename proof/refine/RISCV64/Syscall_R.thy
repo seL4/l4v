@@ -1839,6 +1839,7 @@ crunch refillResetRR, refillBudgetCheck
 
 crunch chargeBudget
   for typ_at'[wp]: "\<lambda>s. Q (typ_at' P p s)"
+  and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 end
@@ -1846,16 +1847,13 @@ end
 global_interpretation refillResetRR: typ_at_all_props' "refillResetRR scPtr"
   by typ_at_props'
 
+global_interpretation chargeBudget: typ_at_all_props' "chargeBudget consumed canTimeoutFault"
+  by typ_at_props'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma refillResetRR_invs'[wp]:
-  "refillResetRR scp \<lbrace>invs'\<rbrace>"
-  unfolding refillResetRR_def
-  apply (wpsimp wp: updateSchedContext_invs')
-  apply (intro conjI; clarsimp elim!: live_sc'_ex_cap[OF invs_iflive'])
-  by (fastforce dest!: valid_sc_strengthen[OF invs_valid_objs']
-                 simp: valid_sched_context'_def valid_sched_context_size'_def scBits_simps
-                       objBits_simps' refillSize_def)
+crunch refillResetRR
+  for invs'[wp]: invs'
 
 lemmas refill_reset_rr_typ_ats [wp] =
   abs_typ_at_lifts [OF refill_reset_rr_typ_at]
@@ -1889,9 +1887,9 @@ lemma chargeBudget_corres:
       and ct_not_queued and ct_not_in_release_q and ct_not_blocked
       and cur_sc_offset_ready 0)
      invs'
-     (charge_budget consumed canTimeout) (chargeBudget consumed canTimeout True)"
+     (charge_budget consumed canTimeout) (chargeBudget consumed canTimeout)"
   (is "corres _ (?pred and _ and cur_sc_offset_ready 0) _ _ _")
-  unfolding chargeBudget_def charge_budget_def ifM_def bind_assoc
+  apply (clarsimp simp: chargeBudget_def charge_budget_def ifM_def bind_assoc)
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply clarsimp
    apply (frule (1) cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb])
@@ -1904,8 +1902,11 @@ lemma chargeBudget_corres:
   apply (rule_tac Q="\<lambda>s. sc_at (cur_sc s) s" in corres_cross_add_abs_guard)
    apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
   apply add_cur_tcb'
+  apply (rule corres_stateAssert_ignore, simp)
+  apply (rule corres_stateAssert_ignore, fastforce intro: sch_act_wf_cross)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-   apply (corresKsimp corres: getCurSc_corres)
+   apply (corres corres: getCurSc_corres)
+  apply (rule corres_stateAssert_ignore, fastforce intro: active_sc_at'_cross)
   apply (rule corres_symb_exec_r[rotated, OF getIdleSC_sp]; wpsimp simp: getIdleSC_def)
   apply (rule_tac F="idle_sc_ptr = idleSCPtr" in corres_req)
    apply (clarsimp simp: state_relation_def)
@@ -2021,9 +2022,9 @@ lemma chargeBudget_corres:
    apply (clarsimp simp: tcb_at_kh_simps[symmetric] pred_tcb_at_def obj_at_def)
    apply (drule_tac x=d and y=p in spec2)
    apply fastforce
-  apply (wpsimp wp: updateSchedContext_invs')
-     apply (wpsimp wp: typ_at_lifts
-           | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
+  apply (wpsimp wp: updateSchedContext_invs' isRoundRobin_wp
+         | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
+  apply (clarsimp simp: active_sc_at'_rewrite)
   done
 
 lemma checkBudget_corres: (* called when ct_schedulable or in checkBudgetRestart *)
@@ -2138,15 +2139,14 @@ lemma dmo_read_stval[wp]:
   done
 
 lemma chargeBudget_invs'[wp]:
-  "chargeBudget consumed canTimeout Flag \<lbrace>invs'\<rbrace>"
+  "chargeBudget consumed canTimeout \<lbrace>invs'\<rbrace>"
   unfolding chargeBudget_def ifM_def bind_assoc
-  apply (rule bind_wp[OF _ getCurSc_sp])
   apply (wpsimp wp: getSchedulable_wp)
-     apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs'"])
-      apply wpsimp
-     apply (clarsimp simp: schedulable'_def obj_at'_def opt_map_def opt_pred_def
-                           ct_in_state'_def pred_tcb_at'_def runnable_eq_active')
-  by (wpsimp wp: hoare_drop_imp updateSchedContext_invs'
+         apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs'"])
+          apply wpsimp
+         apply (clarsimp simp: schedulable'_def obj_at'_def opt_map_def opt_pred_def
+                               ct_in_state'_def pred_tcb_at'_def runnable_eq_active')
+  by (wpsimp wp: updateSchedContext_invs' isRoundRobin_wp
       | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
 
 lemma hy_invs':

@@ -803,60 +803,10 @@ lemma invokeSchedContext_corres:
   apply clarsimp
   done
 
-lemmas sc_relation_refillResetRR1 =
-  sc_relation_updateRefillTl[where f="r_amount_update (\<lambda>_. 0)" and f'="rAmount_update (\<lambda>_. 0)"]
-
-lemma sc_relation_refillResetRR2:
-  "\<lbrakk>sc_relation sc n sc'; length (sc_refills sc) = 2; sc_refill_max sc = MIN_REFILLS;
-    sc_valid_refills' sc'; 1 < refillSize sc'\<rbrakk>
-    \<Longrightarrow> sc_relation
-             (sc_refills_update
-               (\<lambda>refills. r_amount_update (\<lambda>m. m + r_amount (hd (tl refills))) (hd refills) # tl refills)
-               sc)
-             n ((scRefills_update
-                         (\<lambda>_. updateAt (scRefillHead sc') (scRefills sc')
-                                (\<lambda>hd. rAmount_update (\<lambda>_. rAmount hd + rAmount (refillTl sc')) hd)))
-                 sc')"
-  apply (case_tac "sc_refills sc"; simp)
-  apply (rename_tac ls; case_tac ls; clarsimp simp: MIN_REFILLS_def)
-  apply (cases sc; simp add: sc_relation_def refills_map_def)
-  apply (prop_tac "refillSize sc' = 2")
-   apply (insert length_wrap_slice[of "refillSize sc'" "scRefillMax sc'" "scRefillHead sc'" "scRefills sc'"])
-   apply (case_tac "scRefillHead sc'"; simp)
-  apply (clarsimp simp: refill_map_def updateAt_def Let_def null_def)
-  apply (clarsimp simp: wrap_slice_def)
-  apply (intro conjI; clarsimp simp: updateAt_def Let_def null_def refill_map_def)
-   apply (case_tac "scRefills sc'"; simp)
-   apply (rename_tac list; case_tac list;
-          simp add: refill_map_def refillTl_def refillSize_def split: if_splits)
-  apply (case_tac "scRefillHead sc'"; simp)
-  apply (intro conjI; clarsimp)
-  apply (case_tac "scRefills sc'"; simp)
-  apply (rename_tac list; case_tac list;
-         simp add: refill_map_def refillTl_def refillSize_def split: if_splits)
-  done
-
-lemma sc_relation_refillResetRR:
-  "\<lbrakk>sc_relation sc n sc'; length (sc_refills sc) = 2; sc_refill_max sc = MIN_REFILLS;
-    sc_valid_refills' sc'; 1 < refillSize sc'\<rbrakk>
-   \<Longrightarrow> sc_relation
-             (sc_refills_update
-               ((\<lambda>refills. butlast refills @ [last refills\<lparr>r_amount := 0\<rparr>]) \<circ>
-                (\<lambda>refills. r_amount_update (\<lambda>m. m + r_amount (hd (tl refills))) (hd refills) # tl refills))
-               sc)
-             n (((\<lambda>sc. scRefills_update (\<lambda>_. updateAt (scRefillTail sc) (scRefills sc) (rAmount_update (\<lambda>_. 0)))
-                         sc) \<circ>
-                 (\<lambda>sc. scRefills_update
-                         (\<lambda>_. updateAt (scRefillHead sc) (scRefills sc)
-                                (\<lambda>hd. rAmount_update (\<lambda>_. rAmount hd + rAmount (refillTl sc)) hd))
-                         sc))
-                 sc')"
-  apply (drule sc_relation_refillResetRR2; fastforce?)
-  by (drule sc_relation_refillResetRR1; clarsimp simp: refill_map_def refillSize_def split: if_splits)
-
 lemma refillResetRR_corres:
   "corres dc
-     (sc_at csc_ptr and is_active_sc csc_ptr and round_robin csc_ptr and valid_refills csc_ptr)
+     (sc_at csc_ptr and valid_objs and pspace_aligned and pspace_distinct
+      and is_active_sc csc_ptr and round_robin csc_ptr and valid_refills csc_ptr)
      (valid_objs' and sc_at' csc_ptr)
      (refill_reset_rr csc_ptr) (refillResetRR csc_ptr)"
   supply projection_rewrites[simp]
@@ -864,27 +814,19 @@ lemma refillResetRR_corres:
   apply (subst valid_refills_rewrite)
   apply (rule_tac Q'="is_active_sc' csc_ptr" in corres_cross_add_guard)
    apply (fastforce dest!: is_active_sc'_cross[OF state_relation_pspace_relation])
-  apply (rule_tac Q'="\<lambda>s'. ((\<lambda>sc'. refillSize sc' = 2) |< scs_of' s') csc_ptr"
-                  in corres_cross_add_guard)
-   apply (clarsimp simp: obj_at'_def round_robin2_def obj_at_def is_sc_obj
-                         rr_valid_refills_def is_active_sc2_def is_active_sc'_def in_omonad)
-   apply (drule (1) pspace_relation_absD[where x=csc_ptr, OF _ state_relation_pspace_relation])
-   apply (erule (1) valid_objsE')
-   apply (clarsimp simp: sc_relation_def refills_map_def valid_sched_context'_def valid_obj'_def)
-  apply (clarsimp simp: refill_reset_rr_def refillResetRR_def get_refills_def updateRefillTl_def
-                        update_sched_context_decompose[symmetric, simplified] update_refill_tl_def)
-  apply (rule corres_guard_imp)
-    apply (rule monadic_rewrite_corres_r[OF monadic_rewrite_sym[OF updateSchedContext_decompose[simplified]]])
-    apply (rule updateSchedContext_no_stack_update_corres_Q
-                 [where Q="\<lambda>sc. length (sc_refills sc) = 2 \<and> sc_refill_max sc = MIN_REFILLS"
-                    and Q'="\<lambda>sc'. refillSize sc' = 2 \<and> sc_valid_refills' sc'"])
-       apply (fastforce dest: sc_relation_refillResetRR)
-      apply fastforce
-     apply (fastforce simp: objBits_simps)
-    apply fastforce
-   apply (clarsimp simp: round_robin2_def obj_at_def is_sc_obj rr_valid_refills_def in_omonad)
-  apply (clarsimp simp: obj_at_simps is_active_sc'_def in_omonad)
-  apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def valid_sched_context'_def)
+  apply (clarsimp simp: refill_reset_rr_def refillResetRR_def)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[OF getRefillHead_corres], simp)
+      apply (rule corres_split[OF getRefillTail_corres], simp)
+        apply (rule corres_split[OF updateRefillHd_corres], simp)
+           apply (clarsimp simp: refill_map_def)
+          apply (rule updateRefillTl_corres, simp)
+          apply (clarsimp simp: refill_map_def)
+         apply wpsimp+
+   apply (fastforce simp: opt_pred_def opt_map_def sc_refill_cfgs_of_scs_def map_project_simps
+                          active_sc_def is_active_sc2_def round_robin2_def rr_valid_refills_def
+                   split: option.splits)
+  apply (fastforce intro!: valid_objs'_valid_refills')
   done
 
 lemma refillNew_corres:

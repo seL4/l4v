@@ -673,16 +673,16 @@ definition end_timeslice :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" wh
              else postpone sc_ptr
           od
    od"
+
+definition refill_reset_rr :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "refill_reset_rr csc_ptr = do
-     update_sched_context csc_ptr
-         (sc_refills_update (\<lambda>refills. (r_amount_update
-                                           (\<lambda>m. m + r_amount (hd (tl refills)))) (hd refills) # (tl refills)));
+     head \<leftarrow> get_refill_head csc_ptr;
+     tail \<leftarrow> get_refill_tail csc_ptr;
+     update_refill_hd csc_ptr (\<lambda>hd. hd\<lparr>r_amount := r_amount head + r_amount tail\<rparr>);
      update_refill_tl csc_ptr (r_amount_update (\<lambda>_. 0))
    od"
 
-definition
-  charge_budget :: "ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition charge_budget :: "ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "charge_budget consumed canTimeout = do
     csc_ptr \<leftarrow> gets cur_sc;
     when (csc_ptr \<noteq> idle_sc_ptr)

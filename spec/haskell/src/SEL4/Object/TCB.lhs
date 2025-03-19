@@ -1002,9 +1002,14 @@ On some architectures, the thread context may include registers that may be modi
 >           then ls
 >           else x ++ [f u] ++ y
 
-> chargeBudget :: Ticks -> Bool -> Bool -> Kernel ()
-> chargeBudget consumed canTimeoutFault isCurCPU = do
+> chargeBudget :: Ticks -> Bool -> Kernel ()
+> chargeBudget consumed canTimeoutFault = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
+>     stateAssert sch_act_wf_asrt
+>         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >     scPtr <- getCurSc
+>     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     idleSCPtr <- getIdleSC
 >     when (scPtr /= idleSCPtr) $ do
 >       ifM (isRoundRobin scPtr)
@@ -1012,7 +1017,9 @@ On some architectures, the thread context may include registers that may be modi
 >           (refillBudgetCheck consumed)
 >       updateSchedContext scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
 >     setConsumedTime 0
->     whenM ((return isCurCPU) `andM` (getCurThread >>= getSchedulable)) $ do
+>     curThread <- getCurThread
+>     schedulable <- getSchedulable curThread
+>     when schedulable $ do
 >       endTimeslice canTimeoutFault
 >       rescheduleRequired
 >       setReprogramTimer True
@@ -1028,7 +1035,7 @@ On some architectures, the thread context may include registers that may be modi
 >             return (not domExp)
 >         else do
 >             consumed <- getConsumedTime
->             chargeBudget consumed True True
+>             chargeBudget consumed True
 >             return False
 
 > checkBudgetRestart :: Kernel Bool
@@ -1054,7 +1061,7 @@ On some architectures, the thread context may include registers that may be modi
 >             if active
 >                 then do
 >                   consumedTime <- getConsumedTime
->                   chargeBudget consumedTime False True
+>                   chargeBudget consumedTime False
 >                 else setConsumedTime 0
 
 > switchSchedContext :: Kernel ()
