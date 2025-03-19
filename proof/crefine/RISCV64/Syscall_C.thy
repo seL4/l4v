@@ -1545,15 +1545,94 @@ lemma chargeBudget_ccorres:
                          h_val_field_from_bytes' sc_ptr_to_crefill_ptr_def)
   done
 
+crunch checkBudget
+  for cur_tcb'[wp]: cur_tcb'
+  (wp: crunch_wps simp: crunch_simps threadSet_cur)
+
 lemma checkBudget_ccorres:
-  "ccorres dc xfdc invs' UNIV []
-     checkBudget (Call checkBudget_'proc)"
-sorry (* FIXME RT: checkBudget_ccorres *)
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     invs' UNIV hs checkBudget (Call checkBudget_'proc)"
+  supply Collect_const[simp del]
+  apply cinit
+   apply (rule ccorres_pre_getCurSc)
+   apply (rule ccorres_pre_getConsumedTime)
+   apply (ctac (no_vcg) add: refill_sufficient_ccorres, rename_tac sufficient sufficient')
+    apply (rule_tac P=sufficient in ccorres_cases; clarsimp)
+     (* current sc is sufficient; check whether the current domain has expired, and then
+        return True if it has not expired and False if it has expired *)
+     apply (rule ccorres_cond_seq)
+     apply (rule ccorres_cond_true)
+     apply (rule ccorres_rhs_assoc)+
+     apply (ctac (no_vcg) add: isCurDomainExpired_ccorres, rename_tac expired expired')
+      apply (rule_tac P=expired in ccorres_cases; clarsimp)
+       apply (rule ccorres_cond_seq)
+       apply (rule ccorres_cond_true)
+       apply ccorres_rewrite
+       apply (fastforce intro: ccorres_return_C)
+      apply ccorres_rewrite
+      apply (rule ccorres_cond_seq)
+      apply (rule ccorres_cond_false)
+      apply ccorres_rewrite
+      apply (fastforce intro: ccorres_return_C)
+     apply wpsimp
+    (* current sc is not sufficient; call chargeBudget and then return False *)
+    apply (rule ccorres_cond_seq)
+    apply (rule ccorres_cond_false)
+    apply (rule ccorres_pre_getConsumedTime)
+    apply ccorres_rewrite
+    apply (ctac (no_vcg) add: chargeBudget_ccorres)
+     apply (fastforce intro: ccorres_return_C)
+    apply wpsimp+
+  apply (fastforce simp: to_bool_def)
+  done
 
 lemma checkBudgetRestart_ccorres:
-  "ccorres dc xfdc invs' UNIV []
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV hs
      checkBudgetRestart (Call checkBudgetRestart_'proc)"
-sorry (* FIXME RT: checkBudgetRestart_ccorres *)
+  supply Collect_const[simp del]
+  apply cinit
+   apply (rule ccorres_stateAssert)
+   apply (ctac (no_vcg) add: checkBudget_ccorres, rename_tac result result')
+    apply (rule ccorres_pre_getCurThread)
+    apply csymbr
+    apply clarsimp
+    apply (rule_tac P="to_bool result'" in ccorres_cases)
+     (* checkBudget returned True; return True *)
+     apply (rule ccorres_cond_seq)
+     apply (rule ccorres_cond_false)
+     apply clarsimp
+     apply ccorres_rewrite
+     apply (rule ccorres_cond_seq)
+     apply (rule ccorres_cond_false)
+     apply (rule ccorres_symb_exec_l)
+        apply ccorres_rewrite
+        apply (clarsimp simp: to_bool_def)
+        apply (fastforce intro: ccorres_return_C)
+       apply wpsimp+
+    (* checkBudget returned False; if the current thread is runnable, set its thread state
+       to Restart, and then return False *)
+    apply (rule ccorres_cond_seq)
+    apply (rule ccorres_cond_true)
+    apply (rule ccorres_rhs_assoc)
+    apply (ctac add: isRunnable_ccorres, rename_tac runnable runnable')
+      apply (clarsimp simp: when_def)
+      apply csymbr
+      apply clarsimp
+      apply (rule ccorres_cond_seq)
+      apply (clarsimp simp: if_to_top_of_bind)
+      apply (rule ccorres_cond[where R=\<top>])
+        apply (fastforce simp: to_bool_def)
+       apply (ctac add: setThreadState_ccorres)
+         apply (fastforce intro: ccorres_return_C)
+        apply wpsimp
+       apply (vcg exspec=setThreadState_modifies)
+      apply (fastforce intro: ccorres_return_C)
+     apply wpsimp
+    apply (vcg exspec=isRunnable_modifies)
+   apply ((wpsimp simp: cur_tcb'_def[symmetric] wp: hoare_drop_imps | strengthen invs'_implies)+)[1]
+  apply (clarsimp simp: to_bool_def)
+  done
 
 lemma handleYield_ccorres:
   "ccorres dc xfdc

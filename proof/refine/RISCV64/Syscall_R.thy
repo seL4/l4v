@@ -2303,9 +2303,10 @@ lemma checkBudgetRestart_true:
   "\<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
   unfolding checkBudgetRestart_def
   apply (wpsimp wp: checkBudget_true)
-   apply (rule hoare_drop_imp)
-   apply (wpsimp wp: checkBudget_true)
-  by clarsimp
+    apply (rule hoare_drop_imp)
+    apply (wpsimp wp: checkBudget_true)
+   apply wpsimp+
+  done
 
 lemma checkBudgetRestart_false:
   "\<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. Q s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. \<not> rv \<longrightarrow> Q s\<rbrace>"
@@ -2313,10 +2314,14 @@ lemma checkBudgetRestart_false:
 
 crunch checkBudget
   for invs'[wp]: invs'
+  and cur_tcb'[wp]: cur_tcb'
+  (wp: crunch_wps threadSet_cur ignore: threadSet simp: crunch_simps)
 
 lemma checkBudgetRestart_invs'[wp]:
   "checkBudgetRestart \<lbrace>invs'\<rbrace>"
   unfolding checkBudgetRestart_def
+  apply (rule bind_wp[OF _ stateAssert_sp])
+  apply clarsimp
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (wpsimp wp: setThreadState_Restart_invs')
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def)
@@ -2478,7 +2483,9 @@ lemma checkBudgetRestart_corres:
       and ct_not_queued and ct_not_in_release_q)
      invs'
      check_budget_restart checkBudgetRestart"
-  unfolding check_budget_restart_def checkBudgetRestart_def
+  apply add_cur_tcb'
+  apply (clarsimp simp: check_budget_restart_def checkBudgetRestart_def)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF checkBudget_corres])
       apply (rule corres_split_eqr[OF getCurThread_corres])

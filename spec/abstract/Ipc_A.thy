@@ -702,9 +702,7 @@ definition charge_budget :: "ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::s
     od
   od"
 
-definition
-  check_budget :: "(bool, 'z::state_ext) s_monad"
-where
+definition check_budget :: "(bool, 'z::state_ext) s_monad" where
   "check_budget = do
      csc \<leftarrow> gets cur_sc;
      consumed \<leftarrow> gets consumed_time;
