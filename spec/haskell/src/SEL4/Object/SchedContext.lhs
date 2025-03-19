@@ -326,8 +326,10 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillResetRR :: PPtr SchedContext -> Kernel ()
 > refillResetRR scPtr = do
->     updateSchedContext scPtr (\sc -> sc { scRefills = updateAt (scRefillHead sc) (scRefills sc) (\hd -> hd { rAmount = rAmount hd + rAmount (refillTl sc)})})
->     updateRefillTl scPtr (\last -> last { rAmount = 0})
+>     head <- getRefillHead scPtr
+>     tail <- getRefillTail scPtr
+>     updateRefillHd scPtr (\hd -> hd { rAmount = rAmount head + rAmount tail})
+>     updateRefillTl scPtr (\tl -> tl { rAmount = 0})
 
 > refillHdInsufficient :: PPtr SchedContext -> KernelR Bool
 > refillHdInsufficient scPtr = do

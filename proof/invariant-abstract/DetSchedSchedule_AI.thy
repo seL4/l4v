@@ -18231,17 +18231,11 @@ lemma refill_reset_rr_valid_release_q[wp]:
   (is "valid ?pre _ _")
   apply (clarsimp simp: refill_reset_rr_def update_refill_hd_def update_refill_tl_def
                         update_sched_context_set_refills_rewrite bind_assoc)
-  apply (intro bind_wp[OF _ get_refills_sp])
-  apply (rule_tac Q'="\<lambda>_. ?pre" in bind_wp_fwd)
    apply (wpsimp wp: set_refills_valid_release_q get_refills_wp hoare_vcg_imp_lift'
                      hoare_vcg_all_lift
           | wpsimp wp: set_refills_wp)+
-   apply (clarsimp simp: obj_at_def vs_all_heap_simps tcb_ready_times_defs
+  apply (fastforce simp: obj_at_def vs_all_heap_simps tcb_ready_times_defs
                          map_project_simps map_join_simps opt_map_simps sc_at_pred_n_def)
-  apply (wpsimp wp: set_refills_valid_release_q get_refills_wp hoare_vcg_imp_lift' hoare_vcg_all_lift)
-  apply (clarsimp simp: obj_at_def vs_all_heap_simps tcb_ready_times_defs
-                        map_project_simps map_join_simps opt_map_simps sc_at_pred_n_def)
-  apply (metis butlast.simps(2) hd_append2 list.sel(1) list_length_2 neq_Nil_conv)
   done
 
 lemma charge_budget_valid_release_q:
@@ -18361,7 +18355,7 @@ lemma refill_reset_rr_released_sc_tcb_at[wp]:
   apply (wpsimp simp: active_sc_tcb_at_def2 budget_ready_def2 budget_sufficient_def2
                   wp: hoare_vcg_ex_lift
          | wp set_refills_wp get_refills_wp)+
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def vs_all_heap_simps refill_ready_def)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def vs_all_heap_simps refill_ready_def)
   done
 
 lemma refill_reset_rr_valid_ready_qs[wp]:
@@ -18467,8 +18461,9 @@ lemma charge_budget_valid_ready_qs:
      apply (wpsimp wp: is_round_robin_wp)+
   apply (clarsimp split: if_splits)
   apply (subgoal_tac "sc_not_in_ready_q (cur_sc s) s \<and> sc_scheduler_act_not (cur_sc s) s", simp)
-   apply (fastforce simp: schedulable_def3 vs_all_heap_simps pred_map_def obj_at_def ct_in_state_def pred_tcb_at_def
-                          active_scs_valid_def cur_sc_chargeable_def runnable_eq_active)
+   apply (frule (1) active_scs_validE)
+   apply (clarsimp simp: schedulable_def3 vs_all_heap_simps obj_at_def ct_in_state_def
+                         pred_tcb_at_def runnable_eq_active)
   apply (clarsimp simp: vs_all_heap_simps pred_map_def obj_at_def ct_in_state_def pred_tcb_at_def)
   apply (intro conjI impI allI)
    apply (clarsimp simp: cur_sc_chargeable_def)
@@ -18523,8 +18518,9 @@ lemma charge_budget_active_reply_scs:
                     get_tcb_obj_ref_wp)
       apply (rule_tac Q'="\<lambda>_. active_reply_scs" in hoare_strengthen_post[rotated],
              clarsimp split: if_splits simp: schedulable_def2)
-  apply (wpsimp simp: refill_reset_rr_def update_refill_hd_def update_sched_context_set_refills_rewrite
-                      update_refill_tl_def)+
+      apply (wpsimp simp: refill_reset_rr_def update_refill_hd_def
+                          update_sched_context_set_refills_rewrite update_refill_tl_def
+                      wp: is_round_robin_wp)+
   apply (clarsimp simp: schedulable_def2
                  split: if_splits)
   done
@@ -18554,11 +18550,8 @@ lemma charge_budget_sorted_ipc_queues:
   "\<lbrace>sorted_ipc_queues and valid_objs and cur_tcb\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. sorted_ipc_queues :: 'state_ext state \<Rightarrow> _ \<rbrace>"
-  apply (clarsimp simp: charge_budget_def refill_reset_rr_def when_def)
-  apply (wpsimp wp: end_timeslice_sorted_ipc_queues update_sched_context_valid_objs_same
-                    hoare_drop_imp)
-  apply (clarsimp simp: valid_sched_context_def)
-  done
+  unfolding charge_budget_def refill_reset_rr_def
+  by (wpsimp wp: end_timeslice_sorted_ipc_queues update_sched_context_valid_objs_same hoare_drop_imp)
 
 lemma charge_budget_valid_sched:
   "\<lbrace>valid_sched
