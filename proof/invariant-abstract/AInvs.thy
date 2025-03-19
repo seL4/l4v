@@ -1825,7 +1825,7 @@ lemma perform_invocation_schact_is_rct_imp_ct_activatable:
 lemma handle_fault_schact_is_rct_imp_ct_activatable[wp]:
   "handle_fault thread ft \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   apply (clarsimp simp: handle_fault_def handle_no_fault_def send_fault_ipc_def)
-  apply (wpsimp wp: thread_set_wp)
+  apply (wpsimp wp: thread_set_wp get_cap_wp)
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 

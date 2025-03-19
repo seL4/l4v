@@ -579,14 +579,12 @@ where
   "handle_no_fault tptr \<equiv> set_thread_state tptr Inactive"
 
 text \<open>Handle a thread fault by sending a fault message if possible.\<close>
-definition
-  handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "handle_fault thread ex \<equiv> do
-     tcb \<leftarrow> gets_the $ get_tcb thread;
-     thread_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
-     has_fh \<leftarrow> send_fault_ipc thread (tcb_fault_handler tcb) ex (thread_sc \<noteq> None)
-                    <catch> K (return False);
+     fault_handler_slot \<leftarrow> return (get_tcb_fault_handler_ptr thread);
+     fault_handler_cap \<leftarrow> get_cap fault_handler_slot;
+     thread_sc_ptr_opt \<leftarrow> thread_get tcb_sched_context thread;
+     has_fh \<leftarrow> send_fault_ipc thread fault_handler_cap ex (thread_sc_ptr_opt \<noteq> None);
      unless has_fh $ (handle_no_fault thread);
      return ()
    od"

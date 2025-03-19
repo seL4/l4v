@@ -15138,8 +15138,8 @@ lemma handle_fault_valid_sched:
    handle_fault thread ex
    \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: handle_fault_def unless_def)
-  apply (rule bind_wp[OF _ gets_the_sp])
-  apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ get_cap_sp])
+  apply (rule bind_wp[OF _ thread_get_sp])
   apply (rule_tac Q'="\<lambda>_. valid_sched and not_queued thread and not_in_release_q thread and scheduler_act_not thread" in bind_wp
          , wpsimp wp: handle_no_fault_valid_sched)
   apply (wpsimp wp: send_fault_ipc_valid_sched
@@ -21455,7 +21455,7 @@ lemma handle_fault_scheduler_act_sane[wp]:
    handle_fault thread x1
    \<lbrace>\<lambda>rv. scheduler_act_sane:: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding handle_fault_def handle_no_fault_def send_fault_ipc_def
-  by (wpsimp wp: thread_set_ct_in_state)
+  by (wpsimp wp: thread_set_ct_in_state get_cap_wp)
 
 crunch do_nbrecv_failed_transfer
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s) (cur_thread s)"
@@ -22299,7 +22299,7 @@ lemma do_reply_transfer_cur_sc_more_than_ready[wp]:
 lemma handle_fault_cur_sc_more_than_ready[wp]:
   "handle_fault thread ex \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_fault_def
-  by (wpsimp wp: syscall_valid simp: send_fault_ipc_def)
+  by (wpsimp wp: syscall_valid get_cap_wp simp: send_fault_ipc_def)
 
 lemma send_signal_cur_sc_more_than_ready[wp]:
   "send_signal ntfnptr badge
@@ -25259,7 +25259,7 @@ lemma handle_fault_cur_sc_in_release_q_imp_zero_consumed[wp]:
    \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed :: det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_fault_def
   by (wpsimp simp: send_fault_ipc_def
-               wp: send_ipc_cur_sc_in_release_q_imp_zero_consumed)
+               wp: send_ipc_cur_sc_in_release_q_imp_zero_consumed get_cap_wp)
 
 lemma ct_active_not_receive_blocked_helper:
   "ct_active s \<Longrightarrow> ct_in_state' receive_blocked s \<Longrightarrow> False"
@@ -25794,7 +25794,7 @@ lemma handle_fault_ct_ready_if_schedulable_not_blocked_on_receive:
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_fault_def send_fault_ipc_def
   by (wpsimp wp: send_ipc_ct_ready_if_schedulable_not_blocked_on_receive
-                 thread_set_fault_fault_tcb_at thread_set_ct_in_state)
+                 thread_set_fault_fault_tcb_at thread_set_ct_in_state get_cap_wp)
 
 lemma handle_fault_ct_ready_if_schedulable_released_if_bound:
   "\<lbrace>(\<lambda>s. thread = cur_thread s)
@@ -25804,7 +25804,7 @@ lemma handle_fault_ct_ready_if_schedulable_released_if_bound:
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_fault_def send_fault_ipc_def
   by (wpsimp wp: send_ipc_ct_ready_if_schedulable_released_if_bound
-                 thread_set_fault_fault_tcb_at thread_set_fault_released_ipc_queues)
+                 thread_set_fault_fault_tcb_at thread_set_fault_released_ipc_queues get_cap_wp)
 
 crunch test_possible_switch_to, update_restart_pc
   for ct_ready_if_schedulable[wp]: ct_ready_if_schedulable

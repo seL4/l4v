@@ -62,9 +62,10 @@ When a thread faults, the kernel attempts to send a fault IPC to the fault handl
 > handleFault tptr ex = do
 >     stateAssert valid_idle'_asrt
 >         "Assert that `valid_idle' s` holds"
->     tcb <- getObject tptr
+>     faultHandlerSlot <- getThreadFaultHandlerSlot tptr
+>     faultHandlerCap <- getSlotCap faultHandlerSlot
 >     scOpt <- threadGet tcbSchedContext tptr
->     hasFh <- sendFaultIPC tptr (cteCap (tcbFaultHandler tcb)) ex (scOpt /= Nothing) `catchFailure` const (return False)
+>     hasFh <- sendFaultIPC tptr faultHandlerCap ex (scOpt /= Nothing)
 >     unless hasFh $ (handleNoFaultHandler tptr)
 
 \subsection{Sending Fault IPC}

@@ -77,7 +77,7 @@ lemma si_tcb_at [wp]:
 
 lemma handle_fault_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> handle_fault t f \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: handle_fault_def unless_def handle_no_fault_def send_fault_ipc_def)
+  by (wpsimp wp: hoare_drop_imps simp: handle_fault_def handle_no_fault_def send_fault_ipc_def)
 
 lemma hf_tcb_at [wp]:
   "\<And>t' t x.
@@ -929,7 +929,7 @@ lemma hf_makes_simple:
   apply (simp add: handle_fault_def handle_no_fault_def send_fault_ipc_def)
   apply (rule hoare_pre)
    apply (wpsimp wp: sts_st_tcb_at_cases si_blk_makes_simple
-                     thread_set_no_change_tcb_state)
+                     thread_set_no_change_tcb_state hoare_drop_imps)
   apply clarsimp
   done
 
@@ -2715,7 +2715,7 @@ lemma hf_invs':
                        thread_set_no_change_tcb_state ex_nonz_cap_to_pres
                        thread_set_cte_wp_at_trivial
                        thread_set_no_change_tcb_sched_context
-                       hoare_vcg_imp_lift gbn_wp
+                       hoare_vcg_imp_lift gbn_wp thread_get_wp get_cap_wp
             | clarsimp simp: tcb_cap_cases_def
             | erule disjE)+
   apply (rule conjI)
@@ -2724,10 +2724,10 @@ lemma hf_invs':
   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_ko_at)
   apply (rule conjI)
    apply fastforce
-  apply (simp (no_asm) add: ex_nonz_cap_to_def cte_wp_at_cases2)
+  apply (simp add: ex_nonz_cap_to_def cte_wp_at_cases2)
   apply (rule_tac x = t in exI)
   apply (rule_tac x = "tcb_cnode_index 3" in exI)
-  apply (clarsimp simp: obj_at_def tcb_cnode_map_def)
+  apply (clarsimp simp: obj_at_def tcb_cnode_map_def get_tcb_fault_handler_ptr_def)
   done
 
 lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_TrueI, OF TrueI TrueI TrueI TrueI TrueI,simplified]
