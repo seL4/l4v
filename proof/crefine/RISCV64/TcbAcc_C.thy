@@ -16,7 +16,7 @@ lemma ccorres_pre_threadGet_P:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
   shows "ccorres r xf
            (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f tcb) s)
-           ({s'. \<forall>s tcb ctcb. (s, s') \<in> rf_sr \<and> P (f tcb) s
+           ({s'. \<forall>s tcb ctcb. (s, s') \<in> rf_sr \<and> ko_at' tcb p s \<and> P (f tcb) s
                                \<and> cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb
                                \<and> ctcb_relation tcb ctcb
                               \<longrightarrow> s' \<in> P' (f tcb)})
