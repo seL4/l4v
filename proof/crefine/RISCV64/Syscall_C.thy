@@ -1672,6 +1672,74 @@ lemma mcsPreemptionPoint_ccorres:
   apply (fastforce simp: cur_tcb'_def)
   done
 
+crunch chargeBudget
+  for ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma handleYield_ccorres:
+  "ccorres dc xfdc (invs' and ct_active') UNIV hs
+     (handleYield) (Call handleYield_'proc)"
+  supply sched_context_C_size[simp del] refill_C_size[simp del]
+  supply Collect_const[simp del]
+  unfolding handleYield_def K_bind_apply
+  apply (rule ccorres_symb_exec_l'[OF _ _ getCurSc_sp]; (solves wpsimp)?)
+  apply (rename_tac scPtr)
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[OF _ _ get_sc_sp']; (solves wpsimp)?)
+  apply (rename_tac sc)
+  apply (rule ccorres_symb_exec_l'[OF _ _ getConsumedTime_sp]; (solves wpsimp)?)
+  apply (rename_tac consumed)
+  apply cinit'
+   apply (rule ccorres_Guard_Seq)
+   apply (rule_tac val="scConsumed sc + consumed"
+               and xf'=consumed_'
+               and R="\<lambda>s. ko_at' sc scPtr s \<and> ksCurSc s = scPtr \<and> ksConsumedTime s = consumed"
+                in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+      apply (rule conseqPre, vcg)
+      apply clarsimp
+      apply (frule rf_sr_ksCurSC)
+      apply (frule rf_sr_ksConsumed)
+      apply (fastforce dest: obj_at_cslift_sc simp: typ_heap_simps csched_context_relation_def)
+     apply ceqv
+    apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
+                 in ccorres_split_nothrow)
+        apply (fastforce intro: ccorres_call[OF refill_head_ccorres])
+       apply ceqv
+      apply (rule ccorres_Guard_Seq)
+      apply csymbr
+      apply (ctac add: chargeBudget_ccorres)
+        apply (rule_tac P'="\<lambda>s. ksCurSc s = scPtr" in updateSchedContext_ccorres_lemma3[where P="\<top>"])
+          apply vcg
+         apply simp
+        apply clarsimp
+        apply (rule conjI)
+         apply (clarsimp dest!: rf_sr_ksCurSC obj_at_cslift_sc simp: typ_heap_simps)
+        subgoal
+          by (fastforce dest: rf_sr_ksCurSC
+                       intro: rf_sr_sc_update_no_refill_buffer_update2
+                              refill_buffer_relation_sc_no_refills_update
+                        simp: typ_heap_simps' csched_context_relation_def)
+       apply wpsimp
+      apply (vcg exspec=chargeBudget_modifies)
+     apply wpsimp
+    apply vcg
+   apply vcg
+  apply (clarsimp simp: active_sc_at'_def)
+  apply (normalise_obj_at', rename_tac sc s s')
+  apply (frule sc_ko_at_valid_objs_valid_sc')
+   apply fastforce
+  apply (frule (1) obj_at_cslift_sc)
+  apply (frule rf_sr_refill_buffer_relation)
+  apply (frule_tac n="scRefillHead sc" in h_t_valid_refill; fastforce?)
+    apply (clarsimp simp: valid_sched_context'_def)
+   apply fastforce
+  apply (frule_tac n="scRefillTail sc" in h_t_valid_refill; fastforce?)
+    apply (clarsimp simp: valid_sched_context'_def)
+   apply fastforce
+  apply (frule rf_sr_ksCurSC)
+  apply (fastforce simp: csched_context_relation_def crefill_relation_def typ_heap_simps
+                         h_val_field_from_bytes' sc_ptr_to_crefill_ptr_def)
+  done
 
 lemma getIRQState_sp:
   "\<lbrace>P\<rbrace> getIRQState irq \<lbrace>\<lambda>rv s. rv = intStateIRQTable (ksInterruptState s) irq \<and> P s\<rbrace>"

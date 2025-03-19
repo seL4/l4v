@@ -267,10 +267,10 @@ definition
   "handle_yield \<equiv> do
      cur_sc \<leftarrow> gets cur_sc;
      sc \<leftarrow> get_sched_context cur_sc;
-     sc_consumed \<leftarrow> return (sc_consumed sc);
-     refills \<leftarrow> get_refills cur_sc;
-     charge_budget (r_amount (hd refills)) False;
-     set_sc_obj_ref sc_consumed_update cur_sc sc_consumed
+     consumed \<leftarrow> gets consumed_time;
+     head \<leftarrow> get_refill_head cur_sc;
+     charge_budget (r_amount head) False;
+     set_sc_obj_ref sc_consumed_update cur_sc (sc_consumed sc + consumed)
  od"
 
 definition

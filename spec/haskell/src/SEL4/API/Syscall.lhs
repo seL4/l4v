@@ -228,10 +228,12 @@ The "Yield" system call is trivial; it simply moves the current thread to the en
 > handleYield :: Kernel ()
 > handleYield = do
 >     scPtr <- getCurSc
+>     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- getSchedContext scPtr
->     consumed <- return $ scConsumed sc
->     chargeBudget (rAmount (refillHd sc)) False True
->     updateSchedContext scPtr (\sc -> sc { scConsumed = consumed })
+>     consumed <- getConsumedTime
+>     head <- getRefillHead scPtr
+>     chargeBudget (rAmount head) False
+>     updateSchedContext scPtr (\sched_context -> sched_context { scConsumed = consumed + scConsumed sc })
 
 \subsection{Capability Invocations}\label{sel4:api:syscall:invoke}
 

@@ -2068,10 +2068,6 @@ lemma handleYield_corres:
       and ct_not_queued and ct_not_in_release_q)
      invs'
      handle_yield handleYield"
-  (is "corres _ ?pre ?pre' _ _")
-  supply opt_mapE[elim!]
-  apply (rule_tac Q'=ct_active' in corres_cross_add_guard)
-   apply (fastforce intro!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                   dest!: state_relationD schact_is_rct)
@@ -2079,56 +2075,28 @@ lemma handleYield_corres:
    apply (fastforce simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj
                     dest: valid_sched_context_size_objsI)
   apply (clarsimp simp: handle_yield_def handleYield_def)
+  apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
+   apply (corres corres: getCurSc_corres)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce intro: active_sc_at'_cross cur_sc_tcb_sc_at_cur_sc)
+  apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF getCurSc_corres])
-      apply (rule corres_split[OF get_sc_corres])
-        apply (erule exE)
-        apply (rename_tac cursc sc sc' n)
-        apply (rule_tac P="(\<lambda>s. scs_of2 s cursc = Some sc) and ?pre
-                            and (\<lambda>s. cur_sc s = cursc)"
-                   and P'="?pre' and ko_at' sc' cursc"
-               in corres_inst)
-        apply (rule_tac Q="\<lambda>rv. (\<lambda>s. scs_of2 s cursc = Some sc) and ?pre
-                                and (\<lambda>s. cur_sc s = cursc) and K (sc_refills sc = rv)"
-                   and P'="?pre' and ko_at' sc' cursc"
-               in corres_symb_exec_l)
-           apply (rename_tac refills)
-           apply (rule corres_gen_asm')
-           apply (rule_tac F="r_amount (hd refills) = rAmount (refillHd sc')" in corres_req)
-            apply (clarsimp dest!: invs_valid_objs' invs_valid_objs simp: obj_at_def obj_at'_def
-                            split: Structures_A.kernel_object.splits)
-            apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def)
-            apply (frule (1) refill_hd_relation2[rotated -1])
-             apply (drule (1) active_scs_validE[OF _ valid_sched_active_scs_valid])
-             apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def split: if_split_asm)
+    apply (rule corres_split[OF get_sc_corres])
+      apply (rule corres_split[OF getConsumedTime_corres])
+        apply (rule corres_split[OF getRefillHead_corres], simp)
+          apply (clarsimp simp: refill_map_def)
+          apply (rule corres_split[OF chargeBudget_corres])
+            apply (rule updateSchedContext_no_stack_update_corres)
+               apply (clarsimp simp: sc_relation_def)
+              apply clarsimp
+             apply (fastforce simp: sc_relation_def)
             apply clarsimp
-           apply simp
-           apply (rule corres_guard_imp)
-             apply (rule corres_split[OF chargeBudget_corres])
-               apply (rule updateSchedContext_no_stack_update_corres)
-                  apply (clarsimp simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red opt_pred_def)
-                 apply clarsimp
-                apply (fastforce simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red
-                                 elim: sc_replies_relation_prevs_list)
-               apply (clarsimp simp: objBits_simps)
-              apply (rule sc_at_typ_at, wp)
-             apply (wpsimp wp: typ_at_lifts)
-            apply (clarsimp simp: valid_sched_def opt_map_def obj_at_def is_sc_obj
-                           split: option.split_asm Structures_A.kernel_object.split_asm)
-            apply (frule (1) valid_sched_context_size_objsI[OF invs_valid_objs], clarsimp)
-            apply (frule (1) invs_cur_sc_chargeableE)
-            apply fastforce
-           apply clarsimp
-          apply wpsimp
-           apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
-          apply simp
-         apply (wpsimp wp: get_refills_wp)
-         apply (clarsimp simp: obj_at_def is_sc_obj)
-        apply (wpsimp simp: get_refills_def split: Structures_A.kernel_object.splits)
-       apply wpsimp+
-   apply (frule invs_valid_objs)
-   apply (fastforce simp: obj_at_def is_sc_obj cur_sc_tcb_def sc_tcb_sc_at_def opt_map_red
-                   dest!: invs_cur_sc_tcb schact_is_rct elim: valid_sched_context_size_objsI)
+           apply (wpsimp wp: sc_at_typ_at)+
+   apply (clarsimp cong: conj_cong)
+   apply (intro conjI impI allI; clarsimp?)
+     apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
+    apply (fastforce dest: active_scs_validE valid_refills_nonempty_refills)
+   apply (fastforce dest: invs_cur_sc_chargeableE)
   apply clarsimp
   done
 
