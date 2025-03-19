@@ -173,28 +173,27 @@ where
 | "thread_state_relation (Structures_A.BlockedOnNotification oref) ts'
      = (ts' = Structures_H.BlockedOnNotification oref)"
 
-definition
-  arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool"
-where
- "arch_tcb_relation \<equiv> \<lambda>atcb atcb'.
-   tcb_context atcb = atcbContext atcb'"
+definition arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool" where
+  "arch_tcb_relation \<equiv>
+     \<lambda>atcb atcb'. tcb_context atcb = atcbContext atcb'"
 
-definition
-  tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
-where
- "tcb_relation \<equiv> \<lambda>tcb tcb'.
-    tcb_fault_handler tcb = to_bl (tcbFaultHandler tcb')
-  \<and> tcb_ipc_buffer tcb = tcbIPCBuffer tcb'
-  \<and> arch_tcb_relation (tcb_arch tcb) (tcbArch tcb')
-  \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
-  \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
-  \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))
-  \<and> cap_relation (tcb_vtable tcb) (cteCap (tcbVTable tcb'))
-  \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
-  \<and> cap_relation (tcb_caller tcb) (cteCap (tcbCaller tcb'))
-  \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
-  \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'
-  \<and> tcb_mcpriority tcb = tcbMCP tcb'"
+definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool" where
+  "tcb_relation \<equiv> \<lambda>tcb tcb'.
+     tcb_fault_handler tcb = to_bl (tcbFaultHandler tcb')
+   \<and> tcb_ipc_buffer tcb = tcbIPCBuffer tcb'
+   \<and> arch_tcb_relation (tcb_arch tcb) (tcbArch tcb')
+   \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
+   \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
+   \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))
+   \<and> cap_relation (tcb_vtable tcb) (cteCap (tcbVTable tcb'))
+   \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
+   \<and> cap_relation (tcb_caller tcb) (cteCap (tcbCaller tcb'))
+   \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
+   \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'
+   \<and> tcb_mcpriority tcb = tcbMCP tcb'
+   \<and> tcb_priority tcb = tcbPriority tcb'
+   \<and> tcb_time_slice tcb = tcbTimeSlice tcb'
+   \<and> tcb_domain tcb = tcbDomain tcb'"
 
 \<comment> \<open>
   A pair of objects @{term "(obj, obj')"} should satisfy the following relation when, under further
@@ -389,22 +388,8 @@ where
   (\<forall>x \<in> dom ab. \<forall>(y, P) \<in> obj_relation_cuts (the (ab x)) x.
        P (the (ab x)) (the (con y)))"
 
-definition etcb_relation :: "etcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
-where
- "etcb_relation \<equiv> \<lambda>etcb tcb'.
-    tcb_priority etcb = tcbPriority tcb'
-  \<and> tcb_time_slice etcb = tcbTimeSlice tcb'
-  \<and> tcb_domain etcb = tcbDomain tcb'"
-
-definition
- ekheap_relation :: "(obj_ref \<Rightarrow> etcb option) \<Rightarrow> (word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> bool"
-where
- "ekheap_relation ab con \<equiv>
-    \<forall>x \<in> dom ab. \<exists>tcb'. con x = Some (KOTCB tcb') \<and> etcb_relation (the (ab x)) tcb'"
-
-primrec
-  sched_act_relation :: "Deterministic_A.scheduler_action \<Rightarrow> Structures_H.scheduler_action \<Rightarrow> bool"
-where
+primrec sched_act_relation :: "Structures_A.scheduler_action \<Rightarrow> scheduler_action \<Rightarrow> bool"
+  where
   "sched_act_relation resume_cur_thread a' = (a' = ResumeCurrentThread)" |
   "sched_act_relation choose_new_thread a' = (a' = ChooseNewThread)" |
   "sched_act_relation (switch_thread x) a' = (a' = SwitchToThread x)"
@@ -431,8 +416,8 @@ lemma list_queue_relation_nil:
   by (fastforce dest: heap_path_head simp: tcbQueueEmpty_def list_queue_relation_def)
 
 definition ready_queue_relation ::
-  "Deterministic_A.domain \<Rightarrow> Structures_A.priority
-   \<Rightarrow> Deterministic_A.ready_queue \<Rightarrow> ready_queue
+  "Structures_A.domain \<Rightarrow> Structures_A.priority
+   \<Rightarrow> Structures_A.ready_queue \<Rightarrow> ready_queue
    \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
    \<Rightarrow> (obj_ref \<Rightarrow> bool) \<Rightarrow> bool"
   where
@@ -442,7 +427,7 @@ definition ready_queue_relation ::
      \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> tcbQueueEmpty q')"
 
 definition ready_queues_relation_2 ::
-  "(Deterministic_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Deterministic_A.ready_queue)
+  "(Structures_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Structures_A.ready_queue)
    \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue)
    \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
    \<Rightarrow> (domain \<Rightarrow> priority \<Rightarrow> obj_ref \<Rightarrow> bool) \<Rightarrow> bool"
@@ -622,7 +607,6 @@ definition
 where
  "state_relation \<equiv> {(s, s').
          pspace_relation (kheap s) (ksPSpace s')
-       \<and> ekheap_relation (ekheap s) (ksPSpace s')
        \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
        \<and> ready_queues_relation s s'
        \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')
@@ -654,10 +638,6 @@ lemma state_relation_pspace_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> pspace_relation (kheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
 
-lemma state_relation_ekheap_relation[elim!]:
-  "(s,s') \<in> state_relation \<Longrightarrow> ekheap_relation (ekheap s) (ksPSpace s')"
-  by (simp add: state_relation_def)
-
 lemma state_relation_sched_act_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> sched_act_relation (scheduler_action s) (ksSchedulerAction s')"
   by (clarsimp simp: state_relation_def)
@@ -673,7 +653,6 @@ lemma state_relation_idle_thread[elim!]:
 lemma state_relationD:
   assumes sr:  "(s, s') \<in> state_relation"
   shows "pspace_relation (kheap s) (ksPSpace s') \<and>
-  ekheap_relation (ekheap s) (ksPSpace s') \<and>
   sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
   ready_queues_relation s s' \<and>
   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') \<and>
@@ -695,7 +674,6 @@ lemma state_relationD:
 lemma state_relationE [elim?]:
   assumes sr:  "(s, s') \<in> state_relation"
   and rl: "\<lbrakk>pspace_relation (kheap s) (ksPSpace s');
-  ekheap_relation (ekheap s) (ksPSpace s');
   sched_act_relation (scheduler_action s) (ksSchedulerAction s');
   ready_queues_relation s s';
   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s');
@@ -749,11 +727,6 @@ lemma pspace_relation_absD:
   apply (rule rev_bexI, erule domI)
   apply (simp add: image_def rev_bexI)
   done
-
-lemma ekheap_relation_absD:
-  "\<lbrakk> ab x = Some y; ekheap_relation ab con \<rbrakk>
-      \<Longrightarrow> \<exists>tcb'. con x = Some (KOTCB tcb') \<and> etcb_relation y tcb'"
-  by (force simp add: ekheap_relation_def)
 
 lemma in_related_pspace_dom:
   "\<lbrakk> s' x = Some y; pspace_relation s s' \<rbrakk> \<Longrightarrow> x \<in> pspace_dom s"
