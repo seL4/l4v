@@ -14790,21 +14790,6 @@ lemma handle_timeout_valid_sched:
 
 end
 
-lemma send_fault_ipc_error_sched_act_not[wp]:
-  "\<lbrace>scheduler_act_not t\<rbrace> send_fault_ipc tptr handler_cap fault can_donate -, \<lbrace>\<lambda>rv. scheduler_act_not t\<rbrace>"
-  by (simp add: send_fault_ipc_def Let_def |
-      (wp hoare_drop_imps hoare_vcg_all_liftE_R)+ | wpc)+
-
-lemma send_fault_ipc_error_cur_thread[wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> send_fault_ipc tptr handler_cap fault can_donate -, \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-  by (simp add: send_fault_ipc_def Let_def |
-      (wp hoare_drop_imps hoare_vcg_all_liftE_R)+ | wpc)+
-
-lemma send_fault_ipc_error_not_queued[wp]:
-  "\<lbrace>not_queued t\<rbrace> send_fault_ipc tptr handler_cap fault can_donate -, \<lbrace>\<lambda>rv. not_queued t\<rbrace>"
-  by (simp add: send_fault_ipc_def Let_def |
-      (wp hoare_drop_imps hoare_vcg_all_liftE_R)+ | wpc)+
-
 context DetSchedSchedule_AI begin
 
 lemma send_ipc_not_queued:

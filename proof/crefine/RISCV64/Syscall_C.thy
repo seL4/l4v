@@ -533,19 +533,73 @@ lemma hrs_mem_update_use_hrs_mem:
   by (simp add: hrs_mem_update_def hrs_mem_def fun_eq_iff)
 
 lemma sendFaultIPC_ccorres:
-  "ccorres  (cfault_rel2 \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-      (invs' and st_tcb_at' simple' tptr and sch_act_not tptr)
-      (UNIV \<inter> {s. (cfault_rel (Some fault) (seL4_Fault_lift(current_fault_' (globals s)))
-                       (lookup_fault_lift(current_lookup_fault_' (globals s))))}
-            \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
-      [] (sendFaultIPC tptr handlerCap fault canDonate)
-         (Call sendFaultIPC_'proc)"
-sorry (* FIXME RT: sendFaultIPC_ccorres
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (invs' and st_tcb_at' simple' tptr and valid_cap' handlerCap)
+     (\<lbrace>cfault_rel (Some fault) (seL4_Fault_lift \<acute>current_fault)
+                  (lookup_fault_lift
+                    (h_val (hrs_mem \<acute>t_hrs)
+                      (Ptr &(tcb_ptr_to_ctcb_ptr tptr\<rightarrow>[''tcbLookupFailure_C'']))))\<rbrace>
+      \<inter> \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr tptr\<rbrace>
+      \<inter> \<lbrace>ccap_relation handlerCap \<acute>handlerCap\<rbrace>
+      \<inter> \<lbrace>\<acute>can_donate = from_bool canDonate\<rbrace>) hs
+     (sendFaultIPC tptr handlerCap fault canDonate) (Call sendFaultIPC_'proc)"
   supply if_cong[cong] option.case_cong[cong]
   supply Collect_const[simp del]
-  apply (cinit lift: tptr_' cong: call_ignore_cong)
-   apply (simp add: liftE_bindE del:Collect_const cong:call_ignore_cong)
-   apply (rule ccorres_symb_exec_r)
+  apply (cinit lift: tptr_' handlerCap_' can_donate_' cong: call_ignore_cong)
+   apply (rename_tac handlerCap' tptr')
+   apply csymbr
+   apply (rule_tac P="cap_get_tag handlerCap' = scast cap_endpoint_cap" in ccorres_cases)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+    apply ccorres_rewrite
+    apply (simp add: liftE_def bind_assoc)
+    apply (rule ccorres_rhs_assoc)+
+    apply (rule_tac ccorres_split_nothrow_novcg)
+        apply (rule_tac P'=invs'
+                    and R="\<lbrace>cfault_rel
+                              (Some fault) (seL4_Fault_lift \<acute>current_fault)
+                              (lookup_fault_lift
+                                (h_val (hrs_mem \<acute>t_hrs)
+                                  (Ptr &(tcb_ptr_to_ctcb_ptr tptr\<rightarrow>[''tcbLookupFailure_C'']))))\<rbrace>"
+                     in threadSet_ccorres_lemma4[where P=\<top>])
+         apply vcg
+        apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice)
+        apply (rule_tac ctcb="tcbFault_C_update (\<lambda>_. current_fault_' (globals s')) tcb'"
+                     in rf_sr_tcb_update_no_queue2)
+              apply fastforce
+             apply fastforce
+            apply (simp add: typ_heap_simps' rf_sr_def)
+           apply fastforce
+          apply fastforce
+         apply (rule ball_tcb_cte_casesI, simp+)
+        apply (simp add: ctcb_relation_def cthread_state_relation_def)
+        apply (case_tac "tcbState tcb", simp+)
+       apply ceqv
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply (ctac (no_vcg) add: sendIPC_ccorres)
+       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def to_bool_def)
+      apply wpsimp
+     apply (rule_tac Q'="\<lambda>_. invs' and st_tcb_at' simple' tptr and valid_cap' handlerCap"
+                  in hoare_post_imp)
+      apply (clarsimp simp: valid_cap'_def)
+     apply (wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2)
+    apply (clarsimp simp: guard_is_UNIV_def cap_get_tag_isCap  isCap_simps ccap_relation_ep_helpers)
+   apply (rule_tac P="cap_get_tag handlerCap' = scast cap_null_cap" in ccorres_cases)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+    apply ccorres_rewrite
+    apply (simp add: liftE_def bind_assoc)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: return_def liftE_bindE)
+   apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+   apply ccorres_rewrite
+   apply (wpc; clarsimp; (fastforce | rule ccorres_fail))
+  apply auto
+  done
      apply (rule ccorres_split_nothrow)
          apply (rule threadGet_tcbFaultHandler_ccorres)
         apply ceqv

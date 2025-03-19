@@ -537,23 +537,21 @@ where
 
 section \<open>Sending Fault Messages\<close>
 
-text \<open>When a thread encounters a fault, retreive its fault handler capability
-and send a fault message.\<close>
-definition
-  send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Rightarrow> bool \<Rightarrow> (bool, 'z::state_ext) f_monad"
-where
+text \<open>
+  When a thread encounters a fault, retrieve its fault handler capability
+  and send a fault message.\<close>
+definition send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Rightarrow> bool \<Rightarrow> (bool, 'z::state_ext) s_monad" where
   "send_fault_ipc tptr handler_cap fault can_donate \<equiv>
-     (case handler_cap
-       of EndpointCap ref badge rights \<Rightarrow>
-            liftE $ do
-               thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := Some fault \<rparr>) tptr;
-               send_ipc True False (cap_ep_badge handler_cap)
-                        (AllowGrant \<in> rights) (AllowGrantReply \<in> rights) can_donate tptr
-                        (cap_ep_ptr handler_cap);
-               return True
-           od
-        | NullCap \<Rightarrow> liftE $ return False
-        | _ \<Rightarrow> fail)"
+     case handler_cap of
+         EndpointCap ref badge rights \<Rightarrow> do
+           thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := Some fault \<rparr>) tptr;
+           send_ipc True False (cap_ep_badge handler_cap)
+                    (AllowGrant \<in> rights) (AllowGrantReply \<in> rights) can_donate tptr
+                    (cap_ep_ptr handler_cap);
+           return True
+         od
+       |   NullCap \<Rightarrow> return False
+       | _ \<Rightarrow> fail"
 
 text \<open>timeout fault\<close>
 definition handle_timeout :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad"

@@ -1645,9 +1645,9 @@ lemma runnable_not_queued:
   done
 
 lemma send_ipc_st_tcb_at_runnable:
-  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (thread \<noteq> t) \<rbrace>
+  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (thread \<noteq> t)\<rbrace>
    send_ipc block call badge can_grant can_grant_reply can_donate thread epptr
-   \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+   \<lbrace>\<lambda>_. st_tcb_at runnable t\<rbrace>"
   unfolding send_ipc_def
   supply if_split[split del]
   apply (wpsimp wp: sts_st_tcb_at_other get_tcb_obj_ref_wp hoare_vcg_all_lift hoare_vcg_if_lift
@@ -1656,16 +1656,11 @@ lemma send_ipc_st_tcb_at_runnable:
   done
 
 lemma send_fault_ipc_st_tcb_at_runnable:
-  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and tcb_at t' and K (t' \<noteq> t)\<rbrace>
-   send_fault_ipc t' handler_cap fault can_donate \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (t' \<noteq> t)\<rbrace>
+   send_fault_ipc t' handler_cap fault can_donate
+   \<lbrace>\<lambda>_. st_tcb_at runnable t\<rbrace>"
   unfolding send_fault_ipc_def
-  apply (rule hoare_pre, wp)
-     apply wpc
-                apply (wp send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial
-                          hoare_vcg_all_liftE_R thread_get_wp
-                        | clarsimp
-                        | wp (once) hoare_drop_imps)+
-  done
+  by (wpsimp wp: send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial)
 
 lemma handle_fault_st_tcb_at_runnable:
   "\<lbrace>st_tcb_at runnable t and invs and K (t' \<noteq> t) \<rbrace>

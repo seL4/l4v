@@ -5700,16 +5700,15 @@ lemma sendFaultIPC_corres:
   assumes "fr f f'"
   assumes "cap_relation cap cap'"
   shows
-  "corres (fr \<oplus> (=))
-          (invs and valid_list and valid_sched_action and active_scs_valid
-                and valid_release_q and valid_ready_qs and ready_or_release and sorted_ipc_queues
-                and st_tcb_at active thread and scheduler_act_not thread
-                and current_time_bounded
-                and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at (\<lambda>sc. sc \<noteq> None) thread s)
-                and valid_cap cap and K (valid_fault_handler cap) and K (valid_fault f))
-          (invs' and valid_cap' cap')
-          (send_fault_ipc thread cap f can_donate)
-          (sendFaultIPC thread cap' f' can_donate)"
+  "corres (=)
+     (invs and valid_list and valid_sched_action and active_scs_valid
+      and valid_release_q and valid_ready_qs and ready_or_release and sorted_ipc_queues
+      and st_tcb_at active thread and scheduler_act_not thread
+      and current_time_bounded
+      and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at (\<lambda>sc. sc \<noteq> None) thread s)
+      and valid_cap cap and K (valid_fault_handler cap) and K (valid_fault f))
+     (invs' and valid_cap' cap')
+     (send_fault_ipc thread cap f can_donate) (sendFaultIPC thread cap' f' can_donate)"
   using assms
   apply (clarsimp simp: send_fault_ipc_def sendFaultIPC_def)
   apply (rule corres_gen_asm)
@@ -6698,27 +6697,15 @@ lemma si_invs'[wp]:
   apply wpsimp
   done
 
-lemma sfi_invs_plus':
-  "\<lbrace>invs' and valid_idle' and st_tcb_at' active' t
-          and sch_act_not t
-          and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
-          and ex_nonz_cap_to' t
-          and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. \<exists>cte. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>
+lemma sendFaultIPC_invs':
+  "\<lbrace>invs' and st_tcb_at' active' t and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
+    and ex_nonz_cap_to' t
+    and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. \<exists>cte. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>
    sendFaultIPC t cap f canDonate
-   \<lbrace>\<lambda>_. invs'\<rbrace>,
-   \<lbrace>\<lambda>_. invs' and valid_idle' and st_tcb_at' active' t
-              and sch_act_not t
-              and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
-              and ex_nonz_cap_to' t
-              and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>"
-  apply (simp add: sendFaultIPC_def)
-  apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
-            threadSet_cap_to' threadSet_idle'
-           | wpc | simp)+
-  apply (intro conjI impI allI; (fastforce simp: inQ_def)?)
-   apply (clarsimp simp: invs'_def obj_at'_def)
-  apply (fastforce simp: ex_nonz_cap_to'_def cte_wp_at'_def)
-  done
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding sendFaultIPC_def
+  apply (wpsimp wp: threadSet_invs_trivial threadSet_pred_tcb_no_state threadSet_cap_to')
+  by (fastforce simp: invs'_def obj_at'_def ex_nonz_cap_to'_def cte_wp_at'_def)
 
 lemma handleFault_corres:
   assumes "fr f f'"
