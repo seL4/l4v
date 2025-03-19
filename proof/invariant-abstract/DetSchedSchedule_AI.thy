@@ -11300,7 +11300,7 @@ lemma handle_timeout_valid_refills[wp]:
    handle_timeout tptr ex
    \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   supply if_weak_cong[cong del]
-  apply (clarsimp simp: handle_timeout_def)
+  apply (clarsimp simp: handle_timeout_def is_valid_timeout_handler_def)
   by (wpsimp simp: send_fault_ipc_def wp: hoare_drop_imps split_del: if_split)
 
 lemma end_timeslice_valid_refills[wp]:
@@ -14699,7 +14699,8 @@ lemma handle_timeout_valid_sched_misc[wp]:
   "handle_timeout t timeout
    \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s)
                             (idle_thread s) (etcbs_of s)\<rbrace>"
-  unfolding handle_timeout_def by wpsimp
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: get_cap_wp)
 
 lemma handle_timeout_valid_ready_qs:
   "\<lbrace>\<lambda>s. valid_ready_qs s \<and> released_ipc_queues s \<and> valid_sched_action s
@@ -14708,21 +14709,23 @@ lemma handle_timeout_valid_ready_qs:
          \<and> is_timeout_fault timeout\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>rv. valid_ready_qs :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def
-  by (wpsimp wp: send_fault_ipc_valid_ready_qs)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_valid_ready_qs get_cap_wp)
 
 lemma handle_timeout_valid_release_q:
   "\<lbrace>valid_release_q and not_in_release_q t
     and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>rv. valid_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_valid_release_q)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_valid_release_q get_cap_wp)
 
 lemma handle_timeout_ct_not_in_q:
   "\<lbrace>ct_not_in_q and ct_in_cur_domain and idle_thread_is_idle\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>rv. ct_not_in_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_ct_not_in_q)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_ct_not_in_q get_cap_wp)
 
 lemma handle_timeout_valid_sched_action:
   "\<lbrace>\<lambda>s. valid_sched_action s \<and> released_ipc_queues s \<and> scheduler_act_not t s
@@ -14730,39 +14733,44 @@ lemma handle_timeout_valid_sched_action:
          \<and> active_if_bound_sc_tcb_at t s \<and> is_timeout_fault timeout\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>rv. valid_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def
-  by (wpsimp wp: send_fault_ipc_valid_sched_action)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_valid_sched_action get_cap_wp)
 
 lemma handle_timeout_ct_in_cur_domain:
   "handle_timeout t timeout \<lbrace>ct_in_cur_domain :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_ct_in_cur_domain)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_ct_in_cur_domain get_cap_wp)
 
 lemma handle_timeout_valid_blocked:
-  "\<lbrace>\<lambda>s. valid_blocked_except_set (insert t S) s\<rbrace>
+  "\<lbrace>valid_blocked_except_set (insert t S)\<rbrace>
    handle_timeout t timeout
-   \<lbrace>\<lambda>rv. valid_blocked_except_set S :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_valid_blocked)
+   \<lbrace>\<lambda>_. valid_blocked_except_set S :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  apply (wpsimp wp: send_fault_ipc_valid_blocked get_cap_wp)
+  by (fastforce simp: cte_wp_at_cases get_tcb_timeout_handler_ptr_def get_tcb_simp vs_all_heap_simps)
 
 lemma handle_timeout_released_ipc_queues:
   "\<lbrace>\<lambda>s. released_ipc_queues s \<and> active_scs_valid s
          \<and> active_if_bound_sc_tcb_at t s \<and> is_timeout_fault timeout\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>rv. released_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def
-  by (wpsimp wp: send_fault_ipc_released_ipc_queues)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_released_ipc_queues get_cap_wp)
 
 lemma handle_timeout_active_reply_scs:
   "\<lbrace>\<lambda>s. active_reply_scs s \<and> active_if_bound_sc_tcb_at t s\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_active_reply_scs)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_active_reply_scs get_cap_wp)
 
 lemma handle_timeout_sorted_ipc_queues:
   "\<lbrace>\<lambda>s. sorted_ipc_queues s \<and> valid_objs s \<and> tcb_at t s \<and> is_timeout_fault timeout\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>_. sorted_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def
-  by (wpsimp wp: send_fault_ipc_sorted_ipc_queues simp: valid_fault_def is_timeout_fault_def)
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: send_fault_ipc_sorted_ipc_queues get_cap_wp
+           simp: valid_fault_def is_timeout_fault_def)
 
 lemmas handle_timeout_valid_sched_bundled
   = handle_timeout_valid_ready_qs handle_timeout_valid_release_q handle_timeout_ct_not_in_q
@@ -14783,10 +14791,11 @@ lemma handle_timeout_valid_sched:
          \<and> valid_objs s\<rbrace>
    handle_timeout t timeout
    \<lbrace>\<lambda>rv. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def
-  apply (wpsimp wp: send_fault_ipc_valid_sched)
-  apply (fastforce simp: is_timeout_fault_def valid_fault_def)
-  done
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  apply (wpsimp wp: send_fault_ipc_valid_sched get_cap_wp)
+  by (fastforce dest!: get_tcb_SomeD
+                 simp: is_timeout_fault_def valid_fault_def cte_wp_at_cases
+                       get_tcb_timeout_handler_ptr_def)
 
 end
 
@@ -17459,6 +17468,7 @@ lemma end_timeslice_valid_ready_qs:
 
 crunch handle_timeout
   for ready_or_release[wp]: "ready_or_release :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps)
 
 lemma end_timeslice_ready_or_release[wp]:
   "\<lbrace>ready_or_release and ready_qs_etcb_eq and ct_not_in_release_q\<rbrace>
@@ -19747,7 +19757,8 @@ lemma handle_timeout_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane and ct_not_blocked\<rbrace>
    handle_timeout tptr timeout
    \<lbrace>\<lambda>_. scheduler_act_sane ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def by wpsimp
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  by (wpsimp wp: get_cap_wp)
 
 lemma ipc_queued_thread_state_if[simp]:
   "ipc_queued_thread_state (if r then Restart else Inactive) = False"
@@ -20149,19 +20160,19 @@ lemma do_reply_transfer_ct_not_in_release_q[wp]:
   by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
 
 lemma handle_timeout_not_queued:
-  "\<lbrace>not_queued t and scheduler_act_not t
+  "\<lbrace>not_queued t and scheduler_act_not t and tcb_at t'
     and (\<lambda>s. \<forall>qtail tcb. ko_at (TCB tcb) t' s
                          \<longrightarrow> \<not> pred_map_eq (t # qtail) (ep_recv_qs_of s) (cap_ep_ptr (tcb_timeout_handler tcb)))\<rbrace>
    handle_timeout t' ex
    \<lbrace>\<lambda>_. not_queued t :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding handle_timeout_def
-  apply (wpsimp wp: send_fault_ipc_not_queued_not_ep_queued simp: obj_at_def get_tcb_def)
-  apply (case_tac "kheap s t'"; clarsimp?)
-  apply (case_tac a; clarsimp?)
-  done
+  apply (wpsimp wp: send_fault_ipc_not_queued_not_ep_queued get_cap_wp
+              simp: is_valid_timeout_handler_def)
+  by (fastforce simp: cte_wp_at_cases get_tcb_timeout_handler_ptr_def vs_all_heap_simps
+                      tcb_at_def obj_at_def is_tcb_def)
 
 lemma handle_timeout_ct_not_queued:
-  "\<lbrace>ct_not_queued and scheduler_act_sane
+  "\<lbrace>ct_not_queued and scheduler_act_sane and tcb_at t'
     and (\<lambda>s. \<forall>qtail tcb. ko_at (TCB tcb) t' s
                          \<longrightarrow> \<not> pred_map_eq ((cur_thread s) # qtail) (ep_recv_qs_of s) (cap_ep_ptr (tcb_timeout_handler tcb)))\<rbrace>
    handle_timeout t' ex
@@ -20493,7 +20504,7 @@ lemma handle_timeout_released_if_bound[wp]:
     and active_scs_valid\<rbrace>
    handle_timeout tptr ex
    \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp simp: handle_timeout_def)
+  by (wpsimp simp: handle_timeout_def is_valid_timeout_handler_def wp: get_cap_wp)
 
 lemma reply_remove_released_if_bound_other:
   "\<lbrace>\<lambda>s. released_if_bound_sc_tcb_at t s \<and> caller \<noteq> t\<rbrace>
@@ -20705,8 +20716,8 @@ lemma send_ipc_ct_in_state:
 
 lemma handle_timeout_ct_not_blocked_on_ntfn:
   "handle_timeout tptr ex \<lbrace>ct_not_blocked_on_ntfn :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def send_fault_ipc_def
-  by (wpsimp wp: send_ipc_ct_in_state thread_set_ct_in_state)
+  unfolding handle_timeout_def is_valid_timeout_handler_def send_fault_ipc_def
+  by (wpsimp wp: send_ipc_ct_in_state thread_set_ct_in_state get_cap_wp)
 
 lemma handle_timeout_ct_in_state:
   "\<lbrace>ct_in_state P
@@ -20717,8 +20728,8 @@ lemma handle_timeout_ct_in_state:
              \<and> P Inactive)\<rbrace>
    handle_timeout tptr ex
    \<lbrace>\<lambda>_. ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def send_fault_ipc_def
-  apply (wpsimp wp: send_ipc_ct_in_state thread_set_wp thread_set_ct_in_state
+  unfolding handle_timeout_def is_valid_timeout_handler_def send_fault_ipc_def
+  apply (wpsimp wp: send_ipc_ct_in_state thread_set_wp thread_set_ct_in_state get_cap_wp
               simp: send_fault_ipc_def)
   apply (clarsimp simp: ct_in_state_def tcb_at_kh_simps vs_all_heap_simps dest!: get_tcb_SomeD)
   done
@@ -22086,12 +22097,12 @@ lemma handle_timeout_ct_ready_if_schedulable[wp]:
         \<and> heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s) \<and> bound_sc_tcb_at bound ct s\<rbrace>
    handle_timeout ct fault
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def send_fault_ipc_def
+  unfolding handle_timeout_def is_valid_timeout_handler_def send_fault_ipc_def
   apply (wpsimp wp: send_ipc_ct_ready_if_schedulable_not_blocked_on_receive
-                    thread_set_fault_fault_tcb_at thread_set_no_change_tcb_pred
+                    thread_set_fault_fault_tcb_at thread_set_no_change_tcb_pred get_cap_wp
               simp: ct_in_state_def
          | wps)+
-  done
+  by (fastforce dest!: get_tcb_SomeD simp: cte_wp_at_cases get_tcb_timeout_handler_ptr_def)
 
 lemma end_timeslice_ct_ready_if_schedulable[wp]:
   "\<lbrace>cur_sc_tcb_are_bound
@@ -23719,8 +23730,8 @@ lemma handle_timeout_cur_sc_not_in_release_q:
         \<and> \<not> pred_map receive_blocked (tcb_sts_of s) tptr\<rbrace>
    handle_timeout tptr ex
    \<lbrace>\<lambda>_ s :: det_state. sc_not_in_release_q (cur_sc s) s\<rbrace>"
-  unfolding handle_timeout_def send_fault_ipc_def
-  by (wpsimp wp: send_ipc_cur_sc_not_in_release_q)
+  unfolding handle_timeout_def is_valid_timeout_handler_def send_fault_ipc_def
+  by (wpsimp wp: send_ipc_cur_sc_not_in_release_q get_cap_wp)
 
 lemma send_ipc_cur_sc_in_release_q_imp_zero_consumed:
   "\<lbrace>\<lambda>s. cur_sc_in_release_q_imp_zero_consumed s \<and> valid_release_q s \<and> not_in_release_q thread s
@@ -23742,8 +23753,8 @@ lemma handle_timeout_cur_sc_in_release_q_imp_zero_consumed:
         \<and> \<not> pred_map receive_blocked (tcb_sts_of s) tptr\<rbrace>
    handle_timeout tptr ex
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_in_release_q_imp_zero_consumed s\<rbrace>"
-  unfolding handle_timeout_def send_fault_ipc_def
-  by (wpsimp wp: send_ipc_cur_sc_in_release_q_imp_zero_consumed)
+  unfolding handle_timeout_def is_valid_timeout_handler_def send_fault_ipc_def
+  by (wpsimp wp: send_ipc_cur_sc_in_release_q_imp_zero_consumed get_cap_wp)
 
 lemma reply_remove_sc_not_in_release_q[wp]:
   "\<lbrace>\<lambda>s. sc_not_in_release_q sc_ptr s \<and> not_in_release_q caller s\<rbrace>

@@ -2176,13 +2176,46 @@ lemma refillSufficient_sp:
    \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. scs_of' s scp = Some sc \<and> rv = (refillSufficient usage (refillHd sc)))\<rbrace>"
   by wpsimp
 
+lemma cap_in_tcbTimeoutHandlerSlot:
+  "\<lbrakk>ko_at' (tcb :: tcb) t s; valid_tcbs' s\<rbrakk>
+   \<Longrightarrow> \<exists>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) (t + 2 ^ cte_level_bits * tcbTimeoutHandlerSlot) s
+             \<and> valid_cap' cap s
+             \<and> (\<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)"
+  apply (rule_tac x="cteCap (tcbTimeoutHandler tcb)" in exI)
+  apply (rule conjI)
+   apply (simp add: cte_wp_at_cases')
+   apply (rule disjI2)
+   apply (rule_tac x="2 ^ cte_level_bits * tcbTimeoutHandlerSlot" in exI)
+   apply (fastforce simp: tcbTimeoutHandlerSlot_def obj_at'_def objBits_simps' cte_level_bits_def)
+  apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
+  apply (rule conjI)
+   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (rule_tac x="tcbTimeoutHandlerSlot << cteSizeBits" in bexI)
+   apply (fastforce elim: cte_wp_at_tcbI'
+                    simp: tcbTimeoutHandlerSlot_def obj_at'_def objBitsKO_def cteSizeBits_def)
+  apply (fastforce simp: tcbTimeoutHandlerSlot_def cteSizeBits_def)
+  done
+
+lemma ko_at_cte_tcbTimeoutHandler:
+  "ko_at' tcb p s
+   \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbTimeoutHandler tcb) (p + 2 ^ cte_level_bits * tcbTimeoutHandlerSlot) s"
+  apply (clarsimp simp: obj_at'_def objBits_simps)
+  apply (erule (2) cte_wp_at_tcbI')
+   apply (fastforce simp add: tcb_cte_cases_def tcbTimeoutHandlerSlot_def cte_level_bits_def cteSizeBits_def)
+  apply simp
+  done
+
 lemma isValidTimeoutHandler_sp:
   "\<lbrace>P\<rbrace>
    isValidTimeoutHandler x
-   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>ko. ko_at' ko x s \<and> rv = (is_EndpointCap (cteCap (tcbTimeoutHandler ko))))\<rbrace>"
-  unfolding isValidTimeoutHandler_def
-  apply (wpsimp wp: getTCB_wp)
-  by (auto simp: is_EndpointCap_def)
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>ko. ko_at' ko x s \<and> (rv = is_EndpointCap (cteCap (tcbTimeoutHandler ko))))\<rbrace>"
+  unfolding isValidTimeoutHandler_def getThreadTimeoutHandlerSlot_def
+  apply (wpsimp wp: getTCB_wp getSlotCap_wp simp: locateSlot_conv)
+  apply (clarsimp simp: is_EndpointCap_def )
+  apply normalise_obj_at'
+  apply (frule ko_at_cte_tcbTimeoutHandler)
+  apply (fastforce simp: cte_wp_at'_def)
+  done
 
 declare no_fail_getSlotCap [wp]
 
@@ -6760,56 +6793,46 @@ lemma handleFault_corres:
   done
 
 lemma handleTimeout_corres:
-  assumes "fr f f'"
-  shows "corres dc (invs and valid_list and valid_sched_action and active_scs_valid
-                         and valid_release_q and valid_ready_qs and ready_or_release
-                         and sorted_ipc_queues
-                         and scheduler_act_not t and st_tcb_at active t and current_time_bounded
-                         and cte_wp_at is_ep_cap (t,tcb_cnode_index 4) and K (valid_fault f))
-                   invs'
-                   (handle_timeout t f) (handleTimeout t f')"
-  (is "corres _ ?G ?G' _ _")
+  "fr f f' \<Longrightarrow>
+   corres dc
+     (invs and valid_list and valid_sched_action and active_scs_valid
+      and valid_release_q and valid_ready_qs and ready_or_release
+      and sorted_ipc_queues and scheduler_act_not t and st_tcb_at active t and current_time_bounded
+      and cte_wp_at is_ep_cap (t,tcb_cnode_index 4) and K (valid_fault f))
+     invs'
+     (handle_timeout t f) (handleTimeout t f')"
   apply add_valid_idle'
-  using assms
-  apply (clarsimp simp: handle_timeout_def handleTimeout_def)
-  apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: valid_idle'_asrt_def)
+  apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
+   apply (fastforce intro: tcb_at_cross)
+  apply (clarsimp simp: handle_timeout_def handleTimeout_def getThreadTimeoutHandlerSlot_def)
+  apply (rule corres_stateAssert_add_assertion[rotated], simp)
   apply (rule corres_gen_asm)
-  apply (rule_tac Q="?G" and Q'="?G' and obj_at' (isEndpointCap \<circ> cteCap \<circ> tcbTimeoutHandler) t"
-               in stronger_corres_guard_imp)
-    apply (rule corres_symb_exec_r)
-       apply (rule corres_assert_assume_r)
-       apply (rule corres_guard_imp)
-         apply (rule corres_split[OF getObject_TCB_corres])
-           apply (rule corres_assert_assume_l)
-           apply (rule corres_split)
-              apply (rule corres_split_catch[OF sendFaultIPC_corres])
-                  apply fastforce
-                 apply (fastforce simp: tcb_relation_def)
-                apply (rule corres_trivial, clarsimp)
-               apply wp+
-             apply (rule corres_trivial, clarsimp)
-            apply (wp getTCB_wp)+
-        apply (fastforce simp: pred_tcb_at_def cte_wp_at_def obj_at_def is_tcb_def get_cap_def gets_the_def
-                               get_object_def get_tcb_def valid_obj_def valid_tcb_def bind_def
-                               return_def tcb_cap_cases_def tcb_cnode_map_def simpler_gets_def
-                         dest: invs_valid_objs)
-       apply assumption
-      apply (wpsimp wp: getTCB_wp simp: isValidTimeoutHandler_def)
-      apply (fastforce simp: isCap_simps pred_tcb_at'_def obj_at'_def
-                             valid_obj'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def
-                       dest: invs_valid_objs')
-     apply (wpsimp wp: hoare_drop_imps simp: isValidTimeoutHandler_def)+
-  apply (frule cross_relF[OF _ tcb_at'_cross_rel[where t=t]], fastforce)
-  apply (clarsimp simp: pred_tcb_at_def pred_tcb_at'_def obj_at_def obj_at'_def
-                        is_tcb_def state_relation_def pspace_relation_def)
-  apply (erule_tac x=t in ballE)
-   by (auto simp: other_obj_relation_def tcb_relation_cut_def tcb_relation_def cap_relation_def
-                  cte_wp_at_caps_of_state caps_of_state_def tcb_cnode_map_def
-                  get_object_def get_tcb_def get_cap_def simpler_gets_def
-                  return_def bind_def is_cap_simps isCap_simps gets_the_def)
-
-lemma hf_invs' [wp]:
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[OF isValidTimeoutHandler_corres])
+      apply (rule corres_split[OF corres_assert])
+        apply (simp add: getThreadTimeoutHandlerSlot_def locateSlot_conv)
+        apply (rule corres_split[OF getSlotCap_corres])
+           apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def
+                            get_tcb_timeout_handler_ptr_def tcbTimeoutHandlerSlot_def)
+          apply (rule corres_split[OF sendFaultIPC_corres])
+              apply fastforce
+             apply (fastforce simp: tcb_relation_def)
+            apply (rule corres_trivial, clarsimp)
+           apply (wp getTCB_wp)+
+         apply (wpsimp wp: get_cap_wp getSlotCap_wp
+                     simp: is_valid_timeout_handler_def isValidTimeoutHandler_def
+                           getThreadTimeoutHandlerSlot_def locateSlot_conv)+
+   apply (fastforce dest: tcb_ep_slot_cte_wp_ats[where t=t]
+                    simp: cte_wp_at_cases get_tcb_timeout_handler_ptr_def)
+  apply normalise_obj_at'
+  apply (frule cap_in_tcbTimeoutHandlerSlot)
+  apply fastforce
+  apply (frule cte_wp_at_norm)
+  apply (frule state_relation_pspace_relation)
+  apply (fastforce dest!: pspace_relation_cte_wp_at
+                    simp: cte_wp_at'_def cap_relation_def is_cap_simps cte_map_def
+                          tcb_cnode_index_def shiftl_t2n tcbTimeoutHandlerSlot_def)
+  done
   "\<lbrace>invs' and st_tcb_at' active' t and ex_nonz_cap_to' t\<rbrace>
    handleFault t f
    \<lbrace>\<lambda>r. invs'\<rbrace>"

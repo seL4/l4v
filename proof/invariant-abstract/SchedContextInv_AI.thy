@@ -1397,22 +1397,19 @@ lemmas send_fault_ipc_invs[wp] = send_fault_ipc_invs'[where Q=\<top>,simplified 
 
 lemma handle_timeout_Timeout_invs:
   "\<lbrace>invs and st_tcb_at active tptr\<rbrace>
-     handle_timeout tptr (Timeout badge)  \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: handle_timeout_def)
-  apply (wpsimp wp: thread_set_invs_trivial send_fault_ipc_invs
-              simp: handle_timeout_def ran_tcb_cap_cases
-                    thread_set_def valid_fault_def)
-  apply (case_tac "tcb_timeout_handler y"; clarsimp)
+   handle_timeout tptr (Timeout badge)
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding handle_timeout_def is_valid_timeout_handler_def
+  apply (wpsimp wp: get_cap_wp simp: valid_fault_def)
   apply (rule conjI)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
    apply (drule invs_iflive)
    apply (drule (1) if_live_then_nonz_capD2)
     apply (fastforce simp: live_def)
    apply clarsimp
-  apply (rule_tac P="\<exists>n. P n" and P'="P 4" and Q=Q and Q'=Q for P Q in conj_forward)
-    apply (rule context_conjI)
-     apply (clarsimp simp: caps_of_state_tcb_index_trans tcb_cnode_map_def)
-    apply (auto simp: tcb_cap_slot_regular get_tcb_ko_at obj_at_def dest: tcb_cap_slot_regular)
+  apply (fastforce dest: tcb_cap_slot_regular
+                   simp: get_tcb_timeout_handler_ptr_def pred_tcb_at_def obj_at_def
+              simp flip: caps_of_state_Some_simp)
   done
 
 lemma end_timeslice_invs:
