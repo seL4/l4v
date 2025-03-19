@@ -17406,14 +17406,11 @@ lemma refill_reset_rr_valid_sched_misc[wp]:
 
 lemma check_budget_sc_tcb_sc_at[wp]:
   "check_budget \<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>"
-  supply if_split [split del]
   unfolding check_budget_def charge_budget_def end_timeslice_def
-            handle_timeout_def refill_budget_check_defs refill_reset_rr_def update_refill_tl_def
+            handle_timeout_def is_valid_timeout_handler_def refill_budget_check_defs
+            refill_reset_rr_def update_refill_tl_def
             update_sched_context_set_refills_rewrite schedule_used_defs
-  apply clarsimp
-  apply (wpsimp wp: hoare_drop_imps send_fault_ipc_sc_tcb_sc_at hoare_vcg_if_lift2  whileLoop_valid_inv
-              simp: Let_def)
-  done
+  by (wpsimp wp: hoare_drop_imps send_fault_ipc_sc_tcb_sc_at hoare_vcg_if_lift2  whileLoop_valid_inv)
 
 lemma check_budget_simple_sched_action[wp]:
   "check_budget \<lbrace>simple_sched_action\<rbrace>"

@@ -1040,6 +1040,8 @@ On some architectures, the thread context may include registers that may be modi
 
 > checkBudgetRestart :: Kernel Bool
 > checkBudgetRestart = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     result <- checkBudget
 >     ct <- getCurThread
 >     runnable <- isRunnable ct
