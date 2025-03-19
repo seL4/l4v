@@ -1634,27 +1634,43 @@ lemma checkBudgetRestart_ccorres:
   apply (clarsimp simp: to_bool_def)
   done
 
-lemma handleYield_ccorres:
-  "ccorres dc xfdc
-       (invs' and ct_active')
-       UNIV
-       []
-       (handleYield)
-       (Call handleYield_'proc)"
-sorry (* FIXME RT: handleYield_ccorres
+lemma mcsPreemptionPoint_ccorres:
+  "ccorres dc xfdc invs' UNIV hs
+     (mcsPreemptionPoint irq_opt) (Call mcsPreemptionPoint_'proc)"
   apply cinit
+   apply (rule ccorres_stateAssert)
    apply (rule ccorres_pre_getCurThread)
-   apply (ctac add: tcbSchedDequeue_ccorres)
-     apply (ctac  add: tcbSchedAppend_ccorres)
-       apply (ctac add: rescheduleRequired_ccorres)
-      apply (wp weak_sch_act_wf_lift_linear tcbSchedAppend_valid_objs')
-     apply (vcg exspec= tcbSchedAppend_modifies)
-    apply (wp weak_sch_act_wf_lift_linear)
-   apply (vcg exspec= tcbSchedDequeue_modifies)
-  apply (clarsimp simp: tcb_at_invs' invs_valid_objs'
-                        valid_objs'_maxPriority valid_objs'_maxDomain)
-  apply (auto simp: obj_at'_def st_tcb_at'_def ct_in_state'_def valid_objs'_maxDomain)
-  done *)
+   apply (ctac add: isSchedulable_ccorres)
+     apply (rule ccorres_cond[where R=\<top>])
+       apply (fastforce simp: to_bool_def)
+      apply clarsimp
+      apply (rule ccorres_seq_skip'[THEN iffD1])
+      apply (rule ccorres_split_nothrow)
+          apply (rule_tac r=dc and xf'=xfdc and xf''=xfdc in ccorres_call)
+             apply (rule ccorres_rel_imp)
+              apply (ctac add: checkBudget_ccorres)
+             apply fastforce+
+         apply ceqv
+        apply (rule ccorres_return_Skip)
+       apply wpsimp
+      apply (vcg exspec=checkBudget_modifies)
+     apply (rule ccorres_pre_getCurSc)
+     apply (ctac add: sc_active_ccorres)
+       apply (rule ccorres_cond[where R=\<top>])
+         apply (fastforce simp: to_bool_def)
+        apply (rule ccorres_pre_getConsumedTime)
+        apply (ctac add: chargeBudget_ccorres)
+       apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: setConsumedTime_def rf_sr_def cstate_relation_def Let_def
+                             modify_def get_def put_def bind_def carch_state_relation_def
+                             cmachine_state_relation_def)
+      apply wpsimp
+     apply (vcg exspec=sc_active_modifies)
+    apply (wpsimp wp: getSchedulable_wp)
+   apply (vcg exspec=isSchedulable_modifies)
+  apply (fastforce simp: cur_tcb'_def)
+  done
 
 
 lemma getIRQState_sp:

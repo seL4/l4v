@@ -1051,6 +1051,8 @@ On some architectures, the thread context may include registers that may be modi
 
 > mcsPreemptionPoint :: Maybe IRQ -> Kernel ()
 > mcsPreemptionPoint irq_opt = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     curThread <- getCurThread
 >     isschedulable <- getSchedulable curThread
 >     if isschedulable
