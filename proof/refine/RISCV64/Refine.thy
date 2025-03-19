@@ -499,16 +499,12 @@ lemma ckernel_invs:
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: callKernel_def mcsPreemptionPoint_def cur_tcb'_asrt_def)
+  apply (simp add: callKernel_def mcsPreemptionPoint_def)
   apply (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"] activate_invs')
        apply (rule hoare_drop_imp)
        apply (wpsimp wp: schedule_invs')
       apply (wpsimp wp: stateAssert_wp)
      apply (wpsimp wp: getSchedulable_wp hoare_drop_imp)
-      apply (intro iffI; clarsimp simp: schedulable'_def active_sc_tcb_at'_def)
-     apply (rule hoare_strengthen_postE[where E'="\<lambda>_. invs'" and Q=Q and Q'=Q for Q])
-       apply wpsimp
-      apply (clarsimp simp: active_from_running')+
     apply wp+
   apply clarsimp
   done
@@ -659,12 +655,14 @@ lemma kernel_preemption_corres:
    apply (frule (1) cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb])
    apply (drule state_relationD, clarsimp)
    apply (erule sc_at_cross; fastforce simp: invs_def valid_state_def valid_pspace_def)
+  apply add_cur_tcb'
   apply (rule corres_guard_imp)
     apply (simp add: preemption_path_def mcsPreemptionPoint_def bind_assoc)
     apply (rule corres_split[OF corres_machine_op])
        apply (rule corres_underlying_trivial)
        apply (rule no_fail_getActiveIRQ)
       apply (clarsimp simp: dc_def[symmetric])
+      apply (rule corres_stateAssert_r)
       apply (rule corres_split_eqr[OF getCurThread_corres])
         apply (rule corres_split_eqr[OF getSchedulable_corres])
           apply (rename_tac irq ct sched)
@@ -756,10 +754,10 @@ lemma kernel_preemption_corres:
        apply clarsimp
       apply clarsimp
      apply wpsimp
-    apply (rule_tac Q'="\<lambda>irq s. invs' s \<and> sc_at' (ksCurSc s) s \<and>
-                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
-                                         intStateIRQTable (ksInterruptState s ) irq' \<noteq> IRQInactive)"
-           in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>irq s. invs' s \<and> sc_at' (ksCurSc s) s \<and> cur_tcb' s \<and>
+                                (\<forall>irq'. irq = Some irq' \<longrightarrow>
+                                        intStateIRQTable (ksInterruptState s ) irq' \<noteq> IRQInactive)"
+                 in hoare_post_imp)
      apply (clarsimp simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs')
     apply ((wp doMachineOp_getActiveIRQ_IRQ_active  | simp)+)[1]
    apply clarsimp
