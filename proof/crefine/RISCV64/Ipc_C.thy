@@ -5473,8 +5473,7 @@ lemma schedContext_donate_ccorres:
   done
 
 lemma sendIPC_ccorres [corres]:
-  "ccorres dc xfdc (invs' and st_tcb_at' simple' thread
-                          and sch_act_not thread and ep_at' epptr)
+  "ccorres dc xfdc (invs' and st_tcb_at' simple' thread and ep_at' epptr)
      (UNIV \<inter> \<lbrace>\<acute>blocking = from_bool blocking\<rbrace>
            \<inter> \<lbrace>\<acute>do_call = from_bool do_call\<rbrace>
            \<inter> \<lbrace>\<acute>badge___unsigned_long = badge\<rbrace>

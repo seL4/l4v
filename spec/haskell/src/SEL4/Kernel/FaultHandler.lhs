@@ -78,20 +78,19 @@ When a thread faults, the kernel attempts to send a fault IPC to the fault handl
 
 If a thread causes a fault, then an IPC containing details of the fault is sent to a fault handler endpoint specified in the thread's TCB.
 
-> sendFaultIPC :: PPtr TCB -> Capability -> Fault -> Bool -> KernelF Fault Bool
+> sendFaultIPC :: PPtr TCB -> Capability -> Fault -> Bool -> Kernel Bool
 > sendFaultIPC tptr handlerCap fault canDonate = do
 >     case handlerCap of
 
 The kernel stores a copy of the fault in the thread's TCB, and performs an IPC send operation to the fault handler endpoint on behalf of the faulting thread. When the IPC completes, the fault will be retrieved from the TCB and sent instead of the message registers.
 
->         EndpointCap {} ->
->             withoutFailure $ do
->                 threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
->                 sendIPC True False (capEPBadge handlerCap)
+>         EndpointCap {} -> do
+>             threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
+>             sendIPC True False (capEPBadge handlerCap)
 >                     (capEPCanGrant handlerCap) (capEPCanGrantReply handlerCap)
 >                     canDonate tptr (capEPPtr handlerCap)
->                 return True
->         NullCap -> withoutFailure $ return False
+>             return True
+>         NullCap -> return False
 >         _ -> fail "must be send+grant EPCap or NullCap"
 
 \subsection{No Fault Handler}
