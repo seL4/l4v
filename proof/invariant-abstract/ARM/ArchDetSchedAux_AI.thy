@@ -86,9 +86,6 @@ lemma perform_asid_control_invocation_valid_sched:
 
 end
 
-lemmas tcb_sched_action_valid_idle_etcb
-    = ARM.tcb_sched_action_valid_idle_etcb
-
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
   proof goal_cases
   interpret Arch .
