@@ -1246,15 +1246,86 @@ sorry (* FIXME RT: handleRecv_ccorres
   apply (case_tac w, clarsimp+)
   done *)
 
-lemma mcsPreemptionPoint_ccorres:
-  "ccorres dc xfdc invs' UNIV []
-     (mcsPreemptionPoint irq_opt) (Call mcsPreemptionPoint_'proc)"
-sorry (* FIXME RT: mcsPreemptionPoint_ccorres *)
+lemma validTimeoutHandler_ccorres:
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (tcb_at' tptr) \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr tptr\<rbrace> hs
+     (isValidTimeoutHandler tptr) (Call validTimeoutHandler_'proc)"
+  apply (cinit lift: tptr_')
+   apply (rule ccorres_stateAssert)
+   apply (simp add: getThreadTimeoutHandlerSlot_def locateSlot_conv cte_C_size)
+   apply ccorres_remove_UNIV_guard
+   apply (rule ccorres_getSlotCap_cte_at)
+   apply (rule ccorres_move_array_assertion_tcb_ctes)
+   apply (rule ccorres_split_nothrow)
+       apply (ctac add: getSlotCap_h_val_ccorres)
+      apply ceqv
+     apply csymbr
+     apply (wpc; fastforce intro: ccorres_return_C simp: cap_get_tag_isCap isCap_simps)
+    apply wpsimp
+   apply vcg
+  apply (fastforce simp: tcb_cnode_index_defs tcbSlots cte_level_bits_def)
+  done
 
 lemma endTimeslice_ccorres:
-  "ccorres dc xfdc invs' \<lbrace>\<acute>can_timeout_fault = from_bool canTimeoutFault\<rbrace> []
+  "ccorres dc xfdc (invs' and ct_active') \<lbrace>\<acute>can_timeout_fault = from_bool canTimeoutFault\<rbrace> hs
      (endTimeslice canTimeoutFault) (Call endTimeslice_'proc)"
-sorry (* FIXME RT: endTimeslice_ccorres *)
+  supply Collect_const[simp del]
+  apply (cinit lift: can_timeout_fault_')
+   apply clarsimp
+   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_pre_getCurSc)
+   apply (rule ccorres_stateAssert)
+   apply (ctac add: isRoundRobin_ccorres, rename_tac roundRobin)
+     apply (rule ccorres_pre_getCurThread)
+     apply (ctac add: validTimeoutHandler_ccorres, rename_tac valid)
+       apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
+         apply (fastforce simp: to_bool_def)
+        apply (rule ccorres_pre_getObject_sc)
+        apply (rule ccorres_symb_exec_r)
+          apply clarsimp
+          apply (ctac add: handleTimeout_ccorres)
+         apply vcg
+        apply (rule conseqPre, vcg)
+        apply clarsimp
+       apply (rule ccorres_rhs_assoc)+
+       apply (ctac add: refill_ready_ccorres, rename_tac ready)
+         apply csymbr
+         apply clarsimp
+         apply (rule_tac P="to_bool ready" in ccorres_cases)
+          (* current sc is ready; check whether it is sufficient *)
+          apply (rule ccorres_cond_seq)
+          apply (rule ccorres_cond_true)
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac add: refill_sufficient_ccorres, rename_tac sufficient)
+            apply csymbr
+            apply clarsimp
+            apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
+              apply (fastforce simp: to_bool_def)
+             apply (ctac add: tcbSchedAppend_ccorres)
+            apply (ctac add: postpone_ccorres)
+           apply wpsimp
+          apply (vcg exspec=refill_sufficient_modifies)
+         (* current sc is not ready; call postpone *)
+         apply clarsimp
+         apply (rule ccorres_cond_seq)
+         apply (rule ccorres_cond_false)
+         apply ccorres_rewrite
+         apply (rule ccorres_cond_false)
+         apply (rule ccorres_symb_exec_l)
+            apply (ctac add: postpone_ccorres)
+           apply wpsimp+
+       apply (vcg exspec=refill_ready_modifies)
+      apply (wpsimp wp: hoare_drop_imps)
+     apply (vcg exspec=validTimeoutHandler_modifies)
+    apply wpsimp
+   apply (vcg exspec=isRoundRobin_modifies)
+  apply clarsimp
+  apply (intro conjI impI allI; (clarsimp simp: cur_tcb'_def to_bool_def)?)
+    apply (clarsimp elim!: pred_tcb'_weakenE simp: ct_in_state'_def)
+   apply (clarsimp simp: typ_heap_simps)
+  apply (clarsimp simp: typ_heap_simps cfault_rel_def is_cap_fault_def seL4_Faults
+                        seL4_Fault_Timeout_lift_def seL4_Fault_lift_def csched_context_relation_def)
+  done
 
 lemma chargeBudget_ccorres:
   "ccorres dc xfdc

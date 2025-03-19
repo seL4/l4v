@@ -6813,6 +6813,30 @@ lemma handleFault_corres:
   apply normalise_obj_at'
   apply (fastforce dest: cap_in_tcbFaultHandlerSlot)
   done
+
+lemma isValidTimeoutHandler_corres:
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) valid_tcbs'
+     (is_valid_timeout_handler t) (isValidTimeoutHandler t)"
+  apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
+   apply (fastforce intro: tcb_at_cross)
+  apply (rule_tac Q'="pspace_aligned'" in corres_cross_add_guard)
+   apply (fastforce dest!: pspace_aligned_cross)
+  apply (rule_tac Q'="pspace_distinct'" in corres_cross_add_guard)
+   apply (fastforce dest!: pspace_distinct_cross)
+  apply (clarsimp simp: is_valid_timeout_handler_def get_tcb_timeout_handler_ptr_def
+                        isValidTimeoutHandler_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply fastforce
+  apply (simp add: getThreadTimeoutHandlerSlot_def locateSlot_conv)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[OF getSlotCap_corres, where R="\<top>\<top>" and R'="\<top>\<top>"])
+       apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def tcbTimeoutHandlerSlot_def)
+      apply (case_tac rv; case_tac rv'; clarsimp)
+     apply (wpsimp wp: get_cap_wp)
+    apply (wpsimp wp: getSlotCap_wp)
+   apply (fastforce intro: tcb_at_cte_at_4)
+  apply normalise_obj_at'
+  apply (fastforce dest: cap_in_tcbTimeoutHandlerSlot)
   done
 
 lemma handleTimeout_corres:
@@ -7063,8 +7087,16 @@ lemma doReplyTransfer_corres:
                                                (* solve final hoare triple goals *)
                                                apply wpsimp
                                               apply wpsimp
-                                             apply (wpsimp wp: hoare_drop_imp simp: isValidTimeoutHandler_def)
-                                            apply (wpsimp simp: isValidTimeoutHandler_def)
+                                             apply (wpsimp wp: hoare_drop_imp
+                                                         simp: isValidTimeoutHandler_def
+                                                               getThreadTimeoutHandlerSlot_def)
+                                            apply (wpsimp simp: isValidTimeoutHandler_def
+                                                                getThreadTimeoutHandlerSlot_def
+                                                                locateSlot_conv
+                                                            wp: no_fail_stateAssert)
+                                            apply normalise_obj_at'
+                                            apply (fastforce dest: cap_in_tcbTimeoutHandlerSlot
+                                                            elim!: cte_wp_at_weakenE')
                                            apply (clarsimp split: if_split simp: valid_fault_def invs_def valid_state_def valid_pspace_def)
                                            apply (frule valid_ready_qs_in_correct_ready_q)
                                            apply (frule valid_ready_qs_ready_qs_distinct)

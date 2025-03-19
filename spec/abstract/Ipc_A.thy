@@ -655,29 +655,24 @@ where
 
 (* below are moved from Schedule_A, due to a dependency issue *)
 
-definition
-  end_timeslice :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition end_timeslice :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "end_timeslice canTimeout = do
-     ct \<leftarrow> gets cur_thread;
      sc_ptr \<leftarrow> gets cur_sc;
-     csc \<leftarrow> get_sched_context sc_ptr;
+     round_robin \<leftarrow> is_round_robin sc_ptr;
+     ct \<leftarrow> gets cur_thread;
+     valid \<leftarrow> is_valid_timeout_handler ct;
 
-     ready \<leftarrow> get_sc_refill_ready sc_ptr;
-     sufficient \<leftarrow> get_sc_refill_sufficient sc_ptr 0;
-     tcb \<leftarrow> gets_the $ get_tcb ct;
-
-     if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
-       handle_timeout ct (Timeout (sc_badge csc))
-     else if ready \<and> sufficient then
-       tcb_sched_action tcb_sched_append ct \<comment> \<open>@{text \<open>not_queued & ready & sufficient & runnable\<close>}\<close>
-     else
-       postpone sc_ptr
-  od"
-
-definition
-  refill_reset_rr :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+     if canTimeout \<and> \<not> round_robin \<and> valid
+     then do sc \<leftarrow> get_sched_context sc_ptr;
+             handle_timeout ct (Timeout (sc_badge sc))
+          od
+     else do ready \<leftarrow> get_sc_refill_ready sc_ptr;
+             sufficient \<leftarrow> get_sc_refill_sufficient sc_ptr 0;
+             if ready \<and> sufficient
+             then tcb_sched_action tcb_sched_append ct \<comment> \<open>@{text \<open>not_queued & ready & sufficient & runnable\<close>}\<close>
+             else postpone sc_ptr
+          od
+   od"
   "refill_reset_rr csc_ptr = do
      update_sched_context csc_ptr
          (sc_refills_update (\<lambda>refills. (r_amount_update

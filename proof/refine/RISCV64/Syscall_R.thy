@@ -1699,7 +1699,7 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
      invs'
      (end_timeslice canTimeout) (endTimeslice canTimeout)"
   (is "corres _ ?pre ?pre' _ _")
-  unfolding end_timeslice_def endTimeslice_def isValidTimeoutHandler_def bind_assoc
+  apply (clarsimp simp: end_timeslice_def endTimeslice_def bind_assoc)
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                   dest!: state_relationD)
@@ -1713,87 +1713,50 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
                     simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def sc_tcb_sc_at_def
                           obj_at_def is_sc_obj)
   apply add_cur_tcb'
+  apply (rule corres_stateAssert_add_assertion[rotated], simp)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF getCurThread_corres])
-      apply (rule_tac P="?pre and (\<lambda>s. ct = cur_thread s)"
-                 and P'="?pre' and (\<lambda>s. is_active_sc' (ksCurSc s) s) and cur_tcb'
-                         and (\<lambda>s. sc_at' (ksCurSc s) s) and (\<lambda>s. ct = ksCurThread s)" in corres_inst)
-      apply (rule corres_guard_imp)
-        apply (rule corres_split_eqr[OF getCurSc_corres])
-          apply (rule_tac P="?pre and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sc_ptr = cur_sc s)"
-                     and P'="?pre' and (\<lambda>s. is_active_sc' (ksCurSc s) s) and cur_tcb'
-                             and (\<lambda>s. sc_at' (ksCurSc s) s) and (\<lambda>s. ct = ksCurThread s) and (\<lambda>s. sc_ptr = ksCurSc s)" in corres_inst)
-          apply (rule corres_guard_imp)
-            apply (rule corres_split[OF get_sc_corres])
-              apply (rule corres_split_eqr[OF refillReady_corres], simp)
-                apply (rule corres_split_eqr[OF getRefillSufficient_corres], simp)
-                  apply (rule_tac P="?pre and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sc_ptr = cur_sc s)
-                                     and (\<lambda>s. ready = is_refill_ready sc_ptr s)
-                                     and (\<lambda>s. sufficient = is_refill_sufficient 0 sc_ptr s)"
-                             and P'="?pre' and (\<lambda>s. is_active_sc' (ksCurSc s) s) and cur_tcb'
-                                     and (\<lambda>s. sc_at' (ksCurSc s) s) and (\<lambda>s. sc_ptr = ksCurSc s) and (\<lambda>s. ct = ksCurThread s)" in corres_inst)
-                  apply (simp split del: if_split)
-                  apply (rule corres_guard_imp)
-                    apply (rule corres_split[OF getObject_TCB_corres])
-                      apply (rename_tac tcb tcb')
-                      apply (rule_tac F="cap_relation (tcb_timeout_handler tcb) (cteCap (tcbTimeoutHandler tcb'))"
-                             in corres_req)
-                       apply (clarsimp simp: tcb_relation_def)
-                      apply (rule_tac F="is_ep_cap (tcb_timeout_handler tcb)
-                                         = isEndpointCap (cteCap (tcbTimeoutHandler tcb'))"
-                             in corres_req)
-                       apply (case_tac "tcb_timeout_handler tcb";
-                              case_tac "cteCap (tcbTimeoutHandler tcb')";
-                              clarsimp simp: cap_relation_def isEndpointCap_def)
-                      apply (rule corres_symb_exec_r)
-                         apply (rule_tac P="?pre and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sc_ptr = cur_sc s)
-                                            and (\<lambda>s. ready = is_refill_ready sc_ptr s) and ko_at (TCB tcb) ct
-                                            and (\<lambda>s. sufficient = is_refill_sufficient 0 sc_ptr s)"
-                                    and P'="?pre' and cur_tcb' and (\<lambda>s. ct = ksCurThread s)
-                                            and (\<lambda>s. sc_at' (ksCurSc s) s) and (\<lambda>s. is_active_sc' (ksCurSc s) s) and (\<lambda>s. sc_ptr = ksCurSc s) and
-                                            K (valid = isEndpointCap (cteCap (tcbTimeoutHandler tcb')))"
-                                in corres_inst)
-                         apply (rule corres_gen_asm2')
-                         apply (rule corres_guard_imp)
-                           apply (rule corres_if2)
-                             apply clarsimp
-                            apply simp
-                            apply (rule handleTimeout_corres)
-                            apply clarsimp
-                            apply (clarsimp simp: sc_relation_def)
-                           apply (rule corres_if2, simp)
-                            apply (rule tcbSchedAppend_corres, simp)
-                           apply (rule postpone_corres)
-                          apply (clarsimp cong: conj_cong imp_cong)
-                          apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def
-                                                valid_fault_def valid_fault_handler_def)
-                          apply (rule conjI impI; clarsimp)
-                           apply (clarsimp simp: ct_in_state_def cte_wp_at_def cur_tcb_def)
-                           apply (clarsimp simp: get_cap_caps_of_state obj_at_def is_tcb
-                                                 caps_of_state_tcb_index_trans[OF get_tcb_rev]
-                                                 tcb_cnode_map_def)
-                          apply (frule (1) cur_sc_tcb_are_bound_sym)
-                          apply (clarsimp simp: vs_all_heap_simps sc_tcb_sc_at_def obj_at_def
-                                                ct_in_state_def st_tcb_at_def runnable_eq_active
-                                                is_tcb_def)
-                          apply fastforce
-                         apply (clarsimp simp: invs'_def valid_pspace'_def cur_tcb'_def)
-                        apply (wpsimp wp: getTCB_wp)+
-                   apply (frule invs_psp_aligned, frule invs_distinct)
-                   apply (clarsimp dest!: invs_cur simp: cur_tcb_def)
-                  apply (clarsimp simp: cur_tcb'_def isEndpointCap_def)
-                 apply (wpsimp wp: refillReady_wp)+
-           apply (clarsimp dest!: valid_sched_active_scs_valid
-                            simp: invs_def cur_sc_tcb_def valid_state_def valid_pspace_def
-                                  sc_tcb_sc_at_def obj_at_def is_sc_obj opt_map_red vs_all_heap_simps
-                                  sc_refills_sc_at_def opt_pred_def)
-           apply (drule (1) valid_sched_context_size_objsI, clarsimp)
-           apply (drule active_scs_validE[rotated])
-            apply (fastforce simp: vs_all_heap_simps)
-           apply (clarsimp simp: vs_all_heap_simps rr_valid_refills_def valid_refills_def split: if_split_asm)
-          apply (fastforce simp: invs'_def  active_sc_at'_def is_active_sc'_def in_omonad obj_at'_def
-                          elim!: valid_objs'_valid_refills')
-         apply wpsimp+
+    apply (rule corres_split_eqr[OF getCurSc_corres])
+      apply (rule corres_stateAssert_r)
+      apply (rule corres_split[OF isRoundRobin_corres])
+        apply (rule corres_split_eqr[OF getCurThread_corres])
+          apply (rule corres_split_eqr[OF isValidTimeoutHandler_corres])
+            apply (rule corres_if)
+              apply fastforce
+             apply (rule corres_split[OF get_sc_corres])
+               apply clarsimp
+               apply (rule handleTimeout_corres)
+               apply (clarsimp simp: sc_relation_def)
+              apply wpsimp
+             apply wpsimp
+            apply (rule corres_split[OF refillReady_corres], simp)
+              apply (rule corres_split[OF getRefillSufficient_corres], simp)
+                apply (rule corres_if)
+                  apply fastforce
+                 apply (rule tcbSchedAppend_corres, simp)
+                apply (rule postpone_corres)
+               apply wpsimp+
+           apply (wpsimp simp: is_valid_timeout_handler_def wp: get_cap_wp)
+          apply (rule_tac Q'="\<lambda>_. sc_at' sc_ptr and valid_refills' sc_ptr and invs'"
+                       in hoare_post_imp)
+           apply (fastforce split: if_splits)
+          apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' hoare_vcg_disj_lift
+                            is_round_robin_wp)+
+   apply (frule (1) active_scs_validE)
+   apply (frule valid_refills_nonempty_refills)
+   apply (frule invs_valid_objs)
+   apply (frule cur_sc_tcb_sc_at_cur_sc)
+    apply fastforce
+   apply (clarsimp cong: conj_cong)
+   apply (intro conjI impI allI; clarsimp)
+       apply (clarsimp simp: ct_in_state_def)
+      apply (fastforce simp: get_tcb_timeout_handler_ptr_def cte_wp_at_cases)
+     apply (clarsimp simp: valid_fault_def)
+    apply (clarsimp simp: ct_in_state_def runnable_eq_active)
+   subgoal
+     by (fastforce dest!: cur_sc_tcb_are_bound_sym
+                    simp: vs_all_heap_simps sc_tcb_sc_at_def obj_at_def
+                          ct_in_state_def st_tcb_at_def runnable_eq_active)
+  apply (fastforce intro: valid_objs'_valid_refills')
   done
 
 crunch end_timeslice, refill_reset_rr
@@ -1822,8 +1785,9 @@ lemma end_timeslice_valid_sched_action:
     and cur_sc_tcb_are_bound and cur_sc_active and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
-  apply (wpsimp wp: handle_timeout_valid_sched_action postpone_valid_sched_action)
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  apply (wpsimp wp: handle_timeout_valid_sched_action postpone_valid_sched_action
+                    get_cap_wp is_round_robin_wp)
   apply (frule (1) cur_sc_tcb_are_bound_sym)
   apply (intro conjI; clarsimp simp: is_timeout_fault_def del: disjCI)
    apply (rule disjI1)
@@ -1854,7 +1818,7 @@ lemma endTimeslice_invs'[wp]:
    endTimeslice timeout
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding endTimeslice_def
-  apply (wpsimp wp: handleTimeout_Timeout_invs' isValidTimeoutHandler_inv hoare_drop_imp
+  apply (wpsimp wp: handleTimeout_invs' isValidTimeoutHandler_inv hoare_drop_imp
                     refillReady_wp)
   apply (frule (1) active_ex_cap'[OF _ invs_iflive'])
   apply (clarsimp simp: ct_in_state'_def sch_act_sane_def)

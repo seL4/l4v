@@ -11308,7 +11308,7 @@ lemma end_timeslice_valid_refills[wp]:
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   supply if_weak_cong[cong del]
-  apply (clarsimp simp: end_timeslice_def)
+  apply (clarsimp simp: end_timeslice_def is_valid_timeout_handler_def)
   by (wpsimp simp: end_timeslice_def wp: hoare_drop_imps split_del: if_split)
 
 lemma active_sc_tcb_at_budget_sufficient:
@@ -17441,8 +17441,9 @@ lemma end_timeslice_valid_release_q:
          \<and> active_sc_tcb_at (cur_thread s) s\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. (valid_release_q)::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
-  apply (wpsimp wp: handle_timeout_valid_release_q thread_get_wp' postpone_valid_release_q)
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  apply (wpsimp wp: handle_timeout_valid_release_q thread_get_wp' postpone_valid_release_q
+                    get_cap_wp is_round_robin_wp)
   apply (prop_tac "cur_sc_tcb_are_bound s", clarsimp simp: cur_sc_chargeable_def vs_all_heap_simps)
   apply (clarsimp simp: heap_refs_inv_def)
   apply (prop_tac "heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s)", clarsimp)
@@ -17456,8 +17457,9 @@ lemma end_timeslice_valid_ready_qs:
     and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. valid_ready_qs ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
-  apply (wpsimp wp: handle_timeout_valid_ready_qs thread_get_wp' postpone_valid_ready_qs)
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  apply (wpsimp wp: handle_timeout_valid_ready_qs thread_get_wp' postpone_valid_ready_qs
+                    get_cap_wp is_round_robin_wp)
   apply (subgoal_tac "bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s")
    apply (clarsimp dest!: get_tcb_SomeD
                     simp: obj_at_kh_kheap_simps vs_all_heap_simps pred_map_simps
@@ -17474,26 +17476,24 @@ lemma end_timeslice_ready_or_release[wp]:
   "\<lbrace>ready_or_release and ready_qs_etcb_eq and ct_not_in_release_q\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. ready_or_release :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: end_timeslice_def get_tcb_queue_def)
-  apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp_fwd_skip, solves \<open>wpsimp\<close>)+
-  apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
-  done
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  by (wpsimp wp: get_cap_wp is_round_robin_wp)
 
 lemma end_timeslice_valid_blocked[wp]:
   "end_timeslice canTimeout \<lbrace>valid_blocked_except_set S ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
+  unfolding end_timeslice_def is_valid_timeout_handler_def
   by (wpsimp wp: handle_timeout_valid_blocked thread_get_wp'
                  tcb_sched_append_valid_blocked_except_set_const
-                 postpone_valid_blocked_except_set)
+                 postpone_valid_blocked_except_set get_cap_wp is_round_robin_wp)
 
 lemma end_timeslice_released_ipc_queues:
   "\<lbrace>\<lambda>s. released_ipc_queues s \<and> active_sc_tcb_at (cur_thread s) s
         \<and> active_scs_valid s\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. released_ipc_queues ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
-  by (wpsimp wp: handle_timeout_released_ipc_queues thread_get_wp' simp: is_timeout_fault_def)
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  by (wpsimp wp: handle_timeout_released_ipc_queues get_cap_wp is_round_robin_wp
+           simp: is_timeout_fault_def)
 
 lemma head_insufficient_weak_valid_sched_action_not:
   "\<lbrace>\<lambda>s. weak_valid_sched_action s \<and> sc_scheduler_act_not (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
@@ -18510,7 +18510,8 @@ lemma end_timeslice_active_reply_scs:
   "\<lbrace>\<lambda>s. active_reply_scs s \<and> (can_timeout \<longrightarrow> active_if_bound_sc_tcb_at (cur_thread s) s)\<rbrace>
    end_timeslice can_timeout
    \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def by (wpsimp wp: handle_timeout_active_reply_scs thread_get_wp')
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  by (wpsimp wp: handle_timeout_active_reply_scs thread_get_wp' get_cap_wp is_round_robin_wp)
 
 lemma charge_budget_active_reply_scs:
   "\<lbrace>\<lambda>s. active_reply_scs s \<and> (can_timeout \<longrightarrow> cur_sc_tcb_are_bound s \<longrightarrow> cur_sc_active s)\<rbrace>
@@ -18541,9 +18542,9 @@ lemma end_timeslice_sorted_ipc_queues:
   "\<lbrace>sorted_ipc_queues and valid_objs and cur_tcb\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. sorted_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
-  apply (wpsimp wp: handle_timeout_sorted_ipc_queues)
-  apply (clarsimp simp: is_timeout_fault_def is_tcb_def)
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  apply (wpsimp wp: handle_timeout_sorted_ipc_queues get_cap_wp is_round_robin_wp)
+  apply (clarsimp simp: is_timeout_fault_def is_tcb_def cur_tcb_def)
   done
 
 crunch refill_reset_rr
@@ -19565,7 +19566,7 @@ lemma end_timeslice_canTimeout_active_sc_tcb_at[wp]:
   "end_timeslice True
    \<lbrace>\<lambda>(s:: 'state_ext state). active_sc_tcb_at t s\<rbrace>"
   unfolding end_timeslice_def handle_timeout_def send_fault_ipc_def
-  by (wpsimp wp: hoare_drop_imp)
+  by (wpsimp wp: hoare_drop_imp simp: is_valid_timeout_handler_def)
 
 lemma check_budget_canTimeout_active_sc_tcb_at[wp]:
   "charge_budget consumeda True
@@ -20736,13 +20737,13 @@ lemma handle_timeout_ct_in_state:
 
 lemma end_timeslice_ct_not_blocked_on_ntfn[wp]:
   "end_timeslice t \<lbrace>ct_not_blocked_on_ntfn :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
+  unfolding end_timeslice_def is_valid_timeout_handler_def
   by (wpsimp wp: hoare_drop_imp handle_timeout_ct_not_blocked_on_ntfn)
 
 lemma end_timeslice_ct_in_state:
   "\<lbrakk>P Inactive; P Running; \<forall>y. P (BlockedOnReply y); \<forall>x z. P (BlockedOnSend x z)\<rbrakk>
    \<Longrightarrow> end_timeslice t \<lbrace>ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
+  unfolding end_timeslice_def is_valid_timeout_handler_def
   by (wpsimp wp: hoare_drop_imp handle_timeout_ct_in_state)
 
 lemma refill_reset_rr_ct_in_state[wp]:
@@ -22112,10 +22113,10 @@ lemma end_timeslice_ct_ready_if_schedulable[wp]:
     and active_scs_valid\<rbrace>
    end_timeslice x
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def
+  unfolding end_timeslice_def is_valid_timeout_handler_def
   apply wpsimp
         apply (wpsimp wp: postpone_ct_ready_if_schedulable)
-       apply wpsimp+
+       apply (wpsimp wp: get_cap_wp is_round_robin_wp)+
   apply (intro conjI; intro allI impI)
    apply (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
   apply (intro conjI; intro allI impI)
