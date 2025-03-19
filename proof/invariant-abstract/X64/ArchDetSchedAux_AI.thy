@@ -157,9 +157,6 @@ crunch init_arch_objects
 
 end
 
-lemmas tcb_sched_action_valid_idle_etcb
-    = X64.tcb_sched_action_valid_idle_etcb
-
 global_interpretation DetSchedAux_AI_det_ext?: DetSchedAux_AI_det_ext
   proof goal_cases
   interpret Arch .
