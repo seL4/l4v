@@ -267,6 +267,10 @@ lemma gets_the_bcorres_underlying[wp]:
   "(\<And>s. f' (t s) = f s) \<Longrightarrow> bcorres_underlying t (gets_the f) (gets_the f')"
   by (wpsimp simp: gets_the_def)
 
+lemma maybeM_bcorres_underlying[wp]:
+  "\<lbrakk>\<And>x. y = Some x \<Longrightarrow> bcorres_underlying t (f x) (f' x)\<rbrakk> \<Longrightarrow> bcorres_underlying t (maybeM f y) (maybeM f' y)"
+  by (wpsimp simp: maybeM_def)
+
 ML \<open>
 structure CrunchBCorresInstance : CrunchInstance =
 struct
