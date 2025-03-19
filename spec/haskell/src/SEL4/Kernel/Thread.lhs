@@ -834,18 +834,22 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 
 > endTimeslice :: Bool -> Kernel ()
 > endTimeslice canTimeoutFault = do
->     ct <- getCurThread
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     scPtr <- getCurSc
->     sc <- getSchedContext scPtr
->     ready <- refillReady scPtr
->     sufficient <- getRefillSufficient scPtr 0
+>     stateAssert (sc_at'_asrt scPtr) "there is a scheduling context at ksCurSc"
+>     roundRobin <- isRoundRobin scPtr
+>     ct <- getCurThread
 >     valid <- isValidTimeoutHandler ct
->     if canTimeoutFault && valid
->         then handleTimeout ct $ Timeout $ scBadge sc
->         else
+>     if canTimeoutFault && not roundRobin && valid
+>         then do
+>             sc <- getSchedContext scPtr
+>             handleTimeout ct $ Timeout $ scBadge sc
+>         else do
+>             ready <- refillReady scPtr
+>             sufficient <- getRefillSufficient scPtr 0
 >             if ready && sufficient
->                 then do
->                     tcbSchedAppend ct
+>                 then tcbSchedAppend ct
 >                 else postpone scPtr
 
 > readInReleaseQueue :: PPtr TCB -> KernelR Bool

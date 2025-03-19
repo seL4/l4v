@@ -1413,11 +1413,9 @@ lemma handle_timeout_Timeout_invs:
   done
 
 lemma end_timeslice_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> ct_active s\<rbrace>
-      end_timeslice t \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: end_timeslice_def ct_in_state_def get_tcb_queue_def
-          wp: handle_timeout_Timeout_invs hoare_drop_imp hoare_vcg_if_lift2)
-  done
+  "\<lbrace>invs and ct_active\<rbrace> end_timeslice t \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding end_timeslice_def is_valid_timeout_handler_def
+  by (wpsimp simp: ct_in_state_def wp: handle_timeout_Timeout_invs hoare_drop_imp)
 
 (* move to SchedContext_AI *)
 lemma set_sc_refills_cur_sc_tcb[wp]:
