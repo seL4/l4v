@@ -1663,12 +1663,12 @@ lemma send_fault_ipc_st_tcb_at_runnable:
   by (wpsimp wp: send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial)
 
 lemma handle_fault_st_tcb_at_runnable:
-  "\<lbrace>st_tcb_at runnable t and invs and K (t' \<noteq> t) \<rbrace>
-    handle_fault t' x \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  "\<lbrace>st_tcb_at runnable t and invs and K (t' \<noteq> t)\<rbrace>
+   handle_fault t' x
+   \<lbrace>\<lambda>_. st_tcb_at runnable t\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: handle_fault_def handle_no_fault_def)
   apply (wpsimp simp: unless_when wp: sts_st_tcb_at_other send_fault_ipc_st_tcb_at_runnable)
-  apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def is_tcb)
   done
 
 end (* Lemmas related to preservation of runnability over handle_recv for woken threads *)
