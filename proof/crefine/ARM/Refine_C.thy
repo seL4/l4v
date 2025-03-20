@@ -636,18 +636,17 @@ lemma threadSet_all_invs_triv':
   unfolding all_invs'_def
   apply (rule hoare_pre)
    apply (rule wp_from_corres_unit)
-     apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"])
+      apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"]; simp?)
         apply (simp add: tcb_relation_def arch_tcb_context_set_def
                          atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)
       apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
-     apply (simp add: exst_same_def)
-    apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
-              threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
-              thread_set_ct_in_state
-           | simp add: tcb_cap_cases_def tcb_arch_ref_def exst_same_def
-           | rule threadSet_ct_in_state'
-           | wp (once) hoare_vcg_disj_lift)+
+     apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
+               threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
+               thread_set_ct_in_state
+            | simp add: tcb_cap_cases_def tcb_arch_ref_def
+            | rule threadSet_ct_in_state'
+            | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
   apply (rule exI, rule conjI, assumption)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def invs'_def cur_tcb_def cur_tcb'_def)
