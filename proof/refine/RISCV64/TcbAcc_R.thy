@@ -3029,6 +3029,11 @@ lemmas no_fail_scActive[wp] =
 crunch inReleaseQueue
   for inv[wp]: P
 
+defs tcb_at'_asrt_def:
+  "tcb_at'_asrt \<equiv> \<lambda>tcbPtr s. tcb_at' tcbPtr s"
+
+declare tcb_at'_asrt_def[simp]
+
 defs sc_at'_asrt_def:
   "sc_at'_asrt \<equiv> \<lambda>scPtr s. sc_at' scPtr s"
 
