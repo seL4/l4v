@@ -3032,6 +3032,8 @@ crunch inReleaseQueue
 defs sc_at'_asrt_def:
   "sc_at'_asrt \<equiv> \<lambda>scPtr s. sc_at' scPtr s"
 
+declare sc_at'_asrt_def[simp]
+
 defs active_sc_at'_asrt_def:
   "active_sc_at'_asrt \<equiv> \<lambda>scPtr s. active_sc_at' scPtr s"
 

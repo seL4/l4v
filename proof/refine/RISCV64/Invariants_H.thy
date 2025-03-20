@@ -1195,6 +1195,8 @@ where
 defs sch_act_wf_asrt_def:
   "sch_act_wf_asrt \<equiv> \<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 
+declare sch_act_wf_asrt_def[simp]
+
 definition sch_act_simple :: "kernel_state \<Rightarrow> bool" where
   "sch_act_simple \<equiv> \<lambda>s. (ksSchedulerAction s = ResumeCurrentThread) \<or>
                          (ksSchedulerAction s = ChooseNewThread)"
