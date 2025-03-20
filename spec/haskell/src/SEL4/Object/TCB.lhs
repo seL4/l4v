@@ -938,12 +938,6 @@ This function will return a physical pointer to a thread's IPC buffer slot, used
 > getThreadBufferSlot :: PPtr TCB -> Kernel (PPtr CTE)
 > getThreadBufferSlot thread = locateSlotTCB thread tcbIPCBufferSlot
 
-> getThreadFaultHandlerSlot :: PPtr TCB -> Kernel (PPtr CTE)
-> getThreadFaultHandlerSlot thread = locateSlotTCB thread tcbFaultHandlerSlot
-
-> getThreadTimeoutHandlerSlot :: PPtr TCB -> Kernel (PPtr CTE)
-> getThreadTimeoutHandlerSlot thread = locateSlotTCB thread tcbTimeoutHandlerSlot
-
 \subsubsection{Fetching or Modifying TCB Fields}
 
 The following two trivial functions will get or set a given field of a

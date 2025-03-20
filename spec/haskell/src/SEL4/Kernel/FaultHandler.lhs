@@ -6,18 +6,18 @@
 
 This module contains functions that determine how recoverable faults encountered by user-level threads are propagated to the appropriate fault handlers.
 
-> module SEL4.Kernel.FaultHandler (handleFault, handleTimeout, isValidTimeoutHandler, isValidFaultHandler) where
+> module SEL4.Kernel.FaultHandler (handleFault, handleTimeout, isValidTimeoutHandler, isValidFaultHandler, getThreadFaultHandlerSlot, getThreadTimeoutHandlerSlot) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Failures #-}
-% {-# BOOT-EXPORTS: handleFault handleTimeout isValidFaultHandler isValidTimeoutHandler #-}
+% {-# BOOT-EXPORTS: handleFault handleTimeout isValidFaultHandler isValidTimeoutHandler getThreadFaultHandlerSlot getThreadTimeoutHandlerSlot #-}
 
 > import SEL4.API.Failures
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object
-> import SEL4.Object.Structures(TCB(..), CTE(..))
+> import SEL4.Object.Structures(TCB(..), CTE(..), tcbFaultHandlerSlot, tcbTimeoutHandlerSlot)
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
 > import Data.Maybe(fromJust)
@@ -37,6 +37,14 @@ This module contains functions that determine how recoverable faults encountered
 >     case cteCap (tcbTimeoutHandler tcb) of
 >         EndpointCap {} -> return True
 >         _ -> return False
+
+These functions return a pointer to a thread's fault and timeout handler slot respectively.
+
+> getThreadFaultHandlerSlot :: PPtr TCB -> Kernel (PPtr CTE)
+> getThreadFaultHandlerSlot thread = locateSlotTCB thread tcbFaultHandlerSlot
+
+> getThreadTimeoutHandlerSlot :: PPtr TCB -> Kernel (PPtr CTE)
+> getThreadTimeoutHandlerSlot thread = locateSlotTCB thread tcbTimeoutHandlerSlot
 
 \subsection{Handling Faults}
 
