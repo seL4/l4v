@@ -100,6 +100,13 @@ definition
   get_tcb_vtable_ptr :: "obj_ref \<Rightarrow> cslot_ptr" where
   "get_tcb_vtable_ptr tcb_ref \<equiv> (tcb_ref, tcb_cnode_index 1)"
 
+text \<open>The fault and timeout handler slots of the TCB.\<close>
+definition get_tcb_fault_handler_ptr :: "obj_ref \<Rightarrow> cslot_ptr" where
+  "get_tcb_fault_handler_ptr tcb_ref \<equiv> (tcb_ref, tcb_cnode_index 3)"
+
+definition get_tcb_timeout_handler_ptr :: "obj_ref \<Rightarrow> cslot_ptr" where
+  "get_tcb_timeout_handler_ptr tcb_ref \<equiv> (tcb_ref, tcb_cnode_index 4)"
+
 text \<open>Optionally update the tcb at an address.\<close>
 definition
   option_update_thread :: "obj_ref \<Rightarrow> ('a \<Rightarrow> tcb \<Rightarrow> tcb) \<Rightarrow> 'a option \<Rightarrow> (unit,'z::state_ext) s_monad" where
