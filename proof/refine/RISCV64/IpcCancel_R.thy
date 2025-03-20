@@ -3093,7 +3093,6 @@ lemma cancelAllIPC_invs'[wp]:
   apply (clarsimp simp: invs'_def valid_ep'_def)
   apply (frule obj_at_valid_objs', fastforce)
   apply (clarsimp simp: valid_obj'_def)
-  apply (clarsimp simp: sym_refs_asrt_def sch_act_wf_asrt_def)
   apply (rule conjI)
    apply (drule (1) sym_refs_ko_atD')
    apply (fastforce dest: bspec st_tcb_at_state_refs_ofD' elim!: if_live_state_refsE
