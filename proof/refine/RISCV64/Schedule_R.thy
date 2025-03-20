@@ -4437,19 +4437,8 @@ lemma tcb_sched_action_valid_state[wp]:
                wp: hoare_drop_imps hoare_vcg_all_lift)
 
 crunch setQueue, addToBitmap
-  for schedulable'[wp]: "schedulable' tcbPtr"
+  for schedulable'[wp]: "\<lambda>s. P (schedulable' tcbPtr s)"
   (simp: bitmap_fun_defs schedulable'_def active_sc_tcb_at'_def)
-
-lemma threadSet_schedulable'_fields_inv:
-  "\<lbrakk>\<And>tcb. tcbState (f tcb) = tcbState tcb; \<And>tcb. tcbSchedContext (f tcb) = tcbSchedContext tcb;
-    \<And>tcb. tcbInReleaseQueue (f tcb) = tcbInReleaseQueue tcb\<rbrakk>
-   \<Longrightarrow> threadSet f tcbPtr \<lbrace>\<lambda>s. P (schedulable' tcbPtr' s)\<rbrace>"
-  unfolding schedulable'_def threadSet_def
-  apply (wpsimp wp: setObject_tcb_wp getTCB_wp)
-  apply (erule rsubst[where P=P])
-  apply (wpsimp wp: setObject_tcb_wp simp: obj_at'_def)
-  apply (clarsimp simp: opt_pred_def opt_map_def active_sc_tcb_at'_def split: option.splits)
-  done
 
 lemma tcbQueued_update_schedulable'[wp]:
   "threadSet (tcbQueued_update f) tcbPtr \<lbrace>schedulable' tcbPtr'\<rbrace>"

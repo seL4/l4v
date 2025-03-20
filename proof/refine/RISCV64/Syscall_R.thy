@@ -2416,11 +2416,40 @@ lemma invs'_ksCurTime_update[iff]:
                      bitmapQ_no_L1_orphans_def valid_irq_node'_def valid_machine_state'_def
                      valid_dom_schedule'_def valid_bitmaps_def)
 
+lemma schedulable'_ksDomainTime_update[simp]:
+  "schedulable' t (ksDomainTime_update f s) = schedulable' t s"
+  by (simp add: schedulable'_def pred_map_simps opt_map_def active_sc_tcb_at'_def)
+
+lemma schedulable'_ksCurTime_update[simp]:
+  "schedulable' t (ksCurTime_update f s) = schedulable' t s"
+  by (simp add: schedulable'_def pred_map_simps opt_map_def active_sc_tcb_at'_def)
+
+lemma schedulable'_ksConsumedTime_update[simp]:
+  "schedulable' t (ksConsumedTime_update f s) = schedulable' t s"
+  by (simp add: schedulable'_def pred_map_simps opt_map_def active_sc_tcb_at'_def)
+
+lemma schedulable'_ksReleaseQueue_update[simp]:
+  "schedulable' t (ksReleaseQueue_update f s) = schedulable' t s"
+  by (simp add: schedulable'_def pred_map_simps opt_map_def active_sc_tcb_at'_def)
+
+lemma schedulable'_ksMachineState_update[simp]:
+  "schedulable' t (ksMachineState_update f s) = schedulable' t s"
+  by (simp add: schedulable'_def pred_map_simps opt_map_def active_sc_tcb_at'_def)
+
+lemma schedulable'_ksReprogramTimer_update[simp]:
+  "schedulable' t (ksReprogramTimer_update f s) = schedulable' t s"
+  by (simp add: schedulable'_def pred_map_simps opt_map_def active_sc_tcb_at'_def)
+
 crunch setDomainTime, setCurTime, setConsumedTime, setExtraBadge, setReleaseQueue, setQueue,
-  modifyReadyQueuesL1Bitmap, modifyReadyQueuesL2Bitmap, setReprogramTimer
+       modifyReadyQueuesL1Bitmap, modifyReadyQueuesL2Bitmap, setReprogramTimer
   for ct_in_state'[wp]: "ct_in_state' P"
-  and schedulable'[wp]: "schedulable' p"
-  (simp: ct_in_state'_def schedulable'_def active_sc_tcb_at'_def)
+  (simp: ct_in_state'_def active_sc_tcb_at'_def wp: crunch_wps)
+
+crunch setDomainTime, setCurTime, setConsumedTime, setExtraBadge, setReleaseQueue, setQueue,
+       modifyReadyQueuesL1Bitmap, modifyReadyQueuesL2Bitmap, setReprogramTimer,
+       refillBudgetCheck, refillResetRR
+  for schedulable'[wp]: "\<lambda>s. P (schedulable' tcbPtr s)"
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 crunch updateTimeStamp, tcbSchedAppend, postpone
   for invs'[wp]: invs'

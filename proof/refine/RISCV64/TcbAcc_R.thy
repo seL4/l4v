@@ -3086,6 +3086,33 @@ lemma no_ofail_readSchedulable[wp]:
 lemmas no_fail_getSchedulable[wp] =
   no_ofail_gets_the[OF no_ofail_readSchedulable, simplified getSchedulable_def[symmetric]]
 
+lemma threadSet_schedulable'_fields_inv:
+  "\<lbrakk>\<And>tcb. tcbState (f tcb) = tcbState tcb; \<And>tcb. tcbSchedContext (f tcb) = tcbSchedContext tcb;
+    \<And>tcb. tcbInReleaseQueue (f tcb) = tcbInReleaseQueue tcb\<rbrakk>
+   \<Longrightarrow> threadSet f tcbPtr \<lbrace>\<lambda>s. P (schedulable' tcbPtr' s)\<rbrace>"
+  unfolding schedulable'_def threadSet_def
+  apply (wpsimp wp: setObject_tcb_wp getTCB_wp)
+  apply (erule rsubst[where P=P])
+  apply (wpsimp wp: setObject_tcb_wp simp: obj_at'_def)
+  apply (clarsimp simp: opt_pred_def opt_map_def active_sc_tcb_at'_def split: option.splits)
+  done
+
+lemma updateSchedContext_schedulable':
+  "(\<And>sc. scRefillMax (f sc) = scRefillMax sc)
+   \<Longrightarrow> updateSchedContext scPtr f \<lbrace>\<lambda>s. P (schedulable' tcbPtr s)\<rbrace>"
+  apply (wpsimp wp: updateSchedContext_wp)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: schedulable'_def)
+  by (fastforce simp: opt_pred_def opt_map_def obj_at'_def active_sc_tcb_at'_def
+               split: option.splits if_splits)
+
+lemma schedulable'_imp_ct_active':
+  "\<lbrakk>schedulable' (ksCurThread s) s; cur_tcb' s\<rbrakk> \<Longrightarrow> ct_active' s"
+  apply (clarsimp simp: schedulable'_def ct_in_state'_def st_tcb_at'_def cur_tcb'_def obj_at'_def
+                        opt_pred_def opt_map_def)
+  apply (rename_tac tcb, case_tac "tcbState tcb"; clarsimp)
+  done
+
 lemma runnable_tsr:
   "thread_state_relation ts ts' \<Longrightarrow> runnable' ts' = runnable ts"
   by (case_tac ts, auto)
