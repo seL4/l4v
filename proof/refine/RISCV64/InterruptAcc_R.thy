@@ -249,7 +249,7 @@ crunch updateTimeStamp
   for valid_objs'[wp]: valid_objs'
 
 lemma getCurSc_sp:
-  "\<lbrace>P\<rbrace> getCurSc \<lbrace>\<lambda>rv s. rv = ksCurSc s \<and> P s\<rbrace>"
+  "\<lbrace>P\<rbrace> getCurSc \<lbrace>\<lambda>rv s. ksCurSc s = rv \<and> P s\<rbrace>"
   by (wpsimp wp: getCurSc_def)
 
 lemma getConsumedTime_sp:
