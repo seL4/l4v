@@ -528,6 +528,11 @@ An assert that will say that the idle thread is not in a ready queue
 > idleThreadNotQueued :: KernelState -> Bool
 > idleThreadNotQueued _ = True
 
+An assert that will say that there is a TCB at the given pointer
+
+> tcb_at'_asrt :: PPtr TCB -> KernelState -> Bool
+> tcb_at'_asrt _ _ = True
+
 An assert that will say that there is a scheduling context at the given pointer
 
 > sc_at'_asrt :: PPtr SchedContext -> KernelState -> Bool
