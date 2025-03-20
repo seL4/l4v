@@ -3551,14 +3551,6 @@ lemma getRefills_sp:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma getCurSc_sp:
-  "\<lbrace>P\<rbrace>
-   getCurSc
-   \<lbrace>\<lambda>rv s. P s \<and> rv = ksCurSc s\<rbrace>"
-  apply (simp add: getCurSc_def)
-  apply (wpsimp wp: hoare_return_sp)
-  done
-
 lemma refillBudgetCheckRoundRobin_corres:
   "corres dc
           (cur_sc_active and (\<lambda>s. sc_at (cur_sc s) s))
