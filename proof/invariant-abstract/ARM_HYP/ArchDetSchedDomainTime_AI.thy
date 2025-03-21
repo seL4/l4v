@@ -26,12 +26,13 @@ crunch arch_finalise_cap
 
 crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply, init_arch_objects,
-  arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
-  prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion,
+  handle_arch_fault_reply,
+  arch_invoke_irq_control, arch_get_sanitise_register_info,
+  prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg, init_arch_objects,
+  arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
   arch_invoke_irq_handler
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps)
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  (simp: crunch_simps wp: mapM_wp' transfer_caps_loop_pres crunch_wps)
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
 
 crunch arch_finalise_cap, arch_get_sanitise_register_info
@@ -41,19 +42,12 @@ crunch arch_finalise_cap, arch_get_sanitise_register_info
 crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects,
-  arch_invoke_irq_control, handle_vm_fault,
-  prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion,
-  arch_invoke_irq_handler
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps)
-
-crunch make_arch_fault_msg
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
-
-crunch make_arch_fault_msg
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
+  arch_invoke_irq_control, arch_get_sanitise_register_info,
+  prepare_thread_delete, handle_hypervisor_fault, handle_vm_fault,
+  arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg,
+  arch_invoke_irq_handler, handle_reserved_irq, arch_mask_irq_signal
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
+  (simp: crunch_simps wp: transfer_caps_loop_pres crunch_wps)
 
 end
 
@@ -65,34 +59,13 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
 
 context Arch begin arch_global_naming
 
-crunch handle_hypervisor_fault
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
-
-crunch
-  handle_reserved_irq, arch_mask_irq_signal
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
-
-crunch handle_hypervisor_fault
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
-
-crunch
-  handle_reserved_irq, arch_mask_irq_signal
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
-
 crunch arch_perform_invocation
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
-
-crunch arch_perform_invocation
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
+  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
+  and domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
 lemma vgic_maintenance_valid_domain_time:
-  "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
+  "\<lbrace>\<lambda>s::det_state. 0 < domain_time s\<rbrace>
     vgic_maintenance \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   unfolding vgic_maintenance_def
   apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. 0 < domain_time s"])
@@ -101,7 +74,7 @@ lemma vgic_maintenance_valid_domain_time:
   done
 
 lemma vppi_event_valid_domain_time:
-  "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
+  "\<lbrace>\<lambda>s::det_state. 0 < domain_time s\<rbrace>
     vppi_event irq \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   unfolding vppi_event_def
   apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. 0 < domain_time s"])
@@ -110,7 +83,7 @@ lemma vppi_event_valid_domain_time:
   done
 
 lemma handle_reserved_irq_valid_domain_time:
-  "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
+  "\<lbrace>\<lambda>s::det_state. 0 < domain_time s\<rbrace>
      handle_reserved_irq i \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   unfolding handle_reserved_irq_def
   by (wpsimp wp: vgic_maintenance_valid_domain_time vppi_event_valid_domain_time)
@@ -121,7 +94,7 @@ lemma timer_tick_valid_domain_time:
    \<lbrace>\<lambda>x s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>" (is "\<lbrace> ?dtnot0 \<rbrace> _ \<lbrace> _ \<rbrace>")
   unfolding timer_tick_def
   supply if_split[split del]
-  supply ethread_get_wp[wp del]
+  supply thread_get_wp[wp del]
   supply if_apply_def2[simp]
   apply (wpsimp
            wp: reschedule_required_valid_domain_time hoare_vcg_const_imp_lift gts_wp
@@ -129,9 +102,12 @@ lemma timer_tick_valid_domain_time:
                   postcondition once we hit thread_set_time_slice *)
                hoare_post_imp[where Q'="\<lambda>_. ?dtnot0" and Q="\<lambda>_ s. domain_time s = 0 \<longrightarrow> X s"
                                 and f="thread_set_time_slice t ts" for X t ts]
-               hoare_drop_imp[where f="ethread_get t f" for t f])
+               hoare_drop_imp[where f="thread_get t f" for t f])
   apply fastforce
   done
+
+crunch do_machine_op
+  for domain_time_sched[wp]: "\<lambda>s. P (domain_time s) (scheduler_action s)"
 
 lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
   "\<lbrace>\<lambda>s :: det_ext state. 0 < domain_time s \<rbrace>
@@ -155,6 +131,9 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
    apply wpsimp+
   done
 
+crunch handle_reserved_irq, arch_mask_irq_signal
+  for domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
 end
 
