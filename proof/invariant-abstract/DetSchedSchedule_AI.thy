@@ -15521,7 +15521,10 @@ lemma send_signal_WaitingNtfn_helper:
           apply (clarsimp simp: vs_all_heap_simps obj_at_def heap_refs_inv_def2)
          apply (intro conjI impI; clarsimp?)
           apply (clarsimp dest!: valid_blocked_except_set_not_schedulable)
-          apply (clarsimp simp: vs_all_heap_simps obj_at_def schedulable_def2)
+          apply (clarsimp simp: valid_sched_def vs_all_heap_simps obj_at_def)
+          subgoal
+            by (fastforce dest!: sporadic_implies_active
+                           simp: opt_pred_def opt_map_def scs_of_kh_def split: option.splits)
          apply (clarsimp simp: vs_all_heap_simps obj_at_def tcb_at_kh_simps
                         dest!: valid_blocked_except_set_no_sc_bound_sum)
         apply (wpsimp wp: maybe_donate_sc_in_release_q_imp_not_ready
@@ -15885,7 +15888,7 @@ lemma send_signal_BOR_helper:
             schedulable <- gets (schedulable tcbptr);
             y \<leftarrow> when schedulable (possible_switch_to tcbptr);
             get_tcb_obj_ref tcb_sched_context tcbptr >>=
-            if_sporadic_active_cur_sc_assert_refill_unblock_check
+            if_sporadic_cur_sc_test_refill_unblock_check
          od
        \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding if_cond_refill_unblock_check_def
@@ -15953,11 +15956,19 @@ lemma send_signal_BOR_helper:
                   in hoare_strengthen_post[rotated])
      apply (clarsimp simp: schedulable_def2 tcb_at_kh_simps)
      apply (intro conjI; clarsimp simp: valid_sched_valid_sched_except_blocked)
-      apply (intro conjI impI allI; clarsimp elim!: valid_blocked_except_set_not_schedulable simp: schedulable_def2 tcb_at_kh_simps)
+      apply (intro conjI impI allI;
+             clarsimp elim!: valid_blocked_except_set_not_schedulable
+                       simp: schedulable_def2 tcb_at_kh_simps)
+      apply (rename_tac sc_ptr sc t n)
       apply (prop_tac "active_sc_tcb_at tcbptr s")
        apply (clarsimp simp: obj_at_def vs_all_heap_simps)
+       apply (clarsimp simp: valid_sched_def vs_all_heap_simps obj_at_def)
+       apply (frule_tac sc_ptr=sc_ptr in sporadic_implies_active)
+        apply (clarsimp simp: opt_pred_def opt_map_def scs_of_kh_def)
+       apply (clarsimp simp: opt_pred_def opt_map_def scs_of_kh_def)
       apply clarsimp
-      apply (prop_tac "heap_ref_eq x tcbptr (tcb_scps_of s)", clarsimp simp: vs_all_heap_simps obj_at_def)
+      apply (prop_tac "heap_ref_eq sc_ptr tcbptr (tcb_scps_of s)",
+             clarsimp simp: vs_all_heap_simps obj_at_def)
       apply (clarsimp simp: heap_refs_inv_def2 vs_all_heap_simps obj_at_def)
      apply (intro conjI; clarsimp)
       apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
@@ -15965,6 +15976,11 @@ lemma send_signal_BOR_helper:
       apply (fastforce elim!: valid_blocked_except_set_not_schedulable[where tcbptr=tcbptr]
                         simp: schedulable_def3)
      apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+     apply (rename_tac sc_ptr sc n t tcb)
+     apply (clarsimp simp: valid_sched_def vs_all_heap_simps obj_at_def)
+     apply (frule_tac sc_ptr=sc_ptr in sporadic_implies_active)
+      apply (clarsimp simp: opt_pred_def opt_map_def scs_of_kh_def )
+     apply (clarsimp simp: opt_pred_def opt_map_def scs_of_kh_def )
     apply (wpsimp wp: maybe_donate_sc_in_release_q_imp_not_ready
                       maybe_donate_sc_cond_released_sc_tcb_at maybe_donate_sc_schedulable_imp_released
                       maybe_donate_sc_valid_ready_qs maybe_donate_sc_valid_release_q

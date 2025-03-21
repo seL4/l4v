@@ -4393,9 +4393,15 @@ lemma sendSignal_corres:
    \<comment> \<open>WaitingNtfn\<close>
    apply (clarsimp simp: ntfn_relation_def Let_def update_waiting_ntfn_def)
    apply (rename_tac list)
+   apply (rule corres_assert_assume_l_forward)
+    apply (clarsimp simp: valid_ntfn_def)
+   apply (case_tac "list = []")
+    apply (fastforce intro: corres_fail)
+   apply (simp add: list_case_helper split del: if_split)
+   apply (rule corres_assert_gen_asm_cross[where P=P' and P'=P' for P',
+                                           where Q=Q' and Q'=Q' for Q', simplified])
+    apply (fastforce simp: valid_ntfn_def distinct_hd_not_in_tl distinct_tl)
    apply (rule corres_guard_imp)
-     apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
-     apply (simp add: list_case_helper split del: if_split)
      apply (rule corres_split[OF setNotification_corres])
         apply (clarsimp simp: ntfn_relation_def split: list.splits)
        apply (rule corres_split[OF setThreadState_corres], simp)
@@ -4484,8 +4490,8 @@ lemma sendSignal_corres:
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def is_BlockedOnNotification_def)
    apply (clarsimp simp: valid_ntfn'_def split: list.splits)
    apply (intro conjI impI)
-       apply (metis hd_Cons_tl list.set_intros(1) list.set_intros(2))
-      apply (metis hd_Cons_tl list.set_intros(2))
+    apply (metis hd_Cons_tl list.set_intros(1) list.set_intros(2))
+   apply (metis hd_Cons_tl list.set_intros(2))
   \<comment> \<open>ActiveNtfn\<close>
   apply (clarsimp simp add: ntfn_relation_def Let_def)
   apply (rule corres_guard_imp)
