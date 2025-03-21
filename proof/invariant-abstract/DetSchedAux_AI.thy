@@ -1848,6 +1848,12 @@ lemma valid_refills_nonempty_refills:
   by (fastforce simp: sc_at_ppred_def vs_all_heap_simps sc_valid_refills_def
                       rr_valid_refills_def obj_at_def)
 
+lemma sporadic_implies_active:
+  "\<lbrakk>active_scs_valid s; (sc_sporadic |< (scs_of s)) sc_ptr\<rbrakk>
+   \<Longrightarrow> (sc_active |< (scs_of s)) sc_ptr"
+  by (fastforce simp: active_scs_valid_def vs_all_heap_simps opt_pred_def opt_map_def
+               split: option.splits)
+
 lemmas active_valid_budget_sufficient
   = valid_refills_budget_sufficient[OF active_scs_valid_tcb_at]
 

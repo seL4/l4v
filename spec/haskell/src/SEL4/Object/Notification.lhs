@@ -72,7 +72,7 @@ mark the notification object as active.
 >                         schedulable <- getSchedulable tcb
 >                         when schedulable $ possibleSwitchTo tcb
 >                         scOpt <- threadGet tcbSchedContext tcb
->                         ifCondRefillUnblockCheck scOpt (Just True) (Just True)
+>                         ifCondRefillUnblockCheck scOpt (Just False) (Just False)
 >                       else
 >                         setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
 >             (IdleNtfn, Nothing) -> setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
@@ -80,6 +80,7 @@ mark the notification object as active.
 If the notification object is waiting, a thread is removed from its queue and the signal is transferred to it.
 
 >             (WaitingNtfn (dest:queue), _) -> do
+>                 assert (distinct (dest:queue)) "the notification queue must be a list of distinct pointers"
 >                 setNotification ntfnPtr $ nTFN {
 >                   ntfnObj = case queue of
 >                     [] -> IdleNtfn
@@ -91,7 +92,7 @@ If the notification object is waiting, a thread is removed from its queue and th
 >                 schedulable <- getSchedulable dest
 >                 when schedulable $ possibleSwitchTo dest
 >                 scOpt <- threadGet tcbSchedContext dest
->                 ifCondRefillUnblockCheck scOpt (Just True) (Just True)
+>                 ifCondRefillUnblockCheck scOpt (Just False) (Just False)
 >             (WaitingNtfn [], _) -> fail "WaitingNtfn Notification must have non-empty queue"
 
 If the notification object is active, new values are calculated and stored in the notification object. The calculation is done by a bitwise OR operation of the currently stored, and the newly sent values.

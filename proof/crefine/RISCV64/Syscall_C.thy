@@ -1890,7 +1890,8 @@ lemma ccorres_handleReservedIRQ:
 
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
-     (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
      \<lbrace>\<acute>irq = ucast irq\<rbrace> hs
      (handleInterrupt irq) (Call handleInterrupt_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
