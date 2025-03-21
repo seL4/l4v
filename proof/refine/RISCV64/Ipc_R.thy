@@ -4169,7 +4169,7 @@ crunch cancelIPC
 lemma thread_state_tcb_in_WaitingNtfn'_q:
   "\<lbrakk>ko_at' ntfn ntfnPtr s; ntfnObj ntfn = Structures_H.ntfn.WaitingNtfn q; valid_objs' s;
     sym_refs (state_refs_of' s); t \<in> set q\<rbrakk>
-   \<Longrightarrow> st_tcb_at' is_BlockedOnNotification t s"
+   \<Longrightarrow> st_tcb_at' ((=) (BlockedOnNotification ntfnPtr)) t s"
   apply (clarsimp simp: sym_refs_def)
   apply (erule_tac x = ntfnPtr in allE)
   apply (drule_tac x = "(t, NTFNSignal)" in bspec)
