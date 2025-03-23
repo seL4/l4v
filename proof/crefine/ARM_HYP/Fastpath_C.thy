@@ -744,6 +744,8 @@ lemma switchToThread_fp_ccorres:
                del: Collect_const cong: call_ignore_cong)
    apply simp
    apply (rule ccorres_pre_getObject_tcb)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (ctac (no_vcg) add: vcpu_switch_ccorres)
     apply (rule ccorres_getCTE, rename_tac cte)
     apply (rule_tac P="isValidVTableRoot (cteCap cte)

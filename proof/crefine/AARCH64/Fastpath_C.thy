@@ -728,6 +728,8 @@ lemma switchToThread_fp_ccorres:
    apply (simp add: AARCH64_H.switchToThread_def bind_assoc setVMRoot_def
                     cap_case_isPageTableCap)
    apply (simp add: getThreadVSpaceRoot_def locateSlot_conv getSlotCap_def)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (rule ccorres_pre_getObject_tcb)
    apply (ctac (no_vcg) add: vcpu_switch_ccorres)
     apply (rule ccorres_getCTE, rename_tac cte)

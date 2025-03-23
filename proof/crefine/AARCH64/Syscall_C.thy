@@ -2215,6 +2215,24 @@ lemma ccorres_handleReservedIRQ:
                   simp flip: word_unat.Rep_inject split: if_splits)
   done
 
+(* Because of a case distinction, this proof occurs multiple times in handleInterrupt_ccorres below.
+   The proof matches up the C expression "!config_set(CONFIG_ARM_GIC_V3_SUPPORT)"
+   with config_ARM_GIC_V3 from the spec side. *)
+method maybe_maskInterrupt_before_ack =
+    simp only: maskIrqSignal_def when_def,
+    csymbr, (* unwrap config_set(..) *)
+    rule ccorres_cond_seq,
+    rule ccorres_cond_both[where P="\<lambda>_. \<not>config_ARM_GIC_V3" and R=\<top>],
+       simp add: Kernel_Config.config_ARM_GIC_V3_def, (* match up !config_set(..) condition *)
+      rule ccorres_gen_asm[where P="\<not>config_ARM_GIC_V3"],
+      simp,
+      ctac (no_vcg) add: maskInterrupt_ccorres,
+       ctac add: ackInterrupt_ccorres,
+      wp,
+     rule ccorres_gen_asm[where P="config_ARM_GIC_V3"],
+     simp,
+     ctac add: ackInterrupt_ccorres
+
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))

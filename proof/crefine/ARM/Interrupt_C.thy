@@ -449,6 +449,9 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                       invocationCatch_def)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
+    apply ccorres_rewrite
+    apply csymbr (* !config_set(HAVE_SET_TRIGGER) *)
+    apply ccorres_rewrite
     apply (simp add: interpret_excaps_test_null excaps_map_def
                      word_less_nat_alt Let_def
                 del: Collect_const cong: call_ignore_cong)
