@@ -25,6 +25,8 @@ lemma Arch_switchToIdleThread_ccorres:
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_H.switchToIdleThread_def)
    apply (rule ccorres_pre_getIdleThread)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) --
+                   vcpu_switch call is #ifdef'd out, so no ccorres_rewrite necessary *)
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
   apply (clarsimp simp: valid_idle'_tcb_at'_ksIdleThread[OF invs_no_cicd'_valid_idle'])
   done
@@ -54,6 +56,8 @@ lemma Arch_switchToThread_ccorres:
            (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
   apply (cinit lift: tcb_')
    apply (unfold ARM_H.switchToThread_def)[1]
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) --
+                   vcpu_switch call is #ifdef'd out, so no ccorres_rewrite necessary *)
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
     apply (simp (no_asm) del: Collect_const)
     apply (rule_tac A'=UNIV in ccorres_guard_imp2)

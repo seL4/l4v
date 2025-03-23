@@ -2687,6 +2687,8 @@ lemma doFlush_ccorres:
    apply (simp add: Let_def)
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop2, simp)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (rule ccorres_rhs_assoc)+
    apply csymbr
    apply (rule_tac xf'=end_' in ccorres_abstract, ceqv, rename_tac end')

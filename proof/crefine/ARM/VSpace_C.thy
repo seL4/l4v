@@ -1581,6 +1581,8 @@ lemma doFlush_ccorres:
      apply (rule_tac xf'=end_' in ccorres_abstract, ceqv, rename_tac end')
      apply (rule_tac P="end' = ve" in ccorres_gen_asm2)
      apply (simp only: dmo_flushtype_case)
+     apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+     apply ccorres_rewrite
      apply wpc
         apply (rule ccorres_cond_true)
         apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
