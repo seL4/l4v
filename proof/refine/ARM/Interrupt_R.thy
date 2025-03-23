@@ -366,12 +366,16 @@ lemma valid_globals_ex_cte_cap_irq:
                    mult.commute mult.left_commute cteSizeBits_def shiftl_t2n)
   done
 
+lemma no_fail_deactivateInterrupt[wp, simp]:
+  "config_ARM_GIC_V3 \<Longrightarrow> no_fail \<top> (deactivateInterrupt irq)"
+  unfolding deactivateInterrupt_def
+  by wpsimp
+
 lemma arch_invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc \<top> \<top> (arch_invoke_irq_handler i) (ARM_H.invokeIRQHandler i')"
-  apply (cases i; clarsimp simp: ARM_H.invokeIRQHandler_def)
-  apply (rule corres_machine_op, rule corres_Id; simp)
-  apply (rule no_fail_maskInterrupt)
+  apply (cases i; clarsimp simp: ARM_H.invokeIRQHandler_def theIRQ_def)
+  apply (intro conjI impI; rule corres_machine_op, rule corres_Id; simp add: no_fail_maskInterrupt)
   done
 
 
@@ -441,11 +445,27 @@ lemma isnt_irq_handler_strg:
   "(\<not> isIRQHandlerCap cap) \<longrightarrow> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> P irq)"
   by (clarsimp simp: isCap_simps)
 
+lemma dmo_maskInterrupt:
+  "\<lbrace>\<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive\<rbrace>
+   doMachineOp (maskInterrupt m irq)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_maskInterrupt)
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (simp add: valid_irq_masks'_def valid_machine_state'_def
+                   ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  done
+
+lemma doMachineOp_deactivateInterrupt[wp]:
+  "\<lbrace> \<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive \<and> config_ARM_GIC_V3 \<rbrace>
+   doMachineOp (deactivateInterrupt irq)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding deactivateInterrupt_def
+  by (cases config_ARM_GIC_V3; wpsimp wp: dmo_maskInterrupt)
+
 lemma invoke_arch_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> ARM_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (cases i; wpsimp wp: dmo_maskInterrupt simp: ARM_H.invokeIRQHandler_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_irq_masks'_def
-                        valid_machine_state'_def ct_not_inQ_def)
+  apply (cases i; wpsimp simp: ARM_H.invokeIRQHandler_def theIRQ_def)
+  apply (rule conjI; wpsimp wp: dmo_maskInterrupt)
   done
 
 lemma invoke_irq_handler_invs'[wp]:
@@ -744,22 +764,12 @@ lemma handleInterrupt_corres:
             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
              apply (rule corres_guard_imp, rule sendSignal_corres)
-              apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind
-                                    arch_mask_irq_signal_def maskIrqSignal_def)+
-           apply (rule corres_split)
-              apply (rule corres_machine_op, rule corres_eq_trivial
-                     ; (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
-            apply ((wp | simp)+)
-    apply clarsimp
+              apply (clarsimp simp: valid_cap_def valid_cap'_def)+
+           apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
+           apply (corres corres: corres_machine_op corres_eq_trivial intro: no_fail_ackInterrupt)
+          apply wpsimp+
    apply fastforce
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply (rule corres_split[OF timerTick_corres corres_machine_op])
-         apply (rule corres_eq_trivial, simp+)
-         apply wp+
-      apply (rule corres_machine_op)
-      apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
-     apply wp+
+  apply (corres corres: timerTick_corres corres_machine_op simp: bind_assoc)
    apply fastforce
   apply clarsimp
   done

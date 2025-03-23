@@ -26,6 +26,7 @@ This module defines the machine-specific interrupt handling routines.
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
 > import SEL4.API.InvocationLabels.ARM as ArchLabels
+> import SEL4.Machine.Hardware.ARM (config_ARM_GIC_V3, deactivateInterrupt)
 > import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState, isIRQActive)
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 > import {-# SOURCE #-} SEL4.Object.CNode
@@ -64,11 +65,15 @@ This module defines the machine-specific interrupt handling routines.
 >     return ()
 
 > invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
-> invokeIRQHandler (AckIRQ irq) = doMachineOp $ maskInterrupt False irq
+> invokeIRQHandler (AckIRQ irq) =
+>     doMachineOp (if config_ARM_GIC_V3
+>                  then deactivateInterrupt (theIRQ irq)
+>                  else maskInterrupt False irq)
 > invokeIRQHandler _ = return ()
 
 > maskIrqSignal :: IRQ -> Kernel ()
-> maskIrqSignal irq = doMachineOp $ maskInterrupt True irq
+> maskIrqSignal irq =
+>     when (not config_ARM_GIC_V3) (doMachineOp $ maskInterrupt True irq)
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
