@@ -78,8 +78,14 @@ lemma Arch_switchToThread_ccorres:
            (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
   apply (cinit lift: tcb_')
    apply (unfold X64_H.switchToThread_def)[1]
+   apply (rule ccorres_add_return2)
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
-  apply (simp (no_asm) del: Collect_const)
+    apply csymbr (* config_set(CONFIG_KERNEL_X86_IBPB_ON_CONTEXT_SWITCH) *)
+    apply ccorres_rewrite
+    apply csymbr (* config_set(CONFIG_KERNEL_X86_RSB_ON_CONTEXT_SWITCH) *)
+    apply ccorres_rewrite
+    apply (rule ccorres_return_Skip)
+   apply wp
   apply clarsimp
   done
 

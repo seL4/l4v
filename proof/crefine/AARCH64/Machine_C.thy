@@ -589,6 +589,10 @@ lemma ctzl_spec:
   apply (simp add: mex_def meq_def)
   done
 
+lemma wrap_config_set_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
+  by (rule allI, rule conseqPre, vcg) clarsimp
+
 (* FIXME AARCH64 there are a whole lot of cache op lemmas on ARM_HYP, e.g.
      cleanCaches_PoU_ccorres, branchFlushRange_ccorres, invalidateCacheRange_I_ccorres,
      invalidateCacheRange_RAM_ccorres, cleanCacheRange_PoU_ccorres, etc.

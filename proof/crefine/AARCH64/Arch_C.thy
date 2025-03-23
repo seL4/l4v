@@ -1658,6 +1658,8 @@ lemma performPageFlush_ccorres:
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: start_' end_' pstart_' invLabel_')
    apply (unfold when_def)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (rule ccorres_split_nothrow_novcg_dc)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -2378,6 +2380,8 @@ lemma performVSpaceFlush_ccorres:
        (performVSpaceInvocation (VSpaceFlush typ start end pstart vs asid))
        (Call performVSpaceFlush_'proc)"
   apply (cinit lift: start_' end_' pstart_' invLabel_')
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (unfold when_def)
    apply (rule ccorres_rhs_assoc)+
    apply csymbr

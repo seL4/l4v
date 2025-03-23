@@ -1645,6 +1645,8 @@ lemma handleInterrupt_ccorres:
          apply csymbr
          apply (ctac (no_vcg) add: sendSignal_ccorres)
           apply (simp add: maskIrqSignal_def)
+          apply csymbr (* config_set(config_ARM_GIC_V3) -- cannot be set on X64 *)
+          apply ccorres_rewrite
           apply (ctac (no_vcg) add: maskInterrupt_ccorres)
            apply (ctac add: ackInterrupt_ccorres)
           apply wp+
@@ -1654,6 +1656,8 @@ lemma handleInterrupt_ccorres:
         apply csymbr+
         apply (rule ccorres_cond_false_seq)
         apply (simp add: maskIrqSignal_def)
+        apply csymbr (* config_set(config_ARM_GIC_V3) -- cannot be set on X64 *)
+        apply ccorres_rewrite
         apply (ctac (no_vcg) add: maskInterrupt_ccorres)
          apply (ctac add: ackInterrupt_ccorres)
         apply wp
@@ -1666,6 +1670,8 @@ lemma handleInterrupt_ccorres:
                         rule ccorres_guard_imp2,
                         rule ccorres_cond_false_seq, simp,
                         rule ccorres_cond_false_seq, simp,
+                        csymbr, (* config_set(config_ARM_GIC_V3) -- cannot be set on X64 *)
+                        ccorres_rewrite,
                         ctac (no_vcg) add: maskInterrupt_ccorres,
                         ctac (no_vcg) add: ackInterrupt_ccorres,
                         wp, simp)+)

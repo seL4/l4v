@@ -701,6 +701,7 @@ lemma switchToThread_fp_ccorres:
    apply (simp add: getThreadVSpaceRoot_def locateSlot_conv getSlotCap_def
                del: Collect_const cong: call_ignore_cong)
    apply (simp only: )
+   apply csymbr (* config_set(ARM_HYPERVISOR_SUPPORT) *)
    apply (rule ccorres_rhs_assoc2)
    apply (rule ccorres_symb_exec_r, rule_tac xf'="ret__unsigned_'" in ccorres_abstract,
           ceqv, rename_tac "hw_asid_ret")
