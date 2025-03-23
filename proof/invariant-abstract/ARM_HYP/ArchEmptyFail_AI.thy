@@ -190,6 +190,11 @@ lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
                    get_gic_vcpu_ctrl_misr_def
                    vgic_maintenance_def)
 
+lemma deactivateInterrupt_empty_fail[wp]:
+  "config_ARM_GIC_V3 \<Longrightarrow> empty_fail (deactivateInterrupt irq)"
+  unfolding deactivateInterrupt_def
+  by wpsimp
+
 crunch possible_switch_to
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (ignore_del: possible_switch_to)

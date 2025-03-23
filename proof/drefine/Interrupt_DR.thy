@@ -299,14 +299,17 @@ lemma handle_interrupt_corres_branch:
              (do y \<leftarrow> do_machine_op (maskInterrupt True x);
                  do_machine_op (ackInterrupt x)
               od)"
-   apply (rule corres_dummy_return_pl)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split)
-       apply (rule dcorres_machine_op_noop)
-       apply wp
-      apply (clarsimp simp:dc_def[symmetric])
-      apply (rule dcorres_machine_op_noop)
-      apply (wp|clarsimp)+
+  apply (rule corres_dummy_return_pl)
+  apply (corres corres: dcorres_machine_op_noop)
+  done
+
+lemma handle_maybe_interrupt_corres_branch:
+  "dcorres dc \<top> \<top> (return ())
+             (do y \<leftarrow>  if \<not> config_ARM_GIC_V3 then do_machine_op (maskInterrupt True x) else return ();
+                 do_machine_op (ackInterrupt x)
+              od)"
+  apply (cases "config_ARM_GIC_V3"; simp add: handle_interrupt_corres_branch)
+  apply (corres corres: dcorres_machine_op_noop)
   done
 
 lemma irq_state_IRQSignal_NullCap:
@@ -368,19 +371,28 @@ lemma handle_interrupt_corres:
        apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs and valid_etcbs"
                in corres_split)
           apply (rule option_get_cap_corres; simp)
-         apply (case_tac rv'a)
+         apply (rename_tac cap')
+         apply (case_tac cap')
                     prefer 4
-                    apply (simp_all add:when_def)
-                  apply (clarsimp simp:transform_cap_def when_def is_ntfn_cap_def | rule conjI)+
-                   apply (rule corres_dummy_return_l)
-                   apply (rule corres_split_forwards' [where Q'="\<lambda>rv. \<top>" and Q = "\<lambda>rv. \<top>"])
-                      apply (rule corres_guard_imp[OF send_signal_corres])
-                        apply (simp+)
-                   apply (clarsimp simp:handle_interrupt_corres_branch dc_def[symmetric])+
-                  apply (simp add: corres_guard_imp[OF handle_interrupt_corres_branch])+
-       apply (clarsimp simp:transform_cap_def when_def is_ntfn_cap_def
-                   split:arch_cap.splits)+
-           apply (simp add: corres_guard_imp[OF handle_interrupt_corres_branch])+
+                    apply (simp_all add: when_def split del: if_split)
+                  apply (clarsimp simp: transform_cap_def when_def is_ntfn_cap_def split del: if_split)
+                  apply (rule corres_dummy_return_l)
+                  apply (rule corres_split_forwards' [where Q'="\<lambda>rv. \<top>" and Q = "\<lambda>rv. \<top>"])
+                     apply (simp, rule conjI; clarsimp)
+                      apply (rule corres_guard_imp[OF send_signal_corres]; simp)
+                     apply simp
+                    apply wp+
+                  apply (clarsimp simp: handle_maybe_interrupt_corres_branch dc_def[symmetric]
+                                        corres_guard_imp[OF handle_maybe_interrupt_corres_branch]
+                                  split del: if_split)+
+              apply (clarsimp, rule conjI; clarsimp)
+               apply (simp add: corres_guard_imp[OF handle_interrupt_corres_branch])+
+              apply (corres corres: dcorres_machine_op_noop)
+             apply (clarsimp simp: corres_guard_imp[OF handle_maybe_interrupt_corres_branch]
+                             split del: if_split)+
+       apply (clarsimp simp: transform_cap_def split: arch_cap.splits)
+       apply (intro conjI impI corres_guard_imp[OF handle_interrupt_corres_branch] TrueI)
+           apply (corres corres: dcorres_machine_op_noop)+
       apply (wp hoare_vcg_prop[where P=True] valid_state_get_cap_wp|simp add:get_irq_slot_def)+
    apply (clarsimp simp:invs_def )
    apply (strengthen irq_node_image_not_idle,simp add:valid_state_def)
@@ -601,15 +613,11 @@ lemma dcorres_invoke_irq_handler:
             (translate_irq_handler_invocation irq_handler_invocation))
           (Interrupt_A.invoke_irq_handler irq_handler_invocation)"
   apply (case_tac irq_handler_invocation)
-(* ACKIrq *)
-    apply (clarsimp simp:Interrupt_D.invoke_irq_handler_def)
-    apply (rule corres_dummy_return_r)
-    apply (rule dcorres_symb_exec_r_strong)
-      apply (rule corres_free_return[where P'=\<top> ])
-     apply wp
-    apply (wp do_machine_op_wp,clarsimp)
-     apply (wp maskInterrupt_underlying_memory|clarsimp simp:Interrupt_D.invoke_irq_handler_def)+
+    (* ACKIrq *)
+    apply (clarsimp simp:Interrupt_D.invoke_irq_handler_def deactivateInterrupt_def)
+    apply (corres corres: dcorres_machine_op_noop)
    (* SetIRQHandler *)
+   apply (clarsimp simp: Interrupt_D.invoke_irq_handler_def)
    apply (rule dcorres_expand_pfx)
    apply (clarsimp dest!:is_ntfn_capD simp:valid_cap_def)
    apply (rule corres_guard_imp)

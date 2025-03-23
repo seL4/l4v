@@ -192,6 +192,12 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
+(* This function is only implemented on GICv3 configs, hence the precondition *)
+assumes deactivateInterrupt_ccorres:
+  "ccorres dc xfdc (\<lambda>_. config_ARM_GIC_V3) (\<lbrace>\<acute>irq = ucast irq\<rbrace>) []
+           (doMachineOp (deactivateInterrupt irq))
+           (Call deactivateInterrupt_'proc)"
+
 assumes invalidateLocalTLB_VAASID_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateLocalTLB_VAASID_'proc) UNIV"
 
