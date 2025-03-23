@@ -1287,7 +1287,7 @@ lemma setVMRoot_ccorres:
                         cr3_lift_def word_bw_assocs
                  elim!: ccap_relationE
                  split: if_split_asm X64_H.cr3.splits)
-  apply (rename_tac t t')
+  apply (rename_tac t t' t'')
   apply (rule conjI; clarsimp)
    apply (drule_tac t="cr3_C.words_C (ret__struct_cr3_C_' t').[0]" in sym)
    apply (simp add: word_bw_assocs)
@@ -1680,6 +1680,7 @@ lemma modeUnmapPage_ccorres:
         odE)
        (Call modeUnmapPage_'proc)"
   apply (cinit' lift: page_size_' vroot_' vaddr___unsigned_long_' pptr_')
+   apply csymbr (* config_set(CONFIG_HUGE_PAGE) *)
    apply ccorres_rewrite
    apply (rule ccorres_rhs_assoc)+
    apply csymbr

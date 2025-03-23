@@ -520,6 +520,9 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                      word_less_nat_alt Let_def
                 cong: call_ignore_cong)
     apply (rule ccorres_add_return)
+    apply ccorres_rewrite
+    apply csymbr (* !config_set(HAVE_SET_TRIGGER) *)
+    apply ccorres_rewrite
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply csymbr
       apply (rule ccorres_add_return)

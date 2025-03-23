@@ -673,6 +673,10 @@ lemma writeTTBR0Ptr_ccorres:
   apply clarsimp
   done
 
+lemma wrap_config_set_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
+  by (rule allI, rule conseqPre, vcg) clarsimp
+
 lemma setCurrentPD_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
            (doMachineOp (setCurrentPD pd))
@@ -681,6 +685,8 @@ lemma setCurrentPD_ccorres:
    apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
                          writeTTBR0_empty_fail empty_fail_cond
                    intro!: ccorres_cond_empty)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (rule ccorres_rhs_assoc)+
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (ctac (no_vcg) add: writeTTBR0Ptr_ccorres)
