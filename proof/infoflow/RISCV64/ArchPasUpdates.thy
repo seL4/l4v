@@ -17,8 +17,8 @@ crunch arch_post_cap_deletion, arch_finalise_cap, prepare_thread_delete
   (    wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
      simp: crunch_simps check_cap_at_def filterM_mapM unless_def
    ignore: without_preemption filterM rec_del check_cap_at cap_revoke
-   ignore_del: retype_region_ext create_cap_ext cap_insert_ext ethread_set cap_move_ext
-               empty_slot_ext cap_swap_ext set_thread_state_ext tcb_sched_action reschedule_required)
+   ignore_del: create_cap_ext cap_insert_ext cap_move_ext
+               empty_slot_ext cap_swap_ext set_thread_state_act tcb_sched_action reschedule_required)
 
 end
 
@@ -33,16 +33,16 @@ qed
 
 context Arch begin
 
-declare init_arch_objects_exst[PasUpdates_assms]
-
-crunch arch_perform_invocation, arch_post_modify_registers,
+crunch arch_perform_invocation, arch_post_modify_registers, init_arch_objects,
          arch_invoke_irq_control, arch_invoke_irq_handler, handle_arch_fault_reply
   for domain_fields[PasUpdates_assms, wp]: "domain_fields P"
   (wp: syscall_valid crunch_wps mapME_x_inv_wp
-   simp: crunch_simps check_cap_at_def detype_def detype_ext_def mapM_x_defsym
+   simp: crunch_simps check_cap_at_def detype_def mapM_x_defsym
    ignore: check_cap_at syscall
    ignore_del: set_domain set_priority possible_switch_to
    rule: transfer_caps_loop_pres)
+
+declare init_arch_objects_inv[PasUpdates_assms]
 
 lemma state_asids_to_policy_aux_pasSubject_update:
   "state_asids_to_policy_aux (aag\<lparr>pasSubject := x\<rparr>) caps asid vrefs =

@@ -919,6 +919,9 @@ lemma invoke_arch_invs[wp]:
   apply (wp|simp)+
   done
 
+crunch set_thread_state_act
+  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+
 lemma sts_aobjs_of[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
   unfolding set_thread_state_def

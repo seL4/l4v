@@ -693,8 +693,7 @@ lemma next_slot_eq2:
 
 lemma set_cap_not_quite_corres':
   assumes cr:
-  "pspace_relations (ekheap (a)) (kheap s) (ksPSpace s')"
-  "ekheap (s)      = ekheap (a)"
+  "pspace_relation (kheap s) (ksPSpace s')"
   "cur_thread s    = ksCurThread s'"
   "idle_thread s   = ksIdleThread s'"
   "machine_state s = ksMachineState s'"
@@ -711,10 +710,9 @@ lemma set_cap_not_quite_corres':
   assumes c: "cap_relation c c'"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
-             pspace_relations (ekheap t) (kheap t) (ksPSpace t') \<and>
+             pspace_relation (kheap t) (ksPSpace t') \<and>
              cdt t              = cdt s \<and>
              cdt_list t         = cdt_list (s) \<and>
-             ekheap t           = ekheap (s) \<and>
              scheduler_action t = scheduler_action (s) \<and>
              ready_queues t     = ready_queues (s) \<and>
              is_original_cap t  = is_original_cap s \<and>
@@ -731,7 +729,7 @@ lemma set_cap_not_quite_corres':
              domain_time t   = ksDomainTime t'"
   apply (rule set_cap_not_quite_corres)
                 using cr
-                apply (fastforce simp: c p pspace_relations_def)+
+                apply (fastforce simp: c p)+
                 done
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -803,7 +801,6 @@ lemma cteMove_corres:
      apply fastforce
     apply fastforce
    apply fastforce
-   apply (drule (1) pspace_relationsD)
    apply (drule_tac p=ptr' in set_cap_not_quite_corres, assumption+)
             apply fastforce
            apply fastforce
@@ -863,7 +860,7 @@ lemma cteMove_corres:
   apply (frule(1) use_valid [OF _ updateCap_no_0])
   apply (frule(2) use_valid [OF _ updateCap_no_0, OF _ use_valid [OF _ updateCap_no_0]])
   apply (elim conjE)
-  apply (drule (5) updateMDB_the_lot', elim conjE)
+  apply (drule (4) updateMDB_the_lot', elim conjE)
   apply (drule (4) updateMDB_the_lot, elim conjE)
   apply (drule (4) updateMDB_the_lot, elim conjE)
   apply (drule (4) updateMDB_the_lot, elim conjE)
@@ -891,7 +888,6 @@ lemma cteMove_corres:
      apply fastforce
     apply fastforce
    apply fastforce
-  apply (clarsimp simp: pspace_relations_def)
   apply (rule conjI)
    subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply (thin_tac "gsCNodes t = p" for t p)+
@@ -912,7 +908,6 @@ lemma cteMove_corres:
   apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
   apply (thin_tac "ksDomainTime t = p" for t p)+
   apply (thin_tac "ksDomSchedule t = p" for t p)+
-  apply (thin_tac "ekheap_relation t p" for t p)+
   apply (thin_tac "pspace_relation t p" for t p)+
   apply (thin_tac "interrupt_state_relation s t p" for s t p)+
   apply (thin_tac "ghost_relation s t p" for s t p)+
@@ -3526,7 +3521,7 @@ lemma deriveCap_untyped_derived:
 
 lemma setCTE_corres:
   "cap_relation cap (cteCap cte) \<Longrightarrow>
-   corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True dc
+   corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False True dc
       (pspace_distinct and pspace_aligned and valid_objs and cte_at p)
       (pspace_aligned' and pspace_distinct' and cte_at' (cte_map p))
       (set_cap cap p)
@@ -3571,7 +3566,7 @@ lemma ghost_relation_of_heap:
   done
 
 lemma corres_caps_decomposition:
-  assumes x: "corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True r P P' f g"
+  assumes x: "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False True r P P' f g"
   assumes u: "\<And>P. \<lbrace>\<lambda>s. P (new_caps s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_mdb s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_list s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt_list (s))\<rbrace>"
@@ -3681,14 +3676,11 @@ proof -
   note abs_irq_together = abs_irq_together'[simplified]
   show ?thesis
     unfolding state_relation_def swp_cte_at
-    apply (subst conj_assoc[symmetric])
-    apply (subst pspace_relations_def[symmetric])
     apply (rule corres_underlying_decomposition [OF x])
      apply (simp add: ghost_relation_of_heap)
-     apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)+
-    apply (intro z[simplified o_def] conjI
-           | simp add: state_relation_def pspace_relations_def swp_cte_at
-           | (clarsimp, drule (1) z(6), simp add: state_relation_def))+
+     apply (wpsimp wp: hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)+
+    apply (intro z[simplified o_def] conjI | simp add: state_relation_def swp_cte_at
+          | (drule (1) z(6), simp add: state_relation_def swp_cte_at))+
     done
 qed
 
@@ -3700,7 +3692,7 @@ lemma getCTE_symb_exec_r:
   done
 
 lemma updateMDB_symb_exec_r:
-  "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False nf' dc
+  "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False nf' dc
         \<top> (pspace_aligned' and pspace_distinct' and (no_0 \<circ> ctes_of) and (\<lambda>s. p \<noteq> 0 \<longrightarrow> cte_at' p s))
         (return ()) (updateMDB p m)"
   using no_fail_updateMDB [of p m]
@@ -3739,45 +3731,20 @@ lemma revokable_relation_simp:
       \<Longrightarrow> mdbRevocable node = is_original_cap s p"
   by (cases p, clarsimp simp: state_relation_def revokable_relation_def)
 
-lemma setCTE_gsUserPages[wp]:
-  "\<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_gsCNodes[wp]:
-  "\<lbrace>\<lambda>s. P (gsCNodes s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (gsCNodes s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
+crunch setCTE
+  for gsUserPages[wp]: "\<lambda>s. P (gsUserPages s)"
+  and gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
+  and domain_time[wp]: "\<lambda>s. P (ksDomainTime s)"
+  and work_units_completed[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
+  (simp: setObject_def wp: updateObject_cte_inv)
 
 lemma set_original_symb_exec_l':
-  "corres_underlying {(s, s'). f (ekheap s) (kheap s) s'} False nf' dc P P' (set_original p b) (return x)"
+  "corres_underlying {(s, s'). f (kheap s) s'} False nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
 
-lemma setCTE_schedule_index[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_schedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_domain_time[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_work_units_completed[wp]:
-  "\<lbrace>\<lambda>s. P (ksWorkUnitsCompleted s)\<rbrace> setCTE p v \<lbrace>\<lambda>_ s. P (ksWorkUnitsCompleted s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
+crunch set_cap
+  for domain_index[wp]: "\<lambda>s. P (domain_index s)"
+  (wp: set_object_wp)
 
 lemma create_reply_master_corres:
   "\<lbrakk> sl' = cte_map sl ; AllowGrant \<in> rights \<rbrakk> \<Longrightarrow>
@@ -4782,7 +4749,6 @@ lemma cteInsert_simple_corres:
                apply (simp+)[3]
             apply (clarsimp simp: corres_underlying_def state_relation_def
                                   in_monad valid_mdb'_def valid_mdb_ctes_def)
-            apply (drule (1) pspace_relationsD)
             apply (drule (18) set_cap_not_quite_corres)
              apply (rule refl)
             apply (elim conjE exE)
@@ -4809,7 +4775,7 @@ lemma cteInsert_simple_corres:
             apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
             apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
             apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
-            apply (clarsimp simp: pspace_relations_def)
+            apply clarsimp
             apply (rule conjI)
              subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
             apply (thin_tac "gsCNodes t = p" for t p)+
@@ -4836,7 +4802,6 @@ lemma cteInsert_simple_corres:
             apply (thin_tac "ksDomainTime t = p" for t p)+
             apply (thin_tac "ksDomSchedule t = p" for t p)+
             apply (thin_tac "ctes_of t = p" for t p)+
-            apply (thin_tac "ekheap_relation t p" for t p)+
             apply (thin_tac "pspace_relation t p" for t p)+
             apply (thin_tac "interrupt_state_relation s t p" for s t p)+
             apply (thin_tac "sched_act_relation t p" for t p)+
@@ -6001,7 +5966,7 @@ lemma setCTE_set_cap_ready_queues_relation_valid_corres:
   shows "ready_queues_relation t t'"
   apply (clarsimp simp: ready_queues_relation_def)
   apply (insert pre)
-  apply (rule use_valid[OF step_abs set_cap_exst])
+  apply (rule use_valid[OF step_abs set_cap_rqueues])
   apply (rule use_valid[OF step_conc setCTE_ksReadyQueues])
   apply (rule use_valid[OF step_conc setCTE_tcbSchedNexts_of])
   apply (rule use_valid[OF step_conc setCTE_tcbSchedPrevs_of])
@@ -6027,7 +5992,6 @@ lemma updateCap_same_master:
         apply (clarsimp simp: cte_wp_at_ctes_of)
        apply clarsimp
        apply (clarsimp simp add: state_relation_def)
-       apply (drule (1) pspace_relationsD)
        apply (frule (4) set_cap_not_quite_corres_prequel)
             apply (erule cte_wp_at_weakenE, rule TrueI)
            apply assumption
@@ -6038,7 +6002,7 @@ lemma updateCap_same_master:
        apply (rule bexI)
         prefer 2
         apply assumption
-       apply (clarsimp simp: pspace_relations_def)
+       apply clarsimp
        apply (subst conj_assoc[symmetric])
        apply (extract_conjunct \<open>match conclusion in "ready_queues_relation a b" for a b \<Rightarrow> -\<close>)
         subgoal by (erule setCTE_set_cap_ready_queues_relation_valid_corres; assumption)
