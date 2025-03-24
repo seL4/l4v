@@ -24,10 +24,6 @@ context Arch begin arch_global_naming
 definition ppn_len :: nat where
   "ppn_len \<equiv> LENGTH(pte_ppn_len)"
 
-(* Move to Deterministic_AI *)
-crunch copy_global_mappings
-  for valid_etcbs[wp]: valid_etcbs (wp: mapM_x_wp')
-
 lemma get_pt_mapM_x_lower:
   assumes g: "\<And>P pt x. \<lbrace> \<lambda>s. P (kheap s pt_ptr) \<rbrace> g pt x \<lbrace> \<lambda>_ s. P (kheap s pt_ptr) \<rbrace>"
   assumes y: "ys \<noteq> []"

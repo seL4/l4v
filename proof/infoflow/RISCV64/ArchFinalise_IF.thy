@@ -66,7 +66,7 @@ lemma set_thread_state_reads_respects[Finalise_IF_assms]:
   apply (simp add: bind_assoc[symmetric])
   apply (rule pre_ev)
    apply (rule_tac P'=\<top> in bind_ev)
-     apply (rule set_thread_state_ext_reads_respects)
+     apply (rule set_thread_state_act_reads_respects)
     apply (case_tac "aag_can_read aag ref \<or> aag_can_affect aag l ref")
      apply (wp set_object_reads_respects gets_the_ev)
      apply (fastforce simp: get_tcb_def split: option.splits
@@ -93,7 +93,7 @@ lemma set_thread_state_runnable_reads_respects[Finalise_IF_assms]:
   apply (simp add: bind_assoc[symmetric])
   apply (rule pre_ev)
    apply (rule_tac P'=\<top> in bind_ev)
-     apply (rule set_thread_state_ext_runnable_reads_respects)
+     apply (rule set_thread_state_act_runnable_reads_respects)
     apply (case_tac "aag_can_read aag ref \<or> aag_can_affect aag l ref")
      apply (wp set_object_reads_respects gets_the_ev)
      apply (fastforce simp: get_tcb_def split: option.splits elim: reads_equivE affects_equivE equiv_forE)
