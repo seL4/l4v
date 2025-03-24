@@ -236,6 +236,14 @@ lemma handle_reserved_irq_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
 
+crunch timer_tick
+  for invs[wp]: invs
+  (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
+
+crunch timer_tick
+  for invs[wp]: invs
+  (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
+
 lemma (* handle_interrupt_invs *) [Interrupt_AI_assms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def)
