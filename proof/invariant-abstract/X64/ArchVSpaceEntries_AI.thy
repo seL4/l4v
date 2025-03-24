@@ -482,14 +482,10 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-crunch invoke_tcb
+crunch invoke_tcb, invoke_domain
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at)
-
-lemma invoke_domain_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  by (simp add: invoke_domain_def | wp)+
 
 crunch set_extra_badge, transfer_caps_loop
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
@@ -716,28 +712,26 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
   done
 
-
 crunch activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
-       handle_send, handle_yield, handle_interrupt
+       handle_send, handle_yield, handle_interrupt,
+       schedule_choose_new_thread
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
-              getFaultAddress OR_choice set_scheduler_action)
+              OR_choice set_scheduler_action)
 
 lemma handle_event_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace> handle_event e \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (case_tac e; simp)
-   by (wp | wpc | simp add: handle_vm_fault_def | wp (once) hoare_drop_imps)+
+  by (case_tac e; simp) (wpsimp simp: handle_vm_fault_def | wp (once) hoare_drop_imps)+
 
-lemma schedule_valid_vspace_objs'[wp]: "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
-  apply (simp add: schedule_def allActiveTCBs_def)
-  apply wpsimp
-  done
+lemma schedule_valid_vspace_objs'[wp]:
+  "schedule \<lbrace>valid_vspace_objs'\<rbrace>"
+  unfolding schedule_def by (wpsimp wp: hoare_drop_imps)
 
 lemma call_kernel_valid_vspace_objs'[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs'\<rbrace>
-      (call_kernel e) :: (unit,unit) s_monad
+   call_kernel e
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)

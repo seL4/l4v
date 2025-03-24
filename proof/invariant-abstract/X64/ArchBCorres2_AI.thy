@@ -15,11 +15,11 @@ named_theorems BCorres2_AI_assms
 
 crunch invoke_cnode
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
-  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set)
+  (simp: swp_def ignore: clearMemory without_preemption filterM)
 
 crunch create_cap,init_arch_objects,retype_region,delete_objects
   for (bcorres) bcorres[wp]: truncate_state
-  (ignore: freeMemory clearMemory retype_region_ext)
+  (ignore: freeMemory clearMemory)
 
 crunch set_extra_badge,derive_cap
   for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord)
@@ -28,7 +28,7 @@ crunch invoke_untyped
   for (bcorres) bcorres[wp]: truncate_state
   (ignore: sequence_x)
 
-crunch set_mcpriority
+crunch set_mcpriority, set_priority
   for (bcorres) bcorres[wp]: truncate_state
 
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
@@ -76,10 +76,6 @@ lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
   by (cases a; simp add: handle_arch_fault_reply_def; wp)
 
-crunch
-    arch_switch_to_thread,arch_switch_to_idle_thread
-  for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
-
 end
 
 interpretation BCorres2_AI?: BCorres2_AI
@@ -88,11 +84,9 @@ interpretation BCorres2_AI?: BCorres2_AI
   case 1 show ?case by (unfold_locales; (fact BCorres2_AI_assms)?)
   qed
 
-lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
-
 context Arch begin arch_global_naming
 
-crunch send_ipc,send_signal,do_reply_transfer,arch_perform_invocation
+crunch send_ipc,send_signal,do_reply_transfer,arch_perform_invocation,invoke_domain
   for (bcorres) bcorres[wp]: truncate_state
   (simp: gets_the_def swp_def set_object_def
  ignore: freeMemory clearMemory loadWord cap_fault_on_failure
@@ -149,31 +143,14 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
   apply (simp | wp)+
   done
 
-lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
-  by (cases b) wpsimp
+crunch handle_hypervisor_fault, timer_tick
+  for (bcorres) bcorres[wp]: truncate_state
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)
   apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def
                    handle_interrupt_def Let_def handle_reserved_irq_def arch_mask_irq_signal_def
          | intro impI conjI allI | wp | wpc)+
-  done
-
-crunch guarded_switch_to,switch_to_idle_thread
-  for (bcorres) bcorres[wp]: truncate_state (ignore: storeWord)
-
-lemma choose_switch_or_idle:
-  "((), s') \<in> fst (choose_thread s) \<Longrightarrow>
-       (\<exists>word. ((),s') \<in> fst (guarded_switch_to word s)) \<or>
-       ((),s') \<in> fst (switch_to_idle_thread s)"
-  apply (simp add: choose_thread_def)
-  apply (clarsimp simp add: switch_to_idle_thread_def bind_def gets_def
-                   arch_switch_to_idle_thread_def in_monad
-                   return_def get_def modify_def put_def
-                    get_thread_state_def
-                   thread_get_def
-                   split: if_split_asm)
-  apply force
   done
 
 end
