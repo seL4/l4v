@@ -174,18 +174,6 @@ crunch
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
 
-global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
-
-global_interpretation EmptyFail_AI_schedule_det?: EmptyFail_AI_schedule_det
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
-
 global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   proof goal_cases
   interpret Arch .
@@ -194,11 +182,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 
 context Arch begin arch_global_naming
 
-crunch possible_switch_to
-  for (empty_fail) empty_fail[wp,EmptyFail_AI_assms]
-  (ignore_del: possible_switch_to)
-
-crunch handle_event, activate_thread
+crunch possible_switch_to, handle_event, activate_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
@@ -206,21 +190,8 @@ crunch handle_event, activate_thread
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
-         page_directory_invocation.splits set_object_def
    ignore: resetTimer_impl)
 end
-
-global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
-
-global_interpretation EmptyFail_AI_call_kernel_det?: EmptyFail_AI_call_kernel_det
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel
   proof goal_cases
