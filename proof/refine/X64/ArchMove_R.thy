@@ -74,10 +74,6 @@ lemma no_irq_ioapicMapPinToVector[wp]:
   "no_irq (ioapicMapPinToVector a b c d e)"
   by (simp add: ioapicMapPinToVector_def)
 
-(* Move to Deterministic_AI*)
-crunch copy_global_mappings
-  for valid_etcbs[wp]: valid_etcbs (wp: mapM_x_wp')
-
 (* Move to no_gs_types_simps in ArchRetype_AI *)
 lemma no_gs_types_simps' [simp]:
   "ArchObject PDPTObj \<in> no_gs_types"
