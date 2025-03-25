@@ -14,6 +14,7 @@ named_theorems Finalise_IF_assms
 
 crunch arch_post_cap_deletion
   for globals_equiv[Finalise_IF_assms, wp]: "globals_equiv st"
+  and valid_arch_state[Finalise_IF_assms,wp]: valid_arch_state
 
 lemma dmo_maskInterrupt_reads_respects[Finalise_IF_assms]:
   "reads_respects aag l \<top> (do_machine_op (maskInterrupt m irq))"

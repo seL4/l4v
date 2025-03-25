@@ -712,8 +712,6 @@ lemma kernel_entry_if_integrity:
     apply (wp thread_set_integrity_autarch thread_set_pas_refined guarded_pas_domain_lift
               thread_set_invs_trivial thread_set_not_state_valid_sched
            | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2)+
-    apply (wp (once) prop_of_two_valid[where f="ct_active" and g="cur_thread"])
-      apply (wp | simp)+
     apply (wp thread_set_tcb_context_update_wp)+
   apply (clarsimp simp: schact_is_rct_def)
   apply (rule conjI)
@@ -722,9 +720,8 @@ lemma kernel_entry_if_integrity:
    apply simp
    apply (subgoal_tac "kheap st (cur_thread st) \<noteq> None")
     apply clarsimp
-   apply (drule tcb_at_invs, clarsimp simp: tcb_at_def get_tcb_def
-                                     split: kernel_object.splits option.splits)
-  apply (clarsimp simp: invs_psp_aligned invs_vspace_objs invs_arch_state)
+   apply (drule tcb_at_invs)
+   apply (clarsimp simp: tcb_at_def get_tcb_def split: kernel_object.splits option.splits)
   apply (rule conjI)
    apply assumption
   apply (rule state.equality, simp_all)

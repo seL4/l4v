@@ -294,6 +294,10 @@ locale Tcb_IF_2 = Tcb_IF_1 +
              (invoke_tcb ti)"
 begin
 
+crunch suspend, restart
+  for valid_arch_state[wp]: "\<lambda>s :: det_state. valid_arch_state s"
+  (wp: dxo_wp_weak)
+
 lemma invoke_tcb_globals_equiv:
   "\<lbrace>invs and globals_equiv st and tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
@@ -518,10 +522,7 @@ lemma invoke_tcb_reads_respects_f:
                  restart_silc_inv restart_pas_refined
               | simp split del: if_split add: det_setRegister det_setNextPC
               | strengthen invs_mdb
-              | (rule hoare_strengthen_post[where Q'="\<lambda>_. silc_inv aag st and pas_refined aag
-                                                                         and pspace_aligned
-                                                                         and valid_vspace_objs
-                                                                         and valid_arch_state",
+              | (rule hoare_strengthen_post[where Q'="\<lambda>_. silc_inv aag st and pas_refined aag",
                                             OF mapM_x_wp', rotated], fastforce)
               | wp mapM_x_wp')+
        apply (solves \<open>auto simp: authorised_tcb_inv_def det_getRestartPC det_getRegister

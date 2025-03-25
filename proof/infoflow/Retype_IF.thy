@@ -207,6 +207,9 @@ lemma globals_equiv_is_original_cap_update[simp]:
   "globals_equiv s (s'\<lparr>is_original_cap := x\<rparr>) = globals_equiv s s'"
   by (fastforce simp: globals_equiv_def idle_equiv_def)
 
+crunch set_cdt
+  for valid_arch_state[wp]: "\<lambda>s. P (valid_arch_state s)"
+
 lemma create_cap_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    create_cap type bits untyped dev slot
