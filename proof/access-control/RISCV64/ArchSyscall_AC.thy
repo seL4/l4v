@@ -160,6 +160,7 @@ crunch
 \<comment> \<open>These aren't proved in the previous crunch, and hence need to be declared\<close>
 declare handle_arch_fault_reply_cur_thread[Syscall_AC_assms]
 declare handle_arch_fault_reply_it[Syscall_AC_assms]
+declare init_arch_objects_inv[Syscall_AC_assms]
 
 end
 
@@ -168,7 +169,7 @@ global_interpretation Syscall_AC_1?: Syscall_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Syscall_AC_assms | wp init_arch_objects_inv))
+    by (unfold_locales; (fact Syscall_AC_assms | solves \<open>wp only: Syscall_AC_assms; simp\<close>)?)
 qed
 
 end

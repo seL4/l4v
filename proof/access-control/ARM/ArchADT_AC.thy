@@ -216,7 +216,7 @@ global_interpretation ADT_AC_1?: ADT_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact ADT_AC_assms)
+    by (unfold_locales; (fact ADT_AC_assms)?)
 qed
 
 end

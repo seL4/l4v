@@ -55,6 +55,9 @@ locale Finalise_IF_1 =
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_post_cap_deletion_globals_equiv[wp]:
     "arch_post_cap_deletion acap \<lbrace>globals_equiv st\<rbrace>"
+  (* FIXME IF: precludes X64 *)
+  and arch_post_cap_deletion_valid_arch_state[wp]:
+    "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
   and set_irq_state_globals_equiv:
     "set_irq_state state irq \<lbrace>globals_equiv st\<rbrace>"
   and arch_finalise_cap_globals_equiv:
@@ -629,8 +632,7 @@ lemma possible_switch_to_reads_respects:
 
 lemma cancel_all_ipc_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs
-                                               and valid_arch_state and K (aag_can_read aag epptr))
+  shows "reads_respects aag l (pas_refined aag and K (aag_can_read aag epptr))
                         (cancel_all_ipc epptr)"
   unfolding cancel_all_ipc_def fun_app_def
   by (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
@@ -643,9 +645,7 @@ lemma cancel_all_ipc_reads_respects:
       | rule subset_refl
       | wp (once) hoare_drop_imps
       | assumption
-      | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag and pspace_aligned
-                                                                and valid_vspace_objs
-                                                                and valid_arch_state", OF mapM_x_wp])+
+      | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag", OF mapM_x_wp])+
 
 end
 
@@ -763,8 +763,7 @@ context Finalise_IF_1 begin
 lemma cancel_all_signals_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-    "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs
-                                           and valid_arch_state and K (aag_can_read aag ntfnptr))
+    "reads_respects aag l (pas_refined aag and K (aag_can_read aag ntfnptr))
                    (cancel_all_signals ntfnptr)"
   unfolding cancel_all_signals_def
   by (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
@@ -777,9 +776,7 @@ lemma cancel_all_signals_reads_respects:
       | rule subset_refl
       | wp (once) hoare_drop_imps
       | simp
-      | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag and pspace_aligned
-                                                                and valid_vspace_objs
-                                                                and valid_arch_state", OF mapM_x_wp])+
+      | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag", OF mapM_x_wp])+
 
 lemma unbind_maybe_notification_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -925,9 +922,7 @@ lemma select_singleton_ev:
   by (fastforce simp: equiv_valid_def2 equiv_valid_2_def select_def)
 
 lemma thread_set_fault_pas_refined':
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-   thread_set (tcb_fault_update fault) thread
-   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  "thread_set (tcb_fault_update fault) thread \<lbrace>pas_refined aag\<rbrace>"
   by (wp thread_set_pas_refined | simp)+
 
 (* FIXME MERGE names *)
@@ -1461,6 +1456,9 @@ lemma unbind_maybe_notification_globals_equiv:
   by (wpsimp wp: gbn_wp set_bound_notification_globals_equiv
                  set_notification_globals_equiv get_simple_ko_wp)
 
+crunch unbind_maybe_notification
+  for valid_arch_state[wp]: "valid_arch_state"
+
 lemma fast_finalise_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    fast_finalise cap final
@@ -1473,11 +1471,18 @@ lemma fast_finalise_globals_equiv:
 crunch deleted_irq_handler
   for globals_equiv[wp]: "globals_equiv st"
 
+crunch set_original
+  for valid_arch_state[wp]: "valid_arch_state"
+
 lemma empty_slot_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace> empty_slot s b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding empty_slot_def post_cap_deletion_def
   by (wpsimp wp: set_cap_globals_equiv'' set_original_globals_equiv hoare_vcg_if_lift2
                  set_cdt_globals_equiv dxo_wp_weak hoare_drop_imps hoare_vcg_all_lift)
+
+crunch fast_finalise
+  for valid_arch_state[wp]: "valid_arch_state"
+  (wp: dxo_wp_weak mapM_x_wp)
 
 crunch cap_delete_one
   for globals_equiv: "globals_equiv st"
@@ -1489,6 +1494,7 @@ crunch deleting_irq_handler
 
 crunch cancel_ipc
   for globals_equiv[wp]: "globals_equiv st"
+  and valid_arch_state[wp]: "\<lambda>s :: det_state. valid_arch_state s"
   (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 thread_set_valid_arch_state
    simp: unless_def tcb_cap_cases_def)
 

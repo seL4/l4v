@@ -25,6 +25,21 @@ lemma arch_finalise_cap_rv[DomainSepInv_assms]:
   "\<lbrace>\<lambda>_. P (NullCap,NullCap)\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>rv _. P rv\<rbrace>"
   unfolding arch_finalise_cap_def by wpsimp
 
+crunch
+  invalidate_tlb_by_asid, handle_reserved_irq, handle_vm_fault,
+  handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,
+  arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread
+  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+
+lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
+  unfolding arch_derive_cap_def
+  by wpsimp
+
+lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
+  "arch_post_modify_registers cur x31 \<lbrace>domain_sep_inv irqs st\<rbrace>"
+  unfolding arch_post_modify_registers_def by wpsimp
+
 end
 
 
@@ -32,17 +47,11 @@ global_interpretation DomainSepInv_1?: DomainSepInv_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact DomainSepInv_assms)
+    by (unfold_locales; (fact DomainSepInv_assms)?)
 qed
 
 
 context Arch begin global_naming ARM_A
-
-crunch
-  invalidate_tlb_by_asid, handle_reserved_irq, handle_vm_fault,
-  handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,
-  arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
 
 lemma perform_page_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_page_inv pgi\<rbrace>
@@ -120,15 +129,6 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
    apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)+
   done
 
-lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
-  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
-  unfolding arch_derive_cap_def
-  by wpsimp
-
-lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
-  "arch_post_modify_registers cur x31 \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  unfolding arch_post_modify_registers_def by wpsimp
-
 end
 
 
@@ -136,7 +136,7 @@ global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact DomainSepInv_assms)
+    by (unfold_locales; (fact DomainSepInv_assms | solves \<open>wp only: DomainSepInv_assms; simp\<close>)?)
 qed
 
 end

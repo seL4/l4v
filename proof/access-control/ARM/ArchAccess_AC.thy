@@ -64,7 +64,7 @@ global_interpretation Access_AC_1?: Access_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Access_AC_assms)
+    by (unfold_locales; (fact Access_AC_assms)?)
 qed
 
 
