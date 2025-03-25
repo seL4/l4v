@@ -111,9 +111,7 @@ crunch prepare_thread_delete
   for respects[Finalise_AC_assms, wp]: "integrity aag X st"
 
 lemma sbn_st_vrefs[Finalise_AC_assms]:
-  "\<lbrace>(\<lambda>s. P (state_vrefs s)) and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-   set_bound_notification t st
-   \<lbrace>\<lambda>_ s. P (state_vrefs s)\<rbrace>"
+  "set_bound_notification t st \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (subst state_vrefs_tcb_upd)
@@ -216,7 +214,7 @@ lemma delete_asid_respects:
   apply (clarsimp simp: pas_refined_refl obj_at_def asid_pool_integrity_def)
   done
 
-lemma arch_finalise_cap_respects[wp]:
+lemma arch_finalise_cap_respects[Finalise_AC_assms, wp]:
   "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap (ArchObjectCap cap)
                        and K (pas_cap_cur_auth aag (ArchObjectCap cap))\<rbrace>
    arch_finalise_cap cap final
@@ -229,10 +227,11 @@ lemma arch_finalise_cap_respects[wp]:
              intro: pas_refined_Control_into_is_subject_asid)
   done
 
-crunch arch_post_cap_deletion
-  for pspace_aligned[Finalise_AC_assms, wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
-  and valid_vspace_objs[Finalise_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
-  and valid_arch_state[Finalise_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
+declare prepare_thread_delete_st_tcb_at_halted[Finalise_AC_assms]
+declare finalise_cap_valid_list[Finalise_AC_assms]
+declare arch_finalise_cap_pas_refined[Finalise_AC_assms]
+declare prepare_thread_delete_pas_refined[Finalise_AC_assms]
+declare finalise_cap_replaceable[Finalise_AC_assms]
 
 end
 
@@ -241,7 +240,7 @@ global_interpretation Finalise_AC_1?: Finalise_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Finalise_AC_assms | wp finalise_cap_replaceable))
+    by (unfold_locales; (fact Finalise_AC_assms | solves \<open>wp only: Finalise_AC_assms; simp\<close>)?)
 qed
 
 
@@ -296,7 +295,7 @@ global_interpretation Finalise_AC_2?: Finalise_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Finalise_AC_assms)
+    by (unfold_locales; (fact Finalise_AC_assms)?)
 qed
 
 end

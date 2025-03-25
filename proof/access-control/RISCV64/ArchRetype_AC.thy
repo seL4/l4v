@@ -368,6 +368,8 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
                     simp: image_def p_assoc_help power_sub)
   done
 
+declare init_arch_objects_inv[Retype_AC_assms]
+
 end
 
 
@@ -375,7 +377,7 @@ global_interpretation Retype_AC_1?: Retype_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_AC_assms | wpsimp wp: init_arch_objects_inv)?)
+    by (unfold_locales; (fact Retype_AC_assms | solves \<open>wp only: Retype_AC_assms; simp\<close>)?)
 qed
 
 requalify_facts RISCV64.storeWord_respects

@@ -954,6 +954,8 @@ locale ADT_IF_1 =
     "\<And>P. handle_vm_fault t vmft \<lbrace>domain_fields P\<rbrace>"
   and handle_hypervisor_fault_domain_fields[wp]:
     "\<And>P. handle_hypervisor_fault t hft \<lbrace>domain_fields P\<rbrace>"
+  and handle_reserved_irq_non_kernel_IRQs:
+    "\<And>P. \<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s :: det_state. P s\<rbrace>"
   and arch_perform_invocation_noErr[wp]:
     "\<And>Q. \<lbrace>\<top>\<rbrace> arch_perform_invocation i -, \<lbrace>\<lambda>rv s :: det_state. Q rv s\<rbrace>"
   and arch_invoke_irq_control_noErr[wp]:
@@ -1023,9 +1025,8 @@ lemma kernel_entry_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases schact_is_rct_def arch_tcb_update_aux2
-               wp: hoare_weak_lift_imp handle_event_pas_refined thread_set_pas_refined
-                   guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched
-      | force)+
+               wp: hoare_vcg_imp_lift' handle_event_pas_refined thread_set_pas_refined
+                   guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched)+
 
 lemma kernel_entry_if_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
@@ -1052,12 +1053,6 @@ lemma kernel_entry_if_irq_masks:
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (simp add: kernel_entry_if_def ran_tcb_cap_cases arch_tcb_update_aux2
       | wp handle_event_irq_masks thread_set_invs_trivial | force)+
-
-crunch schedule
-  for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
-  and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
-  and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
-  (wp: crunch_wps)
 
 crunch schedule_if
   for pas_refined[wp]: "pas_refined aag"
@@ -1091,22 +1086,53 @@ lemma handle_preemption_if_invs:
   "handle_preemption_if tc \<lbrace>invs\<rbrace>"
   by (simp add: handle_preemption_if_def | wp)+
 
+
+context ADT_IF_1 begin
+
+lemma handle_kernel_interrupt_domain_sep_inv:
+  "\<lbrace>domain_sep_inv irqs st and K (irq \<notin> non_kernel_IRQs)\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>_ s :: det_ext state. domain_sep_inv irqs st s\<rbrace>"
+  apply (simp add: handle_interrupt_def)
+  apply (rule conjI; rule impI; rule hoare_pre)
+  by (wpsimp wp: send_signal_pas_refined get_cap_wp handle_reserved_irq_non_kernel_IRQs
+           simp: get_irq_slot_def get_irq_state_def)+
+
 lemma handle_preemption_if_domain_sep_inv:
   "handle_preemption_if e \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (simp add: handle_preemption_if_def | wp)+
+  apply (wpsimp simp: handle_preemption_if_def wp: handle_kernel_interrupt_domain_sep_inv)
+   apply (rule_tac Q'="\<lambda>rv s. domain_sep_inv  irqs st s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
+                in hoare_strengthen_post)
+    apply (wpsimp wp: getActiveIRQ_rv_None)+
+  done
+
+lemma handle_kernel_interrupt_pas_refined:
+  "\<lbrace>pas_refined aag and K (irq \<notin> non_kernel_IRQs)\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (simp add: handle_interrupt_def)
+  apply (rule conjI; rule impI;rule hoare_pre)
+  apply ((wp send_signal_pas_refined get_cap_wp handle_reserved_irq_non_kernel_IRQs
+         | wpc
+         | simp add: get_irq_slot_def get_irq_state_def )+)
+  done
+
+lemma handle_preemption_if_pas_refined[wp]:
+  "handle_preemption_if tc \<lbrace>pas_refined aag\<rbrace>"
+  apply (wpsimp simp: handle_preemption_if_def wp: handle_kernel_interrupt_pas_refined)
+   apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
+                in hoare_strengthen_post)
+    apply (wpsimp wp: getActiveIRQ_rv_None)+
+  done
+
+end
+
 
 lemma handle_preemption_if_silc_inv[wp]:
   "handle_preemption_if tc \<lbrace>silc_inv aag st\<rbrace>"
   apply (simp add: handle_preemption_if_def)
   apply (wp handle_interrupt_silc_inv do_machine_op_silc_inv | simp)+
   done
-
-lemma handle_preemption_if_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-   handle_preemption_if tc
-   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  by (wpsimp wp: handle_interrupt_pas_refined getActiveIRQ_wp hoare_drop_imps
-           simp: handle_preemption_if_def if_fun_split)
 
 crunch handle_preemption_if
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
@@ -1379,10 +1405,16 @@ lemma check_active_irq_if_wp:
    \<lbrace>P\<rbrace>"
   by (wpsimp wp: dmo_getActiveIRQ_wp simp: check_active_irq_if_def)
 
+
+context ADT_IF_1 begin
+
 lemma handle_preemption_if_only_timer_irq_inv[wp]:
   "handle_preemption_if tc \<lbrace>only_timer_irq_inv irq st\<rbrace>"
   by (wp only_timer_irq_inv_pres handle_preemption_if_irq_masks handle_preemption_if_domain_sep_inv
       | simp | blast)+
+
+end
+
 
 lemma schedule_if_only_timer_irq_inv[wp]:
   "schedule_if tc \<lbrace>only_timer_irq_inv irq st\<rbrace>"

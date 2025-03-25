@@ -437,7 +437,7 @@ global_interpretation Retype_AC_1?: Retype_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_AC_assms | wpsimp))
+    by (unfold_locales; (fact Retype_AC_assms | solves \<open>wp only: Retype_AC_assms; simp\<close>)?)
 qed
 
 

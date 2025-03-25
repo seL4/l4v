@@ -67,15 +67,13 @@ crunch possible_switch_to
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
 
 lemma update_waiting_ntfn_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and ko_at (Notification ntfn) ntfnptr and K (ntfn_obj ntfn = WaitingNtfn queue)\<rbrace>
+  "\<lbrace>pas_refined aag and ko_at (Notification ntfn) ntfnptr and K (ntfn_obj ntfn = WaitingNtfn queue)\<rbrace>
    update_waiting_ntfn ntfnptr queue badge val
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wpsimp wp: set_thread_state_pas_refined set_simple_ko_pas_refined simp: update_waiting_ntfn_def)
 
 lemma cancel_ipc_receive_blocked_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs
-                    and valid_arch_state and st_tcb_at receive_blocked t\<rbrace>
+  "\<lbrace>pas_refined aag and st_tcb_at receive_blocked t\<rbrace>
    cancel_ipc t
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
@@ -85,9 +83,7 @@ lemma cancel_ipc_receive_blocked_pas_refined:
   done
 
 lemma send_signal_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-   send_signal ntfnptr badge
-   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  "send_signal ntfnptr badge \<lbrace>pas_refined aag\<rbrace>"
   apply (simp add: send_signal_def)
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (wpsimp wp: set_simple_ko_pas_refined update_waiting_ntfn_pas_refined gts_wp
@@ -96,8 +92,7 @@ lemma send_signal_pas_refined:
   done
 
 lemma receive_signal_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and K (\<forall>ntfnptr \<in> obj_refs_ac cap. abs_has_auth_to aag Receive thread ntfnptr)\<rbrace>
+  "\<lbrace>pas_refined aag and K (\<forall>ntfnptr \<in> obj_refs_ac cap. abs_has_auth_to aag Receive thread ntfnptr)\<rbrace>
    receive_signal thread cap is_blocking
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: receive_signal_def)
@@ -172,9 +167,6 @@ locale Ipc_AC_1 =
     "\<And>P. make_fault_msg ft t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
   and tcb_context_no_change:
     "\<exists>ctxt. (tcb :: tcb) = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt (tcb_arch tcb)\<rparr>"
-  (* This assumption excludes x64 (its valid_arch_state includes caps) *)
-  and transfer_caps_loop_valid_arch[wp]:
-    "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
 begin
 
 lemma send_upd_ctxintegrity:
@@ -736,8 +728,7 @@ lemma derive_cap_is_derived_foo':
 lemma transfer_caps_loop_presM_extended:
   fixes P vo em ex buffer slots caps n mi
   assumes x: "\<And>cap src dest.
-              \<lbrace>\<lambda>s. P s \<and> (vo \<longrightarrow> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s
-                               \<and> valid_objs s \<and> valid_mdb s \<and> real_cte_at dest s
+              \<lbrace>\<lambda>s. P s \<and> (vo \<longrightarrow> valid_objs s \<and> valid_mdb s \<and> real_cte_at dest s
                                \<and> s \<turnstile> cap \<and> Psrc src \<and> Pdest dest \<and> Pcap cap
                                \<and> tcb_cap_valid cap dest s \<and> real_cte_at src s
                                \<and> cte_wp_at (is_derived (cdt s) src cap) src s
@@ -748,8 +739,7 @@ lemma transfer_caps_loop_presM_extended:
               \<lbrace>\<lambda>_ s :: det_ext state. P s\<rbrace>"
   assumes eb: "\<And>b n. set_extra_badge buffer b n \<lbrace>P\<rbrace>"
   assumes pcap_auth_derived: "\<And>cap cap'. \<lbrakk> auth_derived cap cap'; Pcap cap' \<rbrakk> \<Longrightarrow> Pcap cap"
-  shows "\<lbrace>\<lambda>s. P s \<and> (vo \<longrightarrow> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s
-                          \<and> valid_objs s \<and> valid_mdb s \<and> distinct slots
+  shows "\<lbrace>\<lambda>s. P s \<and> (vo \<longrightarrow> valid_objs s \<and> valid_mdb s \<and> distinct slots
                           \<and> (\<forall>x \<in> set slots. cte_wp_at (\<lambda>cap. cap = NullCap) x s
                                            \<and> real_cte_at x s \<and> Pdest x)
                           \<and> (\<forall>x \<in> set caps. valid_cap (fst x) s \<and> Psrc (snd x) \<and> Pcap (fst x)
@@ -807,8 +797,7 @@ lemma transfer_caps_loop_presM_extended:
   by (clarsimp simp: masked_as_full_def is_cap_simps split: if_splits)+
 
 lemma transfer_caps_loop_pas_refined:
-  "\<lbrace>\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and>
-        valid_arch_state s \<and> valid_objs s \<and> valid_mdb s \<and>
+  "\<lbrace>\<lambda>s. pas_refined aag s \<and> valid_objs s \<and> valid_mdb s \<and>
         (\<forall>x \<in> set caps. valid_cap (fst x) s \<and> real_cte_at (snd x) s
                       \<and> cte_wp_at (\<lambda>cp. fst x \<noteq> NullCap \<longrightarrow> cp = fst x) (snd x) s) \<and>
         (\<forall>x\<in>set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = NullCap) x s) \<and>
@@ -831,8 +820,7 @@ lemma transfer_caps_loop_pas_refined:
   done
 
 lemma transfer_caps_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs
-                    and valid_arch_state and valid_objs and valid_mdb
+  "\<lbrace>pas_refined aag and valid_objs and valid_mdb
                     and (\<lambda>s. (\<forall>x \<in> set caps. valid_cap (fst x) s
                                            \<and> cte_wp_at (\<lambda>cp. fst x \<noteq> NullCap \<longrightarrow> cp = fst x) (snd x) s
                                            \<and> real_cte_at (snd x) s))
@@ -849,16 +837,9 @@ lemma transfer_caps_pas_refined:
 end
 
 lemma copy_mrs_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
-   copy_mrs sender sbuf receiver rbuf n
-   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  "copy_mrs sender sbuf receiver rbuf n \<lbrace>pas_refined aag\<rbrace>"
   unfolding copy_mrs_def
-  apply (rule_tac Q'="\<lambda>_. pas_refined aag and pspace_aligned
-                                         and valid_vspace_objs
-                                         and valid_arch_state"
-               in hoare_strengthen_post[rotated], clarsimp)
-  apply (wpsimp wp: mapM_wp_inv)
-  done
+  by (wpsimp wp: mapM_wp_inv)
 
 lemma lookup_cap_and_slot_authorised:
   "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
@@ -916,13 +897,8 @@ context Ipc_AC_1 begin
 crunch do_fault_transfer
   for pas_refined[wp]: "\<lambda>s :: det_ext state. pas_refined aag s"
 
-crunch transfer_caps, copy_mrs
-  for valid_arch_state[wp]: "valid_arch_state :: det_ext state \<Rightarrow> _"
-  (wp: crunch_wps)
-
 lemma do_normal_transfer_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_objs and valid_mdb
+  "\<lbrace>pas_refined aag and valid_objs and valid_mdb
                     and K (grant \<longrightarrow> is_subject aag sender)
                     and K (grant \<longrightarrow> is_subject aag receiver)\<rbrace>
    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
@@ -945,8 +921,7 @@ next
 qed
 
 lemma do_ipc_transfer_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_objs and valid_mdb
+  "\<lbrace>pas_refined aag and valid_objs and valid_mdb
                     and K (grant \<longrightarrow> is_subject aag sender)
                     and K (grant \<longrightarrow> is_subject aag receiver)\<rbrace>
    do_ipc_transfer sender ep badge grant receiver
@@ -959,7 +934,7 @@ end
 
 (* FIXME MOVE*)
 lemma cap_insert_pas_refined_transferable:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb and
+  "\<lbrace>pas_refined aag and valid_mdb and
     K (is_transferable_cap new_cap \<and> aag_cap_auth aag (pasObjectAbs aag (fst dest_slot)) new_cap \<and>
        abs_has_auth_to aag DeleteDerived (fst src_slot) (fst dest_slot))\<rbrace>
    cap_insert new_cap src_slot dest_slot
@@ -982,7 +957,7 @@ lemma cap_insert_pas_refined_transferable:
                 intro: aag_wellformed_delete_derived_trans[OF _ _ pas_refined_wellformed])
 
 lemma setup_caller_cap_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb and
+  "\<lbrace>pas_refined aag and valid_mdb and
     K ((grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver) \<and>
        abs_has_auth_to aag Reply receiver sender)\<rbrace>
    setup_caller_cap sender receiver grant
@@ -1061,12 +1036,11 @@ lemma send_ipc_pas_refined:
    apply (wpc | wp set_thread_state_pas_refined)+
          apply (simp add: hoare_if_r_and split del:if_split)
          apply (wp setup_caller_cap_pas_refined set_thread_state_pas_refined)+
-       apply (simp split del:if_split)
-       apply (rule_tac Q'="\<lambda>rv. pas_refined aag and pspace_aligned and valid_vspace_objs and
-                               valid_arch_state and valid_mdb and
-                               K (can_grant \<or> can_grant_reply
-                                  \<longrightarrow> (reply_can_grant \<longrightarrow> is_subject aag x21) \<and>
-                                      (pasObjectAbs aag x21, Reply, pasSubject aag) \<in> pasPolicy aag)"
+       apply (simp split del: if_split)
+       apply (rule_tac Q'="\<lambda>rv. pas_refined aag and valid_mdb and
+                                K (can_grant \<or> can_grant_reply
+                                   \<longrightarrow> (reply_can_grant \<longrightarrow> is_subject aag x21) \<and>
+                                       (pasObjectAbs aag x21, Reply, pasSubject aag) \<in> pasPolicy aag)"
                     in hoare_strengthen_post[rotated])
         apply simp
        apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined hoare_weak_lift_imp gts_wp
@@ -1180,8 +1154,7 @@ lemma receive_ipc_sender_can_grant_helper:
   done
 
 lemma complete_signal_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and bound_tcb_at ((=) (Some ntfnptr)) thread\<rbrace>
+  "\<lbrace>pas_refined aag and bound_tcb_at ((=) (Some ntfnptr)) thread\<rbrace>
    complete_signal ntfnptr thread
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: complete_signal_def)
@@ -1207,8 +1180,7 @@ lemma receive_ipc_base_pas_refined:
    apply (wp set_thread_state_pas_refined get_simple_ko_wp setup_caller_cap_pas_refined
           | wpc | simp add: thread_get_def do_nbrecv_failed_transfer_def split del: if_split)+
         apply (rename_tac list sss data)
-        apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and>
-                                  valid_arch_state s \<and> valid_mdb s \<and>
+        apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> valid_mdb s \<and>
                                   (sender_can_grant data \<longrightarrow> is_subject aag (hd list)) \<and>
                                   (sender_can_grant_reply data \<longrightarrow>
                                   (AllowGrant \<in> rights \<longrightarrow> is_subject aag (hd list)) \<and>
@@ -1286,7 +1258,6 @@ lemma receive_ipc_pas_refined:
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "isActive ntfn", simp_all)
    apply (wp complete_signal_pas_refined, clarsimp)
-   apply fastforce
   (* regular case again *)
   apply (rule hoare_pre, wp receive_ipc_base_pas_refined)
   apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
@@ -1365,8 +1336,7 @@ lemma transfer_caps_integrity_autarch:
 lemma do_normal_transfer_send_integrity_autarch:
   notes lec_valid_cap[wp del]
   shows
-  "\<lbrace>pas_refined aag and integrity aag X st and pspace_aligned and
-    valid_vspace_objs and valid_arch_state and valid_objs and valid_mdb and
+  "\<lbrace>pas_refined aag and integrity aag X st and valid_objs and valid_mdb and
     K (is_subject aag receiver \<and> ipc_buffer_has_auth aag receiver rbuf
                                \<and> (grant \<longrightarrow> is_subject aag sender))\<rbrace>
    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
@@ -1390,8 +1360,7 @@ lemma do_fault_transfer_integrity_autarch:
                  set_mrs_integrity_autarch thread_get_wp')
 
 lemma do_ipc_transfer_integrity_autarch:
-  "\<lbrace>pas_refined aag and integrity aag X st and
-    pspace_aligned and valid_vspace_objs and valid_arch_state and valid_objs and valid_mdb and
+  "\<lbrace>pas_refined aag and integrity aag X st and valid_objs and valid_mdb and
     K (is_subject aag receiver \<and> (grant \<longrightarrow> is_subject aag sender))\<rbrace>
    do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -1768,12 +1737,6 @@ locale Ipc_AC_2 = Ipc_AC_1 +
   and handle_arch_fault_reply_integrity_tcb_in_fault_reply_TRFContext[wp]:
     "handle_arch_fault_reply vmf thread x y
      \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
-  and handle_arch_fault_reply_pspace_aligned[wp]:
-    "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s :: det_ext state. pspace_aligned s\<rbrace>"
-  and handle_arch_fault_reply_valid_vspace_objs[wp]:
-    "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s :: det_ext state. valid_vspace_objs s\<rbrace>"
-  and handle_arch_fault_reply_valid_arch_state[wp]:
-    "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
   and cap_insert_ext_integrity_asids_in_ipc[wp]:
     "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
      \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
@@ -2072,8 +2035,7 @@ lemma do_normal_transfer_respects_in_ipc:
   notes lec_valid_cap[wp del]
   shows
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and pas_refined aag and
-    pspace_aligned and valid_vspace_objs and valid_arch_state and
-valid_objs and valid_mdb and st_tcb_at can_receive_ipc receiver and
+    valid_objs and valid_mdb and st_tcb_at can_receive_ipc receiver and
     (\<lambda>s. grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver) and
     K ((\<not> is_subject aag receiver \<longrightarrow>
         (case recv_buf of None \<Rightarrow> True | Some buf' \<Rightarrow> auth_ipc_buffers st receiver =
@@ -2105,7 +2067,6 @@ lemma do_fault_transfer_respects_in_ipc:
 
 lemma do_ipc_transfer_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and pas_refined aag and
-    pspace_aligned and valid_vspace_objs and valid_arch_state and
     valid_objs and valid_mdb and st_tcb_at can_receive_ipc receiver and
     (\<lambda>s. grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
    do_ipc_transfer sender epopt badge grant receiver
@@ -2330,7 +2291,7 @@ lemma setup_caller_cap_respects_in_ipc_reply:
   by (wpsimp wp: cap_insert_reply_cap_respects_in_ipc set_thread_state_respects_in_ipc_autarch)
 
 lemma send_ipc_integrity_autarch:
-  "\<lbrace>integrity aag X st and pas_refined aag and invs and is_subject aag \<circ> cur_thread and
+  "\<lbrace>integrity aag X st and pas_refined aag and invs and
     obj_at (\<lambda>ep. can_grant \<longrightarrow> (\<forall>r \<in> refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r))) epptr and
     K (is_subject aag sender \<and> aag_has_auth_to aag SyncSend epptr \<and>
        (can_grant_reply \<longrightarrow> aag_has_auth_to aag Call epptr))\<rbrace>
@@ -2409,15 +2370,13 @@ lemma valid_tcb_fault_update:
 context Ipc_AC_2 begin
 
 lemma thread_set_fault_pas_refined:
-  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
+  "\<lbrace>pas_refined aag\<rbrace>
    thread_set (tcb_fault_update (\<lambda>_. Some fault)) thread
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  by (wpsimp wp: send_ipc_pas_refined thread_set_pas_refined
-                 thread_set_refs_trivial thread_set_obj_at_impossible)
+  by (wpsimp wp: thread_set_pas_refined)
 
 lemma send_fault_ipc_pas_refined:
-  "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread
-                    and K (valid_fault fault) and K (is_subject aag thread)\<rbrace>
+  "\<lbrace>pas_refined aag and invs and K (valid_fault fault) and K (is_subject aag thread)\<rbrace>
    send_fault_ipc thread fault
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)+
@@ -2426,8 +2385,7 @@ lemma send_fault_ipc_pas_refined:
                     thread_set_refs_trivial thread_set_obj_at_impossible get_cap_wp
                     thread_set_valid_objs'' hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_all_lift
               simp: split_def)
-    apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> is_subject aag (cur_thread s) \<and>
-                               invs s \<and> valid_fault fault \<and> is_subject aag (fst (fst rv))"
+    apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> invs s \<and> valid_fault fault \<and> is_subject aag (fst (fst rv))"
                  in hoare_strengthen_postE_R[rotated])
      apply (fastforce dest!: cap_auth_caps_of_state
                        simp: invs_valid_objs invs_sym_refs cte_wp_at_caps_of_state aag_cap_auth_def
@@ -2437,8 +2395,7 @@ lemma send_fault_ipc_pas_refined:
   done
 
 lemma handle_fault_pas_refined:
-  "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread
-                    and K (valid_fault fault) and K (is_subject aag thread)\<rbrace>
+  "\<lbrace>pas_refined aag and invs and K (valid_fault fault) and K (is_subject aag thread)\<rbrace>
    handle_fault thread fault
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (wpsimp wp: set_thread_state_pas_refined simp: handle_fault_def handle_double_fault_def)
@@ -2449,7 +2406,6 @@ lemma handle_fault_pas_refined:
       apply (rule hoare_strengthen_postE[where E'=E and E=E for E])
         apply (rule valid_validE)
         apply (wpsimp wp: send_fault_ipc_pas_refined)+
-  apply fastforce
   done
 
 end
@@ -2471,7 +2427,7 @@ lemma obj_at_conj_distrib:
 context Ipc_AC_2 begin
 
 lemma send_fault_ipc_integrity_autarch:
-  "\<lbrace>pas_refined aag and invs and integrity aag X st and is_subject aag \<circ> cur_thread
+  "\<lbrace>pas_refined aag and invs and integrity aag X st
                     and K (valid_fault fault) and K (is_subject aag thread)\<rbrace>
    send_fault_ipc thread fault
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -2492,7 +2448,6 @@ lemma send_fault_ipc_integrity_autarch:
     apply (rule_tac Q'="\<lambda>rv s. integrity aag X st s \<and> pas_refined aag s
                           \<and> invs s
                           \<and> valid_fault fault
-                          \<and> is_subject aag (cur_thread s)
                           \<and> is_subject aag (fst (fst rv))"
                in hoare_strengthen_postE_R[rotated])
      apply (clarsimp simp: invs_valid_objs invs_sym_refs cte_wp_at_caps_of_state obj_at_def)
@@ -2512,7 +2467,7 @@ lemma send_fault_ipc_integrity_autarch:
   done
 
 lemma handle_fault_integrity_autarch:
-  "\<lbrace>pas_refined aag and integrity aag X st and is_subject aag \<circ> cur_thread and invs
+  "\<lbrace>integrity aag X st and pas_refined aag and invs
                     and K (valid_fault fault) and K (is_subject aag thread)\<rbrace>
    handle_fault thread fault
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -2532,12 +2487,6 @@ lemma tcb_st_to_auth_Restart_Inactive [simp]:
 
 
 context Ipc_AC_2 begin
-
-crunch handle_fault_reply
-  for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
-  and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
-  and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
-  (wp: arch_get_sanitise_register_info_inv)
 
 lemma do_reply_transfer_pas_refined:
   "\<lbrace>pas_refined aag and invs and K (is_subject aag sender)
