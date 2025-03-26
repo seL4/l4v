@@ -205,14 +205,14 @@ lemma transform_objects_update_kheap_same_caps:
   (if ptr = idle_thread s then
          transform_objects (update_kheap kh s)
   else
-         (transform_objects (update_kheap kh s))(ptr \<mapsto> transform_object (machine_state s) ptr (ekheap s ptr) ko'))"
+         (transform_objects (update_kheap kh s))(ptr \<mapsto> transform_object (machine_state s) ptr ko'))"
   unfolding transform_objects_def
   apply (rule ext)
   apply (simp add: map_option_case restrict_map_def map_add_def )
   done
 
 lemma transform_objects_update_same:
-  "\<lbrakk> kheap s ptr = Some ko; transform_object (machine_state s) ptr (ekheap s ptr) ko = ko'; ptr \<noteq> idle_thread s \<rbrakk>
+  "\<lbrakk> kheap s ptr = Some ko; transform_object (machine_state s) ptr ko = ko'; ptr \<noteq> idle_thread s \<rbrakk>
   \<Longrightarrow> (transform_objects s)(ptr \<mapsto> ko') = transform_objects s"
   unfolding transform_objects_def
   by (rule ext) (simp)
