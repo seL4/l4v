@@ -491,16 +491,6 @@ lemma bisim_injection:
       apply wpsimp+
   done
 
-lemma separate_state_cdt [simp]:
-  "separate_state (s\<lparr>cdt := x\<rparr>) = separate_state s"
-  unfolding separate_state_def
-  by (simp add: get_tcb_def)
-
-lemma separate_state_original [simp]:
-  "separate_state (s\<lparr>is_original_cap := x\<rparr>) = separate_state s"
-  unfolding separate_state_def
-  by (simp add: get_tcb_def)
-
 lemma separate_cap_NullCap [simp]: "separate_cap NullCap" by (simp add: separate_cap_def)
 
 lemma set_cap_NullCap_separate_state [wp]:
@@ -533,11 +523,6 @@ lemma separate_state_pres':
   apply wp
   apply simp
   done
-
-lemma separate_state_more_update[simp]:
-  "separate_state (trans_state f s) =
-   separate_state s"
-  by (simp add: separate_state_def)
 
 lemma cap_delete_one_sep [wp]:
   "\<lbrace>separate_state\<rbrace> cap_delete_one cptr \<lbrace>\<lambda>_. separate_state\<rbrace>"
@@ -695,11 +680,17 @@ lemma activate_thread_separate_state [wp]:
   unfolding activate_thread_def
   by (wp separate_state_pres' | wpc | simp add: arch_activate_idle_thread_def |  strengthen imp_consequent)+
 
+crunch schedule_choose_new_thread
+  for separate_state[wp]: separate_state
+  and typ_at[wp]: "\<lambda>s. P (typ_at t p s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma schedule_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"
   unfolding schedule_def switch_to_thread_def arch_switch_to_thread_def
-            switch_to_idle_thread_def arch_switch_to_idle_thread_def allActiveTCBs_def
-  by (wpsimp wp: select_inv separate_state_pres'
+            switch_to_idle_thread_def arch_switch_to_idle_thread_def
+  by (wpsimp wp: select_inv separate_state_pres' gts_wp
              simp: arch_activate_idle_thread_def |
       strengthen imp_consequent)+
 
@@ -732,9 +723,19 @@ lemma send_signal_separate_state [wp]:
   apply (clarsimp simp add: pred_tcb_at_def obj_at_def)
   done
 
-lemma dmo_separate_state [wp]:
-  "\<lbrace>separate_state\<rbrace> do_machine_op f \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  by (rule separate_state_pres, rule hoare_pre, wps, wp, simp)
+lemma thread_set_time_slice_separate_state[wp]:
+  "thread_set_time_slice t time \<lbrace>separate_state\<rbrace>"
+  unfolding thread_set_time_slice_def
+  apply (rule separate_state_pres)
+  apply (wp_pre, wps)
+   apply (wpsimp wp: separate_state_pres thread_set_caps_of_state_trivial)+
+   apply (fastforce simp: ran_tcb_cap_cases)
+  apply clarsimp
+  done
+
+crunch timer_tick, do_machine_op
+  for separate_state[wp]: separate_state
+  (wp: crunch_wps set_object_wp simp: crunch_simps)
 
 lemma handle_interrupt_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. separate_state\<rbrace>"
@@ -750,10 +751,6 @@ lemma decode_invocation_separate_state [wp]:
   \<lbrace> \<lambda>_. separate_state \<rbrace>"
   unfolding decode_invocation_def by wpsimp
 
-lemma separate_state_machine_state:
-  "separate_state (s\<lparr>machine_state := ms\<rparr>) = separate_state s"
-  unfolding separate_state_def by simp
-
 crunch set_thread_state, set_simple_ko
   for separate_state[wp]: "separate_state"
    (wp: separate_state_pres' crunch_wps simp: crunch_simps)
@@ -761,7 +758,7 @@ crunch set_thread_state, set_simple_ko
 crunch "Syscall_SA.handle_event"
   for separate_state[wp]: "separate_state"
    (wp: crunch_wps syscall_valid
-    simp: crunch_simps separate_state_machine_state
+    simp: crunch_simps
     ignore: syscall)
 
 lemma call_kernel_separate_state:
