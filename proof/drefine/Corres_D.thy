@@ -11,7 +11,7 @@
  *)
 
 theory Corres_D
-imports StateTranslationProofs_DR
+imports StateTranslationProofs_DR Lib.Corres_Method
 begin
 
 lemma truncate_state_unit[simp]: "truncate_state s = s" by simp

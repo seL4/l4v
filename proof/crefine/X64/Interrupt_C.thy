@@ -16,6 +16,8 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
        invs' (UNIV \<inter> {s. irq_' s = ucast irq}) []
      (InterruptDecls_H.invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
   apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
+   apply csymbr (* config_set(config_ARM_GIC_V3) -- cannot be set on X64 *)
+   apply ccorres_rewrite
    apply (ctac add: maskInterrupt_ccorres)
   apply simp
   done
@@ -776,6 +778,8 @@ from assms show ?thesis
                 simp: ArchInterrupt_H.X64_H.decodeIRQControlInvocation_def)
    apply (simp add: throwError_bind
               cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply csymbr (* config_set(CONFIG_IRQ_IOAPIC) *)
+   apply ccorres_rewrite
    apply (rule ccorres_Cond_rhs_Seq)
     apply ccorres_rewrite
     apply (auto split: invocation_label.split arch_invocation_label.split

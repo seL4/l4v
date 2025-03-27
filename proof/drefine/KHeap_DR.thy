@@ -2825,8 +2825,8 @@ lemma transform_objects_update_kheap_simp:
            Some (transform_object (machine_state s) ptr opt_etcb obj)))"
   apply (rule ext)
   apply (clarsimp split:if_splits)
-  apply (case_tac "x = ptr")
-   apply (clarsimp simp: map_add_def transform_objects_def)
+  apply (case_tac "x = ptr"; simp)
+   apply (clarsimp simp: transform_objects_def map_add_def)
   apply (simp add:restrict_map_def map_add_def transform_objects_def)
   done
 

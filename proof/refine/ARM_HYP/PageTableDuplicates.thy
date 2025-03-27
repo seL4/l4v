@@ -1430,10 +1430,8 @@ lemma invokeIRQControl_valid_duplicates'[wp]:
 lemma invokeIRQHandler_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> InterruptDecls_H.invokeIRQHandler a
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: Interrupt_H.invokeIRQHandler_def)
-  apply (rule hoare_pre)
-  apply (wp|wpc | simp add:ARM_HYP_H.performIRQControl_def invokeIRQHandler_def)+
-  done
+  by (wpsimp simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def
+             split_del: if_split)
 
 lemma invokeCNode_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> vs_valid_duplicates' (ksPSpace s)

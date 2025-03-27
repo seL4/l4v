@@ -2230,11 +2230,11 @@ lemma ccorres_handleReservedIRQ:
   done
 
 (* Because of a case distinction, this proof occurs multiple times in handleInterrupt_ccorres below.
-   The proof is carefully manual to match up the C expression
-   "if (!config_set(CONFIG_ARM_GIC_V3_SUPPORT))", which renders as IF False or IF True in Simpl,
+   The proof matches up the C expression "!config_set(CONFIG_ARM_GIC_V3_SUPPORT)"
    with config_ARM_GIC_V3 from the spec side. *)
 method maybe_maskInterrupt_before_ack =
     simp only: maskIrqSignal_def when_def,
+    csymbr, (* unwrap config_set(..) *)
     rule ccorres_cond_seq,
     rule ccorres_cond_both[where P="\<lambda>_. \<not>config_ARM_GIC_V3" and R=\<top>],
        simp add: Kernel_Config.config_ARM_GIC_V3_def, (* match up !config_set(..) condition *)
@@ -2254,9 +2254,7 @@ lemma handleInterrupt_ccorres:
      hs
      (handleInterrupt irq)
      (Call handleInterrupt_'proc)"
-  (* Use (no_ccorres_rewrite) to avoid rewriting the static condition coming out of
-     "if (!config_set(CONFIG_ARM_GIC_V3_SUPPORT))" in C *)
-  apply (cinit (no_ccorres_rewrite) lift: irq_' cong: call_ignore_cong)
+  apply (cinit lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add:  Kernel_C_maxIRQ del: Collect_const)
     apply (rule ccorres_rhs_assoc)+

@@ -162,6 +162,11 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 
 context Arch begin arch_global_naming
 
+lemma deactivateInterrupt_empty_fail[wp]:
+  "config_ARM_GIC_V3 \<Longrightarrow> empty_fail (deactivateInterrupt irq)"
+  unfolding deactivateInterrupt_def
+  by wpsimp
+
 crunch possible_switch_to, handle_event, activate_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def

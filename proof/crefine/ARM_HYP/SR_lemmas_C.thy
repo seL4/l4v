@@ -2339,6 +2339,7 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_CNTV_CVALlow_def
     seL4_VCPUReg_CNTVOFFhigh_def
     seL4_VCPUReg_CNTVOFFlow_def
+    seL4_VCPUReg_CNTKCTL_def
 
 (* rewrite a definition from a C enum into a vcpureg enumeration lookup *)
 (* FIXME type annotations are ham-fisted and repetitive *)
@@ -2439,6 +2440,10 @@ lemma unat_scast_seL4_VCPUReg_SCTLR_simp[simp]:
 lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_ACTLR) = fromEnum VCPURegACTLR"
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegACTLR, simplified, symmetric])
+
+lemma unat_scast_seL4_VCPUReg_CNTKCTL_simp[simp]:
+  "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_CNTKCTL) = fromEnum VCPURegCNTKCTL"
+  by (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTKCTL, simplified, symmetric])
 
 lemma numDomains_sge_1_simp:
   "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"

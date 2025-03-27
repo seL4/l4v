@@ -438,7 +438,7 @@ crunch readVCPUReg
 
 (* schematic_goal leads to Suc (Suc ..) form only *)
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 42"
+  "fromEnum (maxBound :: vcpureg) = 43"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:

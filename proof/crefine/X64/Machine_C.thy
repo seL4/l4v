@@ -182,6 +182,10 @@ assumes out32_ccorres:
 
 context kernel_m begin
 
+lemma wrap_config_set_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
+  by (rule allI, rule conseqPre, vcg) clarsimp
+
 lemma index_xf_for_sequence:
   "\<forall>s f. index_' (index_'_update f s) = f (index_' s)
           \<and> globals (index_'_update f s) = globals s"

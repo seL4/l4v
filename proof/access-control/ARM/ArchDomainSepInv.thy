@@ -106,7 +106,7 @@ lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:
 
 lemma arch_invoke_irq_handler_domain_sep_inv[DomainSepInv_assms, wp]:
   "arch_invoke_irq_handler ihi \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (cases ihi; wpsimp)
+  by (cases ihi; wpsimp split_del: if_split)
 
 lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
   "\<lbrace>domain_sep_inv irqs st and arch_irq_control_inv_valid ivk\<rbrace>

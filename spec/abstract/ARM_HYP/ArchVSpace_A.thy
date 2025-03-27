@@ -384,6 +384,8 @@ definition save_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_mona
      vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALlow (ucast cval);
      vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (cntvoff >> 32));
      vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast cntvoff);
+     vcpu_save_reg vcpu_ptr VCPURegCNTKCTL;
+     do_machine_op check_export_arch_timer;
      cntpct \<leftarrow> do_machine_op read_cntpct;
      vcpu_update vcpu_ptr (\<lambda>vcpu. vcpu\<lparr>vcpu_vtimer := VirtTimer cntpct \<rparr>)
    od"
@@ -400,6 +402,7 @@ definition restore_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_m
      cval_low \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTV_CVALlow;
      (cval :: 64 word) \<leftarrow> return $ ((ucast cval_high) << 32) || ucast cval_low;
      do_machine_op $ set_cntv_cval_64 cval;
+     vcpu_restore_reg vcpu_ptr VCPURegCNTKCTL;
      current_cntpct \<leftarrow> do_machine_op read_cntpct;
      vcpu \<leftarrow> get_vcpu vcpu_ptr;
      last_pcount \<leftarrow> return $ vtimerLastPCount $ vcpu_vtimer vcpu;

@@ -37,7 +37,7 @@ lemma arch_invoke_irq_handler_pas_refined[Interrupt_AC_assms]:
   "\<lbrace>pas_refined aag and invs and (\<lambda>s. interrupt_states s x1 \<noteq> IRQInactive)\<rbrace>
    arch_invoke_irq_handler (ACKIrq x1)
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  by wpsimp
+  by (wpsimp split_del: if_split)
 
 lemma arch_invoke_irq_control_respects[Interrupt_AC_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (arch_authorised_irq_ctl_inv aag acinv)\<rbrace>
@@ -57,7 +57,7 @@ lemma arch_invoke_irq_handler_respects[Interrupt_AC_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs\<rbrace>
    arch_invoke_irq_handler (ACKIrq x1)
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  by (wpsimp wp: dmo_wp simp: maskInterrupt_def)
+  by (wpsimp wp: dmo_wp simp: maskInterrupt_def deactivateInterrupt_def split_del: if_split)
 
 crunch arch_check_irq for inv[Interrupt_AC_assms, wp]: P
 

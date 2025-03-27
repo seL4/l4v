@@ -12,9 +12,17 @@ context Arch begin global_naming ARM
 
 named_theorems Interrupt_IF_assms
 
+lemma dmo_deactivateInterrupt_reads_respects:
+  "config_ARM_GIC_V3 \<Longrightarrow> reads_respects aag l \<top> (do_machine_op (deactivateInterrupt irq))"
+  unfolding deactivateInterrupt_def
+  by (simp add: dmo_maskInterrupt_reads_respects)
+
 lemma arch_invoke_irq_handler_reads_respects[Interrupt_IF_assms, wp]:
   "reads_respects_f aag l (silc_inv aag st) (arch_invoke_irq_handler irq)"
   apply (cases irq; wpsimp)
+  apply (rule conjI; clarsimp)
+   apply (erule reads_respects_f[OF dmo_deactivateInterrupt_reads_respects, where Q=\<top>, simplified])
+   apply (wpsimp simp: deactivateInterrupt_def)
   apply (rule reads_respects_f[OF dmo_maskInterrupt_reads_respects, where Q=\<top>, simplified])
   apply wpsimp
   done
@@ -40,7 +48,8 @@ lemma arch_invoke_irq_control_globals_equiv[Interrupt_IF_assms]:
 
 lemma arch_invoke_irq_handler_globals_equiv[Interrupt_IF_assms, wp]:
   "arch_invoke_irq_handler irq \<lbrace>globals_equiv st\<rbrace>"
-  by (cases irq; wpsimp wp: dmo_no_mem_globals_equiv simp: maskInterrupt_def)
+  by (cases irq;
+      wpsimp wp: dmo_no_mem_globals_equiv simp: maskInterrupt_def deactivateInterrupt_def)
 
 end
 

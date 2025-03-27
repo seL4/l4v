@@ -693,9 +693,9 @@ crunch vcpu_save_reg, vgic_update, vcpu_disable
   for valid_irq_states[wp]: valid_irq_states
   and in_user_frame[wp]: "in_user_frame p"
   (wp: dmo_maskInterrupt_True_valid_irq_states dmo_valid_irq_states
-   simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-         get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def writeVCPUHardwareReg_def
-         read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def maskInterrupt_def)
+   simp: get_cntv_off_64_def get_cntv_cval_64_def set_gic_vcpu_ctrl_hcr_def get_gic_vcpu_ctrl_hcr_def
+         readVCPUHardwareReg_def writeVCPUHardwareReg_def setHCR_def setSCTLR_def getSCTLR_def
+         isb_def dsb_def read_cntpct_def maskInterrupt_def check_export_arch_timer_def)
 
 lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
   "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>valid_machine_state\<rbrace>"
@@ -703,12 +703,19 @@ lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift writeVCPUHardwareReg_underlying_memory
                  dmo_machine_state_lift)
 
+lemma dmo_check_export_arch_timer_valid_machine_state[wp]:
+  "do_machine_op check_export_arch_timer \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift
+                 check_export_arch_timer_underlying_memory)
+
 crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, save_virt_timer
   for in_user_frame[wp]: "in_user_frame p"
   and valid_machine_state[wp]: valid_machine_state
   and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
   (simp: readVCPUHardwareReg_def read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def
    wp: writeVCPUHardwareReg_underlying_memory_pred dmo_machine_state_lift
+       check_export_arch_timer_underlying_memory_pred
    ignore: do_machine_op)
 
 lemma vcpu_disable_valid_machine_state[wp]:

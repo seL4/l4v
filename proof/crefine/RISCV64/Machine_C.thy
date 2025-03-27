@@ -385,5 +385,9 @@ lemma ctzl_spec:
   apply (rule allI, rule conseqPre, vcg)
   by (clarsimp simp: casts_of_nat_small[OF word_ctz_max[THEN le_less_trans]] word_size)
 
+lemma wrap_config_set_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
+  by (rule allI, rule conseqPre, vcg) clarsimp
+
 end
 end

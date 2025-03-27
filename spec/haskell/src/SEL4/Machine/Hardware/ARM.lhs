@@ -182,6 +182,9 @@ The following functions define the ARM-specific interface between the kernel and
 >     cbptr <- ask
 >     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
+> deactivateInterrupt :: IRQ -> MachineMonad ()
+> deactivateInterrupt irq = error "Unimplemented - GICv3 machine op"
+
 > configureTimer :: MachineMonad IRQ
 > configureTimer = do
 >     cbptr <- ask
@@ -869,6 +872,9 @@ FIXME ARMHYP consider moving to platform code?
 > read_cntpct :: MachineMonad Word64
 > read_cntpct = error "FIXME ARMHYP Unimplemented callback"
 
+> check_export_arch_timer :: MachineMonad ()
+> check_export_arch_timer = error "FIXME ARMHYP Unimplemented callback"
+
 #endif
 
 \subsection{Constants}
@@ -902,3 +908,8 @@ FIXME ARMHYP consider moving to platform code?
 
 #endif
 
+\subsection{Config parameters}
+
+> -- Whether to use the GICv3. Defaults to GICv2 when set to False.
+> config_ARM_GIC_V3 :: Bool
+> config_ARM_GIC_V3 = error "generated from CMake config"

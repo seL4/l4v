@@ -276,9 +276,14 @@ definition
   initIRQController :: "unit machine_monad"
 where "initIRQController \<equiv> machine_op_lift initIRQController_impl"
 
+(* Interface function for the Haskell IRQ wrapper type *)
 definition
   IRQ :: "irq \<Rightarrow> irq"
 where "IRQ \<equiv> id"
+
+(* Interface function for the Haskell IRQ wrapper type *)
+definition theIRQ :: "irq \<Rightarrow> irq" where
+  "theIRQ \<equiv> id"
 
 consts'
   writeContextID_impl :: "unit machine_rest_monad"
@@ -356,6 +361,14 @@ definition
 where
   "maskInterrupt m irq \<equiv>
   modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
+
+text \<open>Only exists on GICv3 platforms. We model interrupt deactivation as unmasking
+  for the purposes of the interrupt oracle.\<close>
+definition deactivateInterrupt :: "irq \<Rightarrow> unit machine_monad" where
+  "deactivateInterrupt irq \<equiv> do
+     assert config_ARM_GIC_V3;
+     maskInterrupt False irq
+   od"
 
 definition
   lineStart :: "machine_word \<Rightarrow> machine_word"

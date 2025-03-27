@@ -15,12 +15,8 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
   "ccorres dc xfdc
        invs' (UNIV \<inter> {s. irq_' s = ucast irq}) []
      (InterruptDecls_H.invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
-  (* C has "if (config_set(CONFIG_ARM_GIC_V3_SUPPORT))", which will render as IF 0 = 1 or IF 1 = 1.
-     Pretend we don't know what the result of that is and make a case distinction that matches
-     the condition up with config_ARM_GIC_V3. *)
-  apply (cinit (no_ccorres_rewrite)
-               lift: irq_'
-               simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def dmo_if)
+  apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def dmo_if)
+   apply csymbr (* make config_set(CONFIG_ARM_GIC_V3_SUPPORT) available *)
    apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
      apply (simp add: Kernel_Config.config_ARM_GIC_V3_def) (* match C condition *)
     apply (ctac add: deactivateInterrupt_ccorres)
@@ -468,6 +464,9 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                       throwError_bind invocationCatch_def)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
+    apply ccorres_rewrite
+    apply csymbr (* !config_set(HAVE_SET_TRIGGER) *)
+    apply ccorres_rewrite
     apply (simp add: interpret_excaps_test_null excaps_map_def
                      word_less_nat_alt Let_def
                 cong: call_ignore_cong)

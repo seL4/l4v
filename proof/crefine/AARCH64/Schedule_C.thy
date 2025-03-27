@@ -27,6 +27,8 @@ lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: AARCH64_H.switchToIdleThread_def)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (ctac (no_vcg) add: vcpu_switch_ccorres_None)
     apply (simp add: setGlobalUserVSpace_def)
     apply (rule ccorres_symb_exec_l)
@@ -83,6 +85,8 @@ lemma Arch_switchToThread_ccorres:
    apply (unfold AARCH64_H.switchToThread_def)[1]
    apply (rule ccorres_symb_exec_l3)
       apply (rule_tac P="ko_at' rv t" in ccorres_cross_over_guard)
+      apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+      apply ccorres_rewrite
       apply (ctac add: vcpu_switch_ccorres) (* c *)
         apply simp
         apply (ctac (no_vcg) add: setVMRoot_ccorres)

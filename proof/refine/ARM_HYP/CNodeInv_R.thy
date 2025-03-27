@@ -9031,7 +9031,7 @@ lemma setVCPU_valid_irq_states' [wp]:
   "setObject p (vcpu::vcpu) \<lbrace>valid_irq_states'\<rbrace>"
   by (wp valid_irq_states_lift')
 
-crunch writeVCPUHardwareReg, readVCPUHardwareReg
+crunch writeVCPUHardwareReg, readVCPUHardwareReg, check_export_arch_timer
   for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
 
 crunch vcpuUpdate, vcpuWriteReg, vcpuSaveReg, vcpuRestoreReg, vcpuReadReg
