@@ -274,6 +274,13 @@ lemma handle_arch_fault_reply_globals_equiv[Ipc_IF_assms]:
 crunch arch_get_sanitise_register_info, handle_arch_fault_reply
   for valid_global_objs[Ipc_IF_assms, wp]: "valid_global_objs"
 
+crunch handle_arch_fault_reply
+  for valid_arch_state[Ipc_IF_assms,wp]: "\<lambda>s :: det_state. valid_arch_state s"
+
+lemma transfer_caps_loop_valid_arch[Ipc_IF_assms]:
+  "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
+  by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
+
 end
 
 
@@ -330,8 +337,7 @@ lemma do_normal_transfer_reads_respects[Ipc_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
   "reads_respects aag (l :: 'a subject_label)
-     (pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                      and valid_mdb and valid_objs
+     (pas_refined aag and valid_mdb and valid_objs
                       and K (aag_can_read_or_affect aag l sender \<and>
                              ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and>
                              ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and>

@@ -186,7 +186,6 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                       | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                                   tcb_at_st_tcb_at when_def
                       | strengthen use_no_cap_to_obj_asid_strg invs_mdb
-                                   invs_psp_aligned invs_vspace_objs invs_arch_state
                       | solves auto)+)[7]
           apply ((simp add: conj_comms, strengthen imp_consequent[where Q="x = None" for x]
                                       , simp cong: conj_cong)
@@ -216,7 +215,6 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                  | wpc
                  | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def when_def st_tcb_at_triv
                  | strengthen use_no_cap_to_obj_asid_strg invs_mdb
-                              invs_psp_aligned invs_vspace_objs invs_arch_state
                  | wp (once) hoare_drop_imp)+
     apply (simp add: option_update_thread_def tcb_cap_cases_def
            | wp hoare_weak_lift_imp hoare_weak_lift_imp_conj thread_set_pas_refined
@@ -232,7 +230,6 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
              thread_set_valid_arch_state
           | simp add: tcb_cap_cases_def | wpc | wp (once) hoare_drop_imp)+
   apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
-  apply (clarsimp simp: invs_psp_aligned invs_vspace_objs invs_arch_state)
   apply (clarsimp cong: conj_cong)
   apply (intro conjI impI allI)
   (* slow *)

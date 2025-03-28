@@ -89,6 +89,9 @@ lemma cap_revoke_globals_equiv:
   by (wp cap_delete_globals_equiv preemption_point_inv
       | fastforce simp: emptyable_def dest: reply_slot_not_descendant)+
 
+crunch cap_move
+  for valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
+
 lemma invoke_cnode_globals_equiv:
   "\<lbrace>globals_equiv st and invs and valid_cnode_inv cinv\<rbrace>
    invoke_cnode cinv

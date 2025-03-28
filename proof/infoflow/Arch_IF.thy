@@ -8,7 +8,7 @@ theory Arch_IF
 imports ArchRetype_IF
 begin
 
-(* Note: exporting the following diverges from AInvs interfaces where valid_arch_state is
+(* FIXME IF: exporting the following diverges from AInvs interfaces where valid_arch_state is
    permitted to depend on caps (due to supporting x64). If x64 confidentiality is to go ahead,
    this will need more careful management. *)
 arch_requalify_facts
