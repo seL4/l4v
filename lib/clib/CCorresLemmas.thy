@@ -1057,8 +1057,10 @@ lemma ccorres_add_returnOk:
      \<Longrightarrow> ccorres_underlying Gamm sr rvr xf arrel axf hs P P' a c"
   by simp
 
-lemmas ccorres_when
-    = ccorres_cond2[OF _ _ ccorres_return_Skip[where a="()"], folded when_def]
+lemmas ccorres_when_strong
+    = ccorres_cond_strong[OF _ _ ccorres_return_Skip[where a="()"], folded when_def, simplified]
+
+lemmas ccorres_when = ccorres_when_strong[where R'=UNIV, simplified]
 
 lemma ccorres_Guard_True:
   "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a c

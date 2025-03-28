@@ -185,7 +185,8 @@ definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Ri
    \<and> tcb_mcpriority tcb = tcbMCP tcb'
    \<and> tcb_priority tcb = tcbPriority tcb'
    \<and> tcb_time_slice tcb = tcbTimeSlice tcb'
-   \<and> tcb_domain tcb = tcbDomain tcb'"
+   \<and> tcb_domain tcb = tcbDomain tcb'
+   \<and> tcb_flags tcb = word_to_tcb_flags (tcbFlags tcb')"
 
 \<comment> \<open>
   A pair of objects @{term "(obj, obj')"} should satisfy the following relation when, under further
@@ -425,7 +426,8 @@ definition arch_state_relation :: "(arch_state \<times> AARCH64_H.kernel_state) 
          \<and> map_option ucast \<circ> arm_vmid_table s = armKSVMIDTable s'
          \<and> arm_kernel_vspace s = armKSKernelVSpace s'
          \<and> arm_current_vcpu s = armHSCurVCPU s'
-         \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'}"
+         \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'
+         \<and> arm_current_fpu_owner  s = armKSCurFPUOwner s'}"
 
 definition rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights" where
   "rights_mask_map \<equiv>

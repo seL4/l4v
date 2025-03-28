@@ -180,7 +180,7 @@ lemmas corres_split_liftE_bindE [corres_splits] =
    that weak guard, the rule is safe. This enables us to solve trivial cases without adding
    unsafe rules to the [corres] set. *)
 lemmas [corres_term] =
-  corres_return_eq_same corres_gets_trivial select_corres_eq
+  corres_return_eq_same_unit corres_return_eq_same corres_gets_trivial select_corres_eq
   corres_underlying_assert_assert
 
 lemmas corres_returnOk_eq_same[corres_term] = corres_returnOkTT[of "(=)"]

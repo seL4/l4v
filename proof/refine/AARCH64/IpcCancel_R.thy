@@ -1343,7 +1343,8 @@ lemma dissociateVCPUTCB_corres[corres]:
                 simp: vcpu_relation_def archThreadSet_def tcb_ko_at' tcb_at_typ_at')
             apply (wpsimp simp: tcb_at_typ_at' archThreadGet_def
                           wp: get_vcpu_wp getVCPU_wp arch_thread_get_wp getObject_tcb_wp)+
-   apply (clarsimp simp: obj_at_def is_tcb in_omonad)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb in_omonad)
+  apply (clarsimp simp: pred_tcb_at_def)
   apply normalise_obj_at'
   apply (rule context_conjI)
    apply (rule vcpu_at_cross; assumption?)
@@ -1369,18 +1370,10 @@ lemma sym_refs_tcb_vcpu:
   apply (case_tac koa; simp add: vcpu_tcb_refs_def split: option.splits)
   done
 
-lemma fpuThreadDelete_corres[corres]:
-  "t' = t \<Longrightarrow> corres dc \<top> \<top> (fpu_thread_delete t) (fpuThreadDelete t')"
-  by (corres simp: fpu_thread_delete_def fpuThreadDelete_def)
-
-crunch fpu_thread_delete
-  for aligned[wp]: pspace_aligned
-  and distinct[wp]: pspace_distinct
-  and obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
-
-crunch fpuThreadDelete
-  for obj_at'[wp]: "\<lambda>s. P (obj_at' Q p s)"
-  and no_0_obj'[wp]: no_0_obj'
+lemma fpuRelease_corres[corres]:
+  "t' = t \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top> (fpu_release t) (fpuRelease t')"
+  by (corres simp: fpu_release_def fpuRelease_def)
 
 lemma prepareThreadDelete_corres[corres]:
   "t' = t \<Longrightarrow>
@@ -2378,9 +2371,8 @@ lemma archThreadGet_wp:
 
 crunch prepareThreadDelete
   for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
-  (simp: o_def wp: dissociateVCPUTCB_unqueued[simplified o_def] archThreadGet_wp)
-crunch prepareThreadDelete
-  for inactive: "st_tcb_at' ((=) Inactive) t'"
+  and inactive: "st_tcb_at' ((=) Inactive) t'"
+  (simp: obj_at'_not_o)
 
 end
 end

@@ -2695,6 +2695,14 @@ lemma obj_at'_ko_at'_prop:
   "ko_at' ko t s \<Longrightarrow> obj_at' P t s = P ko"
   by (drule obj_at_ko_at', clarsimp simp: obj_at'_def)
 
+lemma ko_wp_at'_not_o:
+  "ko_wp_at' (\<lambda>a. \<not> P a) t s = ko_wp_at' (Not o P) t s"
+  by (simp add: ko_wp_at'_def)
+
+lemma obj_at'_not_o:
+  "obj_at' (\<lambda>a. \<not> P a) t s =  obj_at' (Not o P) t s"
+  by (simp add: obj_at'_def)
+
 lemma valid_refs'_cteCaps:
   "valid_refs' S (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). S \<inter> capRange c = {})"
   by (fastforce simp: valid_refs'_def cteCaps_of_def elim!: ranE)

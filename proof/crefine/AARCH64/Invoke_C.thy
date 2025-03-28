@@ -93,6 +93,24 @@ lemma setDomain_ccorres:
                          invs'_def valid_state'_def valid_pspace'_def)
   done
 
+lemma prepareSetDomain_ccorres:
+  "ccorres dc xfdc
+      (invs' and tcb_at' t)
+      (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. dom_' s = ucast d})
+      [] (prepareSetDomain t d) (Call prepareSetDomain_'proc)"
+  apply (cinit lift: tptr_' dom_')
+   apply (rule ccorres_pre_curDomain)
+   apply (rule_tac C'="{s. curDom \<noteq> ucast d}"
+               and Q="\<lambda>s. curDom = ksCurDomain s"
+               and Q'=UNIV
+                in ccorres_rewrite_cond_sr)
+    apply (clarsimp simp: rf_sr_ksCurDomain)
+   apply (rule ccorres_when[where R=\<top>])
+    apply clarsimp
+   apply (ctac add: fpuRelease_ccorres)
+  apply clarsimp
+  done
+
 lemma active_runnable':
   "active' state \<Longrightarrow> runnable' state"
   by (fastforce simp: runnable'_def)
@@ -179,11 +197,15 @@ lemma decodeDomainInvocation_ccorres:
                                  performInvocation_def liftE_bindE bind_assoc)
        apply (ctac add: setThreadState_ccorres)
          apply csymbr
-         apply (ctac add: setDomain_ccorres)
-           apply (rule ccorres_alternative2)
-           apply (ctac add: ccorres_return_CE)
-          apply wp
-         apply (vcg exspec=setDomain_modifies)
+         apply csymbr
+         apply (ctac add: prepareSetDomain_ccorres)
+           apply (ctac add: setDomain_ccorres)
+             apply (rule ccorres_alternative2)
+             apply (ctac add: ccorres_return_CE)
+            apply wp
+           apply (vcg exspec=setDomain_modifies)
+          apply wpsimp
+         apply (vcg exspec=prepareSetDomain_modifies)
         apply (wp sts_invs_minor')
        apply (vcg exspec=setThreadState_modifies)
       apply wp
