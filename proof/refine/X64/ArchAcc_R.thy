@@ -173,21 +173,19 @@ crunch getIRQSlot
 
 lemma setObject_ASIDPool_corres:
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
-  corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p)
+  corres dc (asid_pool_at p) (asid_pool_at' p)
             (set_asid_pool p a) (setObject p a')"
   apply (simp add: set_asid_pool_def)
   apply (rule corres_guard_imp)
     apply (rule setObject_other_corres [where P="\<lambda>ko::asidpool. True"])
-          apply simp
-         apply (clarsimp simp: obj_at'_def projectKOs)
-         apply (erule map_to_ctes_upd_other, simp, simp)
-        apply (simp add: a_type_def is_other_obj_relation_type_def)
-       apply (simp add: objBits_simps archObjSize_def)
-      apply simp
-     apply (simp add: objBits_simps archObjSize_def pageBits_def)
+         apply simp
+        apply (clarsimp simp: obj_at'_def projectKOs)
+        apply (erule map_to_ctes_upd_other, simp, simp)
+       apply (simp add: a_type_def is_other_obj_relation_type_def)
+      apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps pageBits_def)
     apply (simp add: other_obj_relation_def asid_pool_relation_def)
    apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
-   apply clarsimp
    apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object; simp)
    apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
@@ -197,7 +195,7 @@ lemma setObject_ASIDPool_corres:
 
 lemma setObject_ASIDPool_corres':
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
-  corres dc (asid_pool_at p and valid_etcbs) (pspace_aligned' and pspace_distinct')
+  corres dc (asid_pool_at p) (pspace_aligned' and pspace_distinct')
             (set_asid_pool p a) (setObject p a')"
   apply (rule stronger_corres_guard_imp,
          erule setObject_ASIDPool_corres)
@@ -524,7 +522,7 @@ lemma get_pml4e_corres':
 lemma setObject_PD_corres:
   "pde_relation' pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
-                     and pspace_aligned and valid_etcbs)
+                     and pspace_aligned)
                     (pde_at' p)
           (set_pd (p && ~~ mask pd_bits) (pd(ucast (p && mask pd_bits >> word_size_bits) := pde)))
           (setObject p pde')"
@@ -582,13 +580,6 @@ lemma setObject_PD_corres:
        apply ((simp split: if_split_asm)+)[4]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def tcb_relation_cut_def
-           split: Structures_A.kernel_object.splits)
   apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pde')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)
@@ -613,7 +604,7 @@ lemma more_pt_inner_beauty:
 lemma setObject_PT_corres:
   "pte_relation' pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
-                     and pspace_aligned and valid_etcbs)
+                     and pspace_aligned)
                     (pte_at' p)
           (set_pt (p && ~~ mask pt_bits) (pt(ucast (p && mask pt_bits >> word_size_bits) := pte)))
           (setObject p pte')"
@@ -671,13 +662,6 @@ lemma setObject_PT_corres:
         apply ((simp split: if_split_asm)+)[5]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def tcb_relation_cut_def
-               split: Structures_A.kernel_object.splits)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
@@ -702,7 +686,7 @@ lemma more_pdpt_inner_beauty:
 lemma setObject_PDPT_corres:
   "pdpte_relation' pdpte pdpte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PDPointerTable pt)) (p && ~~ mask pdpt_bits)
-                     and pspace_aligned and valid_etcbs)
+                     and pspace_aligned)
                     (pdpte_at' p)
           (set_pdpt (p && ~~ mask pdpt_bits) (pt(ucast (p && mask pdpt_bits >> word_size_bits) := pdpte)))
           (setObject p pdpte')"
@@ -761,13 +745,6 @@ lemma setObject_PDPT_corres:
       apply ((simp split: if_split_asm)+)[5]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def tcb_relation_cut_def
-               split: Structures_A.kernel_object.splits)
   apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pdpte')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)
@@ -792,7 +769,7 @@ lemma more_pml4_inner_beauty:
 lemma setObject_PML4_corres:
   "pml4e_relation' pml4e pml4e' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageMapL4 pt)) (p && ~~ mask pml4_bits)
-                     and pspace_aligned and valid_etcbs)
+                     and pspace_aligned)
                     (pml4e_at' p)
           (set_pml4 (p && ~~ mask pml4_bits) (pt(ucast (p && mask pml4_bits >> word_size_bits) := pml4e)))
           (setObject p pml4e')"
@@ -852,13 +829,6 @@ lemma setObject_PML4_corres:
      apply ((simp split: if_split_asm)+)[2]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def tcb_relation_cut_def
-               split: Structures_A.kernel_object.splits)
   apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pml4e')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)
@@ -874,7 +844,7 @@ lemma setObject_PML4_corres:
 
 lemma store_pml4e_corres [corres]:
   assumes "p' = p" "pml4e_relation' pml4e pml4e'"
-  shows "corres dc (pml4e_at p and pspace_aligned and valid_etcbs) (pml4e_at' p')
+  shows "corres dc (pml4e_at p and pspace_aligned) (pml4e_at' p')
                    (store_pml4e p pml4e) (storePML4E p' pml4e')"
   using assms
   apply (simp add: store_pml4e_def storePML4E_def)
@@ -894,7 +864,7 @@ lemma store_pml4e_corres [corres]:
 
 lemma store_pml4e_corres':
   assumes "p' = p" "pml4e_relation' pml4e pml4e'"
-  shows "corres dc (pml4e_at p and pspace_aligned and valid_etcbs) (pspace_aligned' and pspace_distinct')
+  shows "corres dc (pml4e_at p and pspace_aligned) (pspace_aligned' and pspace_distinct')
                    (store_pml4e p pml4e) (storePML4E p' pml4e')"
   using assms apply -
   apply (rule stronger_corres_guard_imp, erule (1) store_pml4e_corres)
@@ -903,7 +873,7 @@ lemma store_pml4e_corres':
 
 lemma storePDPTE_corres:
   "pdpte_relation' pdpte pdpte' \<Longrightarrow>
-  corres dc (pdpte_at p and pspace_aligned and valid_etcbs) (pdpte_at' p) (store_pdpte p pdpte) (storePDPTE p pdpte')"
+  corres dc (pdpte_at p and pspace_aligned) (pdpte_at' p) (store_pdpte p pdpte) (storePDPTE p pdpte')"
   apply (simp add: store_pdpte_def storePDPTE_def)
   apply (rule corres_symb_exec_l)
      apply (erule setObject_PDPT_corres)
@@ -922,7 +892,7 @@ lemma storePDPTE_corres:
 lemma storePDPTE_corres':
   "pdpte_relation' pdpte pdpte' \<Longrightarrow>
   corres dc
-     (pdpte_at p and pspace_aligned and valid_etcbs) (pspace_aligned' and pspace_distinct')
+     (pdpte_at p and pspace_aligned) (pspace_aligned' and pspace_distinct')
      (store_pdpte p pdpte) (storePDPTE p pdpte')"
   apply (rule stronger_corres_guard_imp,
          erule storePDPTE_corres)
@@ -931,7 +901,7 @@ lemma storePDPTE_corres':
 
 lemma storePDE_corres:
   "pde_relation' pde pde' \<Longrightarrow>
-  corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
+  corres dc (pde_at p and pspace_aligned) (pde_at' p) (store_pde p pde) (storePDE p pde')"
   apply (simp add: store_pde_def storePDE_def)
   apply (rule corres_symb_exec_l)
      apply (erule setObject_PD_corres)
@@ -950,7 +920,7 @@ lemma storePDE_corres:
 lemma storePDE_corres':
   "pde_relation' pde pde' \<Longrightarrow>
   corres dc
-     (pde_at p and pspace_aligned and valid_etcbs) (pspace_aligned' and pspace_distinct')
+     (pde_at p and pspace_aligned) (pspace_aligned' and pspace_distinct')
      (store_pde p pde) (storePDE p pde')"
   apply (rule stronger_corres_guard_imp,
          erule storePDE_corres)
@@ -959,7 +929,7 @@ lemma storePDE_corres':
 
 lemma storePTE_corres:
   "pte_relation' pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
+  corres dc (pte_at p and pspace_aligned) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_symb_exec_l)
      apply (erule setObject_PT_corres)
@@ -977,7 +947,7 @@ lemma storePTE_corres:
 
 lemma storePTE_corres':
   "pte_relation' pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and valid_etcbs)
+  corres dc (pte_at p and pspace_aligned)
             (pspace_aligned' and pspace_distinct')
             (store_pte p pte) (storePTE p pte')"
   apply (rule stronger_corres_guard_imp,
@@ -1420,7 +1390,7 @@ lemma corres_gets_global_pml4 [corres]:
   by (simp add: state_relation_def arch_state_relation_def)
 
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
-  "corres dc (valid_arch_state and valid_etcbs and pspace_aligned and page_map_l4_at pm)
+  "corres dc (valid_arch_state and pspace_aligned and page_map_l4_at pm)
                    (valid_arch_state' and page_map_l4_at' pm)
                 (copy_global_mappings pm)
                 (copyGlobalMappings pm)" (is "corres _ ?apre _ _ _")
