@@ -88,6 +88,31 @@ pip3 install --user --upgrade pip
 pip3 install --user sel4-deps
 ```
 
+<details>
+  <summary>Error: Python environment is externally managed</summary>
+  <div markdown="1">
+
+Some Linux distributions have changed how Python is managed. If you get an error
+saying the Python 'environment is externally managed' follow the instructions
+below. The first two steps are needed only once for setup.
+
+```sh
+python3 -m venv seL4-venv
+./seL4-venv/bin/pip install sel4-deps
+```
+
+The following step is needed every time you start using the build environment
+in a new shell.
+
+```sh
+source ./seL4-venv/bin/activate
+```
+
+It is not important where the `seL4-venv` directory is located.
+  </div>
+</details>
+
+
 ### Haskell Stack
 
 After installing [haskell-stack](https://docs.haskellstack.org/en/stable/)
