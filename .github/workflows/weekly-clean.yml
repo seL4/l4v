@@ -19,6 +19,53 @@ jobs:
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
         num_domains: ['1', '7', '']
+        plat: ['']
+        include:
+          - arch: ARM
+            plat: exynos4
+          - arch: ARM
+            plat: exynos5410
+          - arch: ARM
+            plat: exynos5422
+          - arch: ARM
+            plat: hikey
+          - arch: ARM
+            plat: tk1
+          - arch: ARM
+            plat: zynq7000
+          - arch: ARM
+            plat: zynqmp
+
+          - arch: ARM_HYP
+            plat: exynos5410
+          - arch: ARM_HYP
+            plat: exynos5
+
+          - arch: AARCH64
+            plat: bcm2711
+          - arch: AARCH64
+            plat: hikey
+          - arch: AARCH64
+            plat: imx8mm
+          - arch: AARCH64
+            plat: imx8mq
+          - arch: AARCH64
+            plat: imx93
+          - arch: AARCH64
+            plat: maaxboard
+          - arch: AARCH64
+            plat: odroidc2
+          - arch: AARCH64
+            plat: odroidc4
+          - arch: AARCH64
+            plat: rockpro64
+          - arch: AARCH64
+            plat: tqma
+          - arch: AARCH64
+            plat: tx1
+          - arch: AARCH64
+            plat: zynqmp
+
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
