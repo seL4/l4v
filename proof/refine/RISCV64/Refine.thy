@@ -195,18 +195,27 @@ lemma absKState_correct:
   shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-           apply (rule absHeap_correct, clarsimp+)
-           apply (clarsimp elim!: state_relationE)
-          apply (rule absCDT_correct, clarsimp+)
-         apply (rule absIsOriginalCap_correct, clarsimp+)
+                 apply (rule absHeap_correct; clarsimp)
+                 apply (clarsimp elim!: state_relationE)
+                apply (rule absCDT_correct; clarsimp)
+               apply (rule absIsOriginalCap_correct; clarsimp)
+              apply (simp add: state_relation_def)
+             apply (simp add: state_relation_def)
+            apply (clarsimp simp: state_relation_def)
+            apply (rule absSchedulerAction_correct, simp add: state_relation_def)
+           apply (simp add: state_relation_def)
+          apply (simp add: state_relation_def)
+         apply (simp add: state_relation_def)
         apply (simp add: state_relation_def)
-       apply (simp add: state_relation_def)
+       apply (simp add: state_relation_def ready_queues_relation_def ready_queue_relation_def Let_def
+                        list_queue_relation_def)
+       apply (fastforce dest: heap_ls_is_walk)
       apply (clarsimp simp:  user_mem_relation invs_def invs'_def)
       apply (simp add: state_relation_def)
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
     apply (rule absInterruptStates_correct, simp add: state_relation_def)
    apply (rule absArchState_correct, simp)
-  apply (rule absExst_correct, simp+)
+  apply (rule absExst_correct; simp)
   done
 
 text \<open>The top-level invariance\<close>
@@ -217,7 +226,7 @@ lemma set_thread_state_sched_act:
   \<lbrace>\<lambda>rs s. P (scheduler_action (s::det_state))\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply wp
-     apply (simp add: set_thread_state_ext_def)
+     apply (simp add: set_thread_state_act_def)
      apply wp
         apply (rule hoare_pre_cont)
        apply (rule_tac Q'="\<lambda>rv. (\<lambda>s. runnable ts) and (\<lambda>s. P (scheduler_action s))"
@@ -271,7 +280,7 @@ lemma kernel_entry_invs:
    apply clarsimp
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs_det_ext call_kernel_valid_sched thread_set_invs_trivial
-            thread_set_ct_running thread_set_not_state_valid_sched
+            thread_set_not_state_valid_sched
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
             hoare_weak_lift_imp
@@ -329,13 +338,13 @@ lemmas valid_list_inits[simp] = valid_list_init[simplified]
 lemma valid_sched_init[simp]:
   "valid_sched init_A_st"
   apply (simp add: valid_sched_def init_A_st_def ext_init_def)
-  apply (clarsimp simp: valid_etcbs_def init_kheap_def st_tcb_at_kh_def obj_at_kh_def
-                    obj_at_def is_etcb_at_def idle_thread_ptr_def
+  apply (clarsimp simp: init_kheap_def st_tcb_at_kh_def obj_at_kh_def
+                    obj_at_def idle_thread_ptr_def
                     valid_queues_2_def ct_not_in_q_def not_queued_def
                     valid_sched_action_def is_activatable_def init_irq_node_ptr_def
                     riscv_global_pt_ptr_def init_global_pt_def
                     ct_in_cur_domain_2_def valid_blocked_2_def valid_idle_etcb_def
-                    etcb_at'_def default_etcb_def)
+                    etcb_at'_def etcbs_of'_def)
   done
 
 lemma valid_domain_list_init[simp]:
@@ -444,27 +453,6 @@ lemma kernelEntry_invs':
                           valid_domain_list'_def)+
   done
 
-lemma absKState_correct':
-  "\<lbrakk>einvs s; invs' s'; (s,s') \<in> state_relation\<rbrakk>
-   \<Longrightarrow> absKState s' = abs_state s"
-  apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-           apply (rule absHeap_correct)
-               apply (clarsimp simp: valid_state_def valid_pspace_def)+
-           apply (clarsimp dest!: state_relationD)
-          apply (rule absCDT_correct)
-                apply (clarsimp simp: valid_state_def valid_pspace_def
-                                      valid_state'_def valid_pspace'_def)+
-         apply (rule absIsOriginalCap_correct, clarsimp+)
-        apply (simp add: state_relation_def)
-       apply (simp add: state_relation_def)
-      apply (clarsimp simp: user_mem_relation invs_def invs'_def)
-      apply (simp add: state_relation_def)
-     apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
-    apply (rule absInterruptStates_correct, simp add: state_relation_def)
-   apply (erule absArchState_correct)
-  apply (rule absExst_correct, simp, assumption+)
-  done
-
 lemma ptable_lift_abs_state[simp]:
   "ptable_lift t (abs_state s) = ptable_lift t s"
   by (simp add: ptable_lift_def abs_state_def)
@@ -482,7 +470,7 @@ lemma ptable_rights_imp_UserData:
   shows "pointerInUserData y s' \<or> pointerInDeviceData y s'"
 proof -
   from invs invs' rel have [simp]: "absKState s' = abs_state s"
-    by - (rule absKState_correct', simp_all)
+    by - (rule absKState_correct, simp_all)
   from invs have valid: "valid_state s" by auto
   from invs' have valid': "valid_state' s'" by auto
   have "in_user_frame y s \<or> in_device_frame y s "
@@ -640,11 +628,10 @@ lemma entry_corres:
       apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT; simp?)
-            apply (simp add: tcb_relation_def arch_tcb_relation_def
-                             arch_tcb_context_set_def atcbContextSet_def)
-           apply (clarsimp simp: tcb_cap_cases_def)
-          apply (clarsimp simp: tcb_cte_cases_def tcb_cte_cases_neqs)
-         apply (simp add: exst_same_def)
+           apply (simp add: tcb_relation_def arch_tcb_relation_def
+                            arch_tcb_context_set_def atcbContextSet_def)
+          apply (clarsimp simp: tcb_cap_cases_def)
+         apply (clarsimp simp: tcb_cte_cases_def tcb_cte_cases_neqs)
         apply (rule corres_split[OF kernel_corres])
           apply (rule corres_split_eqr[OF getCurThread_corres])
             apply (rule threadGet_corres)
@@ -654,7 +641,7 @@ lemma entry_corres:
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext,
                 simp add: invs_def valid_state_def valid_pspace_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
-       apply (wp thread_set_invs_trivial thread_set_ct_running
+       apply (wp thread_set_invs_trivial
                  threadSet_invs_trivial threadSet_ct_running'
                  thread_set_not_state_valid_sched hoare_weak_lift_imp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
