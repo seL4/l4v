@@ -1,4 +1,4 @@
-# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+# Copyright 2025, Proofcraft Pty Ltd
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -6,37 +6,11 @@
 
 name: PR
 
-on: [pull_request]
+on: [pull_request, workflow_dispatch]
 
 jobs:
-  gitlint:
-    name: Gitlint
-    runs-on: ubuntu-latest
-    steps:
-    - uses: seL4/ci-actions/gitlint@master
-      with:
-        token: ${{ secrets.READ_TOKEN }}
-
-  whitespace:
-    name: 'Trailing Whitespace'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: seL4/ci-actions/git-diff-check@master
-      with:
-        token: ${{ secrets.READ_TOKEN }}
-
-  shell:
-    name: 'Portable Shell'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: seL4/ci-actions/bashisms@master
-      with:
-        token: ${{ secrets.READ_TOKEN }}
-
-  style:
-    name: Style
-    runs-on: ubuntu-latest
-    steps:
-    - uses: seL4/ci-actions/style@master
-      with:
+  pr-checks:
+    name: Checks
+    uses: seL4/ci-actions/.github/workflows/pr.yml@master
+    secrets:
         token: ${{ secrets.READ_TOKEN }}
