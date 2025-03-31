@@ -254,6 +254,12 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
+(* This function is only implemented on GICv3 configs, hence the precondition *)
+assumes deactivateInterrupt_ccorres:
+  "ccorres dc xfdc (\<lambda>_. config_ARM_GIC_V3) (\<lbrace>\<acute>irq = ucast irq\<rbrace>) []
+           (doMachineOp (deactivateInterrupt irq))
+           (Call deactivateInterrupt_'proc)"
+
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
 
@@ -802,6 +808,10 @@ lemma cleanCaches_PoU_ccorres:
   apply clarsimp
   done
 
+lemma wrap_config_set_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
+  by (rule allI, rule conseqPre, vcg) clarsimp
+
 lemma setCurrentPD_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
            (doMachineOp (setCurrentPD pd))
@@ -810,6 +820,8 @@ lemma setCurrentPD_ccorres:
    apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
                          setCurrentPDPL2_empty_fail empty_fail_cond
                   intro!: ccorres_cond_empty)
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
    apply (ctac (no_vcg) add: setCurrentPDPL2_ccorres)
   apply wpsimp
   done

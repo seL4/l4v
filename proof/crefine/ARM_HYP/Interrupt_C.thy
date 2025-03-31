@@ -15,7 +15,11 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
   "ccorres dc xfdc
        invs' (UNIV \<inter> {s. irq_' s = ucast irq}) []
      (InterruptDecls_H.invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
-  apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
+  apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def dmo_if)
+   apply csymbr (* make config_set(CONFIG_ARM_GIC_V3_SUPPORT) available *)
+   apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
+     apply (simp add: Kernel_Config.config_ARM_GIC_V3_def) (* match C condition *)
+    apply (ctac add: deactivateInterrupt_ccorres)
    apply (ctac add: maskInterrupt_ccorres)
   apply simp
   done
@@ -416,6 +420,8 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                      word_less_nat_alt Let_def
                      del: Collect_const cong: call_ignore_cong)
     apply (rule ccorres_add_return)
+    apply csymbr (* !config_set(HAVE_SET_TRIGGER) *)
+    apply ccorres_rewrite
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply csymbr
       apply (rule ccorres_add_return)

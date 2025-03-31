@@ -2183,6 +2183,7 @@ lemma decodeX86ModeMapPage_ccorres:
   apply (cinit' lift: label___unsigned_long_' page_size_' vroot_' cap_' paddr_' vm_rights_' vm_attr_'
                       vaddr___unsigned_long_' cte_'
                 simp: bindE_assoc injection_handler_bindE)
+   apply csymbr (* config_set(CONFIG_HUGE_PAGE) *)
    apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (clarsimp simp: framesize_from_H_simps, ccorres_rewrite)
    apply (rule ccorres_rhs_assoc)+

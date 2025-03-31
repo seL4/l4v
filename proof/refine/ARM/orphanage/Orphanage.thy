@@ -1801,9 +1801,7 @@ lemma arch_invokeIRQHandler_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
    ARM_H.invokeIRQHandler i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: ARM_H.invokeIRQHandler_def)
-    apply (wp | clarsimp | fastforce)+
-  done
+  by (wpsimp simp: ARM_H.invokeIRQHandler_def split_del: if_split)
 
 crunch setVMRootForFlush
   for no_orphans[wp]: "no_orphans"
