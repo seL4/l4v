@@ -1312,7 +1312,7 @@ lemma in_getCTE2:
 declare wrap_ext_op_det_ext_ext_def[simp]
 
 lemma do_ext_op_update_cdt_list_symb_exec_l':
-  "corres_underlying {(s::det_state, s'). f (kheap s) (ekheap s) s'} nf nf' dc P P' (create_cap_ext p z a) (return x)"
+  "corres_underlying {(s::det_state, s'). f (kheap s) s'} nf nf' dc P P' (create_cap_ext p z a) (return x)"
   apply (simp add: corres_underlying_def create_cap_ext_def
   update_cdt_list_def set_cdt_list_def bind_def put_def get_def gets_def return_def)
   done
@@ -1351,14 +1351,13 @@ lemma set_cdt_symb_exec_l:
   by (simp add: corres_underlying_def return_def set_cdt_def in_monad Bex_def)
 
 crunch create_cap_ext
-  for domain_index[wp]: "\<lambda>s. P (domain_index s)"
-crunch create_cap_ext
   for work_units_completed[wp]: "\<lambda>s. P (work_units_completed s)"
+  (ignore_del: create_cap_ext)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma updateNewFreeIndex_noop_psp_corres:
-  "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False True
+  "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False True
     dc \<top> (cte_at' slot)
     (return ()) (updateNewFreeIndex slot)"
   apply (simp add: updateNewFreeIndex_def)
@@ -1369,6 +1368,10 @@ lemma updateNewFreeIndex_noop_psp_corres:
       apply (wp getCTE_wp' | wpc
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
   done
+
+crunch set_cap, set_cdt
+  for domain_index[wp]: "\<lambda>s. P (domain_index s)"
+  (wp: crunch_wps)
 
 crunch updateMDB, updateNewFreeIndex, setCTE
   for rdyq_projs[wp]:
@@ -2984,36 +2987,31 @@ lemma createNewCaps_range_helper:
   apply (frule range_cover.range_cover_n_less)
   apply (frule range_cover.unat_of_nat_n)
   apply (cases tp, simp_all split del: if_split)
-          apply (rename_tac apiobject_type)
-          apply (case_tac apiobject_type, simp_all split del: if_split)
-              apply (rule hoare_pre, wp)
-              apply (frule range_cover_not_zero[rotated -1],simp)
-              apply (clarsimp simp: APIType_capBits_def objBits_simps ptr_add_def o_def)
-              apply (subst upto_enum_red')
-               apply unat_arith
-              apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
-              apply fastforce
-             apply (rule hoare_pre,wp createObjects_ret2)
-             apply (clarsimp simp: APIType_capBits_def word_bits_def bit_simps
-                                   objBits_simps ptr_add_def o_def)
-             apply (fastforce simp: objBitsKO_def objBits_def)
-            apply (rule hoare_pre,wp createObjects_ret2)
-            apply (clarsimp simp: APIType_capBits_def word_bits_def
-                                  objBits_simps ptr_add_def o_def)
-            apply (fastforce simp: objBitsKO_def  objBits_def)
-           apply (rule hoare_pre,wp createObjects_ret2)
-           apply (clarsimp simp:  APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def)
-           apply (fastforce simp: objBitsKO_def  objBits_def)
-          apply (rule hoare_pre,wp createObjects_ret2)
-          apply (clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def)
-          apply (fastforce simp: objBitsKO_def  objBits_def)
-        apply (wp createObjects_ret2
-          | clarsimp simp: APIType_capBits_def objBits_if_dev archObjSize_def
-                        word_bits_def  bit_simps
-                        split del: if_split
-          | simp add: objBits_simps
-          | (rule exI, (fastforce simp: bit_simps)))+
-  done
+      apply (rename_tac apiobject_type)
+      apply (case_tac apiobject_type, simp_all split del: if_split)
+          \<comment>\<open>Untyped\<close>
+          apply (rule hoare_pre, wp)
+          apply (frule range_cover_not_zero[rotated -1],simp)
+          apply (clarsimp simp: APIType_capBits_def objBits_simps ptr_add_def o_def)
+          apply (subst upto_enum_red')
+           apply unat_arith
+          apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
+          apply fastforce
+         \<comment>\<open>TCB\<close>
+         apply (rule hoare_pre, wp createObjects_ret2)
+          apply (wpsimp simp: curDomain_def)
+         apply (clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def)
+         apply (fastforce simp: objBitsKO_def objBits_def)
+        \<comment>\<open>other APIObjectType\<close>
+        apply ((rule hoare_pre, wp createObjects_ret2,
+                clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def,
+                fastforce simp: objBitsKO_def objBits_def)+)[3]
+     \<comment>\<open>Arch objects\<close>
+     by (wp createObjects_ret2
+         | clarsimp simp: APIType_capBits_def objBits_if_dev word_bits_def
+               split del: if_split
+         | simp add: objBits_simps
+         | (rule exI, (fastforce simp: bit_simps)))+
 
 lemma createNewCaps_range_helper2:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n\<rbrace>
@@ -4051,9 +4049,6 @@ end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma valid_sched_etcbs[elim!]: "valid_sched_2 queues ekh sa cdom kh ct it \<Longrightarrow> valid_etcbs_2 ekh kh"
-  by (simp add: valid_sched_def)
-
 crunch deleteObjects
   for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps wp: hoare_drop_imps unless_wp)
@@ -4979,7 +4974,7 @@ lemma inv_untyped_corres':
                 invs_distinct)
          apply (clarsimp simp:conj_comms ball_conj_distrib ex_in_conv)
          apply ((rule validE_R_validE)?,
-          rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
+          rule_tac Q'="\<lambda>_ s. valid_list s \<and> invs s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ui
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
@@ -5067,7 +5062,7 @@ lemma inv_untyped_corres':
       apply (clarsimp simp only: pred_conj_def invs ui)
       apply (strengthen vui)
       apply (cut_tac vui invs invs')
-      apply (clarsimp simp: cte_wp_at_caps_of_state valid_sched_etcbs schact_is_rct_def)
+      apply (clarsimp simp: cte_wp_at_caps_of_state schact_is_rct_def)
      apply (cut_tac vui' invs')
      apply (clarsimp simp: ui cte_wp_at_ctes_of if_apply_def2 ui')
      done
