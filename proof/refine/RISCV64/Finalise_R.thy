@@ -2422,6 +2422,12 @@ lemma replyNext_update_valid_objs':
   apply (case_tac next_opt; wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def)
   by (case_tac a; clarsimp)
 
+lemma replyPrev_update_valid_objs'[wp]:
+  "\<lbrace>valid_objs' and (\<lambda>s. (\<forall>r. prev_opt = Some r \<longrightarrow> reply_at' r s))\<rbrace>
+   updateReply replyPtr (replyPrev_update (\<lambda>_. prev_opt))
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  by (case_tac prev_opt; wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def)
+
 lemma replyPop_valid_objs'[wp]:
   "\<lbrace>valid_objs' and valid_sched_pointers and sym_heap_sched_pointers
     and pspace_aligned' and pspace_distinct' and pspace_bounded'\<rbrace>
@@ -2430,16 +2436,14 @@ lemma replyPop_valid_objs'[wp]:
   unfolding replyPop_def
   supply if_split[split del]
   apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (wpsimp wp: schedContextDonate_valid_objs' hoare_vcg_if_lift_strong threadGet_const)
+  apply (wpsimp wp: schedContextDonate_valid_objs' hoare_vcg_if_lift_strong threadGet_wp)
                   apply (clarsimp simp: obj_at'_def)
-                 apply (wpsimp wp: replyNext_update_valid_objs' hoare_drop_imp hoare_vcg_if_lift2)+
-                apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_if_lift2 )+
-  apply (simp add: isHead_to_head)
-  apply (drule_tac k=x in ko_at_valid_objs'; clarsimp simp: valid_obj'_def
-                 valid_sched_context'_def valid_sched_context_size'_def objBits_simps refillSize_def)
-  apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: valid_obj'_def
-                 valid_sched_context'_def valid_sched_context_size'_def objBits_simps refillSize_def)
-  apply (clarsimp simp: valid_reply'_def)
+                 apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_if_lift2
+                                   hoare_vcg_all_lift
+                        | wp (once) hoare_drop_imp)+
+  apply (fastforce dest!: ko_at_valid_objs'
+                    simp: valid_obj'_def valid_sched_context'_def refillSize_def isHead_to_head
+                          valid_reply'_def obj_at'_def opt_pred_def opt_map_def)
   done
 
 lemma replyRemove_valid_objs'[wp]:
@@ -2453,6 +2457,9 @@ lemma replyRemove_valid_objs'[wp]:
          | intro conjI impI)+
   done
 
+crunch schedContextDonate, updateSchedContext
+  for ko_at'_reply[wp]: "\<lambda>s. Q (ko_at' (reply :: reply) scPtr s)"
+
 lemma replyPop_valid_replies'[wp]:
   "\<lbrace>\<lambda>s. valid_replies' s \<and> pspace_aligned' s \<and> pspace_distinct' s
         \<and> sym_refs (list_refs_of_replies' s)\<rbrace>
@@ -2460,11 +2467,12 @@ lemma replyPop_valid_replies'[wp]:
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   unfolding replyPop_def
   supply if_split[split del]
-  apply (wpsimp wp: hoare_vcg_imp_lift)
-                 apply (wpsimp wp: updateReply_valid_replies'_bound hoare_vcg_imp_lift
-                                   hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_if_lift)+
-  apply (rename_tac prevReplyPtr)
-  apply (drule_tac rptr=prevReplyPtr in valid_replies'D)
+  apply (wpsimp wp: hoare_vcg_imp_lift'
+         | wpsimp wp: updateReply_valid_replies'_bound hoare_vcg_all_lift
+                      hoare_vcg_ex_lift hoare_vcg_if_lift2 gts_wp')+
+  apply normalise_obj_at'
+  apply (rename_tac replyPrev_ptr)
+  apply (drule_tac rptr=replyPrev_ptr in valid_replies'D)
    apply (frule reply_sym_heap_Prev_Next)
    apply (frule_tac p=replyPtr in sym_heapD1)
     apply (fastforce simp: opt_map_def obj_at'_def)
@@ -2581,37 +2589,44 @@ lemma replyPop_iflive:
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  unfolding replyPop_def
-  apply (wpsimp wp: setSchedContext_iflive' schedContextDonate_if_live_then_nonz_cap'
-                    threadGet_inv hoare_vcg_if_lift2
-         | wp (once) hoare_drop_imps)+
-                 apply (wpsimp wp: updateReply_iflive' updateReply_valid_objs')
-                apply (wpsimp wp: updateReply_iflive'_strong updateReply_valid_objs'
-                            simp: valid_reply'_def)
-               apply (rule_tac Q'="\<lambda>_. ?pre
+  unfolding replyPop_def updateSchedContext_def
+  apply (wpsimp wp: updateReply_iflive' updateReply_valid_objs')
+                  apply (wpsimp wp: setSchedContext_iflive' schedContextDonate_if_live_then_nonz_cap'
+                                    threadGet_inv hoare_vcg_if_lift2
+                         | wp (once) hoare_drop_imps)+
+                apply (wpsimp wp: updateReply_iflive' updateReply_valid_objs')
+               apply (wpsimp wp: updateReply_iflive'_strong updateReply_valid_objs'
+                           simp: valid_reply'_def)
+              apply (rule_tac Q'="\<lambda>_. ?pre
                                       and ex_nonz_cap_to' scPtr
                                       and (\<lambda>s. prevReplyPtrOpt \<noteq> Nothing
                                                \<longrightarrow> ex_nonz_cap_to' (fromJust prevReplyPtrOpt) s)
                                       and valid_reply' reply"
-                            in hoare_post_imp)
-                apply (force simp: valid_reply'_def live_reply'_def)
-               apply (wpsimp wp: hoare_vcg_imp_lift')
-              apply (wpsimp wp: gts_wp')+
-  apply (rename_tac reply_next state sched_context)
+                           in hoare_post_imp)
+               apply (force simp: valid_reply'_def live_reply'_def)
+              apply (wpsimp wp: hoare_vcg_imp_lift')+
+  apply normalise_obj_at'
+  apply (rename_tac s reply sched_context tcb)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (frule (1) reply_ko_at_valid_objs_valid_reply')
-  apply (clarsimp simp: valid_sched_context'_def comp_def valid_reply'_def sym_refs_asrt_def)
-  apply (prop_tac "ex_nonz_cap_to' (theHeadScPtr (Some reply_next)) s")
-   apply (fastforce elim: if_live_then_nonz_capE'
-                   intro: live'_HeadScPtr)
-  apply (clarsimp simp: refillSize_def)
-  apply (erule if_live_then_nonz_capE')
+  apply (case_tac "replyNext reply")
+   apply (clarsimp simp: isHead_def split: option.splits)
+  apply (frule (2) live'_HeadScPtr)
+     apply (clarsimp simp: isHead_def)
+    apply fastforce
+   apply (clarsimp simp: valid_sched_context'_def)
+  apply (frule (1) if_live_then_nonz_capE')
+  apply clarsimp
+  apply (intro conjI impI allI)
+   apply (clarsimp simp: valid_sched_context'_def refillSize_def valid_reply'_def)
+  apply clarsimp
   apply (rename_tac replyPrevPtr)
-  apply (prop_tac "(replyPrevPtr, ReplyPrev) \<in> list_refs_of_replies' s replyPtr")
-   apply (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def obj_at'_def opt_map_def)
-  apply (frule sym_refsD, simp)
-  by (fastforce simp: ko_wp_at'_def obj_at'_def list_refs_of_replies'_def live_reply'_def
-                      opt_map_def list_refs_of_reply'_def)
+  apply (frule reply_sym_heap_Next_Prev)
+  apply (frule_tac p'=replyPtr and p=replyPrevPtr and hp'="replyPrevs_of s" in sym_heapD2)
+   apply (clarsimp simp: opt_map_def obj_at'_def)
+  apply (fastforce intro: if_live_then_nonz_capE'
+                    simp: ko_wp_at'_def obj_at'_def live_reply'_def opt_map_def valid_reply'_def)
+  done
 
 lemma replyRemove_if_live_then_nonz_cap':
   "\<lbrace>if_live_then_nonz_cap' and valid_objs' and ex_nonz_cap_to' tcbPtr

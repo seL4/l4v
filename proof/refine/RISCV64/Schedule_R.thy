@@ -2706,6 +2706,7 @@ lemma tcbReleaseRemove_corres:
    apply (fastforce intro: monadic_rewrite_guard_imp[OF tcb_release_remove_monadic_rewrite])
   apply (clarsimp simp: tcb_release_remove'_def tcbReleaseRemove_def)
   apply (rule corres_symb_exec_l[OF _ _ gets_sp]; wpsimp?)
+  apply (rule corres_stateAssert_ignore, fastforce)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: ready_or_release_cross)
   apply (rule corres_stateAssert_ignore)

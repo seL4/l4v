@@ -457,6 +457,7 @@ lemma getTimerPrecision_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call getTimerPrecision_'proc \<lbrace>\<acute>ret__unsigned_longlong = timerPrecision\<rbrace>"
   apply vcg
   by (simp add: timerPrecision_def)
+
 lemma wrap_config_set_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
   by (rule allI, rule conseqPre, vcg) clarsimp

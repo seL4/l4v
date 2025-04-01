@@ -781,7 +781,9 @@ lemma replyRemoveTCB_corres:
                    (* i.e. replyNext reply'  *)
                     apply (rule corres_guard_imp)
                       apply (rule corres_assert_gen_asm_l2)
-                      apply (simp add: getHeadScPtr_def isHead_def neq_conv[symmetric] split: reply_next.splits)
+                      apply (simp add: updateSchedContext_def getHeadScPtr_def isHead_def
+                                       neq_conv[symmetric]
+                                split: reply_next.splits)
                       apply (rule corres_split[OF setSchedContext_scReply_update_None_corres[simplified dc_def]])
                         apply (rule_tac Q =\<top> and
                                         P'="valid_objs' and sym_heap_sched_pointers and ko_at' reply' rp" and
@@ -1191,7 +1193,7 @@ lemma replyPop_corres:
                                   and ko_at' r' rp and sc_at' scp and K (state = st')"
                       in corres_inst)
                apply (rule corres_gen_asm2')
-               apply (simp add: bind_assoc isReply_def isHead_def)
+               apply (simp add: bind_assoc isReply_def isHead_def updateSchedContext_def)
                apply (subst bind_assoc[symmetric, where m="getSchedContext _"])
                apply (rule corres_guard_imp)
                  apply (rule corres_split[OF setSchedContext_pop_head_corres[where rp=rp]])
@@ -1268,50 +1270,25 @@ lemma replyPop_corres:
                                     apply (clarsimp simp: valid_objs_valid_tcbs elim!: pred_tcb_weakenE)
                                    apply simp
                                   apply (simp add: cleanReply_def)
-                                  apply (rule_tac Q'="\<lambda>_ s. reply_at' rp s \<and> (replies_of' s |> replyNext) rp = None
-                                                            \<and> (\<forall>p'. replyPrevs_of s p' \<noteq> Some rp)
-                                                            \<and> (\<forall>p'. scReplies_of s p' \<noteq> Some rp)"
-                                         in sr_inv_ul_bind[rotated])
-                                    apply (rule updateReply_sr_inv)
-                                     apply (clarsimp simp: reply_relation_def)
-                                    apply (intro conjI impI allI)
-                                    apply (erule sc_replies_relation_replyNext_None; clarsimp)
-                                    apply (clarsimp simp: obj_at'_def opt_map_red)
-                                   apply clarsimp
-                                   apply (wpsimp wp: updateReply_wp_all)
-                                   apply (clarsimp simp: obj_at'_def  objBits_simps ps_clear_upd opt_map_red)
-                                   apply (rename_tac s s' reply' sc')
-                                   apply (intro conjI allI; clarsimp split: if_split_asm simp:)
-                                   apply (rename_tac scp' sc'')
-                                   apply (drule_tac x=scp' in spec[where P="\<lambda>x. scReplies_of _ x \<noteq> Some rp"])
-                                   apply (clarsimp simp: opt_map_red)
-                                  apply (clarsimp simp: sr_inv_def updateReply_def)
-                                  apply (clarsimp simp: setReply_def getReply_def getObject_def
-                                                        setObject_def split_def objBits_simps'
-                                                        updateObject_default_def in_monad fail_def
-                                                        in_magnitude_check obj_at_simps return_def
-                                                        loadObject_default_def RISCV64_H.fromPPtr_def
-                                                 split: if_split_asm option.split_asm
-                                                 dest!: readObject_misc_ko_at')
-                                  apply (prop_tac "(ksPSpace s')(rp \<mapsto>
-                                                          KOReply (replyNext_update Map.empty reply))
-                                                   = ksPSpace s'")
-                                   apply (rule ext)
-                                   apply (clarsimp simp: opt_map_red split: if_split)
-                                   apply (case_tac reply; simp)
-                                  apply simp
+                                  apply (rule updateReply_sr_inv)
+                                   apply (clarsimp simp: reply_relation_def)
+                                  apply (intro conjI impI allI)
+                                  apply (erule sc_replies_relation_replyNext_None; clarsimp)
+                                  apply (clarsimp simp: obj_at'_def opt_map_red)
                                  apply wpsimp
                                 apply wpsimp
+                               apply simp
                                apply wpsimp
                               apply (rule hoare_when_cases, simp)
                               apply (wpsimp wp: schedContextDonate_valid_objs'
                                                 schedContextDonate_replies_of' schedContextDonate_reply_projs)
-                              apply (clarsimp split: if_split)
-                              apply (frule_tac t=t in valid_release_q_not_in_release_q_not_runnable)
-                               apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-                               apply (case_tac "tcb_state tcb"; clarsimp)
-                              apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps
-                                                     weak_valid_sched_action_no_sc_sched_act_not)
+                             apply (clarsimp split: if_split)
+                             apply (frule_tac t=t in valid_release_q_not_in_release_q_not_runnable)
+                              apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+                              apply (case_tac "tcb_state tcb"; clarsimp)
+                             apply (frule (3) bound_sc_tcb_at_cross)
+                             apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps
+                                                    weak_valid_sched_action_no_sc_sched_act_not)
                             apply (clarsimp simp: pred_tcb_at'_def opt_map_red obj_at_simps pred_tcb_at_def)
                             apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, where x=t])
                             apply (rename_tac tcb' sc')
