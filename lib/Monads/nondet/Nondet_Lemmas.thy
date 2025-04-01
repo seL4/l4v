@@ -9,27 +9,41 @@ theory Nondet_Lemmas
   imports Nondet_Monad
 begin
 
-section \<open>General Lemmas Regarding the Nondeterministic State Monad\<close>
+section \<open>General Lemmas about the Non-Deterministic State Monad\<close>
 
 subsection \<open>Congruence Rules for the Function Package\<close>
 
 lemma bind_cong[fundef_cong]:
-  "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> fst (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
+  "\<lbrakk> f = f';
+     \<And>v s s'. (v, s') \<in> fst (f' s) \<Longrightarrow> g v (with_env_of s s') = g' v (with_env_of s s') \<rbrakk>
+   \<Longrightarrow> f >>= g = f' >>= g'"
   by (auto simp: bind_def split_def)
 
 lemma bind_apply_cong [fundef_cong]:
-  "\<lbrakk> f s = f' s'; \<And>rv st. (rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
+  "\<lbrakk> f s = f' s';
+     \<And>rv st. (rv, st) \<in> fst (f' s') \<Longrightarrow> g rv (with_env_of s st) = g' rv (with_env_of s' st) \<rbrakk>
    \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
   by (auto simp: bind_def split_def)
 
 lemma bindE_cong[fundef_cong]:
-  "\<lbrakk> M = M' ; \<And>v s s'. (Inr v, s') \<in> fst (M' s) \<Longrightarrow> N v s' = N' v s' \<rbrakk> \<Longrightarrow> bindE M N = bindE M' N'"
+  "\<lbrakk> M = M';
+     \<And>v s s'. (Inr v, s') \<in> fst (M' s) \<Longrightarrow> N v (with_env_of s s') = N' v (with_env_of s s') \<rbrakk>
+   \<Longrightarrow> bindE M N = bindE M' N'"
   by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_cong)
 
+lemma return_no_const:
+  "mstate s = mstate s' \<Longrightarrow> return x s = return x s'"
+  by (simp add: return_def)
+
+lemma throwError_no_const:
+  "mstate s = mstate s' \<Longrightarrow> throwError e s = throwError e s'"
+  by (fastforce simp: throwError_def intro: return_no_const)
+
 lemma bindE_apply_cong[fundef_cong]:
-  "\<lbrakk> f s = f' s'; \<And>rv st. (Inr rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
+  "\<lbrakk> f s = f' s';
+     \<And>rv st. (Inr rv, st) \<in> fst (f' s') \<Longrightarrow> g rv (with_env_of s st) = g' rv (with_env_of s' st) \<rbrakk>
   \<Longrightarrow> (f >>=E g) s = (f' >>=E g') s'"
-  by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_apply_cong)
+  by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_apply_cong throwError_no_const)
 
 lemma K_bind_apply_cong[fundef_cong]:
   "\<lbrakk> f st = f' st' \<rbrakk> \<Longrightarrow> K_bind f arg st = K_bind f' arg' st'"
@@ -263,30 +277,30 @@ lemma monad_eqI [intro]:
   "\<lbrakk> \<And>r t s. (r, t) \<in> fst (A s) \<Longrightarrow> (r, t) \<in> fst (B s);
      \<And>r t s. (r, t) \<in> fst (B s) \<Longrightarrow> (r, t) \<in> fst (A s);
      \<And>x. snd (A x) = snd (B x) \<rbrakk>
-  \<Longrightarrow> A = B" for A :: "('s, 'a) nondet_monad"
+  \<Longrightarrow> A = B" for A :: "('c, 's, 'a) nondet_monad"
   by (fastforce intro!: set_eqI prod_eqI)
 
 lemma monad_state_eqI [intro]:
   "\<lbrakk> \<And>r t. (r, t) \<in> fst (A s) \<Longrightarrow> (r, t) \<in> fst (B s');
      \<And>r t. (r, t) \<in> fst (B s') \<Longrightarrow> (r, t) \<in> fst (A s);
      snd (A s) = snd (B s') \<rbrakk>
-  \<Longrightarrow> A s = B s'" for A :: "('s, 'a) nondet_monad"
+  \<Longrightarrow> A s = B s'" for A :: "('c, 's, 'a) nondet_monad"
   by (fastforce intro!: set_eqI prod_eqI)
 
 
 subsection \<open>General @{const whileLoop} reasoning\<close>
 
 definition whileLoop_terminatesE ::
-  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool"
+  "('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('a \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad) \<Rightarrow> 'c \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool"
   where
-  "whileLoop_terminatesE C B \<equiv>
-     \<lambda>r. whileLoop_terminates (\<lambda>r s. case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False) (lift B) (Inr r)"
+  "whileLoop_terminatesE C B c \<equiv>
+     \<lambda>r. whileLoop_terminates (\<lambda>r s. case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False) (lift B) c (Inr r)"
 
 lemma whileLoop_cond_fail:
   "\<not> C x s \<Longrightarrow> whileLoop C B x s = return x s"
   by (auto simp: return_def whileLoop_def
            intro: whileLoop_results.intros whileLoop_terminates.intros
-           elim!: whileLoop_results.cases)
+           elim: whileLoop_results.cases)
 
 lemma whileLoopE_cond_fail:
   "\<not> C x s \<Longrightarrow> whileLoopE C B x s = returnOk x s"
@@ -294,7 +308,7 @@ lemma whileLoopE_cond_fail:
   by (auto intro: whileLoop_cond_fail)
 
 lemma whileLoop_results_simps_no_move[simp]:
-  "(Some x, Some x) \<in> whileLoop_results C B \<longleftrightarrow> \<not>C (fst x) (snd x)"
+  "(Some x, Some x) \<in> whileLoop_results C B c \<longleftrightarrow> \<not>C (fst x) (monad_state c (snd x))"
   (is "?LHS x \<longleftrightarrow> ?RHS x")
 proof (rule iffI)
   assume "?LHS x"

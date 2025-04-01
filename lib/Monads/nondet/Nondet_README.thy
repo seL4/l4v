@@ -13,10 +13,10 @@ theory Nondet_README
     WP_README
 begin
 
-\<comment> \<open>Nondeterministic State Monad with Failure\<close>
+\<comment> \<open>Nondeterministic State Monad with Failure and Environment\<close>
 
 text \<open>
-The type of the nondeterministic monad, @{typ "('s, 'a) nondet_monad"}, can be found in
+The type of the nondeterministic monad, @{typ "('c, 's, 'a) nondet_monad"}, can be found in
 @{theory Monads.Nondet_Monad}, along with definitions of fundamental monad primitives and
 Haskell-like do-syntax.
 
@@ -25,7 +25,8 @@ normal state monad. Instead of a pair consisting of result and new state, we ret
 of these pairs coupled with a failure flag. Each element in the set is a potential result
 of the computation. The flag is @{const True} if there is an execution path in the
 computation that may have failed. Conversely, if the flag is @{const False}, none of the
-computations resulting in the returned set can have failed.
+computations resulting in the returned set have failed. The monad also takes as input an
+environment state @{typ 'c}, which is constant throughout the execution.
 
 The following lemmas are basic examples of those primitives and that syntax.\<close>
 
@@ -46,7 +47,7 @@ lemma "do x \<leftarrow> return 1;
 
 text \<open>
 We also provide a variant of the nondeterministic monad extended with exceptional return
-values. This is available by using the type @{typ "('s, 'e + 'a) nondet_monad"}, with
+values. This is available by using the type @{typ "('c, 's, 'e + 'a) nondet_monad"}, with
 primitives and syntax existing for it as well\<close>
 
 lemma "doE x \<leftarrow> returnOk 1;
@@ -75,7 +76,9 @@ monadic primitives. The @{method wp} tool automates the storage and use of this
 collection of rules. For more details about @{method wp} see @{theory Monads.WP_README}.
 
 The following is an example of one of these operator lifting rules and an example of a
-relatively trivial Hoare triple being solved by @{method wp}.\<close>
+relatively trivial Hoare triple being solved by @{method wp}. Pre and post conditions
+are predicates on @{typ "('c, 's) monad_state"}, which means that both the constant
+environment and the variable state are available to the Hoare triple.\<close>
 
 lemma hoare_vcg_if_split:
   "\<lbrakk>P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>; \<not>P \<Longrightarrow> \<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>\<rbrakk>
@@ -117,7 +120,7 @@ Lemmas for handling these goals exist in @{theory Monads.Nondet_In_Monad}, with
 @{thm in_monad} being particularly useful.\<close>
 
 lemma
-  "(r, s) \<in> fst (return r s)"
+  "(r, mstate s) \<in> fst (return r s)"
   by (simp add: in_monad)
 
 text \<open>

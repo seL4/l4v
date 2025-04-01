@@ -415,8 +415,8 @@ end
 
 
 notepad begin
-  fix P P' P'' P''' and Q Q' Q'' :: "'a \<Rightarrow> bool" and R :: "bool \<Rightarrow> 'b \<Rightarrow> 'a \<Rightarrow> bool"
-      and f :: "'x \<Rightarrow> ('a,'b) nondet_monad" and D D' D'' D''' D'''' y and x :: 'x
+  fix P P' P'' P''' and Q Q' Q'' :: "('c, 'a) mpred" and R :: "bool \<Rightarrow> 'b \<Rightarrow> ('c, 'a) mpred"
+      and f :: "'x \<Rightarrow> ('c, 'a, 'b) nondet_monad" and D D' D'' D''' D'''' y and x :: 'x
   assume    Q[wp]: "\<lbrace>P'\<rbrace> f x \<lbrace>\<lambda>_. Q\<rbrace>" and
             Q'[wp]:"\<lbrace>P''\<rbrace> f x \<lbrace>\<lambda>_. Q'\<rbrace>" and
             C: "\<And>r s.
@@ -512,7 +512,10 @@ end
 
 
 notepad begin
-  fix f :: "'a \<Rightarrow> ('a,'b) nondet_monad" and Q P P' :: "int \<Rightarrow> 'a \<Rightarrow> bool" and Q' :: "'a \<Rightarrow> bool" and a :: 'a
+  fix f :: "'a \<Rightarrow> ('c, 'a,'b) nondet_monad"
+  fix Q P P' :: "int \<Rightarrow> ('c, 'a) mpred"
+  fix Q' :: "('c, 'a) mpred"
+  fix a :: 'a
 
   {
   assume P[wp]: "\<And>PP x. \<lbrace>\<lambda>s. PP (P x s)\<rbrace> f a \<lbrace>\<lambda>r s. PP (P x s)\<rbrace>"

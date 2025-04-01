@@ -20,16 +20,17 @@ text \<open>
   is often similar. The following definitions allow such reasoning to take place.\<close>
 
 definition validNF ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c,'s) mpred \<Rightarrow> ('c,'s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>!") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<and> no_fail P f"
 
 lemma validNF_alt_def:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! = (\<forall>s. P s \<longrightarrow> ((\<forall>(r', s') \<in> fst (f s). Q r' s') \<and> \<not> snd (f s)))"
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! = (\<forall>s. P s \<longrightarrow> ((\<forall>(r', s') \<in> fst (f s). Q r' (with_env_of s s')) \<and> \<not> snd (f s)))"
   by (fastforce simp: validNF_def valid_def no_fail_def)
 
 definition validE_NF ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) nondet_monad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c,'s) mpred \<Rightarrow> ('c, 's, 'a + 'b) nondet_monad \<Rightarrow>
+   ('b \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>!)") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>! \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace> \<and> no_fail P f"
 
@@ -92,7 +93,7 @@ lemma validNF_not_failed:
   by (clarsimp simp: validNF_def no_fail_def)
 
 lemma use_validNF:
-  "\<lbrakk> (r', s') \<in> fst (f s); \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> Q r' s'"
+  "\<lbrakk> (r', s') \<in> fst (f s); \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> Q r' (with_env_of s s')"
   by (fastforce simp: validNF_def valid_def)
 
 
@@ -107,7 +108,7 @@ lemma validNF_get[wp]:
   by (wp validNF)+
 
 lemma validNF_put[wp]:
-  "\<lbrace> \<lambda>s. P () x  \<rbrace> put x \<lbrace> P \<rbrace>!"
+  "\<lbrace> \<lambda>s. P () (with_env_of s (mstate x))  \<rbrace> put x \<lbrace> P \<rbrace>!"
   by (wp validNF)+
 
 lemma validNF_K_bind[wp]:
@@ -133,8 +134,10 @@ lemma validNF_pre_disj[intro!]:
 text \<open>
   Set up combination rules for @{method wp}, which also requires a @{text wp_trip} rule for
   @{const validNF}.\<close>
-definition validNF_property :: "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> bool" where
-  "validNF_property Q s b \<equiv> \<not> snd (b s) \<and> (\<forall>(r', s') \<in> fst (b s). Q r' s')"
+definition validNF_property ::
+  "('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('c,'s) monad_state \<Rightarrow> ('c,'s,'a) nondet_monad \<Rightarrow> bool"
+   where
+  "validNF_property Q s b \<equiv> \<not> snd (b s) \<and> (\<forall>(r', s') \<in> fst (b s). Q r' (with_env_of s s'))"
 
 lemma validNF_is_triple[wp_trip]:
   "validNF P f Q = triple_judgement P f (validNF_property Q)"
@@ -192,7 +195,7 @@ lemma validNF_state_assert[wp]:
   by (rule validNF; wpsimp)
 
 lemma validNF_modify[wp]:
-  "\<lbrace> \<lambda>s. P () (f s) \<rbrace> modify f \<lbrace> P \<rbrace>!"
+  "\<lbrace> \<lambda>s. P () (const_env f s) \<rbrace> modify f \<lbrace> P \<rbrace>!"
   by (rule validNF; wpsimp)
 
 lemma validNF_gets[wp]:
@@ -305,10 +308,13 @@ lemma validNF_nobindE[wp]:
 text \<open>
   Set up triple rules for @{term validE_NF} so that we can use @{method wp} combinator rules.\<close>
 definition validE_NF_property ::
-  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'c+'a) nondet_monad \<Rightarrow> bool"
+  "('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('e \<Rightarrow> ('c,'s) mpred) \<Rightarrow>
+   ('c,'s) monad_state \<Rightarrow> ('c, 's, 'e+'a) nondet_monad \<Rightarrow> bool"
   where
   "validE_NF_property Q E s b \<equiv>
-   \<not> snd (b s) \<and> (\<forall>(r', s') \<in> fst (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"
+   \<not> snd (b s) \<and>
+   (\<forall>(r', s') \<in> fst (b s). case r' of Inl x \<Rightarrow> E x (with_env_of s s')
+                                    | Inr x \<Rightarrow> Q x (with_env_of s s'))"
 
 lemma validE_NF_is_triple[wp_trip]:
   "validE_NF P f Q E = triple_judgement P f (validE_NF_property Q E)"
@@ -318,8 +324,8 @@ lemma validE_NF_is_triple[wp_trip]:
 
 lemma validNF_cong:
   "\<lbrakk> \<And>s. P s = P' s; \<And>s. P s \<Longrightarrow> m s = m' s;
-     \<And>r' s' s. \<lbrakk> P s; (r', s') \<in> fst (m s) \<rbrakk> \<Longrightarrow> Q r' s' = Q' r' s' \<rbrakk> \<Longrightarrow>
-   (\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>!) = (\<lbrace>P'\<rbrace> m' \<lbrace>Q'\<rbrace>!)"
+     \<And>r' s' s. \<lbrakk> P s; (r', s') \<in> fst (m s) \<rbrakk> \<Longrightarrow> Q r' (with_env_of s s') = Q' r' (with_env_of s s') \<rbrakk>
+  \<Longrightarrow> \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>! = \<lbrace>P'\<rbrace> m' \<lbrace>Q'\<rbrace>!"
   by (fastforce simp: validNF_alt_def)
 
 lemma validE_NF_liftE[wp]:

@@ -45,15 +45,20 @@ text \<open>
   @{const whileLoop} terms with information that can be used
   by automated tools.
 \<close>
+
 definition whileLoop_inv ::
-  "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('b, 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
-   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'a) nondet_monad"
+  "('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('a \<Rightarrow> ('c, 's, 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow>
+   ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow>
+   (('a \<times> ('c, 's) monad_state) \<times> 'a \<times> ('c, 's) monad_state) set \<Rightarrow>
+   ('c, 's, 'a) nondet_monad"
   where
   "whileLoop_inv C B x I R \<equiv> whileLoop C B x"
 
 definition whileLoopE_inv ::
-  "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('b, 'c + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
-   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'c + 'a) nondet_monad"
+  "('a \<Rightarrow> ('r, 'b) mpred) \<Rightarrow> ('a \<Rightarrow> ('r, 'b, 'c + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow>
+   ('a \<Rightarrow> ('r, 'b) mpred) \<Rightarrow>
+   (('a \<times> ('r, 'b) monad_state) \<times> 'a \<times> ('r, 'b) monad_state) set \<Rightarrow>
+   ('r, 'b, 'c + 'a) nondet_monad"
   where
   "whileLoopE_inv C B x I R \<equiv> whileLoopE C B x"
 
@@ -68,8 +73,9 @@ lemma whileLoopE_add_inv:
 subsection "Simple base rules"
 
 lemma whileLoop_terminates_unfold:
-  "\<lbrakk> whileLoop_terminates C B r s; (r', s') \<in> fst (B r s); C r s \<rbrakk> \<Longrightarrow>
-   whileLoop_terminates C B r' s'"
+  "\<lbrakk> whileLoop_terminates C B c r s; (r', s') \<in> fst (B r (monad_state c s));
+     C r (monad_state c s) \<rbrakk> \<Longrightarrow>
+   whileLoop_terminates C B c r' s'"
   by (force elim!: whileLoop_terminates.cases)
 
 lemma snd_whileLoop_first_step: "\<lbrakk> \<not> snd (whileLoop C B r s); C r s \<rbrakk> \<Longrightarrow> \<not> snd (B r s)"
@@ -86,34 +92,35 @@ lemma snd_whileLoopE_first_step: "\<lbrakk> \<not> snd (whileLoopE C B r s); C r
   done
 
 lemma snd_whileLoop_unfold:
-  "\<lbrakk> \<not> snd (whileLoop C B r s); C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> \<not> snd (whileLoop C B r' s')"
-  apply (clarsimp simp: whileLoop_def)
-  apply (auto elim: whileLoop_results.cases whileLoop_terminates.cases
-              intro: whileLoop_results.intros whileLoop_terminates.intros)
-  done
+  "\<lbrakk> \<not> snd (whileLoop C B r s); C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow>
+   \<not> snd (whileLoop C B r' (with_env_of s s'))"
+  unfolding whileLoop_def
+  by (metis select_convs snd_conv whileLoop_results.intros(3) whileLoop_terminates_unfold
+            with_env_of_mstate)
 
 lemma snd_whileLoopE_unfold:
-  "\<lbrakk> \<not> snd (whileLoopE C B r s); (Inr r', s') \<in> fst (B r s); C r s \<rbrakk> \<Longrightarrow> \<not> snd (whileLoopE C B r' s')"
+  "\<lbrakk> \<not> snd (whileLoopE C B r s); (Inr r', s') \<in> fst (B r s); C r s \<rbrakk> \<Longrightarrow>
+   \<not> snd (whileLoopE C B r' (with_env_of s s'))"
   unfolding whileLoopE_def
   by (fastforce simp: lift_def dest: snd_whileLoop_unfold)
 
 lemma whileLoop_results_cong [cong]:
   assumes C:  "\<And>r s. C r s = C' r s"
-  and B:"\<And>(r :: 'r) (s :: 's). C' r s \<Longrightarrow> B r s = B' r s"
+  and B:"\<And>r s. C' r s \<Longrightarrow> B r s = B' r s"
   shows "whileLoop_results C B = whileLoop_results C' B'"
 proof -
   {
-    fix x y C B C' B'
-    have  "\<lbrakk> (x, y) \<in> whileLoop_results C B;
-             \<And>(r :: 'r) (s :: 's). C r s = C' r s; \<And>r s. C' r s \<Longrightarrow> B r s = B' r s \<rbrakk>
-           \<Longrightarrow> (x, y) \<in> whileLoop_results C' B'"
+    fix x y C B C' B' c
+    have  "\<lbrakk> (x, y) \<in> whileLoop_results C B c;
+             \<And>r s. C r s = C' r s; \<And>r s. C' r s \<Longrightarrow> B r s = B' r s \<rbrakk>
+           \<Longrightarrow> (x, y) \<in> whileLoop_results C' B' c"
       by (induct rule: whileLoop_results.induct) (auto intro: whileLoop_results.intros)
   }
-
   thus ?thesis
     apply -
+    apply (rule ext)
     apply (rule set_eqI, rule iffI; clarsimp split: prod.splits)
-     apply (clarsimp simp: C B)
+     apply (fastforce simp: C B)
     apply (clarsimp simp: C [symmetric] B [symmetric])
     done
 qed
@@ -121,13 +128,14 @@ qed
 lemma whileLoop_terminates_cong [cong]:
   assumes r: "r = r'"
   and s: "s = s'"
+  and c: "c = c'"
   and C: "\<And>r s. C r s = C' r s"
   and B: "\<And>r s. C' r s \<Longrightarrow> B r s = B' r s"
-  shows "whileLoop_terminates C B r s = whileLoop_terminates C' B' r' s'"
+  shows "whileLoop_terminates C B c r s = whileLoop_terminates C' B' c' r' s'"
 proof (rule iffI)
-  assume T: "whileLoop_terminates C B r s"
-  show "whileLoop_terminates C' B' r' s'"
-    apply (insert T r s)
+  assume T: "whileLoop_terminates C B c r s"
+  show "whileLoop_terminates C' B' c' r' s'"
+    apply (insert T r s c)
     apply (induct arbitrary: r' s' rule: whileLoop_terminates.induct)
      apply (clarsimp simp: C)
      apply (erule whileLoop_terminates.intros)
@@ -136,9 +144,9 @@ proof (rule iffI)
     apply (clarsimp simp: C B split: prod.splits)
     done
 next
-  assume T: "whileLoop_terminates C' B' r' s'"
-  show "whileLoop_terminates C B r s"
-    apply (insert T r s)
+  assume T: "whileLoop_terminates C' B' c' r' s'"
+  show "whileLoop_terminates C B c r s"
+    apply (insert T c r s)
     apply (induct arbitrary: r s rule: whileLoop_terminates.induct)
      apply (rule whileLoop_terminates.intros)
      apply (clarsimp simp: C)
@@ -157,25 +165,30 @@ lemma whileLoopE_cong[cong]:
   by (rule whileLoop_cong[THEN arg_cong]; clarsimp simp: lift_def throwError_def split: sum.splits)
 
 lemma whileLoop_terminates_wf:
-  "wf {(x, y). C (fst y) (snd y) \<and> x \<in> fst (B (fst y) (snd y)) \<and> whileLoop_terminates C B (fst y) (snd y)}"
-  apply (rule wfI[where A="UNIV" and B="{(r, s). whileLoop_terminates C B r s}"]; clarsimp)
-  apply (erule whileLoop_terminates.induct; blast)
+  "wf {(x, y). C (fst y) (snd y) \<and> (fst x, mstate (snd x)) \<in> fst (B (fst y) (snd y)) \<and>
+               env (snd x) = env (snd y) \<and>
+               whileLoop_terminates C B (env (snd y)) (fst y) (mstate (snd y))}"
+  apply (rule wfI[where A="UNIV" and
+                        B="{(r, s). whileLoop_terminates C B (env s) r (mstate s)}"]; clarsimp)
+  apply (rename_tac s P, case_tac s, clarsimp)
+  apply (erule whileLoop_terminates.induct; fastforce)
   done
 
 subsection "Basic induction helper lemmas"
 
 lemma whileLoop_results_induct_lemma1:
-  "\<lbrakk> (a, b) \<in> whileLoop_results C B; b = Some (x, y) \<rbrakk> \<Longrightarrow> \<not> C x y"
+  "\<lbrakk> (a, b) \<in> whileLoop_results C B c; b = Some (x, y) \<rbrakk> \<Longrightarrow> \<not> C x (monad_state c y)"
   by (induct rule: whileLoop_results.induct) auto
 
 lemma whileLoop_results_induct_lemma1':
-  "\<lbrakk> (a, b) \<in> whileLoop_results C B; a \<noteq> b \<rbrakk> \<Longrightarrow> \<exists>x. a = Some x \<and> C (fst x) (snd x)"
+  "\<lbrakk> (a, b) \<in> whileLoop_results C B c; a \<noteq> b \<rbrakk> \<Longrightarrow> \<exists>x. a = Some x \<and> C (fst x) (monad_state c (snd x))"
   by (induct rule: whileLoop_results.induct) auto
 
 lemma whileLoop_results_induct_lemma2 [consumes 1]:
-  "\<lbrakk> (a, b) \<in> whileLoop_results C B;
+  "\<lbrakk> (a, b) \<in> whileLoop_results C B c;
      a = Some (x :: 'a \<times> 'b); b = Some y;
-     P x; \<And>s t. \<lbrakk> P s; t \<in> fst (B (fst s) (snd s)); C (fst s) (snd s) \<rbrakk> \<Longrightarrow> P t \<rbrakk> \<Longrightarrow> P y"
+     P x; \<And>s t. \<lbrakk> P s; t \<in> fst (B (fst s) (monad_state c (snd s)));
+                  C (fst s) (monad_state c (snd s)) \<rbrakk> \<Longrightarrow> P t \<rbrakk> \<Longrightarrow> P y"
   apply (induct arbitrary: x y rule: whileLoop_results.induct)
     apply simp
    apply simp
@@ -184,12 +197,15 @@ lemma whileLoop_results_induct_lemma2 [consumes 1]:
   done
 
 lemma whileLoop_results_induct_lemma3 [consumes 1]:
-  assumes result: "(Some (r, s), Some (r', s')) \<in> whileLoop_results C B"
-  and inv_start: "I r s"
-  and inv_step: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> I r' s'"
-  shows "I r' s'"
-  apply (rule whileLoop_results_induct_lemma2 [where P="case_prod I" and y="(r', s')" and x="(r, s)",
-                                               simplified case_prod_unfold, simplified])
+  assumes result: "(Some (r, s), Some (r', s')) \<in> whileLoop_results C B c"
+  and inv_start: "I r (monad_state c s)"
+  and inv_step: "\<And>r s r' s'. \<lbrakk> I r (monad_state c s); C r (monad_state c s);
+                               (r', s') \<in> fst (B r (monad_state c s)) \<rbrakk> \<Longrightarrow> I r' (monad_state c s')"
+  shows "I r' (monad_state c s')"
+  apply (rule whileLoop_results_induct_lemma2[where P="\<lambda>(r, s). I r (monad_state c s)" and
+                                                    y="(r', s')" and
+                                                    x="(r, s)",
+                                              simplified case_prod_unfold, simplified])
       apply (rule result)
      apply simp
     apply simp
@@ -204,24 +220,26 @@ lemma in_whileLoop_induct[consumes 1]:
   assumes in_whileLoop: "(r', s') \<in> fst (whileLoop C B r s)"
   and init_I: "\<And> r s. \<not> C r s \<Longrightarrow> I r s r s"
   and step: "\<And>r s r' s' r'' s''. \<lbrakk> C r s; (r', s') \<in> fst (B r s);
-                                   (r'', s'') \<in> fst (whileLoop C B r' s');
-                                   I r' s' r'' s'' \<rbrakk> \<Longrightarrow> I r s r'' s''"
-  shows "I r s r' s'"
+                                   (r'', s'') \<in> fst (whileLoop C B r' (with_env_of s s'));
+                                   I r' (with_env_of s s') r'' (with_env_of s s'') \<rbrakk>
+                                  \<Longrightarrow> I r s r'' (with_env_of s s'')"
+  shows "I r s r' (with_env_of s s')"
 proof cases
   assume "C r s"
 
   {
-    obtain a where a_def: "a = Some (r, s)"
+    obtain a where a_def: "a = Some (r, mstate s)"
       by blast
     obtain b where b_def: "b = Some (r', s')"
       by blast
 
-    have "\<lbrakk> (a, b) \<in> whileLoop_results C B; \<exists>x. a = Some x;  \<exists>x. b = Some x \<rbrakk>
-          \<Longrightarrow> I (fst (the a)) (snd (the a)) (fst (the b)) (snd (the b))"
+    have "\<lbrakk> (a, b) \<in> whileLoop_results C B (env s); \<exists>x. a = Some x;  \<exists>x. b = Some x \<rbrakk>
+          \<Longrightarrow> I (fst (the a)) (with_env_of s (snd (the a))) (fst (the b)) (with_env_of s (snd (the b)))"
       by (induct rule: whileLoop_results.induct)
-         (auto simp: init_I whileLoop_def intro: step)
+         (auto simp: init_I whileLoop_def dest: step)
 
-    hence "(Some (r, s), Some (r', s')) \<in> whileLoop_results C B \<Longrightarrow> I r s r' s'"
+    hence "(Some (r, mstate s), Some (r', s')) \<in> whileLoop_results C B (env s) \<Longrightarrow>
+           I r s r' (with_env_of s s')"
       by (clarsimp simp: a_def b_def)
    }
 
@@ -230,22 +248,22 @@ proof cases
      by (clarsimp simp: whileLoop_def)
 next
   assume "\<not> C r s"
-
-  hence "r' = r \<and> s' = s"
+  moreover
+  from this have "r' = r \<and> s' = mstate s"
     using in_whileLoop
     by (subst (asm) whileLoop_unroll, clarsimp simp: condition_def return_def)
-
-  thus ?thesis
-    by (metis init_I \<open>\<not> C r s\<close>)
+  ultimately
+  show ?thesis
+   by (simp add: init_I)
 qed
 
 lemma snd_whileLoop_induct [consumes 1]:
-  assumes induct: "snd (whileLoop C B r s)"
-  and terminates: "\<not> whileLoop_terminates C B r s \<Longrightarrow> I r s"
-  and init: "\<And> r s. \<lbrakk> snd (B r s); C r s \<rbrakk> \<Longrightarrow> I r s"
-  and step: "\<And>r s r' s' r'' s''. \<lbrakk> C r s; (r', s') \<in> fst (B r s); snd (whileLoop C B r' s');
-                                   I r' s' \<rbrakk> \<Longrightarrow> I r s"
-  shows "I r s"
+  assumes induct: "snd (whileLoop C B r (monad_state c s))"
+  and terminates: "\<not> whileLoop_terminates C B c r s \<Longrightarrow> I r (monad_state c s)"
+  and init: "\<And>r s. \<lbrakk> snd (B r s); C r s \<rbrakk> \<Longrightarrow> I r s"
+  and step: "\<And>r s r' s' r'' s''. \<lbrakk> C r s; (r', s') \<in> fst (B r s); snd (whileLoop C B r' (with_env_of s s'));
+                                   I r' (with_env_of s s') \<rbrakk> \<Longrightarrow> I r s"
+  shows "I r (monad_state c s)"
   apply (insert init induct)
   apply atomize
   apply (unfold whileLoop_def)
@@ -254,6 +272,7 @@ lemma snd_whileLoop_induct [consumes 1]:
    apply (erule rev_mp)
    apply (induct "Some (r, s)" "None :: ('a \<times> 'b) option" arbitrary: r s rule: whileLoop_results.induct)
     apply clarsimp
+    apply simp
    apply clarsimp
    apply (erule (1) step)
     apply (clarsimp simp: whileLoop_def)
@@ -262,34 +281,39 @@ lemma snd_whileLoop_induct [consumes 1]:
   done
 
 lemma whileLoop_terminatesE_induct [consumes 1]:
-  assumes induct: "whileLoop_terminatesE C B r s"
-  and init: "\<And>r s. \<not> C r s \<Longrightarrow> I r s"
-  and step: "\<And>r s r' s'. \<lbrakk> C r s; \<forall>(v', s') \<in> fst (B r s). case v' of Inl _ \<Rightarrow> True | Inr r' \<Rightarrow> I r' s' \<rbrakk> \<Longrightarrow> I r s"
-  shows "I r s"
+  assumes induct: "whileLoop_terminatesE C B c r s"
+  and init:
+    "\<And>r s. \<not> C r (monad_state c s) \<Longrightarrow> I r (monad_state c s)"
+  and step:
+    "\<And>r s. \<lbrakk> C r (monad_state c s);
+             \<forall>(v, s') \<in> fst (B r (monad_state c s)). case v of
+                                                       Inl _ \<Rightarrow> True
+                                                     | Inr r' \<Rightarrow> I r' (monad_state c s') \<rbrakk> \<Longrightarrow>
+           I r (monad_state c s)"
+  shows "I r (monad_state c s)"
   apply (insert induct)
   apply (clarsimp simp: whileLoop_terminatesE_def)
-  apply (subgoal_tac "(\<lambda>r s. case (Inr r) of Inl x \<Rightarrow> True | Inr x \<Rightarrow> I x s) r s")
+  apply (subgoal_tac "(\<lambda>r s. case Inr r of Inl x \<Rightarrow> True | Inr x \<Rightarrow> I x (monad_state c s)) r s")
    apply simp
   apply (induction rule: whileLoop_terminates.induct)
    apply (clarsimp split: sum.splits elim!: init)
-  apply (clarsimp split: sum.splits)
-  apply (rule step)
-   apply simp
-  apply (force simp: lift_def split: sum.splits)
+  apply (force simp: lift_def elim!: step split: sum.splits)
   done
 
 subsection "Direct reasoning about @{const whileLoop} components"
 
 lemma fst_whileLoop_cond_false:
   assumes loop_result: "(r', s') \<in> fst (whileLoop C B r s)"
-  shows "\<not> C r' s'"
+  shows "\<not> C r' (with_env_of s s')"
   using loop_result
   by (rule in_whileLoop_induct, auto)
 
 lemma whileLoop_terminates_results:
-  assumes non_term: "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
+  assumes non_term:
+    "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
   shows
-    "\<lbrakk>whileLoop_terminates C B r s; (Some (r, s), None) \<notin> whileLoop_results C B; I r s; C r s\<rbrakk>
+    "\<lbrakk>whileLoop_terminates C B c r s; (Some (r, s), None) \<notin> whileLoop_results C B c;
+      I r (monad_state c s); C r (monad_state c s)\<rbrakk>
      \<Longrightarrow> False"
 proof (induct rule: whileLoop_terminates.induct)
   case (1 r s)
@@ -304,7 +328,7 @@ next
     apply (subst (asm) (2) whileLoop_results.simps)
     apply clarsimp
     apply (insert whileLoop_results.simps)
-    apply fast
+    apply fastforce
     done
 qed
 
@@ -313,36 +337,40 @@ lemma snd_whileLoop:
     and cond_I: "C r s"
     and non_term: "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
   shows "snd (whileLoop C B r s)"
+  using init_I cond_I
   apply (clarsimp simp: whileLoop_def)
-  apply (erule (1) whileLoop_terminates_results[OF non_term _ _ init_I cond_I])
+  apply (erule (1) whileLoop_terminates_results[OF non_term]; simp)
   done
 
 lemma whileLoop_terminates_inv:
-  assumes init_I: "I r s"
-  assumes inv: "\<And>r s. \<lbrace>\<lambda>s'. I r s' \<and> C r s' \<and> s' = s \<rbrace> B r \<lbrace> \<lambda>r' s'. I r' s' \<and> ((r', s'), (r, s)) \<in> R \<rbrace>"
+  assumes init_I: "I r (monad_state c s)"
+  assumes inv: "\<And>r s. \<lbrace>\<lambda>s'. I r s' \<and> C r s' \<and> s' = s \<rbrace> B r \<lbrace> \<lambda>r' s'. I r' s' \<and> ((r', s'), (r, s)) \<in> R\<rbrace>"
   assumes wf_R: "wf R"
-  shows "whileLoop_terminates C B r s"
+  shows "whileLoop_terminates C B c r s"
   apply (insert init_I)
   using wf_R
-  apply (induction "(r, s)" arbitrary: r s)
+  apply (induction "(r, monad_state c s)" arbitrary: r c s)
   apply atomize
   apply (subst whileLoop_terminates_simps)
   apply clarsimp
-  apply (erule use_valid)
-  apply (rule hoare_strengthen_post, rule inv)
-   apply force
-  apply force
+  apply (drule_tac Q="\<lambda>r s. whileLoop_terminates C B (env s) r (mstate s)" in use_valid)
+    apply (rule_tac hoare_strengthen_post, rule inv)
+    prefer 2
+    apply force
+   apply clarsimp
+  apply simp
   done
 
 lemma not_snd_whileLoop:
   assumes init_I: "I r s"
-      and inv_holds: "\<And>r s. \<lbrace>\<lambda>s'. I r s' \<and> C r s' \<and> s' = s \<rbrace> B r \<lbrace> \<lambda>r' s'. I r' s' \<and> ((r', s'), (r, s)) \<in> R \<rbrace>!"
+      and inv_holds:
+        "\<And>r s. \<lbrace>\<lambda>s'. I r s' \<and> C r s' \<and> s' = s \<rbrace> B r \<lbrace> \<lambda>r' s'. I r' s' \<and> ((r', s'), (r, s)) \<in> R \<rbrace>!"
       and wf_R: "wf R"
   shows "\<not> snd (whileLoop C B r s)"
 proof -
   {
-    fix x y
-    have "\<lbrakk> (x, y) \<in> whileLoop_results C B; x = Some (r, s); y = None \<rbrakk> \<Longrightarrow> False"
+    fix x y c
+    have "\<lbrakk> (x, y) \<in> whileLoop_results C B c; x = Some (r, mstate s); y = None; c = env s \<rbrakk> \<Longrightarrow> False"
       apply (insert init_I)
       apply (induct arbitrary: r s rule: whileLoop_results.inducts)
         apply simp
@@ -351,12 +379,13 @@ proof -
        apply blast
       apply (drule use_validNF [OF _ inv_holds])
        apply simp
-      apply clarsimp
+      apply force
       done
   }
 
-  also have "whileLoop_terminates C B r s"
-    apply (rule whileLoop_terminates_inv [where I=I, OF init_I _ wf_R])
+  also have "whileLoop_terminates C B (env s) r (mstate s)"
+    apply (rule whileLoop_terminates_inv [where I=I, OF _ _ wf_R])
+     apply (simp add: init_I)
     apply (insert inv_holds)
     apply (clarsimp simp: validNF_def)
     done
@@ -367,21 +396,22 @@ qed
 
 lemma no_fail_whileLoop:
   assumes nf: "\<And>r. no_fail (P r and C r) (B r)"
-  assumes termin: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B r s"
+  assumes termin: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B (env s) r (mstate s)"
   assumes body_inv: "\<And>r. \<lbrace>P r and C r\<rbrace> B r \<lbrace>P\<rbrace>"
   assumes P: "P r s"
   shows "\<not> snd (whileLoop C B r s)"
   apply (insert P)
   apply (erule_tac I="\<lambda>r s. P r s"
-               and R="{((r', s'), r, s). C r s \<and> (r', s') \<in> fst (B r s)
-                                         \<and> whileLoop_terminates C B r s}"
+               and R="{((r', s'), r, s). C r s \<and> (r', mstate s') \<in> fst (B r s) \<and> env s' = env s
+                                         \<and> whileLoop_terminates C B (env s) r (mstate s)}"
                 in not_snd_whileLoop)
    apply (clarsimp simp: validNF_def)
    apply (rule conjI)
     apply (intro hoare_vcg_conj_lift_pre_fix)
-       apply (fastforce intro: body_inv hoare_weaken_pre)
-      apply (fastforce intro: hoare_vcg_prop hoare_weaken_pre)
-     apply (fastforce intro: body_inv simp: valid_def)
+        apply (fastforce intro: body_inv hoare_weaken_pre)
+       apply (fastforce intro: hoare_vcg_prop hoare_weaken_pre)
+      apply (fastforce intro: body_inv simp: valid_def)
+     apply (wpsimp wp: hoare_vcg_const_lift)
     apply (fastforce intro: termin hoare_vcg_prop hoare_weaken_pre)
    apply (fastforce intro: no_fail_pre nf)
   apply (fastforce intro: wf_subset[OF whileLoop_terminates_wf[where C=C]])
@@ -398,7 +428,7 @@ proof -
     assume inv: "I r s"
     assume step: "(r', s') \<in> fst (whileLoop C B r s)"
 
-    have "I r' s'"
+    have "I r' (with_env_of s s')"
       using step inv
       apply (induct rule: in_whileLoop_induct)
        apply simp
@@ -476,7 +506,8 @@ proof -
 
     {
       fix x
-      have "T (fst x) (snd x) \<Longrightarrow> \<exists>r' s'. (r', s') \<in> fst (whileLoop C B (fst x) (snd x)) \<and> T r' s'"
+      have "T (fst x) (snd x) \<Longrightarrow> \<exists>r' s'. (r', s') \<in> fst (whileLoop C B (fst x) (snd x)) \<and>
+                                          T r' (with_env_of (snd x) s')"
         using wf_R
       proof induct
         case (less x)
@@ -487,7 +518,7 @@ proof -
            apply (clarsimp simp: condition_def bind_def')
            apply (cut_tac iter_I[where ?s0.0="snd x" and r="fst x"])
            apply (clarsimp simp: exs_valid_def)
-           apply blast
+           apply force
           apply (subst whileLoop_unroll)
           apply (cases x)
           apply (clarsimp simp: condition_def bind_def' return_def)
@@ -495,7 +526,7 @@ proof -
       qed
     }
 
-    then have "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' s'"
+    then have "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' (with_env_of s s')"
       by (metis \<open>P s\<close> fst_conv init_T snd_conv final_I fst_whileLoop_cond_false)
   }
   thus ?thesis by (clarsimp simp: exs_valid_def Bex_def)
@@ -540,17 +571,21 @@ lemma empty_fail_whileM[empty_fail_cond, intro!, wp]:
   by (wpsimp wp: empty_fail_whileLoop empty_fail_bind)
 
 lemma whileLoop_results_bisim_helper:
-  assumes base: "(a, b) \<in> whileLoop_results C B"
-    and inv_init: "case a of Some (r, s) \<Rightarrow> I r s | _ \<Rightarrow> True"
-    and inv_step: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> I r' s'"
-    and cond_match: "\<And>r s. I r s \<Longrightarrow> C r s = C' (rt r) (st s)"
-    and fail_step: "\<And>r s. \<lbrakk>C r s; snd (B r s); I r s\<rbrakk>
-                         \<Longrightarrow> (Some (rt r, st s), None) \<in> whileLoop_results C' B'"
-    and refine: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in>  fst (B r s) \<rbrakk>
-                            \<Longrightarrow> (rt r', st s') \<in> fst (B' (rt r) (st s))"
+  assumes base: "(a, b) \<in> whileLoop_results C B c"
+    and inv_init: "case a of Some (r, s) \<Rightarrow> I r (monad_state c s) | _ \<Rightarrow> True"
+    and inv_step: "\<And>r s r' s'. \<lbrakk> I r (monad_state c s); C r (monad_state c s);
+                                 (r', s') \<in> fst (B r (monad_state c s)) \<rbrakk>
+                               \<Longrightarrow> I r' (monad_state c s')"
+    and cond_match: "\<And>r s. I r (monad_state c s) \<Longrightarrow>
+                            C r (monad_state c s) = C' (rt r) (monad_state (ct c) (st s))"
+    and fail_step: "\<And>r s. \<lbrakk>C r (monad_state c s); snd (B r (monad_state c s)); I r (monad_state c s)\<rbrakk>
+                          \<Longrightarrow> (Some (rt r, st s), None) \<in> whileLoop_results C' B' (ct c)"
+    and refine: "\<And>r s r' s'. \<lbrakk> I r (monad_state c s); C r (monad_state c s);
+                               (r', s') \<in>  fst (B r (monad_state c s)) \<rbrakk>
+                              \<Longrightarrow> (rt r', st s') \<in> fst (B' (rt r) (monad_state (ct c) (st s)))"
   defines [simp]: "Q x \<equiv> (case x of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
     and [simp]: "R y\<equiv> (case y of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
-  shows "(Q a, R b) \<in> whileLoop_results C' B'"
+  shows "(Q a, R b) \<in> whileLoop_results C' B' (ct c)"
   using base inv_init
 proof (induct rule: whileLoop_results.induct)
   case (1 r s)
@@ -578,24 +613,27 @@ next
 qed
 
 lemma whileLoop_results_bisim:
-  assumes base: "(a, b) \<in> whileLoop_results C B"
-    and vars1: "Q = (case a of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
-    and vars2: "R = (case b of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
-    and inv_init: "case a of Some (r, s) \<Rightarrow> I r s | _ \<Rightarrow> True"
-    and inv_step: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> I r' s'"
-    and cond_match: "\<And>r s. I r s \<Longrightarrow> C r s = C' (rt r) (st s)"
-    and fail_step: "\<And>r s. \<lbrakk>C r s; snd (B r s); I r s\<rbrakk>
-                         \<Longrightarrow> (Some (rt r, st s), None) \<in> whileLoop_results C' B'"
-    and refine: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in>  fst (B r s) \<rbrakk>
-                            \<Longrightarrow> (rt r', st s') \<in> fst (B' (rt r) (st s))"
-  shows "(Q, R) \<in> whileLoop_results C' B'"
+  assumes "(a, b) \<in> whileLoop_results C B c"
+  assumes vars1: "Q = (case a of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
+  assumes vars2: "R = (case b of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
+  assumes "case a of Some (r, s) \<Rightarrow> I r (monad_state c s) | _ \<Rightarrow> True"
+  assumes "\<And>r s r' s'. \<lbrakk> I r (monad_state c s); C r (monad_state c s);
+                         (r', s') \<in> fst (B r (monad_state c s)) \<rbrakk>
+                        \<Longrightarrow> I r' (monad_state c s')"
+  assumes "\<And>r s. I r (monad_state c s) \<Longrightarrow>
+                  C r (monad_state c s) = C' (rt r) (monad_state (ct c) (st s))"
+  assumes "\<And>r s. \<lbrakk>C r (monad_state c s); snd (B r (monad_state c s)); I r (monad_state c s)\<rbrakk>
+                  \<Longrightarrow> (Some (rt r, st s), None) \<in> whileLoop_results C' B' (ct c)"
+  assumes "\<And>r s r' s'. \<lbrakk> I r (monad_state c s); C r (monad_state c s);
+                         (r', s') \<in>  fst (B r (monad_state c s)) \<rbrakk>
+                        \<Longrightarrow> (rt r', st s') \<in> fst (B' (rt r) (monad_state (ct c) (st s)))"
+  shows "(Q, R) \<in> whileLoop_results C' B' (ct c)"
   apply (subst vars1, subst vars2)
-  apply (rule whileLoop_results_bisim_helper)
-       apply (rule assms; assumption?)+
+  apply (rule whileLoop_results_bisim_helper[where ct=ct]; rule assms; assumption?)
   done
 
 lemma whileLoop_terminates_liftE:
-  "whileLoop_terminatesE C (\<lambda>r. liftE (B r)) r s = whileLoop_terminates C B r s"
+  "whileLoop_terminatesE C (\<lambda>r. liftE (B r)) c r s = whileLoop_terminates C B c r s"
   apply (subst eq_sym_conv)
   apply (clarsimp simp: whileLoop_terminatesE_def)
   apply (rule iffI)
@@ -616,7 +654,7 @@ lemma whileLoop_terminates_liftE:
             Inl _ \<Rightarrow> True
           | Inr r \<Rightarrow> whileLoop_terminates
                        (\<lambda>r s. (\<lambda>r s. case r of Inl _ \<Rightarrow> False | Inr v \<Rightarrow> C v s) (Inr r) s)
-                       (\<lambda>r. lift (\<lambda>r. liftE (B r)) (Inr r) >>= (\<lambda>x. return (projr x))) r s")
+                       (\<lambda>r. lift (\<lambda>r. liftE (B r)) (Inr r) >>= (\<lambda>x. return (projr x))) c r s")
    apply (clarsimp simp: liftE_def lift_def)
   apply (erule whileLoop_terminates.induct)
    apply (clarsimp simp: liftE_def lift_def split: sum.splits)
@@ -816,8 +854,9 @@ lemma whileLoopE_wp_inv [wp]:
 subsection "Stronger @{const whileLoop} rules"
 
 lemma whileLoop_rule_strong:
-  assumes init_U: "\<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>r s. (r, s) \<in> fst Q \<rbrace>"
-  and path_exists: "\<And>r'' s''. \<lbrakk> (r'', s'') \<in> fst Q \<rbrakk> \<Longrightarrow> \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<exists>\<lbrace> \<lambda>r s. r = r'' \<and> s = s'' \<rbrace>"
+  assumes init_U: "\<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>r s. (r, mstate s) \<in> fst Q \<rbrace>"
+  and path_exists: "\<And>r'' s''. \<lbrakk> (r'', s'') \<in> fst Q \<rbrakk> \<Longrightarrow>
+                               \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<exists>\<lbrace> \<lambda>r s. r = r'' \<and> mstate s = s'' \<rbrace>"
   and loop_fail: "snd Q \<Longrightarrow> snd (whileLoop C B r s)"
   and loop_nofail: "\<not> snd Q \<Longrightarrow> \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>_ _. True \<rbrace>!"
   shows "whileLoop C B r s = Q"
@@ -831,8 +870,9 @@ lemma whileLoop_rule_strong:
   done
 
 lemma whileLoop_rule_strong_no_fail:
-  assumes init_U: "\<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>r s. (r, s) \<in> fst Q \<rbrace>!"
-  and path_exists: "\<And>r'' s''. \<lbrakk> (r'', s'') \<in> fst Q \<rbrakk> \<Longrightarrow> \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<exists>\<lbrace> \<lambda>r s. r = r'' \<and> s = s'' \<rbrace>"
+  assumes init_U: "\<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>r s. (r, mstate s) \<in> fst Q \<rbrace>!"
+  and path_exists: "\<And>r'' s''. \<lbrakk> (r'', s'') \<in> fst Q \<rbrakk> \<Longrightarrow>
+                               \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<exists>\<lbrace> \<lambda>r s. r = r'' \<and> mstate s = s'' \<rbrace>"
   and loop_no_fail: "\<not> snd Q"
   shows "whileLoop C B r s = Q"
   apply (rule whileLoop_rule_strong)
@@ -844,34 +884,38 @@ lemma whileLoop_rule_strong_no_fail:
 
 subsection "Miscellaneous rules"
 
-(* Failure of one whileLoop implies the failure of another whileloop
- * which will only ever fail more. *)
+(* Failure of one whileLoop implies the failure of another whileLoop
+   which will only ever fail more. *)
 lemma snd_whileLoop_subset:
-    assumes a_fails: "snd (whileLoop C A r s)"
-    and b_success_step:
-        "\<And>r s r' s'. \<lbrakk> C r s; (r', s') \<in> fst (A r s); \<not> snd (B r s) \<rbrakk>
-             \<Longrightarrow> (r', s') \<in> fst (B r s)"
-    and b_fail_step: "\<And>r s. \<lbrakk> C r s; snd (A r s) \<rbrakk> \<Longrightarrow> snd (B r s) "
-   shows "snd (whileLoop C B r s)"
-  apply (insert a_fails)
-  apply (induct rule: snd_whileLoop_induct)
-    apply (unfold whileLoop_def snd_conv)[1]
-    apply (rule disjCI, simp)
-    apply rotate_tac
-    apply (induct rule: whileLoop_terminates.induct)
-     apply (subst (asm) whileLoop_terminates.simps)
-     apply simp
-    apply (subst (asm) (3) whileLoop_terminates.simps, clarsimp)
-    apply (subst whileLoop_results.simps, clarsimp)
-    apply (rule classical)
-    apply (frule b_success_step, assumption, simp)
-    apply (drule (1) bspec)
-    apply clarsimp
-   apply (frule (1) b_fail_step)
-   apply (metis snd_whileLoop_first_step)
-  apply (metis b_success_step snd_whileLoop_first_step snd_whileLoop_unfold)
-  done
-
+  assumes a_fails: "snd (whileLoop C A r s)"
+      and b_success_step:
+            "\<And>r s r' s'. \<lbrakk> C r s; (r', s') \<in> fst (A r s); \<not> snd (B r s) \<rbrakk>
+                          \<Longrightarrow> (r', s') \<in> fst (B r s)"
+      and b_fail_step: "\<And>r s. \<lbrakk> C r s; snd (A r s) \<rbrakk> \<Longrightarrow> snd (B r s) "
+  shows "snd (whileLoop C B r s)"
+proof -
+  obtain c ms where s: "s = monad_state c ms" by (cases s, simp)
+  from a_fails
+  show ?thesis
+    apply (simp add: s)
+    apply (induct rule: snd_whileLoop_induct)
+      apply (unfold whileLoop_def snd_conv)[1]
+      apply (rule disjCI, simp)
+      apply rotate_tac
+      apply (induct rule: whileLoop_terminates.induct)
+       apply (subst (asm) whileLoop_terminates.simps)
+       apply simp
+      apply (subst (asm) (3) whileLoop_terminates.simps, clarsimp)
+      apply (subst whileLoop_results.simps, clarsimp)
+      apply (rule classical)
+      apply (frule b_success_step, assumption, simp)
+      apply (drule (1) bspec)
+      apply clarsimp
+     apply (frule (1) b_fail_step)
+     apply (metis snd_whileLoop_first_step)
+    apply (metis b_success_step snd_whileLoop_first_step snd_whileLoop_unfold)
+    done
+qed
 
 subsection "Some rules for @{const whileM}"
 

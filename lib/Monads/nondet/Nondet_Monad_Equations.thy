@@ -13,6 +13,7 @@ theory Nondet_Monad_Equations
     Nondet_Empty_Fail
     Nondet_No_Fail
     Nondet_MonadEq_Lemmas
+    Nondet_Env
 begin
 
 lemmas assertE_assert = assertE_liftE
@@ -26,8 +27,8 @@ lemma return_returnOk:
   unfolding returnOk_def by simp
 
 lemma exec_modify:
-  "(modify f >>= g) s = g () (f s)"
-  by (simp add: bind_def simpler_modify_def)
+  "(modify f >>= g) s = g () (const_env f s)"
+  by (simp add: bind_def simpler_modify_def const_env_def)
 
 lemma bind_return_eq:
   "(a >>= return) = (b >>= return) \<Longrightarrow> a = b"
@@ -81,19 +82,21 @@ lemma select_f_singleton_return:
   by (simp add: select_f_def return_def)
 
 lemma select_f_returns:
-  "select_f (return v s) = return (v, s)"
-  "select_f (get s) = return (s, s)"
-  "select_f (gets f s) = return (f s, s)"
-  "select_f (modify g s) = return ((), g s)"
+  "select_f (return v s) = return (v, mstate s)"
+  "select_f (get s) = return (s, mstate s)"
+  "select_f (gets f s) = return (f s, mstate s)"
+  "select_f (modify g s) = return ((), mstate (g s))"
   by (simp add: select_f_def return_def get_def
                 simpler_gets_def simpler_modify_def)+
+
+lemmas select_from_gets = select_f_returns(3)
 
 lemma select_eq_select_f:
   "select S = select_f (S, False)"
   by (simp add: select_def select_f_def)
 
 lemma select_f_select_f:
-  "select_f (select_f v s) = liftM (swp Pair s) (select_f v)"
+  "select_f (select_f v s) = liftM (swp Pair (mstate s)) (select_f v)"
   apply (rule ext)
   apply (simp add: select_f_def liftM_def swp_def
                    bind_def return_def split_def
@@ -102,15 +105,15 @@ lemma select_f_select_f:
   done
 
 lemma select_f_select:
-  "select_f (select S s) = liftM (swp Pair s) (select S)"
+  "select_f (select S s) = liftM (swp Pair (mstate s)) (select S)"
   unfolding select_eq_select_f by (rule select_f_select_f)
 
 lemmas select_f_selects = select_f_select_f select_f_select
 
 lemma select_f_asserts:
   "select_f (fail s) = fail"
-  "select_f (assert P s) = do assert P; return ((), s) od"
-  "select_f (assert_opt v s) = do v' \<leftarrow> assert_opt v; return (v', s) od"
+  "select_f (assert P s) = do assert P; return ((), mstate s) od"
+  "select_f (assert_opt v s) = do v' \<leftarrow> assert_opt v; return (v', mstate s) od"
   by (simp add: select_f_def fail_def assert_def return_def bind_def
                 assert_opt_def split: if_split option.split)+
 
@@ -154,11 +157,11 @@ lemma alternative_left_readonly_bind:
   "\<lbrakk> \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>rv. (=) s\<rbrace>; fst (f s) \<noteq> {} \<rbrakk>
    \<Longrightarrow> alternative (f >>= (\<lambda>x. g x)) h s
        = (f >>= (\<lambda>x. alternative (g x) h)) s"
-  apply (subgoal_tac "\<forall>x \<in> fst (f s). snd x = s")
+  apply (subgoal_tac "\<forall>x \<in> fst (f s). snd x = mstate s")
    apply (clarsimp simp: alternative_def bind_def split_def)
    apply fastforce
   apply clarsimp
-  apply (drule(1) use_valid, simp_all)
+  apply (drule(1) use_valid; simp)
   done
 
 lemma gets_the_return:
@@ -167,7 +170,7 @@ lemma gets_the_return:
   apply (simp add: return_def gets_the_def exec_gets
                    assert_opt_def fail_def
             split: option.split)
-  apply auto
+  apply fastforce
   done
 
 lemma gets_the_returns:
@@ -197,9 +200,8 @@ lemma gets_the_eq_bindE:
 
 lemma gets_the_fail:
   "(fail = gets_the f) = (\<forall>s. f s = None)"
-  by (simp add: gets_the_def exec_gets assert_opt_def
-                fail_def return_def fun_eq_iff
-         split: option.split)
+  by (simp add: gets_the_def exec_gets assert_opt_def fail_def return_def fun_eq_iff
+           split: option.split)
 
 lemma gets_the_asserts:
   "(fail = gets_the f) = (\<forall>s. f s = None)"
@@ -265,9 +267,15 @@ lemma select_singleton[simp]:
   "select {x} = return x"
   by (simp add: select_def return_def)
 
-lemma return_modify:
-  "return () = modify id"
-  by (simp add: return_def simpler_modify_def)
+lemma get_put_eq_return[simp]:
+  "get >>= put = return ()"
+  by (simp add: get_def put_def return_def bind_def)
+
+lemma modify_id_return:
+  "modify id = return ()"
+  by (simp add: modify_def)
+
+lemmas return_modify = modify_id_return[symmetric]
 
 lemma liftE_liftM_liftME:
   "liftE (liftM f m) = liftME f (liftE m)"
@@ -276,10 +284,6 @@ lemma liftE_liftM_liftME:
 lemma bind_return_unit:
   "f = (f >>= (\<lambda>x. return ()))"
   by simp
-
-lemma modify_id_return:
-  "modify id = return ()"
-  by (simp add: simpler_modify_def return_def)
 
 lemma liftE_bind_return_bindE_returnOk:
   "liftE (v >>= (\<lambda>rv. return (f rv)))
@@ -298,16 +302,6 @@ lemma gets_the_bind_eq:
   "\<lbrakk> f s = Some x; g x s = h s \<rbrakk>
    \<Longrightarrow> (gets_the f >>= g) s = h s"
   by (simp add: gets_the_def bind_assoc exec_gets assert_opt_def)
-
-lemma zipWithM_x_modify:
-  "zipWithM_x (\<lambda>a b. modify (f a b)) as bs
-   = modify (\<lambda>s. foldl (\<lambda>s (a, b). f a b s) s (zip as bs))"
-  apply (simp add: zipWithM_x_def zipWith_def sequence_x_def)
-  apply (induct ("zip as bs"))
-   apply (simp add: simpler_modify_def return_def)
-  apply (rule ext)
-  apply (simp add: simpler_modify_def bind_def split_def)
-  done
 
 lemma bind_return_subst:
   assumes r: "\<And>r. \<lbrace>\<lambda>s. P x = r\<rbrace> f x \<lbrace>\<lambda>rv s. Q rv = r\<rbrace>"
@@ -402,11 +396,13 @@ lemma bind_liftE_distrib: "(liftE (A >>= (\<lambda>x. B x))) = (liftE A >>=E (\<
   by (clarsimp simp: liftE_def bindE_def lift_def bind_assoc)
 
 lemma condition_apply_cong:
-  "\<lbrakk> c s = c' s'; s = s'; \<And>s. c' s \<Longrightarrow> l s = l' s  ; \<And>s. \<not> c' s \<Longrightarrow> r s = r' s  \<rbrakk> \<Longrightarrow>  condition c l r s = condition c' l' r' s'"
+  "\<lbrakk> c s = c' s'; s = s'; \<And>s. c' s \<Longrightarrow> l s = l' s  ; \<And>s. \<not> c' s \<Longrightarrow> r s = r' s  \<rbrakk>
+   \<Longrightarrow> condition c l r s = condition c' l' r' s'"
   by monad_eq
 
 lemma condition_cong [cong, fundef_cong]:
-  "\<lbrakk> c = c'; \<And>s. c' s \<Longrightarrow> l s = l' s; \<And>s. \<not> c' s \<Longrightarrow> r s = r' s \<rbrakk> \<Longrightarrow> condition c l r = condition c' l' r'"
+  "\<lbrakk> c = c'; \<And>s. c' s \<Longrightarrow> l s = l' s; \<And>s. \<not> c' s \<Longrightarrow> r s = r' s \<rbrakk>
+   \<Longrightarrow> condition c l r = condition c' l' r'"
   by monad_eq
 
 lemma lift_Inr [simp]: "(lift X (Inr r)) = (X r)"
@@ -449,17 +445,25 @@ lemma catch_is_if:
 lemma liftE_K_bind: "liftE ((K_bind (\<lambda>s. A s)) x) = K_bind (liftE (\<lambda>s. A s)) x"
   by clarsimp
 
+lemma eq_apsnd[simp]:
+  "((a, b) = apsnd f x) = (a = fst x \<and> b = f (snd x))"
+  by (cases x) simp
+
+lemma eq_apfst[simp]:
+  "((a, b) = apfst f x) = (a = f (fst x) \<and> b = snd x)"
+  by (cases x) simp
+
 lemma monad_eq_split:
   assumes "\<And>r s. Q r s \<Longrightarrow> f r s = f' r s"
           "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>r s. Q r s\<rbrace>"
           "P s"
   shows "(g >>= f) s = (g >>= f') s"
 proof -
-  have pre: "\<And>rv s'. \<lbrakk>(rv, s') \<in> fst (g s)\<rbrakk> \<Longrightarrow> f rv s' = f' rv s'"
+  have pre: "\<And>rv s'. \<lbrakk>(rv, s') \<in> fst (g s)\<rbrakk> \<Longrightarrow> f rv (with_env_of s s') = f' rv (with_env_of s s')"
     using assms unfolding valid_def apply -
     by (erule allE[where x=s]) auto
   show ?thesis
-    by (simp add: bind_def image_def case_prod_unfold pre)
+    by (force simp: bind_def image_def case_prod_unfold pre)
 qed
 
 lemma monad_eq_split2:
@@ -468,10 +472,10 @@ lemma monad_eq_split2:
   and hoare:   "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>r s. Q r s\<rbrace>" "P s"
   shows "(g >>= f) s = (g' >>= f') s"
 proof -
-  have pre: "\<And>aa bb. \<lbrakk>(aa, bb) \<in> fst (g s)\<rbrakk> \<Longrightarrow> Q aa bb"
+  have pre: "\<And>rv s'. \<lbrakk>(rv, s') \<in> fst (g s)\<rbrakk> \<Longrightarrow> Q rv (with_env_of s s')"
     using hoare by (auto simp: valid_def)
   show ?thesis
-    by (simp add:bind_def eq image_def case_prod_unfold pre surjective_pairing tail)
+    by (force simp: bind_def eq image_def case_prod_unfold pre surjective_pairing tail)
 qed
 
 lemma monad_eq_split_tail:
@@ -493,8 +497,12 @@ lemma bind_inv_inv_comm_weak:
      empty_fail f; empty_fail g \<rbrakk> \<Longrightarrow>
    do x \<leftarrow> f; y \<leftarrow> g; n od = do y \<leftarrow> g; x \<leftarrow> f; n od"
   apply (rule ext)
-  apply (fastforce simp: bind_def valid_def empty_fail_def split_def image_def)
-  done
+  apply (clarsimp simp: bind_def valid_def empty_fail_def split_def)
+  apply (rule conjI)
+   apply (subst set_eq_iff)
+   apply clarsimp
+   apply (metis surjective)
+  by fastforce
 
 lemma state_assert_false[simp]:
   "state_assert (\<lambda>_. False) = fail"
@@ -536,24 +544,24 @@ lemma bind_inv_inv_comm:
                                  n x y od) s" for s])
    apply (simp add: bind_assoc)
    apply (intro bind_apply_cong, simp_all)[1]
-    apply (metis in_inv_by_hoareD)
+    apply (metis in_inv_by_hoareD surjective)
    apply (simp add: return_def bind_def)
-   apply (metis in_inv_by_hoareD)
+   apply (metis in_inv_by_hoareD surjective)
   apply (rule trans[where s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
                                  n x y od) s" for s, rotated])
    apply (simp add: bind_assoc)
    apply (intro bind_apply_cong, simp_all)[1]
-    apply (metis in_inv_by_hoareD)
+    apply (metis in_inv_by_hoareD surjective)
    apply (simp add: return_def bind_def)
-   apply (metis in_inv_by_hoareD)
+   apply (metis in_inv_by_hoareD surjective)
   apply (rule bind_apply_cong, simp_all)
   apply (clarsimp simp: bind_def split_def return_def)
   apply (auto | drule(1) empty_failD3)+
   done
 
 lemma bind_known_operation_eq:
-  "\<lbrakk> no_fail P f; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. rv = x \<and> s = t\<rbrace>; P s; Q s; empty_fail f \<rbrakk>
-     \<Longrightarrow> (f >>= g) s = g x t"
+  "\<lbrakk> no_fail P f; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. rv = x \<and> mstate s = t\<rbrace>; P s; Q s; empty_fail f \<rbrakk>
+     \<Longrightarrow> (f >>= g) s = g x (with_env_of s t)"
   apply (drule(1) no_failD)
   apply (subgoal_tac "fst (f s) = {(x, t)}")
    apply (clarsimp simp: bind_def)
@@ -573,15 +581,33 @@ lemma if_to_top_of_bindE:
   by (simp split: if_split)
 
 lemma modify_modify:
-  "(do x \<leftarrow> modify f; modify (g x) od) = modify (g () o f)"
-  by (simp add: bind_def simpler_modify_def)
+  "(do x \<leftarrow> modify f; modify (g x) od) = modify (\<lambda>s. g () (const_env f s))"
+  by (simp add: bind_def simpler_modify_def const_env_def)
 
 lemmas modify_modify_bind =
   arg_cong2[where f=bind, OF modify_modify refl, simplified bind_assoc]
 
+lemma modify_const_env:
+  "modify (const_env f) = modify f"
+  by (simp add: simpler_modify_def)
+
+lemma modify_modify_comp:
+  "modify fn1 >>= (\<lambda>x. modify fn2) = modify (const_env fn2 \<circ> const_env fn1)"
+  by (simp add: bind_def modify_def get_def put_def const_env_def)
+
+lemma zipWithM_x_modify:
+  "zipWithM_x (\<lambda>a b. modify (f a b)) as bs =
+   modify (\<lambda>s. foldl (\<lambda>s' (a, b). const_env (f a b) s') s (zip as bs))"
+  apply (simp add: zipWithM_x_def zipWith_def sequence_x_def const_env_def)
+  apply (induct ("zip as bs"))
+   apply (simp add: simpler_modify_def return_def)
+  apply (rule ext)
+  apply (simp add: simpler_modify_def bind_def split_def)
+  done
+
 lemma put_then_get[unfolded K_bind_def]:
-  "do put s; get od = do put s; return s od"
-  by (simp add: put_def bind_def get_def return_def)
+  "do put s; get od = do put s; c \<leftarrow> ask; return (monad_state c (mstate s)) od"
+  by (simp add: put_def bind_def get_def return_def ask_def)
 
 lemmas put_then_get_then =
     put_then_get[THEN bind_then_eq, simplified bind_assoc return_bind]
@@ -589,5 +615,23 @@ lemmas put_then_get_then =
 lemma select_empty_bind[simp]:
   "select {} >>= f = select {}"
   by (simp add: select_def bind_def)
+
+lemma bind_select_f_bind':
+  "(select_f (m s) >>= (\<lambda>x. select_f ((\<lambda>(r, s). n r (monad_state () s)) x)))
+   = select_f ((m >>= n) s)"
+  by (force simp: select_f_def bind_def)
+
+lemma bind_select_f_bind:
+  "(select_f (m1 s) >>= (\<lambda>x. select_f (m2 (fst x) (monad_state () (snd x)))))
+   = select_f ((m1 >>= m2) s)"
+  by (insert bind_select_f_bind' [where m=m1 and n=m2 and s=s], simp add: split_def)
+
+lemma select_from_gets':
+  "select_f \<circ> gets f = (\<lambda>s. return (f s, mstate s))"
+  by (simp add: o_def select_from_gets)
+
+lemma bind_subst_lift:
+  "(f >>= g) = h \<Longrightarrow> (do x \<leftarrow> f; y \<leftarrow> g x; j y od) = (h >>= j)"
+  by (simp add: bind_assoc[symmetric])
 
 end

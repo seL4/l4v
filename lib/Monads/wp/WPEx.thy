@@ -14,11 +14,11 @@ begin
 (* Only the wps method and wps_tac are left of this experiment: *)
 text \<open>WPEx - the WP Extension Experiment\<close>
 
-definition mresults :: "('s, 'a) nondet_monad \<Rightarrow> ('a \<times> 's \<times> 's) set" where
+definition mresults :: "('c, 's, 'a) nondet_monad \<Rightarrow> ('a \<times> 's \<times> ('c, 's) monad_state) set" where
  "mresults f = {(rv, s', s). (rv, s') \<in> fst (f s)}"
 
 definition assert_value_exported ::
-  "'x \<times> 's \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('x \<Rightarrow> ('s, 'a) nondet_monad)" where
+  "'x \<times> ('c, 's) monad_state \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('x \<Rightarrow> ('c, 's, 'a) nondet_monad)" where
   "assert_value_exported x f y \<equiv> do s \<leftarrow> get; if x = (y, s) then f else fail od"
 
 lemma in_mresults_export:
@@ -28,23 +28,24 @@ lemma in_mresults_export:
 
 lemma in_mresults_bind:
   "(rv, s', s) \<in> mresults (a >>= b)
-       = (\<exists>rv' s''. (rv, s', s'') \<in> mresults (b rv') \<and> (rv', s'', s) \<in> mresults a)"
-  by (auto simp: mresults_def bind_def elim: rev_bexI)
+       = (\<exists>rv' s''. (rv, s', with_env_of s s'') \<in> mresults (b rv') \<and> (rv', s'', s) \<in> mresults a)"
+  by (force simp: mresults_def bind_def elim: rev_bexI)
 
 lemma mresults_export_bindD:
   "(rv, s', s) \<in> mresults (a >>= assert_value_exported (rv', s'') b) \<Longrightarrow> (rv, s', s'') \<in> mresults b"
-  "(rv, s', s) \<in> mresults (a >>= assert_value_exported (rv', s'') b) \<Longrightarrow> (rv', s'', s) \<in> mresults a"
-  by (simp_all add: in_mresults_export in_mresults_bind)
+  "(rv, s', s) \<in> mresults (a >>= assert_value_exported (rv', s'') b) \<Longrightarrow> (rv', mstate s'', s) \<in> mresults a"
+  by (force simp add: in_mresults_export in_mresults_bind)+
 
 definition wpex_name_for_id :: "'a \<Rightarrow> 'a" where
   "wpex_name_for_id = id"
 
 lemma use_valid_mresults:
-  "\<lbrakk> (rv, s', s) \<in> mresults f; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> P s \<longrightarrow> Q rv s'"
+  "\<lbrakk> (rv, s', s) \<in> mresults f; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> P s \<longrightarrow> Q rv (with_env_of s s')"
   by (auto simp: mresults_def valid_def)
 
 lemma valid_strengthen_with_mresults:
-  "\<lbrakk> \<And>s rv s'. \<lbrakk> (rv, s', s) \<in> mresults f; wpex_name_for_id (Q' s rv s') \<rbrakk> \<Longrightarrow> Q rv s';
+  "\<lbrakk> \<And>s rv s'. \<lbrakk> (rv, s', s) \<in> mresults f; wpex_name_for_id (Q' s rv (with_env_of s s')) \<rbrakk>
+               \<Longrightarrow> Q rv (with_env_of s s');
      \<And>prev_s. \<lbrace>P prev_s\<rbrace> f \<lbrace>Q' prev_s\<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s. P s s\<rbrace> f \<lbrace>Q\<rbrace>"
   by (clarsimp simp: valid_def mresults_def wpex_name_for_id_def) blast
@@ -128,7 +129,7 @@ method_setup wps = \<open>wps_method\<close> "experimental wp simp method"
 experiment
 begin
 
-lemma "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>(=)\<rbrace>"
+lemma "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>\<lambda>r s. r = mstate s\<rbrace>"
   apply (rule hoare_pre)
    apply (rule bind_wp)+
     apply (wps | rule hoare_vcg_prop)+

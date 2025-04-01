@@ -8,6 +8,7 @@
 theory Nondet_VCG
   imports
     Nondet_Lemmas
+    Nondet_Env
     WPSimp
 begin
 
@@ -35,15 +36,14 @@ text \<open>
   to assume @{term P}! Proving non-failure is done via a separate predicate and
   calculus (see theory @{text Nondet_No_Fail}).\<close>
 definition valid ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "(('c,'s) mpred) \<Rightarrow> ('c,'s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). Q r s')"
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). Q r (with_env_of s s'))"
 
 text \<open>
   We often reason about invariant predicates. The following provides shorthand syntax
   that avoids repeating potentially long predicates.\<close>
-abbreviation invariant ::
-  "('s,'a) nondet_monad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool"
+abbreviation invariant :: "('c,'s,'a) nondet_monad \<Rightarrow> ('c,'s) mpred \<Rightarrow> bool"
   ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
   "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
 
@@ -52,12 +52,16 @@ text \<open>
   validity above. Instead of one postcondition, we have two: one for
   normal and one for exceptional results.\<close>
 definition validE ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) nondet_monad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c,'s) mpred \<Rightarrow> ('c, 's, 'a + 'b) nondet_monad \<Rightarrow>
+   ('b \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f \<lbrace> \<lambda>v s. case v of Inr r \<Rightarrow> Q r s | Inl e \<Rightarrow> E e s \<rbrace>"
 
 lemma validE_def2:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). case r of Inr b \<Rightarrow> Q b s' | Inl a \<Rightarrow> E a s')"
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv>
+   \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). case r of
+                                       Inr b \<Rightarrow> Q b (with_env_of s s')
+                                     | Inl a \<Rightarrow> E a (with_env_of s s'))"
   by (unfold valid_def validE_def)
 
 text \<open>
@@ -66,12 +70,14 @@ text \<open>
 (* Narrator: they are in fact not convenient, and are now considered a mistake that should have
              been an abbreviation instead. *)
 definition validE_R :: (* FIXME lib: this should be an abbreviation *)
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>, -")
+  "('c,'s) mpred \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+  ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>, -")
   where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>_. \<top>\<rbrace>"
 
 definition validE_E :: (* FIXME lib: this should be an abbreviation *)
-  "('s \<Rightarrow> bool) \<Rightarrow>  ('s, 'e + 'a) nondet_monad \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /-, \<lbrace>_\<rbrace>")
+  "(('c,'s) mpred) \<Rightarrow>  ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> ('e \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+   ("\<lbrace>_\<rbrace>/ _ /-, \<lbrace>_\<rbrace>")
   where
   "\<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. \<top>\<rbrace>,\<lbrace>E\<rbrace>"
 
@@ -226,8 +232,8 @@ lemma return_inv[iff]:
   by (simp add: valid_def return_def)
 
 lemma hoare_modifyE_var:
-  "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> modify f \<lbrace>\<lambda>_ s. Q s\<rbrace>"
-  by (simp add: valid_def modify_def put_def get_def bind_def)
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (const_env f s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> modify f \<lbrace>\<lambda>_ s. Q s\<rbrace>"
+  by (simp add: valid_def const_env_def modify_def put_def get_def bind_def)
 
 lemma hoare_if:
   "\<lbrakk> P' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<not> P' \<Longrightarrow> \<lbrace>P\<rbrace> g \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> if P' then f else g \<lbrace>Q\<rbrace>"
@@ -303,7 +309,7 @@ lemma hoare_post_disjI2:
   unfolding valid_def by auto
 
 lemma use_valid:
-  "\<lbrakk>(r, s') \<in> fst (f s); \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; P s \<rbrakk> \<Longrightarrow> Q r s'"
+  "\<lbrakk>(r, s') \<in> fst (f s); \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; P s \<rbrakk> \<Longrightarrow> Q r (with_env_of s s')"
   unfolding valid_def by blast
 
 lemmas post_by_hoare = use_valid[rotated]
@@ -311,20 +317,21 @@ lemmas post_by_hoare = use_valid[rotated]
 lemma use_valid_inv:
   assumes step: "(r, s') \<in> fst (f s)"
   assumes pres: "\<And>N. \<lbrace>\<lambda>s. N (P s) \<and> E s\<rbrace> f \<lbrace>\<lambda>rv s. N (P s)\<rbrace>"
-  shows "E s \<Longrightarrow> P s = P s'"
+  shows "E s \<Longrightarrow> P s = P (with_env_of s s')"
   using use_valid[where f=f, OF step pres[where N="\<lambda>p. p = P s"]] by simp
 
 lemma use_validE_norm:
-  "\<lbrakk> (Inr r', s') \<in> fst (f s); \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>; P s \<rbrakk> \<Longrightarrow> Q r' s'"
+  "\<lbrakk> (Inr r', s') \<in> fst (f s); \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>; P s \<rbrakk> \<Longrightarrow> Q r' (with_env_of s s')"
   unfolding validE_def valid_def by force
 
 lemma use_validE_except:
-  "\<lbrakk> (Inl r', s') \<in> fst (f s); \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>; P s \<rbrakk> \<Longrightarrow> E r' s'"
+  "\<lbrakk> (Inl r', s') \<in> fst (f s); \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>; P s \<rbrakk> \<Longrightarrow> E r' (with_env_of s s')"
   unfolding validE_def valid_def by force
 
 lemma in_inv_by_hoareD:
-  "\<lbrakk> \<And>P. f \<lbrace>P\<rbrace>; (x,s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> s' = s"
-  by (auto simp add: valid_def) blast
+  "\<lbrakk> \<And>P. f \<lbrace>P\<rbrace>; (x,s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> s' = mstate s"
+  by (cases s)
+     (fastforce dest: use_valid_inv[where E=\<top> and P=id, simplified])
 
 
 subsection \<open>Misc\<close>
@@ -752,6 +759,31 @@ lemma hoare_vcg_split_lift[wp]:
   "\<lbrace>P\<rbrace> f x y \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> case (x, y) of (a, b) \<Rightarrow> f a b \<lbrace>Q\<rbrace>"
   by simp
 
+(* unfortunately not good wp rule -- unsafe when you need to collect context by digging into f *)
+lemma hoare_vcg_const_lift:
+  "f \<lbrace>\<lambda>s. P (env s)\<rbrace>"
+  unfolding valid_def
+  by simp
+
+lemma hoare_vcg_const_liftE:
+  "\<lbrace>\<lambda>s. Q (env s) \<and> E (env s)\<rbrace> f \<lbrace>\<lambda>_s. Q (env s)\<rbrace>, \<lbrace>\<lambda>_s. E (env s)\<rbrace>"
+  unfolding validE_def valid_def
+  by (simp split: sum.splits)
+
+lemma hoare_vcg_const_liftE_R:
+  "\<lbrace>\<lambda>s. P (env s)\<rbrace> f \<lbrace>\<lambda>_s. P (env s)\<rbrace>, -"
+  unfolding validE_R_def
+  by (wp hoare_vcg_const_liftE)
+
+lemma hoare_vcg_const_liftE_E:
+  "\<lbrace>\<lambda>s. P (env s)\<rbrace> f -, \<lbrace>\<lambda>_s. P (env s)\<rbrace>"
+  unfolding validE_E_def
+  by (wp hoare_vcg_const_liftE)
+
+(* not wp, see comment for hoare_vcg_const_lift *)
+lemmas hoare_vcg_const_lifts =
+  hoare_vcg_const_lift hoare_vcg_const_liftE hoare_vcg_const_liftE_R hoare_vcg_const_liftE_E
+
 named_theorems hoare_vcg_op_lift
 lemmas [hoare_vcg_op_lift] =
   hoare_vcg_const_imp_lift
@@ -798,12 +830,12 @@ lemma gets_wp:
   by(simp add: valid_def split_def gets_def return_def get_def bind_def)
 
 lemma put_wp:
-  "\<lbrace>\<lambda>_. Q () s\<rbrace> put s \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. Q () (with_env_of s (mstate s'))\<rbrace> put s' \<lbrace>Q\<rbrace>"
   by (simp add: put_def valid_def)
 
 lemma modify_wp:
-  "\<lbrace>\<lambda>s. Q () (f s)\<rbrace> modify f \<lbrace>Q\<rbrace>"
-  unfolding modify_def
+  "\<lbrace>\<lambda>s. Q () (const_env f s)\<rbrace> modify f \<lbrace>Q\<rbrace>"
+  unfolding modify_def const_env_def
   by (wp put_wp get_wp)
 
 lemma failE_wp:
@@ -901,7 +933,7 @@ lemma select_f_wp:
   by (simp add: select_f_def valid_def)
 
 lemma state_select_wp:
-  "\<lbrace>\<lambda>s. \<forall>t. (s, t) \<in> f \<longrightarrow> P () t\<rbrace> state_select f \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>t. (s, t) \<in> f \<longrightarrow> P () (with_env_of s (mstate t))\<rbrace> state_select f \<lbrace>P\<rbrace>"
   unfolding state_select_def2
   by (wpsimp wp: put_wp select_wp return_wp get_wp assert_wp)
 
@@ -1046,25 +1078,25 @@ lemma select_throwError_wp:
 subsection \<open>Setting up the @{method wp} method\<close>
 
 lemma valid_is_triple:
-  "valid P f Q = triple_judgement P f (postcondition Q (\<lambda>s f. fst (f s)))"
-  by (simp add: triple_judgement_def valid_def postcondition_def)
+  "valid P f Q = triple_judgement P f (postcondition Q (\<lambda>s f. apsnd (with_env_of s) ` fst (f s)))"
+  by (fastforce simp: triple_judgement_def valid_def postcondition_def)
 
 lemma validE_is_triple:
   "validE P f Q E =
    triple_judgement P f
-     (postconditions (postcondition Q (\<lambda>s f. {(rv, s'). (Inr rv, s') \<in> fst (f s)}))
-                     (postcondition E (\<lambda>s f. {(rv, s'). (Inl rv, s') \<in> fst (f s)})))"
+     (postconditions (postcondition Q (\<lambda>s f. {(rv, with_env_of s s')|rv s'. (Inr rv, s') \<in> fst (f s)}))
+                     (postcondition E (\<lambda>s f. {(rv, with_env_of s s')|rv s'. (Inl rv, s') \<in> fst (f s)})))"
   by (fastforce simp: validE_def triple_judgement_def valid_def postcondition_def postconditions_def
                 split: sum.split)
 
 lemma validE_R_is_triple:
   "validE_R P f Q =
-   triple_judgement P f (postcondition Q (\<lambda>s f. {(rv, s'). (Inr rv, s') \<in> fst (f s)}))"
+   triple_judgement P f (postcondition Q (\<lambda>s f. {(rv, with_env_of s s')|rv s'. (Inr rv, s') \<in> fst (f s)}))"
   by (simp add: validE_R_def validE_is_triple postconditions_def postcondition_def)
 
 lemma validE_E_is_triple:
   "validE_E P f E =
-   triple_judgement P f (postcondition E (\<lambda>s f. {(rv, s'). (Inl rv, s') \<in> fst (f s)}))"
+   triple_judgement P f (postcondition E (\<lambda>s f. {(rv, with_env_of s s')|rv s'. (Inl rv, s') \<in> fst (f s)}))"
   by (simp add: validE_E_def validE_is_triple postconditions_def postcondition_def)
 
 lemmas hoare_wp_combs = hoare_vcg_conj_lift
@@ -1269,7 +1301,7 @@ lemma hoare_add_post:
 
 lemma hoare_gen_asmE:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>,-) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>, -"
-  by (simp add: validE_R_def validE_def valid_def) blast
+  by (simp add: validE_R_def validE_def valid_def)
 
 lemma hoare_list_case:
   "\<lbrakk> \<lbrace>P1\<rbrace> f f1 \<lbrace>Q\<rbrace>; \<And>y ys. xs = y#ys \<Longrightarrow> \<lbrace>P2 y ys\<rbrace> f (f2 y ys) \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow>
@@ -1385,7 +1417,7 @@ lemma get_sp:
   by(simp add:get_def valid_def)
 
 lemma put_sp:
-  "\<lbrace>\<top>\<rbrace> put a \<lbrace>\<lambda>_ s. s = a\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> put a \<lbrace>\<lambda>_ s. mstate s = mstate a\<rbrace>"
   by(simp add:put_def valid_def)
 
 lemma return_sp:

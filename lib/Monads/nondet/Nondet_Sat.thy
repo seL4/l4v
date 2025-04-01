@@ -17,37 +17,37 @@ text \<open>
   The dual to validity: an existential instead of a universal quantifier for the post condition.
   In refinement, it is often sufficient to know that there is one state that satisfies a condition.\<close>
 definition exs_valid ::
-  "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) nondet_monad \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) mpred \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace> _ \<exists>\<lbrace>_\<rbrace>") where
-  "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>(rv, s') \<in> fst (f s). Q rv s')"
+  "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>(rv, s') \<in> fst (f s). Q rv (with_env_of s s'))"
 
 text \<open>The above for the exception monad\<close>
 definition ex_exs_validE ::
-  "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'e + 'b) nondet_monad \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) mpred \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow>
+   ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('e \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace> _ \<exists>\<lbrace>_\<rbrace>, \<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f  \<exists>\<lbrace>\<lambda>rv. case rv of Inl e \<Rightarrow> E e | Inr v \<Rightarrow> Q v\<rbrace>"
 
 text \<open>
   Seen as predicate transformer, @{const exs_valid} is the so-called conjugate wp in the literature,
-  i.e. with
-  @{term "wp f Q \<equiv> \<lambda>s. fst (f s) \<subseteq> {(rv,s). Q rv s}"} and
-  @{term "cwp f Q \<equiv> not (wp f (not Q))"}, we get
+  i.e. with @{text wp} such that
   @{prop "valid P f Q = (\<forall>s. P s \<longrightarrow> wp f Q s)"} and
+  @{term "cwp f Q \<equiv> not (wp f (not Q))"}, we get
   @{prop "exs_valid P f Q = (\<forall>s. P s \<longrightarrow> cwp f Q s)"}.
 
   See also "Predicate Calculus and Program Semantics" by E. W. Dijkstra and C. S. Scholten.\<close>
 experiment
 begin
 
-definition
-  "wp f Q \<equiv> \<lambda>s. fst (f s) \<subseteq> {(rv,s). Q rv s}"
+definition wp :: "('c, 's, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('c, 's) mpred" where
+  "wp f Q \<equiv> \<lambda>s. apsnd (with_env_of s) ` fst (f s) \<subseteq> {(rv,s). Q rv s}"
 
-definition
+definition cwp :: "('c, 's, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('c, 's) mpred" where
   "cwp f Q \<equiv> not (wp f (not Q))"
 
-lemma
-  "exs_valid P f Q = (\<forall>s. P s \<longrightarrow> cwp f Q s)"
-  unfolding exs_valid_def cwp_def wp_def by auto
+lemma "exs_valid P f Q = (\<forall>s. P s \<longrightarrow> cwp f Q s)"
+  unfolding exs_valid_def cwp_def wp_def
+  by (simp add: case_prod_beta image_subset_iff)
 
 end
 
@@ -55,7 +55,7 @@ end
 subsection \<open>Set up for @{method wp}\<close>
 
 definition exs_postcondition where
-  "exs_postcondition P f \<equiv> \<lambda>a b. \<exists>(rv, s) \<in> f a b. P rv s"
+  "exs_postcondition P f \<equiv> \<lambda>s b. \<exists>(rv, s') \<in> f s b. P rv (with_env_of s s')"
 
 lemma exs_valid_is_triple[wp_trip]:
   "exs_valid P f Q = triple_judgement P f (exs_postcondition Q (\<lambda>s f. fst (f s)))"
@@ -69,7 +69,7 @@ lemma exs_hoare_post_imp:
   unfolding exs_valid_def by blast
 
 lemma use_exs_valid:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>; P s \<rbrakk> \<Longrightarrow> \<exists>(r, s') \<in> fst (f s). Q r s'"
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>; P s \<rbrakk> \<Longrightarrow> \<exists>(r, s') \<in> fst (f s). Q r (with_env_of s s')"
   by (simp add: exs_valid_def)
 
 lemma exs_valid_weaken_pre[wp_pre]:
@@ -86,8 +86,7 @@ lemma exs_valid_assume_pre:
 
 lemma exs_valid_bind[wp_split]:
   "\<lbrakk> \<And>rv. \<lbrace>B rv\<rbrace> g rv \<exists>\<lbrace>C\<rbrace>; \<lbrace>A\<rbrace> f \<exists>\<lbrace>B\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> f >>= (\<lambda>rv. g rv) \<exists>\<lbrace>C\<rbrace>"
-  by (clarsimp simp: exs_valid_def bind_def')
-     blast
+  by (fastforce simp: exs_valid_def bind_def')
 
 lemma exs_valid_return[wp]:
   "\<lbrace>Q v\<rbrace> return v \<exists>\<lbrace>Q\<rbrace>"
@@ -110,7 +109,7 @@ lemma exs_valid_gets[wp]:
   by (clarsimp simp: gets_def) wp
 
 lemma exs_valid_put[wp]:
-  "\<lbrace>Q v\<rbrace> put v \<exists>\<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. Q () (with_env_of s (mstate v))\<rbrace> put v \<exists>\<lbrace>Q\<rbrace>"
   by (clarsimp simp: put_def exs_valid_def)
 
 lemma exs_valid_fail[wp]:

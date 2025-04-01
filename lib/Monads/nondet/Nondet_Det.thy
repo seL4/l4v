@@ -14,11 +14,11 @@ subsection "Determinism"
 
 text \<open>A monad of type @{text nondet_monad} is deterministic iff it returns exactly one state and
   result and does not fail\<close>
-definition det :: "('a,'s) nondet_monad \<Rightarrow> bool" where
+definition det :: "('c,'s,'a) nondet_monad \<Rightarrow> bool" where
   "det f \<equiv> \<forall>s. \<exists>r. f s = ({r},False)"
 
 text \<open>A deterministic @{text nondet_monad} can be turned into a normal state monad:\<close>
-definition the_run_state :: "('s,'a) nondet_monad \<Rightarrow> 's \<Rightarrow> 'a \<times> 's" where
+definition the_run_state :: "('c,'s,'a) nondet_monad \<Rightarrow> ('c,'s) monad_state \<Rightarrow> 'a \<times> 's" where
   "the_run_state M \<equiv> \<lambda>s. THE s'. fst (M s) = {s'}"
 
 
