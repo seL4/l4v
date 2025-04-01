@@ -5368,9 +5368,9 @@ proof (intro impI allI)
     apply (simp add: eval_nat_numeral update_ti_t_ptr_0s)
     apply (simp add: call_stack_C_tag_def)
     apply (simp add: ti_typ_pad_combine_empty_ti final_pad_def)
-    apply (simp add: align_td_array' size_td_array typ_info_array array_tag_def  array_tag_n.simps
+    apply (simp add: align_td_array' size_td_array typ_info_array array_tag_def array_tag_n.simps
                      update_ti_adjust_ti ti_typ_combine_def empty_typ_info_def
-                     update_ti_t_machine_word_0s)
+                     update_ti_t_machine_word_0s option_to_ctcb_ptr_def)
     done
 
   (* /obj specific *)
