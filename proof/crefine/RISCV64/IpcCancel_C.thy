@@ -2994,11 +2994,7 @@ lemmas rf_sr_reply_update2 = rf_sr_obj_update_helper[OF rf_sr_reply_update, simp
 lemma reply_unlink_ccorres:
   "ccorres dc xfdc
     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'
-     and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
-     and st_tcb_at' (\<lambda>st. (\<exists>oref cg. st = Structures_H.BlockedOnReceive oref cg (Some replyPtr))
-                          \<or> st = Structures_H.BlockedOnReply (Some replyPtr))
-                    tcbPtr
-     and obj_at' (\<lambda>reply. replyTCB reply = Some tcbPtr) replyPtr)
+     and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
     (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
     (replyUnlink replyPtr tcbPtr) (Call reply_unlink_'proc)"
   apply (cinit lift: reply_' tcb_')
@@ -3012,7 +3008,8 @@ lemma reply_unlink_ccorres:
                 apply (rule updateReply_ccorres_lemma2[where P=\<top>])
                  apply vcg
                 apply (frule (1) obj_at_cslift_reply)
-                apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
+                apply (fastforce intro!: rf_sr_reply_update2
+                                   simp: typ_heap_simps' creply_relation_def option_to_ctcb_ptr_def)
                apply ceqv
               apply (ctac add: setThreadState_ccorres)
              apply (wpsimp wp: updateReply_valid_objs')
