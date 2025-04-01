@@ -2096,8 +2096,8 @@ lemma replyPush_corres:
   unfolding reply_push_def replyPush_def
   apply clarsimp
   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
-   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified, rotated])
-    apply (clarsimp simp: valid_idle'_asrt_def)
+   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified, rotated],clarsimp)
+   apply (rule corres_stateAssert_ignore, simp)
    apply (rule stronger_corres_guard_imp)
      apply (simp add: get_tcb_obj_ref_def)
      apply (rule corres_split_eqr[OF threadGet_corres])
@@ -6111,13 +6111,6 @@ lemma replyPush_if_live_then_nonz_cap':
   apply (clarsimp simp: valid_idle'_def valid_idle'_asrt_def)
   done
 
-lemma bindScReply_valid_idle':
-  "\<lbrace>valid_idle' and K (scPtr \<noteq> idle_sc_ptr)\<rbrace>
-   bindScReply scPtr replyPtr
-   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
-  unfolding bindScReply_def
-  by (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift set_reply'.obj_at')
-
 lemma replyPush_untyped_ranges_zero'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>untyped_ranges_zero'\<rbrace>"
   apply (clarsimp simp: untyped_ranges_zero_inv_null_filter_cteCaps_of)
@@ -6261,7 +6254,7 @@ crunch cleanReply
 
 lemma replyRemoveTCB_scTCBs_of[wp]:
   "replyRemoveTCB tptr \<lbrace>\<lambda>s. P (scTCBs_of s)\<rbrace>"
-  unfolding replyRemoveTCB_def
+  unfolding replyRemoveTCB_def updateSchedContext_def
   apply (wpsimp wp: setSchedContext_scTCBs_of gts_wp')
   apply (erule back_subst[where P=P], rule ext, clarsimp)
   by (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def)
@@ -6310,6 +6303,7 @@ lemma replyRemoveTCB_sym_heap_scReplies [wp]:
                 sym_heap (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)"
               in hoare_strengthen_post[rotated])
         apply (clarsimp split: if_splits simp: obj_at'_def)
+       apply (clarsimp simp: updateSchedContext_def)
        apply (wp hoare_vcg_if_lift2 hoare_vcg_imp_lift' hoare_vcg_all_lift)
          apply wps
          apply (wpsimp wp: setSchedContext_scReplies_of)

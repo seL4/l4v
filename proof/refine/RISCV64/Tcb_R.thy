@@ -1942,6 +1942,7 @@ lemma schedContextBindTCB_corres:
                           update_sched_context_valid_objs_same valid_ioports_lift
                           update_sched_context_iflive_update update_sched_context_refs_of_update
                           update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
+                          valid_dom_schedule'_lift
                     simp: invs'_def valid_pspace_def updateSchedContext_def
                | rule hoare_vcg_conj_lift update_sched_context_wp)+)[2]
      apply (clarsimp simp: pred_conj_def)
