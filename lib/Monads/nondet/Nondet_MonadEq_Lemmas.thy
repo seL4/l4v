@@ -38,7 +38,7 @@ lemma snd_fail[monad_eq]:
   by (clarsimp simp: fail_def)
 
 lemma not_snd_bindD:
-  "\<lbrakk> \<not> snd ((a >>= b) s); (rv, s') \<in> fst (a s) \<rbrakk> \<Longrightarrow> \<not> snd (a s) \<and> \<not> snd (b rv s')"
+  "\<lbrakk> \<not> snd ((a >>= b) s); (rv, s') \<in> fst (a s) \<rbrakk> \<Longrightarrow> \<not> snd (a s) \<and> \<not> snd (b rv (with_env_of s s'))"
   by (fastforce simp: bind_def)
 
 lemma not_snd_bindI1:
@@ -46,20 +46,20 @@ lemma not_snd_bindI1:
   by (fastforce simp: bind_def)
 
 lemma not_snd_bindI2:
-  "\<lbrakk> \<not> snd ((a >>= b) s); (rv, s') \<in> fst (a s) \<rbrakk> \<Longrightarrow> \<not> snd (b rv s')"
+  "\<lbrakk> \<not> snd ((a >>= b) s); (rv, s') \<in> fst (a s) \<rbrakk> \<Longrightarrow> \<not> snd (b rv (with_env_of s s'))"
   by (fastforce simp: bind_def)
 
 lemma in_returns[monad_eq]:
-  "(r, s) \<in> fst (return r s)"
-  "(Inr r, s) \<in> fst (returnOk r s)"
+  "(r, mstate s) \<in> fst (return r s)"
+  "(Inr r, mstate s) \<in> fst (returnOk r s)"
   by (simp add: in_monad)+
 
 lemma fst_return:
-  "fst (return v s) = {(v, s)}"
+  "fst (return v s) = {(v, mstate s)}"
   by (simp add: return_def)
 
 lemma in_bind_split[monad_eq]:
-  "(rv \<in> fst ((f >>= g) s)) = (\<exists>rv'. rv' \<in> fst (f s) \<and> rv \<in> fst (g (fst rv') (snd rv')))"
+  "(rv \<in> fst ((f >>= g) s)) = (\<exists>rv'. rv' \<in> fst (f s) \<and> rv \<in> fst (g (fst rv') (with_env_of s (snd rv'))))"
   by (cases rv) (fastforce simp: in_bind)
 
 lemma Inr_in_liftE_simp[monad_eq]:
@@ -67,12 +67,12 @@ lemma Inr_in_liftE_simp[monad_eq]:
   by (simp add: in_monad)
 
 lemma gets_the_member:
-  "(x, s') \<in> fst (gets_the f s) = (f s = Some x \<and> s' = s)"
+  "(x, s') \<in> fst (gets_the f s) = (f s = Some x \<and> s' = mstate s)"
   by (cases "f s"; simp add: gets_the_def simpler_gets_def bind_def in_assert_opt)
 
 lemma fst_throwError_returnOk:
-  "fst (throwError e s) = {(Inl e, s)}"
-  "fst (returnOk v s) = {(Inr v, s)}"
+  "fst (throwError e s) = {(Inl e, mstate s)}"
+  "fst (returnOk v s) = {(Inr v, mstate s)}"
   by (simp add: throwError_def returnOk_def return_def)+
 
 lemma not_snd_bindE_I1:
@@ -95,18 +95,18 @@ lemma snd_assert_opt[monad_eq]:
 declare in_assert_opt[monad_eq]
 
 lemma not_snd_bindD':
-  "\<lbrakk>\<not> snd ((a >>= b) s); \<not> snd (a s) \<Longrightarrow> (rv, s') \<in> fst (a s)\<rbrakk> \<Longrightarrow> \<not> snd (a s) \<and> \<not> snd (b rv s')"
+  "\<lbrakk>\<not> snd ((a >>= b) s); \<not> snd (a s) \<Longrightarrow> (rv, s') \<in> fst (a s)\<rbrakk> \<Longrightarrow> \<not> snd (a s) \<and> \<not> snd (b rv (with_env_of s s'))"
   by (metis not_snd_bindI1 not_snd_bindI2)
 
 lemma snd_bind[monad_eq]:
-  "snd ((a >>= b) s) = (snd (a s) \<or> (\<exists>r s'. (r, s') \<in> fst (a s) \<and> snd (b r s')))"
+  "snd ((a >>= b) s) = (snd (a s) \<or> (\<exists>r s'. (r, s') \<in> fst (a s) \<and> snd (b r (with_env_of s s'))))"
   apply (clarsimp simp add: bind_def Bex_def image_def)
   apply (subst surjective_pairing, subst prod.inject, force)
   done
 
 lemma in_lift[monad_eq]:
   "(rv, s') \<in> fst (lift M v s) =
-   (case v of Inl x \<Rightarrow> rv = Inl x \<and> s' = s
+   (case v of Inl x \<Rightarrow> rv = Inl x \<and> s' = mstate s
             | Inr x \<Rightarrow> (rv, s') \<in> fst (M x s))"
   by (clarsimp simp: lift_def throwError_def return_def split: sum.splits)
 
@@ -115,7 +115,7 @@ lemma snd_lift[monad_eq]:
   by (clarsimp simp: lift_def throwError_def return_def split: sum.splits)
 
 lemma snd_bindE[monad_eq]:
-  "snd ((a >>=E b) s) = (snd (a s) \<or> (\<exists>r s'. (r, s') \<in> fst (a s) \<and> (\<exists>a. r = Inr a \<and> snd (b a s'))))"
+  "snd ((a >>=E b) s) = (snd (a s) \<or> (\<exists>r s'. (r, s') \<in> fst (a s) \<and> (\<exists>a. r = Inr a \<and> snd (b a (with_env_of s s')))))"
   unfolding bindE_def
   by monad_eq
 
@@ -130,24 +130,24 @@ lemma snd_gets[monad_eq]:
 lemma in_handleE'[monad_eq]:
   "((rv, s') \<in> fst ((f <handle2> g) s)) =
     ((\<exists>ex. rv = Inr ex \<and> (Inr ex, s') \<in> fst (f s)) \<or>
-     (\<exists>rv' s''. (rv, s') \<in> fst (g rv' s'') \<and> (Inl rv', s'') \<in> fst (f s)))"
+     (\<exists>rv' s''. (rv, s') \<in> fst (g rv' (with_env_of s s'')) \<and> (Inl rv', s'') \<in> fst (f s)))"
   unfolding handleE'_def return_def
   by (simp add: in_bind_split) (fastforce split: sum.splits)
 
 lemma in_handleE[monad_eq]:
   "(a, b) \<in> fst ((A <handle> B) s) =
     ((\<exists>x. a = Inr x \<and> (Inr x, b) \<in> fst (A s)) \<or>
-     (\<exists>r t. (Inl r, t) \<in> fst (A s) \<and> (a, b) \<in> fst (B r t)))"
+     (\<exists>r t. (Inl r, t) \<in> fst (A s) \<and> (a, b) \<in> fst (B r (with_env_of s t))))"
   unfolding handleE_def
   by (monad_eq split: sum.splits) blast
 
 lemma snd_handleE'[monad_eq]:
-  "snd ((A <handle2> B) s) = (snd (A s) \<or> (\<exists>r s'. (r, s')\<in>fst (A s) \<and> (\<exists>a. r = Inl a \<and> snd (B a s'))))"
+  "snd ((A <handle2> B) s) = (snd (A s) \<or> (\<exists>r s'. (r, s')\<in>fst (A s) \<and> (\<exists>a. r = Inl a \<and> snd (B a (with_env_of s s')))))"
   unfolding handleE'_def
   by (monad_eq simp: Bex_def split: sum.splits) fastforce
 
 lemma snd_handleE[monad_eq]:
-  "snd ((A <handle> B) s) = (snd (A s) \<or> (\<exists>r s'. (r, s')\<in>fst (A s) \<and> (\<exists>a. r = Inl a \<and> snd (B a s'))))"
+  "snd ((A <handle> B) s) = (snd (A s) \<or> (\<exists>r s'. (r, s')\<in>fst (A s) \<and> (\<exists>a. r = Inl a \<and> snd (B a (with_env_of s s')))))"
   unfolding handleE_def
   by (rule snd_handleE')
 
@@ -183,7 +183,7 @@ declare snd_returnOk [simp, monad_eq]
 
 lemma in_catch[monad_eq]:
   "(r, t) \<in> fst ((M <catch> E) s)
-     = ((Inr r, t) \<in> fst (M s) \<or> (\<exists>r' s'. ((Inl r', s') \<in> fst (M s)) \<and> (r, t) \<in> fst (E r' s')))"
+     = ((Inr r, t) \<in> fst (M s) \<or> (\<exists>r' s'. ((Inl r', s') \<in> fst (M s)) \<and> (r, t) \<in> fst (E r' (with_env_of s s'))))"
   apply (rule iffI; clarsimp simp: catch_def in_bind in_return split: sum.splits)
    apply (metis sumE)
   apply fastforce
@@ -191,7 +191,7 @@ lemma in_catch[monad_eq]:
 
 lemma snd_catch[monad_eq]:
   "snd ((M <catch> E) s)
-     = (snd (M s) \<or> (\<exists>r' s'. ((Inl r', s') \<in> fst (M s)) \<and> snd (E r' s')))"
+     = (snd (M s) \<or> (\<exists>r' s'. ((Inl r', s') \<in> fst (M s)) \<and> snd (E r' (with_env_of s s'))))"
   by (force simp: catch_def snd_bind snd_return split: sum.splits)
 
 declare in_get[monad_eq]
@@ -201,7 +201,7 @@ lemma returnOk_cong:
   by monad_eq
 
 lemma in_state_assert [monad_eq, simp]:
-  "(rv, s') \<in> fst (state_assert P s) = (rv = () \<and> s' = s \<and> P s)"
+  "(rv, s') \<in> fst (state_assert P s) = (rv = () \<and> s' = mstate s \<and> P s)"
   by (monad_eq simp: state_assert_def)
      metis
 
@@ -210,7 +210,7 @@ lemma snd_state_assert[monad_eq]:
   by (monad_eq simp: state_assert_def Bex_def)
 
 lemma in_select[monad_eq]:
-  "(rv, s') \<in> fst (select S s) = (s' = s \<and> rv \<in> S)"
+  "(rv, s') \<in> fst (select S s) = (s' = mstate s \<and> rv \<in> S)"
   by (fastforce simp: select_def)
 
 lemma snd_select[monad_eq]:

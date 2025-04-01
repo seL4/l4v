@@ -28,21 +28,21 @@ context begin
 
 definition "packed_valid P f si r s \<equiv> P si \<and> (r, s) \<in> fst (f si)"
 
-lemma packed_validE:"(\<And>si r s. packed_valid P f si r s \<Longrightarrow> Q r s) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+lemma packed_validE:"(\<And>si r s. packed_valid P f si r s \<Longrightarrow> Q r (with_env_of si s)) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (clarsimp simp: valid_def packed_valid_def)
 
-lemma packed_validI: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<forall>si r s. packed_valid P f si r s \<longrightarrow> Q r s"
+lemma packed_validI: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<forall>si r s. packed_valid P f si r s \<longrightarrow> Q r (with_env_of si s)"
   apply (clarsimp simp: valid_def packed_valid_def)
   by auto
 
 definition "packed_validR P f si r s \<equiv> P si \<and> (Inr r, s) \<in> fst (f si)"
 
 
-lemma packed_validRE:"(\<And>si r s. packed_validR P f si r s \<Longrightarrow> Q r s) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
+lemma packed_validRE:"(\<And>si r s. packed_validR P f si r s \<Longrightarrow> Q r (with_env_of si s)) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
   apply (clarsimp simp: validE_R_def validE_def valid_def packed_validR_def)
   by (metis sum.case sumE)
 
-lemma packed_validRI: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<forall>si r s. packed_validR P f si r s \<longrightarrow> Q r s"
+lemma packed_validRI: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<forall>si r s. packed_validR P f si r s \<longrightarrow> Q r (with_env_of si s)"
   apply (clarsimp simp: valid_def validE_R_def validE_def packed_validR_def)
   by fastforce
 
@@ -143,12 +143,12 @@ end
 
 
 notepad begin
-  fix A :: "'a \<Rightarrow> bool" and B C D f
+  fix A :: "('c, 'a) mpred" and B C D f
   assume A: "\<And>s. A s = True" and
-         B: "\<And>s :: 'a. B s = True" and
-         C: "\<And>s :: 'a. C s = True" and
-         D: "\<And>s :: 'a. D s = True" and
-         f: "f = (return () :: ('a,unit) nondet_monad)"
+         B: "\<And>s :: ('c, 'a) monad_state. B s = True" and
+         C: "\<And>s :: ('c, 'a) monad_state. C s = True" and
+         D: "\<And>s :: ('c, 'a) monad_state. D s = True" and
+         f: "f = (return () :: ('c,'a,unit) nondet_monad)"
 
   have f_valid[@ \<open>hoare_decompose\<close>,conjuncts]: "\<lbrace>A\<rbrace> f \<lbrace>\<lambda>_. B and C and D\<rbrace>"
   apply (simp add: f)

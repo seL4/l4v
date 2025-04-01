@@ -21,7 +21,7 @@ text \<open>
   A monad @{text m} does not fail under precondition @{text P}, if for no start
   state that satisfies the precondition it sets the failure flag.
 \<close>
-definition no_fail :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> bool" where
+definition no_fail :: "('c,'s) mpred \<Rightarrow> ('c,'s,'a) nondet_monad \<Rightarrow> bool" where
   "no_fail P m \<equiv> \<forall>s. P s \<longrightarrow> \<not>snd (m s)"
 
 

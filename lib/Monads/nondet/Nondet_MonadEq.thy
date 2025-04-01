@@ -51,18 +51,18 @@ end
 \<close>
 
 method_setup monad_eq = \<open>
-    Method.sections Clasimp.clasimp_modifiers >> (K (SIMPLE_METHOD o monad_eq_tac))\<close>
+  Method.sections Clasimp.clasimp_modifiers >> (K (SIMPLE_METHOD o monad_eq_tac))\<close>
   "prove equality on monads"
 
 lemma monad_eq_simp_state[monad_eq]:
-  "((A :: ('s, 'a) nondet_monad) s = B s') =
+  "((A :: ('c, 's, 'a) nondet_monad) s = B s') =
       ((\<forall>r t. (r, t) \<in> fst (A s) \<longrightarrow> (r, t) \<in> fst (B s'))
          \<and> (\<forall>r t. (r, t) \<in> fst (B s') \<longrightarrow> (r, t) \<in> fst (A s))
          \<and> (snd (A s) = snd (B s')))"
   by (auto intro!: set_eqI prod_eqI)
 
 lemma monad_eq_simp[monad_eq]:
-  "((A :: ('s, 'a) nondet_monad) = B) =
+  "((A :: ('c, 's, 'a) nondet_monad) = B) =
       ((\<forall>r t s. (r, t) \<in> fst (A s) \<longrightarrow> (r, t) \<in> fst (B s))
          \<and> (\<forall>r t s. (r, t) \<in> fst (B s) \<longrightarrow> (r, t) \<in> fst (A s))
          \<and> (\<forall>x. snd (A x) = snd (B x)))"
