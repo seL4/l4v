@@ -49,7 +49,7 @@ global_interpretation Arch_AC_1?: Arch_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Arch_AC_assms | wpsimp wp: Arch_AC_assms))
+    by (unfold_locales; (fact Arch_AC_assms | solves \<open>wp only: Arch_AC_assms; simp\<close>)?)
 qed
 
 

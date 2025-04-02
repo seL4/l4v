@@ -61,6 +61,12 @@ lemma arch_finalise_cap_respects[Finalise_AC_assms, wp]:
              intro: pas_refined_Control_into_is_subject_asid)
   done
 
+declare finalise_cap_replaceable[Finalise_AC_assms]
+declare finalise_cap_valid_list[Finalise_AC_assms]
+declare arch_finalise_cap_pas_refined[Finalise_AC_assms]
+declare prepare_thread_delete_st_tcb_at_halted[Finalise_AC_assms]
+declare prepare_thread_delete_pas_refined[Finalise_AC_assms]
+
 end
 
 
@@ -68,7 +74,7 @@ global_interpretation Finalise_AC_1?: Finalise_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Finalise_AC_assms | wpsimp wp: finalise_cap_replaceable))
+    by (unfold_locales; (fact Finalise_AC_assms | solves \<open>wp only: Finalise_AC_assms; simp\<close>)?)
 qed
 
 
@@ -123,7 +129,7 @@ global_interpretation Finalise_AC_2?: Finalise_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Finalise_AC_assms)
+    by (unfold_locales; (fact Finalise_AC_assms)?)
 qed
 
 end

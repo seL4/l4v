@@ -134,7 +134,7 @@ global_interpretation CNode_AC_1?: CNode_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms | simp add: CNode_AC_assms | wpsimp))
+    by (unfold_locales; (fact CNode_AC_assms | solves \<open>wp only: CNode_AC_assms; simp\<close>)?)
 qed
 
 
@@ -161,7 +161,7 @@ global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact CNode_AC_assms)
+    by (unfold_locales; (fact CNode_AC_assms)?)
 qed
 
 
@@ -199,7 +199,7 @@ global_interpretation CNode_AC_3?: CNode_AC_3
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact CNode_AC_assms)
+    by (unfold_locales; (fact CNode_AC_assms)?)
 qed
 
 
@@ -307,7 +307,7 @@ global_interpretation CNode_AC_4?: CNode_AC_4
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact CNode_AC_assms)
+    by (unfold_locales; (fact CNode_AC_assms)?)
 qed
 
 
