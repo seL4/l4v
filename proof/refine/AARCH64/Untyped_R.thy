@@ -2999,7 +2999,7 @@ lemma createNewCaps_range_helper:
             apply (wpsimp simp: curDomain_def)
            apply (clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def)
            apply (fastforce simp: objBitsKO_def objBits_def)
-           \<comment>\<open>other APIObjectType\<close>
+          \<comment>\<open>other APIObjectType\<close>
           apply ((rule hoare_pre, wp createObjects_ret2,
                   clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def,
                   fastforce simp: objBitsKO_def objBits_def)+)[3]
