@@ -86,7 +86,7 @@ lemma lookup_slot_for_thread_rev:
   apply (clarsimp simp: tcb.splits)
   apply (erule (2) owns_thread_owns_cspace)
    defer
-   apply (case_tac tcb_ctablea, simp_all)
+   apply (case_tac tcb_ctable, simp_all)
   done
 
 lemma lookup_cap_and_slot_rev[wp]:

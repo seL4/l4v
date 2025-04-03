@@ -39,7 +39,7 @@ val simp_expr_thm =
 fun solve_simp_expr_tac ctxt =
   Subgoal.FOCUS_PARAMS (fn {context = ctxt, ...} =>
   (fn thm =>
-    case Drule.cprems_of thm of
+    case Thm.cprems_of thm of
       [] => (no_tac thm)
     | (goal::_) =>
       (case Thm.term_of goal of

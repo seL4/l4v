@@ -30,7 +30,10 @@ end
 
 
 syntax
-  "_Ucast" :: "type \<Rightarrow> type \<Rightarrow> logic" ("(1UCAST/(1'(_ \<rightarrow> _')))")
+  "_Ucast" :: "type \<Rightarrow> type \<Rightarrow> logic"
+    (\<open>(\<open>indent=1 notation=\<open>mixfix UCAST\<close>\<close>UCAST/(\<open>indent=1 notation=\<open>infix cast\<close>\<close>'(_ \<rightarrow> _')))\<close>)
+syntax_consts
+  "_Ucast" == ucast
 translations
   "UCAST('s \<rightarrow> 't)" => "CONST ucast :: ('s word \<Rightarrow> 't word)"
 typed_print_translation
@@ -38,7 +41,10 @@ typed_print_translation
 
 
 syntax
-  "_Scast" :: "type \<Rightarrow> type \<Rightarrow> logic" ("(1SCAST/(1'(_ \<rightarrow> _')))")
+  "_Scast" :: "type \<Rightarrow> type \<Rightarrow> logic"
+    (\<open>(\<open>indent=1 notation=\<open>mixfix SCAST\<close>\<close>SCAST/(\<open>indent=1 notation=\<open>infix cast\<close>\<close>'(_ \<rightarrow> _')))\<close>)
+syntax_consts
+  "_Scast" == scast
 translations
   "SCAST('s \<rightarrow> 't)" => "CONST scast :: ('s word \<Rightarrow> 't word)"
 typed_print_translation
@@ -46,7 +52,10 @@ typed_print_translation
 
 
 syntax
-  "_Revcast" :: "type \<Rightarrow> type \<Rightarrow> logic" ("(1REVCAST/(1'(_ \<rightarrow> _')))")
+  "_Revcast" :: "type \<Rightarrow> type \<Rightarrow> logic"
+    (\<open>(\<open>indent=1 notation=\<open>mixfix REVCAST\<close>\<close>REVCAST/(\<open>indent=1 notation=\<open>infix cast\<close>\<close>'(_ \<rightarrow> _')))\<close>)
+syntax_consts
+  "_Revcast" == revcast
 translations
   "REVCAST('s \<rightarrow> 't)" => "CONST revcast :: ('s word \<Rightarrow> 't word)"
 typed_print_translation

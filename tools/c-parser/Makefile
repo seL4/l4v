@@ -4,6 +4,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
+ifndef L4V_ARCH
+$(error L4V_ARCH must be set, e.g. "ARM")
+endif
+
 ifndef CPARSER_PFX
 CPARSER_PFX := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 endif

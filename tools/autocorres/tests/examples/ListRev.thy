@@ -91,9 +91,11 @@ lemma (in list_rev) reverse_correct:
         unfolded reverse_inv_def])
   apply wp
     apply (clarsimp simp del: distinct_rev)
+    apply (rename_tac ys zs)
     apply (case_tac ys, fastforce)
+    apply (rename_tac ys')
     apply (clarsimp simp del: distinct_rev)
-    apply (rule_tac x=lista in exI)
+    apply (rule_tac x=ys' in exI)
     apply (simp add: fun_upd_def)
    apply (clarsimp simp del: distinct_rev)
   apply simp
