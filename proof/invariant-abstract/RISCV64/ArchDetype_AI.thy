@@ -289,6 +289,11 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   unfolding valid_arch_state_def pred_conj_def
   by (simp only: valid_asid_table valid_global_arch_objs valid_global_tables) simp
 
+lemma valid_cur_fpu[detype_invs_proofs]:
+  "valid_cur_fpu (detype (untyped_range cap) s)"
+  using valid_cur_fpu
+  by (clarsimp simp: valid_cur_fpu_def)
+
 lemma vs_lookup_asid_pool_level:
   assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"
   assumes ap: "asid_pools_of s p = Some ap"
@@ -585,7 +590,7 @@ sublocale detype_locale < detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?)
+  by (intro_locales; unfold_locales; (fact detype_invs_proofs)?)
   qed
 
 context detype_locale begin
