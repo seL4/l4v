@@ -195,8 +195,7 @@ lemma absKState_correct:
   shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-                 apply (rule absHeap_correct; clarsimp)
-                 apply (clarsimp elim!: state_relationE)
+                 apply (rule absHeap_correct; clarsimp elim!: state_relationE)
                 apply (rule absCDT_correct; clarsimp)
                apply (rule absIsOriginalCap_correct; clarsimp)
               apply (simp add: state_relation_def)
@@ -645,8 +644,8 @@ lemma entry_corres:
                  threadSet_invs_trivial threadSet_ct_running'
                  thread_set_not_state_valid_sched hoare_weak_lift_imp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
-              | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
-                          schact_is_rct_def
+                 thread_set_no_change_tcb_state
+              | simp add: tcb_cap_cases_def ct_in_state'_def schact_is_rct_def
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (clarsimp simp: invs_def cur_tcb_def valid_state_def valid_pspace_def)
   apply (clarsimp simp: ct_in_state'_def)

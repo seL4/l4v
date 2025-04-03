@@ -12,11 +12,7 @@ context Arch begin global_naming RISCV64
 
 named_theorems Ipc_AC_assms
 
-lemma make_fault_message_inv[Ipc_AC_assms, wp]:
-  "make_fault_msg ft t \<lbrace>P\<rbrace>"
-  apply (cases ft, simp_all split del: if_split)
-  by (wp as_user_inv getRestartPC_inv mapM_wp' make_arch_fault_msg_inv | simp add: getRegister_def)+
-
+declare make_fault_msg_inv[Ipc_AC_assms]
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
 crunch cap_insert_ext

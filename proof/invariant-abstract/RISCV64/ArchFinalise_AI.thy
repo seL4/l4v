@@ -645,7 +645,7 @@ lemma prepare_thread_delete_unlive[wp]:
   apply (rule_tac Q'="\<lambda>rv. obj_at (Not \<circ> live0) ptr and obj_at (Not \<circ> hyp_live) ptr" in hoare_strengthen_post)
   apply (wpsimp wp: hoare_vcg_conj_lift prepare_thread_delete_unlive_hyp prepare_thread_delete_unlive0)
    apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: obj_at_def, case_tac ko, simp_all add: is_tcb_def live_def)
+  apply (clarsimp simp: obj_at_def, case_tac ko, simp_all add: is_tcb_def live_def arch_tcb_live_def)
   done
 
 lemma finalise_cap_replaceable [Finalise_AI_assms]:
@@ -666,38 +666,37 @@ lemma finalise_cap_replaceable [Finalise_AI_assms]:
                          ran_tcb_cap_cases is_cap_simps
                          gen_obj_refs_subset vs_cap_ref_def
                          all_bool_eq)
-  apply (cases cap;
-           simp add: replaceable_def reachable_frame_cap_def is_arch_cap_def
-                split del: if_split;
-           ((wp suspend_unlive[unfolded o_def]
-                suspend_final_cap[where sl=sl]
-                prepare_thread_delete_unlive[unfolded o_def]
-                unbind_maybe_notification_not_bound
-                get_simple_ko_ko_at unbind_notification_valid_objs
-             | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
-                              ran_tcb_cap_cases is_cap_simps
-                              cap_range_def unat_of_bl_length
-                              can_fast_finalise_def
-                              gen_obj_refs_subset
-                              vs_cap_ref_def
-                              valid_ipc_buffer_cap_def
-                        dest!: tcb_cap_valid_NullCapD
-                        split: Structures_A.thread_state.split_asm
-             | simp cong: conj_cong
-             | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
-             | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
-             | rule conjI
-             | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
-             | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
-             | (wp (once) hoare_drop_imps,
-                        wp (once) cancel_all_ipc_unlive[unfolded o_def]
-                       cancel_all_signals_unlive[unfolded o_def])
-             | ((wp (once) hoare_drop_imps)?,
-                (wp (once) hoare_drop_imps)?,
-                wp (once) deleting_irq_handler_empty)
-             | wpc
-             | simp add: valid_cap_simps is_nondevice_page_cap_simps)+))
-  done
+  by (cases cap;
+        simp add: replaceable_def reachable_frame_cap_def is_arch_cap_def
+             split del: if_split;
+        ((wp suspend_unlive[unfolded o_def]
+             suspend_final_cap[where sl=sl]
+             prepare_thread_delete_unlive[unfolded o_def]
+             unbind_maybe_notification_not_bound
+             get_simple_ko_ko_at unbind_notification_valid_objs
+          | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
+                           ran_tcb_cap_cases is_cap_simps
+                           cap_range_def unat_of_bl_length
+                           can_fast_finalise_def
+                           gen_obj_refs_subset
+                           vs_cap_ref_def
+                           valid_ipc_buffer_cap_def
+                     dest!: tcb_cap_valid_NullCapD
+                     split: Structures_A.thread_state.split_asm
+          | simp cong: conj_cong
+          | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
+          | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
+          | rule conjI
+          | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
+          | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
+          | (wp (once) hoare_drop_imps,
+                     wp (once) cancel_all_ipc_unlive[unfolded o_def]
+                    cancel_all_signals_unlive[unfolded o_def])
+          | ((wp (once) hoare_drop_imps)?,
+             (wp (once) hoare_drop_imps)?,
+             wp (once) deleting_irq_handler_empty)
+          | wpc
+          | simp add: valid_cap_simps)+))
 
 lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_assms]:
   assumes x: "\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap"
