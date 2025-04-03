@@ -670,6 +670,14 @@ definition
 
 declare cap_asid_arch_def[abs_def, simp]
 
+(* arch_tcb_live stub; there is no state in the arch specific part of TCBs on this platform that
+   marks a TCB as live *)
+definition arch_tcb_live :: "arch_tcb \<Rightarrow> bool" where
+  "arch_tcb_live arch_tcb \<equiv> False"
+
+definition valid_cur_fpu :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_cur_fpu \<equiv> \<top>"
+
 definition
   "cap_asid = arch_cap_fun_lift cap_asid_arch None"
 
@@ -882,9 +890,9 @@ lemma addrFromPPtr_ptrFromPAddr_id[simp]:
   "addrFromPPtr (ptrFromPAddr x) = x"
   by (simp add: addrFromPPtr_def ptrFromPAddr_def)
 
-lemma global_refs_asid_table_update [iff]:
-  "global_refs (s\<lparr>arch_state := riscv_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
-  by (simp add: global_refs_def)
+lemma global_refs_updates[simp]:
+  "\<And>f. global_refs (s\<lparr>arch_state := riscv_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
+  by (auto simp: global_refs_def)
 
 lemma pspace_in_kernel_window_arch_update[simp]:
   "riscv_kernel_vspace (f (arch_state s)) = riscv_kernel_vspace (arch_state s)
@@ -1182,6 +1190,7 @@ lemma valid_tcb_arch_ref_lift:
 lemma tcb_arch_ref_simps[simp]:
   "\<And>f. tcb_arch_ref (tcb_ipc_buffer_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_mcpriority_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_flags_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ctable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_vtable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_reply_update f tcb) = tcb_arch_ref tcb"
@@ -1217,6 +1226,15 @@ lemma hyp_live_tcb_simps[simp]:
   "\<And>f. hyp_live (TCB (tcb_priority_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_time_slice_update f tcb)) = hyp_live (TCB tcb)"
   by (simp_all add: hyp_live_tcb_def)
+
+lemma arch_tcb_live_simps[simp]:
+  "\<And>f. arch_tcb_live (tcb_context_update f arch_tcb) = arch_tcb_live arch_tcb"
+  by (simp_all add: arch_tcb_live_def)
+
+lemma arch_tcb_live_context_simps[simp]:
+  "\<And>f. arch_tcb_live (arch_tcb_context_set f arch_tcb) = arch_tcb_live arch_tcb"
+  "\<And>f. arch_tcb_live (arch_tcb_set_registers f arch_tcb) = arch_tcb_live arch_tcb"
+  by (simp_all add: arch_tcb_context_set_def arch_tcb_set_registers_def)
 
 lemma wellformed_arch_typ:
   "(\<And>T p. f \<lbrace>typ_at T p\<rbrace>) \<Longrightarrow> f \<lbrace>arch_valid_obj ao\<rbrace>"
@@ -1260,17 +1278,14 @@ lemma valid_arch_cap_ref_pspaceI[elim]:
   unfolding valid_arch_cap_ref_def
   by (auto intro: obj_at_pspaceI split: arch_cap.split)
 
-lemma valid_arch_tcb_context_update[simp]:
-  "valid_arch_tcb (tcb_context_update f t) = valid_arch_tcb t"
-  unfolding valid_arch_tcb_def obj_at_def by simp
+lemma valid_arch_tcb_simps[simp]:
+  "\<And>f. valid_arch_tcb (tcb_context_update f t) = valid_arch_tcb t"
+  by (simp add: valid_arch_tcb_def)+
 
-lemma valid_arch_arch_tcb_context_set[simp]:
-  "valid_arch_tcb (arch_tcb_context_set a t) = valid_arch_tcb t"
-  by (simp add: arch_tcb_context_set_def)
-
-lemma valid_arch_arch_tcb_set_registers[simp]:
-  "valid_arch_tcb (arch_tcb_set_registers a t) = valid_arch_tcb t"
-  by (simp add: arch_tcb_set_registers_def)
+lemma valid_arch_tcb_context_simps[simp]:
+  "\<And>a. valid_arch_tcb (arch_tcb_context_set a t) = valid_arch_tcb t"
+  "\<And>a. valid_arch_tcb (arch_tcb_set_registers a t) = valid_arch_tcb t"
+  by (simp add: arch_tcb_context_set_def arch_tcb_set_registers_def)+
 
 lemma valid_arch_tcb_typ_at:
   "\<lbrakk> valid_arch_tcb t s; \<And>T p. typ_at T p s \<Longrightarrow> typ_at T p s' \<rbrakk> \<Longrightarrow> valid_arch_tcb t s'"
@@ -1589,7 +1604,6 @@ lemma valid_global_vspace_mappings_kwD:
 lemma valid_global_vspace_mappings_aligned[simp]:
   "valid_global_vspace_mappings s \<Longrightarrow> is_aligned (global_pt s) pt_bits"
   by (simp add: valid_global_vspace_mappings_def Let_def)
-
 
 lemma vspace_for_asid_SomeD:
   "vspace_for_asid asid s = Some pt_ptr
@@ -2434,6 +2448,10 @@ lemma valid_arch_state_lift:
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift_arch; wp)
 
+lemma valid_cur_fpu_updates[simp]:
+  "\<And>f. valid_cur_fpu (arch_state_update f s) = valid_cur_fpu s"
+  by (auto simp: valid_cur_fpu_def)
+
 lemma asid_high_bits_of_and_mask[simp]:
   "asid_high_bits_of (asid && ~~ mask asid_low_bits || ucast (asid_low::asid_low_index)) =
    asid_high_bits_of asid"
@@ -2809,6 +2827,10 @@ lemma has_kernel_mappings_update [iff]:
 lemma equal_kernel_mappings_update [iff]:
   "equal_kernel_mappings (f s) = equal_kernel_mappings s"
   by (simp add: equal_kernel_mappings_def pspace)
+
+lemma valid_cur_fpu_update [iff]:
+  "valid_cur_fpu (f s) = valid_cur_fpu s"
+  by (auto simp: valid_cur_fpu_def)
 
 end
 
