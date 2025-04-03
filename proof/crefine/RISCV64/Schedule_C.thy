@@ -397,11 +397,20 @@ lemma nextDomain_ccorres:
   apply simp
   done
 
+lemma prepareNextDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] prepareNextDomain (Call prepareNextDomain_'proc)"
+  apply cinit
+  apply (rule ccorres_return_Skip)
+  by clarsimp
+
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread) UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
-         y \<leftarrow> when (domainTime = 0) nextDomain;
+         y \<leftarrow> when (domainTime = 0) (do
+             y <- prepareNextDomain;
+             nextDomain
+         od);
          chooseThread
       od)
      (Call scheduleChooseNewThread_'proc)"
@@ -410,12 +419,14 @@ lemma scheduleChooseNewThread_ccorres:
    apply (rule ccorres_split_nothrow)
        apply (rule_tac R="\<lambda>s. ksDomainTime s = domainTime" in ccorres_when)
         apply (fastforce simp: rf_sr_ksDomainTime)
-       apply (rule_tac xf'=xfdc in ccorres_call[OF nextDomain_ccorres] ; simp)
+       apply (ctac (no_vcg) add: prepareNextDomain_ccorres)
+        apply (rule ccorres_call[OF nextDomain_ccorres, where xf'=xfdc] ; simp)
+       apply wpsimp
       apply ceqv
      apply (ctac (no_vcg) add: chooseThread_ccorres)
     apply (wp nextDomain_invs_no_cicd')
    apply clarsimp
-   apply (vcg exspec=nextDomain_modifies)
+   apply (vcg exspec=nextDomain_modifies exspec=prepareNextDomain_modifies)
   apply (clarsimp simp: if_apply_def2 invs'_invs_no_cicd')
   done
 

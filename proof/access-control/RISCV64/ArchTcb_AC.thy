@@ -14,7 +14,7 @@ named_theorems Tcb_AC_assms
 
 declare arch_get_sanitise_register_info_inv[Tcb_AC_assms]
 
-crunch arch_post_modify_registers
+crunch arch_post_modify_registers, arch_post_set_flags
   for pas_refined[Tcb_AC_assms, wp]: "pas_refined aag"
 
 lemma arch_post_modify_registers_respects[Tcb_AC_assms]:
@@ -22,6 +22,12 @@ lemma arch_post_modify_registers_respects[Tcb_AC_assms]:
    arch_post_modify_registers cur t
    \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   by wpsimp
+
+lemma arch_post_set_flags_respects[Tcb_AC_assms]:
+  "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
+   arch_post_set_flags t flags
+   \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  by (wpsimp simp: arch_post_set_flags_def)
 
 lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
