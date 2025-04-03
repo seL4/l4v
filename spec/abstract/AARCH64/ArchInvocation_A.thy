@@ -82,6 +82,9 @@ datatype vcpu_invocation =
       (vcpu_inv_vcpu : obj_ref)
       (vcpu_inv_eirq : vppievent_irq)
 
+datatype sgi_signal_invocation =
+    SGISignalGenerate (sgi_irq : sgi_irq) (sgi_target : sgi_target)
+
 datatype arch_invocation =
     InvokeVSpace vspace_invocation
   | InvokePageTable page_table_invocation
@@ -89,6 +92,7 @@ datatype arch_invocation =
   | InvokeASIDControl asid_control_invocation
   | InvokeASIDPool asid_pool_invocation
   | InvokeVCPU vcpu_invocation
+  | InvokeSGISignal sgi_signal_invocation
 
 datatype arch_copy_register_sets =
     ARMNoExtraRegisters
@@ -98,6 +102,11 @@ definition ArchDefaultExtraRegisters :: arch_copy_register_sets where
 
 datatype arch_irq_control_invocation =
     ARMIRQControlInvocation irq cslot_ptr cslot_ptr bool
+  | IssueSGISignal
+      (issue_sgi_irq : sgi_irq)
+      (issue_sgi_target : sgi_target)
+      (issue_control_slot : cslot_ptr)
+      (issue_sgi_slot : cslot_ptr)
 
 end
 end

@@ -20,7 +20,7 @@ import {-# SOURCE #-} SEL4.Object.Structures
 import Data.Array
 import Data.Helpers
 import Data.Bits
-import Data.Word(Word64, Word32, Word8)
+import Data.Word(Word64, Word32, Word16, Word8)
 import SEL4.Machine.RegisterSet.AARCH64 (VCPUReg(..))
 
 {- Capabilities -}
@@ -42,6 +42,9 @@ data ArchCapability
         capPTMappedAddress :: Maybe (ASID, VPtr) }
     | VCPUCap {
         capVCPUPtr :: PPtr VCPU }
+    | SGISignalCap {
+        capSGIIRQ :: Word,
+        capSGITargetMask :: Word }
     deriving (Eq, Show)
 
 {- The range of allowable sizes for Untyped objects depends on addressable memory size. -}

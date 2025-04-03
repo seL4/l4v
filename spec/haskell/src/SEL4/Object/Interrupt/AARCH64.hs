@@ -30,12 +30,15 @@ import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqInvalid)
 import SEL4.Object.VCPU.TARGET (vgicMaintenance, vppiEvent, irqVPPIEventIndex)
 import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqVGICMaintenance, irqVTimerEvent, irqSMMU)
 
+isSGITargetValid :: Word -> Bool
+isSGITargetValid target = target < fromIntegral Arch.gicNumTargets
+
 decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
         KernelF SyscallError ArchInv.IRQControlInvocation
 decodeIRQControlInvocation label args srcSlot extraCaps =
     case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,
-            irqW:triggerW:index:depth:_, cnode:_) -> do
+         irqW:triggerW:index:depth:_, cnode:_) -> do
             checkIRQ irqW
             let irq = toEnum (fromIntegral irqW) :: IRQ
             irqActive <- withoutFailure $ isIRQActive irq
@@ -47,6 +50,15 @@ decodeIRQControlInvocation label args srcSlot extraCaps =
                 ArchInv.IssueIRQHandler irq destSlot srcSlot (triggerW /= 0)
         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) ->
             throw TruncatedMessage
+        (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,
+         irqW:targetW:index:depth:_, cnode:_) -> do
+            rangeCheck irqW 0 (Arch.numSGIs - 1)
+            unless (isSGITargetValid targetW) $ throw $ InvalidArgument 1
+            sgiSlot <- lookupTargetSlot cnode (CPtr index) (fromIntegral depth)
+            ensureEmptySlot sgiSlot
+            return $ ArchInv.IssueSGISignal irqW targetW srcSlot sgiSlot
+        (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) ->
+            throw TruncatedMessage
         _ -> throw IllegalOperation
 
 performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
@@ -57,6 +69,22 @@ performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger)
     setIRQState IRQSignal (IRQ irq)
     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
     return ()
+performIRQControl (ArchInv.IssueSGISignal irq targets controlSlot sgiSlot)
+    = withoutPreemption $ do
+    cteInsert (ArchObjectCap (SGISignalCap irq targets)) controlSlot sgiSlot
+    return ()
+
+decodeSGISignalInvocation :: ArchCapability-> KernelF SyscallError ArchInv.Invocation
+decodeSGISignalInvocation cap =
+    case cap of
+        SGISignalCap irq targets -> do
+            return $ ArchInv.InvokeSGISignal $ ArchInv.SGISignalGenerate irq targets
+        _ -> throw IllegalOperation
+
+performSGISignalGenerate :: ArchInv.SGISignalInvocation -> Kernel [Word]
+performSGISignalGenerate (ArchInv.SGISignalGenerate irq targets) = do
+    doMachineOp $ Arch.ipiSendTarget (fromIntegral irq) (fromIntegral targets)
+    return []
 
 invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
 invokeIRQHandler (AckIRQ irq) =

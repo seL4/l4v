@@ -1973,61 +1973,62 @@ lemma performArchInvocation_valid_duplicates':
     and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>reply s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
-  apply (cases ai, simp_all)
-      apply (rename_tac page_table_invocation)
-      apply (case_tac page_table_invocation)
+  apply (simp add: ARM_H.performInvocation_def)
+  apply (cases ai, simp_all add: performARMMMUInvocation_def)
+       apply (rename_tac page_table_invocation)
+       apply (case_tac page_table_invocation)
+        apply (rule hoare_name_pre_state)
+        apply (clarsimp simp: valid_arch_inv'_def valid_pti'_def isCap_simps
+                              cte_wp_at_ctes_of is_arch_update'_def isPageTableCap_def
+                        split: arch_capability.splits)
+        apply (clarsimp simp: performPageTableInvocation_def)
+        apply (rule hoare_pre)
+         apply (simp | wp getSlotCap_inv mapM_x_storePTE_invalid_whole[unfolded swp_def]
+                | wpc)+
+        apply fastforce
        apply (rule hoare_name_pre_state)
-       apply (clarsimp simp:valid_arch_inv'_def valid_pti'_def isCap_simps
-              cte_wp_at_ctes_of is_arch_update'_def isPageTableCap_def
-              split:arch_capability.splits)
+       apply (clarsimp simp: valid_arch_inv'_def isCap_simps valid_pti'_def
+                             cte_wp_at_ctes_of is_arch_update'_def isPageTableCap_def
+                       split: arch_capability.splits)
        apply (clarsimp simp: performPageTableInvocation_def)
-       apply (rule hoare_pre)
-        apply (simp | wp getSlotCap_inv mapM_x_storePTE_invalid_whole[unfolded swp_def]
-           | wpc)+
-       apply fastforce
-      apply (rule hoare_name_pre_state)
-      apply (clarsimp simp: valid_arch_inv'_def isCap_simps valid_pti'_def
-                            cte_wp_at_ctes_of is_arch_update'_def isPageTableCap_def
-                      split: arch_capability.splits)
-      apply (clarsimp simp: performPageTableInvocation_def)
-      apply (wp storePDE_no_duplicates' | simp)+
-     apply (rename_tac page_directory_invocation)
-     apply (case_tac page_directory_invocation,
-            simp_all add:performPageDirectoryInvocation_def)[]
-      apply (wp+, simp)
-     apply (wp)+
+       apply (wp storePDE_no_duplicates' | simp)+
+       apply (rename_tac page_directory_invocation)
+       apply (case_tac page_directory_invocation,
+              simp_all add:performPageDirectoryInvocation_def)[]
+        apply (wp+, simp)
+         apply (wp)+
+       apply simp
       apply simp
-     apply simp
-    apply(wp, simp)
-   apply (rename_tac asidcontrol_invocation)
-   apply (case_tac asidcontrol_invocation)
-   apply (simp add:performASIDControlInvocation_def )
-   apply (clarsimp simp:valid_aci'_def valid_arch_inv'_def)
-   apply (rule hoare_name_pre_state)
-   apply (clarsimp simp:cte_wp_at_ctes_of)
-   apply (case_tac ctea,clarsimp)
-   apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
-   apply (wp hoare_weak_lift_imp|simp)+
-       apply (simp add:placeNewObject_def)
-       apply (wp |simp add:alignError_def unless_def|wpc)+
-      apply (wp updateFreeIndex_pspace_no_overlap' hoare_drop_imp
-        getSlotCap_cte_wp_at deleteObject_no_overlap
-        deleteObjects_invs_derivatives[where p="makePoolParent (case ai of InvokeASIDControl i \<Rightarrow> i)"]
-        deleteObject_no_overlap
-        deleteObjects_cte_wp_at')+
-   apply (clarsimp simp:cte_wp_at_ctes_of)
-   apply (strengthen refl ctes_of_valid_cap'[mk_strg I E])
-   apply (clarsimp simp: conj_comms valid_cap_simps' capAligned_def
-                         descendants_range'_def2 empty_descendants_range_in')
-   apply (intro conjI; clarsimp)
-   apply (drule(1) cte_cap_in_untyped_range, fastforce simp:cte_wp_at_ctes_of, simp_all)[1]
-    apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-   apply clarsimp
-  apply (rename_tac asidpool_invocation)
-  apply (case_tac asidpool_invocation)
-  apply (clarsimp simp:performASIDPoolInvocation_def)
-  apply (wp | simp)+
+     apply(wp, simp)
+    apply (rename_tac asidcontrol_invocation)
+    apply (case_tac asidcontrol_invocation)
+    apply (simp add:performASIDControlInvocation_def )
+    apply (clarsimp simp:valid_aci'_def valid_arch_inv'_def)
+    apply (rule hoare_name_pre_state)
+    apply (clarsimp simp:cte_wp_at_ctes_of)
+    apply (case_tac ctea,clarsimp)
+    apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
+    apply (wp hoare_weak_lift_imp|simp)+
+        apply (simp add:placeNewObject_def)
+        apply (wp |simp add:alignError_def unless_def|wpc)+
+       apply (wp updateFreeIndex_pspace_no_overlap' hoare_drop_imp
+                 getSlotCap_cte_wp_at deleteObject_no_overlap
+                 deleteObjects_invs_derivatives[where
+                   p="makePoolParent (case ai of InvokeASIDControl i \<Rightarrow> i)"]
+                 deleteObject_no_overlap  deleteObjects_cte_wp_at')+
+    apply (clarsimp simp:cte_wp_at_ctes_of)
+    apply (strengthen refl ctes_of_valid_cap'[mk_strg I E])
+    apply (clarsimp simp: conj_comms valid_cap_simps' capAligned_def
+                          descendants_range'_def2 empty_descendants_range_in')
+    apply (intro conjI; clarsimp)
+    apply (drule(1) cte_cap_in_untyped_range, fastforce simp:cte_wp_at_ctes_of, simp_all)[1]
+     apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+    apply clarsimp
+   apply (rename_tac asidpool_invocation)
+   apply (case_tac asidpool_invocation)
+   apply (clarsimp simp: performASIDPoolInvocation_def)
+   apply wpsimp
+  apply (wpsimp simp: performSGISignalGenerate_def)
   done
 
 crunch restart

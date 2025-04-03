@@ -69,6 +69,8 @@ primrec acap_relation :: "arch_cap \<Rightarrow> arch_capability \<Rightarrow> b
      (c = PageTableCap p pt_t (mdata_map data))"
 | "acap_relation (arch_cap.VCPUCap vcpu) c  = (c =
         arch_capability.VCPUCap vcpu)"
+| "acap_relation (arch_cap.SGISignalCap irq trigger) c  = (c =
+        arch_capability.SGISignalCap (ucast irq) (ucast trigger))"
 
 primrec cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool" where
   "cap_relation Structures_A.NullCap c =
@@ -626,6 +628,7 @@ lemmas isCap_defs =
   isFrameCap_def isPageTableCap_def
   isASIDControlCap_def isASIDPoolCap_def
   isDomainCap_def isArchFrameCap_def isVCPUCap_def
+  isSGISignalCap_def
 
 lemma isCNodeCap_cap_map[simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"

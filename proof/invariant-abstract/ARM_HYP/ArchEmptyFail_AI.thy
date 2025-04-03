@@ -19,7 +19,7 @@ crunch_ignore (empty_fail)
         clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl
         invalidateL2Range_impl cleanL2Range_impl flushBTAC_impl
         writeContextID_impl isb_impl dsb_impl dmb_impl setHardwareASID_impl
-        writeTTBR0_impl cacheRangeOp setIRQTrigger_impl)
+        writeTTBR0_impl cacheRangeOp setIRQTrigger_impl ipiSendTarget_impl)
 
 crunch
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
@@ -28,10 +28,10 @@ crunch
 end
 
 global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -67,9 +67,12 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def)
-  apply (cases e; simp add: decode_vcpu_invocation_def decode_mmu_invocation_def Let_def; intro impI conjI allI)
-  prefer 2
-   apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
+  apply (cases e;
+         simp add: decode_vcpu_invocation_def decode_mmu_invocation_def
+                   decode_sgi_signal_invocation_def Let_def;
+         intro impI conjI allI)
+    prefer 2
+    apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
    apply (simp add: split_def)
    apply (wp (once), simp)
    apply (subst bindE_assoc[symmetric])
@@ -85,6 +88,7 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def decode_mmu_invocation_def
+                   decode_sgi_signal_invocation_def
                    split_def Let_def isPageFlushLabel_def isPDFlushLabel_def
             split: arch_cap.splits cap.splits option.splits | intro impI allI conjI)+
   apply (rule empty_fail_bindE)
@@ -112,16 +116,18 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]
-  by ((simp add: arch_decode_invocation_def decode_mmu_invocation_def Let_def
-               split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
+  by ((simp add: arch_decode_invocation_def decode_mmu_invocation_def
+                 decode_sgi_signal_invocation_def Let_def
+            split: arch_cap.splits cap.splits option.splits
+       | wp | intro conjI impI allI)+)
 
 end
 
 global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -153,10 +159,10 @@ crunch setRegister, setNextPC
 end
 
 global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 crunch
@@ -165,22 +171,22 @@ crunch
 end
 
 global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_schedule_det?: EmptyFail_AI_schedule_det
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -212,21 +218,21 @@ crunch handle_event, activate_thread
 end
 
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_call_kernel_det?: EmptyFail_AI_call_kernel_det
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+qed
 
 end

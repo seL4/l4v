@@ -31,6 +31,7 @@ data Invocation
     | InvokeASIDControl ASIDControlInvocation
     | InvokeASIDPool ASIDPoolInvocation
     | InvokeVCPU VCPUInvocation
+    | InvokeSGISignal SGISignalInvocation
     deriving Show
 
 data VSpaceInvocation
@@ -106,6 +107,14 @@ data VCPUInvocation
     | VCPUAckVPPI (PPtr VCPU) VPPIEventIRQ
     deriving (Show, Eq)
 
+{- SGI -}
+
+data SGISignalInvocation
+    = SGISignalGenerate {
+        sgiIRQ :: Word,
+        sgiTargets :: Word }
+    deriving (Show, Eq)
+
 {- Interrupt Control -}
 
 data IRQControlInvocation
@@ -114,6 +123,11 @@ data IRQControlInvocation
         issueHandlerSlot,
         issueHandlerControllerSlot :: PPtr CTE,
         issueHandlerTrigger :: Bool }
+    | IssueSGISignal {
+        issueSGIIRQ :: Word,
+        issueSGITargets :: Word,
+        issueSGIControlSlot,
+        issueSGISlot :: PPtr CTE }
     deriving (Show, Eq)
 
 {- Additional Register Subsets -}

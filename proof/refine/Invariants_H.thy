@@ -23,6 +23,8 @@ arch_requalify_consts
   arch_valid_irq
   isArchFrameCap
   acapClass
+  valid_arch_badges
+  mdb_chunked_arch_assms
   global_refs'
   valid_arch_state'
   archMakeObjectT
@@ -459,20 +461,21 @@ where
 
 definition
   "valid_badges m \<equiv>
-  \<forall>p p' cap node cap' node'.
-    m p = Some (CTE cap node) \<longrightarrow>
-    m p' = Some (CTE cap' node') \<longrightarrow>
-    (m \<turnstile> p \<leadsto> p') \<longrightarrow>
-    (sameRegionAs cap cap') \<longrightarrow>
-    (isEndpointCap cap \<longrightarrow>
-     capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
-     capEPBadge cap' \<noteq> 0 \<longrightarrow>
-     mdbFirstBadged node')
-    \<and>
-    (isNotificationCap cap \<longrightarrow>
-     capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
-     capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
-     mdbFirstBadged node')"
+   \<forall>p p' cap node cap' node'.
+     m p = Some (CTE cap node) \<longrightarrow>
+     m p' = Some (CTE cap' node') \<longrightarrow>
+     m \<turnstile> p \<leadsto> p' \<longrightarrow>
+     (sameRegionAs cap cap' \<longrightarrow>
+       (isEndpointCap cap \<longrightarrow>
+        capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
+        capEPBadge cap' \<noteq> 0 \<longrightarrow>
+        mdbFirstBadged node')
+       \<and>
+       (isNotificationCap cap \<longrightarrow>
+        capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
+        capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
+        mdbFirstBadged node'))
+     \<and> valid_arch_badges cap cap' node'"
 
 fun (sequential)
   untypedRange :: "capability \<Rightarrow> machine_word set"
@@ -544,6 +547,7 @@ definition
   m p = Some (CTE cap n) \<longrightarrow>
   m p' = Some (CTE cap' n') \<longrightarrow>
   sameRegionAs cap cap' \<longrightarrow>
+  mdb_chunked_arch_assms cap \<longrightarrow>
   p \<noteq> p' \<longrightarrow>
   (m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> m \<turnstile> p' \<leadsto>\<^sup>+ p) \<and>
   (m \<turnstile> p \<leadsto>\<^sup>+ p' \<longrightarrow> is_chunk m cap p p') \<and>
@@ -2561,7 +2565,7 @@ lemma class_linksD:
 
 lemma mdb_chunkedD:
   "\<lbrakk> m p = Some (CTE cap n); m p' = Some (CTE cap' n');
-     sameRegionAs cap cap'; p \<noteq> p'; mdb_chunked m \<rbrakk>
+     sameRegionAs cap cap'; p \<noteq> p'; mdb_chunked_arch_assms cap; mdb_chunked m \<rbrakk>
   \<Longrightarrow> (m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> m \<turnstile> p' \<leadsto>\<^sup>+ p) \<and>
      (m \<turnstile> p \<leadsto>\<^sup>+ p' \<longrightarrow> is_chunk m cap p p') \<and>
      (m \<turnstile> p' \<leadsto>\<^sup>+ p \<longrightarrow> is_chunk m cap' p' p)"
