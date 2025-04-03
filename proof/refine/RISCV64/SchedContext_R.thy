@@ -515,13 +515,14 @@ lemma sc_relation_tcb_yield_to_update:
 lemma schedContextCancelYieldTo_corres:
   "corres dc
           (pspace_aligned and pspace_distinct and valid_objs and tcb_at t)
-          \<top>
+          valid_objs'
           (sched_context_cancel_yield_to t)
           (schedContextCancelYieldTo t)" (is "corres _ ?abs_guard _ _ _")
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (clarsimp simp: sched_context_cancel_yield_to_def schedContextCancelYieldTo_def
                         updateSchedContext_def maybeM_def)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF get_tcb_yield_to_corres _ gyt_sp threadGet_sp
                              , where Q="?abs_guard"])
@@ -544,6 +545,10 @@ lemma schedContextCancelYieldTo_corres:
                    split: option.splits)
   apply clarsimp
   done
+
+crunch setConsumed
+  for valid_objs'[wp]: valid_objs'
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma schedContextCompleteYieldTo_corres:
   "corres dc (invs and tcb_at thread) (invs' and tcb_at' thread)
@@ -777,10 +782,9 @@ lemma updateRefillTl_corres:
   done
 
 lemma readRefillReady_no_ofail[wp]:
-  "no_ofail (active_sc_at' t) (readRefillReady t)"
+  "no_ofail (valid_objs' and active_sc_at' t) (readRefillReady t)"
   unfolding readRefillReady_def ohaskell_state_assert_def
-  apply (wpsimp wp: no_ofail_readCurTime)
-  done
+  by (wpsimp wp: no_ofail_readCurTime)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -796,6 +800,7 @@ lemma refillReady_corres:
                         read_sc_refill_ready_def readRefillReady_def readCurTime_def gets_the_ogets
                         ohaskell_state_assert_def gets_the_ostate_assert
              simp flip: get_refill_head_def getRefillHead_def getCurTime_def)
+  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)
   apply (rule corres_symb_exec_r[OF _ stateAssert_sp[unfolded HaskellLib_H.stateAssert_def]];
          (solves wpsimp)?)
   apply (corres corres: getRefillHead_corres getCurTime_corres

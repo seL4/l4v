@@ -579,6 +579,7 @@ candidates are enqueued.
 
 > possibleSwitchTo :: PPtr TCB -> Kernel ()
 > possibleSwitchTo target = do
+>     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
 >     scOpt <- threadGet tcbSchedContext target
 >     inq <- inReleaseQueue target
 >     when (scOpt /= Nothing && not inq) $ do
@@ -777,6 +778,7 @@ tcbPtr is in the middle of the queue
 >         "thread must not have the tcbInReleaseQueue flag set"
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
+>     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread
@@ -797,6 +799,7 @@ tcbPtr is in the middle of the queue
 >         "thread must not have the tcbInReleaseQueue flag set"
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
+>     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread
@@ -816,6 +819,7 @@ The following function dequeues a thread, if it is queued.
 >     stateAssert ready_or_release'_asrt
 >         "Assert that `ready_or_release'` holds"
 >     stateAssert ksReadyQueues_asrt ""
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     queued <- threadGet tcbQueued thread
 >     when queued $ do
 >         tdom <- threadGet tcbDomain thread
@@ -861,6 +865,7 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 
 > tcbReleaseRemove :: PPtr TCB -> Kernel ()
 > tcbReleaseRemove tcbPtr = do
+>     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
 >     stateAssert ready_or_release'_asrt
 >         "Assert that `ready_or_release'` holds"
 >     stateAssert ksReleaseQueue_asrt ""

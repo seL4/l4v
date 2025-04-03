@@ -61,6 +61,7 @@ This module specifies the behavior of reply objects.
 >         "replyPush: valid_replies'_sc holds for replyPtr"
 >     stateAssert valid_idle'_asrt
 >         "Assert that `valid_idle' s` holds"
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
 >     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
 
@@ -125,6 +126,7 @@ This module specifies the behavior of reply objects.
 
 > replyRemoveTCB :: PPtr TCB -> Kernel ()
 > replyRemoveTCB tptr = do
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     state <- getThreadState tptr
 >     assert (isReply state) "replyRemoveTCB: thread state must be BlockedOnReply"
 

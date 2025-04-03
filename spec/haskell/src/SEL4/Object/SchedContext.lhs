@@ -104,6 +104,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillHead :: PPtr SchedContext -> KernelR Refill
 > readRefillHead scPtr = do
+>     readStateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillHd sc
@@ -116,6 +117,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillTail :: PPtr SchedContext -> KernelR Refill
 > readRefillTail scPtr = do
+>     readStateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillTl sc
@@ -199,6 +201,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillNext :: PPtr SchedContext -> Int -> KernelR Int
 > readRefillNext scPtr index = do
+>     readStateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     sc <- readSchedContext scPtr
 >     return $ refillNext sc index
@@ -223,6 +226,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillCapacity :: PPtr SchedContext -> Ticks -> KernelR Ticks
 > readRefillCapacity scPtr usage = do
+>     readStateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- readRefillHead scPtr
 >     return $ refillCapacity usage head
@@ -243,6 +247,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillPopHead :: PPtr SchedContext -> Kernel Refill
 > refillPopHead scPtr = do
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- getRefillHead scPtr
 >     sc <- getSchedContext scPtr
@@ -281,6 +286,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillReady :: PPtr SchedContext -> KernelR Bool
 > readRefillReady scPtr = do
+>     readStateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     readStateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
 >     head <- readRefillHead scPtr
 >     curTime <- readCurTime
@@ -426,6 +432,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
+>       stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >       active <- scActive scPtr
 >       assert active "the scheduling context must be active"
 >       roundRobin <- isRoundRobin scPtr
@@ -532,6 +539,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextCancelYieldTo :: PPtr TCB -> Kernel ()
 > schedContextCancelYieldTo tptr = do
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     scPtrOpt <- threadGet tcbYieldTo tptr
 >     when (scPtrOpt /= Nothing) $ do
 >         scPtr <- return $ fromJust scPtrOpt
@@ -584,6 +592,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > postpone :: PPtr SchedContext -> Kernel ()
 > postpone scPtr = do
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     sc <- getSchedContext scPtr
 >     assert (scTCB sc /= Nothing) "the sc must have an associated tcb"
 >     tptr <- return $ fromJust $ scTCB sc
@@ -593,6 +602,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextResume :: PPtr SchedContext -> Kernel ()
 > schedContextResume scPtr = do
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     sc <- getSchedContext scPtr
 >     tptrOpt <- return $ scTCB sc
 >     assert (tptrOpt /= Nothing) "schedContextResume: option of TCB pointer must not be Nothing"
@@ -658,6 +668,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextDonate :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextDonate scPtr tcbPtr = do
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     sc <- getSchedContext scPtr
 >     fromOpt <- return $ scTCB sc
 >     when (fromOpt /= Nothing) $ do
@@ -822,6 +833,7 @@ This module uses the C preprocessor to select a target architecture.
 >         "tcbPtr must not have the tcbQueued flag set"
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
+>     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
 >     runnable <- isRunnable tcbPtr
 >     assert runnable "thread must be runnable"
 >     tcb <- getObject tcbPtr

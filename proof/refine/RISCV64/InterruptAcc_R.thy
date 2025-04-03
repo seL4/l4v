@@ -146,17 +146,17 @@ lemma updateTimeStamp_corres[corres]:
   done
 
 lemma no_ofail_readRefillHead[wp]:
-  "no_ofail (active_sc_at' scPtr) (readRefillHead scPtr)"
+  "no_ofail (valid_objs' and active_sc_at' scPtr) (readRefillHead scPtr)"
   unfolding readRefillHead_def readSchedContext_def ohaskell_state_assert_def
   by (wpsimp wp_del: ovalid_readObject simp: active_sc_at'_def)
 
 lemma no_ofail_readRefillCapacity[wp]:
-  "no_ofail (active_sc_at' scPtr) (readRefillCapacity scPtr usage)"
+  "no_ofail (valid_objs' and active_sc_at' scPtr) (readRefillCapacity scPtr usage)"
   unfolding readRefillCapacity_def ohaskell_state_assert_def
   by (wpsimp simp: active_sc_at'_def)
 
 lemma no_ofail_readRefillSufficient[wp]:
-  "no_ofail (active_sc_at' scPtr) (readRefillSufficient scPtr usage)"
+  "no_ofail (valid_objs' and active_sc_at' scPtr) (readRefillSufficient scPtr usage)"
   unfolding readRefillSufficient_def
   by wpsimp
 
@@ -175,7 +175,7 @@ lemma getRefillHead_corres:
                         readRefillHead_def read_sched_context_get_sched_context
                         readSchedContext_def ohaskell_state_assert_def gets_the_ostate_assert
              simp flip: getSchedContext_def getObject_def)
-  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)
+  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)+
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF get_sc_corres])
       apply (rule corres_assert_assume_l)
@@ -203,7 +203,7 @@ lemma getRefillCapacity_corres:
   apply (clarsimp simp: getRefillCapacity_def get_sc_refill_capacity_def read_sc_refill_capacity_def
                         readRefillCapacity_def ohaskell_state_assert_def gets_the_ostate_assert
              simp flip: get_refill_head_def getRefillHead_def)
-  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)
+  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)+
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getRefillHead_corres])
        apply simp
@@ -223,7 +223,7 @@ lemma getRefillSufficient_corres:
                         read_sc_refill_sufficient_def readRefillSufficient_def refill_sufficient_def
                         readRefillCapacity_def ohaskell_state_assert_def gets_the_ostate_assert
                         get_refill_head_def[symmetric] getRefillHead_def[symmetric])
-  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)
+  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)+
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getRefillHead_corres])
        apply simp

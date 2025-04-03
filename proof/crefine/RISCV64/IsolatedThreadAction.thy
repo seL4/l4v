@@ -903,7 +903,7 @@ lemma setThreadState_tcbPriority_obj_at'[wp]:
 (* FIXME RT: move following lemmas about tcbPriority to Refine or possibly DInvs (see VER-1299) *)
 crunch unbindMaybeNotification, blockedCancelIPC, replyRemoveTCB, cancelSignal
   for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: hoare_vcg_all_lift crunch_wps simp: crunch_simps)
 
 lemma cancelIPC_tcbPriority[wp]:
   "cancelIPC tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"

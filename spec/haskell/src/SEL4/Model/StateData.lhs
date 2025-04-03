@@ -548,6 +548,11 @@ An assert that will say that valid_tcbs' holds
 > valid_tcbs'_asrt :: KernelState -> Bool
 > valid_tcbs'_asrt _ = True
 
+An assert that will say that valid_objs' holds
+
+> valid_objs'_asrt :: KernelState -> Bool
+> valid_objs'_asrt _ = True
+
 An assert that will say that priority_ordered' holds of the given list
 
 > priority_ordered'_asrt :: [PPtr TCB] -> KernelState -> Bool

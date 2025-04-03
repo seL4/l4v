@@ -304,14 +304,14 @@ lemma isRoundRobin_ccorres:
 
 lemma refill_ready_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     valid_objs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
      (refillReady scPtr) (Call refill_ready_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
   unfolding refillReady_def readRefillReady_def gets_the_obind ohaskell_state_assert_def
             gets_the_ostate_assert
   apply (rule ccorres_symb_exec_l'
                [OF _ _ stateAssert_sp[simplified HaskellLib_H.stateAssert_def]];
-         (solves wpsimp)?)
+         (solves wpsimp)?)+
   apply (cinit' lift: sc_'
                 simp: readCurTime_def gets_the_ogets getRefillHead_def[symmetric]
                       getCurTime_def[symmetric])
@@ -352,7 +352,7 @@ lemma refill_next_ccorres:
             gets_the_ostate_assert
   apply (rule ccorres_symb_exec_l'
                [OF _ _ stateAssert_sp[simplified HaskellLib_H.stateAssert_def]];
-         (solves wpsimp)?)
+         (solves wpsimp)?)+
   apply (cinit' lift: sc_' index_'
                 simp: refillNext_def readSchedContext_def getObject_def[symmetric]
                       getSchedContext_def[symmetric])
@@ -385,11 +385,11 @@ lemma refill_next_ccorres:
 
 lemma refill_pop_head_ccorres:
   "ccorres crefill_relation ret__struct_refill_C_'
-     (valid_objs' and no_0_obj') \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     no_0_obj' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (refillPopHead scPtr) (Call refill_pop_head_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
-  unfolding refillPopHead_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  unfolding refillPopHead_def K_bind_apply
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
   apply (cinit' lift: sc_')
    apply (rule ccorres_symb_exec_r)
      apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
@@ -656,12 +656,13 @@ crunch scActive
 
 lemma refill_unblock_check_ccorres:
   "ccorres dc xfdc
-     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct' and pspace_bounded')
+     (no_0_obj' and pspace_aligned' and pspace_distinct' and pspace_bounded')
      \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (refillUnblockCheck scPtr) (Call refill_unblock_check_'proc)"
   (is "ccorres _ _ ?abs _ _ _ _")
   supply sched_context_C_size[simp del] refill_C_size[simp del]
   apply (cinit lift: sc_')
+   apply (rule ccorres_stateAssert)+
    apply (rule ccorres_symb_exec_l)
       apply (rule ccorres_assert2)
       apply (ctac add: isRoundRobin_ccorres, rename_tac is_round_robin)
@@ -684,7 +685,7 @@ lemma refill_unblock_check_ccorres:
            apply (rule ccorres_rhs_assoc)
            apply (rule ccorres_split_nothrow)
                apply (clarsimp simp: setRefillHd_def updateRefillHd_def)
-               apply (rule_tac P'="?abs and (\<lambda>s. ksCurTime s = curTime)"
+               apply (rule_tac P'="?abs and valid_objs' and (\<lambda>s. ksCurTime s = curTime)"
                             in updateSchedContext_ccorres_lemma3
                                 [where P="\<lambda>sc. scRefillHead sc < length (scRefills sc)"])
                  apply vcg
@@ -725,7 +726,8 @@ lemma refill_unblock_check_ccorres:
                 apply ceqv
                apply (clarsimp simp: whileAnno_def refillHeadOverlappingLoop_def)
                apply (rule ccorres_handlers_weaken)
-               apply (rule_tac G="\<lambda>_. ?abs and active_sc_at' scPtr" and G'=UNIV in ccorres_While')
+               apply (rule_tac G="\<lambda>_. ?abs and valid_objs' and active_sc_at' scPtr" and G'=UNIV
+                            in ccorres_While')
                     apply (rule ccorres_guard_imp)
                       apply (ctac add: merge_overlapping_head_refill_ccorres)
                      apply (clarsimp simp: active_sc_at'_rewrite runReaderT_def)
@@ -765,7 +767,7 @@ lemma refill_unblock_check_ccorres:
             apply (wpsimp wp: updateRefillHd_valid_objs')
            apply vcg
           apply (rule ccorres_return_Skip)
-         apply (rule_tac Q'="\<lambda>_.?abs and active_sc_at' scPtr" in hoare_post_imp)
+         apply (rule_tac Q'="\<lambda>_.?abs and valid_objs' and active_sc_at' scPtr" in hoare_post_imp)
           apply (clarsimp simp: active_sc_at'_def)
           apply normalise_obj_at'
           apply (frule (1) sc_ko_at_valid_objs_valid_sc')
@@ -1244,10 +1246,12 @@ lemma tcbBoundYieldTo_caps_safe[simp]:
 
 lemma schedContext_cancelYieldTo_ccorres:
   "ccorres dc xfdc
-     (tcb_at' tptr and no_0_obj' and valid_objs')
+     (tcb_at' tptr and no_0_obj')
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tptr\<rbrace> []
      (schedContextCancelYieldTo tptr) (Call schedContext_cancelYieldTo_'proc)"
-  apply (cinit lift: tcb_')
+  unfolding schedContextCancelYieldTo_def K_bind_apply
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply (cinit' lift: tcb_')
    apply csymbr
    apply simp
    apply (rule ccorres_cond_true_seq)
