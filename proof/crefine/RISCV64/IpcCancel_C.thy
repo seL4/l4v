@@ -956,7 +956,7 @@ crunch isRunnable
 
 lemma tcbSchedEnqueue_ccorres:
   "ccorres dc xfdc
-     (tcb_at' t and valid_objs' and pspace_aligned' and pspace_distinct')
+     (tcb_at' t and pspace_aligned' and pspace_distinct')
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> hs
      (tcbSchedEnqueue t) (Call tcbSchedEnqueue_'proc)"
 proof -
@@ -968,8 +968,9 @@ proof -
   note word_less_1[simp del]
 
   show ?thesis
-    apply (cinit lift: tcb_')
-     apply (rule ccorres_stateAssert)+
+    unfolding tcbSchedEnqueue_def K_bind_apply
+    apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+    apply (cinit' lift: tcb_')
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_assert)
         apply (thin_tac runnable)
@@ -1067,7 +1068,7 @@ proof -
      apply wpsimp
     apply normalise_obj_at'
     apply (rename_tac tcb)
-    apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+    apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
     apply (clarsimp simp: valid_tcb'_def)
     apply (frule (1) obj_at_cslift_tcb)
     apply (rule conjI)
@@ -1090,7 +1091,7 @@ qed
 
 lemma tcbSchedAppend_ccorres:
   "ccorres dc xfdc
-     (tcb_at' t and valid_objs' and pspace_aligned' and pspace_distinct')
+     (tcb_at' t and pspace_aligned' and pspace_distinct')
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> hs
      (tcbSchedAppend t) (Call tcbSchedAppend_'proc)"
 proof -
@@ -1102,8 +1103,9 @@ proof -
   note word_less_1[simp del]
 
   show ?thesis
-    apply (cinit lift: tcb_')
-     apply (rule ccorres_stateAssert)+
+    unfolding tcbSchedAppend_def K_bind_apply
+    apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+    apply (cinit' lift: tcb_')
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_assert)
         apply (thin_tac "runnable")
@@ -1202,7 +1204,7 @@ proof -
      apply wpsimp
     apply normalise_obj_at'
     apply (rename_tac tcb)
-    apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+    apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
     apply (clarsimp simp: valid_tcb'_def)
     apply (frule (1) obj_at_cslift_tcb)
     apply (rule conjI)
@@ -1335,7 +1337,7 @@ lemma ctcb_ptr_to_tcb_ptr_option_to_ctcb_ptr[simp]:
 
 lemma tcb_queue_remove_ccorres:
   "ccorres ctcb_queue_relation ret__struct_tcb_queue_C_'
-     (\<lambda>s. tcb_at' tcbPtr s \<and> valid_objs' s
+     (\<lambda>s. tcb_at' tcbPtr s \<and> valid_tcbs' s
           \<and> (tcbQueueHead queue \<noteq> None \<longleftrightarrow> tcbQueueEnd queue \<noteq> None))
      (\<lbrace>ctcb_queue_relation queue \<acute>queue\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
      (tcbQueueRemove queue tcbPtr) (Call tcb_queue_remove_'proc)"
@@ -1513,14 +1515,14 @@ lemma tcb_queue_remove_ccorres:
                   apply (wpsimp | vcg)+
   apply (clarsimp split: if_splits)
   apply normalise_obj_at'
-  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+  apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
   by (intro conjI impI;
       clarsimp simp: ctcb_queue_relation_def typ_heap_simps option_to_ctcb_ptr_def
                      valid_tcb'_def valid_bound_tcb'_def)
 
 lemma tcb_queue_insert_ccorres:
   "ccorres dc xfdc
-     (tcb_at' tcbPtr and tcb_at' afterPtr and valid_objs')
+     (tcb_at' tcbPtr and tcb_at' afterPtr and valid_tcbs')
      (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>after = tcb_ptr_to_ctcb_ptr afterPtr\<rbrace>) hs
      (tcbQueueInsert tcbPtr afterPtr) (Call tcb_queue_insert_'proc)"
   apply (cinit' lift: tcb_' after_')
@@ -1599,7 +1601,7 @@ lemma tcb_queue_insert_ccorres:
      apply wpsimp
     apply wpsimp
    apply wpsimp
-  apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb'[where p=afterPtr]
+  apply (fastforce dest: ko_at'_valid_tcbs'_valid_tcb'[where ptr=afterPtr]
                    simp: valid_tcb'_def valid_bound_tcb'_def)
   done
 
@@ -1615,7 +1617,7 @@ lemma tcbQueueRemove_tcb_at'_head:
 
 lemma tcbSchedDequeue_ccorres:
   "ccorres dc xfdc
-     (tcb_at' t and valid_objs' and pspace_aligned' and pspace_distinct')
+     (tcb_at' t and pspace_aligned' and pspace_distinct')
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> hs
      (tcbSchedDequeue t) (Call tcbSchedDequeue_'proc)"
 proof -
@@ -1627,8 +1629,9 @@ proof -
   note word_less_1[simp del]
 
   show ?thesis
-    apply (cinit lift: tcb_')
-     apply (rule ccorres_stateAssert)+
+    unfolding tcbSchedDequeue_def K_bind_apply
+    apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+    apply (cinit' lift: tcb_')
      apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
                   in ccorres_split_nothrow)
          apply (rule threadGet_vcg_corres)
@@ -1726,7 +1729,7 @@ proof -
      apply (force dest!: tcbQueueHead_iff_tcbQueueEnd simp: tcbQueueEmpty_def)
     by (fastforce simp: word_less_nat_alt
                         cready_queues_index_to_C_def2 ctcb_relation_def
-                        typ_heap_simps le_maxDomain_eq_less_numDomains(2) unat_trans_ucast_helper)[1]
+                        typ_heap_simps le_maxDomain_eq_less_numDomains(2) unat_trans_ucast_helper)
 qed
 
 lemma isStopped_spec:
@@ -1876,7 +1879,7 @@ lemma isSchedulable_ccorres[corres]:
 
 lemma rescheduleRequired_ccorres:
   "ccorres dc xfdc
-     ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs' and no_0_obj'
+     ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and no_0_obj'
       and pspace_aligned' and pspace_distinct')
      UNIV hs
      rescheduleRequired (Call rescheduleRequired_'proc)"
@@ -2207,7 +2210,7 @@ lemma possibleSwitchTo_ccorres:
   "ccorres dc xfdc
      ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
       and tcb_at' t and (\<lambda>s. ksCurDomain s \<le> maxDomain)
-      and valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
+      and no_0_obj' and pspace_aligned' and pspace_distinct')
      \<lbrace>\<acute>target = tcb_ptr_to_ctcb_ptr t\<rbrace> []
      (possibleSwitchTo t ) (Call possibleSwitchTo_'proc)"
   supply if_split[split del]
@@ -2218,18 +2221,19 @@ lemma possibleSwitchTo_ccorres:
   supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
          ccorres_IF_True[simp] if_cong[cong]
   apply (cinit lift: target_')
+   apply (rule ccorres_stateAssert)
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_threadGet, rename_tac scOpt)
    apply (rule_tac val="from_bool (\<exists>scPtr. scOpt = Some scPtr)"
                and xf'=ret__int_'
-               and R="tcb_at' t and bound_sc_tcb_at' ((=) scOpt) t and valid_objs' and no_0_obj'"
+               and R="tcb_at' t and bound_sc_tcb_at' ((=) scOpt) t and valid_tcbs' and no_0_obj'"
                and R'=UNIV
                 in ccorres_symb_exec_r_known_rv)
       apply (rule conseqPre, vcg)
       apply clarsimp
       apply (frule (1) obj_at_cslift_tcb)
       apply normalise_obj_at'
-      apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+      apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
       subgoal
         by (fastforce simp: typ_heap_simps ctcb_relation_def option_to_ptr_def option_to_0_def
                             valid_tcb'_def
@@ -2286,7 +2290,7 @@ lemma possibleSwitchTo_ccorres:
 lemma scheduleTCB_ccorres:
   "ccorres dc xfdc
      ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
-      and tcb_at' thread and valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
+      and tcb_at' thread and no_0_obj' and pspace_aligned' and pspace_distinct')
      \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace> []
      (scheduleTCB thread) (Call scheduleTCB_'proc)"
   supply Collect_const[simp del]
@@ -2444,7 +2448,7 @@ lemma scheduleTCB_ccorres_simple:
 
 lemma setThreadState_ccorres[corres]:
   "ccorres dc xfdc
-     (\<lambda>s. tcb_at' thread s \<and> valid_objs' s \<and> valid_tcb_state' st s
+     (\<lambda>s. tcb_at' thread s \<and> valid_tcb_state' st s
           \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> no_0_obj' s
           \<and> pspace_aligned' s \<and> pspace_distinct' s)
      (\<lbrace>\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := \<acute>ts && mask 4\<rparr>, fl)\<rbrace>
@@ -2988,7 +2992,7 @@ lemmas rf_sr_reply_update2 = rf_sr_obj_update_helper[OF rf_sr_reply_update, simp
 
 lemma reply_unlink_ccorres:
   "ccorres dc xfdc
-    (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'
+    (no_0_obj' and pspace_aligned' and pspace_distinct'
      and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
     (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
     (replyUnlink replyPtr tcbPtr) (Call reply_unlink_'proc)"
@@ -3345,17 +3349,16 @@ lemma tcbReleaseRemove_ccorres:
   apply (fastforce dest: tcbQueueHead_iff_tcbQueueEnd simp: ksReleaseQueue_asrt_def)
   done
 
-(* Note that valid_objs' can be removed from the Haskell guard by asserting valid_objs' within
-   schedContextDonate *)
 lemma schedContext_donate_ccorres:
   "ccorres dc xfdc
-     (sc_at' scPtr and tcb_at' tcbPtr and valid_objs' and no_0_obj'
+     (sc_at' scPtr and tcb_at' tcbPtr and no_0_obj'
       and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and pspace_aligned' and pspace_distinct')
-     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>to = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []
+     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>to = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
      (schedContextDonate scPtr tcbPtr) (Call schedContext_donate_'proc)"
   (is "ccorres _ _ ?abs _ _ _ _")
   supply if_split[split del]
   apply (cinit lift: sc_' to_')
+   apply (rule ccorres_stateAssert)
    apply (rule ccorres_pre_getObject_sc, rename_tac sc)
    apply (rule ccorres_move_c_guard_sc)
    apply (rule_tac xf'=from_'
@@ -3407,7 +3410,7 @@ lemma schedContext_donate_ccorres:
                             split: scheduler_action.splits)
                 apply (ctac add: rescheduleRequired_ccorres)
                apply (rule ccorres_return_Skip)
-              apply (rule_tac Q'="\<lambda>_. ?abs and ko_at' sc scPtr" in hoare_post_imp)
+              apply (rule_tac Q'="\<lambda>_. ?abs and valid_objs' and ko_at' sc scPtr" in hoare_post_imp)
                apply clarsimp
               apply wpsimp
              apply vcg
@@ -3438,13 +3441,13 @@ lemma schedContext_donate_ccorres:
                exspec=rescheduleRequired_modifies)
    apply vcg
   apply normalise_obj_at'
-  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-  apply (clarsimp simp: valid_sched_context'_def option_to_ctcb_ptr_def split: option.splits)
+  apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
+                   simp: valid_sched_context'_def option_to_ctcb_ptr_def split: option.splits)
   done
 
 crunch updateSchedContext
-  for ko_at'_reply[wp]: "\<lambda>s. P (ko_at' (reply :: reply) replyPtr s)"
-  and ko_at'_tcb[wp]: "\<lambda>s. P (ko_at' (tcb :: tcb) replyPtr s)"
+  for ko_at'_tcb[wp]: "\<lambda>s. P (ko_at' (tcb :: tcb) tcbPtr s)"
+  and obj_at'_tcb[wp]: "\<lambda>s. Q (obj_at' (P :: tcb \<Rightarrow> bool) tcbPtr s)"
 
 lemma reply_pop_ccorres:
   "ccorres dc xfdc
@@ -3987,12 +3990,9 @@ lemma cancelIPC_ccorres1:
                  split: thread_state.splits)
       apply (clarsimp simp: invs'_implies valid_objs'_valid_tcbs'
                             sym_ref_BlockedOnReceive_replyObject_linked)
-      apply (simp only: conj_assoc[symmetric])
-      apply (rule conjI)
-       subgoal
-         by (auto simp: st_tcb_at'_def obj_at'_def isTS_defs valid_ep'_def
-                 split: thread_state.splits)
-      subgoal by (auto simp: invs'_implies valid_tcb_state'_def BlockedOnReceive_replyObject_no_0)
+      subgoal
+        by (auto simp: st_tcb_at'_def obj_at'_def isTS_defs valid_ep'_def
+                split: thread_state.splits)
      apply (clarsimp simp: invs'_implies valid_objs'_valid_tcbs'
                            sym_ref_BlockedOnReceive_replyObject_linked)
      apply (case_tac ro)
@@ -4002,16 +4002,7 @@ lemma cancelIPC_ccorres1:
       subgoal
         by (auto simp: obj_at'_def pred_tcb_at'_def valid_ep'_def isTS_defs isRecvEP_def
                 split: thread_state.splits endpoint.splits)
-     apply (clarsimp simp: sym_refs_asrt_def invs'_implies valid_objs'_valid_tcbs'
-                           sym_ref_BlockedOnReceive_replyObject_linked)
-     apply (frule (3) ep_blocked_in_queueD_recv)
-     apply (frule (1) ko_at_valid_ep'[OF _ invs_valid_objs'])
-     apply (simp only: conj_assoc[symmetric])
-     apply (rule conjI)
-      subgoal
-        by (auto simp: obj_at'_def pred_tcb_at'_def valid_ep'_def isTS_defs isRecvEP_def
-                split: thread_state.splits endpoint.splits)
-     subgoal by (auto simp: invs'_implies valid_tcb_state'_def BlockedOnReceive_replyObject_no_0)
+     apply (fastforce dest: sym_ref_BlockedOnReceive_replyObject_linked)
     apply (rule conjI)
      apply (fastforce simp: inQ_def)
     apply (rule conjI)
@@ -4020,18 +4011,9 @@ lemma cancelIPC_ccorres1:
     apply (rule conjI)
      apply (clarsimp simp: invs_valid_objs' BlockedOnSend_ep_at')
     apply clarsimp
-    apply (rule conjI)
-     apply (clarsimp simp: sym_refs_asrt_def invs'_implies)
      subgoal
        by (auto simp: obj_at'_def pred_tcb_at'_def valid_ep'_def isTS_defs isSendEP_def
                split: thread_state.splits endpoint.splits)
-    apply (clarsimp simp: sym_refs_asrt_def invs'_implies valid_objs'_valid_tcbs'
-                          sym_ref_BlockedOnReceive_replyObject_linked)
-    apply (frule (3) ep_blocked_in_queueD_send)
-    apply (frule (1) ko_at_valid_ep'[OF _ invs_valid_objs'])
-    subgoal
-      by (auto simp: obj_at'_def pred_tcb_at'_def valid_ep'_def isTS_defs isSendEP_def
-              split: thread_state.splits endpoint.splits)
    apply vcg
   apply (auto simp: cthread_state_relation_def typ_heap_simps)
   done

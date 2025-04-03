@@ -904,12 +904,9 @@ crunch schedContextResume
 
 lemma schedContextCancelYieldTo_bound_scTCB[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
-  apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (rule hoare_when_cases, simp)
-  apply (wpsimp wp: set_sc'.obj_at' simp: updateSchedContext_def)
-  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
-  done
+  unfolding schedContextCancelYieldTo_def
+  apply (wpsimp wp: set_sc'.obj_at' threadGet_wp simp: updateSchedContext_def)
+  by (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
 
 lemma schedContextUpdateConsumed_bound_scTCB[wp]:
   "schedContextUpdateConsumed tptr \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr\<rbrace>"

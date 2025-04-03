@@ -2739,6 +2739,16 @@ lemma tcbQueued_False_makes_not_inQ:
   apply (wpsimp wp: threadSet_wp)
   by (clarsimp simp: inQ_def opt_pred_def opt_map_def obj_at'_def)
 
+defs valid_tcbs'_asrt_def:
+  "valid_tcbs'_asrt \<equiv> valid_tcbs'"
+
+declare valid_tcbs'_asrt_def[simp]
+
+defs valid_objs'_asrt_def:
+  "valid_objs'_asrt \<equiv> valid_objs'"
+
+declare valid_objs'_asrt_def[simp]
+
 lemma tcbSchedEnqueue_corres:
   "tcb_ptr = tcbPtr \<Longrightarrow>
    corres dc
@@ -2768,6 +2778,7 @@ lemma tcbSchedEnqueue_corres:
    apply (fastforce intro: ksReadyQueues_asrt_cross)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: ksReleaseQueue_asrt_cross)
+  apply (rule corres_stateAssert_ignore, fastforce)
   apply (rule corres_symb_exec_r[OF _ isRunnable_sp]; (solves wpsimp)?)
   apply (rule corres_symb_exec_r[OF _ assert_sp, rotated]; (solves wpsimp)?)
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; (solves wpsimp)?)
@@ -3047,11 +3058,6 @@ declare active_sc_at'_asrt_def[simp]
 lemma ko_at'_valid_tcbs'_valid_tcb':
   "\<lbrakk>ko_at' ko ptr s; valid_tcbs' s\<rbrakk> \<Longrightarrow> valid_tcb' ko s"
   by (fastforce simp: valid_tcbs'_def obj_at'_def)
-
-defs valid_tcbs'_asrt_def:
-  "valid_tcbs'_asrt \<equiv> valid_tcbs'"
-
-declare valid_tcbs'_asrt_def[simp]
 
 definition schedulable' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "schedulable' tcbPtr s' \<equiv>
@@ -5927,6 +5933,7 @@ lemma tcbSchedDequeue_valid_sched_pointers[wp]:
   supply if_split[split del] fun_upd_apply[simp del]
   apply (clarsimp simp: tcbSchedDequeue_def getQueue_def setQueue_def)
   apply (wpsimp wp: threadSet_wp getTCB_wp threadGet_wp simp: tcbQueueRemove_def)
+  apply (thin_tac "valid_objs' s")
   apply normalise_obj_at'
   apply (rename_tac tcb)
   apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
@@ -6536,6 +6543,7 @@ lemma tcbSchedDequeue_corres:
    apply (fastforce intro: ready_or_release_cross)
   apply (rule corres_stateAssert_implied[where P=P and P'=P for P, simplified, rotated])
    apply (fastforce intro: ksReadyQueues_asrt_cross)
+  apply (rule corres_stateAssert_ignore, fastforce)
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; (solves wpsimp)?)
   apply (rule corres_if_strong'; fastforce?)
    apply (intro iffI)
@@ -6682,6 +6690,7 @@ lemma tcbReleaseRemove_valid_mdb'[wp]:
 
 crunch setReprogramTimer
   for obj_at'[wp]: "\<lambda>s. Q (obj_at' P ptr s)"
+  and valid_tcbs'[wp]: valid_tcbs'
 
 lemma tcbReleaseRemove_valid_sched_pointers[wp]:
   "\<lbrace>valid_sched_pointers and sym_heap_sched_pointers\<rbrace>

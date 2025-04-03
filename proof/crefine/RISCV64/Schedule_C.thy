@@ -515,7 +515,7 @@ crunch getSchedContext, isRoundRobin
 
 lemma refill_size_ccorres:
   "ccorres (\<lambda>rv rv'. rv = unat rv') ret__unsigned_long_'
-     (sc_at' scPtr and valid_objs' and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (sc_at' scPtr and valid_objs' and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
      (getRefillSize scPtr) (Call refill_size_'proc)"
   supply len_bit0[simp del]
   apply (cinit lift: sc_', rename_tac sc)
@@ -991,7 +991,7 @@ lemma charge_entire_head_refill_ccorres:
   done
 
 lemma no_ofail_headRefillOverrun[wp]:
-  "no_ofail (active_sc_at' scPtr) (headRefillOverrun scPtr usage)"
+  "no_ofail (valid_objs' and active_sc_at' scPtr) (headRefillOverrun scPtr usage)"
   unfolding headRefillOverrun_def
   by wpsimp
 
@@ -1004,7 +1004,7 @@ lemmas no_fail_getRefillFull[wp] =
   no_ofail_gets_the[OF no_ofail_readRefillFull, simplified getRefillFull_def[symmetric]]
 
 lemma no_ofail_readRefillTail[wp]:
-  "no_ofail (active_sc_at' scPtr) (readRefillTail scPtr)"
+  "no_ofail (valid_objs' and active_sc_at' scPtr) (readRefillTail scPtr)"
   unfolding readRefillTail_def ohaskell_state_assert_def
   by (wpsimp wp: no_ofail_readSchedContext simp: active_sc_at'_rewrite)
 
@@ -1263,7 +1263,7 @@ lemma merge_nonoverlapping_head_refill_ccorres:
   done
 
 lemma no_ofail_refillHdInsufficient[wp]:
-  "no_ofail (active_sc_at' scPtr) (refillHdInsufficient scPtr)"
+  "no_ofail (valid_objs' and active_sc_at' scPtr) (refillHdInsufficient scPtr)"
   unfolding refillHdInsufficient_def
   by wpsimp
 
@@ -1334,16 +1334,17 @@ lemma refill_budget_check_ccorres:
                                state_assert_def get_def assert_def fail_def
                         split: if_splits)
          apply (intro conjI impI)
-          apply (rule_tac x="(sc, s)" in bexI[rotated])
-           apply (fastforce intro: getObject_eq)
-          apply (drule refill_buffer_relation_crefill_relation)
-          apply (clarsimp simp: Let_def)
-          apply (drule_tac x=scPtr in spec)
-          apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
-          apply (drule_tac x="scRefillHead sc" in spec)
-          apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
-                                typ_heap_simps csched_context_relation_def refillHd_def
-                                sc_ptr_to_crefill_ptr_def)
+           apply (rule_tac x="(sc, s)" in bexI[rotated])
+            apply (fastforce intro: getObject_eq)
+           apply (drule refill_buffer_relation_crefill_relation)
+           apply (clarsimp simp: Let_def)
+           apply (drule_tac x=scPtr in spec)
+           apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
+           apply (drule_tac x="scRefillHead sc" in spec)
+           apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
+                                 typ_heap_simps csched_context_relation_def refillHd_def
+                                 sc_ptr_to_crefill_ptr_def)
+          apply fastforce
          apply (clarsimp simp: active_sc_at'_rewrite)
         apply ceqv
        apply csymbr
@@ -2127,17 +2128,18 @@ lemma setNextInterrupt_ccorres:
                                 state_assert_def get_def assert_def fail_def
                          split: if_splits)
           apply (intro conjI impI)
-           apply (rule_tac x="(sc, s)" in bexI[rotated])
-            apply (fastforce intro: getObject_eq)
-           apply (drule refill_buffer_relation_crefill_relation)
-           apply (clarsimp simp: Let_def)
-           apply (drule_tac x=scPtr in spec)
-           apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
-           apply (drule_tac x="scRefillHead sc" in spec)
-           apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
-                                 typ_heap_simps csched_context_relation_def refillHd_def
-                                 sc_ptr_to_crefill_ptr_def ctcb_relation_def)
-           apply (metis h_val_clift' ptr_val.simps)
+            apply (rule_tac x="(sc, s)" in bexI[rotated])
+             apply (fastforce intro: getObject_eq)
+            apply (drule refill_buffer_relation_crefill_relation)
+            apply (clarsimp simp: Let_def)
+            apply (drule_tac x=scPtr in spec)
+            apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
+            apply (drule_tac x="scRefillHead sc" in spec)
+            apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
+                                  typ_heap_simps csched_context_relation_def refillHd_def
+                                  sc_ptr_to_crefill_ptr_def ctcb_relation_def)
+            apply (metis h_val_clift' ptr_val.simps)
+           apply fastforce
           apply (clarsimp simp: active_sc_at'_rewrite)
          apply ceqv
         apply (rename_tac ct_head_refill ct_head_refill')
@@ -2243,18 +2245,19 @@ lemma setNextInterrupt_ccorres:
                                               state_assert_def get_def assert_def fail_def
                                        split: if_splits)
                         apply (intro conjI impI)
-                         apply (rule_tac x="(sc, s)" in bexI[rotated])
-                          apply (fastforce intro: getObject_eq)
-                         apply (drule refill_buffer_relation_crefill_relation)
-                         apply (clarsimp simp: Let_def)
-                         apply (drule_tac x=rqScPtr in spec)
-                         apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
-                         apply (drule_tac x="scRefillHead sc" in spec)
-                         apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def
-                                               opt_map_def csched_context_relation_def refillHd_def
-                                               sc_ptr_to_crefill_ptr_def typ_heap_simps' obj_at'_def
-                                               valid_tcb'_def ctcb_relation_def)
-                         apply (metis h_val_clift' ptr_val.simps)
+                          apply (rule_tac x="(sc, s)" in bexI[rotated])
+                           apply (fastforce intro: getObject_eq)
+                          apply (drule refill_buffer_relation_crefill_relation)
+                          apply (clarsimp simp: Let_def)
+                          apply (drule_tac x=rqScPtr in spec)
+                          apply (clarsimp simp: dyn_array_list_rel_pointwise obj_at'_def)
+                          apply (drule_tac x="scRefillHead sc" in spec)
+                          apply (clarsimp simp: valid_sched_context'_def is_active_sc'_def opt_pred_def
+                                                opt_map_def csched_context_relation_def refillHd_def
+                                                sc_ptr_to_crefill_ptr_def typ_heap_simps' obj_at'_def
+                                                valid_tcb'_def ctcb_relation_def)
+                          apply (metis h_val_clift' ptr_val.simps)
+                         apply fastforce
                         apply (clarsimp simp: active_sc_at'_rewrite)
                        apply ceqv
                       apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])

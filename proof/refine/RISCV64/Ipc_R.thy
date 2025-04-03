@@ -3595,6 +3595,7 @@ lemma tcbReleaseEnqueue_corres:
    apply (fastforce intro: ksReadyQueues_asrt_cross)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: ksReleaseQueue_asrt_cross)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule corres_symb_exec_r[rotated, OF isRunnable_sp]; wpsimp?)
   apply (rule corres_symb_exec_r_conj_ex_abs_forwards[rotated, OF assert_sp]; wpsimp)
   apply (fastforce dest: st_tcb_at_runnable_cross
@@ -3843,8 +3844,9 @@ lemma postpone_corres:
      (pspace_aligned' and pspace_distinct' and pspace_bounded'
       and valid_objs' and sym_heap_sched_pointers and valid_sched_pointers)
      (SchedContext_A.postpone ptr) (postpone ptr)"
+  apply (clarsimp simp: SchedContext_A.postpone_def postpone_def get_sc_obj_ref_def)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule stronger_corres_guard_imp)
-    apply (clarsimp simp: SchedContext_A.postpone_def postpone_def get_sc_obj_ref_def)
     apply (rule_tac r'="\<lambda>sc sca. \<exists>n. sc_relation sc n sca" in corres_split)
        apply (rule get_sc_corres)
       apply (rule corres_assert_opt_assume_l)
@@ -3894,6 +3896,7 @@ lemma schedContextResume_corres:
       and sym_heap_sched_pointers and valid_sched_pointers)
      (sched_context_resume ptr) (schedContextResume ptr)"
   apply (simp only: sched_context_resume_def schedContextResume_def)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule stronger_corres_guard_imp)
     apply clarsimp
     apply (rule_tac r'="\<lambda>sc sca. \<exists>n. sc_relation sc n sca" in corres_split)
@@ -6176,7 +6179,7 @@ lemma cancelIPC_replyTCBs_of_None:
                                refs_of_rev' get_refs_def ko_wp_at'_def opt_map_def
                         split: option.splits if_splits)
         \<comment> \<open>BlockedOnReply\<close>
-        apply (wp gts_wp' updateReply_obj_at'_inv
+        apply (wp stateAssert_inv gts_wp' updateReply_obj_at'_inv
                   hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
                | rule threadSet_pred_tcb_no_state
                | simp add: replyRemoveTCB_def cleanReply_def if_fun_split)+

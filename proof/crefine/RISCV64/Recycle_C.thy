@@ -1043,7 +1043,6 @@ lemma cancelBadgedSends_ccorres:
              apply (ctac add: rescheduleRequired_ccorres)
             apply (rule hoare_pre, wp weak_sch_act_wf_lift_linear set_ep_valid_objs')
             apply (clarsimp simp: weak_sch_act_wf_def sch_act_wf_def)
-            apply (fastforce simp: valid_ep'_def pred_tcb_at' split: list.splits)
            apply (simp add: guard_is_UNIV_def)
           apply (rule allI)
           apply (rename_tac a lista x)

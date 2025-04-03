@@ -4392,7 +4392,7 @@ lemma timeAfter_SomeTrueD:
   by (clarsimp dest!: threadRead_SomeD split: if_splits)
 
 lemma no_ofail_readReadyTime[wp]:
-  "no_ofail (active_sc_at' scPtr) (readReadyTime scPtr)"
+  "no_ofail (valid_objs' and active_sc_at' scPtr) (readReadyTime scPtr)"
   unfolding readReadyTime_def
   by wpsimp
 
@@ -4523,7 +4523,7 @@ lemma find_time_after_ccorres:
 
 lemma tcbReleaseEnqueue_ccorres:
   "ccorres dc xfdc
-     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
+     (no_0_obj' and pspace_aligned' and pspace_distinct')
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> []
      (tcbReleaseEnqueue tcbPtr) (Call tcbReleaseEnqueue_'proc)"
   apply (cinit lift: tcb_' simp: orM_def ifM_def)
@@ -4631,7 +4631,7 @@ lemma tcbReleaseEnqueue_ccorres:
               apply (ctac (no_vcg) add: tcb_queue_insert_ccorres)
                apply ctac
               apply wpsimp
-             apply (rule_tac Q'="\<lambda>_. tcb_at' tcbPtr and valid_objs'" in hoare_post_imp)
+             apply (rule_tac Q'="\<lambda>_. tcb_at' tcbPtr and valid_tcbs'" in hoare_post_imp)
               apply (clarsimp simp: findTimeAfter_asrt_def)
              apply wpsimp+
           apply (clarsimp simp: guard_is_UNIV_def ctcb_queue_relation_def
@@ -4654,10 +4654,11 @@ lemma tcbReleaseEnqueue_ccorres:
 
 lemma postpone_ccorres:
   "ccorres dc xfdc
-     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
+     (no_0_obj' and pspace_aligned' and pspace_distinct')
      \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (postpone scPtr) (Call postpone_'proc)"
   apply (cinit lift: sc_')
+   apply (rule ccorres_stateAssert)
    apply (rule ccorres_pre_getObject_sc)
    apply clarsimp
    apply (rename_tac sc)
@@ -6122,17 +6123,17 @@ lemmas ccorres_pre_getBoundNotification = ccorres_pre_threadGet[where f=tcbBound
 
 lemma schedContext_resume_ccorres:
   "ccorres dc xfdc
-     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct')
-     \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
+     (no_0_obj' and pspace_aligned' and pspace_distinct') \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
      (schedContextResume scPtr) (Call schedContext_resume_'proc)"
   supply Collect_const[simp del]
   apply (cinit lift: sc_')
+   apply (rule ccorres_stateAssert)
    apply (rule ccorres_pre_getObject_sc)
    apply (clarsimp, rename_tac sc)
    apply (rule ccorres_assert2)
    apply (rule_tac xf'=ret__int_'
                and val="from_bool True"
-               and R="ko_at' sc scPtr and valid_objs' and no_0_obj'"
+               and R="ko_at' sc scPtr and no_0_obj'"
                and R'=UNIV
                 in ccorres_symb_exec_r_known_rv)
       apply (rule conseqPre, vcg, clarsimp)
@@ -6174,11 +6175,7 @@ lemma schedContext_resume_ccorres:
            apply wpsimp+
        apply (vcg exspec=refill_ready_modifies)
       apply (rule ccorres_return_Skip)
-     apply clarsimp
-     apply (rule_tac Q'="\<lambda>_. valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'"
-                  in hoare_post_imp)
-      apply clarsimp
-     apply wpsimp
+     apply (wpsimp wp: getSchedulable_wp)
     apply (vcg exspec=isSchedulable_modifies)
    apply vcg
   apply (rule conjI)
@@ -6295,7 +6292,7 @@ crunch schedContextResume
 
 lemma schedContext_bindTCB_ccorres:
   "ccorres dc xfdc
-     (tcb_at' tcbPtr and sc_at' scPtr and valid_objs' and no_0_obj'
+     (tcb_at' tcbPtr and sc_at' scPtr and no_0_obj'
       and pspace_aligned' and pspace_distinct' and pspace_bounded'
       and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
      (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace>) hs
@@ -6385,18 +6382,13 @@ lemma schedContext_bindTCB_ccorres:
               apply (rule ccorres_return_Skip)
              apply (wpsimp wp: getSchedulable_wp)
             apply (vcg exspec=isSchedulable_modifies)
-           apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> no_0_obj' s
-                                     \<and> pspace_aligned' s \<and> pspace_distinct' s
-                                     \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> tcb_at' tcbPtr s"
-                        in hoare_post_imp)
-            apply fastforce
-           apply wpsimp
+           apply (wpsimp wp: hoare_drop_imps)
           apply (vcg exspec=schedContext_resume_modifies)
          apply (wpsimp wp: refillUnblockCheck_invs')
         apply (vcg exspec=refill_unblock_check_modifies exspec=sc_sporadic_modifies
                    exspec=sc_active_modifies)
        apply (vcg exspec=sc_sporadic_modifies)
-      apply (rule_tac Q'="\<lambda>_ s. valid_objs' s \<and> no_0_obj' s
+      apply (rule_tac Q'="\<lambda>_ s. no_0_obj' s
                                 \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s
                                 \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> tcb_at' tcbPtr s"
                    in hoare_post_imp)
@@ -6665,15 +6657,7 @@ lemma maybeReturnSchedContext_ccorres:
           apply (drule Some_to_the)
           apply (wpsimp wp: updateSchedContext_valid_objs' hoare_vcg_imp_lift')
          apply vcg
-        apply (wpsimp wp: hoare_vcg_imp_lift')
-        apply (rule_tac Q'="\<lambda>_. sc_at' (the (ntfnSc ntfn)) and valid_objs' and no_0_obj'
-                               and pspace_aligned' and pspace_distinct'"
-                     in hoare_post_imp)
-         apply (clarsimp simp: opt_pred_def opt_map_def valid_obj'_def valid_sched_context'_def
-                               valid_sched_context_size'_def obj_at'_def refillSize_def
-                               objBits_simps
-                        split: option.splits if_splits)
-        apply wpsimp
+        apply (wpsimp wp: hoare_drop_imps)
        apply vcg
       apply (rule ccorres_return_Skip)
      apply vcg

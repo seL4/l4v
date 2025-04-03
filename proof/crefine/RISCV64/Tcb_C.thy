@@ -3599,7 +3599,7 @@ lemma isBlocked_ccorres:
 
 lemma sc_released_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     valid_objs' {s. sc_' s = sched_context_Ptr scPtr} []
+     \<top> \<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace> hs
      (scReleased scPtr) (Call sc_released_'proc)"
   apply (cinit lift: sc_' simp: readScReleased_def scActive_def[symmetric])
    apply (ctac add: sc_active_ccorres)

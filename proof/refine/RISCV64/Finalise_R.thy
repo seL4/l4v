@@ -2466,12 +2466,13 @@ lemma replyPop_valid_replies'[wp]:
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   unfolding replyPop_def
-  supply if_split[split del]
-  apply (wpsimp wp: hoare_vcg_imp_lift'
-         | wpsimp wp: updateReply_valid_replies'_bound hoare_vcg_all_lift
-                      hoare_vcg_ex_lift hoare_vcg_if_lift2 gts_wp')+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+                apply (wpsimp wp: updateReply_valid_replies'_bound hoare_vcg_all_lift
+                                  hoare_vcg_ex_lift hoare_vcg_if_lift2 gts_wp'
+                                  hoare_drop_imp[where Q'="\<lambda>_ s. replyTCBs_of s replyPtr = _"]
+                                  hoare_vcg_imp_lift')+
   apply normalise_obj_at'
-  apply (rename_tac replyPrev_ptr)
+  apply (rename_tac replyPrev_ptr reply)
   apply (drule_tac rptr=replyPrev_ptr in valid_replies'D)
    apply (frule reply_sym_heap_Prev_Next)
    apply (frule_tac p=replyPtr in sym_heapD1)

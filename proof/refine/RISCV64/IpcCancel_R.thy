@@ -59,7 +59,7 @@ crunch cancelIPC, cancelSignal
   (* FIXME RT: VER-1016 *)
   for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' p s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps cancelSignal_tcb_at' simp: crunch_simps pred_tcb_at'_def)
+  (wp: hoare_vcg_all_lift crunch_wps cancelSignal_tcb_at' simp: crunch_simps pred_tcb_at'_def)
 
 crunch emptySlot
  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
@@ -672,6 +672,7 @@ lemma replyRemoveTCB_corres:
   apply (rule_tac Q'="st_tcb_at' ((=) (thread_state.BlockedOnReply (Some rp))) t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
   apply (clarsimp simp: reply_remove_tcb_def replyRemoveTCB_def isReply_def)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getThreadState_corres])
       apply (rule corres_assert_gen_asm_l)
@@ -1830,7 +1831,7 @@ crunch cancelIPC
   and ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   and pspace_domain_valid[wp]: pspace_domain_valid
   and ntfn_at'[wp]: "ntfn_at' t"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: hoare_vcg_all_lift crunch_wps simp: crunch_simps)
 
 crunch cancelSignal, replyRemoveTCB
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
@@ -3239,10 +3240,8 @@ lemma possibleSwitchTo_unlive_other:
   "\<lbrace>ko_wp_at' (Not \<circ> live') p and K (p \<noteq> t) and valid_tcbs'\<rbrace>
    possibleSwitchTo t
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') p\<rbrace>"
-  apply (simp add: possibleSwitchTo_def inReleaseQueue_def)
-  apply (wpsimp wp: tcbSchedEnqueue_unlive_other threadGet_wp rescheduleRequired_unlive)+
-  apply (auto simp: obj_at'_def ko_wp_at'_def)
-  done
+  unfolding possibleSwitchTo_def inReleaseQueue_def
+  by (wpsimp wp: tcbSchedEnqueue_unlive_other threadGet_wp rescheduleRequired_unlive)+
 
 lemma setThreadState_Inactive_unlive:
   "setThreadState Inactive tptr \<lbrace>ko_wp_at' (Not o live') p\<rbrace>"
