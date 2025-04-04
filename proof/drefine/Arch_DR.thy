@@ -598,7 +598,7 @@ lemma decode_invocation_archcap_corres:
      invoked_cap' = cap.ArchObjectCap x \<rbrakk> \<Longrightarrow>
     dcorres (dc \<oplus> (\<lambda>rv rv'. \<exists>ai. rv' = Invocations_A.InvokeArchObject ai
                        \<and> arch_invocation_relation rv ai))
-         \<top> (invs and valid_etcbs and valid_cap invoked_cap'
+         \<top> (invs and valid_cap invoked_cap'
                  and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
                  and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at ((=) (fst x)) (snd x) s))
         (Decode_D.decode_invocation invoked_cap invoked_cap_ref excaps intent)
@@ -1015,7 +1015,7 @@ qed
 
 
 lemma set_object_simple_corres:
-  "\<lbrakk> obj = transform_object undefined 0 (Some etcb') obj' \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> obj = transform_object undefined 0 obj' \<rbrakk> \<Longrightarrow>
    dcorres dc \<top> (not_idle_thread ptr
              and obj_at (\<lambda>obj. \<not> is_tcb obj \<and> same_caps obj' obj \<and> obj_bits obj = obj_bits obj') ptr)
       (KHeap_D.set_object ptr obj) (KHeap_A.set_object ptr obj')"
@@ -1114,7 +1114,7 @@ lemma set_cap_opt_cap:
 lemma set_cap_corres_stronger:
 assumes rules: "\<And>s.  P cap' s \<Longrightarrow> cap = transform_cap cap'"  "slot = transform_cslot_ptr slot'"
 shows "dcorres dc \<top>
-           (\<lambda>s. P cap' s \<and> valid_idle s \<and> fst slot' \<noteq> idle_thread s \<and> valid_etcbs s)
+           (\<lambda>s. P cap' s \<and> valid_idle s \<and> fst slot' \<noteq> idle_thread s)
            (KHeap_D.set_cap slot cap)
            (CSpaceAcc_A.set_cap cap' slot')"
 (* corres_req2 *)
@@ -1126,7 +1126,7 @@ shows "dcorres dc \<top>
 
 lemma invoke_page_table_corres:
   "transform_page_table_inv ptinv' = Some ptinv \<Longrightarrow>
-   dcorres dc \<top> (valid_pti ptinv' and invs and valid_etcbs)
+   dcorres dc \<top> (valid_pti ptinv' and invs)
     (invoke_page_table ptinv) (perform_page_table_invocation ptinv')"
   apply (simp add: invoke_page_table_def perform_page_table_invocation_def)
   apply (clarsimp simp: transform_page_table_inv_def
@@ -1202,7 +1202,7 @@ lemma invoke_page_table_corres:
        apply (wp store_pte_cte_wp_at)
       apply fastforce
      apply wpsimp+
-    apply (rule_tac Q'="\<lambda>rv s. invs s \<and> valid_etcbs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
+    apply (rule_tac Q'="\<lambda>rv s. invs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
                               caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
      apply wp
     apply (clarsimp simp:invs_def valid_state_def)
@@ -1392,7 +1392,7 @@ declare cleanCacheRange_PoU_underlying_memory[wp]
 
 lemma invoke_page_directory_corres:
   "transform_page_dir_inv ip' = Some ip  \<Longrightarrow>
-   dcorres dc \<top> (invs  and valid_pdpt_objs and valid_etcbs)
+   dcorres dc \<top> (invs  and valid_pdpt_objs)
     (invoke_page_directory ip) (perform_page_directory_invocation ip')"
   apply (clarsimp simp:invoke_page_directory_def)
   apply (case_tac ip')
@@ -1450,7 +1450,7 @@ lemma ct_active_not_idle_etc:
 
 lemma invoke_page_corres:
   "transform_page_inv ip' = Some ip  \<Longrightarrow>
-   dcorres dc \<top> (valid_page_inv ip' and invs and page_inv_duplicates_valid ip' and valid_pdpt_objs and valid_etcbs and ct_active)
+   dcorres dc \<top> (valid_page_inv ip' and invs and page_inv_duplicates_valid ip' and valid_pdpt_objs and ct_active)
     (invoke_page ip) (perform_page_invocation ip')"
   supply if_cong[cong]
   apply (clarsimp simp:invoke_page_def)
@@ -1543,8 +1543,7 @@ lemma invoke_page_corres:
           apply (clarsimp simp: transform_mapping_def update_map_data_def)
          apply (wp get_cap_cte_wp_at_rv unmap_page_pred_tcb_at |
                 clarsimp simp:valid_idle_def not_idle_thread_def)+
-     apply (rule_tac Q'="\<lambda>rv s. valid_etcbs s \<and>
-                               idle_tcb_at (\<lambda>(st, ntfn, arch). idle st \<and> ntfn = None \<and> valid_arch_idle arch)
+     apply (rule_tac Q'="\<lambda>rv s. idle_tcb_at (\<lambda>(st, ntfn, arch). idle st \<and> ntfn = None \<and> valid_arch_idle arch)
                                            (idle_thread s) s \<and>
                                a \<noteq> idle_thread s \<and> idle_thread s = idle_thread_ptr \<and> cte_wp_at \<top> (a,b) s \<and>
                                caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
@@ -1578,11 +1577,6 @@ lemma invoke_page_corres:
 
 declare tl_drop_1[simp]
 
-lemma valid_etcbs_clear_um_detype:
-  "\<lbrakk> valid_etcbs s \<rbrakk> \<Longrightarrow> valid_etcbs (clear_um {frame..frame + 2 ^ pageBits - 1} (Retype_A.detype {frame..frame + 2 ^ pageBits - 1} s))"
-  by (clarsimp simp: valid_etcbs_def st_tcb_at_def is_etcb_at_def st_tcb_at_kh_def
-                     obj_at_kh_def obj_at_def detype_def detype_ext_def clear_um_def)
-
 lemma unat_map_upd:
   "unat_map (Some \<circ> transform_asid_table_entry \<circ> (asid_table as)(asid_high_bits_of base \<mapsto> frame)) =
    (unat_map (Some \<circ> transform_asid_table_entry \<circ> asid_table as))
@@ -1607,7 +1601,7 @@ lemma invoke_asid_control_corres:
         is_aligned_neg_mask_weaken[simp del]
   shows
   "dcorres dc \<top>
-    (invs and ct_active and valid_aci asid_inv' and valid_etcbs)
+    (invs and ct_active and valid_aci asid_inv')
     (invoke_asid_control asid_inv)
     (perform_asid_control_invocation asid_inv')"
   using assms
@@ -1631,7 +1625,7 @@ proof -
   have p2bits: "2 ^ pageBits \<le> 2 ^ pageBits - Suc 0 \<Longrightarrow> False"
     by (simp add:pageBits_def)
 
-  assume misc: "invs (s' :: det_ext state)" "ct_active s'" "valid_etcbs s'"
+  assume misc: "invs (s' :: det_ext state)" "ct_active s'"
         "caps_of_state s' cnode_ref = Some cap.NullCap"
         "ex_cte_cap_wp_to Structures_A.is_cnode_cap cnode_ref s'"
         "cnode_ref \<noteq> cref"
@@ -1681,7 +1675,7 @@ proof -
              apply (rule_tac Q'="\<lambda>rv s. cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) cref s
                                        \<and> asid_pool_at frame s
                                        \<and> cte_wp_at ((=) cap.NullCap) cnode_ref s
-                                       \<and> ex_cte_cap_to cnode_ref s \<and> invs s \<and> valid_etcbs s"
+                                       \<and> ex_cte_cap_to cnode_ref s \<and> invs s"
                              in hoare_post_imp)
               apply (clarsimp simp: cte_wp_at_caps_of_state)
               apply (frule(1) caps_of_state_valid[where p = cref])
@@ -1715,7 +1709,7 @@ proof -
                       in hoare_gen_asm)
       apply (simp add: delete_objects_rewrite[unfolded word_size_bits_def] is_aligned_neg_mask_eq)
       apply (rule_tac Q'="\<lambda>_ s.
-             invs s \<and> valid_etcbs s \<and> pspace_no_overlap_range_cover frame pageBits s \<and>
+             invs s \<and> pspace_no_overlap_range_cover frame pageBits s \<and>
              descendants_range_in (untyped_range (cap.UntypedCap False frame pageBits idx)) cref s \<and>
              cte_wp_at ((=) (cap.UntypedCap False frame pageBits idx)) cref s \<and>
              cte_wp_at ((=) cap.NullCap) cnode_ref s \<and>
@@ -1765,7 +1759,6 @@ proof -
      apply (simp add: pageBits_def word_bits_conv asid_low_bits_def)
     apply (clarsimp simp: untyped_range.simps detype_clear_um_independent)
     apply (intro conjI)
-          apply (rule valid_etcbs_clear_um_detype, simp)
          apply (erule pspace_no_overlap_detype; clarsimp)
         apply (clarsimp simp: descendants_range_in_def)
        apply (erule cap_to_protected[OF ex_cte_cap_wp_to_weakenE]; fastforce simp:cte_wp_at_caps_of_state)
@@ -1788,7 +1781,7 @@ lemma dcorres_assert_assume:
 lemma invoke_asid_pool_corres:
   "arch_invocation_relation (InvokeAsidPool ap_inv)
                             (arch_invocation.InvokeASIDPool ap_inv') \<Longrightarrow>
-   dcorres dc \<top> (invs and valid_apinv ap_inv' and valid_etcbs)
+   dcorres dc \<top> (invs and valid_apinv ap_inv')
     (invoke_asid_pool ap_inv)
     (perform_asid_pool_invocation ap_inv')"
   apply (rule dcorres_expand_pfx)
@@ -1819,7 +1812,7 @@ lemma invoke_arch_corres:
    \<Longrightarrow> dcorres (dc \<oplus> dc) (\<lambda>_. True)
    (invs and ct_active and valid_arch_inv arch_invok
          and invocation_duplicates_valid (Invocations_A.InvokeArchObject arch_invok)
-         and valid_pdpt_objs and valid_etcbs)
+         and valid_pdpt_objs)
    (Syscall_D.perform_invocation block call_m invok)
     (arch_perform_invocation arch_invok)"
   apply (clarsimp simp: arch_perform_invocation_def valid_arch_inv_def)

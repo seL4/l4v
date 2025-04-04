@@ -75,26 +75,26 @@ lemma delete_asid_pas_refined[wp]:
                  in hoare_strengthen_post[rotated])
      defer
      apply wpsimp+
-  apply (clarsimp simp: pas_refined_def)
-  apply (intro conjI)
-    apply (clarsimp simp: state_objs_to_policy_def)
-    apply (subst (asm) caps_of_state_fun_upd[simplified fun_upd_def])
-     apply (clarsimp simp: obj_at_def)
-    apply (erule subsetD)
-    apply (clarsimp simp: auth_graph_map_def)
-    apply (rule exI, rule conjI, rule refl)+
-    apply (erule state_bits_to_policy_vrefs_subseteq)
-        apply clarsimp
-       apply (clarsimp simp: all_ext thread_st_auth_def tcb_states_of_state_def get_tcb_def obj_at_def)
-      apply (clarsimp simp: all_ext thread_bound_ntfns_def get_tcb_def obj_at_def)
+  apply (erule pas_refined_subsets_tcb_domain_map_wellformed)
+      apply (clarsimp simp: state_objs_to_policy_def)
+      apply (subst (asm) caps_of_state_fun_upd[simplified fun_upd_def])
+       apply (clarsimp simp: obj_at_def)
+      apply (erule state_bits_to_policy_vrefs_subseteq)
+          apply clarsimp
+         apply (clarsimp simp: all_ext thread_st_auth_def tcb_states_of_state_def get_tcb_def obj_at_def)
+        apply (clarsimp simp: all_ext thread_bound_ntfns_def get_tcb_def obj_at_def)
+       apply clarsimp
+      apply (rule allI[OF state_vrefs_clear_asid_pool]; simp)
      apply clarsimp
-    apply (rule allI[OF state_vrefs_clear_asid_pool]; simp)
+     apply (erule state_asids_to_policy_vrefs_subseteq)
+       apply (fastforce simp: obj_at_def caps_of_state_fun_upd[simplified fun_upd_def])
+      apply (rule allI[OF state_vrefs_clear_asid_pool]; fastforce)
+     apply fastforce
+    apply (fastforce simp: obj_at_def caps_of_state_fun_upd[simplified fun_upd_def])
+   apply (subst tcb_domain_map_wellformed_etcbs_of[where P="kheap_update f" for f])
+    apply (fastforce simp: etcbs_of'_def obj_at_def split: option.splits)
    apply clarsimp
-   apply (erule subsetD, erule state_asids_to_policy_vrefs_subseteq)
-     apply (fastforce simp: obj_at_def caps_of_state_fun_upd[simplified fun_upd_def])
-    apply (rule allI[OF state_vrefs_clear_asid_pool]; fastforce)
-   apply fastforce
-  apply (fastforce simp: obj_at_def caps_of_state_fun_upd[simplified fun_upd_def])
+  apply clarsimp
   done
 
 lemma arch_finalise_cap_pas_refined[wp]:
