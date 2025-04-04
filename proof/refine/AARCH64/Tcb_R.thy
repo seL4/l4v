@@ -1698,7 +1698,7 @@ lemmas word_to_tcb_flags_simps = word_to_tcb_flags_subtract word_to_tcb_flags_un
 lemma postSetFlags_corres[corres]:
   "flags = word_to_tcb_flags flags' \<Longrightarrow>
    corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
-         (arch_post_set_flags  t flags) (postSetFlags t flags')"
+     (arch_post_set_flags  t flags) (postSetFlags t flags')"
   unfolding arch_post_set_flags_def postSetFlags_def
   by (corres term_simp: isFlagSet_set)
 
@@ -1736,8 +1736,9 @@ where
 | "tcbinv_relation (tcb_invocation.SetTLSBase ref w) x
     = (x = tcbinvocation.SetTLSBase ref w)"
 | "tcbinv_relation (tcb_invocation.SetFlags ref clears sets) x
-    = (\<exists>clears' sets'. clears = word_to_tcb_flags clears' \<and> sets = word_to_tcb_flags sets' \<and>
-       x = tcbinvocation.SetFlags ref clears' sets')"
+    = (\<exists>clears' sets'.
+         clears = word_to_tcb_flags clears' \<and> sets = word_to_tcb_flags sets' \<and>
+         x = tcbinvocation.SetFlags ref clears' sets')"
 
 primrec
   tcb_inv_wf' :: "tcbinvocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -2721,10 +2722,9 @@ lemma decodeSetTLSBase_wf:
 
 lemma decodeSetFlags_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
-     decodeSetFlags w (capability.ThreadCap t)
+   decodeSetFlags w (capability.ThreadCap t)
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
-  apply (simp add: decodeSetFlags_def)
-  by wpsimp
+  by (wpsimp simp: decodeSetFlags_def)
 
 lemma decodeTCBInv_wf:
   "\<lbrace>invs' and tcb_at' t and cte_at' slot and ex_nonz_cap_to' t

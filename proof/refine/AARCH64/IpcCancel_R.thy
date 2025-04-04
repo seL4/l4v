@@ -2372,7 +2372,7 @@ lemma archThreadGet_wp:
 crunch prepareThreadDelete
   for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
   and inactive: "st_tcb_at' ((=) Inactive) t'"
-  (simp: obj_at'_not_o)
+  (simp: obj_at'_not_comp_fold)
 
 end
 end

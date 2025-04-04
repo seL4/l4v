@@ -2695,12 +2695,12 @@ lemma obj_at'_ko_at'_prop:
   "ko_at' ko t s \<Longrightarrow> obj_at' P t s = P ko"
   by (drule obj_at_ko_at', clarsimp simp: obj_at'_def)
 
-lemma ko_wp_at'_not_o:
-  "ko_wp_at' (\<lambda>a. \<not> P a) t s = ko_wp_at' (Not o P) t s"
+lemma ko_wp_at'_not_comp_fold:
+  "ko_wp_at' (\<lambda>a. \<not> P a) t s = ko_wp_at' (Not \<circ> P) t s"
   by (simp add: ko_wp_at'_def)
 
-lemma obj_at'_not_o:
-  "obj_at' (\<lambda>a. \<not> P a) t s =  obj_at' (Not o P) t s"
+lemma obj_at'_not_comp_fold:
+  "obj_at' (\<lambda>a. \<not> P a) t s =  obj_at' (Not \<circ> P) t s"
   by (simp add: obj_at'_def)
 
 lemma valid_refs'_cteCaps:

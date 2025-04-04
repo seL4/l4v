@@ -3185,7 +3185,7 @@ lemma dissociateVCPUTCB_hyp_unlive[wp]:
 
 crunch fpuRelease
   for hyp_unlive[wp]: "ko_wp_at' (Not \<circ> hyp_live') ptr"
-  (simp: ko_wp_at'_not_o)
+  (simp: ko_wp_at'_not_comp_fold)
 
 lemma prepareThreadDelete_hyp_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> prepareThreadDelete t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"

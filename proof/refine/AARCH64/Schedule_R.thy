@@ -259,7 +259,7 @@ lemma lazyFpuRestore_corres[corres]:
   "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and tcb_at t) \<top>
              (lazy_fpu_restore t) (lazyFpuRestore t)"
   unfolding lazy_fpu_restore_def lazyFpuRestore_def
-  by (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"] \<comment> \<open>FIXME: make a tcb_flags_relation?\<close>
+  by (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"]
           term_simp: tcb_relation_def isFlagSet_set
                  wp: hoare_drop_imps)
 
