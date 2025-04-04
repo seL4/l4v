@@ -2782,7 +2782,9 @@ lemma prepareThreadDelete_ccorres:
        apply (rule_tac Q="valid_objs' and
                           no_0_obj'   and
                           obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = vcpuopt) thread"
-                   and Q'=UNIV  and C'="{s. vcpuopt \<noteq> None}" in ccorres_rewrite_cond_sr)
+                   and Q'=UNIV
+                   and C'="{s. vcpuopt \<noteq> None}"
+                    in ccorres_rewrite_cond_sr)
         apply clarsimp
         apply (drule (1) obj_at_cslift_tcb)
         apply (fastforce simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def

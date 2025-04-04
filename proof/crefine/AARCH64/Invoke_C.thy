@@ -96,8 +96,8 @@ lemma setDomain_ccorres:
 lemma prepareSetDomain_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t)
-      ({s. tptr_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. dom_' s = ucast d})
-      [] (prepareSetDomain t d) (Call prepareSetDomain_'proc)"
+      (\<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>dom = ucast d\<rbrace>) []
+      (prepareSetDomain t d) (Call prepareSetDomain_'proc)"
   apply (cinit lift: tptr_' dom_')
    apply (rule ccorres_pre_curDomain)
    apply (rule_tac C'="{s. curDom \<noteq> ucast d}"
@@ -119,7 +119,7 @@ lemma invokeDomainSetSet_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t and sch_act_simple
              and (\<lambda>s. d \<le> maxDomain))
-      ({s. tcb_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. domain_' s = ucast d}) []
+      (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>domain = ucast d\<rbrace>) []
       (do x <- prepareSetDomain t d;
                setDomain t d
        od)

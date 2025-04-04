@@ -295,11 +295,11 @@ lemma rf_sr_ksArchState_armHSCurFPU:
 
 lemma ccorres_pre_getCurFPUOwner:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
-  shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. (armKSCurFPUOwner \<circ> ksArchState) s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv fpu'. ksCurFPUOwner_' (globals s) = fpu' \<and> cur_fpu_relation rv fpu'
-                                \<longrightarrow> s \<in> P' rv }
-                  hs (gets (armKSCurFPUOwner \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  shows
+    "ccorres r xf
+       (\<lambda>s. (\<forall>rv. (armKSCurFPUOwner \<circ> ksArchState) s = rv \<longrightarrow> P rv s))
+       {s. \<forall>rv fpu'. ksCurFPUOwner_' (globals s) = fpu' \<and> cur_fpu_relation rv fpu' \<longrightarrow> s \<in> P' rv} hs
+       (gets (armKSCurFPUOwner \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer

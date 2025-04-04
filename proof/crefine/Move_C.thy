@@ -471,18 +471,19 @@ lemma threadGet_tcbFault_submonad_fn:
 lemma is_stateAssert_modify:
   "\<lbrakk> \<forall>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) (replace s)\<rbrace>; \<forall>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_ _. guard s\<rbrace>;
      empty_fail f; no_fail guard f \<rbrakk>
-    \<Longrightarrow> f = do stateAssert guard []; modify replace od"
+   \<Longrightarrow> f = do stateAssert guard []; modify replace od"
   apply (rule ext)
+  apply (rename_tac s)
   apply (clarsimp simp: bind_def empty_fail_def valid_def no_fail_def
                         stateAssert_def assert_def simpler_modify_def get_def
                         return_def fail_def image_def split_def)
-  apply (case_tac "f x")
+  apply (case_tac "f s")
   apply (intro conjI impI)
-   apply (drule_tac x=x in spec)+
-   apply (subgoal_tac "\<forall>xa\<in>fst (f x). fst xa = () \<and> snd xa = replace x")
+   apply (drule_tac x=s in spec)+
+   apply (subgoal_tac "\<forall>x\<in>fst (f s). fst x = () \<and> snd x = replace s")
     apply fastforce
    apply clarsimp
-  apply (drule_tac x=x in spec)+
+  apply (drule_tac x=s in spec)+
   apply fastforce
   done
 

@@ -93,7 +93,7 @@ lemma arch_switchToThread_rewrite:
      arch_switchToThread tcb;
      lazyFpuRestore tcb
    od"
- by (clarsimp simp: AARCH64_H.switchToThread_def arch_switchToThread_def bind_assoc)
+  by (clarsimp simp: AARCH64_H.switchToThread_def arch_switchToThread_def bind_assoc)
 
 lemma Arch_switchToThread_ccorres:
   "ccorres dc xfdc

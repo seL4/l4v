@@ -4514,9 +4514,9 @@ lemma invokeTCB_SetFlags_ccorres:
   shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
    (invs' and tcb_at' tcb)
-   ({s. thread_' s = tcb_ptr_to_ctcb_ptr tcb}
-         \<inter> {s. clear_' s = clears}
-         \<inter> {s. set_' s = sets}) []
+   (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr tcb\<rbrace>
+    \<inter> \<lbrace>\<acute>clear = clears\<rbrace>
+    \<inter> \<lbrace>\<acute>set = sets\<rbrace>) []
    (invokeTCB (SetFlags tcb clears sets))
    (Call invokeSetFlags_'proc)"
   apply (cinit lift: thread_' clear_' set_' simp: setFlags_def postSetFlags_def)
@@ -4549,12 +4549,11 @@ lemma decodeSetFlags_ccorres:
               and (\<lambda>s. ksCurThread s = thread) and ct_active' and K (isThreadCap cp)
               and valid_cap' cp and (\<lambda>s. \<forall>x \<in> zobj_refs' cp. ex_nonz_cap_to' x s)
               and sysargs_rel args buffer)
-       (UNIV
-            \<inter> {s. ccap_relation cp (cap_' s)}
-            \<inter> {s. unat (length___unsigned_long_' s) = length args}
-            \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+       (\<lbrace>ccap_relation cp \<acute>cap\<rbrace>
+        \<inter> \<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace>
+        \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
      (decodeSetFlags args cp
-            >>= invocationCatch thread isBlocking isCall InvokeTCB)
+        >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeSetFlags_'proc)"
   apply (cinit' lift: cap_' length___unsigned_long_' buffer_'
                 simp: decodeSetFlags_def )

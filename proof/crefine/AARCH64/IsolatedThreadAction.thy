@@ -16,7 +16,7 @@ datatype tcb_state_regs =
   TCBStateRegs (tsrState : thread_state) (tsrContext : "MachineTypes.register \<Rightarrow> machine_word")
 
 definition get_tcb_state_regs_tcb :: "tcb \<Rightarrow> tcb_state_regs" where
-  "get_tcb_state_regs_tcb tcb \<equiv> TCBStateRegs (tcbState tcb) ((user_regs o atcbContextGet o tcbArch) tcb)"
+  "get_tcb_state_regs_tcb tcb \<equiv> TCBStateRegs (tcbState tcb) ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb)"
 
 definition
   get_tcb_state_regs :: "kernel_object option \<Rightarrow> tcb_state_regs"
@@ -1644,8 +1644,7 @@ lemma threadGet_isolatable:
 
 lemma typ_at_partial_overwrite_id2:
   "\<lbrakk> \<forall>x. tcb_at' (idx x) s \<rbrakk>
-    \<Longrightarrow> typ_at' P p (ksPSpace_update (partial_overwrite idx f) s)
-             = typ_at' P p s"
+   \<Longrightarrow> typ_at' P p (ksPSpace_update (partial_overwrite idx f) s) = typ_at' P p s"
   apply (frule dom_partial_overwrite[where tsrs=f])
   apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def ps_clear_def partial_overwrite_def
                     split: if_split)
@@ -1693,8 +1692,7 @@ lemma asUser_asUserFPU_get:
   done
 
 lemma put_tcb_state_regs_tcb_twice[simp]:
-  "put_tcb_state_regs_tcb tsr (put_tcb_state_regs_tcb tsr' tcb)
-    = put_tcb_state_regs_tcb tsr tcb"
+  "put_tcb_state_regs_tcb tsr (put_tcb_state_regs_tcb tsr' tcb) = put_tcb_state_regs_tcb tsr tcb"
   apply (cases tcb)
   apply (simp add: put_tcb_state_regs_tcb_def split: tcb_state_regs.split)
   apply (fastforce simp: atcbContextSet_def)
@@ -1766,7 +1764,7 @@ lemma saveFpuState_isolatable:
          | wpsimp)+
   done
 
-lemma asUserFPU_typ_at' [wp]:
+lemma asUserFPU_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> asUserFPU t' f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   by (simp add: asUserFPU_def bind_assoc split_def, wp select_f_inv)
 
