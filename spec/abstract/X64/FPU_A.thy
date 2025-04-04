@@ -36,8 +36,8 @@ definition set_arm_current_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::
 \<comment> \<open>FIXME FPU: maybe use an if instead of the case (depends on if wpc or if\_split is easier)\<close>
 definition switch_local_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_local_fpu_owner new_owner \<equiv> do
-     do_machine_op enableFpu;
      cur_fpu_owner \<leftarrow> gets (x64_current_fpu_owner \<circ> arch_state);
+     do_machine_op enableFpu;
      maybeM save_fpu_state cur_fpu_owner;
      case new_owner of
        None \<Rightarrow> do_machine_op disableFpu
@@ -57,8 +57,10 @@ definition lazy_fpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_mon
      if ArchFlag FpuDisabled \<in> flags
      then do_machine_op disableFpu
      else do
-       do_machine_op enableFpu;
-       switch_local_fpu_owner (Some thread_ptr)
+       cur_fpu_owner \<leftarrow> gets (x64_current_fpu_owner \<circ> arch_state);
+       if cur_fpu_owner = Some thread_ptr
+       then do_machine_op enableFpu
+       else switch_local_fpu_owner (Some thread_ptr)
      od
    od"
 

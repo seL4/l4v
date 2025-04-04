@@ -584,6 +584,9 @@ crunch getVMID, Arch.switchToThread
   (wp: crunch_wps getObject_inv loadObject_default_inv findVSpaceForASID_vs_at_wp
    simp: getThreadVSpaceRoot_def if_distribR)
 
+crunch lazyFpuRestore
+  for tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"
+
 crunch updateASIDPoolEntry, Arch.switchToThread
   for no_orphans[wp]: "no_orphans"
   (wp: no_orphans_lift crunch_wps)
@@ -745,25 +748,13 @@ lemma ThreadDecls_H_switchToThread_ct [wp]:
   apply (wp | clarsimp)+
   done
 
-crunch nextDomain
+crunch nextDomain, prepareNextDomain
   for no_orphans[wp]: no_orphans
-(wp: no_orphans_lift simp: Let_def)
-
-crunch nextDomain
-  for tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"
-(simp: Let_def)
-
-crunch nextDomain
-  for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
-(simp: Let_def)
-
-crunch nextDomain
-  for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
-(simp: Let_def)
-
-crunch nextDomain
-  for sch_act_not[wp]: "sch_act_not t"
-(simp: Let_def)
+  and tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"
+  and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
+  and ct'[wp]: "\<lambda>s. P (ksCurThread s)"
+  and sch_act_not[wp]: "sch_act_not t"
+  (wp: no_orphans_lift simp: Let_def)
 
 lemma all_invs_but_ct_idle_or_in_cur_domain'_strg:
   "invs' s \<longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
@@ -829,16 +820,11 @@ lemma scheduleChooseNewThread_no_orphans:
    scheduleChooseNewThread
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding scheduleChooseNewThread_def
-     apply (wp add: ssa_no_orphans hoare_vcg_all_lift)
-         apply (wp hoare_disjI1 chooseThread_nosch)+
-    apply (wp nextDomain_invs_no_cicd' hoare_vcg_imp_lift
-               hoare_lift_Pf2 [OF tcbQueued_all_queued_tcb_ptrs_lift[OF nextDomain_tcbQueued]
-                                  nextDomain_ct']
-               hoare_lift_Pf2 [OF st_tcb_at'_is_active_tcb_ptr_lift[OF nextDomain_st_tcb_at']
-                                  nextDomain_ct']
-               hoare_vcg_all_lift getDomainTime_wp)[2]
-   apply (wpsimp simp: if_apply_def2 invs'_invs_no_cicd all_queued_tcb_ptrs_def
-                       is_active_tcb_ptr_runnable')+
+  apply (wpsimp wp: ssa_no_orphans hoare_vcg_all_lift hoare_vcg_imp_lift' chooseThread_nosch
+                    hoare_disjI1 nextDomain_invs_no_cicd' tcbQueued_all_queued_tcb_ptrs_lift
+                    st_tcb_at'_is_active_tcb_ptr_lift
+         | wps)+
+  apply (clarsimp simp: invs'_invs_no_cicd is_active_tcb_ptr_runnable')
   done
 
 lemma setSchedulerAction_tcbQueued[wp]:
@@ -915,20 +901,15 @@ proof -
     unfolding schedule_def
     apply (wp, wpc)
          \<comment> \<open>action = ResumeCurrentThread\<close>
-         apply (wp)[1]
+         apply wp
         \<comment> \<open>action = ChooseNewThread\<close>
         apply (clarsimp simp: when_def scheduleChooseNewThread_def)
         apply (wp ssa_no_orphans hoare_vcg_all_lift)
             apply (wp hoare_disjI1 chooseThread_nosch)
-           apply (wp nextDomain_invs_no_cicd' hoare_vcg_imp_lift
-                     hoare_lift_Pf2 [OF tcbQueued_all_queued_tcb_ptrs_lift
-                                      [OF nextDomain_tcbQueued]
-                                      nextDomain_ct']
-                     hoare_lift_Pf2 [OF st_tcb_at'_is_active_tcb_ptr_lift
-                                      [OF nextDomain_st_tcb_at']
-                                      nextDomain_ct']
-                     hoare_vcg_all_lift getDomainTime_wp)[2]
-          apply wpsimp
+           apply ((wpsimp wp: nextDomain_invs_no_cicd' hoare_vcg_imp_lift'
+                              st_tcb_at'_is_active_tcb_ptr_lift
+                              tcbQueued_all_queued_tcb_ptrs_lift hoare_vcg_all_lift getDomainTime_wp
+                   | wps)+)[2]
          apply ((wp tcbSchedEnqueue_no_orphans tcbSchedEnqueue_all_queued_tcb_ptrs'
                     hoare_drop_imp
                  | clarsimp simp: all_queued_tcb_ptrs_def
@@ -1699,15 +1680,19 @@ lemma tc_no_orphans:
   apply (fastforce simp: objBits_defs isCap_simps dest!: isValidVTableRootD)
   done
 
+crunch setFlags, postSetFlags
+  for no_orphans[wp]: no_orphans
+
 lemma invokeTCB_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_inv_wf' tinv s \<rbrace>
    invokeTCB tinv
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (case_tac tinv; simp; (solves wpsimp)?)
+      apply (wpsimp simp: invokeTCB_def)
      apply (wpsimp simp: invokeTCB_def)
-    apply (wpsimp simp: invokeTCB_def)
-   apply (wp tc_no_orphans)
-   apply (clarsimp split: option.splits simp: msg_align_bits elim!:is_aligned_weaken)
+    apply (wp tc_no_orphans)
+    apply (clarsimp split: option.splits simp: msg_align_bits elim!:is_aligned_weaken)
+   apply (wpsimp simp: invokeTCB_def)
   apply (wpsimp simp: invokeTCB_def)
   done
 
@@ -1837,6 +1822,10 @@ lemma setDomain_no_orphans [wp]:
          | clarsimp simp: st_tcb_at_neg2 not_obj_at')+
   apply (fastforce simp: tcb_at_typ_at'  is_active_tcb_ptr_runnable')
   done
+
+crunch prepareSetDomain
+  for no_orphans[wp]: no_orphans
+  and cur_tcb'[wp]: cur_tcb'
 
 lemma performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_invocation' i s \<and> ct_active' s \<and> sch_act_simple s \<rbrace>
