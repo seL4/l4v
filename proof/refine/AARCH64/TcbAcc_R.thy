@@ -1140,13 +1140,12 @@ lemma threadSet_obj_at'_strongish[wp]:
      threadSet f t \<lbrace>\<lambda>rv. obj_at' P t'\<rbrace>"
   by (simp add: hoare_weaken_pre [OF threadSet_obj_at'_really_strongest])
 
-lemma threadSet_pred_tcb_no_state:
-  assumes "\<And>tcb. proj (tcb_to_itcb' (f tcb)) = proj (tcb_to_itcb' tcb)"
-  shows   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+lemma threadSet_obj_at'_no_state:
+  assumes "\<And>tcb. P' (f tcb) = P' tcb"
+  shows   "threadSet f t \<lbrace>\<lambda>s. P (obj_at' P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>P' t' t.
-            \<lbrace>pred_tcb_at' proj P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. pred_tcb_at' proj P' t'\<rbrace>"
-    apply (simp add: pred_tcb_at'_def)
+  have pos: "\<And>t' t.
+            \<lbrace>obj_at' P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P' t'\<rbrace>"
     apply (wp threadSet_obj_at'_strongish)
     apply clarsimp
     apply (erule obj_at'_weakenE)
@@ -1156,19 +1155,24 @@ proof -
   show ?thesis
     apply (rule_tac P=P in P_bool_lift)
      apply (rule pos)
-    apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> pred_tcb_at' proj (\<lambda>tcb. \<not> P' tcb) t' s"
+    apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> obj_at' (\<lambda>tcb. \<not> P' tcb) t' s"
              in hoare_post_imp)
      apply (erule disjE)
-      apply (clarsimp dest!: pred_tcb_at')
+      apply (clarsimp simp: obj_at'_def)
      apply (clarsimp)
-     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in pred_tcb_at_conj')
-     apply (clarsimp)+
+     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in obj_at_conj')
+      apply (clarsimp)+
     apply (wp hoare_convert_imp)
       apply (simp add: typ_at_tcb' [symmetric])
       apply (wp pos)+
-    apply (clarsimp simp: pred_tcb_at'_def not_obj_at' elim!: obj_at'_weakenE)
+    apply (clarsimp simp: not_obj_at' assms elim!: obj_at'_weakenE)
     done
 qed
+
+lemma threadSet_pred_tcb_no_state:
+  assumes "\<And>tcb. proj (tcb_to_itcb' (f tcb)) = proj (tcb_to_itcb' tcb)"
+  shows   "threadSet f t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+  by (wpsimp wp: threadSet_obj_at'_no_state simp: pred_tcb_at'_def assms)
 
 lemma threadSet_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
