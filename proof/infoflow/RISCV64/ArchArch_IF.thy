@@ -124,12 +124,15 @@ lemma set_simple_ko_globals_equiv[Arch_IF_assms]:
   apply (fastforce simp: obj_at_def valid_arch_state_def dest: valid_global_arch_objs_pt_at)
   done
 
+crunch set_thread_state_act
+  for globals_equiv[wp]: "globals_equiv s"
+
 lemma set_thread_state_globals_equiv[Arch_IF_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    set_thread_state ref ts
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_thread_state_def
-  apply (wp set_object_globals_equiv dxo_wp_weak |simp)+
+  apply (wp set_object_globals_equiv |simp)+
   apply (intro impI conjI allI)
     apply (fastforce simp: valid_arch_state_def obj_at_def tcb_at_def2 get_tcb_def is_tcb_def
                      dest: get_tcb_SomeD valid_global_arch_objs_pt_at
