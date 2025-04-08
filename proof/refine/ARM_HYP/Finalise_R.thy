@@ -2470,7 +2470,8 @@ lemma finaliseCap_True_invs[wp]:
   done
 
 crunch flushSpace
-  for invs'[wp]: "invs'" (ignore: doMachineOp)
+  for invs'[wp]: "invs'"
+  (ignore: doMachineOp)
 
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = armKSASIDTable (ksArchState s) \<longrightarrow>
