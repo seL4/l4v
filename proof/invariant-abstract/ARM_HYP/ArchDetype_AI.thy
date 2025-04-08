@@ -194,7 +194,7 @@ lemma tcb_arch_detype[detype_invs_proofs]:
   apply rotate_tac (* do not pick typ_at *)
   apply (drule live_okE)
    apply (clarsimp simp: live_def hyp_live_def arch_live_def obj_at_def hyp_refs_of_def
-                         refs_of_a_def vcpu_tcb_refs_def
+                         refs_of_a_def vcpu_tcb_refs_def tcb_vcpu_refs_def
                   split: kernel_object.splits arch_kernel_obj.splits option.splits)
   apply clarsimp
   done
@@ -222,6 +222,11 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   apply (drule obj_at_hyp_live_strg)
   apply (clarsimp simp: live_okE)
   done
+
+lemma valid_cur_fpu[detype_invs_proofs]:
+  "valid_cur_fpu (detype (untyped_range cap) s)"
+  using valid_cur_fpu
+  by (clarsimp simp: valid_cur_fpu_def)
 
 lemma global_pts: (* ARCH SPECIFIC STATEMENT *)
   "\<And>p. \<lbrakk> p \<in> {}; p \<in> untyped_range cap \<rbrakk>  \<Longrightarrow> False"
@@ -403,7 +408,7 @@ sublocale detype_locale < detype_locale_gen_1
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?)
+  by (intro_locales; unfold_locales; (fact detype_invs_proofs)?)
   qed
 
 
@@ -613,7 +618,7 @@ sublocale detype_locale < detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?)
+  by (intro_locales; unfold_locales; (fact detype_invs_proofs)?)
   qed
 
 context detype_locale begin

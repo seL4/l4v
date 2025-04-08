@@ -2007,7 +2007,7 @@ lemma tc_valid_duplicates':
                simp: isCap_simps)
   done
 
-crunch performTransfer, unbindNotification, bindNotification, setDomain
+crunch performTransfer, unbindNotification, bindNotification, setDomain, prepareSetDomain,postSetFlags, setFlags
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
