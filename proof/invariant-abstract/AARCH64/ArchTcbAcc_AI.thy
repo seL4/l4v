@@ -183,7 +183,7 @@ lemma arch_thread_set_cur_fpu_False_if_live_then_nonz_cap[wp]:
 
 lemma arch_thread_set_if_live_then_nonz_cap_None[wp]:
   "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap_unchanged simp: hyp_live_def )
+  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap_unchanged simp: hyp_live_def)
 
 lemmas arch_thread_set_cur_fpu_True_if_live_then_nonz_cap[wp]
   = arch_thread_set_if_live_then_nonz_cap'[where f="tcb_cur_fpu_update \<top>"]

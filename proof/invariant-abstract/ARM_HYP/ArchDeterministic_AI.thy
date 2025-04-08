@@ -16,7 +16,8 @@ context Arch begin arch_global_naming
 named_theorems Deterministic_AI_assms
 
 crunch
- vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_get_sanitise_register_info, arch_post_modify_registers
+  vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_get_sanitise_register_info,
+  arch_post_modify_registers, arch_post_set_flags
   for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 

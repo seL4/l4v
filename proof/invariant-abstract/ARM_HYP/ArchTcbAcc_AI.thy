@@ -164,7 +164,7 @@ lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atc
 lemma thread_set_valid_arch_state[TcbAcc_AI_assms]:
   "(\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb)
    \<Longrightarrow> thread_set f t \<lbrace> valid_arch_state \<rbrace>"
-  by (wp valid_arch_state_lift_aobj_at_no_caps thread_set.aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps thread_set_tcb thread_set.aobj_at)
 
 end
 
@@ -184,19 +184,10 @@ lemma arch_thread_set_valid_idle[wp]:
 
 lemma arch_thread_set_if_live_then_nonz_cap_None[wp]:
   "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap' simp: hyp_live_def)
+  by (wpsimp wp: arch_thread_set_if_live_then_nonz_cap_unchanged simp: hyp_live_def)
 
-lemma arch_thread_set_if_live_then_nonz_cap_Some[wp]:
-  "\<lbrace>(ex_nonz_cap_to t or obj_at live t) and if_live_then_nonz_cap\<rbrace>
-   arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcp)) t
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (simp add: arch_thread_set_def)
-  apply (wp set_object_iflive)
-  apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
-                  dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
-  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
-  done
+lemmas arch_thread_set_if_live_then_nonz_cap_Some[wp]
+  = arch_thread_set_if_live_then_nonz_cap'[where f="tcb_vcpu_update (\<lambda>_. Some vcp)" for vcp]
 
 lemma arch_thread_set_valid_objs_vcpu_None[wp]:
   "arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>valid_objs\<rbrace>"
