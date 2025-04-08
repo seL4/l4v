@@ -490,6 +490,18 @@ lemma valid_arch_state_lift_aobj_at:
 
 end
 
+\<comment> \<open>Intended for use inside Arch, as opposed to the interface lemma valid_cur_fpu_lift\<close>
+lemma valid_cur_fpu_lift_arch[wp]:
+  shows "f \<lbrace>valid_cur_fpu\<rbrace>"
+  by (wpsimp simp: valid_cur_fpu_def)
+
+\<comment> \<open>Interface lemma\<close>
+lemma valid_cur_fpu_lift:
+  assumes arch_tcb_at[wp]: "\<And>P P' p. f \<lbrace>\<lambda>s. P (arch_tcb_at P' p s)\<rbrace>"
+  assumes arch_state[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>valid_cur_fpu\<rbrace>"
+  by (wpsimp wp: valid_cur_fpu_lift_arch)
+
 lemma equal_kernel_mappings_lift:
   assumes vsobj_at:
     "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
@@ -762,7 +774,7 @@ lemma default_arch_object_not_live[simp]: "\<not> live (ArchObj (default_arch_ob
                split: aobject_type.splits)
 
 lemma default_tcb_not_live[simp]: "\<not> live (TCB (default_tcb d))"
-  by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
+  by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def arch_tcb_live_def)
 
 lemma valid_arch_tcb_same_type:
   "\<lbrakk> valid_arch_tcb t s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>

@@ -19,6 +19,8 @@ named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_invs[Syscall_AI_assms]
         arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
+        make_fault_msg_inv[Syscall_AI_assms]
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for pred_tcb_at[wp,Syscall_AI_assms]: "pred_tcb_at proj P t"
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info

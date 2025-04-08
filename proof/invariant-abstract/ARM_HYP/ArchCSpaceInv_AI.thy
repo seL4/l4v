@@ -32,7 +32,7 @@ lemmas unique_table_refs_no_cap_asidD
 
 lemma set_cap_valid_arch_state[wp]:
   "set_cap cap ptr \<lbrace> valid_arch_state \<rbrace>"
-  by (wp valid_arch_state_lift_aobj_at_no_caps set_cap.aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps set_cap_tcb set_cap.aobj_at)
 
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
