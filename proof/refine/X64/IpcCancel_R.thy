@@ -1187,9 +1187,9 @@ lemma updateObject_ep_inv:
   by simp (rule updateObject_default_inv)
 
 lemma asUser_tcbQueued_inv[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace>"
+  "asUser t m \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)\<rbrace>"
   apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
+  apply (wp threadSet_obj_at'_no_state getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
   done
 
 crunch asUser
@@ -1278,39 +1278,28 @@ lemma (in delete_one) suspend_corres:
   apply simp
   done
 
-lemma no_fail_switchFpuOwner[wp]:
-  "no_fail \<top> (X64.switchFpuOwner thread cpu)"
-  by (simp add: X64.switchFpuOwner_def X64.no_fail_machine_op_lift)
+context begin interpretation Arch .
 
-lemma no_fail_nativeThreadUsingFPU[wp]:
-  "no_fail (\<top> and \<top>) (X64.nativeThreadUsingFPU thread)"
-  supply Collect_const[simp del]
-  apply (simp only: X64.nativeThreadUsingFPU_def)
-  apply (wpsimp wp: X64.no_fail_machine_op_lift)
+lemma tcb_ko_at':
+  "tcb_at' t s \<Longrightarrow> \<exists>t'::tcb. ko_at' t' t s"
+  by (clarsimp simp: obj_at'_def)
+
+lemma fpuRelease_corres[corres]:
+  "t' = t \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top> (fpu_release t) (fpuRelease t')"
+  by (corres simp: fpu_release_def fpuRelease_def)
+
+lemma prepareThreadDelete_corres[corres]:
+  "t' = t \<Longrightarrow>
+   corres dc (invs and tcb_at t) no_0_obj'
+          (prepare_thread_delete t) (prepareThreadDelete t')"
+  apply (simp add: prepare_thread_delete_def prepareThreadDelete_def)
+  apply corres
+   apply fastforce
+  apply (clarsimp simp: tcb_ko_at')
   done
 
-lemma (in delete_one) prepareThreadDelete_corres:
-  "corres dc (tcb_at t) (tcb_at' t)
-        (prepare_thread_delete t) (ArchRetypeDecls_H.X64_H.prepareThreadDelete t)"
-  apply (simp add: ArchVSpace_A.X64_A.prepare_thread_delete_def ArchRetype_H.X64_H.prepareThreadDelete_def
-                   ArchVSpace_A.X64_A.fpu_thread_delete_def ArchRetype_H.X64_H.fpuThreadDelete_def
-                   X64_H.fromPPtr_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="(=)"])
-       apply (rule corres_machine_op)
-       apply (rule corres_Id, rule refl, simp)
-       apply wpsimp
-      apply clarsimp
-      apply (rule corres_when)
-       apply clarsimp
-      apply (rule corres_machine_op)
-      apply (rule corres_Id, rule refl, simp)
-      apply wpsimp
-     apply clarsimp
-     apply wpsimp
-    apply wpsimp
-   apply auto
-  done
+end
 
 lemma no_refs_simple_strg':
   "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"
@@ -2305,9 +2294,15 @@ lemma suspend_unqueued:
   unfolding suspend_def
   by (wpsimp simp: comp_def wp: tcbSchedDequeue_not_tcbQueued)
 
+lemma asUser_tcbQueued[wp]:
+  "asUser t' f \<lbrace>\<lambda>s. Q (obj_at' (P \<circ> tcbQueued) t s)\<rbrace>"
+  unfolding asUser_def threadGet_stateAssert_gets_asUser
+  by (wpsimp wp: threadSet_obj_at'_no_state simp: asUser_fetch_def obj_at'_def)
+
 crunch prepareThreadDelete
-  for unqueued: "obj_at' (\<lambda>a. \<not> tcbQueued a) t"
+  for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
   and inactive: "st_tcb_at' ((=) Inactive) t'"
+  (simp: obj_at'_not_comp_fold)
 
 end
 end
