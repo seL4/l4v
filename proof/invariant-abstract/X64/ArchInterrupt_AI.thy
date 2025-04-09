@@ -269,13 +269,8 @@ lemma updateIRQState_invs[wp]:
                         vs_lookup_pages1_def valid_table_caps_def empty_table_def second_level_tables_def
                         valid_global_objs_def valid_kernel_mappings_def valid_asid_map_def
                         valid_x64_irq_state_def valid_ioports_def all_ioports_issued_def
-                        issued_ioports_def word_not_le[symmetric])
+                        issued_ioports_def word_not_le[symmetric] valid_cur_fpu_def is_tcb_cur_fpu_def)
   done
-
-lemma no_irq_ioapicMapPinToVector: "no_irq (ioapicMapPinToVector a b c d e)"
-  by (wp no_irq | clarsimp simp: no_irq_def ioapicMapPinToVector_def)+
-
-lemmas ioapicMapPinToVector_irq_masks = no_irq[OF no_irq_ioapicMapPinToVector]
 
 lemma dmo_ioapicMapPinToVector[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ioapicMapPinToVector irq b c d e) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
