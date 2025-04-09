@@ -120,7 +120,6 @@ lemma storePTE_Basic_ccorres':
           erule ko_at_projectKO_opt, simp+)
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
-                   fpu_null_state_heap_update_tag_disj_simps
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
                    cteCaps_of_def update_pte_map_tos bit_simps)
@@ -167,7 +166,6 @@ lemma storePDE_Basic_ccorres':
           erule ko_at_projectKO_opt, simp+)
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
-                   fpu_null_state_heap_update_tag_disj_simps
                    cmachine_state_relation_def
                    Let_def typ_heap_simps bit_simps
                    cteCaps_of_def update_pde_map_tos)
@@ -213,7 +211,6 @@ lemma storePDPTE_Basic_ccorres':
           erule ko_at_projectKO_opt, simp+)
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
-                   fpu_null_state_heap_update_tag_disj_simps
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
                    cteCaps_of_def update_pdpte_map_tos bit_simps)
@@ -260,7 +257,6 @@ lemma storePML4E_Basic_ccorres':
           erule ko_at_projectKO_opt, simp+)
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
-                   fpu_null_state_heap_update_tag_disj_simps
                    cmachine_state_relation_def
                    Let_def typ_heap_simps bit_simps
                    cteCaps_of_def update_pml4e_map_tos)

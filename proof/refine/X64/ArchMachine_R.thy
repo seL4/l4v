@@ -69,15 +69,5 @@ lemma getActiveIRQ_le_maxIRQ:
   apply (simp add: irqs_masked'_def valid_irq_states'_def)
   done
 
-(* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
-lemma getActiveIRQ_neq_Some0xFF:
-  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  apply clarsimp
-  apply (drule use_valid, rule getActiveIRQ_neq_Some0xFF')
-   apply auto
-  done
-
 end
 end

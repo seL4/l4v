@@ -12,7 +12,7 @@ begin
 context Arch begin arch_global_naming
 
 
-crunch_ignore (add: debugPrint clearMemory invalidateTLB initL2Cache)
+crunch_ignore (add: debugPrint clearMemory)
 
 end
 

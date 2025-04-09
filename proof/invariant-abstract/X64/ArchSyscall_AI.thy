@@ -18,6 +18,9 @@ context Arch begin arch_global_naming
 named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_invs[Syscall_AI_assms]
+        arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
+        make_fault_msg_inv[Syscall_AI_assms]
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for pred_tcb_at[wp,Syscall_AI_assms]: "pred_tcb_at proj P t"
 crunch handle_arch_fault_reply
@@ -28,7 +31,7 @@ crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for it[wp,Syscall_AI_assms]: "\<lambda>s. P (idle_thread s)"
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for caps[wp,Syscall_AI_assms]: "\<lambda>s. P (caps_of_state s)"
-crunch handle_arch_fault_reply, make_fault_msg, arch_get_sanitise_register_info
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for cur_thread[wp,Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for valid_objs[wp,Syscall_AI_assms]: "valid_objs"
@@ -103,23 +106,6 @@ lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   apply (cases b, simp_all)
    apply (wp | simp)+
   done
-
-
-crunch handle_arch_fault_reply
-  for pred_tcb_at[wp,Syscall_AI_assms]: "pred_tcb_at proj P t"
-crunch handle_arch_fault_reply
-  for invs[wp,Syscall_AI_assms]: "invs"
-declare arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
-crunch handle_arch_fault_reply
-  for it[wp,Syscall_AI_assms]: "\<lambda>s. P (idle_thread s)"
-crunch handle_arch_fault_reply
-  for caps[wp,Syscall_AI_assms]: "\<lambda>s. P (caps_of_state s)"
-declare make_fault_message_inv[Syscall_AI_assms]
-crunch handle_arch_fault_reply
-  for valid_objs[wp,Syscall_AI_assms]: "valid_objs"
-crunch handle_arch_fault_reply
-  for cte_wp_at[wp,Syscall_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
-
 
 lemma hh_invs[wp, Syscall_AI_assms]:
   "\<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to_thread\<rbrace>

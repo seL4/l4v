@@ -264,7 +264,7 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   by fastforce
 
 crunch
-  chooseThread, getDomainTime, nextDomain, isHighestPrio
+  chooseThread, getDomainTime, nextDomain, isHighestPrio, prepareNextDomain
   for (empty_fail) empty_fail[intro!, wp, simp]
   (wp: empty_fail_catch)
 
