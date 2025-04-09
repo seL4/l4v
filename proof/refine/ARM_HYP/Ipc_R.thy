@@ -2306,9 +2306,8 @@ lemma doReplyTransfer_corres:
                apply simp
               apply (rule corres_split)
                  apply (rule threadset_corresT;
-                        clarsimp simp add: tcb_relation_def fault_rel_optionation_def
-                                           tcb_cap_cases_def tcb_cte_cases_def tcb_cte_cases_neqs
-                                           exst_same_def)
+                        clarsimp simp add: tcb_relation_def fault_rel_optionation_def cteSizeBits_def
+                                           tcb_cap_cases_def tcb_cte_cases_def inQ_def)
                 apply (rule_tac Q="valid_sched and cur_tcb and tcb_at receiver and pspace_aligned and pspace_distinct"
                             and Q'="tcb_at' receiver and cur_tcb'
                                       and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
@@ -3515,7 +3514,7 @@ lemma sendFaultIPC_corres:
            apply (rule corres_if2 [OF refl])
             apply (simp add: dc_def[symmetric])
             apply (rule corres_split[OF threadset_corres sendIPC_corres], simp_all)[1]
-               apply (simp add: tcb_relation_def fault_rel_optionation_def exst_same_def)+
+               apply (simp add: tcb_relation_def fault_rel_optionation_def inQ_def)+
              apply (wp thread_set_invs_trivial thread_set_no_change_tcb_state
                        thread_set_typ_at ep_at_typ_at ex_nonz_cap_to_pres
                        thread_set_cte_wp_at_trivial thread_set_not_state_valid_sched

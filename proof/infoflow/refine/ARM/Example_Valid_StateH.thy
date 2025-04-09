@@ -3292,11 +3292,7 @@ lemma s0_srel:
   "1 \<le> maxDomain \<Longrightarrow> (s0_internal, s0H_internal) \<in> state_relation"
   apply (simp add: state_relation_def)
   apply (intro conjI)
-                   apply (simp add: s0_pspace_rel)
-                  apply (clarsimp simp: ekheap_relation_def)
-                  apply (case_tac "ksPSpace s0H_internal x")
-                   apply (clarsimp simp: s0_internal_def s0H_internal_def exst0_def kh0H_def option_update_range_def split: if_split_asm option.splits)
-                  apply (clarsimp simp: s0_internal_def s0H_internal_def exst0_def etcb_relation_def idle_tcbH_def High_tcbH_def High_etcb_def Low_tcbH_def Low_etcb_def default_etcb_def split: if_split_asm)
+                  apply (simp add: s0_pspace_rel)
                  apply (simp add: s0_internal_def exst0_def s0H_internal_def sched_act_relation_def)
                 apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def
                                       ready_queues_relation_def ready_queue_relation_def

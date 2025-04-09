@@ -444,11 +444,6 @@ lemma setObject_PT_corres:
      apply ((simp split: if_split_asm)+)[2]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
-           split: Structures_A.kernel_object.splits)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+

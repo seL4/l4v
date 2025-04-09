@@ -36,20 +36,19 @@ lemma storeWord_equiv_but_for_labels[Ipc_IF_assms]:
   apply (wp modify_wp)
   apply (clarsimp simp: equiv_but_for_labels_def)
   apply (rule states_equiv_forI)
-           apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD)
-          apply (simp add: states_equiv_for_def)
-          apply (rule conjI)
-           apply (rule equiv_forI)
-           apply clarsimp
-           apply (drule_tac f=underlying_memory in equiv_forD,fastforce)
-           apply (fastforce intro: is_aligned_no_wrap' word_plus_mono_right
-                             simp: is_aligned_mask for_each_byte_of_word_def word_size_def upto.simps)
+          apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD)
+         apply (simp add: states_equiv_for_def)
+         apply (rule conjI)
           apply (rule equiv_forI)
           apply clarsimp
-          apply (drule_tac f=device_state in equiv_forD,fastforce)
-          apply clarsimp
-         apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
-        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ekheap])
+          apply (drule_tac f=underlying_memory in equiv_forD,fastforce)
+          apply (fastforce intro: is_aligned_no_wrap' word_plus_mono_right
+                            simp: is_aligned_mask for_each_byte_of_word_def word_size_def upto.simps)
+         apply (rule equiv_forI)
+         apply clarsimp
+         apply (drule_tac f=device_state in equiv_forD,fastforce)
+         apply clarsimp
+        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
       apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=is_original_cap])
      apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_states])
@@ -65,7 +64,7 @@ lemma set_thread_state_runnable_equiv_but_for_labels[Ipc_IF_assms]:
        \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding set_thread_state_def
   apply (wpsimp wp: set_object_equiv_but_for_labels[THEN hoare_set_object_weaken_pre]
-                    set_thread_state_ext_runnable_equiv_but_for_labels)
+                    set_thread_state_act_runnable_equiv_but_for_labels)
     apply (wpsimp wp: set_object_wp)+
   apply (fastforce dest: get_tcb_not_asid_pool_at simp: st_tcb_at_def obj_at_def)
   done

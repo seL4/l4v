@@ -2638,6 +2638,10 @@ lemma valid_reply_masters_update [iff]:
 lemmas in_user_frame_update[iff] = in_user_frame_update
 lemmas in_device_frame_update[iff] = in_device_frame_update
 
+lemma zombies_final_update[iff]:
+  "zombies_final (f s) = zombies_final s"
+  by (simp add: zombies_final_def is_final_cap'_def)
+
 end
 
 
@@ -2756,6 +2760,42 @@ interpretation more_update:
 
 sublocale Arch \<subseteq> more_update: Arch_p_arch_idle_update_int_eq "trans_state f" ..
 
+interpretation scheduler_action_update:
+  p_arch_idle_update_int_eq "scheduler_action_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> scheduler_action_update: Arch_p_arch_idle_update_int_eq "scheduler_action_update f" ..
+
+interpretation domain_list_update:
+  p_arch_idle_update_int_eq "domain_list_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> domain_list_update: Arch_p_arch_idle_update_int_eq "domain_list_update f" ..
+
+interpretation domain_index_update:
+  p_arch_idle_update_int_eq "domain_index_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> domain_index_update: Arch_p_arch_idle_update_int_eq "domain_index_update f" ..
+
+interpretation cur_domain_update:
+  p_arch_idle_update_int_eq "cur_domain_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> cur_domain_update: Arch_p_arch_idle_update_int_eq "cur_domain_update f" ..
+
+interpretation domain_time_update:
+  p_arch_idle_update_int_eq "domain_time_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> domain_time_update: Arch_p_arch_idle_update_int_eq "domain_time_update f" ..
+
+interpretation ready_queues_update:
+  p_arch_idle_update_int_eq "ready_queues_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ready_queues_update: Arch_p_arch_idle_update_int_eq "ready_queues_update f" ..
+
 interpretation interrupt_update:
   p_arch_idle_update_eq "interrupt_states_update f"
   by unfold_locales auto
@@ -2790,17 +2830,14 @@ lemma untyped_range_non_empty:
   "\<lbrakk> is_untyped_cap c; cap_aligned c \<rbrakk> \<Longrightarrow> untyped_range c \<noteq> {}"
   by (blast dest: obj_ref_in_untyped_range)
 
-lemma valid_mdb_cur [iff]:
-  "valid_mdb (cur_thread_update f s) = valid_mdb s"
+lemma valid_mdb_simps[simp]:
+  "\<And>f. valid_mdb (cur_thread_update f s) = valid_mdb s"
+  "\<And>f. valid_mdb (ready_queues_update f s) = valid_mdb s"
+  "\<And>f. valid_mdb (domain_time_update f s) = valid_mdb s"
+  "\<And>f. valid_mdb (scheduler_action_update f s) = valid_mdb s"
+  "\<And>f. valid_mdb (trans_state f s) = valid_mdb s"
+  "\<And>f. valid_mdb (machine_state_update f s) = valid_mdb s"
   by (auto elim!: valid_mdb_eqI)
-
-lemma valid_mdb_more_update [iff]:
-  "valid_mdb (trans_state f s) = valid_mdb s"
-  by (auto elim!: valid_mdb_eqI)
-
-lemma valid_mdb_machine [iff]:
-  "valid_mdb (machine_state_update f s) = valid_mdb s"
-  by (auto elim: valid_mdb_eqI)
 
 lemma valid_refs_cte:
   assumes "\<And>P p. cte_wp_at P p s = cte_wp_at P p s'"
@@ -2882,7 +2919,7 @@ lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
   by (simp add: dom_def)
 
 lemma obj_at_default_cap_valid:
-  "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us) x s;
+  "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us d) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
    ty \<noteq> Untyped; ty \<noteq> ArchObject ASIDPoolObj;
    cap_aligned (default_cap ty x us dev)\<rbrakk>
@@ -3113,6 +3150,7 @@ lemmas (in pspace_update_eq) state_hyp_refs_update[iff] = state_hyp_refs_update[
 
 declare more_update.state_refs_update[iff]
 declare more_update.state_hyp_refs_update[iff]
+declare ready_queues_update.state_refs_update[simp]
 
 lemma zombies_final_arch_update [iff]:
   "zombies_final (arch_state_update f s) = zombies_final s"
@@ -3126,31 +3164,51 @@ lemmas state_refs_arch_update [iff] = arch_update.state_refs_update
 
 lemmas state_hyp_refs_arch_update [iff] = arch_update.state_hyp_refs_update
 
-lemma valid_ioc_arch_state_update[iff]:
-  "valid_ioc (arch_state_update f s) = valid_ioc s"
-  by (simp add: valid_ioc_def)
-
-lemma valid_ioc_more_update[iff]:
-  "valid_ioc (trans_state f s) = valid_ioc s"
-  by (simp add: valid_ioc_def)
-
-lemma valid_ioc_interrupt_states_update[iff]:
-  "valid_ioc (interrupt_states_update f s) = valid_ioc s"
-  by (simp add: valid_ioc_def)
-lemma valid_ioc_machine_state_update[iff]:
-  "valid_ioc (machine_state_update f s) = valid_ioc s"
-  by (simp add: valid_ioc_def)
-lemma valid_ioc_cur_thread_update[iff]:
-  "valid_ioc (cur_thread_update f s) = valid_ioc s"
-  by (simp add: valid_ioc_def)
+lemma valid_ioc_simps[simp]:
+  "\<And>f. valid_ioc (arch_state_update f s) = valid_ioc s"
+  "\<And>f. valid_ioc (trans_state f s) = valid_ioc s"
+  "\<And>f. valid_ioc (interrupt_states_update f s) = valid_ioc s"
+  "\<And>f. valid_ioc (machine_state_update f s) = valid_ioc s"
+  "\<And>f. valid_ioc (cur_thread_update f s) = valid_ioc s"
+  "\<And>f. valid_ioc (scheduler_action_update f s) = valid_ioc s"
+  "\<And>f. valid_ioc (ready_queues_update f s) = valid_ioc s"
+  "\<And>f. valid_ioc (domain_time_update f s) = valid_ioc s"
+  by (simp_all add: valid_ioc_def)
 
 lemma vms_ioc_update[iff]:
-  "valid_machine_state (is_original_cap_update f s::'z::state_ext state) = valid_machine_state s"
+  "valid_machine_state (is_original_cap_update f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)+
 
-lemma valid_machine_state_more_update[iff]:
-  "valid_machine_state (trans_state f s) = valid_machine_state s"
-  by (simp add: valid_machine_state_def)
+lemma cur_tcb_simps[simp]:
+  "\<And>f. cur_tcb (cdt_update f s) = cur_tcb s"
+  "\<And>f. cur_tcb (trans_state f s) = cur_tcb s"
+  "\<And>f. cur_tcb (ready_queues_update f s) = cur_tcb s"
+  "\<And>f. cur_tcb (domain_time_update f s) = cur_tcb s"
+  by (simp_all add: cur_tcb_def)
+
+lemma valid_machine_state_simps[simp]:
+  "\<And>f. valid_machine_state (arch_state_update f s) = valid_machine_state s"
+  "\<And>f. valid_machine_state (ready_queues_update f s) = valid_machine_state s"
+  "\<And>f. valid_machine_state (domain_time_update f s) = valid_machine_state s"
+  "\<And>f. valid_machine_state (scheduler_action_update f s) = valid_machine_state s"
+  "\<And>f. valid_machine_state (trans_state f s) = valid_machine_state s"
+  by (simp_all add: valid_machine_state_def)
+
+lemma valid_irq_states_simps[simp]:
+  "\<And>f. valid_irq_states (cur_thread_update f s) = valid_irq_states s"
+  "\<And>f. valid_irq_states (cdt_update f s) = valid_irq_states s"
+  "\<And>f. valid_irq_states (is_original_cap_update f s) = valid_irq_states s"
+  "\<And>f. valid_irq_states (arch_state_update f s) = valid_irq_states s"
+  "\<And>f. valid_irq_states (ready_queues_update f s) = valid_irq_states s"
+  "\<And>f. valid_irq_states (domain_time_update f s) = valid_irq_states s"
+  "\<And>f. valid_irq_states (exst_update f s) = valid_irq_states s"
+  "\<And>f. valid_irq_states (trans_state f s) = valid_irq_states s"
+  by (simp_all add: valid_irq_states_def)
+
+lemma ex_nonz_cap_to_simps[simp]:
+  "\<And>f. ex_nonz_cap_to p (scheduler_action_update f s) = ex_nonz_cap_to p s"
+  "\<And>f. ex_nonz_cap_to w (trans_state f s) = ex_nonz_cap_to w s"
+  by (simp_all add: ex_nonz_cap_to_def)
 
 lemma only_idle_lift_weak:
   assumes "\<And>Q P t. \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace> f \<lbrace>\<lambda>_ s. Q (st_tcb_at P t s)\<rbrace>"
@@ -3211,11 +3269,6 @@ lemma invs_valid_stateI [elim!]:
 lemma tcb_at_invs [elim!]:
   "invs s \<Longrightarrow> tcb_at (cur_thread s) s"
   by (simp add: invs_def cur_tcb_def)
-
-lemma valid_irq_states_more_update[iff]:
-  "valid_irq_states (trans_state f s) = valid_irq_states s"
-  by (simp add: valid_irq_states_def)
-
 
 lemma invs_valid_objs [elim!]:
   "invs s \<Longrightarrow> valid_objs s"

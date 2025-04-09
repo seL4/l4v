@@ -275,6 +275,10 @@ lemma arch_invoke_irq_control_silc_inv[FinalCaps_assms]:
   apply (fastforce dest: new_irq_handler_caps_are_intra_label)
   done
 
+crunch set_priority
+  for silc_inv[wp]: "silc_inv aag st"
+  (simp: tcb_cap_cases_def)
+
 lemma invoke_tcb_silc_inv[FinalCaps_assms]:
   notes hoare_weak_lift_imp [wp]
         hoare_weak_lift_imp_conj [wp]

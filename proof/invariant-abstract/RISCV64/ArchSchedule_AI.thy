@@ -39,11 +39,9 @@ lemma arch_stt_tcb [wp,Schedule_AI_assms]:
   apply (wp)
   done
 
-lemma arch_stt_runnable[Schedule_AI_assms]:
-  "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at runnable t\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply wp
-  done
+lemma arch_stt_st_tcb_at[Schedule_AI_assms]:
+  "arch_switch_to_thread t \<lbrace>st_tcb_at Q t\<rbrace>"
+  by (wpsimp simp: arch_switch_to_thread_def)
 
 lemma idle_strg:
   "thread = idle_thread s \<and> invs s \<Longrightarrow> invs (s\<lparr>cur_thread := thread\<rparr>)"
@@ -63,6 +61,7 @@ lemma arch_stit_tcb_at[wp]:
 crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (simp: crunch_simps wp: hoare_drop_imps)
 
 lemma arch_stit_activatable[wp, Schedule_AI_assms]:
@@ -72,7 +71,7 @@ lemma arch_stit_activatable[wp, Schedule_AI_assms]:
   done
 
 lemma stit_invs [wp,Schedule_AI_assms]:
-  "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "switch_to_idle_thread \<lbrace>invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
   apply (wpsimp|strengthen idle_strg)+
   done
@@ -85,28 +84,15 @@ lemma stit_activatable[Schedule_AI_assms]:
                  elim!: pred_tcb_weaken_strongerE)
   done
 
-lemma stt_invs [wp,Schedule_AI_assms]:
-  "\<lbrace>invs\<rbrace> switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: switch_to_thread_def)
-  apply wp
-     apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-    apply (rule_tac Q'="\<lambda>_. invs and tcb_at t'" in hoare_strengthen_post, wp)
-    apply (clarsimp simp: invs_def valid_state_def valid_idle_def
-                          valid_irq_node_def valid_machine_state_def)
-    apply (fastforce simp: cur_tcb_def obj_at_def
-                     elim: valid_pspace_eqI ifunsafe_pspaceI)
-   apply wp+
-  apply clarsimp
-  apply (simp add: is_tcb_def)
-  done
-end
+lemma arch_stt_scheduler_action [wp, Schedule_AI_assms]:
+  "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  by (wpsimp simp: arch_switch_to_thread_def)
 
-interpretation Schedule_AI_U?: Schedule_AI_U
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case
-  by (intro_locales; (unfold_locales; fact Schedule_AI_assms)?)
-  qed
+lemma arch_stit_scheduler_action [wp, Schedule_AI_assms]:
+  "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  by (wpsimp simp: arch_switch_to_idle_thread_def)
+
+end
 
 interpretation Schedule_AI?: Schedule_AI
   proof goal_cases

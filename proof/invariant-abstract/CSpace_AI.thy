@@ -3860,21 +3860,9 @@ lemma cap_insert_vms[wp]:
   apply (wp get_object_wp get_cap_wp| simp only: vms_ioc_update | rule hoare_drop_imp | simp split del: if_split)+
   done
 
-lemma valid_irq_states_cdt_update[simp]:
-  "valid_irq_states (s\<lparr>cdt := x\<rparr>) = valid_irq_states s"
-  by(auto simp: valid_irq_states_def)
-
-lemma valid_irq_states_is_original_cap_update[simp]:
-  "valid_irq_states (s\<lparr>is_original_cap := x\<rparr>) = valid_irq_states s"
-  by(auto simp: valid_irq_states_def)
-
 crunch cap_insert
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
-
-lemma valid_irq_states_exst_update[simp]:
-  "valid_irq_states (s\<lparr>exst := x\<rparr>) = valid_irq_states s"
-  by(auto simp: valid_irq_states_def)
 
 
 context CSpace_AI_cap_insert begin

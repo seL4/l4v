@@ -296,7 +296,7 @@ lemma deleteASID_corres [corres]:
   assumes "asid' = asid" "pm' = pm"
   notes set_asid_pool_def[simp del]
   shows "corres dc
-          (invs and valid_etcbs and K (asid_wf asid \<and> asid \<noteq> 0))
+          (invs and K (asid_wf asid \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'
               and valid_arch_state' and cur_tcb')
           (delete_asid asid pm) (deleteASID asid' pm')"
@@ -309,7 +309,7 @@ lemma deleteASID_corres [corres]:
       apply (rule_tac P="\<lambda>s. asid_high_bits_of asid \<in> dom (asidTable o ucast) \<longrightarrow>
                              asid_pool_at (the ((asidTable o ucast) (asid_high_bits_of asid))) s" and
                       P'="pspace_aligned' and pspace_distinct'" and
-                      Q="invs and valid_etcbs and K (asid_wf asid \<and> asid \<noteq> 0) and
+                      Q="invs and K (asid_wf asid \<and> asid \<noteq> 0) and
                          (\<lambda>s. x64_asid_table (arch_state s) = asidTable \<circ> ucast)" in
                       corres_split)
          apply (simp add: dom_def)
@@ -317,8 +317,7 @@ lemma deleteASID_corres [corres]:
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def)
         apply (rule corres_split)
            apply (rule hwASIDInvalidate_corres[where pm=pm]; simp)
-          apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
-                             and valid_etcbs"
+          apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))"
                       and P'="pspace_aligned' and pspace_distinct'"
                        in corres_split)
              apply (simp del: fun_upd_apply)
@@ -570,7 +569,7 @@ lemma unmapPageTable_corres:
   assumes "asid' = asid" "vptr' = vptr" "pt' = pt"
   notes liftE_get_pde_corres = getObject_PDE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
-          (invs and valid_etcbs and page_table_at pt and
+          (invs and page_table_at pt and
            K (0 < asid \<and> is_aligned vptr pd_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
             and no_0_obj' and cur_tcb' and valid_objs')
@@ -655,7 +654,7 @@ lemmas liftE_get_pdpte_corres = getObject_PDPTE_corres'[THEN corres_liftE_rel_su
 
 lemma unmapPage_corres:
   assumes "sz' = sz" "asid' = asid" "vptr' = vptr" "pptr' = pptr"
-  shows "corres dc (invs and valid_etcbs and
+  shows "corres dc (invs and
                      K (valid_unmap sz (asid,vptr) \<and> vptr < pptr_base \<and> asid_wf asid
                           \<and> canonical_address vptr))
                    (valid_objs' and valid_arch_state' and pspace_aligned' and
@@ -673,7 +672,7 @@ lemma unmapPage_corres:
                               and (\<exists>\<rhd> vspace)
                               and valid_arch_state and valid_vspace_objs
                               and equal_kernel_mappings
-                              and pspace_aligned and valid_global_objs and valid_etcbs and
+                              and pspace_aligned and valid_global_objs and
                               K (valid_unmap sz (asid,vptr) \<and> canonical_address vptr )" and
                            P'="pspace_aligned' and pspace_distinct'" in corres_inst)
            apply clarsimp
@@ -865,7 +864,7 @@ lemma same_refs_vs_cap_ref_eq:
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   notes mapping_map_simps = mapping_map_def page_entry_map_def attr_mask_def attr_mask'_def page_entry_ptr_map_def
-  shows "corres (=) (invs and valid_etcbs and valid_page_inv pgi)
+  shows "corres (=) (invs and valid_page_inv pgi)
             (invs' and valid_page_inv' pgi')
             (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
@@ -881,7 +880,7 @@ proof -
     apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
                           page_invocation_map_def)
     apply (rule corres_guard_imp)
-      apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv cap (a,b) (aa,ba) vspace) and valid_etcbs
+      apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv cap (a,b) (aa,ba) vspace)
                          and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
                and R'="\<lambda>_. invs' and valid_slots' (ab,bb) and pspace_aligned'
                        and pspace_distinct' and K (page_entry_map_corres (ab,bb))" in corres_split)
@@ -1017,7 +1016,7 @@ definition
                                  and K (isPageTableCap cap)"
 
 lemma clear_page_table_corres:
-  "corres dc (pspace_aligned and page_table_at p and valid_etcbs)
+  "corres dc (pspace_aligned and page_table_at p)
              (pspace_aligned' and pspace_distinct')
     (mapM_x (swp store_pte X64_A.InvalidPTE)
        [p , p + 8 .e. p + 2 ^ ptBits - 1])
@@ -1035,7 +1034,7 @@ lemma clear_page_table_corres:
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
          rule_tac r'=dc and S="(=)"
-               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
+               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
       apply (rule corres_guard_imp, rule storePTE_corres')
@@ -1049,7 +1048,7 @@ lemma clear_page_table_corres:
   done
 
 lemma clear_page_directory_corres:
-  "corres dc (pspace_aligned and page_directory_at p and valid_etcbs)
+  "corres dc (pspace_aligned and page_directory_at p)
              (pspace_aligned' and pspace_distinct')
     (mapM_x (swp store_pde X64_A.InvalidPDE)
        [p , p + 8 .e. p + 2 ^ pdBits - 1])
@@ -1067,7 +1066,7 @@ lemma clear_page_directory_corres:
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
          rule_tac r'=dc and S="(=)"
-               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pde_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
+               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pde_at x s \<and> pspace_aligned s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
       apply (rule corres_guard_imp, rule storePDE_corres')
@@ -1081,7 +1080,7 @@ lemma clear_page_directory_corres:
   done
 
 lemma clear_pdpt_corres:
-  "corres dc (pspace_aligned and pd_pointer_table_at p and valid_etcbs)
+  "corres dc (pspace_aligned and pd_pointer_table_at p)
              (pspace_aligned' and pspace_distinct')
     (mapM_x (swp store_pdpte X64_A.InvalidPDPTE)
        [p , p + 8 .e. p + 2 ^ pdBits - 1])
@@ -1099,7 +1098,7 @@ lemma clear_pdpt_corres:
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
          rule_tac r'=dc and S="(=)"
-               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pdpte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
+               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pdpte_at x s \<and> pspace_aligned s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
       apply (rule corres_guard_imp, rule storePDPTE_corres')
@@ -1123,7 +1122,7 @@ lemmas unmapPDPT_typ_ats[wp] = typ_at_lifts[OF unmapPDPT_typ_at']
 lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
    corres dc
-          (invs and valid_etcbs and valid_pti pti)
+          (invs and valid_pti pti)
           (invs' and valid_pti' pti')
           (perform_page_table_invocation pti)
           (performPageTableInvocation pti')"
@@ -1214,7 +1213,7 @@ lemma unmapPageDirectory_corres:
   assumes "asid' = asid" "vptr' = vptr" "pd' = pd"
   notes liftE_get_pdpte_corres = getObject_PDPTE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
-          (invs and valid_etcbs and page_directory_at pd and
+          (invs and page_directory_at pd and
            K (0 < asid \<and> is_aligned vptr pdpt_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
             and no_0_obj' and cur_tcb' and valid_objs')
@@ -1254,7 +1253,7 @@ crunch unmap_pd, unmap_pdpt
 lemma performPageDirectoryInvocation_corres:
   "page_directory_invocation_map pdi pdi' \<Longrightarrow>
    corres dc
-          (invs and valid_etcbs and valid_pdi pdi)
+          (invs and valid_pdi pdi)
           (invs' and valid_pdi' pdi')
           (perform_page_directory_invocation pdi)
           (performPageDirectoryInvocation pdi')"
@@ -1336,7 +1335,7 @@ lemma unmapPDPT_corres:
   assumes "asid' = asid" "vptr' = vptr" "pd' = pd"
   notes liftE_get_pml4e_corres = get_pml4e_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
-          (invs and valid_etcbs and pd_pointer_table_at pd and
+          (invs and pd_pointer_table_at pd and
            K (0 < asid \<and> is_aligned vptr pml4_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
             and no_0_obj' and cur_tcb' and valid_objs')
@@ -1381,7 +1380,7 @@ definition
 lemma performPDPTInvocation_corres:
   "pdpt_invocation_map pdpti pdpti' \<Longrightarrow>
    corres dc
-          (invs and valid_etcbs and valid_pdpti pdpti)
+          (invs and valid_pdpti pdpti)
           (invs' and valid_pdpti' pdpti')
           (perform_pdpt_invocation pdpti)
           (performPDPTInvocation pdpti')"
@@ -1463,7 +1462,7 @@ definition
 
 lemma performASIDPoolInvocation_corres:
   assumes "ap' = asid_pool_invocation_map ap"
-  shows "corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap and valid_etcbs)
+  shows "corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap)
                    (pspace_aligned' and pspace_distinct' and valid_apinv' ap')
                    (perform_asid_pool_invocation ap)
                    (performASIDPoolInvocation ap')"
