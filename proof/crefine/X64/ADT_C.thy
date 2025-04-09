@@ -105,8 +105,6 @@ lemma setTCBContext_C_corres:
   apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def tcb_cte_cases_neqs
                    cvariable_relation_upd_const ko_at_projectKO_opt)
   apply (simp add: cep_relations_drop_fun_upd)
-  apply (apply_conjunct \<open>match conclusion in \<open>fpu_null_state_relation _\<close> \<Rightarrow>
-         \<open>simp add: fpu_null_state_heap_update_span_disjoint[OF tcb_at'_non_kernel_data_ref]\<close>\<close>)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     apply (simp add: ctcb_relation_def carch_tcb_relation_def)
@@ -119,12 +117,16 @@ end
 definition
   "register_to_H \<equiv> inv register_from_H"
 
-definition (in state_rel)
-  to_user_context_C :: "user_context \<Rightarrow> user_context_C"
-where
+definition (in state_rel) to_user_context_C :: "user_context \<Rightarrow> user_context_C" where
   "to_user_context_C uc \<equiv>
-  user_context_C (user_fpu_state_C (ARRAY r. user_fpu_state uc (finite_index r)))
-                 (ARRAY r. user_regs uc (register_to_H (of_nat r)))"
+     user_context_C (user_fpu_state_C (ARRAY r. user_fpu_state uc (finite_index r)))
+                    (ARRAY r. user_regs uc (register_to_H (of_nat r)))"
+
+definition ccur_fpu_to_H :: "tcb_C ptr \<Rightarrow> machine_word option" where
+  "ccur_fpu_to_H cur_fpu_owner \<equiv>
+    if cur_fpu_owner = NULL
+    then None
+    else Some (ctcb_ptr_to_tcb_ptr cur_fpu_owner)"
 
 lemma (in kernel_m) ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
@@ -562,7 +564,8 @@ definition
       (case_option X64IRQFree id \<circ>
           (array_map_conv
             (\<lambda>x. map_option x86_irq_state_to_H (x86_irq_state_lift x))
-            maxIRQ (x86KSIRQState_' cstate)))"
+            maxIRQ (x86KSIRQState_' cstate)))
+      (ccur_fpu_to_H (ksCurFPUOwner_' cstate))"
 
 
 lemma eq_option_to_ptr_rev:
@@ -571,35 +574,46 @@ lemma eq_option_to_ptr_rev:
               (if x=NULL then None else Some (ptr_val x)) = y"
   by (force simp: option_to_ptr_def option_to_0_def split: option.splits)
 
+lemma ccur_fpu_to_H_correct:
+  assumes valid: "valid_arch_state' astate"
+  assumes rel: "carch_state_relation (ksArchState astate) cstate"
+  shows
+    "ccur_fpu_to_H (ksCurFPUOwner_' cstate) = x64KSCurFPUOwner (ksArchState astate)"
+  using valid rel
+  by (clarsimp simp: valid_arch_state'_def carch_state_relation_def ccur_fpu_to_H_def cur_fpu_relation_def
+                     kernel.ctcb_ptr_to_ctcb_ptr \<comment> \<open>FIXME: move this lemma somewhere so it's not in kernel context\<close>
+                 split: option.splits)
+
 lemma carch_state_to_H_correct:
   assumes valid:  "valid_arch_state' astate"
   assumes rel:    "carch_state_relation (ksArchState astate) (cstate)"
   shows           "carch_state_to_H cstate = ksArchState astate"
   apply (case_tac "ksArchState astate", simp)
-  apply (rename_tac v1 v2 v3 v4 v5 v6 v7)
   using rel[simplified carch_state_relation_def carch_globals_def]
   apply (clarsimp simp: carch_state_to_H_def)
   apply (rule conjI)
-  apply (rule array_relation_map_conv2[OF _ eq_option_to_ptr_rev])
-    apply assumption
+   apply (rule array_relation_map_conv2[OF _ eq_option_to_ptr_rev])
+     apply assumption
+    using valid[simplified valid_arch_state'_def]
+    apply (fastforce simp: valid_asid_table'_def)
    using valid[simplified valid_arch_state'_def]
    apply (fastforce simp: valid_asid_table'_def)
-  using valid[simplified valid_arch_state'_def]
-  apply (fastforce simp: valid_asid_table'_def)
   apply (simp add: ccr3_relation_def split: cr3.splits)
   apply (rule conjI)
    apply (solves \<open>clarsimp simp: global_ioport_bitmap_relation_def\<close>)
   apply (rule conjI)
-   prefer 2
+   apply (clarsimp simp: array_relation_def ioapic_nirqs_to_H_def)
+   apply (rule ext)
+   using valid[simplified valid_arch_state'_def valid_ioapic_def]
+   apply (clarsimp simp: not_le)
+  apply (rule conjI)
    apply (rule ext)
    apply (clarsimp simp: x64_irq_state_relation_def array_relation_def array_map_conv_def
                          array_to_map_def)
    using valid[simplified valid_arch_state'_def valid_x64_irq_state'_def]
    apply (case_tac "x \<le> maxIRQ"; fastforce split: option.split)
-  apply (clarsimp simp: array_relation_def ioapic_nirqs_to_H_def)
-  apply (rule ext)
-  using valid[simplified valid_arch_state'_def valid_ioapic_def]
-  apply (clarsimp simp: not_le)
+  using valid rel
+  apply (simp add: ccur_fpu_to_H_correct)
   done
 
 end
@@ -1491,9 +1505,7 @@ lemma mk_gsUntypedZeroRanges_correct:
   done
 
 
-definition
-  cstate_to_H :: "globals \<Rightarrow> kernel_state"
-where
+definition cstate_to_H :: "globals \<Rightarrow> kernel_state" where
   "cstate_to_H s \<equiv>
    \<lparr>ksPSpace = cstate_to_pspace_H s,
     gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),

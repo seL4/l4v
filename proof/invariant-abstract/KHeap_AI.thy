@@ -1459,10 +1459,10 @@ lemma set_aobject_valid_mdb[wp]:
   done
 
 lemma set_aobject_pred_tcb_at[wp]:
-  "set_object ptr (ArchObj obj) \<lbrace>pred_tcb_at proj P t\<rbrace>"
+  "set_object ptr (ArchObj obj) \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def a_type_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def a_type_def split: kernel_object.splits)
   done
 
 lemma set_aobject_cur_tcb [wp]:

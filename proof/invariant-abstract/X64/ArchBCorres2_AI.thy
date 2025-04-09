@@ -28,7 +28,7 @@ crunch invoke_untyped
   for (bcorres) bcorres[wp]: truncate_state
   (ignore: sequence_x)
 
-crunch set_mcpriority, set_priority
+crunch set_mcpriority, set_priority, set_flags, arch_post_set_flags
   for (bcorres) bcorres[wp]: truncate_state
 
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
@@ -72,7 +72,7 @@ lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
   "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"
   by (cases a; simp ; wp)
 
-lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
+lemma handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
   by (cases a; simp add: handle_arch_fault_reply_def; wp)
 
@@ -105,7 +105,7 @@ lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (d
 crunch
   decode_set_ipc_buffer, decode_set_space, decode_set_priority,
   decode_set_mcpriority, decode_set_sched_params, decode_bind_notification,
-  decode_unbind_notification, decode_set_tls_base
+  decode_unbind_notification, decode_set_tls_base, decode_set_flags
   for (bcorres) bcorres[wp]: truncate_state
 
 lemma decode_tcb_configure_bcorres[wp]: "bcorres (decode_tcb_configure b (cap.ThreadCap c) d e)

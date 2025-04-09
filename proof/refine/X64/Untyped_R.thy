@@ -4488,7 +4488,7 @@ crunch doMachineOp
   (simp: crunch_simps ct_in_state'_def)
 
 crunch doMachineOp
-  for st_tcb_at'[wp]: "st_tcb_at' P p"
+  for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
   (simp: crunch_simps ct_in_state'_def)
 
 lemma ex_cte_cap_wp_to_irq_state_independent_H[simp]:

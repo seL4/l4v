@@ -133,6 +133,13 @@ lemma set_asid_pool_iflive [wp]:
                  split: kernel_object.splits arch_kernel_obj.splits)
   done
 
+lemma set_asid_pool_nonz_cap_to[wp]:
+  "set_asid_pool p ap \<lbrace>ex_nonz_cap_to t\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  including unfold_objects
+  by (wpsimp wp: set_object_nonz_cap_to[THEN hoare_set_object_weaken_pre]
+           simp: a_type_def)
+
 lemma set_asid_pool_zombies [wp]:
   "\<lbrace>\<lambda>s. zombies_final s\<rbrace>
   set_asid_pool p ap
@@ -671,7 +678,6 @@ lemmas pd_shifting_at = pd_shifting[OF is_aligned_pd]
 lemmas pdpt_shifting_at = pdpt_shifting[OF is_aligned_pdpt]
 lemmas pml4_shifting_at = pml4_shifting[OF is_aligned_pml4]
 
-
 lemma kernel_mapping_slots_empty_pml4eI:
   "\<lbrakk>equal_kernel_mappings s; valid_global_objs s; valid_arch_state s;
     kheap s p = Some (ArchObj (PageMapL4 pm)); x \<in> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
@@ -1104,22 +1110,31 @@ lemma store_pdpte_valid_objs [wp]:
   apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
   done
 
-lemma store_pml4e_arch [wp]:
-  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> store_pml4e p pml4e \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
-  by (simp add: store_pml4e_def set_arch_obj_simps | wp)+
+lemma set_pml4_pred_tcb_at[wp]:
+  "set_pml4 ptr val \<lbrace> \<lambda>s. Q (pred_tcb_at proj P t s) \<rbrace>"
+  unfolding set_pml4_def set_object_def
+  by (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def a_type_simps)
 
-lemma store_pdpte_arch [wp]:
-  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> store_pdpte p pdpte \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
-  by (simp add: store_pdpte_def set_arch_obj_simps | wp)+
+lemma set_pdpt_pred_tcb_at[wp]:
+  "set_pdpt ptr val \<lbrace> \<lambda>s. Q (pred_tcb_at proj P t s) \<rbrace>"
+  unfolding set_pdpt_def set_object_def
+  by (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def a_type_simps)
 
-lemma store_pde_arch [wp]:
-  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> store_pde p pde \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
-  by (simp add: store_pde_def set_arch_obj_simps | wp)+
+lemma set_pd_pred_tcb_at[wp]:
+  "set_pd ptr val \<lbrace> \<lambda>s. Q (pred_tcb_at proj P t s) \<rbrace>"
+  unfolding set_pd_def set_object_def
+  by (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def a_type_simps)
 
-lemma store_pte_arch [wp]:
-  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> store_pte p pte \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
-  apply (simp add: store_pte_def set_arch_obj_simps | wp)+
-  done
+lemma set_pt_pred_tcb_at[wp]:
+  "set_pt ptr val \<lbrace> \<lambda>s. Q (pred_tcb_at proj P t s) \<rbrace>"
+  unfolding set_pt_def set_object_def
+  by (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def a_type_simps)
+
+crunch store_pml4e, store_pdpte, store_pde, store_pte
+  for arch[wp]: "\<lambda>s. P (arch_state s)"
+  and distinct[wp]: pspace_distinct
+  and pred_tcb[wp]:  "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and idle[wp]: "\<lambda>s. P (idle_thread s)"
 
 lemma store_pte_valid_pte [wp]:
   "\<lbrace>valid_pte pt\<rbrace> store_pte p pte \<lbrace>\<lambda>_. valid_pte pt\<rbrace>"
@@ -1527,10 +1542,6 @@ lemma set_object_valid_arch_caps[wp]:
   \<lbrace> \<lambda>_. valid_arch_caps \<rbrace>"
   by (clarsimp simp: valid_arch_caps_def | wp | fast)+
 
-crunch set_object
-  for valid_irq_states[wp]: "valid_irq_states"
-  (wp: crunch_wps)
-
 lemma set_object_state_hyp_refs[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_object ptr obj
@@ -1577,7 +1588,7 @@ lemma set_object_invs[wp]:
   \<lbrace> \<lambda>_. invs \<rbrace>"
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_asid_map_def)
   apply (wp valid_irq_node_typ valid_irq_handlers_lift valid_arch_state_lift
-            set_aobj_valid_global_vspace_mappings set_object_valid_objs)
+            set_aobj_valid_global_vspace_mappings set_object_valid_objs valid_cur_fpu_lift_arch)
   apply (clarsimp simp: valid_arch_state_def valid_obj_def)
   done
 
@@ -2214,7 +2225,7 @@ lemma valid_table_caps_aobj_upd_invalid_pde:
   apply (drule_tac x = p in spec)
   apply (intro impI allI conjI)
          apply (clarsimp simp: obj_at_def dest!: ref_pages_NoneD)
-         apply (fastforce simp: ref_pages_NoneD)
+         apply fastforce
     apply (clarsimp simp: obj_at_def dest!: invs_valid_objs caps_of_state_valid | drule(2) valid_cap_typ_at)+
   done
 
@@ -2348,6 +2359,10 @@ lemma valid_pte_ref_obj_at_empty_vs_refs:
    apply (clarsimp simp: a_type_simps vs_refs_def)+
   done
 
+crunch store_pte
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
+
 lemma store_pte_invs:
   "\<lbrace>invs and (\<lambda>s. valid_pte pte s) and
          (\<lambda>s. \<forall>ptr. pte_ref_pages pte = Some ptr \<longrightarrow> (
@@ -2412,10 +2427,9 @@ lemma set_asid_pool_ifunsafe [wp]:
   by (wpsimp simp: set_asid_pool_def)
 
 lemma set_asid_pool_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
-  done
+  "set_asid_pool ptr val \<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace>"
+  unfolding set_asid_pool_def set_object_def
+  by (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def a_type_simps)
 
 lemma set_asid_pool_reply_caps [wp]:
   "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace>
@@ -2606,15 +2620,17 @@ lemma set_asid_pool_zombies_state_hyp_refs [wp]:
    \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
   by (simp add: set_object_state_hyp_refs set_arch_obj_simps)
 
+crunch set_asid_pool
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
+
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p \<rbrace>
        set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_asid_map_def
-                   valid_arch_caps_def del: set_asid_pool_def)
-  apply (wp valid_irq_node_typ
-            set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
-            set_asid_pool_vs_lookup_unmap valid_ioports_lift
-         | simp del: set_asid_pool_def)+
+                   valid_arch_caps_def)
+  apply (wpsimp wp: valid_irq_node_typ set_asid_pool_vspace_objs_unmap valid_irq_handlers_lift
+                    set_asid_pool_vs_lookup_unmap valid_ioports_lift)
   done
 
 lemma set_asid_pool_invs_unmap:
@@ -2809,12 +2825,33 @@ lemma cap_refs_respects_device_region_dmo:
                          OF _ refl])
   by simp
 
-lemma machine_op_lift_device_state[wp]:
-  "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def Nondet_VCG.valid_def bind_def
-                     machine_rest_lift_def gets_def simpler_modify_def get_def return_def
-                     select_def ignore_failure_def select_f_def
-              split: if_splits)
+crunch do_machine_op
+  for valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and equal_kernel_mappings[wp]: equal_kernel_mappings
+  and valid_asid_map[wp]: valid_asid_map
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and vspace_at_asid[wp]: "\<lambda>s. P (vspace_at_asid a pt s)"
+  and valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
+  and valid_obj[wp]: "valid_obj t obj"
+  and valid_cur_fpu[wp]: valid_cur_fpu
+  (simp: valid_kernel_mappings_def wp: valid_obj_typ)
+
+lemma dmo_invs_lift:
+  assumes dev: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  assumes mem: "\<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
+  assumes irq: "\<And>P. f \<lbrace>\<lambda>ms. P (irq_masks ms)\<rbrace>"
+  shows "do_machine_op f \<lbrace>invs\<rbrace>"
+  unfolding invs_def valid_state_def valid_pspace_def valid_irq_states_def valid_machine_state_def
+  by (wpsimp wp: dev hoare_vcg_all_lift hoare_vcg_disj_lift
+                 dmo_inv_prop_lift[where g=underlying_memory, OF mem]
+                 pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo
+      | wps dmo_inv_prop_lift[where g=irq_masks, OF irq])+
+
+lemma dmo_machine_op_lift_invs[wp]:
+  "do_machine_op (machine_op_lift f) \<lbrace>invs\<rbrace>"
+  by (wp dmo_invs_lift)
 
 lemma as_user_inv:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"

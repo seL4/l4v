@@ -752,13 +752,16 @@ lemma set_ioport_mask_invs:
                         valid_irq_node_def valid_irq_states_def valid_machine_state_def valid_arch_caps_def
                          valid_global_objs_def valid_asid_map_def valid_kernel_mappings_def
                         second_level_tables_def)
-  apply (clarsimp simp: valid_ioports_def all_ioports_issued_def)
-  apply (drule_tac x=cap in bspec, assumption)
-  apply (clarsimp simp: subset_eq issued_ioports_def clearable_ioport_range_def)
-  apply (case_tac b; simp)
-  apply (erule ranE)
-  apply (drule_tac x=cap in bspec, fastforce simp: ran_def)
-  by auto
+  apply (rule conjI)
+   apply (clarsimp simp: valid_ioports_def all_ioports_issued_def)
+   apply (drule_tac x=cap in bspec, assumption)
+   apply (clarsimp simp: subset_eq issued_ioports_def clearable_ioport_range_def)
+   apply (case_tac b; simp)
+   apply (erule ranE)
+   apply (drule_tac x=cap in bspec, fastforce simp: ran_def)
+   apply fastforce
+  apply (clarsimp simp: valid_cur_fpu_defs)
+  done
 
 definition
   "arch_post_cap_delete_pre \<equiv> clearable_ioport_range"

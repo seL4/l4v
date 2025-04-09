@@ -79,9 +79,9 @@ proof -
        apply (clarsimp simp: return_def)
       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
+   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ)" in hoare_post_imp)
     apply (clarsimp simp: non_kernel_IRQs_def)
-   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+   apply (wp getActiveIRQ_le_maxIRQ  | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 qed
@@ -253,7 +253,6 @@ lemma handleSyscall_ccorres:
                 apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
                  apply (rule ccorres_Guard)?
                  apply (simp only: irqInvalid_def)?
-                 apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                  apply (subst ccorres_seq_skip'[symmetric])
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
@@ -264,11 +263,10 @@ lemma handleSyscall_ccorres:
                   apply wp
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
-                apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
-                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                             in hoare_post_imp)
+                apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ)"
+                             in hoare_post_imp)
                  apply (clarsimp simp: non_kernel_IRQs_def)
-                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+                apply (wp getActiveIRQ_le_maxIRQ | simp)+
                apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
                apply (simp add: invs'_def valid_state'_def)
               apply clarsimp
@@ -288,7 +286,6 @@ lemma handleSyscall_ccorres:
                apply (rule ccorres_cond_univ)
                apply (simp add: liftE_def bind_assoc irqInvalid_def)
                apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-                apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                 apply (subst ccorres_seq_skip'[symmetric])
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule ccorres_Guard)?
@@ -300,11 +297,10 @@ lemma handleSyscall_ccorres:
                  apply wp
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
-               apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
-                (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                     in hoare_post_imp)
+               apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ)"
+                            in hoare_post_imp)
                 apply (clarsimp simp: non_kernel_IRQs_def)
-               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+               apply (wp getActiveIRQ_le_maxIRQ | simp)+
               apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
@@ -323,25 +319,22 @@ lemma handleSyscall_ccorres:
               apply (rule ccorres_cond_univ)
               apply (simp add: liftE_def bind_assoc irqInvalid_def)
               apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-               apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
                apply (subst ccorres_seq_skip'[symmetric])
                apply (rule ccorres_split_nothrow_novcg)
                    apply (rule ccorres_Guard)?
                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                     apply (case_tac rv, clarsimp)
                     apply (clarsimp simp: ucast_8_32_neq)
-                   apply clarsimp
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                 apply wp
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
-              apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
-               (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                        in hoare_post_imp)
+              apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ)"
+                           in hoare_post_imp)
                apply (clarsimp simp: non_kernel_IRQs_def)
-              apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+              apply (wp getActiveIRQ_le_maxIRQ | simp)+
              apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
