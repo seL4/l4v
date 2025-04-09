@@ -2325,6 +2325,10 @@ lemma other_objs_default_relation:
                  split: Structures_A.apiobject_type.split_asm)
   done
 
+lemma word_to_tcb_flags_0[simp]:
+  "word_to_tcb_flags 0 = {}"
+  by (clarsimp simp: word_to_tcb_flags_def)
+
 lemma tcb_relation_retype:
   "obj_relation_retype (default_object Structures_A.TCBObject dev n d)
                        (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject))"
@@ -3113,7 +3117,7 @@ proof (intro conjI impI)
        apply (rule_tac ptr="x + xa" in cte_wp_at_tcbI', assumption+)
         apply fastforce
        apply simp
-      apply (rename_tac thread_state mcp priority bool option nat cptr vptr bound tcbprev tcbnext user_context)
+      apply (rename_tac thread_state mcp priority bool option nat cptr vptr bound tcbprev tcbnext tcbflags tcbarch)
       apply (case_tac thread_state, simp_all add: valid_tcb_state'_def valid_bound_tcb'_def
                                                   valid_bound_ntfn'_def obj_at_disj' none_top_def
                                                   valid_arch_tcb'_def

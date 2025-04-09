@@ -622,11 +622,14 @@ lemma unbindNotification_ctes_of_thread:
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by wp
 
+crunch fpuRelease
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
+
 lemma prepareThreadDelete_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
-  by (wpsimp simp: prepareThreadDelete_def fpuThreadDelete_def)
+  by (wpsimp simp: prepareThreadDelete_def)
 
 lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
@@ -653,7 +656,7 @@ lemma prepareThreadDelete_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  by (wpsimp simp: prepareThreadDelete_def fpuThreadDelete_def not_recursive_ctes_def cteCaps_of_def)
+  by (wpsimp simp: prepareThreadDelete_def not_recursive_ctes_def cteCaps_of_def)
 
 definition
   finaliseSlot_recset :: "((machine_word \<times> bool \<times> kernel_state) \<times> (machine_word \<times> bool \<times> kernel_state)) set"
@@ -9042,7 +9045,6 @@ crunch finaliseCap
   (wp: crunch_wps unless_wp getASID_wp no_irq
        no_irq_writeCR3 no_irq_invalidateASID
        no_irq_invalidateLocalPageStructureCacheASID
-       no_irq_switchFpuOwner no_irq_nativeThreadUsingFPU
    simp: crunch_simps o_def)
 
 lemma finaliseSlot_IRQInactive':
