@@ -82,7 +82,7 @@ next
 qed
 
 lemma empty_fail_freeMemory [Detype_AI_assms]: "empty_fail (freeMemory ptr bits)"
-  by (fastforce simp: freeMemory_def mapM_x_mapM ef_storeWord)
+  by (fastforce simp: freeMemory_def mapM_x_mapM)
 
 
 lemma region_in_kernel_window_detype[simp]:
@@ -211,6 +211,11 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   apply (simp add: cap_range_def)
   apply blast
   done
+
+lemma valid_cur_fpu[detype_invs_proofs]:
+  "valid_cur_fpu (detype (untyped_range cap) s)"
+  using valid_cur_fpu
+  by (auto simp: valid_cur_fpu_def is_tcb_cur_fpu_def live_def arch_tcb_live_def arch_state_det elim!: live_okE)
 
 lemma global_pdpts:
   "\<And>p. \<lbrakk> p \<in> set (x64_global_pdpts (arch_state s)); p \<in> untyped_range cap \<rbrakk>  \<Longrightarrow> False"
@@ -547,7 +552,7 @@ sublocale detype_locale < detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?)
+  by (intro_locales; unfold_locales; (fact detype_invs_proofs)?)
   qed
 
 context detype_locale begin
@@ -569,7 +574,7 @@ lemma (in Arch) delete_objects_invs[wp]:
     invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
+  apply (simp add: freeMemory_def word_size_def bind_assoc)
    apply (rule hoare_pre)
    apply (rule_tac P'="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)
