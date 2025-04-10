@@ -486,10 +486,6 @@ crunch arch_get_sanitise_register_info, arch_post_modify_registers
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
-lemma make_arch_fault_msg_inv:
-  "make_arch_fault_msg f t \<lbrace>P\<rbrace>"
-  by (cases f; wpsimp)
-
 declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
 
 lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:

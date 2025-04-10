@@ -570,7 +570,7 @@ lemma cap_insert_simple_invs:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_mdb cap_insert_iflive
-             cap_insert_zombies cap_insert_ifunsafe valid_cur_fpu_lift
+             cap_insert_zombies cap_insert_ifunsafe
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)
