@@ -25,8 +25,8 @@ definition load_fpu_state :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad
      do_machine_op (writeFpuState fpu_state)
    od"
 
-definition set_arm_current_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_arm_current_fpu_owner new_owner \<equiv> do
+definition set_x64_current_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_x64_current_fpu_owner new_owner \<equiv> do
      cur_fpu_owner \<leftarrow> gets (x64_current_fpu_owner \<circ> arch_state);
      maybeM (arch_thread_set (tcb_cur_fpu_update \<bottom>)) cur_fpu_owner;
      modify (\<lambda>s. s \<lparr>arch_state := arch_state s\<lparr>x64_current_fpu_owner := new_owner\<rparr>\<rparr>);
@@ -42,7 +42,7 @@ definition switch_local_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::sta
      case new_owner of
        None \<Rightarrow> do_machine_op disableFpu
        | Some tcb_ptr \<Rightarrow> load_fpu_state tcb_ptr;
-     set_arm_current_fpu_owner new_owner
+     set_x64_current_fpu_owner new_owner
    od"
 
 definition fpu_release :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
