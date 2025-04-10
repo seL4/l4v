@@ -218,6 +218,7 @@ definition Low_tcbH :: tcb where
      \<comment> \<open>tcbBoundNotification =\<close> None
      \<comment> \<open>tcbSchedPrev         =\<close> None
      \<comment> \<open>tcbSchedNext         =\<close> None
+     \<comment> \<open>tcbFlags             =\<close> 0
      \<comment> \<open>tcbContext           =\<close> (ArchThread undefined)"
 
 
@@ -244,6 +245,7 @@ definition High_tcbH :: tcb where
      \<comment> \<open>tcbBoundNotification =\<close> None
      \<comment> \<open>tcbSchedPrev         =\<close> None
      \<comment> \<open>tcbSchedNext         =\<close> None
+     \<comment> \<open>tcbFlags             =\<close> 0
      \<comment> \<open>tcbContext           =\<close> (ArchThread undefined)"
 
 
@@ -268,6 +270,7 @@ definition idle_tcbH :: tcb where
      \<comment> \<open>tcbBoundNotification =\<close> None
      \<comment> \<open>tcbSchedPrev         =\<close> None
      \<comment> \<open>tcbSchedNext         =\<close> None
+     \<comment> \<open>tcbFlags             =\<close> 0
      \<comment> \<open>tcbContext           =\<close> (ArchThread empty_context)"
 
 

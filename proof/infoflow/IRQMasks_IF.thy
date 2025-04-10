@@ -264,9 +264,6 @@ fun irq_of_handler_inv where
   "irq_of_handler_inv (ClearIRQHandler irq) = irq" |
   "irq_of_handler_inv (SetIRQHandler irq _ _) = irq"
 
-crunch invoke_domain
-  for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
-
 lemma decode_invocation_IRQHandlerCap:
   "\<lbrace>cte_wp_at ((=) cap) slot\<rbrace>
    decode_invocation label args cap_index slot cap blah
@@ -295,11 +292,16 @@ locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
     "do_reply_transfer sender receiver slot grant \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and arch_perform_invocation_irq_masks[wp]:
     "arch_perform_invocation i \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  and arch_prepare_set_domain_irq_masks_of_state[wp]:
+    "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and invoke_tcb_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and tcb_inv_wf tinv\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
 begin
+
+crunch invoke_domain
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma perform_invocation_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and
