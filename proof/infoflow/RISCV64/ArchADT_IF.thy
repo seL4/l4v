@@ -235,6 +235,9 @@ lemma do_user_op_if_irq_measure_if[ADT_IF_assms]:
          | wps |wp dmo_wp | wpc)+
   done
 
+crunch set_flags
+  for irq_states_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
+
 lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
   "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False sta
                              and tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>

@@ -160,6 +160,9 @@ lemma as_user_globals_equiv[Arch_IF_assms]:
                    dest: valid_global_arch_objs_pt_at)
   done
 
+declare arch_prepare_set_domain_inv[Arch_IF_assms]
+declare arch_prepare_next_domain_inv[Arch_IF_assms]
+
 end
 
 
