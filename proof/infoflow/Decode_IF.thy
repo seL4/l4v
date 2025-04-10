@@ -212,6 +212,10 @@ lemma decode_untyped_invocation_rev:
   apply (auto dest: is_cnode_into_is_subject elim: prop_of_obj_ref_of_cnode_cap)
   done
 
+lemma decode_set_flags_reads_rev:
+  "reads_equiv_valid_inv A aag \<top> (decode_set_flags args (ThreadCap t))"
+  unfolding decode_set_flags_def by wpsimp
+
 lemma decode_tcb_invocation_reads_respects_f:
   notes respects_f = reads_respects_f[where st=st and Q=\<top>]
   shows
@@ -231,6 +235,7 @@ lemma decode_tcb_invocation_reads_respects_f:
              derive_cap_inv slot_cap_long_running_delete_reads_respects_f[where st=st]
              respects_f[OF check_valid_ipc_buffer_rev] check_valid_ipc_buffer_inv
              respects_f[OF decode_set_priority_rev] respects_f[OF decode_set_mcpriority_rev]
+             respects_f[OF decode_set_flags_reads_rev]
              respects_f[OF decode_set_sched_params_rev]
              respects_f[OF get_simple_ko_reads_respects]
              respects_f[OF get_bound_notification_reads_respects']

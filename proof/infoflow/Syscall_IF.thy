@@ -55,6 +55,10 @@ locale Syscall_IF_1 =
     "arch_mask_irq_signal irq \<lbrace>globals_equiv st\<rbrace>"
   and handle_reserved_irq_globals_equiv[wp]:
     "handle_reserved_irq irq \<lbrace>globals_equiv st\<rbrace>"
+  and arch_prepare_set_domain_globals_equiv[wp]:
+    "arch_prepare_set_domain t new_dom \<lbrace>globals_equiv st\<rbrace>"
+  and arch_prepare_set_domain_valid_arch_state[wp]:
+    "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
   and handle_vm_fault_reads_respects:
     "reads_respects aag l (K (is_subject aag thread)) (handle_vm_fault thread vmfault_type)"
   and handle_hypervisor_fault_reads_respects:
@@ -828,9 +832,6 @@ lemma as_user_reads_respects_g:
    apply simp+
   done
 
-crunch invoke_domain
-  for globals_equiv[wp]: "globals_equiv st"
-
 lemma handle_fault_globals_equiv':
   "\<lbrace>invs and globals_equiv st and K (valid_fault ex)\<rbrace>
    handle_fault thread ex
@@ -842,6 +843,9 @@ crunch timer_tick
 
 
 context Syscall_IF_1 begin
+
+crunch invoke_domain
+  for globals_equiv[wp]: "globals_equiv st"
 
 lemma handle_interrupt_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_state) and invs\<rbrace>
