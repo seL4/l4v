@@ -233,6 +233,7 @@ where
      \<comment> \<open>tcbBoundNotification        =\<close> None
      \<comment> \<open>tcbSchedPrev       =\<close> None
      \<comment> \<open>tcbSchedNext       =\<close> None
+     \<comment> \<open>tcbFlags           =\<close> 0
      \<comment> \<open>tcbContext         =\<close> (ArchThread undefined)"
 
 
@@ -259,6 +260,7 @@ where
      \<comment> \<open>tcbBoundNotification        =\<close> None
      \<comment> \<open>tcbSchedPrev       =\<close> None
      \<comment> \<open>tcbSchedNext       =\<close> None
+     \<comment> \<open>tcbFlags           =\<close> 0
      \<comment> \<open>tcbContext         =\<close> (ArchThread undefined)"
 
 
@@ -285,6 +287,7 @@ where
      \<comment> \<open>tcbBoundNotification        =\<close> None
      \<comment> \<open>tcbSchedPrev       =\<close> None
      \<comment> \<open>tcbSchedNext       =\<close> None
+     \<comment> \<open>tcbFlags           =\<close> 0
      \<comment> \<open>tcbContext         =\<close> (ArchThread empty_context)"
 
 definition

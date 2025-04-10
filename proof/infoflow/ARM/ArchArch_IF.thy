@@ -162,6 +162,9 @@ lemma as_user_globals_equiv[Arch_IF_assms]:
   apply (clarsimp simp: valid_arch_state_def get_tcb_def obj_at_def)
   done
 
+declare arch_prepare_set_domain_inv[Arch_IF_assms]
+declare arch_prepare_next_domain_inv[Arch_IF_assms]
+
 end
 
 context begin interpretation Arch .

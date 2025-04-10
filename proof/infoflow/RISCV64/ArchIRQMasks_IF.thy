@@ -104,7 +104,7 @@ qed
 
 context Arch begin global_naming RISCV64
 
-crunch do_reply_transfer, set_priority
+crunch do_reply_transfer, set_priority, set_flags, arch_post_set_flags
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 
@@ -154,6 +154,9 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
 lemma init_arch_objects_irq_masks:
   "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   by (rule init_arch_objects_inv)
+
+crunch arch_prepare_set_domain
+  for inv[IRQMasks_IF_assms,wp]: P
 
 end
 

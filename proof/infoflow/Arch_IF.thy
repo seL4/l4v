@@ -422,6 +422,10 @@ locale Arch_IF_1 =
      \<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
      as_user tptr f
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  and arch_prepare_set_domain_irq_state_of_state[wp]:
+    "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  and arch_prepare_next_domain_irq_state_of_state[wp]:
+    "arch_prepare_next_domain  \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
 begin
 
 crunch empty_slot

@@ -172,6 +172,8 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
     apply (auto simp: cap_range_def)
   done
 
+declare arch_prepare_set_domain_inv[Syscall_IF_assms]
+
 end
 
 
