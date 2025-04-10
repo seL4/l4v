@@ -893,7 +893,7 @@ lemma set_pt_distinct [wp]:
 
 crunch store_pte
   for arch[wp]: "\<lambda>s. P (arch_state s)"
-  and "distinct"[wp]: pspace_distinct
+  and distinct[wp]: pspace_distinct
 
 lemma store_pt_asid_pools_of[wp]:
   "set_pt p pt \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
