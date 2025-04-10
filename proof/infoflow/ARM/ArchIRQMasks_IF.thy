@@ -107,7 +107,7 @@ qed
 
 context Arch begin global_naming ARM
 
-crunch do_reply_transfer, set_priority
+crunch do_reply_transfer, set_priority, set_flags, arch_post_set_flags
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 
@@ -154,6 +154,9 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
      apply blast
     apply (simp add: option_update_thread_def | wp hoare_weak_lift_imp hoare_vcg_all_lift | wpc)+
   by fastforce+
+
+crunch arch_prepare_set_domain
+  for inv[IRQMasks_IF_assms,wp]: P
 
 end
 
