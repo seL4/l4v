@@ -1202,9 +1202,9 @@ lemma updateObject_ep_inv:
   by simp (rule updateObject_default_inv)
 
 lemma asUser_tcbQueued_inv[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace>"
+  "asUser t m \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)\<rbrace>"
   apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
+  apply (wp threadSet_obj_at'_no_state getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
   done
 
 context begin interpretation Arch . (* FIXME: arch-split *)
@@ -2248,8 +2248,8 @@ lemma suspend_unqueued:
 
 crunch prepareThreadDelete
   for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
-crunch prepareThreadDelete
-  for inactive: "st_tcb_at' ((=) Inactive) t'"
+  and inactive: "st_tcb_at' ((=) Inactive) t'"
+  (simp: obj_at'_not_comp_fold)
 
 end
 end
