@@ -452,7 +452,7 @@ lemma tcbFault_submonad_args:
 lemma threadGet_stateAssert_gets:
   "threadGet ext t = do stateAssert (tcb_at' t) []; gets (thread_fetch ext t) od"
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
-  apply (wp threadGet_wp | clarsimp simp: obj_at'_def thread_fetch_def)+
+  apply (wp threadGet_wp | clarsimp simp: obj_at'_def thread_fetch_def projectKOs)+
   done
 
 lemma threadGet_tcbFault_submonad_fn:
@@ -490,7 +490,7 @@ lemma is_stateAssert_modify:
 lemma threadSet_stateAssert_modify:
   "threadSet f t = do stateAssert (tcb_at' t) []; modify (thread_replace (\<lambda>_. f) t ()) od"
   apply (rule is_stateAssert_modify [OF _ _ empty_fail_threadSet no_fail_threadSet])
-  apply (wp threadSet_wp | clarsimp simp: obj_at'_def thread_replace_def)+
+  apply (wp threadSet_wp | clarsimp simp: obj_at'_def thread_replace_def projectKOs)+
   done
 
 lemmas asUser_return = submonad.return [OF submonad_asUser]
