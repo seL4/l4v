@@ -58,11 +58,6 @@ where
           \<and> (is_pml4_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
           \<and> \<not> is_ioport_control_cap cap)"
 
-crunch arch_post_set_flags, arch_prepare_set_domain
-  for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
-  and invs[wp, Tcb_AI_assms]: "invs"
-
-
 definition (* arch specific *)
   "vspace_asid cap \<equiv> case cap of
     ArchObjectCap (PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
