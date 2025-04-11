@@ -139,7 +139,7 @@ present on all platforms is stored here.
 > type ArchTcbFlag = ()
 
 > archTcbFlagToWord :: ArchTcbFlag -> Word
-> archTcbFlagToWord _ = error "ARM does not have any arch specific flags"
+> archTcbFlagToWord _ = 0 -- ARM does not have any arch specific flags but we make this 0 so that some proofs are easier
 
 \subsection{ASID Pools}
 
