@@ -76,7 +76,7 @@ atcbContextGet = atcbContext
 type ArchTcbFlag = ()
 
 archTcbFlagToWord :: ArchTcbFlag -> Word
-archTcbFlagToWord _ = error "ARM does not have any arch specific flags"
+archTcbFlagToWord _ = 0 -- RISCV64 does not have any arch specific flags but we make this 0 so that some proofs are easier
 
 {- ASID Pools -}
 
