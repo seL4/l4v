@@ -1663,9 +1663,6 @@ lemma makeFaultMessage_tcb_at'[wp]:
                  simp: getRegister_def makeArchFaultMessage_def)+
   done
 
-crunch make_fault_msg
-  for in_user_frame[wp]: "in_user_frame p"
-
 lemma makeFaultMessage_valid_ipc_buffer_ptr'[wp]:
   "makeFaultMessage ft t \<lbrace>valid_ipc_buffer_ptr' p\<rbrace>"
   apply (cases ft, simp_all add: makeFaultMessage_def)
