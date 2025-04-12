@@ -463,9 +463,9 @@ lemma performInvocation_corres:
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF prepareSetDomain_corres])
-        apply (rule corres_split[OF setDomain_corres])
-          apply (rule corres_trivial, simp)
-         apply wpsimp+
+          apply (rule corres_split[OF setDomain_corres])
+            apply (rule corres_trivial, simp)
+           apply wpsimp+
        apply (fastforce+)[2]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
