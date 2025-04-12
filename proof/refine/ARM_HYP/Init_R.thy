@@ -28,9 +28,7 @@ context begin interpretation Arch . (*FIXME: arch-split*)
   system.
 *)
 
-definition zeroed_arch_abstract_state ::
-  arch_state
-  where
+definition zeroed_arch_abstract_state :: arch_state where
   "zeroed_arch_abstract_state \<equiv> \<lparr>
     arm_asid_table = Map.empty,
     arm_hwasid_table = Map.empty,
@@ -42,9 +40,7 @@ definition zeroed_arch_abstract_state ::
     arm_us_global_pd =0
    \<rparr>"
 
-definition zeroed_main_abstract_state ::
-  abstract_state
-  where
+definition zeroed_main_abstract_state :: abstract_state where
   "zeroed_main_abstract_state \<equiv> \<lparr>
     kheap = Map.empty,
     cdt = Map.empty,
