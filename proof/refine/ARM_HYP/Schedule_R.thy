@@ -824,12 +824,11 @@ proof -
 qed
 
 crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread
-  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_objs'[wp]: valid_objs'
-  (wp: crunch_wps threadSet_sched_pointers getObject_tcb_wp getASID_wp
-   simp: crunch_simps obj_at'_def)
+  (wp: crunch_wps threadSet_sched_pointers simp: crunch_simps)
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for pspace_aligned[wp]: pspace_aligned
@@ -837,7 +836,7 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
   and ready_qs_distinct[wp]: ready_qs_distinct
   and valid_idle_new[wp]: valid_idle
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
-  (wp: ready_qs_distinct_lift simp: crunch_simps)
+  (wp: ready_qs_distinct_lift)
 
 lemma valid_queues_in_correct_ready_q[elim!]:
   "valid_queues s \<Longrightarrow> in_correct_ready_q s"

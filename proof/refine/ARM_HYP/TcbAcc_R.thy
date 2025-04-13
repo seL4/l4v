@@ -1461,6 +1461,10 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
+lemma atcbVCPUPtr_atcbContextSet_id[simp]:
+  "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
+  by (simp add: atcbContextSet_def)
+
 lemmas typ_at'_valid_tcb'_lift =
   typ_at'_valid_obj'_lift[where obj="KOTCB tcb" for tcb, unfolded valid_obj'_def, simplified]
 

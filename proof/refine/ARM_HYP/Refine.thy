@@ -658,16 +658,14 @@ lemma entry_corres:
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext,
                 simp add: invs_def valid_state_def valid_pspace_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
-       apply ((wp thread_set_invs_trivial
-                  thread_set_not_state_valid_sched hoare_weak_lift_imp
-                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
-               | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state schact_is_rct_def)+)[1]
-      apply (simp add: pred_conj_def cong: conj_cong)
-      apply (wp threadSet_invs_trivial threadSet_ct_running'
-                 hoare_weak_lift_imp hoare_vcg_disj_lift
-              | simp add: ct_in_state'_def atcbContextSet_def
-              | (wps, wp threadSet_st_tcb_at2))+
-   apply (fastforce simp: invs_def cur_tcb_def)
+       apply (wp thread_set_invs_trivial
+                 threadSet_invs_trivial threadSet_ct_running'
+                 thread_set_not_state_valid_sched hoare_weak_lift_imp
+                 hoare_vcg_disj_lift ct_in_state_thread_state_lift
+                 thread_set_no_change_tcb_state
+              | simp add: tcb_cap_cases_def ct_in_state'_def schact_is_rct_def
+              | (wps, wp threadSet_st_tcb_at2) )+
+   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def valid_pspace_def)
   apply (clarsimp simp: ct_in_state'_def)
   done
 
