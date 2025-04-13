@@ -28,18 +28,14 @@ context begin interpretation Arch . (*FIXME: arch-split*)
   system.
 *)
 
-definition zeroed_arch_abstract_state ::
-  arch_state
-  where
+definition zeroed_arch_abstract_state :: arch_state where
   "zeroed_arch_abstract_state \<equiv> \<lparr>
     riscv_asid_table    = Map.empty,
     riscv_global_pts    = K {},
     riscv_kernel_vspace = K RISCVVSpaceUserRegion
   \<rparr>"
 
-definition zeroed_main_abstract_state ::
-  abstract_state
-  where
+definition zeroed_main_abstract_state :: abstract_state where
   "zeroed_main_abstract_state \<equiv> \<lparr>
     kheap = Map.empty,
     cdt = Map.empty,
