@@ -28,9 +28,7 @@ context begin interpretation Arch . (*FIXME: arch-split*)
   system.
 *)
 
-definition zeroed_arch_abstract_state ::
-  arch_state
-  where
+definition zeroed_arch_abstract_state :: arch_state where
   "zeroed_arch_abstract_state \<equiv> \<lparr>
     x64_asid_table         = Map.empty,
     x64_global_pml4        = 0,

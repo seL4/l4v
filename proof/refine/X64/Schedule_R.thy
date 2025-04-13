@@ -869,6 +869,28 @@ lemma setCurThread_invs_idle_thread:
   by (rule hoare_pre, rule setCurThread_invs_no_cicd'_idle_thread)
      (clarsimp simp: invs'_to_invs_no_cicd'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
 
+lemma armKSCurFPUOwner_invs'[wp]:
+  "modifyArchState (armKSCurFPUOwner_update f) \<lbrace>invs'\<rbrace>"
+  apply (wpsimp simp: modifyArchState_def)
+  by (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def
+                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+                     valid_arch_state'_def valid_global_refs'_def global_refs'_def
+              split: option.split)
+
+crunch loadFpuState, saveFpuState
+  for invs'[wp]: invs'
+  (ignore: doMachineOp)
+
+lemma switchLocalFpuOwner_invs[wp]:
+  "\<lbrace>invs' and opt_tcb_at' newOwner\<rbrace> switchLocalFpuOwner newOwner \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding switchLocalFpuOwner_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' typ_at_lifts simp: fpuOwner_asrt_def)
+
+lemma lazyFpuRestore_invs[wp]:
+  "\<lbrace>invs' and tcb_at' t\<rbrace> lazyFpuRestore t \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding lazyFpuRestore_def
+  by (wpsimp wp: threadGet_wp)
+
 lemma Arch_switchToThread_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: X64_H.switchToThread_def)
@@ -991,6 +1013,17 @@ lemma asUser_utr[wp]:
   apply (rule hoare_pre, wp untyped_ranges_zero_lift)
   apply (simp add: o_def)
   done
+
+lemma armKSCurFPUOwner_invs_no_cicd'[wp]:
+  "modifyArchState (armKSCurFPUOwner_update f) \<lbrace>invs_no_cicd'\<rbrace>"
+  apply (wpsimp simp: modifyArchState_def)
+  by (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_machine_state'_def
+                     valid_arch_state'_def valid_global_refs'_def global_refs'_def
+              split: option.split)
+
+crunch lazyFpuRestore
+  for invs_no_cicd'[wp]: invs_no_cicd'
+  (ignore: doMachineOp modifyArchState)
 
 lemma Arch_switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
@@ -1651,24 +1684,34 @@ lemma nextDomain_invs_no_cicd':
                         all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
+lemma prepareNextDomain_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
+             arch_prepare_next_domain prepareNextDomain"
+  apply (clarsimp simp: arch_prepare_next_domain_def prepareNextDomain_def)
+  by (corres corres: switchLocalFpuOwner_corres)
+
+crunch prepareNextDomain
+  for invs'[wp]: invs'
+  and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+
 lemma scheduleChooseNewThread_fragment_corres:
   "corres dc (invs and valid_sched and (\<lambda>s. scheduler_action s = choose_new_thread)) (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
-     (do _ \<leftarrow> when (domainTime = 0) next_domain;
+     (do _ \<leftarrow> when (domainTime = 0) (do
+           _ \<leftarrow> arch_prepare_next_domain;
+           next_domain
+         od);
          choose_thread
       od)
-     (do _ \<leftarrow> when (domainTime = 0) nextDomain;
-          chooseThread
+     (do _ \<leftarrow> when (domainTime = 0) (do
+           _ \<leftarrow> prepareNextDomain;
+           nextDomain
+         od);
+         chooseThread
       od)"
-  apply (subst bind_dummy_ret_val)
-  apply (subst bind_dummy_ret_val)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply (rule corres_when, simp)
-       apply (rule nextDomain_corres)
-      apply simp
-      apply (rule chooseThread_corres)
-     apply (wp nextDomain_invs_no_cicd')+
-   apply (clarsimp simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)+
+  apply (subst bind_dummy_ret_val)+
+  apply (corres corres: nextDomain_corres chooseThread_corres
+                    wp: nextDomain_invs_no_cicd')
+   apply (auto simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
 lemma scheduleSwitchThreadFastfail_corres:
@@ -2181,6 +2224,9 @@ lemma setCurThread_nosch:
   apply wp
   apply simp
   done
+
+crunch lazyFpuRestore
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma stt_nosch:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>

@@ -201,8 +201,7 @@ assumes rel: "(s,s') \<in> state_relation"
 shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-                 apply (rule absHeap_correct; clarsimp)
-                 apply (clarsimp elim!: state_relationE)
+                 apply (rule absHeap_correct; clarsimp elim!: state_relationE)
                 apply (rule absCDT_correct; clarsimp)
                apply (rule absIsOriginalCap_correct; clarsimp)
               apply (simp add: state_relation_def)

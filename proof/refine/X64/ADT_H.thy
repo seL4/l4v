@@ -533,7 +533,8 @@ definition
       tcb_priority = tcbPriority tcb,
       tcb_time_slice = tcbTimeSlice tcb,
       tcb_domain = tcbDomain tcb,
-      tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
+      tcb_flags = word_to_tcb_flags (tcbFlags tcb),
+      tcb_arch = ArchTcbMap (tcbArch tcb) is_cur_fpu_owner\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -839,9 +840,12 @@ proof -
                        split: option.splits)
       using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
       apply (erule_tac x=y in allE)
+      using arch_state_relation valid_cur_fpu[simplified valid_cur_fpu_def]
+      apply (erule_tac x=y in allE)
       apply (clarsimp simp add: cap_relation_imp_CapabilityMap valid_obj_def
                                 valid_tcb_def ran_tcb_cap_cases valid_cap_def2
-                                arch_tcb_relation_imp_ArchTcnMap)
+                                arch_tcb_relation_imp_ArchTcnMap arch_state_relation_def
+                                is_tcb_cur_fpu_def obj_at_def)
      apply (simp add: absCNode_def cte_map_def)
      apply (erule pspace_dom_relatedE[OF _ pspace_relation])
      apply (case_tac ko, simp_all add: other_obj_relation_def

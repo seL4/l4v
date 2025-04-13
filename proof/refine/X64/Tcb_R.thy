@@ -1190,6 +1190,10 @@ lemma assertDerived_wp_weak:
   apply (wpsimp simp: assertDerived_def)
   done
 
+crunch fpu_release
+  for pspace_alinged[wp]: "pspace_aligned"
+  and pspace_distinct[wp]: "pspace_distinct"
+
 crunch cap_delete
   for pspace_aligned[wp]: "pspace_aligned :: det_state \<Rightarrow> _"
   and pspace_distinct[wp]: "pspace_distinct :: det_state \<Rightarrow> _"
@@ -1539,7 +1543,7 @@ proof -
                                    threadSet_valid_objs' thread_set_not_state_valid_sched
                                    thread_set_tcb_ipc_buffer_cap_cleared_invs thread_set_cte_wp_at_trivial
                                    thread_set_no_cap_to_trivial getThreadBufferSlot_dom_tcb_cte_cases
-                                   assertDerived_wp_weak threadSet_cap_to' out_pred_tcb_at_preserved
+                                   assertDerived_wp_weak threadSet_cap_to'
                                    checkCap_wp assertDerived_wp_weak cap_insert_objs'
                         | simp add: ran_tcb_cap_cases split_def U V
                                   emptyable_def
@@ -1575,7 +1579,7 @@ proof -
                                  threadSet_valid_objs' thread_set_not_state_valid_sched setP_invs'
                                  typ_at_lifts [OF setPriority_typ_at']
                                  typ_at_lifts [OF setMCPriority_typ_at']
-                                 threadSet_cap_to' out_pred_tcb_at_preserved assertDerived_wp
+                                 threadSet_cap_to' assertDerived_wp
                       del: cteInsert_invs
                    | simp add: ran_tcb_cap_cases split_def U V
                                emptyable_def
@@ -1680,6 +1684,51 @@ lemma setSchedulerAction_invs'[wp]:
 
 end
 
+lemma setFlags_corres[corres]:
+  "flags = word_to_tcb_flags flags' \<Longrightarrow>
+   corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+         (set_flags t flags) (setFlags t flags')"
+  unfolding set_flags_def setFlags_def
+  apply (corres corres: threadset_corres)
+  by (clarsimp simp: tcb_relation_def inQ_def)+
+
+crunch set_flags
+  for pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  and valid_cur_fpu[wp]: valid_cur_fpu
+
+context begin interpretation Arch . (*FIXME: arch-split*)
+
+lemma tcbFlagToWord_bit:
+  "\<exists>n. tcbFlagToWord flag = bit n"
+  by (auto simp: tcbFlagToWord_def archTcbFlagToWord_def split: tcb_flag.splits arch_tcb_flag.splits
+       simp del: bit_def)
+
+lemma word_to_tcb_flags_subtract:
+  "word_to_tcb_flags (flags && ~~ flags') = word_to_tcb_flags flags - word_to_tcb_flags flags'"
+  apply (clarsimp simp: word_to_tcb_flags_def intro!: set_eqI)
+  apply (cut_tac flag=x in tcbFlagToWord_bit)
+  apply (fastforce simp: word_eq_iff tcbFlagToWord_bit)
+  done
+
+lemma word_to_tcb_flags_union:
+  "word_to_tcb_flags (flags || flags') = word_to_tcb_flags flags \<union> word_to_tcb_flags flags'"
+  apply (clarsimp simp: word_to_tcb_flags_def intro!: set_eqI)
+  apply (cut_tac flag=x in tcbFlagToWord_bit)
+  apply (fastforce simp: word_eq_iff tcbFlagToWord_bit)
+  done
+
+lemmas word_to_tcb_flags_simps = word_to_tcb_flags_subtract word_to_tcb_flags_union
+
+lemma postSetFlags_corres[corres]:
+  "flags = word_to_tcb_flags flags' \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
+     (arch_post_set_flags  t flags) (postSetFlags t flags')"
+  unfolding arch_post_set_flags_def postSetFlags_def
+  by (corres term_simp: isFlagSet_set)
+
+end
+
 consts
   copyregsets_map :: "arch_copy_register_sets \<Rightarrow> Arch.copy_register_sets"
 
@@ -1711,6 +1760,10 @@ where
     = (x = tcbinvocation.NotificationControl t ntfnptr)"
 | "tcbinv_relation (tcb_invocation.SetTLSBase ref w) x
     = (x = tcbinvocation.SetTLSBase ref w)"
+| "tcbinv_relation (tcb_invocation.SetFlags ref clears sets) x
+    = (\<exists>clears' sets'.
+         clears = word_to_tcb_flags clears' \<and> sets = word_to_tcb_flags sets' \<and>
+         x = tcbinvocation.SetFlags ref clears' sets')"
 
 primrec
   tcb_inv_wf' :: "tcbinvocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1749,6 +1802,8 @@ where
                                           and ex_nonz_cap_to' ntfnptr
                                           and bound_tcb_at' ((=) None) t) )"
 | "tcb_inv_wf' (tcbinvocation.SetTLSBase ref w)
+             = (tcb_at' ref and ex_nonz_cap_to' ref)"
+| "tcb_inv_wf' (tcbinvocation.SetFlags ref clears sets)
              = (tcb_at' ref and ex_nonz_cap_to' ref)"
 
 lemma invokeTCB_corres:
@@ -1875,23 +1930,37 @@ lemma setTLSBase_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (wpsimp simp: invokeTCB_def)
 
+lemma threadSet_flags_invs[wp]:
+  "threadSet (tcbFlags_update f) t \<lbrace>invs'\<rbrace>"
+  by (wpsimp wp: threadSet_invs_trivial)
+
+crunch setFlags, postSetFlags
+  for invs'[wp]: invs'
+  (ignore: threadSet)
+
+lemma invokeSetFlags_invs'[wp]:
+  "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.SetFlags tcb clears' sets')\<rbrace>
+   invokeTCB (tcbinvocation.SetFlags tcb clears' sets')
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (wpsimp simp: invokeTCB_def)
+
 lemma tcbinv_invs':
   "\<lbrace>invs' and sch_act_simple and ct_in_state' runnable' and tcb_inv_wf' ti\<rbrace>
      invokeTCB ti
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (case_tac ti, simp_all only:)
+          apply (simp add: invokeTCB_def)
+          apply wp
+          apply (clarsimp simp: invs'_def valid_state'_def
+                          dest!: global'_no_ex_cap)
          apply (simp add: invokeTCB_def)
-         apply wp
+         apply (wp restart_invs')
          apply (clarsimp simp: invs'_def valid_state'_def
                          dest!: global'_no_ex_cap)
-        apply (simp add: invokeTCB_def)
-        apply (wp restart_invs')
-        apply (clarsimp simp: invs'_def valid_state'_def
-                        dest!: global'_no_ex_cap)
-       apply (wp tc_invs')
-       apply (clarsimp split: option.split dest!: isCapDs)
-      apply (wp writereg_invs' readreg_invs' copyreg_invs' tcbntfn_invs'
-             | simp)+
+        apply (wp tc_invs')
+        apply (clarsimp split: option.split dest!: isCapDs)
+       apply (wp writereg_invs' readreg_invs' copyreg_invs' tcbntfn_invs'
+              | simp)+
   done
 
 declare assertDerived_wp [wp]
@@ -2605,6 +2674,13 @@ lemma decodeSetTLSBase_corres:
   by (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def returnOk_def
                split: list.split)
 
+lemma decodeSetFlags_corres:
+  "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
+          (decode_set_flags w (cap.ThreadCap t))
+          (decodeSetFlags w (capability.ThreadCap t))"
+  by (clarsimp simp: decode_set_flags_def decodeSetFlags_def returnOk_def
+               split: list.split)
+
 lemma decodeTCBInvocation_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';
       list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
@@ -2682,6 +2758,12 @@ lemma decodeSetTLSBase_wf:
   apply (simp add: decodeSetTLSBase_def
              cong: list.case_cong)
   by wpsimp
+
+lemma decodeSetFlags_wf[wp]:
+  "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
+   decodeSetFlags w (capability.ThreadCap t)
+   \<lbrace>tcb_inv_wf'\<rbrace>,-"
+  by (wpsimp simp: decodeSetFlags_def)
 
 lemma decodeTCBInv_wf:
   "\<lbrace>invs' and tcb_at' t and cte_at' slot and ex_nonz_cap_to' t
