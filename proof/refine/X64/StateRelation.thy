@@ -197,7 +197,8 @@ definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Ri
    \<and> tcb_mcpriority tcb = tcbMCP tcb'
    \<and> tcb_priority tcb = tcbPriority tcb'
    \<and> tcb_time_slice tcb = tcbTimeSlice tcb'
-   \<and> tcb_domain tcb = tcbDomain tcb'"
+   \<and> tcb_domain tcb = tcbDomain tcb'
+   \<and> tcb_flags tcb = word_to_tcb_flags (tcbFlags tcb')"
 
 
 \<comment> \<open>
@@ -543,7 +544,8 @@ where
        \<and> x64_allocated_io_ports s = x64KSAllocatedIOPorts s'
        \<and> x64_num_ioapics s = x64KSNumIOAPICs s'
        \<and> x64_ioapic_nirqs s = x64KSIOAPICnIRQs s'
-       \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')}"
+       \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')
+       \<and> x64_current_fpu_owner s = x64KSCurFPUOwner s'}"
 
 definition
   rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights"

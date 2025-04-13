@@ -44,6 +44,71 @@ crunch findVSpaceForASID, haskell_fail
   for inv[wp]: "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
+lemma dmo_invs_no_cicd_lift': (* FIXME X64: move up *)
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
+  assumes "\<And>P p. f \<lbrace>\<lambda>s. P (underlying_memory s p)\<rbrace>"
+  shows "doMachineOp f \<lbrace>all_invs_but_ct_idle_or_in_cur_domain'\<rbrace>"
+  apply (wp dmo_invs_no_cicd' assms)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid,
+         rule assms, rule refl)
+  apply simp
+  done
+
+lemma dmo_invs_lift': (* FIXME X64: move up *)
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
+  assumes "\<And>P p. f \<lbrace>\<lambda>s. P (underlying_memory s p)\<rbrace>"
+  shows "doMachineOp f \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs' assms)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid,
+         rule assms, rule refl)
+  apply simp
+  done
+
+lemma dmo_invalidateTranslationSingleASID_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTranslationSingleASID a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_invalidateTranslationSingleASID no_irq)
+  apply clarsimp
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply (simp add: invalidateTranslationSingleASID_def machine_op_lift_def
+                     machine_rest_lift_def split_def | wp)+
+  done
+
+lemma dmo_invalidateASID_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateASID a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_invalidateASID no_irq)
+  apply clarsimp
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply (simp add: invalidateASID_def machine_op_lift_def
+                     machine_rest_lift_def split_def | wp)+
+  done
+
+lemma dmo_invalidateLocalPageStructureCacheASID_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateLocalPageStructureCacheASID vspace asid) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wpsimp wp: dmo_invs' invalidateLocalPageStructureCacheASID_irq_masks)
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply (simp add: invalidateLocalPageStructureCacheASID_def machine_op_lift_def
+                     machine_rest_lift_def split_def | wp)+
+  done
+
+lemma dmos_invs_no_cicd'[wp]:
+  "doMachineOp enableFpu \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp disableFpu \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp (writeFpuState val) \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp readFpuState \<lbrace>invs_no_cicd'\<rbrace>"
+  by (wp dmo_invs_no_cicd_lift')+
+
+lemma dmos_invs'[wp]:
+  "doMachineOp enableFpu \<lbrace>invs'\<rbrace>"
+  "doMachineOp disableFpu \<lbrace>invs'\<rbrace>"
+  "doMachineOp (writeFpuState val) \<lbrace>invs'\<rbrace>"
+  "doMachineOp readFpuState \<lbrace>invs'\<rbrace>"
+  by (wp dmo_invs_lift')+
+
 lemma pspace_relation_pml4:
   assumes p: "pspace_relation (kheap a) (ksPSpace c)"
   assumes pa: "pspace_aligned a"
@@ -259,8 +324,7 @@ lemma hwASIDInvalidate_corres:
   using assms
   apply (simp add: hw_asid_invalidate_def hwASIDInvalidate_def)
   apply (rule corres_machine_op)
-  apply (rule corres_Id; simp add: ucast_id)
-  apply wp
+  apply (rule corres_Id; simp)
   done
 
 crunch hwASIDInvalidate
@@ -2466,35 +2530,6 @@ crunch unmapPDPT
 lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
 lemmas storePDPTE_Invalid_invs = storePDPTE_invs[where pde=InvalidPDPTE, simplified]
 lemmas storePML4E_Invalid_invs = storePML4E_invs[where pde=InvalidPML4E, simplified]
-
-lemma dmo_invalidateTranslationSingleASID_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTranslationSingleASID a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateTranslationSingleASID no_irq)
-  apply clarsimp
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: invalidateTranslationSingleASID_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
-  done
-
-lemma dmo_invalidateASID_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateASID a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateASID no_irq)
-  apply clarsimp
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: invalidateASID_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
-  done
-
-lemma dmo_invalidateLocalPageStructureCacheASID_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateLocalPageStructureCacheASID vspace asid) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wpsimp wp: dmo_invs' invalidateLocalPageStructureCacheASID_irq_masks)
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: invalidateLocalPageStructureCacheASID_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
-  done
 
 crunch unmapPageTable, unmapPageDirectory, unmapPDPT
   for invs'[wp]: "invs'"
