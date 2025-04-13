@@ -887,20 +887,15 @@ proof -
     unfolding schedule_def
     apply (wp, wpc)
          \<comment> \<open>action = ResumeCurrentThread\<close>
-         apply (wp)[1]
+         apply wp
         \<comment> \<open>action = ChooseNewThread\<close>
         apply (clarsimp simp: when_def scheduleChooseNewThread_def)
         apply (wp ssa_no_orphans hoare_vcg_all_lift)
             apply (wp hoare_disjI1 chooseThread_nosch)
-           apply (wp nextDomain_invs_no_cicd' hoare_vcg_imp_lift
-                     hoare_lift_Pf2 [OF tcbQueued_all_queued_tcb_ptrs_lift
-                                      [OF nextDomain_tcbQueued]
-                                      nextDomain_ct']
-                     hoare_lift_Pf2 [OF st_tcb_at'_is_active_tcb_ptr_lift
-                                      [OF nextDomain_st_tcb_at']
-                                      nextDomain_ct']
-                     hoare_vcg_all_lift getDomainTime_wp)[2]
-          apply wpsimp
+           apply ((wpsimp wp: nextDomain_invs_no_cicd' hoare_vcg_imp_lift'
+                              st_tcb_at'_is_active_tcb_ptr_lift
+                              tcbQueued_all_queued_tcb_ptrs_lift hoare_vcg_all_lift getDomainTime_wp
+                   | wps)+)[2]
          apply ((wp tcbSchedEnqueue_no_orphans tcbSchedEnqueue_all_queued_tcb_ptrs'
                     hoare_drop_imp
                  | clarsimp simp: all_queued_tcb_ptrs_def
@@ -917,7 +912,7 @@ proof -
         apply (clarsimp simp: conj_comms cong: conj_cong imp_cong split del: if_split)
         apply (wp hoare_vcg_imp_lift'
                | strengthen not_pred_tcb_at'_strengthen)+
-        apply (wps | wpsimp wp: tcbSchedEnqueue_all_queued_tcb_ptrs')+
+         apply (wps | wpsimp wp: tcbSchedEnqueue_all_queued_tcb_ptrs')+
     apply (fastforce simp: is_active_tcb_ptr_runnable' all_invs_but_ct_idle_or_in_cur_domain'_strg
                            invs_switchToThread_runnable')
     done
@@ -1575,7 +1570,7 @@ lemma readreg_no_orphans[wp]:
   apply (wp | clarsimp)+
   done
 
-lemma writereg_no_orphans:
+lemma writereg_no_orphans[wp]:
   "\<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' dest s \<and> ex_nonz_cap_to' dest s\<rbrace>
    invokeTCB (tcbinvocation.WriteRegisters dest resume values arch)
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"

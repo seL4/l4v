@@ -470,9 +470,10 @@ lemma performInvocation_corres:
       \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
-        apply (rule corres_split[OF setDomain_corres])
-          apply (rule corres_trivial, simp)
-         apply (wp)+
+        apply (rule corres_split[OF prepareSetDomain_corres])
+          apply (rule corres_split[OF setDomain_corres])
+            apply (rule corres_trivial, simp)
+           apply wpsimp+
        apply ((clarsimp simp: invs_psp_aligned invs_distinct)+)[2]
      \<comment> \<open>CNodes\<close>
      apply clarsimp

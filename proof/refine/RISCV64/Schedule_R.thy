@@ -742,7 +742,7 @@ proof -
 qed
 
 crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread
-  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_objs'[wp]: valid_objs'

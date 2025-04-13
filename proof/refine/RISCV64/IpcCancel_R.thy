@@ -2185,9 +2185,9 @@ lemma suspend_unqueued:
   by (wpsimp simp: comp_def wp: tcbSchedDequeue_not_tcbQueued)
 
 crunch prepareThreadDelete
-  for unqueued: "obj_at' (\<lambda>a. \<not> tcbQueued a) t"
-crunch prepareThreadDelete
-  for inactive: "st_tcb_at' ((=) Inactive) t'"
+  for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
+  and inactive: "st_tcb_at' ((=) Inactive) t'"
+  (simp: obj_at'_not_comp_fold)
 
 end
 end
