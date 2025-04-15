@@ -673,7 +673,7 @@ lemma setVCPU_isolatable:
   apply (clarsimp simp: put_tcb_state_regs_tcb_def get_tcb_state_regs_def)
   apply (rename_tac p')
   apply (erule_tac x=p' in allE)
-  apply (clarsimp simp: obj_at'_def projectKOs atcbContextSet_def atcbContextGet_def split: tcb_state_regs.splits)
+  apply (clarsimp simp: obj_at'_def projectKOs get_tcb_state_regs_defs atcbContextSet_def atcbContextGet_def split: tcb_state_regs.splits)
   apply (rename_tac tcb)
   apply (case_tac tcb, simp)
   apply (rename_tac arch_tcb)
@@ -1166,8 +1166,8 @@ lemma oblivious_switchToThread_schact:
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
                    pointerInUserData_def isRunnable_def isStopped_def
-                   getThreadState_def tcbSchedDequeue_def tcbQueueRemove_def bitmap_fun_defs
-                   ksReadyQueues_asrt_def)
+                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs
+                   tcbQueueRemove_def ksReadyQueues_asrt_def)
   apply (safe intro!: oblivious_bind
          | simp_all add: ready_qs_runnable_def idleThreadNotQueued_def oblivious_setVMRoot_schact
                          oblivious_vcpuSwitch_schact)+
@@ -1518,16 +1518,11 @@ lemma threadGet_isolatable:
 
 lemma switchToThread_isolatable:
   "thread_actions_isolatable idx (Arch.switchToThread t)"
-  apply (simp add: switchToThread_def getTCB_threadGet
-                   storeWordUser_def stateAssert_def2)
+  apply (simp add: switchToThread_def getTCB_threadGet)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
-               gets_isolatable setVMRoot_isolatable
-               thread_actions_isolatable_if
+               setVMRoot_isolatable
                doMachineOp_isolatable
                threadGet_isolatable [OF all_tcbI]
-               thread_actions_isolatable_returns
-               thread_actions_isolatable_fail
-               threadGet_vcpu_isolatable
                vcpuSwitch_isolatable)
         apply (wpsimp simp: put_tcb_state_regs_tcb_def atcbContextSet_def
                      split: tcb_state_regs.split)+
@@ -1644,8 +1639,8 @@ lemma set_register_isolate:
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
                   cong: if_cong)
   apply (case_tac obj)
-  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
-                   put_tcb_state_regs_tcb_def get_tcb_state_regs_def
+  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_defs
+                   get_tcb_state_regs_defs
              cong: if_cong)
   done
 
