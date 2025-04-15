@@ -119,7 +119,7 @@ crunch switch_to_thread
 
 crunch
   arch_switch_to_idle_thread
-  for valid_idle[wp, DetSchedSchedule_AI_assms]: "valid_idle :: det_ext state \<Rightarrow> bool"
+  for valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
   (wp: crunch_wps simp: crunch_simps)
 
 crunch arch_switch_to_idle_thread, arch_prepare_next_domain
