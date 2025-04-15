@@ -442,7 +442,6 @@ lemma cancelAllIPC_ccorres:
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   carch_state_relation_def carch_globals_def
                                   cmachine_state_relation_def
-                                  fpu_null_state_heap_update_tag_disj_simps
                                   packed_heap_update_collapse_hrs)
             apply (clarsimp simp: cpspace_relation_def
                                   update_ep_map_tos typ_heap_simps')
@@ -491,7 +490,6 @@ lemma cancelAllIPC_ccorres:
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def
-                                fpu_null_state_heap_update_tag_disj_simps
                                 packed_heap_update_collapse_hrs)
           apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                 update_ep_map_tos)
@@ -576,7 +574,6 @@ lemma cancelAllSignals_ccorres:
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def
-                                fpu_null_state_heap_update_tag_disj_simps
                                 packed_heap_update_collapse_hrs)
           apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                 update_ntfn_map_tos)
@@ -823,8 +820,7 @@ lemma doUnbindNotification_ccorres:
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj ntfn", ((simp add: option_to_ctcb_ptr_def)+)[4])
              subgoal by (simp add: carch_state_relation_def
-                                   global_ioport_bitmap_heap_update_tag_disj_simps
-                                   fpu_null_state_heap_update_tag_disj_simps)
+                                   global_ioport_bitmap_heap_update_tag_disj_simps)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
           subgoal by (simp add: objBits_simps')
@@ -875,8 +871,7 @@ lemma doUnbindNotification_ccorres':
                subgoal premises prems using prems
                        by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
              subgoal by (simp add: carch_state_relation_def
-                                   global_ioport_bitmap_heap_update_tag_disj_simps
-                                   fpu_null_state_heap_update_tag_disj_simps)
+                                   global_ioport_bitmap_heap_update_tag_disj_simps)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
           subgoal by (simp add: objBits_simps')
@@ -1361,7 +1356,6 @@ lemma deleteASID_ccorres:
               subgoal by (clarsimp dest!: asid_map_lift_asid_map_none simp: asid_map_relation_def)
              subgoal by (simp add: asid_low_bits_def)
             subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                                  fpu_null_state_heap_update_tag_disj_simps
                                   global_ioport_bitmap_heap_update_tag_disj_simps
                                   carch_globals_def update_asidpool_map_tos)
            apply (rule ccorres_pre_getCurThread)
@@ -2479,21 +2473,77 @@ lemma Arch_finaliseCap_ccorres:
                  Let_def isCap_simps cap_get_tag_isCap_ArchObject
            split: cap_CL.splits if_split_asm)
 
-lemma fpuThreadDelete_ccorres:
+lemma switchLocalFpuOwner_ccorres:
   "ccorres dc xfdc
-     (invs' and tcb_at' thread)
-     (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) hs
-   (fpuThreadDelete thread) (Call fpuThreadDelete_'proc)"
-  supply Collect_const[simp del]
-  apply (cinit lift: thread_')
-   apply clarsimp
-   apply (ctac (no_vcg) add: nativeThreadUsingFPU_ccorres)
-    apply clarsimp
-    apply (rule ccorres_when[where R=\<top>])
-     apply fastforce
-    apply (ctac add: switchFpuOwner_ccorres)
-   apply wpsimp
-  apply fastforce
+     (no_0_obj' and opt_tcb_at' newOwner)
+     (\<lbrace>\<acute>new_owner = option_to_ctcb_ptr newOwner\<rbrace>) hs
+     (switchLocalFpuOwner newOwner) (Call switchLocalFpuOwner_'proc)"
+  apply (cinit lift: new_owner_')
+   apply (rule_tac P="newOwner \<noteq> Some 0" in ccorres_gen_asm)
+   apply (rule ccorres_pre_getCurFPUOwner)
+   apply (rule ccorres_stateAssert)
+   apply (ctac add: enableFpu_ccorres)
+     apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+         apply wpc
+          apply (rule ccorres_cond_false)
+          apply (rule ccorres_return_Skip)
+         apply (rule ccorres_cond_true)
+         apply (ctac add: saveFpuState_ccorres)
+        apply ceqv
+       apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+           apply wpc
+            apply (rule ccorres_cond_false)
+            apply (ctac add: disableFpu_ccorres)
+           apply (rule ccorres_cond_true)
+           apply (ctac add: loadFpuState_ccorres)
+          apply ceqv
+         apply (ctac add: armKSCurFPUOwner_update_ccorres)
+        apply wpsimp
+       apply (vcg exspec=disableFpu_modifies exspec=loadFpuState_modifies)
+      apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+     apply (vcg exspec=saveFpuState_modifies)
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+   apply (clarsimp simp: Collect_const_mem)
+   apply (vcg exspec=enableFpu_modifies)
+  apply (auto simp: fpuOwner_asrt_def cur_fpu_relation_def option_to_ctcb_ptr_def tcb_at_not_NULL
+             split: option.splits)
+  done
+
+lemma switchFpuOwner_ccorres:
+  "ccorres dc xfdc
+     (no_0_obj' and opt_tcb_at' newOwner)
+     (\<lbrace>\<acute>new_owner = option_to_ctcb_ptr newOwner\<rbrace>) hs
+     (switchLocalFpuOwner newOwner) (Call switchFpuOwner_'proc)"
+  apply (cinit')
+   apply (ctac add: switchLocalFpuOwner_ccorres)
+  apply clarsimp
+  done
+
+lemma nativeThreadUsingFPU_ccorres:
+  "ccorres (\<lambda>rv rv'. to_bool rv' = (rv = Some thread)) ret__unsigned_long_'
+     (no_0_obj' and tcb_at' thread)
+     (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
+     (gets (x64KSCurFPUOwner \<circ> ksArchState)) (Call nativeThreadUsingFPU_'proc)"
+  apply (cinit' lift: thread_', rename_tac cthread)
+   apply (rule ccorres_add_return2, rule ccorres_pre_getCurFPUOwner)
+   apply (ctac add: ccorres_return_C)
+  apply (auto simp: cur_fpu_relation_def tcb_at_not_NULL option_to_ctcb_ptr_def split: if_splits option.splits)
+  done
+
+lemma fpuRelease_ccorres:
+  "ccorres dc xfdc
+     (no_0_obj' and tcb_at' thread)
+     (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
+     (fpuRelease thread) (Call fpuRelease_'proc)"
+  apply (cinit lift: thread_', rename_tac cthread)
+   apply (ctac add: nativeThreadUsingFPU_ccorres[where thread=thread])
+     apply (clarsimp simp: to_bool_neq_0)
+     apply (rule ccorres_when[where R=\<top>])
+      apply (clarsimp split: if_split)
+     apply (ctac add: switchFpuOwner_ccorres)
+    apply wpsimp
+   apply (vcg exspec=nativeThreadUsingFPU_modifies)
+  apply (clarsimp simp: invs_no_0_obj' option_to_ctcb_ptr_def)
   done
 
 lemma prepareThreadDelete_ccorres:
@@ -2502,7 +2552,7 @@ lemma prepareThreadDelete_ccorres:
      (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) hs
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
   apply (cinit lift: thread_', rename_tac cthread)
-   apply (ctac add: fpuThreadDelete_ccorres)
+   apply (ctac add: fpuRelease_ccorres)
   apply fastforce
   done
 

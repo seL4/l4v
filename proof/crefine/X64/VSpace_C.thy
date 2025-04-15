@@ -1908,8 +1908,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
     apply (erule (1) setCTE_tcb_case)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                          typ_heap_simps h_t_valid_clift_Some_iff
-                         cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
-                         fpu_null_state_heap_update_tag_disj_simps)
+                         cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
   apply (clarsimp simp: ccte_relation_def)
   apply (clarsimp simp: cte_lift_def)
   apply (simp split: option.splits)
@@ -2294,7 +2293,6 @@ lemma setObjectASID_Basic_ccorres:
           erule ko_at_projectKO_opt, simp+)
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
-                   fpu_null_state_heap_update_tag_disj_simps
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
                    update_asidpool_map_tos)
@@ -2383,7 +2381,6 @@ lemma performASIDPoolInvocation_ccorres:
             apply (erule (1) setCTE_tcb_case)
            apply (simp add: carch_state_relation_def cmachine_state_relation_def
                             cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
-                            fpu_null_state_heap_update_tag_disj_simps
                             global_ioport_bitmap_heap_update_tag_disj_simps
                             packed_heap_update_collapse_hrs)
           apply (clarsimp simp: cte_wp_at_ctes_of)
