@@ -427,7 +427,7 @@ definition arch_state_relation :: "(arch_state \<times> AARCH64_H.kernel_state) 
          \<and> arm_kernel_vspace s = armKSKernelVSpace s'
          \<and> arm_current_vcpu s = armHSCurVCPU s'
          \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'
-         \<and> arm_current_fpu_owner  s = armKSCurFPUOwner s'}"
+         \<and> arm_current_fpu_owner s = armKSCurFPUOwner s'}"
 
 definition rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights" where
   "rights_mask_map \<equiv>
