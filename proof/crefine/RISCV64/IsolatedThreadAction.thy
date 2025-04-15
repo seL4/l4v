@@ -73,13 +73,11 @@ lemma UserContextGet[simp]:
 lemma put_tcb_state_regs_twice[simp]:
   "put_tcb_state_regs tsr (put_tcb_state_regs tsr' tcb)
     = put_tcb_state_regs tsr tcb"
-  apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                   makeObject_tcb newArchTCB_def
+  apply (simp add: put_tcb_state_regs_defs makeObject_tcb newArchTCB_def
             split: tcb_state_regs.split option.split
                    Structures_H.kernel_object.split)
-  apply (intro all_tcbI impI allI)
-   using atcbContextSet_def atcbContext_set_set
-   apply fastforce+
+  using atcbContextSet_def atcbContext_set_set
+  apply (intro all_tcbI impI allI conjI; simp)
   done
 
 lemma partial_overwrite_twice[simp]:
@@ -277,10 +275,9 @@ lemma map_to_ctes_partial_overwrite:
   apply (case_tac "x \<in> range idx")
    apply (clarsimp simp: put_tcb_state_regs_def)
    apply (drule_tac x=xa in spec)
-   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps'
+   apply (clarsimp simp: obj_at'_def objBits_simps'
                    cong: if_cong)
-   apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                    objBits_simps'
+   apply (simp add: put_tcb_state_regs_tcb_def objBits_simps'
               cong: if_cong option.case_cong)
    apply (case_tac obj, simp split: tcb_state_regs.split if_split)
   apply simp
@@ -289,10 +286,9 @@ lemma map_to_ctes_partial_overwrite:
   apply (case_tac "x && ~~ mask (objBitsKO (KOTCB undefined)) \<in> range idx")
    apply (clarsimp simp: put_tcb_state_regs_def)
    apply (drule_tac x=xa in spec)
-   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps'
+   apply (clarsimp simp: obj_at'_def objBits_simps'
                    cong: if_cong)
-   apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                    objBits_simps'
+   apply (simp add: put_tcb_state_regs_tcb_def objBits_simps'
               cong: if_cong option.case_cong)
    apply (case_tac obj, simp split: tcb_state_regs.split if_split)
    apply (intro impI allI)
@@ -1279,17 +1275,13 @@ lemma threadGet_isolatable:
   apply (simp add: projectKO_opt_tcb v split: if_split)
   done
 
- lemma switchToThread_isolatable:
+lemma switchToThread_isolatable:
   "thread_actions_isolatable idx (Arch.switchToThread t)"
-  apply (simp add: switchToThread_def
-                   storeWordUser_def stateAssert_def2)
+  apply (simp add: switchToThread_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
-               gets_isolatable setVMRoot_isolatable
-               thread_actions_isolatable_if
+               setVMRoot_isolatable
                doMachineOp_isolatable
-               threadGet_isolatable [OF all_tcbI]
-               thread_actions_isolatable_returns
-               thread_actions_isolatable_fail)
+               threadGet_isolatable [OF all_tcbI])
   done
 
 lemma tcbQueued_put_tcb_state_regs_tcb:
@@ -1400,12 +1392,11 @@ lemma set_register_isolate:
                         partial_overwrite_fun_upd
                         partial_overwrite_get_tcb_state_regs)
   apply (drule_tac x=y in spec)
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
+  apply (clarsimp simp: obj_at'_def objBits_simps
                   cong: if_cong)
   apply (case_tac obj)
-  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
-                   put_tcb_state_regs_tcb_def get_tcb_state_regs_def
-                   atcbContextGet_def
+  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_defs
+                   get_tcb_state_regs_defs atcbContextGet_def
              cong: if_cong)
   done
 
