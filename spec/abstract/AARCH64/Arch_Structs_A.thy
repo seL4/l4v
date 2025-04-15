@@ -398,7 +398,7 @@ text \<open>
 \<close>
 definition arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb" where
   "arch_tcb_set_registers regs a_tcb \<equiv>
-    a_tcb \<lparr> tcb_context := UserContext (fpu_state (tcb_context a_tcb)) regs \<rparr>"
+    a_tcb \<lparr> tcb_context := UserContext (user_fpu_state (tcb_context a_tcb)) regs \<rparr>"
 
 definition arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word" where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
