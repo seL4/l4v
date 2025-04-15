@@ -360,6 +360,7 @@ where
 "numIODomainIDBits \<equiv> undefined"
 *)
 
+(* FIXME: unused and clashes with X64_H.hwASIDInvalidate, remove? *)
 definition
   hwASIDInvalidate :: "word64 \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
