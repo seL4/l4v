@@ -87,7 +87,7 @@ with the convention that all unused entries map to 0.
 > type FPUState = Array Word Data.Word.Word8
 
 > data UserContext = UC { fromUC :: Array Register Word,
->                         fpuState :: FPUState }
+>                         userFpuState :: FPUState }
 >   deriving Show
 
 
@@ -103,9 +103,9 @@ Functions are provided to get and set a single register, or to get and set the F
 
 > getRegister r = gets $ (! r) . fromUC
 
-> setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (fpuState uc))
+> setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (userFpuState uc))
 
 > getFPUState :: State UserContext FPUState
-> getFPUState = gets fpuState
+> getFPUState = gets userFpuState
 
 > setFPUState fc = modify (\ uc -> UC (fromUC uc) fc)

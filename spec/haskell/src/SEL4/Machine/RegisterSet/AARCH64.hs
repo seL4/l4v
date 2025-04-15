@@ -123,7 +123,7 @@ data FPUState = FPUState { fpuRegs :: Array Int Data.Word.Word64
 -- machine words, indexed by register name for the user registers, plus the
 -- state of the FPU.
 data UserContext = UC { fromUC :: Array Register Word,
-                        fpuState :: FPUState }
+                        userFpuState :: FPUState }
   deriving Show
 
 -- A new user-level context is a list of values for the machine's registers.
@@ -140,9 +140,9 @@ newContext = UC ((funArray $ const 0)//initContext) newFPUState
 
 getRegister r = gets $ (! r) . fromUC
 
-setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (fpuState uc))
+setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (userFpuState uc))
 
 getFPUState :: State UserContext FPUState
-getFPUState = gets fpuState
+getFPUState = gets userFpuState
 
 setFPUState fc = modify (\ uc -> UC (fromUC uc) fc)
