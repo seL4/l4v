@@ -607,10 +607,6 @@ crunch dissociate_vcpu_tcb
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps)
 
-lemma same_caps_tcb_arch_update[simp]:
-  "same_caps (TCB (tcb_arch_update f tcb)) = same_caps (TCB tcb)"
-  by (rule ext) (clarsimp simp: tcb_cap_cases_def)
-
 crunch dissociate_vcpu_tcb
   for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
   (wp: crunch_wps cap_refs_respects_device_region_dmo

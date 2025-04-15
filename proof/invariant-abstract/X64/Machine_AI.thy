@@ -311,7 +311,7 @@ crunch
   and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
   (wp: no_irq_bind no_irq_modify ef_machine_rest_lift no_fail_machine_state_rest_T)
 
-crunch getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt, hwASIDInvalidate
+crunch getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
 
