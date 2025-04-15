@@ -237,7 +237,7 @@ lemma asUser_loadWordUser_comm:
                            ps_clear_upd ps_clear_upd_None pointerInUserData_def
                     split: option.split kernel_object.split)
     apply simp
-   apply (simp add: ef_loadWord)
+   apply simp
   apply assumption
   done
 
@@ -253,7 +253,7 @@ lemma asUser_storeWordUser_comm:
                            ps_clear_upd ps_clear_upd_None pointerInUserData_def
                     split: option.split kernel_object.split)
     apply simp
-   apply (simp add: ef_storeWord)
+   apply simp
   apply assumption
   done
 
@@ -4463,9 +4463,7 @@ lemma sendIPC_dequeue_ccorres_helper:
            apply simp
           apply (erule (1) map_to_ko_atI')
          apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                               fpu_null_state_heap_update_tag_disj_simps
-                               global_ioport_bitmap_heap_update_tag_disj_simps
-                        elim!: fpu_null_state_typ_heap_preservation)
+                               global_ioport_bitmap_heap_update_tag_disj_simps)
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
       apply (simp add: objBits_simps')
@@ -4510,9 +4508,7 @@ lemma sendIPC_dequeue_ccorres_helper:
           apply simp
          apply (erule (1) map_to_ko_atI')
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                              fpu_null_state_heap_update_tag_disj_simps
-                              global_ioport_bitmap_heap_update_tag_disj_simps
-                       elim!: fpu_null_state_typ_heap_preservation)
+                              global_ioport_bitmap_heap_update_tag_disj_simps)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps')
@@ -4853,9 +4849,7 @@ lemma sendIPC_enqueue_ccorres_helper:
           apply clarsimp
          apply (clarsimp simp: obj_at'_def projectKOs)
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                              global_ioport_bitmap_heap_update_tag_disj_simps
-                              fpu_null_state_heap_update_tag_disj_simps
-                       elim!: fpu_null_state_typ_heap_preservation)
+                              global_ioport_bitmap_heap_update_tag_disj_simps)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
      apply (simp add: objBits_simps')
@@ -4904,9 +4898,7 @@ lemma sendIPC_enqueue_ccorres_helper:
          apply (clarsimp simp: objBitsKO_def)
         apply (clarsimp simp: obj_at'_def projectKOs)
        apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                             global_ioport_bitmap_heap_update_tag_disj_simps
-                             fpu_null_state_heap_update_tag_disj_simps
-                      elim!: fpu_null_state_typ_heap_preservation)
+                             global_ioport_bitmap_heap_update_tag_disj_simps)
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
     apply (simp add: objBits_simps')
@@ -5271,9 +5263,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
           apply (clarsimp simp: objBitsKO_def)
          apply (clarsimp simp: obj_at'_def projectKOs)
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                              global_ioport_bitmap_heap_update_tag_disj_simps
-                              fpu_null_state_heap_update_tag_disj_simps
-                       elim!: fpu_null_state_typ_heap_preservation)
+                              global_ioport_bitmap_heap_update_tag_disj_simps)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps')
@@ -5314,9 +5304,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
          apply (clarsimp simp: objBitsKO_def)
         apply (clarsimp simp: obj_at'_def projectKOs)
        apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                             global_ioport_bitmap_heap_update_tag_disj_simps
-                             fpu_null_state_heap_update_tag_disj_simps
-                      elim!: fpu_null_state_typ_heap_preservation)
+                             global_ioport_bitmap_heap_update_tag_disj_simps)
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: typ_heap_simps')
     apply (simp add: objBits_simps')
@@ -5399,9 +5387,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
           apply simp
          apply (erule (1) map_to_ko_atI')
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                               global_ioport_bitmap_heap_update_tag_disj_simps
-                               fpu_null_state_heap_update_tag_disj_simps
-                        elim!: fpu_null_state_typ_heap_preservation)
+                               global_ioport_bitmap_heap_update_tag_disj_simps)
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: typ_heap_simps')
       apply (simp add: objBits_simps')
@@ -5446,9 +5432,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
           apply simp
          apply (erule (1) map_to_ko_atI')
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                              global_ioport_bitmap_heap_update_tag_disj_simps
-                              fpu_null_state_heap_update_tag_disj_simps
-                       elim!: fpu_null_state_typ_heap_preservation)
+                              global_ioport_bitmap_heap_update_tag_disj_simps)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
      apply (simp add: objBits_simps')
@@ -5526,7 +5510,6 @@ lemma completeSignal_ccorres:
               apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def mask_def)
              apply simp
             apply (clarsimp simp: carch_state_relation_def
-                                  fpu_null_state_heap_update_tag_disj_simps
                                   global_ioport_bitmap_heap_update_tag_disj_simps)
            apply (simp add: cmachine_state_relation_def)
           apply (simp add: h_t_valid_clift_Some_iff)
@@ -5931,9 +5914,7 @@ lemma sendSignal_dequeue_ccorres_helper:
                             tcb_queue_relation'_def)
           apply simp
          apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                               global_ioport_bitmap_heap_update_tag_disj_simps
-                               fpu_null_state_heap_update_tag_disj_simps
-                        elim!: fpu_null_state_typ_heap_preservation)
+                               global_ioport_bitmap_heap_update_tag_disj_simps)
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
       apply (simp add: objBits_simps')
@@ -5983,9 +5964,7 @@ lemma sendSignal_dequeue_ccorres_helper:
           apply (clarsimp split: if_split)
          apply simp
         apply (clarsimp simp: carch_state_relation_def
-                              global_ioport_bitmap_heap_update_tag_disj_simps
-                              fpu_null_state_heap_update_tag_disj_simps
-                       elim!: fpu_null_state_typ_heap_preservation)
+                              global_ioport_bitmap_heap_update_tag_disj_simps)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps')
@@ -6015,7 +5994,6 @@ lemma ntfn_set_active_ccorres:
     apply (clarsimp simp: typ_heap_simps' rf_sr_def cstate_relation_def Let_def
                           cpspace_relation_def update_ntfn_map_tos
                           carch_state_relation_def packed_heap_update_collapse_hrs
-                          fpu_null_state_heap_update_tag_disj_simps
                           cmachine_state_relation_def)
     apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
      apply (simp add: cnotification_relation_def Let_def NtfnState_Active_def
@@ -6131,7 +6109,6 @@ lemma sendSignal_ccorres [corres]:
                              NtfnState_Active_def mask_def word_bw_comms)
            apply simp
           apply (clarsimp simp: carch_state_relation_def
-                                fpu_null_state_heap_update_tag_disj_simps
                                 global_ioport_bitmap_heap_update_tag_disj_simps)
          apply (simp add: cmachine_state_relation_def)
         apply (simp add: h_t_valid_clift_Some_iff)
@@ -6372,9 +6349,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
             by clarsimp
          apply (simp add: isWaitingNtfn_def)
         apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                              global_ioport_bitmap_heap_update_tag_disj_simps
-                              fpu_null_state_heap_update_tag_disj_simps
-                       elim!: fpu_null_state_typ_heap_preservation)
+                              global_ioport_bitmap_heap_update_tag_disj_simps)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps')
@@ -6430,9 +6405,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
            done
         apply (simp add: isWaitingNtfn_def)
        apply (clarsimp simp: carch_state_relation_def packed_heap_update_collapse_hrs
-                             global_ioport_bitmap_heap_update_tag_disj_simps
-                             fpu_null_state_heap_update_tag_disj_simps
-                      elim!: fpu_null_state_typ_heap_preservation)
+                             global_ioport_bitmap_heap_update_tag_disj_simps)
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
     apply (simp add: objBits_simps')
@@ -6533,8 +6506,7 @@ lemma receiveSignal_ccorres [corres]:
                apply (simp add: cnotification_relation_def Let_def
                                 NtfnState_Idle_def mask_def)
               apply simp
-             apply (simp add: carch_state_relation_def fpu_null_state_heap_update_tag_disj_simps
-                              global_ioport_bitmap_heap_update_tag_disj_simps)
+             apply (simp add: carch_state_relation_def global_ioport_bitmap_heap_update_tag_disj_simps)
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
           apply (simp add: objBits_simps')
