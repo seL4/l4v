@@ -95,6 +95,26 @@ assumes invalidateLocalPageStructureCacheASID_ccorres:
            (doMachineOp (invalidateLocalPageStructureCacheASID vspace asid))
            (Call invalidateLocalPageStructureCacheASID_'proc)"
 
+
+(* FPU-related machine ops *)
+
+assumes saveFpuState_ccorres:
+  "ccorres dc xfdc (tcb_at' t) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t \<rbrace>) []
+     (saveFpuState t) (Call saveFpuState_'proc)"
+
+assumes loadFpuState_ccorres:
+  "ccorres dc xfdc (tcb_at' t) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t \<rbrace>) []
+     (loadFpuState t) (Call loadFpuState_'proc)"
+
+assumes enableFpu_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+     (doMachineOp enableFpu) (Call enableFpu_'proc)"
+
+assumes disableFpu_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+     (doMachineOp disableFpu) (Call disableFpu_'proc)"
+
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 

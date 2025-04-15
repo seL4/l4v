@@ -126,6 +126,12 @@ where
   user_context_C (user_fpu_state_C (ARRAY r. user_fpu_state uc (finite_index r)))
                  (ARRAY r. user_regs uc (register_to_H (of_nat r)))"
 
+definition ccur_fpu_to_H :: "tcb_C ptr \<Rightarrow> machine_word option" where
+  "ccur_fpu_to_H cur_fpu_owner \<equiv>
+    if cur_fpu_owner = NULL
+    then None
+    else Some (ctcb_ptr_to_tcb_ptr cur_fpu_owner)"
+
 lemma (in kernel_m) ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
   unfolding ccontext_relation_def to_user_context_C_def cregs_relation_def fpu_relation_def
@@ -570,6 +576,16 @@ lemma eq_option_to_ptr_rev:
    \<forall>x. \<forall>y\<in>A. ((=) \<circ> option_to_ptr) y x \<longrightarrow>
               (if x=NULL then None else Some (ptr_val x)) = y"
   by (force simp: option_to_ptr_def option_to_0_def split: option.splits)
+
+lemma ccur_fpu_to_H_correct:
+  assumes valid: "valid_arch_state' astate"
+  assumes rel: "carch_state_relation (ksArchState astate) cstate"
+  shows
+    "ccur_fpu_to_H (ksCurFPUOwner_' cstate) = armKSCurFPUOwner (ksArchState astate)"
+  using valid rel
+  by (clarsimp simp: valid_arch_state'_def carch_state_relation_def ccur_fpu_to_H_def cur_fpu_relation_def
+                     kernel.ctcb_ptr_to_ctcb_ptr \<comment> \<open>FIXME: move this lemma somewhere so it's not in kernel context\<close>
+                 split: option.splits)
 
 lemma carch_state_to_H_correct:
   assumes valid:  "valid_arch_state' astate"

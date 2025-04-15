@@ -89,6 +89,33 @@ lemma Arch_switchToThread_ccorres:
   apply clarsimp
   done
 
+lemma lazyFPURestore_ccorres:
+  "ccorres dc xfdc
+     (no_0_obj' and tcb_at' t)
+     (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>) hs
+     (lazyFpuRestore t) (Call lazyFPURestore_'proc)"
+  apply (cinit lift: thread_')
+   apply (rule ccorres_pre_threadGet, rename_tac flags)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule ccorres_if_lhs)
+    apply (rule ccorres_cond_true)
+    apply (ctac add: disableFpu_ccorres)
+   apply (rule ccorres_cond_false)
+   apply (ctac add: nativeThreadUsingFPU_ccorres[where thread=t])
+     apply (rule ccorres_cond[where R=\<top>])
+       apply (clarsimp simp: to_bool_neq_0 split: if_split)
+      apply (ctac add: enableFpu_ccorres)
+     apply (ctac add: switchLocalFpuOwner_ccorres)
+    apply wpsimp
+   apply (vcg exspec=nativeThreadUsingFPU_modifies)
+  apply (clarsimp simp: isFlagSet_def typ_heap_simps' word_bw_comms ctcb_relation_def
+                        option_to_ctcb_ptr_def)
+  done
+
+crunch arch_switchToThread
+  for no_0_obj'[wp]: no_0_obj'
+  and tcb_at'[wp]: "tcb_at' t"
+
 (* FIXME: move *)
 lemma switchToThread_ccorres:
   "ccorres dc xfdc
@@ -102,17 +129,27 @@ lemma switchToThread_ccorres:
   apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
   apply (rule ccorres_stateAssert_fwd)+
   apply (cinit' lift: thread_')
-   apply (ctac (no_vcg) add: Arch_switchToThread_ccorres)
-    apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
-     apply (simp add: setCurThread_def)
-     apply (rule ccorres_stateAssert)
-     apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-     apply clarsimp
-     apply (rule conseqPre, vcg)
-     apply (clarsimp simp: setCurThread_def simpler_modify_def rf_sr_def cstate_relation_def
-                           Let_def carch_state_relation_def cmachine_state_relation_def)
-    apply (wpsimp wp: Arch_switchToThread_invs_no_cicd' hoare_drop_imps
-           | strengthen invs_no_cicd'_pspace_aligned' invs_no_cicd'_pspace_distinct')+
+   \<comment> \<open>Split off Arch_switchToThread and lazyFPURestore and rewrite Haskell to line up.
+       We do this locally in the ccorres step to avoid affecting the later wp proof.\<close>
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule ccorres_split_nothrow)
+       apply (clarsimp simp: arch_switchToThread_rewrite)
+       apply (ctac (no_vcg) add: Arch_switchToThread_ccorres)
+        apply (rule ccorres_call[where xf'=xfdc], ctac (no_vcg) add: lazyFPURestore_ccorres; simp)
+       apply wpsimp
+      apply ceqv
+     apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
+      apply (simp add: setCurThread_def)
+      apply (rule ccorres_stateAssert)
+      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+      apply clarsimp
+      apply (rule conseqPre, vcg)
+      apply (clarsimp simp: setCurThread_def simpler_modify_def rf_sr_def cstate_relation_def
+                            Let_def carch_state_relation_def cmachine_state_relation_def)
+     apply (wpsimp wp: Arch_switchToThread_invs_no_cicd'
+            | strengthen invs_no_cicd'_pspace_aligned' invs_no_cicd'_pspace_distinct')+
+   apply (vcg exspec=lazyFPURestore_modifies exspec=Arch_switchToThread_modifies)
+  apply (clarsimp simp: invs_cicd_no_0_obj')
   done
 
 lemma activateThread_ccorres:
@@ -402,11 +439,20 @@ lemma nextDomain_ccorres:
   apply simp
   done
 
+lemma prepareNextDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] prepareNextDomain (Call prepareNextDomain_'proc)"
+  apply cinit
+  apply (ctac add: switchLocalFpuOwner_ccorres)
+  by (clarsimp simp: option_to_ctcb_ptr_def)
+
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread) UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
-         y \<leftarrow> when (domainTime = 0) nextDomain;
+         y \<leftarrow> when (domainTime = 0) (do
+             y <- prepareNextDomain;
+             nextDomain
+         od);
          chooseThread
       od)
      (Call scheduleChooseNewThread_'proc)"
@@ -415,12 +461,14 @@ lemma scheduleChooseNewThread_ccorres:
    apply (rule ccorres_split_nothrow)
        apply (rule_tac R="\<lambda>s. ksDomainTime s = domainTime" in ccorres_when)
         apply (fastforce simp: rf_sr_ksDomainTime)
-       apply (rule_tac xf'=xfdc in ccorres_call[OF nextDomain_ccorres] ; simp)
+       apply (ctac (no_vcg) add: prepareNextDomain_ccorres)
+        apply (rule ccorres_call[OF nextDomain_ccorres, where xf'=xfdc] ; simp)
+       apply wpsimp
       apply ceqv
      apply (ctac (no_vcg) add: chooseThread_ccorres)
     apply (wp nextDomain_invs_no_cicd')
    apply clarsimp
-   apply (vcg exspec=nextDomain_modifies)
+   apply (vcg exspec=nextDomain_modifies exspec=prepareNextDomain_modifies)
   apply (clarsimp simp: if_apply_def2 invs'_invs_no_cicd')
   done
 
