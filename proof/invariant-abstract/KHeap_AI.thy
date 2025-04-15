@@ -692,6 +692,12 @@ lemma caps_of_state_after_update:
   by (simp add: caps_of_state_cte_wp_at cte_wp_at_after_update
           cong: if_cong)
 
+lemma caps_of_state_fun_upd:
+  "obj_at (same_caps val) p s \<Longrightarrow>
+   (caps_of_state (s\<lparr>kheap := (kheap s) (p \<mapsto> val)\<rparr>)) = caps_of_state s"
+  apply (drule caps_of_state_after_update)
+  apply (simp add: fun_upd_def)
+  done
 
 lemma elim_CNode_case:
   "\<lbrakk> (case x of CNode sz ct \<Rightarrow> False | _ \<Rightarrow> True) \<rbrakk>

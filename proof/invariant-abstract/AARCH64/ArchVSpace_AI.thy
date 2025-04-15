@@ -2348,13 +2348,6 @@ lemma set_asid_pool_arch_objs_map:
   apply (fastforce simp: obj_at_def)
   done
 
-lemma caps_of_state_fun_upd:
-  "obj_at (same_caps val) p s \<Longrightarrow>
-   (caps_of_state (s\<lparr>kheap := (kheap s) (p \<mapsto> val)\<rparr>)) = caps_of_state s"
-  apply (drule caps_of_state_after_update)
-  apply (simp add: fun_upd_def)
-  done
-
 lemma set_asid_pool_valid_arch_caps_map:
   "\<lbrace>valid_arch_caps and valid_arch_state and valid_global_objs and valid_objs
     and valid_vspace_objs and pspace_aligned and

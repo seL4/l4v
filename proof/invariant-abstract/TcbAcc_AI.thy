@@ -2333,7 +2333,6 @@ lemma arch_thread_set_zombies_final[wp]:
   apply (subst get_tcb_rev)
    apply assumption
   apply simp
-  apply (subst get_tcb_rev, assumption, simp)+
   apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
   done
 

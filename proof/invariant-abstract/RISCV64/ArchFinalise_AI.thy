@@ -361,10 +361,6 @@ lemma as_user_unlive0[wp]:
 lemma o_def_not: "obj_at (\<lambda>a. \<not> P a) t s =  obj_at (Not o P) t s"
   by (simp add: obj_at_def)
 
-lemma same_caps_tcb_arch_update[simp]:
-  "same_caps (TCB (tcb_arch_update f tcb)) = same_caps (TCB tcb)"
-  by (rule ext) (clarsimp simp: tcb_cap_cases_def)
-
 lemma as_user_valid_irq_node[wp]:
   "\<lbrace>valid_irq_node\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_irq_node\<rbrace>"
   unfolding as_user_def
