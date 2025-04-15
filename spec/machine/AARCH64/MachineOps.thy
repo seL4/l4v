@@ -163,7 +163,7 @@ datatype fpu_state = FPUState (fpuRegs : "fpu_regs \<Rightarrow> 64 word")
                               (fpuSr : "32 word")
                               (fpuCr : "32 word")
 
-datatype user_context = UserContext (fpu_state : fpu_state) (user_regs : user_regs)
+datatype user_context = UserContext (user_fpu_state : fpu_state) (user_regs : user_regs)
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
@@ -171,10 +171,10 @@ definition getRegister :: "register \<Rightarrow> machine_word user_monad" where
   "getRegister r \<equiv> gets (\<lambda>s. user_regs s r)"
 
 definition modify_registers :: "(user_regs \<Rightarrow> user_regs) \<Rightarrow> user_context \<Rightarrow> user_context" where
-  "modify_registers f uc \<equiv> UserContext (fpu_state uc) (f (user_regs uc))"
+  "modify_registers f uc \<equiv> UserContext (user_fpu_state uc) (f (user_regs uc))"
 
 definition setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad" where
-  "setRegister r v \<equiv> modify (\<lambda>s. UserContext (fpu_state s) ((user_regs s) (r := v)))"
+  "setRegister r v \<equiv> modify (\<lambda>s. UserContext (user_fpu_state s) ((user_regs s) (r := v)))"
 
 definition getRestartPC :: "machine_word user_monad" where
   "getRestartPC \<equiv> getRegister FaultIP"
@@ -186,7 +186,7 @@ definition setNextPC :: "machine_word \<Rightarrow> unit user_monad" where
 subsection "FPU-related"
 
 definition getFPUState :: "fpu_state user_monad" where
-  "getFPUState \<equiv> gets fpu_state"
+  "getFPUState \<equiv> gets user_fpu_state"
 
 definition setFPUState :: "fpu_state \<Rightarrow> unit user_monad" where
   "setFPUState fc \<equiv> modify (\<lambda>s. UserContext fc (user_regs s))"
