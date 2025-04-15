@@ -360,11 +360,6 @@ where
 "numIODomainIDBits \<equiv> undefined"
 *)
 
-definition
-  hwASIDInvalidate :: "word64 \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
-  "hwASIDInvalidate \<equiv> invalidateASID"
-
 consts'
   getFaultAddress_val :: "machine_state \<Rightarrow> machine_word"
 definition
