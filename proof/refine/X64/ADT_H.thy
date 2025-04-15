@@ -510,15 +510,16 @@ lemma FaultMap_fault_map[simp]:
   done
 
 definition
-  "ArchTcbMap atcb \<equiv>
-    \<lparr> tcb_context =  atcbContext atcb \<rparr>"
+  "ArchTcbMap atcb is_cur_fpu_owner \<equiv>
+    \<lparr> tcb_context = atcbContext atcb, tcb_cur_fpu = is_cur_fpu_owner \<rparr>"
 
 lemma arch_tcb_relation_imp_ArchTcnMap:
-  "\<lbrakk> arch_tcb_relation atcb atcb'\<rbrakk> \<Longrightarrow> ArchTcbMap atcb' = atcb"
+  "\<lbrakk> arch_tcb_relation atcb atcb'; tcb_cur_fpu atcb = is_cur_fpu_owner\<rbrakk>
+   \<Longrightarrow> ArchTcbMap atcb' is_cur_fpu_owner = atcb"
   by (clarsimp simp: arch_tcb_relation_def ArchTcbMap_def)
 
 definition
-  "TcbMap tcb \<equiv>
+  "TcbMap tcb is_cur_fpu_owner \<equiv>
      \<lparr>tcb_ctable = CapabilityMap (cteCap (tcbCTable tcb)),
       tcb_vtable = CapabilityMap (cteCap (tcbVTable tcb)),
       tcb_reply = CapabilityMap (cteCap (tcbReply tcb)),
@@ -537,24 +538,23 @@ definition
       tcb_arch = ArchTcbMap (tcbArch tcb) is_cur_fpu_owner\<rparr>"
 
 definition
- "absCNode sz h a \<equiv> CNode sz (%bl.
-  if length bl = sz
+ "absCNode sz h a \<equiv> CNode sz (\<lambda>bl.
+    if length bl = sz
     then Some (CapabilityMap (case (h (a + of_bl bl * 2^cteSizeBits)) of
                                 Some (KOCTE cte) \<Rightarrow> cteCap cte))
-  else None)"
+    else None)"
 
-definition
-  absHeap :: "(machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow>
-              (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> Structures_A.kheap"
-  where
-  "absHeap ups cns h \<equiv> \<lambda>x.
+definition absHeap ::
+  "(machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow>
+     (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> machine_word option \<Rightarrow> Structures_A.kheap" where
+  "absHeap ups cns h cur_fpu_owner \<equiv> \<lambda>x.
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
      | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
      | Some KOKernelData \<Rightarrow> undefined \<comment> \<open>forbidden by pspace_relation\<close>
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
      | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
-     | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
+     | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb (cur_fpu_owner = Some x)))
      | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
      | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
      | None \<Rightarrow> None"
@@ -662,10 +662,12 @@ lemma absHeap_correct:
   assumes pspace_aligned:  "pspace_aligned s"
   assumes pspace_distinct: "pspace_distinct s"
   assumes valid_objs:      "valid_objs s"
+  assumes valid_cur_fpu:   "valid_cur_fpu s"
   assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ghost_relation:  "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
+  assumes arch_state_relation: "(arch_state s, ksArchState s') \<in> arch_state_relation"
 shows
-  "absHeap (gsUserPages s') (gsCNodes s') (ksPSpace s') = kheap s"
+  "absHeap (gsUserPages s') (gsCNodes s') (ksPSpace s') (x64KSCurFPUOwner (ksArchState s')) = kheap s"
 proof -
   from ghost_relation
   have gsUserPages:
@@ -1907,7 +1909,9 @@ where
 
 definition
   "absArchState s' \<equiv>
-   case s' of X64KernelState asid_tbl gpm gpdpts gpds gpts ccr3 kvspace kports num_ioapics ioapics_nirqs irq_states \<Rightarrow>
+   case s' of
+     X64KernelState asid_tbl gpm gpdpts gpds gpts ccr3 kvspace kports num_ioapics ioapics_nirqs
+                    irq_states current_fpu_owner \<Rightarrow>
      \<lparr>x64_asid_table = asid_tbl \<circ> ucast, x64_global_pml4 = gpm,
       x64_kernel_vspace = kvspace, x64_global_pts = gpts,
       x64_global_pdpts = gpdpts, x64_global_pds = gpds,
@@ -1915,7 +1919,8 @@ definition
       x64_allocated_io_ports = kports,
       x64_num_ioapics = num_ioapics,
       x64_ioapic_nirqs = ioapics_nirqs,
-      x64_irq_state = x64irqstate_to_abstract \<circ> irq_states\<rparr>"
+      x64_irq_state = x64irqstate_to_abstract \<circ> irq_states,
+      x64_current_fpu_owner = current_fpu_owner\<rparr>"
 
 lemma cr3_expand_unexpand[simp]: "cr3 (cr3_base_address a) (cr3_pcid a) = a"
   by (cases a, simp)
@@ -1965,7 +1970,7 @@ lemma absExst_correct:
 
 definition
   "absKState s \<equiv>
-   \<lparr>kheap = absHeap (gsUserPages s) (gsCNodes s) (ksPSpace s),
+   \<lparr>kheap = absHeap (gsUserPages s) (gsCNodes s) (ksPSpace s) (x64KSCurFPUOwner (ksArchState s)),
     cdt = absCDT (cteMap (gsCNodes s)) (ctes_of s),
     is_original_cap = absIsOriginalCap (cteMap (gsCNodes s)) (ksPSpace s),
     cur_thread = ksCurThread s, idle_thread = ksIdleThread s,
@@ -1980,11 +1985,6 @@ definition
     interrupt_states = absInterruptStates (ksInterruptState s),
     arch_state = absArchState (ksArchState s),
     exst = absExst s\<rparr>"
-
-(* TODO: move *)
-lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
-  by (clarsimp simp add: invs_def valid_state_def)
-
 
 
 definition

@@ -544,7 +544,8 @@ where
        \<and> x64_allocated_io_ports s = x64KSAllocatedIOPorts s'
        \<and> x64_num_ioapics s = x64KSNumIOAPICs s'
        \<and> x64_ioapic_nirqs s = x64KSIOAPICnIRQs s'
-       \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')}"
+       \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')
+       \<and> x64_current_fpu_owner s = x64KSCurFPUOwner s'}"
 
 definition
   rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights"

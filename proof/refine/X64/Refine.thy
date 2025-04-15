@@ -447,7 +447,6 @@ lemma kernelEntry_invs':
   apply (wp ckernel_invs callKernel_domain_time_left
             threadSet_invs_trivial threadSet_ct_running'
             TcbAcc_R.dmo_invs' hoare_weak_lift_imp
-            doMachineOp_sch_act_simple
             callKernel_domain_time_left
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
                           valid_domain_list'_def)+
@@ -634,16 +633,17 @@ lemma entry_corres:
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
            apply wp+
-         apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, fastforce simp: invs_def cur_tcb_def)
+         apply (rule hoare_strengthen_post, rule akernel_invs_det_ext,
+                simp add: invs_def valid_state_def valid_pspace_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply (wp thread_set_invs_trivial
                  threadSet_invs_trivial threadSet_ct_running'
                  thread_set_not_state_valid_sched hoare_weak_lift_imp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
-              | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
-                          schact_is_rct_def
-              | (wps, wp threadSet_st_tcb_at2))+
-   apply (fastforce simp: invs_def cur_tcb_def)
+                 thread_set_no_change_tcb_state
+              | simp add: tcb_cap_cases_def ct_in_state'_def schact_is_rct_def
+              | (wps, wp threadSet_st_tcb_at2) )+
+   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def valid_pspace_def)
   apply (clarsimp simp: ct_in_state'_def)
   done
 

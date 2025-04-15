@@ -468,12 +468,13 @@ lemma performInvocation_corres:
        apply (rule corres_guard_imp)
          apply (erule invokeTCB_corres)
         apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
-       \<comment> \<open>domain cap\<close>
+      \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
-        apply (rule corres_split[OF setDomain_corres])
-          apply (rule corres_trivial, simp)
-         apply (wp)+
+        apply (rule corres_split[OF prepareSetDomain_corres])
+          apply (rule corres_split[OF setDomain_corres])
+            apply (rule corres_trivial, simp)
+           apply wpsimp+
        apply (fastforce+)[2]
      \<comment> \<open>CNodes\<close>
      apply clarsimp

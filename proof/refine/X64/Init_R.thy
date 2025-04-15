@@ -40,11 +40,10 @@ definition zeroed_arch_abstract_state :: arch_state where
     x64_allocated_io_ports = \<bottom>,
     x64_num_ioapics        = 0,
     x64_ioapic_nirqs       = K 0,
-    x64_irq_state          = K IRQFree\<rparr>"
+    x64_irq_state          = K IRQFree,
+    x64_current_fpu_owner = None\<rparr>"
 
-definition zeroed_main_abstract_state ::
-  abstract_state
-  where
+definition zeroed_main_abstract_state :: abstract_state where
   "zeroed_main_abstract_state \<equiv> \<lparr>
     kheap = Map.empty,
     cdt = Map.empty,
@@ -63,29 +62,21 @@ definition zeroed_main_abstract_state ::
     arch_state = zeroed_arch_abstract_state
   \<rparr>"
 
-definition zeroed_extended_state ::
-  det_ext
-  where
+definition zeroed_extended_state :: det_ext where
   "zeroed_extended_state \<equiv> \<lparr>
     work_units_completed_internal = 0,
     cdt_list_internal = K []
   \<rparr>"
 
-definition zeroed_abstract_state ::
-  det_state
-  where
+definition zeroed_abstract_state :: det_state where
   "zeroed_abstract_state \<equiv> abstract_state.extend zeroed_main_abstract_state
                            (state.fields zeroed_extended_state)"
 
-definition zeroed_arch_intermediate_state ::
-  Arch.kernel_state
-  where
+definition zeroed_arch_intermediate_state :: Arch.kernel_state where
   "zeroed_arch_intermediate_state \<equiv> X64KernelState Map.empty 0 [] [] [] (CR3 0 0)
-     (K X64VSpaceUserRegion) \<bottom> 0 (K 0) (K X64IRQFree)"
+     (K X64VSpaceUserRegion) \<bottom> 0 (K 0) (K X64IRQFree) None"
 
-definition zeroed_intermediate_state ::
-  global.kernel_state
-  where
+definition zeroed_intermediate_state :: global.kernel_state where
   "zeroed_intermediate_state \<equiv> \<lparr>
     ksPSpace = Map.empty,
     gsUserPages = Map.empty,

@@ -61,18 +61,125 @@ lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.refl]
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
 
+lemma gets_x64KSCurFPUOwner_corres[corres]:
+  "corres (=) \<top> \<top>
+          (gets (x64_current_fpu_owner \<circ> arch_state)) (gets (x64KSCurFPUOwner \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
+crunch setFPUState
+  for (no_fail) no_fail[wp]
+
+lemma saveFpuState_corres[corres]:
+  "corres dc (tcb_at t and pspace_aligned and pspace_distinct and (fpu_enabled \<circ> machine_state)) \<top>
+             (save_fpu_state t) (saveFpuState t)"
+  unfolding save_fpu_state_def saveFpuState_def
+  apply (corres corres: corres_machine_op' asUser_corres')
+  by (simp add: state_relation_def)
+
+crunch asUser
+  for ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
+  (wp: crunch_wps)
+
+lemma loadFpuState_corres[corres]:
+  "corres dc (tcb_at t and pspace_aligned and pspace_distinct and (fpu_enabled \<circ> machine_state)) \<top>
+             (load_fpu_state t) (loadFpuState t)"
+  unfolding load_fpu_state_def loadFpuState_def
+  apply (corres corres: corres_machine_op' asUser_corres' simp: o_def)
+  by (simp add: state_relation_def)
+
+lemma set_tcb_cur_fpu_noop:
+  "corres dc (pspace_aligned and pspace_distinct and tcb_at t) \<top>
+             (arch_thread_set (tcb_cur_fpu_update f) t) (return ())"
+  unfolding arch_thread_set_def thread_set_def
+  apply (rule corres_cross_over_guard[OF tcb_at_cross]; fastforce?)
+  apply (clarsimp simp: corres_underlying_def return_def set_object_def get_object_def in_monad Bex_def
+                        obj_at_def obj_at'_def is_tcb get_tcb_rev)
+  apply (clarsimp simp: state_relation_def projectKOs)
+  apply safe
+     apply (frule (2) pspace_relation_tcb_relation)
+     apply (clarsimp simp: pspace_relation_update_abstract_tcb tcb_relation_def arch_tcb_relation_def)
+    apply (clarsimp simp: ghost_relation_of_heap)
+   apply (clarsimp simp: swp_def cte_wp_at_after_update' obj_at_def simp del: same_caps_simps)
+  apply (clarsimp simp: caps_of_state_fun_upd obj_at_def simp del: same_caps_simps)
+  done
+
+lemma set_x64_current_fpu_owner_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and none_top tcb_at new_owner) \<top>
+             (set_x64_current_fpu_owner new_owner) (modifyArchState (x64KSCurFPUOwner_update (\<lambda>_. new_owner)))"
+  unfolding set_x64_current_fpu_owner_def modifyArchState_def maybeM_def
+  apply corres_pre
+  apply (rule corres_underlying_gets_pre_lhs)
+  apply (rule corres_add_noop_rhs)
+  apply (corres_split; clarsimp?)
+       apply (corres_cases; corres corres: set_tcb_cur_fpu_noop)
+      apply (rule corres_add_noop_rhs2)
+      apply (rule corres_split)
+         apply (corres corres: corres_modify_tivial) \<comment> \<open>FIXME: typo in rule name\<close>
+         apply (clarsimp simp: state_relation_def arch_state_relation_def)
+        apply (corres_cases; corres corres: set_tcb_cur_fpu_noop)
+       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)+
+   apply (auto simp: current_fpu_owner_Some_tcb_at)
+  done
+
+lemma enableFpu_fpu_enabled[wp]:
+  "\<lbrace>\<top>\<rbrace> enableFpu \<lbrace>\<lambda>_. fpu_enabled\<rbrace>"
+  by (wpsimp simp: enableFpu_def)
+
+crunch writeFpuState, readFpuState
+  for fpu_enabled[wp]: fpu_enabled
+
+crunch load_fpu_state, save_fpu_state
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  and fpu_enabled[wp]: "\<lambda>s. fpu_enabled (machine_state s)"
+  (wp: dmo_machine_state_lift)
+
+defs fpuOwner_asrt_def:
+  "fpuOwner_asrt \<equiv> \<lambda>s'. opt_tcb_at' (x64KSCurFPUOwner (ksArchState s')) s'"
+
+lemma fpuOwner_asrt_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; valid_cur_fpu s; pspace_aligned s; pspace_distinct s\<rbrakk> \<Longrightarrow> fpuOwner_asrt s'"
+  by (fastforce simp: state_relation_def arch_state_relation_def fpuOwner_asrt_def
+              intro!: tcb_at_cross current_fpu_owner_Some_tcb_at)
+
+lemma switchLocalFpuOwner_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and none_top tcb_at new_owner) \<top>
+             (switch_local_fpu_owner new_owner) (switchLocalFpuOwner new_owner)"
+  unfolding switch_local_fpu_owner_def switchLocalFpuOwner_def maybeM_def
+  apply (corres corres: corres_stateAssert_r | corres_cases | clarsimp)+
+         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' dmo_machine_state_lift)+
+   apply (auto simp: current_fpu_owner_Some_tcb_at fpuOwner_asrt_cross)
+  done
+
+lemma isFlagSet_set:
+  "isFlagSet flag flags = (flag \<in> word_to_tcb_flags flags)"
+  by (clarsimp simp: isFlagSet_def word_to_tcb_flags_def)
+
+lemma lazyFpuRestore_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and tcb_at t) \<top>
+             (lazy_fpu_restore t) (lazyFpuRestore t)"
+  unfolding lazy_fpu_restore_def lazyFpuRestore_def
+  by (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"]
+          term_simp: tcb_relation_def isFlagSet_set
+                 wp: hoare_drop_imps)
+
+crunch set_vm_root
+  for x64_current_fpu_owner[wp]: "\<lambda>s. P (x64_current_fpu_owner (arch_state s))"
+  and valid_cur_fpu[wp]: valid_cur_fpu
+  and aligned[wp]: pspace_aligned
+  and distinct[wp]: pspace_distinct
+  (simp: crunch_simps wp: crunch_wps valid_cur_fpu_lift_arch)
+
 lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
               and valid_vspace_objs and pspace_aligned and pspace_distinct
               and valid_vs_lookup and valid_global_objs
               and unique_table_refs o caps_of_state
-              and st_tcb_at runnable t)
+              and valid_cur_fpu and tcb_at t)
              (valid_arch_state' and valid_pspace' and st_tcb_at' runnable' t)
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def X64_H.switchToThread_def)
-  apply (rule corres_guard_imp)
-    apply (rule setVMRoot_corres[OF refl])
-   apply (clarsimp simp: st_tcb_at_tcb_at)
+  apply (corres corres: getObject_TCB_corres
+                term_simp: tcb_relation_def arch_tcb_relation_def)
   apply (clarsimp simp: valid_pspace'_def)
   done
 
@@ -672,61 +779,38 @@ lemma setCurThread_corres:
   apply (simp add: state_relation_def swp_def)
   done
 
-lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (unfold X64_H.switchToThread_def, wp typ_at_lift_tcb')
+crunch setVMRoot, lazyFpuRestore
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t'"
+  (simp: crunch_simps wp: crunch_wps)
 
-crunch "switchToThread"
+crunch switchToThread
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
-  "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
-   Arch.switchToThread t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+  "Arch.switchToThread t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
-    apply (simp add:  pred_tcb_at'_def X64_H.switchToThread_def)
-     apply (rule setVMRoot_obj_at)
-    done
+  have pos: "\<And>P t t'. Arch.switchToThread t \<lbrace>pred_tcb_at' proj P t'\<rbrace>"
+    by (wpsimp simp: X64_H.switchToThread_def)
   show ?thesis
     apply (rule P_bool_lift [OF pos])
     by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_X64_H_switchToThread_typ_at' pos])
 qed
 
-
-crunch storeWordUser
-  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
-crunch setVMRoot
-  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
-(wp: crunch_wps simp: crunch_simps)
-crunch storeWordUser
-  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
-crunch asUser
-  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
-(wp: crunch_wps simp: crunch_simps)
-crunch asUser
-  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
-(wp: crunch_wps simp: crunch_simps)
-
-lemma arch_switch_thread_ksQ[wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: X64_H.switchToThread_def)
-  apply (wp)
-  done
-
 crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread
-  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_objs'[wp]: valid_objs'
-  (wp: crunch_wps threadSet_sched_pointers simp: crunch_simps)
+  (wp: crunch_wps threadSet_sched_pointers getObject_tcb_wp getASID_wp
+   simp: crunch_simps obj_at'_def)
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
-  and ready_qs_distinct[wp]: ready_qs_distinct
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
-  (wp: ready_qs_distinct_lift simp: crunch_simps)
-
-crunch arch_switch_to_thread, arch_switch_to_idle_thread
-  for valid_idle[wp]: "\<lambda>s::det_ext state. valid_idle s"
+  and ready_qs_distinct[wp]: ready_qs_distinct
+  and valid_idle[wp]: valid_idle
+  (wp: ready_qs_distinct_lift crunch_wps simp: crunch_simps)
 
 lemma valid_queues_in_correct_ready_q[elim!]:
   "valid_queues s \<Longrightarrow> in_correct_ready_q s"
@@ -741,7 +825,7 @@ lemma switchToThread_corres:
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
-                and st_tcb_at runnable t and valid_queues and valid_idle)
+                and st_tcb_at runnable t and valid_queues and valid_idle and valid_cur_fpu)
              (no_0_obj' and sym_heap_sched_pointers and valid_pspace' and valid_arch_state')
              (switch_to_thread t) (switchToThread t)"
   apply (rule_tac Q'="st_tcb_at' runnable' t" in corres_cross_add_guard)
@@ -869,8 +953,8 @@ lemma setCurThread_invs_idle_thread:
   by (rule hoare_pre, rule setCurThread_invs_no_cicd'_idle_thread)
      (clarsimp simp: invs'_to_invs_no_cicd'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
 
-lemma armKSCurFPUOwner_invs'[wp]:
-  "modifyArchState (armKSCurFPUOwner_update f) \<lbrace>invs'\<rbrace>"
+lemma x64KSCurFPUOwner_invs'[wp]:
+  "modifyArchState (x64KSCurFPUOwner_update f) \<lbrace>invs'\<rbrace>"
   apply (wpsimp simp: modifyArchState_def)
   by (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def
                      ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
@@ -899,19 +983,12 @@ lemma Arch_switchToThread_invs[wp]:
 
 crunch "Arch.switchToThread"
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-(simp: crunch_simps)
+  (simp: crunch_simps)
 
-lemma Arch_swichToThread_tcbDomain_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
-  apply (clarsimp simp: X64_H.switchToThread_def storeWordUser_def)
-  apply (wp hoare_drop_imp | simp)+
-  done
-
-lemma Arch_swichToThread_tcbPriority_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
-  apply (clarsimp simp: X64_H.switchToThread_def storeWordUser_def)
-  apply (wp hoare_drop_imp | simp)+
-  done
+crunch Arch.switchToThread
+  for tcbDomain[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
+  and tcbState[wp]: "obj_at' (\<lambda>tcb. P (tcbState tcb)) t'"
+  and tcbPriority[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
 
 lemma Arch_switchToThread_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
@@ -929,12 +1006,10 @@ lemma tcbSchedDequeue_not_tcbQueued:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma Arch_switchToThread_obj_at[wp]:
-  "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>
-   Arch.switchToThread t
-   \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
-  apply (simp add: X64_H.switchToThread_def )
-  apply (rule setVMRoot_obj_at)
+lemma asUser_obj_at[wp]:
+  "asUser t' f \<lbrace>\<lambda>s. P' (obj_at' (P \<circ> tcbState) t s)\<rbrace>"
+  apply (wpsimp simp: asUser_def threadGet_stateAssert_gets_asUser wp: threadSet_obj_at'_no_state)
+  apply (simp add: obj_at'_def)
   done
 
 declare doMachineOp_obj_at[wp]
@@ -1014,8 +1089,51 @@ lemma asUser_utr[wp]:
   apply (simp add: o_def)
   done
 
-lemma armKSCurFPUOwner_invs_no_cicd'[wp]:
-  "modifyArchState (armKSCurFPUOwner_update f) \<lbrace>invs_no_cicd'\<rbrace>"
+lemma threadSet_invs_no_cicd'_trivialT:
+  assumes
+    "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
+    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
+    "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
+    "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
+    "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
+    "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
+    "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
+    "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
+    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
+    "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+  shows "threadSet F t \<lbrace>invs_no_cicd'\<rbrace>"
+  apply (simp add: invs_no_cicd'_def valid_state'_def)
+  apply (wp threadSet_valid_pspace'T
+            threadSet_sch_actT_P[where P=False, simplified]
+            threadSet_state_refs_of'T[where f'=id]
+            threadSet_iflive'T
+            threadSet_ifunsafe'T
+            threadSet_idle'T
+            threadSet_global_refsT
+            irqs_masked_lift
+            valid_irq_node_lift
+            valid_irq_handlers_lift''
+            threadSet_ctes_ofT
+            threadSet_not_inQ
+            threadSet_ct_idle_or_in_cur_domain'
+            threadSet_valid_dom_schedule' threadSet_sched_pointers threadSet_valid_sched_pointers
+            threadSet_cur
+            untyped_ranges_zero_lift
+         | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
+  by (auto simp: o_def)
+
+lemmas threadSet_invs_no_cicd'_trivial =
+    threadSet_invs_no_cicd'_trivialT [OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
+
+lemma asUser_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp hoare_drop_imps | simp)+
+  apply (wp threadSet_invs_no_cicd'_trivial hoare_drop_imps | simp)+
+  done
+
+lemma x64KSCurFPUOwner_invs_no_cicd'[wp]:
+  "modifyArchState (x64KSCurFPUOwner_update f) \<lbrace>invs_no_cicd'\<rbrace>"
   apply (wpsimp simp: modifyArchState_def)
   by (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_machine_state'_def
                      valid_arch_state'_def valid_global_refs'_def global_refs'_def
@@ -1071,7 +1189,7 @@ lemma switchToThread_ct_in_state[wp]:
 proof -
   show ?thesis
     apply (simp add: Thread_H.switchToThread_def tcbSchedEnqueue_def unless_def)
-    apply (wp setCurThread_ct_in_state Arch_switchToThread_obj_at
+    apply (wp setCurThread_ct_in_state
          | simp add: o_def cong: if_cong)+
     done
 qed
@@ -1414,7 +1532,7 @@ lemma guarded_switch_to_corres:
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
                 and st_tcb_at runnable t
-                and valid_queues and valid_idle)
+                and valid_queues and valid_idle and valid_cur_fpu)
              (valid_arch_state' and valid_pspace' and sym_heap_sched_pointers
                 and st_tcb_at' runnable' t and cur_tcb')
              (guarded_switch_to t) (switchToThread t)"

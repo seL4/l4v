@@ -3972,7 +3972,7 @@ lemma getMRs_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF T])
       apply (simp only: option.simps return_bind fun_app_def
-                        load_word_offs_def doMachineOp_mapM ef_loadWord)
+                        load_word_offs_def doMachineOp_mapM)
       apply (rule corres_split_eqr)
          apply (simp only: mapM_map_simp msgMaxLength_def msgLengthBits_def
                            msg_max_length_def o_def upto_enum_word)

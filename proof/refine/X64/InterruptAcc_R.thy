@@ -36,7 +36,6 @@ lemma setIRQState_corres:
         apply (clarsimp simp: interrupt_state_relation_def)
        apply (rule corres_machine_op)
        apply (rule corres_Id | simp)+
-       apply (rule no_fail_maskInterrupt)
       apply (wp | simp)+
   apply (clarsimp simp: irq_state_relation_def
                  split: irq_state.split_asm irqstate.split_asm)
