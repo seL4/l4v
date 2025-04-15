@@ -26,7 +26,7 @@ where
  "put_tcb_state_regs_tcb tsr tcb \<equiv> case tsr of
      TCBStateRegs st regs \<Rightarrow>
         tcb \<lparr> tcbState := st,
-              tcbArch := atcbContextSet (UserContext (fpu_state (atcbContext (tcbArch tcb))) regs)
+              tcbArch := atcbContextSet (UserContext (user_fpu_state (atcbContext (tcbArch tcb))) regs)
                          (tcbArch tcb) \<rparr>"
 
 definition
@@ -60,7 +60,7 @@ definition
   od"
 
 lemma UserContextGet[simp]:
-  "UserContext (fpu_state (atcbContext t)) (user_regs (atcbContextGet t)) = atcbContextGet t"
+  "UserContext (user_fpu_state (atcbContext t)) (user_regs (atcbContextGet t)) = atcbContextGet t"
   by (cases t, simp add: atcbContextGet_def)
 
 lemma put_tcb_state_regs_twice[simp]:
@@ -172,7 +172,7 @@ lemma get_tcb_state_regs_ko_at':
 lemma put_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> put_tcb_state_regs tsr (ksPSpace s p)
        = Some (KOTCB (ko \<lparr> tcbState := tsrState tsr
-                         , tcbArch := atcbContextSet (UserContext (fpu_state (atcbContext (tcbArch ko))) (tsrContext tsr)) (tcbArch ko)\<rparr>))"
+                         , tcbArch := atcbContextSet (UserContext (user_fpu_state (atcbContext (tcbArch ko))) (tsrContext tsr)) (tcbArch ko)\<rparr>))"
   by (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
                      put_tcb_state_regs_tcb_def
               split: tcb_state_regs.split)
@@ -241,12 +241,12 @@ lemma mapM_getRegister_simple:
   done
 
 lemma setRegister_simple:
-  "setRegister r v = (\<lambda>con. ({((), UserContext (fpu_state con) ((user_regs con)(r := v)))}, False))"
+  "setRegister r v = (\<lambda>con. ({((), UserContext (user_fpu_state con) ((user_regs con)(r := v)))}, False))"
   by (simp add: setRegister_def simpler_modify_def)
 
 lemma zipWithM_setRegister_simple:
   "zipWithM_x setRegister rs vs
-      = (\<lambda>con. ({((), foldl (\<lambda>con (r, v). UserContext (fpu_state con) ((user_regs con)(r := v))) con (zip rs vs))}, False))"
+      = (\<lambda>con. ({((), foldl (\<lambda>con (r, v). UserContext (user_fpu_state con) ((user_regs con)(r := v))) con (zip rs vs))}, False))"
   apply (simp add: zipWithM_x_mapM_x)
   apply (induct ("zip rs vs"))
    apply (simp add: mapM_x_Nil return_def)
@@ -1100,8 +1100,8 @@ lemma partial_overwrite_fun_upd2:
   by (simp add: fun_eq_iff partial_overwrite_def split: if_split)
 
 lemma atcbContextSetSetGet_eq[simp]:
-  "atcbContextSet (UserContext (fpu_state (atcbContext
-     (atcbContextSet (UserContext (fpu_state (atcbContext t)) r) t)))
+  "atcbContextSet (UserContext (user_fpu_state (atcbContext
+     (atcbContextSet (UserContext (user_fpu_state (atcbContext t)) r) t)))
         (user_regs (atcbContextGet t))) t = t"
   by (cases t, simp add: atcbContextSet_def atcbContextGet_def)
 
