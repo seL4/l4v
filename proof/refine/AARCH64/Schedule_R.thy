@@ -228,9 +228,7 @@ crunch writeFpuState, readFpuState
   for fpu_enabled[wp]: fpu_enabled
 
 crunch load_fpu_state, save_fpu_state
-  for pspace_aligned[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
-  and valid_cur_fpu[wp]: valid_cur_fpu
+  for valid_cur_fpu[wp]: valid_cur_fpu
   and fpu_enabled[wp]: "\<lambda>s. fpu_enabled (machine_state s)"
   (wp: dmo_machine_state_lift)
 
