@@ -313,12 +313,12 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
 definition tcb_no_ctes_proj ::
   "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8
           \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option
-          \<times> machine_word option \<times> machine_word option"
+          \<times> machine_word option \<times> machine_word option \<times> machine_word"
   where
   "tcb_no_ctes_proj t \<equiv>
      (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
       tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t,
-      tcbSchedNext t, tcbSchedPrev t)"
+      tcbSchedNext t, tcbSchedPrev t, tcbFlags t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
