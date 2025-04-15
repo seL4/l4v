@@ -555,11 +555,6 @@ lemma zipWithM_setRegister_simple_modify_registers:
                         simpler_modify_def fun_upd_def[symmetric])
   done
 
-(* FIXME AARCH64 move to IsolatedThreadAction where existing setRegister_simple is commented out *)
-lemma setRegister_simple:
-  "setRegister r v = (\<lambda>con. ({((), UserContext (fpu_state con) ((user_regs con)(r := v)))}, False))"
-  by (simp add: setRegister_def simpler_modify_def)
-
 lemma no_fail_getObject_asidpool[wp]:
   "no_fail (asid_pool_at' pool_ptr) (getObject pool_ptr :: asidpool kernel)"
   (* FIXME AARCH64 no_fail_getObject_tcb and no_fail_getObject_vcpu don't need this at their locations

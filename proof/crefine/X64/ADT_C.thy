@@ -123,7 +123,7 @@ definition (in state_rel)
   to_user_context_C :: "user_context \<Rightarrow> user_context_C"
 where
   "to_user_context_C uc \<equiv>
-  user_context_C (user_fpu_state_C (ARRAY r. fpu_state uc (finite_index r)))
+  user_context_C (user_fpu_state_C (ARRAY r. user_fpu_state uc (finite_index r)))
                  (ARRAY r. user_regs uc (register_to_H (of_nat r)))"
 
 lemma (in kernel_m) ccontext_rel_to_C:

@@ -1880,9 +1880,9 @@ crunch doIPCTransfer
    simp: split_def zipWithM_x_mapM)
 
 lemma sanitise_register_corres:
-  "foldl (\<lambda>s (a, b). UserContext (fpu_state s) ((user_regs s)(a := sanitise_register x a b))) s
+  "foldl (\<lambda>s (a, b). UserContext (user_fpu_state s) ((user_regs s)(a := sanitise_register x a b))) s
           (zip msg_template msg) =
-   foldl (\<lambda>s (a, b). UserContext (fpu_state s) ((user_regs s)(a := sanitiseRegister y a b))) s
+   foldl (\<lambda>s (a, b). UserContext (user_fpu_state s) ((user_regs s)(a := sanitiseRegister y a b))) s
           (zip msg_template msg)"
   apply (rule foldl_cong)
     apply simp
