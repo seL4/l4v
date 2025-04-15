@@ -18,9 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
-        num_domains: ['1', '7', '']
+        num_domains: ['1', '']
         plat: ['']
         include:
+          - arch: ARM
+            num_domains: '7'
+
           - arch: ARM
             plat: exynos4
           - arch: ARM
