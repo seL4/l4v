@@ -34,7 +34,7 @@ crunch set_mcpriority, set_priority, set_flags, arch_post_set_flags
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
-crunch updateIRQState
+crunch update_irq_state
   for (bcorres) bcorres[wp]: truncate_state
 
 lemma invoke_tcb_bcorres[wp]:
