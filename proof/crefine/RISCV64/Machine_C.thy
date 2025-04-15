@@ -81,6 +81,7 @@ assumes isIRQPending_ccorres:
 assumes getActiveIRQ_Normal:
   "\<Gamma> \<turnstile> \<langle>Call getActiveIRQ_'proc, Normal s\<rangle> \<Rightarrow> s' \<Longrightarrow> isNormal s'"
 
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 

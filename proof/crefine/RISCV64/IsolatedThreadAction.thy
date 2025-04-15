@@ -15,11 +15,15 @@ context begin interpretation Arch .
 datatype tcb_state_regs =
   TCBStateRegs (tsrState : thread_state) (tsrContext : "MachineTypes.register \<Rightarrow> machine_word")
 
+definition get_tcb_state_regs_tcb :: "tcb \<Rightarrow> tcb_state_regs" where
+  "get_tcb_state_regs_tcb tcb \<equiv> TCBStateRegs (tcbState tcb) ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb)"
+
 definition
   get_tcb_state_regs :: "kernel_object option \<Rightarrow> tcb_state_regs"
 where
- "get_tcb_state_regs oko \<equiv> case oko of
-    Some (KOTCB tcb) \<Rightarrow> TCBStateRegs (tcbState tcb) ((user_regs o atcbContextGet o tcbArch) tcb)"
+ "get_tcb_state_regs oko \<equiv> case oko of Some (KOTCB tcb) \<Rightarrow> get_tcb_state_regs_tcb tcb"
+
+lemmas get_tcb_state_regs_defs = get_tcb_state_regs_def get_tcb_state_regs_tcb_def
 
 definition
   put_tcb_state_regs_tcb :: "tcb_state_regs \<Rightarrow> tcb \<Rightarrow> tcb"
@@ -36,6 +40,8 @@ where
  "put_tcb_state_regs tsr oko = Some (KOTCB (put_tcb_state_regs_tcb tsr
     (case oko of
        Some (KOTCB tcb) \<Rightarrow> tcb | _ \<Rightarrow> makeObject)))"
+
+lemmas put_tcb_state_regs_defs = put_tcb_state_regs_def put_tcb_state_regs_tcb_def
 
 definition
  "partial_overwrite idx tcbs ps \<equiv>
@@ -86,9 +92,8 @@ lemma get_tcb_state_regs_partial_overwrite[simp]:
    get_tcb_state_regs (partial_overwrite idx tcbs f (idx x))
       = tcbs x"
   apply (simp add: partial_overwrite_def)
-  apply (simp add: put_tcb_state_regs_def
-                   get_tcb_state_regs_def
-                   put_tcb_state_regs_tcb_def
+  apply (simp add: put_tcb_state_regs_defs
+                   get_tcb_state_regs_defs
             split: tcb_state_regs.split)
   done
 
@@ -166,14 +171,13 @@ context begin interpretation Arch . (*FIXME: arch-split*)
 lemma get_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> get_tcb_state_regs (ksPSpace s p)
        = TCBStateRegs (tcbState ko) ((user_regs o atcbContextGet o tcbArch) ko)"
-  by (clarsimp simp: obj_at'_def projectKOs get_tcb_state_regs_def)
+  by (clarsimp simp: obj_at'_def get_tcb_state_regs_defs projectKOs)
 
 lemma put_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> put_tcb_state_regs tsr (ksPSpace s p)
        = Some (KOTCB (ko \<lparr> tcbState := tsrState tsr
                          , tcbArch := atcbContextSet (UserContext (tsrContext tsr)) (tcbArch ko)\<rparr>))"
-  by (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
-                     put_tcb_state_regs_tcb_def
+  by (clarsimp simp: obj_at'_def put_tcb_state_regs_defs projectKOs
               split: tcb_state_regs.split)
 
 lemma partial_overwrite_get_tcb_state_regs:
@@ -184,8 +188,7 @@ lemma partial_overwrite_get_tcb_state_regs:
                       split: if_split)
   apply clarsimp
   apply (drule_tac x=xa in spec)
-  apply (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
-                        get_tcb_state_regs_def put_tcb_state_regs_tcb_def)
+  apply (clarsimp simp: obj_at'_def put_tcb_state_regs_defs get_tcb_state_regs_defs projectKOs)
   apply (case_tac obj, simp)
   done
 
@@ -914,8 +917,8 @@ lemma oblivious_switchToThread_schact:
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
                    pointerInUserData_def isRunnable_def isStopped_def
-                   getThreadState_def tcbSchedDequeue_def tcbQueueRemove_def bitmap_fun_defs
-                   ksReadyQueues_asrt_def)
+                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs
+                   tcbQueueRemove_def ksReadyQueues_asrt_def)
   by (safe intro!: oblivious_bind
               | simp_all add: ready_qs_runnable_def idleThreadNotQueued_def
                               oblivious_setVMRoot_schact)+
@@ -1138,8 +1141,7 @@ lemma setCTE_isolatable:
     apply (rule ext)
     apply (clarsimp simp: partial_overwrite_get_tcb_state_regs
                    split: if_split)
-    apply (clarsimp simp: projectKOs get_tcb_state_regs_def
-                          put_tcb_state_regs_def put_tcb_state_regs_tcb_def
+    apply (clarsimp simp: projectKOs get_tcb_state_regs_defs put_tcb_state_regs_defs
                           partial_overwrite_def
                    split: tcb_state_regs.split)
     apply (case_tac obj, simp add: projectKO_opt_tcb)
@@ -1220,8 +1222,7 @@ lemma isolate_thread_actions_threadSet_tcbState:
                 intro!: kernel_state.fold_congs[OF refl refl])
   apply (simp add: partial_overwrite_fun_upd
                    partial_overwrite_get_tcb_state_regs)
-  apply (clarsimp simp: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                        projectKOs get_tcb_state_regs_def
+  apply (clarsimp simp: put_tcb_state_regs_defs projectKOs get_tcb_state_regs_defs
                  elim!: obj_atE')
   apply (case_tac ko)
   apply (simp add: projectKO_opt_tcb)
@@ -1250,7 +1251,7 @@ lemma switchToThread_rewrite:
        (switchToThread t)
        (do Arch.switchToThread t; setCurThread t od)"
   apply (simp add: switchToThread_def Thread_H.switchToThread_def)
-  apply (monadic_rewrite_l tcbSchedDequeue_rewrite, simp)
+  apply (monadic_rewrite_l tcbSchedDequeue_rewrite \<open>wpsimp simp: o_def\<close>, simp)
    (* strip LHS of getters and asserts until LHS and RHS are the same *)
    apply (repeat_unless \<open>rule monadic_rewrite_refl\<close> monadic_rewrite_symb_exec_l)
       apply wpsimp+
@@ -1435,9 +1436,8 @@ lemma copy_register_isolate:
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
                   cong: if_cong)
   apply (case_tac obj, case_tac obja)
-  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
-                   put_tcb_state_regs_tcb_def get_tcb_state_regs_def
-                   atcbContextGet_def
+  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_defs
+                   get_tcb_state_regs_defs atcbContextGet_def
              cong: if_cong)
   apply (auto simp: fun_eq_iff split: if_split)
   done
