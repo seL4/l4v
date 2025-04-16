@@ -8,7 +8,7 @@ theory ArchFinalise_AC
 imports Finalise_AC
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 named_theorems Finalise_AC_assms
 
@@ -66,6 +66,7 @@ declare finalise_cap_valid_list[Finalise_AC_assms]
 declare arch_finalise_cap_pas_refined[Finalise_AC_assms]
 declare prepare_thread_delete_st_tcb_at_halted[Finalise_AC_assms]
 declare prepare_thread_delete_pas_refined[Finalise_AC_assms]
+declare valid_cur_fpu_lift_arch[Finalise_AC_assms]
 
 end
 
@@ -78,7 +79,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 lemma cap_revoke_respects'[Finalise_AC_assms]:
   "s \<turnstile> \<lbrace>(\<lambda>s. trp \<longrightarrow> integrity aag X st s) and K (is_subject aag (fst slot))
