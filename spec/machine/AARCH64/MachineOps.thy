@@ -153,16 +153,6 @@ subsection "User Monad and Registers"
 
 type_synonym user_regs = "register \<Rightarrow> machine_word"
 
-text \<open> There are 64 general FPU registers saved. \<close>
-type_synonym fpu_regs = 64
-
-text \<open>
-  We use Haskell naming convention here, as we translate the Haskell FPUState directly
-  to this one for use in the abstract and executable specs.\<close>
-datatype fpu_state = FPUState (fpuRegs : "fpu_regs \<Rightarrow> 64 word")
-                              (fpuSr : "32 word")
-                              (fpuCr : "32 word")
-
 datatype user_context = UserContext (user_fpu_state : fpu_state) (user_regs : user_regs)
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
@@ -195,24 +185,26 @@ definition setFPUState :: "fpu_state \<Rightarrow> unit user_monad" where
    and EL1 and is generally controlled by the VM. seL4 only modifies it when unconditionally enabling
    it while disabling a VCPU, and seL4 instead toggles CPTR_EL2 to enable or disable the FPU for
    native tasks.\<close>
-\<comment> \<open>FIXME FPU: The underlying register is saved and restored when switching between VCPUs, so this
-     will probably need to be moved out of machine\_rest\_monad.\<close>
 consts' enableFpuEL01_impl :: "unit machine_rest_monad"
+consts' enableFpuEL01_val :: "machine_word \<Rightarrow> machine_word"
 definition enableFpuEL01 :: "unit machine_monad" where
-  "enableFpuEL01 \<equiv> machine_op_lift enableFpuEL01_impl"
+  "enableFpuEL01 \<equiv> do
+     modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(VCPURegCPACR := enableFpuEL01_val (r VCPURegCPACR)))));
+     machine_op_lift enableFpuEL01_impl
+   od"
 
-consts' readFpuState_val :: "machine_state_rest \<Rightarrow> fpu_state"
 definition readFpuState :: "fpu_state machine_monad" where
   "readFpuState \<equiv>  do
      state_assert fpu_enabled;
-     machine_rest_lift $ gets readFpuState_val
+     gets fpu_state
    od"
 
 consts' writeFpuState_impl :: "fpu_state \<Rightarrow> unit machine_rest_monad"
 definition writeFpuState :: "fpu_state \<Rightarrow> unit machine_monad" where
-  "writeFpuState val \<equiv>  do
+  "writeFpuState fpu \<equiv>  do
      state_assert fpu_enabled;
-     machine_op_lift $ writeFpuState_impl val
+     modify (fpu_state_update (\<lambda>_. fpu));
+     machine_op_lift $ writeFpuState_impl fpu
    od"
 
 \<comment> \<open>FIXME FPU: on AArch64 with hypervisor support this actually calls disableTrapFpu to enable the
@@ -270,8 +262,12 @@ definition setHCR :: "machine_word \<Rightarrow> unit machine_monad" where
   "setHCR w \<equiv> machine_op_lift (setHCR_impl w)"
 
 consts' setSCTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+consts' setSCTLR_val :: "machine_word \<Rightarrow> machine_word"
 definition setSCTLR :: "machine_word \<Rightarrow> unit machine_monad" where
-  "setSCTLR w \<equiv> machine_op_lift (setSCTLR_impl w)"
+  "setSCTLR w \<equiv> do
+     modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(VCPURegSCTLR := setSCTLR_val w))));
+     machine_op_lift (setSCTLR_impl w)
+   od"
 
 consts' addressTranslateS1_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 consts' addressTranslateS1_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
@@ -284,29 +280,35 @@ definition addressTranslateS1 :: "machine_word \<Rightarrow> machine_word machin
 
 subsection "GIC VCPU Interface"
 
-consts' gic_vcpu_ctrl_hcr_val :: "machine_state \<Rightarrow> 32 word"
 definition get_gic_vcpu_ctrl_hcr :: "32 word machine_monad" where
-  "get_gic_vcpu_ctrl_hcr \<equiv> gets gic_vcpu_ctrl_hcr_val"
+  "get_gic_vcpu_ctrl_hcr \<equiv> gets (\<lambda>ms. vgic_hcr (vcpu_vgic (vcpu_state ms)))"
 
 consts' set_gic_vcpu_ctrl_hcr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
 definition set_gic_vcpu_ctrl_hcr :: "32 word \<Rightarrow> unit machine_monad" where
-  "set_gic_vcpu_ctrl_hcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_hcr_impl w)"
+  "set_gic_vcpu_ctrl_hcr w \<equiv> do
+     modify (vcpu_state_update (vcpu_vgic_update (vgic_hcr_update (\<lambda>_. w))));
+     machine_op_lift (set_gic_vcpu_ctrl_hcr_impl w)
+   od"
 
-consts' gic_vcpu_ctrl_vmcr_val :: "machine_state \<Rightarrow> 32 word"
 definition get_gic_vcpu_ctrl_vmcr :: "32 word machine_monad" where
-  "get_gic_vcpu_ctrl_vmcr \<equiv> gets gic_vcpu_ctrl_vmcr_val"
+  "get_gic_vcpu_ctrl_vmcr \<equiv> gets (\<lambda>ms. vgic_vmcr (vcpu_vgic (vcpu_state ms)))"
 
 consts' set_gic_vcpu_ctrl_vmcr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
 definition set_gic_vcpu_ctrl_vmcr :: "32 word \<Rightarrow> unit machine_monad" where
-  "set_gic_vcpu_ctrl_vmcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vmcr_impl w)"
+  "set_gic_vcpu_ctrl_vmcr w \<equiv> do
+     modify (vcpu_state_update (vcpu_vgic_update (vgic_vmcr_update (\<lambda>_. w))));
+     machine_op_lift (set_gic_vcpu_ctrl_vmcr_impl w)
+   od"
 
-consts' gic_vcpu_ctrl_apr_val :: "machine_state \<Rightarrow> 32 word"
 definition get_gic_vcpu_ctrl_apr :: "32 word machine_monad" where
-  "get_gic_vcpu_ctrl_apr \<equiv> gets gic_vcpu_ctrl_apr_val"
+  "get_gic_vcpu_ctrl_apr \<equiv> gets (\<lambda>ms. vgic_apr (vcpu_vgic (vcpu_state ms)))"
 
 consts' set_gic_vcpu_ctrl_apr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
 definition set_gic_vcpu_ctrl_apr :: "32 word \<Rightarrow> unit machine_monad" where
-  "set_gic_vcpu_ctrl_apr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)"
+  "set_gic_vcpu_ctrl_apr w \<equiv> do
+     modify (vcpu_state_update (vcpu_vgic_update (vgic_apr_update (\<lambda>_. w))));
+     machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)
+   od"
 
 consts' gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> 32 word"
 definition get_gic_vcpu_ctrl_vtr :: "32 word machine_monad" where
@@ -329,23 +331,29 @@ definition get_gic_vcpu_ctrl_eisr1 :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr1_val"
 
 consts' get_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-consts' gic_vcpu_ctrl_lr_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition get_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word machine_monad" where
   "get_gic_vcpu_ctrl_lr n \<equiv> do
      machine_op_lift (get_gic_vcpu_ctrl_lr_impl n);
-     gets (gic_vcpu_ctrl_lr_val n)
+     gets (\<lambda>ms. vgic_lr (vcpu_vgic (vcpu_state ms)) (unat n))
    od"
 
 consts' set_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition set_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
-  "set_gic_vcpu_ctrl_lr n w  \<equiv> machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)"
+  "set_gic_vcpu_ctrl_lr n w  \<equiv> do
+     modify (vcpu_state_update (vcpu_vgic_update (vgic_lr_update (\<lambda>f. f(unat n := w)))));
+     machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)
+   od"
 
 
 subsection "Virtual Timer Interface"
 
 consts' check_export_arch_timer_impl :: "unit machine_rest_monad"
+consts' check_export_arch_timer_val :: "machine_word"
 definition check_export_arch_timer :: "unit machine_monad" where
-  "check_export_arch_timer \<equiv> machine_op_lift check_export_arch_timer_impl"
+  "check_export_arch_timer \<equiv> do
+     modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(VCPURegCNTKCTL_EL1 := check_export_arch_timer_val))));
+     machine_op_lift check_export_arch_timer_impl
+   od"
 
 consts' read_cntpct_val :: "machine_state \<Rightarrow> 64 word"
 definition read_cntpct :: "64 word machine_monad" where
@@ -354,13 +362,15 @@ definition read_cntpct :: "64 word machine_monad" where
 
 subsection "Hypervisor Banked Registers"
 
-consts' vcpuHardwareReg_val :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition readVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word machine_monad" where
-  "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareReg_val reg)"
+  "readVCPUHardwareReg reg \<equiv> gets (\<lambda>ms. vcpu_regs (vcpu_state ms) reg)"
 
 consts' writeVCPUHardwareReg_impl :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition writeVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
-  "writeVCPUHardwareReg reg val \<equiv> machine_op_lift (writeVCPUHardwareReg_impl reg val)"
+  "writeVCPUHardwareReg reg val \<equiv> do
+     modify (vcpu_state_update (vcpu_regs_update (\<lambda>f. f(reg := val))));
+     machine_op_lift (writeVCPUHardwareReg_impl reg val)
+   od"
 
 
 subsection "Caches, Barriers, and Flushing"
