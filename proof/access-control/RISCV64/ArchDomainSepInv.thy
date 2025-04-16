@@ -9,7 +9,7 @@ imports
   "DomainSepInv"
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems DomainSepInv_assms
 
@@ -58,7 +58,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma perform_page_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_page_inv pgi\<rbrace>
