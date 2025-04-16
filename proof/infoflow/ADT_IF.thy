@@ -824,18 +824,6 @@ lemma thread_set_tcb_context_update_domain_sep_inv[wp]:
   "thread_set (tcb_arch_update f) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
   by (wp domain_sep_inv_triv)
 
-lemma kernel_entry_silc_inv[wp]:
-  "\<lbrace>silc_inv aag st and einvs and simple_sched_action and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)
-                    and pas_refined aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
-                    and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
-   kernel_entry_if ev tc
-   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding kernel_entry_if_def
-  by (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
-               wp: hoare_weak_lift_imp handle_event_silc_inv thread_set_silc_inv thread_set_invs_trivial
-                   thread_set_not_state_valid_sched thread_set_pas_refined
-      | wp (once) hoare_vcg_imp_lift | force)+
-
 
 subsection \<open>handle_preemption_if\<close>
 
@@ -1012,13 +1000,31 @@ locale ADT_IF_1 =
     "create_cap type bits untyped dev sl \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and arch_invoke_irq_control_irq_state_of_state[wp]:
     "arch_invoke_irq_control ici \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  and thread_set_pas_refined:
+    "\<lbrakk> \<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb;
+       \<And>tcb. tcb_state (f tcb) = tcb_state tcb;
+       \<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb;
+       \<And>tcb. tcb_domain (f tcb) = tcb_domain tcb \<rbrakk>
+       \<Longrightarrow> thread_set f t \<lbrace>pas_refined aag\<rbrace>"
 begin
 
-lemma kernel_entry_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st
-                    and einvs and schact_is_rct
+lemma kernel_entry_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st and einvs and simple_sched_action and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)
+                    and pas_refined (aag :: 'a subject_label PAS)
                     and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))
-                    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
+                    and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
+   kernel_entry_if ev tc
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding kernel_entry_if_def
+  by (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
+               wp: hoare_weak_lift_imp handle_event_silc_inv thread_set_silc_inv thread_set_invs_trivial
+                   thread_set_not_state_valid_sched thread_set_pas_refined
+      | wp (once) hoare_vcg_imp_lift | force)+
+
+lemma kernel_entry_pas_refined[wp]:
+  "\<lbrace>pas_refined (aag :: 'a subject_label PAS) and guarded_pas_domain aag and
+    domain_sep_inv (pasMaySendIrqs aag) st and einvs and schact_is_rct and
+    (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s)) and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    kernel_entry_if ev tc
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding kernel_entry_if_def

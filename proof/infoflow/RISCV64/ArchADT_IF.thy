@@ -299,6 +299,18 @@ lemma handle_reserved_irq_non_kernel_IRQs[ADT_IF_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: handle_reserved_irq_def)
 
+lemma thread_set_pas_refined[ADT_IF_assms]:
+  assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
+       and st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
+      and ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
+       and dom: "\<And>tcb. tcb_domain (f tcb) = tcb_domain tcb"
+     shows "thread_set f t \<lbrace>pas_refined aag\<rbrace>"
+  by (wpsimp wp: tcb_domain_map_wellformed_lift_strong thread_set_state_vrefs thread_set_edomains[OF dom]
+           simp: pas_refined_def state_objs_to_policy_def
+      | wps thread_set_caps_of_state_trivial[OF cps]
+            thread_set_thread_st_auth_trivT[OF st]
+            thread_set_thread_bound_ntfns_trivT[OF ntfn])+
+
 end
 
 

@@ -2069,32 +2069,6 @@ lemma equiv_valid_2_bind_right:
   apply fastforce
   done
 
-(*FIXME: MOVE do_machine_op distributing over binds/basic operations*)
-lemma dmo_distr:
-  "do_machine_op (f >>= g) = (do_machine_op f >>= (\<lambda>x. do_machine_op (g x)))"
-  apply (clarsimp simp: do_machine_op_def bind_assoc)
-  apply (clarsimp simp: gets_def simpler_modify_def select_f_def
-                  bind_def get_def return_def)
-  apply (rule ext)
-  apply safe
-       apply ((clarsimp, force)+)[5]
-  apply (simp add: image_def)
-  done
-
-lemma dmo_if_distr:
-  "do_machine_op (if A then f else g) = (if A then (do_machine_op f) else (do_machine_op g))"
-  by simp
-
-lemma dmo_gets_distr:
-  "do_machine_op (gets f) = gets (\<lambda>s. f (machine_state s))"
-  by (clarsimp simp: do_machine_op_def bind_assoc gets_def get_def
-                     simpler_modify_def select_f_def bind_def return_def)
-
-lemma dmo_modify_distr:
-  "do_machine_op (modify f) = modify (machine_state_update f)"
-  by (fastforce simp: do_machine_op_def bind_assoc gets_def get_def
-                      simpler_modify_def select_f_def bind_def return_def)
-
 
 context Scheduler_IF_1 begin
 
