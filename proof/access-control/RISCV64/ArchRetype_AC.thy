@@ -14,6 +14,15 @@ lemma invs_mdb_cte':
   by (drule invs_mdb) (simp add: valid_mdb_def2)
 
 
+context Arch begin arch_global_naming
+
+lemma state_hyp_refs_empty[simp]:
+  "state_hyp_refs_of s = (\<lambda>_. {})"
+  by (auto simp: state_hyp_refs_of_def split: option.splits)
+
+end
+
+
 context retype_region_proofs begin interpretation Arch .
 
 lemma state_vrefs_eq:
@@ -59,15 +68,16 @@ lemma pas_refined:
       apply (subst state_vrefs_eq; fastforce?)
       apply (rule subsetI, rename_tac x, case_tac x, simp)
       apply (erule state_bits_to_policy.cases)
-            apply (solves \<open>auto intro!: sbta_caps intro: caps_retype split: cap.split\<close>)
-           apply (solves \<open>auto intro!: sbta_untyped intro: caps_retype split: cap.split\<close>)
+             apply (solves \<open>auto intro!: sbta_caps intro: caps_retype split: cap.split\<close>)
+            apply (solves \<open>auto intro!: sbta_untyped intro: caps_retype split: cap.split\<close>)
+           apply (blast intro: state_bits_to_policy.intros)
           apply (blast intro: state_bits_to_policy.intros)
-         apply (blast intro: state_bits_to_policy.intros)
-        apply (force intro!: sbta_cdt
+         apply (force intro!: sbta_cdt
+                        dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
+        apply (force intro!: sbta_cdt_transferable
                        dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
-       apply (force intro!: sbta_cdt_transferable
-                      dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
-      apply (blast intro: state_bits_to_policy.intros)
+       apply (blast intro: state_bits_to_policy.intros)
+      apply simp
      apply (subst state_vrefs_eq; fastforce?)
      apply (force elim!: state_asids_to_policy_aux.cases
                  intro: state_asids_to_policy_aux.intros caps_retype
@@ -83,7 +93,7 @@ lemma pas_refined:
 end
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems Retype_AC_assms
 
@@ -353,7 +363,7 @@ lemma integrity_asids_detype[Retype_AC_assms]:
      integrity_asids aag subjects x a s s'"
     "integrity_asids aag subjects x a s (detype refs s') =
      integrity_asids aag subjects x a s s'"
-  by (auto simp: detype_def refs opt_map_def)
+  by (auto simp: integrity_asids_def detype_def refs opt_map_def)
 
 lemma retype_region_integrity_asids[Retype_AC_assms]:
   "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
@@ -362,13 +372,14 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
            (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
                             then Some (default_object typ dev o_bits d)
                             else kheap s a\<rparr>)"
-  apply (clarsimp simp: opt_map_def)
+  apply (clarsimp simp: integrity_asids_def opt_map_def)
   apply (case_tac "x \<in> up_aligned_area ptr sz"; clarsimp)
   by (fastforce intro: tro_lrefl
                  dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
                  simp: image_def p_assoc_help power_sub)
 
 declare init_arch_objects_inv[Retype_AC_assms]
+declare state_hyp_refs_of_detype[Retype_AC_assms]
 
 end
 
@@ -377,9 +388,8 @@ global_interpretation Retype_AC_1?: Retype_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_AC_assms | solves \<open>wp only: Retype_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact Retype_AC_assms | solves \<open>rule integrity_arch_triv\<close>
+                                              | solves \<open>wp only: Retype_AC_assms; simp\<close>)?)
 qed
-
-requalify_facts RISCV64.storeWord_respects
 
 end

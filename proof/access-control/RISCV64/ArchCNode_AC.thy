@@ -10,7 +10,7 @@ begin
 
 section\<open>Arch-specific CNode AC.\<close>
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 declare arch_post_modify_registers_def[simp]
 declare arch_post_cap_deletion_def[simp]
@@ -121,6 +121,13 @@ lemma arch_post_cap_deletion_integrity[CNode_AC_assms]:
   "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
   by wpsimp
 
+lemma set_irq_state_respects[CNode_AC_assms,wp]:
+  "\<lbrace>integrity aag X st and K (is_subject_irq aag irq)\<rbrace>
+   set_irq_state irqst irq
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  unfolding set_irq_state_def maskInterrupt_def
+  by (wpsimp wp: dmo_no_mem_respects simp: integrity_subjects_def integrity_interrupts_def)
+
 end
 
 
@@ -152,7 +159,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
   "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
@@ -168,6 +175,15 @@ crunch set_cdt_list, update_cdt_list
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
 
+lemma thread_set_arch_trivT[CNode_AC_assms]:
+  assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
+  shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: thread_set_def wp: set_object_wp )
+  apply (erule_tac P=P in back_subst)
+  apply (rule ext)
+  apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
+  done
+
 end
 
 
@@ -175,11 +191,11 @@ global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms)?)
+    by (unfold_locales; (fact CNode_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma arch_post_cap_deletion_pas_refined[CNode_AC_assms, wp]:
   "arch_post_cap_deletion irqopt \<lbrace>pas_refined aag\<rbrace>"
@@ -217,7 +233,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma arch_derive_cap_auth_derived[CNode_AC_assms]:
   "\<lbrace>\<lambda>s. cte_wp_at (auth_derived (ArchObjectCap cap)) src_slot s\<rbrace>
