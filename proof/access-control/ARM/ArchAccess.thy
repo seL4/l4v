@@ -8,7 +8,7 @@ theory ArchAccess
 imports Types
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 subsection \<open>Arch-specific transformation of caps into authorities\<close>
 
@@ -63,41 +63,6 @@ definition vs_refs_no_global_pts :: "kernel_object \<Rightarrow> (obj_ref \<time
 definition state_vrefs where
   "state_vrefs s = case_option {} vs_refs_no_global_pts o kheap s"
 
-end
-
-context Arch_p_arch_update_eq begin global_naming ARM_A
-
-interpretation Arch .
-
-lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
-  by (simp add: state_vrefs_def pspace)
-
-end
-
-context Arch begin global_naming ARM_A
-
-lemma arch_update_state_vrefs[simp]:
-  "state_vrefs (arch_state_update f s) = state_vrefs s"
-  by (simp add: state_vrefs_def)
-
-lemmas state_vrefs_upd =
-  cur_thread_update.state_vrefs
-  cdt_update.state_vrefs
-  irq_node_update_arch.state_vrefs
-  interrupt_update.state_vrefs
-  revokable_update.state_vrefs
-  machine_state_update.state_vrefs
-  more_update.state_vrefs
-  scheduler_action_update.state_vrefs
-  domain_index_update.state_vrefs
-  cur_domain_update.state_vrefs
-  domain_time_update.state_vrefs
-  ready_queues_update.state_vrefs
-
-end
-
-context Arch begin
-
 primrec aobj_ref' where
   "aobj_ref' (ASIDPoolCap p _) = {p}"
 | "aobj_ref' ASIDControlCap = {}"
@@ -139,94 +104,44 @@ section \<open>Arch-specific integrity definition\<close>
 
 subsection \<open>How ASIDs can change\<close>
 
-abbreviation integrity_asids_aux ::
-  "'a PAS \<Rightarrow> 'a set \<Rightarrow> asid \<Rightarrow> obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> bool" where
-  "integrity_asids_aux aag subjects asid pp_opt pp_opt' \<equiv>
-     pp_opt = pp_opt' \<or> (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid
-                                 \<longrightarrow> pasASIDAbs aag asid' \<in> subjects)"
+definition integrity_asids_2 ::
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> arch_state \<Rightarrow> arch_state \<Rightarrow>
+   (obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> (obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> bool"
+where
+  "integrity_asids_2 aag subjects x asid as as' ao ao' \<equiv>
+     arm_asid_table as (asid_high_bits_of asid) = arm_asid_table as' (asid_high_bits_of asid) \<or>
+     (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid
+              \<longrightarrow> pasASIDAbs aag asid' \<in> subjects)"
 
-definition integrity_asids ::
-  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> 'y::state_ext state \<Rightarrow> 'z:: state_ext state  \<Rightarrow> bool" where
-  "integrity_asids aag subjects x a s s' \<equiv>
-   integrity_asids_aux aag subjects a (asid_table s  (asid_high_bits_of a))
-                                      (asid_table s' (asid_high_bits_of a))"
+lemmas integrity_asids_def = integrity_asids_2_def
 
-sublocale kheap_update: Arch_arch_update_eq "kheap_update f"
-  by unfold_locales simp
+\<comment> \<open>No hypervisor\<close>
+definition integrity_hyp_2 ::
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> arch_state \<Rightarrow> arch_state
+          \<Rightarrow> (obj_ref \<Rightarrow> arch_kernel_obj option) \<Rightarrow> (obj_ref \<Rightarrow> arch_kernel_obj option) \<Rightarrow> bool"
+where
+  "integrity_hyp_2 aag subjects x ms ms' as as' aobjs aobjs' \<equiv> True"
 
-lemma (in Arch_arch_update_eq) integrity_asids_update[simp]:
-  "integrity_asids aag subjects x a (f st) s = integrity_asids aag subjects x a st s"
-  "integrity_asids aag subjects x a st (f s) = integrity_asids aag subjects x a st s"
-  by (auto simp: integrity_asids_def arch)
+lemmas integrity_hyp_def = integrity_hyp_2_def
 
-lemmas integrity_asids_updates =
-  cdt_update.integrity_asids_update
-  more_update.integrity_asids_update
-  revokable_update.integrity_asids_update
-  interrupt_update.integrity_asids_update
-  cur_thread_update.integrity_asids_update
-  machine_state_update.integrity_asids_update
-  scheduler_action_update.integrity_asids_update
-  domain_index_update.integrity_asids_update
-  cur_domain_update.integrity_asids_update
-  domain_time_update.integrity_asids_update
-  ready_queues_update.integrity_asids_update
+definition valid_cur_hyp :: "'s::state_ext state \<Rightarrow> bool" where
+  "valid_cur_hyp \<equiv> \<top>"
 
-(* The kheap isn't used in ARM's integrity_asids definition,
-   but we need the following lemmas in some generic contexts *)
+\<comment> \<open>No FPU\<close>
+definition integrity_fpu_2 ::
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> machine_state \<Rightarrow> machine_state
+          \<Rightarrow> (obj_ref \<Rightarrow> kernel_object option) \<Rightarrow> (obj_ref \<Rightarrow> kernel_object option) \<Rightarrow> bool"
+where
+  "integrity_fpu_2 aag subjects x ms ms' kh kh' \<equiv> True"
 
-lemma integrity_asids_cnode_update':
-  "\<lbrakk> kheap st p = Some (CNode sz cs); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
-     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (simp add: integrity_asids_def)
-
-lemma integrity_asids_tcb_update':
-  "\<lbrakk> kheap st p = Some (TCB tcb); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
-     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (simp add: integrity_asids_def)
-
-lemma integrity_asids_ep_update':
-  "\<lbrakk> kheap st p = Some (Endpoint ep); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
-     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (simp add: integrity_asids_def)
-
-lemma integrity_asids_ntfn_update':
-  "\<lbrakk> kheap st p = Some (Notification ntfn); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
-     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (simp add: integrity_asids_def)
-
-lemmas integrity_asids_kh_upds'' =
-  integrity_asids_cnode_update'
-  integrity_asids_tcb_update'
-  integrity_asids_ep_update'
-  integrity_asids_ntfn_update'
-
-lemmas integrity_asids_kh_upds =
-  integrity_asids_kh_upds''
-  integrity_asids_kh_upds''[where rest="kheap s" and s=s for s, folded fun_upd_def, simplified]
-
-declare integrity_asids_def[simp]
-
-lemma integrity_asids_kh_upds':
-  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> CNode sz cs)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB tcb)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> Endpoint ep)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> Notification ntfn)\<rparr>) s"
-  by auto
-
-lemma integrity_asids_kh_update:
-  "integrity_asids aag subject x a (s\<lparr>kheap := kh\<rparr>) (s\<lparr>kheap := kh'\<rparr>)
-   \<Longrightarrow> integrity_asids aag subject x a (s\<lparr>kheap := kh(p := v)\<rparr>) (s\<lparr>kheap := kh'(p := v)\<rparr>)"
-  by auto
+lemmas integrity_fpu_def = integrity_fpu_2_def
 
 
 subsection \<open>Misc definitions\<close>
 
-definition ctxt_IP_update :: "user_context \<Rightarrow> user_context" where
-  "ctxt_IP_update ctxt \<equiv> UserContext ((user_regs ctxt)(NextIP := user_regs ctxt FaultIP))"
-
-abbreviation arch_IP_update :: "arch_tcb \<Rightarrow> arch_tcb" where
-  "arch_IP_update arch \<equiv> arch_tcb_context_set (ctxt_IP_update (arch_tcb_context_get arch)) arch"
+abbreviation arch_IP_update where
+  "arch_IP_update a \<equiv>
+   arch_tcb_set_registers ((arch_tcb_get_registers a)(NextIP := arch_tcb_get_registers a FaultIP)) a"
 
 definition asid_pool_integrity ::
   "'a set \<Rightarrow> 'a PAS \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
@@ -262,33 +177,5 @@ definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> obj_ref \<Righ
       | _ \<Rightarrow> {})"
 
 end
-
-
-context begin interpretation Arch .
-
-requalify_consts
-  vspace_cap_rights_to_auth
-  aobj_ref'
-  acap_asid'
-  state_vrefs
-  state_asids_to_policy_arch
-  integrity_asids
-  arch_IP_update
-  arch_cap_auth_conferred
-  arch_integrity_obj_atomic
-  arch_integrity_obj_alt
-  auth_ipc_buffers
-
-requalify_facts
-  integrity_asids_updates
-  state_vrefs_upd
-  integrity_asids_kh_upds
-  integrity_asids_kh_upds'
-  integrity_asids_kh_update
-
-end
-
-declare state_vrefs_upd[simp]
-declare integrity_asids_updates[simp]
 
 end
