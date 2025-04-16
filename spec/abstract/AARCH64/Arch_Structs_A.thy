@@ -145,16 +145,8 @@ end
 
 qualify AARCH64_A (in Arch)
 
-record  gic_vcpu_interface =
-  vgic_hcr  :: word32
-  vgic_vmcr :: word32
-  vgic_apr  :: word32
-  vgic_lr   :: "nat \<Rightarrow> AARCH64_A.virq"
-
-record vcpu =
+record vcpu = AARCH64.vcpu_state +
   vcpu_tcb  :: "obj_ref option"
-  vcpu_vgic :: "gic_vcpu_interface"
-  vcpu_regs :: "vcpureg \<Rightarrow> machine_word"
   vcpu_vppi_masked :: "vppievent_irq \<Rightarrow> bool"
   vcpu_vtimer :: virt_timer
 
@@ -175,9 +167,9 @@ definition default_gic_vcpu_interface :: gic_vcpu_interface where
 definition
   default_vcpu :: vcpu where
   "default_vcpu \<equiv> \<lparr>
-      vcpu_tcb    = None,
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM),
+      vcpu_tcb    = None,
       vcpu_vppi_masked = (\<lambda>_. False),
       vcpu_vtimer = VirtTimer 0
    \<rparr>"

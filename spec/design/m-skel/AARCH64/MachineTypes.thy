@@ -52,16 +52,39 @@ text \<open>
 \<close>
 typedecl machine_state_rest
 
+type_synonym virq = machine_word
+
+text \<open> There are 64 general FPU registers saved. \<close>
+type_synonym fpu_regs = 64
+
+text \<open>
+  We use Haskell naming convention here, as we translate the Haskell FPUState directly
+  to this one for use in the abstract and executable specs.\<close>
+datatype fpu_state = FPUState (fpuRegs : "fpu_regs \<Rightarrow> 64 word")
+                              (fpuSr : "32 word")
+                              (fpuCr : "32 word")
+
 end
 
 qualify AARCH64 (in Arch)
 
-record
-  machine_state =
+record gic_vcpu_interface =
+  vgic_hcr  :: word32
+  vgic_vmcr :: word32
+  vgic_apr  :: word32
+  vgic_lr   :: "nat \<Rightarrow> AARCH64.virq"
+
+record vcpu_state =
+  vcpu_vgic :: "gic_vcpu_interface"
+  vcpu_regs :: "vcpureg \<Rightarrow> machine_word"
+
+record machine_state =
   irq_masks :: "AARCH64.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "machine_word \<Rightarrow> word8"
   device_state :: "machine_word \<Rightarrow> word8 option"
+  vcpu_state :: vcpu_state
+  fpu_state :: AARCH64.fpu_state
   fpu_enabled :: bool
   machine_state_rest :: AARCH64.machine_state_rest
 
@@ -86,6 +109,14 @@ translations
 
 context Arch begin arch_global_naming
 
+#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY \
+  PT_Type \
+  VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits \
+  pageBitsForSize \
+  hcrCommon hcrTWE hcrTWI \
+  hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR \
+  vcpuBits
+
 text \<open>
   After kernel initialisation all IRQs are masked.
 \<close>
@@ -100,6 +131,21 @@ definition
   where
   "init_underlying_memory \<equiv> \<lambda>_. 0"
 
+definition default_gic_vcpu_interface :: gic_vcpu_interface where
+  "default_gic_vcpu_interface \<equiv> \<lparr>
+      vgic_hcr  = vgicHCREN,
+      vgic_vmcr = 0,
+      vgic_apr  = 0,
+      vgic_lr   = \<lambda>_. 0
+   \<rparr>"
+
+definition
+  default_vcpu_state :: vcpu_state where
+  "default_vcpu_state \<equiv> \<lparr>
+      vcpu_vgic   = default_gic_vcpu_interface,
+      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM)
+   \<rparr>"
+
 text \<open>
   We leave open the underspecified rest of the machine state in
   the initial state.
@@ -110,16 +156,10 @@ definition
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
                          device_state = Map.empty,
+                         vcpu_state = default_vcpu_state,
+                         fpu_state = FPUState (\<lambda>_. 0) 0 0,
                          fpu_enabled = False,
                          machine_state_rest = undefined \<rparr>"
-
-#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY \
-  PT_Type \
-  VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits \
-  pageBitsForSize \
-  hcrCommon hcrTWE hcrTWI \
-  hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR \
-  vcpuBits
 
 end
 
