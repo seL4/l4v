@@ -330,7 +330,7 @@ definition
   ccontext_relation :: "user_context \<Rightarrow> user_context_C \<Rightarrow> bool"
 where
   "ccontext_relation uc_H uc_C \<equiv> cregs_relation (user_regs uc_H) (registers_C uc_C) \<and>
-                                  fpu_relation (fpu_state uc_H) (fpuState_C uc_C)"
+                                  fpu_relation (user_fpu_state uc_H) (fpuState_C uc_C)"
 
 primrec
   cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow>

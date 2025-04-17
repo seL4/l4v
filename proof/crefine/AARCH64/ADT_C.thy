@@ -127,8 +127,8 @@ definition
 definition (in state_rel) to_user_context_C :: "user_context \<Rightarrow> user_context_C" where
   "to_user_context_C uc \<equiv>
      user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r))) 0
-                    (user_fpu_state_C (ARRAY r. fpuRegs (fpu_state uc) (of_nat r))
-                                      (fpuSr (fpu_state uc)) (fpuCr (fpu_state uc)))"
+                    (user_fpu_state_C (ARRAY r. fpuRegs (user_fpu_state uc) (of_nat r))
+                                      (fpuSr (user_fpu_state uc)) (fpuCr (user_fpu_state uc)))"
 
 (* FIXME ARMHYP is this useful in any other file? *)
 (* Note: depends on vcpuactive being false when vcpuptr is NULL! *)
