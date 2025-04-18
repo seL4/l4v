@@ -85,20 +85,22 @@ install_C_file "list_reverse_norm.c"
 
 lemma (in list_reverse_norm_global_addresses) reverse_correct:
   shows "reverse_spec"
-apply (unfold reverse_spec_def)
-apply (hoare_rule HoarePartial.ProcNoRec1)
-apply (hoare_rule anno = "reverse_invs_body zs" in HoarePartial.annotateI)
- prefer 2
- apply (simp add: whileAnno_def reverse_invs_body_def)
-apply (subst reverse_invs_body_def)
-apply (fold lift_def)
-apply vcg
-  prefer 2
-  apply (clarsimp simp del: distinct_rev)
-  apply (case_tac xs, fastforce)
-  apply (clarsimp simp: lift_t_g ucast_id)
-  apply (rule_tac x=lista in exI)
-  apply auto
-done
+  apply (unfold reverse_spec_def)
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (hoare_rule anno = "reverse_invs_body zs" in HoarePartial.annotateI)
+   prefer 2
+   apply (simp add: whileAnno_def reverse_invs_body_def)
+  apply (subst reverse_invs_body_def)
+  apply (fold lift_def)
+  apply vcg
+    prefer 2
+    apply (clarsimp simp del: distinct_rev)
+    apply (rename_tac xs ys)
+    apply (case_tac xs, fastforce)
+    apply (rename_tac xs')
+    apply (clarsimp simp: lift_t_g)
+    apply (rule_tac x=xs' in exI)
+    apply auto
+  done
 
 end

@@ -39,7 +39,7 @@ begin
       (* NB: this test fails if we leave some polymorphism in the term *)
       val term = @{thm c_guard_cast_byte[where x = "Ptr (ucast (0 :: 8 word)) :: unit ptr"]} |> Thm.prop_of
       val string_no_types = Syntax.pretty_term ctxt term
-                            |> Pretty.string_of |> YXML.content_of
+                            |> Pretty.string_of |> Protocol_Message.clean_output
       val string_show_types = Show_Types.term_show_types true ctxt term
 
       val _ = assert (Syntax.read_term ctxt string_no_types <> term) "Show_Types test (baseline)"

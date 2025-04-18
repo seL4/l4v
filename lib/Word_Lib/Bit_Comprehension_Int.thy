@@ -27,20 +27,19 @@ instance proof
   obtain n where *: \<open>\<And>m. n \<le> m \<Longrightarrow> bit k m \<longleftrightarrow> bit k n\<close>
     and **: \<open>n > 0 \<Longrightarrow> bit k (n - 1) \<noteq> bit k n\<close>
     by blast
-  then have ***: \<open>\<exists>n. \<forall>n'\<ge>n. bit k n' \<longleftrightarrow> bit k n\<close>
-    by meson
   have l: \<open>(LEAST q. \<forall>m\<ge>q. bit k m \<longleftrightarrow> bit k q) = n\<close>
-    apply (rule Least_equality)
-    using * apply blast
-    apply (metis "**" One_nat_def Suc_pred le_cases le0 neq0_conv not_less_eq_eq)
-    done
-  show \<open>set_bits (bit k) = k\<close>
-    apply (simp only: *** set_bits_int_def horner_sum_bit_eq_take_bit l)
-    apply simp
+  proof (rule Least_equality)
+    show "\<forall>m\<ge>n. bit k m = bit k n"
+      using * by blast
+    show "\<And>y. \<forall>m\<ge>y. bit k m = bit k y \<Longrightarrow> n \<le> y"
+      by (metis "**" One_nat_def Suc_pred le_cases le0 neq0_conv not_less_eq_eq)
+  qed
+  have "signed_take_bit n (take_bit (Suc n) k) = k"
     apply (rule bit_eqI)
-    apply (simp add: bit_signed_take_bit_iff min_def)
-    apply (auto simp add: not_le bit_take_bit_iff dest: *)
-    done
+    by (metis "*" bit_signed_take_bit_iff bit_take_bit_iff leI lessI less_SucI min.absorb4 min.order_iff)
+  then show \<open>set_bits (bit k) = k\<close>
+    unfolding * set_bits_int_def horner_sum_bit_eq_take_bit l
+    using "*" by auto
 qed
 
 end
@@ -84,28 +83,21 @@ proof (cases \<open>\<exists>n. \<forall>m\<ge>n. f m \<longleftrightarrow> f n\
     have **: \<open>(LEAST n. \<forall>n'\<ge>n. \<not> f n') = n\<close>
       using False n_eq by simp
     from * False show ?thesis
-    apply (simp add: set_bits_int_def n_def [symmetric] ** del: upt.upt_Suc)
-    apply (auto simp add: take_bit_horner_sum_bit_eq
-      bit_horner_sum_bit_iff take_map
-      signed_take_bit_def set_bits_int_def
-      horner_sum_bit_eq_take_bit simp del: upt.upt_Suc)
-    done
+      unfolding set_bits_int_def n_def [symmetric] **
+      by (auto simp add: take_bit_horner_sum_bit_eq bit_horner_sum_bit_iff take_map
+          signed_take_bit_def set_bits_int_def horner_sum_bit_eq_take_bit simp del: upt.upt_Suc)
   next
     case True
-    with n have *: \<open>\<exists>n. \<forall>n'\<ge>n. f n'\<close>
-      by blast
-    have ***: \<open>\<not> (\<exists>n. \<forall>n'\<ge>n. \<not> f n')\<close>
-      apply (rule ccontr)
-      using * nat_le_linear by auto
+    with n obtain *: \<open>\<exists>n. \<forall>n'\<ge>n. f n'\<close> \<open>\<not> (\<exists>n. \<forall>n'\<ge>n. \<not> f n')\<close>
+      by (metis linorder_linear)
     have **: \<open>(LEAST n. \<forall>n'\<ge>n. f n') = n\<close>
       using True n_eq by simp
-    from * *** True show ?thesis
-    apply (simp add: set_bits_int_def n_def [symmetric] ** del: upt.upt_Suc)
-    apply (auto simp add: take_bit_horner_sum_bit_eq
+    from * True show ?thesis
+      unfolding set_bits_int_def n_def [symmetric] **
+      by (auto simp add: take_bit_horner_sum_bit_eq
       bit_horner_sum_bit_iff take_map
       signed_take_bit_def set_bits_int_def
       horner_sum_bit_eq_take_bit nth_append simp del: upt.upt_Suc)
-    done
   qed
 next
   case False

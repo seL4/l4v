@@ -36,17 +36,7 @@ lemma distinct_the_index_is_index[simp]:
 
 lemma the_index_last_distinct:
   "distinct xs \<and> xs \<noteq> [] \<Longrightarrow> the_index xs (last xs) = length xs - 1"
-  apply safe
-  apply (subgoal_tac "xs ! (length xs - 1) = last xs")
-   apply (subgoal_tac "xs ! the_index xs (last xs) = last xs")
-    apply (subst nth_eq_iff_index_eq[symmetric])
-       apply assumption
-      apply (rule the_index_bounded)
-      apply simp_all
-   apply (rule nth_the_index)
-   apply simp
-  apply (induct xs, auto)
-  done
+  by (simp add: last_conv_nth)
 
 context enum begin
 
@@ -169,21 +159,30 @@ definition
 where
   "alt_from_ord L \<equiv> \<lambda>n. if (n < length L) then Some (L ! n) else None"
 
+(*Seemingly redundant, but heavily used elsewhere*)
 lemma handy_if_lemma: "((if P then Some A else None) = Some B) = (P \<and> (A = B))"
   by simp
 
 class enumeration_both = enum_alt + enum +
   assumes enum_alt_rel: "enum_alt = alt_from_ord enum"
 
+lemma the_index_less_length: "the_index (enum::'a::enum list) x < length (enum::'a::enum list)"
+  by (rule the_index_bounded, simp)
+
+lemma enum_if_enum:
+  defines "(e::'a::enum list) \<equiv> enum"
+  shows
+    "(if x < length e then Some (e ! x) else None) = Some (e ! y) \<Longrightarrow>
+           y < length e \<Longrightarrow> x = y"
+  by (simp add: e_def split: if_split_asm flip: nth_eq_iff_index_eq [where xs=e])
+
 instance enumeration_both < enumeration_alt
-  apply (intro_classes; simp add: enum_alt_rel alt_from_ord_def)
-    apply auto[1]
-   apply (safe; simp)[1]
-   apply (rule rev_image_eqI; simp)
-    apply (rule the_index_bounded; simp)
-   apply (subst nth_the_index; simp)
-  apply (clarsimp simp: handy_if_lemma)
-  apply (subst nth_eq_iff_index_eq[symmetric]; simp)
+  apply (intro_classes)
+    apply (simp_all add: enum_alt_rel alt_from_ord_def enum_if_enum split: if_split_asm)
+  apply (safe; simp)[1]
+  apply (intro rev_image_eqI; simp)
+   apply (rule the_index_less_length)
+  apply (subst nth_the_index; simp)
   done
 
 instantiation bool :: enumeration_both
@@ -201,8 +200,9 @@ definition
  "fromEnumAlt x \<equiv> THE n. enum_alt n = Some x"
 
 definition
-  upto_enum :: "('a :: enumeration_alt) \<Rightarrow> 'a \<Rightarrow> 'a list" ("(1[_ .e. _])") where
- "upto_enum n m \<equiv> map toEnumAlt [fromEnumAlt n ..< Suc (fromEnumAlt m)]"
+  upto_enum :: "('a :: enumeration_alt) \<Rightarrow> 'a \<Rightarrow> 'a list"
+    (\<open>(\<open>indent=1 notation=\<open>mixfix upto_enum\<close>\<close>[_ .e. _])\<close>)
+  where "[n .e. m] \<equiv> map toEnumAlt [fromEnumAlt n ..< Suc (fromEnumAlt m)]"
 
 lemma fromEnum_alt_red[simp]:
   "fromEnumAlt = (fromEnum :: ('a :: enumeration_both) \<Rightarrow> nat)"
@@ -210,9 +210,8 @@ lemma fromEnum_alt_red[simp]:
   apply (simp add: fromEnumAlt_def fromEnum_def enum_alt_rel alt_from_ord_def)
   apply (rule theI2)
     apply (rule conjI)
-     apply (clarify, rule nth_the_index, simp)
-    apply (rule the_index_bounded, simp)
-   apply auto
+     apply (clarify, rule nth_the_index)
+    apply (auto simp: enum_if_enum the_index_less_length)
   done
 
 lemma toEnum_alt_red[simp]:
@@ -297,9 +296,7 @@ qed
 lemma length_upto_enum_le_maxBound:
   fixes start :: "'a :: enumeration_both"
   shows "length [start .e. end] \<le> Suc (fromEnum (maxBound :: 'a))"
-  apply (clarsimp simp add: upto_enum_red split: if_splits)
-  apply (rule le_imp_diff_le[OF maxBound_is_bound[of "end"]])
-  done
+  by (simp add: le_imp_diff_le upto_enum_red)
 
 lemma less_length_upto_enum_maxBoundD:
   fixes start :: "'a :: enumeration_both"
