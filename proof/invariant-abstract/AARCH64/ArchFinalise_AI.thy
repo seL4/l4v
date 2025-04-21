@@ -569,7 +569,7 @@ lemma vcpu_update_regs_if_live_then_nonz_cap[wp]:
 
 lemma vcpu_write_if_live_then_nonz_cap[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
+  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu_state.fold_congs)
 
 lemma vcpu_update_vtimer_if_live_then_nonz_cap[wp]:
   "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"

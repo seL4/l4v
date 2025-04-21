@@ -149,6 +149,8 @@ where
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
   device_state s = device_state (phantom_machine_state_' s') \<and>
+  vcpu_state s = vcpu_state (phantom_machine_state_' s') \<and>
+  fpu_state s = fpu_state (phantom_machine_state_' s') \<and>
   fpu_enabled s = fpu_enabled (phantom_machine_state_' s') \<and>
   \<comment> \<open>exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>\<close> \<comment> \<open>FIXME: this is needed for infoflow so we'll leave it commented\<close>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"

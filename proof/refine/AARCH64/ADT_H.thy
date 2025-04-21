@@ -110,9 +110,9 @@ definition absHeapArch ::
      | KOPTE _ \<Rightarrow>
          map_option PageTable (absPageTable h (pt_types a) a)
      | KOVCPU (VCPUObj tcb vgic regs vppimask vtimer) \<Rightarrow>
-       Some (VCPU \<lparr> vcpu_tcb    = tcb,
-                    vcpu_vgic   = absVGIC vgic,
+       Some (VCPU \<lparr> vcpu_vgic   = absVGIC vgic,
                     vcpu_regs   = regs,
+                    vcpu_tcb    = tcb,
                     vcpu_vppi_masked = vppimask,
                     vcpu_vtimer = vtimer \<rparr>)"
 
