@@ -2901,7 +2901,7 @@ crunch vcpu_restore_reg_range, vcpu_save_reg_range, vgic_update_lr, vcpu_read_re
 lemma vcpu_write_reg_invs[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>invs\<rbrace>"
   unfolding vcpu_write_reg_def
-  by (wpsimp cong: vcpu.fold_congs) (* crunch can't do cong yet *)
+  by (wpsimp cong: vcpu_state.fold_congs) (* crunch can't do cong yet *)
 
 lemma save_virt_timer_invs[wp]:
   "save_virt_timer vcpu_ptr \<lbrace>invs\<rbrace>"
@@ -3010,7 +3010,7 @@ lemma vcpu_update_regs_sym_refs_hyp[wp]:
 
 lemma vcpu_write_reg_sym_refs_hyp[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
+  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu_state.fold_congs)
 
 lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
   "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
