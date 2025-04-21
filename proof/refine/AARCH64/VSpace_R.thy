@@ -1321,9 +1321,7 @@ lemma saveVirtTimer_invs'[wp]:
 
 lemma vcpuDisable_invs'[wp]:
   "vcpuDisable v \<lbrace>invs'\<rbrace>"
-  unfolding vcpuDisable_def isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def
-             getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def vgicUpdate_def vcpuUpdate_def
-             vcpuSaveReg_def enableFpuEL01_def
+  unfolding vcpuDisable_def vgicUpdate_def vcpuUpdate_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
                  hoare_drop_imps
              simp: doMachineOp_bind empty_fail_cond)
