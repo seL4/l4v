@@ -202,10 +202,7 @@ where
    odE"
 
 | "perform_invocation _ _ _ (InvokeSchedContext i) =
-   doE
-     liftE $ invoke_sched_context i;
-     returnOk []
-   odE"
+     without_preemption (invoke_sched_context i)"
 
 | "perform_invocation _ _ _ (InvokeSchedControl i) =
    doE

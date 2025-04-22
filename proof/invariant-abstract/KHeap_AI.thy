@@ -2342,10 +2342,6 @@ lemma as_user_obj_at_trivial:
    \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
   by (wpsimp simp: as_user_def set_object_def get_object_def split_def obj_at_def get_tcb_SomeD)
 
-crunch set_consumed
- for obj_at_trivial: "obj_at P t"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma set_simple_ko_obj_at_disjoint:
   "\<lbrace>obj_at P p and K (p \<noteq> p')\<rbrace>
      set_simple_ko f p' v

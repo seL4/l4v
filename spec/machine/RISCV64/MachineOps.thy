@@ -181,6 +181,9 @@ consts' timer_unit :: RISCV64.ticks
 definition
   "us_to_ticks us = (us * ticks_per_timer_unit) div timer_unit"
 
+definition
+  "ticks_to_us ticks = ticks div (ticks_per_timer_unit div timer_unit)"
+
 axiomatization where
   ticks_per_timer_unit_non_zero: "ticks_per_timer_unit \<noteq> 0"
 and
@@ -204,9 +207,6 @@ and
   getCurrentTime_buffer_pos: "0 < 5 * us_to_ticks RISCV64.MAX_PERIOD_US"
 
 definition "MAX_PERIOD = us_to_ticks RISCV64.MAX_PERIOD_US"
-
-axiomatization
-  ticks_to_us :: "RISCV64.ticks \<Rightarrow> RISCV64.ticks"
 
 end_qualify
 

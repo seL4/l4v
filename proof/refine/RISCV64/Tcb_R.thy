@@ -107,7 +107,7 @@ lemma activate_invs':
   "activateThread \<lbrace>invs'\<rbrace>"
   apply (simp add: activateThread_def)
   apply (wpsimp wp: activateIdle_invs' sts_invs_minor' schedContextCompleteYieldTo_invs'
-                    hoare_vcg_imp_lift')
+                    hoare_vcg_imp_lift' hoare_vcg_if_lift2 threadGet_wp)
   by (fastforce simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def sch_act_simple_def)
 
 declare not_psubset_eq[dest!]

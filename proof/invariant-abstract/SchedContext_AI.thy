@@ -1661,10 +1661,15 @@ lemma refill_new_invs[wp]:
                wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
                    hoare_vcg_disj_lift )
 
+crunch reply_from_kernel
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj test tcb_ptr s)"
 
-lemma set_consumed_invs[wp]:
-  "\<lbrace>invs\<rbrace> set_consumed scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
+lemma rfk_invs[wp]:
+  "\<lbrace>invs and tcb_at t\<rbrace> reply_from_kernel t r \<lbrace>\<lambda>rv. invs\<rbrace>"
+  unfolding reply_from_kernel_def by (cases r; wpsimp)
+
+crunch set_consumed
+  for invs'[wp]: invs
 
 (* FIXME: move *)
 lemma invs_ready_queues_update[simp]:

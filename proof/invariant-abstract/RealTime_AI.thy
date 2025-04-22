@@ -1344,12 +1344,8 @@ lemma reply_push_st_tcb_at[wp]:
          | wp (once) hoare_drop_imp)+
 
 lemma sched_context_update_consumed_if_live[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace>
-     sched_context_update_consumed param_a
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def
-                  wp: get_sched_context_wp get_object_wp)
-  done
+  "sched_context_update_consumed param_a \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: sched_context_update_consumed_def)
 
 crunch
   set_irq_state, set_simple_ko

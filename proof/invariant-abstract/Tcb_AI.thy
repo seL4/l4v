@@ -964,7 +964,7 @@ crunch reorder_ntfn, reorder_ep, set_priority
 crunch
   install_tcb_cap, sched_context_unbind_tcb, sched_context_bind_tcb, set_priority, thread_set
   for cap_table_at[wp]: "cap_table_at bits p"
-  and tcb_at[wp]: "\<lambda>s. P (tcb_at p s)"
+  and tcb_at_strong[wp]: "\<lambda>s. P (tcb_at p s)"
   (wp: cap_table_at_typ_at tcb_at_typ_at' crunch_wps)
 
 crunch unbind_notification
