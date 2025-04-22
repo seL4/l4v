@@ -38,11 +38,11 @@ lemma send_signal_caps_of_state[wp]:
   done
 
 crunch blocked_cancel_ipc, update_waiting_ntfn
-  for mdb[wp]: "\<lambda>s. P (cdt (s :: det_ext state))"
+  for mdb[wp]: "\<lambda>s :: det_state. P (cdt s)"
   (wp: crunch_wps unless_wp dxo_wp_weak simp: crunch_simps)
 
 lemma cancel_ipc_receive_blocked_mdb:
-  "\<lbrace>\<lambda>s :: det_ext state. P (cdt s) \<and> st_tcb_at receive_blocked t s\<rbrace>
+  "\<lbrace>\<lambda>s :: det_state. P (cdt s) \<and> st_tcb_at receive_blocked t s\<rbrace>
    cancel_ipc t
    \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
@@ -55,7 +55,7 @@ lemma cancel_ipc_receive_blocked_mdb:
   done
 
 lemma send_signal_mdb[wp]:
-  "send_signal ntfnptr badge \<lbrace>\<lambda>s :: det_ext state. P (cdt s)\<rbrace>"
+  "send_signal ntfnptr badge \<lbrace>\<lambda>s :: det_state. P (cdt s)\<rbrace>"
   apply (clarsimp simp: send_signal_def)
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
@@ -132,7 +132,7 @@ lemma set_notification_respects:
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def partial_inv_def a_type_def)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def tro_ntfn integrity_asids_kh_upds)
+  apply (clarsimp simp: integrity_def tro_ntfn integrity_arch_kh_upds)
   done
 
 lemma receive_signal_integrity_autarch:
@@ -156,69 +156,92 @@ locale Ipc_AC_1 =
   assumes arch_derive_cap_auth_derived:
     "\<lbrace>\<top>\<rbrace>
      arch_derive_cap acap
-     \<lbrace>\<lambda>rv _ :: det_ext state. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
+     \<lbrace>\<lambda>rv _ :: det_state. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
   and lookup_ipc_buffer_has_auth[wp]:
     "\<lbrace>pas_refined aag and valid_objs\<rbrace>
      lookup_ipc_buffer True receiver
      \<lbrace>\<lambda>rv _. ipc_buffer_has_auth aag receiver rv\<rbrace>"
-  and cap_insert_ext_integrity_asids[wp]:
-    "cap_insert_ext a b c d e \<lbrace>integrity_asids aag subjects x asid (st :: det_ext state)\<rbrace>"
   and make_fault_message_inv[wp]:
-    "\<And>P. make_fault_msg ft t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
-  and tcb_context_no_change:
-    "\<exists>ctxt. (tcb :: tcb) = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt (tcb_arch tcb)\<rparr>"
+    "\<And>P. make_fault_msg ft t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
+  and arch_tcb_get_set_registers[simp]:
+    "arch_tcb_get_registers (arch_tcb_set_registers regs atcb) = regs"
+  and arch_tcb_set_get_registers[simp]:
+    "arch_tcb_set_registers (arch_tcb_get_registers atcb) atcb = atcb"
+  and arch_tcb_set_set_registers[simp]:
+    "arch_tcb_set_registers regs (arch_tcb_set_registers regs' atcb) =
+     arch_tcb_set_registers regs atcb"
+  and arch_tcb_context_set_set_registers[simp]:
+    "arch_tcb_context_set (arch_tcb_context_get (arch_tcb_set_registers regs atcb)) atcb =
+     arch_tcb_set_registers regs atcb"
+  and arch_tcb_setRegister:
+    "((), uc) \<in> fst (setRegister r v (arch_tcb_context_get atcb))
+     \<Longrightarrow> uc = arch_tcb_context_get (arch_tcb_set_registers ((arch_tcb_get_registers atcb)(r := v)) atcb)"
 begin
 
 lemma send_upd_ctxintegrity:
-  "\<lbrakk> direct_send {pasSubject aag} aag ep tcb
+  "\<lbrakk> get_tcb thread st = Some tcb; get_tcb thread s = Some tcb';
+     direct_send {pasSubject aag} aag ep tcb
      \<or> indirect_send {pasSubject aag} aag (the (tcb_bound_notification tcb)) ep tcb;
      integrity aag X st s; st_tcb_at ((=) Running) thread s;
-     get_tcb thread st = Some tcb; get_tcb thread s = Some tcb'\<rbrakk>
+     c' = arch_tcb_context_get (arch_tcb_set_registers regs (tcb_arch tcb')) \<rbrakk>
      \<Longrightarrow> integrity aag X st
-                   (s\<lparr>kheap := (kheap s)
-                               (thread \<mapsto> TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
+           (s\<lparr>kheap := (kheap s)
+                       (thread \<mapsto> TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
   apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)
-  apply (rule conjI)
-   prefer 2
-   apply (fastforce dest: get_tcb_ko_atI simp: integrity_asids_kh_upds obj_at_def)
-  apply (drule get_tcb_SomeD)+
-  apply (drule spec[where x=thread], simp)
-  apply (cases "is_subject aag thread")
-   apply (rule tro_lrefl, solves\<open>simp\<close>)
-  (* slow 5s *)
-  by (erule integrity_objE;
-      (* eliminate all TCB unrelated cases and simplifies the other *)
-      clarsimp;
-        (* deal with the orefl case *)
-      (solves \<open>simp add:direct_send_def indirect_send_def\<close>
-      (* deal with the other case by applying either the reply,
-         call or send rules and then the generic rule *)
-      | rule tro_trans_spec,
-        (rule tro_tcb_reply'[OF refl refl refl] tro_tcb_call[OF refl refl refl]
-              tro_tcb_send[OF refl refl refl];
-          blast),
-        rule tro_trans_spec,
-        (rule tro_tcb_generic'[OF refl refl refl]; simp),
-        rule tro_orefl, simp, rule tcb.equality; solves simp))
+  apply (intro conjI)
+     apply (drule get_tcb_SomeD)+
+     apply (drule spec[where x=thread], simp)
+     apply (cases "is_subject aag thread")
+      apply (rule tro_lrefl, simp)
+     apply (erule integrity_objE;
+           (* eliminate all TCB unrelated cases and simplifies the other *)
+           clarsimp;
+           (* deal with the orefl case *)
+           (solves \<open>simp add:direct_send_def indirect_send_def\<close>
+           (* deal with the other case by applying either the reply,
+              call or send rules and then the generic rule *)
+           | rule tro_trans_spec,
+             (rule tro_tcb_reply'[OF refl refl refl] tro_tcb_call[OF refl refl refl]
+                   tro_tcb_send[OF refl refl refl];
+               blast),
+             rule tro_trans_spec,
+             (rule tro_tcb_generic'[OF refl refl refl]; simp),
+             rule tro_trans_spec[OF tro_tcb_fpu[OF refl refl refl] tro_orefl]; simp))
+    apply (fastforce dest: get_tcb_ko_atI simp: integrity_arch_kh_upds obj_at_def)
+   apply (fastforce dest: get_tcb_ko_atI simp: integrity_arch_kh_upds obj_at_def)
+  apply (erule allEI, erule trfpu_trans)
+  apply (case_tac "x = thread")
+   apply (auto simp: integrity_fpu_kh_upd_neq integrity_fpu_set_registers get_tcb_def
+              split: option.splits kernel_object.splits)
+  done
 
 lemma as_user_set_register_respects:
   "\<lbrace>integrity aag X st and st_tcb_at ((=) Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st) \<and>
        (aag_has_auth_to aag SyncSend ep \<or> aag_has_auth_to aag Notify ep))\<rbrace>
-   as_user thread (set_register r v)
+   as_user thread (setRegister r v)
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: as_user_def split_def set_object_def get_object_def)
-  apply wp
-  apply (clarsimp simp: in_monad)
+  apply (wpsimp simp: as_user_def split_def set_object_def get_object_def)
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
   apply (clarsimp simp: st_tcb_def2)
-  apply (rule send_upd_ctxintegrity [OF disjI1, unfolded fun_upd_def])
-      apply (auto simp: direct_send_def st_tcb_def2)
-  done
+  apply (rule send_upd_ctxintegrity [unfolded fun_upd_def])
+  by (auto elim: arch_tcb_setRegister simp: direct_send_def st_tcb_def2)
 
-end
-
+lemma as_user_set_register_respects_indirect:
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Running) thread and
+    K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at receive_blocked thread st
+                                  \<and> bound_tcb_at ((=) (Some ntfnptr)) thread st) \<and>
+       (aag_has_auth_to aag Notify ntfnptr))\<rbrace>
+   as_user thread (setRegister r v)
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (wpsimp simp: as_user_def split_def set_object_def get_object_def)
+  apply (cases "is_subject aag thread")
+   apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
+  apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
+  apply (simp split: thread_state.split_asm)
+  apply (rule send_upd_ctxintegrity [unfolded fun_upd_def])
+  by (auto dest: sym elim: arch_tcb_setRegister simp: indirect_send_def pred_tcb_def2)
 
 lemma set_thread_state_respects_in_signalling:
   "\<lbrace>\<lambda>s. integrity aag X st s \<and> aag_has_auth_to aag Notify ntfnptr \<and>
@@ -232,12 +255,13 @@ lemma set_thread_state_respects_in_signalling:
    apply (erule(1) integrity_update_autarch [unfolded fun_upd_def])
   apply (erule integrity_trans)
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: integrity_def st_tcb_def2 integrity_asids_kh_upds)
-  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp simp: integrity_arch_kh_upds integrity_def st_tcb_def2 get_tcb_def)
   apply (rule tro_tcb_send [OF refl refl])
-   apply (rule tcb.equality; simp; rule arch_tcb_context_set_eq[symmetric])
+   apply (rule tcb.equality; simp; rule arch_tcb_set_get_registers[symmetric])
   apply (auto simp: indirect_send_def direct_send_def)
   done
+
+end
 
 lemma set_notification_obj_at:
   "\<lbrace>obj_at P ptr and K (ptr \<noteq> ntfnptr)\<rbrace>
@@ -306,71 +330,9 @@ lemma get_tcb_recv_blocked_implies_receive:
   apply (case_tac "tcb_state tcb", simp_all)
   done
 
-lemma cancel_ipc_receive_blocked_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and st_tcb_at (receive_blocked) t and
-    (sym_refs o state_refs_of) and bound_tcb_at (\<lambda>ntfn. ntfn = Some ntfnptr) t and
-    K (abs_has_auth_to aag Receive t ntfnptr \<and> aag_has_auth_to aag Notify ntfnptr)\<rbrace>
-   cancel_ipc t
-   \<lbrace>\<lambda>_. integrity_once_ts_upd t Running aag X st\<rbrace>"
-  apply (clarsimp simp: cancel_ipc_def bind_assoc)
-  apply (rule bind_wp[OF _ gts_sp])
-  apply (rule hoare_name_pre_state)
-  apply (subgoal_tac "case state of BlockedOnReceive x y \<Rightarrow> True | _ \<Rightarrow> False")
-   apply (simp add: blocked_cancel_ipc_def bind_assoc set_simple_ko_def set_object_def
-                    get_ep_queue_def get_blocking_object_def
-             split: thread_state.splits)
-   apply (rule hoare_pre)
-    apply (wp set_thread_state_integrity_once_ts_upd get_object_wp get_simple_ko_wp
-          | wpc)+
-   apply (clarsimp simp: st_tcb_at_def2 obj_at_def)
-   apply (rename_tac ep payload s tcb ntfn)
-   apply (drule_tac t="tcb_state tcb" in sym)
-   apply (subgoal_tac "st_tcb_at ((=) (tcb_state tcb)) t s")
-    apply (drule(1) sym_refs_st_tcb_atD)
-    apply (clarsimp simp: obj_at_def ep_q_refs_of_def fun_upd_def get_tcb_def
-                   split: endpoint.splits cong: if_cong)
-    apply (intro impI conjI, simp_all)[1]
-    apply (erule integrity_trans)
-    apply (simp add: integrity_def)
-    apply (intro impI conjI allI)
-     apply clarsimp
-     apply (rule tro_ep_unblock; simp?)
-     apply (erule get_tcb_recv_blocked_implies_receive, erule get_tcb_rev; solves\<open>simp\<close>)
-    apply (rule_tac ep=ep in tro_tcb_send[OF refl refl];
-           fastforce intro!: tcb.equality arch_tcb_context_set_eq[symmetric]
-                       simp: indirect_send_def pred_tcb_at_def obj_at_def)
-    apply (fastforce simp: integrity_asids_kh_upds)
-   apply (fastforce simp: indirect_send_def pred_tcb_at_def obj_at_def)
-  apply (fastforce simp: pred_tcb_at_def obj_at_def receive_blocked_def)
-  done
-
 lemma set_thread_state_integrity':
   "\<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace> set_thread_state t ts \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: set_thread_state_def)
-  by (wpsimp wp: set_object_wp)
-
-
-context Ipc_AC_1 begin
-
-lemma as_user_set_register_respects_indirect:
-  "\<lbrace>integrity aag X st and st_tcb_at ((=) Running) thread and
-    K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at receive_blocked thread st
-                                  \<and> bound_tcb_at ((=) (Some ntfnptr)) thread st) \<and>
-       (aag_has_auth_to aag Notify ntfnptr))\<rbrace>
-   as_user thread (set_register r v)
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: as_user_def split_def set_object_def get_object_def)
-  apply wp
-  apply (clarsimp simp: in_monad )
-  apply (cases "is_subject aag thread")
-   apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
-  apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
-  apply (simp split: thread_state.split_asm)
-  apply (rule send_upd_ctxintegrity [OF disjI2, unfolded fun_upd_def])
-  by (auto simp: st_tcb_def2 indirect_send_def pred_tcb_def2 dest: sym)
-
-end
-
+  by (wpsimp wp: set_object_wp simp: set_thread_state_def)
 
 lemma integrity_receive_blocked_chain':
   "\<lbrakk> st_tcb_at receive_blocked p s; integrity aag X st s; \<not> is_subject aag p \<rbrakk>
@@ -408,6 +370,44 @@ lemma integrity_receive_blocked_chain_bound:
 
 
 context Ipc_AC_1 begin
+
+lemma cancel_ipc_receive_blocked_respects:
+  "\<lbrace>integrity aag X st and pas_refined aag and st_tcb_at (receive_blocked) t and
+    (sym_refs o state_refs_of) and bound_tcb_at (\<lambda>ntfn. ntfn = Some ntfnptr) t and
+    K (abs_has_auth_to aag Receive t ntfnptr \<and> aag_has_auth_to aag Notify ntfnptr)\<rbrace>
+   cancel_ipc t
+   \<lbrace>\<lambda>_. integrity_once_ts_upd t Running aag X st\<rbrace>"
+  apply (clarsimp simp: cancel_ipc_def bind_assoc)
+  apply (rule bind_wp[OF _ gts_sp])
+  apply (rule hoare_name_pre_state)
+  apply (subgoal_tac "case state of BlockedOnReceive x y \<Rightarrow> True | _ \<Rightarrow> False")
+   apply (simp add: blocked_cancel_ipc_def bind_assoc set_simple_ko_def set_object_def
+                    get_ep_queue_def get_blocking_object_def
+             split: thread_state.splits)
+   apply (rule hoare_pre)
+    apply (wp set_thread_state_integrity_once_ts_upd get_object_wp get_simple_ko_wp
+          | wpc)+
+   apply (clarsimp simp: st_tcb_at_def2 obj_at_def)
+   apply (rename_tac ep payload s tcb ntfn)
+   apply (drule_tac t="tcb_state tcb" in sym)
+   apply (subgoal_tac "st_tcb_at ((=) (tcb_state tcb)) t s")
+    apply (drule(1) sym_refs_st_tcb_atD)
+    apply (clarsimp simp: obj_at_def ep_q_refs_of_def fun_upd_def get_tcb_def
+                   split: endpoint.splits cong: if_cong)
+    apply (intro impI conjI, simp_all)[1]
+    apply (erule integrity_trans)
+    apply (simp add: integrity_def)
+    apply (intro impI conjI allI; clarsimp)
+        apply (fastforce simp: tro_ep_unblock get_tcb_recv_blocked_implies_receive get_tcb_rev)
+       apply (fastforce intro!: tro_tcb_send[OF refl refl] tcb.equality
+                                arch_tcb_set_get_registers[symmetric]
+                          simp: indirect_send_def pred_tcb_at_def obj_at_def)
+      apply (fastforce simp: integrity_arch_kh_upds)
+     apply (fastforce simp: integrity_arch_kh_upds)
+    apply (clarsimp simp: integrity_arch_kh_upds)
+   apply (fastforce simp: indirect_send_def pred_tcb_at_def obj_at_def)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def receive_blocked_def)
+  done
 
 lemma send_signal_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of
@@ -688,7 +688,7 @@ crunch set_extra_badge
 context Ipc_AC_1 begin
 
 lemma derive_cap_auth_derived:
-  "\<lbrace>\<top>\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s :: det_ext state. rv \<noteq> NullCap \<longrightarrow> auth_derived rv cap\<rbrace>, -"
+  "\<lbrace>\<top>\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s :: det_state. rv \<noteq> NullCap \<longrightarrow> auth_derived rv cap\<rbrace>, -"
   by (cases cap; wpsimp wp: arch_derive_cap_auth_derived simp: derive_cap_def)
 
 (* FIXME MOVE *)
@@ -698,7 +698,7 @@ lemma auth_derived_pas_cur_auth:
   by (force simp: aag_cap_auth_def auth_derived_def cap_links_asid_slot_def cap_links_irq_def)
 
 lemma derive_cap_is_derived_foo':
-  "\<lbrace>\<lambda>s :: det_ext state.
+  "\<lbrace>\<lambda>s :: det_state.
     \<forall>cap'. (valid_objs s \<and> cap' \<noteq> NullCap \<and>
             cte_wp_at (\<lambda>capa. cap_master_cap capa = cap_master_cap cap \<and>
                               (cap_badge capa, cap_badge cap) \<in> capBadge_ordering False \<and>
@@ -736,7 +736,7 @@ lemma transfer_caps_loop_presM_extended:
                        \<and> (em \<longrightarrow> cte_wp_at ((=) NullCap) dest s)
                        \<and> (ex \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) dest s)\<rbrace>
               cap_insert cap src dest
-              \<lbrace>\<lambda>_ s :: det_ext state. P s\<rbrace>"
+              \<lbrace>\<lambda>_ s :: det_state. P s\<rbrace>"
   assumes eb: "\<And>b n. set_extra_badge buffer b n \<lbrace>P\<rbrace>"
   assumes pcap_auth_derived: "\<And>cap cap'. \<lbrakk> auth_derived cap cap'; Pcap cap' \<rbrakk> \<Longrightarrow> Pcap cap"
   shows "\<lbrace>\<lambda>s. P s \<and> (vo \<longrightarrow> valid_objs s \<and> valid_mdb s \<and> distinct slots
@@ -895,7 +895,7 @@ lemma hoare_conjDR2:
 context Ipc_AC_1 begin
 
 crunch do_fault_transfer
-  for pas_refined[wp]: "\<lambda>s :: det_ext state. pas_refined aag s"
+  for pas_refined[wp]: "\<lambda>s :: det_state. pas_refined aag s"
 
 lemma do_normal_transfer_pas_refined:
   "\<lbrace>pas_refined aag and valid_objs and valid_mdb
@@ -925,7 +925,7 @@ lemma do_ipc_transfer_pas_refined:
                     and K (grant \<longrightarrow> is_subject aag sender)
                     and K (grant \<longrightarrow> is_subject aag receiver)\<rbrace>
    do_ipc_transfer sender ep badge grant receiver
-   \<lbrace>\<lambda>_ s :: det_ext state. pas_refined aag s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. pas_refined aag s\<rbrace>"
   unfolding do_ipc_transfer_def
   by (wpsimp wp: do_normal_transfer_pas_refined hoare_vcg_all_lift hoare_drop_imps)
 
@@ -1381,8 +1381,7 @@ lemma set_thread_state_running_respects:
   apply (simp add: set_thread_state_def)
   apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def integrity_asids_kh_upds)
-  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp simp: integrity_def st_tcb_at_def get_tcb_def obj_at_def integrity_arch_kh_upds)
   apply (rule_tac new_st=Running in tro_tcb_receive)
   by (auto simp: tcb_bound_notification_reset_integrity_def)
 
@@ -1407,8 +1406,7 @@ lemma sts_receive_Inactive_respects:
   apply wp
   apply clarsimp
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def integrity_asids_kh_upds)
-  apply (drule get_tcb_SomeD)
+  apply (clarsimp simp: integrity_def integrity_arch_kh_upds get_tcb_def)
   apply (rule_tac new_st=Inactive in tro_tcb_receive, simp_all)
   apply (fastforce simp: st_tcb_at_def obj_at_def)
   done
@@ -1453,7 +1451,7 @@ lemma set_thread_state_blocked_on_reply_respects:
    apply wp
   apply clarsimp
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def integrity_asids_kh_upds
+  apply (clarsimp simp: integrity_def integrity_arch_kh_upds
                  dest!: get_tcb_SomeD elim!: pred_tcb_atE)
   apply (rule tro_tcb_receive[where new_st=BlockedOnReply])
   by fastforce+
@@ -1483,7 +1481,7 @@ abbreviation sender_can_call :: "sender_payload \<Rightarrow> bool" where
 context Ipc_AC_1 begin
 
 crunch do_ipc_transfer
-  for pred_tcb: "\<lambda>s :: det_ext state. pred_tcb_at proj P t s"
+  for pred_tcb: "\<lambda>s :: det_state. pred_tcb_at proj P t s"
   (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
 
 lemma receive_ipc_base_integrity:
@@ -1589,22 +1587,22 @@ inductive tcb_in_ipc for aag tst l' epptr ko ko' where
     "l' = pasSubject aag \<Longrightarrow> tcb_in_ipc aag tst l' epptr ko ko'"
 | tii_context:
     "\<lbrakk> ko  = Some (TCB tcb); ko' = Some (TCB tcb'); can_receive_ipc (tcb_state tcb);
-       \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb)\<rparr>; tst = TRContext \<rbrakk>
+       \<exists>regs'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb)\<rparr>; tst = TRContext \<rbrakk>
        \<Longrightarrow> tcb_in_ipc aag tst l' epptr ko ko'"
 | tii_final:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb'); receive_blocked_on epptr (tcb_state tcb);
-       \<exists>ctxt'. tcb' = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Running\<rparr>;
+       \<exists>regs'. tcb' = tcb\<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb), tcb_state := Running\<rparr>;
        aag_has_auth_to aag SyncSend epptr; tst = TRFinal \<or> tst = TRFinalOrCall \<rbrakk>
        \<Longrightarrow> tcb_in_ipc aag tst l' epptr ko ko'"
 | tii_call:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb'); ep_recv_blocked epptr (tcb_state tcb);
-       \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb),
+       \<exists>regs'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb),
                            tcb_state := Running, tcb_caller := ReplyCap caller False R\<rparr>;
        is_subject aag caller; aag_has_auth_to aag Call epptr; tst = TRFinal \<rbrakk>
        \<Longrightarrow> tcb_in_ipc aag tst l' epptr ko ko'"
 | tii_reply:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       \<exists>ctxt'. tcb' = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb),
+       \<exists>regs'. tcb' = tcb\<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb),
                           tcb_fault := None, tcb_state := Running\<rparr>;
        (pasSubject aag, Reply, l') \<in> pasPolicy aag; tcb_state tcb = BlockedOnReply; tst = TRFinal \<rbrakk>
        \<Longrightarrow> tcb_in_ipc aag tst l' epptr ko ko'"
@@ -1613,7 +1611,7 @@ lemmas tii_subject[simp] = tii_lrefl[OF refl]
 
 definition integrity_tcb_in_ipc ::
   "'a PAS \<Rightarrow> obj_ref set \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow>
-   tcb_respects_state \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool" where
+   tcb_respects_state \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
   "integrity_tcb_in_ipc aag X thread epptr tst st \<equiv>
    \<lambda>s. \<not> is_subject aag thread \<and> pas_refined aag st \<and>
        integrity aag X st (s\<lparr>kheap := (kheap s)(thread := kheap st thread),
@@ -1634,19 +1632,19 @@ inductive tcb_in_fault_reply for aag tst l' ko ko' where
   tifr_lrefl: "l' = pasSubject aag \<Longrightarrow> tcb_in_fault_reply aag tst l' ko ko'"
 | tifr_context:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb)\<rparr>;
+       \<exists>regs'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb)\<rparr>;
        (pasSubject aag, Reply, l') \<in> pasPolicy aag;
        tcb_state tcb = BlockedOnReply; tcb_fault tcb = Some fault; tst = TRFContext \<rbrakk>
        \<Longrightarrow> tcb_in_fault_reply aag tst l' ko ko'"
 | tifr_remove_fault:
     "\<lbrakk> ko  = Some (TCB tcb); ko' = Some (TCB tcb');
-       \<exists>ctxt'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_fault := None\<rparr>;
+       \<exists>regs'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb), tcb_fault := None\<rparr>;
        (pasSubject aag, Reply, l') \<in> pasPolicy aag;
        tcb_state tcb = BlockedOnReply; tcb_fault tcb = Some fault; tst = TRFRemoveFault \<rbrakk>
          \<Longrightarrow> tcb_in_fault_reply aag tst l' ko ko'"
 | tifr_reply:
     "\<lbrakk> ko  = Some (TCB tcb); ko' = Some (TCB tcb');
-       \<exists>ctxt'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb),
+       \<exists>regs'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb),
                             tcb_fault := None, tcb_state := new_st\<rparr>;
        new_st = Restart \<or> new_st = Inactive; (pasSubject aag, Reply, l') \<in> pasPolicy aag;
        tcb_state tcb = BlockedOnReply; tcb_fault tcb = Some fault; tst = TRFFinal \<rbrakk>
@@ -1654,17 +1652,44 @@ inductive tcb_in_fault_reply for aag tst l' ko ko' where
 
 definition integrity_tcb_in_fault_reply ::
   "'a PAS \<Rightarrow> obj_ref set \<Rightarrow> obj_ref \<Rightarrow> tcb_respects_fault_state \<Rightarrow>
-   det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool" where
+   det_state \<Rightarrow> det_state \<Rightarrow> bool" where
   "integrity_tcb_in_fault_reply aag X thread tst st \<equiv>
    \<lambda>s. \<not> is_subject aag thread \<and> pas_refined aag st \<and> \<comment> \<open>more or less convenience\<close>
        integrity aag X st (s\<lparr>kheap := (kheap s)(thread := kheap st thread)\<rparr>) \<and>
        (tcb_in_fault_reply aag tst (pasObjectAbs aag thread) (kheap st thread) (kheap s thread))"
 
+lemma tcb_in_ipc_kheap_comms:
+  "\<And>g. kheap_update (\<lambda>_. f) (cdt_update (\<lambda>_. g) s) =
+        cdt_update (\<lambda>_. g) (kheap_update (\<lambda>_. f) s)"
+  "\<And>g. kheap_update (\<lambda>_. f) (is_original_cap_update (\<lambda>_. g) s) =
+        is_original_cap_update (\<lambda>_. g) (kheap_update (\<lambda>_. f) s)"
+  "\<And>g. kheap_update (\<lambda>_. f) (scheduler_action_update (\<lambda>_. g) s) =
+        scheduler_action_update (\<lambda>_. g) (kheap_update (\<lambda>_. f) s)"
+  "\<And>g. kheap_update (\<lambda>_. f) (ready_queues_update (\<lambda>_. g) s) =
+        ready_queues_update (\<lambda>_. g) (kheap_update (\<lambda>_. f) s)"
+  by auto
 
+context Ipc_AC_1 begin
+
+lemma update_tcb_context_in_fault_reply:
+  "\<lbrakk> integrity_tcb_in_fault_reply aag X thread TRFContext st s; get_tcb thread s = Some tcb;
+     tcb' = tcb\<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb)\<rparr> \<rbrakk>
+     \<Longrightarrow> integrity_tcb_in_fault_reply aag X thread TRFContext st
+                              (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>)"
+  unfolding integrity_tcb_in_fault_reply_def
+  apply (elim conjE)
+  apply (intro conjI)
+     apply assumption+
+   apply (erule integrity_trans)
+   apply (simp cong: if_cong)
+  apply clarsimp
+  apply (erule tcb_in_fault_reply.cases, simp_all)
+  apply (auto intro!: tifr_context[OF refl refl] dest!: get_tcb_SomeD)
+  done
 
 lemma update_tcb_context_in_ipc:
   "\<lbrakk> integrity_tcb_in_ipc aag X thread epptr TRContext st s; get_tcb thread s = Some tcb;
-     tcb' = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb)\<rparr> \<rbrakk>
+     tcb' = tcb\<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb)\<rparr> \<rbrakk>
      \<Longrightarrow> integrity_tcb_in_ipc aag X thread epptr TRContext st
                               (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>)"
   unfolding integrity_tcb_in_ipc_def
@@ -1677,6 +1702,28 @@ lemma update_tcb_context_in_ipc:
   apply (erule tcb_in_ipc.cases, simp_all)
   apply (auto intro!: tii_context[OF refl refl] dest!: get_tcb_SomeD)
   done
+
+lemma as_user_tcb_in_ipc:
+  "\<lbrace>integrity_tcb_in_ipc aag X thread epptr TRContext st\<rbrace>
+   as_user thread (setRegister reg w)
+   \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X thread epptr TRContext st\<rbrace>"
+  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
+              simp: as_user_def set_object_def get_object_def)
+  apply (auto dest: arch_tcb_setRegister
+              simp: update_tcb_context_in_ipc st_tcb_def2 tcb_at_def fun_upd_def[symmetric])
+  done
+
+lemma as_user_tcb_in_fault_reply:
+  "\<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>
+   as_user thread (setRegister reg w)
+   \<lbrace>\<lambda>_. integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
+  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
+              simp: as_user_def set_object_def get_object_def)
+  apply (auto dest: arch_tcb_setRegister
+              simp: update_tcb_context_in_fault_reply st_tcb_def2 tcb_at_def fun_upd_def[symmetric])
+  done
+
+end
 
 
 locale Ipc_AC_2 = Ipc_AC_1 +
@@ -1695,7 +1742,7 @@ locale Ipc_AC_2 = Ipc_AC_1 +
      set_extra_badge buffer badge n
      \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   and arch_get_sanitise_register_info_inv[wp]:
-    "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
+    "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
   and handle_arch_fault_reply_pas_refined[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>pas_refined aag\<rbrace>"
   and set_mrs_respects_in_ipc:
@@ -1715,17 +1762,17 @@ locale Ipc_AC_2 = Ipc_AC_1 +
   and lookup_ipc_buffer_aligned:
     "\<lbrace>valid_objs\<rbrace>
      lookup_ipc_buffer True thread
-     \<lbrace>\<lambda>rv _ :: det_ext state. case rv of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits\<rbrace>"
+     \<lbrace>\<lambda>rv _ :: det_state. case rv of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits\<rbrace>"
   and handle_arch_fault_reply_respects:
     "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
-     handle_arch_fault_reply fault thread x y
+     handle_arch_fault_reply vmf thread x y
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   and auth_ipc_buffers_kheap_update:
     "\<lbrakk> x \<in> auth_ipc_buffers st thread; kheap st thread = Some (TCB tcb);
        kheap s thread = Some (TCB tcb'); tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk>
        \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
   and auth_ipc_buffers_machine_state_update[simp]:
-    "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers (s :: det_ext state)"
+    "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers (s :: det_state)"
   and empty_slot_extended_list_integ_lift_in_ipc:
     "\<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        empty_slot_ext a b
@@ -1733,13 +1780,30 @@ locale Ipc_AC_2 = Ipc_AC_1 +
        \<Longrightarrow> \<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
            empty_slot_ext a b
            \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  and handle_arch_fault_reply_integrity_tcb_in_fault_reply_TRFContext[wp]:
-    "handle_arch_fault_reply vmf thread x y
+  and handle_arch_fault_reply_integrity_tcb_in_fault_reply[wp]:
+    "handle_arch_fault_reply vmf thread d ds
      \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
   and cap_insert_ext_integrity_asids_in_ipc[wp]:
     "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
      \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
             (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  and cap_insert_ext_integrity_hyp_in_ipc[wp]:
+    "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+     \<lbrace>\<lambda>s. integrity_hyp aag subjects x st
+            (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  and cap_insert_ext_integrity_fpu_in_ipc[wp]:
+    "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+     \<lbrace>\<lambda>s. integrity_fpu aag subjects x st
+            (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  and integrity_asids_kh_updI:
+    "integrity_asids_2 aag subjects x asid as as ao ao'
+     \<Longrightarrow> integrity_asids_2 aag subjects x asid as as (ao(p := ako)) (ao'(p := ako))"
+  and integrity_hyp_kh_updI:
+    "integrity_hyp_2 aag subjects x ms ms as as ao ao'
+     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms as as (ao(p := ako)) (ao'(p := ako))"
+  and integrity_fpu_kh_updI:
+    "integrity_fpu_2 aag subjects x ms ms kh kh'
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms (kh(p := ko)) (kh'(p := ko))"
 begin
 
 lemma cap_insert_ext_integrity_in_ipc_autarch:
@@ -1811,36 +1875,36 @@ lemma integrity_tcb_in_ipc_final:
     apply (fastforce intro!: tro_tcb_call simp: direct_call_def)
    apply clarsimp
    apply (fastforce intro!: tro_tcb_reply tcb.equality simp: direct_reply_def)
-  apply (rule conjI)
-   prefer 2
-   apply (clarsimp)
-   apply (erule tcb_in_ipc.cases; clarsimp simp: integrity_asids_kh_upds' split: if_splits)
-  \<comment> \<open>rm\<close>
-  apply clarsimp
-  apply (cases "is_subject aag thread")
-   apply (rule trm_write)
-   apply (solves\<open>simp\<close>)
-  \<comment> \<open>doesn't own\<close>
-  apply (erule tcb_in_ipc.cases, simp_all)[1]
-    apply clarsimp
-    apply (rule trm_ipc [where p' = thread])
+  apply (intro conjI)
+     \<comment> \<open>rm\<close>
+     apply clarsimp
+     apply (cases "is_subject aag thread")
+      apply (simp add: trm_write)
+     \<comment> \<open>doesn't own\<close>
+     apply (erule tcb_in_ipc.cases, simp_all)[1]
+       apply clarsimp
+       apply (rule trm_ipc [where p' = thread])
+          apply (simp add: tcb_states_of_state_def get_tcb_def)
+         apply (simp add: tcb_states_of_state_def get_tcb_def)
+        apply (fastforce elim: auth_ipc_buffers_kheap_update)
+       apply simp
+      apply clarsimp
+      apply (rule trm_ipc [where p' = thread])
+         apply (simp add: tcb_states_of_state_def get_tcb_def split: thread_state.splits)
+        apply (simp add: tcb_states_of_state_def get_tcb_def)
+       apply (fastforce elim: auth_ipc_buffers_kheap_update)
+      apply simp
+     apply clarsimp
+     apply (rule trm_ipc [where p' = thread])
+        apply (simp add: tcb_states_of_state_def get_tcb_def split: thread_state.splits)
        apply (simp add: tcb_states_of_state_def get_tcb_def)
-      apply (simp add: tcb_states_of_state_def get_tcb_def)
-     apply (fastforce elim: auth_ipc_buffers_kheap_update)
-    apply simp
-   apply clarsimp
-   apply (rule trm_ipc [where p' = thread])
-      apply (simp add: tcb_states_of_state_def get_tcb_def split: thread_state.splits)
-     apply (simp add: tcb_states_of_state_def get_tcb_def)
-    apply (fastforce elim: auth_ipc_buffers_kheap_update)
-   apply simp
+      apply (fastforce elim: auth_ipc_buffers_kheap_update)
+     apply simp
+    apply (erule tcb_in_ipc.cases; clarsimp simp: integrity_arch_kh_upds split: if_splits)
+   apply (erule tcb_in_ipc.cases; clarsimp simp: integrity_arch_kh_upds split: if_splits)
   apply clarsimp
-  apply (rule trm_ipc [where p' = thread])
-     apply (simp add: tcb_states_of_state_def get_tcb_def split: thread_state.splits)
-    apply (simp add: tcb_states_of_state_def get_tcb_def)
-   apply (fastforce elim: auth_ipc_buffers_kheap_update)
-  apply simp
-  done
+  apply (case_tac "x = thread"; erule tcb_in_ipc.cases)
+  by (auto simp: integrity_fpu_kh_upd_neq integrity_fpu_set_registers)
 
 end
 
@@ -1867,85 +1931,56 @@ lemma update_tcb_state_in_ipc:
   apply fastforce
   done
 
-lemma as_user_respects_in_ipc:
-  "\<lbrace>integrity_tcb_in_ipc aag X thread epptr TRContext st\<rbrace>
-   as_user thread m
-   \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X thread epptr TRContext st\<rbrace>"
-  apply (simp add: as_user_def set_object_def get_object_def)
-  apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
-       | wpc
-       | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
-  apply (clarsimp simp: st_tcb_def2 tcb_at_def fun_upd_def[symmetric])
-  apply (auto elim: update_tcb_context_in_ipc)
-  done
+lemma update_cdt_wp:
+  "\<lbrace>\<lambda>s. P (s\<lparr>cdt := f (cdt s)\<rparr>)\<rbrace> update_cdt f \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wpsimp simp: update_cdt_def set_cdt_def)
+
+
+context Ipc_AC_2 begin
 
 lemma set_message_info_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X thread epptr TRContext st\<rbrace>
    set_message_info thread m
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X thread epptr TRContext st\<rbrace>"
   unfolding set_message_info_def
-  by (wp as_user_respects_in_ipc)
-
-
-context Ipc_AC_2 begin
+  by (wpsimp wp: as_user_tcb_in_ipc)
 
 lemma set_object_respects_in_ipc_autarch:
-  "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and K (is_subject aag ptr)\<rbrace>
+  "\<lbrace>\<lambda>s. integrity_tcb_in_ipc aag X receiver epptr ctxt st s \<and> is_subject aag ptr \<and>
+        (is_CNode obj \<or>
+         (\<exists>tcb tcb'. kheap s ptr = Some (TCB tcb) \<and> obj = TCB tcb' \<and> tcb_arch tcb' = tcb_arch tcb))\<rbrace>
    set_object ptr obj
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (simp add: integrity_tcb_in_ipc_def)
-  apply (rule hoare_pre, wp)
-   apply (wpsimp wp: set_object_wp)
-  apply (simp only: pred_conj_def)
-  apply (elim conjE)
-  apply (intro conjI ; (solves \<open>simp\<close>)?)
+  unfolding integrity_tcb_in_ipc_def
+  apply (wp set_object_wp)
+  apply (intro conjI; clarsimp)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def)
-  apply (clarsimp simp: fun_upd_def)
-  apply (rule integrity_asids_kh_update[simplified fun_upd_def])
-  apply (cut_tac integrity_asids_update_autarch)
-    apply (auto simp: fun_upd_def)
-  done
+  apply (clarsimp simp: integrity_def fun_upd_def[symmetric])
+  apply (erule tcb_in_ipc.cases)
+  by (auto simp: integrity_asids_kh_updI integrity_asids_update_autarch
+                 integrity_hyp_kh_updI integrity_hyp_update_autarch
+                 integrity_fpu_kh_updI integrity_fpu_update_autarch)
 
 lemma set_cap_respects_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and K (is_subject aag (fst ptr))\<rbrace>
    set_cap cap ptr
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (simp add: set_cap_def split_def)
-  apply (wpsimp wp: set_object_respects_in_ipc_autarch get_object_wp)
-  done
+  by (wpsimp wp: set_object_respects_in_ipc_autarch get_object_wp
+           simp: set_cap_def obj_at_def)
 
 lemma set_original_respects_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and K (is_subject aag (fst slot))\<rbrace>
    set_original slot orig
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (wp set_original_wp)
-  apply (clarsimp simp: integrity_tcb_in_ipc_def)
-  apply (simp add: integrity_def tcb_states_of_state_def get_tcb_def map_option_def
-              split del: if_split cong: if_cong)
-  apply (rule conjI)
-   apply (fastforce intro: integrity_cdt_direct)
-  apply (subst (asm) integrity_asids_updates(6)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
-  done
+  by (wpsimp wp: set_original_wp
+           simp: integrity_tcb_in_ipc_def integrity_def integrity_cdt_direct tcb_in_ipc_kheap_comms)
 
 lemma update_cdt_fun_upd_respects_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and K (is_subject aag (fst slot))\<rbrace>
    update_cdt (\<lambda>cdt. cdt (slot := v cdt))
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
-  apply (simp add: update_cdt_def set_cdt_def)
-  apply wp
-  apply (simp add: integrity_tcb_in_ipc_def integrity_def tcb_states_of_state_def get_tcb_def
-             cong: if_cong split del: if_split)
-  apply (rule conjI)
-   apply (fastforce intro: integrity_cdt_direct)
-  apply (subst (asm) integrity_asids_updates(2)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
-  done
+  by (wpsimp wp: update_cdt_wp
+           simp: integrity_tcb_in_ipc_def integrity_def integrity_cdt_direct tcb_in_ipc_kheap_comms)
 
 lemma set_untyped_cap_as_full_integrity_tcb_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -2025,7 +2060,7 @@ lemma copy_mrs_respects_in_ipc:
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   unfolding copy_mrs_def
   apply (rule hoare_gen_asm)
-  apply (wp as_user_respects_in_ipc store_word_offs_respects_in_ipc
+  apply (wp as_user_tcb_in_ipc store_word_offs_respects_in_ipc
             mapM_wp' hoare_vcg_const_imp_lift hoare_vcg_all_lift
          | wpc | fastforce split: if_split_asm)+
   done
@@ -2043,7 +2078,7 @@ lemma do_normal_transfer_respects_in_ipc:
    do_normal_transfer sender sbuf epopt badge grant receiver recv_buf
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (simp add: do_normal_transfer_def)
-  apply (wpsimp wp: as_user_respects_in_ipc set_message_info_respects_in_ipc copy_mrs_pas_refined
+  apply (wpsimp wp: as_user_tcb_in_ipc set_message_info_respects_in_ipc copy_mrs_pas_refined
                     copy_mrs_respects_in_ipc transfer_caps_respects_in_ipc get_mi_length
                     lookup_extra_caps_authorised lookup_extra_caps_length hoare_vcg_const_Ball_lift
                     hoare_vcg_conj_liftE_R hoare_vcg_const_imp_lift lec_valid_cap'
@@ -2060,7 +2095,7 @@ lemma do_fault_transfer_respects_in_ipc:
    do_fault_transfer badge sender receiver recv_buf
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (simp add: do_fault_transfer_def split_def)
-  apply (wp as_user_respects_in_ipc set_message_info_respects_in_ipc set_mrs_respects_in_ipc
+  apply (wp as_user_tcb_in_ipc set_message_info_respects_in_ipc set_mrs_respects_in_ipc
          | wpc | simp | rule hoare_drop_imps)+
   done
 
@@ -2099,6 +2134,7 @@ lemma set_thread_state_running_respects_in_ipc:
               cong: if_cong elim: update_tcb_state_in_ipc[unfolded fun_upd_def])
   done
 
+
 context Ipc_AC_2 begin
 
 lemma set_endpoint_integrity_in_ipc:
@@ -2115,11 +2151,9 @@ lemma set_endpoint_integrity_in_ipc:
     apply (clarsimp simp: integrity_def fun_upd_def)
    apply (erule tcb_in_ipc.cases, simp_all)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def)
-  apply (rule conjI)
-   apply (fastforce intro: tro_ep)
-  apply (clarsimp simp: integrity_asids_kh_update integrity_asids_kh_upds)
-  done
+  by (fastforce elim: tcb_in_ipc.cases intro: tro_ep
+                simp: integrity_asids_kh_updI integrity_hyp_kh_updI
+                      integrity_fpu_kh_updI integrity_def integrity_arch_kh_upds)
 
 lemma integrity_tcb_in_ipc_refl:
   "\<lbrakk> st_tcb_at can_receive_ipc receiver s; \<not> is_subject aag receiver; pas_refined aag s \<rbrakk>
@@ -2127,8 +2161,8 @@ lemma integrity_tcb_in_ipc_refl:
   unfolding integrity_tcb_in_ipc_def
   apply (clarsimp simp: st_tcb_def2)
   apply (rule tii_context [OF get_tcb_SomeD get_tcb_SomeD], assumption+)
-    apply (rule tcb_context_no_change)
-   apply simp
+   apply (rule_tac x="arch_tcb_get_registers (tcb_arch tcb)" in exI, simp)
+  apply simp
   done
 
 end
@@ -2149,51 +2183,21 @@ lemma set_original_respects_in_ipc_reply:
     K (st_tcb_at (\<lambda>st. direct_call {pasSubject aag} aag epptr st) receiver st)\<rbrace>
    set_original (receiver, tcb_cnode_index 3) orig
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (wp set_original_wp)
-  apply (clarsimp simp: integrity_tcb_in_ipc_def)
-  apply (simp add: integrity_def tcb_states_of_state_def get_tcb_def)
-  apply (fold get_tcb_def tcb_states_of_state_def)
-  apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
-  apply (rule conjI)
-   apply (rule integrity_cdt_change_allowed)
-   apply (rule cca_reply; force)
-  apply (subst (asm) integrity_asids_updates(6)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
-  done
-
-end
-
-
-lemma update_cdt_wp:
-  "\<lbrace>\<lambda>s. P (s\<lparr>cdt := f (cdt s)\<rparr>)\<rbrace> update_cdt f \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: update_cdt_def set_cdt_def)
-
-
-context Ipc_AC_2 begin
+  by (wpsimp wp: set_original_wp
+           simp: integrity_tcb_in_ipc_def tcb_in_ipc_kheap_comms
+                 integrity_def cca_reply st_tcb_at_tcb_states_of_state)
 
 lemma update_cdt_reply_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and
     K(st_tcb_at (\<lambda>st. direct_call {pasSubject aag} aag epptr st) receiver st)\<rbrace>
    update_cdt (\<lambda>cdt. cdt ((receiver, tcb_cnode_index 3) := val cdt))
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (wp update_cdt_wp)
-  apply (clarsimp simp: integrity_tcb_in_ipc_def)
-  apply (simp add: integrity_def tcb_states_of_state_def get_tcb_def
-              split del: if_split cong: if_cong)
-  apply (fold get_tcb_def tcb_states_of_state_def)
-  apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
-  apply (rule conjI)
-   apply (rule integrity_cdt_change_allowed)
-   apply (rule cca_reply; force)
-  apply (subst (asm) integrity_asids_updates(2)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
-  done
+  by (wpsimp wp: update_cdt_wp
+           simp: integrity_tcb_in_ipc_def tcb_in_ipc_kheap_comms
+                 integrity_def cca_reply st_tcb_at_tcb_states_of_state)
 
 end
+
 
 (* FIXME: move to NondetMonad *)
 lemma spec_valid_direct:
@@ -2233,18 +2237,12 @@ lemma cap_insert_reply_cap_respects_in_ipc:
                  update_cdt_reply_in_ipc set_cap_respects_in_ipc_reply
                  set_untyped_cap_as_full_not_untyped get_cap_wp)
 
-
 lemma set_scheduler_action_respects_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>
    set_scheduler_action action
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   unfolding set_scheduler_action_def
-  apply (wpsimp simp: integrity_tcb_in_ipc_def integrity_def tcb_states_of_state_def get_tcb_def)
-  apply (subst (asm) integrity_asids_updates(14)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
-  done
+  by (wpsimp simp: integrity_tcb_in_ipc_def integrity_def tcb_in_ipc_kheap_comms)
 
 end
 
@@ -2258,28 +2256,15 @@ lemma tcb_sched_action_respects_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>
    tcb_sched_action tcb_sched_enqueue target
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (simp add: tcb_sched_action_def)
-  apply wp
-  apply (clarsimp simp: integrity_def integrity_tcb_in_ipc_def tcb_states_of_state_def get_tcb_def
-                        integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def
-                        tcb_at_def tcb_sched_enqueue_def etcb_at_def
-                 split: option.splits)
-  apply (intro conjI impI)
-     apply (fastforce intro: exists_cons_append)
-    apply (subst (asm) integrity_asids_updates(22)[symmetric])
-    apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-    apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-    apply (fastforce simp: trans_state_def abstract_state.defs)
-   apply (fastforce intro: exists_cons_append)
-  apply (subst (asm) integrity_asids_updates(22)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
+  apply (wpsimp simp: tcb_sched_action_def)
+  apply (fastforce simp: integrity_def integrity_tcb_in_ipc_def integrity_ready_queues_def
+                         tcb_sched_enqueue_def exists_cons_append tcb_in_ipc_kheap_comms
+                  split: option.splits)
   done
 
 crunch possible_switch_to, set_thread_state
   for respects_in_ipc_autarch: "integrity_tcb_in_ipc aag X receiver epptr ctxt st"
-  (wp: tcb_sched_action_respects_in_ipc_autarch ignore: tcb_sched_action)
+  (wp: tcb_sched_action_respects_in_ipc_autarch simp: get_tcb_SomeD ignore: tcb_sched_action)
 
 lemma setup_caller_cap_respects_in_ipc_reply:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRFinalOrCall st and
@@ -2579,14 +2564,9 @@ lemma set_cdt_empty_slot_respects_in_ipc_autarch:
     (\<lambda>s. descendants_of slot m = {}) and K (is_subject aag (fst slot))\<rbrace>
    set_cdt ((\<lambda>p. if m p = Some slot then m slot else m p)(slot := None))
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st \<rbrace>"
-  unfolding set_cdt_def
-  apply wp
-  apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def no_children_empty_desc[symmetric])
-  apply (rule conjI, force)
-  apply (subst (asm) integrity_asids_updates(2)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
+  apply (wpsimp simp: set_cdt_def)
+  apply (fastforce simp: integrity_tcb_in_ipc_def integrity_def
+                         tcb_in_ipc_kheap_comms no_children_empty_desc[symmetric])
   done
 
 end
@@ -2638,11 +2618,6 @@ lemma cte_delete_one_respects_in_ipc_autharch:
   apply (wp empty_slot_respects_in_ipc_autarch fast_finalise_reply_respects_in_ipc_autarch get_cap_wp)
   by (fastforce simp:cte_wp_at_caps_of_state is_cap_simps)
 
-end
-
-
-context Ipc_AC_2 begin
-
 lemma integrity_tcb_in_fault_reply_final:
   "integrity_tcb_in_fault_reply aag X thread TRFFinal st s \<Longrightarrow> integrity aag X st s"
   unfolding integrity_tcb_in_fault_reply_def
@@ -2652,37 +2627,44 @@ lemma integrity_tcb_in_fault_reply_final:
   apply (erule tcb_in_fault_reply.cases; clarsimp)
   apply (rule conjI)
    apply (fastforce intro!: tcb.equality tro_tcb_reply)
-  apply (clarsimp simp: integrity_asids_kh_upds')
+  apply (clarsimp simp: integrity_arch_kh_upds)
+  apply (case_tac "x = thread")
+   apply (fastforce intro: integrity_fpu_set_registers)
+  apply (clarsimp simp: integrity_fpu_kh_upd_neq)
   done
-
-end
-
-
-lemma as_user_respects_in_fault_reply:
-  "as_user thread m \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
-  apply (simp add: as_user_def)
-  apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: integrity_tcb_in_fault_reply_def)
-  apply (erule tcb_in_fault_reply.cases; clarsimp dest!: get_tcb_SomeD)
-  apply (rule tifr_context[OF refl refl])
-  by fastforce+
-
-
-context Ipc_AC_2 begin
 
 lemma set_scheduler_action_respects_in_fault_reply:
   "set_scheduler_action action \<lbrace>integrity_tcb_in_fault_reply aag X receiver ctxt st\<rbrace>"
   unfolding set_scheduler_action_def
-  apply (wpsimp simp: integrity_tcb_in_fault_reply_def integrity_def tcb_states_of_state_def get_tcb_def)
-  apply (subst (asm) integrity_asids_updates(14)[symmetric])
-  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
-  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
-  apply (fastforce simp: trans_state_def abstract_state.defs)
+  by (wpsimp simp: integrity_tcb_in_fault_reply_def integrity_def tcb_in_ipc_kheap_comms)
+
+lemma as_user_mapM_inv:
+  assumes "\<And>x. as_user thread (f x) \<lbrace>P\<rbrace>"
+  shows "as_user thread (mapM f xs) \<lbrace>P\<rbrace>"
+  apply (induct xs)
+   apply (clarsimp simp: mapM_empty fun_upd_idem valid_def as_user_def select_f_def put_def
+                         set_object_def get_object_def gets_the_def gets_def get_def get_tcb_def
+                         assert_opt_def assert_def fail_def return_def bind_def
+                  split: option.splits if_splits)
+  apply (clarsimp simp: mapM_Cons as_user_bind)
+  apply (rule bind_wp)+
+    apply (wp as_user_inv)
+   apply assumption
+  apply (wp assms)
+  done
+
+lemma as_user_zipWithM_x_inv:
+  assumes "\<And>x y. as_user thread (f x y) \<lbrace>P\<rbrace>"
+  shows "as_user thread (zipWithM_x f xs ys) \<lbrace>P\<rbrace>"
+  apply (simp add: zipWithM_x_mapM as_user_bind)
+  apply (rule bind_wp)
+   apply (wp as_user_inv)
+  apply (wpsimp wp: assms as_user_mapM_inv)
   done
 
 lemma handle_fault_reply_respects_in_fault_reply:
   "handle_fault_reply f thread label mrs \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
-  by (cases f; wpsimp wp: as_user_respects_in_fault_reply handle_arch_fault_reply_typ_at)
+  by (cases f; wpsimp wp: zipWithM_x_inv' as_user_zipWithM_x_inv as_user_tcb_in_fault_reply)
 
 crunch set_thread_state_act
   for respects_in_fault_reply: "integrity_tcb_in_fault_reply aag X receiver ctxt st"
@@ -2707,9 +2689,8 @@ lemma set_thread_state_respects_in_fault_reply:
   apply (wp set_thread_state_act_respects_in_fault_reply set_object_wp)
   apply (clarsimp simp: integrity_tcb_in_fault_reply_def)
   apply (erule tcb_in_fault_reply.cases; clarsimp dest!: get_tcb_SomeD)
-  apply (rule tifr_reply[OF refl refl])
-       apply (intro exI tcb.equality; simp)
-  by fastforce+
+  apply (auto intro: tifr_reply[OF refl refl])
+  done
 
 lemma integrity_tcb_in_fault_reply_refl:
   "\<lbrakk> st_tcb_at awaiting_reply receiver s; fault_tcb_at (flip (\<noteq>) None) receiver s;
@@ -2718,8 +2699,8 @@ lemma integrity_tcb_in_fault_reply_refl:
   unfolding integrity_tcb_in_fault_reply_def
   apply (clarsimp elim!: pred_tcb_atE)
   apply (rule tifr_context[OF refl refl])
-      apply (rule tcb_context_no_change)
-     apply fastforce+
+      apply (rule_tac x="arch_tcb_get_registers (tcb_arch tcb)" in exI)
+      apply auto
   done
 
 end
