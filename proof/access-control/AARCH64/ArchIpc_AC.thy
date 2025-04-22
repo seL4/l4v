@@ -12,12 +12,12 @@ context Arch begin arch_global_naming
 
 named_theorems Ipc_AC_assms
 
-declare make_fault_msg_inv[Ipc_AC_assms]
-declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
+lemma make_fault_message_inv[Ipc_AC_assms, wp]:
+  "make_fault_msg ft t \<lbrace>P\<rbrace>"
+  apply (cases ft, simp_all split del: if_split)
+  by (wp as_user_inv getRestartPC_inv mapM_wp' make_arch_fault_msg_inv | simp add: getRegister_def)+
 
-crunch cap_insert_ext
-  for integrity_asids[Ipc_AC_assms, wp]: "integrity_asids aag subjects x a st"
-  (ignore_del: cap_insert_ext) \<comment> \<open>FIXME: should these ext consts still be ignored in DetSched_AI files and beyond?\<close>
+declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
@@ -80,6 +80,7 @@ lemma arch_tcb_setRegister[Ipc_AC_assms]:
   by (simp add: arch_tcb_context_get_def arch_tcb_context_set_def
                 arch_tcb_get_registers_def arch_tcb_set_registers_def
                 setRegister_def modify_def get_def put_def bind_def)
+
 end
 
 
@@ -202,16 +203,37 @@ lemma cap_insert_ext_integrity_asids_in_ipc[Ipc_AC_assms, wp]:
   "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
    \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
           (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
-  by wpsimp
+  by (wpsimp simp: integrity_asids_def)
+
+lemma cap_insert_ext_integrity_hyp_in_ipc[Ipc_AC_assms, wp]:
+  "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+   \<lbrace>\<lambda>s. integrity_hyp aag subjects x st
+          (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  by (wpsimp simp: integrity_hyp_def)
+
+lemma cap_insert_ext_integrity_fpu_in_ipc[Ipc_AC_assms, wp]:
+  "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+   \<lbrace>\<lambda>s. integrity_fpu aag subjects x st
+          (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  by (wpsimp simp: integrity_fpu_def)
 
 lemma integrity_asids_kh_updI[Ipc_AC_assms]:
   "integrity_asids_2 aag subjects x asid as as ao ao'
    \<Longrightarrow> integrity_asids_2 aag subjects x asid as as (ao(p := ako)) (ao'(p := ako))"
   by (clarsimp simp: integrity_asids_def opt_map_def)
 
+lemma integrity_hyp_kh_updI[Ipc_AC_assms]:
+  "integrity_hyp_2 aag subjects x ms ms as as ao ao'
+   \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms as as (ao(p := ako)) (ao'(p := ako))"
+  by (simp add: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def)
+
+lemma integrity_fpu_kh_updI[Ipc_AC_assms]:
+  "integrity_fpu_2 aag subjects x ms ms kh kh'
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms (kh(p := ko)) (kh'(p := ko))"
+  by (clarsimp simp: integrity_fpu_def fpu_of_state_def opt_map_def)
+
 declare handle_arch_fault_reply_inv[Ipc_AC_assms]
 declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
-declare integrity_arch_triv[Ipc_AC_assms]
 
 end
 
@@ -220,21 +242,22 @@ context is_extended begin interpretation Arch .
 
 lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   assumes li:
-   "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-    f
-    \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  shows "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
-         f
-         \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def] pool_for_asid_def)
-  apply (simp del:split_paired_All)
+    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
+     f
+     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
+  shows
+    "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
+     f
+     \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
+  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def] pool_for_asid_def
+                integrity_asids_def integrity_hyp_def integrity_fpu_def)
+  apply (simp del: split_paired_All)
   apply (rule hoare_pre)
    apply (simp only: integrity_cdt_list_as_list_integ)
    apply (simp add: tcb_states_of_state_def get_tcb_def)
-   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
+   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])
   apply (simp only: integrity_cdt_list_as_list_integ)
-  apply (simp add: tcb_states_of_state_def get_tcb_def)
-  apply (fastforce simp: opt_map_def)
+  apply (clarsimp simp: tcb_states_of_state_def get_tcb_def fun_upd_def)
   done
 
 end

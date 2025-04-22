@@ -16,7 +16,7 @@ named_theorems Interrupt_AC_assms
 definition arch_authorised_irq_ctl_inv ::
   "'a PAS \<Rightarrow> Invocations_A.arch_irq_control_invocation \<Rightarrow> bool" where
   "arch_authorised_irq_ctl_inv aag cinv \<equiv>
-     case cinv of (RISCVIRQControlInvocation irq x1 x2 trigger) \<Rightarrow>
+     case cinv of (ARMIRQControlInvocation irq x1 x2 trigger) \<Rightarrow>
        is_subject aag (fst x1) \<and> is_subject aag (fst x2) \<and>
        (pasSubject aag, Control, pasIRQAbs aag irq) \<in> pasPolicy aag"
 
@@ -36,7 +36,7 @@ lemma arch_invoke_irq_handler_pas_refined[Interrupt_AC_assms]:
   "\<lbrace>pas_refined aag and invs and (\<lambda>s. interrupt_states s x1 \<noteq> IRQInactive)\<rbrace>
    arch_invoke_irq_handler (ACKIrq x1)
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  by wpsimp
+  by (wpsimp split_del: if_split)
 
 lemma arch_invoke_irq_control_respects[Interrupt_AC_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (arch_authorised_irq_ctl_inv aag acinv)\<rbrace>
@@ -47,18 +47,19 @@ lemma arch_invoke_irq_control_respects[Interrupt_AC_assms]:
                     dmo_mol_respects do_machine_op_pas_refined)
   done
 
-lemma integrity_irq_masks [iff]:
+lemma integrity_irq_masks[iff]:
   "integrity aag X st (s\<lparr>machine_state := machine_state s \<lparr>irq_masks := v\<rparr>\<rparr>) =
    integrity aag X st s"
-  unfolding integrity_def by simp
+  by (simp add: integrity_def integrity_arch_kh_upds)
 
 lemma arch_invoke_irq_handler_respects[Interrupt_AC_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs\<rbrace>
    arch_invoke_irq_handler (ACKIrq x1)
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  by (wpsimp wp: dmo_wp mol_respects simp: maskInterrupt_def plic_complete_claim_def)
+  by (wpsimp simp: deactivateInterrupt_def maskInterrupt_def
+               wp: dmo_wp mol_respects split_del: if_split)
 
-crunch arch_check_irq for inv[Interrupt_AC_assms, wp]: P
+declare arch_check_irq_inv[Interrupt_AC_assms]
 
 end
 
