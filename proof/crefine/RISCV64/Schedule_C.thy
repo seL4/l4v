@@ -134,58 +134,96 @@ lemma switchToThread_ccorres:
   apply (fastforce simp: ready_qs_runnable_def)
   done
 
+crunch schedContextCompleteYieldTo
+  for valid_objs'[wp]: valid_objs'
+  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  and no_0_obj'[wp]: no_0_obj'
+  and ct_in_state'[wp]: "ct_in_state' st"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma activateThread_ccorres:
   "ccorres dc xfdc
-           (ct_in_state' activatable' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and valid_objs')
-           UNIV []
-           activateThread
-           (Call activateThread_'proc)"
-  apply (cinit)
-sorry (* FIXME RT: activeThread_ccorres
-   apply (rule ccorres_pre_getCurThread)
-   apply (ctac add: get_tsType_ccorres [where f="\<lambda>s. ksCurThread_' (globals s)"])
-     apply (rule_tac P="activatable' rv" in ccorres_gen_asm)
-     apply (wpc)
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV hs
+     activateThread (Call activateThread_'proc)"
+  unfolding activateThread_def K_bind_apply
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[OF _ _ getCurThread_sp]; (solves wpsimp)?)
+  apply (rule ccorres_symb_exec_l'[OF _ _ threadGet_sp]; (solves wpsimp)?)
+  apply cinit'
+   apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+   apply (rule ccorres_abstract_ksCurThread, ceqv)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule_tac P="ct = thread" in ccorres_gen_asm, simp only:, thin_tac "ct = thread")
+   apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+       apply (clarsimp simp: when_def)
+       apply (rule_tac Q="\<lambda>s. thread = ksCurThread s
+                              \<and> obj_at' (\<lambda>tcb. tcbYieldTo tcb = scPtrOpt) thread s
+                              \<and> valid_objs' s \<and> no_0_obj' s"
+                    in ccorres_cond_both'[where Q'=\<top>])
+         apply clarsimp
+         apply (frule (1) obj_at_cslift_tcb)
+         apply clarsimp
+         apply (frule rf_sr_ksCurThread)
+         apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+         apply (case_tac "tcbYieldTo ko";
+                clarsimp simp: ctcb_relation_def typ_heap_simps option_to_ptr_def option_to_0_def
+                               valid_tcb'_def)
+        apply (ctac add: schedContext_completeYieldTo_ccorres)
+       apply (rule ccorres_return_Skip)
+      apply ceqv
+     apply (rule getThreadState_ccorres_foo)
+     apply (rename_tac threadState)
+     apply (rule ccorres_move_c_guard_tcb)
+     apply (rule_tac xf'=ret__unsigned_longlong_'
+                 and val="thread_state_to_tsType threadState"
+                 and R="st_tcb_at' ((=) threadState) thread"
+                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+        apply clarsimp
+        apply (rule conseqPre, vcg)
+        apply (clarsimp simp: st_tcb_at'_def)
+        apply (frule (1) obj_at_cslift_tcb)
+        apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType)
+       apply ceqv
+      apply (rule_tac P="activatable' threadState" in ccorres_gen_asm)
+      apply wpc
+             apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
             apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-          apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-         apply simp
-         apply (rule ccorres_cond_true)
-         apply (rule ccorres_return_Skip)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-       apply (simp add: ThreadState_defs del: Collect_const)
-       apply (rule ccorres_cond_false)
-       apply (rule ccorres_cond_false)
-       apply (rule ccorres_cond_true)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: activateIdleThread_def return_def)
-      apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-     apply (simp add: ThreadState_defs del: Collect_const)
-     apply (rule ccorres_cond_false)
-     apply (rule ccorres_cond_true)
-     apply (rule ccorres_rhs_assoc)+
-     apply csymbr
-     apply (ctac)
-       apply (ctac add: setNextPC_ccorres)
-         apply ctac
-        apply (wp | simp add: valid_tcb_state'_def)+
-       apply vcg
-      apply wp
+          apply simp
+          apply (rule ccorres_cond_true)
+          apply (rule ccorres_return_Skip)
+         apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
+         apply (simp add: ThreadState_defs del: Collect_const)
+        apply (rule ccorres_cond_false)
+        apply (rule ccorres_cond_false)
+        apply (rule ccorres_cond_true)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: activateIdleThread_def return_def)
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
+      apply (simp add: ThreadState_defs del: Collect_const)
+      apply (rule ccorres_cond_false)
+      apply (rule ccorres_cond_true)
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply ctac
+        apply (ctac add: setNextPC_ccorres)
+          apply ctac
+         apply (wp | simp add: valid_tcb_state'_def)+
+        apply vcg
+       apply wp
+      apply (vcg exspec=thread_state_get_tsType_modifies)
      apply vcg
-    apply (wp gts_wp')
-   apply vcg
-  apply (clarsimp simp: ct_in_state'_def)
-  apply (rule conjI, clarsimp)
-  apply (clarsimp simp: st_tcb_at'_def)
-  apply (rule conjI, clarsimp simp: obj_at'_def)
-  apply clarsimp
-  apply (drule (1) obj_at_cslift_tcb)
-  apply (subgoal_tac "ksCurThread_' (globals s') = tcb_ptr_to_ctcb_ptr (ksCurThread s)")
-   prefer 2
-   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: typ_heap_simps ThreadState_defs mask_def)
-  done *)
+    apply (rule_tac Q'="\<lambda>_ s. thread = ksCurThread s
+                              \<and> ct_in_state' activatable' s
+                              \<and> weak_sch_act_wf (ksSchedulerAction s) s
+                              \<and> valid_objs' s \<and> no_0_obj' s \<and> pspace_aligned' s \<and> pspace_distinct' s"
+                 in hoare_post_imp)
+     apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def
+                    elim!: obj_at'_weaken)
+    apply wpsimp
+   apply (vcg exspec=schedContext_completeYieldTo_modifies)
+  by (force simp: ct_in_state'_def typ_heap_simps ThreadState_defs mask_def obj_at'_def)
 
 lemma ceqv_Guard_UNIV_Skip:
   "ceqv Gamma xf v s s' (a ;; Guard F UNIV Skip) a"
