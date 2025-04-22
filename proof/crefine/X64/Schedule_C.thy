@@ -70,14 +70,29 @@ lemma switchToIdleThread_ccorres:
       apply (wpsimp simp: X64_H.switchToIdleThread_def wp: hoare_drop_imps)+
   done
 
+\<comment> \<open>The C and specifications differ in where the lazyFpuRestore is located within switchToThread; in
+   the specifications it is in ARCH.switchToThread while in the C it is directly in the generic
+   switchToThread. This difference is because the C treats FPUs being enabled as a generic feature,
+   while it is an architecture feature in the specifications.
+   To make things line up in switchToThread_ccorres we rewrite ARCH.switchToThread to have the
+   lazyFpuRestore outside of it.\<close>
+definition arch_switchToThread where
+  "arch_switchToThread tcb \<equiv> setVMRoot tcb"
+
+lemma arch_switchToThread_rewrite:
+  "X64_H.switchToThread tcb \<equiv> do
+     arch_switchToThread tcb;
+     lazyFpuRestore tcb
+   od"
+  by (clarsimp simp: X64_H.switchToThread_def arch_switchToThread_def bind_assoc)
+
 lemma Arch_switchToThread_ccorres:
   "ccorres dc xfdc
            (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
            (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            []
-           (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
+           (arch_switchToThread t) (Call Arch_switchToThread_'proc)"
   apply (cinit lift: tcb_')
-   apply (unfold X64_H.switchToThread_def)[1]
    apply (rule ccorres_add_return2)
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
     apply csymbr (* config_set(CONFIG_KERNEL_X86_IBPB_ON_CONTEXT_SWITCH) *)
@@ -789,8 +804,7 @@ lemma threadSet_timeSlice_ccorres [corres]:
    apply assumption
   apply clarsimp
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def
-                        fpu_null_state_heap_update_tag_disj_simps)
+  apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
   apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def tcb_cte_cases_neqs
                    map_to_tcbs_upd)

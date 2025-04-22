@@ -1040,7 +1040,6 @@ lemma setupReplyMaster_ccorres:
          apply simp
         apply (simp add: cmachine_state_relation_def packed_heap_update_collapse_hrs
                          carch_state_relation_def carch_globals_def
-                         fpu_null_state_heap_update_tag_disj_simps
                          global_ioport_bitmap_heap_update_tag_disj_simps
                          cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
        apply (wp | simp)+
@@ -3824,8 +3823,7 @@ lemma bindNotification_ccorres:
                  apply ((clarsimp simp: option_to_ctcb_ptr_canonical[OF invs_pspace_canonical'])+)[3]
               apply (auto simp: option_to_ctcb_ptr_def objBits_simps'
                                 bindNTFN_alignment_junk)[1]
-             apply (simp add: carch_state_relation_def fpu_null_state_heap_update_tag_disj_simps
-                              global_ioport_bitmap_heap_update_tag_disj_simps)
+             apply (simp add: carch_state_relation_def global_ioport_bitmap_heap_update_tag_disj_simps)
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
           apply (simp add: objBits_simps')

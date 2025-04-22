@@ -439,8 +439,7 @@ lemma ccorres_updateCap [corres]:
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    by (auto simp: carch_state_relation_def cmachine_state_relation_def
-                  global_ioport_bitmap_heap_update_tag_disj_simps
-                  fpu_null_state_heap_update_tag_disj_simps)
+                  global_ioport_bitmap_heap_update_tag_disj_simps)
 
 lemma ccorres_updateMDB_const [corres]:
   fixes ptr :: "cstate \<Rightarrow> cte_C ptr" and val :: "cstate \<Rightarrow> mdb_node_C"
@@ -477,8 +476,7 @@ lemma ccorres_updateMDB_const [corres]:
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    by (auto simp: carch_state_relation_def cmachine_state_relation_def
-                  global_ioport_bitmap_heap_update_tag_disj_simps
-                  fpu_null_state_heap_update_tag_disj_simps)
+                  global_ioport_bitmap_heap_update_tag_disj_simps)
 
 (* 64 == badgeBits *)
 lemma cap_lift_capNtfnBadge_mask_eq:
@@ -636,8 +634,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    by (auto simp: carch_state_relation_def cmachine_state_relation_def
-                  global_ioport_bitmap_heap_update_tag_disj_simps
-                  fpu_null_state_heap_update_tag_disj_simps)
+                  global_ioport_bitmap_heap_update_tag_disj_simps)
 
 lemma ccorres_updateMDB_set_mdbPrev [corres]:
   "src=src' \<Longrightarrow>
@@ -679,7 +676,6 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
     apply (simp add: cmdbnode_relation_def mask_def)
    apply (erule_tac t = s'a in ssubst)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    fpu_null_state_heap_update_tag_disj_simps
                     global_ioport_bitmap_heap_update_tag_disj_simps)
    apply (erule (1) setCTE_tcb_case)
   by clarsimp
@@ -812,7 +808,6 @@ lemma update_freeIndex':
        apply (rule conjI)
         subgoal by (erule (1) setCTE_tcb_case)
        apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                             fpu_null_state_heap_update_tag_disj_simps
                              global_ioport_bitmap_heap_update_tag_disj_simps
                              packed_heap_update_collapse_hrs)
       by (clarsimp simp: cte_wp_at_ctes_of)
@@ -1500,7 +1495,6 @@ lemma emptySlot_helper:
       prefer 2
       apply (erule_tac t = s' in ssubst)
       apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                       fpu_null_state_heap_update_tag_disj_simps
                        cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                        h_t_valid_clift_Some_iff typ_heap_simps'
                  cong: lifth_update)
@@ -1531,7 +1525,6 @@ lemma emptySlot_helper:
     prefer 2
     apply (erule_tac t = s' in ssubst)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                     fpu_null_state_heap_update_tag_disj_simps
                      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                      typ_heap_simps' h_t_valid_clift_Some_iff
                cong: lifth_update)
@@ -2394,8 +2387,7 @@ lemma setIOPortMask_ccorres:
                         monad_simps in_monad
                         hrs_mem_update h_val_heap_modify
                         clift_heap_modify_same tag_disj_via_td_name
-                        cpspace_relation_def carch_globals_def cmachine_state_relation_def
-                        fpu_null_state_relation_def)
+                        cpspace_relation_def carch_globals_def cmachine_state_relation_def)
   apply (match premises in H: \<open>cioport_bitmap_to_H _ = _\<close> and O: \<open>low_' s \<le> high_' s\<close> for s
            \<Rightarrow> \<open>match premises in _[thin]: _(multi) \<Rightarrow> \<open>insert O H\<close>\<close>)
   apply (clarsimp simp: cioport_bitmap_to_H_def wordRadix_def, rule ext, drule_tac x=port in fun_cong)
