@@ -175,9 +175,11 @@ lemma updateSchedContext_invs'_indep:
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma schedContextUpdateConsumed_corres:
- "corres (=) (sc_at scp) (sc_at' scp)
-            (sched_context_update_consumed scp)
-            (schedContextUpdateConsumed scp)"
+  "sc_ptr = scPtr \<Longrightarrow>
+   corres (=) (sc_at sc_ptr and pspace_aligned and pspace_distinct) \<top>
+     (sched_context_update_consumed sc_ptr) (schedContextUpdateConsumed scPtr)"
+  apply (rule_tac Q'="sc_at' scPtr" in corres_cross_add_guard)
+   apply (fastforce intro: sc_at_cross)
   apply (clarsimp simp: sched_context_update_consumed_def schedContextUpdateConsumed_def)
   apply (simp add: maxTicksToUs_def ticksToUs_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
@@ -188,9 +190,8 @@ lemma schedContextUpdateConsumed_corres:
    apply (rule corres_underlying_split)
       apply (rule corres_guard_imp)
         apply clarsimp
-        apply (rule_tac f="\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed abs_sc - max_ticks_to_us\<rparr>"
-                    and f'="\<lambda>sc'. scConsumed_update (\<lambda>_. scConsumed conc_sc - maxTicksToUs) sc'"
-                     in setSchedContext_update_sched_context_no_stack_update_corres)
+        apply (rule_tac Q'="\<lambda>sc'. sc' = conc_sc"
+                     in updateSchedContext_no_stack_update_corres_Q[where Q=\<top>])
            apply (clarsimp simp: sc_relation_def maxTicksToUs_def)
           apply (clarsimp simp: sc_relation_def)
          apply (clarsimp simp: sc_relation_def objBits_simps)
@@ -203,9 +204,8 @@ lemma schedContextUpdateConsumed_corres:
   apply (rule corres_underlying_split)
      apply (rule corres_guard_imp)
        apply clarsimp
-       apply (rule_tac f="\<lambda>sc. sc\<lparr>sc_consumed := 0\<rparr>"
-                   and f'="\<lambda>sc'. scConsumed_update (\<lambda>_. 0) sc'"
-                    in setSchedContext_update_sched_context_no_stack_update_corres)
+       apply (rule_tac Q'="\<lambda>sc'. sc' = conc_sc"
+                    in updateSchedContext_no_stack_update_corres_Q[where Q=\<top>])
           apply (clarsimp simp: sc_relation_def maxTicksToUs_def)
          apply (clarsimp simp: sc_relation_def)
         apply (clarsimp simp: sc_relation_def objBits_simps)
@@ -221,44 +221,6 @@ end
 
 crunch sched_context_update_consumed
   for in_user_Frame[wp]: "in_user_frame buffer"
-
-lemma schedContextUpdateConsumed_valid_ipc_buffer_ptr'[wp]:
-  "schedContextUpdateConsumed scp \<lbrace>valid_ipc_buffer_ptr' x\<rbrace>"
-  unfolding schedContextUpdateConsumed_def valid_ipc_buffer_ptr'_def
-  by wpsimp
-
-lemma schedContextUpdateConsumed_iflive[wp]:
-  "schedContextUpdateConsumed scp \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  apply (wpsimp simp: schedContextUpdateConsumed_def)
-  apply (clarsimp elim!: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def)
-  done
-
-lemma schedContextUpdateConsumed_valid_idle'[wp]:
-  "schedContextUpdateConsumed scp \<lbrace>valid_idle'\<rbrace>"
-  apply (wpsimp simp: schedContextUpdateConsumed_def)
-  apply (clarsimp simp: valid_idle'_def obj_at'_def)
-  done
-
-lemma schedContextUpdateConsumed_state_refs_of:
-  "schedContextUpdateConsumed sc \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
-  unfolding schedContextUpdateConsumed_def
-  apply wpsimp
-  apply (clarsimp dest!: ko_at_state_refs_ofD' elim!: rsubst[where P=P])
-  apply (rule ext; clarsimp)
-  done
-
-lemma schedContextUpdateConsumed_objs'[wp]:
-  "schedContextUpdateConsumed sc \<lbrace>valid_objs'\<rbrace>"
-  unfolding schedContextUpdateConsumed_def
-  apply wpsimp
-  apply (drule (1) ko_at_valid_objs'_pre)
-  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def)
-  done
-
-lemma schedContextUpdateConsumed_sym_refs_lis_refs_of_replies'[wp]:
-  "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
-  unfolding schedContextUpdateConsumed_def
-  by wpsimp
 
 crunch schedContextUpdateConsumed
   for aligned'[wp]: "pspace_aligned'"
@@ -301,13 +263,49 @@ crunch schedContextUpdateConsumed
   and valid_sched_pointers[wp]: valid_sched_pointers
   (wp: crunch_wps simp: crunch_simps)
 
+lemma schedContextUpdateConsumed_valid_ipc_buffer_ptr'[wp]:
+  "schedContextUpdateConsumed scp \<lbrace>valid_ipc_buffer_ptr' x\<rbrace>"
+  unfolding schedContextUpdateConsumed_def valid_ipc_buffer_ptr'_def
+  by wpsimp
+
+lemma schedContextUpdateConsumed_iflive[wp]:
+  "schedContextUpdateConsumed scp \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  apply (wpsimp simp: schedContextUpdateConsumed_def updateSchedContext_def)
+  apply (clarsimp elim!: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def)
+  done
+
+lemma schedContextUpdateConsumed_valid_idle'[wp]:
+  "schedContextUpdateConsumed scp \<lbrace>valid_idle'\<rbrace>"
+  apply (wpsimp simp: schedContextUpdateConsumed_def updateSchedContext_def)
+  apply (clarsimp simp: valid_idle'_def obj_at'_def)
+  done
+
+lemma schedContextUpdateConsumed_state_refs_of:
+  "schedContextUpdateConsumed sc \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
+  apply wpsimp
+  apply (clarsimp dest!: ko_at_state_refs_ofD' elim!: rsubst[where P=P])
+  apply (rule ext; clarsimp)
+  done
+
+lemma schedContextUpdateConsumed_objs'[wp]:
+  "schedContextUpdateConsumed sc \<lbrace>valid_objs'\<rbrace>"
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
+  apply wpsimp
+  by (fastforce dest: sc_ko_at_valid_objs_valid_sc')
+
+lemma schedContextUpdateConsumed_sym_refs_lis_refs_of_replies'[wp]:
+  "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
+  by wpsimp
+
 global_interpretation schedContextUpdateConsumed: typ_at_all_props' "schedContextUpdateConsumed scPtr"
   by typ_at_props'
 
 lemma schedContextUpdateConsumed_if_unsafe_then_cap'[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>if_unsafe_then_cap'\<rbrace>"
   apply (clarsimp simp: schedContextUpdateConsumed_def)
-  apply (wpsimp wp: threadSet_ifunsafe' threadGet_wp)
+  apply (wpsimp wp: threadSet_ifunsafe' threadGet_wp simp: updateSchedContext_def)
   done
 
 lemma schedContextUpdateConsumed_invs'[wp]:
@@ -455,36 +453,34 @@ crunch setConsumed
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma setConsumed_invs':
-  "setConsumed scp buffer \<lbrace>invs'\<rbrace>"
-  apply (simp add: setConsumed_def cur_tcb'_asrt_def)
-  apply (wpsimp wp: schedContextUpdateConsumed_invs'
-              simp: cur_tcb'_def
-         | wps)+
-  done
+lemma rfk_invs'[wp]:
+  "\<lbrace>invs' and tcb_at' t\<rbrace> replyFromKernel t r \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding replyFromKernel_def
+  by (cases r)
+     wpsimp
 
-lemma schedContextCompleteYieldTo_invs'[wp]:
-  "schedContextCompleteYieldTo thread \<lbrace>invs'\<rbrace>"
-  unfolding schedContextCompleteYieldTo_def
-  by (wpsimp wp: schedContextCancelYieldTo_invs' setConsumed_invs'
-                 hoare_drop_imp hoare_vcg_if_lift2
-           simp: sch_act_simple_def)
+crunch schedContextCompleteYieldTo
+  for invs'[wp]: invs'
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma wordsOfTime_eq_words_from_time[simp]:
+  "wordsOfTime time = words_from_time time"
+  by (clarsimp simp: wordsOfTime_def words_from_time_def)
 
 lemma setConsumed_corres:
- "corres dc (case_option \<top> in_user_frame buf and sc_at scp
-             and cur_tcb and pspace_aligned and pspace_distinct)
-            (case_option \<top> valid_ipc_buffer_ptr' buf and sc_at' scp)
-            (set_consumed scp buf)
-            (setConsumed scp buf)"
+  "\<lbrakk>sc_ptr = scPtr; tcb_ptr = tcbPtr\<rbrakk> \<Longrightarrow>
+   corres dc
+     (sc_at sc_ptr and tcb_at tcb_ptr and invs and pspace_aligned and pspace_distinct) invs'
+     (set_consumed sc_ptr tcb_ptr) (setConsumed scPtr tcbPtr)"
   apply add_cur_tcb'
   apply (simp add: set_consumed_def setConsumed_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: cur_tcb'_asrt_def)
+   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF schedContextUpdateConsumed_corres])
-      apply (rule corres_split[OF getCurThread_corres], simp)
-        apply (rule corres_split[OF setMRs_corres setMessageInfo_corres])
-  by (wpsimp wp: hoare_case_option_wp simp: setTimeArg_def cur_tcb_def cur_tcb'_def | wps)+
+    apply (rule corres_split[OF schedContextUpdateConsumed_corres], simp)
+      apply (rule replyFromKernel_corres, simp+)
+     apply wpsimp+
+  done
 
 lemma get_tcb_yield_to_corres:
   "corres (=) (pspace_aligned and pspace_distinct and tcb_at t) \<top>
@@ -551,33 +547,23 @@ crunch setConsumed
   (simp: crunch_simps wp: crunch_wps)
 
 lemma schedContextCompleteYieldTo_corres:
-  "corres dc (invs and tcb_at thread) (invs' and tcb_at' thread)
-    (complete_yield_to thread) (schedContextCompleteYieldTo thread)"
-  apply add_cur_tcb'
+  "corres dc (invs and tcb_at thread) invs'
+     (complete_yield_to thread) (schedContextCompleteYieldTo thread)"
   apply (simp add: complete_yield_to_def schedContextCompleteYieldTo_def)
   apply (subst maybeM_when)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF get_tcb_yield_to_corres], simp)
       apply (rule corres_when2[OF refl])
-      apply (clarsimp, wpfix)
-      apply (rule corres_split[OF lookupIPCBuffer_corres], simp)
-        apply (rule corres_split[OF setConsumed_corres])
-          apply (rule schedContextCancelYieldTo_corres[simplified dc_def])
-         apply wpsimp
-        apply wpsimp
+      apply (rule corres_split[OF setConsumed_corres], simp, simp)
+        apply (rule schedContextCancelYieldTo_corres)
        apply wpsimp
       apply wpsimp
      apply (wpsimp wp: get_tcb_obj_ref_wp)
     apply (wpsimp wp: threadGet_wp)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cur_tcb_def)
    apply (subgoal_tac "valid_tcb thread tcb s", clarsimp simp: valid_tcb_def)
-   apply (fastforce simp: obj_at'_def valid_tcb_valid_obj elim: valid_objs_ko_at
-                    dest: invs_valid_objs)
-  apply (clarsimp simp: invs'_def valid_pspace'_def cur_tcb'_def
-                        obj_at'_real_def ko_wp_at'_def pred_tcb_at'_def)
-  apply (subgoal_tac "valid_tcb' obj s", clarsimp simp: valid_tcb'_def cur_tcb'_def)
-   apply (fastforce simp: obj_at'_real_def ko_wp_at'_def)
-  apply (fastforce simp: valid_objs'_def valid_obj'_def)
+   apply (fastforce simp: obj_at'_def valid_tcb_valid_obj elim: valid_objs_ko_at)
+  apply clarsimp
   done
 
 crunch schedContextDonate

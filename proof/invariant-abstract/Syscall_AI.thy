@@ -1023,14 +1023,6 @@ crunch reply_from_kernel
   (simp: crunch_simps)
 
 crunch reply_from_kernel
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
-  (simp: crunch_simps)
-
-crunch reply_from_kernel
-  for cap_to[wp]: "ex_nonz_cap_to p"
-  (simp: crunch_simps)
-
-crunch reply_from_kernel
   for it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps)
 
@@ -1514,7 +1506,7 @@ crunch
   sched_context_bind_tcb, sched_context_unbind_tcb, sched_context_yield_to
   for ct_in_state: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps ct_in_state_thread_state_lift ignore: set_tcb_obj_ref
-   simp: crunch_simps)
+   simp: crunch_simps return_consumed_def)
 
 crunch invoke_domain, invoke_sched_context
   for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"

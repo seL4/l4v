@@ -948,6 +948,20 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (case_tac rghts; simp add: pageBits_def ptTranslationBits_def)
   done
 
+lemma replyFromKernel_corres:
+  "\<lbrakk>t = t'; r = r'\<rbrakk> \<Longrightarrow>
+   corres dc (tcb_at t and invs) invs' (reply_from_kernel t r) (replyFromKernel t' r')"
+  apply (case_tac r)
+  apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def
+                        badge_register_def badgeRegister_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr[OF lookupIPCBuffer_corres])
+      apply (rule corres_split[OF asUser_setRegister_corres])
+        apply (rule corres_split_eqr[OF setMRs_corres], simp)
+          apply (rule setMessageInfo_corres)
+          apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
+                 | fastforce)+
+  done
 
 end
 

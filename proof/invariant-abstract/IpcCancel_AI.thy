@@ -2631,6 +2631,10 @@ lemma set_mrs_ex_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> set_mrs thread buf args \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wpsimp wp: ex_nonz_cap_to_pres)
 
+crunch reply_from_kernel
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma set_consumed_ex_nonz[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wpsimp simp: set_consumed_def)
@@ -2649,28 +2653,9 @@ crunch set_consumed
  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma complete_yield_to_invs:
-  "\<lbrace>invs\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def get_tcb_obj_ref_def maybeM_def)
-  apply (rule bind_wp[OF _ thread_get_sp])
-  apply (case_tac yt_opt; simp)
-   apply wpsimp
-  apply (rule bind_wp[OF _ lookup_ipc_buffer_inv])
-  apply (rule bind_wp_fwd)
-   apply (rule_tac P'="K (yt_opt = Some a) and
-         (bound_yt_tcb_at ((=) (Some a)) tcb_ptr and
-         (invs and ex_nonz_cap_to tcb_ptr))"
-         in hoare_weaken_pre)
-    apply (rule hoare_pre, rule hoare_vcg_conj_lift
-      [OF set_consumed_pred_tcb_at[where proj=itcb_yield_to and t=tcb_ptr and P="(=) (Some _)"]
-          hoare_vcg_conj_lift[OF set_consumed_invs
-                                  set_consumed_ex_nonz]])
-    apply (auto)[2]
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-   apply (drule (1) if_live_then_nonz_capD; clarsimp simp: live_def)
-  apply (wpsimp wp: sched_context_cancel_yield_to_invs)
-  done
+crunch complete_yield_to
+  for invs[wp]: invs
+  (wp: sched_context_cancel_yield_to_invs crunch_wps)
 
 crunch
   unbind_maybe_notification, sched_context_maybe_unbind_ntfn, sched_context_donate,

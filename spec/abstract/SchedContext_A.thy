@@ -294,29 +294,30 @@ where
 
 text \<open>consumed related functions\<close>
 
-definition
-  sched_context_update_consumed :: "obj_ref \<Rightarrow> (time,'z::state_ext) s_monad" where
+definition sched_context_update_consumed :: "obj_ref \<Rightarrow> (time, 'z::state_ext) s_monad" where
   "sched_context_update_consumed sc_ptr \<equiv> do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    consumed \<leftarrow> return (sc_consumed sc);
-    if max_ticks_to_us \<le> consumed
-    then do set_sc_obj_ref sc_consumed_update sc_ptr (consumed - max_ticks_to_us);
-            return (ticks_to_us (max_ticks_to_us))
-         od
-    else do set_sc_obj_ref sc_consumed_update sc_ptr 0;
-            return (ticks_to_us (sc_consumed sc))
-         od
+     sc \<leftarrow> get_sched_context sc_ptr;
+     consumed \<leftarrow> return (sc_consumed sc);
+     if max_ticks_to_us \<le> consumed
+     then do set_sc_obj_ref sc_consumed_update sc_ptr (consumed - max_ticks_to_us);
+             return (ticks_to_us (max_ticks_to_us))
+          od
+     else do set_sc_obj_ref sc_consumed_update sc_ptr 0;
+             return (ticks_to_us (sc_consumed sc))
+          od
    od"
 
-definition
-  set_consumed :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "set_consumed sc_ptr buf \<equiv> do
-      consumed \<leftarrow> sched_context_update_consumed sc_ptr;
-      ct \<leftarrow> gets cur_thread;
-      sent \<leftarrow> set_mrs ct buf ((ucast consumed) # [ucast (consumed >> 32)]);
-      set_message_info ct $ MI sent 0 0 0 \<comment> \<open>FIXME RT: is this correct?\<close>
-    od"
+definition set_consumed :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_consumed sc_ptr tcb_ptr \<equiv> do
+     consumed \<leftarrow> sched_context_update_consumed sc_ptr;
+     reply_from_kernel tcb_ptr (0, words_from_time consumed)
+   od"
+
+definition return_consumed :: "obj_ref \<Rightarrow> (data list, 'z::state_ext) s_monad" where
+  "return_consumed sc_ptr \<equiv> do
+     consumed \<leftarrow> sched_context_update_consumed sc_ptr;
+     return $ words_from_time consumed
+   od"
 
 text \<open>yield\_to related functions\<close>
 
@@ -337,8 +338,7 @@ where
   "complete_yield_to tcb_ptr \<equiv> do
      yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to tcb_ptr;
      maybeM (\<lambda>sc_ptr. do
-         buf \<leftarrow> lookup_ipc_buffer True tcb_ptr;
-         set_consumed sc_ptr buf;
+         set_consumed sc_ptr tcb_ptr;
          sched_context_cancel_yield_to tcb_ptr
        od) yt_opt
     od"

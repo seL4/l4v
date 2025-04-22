@@ -14,21 +14,12 @@ lemma tcb_yield_to_noncap: "tcb_at p s \<Longrightarrow>
   apply (clarsimp simp: obj_at_def is_tcb_def)
   by (case_tac ko; clarsimp simp: ran_tcb_cap_cases get_tcb_rev)
 
-lemma set_consumed_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
-
-lemma set_consumed_valid_idle[wp]:
-  "\<lbrace>valid_idle\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
-
-lemma set_consumed_only_idle[wp]:
-  "\<lbrace>only_idle\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. only_idle\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
-
-lemma set_consumed_iflive[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
+crunch set_consumed
+  for valid_idle[wp]: valid_idle
+  and only_idle[wp]: only_idle
+  and if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
 
 lemma set_mrs_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
@@ -89,14 +80,6 @@ crunch set_message_info, set_mrs, set_consumed
   and ex_nonz_cap_to_ct[wp]: "\<lambda>s. ex_nonz_cap_to (cur_thread s) s"
   (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp
    ignore: set_object as_user simp: zipWithM_x_mapM)
-
-lemma set_consumed_cap_refs_in_kernel_window[wp]:
-  "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  by (wpsimp simp: set_consumed_def ran_tcb_cap_cases)
-
-lemma set_consumed_cap_refs_respects_device_region[wp]:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
-  by (wpsimp simp: set_consumed_def ran_tcb_cap_cases)
 
 crunch set_thread_state_act
  for it_ct[wp]: "\<lambda>s. P (idle_thread s) (cur_thread s)"
@@ -261,11 +244,9 @@ lemma sched_context_update_consumed_pred_tcb_at_ct[wp]:
   done
 
 lemma set_consumed_pred_tcb_at_ct[wp]:
-  "\<lbrace>(\<lambda>s. pred_tcb_at proj P (cur_thread s) s)\<rbrace>
-    set_consumed sc_ptr args \<lbrace>\<lambda>_ s. pred_tcb_at proj P (cur_thread s) s\<rbrace>"
-  apply (clarsimp simp: set_consumed_def)
-  apply (wpsimp split_del: if_split simp: split_def set_object_def)
-  done
+  "set_consumed sc_ptr args \<lbrace>\<lambda>s. pred_tcb_at proj P (cur_thread s) s\<rbrace>"
+  unfolding set_consumed_def reply_from_kernel_def
+  by (wpsimp split_del: if_split simp: split_def set_object_def)
 
 lemma update_sched_context_sc_at_pred_n_no_change:
   "\<forall>sc. P (proj sc) \<longrightarrow> P (proj (f sc)) \<Longrightarrow>
@@ -307,12 +288,8 @@ lemma sched_context_update_consumed_sc_tcb_sc_at_inv'_none[wp]:
            simp: split_def update_sched_context_def set_object_def)
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
-lemma set_consumed_sc_tcb_sc_at_inv'_none[wp]:
-  "set_consumed sp buf \<lbrace> \<lambda>s. sc_tcb_sc_at P scp s\<rbrace>"
-  apply (simp add: set_consumed_def)
-  by (wpsimp wp: get_object_wp mapM_wp' hoare_drop_imp split_del: if_split
-           simp: split_def set_message_info_def as_user_def set_mrs_def set_object_def
-                 sc_tcb_sc_at_def zipWithM_x_mapM)
+crunch set_consumed
+  for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P scp"
 
 lemma sched_context_unbind_yield_from_sc_tcb_sc_at[wp]:
   "sched_context_unbind_yield_from scptr \<lbrace>sc_tcb_sc_at P scptr\<rbrace>"
@@ -386,11 +363,10 @@ lemma sched_context_update_consumed_sc_tcb_sc_at_not_ct[wp]:
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
 lemma set_consumed_sc_tcb_sc_at_not_ct[wp]:
-  "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
-   set_consumed sp buf \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
-  apply (simp add: set_consumed_def)
-  by (wpsimp wp: get_object_wp mapM_wp' hoare_drop_imp split_del: if_split
- simp: split_def set_message_info_def as_user_def set_mrs_def set_object_def sc_tcb_sc_at_def zipWithM_x_mapM)
+  "set_consumed sp buf
+   \<lbrace>\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
+  unfolding set_consumed_def
+  by (wps | wpsimp)+
 
 lemma complete_yield_to_sc_tcb_sc_at[wp]:
   "complete_yield_to tcb_ptr \<lbrace>sc_tcb_sc_at P scp \<rbrace>"
@@ -422,9 +398,9 @@ lemma set_yf_sc_yf_sc_at:
 
 lemma set_consumed_sc_yf_sc_at_inv'_none[wp]:
   "set_consumed sp buf \<lbrace> \<lambda>s. sc_yf_sc_at P scp s\<rbrace>"
-  apply (simp add: set_consumed_def sched_context_update_consumed_def)
-  by (wpsimp wp: update_sched_context_wp hoare_drop_imp simp: sc_yf_sc_at_def)
-     (fastforce simp: obj_at_def)
+  apply (simp add: set_consumed_def sched_context_update_consumed_def reply_from_kernel_def)
+  apply (wpsimp wp: update_sched_context_wp hoare_drop_imp simp: sc_yf_sc_at_def)
+  by (fastforce simp: obj_at_def)
 
 lemma sched_context_cancel_yield_to_sc_yf_sc_at_None:
   "\<lbrace>sc_yf_sc_at ((=) (Some tptr)) scp and invs\<rbrace>
@@ -445,7 +421,7 @@ lemma complete_yield_to_sc_yf_sc_at_None:
               simp: get_tcb_obj_ref_def)
   apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
   apply (subgoal_tac "bound_yt_tcb_at (\<lambda>b. b = (Some scp)) tptr s")
-   apply (clarsimp simp: obj_at_def sc_at_pred_n_def pred_tcb_at_def)
+   apply (clarsimp simp: obj_at_def sc_at_pred_n_def pred_tcb_at_def is_tcb_def)
   apply (subgoal_tac "(scp, TCBYieldTo) \<in> state_refs_of s tptr")
    apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def refs_of_def
                   split: option.splits)
@@ -469,8 +445,9 @@ lemma sched_context_yield_to_invs:
     and (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s)
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb.\<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s)
     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and ex_nonz_cap_to scp\<rbrace>
-       sched_context_yield_to scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (unfold sched_context_yield_to_def get_sc_obj_ref_def bind_assoc)
+   sched_context_yield_to scp
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (unfold sched_context_yield_to_def return_consumed_def get_sc_obj_ref_def bind_assoc)
   apply (rule bind_wp[OF _ get_sched_context_sp])
   apply clarsimp
   apply (rule bind_wp[where Q'=
@@ -483,6 +460,10 @@ lemma sched_context_yield_to_invs:
    apply (wpsimp wp: complete_yield_to_invs hoare_drop_imps complete_yield_to_sc_yf_sc_at_None
           | wps)+
    apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
+   apply (fastforce dest!: valid_objs_valid_sched_context[OF invs_valid_objs]
+                     simp: valid_sched_context_def valid_bound_obj_def is_tcb_def tcb_at_def
+                           get_tcb_def
+                    split: option.splits kernel_object.splits)
   apply (clarsimp simp: sc_at_pred_n_eq_commute)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def get_sc_obj_ref_def
            split_del: if_split
@@ -509,8 +490,8 @@ text \<open>valid invocation definitions\<close>
 primrec
   valid_sched_context_inv :: "sched_context_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-    "valid_sched_context_inv (InvokeSchedContextConsumed scptr args)
-     = (sc_at scptr and ex_nonz_cap_to scptr and case_option \<top> in_user_frame args)"
+    "valid_sched_context_inv (InvokeSchedContextConsumed scptr)
+     = (sc_at scptr and ex_nonz_cap_to scptr)"
   | "valid_sched_context_inv (InvokeSchedContextBind scptr cap)
      = (ex_nonz_cap_to scptr and valid_cap cap and
           (case cap of ThreadCap t \<Rightarrow>
@@ -531,10 +512,9 @@ where
              | _ \<Rightarrow> \<lambda>_. False))"
   | "valid_sched_context_inv (InvokeSchedContextUnbind scptr)
      = (sc_at scptr and ex_nonz_cap_to scptr)"
-  | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
+  | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr)
      = (\<lambda>s. ex_nonz_cap_to scptr s
             \<and> bound_yt_tcb_at ((=) None) (cur_thread s) s
-            \<and> case_option \<top> in_user_frame args s
             \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)"
 
 definition
@@ -1209,17 +1189,12 @@ lemma sched_context_bind_tcb_typ_at[wp]:
   by (wpsimp simp: sched_context_bind_tcb_def wp: hoare_drop_imps)
 
 lemma sched_context_yield_to_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-      sched_context_yield_to sc_ptr args \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: sched_context_yield_to_def wp: hoare_drop_imp hoare_vcg_if_lift2)
+  "sched_context_yield_to sc_ptr \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  by (wpsimp simp: sched_context_yield_to_def return_consumed_def  wp: hoare_drop_imp)
 
 lemma invoke_sched_context_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-     invoke_sched_context i
-   \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (cases i;
-      wpsimp wp: dxo_wp_weak mapM_x_wp get_sched_context_wp
-       simp: invoke_sched_context_def sched_context_bind_ntfn_def)
+  "invoke_sched_context i \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  by (wpsimp simp: invoke_sched_context_def return_consumed_def sched_context_bind_ntfn_def)
 
 context notes if_weak_cong[cong del] begin
 crunch charge_budget
@@ -1249,9 +1224,10 @@ lemma invoke_sched_control_tcb[wp]:
   by (simp add: tcb_at_typ invoke_sched_control_configure_flags_typ_at [where P=id, simplified])
 
 lemma invoke_sched_context_invs[wp]:
-  "\<lbrace>invs and valid_sched_context_inv i and ct_active\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and valid_sched_context_inv i and ct_active\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (cases i;
-         wpsimp simp: invoke_sched_context_def set_consumed_def valid_sched_context_inv_def
+         wpsimp simp: invoke_sched_context_def return_consumed_def set_consumed_def
+                      valid_sched_context_inv_def
                   wp: sched_context_yield_to_invs)
     apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def sc_ntfn_sc_at_def is_sc_obj_def is_tcb
                           valid_cap_def idle_no_ex_cap ct_in_state_def
@@ -1624,7 +1600,7 @@ lemma sts_valid_sched_control_inv[wp]:
   by (cases sci; wpsimp wp: sts_obj_at_impossible)
 
 lemma decode_sched_context_inv_inv:
-  "\<lbrace>P\<rbrace> decode_sched_context_invocation label sc_ptr excaps args \<lbrace>\<lambda>rv. P\<rbrace>"
+  "decode_sched_context_invocation label sc_ptr excaps \<lbrace>P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decode_sched_context_invocation_def
                     decode_sched_context_bind_def
@@ -1643,11 +1619,9 @@ lemma decode_sched_control_inv_inv:
   done
 
 lemma decode_sched_context_inv_wf:
-  "\<lbrace>invs and sc_at sc_ptr and ex_nonz_cap_to sc_ptr and
-     case_option \<top> in_user_frame args and
-     (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
-     (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
-     decode_sched_context_invocation label sc_ptr excaps args
+  "\<lbrace>invs and sc_at sc_ptr and ex_nonz_cap_to sc_ptr
+     and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
+   decode_sched_context_invocation label sc_ptr excaps
    \<lbrace>valid_sched_context_inv\<rbrace>, -"
   apply (wpsimp simp: decode_sched_context_invocation_def
                       decode_sched_context_bind_def

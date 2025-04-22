@@ -16809,8 +16809,9 @@ lemma sched_context_yield_to_valid_sched_helper:
    \<lbrace>\<lambda>_. valid_sched and simple_sched_action and
      (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s) and
      ct_active and ct_released and invs and current_time_bounded and ct_not_in_release_q\<rbrace>"
-  by (wpsimp wp: get_sc_obj_ref_wp complete_yield_to_invs hoare_vcg_all_lift hoare_drop_imp
-      | wps)+
+  apply (wp get_sc_obj_ref_wp complete_yield_to_invs hoare_vcg_all_lift hoare_drop_imp | wps)+
+  by (fastforce dest: valid_objs_valid_sched_context[OF invs_valid_objs]
+                simp: obj_at_def valid_sched_context_def sc_at_pred_n_def)
 
 lemma schedulable_not_in_release_q:
   "schedulable tp s \<Longrightarrow> not_in_release_q tp s"
@@ -16892,8 +16893,8 @@ lemma sched_context_yield_to_valid_sched:
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s)
     and ct_active and ct_released and invs and ct_not_in_release_q
     and current_time_bounded\<rbrace>
-   sched_context_yield_to sc_ptr args
-   \<lbrace>\<lambda>y. valid_sched\<rbrace>"
+   sched_context_yield_to sc_ptr
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   supply if_split[split del]
   unfolding sched_context_yield_to_def assert_opt_def
   apply (rule bind_wp[OF _ gscyf_sp])
@@ -16911,6 +16912,7 @@ lemma sched_context_yield_to_valid_sched:
    apply (intro conjI; clarsimp?)
     apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
    apply (clarsimp simp: sc_tcb_sc_at_def elim!: obj_at_weakenE)
+  apply (clarsimp simp: return_consumed_def)
   apply (rule_tac Q'="\<lambda>_. valid_sched" in bind_wp_fwd; (solves \<open>wpsimp\<close>)?)
   apply (rule bind_wp[OF _ gsct_sp])
   apply (case_tac sc_tcb_opt; clarsimp)
@@ -16985,9 +16987,9 @@ lemma invoke_sched_context_valid_sched:
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split[split del]
   apply (cases iv; simp)
-      apply (wpsimp simp: invoke_sched_context_def
-                  wp: sched_context_bind_tcb_valid_sched
-                      sched_context_unbind_tcb_valid_sched sched_context_yield_to_valid_sched)+
+      apply (wpsimp simp: invoke_sched_context_def return_consumed_def
+                      wp: sched_context_bind_tcb_valid_sched
+                          sched_context_unbind_tcb_valid_sched sched_context_yield_to_valid_sched)+
      apply (rename_tac ref s cap)
      apply (prop_tac "sched_context_donate_ipc_queues_precond cap ref s")
       apply (simp add: obj_at_kh_kheap_simps pred_map_ipc_queued_thread_state_iff;
@@ -19815,7 +19817,7 @@ lemma sched_context_cancel_yield_to_sc_tcb_sc_at_not_ct[wp]:
 lemma sched_context_yield_to_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)\<rbrace>
-   sched_context_yield_to scptr args
+   sched_context_yield_to scptr
    \<lbrace>\<lambda>_. scheduler_act_sane\<rbrace>"
   apply (clarsimp simp: sched_context_yield_to_def assert_opt_def)
   apply (rule bind_wp_fwd_skip, wpsimp)
@@ -19828,7 +19830,6 @@ lemma sched_context_yield_to_scheduler_act_sane[wp]:
    apply (clarsimp simp: bind_assoc assert_opt_def)
    apply (rule bind_wp_fwd_skip, wpsimp)
    apply (rule bind_wp_fwd_skip, wpsimp)
-   apply (rule bind_wp_fwd_skip, wpsimp)
    apply (rule bind_wp_fwd_skip)
     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift'
                 simp: set_consumed_def)
@@ -19836,6 +19837,7 @@ lemma sched_context_yield_to_scheduler_act_sane[wp]:
                simp: set_tcb_obj_ref_def)
   apply (rule bind_wp_fwd_skip)
    apply ((wpsimp wp:sched_context_resume_sc_tcb_sc_at | wps)+)[1]
+  apply (clarsimp simp: return_consumed_def)
   apply (rule_tac Q'="\<lambda>_. scheduler_act_sane" in bind_wp_fwd; (solves \<open>wpsimp\<close>)?)
   by (wpsimp wp: set_scheduler_action_wp hoare_vcg_all_lift hoare_drop_imps
            simp: sc_at_pred_n_def obj_at_def scheduler_act_not_def
@@ -19846,7 +19848,7 @@ lemma invoke_sched_context_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane and valid_sched_context_inv iv\<rbrace>
    invoke_sched_context iv
    \<lbrace>\<lambda>_. scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding invoke_sched_context_def
+  unfolding invoke_sched_context_def return_consumed_def
   apply (case_tac iv; simp)
   by (wpsimp simp:  wp: hoare_vcg_if_lift2)+
 
@@ -20291,9 +20293,9 @@ lemma sched_context_bind_tcb_not_queued_other:
 
 lemma sched_context_yield_to_not_in_release_q_other:
   "\<lbrace>not_in_release_q t and sc_tcb_sc_at (\<lambda>sctcb. sctcb \<noteq> Some t) sc_ptr\<rbrace>
-   sched_context_yield_to sc_ptr args
+   sched_context_yield_to sc_ptr
    \<lbrace>\<lambda>_. not_in_release_q t\<rbrace>"
-  apply (simp add: sched_context_yield_to_def)
+  apply (simp add: sched_context_yield_to_def return_consumed_def)
   by (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps get_sc_obj_ref_wp
                  sched_context_resume_not_in_release_q_other)
 
@@ -20319,12 +20321,12 @@ lemma invoke_sched_context_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and valid_sched_context_inv i and schact_is_rct and invs\<rbrace>
    invoke_sched_context i
    \<lbrace>\<lambda>_. ct_not_in_release_q\<rbrace>"
-  apply (simp add: invoke_sched_context_def)
+  unfolding invoke_sched_context_def return_consumed_def
   apply (cases i; simp)
       apply (find_goal \<open>match premises in \<open>_ = InvokeSchedContextBind _ _\<close> \<Rightarrow> \<open>-\<close>\<close>)
       apply (wpsimp wp: sched_context_bind_tcb_not_in_release_q_other | wps)+
       apply (clarsimp dest!: invs_cur_sc_tcb_symref simp: pred_tcb_at_def obj_at_def)
-     apply (find_goal \<open>match premises in \<open>_ = InvokeSchedContextYieldTo _ _\<close> \<Rightarrow> \<open>-\<close>\<close>)
+     apply (find_goal \<open>match premises in \<open>_ = InvokeSchedContextYieldTo _\<close> \<Rightarrow> \<open>-\<close>\<close>)
      apply wp_pre
       apply (wpsimp wp: sched_context_yield_to_not_in_release_q_other | wps)+
      apply (clarsimp simp: sc_at_ppred_def obj_at_def)
@@ -22333,9 +22335,9 @@ crunch suspend, bind_notification, maybe_sched_context_unbind_tcb,
 
 lemma sched_context_yield_to_cur_sc_more_than_ready[wp]:
   "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. sc_ptr \<noteq> cur_sc s)\<rbrace>
-   sched_context_yield_to sc_ptr args
+   sched_context_yield_to sc_ptr
    \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding sched_context_yield_to_def
+  unfolding sched_context_yield_to_def return_consumed_def
   by (wpsimp wp: assert_inv hoare_drop_imp)
 
 lemma update_sched_context_cur_sc_more_than_ready:
@@ -22397,7 +22399,7 @@ lemma invoke_sched_context_cur_sc_more_than_ready[wp]:
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. sctcb = Some (cur_thread s)) (cur_sc s) s)\<rbrace>
    invoke_sched_context iv
    \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding invoke_sched_context_def
+  unfolding invoke_sched_context_def return_consumed_def
   apply (cases iv; wpsimp)
   by (clarsimp simp: sc_at_kh_simps vs_all_heap_simps)
 
@@ -24281,9 +24283,9 @@ lemma sched_context_yield_to_cur_sc_in_release_q_imp_zero_consumed[wp]:
         \<and> (if sc_ptr = cur_sc s
            then cur_sc_more_than_ready s
            else heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s))\<rbrace>
-   sched_context_yield_to sc_ptr args
+   sched_context_yield_to sc_ptr
    \<lbrace>\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed s\<rbrace>"
-  unfolding sched_context_yield_to_def
+  unfolding sched_context_yield_to_def return_consumed_def
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule bind_wp_fwd_skip)
    apply (wpsimp simp: get_sc_obj_ref_def complete_yield_to_def set_tcb_obj_ref_def
@@ -24324,7 +24326,8 @@ lemma invoke_sched_context_cur_sc_in_release_q_imp_zero_consumed[wp]:
         \<and> valid_sched_context_inv i s\<rbrace>
    invoke_sched_context i
    \<lbrace>\<lambda>rv. cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
-  apply (cases i; wpsimp simp: invoke_sched_context_def sched_context_unbind_all_tcbs_def)
+  apply (cases i;
+         wpsimp simp: invoke_sched_context_def sched_context_unbind_all_tcbs_def return_consumed_def)
    apply (frule invs_valid_global_refs)
    apply (frule idle_sc_no_ex_cap; fastforce?)
    apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps valid_release_q_def pred_neg_def

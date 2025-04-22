@@ -18,7 +18,7 @@ This module uses the C preprocessor to select a target architecture.
 >         threadRead, threadGet, threadSet, asUser, sanitiseRegister, getSanitiseRegisterInfo,
 >         getThreadCSpaceRoot, getThreadVSpaceRoot,
 >         getThreadBufferSlot,
->         getMRs, setMRs, copyMRs, getMessageInfo, setMessageInfo,
+>         getMRs, setMRs, copyMRs, replyFromKernel, getMessageInfo, setMessageInfo,
 >         tcbFaultHandler, tcbIPCBuffer,
 >         decodeTCBInvocation, invokeTCB,
 >         getExtraCPtrs, getExtraCPtr, lookupExtraCaps, setExtraBadge,
@@ -26,13 +26,13 @@ This module uses the C preprocessor to select a target architecture.
 >         archThreadSet, archThreadGet,
 >         decodeSchedContextInvocation, decodeSchedControlInvocation,
 >         checkBudget, chargeBudget, checkBudgetRestart, mcsPreemptionPoint, commitTime, awaken, switchSchedContext,
->         updateAt, tcbEPAppend, tcbEPDequeue, setTimeArg, isBlocked, isStopped
+>         updateAt, tcbEPAppend, tcbEPDequeue, isBlocked, isStopped
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadRead threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt tcbEPAppend tcbEPDequeue setTimeArg #-}
+% {-# BOOT-EXPORTS: threadRead threadGet threadSet asUser setMRs replyFromKernel setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt tcbEPAppend tcbEPDequeue #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -680,8 +680,8 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >             when (scTCB sc /= Nothing) $ throw IllegalOperation
 >             scPtrOpt <- withoutFailure $ threadGet tcbSchedContext tcbPtr
 >             when (scPtrOpt /= Nothing) $ throw IllegalOperation
->             released <- withoutFailure $ scReleased scPtr
 >             blocked <- withoutFailure $ isBlocked tcbPtr
+>             released <- withoutFailure $ scReleased scPtr
 >             when (blocked && not released) $ throw IllegalOperation
 >         NotificationCap ntfnPtr _ _ _ -> do
 >             when (scNtfn sc /= Nothing) $ throw IllegalOperation
@@ -707,9 +707,9 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         _ -> throw (InvalidCapability 1)
 >     return $ InvokeSchedContextUnbindObject scPtr cap
 
-> decodeSchedContext_YieldTo :: PPtr SchedContext -> Maybe (PPtr Word) ->
+> decodeSchedContext_YieldTo :: PPtr SchedContext ->
 >     KernelF SyscallError SchedContextInvocation
-> decodeSchedContext_YieldTo scPtr buffer = do
+> decodeSchedContext_YieldTo scPtr = do
 >     sc <- withoutFailure $ getSchedContext scPtr
 >     when (scTCB sc == Nothing) $ throw IllegalOperation
 >     ctPtr <- withoutFailure $ getCurThread
@@ -719,14 +719,14 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >     when (priority > ct_mcp) $ throw IllegalOperation
 >     yt_ptr <- withoutFailure $ threadGet tcbYieldTo ctPtr
 >     when (yt_ptr /= Nothing) $ throw IllegalOperation
->     return $ InvokeSchedContextYieldTo scPtr buffer
+>     return $ InvokeSchedContextYieldTo scPtr
 
-> decodeSchedContextInvocation :: Word -> PPtr SchedContext -> [Capability] -> Maybe (PPtr Word) ->
+> decodeSchedContextInvocation :: Word -> PPtr SchedContext -> [Capability] ->
 >     KernelF SyscallError SchedContextInvocation
-> decodeSchedContextInvocation label scPtr excaps buffer = do
+> decodeSchedContextInvocation label scPtr excaps = do
 >     case genInvocationType label of
 >         SchedContextConsumed -> do
->             return $ InvokeSchedContextConsumed scPtr buffer
+>             return $ InvokeSchedContextConsumed scPtr
 >         SchedContextBind -> decodeSchedContext_Bind scPtr excaps
 >         SchedContextUnbindObject -> decodeSchedContext_UnbindObject scPtr excaps
 >         SchedContextUnbind -> do
@@ -734,7 +734,7 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >             ctPtr <- withoutFailure $ getCurThread
 >             when (scTCB sc == Just ctPtr) $ throw IllegalOperation
 >             return $ InvokeSchedContextUnbind scPtr
->         SchedContextYieldTo -> decodeSchedContext_YieldTo scPtr buffer
+>         SchedContextYieldTo -> decodeSchedContext_YieldTo scPtr
 >         _ -> throw IllegalOperation
 
 > decodeSchedControl_ConfigureFlags :: [Capability] -> [Word] ->
@@ -861,6 +861,22 @@ This function's first argument is the maximum number of message registers to cop
 >                 ) [fromIntegral $ length msgRegisters + 1 .. n]
 >             _ -> return []
 >         return $ min n $ fromIntegral $ length hardwareMRs + length bufferMRs
+
+\subsection{Kernel Invocation Replies}
+
+A system call reply from the kernel is an IPC transfer with no badge and no additional capabilities. The message registers are explicitly specified rather than coming from the sender's context.
+
+> replyFromKernel :: PPtr TCB -> (Word, [Word]) -> Kernel ()
+> replyFromKernel thread (resultLabel, resultData) = do
+>     destIPCBuffer <- lookupIPCBuffer True thread
+>     asUser thread $ setRegister badgeRegister 0
+>     len <- setMRs thread destIPCBuffer resultData
+>     let msgInfo = MI {
+>             msgLength = len,
+>             msgExtraCaps = 0,
+>             msgCapsUnwrapped = 0,
+>             msgLabel = resultLabel }
+>     setMessageInfo thread msgInfo
 
 \subsubsection{Extra Capabilities}
 

@@ -545,43 +545,1034 @@ lemma refill_update_ccorres:
    apply (fastforce simp: objBits_simps obj_at'_def opt_map_def ps_clear_def)
   by (clarsimp simp: typ_heap_simps sc_ptr_to_crefill_ptr_def) (* takes ~ 1 minute *)
 
+lemma invokeSchedContext_UnbindObject_ThreadCap_ccorres:
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr)
+     (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>ccap_relation (ThreadCap ptr) \<acute>cap\<rbrace>) hs
+     (liftE (invokeSchedContext (InvokeSchedContextUnbindObject scPtr (ThreadCap ptr))))
+     (Call invokeSchedContext_UnbindObject_'proc)"
+  apply (cinit' lift: sc_' cap_')
+   apply (simp add: invokeSchedContext_def)
+   apply csymbr
+   \<comment> \<open>the given cap is a ThreadCap\<close>
+   apply (rule ccorres_cond_seq)
+   apply (rule ccorres_cond_true)
+   apply (rule ccorres_liftE')
+   apply (ctac add: schedContext_unbindTCB_ccorres)
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def)
+    apply wpsimp
+   apply (vcg exspec=schedContext_unbindTCB_modifies)
+  apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+  done
+
+lemma invokeSchedContext_UnbindObject_NotificationCap_ccorres:
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr)
+     (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>ccap_relation (NotificationCap ptr badge canSend canReceive) \<acute>cap\<rbrace>) hs
+     (liftE (invokeSchedContext
+              (InvokeSchedContextUnbindObject scPtr (NotificationCap ptr badge canSend canReceive))))
+     (Call invokeSchedContext_UnbindObject_'proc)"
+  apply (cinit' lift: sc_' cap_')
+   apply (clarsimp simp: invokeSchedContext_def)
+   apply csymbr
+   \<comment> \<open>the given cap is a NotificationCap\<close>
+   apply (rule ccorres_cond_seq)
+   apply (rule ccorres_cond_false)
+   apply (rule ccorres_cond_seq)
+   apply (rule ccorres_cond_true)
+   apply (rule ccorres_liftE')
+   apply (ctac add: schedContext_unbindNtfn_ccorres)
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def)
+    apply wpsimp
+   apply (vcg exspec=schedContext_unbindNtfn_modifies)
+  apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+  done
+
 lemma decodeSchedContext_UnbindObject_ccorres:
-  "ccorres dc xfdc
-     invs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (decodeSchedContext_UnbindObject scPtr excaps) (Call decodeSchedContext_UnbindObject_'proc)"
-sorry (* FIXME RT: decodeSchedContext_UnbindObject_ccorres *)
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
+      and (\<lambda>s. ksCurThread s = thread) and ct_active' and ex_nonz_cap_to' scPtr
+      and (excaps_in_mem extraCaps o ctes_of)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v))
+     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>\<acute>current_extra_caps = extraCaps'\<rbrace>) hs
+     (decodeSchedContext_UnbindObject scPtr (map fst extraCaps)
+      >>= invocationCatch thread isBlocking isCall canDonate InvokeSchedContext)
+     (Call decodeSchedContext_UnbindObject_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: sc_' current_extra_caps_'   simp: decodeSchedContext_UnbindObject_def)
+   apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+   apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+      apply vcg
+     apply (clarsimp simp: interpret_excaps_test_null excaps_map_def)
+    apply (simp add: throwError_bind invocationCatch_def)
+    apply (rule syscall_error_throwError_ccorres_n)
+    apply (simp add: syscall_error_to_H_cases)
+   apply clarsimp
+   apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+   apply (rule ccorres_move_c_guard_cte)
+   apply ctac
+     apply csymbr
+     apply (simp add: cap_get_tag_isCap)
+     apply (rule ccorres_assert2)
+     apply (simp add: hd_map hd_conv_nth)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (clarsimp simp: isCap_defs split: capability.splits)
+      apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
+      apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply (rule ccorres_move_c_guard_sc)
+      apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+      apply (wpfix add: capability.sel)
+      apply (rule ccorres_cond_seq)
+      apply ccorres_rewrite
+      apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> s \<turnstile>' fst (extraCaps ! 0) \<and> no_0_obj' s"
+                   in ccorres_cond_both'[where Q'=\<top>])
+        apply clarsimp
+        apply (frule (1) obj_at_cslift_sc)
+        apply (frule capTCBPtr_eq)
+         apply (clarsimp simp: isCap_defs split: capability.splits)
+        apply (clarsimp simp: csched_context_relation_def ccap_relation_def option_to_ctcb_ptr_def
+                              valid_cap'_def typ_heap_simps)
+        apply (case_tac "scTCB sc"; fastforce dest: tcb_at_not_NULL)
+       apply (simp add: throwError_bind invocationCatch_def)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply clarsimp
+      apply (rule ccorres_move_c_guard_sc)
+      apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
+      apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+      apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+      apply (rule ccorres_cond_seq)
+      apply ccorres_rewrite
+      apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> ksCurThread s = curThread \<and> no_0_obj' s"
+                   in ccorres_cond_both'[where Q'=\<top>])
+        apply clarsimp
+        apply (frule (1) obj_at_cslift_sc)
+        apply (frule rf_sr_ksCurThread)
+        apply (fastforce simp: typ_heap_simps csched_context_relation_def option_to_ctcb_ptr_def)
+       apply (simp add: throwError_bind invocationCatch_def)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply (simp add: returnOk_bind bindE_assoc ccorres_invocationCatch_Inr performInvocation_def)
+      apply (ctac add: setThreadState_ccorres)
+        apply (ctac add: invokeSchedContext_UnbindObject_ThreadCap_ccorres)
+           apply simp
+           apply (rename_tac reply exception)
+           apply (rule_tac P="reply = []" in ccorres_gen_asm)
+           apply clarsimp
+           apply (rule ccorres_alternative2)
+           apply (rule ccorres_return_CE, simp+)[1]
+          apply (rule ccorres_return_C_errorE, simp+)[1]
+         apply (wpsimp simp: invokeSchedContext_def)
+        apply (vcg exspec=invokeSchedContext_UnbindObject_modifies)
+       apply (wp sts_invs_minor')
+      apply (vcg exspec=setThreadState_modifies)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (clarsimp simp: isCap_defs split: capability.splits)
+      apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
+      apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply (rule ccorres_move_c_guard_sc)
+      apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+      apply (wpfix add: capability.sel)
+      apply (rule ccorres_cond_seq)
+      apply ccorres_rewrite
+      apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> s \<turnstile>' fst (extraCaps ! 0) \<and> no_0_obj' s"
+                   in ccorres_cond_both'[where Q'=\<top>])
+        apply clarsimp
+        apply (frule (1) obj_at_cslift_sc)
+        apply (clarsimp simp: csched_context_relation_def option_to_ctcb_ptr_def valid_cap'_def
+                              typ_heap_simps)
+        apply (frule cap_get_tag_NotificationCap)
+        apply (simp add: cap_get_tag_isCap)
+        apply (clarsimp simp: isCap_defs split: capability.splits)
+        apply (case_tac "scNtfn sc"; fastforce)
+       apply (simp add: throwError_bind invocationCatch_def)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply (simp add: returnOk_bind bindE_assoc ccorres_invocationCatch_Inr performInvocation_def)
+      apply (ctac add: setThreadState_ccorres)
+        apply (ctac add: invokeSchedContext_UnbindObject_NotificationCap_ccorres)
+           apply (rename_tac reply exception)
+           apply (rule_tac P="reply = []" in ccorres_gen_asm)
+           apply clarsimp
+           apply (rule ccorres_alternative2)
+           apply (rule ccorres_return_CE, simp+)[1]
+          apply (rule ccorres_return_C_errorE, simp+)[1]
+         apply (wpsimp simp: invokeSchedContext_def)
+        apply (vcg exspec=invokeSchedContext_UnbindObject_modifies)
+       apply (wp sts_invs_minor')
+      apply (vcg exspec=setThreadState_modifies)
+     apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+      apply vcg
+     apply (rule conseqPre, vcg)
+     apply (simp add: hd_map isCap_simps hd_conv_nth)
+     apply (clarsimp simp: invocationCatch_def throwError_bind split: capability.split,
+            clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases
+                           exception_defs)
+    apply (simp add: getSlotCap_def)
+    apply (wp getCTE_wp)
+   apply (simp add: cap_get_tag_isCap)
+   apply vcg
+  apply clarsimp
+  apply (frule rf_sr_ksCurThread)
+  apply (intro conjI impI)
+      apply (force simp: cte_wp_at_ctes_of ct_in_state'_def st_tcb_at'_def obj_at'_def)
+     apply (clarsimp simp: excaps_map_def neq_Nil_conv cte_wp_at_ctes_of dest!: interpret_excaps_eq)
+    using interpret_excaps_empty
+    apply (fastforce dest: interpret_excaps_eq[rule_format] simp: excaps_map_def split_def)
+   apply fastforce
+  apply fastforce
+  done
+
+lemma invokeSchedContext_Bind_ThreadCap_ccorres:
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr and tcb_at' ptr)
+     (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>ccap_relation (ThreadCap ptr) \<acute>cap\<rbrace>) hs
+     (liftE (invokeSchedContext (InvokeSchedContextBind scPtr (ThreadCap ptr))))
+     (Call invokeSchedContext_Bind_'proc)"
+  apply (cinit' lift: sc_' cap_')
+   apply (clarsimp simp: invokeSchedContext_def)
+   apply csymbr
+   \<comment> \<open>the given cap is a ThreadCap\<close>
+   apply (rule ccorres_cond_seq)
+   apply (rule ccorres_cond_true)
+   apply (rule ccorres_liftE')
+   apply (rule ccorres_rhs_assoc)+
+   apply csymbr
+   apply (ctac add: schedContext_bindTCB_ccorres)
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def)
+    apply wpsimp
+   apply (vcg exspec=schedContext_bindTCB_modifies)
+  apply (frule cap_get_tag_ThreadCap)
+  apply (fastforce simp: cap_get_tag_isCap isCap_simps)
+  done
+
+lemma invokeSchedContext_Bind_NotificationCap_ccorres:
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr)
+     (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>ccap_relation (NotificationCap ptr badge canSend canReceive) \<acute>cap\<rbrace>) hs
+     (liftE (invokeSchedContext
+              (InvokeSchedContextBind scPtr (NotificationCap ptr badge canSend canReceive))))
+     (Call invokeSchedContext_Bind_'proc)"
+  apply (cinit' lift: sc_' cap_')
+   apply (clarsimp simp: invokeSchedContext_def)
+   apply csymbr
+   \<comment> \<open>the given cap is a NotificationCap\<close>
+   apply (rule ccorres_cond_seq)
+   apply (rule ccorres_cond_false)
+   apply (rule ccorres_cond_seq)
+   apply (rule ccorres_cond_true)
+   apply (rule ccorres_liftE')
+   apply (rule ccorres_rhs_assoc)+
+   apply csymbr
+   apply (ctac add: schedContext_bindNtfn_ccorres)
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def)
+    apply wpsimp
+   apply (vcg exspec=schedContext_bindNtfn_modifies)
+  apply (frule cap_get_tag_NotificationCap)
+  apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+  done
+
+crunch scReleased
+  for (empty_fail) empty_fail[wp]
 
 lemma decodeSchedContext_Bind_ccorres:
-  "ccorres dc xfdc
-     invs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (decodeSchedContext_Bind scPtr excaps) (Call decodeSchedContext_Bind_'proc)"
-sorry (* FIXME RT: decodeSchedContext_Bind_ccorres *)
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
+      and (\<lambda>s. ksCurThread s = thread) and ct_active' and ex_nonz_cap_to' scPtr
+      and (excaps_in_mem extraCaps o ctes_of)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v))
+     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>\<acute>current_extra_caps = extraCaps'\<rbrace>) hs
+     (decodeSchedContext_Bind scPtr (map fst extraCaps)
+      >>= invocationCatch thread isBlocking isCall canDonate InvokeSchedContext)
+     (Call decodeSchedContext_Bind_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: sc_' current_extra_caps_' simp: decodeSchedContext_Bind_def)
+   apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+   apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+      apply vcg
+     apply (clarsimp simp: interpret_excaps_test_null excaps_map_def)
+    apply (simp add: throwError_bind invocationCatch_def)
+    apply (rule syscall_error_throwError_ccorres_n)
+    apply (simp add: syscall_error_to_H_cases)
+   apply clarsimp
+   apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+   apply (rule ccorres_move_c_guard_cte)
+   apply ctac
+     apply csymbr
+     apply (simp add: cap_get_tag_isCap)
+     apply (rule ccorres_assert2)
+      apply (simp add: liftE_bindE bind_bindE_assoc  bind_assoc)
+      apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+     apply (simp add: hd_map hd_conv_nth)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (clarsimp simp: isCap_defs split: capability.splits)
+      apply (rename_tac tcb)
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_move_c_guard_sc)
+      apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+      apply (wpfix add: capability.sel)
+      apply (rule ccorres_cond_seq)
+      apply ccorres_rewrite
+      apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> s \<turnstile>' fst (extraCaps ! 0)
+                             \<and> valid_objs' s \<and> no_0_obj' s"
+                   in ccorres_cond_both'[where Q'=\<top>])
+        apply clarsimp
+        apply (frule (1) obj_at_cslift_sc)
+        apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+        apply (frule capTCBPtr_eq)
+         apply (clarsimp simp: isCap_defs split: capability.splits)
+        apply (clarsimp simp: csched_context_relation_def option_to_ctcb_ptr_def
+                              valid_cap'_def typ_heap_simps)
+        apply (case_tac "scTCB sc"; fastforce simp: valid_sched_context'_def dest: tcb_at_not_NULL)
+       apply (simp add: throwError_bind invocationCatch_def)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply clarsimp
+      apply (rule_tac xf'=ret__unsigned_longlong_'
+                  and val="ptr_val (tcb_ptr_to_ctcb_ptr tcb)"
+                   in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
+         apply (rule conseqPre, vcg)
+         apply clarsimp
+         apply (frule cap_get_tag_ThreadCap)
+         apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+        apply ceqv
+       apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
+       apply (rule ccorres_pre_threadGet, rename_tac threadCap_tcbSC)
+       apply ccorres_rewrite
+       apply (rule ccorres_move_c_guard_tcb)
+       apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+       apply (rule ccorres_cond_seq)
+       apply ccorres_rewrite
+       apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = threadCap_tcbSC) tcb s
+                              \<and> valid_objs' s \<and> no_0_obj' s"
+                    in ccorres_cond_both'[where Q'=\<top>])
+         apply normalise_obj_at'
+         apply (frule (1) obj_at_cslift_tcb)
+         apply clarsimp
+         apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+         apply (frule cap_get_tag_ThreadCap)
+         apply (clarsimp simp: ctcb_relation_def typ_heap_simps' valid_tcb'_def)
+         apply (case_tac "tcbSchedContext ko"; clarsimp)
+        apply (simp add: throwError_bind invocationCatch_def)
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (simp add: syscall_error_to_H_cases)
+       apply (simp add: returnOk_bind bindE_assoc ccorres_invocationCatch_Inr performInvocation_def)
+       apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
+       apply csymbr
+       apply (ctac add: isBlocked_ccorres, rename_tac blocked blocked')
+         apply csymbr
+         apply (rule_tac r'="\<lambda>rv rv'. rv' = from_bool (blocked \<and> \<not> rv)"
+                     and xf'=ret__int_'
+                      in ccorres_split_nothrow)
+             apply (clarsimp simp: to_bool_def)
+             apply (rule ccorres_Cond_rhs)
+              apply (rule ccorres_add_return2)
+              apply (ctac add: sc_released_ccorres, rename_tac released released')
+                apply (rule ccorres_return[where R=\<top> and R'=UNIV])
+                apply (rule conseqPre, vcg)
+                apply (clarsimp simp: to_bool_def from_bool_def split: if_splits)
+               apply wpsimp
+              apply (vcg exspec=sc_released_modifies)
+             apply (rule ccorres_add_return2)
+             apply (rule ccorres_symb_exec_l)
+                apply (rule ccorres_return_Skip')
+               apply wpsimp+
+            apply ceqv
+           apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+           apply (wpfix add: capability.sel)
+           apply (rule ccorres_cond_seq)
+           apply ccorres_rewrite
+           apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
+             apply (clarsimp simp: to_bool_def)
+            apply (simp add: throwError_bind invocationCatch_def)
+            apply (rule syscall_error_throwError_ccorres_n)
+            apply (simp add: syscall_error_to_H_cases)
+           apply (simp add: returnOk_bind ccorres_invocationCatch_Inr performInvocation_def)
+           apply (ctac add: setThreadState_ccorres)
+             apply (ctac add: invokeSchedContext_Bind_ThreadCap_ccorres)
+                apply (rename_tac reply exception)
+                apply (rule_tac P="reply = []" in ccorres_gen_asm)
+                apply clarsimp
+                apply (rule ccorres_alternative2)
+                apply (rule ccorres_return_CE, simp+)[1]
+               apply (rule ccorres_return_C_errorE, simp+)[1]
+              apply (wpsimp simp: invokeSchedContext_def)
+             apply (vcg exspec=invokeSchedContext_Bind_modifies)
+            apply (wpsimp wp: sts_invs_minor')
+           apply (vcg exspec=setThreadState_modifies)
+          apply (wpsimp simp: scReleased_def)
+         apply (vcg exspec=sc_released_modifies)
+        apply (wpsimp simp: isBlocked_def wp: gts_wp')
+       apply (vcg exspec=isBlocked_modifies)
+      apply (vcg exspec=cap_thread_cap_get_capTCBPtr_modifies)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (clarsimp simp: isCap_defs split: capability.splits)
+      apply (rename_tac capNtfnPtr badge canSend canReceive)
+      apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_move_c_guard_sc)
+      apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+      apply (wpfix add: capability.sel)
+      apply (rule ccorres_cond_seq)
+      apply ccorres_rewrite
+      apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> valid_objs' s \<and> no_0_obj' s"
+                   in ccorres_cond_both'[where Q'=\<top>])
+        apply clarsimp
+        apply (frule (1) obj_at_cslift_sc)
+        apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+        apply (clarsimp simp: csched_context_relation_def typ_heap_simps valid_sched_context'_def)
+        apply (case_tac "scNtfn sc"; clarsimp)
+       apply (simp add: throwError_bind invocationCatch_def)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc liftM_def)
+      apply (rule ccorres_pre_getNotification, rename_tac ntfn)
+      apply csymbr
+      apply (rule_tac xf'=unsigned_longlong_eret_2_'
+                  and val="ptr_val (option_to_ptr (ntfnSc ntfn))"
+                  and R="ko_at' ntfn capNtfnPtr"
+                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+         apply (rule conseqPre, vcg)
+         apply clarsimp
+         apply (erule cmap_relationE1 [OF cmap_relation_ntfn])
+          apply (erule ko_at_projectKO_opt)
+         apply (frule cap_get_tag_NotificationCap)
+         apply (clarsimp simp: typ_heap_simps' cnotification_relation_def Let_def
+                               cap_get_tag_isCap isCap_simps)
+         apply (case_tac "ntfnSc ntfn"; clarsimp)
+        apply ceqv
+       apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+       apply (rule_tac Q="\<lambda>s. ko_at' ntfn capNtfnPtr s \<and> valid_objs' s \<and> no_0_obj' s"
+                    in ccorres_if_cond_throws[rotated -1, where Q'=\<top>])
+          apply vcg
+         apply clarsimp
+         apply (frule (1) obj_at_cslift_ntfn)
+         apply (frule (1) ntfn_ko_at_valid_objs_valid_ntfn')
+         apply (clarsimp simp: valid_ntfn'_def valid_bound_obj'_def split: option.splits)
+        apply (simp add: throwError_bind invocationCatch_def)
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (simp add: syscall_error_to_H_cases)
+       apply (simp add: returnOk_bind bindE_assoc ccorres_invocationCatch_Inr performInvocation_def)
+       apply (ctac add: setThreadState_ccorres)
+         apply (ctac add: invokeSchedContext_Bind_NotificationCap_ccorres)
+            apply simp
+            apply (rename_tac reply exception)
+            apply (rule_tac P="reply = []" in ccorres_gen_asm)
+            apply clarsimp
+            apply (rule ccorres_alternative2)
+            apply (rule ccorres_return_CE, simp+)[1]
+           apply (rule ccorres_return_C_errorE, simp+)[1]
+          apply (wpsimp simp: invokeSchedContext_def)
+         apply (vcg exspec=invokeSchedContext_Bind_modifies)
+        apply (wp sts_invs_minor')
+       apply (vcg exspec=setThreadState_modifies)
+      apply (vcg exspec=notification_ptr_get_ntfnSchedContext_modifies)
+     apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+      apply vcg
+     apply (rule conseqPre, vcg)
+     apply (simp add: hd_map isCap_simps hd_conv_nth)
+     apply (clarsimp simp: invocationCatch_def throwError_bind split: capability.split,
+            clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases
+                           exception_defs)
+    apply (simp add: getSlotCap_def)
+    apply (wp getCTE_wp)
+   apply (simp add: cap_get_tag_isCap)
+   apply vcg
+  apply (frule rf_sr_ksCurThread)
+  apply simp
+  apply (intro conjI impI allI)
+      apply (force simp: cte_wp_at_ctes_of ct_in_state'_def st_tcb_at'_def obj_at'_def)
+     apply (clarsimp simp: excaps_map_def neq_Nil_conv cte_wp_at_ctes_of dest!: interpret_excaps_eq)
+    using interpret_excaps_empty
+    apply (fastforce dest: interpret_excaps_eq[rule_format] simp: excaps_map_def split_def)
+   apply (frule cap_get_tag_ThreadCap)
+   apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap)
+  apply (clarsimp simp: to_bool_def)
+  done
 
-lemma setConsumed_ccorres:
-  "ccorres dc xfdc
-     invs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (setConsumed scPtr buffer) (Call setConsumed_'proc)"
-sorry (* FIXME RT: setConsumed_ccorres *)
+crunch schedContextUnbindNtfn, schedContextUnbindAllTCBs
+  for scReply[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scReply sc)) scPtr s)"
+  and no_0_obj'[wp]: no_0_obj'
+  and reply_at'[wp]: "reply_at' replyPtr"
+  (wp: updateSchedContext_sc_obj_at'_inv)
+
+lemma invokeSchedContext_Unbind_ccorres:
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr and ex_nonz_cap_to' scPtr)
+     \<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace> []
+     (liftE (invokeSchedContext (InvokeSchedContextUnbind scPtr)))
+     (Call invokeSchedContext_Unbind_'proc)"
+  apply (cinit' lift: sc_')
+   apply (simp add: liftE_bindE bind_assoc)
+   apply (clarsimp simp: invokeSchedContext_def liftE_bindE)
+   apply (simp add: liftE_bindE bind_liftE_distrib)
+   apply (ctac add: schedContext_unbindAllTCBs_ccorres)
+     apply (ctac add: schedContext_unbindNtfn_ccorres)
+       apply (clarsimp simp: schedContextUnbindReply_def bind_assoc)
+       apply (rule ccorres_stateAssert)
+       apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+       apply (rule ccorres_move_c_guard_sc)
+       apply (rule ccorres_split_nothrow)
+           apply (clarsimp simp: when_def)
+           apply (rule_tac Q="obj_at' (\<lambda>sc'. scReply sc' = scReply sc) scPtr
+                              and valid_sched_context' sc and no_0_obj'"
+                        in ccorres_cond_both'[where Q'=\<top>])
+             apply normalise_obj_at'
+             apply (frule (1) obj_at_cslift_sc)
+             apply (clarsimp simp: csched_context_relation_def typ_heap_simps
+                                   valid_sched_context'_def)
+             apply (case_tac "scReply sc"; clarsimp)
+            apply (rule ccorres_split_nothrow)
+                apply (rule_tac P'="obj_at' (\<lambda>sc'. scReply sc' = scReply sc) scPtr
+                                    and valid_sched_context' sc and no_0_obj'"
+                             in updateReply_ccorres_lemma3[where P=\<top>])
+                 apply vcg
+                apply clarsimp
+                apply (frule (1) obj_at_cslift_sc)
+                apply (frule (1) obj_at_cslift_reply)
+                apply (fastforce intro!: rf_sr_reply_update2
+                                   simp: typ_heap_simps' creply_relation_def
+                                         csched_context_relation_def from_bool_def isHead_def
+                                  split: if_splits)
+               apply ceqv
+              apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+                apply vcg
+               apply fastforce
+              apply clarsimp
+              apply (rule conjI)
+               apply (clarsimp simp: typ_heap_simps')
+              apply (rule_tac sc'="scReply_C_update (\<lambda>_. NULL) sc'"
+                           in rf_sr_sc_update_no_refill_buffer_update2;
+                     fastforce?)
+                apply (clarsimp simp: typ_heap_simps')
+               apply (clarsimp simp: csched_context_relation_def option_to_ctcb_ptr_def)
+              apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
+             apply wpsimp
+            apply vcg
+           apply (rule ccorres_return_Skip)
+          apply ceqv
+         apply (simp add: liftE_def return_returnOk)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply wpsimp
+       apply vcg
+      apply (rule_tac Q'="\<lambda>_ s. sc_at' scPtr s \<and> no_0_obj' s \<and> valid_objs' s" in hoare_post_imp)
+       apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
+                        simp: obj_at'_def valid_sched_context'_def)
+      apply wpsimp
+     apply (vcg exspec=schedContext_unbindNtfn_modifies)
+    apply ((wpsimp | strengthen invs'_implies)+)[1]
+   apply (vcg exspec=schedContext_unbindAllTCBs_modifies)
+  apply clarsimp
+  apply (frule global'_sc_no_ex_cap[OF invs_valid_global'])
+   apply fastforce
+  apply fastforce
+  done
+
+crunch replyFromKernel, schedContextUpdateConsumed
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+
+lemma invokeSchedContext_Consumed_ccorres:
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
+      and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+     (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) hs
+     (do reply \<leftarrow> returnConsumed scPtr;
+         liftE (replyOnRestart thread reply isCall)
+      od)
+     (Call invokeSchedContext_Consumed_'proc)"
+  apply (rule monadic_rewrite_ccorres_assemble[where P=P and Q=P for P, simplified, rotated])
+   apply (rule monadic_rewrite_bind_tail)
+    apply (rule monadic_rewrite_liftE)
+    apply (rule replyOnRestart_replyFromKernel_rewrite)
+   apply (wpsimp simp: returnConsumed_def)
+   apply (clarsimp simp: ct_in_state'_def)
+  apply (cinit' lift: sc_' call_')
+   apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
+   apply (subst bind_assoc[symmetric])
+   apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+       apply (ctac add: setConsumed_returnConsumed_ccorres)
+      apply ceqv
+     apply (ctac add: setThreadState_ccorres)
+       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def)
+      apply wpsimp
+     apply (vcg exspec=setThreadState_modifies)
+    apply ((wpsimp wp: rfk_invs' hoare_vcg_if_lift2 hoare_drop_imps
+                 simp: returnConsumed_def
+            | strengthen invs'_implies)+)[1]
+   apply (vcg exspec=setConsumed_modifies)
+  apply (fastforce intro: rf_sr_ksCurThread simp: ct_in_state'_def)
+  done
+
+crunch schedContextYieldTo
+  for st_tcb_at'[wp]: "st_tcb_at' P tcbPtr"
+  (wp: threadSet_st_tcb_at2)
+
+crunch schedContextResume, schedContextCompleteYieldTo, schedContextCompleteYieldTo
+  for scTCB[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) scPtr s)"
+  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps updateSchedContext_sc_obj_at'_inv simp: crunch_simps)
+
+lemma returnConsumed_returns_nonempty_rewrite:
+  "monadic_rewrite False True \<top>
+     (do reply \<leftarrow> returnConsumed scPtr;
+         if reply = []
+         then liftE (replyOnRestart thread [] isCall) \<sqinter> returnOk ()
+         else liftE (replyOnRestart thread reply isCall)
+      od)
+     (do reply \<leftarrow> returnConsumed scPtr; liftE (replyOnRestart thread reply isCall) od)"
+  supply wordsOfTime_eq_words_from_time[simp del]
+  apply (rule monadic_rewrite_bind_tail)
+   apply (rule monadic_rewrite_if_l)
+    apply (rule monadic_rewrite_impossible)
+   apply (rule monadic_rewrite_refl)
+  apply (wpsimp simp: returnConsumed_def simp: wordsOfTime_def)
+  done
+
+crunch schedContextResume
+  for ko_at'_sc[wp]: "ko_at' (sc :: sched_context) scPtr"
+  and valid_sched_context'[wp]: "valid_sched_context' sc"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma invokeSchedContext_YieldTo_ccorres:
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
+      and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+     (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) hs
+     (doE reply \<leftarrow> liftE (schedContextYieldTo scPtr);
+          if reply = []
+          then liftE (replyOnRestart thread [] isCall) \<sqinter> returnOk ()
+          else liftE (replyOnRestart thread reply isCall)
+      odE)
+     (Call invokeSchedContext_YieldTo_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: sc_' call_')
+   apply (simp add: liftE_bindE bind_assoc)
+   apply (clarsimp simp: schedContextYieldTo_def bind_assoc)
+   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+   apply (rule ccorres_move_c_guard_sc)
+   apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+       apply (clarsimp simp: when_def)
+       apply (rule_tac Q="ko_at' sc scPtr and valid_sched_context' sc and no_0_obj'"
+                    in ccorres_cond_both'[where Q'=\<top>])
+         apply normalise_obj_at'
+         apply (frule (1) obj_at_cslift_sc)
+         apply (clarsimp simp: csched_context_relation_def valid_sched_context'_def valid_bound_obj'_def
+                               option_to_ctcb_ptr_def)
+         apply (case_tac "scYieldFrom sc"; force dest!: tcb_at_not_NULL simp: typ_heap_simps)
+        apply (rule ccorres_move_c_guard_sc)
+        apply (ctac add: schedContext_completeYieldTo_ccorres)
+       apply (rule ccorres_return_Skip)
+      apply ceqv
+     apply (ctac add: schedContext_resume_ccorres)
+       apply (rule ccorres_move_c_guard_sc)
+       apply (clarsimp simp: contextYieldToUpdateQueues_def)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule_tac r'="\<lambda> rv rv'. rv' = from_bool rv" and xf'=return_now_'
+                    in ccorres_split_nothrow)
+           apply (rule ccorres_pre_getObject_sc, rename_tac new_sc)
+           apply (rule ccorres_assert2)
+           apply (rule ccorres_rhs_assoc)+
+           apply (rule_tac xf'=tcb_'
+                       and val="option_to_ctcb_ptr (scTCB new_sc)"
+                       and R="ko_at' new_sc scPtr"
+                        in ccorres_symb_exec_r_known_rv[where R'="UNIV"])
+              apply (rule conseqPre, vcg)
+              apply normalise_obj_at'
+              apply (frule (1) obj_at_cslift_sc)
+              apply (clarsimp simp: typ_heap_simps csched_context_relation_def)
+             apply ceqv
+            apply csymbr
+            apply (ctac add: isSchedulable_ccorres)
+              apply (rule ccorres_cond[where R=\<top>])
+                apply (fastforce simp: to_bool_def)
+               apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+               apply (rule ccorres_pre_threadGet, rename_tac prio)
+               apply (rule ccorres_pre_threadGet, rename_tac curprio)
+               apply (rule ccorres_Guard)
+               apply (rule ccorres_move_c_guard_tcb)
+               apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = prio) (the (scTCB new_sc)) s
+                                      \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = curprio) curThread s
+                                      \<and> ksCurThread s = curThread"
+                            in ccorres_cond_both'[where Q'=\<top>])
+                 apply normalise_obj_at'
+                 apply (drule (1) obj_at_cslift_tcb)+
+                 apply (clarsimp simp: ucast_less_ucast_weak[symmetric, where 'b=machine_word_len]
+                                       rf_sr_ksCurThread option_to_ctcb_ptr_def ctcb_relation_def
+                                       typ_heap_simps')
+                apply (rule ccorres_rhs_assoc)+
+                apply (ctac add: tcbSchedDequeue_ccorres)
+                  apply (clarsimp simp: option_to_ctcb_ptr_def)
+                  apply (drule Some_to_the)
+                  apply clarsimp
+                  apply (ctac add: tcbSchedEnqueue_ccorres)
+                    apply (rule ccorres_return[where R=\<top> and R'=UNIV])
+                    apply (rule conseqPre, vcg)
+                    apply fastforce
+                   apply wpsimp
+                  apply (vcg exspec=tcbSchedEnqueue_modifies)
+                 apply wpsimp
+                apply (vcg exspec=tcbSchedDequeue_modifies)
+               apply (rule ccorres_rhs_assoc)+
+               apply (rule ccorres_Guard_Seq)
+               apply (rule ccorres_split_nothrow)
+                   apply (rule_tac Q="\<lambda>s tcb. {s'. (s,s') \<in> rf_sr \<and> ko_at' tcb curThread s
+                                                   \<and> ksCurThread s = curThread}"
+                                in threadSet_ccorres_lemma3[where P=\<top>])
+                    apply (rule conseqPre, vcg)
+                    apply clarsimp
+                    apply (frule (1) obj_at_cslift_tcb)
+                    apply (frule rf_sr_ksCurThread)
+                    subgoal
+                      by (fastforce intro!: rf_sr_tcb_update_no_queue2
+                                      simp: typ_heap_simps' tcb_cte_cases_def cteSizeBits_def
+                                            ctcb_relation_def)
+                   apply simp
+                  apply ceqv
+                 apply clarsimp
+                 apply (rule ccorres_move_c_guard_sc)
+                 apply (rule ccorres_split_nothrow)
+                     apply (rule_tac P'="\<lambda>s. ksCurThread s = curThread"
+                                  in updateSchedContext_ccorres_lemma3)
+                       apply vcg
+                      apply simp
+                     apply clarsimp
+                     apply (frule rf_sr_ksCurThread)
+                     apply (rule_tac sc'="scYieldFrom_C_update
+                                            (\<lambda>_. tcb_ptr_to_ctcb_ptr (ksCurThread s)) sc'"
+                                  in rf_sr_sc_update_no_refill_buffer_update2)
+                         apply fastforce
+                        apply force
+                       apply (simp add: typ_heap_simps' csched_context_relation_def)
+                      apply (simp add: typ_heap_simps' csched_context_relation_def)
+                     apply (fastforce intro: refill_buffer_relation_sc_no_refills_update
+                                       simp: typ_heap_simps' csched_context_relation_def)
+                    apply ceqv
+                   apply (ctac add: tcbSchedDequeue_ccorres)
+                     apply (ctac add: tcbSchedEnqueue_ccorres)
+                       apply (ctac add: tcbSchedEnqueue_ccorres)
+                         apply (ctac add: rescheduleRequired_ccorres)
+                           apply (rule ccorres_return[where R=\<top> and R'=UNIV])
+                           apply (rule conseqPre, vcg)
+                           apply clarsimp
+                          apply wpsimp
+                         apply (vcg exspec=rescheduleRequired_modifies)
+                        apply wpsimp
+                       apply (vcg exspec=tcbSchedEnqueue_modifies)
+                      apply wpsimp
+                     apply (vcg exspec=tcbSchedEnqueue_modifies)
+                    apply wpsimp
+                   apply (vcg exspec=tcbSchedDequeue_modifies)
+                  apply (drule Some_to_the)
+                  apply clarsimp
+                  apply wpsimp
+                 apply (drule Some_to_the)
+                 apply clarsimp
+                 apply vcg
+                apply (rule_tac Q'="\<lambda>_ s. ko_at' new_sc scPtr s \<and> valid_sched_context' new_sc s
+                                          \<and> no_0_obj' s \<and> pspace_aligned' s \<and> pspace_distinct' s
+                                          \<and> tcb_at' curThread s \<and> ksCurThread s = curThread
+                                          \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                             in hoare_post_imp)
+                 apply (fastforce simp: option_to_ctcb_ptr_def valid_sched_context'_def)
+                apply wpsimp
+               apply vcg
+              apply (rule ccorres_return[where R=\<top>])
+              apply (rule conseqPre, vcg)
+              apply clarsimp
+             apply (rule_tac Q'="\<lambda>_ s. ko_at' new_sc scPtr s \<and> no_0_obj' s
+                                       \<and> pspace_aligned' s \<and> pspace_distinct' s
+                                       \<and> weak_sch_act_wf (ksSchedulerAction s) s
+                                       \<and> tcb_at' thread s
+                                       \<and> valid_sched_context' new_sc s"
+                          in hoare_post_imp)
+              apply (fastforce simp: obj_at'_def)
+             apply (wpsimp wp: getSchedulable_wp)
+            apply (vcg exspec=isSchedulable_modifies)
+           apply vcg
+          apply ceqv
+         apply (rename_tac return_now return_now')
+         apply (rule_tac P=return_now in ccorres_cases; clarsimp)
+          apply ccorres_rewrite
+          apply (rule monadic_rewrite_ccorres_assemble[rotated])
+           apply (rule returnConsumed_returns_nonempty_rewrite)
+          apply (rule monadic_rewrite_ccorres_assemble[rotated])
+           apply (rule monadic_rewrite_bind_tail)
+            apply (rule monadic_rewrite_liftE)
+            apply (rule replyOnRestart_replyFromKernel_rewrite)
+           apply wpsimp
+          apply (simp add: liftE_bindE bind_assoc liftE_bindE_assoc bind_liftE_distrib)
+          apply (subst bind_assoc[symmetric])
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac add: setConsumed_returnConsumed_ccorres)
+            apply (rule ccorres_add_returnOk)
+            apply (rule ccorres_liftE_Seq)
+            apply (ctac add: setThreadState_ccorres)
+              apply (rule ccorres_return_CE, simp+)[1]
+             apply wpsimp
+            apply (vcg exspec=setThreadState_modifies)
+           apply (wpsimp simp: returnConsumed_def wp: hoare_vcg_if_lift2)
+          apply (vcg exspec=setConsumed_modifies)
+         apply ccorres_rewrite
+         apply clarsimp
+         apply (rule ccorres_alternative2)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply (rule_tac Q'="\<lambda>_ s. cur_tcb' s \<and> no_0_obj' s \<and> pspace_aligned' s \<and> pspace_distinct' s
+                                  \<and> st_tcb_at' ((=) Restart) thread s
+                                  \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                     in hoare_post_imp)
+         apply (clarsimp simp: st_tcb_at'_def obj_at'_def cur_tcb'_def)
+        apply (wpsimp wp: threadSet_cur threadSet_st_tcb_at2 hoare_drop_imp)
+       apply (vcg exspec=isSchedulable_modifies
+                  exspec=rescheduleRequired_modifies
+                  exspec=tcbSchedEnqueue_modifies
+                  exspec=tcbSchedDequeue_modifies)
+      apply (rule_tac Q'="\<lambda>_ s. obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr s
+                                \<and> invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> cur_tcb' s
+                                \<and> st_tcb_at' ((=) Restart) thread s"
+                   in hoare_post_imp)
+       apply normalise_obj_at'
+       apply (frule (1) invs'_ko_at_valid_sched_context')
+       apply (fastforce simp: valid_sched_context'_def valid_bound_obj'_def)
+      apply wpsimp
+     apply (vcg exspec=schedContext_resume_modifies)
+    apply ((wp | strengthen invs'_implies)+)[1]
+   apply (vcg exspec=schedContext_completeYieldTo_modifies)
+  apply (frule rf_sr_ksCurThread)
+  apply (clarsimp cong: conj_cong split: if_splits)
+  by (safe;
+      force dest!: invs'_ko_at_valid_sched_context'
+             simp: typ_heap_simps' ct_in_state'_def st_tcb_at'_def obj_at'_def  cur_tcb'_def
+                   csched_context_relation_def option_to_ctcb_ptr_def valid_sched_context'_def
+            split: option.splits)
 
 lemma decodeSchedContext_YieldTo_ccorres:
-  "ccorres dc xfdc
-     invs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (decodeSchedContext_YieldTo scPtr buffer) (Call decodeSchedContext_YieldTo_'proc)"
-sorry (* FIXME RT: decodeSchedContext_YieldTo_ccorres *)
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and (\<lambda>s. ksCurThread s = thread)
+      and ct_active' and sc_at' scPtr and sch_act_simple)
+     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) hs
+     (decodeSchedContext_YieldTo scPtr
+      >>= invocationCatch thread isBlocking isCall canDonate InvokeSchedContext)
+     (Call decodeSchedContext_YieldTo_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: sc_' call_' simp: decodeSchedContext_YieldTo_def)
+   apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (clarsimp simp: liftE_bindE bind_assoc)
+   apply (rule ccorres_move_c_guard_sc)
+   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+   apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+   apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> valid_objs' s \<and> no_0_obj' s"
+                in ccorres_if_cond_throws[rotated -1, where Q'=\<top>])
+      apply vcg
+     apply normalise_obj_at'
+     apply (frule (1) obj_at_cslift_sc)
+     apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+     apply (clarsimp simp: typ_heap_simps csched_context_relation_def option_to_ctcb_ptr_def)
+     apply (case_tac "scTCB sc"; clarsimp)
+     apply (fastforce dest: tcb_at_not_NULL
+                      simp: valid_sched_context'_def valid_bound_obj'_def)
+    apply (simp add: throwError_bind invocationCatch_def)
+    apply (rule syscall_error_throwError_ccorres_n)
+    apply (simp add: syscall_error_to_H_cases)
+   apply (simp add: liftE_bindE bind_assoc)
+   apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+   apply (rule ccorres_move_c_guard_sc)
+   apply (rule_tac xf'=tcb_'
+               and val="option_to_ctcb_ptr (scTCB sc)"
+               and R="obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr and valid_objs'"
+                in ccorres_symb_exec_r_known_rv[where R'="UNIV"])
+      apply (rule conseqPre, vcg)
+      apply normalise_obj_at'
+      apply (frule (1) obj_at_cslift_sc)
+      apply (clarsimp simp: typ_heap_simps csched_context_relation_def)
+     apply ceqv
+    apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+    apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> valid_objs' s \<and> no_0_obj' s
+                           \<and> ksCurThread s = curThread"
+                 in ccorres_if_cond_throws[rotated -1, where Q'=\<top>])
+       apply vcg
+      apply (fastforce simp: rf_sr_ksCurThread option_to_ctcb_ptr_def)
+     apply (simp add: throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply (simp add: liftE_bindE bind_assoc)
+    apply (rule ccorres_pre_threadGet, rename_tac priority)
+    apply (rule ccorres_pre_threadGet, rename_tac ct_mcp)
+    apply (rule ccorres_move_c_guard_tcb)
+    apply (rule ccorres_Guard_Seq)
+    apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+    apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = priority) (the (scTCB sc)) s
+                           \<and> obj_at' (\<lambda>tcb. tcbMCP tcb = ct_mcp) curThread s
+                           \<and> ksCurThread s = curThread"
+                 in ccorres_if_cond_throws[rotated -1, where Q'=\<top>])
+       apply vcg
+      apply normalise_obj_at'
+      apply (drule (1) obj_at_cslift_tcb)+
+      apply (clarsimp simp: ucast_less_ucast_weak[symmetric, where 'b=machine_word_len]
+                            ctcb_relation_def rf_sr_ksCurThread typ_heap_simps'
+                            option_to_ctcb_ptr_def)
+     apply (simp add: throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply (simp add: liftE_bindE bind_assoc)
+    apply (rule ccorres_pre_threadGet, rename_tac yt_ptr)
+    apply (rule ccorres_Guard_Seq)
+    apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+    apply (rule_tac Q="\<lambda>s. ksCurThread s = curThread
+                           \<and> obj_at' (\<lambda>tcb. tcbYieldTo tcb = yt_ptr) curThread s
+                           \<and> valid_objs' s \<and> no_0_obj' s"
+                 in ccorres_if_cond_throws[rotated -1, where Q'=\<top>])
+       apply vcg
+      apply normalise_obj_at'
+      apply (rename_tac tcb)
+      apply (frule (1) obj_at_cslift_tcb)
+      apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+      apply (clarsimp simp: typ_heap_simps rf_sr_ksCurThread ctcb_relation_def valid_tcb'_def)
+      apply (case_tac "tcbYieldTo tcb"; clarsimp)
+     apply (simp add: throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply (simp add: returnOk_bind bindE_assoc ccorres_invocationCatch_Inr
+                     performInvocation_def invokeSchedContext_def)
+    apply (ctac add: setThreadState_ccorres)
+      apply (rule ccorres_add_returnOk)
+      apply (ctac add: invokeSchedContext_YieldTo_ccorres)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply (rule ccorres_return_C_errorE, simp+)[1]
+       apply wpsimp
+      apply (vcg exspec=invokeSchedContext_YieldTo_modifies)
+     apply ((wpsimp wp: sts_invs_minor' sts_st_tcb' setThreadState_ct'
+                  simp: ct_in_state'_def
+             | wps)+)[1]
+    apply (vcg exspec=setThreadState_modifies)
+   apply vcg
+  by (force simp: st_tcb_at'_def obj_at'_def ct_in_state'_def
+                  csched_context_relation_def typ_heap_simps rf_sr_ksCurThread)
 
 lemma decodeSchedContextInvocation_ccorres:
-  "ccorres dc xfdc
-     invs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (decodeSchedContextInvocation label scPtr excaps buffer)
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
+      and (\<lambda>s. ksCurThread s = thread) and ct_active' and sc_at' scPtr and ex_nonz_cap_to' scPtr
+      and (excaps_in_mem extraCaps o ctes_of)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v))
+     (\<lbrace>\<acute>label___unsigned_long = label\<rbrace>
+      \<inter> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace>
+      \<inter> \<lbrace>\<acute>current_extra_caps = extraCaps'\<rbrace>
+      \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) hs
+     (decodeSchedContextInvocation label scPtr (map fst extraCaps)
+      >>= invocationCatch thread isBlocking isCall canDonate InvokeSchedContext)
      (Call decodeSchedContextInvocation_'proc)"
-sorry (* FIXME RT: decodeSchedContextInvocation_ccorres *)
-
-lemma schedContext_updateConsumed_ccorres:
-  "ccorres dc xfdc
-     invs' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (schedContextUpdateConsumed scPtr)
-     (Call schedContext_updateConsumed_'proc)"
-sorry (* FIXME RT: schedContext_updateConsumed_ccorres *)
+  supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
+  apply (cinit' lift: label___unsigned_long_' sc_' current_extra_caps_' call_')
+   apply (simp add: decodeSchedContextInvocation_def invocation_eq_use_types gen_invocation_type_eq
+              cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: returnOk_bind bindE_assoc ccorres_invocationCatch_Inr
+                     performInvocation_def invokeSchedContext_def)
+    apply (rule ccorres_rhs_assoc)
+    apply (ctac add: setThreadState_ccorres)
+      apply (rule ccorres_nondet_refinement)
+       apply (rule is_nondet_refinement_bindE)
+        apply (rule is_nondet_refinement_refl)
+       apply (simp split: if_split, rule conjI[rotated])
+        apply (rule impI, rule is_nondet_refinement_refl)
+       apply (rule impI, rule is_nondet_refinement_alternative1)
+      apply (clarsimp simp: liftE_bindE)
+      apply (rule ccorres_add_returnOk)
+      apply (ctac(no_vcg) add: invokeSchedContext_Consumed_ccorres)
+        apply (rule ccorres_return_CE, simp+)[1]
+       apply (rule ccorres_return_C_errorE, simp+)[1]
+      apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
+    apply (vcg exspec=setThreadState_modifies)
+   apply (rule ccorres_Cond_rhs)
+    apply simp
+    apply (rule ccorres_add_returnOk, ctac (no_vcg) add: decodeSchedContext_Bind_ccorres)
+      apply (rule ccorres_return_CE, simp+)[1]
+     apply (rule ccorres_return_C_errorE, simp+)[1]
+    apply wpsimp
+   apply (rule ccorres_Cond_rhs)
+    apply simp
+    apply (rule ccorres_add_returnOk, ctac (no_vcg) add: decodeSchedContext_UnbindObject_ccorres)
+      apply (rule ccorres_return_CE, simp+)[1]
+     apply (rule ccorres_return_C_errorE, simp+)[1]
+    apply wpsimp
+   apply (rule ccorres_Cond_rhs)
+    apply (clarsimp simp: liftE_bindE bind_assoc)
+    apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+    apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+    apply (rule ccorres_rhs_assoc)+
+    apply (rule ccorres_move_c_guard_sc)
+    apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+    apply (rule_tac Q="\<lambda>s. ko_at' sc scPtr s \<and> ksCurThread s = curThread \<and> cur_tcb' s \<and> no_0_obj' s"
+                 in ccorres_if_cond_throws[rotated -1, where Q'=\<top>])
+       apply vcg
+      apply clarsimp
+      apply (frule (1) obj_at_cslift_sc)
+      apply normalise_obj_at'
+      apply (simp add: rf_sr_ksCurThread typ_heap_simps csched_context_relation_def
+                       option_to_ctcb_ptr_def cur_tcb'_def)
+      apply (case_tac "scTCB sc"; fastforce dest: tcb_at_not_NULL)
+     apply (simp add: throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)
+    apply (ctac add: setThreadState_ccorres)
+      apply (simp add: performInvocation_def)
+      apply (ctac add: invokeSchedContext_Unbind_ccorres)
+         apply clarsimp
+         apply (rename_tac reply)
+         apply (rule_tac P="reply = []" in ccorres_gen_asm)
+         apply clarsimp
+         apply (rule ccorres_alternative2)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply (rule ccorres_return_C_errorE, simp+)[1]
+       apply (wpsimp simp: invokeSchedContext_def)
+      apply (vcg exspec=invokeSchedContext_Unbind_modifies)
+     apply (wp sts_invs_minor')
+    apply (vcg exspec=setThreadState_modifies)
+   apply clarsimp
+   apply (rule ccorres_Cond_rhs)
+    apply simp
+    apply (rule ccorres_add_returnOk, ctac (no_vcg) add: decodeSchedContext_YieldTo_ccorres)
+      apply (rule ccorres_return_CE, simp+)[1]
+     apply (rule ccorres_return_C_errorE, simp+)[1]
+    apply wpsimp
+   apply (rule ccorres_equals_throwError)
+    apply (fastforce simp: throwError_bind invocationCatch_def
+                    split: invocation_label.split gen_invocation_labels.split)
+   apply (rule syscall_error_throwError_ccorres_n)
+   apply (simp add: syscall_error_to_H_cases)
+  by (force simp: ct_in_state'_def st_tcb_at'_def obj_at'_def rf_sr_ksCurThread cur_tcb'_def)
 
 lemma invokeSchedControl_ConfigureFlags_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')

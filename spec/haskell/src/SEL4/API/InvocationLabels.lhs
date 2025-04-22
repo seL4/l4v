@@ -60,10 +60,10 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          | IRQClearIRQHandler
 >          | DomainSetSet
 >          | SchedControlConfigureFlags
->          | SchedContextConsumed
 >          | SchedContextBind
 >          | SchedContextUnbind
 >          | SchedContextUnbindObject
+>          | SchedContextConsumed
 >          | SchedContextYieldTo
 >         deriving (Show, Eq, Enum, Bounded)
 
