@@ -257,15 +257,8 @@ text \<open>Scheduling context invocation function\<close>
 
 text \<open> User-level scheduling context invocations. \<close>
 
-definition
-  parse_time_arg :: "nat \<Rightarrow> data list \<Rightarrow> time"
-where
-  "parse_time_arg i args \<equiv> (ucast (args!(i+1)) << 32) + ucast (args!i)"
-
-definition
-  sched_context_yield_to :: "obj_ref \<Rightarrow> data option \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "sched_context_yield_to sc_ptr buffer \<equiv> do
+definition sched_context_yield_to :: "obj_ref \<Rightarrow> (data list, 'z::state_ext) s_monad" where
+  "sched_context_yield_to sc_ptr \<equiv> do
     sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
     when (sc_yf_opt \<noteq> None) $ do
       complete_yield_to (the sc_yf_opt); \<comment> \<open>@{text \<open>sc_yield_from = None\<close>}\<close>
@@ -302,29 +295,31 @@ where
       od
       else return True
     od;
-    when return_now $ set_consumed sc_ptr buffer
+    if return_now then return_consumed sc_ptr else return []
   od"
 
 
 definition
-  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (data list, 'z::state_ext) s_monad"
 where
   "invoke_sched_context iv \<equiv> case iv of
-    InvokeSchedContextConsumed sc_ptr args \<Rightarrow> set_consumed sc_ptr args
+    InvokeSchedContextConsumed sc_ptr \<Rightarrow>
+      return_consumed sc_ptr
   | InvokeSchedContextBind sc_ptr cap \<Rightarrow> (case cap of
-      ThreadCap tcb_ptr \<Rightarrow> sched_context_bind_tcb sc_ptr tcb_ptr
-    | NotificationCap ntfn _ _ \<Rightarrow> sched_context_bind_ntfn sc_ptr ntfn
+      ThreadCap tcb_ptr \<Rightarrow> do sched_context_bind_tcb sc_ptr tcb_ptr; return [] od
+    | NotificationCap ntfn _ _ \<Rightarrow> do sched_context_bind_ntfn sc_ptr ntfn; return [] od
     | _ \<Rightarrow> fail)
   | InvokeSchedContextUnbindObject sc_ptr cap \<Rightarrow> (case cap of
-      ThreadCap _ \<Rightarrow> sched_context_unbind_tcb sc_ptr
-    | NotificationCap _ _ _ \<Rightarrow> sched_context_unbind_ntfn sc_ptr
+      ThreadCap _ \<Rightarrow> do sched_context_unbind_tcb sc_ptr; return [] od
+    | NotificationCap _ _ _ \<Rightarrow> do sched_context_unbind_ntfn sc_ptr; return [] od
     | _ \<Rightarrow> fail)
   | InvokeSchedContextUnbind sc_ptr \<Rightarrow> do
       sched_context_unbind_all_tcbs sc_ptr;
       sched_context_unbind_ntfn sc_ptr;
-      sched_context_unbind_reply sc_ptr
+      sched_context_unbind_reply sc_ptr;
+      return []
     od
-  | InvokeSchedContextYieldTo sc_ptr args \<Rightarrow>
-      sched_context_yield_to sc_ptr args"
+  | InvokeSchedContextYieldTo sc_ptr \<Rightarrow>
+      sched_context_yield_to sc_ptr"
 
 end

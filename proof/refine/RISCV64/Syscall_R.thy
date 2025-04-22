@@ -487,12 +487,7 @@ lemma performInvocation_corres:
            apply (wp)+
          apply ((clarsimp | fastforce dest: valid_sched_valid_ready_qs)+)[3]
        \<comment> \<open>SchedContext\<close>
-       apply (rule corres_guard_imp)
-         apply (rule corres_splitEE)
-            apply (simp)
-            apply (erule invokeSchedContext_corres)
-           apply (rule corres_trivial, simp add: returnOk_def)
-          apply (wpsimp+)[4]
+       apply (corres corres: invokeSchedContext_corres)
       \<comment> \<open>SchedControl\<close>
       apply clarsimp
       apply (rule corres_guard_imp)
@@ -882,19 +877,23 @@ lemma schedContextBindNtfn_invs':
   done
 
 lemma contextYieldToUpdateQueues_invs'_helper:
-   "\<lbrace>\<lambda>s. invs' s \<and> sc_at' scPtr s \<and> valid_sched_context' sc s \<and> valid_sched_context_size' sc
-         \<and> ex_nonz_cap_to' scPtr s \<and> ex_nonz_cap_to' ctPtr s \<and> tcb_at' ctPtr s\<rbrace>
-    do y \<leftarrow> threadSet (tcbYieldTo_update (\<lambda>_. Some scPtr)) ctPtr;
-       setSchedContext scPtr (scYieldFrom_update (\<lambda>_. Some ctPtr) sc)
-    od
-    \<lbrace>\<lambda>_. invs'\<rbrace>"
-   apply (clarsimp simp: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-   apply (wp threadSet_valid_objs' threadSet_mdb' threadSet_iflive' threadSet_cap_to
-             threadSet_ifunsafe'T threadSet_ctes_ofT threadSet_valid_sched_pointers
-             sym_heap_sched_pointers_lift threadSet_tcbSchedNexts_of threadSet_tcbSchedPrevs_of
-             untyped_ranges_zero_lift valid_irq_node_lift valid_irq_handlers_lift''
-             hoare_vcg_const_imp_lift hoare_vcg_imp_lift' threadSet_valid_replies'
-          | clarsimp simp: tcb_cte_cases_def cteSizeBits_def cteCaps_of_def)+
+  "\<lbrace>\<lambda>s. invs' s \<and> sc_at' scPtr s \<and> valid_sched_context_size' sc
+        \<and> ex_nonz_cap_to' scPtr s \<and> ex_nonz_cap_to' ctPtr s \<and> tcb_at' ctPtr s\<rbrace>
+   do y \<leftarrow> threadSet (tcbYieldTo_update (\<lambda>_. Some scPtr)) ctPtr;
+      updateSchedContext scPtr (\<lambda>sc. scYieldFrom_update (\<lambda>_. Some ctPtr) sc)
+   od
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding updateSchedContext_def
+  apply (clarsimp simp: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (wp threadSet_valid_objs' threadSet_mdb' threadSet_iflive' threadSet_cap_to
+            threadSet_ifunsafe'T threadSet_ctes_ofT threadSet_valid_sched_pointers
+            sym_heap_sched_pointers_lift threadSet_tcbSchedNexts_of threadSet_tcbSchedPrevs_of
+            untyped_ranges_zero_lift valid_irq_node_lift valid_irq_handlers_lift''
+            hoare_vcg_const_imp_lift hoare_vcg_imp_lift' threadSet_valid_replies'
+            hoare_vcg_all_lift
+         | clarsimp simp: tcb_cte_cases_def cteSizeBits_def cteCaps_of_def)+
+  apply normalise_obj_at'
+  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   by (fastforce simp: obj_at_simps valid_tcb'_def tcb_cte_cases_def cteSizeBits_def comp_def
                       valid_sched_context'_def valid_sched_context_size'_def inQ_def refillSize_def)
 
@@ -925,6 +924,7 @@ lemma contextYieldToUpdateQueues_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: contextYieldToUpdateQueues_def)
   apply (rule bind_wp[OF _ get_sc_sp'], rename_tac sc)
+  apply (rule bind_wp[OF _ assert_sp], rename_tac sc)
   apply (rule bind_wp[OF _ getSchedulable_sp])
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule bind_wp[OF _ getCurThread_sp], rename_tac ctPtr)
@@ -955,13 +955,16 @@ crunch schedContextCompleteYieldTo
 lemma schedContextYiedTo_invs':
   "\<lbrace>invs' and ct_active' and ex_nonz_cap_to' scPtr
     and (\<lambda>s. obj_at' (\<lambda>sc. \<exists>t. scTCB sc = Some t) scPtr s)\<rbrace>
-   schedContextYieldTo scPtr buffer
+   schedContextYieldTo scPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: schedContextYieldTo_def)
-  apply (wpsimp wp: contextYieldToUpdateQueues_invs' setConsumed_invs'
+  unfolding schedContextYieldTo_def returnConsumed_def
+  apply (wpsimp wp: contextYieldToUpdateQueues_invs' setConsumed_invs' hoare_drop_imps
               simp: ct_in_state'_def
          | wps)+
-  by (fastforce simp: cur_tcb'_def)
+  apply normalise_obj_at'
+  apply (frule (1) invs'_ko_at_valid_sched_context')
+  apply (fastforce simp: valid_sched_context'_def cur_tcb'_def)
+  done
 
 lemma invokeSchedContext_invs':
   "\<lbrace>invs' and  ct_active' and valid_sc_inv' iv\<rbrace>
@@ -969,16 +972,12 @@ lemma invokeSchedContext_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: invokeSchedContext_def)
   apply (cases iv; clarsimp)
-      apply (wpsimp wp: setConsumed_invs')
+      apply (wpsimp wp: simp: returnConsumed_def)
      apply (rename_tac scPtr cap)
      apply (case_tac cap; clarsimp)
       apply (wpsimp wp: schedContextBindTCB_invs')
       apply (clarsimp simp: pred_tcb_at'_def obj_at_simps)
      apply (wpsimp wp: schedContextBindNtfn_invs')
-    apply (rename_tac scPtr cap)
-    apply (case_tac cap; clarsimp)
-     apply wpsimp
-     using global'_sc_no_ex_cap apply fastforce
     apply wpsimp
    apply wpsimp
    using global'_sc_no_ex_cap apply fastforce

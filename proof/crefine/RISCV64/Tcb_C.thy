@@ -3943,24 +3943,6 @@ sorry (* FIXME RT: decodeSetIPCBuffer_ccorres
   apply clarsimp
   done *)
 
-lemma bindNTFN_alignment_junk:
-  "\<lbrakk> is_aligned tcb tcbBlockSizeBits; bits \<le> ctcb_size_bits \<rbrakk>
-    \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr tcb) && ~~ mask bits = ptr_val (tcb_ptr_to_ctcb_ptr tcb)"
-  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def projectKOs)
-  apply (rule is_aligned_neg_mask_eq)
-  apply (erule aligned_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   by (auto simp add: is_aligned_def objBits_defs ctcb_offset_defs)
-
-lemma option_to_ctcb_ptr_canonical:
-  "\<lbrakk>pspace_canonical' s; tcb_at' tcb s\<rbrakk> \<Longrightarrow>
-     option_to_ctcb_ptr (Some tcb) = tcb_Ptr (sign_extend canonical_bit (ptr_val (tcb_ptr_to_ctcb_ptr tcb)))"
-  apply (clarsimp simp: option_to_ctcb_ptr_def)
-  apply (frule (1) obj_at'_is_canonical)
-  by (fastforce dest: canonical_address_tcb_ptr
-                simp: obj_at'_def objBits_simps' projectKOs canonical_address_sign_extended
-                      sign_extended_iff_sign_extend)
-
 lemma bindNotification_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and tcb_at' tcb)
     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}

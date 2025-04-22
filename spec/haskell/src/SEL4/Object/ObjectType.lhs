@@ -449,7 +449,7 @@ The "decodeInvocation" function parses the message, determines the operation tha
 >     liftM (uncurry InvokeDomain) $ decodeDomainInvocation label args extraCaps
 >
 > decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps False buffer =
->     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps) buffer
+>     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps)
 >
 > decodeInvocation label args _ _ SchedControlCap extraCaps False _ =
 >     liftM InvokeSchedControl $ decodeSchedControlInvocation label args (map fst extraCaps)
@@ -526,9 +526,8 @@ This function just dispatches invocations to the type-specific invocation functi
 >     withoutPreemption $ invokeIRQHandler invok
 >     return $ []
 >
-> performInvocation _ _ _ (InvokeSchedContext invok) = do
+> performInvocation _ _ _ (InvokeSchedContext invok) =
 >     withoutPreemption $ invokeSchedContext invok
->     return $ []
 >
 > performInvocation _ _ _ (InvokeSchedControl invok) = do
 >     withoutPreemption $ invokeSchedControlConfigureFlags invok

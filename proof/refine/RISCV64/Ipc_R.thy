@@ -4815,13 +4815,6 @@ lemma replyFromKernel_corres:
                  | fastforce)+
   done
 
-lemma rfk_invs':
-  "\<lbrace>invs' and tcb_at' t\<rbrace> replyFromKernel t r \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: replyFromKernel_def)
-  apply (cases r)
-  apply wpsimp
-  done
-
 crunch replyFromKernel
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
@@ -6007,7 +6000,7 @@ lemma replyUnlink_misc_heaps[wp]:
 lemma schedContextUpdateConsumed_scReplies_of[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. P (scReplies_of s) \<rbrace>"
   unfolding schedContextUpdateConsumed_def
-  apply (wpsimp simp: setSchedContext_def)
+  apply (wpsimp wp: updateSchedContext_wp)
   apply (clarsimp simp: opt_map_def if_distrib)
   apply (erule subst[where P=P, rotated], rule ext)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: option.splits)
@@ -6016,7 +6009,7 @@ lemma schedContextUpdateConsumed_scReplies_of[wp]:
 lemma schedContextUpdateConsumed_sc_tcbs_of[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. P (scTCBs_of s)\<rbrace>"
   unfolding schedContextUpdateConsumed_def
-  apply (wpsimp simp: setSchedContext_def)
+  apply (wpsimp wp: updateSchedContext_wp)
   apply (clarsimp simp: opt_map_def if_distrib)
   apply (erule subst[where P=P, rotated], rule ext)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: option.splits)
