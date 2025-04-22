@@ -1211,7 +1211,6 @@ lemma rf_sr_upd_safe[simp]:
     "armHSCurVCPU_' (globals (g y)) = armHSCurVCPU_' (globals y)"
     "armHSVCPUActive_' (globals (g y)) = armHSVCPUActive_' (globals y)"
     "ksCurFPUOwner_' (globals (g y)) = ksCurFPUOwner_' (globals y)"
-    "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"

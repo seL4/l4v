@@ -1646,12 +1646,9 @@ lemma typ_at_partial_overwrite_id2:
   "\<lbrakk> \<forall>x. tcb_at' (idx x) s \<rbrakk>
    \<Longrightarrow> typ_at' P p (ksPSpace_update (partial_overwrite idx f) s) = typ_at' P p s"
   apply (frule dom_partial_overwrite[where tsrs=f])
-  apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def ps_clear_def partial_overwrite_def
-                    split: if_split)
-  apply clarsimp
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def ps_clear_def partial_overwrite_def)
   apply (drule_tac x=x in spec)
-  apply (clarsimp simp: put_tcb_state_regs_def objBits_simps
-                        project_inject)
+  apply (clarsimp simp: put_tcb_state_regs_def objBits_simps)
   done
 
 lemma tcb_at_partial_overwrite:
@@ -1708,7 +1705,7 @@ lemma threadSet_isolatable:
   assumes v: "\<And>tcb. get_tcb_state_regs_tcb (f tcb) = get_tcb_state_regs_tcb tcb"
   assumes y: "\<And>tsr tcb. f (put_tcb_state_regs_tcb tsr tcb) = put_tcb_state_regs_tcb tsr (f tcb)"
   shows "thread_actions_isolatable idx (threadSet f t)"
-  apply (clarsimp simp: threadSet_def )
+  apply (clarsimp simp: threadSet_def)
   apply (subst setObject_assert_modify;
          simp add: objBits_2n objBits_simps tcbBlockSizeBits_def)+
   apply (clarsimp simp: thread_actions_isolatable_def isolate_thread_actions_def split_def

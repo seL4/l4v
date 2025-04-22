@@ -289,7 +289,7 @@ lemma ccorres_pre_getCurVCPU:
   apply (clarsimp simp: rf_sr_ksArchState_armHSCurVCPU)
   done
 
-lemma rf_sr_ksArchState_armHSCurFPU:
+lemma rf_sr_ksArchState_armKSCurFPUOwner:
   "(s, s') \<in> rf_sr \<Longrightarrow> cur_fpu_relation (armKSCurFPUOwner (ksArchState s)) (ksCurFPUOwner_' (globals s'))"
   by (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
 
@@ -313,7 +313,7 @@ lemma ccorres_pre_getCurFPUOwner:
      apply (rule cc)
     apply clarsimp
    apply assumption
-  apply (simp add: rf_sr_ksArchState_armHSCurFPU)
+  apply (simp add: rf_sr_ksArchState_armKSCurFPUOwner)
   done
 
 lemma getObject_tcb_wp':
