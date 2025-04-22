@@ -1506,9 +1506,7 @@ lemma mk_gsUntypedZeroRanges_correct:
   done
 
 
-definition
-  cstate_to_H :: "globals \<Rightarrow> kernel_state"
-where
+definition cstate_to_H :: "globals \<Rightarrow> kernel_state" where
   "cstate_to_H s \<equiv>
    \<lparr>ksPSpace = cstate_to_pspace_H s,
     gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),
