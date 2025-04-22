@@ -54,7 +54,7 @@ When a user-level task causes a fault or exception, represented in this model by
 >         Nothing -> return (5, [badge])
 >         Just scPtr -> do
 >             consumed <- schedContextUpdateConsumed scPtr
->             return (5, badge : setTimeArg consumed)
+>             return (5, badge : wordsOfTime consumed)
 
 > makeFaultMessage (ArchFault af) thread = makeArchFaultMessage af thread
 

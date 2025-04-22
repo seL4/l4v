@@ -155,7 +155,7 @@ where
      case (tcb_sched_context tcb) of None \<Rightarrow> return (5, [badge])
      | Some sc \<Rightarrow> do
          consumed \<leftarrow> sched_context_update_consumed sc;
-         return (5, badge # (ucast consumed) # [ucast (consumed >> 32)])
+         return (5, badge # words_from_time consumed)
        od
    od)"
 | "make_fault_msg (ArchFault af) thread = make_arch_fault_msg af thread " (* arch_fault *)

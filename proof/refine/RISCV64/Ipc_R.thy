@@ -1588,7 +1588,7 @@ lemma makeFaultMessage_corres:
            apply (fastforce dest!: state_relationD intro!: sc_at_cross simp: obj_at'_def)[1]
           apply (rule corres_guard_imp)
             apply (rule schedContextUpdateConsumed_corres)
-           apply (wpsimp simp: sched_context_update_consumed_def setTimeArg_def)+
+           apply (wpsimp simp: sched_context_update_consumed_def)+
     apply (fastforce dest!: valid_tcb_objs simp: valid_tcb_def valid_bound_obj_def obj_at_def)
    apply clarsimp
   apply (corresKsimp corres: makeArchFaultMessage_corres)

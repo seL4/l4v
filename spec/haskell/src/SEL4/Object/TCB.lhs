@@ -768,12 +768,6 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         SchedControlConfigureFlags -> decodeSchedControl_ConfigureFlags excaps args
 >         _ -> throw IllegalOperation
 
-> parseTimeArg :: Int -> [Word] -> Time
-> parseTimeArg i args = fromIntegral (args !! (i+1)) `shiftL` 32 + fromIntegral (args !! i)
-
-> setTimeArg :: Time -> [Word]
-> setTimeArg t = fromIntegral t : [fromIntegral $ t `shiftR` 32]
-
 \subsection{Checks}
 
 The "checkCapAt" function ensures that a capability of the same type and object reference remains at a given slot. It is used by the "ThreadControl" invocation, defined above.
