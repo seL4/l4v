@@ -96,3 +96,11 @@ asidRange = (0, (1 `shiftL` asidBits) - 1)
 
 asidHighBitsOf :: ASID -> ASID
 asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
+
+{- Time -}
+
+parseTimeArg :: Int -> [Word] -> Time
+parseTimeArg i args = fromIntegral (args !! i)
+
+wordsOfTime :: Time -> [Word]
+wordsOfTime t = [fromIntegral t]

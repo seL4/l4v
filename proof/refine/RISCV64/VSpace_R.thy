@@ -459,7 +459,6 @@ lemma setMessageInfo_corres:
   apply (simp add: message_info_to_data_eqv)
   done
 
-
 lemma set_mi_invs'[wp]: "\<lbrace>invs' and tcb_at' t\<rbrace> setMessageInfo t a \<lbrace>\<lambda>x. invs'\<rbrace>"
   by (simp add: setMessageInfo_def) wp
 
