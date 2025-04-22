@@ -109,7 +109,7 @@ object: obj1_0x9, the endpoint. Both UT1 and T1 contains:
 
   . one TCB (obj1_0xC07 and obj1_0xC08 resp.)
   . one vspace made up of one top-level page table (obj1_BF7 and obj1_0xBF9 resp.)
-  . each top-level pt contains a single page table (obj1_0xC00000 and obj1_0xC05000 resp.)
+  . each top-level pt contains a single page table (obj1_0xC000000000 and obj1_0xC050000000 resp.)
   . one cspace made up of one cnode (obj1_0x6 and obj1_0x7 resp.)
   . each cspace contains 4 caps:
          one to the tcb
@@ -131,7 +131,7 @@ obj1_0xC07(tcb)-->obj1_0x6(cnode)--->obj1_0x9(ep)<---obj1_0x7(cnode)<--obj1_0xC0
 obj1_0xBF7(pt)<-----                                    -------> obj1_0xBF9(pt)
   |                                                                |
   V                                                                V
-obj1_0xC00000(pt)                                                obj1_0xC05000(pt)
+obj1_0xC000000000(pt)                                                obj1_0xC050000000(pt)
 
 
 (the references are derived from the dump of the SAC system)
@@ -170,7 +170,7 @@ where
   "asid1_0xBF9 \<equiv> 2<<asid_low_bits"
 
 lemma "asid_high_bits_of asid1_0xBF9 \<noteq> asid_high_bits_of asid1_0xBF7"
-by (simp add: asid1_0xBF7_def asid_high_bits_of_def asid1_0xBF9_def asid_low_bits_def)
+  by (simp add: asid1_0xBF7_def asid_high_bits_of_def asid1_0xBF9_def asid_low_bits_def)
 
 
 text \<open>UT1's CSpace\<close>
@@ -184,7 +184,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap 6 undefined undefined,
         (the_nat_to_bl_10 3)
-            \<mapsto> ArchObjectCap (PageTableCap 0xBF7 (Some (asid1_0xBF7,0))),
+            \<mapsto> ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T (Some (asid1_0xBF7,0))),
         (the_nat_to_bl_10 318)
             \<mapsto> EndpointCap 9 0 {AllowSend} )"
 
@@ -206,7 +206,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> ArchObjectCap (PageTableCap 0xBF9 (Some (asid1_0xBF9,0))),
+           \<mapsto> ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T (Some (asid1_0xBF9,0))),
         (the_nat_to_bl_10 318)
            \<mapsto> EndpointCap 9 0 {AllowRecv}) "
 
@@ -227,23 +227,20 @@ where
 text \<open>UT1's VSpace\<close>
 
 definition
-  pt1_0xC00000 :: pt
+  pt1_0xC000000000 :: pt
 where
-  "pt1_0xC00000 \<equiv> (\<lambda>_. InvalidPTE)"
+  "pt1_0xC000000000 \<equiv> NormalPT (\<lambda>_. InvalidPTE)"
 
 definition
-  obj1_0xC00000 :: kernel_object
+  obj1_0xC000000000 :: kernel_object
 where
-  "obj1_0xC00000 \<equiv> ArchObj (PageTable pt1_0xC00000)"
+  "obj1_0xC000000000 \<equiv> ArchObj (PageTable pt1_0xC000000000)"
 
 definition
   pt1_0xBF7 :: pt
 where
-  "pt1_0xBF7 \<equiv>
-    (\<lambda>_. InvalidPTE)
-     (0 := PageTablePTE
-              (ucast (addrFromPPtr 0xC00000 >> pageBits))
-              undefined )"
+  "pt1_0xBF7 \<equiv> VSRootPT ((\<lambda>_. InvalidPTE)
+                           (0 := PageTablePTE (ppn_from_pptr 0xC000000000)))"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -258,26 +255,22 @@ text \<open>T1's VSpace\<close>
 
 
 definition
-  pt1_0xC05000 :: pt
+  pt1_0xC050000000 :: pt
 where
-  "pt1_0xC05000 \<equiv>
-    (\<lambda>_. InvalidPTE)"
+  "pt1_0xC050000000 \<equiv> NormalPT (\<lambda>_. InvalidPTE)"
 
 
 definition
-  obj1_0xC05000 :: kernel_object
+  obj1_0xC050000000 :: kernel_object
 where
-  "obj1_0xC05000 \<equiv> ArchObj (PageTable pt1_0xC05000)"
+  "obj1_0xC050000000 \<equiv> ArchObj (PageTable pt1_0xC050000000)"
 
 
 definition
   pt1_0xBF9 :: pt
 where
-  "pt1_0xBF9 \<equiv>
-    (\<lambda>_. InvalidPTE)
-     (0 := PageTablePTE
-             (ucast (addrFromPPtr 0xC05000 >> pageBits))
-             undefined )"
+  "pt1_0xBF9 \<equiv> VSRootPT ((\<lambda>_. InvalidPTE)
+                           (0 := PageTablePTE (ppn_from_pptr 0xC050000000)))"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -296,7 +289,7 @@ where
   "obj1_0xC07 \<equiv>
    TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined,
-     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF7 (Some (asid1_0xBF7, 0))),
+     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T (Some (asid1_0xBF7, 0))),
      tcb_reply              = ReplyCap 0xC07 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
@@ -310,8 +303,7 @@ where
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
      tcb_flags              = undefined,
-     tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
-
+     tcb_arch               = \<lparr>tcb_context = undefined, tcb_vcpu = None, tcb_cur_fpu = False\<rparr>\<rparr>"
 
 text \<open>T1's tcb\<close>
 
@@ -321,7 +313,7 @@ where
   "obj1_0xC08 \<equiv>
    TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined,
-     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF9 (Some (asid1_0xBF9, 0))),
+     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T (Some (asid1_0xBF9, 0))),
      tcb_reply              = ReplyCap 0xC08 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
@@ -335,7 +327,7 @@ where
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
      tcb_flags              = undefined,
-     tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
+     tcb_arch               = \<lparr>tcb_context = undefined, tcb_vcpu = None, tcb_cur_fpu = False\<rparr>\<rparr>"
 
 definition
  "obj1_10 \<equiv> CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
@@ -355,19 +347,19 @@ where
            0xBF9 \<mapsto> obj1_0xBF9,
            0xC07 \<mapsto> obj1_0xC07,
            0xC08 \<mapsto> obj1_0xC08,
-           0xC00000 \<mapsto> obj1_0xC00000,
-           0xC05000 \<mapsto> obj1_0xC05000]"
+           0xC000000000 \<mapsto> obj1_0xC000000000,
+           0xC050000000 \<mapsto> obj1_0xC050000000]"
 
 lemmas kh1_obj_def =
   obj1_0x6_def obj1_0x7_def obj1_0x9_def obj1_10_def obj1_0xBF7_def obj1_0xBF9_def
-  obj1_0xC00000_def obj1_0xC05000_def obj1_0xC07_def obj1_0xC08_def
+  obj1_0xC000000000_def obj1_0xC050000000_def obj1_0xC07_def obj1_0xC08_def
 
 definition exst1 :: "det_ext" where
   "exst1 \<equiv> \<lparr>work_units_completed_internal = undefined,
              cdt_list_internal = undefined\<rparr>"
 
 definition
-  s1 :: "det_ext state"
+  s1 :: "det_state"
 where
   "s1 \<equiv>  \<lparr>
     kheap = kh1,
@@ -385,9 +377,14 @@ where
     interrupt_irq_node = (\<lambda>_. 10),
     interrupt_states = undefined,
     arch_state = \<lparr>
-        riscv_asid_table = (\<lambda>_. None),
-        riscv_global_pts = undefined,
-        riscv_kernel_vspace = undefined
+        arm_asid_table = Map.empty,
+        arm_kernel_vspace = init_vspace_uses,
+        arm_vmid_table = Map.empty,
+        arm_next_vmid = 0,
+        arm_us_global_vspace = arm_global_pt_ptr,
+        arm_current_vcpu = None,
+        arm_gicvcpu_numlistregs = 20,
+        arm_current_fpu_owner = None
         \<rparr>,
      exst = exst1
     \<rparr>"
@@ -410,8 +407,8 @@ where
       0xA := IRQ1,
       0xBF7 := UT1,
       0xBF9 := T1,
-      0xC00000 := UT1,
-      0xC05000 := T1,
+      0xC000000000 := UT1,
+      0xC050000000 := T1,
       0xC07 := UT1,
       0xC08 := T1 )"
 
@@ -422,8 +419,8 @@ lemma Sys1AgentMap_simps:
   "Sys1AgentMap 0xA = IRQ1"
   "Sys1AgentMap 0xBF7 = UT1"
   "Sys1AgentMap 0xBF9 = T1"
-  "Sys1AgentMap 0xC00000 = UT1"
-  "Sys1AgentMap 0xC05000 = T1"
+  "Sys1AgentMap 0xC000000000 = UT1"
+  "Sys1AgentMap 0xC050000000 = T1"
   "Sys1AgentMap 0xC07 = UT1"
   "Sys1AgentMap 0xC08 = T1"
   unfolding Sys1AgentMap_def by simp_all
@@ -494,19 +491,19 @@ lemma s1_caps_of_state :
      (p,cap) \<in>
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 0xC07),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF7 (Some (asid1_0xBF7, 0)))),
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T (Some (asid1_0xBF7, 0)))),
          ((6::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowSend}),
          ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 0xC08),
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF9 (Some (asid1_0xBF9, 0)))),
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T (Some (asid1_0xBF9, 0)))),
          ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowRecv}) ,
          ((0xC07::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
-         ((0xC07::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF7 (Some (asid1_0xBF7, 0)))),
+         ((0xC07::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T (Some (asid1_0xBF7, 0)))),
          ((0xC07::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC07 True {AllowGrant,AllowWrite}),
          ((0xC07::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((0xC07::obj_ref, (tcb_cnode_index 4)), NullCap),
          ((0xC08::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
-         ((0xC08::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF9 (Some (asid1_0xBF9, 0)))),
+         ((0xC08::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T (Some (asid1_0xBF9, 0)))),
          ((0xC08::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC08 True {AllowGrant,AllowWrite}),
          ((0xC08::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((0xC08::obj_ref, (tcb_cnode_index 4)), NullCap)} "
@@ -532,20 +529,17 @@ lemma Sys1_wellformed: "pas_wellformed Sys1PAS"
   done
 
 lemma tcb_states_of_state_1:
-  "tcb_states_of_state s1 = [0xC08 \<mapsto> thread_state.BlockedOnReceive 9 \<lparr> receiver_can_grant = False \<rparr>,  0xC07 \<mapsto> thread_state.Running ]"
-  unfolding s1_def tcb_states_of_state_def
-  apply (rule ext)
-  apply (simp add: get_tcb_def)
-  apply (simp add: kh1_def kh1_obj_def )
-  done
+  "tcb_states_of_state s1 = [0xC08 \<mapsto> thread_state.BlockedOnReceive 9 \<lparr> receiver_can_grant = False \<rparr>,
+                             0xC07 \<mapsto> thread_state.Running ]"
+  unfolding tcb_states_of_state_def
+  by (fastforce simp: get_tcb_def s1_def kh1_def kh1_obj_def
+               split: option.splits kernel_object.splits)
 
 lemma thread_bound_ntfns_1:
   "thread_bound_ntfns s1 = Map.empty"
   unfolding s1_def thread_bound_ntfns_def
-  apply (rule ext)
-  apply (simp add: get_tcb_def)
-  apply (simp add: kh1_def kh1_obj_def )
-  done
+  by (fastforce simp: get_tcb_def kh1_def kh1_obj_def
+               split: option.splits kernel_object.splits)
 
 declare AllowSend_def[simp] AllowRecv_def[simp]
 
@@ -560,26 +554,30 @@ lemma domains_of_state_s1:
                 split: if_split_asm
                intro!: domtcbs)
 
+lemma vs_refs_aux_empty_pt[simp]:
+  "vs_refs_aux lvl (PageTable (empty_pt pt_t)) = {}"
+  by (clarsimp simp: vs_refs_aux_def graph_of_def pte_ref2_def empty_pt_def)
+
+lemma is_aligned_0xC000000000[simp]:
+  "ptrFromPAddr (paddr_from_ppn (ppn_from_pptr 0xC000000000)) = 0xC000000000"
+  apply (subst ptrFromPAddr_addr_from_ppn)
+  by (auto simp: bit_simps is_aligned_mask mask_def pptr_base_def pptrBase_def pptrTop_def)
+
+lemma is_aligned_0xC050000000[simp]:
+  "ptrFromPAddr (paddr_from_ppn (ppn_from_pptr 0xC050000000)) = 0xC050000000"
+  apply (subst ptrFromPAddr_addr_from_ppn)
+  by (auto simp: bit_simps is_aligned_mask mask_def pptr_base_def pptrBase_def pptrTop_def)
+
 lemma tcb_domain_map_wellformed_s1:
   "tcb_domain_map_wellformed Sys1PAS s1"
   by (clarsimp simp: tcb_domain_map_wellformed_aux_def Sys1PAS_def domains_of_state_s1
-                        Sys1AgentMap_simps Sys1DomainMap_def)
+                     Sys1AgentMap_simps Sys1DomainMap_def)
 
-lemma vs_refs_aux_empty_pt[simp]:
-  "vs_refs_aux lvl (PageTable empty_pt) = {}"
-  by (clarsimp simp: vs_refs_aux_def graph_of_def pte_ref2_def)
-
-lemma is_aligned_0xC00000[simp]:
-  "ptrFromPAddr (addr_from_ppn (UCAST(64 \<rightarrow> 52) (addrFromPPtr 0xC00000 >> pageBits))) = 0xC00000"
-  by (subst ptrFromPAddr_addr_from_ppn; fastforce simp: bit_simps is_aligned_mask mask_def)
-
-lemma is_aligned_0xC05000[simp]:
-  "ptrFromPAddr (addr_from_ppn (UCAST(64 \<rightarrow> 52) (addrFromPPtr 0xC05000 >> pageBits))) = 0xC05000"
-  by (subst ptrFromPAddr_addr_from_ppn; fastforce simp: bit_simps is_aligned_mask mask_def)
-
-lemma state_hyp_refs_of_s1_empty[simp]:
-  "state_hyp_refs_of s1 = (\<lambda>_. {})"
-  by (auto simp: state_hyp_refs_of_def hyp_refs_of_def split: option.splits kernel_object.splits)
+lemma state_hyp_refs_of_s1[simp]:
+  "state_hyp_refs_of s1 p = {}"
+  by (auto simp: s1_def kh1_def kh1_obj_def refs_of_ao_def
+                 state_hyp_refs_of_def hyp_refs_of_def tcb_hyp_refs_def
+          split: option.splits kernel_object.splits if_splits)
 
 lemma "pas_refined Sys1PAS s1"
   apply (clarsimp simp: pas_refined_def)
@@ -599,11 +597,11 @@ lemma "pas_refined Sys1PAS s1"
                complete_AuthGraph_def
                Sys1AuthGraph_aux_def
                split: if_splits)
-       apply (simp add:  thread_bound_ntfns_1)
+       apply (simp add: thread_bound_ntfns_1)
       apply (simp add: s1_def) (* this is OK because cdt is empty..*)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
     apply (fastforce simp: state_vrefs_def vs_refs_aux_def s1_def kh1_def kh1_obj_def
-                           pt1_0xC00000_def pt1_0xC05000_def pt1_0xBF9_def pt1_0xBF7_def
+                           pt1_0xC000000000_def pt1_0xC050000000_def pt1_0xBF9_def pt1_0xBF7_def
                            Sys1AuthGraph_def Sys1AuthGraph_aux_def Sys1AgentMap_simps
                            complete_AuthGraph_def ptr_range_def pte_ref2_def opt_map_def
                     dest!: graph_ofD split: if_splits)
@@ -614,7 +612,7 @@ lemma "pas_refined Sys1PAS s1"
                             Sys1AuthGraph_aux_def complete_AuthGraph_def cap_auth_conferred_def
                             asid1_0xBF9_def asid1_0xBF7_def asid_low_bits_def asid_high_bits_of_def)
     apply (fastforce simp: state_vrefs_def vs_refs_aux_def s1_def kh1_def kh1_obj_def
-                           pt1_0xC00000_def pt1_0xC05000_def pt1_0xBF9_def pt1_0xBF7_def
+                           pt1_0xC000000000_def pt1_0xC050000000_def pt1_0xBF9_def pt1_0xBF7_def
                            Sys1AuthGraph_def Sys1AuthGraph_aux_def Sys1AgentMap_simps
                            complete_AuthGraph_def ptr_range_def pte_ref2_def opt_map_def
                     dest!: graph_ofD split: if_splits)
@@ -641,7 +639,7 @@ Both UT2 and T2 contains:
 
   . one TCB (obj2_0xC07 and obj2_0xC08 resp.)
   . one vspace made up of one top-level page table (obj2_0xBF7 and obj2_0xBF9 resp.)
-  . each top-level pt contains a single page table (obj2_0xC00000 and obj2_0xC05000 resp.)
+  . each top-level pt contains a single page table (obj2_0xC000000000 and obj2_0xC050000000 resp.)
   . one cspace made up of one cnode (obj2_0x6 and obj2_0x7 resp.)
   . each cspace contains 4 caps:
          one to the tcb
@@ -662,7 +660,7 @@ obj2_0xC07(tcb)-->obj2_0x6(cnode)--->obj2_5(cnode)<---obj2_0x7(cnode)<--obj2_0xC
 obj2_0xBF7(pt)<-----                                    -------> obj2_0xBF9(pt)
   |                                                                |
   V                                                                V
-obj2_0xC00000(pt)                                                obj2_0xC05000(pt)
+obj2_0xC000000000(pt)                                                obj2_0xC050000000(pt)
 
 
 (the references are derived from the dump of the SAC system)
@@ -703,11 +701,10 @@ where
   "asid2_0xBF9 \<equiv> 2<<asid_low_bits"
 
 lemma "asid_high_bits_of asid2_0xBF9 \<noteq> asid_high_bits_of asid2_0xBF7"
-by (simp add: asid2_0xBF7_def asid_high_bits_of_def asid2_0xBF9_def asid_low_bits_def)
+  by (simp add: asid2_0xBF7_def asid_high_bits_of_def asid2_0xBF9_def asid_low_bits_def)
 
 
-
-text \<open>the intermediaite CSpace\<close>
+text \<open>the intermediate CSpace\<close>
 
 definition
   caps2_5 :: cnode_contents
@@ -719,7 +716,6 @@ definition
   obj2_5 :: kernel_object
 where
   "obj2_5 \<equiv> CNode 10 caps2_5"
-
 
 
 text \<open>UT2's CSpace\<close>
@@ -734,7 +730,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap 6 undefined undefined,
         (the_nat_to_bl_10 3)
-            \<mapsto> ArchObjectCap (PageTableCap 0xBF7
+            \<mapsto> ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T
                                              (Some (asid2_0xBF7, 0))),
         (the_nat_to_bl_10 4)
             \<mapsto> CNodeCap 5 undefined undefined )"
@@ -757,7 +753,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> ArchObjectCap (PageTableCap 0xBF9
+           \<mapsto> ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T
                                             (Some (asid2_0xBF9, 0))),
         (the_nat_to_bl_10 4)
             \<mapsto> CNodeCap 5 undefined undefined) "
@@ -779,24 +775,21 @@ where
 text \<open>UT2's VSpace\<close>
 
 definition
-  pt2_0xC00000 :: pt
+  pt2_0xC000000000 :: pt
 where
-  "pt2_0xC00000 \<equiv> (\<lambda>_. InvalidPTE)"
+  "pt2_0xC000000000 \<equiv> NormalPT (\<lambda>_. InvalidPTE)"
 
 definition
-  obj2_0xC00000 :: kernel_object
+  obj2_0xC000000000 :: kernel_object
 where
-  "obj2_0xC00000 \<equiv> ArchObj (PageTable pt2_0xC00000)"
+  "obj2_0xC000000000 \<equiv> ArchObj (PageTable pt2_0xC000000000)"
 
 
 definition
   pt2_0xBF7 :: pt
 where
-  "pt2_0xBF7 \<equiv>
-    (\<lambda>_. InvalidPTE)
-     (0 := PageTablePTE
-              (ucast (addrFromPPtr 0xC00000 >> pageBits))
-              undefined )"
+  "pt2_0xBF7 \<equiv> VSRootPT ((\<lambda>_. InvalidPTE)
+                           (0 := PageTablePTE (ppn_from_pptr 0xC000000000)))"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -811,25 +804,21 @@ text \<open>T1's VSpace\<close>
 
 
 definition
-  pt2_0xC05000 :: pt
+  pt2_0xC050000000 :: pt
 where
-  "pt2_0xC05000 \<equiv>
-    (\<lambda>_. InvalidPTE)"
+  "pt2_0xC050000000 \<equiv> NormalPT (\<lambda>_. InvalidPTE)"
 
 definition
-  obj2_0xC05000 :: kernel_object
+  obj2_0xC050000000 :: kernel_object
 where
-  "obj2_0xC05000 \<equiv> ArchObj (PageTable pt2_0xC05000)"
+  "obj2_0xC050000000 \<equiv> ArchObj (PageTable pt2_0xC050000000)"
 
 
 definition
   pt2_0xBF9 :: pt
 where
-  "pt2_0xBF9 \<equiv>
-    (\<lambda>_. InvalidPTE)
-     (0 := PageTablePTE
-             (ucast (addrFromPPtr 0xC05000 >> pageBits))
-             undefined )"
+  "pt2_0xBF9 \<equiv> VSRootPT ((\<lambda>_. InvalidPTE)
+                           (0 := PageTablePTE (ppn_from_pptr 0xC050000000)))"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -848,7 +837,7 @@ where
   "obj2_0xC07 \<equiv>
    TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined ,
-     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF7 (Some (asid2_0xBF7, 0))),
+     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T (Some (asid2_0xBF7, 0))),
      tcb_reply              = ReplyCap 0xC07 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
@@ -862,7 +851,7 @@ where
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
      tcb_flags              = undefined,
-     tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
+     tcb_arch               = \<lparr>tcb_context = undefined, tcb_vcpu = None, tcb_cur_fpu = False\<rparr>\<rparr>"
 
 
 text \<open>T1's tcb\<close>
@@ -873,7 +862,7 @@ where
   "obj2_0xC08 \<equiv>
    TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined ,
-     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF9 (Some (asid2_0xBF9,0))),
+     tcb_vtable             = ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T (Some (asid2_0xBF9,0))),
      tcb_reply              = ReplyCap 0xC08 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
@@ -887,7 +876,8 @@ where
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
      tcb_flags              = undefined,
-     tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
+     tcb_arch               = \<lparr>tcb_context = undefined, tcb_vcpu = None, tcb_cur_fpu = False\<rparr>\<rparr>"
+
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)
@@ -900,18 +890,18 @@ where
            0x9 \<mapsto> obj2_0x9,
            0xBF7 \<mapsto> obj2_0xBF7,
            0xBF9 \<mapsto> obj2_0xBF9,
-           0xC00000 \<mapsto> obj2_0xC00000,
-           0xC05000 \<mapsto> obj2_0xC05000,
+           0xC000000000 \<mapsto> obj2_0xC000000000,
+           0xC050000000 \<mapsto> obj2_0xC050000000,
            0xC07 \<mapsto> obj2_0xC07,
            0xC08 \<mapsto> obj2_0xC08 ]"
 
 lemmas kh2_obj_def =
   obj2_0x6_def obj2_0x7_def obj2_0x9_def obj2_0xBF7_def obj2_0xBF9_def
-  obj2_0xC00000_def obj2_0xC05000_def obj2_0xC07_def obj2_0xC08_def
+  obj2_0xC000000000_def obj2_0xC050000000_def obj2_0xC07_def obj2_0xC08_def
 
 
 definition
-  s2 :: "det_ext state"
+  s2 :: "det_state"
 where
   "s2 \<equiv>  \<lparr>
     kheap = kh2,
@@ -929,9 +919,14 @@ where
     interrupt_irq_node = (\<lambda>_. 9001),
     interrupt_states = undefined,
     arch_state = \<lparr>
-        riscv_asid_table = (\<lambda>_. None),
-        riscv_global_pts = undefined,
-        riscv_kernel_vspace = undefined
+        arm_asid_table = Map.empty,
+        arm_kernel_vspace = init_vspace_uses,
+        arm_vmid_table = Map.empty,
+        arm_next_vmid = 0,
+        arm_us_global_vspace = arm_global_pt_ptr,
+        arm_current_vcpu = None,
+        arm_gicvcpu_numlistregs = 20,
+        arm_current_fpu_owner = None
         \<rparr>,
     exst = exst1
     \<rparr>"
@@ -954,8 +949,8 @@ where
       0x9 := T2,
       0xBF7 := UT2,
       0xBF9 := T2,
-      0xC00000 := UT2,
-      0xC05000 := T2,
+      0xC000000000 := UT2,
+      0xC050000000 := T2,
       0xC07 := UT2,
       0xC08 := T2,
       9001 := IRQ2 )"
@@ -986,10 +981,9 @@ definition Sys2DomainMap :: "Sys2Labels agent_domain_map" where
 
 definition Sys2PAS :: "Sys2Labels PAS" where
   "Sys2PAS \<equiv> \<lparr> pasObjectAbs = Sys2AgentMap, pasASIDAbs = Sys2ASIDMap,
-              pasIRQAbs = (\<lambda>_. IRQ2),
-              pasPolicy = Sys2AuthGraph, pasSubject = UT2, pasMayActivate = True, pasMayEditReadyQueues = True,
-              pasMaySendIrqs = True, pasDomainAbs = Sys2DomainMap \<rparr>"
-
+               pasIRQAbs = (\<lambda>_. IRQ2),
+               pasPolicy = Sys2AuthGraph, pasSubject = UT2, pasMayActivate = True,
+               pasMayEditReadyQueues = True, pasMaySendIrqs = True, pasDomainAbs = Sys2DomainMap \<rparr>"
 
 
 subsubsection \<open>Proof of pas_refined for Sys2\<close>
@@ -1020,19 +1014,19 @@ lemma s2_caps_of_state :
      (p,cap) \<in>
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 0xC07),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF7 (Some (asid2_0xBF7, 0)))),
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T (Some (asid2_0xBF7, 0)))),
          ((6::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
          ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 0xC08),
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF9 (Some (asid2_0xBF9, 0)))),
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T (Some (asid2_0xBF9, 0)))),
          ((7::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
          ((0xC07::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
-         ((0xC07::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF7 (Some (asid2_0xBF7, 0)))),
+         ((0xC07::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF7 VSRootPT_T (Some (asid2_0xBF7, 0)))),
          ((0xC07::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC07 True {AllowGrant,AllowWrite}),
          ((0xC07::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((0xC07::obj_ref, (tcb_cnode_index 4)), NullCap),
          ((0xC08::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
-         ((0xC08::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF9 (Some (asid2_0xBF9, 0)))),
+         ((0xC08::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF9 VSRootPT_T (Some (asid2_0xBF9, 0)))),
          ((0xC08::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC08 True {AllowGrant,AllowWrite}),
          ((0xC08::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((0xC08::obj_ref, (tcb_cnode_index 4)), NullCap)} "
@@ -1047,11 +1041,8 @@ lemma s2_caps_of_state :
   done
 
 lemma Sys2_wellformed: "pas_wellformed Sys2PAS"
-  apply (clarsimp simp: Sys2PAS_def policy_wellformed_def)
-  apply (intro conjI)
-  apply (simp_all add: Sys2AuthGraph_def complete_AuthGraph_def
-                       Sys2AuthGraph_aux_def)
-  done
+  by (clarsimp simp: policy_wellformed_def Sys2PAS_def Sys2AuthGraph_def
+                     Sys2AuthGraph_aux_def complete_AuthGraph_def)
 
 lemma Sys2AgentMap_simps:
   "Sys2AgentMap 5 = UT2"
@@ -1060,8 +1051,8 @@ lemma Sys2AgentMap_simps:
   "Sys2AgentMap 9 = T2"
   "Sys2AgentMap 0xBF7 = UT2"
   "Sys2AgentMap 0xBF9 = T2"
-  "Sys2AgentMap 0xC00000 = UT2"
-  "Sys2AgentMap 0xC05000 = T2"
+  "Sys2AgentMap 0xC000000000 = UT2"
+  "Sys2AgentMap 0xC050000000 = T2"
   "Sys2AgentMap 0xC07 = UT2"
   "Sys2AgentMap 0xC08 = T2"
   "Sys2AgentMap 9001 = IRQ2"
@@ -1078,22 +1069,22 @@ lemma domains_of_state_s2:
                 split: if_split_asm
                intro!: domtcbs)
 
+lemma thread_bound_ntfns_2:
+  "thread_bound_ntfns s2 = Map.empty"
+  unfolding s2_def thread_bound_ntfns_def
+  by (fastforce simp: get_tcb_def kh2_def kh2_obj_def
+               split: option.splits kernel_object.splits)
+
 lemma tcb_domain_map_wellformed_s2:
   "tcb_domain_map_wellformed Sys2PAS s2"
   by (clarsimp simp: tcb_domain_map_wellformed_aux_def Sys2PAS_def domains_of_state_s2
-                        Sys2AgentMap_simps Sys2DomainMap_def)
+                     Sys2AgentMap_simps Sys2DomainMap_def)
 
-lemma thread_bound_ntfns_2[simp]:
-  "thread_bound_ntfns s2 = Map.empty"
-  unfolding s2_def thread_bound_ntfns_def
-  apply (rule ext)
-  apply (simp add: get_tcb_def)
-  apply (simp add: kh2_def kh2_obj_def)
-  done
-
-lemma state_hyp_refs_of_s2_empty[simp]:
-  "state_hyp_refs_of s2 = (\<lambda>_. {})"
-  by (auto simp: state_hyp_refs_of_def hyp_refs_of_def split: option.splits kernel_object.splits)
+lemma state_hyp_refs_of_s2[simp]:
+  "state_hyp_refs_of s2 p = {}"
+  by (auto simp: s2_def kh2_def kh2_obj_def refs_of_ao_def
+                 state_hyp_refs_of_def hyp_refs_of_def tcb_hyp_refs_def
+          split: option.splits kernel_object.splits if_splits)
 
 lemma "pas_refined Sys2PAS s2"
   apply (clarsimp simp: pas_refined_def)
@@ -1105,39 +1096,40 @@ lemma "pas_refined Sys2PAS s2"
     apply (clarsimp simp: auth_graph_map_def
                           Sys2PAS_def
                           state_objs_to_policy_def
-                          state_bits_to_policy_def)
+                          state_bits_to_policy_def tcb_domain_map_wellformed_aux_def)+
     apply (erule state_bits_to_policyp.cases, simp_all)
+          apply (drule s2_caps_of_state, clarsimp)
+          apply (elim disjE, simp_all add: cap_auth_conferred_def
+                                           Sys2AgentMap_simps
+                                           Sys2AuthGraph_def Sys2AuthGraph_aux_def
+                                           complete_AuthGraph_def
+                               split: if_split_asm)[1]
          apply (drule s2_caps_of_state, clarsimp)
-         apply (elim disjE, simp_all add: cap_auth_conferred_def
-                                          Sys2AgentMap_simps
-                                          Sys2AuthGraph_def Sys2AuthGraph_aux_def
-                                          complete_AuthGraph_def
-                              split: if_split_asm)[1]
-        apply (drule s2_caps_of_state, clarsimp)
-        apply (elim disjE, simp_all)[1]
-       apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def
-                       split: if_splits)
-       apply (clarsimp split:if_splits option.splits
-                       simp: thread_st_auth_def tcb_states_of_state_def
-                             Sys2AgentMap_simps Sys2AuthGraph_def
-                             complete_AuthGraph_def Sys2AuthGraph_aux_def
-                      dest!: get_tcb_SomeD)
+         apply (elim disjE, simp_all)[1]
+        apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def
+                        split: if_splits)
+        apply (clarsimp split:if_splits option.splits
+                        simp: thread_st_auth_def tcb_states_of_state_def
+                              Sys2AgentMap_simps Sys2AuthGraph_def
+                              complete_AuthGraph_def Sys2AuthGraph_aux_def
+                       dest!: get_tcb_SomeD)
+       apply (simp add: thread_bound_ntfns_2)
       apply (simp add: s2_def) (* this is OK because cdt is empty..*)
      apply (simp add: s2_def) (* this is OK because cdt is empty..*)
     apply (fastforce simp: state_vrefs_def vs_refs_aux_def s2_def kh2_def kh2_obj_def pt2_0xBF9_def
-                           pt2_0xBF7_def pt2_0xC05000_def pt2_0xC00000_def Sys2AgentMap_simps
+                           pt2_0xBF7_def pt2_0xC050000000_def pt2_0xC000000000_def Sys2AgentMap_simps
                            Sys2AuthGraph_def Sys2AuthGraph_aux_def complete_AuthGraph_def
                            pte_ref2_def graph_of_def opt_map_def ptr_range_def
                     split: if_splits)
    apply clarsimp
    apply (erule state_asids_to_policy_aux.cases)
-    apply clarsimp
-    apply (fastforce simp: Sys2PAS_def Sys2AuthGraph_def Sys2AuthGraph_aux_def
-                           complete_AuthGraph_def Sys2AgentMap_simps asid_low_bits_def
-                           Sys2ASIDMap_def asid2_0xBF7_def asid2_0xBF9_def
-                    dest!: s2_caps_of_state)
-   apply (clarsimp simp: state_vrefs_def vs_refs_aux_def s2_def kh2_def kh2_obj_def
-                  split: if_splits)
+     apply clarsimp
+     apply (fastforce simp: Sys2PAS_def Sys2AuthGraph_def Sys2AuthGraph_aux_def
+                            complete_AuthGraph_def Sys2AgentMap_simps asid_low_bits_def
+                            Sys2ASIDMap_def asid2_0xBF7_def asid2_0xBF9_def
+                     dest!: s2_caps_of_state)
+    apply (clarsimp simp: state_vrefs_def vs_refs_aux_def s2_def kh2_def kh2_obj_def
+                   split: if_splits)
    apply (clarsimp simp: s2_def)
   apply (clarsimp)
   apply (erule state_irqs_to_policy_aux.cases)

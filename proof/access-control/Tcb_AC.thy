@@ -240,10 +240,10 @@ lemma sbn_bind_respects:
     K (aag_has_auth_to aag Receive ntfn \<and> is_subject aag t)\<rbrace>
    set_bound_notification t (Some ntfn)
    \<lbrace>\<lambda>_. integrity aag X st \<rbrace>"
-  apply (simp add: set_bound_notification_def)
-  apply (wpsimp wp: set_object_wp)
+  apply (wpsimp wp: set_object_wp simp: set_bound_notification_def)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def integrity_asids_kh_upds)
+  apply (clarsimp simp: integrity_def integrity_arch_kh_upds
+                        obj_at_def pred_tcb_at_def get_tcb_def)
   done
 
 lemma bind_notification_respects:
@@ -290,13 +290,13 @@ locale Tcb_AC_1 =
      arch_post_modify_registers cur t
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   and arch_post_set_flags_respects[wp]:
-    "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
+    "\<lbrace>integrity aag X st and valid_cur_fpu\<rbrace>
      arch_post_set_flags t flags
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   assumes arch_post_set_flags_pas_refined[wp]:
     "arch_post_set_flags t flags \<lbrace>pas_refined aag\<rbrace>"
   and arch_get_sanitise_register_info_inv[wp]:
-    "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
+    "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
   and invoke_tcb_tc_respects_aag:
     "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
                          and tcb_inv_wf (ThreadControl t sl ep mcp priority croot vroot buf)
@@ -307,6 +307,7 @@ begin
 
 crunch set_flags
   for integrity_autarch[wp]: "integrity aag X st"
+  and valid_cur_fpu[wp]: "valid_cur_fpu"
 
 lemma invoke_tcb_set_flags_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
@@ -420,7 +421,7 @@ lemma decode_set_ipc_buffer_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                         \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_set_ipc_buffer msg (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag rv\<rbrace>, -"
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_ipc_buffer_def authorised_tcb_inv_def
   apply (cases "excaps ! 0")
   apply (clarsimp cong: list.case_cong split del: if_split)
@@ -437,7 +438,7 @@ lemma decode_set_space_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                         \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_set_space ws (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag rv\<rbrace>, -"
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_space_def authorised_tcb_inv_def
   apply (rule hoare_pre)
   apply (simp cong: list.case_cong split del: if_split)
@@ -458,7 +459,7 @@ lemma decode_tcb_configure_authorised_helper:
                                    \<and> authorised_tcb_inv aag set_param
                                    \<and> is_ThreadControl set_param)\<rbrace>
    decode_set_space ws (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag (ThreadControl t slot (tc_new_fault_ep rv)
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag (ThreadControl t slot (tc_new_fault_ep rv)
                                                                   None None (tc_new_croot rv)
                                                                   (tc_new_vroot rv)
                                                                   (tc_new_buffer set_param))\<rbrace>, -"
@@ -484,7 +485,7 @@ lemma decode_tcb_configure_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                         \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_tcb_configure msg (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag rv\<rbrace>, -"
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag rv\<rbrace>, -"
   apply (wpsimp simp: decode_tcb_configure_def
                 wp: whenE_throwError_wp decode_tcb_configure_authorised_helper
                     decode_set_ipc_buffer_authorised)
