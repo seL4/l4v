@@ -48,6 +48,8 @@ lemma activateThread_corres:
   supply subst_all [simp del]
   apply add_cur_tcb'
   apply (simp add: activate_thread_def activateThread_def)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce intro: ct_in_state'_activatable_coerce_concrete)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF getCurThread_corres])
       apply (rule corres_split[OF get_tcb_yield_to_corres])
