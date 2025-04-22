@@ -14,9 +14,6 @@ named_theorems Tcb_AC_assms
 
 declare arch_get_sanitise_register_info_inv[Tcb_AC_assms]
 
-crunch arch_post_set_flags
-  for inv[Tcb_AC_assms,wp]: P
-
 crunch arch_post_modify_registers
   for pas_refined[Tcb_AC_assms, wp]: "pas_refined aag"
 
@@ -25,12 +22,6 @@ lemma arch_post_modify_registers_respects[Tcb_AC_assms]:
    arch_post_modify_registers cur t
    \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   by wpsimp
-
-lemma arch_post_set_flags_respects[Tcb_AC_assms]:
-  "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
-   arch_post_set_flags t flags
-   \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
-  by (wpsimp simp: arch_post_set_flags_def)
 
 lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
@@ -72,9 +63,6 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
               check_cap_inv[where P="simple_sched_action"]
               check_cap_inv[where P="valid_list"]
               check_cap_inv[where P="valid_sched"]
-              check_cap_inv[where P="valid_arch_state"]
-              check_cap_inv[where P="valid_vspace_objs"]
-              check_cap_inv[where P="pspace_aligned"]
               thread_set_not_state_valid_sched
               thread_set_cte_at
               thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
@@ -86,8 +74,7 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
          | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                      emptyable_def a_type_def partial_inv_def
          | wpc
-         | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
-                      invs_mdb use_no_cap_to_obj_asid_strg
+         | strengthen invs_mdb use_no_cap_to_obj_asid_strg
                       tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                       tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]))+
   apply (clarsimp simp: authorised_tcb_inv_def)
@@ -100,10 +87,15 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
                         emptyable_def
          | rule conjI | erule pas_refined_refl)+
    apply (thin_tac "case_option _ _ _")+
-   apply (fastforce split: cap.split_asm option.split_asm)
+   apply (fastforce split: cap.split_asm option.split_asm pt_type.split_asm)
   apply (thin_tac "case_option _ _ _")+
-  apply (fastforce split: cap.split_asm option.split_asm)
+  apply (fastforce split: cap.split_asm option.split_asm pt_type.split_asm)
   done
+
+crunch arch_post_set_flags
+  for integrity[Tcb_AC_assms,wp]: "integrity aag X st"
+  and pas_refined[Tcb_AC_assms,wp]: "pas_refined aag"
+  (simp: crunch_simps)
 
 end
 
@@ -112,7 +104,7 @@ global_interpretation Tcb_AC_1?: Tcb_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Tcb_AC_assms | solves \<open>wp only: Tcb_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact Tcb_AC_assms)?)
 qed
 
 end

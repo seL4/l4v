@@ -56,28 +56,8 @@ lemma sata_update2[CNode_AC_assms]:
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
                 split: if_split_asm)
 
-lemma vs_lookup_table_eqI':
-  "\<lbrakk> asid_table s' (asid_high_bits_of asid) = asid_table s (asid_high_bits_of asid);
-     \<forall>pool_ptr. asid_table s' (asid_high_bits_of asid) = Some pool_ptr
-                \<longrightarrow> bot_level \<le> max_pt_level
-                \<longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s') =
-                    vspace_for_pool pool_ptr asid (asid_pools_of s);
-     bot_level < max_pt_level \<longrightarrow> pts_of s' = pts_of s \<rbrakk>
-     \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
-  by (auto simp: obind_def vs_lookup_table_def asid_pool_level_eq[symmetric]
-                 pool_for_asid_def vspace_for_pool_def
-          split: option.splits)
-
-lemma state_vrefs_eqI:
-  assumes "asid_table s' = asid_table s"
-  and "aobjs_of s' = aobjs_of s"
-  shows "state_vrefs s' = state_vrefs s"
-  apply (prop_tac "\<forall>level asid vref. vs_lookup_table level asid vref s = vs_lookup_table level asid vref s'")
-   apply (intro allI vs_lookup_table_eqI')
-  using assms by (auto simp: vspace_for_pool_def state_vrefs_def)
-
 lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
-  "set_cap cap slot \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
+  "set_cap cap slot \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply safe
@@ -85,10 +65,8 @@ lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
   by (fastforce simp: valid_arch_state_def obj_at_def opt_map_def
                split: option.splits kernel_object.splits)+
 
-crunch maskInterrupt
-  for underlying_memory[CNode_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
-  and device_state[CNode_AC_assms, wp]: "\<lambda>s. P (device_state s)"
-  (simp: maskInterrupt_def)
+declare maskInterrupt_underlying_memory_inv[CNode_AC_assms, wp]
+        maskInterrupt_device_state_inv[CNode_AC_assms, wp]
 
 crunch set_cdt
   for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
@@ -140,12 +118,12 @@ lemma list_integ_lift[CNode_AC_assms]:
      \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag}  (cdt st) (tcb_states_of_state st)) st\<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
-   apply (unfold integrity_def[abs_def] integrity_asids_def)
+   apply (unfold integrity_def[abs_def] integrity_asids_def integrity_hyp_def integrity_fpu_def)
    apply (simp only: integrity_cdt_list_as_list_integ)
    apply (simp add: tcb_states_of_state_def get_tcb_def)
    apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
   apply (simp only: integrity_cdt_list_as_list_integ)
-  apply (simp add: tcb_states_of_state_def get_tcb_def)
+  apply (auto simp: tcb_states_of_state_def get_tcb_def)
   done
 
 end
@@ -165,6 +143,18 @@ lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
   "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
   unfolding integrity_asids_def by wpsimp
 
+lemma integrity_hyp_set_cap_Nullcap[CNode_AC_assms]:
+  "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_hyp aag subjects x s\<rbrace>"
+  unfolding integrity_hyp_def vcpu_integrity_def
+  by (wp | wps | wpsimp)+
+
+lemma integrity_fpu_set_cap_Nullcap[CNode_AC_assms]:
+  "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_fpu aag subjects x s\<rbrace>"
+  unfolding set_cap_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (auto simp: integrity_fpu_def fpu_of_state_def opt_map_def obj_at_def)
+  done
+
 crunch set_original
   for state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   and state_objs_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_objs_to_policy s)"
@@ -174,17 +164,6 @@ crunch set_cdt_list, update_cdt_list
   for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
-
-lemma thread_set_arch_trivT[CNode_AC_assms]:
-  assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
-  shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: thread_set_def wp: set_object_wp )
-  apply (erule_tac P=P in back_subst)
-  apply (rule ext)
-  apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
-  done
-
-declare integrity_arch_triv[CNode_AC_assms]
 
 end
 
@@ -209,6 +188,15 @@ lemma aobj_ref'_same_aobject[CNode_AC_assms]:
 
 crunch set_untyped_cap_as_full
   for valid_arch_state[CNode_AC_assms, wp]: valid_arch_state
+
+lemma thread_set_arch_trivT[CNode_AC_assms]:
+  assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
+  shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: thread_set_def wp: set_object_wp )
+  apply (erule_tac P=P in back_subst)
+  apply (rule ext)
+  apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
+  done
 
 end
 

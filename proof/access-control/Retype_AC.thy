@@ -163,13 +163,15 @@ lemma dtsa_detype: "domains_of_state (detype R s) \<subseteq> domains_of_state s
 
 
 locale retype_region_proofs' = retype_region_proofs +
-  constrains s :: "det_ext state"
-  and s' :: "det_ext state"
+  constrains s :: "det_state"
+  and s' :: "det_state"
 
 locale Retype_AC_1 =
   fixes aag :: "'a PAS"
   assumes state_vrefs_detype[simp]:
     "x \<in> state_vrefs (detype R s) p \<Longrightarrow> x \<in> state_vrefs s p"
+  and state_hyp_refs_of_detype:
+  "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   and sata_detype:
     "state_asids_to_policy aag (detype R s) \<subseteq> state_asids_to_policy aag s"
   and word_size_bits_untyped_min_bits:
@@ -190,13 +192,13 @@ locale Retype_AC_1 =
                init_arch_objects tp dev ptr bits obj_sz refs
                \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   and dmo_freeMemory_invs:
-    "do_machine_op (freeMemory ptr bits) \<lbrace>\<lambda>s :: det_ext state. invs s\<rbrace>"
+    "do_machine_op (freeMemory ptr bits) \<lbrace>\<lambda>s :: det_state. invs s\<rbrace>"
   and init_arch_objects_pas_cur_domain[wp]:
-    "\<And>tp dev. init_arch_objects tp dev ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
+    "\<And>tp dev. init_arch_objects tp dev ptr n us refs \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
   and retype_region_pas_cur_domain[wp]:
-    "\<And>tp. retype_region ptr n us tp dev \<lbrace>pas_cur_domain aag\<rbrace>"
+    "\<And>tp. retype_region ptr n us tp dev \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
   and reset_untyped_cap_pas_cur_domain[wp]:
-    "reset_untyped_cap src_slot \<lbrace>pas_cur_domain aag\<rbrace>"
+    "reset_untyped_cap src_slot \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
   and arch_data_to_obj_type_not_ASIDPoolObj[simp]:
     "arch_data_to_obj_type v \<noteq> Some ASIDPoolObj"
   and data_to_nat_of_nat[simp]:
@@ -226,14 +228,38 @@ locale Retype_AC_1 =
      init_arch_objects new_type dev ptr num_objects obj_sz refs
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   and integrity_asids_detype:
-    "\<forall>r \<in> R. pasObjectAbs aag r \<in> subjects
-     \<Longrightarrow> integrity_asids aag subjects p a (detype R s) st = integrity_asids aag subjects p a s st"
-    "\<forall>r \<in> R. pasObjectAbs aag r \<in> subjects
-     \<Longrightarrow> integrity_asids aag subjects p a s (detype R st) = integrity_asids aag subjects p a s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_asids aag {pasSubject aag} p a (detype R s) st = integrity_asids aag {pasSubject aag} p a s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s (detype R st) = integrity_asids aag {pasSubject aag} p a s st"
+  and integrity_hyp_detype:
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p (detype R s) st = integrity_hyp aag {pasSubject aag} p s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s (detype R st) = integrity_hyp aag {pasSubject aag} p s st"
+  and integrity_fpu_detype:
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p (detype R s) st = integrity_fpu aag {pasSubject aag} p s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s (detype R st) = integrity_fpu aag {pasSubject aag} p s st"
   and retype_region_integrity_asids:
     "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} p a s st \<rbrakk>
        \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s
+             (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                              then Some (default_object typ dev o_bits d)
+                              else kheap s a\<rparr>)"
+  and retype_region_integrity_hyp:
+    "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+       \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_hyp aag {pasSubject aag} p s st \<rbrakk>
+       \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s
+             (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                              then Some (default_object typ dev o_bits d)
+                              else kheap s a\<rparr>)"
+  and retype_region_integrity_fpu:
+    "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+       \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_fpu aag {pasSubject aag} p s st \<rbrakk>
+       \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s
              (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
                               then Some (default_object typ dev o_bits d)
                               else kheap s a\<rparr>)"
@@ -242,18 +268,15 @@ begin
 lemma detype_integrity:
   "\<lbrakk> integrity aag X st s; \<forall>r\<in>refs. is_subject aag r \<rbrakk>
      \<Longrightarrow> integrity aag X st (detype refs s)"
-  apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def integrity_asids_detype)
-  apply (clarsimp simp: detype_def integrity_def)
-  done
+  by (fastforce elim!: integrity_trans simp: integrity_def detype_def
+                 dest: integrity_asids_detype integrity_hyp_detype integrity_fpu_detype)
 
 lemma sta_detype:
   "state_objs_to_policy (detype R s) \<subseteq> state_objs_to_policy s"
   apply (clarsimp simp add: state_objs_to_policy_def state_refs_of_detype)
   apply (erule state_bits_to_policy.induct)
-        apply (auto intro: state_bits_to_policy.intros dest: state_vrefs_detype
-                     simp: state_objs_to_policy_def split: if_splits)
-  done
+  by (auto intro: state_bits_to_policy.intros dest: state_vrefs_detype
+            simp: state_hyp_refs_of_detype state_objs_to_policy_def split: if_splits)
 
 lemma pas_refined_detype:
   "pas_refined aag s \<Longrightarrow> pas_refined aag (detype R s)"
@@ -333,10 +356,11 @@ lemma retype_region_integrity:
   apply wp
   apply (clarsimp simp: not_less)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def retype_region_integrity_asids)
-  apply (fastforce intro: tro_lrefl
+  apply (fastforce intro: tro_lrefl integrity_asids_refl integrity_hyp_refl integrity_fpu_refl
                     dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
-                    simp: image_def p_assoc_help power_sub)
+                          retype_region_integrity_asids retype_region_integrity_hyp
+                          retype_region_integrity_fpu
+                    simp: integrity_def image_def p_assoc_help power_sub)
   done
 
 lemma invoke_untyped_integrity:
@@ -444,7 +468,7 @@ lemma caps_of_state_pres:
 end
 
 lemma use_retype_region_proofs':
-  assumes x: "\<And>(s::det_ext state). \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s; pas_cur_domain aag s;
+  assumes x: "\<And>(s::det_state). \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s; pas_cur_domain aag s;
                                      \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
                                       \<Longrightarrow> Q (retype_addrs ptr ty n us)
                                             (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
@@ -618,7 +642,7 @@ lemma range_cover_subset'':
 context Retype_AC_1 begin
 
 lemma delete_objects_descendants_range_in':
-  "\<lbrace>invs and (\<lambda>s :: det_ext state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s)
+  "\<lbrace>invs and (\<lambda>s :: det_state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s)
          and descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>
    delete_objects word2 sz
    \<lbrace>\<lambda>_. descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>"
@@ -629,7 +653,7 @@ lemma delete_objects_descendants_range_in':
   done
 
 lemma delete_objects_descendants_range_in'':
-  "\<lbrace>invs and (\<lambda> s :: det_ext state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s)
+  "\<lbrace>invs and (\<lambda> s :: det_state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s)
          and descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>
    delete_objects word2 sz
    \<lbrace>\<lambda>_. descendants_range_in {word2..(word2 && ~~ mask sz) + 2 ^ sz - 1} slot\<rbrace>"
@@ -641,7 +665,7 @@ lemma delete_objects_descendants_range_in'':
   done
 
 lemma delete_objects_descendants_range_in''':
-  "\<lbrace>invs and (\<lambda>s :: det_ext state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s)
+  "\<lbrace>invs and (\<lambda>s :: det_state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s)
          and descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>
    delete_objects word2 sz
    \<lbrace>\<lambda>_. descendants_range_in {word2 && ~~ mask sz..(word2 && ~~ mask sz) + 2 ^ sz - 1} slot\<rbrace>"
@@ -653,7 +677,7 @@ lemma delete_objects_descendants_range_in''':
   done
 
 lemma delete_objects_descendants_range_in'''':
-  "\<lbrace>invs and (\<lambda> s :: det_ext state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s) and
+  "\<lbrace>invs and (\<lambda> s :: det_state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s) and
     ct_active and descendants_range_in {word2..word2 + 2 ^ sz - 1} slot and
     K (range_cover word2 sz bits n \<and> n \<noteq> 0)\<rbrace>
    delete_objects word2 sz

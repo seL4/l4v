@@ -14,15 +14,6 @@ lemma invs_mdb_cte':
   by (drule invs_mdb) (simp add: valid_mdb_def2)
 
 
-context Arch begin arch_global_naming
-
-lemma state_hyp_refs_empty[simp]:
-  "state_hyp_refs_of s = (\<lambda>_. {})"
-  by (auto simp: state_hyp_refs_of_def split: option.splits)
-
-end
-
-
 context retype_region_proofs begin interpretation Arch .
 
 lemma state_vrefs_eq:
@@ -64,7 +55,7 @@ lemma pas_refined:
   "\<lbrakk> invs s; pas_refined aag s; pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
    \<Longrightarrow> pas_refined aag s'"
   apply (erule pas_refined_subsets_tcb_domain_map_wellformed)
-      apply (simp add: state_objs_to_policy_def refs_eq mdb_and_revokable)
+      apply (simp add: state_objs_to_policy_def refs_eq  mdb_and_revokable)
       apply (subst state_vrefs_eq; fastforce?)
       apply (rule subsetI, rename_tac x, case_tac x, simp)
       apply (erule state_bits_to_policy.cases)
@@ -77,7 +68,7 @@ lemma pas_refined:
         apply (force intro!: sbta_cdt_transferable
                        dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
        apply (blast intro: state_bits_to_policy.intros)
-      apply simp
+      apply (fastforce intro: state_bits_to_policy.intros simp: hyp_refs_eq)
      apply (subst state_vrefs_eq; fastforce?)
      apply (force elim!: state_asids_to_policy_aux.cases
                  intro: state_asids_to_policy_aux.intros caps_retype
@@ -108,7 +99,7 @@ lemma pts_of_detype[simp]:
   by (simp add: in_omonad detype_def)
 
 lemma ptes_of_detype_Some[simp]:
-  "(ptes_of (detype S s) p = Some pte) = (table_base p \<notin> S \<and> ptes_of s p = Some pte)"
+  "(ptes_of (detype S s) pt_t p = Some pte) = (table_base pt_t p \<notin> S \<and> ptes_of s pt_t p = Some pte)"
   by (simp add: in_omonad ptes_of_def detype_def)
 
 lemma asid_pools_of_detype:
@@ -126,14 +117,14 @@ lemma pool_for_asid_detype_Some[simp]:
 lemma vspace_for_pool_detype_Some[simp]:
   "(vspace_for_pool ap asid (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
    (ap \<notin> S \<and> vspace_for_pool ap asid pools = Some p)"
-  by (simp add: vspace_for_pool_def obind_def split: option.splits)
+  by (simp add: entry_for_pool_def vspace_for_pool_def obind_def split: option.splits)
 
 lemma vspace_for_asid_detype_Some[simp]:
   "(vspace_for_asid asid (detype S s) = Some p) =
    ((\<exists>ap. pool_for_asid asid s = Some ap \<and> ap \<notin> S) \<and> vspace_for_asid asid s = Some p)"
-  apply (simp add: vspace_for_asid_def obind_def asid_pools_of_detype split: option.splits)
-  apply (auto simp: pool_for_asid_def)
-  done
+  by (auto simp: entry_for_asid_def entry_for_pool_def pool_for_asid_def
+                 vspace_for_asid_def obind_def asid_pools_of_detype
+          split: option.splits)
 
 lemma pt_walk_detype:
   "pt_walk level bot_level pt_ptr vref (ptes_of (detype S s)) = Some (bot_level, p) \<Longrightarrow>
@@ -165,7 +156,7 @@ lemma state_vrefs_detype[Retype_AC_assms, dest]:
   apply (clarsimp simp: state_vrefs_def)
   apply (frule vs_lookup_level)
   apply (drule vs_lookup_table)
-  apply fastforce
+  apply (fastforce simp: vspace_objs_of_Some)
   done
 
 lemma sata_detype[Retype_AC_assms]:
@@ -200,8 +191,15 @@ lemma aobj_refs'_default'[Retype_AC_assms]:
    \<Longrightarrow> aobj_ref' (arch_default_cap tp oref sz dev) \<subseteq> ptr_range oref (obj_bits_api (ArchObject tp) sz)"
   by (cases tp; simp add: arch_default_cap_def ptr_range_memI obj_bits_api_def default_arch_object_def)
 
+crunch cleanCacheRange_RAM, cleanInvalidateCacheRange_RAM, cleanCacheRange_PoU,
+       invalidateCacheRange_RAM, invalidateCacheRange_I
+  for vcpu_state[wp]: "\<lambda>ms. P (vcpu_state ms)"
+  and fpu_state[wp]: "\<lambda>ms. P (fpu_state ms)"
+
 crunch init_arch_objects
-  for inv[wp]: P
+  for pas_refined[Retype_AC_assms,wp]: "pas_refined aag"
+  and integrity_autarch[Retype_AC_assms,wp]: "integrity aag X st"
+  (wp: crunch_wps dmo_no_mem_respects)
 
 lemma region_in_kernel_window_preserved:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
@@ -365,6 +363,28 @@ lemma integrity_asids_detype[Retype_AC_assms]:
      integrity_asids aag subjects x a s s'"
   by (auto simp: integrity_asids_def detype_def refs opt_map_def)
 
+lemma integrity_hyp_detype[Retype_AC_assms]:
+  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  shows
+    "integrity_hyp aag subjects x (detype refs s) s' =
+     integrity_hyp aag subjects x s s'"
+    "integrity_hyp aag subjects x s (detype refs s') =
+     integrity_hyp aag subjects x s s'"
+  unfolding integrity_hyp_def vcpu_integrity_def vcpu_of_state_def atomize_conj
+  apply (safe elim!: allEI; clarsimp)
+  apply (all \<open>case_tac "x \<in> refs"\<close>)
+  by (auto simp: refs detype_def opt_map_def split: option.splits)
+
+lemma integrity_fpu_detype[Retype_AC_assms]:
+  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  shows
+    "integrity_fpu aag subjects x (detype refs s) s' =
+     integrity_fpu aag subjects x s s'"
+    "integrity_fpu aag subjects x s (detype refs s') =
+     integrity_fpu aag subjects x s s'"
+  unfolding integrity_fpu_def integrity_fpu_def fpu_of_state_def
+  by (auto simp: refs detype_def opt_map_def split: option.splits kernel_object.splits)
+
 lemma retype_region_integrity_asids[Retype_AC_assms]:
   "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
      \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
@@ -373,14 +393,38 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
                             then Some (default_object typ dev o_bits d)
                             else kheap s a\<rparr>)"
   apply (clarsimp simp: integrity_asids_def opt_map_def)
-  apply (case_tac "x \<in> up_aligned_area ptr sz"; clarsimp)
-  by (fastforce intro: tro_lrefl
-                 dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
-                 simp: image_def p_assoc_help power_sub)
+  apply (fastforce intro: tro_lrefl
+                    dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
+                    simp: image_def p_assoc_help power_sub)
+  done
 
-declare init_arch_objects_inv[Retype_AC_assms]
+lemma retype_region_integrity_hyp[Retype_AC_assms]:
+  "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+     \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_hyp aag {pasSubject aag} p s st \<rbrakk>
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
+  apply (clarsimp simp: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def)
+  apply (fastforce intro: tro_lrefl
+                    dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
+                    simp: image_def p_assoc_help power_sub)
+  done
+
+lemma retype_region_integrity_fpu[Retype_AC_assms]:
+  "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+     \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_fpu aag {pasSubject aag} p s st \<rbrakk>
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
+  apply (clarsimp simp: integrity_fpu_def fpu_of_state_def opt_map_def)
+  apply (fastforce intro: tro_lrefl
+                    dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
+                    simp: image_def p_assoc_help power_sub)
+  done
+
 declare state_hyp_refs_of_detype[Retype_AC_assms]
-declare integrity_arch_triv[Retype_AC_assms]
 
 end
 
