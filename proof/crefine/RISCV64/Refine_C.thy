@@ -58,92 +58,141 @@ lemma schedule_sch_act_wf:
    apply (clarsimp simp: sch_act_wf_def)
   by (wpsimp wp: schedule_sch)
 
+lemma weak_sch_act_wf_more_updates[simp]:
+  "\<And>f. weak_sch_act_wf sa (ksCurDomain_update f s) = weak_sch_act_wf sa s"
+  "\<And>f. weak_sch_act_wf sa (ksWorkUnitsCompleted_update f s) = weak_sch_act_wf sa s"
+  "\<And>f. weak_sch_act_wf sa (ksDomScheduleIdx_update f s) = weak_sch_act_wf sa s"
+  "\<And>f. weak_sch_act_wf sa (ksCurSc_update f s) = weak_sch_act_wf sa s"
+  "\<And>f. weak_sch_act_wf sa (ksConsumedTime_update f s) = weak_sch_act_wf sa s"
+  by (auto simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
+
+crunch scAndTimer, setNextInterrupt, switchSchedContext, setCurSc, handleInterrupt
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps)
+
+crunch updateTimeStamp
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: weak_sch_act_wf_lift)
+
+lemma weak_sch_act_wf_ResumeCurrentThread[simp]:
+  "weak_sch_act_wf ResumeCurrentThread (s\<lparr>ksSchedulerAction := ResumeCurrentThread\<rparr>)"
+  by (clarsimp simp: weak_sch_act_wf_def)
+
+lemma schedule_weak_sch_act_wf[wp]:
+  "schedule \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding schedule_def scheduleChooseNewThread_def
+  by (wpsimp wp: hoare_drop_imps hoare_vcg_if_lift2)
+
 lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
 lemma handleInterruptEntry_ccorres:
-  "ccorres dc xfdc
-           (invs' and sch_act_simple)
-           UNIV []
-           (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
-proof -
-  show ?thesis
-  apply (cinit')
+  "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV []
+     (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
+  supply Collect_const[simp del]
+  apply cinit'
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
-   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
-sorry (* FIXME RT: handleInterruptEntry_ccorres
-    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-    apply (rule ccorres_Guard_Seq)?
-    apply wpc
-     apply (simp add: irqInvalid_def Kernel_C.irqInvalid_def)
-     apply (rule ccorres_symb_exec_r)
+   apply (rule ccorres_rhs_assoc)+
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+    apply (rule_tac xf'=xfdc in ccorres_split_nothrow_novcg)
+        apply (rule_tac xf''=xfdc in ccorres_call)
+           apply (rule ccorres_rel_imp)
+            apply (rule checkBudget_ccorres, fastforce+)
+       apply ceqv
+      apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
+       apply (rename_tac irq_opt irq)
+       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+           apply (rule_tac P="irq_opt = None" in ccorres_cases)
+            apply clarsimp
+            \<comment> \<open>invalid irq; call handleSpuriousIRQ\<close>
+            apply (rule ccorres_cond_false)
+            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+            apply (rule allI, rule conseqPre, vcg)
+            apply (clarsimp simp: return_def)
+           apply clarsimp
+           apply (rule ccorres_cond_true)
+           apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
+           apply wpfix
+           apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+          apply ceqv
+         apply (rule ccorres_stateAssert)+
+         apply (rule ccorres_rhs_assoc)+
+         apply (ctac (no_vcg) add: schedule_ccorres)
+          apply (rule ccorres_stateAssert)+
+          apply (rule ccorres_stateAssert_after)
+          apply (rule ccorres_add_return2)
+          apply (ctac (no_vcg) add: activateThread_ccorres)
+           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: return_def)
+          apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
+        apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                     in hoare_post_imp)
+         apply wpsimp+
+       apply (clarsimp simp: guard_is_UNIV_def)
+      apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: weak_sch_act_wf_def)+
+    apply (clarsimp simp: guard_is_UNIV_def)
+    apply (clarsimp simp: irqInvalid_def Kernel_C.irqInvalid_def split: option.splits)
+   apply wpsimp
+  apply clarsimp
+  done
+
+crunch handleFault, checkBudgetRestart, updateTimeStamp, handleVMFault
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: sch_act_wf_lift)
+
+crunch updateTimeStamp
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (wp: sch_act_wf_lift)
+
+lemma handleUnknownSyscall_ccorres:
+  "ccorres dc xfdc
+     (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+     \<lbrace>of_nat n = \<acute>w___unsigned_long\<rbrace> []
+     (callKernel (UnknownSyscall n)) (Call handleUnknownSyscall_'proc)"
+  apply (cinit' lift: w_')
+   apply (simp add: callKernel_def handleEvent_def)
+   apply (rule ccorres_stateAssert)+
+   apply (simp add: liftE_bind bind_assoc)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+    apply (ctac (no_vcg) add: checkBudgetRestart_ccorres)
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+         apply (clarsimp simp: when_def)
+         apply (rule ccorres_cond[where R=\<top>])
+           apply (fastforce simp: to_bool_def)
+          apply (rule ccorres_symb_exec_r)
+            apply (rule ccorres_pre_getCurThread)
+            apply (ctac add: handleFault_ccorres)
+           apply vcg
+          apply (rule conseqPre, vcg)
+          apply clarsimp
+         apply (rule ccorres_return_Skip)
+        apply ceqv
+       apply (rule ccorres_stateAssert)+
        apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (rule ccorres_stateAssert)+
         apply (rule ccorres_stateAssert_after)
         apply (rule ccorres_add_return2)
         apply (ctac (no_vcg) add: activateThread_ccorres)
          apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
          apply (rule allI, rule conseqPre, vcg)
          apply (clarsimp simp: return_def)
-        apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-      apply vcg
-     apply vcg
-    apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
-    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-      apply (ctac (no_vcg) add: schedule_ccorres)
-       apply (rule ccorres_stateAssert_after)
-       apply (rule ccorres_add_return2)
-       apply (ctac (no_vcg) add: activateThread_ccorres)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-       apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
-    apply (clarsimp simp: non_kernel_IRQs_def)
-   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
-  apply (clarsimp simp: invs'_def valid_state'_def)
-  done *)
-qed
-
-lemma handleUnknownSyscall_ccorres:
-  "ccorres dc xfdc
-           (invs' and ct_running' and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV \<inter> {s. of_nat n = w_' s}) []
-           (callKernel (UnknownSyscall n)) (Call handleUnknownSyscall_'proc)"
-  apply (cinit' lift: w_')
-   apply (simp add: callKernel_def handleEvent_def)
-   apply (rule ccorres_stateAssert)
-   apply (simp add: liftE_bind bind_assoc)
-   apply (rule ccorres_symb_exec_r)
-sorry (* FIXME RT: handleUnknownSyscall_ccorres
-     apply (rule ccorres_pre_getCurThread)
-     apply (ctac (no_vcg) add: handleFault_ccorres)
-      apply (ctac (no_vcg) add: schedule_ccorres)
-       apply (rule ccorres_stateAssert_after)
-       apply (rule ccorres_add_return2)
-       apply (ctac (no_vcg) add: activateThread_ccorres)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-       apply (wp schedule_sch_act_wf schedule_invs'
-              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-    apply (clarsimp, vcg)
-   apply (clarsimp, rule conseqPre, vcg, clarsimp)
-  apply clarsimp
-  apply (intro impI conjI allI)
-    apply fastforce
-   apply (rule active_ex_cap')
-    apply (erule active_from_running')
-   apply (erule invs_iflive')
-  apply (clarsimp simp: ct_in_state'_def)
-  apply (frule st_tcb_idle'[rotated])
-   apply (erule invs_valid_idle')
-  apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
-  done *)
+        apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
+     apply (clarsimp simp: guard_is_UNIV_def)
+    apply (wpsimp wp: checkBudgetRestart_false checkBudgetRestart_true hoare_vcg_if_lift2
+           | wp (once) hoare_drop_imp)+
+   apply (rule_tac Q'="\<lambda> _ s. invs' s \<and> ct_in_state' active' s
+                              \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                in hoare_post_imp)
+    apply (fastforce simp: ct_in_state'_def)
+   apply wpsimp
+  apply (fastforce simp: weak_sch_act_wf_def ct_in_state'_def runnable_eq_active'
+                         st_tcb_at'_def obj_at'_def cfault_rel_def seL4_Fault_UnknownSyscall_lift
+                         is_cap_fault_def)
+  done
 
 lemma handleVMFaultEvent_ccorres:
   "ccorres dc xfdc
@@ -155,88 +204,100 @@ lemma handleVMFaultEvent_ccorres:
    apply (simp add: callKernel_def handleEvent_def)
    apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
-sorry (* FIXME RT: handleVMFaultEvent_ccorres
-   apply (rule ccorres_pre_getCurThread)
-   apply (rename_tac thread)
-   apply (simp add: catch_def)
-   apply (rule ccorres_rhs_assoc2)
-   apply (rule ccorres_split_nothrow_novcg)
-       apply (rule ccorres_split_nothrow_case_sum)
-            apply (ctac (no_vcg) add: handleVMFault_ccorres)
-           apply ceqv
-          apply clarsimp
-         apply clarsimp
-         apply (rule ccorres_cond_univ)
-         apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
-         apply (rule_tac xf'=xfdc in ccorres_call)
-            apply (ctac (no_vcg) add: handleFault_ccorres)
-           apply simp
-          apply simp
-         apply simp
-        apply (wp hv_inv_ex')
-       apply (simp add: guard_is_UNIV_def)
-       apply (vcg exspec=handleVMFault_modifies)
-      apply ceqv
-     apply clarsimp
-     apply (ctac (no_vcg) add: schedule_ccorres)
-      apply (rule ccorres_stateAssert_after)
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: activateThread_ccorres)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-     apply (case_tac rv, clarsimp, wp)
-     apply (clarsimp, wp, simp)
-    apply wp
-   apply (simp add: guard_is_UNIV_def)
-  apply (clarsimp simp: simple_sane_strg[unfolded sch_act_sane_not])
-  apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def
-              elim: pred_tcb'_weakenE st_tcb_ex_cap''
-              dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
-  done *)
+   apply (rule ccorres_stateAssert)+
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+    apply (ctac (no_vcg) add: checkBudgetRestart_ccorres)
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+         apply (clarsimp simp: when_def)
+         apply (rule ccorres_cond[where R=\<top>])
+           apply (fastforce simp: to_bool_def)
+          apply (rule ccorres_pre_getCurThread)
+          apply (rename_tac thread)
+          apply (simp add: catch_def)
+          apply (rule ccorres_split_nothrow_case_sum)
+               apply (ctac (no_vcg) add: handleVMFault_ccorres)
+              apply ceqv
+             apply clarsimp
+            apply clarsimp
+            apply (rule ccorres_cond_univ)
+            apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+            apply (rule_tac xf'=xfdc in ccorres_call)
+               apply (ctac (no_vcg) add: handleFault_ccorres)
+              apply simp
+             apply simp
+            apply simp
+           apply (wp hv_inv_ex')
+          apply (vcg exspec=handleVMFault_modifies)
+         apply (rule ccorres_return_Skip)
+        apply ceqv
+       apply clarsimp
+       apply (rule ccorres_stateAssert)
+       apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (rule ccorres_stateAssert)
+        apply (rule ccorres_stateAssert_after)
+        apply (rule ccorres_add_return2)
+        apply (ctac (no_vcg) add: activateThread_ccorres)
+         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: return_def)
+        apply (wpsimp wp: hv_invs' schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
+     apply (simp add: guard_is_UNIV_def)
+    apply ((wpsimp wp: checkBudgetRestart_false checkBudgetRestart_true hoare_vcg_if_lift2
+            | wp (once) hoare_drop_imp)+)[1]
+   apply (rule_tac Q'="\<lambda> _ s. invs' s \<and> ct_in_state' active' s
+                              \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                in hoare_post_imp)
+    apply (fastforce simp: ct_in_state'_def)
+   apply wpsimp
+  by (auto simp: weak_sch_act_wf_def ct_in_state'_def cfault_rel_def is_cap_fault_def
+           elim: pred_tcb'_weakenE
+           dest: rf_sr_ksCurThread)
 
 lemma handleUserLevelFault_ccorres:
   "ccorres dc xfdc
-           (invs' and sch_act_simple and ct_running' and
-               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV \<inter> {s.  w_a_' s = word1} \<inter> {s. w_b_' s = word2 }) []
-           (callKernel (UserLevelFault word1 word2)) (Call handleUserLevelFault_'proc)"
-  apply (cinit' lift:w_a_' w_b_')
+     (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+     (\<lbrace>\<acute>w_a = word1\<rbrace> \<inter> \<lbrace>\<acute>w_b = word2\<rbrace>) []
+     (callKernel (UserLevelFault word1 word2)) (Call handleUserLevelFault_'proc)"
+  apply (cinit' lift: w_a_' w_b_')
    apply (simp add: callKernel_def handleEvent_def)
-   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
-   apply (rule ccorres_symb_exec_r)
-sorry (* FIXME RT: handleUserLevelFault_ccorres
-     apply (rule ccorres_pre_getCurThread)
-     apply (ctac (no_vcg) add: handleFault_ccorres)
-      apply (ctac (no_vcg) add: schedule_ccorres)
-       apply (rule ccorres_stateAssert_after)
-       apply (rule ccorres_add_return2)
-       apply (ctac (no_vcg) add: activateThread_ccorres)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-       apply (wp schedule_sch_act_wf schedule_invs'
-              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-    apply (clarsimp, vcg)
-   apply (clarsimp, rule conseqPre, vcg, clarsimp)
-  apply clarsimp
-  apply (intro impI conjI allI)
-    apply (simp add: ct_in_state'_def)
-    apply (erule pred_tcb'_weakenE)
-    apply simp
-   apply (rule active_ex_cap')
-    apply (erule active_from_running')
-   apply (erule invs_iflive')
-  apply (clarsimp simp: ct_in_state'_def)
-  apply (frule st_tcb_idle'[rotated])
-   apply (erule invs_valid_idle')
-   apply simp
-  apply (clarsimp simp: cfault_rel_def seL4_Fault_UserException_lift)
-  apply (simp add: is_cap_fault_def)
-  done *)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+    apply (ctac (no_vcg) add: checkBudgetRestart_ccorres, rename_tac restart restart')
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+         apply (clarsimp simp: when_def)
+         apply (rule ccorres_cond[where R=\<top>])
+           apply (fastforce simp: to_bool_def)
+          apply (rule ccorres_symb_exec_r)
+            apply (rule ccorres_pre_getCurThread)
+            apply (ctac add: handleFault_ccorres)
+           apply vcg
+          apply (rule conseqPre, vcg)
+          apply clarsimp
+         apply (rule ccorres_return_Skip)
+        apply ceqv
+       apply (rule ccorres_stateAssert)+
+       apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (rule ccorres_stateAssert)+
+        apply (rule ccorres_stateAssert_after)
+        apply (rule ccorres_add_return2)
+        apply (ctac (no_vcg) add: activateThread_ccorres)
+         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: return_def)
+        apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
+     apply (clarsimp simp: guard_is_UNIV_def)
+    apply ((wpsimp wp: checkBudgetRestart_false checkBudgetRestart_true hoare_vcg_if_lift2
+            | wp (once) hoare_drop_imp)+)[1]
+   apply (rule_tac Q'="\<lambda> _ s. invs' s \<and> ct_in_state' active' s
+                              \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                in hoare_post_imp)
+    apply (fastforce simp: ct_in_state'_def)
+   apply wpsimp
+  apply (fastforce elim: pred_tcb'_weakenE
+                   simp: ct_in_state'_def weak_sch_act_wf_def cfault_rel_def
+                         seL4_Fault_UserException_lift is_cap_fault_def)
+  done
 
 lemmas syscall_defs =
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
@@ -519,27 +580,25 @@ lemma no_fail_callKernel:
   done
 
 lemma handleHypervisorEvent_ccorres:
-  "ccorres dc xfdc
-           (invs' and sch_act_simple)
-           UNIV []
-           (callKernel (HypervisorEvent t)) handleHypervisorEvent_C"
+  "ccorres dc xfdc (invs' and sch_act_simple) UNIV hs
+     (callKernel (HypervisorEvent t)) handleHypervisorEvent_C"
   apply (simp add: callKernel_def handleEvent_def handleHypervisorEvent_C_def)
   apply (simp add: liftE_def bind_assoc)
   apply (rule ccorres_guard_imp)
-    apply (rule ccorres_stateAssert)
-    apply (rule ccorres_symb_exec_l)
-       apply (cases t; simp add: handleHypervisorFault_def)
-sorry (* FIXME RT: handleHypervisorEvent_ccorres
-       apply (ctac (no_vcg) add: schedule_ccorres)
-        apply (rule ccorres_stateAssert_after)
-        apply (rule ccorres_guard_imp[where A="A and P" and Q=A for A P])
-          apply (ctac (no_vcg) add: activateThread_ccorres)
-         apply simp
-        apply assumption
-       apply (wp schedule_sch_act_wf schedule_invs'
-              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-    apply clarsimp+
-  done *)
+    apply (rule ccorres_stateAssert)+
+    apply (rule ccorres_pre_getCurThread)
+    apply (cases t; simp add: handleHypervisorFault_def)
+    apply (rule ccorres_stateAssert)+
+    apply (ctac (no_vcg) add: schedule_ccorres)
+     apply (rule ccorres_stateAssert)+
+     apply (rule ccorres_stateAssert_after)
+     apply (rule ccorres_guard_imp[where A="A and P" and Q=A for A P])
+       apply (ctac (no_vcg) add: activateThread_ccorres)
+      apply simp
+     apply assumption
+    apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
+   apply (clarsimp simp: weak_sch_act_wf_def sch_act_simple_def)+
+  done
 
 lemma callKernel_corres_C:
   "corres_underlying rf_sr False True dc
@@ -554,7 +613,8 @@ lemma callKernel_corres_C:
         apply simp
         apply (rule ccorres_guard_imp)
           apply (rule handleInterruptEntry_ccorres)
-         apply (clarsimp simp: all_invs'_def sch_act_simple_def)
+         apply (clarsimp simp: all_invs'_def sch_act_simple_def weak_sch_act_wf_def)
+         apply (frule state_relation_sched_act_relation)
          apply (fastforce intro!: resume_cur_thread_cross)
         apply simp
        apply assumption

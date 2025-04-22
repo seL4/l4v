@@ -21173,27 +21173,26 @@ lemma handle_event_valid_sched:
   (* Interrupt *)
   apply wpsimp
       apply (wpsimp wp: handle_interrupt_valid_sched check_budget_restart_valid_sched_weaker)
-     apply (wpsimp wp: check_budget_valid_sched_weaker hoare_vcg_all_lift hoare_vcg_imp_lift')
-    apply(rule_tac Q'="\<lambda>_. valid_sched and invs and ct_not_in_release_q
-                          and ct_in_state activatable
-                          and cur_sc_active
-                          and (\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
-                          and consumed_time_bounded
-                          and schact_is_rct and ct_not_queued
-                          and (\<lambda>s. valid_refills (cur_sc s) s)
-                          and current_time_bounded" in hoare_strengthen_post[rotated])
-     apply (clarsimp simp: if_split)
-     apply (intro conjI allI impI)
-           apply fastforce
-          apply (fastforce intro: invs_cur_sc_chargeableE)
-         apply (fastforce elim: ct_in_state_weaken)
-        apply fastforce
-       apply (fastforce intro: invs_cur_sc_chargeableE)
-      apply (fastforce elim: ct_in_state_weaken)
-     apply fastforce
-    apply (wpsimp wp: update_time_stamp_current_time_bounded)
-   apply wpsimp
-   apply (clarsimp simp: ct_in_state_def)
+     apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift)
+    apply (wpsimp wp: check_budget_valid_sched_weaker hoare_vcg_all_lift hoare_vcg_imp_lift')
+   apply (rule_tac Q'="\<lambda>_. valid_sched and invs and ct_not_in_release_q
+                           and ct_in_state activatable
+                           and cur_sc_active
+                           and (\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
+                           and consumed_time_bounded
+                           and schact_is_rct and ct_not_queued
+                           and (\<lambda>s. valid_refills (cur_sc s) s)
+                           and current_time_bounded" in hoare_strengthen_post[rotated])
+    apply (clarsimp simp: if_split)
+    apply (intro conjI allI impI)
+          apply fastforce
+         apply (fastforce intro: invs_cur_sc_chargeableE)
+        apply (fastforce elim: ct_in_state_weaken)
+       apply fastforce
+      apply (fastforce intro: invs_cur_sc_chargeableE)
+     apply (fastforce elim: ct_in_state_weaken)
+    apply fastforce
+   apply (wpsimp wp: update_time_stamp_current_time_bounded)
   apply (fastforce elim!: valid_sched_ct_not_queued
                     elim: invs_cur_sc_chargeableE ct_in_state_weaken
                   intro!: active_scs_validE)
@@ -23166,16 +23165,16 @@ lemma handle_event_cur_sc_more_than_ready[wp]:
 
    apply (subst validE_R_def)
    apply (subst liftE_validE)
-   apply (rule bind_wp_fwd_skip, wpsimp)
    apply (rule_tac Q'="\<lambda>_ s. (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
-                            \<and> cur_sc_active s
-                            \<and> valid_machine_time s
-                            \<and> invs s
-                            \<and> schact_is_rct s"
+                             \<and> cur_sc_active s
+                             \<and> valid_machine_time s
+                             \<and> invs s
+                             \<and> schact_is_rct s"
                 in bind_wp_fwd)
     apply wpsimp
    apply (rule_tac Q'="\<lambda>_. cur_sc_more_than_ready and invs" in bind_wp_fwd)
     apply wpsimp
+   apply (rule bind_wp_fwd_skip, wpsimp)
    apply wpsimp
   apply wpsimp
   apply (clarsimp simp: cur_sc_more_than_ready_def)
@@ -25740,25 +25739,23 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
 
     subgoal \<comment>\<open>handle_interrupt\<close>
       apply (clarsimp simp: validE_R_def)
-       apply (rule_tac P'="\<lambda>s. invs s \<and> valid_sched s \<and> schact_is_rct s \<and> ct_not_queued s
+      apply (rule_tac P'="\<lambda>s. invs s \<and> valid_sched s \<and> schact_is_rct s \<and> ct_not_queued s
                               \<and> ct_not_in_release_q s \<and> valid_machine_time s \<and> cur_sc_active s
                               \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
                               \<and> (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
                               \<and> consumed_time_bounded s"
-                    in hoare_weaken_pre[rotated], simp)
-      apply (rule bind_wp_fwd_skip, wpsimp simp: ct_in_state_def)
+                   in hoare_weaken_pre[rotated], simp)
       apply (rule_tac Q'="\<lambda>_s. invs s \<and> valid_sched s \<and> schact_is_rct s \<and> ct_not_queued s
-                              \<and> ct_not_in_release_q s \<and> valid_machine_time s \<and> cur_sc_active s
-                              \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
-                              \<and> (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
-                              \<and> consumed_time_bounded s \<and> current_time_bounded s"
+                               \<and> ct_not_in_release_q s \<and> valid_machine_time s \<and> cur_sc_active s
+                               \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+                               \<and> (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
+                               \<and> consumed_time_bounded s \<and> current_time_bounded s"
                    in bind_wp_fwd)
        apply (wpsimp wp: update_time_stamp_current_time_bounded hoare_vcg_disj_lift)
       apply (wpsimp wp: handle_interrupt_cur_sc_in_release_q_imp_zero_consumed)
-       apply (strengthen valid_sched_active_scs_valid valid_sched_valid_release_q)
-       apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift
-                         check_budget_cur_sc_in_release_q_imp_zero_consumed
-                         check_budget_valid_sched)
+        apply (strengthen valid_sched_valid_release_q)
+        apply (wpsimp wp: hoare_drop_imp)
+       apply (wpsimp wp: check_budget_cur_sc_in_release_q_imp_zero_consumed check_budget_valid_sched)
       apply (clarsimp cong: conj_cong)
       apply (prop_tac "cur_sc_tcb_are_bound s")
        apply (rule invs_strengthen_cur_sc_tcb_are_bound, fastforce+)
@@ -26898,13 +26895,11 @@ lemma handle_event_ct_ready_if_schedulable[wp]:
   subgoal \<comment>\<open>Interrupt\<close>
     apply wpsimp
        apply (wp hoare_drop_imp)
-      apply (wpsimp_str wp: update_time_stamp_current_time_bounded)
-     apply wpsimp
-     apply (clarsimp simp: ct_in_state_def)
-    apply (fastforce intro!: schact_is_rct_ct_released
-                       elim: invs_cur_sc_chargeableE
-                       simp: ct_ready_if_schedulable_def vs_all_heap_simps ct_in_state_def
-                             pred_tcb_at_def obj_at_def is_blocked_on_receive_def)
+       apply (fastforce simp: ct_in_state_def)
+      apply (wpsimp_str wp: update_time_stamp_current_time_bounded)+
+    apply (fastforce elim: invs_cur_sc_chargeableE
+                     simp: ct_ready_if_schedulable_def vs_all_heap_simps ct_in_state_def
+                           pred_tcb_at_def obj_at_def is_blocked_on_receive_def)
     done
   apply he_ctris_handle_fault
   apply (wpsimp wp: handle_fault_ct_ready_if_schedulable_not_blocked_on_receive)

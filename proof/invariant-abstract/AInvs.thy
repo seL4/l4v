@@ -1160,16 +1160,16 @@ lemma handle_event_schact_is_rct_imp_ct_not_in_release_q:
 
   \<comment> \<open>Interrupt\<close>
   apply (clarsimp simp: liftE_def bind_assoc)
-  apply (rule bind_wp_fwd_skip, wpsimp)
-    apply (clarsimp simp: ct_in_state_def)
-   apply simp
   apply (rule bind_wp_fwd_skip, wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
   apply (rule_tac Q'="\<lambda>_ s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> cur_sc_active s
-                           \<and> ct_not_blocked_on_receive s \<and> ct_not_blocked_on_ntfn s"
+                            \<and> ct_not_blocked_on_receive s \<and> ct_not_blocked_on_ntfn s"
                in bind_wp_fwd)
    apply (wpsimp wp: cur_sc_active_lift)
    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
                    split: thread_state.splits)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+    apply (clarsimp simp: ct_in_state_def)
+   apply simp
   apply (wpsimp wp: handle_interrupt_schact_is_rct_imp_ct_not_in_release_q)
   done
 
@@ -2014,8 +2014,10 @@ lemma handle_event_schact_is_rct_imp_ct_activatable:
     apply (clarsimp simp: liftE_def bind_assoc)
     apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-    apply (rule bind_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift' do_machine_op_ct_in_state\<close>)+
-    apply (rule bind_wp_fwd_skip, wpsimp)
+    apply (rule bind_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
+    apply (rule bind_wp_fwd_skip, wpsimp)+
+      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+     apply simp
     apply wpsimp
    apply (clarsimp simp: liftE_def bind_assoc)
    apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])

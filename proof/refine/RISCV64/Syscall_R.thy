@@ -2751,55 +2751,56 @@ proof -
                         elim: pred_tcb'_weakenE st_tcb_ex_cap'')
 
       apply (rule corres_guard_imp)
-        apply (rule corres_split_eqr[OF corres_machine_op])
-           apply (rule corres_Id, simp+)
-           apply wp
-          apply (rename_tac active)
-          apply (rule corres_split[OF updateTimeStamp_corres])
-            apply (rule_tac P="\<lambda> s. (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
-                                     \<and> cur_sc_active s \<and> valid_machine_time s \<and> (ct_active s \<or> ct_idle s)
-                                     \<and> ct_not_in_release_q s \<and> ct_not_queued s
-                                     \<and> current_time_bounded s \<and> consumed_time_bounded s \<and> einvs s
-                                     \<and> scheduler_action s = resume_cur_thread"
-                       and P'="(invs' and
-                                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) and
-                                (\<lambda>s. \<forall>x. active = Some x \<longrightarrow>
-                                            intStateIRQTable (ksInterruptState s) x \<noteq> irqstate.IRQInactive)"
-                   in corres_inst)
-            apply (rule corres_guard_imp)
-              apply (rule corres_split[OF checkBudget_corres])
-                apply (rule_tac P="einvs and current_time_bounded"
-                           and P'="invs' and (\<lambda>s. \<forall>x. active = Some x \<longrightarrow> intStateIRQTable (ksInterruptState s) x \<noteq> irqstate.IRQInactive)"
-                       in corres_inst)
-                apply (case_tac active; simp)
-                apply (rule handleInterrupt_corres)
-               apply (wpsimp wp: check_budget_valid_sched)
-              apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
-             apply (wpsimp wp: update_time_stamp_current_time_bounded hoare_vcg_disj_lift
-                               update_time_stamp_cur_sc_offset_ready_cs)
-             apply (clarsimp simp: cur_sc_offset_ready_weaken_zero active_from_running current_time_bounded_def)
-             apply (frule invs_cur_sc_chargeableE)
-              apply (clarsimp simp: schact_is_rct_def)
-             apply clarsimp
-             apply (rule conjI)
-              apply (erule cur_sc_offset_ready_weaken_zero)
-             apply (rule conjI)
-              apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def cur_tcb_def is_tcb dest!: invs_cur)
-             apply (rule conjI)
-              apply (erule ct_not_blocked_cur_sc_not_blocked)
-              apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-             apply fastforce
-             apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def dest!: active_activatable)
-            apply clarsimp
-           apply (wpsimp wp: update_time_stamp_current_time_bounded hoare_vcg_disj_lift
-                             update_time_stamp_cur_sc_offset_ready_cs)
+        apply (rule corres_split[OF updateTimeStamp_corres])
+          apply (rule corres_split[OF checkBudget_corres])
+            apply (rule corres_split_eqr[OF corres_machine_op])
+               apply (rule corres_Id, simp+)
+               apply wpsimp
+              apply clarsimp
+              apply (rename_tac active)
+              apply (rule corres_option_split)
+                apply simp
+               apply (rule corres_return[THEN iffD2, where P1=\<top> and P'1=\<top>])
+               apply clarsimp
+              apply (rule handleInterrupt_corres)
+             apply (wpsimp wp: hoare_case_option_wp)
+             apply (rule_tac Q'="\<lambda>_. einvs and current_time_bounded" in hoare_post_imp)
+              apply (clarsimp split: option.splits)
+             apply wpsimp
+            apply (rule_tac Q'="\<lambda>active. invs'
+                                         and (\<lambda>s. \<forall>irq. active = Some irq \<longrightarrow>
+                                                        intStateIRQTable (ksInterruptState s) irq
+                                                          \<noteq> irqstate.IRQInactive)"
+                         in hoare_post_imp)
+             apply (clarsimp split: option.splits)
+            apply (wpsimp wp:  hoare_vcg_all_lift doMachineOp_getActiveIRQ_IRQ_active')
+           apply (wpsimp wp: check_budget_valid_sched)
+          apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
+           apply (clarsimp simp: invs'_def)
           apply wpsimp
-         apply wpsimp
-         apply (clarsimp simp: ct_in_state_def)
-        apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
-       apply (clarsimp elim!: active_from_running)
+         apply (rule_tac Q'="\<lambda>_ s. (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
+                                    \<and> cur_sc_active s \<and> valid_machine_time s \<and> (ct_active s \<or> ct_idle s)
+                                    \<and> ct_not_in_release_q s \<and> ct_not_queued s
+                                    \<and> current_time_bounded s \<and> consumed_time_bounded s \<and> einvs s
+                                    \<and> scheduler_action s = resume_cur_thread"
+                      in hoare_post_imp)
+          apply clarsimp
+          apply (frule invs_cur_sc_chargeableE)
+           apply (clarsimp simp: schact_is_rct_def)
+          apply clarsimp
+          apply (rule conjI)
+           apply (erule cur_sc_offset_ready_weaken_zero)
+          apply (rule conjI)
+           apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def dest!: invs_cur)
+          apply (rule conjI)
+           apply (erule ct_not_blocked_cur_sc_not_blocked)
+           apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+          apply fastforce
+         apply (wpsimp wp: update_time_stamp_current_time_bounded hoare_vcg_disj_lift
+                           update_time_stamp_cur_sc_offset_ready_cs)
+        apply wpsimp
+       apply clarsimp
       apply clarsimp
-      apply (simp add: invs'_def)
      apply (rule updateTimeStamp_checkBudgetRestart_helper)
      apply (rule corres_underlying_split)
         apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
