@@ -277,10 +277,12 @@ lemma idle_thread_not_in_queue:
   apply clarsimp
   done
 
-lemma change_current_domain_dcorres: "dcorres dc \<top> \<top> change_current_domain next_domain"
-  by (auto simp: corres_underlying_def change_current_domain_def next_domain_def bind_def return_def modify_def Let_def put_def select_def
-                    get_def transform_def trans_state_def transform_objects_def transform_cdt_def transform_current_thread_def
-                    transform_asid_table_def do_extended_op_def select_f_def)
+lemma change_current_domain_dcorres:
+  "dcorres dc \<top> \<top> change_current_domain (do y <- arch_prepare_next_domain; next_domain od)"
+  by (auto simp: corres_underlying_def arch_prepare_next_domain_def change_current_domain_def
+                 next_domain_def bind_def return_def modify_def Let_def put_def select_def
+                 get_def transform_def trans_state_def transform_objects_def transform_cdt_def
+                 transform_current_thread_def transform_asid_table_def do_extended_op_def select_f_def)
 
 lemma max_set_not_empty:
   "\<And>x::'a::{linorder,finite}. f x \<noteq> [] \<Longrightarrow> f (Max {x. f x \<noteq> []}) \<noteq> []"
@@ -308,6 +310,9 @@ lemma schedule_def_2:
   unfolding Schedule_D.schedule_def
   apply (subst alternative_bind_distrib_2, simp)
   done
+
+crunch arch_prepare_next_domain
+  for inv[wp]: P
 
 lemma schedule_choose_new_thread_dcorres:
   "dcorres dc \<top>
