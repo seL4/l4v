@@ -2022,7 +2022,7 @@ lemma copy_mrs_corres:
     apply (clarsimp|rule conjI)+
     apply ((wp|clarsimp)+)[3]
   apply (case_tac rv)
-   apply (fastforce simp: ipc_buffer_wp_at_def obj_at_def tcb_at_def)+
+   apply (fastforce simp: ipc_buffer_wp_at_def obj_at_def tcb_at_def valid_cur_fpu_def)+
   done
 
 lemmas transform_cap_simps [simp] = transform_cap_def [split_simps cap.split arch_cap.split]

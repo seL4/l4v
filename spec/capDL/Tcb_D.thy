@@ -131,8 +131,8 @@ where
            returnOk (NotificationControl (cap_object target) (Some (cap_object ntfn_cap)))
          odE \<sqinter> throw
      | TcbUnbindNTFNIntent \<Rightarrow> returnOk (NotificationControl (cap_object target) None) \<sqinter> throw
-     | TCBSetTLSBaseIntent \<Rightarrow> returnOk (SetTLSBase (cap_object target)) \<sqinter> throw
-  "
+     | TcbSetTLSBaseIntent \<Rightarrow> returnOk (SetTLSBase (cap_object target)) \<sqinter> throw
+     | TcbSetFlagsIntent \<Rightarrow> returnOk (SetFlags (cap_object target)) \<sqinter> throw"
 
 
 (* Delete the given slot of a TCB. *)
@@ -296,8 +296,8 @@ where
           liftE $ (case ntfn of
              Some ntfn_id \<Rightarrow> bind_notification tcb ntfn_id
            | None \<Rightarrow> unbind_notification tcb)
-    | SetTLSBase tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb"
-
+    | SetTLSBase tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb
+    | SetFlags tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb"
 
 definition
   decode_domain_invocation :: "(cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_domain_intent \<Rightarrow> cdl_domain_invocation except_monad"
