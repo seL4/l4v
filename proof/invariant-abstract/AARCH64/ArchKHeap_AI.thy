@@ -352,7 +352,7 @@ lemma vspace_obj_pred_aobjs:
 
 lemma vs_lookup_vspace_objs_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
   by (intro vs_lookup_lift vspace_objs_of_pts_lift vspace_objs_of_aps_lift assms)
 
