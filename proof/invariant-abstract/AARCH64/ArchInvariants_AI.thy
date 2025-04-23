@@ -691,10 +691,19 @@ locale_abbrev valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" wh
 
 lemmas valid_global_tables_def = valid_global_tables_2_def
 
+(* The number of list registers should not exceed the maximum word value *)
+definition valid_numlistregs_2 :: "nat \<Rightarrow> bool" where
+  "valid_numlistregs_2 \<equiv> \<lambda>n. n < 2 ^ word_bits"
+
+locale_abbrev valid_numlistregs :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_numlistregs \<equiv> \<lambda>s. valid_numlistregs_2 (arm_gicvcpu_numlistregs (arch_state s))"
+
+lemmas valid_numlistregs_def = valid_numlistregs_2_def
+
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_arch_state \<equiv>
      valid_asid_table and valid_uses and vmid_inv and valid_vmid_table and cur_vcpu and
-     valid_global_arch_objs and valid_global_tables"
+     valid_global_arch_objs and valid_global_tables and valid_numlistregs"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
