@@ -30,6 +30,7 @@ arch_requalify_consts
   is_nondevice_page_cap
   state_hyp_refs_of
   hyp_refs_of
+  tcb_hyp_refs
   hyp_live
   arch_tcb_live
 
