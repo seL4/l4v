@@ -169,6 +169,10 @@ abbreviation fun_upd2_Some :: "('a \<Rightarrow> 'b \<Rightarrow> 'c option) \<R
   ("_ '(_, _ \<mapsto> _')" [900, 0, 0] 900) where
   "f (x, y \<mapsto> v) \<equiv> f (x, y := Some v)"
 
+lemma fun_upd2_apply:
+  "(f (x, y := z)) a b = (if a = x \<and> b = y then z else f a b)"
+  by (clarsimp simp: fun_upd2_def)
+
 lemma False_implies_equals [simp]:
   "((False \<Longrightarrow> P) \<Longrightarrow> PROP Q) \<equiv> PROP Q"
   apply (rule equal_intr_rule)
