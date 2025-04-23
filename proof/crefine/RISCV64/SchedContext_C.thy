@@ -1135,6 +1135,7 @@ crunch schedContextYieldTo
 
 crunch schedContextResume, schedContextCompleteYieldTo, schedContextCompleteYieldTo
   for scTCB[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) scPtr s)"
+  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps updateSchedContext_sc_obj_at'_inv simp: crunch_simps)
 
 lemma returnConsumed_returns_nonempty_rewrite:
@@ -1362,7 +1363,7 @@ lemma invokeSchedContext_YieldTo_ccorres:
        apply (fastforce simp: valid_sched_context'_def valid_bound_obj'_def)
       apply wpsimp
      apply (vcg exspec=schedContext_resume_modifies)
-    apply ((wpsimp | strengthen invs'_implies)+)[1]
+    apply ((wp | strengthen invs'_implies)+)[1]
    apply (vcg exspec=schedContext_completeYieldTo_modifies)
   apply (frule rf_sr_ksCurThread)
   apply (clarsimp cong: conj_cong split: if_splits)
