@@ -602,7 +602,7 @@ where
           assert (r = reply);
           reply_remove receiver reply;
           sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
-          if_sporadic_active_cur_sc_test_refill_unblock_check sc_opt;
+          if_sporadic_cur_sc_test_refill_unblock_check sc_opt;
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do
@@ -618,8 +618,8 @@ where
               set_thread_state receiver (if restart then Restart else Inactive)
             od;
 
-          state \<leftarrow> get_thread_state receiver;
           sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+          state \<leftarrow> get_thread_state receiver;
           when (sc_opt \<noteq> None \<and> runnable (state)) $ do
             sc_ptr \<leftarrow> assert_opt sc_opt;
             sc \<leftarrow> get_sched_context sc_ptr;

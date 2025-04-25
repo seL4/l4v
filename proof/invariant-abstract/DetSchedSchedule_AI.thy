@@ -15101,9 +15101,9 @@ lemma do_reply_transfer_valid_sched:
    apply (prop_tac "scheduler_act_not receiver s", clarsimp simp: valid_sched_not_runnable_scheduler_act_not)
    apply (clarsimp simp: valid_sched_def elim!: released_ipc_queuesE)
    apply (clarsimp simp: vs_all_heap_simps heap_upd_def split: if_splits)
-  apply (rule bind_wp[OF _ gts_sp])
   apply (rule bind_wp[OF _ gsc_sp])
-  apply (rename_tac sc_opt')
+  apply (rule bind_wp[OF _ gts_sp])
+  apply (rename_tac sc_opt' state)
   apply (case_tac "runnable state \<longrightarrow> sc_opt' = None"
          ; clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
    apply (wpsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise valid_sched_def)
@@ -20151,8 +20151,8 @@ lemma do_reply_transfer_ct_not_in_release_q[wp]:
   apply (rule bind_wp_fwd_skip)
    apply (wpsimp wp: maybeM_inv)
   apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (rule bind_wp[OF _ gts_sp])
   apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (case_tac "runnable state \<longrightarrow> sc_opt = None"
          ; clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
    apply wpsimp
@@ -20226,8 +20226,8 @@ lemma do_reply_transfer_ct_not_queued[wp]:
   apply (rule bind_wp_fwd_skip)
    apply (wpsimp wp: maybeM_inv)
   apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp_fwd_skip, wpsimp)
   apply (clarsimp simp: when_def pred_conj_def)
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
   apply (rule bind_wp[OF _ assert_opt_sp])
@@ -20535,7 +20535,7 @@ lemma do_reply_transfer_released_if_bound[wp]:
    do_reply_transfer sender reply grant
    \<lbrace>\<lambda>rv. released_if_bound_sc_tcb_at t :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: do_reply_transfer_def)
-  apply wpsimp
+  apply (wpsimp wp: gts_wp)
               apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imp weak_if_wp')
              apply (clarsimp cong: conj_cong)
              apply wpsimp
@@ -22301,8 +22301,7 @@ crunch handle_timeout
 lemma do_reply_transfer_cur_sc_more_than_ready[wp]:
   "do_reply_transfer sender reply grant \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
   unfolding do_reply_transfer_def
-  apply (wpsimp wp: get_tcb_obj_ref_wp)
-  by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)+
+  by (wpsimp wp: get_tcb_obj_ref_wp hoare_drop_imp hoare_vcg_all_lift)
 
 lemma handle_fault_cur_sc_more_than_ready[wp]:
   "handle_fault thread ex \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
@@ -23891,9 +23890,9 @@ lemma do_reply_transfer_sc_not_in_release_q:
     apply (wpsimp wp: set_thread_state_valid_release_q)
    apply (rule bind_wp_fwd_skip, wpsimp wp: thread_set_no_change_tcb_sched_context)+
    apply ((wpsimp wp: set_thread_state_valid_release_q)+)[1]
-  apply (rule bind_wp[OF _ gts_sp])
   apply (rule bind_wp[OF _ gsc_sp])
-  apply (rename_tac sc_opt')
+  apply (rule bind_wp[OF _ gts_sp])
+  apply (rename_tac sc_opt' state)
   apply (case_tac "runnable state \<longrightarrow> sc_opt' = None"
          ; clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
    apply wpsimp
@@ -23934,8 +23933,8 @@ lemma do_reply_transfer_consumed_time[wp]:
   apply (rule bind_wp_fwd_skip, wpsimp wp: maybeM_inv)
   apply (rule bind_wp_fwd_skip)
   apply (case_tac fault; clarsimp?; (solves \<open>wpsimp\<close>)?)
-  apply (rule bind_wp[OF _ gts_sp])
   apply (rule bind_wp[OF _ gsc_sp])
+  apply (rule bind_wp[OF _ gts_sp])
   apply (case_tac "runnable state \<longrightarrow> sc_opt = None"
          ; clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (clarsimp simp: when_def, intro conjI impI; (solves \<open>wpsimp\<close>)?)

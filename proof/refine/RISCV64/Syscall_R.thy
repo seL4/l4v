@@ -798,23 +798,24 @@ lemma doReplyTransfer_invs'[wp]:
    doReplyTransfer sender replyPtr grant
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding doReplyTransfer_def
-  apply (wpsimp wp: handleTimeout_invs' postpone_invs' isValidTimeoutHandler_inv hoare_drop_imps)
-           apply (wpsimp wp: threadGet_wp)
-          apply wpsimp
-         apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> sch_act_not x2 s \<and> ex_nonz_cap_to' x2 s"
-                      in hoare_post_imp)
-          apply (fastforce simp: runnable_eq_active' obj_at_simps st_tcb_at'_def)
-         apply (wpsimp wp: setThreadState_Running_invs')
-              apply (intro conjI)
-               apply (wpsimp wp: setThreadState_Restart_invs')
-              apply (wpsimp wp: sts_invs' sts_st_tcb_at'_cases)
-             apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) xa s
-                                      \<and> sch_act_not xa s \<and> ex_nonz_cap_to' xa s"
-                          in hoare_post_imp)
-              apply (clarsimp simp: obj_at_simps st_tcb_at'_def is_BlockedOnReply_def)
-              apply metis
-             apply (wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2)+
-       apply (wpsimp wp: replyRemove_invs' gts_wp' hoare_drop_imps)+
+  apply (wpsimp wp: handleTimeout_invs' postpone_invs' threadGet_wp hoare_vcg_all_lift
+                    hoare_drop_imp[where f="isValidTimeoutHandler _ "])
+              apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ex_nonz_cap_to' x2 s" in hoare_post_imp)
+               apply (clarsimp simp: runnable_eq_active')
+              apply (wpsimp wp:setThreadState_Running_invs' split_del: if_splits)+
+                 apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ex_nonz_cap_to' x2 s" in hoare_post_imp)
+                  apply (clarsimp simp: runnable_eq_active')
+                 apply (wpsimp wp: setThreadState_Running_invs')
+                 apply (intro conjI)
+                  apply (wpsimp wp: setThreadState_Restart_invs')
+                 apply (wpsimp wp: sts_invs' sts_st_tcb_at'_cases)
+                apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) x2 s
+                                          \<and> sch_act_not x2 s \<and> ex_nonz_cap_to' x2 s"
+                             in hoare_post_imp)
+                 apply (clarsimp simp: obj_at_simps st_tcb_at'_def is_BlockedOnReply_def)
+                 apply metis
+                apply (wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2)+
+           apply (wpsimp wp: replyRemove_invs' gts_wp' hoare_drop_imps)+
   by (fastforce intro: st_tcb_ex_cap''
                  simp: isReply_def split: thread_state.splits)
 
