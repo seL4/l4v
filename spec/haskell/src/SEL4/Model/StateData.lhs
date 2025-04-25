@@ -543,6 +543,11 @@ An assert that will say that there is an active scheduling context at the given 
 > active_sc_at'_asrt :: PPtr SchedContext -> KernelState -> Bool
 > active_sc_at'_asrt _ _ = True
 
+An assert that will say that there is a TCB with active' thread state at the given pointer
+
+> active_tcb_at'_asrt :: PPtr TCB -> KernelState -> Bool
+> active_tcb_at'_asrt _ _ = True
+
 An assert that will say that valid_tcbs' holds
 
 > valid_tcbs'_asrt :: KernelState -> Bool
@@ -552,6 +557,16 @@ An assert that will say that valid_objs' holds
 
 > valid_objs'_asrt :: KernelState -> Bool
 > valid_objs'_asrt _ = True
+
+An assert that will say that invs' holds
+
+> invs'_asrt :: KernelState -> Bool
+> invs'_asrt _ = True
+
+An assert that will say that weak_sch_act_wf holds
+
+> weak_sch_act_wf_asrt :: KernelState -> Bool
+> weak_sch_act_wf_asrt _ = True
 
 An assert that will say that priority_ordered' holds of the given list
 

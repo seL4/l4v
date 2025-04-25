@@ -201,6 +201,11 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 
 > doReplyTransfer :: PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > doReplyTransfer sender reply grant = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
+>     stateAssert weak_sch_act_wf_asrt "assert that `weak_sch_act_wf` holds"
 >     receiverOpt <- liftM replyTCB (getReply reply)
 >     case receiverOpt of
 >         Nothing -> return ()
@@ -211,7 +216,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                 else do
 >                     replyRemove reply receiver
 >                     scOpt <- threadGet tcbSchedContext receiver
->                     ifCondRefillUnblockCheck scOpt (Just True) (Just False)
+>                     ifCondRefillUnblockCheck scOpt (Just False) (Just False)
 >                     faultOpt <- threadGet tcbFault receiver
 >                     case faultOpt of
 >                         Nothing -> do
@@ -224,8 +229,8 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                             restart <- handleFaultReply fault receiver (msgLabel mi) mrs
 >                             threadSet (\tcb -> tcb { tcbFault = Nothing }) receiver
 >                             setThreadState (if restart then Restart else Inactive) receiver
->                     runnable <- isRunnable receiver
 >                     scPtrOpt <- threadGet tcbSchedContext receiver
+>                     runnable <- isRunnable receiver
 >                     when (scPtrOpt /= Nothing && runnable) $ do
 >                         let scPtr = fromJust scPtrOpt
 >                         ready <- refillReady scPtr

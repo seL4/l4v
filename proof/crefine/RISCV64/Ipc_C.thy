@@ -266,6 +266,11 @@ lemma length_syscallMessage:
   apply (simp add: fromEnum_def enum_register)
   done
 
+lemma length_timeoutMessage:
+  "length RISCV64_H.timeoutMessage = unat n_timeoutMessage"
+  by (simp add: timeoutMessage_def RISCV64.timeoutMessage_def msgRegisters_unfold
+                n_timeoutMessage_def upto_enum_def fromEnum_def enum_register)
+
 end
 
 context kernel_m begin
@@ -297,6 +302,8 @@ abbreviation "syscallMessageC \<equiv>  kernel_all_global_addresses.fault_messag
 lemmas syscallMessageC_def = kernel_all_substitute.fault_messages_def
 abbreviation "exceptionMessageC \<equiv> kernel_all_substitute.fault_messages.[unat MessageID_Exception]"
 lemmas exceptionMessageC_def = kernel_all_substitute.fault_messages_def
+abbreviation "timeoutMessageC \<equiv> kernel_all_substitute.fault_messages.[unat MessageID_TimeoutReply]"
+lemmas timeoutMessageC_def = kernel_all_substitute.fault_messages_def
 
 lemma syscallMessage_ccorres:
   "n < unat n_syscallMessage
@@ -310,6 +317,17 @@ lemma syscallMessage_ccorres:
   apply (simp add: toEnum_def enum_register)
   apply (clarsimp simp: fupdate_def
               | drule nat_less_cases' | erule disjE)+
+  done
+
+lemma timeoutMessage_ccorres:
+  "n < unat n_timeoutMessage
+   \<Longrightarrow> register_from_H (RISCV64_H.timeoutMessage ! n) = index timeoutMessageC n"
+  apply (simp add: RISCV64_H.timeoutMessage_def timeoutMessageC_def RISCV64.timeoutMessage_def
+                   MessageID_Exception_def MessageID_TimeoutReply_def
+                   n_timeoutMessage_def msgRegisters_unfold)
+  apply (simp add: upto_enum_def fromEnum_def enum_register)
+  apply (simp add: toEnum_def enum_register)
+  apply (clarsimp simp: fupdate_def | drule nat_less_cases' | erule disjE)+
   done
 
 end
@@ -1069,7 +1087,10 @@ lemma setMR_ccorres:
   notes if_cong[cong]
   notes unat_of_nat32 = unat_of_nat_eq[where 'a=32, unfolded word_bits_len_of]
   shows
-  "ccorres (\<lambda>r r'. r = unat (r' && mask msgLengthBits)) ret__unsigned_'
+  "ccorres
+     (\<lambda>r r'. r = unat (r' && mask msgLengthBits)
+             \<and> (offset < length msgRegisters \<longrightarrow> r' = word_of_nat offset + 1))
+     ret__unsigned_'
      (valid_pspace' and  case_option \<top> valid_ipc_buffer_ptr' buf
            and (\<lambda>s. offset < msgMaxLength))
      (UNIV \<inter> {s. offset_' s = of_nat offset} \<inter> {s. reg___unsigned_long_' s = v}
@@ -1112,17 +1133,16 @@ lemma setMR_ccorres:
   apply (simp add: Collect_const_mem option_to_0_def
                    unat_gt_0 option_to_ptr_def)
   apply (intro impI conjI allI; simp?)
-          apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
-          apply (erule aligned_add_aligned)
-           apply (simp only: word_size_def is_aligned_mult_triv2[where n=3, simplified])
-          apply (simp add: msg_align_bits_def word_size_bits_def)
-         apply (simp add: n_msgRegisters_def length_msgRegisters msgLengthBits_def mask_def)
+           apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
+           apply (erule aligned_add_aligned)
+            apply (simp only: word_size_def is_aligned_mult_triv2[where n=3, simplified])
+           apply (simp add: msg_align_bits_def word_size_bits_def)
+          apply (simp add: n_msgRegisters_def length_msgRegisters msgLengthBits_def mask_def)
+         apply (simp add: unat_of_nat length_msgRegisters n_msgRegisters_def word_le_nat_alt)
         apply (simp add: msg_align_bits word_size_def msgMaxLength_def unat_of_nat
                          length_msgRegisters n_msgRegisters_def uint_nat unat_word_ariths)
-       apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def
-                        word_less_nat_alt unat_of_nat)
-      apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def
-                       word_less_nat_alt unat_of_nat)
+       apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def unat_of_nat)
+      apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def unat_of_nat)
      apply (fastforce simp: valid_ipc_buffer_ptr'_def)
     apply (simp add: unat_of_nat32 word_bits_def msgMaxLength_unfold
                      word_le_nat_alt msgRegisters_ccorres n_msgRegisters_def)
@@ -1876,6 +1896,50 @@ proof -
     done
 qed
 
+lemma setMR_mode_setTimeArg_ccorres:
+  "ccorres (\<lambda>r r'. r = unat (r' && mask msgLengthBits)) ret__unsigned_long_'
+     (valid_pspace' and case_option \<top> valid_ipc_buffer_ptr' buf
+      and (\<lambda>_. i < msgMaxLength))
+     (\<lbrace>\<acute>i = word_of_nat i\<rbrace>
+      \<inter> \<lbrace>\<acute>time = v\<rbrace>
+      \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
+      \<inter> \<lbrace>\<acute>buffer = option_to_ptr buf\<rbrace>) []
+     (setMR thread buf i v) (Call mode_setTimeArg_'proc)"
+  apply (rule ccorres_gen_asm)
+  apply (cinit' lift:  i_' time_'  thread_' buffer_')
+   apply (rule ccorres_add_return2)
+   apply (ctac add: setMR_ccorres)
+     apply (fastforce intro: ccorres_return_C)
+    apply fastforce
+   apply (vcg exspec=setMR_modifies)
+  apply (clarsimp split: if_splits)
+  apply (subst ucast_of_nat_small; clarsimp simp: msgMaxLength_def)
+  done
+
+crunch setMR
+  for invs'[wp]: invs'
+  and valid_objs'[wp]: valid_objs'
+  and no_0_obj'[wp]: no_0_obj'
+  and tcb_at'[wp]: "tcb_at' tcbPtr"
+
+lemma asUser_tcbSchedContext_inv[wp]:
+  "asUser t' m \<lbrace>obj_at' (\<lambda>tcb. P (tcbSchedContext tcb)) t\<rbrace>"
+  apply (simp add: asUser_def threadGet_def)
+  apply (wpsimp wp: threadSet_obj_at'_strongish)
+  apply (clarsimp simp: obj_at'_def split: if_splits)
+  done
+
+lemma setMR_tcbSchedContext_inv[wp]:
+  "setMR thread buffer a b\<lbrace>obj_at' (\<lambda>tcb. P (tcbSchedContext tcb)) t\<rbrace>"
+  unfolding setMR_def
+  by wpsimp
+
+crunch setMR, schedContextUpdateConsumed
+  for valid_pspace'[wp]: valid_pspace'
+
+crunch schedContextUpdateConsumed
+  for obj_at'_tcb[wp]: "obj_at' (P :: tcb \<Rightarrow> bool) tcbPtr"
+
 lemma setMRs_fault_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_long_'
            (valid_pspace' and obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender
@@ -1894,6 +1958,7 @@ proof -
           [where xf'=ret__unsigned_longlong_' and R="?obj_at_ft" and R'=UNIV]
   note empty_fail_cond[simp]
   show ?thesis
+    supply Collect_const[simp del]
     apply (unfold K_def)
     apply (intro ccorres_gen_asm)
     apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_' simp: whileAnno_def)
@@ -2054,8 +2119,71 @@ proof -
        apply (wp asUser_inv mapM_wp' getRegister_inv hoare_drop_imps asUser_const_rv
                  asUser_get_registers[simplified atcbContextGet_def comp_def])
        apply simp
-     (* Timeout *)
-     subgoal sorry (* FIXME RT: Timeout case for setMRs_fault_ccorres *)
+       (* Timeout *)
+       apply (rename_tac badge)
+       apply (simp add: seL4_Fault_tag_defs Collect_True Collect_False
+                        ccorres_cond_iffs zipWithM_mapM bind_assoc)
+       apply (rule ccorres_pre_threadGet, rename_tac tcbSc)
+       apply (simp add: case_option_If2 if_to_top_of_bind)
+       apply (rule ccorres_move_c_guard_tcb)
+       apply (rule_tac Q="obj_at' (\<lambda>tcb. tcbSchedContext tcb = tcbSc) sender
+                          and valid_objs' and no_0_obj'"
+                    in ccorres_cond_both'[where Q'=\<top>])
+         apply normalise_obj_at'
+         apply (frule (1) obj_at_cslift_tcb)
+         apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+         apply (clarsimp simp: ctcb_relation_def typ_heap_simps valid_tcb'_def)
+         apply (case_tac "tcbSchedContext ko"; clarsimp)
+        apply (simp add: bind_assoc)
+        apply (rule ccorres_rhs_assoc)+
+        apply csymbr
+        apply (rule ccorres_move_c_guard_tcb)
+        apply (ctac (no_vcg) add: schedContext_updateConsumed_ccorres)
+         apply (rule ccorres_stateAssert)
+         apply (rule ccorres_move_c_guard_tcb)
+         apply (rule_tac val=badge in symb_exec_r_fault)
+            apply (vcg, clarsimp)
+            apply (drule(1) obj_at_cslift_tcb)
+            subgoal
+              by (clarsimp simp: ctcb_relation_def typ_heap_simps'
+                                 cfault_rel_def seL4_Fault_lift_def Let_def
+                                 seL4_Fault_Timeout_def seL4_Fault_Timeout_lift_def
+                          split: if_split_asm)
+           apply ceqv
+          apply (simp add: zip_upt_Cons msgMaxLength_unfold mapM_Cons bind_assoc)
+          apply (ctac add: setMR_ccorres)
+            apply csymbr
+            apply (simp add: words_from_time_def zip_upt_Cons mapM_Cons mapM_empty)
+            apply (ctac add: setMR_mode_setTimeArg_ccorres[where i="Suc 0"])
+              apply (fastforce intro: ccorres_return_C)
+             apply wpsimp
+            apply (vcg exspec=mode_setTimeArg_modifies)
+           apply (wpsimp wp: hoare_case_option_wp)
+          apply simp
+          apply vcg
+         apply (fastforce simp: guard_is_UNIV_def n_msgRegisters_def msgRegisters_def
+                                seL4_Timeout_Data_def option_to_ptr_def)
+        apply (wpsimp wp: hoare_drop_imp hoare_case_option_wp)
+       apply simp
+       apply (rule ccorres_stateAssert)
+       apply (simp add: zip_upt_Cons msgMaxLength_unfold mapM_Cons mapM_empty)
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_move_c_guard_tcb)
+       apply (rule_tac val=badge in symb_exec_r_fault)
+          apply (vcg, clarsimp)
+          apply (drule(1) obj_at_cslift_tcb)
+          subgoal
+            by (clarsimp simp: ctcb_relation_def typ_heap_simps'
+                               cfault_rel_def seL4_Fault_lift_def Let_def
+                               seL4_Fault_Timeout_def seL4_Fault_Timeout_lift_def
+                        split: if_split_asm)
+         apply ceqv
+        apply (ctac add: setMR_ccorres)
+          apply (fastforce intro: ccorres_return_C)
+         apply wpsimp
+        apply (vcg exspec=setMR_modifies)
+       apply (clarsimp simp: guard_is_UNIV_def seL4_Timeout_Data_def option_to_ptr_def
+                             ucast_and_mask)
       (* ArchFault *)
       apply clarsimp
       apply ccorres_rewrite
@@ -2078,15 +2206,19 @@ proof -
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
       apply (rule fault_to_fault_tag.simps(2)[symmetric])
      (* done *)
-sorry (* FIXME RT: setMRs_fault_ccorres *) (*
+     apply clarsimp
      apply (rule guard_is_UNIVI, clarsimp simp: option_to_ptr_def)
-    apply (clarsimp simp: msgMaxLength_unfold length_syscallMessage msgFromLookupFailure_def
-                         RISCV64_H.exceptionMessage_def
-                         RISCV64.exceptionMessage_def
-                         n_exceptionMessage_def
-                         n_syscallMessage_def)
-    apply (fastforce elim: obj_tcb_at' split: Fault_H.lookup_failure.splits)
-  done *)
+     apply (intro conjI impI allI)
+      apply (clarsimp simp: seL4_CapFault_IP_def)
+     apply (clarsimp simp: ctcb_relation_def typ_heap_simps)
+     apply (rename_tac tcb badge ctcb)
+     apply (case_tac "tcbSchedContext tcb"; clarsimp)
+    apply (fastforce simp: msgMaxLength_unfold length_syscallMessage msgFromLookupFailure_def
+                           RISCV64_H.exceptionMessage_def RISCV64.exceptionMessage_def
+                           n_exceptionMessage_def n_syscallMessage_def
+                           ArchMove_C.length_msgRegisters seL4_CapFault_IP_def obj_at'_def
+                    split: lookup_failure.splits)
+    done
 qed
 
 definition
@@ -4014,6 +4146,207 @@ lemma copyMRsFaultReply_ccorres_syscall:
   done
 qed
 
+lemma copyMRsFaultReply_ccorres_timeout:
+  fixes word_size :: "'a::len"
+  shows
+  "ccorres dc xfdc
+     (valid_pspace' and tcb_at' s and tcb_at' r and obj_at' (\<lambda>t. tcbFault t = Some f) r
+      and K (r \<noteq> s) and K (len \<le> unat n_timeoutMessage))
+     (\<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr s\<rbrace>
+      \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr r\<rbrace>
+      \<inter> \<lbrace>\<acute>id___anonymous_enum = MessageID_TimeoutReply \<rbrace>
+      \<inter> \<lbrace>\<acute>length___unsigned_long = of_nat len \<rbrace>) hs
+     (do t \<leftarrow> getSanitiseRegisterInfo r;
+         a \<leftarrow> zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
+                                    asUser r (setRegister rd (RISCV64_H.sanitiseRegister t rd v))
+                                  od)
+         RISCV64_H.msgRegisters (take len RISCV64_H.timeoutMessage);
+         sendBuf \<leftarrow> lookupIPCBuffer False s;
+         case sendBuf of
+           None \<Rightarrow> return ()
+         | Some bufferPtr \<Rightarrow> zipWithM_x (\<lambda>i rd. do v \<leftarrow> loadWordUser (bufferPtr + i * 8);
+                                                   asUser r (setRegister rd (RISCV64_H.sanitiseRegister t rd v))
+                                                od)
+                                        [scast n_msgRegisters + 1.e.scast n_timeoutMessage]
+                                        (drop (unat (scast n_msgRegisters :: machine_word))
+                                              (take len RISCV64_H.timeoutMessage))
+      od)
+     (Call copyMRsFaultReply_'proc)"
+proof -
+  let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some f) s"
+  note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
+          [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
+  note empty_fail_cond[simp]
+  show ?thesis
+    apply (unfold K_def, rule ccorres_gen_asm) using [[goals_limit=1]]
+    apply (cinit' lift: sender_' receiver_'
+                        id___anonymous_enum_'
+                        length___unsigned_long_'
+                  simp: whileAnno_def)
+     apply (ctac(no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
+     apply (rule ccorres_rhs_assoc2)
+     apply (simp add: MessageID_TimeoutReply_def)
+     apply ccorres_rewrite
+     apply (rule ccorres_split_nothrow_novcg)
+         apply (rule ccorres_zipWithM_x_while)
+             apply clarsimp
+             apply (intro ccorres_rhs_assoc)
+             apply (rule ccorres_symb_exec_r)
+               apply ctac
+                 apply (rule ccorres_symb_exec_r)
+                   apply ctac
+                  apply (vcg)
+                 apply (rule conseqPre, vcg)
+                 apply fastforce
+                apply wp
+               apply vcg
+              apply vcg
+              apply (rule conjI, simp add: RISCV64_H.timeoutMessage_def
+                                           RISCV64.timeoutMessage_def word_of_nat_less
+                                           unat_of_nat msgRegisters_ccorres n_msgRegisters_def
+                                           length_msgRegisters)
+              apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters unat_of_nat
+                               timeoutMessage_ccorres[symmetric,simplified MessageID_TimeoutReply_def,simplified]
+                               n_syscallMessage_def length_syscallMessage sanitiseRegister_def)
+              apply (auto simp add: word_less_nat_alt unat_of_nat)[1]
+             apply (rule conseqPre, vcg)
+             apply (clarsimp simp: word_of_nat_less syscallMessage_unfold length_msgRegisters
+                                   n_syscallMessage_def n_msgRegisters_def)
+            apply (simp add: min_def length_msgRegisters)
+            apply (clarsimp simp:   min_def n_timeoutMessage_def
+                                    length_msgRegisters n_msgRegisters_def
+                                    length_timeoutMessage
+                                    message_info_to_H_def word_of_nat_less
+                             split: if_split)
+            apply (simp add: word_less_nat_alt unat_of_nat not_le)
+           apply clarsimp
+           apply (vcg spec=TrueI)
+           apply clarsimp
+          apply wp
+            apply simp+
+         apply (clarsimp simp: length_timeoutMessage
+                               length_msgRegisters
+                               n_msgRegisters_def n_timeoutMessage_def
+                               word_bits_def min_def
+                         split: if_split)
+        apply ceqv
+       apply (rule_tac P'="if 4 < len then _ else _" in ccorres_inst)
+       apply (cases "4 < len" ; simp)
+        apply (clarsimp simp: unat_ucast_less_no_overflow n_timeoutMessage_def
+                              length_timeoutMessage msgRegisters_unfold
+                              word_of_nat_less unat_of_nat unat_less_helper)
+        apply ccorres_rewrite
+        apply (ctac(no_vcg))
+         apply (rename_tac sb sb')
+         apply wpc
+          apply (simp add: option_to_0_def ccorres_cond_iffs option_to_ptr_def)
+          apply (rule ccorres_return_Skip')
+            apply (rule_tac P="sb \<noteq> Some 0" in ccorres_gen_asm)
+            apply (rule_tac P="case_option True (\<lambda>x. is_aligned x msg_align_bits) sb"
+                            in ccorres_gen_asm)
+            apply (simp add: option_to_0_def option_to_ptr_def)
+            apply (subgoal_tac "sb'\<noteq> NULL") prefer 2
+             apply clarsimp
+            apply (simp add: ccorres_cond_iffs)
+            apply (subst ccorres_seq_skip' [symmetric])
+            apply (rule_tac r'="\<lambda>rv rv'. rv' = of_nat (unat  n_msgRegisters) + _" in ccorres_rel_imp)
+             apply (drule_tac s="sb" in sym)
+             apply (simp only: zipWithM_x_mapM_x)
+             apply ccorres_rewrite
+             apply (rule_tac F="\<lambda>_. valid_pspace'
+                                     and (case sb of None \<Rightarrow> \<top>
+                                                   | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
+                                     and tcb_at' r"
+                             in ccorres_mapM_x_while')
+                 apply clarsimp
+                 apply (rule ccorres_guard_imp2)
+                  apply (rule ccorres_pre_loadWordUser)
+                  apply (intro ccorres_rhs_assoc)
+                  apply (rule ccorres_symb_exec_r)
+                    apply (rule ccorres_move_array_assertion_ipc_buffer
+                                ccorres_Guard_Seq[where S="{s. h_t_valid (htd s) c_guard (ptr s)}" for ptr htd])+
+                    apply (rule ccorres_symb_exec_r)
+                      apply (rule ccorres_symb_exec_r)
+                        apply ctac
+                       apply (vcg)
+                      apply (rule conseqPre, vcg)
+                      apply fastforce
+                     apply vcg
+                    apply (rule conseqPre, vcg)
+                    apply clarsimp
+                   apply vcg
+                  apply (rule conseqPre, vcg)
+                  apply clarsimp
+                 apply clarsimp
+                 apply (subst aligned_add_aligned, assumption)
+                   apply (rule is_aligned_mult_triv2[where n=3, simplified])
+                  apply (simp add: msg_align_bits)
+                 apply (simp only: n_msgRegisters_def)
+                 apply (clarsimp simp: n_timeoutMessage_def n_msgRegisters_def
+                                       word_unat.Rep_inverse[of "scast _ :: 'a word"]
+                                       msgRegisters_ccorres[symmetric]
+                                       length_msgRegisters[symmetric]
+                                       timeoutMessage_ccorres[symmetric]
+                                       length_msgRegisters length_timeoutMessage
+                                       timeoutMessage_ccorres[symmetric,
+                                                              simplified MessageID_TimeoutReply_def,
+                                                              simplified]
+                                       unat_of_nat64 word_bits_def
+                                       MessageID_TimeoutReply_def
+                                       min_def message_info_to_H_def
+                                       upto_enum_def typ_heap_simps'
+                                       unat_add_lem[THEN iffD1] Let_def
+                                       msg_align_bits sanitiseRegister_def
+                             simp del: upt_rec_numeral cong: if_cong register.case_cong,
+                        simp_all add: word_less_nat_alt unat_add_lem[THEN iffD1] unat_of_nat)[1]
+                apply (clarsimp simp: n_timeoutMessage_def n_msgRegisters_def
+                                      msgRegisters_ccorres
+                                      timeoutMessage_ccorres
+                                      length_timeoutMessage length_msgRegisters
+                                      message_info_to_H_def min_def
+                               split: if_split)
+                apply (fastforce dest!: le_antisym)
+               apply (vcg spec=TrueI)
+               apply clarsimp
+              apply (simp add: split_def)
+              apply (wp hoare_case_option_wp)
+              apply (fastforce elim: aligned_add_aligned
+                               intro: is_aligned_mult_triv2 [where n=3,simplified]
+                               simp: word_bits_def msg_align_bits)
+             apply (clarsimp simp: msgRegisters_unfold
+                                   n_msgRegisters_def
+                                   word_bits_def not_less)
+             apply (simp add: n_syscallMessage_def)
+            apply simp
+        apply (subst option.split[symmetric,where P=id, simplified])
+        apply (rule valid_drop_case)
+        apply (wp hoare_drop_imps hoare_vcg_all_lift lookupIPCBuffer_aligned[simplified]
+                  lookupIPCBuffer_not_Some_0[simplified])
+       apply (simp add: length_timeoutMessage
+                        length_msgRegisters
+                        n_timeoutMessage_def
+                        msgMaxLength_def
+                        n_msgRegisters_def
+                        of_nat_less_iff)
+       apply (rule_tac P'="{s. i_' s = of_nat len}" in ccorres_inst)
+       apply ccorres_rewrite
+       apply (rule ccorres_guard_imp)
+         apply (rule ccorres_symb_exec_l)
+            apply (case_tac rva ; clarsimp)
+             apply (rule ccorres_return_Skip)+
+                apply (wp mapM_x_wp_inv user_getreg_inv'
+                       | clarsimp simp: zipWithM_x_mapM_x split: prod.split)+
+     apply (cases  "4 < len")
+      apply ((fastforce simp: guard_is_UNIV_def
+                            msgRegisters_unfold
+                            timeoutMessage_unfold
+                            n_msgRegisters_def
+                       intro: obj_tcb_at')+)[2]
+    apply wp
+   apply auto
+  done
+qed
+
 lemma handleArchFaultReply_corres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
            (valid_pspace' and tcb_at' sender
@@ -4142,7 +4475,16 @@ lemma handleFaultReply_ccorres [corres]:
             apply (vcg exspec=copyMRsFaultReply_modifies)
            apply (wpsimp wp: threadGet_wp)+
          (* Timeout *)
-         subgoal sorry (* FIXME RT: Timeout case for handleFaultReply_ccorres *)
+         apply (clarsimp simp: seL4_Fault_tag_defs ccorres_cond_iffs
+                         split del: if_split)
+            apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
+            apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
+            apply (fold bind_assoc)
+            apply (ctac add: copyMRsFaultReply_ccorres_timeout[simplified bind_assoc[symmetric]])
+              apply (ctac add: ccorres_return_C)
+             apply wp
+            apply (vcg exspec=copyMRsFaultReply_modifies)
+           apply (wpsimp wp: threadGet_wp)+
         (* ArchFault *)
         apply (rename_tac arch_fault)
         apply ccorres_rewrite
@@ -4177,23 +4519,22 @@ lemma handleFaultReply_ccorres [corres]:
       apply vcg
      apply clarsimp
      apply vcg_step
-     apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def
+     apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def n_timeoutMessage_def
                            message_info_to_H_def to_bool_def scast_def
-                           length_exceptionMessage length_syscallMessage
+                           length_exceptionMessage length_syscallMessage length_timeoutMessage
                            min_def word_less_nat_alt
                            guard_is_UNIV_def seL4_Faults seL4_Arch_Faults
                        split: if_split)
-    apply (simp add: length_exceptionMessage length_syscallMessage)
+    apply (simp add: length_exceptionMessage length_syscallMessage length_timeoutMessage)
     apply wp
    apply clarsimp
    apply (vcg exspec=getRegister_modifies)
-  apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def
+  apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def n_timeoutMessage_def
                         message_info_to_H_def length_exceptionMessage length_syscallMessage
-                        min_def word_less_nat_alt obj_at'_def
+                        length_timeoutMessage min_def word_less_nat_alt obj_at'_def
                  split: if_split)
-sorry (* FIXME RT: resolves handleFaultReply_ccorres guards *) (*
   apply (fastforce simp: seL4_Faults seL4_Arch_Faults)
-  done *)
+  done
 
 context
 notes if_cong[cong]
@@ -4219,23 +4560,6 @@ lemma sbn_tcbFault:
 crunch unbindNotification, unbindMaybeNotification
   for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (ignore: threadSet wp: sbn_tcbFault)
-
-(* FIXME: move *)
-lemma cteDeleteOne_tcbFault:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
-  cteDeleteOne slot
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
-  apply (simp add: cteDeleteOne_def unless_when split_def)
-  apply (simp add: finaliseCapTrue_standin_def Let_def)
-  apply (rule hoare_pre)
-  apply (wp emptySlot_tcbFault cancelAllIPC_tcbFault getCTE_wp'
-            cancelAllSignals_tcbFault unbindNotification_tcbFault
-            isFinalCapability_inv unbindMaybeNotification_tcbFault
-            hoare_weak_lift_imp
-          | wpc | simp add: Let_def)+
-sorry (* FIXME RT: cteDeleteOne_tcbFault. Now unused?*) (*
-  apply (clarsimp split: if_split)
-  done *)
 
 lemma transferCapsToSlots_local_slots:
   assumes weak: "\<And>c cap. P (maskedAsFull c cap) = P c"
@@ -4686,134 +5010,6 @@ lemma postpone_ccorres:
    apply (fastforce dest: sc_ko_at_valid_objs_valid_sc' simp: valid_sched_context'_def)
   apply (clarsimp simp: option_to_ctcb_ptr_def)
   done
-
-lemma doReplyTransfer_ccorres[corres]:
-  "ccorres dc xfdc
-    (invs' and reply_at' reply and tcb_at' sender)
-    (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
-          \<inter> \<lbrace>\<acute>reply = Ptr reply\<rbrace>
-          \<inter> \<lbrace>\<acute>grant = from_bool grant\<rbrace>) hs
-    (doReplyTransfer sender reply grant)
-    (Call doReplyTransfer_'proc)"
-sorry (* FIXME RT: doReplyTransfer_ccorres *) (*
-proof -
-  have invs_valid_queues_strg: "\<And>s. invs' s \<longrightarrow> valid_queues s"
-    by clarsimp
-  show ?thesis
-  apply (cinit lift: sender_' receiver_' slot_' grant_')
-   apply (rule getThreadState_ccorres_foo)
-   apply (rule ccorres_assert2)
-   apply (simp add: liftM_def getSlotCap_def
-               del: Collect_const split del: if_split)
-   apply (rule ccorres_pre_getCTE)
-   apply (rule ccorres_assert2)
-   apply (rule ccorres_pre_getCTE)
-   apply (rule ccorres_assert2)
-   apply (rule ccorres_pre_threadGet)
-   apply (rename_tac fault)
-   apply (rule ccorres_move_c_guard_tcb)
-   apply (rule_tac val="case_option (scast seL4_Fault_NullFault) fault_to_fault_tag fault"
-               and xf'=ret__unsigned_longlong_'
-               and R="\<lambda>s. \<exists>t. ko_at' t receiver s \<and> tcbFault t = fault"
-                in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
-      apply (vcg, clarsimp)
-      apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
-      apply (fastforce simp: ctcb_relation_def typ_heap_simps
-                            cfault_rel_def seL4_Fault_lift_def Let_def
-                     split: if_split_asm option.split)
-     apply ceqv
-    apply csymbr
-    apply wpc
-     apply (clarsimp simp: ccorres_cond_iffs split del: if_split)
-     apply (rule ccorres_rhs_assoc)+
-     apply (ctac(no_vcg))
-      apply (rule ccorres_symb_exec_r)
-        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
-         apply (ctac(no_vcg) add: setThreadState_ccorres)
-          apply (ctac(no_vcg) add: possibleSwitchTo_ccorres)
-         apply (wpsimp wp: sts_valid_objs' setThreadState_st_tcb)+
-        apply (wp cteDeleteOne_sch_act_wf)
-       apply vcg
-      apply (rule conseqPre, vcg)
-      apply (simp(no_asm_use) add: gs_set_assn_Delete_cstate_relation[unfolded o_def]
-                                   subset_iff rf_sr_def)
-     apply wp
-     apply (simp add: cap_get_tag_isCap)
-     apply (strengthen invs_weak_sch_act_wf_strg
-                       cte_wp_at_imp_consequent'[where P="\<lambda>ct. Ex (ccap_relation (cteCap ct))" for ct])
-     apply (simp add: cap_reply_cap_def)
-     apply (wp doIPCTransfer_reply_or_replyslot)
-    apply (clarsimp simp: seL4_Fault_NullFault_def ccorres_cond_iffs
-                          fault_to_fault_tag_nonzero
-               split del: if_split)
-    apply (rule ccorres_rhs_assoc)+
-    apply (rule ccorres_symb_exec_r)
-      apply (ctac (no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
-       apply (rule_tac A'=UNIV in stronger_ccorres_guard_imp)
-         apply (rule ccorres_split_nothrow_novcg [OF ccorres_call,
-                                                  OF handleFaultReply_ccorres,
-                                                  unfolded bind_assoc,
-                                                  where xf'=restart_'])
-               apply simp_all[3]
-            apply ceqv
-           apply csymbr
-           apply (rule ccorres_split_nothrow_novcg)
-               apply (rule threadSet_ccorres_lemma2[where P=\<top>])
-                apply vcg
-               apply (clarsimp simp: typ_heap_simps')
-               apply (erule(1) rf_sr_tcb_update_no_queue2,
-                      (simp add: typ_heap_simps')+, simp_all?)[1]
-                apply (rule ball_tcb_cte_casesI, simp+)
-               apply (clarsimp simp: ctcb_relation_def
-                                     seL4_Fault_lift_NullFault
-                                     cfault_rel_def is_cap_fault_def
-                                     cthread_state_relation_def)
-               apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
-              apply ceqv
-             apply (rule_tac R=\<top> in ccorres_cond2)
-               apply (clarsimp simp: to_bool_def Collect_const_mem)
-              apply (ctac (no_vcg))
-               apply (simp only: K_bind_def)
-               apply (ctac add: possibleSwitchTo_ccorres)
-              apply (wp sts_valid_objs' setThreadState_st_tcb | simp)+
-             apply (ctac add: setThreadState_ccorres_simple)
-             apply wp
-            apply ((wp threadSet_sch_act hoare_weak_lift_imp
-                       threadSet_valid_objs' threadSet_weak_sch_act_wf
-                         | simp add: valid_tcb_state'_def)+)[1]
-           apply (clarsimp simp: guard_is_UNIV_def ThreadState_defs mask_def option_to_ctcb_ptr_def)
-
-          apply (rule_tac Q'="\<lambda>rv. tcb_at' receiver and
-                                valid_objs' and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain) and
-                                (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
-                                pspace_aligned' and pspace_distinct'" in hoare_post_imp)
-           apply (clarsimp simp: inQ_def weak_sch_act_wf_def)
-          apply (wp threadSet_sch_act handleFaultReply_sch_act_wf)
-         apply (clarsimp simp: guard_is_UNIV_def)
-        apply assumption
-       apply clarsimp
-       apply (drule_tac p=receiver in obj_at_ko_at')
-       apply clarsimp
-       apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
-       apply (clarsimp simp: ctcb_relation_def typ_heap_simps)
-      apply wp
-      apply (strengthen vp_invs_strg')
-      apply (wp cteDeleteOne_tcbFault cteDeleteOne_sch_act_wf)
-     apply vcg
-    apply (rule conseqPre, vcg)
-    apply (simp(no_asm_use) add: gs_set_assn_Delete_cstate_relation[unfolded o_def]
-                                 subset_iff rf_sr_def)
-   apply (clarsimp simp: guard_is_UNIV_def option_to_ptr_def option_to_0_def
-                         ThreadState_defs mask_def
-                         ghost_assertion_data_get_def ghost_assertion_data_set_def
-                         cap_tag_defs option_to_ctcb_ptr_def
-                  split: option.splits)
-  apply (clarsimp simp: pred_tcb_at' invs_valid_objs')
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def cte_wp_at_ctes_of
-                        cap_get_tag_isCap)
-  apply fastforce
-  done
-qed *)
 
 lemma ccorres_getCTE_cte_at:
   "ccorresG rf_sr \<Gamma> r xf P P' hs (getCTE p >>= f) c
@@ -5573,7 +5769,8 @@ lemma reply_push_ccorres:
   done
 
 lemma sendIPC_ccorres [corres]:
-  "ccorres dc xfdc (invs' and st_tcb_at' simple' thread and ep_at' epptr)
+  "ccorres dc xfdc
+     (st_tcb_at' simple' thread and ep_at' epptr)
      (UNIV \<inter> \<lbrace>\<acute>blocking = from_bool blocking\<rbrace>
            \<inter> \<lbrace>\<acute>do_call = from_bool do_call\<rbrace>
            \<inter> \<lbrace>\<acute>badge___unsigned_long = badge\<rbrace>
@@ -5591,7 +5788,7 @@ lemma sendIPC_ccorres [corres]:
                       canDonate_'  thread_' epptr_')
    apply (unfold sendIPC_def)[1]
    apply (rule ccorres_stateAssert, clarsimp)
-   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_stateAssert)+
    apply (rule ccorres_pre_getEndpoint)
    apply (rename_tac ep)
    apply (rule_tac xf'=ret__unsigned_longlong_'

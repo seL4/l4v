@@ -47,10 +47,12 @@ This function performs an IPC send operation, given a pointer to the sending thr
 The normal (blocking) version of the send operation will remove a recipient from the endpoint's queue if one is available, or otherwise add the sender to the queue.
 
 > sendIPC blocking call badge canGrant canGrantReply canDonate thread epptr = do
+>         stateAssert invs'_asrt "assert that `invs'` holds"
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         stateAssert valid_idle'_asrt
 >             "Assert that `valid_idle' s` holds"
+>         stateAssert (active_tcb_at'_asrt thread) "thread has an active' thread state"
 >         ep <- getEndpoint epptr
 >         case ep of
 

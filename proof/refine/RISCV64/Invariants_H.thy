@@ -1437,6 +1437,16 @@ abbreviation
 defs ct_active'_asrt_def:
   "ct_active'_asrt \<equiv> ct_active'"
 
+defs invs'_asrt_def:
+  "invs'_asrt \<equiv> invs'"
+
+declare invs'_asrt_def[simp]
+
+defs active_tcb_at'_asrt_def:
+  "active_tcb_at'_asrt tcbPtr \<equiv> \<lambda>s. st_tcb_at' active' tcbPtr s"
+
+declare active_tcb_at'_asrt_def[simp]
+
 end
 
 locale mdb_next =

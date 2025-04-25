@@ -74,6 +74,8 @@ When a thread faults, the kernel attempts to send a fault IPC to the fault handl
 > handleTimeout tptr timeout = do
 >     stateAssert valid_idle'_asrt
 >         "Assert that `valid_idle' s` holds"
+>     stateAssert (active_tcb_at'_asrt tptr) "tptr has an active' thread state"
+>     stateAssert invs'_asrt "assert that `invs'` holds"
 >     valid <- isValidTimeoutHandler tptr
 >     assert valid "no valid timeout handler"
 >     timeoutHandlerSlot <- getThreadTimeoutHandlerSlot tptr
@@ -85,6 +87,7 @@ If a thread causes a fault, then an IPC containing details of the fault is sent 
 
 > sendFaultIPC :: PPtr TCB -> Capability -> Fault -> Bool -> Kernel Bool
 > sendFaultIPC tptr handlerCap fault canDonate = do
+>     stateAssert invs'_asrt "assert that `invs'` holds"
 >     case handlerCap of
 
 The kernel stores a copy of the fault in the thread's TCB, and performs an IPC send operation to the fault handler endpoint on behalf of the faulting thread. When the IPC completes, the fault will be retrieved from the TCB and sent instead of the message registers.

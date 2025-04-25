@@ -2466,10 +2466,10 @@ lemma sendIPC_corres:
   apply add_sym_refs
   apply add_valid_idle'
   apply (clarsimp simp: send_ipc_def sendIPC_def Let_def split del: if_split)
+  apply (rule corres_stateAssert_add_assertion[rotated], solves clarsimp)+
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: sym_refs_asrt_def)
-  apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: valid_idle'_asrt_def)
+   apply (fastforce intro!: st_tcb_at_runnable_cross
+                 simp flip: runnable_eq_active' simp: runnable_eq_active)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split [OF getEndpoint_corres, where
              R="\<lambda>rv. all_invs_but_fault_tcbs and valid_list and st_tcb_at active t
@@ -5768,6 +5768,7 @@ lemma sendFaultIPC_corres:
   apply (clarsimp simp: send_fault_ipc_def sendFaultIPC_def)
   apply (rule corres_gen_asm)
   apply (rule corres_gen_asm)
+  apply (rule corres_stateAssert_ignore, clarsimp)
   apply (cases cap; simp add: valid_fault_handler_def tcb_relation_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split)
@@ -6849,6 +6850,10 @@ lemma handleTimeout_corres:
    apply (fastforce intro: tcb_at_cross)
   apply (clarsimp simp: handle_timeout_def handleTimeout_def getThreadTimeoutHandlerSlot_def)
   apply (rule corres_stateAssert_add_assertion[rotated], simp)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (fastforce intro!: st_tcb_at_runnable_cross
+                 simp flip: runnable_eq_active' simp: runnable_eq_active)
+  apply (rule corres_stateAssert_add_assertion[rotated], clarsimp)
   apply (rule corres_gen_asm)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF isValidTimeoutHandler_corres])
@@ -6927,8 +6932,12 @@ lemma doReplyTransfer_corres:
      (do_reply_transfer sender reply grant)
      (doReplyTransfer sender reply grant)"
   apply add_cur_tcb'
+  apply add_sym_refs
   supply if_split [split del] subst_all[simp del] opt_mapE[elim!]
   apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
+  apply (rule corres_stateAssert_ignore, solves clarsimp)+
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce intro: weak_sch_act_wf_cross)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split [OF getReply_TCB_corres])
       apply (simp add: maybeM_def)
@@ -6996,10 +7005,10 @@ lemma doReplyTransfer_corres:
                   apply (clarsimp simp: isRunnable_def readRunnable_def get_tcb_obj_ref_def
                              simp flip: getThreadState_def threadGet_def)
                   (* solve remaining corres goals *)
-                  apply (rule corres_split [OF getThreadState_corres])
-                    apply (rule corres_split [OF threadGet_corres[where r="(=)"]])
-                       apply (simp add: tcb_relation_def)
-                      apply (rename_tac scopt scopt')
+                  apply (rule corres_split [OF threadGet_corres[where r="(=)"]])
+                     apply (simp add: tcb_relation_def)
+                    apply (rule corres_split [OF getThreadState_corres])
+                      apply (rename_tac scopt scopt' state state')
                       apply (rule corres_when)
                        apply (case_tac state; simp add: thread_state_relation_def)
                       apply (rule corres_assert_opt_assume_l)
@@ -7168,10 +7177,10 @@ lemma doReplyTransfer_corres:
                        apply (fastforce simp: obj_at_kh_kheap_simps)
                       apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps is_sc_obj_def
                                      intro!: valid_sched_context_size_objsI)
-                     apply (wpsimp wp: thread_get_wp')
-                    apply (wpsimp wp: threadGet_wp)
-                   apply (wpsimp wp: gts_wp)
-                  apply (wpsimp wp: gts_wp')
+                     apply (wpsimp wp: gts_wp)
+                    apply (wpsimp wp: gts_wp')
+                   apply (wpsimp wp: thread_get_wp')
+                  apply (wpsimp wp: threadGet_wp)
                  apply (rule_tac Q'="\<lambda>_. tcb_at recvr and valid_sched_action and invs and valid_list
                                         and valid_release_q and valid_ready_qs and scheduler_act_not recvr
                                         and active_scs_valid and current_time_bounded
