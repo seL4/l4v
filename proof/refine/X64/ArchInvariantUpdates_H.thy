@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory InvariantUpdates_H
+theory ArchInvariantUpdates_H
 imports ArchInvsLemmas_H
 begin
 
