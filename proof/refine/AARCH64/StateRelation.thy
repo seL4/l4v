@@ -10,7 +10,7 @@
 *)
 
 theory StateRelation
-imports InvariantUpdates_H
+imports ArchInvariantUpdates_H
 begin
 
 context begin interpretation Arch .

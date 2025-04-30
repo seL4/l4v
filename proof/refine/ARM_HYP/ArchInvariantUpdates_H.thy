@@ -5,7 +5,7 @@
  *)
 
 theory ArchInvariantUpdates_H
-imports ArchInvsLemmas_H
+imports InvariantUpdates_H
 begin
 
 (* generic consequences which require arch-specific proofs from ArchInvsLemmas_H *)
