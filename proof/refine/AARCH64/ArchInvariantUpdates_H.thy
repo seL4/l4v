@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory InvariantUpdates_H
+theory ArchInvariantUpdates_H
 imports ArchInvsLemmas_H
 begin
 
@@ -140,6 +140,7 @@ lemma ct_in_current_domain_ksMachineState[simp]:
   "ct_idle_or_in_cur_domain' (ksMachineState_update p s) = ct_idle_or_in_cur_domain' s"
   by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
+(* FIXME arch-split: export? *)
 lemma invs'_machine:
   assumes mask: "irq_masks (f (ksMachineState s)) =
                  irq_masks (ksMachineState s)"
@@ -159,6 +160,7 @@ proof -
     done
 qed
 
+(* FIXME arch-split: export? *)
 lemma invs_no_cicd'_machine:
   assumes mask: "irq_masks (f (ksMachineState s)) =
                  irq_masks (ksMachineState s)"
@@ -185,6 +187,11 @@ lemma pspace_no_overlap_queues [simp]:
 lemma pspace_no_overlap'_ksSchedulerAction[simp]:
   "pspace_no_overlap' a b (ksSchedulerAction_update f s) =
    pspace_no_overlap' a b s"
+  by (simp add: pspace_no_overlap'_def)
+
+lemma pspace_no_overlap'_ksArchState_update[simp]:
+  "pspace_no_overlap' p n (ksArchState_update f s) =
+   pspace_no_overlap' p n s"
   by (simp add: pspace_no_overlap'_def)
 
 lemma ksReadyQueues_update_id[simp]:
@@ -449,11 +456,6 @@ lemma sch_act_simple_ksReadyQueuesL2Bitmap[simp]:
   apply (simp add: sch_act_simple_def)
   done
 
-lemma ksDomainTime_invs[simp]:
-  "invs' (ksDomainTime_update f s) = invs' s"
-  by (simp add: invs'_def valid_state'_def cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
-                tcb_in_cur_domain'_def valid_machine_state'_def bitmapQ_defs)
-
 lemma valid_machine_state'_ksDomainTime[simp]:
   "valid_machine_state' (ksDomainTime_update f s) = valid_machine_state' s"
   by (simp add:valid_machine_state'_def)
@@ -478,9 +480,40 @@ lemma ct_not_inQ_update_stt[simp]:
   "ct_not_inQ (s\<lparr>ksSchedulerAction := SwitchToThread t\<rparr>)"
    by (simp add: ct_not_inQ_def)
 
+lemma ksDomainTime_invs[simp]:
+  "invs' (ksDomainTime_update f s) = invs' s"
+  by (simp add: invs'_def valid_state'_def cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
+                tcb_in_cur_domain'_def valid_machine_state'_def bitmapQ_defs)
+
 lemma invs'_update_cnt[elim!]:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-   by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def cur_tcb'_def
+   by (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_irq_node'_def cur_tcb'_def
                       ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def bitmapQ_defs)
+
+(* FIXME arch-split: MOVE *)
+context Arch begin arch_global_naming
+
+lemma valid_arch_state'_vmid_next_update[simp]:
+  "valid_arch_state' (s\<lparr>ksArchState := armKSNextVMID_update f (ksArchState s)\<rparr>) =
+   valid_arch_state' s"
+  by (auto simp: valid_arch_state'_def split: option.split)
+
+lemma invs'_armKSNextVMID_update[simp]:
+  "invs' (s\<lparr>ksArchState := armKSNextVMID_update f s'\<rparr>) = invs' (s\<lparr>ksArchState := s'\<rparr>)"
+  by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
+                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
+
+lemma invs_no_cicd'_armKSNextVMID_update[simp]:
+  "invs_no_cicd' (s\<lparr>ksArchState := armKSNextVMID_update f s'\<rparr>) = invs_no_cicd' (s\<lparr>ksArchState := s'\<rparr>)"
+  by (simp add: invs_no_cicd'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
+                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
+
+lemma invs'_gsTypes_update:
+  "ksA' = ksArchState s \<Longrightarrow> invs' (s \<lparr>ksArchState := gsPTTypes_update f ksA'\<rparr>) = invs' s"
+  by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                valid_machine_state'_def valid_arch_state'_def
+           cong: option.case_cong)
+
+end
 
 end
