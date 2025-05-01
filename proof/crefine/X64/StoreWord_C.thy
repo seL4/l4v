@@ -603,8 +603,7 @@ proof (intro allI impI)
 
   thus ?thesis using rf
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def
-                     cmachine_state_relation_def carch_globals_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def carch_globals_def)
     apply (simp add: rl' tag_disj_via_td_name zr)
     done
 qed
@@ -924,8 +923,7 @@ proof (intro allI impI)
 
   thus ?thesis using rf
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def
-                     cmachine_state_relation_def carch_globals_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def carch_globals_def)
     apply (simp add: rl' tag_disj_via_td_name zr)
     done
 qed

@@ -22,6 +22,7 @@ arch_requalify_consts (H)
   msgRegisters
   fromVPtr
   postModifyRegisters
+  postSetFlags
   sanitiseRegister
   getSanitiseRegisterInfo
 

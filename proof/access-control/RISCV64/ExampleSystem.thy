@@ -309,6 +309,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
 
 
@@ -333,6 +334,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
@@ -855,6 +857,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -879,6 +882,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.

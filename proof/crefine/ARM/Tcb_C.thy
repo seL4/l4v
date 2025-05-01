@@ -4418,6 +4418,95 @@ lemma decodeSetTLSBase_ccorres:
   apply (auto simp: unat_eq_0 le_max_word_ucast_id)+
   done
 
+lemma invokeTCB_SetFlags_ccorres:
+  notes hoare_weak_lift_imp [wp]
+  shows
+  "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
+   (invs' and tcb_at' tcb)
+   (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr tcb\<rbrace>
+    \<inter> \<lbrace>\<acute>clear = clears\<rbrace>
+    \<inter> \<lbrace>\<acute>set = sets\<rbrace>) []
+   (invokeTCB (SetFlags tcb clears sets))
+   (Call invokeSetFlags_'proc)"
+  apply (cinit lift: thread_' clear_' set_' simp: setFlags_def postSetFlags_def)
+   apply (simp add: liftE_def bind_assoc)
+   apply (rule ccorres_pre_threadGet, rename_tac flags)
+   \<comment> \<open>split off flags_' updates and threadSet\<close>
+   apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
+   apply (rule ccorres_split_nothrow)
+       apply (rule_tac P="\<lambda>tcb. tcbFlags tcb = flags" in threadSet_ccorres_lemma2)
+        apply vcg
+       apply (clarsimp simp: tcb_at_h_t_valid[OF obj_tcb_at'])
+       apply (erule rf_sr_tcb_update_no_queue2[rotated],
+              (simp add: typ_heap_simps')+, simp_all?)[1]
+        apply (rule ball_tcb_cte_casesI, simp+)
+       apply (clarsimp simp: ctcb_relation_def)
+      apply ceqv
+     apply (rule ccorres_return_CE[folded return_returnOk]; simp)
+    apply (wpsimp simp: guard_is_UNIV_def)+
+   apply vcg
+  apply (clarsimp simp: obj_at'_def typ_heap_simps' ctcb_relation_def)
+  done
+
+lemma decodeSetFlags_ccorres:
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and sch_act_simple
+              and (\<lambda>s. ksCurThread s = thread) and ct_active' and K (isThreadCap cp)
+              and valid_cap' cp and (\<lambda>s. \<forall>x \<in> zobj_refs' cp. ex_nonz_cap_to' x s)
+              and sysargs_rel args buffer)
+       (\<lbrace>ccap_relation cp \<acute>cap\<rbrace>
+        \<inter> \<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace>
+        \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
+     (decodeSetFlags args cp
+        >>= invocationCatch thread isBlocking isCall InvokeTCB)
+     (Call decodeSetFlags_'proc)"
+  apply (cinit' lift: cap_' length___unsigned_long_' buffer_'
+                simp: decodeSetFlags_def )
+   apply csymbr+
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+     apply vcg
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: throwError_def invocationCatch_def fst_return
+                          intr_and_se_rel_def syscall_error_rel_def
+                          syscall_error_to_H_cases exception_defs
+                   split: list.split)
+    apply unat_arith
+   apply (clarsimp simp: linorder_not_less word_le_nat_alt)
+   apply (rule_tac P="\<lambda>a. ccorres rvr xf P P' hs a c" for rvr xf P P' hs c in ssubst,
+          rule bind_cong [OF _ refl], rule list_case_helper,
+          clarsimp)+
+   apply (rule ccorres_add_return,
+          ctac add: getSyscallArg_ccorres_foo'[where args=args and n=0 and buffer=buffer])
+     apply (rule ccorres_add_return,
+            ctac add: getSyscallArg_ccorres_foo'[where args=args and n=1 and buffer=buffer])
+       apply (simp add: invocationCatch_use_injection_handler
+                        bindE_assoc injection_handler_returnOk
+                        ccorres_invocationCatch_Inr performInvocation_def)
+       apply (ctac add: setThreadState_ccorres)
+         apply (ctac (no_vcg) add: invokeTCB_SetFlags_ccorres)
+           apply simp
+           apply (rule ccorres_alternative2)
+           apply (rule ccorres_return_CE, simp+)[1]
+          apply (rule ccorres_return_C_errorE, simp+)[1]
+         apply (wpsimp wp: sts_invs_minor')+
+       apply (vcg exspec=setThreadState_modifies)
+      apply wpsimp
+     apply (vcg exspec=getSyscallArg_modifies)
+    apply wpsimp
+   apply (vcg exspec=getSyscallArg_modifies)
+  apply (clarsimp simp: Collect_const_mem)
+  apply (rule conjI)
+   apply (clarsimp simp: ct_in_state'_def sysargs_rel_n_def n_msgRegisters_def)
+   apply (auto simp: valid_tcb_state'_def linorder_not_less word_le_nat_alt isCap_simps valid_cap'_def
+              elim!: pred_tcb'_weakenE)[1]
+  apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
+  apply (clarsimp simp: rf_sr_ksCurThread word_sle_def cap_get_tag_isCap cap_get_tag_to_H word_less_nat_alt)
+  apply (subgoal_tac "args \<noteq> []")
+   apply (clarsimp simp: hd_conv_nth)
+  apply clarsimp
+  done
+
 lemma decodeTCBInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -4545,6 +4634,12 @@ lemma decodeTCBInvocation_ccorres:
    apply (rule ccorres_Cond_rhs)
     apply (simp add: gen_invocation_type_eq)
     apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeSetTLSBase_ccorres)
+      apply (rule ccorres_return_CE, simp+)[1]
+     apply (rule ccorres_return_C_errorE, simp+)[1]
+    apply wp
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: gen_invocation_type_eq)
+    apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeSetFlags_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp

@@ -294,11 +294,18 @@ locale Tcb_IF_2 = Tcb_IF_1 +
                               and is_subject aag \<circ> cur_thread
                               and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
              (invoke_tcb ti)"
+  and arch_post_set_flags_globals_equiv[wp]:
+    "arch_post_set_flags t flags \<lbrace>globals_equiv st\<rbrace>"
+  and arch_post_set_flags_reads_respects_f:
+    "reads_respects_f aag l \<top> (arch_post_set_flags t flags)"
 begin
 
 crunch suspend, restart
   for valid_arch_state[wp]: "\<lambda>s :: det_state. valid_arch_state s"
   (wp: dxo_wp_weak)
+
+crunch set_flags
+  for globals_equiv[wp]: "globals_equiv st"
 
 lemma invoke_tcb_globals_equiv:
   "\<lbrace>invs and globals_equiv st and tcb_inv_wf ti\<rbrace>
@@ -470,6 +477,16 @@ lemmas reschedule_required_reads_respects_f =
 
 context Tcb_IF_2 begin
 
+lemma thread_set_tcb_flags_update_silc_inv[wp]:
+  "thread_set (tcb_flags_update f) t \<lbrace>silc_inv aag st\<rbrace>"
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
+
+lemma set_flags_reads_respects_f:
+  assumes "pas_domains_distinct aag"
+  shows "reads_respects_f aag l (silc_inv aag st) (set_flags t flags)"
+  unfolding set_flags_def
+  by (wpsimp wp: reads_respects_f thread_set_reads_respects equiv_valid_guard_imp | simp add: assms)+
+
 lemma invoke_tcb_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes validE_valid[wp del] hoare_weak_lift_imp [wp]
@@ -482,48 +499,51 @@ lemma invoke_tcb_reads_respects_f:
        (invoke_tcb ti)"
   including classic_wp_pre
   apply (case_tac ti)
-         \<comment> \<open>WriteRegisters\<close>
-         apply (strengthen invs_mdb
-                | wpsimp wp: when_ev restart_reads_respects_f reschedule_required_reads_respects_f
-                             as_user_reads_respects_f restart_silc_inv restart_pas_refined hoare_vcg_if_lift)+
-            apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<forall>rv. Q rv s" and Q=Q for Q, rotated])
-             apply (rename_tac rv s)
-             apply (erule_tac x=rv in allE, assumption)
-            apply wpsimp+
-         apply (solves \<open>auto intro!: det_zipWithM
+          \<comment> \<open>WriteRegisters\<close>
+          apply (strengthen invs_mdb
+                 | wpsimp wp: when_ev restart_reads_respects_f reschedule_required_reads_respects_f
+                              as_user_reads_respects_f restart_silc_inv restart_pas_refined hoare_vcg_if_lift)+
+             apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<forall>rv. Q rv s" and Q=Q for Q, rotated])
+              apply (rename_tac rv s)
+              apply (erule_tac x=rv in allE, assumption)
+             apply wpsimp+
+          apply (solves \<open>auto intro!: det_zipWithM
                                simp: det_setRegister det_getRestartPC det_setNextPC
                                      authorised_tcb_inv_def reads_equiv_f_def\<close>)
-        apply (wp as_user_reads_respects_f suspend_silc_inv when_ev  suspend_reads_respects_f
-               | simp | elim conjE, assumption)+
-        apply (solves \<open>auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
+         apply (wp as_user_reads_respects_f suspend_silc_inv when_ev  suspend_reads_respects_f
+                | simp | elim conjE, assumption)+
+         apply (solves \<open>auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
                           intro!: det_mapM[OF _ subset_refl]\<close>)
-       apply (wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
-                 as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift
-                 restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift
-                 suspend_reads_respects_f suspend_silc_inv hoare_drop_imp
-                 restart_silc_inv restart_pas_refined
-              | simp split del: if_split add: det_setRegister det_setNextPC
-              | strengthen invs_mdb
-              | (rule hoare_strengthen_post[where Q'="\<lambda>_. silc_inv aag st and pas_refined aag",
-                                            OF mapM_x_wp', rotated], fastforce)
-              | wp mapM_x_wp')+
-       apply (solves \<open>auto simp: authorised_tcb_inv_def det_getRestartPC det_getRegister
+        apply (wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
+                  as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift
+                  restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift
+                  suspend_reads_respects_f suspend_silc_inv hoare_drop_imp
+                  restart_silc_inv restart_pas_refined
+               | simp split del: if_split add: det_setRegister det_setNextPC
+               | strengthen invs_mdb
+               | (rule hoare_strengthen_post[where Q'="\<lambda>_. silc_inv aag st and pas_refined aag",
+                                             OF mapM_x_wp', rotated], fastforce)
+               | wp mapM_x_wp')+
+        apply (solves \<open>auto simp: authorised_tcb_inv_def det_getRestartPC det_getRegister
                                  idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs]\<close>)
-      defer
-      apply ((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
-              | simp add: authorised_tcb_inv_def )+)[2]
-    \<comment> \<open>NotificationControl\<close>
-    apply (rename_tac option)
-    apply (case_tac option, simp_all)[1]
-     apply ((wp unbind_notification_is_subj_reads_respects
-                unbind_notification_silc_inv bind_notification_reads_respects
-             | clarsimp simp: authorised_tcb_inv_def
-             | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
-   \<comment> \<open>SetTLSBase\<close>
-   apply (rename_tac tcb tls_base)
-   apply (wpsimp wp: when_ev reschedule_required_reads_respects_f
-                     as_user_reads_respects_f hoare_drop_imps)+
-   apply (auto simp: det_setRegister authorised_tcb_inv_def)[1]
+       defer
+       apply ((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
+               | simp add: authorised_tcb_inv_def )+)[2]
+     \<comment> \<open>NotificationControl\<close>
+     apply (rename_tac option)
+     apply (case_tac option, simp_all)[1]
+      apply ((wp unbind_notification_is_subj_reads_respects
+                 unbind_notification_silc_inv bind_notification_reads_respects
+              | clarsimp simp: authorised_tcb_inv_def
+              | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
+    \<comment> \<open>SetTLSBase\<close>
+    apply (wpsimp wp: when_ev reschedule_required_reads_respects_f
+                      as_user_reads_respects_f hoare_drop_imps)+
+    apply (auto simp: det_setRegister authorised_tcb_inv_def)[1]
+   \<comment> \<open>SetFlags\<close>
+   apply (wpsimp wp: set_flags_reads_respects_f thread_get_reads_respects_f
+                     arch_post_set_flags_reads_respects_f)
+   apply (auto simp: authorised_tcb_inv_def)[1]
   \<comment> \<open>ThreadControl\<close>
   apply (fastforce intro: tc_reads_respects_f[OF assms])
   done
@@ -566,6 +586,7 @@ lemma decode_tcb_invocation_authorised_extra:
                             decode_bind_notification_def
                             decode_unbind_notification_def
                             decode_set_tls_base_def
+                            decode_set_flags_def
                             split_def decode_set_space_def
                  split del: if_split)+
   done

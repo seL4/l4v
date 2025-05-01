@@ -567,6 +567,7 @@ definition Low_tcb :: kernel_object where
                   tcb_priority = Low_prio,
                   tcb_time_slice = Low_time_slice,
                   tcb_domain = Low_domain,
+                  tcb_flags = {},
                   tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -587,6 +588,7 @@ definition High_tcb :: kernel_object where
                    tcb_priority = High_prio,
                    tcb_time_slice = High_time_slice,
                    tcb_domain = High_domain,
+                   tcb_flags = {},
                    tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -607,6 +609,7 @@ definition idle_tcb :: kernel_object where
                    tcb_priority = default_priority,
                    tcb_time_slice = timeSlice,
                    tcb_domain = default_domain,
+                   tcb_flags = {},
                    tcb_arch = \<lparr>tcb_context = empty_context\<rparr>\<rparr>"
 
 definition
@@ -1356,7 +1359,8 @@ lemma valid_pspace_s0[simp]:
   apply (rule conjI)
    apply (clarsimp simp: if_live_then_nonz_cap_def)
    apply (subst (asm) s0_internal_def)
-   apply (clarsimp simp: ex_nonz_cap_to_def live_def hyp_live_def obj_at_def kh0_def kh0_obj_def
+   apply (clarsimp simp: ex_nonz_cap_to_def live_def arch_tcb_live_def
+                         hyp_live_def obj_at_def kh0_def kh0_obj_def
                   split: if_splits)
      apply (rule_tac x="High_cnode_ptr" in exI)
      apply (rule_tac x="the_nat_to_bl_10 1" in exI)
@@ -1878,7 +1882,7 @@ lemma respects_device_trivial:
 
 lemma einvs_s0:
   "einvs s0_internal"
-  by (simp add: valid_state_def invs_def respects_device_trivial)
+  by (simp add: valid_state_def invs_def valid_cur_fpu_def respects_device_trivial)
 
 
 subsubsection \<open>Haskell state\<close>

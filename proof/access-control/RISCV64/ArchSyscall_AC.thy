@@ -151,7 +151,8 @@ crunch arch_post_cap_deletion
 crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
-  handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply
+  handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
+  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
@@ -160,7 +161,15 @@ crunch
 \<comment> \<open>These aren't proved in the previous crunch, and hence need to be declared\<close>
 declare handle_arch_fault_reply_cur_thread[Syscall_AC_assms]
 declare handle_arch_fault_reply_it[Syscall_AC_assms]
+declare arch_prepare_set_domain_idle_thread[Syscall_AC_assms]
 declare init_arch_objects_inv[Syscall_AC_assms]
+
+crunch arch_prepare_next_domain
+  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
+  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+  and ct_not_in_q[Syscall_AC_assms, wp]: ct_not_in_q
+  and valid_sched_action[Syscall_AC_assms, wp]: valid_sched_action
+  and ct_in_cur_domain[Syscall_AC_assms, wp]: ct_in_cur_domain
 
 end
 

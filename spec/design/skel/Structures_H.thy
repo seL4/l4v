@@ -12,6 +12,7 @@ chapter "Kernel Data Structures"
 
 theory Structures_H
 imports
+  Structs_B
   Config_H
   State_H
   Fault_H
@@ -34,8 +35,8 @@ arch_requalify_consts (H)
   atcbContextGet
   atcbContextSet
 
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap TcbFlag tcbFlagToWord
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap tcbFlagToWord
 
 
 end

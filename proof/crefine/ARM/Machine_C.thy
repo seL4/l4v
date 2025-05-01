@@ -204,6 +204,7 @@ assumes invalidateLocalTLB_VAASID_spec:
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
 
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 

@@ -129,6 +129,8 @@ lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
      \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
+declare arch_prepare_next_domain_inv[Scheduler_IF_assms]
+
 end
 
 
@@ -376,6 +378,10 @@ lemma set_object_reads_respects_scheduler[Scheduler_IF_assms, wp]:
 lemma arch_activate_idle_thread_reads_respects_scheduler[Scheduler_IF_assms, wp]:
   "reads_respects_scheduler aag l \<top> (arch_activate_idle_thread rv)"
   unfolding arch_activate_idle_thread_def by wpsimp
+
+lemma arch_prepare_next_domain_ev[Scheduler_IF_assms]:
+  "equiv_valid_inv I A (\<lambda>_. True) arch_prepare_next_domain"
+  unfolding arch_prepare_next_domain_def by wp
 
 end
 

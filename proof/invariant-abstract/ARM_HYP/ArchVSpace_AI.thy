@@ -2327,7 +2327,7 @@ lemma set_vcpu_valid_reply_masters[wp]:
   by (rule valid_reply_masters_cte_lift) wp
 
 lemma set_vcpu_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  "set_vcpu p v \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_vcpu_def set_object_def)
   including no_pre apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
@@ -2460,8 +2460,8 @@ lemma set_vcpu_valid_pspace:
   apply (wpsimp simp: valid_pspace_def pred_conj_def
                   wp: set_vcpu_if_live_then_nonz_cap_full set_vcpu_sym_refs_refs_hyp)
   apply (clarsimp simp: obj_at_def live_def)
-  apply (clarsimp simp: arch_live_def hyp_refs_of_def refs_of_a_def vcpu_tcb_refs_def hyp_live_def
-                 split: kernel_object.splits arch_kernel_obj.splits option.splits)
+  apply (auto simp: arch_live_def hyp_refs_of_def vcpu_tcb_refs_def hyp_live_def
+              split: kernel_object.splits arch_kernel_obj.splits option.splits)
   done
 
 
@@ -2764,7 +2764,7 @@ lemma svr_invs [wp]:
 crunch
   arm_context_switch, vcpu_update, vgic_update, vcpu_disable, vcpu_enable,
   vcpu_restore, vcpu_switch, set_vm_root
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: crunch_simps wp: crunch_wps mapM_x_wp)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]

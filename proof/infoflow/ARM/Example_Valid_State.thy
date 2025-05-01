@@ -594,6 +594,7 @@ where
      tcb_priority      = Low_prio,
      tcb_time_slice    = Low_time_slice,
      tcb_domain        = Low_domain,
+     tcb_flags         = {},
      tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -619,6 +620,7 @@ where
      tcb_priority      = High_prio,
      tcb_time_slice    = High_time_slice,
      tcb_domain        = High_domain,
+     tcb_flags         = {},
      tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -643,6 +645,7 @@ where
      tcb_priority      = default_priority,
      tcb_time_slice    = timeSlice,
      tcb_domain        = default_domain,
+     tcb_flags         = {},
      tcb_arch = \<lparr>tcb_context = empty_context\<rparr>\<rparr>"
 
 
@@ -1401,7 +1404,8 @@ lemma valid_pspace_s0[simp]:
   apply (rule conjI)
    apply (clarsimp simp: if_live_then_nonz_cap_def)
    apply (subst(asm) s0_internal_def)
-   apply (clarsimp simp: live_def hyp_live_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs split: if_split_asm)
+   apply (clarsimp simp: live_def arch_tcb_live_def hyp_live_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs
+                  split: if_split_asm)
      apply (clarsimp simp: ex_nonz_cap_to_def)
      apply (rule_tac x="High_cnode_ptr" in exI)
      apply (rule_tac x="the_nat_to_bl_10 1" in exI)
@@ -1425,7 +1429,7 @@ lemma valid_pspace_s0[simp]:
   apply (clarsimp simp: sym_refs_def state_hyp_refs_of_def s0_internal_def)
   apply (subst(asm) kh0_def)
   apply (clarsimp split: if_split_asm)
-             by (simp add: refs_of_def kh0_def s0_ptr_defs kh0_obj_def)+
+  by (simp add: refs_of_def kh0_def s0_ptr_defs kh0_obj_def)+
 
 lemma descendants_s0[simp]:
   "descendants_of (a, b) (cdt s0_internal) = {}"
@@ -1780,8 +1784,7 @@ lemma respects_device_trivial:
 
 lemma einvs_s0:
   "einvs s0_internal"
-  apply (simp add: valid_state_def invs_def respects_device_trivial)
-  done
+  by (simp add: valid_state_def invs_def valid_cur_fpu_def respects_device_trivial)
 
 lemma obj_valid_pdpt_kh0:
   "x \<in> ran kh0 \<Longrightarrow> obj_valid_pdpt x"

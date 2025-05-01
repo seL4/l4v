@@ -457,7 +457,7 @@ lemma ball_tcb_cte_casesI:
   by (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma all_tcbI:
-  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q r s. P (Thread a b c d e f g h i j k l m n p q r s) \<rbrakk>
+  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q r s t. P (Thread a b c d e f g h i j k l m n p q r s t) \<rbrakk>
    \<Longrightarrow> \<forall>tcb. P tcb"
   by (rule allI, case_tac tcb, simp)
 
@@ -1151,13 +1151,12 @@ lemma threadSet_obj_at'_strongish[wp]:
      threadSet f t \<lbrace>\<lambda>rv. obj_at' P t'\<rbrace>"
   by (simp add: hoare_weaken_pre [OF threadSet_obj_at'_really_strongest])
 
-lemma threadSet_pred_tcb_no_state:
-  assumes "\<And>tcb. proj (tcb_to_itcb' (f tcb)) = proj (tcb_to_itcb' tcb)"
-  shows   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+lemma threadSet_obj_at'_no_state:
+  assumes "\<And>tcb. P' (f tcb) = P' tcb"
+  shows   "threadSet f t \<lbrace>\<lambda>s. P (obj_at' P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>P' t' t.
-            \<lbrace>pred_tcb_at' proj P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. pred_tcb_at' proj P' t'\<rbrace>"
-    apply (simp add: pred_tcb_at'_def)
+  have pos: "\<And>t' t.
+            \<lbrace>obj_at' P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P' t'\<rbrace>"
     apply (wp threadSet_obj_at'_strongish)
     apply clarsimp
     apply (erule obj_at'_weakenE)
@@ -1167,19 +1166,24 @@ proof -
   show ?thesis
     apply (rule_tac P=P in P_bool_lift)
      apply (rule pos)
-    apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> pred_tcb_at' proj (\<lambda>tcb. \<not> P' tcb) t' s"
+    apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> obj_at' (\<lambda>tcb. \<not> P' tcb) t' s"
              in hoare_post_imp)
      apply (erule disjE)
-      apply (clarsimp dest!: pred_tcb_at')
+      apply (clarsimp simp: obj_at'_def)
      apply (clarsimp)
-     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in pred_tcb_at_conj')
-     apply (clarsimp)+
+     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in obj_at_conj')
+      apply (clarsimp)+
     apply (wp hoare_convert_imp)
       apply (simp add: typ_at_tcb' [symmetric])
       apply (wp pos)+
-    apply (clarsimp simp: pred_tcb_at'_def not_obj_at' elim!: obj_at'_weakenE)
+    apply (clarsimp simp: not_obj_at' assms elim!: obj_at'_weakenE)
     done
 qed
+
+lemma threadSet_pred_tcb_no_state:
+  assumes "\<And>tcb. proj (tcb_to_itcb' (f tcb)) = proj (tcb_to_itcb' tcb)"
+  shows   "threadSet f t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+  by (wpsimp wp: threadSet_obj_at'_no_state simp: pred_tcb_at'_def assms)
 
 lemma threadSet_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
@@ -1456,6 +1460,10 @@ lemma threadSet_valid_objs':
   apply (simp add: valid_obj'_def)
   apply (clarsimp elim!: obj_at'_weakenE)
   done
+
+lemma atcbVCPUPtr_atcbContextSet_id[simp]:
+  "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
+  by (simp add: atcbContextSet_def)
 
 lemmas typ_at'_valid_tcb'_lift =
   typ_at'_valid_obj'_lift[where obj="KOTCB tcb" for tcb, unfolded valid_obj'_def, simplified]
@@ -1742,6 +1750,12 @@ lemma asUser_tcbPriority_inv[wp]:
   apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
   done
 
+lemma asUser_tcbState_inv[wp]:
+  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace>"
+  apply (simp add: asUser_def threadGet_def)
+  apply (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
+  done
+
 lemma asUser_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
     asUser t m \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
@@ -2001,6 +2015,12 @@ lemma pspace_relation_update_concrete_tcb:
   "\<lbrakk>pspace_relation s s'; s ptr = Some (TCB tcb); s' ptr = Some (KOTCB otcb');
     tcb_relation tcb tcb'\<rbrakk>
    \<Longrightarrow> pspace_relation s (s'(ptr \<mapsto> KOTCB tcb'))"
+  by (fastforce dest: pspace_relation_update_tcbs simp: map_upd_triv)
+
+lemma pspace_relation_update_abstract_tcb:
+  "\<lbrakk>pspace_relation s s'; s ptr = Some (TCB tcb); s' ptr = Some (KOTCB otcb');
+    tcb_relation tcb' otcb'\<rbrakk>
+   \<Longrightarrow> pspace_relation (s(ptr \<mapsto> TCB tcb')) s'"
   by (fastforce dest: pspace_relation_update_tcbs simp: map_upd_triv)
 
 lemma threadSet_pspace_relation:
