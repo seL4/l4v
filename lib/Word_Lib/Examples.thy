@@ -6,7 +6,7 @@
 
 theory Examples
   imports
-    Bit_Shifts_Infix_Syntax Next_and_Prev Signed_Division_Word Bitwise
+    Bit_Shifts_Infix_Syntax Next_and_Prev Signed_Division_Word Bitwise Generic_set_bit
 begin
 
 context
@@ -1112,7 +1112,7 @@ lemma "word_next (255:: 8 word) = 255" by eval
 lemma "word_prev (2:: 8 word) = 1" by eval
 lemma "word_prev (0:: 8 word) = 0" by eval
 
-text \<open>singed division\<close>
+text \<open>signed division\<close>
 
 lemma
   "( 4 :: 32 word) sdiv  4 =  1"

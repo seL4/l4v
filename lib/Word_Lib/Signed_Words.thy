@@ -98,15 +98,15 @@ lemma nth_w2p_scast:
          \<longleftrightarrow> (bit (((2::'a::len  word) ^ n) :: 'a word) m)"
   by (simp add: bit_simps)
 
-lemma scast_nop1 [simp]:
+lemma scast_nop_1 [simp]:
   "((scast ((of_int x)::('a::len) word))::'a signed word) = of_int x"
   by transfer (simp add: take_bit_signed_take_bit)
 
-lemma scast_nop2 [simp]:
+lemma scast_nop_2 [simp]:
   "((scast ((of_int x)::('a::len) signed word))::'a word) = of_int x"
   by transfer (simp add: take_bit_signed_take_bit)
 
-lemmas scast_nop = scast_nop1 scast_nop2 scast_id
+lemmas scast_nop = scast_nop_1 scast_nop_2 scast_id
 
 type_synonym 'a sword = "'a signed word"
 

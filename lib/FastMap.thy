@@ -613,7 +613,7 @@ fun define_map
     val start = Timing.start ()
     val convert_thm =
           convert_to_lookup_list kT valT mappings map_const map_def tree_valid_thm simp_ctxt ctxt
-    val [lookup_list_eqn, map_distinct_thm] = HOLogic.conj_elims ctxt convert_thm
+    val [lookup_list_eqn, map_distinct_thm] = HOLogic.conj_elims convert_thm
     val _ = tracing ("  done: " ^ Timing.message (Timing.result start))
     val _ = tracing (#map_name name_opts ^ ": storing map and distinctness theorems")
     val start = Timing.start ()
@@ -633,7 +633,7 @@ fun define_map
           |> Conv.fconv_rule (conv_at @{term "Trueprop HERE"} (dest_list_all_conv ()) ctxt)
     val _ = tracing ("  splitting... " ^ Timing.message (Timing.result start))
     val lookup_thms =
-          HOLogic.conj_elims ctxt combined_lookup_thm
+          HOLogic.conj_elims combined_lookup_thm
           |> map (Conv.fconv_rule (conv_at @{term "Trueprop HERE"}
                                      (fo_rewr_conv @{thm prod.case[THEN eq_reflection]}) ctxt))
 

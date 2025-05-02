@@ -1364,9 +1364,9 @@ lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is real
      ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) !!
        word_log2 (ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d)))))"
   unfolding bitmapQ_def lookupBitmapPriority_def
-  apply (drule word_log2_nth_same, clarsimp)
+  apply (drule bit_word_log2, clarsimp)
   apply (drule (1) bitmapQ_no_L1_orphansD, clarsimp)
-  apply (drule word_log2_nth_same, clarsimp)
+  apply (drule bit_word_log2, clarsimp)
   apply (frule test_bit_size[where n="word_log2 (ksReadyQueuesL2Bitmap _ _)"])
   apply (clarsimp simp: numPriorities_def wordBits_def word_size)
   apply (subst prioToL1Index_l1IndexToPrio_or_id)
@@ -1388,9 +1388,9 @@ lemma bitmapQ_from_bitmap_lookup:
      \<rbrakk>
    \<Longrightarrow> bitmapQ d (lookupBitmapPriority d s) s"
   apply (simp add: bitmapQ_lookupBitmapPriority_simp)
-  apply (drule word_log2_nth_same)
+  apply (drule bit_word_log2)
   apply (drule (1) bitmapQ_no_L1_orphansD)
-  apply (fastforce dest!: word_log2_nth_same
+  apply (fastforce dest!: bit_word_log2
                    simp: word_ao_dist lookupBitmapPriority_def word_size numPriorities_def
                          wordBits_def)
   done
@@ -1461,7 +1461,7 @@ lemma bitmapL1_highest_lookup:
    apply (subst word_le_nat_alt)
    apply (subst unat_of_nat_eq)
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
-   apply (rule word_log2_highest)
+   apply (rule word_log2_maximum)
    apply (subst (asm) prioToL1Index_l1IndexToPrio_or_id)
      apply (subst unat_of_nat_eq)
       apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
@@ -1480,7 +1480,7 @@ lemma bitmapL1_highest_lookup:
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
    apply (fastforce dest: bitmapQ_no_L1_orphansD
                     simp: wordBits_def numPriorities_def word_size wordRadix_def' l2BitmapSize_def')
-  apply (erule word_log2_highest)
+  apply (erule word_log2_maximum)
   done
 
 lemma bitmapQ_ksReadyQueuesI:

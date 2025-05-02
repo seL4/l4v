@@ -13,7 +13,7 @@ subsection \<open>Validity of Hoare Tuples: \<open>\<Gamma>\<Turnstile>\<^sub>t\
 
 definition
   validt :: "[('s,'p,'f) body,'f set,'s assn,('s,'p,'f) com,'s assn,'s assn] \<Rightarrow> bool"
-                ("_\<Turnstile>\<^sub>t\<^bsub>'/_\<^esub>/ _ _ _,_"  [61,60,1000, 20, 1000,1000] 60)
+                (\<open>_\<Turnstile>\<^sub>t\<^bsub>'/_\<^esub>/ _ _ _,_\<close>  [61,60,1000, 20, 1000,1000] 60)
 where
  "\<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A \<equiv> \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A \<and> (\<forall>s \<in> Normal ` P. \<Gamma>\<turnstile>c\<down>s)"
 
@@ -21,15 +21,15 @@ definition
   cvalidt::
   "[('s,'p,'f) body,('s,'p) quadruple set,'f set,
     's assn,('s,'p,'f) com,'s assn,'s assn] \<Rightarrow> bool"
-                ("_,_\<Turnstile>\<^sub>t\<^bsub>'/_\<^esub>/ _ _ _,_"  [61,60, 60,1000, 20, 1000,1000] 60)
+                (\<open>_,_\<Turnstile>\<^sub>t\<^bsub>'/_\<^esub>/ _ _ _,_\<close>  [61,60, 60,1000, 20, 1000,1000] 60)
 where
  "\<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A \<equiv> (\<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A) \<longrightarrow> \<Gamma> \<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
 
 
 
 notation (ASCII)
-  validt  ("_|=t'/_/ _ _ _,_"  [61,60,1000, 20, 1000,1000] 60) and
-  cvalidt  ("_,_|=t'/_ / _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60)
+  validt  (\<open>_|=t'/_/ _ _ _,_\<close>  [61,60,1000, 20, 1000,1000] 60) and
+  cvalidt  (\<open>_,_|=t'/_ / _ _ _,_\<close>  [61,60,60,1000, 20, 1000,1000] 60)
 
 subsection \<open>Properties of Validity\<close>
 
@@ -71,7 +71,7 @@ subsection \<open>The Hoare Rules: \<open>\<Gamma>,\<Theta>\<turnstile>\<^sub>t\
 inductive "hoaret"::"[('s,'p,'f) body,('s,'p) quadruple set,'f set,
                         's assn,('s,'p,'f) com,'s assn,'s assn]
                        => bool"
-    ("(3_,_/\<turnstile>\<^sub>t\<^bsub>'/_\<^esub> (_/ (_)/ _,_))" [61,60,60,1000,20,1000,1000]60)
+    (\<open>(3_,_/\<turnstile>\<^sub>t\<^bsub>'/_\<^esub> (_/ (_)/ _,_))\<close> [61,60,60,1000,20,1000,1000]60)
    for \<Gamma>::"('s,'p,'f) body"
 where
   Skip: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> Q Skip Q,A"

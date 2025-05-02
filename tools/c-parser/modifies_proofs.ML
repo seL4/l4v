@@ -385,7 +385,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
       val _ = Feedback.informStr (0, pnm ^ " commencing.")
       fun msg () = Feedback.informStr (0, pnm ^ " completed.")
       val nway_thm = munge_tactic lthy nway_goal msg tac
-      val nway_thms = HOLogic.conj_elims lthy nway_thm
+      val nway_thms = HOLogic.conj_elims nway_thm
       val _ = length nway_thms = length fnlist orelse
               raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
       fun note_it (nm, th, lthy) =

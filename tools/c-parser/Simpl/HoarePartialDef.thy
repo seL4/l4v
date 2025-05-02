@@ -14,7 +14,7 @@ subsection \<open>Validity of Hoare Tuples: \<open>\<Gamma>,\<Theta>\<Turnstile>
 
 definition
   valid :: "[('s,'p,'f) body,'f set,'s assn,('s,'p,'f) com,'s assn,'s assn] => bool"
-                ("_\<Turnstile>\<^bsub>'/_\<^esub>/ _ _ _,_"  [61,60,1000, 20, 1000,1000] 60)
+                (\<open>_\<Turnstile>\<^bsub>'/_\<^esub>/ _ _ _,_\<close>  [61,60,1000, 20, 1000,1000] 60)
 where
  "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A \<equiv> \<forall>s t. \<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow> t \<longrightarrow> s \<in> Normal ` P \<longrightarrow> t \<notin> Fault ` F
                       \<longrightarrow>  t \<in>  Normal ` Q \<union> Abrupt ` A"
@@ -23,7 +23,7 @@ definition
   cvalid::
   "[('s,'p,'f) body,('s,'p) quadruple set,'f set,
       's assn,('s,'p,'f) com,'s assn,'s assn] =>bool"
-                ("_,_\<Turnstile>\<^bsub>'/_\<^esub>/ _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60)
+                (\<open>_,_\<Turnstile>\<^bsub>'/_\<^esub>/ _ _ _,_\<close>  [61,60,60,1000, 20, 1000,1000] 60)
 where
  "\<Gamma>,\<Theta>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A \<equiv> (\<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P (Call p) Q,A) \<longrightarrow> \<Gamma> \<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
 
@@ -31,7 +31,7 @@ where
 definition
   nvalid :: "[('s,'p,'f) body,nat,'f set,
                 's assn,('s,'p,'f) com,'s assn,'s assn] => bool"
-                ("_\<Turnstile>_:\<^bsub>'/_\<^esub>/ _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60)
+                (\<open>_\<Turnstile>_:\<^bsub>'/_\<^esub>/ _ _ _,_\<close>  [61,60,60,1000, 20, 1000,1000] 60)
 where
  "\<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A \<equiv> \<forall>s t. \<Gamma>\<turnstile>\<langle>c,s \<rangle> =n\<Rightarrow> t \<longrightarrow> s \<in> Normal ` P \<longrightarrow> t \<notin> Fault ` F
                         \<longrightarrow> t \<in>  Normal ` Q \<union> Abrupt ` A"
@@ -41,16 +41,16 @@ definition
   cnvalid::
   "[('s,'p,'f) body,('s,'p) quadruple set,nat,'f set,
      's assn,('s,'p,'f) com,'s assn,'s assn] \<Rightarrow> bool"
-                ("_,_\<Turnstile>_:\<^bsub>'/_\<^esub>/ _ _ _,_"  [61,60,60,60,1000, 20, 1000,1000] 60)
+                (\<open>_,_\<Turnstile>_:\<^bsub>'/_\<^esub>/ _ _ _,_\<close>  [61,60,60,60,1000, 20, 1000,1000] 60)
 where
  "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A \<equiv> (\<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A) \<longrightarrow> \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 
 
 notation (ASCII)
-  valid  ("_|='/_/ _ _ _,_"  [61,60,1000, 20, 1000,1000] 60) and
-  cvalid  ("_,_|='/_/ _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60) and
-  nvalid  ("_|=_:'/_/ _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60) and
-  cnvalid  ("_,_|=_:'/_/ _ _ _,_"  [61,60,60,60,1000, 20, 1000,1000] 60)
+  valid  (\<open>_|='/_/ _ _ _,_\<close>  [61,60,1000, 20, 1000,1000] 60) and
+  cvalid  (\<open>_,_|='/_/ _ _ _,_\<close>  [61,60,60,1000, 20, 1000,1000] 60) and
+  nvalid  (\<open>_|=_:'/_/ _ _ _,_\<close>  [61,60,60,1000, 20, 1000,1000] 60) and
+  cnvalid  (\<open>_,_|=_:'/_/ _ _ _,_\<close>  [61,60,60,60,1000, 20, 1000,1000] 60)
 
 
 subsection \<open>Properties of Validity\<close>
@@ -208,7 +208,7 @@ done
 
 inductive "hoarep"::"[('s,'p,'f) body,('s,'p) quadruple set,'f set,
     's assn,('s,'p,'f) com, 's assn,'s assn] => bool"
-    ("(3_,_/\<turnstile>\<^bsub>'/_ \<^esub>(_/ (_)/ _,/_))" [60,60,60,1000,20,1000,1000]60)
+    (\<open>(3_,_/\<turnstile>\<^bsub>'/_ \<^esub>(_/ (_)/ _,/_))\<close> [60,60,60,1000,20,1000,1000]60)
   for \<Gamma>::"('s,'p,'f) body"
 where
   Skip: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> Q Skip Q,A"
