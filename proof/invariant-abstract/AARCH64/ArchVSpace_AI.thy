@@ -722,6 +722,7 @@ crunch find_free_vmid
   and valid_vmid_table[wp]: valid_vmid_table
   and arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
   and valid_cur_fpu[wp]: valid_cur_fpu
+  and valid_numlistregs[wp]: valid_numlistregs
 
 lemma find_free_vmid_valid_arch [wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
