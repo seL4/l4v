@@ -229,3 +229,8 @@ Converting Time to and from a list of words.
 
 > wordsOfTime :: Time -> [Word]
 > wordsOfTime t = fromIntegral t : [fromIntegral $ t `shiftR` 32]
+
+The following constant is equal to sizeof(ticks_t) / sizeof(word_t)
+
+> timeArgSize :: Int
+> timeArgSize = 2

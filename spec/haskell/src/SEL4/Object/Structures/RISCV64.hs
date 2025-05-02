@@ -104,3 +104,6 @@ parseTimeArg i args = fromIntegral (args !! i)
 
 wordsOfTime :: Time -> [Word]
 wordsOfTime t = [fromIntegral t]
+
+timeArgSize :: Int
+timeArgSize = 1

@@ -330,6 +330,9 @@ definition parse_time_arg :: "nat \<Rightarrow> data list \<Rightarrow> time" wh
 definition words_from_time :: "time \<Rightarrow> machine_word list" where
   "words_from_time t = [ucast t, ucast (t >> 32)]"
 
+definition TIME_ARG_SIZE :: nat where
+  "TIME_ARG_SIZE \<equiv> 2" (* sizeof(ticks_t) / sizeof(word_t) *)
+
 end
 
 end
