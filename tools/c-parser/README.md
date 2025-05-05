@@ -22,8 +22,8 @@ be allocated via `alloc`, because this library function does typically not yet
 exist in low-level code such as OS kernel implementation.
 
 To install, we recommend using one of the [releases] provided below and see the
-file INSTALL in the `src/c-parser` directory. You will need Isabelle and the
-[MLton compiler] for Standard ML.
+file INSTALL in the `src/c-parser` directory. You need the Isabelle release that
+corresponds to the StrictC parser release.
 
 To use:
 
@@ -41,7 +41,6 @@ for more information.
 [releases]: #releases
 [testfiles]: testfiles/
 [breakcontinue]: testfiles/breakcontinue.thy
-[MLton compiler]: http://mlton.org
 [AutoCorres]: https://trustworthy.systems/projects/OLD/autocorres/
 
 Documentation
