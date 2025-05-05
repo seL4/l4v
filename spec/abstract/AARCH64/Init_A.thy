@@ -52,7 +52,7 @@ definition init_arch_state :: arch_state where
      arm_next_vmid = 0,
      arm_us_global_vspace = arm_global_pt_ptr,
      arm_current_vcpu = None,
-     arm_gicvcpu_numlistregs = undefined,
+     arm_gicvcpu_numlistregs = 20,
      arm_current_fpu_owner = None
    \<rparr>"
 

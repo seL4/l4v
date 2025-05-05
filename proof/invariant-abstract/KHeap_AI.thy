@@ -777,6 +777,34 @@ lemma dmo_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp wp: dmo_invs1) fastforce
 
+(* Only works after a hoare_pre! *)
+lemma dmo_wp:
+  assumes mopv: "\<And>s. \<lbrace>P s\<rbrace> mop \<lbrace>\<lambda>a b. R a (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P s (machine_state s)\<rbrace> do_machine_op mop \<lbrace>R\<rbrace>"
+  by (wpsimp simp: do_machine_op_def use_valid[OF _ mopv])
+
+(* do_machine_op distributing over binds/basic operations*)
+lemma dmo_distr:
+  "do_machine_op (f >>= g) = (do_machine_op f >>= (\<lambda>x. do_machine_op (g x)))"
+  by (fastforce simp: do_machine_op_def gets_def get_def select_f_def
+                      modify_def put_def return_def bind_def
+               split: prod.splits)
+
+lemma dmo_if_distr:
+  "do_machine_op (if A then f else g) = (if A then (do_machine_op f) else (do_machine_op g))"
+  by simp
+
+lemma dmo_gets_distr:
+  "do_machine_op (gets f) = gets (\<lambda>s. f (machine_state s))"
+  by (clarsimp simp: do_machine_op_def bind_assoc gets_def get_def
+                     simpler_modify_def select_f_def bind_def return_def)
+
+lemma dmo_modify_distr:
+  "do_machine_op (modify f) = modify (machine_state_update f)"
+  by (fastforce simp: do_machine_op_def bind_assoc gets_def get_def
+                      simpler_modify_def select_f_def bind_def return_def)
+
+(* FIXME: should not be declared as wp *)
 lemma as_user_bind[wp]:
   "as_user t (f >>= g) = (as_user t f) >>= (\<lambda>x. as_user t (g x))"
   apply (monad_eq simp: as_user_def select_f_def set_object_def get_object_def gets_the_def get_tcb_def)

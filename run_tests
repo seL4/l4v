@@ -64,7 +64,7 @@ EXCLUDE["RISCV64"]=[
 EXCLUDE["AARCH64"]=[
     # To be eliminated/refined as development progresses
     "ASepSpec",
-    "Access",
+    "InfoFlow",
 
     # Tools and unrelated content, removed for development
     "AutoCorres",
