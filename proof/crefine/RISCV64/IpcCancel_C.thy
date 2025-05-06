@@ -3769,16 +3769,7 @@ lemma thread_state_to_tsType_eq_BlockedOnSend:
    \<Longrightarrow> thread_state_to_tsType ts = scast ThreadState_BlockedOnSend"
   by (cases ts, simp_all add: ThreadState_defs)
 
-lemma cancelIPC_ccorres1:
-  assumes cteDeleteOne_ccorres:
-  "\<And>w slot.
-     ccorres dc xfdc
-       (invs'
-        and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
-                             \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
-       (\<lbrace>gs_get_assn cteDeleteOne_'proc \<acute>ghost'state = w\<rbrace> \<inter> \<lbrace>\<acute>slot = cte_Ptr slot\<rbrace>) []
-     (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
-  shows
+lemma cancelIPC_ccorres:
   "ccorres dc xfdc
      (tcb_at' thread and invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
      \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace> hs

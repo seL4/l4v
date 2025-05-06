@@ -243,6 +243,8 @@ The following functions are specialisations of the "getObject" and "setObject" f
 
 > unbindNotification :: PPtr TCB -> Kernel ()
 > unbindNotification tcb = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     ntfnPtr <- getBoundNotification tcb
 >     case ntfnPtr of
 >         Just ntfnPtr' -> do
@@ -252,6 +254,8 @@ The following functions are specialisations of the "getObject" and "setObject" f
 
 > unbindMaybeNotification :: PPtr Notification -> Kernel ()
 > unbindMaybeNotification ntfnPtr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     ntfn <- getNotification ntfnPtr
 >     case ntfnBoundTCB ntfn of
 >         Just t -> doUnbindNotification ntfnPtr ntfn t

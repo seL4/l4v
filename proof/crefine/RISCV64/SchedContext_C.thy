@@ -1032,54 +1032,12 @@ lemma invokeSchedContext_Unbind_ccorres:
    apply (simp add: liftE_bindE bind_liftE_distrib)
    apply (ctac add: schedContext_unbindAllTCBs_ccorres)
      apply (ctac add: schedContext_unbindNtfn_ccorres)
-       apply (clarsimp simp: schedContextUnbindReply_def bind_assoc)
-       apply (rule ccorres_stateAssert)
-       apply (rule ccorres_pre_getObject_sc, rename_tac sc)
-       apply (rule ccorres_move_c_guard_sc)
-       apply (rule ccorres_split_nothrow)
-           apply (clarsimp simp: when_def)
-           apply (rule_tac Q="obj_at' (\<lambda>sc'. scReply sc' = scReply sc) scPtr
-                              and valid_sched_context' sc and no_0_obj'"
-                        in ccorres_cond_both'[where Q'=\<top>])
-             apply normalise_obj_at'
-             apply (frule (1) obj_at_cslift_sc)
-             apply (clarsimp simp: csched_context_relation_def typ_heap_simps
-                                   valid_sched_context'_def)
-             apply (case_tac "scReply sc"; clarsimp)
-            apply (rule ccorres_split_nothrow)
-                apply (rule_tac P'="obj_at' (\<lambda>sc'. scReply sc' = scReply sc) scPtr
-                                    and valid_sched_context' sc and no_0_obj'"
-                             in updateReply_ccorres_lemma3[where P=\<top>])
-                 apply vcg
-                apply clarsimp
-                apply (frule (1) obj_at_cslift_sc)
-                apply (frule (1) obj_at_cslift_reply)
-                apply (fastforce intro!: rf_sr_reply_update2
-                                   simp: typ_heap_simps' creply_relation_def
-                                         csched_context_relation_def from_bool_def isHead_def
-                                  split: if_splits)
-               apply ceqv
-              apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
-                apply vcg
-               apply fastforce
-              apply clarsimp
-              apply (rule conjI)
-               apply (clarsimp simp: typ_heap_simps')
-              apply (rule_tac sc'="scReply_C_update (\<lambda>_. NULL) sc'"
-                           in rf_sr_sc_update_no_refill_buffer_update2;
-                     fastforce?)
-                apply (clarsimp simp: typ_heap_simps')
-               apply (clarsimp simp: csched_context_relation_def option_to_ctcb_ptr_def)
-              apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
-             apply wpsimp
-            apply vcg
-           apply (rule ccorres_return_Skip)
-          apply ceqv
+       apply (ctac add: schedContext_unbindReply_ccorres)
          apply (simp add: liftE_def return_returnOk)
          apply (rule ccorres_return_CE, simp+)[1]
         apply wpsimp
-       apply vcg
-      apply (rule_tac Q'="\<lambda>_ s. sc_at' scPtr s \<and> no_0_obj' s \<and> valid_objs' s" in hoare_post_imp)
+       apply (vcg exspec=schedContext_unbindReply_modifies)
+      apply (rule_tac Q'="\<lambda>_. invs' and sc_at' scPtr" in hoare_post_imp)
        apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
                         simp: obj_at'_def valid_sched_context'_def)
       apply wpsimp

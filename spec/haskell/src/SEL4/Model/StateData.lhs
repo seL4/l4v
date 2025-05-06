@@ -568,6 +568,11 @@ An assert that will say that weak_sch_act_wf holds
 > weak_sch_act_wf_asrt :: KernelState -> Bool
 > weak_sch_act_wf_asrt _ = True
 
+An assert that will say that sch_act_simple holds
+
+> sch_act_simple_asrt :: KernelState -> Bool
+> sch_act_simple_asrt _ = True
+
 An assert that will say that priority_ordered' holds of the given list
 
 > priority_ordered'_asrt :: [PPtr TCB] -> KernelState -> Bool

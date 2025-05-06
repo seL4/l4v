@@ -1246,7 +1246,7 @@ lemma invokeTCB_CopyRegisters_ccorres:
    apply (rule ccorres_split_nothrow_novcg_dc)
       apply (rule ccorres_when[where R=\<top>])
        apply (simp add: to_bool_def del: Collect_const)
-      apply (ctac add: suspend_ccorres[OF cteDeleteOne_ccorres])
+      apply (ctac add: suspend_ccorres)
      apply (rule ccorres_split_nothrow_novcg_dc)
         apply (rule ccorres_when[where R=\<top>])
          apply (simp add: to_bool_def del: Collect_const)
@@ -1785,11 +1785,10 @@ lemma invokeTCB_Suspend_ccorres:
    (invokeTCB (Suspend t)) (Call invokeTCB_Suspend_'proc)"
   apply (cinit lift: thread_')
    apply (simp add: liftE_def return_returnOk)
-   apply (ctac(no_vcg) add: suspend_ccorres[OF cteDeleteOne_ccorres])
+   apply (ctac (no_vcg) add: suspend_ccorres)
     apply (rule ccorres_return_CE, simp+)[1]
    apply wp
   apply clarsimp
-  apply (auto simp: invs'_def global'_no_ex_cap)
   done
 
 lemma invokeTCB_Resume_ccorres:
@@ -1894,7 +1893,7 @@ shows
      apply (rule ccorres_split_nothrow_dc)
         apply (simp add: when_def del: Collect_const split del: if_split)
         apply (rule ccorres_cond2[where R=\<top>], simp add: from_bool_0 Collect_const_mem)
-         apply (ctac add: suspend_ccorres[OF cteDeleteOne_ccorres])
+         apply (ctac add: suspend_ccorres)
         apply (rule ccorres_return_Skip)
        apply (rule ccorres_pre_getCurThread)
        apply (simp only: liftE_bindE[symmetric])
@@ -3941,6 +3940,15 @@ sorry (* FIXME RT: decodeSetIPCBuffer_ccorres
   apply clarsimp
   done *)
 
+lemma tcb_ptr_to_ctcb_ptr_alignment:
+  "\<lbrakk> is_aligned tcb tcbBlockSizeBits; bits \<le> ctcb_size_bits \<rbrakk>
+   \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr tcb) && ~~ mask bits = ptr_val (tcb_ptr_to_ctcb_ptr tcb)"
+  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
+  apply (rule is_aligned_neg_mask_eq)
+  apply (erule aligned_add_aligned)
+   apply (erule is_aligned_weaken[rotated])
+   by (auto simp add: is_aligned_def objBits_defs ctcb_offset_defs)
+
 lemma bindNotification_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and tcb_at' tcb)
     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}
@@ -3973,8 +3981,8 @@ lemma bindNotification_ccorres:
                apply (case_tac "ntfnObj ntfn")
                  apply ((clarsimp simp: option_to_ctcb_ptr_canonical[OF invs_pspace_canonical']
                                   simp flip: canonical_bit_def)+)[3]
-              apply (auto simp: option_to_ctcb_ptr_def objBits_simps'
-                                tcb_ptr_to_ctcb_ptr_alignment canonical_bit_def)[1]
+               apply (auto simp: option_to_ctcb_ptr_def objBits_simps'
+                                 tcb_ptr_to_ctcb_ptr_alignment canonical_bit_def)[1]
               apply (simp add: refill_buffer_relation_def image_def dom_def Let_def typ_heap_simps
                                update_ntfn_map_tos)
              apply (simp add: carch_state_relation_def)

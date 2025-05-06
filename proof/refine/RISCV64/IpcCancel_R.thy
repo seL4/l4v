@@ -2128,9 +2128,9 @@ lemma (in delete_one) suspend_corres:
      (SchedContext_A.suspend t) (ThreadDecls_H.suspend t)"
   apply (simp add: SchedContext_A.suspend_def Thread_H.suspend_def)
   apply add_sym_refs
-  apply (rule corres_stateAssert_add_assertion)
-   prefer 2
-   apply clarsimp
+  apply (rule corres_stateAssert_ignore, simp)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce intro: weak_sch_act_wf_cross)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF cancel_ipc_corres])
       apply (rule corres_split[OF getThreadState_corres], rename_tac state state')

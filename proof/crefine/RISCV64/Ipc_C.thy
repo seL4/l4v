@@ -6391,17 +6391,6 @@ lemma schedContext_resume_ccorres:
                          to_bool_def)
   done
 
-lemma obj_at_cslift_ntfn:
-  "\<lbrakk>obj_at' P ntfn s; (s, s') \<in> rf_sr\<rbrakk>
-   \<Longrightarrow> \<exists>ko ko'. ko_at' ko ntfn s \<and> P ko \<and> cslift s' (Ptr ntfn) = Some ko'
-                \<and> cnotification_relation (cslift s') ko ko'"
-  apply (frule obj_at_ko_at')
-  apply clarsimp
-  apply (frule cmap_relation_ntfn)
-  apply (drule (1) cmap_relation_ko_atD)
-  apply fastforce
-  done
-
 lemma maybeDonateSchedContext_ccorres:
   "ccorres dc xfdc
      (tcb_at' tcbPtr and invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
@@ -7415,7 +7404,7 @@ lemma sendSignal_ccorres[corres]:
          apply (simp add: Collect_const_mem)
         apply (rule ccorres_rhs_assoc)+
         apply simp
-        apply (ctac (no_vcg) add: cancelIPC_ccorres1[OF cteDeleteOne_ccorres])
+        apply (ctac (no_vcg) add: cancelIPC_ccorres)
          apply (ctac (no_vcg) add: setThreadState_ccorres)
           apply (ctac (no_vcg) add: setRegister_ccorres)
            apply (ctac (no_vcg) add: maybeDonateSchedContext_ccorres, rename_tac xfdc')

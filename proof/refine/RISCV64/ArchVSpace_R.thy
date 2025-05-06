@@ -162,8 +162,10 @@ lemma deleteASID_corres[corres]:
   assumes "asid' = ucast asid" "pm' = pm"
   shows "corres dc invs no_0_obj'
                 (delete_asid asid pm) (deleteASID asid' pm')"
+  apply add_cur_tcb'
   unfolding delete_asid_def deleteASID_def using assms
   apply simp
+  apply (rule corres_stateAssert_ignore, simp)
   apply (corres simp: liftM_def mask_asid_low_bits_ucast_ucast asid_low_bits_of_def
                       ucast_ucast_a is_down
          | corres_cases_both)+
@@ -206,8 +208,10 @@ lemma deleteASIDPool_corres:
   shows "corres dc (invs and K (is_aligned base asid_low_bits) and asid_pool_at ptr)
                    (no_0_obj')
                    (delete_asid_pool base ptr) (deleteASIDPool base' ptr)"
+  apply add_cur_tcb'
   using assms
   apply (simp add: delete_asid_pool_def deleteASIDPool_def)
+  apply (rule corres_stateAssert_ignore, simp)
   apply (rule corres_assume_pre)
   apply (simp add: is_aligned_asid_low_bits_of_zero cong: corres_weak_cong)
   apply (thin_tac P for P)+

@@ -1792,6 +1792,17 @@ lemma obj_at_cslift_tcb:
   apply fastforce
   done
 
+lemma obj_at_cslift_ntfn:
+  "\<lbrakk>obj_at' P ntfn s; (s, s') \<in> rf_sr\<rbrakk>
+   \<Longrightarrow> \<exists>ko ko'. ko_at' ko ntfn s \<and> P ko \<and> cslift s' (Ptr ntfn) = Some ko'
+                \<and> cnotification_relation (cslift s') ko ko'"
+  apply (frule obj_at_ko_at')
+  apply clarsimp
+  apply (frule cmap_relation_ntfn)
+  apply (drule (1) cmap_relation_ko_atD)
+  apply fastforce
+  done
+
 lemma obj_at_cslift_sc:
   fixes P :: "sched_context \<Rightarrow> bool"
   shows "\<lbrakk>obj_at' P sc s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
