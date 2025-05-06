@@ -1130,6 +1130,11 @@ definition sch_act_simple :: "kernel_state \<Rightarrow> bool" where
   "sch_act_simple \<equiv> \<lambda>s. (ksSchedulerAction s = ResumeCurrentThread) \<or>
                          (ksSchedulerAction s = ChooseNewThread)"
 
+defs sch_act_simple_asrt_def:
+  "sch_act_simple_asrt \<equiv> sch_act_simple"
+
+declare sch_act_simple_asrt_def[simp]
+
 definition sch_act_sane :: "kernel_state \<Rightarrow> bool" where
   "sch_act_sane \<equiv> \<lambda>s. \<forall>t. ksSchedulerAction s = SwitchToThread t \<longrightarrow> t \<noteq> ksCurThread s"
 

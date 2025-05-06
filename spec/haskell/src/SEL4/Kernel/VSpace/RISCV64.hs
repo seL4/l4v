@@ -181,6 +181,8 @@ handleVMFault thread f = do
 
 deleteASIDPool :: ASID -> PPtr ASIDPool -> Kernel ()
 deleteASIDPool base ptr = do
+    stateAssert cur_tcb'_asrt
+        "Assert that `cur_tcb' s` holds"
     assert (base .&. mask asidLowBits == 0)
         "ASID pool's base must be aligned"
     asidTable <- gets (riscvKSASIDTable . ksArchState)
@@ -196,6 +198,8 @@ deleteASIDPool base ptr = do
 
 deleteASID :: ASID -> PPtr PTE -> Kernel ()
 deleteASID asid pt = do
+    stateAssert cur_tcb'_asrt
+        "Assert that `cur_tcb' s` holds"
     asidTable <- gets (riscvKSASIDTable . ksArchState)
     case asidTable!(asidHighBitsOf asid) of
         Nothing -> return ()

@@ -162,6 +162,7 @@ Threads are treated as special capability nodes; they also become zombies when t
 
 > finaliseCap (ThreadCap { capTCBPtr = tptr}) True _ = do
 >     stateAssert valid_idle'_asrt "`valid_idle'`"
+>     stateAssert sch_act_simple_asrt "assert that `sch_act_simple` holds"
 >     cte_ptr <- getThreadCSpaceRoot tptr
 >     unbindNotification tptr
 >     unbindFromSC tptr

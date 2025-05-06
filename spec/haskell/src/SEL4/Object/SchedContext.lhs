@@ -511,6 +511,7 @@ This module uses the C preprocessor to select a target architecture.
 >     stateAssert valid_idle'_asrt "`valid_idle'`"
 >     stateAssert cur_tcb'_asrt
 >         "Assert that `cur_tcb' s` holds"
+>     stateAssert weak_sch_act_wf_asrt "assert that `weak_sch_act_wf` holds"
 >     sc <- getSchedContext scPtr
 >     let tptrOpt = scTCB sc
 >     assert (tptrOpt /= Nothing) "schedContextUnbind: option of TCB pointer must not be Nothing"

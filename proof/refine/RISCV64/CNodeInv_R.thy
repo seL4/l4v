@@ -707,13 +707,14 @@ termination finaliseSlot'
      apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad
                            getThreadCSpaceRoot_def locateSlot_conv)
      apply (intro conjI)
-      apply (erule use_valid [OF _ prepareThreadDelete_not_recursive_ctes])
-      apply (erule use_valid [OF _ suspend_not_recursive_ctes])
-      apply (erule use_valid [OF _ unbindFromSC_not_recursive_ctes])
-      apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes])
-      apply (erule use_valid [OF _ stateAssert_inv], simp)
-     apply (frule(1) use_valid [OF _ stateAssert_inv])
-     apply (frule(1) use_valid [OF _ unbindNotification_ctes_of_thread, OF _ exI])
+      apply (erule use_valid[OF _ prepareThreadDelete_not_recursive_ctes])
+      apply (erule use_valid[OF _ suspend_not_recursive_ctes])
+      apply (erule use_valid[OF _ unbindFromSC_not_recursive_ctes])
+      apply (erule use_valid[OF _ unbindNotification_not_recursive_ctes])
+      subgoal by (fastforce elim: use_valid[OF _ stateAssert_inv])
+     apply (frule (1) use_valid[OF _ stateAssert_inv],
+            frule (1) use_valid[OF _ stateAssert_inv],
+            frule(1) use_valid [OF _ unbindNotification_ctes_of_thread, OF _ exI])
      apply (frule(1) use_valid [OF _ unbindFromSC_ctes_of_thread])
      apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
      apply (frule(1) use_valid [OF _ prepareThreadDelete_ctes_of_thread])

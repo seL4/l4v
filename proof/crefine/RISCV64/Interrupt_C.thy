@@ -57,12 +57,12 @@ lemma cte_at_irq_node':
 
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
   "ccorres dc xfdc
-          (invs' and sch_act_simple
-            and irq_handler_inv_valid' (SetIRQHandler irq cp slot))
-          (UNIV \<inter> {s. irq_' s = ucast irq} \<inter> {s. slot_' s = Ptr slot}
-                \<inter> {s. ccap_relation cp (cap_' s)}) []
-      (InterruptDecls_H.invokeIRQHandler (SetIRQHandler irq cp slot))
-      (Call invokeIRQHandler_SetIRQHandler_'proc)"
+     (invs' and irq_handler_inv_valid' (SetIRQHandler irq cp slot))
+     (\<lbrace>\<acute>irq = UCAST(6 \<rightarrow> 64) irq\<rbrace>
+      \<inter> \<lbrace>\<acute>slot = cte_Ptr slot\<rbrace>
+      \<inter> \<lbrace>ccap_relation cp \<acute>cap\<rbrace>) []
+     (InterruptDecls_H.invokeIRQHandler (SetIRQHandler irq cp slot))
+     (Call invokeIRQHandler_SetIRQHandler_'proc)"
 proof -
   have valid_objs_invs'_strg: "\<And>s. invs' s \<longrightarrow> valid_objs' s"
     by (clarsimp)

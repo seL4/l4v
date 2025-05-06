@@ -320,5 +320,15 @@ lemma setMRs_single:
   apply (clarsimp simp: msgRegisters_unfold sequence_x_def)
   done
 
+lemma option_to_ctcb_ptr_canonical:
+  "\<lbrakk>pspace_canonical' s; tcb_at' tcb s\<rbrakk>
+   \<Longrightarrow> option_to_ctcb_ptr (Some tcb)
+       = tcb_Ptr (sign_extend canonical_bit (ptr_val (tcb_ptr_to_ctcb_ptr tcb)))"
+  apply (clarsimp simp: option_to_ctcb_ptr_def)
+  apply (frule (1) obj_at'_is_canonical)
+  by (fastforce dest: canonical_address_tcb_ptr
+                simp: obj_at'_def objBits_simps' canonical_address_sign_extended
+                      sign_extended_iff_sign_extend)
+
 end
 end

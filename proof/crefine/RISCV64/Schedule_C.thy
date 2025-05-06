@@ -134,13 +134,6 @@ lemma switchToThread_ccorres:
   apply (fastforce simp: ready_qs_runnable_def)
   done
 
-crunch schedContextCompleteYieldTo
-  for valid_objs'[wp]: valid_objs'
-  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-  and no_0_obj'[wp]: no_0_obj'
-  and ct_in_state'[wp]: "ct_in_state' st"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma activateThread_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV hs
