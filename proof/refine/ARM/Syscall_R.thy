@@ -2075,9 +2075,7 @@ lemma inv_irq_IRQInactive:
 lemma inv_arch_IRQInactive:
   "\<lbrace>\<top>\<rbrace> Arch.performInvocation invocation
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
-  apply wp
-  done
+  by (wpsimp simp: ARM_H.performInvocation_def performARMMMUInvocation_def)
 
 lemma retype_pi_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> RetypeDecls_H.performInvocation blocking call v
