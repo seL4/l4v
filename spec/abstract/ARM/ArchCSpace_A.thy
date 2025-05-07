@@ -39,7 +39,11 @@ text \<open>For some purposes capabilities to physical objects are treated
 differently to others.\<close>
 definition
   arch_is_physical :: "arch_cap \<Rightarrow> bool" where
-  "arch_is_physical cap \<equiv> case cap of ASIDControlCap \<Rightarrow> False | _ \<Rightarrow> True"
+  "arch_is_physical cap \<equiv>
+    case cap of
+      ASIDControlCap \<Rightarrow> False
+    | SGISignalCap _ _ \<Rightarrow> False
+    | _ \<Rightarrow> True"
 
 text \<open>Check whether the second capability is to the same object or an object
 contained in the region of the first one.\<close>
@@ -55,8 +59,12 @@ where
 | "arch_same_region_as (PageDirectoryCap r x) (PageDirectoryCap r' x') = (r' = r)"
 | "arch_same_region_as ASIDControlCap ASIDControlCap = True"
 | "arch_same_region_as (ASIDPoolCap r a) (ASIDPoolCap r' a') = (r' = r)"
+| "arch_same_region_as (SGISignalCap irq target) c' = (c' = SGISignalCap irq target)"
 | "arch_same_region_as _ _ = False"
 
+text \<open>Check whether given cap is a descendant of IRQControlCap\<close>
+definition is_irq_control_descendant :: "arch_cap \<Rightarrow> bool" where
+  "is_irq_control_descendant acap = is_SGISignalCap acap"
 
 text \<open>Check whether two arch capabilities are to the same object.\<close>
 definition
@@ -66,6 +74,7 @@ definition
       (PageCap dev ref _ pgsz _,PageCap dev' ref' _ pgsz' _)
           \<Rightarrow> (dev, ref, pgsz) = (dev', ref', pgsz')
               \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
+    | (SGISignalCap _ _, _) \<Rightarrow> False
     | _ \<Rightarrow> arch_same_region_as cp cp')"
 
 (* Proofs don't want to see this definition *)
@@ -74,7 +83,13 @@ declare same_aobject_as_def[simp]
 definition
   arch_is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
-  "arch_is_cap_revocable c c' \<equiv> False"
+  "arch_is_cap_revocable new_cap src_cap \<equiv>
+    case new_cap of
+      ArchObjectCap (SGISignalCap _ _) \<Rightarrow> src_cap = IRQControlCap
+    | _ \<Rightarrow> False"
+
+definition should_be_arch_parent_of :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool \<Rightarrow> bool" where
+  "should_be_arch_parent_of acap acap' original' \<equiv> is_SGISignalCap acap \<longrightarrow> \<not>original'"
 
 end
 end

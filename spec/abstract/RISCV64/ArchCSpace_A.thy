@@ -54,6 +54,9 @@ fun arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
 | "arch_same_region_as ASIDControlCap c' = (c' = ASIDControlCap)"
 | "arch_same_region_as (ASIDPoolCap r _) c' = (\<exists>r' d'. c' = ASIDPoolCap r' d' \<and> r = r')"
 
+text \<open>Check whether given cap is a descendant of IRQControlCap\<close>
+definition is_irq_control_descendant :: "arch_cap \<Rightarrow> bool" where
+  "is_irq_control_descendant acap = False"
 
 text \<open>Check whether two arch capabilities are to the same object.\<close>
 definition same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
@@ -69,6 +72,9 @@ declare same_aobject_as_def[simp]
 definition arch_is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool"
   where
   "arch_is_cap_revocable new_cap src_cap \<equiv> False"
+
+definition should_be_arch_parent_of :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool \<Rightarrow> bool" where
+  "should_be_arch_parent_of acap acap' original' \<equiv> True"
 
 end
 end

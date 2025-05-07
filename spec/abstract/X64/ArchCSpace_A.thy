@@ -71,6 +71,10 @@ where
    (\<exists>frst' lst'. c' = IOPortCap frst' lst' \<and> frst' = frst \<and> lst' = lst)"
 | "arch_same_region_as IOPortControlCap c' = (c' = IOPortControlCap \<or> (\<exists>f l. c' = IOPortCap f l))"
 
+text \<open>Check whether given cap is a descendant of IRQControlCap\<close>
+definition is_irq_control_descendant :: "arch_cap \<Rightarrow> bool" where
+  "is_irq_control_descendant acap = False"
+
 text \<open>Check whether two arch capabilities are to the same object.\<close>
 definition
   same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" where
@@ -91,6 +95,9 @@ where
            if \<exists>f l. new_cap = ArchObjectCap (IOPortCap f l)
              then src_cap = ArchObjectCap IOPortControlCap
              else False"
+
+definition should_be_arch_parent_of :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool \<Rightarrow> bool" where
+  "should_be_arch_parent_of acap acap' original' \<equiv> True"
 
 end
 end

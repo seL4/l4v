@@ -56,6 +56,12 @@ where
   "page_base vaddr vmsize \<equiv> vaddr && ~~ mask (pageBitsForSize vmsize)"
 
 
+definition decode_sgi_signal_invocation :: "arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad" where
+  "decode_sgi_signal_invocation acap \<equiv>
+     case acap of
+       SGISignalCap irq target \<Rightarrow> returnOk $ InvokeSGISignal $ SGISignalGenerate irq target
+     | _ \<Rightarrow> fail"
+
 definition
   arch_decode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
@@ -235,7 +241,8 @@ where
           odE
         | _ \<Rightarrow>  throwError $ InvalidCapability 1
   else  throwError TruncatedMessage
-  else  throwError IllegalOperation"
+  else  throwError IllegalOperation
+| SGISignalCap _ _ \<Rightarrow> decode_sgi_signal_invocation cap"
 
 
 definition
@@ -253,6 +260,9 @@ definition
   arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
   "arch_check_irq irq \<equiv> whenE (irq > maxIRQ) $ throwError (RangeError 0 maxIRQ)"
+
+definition sgi_target_valid :: "machine_word \<Rightarrow> bool" where
+  "sgi_target_valid t \<equiv> t < of_nat gicNumTargets"
 
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
@@ -275,6 +285,21 @@ definition arch_decode_irq_control_invocation ::
           ensure_empty dest_slot;
 
           returnOk $ ArchIRQControlIssue irq dest_slot src_slot (trigger \<noteq> 0)
+        odE
+      else throwError TruncatedMessage
+      else if invocation_type label = ArchInvocationLabel ARMIRQIssueSGISignal
+      then if length args \<ge> 4 \<and> length cps \<ge> 1
+        then let irq_word = args ! 0;
+                 target_word = args ! 1;
+                 index = args ! 2;
+                 depth = args ! 3;
+                 cnode = cps ! 0
+        in doE
+          range_check irq_word 0 (of_nat numSGIs - 1);
+          unlessE (sgi_target_valid target_word) $ throwError $ InvalidArgument 1;
+          dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
+          ensure_empty dest_slot;
+          returnOk $ IssueSGISignal (ucast irq_word) (ucast target_word) src_slot dest_slot
         odE
       else throwError TruncatedMessage
     else throwError IllegalOperation)"
