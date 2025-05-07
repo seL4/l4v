@@ -30,7 +30,7 @@ section \<open>Architecture-specific capabilities\<close>
 
 text \<open>
   The AARCH64 kernel supports capabilities for ASID pools and an ASID controller capability,
-  along with capabilities for virtual memory mappings.
+  along with capabilities for virtual memory mappings, VCPUs, and software-generated interrupts.
 \<close>
 
 datatype arch_cap =
@@ -50,6 +50,9 @@ datatype arch_cap =
       (acap_map_data : "(asid \<times> vspace_ref) option")
   | VCPUCap
       (acap_obj : obj_ref)
+  | SGISignalCap
+      (acap_sgi_irq : sgi_irq)
+      (acap_sgi_target : sgi_target)
 
 
 text \<open>Update the mapping data saved in a frame or page table capability.\<close>
@@ -216,6 +219,7 @@ primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
 | "arch_obj_size (FrameCap _ _ sz _ _) = pageBitsForSize sz"
 | "arch_obj_size (PageTableCap _ pt_t _ ) = table_size pt_t"
 | "arch_obj_size (VCPUCap _) = vcpuBits"
+| "arch_obj_size (SGISignalCap _ _) = 0"
 
 fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool" where
   "arch_cap_is_device (FrameCap _ _ _ is_dev _) = is_dev"
@@ -247,6 +251,7 @@ primrec arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat" where
 
 fun aobj_ref :: "arch_cap \<rightharpoonup> obj_ref" where
   "aobj_ref ASIDControlCap = None"
+| "aobj_ref (SGISignalCap _ _) = None"
 | "aobj_ref c = Some (acap_obj c)"
 
 definition acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap" where

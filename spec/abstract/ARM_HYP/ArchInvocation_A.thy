@@ -64,6 +64,9 @@ datatype vcpu_invocation =
      | VCPUWriteRegister obj_ref vcpureg machine_word
      | VCPUAckVPPI obj_ref (* vcpu *) vppievent_irq
 
+datatype sgi_signal_invocation =
+    SGISignalGenerate (sgi_irq : sgi_irq) (sgi_target : sgi_target)
+
 datatype arch_invocation
      = InvokePageTable page_table_invocation
      | InvokePageDirectory page_directory_invocation
@@ -71,6 +74,7 @@ datatype arch_invocation
      | InvokeASIDControl asid_control_invocation
      | InvokeASIDPool asid_pool_invocation
      | InvokeVCPU vcpu_invocation
+     | InvokeSGISignal sgi_signal_invocation
 
 (* The ARM platform currently does not define any additional register sets for
 the "CopyRegisters" operation. This may be changed in future to support a floating point unit. *)
@@ -81,6 +85,11 @@ definition "ArchDefaultExtraRegisters \<equiv> ARMNoExtraRegisters"
 
 datatype arch_irq_control_invocation =
     ArchIRQControlIssue irq cslot_ptr cslot_ptr bool
+  | IssueSGISignal
+      (issue_sgi_irq : sgi_irq)
+      (issue_sgi_target : sgi_target)
+      (issue_control_slot : cslot_ptr)
+      (issue_sgi_slot : cslot_ptr)
 
 end
 
