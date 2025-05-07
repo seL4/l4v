@@ -2637,7 +2637,7 @@ proof -
   from valid
   have "valid_badges m" ..
   thus ?thesis
-    apply (clarsimp simp: valid_badges_def)
+    apply (clarsimp simp: valid_badges_def valid_arch_badges_def) (* FIXME arch-split; take AARCH64 version *)
     apply (simp add: n_Some_eq n_next split: if_split_asm)
     apply fastforce
     done

@@ -130,7 +130,7 @@ where
        \<comment> \<open>
          For other operations, we only perform the user's intent
          if it matches up with the cap.
-        
+
          Note that this does not currently match the current
          implementation: instead, the user's message will be
          decoded into a new (undefined) intent for what the
@@ -160,6 +160,8 @@ where
              liftME InvokeIrqHandler $ decode_irq_handler_invocation
                  invoked_cap invoked_cap_ref caps irq_handler_intent
            odE
+       | SGISignalCap _ _ \<Rightarrow>
+             returnOk $ InvokeSGISignal SGISignalGenerate
        | AsidPoolCap _ _\<Rightarrow>
            doE
              asid_pool_intent \<leftarrow> throw_opt undefined $ get_asid_pool_intent intent;

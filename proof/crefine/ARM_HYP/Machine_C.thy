@@ -260,6 +260,12 @@ assumes deactivateInterrupt_ccorres:
            (doMachineOp (deactivateInterrupt irq))
            (Call deactivateInterrupt_'proc)"
 
+(* FIXME SGI: rename ipiSendTarget irq targets to sendSGI irq target *)
+assumes plat_sendSGI_ccorres:
+  "\<And>irq target hs. ccorres dc xfdc \<top> (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = target \<rbrace>) hs
+                      (doMachineOp (ipiSendTarget irq target))
+                      (Call plat_sendSGI_'proc)"
+
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
 

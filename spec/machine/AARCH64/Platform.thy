@@ -25,10 +25,38 @@ section \<open>Platform Constants\<close>
 
 context Arch begin global_naming AARCH64
 
+(* General interrupts *)
 value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"
-type_synonym paddr = machine_word
 
+(* Software-generated interrupts *)
+definition numSGIs_bits :: nat where
+  "numSGIs_bits = 4"
+
+definition numSGIs :: nat where
+  "numSGIs = 2^numSGIs_bits"
+
+definition gicNumTargets_bits :: nat where
+  "gicNumTargets_bits \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 5 else 3"
+
+definition gicNumTargets :: nat where
+  "gicNumTargets \<equiv> 2^gicNumTargets_bits"
+
+end
+
+(* Need to declare code equation outside Arch locale. Used in value_type below. *)
+lemmas [code] = AARCH64.numSGIs_bits_def AARCH64.gicNumTargets_bits_def
+
+context Arch begin global_naming AARCH64
+
+value_type sgi_irq_len = numSGIs_bits
+type_synonym sgi_irq = "sgi_irq_len word"
+
+value_type sgi_target_len = gicNumTargets_bits
+type_synonym sgi_target = "sgi_target_len word"
+
+(* Physical addresses *)
+type_synonym paddr = machine_word
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
@@ -117,8 +145,8 @@ definition vs_index_bits :: nat where
 
 end
 
-(* Need to declare code equation outside Arch locale *)
-declare AARCH64.vs_index_bits_def[code]
+(* Need to declare code equation outside Arch locale. They are used in value_type below. *)
+lemmas [code] = AARCH64.vs_index_bits_def
 
 context Arch begin global_naming AARCH64
 

@@ -47,6 +47,7 @@ IO pages are invoked using InvokePage (cap contains a bit indicating it is an IO
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     | InvokeVCPU VCPUInvocation
 #endif
+>     | InvokeSGISignal SGISignalInvocation
 #ifdef CONFIG_ARM_SMMU
 >     | InvokeIOSpace IOSpaceInvocation
 >     | InvokeIOPageTable IOPageTableInvocation
@@ -133,6 +134,14 @@ FIXME ARMHYP move HyperReg definition (to Hardware?)
 
 #endif
 
+\subsection{SGI}
+
+> data SGISignalInvocation
+>     = SGISignalGenerate {
+>         sgiIRQ :: Word,
+>         sgiTargets :: Word }
+>     deriving (Show, Eq)
+
 #ifdef CONFIG_ARM_SMMU
 
 \subsection{IO Page Tables}
@@ -180,6 +189,11 @@ The ARM platform requires an interrupt control call to record whether the interr
 >         issueHandlerSlot,
 >         issueHandlerControllerSlot :: PPtr CTE,
 >         issueHandlerTrigger :: Bool }
+>     | IssueSGISignal {
+>         issueSGIIRQ :: Word,
+>         issueSGITargets :: Word,
+>         issueSGIControlSlot,
+>         issueSGISlot :: PPtr CTE }
 >     deriving (Show, Eq)
 
 \subsection{Additional Register Subsets}

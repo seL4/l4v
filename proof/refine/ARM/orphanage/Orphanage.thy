@@ -96,7 +96,7 @@ lemma no_orphans_disj:
   apply (rule ext)
   apply (unfold no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: pred_tcb_at')
+  apply (auto del: pred_tcb_at' intro: pred_tcb_at')
   done
 
 lemma no_orphans_lift:
@@ -175,7 +175,7 @@ lemma almost_no_orphans_disj:
   apply (rule ext)
   apply (unfold almost_no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: pred_tcb_at')
+  apply (auto del: pred_tcb_at' intro: pred_tcb_at')
   done
 
 lemma all_queued_tcb_ptrs_ksReadyQueues_update[simp]:
@@ -240,19 +240,6 @@ lemma all_active_tcb_ptrs_queue [simp]:
 crunch setVMRoot
   for ksCurThread[wp]: "\<lambda> s. P (ksCurThread s)"
 (wp: crunch_wps simp: crunch_simps)
-
-crunch asUser
-  for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
-(wp: crunch_wps simp: crunch_simps)
-
-crunch getCurThread
-  for no_orphans[wp]: "no_orphans"
-
-crunch threadGet
-  for no_orphans[wp]: "no_orphans"
-
-crunch getNotification
-  for no_orphans[wp]: "no_orphans"
 
 crunch addToBitmap
   for no_orphans[wp]: "no_orphans"
@@ -1103,15 +1090,6 @@ lemma replyFromKernel_no_orphans [wp]:
   apply wp
   done
 
-crunch setMessageInfo
-  for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-
-crunch createNewCaps
-  for ksCurThread[wp]: "\<lambda> s. P (ksCurThread s)"
-
-crunch createNewCaps
-  for ksReadyQueues[wp]: "\<lambda> s. P (ksReadyQueues s)"
-
 crunch alignError
   for inv[wp]: "P"
 
@@ -1660,7 +1638,7 @@ lemma copyreg_no_orphans:
   apply simp
   apply (wp hoare_vcg_if_lift hoare_weak_lift_imp)
       apply (wp hoare_vcg_imp_lift' mapM_x_wp' asUser_no_orphans
-             | wpc | clarsimp split del: if_splits)+
+             | wpc | clarsimp split del: if_split)+
        apply (wp hoare_weak_lift_imp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
               restart_no_orphans asUser_no_orphans suspend_nonz_cap_to_tcb
               | wpc | simp add: if_apply_def2)+
@@ -1803,10 +1781,6 @@ lemma arch_invokeIRQHandler_no_orphans[wp]:
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
   by (wpsimp simp: ARM_H.invokeIRQHandler_def split_del: if_split)
 
-crunch setVMRootForFlush
-  for no_orphans[wp]: "no_orphans"
-(wp: crunch_wps)
-
 lemma performPageTableInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    performPageTableInvocation pti
@@ -1920,10 +1894,10 @@ lemma arch_performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_arch_inv' i s \<and> ct_active' s \<rbrace>
    Arch.performInvocation i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  unfolding ARM_H.performInvocation_def performARMMMUInvocation_def
-  apply (cases i, simp_all add: valid_arch_inv'_def)
-      apply (wp | clarsimp)+
-  done
+  unfolding ARM_H.performInvocation_def
+  by (cases i;
+      simp add: valid_arch_inv'_def performARMMMUInvocation_def performSGISignalGenerate_def;
+      wpsimp)
 
 lemma setDomain_no_orphans [wp]:
   "\<lbrace>no_orphans and cur_tcb' and tcb_at' tptr\<rbrace>

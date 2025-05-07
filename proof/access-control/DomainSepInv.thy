@@ -864,9 +864,7 @@ crunch setup_reply_master
 lemma same_object_as_domain_sep_inv_cap:
   "\<lbrakk> same_object_as a cap; domain_sep_inv_cap irqs cap \<rbrakk>
      \<Longrightarrow> domain_sep_inv_cap irqs a"
-  apply (case_tac a, simp_all add: same_object_as_def domain_sep_inv_cap_def)
-  apply (case_tac cap, simp_all)
-  done
+  by (case_tac a, simp_all add: same_object_as_def domain_sep_inv_cap_def)
 
 lemma checked_cap_insert_domain_sep_inv:
   "check_cap_at a b (check_cap_at c d (cap_insert a b e)) \<lbrace>domain_sep_inv irqs st\<rbrace>"

@@ -30,9 +30,10 @@ lemma arch_invoke_irq_handler_reads_respects[Interrupt_IF_assms, wp]:
 lemma arch_invoke_irq_control_reads_respects[Interrupt_IF_assms]:
   "reads_respects aag (l :: 'a subject_label) (K (arch_authorised_irq_ctl_inv aag i))
                   (arch_invoke_irq_control i)"
-  apply (cases i)
-  apply (simp add: setIRQTrigger_def)
-  apply (wp cap_insert_reads_respects set_irq_state_reads_respects dmo_mol_reads_respects | simp)+
+  apply (cases i; simp add: setIRQTrigger_def)
+   apply (wp cap_insert_reads_respects set_irq_state_reads_respects dmo_mol_reads_respects | simp)+
+   apply (clarsimp simp: arch_authorised_irq_ctl_inv_def)
+  apply (rule pre_ev, wp cap_insert_reads_respects)
   apply (clarsimp simp: arch_authorised_irq_ctl_inv_def)
   done
 
@@ -40,10 +41,10 @@ lemma arch_invoke_irq_control_globals_equiv[Interrupt_IF_assms]:
   "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
    arch_invoke_irq_control ai
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (induct ai)
-  apply (simp add: setIRQTrigger_def)
-  apply (wpsimp wp: set_irq_state_globals_equiv set_irq_state_valid_global_objs
-                    cap_insert_globals_equiv'' dmo_mol_globals_equiv)
+  apply (induct ai;
+         wpsimp wp: set_irq_state_globals_equiv set_irq_state_valid_global_objs
+                    cap_insert_globals_equiv'' dmo_mol_globals_equiv
+               simp: setIRQTrigger_def)
   done
 
 lemma arch_invoke_irq_handler_globals_equiv[Interrupt_IF_assms, wp]:

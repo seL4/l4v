@@ -93,12 +93,8 @@ lemma perform_asid_control_invocation_domain_sep_inv:
          | wpc | simp )+
   done
 
-lemma perform_asid_pool_invocation_domain_sep_inv:
-  "perform_asid_pool_invocation iv \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  apply (simp add: perform_asid_pool_invocation_def)
-  apply (rule hoare_pre)
-  apply (wp set_cap_domain_sep_inv get_cap_wp | wpc | simp)+
-  done
+crunch perform_sgi_invocation, perform_asid_pool_invocation
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
 lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:
   "\<lbrace>domain_sep_inv irqs st and valid_arch_inv ai\<rbrace>
@@ -121,8 +117,7 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
   "\<lbrace>domain_sep_inv irqs st and arch_irq_control_inv_valid ivk\<rbrace>
    arch_invoke_irq_control ivk
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply (cases ivk)
-  apply (wpsimp wp: cap_insert_domain_sep_inv' simp: set_irq_state_def)
+  apply (cases ivk; wpsimp wp: cap_insert_domain_sep_inv' simp: set_irq_state_def)
    apply (rule_tac Q'="\<lambda>_. domain_sep_inv irqs st and arch_irq_control_inv_valid ivk"
                 in hoare_strengthen_post[rotated])
     apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def arch_irq_control_inv_valid_def)
