@@ -31,7 +31,10 @@ definition update_cnode_cap_data :: "data \<Rightarrow> nat \<times> data" where
 
 text \<open>For some purposes capabilities to physical objects are treated differently to others.\<close>
 definition arch_is_physical :: "arch_cap \<Rightarrow> bool" where
-  "arch_is_physical cap \<equiv> case cap of ASIDControlCap \<Rightarrow> False | _ \<Rightarrow> True"
+  "arch_is_physical cap \<equiv> case cap of
+     ASIDControlCap \<Rightarrow> False
+   | SGISignalCap _ _ \<Rightarrow> False
+   | _ \<Rightarrow> True"
 
 text \<open>
   Check whether the second capability is to the same object or an object
@@ -50,7 +53,11 @@ fun arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" 
 | "arch_same_region_as ASIDControlCap c' = (c' = ASIDControlCap)"
 | "arch_same_region_as (ASIDPoolCap r _) c' = (\<exists>r' d'. c' = ASIDPoolCap r' d' \<and> r = r')"
 | "arch_same_region_as (VCPUCap r) c' = (\<exists>r'. c' = VCPUCap r' \<and> r = r')"
+| "arch_same_region_as (SGISignalCap irq target) c' = (c' = SGISignalCap irq target)"
 
+text \<open>Check whether given cap is a descendant of IRQControlCap\<close>
+definition is_irq_control_descendant :: "arch_cap \<Rightarrow> bool" where
+  "is_irq_control_descendant acap = is_SGISignalCap acap"
 
 text \<open>Check whether two arch capabilities are to the same object.\<close>
 definition same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" where
@@ -58,12 +65,19 @@ definition same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> boo
      case (cap, cap') of
        (FrameCap ref _ sz dev _, FrameCap ref' _ sz' dev' _) \<Rightarrow>
          (dev, ref, sz) = (dev', ref', sz') \<and> ref \<le> ref + 2 ^ pageBitsForSize sz - 1
+     | (SGISignalCap _ _, _) \<Rightarrow> False
      | _ \<Rightarrow> arch_same_region_as cap cap'"
 
 declare same_aobject_as_def[simp]
 
 definition arch_is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool" where
-  "arch_is_cap_revocable new_cap src_cap \<equiv> False"
+  "arch_is_cap_revocable new_cap src_cap \<equiv>
+    case new_cap of
+      ArchObjectCap (SGISignalCap _ _) \<Rightarrow> src_cap = IRQControlCap
+    | _ \<Rightarrow> False"
+
+definition should_be_arch_parent_of :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool \<Rightarrow> bool" where
+  "should_be_arch_parent_of acap acap' original' \<equiv> is_SGISignalCap acap \<longrightarrow> \<not>original'"
 
 end
 end
