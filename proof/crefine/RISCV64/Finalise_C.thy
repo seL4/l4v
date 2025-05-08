@@ -2668,7 +2668,7 @@ lemma prepareThreadDelete_ccorres:
   apply fastforce
   done
 
-lemma bindNTFN_alignment_junk:
+lemma tcb_ptr_to_ctcb_ptr_alignment:
   "\<lbrakk> is_aligned tcb tcbBlockSizeBits; bits \<le> ctcb_size_bits \<rbrakk>
    \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr tcb) && ~~ mask bits = ptr_val (tcb_ptr_to_ctcb_ptr tcb)"
   apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
