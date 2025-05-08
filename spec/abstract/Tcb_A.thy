@@ -193,8 +193,11 @@ where
     liftE $ maybeM (\<lambda>(newmcp, _). set_mcpriority target newmcp) mcp;
     liftE $ maybeM (\<lambda>(prio, _). set_priority target prio) priority;
     liftE $ maybeM (\<lambda>scopt. case scopt of
-                              None \<Rightarrow> maybe_sched_context_unbind_tcb target
-                            | Some sc_ptr \<Rightarrow> maybe_sched_context_bind_tcb sc_ptr target) sc;
+                              None \<Rightarrow> do sc_ptr_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
+                                         sc_ptr \<leftarrow> assert_opt sc_ptr_opt;
+                                         sched_context_unbind_tcb sc_ptr
+                                      od
+                            | Some sc_ptr \<Rightarrow> sched_context_bind_tcb sc_ptr target) sc;
     returnOk []
   odE"
 

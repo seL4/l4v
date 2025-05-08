@@ -388,12 +388,27 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
 lemma tcs_invs[Tcb_AI_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
    invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+   \<lbrace>\<lambda>_. invs\<rbrace>"
   supply if_cong[cong]
-  apply (simp add: split_def cong: option.case_cong)
-  apply (wpsimp wp: maybeM_wp_drop_None, assumption)
+  apply (simp add: split_def get_tcb_obj_ref_def cong: option.case_cong)
+  apply (wpsimp wp: maybeM_wp_drop_None thread_get_wp, assumption)
      apply (clarsimp cong: conj_cong)
-     apply (wpsimp wp: maybeM_inv hoare_vcg_all_lift hoare_vcg_imp_lift')
+     apply (rule_tac Q'="\<lambda>_ s. invs s
+                               \<and> (\<forall>sc_ptr_opt. sc = Some sc_ptr_opt \<longrightarrow>
+                                   (sc_ptr_opt = None \<longrightarrow>
+                                    obj_at is_tcb t s
+                                    \<and> (\<forall>sc_ptr. bound_sc_tcb_at ((=) (Some sc_ptr)) t s \<longrightarrow>
+                                                sc_ptr \<noteq> idle_sc_ptr))
+                                    \<and> (\<forall>sc_ptr. sc_ptr_opt = Some sc_ptr \<longrightarrow>
+                                                pred_tcb_at itcb_sched_context ((=) None) t s
+                                                \<and> ex_nonz_cap_to t s
+                                                \<and> sc_at_pred_n (\<lambda>_. True) sc_tcb ((=) None) sc_ptr s
+                                                \<and> ex_nonz_cap_to sc_ptr s))"
+                  in hoare_post_imp)
+      apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb_def sc_at_pred_n_def
+                     split: kernel_object.splits)
+      apply (rename_tac ko, case_tac ko; clarsimp)
+     apply (wpsimp wp: maybeM_wp_drop_None hoare_vcg_all_lift hoare_vcg_imp_lift')
     apply (clarsimp cong: conj_cong)
     apply (wpsimp wp: maybeM_wp_drop_None hoare_vcg_all_lift hoare_vcg_imp_lift', assumption)
    apply (clarsimp cong: conj_cong)

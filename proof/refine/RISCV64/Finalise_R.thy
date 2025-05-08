@@ -3524,8 +3524,8 @@ global_interpretation schedContextUnbindTCB: typ_at_all_props' "schedContextUnbi
   by typ_at_props'
 
 lemma unbindFromSC_invs'[wp]:
-  "\<lbrace>invs' and tcb_at' t and K (t \<noteq> idle_thread_ptr)\<rbrace> unbindFromSC t \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: unbindFromSC_def sym_refs_asrt_def)
+  "unbindFromSC t \<lbrace>invs'\<rbrace>"
+  apply (clarsimp simp: unbindFromSC_def)
   apply (wpsimp split_del: if_split)
      apply (rule_tac Q'="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
       apply (fastforce simp: valid_obj'_def valid_sched_context'_def
@@ -3597,13 +3597,11 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
      (* ThreadCap *)
-      apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
-      apply (clarsimp simp: valid_cap'_def)
-      apply (drule valid_globals_cte_wpD'_idleThread[rotated], clarsimp)
-      apply (fastforce simp: invs'_def valid_pspace'_def valid_idle'_asrt_def valid_idle'_def)
-     (* NotificationCap *)
-     apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
-     (* EndpointCap *)
+     apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
+     apply (clarsimp simp: valid_cap'_def)
+     apply (drule valid_globals_cte_wpD'_idleThread[rotated], clarsimp)
+     apply (fastforce simp: invs'_def valid_pspace'_def valid_idle'_asrt_def valid_idle'_def)
+    (* EndpointCap *)
     apply (fastforce simp: sch_act_wf_asrt_def valid_cap'_def)
    (* ArchObjectCap *)
    apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
@@ -3924,18 +3922,11 @@ lemma finaliseCap_invs:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
-  apply (rule hoare_pre)
-   apply (wpsimp wp: hoare_vcg_all_lift)
+  apply (wpsimp wp: hoare_vcg_all_lift)
   apply (case_tac cap; clarsimp simp: gen_isCap_simps)
-   apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleThread)
-   apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
-    apply clarsimp
-   apply (clarsimp dest!: simp: valid_cap'_def valid_idle'_def valid_idle'_asrt_def)
-  apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
-   apply (fastforce simp: invs'_def global'_no_ex_cap)
-  apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleSC)
   apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
    apply clarsimp
+  apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleSC)
   apply clarsimp
   done
 
