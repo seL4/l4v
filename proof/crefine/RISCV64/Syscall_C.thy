@@ -708,10 +708,11 @@ lemma performInvocation_Reply_ccorres:
   done
 
 lemma decodeInvocation_ccorres:
-  "interpret_excaps extraCaps' = excaps_map extraCaps
-  \<Longrightarrow>
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+     (invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_idle'
+            and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+            and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
             and valid_cap' cp and (\<lambda>s. \<forall>x \<in> zobj_refs' cp. ex_nonz_cap_to' x s)
             and (excaps_in_mem extraCaps \<circ> ctes_of)
             and cte_wp_at' ((=) cp \<circ> cteCap) slot
@@ -724,7 +725,6 @@ lemma decodeInvocation_ccorres:
       \<inter> \<lbrace>\<acute>block = from_bool isBlocking\<rbrace>
       \<inter> \<lbrace>\<acute>invLabel = label\<rbrace>
       \<inter> {s. unat (length___unsigned_long_' s) = length args}
-      \<inter> \<lbrace>\<acute>invLabel = label\<rbrace>
       \<inter> \<lbrace>\<acute>capIndex = cptr\<rbrace>
       \<inter> \<lbrace>\<acute>slot = cte_Ptr slot\<rbrace>
       \<inter> {s. ccap_relation cp (cap_' s)}
@@ -734,9 +734,8 @@ lemma decodeInvocation_ccorres:
      (decodeInvocation label args cptr slot cp extraCaps first_phase buffer >>=
       invocationCatch thread isBlocking isCall canDonate id)
      (Call decodeInvocation_'proc)"
-sorry (* FIXME RT: decodeInvocation_ccorres
-  apply (cinit' lift: call_' block_' invLabel_' length___unsigned_long_'
-                      capIndex_' slot_' current_extra_caps_' cap_' buffer_')
+  apply (cinit' lift: current_extra_caps_' call_' block_' invLabel_' length___unsigned_long_'
+                      capIndex_' slot_' cap_' buffer_' canDonate_' firstPhase_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap decodeInvocation_def
               cong: if_cong StateSpace.state.fold_congs
@@ -831,57 +830,72 @@ sorry (* FIXME RT: decodeInvocation_ccorres
    apply (rule ccorres_Cond_rhs)
     apply (simp add: if_to_top_of_bind)
     apply (rule ccorres_rhs_assoc)+
-    apply csymbr
+     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr
+                      performInvocation_def bindE_assoc)
+    apply (ctac add: setThreadState_ccorres)
+      apply csymbr
+      apply csymbr
+      apply (simp flip: liftE_liftE add: bindE_assoc)
+      apply (simp add: liftE_bindE[where a=getCurThread])
+      apply (rule ccorres_pre_getCurThread)
+      apply (ctac add: performInvocation_Reply_ccorres)
+         apply (simp add: liftE_bindE)
+         apply (rule ccorres_alternative2)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply (rule ccorres_return_C_errorE, simp+)[1]
+       apply wp
+      apply simp
+      apply (vcg exspec=performInvocation_Reply_modifies)
+     apply (simp add: cur_tcb'_def[symmetric])
+     apply (rule_tac Q'="\<lambda>rv s. ksCurThread s = thread" in hoare_post_add)
+     apply (simp cong: conj_cong)
+     apply (wp sts_invs_minor' sts_st_tcb_at'_cases)
+    apply simp
+    apply (vcg exspec=setThreadState_modifies)
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: if_to_top_of_bind)
+    apply (rule ccorres_trim_returnE, simp+)
+    apply (simp add: if_to_top_of_bind Collect_const[symmetric]
+                del: Collect_const)
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
        apply (clarsimp simp: isCap_simps)
-       apply (frule cap_get_tag_isCap_unfolded_H_cap)
-       apply (clarsimp simp: cap_get_tag_ReplyCap to_bool_def)
       apply (simp add: throwError_bind invocationCatch_def)
       apply (rule syscall_error_throwError_ccorres_n)
       apply (simp add: syscall_error_to_H_cases)
-     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr
-                      performInvocation_def liftE_bindE
-                      bind_assoc)
-     apply (ctac add: setThreadState_ccorres)
-       apply csymbr
-       apply csymbr
-       apply (rule ccorres_pre_getCurThread)
-       apply (simp only: liftE_bindE[symmetric])
-       apply (ctac add: performInvocation_Reply_ccorres)
-          apply (rule ccorres_alternative2)
-          apply (rule ccorres_return_CE, simp+)[1]
-         apply (rule ccorres_return_C_errorE, simp+)[1]
-        apply wp
-       apply simp
-       apply (vcg exspec=performInvocation_Reply_modifies)
-      apply (simp add: cur_tcb'_def[symmetric])
-      apply (rule_tac Q'="\<lambda>rv s. ksCurThread s = thread" in hoare_post_add)
-      apply (simp cong: conj_cong)
-      apply (strengthen imp_consequent)
-      apply (wp sts_invs_minor' sts_st_tcb_at'_cases)
-     apply simp
-     apply (vcg exspec=setThreadState_modifies)
+     apply (simp only: liftME_invocationCatch comp_def id_def)
+     apply (rule ccorres_call, rule decodeTCBInvocation_ccorres)
+        apply assumption
+       apply (simp+)[3]
+    apply vcg
+   apply (rule ccorres_Cond_rhs)
+    apply (rule ccorres_trim_returnE, simp+)
+    apply (simp add: if_to_top_of_bind Collect_const[symmetric]
+                del: Collect_const)
+    apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
+       apply (clarsimp simp: isCap_simps)
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (simp only: liftME_invocationCatch comp_def id_def)
+     apply (rule ccorres_call,
+            erule decodeDomainInvocation_ccorres,
+            simp+)[1]
     apply vcg
    apply (rule ccorres_Cond_rhs)
     apply (simp add: if_to_top_of_bind)
     apply (rule ccorres_trim_returnE, simp+)
-    apply (simp add: liftME_invocationCatch)
-    apply (rule ccorres_call, rule decodeTCBInvocation_ccorres)
-       apply assumption
-      apply (simp+)[3]
-   apply (rule ccorres_Cond_rhs)
-    apply (rule ccorres_trim_returnE, simp+)
-    apply (simp add: liftME_invocationCatch)
-    apply (rule ccorres_call,
-           erule decodeDomainInvocation_ccorres,
-           simp+)[1]
-   apply (rule ccorres_Cond_rhs)
-    apply (simp add: if_to_top_of_bind)
-    apply (rule ccorres_trim_returnE, simp+)
-    apply (simp add: liftME_invocationCatch)
-    apply (rule ccorres_call,
-           erule decodeCNodeInvocation_ccorres,
-           simp+)[1]
+    apply (simp add: if_to_top_of_bind Collect_const[symmetric]
+                del: Collect_const)
+    apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
+       apply (clarsimp simp: isCap_simps)
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (simp only: liftME_invocationCatch comp_def id_def)
+     apply (rule ccorres_call,
+            erule decodeCNodeInvocation_ccorres,
+            simp+)[1]
+    apply vcg
    apply (rule ccorres_Cond_rhs)
     apply simp
     apply (rule ccorres_trim_returnE, simp+)
@@ -899,8 +913,42 @@ sorry (* FIXME RT: decodeInvocation_ccorres
     apply csymbr
     apply (rule ccorres_trim_returnE, simp+)
     apply (rule ccorres_call,
-           erule decodeIRQHandlerInvocation_ccorres, simp+)
-   apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+           erule decodeIRQHandlerInvocation_ccorres, simp+)[1]
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: if_to_top_of_bind)
+    apply (rule ccorres_trim_returnE, simp+)
+    apply (simp add: if_to_top_of_bind Collect_const[symmetric]
+                del: Collect_const)
+    apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
+       apply (clarsimp simp: isCap_simps)
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (simp only: liftME_invocationCatch comp_def id_def)
+     apply (rule ccorres_call, rule decodeSchedControlInvocation_ccorres[where cp=cp])
+        apply assumption
+       apply (simp+)[3]
+    apply vcg
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: if_to_top_of_bind)
+    apply (rule ccorres_rhs_assoc)+
+    apply (simp add: if_to_top_of_bind Collect_const[symmetric]
+                del: Collect_const)
+    apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
+       apply (clarsimp simp: isCap_simps)
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (simp only: liftME_invocationCatch comp_def id_def)
+     apply csymbr
+     apply csymbr
+     apply (rule ccorres_trim_returnE)
+       apply simp
+      apply simp
+     apply (rule ccorres_call, rule decodeSchedContextInvocation_ccorres)
+        apply assumption
+       apply (simp+)[3]
+    apply vcg
    apply (simp add: isArchCap_T_isArchObjectCap one_on_true_def from_bool_0)
   apply clarsimp
   apply (frule rf_sr_ksCurThread)
@@ -913,36 +961,33 @@ sorry (* FIXME RT: decodeInvocation_ccorres
    apply (fastforce simp: ct_in_state'_def st_tcb_at'_def obj_at'_def split: thread_state.splits)
   apply clarsimp
   apply (rule conjI)
-   apply (clarsimp simp: tcb_at_invs' ct_in_state'_def
-                         simple_sane_strg)
-   apply (clarsimp simp: cte_wp_at_ctes_of valid_cap'_def isCap_simps
-                         unat_eq_0 sysargs_rel_n_def n_msgRegisters_def valid_tcb_state'_def
-          | rule conjI | erule pred_tcb'_weakenE disjE
-          | drule st_tcb_at_idle_thread')+
-   apply fastforce
-  apply (simp add: cap_lift_capEPBadge_mask_eq)
-  apply (clarsimp simp: rf_sr_ksCurThread Collect_const_mem
-                        cap_get_tag_isCap ThreadState_defs)
-  apply (frule word_unat.Rep_inverse')
-  apply (simp add: cap_get_tag_isCap[symmetric] cap_get_tag_ReplyCap)
+   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule conjI)
-   apply (simp add: cap_get_tag_isCap)
-   apply (clarsimp simp: isCap_simps cap_get_tag_to_H from_bool_neq_0)
+   apply (clarsimp simp: valid_cap'_def isCap_simps cte_wp_at_ctes_of)
+   apply (intro conjI impI allI TrueI; clarsimp?)
+     apply (fastforce simp: cte_wp_at_ctes_of)
+    apply (fastforce intro: sc_at'_n_sc_at')
+   apply force
+  apply (rule conjI)
+   apply (clarsimp simp: cap_get_tag_isCap)
   apply (insert ccap_relation_IRQHandler_mask, elim meta_allE, drule(1) meta_mp)
   apply (clarsimp simp: word_size)
   apply (clarsimp simp: cap_get_tag_isCap)
   apply (cases cp ; clarsimp simp: isCap_simps)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
+      apply fastforce
      apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
-     apply fastforce
-    apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)
-    apply (fastforce simp: cap_endpoint_cap_lift_def mask_eq_ucast_eq)
-   apply (frule ccap_relation_ep_helpers)
-    apply (clarsimp simp: cap_get_tag_isCap isEndpointCap_def)
+     apply (fastforce simp: cap_endpoint_cap_lift_def mask_eq_ucast_eq)
+    apply (frule ccap_relation_ep_helpers)
+     apply (clarsimp simp: cap_get_tag_isCap isEndpointCap_def)
+    apply clarsimp
+   apply (frule ccap_relation_reply_helpers)
+    apply (clarsimp simp:  cap_get_tag_isCap isReplyCap_def)
    apply clarsimp
-  apply (frule ccap_relation_reply_helpers)
-   apply (clarsimp simp:  cap_get_tag_isCap isReplyCap_def)
+  apply (frule ccap_relation_sched_context_helpers)
+   apply (clarsimp simp:  cap_get_tag_isCap isCap_simps)
   apply clarsimp
-  done *)
+  done
 
 lemma ccorres_Call_Seq:
   "\<lbrakk> \<Gamma> f = Some v; ccorres r xf P P' hs a (v ;; c) \<rbrakk>

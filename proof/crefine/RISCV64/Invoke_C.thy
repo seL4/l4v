@@ -139,23 +139,20 @@ lemma decodeDomainInvocation_ccorres:
        (invs' and (\<lambda>s. ksCurThread s = thread)
               and sch_act_simple and ct_active'
               and (excaps_in_mem extraCaps \<circ> ctes_of)
-              and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v).
-                              ex_nonz_cap_to' y s)
-              and (\<lambda>s. \<forall>v \<in> set extraCaps.
-                             s \<turnstile>' fst v)
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v). ex_nonz_cap_to' y s)
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v)
               and sysargs_rel args buffer
               and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
-             \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeDomainInvocation lab args extraCaps
            >>= invocationCatch thread isBlocking isCall canDonate (uncurry InvokeDomain))
   (Call decodeDomainInvocation_'proc)"
   supply gen_invocation_type_eq[simp]
-  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' call_' invLabel_' buffer_'
+  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' invLabel_' buffer_'
                 simp: decodeDomainInvocation_def list_case_If2 whenE_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
@@ -545,7 +542,6 @@ lemma decodeCNodeInvocation_ccorres:
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
-             \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeCNodeInvocation lab args cp (map fst extraCaps)
@@ -557,7 +553,7 @@ lemma decodeCNodeInvocation_ccorres:
               cong: conj_cong)
    apply (rule ccorres_fail')
   apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' current_extra_caps_'
-                                     call_' invLabel_' buffer_')
+                                     invLabel_' buffer_')
    apply (clarsimp simp: word_less_nat_alt decodeCNodeInvocation_def
                          list_case_If2 invocation_eq_use_types
                          label_in_CNodeInv_ranges[unfolded word_less_nat_alt]
@@ -3390,7 +3386,7 @@ notes valid_untyped_inv_wcap'.simps[simp del]
 shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+       (invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_idle'
               and (\<lambda>s. ksCurThread s = thread)
               and sch_act_simple and ct_active'
               and valid_cap' cp and K (isUntypedCap cp)
@@ -3401,8 +3397,7 @@ shows
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer
-              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
-              and valid_idle')
+              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
        (UNIV
              \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
