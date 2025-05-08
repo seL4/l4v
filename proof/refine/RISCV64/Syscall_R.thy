@@ -812,23 +812,26 @@ lemma ifConfRefillUnblockCheck_ko_at'_tcb[wp]:
   by (wpsimp wp: whileLoop_valid_inv hoare_drop_imps getRefillNext_wp isRoundRobin_wp)
 
 lemma doReplyTransfer_invs'[wp]:
-  "\<lbrace>invs' and tcb_at' sender and reply_at' replyPtr and sch_act_simple\<rbrace>
+  "\<lbrace>invs' and tcb_at' sender and reply_at' replyPtr\<rbrace>
    doReplyTransfer sender replyPtr grant
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding doReplyTransfer_def
   apply (wpsimp wp: handleTimeout_invs' postpone_invs' threadGet_wp hoare_vcg_all_lift
                     hoare_drop_imp[where f="isValidTimeoutHandler _ "])
-              apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ex_nonz_cap_to' x2 s" in hoare_post_imp)
+              apply (rename_tac receiver state scOpt tcb)
+              apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ex_nonz_cap_to' receiver s" in hoare_post_imp)
                apply (clarsimp simp: runnable_eq_active')
-              apply (wpsimp wp:setThreadState_Running_invs' split_del: if_splits)+
-                 apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ex_nonz_cap_to' x2 s" in hoare_post_imp)
+              apply (wpsimp wp: setThreadState_Running_invs' split_del: if_splits)+
+                 apply (rename_tac receiver state scOpt tcb x2a mi buf mrs restart)
+                 apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ex_nonz_cap_to' receiver s" in hoare_post_imp)
                   apply (clarsimp simp: runnable_eq_active')
                  apply (wpsimp wp: setThreadState_Running_invs')
                  apply (intro conjI)
                   apply (wpsimp wp: setThreadState_Restart_invs')
                  apply (wpsimp wp: sts_invs' sts_st_tcb_at'_cases)
-                apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) x2 s
-                                          \<and> sch_act_not x2 s \<and> ex_nonz_cap_to' x2 s"
+                apply (rename_tac receiver state rvc scOpt rvd faultOpt tcb x2a mi buf mrs restart)
+                apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) receiver s
+                                          \<and> ex_nonz_cap_to' receiver s"
                              in hoare_post_imp)
                  apply (clarsimp simp: obj_at_simps st_tcb_at'_def is_BlockedOnReply_def)
                  apply metis
@@ -1060,12 +1063,11 @@ crunch prepareSetDomain
 
 lemma performInv_invs'[wp]:
   "\<lbrace>invs' and ct_active' and valid_invocation' i
-          and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at' bound (ksCurThread s) s)
-          and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
+          and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at' bound (ksCurThread s) s)\<rbrace>
    performInvocation block call can_donate i
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: performInvocation_def)
-  apply (cases i)
+  apply (cases i; clarsimp)
   by (clarsimp simp: stateAssertE_def sym_refs_asrt_def ct_in_state'_def sch_act_simple_def
       | wp tcbinv_invs' arch_performInvocation_invs' setDomain_invs' stateAssertE_inv
            stateAssertE_wp invokeSchedControlConfigureFlags_invs' invokeSchedContext_invs'

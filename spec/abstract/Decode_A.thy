@@ -311,30 +311,32 @@ where
                             (tc_new_croot space) (tc_new_vroot space) None
  odE"
 
-definition
-  decode_update_sc :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (obj_ref option,'z::state_ext) se_monad"
-where
-  "decode_update_sc cap slot sc_cap \<equiv>
-    (case sc_cap of
-       NullCap \<Rightarrow>
-         doE tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
-             ct_ptr \<leftarrow> liftE $ gets cur_thread;
-             whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation;
-             returnOk None
-         odE
-     | SchedContextCap _ _ \<Rightarrow>
-         doE tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
-             sc_ptr \<leftarrow> returnOk $ obj_ref_of sc_cap;
-             sc_ptr' \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
-             whenE (sc_ptr' \<noteq> None) $ throwError IllegalOperation;
-             sc \<leftarrow> liftE $ get_sched_context sc_ptr;
-             whenE (sc_tcb sc \<noteq> None) $ throwError IllegalOperation;
-             blocked \<leftarrow> liftE $ is_blocked tcb_ptr;
-             released \<leftarrow> liftE $ get_sc_released sc_ptr;
-             whenE (blocked \<and> \<not>released) $ throwError IllegalOperation;
-             returnOk $ Some sc_ptr
-         odE
-     | _ \<Rightarrow> throwError (InvalidCapability 2))"
+definition decode_update_sc ::
+  "cap \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (obj_ref option option,'z::state_ext) se_monad"
+  where
+  "decode_update_sc cap slot sc_cap \<equiv> doE
+     tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
+     tcb_sc \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
+     sc_ptr_opt \<leftarrow>
+       case sc_cap of
+         NullCap \<Rightarrow>
+           doE ct_ptr \<leftarrow> liftE $ gets cur_thread;
+               whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation;
+               returnOk None
+           odE
+       | SchedContextCap _ _ \<Rightarrow>
+           doE sc_ptr \<leftarrow> returnOk $ obj_ref_of sc_cap;
+               sc_tcb \<leftarrow> liftE $ get_sc_obj_ref sc_tcb sc_ptr;
+               whenE (tcb_sc \<noteq> Some sc_ptr \<and> (tcb_sc \<noteq> None \<or> sc_tcb \<noteq> None))
+                     (throwError IllegalOperation);
+               blocked \<leftarrow> liftE $ is_blocked tcb_ptr;
+               released \<leftarrow> liftE $ get_sc_released sc_ptr;
+               whenE (blocked \<and> \<not> released) $ throwError IllegalOperation;
+               returnOk (Some sc_ptr)
+           odE
+       |   _ \<Rightarrow> throwError (InvalidCapability 2);
+     returnOk (if tcb_sc \<noteq> sc_ptr_opt then Some sc_ptr_opt else None)
+   odE"
 
 definition
   decode_tcb_configure ::
@@ -435,11 +437,11 @@ where
        | _ \<Rightarrow> throwError (InvalidCapability 1);
      check_prio (args ! 0) auth_tcb;
      check_prio (args ! 1) auth_tcb;
-     sc \<leftarrow> decode_update_sc cap slot sc_cap;
+     sc_ptr_opt_opt \<leftarrow> decode_update_sc cap slot sc_cap;
      fh \<leftarrow> check_handler_ep 3 fh_arg;
      returnOk $ ThreadControlSched (obj_ref_of cap) slot (Some fh)
                               (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb))
-                              (Some sc)
+                              sc_ptr_opt_opt
      odE"
 
 definition

@@ -96,18 +96,6 @@ where
      set_sc_obj_ref sc_tcb_update sc_ptr None
   od"
 
-text \<open>
-  Unbind a TCB from its scheduling context.
-  Takes the TCB as argument and calls @{text sched_context_unbind_tcb}.
-\<close>
-definition
-  maybe_sched_context_unbind_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "maybe_sched_context_unbind_tcb target = do
-     sc_ptr_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
-     maybeM sched_context_unbind_tcb sc_ptr_opt
-  od"
-
 text \<open>Donate a scheduling context.\<close>
 
 definition

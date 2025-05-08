@@ -792,9 +792,6 @@ lemma invokeSchedContext_Bind_NotificationCap_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
   done
 
-crunch scReleased
-  for (empty_fail) empty_fail[wp]
-
 lemma decodeSchedContext_Bind_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')

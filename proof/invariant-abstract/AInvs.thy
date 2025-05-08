@@ -427,9 +427,7 @@ lemma invoke_tcb_schact_is_rct_imp_cur_sc_active:
     apply (rule maybeM_inv)
     apply (clarsimp split: option.splits)
     apply (intro conjI impI)
-     apply (clarsimp simp: maybe_sched_context_unbind_tcb_def)
      apply (wpsimp wp: thread_get_wp simp: get_tcb_obj_ref_def)
-    apply (clarsimp simp: maybe_sched_context_bind_tcb_def)
     apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
    apply wpsimp
   apply (rename_tac t ntfn)
@@ -703,10 +701,6 @@ crunch install_tcb_frame_cap
   for ct_not_in_release_q[wp]: ct_not_in_release_q
   (wp: crunch_wps preemption_point_inv ignore: check_cap_at simp: check_cap_at_def)
 
-crunch maybe_sched_context_unbind_tcb, bind_notification
-  for ct_not_in_release_q[wp]: ct_not_in_release_q
-  (wp: crunch_wps)
-
 lemma restart_ct_not_in_release_q_active:
   "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> st_tcb_at active thread s\<rbrace>
    restart thread
@@ -873,10 +867,7 @@ lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
   apply (clarsimp split: option.splits)
   apply (intro conjI)
    apply (wpsimp wp: hoare_drop_imps)
-  apply (clarsimp simp: maybe_sched_context_bind_tcb_def bind_assoc)
   apply (wpsimp wp: sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q hoare_vcg_if_lift2)
-    apply (wpsimp wp: hoare_drop_imps)
-   apply wpsimp
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
@@ -1662,7 +1653,7 @@ lemma install_tcb_frame_cap_schact_is_rct_imp_ct_activatable:
   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
-crunch set_priority, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb
+crunch set_priority, sched_context_unbind_tcb, sched_context_bind_tcb
   for ct_in_state[wp]: "ct_in_state P"
   (wp: crunch_wps)
 
@@ -1711,7 +1702,9 @@ lemma invoke_tcb_schact_is_rct_imp_ct_activatable:
         apply (wpsimp wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)
         apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
        apply (rule bindE_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
-       apply (wpsimp wp: hoare_vcg_imp_lift')
+       apply (wpsimp wp: hoare_vcg_imp_lift' sched_context_bind_tcb_ct_in_state
+                         sched_context_unbind_tcb_ct_in_state get_tcb_obj_ref_wp)
+       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
       apply wpsimp
       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
      apply wpsimp

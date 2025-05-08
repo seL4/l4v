@@ -601,7 +601,7 @@ where
                         and case_option \<top> ((real_cte_at and ex_cte_cap_to) \<circ> snd) fh
                         and case_option \<top>
                               (case_option
-                                (\<lambda>s. t \<noteq> cur_thread s)
+                                (\<lambda>s. t \<noteq> cur_thread s \<and> bound_sc_tcb_at bound t s)
                                 (\<lambda>scptr. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to scptr
                                          and sc_tcb_sc_at ((=) None) scptr
                                          and (\<lambda>s. st_tcb_at (ipc_queued_thread_state) t s
@@ -1272,9 +1272,9 @@ lemma check_handler_ep_wpE[wp]:
   "\<lbrace>\<lambda>s. valid_fault_handler (fst cap_slot) \<longrightarrow> P cap_slot s\<rbrace> check_handler_ep n cap_slot \<lbrace>P\<rbrace>, -"
   unfolding check_handler_ep_def unlessE_def by wpsimp
 
-lemma decode_update_sc_inv[wp]:
-  "\<lbrace>P\<rbrace> decode_update_sc cap slot sc_cap \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding decode_update_sc_def is_blocked_def by (wpsimp wp: hoare_drop_imps gts_wp)
+crunch decode_update_sc
+  for inv[wp]: P
+  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift)
 
 context Tcb_AI
 begin
@@ -1290,19 +1290,12 @@ lemma decode_set_sched_params_wf[wp]:
    decode_set_sched_params args (ThreadCap t) slot excaps
    \<lbrace>tcb_inv_wf\<rbrace>, -"
   unfolding decode_set_sched_params_def decode_update_sc_def is_blocked_def
-  apply (wpsimp simp: get_tcb_obj_ref_def
-                wp: check_prio_wp_weak whenE_throwError_wp thread_get_wp gts_wp
+  apply (wpsimp wp: check_prio_wp_weak whenE_throwError_wp get_sc_obj_ref_wp get_tcb_obj_ref_wp
+                    gts_wp
                 split_del: if_split)
-  apply (clarsimp simp: split_paired_Ball)
-  apply (rule conjI; clarsimp)
-  apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def is_cap_simps sc_tcb_sc_at_def
-                        sc_at_ppred_def)
-  apply (rule conjI, fastforce)
-  apply (subgoal_tac "excaps ! Suc 0 \<in> set excaps")
-   prefer 2
-   apply fastforce
-  apply (cases "excaps ! Suc 0")
-  apply (clarsimp)
+  apply (clarsimp simp: split_paired_Ball pred_tcb_at_def obj_at_def sc_at_ppred_def)
+  apply (prop_tac "excaps ! Suc 0 \<in> set excaps", fastforce)
+  apply (cases "excaps ! Suc 0"; fastforce)
   done
 
 end

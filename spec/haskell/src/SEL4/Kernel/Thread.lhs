@@ -537,6 +537,7 @@ The following function is used to alter a thread's domain.
 
 > setMCPriority :: PPtr TCB -> Priority -> Kernel ()
 > setMCPriority tptr prio = do
+>         assert (prio <= maxPriority) "prio must be at most maxPriority"
 >         threadSet (\t -> t { tcbMCP = prio }) tptr
 
 \subsubsection{Changing a Thread's Priority}
@@ -560,6 +561,8 @@ The following function is used to alter the priority of a thread.
 
 > setPriority :: PPtr TCB -> Priority -> Kernel ()
 > setPriority tptr prio = do
+>     stateAssert ready_qs_runnable "threads in the ready queues are runnable'"
+>     assert (prio <= maxPriority) "prio must be at most maxPriority"
 >     ts <- getThreadState tptr
 >     case ts of
 >          Running -> threadSetPriority_onRunning tptr prio
