@@ -310,5 +310,13 @@ definition arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarr
   where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
 
+text \<open> Time \<close>
+
+definition parse_time_arg :: "nat \<Rightarrow> machine_word list \<Rightarrow> time" where
+  "parse_time_arg i args = ucast (args ! i)"
+
+definition words_from_time :: "time \<Rightarrow> machine_word list" where
+  "words_from_time t = [ucast t]"
+
 end
 end

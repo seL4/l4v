@@ -40,6 +40,10 @@ end
 
 end
 
+arch_requalify_facts (H)
+  wordsOfTime_def
+  parseTimeArg_def
+
 section "Relationship of Executable Spec to Kernel Configuration"
 
 text \<open>

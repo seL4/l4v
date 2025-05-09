@@ -18,6 +18,10 @@ imports
 
 begin
 
+(* clobbers previously requalified abstract spec constants with design spec versions *)
+arch_requalify_consts (aliasing, H)
+  badgeRegister
+
 context begin interpretation Arch .
 requalify_consts
   kernelWCETTicks

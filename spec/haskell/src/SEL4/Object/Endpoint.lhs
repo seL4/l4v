@@ -8,7 +8,6 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 
 > module SEL4.Object.Endpoint (
 >         sendIPC, receiveIPC,
->         replyFromKernel,
 >         cancelIPC, cancelAllIPC, cancelBadgedSends, epBlocked, reorderEp
 >     ) where
 
@@ -208,22 +207,6 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >               SendEP [] -> fail "Send endpoint queue must not be empty"
 
 > receiveIPC _ _ _ _ = fail "receiveIPC: invalid cap"
-
-\subsection{Kernel Invocation Replies}
-
-A system call reply from the kernel is an IPC transfer with no badge and no additional capabilities. The message registers are explicitly specified rather than coming from the sender's context.
-
-> replyFromKernel :: PPtr TCB -> (Word, [Word]) -> Kernel ()
-> replyFromKernel thread (resultLabel, resultData) = do
->     destIPCBuffer <- lookupIPCBuffer True thread
->     asUser thread $ setRegister badgeRegister 0
->     len <- setMRs thread destIPCBuffer resultData
->     let msgInfo = MI {
->             msgLength = len,
->             msgExtraCaps = 0,
->             msgCapsUnwrapped = 0,
->             msgLabel = resultLabel }
->     setMessageInfo thread msgInfo
 
 \subsection{Cancelling IPC}
 

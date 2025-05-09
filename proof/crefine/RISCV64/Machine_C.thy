@@ -406,9 +406,13 @@ defs ticks_per_timer_unit_def:
 defs timer_unit_def:
   "timer_unit \<equiv> (1000 * 1000 :: ticks)"
 
+\<comment> \<open>From sel4/include/arch/riscv/arch/machine/timer.h\<close>
+defs max_ticks_to_us_def:
+  "max_ticks_to_us \<equiv> (max_word :: ticks)"
+
 lemmas timer_defs =
   kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def us_to_ticks_def MAX_PERIOD_US_def
-  \<mu>s_in_ms_def
+  \<mu>s_in_ms_def max_ticks_to_us_def
 
 \<comment> \<open>The following lemmas show that the axioms introduced in MachineOps.thy for kernelWCET_us
     and us_to_ticks are true with the definitions given immediately above.\<close>
@@ -446,6 +450,12 @@ lemma usToTicks_spec:
   apply (fastforce simp: usToTicks_def timer_defs word_mult_div_assoc)
   done
 
+lemma ticksToUs_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call ticksToUs_'proc \<lbrace>\<acute>ret__unsigned_longlong = ticksToUs (ticks_' s)\<rbrace>"
+  apply vcg
+  apply (clarsimp simp: ticksToUs_def timer_defs ticks_to_us_def)
+  done
+
 lemma getKernelWcetTicks_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call getKernelWcetTicks_'proc \<lbrace>\<acute>ret__unsigned_longlong = kernelWCETTicks\<rbrace>"
   apply vcg
@@ -461,6 +471,12 @@ lemma getTimerPrecision_spec:
 lemma wrap_config_set_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
   by (rule allI, rule conseqPre, vcg) clarsimp
+
+lemma getMaxTicksToUs_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call getMaxTicksToUs_'proc \<lbrace>\<acute>ret__unsigned_longlong = maxTicksToUs\<rbrace>"
+  apply vcg
+  apply (clarsimp simp: maxTicksToUs_def timer_defs)
+  done
 
 end
 end

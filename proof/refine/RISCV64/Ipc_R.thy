@@ -1588,7 +1588,7 @@ lemma makeFaultMessage_corres:
            apply (fastforce dest!: state_relationD intro!: sc_at_cross simp: obj_at'_def)[1]
           apply (rule corres_guard_imp)
             apply (rule schedContextUpdateConsumed_corres)
-           apply (wpsimp simp: sched_context_update_consumed_def setTimeArg_def)+
+           apply (wpsimp simp: sched_context_update_consumed_def)+
     apply (fastforce dest!: valid_tcb_objs simp: valid_tcb_def valid_bound_obj_def obj_at_def)
    apply clarsimp
   apply (corresKsimp corres: makeArchFaultMessage_corres)
@@ -4815,13 +4815,6 @@ lemma replyFromKernel_corres:
                  | fastforce)+
   done
 
-lemma rfk_invs':
-  "\<lbrace>invs' and tcb_at' t\<rbrace> replyFromKernel t r \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: replyFromKernel_def)
-  apply (cases r)
-  apply wpsimp
-  done
-
 crunch replyFromKernel
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
@@ -6006,7 +5999,7 @@ lemma replyUnlink_misc_heaps[wp]:
 
 lemma schedContextUpdateConsumed_scReplies_of[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. P (scReplies_of s) \<rbrace>"
-  unfolding schedContextUpdateConsumed_def
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
   apply (wpsimp simp: setSchedContext_def)
   apply (clarsimp simp: opt_map_def if_distrib)
   apply (erule subst[where P=P, rotated], rule ext)
@@ -6015,7 +6008,7 @@ lemma schedContextUpdateConsumed_scReplies_of[wp]:
 
 lemma schedContextUpdateConsumed_sc_tcbs_of[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. P (scTCBs_of s)\<rbrace>"
-  unfolding schedContextUpdateConsumed_def
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
   apply (wpsimp simp: setSchedContext_def)
   apply (clarsimp simp: opt_map_def if_distrib)
   apply (erule subst[where P=P, rotated], rule ext)

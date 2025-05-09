@@ -493,8 +493,8 @@ where
           whenE (sc_tcb sc \<noteq> None) $ throwError IllegalOperation;
           sc_ptr_opt \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
           whenE (sc_ptr_opt \<noteq> None) $ throwError IllegalOperation;
-          released \<leftarrow> liftE $ get_sc_released sc_ptr;
           st \<leftarrow> liftE $ get_thread_state tcb_ptr;
+          released \<leftarrow> liftE $ get_sc_released sc_ptr;
           whenE (ipc_queued_thread_state st \<and> \<not>released) $
             throwError IllegalOperation
         odE
@@ -529,11 +529,10 @@ where
       returnOk $ InvokeSchedContextUnbindObject sc_ptr cap
     odE"
 
-definition
-  decode_sched_context_yield_to ::
-  "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
-where
-  "decode_sched_context_yield_to sc_ptr buffer \<equiv> doE
+definition decode_sched_context_yield_to ::
+  "obj_ref \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
+  where
+  "decode_sched_context_yield_to sc_ptr \<equiv> doE
       sc_tcb_opt \<leftarrow> liftE $ get_sc_obj_ref sc_tcb sc_ptr;
       whenE (sc_tcb_opt = None) $ throwError IllegalOperation;
       ct_ptr \<leftarrow> liftE $ gets cur_thread;
@@ -543,16 +542,15 @@ where
       whenE (prios > ct_mcp) $ throwError IllegalOperation;
       yt_ptr \<leftarrow> liftE $ thread_get tcb_yield_to ct_ptr;
       whenE (yt_ptr \<noteq> None) $ throwError IllegalOperation;
-      returnOk $ InvokeSchedContextYieldTo sc_ptr buffer
+      returnOk $ InvokeSchedContextYieldTo sc_ptr
    odE"
 
-definition
-  decode_sched_context_invocation ::
-  "data \<Rightarrow> obj_ref \<Rightarrow> cap list \<Rightarrow> obj_ref option \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
-where
-  "decode_sched_context_invocation label sc_ptr excaps buffer \<equiv>
+definition decode_sched_context_invocation ::
+  "data \<Rightarrow> obj_ref \<Rightarrow> cap list \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
+  where
+  "decode_sched_context_invocation label sc_ptr excaps \<equiv>
   case gen_invocation_type label of
-    SchedContextConsumed \<Rightarrow> returnOk $ InvokeSchedContextConsumed sc_ptr buffer
+    SchedContextConsumed \<Rightarrow> returnOk $ InvokeSchedContextConsumed sc_ptr
   | SchedContextBind \<Rightarrow> decode_sched_context_bind sc_ptr excaps
   | SchedContextUnbindObject \<Rightarrow> decode_sched_context_unbind_object sc_ptr excaps
   | SchedContextUnbind \<Rightarrow> doE
@@ -560,7 +558,7 @@ where
       ct_ptr \<leftarrow> liftE $ gets cur_thread;
       whenE (sc_tcb sc = Some ct_ptr) $ throwError IllegalOperation;
       returnOk $ InvokeSchedContextUnbind sc_ptr odE
-  | SchedContextYieldTo \<Rightarrow> decode_sched_context_yield_to sc_ptr buffer
+  | SchedContextYieldTo \<Rightarrow> decode_sched_context_yield_to sc_ptr
   | _ \<Rightarrow> throwError $ IllegalOperation"
 
 definition
@@ -795,7 +793,7 @@ where
   | SchedContextCap sc sz \<Rightarrow>
       if first_phase
       then throwError $ InvalidCapability 0
-      else liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps) buffer
+      else liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps)
   | SchedControlCap \<Rightarrow>
       if first_phase
       then throwError $ InvalidCapability 0

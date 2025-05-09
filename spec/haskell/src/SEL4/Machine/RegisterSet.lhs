@@ -22,6 +22,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 > import Data.Bits
 > import Data.Array
 > import Data.Helpers
+> import qualified Data.Word
 > import Foreign.Storable
 
 > import Control.Monad.State(State,liftM)
@@ -171,6 +172,12 @@ Functions for getting and setting registers.
 > newContext :: UserContext
 > newContext = Arch.newContext
 
+\subsubsection{Time}
+
+Time values are always 64 bit, indenpendent of the architecture.
+
+> type Ticks = Data.Word.Word64
+> type Time = Data.Word.Word64
 
 \subsubsection{Miscellaneous}
 

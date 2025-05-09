@@ -31,7 +31,6 @@ arch_requalify_consts (H)
 arch_requalify_consts (aliasing, H)
   gpRegisters
   frameRegisters
-  badgeRegister
   tlsBaseRegister
   maxUsToTicks
   timerIRQ

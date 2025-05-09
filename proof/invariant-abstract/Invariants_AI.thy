@@ -23,6 +23,8 @@ arch_requalify_facts (A)
   endpoint_bits_def
   ntfn_bits_def
   reply_bits_def
+  parse_time_arg_def
+  words_from_time_def
 
 arch_requalify_consts
   not_kernel_window

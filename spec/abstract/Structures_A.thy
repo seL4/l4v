@@ -48,6 +48,8 @@ arch_requalify_consts (A)
   untyped_min_bits
   untyped_max_bits
   msg_label_bits
+  parse_time_arg
+  words_from_time
 
 arch_requalify_facts
   kernelWCET_ticks_pos2

@@ -172,8 +172,8 @@ crunch send_signal, do_reply_transfer, invoke_irq_control, invoke_irq_handler, s
   (wp: crunch_wps check_cap_inv filterM_preserved simp: crunch_simps)
 
 lemma sched_context_yield_to_is_active_sc[wp]:
-  "sched_context_yield_to sc_ptr' buffer \<lbrace>\<lambda>s. P (is_active_sc sc_ptr s)\<rbrace>"
-  unfolding sched_context_yield_to_def
+  "sched_context_yield_to sc_ptr' \<lbrace>\<lambda>s. P (is_active_sc sc_ptr s)\<rbrace>"
+  unfolding sched_context_yield_to_def return_consumed_def
   by (wpsimp wp: hoare_drop_imps)
 
 lemma sched_context_bind_tcb_is_active_sc[wp]:
@@ -202,10 +202,9 @@ crunch handle_recv
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 lemma invoke_sched_context_cur_sc_active[wp]:
-  "invoke_sched_context i \<lbrace>\<lambda>s. cur_sc_active s\<rbrace>"
-  apply (simp add: invoke_sched_context_def)
-  apply (cases i; clarsimp; wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
-  done
+  "invoke_sched_context i \<lbrace>cur_sc_active\<rbrace>"
+  unfolding invoke_sched_context_def return_consumed_def
+  by (cases i; clarsimp; wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
 
 lemma invoke_sched_context_cur_sc_tcb_are_bound_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> valid_sched_control_inv iv s\<rbrace>

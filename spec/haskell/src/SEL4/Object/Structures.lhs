@@ -19,7 +19,9 @@ This module uses the C preprocessor to select a target architecture.
 
 > module SEL4.Object.Structures (
 >         module SEL4.Object.Structures,
->         module SEL4.Object.Structures.TARGET
+>         module SEL4.Object.Structures.TARGET,
+>         Time(),
+>         Ticks()
 >     ) where
 
 \begin{impdetails}
@@ -194,9 +196,6 @@ list of pointers to waiting threads;
 \end{itemize}
 
 \subsubsection{SchedContext Objects}
-
-> type Ticks = Word64
-> type Time = Word64
 
 > data Refill = Refill {
 >     rTime :: Time,

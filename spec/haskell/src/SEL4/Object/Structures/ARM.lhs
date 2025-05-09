@@ -220,3 +220,12 @@ makeObject specialised to VCPUs.
 
 #endif
 
+\subsection{Time}
+
+Converting Time to and from a list of words.
+
+> parseTimeArg :: Int -> [Word] -> Time
+> parseTimeArg i args = fromIntegral (args !! (i+1)) `shiftL` 32 + fromIntegral (args !! i)
+
+> wordsOfTime :: Time -> [Word]
+> wordsOfTime t = fromIntegral t : [fromIntegral $ t `shiftR` 32]

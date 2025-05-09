@@ -322,6 +322,14 @@ definition
 where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
 
+text \<open> Time \<close>
+
+definition parse_time_arg :: "nat \<Rightarrow> data list \<Rightarrow> time" where
+  "parse_time_arg i args \<equiv> (ucast (args ! (i + 1)) << 32) + ucast (args ! i)"
+
+definition words_from_time :: "time \<Rightarrow> machine_word list" where
+  "words_from_time t = [ucast t, ucast (t >> 32)]"
+
 end
 
 end

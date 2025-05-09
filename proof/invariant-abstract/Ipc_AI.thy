@@ -2588,9 +2588,6 @@ lemma recv_ep_distinct:
   apply (clarsimp simp: valid_obj_def valid_ep_def)
   done
 
-lemma rfk_invs: "\<lbrace>invs and tcb_at t\<rbrace> reply_from_kernel t r \<lbrace>\<lambda>rv. invs\<rbrace>"
-  unfolding reply_from_kernel_def by (cases r; wpsimp)
-
 lemma st_tcb_at_valid_st:
   "\<lbrakk> invs s ; tcb_at t s ; st_tcb_at ((=) st) t s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
   apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def

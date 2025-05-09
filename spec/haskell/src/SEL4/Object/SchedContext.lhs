@@ -40,7 +40,7 @@ This module uses the C preprocessor to select a target architecture.
 > import Prelude hiding (Word)
 > import SEL4.Config
 > import SEL4.Machine.Hardware
-> import SEL4.Machine.RegisterSet(PPtr(..), Word)
+> import SEL4.Machine.RegisterSet(PPtr(..), Word, badgeRegister, setRegister)
 > import SEL4.API.Failures(SyscallError(..))
 > import SEL4.API.Types(MessageInfo(..))
 > import SEL4.API.Types.Universal (schedContextSporadicFlag)
@@ -53,7 +53,7 @@ This module uses the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
 > import SEL4.Object.Structures
-> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, updateAt, setTimeArg, setMessageInfo, setMRs, threadRead)
+> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, updateAt, setMessageInfo, setMRs, replyFromKernel, threadRead, asUser)
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 > import SEL4.API.Invocation(SchedContextInvocation(..), SchedControlInvocation(..))
 
@@ -462,20 +462,25 @@ This module uses the C preprocessor to select a target architecture.
 >     consumed <- return $ scConsumed sc
 >     if consumed >= maxTicksToUs
 >         then do
->             setSchedContext scPtr $ sc { scConsumed = scConsumed sc - maxTicksToUs }
+>             updateSchedContext scPtr $ (\sc -> sc { scConsumed = scConsumed sc - maxTicksToUs })
 >             return $ ticksToUs maxTicksToUs
 >         else do
->             setSchedContext scPtr $ sc { scConsumed = 0 }
+>             updateSchedContext scPtr $ (\sc -> sc { scConsumed = 0 })
 >             return $ ticksToUs consumed
 
-> setConsumed :: PPtr SchedContext -> Maybe (PPtr Word) -> Kernel ()
-> setConsumed scPtr buffer = do
+> setConsumed :: PPtr SchedContext -> PPtr TCB -> Kernel ()
+> setConsumed scPtr thread = do
 >     stateAssert cur_tcb'_asrt
 >         "Assert that `cur_tcb' s` holds"
 >     consumed <- schedContextUpdateConsumed scPtr
->     tptr <- getCurThread
->     sent <- setMRs tptr buffer (setTimeArg consumed)
->     setMessageInfo tptr $ MI sent 0 0 0
+>     replyFromKernel thread (0, wordsOfTime consumed)
+
+> returnConsumed :: PPtr SchedContext -> Kernel [Word]
+> returnConsumed scPtr = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
+>     consumed <- schedContextUpdateConsumed scPtr
+>     return (wordsOfTime consumed)
 
 > schedContextBindTCB :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextBindTCB scPtr tcbPtr = do
@@ -511,7 +516,7 @@ This module uses the C preprocessor to select a target architecture.
 >     tcbSchedDequeue tptr
 >     tcbReleaseRemove tptr
 >     threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) tptr
->     setSchedContext scPtr $ sc { scTCB = Nothing }
+>     updateSchedContext scPtr (\sc -> sc { scTCB = Nothing })
 
 > schedContextUnbindNtfn :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindNtfn scPtr = do
@@ -523,7 +528,7 @@ This module uses the C preprocessor to select a target architecture.
 >         Just ntfnPtr -> do
 >             ntfn <- getNotification ntfnPtr
 >             setNotification ntfnPtr (ntfn { ntfnSc = Nothing })
->             setSchedContext scPtr (sc { scNtfn = Nothing })
+>             updateSchedContext scPtr (\sc -> sc { scNtfn = Nothing })
 
 > schedContextMaybeUnbindNtfn :: PPtr Notification -> Kernel ()
 > schedContextMaybeUnbindNtfn ntfnPtr = do
@@ -551,8 +556,7 @@ This module uses the C preprocessor to select a target architecture.
 >     scPtrOpt <- threadGet tcbYieldTo tptr
 >     when (scPtrOpt /= Nothing) $ do
 >         scPtr <- return $ fromJust scPtrOpt
->         bufferOpt <- lookupIPCBuffer True tptr
->         setConsumed scPtr bufferOpt
+>         setConsumed scPtr tptr
 >         schedContextCancelYieldTo tptr
 
 > schedContextUnbindYieldFrom :: PPtr SchedContext -> Kernel ()
@@ -571,7 +575,7 @@ This module uses the C preprocessor to select a target architecture.
 >     when (replyPtrOpt /= Nothing) $ do
 >         replyPtr <- return $ fromJust replyPtrOpt
 >         updateReply replyPtr (\reply -> reply { replyNext = Nothing })
->         setSchedContext scPtr (sc { scReply = Nothing })
+>         updateSchedContext scPtr (\sc -> sc { scReply = Nothing })
 
 > schedContextSetInactive :: PPtr SchedContext -> Kernel ()
 > schedContextSetInactive scPtr = do
@@ -616,6 +620,7 @@ This module uses the C preprocessor to select a target architecture.
 > contextYieldToUpdateQueues :: PPtr SchedContext -> Kernel Bool
 > contextYieldToUpdateQueues scPtr = do
 >     sc <- getSchedContext scPtr
+>     assert (scTCB sc /= Nothing) "scPtr must have an associated TCB"
 >     tptr <- return $ fromJust $ scTCB sc
 >     schedulable <- getSchedulable tptr
 >     if schedulable
@@ -630,7 +635,7 @@ This module uses the C preprocessor to select a target architecture.
 >                     return True
 >                 else do
 >                     threadSet (\tcb -> tcb { tcbYieldTo = Just scPtr }) ctPtr
->                     setSchedContext scPtr (sc { scYieldFrom = Just ctPtr })
+>                     updateSchedContext scPtr (\sc -> sc { scYieldFrom = Just ctPtr })
 >                     tcbSchedDequeue tptr
 >                     tcbSchedEnqueue ctPtr
 >                     tcbSchedEnqueue tptr
@@ -638,33 +643,43 @@ This module uses the C preprocessor to select a target architecture.
 >                     return False
 >         else return True
 
-> schedContextYieldTo :: PPtr SchedContext -> Maybe (PPtr Word) -> Kernel ()
-> schedContextYieldTo scPtr buffer = do
+> schedContextYieldTo :: PPtr SchedContext -> Kernel [Word]
+> schedContextYieldTo scPtr = do
 >     sc <- getSchedContext scPtr
 >     scYieldFromOpt <- return $ scYieldFrom sc
 >     when (scYieldFromOpt /= Nothing) $
 >         schedContextCompleteYieldTo $ fromJust scYieldFromOpt
 >     schedContextResume scPtr
 >     return_now <- contextYieldToUpdateQueues scPtr
->     when return_now $ setConsumed scPtr buffer
+>     if return_now then returnConsumed scPtr else return []
 
-> invokeSchedContext :: SchedContextInvocation -> Kernel ()
+> invokeSchedContext :: SchedContextInvocation -> Kernel [Word]
 > invokeSchedContext iv = case iv of
->     InvokeSchedContextConsumed scPtr buffer -> setConsumed scPtr buffer
+>     InvokeSchedContextConsumed scPtr ->
+>         returnConsumed scPtr
 >     InvokeSchedContextBind scPtr cap -> case cap of
->         ThreadCap tcbPtr -> schedContextBindTCB scPtr tcbPtr
->         NotificationCap ntfnPtr _ _ _ -> schedContextBindNtfn scPtr ntfnPtr
->         _ -> return ()
+>         ThreadCap tcbPtr -> do
+>             schedContextBindTCB scPtr tcbPtr
+>             return []
+>         NotificationCap ntfnPtr _ _ _ -> do
+>             schedContextBindNtfn scPtr ntfnPtr
+>             return []
+>         _ -> return []
 >     InvokeSchedContextUnbindObject scPtr cap -> case cap of
->         ThreadCap _ -> schedContextUnbindTCB scPtr
->         NotificationCap _ _ _ _ -> schedContextUnbindNtfn scPtr
->         _ -> return ()
+>         ThreadCap _ -> do
+>             schedContextUnbindTCB scPtr
+>             return []
+>         NotificationCap _ _ _ _ -> do
+>             schedContextUnbindNtfn scPtr
+>             return []
+>         _ -> return []
 >     InvokeSchedContextUnbind scPtr -> do
 >         schedContextUnbindAllTCBs scPtr
 >         schedContextUnbindNtfn scPtr
 >         schedContextUnbindReply scPtr
->     InvokeSchedContextYieldTo scPtr buffer -> do
->         schedContextYieldTo scPtr buffer
+>         return []
+>     InvokeSchedContextYieldTo scPtr -> do
+>         schedContextYieldTo scPtr
 
 > schedContextDonate :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextDonate scPtr tcbPtr = do
