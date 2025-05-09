@@ -2875,7 +2875,7 @@ lemma schedContext_unbindAllTCBs_ccorres:
   done
 
 lemma schedContext_updateConsumed_ccorres:
-  "ccorres (=) ret__unsigned_longlong_' \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
+  "ccorres (=) ret__unsigned_longlong_' \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (schedContextUpdateConsumed scPtr)
      (Call schedContext_updateConsumed_'proc)"
   apply (cinit lift: sc_')
@@ -2884,18 +2884,41 @@ lemma schedContext_updateConsumed_ccorres:
    apply (rename_tac sc)
    apply (rule ccorres_move_c_guard_sc)
    apply (rule_tac val="scConsumed sc"
-               and R="ko_at' sc scPtr"
                and xf'=consumed_'
+               and R="ko_at' sc scPtr"
                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
       apply (rule conseqPre, vcg)
       apply (fastforce dest: obj_at_cslift_sc simp: typ_heap_simps csched_context_relation_def)
      apply ceqv
-    apply (rule ccorres_move_c_guard_sc)
+    apply csymbr
+    apply (rule ccorres_cond[where R=\<top>])
+      apply (fastforce split: if_splits)
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr
+     apply clarsimp
+     apply (rule ccorres_move_c_guard_sc)
+     apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+         apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+           apply vcg
+          apply fastforce
+         apply (clarsimp simp: typ_heap_simps)
+         apply (rule_tac sc'="scConsumed_C_update (\<lambda>_. scConsumed_C sc' - maxTicksToUs) sc'"
+                      in rf_sr_sc_update_no_refill_buffer_update2;
+                fastforce?)
+           apply (clarsimp simp: typ_heap_simps')
+          apply (clarsimp simp: csched_context_relation_def)
+         apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
+        apply ceqv
+       apply csymbr+
+       apply (fastforce intro: ccorres_return_C)
+      apply wpsimp
+     apply vcg
+    apply (rule ccorres_rhs_assoc)
     apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+        apply clarsimp
         apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
           apply vcg
          apply fastforce
-        apply (rename_tac sc')
         apply (clarsimp simp: typ_heap_simps)
         apply (rule_tac sc'="scConsumed_C_update (\<lambda>_. 0) sc'"
                      in rf_sr_sc_update_no_refill_buffer_update2;
@@ -2904,12 +2927,13 @@ lemma schedContext_updateConsumed_ccorres:
          apply (clarsimp simp: csched_context_relation_def)
         apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
        apply ceqv
-      apply csymbr+
+      apply clarsimp
+      apply csymbr
       apply (fastforce intro: ccorres_return_C)
      apply wpsimp
     apply vcg
    apply vcg
-  apply fastforce
+  apply clarsimp
   done
 
 lemma mode_setTimeArg_ccorres:

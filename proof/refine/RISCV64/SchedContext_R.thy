@@ -180,15 +180,31 @@ lemma schedContextUpdateConsumed_corres:
      (sched_context_update_consumed sc_ptr) (schedContextUpdateConsumed scPtr)"
   apply (rule_tac Q'="sc_at' scPtr" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross)
-  apply (clarsimp simp: sched_context_update_consumed_def schedContextUpdateConsumed_def
-                        ticksToUs_def)
+  apply (clarsimp simp: sched_context_update_consumed_def schedContextUpdateConsumed_def)
+  apply (simp add: maxTicksToUs_def ticksToUs_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corresKsimp corres: get_sc_corres)
   apply (rename_tac abs_sc conc_sc)
-  apply (clarsimp simp: sc_relation_def)
+  apply (rule corres_if_split)
+    apply (clarsimp simp: sc_relation_def)
+   apply (rule corres_underlying_split)
+      apply (rule corres_guard_imp)
+        apply clarsimp
+        apply (rule_tac Q'="\<lambda>sc'. sc' = conc_sc"
+                     in updateSchedContext_no_stack_update_corres_Q[where Q=\<top>])
+           apply (clarsimp simp: sc_relation_def maxTicksToUs_def)
+          apply (clarsimp simp: sc_relation_def)
+         apply (clarsimp simp: sc_relation_def objBits_simps)
+        apply (clarsimp simp: sc_relation_def)
+       apply (clarsimp simp: obj_at_def)
+      apply (clarsimp simp: obj_at_simps)
+     apply (clarsimp simp: maxTicksToUs_def ticksToUs_def)
+    apply wpsimp
+   apply wpsimp
   apply (rule corres_underlying_split)
      apply (rule corres_guard_imp)
-       apply (rule_tac Q'="\<lambda>sc. scConsumed sc = scConsumed conc_sc"
+       apply clarsimp
+       apply (rule_tac Q'="\<lambda>sc'. sc' = conc_sc"
                     in updateSchedContext_no_stack_update_corres_Q[where Q=\<top>])
           apply (clarsimp simp: sc_relation_def maxTicksToUs_def)
          apply (clarsimp simp: sc_relation_def)
@@ -196,7 +212,7 @@ lemma schedContextUpdateConsumed_corres:
        apply (clarsimp simp: sc_relation_def)
       apply (clarsimp simp: obj_at_def)
      apply (clarsimp simp: obj_at_simps)
-    apply clarsimp
+    apply (clarsimp simp: maxTicksToUs_def ticksToUs_def sc_relation_def)
    apply wpsimp
   apply wpsimp
   done

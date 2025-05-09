@@ -5999,8 +5999,8 @@ lemma replyUnlink_misc_heaps[wp]:
 
 lemma schedContextUpdateConsumed_scReplies_of[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. P (scReplies_of s) \<rbrace>"
-  unfolding schedContextUpdateConsumed_def
-  apply (wpsimp wp: updateSchedContext_wp)
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
+  apply (wpsimp simp: setSchedContext_def)
   apply (clarsimp simp: opt_map_def if_distrib)
   apply (erule subst[where P=P, rotated], rule ext)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: option.splits)
@@ -6008,8 +6008,8 @@ lemma schedContextUpdateConsumed_scReplies_of[wp]:
 
 lemma schedContextUpdateConsumed_sc_tcbs_of[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. P (scTCBs_of s)\<rbrace>"
-  unfolding schedContextUpdateConsumed_def
-  apply (wpsimp wp: updateSchedContext_wp)
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
+  apply (wpsimp simp: setSchedContext_def)
   apply (clarsimp simp: opt_map_def if_distrib)
   apply (erule subst[where P=P, rotated], rule ext)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: option.splits)
