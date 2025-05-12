@@ -282,7 +282,14 @@ lemma valid_pde_mappings'_update [iff]:
   "valid_pde_mappings' (f s) = valid_pde_mappings' s"
   by (simp add: valid_pde_mappings'_def)
 
+end
 
+context Arch_p_arch_idle_update_eq'
+begin
+
+lemma valid_arch_state_update'[iff]:
+  "valid_arch_state' (f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
 
 end
 

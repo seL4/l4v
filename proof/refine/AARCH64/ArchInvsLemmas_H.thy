@@ -257,6 +257,15 @@ lemma pspace_in_kernel_mappings_update' [iff]:
 
 end
 
+context Arch_p_arch_idle_update_eq'
+begin
+
+lemma valid_arch_state_update'[iff]:
+  "valid_arch_state' (f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
+
+end
+
 context Arch begin arch_global_naming
 
 lemma mask_wordRadix_less_wordBits:
