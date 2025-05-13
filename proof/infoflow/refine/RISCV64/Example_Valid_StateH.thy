@@ -3037,6 +3037,7 @@ lemma mdb_nextI:
 
 lemma s0H_valid_pspace':
   notes pteBits_def[simp] objBits_defs[simp]
+  notes valid_arch_badges_def[simp] mdb_chunked_arch_assms_def[simp]
   assumes "1 \<le> maxDomain"
   shows "valid_pspace' s0H_internal"
   using assms
