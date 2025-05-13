@@ -440,10 +440,14 @@ lemma eq_singleton_set: "\<lbrakk>A = f` B; \<forall>x\<in>B. \<forall>y\<in> B.
   done
 
 lemma final_cap_set_map:
-  "\<lbrakk>valid_idle s'; valid_irq_node s';valid_objs s';if_unsafe_then_cap s'; valid_global_refs s'; cap_counts (transform_cap cap)\<rbrakk>
-    \<Longrightarrow> {cref. opt_cap_wp_at (\<lambda>cap'. cap_object (transform_cap cap) = cap_object cap'
-                                    \<and> cdl_cap_irq (transform_cap cap) = cdl_cap_irq cap' \<and> cap_counts cap') cref (transform s')}
-    = transform_cslot_ptr ` {cref. cte_wp_at (\<lambda>cap'. cap_irqs cap \<inter> cap_irqs cap' = {} \<longrightarrow> obj_refs cap \<inter> obj_refs cap' = {} \<longrightarrow> arch_gen_refs cap \<inter> arch_gen_refs cap' \<noteq> {}) cref s'}"
+  "\<lbrakk>valid_idle s'; valid_irq_node s';valid_objs s';if_unsafe_then_cap s'; valid_global_refs s';
+    cap_counts (transform_cap cap)\<rbrakk> \<Longrightarrow>
+   {cref. opt_cap_wp_at (\<lambda>cap'. cap_object (transform_cap cap) = cap_object cap' \<and>
+                                cdl_cap_irq (transform_cap cap) = cdl_cap_irq cap' \<and>
+                                cap_counts cap') cref (transform s')} =
+   transform_cslot_ptr ` {cref. cte_wp_at (\<lambda>cap'. cap_irqs cap \<inter> cap_irqs cap' = {} \<longrightarrow>
+                                                  obj_refs cap \<inter> obj_refs cap' = {} \<longrightarrow>
+                                                  arch_gen_refs cap \<inter> arch_gen_refs cap' \<noteq> {}) cref s'}"
   apply (rule set_eqI)
   apply (rule iffI)
    apply (clarsimp simp: image_def)

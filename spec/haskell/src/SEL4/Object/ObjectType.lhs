@@ -236,6 +236,7 @@ This function assumes that its arguments are in MDB order.
 
 > sameRegionAs IRQControlCap IRQControlCap = True
 > sameRegionAs IRQControlCap (IRQHandlerCap {}) = True
+> sameRegionAs IRQControlCap (ArchObjectCap b) = Arch.isIRQControlCapDescendant b
 
 > sameRegionAs (IRQHandlerCap a) (IRQHandlerCap b) = a == b
 
@@ -260,10 +261,10 @@ This helper function to "sameRegionAs" checks that we have a physical capability
 
 If this function returns true, neither of the two arguments is a final typed capability for the purposes of "finaliseCap". Like "sameRegionAs", it assumes that its arguments are in MDB order.
 
-The rules for determining this are generally the same as for "sameRegionAs". However, an untyped capability for an enclosing region on the left hand side does not prevent the right hand side capability being final. Likewise, an IRQ control capability on the left hand side does not prevent a IRQ handler capability being final.
+The rules for determining this are generally the same as for "sameRegionAs". However, an untyped capability for an enclosing region on the left hand side does not prevent the right hand side capability being final. Likewise, an IRQ control capability on the left hand side does not prevent any IRQControl derived caps from being final (IRQHandlers, SGISignalCaps).
 
 > sameObjectAs (UntypedCap {}) _ = False
-> sameObjectAs IRQControlCap (IRQHandlerCap {}) = False
+> sameObjectAs IRQControlCap _ = False
 > sameObjectAs (ArchObjectCap a) (ArchObjectCap b) = a `Arch.sameObjectAs` b
 > sameObjectAs a b = a `sameRegionAs` b
 
@@ -519,5 +520,3 @@ The following two functions returns the base and size of the object a capability
 >     = 1 -- error in haskell
 > capUntypedSize (IRQHandlerCap {})
 >     = 1 -- error in haskell
-
-

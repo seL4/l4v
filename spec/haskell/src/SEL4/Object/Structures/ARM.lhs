@@ -23,7 +23,7 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import SEL4.Machine.Hardware.ARM
 > import Data.Array
 > import Data.Helpers
-> import Data.Word(Word64,Word32,Word16)
+> import Data.Word(Word64,Word32)
 > import Data.Bits
 > import {-# SOURCE #-} SEL4.Object.Structures
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -60,6 +60,9 @@ There are six ARM-specific capability types: the global ASID control capability,
 >     | VCPUCap {
 >         capVCPUPtr :: PPtr VCPU }
 #endif
+>     | SGISignalCap {
+>         capSGIIRQ :: Word,
+>         capSGITargetMask :: Word }
 #ifdef CONFIG_ARM_SMMU
 >     | IOSpaceCap {
 >         capIOSpaceModuleID :: Word16,

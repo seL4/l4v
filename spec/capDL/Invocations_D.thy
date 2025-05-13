@@ -36,7 +36,7 @@ datatype cdl_tcb_invocation =
   | SetTLSBase cdl_object_id
 
 datatype arch_cdl_irq_control_invocation =
-    ARMIssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref bool
+    ARMIssueSGISignal sgi_irq sgi_target cdl_cap_ref cdl_cap_ref
 
 datatype cdl_irq_control_invocation =
     IssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref
@@ -90,6 +90,9 @@ datatype cdl_page_directory_invocation =
 datatype cdl_domain_invocation =
   SetDomain cdl_object_id word8
 
+datatype cdl_sgi_signal_invocation =
+  SGISignalGenerate (* no params, machine op only *)
+
 datatype cdl_invocation =
     InvokeUntyped cdl_untyped_invocation
   | InvokeEndpoint cdl_endpoint_invocation
@@ -105,5 +108,6 @@ datatype cdl_invocation =
   | InvokePageDirectory cdl_page_directory_invocation
   | InvokeAsidControl cdl_asid_control_invocation
   | InvokeAsidPool cdl_asid_pool_invocation
+  | InvokeSGISignal cdl_sgi_signal_invocation
 
 end

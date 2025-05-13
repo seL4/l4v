@@ -14,6 +14,10 @@ context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare doUnbindNotification_def[simp]
 
+lemma isArchSGISignalCap_NullCap[simp]:
+  "\<not>isArchSGISignalCap NullCap"
+  by (simp add: isCap_simps)
+
 text \<open>Properties about empty_slot/emptySlot\<close>
 
 lemma case_Null_If:
@@ -137,7 +141,7 @@ crunch emptySlot
 lemma mdb_chunked2D:
   "\<lbrakk> mdb_chunked m; m \<turnstile> p \<leadsto> p'; m \<turnstile> p' \<leadsto> p'';
      m p = Some (CTE cap nd); m p'' = Some (CTE cap'' nd'');
-     sameRegionAs cap cap''; p \<noteq> p'' \<rbrakk>
+     sameRegionAs cap cap''; p \<noteq> p''; mdb_chunked_arch_assms cap \<rbrakk>
      \<Longrightarrow> \<exists>cap' nd'. m p' = Some (CTE cap' nd') \<and> sameRegionAs cap cap'"
   apply (subgoal_tac "\<exists>cap' nd'. m p' = Some (CTE cap' nd')")
    apply (clarsimp simp add: mdb_chunked_def)
@@ -155,8 +159,7 @@ lemma mdb_chunked2D:
   apply (case_tac z, simp)
   done
 
-lemma nullPointer_eq_0_simp[simp]:
-  "(nullPointer = 0) = True"
+lemma nullPointer_eq_0_simp[simp]: (* FIXME: move to nullPointer_0_simp in Retype_R *)
   "(0 = nullPointer) = True"
   by (simp add: nullPointer_def)+
 
@@ -479,7 +482,7 @@ lemma caps_contained_n:
 
 lemma chunked:
   "mdb_chunked m"
-  using valid by (simp add: valid_mdb_ctes_def)
+  using valid ..
 
 lemma valid_badges:
   "valid_badges m"
@@ -492,6 +495,20 @@ proof -
   show ?thesis
     apply (simp add: valid_badges_def2)
     apply clarsimp
+    apply (rule conjI)
+     prefer 2
+     apply (drule_tac p=p in n_cap)
+     apply (frule n_cap)
+     apply (drule n_badged)
+     apply (clarsimp simp: n_next_eq)
+     apply (case_tac "p=slot", simp)
+     apply clarsimp
+     apply (case_tac "p'=slot", simp add: isCap_simps)
+     apply clarsimp
+     apply (case_tac "p = mdbPrev s_node")
+      apply (clarsimp simp: valid_arch_badges_def)
+      apply blast
+     apply (fastforce simp: valid_arch_badges_def)
     apply (drule_tac p=p in n_cap)
     apply (frule n_cap)
     apply (drule n_badged)
@@ -499,21 +516,22 @@ proof -
     apply (case_tac "p=slot", simp)
     apply clarsimp
     apply (case_tac "p'=slot", simp)
-    apply clarsimp
+     apply clarsimp
     apply (case_tac "p = mdbPrev s_node")
      apply clarsimp
      apply (insert slot)[1]
-     (* using mdb_chunked to show cap in between is same as on either side *)
+      (* using mdb_chunked to show cap in between is same as on either side *)
      apply (subgoal_tac "capMasterCap s_cap = capMasterCap cap'")
       prefer 2
       apply (thin_tac "\<forall>p. P p" for P)
       apply (drule mdb_chunked2D[OF chunked])
-           apply (fastforce simp: mdb_next_unfold)
-          apply assumption+
-        apply (simp add: sameRegionAs_def3)
-        apply (intro disjI1)
-        apply (fastforce simp:isCap_simps capMasterCap_def split:capability.splits)
-       apply clarsimp
+            apply (fastforce simp: mdb_next_unfold)
+           apply assumption+
+         apply (simp add: sameRegionAs_def3)
+         apply (intro disjI1)
+         apply (fastforce simp:isCap_simps capMasterCap_def split:capability.splits)
+        apply clarsimp
+       apply (clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
       apply clarsimp
       apply (erule sameRegionAsE, auto simp: isCap_simps capMasterCap_def split:capability.splits)[1]
      (* instantiating known valid_badges on both sides to transitively
@@ -562,9 +580,8 @@ lemma n_parent_of:
   apply (frule_tac p=p' in n_cap)
   apply (frule_tac p=p' in n_badged)
   apply (drule_tac p=p' in n_revokable)
-  apply (clarsimp split: if_split_asm;
-         clarsimp simp: isMDBParentOf_def isCap_simps split: if_split_asm cong: if_cong)
-  done
+  apply (clarsimp split: if_split_asm)
+  by (auto simp: isMDBParentOf_def isArchMDBParentOf_def2 isCap_simps split: if_split_asm)
 
 lemma m_parent_of:
   "\<lbrakk> m \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot; p\<noteq>p'; p'\<noteq>mdbNext s_node \<rbrakk> \<Longrightarrow> n \<turnstile> p parentOf p'"
@@ -580,7 +597,9 @@ lemma m_parent_of:
   apply (drule_tac p=p' in m_revokable)
   apply clarsimp
   apply (simp split: if_split_asm;
-         clarsimp simp: isMDBParentOf_def isCap_simps split: if_split_asm cong: if_cong)
+         clarsimp simp: isMDBParentOf_def isArchMDBParentOf_def2 isCap_simps
+                  split: if_split_asm
+                  cong: if_cong)
   done
 
 lemma m_parent_of_next:
@@ -599,13 +618,37 @@ lemma m_parent_of_next:
   apply (frule_tac p="slot" in m_cap)
   apply (frule_tac p="slot" in m_badged)
   apply (drule_tac p="slot" in m_revokable)
-  apply (clarsimp simp: isMDBParentOf_def isCap_simps split: if_split_asm cong: if_cong)
+  by (auto simp: isMDBParentOf_def isArchMDBParentOf_def2 isCap_simps
+           split: if_split_asm cong: if_cong)
+
+lemma n_mdbNext:
+  "\<lbrakk> n (mdbNext s_node) = Some (CTE cap node); mdbPrev s_node \<noteq> 0 \<rbrakk> \<Longrightarrow>
+  \<exists>node'. m (mdbNext s_node) = Some (CTE cap node') \<and>
+          mdbNext node = mdbNext node' \<and>
+          mdbPrev node = mdbPrev s_node \<and>
+          mdbRevocable node = mdbRevocable node' \<and>
+          (mdbFirstBadged node = mdbFirstBadged node' \<or> mdbFirstBadged s_node)"
+  apply (clarsimp simp: n_def modify_map_def)
+  apply (case_tac z)
+  apply clarsimp
+  done
+
+lemma n_mdbPrev:
+  "\<lbrakk> n (mdbPrev s_node) = Some (CTE cap node); mdbNext s_node \<noteq> 0 \<rbrakk> \<Longrightarrow>
+    \<exists>node'. m (mdbPrev s_node) = Some (CTE cap node') \<and>
+          mdbNext node = mdbNext s_node \<and>
+          mdbPrev node = mdbPrev node' \<and>
+          mdbRevocable node = mdbRevocable node' \<and>
+          (mdbFirstBadged node = mdbFirstBadged node')"
+  apply (clarsimp simp: n_def modify_map_def)
+  apply (case_tac z)
+  apply clarsimp
   done
 
 lemma parency_n:
   assumes "n \<turnstile> p \<rightarrow> p'"
   shows "m \<turnstile> p \<rightarrow> p' \<and> p \<noteq> slot \<and> p' \<noteq> slot"
-using assms
+  using assms
 proof induct
   case (direct_parent c')
   moreover
@@ -624,38 +667,66 @@ proof induct
      apply (erule (2) n_parent_of)
     apply clarsimp
     apply (frule n_parent_of, simp, simp)
-    apply (rule subtree.trans_parent[OF _ m_slot_next], simp_all)
-    apply (rule subtree.direct_parent)
-      apply (erule prev_slot_next)
-     apply simp
-    apply (clarsimp simp: parentOf_def slot)
-    apply (case_tac cte'a)
-    apply (case_tac ctea)
+    apply (prop_tac "\<exists>prev_cap prev_node. m (mdbPrev s_node) = Some (CTE prev_cap prev_node)")
+     apply (clarsimp simp: parentOf_def, case_tac cte'a, clarsimp)
     apply clarsimp
-    apply (frule(2) mdb_chunked2D [OF chunked prev_slot_next m_slot_next])
-      apply (clarsimp simp: isMDBParentOf_CTE)
-     apply simp
-    apply (simp add: slot)
-    apply (clarsimp simp add: isMDBParentOf_CTE)
-    apply (insert valid_badges)
-    apply (simp add: valid_badges_def2)
-    apply (drule spec[where x=slot])
-    apply (drule spec[where x="mdbNext s_node"])
-    apply (simp add: slot m_slot_next)
-    apply (insert valid_badges)
-    apply (simp add: valid_badges_def2)
-    apply (drule spec[where x="mdbPrev s_node"])
-    apply (drule spec[where x=slot])
-    apply (simp add: slot prev_slot_next)
-    apply (case_tac cte, case_tac cte')
-    apply (rename_tac cap'' node'')
-    apply (clarsimp simp: isMDBParentOf_CTE)
-    apply (frule n_cap, drule n_badged)
-    apply (frule n_cap, drule n_badged)
-    apply clarsimp
-    apply (case_tac cap'', simp_all add: isCap_simps)[1]
+    apply (case_tac "isArchSGISignalCap prev_cap")
+     prefer 2
+     apply (rule subtree.trans_parent[OF _ m_slot_next], simp_all)
+     apply (rule subtree.direct_parent)
+       apply (erule prev_slot_next)
+      apply simp
+     apply (clarsimp simp: parentOf_def slot)
+     apply (case_tac cte, rename_tac next_cap next_node)
+     apply clarsimp
+     apply (frule(2) mdb_chunked2D [OF chunked prev_slot_next m_slot_next])
+        apply (clarsimp simp: isMDBParentOf_CTE)
+       apply simp
+      apply (simp add: mdb_chunked_arch_assms_def)
+     apply (simp add: slot)
+     apply (clarsimp simp add: isMDBParentOf_CTE)
+     apply (insert valid_badges)[1]
+     apply (simp add: valid_badges_def2)
+     apply (drule spec[where x=slot])
+     apply (drule spec[where x="mdbNext s_node"])
+     apply (simp add: slot m_slot_next)
+     apply (insert valid_badges)[1]
+     apply (simp add: valid_badges_def2)
+     apply (drule spec[where x="mdbPrev s_node"])
+     apply (drule spec[where x=slot])
+     apply (simp add: slot prev_slot_next)
+     apply (case_tac ctea, case_tac cte')
+     apply (rename_tac cap'' node'')
+     apply (clarsimp simp: isMDBParentOf_CTE)
+     apply (frule n_cap, drule n_badged)
+     apply (frule n_cap, drule n_badged)
+     apply clarsimp
+     apply (case_tac cap'', simp_all add: isCap_simps)[1]
+      apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
      apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
-    apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
+    (* SGISignalCap *)
+    apply (clarsimp simp: parentOf_def isCap_simps isMDBParentOf_CTE)
+    apply (rename_tac next_node)
+    apply (rule subtree.trans_parent[OF _ m_slot_next], simp_all)
+     apply (rule subtree.direct_parent)
+       apply (erule prev_slot_next)
+      apply simp
+     prefer 2
+     apply (clarsimp simp: parentOf_def slot isMDBParentOf_CTE)
+    apply (clarsimp simp: parentOf_def slot isMDBParentOf_CTE isCap_simps)
+    apply (cases "mdbFirstBadged s_node", simp)
+     apply (case_tac ctea, case_tac cte', clarsimp)
+     apply (frule n_cap, drule n_badged)
+     apply (frule n_cap, drule n_badged)
+     apply clarsimp
+     apply (rename_tac prev_node' next_node')
+     apply (clarsimp simp: isMDBParentOf_CTE isCap_simps)
+    apply simp
+    apply (insert valid_badges)[1]
+    apply (clarsimp simp: valid_badges_def)
+    apply (erule_tac x="slot" in allE)
+    apply (erule_tac x="mdbNext s_node" in allE)
+    apply (simp add: slot m_p_next isCap_simps valid_arch_badges_def)
     done
 next
   case (trans_parent c c')
@@ -685,55 +756,67 @@ next
        apply (rename_tac cap node)
        apply (case_tac ctea)
        apply clarsimp
-       apply (subgoal_tac "sameRegionAs cap s_cap")
-        prefer 2
-        apply (insert chunked)[1]
-        apply (simp add: mdb_chunked_def)
-        apply (erule_tac x="p" in allE)
-        apply (erule_tac x="mdbNext s_node" in allE)
-        apply simp
-        apply (drule isMDBParent_sameRegion)+
-        apply clarsimp
-        apply (subgoal_tac "m \<turnstile> p \<leadsto>\<^sup>+ slot")
-         prefer 2
-         apply (rule trancl_trans)
-          apply (erule subtree_mdb_next)
-         apply (rule r_into_trancl)
-         apply (rule prev_slot_next)
+       apply (case_tac "\<not>isArchSGISignalCap cap")
+        apply (prop_tac "sameRegionAs cap s_cap")
+         apply (insert chunked)[1]
+         apply (simp add: mdb_chunked_def)
+         apply (erule_tac x="p" in allE)
+         apply (erule_tac x="mdbNext s_node" in allE)
+         apply simp
+         apply (drule isMDBParent_sameRegion)+
          apply clarsimp
-        apply (subgoal_tac "m \<turnstile> p \<leadsto>\<^sup>+ mdbNext s_node")
-         prefer 2
-         apply (erule trancl_trans)
-         apply fastforce
-        apply simp
-        apply (erule impE)
+         apply (prop_tac "m \<turnstile> p \<leadsto>\<^sup>+ slot")
+          apply (rule trancl_trans)
+           apply (erule subtree_mdb_next)
+          apply (rule r_into_trancl)
+          apply (rule prev_slot_next)
+          apply clarsimp
+         apply (prop_tac "m \<turnstile> p \<leadsto>\<^sup>+ mdbNext s_node")
+          apply (erule trancl_trans)
+          apply fastforce
+         apply (simp add: mdb_chunked_arch_assms_def)
+         apply (erule impE)
+          apply clarsimp
          apply clarsimp
-        apply clarsimp
-        apply (thin_tac "s \<longrightarrow> t" for s t)
-        apply (simp add: is_chunk_def)
-        apply (erule_tac x=slot in allE)
-        apply (erule impE, fastforce)
-        apply (erule impE, fastforce)
-        apply (clarsimp simp: slot)
-       apply (clarsimp simp: isMDBParentOf_CTE)
-       apply (insert valid_badges, simp add: valid_badges_def2)
-       apply (drule spec[where x=slot], drule spec[where x="mdbNext s_node"])
-       apply (simp add: slot m_slot_next)
+         apply (thin_tac "s \<longrightarrow> t" for s t)
+         apply (simp add: is_chunk_def)
+         apply (erule_tac x=slot in allE)
+         apply (erule impE, fastforce)
+         apply (erule impE, fastforce)
+         apply (clarsimp simp: slot)
+        apply (clarsimp simp: isMDBParentOf_CTE)
+        apply (insert valid_badges, simp add: valid_badges_def2)[1]
+        apply (drule spec[where x=slot], drule spec[where x="mdbNext s_node"])
+        apply (simp add: slot m_slot_next)
+        apply (case_tac cte, case_tac cte')
+        apply (rename_tac cap'' node'')
+        apply (clarsimp simp: isMDBParentOf_CTE)
+        apply (frule n_cap, drule n_badged)
+        apply (frule n_cap, drule n_badged)
+        apply (clarsimp split: if_split_asm)
+         apply (drule subtree_mdb_next)
+         apply (drule no_loops_tranclE[OF no_loops])
+         apply (erule notE, rule trancl_into_rtrancl)
+         apply (rule trancl.intros(2)[OF _ m_slot_next])
+         apply (rule trancl.intros(1), rule prev_slot_next)
+         apply simp
+        apply (case_tac cap'', simp_all add: isCap_simps)[1]
+         apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
+        apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
+       (* SGISignalCap *)
+       apply (rename_tac next_cap next_node)
+       apply (clarsimp simp: isCap_simps)
        apply (case_tac cte, case_tac cte')
        apply (rename_tac cap'' node'')
        apply (clarsimp simp: isMDBParentOf_CTE)
        apply (frule n_cap, drule n_badged)
        apply (frule n_cap, drule n_badged)
-       apply (clarsimp split: if_split_asm)
-        apply (drule subtree_mdb_next)
-        apply (drule no_loops_tranclE[OF no_loops])
-        apply (erule notE, rule trancl_into_rtrancl)
-        apply (rule trancl.intros(2)[OF _ m_slot_next])
-        apply (rule trancl.intros(1), rule prev_slot_next)
-        apply simp
-       apply (case_tac cap'', simp_all add: isCap_simps)[1]
-        apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
-       apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
+       apply (clarsimp simp: isCap_simps)
+       apply (insert valid_badges)[1]
+       apply (clarsimp simp: valid_badges_def)
+       apply (erule_tac x="slot" in allE)
+       apply (erule_tac x="mdbNext s_node" in allE)
+       apply (simp add: slot m_p_next isCap_simps valid_arch_badges_def)
       apply (rule m_slot_next)
      apply simp
     apply (erule n_parent_of, simp, simp)
@@ -1815,6 +1898,7 @@ where
   | ArchObjectCap acap \<Rightarrow> (case acap of
     PageCap d ref rghts sz mapdata \<Rightarrow> False
   | ASIDControlCap \<Rightarrow> False
+  | SGISignalCap _ _ \<Rightarrow> False
   | _ \<Rightarrow> True)
   | _ \<Rightarrow> False"
 
@@ -1837,13 +1921,18 @@ lemma final_matters_sameRegion_sameObject2:
      \<Longrightarrow> sameRegionAs cap cap' = sameObjectAs cap cap'"
   apply (rule iffI)
    apply (erule sameRegionAsE)
-      apply (simp add: sameObjectAs_def3)
-      apply (fastforce simp: isCap_simps final_matters'_def)
-     apply simp
+       apply (simp add: sameObjectAs_def3)
+       apply (fastforce simp: isCap_simps final_matters'_def)
+      apply simp
+     apply (clarsimp simp: final_matters'_def isCap_simps)
     apply (clarsimp simp: final_matters'_def isCap_simps)
    apply (clarsimp simp: final_matters'_def isCap_simps)
   apply (erule sameObjectAs_sameRegionAs)
   done
+
+lemma final_matters_mdb_chunked_arch_assms:
+  "final_matters' cap \<Longrightarrow> mdb_chunked_arch_assms cap"
+  by (clarsimp simp: mdb_chunked_arch_assms_def isCap_simps final_matters'_def)
 
 lemma notFinal_prev_or_next:
   "\<lbrakk> \<not> isFinal cap x (cteCaps_of s); mdb_chunked (ctes_of s);
@@ -1855,6 +1944,7 @@ lemma notFinal_prev_or_next:
               \<and> sameObjectAs cap cap')"
   apply (erule not_FinalE)
    apply (clarsimp simp: isCap_simps final_matters'_def)
+  apply (frule final_matters_mdb_chunked_arch_assms)
   apply (clarsimp simp: mdb_chunked_def cte_wp_at_ctes_of cteCaps_of_def
                    del: disjCI)
   apply (erule_tac x=x in allE, erule_tac x=p in allE)
@@ -1953,7 +2043,7 @@ lemma isFinal:
      apply clarsimp
     apply (case_tac cte')
     apply clarsimp
-   apply (clarsimp simp add: sameObjectAs_def3 isCap_simps)
+   apply (fastforce simp add: sameObjectAs_def3 isCap_simps)
   apply clarsimp
   apply (rule conjI)
    apply clarsimp
@@ -2024,6 +2114,7 @@ lemma (in vmdb) isFinal_untypedParent:
   apply clarsimp
   apply (drule isMDBParent_sameRegion)
   apply simp
+  apply (frule final_matters_mdb_chunked_arch_assms)
   apply (rule classical, simp)
   apply (simp add: final_matters_sameRegion_sameObject2
                    sameObjectAs_sym)
@@ -2858,11 +2949,12 @@ lemma arch_finaliseCap_removeable[wp]:
   unfolding ARM_HYP_H.finaliseCap_def
   including classic_wp_pre
   apply (case_tac cap; clarsimp)
-       apply ((wpsimp simp: removeable'_def isCap_simps
-                | rule conjI)+)[5]
-  apply (clarsimp simp: isCap_simps, rule conjI)
-   apply (wpsimp simp: isCap_simps removeable'_def wp: hoare_disjI2)
-  apply  (wpsimp simp: not_Final_removeable final_matters'_def)
+        apply ((wpsimp simp: removeable'_def isCap_simps
+                 | rule conjI)+)[5]
+   apply (clarsimp simp: isCap_simps, rule conjI)
+    apply (wpsimp simp: isCap_simps removeable'_def wp: hoare_disjI2)
+   apply  (wpsimp simp: not_Final_removeable final_matters'_def)
+  apply  (wpsimp simp: isCap_simps removeable'_def)
   done
 
 lemma isZombie_Null:
@@ -2919,10 +3011,6 @@ lemma cteDeleteOne_isFinal:
 lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ep_ctes_of]
 lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ntfn_ctes_of]
 lemmas threadSet_cteCaps_of = ctes_of_cteCaps_of_lift [OF threadSet_ctes_of]
-
-crunch setSchedulerAction
-  for isFinal: "\<lambda>s. isFinal cap slot (cteCaps_of s)"
-  (simp: cteCaps_of_def)
 
 crunch dissociateVCPUTCB
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
@@ -4100,7 +4188,8 @@ lemma finaliseCap_corres:
 context begin interpretation Arch . (*FIXME: arch-split*)
 lemma arch_recycleCap_improve_cases:
    "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;\<not> isVCPUCap cap;
-         \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
+         \<not> isASIDControlCap cap; \<not>isSGISignalCap cap \<rbrakk> \<Longrightarrow>
+  (if isASIDPoolCap cap then v else undefined) = v"
   by (cases cap, simp_all add: isCap_simps)
 
 crunch copyGlobalMappings

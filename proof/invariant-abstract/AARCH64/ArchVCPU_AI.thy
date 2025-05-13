@@ -552,7 +552,7 @@ crunch perform_asid_control_invocation
   and active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   (simp: active_cur_vcpu_of_def)
 
-crunch perform_vspace_invocation
+crunch perform_vspace_invocation, perform_sgi_invocation
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s )"
   and active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu

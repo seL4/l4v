@@ -49,9 +49,15 @@ lemma ex_cte_cap_to_not_idle:
 
 definition
   "cap_insert_dest_original cap src_cap
-     = (if is_ep_cap cap then cap_ep_badge cap \<noteq> cap_ep_badge src_cap
-           else if is_ntfn_cap cap then cap_ep_badge cap \<noteq> cap_ep_badge src_cap
-                else if \<exists>irq. cap = cap.IRQHandlerCap irq then src_cap = cap.IRQControlCap else is_untyped_cap cap)"
+     = (if is_ep_cap cap
+        then cap_ep_badge cap \<noteq> cap_ep_badge src_cap
+        else if is_ntfn_cap cap
+        then cap_ep_badge cap \<noteq> cap_ep_badge src_cap
+        else if is_IRQHandlerCap cap
+        then src_cap = cap.IRQControlCap
+        else if is_ArchObjectCap cap \<and> is_SGISignalCap (the_arch_cap cap)
+        then src_cap = IRQControlCap
+        else is_untyped_cap cap)"
 
 lemma option_return_modify_modify:
   "case_option (return ()) (\<lambda>x. modify (f x))
@@ -161,7 +167,9 @@ lemma dcorres_set_parent_helper:
 
 lemma revokable_cap_insert_dest_original:
   "is_cap_revocable capa cap = cap_insert_dest_original capa cap"
-  by (clarsimp simp: is_cap_revocable_def arch_is_cap_revocable_def cap_insert_dest_original_def split: cap.splits)
+  by (clarsimp simp: is_cap_revocable_def arch_is_cap_revocable_def cap_insert_dest_original_def
+                     is_cap_simps
+               split: arch_cap.splits cap.splits)
 
 lemma insert_cap_sibling_corres:
   "dcorres dc \<top>
