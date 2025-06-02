@@ -139,10 +139,6 @@ present on all platforms is stored here.
 > atcbContextGet :: ArchTCB -> UserContext
 > atcbContextGet = atcbContext
 
-> type ArchTcbFlag = ()
-
-> archTcbFlagToWord :: ArchTcbFlag -> Word
-> archTcbFlagToWord _ = 0 -- ARM does not have any arch specific flags but we make this 0 so that some proofs are easier
 
 \subsection{ASID Pools}
 

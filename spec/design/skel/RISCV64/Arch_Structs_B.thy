@@ -19,8 +19,6 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Model/StateData/RISCV64.hs CONTEXT RISCV64_H ONLY RISCVVSpaceRegionUse
 
-#INCLUDE_HASKELL SEL4/Object/Structures/RISCV64.hs CONTEXT RISCV64_H ONLY ArchTcbFlag archTcbFlagToWord
-
 end
 
 end
