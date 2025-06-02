@@ -53,7 +53,7 @@ fpuRelease tcbPtr = do
 lazyFpuRestore :: PPtr TCB -> Kernel ()
 lazyFpuRestore tcbPtr = do
     flags <- threadGet tcbFlags tcbPtr
-    if (isFlagSet (ArchFlag FpuDisabled) flags)
+    if (isFlagSet FpuDisabled flags)
       then doMachineOp disableFpu
       else do
           curFpuOwner <- gets (x64KSCurFPUOwner . ksArchState)

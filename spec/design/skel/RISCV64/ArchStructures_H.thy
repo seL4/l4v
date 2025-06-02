@@ -16,11 +16,9 @@ context Arch begin arch_global_naming (H)
 #INCLUDE_SETTINGS keep_constructor=asidpool
 #INCLUDE_SETTINGS keep_constructor=arch_tcb
 
-#INCLUDE_HASKELL SEL4/Object/Structures/RISCV64.hs CONTEXT RISCV64_H decls_only \
-  NOT ArchTcbFlag archTcbFlagToWord
+#INCLUDE_HASKELL SEL4/Object/Structures/RISCV64.hs CONTEXT RISCV64_H decls_only
 #INCLUDE_HASKELL SEL4/Object/Structures/RISCV64.hs CONTEXT RISCV64_H instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/RISCV64.hs CONTEXT RISCV64_H bodies_only \
-  NOT archTcbFlagToWord
+#INCLUDE_HASKELL SEL4/Object/Structures/RISCV64.hs CONTEXT RISCV64_H bodies_only
 
 datatype arch_kernel_object_type =
     PTET

@@ -4509,8 +4509,8 @@ lemma decodeSetTLSBase_ccorres:
   done
 
 lemma scast_seL4_TCBFlag_fpuDisabled[simp]:
-  "scast seL4_TCBFlag_fpuDisabled = tcbFlagToWord (ArchFlag FpuDisabled)"
-  by (clarsimp simp: seL4_TCBFlag_fpuDisabled_def tcbFlagToWord_def archTcbFlagToWord_def)
+  "scast seL4_TCBFlag_fpuDisabled = tcbFlagToWord FpuDisabled"
+  by (clarsimp simp: seL4_TCBFlag_fpuDisabled_def tcbFlagToWord_def)
 
 lemma invokeTCB_SetFlags_ccorres:
   notes hoare_weak_lift_imp [wp]

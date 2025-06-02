@@ -499,10 +499,10 @@ Various operations on the free index of an Untyped cap.
 
 \subsubsection{TCB Flags}
 
-> data TcbFlag = ArchFlag ArchTcbFlag
+> data TcbFlag = FpuDisabled
 
 > tcbFlagToWord :: TcbFlag -> Word
-> tcbFlagToWord (ArchFlag archFlag) = archTcbFlagToWord archFlag
+> tcbFlagToWord (FpuDisabled) = bit 0
 
 Sets of TCB flags are bitwise OR'd and represented as a word.
 
