@@ -54,7 +54,7 @@ definition fpu_release :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" w
 definition lazy_fpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "lazy_fpu_restore thread_ptr \<equiv> do
      flags \<leftarrow> thread_get tcb_flags thread_ptr;
-     if ArchFlag FpuDisabled \<in> flags
+     if FpuDisabled \<in> flags
      then do_machine_op disableFpu
      else do
        cur_fpu_owner \<leftarrow> gets (arm_current_fpu_owner \<circ> arch_state);

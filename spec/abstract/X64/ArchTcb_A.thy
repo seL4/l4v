@@ -49,7 +49,7 @@ where
 \<comment> \<open>The corresponding C code is not arch dependent and so is inline as part of invokeSetFlags\<close>
 definition arch_post_set_flags :: "obj_ref \<Rightarrow> tcb_flags \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_post_set_flags t flags \<equiv>
-     when (ArchFlag FpuDisabled \<in> flags) (fpu_release t)"
+     when (FpuDisabled \<in> flags) (fpu_release t)"
 
 definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_prepare_set_domain t new_dom \<equiv> do

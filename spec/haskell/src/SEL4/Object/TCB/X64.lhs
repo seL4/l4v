@@ -64,7 +64,7 @@ Here, cur = ksCurThread
 
 > postSetFlags :: PPtr TCB -> TcbFlags -> Kernel ()
 > postSetFlags t flags =
->     when (isFlagSet (ArchFlag FpuDisabled) flags) (fpuRelease t)
+>     when (isFlagSet FpuDisabled flags) (fpuRelease t)
 
 Save and clear FPU state before setting the domain of a TCB, to ensure that
 we do not later write to cross-domain state.
