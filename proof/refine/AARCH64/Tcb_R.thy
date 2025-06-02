@@ -1657,6 +1657,13 @@ lemma setSchedulerAction_invs'[wp]:
   apply (simp add: ct_idle_or_in_cur_domain'_def)
   done
 
+lemma postSetFlags_corres[corres]:
+  "flags = word_to_tcb_flags flags' \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
+     (arch_post_set_flags  t flags) (postSetFlags t flags')"
+  unfolding arch_post_set_flags_def postSetFlags_def
+  by (corres term_simp: isFlagSet_set)
+
 end
 
 lemma setFlags_corres[corres]:
@@ -1672,12 +1679,9 @@ crunch set_flags
   and pspace_distinct[wp]: pspace_distinct
   and valid_cur_fpu[wp]: valid_cur_fpu
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-
 lemma tcbFlagToWord_bit:
   "\<exists>n. tcbFlagToWord flag = bit n"
-  by (auto simp: tcbFlagToWord_def archTcbFlagToWord_def split: tcb_flag.splits arch_tcb_flag.splits
-       simp del: bit_def)
+  by (auto simp: tcbFlagToWord_def split: tcb_flag.splits simp del: bit_def)
 
 lemma word_to_tcb_flags_subtract:
   "word_to_tcb_flags (flags && ~~ flags') = word_to_tcb_flags flags - word_to_tcb_flags flags'"
@@ -1694,15 +1698,6 @@ lemma word_to_tcb_flags_union:
   done
 
 lemmas word_to_tcb_flags_simps = word_to_tcb_flags_subtract word_to_tcb_flags_union
-
-lemma postSetFlags_corres[corres]:
-  "flags = word_to_tcb_flags flags' \<Longrightarrow>
-   corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
-     (arch_post_set_flags  t flags) (postSetFlags t flags')"
-  unfolding arch_post_set_flags_def postSetFlags_def
-  by (corres term_simp: isFlagSet_set)
-
-end
 
 consts
   copyregsets_map :: "arch_copy_register_sets \<Rightarrow> Arch.copy_register_sets"

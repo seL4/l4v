@@ -121,10 +121,6 @@ present on all platforms is stored here.
 > atcbContextGet :: ArchTCB -> UserContext
 > atcbContextGet = atcbContext
 
-> data ArchTcbFlag = FpuDisabled
-
-> archTcbFlagToWord :: ArchTcbFlag -> Word
-> archTcbFlagToWord (FpuDisabled) = bit 0
 
 \subsection{ASID Pools}
 

@@ -21,8 +21,6 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/API/Invocation/AARCH64.hs CONTEXT AARCH64_H ONLY FlushType
 
-#INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs CONTEXT AARCH64_H ONLY ArchTcbFlag archTcbFlagToWord
-
 end
 
 end

@@ -18,8 +18,6 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Model/StateData/X64.lhs CONTEXT X64_H ONLY X64VSpaceRegionUse
 
-#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H ONLY ArchTcbFlag archTcbFlagToWord
-
 end (* context X64 *)
 
 end
