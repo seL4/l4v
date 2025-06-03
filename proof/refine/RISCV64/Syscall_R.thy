@@ -513,7 +513,7 @@ lemma invokeTCB_typ_at'[wp]:
      invokeTCB tinv
    \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   apply (cases tinv,
-         simp_all add: invokeTCB_def
+         simp_all add: invokeTCB_def invokeSetFlags_def
                        getThreadBufferSlot_def locateSlot_conv
             split del: if_split)
    apply (simp only: cases_simp if_cancel simp_thms conj_comms pred_conj_def

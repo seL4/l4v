@@ -362,6 +362,7 @@ definition valid_tcb' :: "tcb \<Rightarrow> kernel_state \<Rightarrow> bool" whe
                   \<and> tcbMCP t \<le> maxPriority
                   \<and> opt_tcb_at' (tcbSchedPrev t) s
                   \<and> opt_tcb_at' (tcbSchedNext t) s
+                  \<and> tcbFlags t && ~~ tcbFlagMask = 0
                   \<and> valid_arch_tcb' (tcbArch t) s"
 
 definition valid_ep' :: "Structures_H.endpoint \<Rightarrow> kernel_state \<Rightarrow> bool" where

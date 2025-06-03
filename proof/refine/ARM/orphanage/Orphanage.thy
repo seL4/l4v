@@ -1730,7 +1730,7 @@ lemma invokeTCB_no_orphans [wp]:
     apply (wp tc_no_orphans)
     apply (clarsimp split: option.splits simp: msg_align_bits elim!:is_aligned_weaken)
    apply (wpsimp simp: invokeTCB_def)
-  apply (wpsimp simp: invokeTCB_def)
+  apply (wpsimp simp: invokeTCB_def invokeSetFlags_def)
   done
 
 lemma invokeCNode_no_orphans [wp]:

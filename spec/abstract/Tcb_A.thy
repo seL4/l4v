@@ -259,7 +259,7 @@ where
     new_flags \<leftarrow> return $ flags - clearFlags \<union> setFlags;
     set_flags tcb new_flags;
     arch_post_set_flags tcb new_flags;
-    return []
+    return [tcb_flags_to_word new_flags]
   od)"
 
 definition

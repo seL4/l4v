@@ -225,6 +225,17 @@ lemma ccorres_pre_getObject_tcb:
   apply simp
   done
 
+lemma setMRs_single:
+  "setMRs thread buffer [val] = do
+     _ \<leftarrow> asUser thread (setRegister register.R2 val);
+     return 1
+   od"
+  apply (clarsimp simp: setMRs_def length_msgRegisters zipWithM_x_def zipWith_def split: option.splits)
+  apply (subst zip_commute, subst zip_singleton)
+   apply (simp add: length_msgRegisters size_msgRegisters_def length_0_conv[symmetric])
+  apply (clarsimp simp: msgRegisters_unfold sequence_x_def)
+  done
+
 end
 
 end

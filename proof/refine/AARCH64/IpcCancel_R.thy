@@ -2369,6 +2369,11 @@ lemma archThreadGet_wp:
   unfolding archThreadGet_def
   by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
 
+crunch fpuRelease
+  for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P t s)"
+  and valid_objs'[wp]: valid_objs'
+  and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+
 crunch prepareThreadDelete
   for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
   and inactive: "st_tcb_at' ((=) Inactive) t'"
