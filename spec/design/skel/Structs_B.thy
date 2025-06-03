@@ -13,6 +13,6 @@ imports Arch_Structs_B
 begin
 
 #INCLUDE_SETTINGS keep_constructor = tcb_flag
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs ONLY TcbFlag tcbFlagToWord
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs ONLY TcbFlag tcbFlagToWord tcbFlagMask
 
 end

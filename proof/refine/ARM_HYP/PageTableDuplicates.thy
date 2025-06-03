@@ -2030,7 +2030,7 @@ lemma invokeTCB_valid_duplicates'[wp]:
      apply (clarsimp split:option.splits)
      apply (rename_tac option)
      apply (case_tac option, simp_all)
-    apply (simp add:invokeTCB_def | wp mapM_x_wp' | intro impI conjI | wpc)+
+    apply (simp add:invokeTCB_def invokeSetFlags_def | wp mapM_x_wp' | intro impI conjI | wpc)+
   done
 
 lemma performInvocation_valid_duplicates'[wp]:
