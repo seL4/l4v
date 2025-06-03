@@ -401,6 +401,7 @@ lemma ptr_val_tcb_ptr_mask2:
   apply (simp add: is_aligned_add_helper ctcb_offset_defs objBits_simps')
   done
 
+
 section \<open>Domains\<close>
 
 text \<open>
@@ -507,6 +508,7 @@ value_type num_tcb_queues = "numDomains * numPriorities"
 lemma num_tcb_queues_calculation:
   "num_tcb_queues = numDomains * numPriorities"
   unfolding num_tcb_queues_val by eval
+
 
 text \<open>maxIRQ interface\<close>
 
@@ -620,6 +622,19 @@ schematic_goal hcrVCPU_val:
   "hcrVCPU = ?val"
   by (simp add: hcrVCPU_def hcrCommon_def hcrTWE_def hcrTWI_def
                 Kernel_Config.config_DISABLE_WFI_WFE_TRAPS_def)
+
+
+text \<open>TCBFlags interface\<close>
+
+lemma scast_seL4_TCBFlag_simps[simp]:
+  "scast seL4_TCBFlag_NoFlag = 0"
+  "scast seL4_TCBFlag_fpuDisabled = tcbFlagToWord FpuDisabled"
+  by (clarsimp simp: seL4_TCBFlag_fpuDisabled_def seL4_TCBFlag_NoFlag_def tcbFlagToWord_def)+
+
+(* config_HAVE_FPU has to be unfolded here to match the implicit enum value from the preprocessor. *)
+lemma scast_seL4_TCBFlag_MASK_tcbFlagMask[simp]:
+  "scast seL4_TCBFlag_MASK = tcbFlagMask"
+  by (clarsimp simp: seL4_TCBFlag_MASK_def tcbFlagMask_def Kernel_Config.config_HAVE_FPU_def tcbFlagToWord_def)
 
 (* end of Kernel_Config interface section *)
 

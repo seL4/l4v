@@ -3291,7 +3291,7 @@ proof -
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
        tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
        tcbBoundNotification_C := ntfn_Ptr 0,
-       flags_C := 0\<rparr>"
+       tcbFlags_C := 0\<rparr>"
 
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)

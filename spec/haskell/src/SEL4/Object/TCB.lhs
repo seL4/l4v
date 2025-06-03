@@ -556,11 +556,16 @@ Modifying the current thread may require rescheduling because modified registers
 
 > invokeTCB (SetFlags tcb flagsClear flagsSet) =
 >   withoutPreemption $ do
+>     newFlags <- invokeSetFlags tcb flagsClear flagsSet
+>     return [newFlags]
+
+> invokeSetFlags :: PPtr TCB -> Word -> Word -> Kernel Word
+> invokeSetFlags tcb flagsClear flagsSet = do
 >     flags <- threadGet tcbFlags tcb
->     let newFlags = (flags .&. complement flagsClear) .|. flagsSet
+>     let newFlags = (flags .&. complement flagsClear) .|. (flagsSet .&. tcbFlagMask)
 >     setFlags tcb newFlags
 >     Arch.postSetFlags tcb newFlags
->     return []
+>     return newFlags
 
 \subsection{Decoding Domain Invocations}
 

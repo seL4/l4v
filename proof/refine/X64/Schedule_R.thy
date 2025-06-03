@@ -150,16 +150,14 @@ lemma switchLocalFpuOwner_corres[corres]:
    apply (auto simp: current_fpu_owner_Some_tcb_at fpuOwner_asrt_cross)
   done
 
-lemma isFlagSet_set:
-  "isFlagSet flag flags = (flag \<in> word_to_tcb_flags flags)"
-  by (clarsimp simp: isFlagSet_def word_to_tcb_flags_def)
-
+(* FIXME FPU: when the FPU being enabled is properly configurable for the proofs then this should
+              have config_HAVE_FPU as a precondition instead of being unfolded. *)
 lemma lazyFpuRestore_corres[corres]:
   "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and tcb_at t) \<top>
              (lazy_fpu_restore t) (lazyFpuRestore t)"
   unfolding lazy_fpu_restore_def lazyFpuRestore_def
   by (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"]
-          term_simp: tcb_relation_def isFlagSet_set
+          term_simp: tcb_relation_def Kernel_Config.config_HAVE_FPU_def
                  wp: hoare_drop_imps)
 
 crunch set_vm_root
@@ -1101,6 +1099,7 @@ lemma threadSet_invs_no_cicd'_trivialT:
     "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
     "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
   shows "threadSet F t \<lbrace>invs_no_cicd'\<rbrace>"
   apply (simp add: invs_no_cicd'_def valid_state'_def)
   apply (wp threadSet_valid_pspace'T

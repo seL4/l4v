@@ -448,7 +448,7 @@ where
      \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb
      \<and> option_to_ctcb_ptr (tcbSchedPrev atcb) = tcbSchedPrev_C ctcb
      \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb
-     \<and> tcbFlags atcb = tcb_C.flags_C ctcb"
+     \<and> tcbFlags atcb = tcbFlags_C ctcb"
 
 abbreviation
   "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"
