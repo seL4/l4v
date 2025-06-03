@@ -513,3 +513,6 @@ Sets of TCB flags are bitwise OR'd and represented as a word.
 
 > isFlagSet :: TcbFlag -> TcbFlags -> Bool
 > isFlagSet flag flags = tcbFlagToWord flag .&. flags /= 0
+
+> tcbFlagMask :: Word
+> tcbFlagMask = if config_HAVE_FPU then tcbFlagToWord FpuDisabled else 0

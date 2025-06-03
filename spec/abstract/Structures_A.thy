@@ -372,8 +372,14 @@ type_synonym domain = word8
 
 type_synonym tcb_flags = "tcb_flag set"
 
+text \<open>
+  The set of TCB flags may be larger than the set of configured flags (e.g. FpuDisabled is only
+  used when FPU is configured), hence we only convert flags in `tcbFlagMask`. \<close>
 definition word_to_tcb_flags :: "machine_word \<Rightarrow> tcb_flags" where
-  "word_to_tcb_flags w \<equiv> {flag. tcbFlagToWord flag && w \<noteq> 0}"
+  "word_to_tcb_flags w \<equiv> {flag. w && tcbFlagToWord flag && tcbFlagMask \<noteq> 0}"
+
+definition tcb_flags_to_word :: "tcb_flags \<Rightarrow> machine_word" where
+  "tcb_flags_to_word flags \<equiv> THE w. word_to_tcb_flags w = flags \<and> w && ~~ tcbFlagMask = 0"
 
 record tcb =
  tcb_ctable        :: cap

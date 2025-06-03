@@ -216,3 +216,9 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 > nullPointer :: PPtr a
 > nullPointer = PPtr 0
 
+\subsection{Config parameters}
+
+Whether the FPU is enabled or not.
+
+> config_HAVE_FPU :: Bool
+> config_HAVE_FPU = error "generated from CMake config"

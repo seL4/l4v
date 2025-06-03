@@ -1096,6 +1096,7 @@ lemma threadSet_invs_trivialT2:
     "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
     "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
   shows
   "\<lbrace>\<lambda>s. invs' s \<and> (\<forall>tcb. is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits)\<rbrace>
    threadSet F t
@@ -1670,25 +1671,6 @@ crunch set_flags
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
 
-lemma tcbFlagToWord_bit:
-  "(\<exists>n. tcbFlagToWord flag = bit n) \<or> tcbFlagToWord flag = 0"
-  by (auto simp: tcbFlagToWord_def split: tcb_flag.splits simp del: bit_def)
-
-lemma word_to_tcb_flags_subtract:
-  "word_to_tcb_flags (flags && ~~ flags') = word_to_tcb_flags flags - word_to_tcb_flags flags'"
-  apply (clarsimp simp: word_to_tcb_flags_def intro!: set_eqI)
-  apply (cut_tac flag=x in tcbFlagToWord_bit)
-  apply (fastforce simp: word_eq_iff tcbFlagToWord_bit)
-  done
-
-lemma word_to_tcb_flags_union:
-  "word_to_tcb_flags (flags || flags') = word_to_tcb_flags flags \<union> word_to_tcb_flags flags'"
-  apply (clarsimp simp: word_to_tcb_flags_def intro!: set_eqI)
-  apply (cut_tac flag=x in tcbFlagToWord_bit)
-  apply (fastforce simp: word_eq_iff tcbFlagToWord_bit)
-  done
-
-lemmas word_to_tcb_flags_simps = word_to_tcb_flags_subtract word_to_tcb_flags_union
 
 consts
   copyregsets_map :: "arch_copy_register_sets \<Rightarrow> Arch.copy_register_sets"
@@ -1767,6 +1749,15 @@ where
 | "tcb_inv_wf' (tcbinvocation.SetFlags ref clears sets)
              = (tcb_at' ref and ex_nonz_cap_to' ref)"
 
+lemma invokeSetFlags_helper:
+  "flags = word_to_tcb_flags flags' \<Longrightarrow>
+   corres (=) \<top> (K (flags' && ~~ tcbFlagMask = 0))
+     (return [tcb_flags_to_word (flags - word_to_tcb_flags clears' \<union> word_to_tcb_flags sets')])
+     (return [flags' && ~~ clears' || sets' && tcbFlagMask])"
+  by (fastforce simp: mask_eq_x_eq_0[symmetric] word_to_tcb_flags_simps[symmetric]
+                      word_to_tcb_flags_and_not[symmetric] tcb_flags_to_word_id word_bw_comms
+                      word_ao_dist2 word_bw_assocs[symmetric])
+
 lemma invokeTCB_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (dc \<oplus> (=))
@@ -1821,10 +1812,13 @@ lemma invokeTCB_corres:
           apply (wpsimp wp: hoare_drop_imp)+
     apply (fastforce dest: valid_sched_valid_queues simp: valid_sched_weak_strg)
    apply fastforce
-  apply (clarsimp simp: invokeTCB_def)
+  apply (clarsimp simp: invokeTCB_def invokeSetFlags_def bind_assoc)
   apply (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"]
-             term_simp: tcb_relation_def word_to_tcb_flags_simps)
-   apply fastforce+
+                        invokeSetFlags_helper
+             term_simp: tcb_relation_def word_to_tcb_flags_simps Diff_Int_distrib Diff_Int
+                    wp: threadGet_wp)
+   apply fastforce
+  apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb' simp: valid_tcb'_def)
   done
 
 lemma tcbBoundNotification_caps_safe[simp]:
@@ -1895,11 +1889,19 @@ lemma setTLSBase_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (wpsimp simp: invokeTCB_def)
 
-lemma threadSet_flags_invs[wp]:
-  "threadSet (tcbFlags_update f) t \<lbrace>invs'\<rbrace>"
-  by (wpsimp wp: threadSet_invs_trivial)
+lemma threadSet_flags_invs'[wp]:
+  "\<lbrace>invs' and K (\<forall>flags. flags && ~~ tcbFlagMask = 0 \<longrightarrow> f flags && ~~ tcbFlagMask = 0)\<rbrace>
+   threadSet (tcbFlags_update f) t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by (rule hoare_gen_asm) (wpsimp wp: threadSet_invs_trivial)
 
-crunch setFlags, postSetFlags
+lemma setFlags_invs'[wp]:
+  "\<lbrace>invs' and K (flags && ~~ tcbFlagMask = 0)\<rbrace>
+   setFlags t flags
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by (wpsimp simp: setFlags_def wp: threadSet_flags_invs')
+
+crunch postSetFlags
   for invs'[wp]: invs'
   (ignore: threadSet)
 
@@ -1907,7 +1909,11 @@ lemma invokeSetFlags_invs'[wp]:
   "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.SetFlags tcb clears' sets')\<rbrace>
    invokeTCB (tcbinvocation.SetFlags tcb clears' sets')
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (wpsimp simp: invokeTCB_def)
+  unfolding invokeTCB_def invokeSetFlags_def
+  apply (wpsimp wp: threadGet_wp)
+  apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb'
+                   simp: valid_tcb'_def word_ao_dist word_bw_assocs word_bw_lcs)+
+  done
 
 lemma tcbinv_invs':
   "\<lbrace>invs' and sch_act_simple and ct_in_state' runnable' and tcb_inv_wf' ti\<rbrace>
