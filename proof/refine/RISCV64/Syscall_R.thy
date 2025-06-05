@@ -171,6 +171,7 @@ lemma decodeInvocation_corres:
     \<Longrightarrow>
     corres (ser \<oplus> inv_relation)
            (invs and valid_sched and valid_list
+                 and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and ct_not_in_release_q
                  and valid_cap cap and cte_at slot and cte_wp_at ((=) cap) slot
                  and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s)
                  and case_option \<top> in_user_frame buffer
@@ -2527,14 +2528,6 @@ lemma checkBudgetRestart_corres:
     apply (fastforce simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs'
                     dest!: invs_strengthen_cur_sc_tcb_are_bound)
    apply (clarsimp simp: invs_cur_sc_chargeableE invs_cur ct_activatable_ct_not_blocked)+
-  done
-
-lemma ct_not_in_release_q_cross:
-  "\<lbrakk>ct_not_in_release_q s; release_queue_relation s s'; cur_thread s = ksCurThread s'; cur_tcb' s'\<rbrakk>
-   \<Longrightarrow> pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
-  apply (clarsimp simp: release_queue_relation_def list_queue_relation_def)
-  apply (fastforce simp: not_in_release_q_def pred_map_def opt_pred_def opt_map_red obj_at'_def
-                         cur_tcb'_def)
   done
 
 lemma handleInv_handleRecv_corres:
