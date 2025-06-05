@@ -2650,23 +2650,51 @@ lemma decodeReadRegisters_corres:
        apply (wp|simp)+
   done
 
+defs active_sc_tcb_at'_ct_asrt_def:
+  "active_sc_tcb_at'_ct_asrt \<equiv> \<lambda>s. active_sc_tcb_at' (ksCurThread s) s"
+
+declare active_sc_tcb_at'_ct_asrt_def[simp]
+
+lemma ct_not_in_release_q_cross:
+  "\<lbrakk>ct_not_in_release_q s; release_queue_relation s s'; cur_thread s = ksCurThread s'; cur_tcb' s'\<rbrakk>
+   \<Longrightarrow> pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
+  by (fastforce simp: release_queue_relation_def list_queue_relation_def not_in_release_q_def
+                      pred_map_def opt_pred_def opt_map_red obj_at'_def cur_tcb'_def)
+
+lemma ct_not_in_release_q_cross':
+  "\<lbrakk>ct_not_in_release_q s; release_queue_relation s s'; cur_thread s = ksCurThread s'; cur_tcb' s'\<rbrakk>
+   \<Longrightarrow> (Not \<circ> tcbInReleaseQueue |< (tcbs_of' s')) (ksCurThread s')"
+  by (fastforce simp: release_queue_relation_def list_queue_relation_def not_in_release_q_def
+                      opt_pred_def opt_map_red obj_at'_def cur_tcb'_def)
+
+defs ct_not_in_release_q'_asrt_def:
+  "ct_not_in_release_q'_asrt \<equiv> \<lambda>s. (Not \<circ> tcbInReleaseQueue |< (tcbs_of' s)) (ksCurThread s)"
+
+declare ct_not_in_release_q'_asrt_def[simp]
+
 lemma decodeWriteRegisters_corres:
   notes if_cong [cong]
   shows
   "\<lbrakk> length args < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
-   corres (ser \<oplus> tcbinv_relation) (invs and tcb_at t) (invs' and tcb_at' t)
+   corres (ser \<oplus> tcbinv_relation)
+     (\<lambda>s. invs s \<and> tcb_at t s \<and> active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s)
+     (invs' and tcb_at' t)
      (decode_write_registers args (cap.ThreadCap t))
      (decodeWriteRegisters args (ThreadCap t))"
   apply (simp add: decode_write_registers_def decodeWriteRegisters_def)
   apply (cases args, simp_all)
   apply (case_tac list, simp_all)
   apply (simp add: decodeTransfer_def genericLength_def)
+  apply (simp add: liftE_bindE stateAssertE_def)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce dest: curthread_relation intro: active_sc_tcb_at_cross)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce dest: curthread_relation intro!: ct_not_in_release_q_cross' cur_tcb_cross)
   apply (simp add: word_less_nat_alt unat_of_nat64)
   apply (simp add: whenE_def, simp add: returnOk_def)
   apply (simp add: genericTake_def)
   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (simp add: liftE_bindE)
     apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split_norE)
          apply (rule corres_trivial, simp)
@@ -2704,7 +2732,7 @@ lemma decodeWriteReg_wf:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
      decodeWriteRegisters args (ThreadCap t)
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
-  apply (simp add: decodeWriteRegisters_def whenE_def decodeTransfer_def
+  apply (simp add: decodeWriteRegisters_def whenE_def decodeTransfer_def stateAssertE_def
              cong: list.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
@@ -3545,10 +3573,12 @@ lemma decodeTCBInvocation_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';
       list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
       length args < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
-  corres (ser \<oplus> tcbinv_relation) (einvs and tcb_at t and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> cte_at (snd x) s))
-                                 (invs' and tcb_at' t and (\<lambda>s. \<forall>x \<in> set extras'. s \<turnstile>' fst x \<and> cte_at' (snd x) s))
-         (decode_tcb_invocation label args c slot extras)
-         (decodeTCBInvocation label args c' (cte_map slot) extras')"
+  corres (ser \<oplus> tcbinv_relation)
+    (\<lambda>s. einvs s \<and> tcb_at t s \<and> active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s
+         \<and> (\<forall>x \<in> set extras. s \<turnstile> fst x \<and> cte_at (snd x) s))
+    (invs' and tcb_at' t and (\<lambda>s. \<forall>x \<in> set extras'. s \<turnstile>' fst x \<and> cte_at' (snd x) s))
+    (decode_tcb_invocation label args c slot extras)
+    (decodeTCBInvocation label args c' (cte_map slot) extras')"
   apply (rule_tac F="cap_aligned c \<and> capAligned c'" in corres_req)
    apply (clarsimp simp: cap_aligned_def capAligned_def objBits_simps word_bits_def)
    apply (drule obj_at_aligned', simp_all add: objBits_simps')

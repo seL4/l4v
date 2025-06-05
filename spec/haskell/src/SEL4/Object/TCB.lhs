@@ -187,6 +187,8 @@ For both of these operations, the first argument is a flags field. The lowest bi
 > decodeWriteRegisters :: [Word] -> Capability ->
 >         KernelF SyscallError TCBInvocation
 > decodeWriteRegisters (flags:n:values) cap = do
+>     stateAssert (active_sc_tcb_at'_ct_asrt) "the current thread must be bound to an active scheduling context"
+>     stateAssert (ct_not_in_release_q'_asrt) "the current thread must not be in the release queue"
 >     when (genericLength values < n) $ throw TruncatedMessage
 >     transferArch <- Arch.decodeTransfer $ fromIntegral $ flags `shiftR` 8
 >     self <- withoutFailure $ getCurThread

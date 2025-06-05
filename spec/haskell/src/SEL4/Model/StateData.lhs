@@ -548,6 +548,16 @@ An assert that will say that there is a TCB with active' thread state at the giv
 > active_tcb_at'_asrt :: PPtr TCB -> KernelState -> Bool
 > active_tcb_at'_asrt _ _ = True
 
+An assert that will say that the current thread is associated with an active scheduling context
+
+> active_sc_tcb_at'_ct_asrt :: KernelState -> Bool
+> active_sc_tcb_at'_ct_asrt _ = True
+
+An assert that will say that the current thread is not in the release queue
+
+> ct_not_in_release_q'_asrt :: KernelState -> Bool
+> ct_not_in_release_q'_asrt _ = True
+
 An assert that will say that valid_tcbs' holds
 
 > valid_tcbs'_asrt :: KernelState -> Bool

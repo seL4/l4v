@@ -1475,13 +1475,17 @@ lemma lookupIPCBuffer_isolatable:
 crunch getSchedulable
   for (empty_fail) empty_fail[wp]
 
+crunch getSchedulerAction
+  for (no_fail) no_fail[wp]
+
 lemma setThreadState_rewrite_simple:
-  "monadic_rewrite True True
-     (\<lambda>s. ((runnable' st
-            \<and> active_sc_tcb_at' (ksCurThread s) s
-            \<and> (Not \<circ> tcbInReleaseQueue |< tcbs_of' s) (ksCurThread s))
-           \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<or> t \<noteq> ksCurThread s)
-          \<and> tcb_at' t s)
+  "monadic_rewrite False True
+     (\<lambda>s. runnable' st
+          \<and> ((active_sc_tcb_at' (ksCurThread s) s
+             \<and> (Not \<circ> tcbInReleaseQueue |< tcbs_of' s) (ksCurThread s))
+            \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread
+            \<or> t \<noteq> ksCurThread s)
+          \<and> tcb_at' t s \<and> valid_tcbs' s)
      (setThreadState st t)
      (threadSet (tcbState_update (\<lambda>_. st)) t)"
   supply if_split[split del]
@@ -1494,10 +1498,16 @@ lemma setThreadState_rewrite_simple:
      apply (rule monadic_rewrite_symb_exec_l_drop)+
            apply (rule monadic_rewrite_refl)
           apply (wpsimp simp: getCurThread_def
-                          wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at')+
+                          wp: hoare_vcg_disj_lift threadSet_valid_tcbs')+
    apply (rule monadic_rewrite_refl)
-  apply (fastforce simp: schedulable'_def obj_at_simps opt_map_def opt_pred_def active_sc_tcb_at'_def
-                  split: option.splits if_splits)
+  apply clarsimp
+  apply (intro conjI impI allI)
+    apply (fastforce simp: schedulable'_def obj_at_simps opt_map_def opt_pred_def
+                           active_sc_tcb_at'_def
+                    split: option.splits if_splits)
+   apply (fastforce intro: valid_tcb'_tcbState_update
+                     simp: valid_tcb_state'_def split: thread_state.splits)
+  apply fastforce
   done
 
 end
