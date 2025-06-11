@@ -1656,7 +1656,7 @@ lemma cte_map_pulls_tcb_to_abstract:
                   \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> cte_level_bits))))"
   apply (rule pspace_dom_relatedE, assumption+)
   apply (erule(1) obj_relation_cutsE;
-         clarsimp simp: other_obj_relation_def
+         clarsimp simp: other_obj_relation_def other_aobj_relation_def
                   split: Structures_A.kernel_object.split_asm
                          AARCH64_A.arch_kernel_obj.split_asm if_split_asm)
   apply (drule tcb_cases_related2)
@@ -2053,8 +2053,8 @@ lemma obj_refs_relation_Master:
                     else if capClass (capMasterCap cap') = PhysicalClass
                     then {capUntypedPtr (capMasterCap cap')}
                     else {})"
-  by (simp add: isCap_simps
-         split: cap_relation_split_asm arch_cap.split_asm)
+  by (clarsimp simp: isCap_simps
+               split: cap_relation_split_asm arch_cap.split_asm)
 
 lemma cap_irqs_relation_Master:
   "cap_relation cap cap' \<Longrightarrow>
@@ -6659,6 +6659,7 @@ lemma cteSwap_corres:
          (cap_swap scap src dcap dest) (cteSwap scap' src' dcap' dest')"
   (is "corres _ ?P ?P' _ _") using assms including no_pre
   supply None_upd_eq[simp del]
+  supply AARCH64.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (unfold cap_swap_def cteSwap_def)
   apply (cases "src=dest")
    apply (rule corres_assume_pre)
@@ -6834,7 +6835,7 @@ lemma cteSwap_corres:
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
   apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
   apply (rule conjI)
-   subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv AARCH64.data_at_def)
+   subgoal by (clarsimp simp: AARCH64.ghost_relation_typ_at set_cap_a_type_inv AARCH64.data_at_def)
   apply(subst conj_assoc[symmetric])
   apply (rule conjI)
    prefer 2

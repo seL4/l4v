@@ -220,7 +220,7 @@ next
                  (map (nat_to_cref bits) xs))"
     apply (subgoal_tac "Suc (unat (arg4 + arg5 - 1)) = unat arg4 + unat arg5")
      apply (simp add: upto_enum_def xs del: upt.simps)
-     apply (clarsimp simp: cte_map_def)
+     apply (clarsimp simp: cte_map_def shiftl_t2n)
      apply (subst of_bl_nat_to_cref)
        apply simp
       apply (simp add: word_bits_def)
@@ -3814,6 +3814,7 @@ lemma updateFreeIndex_corres:
          (cte_at' (cte_map src)
            and pspace_distinct' and pspace_aligned')
          (set_cap cap src) (updateFreeIndex (cte_map src) idx)"
+  supply ARM.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (rule corres_name_pre)
   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
   apply (rule corres_guard_imp)

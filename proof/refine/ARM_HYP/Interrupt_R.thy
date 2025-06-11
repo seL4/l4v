@@ -1009,32 +1009,31 @@ lemma handleInterrupt_corres:
   apply (rule corres_gen_asm2)
 
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
-    apply (simp add: getSlotCap_def bind_assoc)
-    apply (rule corres_guard_imp)
-      apply (rule corres_split[OF getIRQSlot_corres])
-        apply simp
-        apply (rule corres_split[OF get_cap_corres,
-                                 where R="\<lambda>rv. einvs and valid_cap rv"
-                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
-          apply (rule corres_underlying_split[where r'=dc])
-             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
-              apply (clarsimp simp add: when_def doMachineOp_return)
-              apply (rule corres_guard_imp, rule sendSignal_corres)
-               apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
-            apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
-            apply (corres corres: corres_machine_op corres_eq_trivial intro: no_fail_ackInterrupt)
-           apply wpsimp+
-    apply fastforce
+   apply (simp add: getSlotCap_def bind_assoc)
    apply (rule corres_guard_imp)
-     apply (rule corres_split)
-        apply (rule corres_split[OF timerTick_corres corres_machine_op])
-          apply (rule corres_eq_trivial, wpsimp+)
-       apply (rule corres_machine_op)
-       apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
-      apply wp+
-    apply fastforce
-   apply clarsimp
-  apply corresKsimp
+     apply (rule corres_split[OF getIRQSlot_corres])
+       apply simp
+       apply (rule corres_split[OF get_cap_corres,
+                                where R="\<lambda>rv. einvs and valid_cap rv"
+                                  and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
+         apply (rule corres_underlying_split[where r'=dc])
+            apply (case_tac xb, simp_all add: doMachineOp_return)[1]
+             apply (clarsimp simp add: when_def doMachineOp_return)
+             apply (rule corres_guard_imp, rule sendSignal_corres)
+              apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
+           apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
+           apply (corres corres: corres_machine_op corres_eq_trivial intro: no_fail_ackInterrupt)
+          apply wpsimp+
+   apply fastforce
+  apply (rule corres_guard_imp)
+    apply (rule corres_split)
+       apply (rule corres_split[OF timerTick_corres corres_machine_op])
+         apply (rule corres_eq_trivial, wpsimp+)
+      apply (rule corres_machine_op)
+      apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
+     apply wp+
+   apply fastforce
+  apply clarsimp
   done
 
 lemma threadSet_ksDomainTime[wp]:

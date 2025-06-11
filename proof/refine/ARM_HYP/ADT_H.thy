@@ -612,7 +612,7 @@ proof -
      apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
     using pspace_aligned[simplified pspace_aligned_def]
      apply (drule_tac x=y in bspec, clarsimp)
-     apply clarsimp
+     apply (clarsimp simp: shiftl_t2n')
      apply (case_tac "(of_bl ya::word32) * 2^cte_level_bits = 0", simp)
       apply (rule ext)
       apply simp
@@ -626,7 +626,7 @@ proof -
        apply (erule_tac x=bl in allE)
        apply clarsimp+
       apply (frule pspace_relation_absD[OF _ pspace_relation])
-      apply (simp add: cte_map_def)
+      apply (simp add: cte_map_def shiftl_t2n')
       apply (drule_tac x="y + of_bl bl * 2^cte_level_bits" in spec)
       apply clarsimp
       apply (erule_tac x="cte_relation bl" in allE)
@@ -670,13 +670,13 @@ proof -
 
        apply clarsimp
        apply (case_tac arch_kernel_obj)
-           apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
+           apply (simp add: other_aobj_relation_def asid_pool_relation_def inv_def o_def)
           apply (clarsimp simp add:  pte_relation_def)
          apply (clarsimp simp add:  pde_relation_def)
         apply (clarsimp split: if_split_asm)+
-       apply (clarsimp simp: other_obj_relation_def)
+       apply (clarsimp simp: other_aobj_relation_def)
       apply (case_tac arch_kernel_obj)
-          apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
+          apply (simp add: other_aobj_relation_def asid_pool_relation_def inv_def o_def)
     using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
          apply (erule_tac x=y in allE)
          apply (clarsimp simp add: pte_relation_def absPageTable_def pt_bits_def pageBits_def)
@@ -714,9 +714,9 @@ proof -
          apply (case_tac x, simp_all)[1]
         apply (clarsimp simp add: pde_relation_def)
        apply (clarsimp split: if_split_asm)+
-      apply (simp add: other_obj_relation_def inv_def o_def)
+      apply (simp add: other_aobj_relation_def inv_def o_def)
      apply (case_tac arch_kernel_obj)
-         apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
+         apply (simp add: other_aobj_relation_def asid_pool_relation_def inv_def o_def)
         apply (clarsimp simp add:  pte_relation_def)
     using pspace_aligned
        apply (simp add: pspace_aligned_def dom_def)
@@ -756,12 +756,12 @@ proof -
        apply (rule set_eqI, clarsimp)
        apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def split: if_split_asm)
-     apply (clarsimp simp add: other_obj_relation_def)
+     apply (clarsimp simp add: other_aobj_relation_def)
 
     apply clarsimp
     apply (rename_tac arch_kernel_obj vcpu)
     apply (case_tac arch_kernel_obj;
-           clarsimp simp: other_obj_relation_def pte_relation_def pde_relation_def split: if_splits)
+           clarsimp simp: other_aobj_relation_def pte_relation_def pde_relation_def split: if_splits)
     apply (rename_tac vcpu')
     apply (case_tac vcpu')
     apply (clarsimp simp: vcpu_relation_def split: vcpu.splits)
@@ -876,11 +876,11 @@ proof -
   apply (rule conjI[rotated])
   apply (drule tcb_cap_cases_length)
   apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
-    apply (fastforce simp: cte_level_bits_def objBits_defs)+
+    apply (fastforce simp: cte_level_bits_def objBits_defs shiftl_t2n')+
   apply (case_tac "b = [False, False, False]")
    apply simp
   apply (frule_tac b=b in bin_to_bl_of_bl_eq)
-    apply (fastforce simp: tcb_cap_cases_length cte_level_bits_def objBits_defs)+
+    apply (fastforce simp: tcb_cap_cases_length cte_level_bits_def objBits_defs shiftl_t2n')+
   apply (subgoal_tac "ksPSpace s' (cte_map (a, b)) = None")
    prefer 2
    apply (rule ccontr)
@@ -896,8 +896,8 @@ proof -
     apply (rule word_plus_mono_right)
      apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
      apply (drule_tac k="2^cte_level_bits" in word_mult_less_mono1)
-       apply (fastforce simp: cte_level_bits_def objBits_defs)+
-     apply (simp add: mask_def)
+       apply (fastforce simp: cte_level_bits_def objBits_defs shiftl_t2n')+
+     apply (simp add: mask_def shiftl_t2n')
      apply (rule ccontr)
      apply (simp add: not_le)
      apply (drule (1) less_trans, fastforce simp: cte_level_bits_def objBits_defs)
@@ -908,11 +908,11 @@ proof -
     apply (drule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
     apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
     apply (drule_tac k="2^cte_level_bits" in word_mult_less_mono1)
-      apply (fastforce simp: cte_level_bits_def objBits_defs)+
+      apply (fastforce simp: cte_level_bits_def objBits_defs shiftl_t2n')+
     apply (subgoal_tac "(0x80::word32) < mask tcbBlockSizeBits")
      prefer 2
-     apply (simp add: mask_def objBits_defs)
-    apply (rule_tac word_random, (fastforce simp: cte_level_bits_def objBits_defs)+)
+     apply (simp add: mask_def objBits_defs shiftl_t2n')
+    apply (rule_tac word_random, (fastforce simp: cte_level_bits_def objBits_defs shiftl_t2n')+)
    apply (simp add: mult.commute[of _ "2^cte_level_bits"]
                     shiftl_t2n[of _ cte_level_bits, simplified, symmetric])
    apply word_bitwise
@@ -921,7 +921,7 @@ proof -
    apply (rename_tac b, case_tac b, simp)
    apply (rename_tac b, case_tac b, simp)
    apply (clarsimp simp add: test_bit_of_bl eval_nat_numeral cte_level_bits_def)
-  apply (simp add: cte_map_def split: option.splits)
+  apply (simp add: cte_map_def shiftl_t2n' split: option.splits)
   apply (drule tcb_cap_cases_length)
   apply (rule of_bl_mult_and_not_mask_eq[where m=cte_level_bits, simplified])
    apply (fastforce simp: cte_level_bits_def objBits_defs)+

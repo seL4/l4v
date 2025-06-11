@@ -2499,6 +2499,7 @@ lemma hwASIDInvalidate_valid_ap' [wp]:
 
 lemma deleteASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> deleteASID asid pd \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply inj_ASIDPool[simp del]
   apply (simp add: deleteASID_def cong: option.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+

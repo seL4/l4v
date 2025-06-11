@@ -634,13 +634,13 @@ proof -
 
      apply clarsimp
      apply (case_tac arch_kernel_obj)
-       apply (simp add: other_obj_relation_def asid_pool_relation_def
+       apply (simp add: other_aobj_relation_def asid_pool_relation_def
                         inv_def o_def)
       apply (clarsimp simp add:  pte_relation_def)
      apply (clarsimp split: if_split_asm)+
 
     apply (case_tac arch_kernel_obj)
-      apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
+      apply (simp add: other_aobj_relation_def asid_pool_relation_def inv_def
                        o_def)
     using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
      apply (erule_tac x=y in allE)
@@ -666,7 +666,7 @@ proof -
       apply (case_tac ko; simp add: tcb_relation_cut_def other_obj_relation_def)
        apply (clarsimp simp add: cte_relation_def split: if_split_asm)
       apply (rename_tac ako' y ko P ako)
-      apply (case_tac ako; clarsimp simp: other_obj_relation_def bit_simps)
+      apply (case_tac ako; clarsimp simp: other_aobj_relation_def bit_simps)
        apply (simp add: pte_relation_def)
     using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
        apply (erule_tac x=y in allE)
