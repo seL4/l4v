@@ -136,11 +136,11 @@ lemma pred[simp,intro!]:
 
 lemma minus1_leq:
   "\<lbrakk> x - 1 \<le> y; y < x \<rbrakk> \<Longrightarrow> (y::'a) = x-1"
-  by (smt Rep_1 Rep_Abs_mod Rep_less_n less_def diff_def int_mod_ge le_neq_trans)
+  by (smt (verit) Rep_1 Rep_Abs_mod Rep_less_n less_def diff_def int_mod_ge le_neq_trans)
 
 lemma max_bound_leq[simp,intro!]:
   "(x::'a) \<le> -1"
-  by (smt Rep_1 Rep_Abs_mod Rep_less_n less_eq_def int_mod_ge' minus_def)
+  by (smt (verit) Rep_1 Rep_Abs_mod Rep_less_n less_eq_def int_mod_ge' minus_def)
 
 lemma leq_minus1_less:
   "0 < y \<Longrightarrow> (x \<le> y - 1) = (x < (y::'a))"
@@ -179,7 +179,7 @@ lemma Suc_size[simp]:
 lemma no_overflow_eq_max_bound:
   "((x::'a) < x + 1) = (x < -1)"
   unfolding definitions
-  by (smt Rep_Abs_mod Rep_Abs_1 Rep_less_n int_mod_ge int_mod_ge' size0)
+  by (smt (verit) Rep_Abs_mod Rep_Abs_1 Rep_less_n int_mod_ge int_mod_ge' size0)
 
 lemma plus_one_leq:
   "x < y \<Longrightarrow> x + 1 \<le> (y::'a)"
@@ -188,7 +188,7 @@ lemma plus_one_leq:
 lemma less_uminus:
   "\<lbrakk> - x < y; x \<noteq> 0 \<rbrakk> \<Longrightarrow> - y < (x::'a)"
   unfolding definitions
-  by (smt Rep_inverse Rep_mod Rep_Abs_mod size0 zmod_zminus1_eq_if)
+  by (smt (verit) Rep_inverse Rep_mod Rep_Abs_mod size0 zmod_zminus1_eq_if)
 
 lemma of_nat_cases[case_names of_nat]:
   "(\<And>m. \<lbrakk> (x::'a) = of_nat m; m < nat n \<rbrakk> \<Longrightarrow> P) \<Longrightarrow> P"
@@ -259,7 +259,7 @@ proof -
     next
       case False
       with plus show ?thesis
-       by (smt top Rep_Abs_mod Rep_le_n less_def less_eq_def diff_def int_mod_ge' size0)
+       by (smt (verit) top Rep_Abs_mod Rep_le_n less_def less_eq_def diff_def int_mod_ge' size0)
     qed
   qed
   ultimately show ?thesis by simp
@@ -381,8 +381,8 @@ proof -
     assume "y < 2 * CARD('a)"
     ultimately
     have "y = nat (Rep_bit0 x)"
-      by (smt Abs_bit0'_code card_bit0 mod_pos_pos_trivial nat_int of_nat_less_0_iff
-              zless_nat_eq_int_zless)
+      by (smt (verit) Abs_bit0'_code card_bit0 mod_pos_pos_trivial nat_int of_nat_less_0_iff
+                      zless_nat_eq_int_zless)
   }
   ultimately
   show ?thesis by (simp  add: fromEnum_def enum_bit0_def size_bit0_def)
@@ -401,8 +401,8 @@ proof -
     assume "y < Suc (2 * CARD('a))"
     ultimately
     have "y = nat (Rep_bit1 x)"
-      by (smt Abs_bit1'_code card_bit1 mod_pos_pos_trivial nat_int of_nat_less_0_iff
-              zless_nat_eq_int_zless)
+      by (smt (verit) Abs_bit1'_code card_bit1 mod_pos_pos_trivial nat_int of_nat_less_0_iff
+                      zless_nat_eq_int_zless)
   }
   ultimately
   show ?thesis by (simp add: fromEnum_def enum_bit1_def size_bit1_def del: upt_Suc)

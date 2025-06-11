@@ -567,7 +567,7 @@ lemma sep_conj_coimplI:
 
 lemma sep_conj_septract_curry:
   "((P \<and>* Q) -* R) s \<Longrightarrow>  (P -* (Q -* R)) s"
-  by (smt sep_antimp' sep_conj_coimplI sep_septraction_snake)
+  by (smt (verit) sep_antimp' sep_conj_coimplI sep_septraction_snake)
 
 lemma sep_snake_boxI:
   "Q s \<Longrightarrow> (\<box> \<leadsto>* Q) s"
