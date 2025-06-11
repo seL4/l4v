@@ -170,7 +170,7 @@ lemma size_plus:
   "(x::'a) < x + y \<Longrightarrow> size (x + y) = size x + size y"
   unfolding definitions Rep_Abs_mod
   using Rep size0
-  by (simp flip: nat_add_distrib add: eq_nat_nat_iff pos_mod_sign mod_add_if_z split: if_split_asm)
+  by (simp flip: nat_add_distrib add: eq_nat_nat_iff mod_add_if_z split: if_split_asm)
 
 lemma Suc_size[simp]:
   "(x::'a) < x + 1 \<Longrightarrow> size (x + 1) = Suc (size x)"
@@ -331,7 +331,7 @@ lemma size_minus:
   "y \<le> (x::'a) \<Longrightarrow> size (x - y) = size x - size y"
   unfolding definitions Rep_Abs_mod
   using Rep size0
-  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff pos_mod_sign mod_sub_if_z split: if_split_asm)
+  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff mod_sub_if_z split: if_split_asm)
 
 lemma size_minus_one:
   "0 < (x::'a) \<Longrightarrow> size (x - 1) = size x - Suc 0"
