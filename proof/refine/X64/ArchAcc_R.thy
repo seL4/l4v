@@ -67,7 +67,7 @@ lemma getObject_ASIDPool_corres:
                    archObjSize_def pageBits_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
-  apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
+  apply (clarsimp simp: other_aobj_relation_def asid_pool_relation_def)
   done
 
 lemmas aligned_distinct_asid_pool_atI'
@@ -81,7 +81,7 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   apply (drule asid_pool_at_ko)
   apply (clarsimp simp add: obj_at_def)
   apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: other_obj_relation_def)
+  apply (clarsimp simp: other_aobj_relation_def)
   apply (simp split: Structures_H.kernel_object.split_asm
                      arch_kernel_object.split_asm)
   apply (drule(2) aligned_distinct_asid_pool_atI')
@@ -177,14 +177,16 @@ lemma setObject_ASIDPool_corres:
             (set_asid_pool p a) (setObject p a')"
   apply (simp add: set_asid_pool_def)
   apply (rule corres_guard_imp)
-    apply (rule setObject_other_corres [where P="\<lambda>ko::asidpool. True"])
-         apply simp
-        apply (clarsimp simp: obj_at'_def projectKOs)
-        apply (erule map_to_ctes_upd_other, simp, simp)
-       apply (simp add: a_type_def is_other_obj_relation_type_def)
-      apply (simp add: objBits_simps)
-     apply (simp add: objBits_simps pageBits_def)
-    apply (simp add: other_obj_relation_def asid_pool_relation_def)
+    apply (rule setObject_other_arch_corres[where P="\<lambda>ko::asidpool. True"])
+           apply simp
+          apply (clarsimp simp: obj_at'_def projectKOs)
+          apply (erule map_to_ctes_upd_other, simp, simp)
+         apply (simp add: a_type_def is_other_obj_relation_type_def)
+        apply (simp add: objBits_simps)
+       apply simp
+      apply (simp add: objBits_simps pageBits_def)
+     apply simp
+    apply (simp add: other_aobj_relation_def asid_pool_relation_def)
    apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
    apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object; simp)
@@ -564,22 +566,22 @@ lemma setObject_PD_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-         apply simp
+           apply simp
+          apply simp
+         apply clarsimp
+        apply (frule (1) pspace_alignedD)
+        apply (drule_tac p=x in pspace_alignedD, assumption)
         apply simp
-       apply clarsimp
-       apply (frule (1) pspace_alignedD)
-       apply (drule_tac p=x in pspace_alignedD, assumption)
-       apply simp
-       apply (drule mask_alignment_ugliness)
+        apply (drule mask_alignment_ugliness)
+           apply (simp add: pd_bits_def pageBits_def)
           apply (simp add: pd_bits_def pageBits_def)
-         apply (simp add: pd_bits_def pageBits_def)
-        apply clarsimp
-        apply (drule test_bit_size)
-        apply (clarsimp simp: word_size bit_simps)
-        apply arith
-       apply ((simp split: if_split_asm)+)[4]
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+         apply clarsimp
+         apply (drule test_bit_size)
+         apply (clarsimp simp: word_size bit_simps)
+         apply arith
+        apply ((simp split: if_split_asm)+)[4]
+    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pde')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)
@@ -646,22 +648,22 @@ lemma setObject_PT_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-         apply simp
-        apply simp
-        apply clarsimp
-        apply (frule (1) pspace_alignedD)
-        apply (drule_tac p=x in pspace_alignedD, assumption)
-        apply simp
-        apply (drule mask_alignment_ugliness)
-           apply (simp add: pt_bits_def pageBits_def)
-          apply (simp add: pt_bits_def pageBits_def)
+           apply simp
+          apply simp
          apply clarsimp
-         apply (drule test_bit_size)
-         apply (clarsimp simp: word_size bit_simps)
-         apply arith
-        apply ((simp split: if_split_asm)+)[5]
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+         apply (frule (1) pspace_alignedD)
+         apply (drule_tac p=x in pspace_alignedD, assumption)
+         apply simp
+         apply (drule mask_alignment_ugliness)
+            apply (simp add: pt_bits_def pageBits_def)
+           apply (simp add: pt_bits_def pageBits_def)
+          apply clarsimp
+          apply (drule test_bit_size)
+          apply (clarsimp simp: word_size bit_simps)
+          apply arith
+         apply ((simp split: if_split_asm)+)[5]
+    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
@@ -728,23 +730,23 @@ lemma setObject_PDPT_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+           apply simp
           apply simp
-         apply simp
-        apply clarsimp
+         apply clarsimp
+        apply simp
+       apply (frule (1) pspace_alignedD)
+       apply (drule_tac p=x in pspace_alignedD, assumption)
        apply simp
-      apply (frule (1) pspace_alignedD)
-      apply (drule_tac p=x in pspace_alignedD, assumption)
-      apply simp
-      apply (drule mask_alignment_ugliness)
+       apply (drule mask_alignment_ugliness)
+          apply (simp add: pdpt_bits_def pageBits_def)
          apply (simp add: pdpt_bits_def pageBits_def)
-        apply (simp add: pdpt_bits_def pageBits_def)
-       apply clarsimp
-       apply (drule test_bit_size)
-       apply (clarsimp simp: word_size bit_simps)
-       apply arith
-      apply ((simp split: if_split_asm)+)[5]
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+        apply clarsimp
+        apply (drule test_bit_size)
+        apply (clarsimp simp: word_size bit_simps)
+        apply arith
+       apply ((simp split: if_split_asm)+)[5]
+    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pdpte')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)
@@ -811,24 +813,24 @@ lemma setObject_PML4_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+           apply simp
           apply simp
          apply simp
         apply simp
        apply simp
+      apply (frule (1) pspace_alignedD)
+      apply (drule_tac p=x in pspace_alignedD, assumption)
       apply simp
-     apply (frule (1) pspace_alignedD)
-     apply (drule_tac p=x in pspace_alignedD, assumption)
-     apply simp
-     apply (drule mask_alignment_ugliness)
-        apply (simp add: bit_simps)
-       apply (simp add: pml4_bits_def pageBits_def)
-      apply clarsimp
-      apply (drule test_bit_size)
-      apply (clarsimp simp: word_size bit_simps)
-      apply arith
-     apply ((simp split: if_split_asm)+)[2]
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+      apply (drule mask_alignment_ugliness)
+         apply (simp add: bit_simps)
+        apply (simp add: pml4_bits_def pageBits_def)
+       apply clarsimp
+       apply (drule test_bit_size)
+       apply (clarsimp simp: word_size bit_simps)
+       apply arith
+      apply ((simp split: if_split_asm)+)[2]
+    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pml4e')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)

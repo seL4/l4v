@@ -30,6 +30,7 @@ lemma findVSpaceForASID_vs_at_wp:
   "\<lbrace>\<lambda>s. \<forall>pm. asid \<noteq> 0 \<and> asid_wf asid \<and> (page_map_l4_at' pm s \<longrightarrow> vspace_at_asid' pm asid s) \<longrightarrow> P pm s\<rbrace>
     findVSpaceForASID asid
    \<lbrace>P\<rbrace>,-"
+  supply inj_ASIDPool[simp del]
   apply (simp add: findVSpaceForASID_def assertE_def checkPML4At_def
                    asidRange_def mask_2pm1[symmetric]
                    le_mask_asidBits_asid_wf

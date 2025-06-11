@@ -524,7 +524,7 @@ proof -
 
   finally
     show ?thesis
-      by (simp add: cte_map_def)
+      by (simp add: cte_map_def shiftl_t2n')
 qed
 
 lemma cte_map_shift':
@@ -1508,10 +1508,10 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (subgoal_tac "of_bl (snd p) * 2^cte_level_bits < 2 ^ (cte_level_bits + length (snd p))")
     apply (rule conjI)
      apply (erule is_aligned_no_wrap')
-     apply assumption
+     apply (simp add: shiftl_t2n')
     apply (subst add_diff_eq[symmetric])
     apply (rule word_plus_mono_right)
-     apply (erule word_le_minus_one_leq)
+     apply (rule word_le_minus_one_leq, simp add: shiftl_t2n')
     apply (erule is_aligned_no_wrap')
     apply (rule word_power_less_1)
     apply (simp add: cte_level_bits_def word_bits_def)
@@ -1524,7 +1524,7 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (drule power_strict_increasing [where a="2 :: nat"])
     apply simp
    apply (simp add: cte_level_bits_def)
-  apply (clarsimp simp: cte_map_def split_def field_simps)
+  apply (clarsimp simp: cte_map_def split_def field_simps shiftl_t2n')
   apply (subgoal_tac "of_bl (snd p) * 2^cte_level_bits < (2^tcb_bits :: word32)")
    apply (drule(1) pspace_alignedD[rotated])
    apply (rule conjI)
@@ -6528,6 +6528,7 @@ lemma cteSwap_corres:
          (cap_swap scap src dcap dest) (cteSwap scap' src' dcap' dest')"
   (is "corres _ ?P ?P' _ _") using assms including no_pre
   supply None_upd_eq[simp del]
+  supply ARM.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (unfold cap_swap_def cteSwap_def)
   apply (cases "src=dest")
    apply (rule corres_assume_pre)
@@ -6678,7 +6679,7 @@ lemma cteSwap_corres:
     apply (erule weak_derived_sym')
    apply assumption
   apply (rule conjI)
-   subgoal by (simp only: simp_thms ghost_relation_typ_at set_cap_a_type_inv ARM.data_at_def)
+   subgoal by (simp only: simp_thms ARM.ghost_relation_typ_at set_cap_a_type_inv ARM.data_at_def)
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
   apply (thin_tac "ksReadyQueues t = p" for t p)+

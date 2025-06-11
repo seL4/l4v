@@ -8868,7 +8868,7 @@ lemma invokeCNode_corres:
      apply (rule corres_split[OF getCurThread_corres])
        apply (subgoal_tac "thread + 2^cte_level_bits * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
         prefer 2
-        apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def)
+        apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def shiftl_t2n')
        apply (rule corres_split[OF getSlotCap_corres])
           apply simp
          apply (rule_tac P="\<lambda>s. (is_reply_cap cap \<or> cap = cap.NullCap) \<and>

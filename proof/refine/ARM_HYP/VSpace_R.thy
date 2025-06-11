@@ -778,13 +778,15 @@ lemma setObject_VCPU_corres:
                   (setObject vcpu vcpuObj')"
   apply (simp add: set_vcpu_def)
   apply (rule corres_guard_imp)
-    apply (rule setObject_other_corres [where P="\<lambda>ko::vcpu. True"], simp)
-        apply (clarsimp simp: obj_at'_def projectKOs)
-        apply (erule map_to_ctes_upd_other, simp, simp)
-       apply (simp add: a_type_def is_other_obj_relation_type_def)
-      apply (simp add: objBits_simps)
-     apply (simp add: objBits_simps vcpu_bits_def pageBits_def)
-    apply (simp add: other_obj_relation_def asid_pool_relation_def)
+    apply (rule setObject_other_arch_corres[where P="\<lambda>ko::vcpu. True"], simp)
+          apply (clarsimp simp: obj_at'_def projectKOs)
+          apply (erule map_to_ctes_upd_other, simp, simp)
+         apply (simp add: a_type_def is_other_obj_relation_type_def)
+        apply (simp add: objBits_simps)
+       apply simp
+      apply (simp add: objBits_simps vcpu_bits_def pageBits_def)
+     apply simp
+    apply (simp add: other_aobj_relation_def asid_pool_relation_def)
    apply (clarsimp simp: typ_at_to_obj_at'[symmetric] obj_at_def exs_valid_def
                          assert_def a_type_def return_def fail_def)
    apply (fastforce split: Structures_A.kernel_object.split_asm if_split_asm)
@@ -1110,7 +1112,7 @@ lemma aligned_distinct_relation_vcpu_atI'[elim]:
   apply (simp split: Structures_A.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
   apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: other_obj_relation_def)
+  apply (clarsimp simp: other_aobj_relation_def)
     apply (case_tac z ; simp)
     apply (rename_tac vcpu)
     apply (case_tac vcpu; simp)

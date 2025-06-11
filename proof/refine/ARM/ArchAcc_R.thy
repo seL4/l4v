@@ -122,7 +122,7 @@ lemma getObject_ASIDPool_corres [corres]:
                    archObjSize_def pageBits_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
-  apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
+  apply (clarsimp simp: other_aobj_relation_def asid_pool_relation_def)
   done
 
 lemmas aligned_distinct_asid_pool_atI'
@@ -136,7 +136,7 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   apply (drule asid_pool_at_ko)
   apply (clarsimp simp add: obj_at_def)
   apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: other_obj_relation_def)
+  apply (clarsimp simp: other_aobj_relation_def)
   apply (simp split: Structures_H.kernel_object.split_asm
                      arch_kernel_object.split_asm)
   apply (drule(2) aligned_distinct_asid_pool_atI')
@@ -191,9 +191,9 @@ lemma setObject_ASIDPool_corres [corres]:
   corres dc (asid_pool_at p) (asid_pool_at' p')
             (set_asid_pool p a) (setObject p' a')"
   apply (simp add: set_asid_pool_def)
-  apply (corresKsimp search: setObject_other_corres[where P="\<lambda>_. True"]
+  apply (corresKsimp search: setObject_other_arch_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
-  apply (simp add: other_obj_relation_def asid_pool_relation_def)
+  apply (simp add: other_aobj_relation_def asid_pool_relation_def)
   apply (clarsimp simp: obj_at_simps )
   by (auto simp: obj_at_simps typ_at_to_obj_at_arches
           split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
@@ -727,23 +727,23 @@ lemma setObject_PD_corres [@lift_corres_args, corres]:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-       apply simp
+         apply simp
+        apply simp
+       apply clarsimp
+      apply (frule (1) pspace_alignedD)
+      apply (drule_tac p=x in pspace_alignedD, assumption)
       apply simp
-     apply clarsimp
-     apply (frule (1) pspace_alignedD)
-     apply (drule_tac p=x in pspace_alignedD, assumption)
-     apply simp
-     apply (drule mask_alignment_ugliness)
+      apply (drule mask_alignment_ugliness)
+         apply (simp add: pd_bits_def pageBits_def)
         apply (simp add: pd_bits_def pageBits_def)
-       apply (simp add: pd_bits_def pageBits_def)
-      apply clarsimp
-      apply (drule test_bit_size)
-      apply (clarsimp simp: word_size pd_bits_def pageBits_def)
-      apply arith
+       apply clarsimp
+       apply (drule test_bit_size)
+       apply (clarsimp simp: word_size pd_bits_def pageBits_def)
+       apply arith
+      apply (simp split: if_split_asm)
      apply (simp split: if_split_asm)
-    apply (simp split: if_split_asm)
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pd_bits" in allE)+
@@ -799,23 +799,23 @@ lemma setObject_PT_corres [@lift_corres_args, corres]:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+         apply simp
+        apply clarsimp
+       apply (frule (1) pspace_alignedD)
+       apply (drule_tac p=x in pspace_alignedD, assumption)
        apply simp
-      apply clarsimp
-      apply (frule (1) pspace_alignedD)
-      apply (drule_tac p=x in pspace_alignedD, assumption)
-      apply simp
-      apply (drule mask_alignment_ugliness)
+       apply (drule mask_alignment_ugliness)
+          apply (simp add: pt_bits_def pageBits_def)
          apply (simp add: pt_bits_def pageBits_def)
-        apply (simp add: pt_bits_def pageBits_def)
-       apply clarsimp
-       apply (drule test_bit_size)
-       apply (clarsimp simp: word_size pt_bits_def pageBits_def)
-       apply arith
-      apply simp
+        apply clarsimp
+        apply (drule test_bit_size)
+        apply (clarsimp simp: word_size pt_bits_def pageBits_def)
+        apply arith
+       apply simp
+      apply (simp split: if_split_asm)
      apply (simp split: if_split_asm)
-    apply (simp split: if_split_asm)
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
@@ -1229,7 +1229,7 @@ lemma find_pd_for_asid_corres [corres]:
    apply (cut_tac asid_pool_at[of x, simplified obj_at_def])
      apply clarsimp
      apply (frule pspace_relation_absD, fastforce)
-     apply (clarsimp simp: other_obj_relation_def obj_at'_def projectKOs asid_pool_relation_def)
+     apply (clarsimp simp: other_aobj_relation_def obj_at'_def projectKOs asid_pool_relation_def)
         apply (cut_tac pd_at[of _ _ 0]; assumption?)
         apply (drule(1) no_0_obj'_abstract)
         by (auto simp add: obj_at_def inv_def o_def)
@@ -1433,41 +1433,46 @@ lemma pspace_aligned_cross:
   apply (rename_tac ko' a a' P ko)
   apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
 
-       \<comment>\<open>CNode\<close>
-       apply (clarsimp simp: cte_map_def)
-       apply (simp only: cteSizeBits_def cte_level_bits_def)
-       apply (rule is_aligned_add)
-        apply (erule is_aligned_weaken, simp)
-       apply (rule is_aligned_weaken)
-        apply (rule is_aligned_mult_triv2, simp)
+        \<comment>\<open>CNode\<close>
+        apply (clarsimp simp: cte_map_def)
+        apply (simp only: cteSizeBits_def cte_level_bits_def)
+        apply (rule is_aligned_add)
+         apply (erule is_aligned_weaken, simp)
+        apply (rule is_aligned_weaken)
+        apply (rule is_aligned_shiftl_self, simp)
 
-      \<comment>\<open>TCB\<close>
-      apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
+       \<comment>\<open>TCB\<close>
+       apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
 
-     \<comment>\<open>PageTable\<close>
-     apply (clarsimp simp: archObjSize_def pteBits_def)
+      \<comment>\<open>PageTable\<close>
+      apply (clarsimp simp: archObjSize_def pteBits_def)
+      apply (rule is_aligned_add)
+       apply (erule is_aligned_weaken)
+       apply simp
+      apply (rule is_aligned_shift)
+
+     \<comment>\<open>PageDirectory\<close>
+     apply (clarsimp simp: archObjSize_def pdeBits_def)
      apply (rule is_aligned_add)
-      apply (erule is_aligned_weaken)
-      apply simp
+      apply (erule is_aligned_weaken, simp)
      apply (rule is_aligned_shift)
 
-    \<comment>\<open>PageDirectory\<close>
-    apply (clarsimp simp: archObjSize_def pdeBits_def)
+    \<comment>\<open>DataPage\<close>
     apply (rule is_aligned_add)
-     apply (erule is_aligned_weaken, simp)
-    apply (rule is_aligned_shift)
-
-  \<comment>\<open>DataPage\<close>
-   apply (rule is_aligned_add)
-    apply (erule is_aligned_weaken)
-    apply (rule pbfs_atleast_pageBits)
+     apply (erule is_aligned_weaken)
+     apply (rule pbfs_atleast_pageBits)
    apply (fastforce intro: is_aligned_shift is_aligned_mult_triv2)
 
-  \<comment>\<open>other_obj_relation\<close>
-  apply (simp add: other_obj_relation_def)
-  by (clarsimp simp: epSizeBits_def ntfnSizeBits_def
-              split: kernel_object.splits Structures_A.kernel_object.splits)
-     (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
+   \<comment>\<open>other_obj_relation\<close>
+   apply (simp add: other_obj_relation_def)
+   apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
+                  split: kernel_object.splits Structures_A.kernel_object.splits)
+
+  \<comment>\<open>other_aobj_relation\<close>
+  apply (clarsimp simp: other_aobj_relation_def
+                 split: kernel_object.splits Structures_A.kernel_object.splits)
+  apply (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
+  done
 
 lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
 
@@ -1484,25 +1489,25 @@ lemma obj_relation_cuts_range_limit:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
    \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
   apply (erule (1) obj_relation_cutsE; clarsimp)
-       apply (drule (1) wf_cs_nD)
-       apply (clarsimp simp: cte_map_def2)
-       apply (rule_tac x=cte_level_bits in exI)
-       apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
-      apply (rule_tac x=tcbBlockSizeBits in exI)
-      apply (simp add: tcbBlockSizeBits_def)
-     apply (rule_tac x=pteBits in exI)
-     apply (simp add: bit_simps is_aligned_shift mask_def pteBits_def)
+        apply (drule (1) wf_cs_nD)
+        apply (clarsimp simp: cte_map_def simp flip: shiftl_t2n')
+        apply (rule_tac x=cte_level_bits in exI)
+        apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+       apply (rule_tac x=tcbBlockSizeBits in exI)
+       apply (simp add: tcbBlockSizeBits_def)
+      apply (rule_tac x=pteBits in exI)
+      apply (simp add: bit_simps is_aligned_shift mask_def pteBits_def)
+      apply word_bitwise
+     apply (rule_tac x=pdeBits in exI)
+     apply (simp add: bit_simps is_aligned_shift mask_def pdeBits_def)
      apply word_bitwise
-    apply (rule_tac x=pdeBits in exI)
-    apply (simp add: bit_simps is_aligned_shift mask_def pdeBits_def)
-    apply word_bitwise
-   apply (rule_tac x=pageBits in exI)
-   apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
-   apply (simp add: mask_def shiftl_t2n mult_ac)
-   apply (frule word_less_power_trans2, rule pbfs_atleast_pageBits)
+    apply (rule_tac x=pageBits in exI)
+    apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
+    apply (simp add: mask_def shiftl_t2n mult_ac)
+    apply (frule word_less_power_trans2, rule pbfs_atleast_pageBits)
+     apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
     apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
-   apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
-  apply fastforce
+   apply fastforce+
   done
 
 lemma obj_relation_cuts_range_mask_range:
@@ -1519,13 +1524,12 @@ lemma obj_relation_cuts_range_mask_range:
 lemma obj_relation_cuts_obj_bits:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
   apply (erule (1) obj_relation_cutsE;
-          clarsimp simp: objBits_simps objBits_defs cte_level_bits_def
-                         pbfs_atleast_pageBits[simplified bit_simps] archObjSize_def pteBits_def
-                         pdeBits_def)
-  apply (cases ko; simp add: other_obj_relation_def objBits_defs
-                      split: kernel_object.splits)
-  apply (rename_tac ako, case_tac ako; clarsimp)
-  apply (rename_tac ako', case_tac ako'; clarsimp simp: archObjSize_def)
+          clarsimp simp: objBits_simps objBits_defs bit_simps cte_level_bits_def
+                         pbfs_atleast_pageBits[simplified bit_simps'] bit_simps')
+   apply (cases ko; simp add: other_obj_relation_def objBits_defs split: kernel_object.splits)
+  apply (rename_tac ako)
+  apply (case_tac ako; simp add: other_aobj_relation_def objBits_defs archObjSize_def
+                            split: kernel_object.splits arch_kernel_object.splits)
   done
 
 lemma pspace_distinct_cross:
@@ -1550,25 +1554,26 @@ lemma pspace_distinct_cross:
   apply (case_tac "p = x")
    apply clarsimp
    apply (erule (1) obj_relation_cutsE; clarsimp)
-       apply (clarsimp simp: cte_relation_def cte_map_def2 objBits_simps)
-       apply (rule_tac n=cte_level_bits in is_aligned_add_step_le'; assumption?)
+        apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
+        apply (rule_tac n=cte_level_bits in is_aligned_add_step_le'; assumption?)
+          apply (rule is_aligned_add; (rule is_aligned_shift)?)
+          apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
          apply (rule is_aligned_add; (rule is_aligned_shift)?)
          apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
-        apply (rule is_aligned_add; (rule is_aligned_shift)?)
-        apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
-       apply (simp add: cte_level_bits_def cteSizeBits_def)
-      apply (clarsimp simp: pte_relation_def objBits_simps archObjSize_def)
-      apply (rule_tac n=pteBits in is_aligned_add_step_le'; assumption?)
-     apply (clarsimp simp: pde_relation_def objBits_simps archObjSize_def)
-     apply (rule_tac n=pdeBits in is_aligned_add_step_le'; assumption?)
-    apply (simp add: objBitsKO_Data)
-    apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
-   apply (case_tac ko;
-          simp split: if_split_asm
-                 add: is_other_obj_relation_type_CapTable a_type_def)
-   apply (rename_tac ako,
-          case_tac ako;
-          simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
+        apply (simp add: cte_level_bits_def cteSizeBits_def)
+       apply (clarsimp simp: pte_relation_def objBits_simps)
+       apply (rule_tac n=pteBits in is_aligned_add_step_le'; assumption?)
+      apply (clarsimp simp: pde_relation_def objBits_simps)
+      apply (rule_tac n=pdeBits in is_aligned_add_step_le'; assumption?)
+     apply (simp add: objBitsKO_Data)
+     apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
+    apply (case_tac ko;
+           simp split: if_split_asm
+                  add: is_other_obj_relation_type_CapTable a_type_def)
+    apply (rename_tac ako,
+           case_tac ako;
+           simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (frule (1) obj_relation_cuts_obj_bits)
   apply (drule (2) obj_relation_cuts_range_mask_range)+
   apply (prop_tac "x' \<in> mask_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
