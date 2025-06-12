@@ -480,13 +480,6 @@ proof -
      pointerInDeviceData_relation[OF rel valid' valid])
 qed
 
-abbreviation
-  "ex_abs G \<equiv> ex_abs_underlying state_relation G"
-
-lemma ex_abs_def:
-  "ex_abs G \<equiv> \<lambda>s'. \<exists>s. ((s :: (det_ext) state),s') \<in> state_relation \<and> G s"
-  by (auto simp add: ex_abs_underlying_def[abs_def])
-
 lemma device_update_invs':
   "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)
    \<lbrace>\<lambda>_. invs'\<rbrace>"

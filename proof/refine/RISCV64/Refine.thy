@@ -481,9 +481,6 @@ proof -
      pointerInDeviceData_relation[OF rel valid' valid])
 qed
 
-definition
-  "ex_abs G \<equiv> \<lambda>s'. \<exists>s. ((s :: (det_ext) state),s') \<in> state_relation \<and> G s"
-
 lemma ex_abs_ksReadyQueues_asrt:
   "ex_abs P s \<Longrightarrow> ksReadyQueues_asrt s"
   by (fastforce simp: ex_abs_def intro: ksReadyQueues_asrt_cross)
