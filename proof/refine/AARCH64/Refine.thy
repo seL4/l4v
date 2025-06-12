@@ -502,9 +502,6 @@ proof -
      pointerInDeviceData_relation[OF rel valid' valid])
 qed
 
-definition
-  "ex_abs G \<equiv> \<lambda>s'. \<exists>s. ((s :: (det_ext) state),s') \<in> state_relation \<and> G s"
-
 lemma device_update_invs':
   "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)
    \<lbrace>\<lambda>_. invs'\<rbrace>"
