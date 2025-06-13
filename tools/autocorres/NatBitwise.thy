@@ -11,16 +11,9 @@ imports
   Word_Lib.WordSetup
 begin
 
-instantiation nat :: lsb
-begin
-
-definition
-  "lsb x = lsb (int x)"
-
-instance
-  by intro_classes (meson even_of_nat lsb_nat_def lsb_odd)
-
-end
+lemma lsb_nat_def:
+  \<open>lsb n = lsb (int n)\<close>
+  by (simp add: bit_simps)
 
 instantiation nat :: msb
 begin
@@ -32,17 +25,13 @@ instance ..
 
 end
 
-instantiation nat :: set_bit
-begin
+lemma not_msb_nat:
+  \<open>\<not> msb n\<close> for n :: nat
+  by (simp add: msb_nat_def msb_int_def)
 
-definition
-  "set_bit x y z = nat (set_bit (int x) y z)"
-
-instance
-  by intro_classes
-     (metis (mono_tags) set_bit_nat_def bin_nth_sc_gen bin_sc_pos
-                        bit_nat_iff exp_eq_0_imp_not_bit int_eq_iff)
-end
+lemma set_bit_nat_def:
+  \<open>set_bit x y z = nat (set_bit (int x) y z)\<close>
+  by (rule bit_eqI) (simp add: bit_simps bin_sc_pos)
 
 lemma nat_2p_eq_shiftl:
   "(2::nat)^x = 1 << x"

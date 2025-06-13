@@ -30,6 +30,7 @@ fun mk_meta_eq_safe t = mk_meta_eq t
 
 val unfold_bodies = Simplifier.make_simproc @{context}
   {name = "unfold constants named *_body",
+   kind = Simproc,
    lhss = [@{term "v"}],
    proc = fn _ =>
      (fn ctxt => (fn t => case head_of (Thm.term_of t) of

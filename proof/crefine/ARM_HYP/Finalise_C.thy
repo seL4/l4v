@@ -1338,7 +1338,7 @@ lemma deleteASID_ccorres:
         apply (simp add: asid_high_bits_of_def
                          asidLowBits_def Kernel_C.asidLowBits_def
                          asid_low_bits_def unat_ucast)
-        apply (rule sym, rule Divides.mod_less, simp)
+        apply (rule sym, rule Euclidean_Rings.mod_less)
         apply (rule unat_less_power[where sz=7, simplified])
          apply (simp add: word_bits_conv)
         apply (rule shiftr_less_t2n[where m=7, simplified])

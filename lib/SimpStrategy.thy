@@ -17,9 +17,7 @@ be defined as 0. The important thing is that the simplifier doesn't know they're
 equal.
 \<close>
 
-definition
-  simp_strategy :: "nat \<Rightarrow> ('a :: {}) \<Rightarrow> 'a"
-where
+definition simp_strategy :: "nat \<Rightarrow> ('a :: {}) \<Rightarrow> 'a" where
   "simp_strategy name x \<equiv> x"
 
 text \<open>
@@ -35,18 +33,16 @@ text \<open>
 This strategy, or rather lack thereof, can be used to forbid simplification.
 \<close>
 
-definition
-  NoSimp :: nat
-where "NoSimp = 0"
+definition NoSimp :: nat where
+  "NoSimp = 0"
 
 text \<open>
 This strategy indicates that a boolean subterm should be simplified only by
 using explicit assumptions of the simpset.
 \<close>
 
-definition
-  ByAssum :: nat
-where "ByAssum = 0"
+definition ByAssum :: nat where
+  "ByAssum = 0"
 
 lemma Eq_TrueI_ByAssum:
   "P \<Longrightarrow> simp_strategy ByAssum P \<equiv> True"
@@ -90,9 +86,11 @@ fun simp_strategy_True_conv ct = case Thm.term_of ct of
 fun new_simp_strategy thy (name : term) ss rewr_True =
 let
   val ctxt = Proof_Context.init_global thy;
-  val ss = Simplifier.make_simproc ctxt
+in
+  Simplifier.make_simproc ctxt
     {name = "simp_strategy_" ^ fst (dest_Const name),
      lhss = [@{term simp_strategy} $ name $ @{term x}],
+     kind = Simproc,
      proc = (fn _ => fn ctxt' => fn ct =>
         ct
         |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt'))
@@ -100,8 +98,6 @@ let
                       else Conv.all_conv))
         |> (fn c => if Thm.is_reflexive c then NONE else SOME c)),
      identifier = []}
-in
-  ss
 end
 \<close>
 

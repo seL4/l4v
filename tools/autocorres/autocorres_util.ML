@@ -312,7 +312,7 @@ fun define_funcs
                       functions
 
     val _ = writeln ("Defining (" ^ FunctionInfo.string_of_phase phase ^ ") " ^
-                     (Utils.commas (map get_const_name fn_names)))
+                     (commas (map get_const_name fn_names)))
 
     (*
      * Determine if we are in a recursive case by checking to see if the
@@ -397,7 +397,7 @@ fun define_funcs
         (* Fetch parameters to this function. *)
         val free_params =
             get_fn_args fn_name
-            |> Variable.variant_frees ctxt' [measure_var]
+            |> Variable.variant_names (Variable.declare_names measure_var ctxt')
             |> map Free
       in
         (* Generate the prop. *)

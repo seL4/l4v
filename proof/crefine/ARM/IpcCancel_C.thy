@@ -1696,7 +1696,7 @@ lemma ksReadyQueuesL1Bitmap_word_log2_max:
   "\<lbrakk>valid_bitmaps s; ksReadyQueuesL1Bitmap s d \<noteq> 0\<rbrakk>
    \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < l2BitmapSize"
   unfolding valid_bitmaps_def
-  by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
+  by (fastforce dest: bit_word_log2 bitmapQ_no_L1_orphansD)
 
 lemma clzl_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0} Call clzl_'proc
@@ -1743,14 +1743,9 @@ proof -
      apply (simp add: word_size)
     apply (subst uint_nat)
     apply (simp add: unat_of_nat)
-    apply (subst Divides.mod_less)
-      apply simp
-     apply (rule order_le_less_trans[OF word_clz_max])
-     apply (simp add: word_size)
-    apply (rule iffD2 [OF le_nat_iff[symmetric]])
-    apply simp
-    apply (rule order_trans[OF word_clz_max])
-    apply (simp add: word_size)
+    apply (subst Euclidean_Rings.mod_less)
+     apply (simp add: order_le_less_trans[OF word_clz_max] word_size)
+    apply (simp add: order_trans[OF word_clz_max] word_size)
     done
 
   have word_clz_sint_lower[simp]:
@@ -1773,7 +1768,7 @@ proof -
     apply (subst unat_sub)
      apply (clarsimp simp: l2BitmapSize_def')
      apply (rule word_of_nat_le)
-     apply (drule word_log2_nth_same)
+     apply (drule bit_word_log2)
      apply (clarsimp simp: l2BitmapSize_def')
     apply (clarsimp simp: invertL1Index_def l2BitmapSize_def')
     apply (simp add: unat_of_nat_eq)
@@ -1820,7 +1815,7 @@ proof -
     subgoal by (fastforce simp: cbitmap_L1_relation_def)
 
    apply (clarsimp simp: signed_word_log2 cbitmap_L1_relation_def maxDomain_le_unat_ucast_explicit)
-   apply (frule bitmapQ_no_L1_orphansD, erule word_log2_nth_same)
+   apply (frule bitmapQ_no_L1_orphansD, erule bit_word_log2)
    apply (rule conjI, fastforce simp: invertL1Index_def l2BitmapSize_def')
    apply (rule conjI, fastforce)
    apply (rule conjI, fastforce)
@@ -2841,4 +2836,3 @@ lemma cancelIPC_ccorres1:
 
 end
 end
-

@@ -28,10 +28,10 @@ msg(s) { Macros.message(view, s); }
 model = Document_Model.get_model(textArea.getBuffer());
 snapshot = Document_Model.snapshot(model.get());
 
-class FirstError {
+public class FirstError {
     public int first_error_pos = -1;
 
-    boolean handle(cmd, offset, markup) {
+    public boolean handle(cmd, offset, markup) {
 
         if (markup.name().equals("error_message")) {
             first_error_pos = offset;
@@ -39,7 +39,7 @@ class FirstError {
         }
         return true;
     }
-    void after() {
+    public void after() {
         if (first_error_pos >= 0) {
             textArea.setCaretPosition(first_error_pos);
         } else {

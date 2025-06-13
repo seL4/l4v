@@ -33,7 +33,7 @@ subsection \<open>Small-Step Computation: \<open>\<Gamma>\<turnstile>(c, s) \<ri
 
 type_synonym ('s,'p,'f) config = "('s,'p,'f)com  \<times> ('s,'f) xstate"
 inductive "step"::"[('s,'p,'f) body,('s,'p,'f) config,('s,'p,'f) config] \<Rightarrow> bool"
-                                ("_\<turnstile> (_ \<rightarrow>/ _)" [81,81,81] 100)
+                                (\<open>_\<turnstile> (_ \<rightarrow>/ _)\<close> [81,81,81] 100)
   for \<Gamma>::"('s,'p,'f) body"
 where
 
@@ -130,12 +130,12 @@ definition final:: "('s,'p,'f) config \<Rightarrow> bool" where
 
 abbreviation
  "step_rtrancl" :: "[('s,'p,'f) body,('s,'p,'f) config,('s,'p,'f) config] \<Rightarrow> bool"
-                                ("_\<turnstile> (_ \<rightarrow>\<^sup>*/ _)" [81,81,81] 100)
+                                (\<open>_\<turnstile> (_ \<rightarrow>\<^sup>*/ _)\<close> [81,81,81] 100)
  where
   "\<Gamma>\<turnstile>cf0 \<rightarrow>\<^sup>* cf1 \<equiv> (CONST step \<Gamma>)\<^sup>*\<^sup>* cf0 cf1"
 abbreviation
  "step_trancl" :: "[('s,'p,'f) body,('s,'p,'f) config,('s,'p,'f) config] \<Rightarrow> bool"
-                                ("_\<turnstile> (_ \<rightarrow>\<^sup>+/ _)" [81,81,81] 100)
+                                (\<open>_\<turnstile> (_ \<rightarrow>\<^sup>+/ _)\<close> [81,81,81] 100)
  where
   "\<Gamma>\<turnstile>cf0 \<rightarrow>\<^sup>+ cf1 \<equiv> (CONST step \<Gamma>)\<^sup>+\<^sup>+ cf0 cf1"
 
@@ -950,7 +950,7 @@ subsection \<open>Infinite Computations: \<open>\<Gamma>\<turnstile>(c, s) \<rig
 (* ************************************************************************ *)
 
 definition inf:: "('s,'p,'f) body \<Rightarrow> ('s,'p,'f) config \<Rightarrow> bool"
- ("_\<turnstile> _ \<rightarrow> \<dots>'(\<infinity>')" [60,80] 100) where
+ (\<open>_\<turnstile> _ \<rightarrow> \<dots>'(\<infinity>')\<close> [60,80] 100) where
 "\<Gamma>\<turnstile> cfg \<rightarrow> \<dots>(\<infinity>) \<equiv> (\<exists>f. f (0::nat) = cfg \<and> (\<forall>i. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)))"
 
 lemma not_infI: "\<lbrakk>\<And>f. \<lbrakk>f 0 = cfg; \<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)\<rbrakk> \<Longrightarrow> False\<rbrakk>

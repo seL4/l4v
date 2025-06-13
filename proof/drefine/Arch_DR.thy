@@ -1234,11 +1234,11 @@ lemma set_vm_root_for_flush_dwp[wp]:
      apply (wp|clarsimp)+
   done
 
-lemma ucast_add:
-  " len_of TYPE('a) \<le> len_of TYPE('b)
+lemma ucast_add: (* FIXME: move to Word_Lib *)
+  "len_of TYPE('a) \<le> len_of TYPE('b)
    \<Longrightarrow> (ucast (a + b) :: (('a::len)word)) = ucast (a :: (('b ::len) word)) + (ucast b)"
   apply (rule word_unat.Rep_eqD)
-  apply (simp add:unat_ucast unat_word_ariths mod_mod_power min_def mod_add_eq)
+  apply (simp add:unat_ucast unat_word_ariths mod_exp_eq min_def mod_add_eq)
   done
 
 lemma store_pte_page_inv_entries_safe:

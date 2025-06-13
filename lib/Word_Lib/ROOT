@@ -17,6 +17,8 @@ session Word_Lib (lib) = HOL +
     "Distinct_Prop"
     "$L4V_ARCH/WordSetup"
   theories [document=false]
+    More_Int
+    Bin_sign
     More_Arithmetic
     Even_More_List
     More_Sublist
