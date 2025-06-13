@@ -5,7 +5,7 @@
  *)
 
 theory Invocations_R
-imports Bits_R
+imports ArchBits_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

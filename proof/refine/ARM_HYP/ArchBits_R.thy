@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory Bits_R
-imports Corres ArchStateRelationLemmas
+theory ArchBits_R
+imports Bits_R
 begin
 
 crunch_ignore (add:

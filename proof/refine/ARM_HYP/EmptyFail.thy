@@ -5,7 +5,7 @@
  *)
 
 theory EmptyFail
-imports Bits_R
+imports ArchBits_R
 begin
 
 (* Collect empty_fail lemmas here. naming convention is emtpy_fail_NAME.

@@ -9,7 +9,7 @@
 *)
 
 theory Machine_R
-imports Bits_R
+imports ArchBits_R
 begin
 
 definition "irq_state_independent_H (P :: kernel_state \<Rightarrow> bool)\<equiv>
