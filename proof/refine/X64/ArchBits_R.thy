@@ -4,13 +4,9 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory Bits_R
-imports Corres ArchStateRelationLemmas
+theory ArchBits_R
+imports Bits_R
 begin
-
-
-
-
 
 crunch_ignore (add:
   bind return "when" get gets fail assert put modify unless select alternative assert_opt gets_the
