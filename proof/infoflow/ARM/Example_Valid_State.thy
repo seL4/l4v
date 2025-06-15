@@ -300,7 +300,7 @@ lemma len_the_nat_to_bl [simp]:
   apply (clarsimp simp: the_nat_to_bl_def nat_to_bl_def)
   apply safe
    apply (metis le_def mod_less_divisor nat_zero_less_power_iff zero_less_numeral)
-  apply (clarsimp simp: len_bin_to_bl_aux not_le)
+  apply (clarsimp simp: size_bin_to_bl_aux not_le)
   done
 
 lemma tcb_cnode_index_nat_to_bl [simp]:

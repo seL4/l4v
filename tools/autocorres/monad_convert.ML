@@ -109,7 +109,7 @@ fun monad_rewrite (lthy : Proof.context) (mt : Monad_Types.monad_type)
                   (more_facts : thm list) (forward : bool)
                   (term : term) : thm option =
 let
-  val lthy = Utils.set_hidden_ctxt lthy
+  val lthy = Context_Position.set_visible false lthy
   val rules = Monad_Types.monad_type_rules mt
   val rules' = if forward then #lift_rules rules else #unlift_rules rules
   val cterm = Thm.cterm_of lthy term
@@ -137,7 +137,7 @@ in
 fun polish ctxt (mt : Monad_Types.monad_type) do_opt thm =
 let
   (* Apply any polishing rules. *)
-  val ctxt = Utils.set_hidden_ctxt ctxt
+  val ctxt = Context_Position.set_visible false ctxt
   val simps = if do_opt then Utils.get_rules ctxt @{named_theorems polish} else []
 
   (* Simplify using polish rules. *)

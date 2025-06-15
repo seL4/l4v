@@ -2107,6 +2107,7 @@ proof -
                                           in ccorres_gen_asm)
                           apply (rule ccorres_move_c_guard_tcb_ctes2)
                           apply (ctac add: cap_reply_cap_ptr_new_np_updateCap_ccorres)
+                            apply (rename_tac xfdc')
                             apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
                                 apply (rule_tac P="cte_wp_at' (\<lambda>cte. cteMDBNode cte = nullMDBNode)
                                                      (hd (epQueue send_ep)
@@ -2924,6 +2925,7 @@ lemma fastpath_reply_recv_ccorres:
                                                      ccap_relation_NullCap_iff)
                               apply csymbr
                               apply (ctac add: fastpath_copy_mrs_ccorres[unfolded forM_x_def])
+                                apply (rename_tac xfdc')
                                 apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
                                     apply (simp add: setThreadState_runnable_simp)
                                     apply (rule_tac P=\<top> in threadSet_ccorres_lemma2, vcg)

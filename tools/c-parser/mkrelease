@@ -170,7 +170,7 @@ sed '
   /^STP_PFX :=/i\
 SML_COMPILER ?= mlton
   /^include/d
-  /General\/table.ML/,/unsynchronized_cache/d
+  /General\/table.ML/,/removed apply_unsynchronized_cache/d
   /ISABELLE_HOME/d
   /CLEAN_TARGETS/s|\$(STP_PFX)/table.ML||
 ' < standalone-parser/Makefile > "$outputdir/src/c-parser/standalone-parser/Makefile"

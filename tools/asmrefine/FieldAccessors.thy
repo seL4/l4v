@@ -247,7 +247,7 @@ lemma heap_update_mono_to_field_rewrite:
 
 ML \<open>
 fun get_field_h_val_rewrites lthy =
-  (simpset_of lthy |> dest_ss |> #simps |> map snd
+  (simpset_of lthy |> Raw_Simplifier.dest_ss |> #simps |> map snd
     |> map (Thm.transfer (Proof_Context.theory_of lthy))
                RL @{thms h_val_mono_to_field_rewrite
                          heap_update_mono_to_field_rewrite[

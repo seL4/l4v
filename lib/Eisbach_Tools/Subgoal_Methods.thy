@@ -128,7 +128,7 @@ fun fold_subgoals ctxt prefix raw_st =
 fun distinct_subgoals ctxt raw_st =
   let
     val (st, inner_ctxt) = fix_schematics ctxt raw_st;
-    val subgoals = Drule.cprems_of st;
+    val subgoals = Thm.cprems_of st;
     val atomize = Conv.fconv_rule (Object_Logic.atomize_prems inner_ctxt);
 
     val rules =

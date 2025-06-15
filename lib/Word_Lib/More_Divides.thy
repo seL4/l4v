@@ -15,46 +15,35 @@ declare div_eq_dividend_iff [simp]
 
 lemma int_div_same_is_1 [simp]:
   \<open>a div b = a \<longleftrightarrow> b = 1\<close> if \<open>0 < a\<close> for a b :: int
-  using that by (metis div_by_1 abs_ge_zero abs_of_pos int_div_less_self neq_iff
-            nonneg1_imp_zdiv_pos_iff zabs_less_one_iff)
+  by (metis div_by_1 int_div_less_self less_le_not_le nle_le nonneg1_imp_zdiv_pos_iff that)
 
 lemma int_div_minus_is_minus1 [simp]:
   \<open>a div b = - a \<longleftrightarrow> b = - 1\<close> if \<open>0 > a\<close> for a b :: int
   using that by (metis div_minus_right equation_minus_iff int_div_same_is_1 neg_0_less_iff_less)
 
-lemma nat_div_eq_Suc_0_iff: "n div m = Suc 0 \<longleftrightarrow> m \<le> n \<and> n < 2 * m"
-  apply auto
-  using div_greater_zero_iff apply fastforce
-   apply (metis One_nat_def div_greater_zero_iff dividend_less_div_times mult.right_neutral mult_Suc mult_numeral_1 numeral_2_eq_2 zero_less_numeral)
-  apply (simp add: div_nat_eqI)
-  done
+lemma nat_div_eq_Suc_0_iff: "n div m = Suc 0 \<longleftrightarrow> m \<le> n \<and> n < 2 * m" (is "?L=?R")
+proof
+  show "?L\<Longrightarrow>?R"
+    by (metis div_greater_zero_iff div_less_iff_less_mult lessI numeral_2_eq_2)
+qed (simp add: div_nat_eqI)
 
 lemma diff_mod_le:
   \<open>a - a mod b \<le> d - b\<close> if \<open>a < d\<close> \<open>b dvd d\<close> for a b d :: nat
-  using that
-  apply(subst minus_mod_eq_mult_div)
-  apply(clarsimp simp: dvd_def)
-  apply(cases \<open>b = 0\<close>)
-   apply simp
-  apply(subgoal_tac "a div b \<le> k - 1")
-   prefer 2
-   apply(subgoal_tac "a div b < k")
-    apply(simp add: less_Suc_eq_le [symmetric])
-   apply(subgoal_tac "b * (a div b) < b * ((b * k) div b)")
-    apply clarsimp
-   apply(subst div_mult_self1_is_m)
-    apply arith
-   apply(rule le_less_trans)
-    apply simp
-    apply(subst mult.commute)
-    apply(rule div_times_less_eq_dividend)
-   apply assumption
-  apply clarsimp
-  apply(subgoal_tac "b * (a div b) \<le> b * (k - 1)")
-   apply(erule le_trans)
-   apply(simp add: diff_mult_distrib2)
-  apply simp
-  done
+proof(cases \<open>b = 0\<close>)
+  case True
+  then show ?thesis
+    by auto
+next
+  case False
+  then obtain k where k: "d = b * k"
+    using \<open>b dvd d\<close> by blast
+  then have "a div b < k"
+    by (metis less_mult_imp_div_less mult.commute that(1))
+  then have "b * (a div b) \<le> b * (k - 1)"
+    by auto
+  then show ?thesis
+    by (simp add: k minus_mod_eq_mult_div right_diff_distrib')
+qed
 
 lemma one_mod_exp_eq_one [simp]:
   "1 mod (2 * 2 ^ n) = (1::int)"
@@ -62,11 +51,7 @@ lemma one_mod_exp_eq_one [simp]:
 
 lemma int_mod_lem: "0 < n \<Longrightarrow> 0 \<le> b \<and> b < n \<longleftrightarrow> b mod n = b"
   for b n :: int
-  apply safe
-    apply (erule (1) mod_pos_pos_trivial)
-   apply (erule_tac [!] subst)
-   apply auto
-  done
+  using zmod_trivial_iff by force
 
 lemma int_mod_ge': "b < 0 \<Longrightarrow> 0 < n \<Longrightarrow> b + n \<le> b mod n"
   for b n :: int
@@ -188,26 +173,15 @@ lemmas nat_mod_eq' = refl [THEN [2] nat_mod_eq]
 
 lemma nat_mod_lem: "0 < n \<Longrightarrow> b < n \<longleftrightarrow> b mod n = b"
   for b n :: nat
-  apply safe
-   apply (erule nat_mod_eq')
-  apply (erule subst)
-  apply (erule mod_less_divisor)
-  done
+  by (metis mod_less_divisor nat_mod_eq')
 
 lemma mod_nat_add: "x < z \<Longrightarrow> y < z \<Longrightarrow> (x + y) mod z = (if x + y < z then x + y else x + y - z)"
   for x y z :: nat
-  apply (rule nat_mod_eq)
-   apply auto
-  apply (rule trans)
-   apply (rule le_mod_geq)
-   apply simp
-  apply (rule nat_mod_eq')
-  apply arith
-  done
+  using mod_if by auto
 
 lemma mod_nat_sub: "x < z \<Longrightarrow> (x - y) mod z = x - y"
   for x y :: nat
-  by (rule nat_mod_eq') arith
+  by simp
 
 lemma int_mod_eq: "0 \<le> b \<Longrightarrow> b < n \<Longrightarrow> a mod n = b mod n \<Longrightarrow> a mod n = b"
   for a b n :: int
@@ -243,43 +217,15 @@ lemma power_sub:
   assumes lt: "n \<le> m"
   and     av: "0 < a"
   shows "a ^ (m - n) = a ^ m div a ^ n"
-proof (subst nat_mult_eq_cancel1 [symmetric])
-  show "(0::nat) < a ^ n" using av by simp
-next
-  from lt obtain q where mv: "n + q = m"
-    by (auto simp: le_iff_add)
-
-  have "a ^ n * (a ^ m div a ^ n) = a ^ m"
-  proof (subst mult.commute)
-    have "a ^ m = (a ^ m div a ^ n) * a ^ n + a ^ m mod a ^ n"
-      by (rule  div_mult_mod_eq [symmetric])
-
-    moreover have "a ^ m mod a ^ n = 0"
-      by (subst mod_eq_0_iff_dvd, subst dvd_def, rule exI [where x = "a ^ q"],
-      (subst power_add [symmetric] mv)+, rule refl)
-
-    ultimately show "(a ^ m div a ^ n) * a ^ n = a ^ m" by simp
-  qed
-
-  then show "a ^ n * a ^ (m - n) = a ^ n * (a ^ m div a ^ n)" using lt
-    by (simp add: power_add [symmetric])
-qed
+  using av less_irrefl lt power_diff by blast
 
 lemma mod_lemma: "[| (0::nat) < c; r < b |] ==> b * (q mod c) + r < b * c"
-  apply (cut_tac m = q and n = c in mod_less_divisor)
-  apply (drule_tac [2] m = "q mod c" in less_imp_Suc_add, auto)
-  apply (erule_tac P = "%x. lhs < rhs x" for lhs rhs in ssubst)
-  apply (simp add: add_mult_distrib2)
-  done
+  using mod_less_divisor [where m = q and n = c]
+  by (smt (verit) div_eq_0_iff add.right_neutral div_mult2_eq div_mult_self3 not_less0 mult.commute)
 
 lemma less_two_pow_divD:
-  "\<lbrakk> (x :: nat) < 2 ^ n div 2 ^ m \<rbrakk>
-    \<Longrightarrow> n \<ge> m \<and> (x < 2 ^ (n - m))"
-  apply (rule context_conjI)
-   apply (rule ccontr)
-   apply (simp add: power_strict_increasing)
-  apply (simp add: power_sub)
-  done
+  "\<lbrakk> (x :: nat) < 2 ^ n div 2 ^ m \<rbrakk> \<Longrightarrow> n \<ge> m \<and> (x < 2 ^ (n - m))"
+  by (metis One_nat_def div_less lessI not_less0 linorder_not_le numeral_2_eq_2 power_diff power_increasing_iff)
 
 lemma less_two_pow_divI:
   "\<lbrakk> (x :: nat) < 2 ^ (n - m); m \<le> n \<rbrakk> \<Longrightarrow> x < 2 ^ n div 2 ^ m"
@@ -287,20 +233,13 @@ lemma less_two_pow_divI:
 
 lemmas m2pths = pos_mod_sign mod_exp_less_eq_exp
 
-lemmas int_mod_eq' = mod_pos_pos_trivial (* FIXME delete *)
-
-lemmas int_mod_le = zmod_le_nonneg_dividend (* FIXME: delete *)
-
 lemma power_mod_div:
   fixes x :: "nat"
   shows "x mod 2 ^ n div 2 ^ m = x div 2 ^ m mod 2 ^ (n - m)" (is "?LHS = ?RHS")
 proof (cases "n \<le> m")
   case True
   then have "?LHS = 0"
-    apply -
-    apply (rule div_less)
-    apply (rule order_less_le_trans [OF mod_less_divisor]; simp)
-    done
+    by (metis diff_is_0_eq' drop_bit_eq_div drop_bit_take_bit take_bit_0 take_bit_eq_mod)
   also have "\<dots> = ?RHS" using True
     by simp
   finally show ?thesis .
@@ -322,33 +261,6 @@ next
   finally show ?thesis .
 qed
 
-lemma mod_mod_power:
-  fixes k :: nat
-  shows "k mod 2 ^ m mod 2 ^ n = k mod 2 ^ (min m n)"
-proof (cases "m \<le> n")
-  case True
-
-  then have "k mod 2 ^ m mod 2 ^ n = k mod 2 ^ m"
-    apply -
-    apply (subst mod_less [where n = "2 ^ n"])
-    apply (rule order_less_le_trans [OF mod_less_divisor])
-    apply simp+
-    done
-  also have "\<dots> = k mod  2 ^ (min m n)" using True by simp
-  finally show ?thesis .
-next
-  case False
-  then have "n < m" by simp
-  then obtain d where md: "m = n + d"
-    by (auto dest: less_imp_add_positive)
-  then have "k mod 2 ^ m = 2 ^ n * (k div 2 ^ n mod 2 ^ d) + k mod 2 ^ n"
-    by (simp add: mod_mult2_eq power_add)
-  then have "k mod 2 ^ m mod 2 ^ n = k mod 2 ^ n"
-    by (simp add: mod_add_left_eq)
-  then show ?thesis using False
-    by simp
-qed
-
 lemma mod_div_equality_div_eq:
   "a div b * b = (a - (a mod b) :: int)"
   by (simp add: field_simps)
@@ -358,47 +270,34 @@ lemma zmod_helper:
   by (metis add.commute mod_add_right_eq)
 
 lemma int_div_sub_1:
-  "\<lbrakk> m \<ge> 1 \<rbrakk> \<Longrightarrow> (n - (1 :: int)) div m = (if m dvd n then (n div m) - 1 else n div m)"
-  apply (subgoal_tac "m = 0 \<or> (n - (1 :: int)) div m = (if m dvd n then (n div m) - 1 else n div m)")
-   apply fastforce
-  apply (subst mult_cancel_right[symmetric])
-  apply (simp only: left_diff_distrib split: if_split)
-  apply (simp only: mod_div_equality_div_eq)
-  apply (clarsimp simp: field_simps)
-  apply (clarsimp simp: dvd_eq_mod_eq_0)
-  apply (cases "m = 1")
-   apply simp
-  apply (subst mod_diff_eq[symmetric], simp add: zmod_minus1)
-  apply clarsimp
-  apply (subst diff_add_cancel[where b=1, symmetric])
-  apply (subst mod_add_eq[symmetric])
-  apply (simp add: field_simps)
-  apply (rule mod_pos_pos_trivial)
-   apply (subst add_0_right[where a=0, symmetric])
-   apply (rule add_mono)
-    apply simp
-   apply simp
-  apply (cases "(n - 1) mod m = m - 1")
-   apply (drule zmod_helper[where a=1])
-   apply simp
-  apply (subgoal_tac "1 + (n - 1) mod m \<le> m")
-   apply simp
-  apply (subst field_simps, rule zless_imp_add1_zle)
-  apply simp
-  done
+  assumes "m \<ge> 1"
+  shows "(n - (1 :: int)) div m = (if m dvd n then (n div m) - 1 else n div m)"
+proof -
+  have "(n - 1) div m * m = n div m * m - 1 * m" if "m dvd n"
+  proof (cases "m = 1")
+    case False
+    with that show ?thesis
+      using assms
+      unfolding mod_div_equality_div_eq
+      by (smt (verit, ccfv_SIG) dvd_eq_mod_eq_0 int_mod_ge' mod_diff_eq pos_mod_bound pos_mod_sign)
+  qed auto
+  moreover
+  have "\<not> m dvd n \<Longrightarrow> (n - 1) div m * m = n div m * m"
+    by (smt (verit, del_insts) assms mod_0_imp_dvd pos_zdiv_mult_2 zdiv_mono1 zdiv_zminus1_eq_if)
+  ultimately
+  have "m = 0 \<or> (n - (1 :: int)) div m = (if m dvd n then (n div m) - 1 else n div m)"
+    by (metis left_diff_distrib' mult.commute nonzero_mult_div_cancel_left)
+  then show ?thesis
+    using assms by force
+qed
 
 lemma power_minus_is_div:
   "b \<le> a \<Longrightarrow> (2 :: nat) ^ (a - b) = 2 ^ a div 2 ^ b"
-  apply (induct a arbitrary: b)
-   apply simp
-  apply (erule le_SucE)
-   apply (clarsimp simp:Suc_diff_le le_iff_add power_add)
-  apply simp
-  done
+  by (simp add: power_diff)
 
 lemma two_pow_div_gt_le:
   "v < 2 ^ n div (2 ^ m :: nat) \<Longrightarrow> m \<le> n"
-  by (clarsimp dest!: less_two_pow_divD)
+  using less_two_pow_divD by blast
 
 lemma td_gal_lt:
   \<open>0 < c \<Longrightarrow> a < b * c \<longleftrightarrow> a div c < b\<close>
