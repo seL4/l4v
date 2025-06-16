@@ -39,19 +39,20 @@ faults, and system calls; the set of possible events is defined in
 
 > callKernel :: Event -> Kernel ()
 > callKernel ev = do
->     stateAssert fastpathKernelAssertions "Fast path assertions must hold"
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert fastpathKernelAssertions ""
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     runExceptT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do
 >                       irq_opt <- doMachineOp (getActiveIRQ True)
 >                       mcsPreemptionPoint irq_opt
 >                       when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt))
->     stateAssert rct_imp_activatable'_asrt "Assert that RCT sched action implies ct activatable'"
+>     stateAssert rct_imp_activatable'_asrt
+>         "if the scheduler action is `ResumeCurrentThread`, then the current thread is `activatable'`"
 >     schedule
->     stateAssert rct_imp_activatable'_asrt "Assert that RCT sched action implies ct activatable'"
+>     stateAssert rct_imp_activatable'_asrt
+>         "if the scheduler action is `ResumeCurrentThread`, then the current thread is `activatable'`"
 >     activateThread
->     stateAssert kernelExitAssertions "Kernel exit conditions must hold"
+>     stateAssert kernelExitAssertions ""
 
 This will be replaced by actual assertions in the proofs:
 

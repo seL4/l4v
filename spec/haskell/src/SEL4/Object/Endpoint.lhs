@@ -47,12 +47,11 @@ This function performs an IPC send operation, given a pointer to the sending thr
 The normal (blocking) version of the send operation will remove a recipient from the endpoint's queue if one is available, or otherwise add the sender to the queue.
 
 > sendIPC blocking call badge canGrant canGrantReply canDonate thread epptr = do
->         stateAssert invs'_asrt "assert that `invs'` holds"
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert valid_idle'_asrt
->             "Assert that `valid_idle' s` holds"
->         stateAssert (active_tcb_at'_asrt thread) "thread has an active' thread state"
+>         stateAssert invs'_asrt "`invs'`"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert valid_idle'_asrt "`valid_idle'`"
+>         stateAssert (active_tcb_at'_asrt thread)
+>             "`thread` has an `active'` thread state"
 >         ep <- getEndpoint epptr
 >         case ep of
 
@@ -135,12 +134,9 @@ The IPC receive operation is essentially the same as the send operation, but wit
 > receiveIPC :: PPtr TCB -> Capability -> Bool -> Capability -> Kernel ()
 > receiveIPC thread cap@(EndpointCap {}) isBlocking replyCap = do
 >         let epptr = capEPPtr cap
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert sch_act_wf_asrt
->             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
->         stateAssert valid_idle'_asrt
->             "Assert that `valid_idle' s` holds"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
+>         stateAssert valid_idle'_asrt "`valid_idle'`"
 >         replyOpt <- (case replyCap of
 >             ReplyCap r _ -> return (Just r)
 >             NullCap -> return Nothing
@@ -216,10 +212,8 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 
 > cancelIPC :: PPtr TCB -> Kernel ()
 > cancelIPC tptr = do
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert ready_qs_runnable
->             "Threads in the ready queues are runnable'"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert ready_qs_runnable "threads in the ready queues are runnable'"
 >         state <- getThreadState tptr
 >         threadSet (\tcb -> tcb {tcbFault = Nothing}) tptr
 >         case state of
@@ -286,10 +280,8 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 
 > cancelAllIPC :: PPtr Endpoint -> Kernel ()
 > cancelAllIPC epptr = do
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert sch_act_wf_asrt
->             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >         stateAssert ksReadyQueues_asrt ""
 >         ep <- getEndpoint epptr
 >         case ep of
@@ -305,10 +297,8 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 
 > cancelBadgedSends :: PPtr Endpoint -> Word -> Kernel ()
 > cancelBadgedSends epptr badge = do
->     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
->     stateAssert sch_act_wf_asrt
->         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>     stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >     stateAssert ksReadyQueues_asrt ""
 >     ep <- getEndpoint epptr
 >     case ep of
@@ -367,8 +357,7 @@ The following two functions are specialisations of "getObject" and
 
 > reorderEp :: PPtr Endpoint -> PPtr TCB -> Kernel ()
 > reorderEp epPtr tptr = do
->     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     ep <- getEndpoint epPtr
 >     qs <- getEpQueue ep
 >     qs' <- tcbEPDequeue tptr qs

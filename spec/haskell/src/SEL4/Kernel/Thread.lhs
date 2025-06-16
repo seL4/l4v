@@ -80,8 +80,7 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 
 > activateThread :: Kernel ()
 > activateThread = do
->         stateAssert ct_activatable'_asrt
->             "Assert that `ct_in_state' activatable' s` holds"
+>         stateAssert ct_activatable'_asrt "`ct_in_state' activatable'`"
 >         thread <- getCurThread
 >         scPtrOpt <- threadGet tcbYieldTo thread
 >         when (scPtrOpt /= Nothing) $ do
@@ -118,7 +117,7 @@ runnable; this is to prevent it being inserted in the scheduler queue.
 > readSchedulable tcbPtr = do
 >     runnable <- readRunnable tcbPtr
 >     scPtrOpt <- threadRead tcbSchedContext tcbPtr
->     readStateAssert valid_tcbs'_asrt "valid_tcbs' holds"
+>     readStateAssert valid_tcbs'_asrt "`valid_tcbs'`"
 >     if scPtrOpt == Nothing
 >         then return False
 >         else do
@@ -141,8 +140,7 @@ When a thread is suspended, either explicitly by a TCB invocation or implicitly 
 
 > suspend :: PPtr TCB -> Kernel ()
 > suspend target = do
->     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     cancelIPC target
 >     state <- getThreadState target
 >     if state == Running then updateRestartPC target else return ()
@@ -201,11 +199,9 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 
 > doReplyTransfer :: PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > doReplyTransfer sender reply grant = do
->     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
->     stateAssert weak_sch_act_wf_asrt "assert that `weak_sch_act_wf` holds"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
+>     stateAssert weak_sch_act_wf_asrt "`weak_sch_act_wf`"
 >     receiverOpt <- liftM replyTCB (getReply reply)
 >     case receiverOpt of
 >         Nothing -> return ()
@@ -375,14 +371,10 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 
 > schedule :: Kernel ()
 > schedule = do
->     stateAssert valid_idle'_asrt
->         "Assert that `valid_idle' s` holds"
->     stateAssert valid_domain_list'_asrt
->         "Assert that `valid_domain_list'` holds"
->     stateAssert sch_act_wf_asrt
->         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert valid_idle'_asrt "`valid_idle'`"
+>     stateAssert valid_domain_list'_asrt "`valid_domain_list'`"
+>     stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     awaken
 >     checkDomainTime
 >     curThread <- getCurThread
@@ -430,8 +422,7 @@ If the current thread is no longer runnable, has used its entire timeslice, an I
 >             scheduleChooseNewThread
 
 >     scAndTimer
->     stateAssert ct_activatable'_asrt
->         "Assert that `ct_in_state' activatable' s` holds"
+>     stateAssert ct_activatable'_asrt "`ct_in_state' activatable'`"
 
 
 Threads are scheduled using a simple multiple-priority round robin algorithm.
@@ -505,7 +496,7 @@ To switch to a new thread, we call the architecture-specific thread switch funct
 >         runnable <- isRunnable thread
 >         assert runnable "thread must be runnable"
 >         stateAssert ksReadyQueues_asrt ""
->         stateAssert ready_qs_runnable "threads in the ready queues are runnable'"
+>         stateAssert ready_qs_runnable "threads in the ready queues are `runnable'`"
 >         Arch.switchToThread thread
 >         tcbSchedDequeue thread
 >         setCurThread thread
@@ -514,9 +505,8 @@ Switching to the idle thread is similar, except that we call a different archite
 
 > switchToIdleThread :: Kernel ()
 > switchToIdleThread = do
->         stateAssert ready_qs_runnable "threads in the ready queues are runnable'"
->         stateAssert valid_idle'_asrt
->             "Assert that `valid_idle' s` holds"
+>         stateAssert ready_qs_runnable "threads in the ready queues are `runnable'`"
+>         stateAssert valid_idle'_asrt "`valid_idle'`"
 >         thread <- getIdleThread
 >         Arch.switchToIdleThread
 >         setCurThread thread
@@ -586,7 +576,7 @@ candidates are enqueued.
 
 > possibleSwitchTo :: PPtr TCB -> Kernel ()
 > possibleSwitchTo target = do
->     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
+>     stateAssert valid_tcbs'_asrt "`valid_tcbs'`"
 >     scOpt <- threadGet tcbSchedContext target
 >     inq <- inReleaseQueue target
 >     when (scOpt /= Nothing && not inq) $ do
@@ -779,13 +769,12 @@ tcbPtr is in the middle of the queue
 
 > tcbSchedEnqueue :: PPtr TCB -> Kernel ()
 > tcbSchedEnqueue thread = do
->     stateAssert ready_or_release'_asrt
->         "Assert that `ready_or_release'` holds"
+>     stateAssert ready_or_release'_asrt "`ready_or_release'`"
 >     stateAssert (not_tcbInReleaseQueue_asrt thread)
->         "thread must not have the tcbInReleaseQueue flag set"
+>         "`thread` must not have the `tcbInReleaseQueue` flag set"
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
->     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
+>     stateAssert valid_tcbs'_asrt "`valid_tcbs'`"
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread
@@ -800,13 +789,12 @@ tcbPtr is in the middle of the queue
 
 > tcbSchedAppend :: PPtr TCB -> Kernel ()
 > tcbSchedAppend thread = do
->     stateAssert ready_or_release'_asrt
->         "Assert that `ready_or_release'` holds"
+>     stateAssert ready_or_release'_asrt "`ready_or_release'`"
 >     stateAssert (not_tcbInReleaseQueue_asrt thread)
->         "thread must not have the tcbInReleaseQueue flag set"
+>         "thread must not have the `tcbInReleaseQueue` flag set"
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
->     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
+>     stateAssert valid_tcbs'_asrt "`valid_tcbs'`"
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread
@@ -823,10 +811,9 @@ The following function dequeues a thread, if it is queued.
 
 > tcbSchedDequeue :: PPtr TCB -> Kernel ()
 > tcbSchedDequeue thread = do
->     stateAssert ready_or_release'_asrt
->         "Assert that `ready_or_release'` holds"
+>     stateAssert ready_or_release'_asrt "`ready_or_release'`"
 >     stateAssert ksReadyQueues_asrt ""
->     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
+>     stateAssert valid_objs'_asrt "`valid_objs'`"
 >     queued <- threadGet tcbQueued thread
 >     when queued $ do
 >         tdom <- threadGet tcbDomain thread
@@ -845,10 +832,9 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 
 > endTimeslice :: Bool -> Kernel ()
 > endTimeslice canTimeoutFault = do
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     scPtr <- getCurSc
->     stateAssert (sc_at'_asrt scPtr) "there is a scheduling context at ksCurSc"
+>     stateAssert (sc_at'_asrt scPtr) "there is a scheduling context at `ksCurSc`"
 >     roundRobin <- isRoundRobin scPtr
 >     ct <- getCurThread
 >     valid <- isValidTimeoutHandler ct
@@ -872,9 +858,8 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 
 > tcbReleaseRemove :: PPtr TCB -> Kernel ()
 > tcbReleaseRemove tcbPtr = do
->     stateAssert valid_tcbs'_asrt "assert that `valid_tcbs'` holds"
->     stateAssert ready_or_release'_asrt
->         "Assert that `ready_or_release'` holds"
+>     stateAssert valid_tcbs'_asrt "`valid_tcbs'`"
+>     stateAssert ready_or_release'_asrt "`ready_or_release'`"
 >     stateAssert ksReleaseQueue_asrt ""
 >     queued <- inReleaseQueue tcbPtr
 >     when queued $ do

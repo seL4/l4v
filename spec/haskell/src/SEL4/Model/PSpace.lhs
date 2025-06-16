@@ -245,10 +245,8 @@ No type checks are performed when deleting objects; "deleteObjects" simply delet
 
 > deleteObjects :: PPtr a -> Int -> Kernel ()
 > deleteObjects ptr bits = do
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert valid_idle'_asrt
->             "Assert that `valid_idle' s` holds"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert valid_idle'_asrt "`valid_idle'`"
 >         unless (fromPPtr ptr .&. mask bits == 0) $
 >             alignError bits
 >         stateAssert (deletionIsSafe ptr bits)

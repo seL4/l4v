@@ -507,16 +507,13 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 
 > invokeTCB (ThreadControlSched target slot faultHandler mcPriority priority sc)
 >   = do
->         stateAssert (tcs_cross_asrt1 target sc)
->             "Assert some conditions that hold in the abstract at this point"
->         stateAssert valid_idle'_asrt
->             "Assert that `valid_idle' s` holds"
+>         stateAssert (tcs_cross_asrt1 target sc) ""
+>         stateAssert valid_idle'_asrt "`valid_idle'`"
 >         installTCBCap target slot 3 faultHandler
 >         withoutPreemption $ do
 >             let mcPriority' = mapMaybe fst mcPriority
 >             maybe (return ()) (setMCPriority target) mcPriority'
->             stateAssert tcs_cross_asrt2
->                 "Assert some conditions that hold in the abstract at this point"
+>             stateAssert tcs_cross_asrt2 ""
 >             let priority' = mapMaybe fst priority
 >             maybe (return ()) (setPriority target) priority'
 >             targetScOpt <- mapTCBPtr target tcbSchedContext
@@ -1014,12 +1011,11 @@ On some architectures, the thread context may include registers that may be modi
 
 > chargeBudget :: Ticks -> Bool -> Kernel ()
 > chargeBudget consumed canTimeoutFault = do
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
->     stateAssert sch_act_wf_asrt
->         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
+>     stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >     scPtr <- getCurSc
->     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
+>     stateAssert (active_sc_at'_asrt scPtr)
+>         "there is an active scheduling context at `scPtr`"
 >     idleSCPtr <- getIdleSC
 >     when (scPtr /= idleSCPtr) $ do
 >       ifM (isRoundRobin scPtr)
@@ -1050,8 +1046,7 @@ On some architectures, the thread context may include registers that may be modi
 
 > checkBudgetRestart :: Kernel Bool
 > checkBudgetRestart = do
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     result <- checkBudget
 >     ct <- getCurThread
 >     runnable <- isRunnable ct
@@ -1061,8 +1056,7 @@ On some architectures, the thread context may include registers that may be modi
 
 > mcsPreemptionPoint :: Maybe IRQ -> Kernel ()
 > mcsPreemptionPoint irq_opt = do
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     curThread <- getCurThread
 >     isschedulable <- getSchedulable curThread
 >     if isschedulable
@@ -1111,7 +1105,8 @@ On some architectures, the thread context may include registers that may be modi
 > tcbReleaseDequeue = do
 >     stateAssert ksReleaseQueue_asrt ""
 >     stateAssert tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt
->         "every thread in the release queue is associated with an active scheduling context"
+>         "every thread in the release queue is associated with \
+>          an active scheduling context"
 >     queue <- getReleaseQueue
 >     awakened <- return $ fromJust $ tcbQueueHead queue
 >     runnable <- isRunnable awakened
@@ -1120,13 +1115,15 @@ On some architectures, the thread context may include registers that may be modi
 >     possibleSwitchTo awakened
 >     stateAssert ksReleaseQueue_asrt ""
 >     stateAssert tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt
->         "if the release queue is not empty, then the head of the release queue is associated with an active scheduling context"
+>         "if the release queue is not empty, then the head of the release queue \
+>          is associated with an active scheduling context"
 
 > awaken :: Kernel ()
 > awaken = do
 >     stateAssert ksReleaseQueue_asrt ""
 >     stateAssert tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt
->         "every thread in the release queue is associated with an active scheduling context"
+>         "every thread in the release queue is associated with \
+>          an active scheduling context"
 >     whileLoop (const (fromJust . runReaderT releaseQNonEmptyAndReady)) (const tcbReleaseDequeue) ()
 
 > tcbEPAppend :: PPtr TCB -> [PPtr TCB] -> Kernel [PPtr TCB]

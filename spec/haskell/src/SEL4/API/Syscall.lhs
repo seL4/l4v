@@ -94,23 +94,26 @@ System call events are dispatched here to the appropriate system call handlers, 
 >         SysReplyRecv -> do
 >             replyCptr <- withoutPreemption $ getCapReg replyRegister
 >             handleInvocation False False True True replyCptr
->             stateAssert sch_act_sane_asrt "Assert sch_act_sane"
->             stateAssert ct_not_ksQ_asrt "Assert ksCurThread notin ksReadyQueues"
->             stateAssert ct_active'_asrt "Assert ct_active'"
+>             stateAssert sch_act_sane_asrt "`sch_act_sane`"
+>             stateAssert ct_not_ksQ_asrt
+>                 "`ksCurThread` is not a member of `ksReadyQueues`"
+>             stateAssert ct_active'_asrt "`ct_active'`"
 >             withoutPreemption $ handleRecv True True
 >         SysNBSendRecv -> do
 >             dest <- withoutPreemption $ getCapReg nbsendRecvDest
 >             handleInvocation False False True True dest
->             stateAssert sch_act_sane_asrt "Assert sch_act_sane"
->             stateAssert ct_not_ksQ_asrt "Assert ksCurThread notin ksReadyQueues"
->             stateAssert ct_active'_asrt "Assert ct_active'"
+>             stateAssert sch_act_sane_asrt "`sch_act_sane`"
+>             stateAssert ct_not_ksQ_asrt
+>                 "`ksCurThread` is not a member of `ksReadyQueues`"
+>             stateAssert ct_active'_asrt "`ct_active'`"
 >             withoutPreemption $ handleRecv True True
 >         SysNBSendWait -> do
 >             replyCptr <- withoutPreemption $ getCapReg replyRegister
 >             handleInvocation False False True True replyCptr
->             stateAssert sch_act_sane_asrt "Assert sch_act_sane"
->             stateAssert ct_not_ksQ_asrt "Assert ksCurThread notin ksReadyQueues"
->             stateAssert ct_active'_asrt "Assert ct_active'"
+>             stateAssert sch_act_sane_asrt "`sch_act_sane`"
+>             stateAssert ct_not_ksQ_asrt
+>                 "`ksCurThread` is not a member of `ksReadyQueues`"
+>             stateAssert ct_active'_asrt "`ct_active'`"
 >             withoutPreemption $ handleRecv True False
 >         SysWait -> withoutPreemption $ handleRecv True False
 >         SysNBWait -> withoutPreemption $ handleRecv False False
@@ -193,8 +196,7 @@ The "Call" system call is similar to "Send", but it also requests a reply. For k
 
 > handleCall :: KernelP ()
 > handleCall = do
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     cptr <- withoutPreemption $ getCapReg capRegister
 >     handleInvocation True True True False cptr
 
@@ -228,7 +230,8 @@ The "Yield" system call is trivial; it simply moves the current thread to the en
 > handleYield :: Kernel ()
 > handleYield = do
 >     scPtr <- getCurSc
->     stateAssert (active_sc_at'_asrt scPtr) "there is an active scheduling context at scPtr"
+>     stateAssert (active_sc_at'_asrt scPtr)
+>         "there is an active scheduling context at `scPtr`"
 >     sc <- getSchedContext scPtr
 >     consumed <- getConsumedTime
 >     head <- getRefillHead scPtr
@@ -241,12 +244,9 @@ The following function implements the "Send" and "Call" system calls. It determi
 
 > handleInvocation :: Bool -> Bool -> Bool -> Bool -> CPtr -> KernelP ()
 > handleInvocation isCall isBlocking canDonate firstPhase cptr = do
->     stateAssert ct_not_inQ_asrt
->        "Assert that `ct_not_inQ s` holds"
->     stateAssert valid_idle'_asrt
->         "Assert that `valid_idle' s` holds"
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert ct_not_inQ_asrt "`ct_not_inQ`"
+>     stateAssert valid_idle'_asrt "`valid_idle'`"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     thread <- withoutPreemption getCurThread
 >     info <- withoutPreemption $ getMessageInfo thread
 >     syscall

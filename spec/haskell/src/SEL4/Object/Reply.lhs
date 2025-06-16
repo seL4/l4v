@@ -42,14 +42,13 @@ This module specifies the behavior of reply objects.
 
 > bindScReply :: PPtr SchedContext -> PPtr Reply -> Kernel ()
 > bindScReply scPtr replyPtr = do
->     stateAssert sym_refs_asrt
->         "bindScReply: `sym_refs (state_refs_of' s)` must hold"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     sc <- getSchedContext scPtr
 >     scReplyOpt <- return $ scReply sc
 >     when (scReplyOpt /= Nothing) $ do
 >         scReplyPtr <- return $ fromJust scReplyOpt
 >         stateAssert (valid_replies'_sc_asrt scReplyPtr)
->             "Assert that `valid_replies'_sc` holds for replyPtr"
+>             "`valid_replies'_sc` holds for `replyPtr`"
 >         updateReply scReplyPtr (\reply -> reply { replyNext = Just (Next replyPtr) })
 >     updateReply replyPtr (\reply -> reply { replyPrev = scReplyOpt })
 >     updateSchedContext scPtr (\sc -> sc { scReply = Just replyPtr })
@@ -58,10 +57,9 @@ This module specifies the behavior of reply objects.
 > replyPush :: PPtr TCB -> PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > replyPush callerPtr calleePtr replyPtr canDonate = do
 >     stateAssert (valid_replies'_sc_asrt replyPtr)
->         "replyPush: valid_replies'_sc holds for replyPtr"
->     stateAssert valid_idle'_asrt
->         "Assert that `valid_idle' s` holds"
->     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
+>         "`valid_replies'_sc` holds for `replyPtr`"
+>     stateAssert valid_idle'_asrt "`valid_idle'`"
+>     stateAssert valid_objs'_asrt "`valid_objs'`"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
 >     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
 
@@ -74,8 +72,7 @@ This module specifies the behavior of reply objects.
 
 > replyPop :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyPop replyPtr tcbPtr = do
->     stateAssert sym_refs_asrt
->         "replyPop: `sym_refs (state_refs_of' s)` must hold"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     reply <- getReply replyPtr
 >     tptr <- maybeToMonad $ replyTCB reply
 >     assert (tptr == tcbPtr) "replyPop: replyTCB must be equal to tcbPtr"
@@ -99,8 +96,7 @@ This module specifies the behavior of reply objects.
 
 > replyRemove :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyRemove replyPtr tcbPtr = do
->     stateAssert sym_refs_asrt
->         "replyRemove: `sym_refs (state_refs_of' s)` must hold"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     reply <- getReply replyPtr
 >     tptr <- maybeToMonad  $ replyTCB reply
 >     assert (tptr == tcbPtr) "replyRemove: replyTCB must be equal to tcbPtr"
@@ -126,7 +122,7 @@ This module specifies the behavior of reply objects.
 
 > replyRemoveTCB :: PPtr TCB -> Kernel ()
 > replyRemoveTCB tptr = do
->     stateAssert valid_objs'_asrt "assert that `valid_objs'` holds"
+>     stateAssert valid_objs'_asrt "`valid_objs'`"
 >     state <- getThreadState tptr
 >     assert (isReply state) "replyRemoveTCB: thread state must be BlockedOnReply"
 

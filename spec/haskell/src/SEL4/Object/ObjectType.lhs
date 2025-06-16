@@ -122,15 +122,13 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 
 > finaliseCap (EndpointCap { capEPPtr = ptr }) final _ = do
 >     when final $ do
->         stateAssert sch_act_wf_asrt
->             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >         cancelAllIPC ptr
 >     return (NullCap, NullCap)
 
 > finaliseCap (NotificationCap { capNtfnPtr = ptr }) final _ = do
 >     when final $ do
->         stateAssert sch_act_wf_asrt
->             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >         schedContextMaybeUnbindNtfn ptr
 >         unbindMaybeNotification ptr
 >         cancelAllSignals ptr
@@ -138,12 +136,9 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 
 > finaliseCap (ReplyCap { capReplyPtr = ptr }) final _ = do
 >     when final $ do
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert (valid_replies'_sc_asrt ptr)
->             "Assert that `valid_replies'` holds"
->         stateAssert sch_act_wf_asrt
->             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert (valid_replies'_sc_asrt ptr) "`valid_replies'`"
+>         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >         tptrOpt <- liftM replyTCB (getReply ptr)
 >         when (tptrOpt /= Nothing) $ do
 >             replyClear ptr (fromJust tptrOpt)
@@ -166,8 +161,7 @@ A "CNodeCap" is replaced with the appropriate "Zombie". No other action is neede
 Threads are treated as special capability nodes; they also become zombies when their final capabilities are deleted, but they must first be suspended to prevent them being scheduled during deletion.
 
 > finaliseCap (ThreadCap { capTCBPtr = tptr}) True _ = do
->     stateAssert valid_idle'_asrt
->         "Assert that `valid_idle' s` holds"
+>     stateAssert valid_idle'_asrt "`valid_idle'`"
 >     cte_ptr <- getThreadCSpaceRoot tptr
 >     unbindNotification tptr
 >     unbindFromSC tptr
@@ -485,8 +479,7 @@ This function just dispatches invocations to the type-specific invocation functi
 > performInvocation :: Bool -> Bool -> Bool -> Invocation -> KernelP [Word]
 >
 > performInvocation _ _ _ (InvokeUntyped invok) = do
->     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     invokeUntyped invok
 >     return $ []
 >
@@ -513,8 +506,7 @@ This function just dispatches invocations to the type-specific invocation functi
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeCNode invok) = do
->     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     invokeCNode invok
 >     return $ []
 >
