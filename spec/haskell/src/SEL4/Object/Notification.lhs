@@ -53,8 +53,7 @@ This function performs an signal operation, given a capability to a notification
 
 Fetch the notification object object, and select the operation based on its state.
 
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >         nTFN <- getNotification ntfnPtr
 >         case (ntfnObj nTFN, ntfnBoundTCB nTFN) of
 
@@ -116,10 +115,8 @@ This function performs an receive signal operation, given a thread pointer and a
 Fetch the notification object, and select the operation based on its state.
 
 >         let ntfnPtr = capNtfnPtr cap
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert valid_idle'_asrt
->             "Assert that `valid_idle' s` holds"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert valid_idle'_asrt "`valid_idle' s`"
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 
@@ -160,10 +157,8 @@ If a notification object is deleted, then pending receive operations must be can
 
 > cancelAllSignals :: PPtr Notification -> Kernel ()
 > cancelAllSignals ntfnPtr = do
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert sch_act_wf_asrt
->             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >         stateAssert ksReadyQueues_asrt ""
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
@@ -182,10 +177,8 @@ The following function will remove the given thread from the queue of the notifi
 
 > cancelSignal :: PPtr TCB -> PPtr Notification -> Kernel ()
 > cancelSignal threadPtr ntfnPtr = do
->         stateAssert sym_refs_asrt
->             "Assert that `sym_refs (state_refs_of' s)` holds"
->         stateAssert ready_qs_runnable
->             "Threads in the ready queues are runnable'"
+>         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>         stateAssert ready_qs_runnable "threads in the ready queues are runnable'"
 >         ntfn <- getNotification ntfnPtr
 >         assert (isWaiting (ntfnObj ntfn))
 >             "cancelSignal: notification object must be waiting"
@@ -271,8 +264,7 @@ The following functions are specialisations of the "getObject" and "setObject" f
 
 > reorderNtfn :: PPtr Notification -> PPtr TCB -> Kernel ()
 > reorderNtfn ntfnPtr tptr = do
->     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     ntfn <- getNotification ntfnPtr
 >     qsOpt <- return $ getntfnQueue ntfn
 >     assert (qsOpt /= Nothing) "reorder_ntfn: the notification queue must not be Nothing"

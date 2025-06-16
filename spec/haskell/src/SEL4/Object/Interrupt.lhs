@@ -221,8 +221,7 @@ The following functions are used within this module to access the global interru
 
 > setNextInterrupt :: Kernel ()
 > setNextInterrupt = do
->     stateAssert cur_tcb'_asrt
->         "Assert that `cur_tcb' s` holds"
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     stateAssert ksReleaseQueue_asrt ""
 >     curTm <- getCurTime
 >     curTh <- getCurThread
