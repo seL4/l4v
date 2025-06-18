@@ -1145,6 +1145,11 @@ lemma word_unat_less_le:
   "a \<le> of_nat b \<Longrightarrow> unat a \<le> b"
   by (metis eq_iff le_cases le_unat_uoi word_of_nat_le)
 
+lemma word_of_nat_div:
+  "\<lbrakk>m < 2 ^ LENGTH('a); n < 2 ^ LENGTH('a)\<rbrakk>
+   \<Longrightarrow> (word_of_nat (m div n) :: 'a :: len word) = word_of_nat m div word_of_nat n"
+  by (clarsimp simp: word_arith_nat_div unat_of_nat_eq)
+
 lemma mask_Suc_0 : "mask (Suc 0) = (1 :: 'a::len word)"
   by (simp add: mask_eq_decr_exp)
 
