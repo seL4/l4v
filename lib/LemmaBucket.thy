@@ -498,6 +498,10 @@ lemma add_right_mono_trans:
     apply (erule add_right_mono)
    done
 
+lemma mult_le_mono3:
+  "\<lbrakk>a * b \<le> (c :: nat); d \<le> a\<rbrakk> \<Longrightarrow> d * b \<le> c"
+  by (meson le_trans mult_le_mono1)
+
 lemma sorted_imp_sorted_filter:
   "sorted xs \<Longrightarrow> sorted (filter P xs)"
   by (metis filter_sort sorted_sort sorted_sort_id)
