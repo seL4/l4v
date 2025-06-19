@@ -49,7 +49,3 @@ Also related to interrupt latency, clearing of memory before "Retype" is done on
 
 > resetChunkBits :: Int
 > resetChunkBits = error "see Kernel_Config.thy"
-
-> timeArgSize :: Int
-> timeArgSize = 2
-

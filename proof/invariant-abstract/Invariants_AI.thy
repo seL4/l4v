@@ -25,6 +25,7 @@ arch_requalify_facts (A)
   reply_bits_def
   parse_time_arg_def
   words_from_time_def
+  TIME_ARG_SIZE_def
 
 arch_requalify_consts
   not_kernel_window

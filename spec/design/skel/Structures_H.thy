@@ -35,6 +35,7 @@ arch_requalify_consts (H)
   atcbContextSet
   wordsOfTime
   parseTimeArg
+  timeArgSize
 
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap objBitsKO
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap objBitsKO

@@ -17,8 +17,8 @@ imports
 begin
 
 arch_requalify_consts (H)
-  minUntypedSizeBits
-  maxUntypedSizeBits
+   minUntypedSizeBits
+   maxUntypedSizeBits
 
 consts
   cNodeOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"

@@ -50,6 +50,7 @@ arch_requalify_consts (A)
   msg_label_bits
   parse_time_arg
   words_from_time
+  TIME_ARG_SIZE
 
 arch_requalify_facts
   kernelWCET_ticks_pos2
