@@ -33,7 +33,7 @@ lemma det_wp_bind [wp]:
   apply fastforce
   done
 
-lemma det_wp_pre:
+lemma det_wp_pre[wp_pre]:
   "det_wp P' f \<Longrightarrow> (\<And>s. P s \<Longrightarrow> P' s) \<Longrightarrow> det_wp P f"
   by (simp add: det_wp_def)
 
