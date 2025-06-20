@@ -391,22 +391,7 @@ lemma corres_whileLoop_ret:
   assumes termin: "\<And>r' s'. \<lbrakk>P' r' s'; C' r' s'\<rbrakk> \<Longrightarrow> whileLoop_terminates C' B' r' s'"
   shows "corres_underlying srel False nf' rrel (P r) (P' r') (whileLoop C B r) (whileLoop C' B' r')"
   apply (rule corres_no_failI)
-   apply (simp add: no_fail_def)
-   apply (intro impI allI)
-   apply (erule_tac I="\<lambda>r' s'. P' r' s'"
-                    and R="{((r', s'), r, s). C' r s \<and> (r', s') \<in> fst (B' r s)
-                                              \<and> whileLoop_terminates C' B' r s}"
-                    in not_snd_whileLoop)
-    apply (clarsimp simp: validNF_def)
-    apply (rule conjI)
-     apply (intro hoare_vcg_conj_lift_pre_fix; wpsimp?)
-       using body_inv
-       apply (fastforce simp: valid_def)
-      apply (clarsimp simp: valid_def)
-     apply (insert termin)[1]
-     apply wpsimp
-    apply (fastforce intro: no_fail_pre nf')
-   apply (fastforce intro: wf_subset[OF whileLoop_terminates_wf[where C=C']])
+   apply (fastforce simp: no_fail_whileLoop[OF nf' termin body_inv(2)] no_fail_def)
   apply clarsimp
   apply (frule in_whileLoop_corres[OF body_corres body_inv]; (fastforce dest: cond)?)
   apply (fastforce intro: assms)
