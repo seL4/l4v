@@ -63,6 +63,10 @@ lemma trans_state[simp]:
   "cur_domain (trans_state t s) = cur_domain s"
   "domain_time (trans_state t s) = domain_time s"
   "ready_queues (trans_state t s) = ready_queues s"
+  "domain_kimage_vspace (trans_state t s) = domain_kimage_vspace s"
+  "domain_kimage_asid (trans_state t s) = domain_kimage_asid s"
+  "domain_irqs (trans_state t s) = domain_irqs s"
+  "shared_data_flush_paddrs (trans_state t s) = shared_data_flush_paddrs s"
   "exst (trans_state t s) = (t (exst s))"
   "exst (trans_state (\<lambda>_. e) s) = e"
   by (simp add: trans_state_def abstract_state.defs state.defs)+
@@ -82,6 +86,14 @@ lemma trans_state_update[simp]:
   "trans_state t (cur_domain_update e s) = cur_domain_update e (trans_state t s)"
   "trans_state t (domain_time_update f2 s) = domain_time_update f2 (trans_state t s)"
   "trans_state t (ready_queues_update g2 s) = ready_queues_update g2 (trans_state t s)"
+  "trans_state t (domain_kimage_vspace_update h2 s) =
+     domain_kimage_vspace_update h2 (trans_state t s)"
+  "trans_state t (domain_kimage_asid_update i2 s) =
+     domain_kimage_asid_update i2 (trans_state t s)"
+  "trans_state t (domain_irqs_update j2 s) =
+     domain_irqs_update j2 (trans_state t s)"
+  "trans_state t (shared_data_flush_paddrs_update k2 s) =
+     shared_data_flush_paddrs_update k2 (trans_state t s)"
   by (simp add: trans_state_def abstract_state.defs)+
 
 

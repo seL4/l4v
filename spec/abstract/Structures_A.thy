@@ -572,6 +572,10 @@ record abstract_state =
   interrupt_irq_node :: "irq \<Rightarrow> obj_ref"
   interrupt_states   :: "irq \<Rightarrow> irq_state"
   arch_state         :: arch_state
+  domain_kimage_vspace :: "domain \<Rightarrow> obj_ref"
+  domain_kimage_asid :: "domain \<Rightarrow> asid"
+  domain_irqs :: "domain \<Rightarrow> irq list"
+  shared_data_flush_paddrs :: "machine_word list"
 
 text \<open>The following record extends the abstract kernel state with extra
 state of type @{typ "'a"}. The specification operates over states of

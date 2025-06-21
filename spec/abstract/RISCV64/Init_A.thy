@@ -148,6 +148,11 @@ definition init_A_st :: "'z::state_ext state"
     interrupt_irq_node = \<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits),
     interrupt_states = \<lambda>_. IRQInactive,
     arch_state = init_arch_state,
+    \<comment> \<open>TODO: Figure out how these are to be initialised. -robs\<close>
+    domain_kimage_vspace = \<lambda>_. 0,
+    domain_kimage_asid = \<lambda>_. 0,
+    domain_irqs = \<lambda>_. [],
+    shared_data_flush_paddrs = [],
     exst = ext_init
   \<rparr>"
 

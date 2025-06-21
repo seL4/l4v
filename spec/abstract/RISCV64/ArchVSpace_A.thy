@@ -79,6 +79,34 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
   odE"
 
 text \<open>
+  Prepare the new domain's kernel image and switch to using it.
+\<close>
+definition arch_switch_domain_kernel :: "domain \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
+  "arch_switch_domain_kernel newdom \<equiv> do
+    tcb \<leftarrow> gets cur_thread;
+    thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
+    thread_root \<leftarrow> get_cap thread_root_slot;
+    (case thread_root of
+       ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
+           pt' \<leftarrow> find_vspace_for_asid asid;
+           whenE (pt \<noteq> pt') $ throwError InvalidRoot;
+           ki_vspace \<leftarrow> liftE $ gets (\<lambda>s. domain_kimage_vspace s newdom);
+           ki_asid \<leftarrow> liftE $ gets (\<lambda>s. domain_kimage_asid s newdom);
+    \<comment> \<open>At this point we would copy the contents of the stack from the previous domain's kernel
+      image to the one we are about to switch to (described Sec. 6.4.6.1 of Qian's PhD thesis).
+      TODO: Determine if we expect that to be visible to the abstract specification. -robs\<close>
+    \<comment> \<open>Switch to the new domain's default kernel-image page table.\<close>
+           liftE $ do_machine_op $ setVSpaceRoot (addrFromPPtr ki_vspace) (ucast ki_asid)
+       odE
+     | _ \<Rightarrow> throwError InvalidRoot) <catch>
+    (\<lambda>_. do
+           global_pt \<leftarrow> gets global_pt;
+           do_machine_op $ setVSpaceRoot (addrFromKPPtr global_pt) 0
+         od)
+   od"
+
+text \<open>
   Switch into the address space of a given thread or the global address space if none is correctly
   configured.
 \<close>

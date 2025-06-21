@@ -14,6 +14,9 @@ arch_requalify_consts (A)
   arch_switch_to_thread
   arch_switch_to_idle_thread
   arch_prepare_next_domain
+  arch_mask_interrupts
+  arch_switch_domain_kernel
+  arch_domainswitch_flush
 
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
@@ -91,10 +94,21 @@ definition
 definition
   "schedule_choose_new_thread \<equiv> do
      dom_time \<leftarrow> gets domain_time;
-     when (dom_time = 0) $ do
+     when (dom_time = 0) (do
+       olddom \<leftarrow> gets cur_domain;
        arch_prepare_next_domain;
-       next_domain
-     od;
+       next_domain;
+       newdom \<leftarrow> gets cur_domain;
+       assert (newdom \<noteq> olddom);
+       irqs_of \<leftarrow> gets domain_irqs;
+       arch_mask_interrupts True (irqs_of olddom);
+       arch_switch_domain_kernel newdom;
+       table \<leftarrow> gets interrupt_states;
+       forM_x (irqs_of newdom)
+           (\<lambda>irq. when (table irq \<noteq> IRQInactive)
+                  (do_machine_op $ maskInterrupt False irq));
+       arch_domainswitch_flush
+     od);
      choose_thread;
      set_scheduler_action resume_cur_thread
    od"
