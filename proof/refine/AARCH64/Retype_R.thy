@@ -2867,9 +2867,9 @@ lemma caps_no_overlapD'':
   "\<lbrakk>cte_wp_at' (\<lambda>cap. cteCap cap = c) q s;caps_no_overlap'' ptr sz s\<rbrakk>
    \<Longrightarrow> untypedRange c \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<noteq> {} \<longrightarrow>
        {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<subseteq> untypedRange c"
-  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps caps_no_overlap''_def
-        simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps caps_no_overlap''_def
+                  simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                            Int_atLeastAtMost atLeastatMost_empty_iff)
   apply (drule_tac x = cte in bspec)
     apply fastforce
   apply (erule(1) impE)

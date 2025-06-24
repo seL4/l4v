@@ -1596,7 +1596,6 @@ lemma setObject_idle':
    apply (wp z)
   apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def)
   apply (clarsimp simp add: project_inject)
-  apply (drule_tac x=obja in spec, simp)
   done
 
 lemma setObject_no_0_obj' [wp]:
