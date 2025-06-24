@@ -6660,6 +6660,7 @@ lemma cteSwap_corres:
          (cap_swap scap src dcap dest) (cteSwap scap' src' dcap' dest')"
   (is "corres _ ?P ?P' _ _") using assms including no_pre
   supply None_upd_eq[simp del]
+  supply RISCV64.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (unfold cap_swap_def cteSwap_def)
   apply (cases "src=dest")
    apply (rule corres_assume_pre)
@@ -6835,7 +6836,7 @@ lemma cteSwap_corres:
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
   apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
   apply (rule conjI)
-   subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv RISCV64.data_at_def)
+   subgoal by (clarsimp simp: RISCV64.ghost_relation_typ_at set_cap_a_type_inv RISCV64.data_at_def)
   apply(subst conj_assoc[symmetric])
   apply (rule conjI)
    prefer 2

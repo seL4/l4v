@@ -150,7 +150,7 @@ lemma performASIDControlInvocation_corres:
                    apply simp
                   apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
                                    default_arch_object_def archObjSize_def)+
-               apply (simp add: obj_relation_retype_def default_object_def
+               apply (simp add: obj_relation_retype_def default_object_def other_aobj_relation_def
                                 default_arch_object_def objBits_simps archObjSize_def)
                apply (simp add: other_obj_relation_def asid_pool_relation_def)
                apply (simp add: makeObject_asidpool const_def inv_def)

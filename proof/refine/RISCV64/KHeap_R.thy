@@ -968,6 +968,7 @@ lemma obj_relation_cut_same_type:
   apply (rule ccontr)
   apply (simp add: obj_relation_cuts_def2 a_type_def)
   apply (auto simp: other_obj_relation_def tcb_relation_cut_def cte_relation_def pte_relation_def
+                    other_aobj_relation_def
              split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
                     arch_kernel_obj.split_asm)
@@ -983,6 +984,8 @@ lemma typ_at'_koTypeOf:
   "ko_at' ob' ptr b \<Longrightarrow> typ_at' (koTypeOf (injectKO ob')) ptr b"
   by (auto simp: typ_at'_def ko_wp_at'_def obj_at'_def project_inject)
 
+(* FIXME arch-split: while other_obj_relation only makes sense for non-arch objects, this lemma
+   predates arch-splitting, and so does not assume a non-arch object *)
 lemma setObject_other_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
@@ -1033,6 +1036,10 @@ lemma setObject_other_corres:
    apply (rule ballI, drule(1) bspec)
    apply (drule domD)
    apply (clarsimp simp: is_other_obj_relation_type t)
+   apply (rule conjI; clarsimp)
+    apply (prop_tac "is_ArchObj ko", clarsimp dest!: a_type_eq_is_ArchObj)
+    apply (simp add: other_obj_relation_not_aobj)
+   apply (prop_tac "\<not> is_ArchObj ko", clarsimp dest!: a_type_eq_is_ArchObj)
    apply (drule(1) bspec)
    apply clarsimp
    apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type,
@@ -1044,6 +1051,74 @@ lemma setObject_other_corres:
   apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
    subgoal
      by (clarsimp simp: other_obj_relation_def; cases ob; cases "injectKO ob'";
+         simp split: arch_kernel_obj.split_asm)
+  by (fastforce dest: tcbs_of'_non_tcb_update)
+
+(* FIXME arch-split: analogous to setObject_other_corres, but for arch objects *)
+lemma setObject_other_arch_corres:
+  fixes ob' :: "'a :: pspace_storable"
+  assumes x: "updateObject ob' = updateObject_default ob'"
+  assumes z: "\<And>s. obj_at' P ptr s
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
+  assumes t: "is_other_obj_relation_type (a_type ob)"
+  assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
+  assumes e: "\<And>ko. P ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ob')"
+  assumes P: "\<And>v::'a::pspace_storable. (1 :: machine_word) < 2 ^ objBits v"
+  assumes a: "is_ArchObj ob"
+  shows      "other_aobj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
+  corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
+            (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
+            (set_object ptr ob) (setObject ptr ob')"
+  supply image_cong_simp [cong del] projectKOs[simp del]
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre)
+    apply wp
+    apply (rule x)
+   apply (clarsimp simp: b elim!: obj_at'_weakenE)
+  apply (unfold set_object_def setObject_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
+                        put_def return_def modify_def get_object_def x
+                        projectKOs obj_at_def
+                        updateObject_default_def in_magnitude_check [OF _ P])
+  apply (rename_tac ko)
+  apply (clarsimp simp add: state_relation_def z)
+  apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
+                            swp_def fun_upd_def obj_at_def)
+  apply (subst conj_assoc[symmetric])
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp add: ghost_relation_def)
+   apply (erule_tac x=ptr in allE)+
+   apply (clarsimp simp: obj_at_def a_type_def
+                   split: Structures_A.kernel_object.splits if_split_asm)
+   apply (simp split: arch_kernel_obj.splits if_splits)
+  apply (fold fun_upd_def)
+  apply (simp only: pspace_relation_def pspace_dom_update dom_fun_upd2 simp_thms)
+  apply (elim conjE)
+  apply (frule bspec, erule domI)
+  apply (prop_tac "is_ArchObj ko", clarsimp simp: a dest!: a_type_eq_is_ArchObj)
+  apply (prop_tac "typ_at' (koTypeOf (injectKO ob')) ptr b")
+   subgoal
+     by (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def projectKO_opts_defs
+                        is_other_obj_relation_type_def a_type_def other_aobj_relation_def
+                 split: Structures_A.kernel_object.split_asm if_split_asm
+                        arch_kernel_obj.split_asm kernel_object.split_asm
+                        arch_kernel_object.split_asm)
+  apply clarsimp
+  apply (rule conjI)
+   apply (rule ballI, drule(1) bspec)
+   apply (drule domD)
+   apply (clarsimp simp: is_other_obj_relation_type t a)
+   apply (drule(1) bspec)
+   apply clarsimp
+   apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type)
+   apply ((fastforce simp add: is_other_obj_relation_type t)+)[3] (* loops when folded into above *)
+   apply (insert t)
+   apply ((erule disjE
+          | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+  \<comment> \<open>ready_queues_relation\<close>
+  apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
+   subgoal
+     by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
          simp split: arch_kernel_obj.split_asm)
   by (fastforce dest: tcbs_of'_non_tcb_update)
 

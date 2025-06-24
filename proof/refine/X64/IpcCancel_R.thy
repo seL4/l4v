@@ -348,7 +348,7 @@ lemma cancelSignal_corres:
 
 lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
-  by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
+  by (simp add: cte_map_def tcb_cnode_index_def to_bl_1 shiftl_t2n')
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -378,7 +378,7 @@ proof -
 
   hence "\<exists>r. cteCap cte = capability.ReplyCap t True r"
     using invs sr
-    by (fastforce simp: cte_wp_at_master_reply_cap_to_ex_rights
+    by (fastforce simp: cte_wp_at_master_reply_cap_to_ex_rights shiftl_t2n'
                         cte_wp_at_ctes_of cte cte_map_def tcb_cnode_index_def
                   dest: pspace_relation_cte_wp_at state_relation_pspace_relation)
 
@@ -410,7 +410,7 @@ proof -
                     [OF state_relation_pspace_relation])
     apply (elim exE, case_tac c, simp_all del: split_paired_All)
     apply (elim allE, erule impE, fastforce)
-    apply (clarsimp simp: cte_map_def tcb_cnode_index_def)
+    apply (clarsimp simp: cte_map_def tcb_cnode_index_def shiftl_t2n')
     done
   hence class_unique:
     "\<forall>ptr cte'. ctes_of s' ptr = Some cte' \<longrightarrow>
@@ -455,7 +455,8 @@ proof -
     by (simp add: st_tcb_at_tcb_at tcb_at_cte_at dom_tcb_cap_cases)
   hence "descendants_of' (t + 2*2^cte_level_bits) (ctes_of s') \<noteq> {}"
     using sr descs
-    by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def)
+    by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def
+                        shiftl_t2n')
   thus ?thesis
     using cte unfolding nullPointer_def
     by (fastforce simp: descendants_of'_def dest: subtree_next_0)
@@ -485,7 +486,8 @@ proof -
     by (simp add: tcb_at_cte_at dom_tcb_cap_cases)
   hence "descendants_of' (t + 2*2^cte_level_bits) (ctes_of s') = {cte_map sl}"
     using sr desc
-    by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def)
+    by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def
+                        shiftl_t2n')
   thus ?thesis
     using cte invs
     apply (clarsimp simp: descendants_of'_def)

@@ -1553,9 +1553,10 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (subgoal_tac "of_bl (snd p) * 2^cte_level_bits < 2 ^ (cte_level_bits + length (snd p))")
     apply (rule conjI)
      apply (erule is_aligned_no_wrap')
-     apply assumption
+     apply (simp add: shiftl_t2n')
     apply (subst add_diff_eq[symmetric])
     apply (rule word_plus_mono_right)
+     apply (subst shiftl_t2n')
      apply (erule word_le_minus_one_leq)
     apply (erule is_aligned_no_wrap')
     apply (rule word_power_less_1)
@@ -1574,11 +1575,11 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (drule(1) pspace_alignedD[rotated])
    apply (rule conjI)
     apply (erule is_aligned_no_wrap')
-     apply (simp add: word_bits_conv)
+     apply (simp add: word_bits_conv shiftl_t2n')
     apply simp
    apply (rule word_plus_mono_right)
     apply (drule word_le_minus_one_leq)
-    apply simp
+    apply (simp add: shiftl_t2n')
    apply (erule is_aligned_no_wrap')
    apply simp
   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 cte_level_bits_def
@@ -6749,6 +6750,7 @@ lemma cteSwap_corres:
          (cap_swap scap src dcap dest) (cteSwap scap' src' dcap' dest')"
   (is "corres _ ?P ?P' _ _") using assms including no_pre
   supply None_upd_eq[simp del]
+  supply X64.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (unfold cap_swap_def cteSwap_def)
   apply (cases "src=dest")
    apply (rule corres_assume_pre)
@@ -6917,7 +6919,7 @@ lemma cteSwap_corres:
     apply (erule weak_derived_sym')
    apply assumption
   apply (rule conjI)
-   subgoal by (simp only: simp_thms ghost_relation_typ_at set_cap_a_type_inv X64.data_at_def)
+   subgoal by (simp only: simp_thms X64.ghost_relation_typ_at set_cap_a_type_inv X64.data_at_def)
   apply (thin_tac "ksArchState t = p" for t p)+
   apply (thin_tac "gsCNodes t = p" for t p)+
   apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+

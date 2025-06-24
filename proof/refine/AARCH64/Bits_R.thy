@@ -6,7 +6,7 @@
  *)
 
 theory Bits_R
-imports Corres
+imports Corres ArchStateRelationLemmas
 begin
 
 crunch_ignore (add:

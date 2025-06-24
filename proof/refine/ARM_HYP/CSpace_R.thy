@@ -3890,7 +3890,7 @@ lemma create_reply_master_corres:
 lemma cte_map_nat_to_cref:
   "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>
    cte_map (p, nat_to_cref b n) = p + (of_nat n * 2^cte_level_bits)"
-  apply (clarsimp simp: cte_map_def nat_to_cref_def
+  apply (clarsimp simp: cte_map_def nat_to_cref_def shiftl_t2n'
                  dest!: less_is_drop_replicate)
   apply (rule arg_cong [where f="\<lambda>x. x * 2^cte_level_bits"])
   apply (subst of_drop_to_bl)

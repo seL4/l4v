@@ -82,7 +82,7 @@ lemma typ_at_UserDataI:
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
                         cte_relation_def other_obj_relation_def tcb_relation_cut_def
-                        pde_relation_def
+                        pde_relation_def other_aobj_relation_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -113,7 +113,7 @@ lemma typ_at_DeviceDataI:
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
                         cte_relation_def other_obj_relation_def tcb_relation_cut_def
-                        pde_relation_def
+                        pde_relation_def other_aobj_relation_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)

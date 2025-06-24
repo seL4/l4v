@@ -5,7 +5,7 @@
  *)
 
 theory Bits_R
-imports Corres
+imports Corres ArchStateRelationLemmas
 begin
 
 

@@ -664,15 +664,15 @@ proof -
       apply (in_case "KOASIDPool ?pool")
       apply clarsimp
       apply (case_tac arch_kernel_obj)
-         apply (simp add: other_obj_relation_def asid_pool_relation_def
+         apply (simp add: other_aobj_relation_def asid_pool_relation_def
                           inv_def o_def)
         apply (clarsimp simp add:  pte_relation_def)
-       apply (clarsimp split: if_split_asm)+
-      apply (simp add: other_obj_relation_def)
+       apply (clarsimp simp: other_aobj_relation_def split: if_split_asm)
+      apply (simp add: other_aobj_relation_def)
 
      apply (in_case "KOPTE ?pte")
      apply (case_tac arch_kernel_obj;
-            simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
+            simp add: other_obj_relation_def other_aobj_relation_def asid_pool_relation_def inv_def o_def)
       apply clarsimp
       apply (rename_tac p pte pt idx)
       apply (frule pspace_alignedD, rule pspace_aligned)
@@ -827,7 +827,7 @@ proof -
     apply clarsimp
     apply (rename_tac arch_kernel_obj vcpu)
     apply (case_tac arch_kernel_obj;
-           clarsimp simp: other_obj_relation_def pte_relation_def split: if_splits)
+           clarsimp simp: other_obj_relation_def other_aobj_relation_def pte_relation_def split: if_splits)
     apply (rename_tac vcpu')
     apply (case_tac vcpu')
     apply (clarsimp simp: vcpu_relation_def split: vcpu.splits)

@@ -10,15 +10,25 @@
 *)
 
 theory StateRelation
-imports InvariantUpdates_H
+imports ArchStateRelation
 begin
 
-context begin interpretation Arch .
+arch_requalify_consts
+  arch_fault_map
+  vmrights_map
+  acap_relation
+  arch_tcb_relation
+  aobj_relation_cuts
+  is_other_obj_relation_type
+  ghost_relation
+  ghost_relation_wrapper
+  arch_state_relation
 
 definition cte_map :: "cslot_ptr \<Rightarrow> machine_word" where
   "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref << cte_level_bits)"
 
-lemmas cte_map_def' = cte_map_def[simplified cte_level_bits_def shiftl_t2n mult_ac, simplified]
+(* FIXME arch-split: same derivation on all arches *)
+lemmas (in Arch) cte_map_def' = cte_map_def[simplified cte_level_bits_def shiftl_t2n mult_ac, simplified]
 
 definition lookup_failure_map :: "ExceptionTypes_A.lookup_failure \<Rightarrow> Fault_H.lookup_failure" where
   "lookup_failure_map \<equiv> \<lambda>lf. case lf of
@@ -26,12 +36,6 @@ definition lookup_failure_map :: "ExceptionTypes_A.lookup_failure \<Rightarrow> 
    | ExceptionTypes_A.MissingCapability n \<Rightarrow> Fault_H.MissingCapability n
    | ExceptionTypes_A.DepthMismatch n m   \<Rightarrow> Fault_H.DepthMismatch n m
    | ExceptionTypes_A.GuardMismatch n g   \<Rightarrow> Fault_H.GuardMismatch n (of_bl g) (length g)"
-
-primrec arch_fault_map :: "Machine_A.AARCH64_A.arch_fault \<Rightarrow> arch_fault" where
-  "arch_fault_map (Machine_A.AARCH64_A.VMFault ptr msg) = VMFault ptr msg"
-| "arch_fault_map (Machine_A.AARCH64_A.VGICMaintenance datalist) = VGICMaintenance datalist "
-| "arch_fault_map (Machine_A.AARCH64_A.VPPIEvent irq) = VPPIEvent irq"
-| "arch_fault_map (Machine_A.AARCH64_A.VCPUFault data) = VCPUFault data"
 
 primrec fault_map :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault" where
   "fault_map (ExceptionTypes_A.CapFault ref bool failure) =
@@ -43,32 +47,8 @@ primrec fault_map :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault" where
 | "fault_map (ExceptionTypes_A.UserException x y) =
      Fault_H.UserException x y"
 
-type_synonym obj_relation_cut = "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
-type_synonym obj_relation_cuts = "(machine_word \<times> obj_relation_cut) set"
-
-definition vmrights_map :: "rights set \<Rightarrow> vmrights" where
-  "vmrights_map S \<equiv> if AllowRead \<in> S
-                     then (if AllowWrite \<in> S then VMReadWrite else VMReadOnly)
-                     else VMKernelOnly"
-
 definition zbits_map :: "nat option \<Rightarrow> zombie_type" where
   "zbits_map N \<equiv> case N of Some n \<Rightarrow> ZombieCNode n | None \<Rightarrow> ZombieTCB"
-
-definition mdata_map ::
-  "(Machine_A.AARCH64_A.asid \<times> vspace_ref) option \<Rightarrow> (asid \<times> vspace_ref) option" where
-  "mdata_map = map_option (\<lambda>(asid, ref). (ucast asid, ref))"
-
-primrec acap_relation :: "arch_cap \<Rightarrow> arch_capability \<Rightarrow> bool" where
-  "acap_relation (arch_cap.ASIDPoolCap p asid) c =
-     (c = ASIDPoolCap p (ucast asid))"
-| "acap_relation (arch_cap.ASIDControlCap) c =
-     (c = ASIDControlCap)"
-| "acap_relation (arch_cap.FrameCap p rghts sz dev data) c =
-     (c = FrameCap p (vmrights_map rghts) sz dev (mdata_map data))"
-| "acap_relation (arch_cap.PageTableCap p pt_t data) c =
-     (c = PageTableCap p pt_t (mdata_map data))"
-| "acap_relation (arch_cap.VCPUCap vcpu) c  = (c =
-        arch_capability.VCPUCap vcpu)"
 
 primrec cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool" where
   "cap_relation Structures_A.NullCap c =
@@ -97,35 +77,9 @@ primrec cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool" where
 | "cap_relation (Structures_A.Zombie p b n) c =
      (c = Structures_H.Zombie p (zbits_map b) n)"
 
-
 definition cte_relation :: "cap_ref \<Rightarrow> obj_relation_cut" where
   "cte_relation y \<equiv> \<lambda>ko ko'. \<exists>sz cs cte cap. ko = CNode sz cs \<and> ko' = KOCTE cte
                                               \<and> cs y = Some cap \<and> cap_relation cap (cteCap cte)"
-
-definition abs_asid_entry :: "asidpool_entry \<Rightarrow> asid_pool_entry" where
-  "abs_asid_entry ap = AARCH64_A.ASIDPoolVSpace (apVMID ap) (apVSpace ap)"
-
-definition asid_pool_relation :: "asid_pool \<Rightarrow> asidpool \<Rightarrow> bool" where
-  "asid_pool_relation \<equiv> \<lambda>p p'. p = map_option abs_asid_entry \<circ> inv ASIDPool p' \<circ> ucast"
-
-lemma inj_ASIDPool[simp]:
-  "inj ASIDPool"
-  by (auto intro: injI)
-
-lemma asid_pool_relation_def':
-  "asid_pool_relation ap (ASIDPool ap') =
-    (\<forall>asid_low. ap asid_low = map_option abs_asid_entry (ap' (ucast asid_low)))"
-  by (auto simp add: asid_pool_relation_def)
-
-definition vgic_map :: "gic_vcpu_interface \<Rightarrow> gicvcpuinterface" where
-  "vgic_map \<equiv> \<lambda>v. VGICInterface (vgic_hcr v) (vgic_vmcr v) (vgic_apr v) (vgic_lr v)"
-
-definition vcpu_relation :: "AARCH64_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool" where
-  "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
-                           vgic_map (vcpu_vgic v) = vcpuVGIC v' \<and>
-                           vcpu_regs v = vcpuRegs v' \<and>
-                           vcpu_vppi_masked v = vcpuVPPIMasked v' \<and>
-                           vcpu_vtimer v = vcpuVTimer v'"
 
 definition ntfn_relation :: "Structures_A.notification \<Rightarrow> Structures_H.notification \<Rightarrow> bool" where
   "ntfn_relation \<equiv> \<lambda>ntfn ntfn'.
@@ -165,10 +119,6 @@ primrec thread_state_relation :: "Structures_A.thread_state \<Rightarrow> Struct
 | "thread_state_relation (Structures_A.BlockedOnNotification oref) ts'
      = (ts' = Structures_H.BlockedOnNotification oref)"
 
-definition arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool" where
-  "arch_tcb_relation \<equiv>
-     \<lambda>atcb atcb'. tcb_context atcb = atcbContext atcb' \<and> tcb_vcpu atcb = atcbVCPUPtr atcb'"
-
 definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool" where
   "tcb_relation \<equiv> \<lambda>tcb tcb'.
      tcb_fault_handler tcb = to_bl (tcbFaultHandler tcb')
@@ -199,37 +149,10 @@ definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
 where
   "other_obj_relation obj obj' \<equiv>
-   (case (obj, obj') of
+   case (obj, obj') of
       (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
     | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
-    | (ArchObj (AARCH64_A.ASIDPool ap), KOArch (KOASIDPool ap')) \<Rightarrow> asid_pool_relation ap ap'
-    | (ArchObj (AARCH64_A.VCPU vcpu), KOArch (KOVCPU vcpu')) \<Rightarrow> vcpu_relation vcpu vcpu'
-    | _ \<Rightarrow> False)"
-
-
-primrec pte_relation' :: "AARCH64_A.pte \<Rightarrow> AARCH64_H.pte \<Rightarrow> bool" where
-  "pte_relation' AARCH64_A.InvalidPTE x =
-     (x = AARCH64_H.InvalidPTE)"
-| "pte_relation' (AARCH64_A.PageTablePTE ppn) x =
-     (x = AARCH64_H.PageTablePTE (ucast ppn))"
-| "pte_relation' (AARCH64_A.PagePTE page_addr is_small attrs rights) x =
-     (x = AARCH64_H.PagePTE page_addr is_small (Global \<in> attrs) (Execute \<notin> attrs) (Device \<in> attrs)
-                            (vmrights_map rights))"
-
-definition pte_relation :: "machine_word \<Rightarrow> Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
- "pte_relation y \<equiv> \<lambda>ko ko'. \<exists>pt pte. ko = ArchObj (PageTable pt) \<and> ko' = KOArch (KOPTE pte)
-                                      \<and> pte_relation' (pt_apply pt y) pte"
-
-primrec aobj_relation_cuts :: "AARCH64_A.arch_kernel_obj \<Rightarrow> machine_word \<Rightarrow> obj_relation_cuts" where
-  "aobj_relation_cuts (DataPage dev sz) x =
-     { (x + (n << pageBits), \<lambda>_ obj. obj = (if dev then KOUserDataDevice else KOUserData))
-       | n. n < 2 ^ (pageBitsForSize sz - pageBits) }"
-| "aobj_relation_cuts (AARCH64_A.ASIDPool pool) x =
-     {(x, other_obj_relation)}"
-| "aobj_relation_cuts (PageTable pt) x =
-     (\<lambda>y. (x + (y << pteBits), pte_relation y)) ` {0..mask (ptTranslationBits (pt_type pt))}"
-| "aobj_relation_cuts (AARCH64_A.VCPU v) x =
-     {(x, other_obj_relation)}"
+    | _ \<Rightarrow> False"
 
 definition tcb_relation_cut :: "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
   "tcb_relation_cut obj obj' \<equiv>
@@ -247,72 +170,10 @@ primrec obj_relation_cuts :: "Structures_A.kernel_object \<Rightarrow> machine_w
 | "obj_relation_cuts (Notification ntfn) x = {(x, other_obj_relation)}"
 | "obj_relation_cuts (ArchObj ao) x = aobj_relation_cuts ao x"
 
-lemma obj_relation_cuts_def2:
-  "obj_relation_cuts ko x =
-   (case ko of CNode sz cs \<Rightarrow> if well_formed_cnode_n sz cs
-                              then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
-                              else {(x, \<bottom>\<bottom>)}
-             | TCB tcb \<Rightarrow> {(x, tcb_relation_cut)}
-             | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) `
-                                         {0..mask (ptTranslationBits (pt_type pt))}
-             | ArchObj (DataPage dev sz) \<Rightarrow>
-                 {(x + (n << pageBits),  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData))
-                  | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
-             | _ \<Rightarrow> {(x, other_obj_relation)})"
-  by (simp split: Structures_A.kernel_object.split
-                  AARCH64_A.arch_kernel_obj.split)
-
-lemma obj_relation_cuts_def3:
-  "obj_relation_cuts ko x =
-   (case a_type ko of
-      ACapTable n \<Rightarrow> {(cte_map (x, y), cte_relation y) | y. length y = n}
-    | ATCB \<Rightarrow> {(x, tcb_relation_cut)}
-    | AArch (APageTable pt_t) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) `
-                                      {0..mask (ptTranslationBits pt_t)}
-    | AArch (AUserData sz) \<Rightarrow> {(x + (n << pageBits), \<lambda>_ obj. obj = KOUserData)
-                               | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
-    | AArch (ADeviceData sz) \<Rightarrow> {(x + (n << pageBits), \<lambda>_ obj. obj = KOUserDataDevice )
-                                 | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
-    | AGarbage _ \<Rightarrow> {(x, \<bottom>\<bottom>)}
-    | _ \<Rightarrow> {(x, other_obj_relation)})"
-  by (simp add: obj_relation_cuts_def2 a_type_def well_formed_cnode_n_def length_set_helper
-           split: Structures_A.kernel_object.split AARCH64_A.arch_kernel_obj.split)
-
-definition is_other_obj_relation_type :: "a_type \<Rightarrow> bool" where
- "is_other_obj_relation_type tp \<equiv>
-    case tp of
-      ACapTable n \<Rightarrow> False
-    | ATCB \<Rightarrow> False
-    | AArch (APageTable _) \<Rightarrow> False
-    | AArch (AUserData _) \<Rightarrow> False
-    | AArch (ADeviceData _) \<Rightarrow> False
-    | AGarbage _ \<Rightarrow> False
-    | _ \<Rightarrow> True"
-
-lemma is_other_obj_relation_type_CapTable:
-  "\<not> is_other_obj_relation_type (ACapTable n)"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_PageTable:
-  "\<not> is_other_obj_relation_type (AArch (APageTable pt_t))"
-  unfolding is_other_obj_relation_type_def by simp
-
-lemma is_other_obj_relation_type_TCB:
-  "\<not> is_other_obj_relation_type ATCB"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_UserData:
-  "\<not> is_other_obj_relation_type (AArch (AUserData sz))"
-  unfolding is_other_obj_relation_type_def by simp
-
-lemma is_other_obj_relation_type_DeviceData:
-  "\<not> is_other_obj_relation_type (AArch (ADeviceData sz))"
-  unfolding is_other_obj_relation_type_def by simp
-
-lemma is_other_obj_relation_type:
-  "is_other_obj_relation_type (a_type ko) \<Longrightarrow> obj_relation_cuts ko x = {(x, other_obj_relation)}"
-  by (simp add: obj_relation_cuts_def3 is_other_obj_relation_type_def
-           split: a_type.splits aa_type.splits)
+lemma other_obj_relation_not_aobj:
+  "other_obj_relation ko ko' \<Longrightarrow> \<not> is_ArchObj ko"
+  unfolding other_obj_relation_def is_ArchObj_def
+  by clarsimp
 
 definition pspace_dom :: "Structures_A.kheap \<Rightarrow> machine_word set" where
   "pspace_dom ps \<equiv> \<Union>x\<in>dom ps. fst ` (obj_relation_cuts (the (ps x)) x)"
@@ -379,13 +240,6 @@ abbreviation ready_queues_relation :: "det_state \<Rightarrow> kernel_state \<Ri
 
 lemmas ready_queues_relation_def = ready_queues_relation_2_def
 
-definition ghost_relation ::
-  "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> (machine_word \<rightharpoonup> pt_type) \<Rightarrow> bool" where
-  "ghost_relation h ups cns pt_types \<equiv>
-     (\<forall>a sz. (\<exists>dev. h a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow> ups a = Some sz) \<and>
-     (\<forall>a n. (\<exists>cs. h a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow> cns a = Some n) \<and>
-     (\<forall>a pt_t. (\<exists>pt. h a = Some (ArchObj (PageTable pt)) \<and> pt_t = pt_type pt) \<longleftrightarrow> pt_types a = Some pt_t)"
-
 definition cdt_relation :: "(cslot_ptr \<Rightarrow> bool) \<Rightarrow> cdt \<Rightarrow> cte_heap \<Rightarrow> bool" where
   "cdt_relation \<equiv> \<lambda>cte_at m m'.
      \<forall>c. cte_at c \<longrightarrow> cte_map ` descendants_of c m = descendants_of' (cte_map c) m'"
@@ -417,65 +271,9 @@ definition interrupt_state_relation ::
                     \<and> (\<forall>irq. node_map irq = node + (ucast irq << cte_level_bits))
                     \<and> (\<forall>irq. irq_state_relation (irqs irq) (irqs' irq)))"
 
-definition arch_state_relation :: "(arch_state \<times> AARCH64_H.kernel_state) set" where
-  "arch_state_relation \<equiv> {(s, s') .
-         arm_asid_table s = armKSASIDTable s' \<circ> ucast
-         \<and> arm_us_global_vspace s = armKSGlobalUserVSpace s'
-         \<and> arm_next_vmid s = armKSNextVMID s'
-         \<and> map_option ucast \<circ> arm_vmid_table s = armKSVMIDTable s'
-         \<and> arm_kernel_vspace s = armKSKernelVSpace s'
-         \<and> arm_current_vcpu s = armHSCurVCPU s'
-         \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'}"
-
 definition rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights" where
   "rights_mask_map \<equiv>
      \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs) (AllowGrantReply \<in> rs)"
-
-
-lemma obj_relation_cutsE:
-  "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko ko';
-     \<And>sz cs z cap cte. \<lbrakk> ko = CNode sz cs; well_formed_cnode_n sz cs; y = cte_map (x, z);
-                         ko' = KOCTE cte; cs z = Some cap; cap_relation cap (cteCap cte) \<rbrakk>
-              \<Longrightarrow> R;
-     \<And>tcb tcb'. \<lbrakk> y = x; ko = TCB tcb; ko' = KOTCB tcb'; tcb_relation tcb tcb' \<rbrakk>
-               \<Longrightarrow> R;
-     \<And>pt z pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (z << pteBits);
-                   z \<le> mask (ptTranslationBits (pt_type pt)); ko' = KOArch (KOPTE pte');
-                   pte_relation' (pt_apply pt z) pte' \<rbrakk>
-              \<Longrightarrow> R;
-     \<And>sz dev n. \<lbrakk> ko = ArchObj (DataPage dev sz);
-                  ko' = (if dev then KOUserDataDevice else KOUserData);
-                  y = x + (n << pageBits); n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
-            \<lbrakk> y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
-    \<rbrakk> \<Longrightarrow> R"
-  by (force simp: obj_relation_cuts_def2 is_other_obj_relation_type_def a_type_def
-                  cte_relation_def pte_relation_def tcb_relation_cut_def
-            split: Structures_A.kernel_object.splits kernel_object.splits if_splits
-                   AARCH64_A.arch_kernel_obj.splits)
-
-lemma eq_trans_helper:
-  "\<lbrakk> x = y; P y = Q \<rbrakk> \<Longrightarrow> P x = Q"
-  by simp
-
-lemma cap_relation_case':
-  "cap_relation cap cap' = (case cap of
-                              cap.ArchObjectCap arch_cap.ASIDControlCap \<Rightarrow> cap_relation cap cap'
-                            | _ \<Rightarrow> cap_relation cap cap')"
-  by (simp split: cap.split arch_cap.split)
-
-schematic_goal cap_relation_case:
-  "cap_relation cap cap' = ?P"
-  apply (subst cap_relation_case')
-  apply (clarsimp cong: cap.case_cong arch_cap.case_cong)
-  apply (rule refl)
-  done
-
-lemmas cap_relation_split =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split[where P=P]] for P
-lemmas cap_relation_split_asm =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split_asm[where P=P]] for P
-
-
 
 text \<open>
   Relations on other data types that aren't stored but used as intermediate values
@@ -499,27 +297,12 @@ primrec syscall_error_map :: "ExceptionTypes_A.syscall_error \<Rightarrow> Fault
 | "syscall_error_map ExceptionTypes_A.RevokeFirst           = Fault_H.RevokeFirst"
 | "syscall_error_map (ExceptionTypes_A.NotEnoughMemory n)   = Fault_H.syscall_error.NotEnoughMemory n"
 
-definition APIType_map :: "Structures_A.apiobject_type \<Rightarrow> AARCH64_H.object_type" where
-  "APIType_map ty \<equiv>
-     case ty of
-       Structures_A.Untyped \<Rightarrow> APIObjectType ArchTypes_H.Untyped
-     | Structures_A.TCBObject \<Rightarrow> APIObjectType ArchTypes_H.TCBObject
-     | Structures_A.EndpointObject \<Rightarrow> APIObjectType ArchTypes_H.EndpointObject
-     | Structures_A.NotificationObject \<Rightarrow> APIObjectType ArchTypes_H.NotificationObject
-     | Structures_A.CapTableObject \<Rightarrow> APIObjectType ArchTypes_H.CapTableObject
-     | ArchObject ao \<Rightarrow> (case ao of
-                           SmallPageObj \<Rightarrow> SmallPageObject
-                         | LargePageObj \<Rightarrow> LargePageObject
-                         | HugePageObj  \<Rightarrow> HugePageObject
-                         | PageTableObj \<Rightarrow> PageTableObject
-                         | AARCH64_A.VCPUObj \<Rightarrow> VCPUObject)"
-
 definition state_relation :: "(det_state \<times> kernel_state) set" where
   "state_relation \<equiv> {(s, s').
          pspace_relation (kheap s) (ksPSpace s')
        \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
        \<and> ready_queues_relation s s'
-       \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))
+       \<and> ghost_relation_wrapper s s'
        \<and> cdt_relation (swp cte_at s) (cdt s) (ctes_of s')
        \<and> cdt_list_relation (cdt_list s) (cdt s) (ctes_of s')
        \<and> revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s')
@@ -565,7 +348,7 @@ lemma state_relationD:
    pspace_relation (kheap s) (ksPSpace s') \<and>
    sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
    ready_queues_relation s s' \<and>
-   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s')) \<and>
+   ghost_relation_wrapper s s' \<and>
    cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
    cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
    revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s') \<and>
@@ -586,7 +369,7 @@ lemma state_relationE [elim?]:
   and rl: "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
              sched_act_relation (scheduler_action s) (ksSchedulerAction s');
              ready_queues_relation s s';
-             ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'));
+             ghost_relation_wrapper s s';
              cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
              revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');
              cdt_list_relation (cdt_list s) (cdt s) (ctes_of s');
@@ -603,18 +386,16 @@ lemma state_relationE [elim?]:
   shows "R"
   using sr by (blast intro!: rl dest: state_relationD)
 
-lemmas isCap_defs =
+lemmas gen_isCap_defs =
   isZombie_def isArchObjectCap_def
   isThreadCap_def isCNodeCap_def isNotificationCap_def
   isEndpointCap_def isUntypedCap_def isNullCap_def
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
-  isFrameCap_def isPageTableCap_def
-  isASIDControlCap_def isASIDPoolCap_def
-  isDomainCap_def isArchFrameCap_def isVCPUCap_def
+  isDomainCap_def
 
 lemma isCNodeCap_cap_map[simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"
-  by (cases c) (auto simp: isCap_defs split: sum.splits)
+  by (cases c) (auto simp: gen_isCap_defs split: sum.splits)
 
 lemma sts_rel_idle :
   "thread_state_relation st IdleThreadState = (st = Structures_A.IdleThreadState)"
@@ -647,15 +428,22 @@ lemma pspace_dom_relatedE:
   apply (fastforce dest: pspace_relation_absD)
   done
 
-lemma ghost_relation_typ_at:
-  "ghost_relation (kheap s) ups cns pt_types \<equiv>
-     (\<forall>a sz. data_at sz a s = (ups a = Some sz)) \<and>
-     (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n)) \<and>
-     (\<forall>a pt_t. pt_at pt_t a s = (pt_types a = Some pt_t))"
-  apply (rule eq_reflection)
-  apply (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj data_at_def)
-  by (intro conjI impI iffI allI; force)
+(* used for generating architecture-specific cap_relation split lemmas *)
+lemma eq_trans_helper:
+  "\<lbrakk> x = y; P y = Q \<rbrakk> \<Longrightarrow> P x = Q"
+  by simp
 
-end
+text \<open>Architecture-specific requirements\<close>
+
+locale StateRelation_R =
+  (* ghost state relation must not depend on machine state *)
+  assumes ghost_relation_wrapper_machine_state_upd_id[simp]:
+    "\<And>s s' ss ss'.
+       ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
+       = ghost_relation_wrapper s s'"
+  assumes is_other_obj_relation_type_CapTable:
+    "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
+  assumes is_other_obj_relation_type_TCB:
+    "\<not> is_other_obj_relation_type ATCB"
 
 end

@@ -1546,10 +1546,10 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (subgoal_tac "of_bl (snd p) * 16 < 2 ^ (4 + length (snd p))")
     apply (rule conjI)
      apply (erule is_aligned_no_wrap')
-     apply assumption
+     apply (simp add: shiftl_t2n')
     apply (subst add_diff_eq[symmetric])
     apply (rule word_plus_mono_right)
-     apply (erule word_le_minus_one_leq)
+     apply (rule word_le_minus_one_leq, simp add: shiftl_t2n')
     apply (erule is_aligned_no_wrap')
     apply (rule word_power_less_1)
     apply (simp add: cte_level_bits_def word_bits_def)
@@ -6709,6 +6709,7 @@ lemma cteSwap_corres:
          (cap_swap scap src dcap dest) (cteSwap scap' src' dcap' dest')"
   (is "corres _ ?P ?P' _ _") using assms including no_pre
   supply None_upd_eq[simp del]
+  supply ARM_HYP.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (unfold cap_swap_def cteSwap_def)
   apply (cases "src=dest")
    apply (rule corres_assume_pre)
@@ -6859,7 +6860,7 @@ lemma cteSwap_corres:
     apply (erule weak_derived_sym')
    apply assumption
   apply (rule conjI)
-   subgoal by (simp only: simp_thms ghost_relation_typ_at set_cap_a_type_inv ARM_HYP.data_at_def)
+   subgoal by (simp only: simp_thms ARM_HYP.ghost_relation_typ_at set_cap_a_type_inv ARM_HYP.data_at_def)
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
   apply (thin_tac "ksReadyQueues t = p" for t p)+

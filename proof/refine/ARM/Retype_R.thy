@@ -831,8 +831,8 @@ lemma obj_relation_retype_other_obj:
       \<Longrightarrow> obj_relation_retype ko ko'"
   apply (simp add: obj_relation_retype_def)
   apply (subgoal_tac "objBitsKO ko' = obj_bits ko")
-   apply (clarsimp simp: is_other_obj_relation_type)
-  apply (fastforce simp: other_obj_relation_def objBits_simps' archObjSize_def
+   apply (clarsimp simp: is_other_obj_relation_type other_obj_relation_not_aobj)
+  apply (fastforce simp: other_obj_relation_def objBits_simps'
                   split: Structures_A.kernel_object.split_asm
                          Structures_H.kernel_object.split_asm
                          Structures_H.kernel_object.split
@@ -1360,7 +1360,7 @@ lemma retype_state_relation:
     by (rule ccontr) (clarsimp simp: pspace_no_overlapD1[OF pn _ cover vs(1)])
 
   from sr have gr: "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
-    by (rule state_relationE)
+    by (rule state_relationE[simplified ghost_relation_wrapper_def]) (* FIXME arch-split *)
 
   show "ghost_relation ?ps (gsUserPages ?t') (gsCNodes ?t')"
   proof (cases ?tp)

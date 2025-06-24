@@ -907,7 +907,7 @@ lemma cNodeNoPartialOverlap:
 lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))"
-  by (erule state_relationE)
+  by (erule state_relationE[simplified ghost_relation_wrapper_def]) (* FIXME arch-split *)
 
 lemma ghost_PTTypes:
   "\<lbrakk> ghost_relation kh gsu gsc pt_Ts; pt_Ts p = Some pt_t \<rbrakk> \<Longrightarrow>
