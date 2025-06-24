@@ -105,7 +105,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
      cancelIPC t
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_conv
-                   capHasProperty_def isCap_simps)
+                   capHasProperty_def gen_isCap_simps)
   apply (wp sts_pred_tcb_neq' hoare_drop_imps delete_one_reply_st_tcb_at
        | wpc | clarsimp)+
           apply (wp getCTE_wp | clarsimp)+
@@ -113,7 +113,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
                    cancelSignal_pred_tcb_at' sts_pred_tcb_neq' getEndpoint_wp gts_wp'
                    threadSet_pred_tcb_no_state
               | wpc | clarsimp)+
-  apply (auto simp: cte_wp_at_ctes_of isCap_simps)
+  apply (auto simp: cte_wp_at_ctes_of gen_isCap_simps)
   done
 
 context begin interpretation Arch .

@@ -594,10 +594,7 @@ lemma setObject_tcb_valid_objs:
 
 lemma setObject_tcb_at':
   "\<lbrace>tcb_at' t'\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
-  apply (rule obj_at_setObject1)
-   apply (clarsimp simp: updateObject_default_def return_def in_monad)
-  apply (simp add: objBits_simps)
-  done
+  by (rule setObject_typ_ats)
 
 lemma setObject_sa_unchanged:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv s.  P (ksSchedulerAction s)\<rbrace>"
@@ -1891,8 +1888,7 @@ lemma in_magnitude_check':
 lemma setObject_tcb_tcb' [wp]:
   "\<lbrace>tcb_at' t\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   apply (rule obj_at_setObject1)
-    apply (simp add: updateObject_default_def in_monad)
-   apply (simp add: projectKOs)
+   apply (simp add: updateObject_default_def in_monad)
   apply (simp add: objBits_simps)
   done
 

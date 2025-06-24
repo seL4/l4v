@@ -3846,7 +3846,7 @@ lemma updateFreeIndex_corres:
                              \<and> cap_relation cap (capFreeIndex_update (\<lambda>_. idx) capa)"
                           in corres_gen_asm2)
           apply (rule updateCap_isUntypedCap_corres, simp+)
-           apply (clarsimp simp: isCap_simps)
+           apply (clarsimp simp: gen_isCap_simps)
           apply simp
          apply (wp getSlotCap_wp)+
         apply (clarsimp simp: state_relation_def cte_wp_at_ctes_of)
@@ -3860,7 +3860,7 @@ lemma updateFreeIndex_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of cte_wp_at_caps_of_state)
   apply (frule state_relation_pspace_relation)
   apply (frule(1) pspace_relation_ctes_ofI[OF _ caps_of_state_cteD], simp+)
-  apply (clarsimp simp: isCap_simps is_cap_simps
+  apply (clarsimp simp: gen_isCap_simps is_cap_simps
                         cte_wp_at_caps_of_state free_index_of_def)
   done
 

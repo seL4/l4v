@@ -392,6 +392,7 @@ lemma threadSet_mdb':
   "\<lbrace>valid_mdb' and obj_at' (\<lambda>t. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF t = getF (f t)) t\<rbrace>
    threadSet f t
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
+  supply projectKOs[simp del]
   by (wpsimp wp: setObject_tcb_mdb' getTCB_wp simp: threadSet_def obj_at'_def)
 
 lemma tcbSchedNext_update_valid_mdb'[wp]:

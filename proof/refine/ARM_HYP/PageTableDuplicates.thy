@@ -22,9 +22,9 @@ lemma set_ntfn_valid_duplicate' [wp]:
   apply (clarsimp simp:updateObject_default_def assert_def bind_def
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
     assert_opt_def return_def fail_def split:if_splits option.splits)
-   apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
+   apply (rule_tac ko="KONotification a" in valid_duplicates'_non_pd_pt_I)
        apply simp+
-  apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
+  apply (rule_tac ko="KONotification a" in valid_duplicates'_non_pd_pt_I)
       apply simp+
   done
 

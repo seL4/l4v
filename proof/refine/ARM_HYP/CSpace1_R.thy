@@ -3190,13 +3190,13 @@ qed
 
 lemma is_ep_cap_relation:
   "cap_relation c c' \<Longrightarrow> isEndpointCap c' = is_ep_cap c"
-  apply (simp add: isCap_simps is_cap_simps)
+  apply (simp add: gen_isCap_simps is_cap_simps)
   apply (cases c, auto)
   done
 
 lemma is_ntfn_cap_relation:
   "cap_relation c c' \<Longrightarrow> isNotificationCap c' = is_ntfn_cap c"
-  apply (simp add: isCap_simps is_cap_simps)
+  apply (simp add: gen_isCap_simps is_cap_simps)
   apply (cases c, auto)
   done
 
@@ -3205,7 +3205,7 @@ definition freeIndex_update where
   "freeIndex_update c' g \<equiv> case c' of capability.UntypedCap d ref sz f \<Rightarrow> capability.UntypedCap d ref sz (g f) | _ \<Rightarrow> c'"
 
 lemma freeIndex_update_not_untyped[simp]: "\<not>isUntypedCap c \<Longrightarrow> freeIndex_update c g = c"
-   by (case_tac c,simp_all add:freeIndex_update_def isCap_simps)
+   by (case_tac c, simp_all add: freeIndex_update_def gen_isCap_simps)
 
 locale mdb_insert =
   mdb_ptr_src?: mdb_ptr m _ _ src src_cap src_node +
@@ -3402,19 +3402,19 @@ lemma valid_badges_def2:
    valid_arch_badges cap cap' node')"
   apply (simp add: valid_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
-  apply (case_tac cap; clarsimp simp: isCap_simps)
-      by (fastforce simp: sameRegionAs_def3 isCap_simps)+
+  apply (case_tac cap; clarsimp simp: gen_isCap_simps)
+      by (fastforce simp: sameRegionAs_def3 ARM_HYP.isCap_simps)+ (* FIXME arch-split *)
 
 lemma sameRegionAs_update_untyped:
   "RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c) =
    RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c')"
   apply (rule ext)
-  by (case_tac x; clarsimp simp:sameRegionAs_def isCap_simps)
+  by (case_tac x; clarsimp simp: sameRegionAs_def gen_isCap_simps)
 
 lemma sameRegionAs_update_untyped':
   "RetypeDecls_H.sameRegionAs cap (capability.UntypedCap d a b f) =
    RetypeDecls_H.sameRegionAs cap (capability.UntypedCap d a b f')"
-  by (case_tac cap; clarsimp simp:sameRegionAs_def isCap_simps)
+  by (case_tac cap; clarsimp simp: sameRegionAs_def gen_isCap_simps)
 
 (*The newly inserted cap should never have children.*)
 lemma (in mdb_insert_der) dest_no_parent_n:
@@ -3431,16 +3431,18 @@ lemma (in mdb_insert_der) dest_no_parent_n:
    apply (subst mdb_next_unfold)
    apply (simp add: src)
   apply (case_tac "isUntypedCap src_cap")
-  apply (clarsimp simp: isCap_simps isMDBParentOf_CTE is_derived'_def
-    badge_derived'_def freeIndex_update_def capMasterCap_def split:capability.splits)
+  apply (clarsimp simp: gen_isCap_simps isMDBParentOf_CTE is_derived'_def
+                        badge_derived'_def freeIndex_update_def capMasterCap_def
+                  split:capability.splits)
    apply (simp add: ut_revocable'_def)
-   apply (drule spec[where x=src], simp add: isCap_simps)
+   apply (drule spec[where x=src], simp add: gen_isCap_simps)
    apply (simp add: descendants_of'_def)
    apply (drule spec[where x="mdbNext src_node"])
    apply (erule notE, rule direct_parent)
      apply (simp add: mdb_next_unfold)
     apply simp
-   apply (simp add: parentOf_def src isMDBParentOf_CTE isCap_simps cong:sameRegionAs_update_untyped)
+   apply (simp add: parentOf_def src isMDBParentOf_CTE ARM_HYP.isCap_simps (* FIXME arch-split *)
+               cong: sameRegionAs_update_untyped)
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def
     badge_derived'_def)
   apply (drule(2) revokable_plus_orderD)
@@ -3450,10 +3452,10 @@ lemma (in mdb_insert_der) dest_no_parent_n:
     apply (erule_tac x="mdbNext src_node" in allE)
     apply (clarsimp simp: src mdb_next_unfold)
     apply (case_tac "capBadge cap'", simp_all)
-   apply (clarsimp simp add: isCap_simps capMasterCap_def vsCapRef_def
+   apply (clarsimp simp add: gen_isCap_simps capMasterCap_def vsCapRef_def
                    simp del: not_ex
                       split: capability.splits)
-  apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: ARM_HYP.isCap_simps) (* FIXME arch-split *)
   done
 
 locale mdb_insert_child = mdb_insert_der +
@@ -4824,12 +4826,14 @@ lemma mdb_inv_preserve_updateCap:
   "\<lbrakk>m slot = Some cte;isUntypedCap (cteCap cte)\<rbrakk> \<Longrightarrow>
    mdb_inv_preserve m (modify_map m slot
      (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. index) (cteCap cte))))"
-  apply (clarsimp simp:mdb_inv_preserve_def modify_map_dom isCap_simps modify_map_def split:if_splits)
+  apply (clarsimp simp: mdb_inv_preserve_def modify_map_dom gen_isCap_simps modify_map_def
+                  split: if_splits)
   apply (intro conjI impI allI)
-    apply fastforce
-    apply (simp add:sameRegionAs_update_untyped)
-    apply (rule ext,simp add:sameRegionAs_update_untyped')
-    apply (simp add:mdb_next_def split:if_splits)
+      apply fastforce
+     apply (simp add: ARM_HYP.isCap_defs) (* FIXME arch-split *)
+    apply (simp add: sameRegionAs_update_untyped)
+   apply (rule ext,simp add:sameRegionAs_update_untyped')
+  apply (simp add:mdb_next_def split:if_splits)
   done
 
 lemma mdb_inv_preserve_fun_upd:
@@ -5186,10 +5190,10 @@ lemma setUntypedCapAsFull_ctes:
  \<lbrace>\<lambda>r s. P (ctes_of s)\<rbrace>"
   apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits,intro conjI impI)
    apply (wp updateCap_ctes_of_wp)
-   apply (clarsimp simp:isCap_simps max_free_index_def maskedAsFull_def)
+   apply (clarsimp simp: gen_isCap_simps max_free_index_def maskedAsFull_def)
   apply wp
-  apply (clarsimp simp:isCap_simps cte_wp_at_ctes_of
-    max_free_index_def maskedAsFull_def split:if_splits)
+  apply (clarsimp simp: gen_isCap_simps cte_wp_at_ctes_of max_free_index_def maskedAsFull_def
+                  split:if_splits)
   done
 
 lemma setUntypedCapAsFull_valid_cap:
@@ -5248,7 +5252,7 @@ lemma setUntypedCapAsFull_mdb[wp]:
               (cteCap_update (\<lambda>_.  maskedAsFull (cteCap srcCTE) cap)))")
     apply (frule mdb_inv_preserve.untyped_inc')
       apply (clarsimp simp:modify_map_def max_free_index_def
-        maskedAsFull_def isCap_simps cte_wp_at_ctes_of
+        maskedAsFull_def gen_isCap_simps cte_wp_at_ctes_of
         split:if_splits)
    apply (clarsimp simp:valid_mdb_ctes_def mdb_inv_preserve.preserve_stuff)+
    apply (clarsimp simp:mdb_inv_preserve.by_products[OF mdb_inv_preserve_sym])
