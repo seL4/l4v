@@ -1073,6 +1073,7 @@ lemma map_to_cnes_eq:
    map_to_tcbs (ksPSpace s') = map_to_tcbs (ksPSpace s) \<Longrightarrow>
    (projectKO_opt::kernel_object\<rightharpoonup>cte) \<circ>\<^sub>m ksPSpace s' =
    (projectKO_opt::kernel_object\<rightharpoonup>cte) \<circ>\<^sub>m ksPSpace s"
+  supply projectKOs[simp del]
   apply (rule ext)
   apply (simp add: fun_eq_iff)
   apply (drule_tac x=x in spec)

@@ -1338,6 +1338,7 @@ lemma getObject_eq:
   and objat: "ko_at' ko p s"
   shows      "(ko, s) \<in> fst (getObject p s)"
   using objat unfolding exs_valid_def obj_at'_def
+  supply projectKOs[simp del]
   apply clarsimp
   apply (simp add: projectKO_def fail_def split: option.splits)
   apply (clarsimp simp: loadObject_default_def getObject_def in_monad return_def lookupAround2_char1

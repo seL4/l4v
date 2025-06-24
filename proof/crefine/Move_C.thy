@@ -596,8 +596,7 @@ lemma setMRs_Nil:
 
 lemma device_data_at_ko:
   "typ_at' UserDataDeviceT p s \<Longrightarrow> ko_at' UserDataDevice p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def
-    projectKO_user_data_device projectKO_eq projectKO_eq2)
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
   apply (case_tac ko, auto)
   done
 
@@ -620,7 +619,7 @@ proof -
                 K_bind_def haskell_assertE_def split_def)
   apply (intro empty_fail_cutMon_intros)
   apply (clarsimp simp: empty_fail_drop_cutMon locateSlot_conv returnOk_liftE[symmetric]
-                        isCap_simps)+
+                        gen_isCap_simps)+
   done
 qed
 
@@ -968,7 +967,7 @@ lemma tcb_in_cur_domain'_def':
 lemma updateCapData_Untyped:
   "isUntypedCap a
          \<Longrightarrow> updateCapData b c a = a"
- by (clarsimp simp: isCap_simps updateCapData_def)
+ by (clarsimp simp: gen_isCap_simps updateCapData_def)
 
 lemma ctes_of_valid_strengthen:
   "(invs' s \<and> ctes_of s p = Some cte) \<longrightarrow> valid_cap' (cteCap cte) s"
@@ -981,7 +980,7 @@ lemma ctes_of_valid_strengthen:
 lemma finaliseCap_Reply:
   "\<lbrace>Q (NullCap,NullCap) and K (isReplyCap cap)\<rbrace> finaliseCapTrue_standin cap is_final \<lbrace>Q\<rbrace>"
   apply (rule Nondet_VCG.hoare_gen_asm)
-  apply (wpsimp simp: finaliseCapTrue_standin_def isCap_simps)
+  apply (wpsimp simp: finaliseCapTrue_standin_def gen_isCap_simps)
   done
 
 lemma cteDeleteOne_Reply:
@@ -1193,7 +1192,7 @@ qed
 lemma valid_cap_cte_at':
   "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk>
    \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
-  apply (clarsimp simp: isCap_simps valid_cap'_def)
+  apply (clarsimp simp: gen_isCap_simps valid_cap'_def)
   apply (rule real_cte_at')
   apply (erule spec)
   done
@@ -1224,7 +1223,7 @@ lemma cap_case_EndpointCap_NotificationCap:
       else if isNotificationCap cap
            then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
            else h)"
-  by (simp add: isCap_simps
+  by (simp add: gen_isCap_simps
          split: capability.split split del: if_split)
 
 lemma asUser_obj_at':

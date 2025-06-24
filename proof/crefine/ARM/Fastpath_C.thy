@@ -1738,6 +1738,7 @@ proof -
      automatic indentation is improved *)
   show ?thesis
   supply if_cong[cong] option.case_cong[cong]
+  supply projectKOs[simp del]
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
