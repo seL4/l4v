@@ -87,6 +87,11 @@ lemma isArchCap_tag_def2:
   "isArchCap_tag n \<equiv> n && 1 = 1"
   by (simp add: isArchCap_tag_def word_mod_2p_is_mask[where n=1, simplified] mask_def)
 
+end
+
+(* FIXME arch-split: need to exit raw Arch interpretation context to override lemmas in Arch *)
+context Arch begin arch_global_naming
+
 (* On AARCH64 we cannot have isArchPageTableCap as at the abstract level there is only one cap,
    while in C there are separate page table and vspace caps. *)
 
@@ -98,6 +103,10 @@ definition isArchVSpacePTCap :: "capability \<Rightarrow> bool" where
 
 (* FIXME AARCH64 overrides version in Bits_R *)
 lemmas isCap_simps = isCap_simps isArchNormalPTCap_def isArchVSpacePTCap_def
+
+end
+
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cap_get_tag_isCap0:
   assumes cr: "ccap_relation cap cap'"
