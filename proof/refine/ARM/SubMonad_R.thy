@@ -5,7 +5,7 @@
  *)
 
 theory SubMonad_R
-imports KHeap_R EmptyFail
+imports KHeap_R ArchEmptyFail
 begin
 
 (* SubMonadLib *)

@@ -171,7 +171,7 @@ begin
 crunch
   cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
   for (empty_fail) empty_fail[intro!, wp, simp]
-(simp: crunch_simps)
+  (simp: crunch_simps)
 end
 
 crunch "ThreadDecls_H.suspend"
