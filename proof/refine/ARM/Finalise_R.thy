@@ -1440,8 +1440,6 @@ lemma emptySlot_valid_irq_handlers'[wp]:
   apply auto
   done
 
-declare setIRQState_irq_states' [wp]
-
 context begin interpretation Arch .
 crunch emptySlot
   for irq_states'[wp]: valid_irq_states'
@@ -1452,7 +1450,6 @@ crunch emptySlot
 
 crunch emptySlot
   for pde_mappings'[wp]: "valid_pde_mappings'"
-end
 
 lemma deletedIRQHandler_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
@@ -1461,7 +1458,6 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch-split*)
 crunch emptySlot
   for irqs_masked'[wp]: "irqs_masked'"
 
