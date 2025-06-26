@@ -1,5 +1,5 @@
 (*
- * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -8,21 +8,11 @@
     Properties of machine operations.
 *)
 
-theory Machine_R
-imports ArchBits_R
+theory ArchMachine_R
+imports Machine_R
 begin
 
-definition "irq_state_independent_H (P :: kernel_state \<Rightarrow> bool)\<equiv>
-              \<forall>(f :: nat \<Rightarrow> nat) (s :: kernel_state). P s \<longrightarrow> P (s\<lparr>ksMachineState := ksMachineState s
-                                \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>)"
-
-lemma irq_state_independent_HI[intro!, simp]:
-  "\<lbrakk>\<And>s f. P (s\<lparr>ksMachineState := ksMachineState s
-              \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>) = P s\<rbrakk>
-   \<Longrightarrow> irq_state_independent_H P"
-  by (simp add: irq_state_independent_H_def)
-
-context begin interpretation Arch . (*FIXME: arch-split*)
+context Arch begin arch_global_naming
 
 lemma dmo_getirq_inv[wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"

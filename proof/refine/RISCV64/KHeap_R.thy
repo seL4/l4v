@@ -6,7 +6,7 @@
 
 theory KHeap_R
 imports
-  Machine_R
+  ArchMachine_R
 begin
 
 lemma lookupAround2_known1:

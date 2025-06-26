@@ -741,7 +741,7 @@ lemma checkActiveIRQ_valid_duplicates':
    checkActiveIRQ
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: checkActiveIRQ_def)
-  apply wp
+  apply wpsimp
   done
 
 lemma check_active_irq_corres':

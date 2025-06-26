@@ -7,7 +7,7 @@
 theory KHeap_R
 imports
   "AInvs.ArchDetSchedSchedule_AI"
-  Machine_R
+  ArchMachine_R
 begin
 
 lemma lookupAround2_known1:
