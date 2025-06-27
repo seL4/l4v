@@ -10,7 +10,7 @@ begin
 
 section\<open>Arch-specific AC proofs\<close>
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems Access_AC_assms
 
@@ -27,7 +27,10 @@ lemma clear_asidpool_trans[elim]:
   "\<lbrakk> asid_pool_integrity subjects aag pool pool';
      asid_pool_integrity subjects aag pool' pool'' \<rbrakk>
      \<Longrightarrow> asid_pool_integrity subjects aag pool pool''"
-  unfolding asid_pool_integrity_def by metis
+  apply (clarsimp simp: asid_pool_integrity_def)
+  apply (erule_tac x=x in allE)+
+  apply (fastforce split: option.split_asm)
+  done
 
 lemma cap_asid'_member[simp]:
   "asid \<in> cap_asid' cap = (\<exists>acap. cap = ArchObjectCap acap \<and> asid \<in> acap_asid' acap)"
@@ -48,6 +51,10 @@ lemma arch_tro_alt_trans_spec[Access_AC_assms]:
      \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
   by (fastforce simp: arch_integrity_obj_alt.simps)
 
+lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
+  "tcb_hyp_refs (arch_tcb_set_registers regs atcb) = tcb_hyp_refs atcb"
+  by (simp add: arch_tcb_set_registers_def)
+
 end
 
 
@@ -59,7 +66,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma auth_ipc_buffers_tro[Access_AC_assms]:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
@@ -71,19 +78,53 @@ lemma auth_ipc_buffers_tro[Access_AC_assms]:
                split: cap.split_asm arch_cap.split_asm if_split_asm bool.splits)
 
 lemma trasids_trans[Access_AC_assms]:
-  "\<lbrakk> (\<forall>x a. integrity_asids aag subjects x a s s');
-     (\<forall>x a. integrity_asids aag subjects x a  s' s'') \<rbrakk>
-     \<Longrightarrow> (\<forall>x a. integrity_asids aag subjects x a s s'')"
-  by clarsimp metis
+  "\<lbrakk> \<forall>x a. integrity_asids_2 aag subjects x a as as' ao ao';
+     \<forall>x a. integrity_asids_2 aag subjects x a as' as'' ao' ao'' \<rbrakk>
+     \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
+  by (clarsimp simp: integrity_asids_def) metis
 
 lemma integrity_asids_refl[Access_AC_assms, simp]:
   "integrity_asids aag subjects x a s s"
-  by simp
+  by (simp add: integrity_asids_def)
 
 lemma integrity_asids_update_autarch[Access_AC_assms]:
-  "\<lbrakk> \<forall>x a. integrity_asids aag {pasSubject aag} x a st s; is_subject aag ptr \<rbrakk>
-     \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a st (s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>)"
-  by (auto simp: opt_map_def)
+  "\<lbrakk> integrity_asids_2 aag subjects x a as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
+     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
+  by (auto simp: integrity_asids_def opt_map_def)
+
+lemma integrity_hyp_triv[intro!,simp]:
+  "integrity_hyp_2 aag subjects x ms ms' as as' ao ao'"
+  by (simp add: integrity_hyp_def)
+
+lemma integrity_fpu_triv[intro!,simp]:
+  "integrity_fpu_2 aag subjects x as as' kh kh'"
+  by (simp add: integrity_fpu_def)
+
+lemma integrity_hyp_wp_triv:
+  "\<lbrace>P\<rbrace> c \<lbrace>\<lambda>_ s. integrity_hyp aag subjects x st (f s)\<rbrace>"
+  by wpsimp
+
+lemma integrity_fpu_wp_triv:
+  "\<lbrace>P\<rbrace> c \<lbrace>\<lambda>_ s. integrity_fpu aag subjects x st (f s)\<rbrace>"
+  by wpsimp
+
+lemma integrity_hyp_eq_triv:
+  "integrity_hyp_2 a b c d e f g h i = integrity_hyp_2 r s t u v w x y z"
+  by simp
+
+lemma integrity_fpu_eq_triv:
+  "integrity_fpu_2 a b c d e f g = integrity_fpu_2 t u v w x y z"
+  by simp
+
+lemmas integrity_arch_triv =
+  integrity_hyp_wp_triv
+  integrity_fpu_wp_triv
+  integrity_hyp_triv
+  integrity_fpu_triv
+  integrity_hyp_eq_triv
+  integrity_fpu_eq_triv
+
+declare integrity_arch_triv[Access_AC_assms]
 
 end
 
@@ -92,11 +133,11 @@ global_interpretation Access_AC_2?: Access_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Access_AC_assms)?)
+    by (unfold_locales; (fact Access_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma ipcframe_subset_page:
   "\<lbrakk> valid_objs s; get_tcb p s = Some tcb;
@@ -145,7 +186,7 @@ lemma asid_pool_integrity_mono[Access_AC_assms]:
 lemma integrity_asids_mono[Access_AC_assms]:
     "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
        \<Longrightarrow> integrity_asids aag T x a s s'"
-  by fastforce
+  by (fastforce simp: integrity_asids_def)
 
 lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
   "\<lbrakk> arch_integrity_obj_atomic aag S l ao ao'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
@@ -159,16 +200,84 @@ global_interpretation Access_AC_3?: Access_AC_3
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Access_AC_assms)?)
+    by (unfold_locales; (fact Access_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
+qed
+
+context Arch_p_arch_update_eq begin arch_global_naming
+
+lemma state_vrefs[Access_AC_assms, iff]:
+  "state_vrefs (f s) = state_vrefs s"
+  by (simp add: state_vrefs_def pspace)
+
+end
+
+context Arch begin arch_global_naming
+
+lemma integrity_asids_kh_upd_None[Access_AC_assms]:
+  "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
+     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
+  "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
+     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
+  unfolding integrity_asids_def opt_map_def
+  by (auto split: option.split_asm)
+
+end
+
+
+global_interpretation Access_AC_4?: Access_AC_4
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case
+    by (unfold_locales; (fact Access_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
 
 
-context Arch begin global_naming RISCV64
+locale Arch_pas_refined_arch_update_eq = Arch +
+  fixes f :: "('a \<Rightarrow> 'a) \<Rightarrow> arch_state \<Rightarrow> arch_state"
+  assumes atable: "riscv_asid_table (f g ms) = riscv_asid_table ms"
+begin
 
-lemma pas_refined_irq_state_independent[intro!, simp]:
-  "pas_refined x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
-   pas_refined x s"
-  by (simp add: pas_refined_def)
+lemma vs_lookup_table_arch_upd:
+  "vs_lookup_table lvl asid vref (arch_state_update (\<lambda>ms. f (g ms) (h ms)) s) =
+   vs_lookup_table lvl asid vref (arch_state_update h s)"
+  by (auto simp: vs_lookup_table_eq_lift pool_for_asid_def atable)
+
+lemma pas_refined_arch_upd:
+  "pas_refined aag (arch_state_update (\<lambda>ms. f (g ms) (h ms)) s) =
+   pas_refined aag (arch_state_update h s)"
+  unfolding pas_refined_def state_objs_to_policy_def state_vrefs_def
+  by (auto simp: vs_lookup_table_arch_upd atable)
+
+lemma arch_state_update_id:
+  "arch_state_update id s = s"
+  by simp
+
+lemmas [simp] =
+  pas_refined_arch_upd[where h="\<lambda>_. _"]
+  pas_refined_arch_upd[where h="\<lambda>_. _" and g="\<lambda>_. _"]
+  pas_refined_arch_upd[where h=id, simplified arch_state_update_id id_apply]
+  pas_refined_arch_upd[where h=id and g="\<lambda>_. _", simplified arch_state_update_id id_apply]
+
+end
+
+sublocale Arch \<subseteq> global_pts_update: Arch_pas_refined_arch_update_eq riscv_global_pts_update by unfold_locales auto
+sublocale Arch \<subseteq> kernel_vspace_update: Arch_pas_refined_arch_update_eq riscv_kernel_vspace_update by unfold_locales auto
+
+
+context Arch begin arch_global_naming
+
+lemma dmo_no_mem_respects:
+  assumes p: "\<And>P. mop \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
+  assumes q: "\<And>P. mop \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  shows "do_machine_op mop \<lbrace>integrity aag X st\<rbrace>"
+  unfolding integrity_def tcb_states_of_state_def get_tcb_def
+  by (wpsimp wp: dmo_machine_state_lift | wps assms)+
+
+lemma state_vrefsD:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl, p);
+     aobjs_of s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
+     \<Longrightarrow> x \<in> state_vrefs s p"
+  unfolding state_vrefs_def by fastforce
 
 end
 

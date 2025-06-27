@@ -412,14 +412,15 @@ lemma sym_refs_VCPU_hyp_live:
   assumes tcb: "ko_at (TCB tcb) t s"
   assumes vcpu: "tcb_vcpu (tcb_arch tcb) = Some v"
   assumes sym: "sym_refs (state_hyp_refs_of s)"
-  shows "obj_at hyp_live v s"
+  shows "vcpu_hyp_live_of s v"
 proof -
   from tcb vcpu have "(v,TCBHypRef) \<in> state_hyp_refs_of s t"
     by (clarsimp simp: state_hyp_refs_of_def obj_at_def)
   with sym have "(t,HypTCBRef) \<in> state_hyp_refs_of s v"
     by (auto dest: sym_refsD)
   thus ?thesis
-    by (clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_live_def hyp_refs_of_def
+    by (clarsimp simp: obj_at_vcpu_hyp_live_of_s[symmetric] is_vcpu_def
+                       state_hyp_refs_of_def obj_at_def hyp_live_def hyp_refs_of_def
                        tcb_vcpu_refs_def refs_of_ao_def arch_live_def vcpu_tcb_refs_def
                 split: option.splits kernel_object.splits arch_kernel_obj.splits)
 qed
@@ -722,6 +723,7 @@ crunch find_free_vmid
   and valid_vmid_table[wp]: valid_vmid_table
   and arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
   and valid_cur_fpu[wp]: valid_cur_fpu
+  and valid_numlistregs[wp]: valid_numlistregs
 
 lemma find_free_vmid_valid_arch [wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
@@ -2900,7 +2902,7 @@ crunch vcpu_restore_reg_range, vcpu_save_reg_range, vgic_update_lr, vcpu_read_re
 lemma vcpu_write_reg_invs[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>invs\<rbrace>"
   unfolding vcpu_write_reg_def
-  by (wpsimp cong: vcpu.fold_congs) (* crunch can't do cong yet *)
+  by (wpsimp cong: vcpu_state.fold_congs) (* crunch can't do cong yet *)
 
 lemma save_virt_timer_invs[wp]:
   "save_virt_timer vcpu_ptr \<lbrace>invs\<rbrace>"
@@ -3009,7 +3011,7 @@ lemma vcpu_update_regs_sym_refs_hyp[wp]:
 
 lemma vcpu_write_reg_sym_refs_hyp[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
+  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu_state.fold_congs)
 
 lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
   "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
@@ -3046,13 +3048,14 @@ crunch vcpu_disable, vcpu_restore, vcpu_save
   (wp: crunch_wps)
 
 lemma vcpu_switch_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. v \<noteq> None \<longrightarrow> obj_at hyp_live (the v) s)\<rbrace> vcpu_switch v \<lbrace> \<lambda>_ . invs \<rbrace>"
+  "\<lbrace>invs and (\<lambda>s. v \<noteq> None \<longrightarrow> vcpu_hyp_live_of s (the v))\<rbrace> vcpu_switch v \<lbrace> \<lambda>_ . invs \<rbrace>"
   unfolding vcpu_switch_def
   apply (cases v; clarsimp)
    apply (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
    apply (clarsimp simp: invs_def valid_state_def valid_arch_state_def cur_vcpu_def
                          in_omonad obj_at_def hyp_live_def arch_live_def)
   apply (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
+  apply (clarsimp simp: in_omonad obj_at_def hyp_live_def arch_live_def)
   done
 
 crunch

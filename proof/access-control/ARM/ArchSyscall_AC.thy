@@ -9,7 +9,7 @@ imports
   Syscall_AC
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 named_theorems Syscall_AC_assms
 
@@ -94,11 +94,11 @@ lemma set_thread_state_restart_to_running_respects[Syscall_AC_assms]:
   apply (cases "is_subject aag thread")
    apply (cut_tac aag=aag in integrity_update_autarch, simp+)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
+  apply (clarsimp simp: integrity_def integrity_asids_def obj_at_def st_tcb_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule_tac tro_tcb_activate[OF refl refl])
-    apply (simp add: tcb_bound_notification_reset_integrity_def ctxt_IP_update_def)+
-  done
+  by (auto simp: tcb_bound_notification_reset_integrity_def arch_tcb_get_registers_def
+                 arch_tcb_set_registers_def arch_tcb_context_get_def arch_tcb_context_set_def)
 
 lemma getActiveIRQ_inv[Syscall_AC_assms]:
   "\<forall>f s. P s \<longrightarrow> P (irq_state_update f s) \<Longrightarrow>
@@ -173,6 +173,27 @@ crunch
 declare handle_arch_fault_reply_cur_thread[Syscall_AC_assms]
 declare handle_arch_fault_reply_it[Syscall_AC_assms]
 declare arch_prepare_set_domain_idle_thread[Syscall_AC_assms]
+declare arch_post_set_flags_inv[Syscall_AC_assms]
+
+lemma ackInterrupt_integrity[Syscall_AC_assms,wp]:
+  "do_machine_op (ackInterrupt irq) \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects)
+
+lemma maskInterrupt_integrity[Syscall_AC_assms,wp]:
+  "do_machine_op (maskInterrupt m irq) \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects)
+
+lemma resetTimer_integrity[Syscall_AC_assms,wp]:
+  "do_machine_op resetTimer \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects)
+
+lemma valid_cur_hyp_triv[Syscall_AC_assms]:
+  "f \<lbrace>\<lambda>s. P (valid_cur_hyp s)\<rbrace>"
+  by (wpsimp simp: valid_cur_hyp_def)
+
+lemma valid_cur_hyp_machine_state[Syscall_AC_assms]:
+  "valid_cur_hyp (machine_state_update f s) = valid_cur_hyp s"
+  by (simp add: valid_cur_hyp_def)
 
 crunch arch_prepare_next_domain
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
