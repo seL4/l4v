@@ -1534,6 +1534,10 @@ lemma nth_is_and_neq_0:
   "bit (x::'a::len word) n = (x AND 2 ^ n \<noteq> 0)"
   by (subst and_neq_0_is_nth; rule refl)
 
+lemma not_nth_is_and_eq_0:
+  "(\<not> bit (x::'a::len word) n) = (x AND 2 ^ n = 0)"
+  by (simp add: and_exp_eq_0_iff_not_bit)
+
 lemma max_word_not_less [simp]:
    "\<not> - 1 < x" for x :: \<open>'a::len word\<close>
   by (fact word_order.extremum_strict)
